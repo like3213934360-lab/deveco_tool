@@ -1,6 +1,6 @@
 # deveco-tool
 
-本目录是本机使用的 DevEco Code 能力整理仓库。当前已原样提取 DevEco Code v0.1.5 的五个 Skill，共 130 个 Skill 文件，包含 ArkTS 参考资料、工程模板和运行时诊断脚本。
+本目录是本机使用的 DevEco Code 能力整理仓库。当前已原样提取 DevEco Code v0.1.5 的四个 Skill，共 129 个 Skill 文件，包含 ArkTS 参考资料、工程模板和运行时诊断脚本；DevEco 环境自定义配置 Skill 未纳入。
 
 ## 统一 MCP
 
@@ -53,7 +53,7 @@ MCP 工具按来源分为：
 
 ## Skill 来源
 
-Skill 来源为 DevEco Code v0.1.5 的 `packages/opencode/resources/skills`，具体提交和许可证信息见 `provenance/`。当前五个目录保持上游原样，没有针对 Claude、Codex 或 Cursor 做改写。
+Skill 来源为 DevEco Code v0.1.5 的 `packages/opencode/resources/skills`，具体提交和许可证信息见 `provenance/`。当前四个目录保持上游原样，没有针对 Claude、Codex 或 Cursor 做改写；DevEco 环境自定义配置 Skill 已排除。
 
 `src/` 是本仓库新增的适配层：它只注册白名单脚本、连接本地语言服务和代理已安装的 CodeGenie MCP，不会把旧的 `deveco-knowledge-mcp` 或旧 ArkTS LSP MCP 复制进来。客户端配置也不会被自动改写；迁移时只需把 stdio MCP 指向：
 

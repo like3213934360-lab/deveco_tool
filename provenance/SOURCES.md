@@ -6,8 +6,8 @@
 - 版本：`v0.1.5`
 - 提取路径：`packages/opencode/resources/skills`
 - 提取提交：见 `deveco-code-v0.1.5.commit`
-- 提取范围：`arkts-error-fixes`、`arkts-grammar-standards`、`arkts-runtime-fix`、`customize-deveco`、`deveco-create-project`
-- 文件数量：130
+- 提取范围：`arkts-error-fixes`、`arkts-grammar-standards`、`arkts-runtime-fix`、`deveco-create-project`
+- 文件数量：129（排除 `customize-deveco` 环境自定义配置 Skill）
 
 DevEco Code 仓库主体采用 MIT；其中 Huawei 工具和脚本文件保留各自的 Apache-2.0 文件头。复制和分发时必须保留原文件头，并继续维护第三方声明。
 

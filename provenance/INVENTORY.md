@@ -2,14 +2,13 @@
 
 ## 原始 Skill
 
-以下目录均从 DevEco Code v0.1.5 原样复制，合计 130 个文件；`diff -qr` 已验证与上游提取目录一致。
+以下目录均从 DevEco Code v0.1.5 原样复制，合计 129 个文件；`diff -qr` 已验证与上游提取目录一致。DevEco 环境自定义配置 Skill 未纳入。
 
 | Skill | 文件数 | 内容 |
 | --- | ---: | --- |
 | `arkts-error-fixes` | 65 | 30 个 ArkTS 错误示例、对应参考说明和 Skill 使用说明 |
 | `arkts-grammar-standards` | 8 | ArkTS/ArkUI 规则、Kit API 速查、配方和 TS→ArkTS 改写参考 |
 | `arkts-runtime-fix` | 21 | JS/ArkTS 崩溃模式、faultlogger/hilog 诊断参考和 5 个运行时脚本 |
-| `customize-deveco` | 1 | DevEco 自定义配置 Skill |
 | `deveco-create-project` | 35 | HarmonyOS 工程模板、工程文件清单和 `copy-template`/`detect-sdk` 脚本 |
 
 脚本目录中的可调用脚本已经进入统一白名单：
