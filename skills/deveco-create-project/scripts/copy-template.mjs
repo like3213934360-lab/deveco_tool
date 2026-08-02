@@ -16,6 +16,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
+import { spawnSync } from 'node:child_process';
+import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { loadSdkMetadata, resolveApiLevel, SkillError } from './detect-sdk.mjs';
 
@@ -52,9 +54,6 @@ function parseArgs(argv) {
     index += 1;
   }
 
-  const scriptDir = path.dirname(fileURLToPath(import.meta.url));
-  const templateDir = values.get('template-dir') ??
-    path.resolve(scriptDir, '../../deveco-create-project/application');
   const projectPath = values.get('project-path');
   const appName = values.get('app-name');
   const bundleName = values.get('bundle-name') ?? (appName
@@ -81,7 +80,6 @@ function parseArgs(argv) {
     appName,
     bundleName,
     apiLevel,
-    templateDir: path.resolve(templateDir),
   };
 }
 
@@ -90,48 +88,29 @@ async function resolve(args) {
   return resolveApiLevel(metadata, args.apiLevel);
 }
 
-function copyDirectoryContents(sourceDir, targetDir) {
-  fs.mkdirSync(targetDir, { recursive: true });
-  for (const entry of fs.readdirSync(sourceDir, { withFileTypes: true })) {
-    const sourcePath = path.join(sourceDir, entry.name);
-    const targetPath = path.join(targetDir, entry.name);
-    if (entry.isDirectory()) {
-      copyDirectoryContents(sourcePath, targetPath);
-      continue;
-    }
-    if (fs.existsSync(targetPath)) {
-      continue;
-    }
-    fs.mkdirSync(path.dirname(targetPath), { recursive: true });
-    fs.copyFileSync(sourcePath, targetPath);
+/*
+ * LOCAL PATCH: upstream 0.2.0 spawns a bare `devecocli`, which only works when the CLI is on PATH
+ * (it ships a PATH shim this pack deliberately does not copy). Resolve the npm entry ourselves
+ * instead, mirroring src/deveco-cli.mjs, and keep PATH as the last resort. This file must stay
+ * self-contained -- SKILL.md forbids importing pack sources from a skill script -- so the
+ * resolution is reimplemented here rather than shared.
+ */
+function resolveDevecoCli() {
+  const override = process.env.DEVECO_CLI_ENTRY;
+  if (override && fs.existsSync(override)) {
+    return { command: process.execPath, prefix: [override], source: 'DEVECO_CLI_ENTRY' };
   }
-}
 
-function replaceInFile(filePath, pairs) {
-  const original = fs.readFileSync(filePath, 'utf-8');
-  let next = original;
-  for (const [from, to] of pairs) {
-    next = next.replaceAll(from, to);
+  const scriptDir = path.dirname(fileURLToPath(import.meta.url));
+  // scripts/ -> deveco-create-project/ -> skills/ -> pack root, where node_modules lives.
+  const packRoot = path.resolve(scriptDir, '../../..');
+  const require = createRequire(import.meta.url);
+  try {
+    const entry = require.resolve('@deveco/deveco-cli/dist/cli.js', { paths: [packRoot, process.cwd()] });
+    return { command: process.execPath, prefix: [entry], source: 'node_modules' };
+  } catch {
+    return { command: 'devecocli', prefix: [], source: 'PATH' };
   }
-  if (next !== original) {
-    fs.writeFileSync(filePath, next, 'utf-8');
-  }
-}
-
-function updateApiLevel(targetRoot, sdkVersion, modelVersion) {
-  replaceInFile(path.join(targetRoot, 'build-profile.json5'), [
-    ['6.0.2(22)', sdkVersion],
-  ]);
-  replaceInFile(path.join(targetRoot, 'hvigor/hvigor-config.json5'), [
-    ['6.0.2', modelVersion],
-  ]);
-  replaceInFile(path.join(targetRoot, 'oh-package.json5'), [
-    ['6.0.2', modelVersion],
-  ]);
-}
-
-function verifyFiles(targetRoot) {
-  return REQUIRED_FILES.filter((relativePath) => !fs.existsSync(path.join(targetRoot, relativePath)));
 }
 
 function validateAppName(appName) {
@@ -146,14 +125,6 @@ function validateAppName(appName) {
 }
 
 function setupProject(args) {
-  if (!fs.existsSync(args.templateDir)) {
-    emitError({
-      code: 'TEMPLATE_DIR_MISSING',
-      message: `Template directory not found: ${args.templateDir}`,
-      hint: '请确认内置 skill 资源完整，或重新安装/打包 Deveco Code。',
-      details: { templateDir: args.templateDir },
-    });
-  }
   fs.mkdirSync(args.projectPath, { recursive: true });
   const targetRoot = path.join(args.projectPath, args.appName);
   if (fs.existsSync(targetRoot) && fs.readdirSync(targetRoot).length > 0) {
@@ -164,21 +135,68 @@ function setupProject(args) {
       details: { targetRoot },
     }, 2);
   }
-  copyDirectoryContents(args.templateDir, targetRoot);
   return targetRoot;
 }
 
-function applyReplacements(targetRoot, args, resolved) {
-  replaceInFile(path.join(targetRoot, 'AppScope/resources/base/element/string.json'), [
-    ['MyApplication', args.appName],
-  ]);
+function createProjectWithDevecoCli(targetRoot, args, resolved) {
+  const cli = resolveDevecoCli();
+  const cliArgs = [
+    'create',
+    '--project-path',
+    targetRoot,
+    '--app-name',
+    args.appName,
+    '--bundle-name',
+    args.bundleName,
+    '--api-level',
+    String(resolved.apiLevel),
+  ];
+  const result = spawnSync(cli.command, [...cli.prefix, ...cliArgs], {
+    cwd: args.projectPath,
+    encoding: 'utf8',
+    shell: process.platform === 'win32',
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+
+  if (result.error) {
+    if (result.error.code === 'ENOENT') {
+      emitError({
+        code: 'DEVECO_CLI_NOT_FOUND',
+        message: 'DevEco CLI is required to create a project but could not be located.',
+        hint: '请在能力包根目录执行 npm install 安装 @deveco/deveco-cli，或设置 DEVECO_CLI_ENTRY 指向 cli.js，或把 devecocli 放进 PATH。',
+        details: { attempted: cli.source },
+      }, 5);
+    }
+    throw new Error(`Failed to execute devecocli create: ${result.error.message}`);
+  }
+  if (result.status !== 0) {
+    const detail = [result.stderr, result.stdout].filter(Boolean).join('\n').trim();
+    throw new Error(
+      `devecocli create failed (code=${result.status ?? 'unknown'}): ${detail || 'No output'}`
+    );
+  }
+  return cli.source;
+}
+
+function replaceInFile(filePath, pairs) {
+  const original = fs.readFileSync(filePath, 'utf-8');
+  let next = original;
+  for (const [from, to] of pairs) {
+    next = next.replaceAll(from, to);
+  }
+  if (next !== original) {
+    fs.writeFileSync(filePath, next, 'utf-8');
+  }
+}
+
+function applyCompatibilityReplacements(targetRoot, args) {
   replaceInFile(path.join(targetRoot, 'entry/src/main/resources/base/element/string.json'), [
     ['"value": "label"', `"value": "${args.appName}"`],
   ]);
-  replaceInFile(path.join(targetRoot, 'AppScope/app.json5'), [
-    ['com.example.myapplication', args.bundleName],
-  ]);
-  updateApiLevel(targetRoot, resolved.sdkVersion, resolved.modelVersion);
+}
+
+function verifyFiles(targetRoot) {
+  return REQUIRED_FILES.filter((relativePath) => !fs.existsSync(path.join(targetRoot, relativePath)));
 }
 
 function verifyTemplate(targetRoot) {
@@ -186,14 +204,14 @@ function verifyTemplate(targetRoot) {
   if (missingFiles.length > 0) {
     emitError({
       code: 'TEMPLATE_COPY_INCOMPLETE',
-      message: `Template copy incomplete. Missing files: ${missingFiles.join(', ')}`,
-      hint: '请确认 skill 模板资源完整，清理目标目录后重新创建。',
+      message: `Generated project is incomplete. Missing files: ${missingFiles.join(', ')}`,
+      hint: '请确认 DevEco CLI 与 SDK 安装完整，清理目标目录后重新创建。',
       details: { missingFiles, targetRoot },
     });
   }
 }
 
-function outputResult(targetRoot, args, resolved) {
+function outputResult(targetRoot, args, resolved, cliSource) {
   console.log(JSON.stringify({
     projectRoot: targetRoot,
     appName: args.appName,
@@ -204,6 +222,7 @@ function outputResult(targetRoot, args, resolved) {
     source: resolved.source,
     detectedFrom: resolved.detectedFrom,
     devecoHome: resolved.devecoHome,
+    cliSource,
     verified: true,
   }, null, 2));
 }
@@ -213,9 +232,10 @@ async function main() {
   validateAppName(args.appName);
   const resolved = await resolve(args);
   const targetRoot = setupProject(args);
-  applyReplacements(targetRoot, args, resolved);
+  const cliSource = createProjectWithDevecoCli(targetRoot, args, resolved);
+  applyCompatibilityReplacements(targetRoot, args);
   verifyTemplate(targetRoot);
-  outputResult(targetRoot, args, resolved);
+  outputResult(targetRoot, args, resolved, cliSource);
 }
 
 try {

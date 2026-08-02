@@ -1,5 +1,6 @@
 import path from 'node:path';
 import fs from 'node:fs/promises';
+import { pathToFileURL } from 'node:url';
 
 const MIN_API_LEVEL = 17;
 
@@ -210,4 +211,28 @@ export function resolveApiLevel(metadata, userApiLevel) {
 export async function detectApiLevel() {
   const metadata = await loadSdkMetadata();
   return resolveApiLevel(metadata);
+}
+
+/*
+ * LOCAL PATCH: upstream ships this file as a library only, but the pack's script
+ * registry advertises `detect_sdk` as a runnable script. With no entry point it
+ * exited 0 with empty stdout, which is indistinguishable from success. Running
+ * it directly now prints the resolved SDK metadata as JSON; importing it is
+ * unchanged, so copy-template.mjs keeps using the exports above.
+ */
+async function main() {
+  const resolved = await detectApiLevel();
+  process.stdout.write(`${JSON.stringify(resolved, null, 2)}\n`);
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  try {
+    await main();
+  } catch (error) {
+    const payload = error instanceof SkillError
+      ? error.payload
+      : { code: 'SCRIPT_ERROR', message: error instanceof Error ? error.message : String(error) };
+    process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
+    process.exitCode = 1;
+  }
 }

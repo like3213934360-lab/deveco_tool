@@ -19,6 +19,11 @@ const CRASH_SIGNAL_RE = /(jscrash|uncaught|exception|fatal|abort|crash|error)/i;
 const STRONG_CRASH_SIGNAL_RE =
   /(jscrash|uncaught|fatal|abort|crash|TypeError|ReferenceError|RangeError|SyntaxError|BusinessError|ParameterError|ResourceError|SystemError|EvalError|URIError)/i;
 const FILE_RE = /([A-Za-z0-9_./\\-]+\.(ets|ts|js)(?::\d+:\d+)?)/i;
+// LOCAL PATCH: matches an explicit "Error message: <text>" line and captures the
+// payload only. CRASH_SIGNAL_RE contains the bare word "error", so a header line
+// such as "Error name:TypeError" scored as a crash signal and was returned whole
+// as the error message, hiding the real one printed two lines below it.
+const ERROR_MESSAGE_LINE_RE = /\berror\s*(?:message|msg)\s*[:=]\s*(.+)$/i;
 
 function trim(input) {
   return input.trim();
@@ -207,7 +212,41 @@ function findCrashSignal(lines, start, end, step) {
   return '';
 }
 
+/**
+ * Find an explicit "Error message: <text>" line and return only its payload.
+ *
+ * @param {string[]} lines Log lines.
+ * @param {number} start Inclusive lower bound, clamped to 0.
+ * @param {number} end Exclusive upper bound, clamped to the line count.
+ * @returns {string} The message payload, or '' when no such line exists.
+ */
+function findExplicitErrorMessage(lines, start, end) {
+  for (let index = Math.min(end, lines.length) - 1; index >= Math.max(0, start); index -= 1) {
+    const match = ERROR_MESSAGE_LINE_RE.exec(lines[index]);
+    if (match && match[1].trim()) {
+      return match[1].trim();
+    }
+  }
+
+  return '';
+}
+
 function detectErrorMessage(lines, anchor) {
+  // Prefer the declared message over whatever crash-ish line sits nearest the
+  // anchor. Look around the anchor first so a hilog snapshot holding several
+  // crashes reports the one the anchor picked, then widen to the whole log.
+  if (anchor >= 0) {
+    const nearby = findExplicitErrorMessage(lines, anchor - 40, anchor + 40);
+    if (nearby) {
+      return nearby;
+    }
+  }
+
+  const anywhere = findExplicitErrorMessage(lines, 0, lines.length);
+  if (anywhere) {
+    return anywhere;
+  }
+
   if (anchor >= 0) {
     const forwardMatch = findCrashSignal(lines, anchor, Math.min(lines.length, anchor + 6), 1);
     if (forwardMatch) {
@@ -228,7 +267,10 @@ function detectErrorMessage(lines, anchor) {
     }
   }
 
-  return lines[lines.length - 1] || '(not found)';
+  // LOCAL PATCH: upstream returned the last log line here, which put an
+  // unrelated line (in practice a wifi status log) into error_message whenever
+  // the snapshot held no crash at all.
+  return '(not found)';
 }
 
 function detectTopStack(lines, anchor) {

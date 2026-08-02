@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { spawn } from "node:child_process";
+import { readModuleEntries } from "./build-profile.mjs";
 import { REPO_ROOT, resolveDevecoHome } from "./config.mjs";
 import { getProjectPath } from "./project-context.mjs";
 
@@ -20,6 +21,125 @@ function projectRoot(explicit) {
     throw error;
   }
   return absolute;
+}
+
+const SKIP_DIRECTORIES = new Set(["node_modules", "oh_modules", "build", "hvigor"]);
+const MAX_WALK_DEPTH = 12;
+
+function isDirectory(candidate) {
+  try {
+    return fs.statSync(candidate).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+function readDirectory(directory) {
+  try {
+    return fs.readdirSync(directory, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+}
+
+function skippable(entry) {
+  return entry.name.startsWith(".") || SKIP_DIRECTORIES.has(entry.name);
+}
+
+/**
+ * Locate module source roots without a build profile: `<module>/src/main/ets`
+ * at the project root and one level below it, plus a single-module layout.
+ *
+ * @param {string} projectRoot Absolute project root.
+ * @returns {string[]} Existing source-root directories.
+ */
+function fallbackSourceRoots(projectRoot) {
+  const roots = [];
+  const single = path.join(projectRoot, "src", "main", "ets");
+  if (isDirectory(single)) roots.push(single);
+  for (const first of readDirectory(projectRoot)) {
+    if (!first.isDirectory() || skippable(first)) continue;
+    const firstPath = path.join(projectRoot, first.name);
+    const firstRoot = path.join(firstPath, "src", "main", "ets");
+    if (isDirectory(firstRoot)) {
+      roots.push(firstRoot);
+      continue;
+    }
+    for (const second of readDirectory(firstPath)) {
+      if (!second.isDirectory() || skippable(second)) continue;
+      const secondRoot = path.join(firstPath, second.name, "src", "main", "ets");
+      if (isDirectory(secondRoot)) roots.push(secondRoot);
+    }
+  }
+  return roots;
+}
+
+function walkEtsFiles(directory, results, depth = 0) {
+  if (depth > MAX_WALK_DEPTH) return results;
+  for (const entry of readDirectory(directory)) {
+    if (entry.isDirectory()) {
+      if (skippable(entry)) continue;
+      walkEtsFiles(path.join(directory, entry.name), results, depth + 1);
+    } else if (entry.name.endsWith(".ets") && !entry.name.endsWith(".d.ets")) {
+      results.push(path.join(directory, entry.name));
+    }
+  }
+  return results;
+}
+
+/**
+ * Discover every checkable `.ets` file in a HarmonyOS project.
+ *
+ * The upstream checker only ever looked at `entry/src/main/ets`, so multi-module
+ * projects reported zero files and the caller could not tell that apart from a
+ * clean result. Source roots come from `build-profile.json5` when present and
+ * from a bounded directory walk otherwise.
+ *
+ * @param {string} projectRoot Absolute project root.
+ * @returns {{roots: string[], files: string[]}} Source roots and the files under them.
+ */
+export function discoverProjectEtsFiles(projectRoot) {
+  const roots = [];
+  const moduleDirectories = [];
+  const modules = readModuleEntries(projectRoot);
+  if (modules) {
+    for (const module of modules) {
+      const srcPath = typeof module?.srcPath === "string" ? module.srcPath : null;
+      if (!srcPath) continue;
+      const moduleDirectory = path.resolve(projectRoot, srcPath);
+      const candidate = path.join(moduleDirectory, "src", "main", "ets");
+      if (!isDirectory(candidate)) continue;
+      roots.push(candidate);
+      moduleDirectories.push(moduleDirectory);
+    }
+  }
+  if (!roots.length) {
+    for (const root of fallbackSourceRoots(projectRoot)) {
+      roots.push(root);
+      moduleDirectories.push(path.resolve(root, "..", "..", ".."));
+    }
+  }
+
+  const seen = new Set();
+  const files = [];
+  const add = (file) => {
+    if (seen.has(file)) return;
+    seen.add(file);
+    files.push(file);
+  };
+  for (const root of roots) {
+    for (const file of walkEtsFiles(root, [])) add(file);
+  }
+  // Module barrels (Index.ets, BuildProfile.ets) live at the module root rather
+  // than under src/main/ets, but they are compiled source and can carry errors.
+  for (const moduleDirectory of moduleDirectories) {
+    for (const entry of readDirectory(moduleDirectory)) {
+      if (!entry.isFile()) continue;
+      if (!entry.name.endsWith(".ets") || entry.name.endsWith(".d.ets")) continue;
+      add(path.join(moduleDirectory, entry.name));
+    }
+  }
+  return { roots, files };
 }
 
 function runNode(argv, cwd, timeoutMs, env) {
@@ -59,7 +179,7 @@ function runNode(argv, cwd, timeoutMs, env) {
   });
 }
 
-export async function runArktsCheck({ files = [], project_path: explicitProject, timeoutMs = 180000 } = {}) {
+export async function runArktsCheck({ files = [], project_path: explicitProject, timeoutMs } = {}) {
   if (!fs.existsSync(CHECKER)) {
     const error = new Error(`ArkTS checker is missing: ${CHECKER}`);
     error.code = "ARKTS_CHECKER_NOT_FOUND";
@@ -91,9 +211,36 @@ export async function runArktsCheck({ files = [], project_path: explicitProject,
     }
     return normalized;
   });
-  const argv = [CHECKER, "--project", project];
-  if (normalizedFiles.length) argv.push("--files", ...normalizedFiles);
-  const boundedTimeout = Math.min(Math.max(Number(timeoutMs) || 180000, 1000), 600000);
+  // With no explicit files this is a whole-project scan. Resolve the file list
+  // here rather than letting the checker guess: it only knows the single-module
+  // `entry/` layout and silently reports success when it finds nothing.
+  let scan = null;
+  let targets = normalizedFiles;
+  if (!targets.length) {
+    const discovered = discoverProjectEtsFiles(project);
+    if (!discovered.files.length) {
+      const error = new Error(
+        `No .ets source files found under ${project} (${discovered.roots.length} module source root(s) resolved). `
+        + "Pass explicit files if this project uses a non-standard layout.",
+      );
+      error.code = "ARKTS_NO_FILES_DISCOVERED";
+      throw error;
+    }
+    scan = {
+      mode: "project",
+      sourceRoots: discovered.roots.map((root) => path.relative(project, root)),
+      fileCount: discovered.files.length,
+    };
+    targets = discovered.files;
+  }
+
+  const argv = [CHECKER, "--project", project, "--files", ...targets];
+  const requested = Number(timeoutMs);
+  const fallbackTimeout = scan ? 600000 : 180000;
+  const boundedTimeout = Math.min(
+    Math.max(Number.isFinite(requested) && requested > 0 ? requested : fallbackTimeout, 1000),
+    600000,
+  );
   const home = resolveDevecoHome().path;
   const env = { ...process.env };
   if (home) env.DEVECO_HOME = home;
@@ -112,6 +259,8 @@ export async function runArktsCheck({ files = [], project_path: explicitProject,
     ...parsed,
     projectPath: project,
     files: normalizedFiles,
+    checkedFileCount: targets.length,
+    ...(scan ? { scan } : {}),
     exitCode: result.exitCode,
     signal: result.signal,
     stderr: result.stderr,

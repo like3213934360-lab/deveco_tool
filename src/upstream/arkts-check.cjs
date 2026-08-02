@@ -322,9 +322,20 @@ function main() {
     files = collectEtsFiles(args.project);
   }
 
+  // LOCAL PATCH: upstream reported `success: true` here, so "found nothing to
+  // check" was indistinguishable from "checked everything and it is clean".
+  // collectEtsFiles only knows the single-module `entry/` layout, so every
+  // multi-module project took this branch and got a false clean bill of health.
+  // src/arkts-check.mjs now resolves the file list and always passes --files;
+  // this branch stays as a loud second-line guard.
   if (files.length === 0) {
-    process.stdout.write(JSON.stringify({ success: true, errors: [], summary: { errorCount: 0, warnCount: 0 } }));
-    process.exit(0);
+    process.stdout.write(JSON.stringify({
+      success: false,
+      error: `No .ets files to check under ${args.project}. Pass --files explicitly for non-standard project layouts.`,
+      errors: [],
+      summary: { errorCount: 0, warnCount: 0 },
+    }));
+    process.exit(1);
   }
 
   const fileMap = {};
@@ -344,6 +355,7 @@ function main() {
   }
 
   const captured = [];
+  let internalError = null;
   const origLog = console.log;
   const origError = console.error;
   const origWarn = console.warn;
@@ -372,7 +384,22 @@ function main() {
 
     process.env.compileMode = 'moduleJson';
 
+    // LOCAL PATCH: the SDK's WhiteListValidator reads
+    // `projectConfig.globalModulePaths` (api_validate_node.js), but main.js only
+    // ever maintains its own module-level `globalModulePaths` and never copies it
+    // onto projectConfig. Left undefined it throws
+    // "Cannot read properties of undefined (reading 'some')" the moment a file
+    // trips the @since suppressor, which used to surface as a clean result.
+    // Mirror main.js: <sdk>/ets/{api,arkts,kits} plus the HMS equivalents.
+    const etsRoots = [path.resolve(etsLoaderPath, '..', '..')];
+    const hmsEtsRoot = path.resolve(devecoHome, 'sdk', 'default', 'hms', 'ets');
+    if (fs.existsSync(hmsEtsRoot)) etsRoots.push(hmsEtsRoot);
+    const globalModulePaths = etsRoots
+      .flatMap(root => ['api', 'arkts', 'kits'].map(name => path.join(root, name)))
+      .filter(candidate => fs.existsSync(candidate));
+
     const projectConfig = {
+      globalModulePaths,
       projectPath: args.project,
       projectRootPath: args.project,
       modulePath: args.project,
@@ -404,6 +431,11 @@ function main() {
 
     etsChecker.etsStandaloneChecker(fileMap, logger, projectConfig);
   } catch (e) {
+    // LOCAL PATCH: upstream only pushed the message into `captured`, where the
+    // diagnostic parser drops it because it does not look like a location line.
+    // A crashing checker therefore reported `success: true, errorCount: 0`.
+    // Keep the captured line, but also record it so the result can say so.
+    internalError = e && e.stack ? e.stack : String((e && e.message) || e);
     captured.push(`Internal error: ${e.message}`);
   } finally {
     console.log = origLog;
@@ -437,6 +469,17 @@ function main() {
     }
   }
 
+  // LOCAL PATCH: keep only diagnostics about the files we were asked to check.
+  // The checker also reports on declaration files it pulls in transitively, so a
+  // whole-project scan surfaced parse errors inside the SDK's own
+  // ets/arkts/@arkts.lang.d.ets and failed a project whose sources are clean.
+  // Filtering by the requested set is safe for explicitly listed files too,
+  // including files outside the project root.
+  const requestedFiles = new Set(files.map(f => path.resolve(f)));
+  const inScope = diagnostics.filter(d => requestedFiles.has(path.resolve(args.project, d.file)));
+  diagnostics.length = 0;
+  diagnostics.push(...inScope);
+
   // A-class project-level checks
   const extraDiags = [
     ...validateSystemResources(files, devecoHome, args.project),
@@ -455,14 +498,21 @@ function main() {
   const errorCount = filtered.filter(d => d.severity === 'error').length;
   const warnCount = filtered.filter(d => d.severity === 'warning').length;
 
+  // LOCAL PATCH: a checker crash must never read as a clean result.
   const result = {
-    success: errorCount === 0,
+    success: errorCount === 0 && !internalError,
     errors: filtered,
     summary: { errorCount, warnCount },
+    ...(internalError ? { internalError } : {}),
   };
 
-  process.stdout.write(JSON.stringify(result, null, 2));
-  process.exit(errorCount > 0 ? 1 : 0);
+  // LOCAL PATCH: stdout is a pipe when this runs under the MCP adapter, so
+  // writes are asynchronous. Upstream called process.exit() on the next line,
+  // which truncated any result larger than the 64 KiB pipe buffer and made the
+  // caller see malformed JSON. Exit only once the payload has been flushed.
+  process.stdout.write(JSON.stringify(result, null, 2), () => {
+    process.exit(errorCount > 0 || internalError ? 1 : 0);
+  });
 }
 
 // Exported for unit testing the whitelist logic without a DevEco SDK.

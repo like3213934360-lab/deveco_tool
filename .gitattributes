@@ -1,0 +1,6 @@
+# Upstream skill content is carried verbatim and provenance/SOURCES.md claims it is
+# byte-for-byte identical to its source. With core.autocrlf=input git would silently
+# rewrite CRLF files on staging and quietly break that claim, so line-ending
+# normalisation is off for everything under skills/. Files this repo authors itself are
+# already LF, so nothing changes for them.
+skills/** -text

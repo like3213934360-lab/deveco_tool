@@ -1,0 +1,168 @@
+{
+  "layoutInference": {
+    "tolerance": {
+      "position": 5,
+      "positionPercent": 0.02,
+      "size": 10,
+      "sizePercent": 0.05
+    },
+    "padding": {
+      "default": 16,
+      "horizontal": 16,
+      "vertical": 16,
+      "safeArea": {
+        "top": 24,
+        "bottom": 24,
+        "left": 16,
+        "right": 16
+      }
+    },
+    "alignment": {
+      "horizontal": ["start", "center", "end", "space-between", "space-evenly"],
+      "vertical": ["top", "center", "bottom", "space-between"]
+    },
+    "grid": {
+      "minColumns": 2,
+      "minRows": 2,
+      "maxColumns": 6,
+      "maxRows": 10,
+      "spacingTolerance": 0.1
+    },
+    "flex": {
+      "direction": ["row", "column", "row-reverse", "column-reverse"],
+      "wrap": ["no-wrap", "wrap", "wrap-reverse"],
+      "justifyContent": ["flex-start", "center", "flex-end", "space-between", "space-around", "space-evenly"],
+      "alignItems": ["stretch", "flex-start", "center", "flex-end", "baseline"]
+    }
+  },
+  "responsive": {
+    "breakpoints": {
+      "xs": 320,
+      "sm": 375,
+      "md": 414,
+      "lg": 768,
+      "xl": 1024,
+      "xxl": 1280
+    },
+    "strategies": {
+      "xs": {
+        "direction": "column",
+        "columns": 1,
+        "gutter": 8,
+        "margin": 16
+      },
+      "sm": {
+        "direction": "column",
+        "columns": 1,
+        "gutter": 12,
+        "margin": 16
+      },
+      "md": {
+        "direction": "row",
+        "columns": 2,
+        "gutter": 16,
+        "margin": 24
+      },
+      "lg": {
+        "direction": "row",
+        "columns": 3,
+        "gutter": 20,
+        "margin": 32
+      },
+      "xl": {
+        "direction": "row",
+        "columns": 4,
+        "gutter": 24,
+        "margin": 40
+      }
+    },
+    "components": {
+      "Button": {
+        "minWidth": {
+          "xs": 120,
+          "sm": 140,
+          "md": 160,
+          "lg": 180,
+          "xl": 200
+        },
+        "height": {
+          "xs": 40,
+          "sm": 44,
+          "md": 48,
+          "lg": 52,
+          "xl": 56
+        }
+      },
+      "Card": {
+        "width": {
+          "xs": "100%",
+          "sm": "100%",
+          "md": "48%",
+          "lg": "32%",
+          "xl": "24%"
+        },
+        "margin": {
+          "xs": 8,
+          "sm": 12,
+          "md": 16,
+          "lg": 20,
+          "xl": 24
+        }
+      },
+      "Text": {
+        "fontSize": {
+          "xs": 14,
+          "sm": 16,
+          "md": 18,
+          "lg": 20,
+          "xl": 22
+        },
+        "lineHeight": {
+          "xs": 20,
+          "sm": 24,
+          "md": 28,
+          "lg": 32,
+          "xl": 36
+        }
+      }
+    }
+  },
+  "codeGeneration": {
+    "framework": "arkui",
+    "language": "arkts",
+    "style": {
+      "useCss": false,
+      "useInlineStyle": true,
+      "useResource": true
+    },
+    "naming": {
+      "component": "PascalCase",
+      "variable": "camelCase",
+      "constant": "UPPER_SNAKE_CASE",
+      "file": "kebab-case"
+    },
+    "formatting": {
+      "indentSize": 2,
+      "useSemicolons": true,
+      "quoteStyle": "single",
+      "trailingComma": "es5"
+    },
+    "validation": {
+      "enableCodelinter": true,
+      "enableCompilationCheck": true,
+      "enableLayoutPreview": false
+    }
+  },
+  "output": {
+    "formats": ["ets", "json", "md"],
+    "include": {
+      "layoutCode": true,
+      "layoutStrategy": true,
+      "breakpointConfig": true,
+      "warnings": true,
+      "usageExample": true
+    },
+    "directory": "./generated-layouts",
+    "namingPattern": "${timestamp}-${layoutType}-${componentCount}"
+  }
+}

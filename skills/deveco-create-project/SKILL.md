@@ -5,7 +5,7 @@ description: Load this skill when creating, initializing, or scaffolding an ArkT
 
 # deveco-create-project
 
-Use the skill's private script to create an ArkTS project, instead of relying on the model to copy template files one by one.
+Use the skill's private script to create an ArkTS project, instead of relying on the model to write project files one by one.
 
 ## Required Parameters
 
@@ -50,8 +50,8 @@ When the script exits with a non-zero code and emits one of the following error 
 | `SDK_PLATFORM_VERSION_MISSING` | `data.platformVersion` missing | Do NOT invent a platform version |
 | `API_LEVEL_OUT_OF_RANGE` | User `--api-level` outside `17..defaultApiVersion` | Do NOT silently clamp or substitute |
 | `API_CONFIG_MISSING` | No template mapping for the requested API level | Do NOT fall back to a different API level without explicit user consent |
-| `TEMPLATE_DIR_MISSING` | Template directory not found | Do NOT attempt to locate template files elsewhere or create them from scratch |
-| `TEMPLATE_COPY_INCOMPLETE` | Template copy missing required files | Do NOT attempt to manually create the missing files |
+| `DEVECO_CLI_NOT_FOUND` | DevEco CLI could not be located | Do NOT hand-write a project skeleton. Report the hint and stop |
+| `TEMPLATE_COPY_INCOMPLETE` | Generated project is missing required files | Do NOT attempt to manually create the missing files |
 
 In all cases: **stop, report the JSON error payload verbatim, and let the user fix their environment before retrying.** Do not search the filesystem for SDK files, do not examine the SDK directory structure or scan subdirectories, do not copy/create `sdk-pkg.json`, and do not modify anything under `DEVECO_HOME/sdk/`.
 
@@ -61,7 +61,7 @@ The script's stdout JSON (`apiLevel`, `sdkVersion`, `source`, `detectedFrom`) is
 
 If the current session is already executing an approved Plan Mode plan or an existing plan file is referenced, do not create another plan, do not call `plan_enter` or `plan_write`, and do not ask for plan approval again. Treat the existing plan as the source of truth.
 
-If there is no existing approved plan and the user asks to create a new project with a complex app requirement, make a brief requirement checklist before copying or editing files.
+If there is no existing approved plan and the user asks to create a new project with a complex app requirement, make a brief requirement checklist before creating or editing files.
 
 The checklist must list:
 - pages to implement
@@ -75,7 +75,7 @@ Do not expand this skill into ArkUI design guidance; load `arkts-grammar-standar
 
 ## Execution Steps
 
-> `copy-template.mjs` reads the sibling skill directory `deveco-create-project/application/` as the template source by default.
+> `copy-template.mjs` generates and validates the project by invoking the local DevEco CLI's `create` subcommand; this skill does not carry or copy its own application template.
 > This script runs with Node.js. If `node` is not available in the environment, stop immediately and explain that to the user.
 > Default skills are extracted to a local user skill directory before execution. Keep all scripts in this skill self-contained and do not import repo-only source files.
 
@@ -91,8 +91,8 @@ If `apiLevel` is not explicitly provided by the user, omit `--api-level` and let
 
 Execution requirements:
 
-- Do not manually copy template files one by one.
-- Let the script handle recursive copying, binary asset copying, placeholder replacement, and basic validation.
+- Do not create project files one by one.
+- Let the script handle project generation, the required compatibility adjustments, and validation.
 - The script is responsible for SDK detection. Do not decide the SDK version in the prompt by guesswork.
 - If the script exits with a non-zero code, report the JSON error payload (`code`, `message`, `hint`) to the user and stop.
 
@@ -106,7 +106,7 @@ If the file is missing, treat the creation as failed and do not proceed to later
 
 ### Step 3: Session Context (Automatic)
 
-After `bash(copy-template.mjs)` succeeds (exit code 0), the session working directory is **automatically** set to the generated project root (`{projectPath}/{appName}`). You do **not** need to call `switch_cwd` — proceed directly to reading template files and writing business code.
+After `bash(copy-template.mjs)` succeeds (exit code 0), the session working directory is **automatically** set to the generated project root (`{projectPath}/{appName}`). You do **not** need to call `switch_cwd` — proceed directly to reading generated project files and writing business code.
 
 If the auto-switch confirmation does not appear in the bash output, or if you change to a different project manually later, use `switch_cwd` as a fallback.
 
@@ -116,9 +116,9 @@ If the user's request includes app behavior, UI, pages, or business requirements
 
 Before implementing the feature:
 
-1. Read `AGENT.md` in the project root — it lists exactly which files to read and which to skip.
-2. Follow AGENT.md's guidance to read only the necessary files (typically `main_pages.json`, `Index.ets`, `EntryAbility.ets`).
-3. Do NOT glob/search the project tree blindly — AGENT.md already identifies what you need.
+1. Read `entry/src/main/resources/base/profile/main_pages.json` to identify the launch page list.
+2. Read the launch page file, usually `entry/src/main/ets/pages/Index.ets`, and `entry/src/main/ets/entryability/EntryAbility.ets`.
+3. Do NOT glob/search the project tree blindly — the three files above are all a fresh project needs.
 4. Modify the actual launch page or its navigation path so the requested feature is reachable from the first screen.
 
 > **CRITICAL: `EntryAbility.ets` and `main_pages.json` must stay in sync.**
@@ -144,6 +144,6 @@ Output:
 - The absolute project path
 - App name / bundle name / API Level
 - `source` of the selected API level: `user_input` / `sdk_pkg`
-- Whether the template integrity check passed
+- Whether the generated-project integrity check passed
 - Whether session context was set (auto-switched or manual)
 - Build/run/verification status when feature work was requested

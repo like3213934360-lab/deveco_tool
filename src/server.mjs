@@ -7,6 +7,8 @@ import {
 import { callCodeGenieTool, closeCodeGenie, getCodeGenieTools } from "./codegenie-client.mjs";
 import { runArktsCheck, arktsCheckStatus } from "./arkts-check.mjs";
 import { collectEnvironmentStatus } from "./config.mjs";
+import { buildProject, devecoCliStatus, startApp } from "./deveco-cli.mjs";
+import { validateDocument } from "./document-validate.mjs";
 import { hdcLog, hdcStatus } from "./hdc-log.mjs";
 import {
   findCallHierarchy,
@@ -22,18 +24,43 @@ import {
 import { authStatus, login, logout } from "./modules/auth.mjs";
 import { searchKnowledge } from "./modules/knowledge.mjs";
 import { getProjectContext, setProjectPath } from "./project-context.mjs";
-import { listScripts, runRegisteredScript } from "./script-registry.mjs";
+import { listScripts, pythonStatus, runRegisteredScript } from "./script-registry.mjs";
 
 const scriptIds = listScripts().map((script) => script.id);
 
-let codegenieTools = [];
-try {
-  codegenieTools = await getCodeGenieTools();
-} catch (error) {
-  console.error(`[deveco-tool] ${error.code}: ${error.message}`);
+// CodeGenie also ships these, but this gateway implements them itself; hide the
+// proxied copies so each name resolves once. build_project and start_app run
+// through the bundled DevEco CLI so that building and launching keep working
+// even when the CodeGenie child is unavailable.
+const LOCAL_OVERRIDE_TOOLS = ["init_project_path", "check_ets_files", "build_project", "start_app"];
+
+// The UI auto-verification chain is not part of this pack. verify_ui needs a
+// multimodal model that nothing here configures, and save_ui_screenshot /
+// get_ui_verification_log are keyed by a verify_ui run id, so without it they
+// can only ever answer "not found". They are hidden from the tool list and
+// rejected on call rather than proxied.
+const DISABLED_CODEGENIE_TOOLS = ["verify_ui", "save_ui_screenshot", "get_ui_verification_log"];
+
+// Resolving the CodeGenie child is deliberately not awaited during startup.
+// Its handshake intermittently never completes, and awaiting it here meant the
+// gateway never reached server.connect(), so the whole MCP silently failed to
+// answer `initialize` -- taking every local tool down with a child process that
+// only five tools need. Handlers await this instead, and a failed attempt is
+// forgotten so the next request can retry.
+let codegenieToolsPromise = null;
+
+function codegenieTools() {
+  if (!codegenieToolsPromise) {
+    codegenieToolsPromise = getCodeGenieTools().catch((error) => {
+      console.error(`[deveco-tool] ${error.code}: ${error.message}`);
+      codegenieToolsPromise = null;
+      return [];
+    });
+  }
+  return codegenieToolsPromise;
 }
 
-const tools = [
+const localTools = [
   {
     name: "deveco_script_catalog",
     description: "List the allowlisted DevEco skill scripts that can be executed through this unified MCP.",
@@ -134,6 +161,51 @@ const tools = [
     },
   },
   {
+    name: "build_project",
+    description: "Build a HarmonyOS project or specific modules through the bundled DevEco CLI. "
+      + "Omit modules to build the whole product. Set clean only when a full rebuild is explicitly wanted: "
+      + "it cleans and then builds, which discards incremental caches and makes the build much slower.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        modules: {
+          type: "array",
+          items: { type: "string" },
+          description: "Modules to build, as `module` or `module@target` (e.g. entry, app_platform@default).",
+        },
+        module: { type: "string", description: "Single module, kept for compatibility; merged into modules." },
+        product: { type: "string", description: "Product name from build-profile.json5; defaults to `default`." },
+        build_mode: { type: "string", description: "Build mode from buildModeSet (e.g. debug, release); defaults to debug." },
+        clean: { type: "boolean", description: "Clean build outputs first, then build." },
+        log_path: { type: "string", description: "Write the full build log here; the reply then keeps only the last 50 lines." },
+        enable_inspector_source_jump: {
+          type: "boolean",
+          description: "Accepted for compatibility only. The DevEco CLI has no equivalent, so this is reported as not applied rather than silently ignored.",
+        },
+        project_path: { type: "string", description: "Optional project root; otherwise the active project from switch_cwd." },
+        timeoutMs: { type: "integer", minimum: 1000, maximum: 3600000 },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "start_app",
+    description: "Deploy the already-built app to a connected device and launch it through the bundled DevEco CLI. "
+      + "Does not build. Resolves the device automatically when exactly one is connected.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        hvd: { type: "string", description: "Target device name or serial; resolved automatically when omitted." },
+        module: { type: "string", description: "Module to launch (e.g. entry, phone)." },
+        target: { type: "string", description: "Build target; combined with module as module@target." },
+        ability: { type: "string", description: "Ability to launch; read from module.json5 when omitted." },
+        project_path: { type: "string", description: "Optional project root; otherwise the active project from switch_cwd." },
+        timeoutMs: { type: "integer", minimum: 1000, maximum: 3600000 },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
     name: "hdc_log",
     description: "List connected HarmonyOS devices, collect filtered hilog lines, or clear the device log buffer.",
     inputSchema: {
@@ -150,7 +222,7 @@ const tools = [
   },
   {
     name: "find_references",
-    description: "Find all ArkTS/TypeScript references to the symbol at an absolute file position.",
+    description: "Find all ArkTS/TypeScript references to the symbol at an absolute file position. Project files mentioning the symbol are loaded into the language server first, so results cover the whole project rather than only files opened earlier this session.",
     inputSchema: {
       type: "object",
       properties: {
@@ -165,7 +237,7 @@ const tools = [
   },
   {
     name: "lsp",
-    description: "Run any official DevEco LSP operation: definition, references, hover, document/workspace symbols, implementation, or call hierarchy.",
+    description: "Run any official DevEco LSP operation: definition, references, hover, document/workspace symbols, implementation, or call hierarchy. Request line/character are 1-based, but the response is the raw LSP payload, so positions inside it are 0-based; the go_to_definition / find_references / get_hover / list_symbols / find_call_hierarchy wrappers normalise theirs to 1-based.",
     inputSchema: {
       type: "object",
       properties: {
@@ -222,7 +294,7 @@ const tools = [
   },
   {
     name: "find_call_hierarchy",
-    description: "Find incoming callers or outgoing callees for an ArkTS/TypeScript symbol.",
+    description: "Find incoming callers or outgoing callees for an ArkTS/TypeScript symbol. For direction=incoming, project files mentioning the symbol are loaded into the language server first so callers outside the current module are found.",
     inputSchema: {
       type: "object",
       properties: {
@@ -235,7 +307,23 @@ const tools = [
       additionalProperties: false,
     },
   },
-  ...codegenieTools.filter((tool) => !["init_project_path", "check_ets_files"].includes(tool.name)),
+  {
+    name: "document_validate",
+    description: "Check an SDD artifact (spec.md / plan.md / tasks.md) against the section structure its template mandates: missing required sections, duplicate headings, disallowed level-2 sections, and the level-2 ceiling. Reports; never blocks. Call it after writing the artifact.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        file: { type: "string", description: "Path to the artifact. Relative paths resolve against the active project." },
+        content: { type: "string", description: "Document text to validate instead of reading from disk. Wins over the file's contents when both are given." },
+        documentType: {
+          type: "string",
+          enum: ["spec", "design", "tasks"],
+          description: "Rule set to apply. Inferred from the basename (spec.md, plan.md, tasks.md) when omitted; plan.md maps to design.",
+        },
+      },
+      additionalProperties: false,
+    },
+  },
 ];
 
 function textResult(value, isError = false) {
@@ -245,12 +333,24 @@ function textResult(value, isError = false) {
   };
 }
 
+// Build and launch reports are long console transcripts; JSON-encoding them
+// would only make them harder to read.
+function plainResult(text, isError = false) {
+  return { isError, content: [{ type: "text", text }] };
+}
+
 const server = new Server(
   { name: "deveco-tool", version: "0.1.0" },
   { capabilities: { tools: {} } },
 );
 
-server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools }));
+server.setRequestHandler(ListToolsRequestSchema, async () => ({
+  tools: [
+    ...localTools,
+    ...(await codegenieTools()).filter((tool) => !LOCAL_OVERRIDE_TOOLS.includes(tool.name)
+      && !DISABLED_CODEGENIE_TOOLS.includes(tool.name)),
+  ],
+}));
 
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const name = request.params.name;
@@ -272,19 +372,22 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     if (name === "switch_cwd" || name === "init_project_path") {
       const project = setProjectPath(args.project_path);
       await resetLsp();
-      if (codegenieTools.some((tool) => tool.name === "init_project_path")) {
+      if ((await codegenieTools()).some((tool) => tool.name === "init_project_path")) {
         await callCodeGenieTool("init_project_path", { project_path: project.projectPath });
       }
       return textResult({ tool: name, ...project });
     }
 
     if (name === "deveco_doctor") {
+      const proxied = await codegenieTools();
       return textResult({
         environment: collectEnvironmentStatus(),
         project: getProjectContext(),
         scripts: listScripts(),
-        codegenie: { available: codegenieTools.length > 0, toolCount: codegenieTools.length },
+        python: pythonStatus(),
+        codegenie: { available: proxied.length > 0, toolCount: proxied.length },
         arktsChecker: arktsCheckStatus(),
+        devecoCli: devecoCliStatus(),
         lsp: lspStatus(),
         hdc: hdcStatus(),
         auth: authStatus(),
@@ -323,6 +426,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       return textResult(await runArktsCheck({ files: args.files }));
     }
 
+    if (name === "build_project") {
+      return plainResult(await buildProject(args));
+    }
+
+    if (name === "start_app") {
+      return plainResult(await startApp(args));
+    }
+
     if (name === "hdc_log") {
       return textResult(await hdcLog(args));
     }
@@ -351,7 +462,36 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       return textResult(await findCallHierarchy(args));
     }
 
-    if (codegenieTools.some((tool) => tool.name === name)) {
+    if (name === "document_validate") {
+      return textResult(validateDocument(args));
+    }
+
+    if (DISABLED_CODEGENIE_TOOLS.includes(name)) {
+      return textResult({
+        code: "TOOL_DISABLED",
+        message: `${name} is not available: this pack does not ship the UI auto-verification chain.`,
+        hint: "Use get_app_ui_tree and perform_ui_action to inspect and drive the UI directly.",
+      }, true);
+    }
+
+    // CodeGenie counts installed-but-stopped emulators as selectable targets and
+    // demands hvd even when exactly one device is actually online, while
+    // get_app_ui_tree picks that device on its own. Resolve it the same way here.
+    if (name === "perform_ui_action" && !args.hvd) {
+      const { devices } = await hdcLog({ action: "list_devices" });
+      if (devices.length === 0) {
+        return textResult({ code: "HDC_NO_DEVICE", message: "No connected HarmonyOS devices detected." }, true);
+      }
+      if (devices.length > 1) {
+        return textResult({
+          code: "HDC_DEVICE_REQUIRED",
+          message: `Multiple HarmonyOS devices are connected (${devices.join(", ")}); pass hvd.`,
+        }, true);
+      }
+      return await callCodeGenieTool(name, { ...args, hvd: devices[0] });
+    }
+
+    if ((await codegenieTools()).some((tool) => tool.name === name)) {
       return await callCodeGenieTool(name, args);
     }
 
@@ -367,6 +507,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
 const transport = new StdioServerTransport();
 await server.connect(transport);
+
+// Start the CodeGenie child now so the first tools/list usually finds it ready,
+// but only after `initialize` can already be served.
+codegenieTools();
 
 let shutdownPromise;
 

@@ -226,6 +226,112 @@ async function ensureOpen(current, filePath) {
   return { absolute, uri };
 }
 
+const PREOPEN_EXTENSIONS = new Set([".ets", ".ts"]);
+const PREOPEN_SKIP_DIRECTORIES = new Set(["node_modules", "oh_modules", "build", "hvigor", "dist"]);
+const PREOPEN_FILE_LIMIT = 400;
+const PREOPEN_MAX_DEPTH = 12;
+
+function collectSourceFiles(directory, results, depth = 0) {
+  if (depth > PREOPEN_MAX_DEPTH) return results;
+  let entries;
+  try {
+    entries = fs.readdirSync(directory, { withFileTypes: true });
+  } catch {
+    return results;
+  }
+  for (const entry of entries) {
+    if (entry.name.startsWith(".")) continue;
+    const full = path.join(directory, entry.name);
+    if (entry.isDirectory()) {
+      if (PREOPEN_SKIP_DIRECTORIES.has(entry.name)) continue;
+      collectSourceFiles(full, results, depth + 1);
+      continue;
+    }
+    if (!PREOPEN_EXTENSIONS.has(path.extname(entry.name).toLowerCase())) continue;
+    if (entry.name.endsWith(".d.ets") || entry.name.endsWith(".d.ts")) continue;
+    results.push(full);
+  }
+  return results;
+}
+
+/**
+ * Read the identifier sitting at a 1-based line/column.
+ *
+ * @param {string} absolutePath Absolute source path.
+ * @param {number} line 1-based line.
+ * @param {number} column 1-based column.
+ * @returns {string} The identifier, or '' when the position is not on one.
+ */
+function symbolNameAt(absolutePath, line, column) {
+  let text;
+  try {
+    text = fs.readFileSync(absolutePath, "utf8");
+  } catch {
+    return "";
+  }
+  const target = text.split(/\r?\n/)[Number(line) - 1];
+  if (typeof target !== "string" || !target.length) return "";
+  const isWord = (character) => /[A-Za-z0-9_$]/.test(character ?? "");
+  let start = Math.min(Math.max(Number(column) - 1, 0), target.length - 1);
+  if (!isWord(target[start])) return "";
+  let end = start;
+  while (start > 0 && isWord(target[start - 1])) start -= 1;
+  while (end + 1 < target.length && isWord(target[end + 1])) end += 1;
+  return target.slice(start, end + 1);
+}
+
+/**
+ * Open every project file that textually mentions the symbol under the cursor.
+ *
+ * The language server only answers from documents it has been told about, and
+ * nothing crawls the workspace, so a cold `find_references` used to return just
+ * the declaration while the real call sites stayed invisible.
+ *
+ * @param {object} current Active LSP state.
+ * @param {string} absolutePath File holding the cursor.
+ * @param {number} line 1-based line.
+ * @param {number} column 1-based column.
+ * @returns {Promise<{symbol: string, scanned: number, opened: number, truncated: boolean}>} Coverage report.
+ */
+async function preopenForSymbol(current, absolutePath, line, column) {
+  const symbol = symbolNameAt(absolutePath, line, column);
+  if (symbol.length < 2) return { symbol, scanned: 0, opened: 0, truncated: false };
+
+  const pattern = new RegExp(`\\b${symbol.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`);
+  const candidates = collectSourceFiles(current.projectPath, []);
+  let opened = 0;
+  let truncated = false;
+  for (const candidate of candidates) {
+    if (opened >= PREOPEN_FILE_LIMIT) {
+      truncated = true;
+      break;
+    }
+    if (current.documents.has(filePathToUri(candidate))) continue;
+    let text;
+    try {
+      text = fs.readFileSync(candidate, "utf8");
+    } catch {
+      continue;
+    }
+    if (!pattern.test(text)) continue;
+    const document = await ensureOpen(current, candidate);
+    // didOpen is a notification, so the server may still be parsing when the
+    // reference query arrives and would answer from a state that does not know
+    // this file yet. A cheap round-trip forces the parse to complete first.
+    await current.connection
+      .sendRequest("textDocument/documentSymbol", { textDocument: { uri: document.uri } })
+      .catch(() => {});
+    opened += 1;
+  }
+  return { symbol, scanned: candidates.length, opened, truncated };
+}
+
+function coverageNote({ scanned, opened, truncated }) {
+  if (!scanned) return "";
+  const limit = truncated ? `, stopped at the ${PREOPEN_FILE_LIMIT}-file preopen limit` : "";
+  return `\n(scanned ${scanned} project files, opened ${opened} new one(s) before querying${limit})`;
+}
+
 async function request(file, line, column, method, params = {}) {
   const current = await getState(file);
   const document = await ensureOpen(current, file);
@@ -255,10 +361,17 @@ function formatHoverContents(contents) {
 }
 
 export async function findReferences({ file, line, column, includeDeclaration = true }) {
-  const result = await request(file, line, column, "textDocument/references", {
+  const current = await getState(file);
+  const document = await ensureOpen(current, file);
+  const coverage = await preopenForSymbol(current, document.absolute, line, column);
+  const result = await current.connection.sendRequest("textDocument/references", {
+    textDocument: { uri: document.uri },
+    position: userPosition(line, column),
     context: { includeDeclaration: Boolean(includeDeclaration) },
   });
-  if (!result?.length) return `No references found for symbol at ${file}:${line}:${column}`;
+  if (!result?.length) {
+    return `No references found for symbol at ${file}:${line}:${column}${coverageNote(coverage)}`;
+  }
   const byFile = new Map();
   for (const location of result) {
     const item = locationParts(location);
@@ -272,7 +385,7 @@ export async function findReferences({ file, line, column, includeDeclaration = 
     for (const ref of references) lines.push(`  L${ref.line}:${ref.column}  ${ref.text}`);
     lines.push("");
   }
-  return lines.join("\n");
+  return `${lines.join("\n")}${coverageNote(coverage)}`;
 }
 
 export async function goToDefinition({ file, line, column }) {
@@ -317,16 +430,22 @@ export async function findCallHierarchy({ file, line, column, direction }) {
   }
   const current = await getState(file);
   const document = await ensureOpen(current, file);
+  // Callers can live anywhere; callees are reachable from this file already.
+  const coverage = direction === "incoming"
+    ? await preopenForSymbol(current, document.absolute, line, column)
+    : { symbol: "", scanned: 0, opened: 0, truncated: false };
   const prepared = await current.connection.sendRequest("textDocument/prepareCallHierarchy", {
     textDocument: { uri: document.uri },
     position: userPosition(line, column),
   });
-  if (!prepared?.length) return `No call hierarchy available for symbol at ${file}:${line}:${column}`;
+  if (!prepared?.length) {
+    return `No call hierarchy available for symbol at ${file}:${line}:${column}${coverageNote(coverage)}`;
+  }
   const item = prepared[0];
   const title = [`Call hierarchy for: ${item.name} (${direction})\n`];
   if (direction === "incoming") {
     const calls = await current.connection.sendRequest("callHierarchy/incomingCalls", { item });
-    if (!calls?.length) return `No incoming calls found for ${item.name}`;
+    if (!calls?.length) return `No incoming calls found for ${item.name}${coverageNote(coverage)}`;
     for (const call of calls) {
       const source = locationParts({ uri: call.from.uri, range: call.from.selectionRange });
       if (source) title.push(`  <- ${call.from.name}  ${source.file}:${source.line}:${source.column}`);
@@ -339,7 +458,7 @@ export async function findCallHierarchy({ file, line, column, direction }) {
       if (target) title.push(`  -> ${call.to.name}  ${target.file}:${target.line}:${target.column}`);
     }
   }
-  return title.join("\n");
+  return `${title.join("\n")}${coverageNote(coverage)}`;
 }
 
 /**

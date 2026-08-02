@@ -1,0 +1,249 @@
+{
+  "skill_name": "arkts-logic-completer",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "帮我用 ArkTS 写一个 Wi-Fi 设置页面，包含 Wi-Fi 总开关和下面的网络列表",
+      "expected_output": "包含 @State 控制开关状态、Toggle onChange 事件、开关联动显示/隐藏网络列表、List+ForEach 渲染网络数据、ListItem 点击事件",
+      "assertions": [
+        { "text": "声明了 @State 变量控制 Toggle 开关状态", "type": "contains_pattern" },
+        { "text": "Toggle 绑定了 onChange 事件并更新状态", "type": "contains_pattern" },
+        { "text": "开关状态联动控制网络列表的显示/隐藏", "type": "behavioral" },
+        { "text": "List 使用 ForEach 渲染数据而非静态写死", "type": "contains_pattern" },
+        { "text": "箭头函数参数有显式类型标注", "type": "arkts_compliance" },
+        { "text": "不包含对象展开运算符 { ...obj }", "type": "arkts_compliance" }
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "写一个 ArkTS 的登录页面，有用户名、密码输入框和登录按钮",
+      "expected_output": "包含 @State 绑定输入值、TextInput onChange 双向绑定、输入校验逻辑、Button onClick 带防重复点击和 loading 状态、表单校验通过才能提交",
+      "assertions": [
+        { "text": "TextInput 通过 @State 和 onChange 实现双向绑定", "type": "contains_pattern" },
+        { "text": "密码输入框使用 InputType.Password 或 type(InputType.Password)", "type": "contains_pattern" },
+        { "text": "Button 有 loading 状态防止重复提交", "type": "behavioral" },
+        { "text": "提交前有表单校验（用户名/密码非空或长度检查）", "type": "behavioral" },
+        { "text": "箭头函数参数有显式类型标注", "type": "arkts_compliance" },
+        { "text": "不包含对象展开运算符 { ...obj }", "type": "arkts_compliance" }
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "用 ArkTS 实现一个待办事项页面，支持勾选完成和批量删除",
+      "expected_output": "包含 @State 任务列表数组、Checkbox 选中状态管理、全选/反选联动、选中计数、批量删除按钮在有选中项时才显示",
+      "assertions": [
+        { "text": "任务数据用 @State 数组 + interface 定义", "type": "contains_pattern" },
+        { "text": "Checkbox onChange 更新对应项的选中状态", "type": "contains_pattern" },
+        { "text": "有全选功能且和子项双向联动", "type": "behavioral" },
+        { "text": "删除按钮根据选中项数量条件显示", "type": "behavioral" },
+        { "text": "删除操作从数组中移除已选项", "type": "behavioral" },
+        { "text": "不包含 get 访问器（应使用普通方法）", "type": "arkts_compliance" },
+        { "text": "不包含对象展开运算符 { ...obj }", "type": "arkts_compliance" }
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "用 ArkTS 写一个商品搜索页面，顶部有搜索框，下面有分类下拉筛选，再下面是商品结果列表",
+      "expected_output": "Search 组件绑定关键词状态 + 防抖搜索、Select 组件绑定 onSelect + 筛选联动、List 展示搜索结果、空状态兜底、组件之间状态联动",
+      "assertions": [
+        { "text": "使用 Search({ value: ... }) 组件绑定搜索关键词的 @State 变量，而不是回退到普通 TextInput", "type": "contains_pattern" },
+        { "text": "Search 组件配置了 onSubmit 或 onChange，并由搜索框事件直接触发搜索逻辑", "type": "contains_pattern" },
+        { "text": "搜索有防抖处理（setTimeout 或类似机制）", "type": "behavioral" },
+        { "text": "Select 组件设置了 selected/value 并绑定 onSelect 回调", "type": "contains_pattern" },
+        { "text": "Select 选中后触发列表数据过滤或重新请求", "type": "behavioral" },
+        { "text": "列表为空时有空状态占位（如'暂无商品'）", "type": "behavioral" },
+        { "text": "定义了商品数据的 interface", "type": "contains_pattern" },
+        { "text": "箭头函数参数有显式类型标注", "type": "arkts_compliance" }
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "用 ArkTS 写一个 App 首页，底部有 4 个 Tab（首页、发现、消息、我的），首页 Tab 里有一个图片轮播",
+      "expected_output": "Tabs 使用 BarPosition.End + BottomTabBarStyle、scrollable(false)、index 用 $$ 双向绑定，底部包含首页/发现/消息/我的 4 个页签，且首页 Tab 内有 Swiper 自动轮播 + 指示器联动",
+      "assertions": [
+        { "text": "Tabs 使用 barPosition: BarPosition.End 实现底部导航", "type": "contains_pattern" },
+        { "text": "TabContent 使用 BottomTabBarStyle 设置底部页签样式", "type": "contains_pattern" },
+        { "text": "Tabs 设置了 scrollable(false) 禁用手势滑动切页", "type": "contains_pattern" },
+        { "text": "Tab 索引使用 @State 声明并通过 $$ 或 onChange 管理", "type": "contains_pattern" },
+        { "text": "底部导航包含 4 个页签，标签结构为“首页 / 发现 / 消息 / 我的”", "type": "contains_pattern" },
+        { "text": "Swiper 轮播位于首页 Tab 的内容区域，而不是放在其他页签", "type": "behavioral" },
+        { "text": "Swiper 实现了自动轮播（autoPlay 或 Interval 配置）", "type": "behavioral" },
+        { "text": "箭头函数参数有显式类型标注", "type": "arkts_compliance" }
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "用 ArkTS 写一个文件管理页面，列表展示文件，长按文件弹出右键菜单（重命名、删除），点删除要有确认弹窗，删除成功后 Toast 提示",
+      "expected_output": "List + ForEach 渲染文件列表、ListItem 通过 bindContextMenu(..., ResponseType.LongPress) 绑定长按菜单、Menu+MenuItem 定义菜单项、AlertDialog 确认删除、promptAction.showToast 反馈",
+      "assertions": [
+        { "text": "文件列表使用 @State 数组 + ForEach 渲染", "type": "contains_pattern" },
+        { "text": "ListItem 使用 bindContextMenu(..., ResponseType.LongPress) 实现长按菜单，而不是仅使用 bindMenu 点击弹出", "type": "contains_pattern" },
+        { "text": "菜单中包含删除选项且有点击回调", "type": "behavioral" },
+        { "text": "删除操作前弹出确认弹窗（AlertDialog 或 CustomDialogController）", "type": "behavioral" },
+        { "text": "删除成功后使用 promptAction.showToast 或类似方式提示", "type": "behavioral" },
+        { "text": "定义了文件数据的 interface", "type": "contains_pattern" },
+        { "text": "不包含对象展开运算符 { ...obj }", "type": "arkts_compliance" }
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "用 ArkTS 写一个任务看板页面，每个任务有标题和状态（待处理/进行中/已完成），点击任务可以切换到下一个状态，顶部显示各状态的任务计数",
+      "expected_output": "任务数据用 interface + @State 数组、状态切换逻辑不使用对象展开而是逐字段赋值、计数用普通方法而非 getter、@State 不用联合字面量类型",
+      "assertions": [
+        { "text": "任务数据定义了 interface（含 id/title/status 等字段）", "type": "contains_pattern" },
+        { "text": "状态切换逻辑使用逐字段赋值而非 { ...task, status: newStatus }", "type": "arkts_compliance" },
+        { "text": "计数使用普通方法（如 getCount()）而非 get 访问器", "type": "arkts_compliance" },
+        { "text": "@State 变量类型使用 string 而非字符串联合字面量", "type": "arkts_compliance" },
+        { "text": "箭头函数参数有显式类型标注", "type": "arkts_compliance" },
+        { "text": "点击任务有 onClick 回调实现状态流转", "type": "behavioral" }
+      ]
+    },
+    {
+      "id": 8,
+      "prompt": "用 ArkTS 写一个网络请求展示页面，有一个按钮点击后发起请求，页面要展示四种状态：初始空闲、加载中（显示 loading）、请求成功（显示数据）、请求失败（显示错误信息和重试按钮）",
+      "expected_output": "@State status 用 string 类型而非联合字面量、loading/error/success/idle 四态 UI 条件渲染、Button 防重复点击、错误状态有重试入口",
+      "assertions": [
+        { "text": "状态变量使用 @State status: string 而非 'idle'|'loading' 联合类型", "type": "arkts_compliance" },
+        { "text": "UI 中根据 status 值条件渲染四种状态（if/else 或条件表达式）", "type": "behavioral" },
+        { "text": "加载中状态显示 loading 指示（LoadingProgress 或文字提示）", "type": "behavioral" },
+        { "text": "错误状态有重试按钮且点击可重新发起请求", "type": "behavioral" },
+        { "text": "请求按钮在 loading 状态下禁用或不可重复点击", "type": "behavioral" },
+        { "text": "箭头函数参数有显式类型标注", "type": "arkts_compliance" },
+        { "text": "不包含对象展开运算符 { ...obj }", "type": "arkts_compliance" }
+      ]
+    },
+    {
+      "id": 9,
+      "prompt": "用 ArkTS 写一个用户注册页面，包含：手机号输入、密码输入、确认密码输入、同意用户协议的勾选框、注册按钮。要求有完整的表单校验",
+      "expected_output": "每个 TextInput 绑定 @State + onChange、逐字段校验（手机号格式、密码长度、两次密码一致）、Checkbox 勾选联动按钮可用性、提交时全量校验 + loading + 结果反馈",
+      "assertions": [
+        { "text": "手机号/密码/确认密码各有独立的 @State 变量和 onChange 绑定", "type": "contains_pattern" },
+        { "text": "手机号有格式校验（正则或长度检查）", "type": "behavioral" },
+        { "text": "两次密码输入有一致性校验", "type": "behavioral" },
+        { "text": "Checkbox 用于用户协议勾选，且与按钮可用状态联动", "type": "behavioral" },
+        { "text": "注册按钮有 loading 状态防止重复提交", "type": "behavioral" },
+        { "text": "校验失败时显示错误提示信息", "type": "behavioral" },
+        { "text": "箭头函数参数有显式类型标注", "type": "arkts_compliance" },
+        { "text": "不包含 get 访问器（应使用普通方法）", "type": "arkts_compliance" }
+      ]
+    },
+    {
+      "id": 10,
+      "prompt": "用 ArkTS 写一个订单详情页，展示订单信息（订单号、商品列表、总价），底部有取消订单按钮，点击弹出确认弹窗，确认后发起取消请求，成功后显示 Toast 提示",
+      "expected_output": "页面数据用 interface + @State、Button 触发确认弹窗（AlertDialog 或 CustomDialog）、弹窗确认后执行异步操作、成功/失败都有反馈（promptAction.showToast）、完整的 Button → Dialog → Request → Toast 调用链",
+      "assertions": [
+        { "text": "订单数据定义了 interface 并用 @State 管理", "type": "contains_pattern" },
+        { "text": "商品列表使用 ForEach 渲染", "type": "contains_pattern" },
+        { "text": "取消按钮点击后弹出确认弹窗而非直接执行", "type": "behavioral" },
+        { "text": "弹窗确认后执行取消逻辑（含 loading 或异步处理）", "type": "behavioral" },
+        { "text": "操作完成后使用 promptAction.showToast 或类似方式反馈结果", "type": "behavioral" },
+        { "text": "箭头函数参数有显式类型标注", "type": "arkts_compliance" },
+        { "text": "不包含对象展开运算符 { ...obj }", "type": "arkts_compliance" }
+      ]
+    },
+    {
+      "id": 11,
+      "prompt": "我有一个文章详情页，现在用基础容器实现：顶部是 Row 容器拼出的自定义导航栏（返回按钮 + 标题'文章详情' + 分享按钮，Row 设了 shadow 和白色背景）；中间是 Scroll + Column 的文章正文；底部是 Row 容器拼出的操作栏（点赞主按钮 + 评论次按钮 + 收藏次按钮，同样有 shadow）。请把这个页面重构为使用 HDS 组件（@kit.UIDesignKit），要求：1) 顶部导航栏改用 HdsNavigation，通过 titleBar 配置 6.1 动态模糊（scrollEffectOpts + IMMERSIVE_GRADIENT_BLUR）以及 originalStyle / scrollEffectStyle 双样式；2) 底部操作栏改用 HdsActionBar，点赞作为 primaryButton（new ActionBarButton），评论和收藏放进 endButtons 数组（每个都是 new ActionBarButton）；样式通过 actionBarStyle: new ActionBarStyle({...}) 设置；3) 保留一个 USE_HDS_COMPONENTS 开关，通过 if/else 走两个 @Builder，便于 A/B 回退；4) 点赞状态用 @ComponentV2 + @Local 管理。注意：不要使用 systemMaterialEffect / hdsMaterial.* 系列 API，它们尚未对外开放。",
+      "expected_output": "从 '@kit.UIDesignKit' 同时导入 HdsNavigation、HdsActionBar、ActionBarButton、ActionBarStyle、ScrollEffectType（不要 import hdsMaterial）；保留 USE_HDS_COMPONENTS 常量和 @Builder 两分支（HdsPageBuilder / LegacyPageBuilder）；HdsNavigation 的 .titleBar 里配齐 scrollEffectOpts + originalStyle / scrollEffectStyle 双样式，不出现 systemMaterialEffect；HdsActionBar 的 primaryButton: new ActionBarButton({ baseIcon, altIcon, onClick }) 绑定点赞，endButtons: [new ActionBarButton({ baseIcon, onClick }), new ActionBarButton({ baseIcon, onClick })] 包含评论和收藏，actionBarStyle: new ActionBarStyle({...})；按钮图标字段用 baseIcon / altIcon（不是 icon）；顶/底栏不再用 Row + shadow 手写；@Local 用于 isLiked 状态；箭头函数有类型标注、无对象展开、无联合字面量 @State",
+      "assertions": [
+        { "text": "从 '@kit.UIDesignKit' 同时导入 HdsNavigation、HdsActionBar、ActionBarButton、ActionBarStyle", "type": "contains_pattern" },
+        { "text": "保留 USE_HDS_COMPONENTS 开关常量 + 通过 if/else 在 build() 或入口 @Builder 里走两份分支", "type": "contains_pattern" },
+        { "text": "顶部导航栏改用 HdsNavigation 且不再出现原 Row + shadow 的自定义顶栏结构", "type": "behavioral" },
+        { "text": "HdsNavigation.titleBar 里配置了 scrollEffectOpts 且 enableScrollEffect: true", "type": "contains_pattern" },
+        { "text": "scrollEffectType 使用 ScrollEffectType.IMMERSIVE_GRADIENT_BLUR（沉浸式渐变模糊）", "type": "contains_pattern" },
+        { "text": "titleBar.style 下同时配置 originalStyle（滚动前）和 scrollEffectStyle（滚动后）双样式", "type": "behavioral" },
+        { "text": "生成代码中不出现 systemMaterialEffect / hdsMaterial / MaterialType 等内部 API", "type": "behavioral" },
+        { "text": "底部操作栏改用 HdsActionBar 且不再出现原 Row + shadow 的自定义底栏结构", "type": "behavioral" },
+        { "text": "HdsActionBar 的 primaryButton 字段使用 new ActionBarButton({...}) 实例化（不是对象字面量）", "type": "contains_pattern" },
+        { "text": "HdsActionBar 使用 endButtons（或 startButtons）数组放评论和收藏按钮，每项都是 new ActionBarButton({...})", "type": "contains_pattern" },
+        { "text": "按钮的图标字段使用 baseIcon（以及可选的 altIcon），而不是 icon", "type": "behavioral" },
+        { "text": "HdsActionBar 的样式字段是 actionBarStyle（不是 style），且值为 new ActionBarStyle({...})", "type": "contains_pattern" },
+        { "text": "不出现 HdsActionBar 的 secondaryButtons 字段（该字段不存在于官方签名）", "type": "behavioral" },
+        { "text": "点赞状态用 @Local 而不是 @State（配合 @ComponentV2）", "type": "contains_pattern" },
+        { "text": "保留 LegacyPageBuilder 或类似原实现分支作为回退路径，未删除原代码", "type": "behavioral" },
+        { "text": "箭头函数参数有显式类型标注", "type": "arkts_compliance" },
+        { "text": "不包含对象展开运算符 { ...obj }", "type": "arkts_compliance" },
+        { "text": "@State / @Local 变量类型不使用联合字面量（如 'liked' | 'unliked'）", "type": "arkts_compliance" }
+      ]
+    },
+    {
+      "id": 12,
+      "prompt": "用 ArkTS 帮我写一个资讯 App 的页面骨架，包含三页：首页展示资讯列表（每条点击进入详情页），详情页展示标题+正文+返回按钮，设置页有'清除缓存'按钮。三页之间用 Navigation 路由栈管理，不要用 @ohos.router。首页在用户按系统返回键时要弹出 AlertDialog 二次确认'确定退出吗'，避免误退出应用。",
+      "expected_output": "顶层 @Entry 组件声明 pageStack: NavPathStack 并通过 @Provide('pageStack') 供后代消费；使用 Navigation(this.pageStack) { ... }（位置参数形式，不是对象字面量 { pageStack: ... }）作为路由容器；NavDestination 包裹 DetailPage 和 SettingsPage；列表点击使用 this.pageStack.pushPath({ name: 'detail', param: item }) 跳转；详情页 onBackPressed 返回 true 并 this.pageStack.pop()；首页 onBackPressed 弹出 AlertDialog 二次确认并 return true 拦截系统默认返回；不导入 '@ohos.router'",
+      "assertions": [
+        { "text": "使用 Navigation(this.pageStack) { ... } 形式（把 NavPathStack 作为位置参数传入），而不是 Navigation({ pageStack: ... }) 对象字面量形式", "type": "contains_pattern" },
+        { "text": "NavPathStack 实例通过 @Provide('pageStack') 共享给子页", "type": "contains_pattern" },
+        { "text": "子页使用 @Consume('pageStack') 拿到 NavPathStack 实例", "type": "contains_pattern" },
+        { "text": "详情页和设置页使用 NavDestination 组件作为容器", "type": "contains_pattern" },
+        { "text": "页面跳转使用 pushPath({ name: ..., param: ... }) 而不是手写 this.currentPage = 'detail' 这种伪路由", "type": "behavioral" },
+        { "text": "详情页通过 onBackPressed 返回 true 并调用 pageStack.pop() 处理返回", "type": "behavioral" },
+        { "text": "首页 onBackPressed 弹出 AlertDialog 二次确认，并 return true 拦截系统默认返回", "type": "behavioral" },
+        { "text": "不包含 import ... from '@ohos.router'（避免新旧路由混用）", "type": "behavioral" },
+        { "text": "不包含 router.pushUrl / router.back 等 V1 路由 API 调用", "type": "behavioral" },
+        { "text": "资讯列表使用 ForEach 渲染并定义了资讯项 interface", "type": "contains_pattern" },
+        { "text": "箭头函数参数有显式类型标注", "type": "arkts_compliance" },
+        { "text": "不包含对象展开运算符 { ...obj }", "type": "arkts_compliance" }
+      ]
+    },
+    {
+      "id": 13,
+      "prompt": "用 ArkTS 写一个资讯 Feed 页：进入页面先拉取第一页 20 条数据，支持下拉刷新（重新拉取第一页），支持滚动到底部自动加载下一页，每页 20 条。列表底部根据状态显示三种提示：加载中显示'加载中...'，还有更多不显示任何东西，没有更多显示'— 没有更多了 —'。注意下拉刷新时如果已经在加载下一页，不要重复并发请求。",
+      "expected_output": "定义资讯项 interface FeedItem；驱动 UI 的状态用 @State（isRefreshing / isLoadingMore / hasMore / items），业务指针 pageNum 和 pageSize 用普通 private 成员（不驱动 UI 所以不上 @State）；Refresh({ refreshing: $$this.isRefreshing }) 包裹 List；List.onReachEnd 触发 loadMore，守卫条件 this.hasMore && !this.isLoadingMore && !this.isRefreshing；onRefreshing 触发 reload 重置 pageNum 为 1；loadMore 让 pageNum += 1；异步方法 try/finally 复位 isRefreshing / isLoadingMore；列表末尾 if (isLoadingMore) 显示加载中，else if (!hasMore) 显示没有更多了",
+      "assertions": [
+        { "text": "Refresh 容器使用 refreshing: $$this.isRefreshing 双向绑定语法", "type": "contains_pattern" },
+        { "text": "Refresh 通过 .onRefreshing(...) 回调触发重新拉取第一页数据", "type": "contains_pattern" },
+        { "text": "List 使用 .onReachEnd(...) 触发加载更多", "type": "contains_pattern" },
+        { "text": "有独立的 isLoadingMore 状态守卫，防止滚动抖动时重复触发 loadMore", "type": "behavioral" },
+        { "text": "有 hasMore 状态，没有更多数据时不再触发 loadMore", "type": "behavioral" },
+        { "text": "pageNum 与 pageSize 分开管理：reload 重置 pageNum=1，loadMore 让 pageNum += 1", "type": "behavioral" },
+        { "text": "pageNum 和 pageSize 使用普通 private 成员字段（不驱动 UI 刷新，不应加 @State 装饰器）", "type": "behavioral" },
+        { "text": "异步方法使用 try/finally 保证 isRefreshing / isLoadingMore 最终复位", "type": "behavioral" },
+        { "text": "列表末尾根据 isLoadingMore / !hasMore 条件显示不同的兜底提示", "type": "behavioral" },
+        { "text": "下拉刷新时若 isLoadingMore 为真，不重复并发请求（或反之）", "type": "behavioral" },
+        { "text": "定义了资讯项的 interface", "type": "contains_pattern" },
+        { "text": "箭头函数参数有显式类型标注", "type": "arkts_compliance" },
+        { "text": "不包含对象展开运算符 { ...obj }", "type": "arkts_compliance" }
+      ]
+    },
+    {
+      "id": 14,
+      "prompt": "用 ArkTS 写一个用户注册页面，要包含用户名的实时查重功能：用户在用户名输入框输入后停顿约 500ms 再触发查询接口（防抖），查询期间在输入框下方显示'检查中...'，查询完成如果用户名已被占用要显示红字'用户名已被占用'，可用则显示绿字'用户名可用'。用户快速连续输入时，只有最后一次请求的结果能生效（防止老请求覆盖新结果）。提交按钮在'检查中'或'已占用'状态下要禁用。错误信息请用 interface 定义，不要用 Record。",
+      "expected_output": "interface FormErrors { username: string; ... }；enum AsyncStatus { Idle, Checking, Available, Taken, Failed }；debounceTimer 和 checkVersion 两个 private 字段；onChange 中清掉上次 timer + setTimeout 500ms 触发 checkUsername；checkUsername 里 this.checkVersion += 1; const my = this.checkVersion; 异步回调中只在 my === this.checkVersion 时写入状态；errors 更新通过整对象替换（不用对象展开）；提交按钮 disabled 由多个状态共同决定",
+      "assertions": [
+        { "text": "错误信息使用 interface FormErrors 定义（字段明确），不使用 Record<string, string>", "type": "contains_pattern" },
+        { "text": "异步校验使用 setTimeout 做防抖（通常 300-800ms）", "type": "behavioral" },
+        { "text": "存在 checkVersion 或类似版本号计数变量用于防并发写入", "type": "contains_pattern" },
+        { "text": "异步回调中通过 if (my === this.checkVersion) 之类的判断，仅最新一次请求结果写入状态", "type": "behavioral" },
+        { "text": "errors 对象通过整对象替换更新（避免 this.errors.xxx = 'xx' 直接改字段导致响应式失效）", "type": "behavioral" },
+        { "text": "校验中或已占用时提交按钮处于 disabled / .enabled(false) 状态", "type": "behavioral" },
+        { "text": "使用 enum 或 string 枚举异步校验的几种状态（如 Idle / Checking / Available / Taken / Failed）", "type": "contains_pattern" },
+        { "text": "不使用 Record<string, string> 作为 errors 的类型（反向断言）", "type": "behavioral" },
+        { "text": "不使用对象展开运算符 { ...this.errors, xxx: '...' } 更新 errors（ArkTS 禁止 spread）", "type": "arkts_compliance" },
+        { "text": "箭头函数参数有显式类型标注", "type": "arkts_compliance" },
+        { "text": "@State 变量类型不使用联合字面量（如 'idle' | 'checking'）", "type": "arkts_compliance" }
+      ]
+    },
+    {
+      "id": 15,
+      "prompt": "用 ArkTS 的状态管理 V2（@ComponentV2 / @Local / @ObservedV2 / @Trace / AppStorageV2 / PersistenceV2）写一个设置页面：页面顶部展示当前登录的用户名和一个登录/登出按钮，下方有一个'深色模式'开关。要求：1) 用户登录态是应用全局的，用 AppStorageV2 存（其他页面也要能看到变化）；2) 深色模式开关状态要持久化，应用重启后保持原值，用 PersistenceV2 存；3) 全程使用 V2 装饰器，不要和 V1 装饰器（@State / @Prop / @Link / @StorageLink / @Observed / @ObjectLink）混用。",
+      "expected_output": "@ObservedV2 class UserSession { @Trace userName; @Trace loggedIn }；@ObservedV2 class AppPrefs { @Trace darkMode }；@ComponentV2 struct SettingsPage { @Local session: UserSession = AppStorageV2.connect<UserSession>(UserSession, () => new UserSession())!; @Local prefs: AppPrefs = PersistenceV2.connect<AppPrefs>(AppPrefs, () => new AppPrefs())! }；登录/登出通过直接修改 session.loggedIn 与 session.userName 触发响应式；切换深色模式通过直接修改 prefs.darkMode 自动持久化；不出现任何 V1 装饰器",
+      "assertions": [
+        { "text": "使用 @ComponentV2 声明组件（而不是 @Component）", "type": "contains_pattern" },
+        { "text": "组件内部状态使用 @Local 装饰", "type": "contains_pattern" },
+        { "text": "数据类使用 @ObservedV2 装饰，其中需要观察变化的属性使用 @Trace 装饰", "type": "contains_pattern" },
+        { "text": "全局登录态通过 AppStorageV2.connect<T>(T, () => new T())! 获取", "type": "contains_pattern" },
+        { "text": "持久化偏好通过 PersistenceV2.connect 或 PersistenceV2.globalConnect 获取", "type": "contains_pattern" },
+        { "text": "登录 / 登出通过直接修改 session 实例的 @Trace 属性（如 this.session.loggedIn = true），而不是整体对象替换", "type": "behavioral" },
+        { "text": "切换深色模式通过直接修改 prefs.darkMode 触发自动持久化", "type": "behavioral" },
+        { "text": "不包含 @State 装饰器（V1）", "type": "behavioral" },
+        { "text": "不包含 @Prop 装饰器（V1）", "type": "behavioral" },
+        { "text": "不包含 @Link 装饰器（V1）", "type": "behavioral" },
+        { "text": "不包含 @StorageLink 或 @StorageProp 装饰器（V1 AppStorage 入口）", "type": "behavioral" },
+        { "text": "不包含 @Observed 或 @ObjectLink 装饰器（V1 对象观测）", "type": "behavioral" },
+        { "text": "@ObservedV2 和 @Trace 成对使用，@Trace 不单独出现（否则无效）", "type": "behavioral" },
+        { "text": "箭头函数参数有显式类型标注", "type": "arkts_compliance" },
+        { "text": "不包含对象展开运算符 { ...obj }", "type": "arkts_compliance" }
+      ]
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { REPO_ROOT, resolveDevecoHome } from "./config.mjs";
@@ -40,7 +40,124 @@ const SCRIPT_DEFINITIONS = {
     file: "scripts/probe-faultlogger.mjs",
     description: "Probe recent faultlogger entries on a connected HarmonyOS device.",
   },
+  search_practices: {
+    skill: "arkui-component-best-practices",
+    file: "scripts/search-practices.mjs",
+    description: "Search the ArkUI component practice library by component name or keyword. "
+      + "Takes a positional query and --limit=N / --json, so pass argv (e.g. [\"Swiper\", \"--limit=5\", \"--json\"]); "
+      + "the args object form cannot express a positional query.",
+  },
+  d2c_pixso_arkts: {
+    skill: "d2c-fast",
+    file: "scripts/pixso-arkts/call-pixso-arkts.mjs",
+    description: "Generate ArkTS page code from a Pixso design DSL. Every option is a flag with no "
+      + "positional arguments, so the args object form works: {occurrence, full, out, images, rawOut, "
+      + "result, structName, engine}. Prints a manifest JSON on stdout.",
+  },
+  ui_score: {
+    skill: "ui-reconstruction-score",
+    runtime: "python",
+    description: "Score UI reconstruction fidelity between a reference and a candidate screenshot (or "
+      + "two directories). Takes two positional paths, so pass argv (e.g. [\"ref.png\", \"cand.png\", "
+      + "\"--out\", \"report\", \"--ignore-top-px\", \"44\"]). Needs Pillow; check deveco_doctor first.",
+    file: "scripts/ui_score.py",
+  },
+  apifault_collect_hilog: {
+    skill: "hmos-apifault-analysis",
+    runtime: "python",
+    file: "references/scripts/hilog_collector.py",
+    description: "Collect and filter device hilog for API fault analysis.",
+  },
+  apifault_analyze_media: {
+    skill: "hmos-apifault-analysis",
+    runtime: "python",
+    file: "references/scripts/media_file_analyzer.py",
+    description: "Inspect a media file's container and codec metadata when diagnosing a media API fault.",
+  },
+  appfreeze_analyze: {
+    skill: "hmos-appfreeze-analysis",
+    runtime: "python",
+    file: "scripts/freeze/main.py",
+    description: "Analyze an appfreeze fault log: binder chains, stack sections, and a structured report.",
+  },
+  appfreeze_sample_stack: {
+    skill: "hmos-appfreeze-analysis",
+    runtime: "python",
+    file: "scripts/sample_stack_analyzer.py",
+    description: "Analyze a sampled stack trace collected during an appfreeze.",
+  },
+  arkts_docs_search: {
+    skill: "hmos-arkts-knowledge-retriever",
+    runtime: "python",
+    file: "scripts/search_docs.py",
+    description: "Search the bundled ArkTS documentation index shipped with this skill.",
+  },
+  arkui_docs_search: {
+    skill: "hmos-arkui-knowledge-retriever",
+    runtime: "python",
+    file: "scripts/run.py",
+    description: "Query the bundled ArkUI knowledge base for API usage, parameters, and version support.",
+  },
+  arkui_docs_rebuild_index: {
+    skill: "hmos-arkui-knowledge-retriever",
+    runtime: "python",
+    file: "scripts/rebuild_index.py",
+    description: "Rebuild the ArkUI knowledge base index after its documents change.",
+  },
+  instrument_test_run: {
+    skill: "hmos-instrument-test",
+    runtime: "python",
+    file: "scripts/run_instrument_test.py",
+    description: "Run instrumented (on-device) tests for a HarmonyOS module and report the results.",
+  },
+  local_test_run: {
+    skill: "hmos-local-test",
+    runtime: "python",
+    file: "scripts/run_local_test.py",
+    description: "Run local (host-side) unit tests for a HarmonyOS module and report the results.",
+  },
+  memleak_analyze: {
+    skill: "hmos-memleak-analysis",
+    runtime: "python",
+    file: "scripts/skill_main.py",
+    description: "Analyze an ArkTS heap snapshot for leak suspects and risky retain paths.",
+  },
 };
+
+/**
+ * Locate a Python interpreter for `runtime: "python"` scripts.
+ * An explicit PYTHON is authoritative: if it is set but unusable, report that rather than silently
+ * falling back to a different interpreter, which is how a script ends up running without Pillow.
+ * @returns {string|null} The interpreter command, or null when none is usable.
+ */
+export function resolvePython() {
+  const explicit = process.env.PYTHON;
+  const candidates = explicit ? [explicit] : ["python3", "python"];
+  for (const candidate of candidates) {
+    const probe = spawnSync(candidate, ["--version"], { stdio: "ignore" });
+    if (!probe.error && probe.status === 0) return candidate;
+  }
+  return null;
+}
+
+/**
+ * Report whether Pillow is importable by the resolved interpreter.
+ * ui_score.py is the only script with a third-party dependency, and the system python3 on macOS
+ * usually does not have it, so this has to be checked rather than assumed.
+ * @returns {{available: boolean, python: string|null, version: string|null, pillow: boolean}} Status.
+ */
+export function pythonStatus() {
+  const python = resolvePython();
+  if (!python) return { available: false, python: null, version: null, pillow: false };
+  const version = spawnSync(python, ["--version"], { encoding: "utf8" });
+  const pillow = spawnSync(python, ["-c", "import PIL"], { stdio: "ignore" });
+  return {
+    available: true,
+    python,
+    version: (version.stdout || version.stderr || "").trim() || null,
+    pillow: !pillow.error && pillow.status === 0,
+  };
+}
 
 function scriptPath(definition) {
   return path.join(REPO_ROOT, "skills", definition.skill, definition.file);
@@ -51,6 +168,7 @@ export function listScripts() {
     id,
     skill: definition.skill,
     file: path.relative(REPO_ROOT, scriptPath(definition)),
+    runtime: definition.runtime ?? "node",
     description: definition.description,
   }));
 }
@@ -77,7 +195,15 @@ function objectToArgv(args) {
   return argv;
 }
 
-function parseScriptOutput(stdout) {
+// Skill scripts print a `key: value` block and then free-form narrative: stack
+// frames, hilog excerpts, evidence dumps. Treating every `x: y` line as a field
+// turned that narrative into fabricated keys ("08-02 14", "at foo (Bar.ets"),
+// and a later duplicate could overwrite a real value. Every field the scripts
+// actually emit is lowercase snake_case, so that is the accepted key shape.
+const SCRIPT_FIELD_KEY = /^[a-z][a-z0-9_]*$/;
+
+// Exported so the key-filtering rules can be unit tested without spawning a script.
+export function parseScriptOutput(stdout) {
   const trimmed = stdout.trim();
   if (!trimmed) return null;
   try {
@@ -90,7 +216,10 @@ function parseScriptOutput(stdout) {
       const colon = line.indexOf(":");
       const separator = equals >= 0 ? equals : colon;
       if (separator <= 0) continue;
-      values[line.slice(0, separator).trim()] = line.slice(separator + 1).trim();
+      const key = line.slice(0, separator).trim();
+      if (!SCRIPT_FIELD_KEY.test(key)) continue;
+      if (Object.hasOwn(values, key)) continue;
+      values[key] = line.slice(separator + 1).trim();
       found = true;
     }
     return found ? values : null;
@@ -123,8 +252,23 @@ export async function runRegisteredScript(id, input = {}) {
   const childEnv = { ...process.env };
   if (devecoHome) childEnv.DEVECO_HOME = devecoHome;
 
+  const runtime = definition.runtime ?? "node";
+  let command = process.execPath;
+  if (runtime === "python") {
+    const python = resolvePython();
+    if (!python) {
+      const error = new Error(`${id} needs a Python interpreter and none was usable.`);
+      error.code = "PYTHON_NOT_FOUND";
+      error.hint = process.env.PYTHON
+        ? `PYTHON is set to "${process.env.PYTHON}" but it did not run. Point it at a working interpreter or unset it.`
+        : "安装 Python 3,或把 PYTHON 环境变量指向可用的解释器。ui_score 还额外需要 Pillow。";
+      throw error;
+    }
+    command = python;
+  }
+
   const result = await new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, [file, ...argv], {
+    const child = spawn(command, [file, ...argv], {
       cwd: getProjectPath() ?? REPO_ROOT,
       env: childEnv,
       stdio: ["ignore", "pipe", "pipe"],
@@ -159,16 +303,22 @@ export async function runRegisteredScript(id, input = {}) {
     });
   });
 
+  // A zero exit with nothing on stdout means the script produced no result at
+  // all; say so rather than letting an empty `parsed` read as a clean run.
+  const silentSuccess = result.exitCode === 0 && !result.stdout.trim();
+
   return {
     script: id,
     skill: definition.skill,
     file: path.relative(REPO_ROOT, file),
+    runtime,
     argv,
     cwd: getProjectPath() ?? REPO_ROOT,
     exitCode: result.exitCode,
     signal: result.signal,
     ok: result.exitCode === 0,
     parsed: parseScriptOutput(result.stdout),
+    ...(silentSuccess ? { warning: "Script exited 0 without writing to stdout; it produced no result." } : {}),
     stdout: result.stdout,
     stderr: result.stderr,
   };

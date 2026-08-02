@@ -1,0 +1,6 @@
+interface:
+  display_name: "ArkUI Component Best Practices"
+  short_description: "ArkUI 组件最佳实践、细分场景模式、405篇轻量索引与 ArkTS 代码建议"
+  default_prompt: "使用 $arkui-component-best-practices 编写或审查 ArkTS/ArkUI 组件代码。"
+policy:
+  allow_implicit_invocation: true
