@@ -1,0 +1,13 @@
+export const BASE_URL = "https://cn.devecostudio.huawei.com";
+export const AUTH_PATH = "console/DevEcoIDE/apply";
+export const TEMP_TOKEN_CHECK_PATH = "authrouter/auth/api/temptoken/check";
+export const JWT_TOKEN_CHECK_PATH = "authrouter/auth/api/jwToken/check";
+export const SUCCESS_REDIRECT_PATH = "console/DevEcoCode/loginSuccess";
+export const FAILED_REDIRECT_PATH = "console/DevEcoCode/loginFailed";
+export const APP_ID = "1008";
+export const PREFERRED_PORTS = [10101, 34567, 34568, 34569, 34570];
+export const LOGIN_TIMEOUT_MS = 5 * 60 * 1000;
+export const BIG_SEARCH_URL = `${BASE_URL}/codeGenie/bigSearch`;
+export const ACCESS_TOKEN_TTL_MS = 30 * 60 * 1000;
+export const MAX_RESULT_LENGTH = 5 * 1024;
+export const RESULT_MARKER = "【检索信息】：";

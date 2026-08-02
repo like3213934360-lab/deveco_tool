@@ -1,0 +1,17 @@
+Collect, clear, or list HarmonyOS device logs via hdc shell hilog.
+
+Use this tool for runtime evidence during debugging of HarmonyOS applications.
+
+Actions:
+- collect: Fetch recent device logs, filtered by prefix
+- clear: Clear the device log buffer
+- list_devices: List connected HarmonyOS devices
+
+Call this tool:
+- When debugging runtime issues on HarmonyOS devices
+- To collect logs before and after reproducing a bug
+- To verify log output after code changes
+
+Do NOT call this tool:
+- For static code analysis (use grep or read instead)
+- When no device is connected
