@@ -118,6 +118,22 @@ const tools = [
     },
   },
   {
+    name: "check_ets_files",
+    description: "Run the official local DevEco ArkTS checker for the requested .ets or .ts files.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        files: {
+          type: "array",
+          items: { type: "string" },
+          description: "Project-relative or absolute .ets/.ts file paths.",
+        },
+      },
+      required: ["files"],
+      additionalProperties: false,
+    },
+  },
+  {
     name: "hdc_log",
     description: "List connected HarmonyOS devices, collect filtered hilog lines, or clear the device log buffer.",
     inputSchema: {
@@ -219,7 +235,7 @@ const tools = [
       additionalProperties: false,
     },
   },
-  ...codegenieTools.filter((tool) => tool.name !== "init_project_path"),
+  ...codegenieTools.filter((tool) => !["init_project_path", "check_ets_files"].includes(tool.name)),
 ];
 
 function textResult(value, isError = false) {
@@ -300,6 +316,13 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       return textResult(await runArktsCheck(args));
     }
 
+    if (name === "check_ets_files") {
+      if (!Array.isArray(args.files)) {
+        return textResult({ code: "ARKTS_FILES_INVALID", message: "files must be an array of .ets or .ts paths" }, true);
+      }
+      return textResult(await runArktsCheck({ files: args.files }));
+    }
+
     if (name === "hdc_log") {
       return textResult(await hdcLog(args));
     }
@@ -345,10 +368,25 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 const transport = new StdioServerTransport();
 await server.connect(transport);
 
+let shutdownPromise;
+
+function waitForShutdownTimeout(timeoutMs) {
+  return new Promise((resolve) => {
+    setTimeout(() => resolve("timeout"), timeoutMs);
+  });
+}
+
 async function shutdown() {
-  await Promise.allSettled([shutdownLsp(), closeCodeGenie()]);
-  process.exit(0);
+  if (shutdownPromise) return shutdownPromise;
+  shutdownPromise = (async () => {
+    const cleanup = Promise.allSettled([shutdownLsp(), closeCodeGenie()]);
+    await Promise.race([cleanup, waitForShutdownTimeout(5000)]);
+    process.exit(0);
+  })();
+  return shutdownPromise;
 }
 
 process.once("SIGINT", shutdown);
 process.once("SIGTERM", shutdown);
+process.stdin.once("end", shutdown);
+process.stdin.once("close", shutdown);

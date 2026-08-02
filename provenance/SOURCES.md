@@ -9,6 +9,8 @@
 - 提取范围：`arkts-error-fixes`、`arkts-grammar-standards`、`arkts-runtime-fix`、`deveco-create-project`
 - 文件数量：129（排除 `customize-deveco` 环境自定义配置 Skill）
 
+`arkts-runtime-fix` 的 HDC 共享调用及四个调用脚本在本仓库增加了失败文本识别，修复 HDC 返回退出码 0 但输出 `[Fail]` 时的误报；原许可证文件头和其余上游内容保持不变。
+
 DevEco Code 仓库主体采用 MIT；其中 Huawei 工具和脚本文件保留各自的 Apache-2.0 文件头。复制和分发时必须保留原文件头，并继续维护第三方声明。
 
 ## 统一 MCP 适配层依赖

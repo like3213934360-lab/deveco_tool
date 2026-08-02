@@ -53,9 +53,7 @@ export async function getCodeGenieTools() {
   try {
     return await ensureCodeGenie();
   } catch (error) {
-    client = undefined;
-    transport = undefined;
-    childTools = [];
+    await closeCodeGenie().catch(() => {});
     const wrapped = new Error(`CodeGenie MCP unavailable: ${error.message}`);
     wrapped.code = "CODEGENIE_UNAVAILABLE";
     throw wrapped;
@@ -80,9 +78,15 @@ export async function callCodeGenieTool(name, args = {}) {
 }
 
 export async function closeCodeGenie() {
-  if (transport) await transport.close();
+  const activeClient = client;
+  const activeTransport = transport;
   client = undefined;
   transport = undefined;
   childTools = [];
   boundProject = null;
+  if (activeClient) {
+    await activeClient.close();
+  } else if (activeTransport) {
+    await activeTransport.close();
+  }
 }

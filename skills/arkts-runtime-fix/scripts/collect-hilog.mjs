@@ -17,7 +17,7 @@ import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
-import { resolveHdcOrThrow, runHdc, targetArgs } from './shared/hdc.mjs';
+import { assertHdcSuccess, resolveHdcOrThrow, runHdc, targetArgs } from './shared/hdc.mjs';
 import { printKv, toErrorMessage } from './shared/utils.mjs';
 
 function cleanLines(input) {
@@ -74,9 +74,7 @@ function printCollectFailed(nextAction) {
 
 async function collectHilogText(hdc, deviceId, lines) {
   const out = await runHdc([hdc, ...targetArgs(deviceId), 'shell', 'hilog', '-x']);
-  if (out.exitCode !== 0) {
-    throw new Error(out.stderr || out.stdout || `hdc hilog -x failed (code=${out.exitCode})`);
-  }
+  assertHdcSuccess(out, 'hdc hilog -x');
 
   const all = cleanLines(out.stdout);
   return all.slice(Math.max(0, all.length - lines)).join('\n');

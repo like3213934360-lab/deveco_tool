@@ -71,7 +71,26 @@ export async function runArktsCheck({ files = [], project_path: explicitProject,
     throw error;
   }
   const project = projectRoot(explicitProject);
-  const normalizedFiles = files.map((file) => String(file));
+  const normalizedFiles = files.map((file) => {
+    if (typeof file !== "string" || file.trim() === "") {
+      const error = new Error("files must contain non-empty .ets or .ts paths");
+      error.code = "ARKTS_FILES_INVALID";
+      throw error;
+    }
+    const normalized = file.trim();
+    if (![".ets", ".ts"].includes(path.extname(normalized).toLowerCase())) {
+      const error = new Error(`Unsupported ArkTS file type: ${normalized}`);
+      error.code = "ARKTS_FILE_UNSUPPORTED";
+      throw error;
+    }
+    const absolute = path.isAbsolute(normalized) ? normalized : path.resolve(project, normalized);
+    if (!fs.existsSync(absolute) || !fs.statSync(absolute).isFile()) {
+      const error = new Error(`ArkTS file does not exist: ${absolute}`);
+      error.code = "ARKTS_FILE_NOT_FOUND";
+      throw error;
+    }
+    return normalized;
+  });
   const argv = [CHECKER, "--project", project];
   if (normalizedFiles.length) argv.push("--files", ...normalizedFiles);
   const boundedTimeout = Math.min(Math.max(Number(timeoutMs) || 180000, 1000), 600000);

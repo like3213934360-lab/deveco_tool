@@ -62,6 +62,53 @@ function fail(message, code = "HDC_ERROR") {
   throw error;
 }
 
+const HDC_FAILURE_PATTERNS = [
+  /^\s*\[Fail\]/im,
+  /Not match target(?: founded)?/i,
+  /check connect-key/i,
+  /(?:target|device)\s+(?:not found|not connected|offline)/i,
+  /no\s+(?:matching|connected|available)\s+(?:target|device)/i,
+];
+
+export function hdcFailureMessage(result) {
+  const stdout = String(result?.stdout ?? "");
+  const stderr = String(result?.stderr ?? "");
+  const combined = [stderr, stdout].filter(Boolean).join("\n").trim();
+  if (result?.exitCode !== 0) {
+    return combined || `hdc exited with code ${result?.exitCode ?? "unknown"}`;
+  }
+  return HDC_FAILURE_PATTERNS.some((pattern) => pattern.test(combined)) ? combined : "";
+}
+
+function assertHdcSuccess(result, operation) {
+  const message = hdcFailureMessage(result);
+  if (message) fail(`${operation} failed: ${message}`, "HDC_COMMAND_FAILED");
+}
+
+async function listConnectedDevices(hdc) {
+  const result = await run([hdc, "list", "targets"]);
+  assertHdcSuccess(result, "hdc list targets");
+  return cleanLines(result.stdout).filter((item) => !item.includes("[Empty]"));
+}
+
+async function resolveDevice(hdc, deviceId) {
+  const devices = await listConnectedDevices(hdc);
+  if (devices.length === 0) {
+    fail("No connected HarmonyOS devices detected.", "HDC_NO_DEVICE");
+  }
+  if (deviceId) {
+    const requested = String(deviceId);
+    if (!devices.includes(requested)) {
+      fail(`HarmonyOS device is not connected: ${requested}`, "HDC_DEVICE_NOT_FOUND");
+    }
+    return requested;
+  }
+  if (devices.length > 1) {
+    fail(`Multiple HarmonyOS devices are connected (${devices.join(", ")}); pass device_id.`, "HDC_DEVICE_REQUIRED");
+  }
+  return devices[0];
+}
+
 export async function hdcLog({
   action,
   device_id: deviceId,
@@ -73,11 +120,7 @@ export async function hdcLog({
   }
   const hdc = requireHdc();
   if (action === "list_devices") {
-    const result = await run([hdc, "list", "targets"]);
-    if (result.exitCode !== 0) {
-      fail(`hdc list targets failed (code=${result.exitCode}): ${result.stderr || result.stdout}`);
-    }
-    const devices = cleanLines(result.stdout).filter((item) => !item.includes("[Empty]"));
+    const devices = await listConnectedDevices(hdc);
     return {
       action,
       deviceCount: devices.length,
@@ -86,25 +129,23 @@ export async function hdcLog({
     };
   }
 
+  const selectedDevice = await resolveDevice(hdc, deviceId);
+
   if (action === "clear") {
-    const result = await run([hdc, ...targetArgs(deviceId), "shell", "hilog", "-r"]);
-    if (result.exitCode !== 0) {
-      fail(`hdc hilog -r failed (code=${result.exitCode}): ${result.stderr || result.stdout}`);
-    }
-    return { action, deviceId: deviceId || null, cleared: true, output: "Device log buffer cleared." };
+    const result = await run([hdc, ...targetArgs(selectedDevice), "shell", "hilog", "-r"]);
+    assertHdcSuccess(result, "hdc hilog -r");
+    return { action, deviceId: selectedDevice, cleared: true, output: "Device log buffer cleared." };
   }
 
   const limit = Math.min(Math.max(Number(lines) || 2000, 1), 5000);
-  const result = await run([hdc, ...targetArgs(deviceId), "shell", "hilog", "-x"]);
-  if (result.exitCode !== 0) {
-    fail(`hdc hilog -x failed (code=${result.exitCode}): ${result.stderr || result.stdout}`);
-  }
+  const result = await run([hdc, ...targetArgs(selectedDevice), "shell", "hilog", "-x"]);
+  assertHdcSuccess(result, "hdc hilog -x");
   const all = cleanLines(result.stdout);
   const filtered = prefix ? all.filter((item) => item.includes(String(prefix))) : all;
   const selected = filtered.slice(Math.max(0, filtered.length - limit));
   return {
     action,
-    deviceId: deviceId || null,
+    deviceId: selectedDevice,
     prefix: String(prefix),
     requestedLines: limit,
     lineCount: selected.length,

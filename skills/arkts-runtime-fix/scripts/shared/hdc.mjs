@@ -105,3 +105,28 @@ export async function runHdc(cmd) {
     });
   });
 }
+
+const HDC_FAILURE_PATTERNS = [
+  /^\s*\[Fail\]/im,
+  /Not match target(?: founded)?/i,
+  /check connect-key/i,
+  /(?:target|device)\s+(?:not found|not connected|offline)/i,
+  /no\s+(?:matching|connected|available)\s+(?:target|device)/i,
+];
+
+export function hdcFailureMessage(result) {
+  const stdout = String(result?.stdout ?? '');
+  const stderr = String(result?.stderr ?? '');
+  const combined = [stderr, stdout].filter(Boolean).join('\n').trim();
+  if (result?.exitCode !== 0) {
+    return combined || `hdc exited with code ${result?.exitCode ?? 'unknown'}`;
+  }
+  return HDC_FAILURE_PATTERNS.some((pattern) => pattern.test(combined)) ? combined : '';
+}
+
+export function assertHdcSuccess(result, operation = 'hdc command') {
+  const message = hdcFailureMessage(result);
+  if (message) {
+    throw new Error(`${operation} failed: ${message}`);
+  }
+}

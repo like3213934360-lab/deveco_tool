@@ -2,7 +2,7 @@
 
 ## 原始 Skill
 
-以下目录均从 DevEco Code v0.1.5 原样复制，合计 129 个文件；`diff -qr` 已验证与上游提取目录一致。DevEco 环境自定义配置 Skill 未纳入。
+以下目录均从 DevEco Code v0.1.5 提取，合计 129 个文件。DevEco 环境自定义配置 Skill 未纳入；`arkts-runtime-fix` 的 HDC 共享调用和四个调用脚本增加了退出码与失败文本联合判断，其余 Skill 内容保持上游版本。
 
 | Skill | 文件数 | 内容 |
 | --- | ---: | --- |
@@ -19,7 +19,7 @@
 
 ### 本仓库适配层
 
-`deveco_script_catalog`、`deveco_script`、`switch_cwd`、`init_project_path`、`deveco_doctor`、`deveco_login`、`deveco_logout`、`deveco_status`、`arkts_knowledge_search`、`arkts_check`、`hdc_log`。
+`deveco_script_catalog`、`deveco_script`、`switch_cwd`、`init_project_path`、`deveco_doctor`、`deveco_login`、`deveco_logout`、`deveco_status`、`arkts_knowledge_search`、`arkts_check`、`check_ets_files`、`hdc_log`。
 
 ### ArkTS LSP
 
@@ -29,9 +29,9 @@
 
 ### CodeGenie MCP 代理
 
-`start_app`、`get_app_ui_tree`、`check_cpp_files`、`verify_ui`、`get_ui_verification_log`、`perform_ui_action`、`check_ets_files`、`build_project`、`save_ui_screenshot`。
+`start_app`、`get_app_ui_tree`、`check_cpp_files`、`verify_ui`、`get_ui_verification_log`、`perform_ui_action`、`build_project`、`save_ui_screenshot`。
 
-CodeGenie 的 `init_project_path` 由本仓库的统一项目上下文入口管理，因此不重复注册子进程同名工具。
+CodeGenie 的 `init_project_path` 由本仓库的统一项目上下文入口管理，因此不重复注册子进程同名工具。CodeGenie 的 `check_ets_files` 由已验证稳定的本地 DevEco 检查器实现替代，保留原工具名和参数。
 
 当前 CodeGenie 正常启动时，统一服务共暴露 26 个工具；如果 CodeGenie 包缺失，其他本地工具仍可以使用。
 

@@ -20,7 +20,7 @@ import {
   buildNextActionText,
   formatCrashReportText,
 } from './shared/jscrash-parse.mjs';
-import { resolveHdcOrThrow, runHdc, targetArgs } from './shared/hdc.mjs';
+import { assertHdcSuccess, resolveHdcOrThrow, runHdc, targetArgs } from './shared/hdc.mjs';
 import { printKv, toErrorMessage } from './shared/utils.mjs';
 
 function parseArgs(argv) {
@@ -82,9 +82,7 @@ function cleanLines(input) {
 async function collectHilogText(deviceId, lines) {
   const hdc = await resolveHdcOrThrow();
   const out = await runHdc([hdc, ...targetArgs(deviceId), 'shell', 'hilog', '-x']);
-  if (out.exitCode !== 0) {
-    throw new Error(out.stderr || out.stdout || `hdc hilog -x failed (code=${out.exitCode})`);
-  }
+  assertHdcSuccess(out, 'hdc hilog -x');
 
   const all = cleanLines(out.stdout);
   return all.slice(Math.max(0, all.length - lines)).join('\n');
