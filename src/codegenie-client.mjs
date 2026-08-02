@@ -1,6 +1,7 @@
 import path from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { ListRootsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import { REPO_ROOT, resolveDevecoHome } from "./config.mjs";
 import { getProjectPath } from "./project-context.mjs";
 
@@ -34,7 +35,14 @@ export async function ensureCodeGenie() {
     env: childEnvironment(),
     stderr: "inherit",
   });
-  client = new Client({ name: "deveco-tool-gateway", version: "0.1.0" });
+  // CodeGenie asks its parent for roots during initialization. The unified
+  // gateway manages project context explicitly through switch_cwd, so return
+  // an empty roots list instead of letting that optional request hang.
+  client = new Client(
+    { name: "deveco-tool-gateway", version: "0.1.0" },
+    { capabilities: { roots: { listChanged: false } } },
+  );
+  client.setRequestHandler(ListRootsRequestSchema, async () => ({ roots: [] }));
   await client.connect(transport);
   const result = await client.listTools();
   childTools = result.tools ?? [];
