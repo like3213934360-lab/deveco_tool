@@ -5,6 +5,7 @@ import { spawn } from "node:child_process";
 import { REPO_ROOT, resolveDevecoHome } from "./config.mjs";
 import { getProjectPath } from "./project-context.mjs";
 import { hdcLog } from "./hdc-log.mjs";
+import { terminateProcessTree } from "./process-tree.mjs";
 
 const require = createRequire(import.meta.url);
 
@@ -97,12 +98,17 @@ export function runDevecoCli(args, { cwd, timeoutMs = DEFAULT_TIMEOUT_MS } = {})
       cwd,
       env: childEnvironment(),
       stdio: ["ignore", "pipe", "pipe"],
+      // Own process group, so a timeout can reach the hvigor client front-end and the ohpm
+      // downloads the CLI starts rather than only the CLI itself. The hvigor daemon re-parents
+      // itself to pid 1 and is already outside this group, which is what we want: it is a shared,
+      // persistent build server, not a leaked grandchild.
+      detached: true,
     });
     let stdout = "";
     let stderr = "";
     let settled = false;
     const timer = setTimeout(() => {
-      child.kill("SIGTERM");
+      terminateProcessTree(child);
       if (!settled) {
         settled = true;
         const error = new Error(`DevEco CLI timed out after ${bounded}ms: ${commandText(entry, args)}`);

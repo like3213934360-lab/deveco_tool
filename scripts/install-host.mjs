@@ -17,13 +17,24 @@
  *     implicitly is materialised here as a patched copy instead of a symlink. manifest.json's
  *     `invocationPolicy` is the single source of truth for which ones those are.
  *
- * Host defaults come from each host's own documentation:
- *   - Claude Code reads `~/.claude/skills/<skill>/SKILL.md`, and caps a skill's
- *     description + when_to_use at 1,536 characters. Every skill here fits, so it gets all of them.
- *   - Codex reads `$HOME/.agents/skills`, and budgets the initial skill list at 2% of the model's
- *     context window (8,000 characters when unknown), counting each skill's path as well as its
- *     description. All 57 need ~16.5K and would be silently truncated; the core tier needs ~6.0K
- *     and fits, so Codex defaults to core.
+ * Both hosts default to the core tier, and for the same reason: each budgets the skill listing it
+ * loads into context, and the full 57 blow through both budgets. Measured across this pack --
+ * descriptions total 18,557 characters for all 57 and 5,781 for the core 18.
+ *
+ *   - Claude Code reads `~/.claude/skills/<skill>/SKILL.md`. Two separate limits apply. Per skill,
+ *     description + when_to_use is capped at 1,536 characters; every skill here fits that (the
+ *     longest is 1,076). Across the whole listing the budget is 1% of the model's context window,
+ *     and when it overflows Claude Code drops descriptions starting with the skills you invoke
+ *     least -- which silently strips the keywords that make a skill match. On a 1M-context model
+ *     that budget is ~10,000 characters: the core tier fits, all 57 do not.
+ *   - Codex reads `$HOME/.agents/skills` and budgets the initial listing at 2% of the context
+ *     window, or 8,000 characters when it is unknown, counting each skill's path as well as its
+ *     description. All 57 need ~22,300; the core 18 need ~6,900.
+ *
+ * `--profile full` stays available for both, and prints the licence warning that goes with the
+ * extended tier. Raising Claude's own budget is a host-side setting (`skillListingBudgetFraction`,
+ * or `SLASH_COMMAND_TOOL_CHAR_BUDGET`); low-value entries can also be set to `name-only` via
+ * `skillOverrides`. Neither is something an installer should change on the user's behalf.
  */
 
 import fs from "node:fs/promises";
@@ -37,7 +48,7 @@ const MARKER = ".deveco-tool-host.json";
 const HOSTS = {
   claude: {
     skillsDir: path.join(os.homedir(), ".claude", "skills"),
-    profile: "full",
+    profile: "core",
     // Claude expresses "only the user may invoke this" as SKILL.md frontmatter.
     policy: "frontmatter",
   },
@@ -62,8 +73,14 @@ const USAGE = `Usage: node scripts/install-host.mjs --host <claude|codex|all> [o
 
 Defaults per host (from each host's own documentation):
 
-  claude  ~/.claude/skills          profile full  (all skills fit Claude's 1,536-char per-skill cap)
-  codex   ~/.agents/skills          profile core  (all 57 would exceed Codex's 8,000-char list budget)
+  claude  ~/.claude/skills   profile core  (listing budget is 1% of the context window; all 57
+                                            descriptions total 18,557 chars and overflow it, and
+                                            Claude then drops descriptions from least-used skills)
+  codex   ~/.agents/skills   profile core  (listing budget is 2% of the context window, or 8,000
+                                            chars when unknown, and counts paths too; all 57 need
+                                            ~22,300, the core 18 need ~6,900)
+
+--profile full installs the extended tier on either host and prints a licence warning.
 
 Skills are symlinked so edits in this repository take effect immediately. Skills whose
 invocation policy has to be expressed in the installed copy are written out as patched copies
@@ -108,6 +125,27 @@ function parseArgs(argv) {
 }
 
 /**
+ * Tell the operator what the full profile pulls in, licence-wise.
+ *
+ * scripts/install.mjs has warned about this since the default flipped to core; this installer did
+ * not, so choosing --profile full here silently exposed the extended tier to a host. Written to
+ * stderr and deliberately non-blocking: the exit code stays 0 and the install proceeds.
+ *
+ * @param {string} hostName Host the warning applies to.
+ * @param {number} extendedCount How many extended-tier skills the profile adds.
+ * @returns {void}
+ */
+function warnExtendedLicence(hostName, extendedCount) {
+  process.stderr.write(
+    `warning: [${hostName}] --profile full installs the extended layer (${extendedCount} skills).\n`
+      + "  Upstream (harmonyos-agent-skills) ships no repository-level LICENSE, NOTICE or COPYING\n"
+      + "  file, and 30 of those skills declare no licence at all — by default all rights reserved.\n"
+      + "  It also overflows this host's skill-listing budget, so descriptions get shortened.\n"
+      + "  Read NOTICE.harmonyos-agent-skills before redistributing. Installing anyway.\n\n",
+  );
+}
+
+/**
  * Check whether a path exists, without following symlinks.
  * @param {string} target Absolute path to probe.
  * @returns {Promise<boolean>} True when something is present at that path.
@@ -149,27 +187,85 @@ function withModelInvocationDisabled(text, name) {
   return text.replace(frontmatter[0], `---\n${patched}\n---`);
 }
 
+// Top-level agents/openai.yaml sections this installer owns. Anything else in an upstream file --
+// `interface` with its display_name, short_description, icons and default_prompt -- is the skill
+// author's and must survive reinstallation. An earlier version rewrote the whole file and silently
+// erased that metadata from arkui-component-best-practices.
+const OWNED_YAML_SECTIONS = new Set(["policy", "dependencies"]);
+
 /**
- * Render the agents/openai.yaml Codex reads for invocation policy and tool dependencies.
- * @param {{disableImplicit: boolean, mcp: {server: string, transport: string}|null}} spec What to declare.
+ * Split a YAML document into top-level sections, keyed by their heading.
+ *
+ * Deliberately not a YAML parser: the pack has no YAML dependency, and these files only ever use
+ * top-level keys with indented bodies. Preserving unknown sections verbatim is both simpler and
+ * safer than round-tripping them through a parser we would have to add.
+ *
+ * @param {string} text Existing YAML document.
+ * @returns {Map<string, string>} Section name to its literal text, including the heading line.
+ */
+function splitYamlSections(text) {
+  const sections = new Map();
+  let current = null;
+  for (const line of text.split(/\r?\n/)) {
+    const heading = /^([A-Za-z_][A-Za-z0-9_-]*):/.exec(line);
+    if (heading) {
+      current = heading[1];
+      sections.set(current, line);
+      continue;
+    }
+    // Leading comments and blank lines before the first heading are dropped: the header this
+    // installer writes replaces them.
+    if (current === null) continue;
+    sections.set(current, `${sections.get(current)}\n${line}`);
+  }
+  // Trim the trailing blank lines each section accumulates from the blank line before the next one.
+  for (const [name, body] of sections) sections.set(name, body.replace(/\s+$/, ""));
+  return sections;
+}
+
+/**
+ * Render agents/openai.yaml, preserving any sections the skill author already wrote.
+ * @param {{disableImplicit: boolean, mcp: {server: string, transport: string}|null, existing: string|null}} spec What to declare.
  * @returns {string} YAML document contents.
  */
 function renderOpenAiYaml(spec) {
-  const lines = [
-    "# Generated by scripts/install-host.mjs from manifest.json invocationPolicy.",
-    "# Edit the manifest, not this file: reinstalling overwrites it.",
-  ];
+  const preserved = spec.existing ? splitYamlSections(spec.existing) : new Map();
+  const blocks = [];
+
+  for (const [name, body] of preserved) {
+    if (!OWNED_YAML_SECTIONS.has(name)) blocks.push(body);
+  }
+
   if (spec.disableImplicit) {
-    lines.push("", "policy:", "  # Loading this skill can cause an irreversible or outward-facing action,",
+    blocks.push([
+      "policy:",
+      "  # Loading this skill can cause an irreversible or outward-facing action,",
       "  # so Codex must not pick it up on its own. Explicit $skill invocation still works.",
-      "  allow_implicit_invocation: false");
+      "  allow_implicit_invocation: false",
+    ].join("\n"));
+  } else if (preserved.has("policy")) {
+    // The author said something about invocation and the manifest does not override it.
+    blocks.push(preserved.get("policy"));
   }
+
   if (spec.mcp) {
-    lines.push("", "dependencies:", "  tools:", `    - type: "mcp"`, `      value: "${spec.mcp.server}"`,
-      `      description: "deveco-tool stdio MCP: this skill drives its bundled scripts through it"`,
-      `      transport: "${spec.mcp.transport}"`);
+    blocks.push([
+      "dependencies:",
+      "  tools:",
+      '    - type: "mcp"',
+      `      value: "${spec.mcp.server}"`,
+      '      description: "deveco-tool stdio MCP: this skill cannot complete its workflow without it"',
+      `      transport: "${spec.mcp.transport}"`,
+    ].join("\n"));
+  } else if (preserved.has("dependencies")) {
+    blocks.push(preserved.get("dependencies"));
   }
-  return `${lines.join("\n")}\n`;
+
+  const header = [
+    "# policy and dependencies are generated by scripts/install-host.mjs from manifest.json",
+    "# invocationPolicy; edit the manifest, not this file. Other sections are preserved as-is.",
+  ].join("\n");
+  return `${[header, ...blocks].join("\n\n")}\n`;
 }
 
 /**
@@ -183,6 +279,9 @@ function renderOpenAiYaml(spec) {
 function planSkills(manifest, hostName, profile, forceCopy) {
   const policy = manifest.invocationPolicy;
   const disabled = new Set(Object.keys(policy.disableImplicitInvocation).filter((key) => key !== "$comment"));
+  // Explicit list, not `skill.scripts`: instruction-only skills like harmony-build-loop declare no
+  // scripts yet call build_project and start_app straight from their prose.
+  const needsMcp = new Set(policy.mcpDependency.skills);
   const host = HOSTS[hostName];
 
   return manifest.skills
@@ -192,7 +291,7 @@ function planSkills(manifest, hostName, profile, forceCopy) {
       // Codex carries both invocation policy and tool dependencies in a file that lives inside
       // the skill directory, so any skill needing either cannot be a bare symlink.
       const needsYaml = host.policy === "openai-yaml"
-        && (disableImplicit || (skill.scripts ?? []).length > 0);
+        && (disableImplicit || needsMcp.has(skill.name));
       const needsFrontmatter = host.policy === "frontmatter" && disableImplicit;
       const mustCopy = needsYaml || needsFrontmatter;
       const reason = needsFrontmatter ? "disable-model-invocation"
@@ -204,7 +303,7 @@ function planSkills(manifest, hostName, profile, forceCopy) {
         mode: mustCopy || forceCopy ? "copy" : "symlink",
         reason,
         disableImplicit,
-        mcp: needsYaml && (skill.scripts ?? []).length > 0
+        mcp: needsYaml && needsMcp.has(skill.name)
           ? { server: policy.mcpDependency.server, transport: policy.mcpDependency.transport }
           : null,
       };
@@ -237,10 +336,15 @@ async function materialise(entry, skillsDir, hostName) {
     await fs.writeFile(file, withModelInvocationDisabled(await fs.readFile(file, "utf8"), entry.name));
   }
   if (hostName === "codex" && (entry.disableImplicit || entry.mcp)) {
-    await fs.mkdir(path.join(target, "agents"), { recursive: true });
+    const yamlPath = path.join(target, "agents", "openai.yaml");
+    // The copy was made from the source skill, so an upstream openai.yaml is already here. Read it
+    // before overwriting so its interface metadata survives.
+    let existing = null;
+    try { existing = await fs.readFile(yamlPath, "utf8"); } catch { /* the skill shipped none */ }
+    await fs.mkdir(path.dirname(yamlPath), { recursive: true });
     await fs.writeFile(
-      path.join(target, "agents", "openai.yaml"),
-      renderOpenAiYaml({ disableImplicit: entry.disableImplicit, mcp: entry.mcp }),
+      yamlPath,
+      renderOpenAiYaml({ disableImplicit: entry.disableImplicit, mcp: entry.mcp, existing }),
     );
   }
 }
@@ -289,6 +393,10 @@ async function runHost(hostName, options, manifest) {
 
   const plan = planSkills(manifest, hostName, profile, options.copy);
 
+  if (profile === "full") {
+    warnExtendedLicence(hostName, manifest.skills.filter((skill) => skill.tier === "extended").length);
+  }
+
   // Only entries this script created may be replaced. A skill someone else put here — or wrote by
   // hand — is left untouched and reported, rather than silently overwritten.
   const foreign = [];
@@ -304,6 +412,20 @@ async function runHost(hostName, options, manifest) {
   }
 
   if (!options.dryRun) await fs.mkdir(skillsDir, { recursive: true });
+
+  // Reinstalling under a narrower profile has to retire what the previous run installed and this
+  // one no longer covers. Without this, full -> core left the 39 extended skills on disk while the
+  // marker recorded only 18, so they became orphans that --uninstall could no longer reach: the
+  // host kept routing to them and nothing here could clean them up.
+  const planned = new Set(plan.map((entry) => entry.name));
+  const retired = [...owned.keys()].filter((name) => !planned.has(name));
+  for (const name of retired) {
+    if (options.dryRun) { lines.push(`  would retire ${name} (not in profile ${profile})`); continue; }
+    await fs.rm(path.join(skillsDir, name), { recursive: true, force: true });
+  }
+  if (retired.length > 0 && !options.dryRun) {
+    lines.push(`  retired ${retired.length} skill(s) no longer in profile ${profile}`);
+  }
 
   const installed = [];
   for (const entry of plan) {

@@ -511,9 +511,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 const transport = new StdioServerTransport();
 await server.connect(transport);
 
-// Start the CodeGenie child now so the first tools/list usually finds it ready,
-// but only after `initialize` can already be served.
-codegenieTools();
+// No eager warm-up. It existed so the first tools/list would find the child ready, and that
+// reason disappeared when tools/list moved to a static table. Keeping it spawned a CodeGenie
+// child in every session -- including the majority that never touch check_cpp_files,
+// perform_ui_action or get_app_ui_tree -- and logged a handshake failure when it stalled, for a
+// child nothing was waiting on. The three proxied tools now start it on first call, which is what
+// PACK.md has been describing all along.
 
 let shutdownPromise;
 

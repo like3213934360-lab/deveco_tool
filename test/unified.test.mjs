@@ -9,6 +9,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { listScripts, parseScriptOutput, runRegisteredScript } from "../src/script-registry.mjs";
 import { arktsCheckStatus, runArktsCheck } from "../src/arkts-check.mjs";
+import { resolveDevecoHome } from "../src/config.mjs";
 import { buildArgs, buildProject, devecoCliFailureMessage } from "../src/deveco-cli.mjs";
 import { hdcFailureMessage, hdcLog, hdcStatus } from "../src/hdc-log.mjs";
 import { hdcFailureMessage as skillHdcFailureMessage } from "../skills/arkts-runtime-fix/scripts/shared/hdc.mjs";
@@ -19,9 +20,19 @@ const REPO_ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), 
 // set out of it, hdc ships inside its toolchain, and detect_sdk reads its sdk-pkg.json. CI runners
 // and contributors without DevEco installed must not see those as failures, so they announce
 // themselves as skipped instead. Everything else -- including the HDC tests, which drive a fake
-// hdc through HDC_PATH -- runs anywhere. Measured by running the suite against an empty
-// DEVECO_HOME: exactly these four fail, the other 56 pass.
-const DEVECO_SDK = hdcStatus().installed;
+// hdc through HDC_PATH -- runs anywhere.
+//
+// Five tests need it. An earlier pass claimed four, measured by pointing DEVECO_HOME at an empty
+// directory on macOS. That proxy was not faithful -- the linter still succeeded there while it
+// fails on Linux -- so the stock-project test slipped through and turned CI red on Node 20 and 22.
+// The count now comes from the real CI run rather than from a local simulation, and the probe
+// below reads the SDK itself: sdk-pkg.json is what detect_sdk loads, the linter resolves its rule
+// set beside it, and hdc ships under the same tree. Probing one tool inside the SDK is exactly how
+// the stock-project test came to look runnable on a machine where it was not.
+const DEVECO_SDK = (() => {
+  const home = resolveDevecoHome().path;
+  return Boolean(home) && fsSync.existsSync(path.join(home, "sdk", "default", "sdk-pkg.json"));
+})();
 const NEEDS_DEVECO_SDK = DEVECO_SDK ? false : "requires a local DevEco Studio SDK";
 
 async function makeFakeHdc(body) {
@@ -133,7 +144,7 @@ test("a timed-out script takes its grandchildren with it", async () => {
   // one SIGTERM to the direct child and return immediately, so those grandchildren survived every
   // timeout and piled up across a session. Verified against a real tree rather than a mock,
   // because what is being tested is process-group semantics, not our own bookkeeping.
-  const { terminateProcessTree } = await import("../src/script-registry.mjs");
+  const { terminateProcessTree } = await import("../src/process-tree.mjs");
 
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-tree-"));
   // Parent ignores SIGTERM so the escalation to SIGKILL is what actually ends it.
@@ -170,6 +181,47 @@ test("a timed-out script takes its grandchildren with it", async () => {
     assert.equal(alive(pids.grandchild), false, "the grandchild must go too, or hvigor daemons leak");
   } finally {
     try { process.kill(-child.pid, "SIGKILL"); } catch { /* already reaped */ }
+    await fs.rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("a timed-out DevEco CLI run does not leave its children behind", async () => {
+  // build_project and start_app go through runDevecoCli, not the script registry, so fixing the
+  // registry left this path still sending a single SIGTERM to the direct child. Upstream has no
+  // timeout here at all -- runBundledDevecoCli is Bun.spawn plus await proc.exited -- so the
+  // deadline, and the cleanup it makes necessary, are both this pack's own.
+  const { runDevecoCli } = await import("../src/deveco-cli.mjs");
+
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-cli-tree-"));
+  const marker = path.join(directory, "child.pid");
+  const fakeCli = path.join(directory, "cli.mjs");
+  // Ignores SIGTERM and starts a child, mirroring a CLI whose hvigor front-end outlives a polite
+  // signal. Writes the child's pid so the test can check the whole group actually went away.
+  await fs.writeFile(fakeCli, [
+    'import { spawn } from "node:child_process";',
+    'import fs from "node:fs";',
+    'process.on("SIGTERM", () => {});',
+    'const kid = spawn(process.execPath, ["-e", "setInterval(() => {}, 1000)"], { stdio: "ignore" });',
+    `fs.writeFileSync(${JSON.stringify(marker)}, String(kid.pid));`,
+    "setInterval(() => {}, 1000);",
+  ].join("\n"));
+
+  const previous = process.env.DEVECO_CLI_ENTRY;
+  process.env.DEVECO_CLI_ENTRY = fakeCli;
+  try {
+    await assert.rejects(
+      () => runDevecoCli([], { cwd: directory, timeoutMs: 1000 }),
+      (error) => error.code === "DEVECO_CLI_TIMEOUT",
+    );
+
+    // Give the SIGTERM -> SIGKILL escalation time to land.
+    await new Promise((resolve) => { setTimeout(resolve, 3000); });
+    const childPid = Number(await fs.readFile(marker, "utf8"));
+    const alive = (pid) => { try { process.kill(pid, 0); return true; } catch { return false; } };
+    assert.equal(alive(childPid), false, "the CLI's child must not survive the timeout");
+  } finally {
+    if (previous === undefined) delete process.env.DEVECO_CLI_ENTRY;
+    else process.env.DEVECO_CLI_ENTRY = previous;
     await fs.rm(directory, { recursive: true, force: true });
   }
 });
@@ -238,7 +290,7 @@ test("the static proxy table still matches what the CodeGenie child advertises",
   }
 });
 
-test("ArkTS checker and check_ets_files accept a stock HarmonyOS project", async () => {
+test("ArkTS checker and check_ets_files accept a stock HarmonyOS project", { skip: NEEDS_DEVECO_SDK }, async () => {
   const templatePath = path.resolve("test/fixtures/harmony-app");
   const projectPath = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-tool-test-"));
   await fs.cp(templatePath, projectPath, { recursive: true });

@@ -70,12 +70,19 @@ jobs:
           grep -q "NOTICE.harmonyos-agent-skills" /tmp/full.err
           grep -q "profile                full" /tmp/full.out
 
-      - name: host adapter plans both hosts
+      - name: host adapter defaults both hosts to core
         run: |
           node scripts/install-host.mjs --host claude --dry-run | tee /tmp/claude.txt
           node scripts/install-host.mjs --host codex --dry-run | tee /tmp/codex.txt
-          grep -q "profile full" /tmp/claude.txt
+          grep -q "profile core" /tmp/claude.txt
           grep -q "profile core" /tmp/codex.txt
+
+      - name: host adapter warns about the extended licence on either host
+        run: |
+          node scripts/install-host.mjs --host claude --profile full --dry-run \
+            >/tmp/full-claude.out 2>/tmp/full-claude.err
+          grep -q "NOTICE.harmonyos-agent-skills" /tmp/full-claude.err
+          grep -q "profile full" /tmp/full-claude.out
 
       - name: host adapter merges into a directory it does not own
         run: |

@@ -79,18 +79,20 @@ node scripts/install.mjs --print-mcp
 前三步只让宿主能用**工具层**。Skill 要被宿主自动路由，还得进它的发现目录——这是单独一层，不装不影响前三步：
 
 ```bash
-node scripts/install-host.mjs --host claude   # → ~/.claude/skills，全 57 个
-node scripts/install-host.mjs --host codex    # → ~/.agents/skills，core 18 个
-node scripts/install-host.mjs --host all --dry-run
-node scripts/install-host.mjs --host codex --print-mcp   # Codex 的 TOML 片段
+node scripts/install-host.mjs --host claude   # → ~/.claude/skills，默认 core 18 个
+node scripts/install-host.mjs --host codex    # → ~/.agents/skills，默认 core 18 个
+node scripts/install-host.mjs --host all --profile full   # 加装 extended，打许可警告
+node scripts/install-host.mjs --host codex --print-mcp    # Codex 的 TOML 片段
 ```
 
-两个宿主的默认 profile 不同，依据是各自官方文档写明的预算：
+**两个宿主都默认 core**，依据是各自官方文档写明的列表预算。实测本包描述合计：57 个 18,557 字符，core 18 个 5,781 字符。
 
 | 宿主 | 目录 | 默认 | 依据 |
 | --- | --- | --- | --- |
-| Claude Code | `~/.claude/skills` | full（57） | 上限是每个 Skill 的 `description` + `when_to_use` 合计 1536 字符；实测 57 个全部合格，最长 801 |
-| Codex | `~/.agents/skills` | core（18） | 初始列表预算为上下文的 2%、未知时 8000 字符，**且含每个 Skill 的路径**；57 个约 16.5K 会被压缩描述甚至省略 Skill，core 18 个约 6.0K 才安全 |
+| Claude Code | `~/.claude/skills` | core（18） | 两条限制：单个 Skill 的 `description` + `when_to_use` ≤ 1536（57 个全部合格，最长 1076）；**整个列表预算 = 上下文的 1%**，超出后从最少使用的 Skill 开始删描述。1M 上下文约 10,000 字符预算，全量 18,557 必被削 |
+| Codex | `~/.agents/skills` | core（18） | 初始列表预算为上下文的 2%、未知时 8000 字符，**且含每个 Skill 的路径**；全量约 22,300 会被压缩甚至省略 Skill，core 含路径约 6,900 才安全 |
+
+被削掉的正是让 Skill 被正确匹配的关键词，而且两个宿主都不会报错，所以这不是"装多点更好"的取舍。要在 Claude 上装全量，先用宿主侧设置抬高预算（`skillListingBudgetFraction` / `SLASH_COMMAND_TOOL_CHAR_BUDGET`），或把低价值条目用 `skillOverrides` 设成 `name-only`；安装器不替你改宿主设置。
 
 默认软链，改仓库即时生效。**隐式调用策略**集中在 `manifest.json` 的 `invocationPolicy`，安装器按宿主渲染：
 Claude 写 frontmatter `disable-model-invocation: true`，Codex 写 `agents/openai.yaml` 的

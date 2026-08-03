@@ -722,9 +722,33 @@
       "app-metadata-audit-skill": "Pre-release store audit."
     },
     "mcpDependency": {
-      "$comment": "Skills that drive bundled scripts through the deveco-tool MCP. Codex renders these into agents/openai.yaml dependencies.tools so the host can surface the requirement. Derived from the `scripts` field on each skill entry; kept explicit so the installer never has to guess.",
+      "$comment": "Skills that need the deveco-tool MCP. Codex renders these into agents/openai.yaml dependencies.tools so the host can surface the requirement. This list is EXPLICIT on purpose: it was previously derived from each skill's `scripts` field, which missed every instruction-only skill whose prose calls build_project / start_app / arkts_check directly — harmony-build-loop and four others declare no scripts yet cannot work without the MCP. test/pack.test.mjs recomputes the set from the skill bodies and fails if this list drifts.",
       "server": "deveco-tool",
-      "transport": "stdio"
+      "transport": "stdio",
+      "skills": [
+        "arkts-grammar-standards",
+        "arkts-runtime-fix",
+        "arkui-component-best-practices",
+        "arkui-scoring-workflow",
+        "d2c-fast",
+        "deveco-create-project",
+        "deveco-studio-verify",
+        "harmony-build-loop",
+        "harmony-debug-instrumentation",
+        "harmony-plan-doc",
+        "harmony-sdd-workflow",
+        "hmos-ability-insight-intent-generator",
+        "hmos-account-kit-quicklogin-client",
+        "hmos-apifault-analysis",
+        "hmos-appfreeze-analysis",
+        "hmos-arkts-knowledge-retriever",
+        "hmos-arkui-knowledge-retriever",
+        "hmos-arkui-mvvm-pattern",
+        "hmos-instrument-test",
+        "hmos-local-test",
+        "hmos-memleak-analysis",
+        "ui-reconstruction-score"
+      ]
     }
   },
   "excluded": {

@@ -34,13 +34,20 @@ node scripts/install.mjs --print-mcp         # 打印 stdio MCP 配置片段
 想让宿主**自动发现**这些 Skill，再装可选的适配层：
 
 ```bash
-node scripts/install-host.mjs --host claude    # → ~/.claude/skills，全 57 个
-node scripts/install-host.mjs --host codex     # → ~/.agents/skills，core 18 个
-node scripts/install-host.mjs --host all --dry-run
-node scripts/install-host.mjs --host codex --print-mcp   # MCP 注册片段
+node scripts/install-host.mjs --host claude    # → ~/.claude/skills，默认 core 18 个
+node scripts/install-host.mjs --host codex     # → ~/.agents/skills，默认 core 18 个
+node scripts/install-host.mjs --host all --profile full   # 加装 extended，会打许可警告
+node scripts/install-host.mjs --host codex --print-mcp     # MCP 注册片段
 ```
 
-两个宿主的默认值来自各自官方文档：Claude 每个 Skill 的 `description` + `when_to_use` 上限 1536 字符，57 个全部合格所以全装；Codex 的初始 Skill 列表预算是上下文的 2%（未知时 8000 字符）**且含路径**，57 个约需 16.5K 会被截断并省略，core 18 个约 6.0K 才安全，所以 Codex 默认只装 core。
+**两个宿主都默认只装 core，原因一样**：它们都会把全部 Skill 的描述加载进上下文，也都会在超预算时裁剪——裁掉的正是让 Skill 被正确匹配的关键词，而且不报错。实测本包描述合计：57 个 **18,557** 字符，core 18 个 **5,781** 字符。
+
+| 宿主 | 限制 | 结论 |
+|---|---|---|
+| Claude | 单个 Skill 的 `description` + `when_to_use` ≤ **1536**；整个列表预算 = 上下文的 **1%**，超出后**从最少使用的 Skill 开始删描述** | 单条限制 57 个全部合格（最长 1076）；但 1M 上下文对应约 10,000 字符预算，全量 18,557 会被削，core 5,781 安全 |
+| Codex | 初始列表预算 = 上下文的 **2%**、未知时 **8000** 字符，**且含每个 Skill 的路径** | 全量约 22,300 会被压缩甚至省略 Skill；core 含路径约 6,900 安全 |
+
+想在 Claude 上装全量，可以先用宿主侧设置抬高预算（`skillListingBudgetFraction`，或 `SLASH_COMMAND_TOOL_CHAR_BUDGET`），或把低价值条目用 `skillOverrides` 设成 `name-only`。安装器不会替你改这些设置。`/doctor` 能看列表的上下文开销估算。
 
 Skill 默认软链，改仓库即时生效。少数「自动加载即可能产生副作用」的 Skill（建工程、批量写产物、起模拟器、真机跑测试、上架审查）会以打过补丁的副本安装，关闭隐式调用——Claude 用 `disable-model-invocation: true`，Codex 用 `agents/openai.yaml` 的 `allow_implicit_invocation: false`。名单在 `manifest.json` 的 `invocationPolicy`，`skills/` 下的原文件一字不改。
 

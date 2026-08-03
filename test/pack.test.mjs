@@ -358,7 +358,8 @@ test("the host adapter renders invocation policy without touching the skills it 
 
   const dest = path.join(await fs.mkdtemp(path.join(os.tmpdir(), "harmony-host-claude-")), "skills");
   try {
-    const result = await runHostInstaller(["--host", "claude", "--dest", dest]);
+    // Explicit --profile full: the policy table spans both tiers, and claude now defaults to core.
+    const result = await runHostInstaller(["--host", "claude", "--dest", dest, "--profile", "full"]);
     assert.equal(result.exitCode, 0, result.stderr);
     assert.equal((await fs.readdir(dest)).length, MANIFEST.skills.length + 1, "every skill plus the marker");
 
@@ -409,23 +410,166 @@ test("the host adapter merges into a shared directory instead of claiming it", a
   }
 });
 
-test("the Codex skill list stays inside Codex's documented metadata budget", async () => {
-  // Codex budgets the initial skill list at 2% of the context window, or 8,000 characters when
-  // the window is unknown, and counts each skill's path alongside its description. Past that it
-  // shortens descriptions and eventually omits skills with a warning — which silently degrades
-  // routing. All 57 need roughly 16.5K, which is why Codex defaults to the core tier.
-  const BUDGET = 8000;
-  const installedPath = (name) => path.join(os.homedir(), ".agents", "skills", name, "SKILL.md");
+test("switching to a narrower profile retires the skills it no longer covers", async () => {
+  // full -> core used to leave the 39 extended skills on disk while rewriting the marker to list
+  // only 18. They became orphans: the host kept routing to them, and --uninstall could no longer
+  // reach them because ownership is tracked through the marker.
+  const dest = path.join(await fs.mkdtemp(path.join(os.tmpdir(), "harmony-host-profile-")), "skills");
+  const core = MANIFEST.skills.filter((skill) => skill.tier === "core").length;
+  const entries = async () => (await fs.readdir(dest)).filter((name) => !name.startsWith("."));
 
-  let used = 0;
-  for (const skill of MANIFEST.skills.filter((entry) => entry.tier === "core")) {
-    const text = await fs.readFile(path.join(PACK_ROOT, skill.path), "utf8");
-    const frontmatter = /^---\r?\n([\s\S]*?)\r?\n---/.exec(text);
-    const description = /^description:\s*([\s\S]*?)(?=\n[a-zA-Z_-]+:|$)/m.exec(frontmatter[1]);
-    assert.ok(description, `${skill.name} has no description for the host to route on`);
-    used += description[1].trim().length + installedPath(skill.name).length;
+  try {
+    await runHostInstaller(["--host", "claude", "--dest", dest, "--profile", "full"]);
+    assert.equal((await entries()).length, MANIFEST.skills.length, "full installs every skill");
+
+    await runHostInstaller(["--host", "claude", "--dest", dest, "--profile", "core"]);
+    assert.equal((await entries()).length, core, "downgrading must retire the extended tier");
+
+    const marker = JSON.parse(await fs.readFile(path.join(dest, ".deveco-tool-host.json"), "utf8"));
+    assert.equal(marker.installed.length, core, "the marker must match what is on disk");
+
+    // Upgrading back has to restore them, so retirement must not be one-way.
+    await runHostInstaller(["--host", "claude", "--dest", dest, "--profile", "full"]);
+    assert.equal((await entries()).length, MANIFEST.skills.length);
+
+    await runHostInstaller(["--host", "claude", "--dest", dest, "--uninstall"]);
+    assert.deepEqual(await entries(), [], "uninstall must leave nothing of ours behind");
+  } finally {
+    await fs.rm(path.dirname(dest), { recursive: true, force: true });
   }
-  assert.ok(used < BUDGET, `core skill metadata is ${used} chars, over Codex's ${BUDGET} floor`);
+});
+
+/**
+ * Read a skill's frontmatter description, including multi-line values.
+ *
+ * An earlier version used a regex with the `m` flag, where `$` matches end of line rather than end
+ * of input, so multi-line descriptions were measured at their first line only. That undercounted
+ * the listing budget by roughly a third and made the budget test pass on numbers that were wrong.
+ *
+ * @param {string} file Absolute path to a SKILL.md.
+ * @returns {Promise<string>} The description text as the host would load it.
+ */
+async function skillDescription(file) {
+  const text = await fs.readFile(file, "utf8");
+  const frontmatter = /^---\r?\n([\s\S]*?)\r?\n---/.exec(text);
+  assert.ok(frontmatter, `${file} is missing YAML frontmatter`);
+  const lines = frontmatter[1].split(/\r?\n/);
+  const start = lines.findIndex((line) => /^description:/.test(line));
+  if (start < 0) return "";
+  const collected = [lines[start].replace(/^description:\s*/, "")];
+  for (let index = start + 1; index < lines.length; index += 1) {
+    if (/^[A-Za-z_-]+:/.test(lines[index])) break;
+    collected.push(lines[index]);
+  }
+  return collected.join("\n").trim();
+}
+
+test("the core tier fits both hosts' skill-listing budgets", async () => {
+  // Both hosts load a listing of every skill's description into context and both trim it when it
+  // overflows -- Claude by dropping descriptions from the skills you invoke least, Codex by
+  // shortening descriptions and then omitting skills. Either way the keywords that make a skill
+  // match are what get lost, so overflowing degrades routing silently. This is why both hosts
+  // default to core rather than to everything.
+  const CLAUDE_PER_SKILL = 1536;          // description + when_to_use, per skill
+  const CLAUDE_LISTING = 10_000;          // 1% of a 1M-token context window
+  const CODEX_LISTING = 8_000;            // 2% of the window, or this floor when it is unknown
+
+  let coreDescriptions = 0;
+  let coreWithPaths = 0;
+  let allDescriptions = 0;
+
+  for (const skill of MANIFEST.skills) {
+    const description = await skillDescription(path.join(PACK_ROOT, skill.path));
+    assert.ok(description, `${skill.name} has no description for the host to route on`);
+    assert.ok(
+      description.length <= CLAUDE_PER_SKILL,
+      `${skill.name} description is ${description.length} chars, over Claude's ${CLAUDE_PER_SKILL} cap`,
+    );
+    allDescriptions += description.length;
+    if (skill.tier !== "core") continue;
+    coreDescriptions += description.length;
+    // Codex's listing includes each skill's file path, so the installed path counts too.
+    coreWithPaths += description.length
+      + path.join(os.homedir(), ".agents", "skills", skill.name, "SKILL.md").length;
+  }
+
+  assert.ok(
+    coreDescriptions < CLAUDE_LISTING,
+    `core descriptions are ${coreDescriptions} chars, over Claude's ${CLAUDE_LISTING} listing budget`,
+  );
+  assert.ok(
+    coreWithPaths < CODEX_LISTING,
+    `core metadata is ${coreWithPaths} chars, over Codex's ${CODEX_LISTING} floor`,
+  );
+  // The reason for the default. If trimming the extended tier ever brings it under budget, this
+  // assertion is what says the default can be revisited.
+  assert.ok(
+    allDescriptions > CLAUDE_LISTING,
+    `all ${MANIFEST.skills.length} descriptions now total ${allDescriptions} chars, which fits `
+      + "Claude's listing budget — the core-only default may no longer be necessary",
+  );
+});
+
+test("the MCP dependency list matches the skills that actually need the MCP", async () => {
+  // This used to be derived from each skill's `scripts` field, which missed every instruction-only
+  // skill: harmony-build-loop declares no scripts but its whole workflow is build_project and
+  // start_app. The list is explicit in the manifest now, and recomputed here so it cannot drift.
+  const declared = new Set(MANIFEST.invocationPolicy.mcpDependency.skills);
+  const toolNames = MANIFEST.mcp.toolGroups.flatMap((group) => group.tools);
+  const reference = new RegExp(`\\b(${toolNames.join("|")})\\b`);
+
+  const actual = new Set();
+  for (const skill of MANIFEST.skills) {
+    if ((skill.scripts ?? []).length > 0) { actual.add(skill.name); continue; }
+    for (const file of await markdownFiles(path.join(PACK_ROOT, "skills", skill.name))) {
+      if (reference.test(await fs.readFile(file, "utf8"))) { actual.add(skill.name); break; }
+    }
+  }
+
+  const missing = [...actual].filter((name) => !declared.has(name)).sort();
+  const stale = [...declared].filter((name) => !actual.has(name)).sort();
+  assert.deepEqual(missing, [], `these skills call MCP tools but are not declared: ${missing.join(", ")}`);
+  assert.deepEqual(stale, [], `these skills are declared but no longer call MCP tools: ${stale.join(", ")}`);
+});
+
+test("installing for Codex preserves a skill's own openai.yaml metadata", async () => {
+  // Skills may ship their own agents/openai.yaml with display_name, short_description and
+  // default_prompt. The installer owns only `policy` and `dependencies`; rewriting the whole file
+  // erased the rest, which is how arkui-component-best-practices lost its Codex UI metadata.
+  const withYaml = [];
+  for (const skill of MANIFEST.skills) {
+    const source = path.join(PACK_ROOT, "skills", skill.name, "agents", "openai.yaml");
+    try { await fs.access(source); withYaml.push(skill.name); } catch { /* most ship none */ }
+  }
+  assert.ok(withYaml.length > 0, "this test needs at least one skill shipping its own openai.yaml");
+
+  const dest = path.join(await fs.mkdtemp(path.join(os.tmpdir(), "harmony-host-yaml-")), "skills");
+  try {
+    assert.equal((await runHostInstaller(["--host", "codex", "--dest", dest, "--profile", "full"])).exitCode, 0);
+    for (const name of withYaml) {
+      const before = await fs.readFile(path.join(PACK_ROOT, "skills", name, "agents", "openai.yaml"), "utf8");
+      const after = await fs.readFile(path.join(dest, name, "agents", "openai.yaml"), "utf8");
+      for (const line of before.split("\n")) {
+        const trimmed = line.trim();
+        // Only `policy` and `dependencies` bodies may change; everything else must come through.
+        if (!trimmed || trimmed.startsWith("#")) continue;
+        if (/^(policy|dependencies):/.test(trimmed) || /allow_implicit_invocation|^-\s|^tools:/.test(trimmed)) continue;
+        assert.ok(after.includes(trimmed), `${name}/agents/openai.yaml lost: ${trimmed}`);
+      }
+      assert.match(after, /dependencies:/, `${name} must still declare its MCP dependency`);
+    }
+  } finally {
+    await fs.rm(path.dirname(dest), { recursive: true, force: true });
+  }
+});
+
+test("both host adapters default to the core tier", async () => {
+  // Defaulting either host to full would put the unlicensed extended tier into a discovery
+  // directory and overflow that host's listing budget in one step.
+  const source = await fs.readFile(path.join(PACK_ROOT, "scripts/install-host.mjs"), "utf8");
+  const profiles = [...source.matchAll(/profile:\s*"(core|full)"/g)].map((match) => match[1]);
+  assert.ok(profiles.length >= 2, "both hosts must declare a default profile");
+  assert.deepEqual([...new Set(profiles)], ["core"], "every host default must be core");
 });
 
 test("--print-mcp emits a parseable stdio config pointing at this pack", async () => {

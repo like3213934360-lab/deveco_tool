@@ -41,6 +41,19 @@ DevEco Code 仓库主体采用 MIT；其中 Huawei 工具和脚本文件保留�
 
 `0.2.0-release` 截至提取时尚未发版（npm 上 `@deveco/deveco-code` 仍是 0.1.6），这批内容后续可能变动，故来源精确记录到提交号。
 
+#### 该分支的后续漂移（2026-08-03 复查）
+
+分支已从锁定的 `9535f0f5` 前进到 `31ae19dd`，中间 5 个提交：`build_project output improve`、`use devecocli docs search`、`fix build project output`、`optimize start_app output format`、`upgrade devecocli version`。
+
+**基线保持不动**，理由不变：这是未发版的移动分支，跟踪它拿到的是不稳定内容。逐文件核对后，5 个提交里**只有 1 个触及 `resources/skills`**，即 `deveco-cli/SKILL.md`（46 行 → 50 行）。它的两处变化本包分别处理：
+
+| 上游变化 | 本包处置 | 理由 |
+| --- | --- | --- |
+| 新增 `devecocli signature generate` 小节 | **已选择性同步** | 捆绑的 `@deveco/deveco-cli@1.2.1` 确实有 `signature` 命令；缺了它，debug 构建只会以 `Will skip sign 'hos_hap'. No signingConfigs profile is configured` 结束而没有任何后续指引 |
+| 删除 `devecocli docs` 小节、改写命令清单 | **不同步** | 1.2.1 仍然提供 `docs` 子命令，跟着删会让本包的文档比实际能力更窄 |
+
+同步处在文件内以 `LOCAL PATCH` 注明来源提交与取舍。其余 4 个提交只动 `src/`，与本包提取范围无关。
+
 ## SDD 命令与模板
 
 - 来源：本机物化目录 `~/.local/share/deveco/specs/`
