@@ -1,6 +1,6 @@
 # deveco-tool
 
-本目录是本机使用的 DevEco Code 能力整理仓库，同时是一个宿主无关的**鸿蒙开发能力包**：把 DevEco Code v0.1.5 的知识、工作流和工具三层能力整理成任何 AI agent 都能自己接入的形态，不含任何宿主适配层。
+本目录是本机使用的 DevEco Code 能力整理仓库，同时是一个宿主无关的**鸿蒙开发能力包**：把 DevEco Code v0.1.5 的知识、工作流和工具三层能力整理成任何 AI agent 都能自己接入的形态。核心资产不含宿主适配；Claude Code 与 Codex 的适配是**单独一层、可选安装**（`scripts/install-host.mjs`），不装它核心照常可用。
 
 接入方先读这两个文件：
 
@@ -9,11 +9,11 @@
 
 ```
 skills/      57 个 Skill，分两层：core 18 个（DevEco Code 提取，MIT）+ extended 39 个（华为官方 Skill 仓库 v0.0.2）
-             路由索引见 skills/INDEX.md；安装器可用 --profile core 只装 core 层
+             路由索引见 skills/INDEX.md；安装器默认只装 core 层，--profile full 才加装 extended
 commands/    SDD 五阶段命令
 templates/   SDD 三份产物模板
 src/         统一 stdio MCP，24 个工具
-scripts/     install.mjs 通用安装器
+scripts/     install.mjs 通用安装器；install-host.mjs 宿主适配层（Claude / Codex，可选）
 docs/        customize-deveco（上游第 5 个 Skill，仅作参考，不进包）
 provenance/  来源、许可与改动记录
 ```
@@ -22,11 +22,29 @@ provenance/  来源、许可与改动记录
 
 ```bash
 npm install
-node scripts/install.mjs --dest <目标目录>   # 装 skills/commands/templates/manifest.json
+node scripts/install.mjs --dest <目标目录>   # 装 skills(core 18)/commands/templates/manifest.json
+node scripts/install.mjs --dest <目标目录> --profile full   # 加装 extended 层，共 57 个
 node scripts/install.mjs --print-mcp         # 打印 stdio MCP 配置片段
 ```
 
-安装器只动目标目录，不改 `~/.claude.json`、`~/.codex/config.toml` 等任何宿主配置。
+默认 profile 是 `core`。`--profile full` 会加装 extended 层并在 stderr 打印许可警告——该层上游没有任何仓库级许可声明，其中 30 个自身也没有声明，默认处于保留所有权利状态，详见 [`LICENSE`](./LICENSE) 的 Scope 段与 `NOTICE.harmonyos-agent-skills`。
+
+`install.mjs` 只动目标目录，不改 `~/.claude.json`、`~/.codex/config.toml` 等任何宿主配置。
+
+想让宿主**自动发现**这些 Skill，再装可选的适配层：
+
+```bash
+node scripts/install-host.mjs --host claude    # → ~/.claude/skills，全 57 个
+node scripts/install-host.mjs --host codex     # → ~/.agents/skills，core 18 个
+node scripts/install-host.mjs --host all --dry-run
+node scripts/install-host.mjs --host codex --print-mcp   # MCP 注册片段
+```
+
+两个宿主的默认值来自各自官方文档：Claude 每个 Skill 的 `description` + `when_to_use` 上限 1536 字符，57 个全部合格所以全装；Codex 的初始 Skill 列表预算是上下文的 2%（未知时 8000 字符）**且含路径**，57 个约需 16.5K 会被截断并省略，core 18 个约 6.0K 才安全，所以 Codex 默认只装 core。
+
+Skill 默认软链，改仓库即时生效。少数「自动加载即可能产生副作用」的 Skill（建工程、批量写产物、起模拟器、真机跑测试、上架审查）会以打过补丁的副本安装，关闭隐式调用——Claude 用 `disable-model-invocation: true`，Codex 用 `agents/openai.yaml` 的 `allow_implicit_invocation: false`。名单在 `manifest.json` 的 `invocationPolicy`，`skills/` 下的原文件一字不改。
+
+适配层按 Skill 记录归属，可以和目录里已有的其他来源 Skill 共存，`--uninstall` 也只删自己装的。
 
 不移植的部分：内置 agent 的 harness 机制（permission 表、mode/temperature 配置、轮次协议）与 UI 自动校验链路。11 个 agent 里可移植的是 prompt 内容，`build` / `debug` / `plan` / `goal` 四个已提取成 `harmony-build-loop` / `harmony-debug-instrumentation` / `harmony-plan-doc` / `harmony-sdd-workflow`；其余 7 个是 OpenCode 通用会话 agent，零鸿蒙内容。UI 自动校验的相关 MCP 工具被禁用，但截图与 UI 树能力保留，详见 `PACK.md`。
 
@@ -65,7 +83,7 @@ MCP 工具按来源分为：
 
 UI 自动校验链路（`verify_ui`、`save_ui_screenshot`、`get_ui_verification_log`）已被本服务禁用，既不出现在工具列表里，直接调用也会返回 `TOOL_DISABLED`。原因见 [PACK.md](./PACK.md)。
 
-可用工具数量会随 CodeGenie 包是否能启动而变化；`check_ets_files` 不依赖 CodeGenie 子进程。本机当前完整列表为 24 个工具。
+工具数量恒为 24：`tools/list` 由静态表回答，不等 CodeGenie 子进程，所以子进程挂死时列表照常返回（实测 1ms），只是那 3 个代理工具在调用时返回 `CODEGENIE_UNAVAILABLE`。`check_ets_files` 不依赖 CodeGenie 子进程。
 
 ### 直接调用示例
 

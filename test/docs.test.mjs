@@ -69,10 +69,94 @@ test("prose script counts agree with the registry", async () => {
   }
 });
 
+/**
+ * Walk a directory tree and yield every file path below it.
+ * @param {string} dir Absolute directory to walk.
+ * @returns {Promise<string[]>} Absolute paths of every file below `dir`.
+ */
+async function allFiles(dir) {
+  const found = [];
+  for (const entry of await fs.readdir(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) found.push(...(await allFiles(full)));
+    else found.push(full);
+  }
+  return found;
+}
+
+test("no OS metadata file ships with the installable assets", async () => {
+  // .gitignore keeps these out of git but not out of the installer: it links or copies whatever
+  // is on disk, so a stray .DS_Store lands in the host's skill directory and may be indexed there.
+  // __pycache__ appears the moment any of the 11 registered Python scripts runs, so this is the
+  // one that actually recurs.
+  const junk = new Set([".DS_Store", "Thumbs.db", "desktop.ini", "__pycache__"]);
+  const offenders = [];
+  for (const asset of ["skills", "commands", "templates"]) {
+    for (const file of await allFiles(path.join(PACK_ROOT, asset))) {
+      if (junk.has(path.basename(file)) || file.includes(`${path.sep}__pycache__${path.sep}`)) {
+        offenders.push(path.relative(PACK_ROOT, file));
+      }
+    }
+  }
+  assert.deepEqual(offenders, [], `OS metadata must not ship: ${offenders.join(", ")}`);
+});
+
+test("the LICENSE scope section agrees with the manifest and the files on disk", async () => {
+  // The root licence used to be a verbatim copy of upstream's, which both misattributed this
+  // repository's own code and implied MIT for the extended tier. Every number it now states is
+  // derived from something checkable, so the three licence documents cannot drift apart again.
+  const license = await fs.readFile(path.join(PACK_ROOT, "LICENSE"), "utf8");
+  const core = MANIFEST.skills.filter((skill) => skill.tier === "core").length;
+  const extended = MANIFEST.skills.length - core;
+
+  assert.match(license, /Copyright \(c\) \d{4} dreamlike/, "the licence must not claim upstream's copyright");
+  assert.match(license, new RegExp(`the ${core} skills under`), `LICENSE must state ${core} core skills`);
+  assert.match(license, new RegExp(`the ${extended} skills under`), `LICENSE must state ${extended} extended skills`);
+
+  // Files carrying a third-party header are governed by that header, not by the root licence,
+  // so the count has to match reality rather than a number someone typed once.
+  const perSkill = new Map();
+  for (const file of await allFiles(path.join(PACK_ROOT, "skills"))) {
+    if (!(await fs.readFile(file, "utf8")).includes("Apache License")) continue;
+    const skill = path.relative(path.join(PACK_ROOT, "skills"), file).split(path.sep)[0];
+    perSkill.set(skill, (perSkill.get(skill) ?? 0) + 1);
+  }
+  const total = [...perSkill.values()].reduce((sum, count) => sum + count, 0);
+  assert.match(
+    license,
+    new RegExp(`${total} files in this repository carry an Apache-2\\.0`),
+    `LICENSE must state ${total} Apache-2.0 headed files`,
+  );
+  for (const [skill, count] of perSkill) {
+    assert.match(
+      license,
+      new RegExp(`\`${skill}\`\\s+${count}\\b`),
+      `LICENSE must record ${skill} as ${count} Apache-2.0 headed files`,
+    );
+  }
+});
+
 test("every provenance source file referenced by the docs exists", async () => {
   for (const file of ["provenance/SOURCES.md", "provenance/INVENTORY.md", "NOTICE.deveco-code",
     "NOTICE.harmonyos-agent-skills", "provenance/deveco-code-v0.1.5.commit",
+    "provenance/deveco-code-v0.1.6.commit",
     "provenance/harmonyos-agent-skills-v0.0.2.commit", "skills/INDEX.md"]) {
     await fs.access(path.join(PACK_ROOT, file));
+  }
+});
+
+test("every pinned commit is a real sha and is cited by SOURCES.md", async () => {
+  // Two upstream refs are in play: v0.1.5 is where the bytes came from, v0.1.6 is the release
+  // line they were verified against. A pin file whose sha appears nowhere in the prose is how
+  // those two roles silently drift apart, so require each pin to be spelled out in the record.
+  const provenance = path.join(PACK_ROOT, "provenance");
+  const sources = await fs.readFile(path.join(provenance, "SOURCES.md"), "utf8");
+  const pins = (await fs.readdir(provenance)).filter((name) => name.endsWith(".commit"));
+  assert.ok(pins.length > 0, "at least one pinned commit must be recorded");
+
+  for (const pin of pins) {
+    const sha = (await fs.readFile(path.join(provenance, pin), "utf8")).trim();
+    assert.match(sha, /^[0-9a-f]{40}$/, `${pin} must hold a full 40-character commit sha`);
+    assert.ok(sources.includes(sha), `SOURCES.md must cite the sha pinned in ${pin}`);
   }
 });

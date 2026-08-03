@@ -190,7 +190,7 @@ license: MIT
 
 - **新增文件**：在 `entry/src/main/ets/insightintents/` 下创建 `.ets` 文件，并更新 `insight_intent.json`（对象数组格式）。
 - **修改现有文件**（如添加 `@InsightIntentPage`）：直接编辑，**无需**更新 `insight_intent.json`。
-- 写入前使用 `AskUserQuestion` 工具征求用户同意。
+- 写入前用宿主的「向用户提问」能力征求同意；宿主没有这个能力时，在回复里列出待写入的文件并停下等用户确认。<!-- LOCAL PATCH: 上游写死 Claude 的 AskUserQuestion，见 manifest.json hostToolMapping.question -->
 
 ### 7. 代码逻辑自检
 

@@ -1,6 +1,6 @@
 ---
 name: deveco-create-project
-description: Load this skill when creating, initializing, or scaffolding an ArkTS project, including "0-1", "from scratch", "new ArkTS project", "新建工程", "创建项目", and empty directory initialization tasks. Load this skill even if the target directory already exists — never assume an existing same-named directory is the user's intended project and skip to build_project/start_app. If the user provides a Chinese or other non-ASCII project name (e.g. 购物车, 天气预报), you MUST propose 2-3 UpperCamelCase ASCII candidates (e.g. 购物车 → ShoppingCart / ShopCart / Cart) and let the user choose via AskUserQuestion BEFORE invoking the script — never pass non-ASCII names through to the script, and never pick a single translation on the user's behalf. Use the skill's private TypeScript script to create ArkTS projects reliably.
+description: Load this skill when creating, initializing, or scaffolding an ArkTS project, including "0-1", "from scratch", "new ArkTS project", "新建工程", "创建项目", and empty directory initialization tasks. Load this skill even if the target directory already exists — never assume an existing same-named directory is the user's intended project and skip to build_project/start_app. If the user provides a Chinese or other non-ASCII project name (e.g. 购物车, 天气预报), you MUST propose 2-3 UpperCamelCase ASCII candidates (e.g. 购物车 → ShoppingCart / ShopCart / Cart) and let the user choose BEFORE invoking the script — never pass non-ASCII names through to the script, and never pick a single translation on the user's behalf. Use the skill's private TypeScript script to create ArkTS projects reliably.
 ---
 
 # deveco-create-project
@@ -24,12 +24,13 @@ Confirm the following parameters before execution. Ask the user if any required 
 
 When the user provides a Chinese or other non-ASCII name, you MUST:
 1. Propose 2-3 UpperCamelCase ASCII candidates based on meaning (e.g. `购物车` → `ShoppingCart` / `ShopCart` / `Cart`; `天气预报` → `WeatherForecast` / `Weather` / `Forecast`). Fall back to pinyin only when meaning is unclear.
-2. Let the user pick one via `AskUserQuestion` before invoking the script — do NOT pick on the user's behalf, even if one option seems obviously best.
+2. Let the user pick one using your host's ask-the-user mechanism before invoking the script — do NOT pick on the user's behalf, even if one option seems obviously best. <!-- LOCAL PATCH: upstream named Claude's AskUserQuestion tool; see manifest.json hostToolMapping.question -->
+   If your host has no such mechanism, present the candidates in your reply and stop until the user answers. Never guess.
 3. Never pass the original non-ASCII name to the script.
 
 ### Target directory conflict
 
-If `{projectPath}/{appName}` already exists and is not empty, the script will exit with code `2` and emit a `PROJECT_EXISTS` JSON payload. When you see it, ask the user via `AskUserQuestion` whether to overwrite, rename, or cancel — do NOT silently re-run or delete the directory yourself.
+If `{projectPath}/{appName}` already exists and is not empty, the script will exit with code `2` and emit a `PROJECT_EXISTS` JSON payload. When you see it, ask the user — using your host's ask-the-user mechanism, or plainly in your reply if it has none — whether to overwrite, rename, or cancel. Do NOT silently re-run, and do NOT delete the directory yourself. <!-- LOCAL PATCH: upstream named Claude's AskUserQuestion tool; see manifest.json hostToolMapping.question -->
 
 If the user explicitly specifies an SDK/API level, pass it through directly. It must fall within the supported range `17..defaultApiVersion`, where `defaultApiVersion` comes from `DEVECO_HOME/sdk/default/sdk-pkg.json` → `data.apiVersion`.
 If the user does not specify one, do not let the model invent a version. Let the script auto-detect from `DEVECO_HOME/sdk/default/sdk-pkg.json`.

@@ -3,11 +3,13 @@
 ## DevEco Code Skills
 
 - 来源：`https://gitcode.com/openharmony-sig/deveco-code.git`
-- 版本：`v0.1.5`
+- **提取来源**：`v0.1.5` → `537543c5732d03b7ba9bbe6082e3380677a520fb`（见 `deveco-code-v0.1.5.commit`）
+- **核对基线**：`v0.1.6` → `ab476cafd27e6418cca35257a456baa1b8cba391`（见 `deveco-code-v0.1.6.commit`），npm 上 `@deveco/deveco-code` 的 latest
 - 提取路径：`packages/opencode/resources/skills`
-- 提取提交：见 `deveco-code-v0.1.5.commit`
 - 提取范围：`arkts-error-fixes`、`arkts-grammar-standards`、`arkts-runtime-fix`、`deveco-create-project`
 - 文件数量：129（排除 `customize-deveco` 环境自定义配置 Skill）
+
+**两个版本号各有分工，不要混为一谈。** 文件字节取自 `v0.1.5`；`v0.1.6` 是发布线上的核对基线。二者对本包提取过的内容**没有任何差异**，这一点是逐提交验证过的而非抽样：`v0.1.5...v0.1.6` 共 20 个提交、140 个文件变更（compare 结果 `truncated: false`），其中落在 `packages/opencode/resources/skills/**`、`packages/opencode/src/agent/prompt/**`、`src/tool/arkts-check.cjs`、`src/tool/hdc_log.ts` 的**为 0 个**；`resources/` 下唯一的变更是 `models.dev.json`，与本包无关。因此 `v0.1.5` 的提取内容与 `v0.1.6` 发布线一致，两处标注都成立。
 
 `arkts-runtime-fix` 的 HDC 共享调用及四个调用脚本在本仓库增加了失败文本识别，修复 HDC 返回退出码 0 但输出 `[Fail]` 时的误报。
 
@@ -31,7 +33,7 @@ DevEco Code 仓库主体采用 MIT；其中 Huawei 工具和脚本文件保留�
 
 > 原文记的是「`0.2.0-release` 的 `deveco-create-project` 只剩 4 个文件，31 个工程模板文件不存在（`copy-template.mjs` 期望的 `application/` 目录整个消失），照搬会让建工程能力不可用」。**这个判断不成立。** 0.2.0 的 `copy-template.mjs` 根本不再期待模板目录——它改成了调用 `devecocli create` 由 CLI 生成工程，模板文件是因此被删的，不是缺失。
 
-现在的理由是：`arkts-error-fixes`、`arkts-grammar-standards`、`arkts-runtime-fix` 三个在 v0.1.6 与 0.2.0-release 之间的 diff 本身为空，重取没有收益，反而会丢掉本仓的 `LOCAL PATCH`；`deveco-create-project` 的 0.2.0 路线本包**已经跟进**（见下），保留 v0.1.6 基线的是它的 `detect-sdk.mjs` CLI 入口补丁。四者继续以 v0.1.6 为基线，已逐文件核对与上游一致（129 个文件中 124 个逐字节相同，5 个是本仓 HDC `[Fail]` 补丁）。
+现在的理由是：`arkts-error-fixes`、`arkts-grammar-standards`、`arkts-runtime-fix` 三个在 v0.1.6 与 0.2.0-release 之间的 diff 本身为空，重取没有收益，反而会丢掉本仓的 `LOCAL PATCH`；`deveco-create-project` 的 0.2.0 路线本包**已经跟进**（见下），保留发布线基线的是它的 `detect-sdk.mjs` CLI 入口补丁。四者的字节仍取自 `v0.1.5`，并已按上文的 compare 结果确认与 `v0.1.6` 发布线无差异；逐文件核对结果是 129 个文件中 124 个与上游逐字节相同，5 个是本仓 HDC `[Fail]` 补丁。
 
 `deveco-create-project` 的建工程实现已按 0.2.0 的方向改写：`copy-template.mjs` 不再拷贝模板，改为调用本机 DevEco CLI 的 `create` 子命令。与上游的差别是它不复制那句写死的 `spawnSync('devecocli')`——上游靠 PATH 上的 shim，本包不提供，改为 `DEVECO_CLI_ENTRY` → `require.resolve("@deveco/deveco-cli/dist/cli.js")` → PATH 三级解析，全部失败时返回结构化的 `DEVECO_CLI_NOT_FOUND`。脚本对外的 CLI 契约（`--project-path` / `--app-name` / `--bundle-name` / `--api-level`）保持不变。原来的 31 个模板文件移到 `test/fixtures/harmony-app/`，只作 ArkTS 检查器的测试夹具，不随包分发（`scripts/install.mjs` 的 `ASSETS` 不含 `test/`）。
 
@@ -55,7 +57,7 @@ DevEco Code 仓库主体采用 MIT；其中 Huawei 工具和脚本文件保留�
 - 提取范围：只取各 prompt 尾部的 HarmonyOS 方法论章节，通用 CLI 行为样板（tone/style、输出长度、通用工具使用政策、安全红线）不取
 - 产物：`skills/harmony-build-loop/`、`skills/harmony-debug-instrumentation/`、`skills/harmony-plan-doc/`、`skills/harmony-sdd-workflow/`
 
-这三个 Skill 是**衍生作品**，不是上游原文件的复制。上游同为 MIT，衍生内容随本仓库一并按 MIT 分发，来源已在各 SKILL.md 正文首段注明。
+这四个 Skill 是**衍生作品**，不是上游原文件的复制。上游 `LICENSE` 在 `v0.1.5`、`v0.1.6`、`0.2.0-release` 三处均为 MIT（已联网核对原始文件），衍生内容随本仓库一并按 MIT 分发，来源已在各 SKILL.md 正文首段注明。
 
 未提取的部分：agent 定义的 harness 侧——permission 表、mode/hidden/temperature 配置、`plan_enter`/`plan_exit`/`debug_exit` 轮次协议，以及 UI 自动校验链路。
 
@@ -63,7 +65,7 @@ DevEco Code 仓库主体采用 MIT；其中 Huawei 工具和脚本文件保留�
 
 ## 统一 MCP 适配层依赖
 
-- `@modelcontextprotocol/sdk@1.29.0`：统一 stdio MCP 协议服务和 CodeGenie 子进程客户端。
+- `@modelcontextprotocol/sdk@1.30.0`：统一 stdio MCP 协议服务和 CodeGenie 子进程客户端。1.29.0 → 1.30.0 是为消掉 GHSA-frvp-7c67-39w9（它把 `@hono/node-server` 放宽到 `^1.19.9 || ^2.0.5`）。另有两条 `overrides` 强制 `axios@1.18.1` 和 `adm-zip@0.6.0`，理由与回归见 `PACK.md`「装依赖」。
 - `@deveco-codegenie/mcp@1.1.11`：固定版本的 CodeGenie MCP 子进程；其平台包由 npm 按当前平台安装。
 - `@arkts/language-server@1.3.10`：本地 ArkTS LSP；通过 `vscode-jsonrpc` 和 `vscode-uri` 连接。
 - `@deveco/deveco-cli`：`build_project` 与 `start_app` 的实现依赖。上游 0.2.0 把这两个工具从 CodeGenie 代理改成了原生实现，本仓跟进；`src/deveco-cli.mjs` 是按上游 `packages/opencode/src/tool/build_project.ts`、`start_app.ts` 与 `lib/deveco-cli.ts` 的公开行为写的 Node 适配层，不复制上游的 vendor-root 探测与 PATH shim（那是为 CLI 分发准备的），并把 `Bun.spawn` 换成 `node:child_process`。
@@ -98,7 +100,7 @@ DevEco Code 仓库主体采用 MIT；其中 Huawei 工具和脚本文件保留�
 | README 中的许可章节 | **不存在**，全文无 license / 许可 / 开源协议 / copyright 字样 |
 | 全仓 86 个 `SKILL.md` 中 frontmatter 声明 `license:` 的 | **14 个**，全部为 MIT |
 | 本包纳入的 39 个中声明 `license: MIT` 的 | **9 个**（`hmos-memleak-analysis`、`hmos-ability-insight-intent-generator`、`hmos-ascf-assistant`、`hmos-ascf-convert-taro`、`hmos-ascf-convert-uniapp`、`hmos-atomicservice-assistant`、`deveco-studio-codelinter`、`deveco-studio-emulator`、`deveco-studio-verify`） |
-| 本包纳入部分带 Apache-2.0 + Huawei 版权头的文件 | **14 个**（`hmos-appfreeze-analysis` 的 10 个 Python、`hmos-apifault-analysis` 的 2 个 Python、`hmos-scan-kit-customscan` 的 2 个 TypeScript 样例） |
+| 本包纳入部分带 Apache-2.0 + Huawei 版权头的文件 | **26 个**（`hmos-scan-kit-customscan` 的 14 个 ArkTS 样例：12 个 `.ets` + 2 个 `.ts`；`hmos-appfreeze-analysis` 的 10 个 Python；`hmos-apifault-analysis` 的 2 个 Python） |
 
 **上游没有提供仓库级许可声明，这一事实本身是记录的一部分。** 30/39 个纳入的 Skill 既没有 frontmatter 声明也没有文件头，处于「保留所有权利」的默认状态。本包的处置是：
 
@@ -129,3 +131,21 @@ DevEco Code 仓库主体采用 MIT；其中 Huawei 工具和脚本文件保留�
 | `hmos-design-visual-mobile` | `assets/` 下 3 个 `.ttf`（`HMOSColorEmojiCompat.ttf`、`HMOSColorEmojiFlags.ttf`、`HMSymbolVF_1.ttf`） | 华为字体的再分发许可未确认 |
 
 `hmos-push-kit` 的 4 个嵌套子 Skill 被拍平为顶层同级目录。它的 Master 路由是**按 Skill 名字**路由的（「路由到 `hmos-push-kit-token`」），名字全局唯一，拍平后路由天然成立；保持嵌套反而会让宿主的 Skill 选择器看不到子 Skill，使大路由失效。
+
+## 宿主中立化改写（跨两个提取源）
+
+上游内容为 DevEco Code / Claude 环境编写，有些地方直接点名了宿主专属工具。照抄会让 Codex、OpenCode 等宿主
+去调一个并不存在的东西，所以逐处改写为**能力**表述，映射见 `manifest.json` 的 `hostToolMapping`。
+每处都在原位留了 `LOCAL PATCH` 注释，`test/pack.test.mjs` 的「no skill instructs the model to call a
+host-specific tool by name」会持续守护。
+
+| 文件 | 上游写法 | 改为 |
+| --- | --- | --- |
+| `skills/deveco-create-project/SKILL.md`（description、`:27`、`:33`） | `AskUserQuestion` | 宿主的「向用户提问」能力；没有就在回复里列出选项并停下等答复 |
+| `skills/hmos-ability-insight-intent-generator/SKILL.md:193` | `AskUserQuestion` | 同上 |
+| `skills/hmos-ability-insight-intent-generator/references/write_file_guide.md:65` | `AskUserQuestion` | 同上，并明确「不要自行写盘」 |
+| `skills/solution-design/SKILL.md`「工具使用指南」 | `Read` / `Write` / `Grep` / `Glob` / `TodoWrite` | 读文件 / 写文件 / 搜索内容 / 查找文件 / 任务跟踪；无任务列表能力时在设计文档顶部维护阶段清单 |
+| `skills/solution-design/references/increment-design.md`「会话管理集成」「标准调用格式」 | `Task subagent_type="session-manager"`、`Task subagent_type="design-and-implementation"` | 这两个 agent 属 DevEco Code 自己的注册表，**本包不分发**，任何宿主上都不存在。改写为阶段化表述：会话状态落到设计文档的进度区块，委派改为「宿主有委派能力就委派，没有就主 agent 按同一模板执行」 |
+
+`skills/harmony-sdd-workflow/SKILL.md` 和 `skills/d2c-fast/references/host-mapping.md` 里仍会出现
+`subagent_type` 字样，那是在说明「上游的哪部分 harness 没有移植」，属于正文而非指令，守护测试对这两个文件放行。

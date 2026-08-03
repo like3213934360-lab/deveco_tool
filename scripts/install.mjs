@@ -20,7 +20,7 @@ const MARKER = ".harmony-pack.json";
 const USAGE = `Usage: node scripts/install.mjs [options]
 
   --dest <dir>    Target directory to install into (required unless --print-mcp)
-  --profile <p>   Which skills to install: full (default) or core
+  --profile <p>   Which skills to install: core (default) or full
   --copy          Copy assets instead of symlinking them (default: symlink)
   --dry-run       Print the planned actions without touching the filesystem
   --uninstall     Remove assets previously installed by this script from <dir>
@@ -32,10 +32,42 @@ Installed assets: ${ASSETS.join(", ")}
 Profiles differ only in which skill directories are linked. manifest.json is always installed
 whole, so the routing index in skills/INDEX.md stays accurate about what exists upstream:
 
-  full   every skill (core + extended)
-  core   only tier "core" skills — the DevEco Code extraction, MIT throughout. Leaves out the
-         extended layer, whose upstream ships no repository-level licence declaration.
+  core   (default) only tier "core" skills — the DevEco Code extraction, MIT throughout.
+  full   core + the extended layer. That upstream ships no repository-level licence
+         declaration and 30 of its 39 skills carry none at all, so this profile prints a
+         licence warning. Read NOTICE.harmonyos-agent-skills before redistributing.
 `;
+
+// OS metadata and build residue are never part of an asset. They would otherwise ride along into
+// a host's skill directory, where they are at best noise and at worst indexed as a skill.
+// __pycache__ is not hypothetical: running any of the 11 registered Python scripts leaves one
+// inside the skill that owns it.
+const JUNK_NAMES = new Set([".DS_Store", "Thumbs.db", "desktop.ini", "__pycache__"]);
+
+/**
+ * Decide whether a path is real content rather than OS metadata.
+ * @param {string} source Absolute path being copied.
+ * @returns {boolean} True when the entry should be installed.
+ */
+function notJunk(source) {
+  return !JUNK_NAMES.has(path.basename(source));
+}
+
+/**
+ * Tell the operator what the full profile actually pulls in, licence-wise.
+ * Written to stderr so it survives piping stdout, and deliberately non-blocking:
+ * the exit code stays 0 and the install proceeds.
+ * @param {number} extendedCount How many extended-tier skills the profile adds.
+ * @returns {void}
+ */
+function warnExtendedLicence(extendedCount) {
+  process.stderr.write(
+    `warning: --profile full installs the extended layer (${extendedCount} skills).\n`
+      + "  Upstream (harmonyos-agent-skills) ships no repository-level LICENSE, NOTICE or COPYING\n"
+      + "  file, and 30 of those skills declare no licence at all — by default all rights reserved.\n"
+      + "  Read NOTICE.harmonyos-agent-skills before redistributing. Installing anyway.\n\n",
+  );
+}
 
 /**
  * Parse argv into an options object.
@@ -45,7 +77,7 @@ whole, so the routing index in skills/INDEX.md stays accurate about what exists 
 function parseArgs(argv) {
   const options = {
     dest: "",
-    profile: "full",
+    profile: "core",
     copy: false,
     dryRun: false,
     uninstall: false,
@@ -151,15 +183,16 @@ async function installAsset(name, dest, options) {
   if (selective) {
     await fs.mkdir(target, { recursive: true });
     for (const entry of [...options.coreSkills, "INDEX.md"]) {
+      if (!notJunk(entry)) continue;
       const from = path.join(source, entry);
       const to = path.join(target, entry);
-      if (options.copy) await fs.cp(from, to, { recursive: true });
+      if (options.copy) await fs.cp(from, to, { recursive: true, filter: notJunk });
       else await fs.symlink(from, to);
     }
     return `installed ${name} (${mode}${suffix})`;
   }
 
-  if (options.copy) await fs.cp(source, target, { recursive: true });
+  if (options.copy) await fs.cp(source, target, { recursive: true, filter: notJunk });
   else await fs.symlink(source, target);
   return `installed ${name} (${mode})`;
 }
@@ -256,6 +289,10 @@ async function main() {
   const coreSkills = options.profile === "core"
     ? manifestForProfile.skills.filter((skill) => skill.tier === "core").map((skill) => skill.name)
     : undefined;
+
+  if (options.profile === "full") {
+    warnExtendedLicence(manifestForProfile.skills.filter((skill) => skill.tier === "extended").length);
+  }
 
   try {
     for (const name of ASSETS) {

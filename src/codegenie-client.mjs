@@ -124,7 +124,10 @@ async function syncProjectPath() {
 }
 
 export async function callCodeGenieTool(name, args = {}) {
-  await ensureCodeGenie();
+  // getCodeGenieTools rather than ensureCodeGenie: since tools/list stopped touching the child,
+  // a call is the first thing that starts it, so it needs the same retry-a-stalled-spawn
+  // behaviour and the same CODEGENIE_UNAVAILABLE wrapper that tool discovery used to provide.
+  await getCodeGenieTools();
   await syncProjectPath();
   return client.callTool({ name, arguments: args });
 }

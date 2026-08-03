@@ -1,6 +1,6 @@
 MIT License
 
-Copyright (c) 2025 opencode
+Copyright (c) 2026 dreamlike
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -19,3 +19,61 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+================================================================================
+SCOPE OF THIS LICENSE
+================================================================================
+
+This repository is a composite. The MIT grant above does NOT cover every file.
+Read this section before redistributing.
+
+1. COVERED BY THE MIT GRANT ABOVE
+
+   - The original adaptation layer authored in this repository:
+     `src/`, `scripts/`, `test/`, `manifest.json`, `README.md`, `PACK.md`.
+
+   - The `core` tier: the 18 skills under `skills/` whose `manifest.json` entry
+     has `"tier": "core"`, plus `commands/` and `templates/`. These are extracted
+     or derived from DevEco Code
+     (https://gitcode.com/openharmony-sig/deveco-code), which is MIT licensed at
+     every reference this pack was built against (`v0.1.6` and `0.2.0-release`).
+     The upstream notice is reproduced in `NOTICE.deveco-code`.
+
+   - The four `harmony-*` skills are derivative works of DevEco Code agent system
+     prompts, not verbatim copies. They inherit the upstream MIT terms, and each
+     names its source in the first paragraph of its `SKILL.md`.
+
+2. NOT COVERED — REDISTRIBUTE ONLY AFTER YOUR OWN REVIEW
+
+   The `extended` tier: the 39 skills under `skills/` whose `manifest.json` entry
+   has `"tier": "extended"`. These come from HarmonyOS Agent Skills
+   (https://gitcode.com/HarmonyOS_Skills/harmonyos-agent-skills), pinned at commit
+   37f8f380ea9ac840ff1e43dd9a608ab320edffc6.
+
+   That upstream repository ships NO repository-level LICENSE, NOTICE, or COPYING
+   file, and its README contains no licensing section. Of the 39 skills included
+   here, 9 declare `license: MIT` in their own frontmatter; the remaining 30 carry
+   no licence declaration of any kind and are therefore, by default, all rights
+   reserved. Absence of a licence is not permission: it does not grant the right
+   to copy, redistribute, or create derivative works.
+
+   Per-skill status is recorded in `NOTICE.harmonyos-agent-skills`. The installer
+   defaults to `--profile core` and leaves this tier out; `--profile full` opts
+   into it and prints a licence warning.
+
+3. THIRD-PARTY FILE HEADERS — PRESERVED, AND THEY GOVERN
+
+   36 files in this repository carry an Apache-2.0 + Huawei copyright header: 26
+   from HarmonyOS Agent Skills (`hmos-scan-kit-customscan` 14,
+   `hmos-appfreeze-analysis` 10, `hmos-apifault-analysis` 2) and 10 from DevEco
+   Code (`arkts-runtime-fix` 9, `deveco-create-project` 1). Those headers are
+   reproduced unmodified and take precedence over this file for those files.
+   Retain them when redistributing.
+
+4. LOCAL MODIFICATIONS
+
+   Files changed relative to upstream are annotated in place with a `LOCAL PATCH`
+   comment and itemised in `provenance/SOURCES.md`.
+
+Full provenance, exclusions, and the reasoning behind each decision:
+`provenance/SOURCES.md`, `NOTICE.deveco-code`, `NOTICE.harmonyos-agent-skills`.

@@ -31,6 +31,26 @@ function runInstaller(args) {
 }
 
 /**
+ * Run the host adapter installer and capture its result.
+ * @param {string[]} args CLI arguments passed to scripts/install-host.mjs.
+ * @returns {Promise<{exitCode: number, stdout: string, stderr: string}>} Process outcome.
+ */
+function runHostInstaller(args) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, [path.join(PACK_ROOT, "scripts/install-host.mjs"), ...args], {
+      cwd: PACK_ROOT,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.on("data", (chunk) => { stdout += chunk.toString(); });
+    child.stderr.on("data", (chunk) => { stderr += chunk.toString(); });
+    child.once("error", reject);
+    child.once("close", (exitCode) => resolve({ exitCode, stdout, stderr }));
+  });
+}
+
+/**
  * Read the YAML frontmatter `name` of a SKILL.md file.
  * @param {string} file Absolute path to a SKILL.md.
  * @returns {Promise<string>} The declared skill name, with any YAML quoting removed.
@@ -206,6 +226,28 @@ test("d2c-fast carries no leftover host bindings from upstream", async () => {
   }
 });
 
+test("no skill instructs the model to call a host-specific tool by name", async () => {
+  // This pack is host-neutral: naming Claude's AskUserQuestion or TodoWrite, or upstream's
+  // subagent registry, tells a Codex or OpenCode session to call something that does not exist.
+  // Capabilities are named instead, with the mapping in manifest.json hostToolMapping.
+  const BINDINGS = ["AskUserQuestion", "TodoWrite", "subagent_type"];
+  // Two kinds of legitimate mention: a LOCAL PATCH comment recording what upstream said, and the
+  // one skill whose job is to explain which parts of upstream's harness were deliberately dropped.
+  const EXPLAINS_NON_PORTAGE = ["skills/harmony-sdd-workflow/SKILL.md", "skills/d2c-fast/references/host-mapping.md"];
+
+  const offenders = [];
+  for (const file of await markdownFiles(path.join(PACK_ROOT, "skills"))) {
+    const relative = path.relative(PACK_ROOT, file);
+    if (EXPLAINS_NON_PORTAGE.includes(relative)) continue;
+    // Strip HTML comments: a LOCAL PATCH note names the upstream tool it replaced, on purpose.
+    const text = (await fs.readFile(file, "utf8")).replace(/<!--[\s\S]*?-->/g, "");
+    for (const binding of BINDINGS) {
+      if (text.includes(binding)) offenders.push(`${relative}: ${binding}`);
+    }
+  }
+  assert.deepEqual(offenders, [], `host-specific tool bindings must be expressed as capabilities:\n${offenders.join("\n")}`);
+});
+
 test("SDD commands cover the five phases in order", () => {
   assert.deepEqual(MANIFEST.commands.map((command) => command.phase), [1, 2, 3, 4, 5]);
   assert.equal(MANIFEST.commands.at(-1).variant, "build-only");
@@ -265,6 +307,125 @@ test("--profile core installs only the core layer but still ships the full manif
   } finally {
     await fs.rm(path.dirname(dest), { recursive: true, force: true });
   }
+});
+
+test("the default profile is core, and full warns about the extended licence without blocking", async () => {
+  // The extended tier's upstream ships no repository-level licence declaration and 30 of its
+  // 39 skills declare none either, so shipping it must be an explicit choice rather than the
+  // path of least resistance. The warning is advisory: it must not change the exit code.
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "harmony-pack-default-"));
+  try {
+    const core = MANIFEST.skills.filter((skill) => skill.tier === "core").map((skill) => skill.name);
+
+    const defaulted = await runInstaller(["--dest", path.join(root, "default")]);
+    assert.equal(defaulted.exitCode, 0);
+    assert.deepEqual(
+      (await fs.readdir(path.join(root, "default", "skills"))).sort(),
+      [...core, "INDEX.md"].sort(),
+      "omitting --profile must install the core layer only",
+    );
+    assert.equal(defaulted.stderr, "", "the default profile has nothing to warn about");
+
+    const full = await runInstaller(["--dest", path.join(root, "full"), "--profile", "full"]);
+    assert.equal(full.exitCode, 0, "the licence warning must not block the install");
+    assert.match(full.stderr, /NOTICE\.harmonyos-agent-skills/);
+    assert.equal(
+      (await fs.readdir(path.join(root, "full", "skills"))).length,
+      MANIFEST.skills.length + 1,
+      "--profile full still installs every skill plus INDEX.md",
+    );
+  } finally {
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});
+
+test("the host adapter renders invocation policy without touching the skills it ships", async () => {
+  // The skills under skills/ are byte-identical with upstream and other tests enforce that, so
+  // a skill that must not be auto-invoked is materialised as a patched copy in the host's
+  // directory. If this ever regressed into editing the source, the pack would quietly stop
+  // matching upstream.
+  const policy = MANIFEST.invocationPolicy.disableImplicitInvocation;
+  const disabled = Object.keys(policy).filter((key) => key !== "$comment");
+  assert.ok(disabled.length > 0, "the policy table must not be empty");
+  for (const name of disabled) {
+    assert.ok(MANIFEST.skills.some((skill) => skill.name === name), `unknown skill in policy: ${name}`);
+    const source = await fs.readFile(path.join(PACK_ROOT, "skills", name, "SKILL.md"), "utf8");
+    assert.ok(
+      !source.includes("disable-model-invocation"),
+      `${name}/SKILL.md must stay upstream-clean; the field belongs in the installed copy`,
+    );
+  }
+
+  const dest = path.join(await fs.mkdtemp(path.join(os.tmpdir(), "harmony-host-claude-")), "skills");
+  try {
+    const result = await runHostInstaller(["--host", "claude", "--dest", dest]);
+    assert.equal(result.exitCode, 0, result.stderr);
+    assert.equal((await fs.readdir(dest)).length, MANIFEST.skills.length + 1, "every skill plus the marker");
+
+    for (const name of disabled) {
+      const installed = await fs.readFile(path.join(dest, name, "SKILL.md"), "utf8");
+      const frontmatter = /^---\r?\n([\s\S]*?)\r?\n---/.exec(installed);
+      assert.ok(frontmatter, `${name} lost its frontmatter during patching`);
+      assert.match(frontmatter[1], /^disable-model-invocation: true$/m, `${name} was not patched`);
+    }
+
+    // Everything else stays a symlink so edits in this repository take effect without reinstalling.
+    const untouched = MANIFEST.skills.find((skill) => !disabled.includes(skill.name)).name;
+    assert.ok((await fs.lstat(path.join(dest, untouched))).isSymbolicLink());
+  } finally {
+    await fs.rm(path.dirname(dest), { recursive: true, force: true });
+  }
+});
+
+test("the host adapter merges into a shared directory instead of claiming it", async () => {
+  // ~/.agents/skills and ~/.claude/skills normally already hold skills from other sources.
+  // Per-directory ownership (what scripts/install.mjs uses for a pack root) would make the
+  // adapter unusable there, so ownership is tracked per skill.
+  const dest = path.join(await fs.mkdtemp(path.join(os.tmpdir(), "harmony-host-merge-")), "skills");
+  const foreign = path.join(dest, "someone-elses-skill");
+  await fs.mkdir(foreign, { recursive: true });
+  await fs.writeFile(path.join(foreign, "SKILL.md"), "---\nname: someone-elses-skill\n---\nkeep me\n");
+
+  try {
+    assert.equal((await runHostInstaller(["--host", "codex", "--dest", dest])).exitCode, 0);
+    assert.equal(
+      await fs.readFile(path.join(foreign, "SKILL.md"), "utf8"),
+      "---\nname: someone-elses-skill\n---\nkeep me\n",
+      "a foreign skill must survive installation untouched",
+    );
+
+    // Reinstalling over our own entries is fine; it is how an update lands.
+    assert.equal((await runHostInstaller(["--host", "codex", "--dest", dest])).exitCode, 0);
+
+    const removed = await runHostInstaller(["--host", "codex", "--dest", dest, "--uninstall"]);
+    assert.equal(removed.exitCode, 0);
+    assert.deepEqual(
+      (await fs.readdir(dest)).sort(),
+      ["someone-elses-skill"],
+      "uninstall must remove only what this script installed",
+    );
+  } finally {
+    await fs.rm(path.dirname(dest), { recursive: true, force: true });
+  }
+});
+
+test("the Codex skill list stays inside Codex's documented metadata budget", async () => {
+  // Codex budgets the initial skill list at 2% of the context window, or 8,000 characters when
+  // the window is unknown, and counts each skill's path alongside its description. Past that it
+  // shortens descriptions and eventually omits skills with a warning — which silently degrades
+  // routing. All 57 need roughly 16.5K, which is why Codex defaults to the core tier.
+  const BUDGET = 8000;
+  const installedPath = (name) => path.join(os.homedir(), ".agents", "skills", name, "SKILL.md");
+
+  let used = 0;
+  for (const skill of MANIFEST.skills.filter((entry) => entry.tier === "core")) {
+    const text = await fs.readFile(path.join(PACK_ROOT, skill.path), "utf8");
+    const frontmatter = /^---\r?\n([\s\S]*?)\r?\n---/.exec(text);
+    const description = /^description:\s*([\s\S]*?)(?=\n[a-zA-Z_-]+:|$)/m.exec(frontmatter[1]);
+    assert.ok(description, `${skill.name} has no description for the host to route on`);
+    used += description[1].trim().length + installedPath(skill.name).length;
+  }
+  assert.ok(used < BUDGET, `core skill metadata is ${used} chars, over Codex's ${BUDGET} floor`);
 });
 
 test("--print-mcp emits a parseable stdio config pointing at this pack", async () => {

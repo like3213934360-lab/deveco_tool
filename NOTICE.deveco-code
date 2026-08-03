@@ -132,3 +132,34 @@ The following components are licensed under the ISC License:
   - npm-package-arg (13.0.2) - Copyright (c) GitHub Inc.
   - semver (7.7.4) - Copyright (c) GitHub Inc.
   - which (6.0.1) - Copyright (c) GitHub Inc.
+
+===================================================================
+ADDED BY deveco-tool — NOT PART OF THE UPSTREAM NOTICE
+===================================================================
+
+Everything above this line is DevEco Code's own NOTICE, reproduced
+verbatim. The section below is this pack's accounting of the files it
+actually ships from that upstream.
+
+Apache-2.0 + Huawei copyright headers (10 files)
+
+  These files are extracted unmodified in their headers and remain
+  governed by the Apache-2.0 header they carry, not by this pack's
+  root MIT licence:
+
+    - skills/arkts-runtime-fix/scripts/collect-hilog.mjs
+    - skills/arkts-runtime-fix/scripts/fetch-faultlog.mjs
+    - skills/arkts-runtime-fix/scripts/jscrash-report.mjs
+    - skills/arkts-runtime-fix/scripts/parse-jscrash-log.mjs
+    - skills/arkts-runtime-fix/scripts/probe-faultlogger.mjs
+    - skills/arkts-runtime-fix/scripts/shared/hdc.mjs
+    - skills/arkts-runtime-fix/scripts/shared/jscrash-faultlogger.mjs
+    - skills/arkts-runtime-fix/scripts/shared/jscrash-parse.mjs
+    - skills/arkts-runtime-fix/scripts/shared/utils.mjs
+    - skills/deveco-create-project/scripts/copy-template.mjs
+
+  Repository-wide there are 36 such files: these 10, plus 26 from
+  HarmonyOS Agent Skills (see NOTICE.harmonyos-agent-skills).
+
+Local modifications to upstream files are annotated in place with a
+LOCAL PATCH comment and itemised in provenance/SOURCES.md.

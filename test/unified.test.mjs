@@ -15,6 +15,15 @@ import { hdcFailureMessage as skillHdcFailureMessage } from "../skills/arkts-run
 
 const REPO_ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
 
+// A few tests need a real DevEco Studio SDK on this machine: the ArkTS linter resolves its rule
+// set out of it, hdc ships inside its toolchain, and detect_sdk reads its sdk-pkg.json. CI runners
+// and contributors without DevEco installed must not see those as failures, so they announce
+// themselves as skipped instead. Everything else -- including the HDC tests, which drive a fake
+// hdc through HDC_PATH -- runs anywhere. Measured by running the suite against an empty
+// DEVECO_HOME: exactly these four fail, the other 56 pass.
+const DEVECO_SDK = hdcStatus().installed;
+const NEEDS_DEVECO_SDK = DEVECO_SDK ? false : "requires a local DevEco Studio SDK";
+
 async function makeFakeHdc(body) {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-hdc-test-"));
   const executable = path.join(directory, "hdc");
@@ -80,7 +89,7 @@ test("registered scripts return parsed key/value output", async () => {
   assert.equal(result.parsed.source, "text");
 });
 
-test("local diagnostics dependencies are discoverable", () => {
+test("local diagnostics dependencies are discoverable", { skip: NEEDS_DEVECO_SDK }, () => {
   assert.equal(arktsCheckStatus().installed, true);
   assert.equal(hdcStatus().installed, true);
 });
@@ -117,6 +126,116 @@ test("unified MCP advertises scripts, diagnostics, LSP, and CodeGenie tools", as
   const catalog = await client.callTool({ name: "deveco_script_catalog", arguments: {} });
   const parsed = JSON.parse(catalog.content[0].text);
   assert.equal(parsed.count, 20);
+});
+
+test("a timed-out script takes its grandchildren with it", async () => {
+  // Registered scripts shell out to hvigor, ohpm, hdc and Python workers. The timeout used to send
+  // one SIGTERM to the direct child and return immediately, so those grandchildren survived every
+  // timeout and piled up across a session. Verified against a real tree rather than a mock,
+  // because what is being tested is process-group semantics, not our own bookkeeping.
+  const { terminateProcessTree } = await import("../src/script-registry.mjs");
+
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-tree-"));
+  // Parent ignores SIGTERM so the escalation to SIGKILL is what actually ends it.
+  const parentScript = path.join(directory, "parent.mjs");
+  const childScript = path.join(directory, "grandchild.mjs");
+  await fs.writeFile(childScript, "setInterval(() => {}, 1000);\nconsole.log(process.pid);\n");
+  await fs.writeFile(parentScript, [
+    'import { spawn } from "node:child_process";',
+    'process.on("SIGTERM", () => {});',
+    `const kid = spawn(process.execPath, [${JSON.stringify(childScript)}], { stdio: "ignore" });`,
+    "console.log(JSON.stringify({ parent: process.pid, grandchild: kid.pid }));",
+    "setInterval(() => {}, 1000);",
+  ].join("\n"));
+
+  const child = spawn(process.execPath, [parentScript], { stdio: ["ignore", "pipe", "ignore"], detached: true });
+  try {
+    const pids = await new Promise((resolve, reject) => {
+      let stdout = "";
+      const timer = setTimeout(() => reject(new Error("the fixture never reported its pids")), 10000);
+      child.stdout.on("data", (chunk) => {
+        stdout += chunk.toString();
+        const line = stdout.split("\n").find((entry) => entry.trim().startsWith("{"));
+        if (line) { clearTimeout(timer); resolve(JSON.parse(line)); }
+      });
+    });
+
+    const alive = (pid) => { try { process.kill(pid, 0); return true; } catch { return false; } };
+    assert.ok(alive(pids.grandchild), "the fixture grandchild should be running before we start");
+
+    terminateProcessTree(child, 300);
+    await new Promise((resolve) => { setTimeout(resolve, 2000); });
+
+    assert.equal(alive(pids.parent), false, "the direct child must be gone");
+    assert.equal(alive(pids.grandchild), false, "the grandchild must go too, or hvigor daemons leak");
+  } finally {
+    try { process.kill(-child.pid, "SIGKILL"); } catch { /* already reaped */ }
+    await fs.rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("the CLI and the MCP report the same doctor findings", async (t) => {
+  // PACK.md told people to run `npm run doctor` to check DevEco Studio, HDC, the ArkTS checker
+  // and login state, but the CLI only ever reported the environment and the script registry --
+  // those checks existed solely in the MCP tool. Both now render one report; assert they agree.
+  const cli = await new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, ["src/cli.mjs", "doctor"], {
+      cwd: REPO_ROOT,
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+    let stdout = "";
+    child.stdout.on("data", (chunk) => { stdout += chunk.toString(); });
+    child.once("error", reject);
+    child.once("close", () => resolve(JSON.parse(stdout)));
+  });
+
+  const transport = new StdioClientTransport({
+    command: process.execPath,
+    args: ["src/server.mjs"],
+    cwd: REPO_ROOT,
+    stderr: "ignore",
+  });
+  const client = new Client({ name: "deveco-doctor-test", version: "0.1.0" });
+  t.after(async () => { await transport.close(); });
+  await client.connect(transport);
+  const mcp = JSON.parse((await client.callTool({ name: "deveco_doctor", arguments: {} })).content[0].text);
+
+  assert.deepEqual(Object.keys(cli).sort(), Object.keys(mcp).sort());
+  for (const key of ["python", "arktsChecker", "devecoCli", "lsp", "hdc", "auth"]) {
+    assert.ok(key in cli, `the CLI must report ${key}; PACK.md promises it`);
+  }
+  // Only the CodeGenie section may differ: the CLI does not start the child unless asked.
+  assert.equal(cli.codegenie.available, "not probed");
+  assert.deepEqual(cli.codegenie.advertised, mcp.codegenie.advertised);
+});
+
+test("the static proxy table still matches what the CodeGenie child advertises", async () => {
+  // tools/list is answered from a hand-copied table so a stalled child cannot delay discovery.
+  // That table is only safe while it agrees with the child; if CodeGenie changes a schema, hosts
+  // would otherwise keep calling the old shape. Fail here rather than in a host.
+  const { PROXIED_CODEGENIE_TOOLS } = await import("../src/codegenie-tools.mjs");
+  const { getCodeGenieTools, closeCodeGenie } = await import("../src/codegenie-client.mjs");
+
+  let live;
+  try {
+    live = await getCodeGenieTools();
+  } catch (error) {
+    // The child is optional; a machine without it must not fail the suite on drift it cannot see.
+    assert.equal(error.code, "CODEGENIE_UNAVAILABLE");
+    return;
+  } finally {
+    await closeCodeGenie().catch(() => {});
+  }
+
+  for (const expected of PROXIED_CODEGENIE_TOOLS) {
+    const actual = live.find((tool) => tool.name === expected.name);
+    assert.ok(actual, `CodeGenie no longer advertises ${expected.name}`);
+    assert.deepEqual(
+      JSON.parse(JSON.stringify(actual)),
+      JSON.parse(JSON.stringify(expected)),
+      `${expected.name} drifted from src/codegenie-tools.mjs`,
+    );
+  }
 });
 
 test("ArkTS checker and check_ets_files accept a stock HarmonyOS project", async () => {
@@ -159,7 +278,7 @@ test("ArkTS checker and check_ets_files accept a stock HarmonyOS project", async
   }
 });
 
-test("ArkTS checker returns structured diagnostics for invalid source", async () => {
+test("ArkTS checker returns structured diagnostics for invalid source", { skip: NEEDS_DEVECO_SDK }, async () => {
   const projectPath = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-tool-invalid-"));
   await fs.cp(path.resolve("test/fixtures/harmony-app"), projectPath, { recursive: true });
   const brokenFile = path.join(projectPath, "entry/src/main/ets/pages/Broken.ets");
@@ -181,7 +300,7 @@ test("ArkTS checker returns structured diagnostics for invalid source", async ()
   }
 });
 
-test("a project-wide scan finds errors in a multi-module project", async () => {
+test("a project-wide scan finds errors in a multi-module project", { skip: NEEDS_DEVECO_SDK }, async () => {
   const projectPath = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-tool-multimodule-"));
   await fs.cp(path.resolve("test/fixtures/harmony-app"), projectPath, { recursive: true });
   // Reshape the single-module template into a multi-module layout. `entry/` at
@@ -272,7 +391,7 @@ test("script output parsing ignores narrative lines that look like fields", () =
   assert.equal(parsed.error_message, "Cannot read property 'cardList' of undefined");
 });
 
-test("detect_sdk runs as a script instead of exiting silently", async () => {
+test("detect_sdk runs as a script instead of exiting silently", { skip: NEEDS_DEVECO_SDK }, async () => {
   const result = await runRegisteredScript("detect_sdk", {});
   assert.equal(result.ok, true);
   assert.equal(result.warning, undefined, "the script must write its result to stdout");
@@ -495,7 +614,7 @@ test("initialize is answered without waiting on the CodeGenie child", async () =
   }
 });
 
-test("a CodeGenie child that never answers degrades to the local tools", { timeout: 60000 }, async (t) => {
+test("a CodeGenie child that never answers cannot delay tool discovery", { timeout: 60000 }, async (t) => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-codegenie-stall-"));
   const entry = path.join(directory, "never-answers.mjs");
   // Reads nothing, writes nothing, stays alive: the observed failure mode.
@@ -515,14 +634,28 @@ test("a CodeGenie child that never answers degrades to the local tools", { timeo
   });
 
   await client.connect(transport);
+
+  // The whole point of the static proxy table: discovery must not wait on the child at all.
+  // This used to take ~14s (2 handshake attempts x 2 five-second timeouts), which is past the
+  // point where hosts abandon tool discovery and show the server as connected but toolless.
+  const startedAt = Date.now();
   const names = (await client.listTools()).tools.map((tool) => tool.name);
-  assert.equal(names.length, 21, "the 21 local tools must still be advertised");
+  const elapsed = Date.now() - startedAt;
+  assert.ok(elapsed < 1000, `tools/list must not wait on the child; took ${elapsed}ms`);
+
+  assert.equal(names.length, 24, "all 24 tools must be advertised even while the child is stalled");
   assert.ok(names.includes("arkts_check"));
   // build_project and start_app run through the bundled DevEco CLI, so a stalled
   // CodeGenie child no longer costs the ability to build and launch.
   assert.ok(names.includes("build_project"), "building must survive a stalled CodeGenie child");
   assert.ok(names.includes("start_app"), "launching must survive a stalled CodeGenie child");
-  assert.ok(!names.includes("check_cpp_files"), "genuinely proxied tools are unavailable while the child is stalled");
+
+  // Proxied tools stay advertised and fail loudly on call. A tool that silently vanishes from
+  // the list looks to a host exactly like a tool that never existed, which is not actionable.
+  assert.ok(names.includes("check_cpp_files"), "proxied tools stay advertised from the static table");
+  const proxied = await client.callTool({ name: "check_cpp_files", arguments: { files: ["/tmp/none.cpp"] } });
+  assert.equal(proxied.isError, true);
+  assert.match(proxied.content[0].text, /CODEGENIE_UNAVAILABLE/);
 
   // Local tools must keep working rather than inheriting the child's stall.
   const status = await client.callTool({ name: "deveco_status", arguments: {} });

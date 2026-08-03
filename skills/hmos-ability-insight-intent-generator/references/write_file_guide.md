@@ -62,7 +62,7 @@ entry/src/main/resources/base/profile/insight_intent.json
 
 ## 询问流程
 
-**生成代码后，必须使用 AskUserQuestion 工具询问用户是否将代码写入文件。**
+**生成代码后，必须先询问用户是否将代码写入文件。** 用宿主的「向用户提问」能力；宿主没有这个能力时，在回复里把选项列出来并停下等用户回答，不要自行写盘。<!-- LOCAL PATCH: 上游写死 Claude 的 AskUserQuestion，见 manifest.json hostToolMapping.question -->
 
 根据代码实现方式的不同，提供不同的询问选项：
 

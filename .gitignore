@@ -3,3 +3,9 @@ node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Running any of the 11 registered Python scripts leaves bytecode inside the skill that owns it.
+# git ignores it here; scripts/install.mjs filters it so it never reaches a host's skill directory
+# either, and test/docs.test.mjs fails if one is committed anyway.
+__pycache__/
+*.py[cod]

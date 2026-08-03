@@ -1,0 +1,88 @@
+name: CI
+
+# The repository had no CI, so every guarantee in PACK.md rested on someone remembering to run
+# `npm test` locally. These jobs run on a machine without DevEco Studio, which is deliberate: the
+# four tests that genuinely need its SDK announce themselves as skipped, and everything else --
+# including the MCP cold-start deadline and the licence accounting -- has to hold anywhere.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # package.json requires >=20. Test the floor and current LTS.
+        node: ["20", "22"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
+      # Covers all 60 tests, including the ones that are the point of having CI at all:
+      #   - tools/list must answer in under 1s while the CodeGenie child is stalled
+      #   - the static proxy schemas must still match what the child advertises
+      #   - a timed-out script must take its whole process group with it
+      #   - LICENSE / NOTICE / SOURCES.md counts must match the files on disk
+      #   - no skill may name a host-specific tool
+      - run: npm test
+
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      # The pack forces axios and adm-zip through `overrides` because the DevEco CLI pins
+      # vulnerable versions and has no fixed release. If a new advisory lands, this is where it
+      # surfaces rather than in someone's `npm install` output months later.
+      - run: npm audit --audit-level=moderate
+
+  install:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+
+      - name: pack installer defaults to core
+        run: |
+          node scripts/install.mjs --dest "$RUNNER_TEMP/pack-default" --dry-run | tee /tmp/default.txt
+          grep -q "profile                core" /tmp/default.txt
+
+      - name: pack installer warns about the extended licence but does not block
+        run: |
+          node scripts/install.mjs --dest "$RUNNER_TEMP/pack-full" --profile full --dry-run \
+            >/tmp/full.out 2>/tmp/full.err
+          grep -q "NOTICE.harmonyos-agent-skills" /tmp/full.err
+          grep -q "profile                full" /tmp/full.out
+
+      - name: host adapter plans both hosts
+        run: |
+          node scripts/install-host.mjs --host claude --dry-run | tee /tmp/claude.txt
+          node scripts/install-host.mjs --host codex --dry-run | tee /tmp/codex.txt
+          grep -q "profile full" /tmp/claude.txt
+          grep -q "profile core" /tmp/codex.txt
+
+      - name: host adapter merges into a directory it does not own
+        run: |
+          dest="$RUNNER_TEMP/shared-skills"
+          mkdir -p "$dest/not-ours"
+          echo "keep me" > "$dest/not-ours/SKILL.md"
+          node scripts/install-host.mjs --host codex --dest "$dest"
+          node scripts/install-host.mjs --host codex --dest "$dest" --uninstall
+          test "$(ls "$dest")" = "not-ours"
+          grep -q "keep me" "$dest/not-ours/SKILL.md"

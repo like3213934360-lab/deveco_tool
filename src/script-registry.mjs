@@ -4,6 +4,42 @@ import path from "node:path";
 import { REPO_ROOT, resolveDevecoHome } from "./config.mjs";
 import { getProjectPath } from "./project-context.mjs";
 
+// How long a timed-out process group gets to honour SIGTERM before SIGKILL. Long enough for a
+// Python worker or a node script to run its cleanup, short enough that nothing lingers.
+const SIGKILL_GRACE_MS = 2000;
+
+/**
+ * Terminate a spawned child and everything it started.
+ *
+ * Registered scripts shell out to hvigor, ohpm, hdc and Python workers. Signalling only the direct
+ * child left those grandchildren running, so a timed-out build kept a hvigor daemon alive for the
+ * rest of the session. Children are spawned detached, which puts them in their own process group,
+ * and a negative pid signals that whole group. SIGTERM is only a request -- a process wedged in a
+ * syscall or holding its own handler ignores it -- so it escalates rather than reporting a timeout
+ * while the tree is still running.
+ *
+ * @param {import("node:child_process").ChildProcess} child The spawned child.
+ * @param {number} [graceMs] How long to wait between SIGTERM and SIGKILL.
+ * @returns {() => void} Cancels the pending escalation; call it once the child has exited.
+ */
+export function terminateProcessTree(child, graceMs = SIGKILL_GRACE_MS) {
+  const signalGroup = (signal) => {
+    try {
+      process.kill(-child.pid, signal);
+    } catch {
+      // The group is gone, or the platform refused the negative pid; the direct child still counts.
+      try { child.kill(signal); } catch { /* already exited */ }
+    }
+  };
+
+  signalGroup("SIGTERM");
+  const escalation = setTimeout(() => signalGroup("SIGKILL"), graceMs);
+  escalation.unref();
+  const cancel = () => clearTimeout(escalation);
+  child.once("close", cancel);
+  return cancel;
+}
+
 const SCRIPT_DEFINITIONS = {
   copy_template: {
     skill: "deveco-create-project",
@@ -272,12 +308,17 @@ export async function runRegisteredScript(id, input = {}) {
       cwd: getProjectPath() ?? REPO_ROOT,
       env: childEnv,
       stdio: ["ignore", "pipe", "pipe"],
+      // Own process group. Several registered scripts shell out to hvigor, ohpm or hdc, and
+      // signalling only the direct child left those grandchildren running: hvigor daemons and
+      // Python workers survived every timeout and accumulated across a session.
+      detached: true,
     });
     let stdout = "";
     let stderr = "";
     let settled = false;
+
     const timer = setTimeout(() => {
-      child.kill("SIGTERM");
+      terminateProcessTree(child);
       if (!settled) {
         settled = true;
         const error = new Error(`Script timed out after ${timeoutMs}ms: ${id}`);

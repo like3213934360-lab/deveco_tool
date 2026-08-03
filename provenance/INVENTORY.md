@@ -2,7 +2,7 @@
 
 ## 原始 Skill
 
-以下目录均从 DevEco Code v0.1.5 提取，合计 129 个文件。DevEco 环境自定义配置 Skill 未纳入包体（保留在 `docs/customize-deveco/`）；`arkts-runtime-fix` 的 HDC 共享调用和四个调用脚本增加了退出码与失败文本联合判断，其余 Skill 内容保持上游版本。
+以下目录均从 DevEco Code v0.1.5（`537543c5`）提取，合计 129 个文件；该内容与发布线 v0.1.6（`ab476caf`）无差异，验证过程见 `SOURCES.md`。DevEco 环境自定义配置 Skill 未纳入包体（保留在 `docs/customize-deveco/`）；`arkts-runtime-fix` 的 HDC 共享调用和四个调用脚本增加了退出码与失败文本联合判断，其余 Skill 内容保持上游版本。
 
 | Skill | 文件数 | 内容 |
 | --- | ---: | --- |

@@ -710,6 +710,23 @@
     "task": "Your host's subagent/delegation mechanism. Optional - the commands run fine single-threaded.",
     "read/edit/write/glob/grep": "Your host's own file and search tools."
   },
+  "invocationPolicy": {
+    "$comment": "Single source of truth for how hosts may auto-trigger these skills. scripts/install-host.mjs renders it per host: Claude gets `disable-model-invocation: true` in SKILL.md frontmatter, Codex gets `policy.allow_implicit_invocation: false` in agents/openai.yaml. Never edit the skills under skills/ to express this — they are byte-identical with upstream and tests enforce that.",
+    "disableImplicitInvocation": {
+      "$comment": "Skills where merely deciding to load them can cause an irreversible or outward-facing action. The test is the side effect, NOT the manifest category: harmony-build-loop is category `tools` but is pure methodology, and auto-loading it is precisely the point.",
+      "deveco-create-project": "Creates directories and writes a project tree.",
+      "d2c-fast": "Writes generated ArkTS artifacts in bulk.",
+      "deveco-studio-emulator": "Starts and stops emulators.",
+      "hmos-instrument-test": "Runs instrumented tests on a real device.",
+      "hmos-local-test": "Runs tests on a real device.",
+      "app-metadata-audit-skill": "Pre-release store audit."
+    },
+    "mcpDependency": {
+      "$comment": "Skills that drive bundled scripts through the deveco-tool MCP. Codex renders these into agents/openai.yaml dependencies.tools so the host can surface the requirement. Derived from the `scripts` field on each skill entry; kept explicit so the installer never has to guess.",
+      "server": "deveco-tool",
+      "transport": "stdio"
+    }
+  },
   "excluded": {
     "$comment": "Deliberately not ported from upstream.",
     "agents": "The 11 built-in agent definitions. What was portable is their prompt content: build, plan, debug and goal were harvested into the four `extracted-from-agent-prompt` skills. What is not ported is the harness around them — the permission tables (upstream has no tools allowlist; tool visibility is expressed entirely through permissions), the mode/hidden/temperature configuration, and the plan_enter/plan_exit/debug_exit turn protocols. The remaining 7 agents are generic OpenCode session agents with no HarmonyOS content.",

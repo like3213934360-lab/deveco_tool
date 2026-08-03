@@ -5,6 +5,8 @@ import {
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { callCodeGenieTool, closeCodeGenie, getCodeGenieTools } from "./codegenie-client.mjs";
+import { PROXIED_CODEGENIE_TOOLS, PROXIED_CODEGENIE_TOOL_NAMES } from "./codegenie-tools.mjs";
+import { collectDoctorReport } from "./doctor.mjs";
 import { runArktsCheck, arktsCheckStatus } from "./arkts-check.mjs";
 import { collectEnvironmentStatus } from "./config.mjs";
 import { buildProject, devecoCliStatus, startApp } from "./deveco-cli.mjs";
@@ -41,6 +43,15 @@ const LOCAL_OVERRIDE_TOOLS = ["init_project_path", "check_ets_files", "build_pro
 // rejected on call rather than proxied.
 const DISABLED_CODEGENIE_TOOLS = ["verify_ui", "save_ui_screenshot", "get_ui_verification_log"];
 
+// The tool list used to be filtered at request time, which made these two tables self-enforcing.
+// Now that the proxy table is static, nothing would notice if a name ended up in two of them and
+// so resolved to two different implementations. Fail at startup instead of shipping the ambiguity.
+for (const tool of PROXIED_CODEGENIE_TOOLS) {
+  if (LOCAL_OVERRIDE_TOOLS.includes(tool.name) || DISABLED_CODEGENIE_TOOLS.includes(tool.name)) {
+    throw new Error(`${tool.name} is proxied to CodeGenie but is also overridden or disabled locally`);
+  }
+}
+
 // Resolving the CodeGenie child is deliberately not awaited during startup.
 // Its handshake intermittently never completes, and awaiting it here meant the
 // gateway never reached server.connect(), so the whole MCP silently failed to
@@ -59,6 +70,7 @@ function codegenieTools() {
   }
   return codegenieToolsPromise;
 }
+
 
 const localTools = [
   {
@@ -344,12 +356,10 @@ const server = new Server(
   { capabilities: { tools: {} } },
 );
 
+// Answered entirely from static tables: no await, so a stalled CodeGenie child cannot delay
+// tool discovery. The child is contacted only when one of the proxied tools is called.
 server.setRequestHandler(ListToolsRequestSchema, async () => ({
-  tools: [
-    ...localTools,
-    ...(await codegenieTools()).filter((tool) => !LOCAL_OVERRIDE_TOOLS.includes(tool.name)
-      && !DISABLED_CODEGENIE_TOOLS.includes(tool.name)),
-  ],
+  tools: [...localTools, ...PROXIED_CODEGENIE_TOOLS],
 }));
 
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
@@ -372,26 +382,16 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     if (name === "switch_cwd" || name === "init_project_path") {
       const project = setProjectPath(args.project_path);
       await resetLsp();
-      if ((await codegenieTools()).some((tool) => tool.name === "init_project_path")) {
-        await callCodeGenieTool("init_project_path", { project_path: project.projectPath });
-      }
+      // The child used to be told the new path here, which meant switching projects waited on
+      // its handshake. callCodeGenieTool already syncs the bound project before every proxied
+      // call, so the child still learns the path -- just lazily, at first use.
       return textResult({ tool: name, ...project });
     }
 
     if (name === "deveco_doctor") {
-      const proxied = await codegenieTools();
-      return textResult({
-        environment: collectEnvironmentStatus(),
-        project: getProjectContext(),
-        scripts: listScripts(),
-        python: pythonStatus(),
-        codegenie: { available: proxied.length > 0, toolCount: proxied.length },
-        arktsChecker: arktsCheckStatus(),
-        devecoCli: devecoCliStatus(),
-        lsp: lspStatus(),
-        hdc: hdcStatus(),
-        auth: authStatus(),
-      });
+      // Same report the CLI renders; the memoised loader is passed in so the probe reuses the
+      // child this process already started rather than spawning a second one.
+      return textResult(await collectDoctorReport({ loadCodeGenieTools: codegenieTools }));
     }
 
     if (name === "arkts_knowledge_search") {
@@ -491,7 +491,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       return await callCodeGenieTool(name, { ...args, hvd: devices[0] });
     }
 
-    if ((await codegenieTools()).some((tool) => tool.name === name)) {
+    // Dispatch off the static table, not off a list fetched from the child. An unreachable child
+    // now surfaces as a CODEGENIE_UNAVAILABLE error from the call itself, which is actionable,
+    // rather than as the tool quietly disappearing from tools/list.
+    if (PROXIED_CODEGENIE_TOOL_NAMES.includes(name)) {
       return await callCodeGenieTool(name, args);
     }
 
