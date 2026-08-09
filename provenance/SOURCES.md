@@ -54,6 +54,31 @@ DevEco Code 仓库主体采用 MIT；其中 Huawei 工具和脚本文件保留�
 
 同步处在文件内以 `LOCAL PATCH` 注明来源提交与取舍。其余 4 个提交只动 `src/`，与本包提取范围无关。
 
+#### 第二次同步（2026-08-09）
+
+这一次**取了上游的变更**，不再只做复查。基线从 `9535f0f5` 推进到当时的 `0.2.0-release` HEAD，
+中间 52 个提交、166 个文件变更（`truncated: false`，`merge_base == base_commit`，直线比较）。
+落在 `resources/skills/**` 的 19 个文件，扣掉本包不取的 `d2c/*` 与 `agents/openai.yaml` 后，
+实际影响 4 个文件，逐一三方合并而非覆盖：
+
+| 文件 | 处置 |
+| --- | --- |
+| `ui-reconstruction-score/references/analysis_workflow.md` | 本地零改动，取上游全部改进（对比要点、问题上限 2→3） |
+| `ui-reconstruction-score/SKILL.md` | 取上游改进，保留本地的 Pillow 前置说明与 vlm 非门禁说明；上游删除的 JSON 结构示例本包保留 |
+| `arkui-scoring-workflow/SKILL.md` | 取上游的多轮视觉校准流程（round/status 状态机、invoked→completed、blocked 档、轮次间允许改代码），保留本包的「工具绑定」表；上游把工具层退回泛指「MCP 工具」，**不跟** |
+| `deveco-cli/SKILL.md` | 取 9 条 emulator 场景控制、`ui` 段、命令清单（15 个，与 1.2.1 实测一致）；上游删除 `docs` 与 `skills` 两节，**均不跟** |
+
+**`compare_images` 是这次同步的主要摩擦点。** 上游 0.2.0 新增了 `src/tool/image-compare`，新版文本
+多处引用 `compare_images`。本包不提供该工具，若照搬会让这几个 Skill 指向不存在的东西——与当初排除
+`verify_ui` 是同一类错误。处置：凡引用处一律改写为本包等价能力（看图观察 + `ui_score.py` 的确定性
+指标），改写点均以 `LOCAL PATCH` 标注。**若将来移植 `image-compare`，这几处改写应当回退。**
+
+上游删除 `docs` / `skills` 两节一事，已用 `devecocli --help` 实测 1.2.1 复核：两个命令都还在，
+连同 `ui`、`check`、`signature`、`auth` 共 15 个，与上游新版的命令清单逐字吻合——上游删的只是详细
+小节而非命令本身。`ui` 段上游只写了 `screenshot`，本包补了实测存在的另外 10 个子命令。
+
+同期 `d2c-fast` 随上游退场，详见 `INVENTORY.md`。
+
 ## SDD 命令与模板
 
 - 来源：本机物化目录 `~/.local/share/deveco/specs/`
@@ -120,7 +145,7 @@ DevEco Code 仓库主体采用 MIT；其中 Huawei 工具和脚本文件保留�
 - 保留所有原始文件头，一字不改；
 - 在 `NOTICE.harmonyos-agent-skills` 中逐 Skill 记录其许可声明状态；
 - 不把这批内容与 DevEco Code 的 MIT 内容混为一谈，`manifest.json` 里给它们独立的 `origin` 值 `harmonyos-agent-skills-v0.0.2` 和独立的 `tier: "extended"`；
-- 再分发本包前，使用方需要自行评估这一层的许可风险。core 层（18 个，MIT）不受影响，`scripts/install.mjs --profile core` 可以只装 core 层。
+- 再分发本包前，使用方需要自行评估这一层的许可风险。core 层（17 个，MIT）不受影响，`scripts/install.mjs --profile core` 可以只装 core 层。
 
 ### 排除的 11 个主 Skill 及理由
 
@@ -160,5 +185,6 @@ host-specific tool by name」会持续守护。
 | `skills/solution-design/SKILL.md`「工具使用指南」 | `Read` / `Write` / `Grep` / `Glob` / `TodoWrite` | 读文件 / 写文件 / 搜索内容 / 查找文件 / 任务跟踪；无任务列表能力时在设计文档顶部维护阶段清单 |
 | `skills/solution-design/references/increment-design.md`「会话管理集成」「标准调用格式」 | `Task subagent_type="session-manager"`、`Task subagent_type="design-and-implementation"` | 这两个 agent 属 DevEco Code 自己的注册表，**本包不分发**，任何宿主上都不存在。改写为阶段化表述：会话状态落到设计文档的进度区块，委派改为「宿主有委派能力就委派，没有就主 agent 按同一模板执行」 |
 
-`skills/harmony-sdd-workflow/SKILL.md` 和 `skills/d2c-fast/references/host-mapping.md` 里仍会出现
-`subagent_type` 字样，那是在说明「上游的哪部分 harness 没有移植」，属于正文而非指令，守护测试对这两个文件放行。
+`skills/harmony-sdd-workflow/SKILL.md` 里仍会出现 `subagent_type` 字样，那是在说明「上游的哪部分
+harness 没有移植」，属于正文而非指令，守护测试对该文件放行。（原先一并放行的
+`skills/d2c-fast/references/host-mapping.md` 已随 `d2c-fast` 退场删除。）

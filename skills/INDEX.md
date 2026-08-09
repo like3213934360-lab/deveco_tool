@@ -1,11 +1,11 @@
 # Skill 路由索引
 
-本包共 57 个 Skill，分两层：
+本包共 56 个 Skill，分两层：
 
-- **core（18 个）** —— 从 DevEco Code 提取的核心能力。安装器的 `--profile core` 只装这一层。
+- **core（17 个）** —— 从 DevEco Code 提取的核心能力。安装器的 `--profile core` 只装这一层。
 - **extended（39 个）** —— 来自华为官方 HarmonyOS Agent Skills 仓库（`v0.0.2`）的场景化能力，按需加载。
 
-**先读本索引再选 Skill，不要把 57 份 frontmatter 全部读进上下文。** 每个 Skill 的完整描述在它自己的
+**先读本索引再选 Skill，不要把 56 份 frontmatter 全部读进上下文。** 每个 Skill 的完整描述在它自己的
 `SKILL.md` frontmatter 里；本索引只给「什么时候用它」。机器可读的完整清单见
 [`../manifest.json`](../manifest.json) 的 `skills[]`，其中每条都有 `tier`、`category`、`origin`。
 
@@ -34,7 +34,6 @@
 - **harmony-plan-doc** — Writing an implementation plan or technical design for a HarmonyOS change.
 - **solution-design** — Producing a module design document or software architecture for a feature.
 - **responsive-layout-generator** — Turning fixed-position layout data into an adaptive ArkUI layout.
-- **d2c-fast** — Converting a Pixso design (link, selected node, or developer-supplied DSL plus local assets) int
 - **ui-reconstruction-score** — Judging how closely an implemented ArkUI page matches its design reference.
 - **arkui-scoring-workflow** — An ArkUI page is implemented and needs to be compared against its design reference on a real tar
 

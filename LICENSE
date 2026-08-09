@@ -32,7 +32,7 @@ Read this section before redistributing.
    - The original adaptation layer authored in this repository:
      `src/`, `scripts/`, `test/`, `manifest.json`, `README.md`, `PACK.md`.
 
-   - The `core` tier: the 18 skills under `skills/` whose `manifest.json` entry
+   - The `core` tier: the 17 skills under `skills/` whose `manifest.json` entry
      has `"tier": "core"`, plus `commands/` and `templates/`. These are extracted
      or derived from DevEco Code
      (https://gitcode.com/openharmony-sig/deveco-code), which is MIT licensed at

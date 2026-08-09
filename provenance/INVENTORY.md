@@ -47,9 +47,16 @@
 | `responsive-layout-generator` | 8 | 绝对定位 DSL 转响应式布局 DSL，含断点、chunks、多设备布局参考 |
 | `arkui2hds` | 8 | ArkUI 组件迁移到 HDS（UI Design Kit），含 Tabs 迁移前后完整案例 |
 | `deveco-cli` | 1 | 设备与模拟器管理 |
-| `d2c-fast` | 5 | Pixso 设计稿转 ArkTS 的十阶段流水线，含 383KB 的 vendored pixso-arkts 生成器（纯本地、零网络、零 npm 依赖）。**已宿主中立化改写**，逐条对照见 `skills/d2c-fast/references/host-mapping.md` |
+| ~~`d2c-fast`~~ | 5 | **已退场，见表下说明。** Pixso 设计稿转 ArkTS 的十阶段流水线，含 383KB 的 vendored pixso-arkts 生成器（纯本地、零网络、零 npm 依赖），曾按宿主中立化改写 |
 | `ui-reconstruction-score` | 5 | UI 还原度评分，`scripts/ui_score.py` 只依赖 Pillow 与标准库。丢弃了上游 `agents/openai.yaml`，SKILL.md 加了 Pillow 前置说明 |
 | `arkui-scoring-workflow` | 1 | 构建→部署→截图→评分的编排流程。上游把工具层写成泛指的「MCP 工具」，本包补了到实际工具的绑定表 |
+
+**`d2c-fast` 已随上游退场。** 上述表格记录的是 `9535f0f5` 时的提取结果，当时该分支有 16 个 Skill，
+本包取了其中 10 个。上游其后在 `0.2.0-release` 上**整目录删除了 `d2c-fast`**（锁定的 `9535f0f5`
+仍在，当前 HEAD 对该路径返回 404），本包已于同步时一并删除，故 0.2.0 来源的 Skill 现为 **9 个**。
+连带删除的还有本包自建的 `references/host-mapping.md`（宿主中立化逐条对照，上游从无此文件）。
+注意 gitcode 的 compare API 在删除枚举上不完整——它只列出 4 个 removed 文件，漏掉了
+`references/workflow.md`；判定以目录 404 为准，不以 compare 清单为准。
 
 未取 `solution-design/SKILL.bak`（上游未清理的备份文件）。三个 `agents/openai.yaml` 未纳入：上游的 skill 加载器只 glob `**/SKILL.md`，运行时根本不读它们，它们服务于 DevEco Code IDE 前端的工作流卡片。`d2c-fast` 的那份里有五条紧凑的停止条件，已搬进其 SKILL.md。
 
@@ -97,7 +104,7 @@
 
 ### 脚本注册表
 
-共 20 个脚本，按 `runtime` 分派解释器（缺省 `node`，另有 `python`）。Python 侧依次尝试 `PYTHON` 环境变量、`python3`、`python`；显式设置了 `PYTHON` 但不可用时直接报 `PYTHON_NOT_FOUND` 而不回落，避免脚本跑在一个没装依赖的解释器上。
+共 19 个脚本，按 `runtime` 分派解释器（缺省 `node`，另有 `python`）。Python 侧依次尝试 `PYTHON` 环境变量、`python3`、`python`；显式设置了 `PYTHON` 但不可用时直接报 `PYTHON_NOT_FOUND` 而不回落，避免脚本跑在一个没装依赖的解释器上。
 
 | runtime | 脚本 |
 | --- | --- |
@@ -161,6 +168,11 @@ DevEco Code 内部的 `debug_exit` 会话调试工具没有迁移；CodeGenie �
 另外 `config.ts` 里每条规则都带 `ruleId` / `message` / `suggestion`，但上游的报告格式化器从不读这三个字段——是死元数据。本包把它们放进结构化返回的 `issues.missing[]`，让调用方拿到可动作化的信息；`report` 文本仍保持上游格式。
 
 ### `d2c-fast` 的上游文档缺陷
+
+> **状态：已随 Skill 退场，本节仅供追溯。** `d2c-fast` 已被上游从 `0.2.0-release` 整目录删除，
+> 本包同步删除，下表的「处置」均已随文件消失。保留本节的理由是：这些缺陷（门禁无 fallback、
+> 产物路径自相矛盾、工具名被清洗后留下的语句空缺）是上游 d2c 系 Skill 的**共性问题**，
+> 将来若纳入 `d2c` 或其后继者，同一张表就是复查清单。
 
 | 位置 | 缺陷 | 处置 |
 | --- | --- | --- |

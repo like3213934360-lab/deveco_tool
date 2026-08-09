@@ -7,7 +7,7 @@
 
 | 层 | 目录 | 是什么 |
 |---|---|---|
-| 知识 | `skills/` | 57 个 Skill，分两层。**core 18 个**（DevEco Code 提取，MIT）：ArkTS 语法规则、编译错误库、崩溃诊断、工程脚手架、构建循环、插桩调试、计划文档、SDD 编排，以及 ArkUI 组件最佳实践、逻辑补全、工程理解、方案设计、响应式布局、HDS 迁移、设备管理、设计稿转代码、UI 还原度评分。**extended 39 个**（华为官方 Skill 仓库 `v0.0.2`）：多设备适配、崩溃与冻屏诊断、Kit 接入、状态管理迁移、MVVM、测试、上架审查等。路由索引见 [`skills/INDEX.md`](./skills/INDEX.md) |
+| 知识 | `skills/` | 56 个 Skill，分两层。**core 17 个**（DevEco Code 提取，MIT）：ArkTS 语法规则、编译错误库、崩溃诊断、工程脚手架、构建循环、插桩调试、计划文档、SDD 编排，以及 ArkUI 组件最佳实践、逻辑补全、工程理解、方案设计、响应式布局、HDS 迁移、设备管理、设计稿转代码、UI 还原度评分。**extended 39 个**（华为官方 Skill 仓库 `v0.0.2`）：多设备适配、崩溃与冻屏诊断、Kit 接入、状态管理迁移、MVVM、测试、上架审查等。路由索引见 [`skills/INDEX.md`](./skills/INDEX.md) |
 | 工作流 | `commands/` + `templates/` | SDD 五阶段命令 + 三份产物模板 |
 | 工具 | `src/server.mjs` | 一个 stdio MCP，24 个工具（构建、跑设备、ArkTS 静态检查、LSP、知识检索、日志采集） |
 
@@ -42,8 +42,8 @@ override，把 adm-zip 记为已知风险。上次执行结果见「与上游的
 ### 2. 装资产
 
 ```bash
-node scripts/install.mjs --dest <目标目录>                     # 默认软链，装 core 层 18 个 Skill
-node scripts/install.mjs --dest <目标目录> --profile full      # 加装 extended 层，共 57 个
+node scripts/install.mjs --dest <目标目录>                     # 默认软链，装 core 层 17 个 Skill
+node scripts/install.mjs --dest <目标目录> --profile full      # 加装 extended 层，共 56 个
 node scripts/install.mjs --dest <目标目录> --copy              # 拷贝
 node scripts/install.mjs --dest <目标目录> --dry-run           # 预演
 node scripts/install.mjs --dest <目标目录> --uninstall
@@ -51,7 +51,7 @@ node scripts/install.mjs --dest <目标目录> --uninstall
 
 装完目标目录里是 `skills/` `commands/` `templates/` `manifest.json`。这个目录就是各命令里说的 `PACK_ROOT`。
 
-**默认 profile 是 `core`**，只链 `tier: "core"` 的 18 个 Skill。两种 profile 下 `manifest.json` 都是完整的
+**默认 profile 是 `core`**，只链 `tier: "core"` 的 17 个 Skill。两种 profile 下 `manifest.json` 都是完整的
 57 条，`skills/INDEX.md` 也总会安装——宿主据此知道还有哪些没装。默认取 `core` 的两个理由：Skill 索引小
 4 倍，以及 extended 层的上游**没有任何仓库级许可声明**，其中 30 个自身也没有声明，默认处于保留所有
 权利状态（见「许可与来源」和 `NOTICE.harmonyos-agent-skills`）。
@@ -79,17 +79,17 @@ node scripts/install.mjs --print-mcp
 前三步只让宿主能用**工具层**。Skill 要被宿主自动路由，还得进它的发现目录——这是单独一层，不装不影响前三步：
 
 ```bash
-node scripts/install-host.mjs --host claude   # → ~/.claude/skills，默认 core 18 个
-node scripts/install-host.mjs --host codex    # → ~/.agents/skills，默认 core 18 个
+node scripts/install-host.mjs --host claude   # → ~/.claude/skills，默认 core 17 个
+node scripts/install-host.mjs --host codex    # → ~/.agents/skills，默认 core 17 个
 node scripts/install-host.mjs --host all --profile full   # 加装 extended，打许可警告
 node scripts/install-host.mjs --host codex --print-mcp    # Codex 的 TOML 片段
 ```
 
-**两个宿主都默认 core**，依据是各自官方文档写明的列表预算。实测本包描述合计：57 个 18,557 字符，core 18 个 5,781 字符。
+**两个宿主都默认 core**，依据是各自官方文档写明的列表预算。实测本包描述合计：56 个 17,947 字符，core 17 个 5,561 字符（口径：SKILL.md frontmatter 的 description 字段，空白归一后计长）。
 
 | 宿主 | 目录 | 默认 | 依据 |
 | --- | --- | --- | --- |
-| Claude Code | `~/.claude/skills` | core（18） | 两条限制：单个 Skill 的 `description` + `when_to_use` ≤ 1536（57 个全部合格，最长 1076）；**整个列表预算 = 上下文的 1%**，超出后从最少使用的 Skill 开始删描述。1M 上下文约 10,000 字符预算，全量 18,557 必被削 |
+| Claude Code | `~/.claude/skills` | core（17） | 两条限制：单个 Skill 的 `description` + `when_to_use` ≤ 1536（56 个全部合格，最长 1076）；**整个列表预算 = 上下文的 1%**，超出后从最少使用的 Skill 开始删描述。1M 上下文约 10,000 字符预算，全量 17,947 必被削 |
 | Codex | `~/.agents/skills` | core（18） | 初始列表预算为上下文的 2%、未知时 8000 字符，**且含每个 Skill 的路径**；全量约 22,300 会被压缩甚至省略 Skill，core 含路径约 6,900 才安全 |
 
 被削掉的正是让 Skill 被正确匹配的关键词，而且两个宿主都不会报错，所以这不是"装多点更好"的取舍。要在 Claude 上装全量，先用宿主侧设置抬高预算（`skillListingBudgetFraction` / `SLASH_COMMAND_TOOL_CHAR_BUDGET`），或把低价值条目用 `skillOverrides` 设成 `name-only`；安装器不替你改宿主设置。
@@ -118,7 +118,7 @@ Codex 侧还会为用到脚本的 Skill 生成 `dependencies.tools` 声明本 MC
 | `spec_write` | **宿主自备** | 上游有专用产物写入工具；本包命令已改为「用宿主的写文件工具」，其附带的章节校验由 `document_validate` 顶上 |
 | `question` | **宿主自备** | 向用户提问。`spec-specify` 的澄清环节依赖它 |
 | `read` / `edit` / `write` / `glob` / `grep` | **宿主自备** | 常规文件与检索工具 |
-| `task` | **宿主自备（可选）** | 子 agent 委派，命令单线程也能跑。`d2c-fast` 的阶段 3/5/6/9 和 `harmony-sdd-workflow` 的 Phase 4/5 在有委派能力时用它，没有时由主 agent 按同一模板执行 |
+| `task` | **宿主自备（可选）** | 子 agent 委派，命令单线程也能跑。`harmony-sdd-workflow` 的 Phase 4/5 在有委派能力时用它，没有时由主 agent 按同一模板执行 |
 
 完整清单见 `manifest.json` 的 `mcp.toolGroups` 和 `hostToolMapping`。
 
@@ -159,7 +159,7 @@ Phase 4/5 的委派契约。只用命令、不装该 Skill 时行为与之前一
 12. **建工程改走 `devecocli create`**：跟进上游 0.2.0——它把建工程从「拷贝内置模板」改成调 DevEco CLI，31 个模板文件随之删除。本包同样不再分发工程模板，但不复制上游那句写死的 `spawnSync('devecocli')`（它依赖 PATH 上的 shim，本包不提供），改为 `DEVECO_CLI_ENTRY` 环境变量 → `require.resolve("@deveco/deveco-cli/dist/cli.js")` → PATH 三级解析，都失败时报 `DEVECO_CLI_NOT_FOUND`。原模板目录移到 `test/fixtures/harmony-app/` 只作 ArkTS 检查器的测试夹具，不随包分发；上游那 5 个被 UTF-8 写坏的 PNG 因此与本包彻底无关。
 13. **`document_validate` 独立成工具**：上游在 `spec_write` 写完产物后自动追加章节校验报告。本包用宿主的写文件工具，这个链路断了，所以把校验逻辑提取成独立 MCP 工具，由三条 SDD 命令在写盘后显式调用。保留上游「只报告不阻断」的语义，另修了两处上游报告缺陷（缺失章节一律按一级标题渲染、level-2 上限那行打的是实测值而非上限），并把上游从不读取的 `ruleId` / `suggestion` 放进结构化返回。
 14. **新增 `harmony-sdd-workflow` 编排层**：见「SDD 五阶段」一节。
-15. **`d2c-fast` 已宿主中立化纳入**：产物根参数化、`task`/`general` 委派改为「宿主有委派能力就委派，没有就主 agent 按同一模板执行」、运行截图要求映射到本包工具、六处上游没配 fallback 的用户门禁逐条补齐、三处被清洗的语句和一处自相矛盾的产物路径已修。逐条对照见 `skills/d2c-fast/references/host-mapping.md`。
+15. **`d2c-fast` 已随上游退场**：该 Skill 曾按宿主中立化纳入本包（产物根参数化、委派能力化、六处门禁补 fallback 等）。**上游已在 `0.2.0-release` 上整目录删除**（锁定的 `9535f0f5` 尚在，当前 HEAD 返回 404），本包于同步时一并删除，宿主中立化对照文件 `host-mapping.md` 随之移除。设计稿转代码能力现由上游的 `d2c` 承担，但本包仍不取它——理由不变，它对 `verify_ui` 有 24 处强依赖。
 16. **第四提取源**：`skills/` 里 `tier: "extended"` 的 39 个来自华为官方 Skill 仓库（独立于 DevEco Code），锁定 tag `v0.0.2`。**该仓库没有仓库级许可声明**，详见「许可与来源」与 `NOTICE.harmonyos-agent-skills`。
 17. **依赖漏洞清零，含两条强制 override**：`@modelcontextprotocol/sdk` 升到 `1.30.0`（它把 `@hono/node-server` 放宽到 `^1.19.9 || ^2.0.5`，实装 `2.0.12`，消掉 GHSA-frvp-7c67-39w9——顺带一提那条是中危且只影响 Windows 上的 `serve-static`，本包走 stdio 根本不触及），`axios` 强制 `1.18.1`、`adm-zip` 强制 `0.6.0`，理由见「装依赖」。`npm audit` 由 3 高危 + 2 中危降到 **0**。adm-zip 跨大版本的回归已实跑通过：57 项测试全绿 → `devecocli create` 建 API 24 工程（`cliSource: node_modules`、`verified: true`）→ debug 构建 `BUILD SUCCESSFUL`（`PackageHap` 161ms、`SignHap` 通过）→ 用 `adm-zip@0.6.0` 读回产出的 124K hap，12 个条目、`module.json` 可读。
 18. **`tools/list` 静态化**：见第 8 条。3 个 CodeGenie 代理工具的 schema 落在 `src/codegenie-tools.mjs`，与子进程逐字节一致，`test/unified.test.mjs` 有漂移测试；子进程可达时不一致就红。
@@ -184,8 +184,7 @@ Phase 4/5 的委派契约。只用命令、不装该 Skill 时行为与之前一
 这两个在 `manifest.json` 里归入 `device-ui` 组，不再标 `optional`。
 
 **截图能力是有的。** `perform_ui_action` 的 `screenshot` 动作带 `savePath` / `localPath` / `displayId`
-参数，不依赖任何校验任务 id，可以独立落盘。`d2c-fast` 的阶段 9 审计和 `arkui-scoring-workflow`
-的评分流程用的就是它。
+参数，不依赖任何校验任务 id，可以独立落盘。`arkui-scoring-workflow` 的评分流程用的就是它。
 
 `ui-reconstruction-score` 提供的是**另一种东西**：`scripts/ui_score.py` 只依赖 Pillow 和标准库，
 零网络零模型调用，产出的是确定性像素指标（SSIM、边带差异、区域热力图）。它与被禁用的 `verify_ui`
@@ -197,7 +196,7 @@ Phase 4/5 的委派契约。只用命令、不装该 Skill 时行为与之前一
 
 ## 许可与来源
 
-**core 层（18 个 Skill、命令、模板、`src/`）**：上游 DevEco Code 为 MIT，其中华为工具与脚本文件保留各自的
+**core 层（17 个 Skill、命令、模板、`src/`）**：上游 DevEco Code 为 MIT，其中华为工具与脚本文件保留各自的
 Apache-2.0 文件头，复制分发时必须保留。
 
 **extended 层（39 个 Skill）**：来自 `gitcode.com/HarmonyOS_Skills/harmonyos-agent-skills`，锁定 tag

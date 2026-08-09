@@ -18,15 +18,15 @@
  *     `invocationPolicy` is the single source of truth for which ones those are.
  *
  * Both hosts default to the core tier, and for the same reason: each budgets the skill listing it
- * loads into context, and the full 57 blow through both budgets. Measured across this pack --
- * descriptions total 18,557 characters for all 57 and 5,781 for the core 18.
+ * loads into context, and the full 56 blow through both budgets. Measured across this pack --
+ * descriptions total 17,947 characters for all 56 and 5,561 for the core 17.
  *
  *   - Claude Code reads `~/.claude/skills/<skill>/SKILL.md`. Two separate limits apply. Per skill,
  *     description + when_to_use is capped at 1,536 characters; every skill here fits that (the
  *     longest is 1,076). Across the whole listing the budget is 1% of the model's context window,
  *     and when it overflows Claude Code drops descriptions starting with the skills you invoke
  *     least -- which silently strips the keywords that make a skill match. On a 1M-context model
- *     that budget is ~10,000 characters: the core tier fits, all 57 do not.
+ *     that budget is ~10,000 characters: the core tier fits, all 56 do not.
  *   - Codex reads `$HOME/.agents/skills` and budgets the initial listing at 2% of the context
  *     window, or 8,000 characters when it is unknown, counting each skill's path as well as its
  *     description. All 57 need ~22,300; the core 18 need ~6,900.
@@ -73,8 +73,8 @@ const USAGE = `Usage: node scripts/install-host.mjs --host <claude|codex|all> [o
 
 Defaults per host (from each host's own documentation):
 
-  claude  ~/.claude/skills   profile core  (listing budget is 1% of the context window; all 57
-                                            descriptions total 18,557 chars and overflow it, and
+  claude  ~/.claude/skills   profile core  (listing budget is 1% of the context window; all 56
+                                            descriptions total 17,947 chars and overflow it, and
                                             Claude then drops descriptions from least-used skills)
   codex   ~/.agents/skills   profile core  (listing budget is 2% of the context window, or 8,000
                                             chars when unknown, and counts paths too; all 57 need

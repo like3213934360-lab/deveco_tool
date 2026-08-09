@@ -50,13 +50,6 @@ const SCRIPT_DEFINITIONS = {
       + "Takes a positional query and --limit=N / --json, so pass argv (e.g. [\"Swiper\", \"--limit=5\", \"--json\"]); "
       + "the args object form cannot express a positional query.",
   },
-  d2c_pixso_arkts: {
-    skill: "d2c-fast",
-    file: "scripts/pixso-arkts/call-pixso-arkts.mjs",
-    description: "Generate ArkTS page code from a Pixso design DSL. Every option is a flag with no "
-      + "positional arguments, so the args object form works: {occurrence, full, out, images, rawOut, "
-      + "result, structName, engine}. Prints a manifest JSON on stdout.",
-  },
   ui_score: {
     skill: "ui-reconstruction-score",
     runtime: "python",

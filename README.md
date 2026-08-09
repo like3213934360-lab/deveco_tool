@@ -8,7 +8,7 @@
 - [`PACK.md`](./PACK.md) — 人读的接入说明与工具名映射表
 
 ```
-skills/      57 个 Skill，分两层：core 18 个（DevEco Code 提取，MIT）+ extended 39 个（华为官方 Skill 仓库 v0.0.2）
+skills/      56 个 Skill，分两层：core 17 个（DevEco Code 提取，MIT）+ extended 39 个（华为官方 Skill 仓库 v0.0.2）
              路由索引见 skills/INDEX.md；安装器默认只装 core 层，--profile full 才加装 extended
 commands/    SDD 五阶段命令
 templates/   SDD 三份产物模板
@@ -23,7 +23,7 @@ provenance/  来源、许可与改动记录
 ```bash
 npm install
 node scripts/install.mjs --dest <目标目录>   # 装 skills(core 18)/commands/templates/manifest.json
-node scripts/install.mjs --dest <目标目录> --profile full   # 加装 extended 层，共 57 个
+node scripts/install.mjs --dest <目标目录> --profile full   # 加装 extended 层，共 56 个
 node scripts/install.mjs --print-mcp         # 打印 stdio MCP 配置片段
 ```
 
@@ -34,17 +34,17 @@ node scripts/install.mjs --print-mcp         # 打印 stdio MCP 配置片段
 想让宿主**自动发现**这些 Skill，再装可选的适配层：
 
 ```bash
-node scripts/install-host.mjs --host claude    # → ~/.claude/skills，默认 core 18 个
-node scripts/install-host.mjs --host codex     # → ~/.agents/skills，默认 core 18 个
+node scripts/install-host.mjs --host claude    # → ~/.claude/skills，默认 core 17 个
+node scripts/install-host.mjs --host codex     # → ~/.agents/skills，默认 core 17 个
 node scripts/install-host.mjs --host all --profile full   # 加装 extended，会打许可警告
 node scripts/install-host.mjs --host codex --print-mcp     # MCP 注册片段
 ```
 
-**两个宿主都默认只装 core，原因一样**：它们都会把全部 Skill 的描述加载进上下文，也都会在超预算时裁剪——裁掉的正是让 Skill 被正确匹配的关键词，而且不报错。实测本包描述合计：57 个 **18,557** 字符，core 18 个 **5,781** 字符。
+**两个宿主都默认只装 core，原因一样**：它们都会把全部 Skill 的描述加载进上下文，也都会在超预算时裁剪——裁掉的正是让 Skill 被正确匹配的关键词，而且不报错。实测本包描述合计：56 个 **17,947** 字符，core 17 个 **5,561** 字符（口径：SKILL.md frontmatter 的 `description` 字段，空白归一后计长）。
 
 | 宿主 | 限制 | 结论 |
 |---|---|---|
-| Claude | 单个 Skill 的 `description` + `when_to_use` ≤ **1536**；整个列表预算 = 上下文的 **1%**，超出后**从最少使用的 Skill 开始删描述** | 单条限制 57 个全部合格（最长 1076）；但 1M 上下文对应约 10,000 字符预算，全量 18,557 会被削，core 5,781 安全 |
+| Claude | 单个 Skill 的 `description` + `when_to_use` ≤ **1536**；整个列表预算 = 上下文的 **1%**，超出后**从最少使用的 Skill 开始删描述** | 单条限制 56 个全部合格（最长 1076）；但 1M 上下文对应约 10,000 字符预算，全量 17,947 会被削，core 5,561 安全 |
 | Codex | 初始列表预算 = 上下文的 **2%**、未知时 **8000** 字符，**且含每个 Skill 的路径** | 全量约 22,300 会被压缩甚至省略 Skill；core 含路径约 6,900 安全 |
 
 想在 Claude 上装全量，可以先用宿主侧设置抬高预算（`skillListingBudgetFraction`，或 `SLASH_COMMAND_TOOL_CHAR_BUDGET`），或把低价值条目用 `skillOverrides` 设成 `name-only`。安装器不会替你改这些设置。`/doctor` 能看列表的上下文开销估算。
@@ -57,7 +57,7 @@ Skill 默认软链，改仓库即时生效。少数「自动加载即可能产�
 
 ## 统一 MCP
 
-可以把多个 Skill 脚本注册在一个 MCP 服务里。本仓库的 `src/server.mjs` 采用白名单脚本注册表，当前通过一个 `deveco_script` 工具调度 20 个脚本：
+可以把多个 Skill 脚本注册在一个 MCP 服务里。本仓库的 `src/server.mjs` 采用白名单脚本注册表，当前通过一个 `deveco_script` 工具调度 19 个脚本：
 
 - 工程与 SDK：`copy_template`、`detect_sdk`
 - 崩溃与日志：`collect_hilog`、`fetch_faultlog`、`jscrash_report`、`parse_jscrash_log`、`probe_faultlogger`
@@ -113,7 +113,7 @@ UI 自动校验链路（`verify_ui`、`save_ui_screenshot`、`get_ui_verificatio
 
 ## 内容来源
 
-**core 层 18 个**分四类来源：四个原始 Skill 来自 DevEco Code 的 `packages/opencode/resources/skills`，与发布线 v0.1.6 逐文件核对一致；十个（`arkui-component-best-practices`、`arkts-logic-completer`、`repo-understand-skill`、`solution-design`、`responsive-layout-generator`、`arkui2hds`、`deveco-cli`、`d2c-fast`、`ui-reconstruction-score`、`arkui-scoring-workflow`）来自尚未发版的 `0.2.0-release` 分支；四个方法论 Skill 是从内置 agent 的 system prompt 提取的衍生内容。SDD 命令与模板取自本机物化目录 `~/.local/share/deveco/specs/`（`.version` 为 `0.1.5`）。
+**core 层 17 个**分四类来源：四个原始 Skill 来自 DevEco Code 的 `packages/opencode/resources/skills`，与发布线 v0.1.7 逐文件核对一致；九个（`arkui-component-best-practices`、`arkts-logic-completer`、`repo-understand-skill`、`solution-design`、`responsive-layout-generator`、`arkui2hds`、`deveco-cli`、`ui-reconstruction-score`、`arkui-scoring-workflow`）来自尚未发版的 `0.2.0-release` 分支；四个方法论 Skill 是从内置 agent 的 system prompt 提取的衍生内容。SDD 命令与模板取自本机物化目录 `~/.local/share/deveco/specs/`（`.version` 为 `0.1.5`）。
 
 **extended 层 39 个**来自另一个仓库：`gitcode.com/HarmonyOS_Skills/harmonyos-agent-skills`，锁定 tag `v0.0.2`。它不是 DevEco Code 的一部分，许可状态也不同（上游无仓库级 LICENSE），详见 `NOTICE.harmonyos-agent-skills` 与 `PACK.md` 的「许可与来源」。
 

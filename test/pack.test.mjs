@@ -206,26 +206,6 @@ test("no tool group is optional and nothing in the pack depends on a removed too
   }
 });
 
-test("d2c-fast carries no leftover host bindings from upstream", async () => {
-  // The host-neutral rewrite of this skill is 1100 lines of prose, so a missed spot would not
-  // surface anywhere else. These two markers are the ones a partial rewrite leaves behind.
-  const skillDir = path.join(PACK_ROOT, "skills", "d2c-fast");
-  for (const file of await markdownFiles(skillDir)) {
-    const text = await fs.readFile(file, "utf8");
-    const relative = path.relative(PACK_ROOT, file);
-    // The artifact root is parameterised as {D2C_OUT_ROOT}; a bare path means R6 missed a line.
-    // host-mapping.md documents the default, so it is allowed to name it.
-    if (path.basename(file) !== "host-mapping.md") {
-      assert.ok(
-        !/(?<!`)\.deveco\/d2c-fast\//.test(text.replace(/`\.deveco\/d2c-fast\/`/g, "")),
-        `${relative} still hardcodes the .deveco/d2c-fast artifact root`,
-      );
-    }
-    // Delegation is expressed as a capability, not as upstream's subagent registry.
-    assert.ok(!text.includes("subagent_type"), `${relative} still names the upstream subagent registry`);
-  }
-});
-
 test("no skill instructs the model to call a host-specific tool by name", async () => {
   // This pack is host-neutral: naming Claude's AskUserQuestion or TodoWrite, or upstream's
   // subagent registry, tells a Codex or OpenCode session to call something that does not exist.
@@ -233,7 +213,7 @@ test("no skill instructs the model to call a host-specific tool by name", async 
   const BINDINGS = ["AskUserQuestion", "TodoWrite", "subagent_type"];
   // Two kinds of legitimate mention: a LOCAL PATCH comment recording what upstream said, and the
   // one skill whose job is to explain which parts of upstream's harness were deliberately dropped.
-  const EXPLAINS_NON_PORTAGE = ["skills/harmony-sdd-workflow/SKILL.md", "skills/d2c-fast/references/host-mapping.md"];
+  const EXPLAINS_NON_PORTAGE = ["skills/harmony-sdd-workflow/SKILL.md"];
 
   const offenders = [];
   for (const file of await markdownFiles(path.join(PACK_ROOT, "skills"))) {

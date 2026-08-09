@@ -160,18 +160,6 @@
       "triggers": ["HDS", "UI Design Kit", "组件替换", "arkui2hds"]
     },
     {
-      "name": "d2c-fast",
-      "path": "skills/d2c-fast/SKILL.md",
-      "origin": "upstream-0.2.0+patched",
-      "tier": "core",
-      "category": "design",
-      "summary": "Ten-stage pipeline turning a Pixso design into a complete, high-fidelity HarmonyOS ArkTS page: dual-DSL intake and security screening, pixso-arkts skeleton generation and integration, repo understanding, spec confirmation, best-practice selection, design and component tree, static layout, logic completion, eight quality/system-UI audits, summary.",
-      "loadWhen": "Converting a Pixso design (link, selected node, or developer-supplied DSL plus local assets) into ArkTS page code.",
-      "triggers": ["d2c", "设计稿转代码", "Pixso", "DSL 转 ArkTS", "还原设计稿"],
-      "patch": "Host-neutralised: artifact root parameterised, task/general delegation replaced by 'delegate if the host can, otherwise run inline', the run-screenshot requirement mapped onto this pack's tools (new section 13.0), the three input methods split into an MCP-dependent mode and a fully offline mode, six question gates given the fallback upstream never wrote, and three scrubbed sentences plus a self-contradictory artifact path repaired. The two pixso-arkts scripts are byte-identical. Chapter 16's four subagent templates and the ten plan titles are kept verbatim. Full itemised diff in references/host-mapping.md.",
-      "scripts": ["d2c_pixso_arkts"]
-    },
-    {
       "name": "ui-reconstruction-score",
       "path": "skills/ui-reconstruction-score/SKILL.md",
       "origin": "upstream-0.2.0+patched",
@@ -189,10 +177,10 @@
       "origin": "upstream-0.2.0+patched",
       "tier": "core",
       "category": "design",
-      "summary": "Build, deploy, drive and screenshot an ArkUI page, then score it against a design reference through ui-reconstruction-score. Also the numeric backing for d2c-fast's stage 9 edge-band and top-overlap audits.",
+      "summary": "Build, deploy, drive and screenshot an ArkUI page, then score it against a design reference through ui-reconstruction-score, iterating over multiple calibration rounds.",
       "loadWhen": "An ArkUI page is implemented and needs to be compared against its design reference on a real target.",
       "triggers": ["视觉校准", "评分流程", "截图对比", "还原度打分"],
-      "patch": "Upstream writes the tool layer as a generic 'MCP tool' because it targets DevEco Code's own tool set. Added a binding table onto this pack's tools (build_project / start_app / perform_ui_action screenshot / get_app_ui_tree / hdc_log), plus get_app_ui_tree as a structural evidence source upstream does not use, and the d2c-fast stage 9 relationship. agents/openai.yaml not carried, same reason as ui-reconstruction-score."
+      "patch": "Upstream writes the tool layer as a generic 'MCP tool' because it targets DevEco Code's own tool set. Added a binding table onto this pack's tools (build_project / start_app / perform_ui_action screenshot / get_app_ui_tree / hdc_log), plus get_app_ui_tree as a structural evidence source upstream does not use. The multi-round calibration flow (round/status state machine, invoked->completed, blocked tier, code edits allowed between rounds) is synced from 0.2.0-release HEAD, with upstream's compare_images fallback dropped since this pack does not ship that tool. agents/openai.yaml not carried, same reason as ui-reconstruction-score."
     },
     {
       "name": "deveco-cli",
@@ -715,7 +703,6 @@
     "disableImplicitInvocation": {
       "$comment": "Skills where merely deciding to load them can cause an irreversible or outward-facing action. The test is the side effect, NOT the manifest category: harmony-build-loop is category `tools` but is pure methodology, and auto-loading it is precisely the point.",
       "deveco-create-project": "Creates directories and writes a project tree.",
-      "d2c-fast": "Writes generated ArkTS artifacts in bulk.",
       "deveco-studio-emulator": "Starts and stops emulators.",
       "hmos-instrument-test": "Runs instrumented tests on a real device.",
       "hmos-local-test": "Runs tests on a real device.",
@@ -730,7 +717,6 @@
         "arkts-runtime-fix",
         "arkui-component-best-practices",
         "arkui-scoring-workflow",
-        "d2c-fast",
         "deveco-create-project",
         "deveco-studio-verify",
         "harmony-build-loop",

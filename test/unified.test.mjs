@@ -55,7 +55,7 @@ async function withHdcPath(executable, operation) {
 
 test("the script registry exposes the allowlisted Skill scripts", () => {
   const scripts = listScripts();
-  assert.equal(scripts.length, 20);
+  assert.equal(scripts.length, 19);
   assert.deepEqual(scripts.map((script) => script.id), [
     "copy_template",
     "detect_sdk",
@@ -65,7 +65,6 @@ test("the script registry exposes the allowlisted Skill scripts", () => {
     "parse_jscrash_log",
     "probe_faultlogger",
     "search_practices",
-    "d2c_pixso_arkts",
     "ui_score",
     "apifault_collect_hilog",
     "apifault_analyze_media",
@@ -136,7 +135,7 @@ test("unified MCP advertises scripts, diagnostics, LSP, and CodeGenie tools", as
 
   const catalog = await client.callTool({ name: "deveco_script_catalog", arguments: {} });
   const parsed = JSON.parse(catalog.content[0].text);
-  assert.equal(parsed.count, 20);
+  assert.equal(parsed.count, 19);
 });
 
 test("a timed-out script takes its grandchildren with it", async () => {
@@ -391,26 +390,6 @@ test("a project-wide scan refuses to report success when it resolves no sources"
   } finally {
     await fs.rm(projectPath, { recursive: true, force: true });
   }
-});
-
-test("the args object form maps camelCase onto the kebab flags d2c_pixso_arkts expects", async () => {
-  // Unlike search_practices, this script has no positional arguments, so the object form works.
-  // The engine is not exercised here: the DSL paths do not exist, so it exits non-zero after
-  // parsing. What is asserted is the flag mapping.
-  const result = await runRegisteredScript("d2c_pixso_arkts", {
-    args: {
-      occurrence: "/nonexistent/design.occurrence.json",
-      full: "/nonexistent/design.full.json",
-      out: path.join(os.tmpdir(), "deveco-d2c-argv-test.ets"),
-      structName: "DemoPage",
-      rawOut: path.join(os.tmpdir(), "deveco-d2c-argv-test.raw.json"),
-    },
-  });
-  assert.equal(result.runtime, "node");
-  assert.deepEqual(result.argv.filter((token) => token.startsWith("--")), [
-    "--occurrence", "--full", "--out", "--struct-name", "--raw-out",
-  ]);
-  assert.equal(result.ok, false, "missing input files must not read as a clean run");
 });
 
 test("a python script reports a missing interpreter instead of failing obscurely", async () => {
