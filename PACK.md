@@ -90,7 +90,7 @@ node scripts/install-host.mjs --host codex --print-mcp    # Codex 的 TOML 片�
 | 宿主 | 目录 | 默认 | 依据 |
 | --- | --- | --- | --- |
 | Claude Code | `~/.claude/skills` | core（17） | 两条限制：单个 Skill 的 `description` + `when_to_use` ≤ 1536（56 个全部合格，最长 1076）；**整个列表预算 = 上下文的 1%**，超出后从最少使用的 Skill 开始删描述。1M 上下文约 10,000 字符预算，全量 17,947 必被削 |
-| Codex | `~/.agents/skills` | core（18） | 初始列表预算为上下文的 2%、未知时 8000 字符，**且含每个 Skill 的路径**；全量约 22,300 会被压缩甚至省略 Skill，core 含路径约 6,900 才安全 |
+| Codex | `~/.agents/skills` | core（17） | 初始列表预算为上下文的 2%、未知时 8000 字符，**且含每个 Skill 的路径**；全量约 20,200 会被压缩甚至省略 Skill，core 含路径约 6,200 才安全 |
 
 被削掉的正是让 Skill 被正确匹配的关键词，而且两个宿主都不会报错，所以这不是"装多点更好"的取舍。要在 Claude 上装全量，先用宿主侧设置抬高预算（`skillListingBudgetFraction` / `SLASH_COMMAND_TOOL_CHAR_BUDGET`），或把低价值条目用 `skillOverrides` 设成 `name-only`；安装器不替你改宿主设置。
 
