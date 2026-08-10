@@ -359,14 +359,14 @@ const localTools = [
   },
   {
     name: "ui_snapshot",
-    description: "Capture the device screen over hdc and return it inline. Use this when you only need to see the screen; use ui_observe when you also need coordinates, since it gets both in one device round trip. Runs locally, so it still works when the CodeGenie child is unavailable. Captures downscaled by default (a native frame costs roughly 24x the image tokens and buys nothing, because exact coordinates come from ui_observe / ui_find, never from this image); pass width or format:png for the full-resolution original.",
+    description: "Capture the device screen over hdc and return it inline. Use this when you only need to see the screen; use ui_observe when you also need coordinates, since it gets both in one device round trip. Runs locally, so it still works when the CodeGenie child is unavailable. Captures at the display's own resolution, scaled down only when its long edge exceeds 2576px — the point past which a vision model resizes the image anyway, so a larger capture costs bytes without adding detail. Lower width when a long loop needs cheaper frames: image cost follows pixel area, so halving width quarters it.",
     inputSchema: {
       type: "object",
       properties: {
         hvd: { type: "string", description: "hdc connect key as printed by hdc_log list_devices; optional when exactly one device is connected." },
         localPath: { type: "string", description: "Where to write the image. Defaults to a timestamped file under the system temp directory." },
-        width: { type: "integer", minimum: 64, maximum: 4096, description: "Capture width, aspect ratio preserved. Defaults to 480. Raise it to read fine detail, or set it at or above the native width for an unscaled frame; coordinateScale reports the ratio either way." },
-        format: { type: "string", enum: ["jpeg", "png"], description: "jpeg (default) uses snapshot_display; png falls back to uitest screenCap for a lossless full-resolution frame." },
+        width: { type: "integer", minimum: 64, maximum: 4096, description: "Capture width, aspect ratio preserved. Defaults to the display’s own width, capped so the long edge stays within 2576px. Lower it to cut image cost on a long loop; coordinateScale reports the ratio either way." },
+        format: { type: "string", enum: ["jpeg", "png"], description: "jpeg (default) is lossy but small; png is lossless and uncapped, for pixel-exact work. Both come from snapshot_display. Format does not change image cost, which follows pixel area only." },
         displayId: { type: "integer", minimum: 0, description: "Only for multi-display devices. Left unset, the device picks its active display." },
         inline: { type: "boolean", description: "Return the image as a content block (default true). Set false to get only the JSON report and the path." },
         timeoutMs: { type: "integer", minimum: 1000, maximum: 600000 },
@@ -409,7 +409,7 @@ const localTools = [
         displayId: { type: "integer", minimum: 0, description: "Restrict matches to one display, and capture that display. Only for multi-display devices; a foldable or an external screen puts nodes from both displays in one dump." },
         hvd: { type: "string", description: "hdc connect key as printed by hdc_log list_devices; optional when exactly one device is connected." },
         localPath: { type: "string", description: "Where to write the frame. Defaults to a timestamped file under the system temp directory." },
-        width: { type: "integer", minimum: 64, maximum: 4096, description: "Capture width, aspect ratio preserved. Defaults to 480." },
+        width: { type: "integer", minimum: 64, maximum: 4096, description: "Capture width, aspect ratio preserved. Defaults to the display’s own width, capped so the long edge stays within 2576px." },
         inline: { type: "boolean", description: "Return the frame as a content block (default true)." },
         timeoutMs: { type: "integer", minimum: 1000, maximum: 600000 },
       },

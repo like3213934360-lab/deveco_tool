@@ -858,9 +858,10 @@ test("the display size is learned once and reused by later processes", async (t)
 
   const captures = (await fake.argv()).filter((line) => line.includes("snapshot_display"));
   assert.ok(!captures[0].includes(" -w "), "nothing known yet on the first capture");
-  // 480 is the default: a native frame costs roughly 24x the image tokens and buys nothing once
-  // coordinates come from the dump. 1071 is 2848 * 480 / 1276, so the aspect ratio is preserved.
-  assert.ok(captures[1].includes(" -w 480 -h 1071"), `second capture must scale: ${captures[1]}`);
+  // The fixture's 1276x2848 display has a long edge past the 2576px ceiling, so it is scaled to
+  // exactly that: 2576 tall, and 1276 * 2576 / 2848 = 1154 wide. A vision consumer would have
+  // resized it to this anyway, so nothing is lost and the larger transfer is avoided.
+  assert.ok(captures[1].includes(" -w 1154 -h 2576"), `second capture must scale: ${captures[1]}`);
   assert.equal(report.nativeWidth, 1276, "the native size is still reported after scaling");
 
   const cached = JSON.parse(
@@ -881,7 +882,30 @@ test("an explicit width at or above native asks for no rescale", async (t) => {
   await withHdcPath(fake.executable, () => uiSnapshot({ localPath: target }));
   await withHdcPath(fake.executable, () => uiSnapshot({ localPath: target, width: 4096 }));
   const captures = (await fake.argv()).filter((line) => line.includes("snapshot_display"));
+  // An explicit width only ever scales down -- asking for more pixels than the display has would
+  // upscale a blurry frame and charge for the extra area.
   assert.ok(!captures[1].includes(" -w "), `native is one explicit width away: ${captures[1]}`);
+});
+
+test("a display within the ceiling is captured untouched", async (t) => {
+  // Only tall displays are scaled. A 1080x1920 panel is inside the 2576px long-edge ceiling, so
+  // the default must not touch it -- the cap exists to avoid waste, not to shrink on principle.
+  const fake = await makeUiHdc({
+    snapshot: "printf 'process: display 0, file type: jpeg, width: 1080, height: 1920\\n';"
+      + " printf 'success: snapshot display 0 , write to /d/x.jpeg as jpeg, width: 1080, height: 1920\\n'",
+  });
+  const target = uiTempTarget("small.jpeg");
+  t.after(async () => {
+    await fs.rm(fake.directory, { recursive: true, force: true });
+    await fs.rm(target, { force: true });
+    await fs.rm(path.join(os.tmpdir(), "deveco-ui", fake.device), { recursive: true, force: true });
+  });
+
+  await withHdcPath(fake.executable, () => uiSnapshot({ localPath: target }));
+  const report = await withHdcPath(fake.executable, () => uiSnapshot({ localPath: target }));
+  const captures = (await fake.argv()).filter((line) => line.includes("snapshot_display"));
+  assert.ok(!captures[1].includes(" -w "), `nothing to cap on this display: ${captures[1]}`);
+  assert.equal(report.coordinateScale, 1);
 });
 
 test("ui_snapshot passes -i only when displayId is given", async (t) => {
@@ -940,26 +964,34 @@ test("a device without snapshot_display is probed once, not on every call", asyn
   assert.equal(attempts.length, 1, "a permanently missing snapshot_display must not be re-probed");
 });
 
-test("format png keeps the lossless full-resolution path available", async (t) => {
-  // snapshot_display only writes jpeg, so png has to route to screenCap. This is the guarantee that
-  // adding the fast path took nothing away: a caller that wants a lossless native frame still gets
-  // one. It also covers the same skip branch as the cached-unavailable path.
+test("format png is lossless, uncapped, and does not need the uitest lock", async (t) => {
+  // snapshot_display writes png too -- believing otherwise sent every lossless capture through
+  // uitest screenCap, which measured 5.2MB in 813ms against 3.7MB in 655ms for the same screen and
+  // took the device lock for no reason. png is also the explicit ask for the untouched original,
+  // so the long-edge ceiling that bounds the jpeg default does not apply to it.
   const fake = await makeUiHdc({ recv: 'write_png "$last"' });
   const target = uiTempTarget("lossless.png");
   t.after(async () => {
     await fs.rm(fake.directory, { recursive: true, force: true });
     await fs.rm(target, { force: true });
+    await fs.rm(path.join(os.tmpdir(), "deveco-ui", fake.device), { recursive: true, force: true });
   });
 
+  await withHdcPath(fake.executable, () => uiSnapshot({ localPath: target, format: "png" }));
   const report = await withHdcPath(fake.executable, () => uiSnapshot({ localPath: target, format: "png" }));
-  assert.equal(report.method, "uitest-screenCap");
+  assert.equal(report.method, "snapshot_display");
   assert.equal(report.mimeType, "image/png");
   assert.equal(report.localPath, target);
   assert.equal(report.requestedPath, undefined, "png was asked for, so nothing was substituted");
   assert.equal(report.fallbackReason, undefined, "an explicit png request is a choice, not a fallback");
+
   const argv = await fake.argv();
-  assert.equal(argv.filter((line) => line.includes("snapshot_display")).length, 0);
-  assert.ok(argv.some((line) => line.includes("screenCap")));
+  const captures = argv.filter((line) => line.includes("snapshot_display"));
+  assert.ok(captures.every((line) => line.includes("-t png")), "png must be asked of snapshot_display");
+  // Even on the second call, when the display size is known and the jpeg default would have capped
+  // the long edge, png stays native.
+  assert.ok(!captures[1].includes(" -w "), `png is the untouched original: ${captures[1]}`);
+  assert.equal(argv.filter((line) => line.includes("screenCap")).length, 0, "screenCap is now only a fallback");
 });
 
 test("ui_snapshot does not fall back after a timeout", async (t) => {

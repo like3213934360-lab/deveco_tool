@@ -22,9 +22,11 @@
  *   - `ui_observe` runs both in one shell round trip with the capture backgrounded. Fusing alone
  *     bought nothing -- 1736ms against 1731ms, because a `file recv` is only ~48ms and `dumpLayout`
  *     is the 1.25s long pole -- but fusing *and* overlapping them lands at 1238ms.
- *   - Frames are captured downscaled by default. A native JPEG costs roughly 4845 image tokens
- *     against 201 for a 260px one, device-side time is flat across widths, and the exact
- *     coordinates come from the dump, so paying for native pixels buys the caller nothing.
+ *   - Captures are bounded by the longest edge a vision consumer will keep rather than by a chosen
+ *     width, because that is the point past which extra pixels are resized away and charged for
+ *     anyway. Cost follows pixel area alone -- not bytes, not encoding -- so resolution is the only
+ *     lever there is, and it is the one that was set wrong: a fixed 480px default made small text
+ *     unreadable on a dense display. See MAX_CAPTURE_LONG_EDGE.
  */
 
 import fs from "node:fs";
@@ -53,10 +55,27 @@ const MAX_TIMEOUT_MS = 600000;
 const MAX_LOCK_WAIT_MS = 30000;
 
 /**
- * Default capture width. See the header: native pixels cost roughly 24x the image tokens and buy
- * nothing once coordinates come from the dump. Native is still one explicit `width` away.
+ * The longest edge worth capturing, because it is the longest edge the consumer will keep.
+ *
+ * A vision model resizes any image whose long edge exceeds this before it ever looks at it, and
+ * charges for the resized pixels -- so beyond this point extra resolution is discarded, and all
+ * the larger capture buys is bytes on the wire. Below it, resolution is the only thing that helps:
+ * cost follows pixel *area*, never file size or encoding, so no choice of format saves anything.
+ *
+ * This replaced a fixed 480px default, which was wrong twice over. It was picked from one reading
+ * of one screen, and it was expressed as an absolute width when what decides legibility is the
+ * scale factor -- 480px is 38% of a 1276px display and 30% of a 1600px one, so the same number
+ * quietly degrades as displays get denser, and the failure surfaces as the model misreading the
+ * screen rather than as a setting being wrong. Measured against a lossless capture of the same
+ * screen, JPEG loss also got *worse* as resolution dropped (34.0dB at 480px against 37.7dB at
+ * 1154px): scaling down and compression damage the same text edges, and compound.
+ *
+ * Capping the long edge instead is self-adjusting. A denser display is scaled further, a smaller
+ * one is not scaled at all, and a consumer with a lower ceiling of its own simply resizes again
+ * and is charged its own lower price. `width` still overrides it downward for a long loop where
+ * the screen is simple and the tokens matter more than the detail.
  */
-const DEFAULT_CAPTURE_WIDTH = 480;
+const MAX_CAPTURE_LONG_EDGE = 2576;
 
 /** Below this, a transferred image is an error string or a truncated write, never a frame. */
 const MIN_IMAGE_BYTES = 512;
@@ -301,19 +320,32 @@ function rememberDisplaySize(deviceId, size) {
 }
 
 /**
- * Work out the `-w` / `-h` pair for a requested width.
+ * Work out the `-w` / `-h` pair for a capture.
+ *
+ * With no explicit width the answer is "native, unless the display's long edge is past the ceiling"
+ * -- so most displays are captured untouched and only the tall ones are scaled, to exactly the size
+ * a consumer would have resized them to anyway.
  *
  * @param {{width: number, height: number}|null} nativeSize Known display size, if any.
- * @param {number|null} targetWidth Requested width.
+ * @param {number|null} targetWidth Explicit width, or null for the default ceiling.
  * @returns {{width: number, height: number}|null} Scale arguments, or null to capture natively.
  */
 function scaleArguments(nativeSize, targetWidth) {
-  if (targetWidth === null || !nativeSize || !(nativeSize.width > 0)) return null;
-  if (targetWidth >= nativeSize.width) return null;
-  return {
-    width: targetWidth,
-    height: Math.max(1, Math.round((nativeSize.height * targetWidth) / nativeSize.width)),
-  };
+  if (!nativeSize || !(nativeSize.width > 0) || !(nativeSize.height > 0)) return null;
+  const fromWidth = (width) => ({
+    width,
+    height: Math.max(1, Math.round((nativeSize.height * width) / nativeSize.width)),
+  });
+
+  if (targetWidth !== null) {
+    // An explicit width only ever scales down; asking for more pixels than the display has would
+    // upscale a blurry frame and charge for the extra area.
+    return targetWidth >= nativeSize.width ? null : fromWidth(targetWidth);
+  }
+
+  const longEdge = Math.max(nativeSize.width, nativeSize.height);
+  if (longEdge <= MAX_CAPTURE_LONG_EDGE) return null;
+  return fromWidth(Math.max(1, Math.round((nativeSize.width * MAX_CAPTURE_LONG_EDGE) / longEdge)));
 }
 
 function withExtension(filePath, extension) {
@@ -402,8 +434,8 @@ function parseSize(pattern, text) {
  *
  * @returns {Promise<{ok: true, native: object|null, output: object|null}|{ok: false, permanent: boolean, reason: string}>} Outcome.
  */
-async function captureWithSnapshotDisplay(hdc, deviceId, devicePath, scale, displayId, timeoutMs) {
-  const args = [hdc, ...targetArgs(deviceId), "shell", "snapshot_display", "-f", devicePath, "-t", "jpeg"];
+async function captureWithSnapshotDisplay(hdc, deviceId, devicePath, format, scale, displayId, timeoutMs) {
+  const args = [hdc, ...targetArgs(deviceId), "shell", "snapshot_display", "-f", devicePath, "-t", format];
   // Only pass -i when the caller named a display. Defaulting it to 0 would break every device whose
   // active display is not 0: unfolded foldables, 2-in-1, anything on an external screen.
   if (displayId !== undefined) args.push("-i", String(displayId));
@@ -458,15 +490,15 @@ async function captureWithScreenCap(hdc, deviceId, devicePath, timeoutMs) {
  */
 function readCaptureOptions(input) {
   const format = input.format === "png" ? "png" : "jpeg";
-  let targetWidth = DEFAULT_CAPTURE_WIDTH;
+  // null means "use the default ceiling" -- except for png, the explicit ask for the untouched
+  // original, which is left at the display's own size unless a width is named.
+  let targetWidth = format === "png" ? Number.POSITIVE_INFINITY : null;
   if (input.width !== undefined && input.width !== null) {
     targetWidth = Number(input.width);
     if (!Number.isInteger(targetWidth) || targetWidth < 64 || targetWidth > 4096) {
       fail("width must be an integer between 64 and 4096", "UI_ARGS_INVALID");
     }
   }
-  // png is the explicit "give me the lossless original" path, so it is never downscaled.
-  if (format === "png") targetWidth = null;
 
   let displayId;
   if (input.displayId !== undefined && input.displayId !== null) {
@@ -526,13 +558,15 @@ export async function uiSnapshot(input = {}) {
     );
 
   const cachedUnavailable = snapshotUnavailable.get(deviceId);
-  // snapshot_display only writes jpeg, so an explicit png request goes straight to screenCap, as
-  // does a device already proven not to have the binary.
-  const skipSnapshotDisplay = format === "png" || Boolean(cachedUnavailable);
+  // snapshot_display writes png as well as jpeg -- the earlier belief that it was jpeg-only sent
+  // every lossless capture to uitest screenCap, which on one screen meant 5.2MB in 813ms against
+  // 3.7MB in 655ms here, and needlessly took the uitest lock. screenCap is now purely the fallback
+  // for a device that has no snapshot_display at all.
+  const skipSnapshotDisplay = Boolean(cachedUnavailable);
   let method = skipSnapshotDisplay ? null : "snapshot_display";
   let fallbackReason = cachedUnavailable ?? null;
   let localPath = requestedPath;
-  let devicePath = devicePathFor("snap", "jpeg", true);
+  let devicePath = devicePathFor("snap", format, true);
   let outputSize = null;
   let nativeSize = readDisplaySize(deviceId);
   let nativeSizeChanged = false;
@@ -541,7 +575,7 @@ export async function uiSnapshot(input = {}) {
     // No probe capture when the size is unknown: the first call simply comes back native and
     // teaches the cache, and every later call -- in this process or the next -- can scale.
     const captured = await captureWithSnapshotDisplay(
-      hdc, deviceId, devicePath, scaleArguments(nativeSize, targetWidth), displayId, timeoutMs,
+      hdc, deviceId, devicePath, format, scaleArguments(nativeSize, targetWidth), displayId, timeoutMs,
     );
     if (captured.ok) {
       nativeSize = captured.native ?? nativeSize;
@@ -559,7 +593,7 @@ export async function uiSnapshot(input = {}) {
   if (method !== "snapshot_display") {
     method = "uitest-screenCap";
     devicePath = devicePathFor("snap", "png", true);
-    // screenCap writes PNG. Handing back PNG bytes at a .jpeg path would be a lie the caller
+    // screenCap only writes PNG. Handing back PNG bytes at a .jpeg path would be a lie the caller
     // cannot detect, so the destination moves and both paths are reported.
     localPath = withExtension(requestedPath, "png");
     // This one is uitest, so unlike the path above it has to hold the device.
@@ -567,7 +601,7 @@ export async function uiSnapshot(input = {}) {
       () => captureWithScreenCap(hdc, deviceId, devicePath, timeoutMs));
   }
 
-  const isPng = method === "uitest-screenCap";
+  const isPng = method === "uitest-screenCap" || format === "png";
   const bytes = await pullArtifact(hdc, deviceId, devicePath, localPath, timeoutMs, {
     emptyCode: "UI_SNAPSHOT_EMPTY",
     magic: isPng ? PNG_MAGIC : JPEG_MAGIC,
