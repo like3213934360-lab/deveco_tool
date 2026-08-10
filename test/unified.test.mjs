@@ -11,6 +11,7 @@ import { listScripts, parseScriptOutput, runRegisteredScript } from "../src/scri
 import { arktsCheckStatus, runArktsCheck } from "../src/arkts-check.mjs";
 import { resolveDevecoHome } from "../src/config.mjs";
 import { buildArgs, buildProject, devecoCliFailureMessage } from "../src/deveco-cli.mjs";
+import { uiFind, uiSnapshot, uiTap } from "../src/device-ui.mjs";
 import { hdcFailureMessage, hdcLog, hdcStatus } from "../src/hdc-log.mjs";
 import { hdcFailureMessage as skillHdcFailureMessage } from "../skills/arkts-runtime-fix/scripts/shared/hdc.mjs";
 
@@ -122,9 +123,9 @@ test("unified MCP advertises scripts, diagnostics, LSP, and CodeGenie tools", as
     "deveco_script_catalog", "deveco_script", "switch_cwd", "deveco_doctor",
     "arkts_check", "hdc_log", "find_references", "go_to_definition",
     "get_hover", "list_symbols", "find_call_hierarchy", "lsp", "build_project",
-    "document_validate",
+    "document_validate", "ui_snapshot", "ui_find", "ui_tap",
   ]) assert.ok(names.has(name), `missing tool ${name}`);
-  assert.equal(result.tools.length, 24);
+  assert.equal(result.tools.length, 28);
   assert.equal(result.tools.filter((tool) => tool.name === "check_ets_files").length, 1);
   for (const disabled of ["verify_ui", "save_ui_screenshot", "get_ui_verification_log"]) {
     assert.ok(!names.has(disabled), `disabled tool ${disabled} is still advertised`);
@@ -674,8 +675,12 @@ test("a CodeGenie child that never answers cannot delay tool discovery", { timeo
   const elapsed = Date.now() - startedAt;
   assert.ok(elapsed < 1000, `tools/list must not wait on the child; took ${elapsed}ms`);
 
-  assert.equal(names.length, 24, "all 24 tools must be advertised even while the child is stalled");
+  assert.equal(names.length, 28, "all 28 tools must be advertised even while the child is stalled");
   assert.ok(names.includes("arkts_check"));
+  // The capture/find/tap loop runs over hdc in-process, so a stalled child must not reach it.
+  for (const local of ["ui_snapshot", "ui_find", "ui_tap"]) {
+    assert.ok(names.includes(local), `${local} must survive a stalled CodeGenie child`);
+  }
   // build_project and start_app run through the bundled DevEco CLI, so a stalled
   // CodeGenie child no longer costs the ability to build and launch.
   assert.ok(names.includes("build_project"), "building must survive a stalled CodeGenie child");
@@ -735,4 +740,601 @@ test("stdio EOF shuts down the MCP server within six seconds", { timeout: 15000 
   } finally {
     if (child.exitCode === null) child.kill("SIGKILL");
   }
+});
+
+// --- device-UI fast path (src/device-ui.mjs) ----------------------------------------------------
+//
+// All of these drive a fake hdc through HDC_PATH, so they run on CI with no device and no DevEco.
+// The fake writes to the LAST argv element because `file recv` puts the destination there and the
+// `-t <device>` prefix shifts every positional index, and it appends every invocation to a log so
+// tests can assert which commands actually ran rather than only what came back.
+
+const SNAPSHOT_OK = "printf 'process: display 0, file type: jpeg, width: 1276, height: 2848\\n';"
+  + " printf 'success: snapshot display 0 , write to /d/x.jpeg as jpeg, width: 1276, height: 2848\\n'";
+
+// device-ui.mjs caches "this device has no snapshot_display" for the life of the process, keyed by
+// device id. Sharing one device name across tests therefore leaks that verdict forward and silently
+// routes later captures down the screenCap fallback, so every fake gets its own device by default.
+let fakeDeviceCounter = 0;
+
+async function makeUiHdc({ devices, snapshot = SNAPSHOT_OK, recv = 'write_jpeg "$last"' } = {}) {
+  const device = `device-${(fakeDeviceCounter += 1)}`;
+  const advertised = devices ?? device;
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-ui-test-"));
+  const log = path.join(directory, "argv.log");
+  const marks = path.join(directory, "marks.log");
+  const body = [
+    `LOG="${log}"`,
+    `MARKS="${marks}"`,
+    'printf \'%s\\n\' "$*" >> "$LOG"',
+    'for a in "$@"; do last="$a"; done',
+    'pad() { i=0; while [ $i -lt 60 ]; do printf \'0123456789\' >> "$1"; i=$((i+1)); done; }',
+    'write_jpeg() { printf \'\\377\\330\\377\\341\' > "$1"; pad "$1"; }',
+    'write_png() { printf \'\\211PNG\\015\\012\\032\\012\' > "$1"; pad "$1"; }',
+    'case "$*" in',
+    `  *"list targets"*) printf '${advertised}\\n' ;;`,
+    `  *snapshot_display*) ${snapshot} ;;`,
+    "  *screenCap*) printf 'ScreenCap saved to /d/x.png\\n' ;;",
+    "  *dumpLayout*) printf 'DumpLayout saved to:/d/x.json\\n' ;;",
+    "  *uiInput*) printf 'No Error\\n' ;;",
+    `  *"file recv"*) ${recv} ;;`,
+    "esac",
+  ].join("\n");
+  const executable = path.join(directory, "hdc");
+  await fs.writeFile(executable, `#!/bin/sh\n${body}\n`, { mode: 0o755 });
+  return {
+    device,
+    directory,
+    executable,
+    async argv() {
+      return (await fs.readFile(log, "utf8")).split("\n").filter(Boolean);
+    },
+    async marks() {
+      return (await fs.readFile(marks, "utf8")).split("\n").filter(Boolean);
+    },
+  };
+}
+
+function uiTempTarget(name) {
+  return path.join(os.tmpdir(), `deveco-ui-target-${process.pid}-${name}`);
+}
+
+test("ui_snapshot reads the native size from one line and the written size from the other", async (t) => {
+  const fake = await makeUiHdc();
+  const target = uiTempTarget("native.jpeg");
+  t.after(async () => {
+    await fs.rm(fake.directory, { recursive: true, force: true });
+    await fs.rm(target, { force: true });
+  });
+
+  const report = await withHdcPath(fake.executable, () => uiSnapshot({ localPath: target }));
+  assert.equal(report.method, "snapshot_display");
+  assert.equal(report.deviceId, fake.device);
+  assert.equal(report.localPath, target);
+  assert.equal(report.nativeWidth, 1276);
+  assert.equal(report.nativeHeight, 2848);
+  // Native capture is the default precisely so this stays 1: a caller that reads a pixel off the
+  // returned frame must never need to scale it to get a device coordinate.
+  assert.equal(report.coordinateScale, 1);
+  assert.equal(report.mimeType, "image/jpeg");
+  assert.ok(report.bytes >= 512);
+
+  const argv = await fake.argv();
+  const capture = argv.find((line) => line.includes("snapshot_display"));
+  // Defaulting -i to 0 breaks unfolded foldables, 2-in-1 and external displays, so it is only ever
+  // sent when the caller named a display.
+  assert.ok(!capture.includes(" -i "), `-i must be omitted when displayId is unset: ${capture}`);
+  assert.ok(!capture.includes(" -w "), `no rescale without an explicit width: ${capture}`);
+});
+
+test("ui_snapshot passes -i only when displayId is given", async (t) => {
+  const fake = await makeUiHdc();
+  const target = uiTempTarget("display.jpeg");
+  t.after(async () => {
+    await fs.rm(fake.directory, { recursive: true, force: true });
+    await fs.rm(target, { force: true });
+  });
+
+  await withHdcPath(fake.executable, () => uiSnapshot({ localPath: target, displayId: 2 }));
+  const capture = (await fake.argv()).find((line) => line.includes("snapshot_display"));
+  assert.match(capture, /-i 2/);
+});
+
+test("ui_snapshot falls back to screenCap when snapshot_display fails at exit 0", async (t) => {
+  // The exact hole this module exists around: `hdc shell` returns 0 whatever the remote command
+  // did, and a bare "error:" line matches none of hdc-log's transport failure patterns. Success has
+  // to be a positive marker, never the absence of a negative one.
+  const fake = await makeUiHdc({
+    snapshot: "printf 'error: something went wrong\\n'",
+    recv: 'write_png "$last"',
+  });
+  const target = uiTempTarget("fallback.jpeg");
+  t.after(async () => {
+    await fs.rm(fake.directory, { recursive: true, force: true });
+    await fs.rm(target, { force: true });
+    await fs.rm(target.replace(/\.jpeg$/, ".png"), { force: true });
+  });
+
+  const report = await withHdcPath(fake.executable, () => uiSnapshot({ localPath: target }));
+  assert.equal(report.method, "uitest-screenCap");
+  assert.equal(report.mimeType, "image/png");
+  // screenCap writes PNG bytes. Leaving them at the requested .jpeg path would be a lie the caller
+  // has no way to detect, so the destination moves and both paths come back.
+  assert.ok(report.localPath.endsWith(".png"), report.localPath);
+  assert.equal(report.requestedPath, target);
+  assert.match(report.fallbackReason, /error/i);
+});
+
+test("a device without snapshot_display is probed once, not on every call", async (t) => {
+  const fake = await makeUiHdc({
+    snapshot: "printf 'inaccessible or not found\\n'",
+    recv: 'write_png "$last"',
+  });
+  t.after(async () => await fs.rm(fake.directory, { recursive: true, force: true }));
+
+  await withHdcPath(fake.executable, async () => {
+    await uiSnapshot({ localPath: uiTempTarget("probe1.jpeg") });
+    await uiSnapshot({ localPath: uiTempTarget("probe2.jpeg") });
+  });
+
+  const attempts = (await fake.argv()).filter((line) => line.includes("snapshot_display"));
+  // Falling back costs the failed attempt plus the slower path, which is worse than the tool being
+  // replaced. A device that has no snapshot_display will never grow one, so that verdict sticks.
+  assert.equal(attempts.length, 1, "a permanently missing snapshot_display must not be re-probed");
+});
+
+test("format png keeps the lossless full-resolution path available", async (t) => {
+  // snapshot_display only writes jpeg, so png has to route to screenCap. This is the guarantee that
+  // adding the fast path took nothing away: a caller that wants a lossless native frame still gets
+  // one. It also covers the same skip branch as the cached-unavailable path.
+  const fake = await makeUiHdc({ recv: 'write_png "$last"' });
+  const target = uiTempTarget("lossless.png");
+  t.after(async () => {
+    await fs.rm(fake.directory, { recursive: true, force: true });
+    await fs.rm(target, { force: true });
+  });
+
+  const report = await withHdcPath(fake.executable, () => uiSnapshot({ localPath: target, format: "png" }));
+  assert.equal(report.method, "uitest-screenCap");
+  assert.equal(report.mimeType, "image/png");
+  assert.equal(report.localPath, target);
+  assert.equal(report.requestedPath, undefined, "png was asked for, so nothing was substituted");
+  assert.equal(report.fallbackReason, undefined, "an explicit png request is a choice, not a fallback");
+  const argv = await fake.argv();
+  assert.equal(argv.filter((line) => line.includes("snapshot_display")).length, 0);
+  assert.ok(argv.some((line) => line.includes("screenCap")));
+});
+
+test("ui_snapshot does not fall back after a timeout", async (t) => {
+  const fake = await makeUiHdc({ snapshot: "sleep 3" });
+  t.after(async () => await fs.rm(fake.directory, { recursive: true, force: true }));
+
+  await withHdcPath(fake.executable, async () => {
+    await assert.rejects(
+      () => uiSnapshot({ localPath: uiTempTarget("timeout.jpeg"), timeoutMs: 1000 }),
+      (error) => error.code === "HDC_TIMEOUT",
+    );
+  });
+  // A wedged device would time out on screenCap too, so retrying there only doubles the wait.
+  assert.equal((await fake.argv()).filter((line) => line.includes("screenCap")).length, 0);
+});
+
+test("ui_snapshot rejects an empty transfer instead of reporting success", async (t) => {
+  const fake = await makeUiHdc({ recv: ": " });
+  t.after(async () => await fs.rm(fake.directory, { recursive: true, force: true }));
+
+  await withHdcPath(fake.executable, async () => {
+    await assert.rejects(
+      () => uiSnapshot({ localPath: uiTempTarget("empty.jpeg") }),
+      (error) => error.code === "UI_SNAPSHOT_EMPTY",
+    );
+  });
+});
+
+test("ui_snapshot rejects a transfer that is not an image", async (t) => {
+  // uitest and snapshot_display write plain-text failures into the -f/-p target and recv pulls them
+  // back faithfully; without a magic-byte check they would arrive as a successful screenshot.
+  const fake = await makeUiHdc({ recv: 'printf \'dump failed: no permission................................................\' > "$last"' });
+  t.after(async () => await fs.rm(fake.directory, { recursive: true, force: true }));
+
+  await withHdcPath(fake.executable, async () => {
+    await assert.rejects(
+      () => uiSnapshot({ localPath: uiTempTarget("text.jpeg") }),
+      (error) => error.code === "UI_SNAPSHOT_EMPTY",
+    );
+  });
+});
+
+test("a failed ui_snapshot never leaves the previous frame in place as if it were new", async (t) => {
+  // Device paths are reused, so without staging a failed recv would leave the earlier call's file
+  // at the destination, pass every size and format check, and hand back a stale screenshot -- worse
+  // than an error, because nothing about it looks wrong.
+  const fake = await makeUiHdc({ recv: ": " });
+  const target = uiTempTarget("stale.jpeg");
+  const original = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe1]), Buffer.alloc(600, 0x41)]);
+  await fs.mkdir(path.dirname(target), { recursive: true });
+  await fs.writeFile(target, original);
+  t.after(async () => {
+    await fs.rm(fake.directory, { recursive: true, force: true });
+    await fs.rm(target, { force: true });
+  });
+
+  await withHdcPath(fake.executable, async () => {
+    await assert.rejects(
+      () => uiSnapshot({ localPath: target }),
+      (error) => error.code === "UI_SNAPSHOT_EMPTY",
+    );
+  });
+  assert.deepEqual(await fs.readFile(target), original, "the earlier frame must be left untouched");
+  assert.equal(fsSync.existsSync(`${target}.part`), false, "staging file must not survive a failure");
+});
+
+test("ui_snapshot resolves devices the same way hdc_log does", async (t) => {
+  const empty = await makeUiHdc({ devices: "[Empty]" });
+  const two = await makeUiHdc({ devices: "device-a\\ndevice-b" });
+  t.after(async () => {
+    await fs.rm(empty.directory, { recursive: true, force: true });
+    await fs.rm(two.directory, { recursive: true, force: true });
+  });
+
+  await withHdcPath(empty.executable, async () => {
+    await assert.rejects(() => uiSnapshot({}), (error) => error.code === "HDC_NO_DEVICE");
+  });
+  await withHdcPath(two.executable, async () => {
+    await assert.rejects(() => uiSnapshot({}), (error) => error.code === "HDC_DEVICE_REQUIRED");
+    await assert.rejects(
+      () => uiSnapshot({ hvd: "device-z" }),
+      (error) => error.code === "HDC_DEVICE_NOT_FOUND",
+    );
+  });
+});
+
+test("concurrent ui_snapshot calls on one device do not overlap", async (t) => {
+  // uitest is a singleton daemon on the device: two concurrent captures genuinely fail, and the
+  // fixed per-process device path would collide even if they did not.
+  const fake = await makeUiHdc({
+    snapshot: `printf 'BEGIN\\n' >> "$MARKS"; sleep 0.4; printf 'END\\n' >> "$MARKS"; ${SNAPSHOT_OK}`,
+  });
+  const first = uiTempTarget("serial1.jpeg");
+  const second = uiTempTarget("serial2.jpeg");
+  t.after(async () => {
+    await fs.rm(fake.directory, { recursive: true, force: true });
+    await fs.rm(first, { force: true });
+    await fs.rm(second, { force: true });
+  });
+
+  const reports = await withHdcPath(fake.executable, () => Promise.all([
+    uiSnapshot({ localPath: first }),
+    uiSnapshot({ localPath: second }),
+  ]));
+  assert.deepEqual(await fake.marks(), ["BEGIN", "END", "BEGIN", "END"]);
+  assert.deepEqual(reports.map((report) => report.localPath), [first, second]);
+});
+
+// A layout dump shaped like a real one: the wrapper around `content`, inconsistent spacing inside
+// $rect, an off-screen node and a zero-area node.
+const SAMPLE_DUMP = {
+  ProcessID: 46711,
+  VsyncID: 587458,
+  WindowID: 82,
+  content: {
+    $ID: 1,
+    $type: "root",
+    $rect: "[0.00, 0.00],[1276.00,2848.00]",
+    $attrs: {},
+    $children: [
+      {
+        $ID: 5,
+        $type: "Text",
+        $rect: "[604.00, 2689.00],[675.00,2730.00]",
+        $attrs: { content: "工具", key: "tab_tools" },
+        $children: [],
+      },
+      { $ID: 6, $type: "Text", $rect: "[357.00,2689.00],[428.00, 2730.00]", $attrs: { content: "首页" } },
+      { $ID: 7, $type: "Button", $rect: "[10.00,9000.00],[100.00,9100.00]", $attrs: { content: "屏幕外" } },
+      { $ID: 8, $type: "Text", $rect: "[5.00,5.00],[5.00,5.00]", $attrs: { content: "零面积" } },
+    ],
+  },
+};
+
+async function writeDump(t, value) {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-ui-dump-"));
+  const dumpPath = path.join(directory, "layout.json");
+  await fs.writeFile(dumpPath, typeof value === "string" ? value : JSON.stringify(value));
+  t.after(async () => await fs.rm(directory, { recursive: true, force: true }));
+  return dumpPath;
+}
+
+test("ui_find turns a layout dump into tap coordinates without touching a device", async (t) => {
+  // This is the arithmetic that decides where every tap lands, so it is checked against the value
+  // measured on a real device: the 工具 tab centres on (640, 2710). An estimate read off a
+  // screenshot put it at (640, 2670) -- 40px out, which a smaller target would have missed.
+  const dumpPath = await writeDump(t, SAMPLE_DUMP);
+
+  const byText = await uiFind({ dumpPath, text: "工具" });
+  assert.equal(byText.matchCount, 1);
+  assert.deepEqual(byText.matches[0].center, { x: 640, y: 2710 });
+  assert.equal(byText.matches[0].key, "tab_tools");
+  assert.equal(byText.matches[0].type, "Text");
+  assert.equal(byText.deviceId, null);
+  assert.deepEqual(byText.screen, [0, 0, 1276, 2848]);
+
+  // key is the only selector that survives a copy change or a locale switch.
+  assert.equal((await uiFind({ dumpPath, key: "tab_tools" })).matches[0].id, 5);
+  assert.equal((await uiFind({ dumpPath, key: "nope" })).matchCount, 0);
+
+  assert.equal((await uiFind({ dumpPath, type: "Button", onScreenOnly: false })).matchCount, 1);
+  assert.equal((await uiFind({ dumpPath, text: "工" })).matchCount, 1, "substring match");
+
+  // Off-screen and zero-area nodes are in the dump but tapping their centres does nothing, and the
+  // caller cannot tell that apart from a broken tap.
+  const onScreen = await uiFind({ dumpPath });
+  assert.deepEqual(onScreen.matches.map((match) => match.text), ["工具", "首页"]);
+  const everything = await uiFind({ dumpPath, onScreenOnly: false });
+  assert.deepEqual(everything.matches.map((match) => match.text), ["工具", "首页", "屏幕外", "零面积"]);
+
+  const limited = await uiFind({ dumpPath, onScreenOnly: false, limit: 1 });
+  assert.equal(limited.matches.length, 1);
+  assert.equal(limited.matchCount, 4);
+  assert.equal(limited.truncated, true);
+});
+
+test("ui_find reads the accessibility dump shape that uitest actually emits", async (t) => {
+  // The fixture above is CodeGenie's get_app_ui_tree shape. `uitest dumpLayout` -- which is what
+  // ui_find itself runs -- emits this one instead: children/attributes, bounds as [x1,y1][x2,y2]
+  // with no comma between the pairs, and type/key/clickable all inside attributes. Captured from a
+  // real device, where the first pass returned every type as "" because it only looked at $type.
+  const dumpPath = await writeDump(t, {
+    attributes: { type: "root", bounds: "[0,0][1276,2848]", text: "" },
+    children: [
+      {
+        attributes: {
+          type: "Stack", bounds: "[372,389][905,1452]", text: "8月10日, 星期一",
+          key: "sl_clock", id: "sl_clock", clickable: "true", enabled: "true", visible: "true",
+        },
+        children: [],
+      },
+      {
+        attributes: {
+          type: "Text", bounds: "[100,100][200,140]", text: "只是标签",
+          key: "", id: "", clickable: "false", enabled: "true", visible: "true",
+        },
+      },
+      {
+        attributes: {
+          type: "Text", bounds: "[100,200][200,240]", text: "隐藏的",
+          clickable: "true", enabled: "true", visible: "false",
+        },
+      },
+    ],
+  });
+
+  const clock = await uiFind({ dumpPath, text: "8月10日" });
+  assert.equal(clock.matchCount, 1);
+  assert.equal(clock.matches[0].type, "Stack", "type lives in attributes in this shape");
+  assert.equal(clock.matches[0].key, "sl_clock");
+  assert.equal(clock.matches[0].clickable, true, "string flags must be read as booleans");
+  assert.deepEqual(clock.matches[0].center, { x: 639, y: 921 });
+
+  // The visible text is frequently a label nested inside whatever handles the tap.
+  const tappable = await uiFind({ dumpPath, clickableOnly: true });
+  assert.deepEqual(tappable.matches.map((match) => match.text), ["8月10日, 星期一"]);
+
+  // An explicit visible:false beats the geometry, which would have called this one on-screen.
+  assert.deepEqual((await uiFind({ dumpPath })).matches.map((match) => match.text),
+    ["8月10日, 星期一", "只是标签"]);
+  assert.equal((await uiFind({ dumpPath, onScreenOnly: false })).matchCount, 3);
+});
+
+test("clickableOnly is a selector, not only a filter", async (t) => {
+  // A real launcher screen carried 35 clickable nodes and not one of them had text of its own: the
+  // node that takes the tap is a Stack / Flex / FormComponent wrapping the label you can see. While
+  // clickableOnly merely filtered the has-text default, "show me what I can tap" answered 0 there.
+  const dumpPath = await writeDump(t, {
+    attributes: { type: "root", bounds: "[0,0][1276,2848]" },
+    children: [
+      {
+        attributes: { type: "FormComponent", bounds: "[72,278][1205,803]", clickable: "true", enabled: "true" },
+        children: [
+          { attributes: { type: "Text", bounds: "[518,815][758,865]", text: "灵动小组件", clickable: "false" } },
+        ],
+      },
+      { attributes: { type: "Text", bounds: "[100,100][200,140]", text: "只是标签", clickable: "false" } },
+    ],
+  });
+
+  const tappable = await uiFind({ dumpPath, clickableOnly: true });
+  assert.equal(tappable.matchCount, 1);
+  assert.equal(tappable.matches[0].type, "FormComponent");
+  assert.deepEqual(tappable.matches[0].center, { x: 639, y: 541 });
+  assert.equal(tappable.matches[0].text, "", "the tappable node has no text of its own");
+
+  // Combining it with another selector still narrows rather than widens.
+  assert.equal((await uiFind({ dumpPath, clickableOnly: true, type: "Text" })).matchCount, 0);
+  // And without it the has-text default is unchanged.
+  assert.deepEqual((await uiFind({ dumpPath })).matches.map((match) => match.text),
+    ["灵动小组件", "只是标签"]);
+});
+
+test("ui_find matches the accessibility label uitest actually writes", async (t) => {
+  // uitest dumpLayout puts it in `description`; `accessibilityText` exists in neither dump shape.
+  // An icon-only control carries no text at all, so this is the only way to address one by name.
+  const dumpPath = await writeDump(t, {
+    attributes: { type: "root", bounds: "[0,0][1276,2848]" },
+    children: [
+      { attributes: { type: "Image", bounds: "[40,120][120,200]", description: "返回", clickable: "true" } },
+      { attributes: { type: "Text", bounds: "[200,120][400,200]", text: "标题", description: "标题的无障碍文本" } },
+    ],
+  });
+
+  const back = await uiFind({ dumpPath, text: "返回" });
+  assert.equal(back.matchCount, 1);
+  assert.deepEqual(back.matches[0].center, { x: 80, y: 160 });
+  // Where a node has both, the visible text wins -- description is the last fallback, not an override.
+  assert.equal((await uiFind({ dumpPath, text: "标题" })).matches[0].text, "标题");
+});
+
+test("ui_find reports an unparseable dump with the file head as the hint", async (t) => {
+  // uitest writes plain-text failures into the -p target, so the head of the file is the diagnosis.
+  const dumpPath = await writeDump(t, "dump layout failed: no permission");
+  await assert.rejects(
+    () => uiFind({ dumpPath }),
+    (error) => error.code === "UI_DUMP_PARSE_FAILED" && /no permission/.test(error.hint),
+  );
+  const emptyPath = await writeDump(t, "   ");
+  await assert.rejects(() => uiFind({ dumpPath: emptyPath }), (error) => error.code === "UI_DUMP_EMPTY");
+});
+
+test("ui_find survives dumps that do not match the one device it was written against", async (t) => {
+  const arrayRoot = await writeDump(t, [
+    { $type: "Text", $rect: "[0,0],[10,10]", attributes: { content: "alpha" }, children: [] },
+    { $type: "Text", $rect: "bad rect", $attrs: { content: "beta" } },
+    { $type: "Text", $attrs: { content: "no rect" } },
+    { $type: "Text", $rect: "[30.00,30.00],[20.00,20.00]", $attrs: { content: "inverted" } },
+  ]);
+  const found = await uiFind({ dumpPath: arrayRoot, onScreenOnly: false });
+  assert.deepEqual(found.matches.map((match) => match.text), ["alpha", "inverted"]);
+  // Corners arrive swapped on some nodes; a swapped pair still describes a real box.
+  assert.deepEqual(found.matches[1].rect, [20, 20, 30, 30]);
+  assert.deepEqual(found.matches[1].center, { x: 25, y: 25 });
+});
+
+test("ui_find dumps and pulls when no dumpPath is given", async (t) => {
+  const fake = await makeUiHdc({ recv: `printf '%s' '${JSON.stringify(SAMPLE_DUMP)}' > "$last"` });
+  t.after(async () => await fs.rm(fake.directory, { recursive: true, force: true }));
+
+  const found = await withHdcPath(fake.executable, () => uiFind({ text: "首页" }));
+  assert.equal(found.deviceId, fake.device);
+  assert.deepEqual(found.matches[0].center, { x: 393, y: 2710 });
+
+  const argv = await fake.argv();
+  assert.ok(argv.some((line) => line.includes("uitest dumpLayout -p")), "must dump on the device");
+  assert.ok(argv.some((line) => line.includes("file recv")), "must pull the dump back");
+});
+
+test("stale device-side scratch files are swept once per device, and only when old", async (t) => {
+  // The scratch paths are keyed by pid, so they are bounded per process but not over time: a
+  // development device had 14 of them, 6.9MB, including a 5.2MB PNG from the screenCap fallback.
+  // Both entry points run here, so the pull has to answer with a frame or a dump depending on which
+  // one asked. `$last` is the staging file, hence the substring match rather than a suffix.
+  const fake = await makeUiHdc({
+    recv: `case "$last" in *json*) printf '%s' '${JSON.stringify(SAMPLE_DUMP)}' > "$last" ;;`
+      + ' *) write_jpeg "$last" ;; esac',
+  });
+  const target = uiTempTarget("swept.jpeg");
+  t.after(async () => {
+    await fs.rm(fake.directory, { recursive: true, force: true });
+    await fs.rm(target, { force: true });
+  });
+
+  await withHdcPath(fake.executable, async () => {
+    await uiSnapshot({ localPath: target });
+    await uiFind({ text: "首页" });
+  });
+
+  // The sweep is not awaited by the capture path, so give it a moment to reach the log.
+  let sweeps = [];
+  for (let attempt = 0; attempt < 40 && sweeps.length === 0; attempt += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 25));
+    sweeps = (await fake.argv()).filter((line) => line.includes("deveco_ui_*"));
+  }
+  assert.equal(sweeps.length, 1, "one sweep per device per process, across both entry points");
+  // The age bound is what makes it safe to run while another server process may be mid-capture
+  // against the same device: an unqualified rm would delete that file between write and recv.
+  assert.match(sweeps[0], /-mmin \+60 -delete/);
+  assert.ok(
+    sweeps[0].includes("shell find /data/local/tmp -maxdepth 1 -name 'deveco_ui_*'"),
+    `the whole command must be one argv element: ${sweeps[0]}`,
+  );
+});
+
+test("ui_tap builds the uiInput command for each action", async (t) => {
+  const fake = await makeUiHdc();
+  t.after(async () => await fs.rm(fake.directory, { recursive: true, force: true }));
+
+  await withHdcPath(fake.executable, async () => {
+    assert.match((await uiTap({ action: "click", x: 640, y: 2710 })).sent, /uiInput click 640 2710$/);
+    assert.match((await uiTap({ action: "swipe", x: 1, y: 2, x2: 3, y2: 4, velocity: 600 })).sent, /uiInput swipe 1 2 3 4 600$/);
+    assert.match((await uiTap({ action: "dircFling", direction: 3 })).sent, /uiInput dircFling 3$/);
+    assert.match((await uiTap({ action: "keyEvent", key1: "Back" })).sent, /uiInput keyEvent Back$/);
+    assert.match((await uiTap({ action: "inputText", x: 5, y: 6, text: "BMI" })).sent, /uiInput inputText 5 6 'BMI'$/);
+  });
+});
+
+test("ui_tap quotes whitespace-free text instead of restricting which characters it may contain", async (t) => {
+  // Measured on a real device. hdc forwards an argument with no whitespace untouched, so a
+  // single-quoted form is unquoted once by the device shell and everything inside arrives literally:
+  // `id` printed the backticks rather than a uid, $HOME and ~ stayed unexpanded, and (b) no longer
+  // raised the `/bin/sh: syntax error: unexpected '('` that the previous allowlist walked straight
+  // into by permitting parentheses.
+  const fake = await makeUiHdc();
+  t.after(async () => await fs.rm(fake.directory, { recursive: true, force: true }));
+
+  await withHdcPath(fake.executable, async () => {
+    const cases = [
+      ["BMI", "'BMI'"],
+      ["`id`", "'`id`'"],
+      ["$HOME", "'$HOME'"],
+      ["a(b)c", "'a(b)c'"],
+      ["a;echo", "'a;echo'"],
+      ['a"b', `'a"b'`],
+      ["a?b", "'a?b'"],
+      // The old allowlist was letters/marks/digits plus an ASCII punctuation set, so it rejected
+      // every CJK punctuation mark: `，` is none of \p{L}, \p{M}, \p{N}.
+      ["你好，世界。", "'你好，世界。'"],
+      // Close, escape, reopen -- and still no whitespace, so it stays in the regime that protects it.
+      ["it's", `'it'\\''s'`],
+    ];
+    for (const [text, expected] of cases) {
+      const report = await uiTap({ action: "inputText", x: 1, y: 1, text });
+      assert.equal(report.sent, `uitest uiInput inputText 1 1 ${expected}`, `text: ${text}`);
+    }
+
+    // With whitespace, hdc wraps the argument in double quotes of its own. That already neutralises
+    // parentheses, globs, # and ;, so the text passes through unquoted by us.
+    assert.equal(
+      (await uiTap({ action: "inputText", x: 1, y: 1, text: "hello world 你好，再见" })).sent,
+      "uitest uiInput inputText 1 1 hello world 你好，再见",
+    );
+  });
+});
+
+test("ui_tap refuses text and keys the device shell would still expand", async (t) => {
+  // The four that survive hdc's own double quotes, all confirmed live on a real device: $HOME
+  // expanded to /root, a backtick ran id, a backslash was consumed, and a double quote closed the
+  // wrapper outright -- `a" ; id ; "b` executed id. perform_ui_action stays available for these.
+  const fake = await makeUiHdc();
+  t.after(async () => await fs.rm(fake.directory, { recursive: true, force: true }));
+
+  await withHdcPath(fake.executable, async () => {
+    for (const text of ["$HOME y", "`id` x", 'a" ; id ; "b', "a\\b c", "line\nbreak"]) {
+      await assert.rejects(
+        () => uiTap({ action: "inputText", x: 1, y: 1, text }),
+        (error) => error.code === "UI_ARGS_INVALID",
+        `text must be rejected: ${JSON.stringify(text)}`,
+      );
+    }
+    await assert.rejects(
+      () => uiTap({ action: "keyEvent", key1: "Back; reboot" }),
+      (error) => error.code === "UI_ARGS_INVALID",
+    );
+    await assert.rejects(() => uiTap({ action: "nope" }), (error) => error.code === "UI_ARGS_INVALID");
+  });
+  assert.equal((await fake.argv()).filter((line) => line.includes("uiInput")).length, 0);
+});
+
+test("ui_tap surfaces a uiInput failure instead of reporting a phantom tap", async (t) => {
+  const fake = await makeUiHdc();
+  // Replace the uiInput branch so it prints a usage line, which is what a real rejection looks like.
+  const body = (await fs.readFile(fake.executable, "utf8"))
+    .replace("*uiInput*) printf 'No Error\\n' ;;", "*uiInput*) printf 'error: coordinate out of range\\n' ;;");
+  await fs.writeFile(fake.executable, body, { mode: 0o755 });
+  t.after(async () => await fs.rm(fake.directory, { recursive: true, force: true }));
+
+  await withHdcPath(fake.executable, async () => {
+    await assert.rejects(
+      () => uiTap({ action: "click", x: 1, y: 1 }),
+      (error) => error.code === "UI_TAP_FAILED",
+    );
+  });
 });

@@ -136,7 +136,29 @@ CodeGenie 的 `verify_ui`、`save_ui_screenshot`、`get_ui_verification_log` 被
 
 `perform_ui_action` 省略 `hvd` 时由本服务按 `hdc list targets` 解析目标设备：恰好一台则注入，零台或多台返回本地错误。上游会把已安装但未启动的模拟器也算作候选从而强制要求 `hvd`，与 `get_app_ui_tree` 的自动选择行为不一致。
 
-当前 CodeGenie 正常启动时，统一服务共暴露 24 个工具；如果 CodeGenie 包缺失，其他本地工具仍可以使用。
+### 设备 UI 快速通道（本仓新增）
+
+`ui_snapshot`、`ui_find`、`ui_tap`，由 `src/device-ui.mjs` 直接经 hdc 实现，上游没有对应工具。`get_app_ui_tree` 与 `perform_ui_action` 原样保留代理，未作任何修改——它们的 schema 与子进程逐字节对齐并有漂移测试守护，本来也改不得。
+
+新增动机是同一条循环（截图 → 找控件 → 点击）上三处实测开销：
+
+- `perform_ui_action` 的截图走 `uitest screenCap`，产出全分辨率 PNG，端到端 1.05s / 5.2MB。同一帧经 `snapshot_display -t jpeg` 是 0.42s / 约 260KB，UI 判读无损失。
+- 从截图上估坐标每次约 2400 个图像 token，且不准：一次实测把 tab 中心估到 (640, 2670)，真值 (640, 2710)，偏 40px。`uitest dumpLayout` 每个节点自带 `$rect`，可直接算出精确中心。
+- 三步全部经 CodeGenie 子进程，而该子进程握手会间歇性永久挂死（见「已核实的上游缺陷」），整条循环都继承这个风险。
+
+实现上几处与直觉不同、有实测依据的决定：
+
+- `snapshot_display` 只接受 `.jpeg` 后缀，且只给 `-w` **不保宽高比**（请求 640 得到 640x2848）。因此默认不缩放，取原生尺寸：实测原生 0.42s 与半宽 0.44s 基本持平（设备端缩放的开销抵消了传输的节省），而原生让 `coordinateScale` 恒为 1，杜绝了「把缩放图上的像素当设备坐标」这个最容易犯的错。`width` 仅作为压缩图像 token 的可选项保留。
+- `format: "png"` 回退到 `uitest screenCap`，保留无损全分辨率能力。回退时本地文件扩展名会改为 `.png` 并同时返回 `requestedPath`，不会把 PNG 字节写进 `.jpeg` 路径。
+- 回退分三态：设备根本没有 `snapshot_display` 时按设备缓存该结论，之后不再重复探测；偶发失败只回退一次；**超时不回退**——设备已经卡住，再跑一次 `screenCap` 只会把等待翻倍。
+- `-i <displayId>` 只在调用方显式指定时才拼。默认写死 0 会打挂折叠屏展开态、2-in-1 和外接屏场景。
+- `ui_find` 直接 `uitest dumpLayout`，因此不受 `get_app_ui_tree` 的 `full` 模式那条「应用未启动，请先启动应用」限制，任意前台应用都能查。
+- `inputText` 不做字符白名单，而是按 hdc 的传参模式引用。hdc 对单个 `shell` 参数原样转发，对多参数中含空格者各套一层自己的双引号，于是分两种模式：无空格文本由本仓套一层单引号即可让任意字符字面化（反引号、`$`、`~`、`;`、`|`、`>`、`"`、括号、glob 均实测惰性）；含空格文本只能依赖 hdc 那层双引号，其中 `$`、反引号、`\` 仍活跃，且 `"` 能把包裹闭合掉（`a" ; id ; "b` 实测在设备上执行了 `id`），故只拦这四个字符。本仓自己的引号在第二种模式下帮不上忙——它会落进 hdc 的引号里，变成用户没打过的字面字符。此前的白名单两头都错：放行了 `(` `)`（第一种模式下是 `/bin/sh: syntax error` 硬失败），又拒掉了全部中文标点（`，` `。` 不属于 `\p{L}`、`\p{M}`、`\p{N}` 中任何一类）。
+- `clickableOnly` 是选择器而非过滤器。实测一屏 35 个 clickable 节点无一带文字——承接点击的是包着标签的 Stack / Flex / FormComponent。若只当过滤器叠加在「有文字」这个默认之上，「列出我能点什么」永远返回 0。
+- 设备端临时文件按 pid 命名，每进程有界但跨进程无界（实测某开发设备累积 14 个 / 6.9MB，含一个 5.2MB 的 PNG）。每进程每设备在后台清理一次，不阻塞已经优化过的截图路径，且只删 60 分钟未改动的文件：另一个 server 进程可能正在同一设备上截图，它的文件只有几秒钟大，无条件 `rm` 会在它 write 与 recv 之间把文件删掉。清理命令必须作为单个 argv 元素传入，否则 `-name 'deveco_ui_*'` 的引号会被 hdc 一并送到设备端，匹配不到任何文件。
+- `ui_find` 取节点文字时把 `description` 作为最后回退：`uitest dumpLayout` 把无障碍标签写在这里，而不是 `accessibilityText`（该字段在两种 dump 形状里都不存在）。纯图标控件没有 `text`，这是唯一能按名字定位它们的途径；节点同时有真实文字时仍以真实文字优先。
+
+当前 CodeGenie 正常启动时，统一服务共暴露 28 个工具；如果 CodeGenie 包缺失，其他本地工具仍可以使用，其中设备 UI 快速通道这 3 个完全不依赖该子进程。
 
 DevEco Code 内部的 `debug_exit` 会话调试工具没有迁移；CodeGenie 的同名 `init_project_path` 也没有重复暴露，而是统一由本服务的项目上下文管理。其余未迁移的 DevEco 专有工具：`spec_write`、`plan_enter`、`plan_exit`、`plan_write`、`question`、`skill`、`doom_loop`、`repo_overview`（后者只出现在内置 agent 的 permission 表中，二进制里没有找到对应实现，可能是预留名）。这些属于 agent harness 级能力，由接入方宿主自备，`manifest.json` 的 `hostToolMapping` 有对应关系。
 
@@ -210,7 +232,7 @@ DevEco Code 内部的 `debug_exit` 会话调试工具没有迁移；CodeGenie �
 
 原先 `src/server.mjs` 在模块顶层 `await getCodeGenieTools()`，位置在 `server.connect(transport)` **之前**，因此子进程一挂死，网关自身的 stdio transport 永远不会连接，整个 MCP 连 `initialize` 都不会回应。表现是本地那些与 CodeGenie 完全无关的工具（ArkTS 检查、LSP、日志、脚本）被一个只提供五个工具的子进程一起拖死。
 
-本仓库的处置：先 `server.connect()` 再后台预热子进程；握手的 connect 与 tools/list 各 5 秒封顶；挂死重试一次（客户端会缓存首次 `tools/list`，丢掉那一次就等于整个会话没有 `build_project` / `start_app`）；仍然失败则清空记忆，后续请求可再试。子进程不可用时服务降级为 18 个本地工具而不是不可用。
+本仓库的处置：先 `server.connect()` 再后台预热子进程；握手的 connect 与 tools/list 各 5 秒封顶；挂死重试一次（客户端会缓存首次 `tools/list`，丢掉那一次就等于整个会话没有 `build_project` / `start_app`）；仍然失败则清空记忆，后续请求可再试。子进程不可用时服务降级为 22 个本地工具而不是不可用（本地工具随 `deveco_restart` 加入从 21 增至 22；此前记的 18 是更早期的数字，已过时）。
 
 挂死的成因未定位到上游代码的具体位置，只能观测到现象；修复方式是让它不再致命，不是消除它。
 

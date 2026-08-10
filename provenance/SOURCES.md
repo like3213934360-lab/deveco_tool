@@ -71,7 +71,17 @@ DevEco Code 仓库主体采用 MIT；其中 Huawei 工具和脚本文件保留�
 **`compare_images` 是这次同步的主要摩擦点。** 上游 0.2.0 新增了 `src/tool/image-compare`，新版文本
 多处引用 `compare_images`。本包不提供该工具，若照搬会让这几个 Skill 指向不存在的东西——与当初排除
 `verify_ui` 是同一类错误。处置：凡引用处一律改写为本包等价能力（看图观察 + `ui_score.py` 的确定性
-指标），改写点均以 `LOCAL PATCH` 标注。**若将来移植 `image-compare`，这几处改写应当回退。**
+指标），改写点均以 `LOCAL PATCH` 标注。
+
+> **订正（2026-08-09，读源码后）。** 上面原本写的是「若将来移植 `image-compare`，这几处改写应当
+> 回退」，该判断不成立，已作废。`src/tool/image-compare/image-compare-tool.ts` 有两处硬依赖：
+> 它 `import { resolveUIVerifyParams } from "../ui-verification/ui-verification-tool"` 取端点配置，
+> 并把两张图 POST 给一个 OpenAI 兼容的 chat completion 端点，缺 `baseURL`/`apiKey`/`modelName`
+> 时直接返回「图片对比功能不可用：未配置多模态模型。请登录 DevEco 账号」。**它不是本地图像算法，
+> 而是 UI 验证链的第四环**，移植它等于把整条链连同 DevEco 账号依赖一起引进来，与本包宿主中立的
+> 定位冲突。且对本包冗余：上游 SKILL.md 自己把它限定在「模型不支持多模态」的场景，而 Claude Code
+> 与 Codex 的模型本身就能看图。因此改写是终局处置，不是过渡措施。`manifest.json` 的
+> `excluded.uiVerification` 已相应改为「四个工具」并记录共同根因。
 
 上游删除 `docs` / `skills` 两节一事，已用 `devecocli --help` 实测 1.2.1 复核：两个命令都还在，
 连同 `ui`、`check`、`signature`、`auth` 共 15 个，与上游新版的命令清单逐字吻合——上游删的只是详细

@@ -9,7 +9,7 @@
 |---|---|---|
 | 知识 | `skills/` | 56 个 Skill，分两层。**core 17 个**（DevEco Code 提取，MIT）：ArkTS 语法规则、编译错误库、崩溃诊断、工程脚手架、构建循环、插桩调试、计划文档、SDD 编排，以及 ArkUI 组件最佳实践、逻辑补全、工程理解、方案设计、响应式布局、HDS 迁移、设备管理、设计稿转代码、UI 还原度评分。**extended 39 个**（华为官方 Skill 仓库 `v0.0.2`）：多设备适配、崩溃与冻屏诊断、Kit 接入、状态管理迁移、MVVM、测试、上架审查等。路由索引见 [`skills/INDEX.md`](./skills/INDEX.md) |
 | 工作流 | `commands/` + `templates/` | SDD 五阶段命令 + 三份产物模板 |
-| 工具 | `src/server.mjs` | 一个 stdio MCP，24 个工具（构建、跑设备、ArkTS 静态检查、LSP、知识检索、日志采集） |
+| 工具 | `src/server.mjs` | 一个 stdio MCP，28 个工具（构建、跑设备、ArkTS 静态检查、LSP、知识检索、日志采集、子进程重启） |
 
 三层可以独立使用。只要 Skill 也行；只要 MCP 也行。但方法论 Skill（`harmony-build-loop` 等）里的指令会引用
 MCP 工具名，缺了 MCP 就只剩流程说明。
@@ -52,7 +52,7 @@ node scripts/install.mjs --dest <目标目录> --uninstall
 装完目标目录里是 `skills/` `commands/` `templates/` `manifest.json`。这个目录就是各命令里说的 `PACK_ROOT`。
 
 **默认 profile 是 `core`**，只链 `tier: "core"` 的 17 个 Skill。两种 profile 下 `manifest.json` 都是完整的
-57 条，`skills/INDEX.md` 也总会安装——宿主据此知道还有哪些没装。默认取 `core` 的两个理由：Skill 索引小
+56 条，`skills/INDEX.md` 也总会安装——宿主据此知道还有哪些没装。默认取 `core` 的两个理由：Skill 索引小
 4 倍，以及 extended 层的上游**没有任何仓库级许可声明**，其中 30 个自身也没有声明，默认处于保留所有
 权利状态（见「许可与来源」和 `NOTICE.harmonyos-agent-skills`）。
 
@@ -112,6 +112,7 @@ Codex 侧还会为用到脚本的 Skill 生成 `dependencies.tools` 声明本 MC
 | `arkts_check` / `check_ets_files` | 本包 MCP | ArkTS 静态检查 |
 | `arkts_knowledge_search` | 本包 MCP | 官方知识库检索，需华为账号登录（`deveco_login`） |
 | `hdc_log` | 本包 MCP | 设备日志采集/清理/列设备 |
+| `ui_snapshot` / `ui_find` / `ui_tap` | 本包 MCP | 设备 UI 快速通道，直接经 hdc，不经 CodeGenie 子进程 |
 | `lsp` 及别名 | 本包 MCP | ArkTS 语言服务，1-based 行列 |
 | `deveco_script` | 本包 MCP | 调用 Skill 私有脚本（崩溃解析、faultlog、模板拷贝等） |
 | `document_validate` | 本包 MCP | SDD 产物的章节结构校验，写盘后调用；只报告不阻断 |
@@ -152,7 +153,7 @@ Phase 4/5 的委派契约。只用命令、不装该 Skill 时行为与之前一
    文件发现逻辑没有留在上游文件里：`collectEtsFiles` 只认 `entry/src/main/ets` 单模块布局，多模块工程一个文件都扫不到，改由 `src/arkts-check.mjs` 的 `discoverProjectEtsFiles` 按 `build-profile.json5` 的 `modules[].srcPath` 解析后显式传 `--files`。
 6. **`detect-sdk.mjs` 补了 CLI 入口**：上游只 export 函数，而本包的脚本注册表把 `detect_sdk` 登记为可执行脚本，直接跑会 stdout 全空、退出 0，看起来像成功。现在直接运行会打印 SDK 元数据 JSON，import 用法不变。
 7. **崩溃日志 `error_message` 取值修正**：`shared/jscrash-parse.mjs` 的 `detectErrorMessage` 原本返回整行且优先命中 `Error name:`（`CRASH_SIGNAL_RE` 含裸词 `error`），真实的 `Error message:` 被盖掉；无崩溃时还会回落到日志最后一行。现在优先解析显式的 `Error message:` 并只取冒号后的负载，无信号时返回 `(not found)`。
-8. **CodeGenie 子进程不再能拖死整个网关，也不再拖慢工具发现**：上游子进程的 MCP 握手会间歇性永久挂死（空闲机器 12 次复现 2 次）。第一版问题是在 `server.connect()` 之前 `await` 它，一挂死连 `initialize` 都不回应；第二版把 `initialize` 救了回来，但 `tools/list` 仍然同步等子进程，握手 5 秒封顶重试一次意味着子进程挂死时**一次 `tools/list` 实测要 14.1 秒**，超出宿主的工具发现超时——宿主表现为「已连接但取不到工具」。现在 `tools/list` 完全由静态表回答（`src/codegenie-tools.mjs`，与子进程逐字节一致，有漂移测试守护），挂死场景下**实测 1ms**，24 个工具照常通告。子进程只在真正调用那 3 个代理工具时才连接，连不上就返回 `CODEGENIE_UNAVAILABLE`，而不是让工具从列表里消失——后者在宿主看来和「工具从不存在」无法区分。
+8. **CodeGenie 子进程不再能拖死整个网关，也不再拖慢工具发现**：上游子进程的 MCP 握手会间歇性永久挂死（空闲机器 12 次复现 2 次）。第一版问题是在 `server.connect()` 之前 `await` 它，一挂死连 `initialize` 都不回应；第二版把 `initialize` 救了回来，但 `tools/list` 仍然同步等子进程，握手 5 秒封顶重试一次意味着子进程挂死时**一次 `tools/list` 实测要 14.1 秒**，超出宿主的工具发现超时——宿主表现为「已连接但取不到工具」。现在 `tools/list` 完全由静态表回答（`src/codegenie-tools.mjs`，与子进程逐字节一致，有漂移测试守护），挂死场景下**实测 1ms**，28 个工具照常通告。子进程只在真正调用那 3 个代理工具时才连接，连不上就返回 `CODEGENIE_UNAVAILABLE`，而不是让工具从列表里消失——后者在宿主看来和「工具从不存在」无法区分。
 9. **UI 自动校验链路已移除**：见下一节。
 10. **知识层是混合来源**：`arkts-error-fixes` / `arkts-grammar-standards` / `arkts-runtime-fix` / `deveco-create-project` 以发布线 v0.1.6 为基线（逐文件核对一致），另外 10 个来自尚未发版的 `0.2.0-release`。这四个不从 0.2.0 重取的理由是它们带本仓的 `LOCAL PATCH`，重取只会丢补丁——前三个在 v0.1.6 与 0.2.0 之间的 diff 本身是空的。0.2.0 只剩 `d2c` 未取（它硬依赖 `verify_ui`），原因见 `provenance/INVENTORY.md`。
 11. **`build_project` / `start_app` 改为原生实现**：跟进上游 0.2.0 的方向，从 CodeGenie 代理换成通过 `@deveco/deveco-cli` 调用。参数保持向后兼容（保留 `log_path`、`module` 单值、`clean` 先清后建），`enable_inspector_source_jump` 无对应能力时显式提示而非静默忽略。`start_app` 部署全部可运行模块而非只部署入口模块——后者在多模块工程上会因 HSP 依赖缺失而安装失败。
@@ -185,6 +186,13 @@ Phase 4/5 的委派契约。只用命令、不装该 Skill 时行为与之前一
 
 **截图能力是有的。** `perform_ui_action` 的 `screenshot` 动作带 `savePath` / `localPath` / `displayId`
 参数，不依赖任何校验任务 id，可以独立落盘。`arkui-scoring-workflow` 的评分流程用的就是它。
+
+**另有一条不经子进程的快速通道。** `ui_snapshot` / `ui_find` / `ui_tap` 覆盖同一条「截图 → 找控件 →
+点击」循环，由 `src/device-ui.mjs` 直接经 hdc 实现。上面那两个代理工具**未作任何改动**，两套并存，
+按需选用。实测差异：截图 `snapshot_display` 出 JPEG 是 0.42s / 约 260KB，`uitest screenCap` 出 PNG 是
+1.05s / 5.2MB；坐标由 `uitest dumpLayout` 的 `$rect` 直接给出，不必从截图上估（一次实测估值偏了 40px）。
+更关键的是这三个不经 CodeGenie 子进程，所以子进程挂死时整条循环依然可用——而代理的那两个不是。
+取舍与实测数据见 `provenance/INVENTORY.md` 的「设备 UI 快速通道」。
 
 `ui-reconstruction-score` 提供的是**另一种东西**：`scripts/ui_score.py` 只依赖 Pillow 和标准库，
 零网络零模型调用，产出的是确定性像素指标（SSIM、边带差异、区域热力图）。它与被禁用的 `verify_ui`

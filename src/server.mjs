@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
@@ -10,6 +11,7 @@ import { collectDoctorReport } from "./doctor.mjs";
 import { runArktsCheck, arktsCheckStatus } from "./arkts-check.mjs";
 import { collectEnvironmentStatus } from "./config.mjs";
 import { buildProject, devecoCliStatus, startApp } from "./deveco-cli.mjs";
+import { uiFind, uiSnapshot, uiTap } from "./device-ui.mjs";
 import { validateDocument } from "./document-validate.mjs";
 import { hdcLog, hdcStatus } from "./hdc-log.mjs";
 import {
@@ -117,6 +119,23 @@ const localTools = [
     name: "deveco_doctor",
     description: "Inspect local DevEco, HDC, project-context, and extracted Skill availability.",
     inputSchema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
+    name: "deveco_restart",
+    description:
+      "Restart this server's long-lived children in place, without dropping the client connection. "
+      + "Use to recover from a stuck or erroring language service after fixing the root cause, instead of "
+      + "restarting the whole agent session. `arkts` resets the ArkTS language server (affects lsp and its "
+      + "five aliases). `cpp` drops the CodeGenie child, which also backs get_app_ui_tree and "
+      + "perform_ui_action, so those reconnect on their next call too. `all` (default) does both. Nothing is "
+      + "respawned eagerly: the next call that needs a child starts it. Caution: if the service fails again "
+      + "right after a restart, the cause is a persistent project or SDK configuration problem -- do not call "
+      + "this repeatedly, run deveco_doctor and fix the project first.",
+    inputSchema: {
+      type: "object",
+      properties: { target: { type: "string", enum: ["arkts", "cpp", "all"] } },
+      additionalProperties: false,
+    },
   },
   {
     name: "arkts_knowledge_search",
@@ -336,6 +355,70 @@ const localTools = [
       additionalProperties: false,
     },
   },
+  {
+    name: "ui_snapshot",
+    description: "Capture the device screen over hdc and return it inline. Prefer this over perform_ui_action's screenshot for iterative UI work: measured 0.42s for a ~260KB JPEG against 1.05s for a 5.2MB PNG, and it runs locally, so it still works when the CodeGenie child is unavailable. Defaults to the display's native size, which keeps image pixels equal to device coordinates. Read coordinates from ui_find rather than from this image.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        hvd: { type: "string", description: "hdc connect key as printed by hdc_log list_devices; optional when exactly one device is connected." },
+        localPath: { type: "string", description: "Where to write the image. Defaults to a timestamped file under the system temp directory." },
+        width: { type: "integer", minimum: 64, maximum: 4096, description: "Scale the capture to this width, preserving aspect ratio. Only worth setting to cut image tokens; it makes image pixels differ from device coordinates by coordinateScale." },
+        format: { type: "string", enum: ["jpeg", "png"], description: "jpeg (default) uses snapshot_display; png falls back to uitest screenCap for a lossless full-resolution frame." },
+        displayId: { type: "integer", minimum: 0, description: "Only for multi-display devices. Left unset, the device picks its active display." },
+        inline: { type: "boolean", description: "Return the image as a content block (default true). Set false to get only the JSON report and the path." },
+        timeoutMs: { type: "integer", minimum: 1000, maximum: 600000 },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "ui_find",
+    description: "Locate on-screen controls in a uitest layout dump and return tap-ready device coordinates. Use this instead of reading coordinates off a screenshot: it is exact, costs a fraction of the tokens an image does, and unlike get_app_ui_tree it does not require the debugged app to be in the foreground. Pass dumpPath to re-query a dump you already have instead of spending ~1.4s on another one.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        text: { type: "string", description: "Case-insensitive substring of the node's visible text." },
+        key: { type: "string", description: "Exact match on the node's key (what ArkUI .id() sets). Survives copy and locale changes, unlike text." },
+        type: { type: "string", description: "Exact component type, e.g. Text, Button, Image." },
+        dumpPath: { type: "string", description: "Parse this existing dump instead of dumping again. The path returned by a previous call." },
+        hvd: { type: "string", description: "hdc connect key as printed by hdc_log list_devices; optional when exactly one device is connected." },
+        limit: { type: "integer", minimum: 1, maximum: 200, description: "Maximum matches to return (default 20); matchCount reports the true total." },
+        onScreenOnly: { type: "boolean", description: "Drop nodes outside the screen box or marked invisible (default true). Their centres are in the dump but tapping them does nothing." },
+        clickableOnly: { type: "boolean", description: "Keep only nodes the device reports as clickable. Usable on its own: the node that handles a tap is usually a container with no text of its own, wrapping the label you can see." },
+        timeoutMs: { type: "integer", minimum: 1000, maximum: 600000 },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "ui_tap",
+    description: "Send a touch, gesture, or key event through uitest uiInput over hdc. Same actions as perform_ui_action but without the CodeGenie child, so it survives that child stalling. Feed it the center from ui_find. Note dircFling direction is the scroll direction, and flinging at a list boundary succeeds without moving anything.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        action: {
+          type: "string",
+          enum: ["click", "doubleClick", "longClick", "swipe", "dircFling", "inputText", "keyEvent"],
+        },
+        x: { type: "integer", minimum: 0, description: "Device x for click/doubleClick/longClick/swipe/inputText." },
+        y: { type: "integer", minimum: 0, description: "Device y for click/doubleClick/longClick/swipe/inputText." },
+        x2: { type: "integer", minimum: 0, description: "Destination x for swipe." },
+        y2: { type: "integer", minimum: 0, description: "Destination y for swipe." },
+        direction: { type: "integer", enum: [0, 1, 2, 3], description: "dircFling scroll direction: 0 left, 1 right, 2 toward the top, 3 toward the bottom." },
+        velocity: { type: "integer", minimum: 200, maximum: 40000, description: "Gesture speed in px/s for swipe and dircFling." },
+        stepLength: { type: "integer", minimum: 1, description: "dircFling step length in px." },
+        text: { type: "string", description: "Text for inputText. Anything without whitespace is quoted for the device shell and accepted as-is; text that mixes whitespace with \" $ ` or \\ is refused because hdc's own quoting leaves those live, and perform_ui_action stays available for it." },
+        key1: { type: "string", description: "Key name or keycode, e.g. Back, Home, Power." },
+        key2: { type: "string", description: "Second key of a combination." },
+        key3: { type: "string", description: "Third key of a combination." },
+        hvd: { type: "string", description: "hdc connect key as printed by hdc_log list_devices; optional when exactly one device is connected." },
+        timeoutMs: { type: "integer", minimum: 1000, maximum: 600000 },
+      },
+      required: ["action"],
+      additionalProperties: false,
+    },
+  },
 ];
 
 function textResult(value, isError = false) {
@@ -349,6 +432,34 @@ function textResult(value, isError = false) {
 // would only make them harder to read.
 function plainResult(text, isError = false) {
   return { isError, content: [{ type: "text", text }] };
+}
+
+// A capture the caller then has to go and read separately spends most of what the faster capture
+// path just saved, so the frame rides back with its own report. Large frames -- a native PNG from
+// the screenCap fallback, above all -- stay on disk rather than becoming a multi-megabyte base64
+// blob in the transcript, and the report says which happened.
+const MAX_INLINE_IMAGE_BYTES = 1500000;
+
+function imageResult(report) {
+  const blocks = [];
+  let inlined = false;
+  if (report.inline !== false && report.bytes <= MAX_INLINE_IMAGE_BYTES) {
+    try {
+      blocks.push({
+        type: "image",
+        data: fs.readFileSync(report.localPath).toString("base64"),
+        mimeType: report.mimeType,
+      });
+      inlined = true;
+    } catch {
+      // The file is on disk and its path is in the report; failing to inline it is not a failed
+      // capture, so fall through to the text-only shape rather than turning this into an error.
+    }
+  }
+  const payload = { ...report, inlined };
+  delete payload.inline;
+  blocks.push({ type: "text", text: JSON.stringify(payload, null, 2) });
+  return { isError: false, content: blocks };
 }
 
 const server = new Server(
@@ -386,6 +497,33 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       // its handshake. callCodeGenieTool already syncs the bound project before every proxied
       // call, so the child still learns the path -- just lazily, at first use.
       return textResult({ tool: name, ...project });
+    }
+
+    if (name === "deveco_restart") {
+      const target = args.target === undefined ? "all" : args.target;
+      if (target !== "arkts" && target !== "cpp" && target !== "all") {
+        return textResult(
+          { code: "BAD_TARGET", message: 'target must be "arkts", "cpp", or "all"' },
+          true,
+        );
+      }
+      // Both helpers only tear down and clear state; the next call that needs a child respawns it.
+      // Nothing is started here, so a restart cannot itself block on a handshake.
+      const restarted = [];
+      if (target === "arkts" || target === "all") {
+        await resetLsp();
+        restarted.push("arkts");
+      }
+      if (target === "cpp" || target === "all") {
+        await closeCodeGenie();
+        restarted.push("cpp");
+      }
+      return textResult({
+        tool: name,
+        target,
+        restarted,
+        note: "Children are respawned lazily on the next call that needs them.",
+      });
     }
 
     if (name === "deveco_doctor") {
@@ -464,6 +602,20 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
     if (name === "document_validate") {
       return textResult(validateDocument(args));
+    }
+
+    // These three run over hdc in this process. They are dispatched here, ahead of the proxy
+    // fallthrough, so a stalled CodeGenie child cannot reach the capture/find/tap loop at all.
+    if (name === "ui_snapshot") {
+      return imageResult({ ...await uiSnapshot(args), inline: args.inline });
+    }
+
+    if (name === "ui_find") {
+      return textResult(await uiFind(args));
+    }
+
+    if (name === "ui_tap") {
+      return textResult(await uiTap(args));
     }
 
     if (DISABLED_CODEGENIE_TOOLS.includes(name)) {

@@ -158,3 +158,17 @@ export function hdcStatus() {
   const hdc = resolveHdcPath();
   return { hdc, installed: hdc !== "hdc" && fs.existsSync(hdc) };
 }
+
+// This module owns hdc process spawning and device resolution. `src/device-ui.mjs` needs the same
+// primitives, and duplicating a 35-line spawn helper into a second module would leave two copies of
+// the timeout and settled-guard logic to keep in sync. Widening visibility is the smaller change:
+// every body above is untouched.
+//
+// `assertHdcSuccess` is deliberately NOT exported. It is built on HDC_FAILURE_PATTERNS, which only
+// recognises hdc's own transport failures, whereas `hdc shell X` exits 0 no matter what X did on the
+// device -- so it cannot decide whether a remote `snapshot_display` or `uitest` actually worked.
+// device-ui.mjs proves success with a positive marker plus a validated artifact instead, and raises
+// its own UI_* codes. Do not "fix" that by adding /error:/ to HDC_FAILURE_PATTERNS: hdcLog's collect
+// path (above) runs real device logs through assertHdcSuccess, and device logs contain the literal
+// string "error:" constantly, so that pattern would make hdc_log throw on virtually every device.
+export { run as runHdc, requireHdc, resolveDevice, targetArgs };

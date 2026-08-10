@@ -654,7 +654,8 @@
     "toolGroups": [
       {
         "group": "project-context",
-        "tools": ["switch_cwd", "init_project_path", "deveco_doctor"]
+        "tools": ["switch_cwd", "init_project_path", "deveco_doctor", "deveco_restart"],
+        "note": "deveco_restart tears down the two long-lived children (ArkTS language server, CodeGenie child) in place, so a wedged language service can be recovered without restarting the agent session. Children are respawned lazily by the next call that needs one. Upstream ships the same capability as `restart` on its standalone deveco-mcp server; it matters more here because this pack folds four upstream MCPs into one process, where a stuck child would otherwise take a whole group of tools down with no in-session way out."
       },
       {
         "group": "skill-scripts",
@@ -680,8 +681,8 @@
       },
       {
         "group": "device-ui",
-        "tools": ["get_app_ui_tree", "perform_ui_action"],
-        "note": "Read and drive the UI of a connected device. The upstream UI auto-verification tools (verify_ui, save_ui_screenshot, get_ui_verification_log) are disabled by this gateway: verify_ui needs a multimodal model this pack does not configure, and the other two are keyed by a verify_ui run id. Calling them returns TOOL_DISABLED. perform_ui_action resolves `hvd` from the connected devices when it is omitted."
+        "tools": ["get_app_ui_tree", "perform_ui_action", "ui_snapshot", "ui_find", "ui_tap"],
+        "note": "Read and drive the UI of a connected device. The upstream UI auto-verification tools (verify_ui, save_ui_screenshot, get_ui_verification_log) are disabled by this gateway: verify_ui needs a multimodal model this pack does not configure, and the other two are keyed by a verify_ui run id. Calling them returns TOOL_DISABLED. perform_ui_action resolves `hvd` from the connected devices when it is omitted. get_app_ui_tree and perform_ui_action are proxied to the CodeGenie child and stay exactly as upstream shipped them; ui_snapshot / ui_find / ui_tap are local implementations over hdc (src/device-ui.mjs) covering the same capture / locate / input loop, measurably faster and still working when that child stalls."
       },
       {
         "group": "sdd-artifacts",
@@ -689,7 +690,7 @@
         "note": "Section-structure check for spec.md / plan.md / tasks.md, ported from the upstream spec_write pipeline. Upstream ran it automatically after its own writer; this pack uses the host's write tool, so the SDD commands call it explicitly once the artifact is written. It reports and never blocks."
       }
     ],
-    "toolCount": 24
+    "toolCount": 28
   },
   "hostToolMapping": {
     "$comment": "Tools the upstream commands assumed, which this pack does NOT provide. Map them onto your host's equivalents before running the SDD commands.",
@@ -740,7 +741,7 @@
   "excluded": {
     "$comment": "Deliberately not ported from upstream.",
     "agents": "The 11 built-in agent definitions. What was portable is their prompt content: build, plan, debug and goal were harvested into the four `extracted-from-agent-prompt` skills. What is not ported is the harness around them — the permission tables (upstream has no tools allowlist; tool visibility is expressed entirely through permissions), the mode/hidden/temperature configuration, and the plan_enter/plan_exit/debug_exit turn protocols. The remaining 7 agents are generic OpenCode session agents with no HarmonyOS content.",
-    "uiVerification": "The UI auto-verification chain. spec-verify ships build-only.",
+    "uiVerification": "The UI auto-verification chain: four tools, not three. verify_ui, save_ui_screenshot and get_ui_verification_log come from the CodeGenie MCP; compare_images is upstream's src/tool/image-compare, added in 0.2.0. All four share one root dependency, which is why they are excluded as a unit: image-compare resolves its endpoint through resolveUIVerifyParams() in the ui-verification module and POSTs both images to an OpenAI-compatible chat completion endpoint, so it needs a multimodal model endpoint plus a DevEco account login. It is not a local image-diff. It is also redundant for a host-neutral pack: upstream's own SKILL.md scopes it to the case where the host model has no vision, which does not apply to Claude Code or Codex. spec-verify ships build-only.",
     "customizeDeveco": "The 5th upstream skill, `customize-deveco`, documents DevEco Code's own config format. Kept under docs/ for reference; not part of the pack."
   }
 }
