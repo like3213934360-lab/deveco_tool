@@ -1935,3 +1935,37 @@ setInterval(() => {}, 1000);
   const status = await client.callTool({ name: "deveco_status", arguments: {} });
   assert.equal(status.isError, false);
 });
+
+test("ifChangedFrom answers with a boolean instead of a frame the caller already has", async (t) => {
+  // The two halves of an observation cost very differently: a capture and pull is ~392ms, while
+  // uitest dumpLayout alone is ~1200ms and is a floor rather than an overhead -- a resident
+  // start-daemon moved it by 5ms, -b saved under 20% while dropping the other windows, and
+  // -m false was slower. So the remaining saving is to skip the dump, and comparing frames is how
+  // a caller knows that is safe. The encoder is deterministic: 8 consecutive captures of a still
+  // screen produced one digest.
+  const fake = await makeUiHdc();
+  const target = uiTempTarget("signature.jpeg");
+  t.after(async () => {
+    await fs.rm(fake.directory, { recursive: true, force: true });
+    await fs.rm(target, { force: true });
+    await fs.rm(path.join(os.tmpdir(), "deveco-ui", fake.device), { recursive: true, force: true });
+  });
+
+  const first = await withHdcPath(fake.executable, () => uiSnapshot({ localPath: target }));
+  assert.match(first.frameSignature, /^[0-9a-f]{32}$/);
+  assert.equal(first.unchanged, undefined, "nothing to compare against on the first capture");
+
+  const again = await withHdcPath(fake.executable, () => uiSnapshot({
+    localPath: target, ifChangedFrom: first.frameSignature,
+  }));
+  assert.equal(again.unchanged, true);
+  assert.equal(again.frameSignature, first.frameSignature);
+  // The capture still ran -- asking the question must never cost more than not asking it.
+  assert.equal((await fake.argv()).filter((line) => line.includes("snapshot_display")).length, 2);
+
+  const mismatched = await withHdcPath(fake.executable, () => uiSnapshot({
+    localPath: target, ifChangedFrom: "0".repeat(32),
+  }));
+  assert.equal(mismatched.unchanged, undefined, "a different screen must report as changed");
+});
+

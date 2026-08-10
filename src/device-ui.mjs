@@ -29,6 +29,7 @@
  *     unreadable on a dense display. See MAX_CAPTURE_LONG_EDGE.
  */
 
+import crypto from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -427,6 +428,32 @@ function parseSize(pattern, text) {
 }
 
 /**
+ * A digest of the encoded frame, which is exactly "what is on screen right now".
+ *
+ * The encoder is deterministic, so an unchanged screen re-encodes to identical bytes -- measured
+ * 8 identical digests out of 8 consecutive captures of a still screen. That makes this a reliable
+ * *equality* test: same digest means nothing moved. It is not a similarity measure, and any live
+ * pixel (a clock, a caret, a spinner) will change it, which is correct rather than a false alarm.
+ *
+ * It exists because the two halves of an observation cost wildly different amounts. Capturing and
+ * pulling a frame is ~392ms; `uitest dumpLayout` alone is ~1200ms, and that is a floor rather than
+ * an overhead to shave -- a resident `uitest start-daemon` changed it by 5ms, restricting the dump
+ * to one window with `-b` saved under 20% while dropping the other windows, and `-m false` was
+ * slower. So the way to spend less time is to skip the dump, not to speed it up, and comparing
+ * frames is how a caller can know it is safe to.
+ *
+ * @param {string} filePath Delivered image.
+ * @returns {string} Truncated sha256 of the file's bytes.
+ */
+function frameSignatureOf(filePath) {
+  try {
+    return crypto.createHash("sha256").update(fs.readFileSync(filePath)).digest("hex").slice(0, 32);
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Capture through snapshot_display.
  *
  * Success is a positive marker plus a validated artifact, never the absence of an error pattern:
@@ -608,10 +635,22 @@ export async function uiSnapshot(input = {}) {
     minBytes: MIN_IMAGE_BYTES,
   });
 
-  return captureReport({
-    deviceId, method, localPath, requestedPath, fallbackReason, isPng, bytes,
-    outputSize, nativeSize, nativeSizeChanged, startedAt,
-  });
+  const frameSignature = frameSignatureOf(localPath);
+  // Comparing here rather than making the caller do it is what saves the tokens: an unchanged
+  // frame does not need to be sent, and the answer is a boolean instead of an image. The capture
+  // itself still happened, so this path is never slower than a plain snapshot -- there is no
+  // branch in which asking the question costs more than not asking it.
+  const unchanged = typeof input.ifChangedFrom === "string" && input.ifChangedFrom !== ""
+    && frameSignature !== null && input.ifChangedFrom === frameSignature;
+
+  return {
+    ...captureReport({
+      deviceId, method, localPath, requestedPath, fallbackReason, isPng, bytes,
+      outputSize, nativeSize, nativeSizeChanged, startedAt,
+    }),
+    frameSignature,
+    unchanged: unchanged || undefined,
+  };
 }
 
 /**
@@ -797,6 +836,9 @@ export async function uiObserve(input = {}) {
       // captureReport rebuilds these from the frame; the analysis values are the authoritative ones.
       dumpPath: analysis.dumpPath,
       deviceId,
+      // Carried so a caller can observe once and then poll with ui_snapshot's ifChangedFrom, which
+      // costs a capture instead of a capture plus a dump.
+      frameSignature: bytes ? frameSignatureOf(localImage) : null,
     };
   });
 }
@@ -837,6 +879,7 @@ async function observeSeparately({ hdc, deviceId, timeoutMs, selector, targetWid
     }),
     dumpPath: analysis.dumpPath,
     deviceId,
+    frameSignature: bytes ? frameSignatureOf(localImage) : null,
   };
 }
 

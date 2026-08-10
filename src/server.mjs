@@ -369,6 +369,7 @@ const localTools = [
         format: { type: "string", enum: ["jpeg", "png"], description: "jpeg (default) is lossy but small; png is lossless and uncapped, for pixel-exact work. Both come from snapshot_display. Format does not change image cost, which follows pixel area only." },
         displayId: { type: "integer", minimum: 0, description: "Only for multi-display devices. Left unset, the device picks its active display." },
         inline: { type: "boolean", description: "Return the image as a content block (default true). Set false to get only the JSON report and the path." },
+        ifChangedFrom: { type: "string", description: "A frameSignature from an earlier ui_snapshot or ui_observe. The capture still happens, but when the screen is byte-identical the reply is unchanged:true with no image. This is how to wait for something to happen cheaply: it costs a capture (~0.4s) where a full ui_observe costs a capture plus a layout dump (~1.4s), and spends no image tokens while nothing is moving." },
         timeoutMs: { type: "integer", minimum: 1000, maximum: 600000 },
       },
       additionalProperties: false,
@@ -476,7 +477,9 @@ function imageResult(report) {
   // ui_observe degrades to a dump-only result when the frame does not arrive; the layout is the
   // half that decides where a tap lands, so that is a usable answer with no image to inline.
   const hasFrame = Boolean(report.localPath) && report.bytes > 0;
-  if (hasFrame && report.inline !== false && report.bytes <= MAX_INLINE_IMAGE_BYTES) {
+  // An unchanged frame is one the caller has already seen. Sending it again would spend the image
+  // tokens to say "nothing happened", which the boolean says for a fraction of the cost.
+  if (hasFrame && !report.unchanged && report.inline !== false && report.bytes <= MAX_INLINE_IMAGE_BYTES) {
     try {
       blocks.push({
         type: "image",
