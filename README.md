@@ -12,7 +12,7 @@ skills/      56 个 Skill，分两层：core 17 个（DevEco Code 提取，MIT�
              路由索引见 skills/INDEX.md；安装器默认只装 core 层，--profile full 才加装 extended
 commands/    SDD 五阶段命令
 templates/   SDD 三份产物模板
-src/         统一 stdio MCP，28 个工具
+src/         统一 stdio MCP，29 个工具
 scripts/     install.mjs 通用安装器；install-host.mjs 宿主适配层（Claude / Codex，可选）
 docs/        customize-deveco（上游第 5 个 Skill，仅作参考，不进包）
 provenance/  来源、许可与改动记录
@@ -87,11 +87,11 @@ MCP 工具按来源分为：
 - ArkTS 和设备诊断：`arkts_check`、`check_ets_files`、`hdc_log`。两个 ArkTS 检查入口都直接调用本地 DevEco 静态检查器并返回结构化 JSON；`check_ets_files` 保留 CodeGenie 的兼容参数格式。`hdc_log` 支持 `list_devices`、`collect`、`clear` 三种操作；收集或清除前会验证目标设备，且会识别 HDC 退出码为 0 时输出的失败标记。`clear` 会清空设备日志缓冲区，应在确认后调用。
 - 构建与运行：`build_project`、`start_app`。由本服务通过 `@deveco/deveco-cli` 直接实现，不经 CodeGenie 子进程。`build_project` 保留 `log_path`、`module` 单值与「先清理再构建」的 `clean` 语义；`start_app` 会部署全部可运行模块（只部署入口模块会因 HSP 依赖缺失而安装失败），并在只有一台设备在线时自动解析 `hvd`。
 - CodeGenie 代理：`check_cpp_files`、`get_app_ui_tree`、`perform_ui_action`。这些工具由固定版本的 `@deveco-codegenie/mcp` 子进程提供。`perform_ui_action` 省略 `hvd` 时由本服务按已连接设备解析，不会把未启动的模拟器算作候选。
-- 设备 UI 快速通道：`ui_snapshot`、`ui_find`、`ui_tap`。覆盖「截图 → 找控件 → 点击」同一条循环，但由本服务直接经 hdc 实现，不经 CodeGenie 子进程，因此子进程挂死时依然可用。`ui_snapshot` 走 `snapshot_display` 出 JPEG，并把图片随结果内联返回；`ui_find` 从 `uitest dumpLayout` 的 `$rect` 直接给出可点击的设备坐标，不必从截图上估；`ui_tap` 映射到 `uitest uiInput`。上面两个代理工具原样保留，未作任何改动。
+- 设备 UI 快速通道：`ui_observe`、`ui_snapshot`、`ui_find`、`ui_tap`。覆盖「截图 → 找控件 → 点击」同一条循环，但由本服务直接经 hdc 实现，不经 CodeGenie 子进程，因此子进程挂死时依然可用。**常规循环用 `ui_observe`**：它在一次设备往返里同时拿回截图和控件树，把截图与 dump 在设备端重叠执行，实测 1289ms，对比分开调用的 1656ms。`ui_snapshot` 只要画面；`ui_find` 只要坐标，或用 `dumpPath` 重查已有的树；`ui_tap` 映射到 `uitest uiInput`，并支持按 `key` / `text` 定位而不是给坐标——坐标会在查到与点下之间失效。截图默认降分辨率（原生约 4845 图像 token，默认 480px 约 685），精确坐标一律来自控件树而不是图。驱动 `uitest` 的调用会取一把跨进程锁，见 [PACK.md](./PACK.md)。上面两个代理工具原样保留，未作任何改动。
 
 UI 自动校验链路（`verify_ui`、`save_ui_screenshot`、`get_ui_verification_log`）已被本服务禁用，既不出现在工具列表里，直接调用也会返回 `TOOL_DISABLED`。原因见 [PACK.md](./PACK.md)。
 
-工具数量恒为 28：`tools/list` 由静态表回答，不等 CodeGenie 子进程，所以子进程挂死时列表照常返回（实测 1ms），只是那 3 个代理工具在调用时返回 `CODEGENIE_UNAVAILABLE`。`check_ets_files` 不依赖 CodeGenie 子进程。
+工具数量恒为 29：`tools/list` 由静态表回答，不等 CodeGenie 子进程，所以子进程挂死时列表照常返回（实测 1ms），只是那 3 个代理工具在调用时返回 `CODEGENIE_UNAVAILABLE`。`check_ets_files` 不依赖 CodeGenie 子进程。
 
 ### 直接调用示例
 

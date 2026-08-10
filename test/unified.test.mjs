@@ -11,7 +11,10 @@ import { listScripts, parseScriptOutput, runRegisteredScript } from "../src/scri
 import { arktsCheckStatus, runArktsCheck } from "../src/arkts-check.mjs";
 import { resolveDevecoHome } from "../src/config.mjs";
 import { buildArgs, buildProject, devecoCliFailureMessage } from "../src/deveco-cli.mjs";
-import { uiFind, uiSnapshot, uiTap } from "../src/device-ui.mjs";
+import { readTar } from "../src/device-tar.mjs";
+import { withUitestLock, lockInternals } from "../src/device-lock.mjs";
+import { analyseDump, dumpSignatures, flattenDump, readSelector } from "../src/device-dump.mjs";
+import { uiFind, uiObserve, uiSnapshot, uiTap } from "../src/device-ui.mjs";
 import { hdcFailureMessage, hdcLog, hdcStatus } from "../src/hdc-log.mjs";
 import { hdcFailureMessage as skillHdcFailureMessage } from "../skills/arkts-runtime-fix/scripts/shared/hdc.mjs";
 
@@ -123,9 +126,9 @@ test("unified MCP advertises scripts, diagnostics, LSP, and CodeGenie tools", as
     "deveco_script_catalog", "deveco_script", "switch_cwd", "deveco_doctor",
     "arkts_check", "hdc_log", "find_references", "go_to_definition",
     "get_hover", "list_symbols", "find_call_hierarchy", "lsp", "build_project",
-    "document_validate", "ui_snapshot", "ui_find", "ui_tap",
+    "document_validate", "ui_snapshot", "ui_observe", "ui_find", "ui_tap",
   ]) assert.ok(names.has(name), `missing tool ${name}`);
-  assert.equal(result.tools.length, 28);
+  assert.equal(result.tools.length, 29);
   assert.equal(result.tools.filter((tool) => tool.name === "check_ets_files").length, 1);
   for (const disabled of ["verify_ui", "save_ui_screenshot", "get_ui_verification_log"]) {
     assert.ok(!names.has(disabled), `disabled tool ${disabled} is still advertised`);
@@ -675,10 +678,10 @@ test("a CodeGenie child that never answers cannot delay tool discovery", { timeo
   const elapsed = Date.now() - startedAt;
   assert.ok(elapsed < 1000, `tools/list must not wait on the child; took ${elapsed}ms`);
 
-  assert.equal(names.length, 28, "all 28 tools must be advertised even while the child is stalled");
+  assert.equal(names.length, 29, "all 29 tools must be advertised even while the child is stalled");
   assert.ok(names.includes("arkts_check"));
   // The capture/find/tap loop runs over hdc in-process, so a stalled child must not reach it.
-  for (const local of ["ui_snapshot", "ui_find", "ui_tap"]) {
+  for (const local of ["ui_snapshot", "ui_observe", "ui_find", "ui_tap"]) {
     assert.ok(names.includes(local), `${local} must survive a stalled CodeGenie child`);
   }
   // build_project and start_app run through the bundled DevEco CLI, so a stalled
@@ -757,8 +760,13 @@ const SNAPSHOT_OK = "printf 'process: display 0, file type: jpeg, width: 1276, h
 // routes later captures down the screenCap fallback, so every fake gets its own device by default.
 let fakeDeviceCounter = 0;
 
-async function makeUiHdc({ devices, snapshot = SNAPSHOT_OK, recv = 'write_jpeg "$last"' } = {}) {
-  const device = `device-${(fakeDeviceCounter += 1)}`;
+async function makeUiHdc({
+  devices, snapshot = SNAPSHOT_OK, recv = 'write_jpeg "$last"', observe = "printf 'OBSERVE_OK\\n'",
+} = {}) {
+  // The pid is part of the name because device-ui.mjs now persists the display size per device
+  // under the system temp directory. Bare counters repeat on the next run, so a later run would
+  // inherit the previous one's cache and capture scaled where the test expected native.
+  const device = `device-${process.pid}-${(fakeDeviceCounter += 1)}`;
   const advertised = devices ?? device;
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-ui-test-"));
   const log = path.join(directory, "argv.log");
@@ -773,6 +781,9 @@ async function makeUiHdc({ devices, snapshot = SNAPSHOT_OK, recv = 'write_jpeg "
     'write_png() { printf \'\\211PNG\\015\\012\\032\\012\' > "$1"; pad "$1"; }',
     'case "$*" in',
     `  *"list targets"*) printf '${advertised}\\n' ;;`,
+    // The fused observe command mentions snapshot_display and dumpLayout too, so it has to be
+    // matched before either of them. Its own echo is what makes it recognisable.
+    `  *OBSERVE_OK*) ${observe} ;;`,
     `  *snapshot_display*) ${snapshot} ;;`,
     "  *screenCap*) printf 'ScreenCap saved to /d/x.png\\n' ;;",
     "  *dumpLayout*) printf 'DumpLayout saved to:/d/x.json\\n' ;;",
@@ -813,8 +824,6 @@ test("ui_snapshot reads the native size from one line and the written size from 
   assert.equal(report.localPath, target);
   assert.equal(report.nativeWidth, 1276);
   assert.equal(report.nativeHeight, 2848);
-  // Native capture is the default precisely so this stays 1: a caller that reads a pixel off the
-  // returned frame must never need to scale it to get a device coordinate.
   assert.equal(report.coordinateScale, 1);
   assert.equal(report.mimeType, "image/jpeg");
   assert.ok(report.bytes >= 512);
@@ -824,7 +833,55 @@ test("ui_snapshot reads the native size from one line and the written size from 
   // Defaulting -i to 0 breaks unfolded foldables, 2-in-1 and external displays, so it is only ever
   // sent when the caller named a display.
   assert.ok(!capture.includes(" -i "), `-i must be omitted when displayId is unset: ${capture}`);
-  assert.ok(!capture.includes(" -w "), `no rescale without an explicit width: ${capture}`);
+  // The very first capture against an unfamiliar display cannot scale: -w alone does not preserve
+  // the aspect ratio, and the height needs a native size nobody has reported yet. So it comes back
+  // native and teaches the cache, which is what the next test picks up.
+  assert.ok(!capture.includes(" -w "), `nothing to scale against yet: ${capture}`);
+});
+
+test("the display size is learned once and reused by later processes", async (t) => {
+  // Scaling needs the native size, and re-learning it would cost every fresh server process an
+  // extra unscaled capture. It is cached on disk, and never trusted over the device: every capture
+  // reports the real size, so a fold or a rotation is picked up on the very next call.
+  const fake = await makeUiHdc();
+  const first = uiTempTarget("learn1.jpeg");
+  const second = uiTempTarget("learn2.jpeg");
+  t.after(async () => {
+    await fs.rm(fake.directory, { recursive: true, force: true });
+    await fs.rm(first, { force: true });
+    await fs.rm(second, { force: true });
+    await fs.rm(path.join(os.tmpdir(), "deveco-ui", fake.device), { recursive: true, force: true });
+  });
+
+  await withHdcPath(fake.executable, () => uiSnapshot({ localPath: first }));
+  const report = await withHdcPath(fake.executable, () => uiSnapshot({ localPath: second }));
+
+  const captures = (await fake.argv()).filter((line) => line.includes("snapshot_display"));
+  assert.ok(!captures[0].includes(" -w "), "nothing known yet on the first capture");
+  // 480 is the default: a native frame costs roughly 24x the image tokens and buys nothing once
+  // coordinates come from the dump. 1071 is 2848 * 480 / 1276, so the aspect ratio is preserved.
+  assert.ok(captures[1].includes(" -w 480 -h 1071"), `second capture must scale: ${captures[1]}`);
+  assert.equal(report.nativeWidth, 1276, "the native size is still reported after scaling");
+
+  const cached = JSON.parse(
+    await fs.readFile(path.join(os.tmpdir(), "deveco-ui", fake.device, "display.json"), "utf8"),
+  );
+  assert.deepEqual(cached, { width: 1276, height: 2848 });
+});
+
+test("an explicit width at or above native asks for no rescale", async (t) => {
+  const fake = await makeUiHdc();
+  const target = uiTempTarget("explicit.jpeg");
+  t.after(async () => {
+    await fs.rm(fake.directory, { recursive: true, force: true });
+    await fs.rm(target, { force: true });
+    await fs.rm(path.join(os.tmpdir(), "deveco-ui", fake.device), { recursive: true, force: true });
+  });
+
+  await withHdcPath(fake.executable, () => uiSnapshot({ localPath: target }));
+  await withHdcPath(fake.executable, () => uiSnapshot({ localPath: target, width: 4096 }));
+  const captures = (await fake.argv()).filter((line) => line.includes("snapshot_display"));
+  assert.ok(!captures[1].includes(" -w "), `native is one explicit width away: ${captures[1]}`);
 });
 
 test("ui_snapshot passes -i only when displayId is given", async (t) => {
@@ -989,14 +1046,15 @@ test("ui_snapshot resolves devices the same way hdc_log does", async (t) => {
   });
 });
 
-test("concurrent ui_snapshot calls on one device do not overlap", async (t) => {
-  // uitest is a singleton daemon on the device: two concurrent captures genuinely fail, and the
-  // fixed per-process device path would collide even if they did not.
+test("captures overlap while uitest work is serialised", async (t) => {
+  // The lock exists for uitest, which is a device singleton. snapshot_display is a different
+  // binary and was measured running concurrently with a dump on a real device (356ms of genuine
+  // overlap), so holding captures behind the same queue was pure latency.
   const fake = await makeUiHdc({
     snapshot: `printf 'BEGIN\\n' >> "$MARKS"; sleep 0.4; printf 'END\\n' >> "$MARKS"; ${SNAPSHOT_OK}`,
   });
-  const first = uiTempTarget("serial1.jpeg");
-  const second = uiTempTarget("serial2.jpeg");
+  const first = uiTempTarget("parallel1.jpeg");
+  const second = uiTempTarget("parallel2.jpeg");
   t.after(async () => {
     await fs.rm(fake.directory, { recursive: true, force: true });
     await fs.rm(first, { force: true });
@@ -1007,8 +1065,35 @@ test("concurrent ui_snapshot calls on one device do not overlap", async (t) => {
     uiSnapshot({ localPath: first }),
     uiSnapshot({ localPath: second }),
   ]));
-  assert.deepEqual(await fake.marks(), ["BEGIN", "END", "BEGIN", "END"]);
+  assert.deepEqual(await fake.marks(), ["BEGIN", "BEGIN", "END", "END"], "captures must overlap");
   assert.deepEqual(reports.map((report) => report.localPath), [first, second]);
+
+  // Overlapping is only safe because each capture gets its own device-side path. Sharing one, as
+  // the serialised version could, would have each call pull whichever write finished last.
+  const captures = (await fake.argv()).filter((line) => line.includes("snapshot_display"));
+  const devicePaths = captures.map((line) => /(-f\s+\S+)/.exec(line)?.[1]);
+  assert.equal(new Set(devicePaths).size, 2, `concurrent captures need distinct paths: ${devicePaths}`);
+});
+
+test("uitest work on one device is serialised", async (t) => {
+  const fake = await makeUiHdc({
+    recv: `case "$last" in *json*) printf '%s' '${JSON.stringify(SAMPLE_DUMP)}' > "$last" ;;`
+      + ' *) write_jpeg "$last" ;; esac',
+  });
+  // The fake's dumpLayout branch has to mark its own window, which the shared factory does not do.
+  const body = (await fs.readFile(fake.executable, "utf8")).replace(
+    "*dumpLayout*) printf 'DumpLayout saved to:/d/x.json\\n' ;;",
+    "*dumpLayout*) printf 'BEGIN\\n' >> \"$MARKS\"; sleep 0.3;"
+    + " printf 'END\\n' >> \"$MARKS\"; printf 'DumpLayout saved to:/d/x.json\\n' ;;",
+  );
+  await fs.writeFile(fake.executable, body, { mode: 0o755 });
+  t.after(async () => await fs.rm(fake.directory, { recursive: true, force: true }));
+
+  await withHdcPath(fake.executable, () => Promise.all([
+    uiFind({ text: "首页" }),
+    uiFind({ text: "工具" }),
+  ]));
+  assert.deepEqual(await fake.marks(), ["BEGIN", "END", "BEGIN", "END"], "dumps must not overlap");
 });
 
 // A layout dump shaped like a real one: the wrapper around `content`, inconsistent spacing inside
@@ -1337,4 +1422,484 @@ test("ui_tap surfaces a uiInput failure instead of reporting a phantom tap", asy
       (error) => error.code === "UI_TAP_FAILED",
     );
   });
+});
+
+// --- ustar reader (src/device-tar.mjs) ----------------------------------------------------------
+
+/**
+ * Build a tar in the two magics that exist in the wild. The device writes the GNU one; the fixtures
+ * here cover both so a change that only handles POSIX cannot pass.
+ */
+function buildTar(entries, { magic = "ustar\0", version = "00", corruptChecksum = false } = {}) {
+  const blocks = [];
+  for (const [name, contents] of entries) {
+    const body = Buffer.isBuffer(contents) ? contents : Buffer.from(contents, "utf8");
+    const header = Buffer.alloc(512);
+    header.write(name, 0, "utf8");
+    header.write("000644 \0", 100, "utf8");
+    header.write("000000 \0", 108, "utf8");
+    header.write("000000 \0", 116, "utf8");
+    header.write(`${body.length.toString(8).padStart(11, "0")} `, 124, "utf8");
+    header.write("00000000000 ", 136, "utf8");
+    header.write("        ", 148, "utf8");
+    header.write("0", 156, "utf8");
+    header.write(magic, 257, "latin1");
+    header.write(version, 263, "latin1");
+    let sum = 0;
+    for (let i = 0; i < 512; i += 1) sum += header[i];
+    header.write(`${(corruptChecksum ? sum + 1 : sum).toString(8).padStart(6, "0")}\0 `, 148, "utf8");
+    blocks.push(header, body, Buffer.alloc((512 - (body.length % 512)) % 512));
+  }
+  blocks.push(Buffer.alloc(1024));
+  return Buffer.concat(blocks);
+}
+
+test("the ustar reader accepts both magics, including the one the device writes", () => {
+  // toybox 0.8.12 -- what runs on the device -- writes the older GNU magic "ustar " rather than
+  // POSIX "ustar\0". An equality test against "ustar" rejects every real archive, which is exactly
+  // what happened until this reader was run against one pulled off a device.
+  for (const [magic, version] of [["ustar\0", "00"], ["ustar ", " \0"]]) {
+    const files = readTar(buildTar([["a.json", '{"ok":true}'], ["b.log", "success:\n"]], { magic, version }));
+    assert.deepEqual([...files.keys()], ["a.json", "b.log"]);
+    assert.equal(files.get("a.json").toString("utf8"), '{"ok":true}');
+    assert.equal(entryByBaseNameForTest(files, "b.log").toString("utf8"), "success:\n");
+  }
+});
+
+function entryByBaseNameForTest(files, baseName) {
+  for (const [name, contents] of files) {
+    if (name === baseName || name.endsWith(`/${baseName}`)) return contents;
+  }
+  return null;
+}
+
+test("the ustar reader refuses damage rather than returning half a file", () => {
+  // A silently mis-parsed archive would hand the caller a screenshot that is really part of a JSON
+  // dump, which nothing downstream could detect.
+  const good = buildTar([["a.bin", Buffer.alloc(2048, 7)]]);
+  assert.equal(readTar(good).get("a.bin").length, 2048);
+
+  assert.throws(() => readTar(good.subarray(0, 900)), (error) => error.code === "TAR_TRUNCATED");
+  assert.throws(
+    () => readTar(buildTar([["a.bin", "x"]], { corruptChecksum: true })),
+    (error) => error.code === "TAR_INVALID" && /checksum/.test(error.message),
+  );
+  assert.throws(() => readTar(Buffer.alloc(2048)), (error) => error.code === "TAR_EMPTY");
+  assert.throws(() => readTar(Buffer.alloc(64)), (error) => error.code === "TAR_INVALID");
+  const alien = buildTar([["a.bin", "x"]], { magic: "gnutar" });
+  assert.throws(() => readTar(alien), (error) => /unsupported tar format/.test(error.message));
+});
+
+// --- cross-process uitest lock (src/device-lock.mjs) --------------------------------------------
+
+async function lockDirectory(t) {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-lock-"));
+  t.after(async () => await fs.rm(directory, { recursive: true, force: true }));
+  return directory;
+}
+
+test("the uitest lock serialises holders and releases on failure", async (t) => {
+  const directory = await lockDirectory(t);
+  const order = [];
+  const hold = (label, ms) => withUitestLock({ directory, op: label, timeoutMs: 5000 }, async () => {
+    order.push(`${label}:in`);
+    await new Promise((resolve) => setTimeout(resolve, ms));
+    order.push(`${label}:out`);
+  });
+
+  await Promise.all([hold("a", 120), hold("b", 10)]);
+  assert.deepEqual(order, ["a:in", "a:out", "b:in", "b:out"]);
+
+  // A holder that throws must still release, or one failure wedges the device for 90 seconds.
+  await assert.rejects(
+    () => withUitestLock({ directory, op: "boom", timeoutMs: 5000 }, async () => {
+      throw new Error("device exploded");
+    }),
+    /device exploded/,
+  );
+  assert.equal(fsSync.existsSync(path.join(directory, lockInternals.LOCK_FILE)), false);
+});
+
+test("the uitest lock reclaims a dead holder but waits for a live one", async (t) => {
+  const directory = await lockDirectory(t);
+  const lockPath = path.join(directory, lockInternals.LOCK_FILE);
+
+  // A pid that cannot be running: the owner crashed without releasing.
+  await fs.writeFile(lockPath, JSON.stringify({ pid: 0x7ffffffe, startedAt: Date.now(), op: "ghost" }));
+  assert.equal(lockInternals.processAlive(0x7ffffffe), false);
+  let ran = false;
+  await withUitestLock({ directory, op: "after-ghost", timeoutMs: 2000 }, async () => { ran = true; });
+  assert.equal(ran, true, "a dead holder must not block the device forever");
+
+  // A live holder that has been in there past the ceiling is wedged, and is also reclaimed --
+  // otherwise one hung process blocks every future one for as long as it stays alive. Age comes
+  // from the file's mtime, so the fixture has to backdate that and not just the recorded startedAt.
+  const wedgedAt = Date.now() - lockInternals.STALE_AFTER_MS - 1000;
+  await fs.writeFile(lockPath, JSON.stringify({ pid: process.pid, startedAt: wedgedAt, op: "wedged" }));
+  await fs.utimes(lockPath, new Date(wedgedAt), new Date(wedgedAt));
+  ran = false;
+  await withUitestLock({ directory, op: "after-wedged", timeoutMs: 2000 }, async () => { ran = true; });
+  assert.equal(ran, true);
+
+  // A live, recent holder is respected, and the wait is bounded and actionable.
+  await fs.writeFile(lockPath, JSON.stringify({ pid: process.pid, startedAt: Date.now(), op: "dumpLayout" }));
+  await assert.rejects(
+    () => withUitestLock({ directory, op: "blocked", timeoutMs: 1000 }, async () => {}),
+    (error) => error.code === "UI_DEVICE_BUSY"
+      && /dumpLayout/.test(error.message)
+      && /agent session/i.test(error.hint),
+  );
+  await fs.rm(lockPath, { force: true });
+});
+
+test("releasing never deletes a lock that has been reclaimed by someone else", async (t) => {
+  const directory = await lockDirectory(t);
+  const lockPath = path.join(directory, lockInternals.LOCK_FILE);
+  await withUitestLock({ directory, op: "mine", timeoutMs: 2000 }, async () => {
+    // Simulate a competitor deciding we were stale and taking the lock for itself.
+    await fs.writeFile(lockPath, JSON.stringify({ pid: process.pid, startedAt: 1, op: "theirs" }));
+  });
+  const survivor = JSON.parse(await fs.readFile(lockPath, "utf8"));
+  assert.equal(survivor.op, "theirs", "our release must not remove the new holder's lock");
+  await fs.rm(lockPath, { force: true });
+});
+
+// --- change signatures (src/device-dump.mjs) ----------------------------------------------------
+
+test("signatures ignore the attributes that change on every dump", () => {
+  // accessibilityId and hashcode churn on 90 of 214 nodes between consecutive dumps of one
+  // unchanged screen: they identify a dump, not a screen. A signature over the raw JSON is
+  // therefore different every time and useless for deciding whether anything happened.
+  const build = (accessibilityId, hashcode, text) => ({
+    attributes: { type: "root", bounds: "[0,0][1276,2848]", accessibilityId, hashcode },
+    children: [{ attributes: { type: "Text", bounds: "[0,0][100,50]", text, key: "k", accessibilityId, hashcode } }],
+  });
+
+  const first = dumpSignatures(flattenDump(build("1", "0xaaa", "同样的文字")).nodes);
+  const second = dumpSignatures(flattenDump(build("999", "0xfff", "同样的文字")).nodes);
+  assert.equal(first.signature, second.signature, "volatile identifiers must not move the signature");
+  assert.equal(first.structureSignature, second.structureSignature);
+
+  // Live content -- a clock, a counter -- legitimately moves `signature`. That is why
+  // structureSignature exists: it answers "did the layout change" without that noise.
+  const relabelled = dumpSignatures(flattenDump(build("1", "0xaaa", "变了的文字")).nodes);
+  assert.notEqual(relabelled.signature, first.signature);
+  assert.equal(relabelled.structureSignature, first.structureSignature);
+
+  // Layout changes must move both.
+  const moved = flattenDump({
+    attributes: { type: "root", bounds: "[0,0][1276,2848]" },
+    children: [{ attributes: { type: "Text", bounds: "[0,900][100,950]", text: "同样的文字", key: "k" } }],
+  });
+  assert.notEqual(dumpSignatures(moved.nodes).structureSignature, first.structureSignature);
+});
+
+test("displayId narrows matches on a multi-display dump", () => {
+  // A foldable or an external screen puts nodes from more than one display in a single dump, and
+  // their coordinate spaces are different, so tapping a match from the wrong one misses.
+  const flattened = flattenDump({
+    attributes: { type: "root", bounds: "[0,0][1276,2848]", displayId: "0" },
+    children: [
+      { attributes: { type: "Text", bounds: "[0,0][100,50]", text: "主屏", displayId: "0" } },
+      { attributes: { type: "Text", bounds: "[0,0][100,50]", text: "副屏", displayId: "4" } },
+    ],
+  });
+  const all = analyseDump({ root: {
+    attributes: { type: "root", bounds: "[0,0][1276,2848]", displayId: "0" },
+    children: [
+      { attributes: { type: "Text", bounds: "[0,0][100,50]", text: "主屏", displayId: "0" } },
+      { attributes: { type: "Text", bounds: "[0,0][100,50]", text: "副屏", displayId: "4" } },
+    ],
+  }, selector: readSelector({}) });
+  assert.equal(all.matchCount, 2);
+  assert.equal(flattened.nodes[1].displayId, "0");
+
+  const onlyExternal = analyseDump({ root: {
+    attributes: { type: "root", bounds: "[0,0][1276,2848]", displayId: "0" },
+    children: [
+      { attributes: { type: "Text", bounds: "[0,0][100,50]", text: "主屏", displayId: "0" } },
+      { attributes: { type: "Text", bounds: "[0,0][100,50]", text: "副屏", displayId: "4" } },
+    ],
+  }, selector: readSelector({ displayId: 4 }) });
+  assert.deepEqual(onlyExternal.matches.map((match) => match.text), ["副屏"]);
+});
+
+// --- fused observation (ui_observe) -------------------------------------------------------------
+
+/** The archive the device builds, with the exact base names device-ui.mjs asks tar for. */
+function observeArchive({ dump = SAMPLE_DUMP, snapLog = SNAPSHOT_OK_TEXT, image = null } = {}) {
+  const pid = process.pid;
+  const frame = image ?? Buffer.concat([Buffer.from([0xff, 0xd8]), Buffer.alloc(1024, 0x41)]);
+  return buildTar([
+    [`deveco_ui_${pid}_obs_snap.jpeg`, frame],
+    [`deveco_ui_${pid}_obs_dump.json`, JSON.stringify(dump)],
+    [`deveco_ui_${pid}_obs_snap.log`, snapLog],
+    [`deveco_ui_${pid}_obs_dump.log`, "DumpLayout saved to:/data/local/tmp/x.json\n"],
+  ], { magic: "ustar ", version: " \0" });
+}
+
+const SNAPSHOT_OK_TEXT = "process: display 0, file type: jpeg, width: 1276, height: 2848\n"
+  + "success: snapshot display 0 , write to /d/x.jpeg as jpeg, width: 1276, height: 2848\n";
+
+async function makeObserveHdc(t, { archive = observeArchive(), observe } = {}) {
+  const staging = path.join(os.tmpdir(), `deveco-observe-${process.pid}-${Math.trunc(performance.now() * 1000)}.tar`);
+  await fs.writeFile(staging, archive);
+  const fake = await makeUiHdc({
+    observe,
+    recv: `case "$last" in *tar*) cat "${staging}" > "$last" ;;`
+      + ` *json*) printf '%s' '${JSON.stringify(SAMPLE_DUMP)}' > "$last" ;; *) write_jpeg "$last" ;; esac`,
+  });
+  t.after(async () => {
+    await fs.rm(fake.directory, { recursive: true, force: true });
+    await fs.rm(staging, { force: true });
+    await fs.rm(path.join(os.tmpdir(), "deveco-ui", fake.device), { recursive: true, force: true });
+  });
+  return fake;
+}
+
+test("ui_observe returns one frame and one tree from a single device round trip", async (t) => {
+  // Fusing the two calls without overlapping them measured 1736ms against 1731ms for doing them
+  // separately, because file recv is only ~48ms while dumpLayout alone is 1.25s. The win comes
+  // from backgrounding the capture so it runs during the dump, which is what this asserts.
+  const fake = await makeObserveHdc(t);
+
+  const report = await withHdcPath(fake.executable, () => uiObserve({ text: "工具" }));
+  assert.equal(report.method, "fused-snapshot_display");
+  assert.equal(report.deviceId, fake.device);
+  assert.equal(report.matchCount, 1);
+  assert.deepEqual(report.matches[0].center, { x: 640, y: 2710 });
+  assert.equal(report.nodeCount > 0, true);
+  assert.ok(report.bytes >= 512, "the frame must come back too");
+  assert.ok(report.signature && report.structureSignature, "both signatures ride along");
+  assert.equal(report.nativeWidth, 1276);
+
+  const argv = await fake.argv();
+  const fused = argv.find((line) => line.includes("OBSERVE_OK"));
+  assert.ok(fused, "the fused command must be issued");
+  assert.ok(fused.includes("2>&1 & uitest dumpLayout"),
+    `the capture must be backgrounded so it overlaps the dump: ${fused}`);
+  assert.ok(fused.includes("wait;"), "and waited for, or the archive can catch a partial file");
+  assert.ok(fused.includes("rm -f"), "a stale archive must never be re-sent as this call's result");
+  // One shell round trip plus one recv, not one per artifact.
+  assert.equal(argv.filter((line) => line.includes("file recv")).length, 1);
+});
+
+test("ui_observe still answers when the frame is missing, because the tree is the half that aims a tap", async (t) => {
+  const fake = await makeObserveHdc(t, {
+    archive: observeArchive({ snapLog: "snapshot_display: command not found\n" }),
+  });
+  const report = await withHdcPath(fake.executable, () => uiObserve({ text: "首页" }));
+  assert.equal(report.method, "fused-dump-only");
+  assert.equal(report.bytes, 0);
+  assert.equal(report.localPath, null);
+  assert.match(report.fallbackReason, /command not found/);
+  assert.deepEqual(report.matches[0].center, { x: 393, y: 2710 });
+});
+
+test("ui_observe falls back to separate calls when the device cannot archive", async (t) => {
+  // Not every device is guaranteed to have tar, and the two-round-trip path still works.
+  const fake = await makeObserveHdc(t, { observe: "printf 'tar: not found\\n'" });
+  const report = await withHdcPath(fake.executable, () => uiObserve({ text: "工具" }));
+  assert.equal(report.method, "separate-snapshot_display");
+  assert.match(report.fallbackReason, /tar: not found/);
+  assert.deepEqual(report.matches[0].center, { x: 640, y: 2710 });
+
+  const argv = await fake.argv();
+  assert.ok(argv.some((line) => line.includes("uitest dumpLayout -p")), "must dump separately");
+  assert.ok(argv.some((line) => line.includes("snapshot_display")), "must capture separately");
+});
+
+test("ui_observe reports a dump failure inside the archive rather than a plausible empty tree", async (t) => {
+  const pid = process.pid;
+  const archive = buildTar([
+    [`deveco_ui_${pid}_obs_snap.jpeg`, Buffer.concat([Buffer.from([0xff, 0xd8]), Buffer.alloc(1024, 0x41)])],
+    [`deveco_ui_${pid}_obs_dump.json`, "dump layout failed: no permission"],
+    [`deveco_ui_${pid}_obs_snap.log`, SNAPSHOT_OK_TEXT],
+    [`deveco_ui_${pid}_obs_dump.log`, "DumpLayout failed:Wait for subscribe uitest.broadcast.command.reply timeout\n"],
+  ], { magic: "ustar ", version: " \0" });
+  const fake = await makeObserveHdc(t, { archive });
+
+  // The archive step succeeds even when the commands inside it failed, so the logs are the only
+  // proof either did anything. Losing the device to another uitest client is called out by name.
+  await assert.rejects(
+    () => withHdcPath(fake.executable, () => uiObserve({})),
+    (error) => error.code === "UI_DEVICE_BUSY" && /DevEco Studio/.test(error.hint),
+  );
+});
+
+test("a uitest client stealing the device is named, not left as a puzzling timeout", async (t) => {
+  const fake = await makeUiHdc();
+  const body = (await fs.readFile(fake.executable, "utf8")).replace(
+    "*dumpLayout*) printf 'DumpLayout saved to:/d/x.json\\n' ;;",
+    "*dumpLayout*) printf 'DumpLayout failed:Wait for subscribe uitest.broadcast.command.reply timeout\\n' ;;",
+  );
+  await fs.writeFile(fake.executable, body, { mode: 0o755 });
+  t.after(async () => await fs.rm(fake.directory, { recursive: true, force: true }));
+
+  await assert.rejects(
+    () => withHdcPath(fake.executable, () => uiFind({ text: "x" })),
+    (error) => error.code === "UI_DEVICE_BUSY" && /another uitest client/.test(error.message),
+  );
+});
+
+// --- selector-aimed taps ------------------------------------------------------------------------
+
+test("ui_tap aims at a node instead of a coordinate", async (t) => {
+  // Coordinates go stale: (639,541) addressed a home-screen widget and, once the notification
+  // shade was pulled down, the notification list -- same point, different element. Resolving and
+  // tapping under one lock hold shrinks that window to a single hdc round trip.
+  const fake = await makeUiHdc({
+    recv: `case "$last" in *json*) printf '%s' '${JSON.stringify(SAMPLE_DUMP)}' > "$last" ;;`
+      + ' *) write_jpeg "$last" ;; esac',
+  });
+  t.after(async () => await fs.rm(fake.directory, { recursive: true, force: true }));
+
+  const report = await withHdcPath(fake.executable, () => uiTap({ action: "click", key: "tab_tools" }));
+  assert.equal(report.sent, "uitest uiInput click 640 2710");
+  assert.equal(report.target.key, "tab_tools");
+  assert.ok(report.structureSignature, "the signature lets a caller tell whether the tap changed anything");
+
+  const argv = await fake.argv();
+  const order = argv.filter((line) => /dumpLayout|uiInput/.test(line)).map((line) => (line.includes("dumpLayout") ? "dump" : "tap"));
+  assert.deepEqual(order, ["dump", "tap"], "the dump must immediately precede the tap");
+});
+
+test("ui_tap refuses to guess which of several matches to hit", async (t) => {
+  const fake = await makeUiHdc({
+    recv: `case "$last" in *json*) printf '%s' '${JSON.stringify(SAMPLE_DUMP)}' > "$last" ;;`
+      + ' *) write_jpeg "$last" ;; esac',
+  });
+  t.after(async () => await fs.rm(fake.directory, { recursive: true, force: true }));
+
+  await withHdcPath(fake.executable, async () => {
+    // An agent handed "the first of several" has no way to know it hit the wrong one; a refusal
+    // that lists the candidates is something it can act on.
+    await assert.rejects(
+      () => uiTap({ action: "click", type: "Text" }),
+      (error) => error.code === "UI_TARGET_AMBIGUOUS" && /Candidates:/.test(error.hint),
+    );
+    await assert.rejects(
+      () => uiTap({ action: "click", key: "does-not-exist" }),
+      (error) => error.code === "UI_TARGET_NOT_FOUND",
+    );
+    // Only single-point actions can be aimed; a swipe needs two points and a fling a direction.
+    await assert.rejects(
+      () => uiTap({ action: "swipe", key: "tab_tools" }),
+      (error) => error.code === "UI_ARGS_INVALID" && /explicit coordinates/.test(error.message),
+    );
+  });
+  assert.equal((await fake.argv()).filter((line) => line.includes("uiInput")).length, 0);
+});
+
+test("the device's own clickable flag breaks a nested tie, but two real targets still refuse", async (t) => {
+  // Visible text almost always matches twice: on a real screen a tab arrived as Column "首页"
+  // clickable=true wrapping Text "首页" clickable=false. Refusing there would make text selectors
+  // nearly unusable, and taking the one node the device calls tappable is not a guess -- the other
+  // cannot be tapped at all.
+  const nested = {
+    attributes: { type: "root", bounds: "[0,0][1276,2848]" },
+    children: [{
+      attributes: { type: "Column", bounds: "[120,2568][328,2736]", text: "首页", clickable: "true" },
+      children: [{ attributes: { type: "Text", bounds: "[188,2677][259,2718]", text: "首页", clickable: "false" } }],
+    }],
+  };
+  const fake = await makeUiHdc({
+    recv: `case "$last" in *json*) printf '%s' '${JSON.stringify(nested)}' > "$last" ;;`
+      + ' *) write_jpeg "$last" ;; esac',
+  });
+  t.after(async () => await fs.rm(fake.directory, { recursive: true, force: true }));
+
+  const report = await withHdcPath(fake.executable, () => uiTap({ action: "click", text: "首页" }));
+  assert.equal(report.sent, "uitest uiInput click 224 2652", "the tappable container, not the label");
+  assert.equal(report.target.disambiguatedBy, "clickable");
+
+  // Two genuinely tappable matches are a real ambiguity and must still refuse.
+  const twoButtons = {
+    attributes: { type: "root", bounds: "[0,0][1276,2848]" },
+    children: [
+      { attributes: { type: "Button", bounds: "[0,0][100,50]", text: "删除", clickable: "true" } },
+      { attributes: { type: "Button", bounds: "[0,200][100,250]", text: "删除", clickable: "true" } },
+    ],
+  };
+  const ambiguous = await makeUiHdc({
+    recv: `case "$last" in *json*) printf '%s' '${JSON.stringify(twoButtons)}' > "$last" ;;`
+      + ' *) write_jpeg "$last" ;; esac',
+  });
+  t.after(async () => await fs.rm(ambiguous.directory, { recursive: true, force: true }));
+  await assert.rejects(
+    () => withHdcPath(ambiguous.executable, () => uiTap({ action: "click", text: "删除" })),
+    (error) => error.code === "UI_TARGET_AMBIGUOUS",
+  );
+});
+
+test("a child that accepts calls but never answers is torn down, then short-circuited", { timeout: 60000 }, async (t) => {
+  // The SDK already bounded calls at 60s, so they were never unbounded -- but a bound is not a
+  // recovery. Nothing reacted to it, so the wedged child stayed wedged and every later call paid
+  // the full wait again. This is the other half: tear the child down, and stop re-paying.
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-codegenie-deaf-"));
+  const entry = path.join(directory, "answers-handshake-only.mjs");
+  await fs.writeFile(entry, `
+let buffer = "";
+process.stdin.on("data", (chunk) => {
+  buffer += chunk;
+  let index;
+  while ((index = buffer.indexOf("\\n")) >= 0) {
+    const line = buffer.slice(0, index).trim();
+    buffer = buffer.slice(index + 1);
+    if (!line) continue;
+    let message;
+    try { message = JSON.parse(line); } catch { continue; }
+    const reply = (result) => process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id: message.id, result }) + "\\n");
+    if (message.method === "initialize") {
+      reply({ protocolVersion: "2024-11-05", capabilities: { tools: {} }, serverInfo: { name: "deaf", version: "0" } });
+    } else if (message.method === "tools/list") {
+      reply({ tools: [{ name: "check_cpp_files", description: "stub", inputSchema: { type: "object" } }] });
+    }
+    // tools/call is deliberately never answered.
+  }
+});
+setInterval(() => {}, 1000);
+`);
+
+  const transport = new StdioClientTransport({
+    command: process.execPath,
+    args: ["src/server.mjs"],
+    cwd: REPO_ROOT,
+    env: { ...process.env, DEVECO_CODEGENIE_ENTRY: entry, DEVECO_CODEGENIE_CALL_TIMEOUT_MS: "500" },
+    stderr: "ignore",
+  });
+  const client = new Client({ name: "deveco-deaf-test", version: "0.1.0" });
+  t.after(async () => {
+    await transport.close();
+    await fs.rm(directory, { recursive: true, force: true });
+  });
+  await client.connect(transport);
+
+  const call = async () => {
+    const startedAt = Date.now();
+    const result = await client.callTool({ name: "check_cpp_files", arguments: { files: ["/tmp/x.cpp"] } });
+    return { code: JSON.parse(result.content[0].text).code, ms: Date.now() - startedAt, isError: result.isError };
+  };
+
+  const first = await call();
+  assert.equal(first.isError, true);
+  assert.equal(first.code, "CODEGENIE_TIMEOUT");
+  assert.ok(first.ms >= 500, `must wait out the deadline, took ${first.ms}ms`);
+  assert.equal((await call()).code, "CODEGENIE_TIMEOUT");
+  assert.equal((await call()).code, "CODEGENIE_TIMEOUT");
+
+  // Three in a row is enough to stop rediscovering it the expensive way.
+  const tripped = await call();
+  assert.equal(tripped.code, "CODEGENIE_CIRCUIT_OPEN");
+  assert.ok(tripped.ms < 400, `an open circuit must fail immediately, took ${tripped.ms}ms`);
+
+  // An explicit restart is the operator saying the cause is handled, so it clears the streak.
+  const restart = await client.callTool({ name: "deveco_restart", arguments: { target: "cpp" } });
+  assert.equal(restart.isError, false);
+  const afterRestart = await call();
+  assert.equal(afterRestart.code, "CODEGENIE_TIMEOUT", "the breaker must reopen for a real attempt");
+
+  // Local tools never depended on that child and must be unaffected throughout.
+  const status = await client.callTool({ name: "deveco_status", arguments: {} });
+  assert.equal(status.isError, false);
 });

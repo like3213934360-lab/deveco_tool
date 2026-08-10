@@ -19,6 +19,29 @@ let starting = null;
 const HANDSHAKE_TIMEOUT_MS = 5000;
 const HANDSHAKE_ATTEMPTS = 2;
 
+/**
+ * Ceiling for one proxied tool call.
+ *
+ * The SDK already applies DEFAULT_REQUEST_TIMEOUT_MSEC (60s), so calls were never unbounded -- but
+ * a bound is not a recovery. Nothing reacted to it, so the wedged child stayed wedged and the next
+ * call waited the full 60s again. Setting our own slightly lower ceiling means the timeout is ours
+ * to act on. 45s clears the slowest legitimate proxied call measured (`get_app_ui_tree full` at
+ * 26s) with room to spare.
+ */
+// DEVECO_CODEGENIE_CALL_TIMEOUT_MS is a test seam, matching how DEVECO_CODEGENIE_ENTRY lets the
+// tests point at a stand-in child: tripping the breaker for real would take three 45-second waits.
+const CALL_TIMEOUT_MS = Number(process.env.DEVECO_CODEGENIE_CALL_TIMEOUT_MS) || 45000;
+
+/**
+ * After this many consecutive timeouts, stop paying CALL_TIMEOUT_MS to rediscover that the child is
+ * broken and fail immediately for a cooldown. Any success resets it.
+ */
+const CIRCUIT_TRIP_AFTER = 3;
+const CIRCUIT_COOLDOWN_MS = 60000;
+
+let consecutiveTimeouts = 0;
+let circuitOpenedAt = 0;
+
 function withTimeout(promise, timeoutMs, message) {
   let timer;
   return Promise.race([
@@ -116,20 +139,74 @@ async function syncProjectPath() {
   const projectPath = getProjectPath();
   if (!projectPath || boundProject === projectPath) return;
   if (!childTools.some((tool) => tool.name === "init_project_path")) return;
-  await client.callTool({
-    name: "init_project_path",
-    arguments: { project_path: projectPath },
-  });
+  await client.callTool(
+    { name: "init_project_path", arguments: { project_path: projectPath } },
+    undefined,
+    { timeout: CALL_TIMEOUT_MS },
+  );
   boundProject = projectPath;
 }
 
+/** The SDK reports its own deadline as an McpError with this JSON-RPC code. */
+function isTimeout(error) {
+  return error?.code === -32001 || error?.code === "CODEGENIE_TIMEOUT"
+    || /timed out|timeout/i.test(String(error?.message ?? ""));
+}
+
+function circuitRemainingMs() {
+  if (consecutiveTimeouts < CIRCUIT_TRIP_AFTER) return 0;
+  return Math.max(0, CIRCUIT_COOLDOWN_MS - (Date.now() - circuitOpenedAt));
+}
+
 export async function callCodeGenieTool(name, args = {}) {
+  const cooling = circuitRemainingMs();
+  if (cooling > 0) {
+    const error = new Error(
+      `CodeGenie MCP timed out ${consecutiveTimeouts} times in a row; not retrying for another ${Math.ceil(cooling / 1000)}s`,
+    );
+    error.code = "CODEGENIE_CIRCUIT_OPEN";
+    error.hint = "Run deveco_doctor to check the DevEco install and project configuration."
+      + " The local tools, including the ui_* device fast path, do not depend on this child.";
+    throw error;
+  }
+
   // getCodeGenieTools rather than ensureCodeGenie: since tools/list stopped touching the child,
   // a call is the first thing that starts it, so it needs the same retry-a-stalled-spawn
   // behaviour and the same CODEGENIE_UNAVAILABLE wrapper that tool discovery used to provide.
   await getCodeGenieTools();
   await syncProjectPath();
-  return client.callTool({ name, arguments: args });
+  try {
+    const result = await client.callTool({ name, arguments: args }, undefined, { timeout: CALL_TIMEOUT_MS });
+    consecutiveTimeouts = 0;
+    return result;
+  } catch (error) {
+    if (!isTimeout(error)) throw error;
+    // Deliberately no retry. Some proxied tools write -- perform_ui_action taps the screen -- and a
+    // timeout says the request was never answered, not that it never landed, so replaying it could
+    // tap twice. Tearing the child down is the recovery: the next call spawns a fresh one.
+    consecutiveTimeouts += 1;
+    if (consecutiveTimeouts === CIRCUIT_TRIP_AFTER) circuitOpenedAt = Date.now();
+    await closeCodeGenie().catch(() => {});
+    const wrapped = new Error(`CodeGenie MCP did not answer ${name} within ${CALL_TIMEOUT_MS}ms`);
+    wrapped.code = "CODEGENIE_TIMEOUT";
+    wrapped.hint = "The child has been torn down; the next call starts a fresh one. Nothing was retried,"
+      + " because a proxied call may have already taken effect on the device.";
+    throw wrapped;
+  }
+}
+
+/**
+ * Clear the timeout streak, so an operator who has just fixed something is not made to wait out a
+ * cooldown that was measuring the old state. Wired to deveco_restart, which is exactly that signal.
+ *
+ * Not folded into closeCodeGenie: the timeout path calls that too, and resetting there would mean
+ * the counter never reached the trip threshold.
+ *
+ * @returns {void}
+ */
+export function resetCodeGenieCircuit() {
+  consecutiveTimeouts = 0;
+  circuitOpenedAt = 0;
 }
 
 export async function closeCodeGenie() {

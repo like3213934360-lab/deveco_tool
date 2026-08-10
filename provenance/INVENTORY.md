@@ -158,7 +158,17 @@ CodeGenie 的 `verify_ui`、`save_ui_screenshot`、`get_ui_verification_log` 被
 - 设备端临时文件按 pid 命名，每进程有界但跨进程无界（实测某开发设备累积 14 个 / 6.9MB，含一个 5.2MB 的 PNG）。每进程每设备在后台清理一次，不阻塞已经优化过的截图路径，且只删 60 分钟未改动的文件：另一个 server 进程可能正在同一设备上截图，它的文件只有几秒钟大，无条件 `rm` 会在它 write 与 recv 之间把文件删掉。清理命令必须作为单个 argv 元素传入，否则 `-name 'deveco_ui_*'` 的引号会被 hdc 一并送到设备端，匹配不到任何文件。
 - `ui_find` 取节点文字时把 `description` 作为最后回退：`uitest dumpLayout` 把无障碍标签写在这里，而不是 `accessibilityText`（该字段在两种 dump 形状里都不存在）。纯图标控件没有 `text`，这是唯一能按名字定位它们的途径；节点同时有真实文字时仍以真实文字优先。
 
-当前 CodeGenie 正常启动时，统一服务共暴露 28 个工具；如果 CodeGenie 包缺失，其他本地工具仍可以使用，其中设备 UI 快速通道这 3 个完全不依赖该子进程。
+第二轮优化的依据，同样来自实测，几条与直觉相反：
+
+- **锁按被争用的资源加，而不是按设备。** 原先每设备一把队列，理由是 uitest 在设备端是单例——但这个理由只覆盖 uitest 系命令。`snapshot_display` 是另一个二进制，实测与 `dumpLayout` 有 356ms 的真实并发重叠且双双成功，排队纯属白等。现在只有 `dumpLayout` / `uiInput` / `screenCap` 取锁。解除排队后必须给截图的设备端路径加每次调用的唯一后缀，否则同进程两次并发截图会写同一个文件。
+- **跨进程互斥是必需的，而且冲突不是快速失败。** 两个独立进程同时 `dumpLayout`：一个 1303ms 成功，另一个 **30533ms** 后失败并留下 0 字节产物，错误是 `Wait for subscribe uitest.broadcast.command.reply timeout`。进程内队列挡不住这个。`src/device-lock.mjs` 用 `open(…, "wx")` 原子创建的文件锁协调本包的进程，按 pid 判活回收崩溃者、按 90 秒上限回收卡死者（正常持有约 1.3 秒）。**它覆盖不了 DevEco Studio**——那边走自己的 uitest 客户端，永远不会取这把锁，所以上面那个签名被单独识别为 `UI_DEVICE_BUSY` 并给出可执行提示。
+- **融合观察的收益来自设备端重叠，不是来自减少往返。** 把 4 次往返压到 2 次单独做毫无用处：顺序融合 1736ms，对比分开调用 1731ms——`file recv` 只值 48ms，而 `dumpLayout` 单独就是 1.25s。把截图 `&` 到后台与 dump 并行才有效，实测 1238ms。因此也放弃了「设备端 base64 经 stdout 回传压到 1 次往返」：省的那 48ms 不值 shell 通道传二进制的风险。融合命令里两条命令的输出必须落到设备文件并随 tar 一起回来，不能丢进 `/dev/null`——正向标记是它们唯一的成功证据。
+- **设备写的是 GNU 风格 tar 魔数。** toybox 0.8.12 写 `"ustar "`（尾随空格）而不是 POSIX 的 `"ustar\0"`，按后者做相等判断会拒绝每一个真实归档。这是拿真机产物验读取器时发现的，不是靠自造 fixture。GNU 布局下偏移 345 也不是路径前缀，读它会凭空造出目录名。
+- **指纹必须投影掉 `accessibilityId` 与 `hashcode`。** 同一未变画面连续两次 dump，这两个字段在 214 个节点里有 90 个不同——它们标识一次 dump，不标识一块屏幕，所以对原始 JSON 做哈希每次都不一样。`signature` 含文字，实时内容（时钟、计数器）会让它一直变，这是正确行为；判断「是否发生了导航」用不含文字的 `structureSignature`。
+- **默认降分辨率。** 原生一帧约 4845 图像 token，480px 约 685，设备端耗时在各宽度间无显著差异。原先默认原生是为了让 `coordinateScale` 恒为 1，但精确坐标本就来自控件树，这个理由在 `ui_find` 存在后已不成立。`-w` 单独给不保比例，算高度需要原生尺寸，故按设备持久化缓存一份，且每次捕获都用设备报告的值刷新，折叠或旋转后至多一帧比例不对。
+- **按选择器点击时，由设备的 `clickable` 标志消歧。** 可见文字几乎总是命中两个节点：实测底部 tab 是 `Column "互动卡片" clickable=true` 包着 `Text "互动卡片" clickable=false`。若一律拒绝，文字选择器基本不可用；取那个设备称为可点的节点不是猜测，另一个根本点不动。两个都可点则仍然拒绝并列出候选。
+
+当前 CodeGenie 正常启动时，统一服务共暴露 29 个工具；如果 CodeGenie 包缺失，其他本地工具仍可以使用，其中设备 UI 快速通道这 3 个完全不依赖该子进程。
 
 DevEco Code 内部的 `debug_exit` 会话调试工具没有迁移；CodeGenie 的同名 `init_project_path` 也没有重复暴露，而是统一由本服务的项目上下文管理。其余未迁移的 DevEco 专有工具：`spec_write`、`plan_enter`、`plan_exit`、`plan_write`、`question`、`skill`、`doom_loop`、`repo_overview`（后者只出现在内置 agent 的 permission 表中，二进制里没有找到对应实现，可能是预留名）。这些属于 agent harness 级能力，由接入方宿主自备，`manifest.json` 的 `hostToolMapping` 有对应关系。
 
@@ -232,7 +242,7 @@ DevEco Code 内部的 `debug_exit` 会话调试工具没有迁移；CodeGenie �
 
 原先 `src/server.mjs` 在模块顶层 `await getCodeGenieTools()`，位置在 `server.connect(transport)` **之前**，因此子进程一挂死，网关自身的 stdio transport 永远不会连接，整个 MCP 连 `initialize` 都不会回应。表现是本地那些与 CodeGenie 完全无关的工具（ArkTS 检查、LSP、日志、脚本）被一个只提供五个工具的子进程一起拖死。
 
-本仓库的处置：先 `server.connect()` 再后台预热子进程；握手的 connect 与 tools/list 各 5 秒封顶；挂死重试一次（客户端会缓存首次 `tools/list`，丢掉那一次就等于整个会话没有 `build_project` / `start_app`）；仍然失败则清空记忆，后续请求可再试。子进程不可用时服务降级为 22 个本地工具而不是不可用（本地工具随 `deveco_restart` 加入从 21 增至 22；此前记的 18 是更早期的数字，已过时）。
+本仓库的处置：先 `server.connect()` 再后台预热子进程；握手的 connect 与 tools/list 各 5 秒封顶；挂死重试一次（客户端会缓存首次 `tools/list`，丢掉那一次就等于整个会话没有 `build_project` / `start_app`）；仍然失败则清空记忆，后续请求可再试。子进程不可用时服务降级为 26 个本地工具而不是不可用（`deveco_restart` 把本地工具从 21 带到 22，设备 UI 快速通道的 `ui_snapshot` / `ui_find` / `ui_tap` 带到 25，`ui_observe` 带到 26；此前记的 18 与 22 都是更早期的数字，已过时）。
 
 挂死的成因未定位到上游代码的具体位置，只能观测到现象；修复方式是让它不再致命，不是消除它。
 

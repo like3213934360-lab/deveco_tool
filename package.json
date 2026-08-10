@@ -15,7 +15,8 @@
     "doctor": "node src/cli.mjs doctor",
     "scripts": "node src/cli.mjs scripts",
     "install-pack": "node scripts/install.mjs",
-    "test": "node --test --test-concurrency=1 test/*.test.mjs"
+    "test": "node --test --test-concurrency=1 test/*.test.mjs",
+    "test:device": "node --test --test-concurrency=1 test/device-canary.test.mjs"
   },
   "dependencies": {
     "@arkts/language-server": "1.3.10",

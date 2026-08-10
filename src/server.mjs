@@ -5,13 +5,15 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-import { callCodeGenieTool, closeCodeGenie, getCodeGenieTools } from "./codegenie-client.mjs";
+import {
+  callCodeGenieTool, closeCodeGenie, getCodeGenieTools, resetCodeGenieCircuit,
+} from "./codegenie-client.mjs";
 import { PROXIED_CODEGENIE_TOOLS, PROXIED_CODEGENIE_TOOL_NAMES } from "./codegenie-tools.mjs";
 import { collectDoctorReport } from "./doctor.mjs";
 import { runArktsCheck, arktsCheckStatus } from "./arkts-check.mjs";
 import { collectEnvironmentStatus } from "./config.mjs";
 import { buildProject, devecoCliStatus, startApp } from "./deveco-cli.mjs";
-import { uiFind, uiSnapshot, uiTap } from "./device-ui.mjs";
+import { uiFind, uiObserve, uiSnapshot, uiTap } from "./device-ui.mjs";
 import { validateDocument } from "./document-validate.mjs";
 import { hdcLog, hdcStatus } from "./hdc-log.mjs";
 import {
@@ -357,13 +359,13 @@ const localTools = [
   },
   {
     name: "ui_snapshot",
-    description: "Capture the device screen over hdc and return it inline. Prefer this over perform_ui_action's screenshot for iterative UI work: measured 0.42s for a ~260KB JPEG against 1.05s for a 5.2MB PNG, and it runs locally, so it still works when the CodeGenie child is unavailable. Defaults to the display's native size, which keeps image pixels equal to device coordinates. Read coordinates from ui_find rather than from this image.",
+    description: "Capture the device screen over hdc and return it inline. Use this when you only need to see the screen; use ui_observe when you also need coordinates, since it gets both in one device round trip. Runs locally, so it still works when the CodeGenie child is unavailable. Captures downscaled by default (a native frame costs roughly 24x the image tokens and buys nothing, because exact coordinates come from ui_observe / ui_find, never from this image); pass width or format:png for the full-resolution original.",
     inputSchema: {
       type: "object",
       properties: {
         hvd: { type: "string", description: "hdc connect key as printed by hdc_log list_devices; optional when exactly one device is connected." },
         localPath: { type: "string", description: "Where to write the image. Defaults to a timestamped file under the system temp directory." },
-        width: { type: "integer", minimum: 64, maximum: 4096, description: "Scale the capture to this width, preserving aspect ratio. Only worth setting to cut image tokens; it makes image pixels differ from device coordinates by coordinateScale." },
+        width: { type: "integer", minimum: 64, maximum: 4096, description: "Capture width, aspect ratio preserved. Defaults to 480. Raise it to read fine detail, or set it at or above the native width for an unscaled frame; coordinateScale reports the ratio either way." },
         format: { type: "string", enum: ["jpeg", "png"], description: "jpeg (default) uses snapshot_display; png falls back to uitest screenCap for a lossless full-resolution frame." },
         displayId: { type: "integer", minimum: 0, description: "Only for multi-display devices. Left unset, the device picks its active display." },
         inline: { type: "boolean", description: "Return the image as a content block (default true). Set false to get only the JSON report and the path." },
@@ -374,7 +376,7 @@ const localTools = [
   },
   {
     name: "ui_find",
-    description: "Locate on-screen controls in a uitest layout dump and return tap-ready device coordinates. Use this instead of reading coordinates off a screenshot: it is exact, costs a fraction of the tokens an image does, and unlike get_app_ui_tree it does not require the debugged app to be in the foreground. Pass dumpPath to re-query a dump you already have instead of spending ~1.4s on another one.",
+    description: "Locate on-screen controls in a uitest layout dump and return tap-ready device coordinates, without capturing a frame. Use ui_observe instead when you also want to see the screen. Exact where reading coordinates off a screenshot is not, and unlike get_app_ui_tree it does not require the debugged app to be in the foreground. Pass dumpPath to re-query a dump you already have instead of spending ~1.4s on another one.",
     inputSchema: {
       type: "object",
       properties: {
@@ -386,6 +388,29 @@ const localTools = [
         limit: { type: "integer", minimum: 1, maximum: 200, description: "Maximum matches to return (default 20); matchCount reports the true total." },
         onScreenOnly: { type: "boolean", description: "Drop nodes outside the screen box or marked invisible (default true). Their centres are in the dump but tapping them does nothing." },
         clickableOnly: { type: "boolean", description: "Keep only nodes the device reports as clickable. Usable on its own: the node that handles a tap is usually a container with no text of its own, wrapping the label you can see." },
+        displayId: { type: "integer", minimum: 0, description: "Restrict matches to one display. Only for multi-display devices; a foldable or an external screen puts nodes from both displays in one dump." },
+        timeoutMs: { type: "integer", minimum: 1000, maximum: 600000 },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "ui_observe",
+    description: "Capture the screen AND the layout tree in one device round trip, and return the frame inline beside tap-ready coordinates. This is the tool to reach for in a UI loop: the capture is overlapped with the dump on the device, which measured 1238ms against 1731ms for calling ui_snapshot and ui_find separately. Takes the same selectors as ui_find. Also returns structureSignature, which is stable while the layout is unchanged, so you can tell whether anything actually happened without re-reading the screen.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        text: { type: "string", description: "Case-insensitive substring of the node's visible text (or its accessibility label)." },
+        key: { type: "string", description: "Exact match on the node's key (what ArkUI .id() sets). Survives copy and locale changes, unlike text." },
+        type: { type: "string", description: "Exact component type, e.g. Text, Button, Image." },
+        clickableOnly: { type: "boolean", description: "Keep only nodes the device reports as clickable. Usable on its own." },
+        onScreenOnly: { type: "boolean", description: "Drop nodes outside the screen box or marked invisible (default true)." },
+        limit: { type: "integer", minimum: 1, maximum: 200, description: "Maximum matches to return (default 20); matchCount reports the true total." },
+        displayId: { type: "integer", minimum: 0, description: "Restrict matches to one display, and capture that display. Only for multi-display devices; a foldable or an external screen puts nodes from both displays in one dump." },
+        hvd: { type: "string", description: "hdc connect key as printed by hdc_log list_devices; optional when exactly one device is connected." },
+        localPath: { type: "string", description: "Where to write the frame. Defaults to a timestamped file under the system temp directory." },
+        width: { type: "integer", minimum: 64, maximum: 4096, description: "Capture width, aspect ratio preserved. Defaults to 480." },
+        inline: { type: "boolean", description: "Return the frame as a content block (default true)." },
         timeoutMs: { type: "integer", minimum: 1000, maximum: 600000 },
       },
       additionalProperties: false,
@@ -393,7 +418,7 @@ const localTools = [
   },
   {
     name: "ui_tap",
-    description: "Send a touch, gesture, or key event through uitest uiInput over hdc. Same actions as perform_ui_action but without the CodeGenie child, so it survives that child stalling. Feed it the center from ui_find. Note dircFling direction is the scroll direction, and flinging at a list boundary succeeds without moving anything.",
+    description: "Send a touch, gesture, or key event through uitest uiInput over hdc. Same actions as perform_ui_action but without the CodeGenie child, so it survives that child stalling. Prefer aiming click/doubleClick/longClick with key/text/type over passing x/y: coordinates go stale between the find and the tap (a point addressing a home-screen widget addressed the notification list moments later), and the selector form resolves and taps while holding the device. Note dircFling direction is the scroll direction, and flinging at a list boundary succeeds without moving anything.",
     inputSchema: {
       type: "object",
       properties: {
@@ -401,8 +426,13 @@ const localTools = [
           type: "string",
           enum: ["click", "doubleClick", "longClick", "swipe", "dircFling", "inputText", "keyEvent"],
         },
-        x: { type: "integer", minimum: 0, description: "Device x for click/doubleClick/longClick/swipe/inputText." },
-        y: { type: "integer", minimum: 0, description: "Device y for click/doubleClick/longClick/swipe/inputText." },
+        key: { type: "string", description: "Aim a click/doubleClick/longClick at the node with this exact key instead of at coordinates. Refuses rather than guesses when it matches no node or several." },
+        text: { type: "string", description: "Aim at the node whose visible text contains this, instead of at coordinates. For inputText this is the text to type, not a selector." },
+        type: { type: "string", description: "Aim at the node of this exact component type, or narrow a key/text selector." },
+        clickableOnly: { type: "boolean", description: "Narrow a selector to nodes the device reports as clickable. The node that handles a tap is often a container wrapping the label you can see." },
+        verify: { type: "boolean", description: "After a selector-aimed tap, dump again and report whether the target is still present. Off by default: it doubles the cost." },
+        x: { type: "integer", minimum: 0, description: "Device x for click/doubleClick/longClick/swipe/inputText. Omit when using a selector." },
+        y: { type: "integer", minimum: 0, description: "Device y for click/doubleClick/longClick/swipe/inputText. Omit when using a selector." },
         x2: { type: "integer", minimum: 0, description: "Destination x for swipe." },
         y2: { type: "integer", minimum: 0, description: "Destination y for swipe." },
         direction: { type: "integer", enum: [0, 1, 2, 3], description: "dircFling scroll direction: 0 left, 1 right, 2 toward the top, 3 toward the bottom." },
@@ -443,7 +473,10 @@ const MAX_INLINE_IMAGE_BYTES = 1500000;
 function imageResult(report) {
   const blocks = [];
   let inlined = false;
-  if (report.inline !== false && report.bytes <= MAX_INLINE_IMAGE_BYTES) {
+  // ui_observe degrades to a dump-only result when the frame does not arrive; the layout is the
+  // half that decides where a tap lands, so that is a usable answer with no image to inline.
+  const hasFrame = Boolean(report.localPath) && report.bytes > 0;
+  if (hasFrame && report.inline !== false && report.bytes <= MAX_INLINE_IMAGE_BYTES) {
     try {
       blocks.push({
         type: "image",
@@ -516,6 +549,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
       if (target === "cpp" || target === "all") {
         await closeCodeGenie();
+        // An explicit restart is the operator saying the cause is dealt with, so the timeout
+        // streak that may have tripped the circuit breaker should not outlive it.
+        resetCodeGenieCircuit();
         restarted.push("cpp");
       }
       return textResult({
@@ -608,6 +644,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     // fallthrough, so a stalled CodeGenie child cannot reach the capture/find/tap loop at all.
     if (name === "ui_snapshot") {
       return imageResult({ ...await uiSnapshot(args), inline: args.inline });
+    }
+
+    if (name === "ui_observe") {
+      return imageResult({ ...await uiObserve(args), inline: args.inline });
     }
 
     if (name === "ui_find") {
