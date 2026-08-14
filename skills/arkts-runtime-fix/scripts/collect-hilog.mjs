@@ -73,8 +73,9 @@ function printCollectFailed(nextAction) {
 }
 
 async function collectHilogText(hdc, deviceId, lines) {
-  const out = await runHdc([hdc, ...targetArgs(deviceId), 'shell', 'hilog', '-x']);
-  assertHdcSuccess(out, 'hdc hilog -x');
+  // hilog -x 全量导出缓冲在部分设备上会卡住不退出, 改用 -z 只取缓冲尾部 lines 行。
+  const out = await runHdc([hdc, ...targetArgs(deviceId), 'shell', 'hilog', '-z', String(lines)]);
+  assertHdcSuccess(out, 'hdc hilog -z');
 
   const all = cleanLines(out.stdout);
   return all.slice(Math.max(0, all.length - lines)).join('\n');

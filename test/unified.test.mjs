@@ -46,6 +46,41 @@ async function makeFakeHdc(body) {
   return { directory, executable };
 }
 
+// Like makeFakeHdc, but keeps every invocation's argv so a test can assert on what was actually
+// sent to the device rather than only on what came back. One argv element per line, invocations
+// separated by ===, so an element containing a space stays one element.
+async function makeRecordingHdc(body) {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-hdc-test-"));
+  const executable = path.join(directory, "hdc");
+  const argvLog = path.join(directory, "argv.log");
+  await fs.writeFile(
+    executable,
+    `#!/bin/sh\n{ printf '===\\n'; printf '%s\\n' "$@"; } >> '${argvLog}'\n${body}\n`,
+    { mode: 0o755 },
+  );
+  return {
+    directory,
+    executable,
+    async invocations() {
+      const text = await fs.readFile(argvLog, "utf8").catch(() => "");
+      return text
+        .split("===\n")
+        .filter((chunk) => chunk.trim())
+        .map((chunk) => chunk.split("\n").filter(Boolean));
+    },
+  };
+}
+
+/** A hilog record as the device prints it; the collect path keys off this shape. */
+function hilogRecord(message) {
+  return `08-14 09:52:21.235 13128 13128 I A00F00/com.example.app/Tag: ${message}`;
+}
+
+/** Render text as one /bin/sh single-quoted word, so a fixture can emit an apostrophe. */
+function shQuote(text) {
+  return `'${text.split("'").join("'\\''")}'`;
+}
+
 async function withHdcPath(executable, operation) {
   const previous = process.env.HDC_PATH;
   process.env.HDC_PATH = executable;
@@ -606,6 +641,231 @@ fi`);
         (error) => error.code === "HDC_COMMAND_FAILED",
       );
     });
+  } finally {
+    await fs.rm(fake.directory, { recursive: true, force: true });
+  }
+});
+
+// The collect path used to run a bare `hilog -x` and filter in Node. On one TCP-attached device
+// that was 30MB / 212354 lines / 231s against a 120s deadline, for a prefix that matched nothing --
+// unable to succeed at all. These tests pin the filter to the device, where the cost is paid.
+test("collect matches the prefix on the device, against the whole rendered line", async () => {
+  const fake = await makeRecordingHdc(`
+if [ "$1 $2" = "list targets" ]; then
+  printf 'device-a\\n'
+  exit 0
+fi
+printf '${hilogRecord("[VCODER_DEBUG] kept")}\\n'`);
+  try {
+    const report = await withHdcPath(fake.executable, () => hdcLog({
+      action: "collect",
+      device_id: "device-a",
+      lines: 300,
+    }));
+    const [, collect] = await fake.invocations();
+    // grep -F rather than hilog's own -e: -e sees only the message body, so a prefix that lands in
+    // the tag is invisible to it. On a real device -e returned 7071 lines from a buffer holding
+    // 8385 matching ones, and lines dropped on the device cannot be recovered here. -F also takes
+    // the prefix literally -- as a regex, [VCODER_DEBUG] is a character class that matched 195715
+    // of 212354 lines.
+    assert.deepEqual(collect, [
+      "-t", "device-a", "shell", "hilog -x | grep -F -- '[VCODER_DEBUG]'",
+    ]);
+    assert.equal(report.deviceFiltered, true);
+    assert.equal(report.truncated, false);
+    assert.deepEqual(report.logs, [hilogRecord("[VCODER_DEBUG] kept")]);
+  } finally {
+    await fs.rm(fake.directory, { recursive: true, force: true });
+  }
+});
+
+test("collect without a prefix bounds the tail instead of dumping the buffer", async () => {
+  const fake = await makeRecordingHdc(`
+if [ "$1 $2" = "list targets" ]; then
+  printf 'device-a\\n'
+  exit 0
+fi
+printf '${hilogRecord("anything")}\\n'`);
+  try {
+    const report = await withHdcPath(fake.executable, () => hdcLog({
+      action: "collect",
+      device_id: "device-a",
+      log_prefix: "",
+      lines: 120,
+    }));
+    const [, collect] = await fake.invocations();
+    assert.deepEqual(collect, ["-t", "device-a", "shell", "hilog", "-z", "120"]);
+    assert.ok(!collect.includes("-x"), "an unfiltered collect must not ship the whole buffer");
+    assert.equal(report.lineCount, 1);
+  } finally {
+    await fs.rm(fake.directory, { recursive: true, force: true });
+  }
+});
+
+test("a prefix with whitespace or shell metacharacters is still sent to the device", async () => {
+  // Single quotes make all of these literal in the remote command, which is sent as one argv
+  // element. Measured on a device: `a`id`b` did not run id, and $, backslash and double quote each
+  // arrived unchanged. So none of them need to cost a full-buffer transfer.
+  for (const prefix of ["[MY TAG]", "a$HOME b", 'say "hi"', "back\\slash", "a ; id ; b", "【标签】"]) {
+    const fake = await makeRecordingHdc(`
+if [ "$1 $2" = "list targets" ]; then
+  printf 'device-a\\n'
+  exit 0
+fi
+printf '${hilogRecord("no match here")}\\n'`);
+    try {
+      const report = await withHdcPath(fake.executable, () => hdcLog({
+        action: "collect",
+        device_id: "device-a",
+        log_prefix: prefix,
+      }));
+      const [, collect] = await fake.invocations();
+      assert.deepEqual(collect, ["-t", "device-a", "shell", `hilog -x | grep -F -- '${prefix}'`]);
+      assert.equal(report.deviceFiltered, true, `${prefix} should filter on the device`);
+    } finally {
+      await fs.rm(fake.directory, { recursive: true, force: true });
+    }
+  }
+});
+
+test("a prefix that cannot be quoted falls back rather than breaking the remote shell", async () => {
+  // A single quote closes our own quoting -- the device answers `/bin/sh: no closing quote` -- so
+  // this one prefix has to be paid for with a full transfer and filtered here.
+  const fake = await makeRecordingHdc(`
+if [ "$1 $2" = "list targets" ]; then
+  printf 'device-a\\n'
+  exit 0
+fi
+printf '%s\\n' ${shQuote(hilogRecord("it's here"))} ${shQuote(hilogRecord("not here"))}`);
+  try {
+    const report = await withHdcPath(fake.executable, () => hdcLog({
+      action: "collect",
+      device_id: "device-a",
+      log_prefix: "it's",
+    }));
+    const [, collect] = await fake.invocations();
+    assert.deepEqual(collect, ["-t", "device-a", "shell", "hilog", "-x"]);
+    assert.equal(report.deviceFiltered, false);
+    assert.deepEqual(report.logs, [hilogRecord("it's here")]);
+  } finally {
+    await fs.rm(fake.directory, { recursive: true, force: true });
+  }
+});
+
+test("a device complaint on stderr is not mistaken for an empty log", async () => {
+  // hilog writes `unrecognized option` to stderr, and grep swallows stdout, so an unreadable device
+  // looks exactly like a device with nothing to report unless stderr is read.
+  const fake = await makeRecordingHdc(`
+if [ "$1 $2" = "list targets" ]; then
+  printf 'device-a\\n'
+  exit 0
+fi
+case "$4" in
+  *grep*) printf 'hilog: unrecognized option: x\\n' >&2 ;;
+  *) printf '${hilogRecord("[VCODER_DEBUG] kept")}\\n' ;;
+esac`);
+  try {
+    const report = await withHdcPath(fake.executable, () => hdcLog({
+      action: "collect",
+      device_id: "device-a",
+    }));
+    assert.equal(report.deviceFiltered, false);
+    assert.deepEqual(report.logs, [hilogRecord("[VCODER_DEBUG] kept")]);
+  } finally {
+    await fs.rm(fake.directory, { recursive: true, force: true });
+  }
+});
+
+test("stderr noise never fails a collect that returned real records", async () => {
+  const fake = await makeRecordingHdc(`
+if [ "$1 $2" = "list targets" ]; then
+  printf 'device-a\\n'
+  exit 0
+fi
+printf 'some unrelated chatter\\n' >&2
+printf '${hilogRecord("[VCODER_DEBUG] kept")}\\n'`);
+  try {
+    const report = await withHdcPath(fake.executable, () => hdcLog({
+      action: "collect",
+      device_id: "device-a",
+    }));
+    const invocations = await fake.invocations();
+    assert.equal(invocations.length, 2, "records outrank stderr noise, so there is no retry");
+    assert.deepEqual(report.logs, [hilogRecord("[VCODER_DEBUG] kept")]);
+  } finally {
+    await fs.rm(fake.directory, { recursive: true, force: true });
+  }
+});
+
+test("a device without grep falls back once instead of reporting its refusal as logs", async () => {
+  // `hdc shell X` exits 0 whatever X did, so a device with no grep on it comes back as a successful
+  // call whose only line is the complaint. Returning that as log content is the silent-wrong-answer
+  // case; the shape test catches it and the plain dump still answers.
+  const fake = await makeRecordingHdc(`
+if [ "$1 $2" = "list targets" ]; then
+  printf 'device-a\\n'
+  exit 0
+fi
+case "$4" in
+  *grep*) printf '/bin/sh: grep: inaccessible or not found\\n'; exit 0 ;;
+esac
+printf '${hilogRecord("[VCODER_DEBUG] kept")}\\n${hilogRecord("noise")}\\n'`);
+  try {
+    const report = await withHdcPath(fake.executable, () => hdcLog({
+      action: "collect",
+      device_id: "device-a",
+    }));
+    const invocations = await fake.invocations();
+    assert.equal(invocations.length, 3, "expected list targets, the -e attempt, then the fallback");
+    assert.deepEqual(invocations[2], ["-t", "device-a", "shell", "hilog", "-x"]);
+    assert.equal(report.deviceFiltered, false);
+    assert.deepEqual(report.logs, [hilogRecord("[VCODER_DEBUG] kept")]);
+  } finally {
+    await fs.rm(fake.directory, { recursive: true, force: true });
+  }
+});
+
+test("a hilog that refuses both forms raises rather than passing the complaint through", async () => {
+  const fake = await makeRecordingHdc(`
+if [ "$1 $2" = "list targets" ]; then
+  printf 'device-a\\n'
+  exit 0
+fi
+printf 'Mutlti commands can not be used in combination [CODE: -31]\\n'`);
+  try {
+    await withHdcPath(fake.executable, async () => {
+      await assert.rejects(
+        () => hdcLog({ action: "collect", device_id: "device-a" }),
+        (error) => error.code === "HDC_HILOG_ERROR" && /CODE: -31/.test(error.message),
+      );
+    });
+  } finally {
+    await fs.rm(fake.directory, { recursive: true, force: true });
+  }
+});
+
+test("a collect that outruns its deadline keeps the lines it already read", async () => {
+  // The old deadline rejected, discarding a buffer of real lines that had already crossed the wire.
+  // /bin/echo rather than the shell builtin so each line is flushed by a process exit.
+  const fake = await makeRecordingHdc(`
+if [ "$1 $2" = "list targets" ]; then
+  printf 'device-a\\n'
+  exit 0
+fi
+/bin/echo '${hilogRecord("[VCODER_DEBUG] first")}'
+/bin/echo '${hilogRecord("[VCODER_DEBUG] second")}'
+sleep 20`);
+  try {
+    const report = await withHdcPath(fake.executable, () => hdcLog({
+      action: "collect",
+      device_id: "device-a",
+      timeoutMs: 1000,
+    }));
+    assert.equal(report.truncated, true);
+    assert.deepEqual(report.logs, [
+      hilogRecord("[VCODER_DEBUG] first"),
+      hilogRecord("[VCODER_DEBUG] second"),
+    ]);
   } finally {
     await fs.rm(fake.directory, { recursive: true, force: true });
   }

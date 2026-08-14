@@ -240,14 +240,15 @@ const localTools = [
   },
   {
     name: "hdc_log",
-    description: "List connected HarmonyOS devices, collect filtered hilog lines, or clear the device log buffer.",
+    description: "List connected HarmonyOS devices, collect filtered hilog lines, or clear the device log buffer. Collect pushes the filter down to hilog itself, so narrowing log_prefix or lines cuts what crosses the wire rather than only what is printed.",
     inputSchema: {
       type: "object",
       properties: {
         action: { type: "string", enum: ["collect", "clear", "list_devices"] },
-        device_id: { type: "string" },
-        log_prefix: { type: "string", description: "Collect only lines containing this prefix; defaults to [VCODER_DEBUG]." },
+        device_id: { type: "string", description: "Required when more than one device is connected; hdc_log list_devices prints the keys." },
+        log_prefix: { type: "string", description: "Collect only lines containing this prefix; defaults to [VCODER_DEBUG]. Matched literally, and matched on the device." },
         lines: { type: "integer", minimum: 1, maximum: 5000 },
+        timeoutMs: { type: "integer", minimum: 1000, maximum: 600000, description: "Deadline for the collect. On expiry the lines already read are returned with truncated: true rather than discarded." },
       },
       required: ["action"],
       additionalProperties: false,
