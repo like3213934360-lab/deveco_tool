@@ -10,7 +10,9 @@ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import { listScripts, parseScriptOutput, runRegisteredScript } from "../src/script-registry.mjs";
 import { arktsCheckStatus, runArktsCheck } from "../src/arkts-check.mjs";
 import { resolveDevecoHome } from "../src/config.mjs";
-import { buildArgs, buildProject, devecoCliFailureMessage } from "../src/deveco-cli.mjs";
+import {
+  buildArgs, buildProject, devecoCliFailureMessage, startApp,
+} from "../src/deveco-cli.mjs";
 import { readTar } from "../src/device-tar.mjs";
 import { withUitestLock, lockInternals } from "../src/device-lock.mjs";
 import { analyseDump, dumpSignatures, flattenDump, readSelector } from "../src/device-dump.mjs";
@@ -544,6 +546,78 @@ test("build_project keeps the parameter contract the CodeGenie tool had", async 
     buildArgs({ modules: ["entry@default"], build_mode: "debug" }),
     ["build", "--modules", "entry@default", "--build-mode", "debug"],
   );
+});
+
+test("start_app deploys only the explicitly selected Entry module", async (t) => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-cli-start-"));
+  const project = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-cli-project-"));
+  const entry = path.join(directory, "fake-cli.mjs");
+  const argvLog = path.join(directory, "argv.log");
+  await fs.writeFile(entry, [
+    'import fs from "node:fs";',
+    `fs.appendFileSync(${JSON.stringify(argvLog)}, JSON.stringify(process.argv.slice(2)) + "\\n");`,
+    'console.log("Application launched successfully");',
+  ].join("\n"));
+
+  const previous = process.env.DEVECO_CLI_ENTRY;
+  process.env.DEVECO_CLI_ENTRY = entry;
+  t.after(async () => {
+    if (previous === undefined) delete process.env.DEVECO_CLI_ENTRY;
+    else process.env.DEVECO_CLI_ENTRY = previous;
+    await fs.rm(directory, { recursive: true, force: true });
+    await fs.rm(project, { recursive: true, force: true });
+  });
+
+  const report = await startApp({
+    project_path: project,
+    hvd: "device-1",
+    module: "default",
+    target: "default",
+    ability: "EntryAbility",
+  });
+  const invocations = (await fs.readFile(argvLog, "utf8"))
+    .trim()
+    .split("\n")
+    .map((line) => JSON.parse(line));
+
+  assert.deepEqual(invocations, [[
+    "run", "--skip-build", "--device", "device-1",
+    "--module", "default@default", "--ability", "EntryAbility",
+  ]]);
+  assert.match(report, /Deployed modules: default@default/);
+  assert.doesNotMatch(report, /watch/);
+});
+
+test("start_app requires a module instead of deploying multiple Entry modules", async (t) => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-cli-start-"));
+  const project = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-cli-project-"));
+  const entry = path.join(directory, "fake-cli.mjs");
+  const argvLog = path.join(directory, "argv.log");
+  await fs.writeFile(entry, [
+    'import fs from "node:fs";',
+    `fs.appendFileSync(${JSON.stringify(argvLog)}, JSON.stringify(process.argv.slice(2)) + "\\n");`,
+    'console.log("Specify module(s) to run. Available runnable modules:\\n- default\\n- watch");',
+  ].join("\n"));
+
+  const previous = process.env.DEVECO_CLI_ENTRY;
+  process.env.DEVECO_CLI_ENTRY = entry;
+  t.after(async () => {
+    if (previous === undefined) delete process.env.DEVECO_CLI_ENTRY;
+    else process.env.DEVECO_CLI_ENTRY = previous;
+    await fs.rm(directory, { recursive: true, force: true });
+    await fs.rm(project, { recursive: true, force: true });
+  });
+
+  await assert.rejects(
+    () => startApp({ project_path: project, hvd: "device-1" }),
+    (error) => error.code === "DEVECO_CLI_MODULE_REQUIRED"
+      && /default, watch/.test(error.message),
+  );
+  const invocations = (await fs.readFile(argvLog, "utf8"))
+    .trim()
+    .split("\n")
+    .map((line) => JSON.parse(line));
+  assert.deepEqual(invocations, [["run", "--skip-build", "--device", "device-1"]]);
 });
 
 test("DevEco CLI failures are errors even when the process exits zero", () => {
@@ -2228,4 +2302,3 @@ test("ifChangedFrom answers with a boolean instead of a frame the caller already
   }));
   assert.equal(mismatched.unchanged, undefined, "a different screen must report as changed");
 });
-

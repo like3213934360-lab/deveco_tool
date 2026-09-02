@@ -179,8 +179,8 @@ export function devecoCliFailureMessage(result) {
  *
  * `build-profile.json5` lists HARs too, and passing those to `--module` is an
  * error, so the runnable set comes from the CLI itself rather than from a guess
- * about module types. Deploying only the entry module fails on multi-module
- * projects: its HSP dependencies never reach the device.
+ * about module types. This probe is only needed when the caller omitted the
+ * module and the wrapper has to decide whether there is a unique choice.
  *
  * @param {string} project Absolute project root.
  * @param {string} device Device name or serial.
@@ -315,17 +315,20 @@ export async function startApp(input = {}) {
   const target = typeof input.target === "string" ? input.target.trim() : "";
   const ability = typeof input.ability === "string" ? input.ability.trim() : "";
 
-  // Deploy every runnable module, not just the requested one: the entry HAP
-  // depends on the other modules' HSPs and installation fails without them.
-  // `module` therefore selects what to launch, not what to install.
-  const discovered = await runnableModules(project, device, input.timeoutMs);
-  const ordered = module && discovered.includes(module)
-    ? [module, ...discovered.filter((item) => item !== module)]
-    : discovered;
-  const selected = (ordered.length ? ordered : [module].filter(Boolean))
-    .map((name) => (target ? `${name}@${target}` : name));
+  let selectedModule = module;
+  if (!selectedModule) {
+    const discovered = await runnableModules(project, device, input.timeoutMs);
+    if (discovered.length > 1) {
+      const error = new Error(
+        `Multiple runnable modules found (${discovered.join(", ")}); pass module explicitly.`,
+      );
+      error.code = "DEVECO_CLI_MODULE_REQUIRED";
+      throw error;
+    }
+    [selectedModule = ""] = discovered;
+  }
 
-  if (!selected.length) {
+  if (!selectedModule) {
     const error = new Error(
       `No runnable modules found for ${project}. Build the project first, or pass module explicitly.`,
     );
@@ -333,7 +336,11 @@ export async function startApp(input = {}) {
     throw error;
   }
 
-  const args = ["run", "--skip-build", "--device", device, "--module", ...selected];
+  // DevEco CLI resolves and installs non-HAR dependencies of the selected
+  // module itself. Passing sibling Entry modules here creates an invalid
+  // multi-Entry install request on a physical device.
+  const selected = target ? `${selectedModule}@${target}` : selectedModule;
+  const args = ["run", "--skip-build", "--device", device, "--module", selected];
   if (ability) args.push("--ability", ability);
 
   const result = await runDevecoCli(args, { cwd: project, timeoutMs: input.timeoutMs });
@@ -344,5 +351,5 @@ export async function startApp(input = {}) {
     error.code = "DEVECO_CLI_RUN_FAILED";
     throw error;
   }
-  return `Device: ${device}\nDeployed modules: ${selected.join(", ")}\n> ${result.command}\n\n${output}`;
+  return `Device: ${device}\nDeployed modules: ${selected}\n> ${result.command}\n\n${output}`;
 }

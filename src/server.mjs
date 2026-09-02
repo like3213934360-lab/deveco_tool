@@ -229,7 +229,10 @@ const localTools = [
       type: "object",
       properties: {
         hvd: { type: "string", description: "Target device name or serial; resolved automatically when omitted." },
-        module: { type: "string", description: "Module to launch (e.g. entry, phone)." },
+        module: {
+          type: "string",
+          description: "Module to deploy and launch (e.g. entry, phone). Required when the project has multiple runnable modules; dependencies are included automatically.",
+        },
         target: { type: "string", description: "Build target; combined with module as module@target." },
         ability: { type: "string", description: "Ability to launch; read from module.json5 when omitted." },
         project_path: { type: "string", description: "Optional project root; otherwise the active project from switch_cwd." },
