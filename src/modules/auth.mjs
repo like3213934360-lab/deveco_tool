@@ -16,7 +16,7 @@ import path from "node:path";
 import fs from "node:fs";
 import http from "node:http";
 import crypto from "node:crypto";
-import { exec } from "node:child_process";
+import { spawn } from "node:child_process";
 import {
   BASE_URL,
   AUTH_PATH,
@@ -29,6 +29,7 @@ import {
   LOGIN_TIMEOUT_MS,
   ACCESS_TOKEN_TTL_MS,
 } from "./config.mjs";
+import { deleteCredential, readCredential, writeCredential } from "./credential-store.mjs";
 
 const STORE_DIR = path.join(os.homedir(), ".deveco-knowledge-mcp");
 const AUTH_FILE = path.join(STORE_DIR, "auth.json");
@@ -44,8 +45,9 @@ function logErr(...args) {
  */
 function loadAuth() {
   try {
-    return JSON.parse(fs.readFileSync(AUTH_FILE, "utf8"));
-  } catch {
+    return readCredential(AUTH_FILE);
+  } catch (error) {
+    logErr("failed to load encrypted login state:", error.message);
     return null;
   }
 }
@@ -57,7 +59,7 @@ function loadAuth() {
  */
 function saveAuth(data) {
   fs.mkdirSync(STORE_DIR, { recursive: true, mode: 0o700 });
-  fs.writeFileSync(AUTH_FILE, JSON.stringify(data, null, 2), { mode: 0o600 });
+  writeCredential(AUTH_FILE, data);
 }
 
 /**
@@ -65,11 +67,7 @@ function saveAuth(data) {
  * @returns {void}
  */
 export function clearAuth() {
-  try {
-    fs.rmSync(AUTH_FILE);
-  } catch {
-    /* 文件不存在则忽略 */
-  }
+  deleteCredential(AUTH_FILE);
 }
 
 /**
@@ -101,14 +99,17 @@ export function parseJwt(token) {
  */
 function openBrowser(url) {
   return new Promise((resolve, reject) => {
-    const platform = process.platform;
-    const command =
-      platform === "win32"
-        ? `start "" "${url}"`
-        : platform === "darwin"
-          ? `open "${url}"`
-          : `xdg-open "${url}"`;
-    exec(command, (err) => (err ? reject(err) : resolve()));
+    const [command, args] = process.platform === "win32"
+      ? ["rundll32.exe", ["url.dll,FileProtocolHandler", url]]
+      : process.platform === "darwin"
+        ? ["open", [url]]
+        : ["xdg-open", [url]];
+    const child = spawn(command, args, { stdio: "ignore", windowsHide: true });
+    child.once("error", reject);
+    child.once("close", (code) => {
+      if (code === 0) resolve();
+      else reject(new Error(`${command} exited with code ${code ?? "unknown"}`));
+    });
   });
 }
 

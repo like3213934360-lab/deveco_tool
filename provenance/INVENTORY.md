@@ -117,9 +117,9 @@
 
 ### ArkTS LSP
 
-`lsp`（9 个官方操作：`goToDefinition`、`findReferences`、`hover`、`documentSymbol`、`workspaceSymbol`、`goToImplementation`、`prepareCallHierarchy`、`incomingCalls`、`outgoingCalls`），以及兼容旧 ArkTS LSP MCP 的：
+`lsp`（10 个官方操作：`goToDefinition`、`goToDeclaration`、`findReferences`、`hover`、`documentSymbol`、`workspaceSymbol`、`goToImplementation`、`prepareCallHierarchy`、`incomingCalls`、`outgoingCalls`），以及兼容旧 ArkTS LSP MCP 的：
 
-`find_references`、`go_to_definition`、`get_hover`、`list_symbols`、`find_call_hierarchy`。
+`find_references`、`go_to_definition`、`go_to_declaration`、`get_hover`、`list_symbols`、`find_call_hierarchy`。
 
 ### CodeGenie MCP 代理
 
@@ -128,7 +128,9 @@
 `build_project` 与 `start_app` 不再走 CodeGenie 代理，改为本仓 `src/deveco-cli.mjs` 通过 `@deveco/deveco-cli` 实现（跟进上游 0.2.0 把这两个工具原生化的方向）。两点与上游不同：
 
 - 参数向后兼容。上游 `build_project` 只有 `clean` / `product` / `modules` / `build_mode`；本仓保留原 CodeGenie 参数中的 `log_path`（上游无对应能力，本地落盘实现）和 `module` 单值形式，并且 `clean` 保持「先清理再构建」而不是上游的只清理不构建。`enable_inspector_source_jump` 在 DevEco CLI 中没有对应开关，调用时会显式提示未生效，不静默忽略。
-- `start_app` 部署全部可运行模块，而不是只部署被请求的那一个。实测多模块工程上只传入口模块会失败：`Failed to install the HAP or HSP because the dependent module does not exist. phone's dependent module: card_catalog does not exist`。可运行模块集由 CLI 自身给出（先不带 `--module` 调一次，解析 `Available runnable modules:`），而不是从 `build-profile.json5` 猜——后者会把 HAR 也算进来。
+- `start_app` 只部署调用方指定的一个可运行模块，依赖由 CLI 自动收集；省略 `module` 时先由 CLI 给出 `Available runnable modules:`，仅在候选唯一时自动选择。这样与 DevEco Studio 的单模块运行语义一致，也避免多 Entry HAP 同时交给真机安装。
+
+CLI 升级至 1.3.1 后新增 `project_sync`、`api_compat_check` 与 `apply_changes`：分别覆盖官方 `ohpm install --all + hvigor --sync`、API 版本兼容扫描、以及以 `.hvigor` 变更清单驱动的冷增量构建部署。`apply_changes` 不启动长驻热重载进程，首次仍需 `start_app` 全量安装。
 
 CodeGenie 的 `init_project_path` 由本仓库的统一项目上下文入口管理，因此不重复注册子进程同名工具。CodeGenie 的 `check_ets_files` 由已验证稳定的本地 DevEco 检查器实现替代，保留原工具名和参数。
 
@@ -169,7 +171,7 @@ CodeGenie 的 `verify_ui`、`save_ui_screenshot`、`get_ui_verification_log` 被
 - **观察这条路已经贴着地板，剩下的省法是不走它。** 逐项量过：`uitest dumpLayout` 约 1200ms，占融合观察 1419ms 的绝大部分，而这 1200ms 是与无障碍服务通信的固有开销，不是可以削的启动成本——常驻 `uitest start-daemon` 只改变 5ms，`-b <bundle>` 把输出从 105KB 降到 36KB 却仍要 1122ms（只省不到 20%，还丢掉其余窗口），`-m false` 反而更慢（1737ms）。非 dump 的部分只剩 `tar` 约 60ms 加 `recv` 约 57ms，加上 hdc 每次调用 68ms 的往返地板。**「用设备端 base64 经 stdout 回传以省掉一次 recv」这个想法实测作废：1255ms，比 `file recv` 的 57ms 慢 20 倍**——shell 通道不适合传批量数据，好在量了才没写进去。因此新增的是 `ui_snapshot` 的 `ifChangedFrom`：JPEG 编码是确定性的，静止画面连续 8 次截图得到同一个摘要，所以帧摘要是可靠的相等性判据（不是相似度；时钟跳一下就会变，这是正确行为）。命中时返回 `unchanged:true` 且不回传图片。实测轮询 425ms 且零图像 token，对比完整观察 1301ms 加约 2400 图像 token；而不带该参数的普通截图是 432ms——**问这个问题不比不问贵，任何分支都不会更慢**。
 - **按选择器点击时，由设备的 `clickable` 标志消歧。** 可见文字几乎总是命中两个节点：实测底部 tab 是 `Column "互动卡片" clickable=true` 包着 `Text "互动卡片" clickable=false`。若一律拒绝，文字选择器基本不可用；取那个设备称为可点的节点不是猜测，另一个根本点不动。两个都可点则仍然拒绝并列出候选。
 
-当前 CodeGenie 正常启动时，统一服务共暴露 29 个工具；如果 CodeGenie 包缺失，其他本地工具仍可以使用，其中设备 UI 快速通道这 3 个完全不依赖该子进程。
+统一服务固定暴露 33 个工具；如果 CodeGenie 包缺失，30 个本地工具仍可以使用，其中设备 UI 快速通道完全不依赖该子进程。
 
 DevEco Code 内部的 `debug_exit` 会话调试工具没有迁移；CodeGenie 的同名 `init_project_path` 也没有重复暴露，而是统一由本服务的项目上下文管理。其余未迁移的 DevEco 专有工具：`spec_write`、`plan_enter`、`plan_exit`、`plan_write`、`question`、`skill`、`doom_loop`、`repo_overview`（后者只出现在内置 agent 的 permission 表中，二进制里没有找到对应实现，可能是预留名）。这些属于 agent harness 级能力，由接入方宿主自备，`manifest.json` 的 `hostToolMapping` 有对应关系。
 
@@ -243,7 +245,7 @@ DevEco Code 内部的 `debug_exit` 会话调试工具没有迁移；CodeGenie �
 
 原先 `src/server.mjs` 在模块顶层 `await getCodeGenieTools()`，位置在 `server.connect(transport)` **之前**，因此子进程一挂死，网关自身的 stdio transport 永远不会连接，整个 MCP 连 `initialize` 都不会回应。表现是本地那些与 CodeGenie 完全无关的工具（ArkTS 检查、LSP、日志、脚本）被一个只提供五个工具的子进程一起拖死。
 
-本仓库的处置：先 `server.connect()` 再后台预热子进程；握手的 connect 与 tools/list 各 5 秒封顶；挂死重试一次（客户端会缓存首次 `tools/list`，丢掉那一次就等于整个会话没有 `build_project` / `start_app`）；仍然失败则清空记忆，后续请求可再试。子进程不可用时服务降级为 26 个本地工具而不是不可用（`deveco_restart` 把本地工具从 21 带到 22，设备 UI 快速通道的 `ui_snapshot` / `ui_find` / `ui_tap` 带到 25，`ui_observe` 带到 26；此前记的 18 与 22 都是更早期的数字，已过时）。
+本仓库的处置：`tools/list` 完全读取静态表，不启动也不等待 CodeGenie；只有调用那 3 个代理工具时才建立子进程连接，握手失败返回 `CODEGENIE_UNAVAILABLE`，后续请求仍可重试。子进程不可用时 30 个本地工具继续工作，工具列表仍固定为 33 个。
 
 挂死的成因未定位到上游代码的具体位置，只能观测到现象；修复方式是让它不再致命，不是消除它。
 

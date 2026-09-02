@@ -11,8 +11,10 @@ import { listScripts, parseScriptOutput, runRegisteredScript } from "../src/scri
 import { arktsCheckStatus, runArktsCheck } from "../src/arkts-check.mjs";
 import { resolveDevecoHome } from "../src/config.mjs";
 import {
-  buildArgs, buildProject, devecoCliFailureMessage, startApp,
+  apiCompatibilityCheck, applyChanges, buildArgs, buildProject,
+  devecoCliFailureMessage, projectSync, startApp,
 } from "../src/deveco-cli.mjs";
+import { deleteCredential, readCredential, writeCredential } from "../src/modules/credential-store.mjs";
 import { readTar } from "../src/device-tar.mjs";
 import { withUitestLock, lockInternals } from "../src/device-lock.mjs";
 import { analyseDump, dumpSignatures, flattenDump, readSelector } from "../src/device-dump.mjs";
@@ -140,6 +142,32 @@ test("registered scripts return parsed key/value output", async () => {
   assert.equal(result.parsed.source, "text");
 });
 
+test("credentials are encrypted at rest and plaintext stores migrate automatically", async (t) => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-credential-"));
+  const file = path.join(directory, "auth.json");
+  const previous = process.env.DEVECO_DISABLE_CREDENTIAL_KEYCHAIN;
+  process.env.DEVECO_DISABLE_CREDENTIAL_KEYCHAIN = "1";
+  t.after(async () => {
+    if (previous === undefined) delete process.env.DEVECO_DISABLE_CREDENTIAL_KEYCHAIN;
+    else process.env.DEVECO_DISABLE_CREDENTIAL_KEYCHAIN = previous;
+    await fs.rm(directory, { recursive: true, force: true });
+  });
+
+  const secret = { jwtToken: "secret-jwt", refreshToken: "secret-refresh" };
+  writeCredential(file, secret);
+  const stored = await fs.readFile(file, "utf8");
+  assert.doesNotMatch(stored, /secret-jwt|secret-refresh/);
+  assert.deepEqual(readCredential(file), secret);
+
+  deleteCredential(file);
+  await fs.writeFile(file, JSON.stringify(secret), { mode: 0o600 });
+  assert.deepEqual(readCredential(file), secret);
+  assert.doesNotMatch(await fs.readFile(file, "utf8"), /secret-jwt|secret-refresh/);
+  deleteCredential(file);
+  assert.equal(fsSync.existsSync(file), false);
+  assert.equal(fsSync.existsSync(`${file}.key`), false);
+});
+
 test("local diagnostics dependencies are discoverable", { skip: NEEDS_DEVECO_SDK }, () => {
   assert.equal(arktsCheckStatus().installed, true);
   assert.equal(hdcStatus().installed, true);
@@ -162,10 +190,11 @@ test("unified MCP advertises scripts, diagnostics, LSP, and CodeGenie tools", as
   for (const name of [
     "deveco_script_catalog", "deveco_script", "switch_cwd", "deveco_doctor",
     "arkts_check", "hdc_log", "find_references", "go_to_definition",
-    "get_hover", "list_symbols", "find_call_hierarchy", "lsp", "build_project",
+    "go_to_declaration", "get_hover", "list_symbols", "find_call_hierarchy", "lsp", "build_project",
+    "project_sync", "api_compat_check", "apply_changes",
     "document_validate", "ui_snapshot", "ui_observe", "ui_find", "ui_tap",
   ]) assert.ok(names.has(name), `missing tool ${name}`);
-  assert.equal(result.tools.length, 29);
+  assert.equal(result.tools.length, 33);
   assert.equal(result.tools.filter((tool) => tool.name === "check_ets_files").length, 1);
   for (const disabled of ["verify_ui", "save_ui_screenshot", "get_ui_verification_log"]) {
     assert.ok(!names.has(disabled), `disabled tool ${disabled} is still advertised`);
@@ -620,6 +649,96 @@ test("start_app requires a module instead of deploying multiple Entry modules", 
   assert.deepEqual(invocations, [["run", "--skip-build", "--device", "device-1"]]);
 });
 
+test("apply_changes uses the CLI apply manifest and never selects multiple Entry modules", async (t) => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-cli-apply-"));
+  const project = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-cli-project-"));
+  const entry = path.join(directory, "fake-cli.mjs");
+  const log = path.join(directory, "apply.json");
+  await fs.mkdir(path.join(project, "entry", "src"), { recursive: true });
+  await fs.writeFile(path.join(project, "entry", "src", "Main.ets"), "@Entry struct Main {}\n");
+  await fs.writeFile(entry, [
+    'import fs from "node:fs";',
+    'import path from "node:path";',
+    'const args = process.argv.slice(2);',
+    'const name = args[args.indexOf("--apply") + 1];',
+    `fs.writeFileSync(${JSON.stringify(log)}, JSON.stringify({ args, manifest: fs.readFileSync(path.join(process.cwd(), ".hvigor", name), "utf8") }));`,
+    'console.log("Apply completed successfully");',
+  ].join("\n"));
+
+  const previous = process.env.DEVECO_CLI_ENTRY;
+  process.env.DEVECO_CLI_ENTRY = entry;
+  t.after(async () => {
+    if (previous === undefined) delete process.env.DEVECO_CLI_ENTRY;
+    else process.env.DEVECO_CLI_ENTRY = previous;
+    await fs.rm(directory, { recursive: true, force: true });
+    await fs.rm(project, { recursive: true, force: true });
+  });
+
+  const report = await applyChanges({
+    project_path: project,
+    hvd: "device-1",
+    files: ["entry/src/Main.ets"],
+    product: "default",
+  });
+  const invocation = JSON.parse(await fs.readFile(log, "utf8"));
+  assert.deepEqual(invocation.manifest, "entry/src/Main.ets\n");
+  assert.deepEqual(invocation.args.slice(0, 5), ["run", "--device", "device-1", "--product", "default"]);
+  assert.ok(invocation.args.includes("--apply"));
+  assert.ok(!invocation.args.includes("--module"));
+  assert.match(report, /Applied 1 changed file/);
+  const hvigorFiles = await fs.readdir(path.join(project, ".hvigor"));
+  assert.deepEqual(hvigorFiles, [], "the temporary apply manifest must be removed");
+});
+
+test("api_compat_check emits the DevEco CLI 1.3 compat command", async (t) => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-cli-compat-"));
+  const project = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-cli-project-"));
+  const entry = path.join(directory, "fake-cli.mjs");
+  await fs.writeFile(entry, "console.log(JSON.stringify(process.argv.slice(2)));\n");
+  const previous = process.env.DEVECO_CLI_ENTRY;
+  process.env.DEVECO_CLI_ENTRY = entry;
+  t.after(async () => {
+    if (previous === undefined) delete process.env.DEVECO_CLI_ENTRY;
+    else process.env.DEVECO_CLI_ENTRY = previous;
+    await fs.rm(directory, { recursive: true, force: true });
+    await fs.rm(project, { recursive: true, force: true });
+  });
+  const report = await apiCompatibilityCheck({
+    project_path: project,
+    source_version: "12",
+    target_version: "18",
+    modules: ["entry"],
+    format: "json",
+  });
+  assert.match(report, /\["check","compat","--source-version","12","--target-version","18","--modules","entry","--format","json"\]/);
+});
+
+test("project_sync uses DevEco Studio's bundled ohpm and Hvigor entries", async (t) => {
+  const home = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-home-"));
+  const project = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-project-"));
+  const node = path.join(home, "tools", "node", process.platform === "win32" ? "node.exe" : "bin/node");
+  const ohpm = path.join(home, "tools", "ohpm", "bin", "pm-cli.js");
+  const hvigor = path.join(home, "tools", "hvigor", "bin", "hvigorw.js");
+  await fs.mkdir(path.dirname(node), { recursive: true });
+  await fs.mkdir(path.dirname(ohpm), { recursive: true });
+  await fs.mkdir(path.dirname(hvigor), { recursive: true });
+  await fs.symlink(process.execPath, node);
+  await fs.writeFile(ohpm, 'console.log("ohpm", ...process.argv.slice(2));\n');
+  await fs.writeFile(hvigor, 'console.log("hvigor", ...process.argv.slice(2));\n');
+
+  const previous = process.env.DEVECO_HOME;
+  process.env.DEVECO_HOME = home;
+  t.after(async () => {
+    if (previous === undefined) delete process.env.DEVECO_HOME;
+    else process.env.DEVECO_HOME = previous;
+    await fs.rm(home, { recursive: true, force: true });
+    await fs.rm(project, { recursive: true, force: true });
+  });
+  const report = await projectSync({ project_path: project, product: "wearable" });
+  assert.match(report, /ohpm install --all/);
+  assert.match(report, /hvigor --sync -p product=wearable --analyze=normal --parallel --incremental --no-daemon/);
+});
+
 test("DevEco CLI failures are errors even when the process exits zero", () => {
   assert.equal(devecoCliFailureMessage({ exitCode: 0, stdout: "Build completed successfully", stderr: "" }), "");
   assert.ok(devecoCliFailureMessage({
@@ -1012,7 +1131,7 @@ test("a CodeGenie child that never answers cannot delay tool discovery", { timeo
   const elapsed = Date.now() - startedAt;
   assert.ok(elapsed < 1000, `tools/list must not wait on the child; took ${elapsed}ms`);
 
-  assert.equal(names.length, 29, "all 29 tools must be advertised even while the child is stalled");
+  assert.equal(names.length, 33, "all 33 tools must be advertised even while the child is stalled");
   assert.ok(names.includes("arkts_check"));
   // The capture/find/tap loop runs over hdc in-process, so a stalled child must not reach it.
   for (const local of ["ui_snapshot", "ui_observe", "ui_find", "ui_tap"]) {

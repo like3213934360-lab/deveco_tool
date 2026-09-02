@@ -397,6 +397,15 @@ export async function goToDefinition({ file, line, column }) {
   return `Definition(s):\n${parts.map((item) => `${item.file}:${item.line}:${item.column}  ${item.text}`).join("\n")}`;
 }
 
+export async function goToDeclaration({ file, line, column }) {
+  const result = await request(file, line, column, "textDocument/declaration");
+  if (!result) return `No declaration found for symbol at ${file}:${line}:${column}`;
+  const locations = Array.isArray(result) ? result : [result];
+  const parts = locations.map(locationParts).filter(Boolean);
+  if (!parts.length) return `No declaration found for symbol at ${file}:${line}:${column}`;
+  return `Declaration(s):\n${parts.map((item) => `${item.file}:${item.line}:${item.column}  ${item.text}`).join("\n")}`;
+}
+
 export async function getHover({ file, line, column }) {
   const result = await request(file, line, column, "textDocument/hover");
   if (!result) return `No hover info for symbol at ${file}:${line}:${column}`;
@@ -469,6 +478,7 @@ export async function findCallHierarchy({ file, line, column, direction }) {
 export async function lspOperation({ operation, filePath, line, character, query = "" }) {
   const supported = [
     "goToDefinition",
+    "goToDeclaration",
     "findReferences",
     "hover",
     "documentSymbol",
@@ -492,6 +502,9 @@ export async function lspOperation({ operation, filePath, line, character, query
 
   if (operation === "goToDefinition") {
     return current.connection.sendRequest("textDocument/definition", { ...textDocument, position });
+  }
+  if (operation === "goToDeclaration") {
+    return current.connection.sendRequest("textDocument/declaration", { ...textDocument, position });
   }
   if (operation === "findReferences") {
     return current.connection.sendRequest("textDocument/references", {

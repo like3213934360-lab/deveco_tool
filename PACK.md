@@ -9,7 +9,7 @@
 |---|---|---|
 | 知识 | `skills/` | 56 个 Skill，分两层。**core 17 个**（DevEco Code 提取，MIT）：ArkTS 语法规则、编译错误库、崩溃诊断、工程脚手架、构建循环、插桩调试、计划文档、SDD 编排，以及 ArkUI 组件最佳实践、逻辑补全、工程理解、方案设计、响应式布局、HDS 迁移、设备管理、设计稿转代码、UI 还原度评分。**extended 39 个**（华为官方 Skill 仓库 `v0.0.2`）：多设备适配、崩溃与冻屏诊断、Kit 接入、状态管理迁移、MVVM、测试、上架审查等。路由索引见 [`skills/INDEX.md`](./skills/INDEX.md) |
 | 工作流 | `commands/` + `templates/` | SDD 五阶段命令 + 三份产物模板 |
-| 工具 | `src/server.mjs` | 一个 stdio MCP，29 个工具（构建、跑设备、ArkTS 静态检查、LSP、知识检索、日志采集、子进程重启） |
+| 工具 | `src/server.mjs` | 一个 stdio MCP，33 个工具（工程同步、构建、冷增量部署、API 兼容检查、LSP、知识检索、日志采集、子进程重启） |
 
 三层可以独立使用。只要 Skill 也行；只要 MCP 也行。但方法论 Skill（`harmony-build-loop` 等）里的指令会引用
 MCP 工具名，缺了 MCP 就只剩流程说明。
@@ -29,15 +29,10 @@ npm run doctor -- --probe-codegenie   # 额外启动 CodeGenie 子进程并报�
 默认不启动 CodeGenie 子进程（省一次 spawn）；加 `--probe-codegenie` 才探测，并会报 `handshakeMs`——
 上游握手会间歇性卡死，正常约 100ms，超过 1 秒会附一条说明，这本身就是诊断信息。
 
-需要 Node >= 20。构建、设备、ArkTS 检查类工具需要本机装有 DevEco Studio 并配置 `DEVECO_HOME`。
+需要 Node >= 22。构建、设备、ArkTS 检查类工具需要本机装有 DevEco Studio 并配置 `DEVECO_HOME`。
 
-**关于 `overrides`。** `npm audit` 目标态是 0。`@deveco/deveco-cli@1.2.1` 是上游最新版，没有可等的修复，
-而它把 `axios` **精确锁死**在 `1.17.0`（命中 10 条公告：原型污染、DoS、`maxBodyLength` 绕过、代理继承），
-`adm-zip` 锁在 `^0.5.17`（GHSA-xcpc-8h2w-3j85，高危，patched 0.6.0 且 0.6.0 是唯一的 0.6.x）。
-两者只能用 `overrides` 强制。`adm-zip` 跨大版本，动的是 CLI 解 SDK 包和打 hap 的路径，因此它的保留条件是
-**每次改依赖都要重跑这条回归**：`npm test` 全绿 → `devecocli create` 真实建 API 24 工程 → debug 构建拿到
-`BUILD SUCCESSFUL`（含 `PackageHap` / `SignHap`）→ 用 `adm-zip` 读回构建产出的 hap。任一步失败就撤掉这条
-override，把 adm-zip 记为已知风险。上次执行结果见「与上游的差异」第 13 条。
+本包锁定 `@deveco/deveco-cli@1.3.1`；该版本要求 Node 22，并已不需要本包此前为旧 CLI 添加的
+`axios` / `adm-zip` 强制覆盖。依赖升级后以 `npm audit` 0 漏洞和完整测试作为门禁。
 
 ### 2. 装资产
 
@@ -108,8 +103,8 @@ Codex 侧还会为用到脚本的 Skill 生成 `dependencies.tools` 声明本 MC
 
 | 工具名 | 来源 | 说明 |
 |---|---|---|
-| `build_project` / `start_app` | 本包 MCP | 构建与部署 |
-| `arkts_check` / `check_ets_files` | 本包 MCP | ArkTS 静态检查 |
+| `project_sync` / `build_project` / `start_app` / `apply_changes` | 本包 MCP | 工程同步、构建、全量部署与冷增量部署 |
+| `arkts_check` / `check_ets_files` / `api_compat_check` | 本包 MCP | ArkTS 静态检查与 API 版本兼容检查 |
 | `arkts_knowledge_search` | 本包 MCP | 官方知识库检索，需华为账号登录（`deveco_login`） |
 | `hdc_log` | 本包 MCP | 设备日志采集/清理/列设备 |
 | `ui_observe` | 本包 MCP | 一次往返同时拿截图与控件树，常规 UI 循环的入口 |
@@ -154,7 +149,7 @@ Phase 4/5 的委派契约。只用命令、不装该 Skill 时行为与之前一
    文件发现逻辑没有留在上游文件里：`collectEtsFiles` 只认 `entry/src/main/ets` 单模块布局，多模块工程一个文件都扫不到，改由 `src/arkts-check.mjs` 的 `discoverProjectEtsFiles` 按 `build-profile.json5` 的 `modules[].srcPath` 解析后显式传 `--files`。
 6. **`detect-sdk.mjs` 补了 CLI 入口**：上游只 export 函数，而本包的脚本注册表把 `detect_sdk` 登记为可执行脚本，直接跑会 stdout 全空、退出 0，看起来像成功。现在直接运行会打印 SDK 元数据 JSON，import 用法不变。
 7. **崩溃日志 `error_message` 取值修正**：`shared/jscrash-parse.mjs` 的 `detectErrorMessage` 原本返回整行且优先命中 `Error name:`（`CRASH_SIGNAL_RE` 含裸词 `error`），真实的 `Error message:` 被盖掉；无崩溃时还会回落到日志最后一行。现在优先解析显式的 `Error message:` 并只取冒号后的负载，无信号时返回 `(not found)`。
-8. **CodeGenie 子进程不再能拖死整个网关，也不再拖慢工具发现**：上游子进程的 MCP 握手会间歇性永久挂死（空闲机器 12 次复现 2 次）。第一版问题是在 `server.connect()` 之前 `await` 它，一挂死连 `initialize` 都不回应；第二版把 `initialize` 救了回来，但 `tools/list` 仍然同步等子进程，握手 5 秒封顶重试一次意味着子进程挂死时**一次 `tools/list` 实测要 14.1 秒**，超出宿主的工具发现超时——宿主表现为「已连接但取不到工具」。现在 `tools/list` 完全由静态表回答（`src/codegenie-tools.mjs`，与子进程逐字节一致，有漂移测试守护），挂死场景下**实测 1ms**，29 个工具照常通告。子进程只在真正调用那 3 个代理工具时才连接，连不上就返回 `CODEGENIE_UNAVAILABLE`，而不是让工具从列表里消失——后者在宿主看来和「工具从不存在」无法区分。
+8. **CodeGenie 子进程不再能拖死整个网关，也不再拖慢工具发现**：上游子进程的 MCP 握手会间歇性永久挂死（空闲机器 12 次复现 2 次）。第一版问题是在 `server.connect()` 之前 `await` 它，一挂死连 `initialize` 都不回应；第二版把 `initialize` 救了回来，但 `tools/list` 仍然同步等子进程，握手 5 秒封顶重试一次意味着子进程挂死时**一次 `tools/list` 实测要 14.1 秒**，超出宿主的工具发现超时——宿主表现为「已连接但取不到工具」。现在 `tools/list` 完全由静态表回答（`src/codegenie-tools.mjs`，与子进程逐字节一致，有漂移测试守护），挂死场景下**实测 1ms**，33 个工具照常通告。子进程只在真正调用那 3 个代理工具时才连接，连不上就返回 `CODEGENIE_UNAVAILABLE`，而不是让工具从列表里消失——后者在宿主看来和「工具从不存在」无法区分。
 9. **UI 自动校验链路已移除**：见下一节。
 10. **知识层是混合来源**：`arkts-error-fixes` / `arkts-grammar-standards` / `arkts-runtime-fix` / `deveco-create-project` 以发布线 v0.1.6 为基线（逐文件核对一致），另外 10 个来自尚未发版的 `0.2.0-release`。这四个不从 0.2.0 重取的理由是它们带本仓的 `LOCAL PATCH`，重取只会丢补丁——前三个在 v0.1.6 与 0.2.0 之间的 diff 本身是空的。0.2.0 只剩 `d2c` 未取（它硬依赖 `verify_ui`），原因见 `provenance/INVENTORY.md`。
 11. **`build_project` / `start_app` 改为原生实现**：跟进上游 0.2.0 的方向，从 CodeGenie 代理换成通过 `@deveco/deveco-cli` 调用。参数保持向后兼容（保留 `log_path`、`module` 单值、`clean` 先清后建），`enable_inspector_source_jump` 无对应能力时显式提示而非静默忽略。`start_app` 与 DevEco Studio 保持一致，只把选中的一个可运行模块交给 CLI；CLI 会自动收集它的非 HAR 依赖。省略 `module` 时仅在候选唯一的情况下自动选择，多候选会要求调用方明确指定，避免把两个 Entry HAP 同时安装到真机。
@@ -163,9 +158,10 @@ Phase 4/5 的委派契约。只用命令、不装该 Skill 时行为与之前一
 14. **新增 `harmony-sdd-workflow` 编排层**：见「SDD 五阶段」一节。
 15. **`d2c-fast` 已随上游退场**：该 Skill 曾按宿主中立化纳入本包（产物根参数化、委派能力化、六处门禁补 fallback 等）。**上游已在 `0.2.0-release` 上整目录删除**（锁定的 `9535f0f5` 尚在，当前 HEAD 返回 404），本包于同步时一并删除，宿主中立化对照文件 `host-mapping.md` 随之移除。设计稿转代码能力现由上游的 `d2c` 承担，但本包仍不取它——理由不变，它对 `verify_ui` 有 24 处强依赖。
 16. **第四提取源**：`skills/` 里 `tier: "extended"` 的 39 个来自华为官方 Skill 仓库（独立于 DevEco Code），锁定 tag `v0.0.2`。**该仓库没有仓库级许可声明**，详见「许可与来源」与 `NOTICE.harmonyos-agent-skills`。
-17. **依赖漏洞清零，含两条强制 override**：`@modelcontextprotocol/sdk` 升到 `1.30.0`（它把 `@hono/node-server` 放宽到 `^1.19.9 || ^2.0.5`，实装 `2.0.12`，消掉 GHSA-frvp-7c67-39w9——顺带一提那条是中危且只影响 Windows 上的 `serve-static`，本包走 stdio 根本不触及），`axios` 强制 `1.18.1`、`adm-zip` 强制 `0.6.0`，理由见「装依赖」。`npm audit` 由 3 高危 + 2 中危降到 **0**。adm-zip 跨大版本的回归已实跑通过：57 项测试全绿 → `devecocli create` 建 API 24 工程（`cliSource: node_modules`、`verified: true`）→ debug 构建 `BUILD SUCCESSFUL`（`PackageHap` 161ms、`SignHap` 通过）→ 用 `adm-zip@0.6.0` 读回产出的 124K hap，12 个条目、`module.json` 可读。
+17. **DevEco CLI 升级到 1.3.1**：Node 基线同步升至 22，旧 CLI 所需的 `axios` / `adm-zip` 强制 override 已删除，实装依赖由上游直接给出且 `npm audit` 为 **0**。新增 `project_sync`、`api_compat_check`、`apply_changes`，并给 LSP 增加 `goToDeclaration` 与独立别名；冷增量只走官方 `run --apply`，不会把多个 Entry 模块塞进一次安装。
 18. **`tools/list` 静态化**：见第 8 条。3 个 CodeGenie 代理工具的 schema 落在 `src/codegenie-tools.mjs`，与子进程逐字节一致，`test/unified.test.mjs` 有漂移测试；子进程可达时不一致就红。
 19. **新增可选的宿主适配层**：`scripts/install-host.mjs`，把 Skill 装进 Claude 的 `~/.claude/skills` 和 Codex 的 `~/.agents/skills`。核心资产仍然宿主无关，这一层不装也不影响任何东西。隐式调用策略集中在 `manifest.json` 的 `invocationPolicy`，由安装器按宿主渲染，**不改 `skills/` 下的任何文件**。
+20. **登录凭证改为加密存储**：token 以 AES-256-GCM 密文落盘，密钥优先保存在 macOS Keychain、Windows DPAPI 或 Linux Secret Service；旧明文 `auth.json` 首次读取时自动迁移。浏览器启动也改为参数数组调用，不再把登录 URL 拼进 shell 命令。
 
 ## 关于 UI 自动校验
 

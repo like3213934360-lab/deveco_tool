@@ -650,7 +650,7 @@
       "command": "node",
       "args": ["<PACK_ROOT>/src/server.mjs"]
     },
-    "note": "Requires Node >= 20 and `npm install` inside the pack root. DEVECO_HOME / DevEco Studio must be present for build, device, and ArkTS-check tools.",
+    "note": "Requires Node >= 22 and `npm install` inside the pack root. DEVECO_HOME / DevEco Studio must be present for build, device, and ArkTS-check tools.",
     "toolGroups": [
       {
         "group": "project-context",
@@ -668,16 +668,16 @@
       },
       {
         "group": "arkts-language-service",
-        "tools": ["lsp", "go_to_definition", "find_references", "get_hover", "list_symbols", "find_call_hierarchy"],
-        "note": "Request positions are 1-based everywhere. The aliases also return 1-based positions; `lsp` returns the raw LSP payload, whose positions are 0-based. `lsp` exposes the 9 official operations. find_references and find_call_hierarchy (incoming) load project files mentioning the symbol into the language server before querying, so results are not limited to files opened earlier in the session."
+        "tools": ["lsp", "go_to_definition", "go_to_declaration", "find_references", "get_hover", "list_symbols", "find_call_hierarchy"],
+        "note": "Request positions are 1-based everywhere. The aliases also return 1-based positions; `lsp` returns the raw LSP payload, whose positions are 0-based. `lsp` exposes the 10 official operations. find_references and find_call_hierarchy (incoming) load project files mentioning the symbol into the language server before querying, so results are not limited to files opened earlier in the session."
       },
       {
         "group": "diagnostics",
-        "tools": ["arkts_check", "check_ets_files", "hdc_log", "check_cpp_files"]
+        "tools": ["arkts_check", "check_ets_files", "api_compat_check", "hdc_log", "check_cpp_files"]
       },
       {
         "group": "build-and-run",
-        "tools": ["build_project", "start_app"]
+        "tools": ["project_sync", "build_project", "start_app", "apply_changes"]
       },
       {
         "group": "device-ui",
@@ -690,7 +690,7 @@
         "note": "Section-structure check for spec.md / plan.md / tasks.md, ported from the upstream spec_write pipeline. Upstream ran it automatically after its own writer; this pack uses the host's write tool, so the SDD commands call it explicitly once the artifact is written. It reports and never blocks."
       }
     ],
-    "toolCount": 29
+    "toolCount": 33
   },
   "hostToolMapping": {
     "$comment": "Tools the upstream commands assumed, which this pack does NOT provide. Map them onto your host's equivalents before running the SDD commands.",

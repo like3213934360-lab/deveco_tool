@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import crypto from "node:crypto";
 import { createRequire } from "node:module";
 import { spawn } from "node:child_process";
 import { REPO_ROOT, resolveDevecoHome } from "./config.mjs";
@@ -78,6 +79,29 @@ function childEnvironment() {
   return env;
 }
 
+function toolchainPaths() {
+  const home = resolveDevecoHome().path;
+  if (!home) {
+    const error = new Error("DevEco Studio is not configured. Set DEVECO_HOME or DEVECO_PATH.");
+    error.code = "DEVECO_HOME_REQUIRED";
+    throw error;
+  }
+  const windows = process.platform === "win32";
+  const paths = {
+    node: path.join(home, "tools", "node", windows ? "node.exe" : "bin/node"),
+    ohpm: path.join(home, "tools", "ohpm", "bin", "pm-cli.js"),
+    hvigor: path.join(home, "tools", "hvigor", "bin", "hvigorw.js"),
+  };
+  for (const [name, entry] of Object.entries(paths)) {
+    if (!fs.existsSync(entry)) {
+      const error = new Error(`DevEco ${name} entry does not exist: ${entry}`);
+      error.code = "DEVECO_TOOLCHAIN_NOT_FOUND";
+      throw error;
+    }
+  }
+  return paths;
+}
+
 function commandText(entry, args) {
   const rendered = args.map((arg) => (/\s/.test(arg) ? JSON.stringify(arg) : arg)).join(" ");
   return `devecocli ${rendered}`;
@@ -130,6 +154,52 @@ export function runDevecoCli(args, { cwd, timeoutMs = DEFAULT_TIMEOUT_MS } = {})
       if (settled) return;
       settled = true;
       resolve({ command: commandText(entry, args), exitCode, signal, stdout, stderr });
+    });
+  });
+}
+
+function runToolchainScript(script, args, { cwd, timeoutMs = DEFAULT_TIMEOUT_MS } = {}) {
+  const { node } = toolchainPaths();
+  const bounded = Math.min(Math.max(Number(timeoutMs) || DEFAULT_TIMEOUT_MS, 1000), MAX_TIMEOUT_MS);
+  return new Promise((resolve, reject) => {
+    const child = spawn(node, [script, ...args], {
+      cwd,
+      env: childEnvironment(),
+      stdio: ["ignore", "pipe", "pipe"],
+      detached: true,
+    });
+    let stdout = "";
+    let stderr = "";
+    let settled = false;
+    const timer = setTimeout(() => {
+      terminateProcessTree(child);
+      if (!settled) {
+        settled = true;
+        const error = new Error(`DevEco toolchain timed out after ${bounded}ms: ${path.basename(script)} ${args.join(" ")}`);
+        error.code = "DEVECO_TOOLCHAIN_TIMEOUT";
+        reject(error);
+      }
+    }, bounded);
+    child.stdout.on("data", (chunk) => { stdout += chunk.toString(); });
+    child.stderr.on("data", (chunk) => { stderr += chunk.toString(); });
+    child.once("error", (error) => {
+      clearTimeout(timer);
+      if (!settled) {
+        settled = true;
+        reject(error);
+      }
+    });
+    child.once("close", (exitCode, signal) => {
+      clearTimeout(timer);
+      if (settled) return;
+      settled = true;
+      resolve({
+        command: `${path.basename(node)} ${path.basename(script)} ${args.join(" ")}`,
+        exitCode,
+        signal,
+        stdout,
+        stderr,
+      });
     });
   });
 }
@@ -187,8 +257,10 @@ export function devecoCliFailureMessage(result) {
  * @param {number|undefined} timeoutMs Optional timeout.
  * @returns {Promise<string[]>} Runnable module names.
  */
-async function runnableModules(project, device, timeoutMs) {
-  const probe = await runDevecoCli(["run", "--skip-build", "--device", device], {
+async function runnableModules(project, device, product, timeoutMs) {
+  const args = ["run", "--skip-build", "--device", device];
+  if (product) args.push("--product", product);
+  const probe = await runDevecoCli(args, {
     cwd: project,
     timeoutMs,
   });
@@ -203,6 +275,23 @@ async function runnableModules(project, device, timeoutMs) {
     .filter((line) => line.startsWith("- "))
     .map((line) => line.slice(2).trim())
     .filter(Boolean);
+}
+
+async function resolveDevice(explicit) {
+  const requested = typeof explicit === "string" ? explicit.trim() : "";
+  if (requested) return requested;
+  const { devices } = await hdcLog({ action: "list_devices" });
+  if (devices.length === 0) {
+    const error = new Error("No connected HarmonyOS devices detected.");
+    error.code = "HDC_NO_DEVICE";
+    throw error;
+  }
+  if (devices.length > 1) {
+    const error = new Error(`Multiple HarmonyOS devices are connected (${devices.join(", ")}); pass hvd.`);
+    error.code = "HDC_DEVICE_REQUIRED";
+    throw error;
+  }
+  return devices[0];
 }
 
 function presentLog(fullText, logPath) {
@@ -286,6 +375,149 @@ export async function buildProject(input = {}) {
   return `${header}=== Build Output ===\n${body}${status}${logNotice}`;
 }
 
+/** Synchronise ohpm dependencies and the Hvigor project model. */
+export async function projectSync(input = {}) {
+  const project = projectRoot(input.project_path);
+  const product = typeof input.product === "string" && input.product.trim()
+    ? input.product.trim()
+    : "default";
+  if (!/^[A-Za-z0-9_-]+$/.test(product)) {
+    const error = new Error("product may contain only letters, numbers, underscores, and hyphens");
+    error.code = "DEVECO_PRODUCT_INVALID";
+    throw error;
+  }
+
+  const toolchain = toolchainPaths();
+  const transcript = [];
+  if (input.install_dependencies !== false) {
+    const install = await runToolchainScript(toolchain.ohpm, ["install", "--all"], {
+      cwd: project,
+      timeoutMs: input.timeoutMs,
+    });
+    transcript.push(`> ${install.command}\n\n${combineOutput(install)}`);
+    if (install.exitCode !== 0) {
+      const error = new Error(`Dependency installation failed:\n${transcript.join("\n\n")}`);
+      error.code = "DEVECO_PROJECT_SYNC_FAILED";
+      throw error;
+    }
+  }
+
+  const sync = await runToolchainScript(toolchain.hvigor, [
+    "--sync",
+    "-p", `product=${product}`,
+    "--analyze=normal",
+    "--parallel",
+    "--incremental",
+    "--no-daemon",
+  ], { cwd: project, timeoutMs: input.timeoutMs });
+  transcript.push(`> ${sync.command}\n\n${combineOutput(sync)}`);
+  if (sync.exitCode !== 0) {
+    const error = new Error(`Project sync failed:\n${transcript.join("\n\n")}`);
+    error.code = "DEVECO_PROJECT_SYNC_FAILED";
+    throw error;
+  }
+  return `Project synchronized for product ${product}.\n\n${transcript.join("\n\n")}`;
+}
+
+/** Run the DevEco CLI 1.3 compatibility scanner. */
+export async function apiCompatibilityCheck(input = {}) {
+  const project = projectRoot(input.project_path);
+  const action = input.action ?? "scan";
+  const format = input.format ?? (action === "versions" ? "default" : "json");
+  const args = ["check", "compat"];
+
+  if (action === "versions") {
+    args.push("versions", "--format", format);
+  } else if (action === "scan") {
+    const source = String(input.source_version ?? "").trim();
+    const target = String(input.target_version ?? "").trim();
+    if (!source || !target) {
+      const error = new Error("source_version and target_version are required for action=scan");
+      error.code = "DEVECO_COMPAT_VERSION_REQUIRED";
+      throw error;
+    }
+    const files = Array.isArray(input.files) ? input.files.map(String).filter(Boolean) : [];
+    const modules = Array.isArray(input.modules) ? input.modules.map(String).filter(Boolean) : [];
+    if (files.length && modules.length) {
+      const error = new Error("files and modules cannot be used together");
+      error.code = "DEVECO_COMPAT_SCOPE_INVALID";
+      throw error;
+    }
+    if (files.length) args.push(...files);
+    args.push("--source-version", source, "--target-version", target);
+    if (modules.length) args.push("--modules", ...modules);
+    args.push("--format", format);
+    if (input.output_path) args.push("--output-path", String(input.output_path));
+    if (input.limit !== undefined) args.push("--limit", String(input.limit));
+  } else {
+    const error = new Error("action must be scan or versions");
+    error.code = "DEVECO_COMPAT_ACTION_INVALID";
+    throw error;
+  }
+
+  const result = await runDevecoCli(args, { cwd: project, timeoutMs: input.timeoutMs });
+  const output = combineOutput(result);
+  const failure = devecoCliFailureMessage(result);
+  if (failure) {
+    const error = new Error(`> ${result.command}\n\n${output}`);
+    error.code = "DEVECO_API_COMPAT_FAILED";
+    throw error;
+  }
+  return `> ${result.command}\n\n${output}`;
+}
+
+/** Build and deploy only the changed project files via DevEco CLI's cold apply mode. */
+export async function applyChanges(input = {}) {
+  const project = projectRoot(input.project_path);
+  if (!Array.isArray(input.files) || input.files.length === 0) {
+    const error = new Error("files must be a non-empty array of project files");
+    error.code = "DEVECO_APPLY_FILES_REQUIRED";
+    throw error;
+  }
+  const files = [];
+  for (const file of input.files) {
+    const absolute = path.resolve(project, String(file));
+    const relative = path.relative(project, absolute);
+    if (!relative || relative === ".." || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
+      const error = new Error(`Changed file must be inside the selected project: ${file}`);
+      error.code = "DEVECO_APPLY_FILE_OUTSIDE_PROJECT";
+      throw error;
+    }
+    if (!fs.existsSync(absolute) || !fs.statSync(absolute).isFile()) {
+      const error = new Error(`Changed file does not exist: ${absolute}`);
+      error.code = "DEVECO_APPLY_FILE_NOT_FOUND";
+      throw error;
+    }
+    const portable = relative.split(path.sep).join("/");
+    if (!files.includes(portable)) files.push(portable);
+  }
+
+  const device = await resolveDevice(input.hvd);
+  const hvigor = path.join(project, ".hvigor");
+  fs.mkdirSync(hvigor, { recursive: true });
+  const manifestName = `deveco-tool-apply-${process.pid}-${crypto.randomBytes(6).toString("hex")}.txt`;
+  const manifest = path.join(hvigor, manifestName);
+  fs.writeFileSync(manifest, `${files.join("\n")}\n`, { encoding: "utf8", mode: 0o600 });
+
+  try {
+    const args = ["run", "--device", device];
+    if (input.product) args.push("--product", String(input.product));
+    if (input.build_mode) args.push("--build-mode", String(input.build_mode));
+    args.push("--apply", manifestName);
+    const result = await runDevecoCli(args, { cwd: project, timeoutMs: input.timeoutMs });
+    const output = combineOutput(result);
+    const failure = devecoCliFailureMessage(result);
+    if (failure) {
+      const error = new Error(`> ${result.command}\n\n${output}`);
+      error.code = "DEVECO_CLI_APPLY_FAILED";
+      throw error;
+    }
+    return `Device: ${device}\nApplied ${files.length} changed file(s):\n${files.map((file) => `- ${file}`).join("\n")}\n\n> ${result.command}\n\n${output}`;
+  } finally {
+    fs.rmSync(manifest, { force: true });
+  }
+}
+
 /**
  * Deploy and launch the already-built app on a connected device.
  *
@@ -294,30 +526,16 @@ export async function buildProject(input = {}) {
  */
 export async function startApp(input = {}) {
   const project = projectRoot(input.project_path);
-
-  let device = typeof input.hvd === "string" ? input.hvd.trim() : "";
-  if (!device) {
-    const { devices } = await hdcLog({ action: "list_devices" });
-    if (devices.length === 0) {
-      const error = new Error("No connected HarmonyOS devices detected.");
-      error.code = "HDC_NO_DEVICE";
-      throw error;
-    }
-    if (devices.length > 1) {
-      const error = new Error(`Multiple HarmonyOS devices are connected (${devices.join(", ")}); pass hvd.`);
-      error.code = "HDC_DEVICE_REQUIRED";
-      throw error;
-    }
-    [device] = devices;
-  }
+  const device = await resolveDevice(input.hvd);
 
   const module = typeof input.module === "string" ? input.module.trim() : "";
   const target = typeof input.target === "string" ? input.target.trim() : "";
   const ability = typeof input.ability === "string" ? input.ability.trim() : "";
+  const product = typeof input.product === "string" ? input.product.trim() : "";
 
   let selectedModule = module;
   if (!selectedModule) {
-    const discovered = await runnableModules(project, device, input.timeoutMs);
+    const discovered = await runnableModules(project, device, product, input.timeoutMs);
     if (discovered.length > 1) {
       const error = new Error(
         `Multiple runnable modules found (${discovered.join(", ")}); pass module explicitly.`,
@@ -341,6 +559,7 @@ export async function startApp(input = {}) {
   // multi-Entry install request on a physical device.
   const selected = target ? `${selectedModule}@${target}` : selectedModule;
   const args = ["run", "--skip-build", "--device", device, "--module", selected];
+  if (product) args.push("--product", product);
   if (ability) args.push("--ability", ability);
 
   const result = await runDevecoCli(args, { cwd: project, timeoutMs: input.timeoutMs });

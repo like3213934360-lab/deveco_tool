@@ -12,7 +12,14 @@ import { PROXIED_CODEGENIE_TOOLS, PROXIED_CODEGENIE_TOOL_NAMES } from "./codegen
 import { collectDoctorReport } from "./doctor.mjs";
 import { runArktsCheck, arktsCheckStatus } from "./arkts-check.mjs";
 import { collectEnvironmentStatus } from "./config.mjs";
-import { buildProject, devecoCliStatus, startApp } from "./deveco-cli.mjs";
+import {
+  apiCompatibilityCheck,
+  applyChanges,
+  buildProject,
+  devecoCliStatus,
+  projectSync,
+  startApp,
+} from "./deveco-cli.mjs";
 import { uiFind, uiObserve, uiSnapshot, uiTap } from "./device-ui.mjs";
 import { validateDocument } from "./document-validate.mjs";
 import { hdcLog, hdcStatus } from "./hdc-log.mjs";
@@ -20,6 +27,7 @@ import {
   findCallHierarchy,
   findReferences,
   getHover,
+  goToDeclaration,
   goToDefinition,
   listSymbols,
   lspOperation,
@@ -222,6 +230,40 @@ const localTools = [
     },
   },
   {
+    name: "project_sync",
+    description: "Install all ohpm dependencies and synchronize the Hvigor project model using DevEco Studio's bundled toolchain.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        product: { type: "string", description: "Product name; defaults to default." },
+        install_dependencies: { type: "boolean", description: "Run ohpm install --all before Hvigor sync; defaults to true." },
+        project_path: { type: "string", description: "Optional project root; otherwise the active project from switch_cwd." },
+        timeoutMs: { type: "integer", minimum: 1000, maximum: 3600000 },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "api_compat_check",
+    description: "Scan source files or modules for HarmonyOS API compatibility, or list supported API versions, through DevEco CLI 1.3.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        action: { type: "string", enum: ["scan", "versions"], description: "Defaults to scan." },
+        source_version: { type: "string", description: "Current API version; required for scan." },
+        target_version: { type: "string", description: "Target API version; required for scan." },
+        files: { type: "array", items: { type: "string" }, description: "Files to scan; cannot be combined with modules." },
+        modules: { type: "array", items: { type: "string" }, description: "Modules to scan; cannot be combined with files." },
+        format: { type: "string", enum: ["default", "csv", "json"] },
+        output_path: { type: "string", description: "Optional report output path." },
+        limit: { type: "integer", minimum: 1 },
+        project_path: { type: "string", description: "Optional project root; otherwise the active project from switch_cwd." },
+        timeoutMs: { type: "integer", minimum: 1000, maximum: 3600000 },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
     name: "start_app",
     description: "Deploy the already-built app to a connected device and launch it through the bundled DevEco CLI. "
       + "Does not build. Resolves the device automatically when exactly one is connected.",
@@ -234,10 +276,28 @@ const localTools = [
           description: "Module to deploy and launch (e.g. entry, phone). Required when the project has multiple runnable modules; dependencies are included automatically.",
         },
         target: { type: "string", description: "Build target; combined with module as module@target." },
+        product: { type: "string", description: "Product name from build-profile.json5; defaults to default." },
         ability: { type: "string", description: "Ability to launch; read from module.json5 when omitted." },
         project_path: { type: "string", description: "Optional project root; otherwise the active project from switch_cwd." },
         timeoutMs: { type: "integer", minimum: 1000, maximum: 3600000 },
       },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "apply_changes",
+    description: "Cold-build and deploy only changed project files through DevEco CLI 1.3 apply mode. Run start_app once first; this is not a persistent hot-reload process.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        files: { type: "array", minItems: 1, items: { type: "string" }, description: "Changed files inside the selected project." },
+        hvd: { type: "string", description: "Target device; resolved automatically when exactly one is connected." },
+        product: { type: "string", description: "Product name from build-profile.json5." },
+        build_mode: { type: "string", description: "Build mode, such as debug or release." },
+        project_path: { type: "string", description: "Optional project root; otherwise the active project from switch_cwd." },
+        timeoutMs: { type: "integer", minimum: 1000, maximum: 3600000 },
+      },
+      required: ["files"],
       additionalProperties: false,
     },
   },
@@ -274,13 +334,13 @@ const localTools = [
   },
   {
     name: "lsp",
-    description: "Run any official DevEco LSP operation: definition, references, hover, document/workspace symbols, implementation, or call hierarchy. Request line/character are 1-based, but the response is the raw LSP payload, so positions inside it are 0-based; the go_to_definition / find_references / get_hover / list_symbols / find_call_hierarchy wrappers normalise theirs to 1-based.",
+    description: "Run any official DevEco LSP operation: definition, declaration, references, hover, document/workspace symbols, implementation, or call hierarchy. Request line/character are 1-based, but the response is the raw LSP payload, so positions inside it are 0-based; the dedicated wrappers normalise theirs to 1-based.",
     inputSchema: {
       type: "object",
       properties: {
         operation: {
           type: "string",
-          enum: ["goToDefinition", "findReferences", "hover", "documentSymbol", "workspaceSymbol", "goToImplementation", "prepareCallHierarchy", "incomingCalls", "outgoingCalls"],
+          enum: ["goToDefinition", "goToDeclaration", "findReferences", "hover", "documentSymbol", "workspaceSymbol", "goToImplementation", "prepareCallHierarchy", "incomingCalls", "outgoingCalls"],
         },
         filePath: { type: "string", description: "Absolute or project-relative source file path." },
         line: { type: "integer", minimum: 1 },
@@ -294,6 +354,20 @@ const localTools = [
   {
     name: "go_to_definition",
     description: "Go to the ArkTS/TypeScript definition at an absolute file position.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        file: { type: "string" },
+        line: { type: "integer", minimum: 1 },
+        column: { type: "integer", minimum: 1 },
+      },
+      required: ["file", "line", "column"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "go_to_declaration",
+    description: "Go to the ArkTS/TypeScript declaration at an absolute file position.",
     inputSchema: {
       type: "object",
       properties: {
@@ -611,8 +685,20 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       return plainResult(await buildProject(args));
     }
 
+    if (name === "project_sync") {
+      return plainResult(await projectSync(args));
+    }
+
+    if (name === "api_compat_check") {
+      return plainResult(await apiCompatibilityCheck(args));
+    }
+
     if (name === "start_app") {
       return plainResult(await startApp(args));
+    }
+
+    if (name === "apply_changes") {
+      return plainResult(await applyChanges(args));
     }
 
     if (name === "hdc_log") {
@@ -629,6 +715,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
     if (name === "go_to_definition") {
       return textResult(await goToDefinition(args));
+    }
+
+    if (name === "go_to_declaration") {
+      return textResult(await goToDeclaration(args));
     }
 
     if (name === "get_hover") {
