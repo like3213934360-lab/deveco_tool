@@ -1851,6 +1851,36 @@ test("default screenshots are session-temporary and their device copies are remo
   cleanupUiTemporaryFiles();
 });
 
+test("the first capture removes only stale screenshot artifacts from the legacy temp directory", async (t) => {
+  const fake = await makeUiHdc();
+  const legacyDirectory = path.join(os.tmpdir(), "deveco-ui", fake.device);
+  const staleSnapshot = path.join(legacyDirectory, "snapshot-123-1.jpeg");
+  const freshSnapshot = path.join(legacyDirectory, "snapshot-456-2.png");
+  const staleObserveArchive = path.join(legacyDirectory, "observe.tar");
+  const displayCache = path.join(legacyDirectory, "display.json");
+  await fs.mkdir(legacyDirectory, { recursive: true });
+  await fs.writeFile(staleSnapshot, "old temporary frame");
+  await fs.writeFile(freshSnapshot, "active old-client frame");
+  await fs.writeFile(staleObserveArchive, "old archive containing a frame");
+  await fs.writeFile(displayCache, JSON.stringify({ width: 1276, height: 2848 }));
+  const staleTime = new Date(Date.now() - 11 * 60 * 1000);
+  await fs.utimes(staleSnapshot, staleTime, staleTime);
+  await fs.utimes(staleObserveArchive, staleTime, staleTime);
+
+  t.after(async () => {
+    await fs.rm(fake.directory, { recursive: true, force: true });
+    await fs.rm(legacyDirectory, { recursive: true, force: true });
+    cleanupUiTemporaryFiles();
+  });
+
+  const report = await withHdcPath(fake.executable, () => uiSnapshot());
+  assert.equal(fsSync.existsSync(staleSnapshot), false);
+  assert.equal(fsSync.existsSync(staleObserveArchive), false);
+  assert.equal(fsSync.existsSync(freshSnapshot), true);
+  assert.equal(fsSync.existsSync(displayCache), true);
+  removeUiTemporaryFile(report.localPath);
+});
+
 test("the MCP deletes a default screenshot after returning it inline", async (t) => {
   const fake = await makeUiHdc();
   const transport = new StdioClientTransport({
@@ -2847,6 +2877,8 @@ test("ui_observe returns one frame and one tree from a single device round trip"
   assert.ok(report.bytes >= 512, "the frame must come back too");
   assert.ok(report.signature && report.structureSignature, "both signatures ride along");
   assert.equal(report.nativeWidth, 1276);
+  assert.equal(fsSync.existsSync(path.join(path.dirname(report.localPath), "observe.tar")), false,
+    "the local archive contains a screenshot and must be removed as soon as it is parsed");
 
   const argv = await fake.argv();
   const fused = argv.find((line) => line.includes("OBSERVE_OK"));

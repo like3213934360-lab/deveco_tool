@@ -137,6 +137,7 @@ const UI_TEMP_SESSION = path.join(
 const UI_TEMP_FILE_TTL_MS = 10 * 60 * 1000;
 const uiTemporaryFileTimers = new Map();
 let localSessionsSwept = false;
+const legacyArtifactDirectoriesSwept = new Set();
 
 function fail(message, code, hint) {
   const error = new Error(message);
@@ -247,6 +248,44 @@ function sweepAbandonedLocalSessions() {
   }
 }
 
+/**
+ * Remove screenshots written by releases that predate the per-process session directory.
+ *
+ * Old defaults lived directly under `deveco-ui/<device>/`; `display.json` still intentionally
+ * lives there, so only generated snapshot names and the old fused-observe archive are eligible.
+ * Refusing symlinked directories/files keeps this migration sweep inside our temp root.
+ */
+function sweepLegacyLocalArtifacts(deviceId) {
+  const safeDeviceId = sanitizeForPath(deviceId);
+  if (legacyArtifactDirectoriesSwept.has(safeDeviceId)) return;
+  legacyArtifactDirectoriesSwept.add(safeDeviceId);
+
+  const directory = path.join(UI_TEMP_ROOT, safeDeviceId);
+  let entries;
+  try {
+    const directoryStat = fs.lstatSync(directory);
+    if (!directoryStat.isDirectory() || directoryStat.isSymbolicLink()) return;
+    entries = fs.readdirSync(directory, { withFileTypes: true });
+  } catch {
+    return;
+  }
+
+  const staleBefore = Date.now() - UI_TEMP_FILE_TTL_MS;
+  for (const entry of entries) {
+    const generatedSnapshot = /^snapshot-\d+-\d+\.(?:jpe?g|png)$/i.test(entry.name);
+    if (!entry.isFile() || (!generatedSnapshot && entry.name !== "observe.tar")) continue;
+    const file = path.join(directory, entry.name);
+    try {
+      const stat = fs.lstatSync(file);
+      if (stat.isFile() && !stat.isSymbolicLink() && stat.mtimeMs <= staleBefore) {
+        fs.rmSync(file, { force: true });
+      }
+    } catch {
+      // Temp cleanup is best-effort and must never make a capture fail.
+    }
+  }
+}
+
 function isManagedTemporaryFile(file) {
   const relative = path.relative(UI_TEMP_SESSION, path.resolve(file));
   return relative !== "" && !relative.startsWith("..") && !path.isAbsolute(relative);
@@ -342,6 +381,7 @@ function defaultLocalDirectory(deviceId) {
   // screenshots into the repository. Each process owns one session directory, which is removed on
   // normal MCP shutdown; abandoned sessions are reclaimed by the next process.
   sweepAbandonedLocalSessions();
+  sweepLegacyLocalArtifacts(deviceId);
   return path.join(UI_TEMP_SESSION, sanitizeForPath(deviceId));
 }
 
@@ -868,6 +908,7 @@ export async function uiObserve(input = {}) {
       scale: scaleArguments(readDisplaySize(deviceId), targetWidth),
       displayId,
     };
+    const archivePath = path.join(directory, "observe.tar");
 
     try {
     const result = await execHdc(
@@ -886,7 +927,6 @@ export async function uiObserve(input = {}) {
       });
     }
 
-    const archivePath = path.join(directory, "observe.tar");
     await pullArtifact(hdc, deviceId, targets.archive, archivePath, timeoutMs, {
       emptyCode: "UI_OBSERVE_EMPTY",
       minBytes: MIN_TAR_BYTES,
@@ -948,6 +988,7 @@ export async function uiObserve(input = {}) {
       frameSignature: bytes ? frameSignatureOf(localImage) : null,
     };
     } finally {
+      fs.rmSync(archivePath, { force: true });
       await removeDeviceArtifacts(hdc, deviceId, [
         targets.snap, targets.dump, targets.snapLog, targets.dumpLog, targets.archive,
       ], timeoutMs);
