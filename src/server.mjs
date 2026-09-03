@@ -39,6 +39,7 @@ import {
 } from "./deveco-official.mjs";
 import { closeHotReload, hotReload } from "./hotreload.mjs";
 import { uiFind, uiObserve, uiSnapshot, uiTap } from "./device-ui.mjs";
+import { closeUiFlows, recordSuccessfulUiAction, uiFlow } from "./arkpilot/flow-service.mjs";
 import { validateDocument } from "./document-validate.mjs";
 import { hdcLog, hdcStatus } from "./hdc-log.mjs";
 import {
@@ -246,6 +247,54 @@ const officialTools = [
 
 const localTools = [
   ...officialTools,
+  {
+    name: "ui_flow",
+    description: "Record, validate, store, and replay deterministic HarmonyOS UI flows through ArkPilot. Start recording before driving the device with ui_tap; successful local actions are appended automatically. Replays launch the already-installed app directly, use semantic waits instead of screenshots, and capture diagnostics only on failure. Long runs return a job_id instead of exceeding common 30-second MCP deadlines.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        action: {
+          type: "string",
+          enum: ["record_start", "record_status", "record_stop", "record_cancel", "run", "status", "cancel", "list", "get", "validate", "delete"],
+        },
+        id: { type: "string", pattern: "^[a-z0-9](?:[a-z0-9_-]{0,62}[a-z0-9])?$" },
+        name: { type: "string", minLength: 1 },
+        recording_id: { type: "string" },
+        job_id: { type: "string" },
+        project_path: { type: "string" },
+        hvd: { type: "string", description: "Exact hdc device id; required when several devices are connected." },
+        bundle_name: { type: "string" },
+        module: { type: "string" },
+        ability: { type: "string" },
+        start_policy: { type: "string", enum: ["restart", "attach"] },
+        backend: { type: "string", enum: ["hdc-shell", "hypium"] },
+        wait_ms: { type: "integer", minimum: 0, maximum: 20000 },
+        timeoutMs: { type: "integer", minimum: 1000, maximum: 600000 },
+        variables: { type: "object", additionalProperties: { type: ["string", "number", "boolean"] } },
+        flow: { type: "object", additionalProperties: true },
+        success_selector: {
+          type: "object",
+          properties: {
+            key: { type: "string" }, text: { type: "string" }, type: { type: "string" },
+            clickableOnly: { type: "boolean" },
+          },
+          additionalProperties: false,
+        },
+        success_state: { type: "string", enum: ["visible", "hidden"] },
+        success_timeout_ms: { type: "integer", minimum: 100, maximum: 600000 },
+        allow_unverified: { type: "boolean" },
+      },
+      required: ["action"],
+      allOf: [
+        { if: { properties: { action: { const: "record_start" } } }, then: { required: ["id", "name"] } },
+        { if: { properties: { action: { enum: ["record_status", "record_stop", "record_cancel"] } } }, then: { required: ["recording_id"] } },
+        { if: { properties: { action: { enum: ["run", "get", "delete"] } } }, then: { required: ["id"] } },
+        { if: { properties: { action: { enum: ["status", "cancel"] } } }, then: { required: ["job_id"] } },
+        { if: { properties: { action: { const: "validate" } } }, then: { anyOf: [{ required: ["id"] }, { required: ["flow"] }] } },
+      ],
+      additionalProperties: false,
+    },
+  },
   {
     name: "deveco_script_catalog",
     description: "List the allowlisted DevEco skill scripts that can be executed through this unified MCP.",
@@ -1087,7 +1136,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     }
 
     if (name === "ui_tap") {
-      return textResult(await uiTap(args));
+      const result = await uiTap(args);
+      const recording = await recordSuccessfulUiAction(args, result);
+      return textResult(recording ? { ...result, recording } : result);
+    }
+
+    if (name === "ui_flow") {
+      const result = await uiFlow(args);
+      return textResult(result, result.status === "FAILED");
     }
 
     if (DISABLED_CODEGENIE_TOOLS.includes(name)) {
@@ -1153,7 +1209,9 @@ function waitForShutdownTimeout(timeoutMs) {
 async function shutdown() {
   if (shutdownPromise) return shutdownPromise;
   shutdownPromise = (async () => {
-    const cleanup = Promise.allSettled([shutdownLsp(), closeCodeGenie(), closeHotReload(), closeBuildProjectJobs()]);
+    const cleanup = Promise.allSettled([
+      shutdownLsp(), closeCodeGenie(), closeHotReload(), closeBuildProjectJobs(), closeUiFlows(),
+    ]);
     await Promise.race([cleanup, waitForShutdownTimeout(5000)]);
     process.exit(0);
   })();

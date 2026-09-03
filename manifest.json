@@ -681,8 +681,8 @@
       },
       {
         "group": "device-ui",
-        "tools": ["get_app_ui_tree", "perform_ui_action", "ui_snapshot", "ui_observe", "ui_find", "ui_tap", "ui_inspect", "ui_control"],
-        "note": "Read and drive the UI of a connected device. The upstream UI auto-verification tools (verify_ui, save_ui_screenshot, get_ui_verification_log) are disabled by this gateway: verify_ui needs a multimodal model this pack does not configure, and the other two are keyed by a verify_ui run id. Calling them returns TOOL_DISABLED. perform_ui_action resolves `hvd` from the connected devices when it is omitted. get_app_ui_tree and perform_ui_action are proxied to the CodeGenie child and stay exactly as upstream shipped them; ui_snapshot / ui_find / ui_tap are local implementations over hdc (src/device-ui.mjs) covering the same capture / locate / input loop, measurably faster and still working when that child stalls."
+        "tools": ["get_app_ui_tree", "perform_ui_action", "ui_snapshot", "ui_observe", "ui_find", "ui_tap", "ui_flow", "ui_inspect", "ui_control"],
+        "note": "Read and drive the UI of a connected device. ui_flow records successful ui_tap actions into project-local .arkpilot flows and replays them without model/screenshot round trips. The upstream UI auto-verification tools (verify_ui, save_ui_screenshot, get_ui_verification_log) are disabled by this gateway: verify_ui needs a multimodal model this pack does not configure, and the other two are keyed by a verify_ui run id. Calling them returns TOOL_DISABLED. perform_ui_action resolves `hvd` from the connected devices when it is omitted. get_app_ui_tree and perform_ui_action are proxied to the CodeGenie child and stay exactly as upstream shipped them; ui_snapshot / ui_find / ui_tap / ui_flow are local implementations over hdc and still work when that child stalls."
       },
       {
         "group": "emulator",
@@ -695,7 +695,7 @@
         "note": "Section-structure check for spec.md / plan.md / tasks.md, ported from the upstream spec_write pipeline. Upstream ran it automatically after its own writer; this pack uses the host's write tool, so the SDD commands call it explicitly once the artifact is written. It reports and never blocks."
       }
     ],
-    "toolCount": 43
+    "toolCount": 44
   },
   "hostToolMapping": {
     "$comment": "Tools the upstream commands assumed, which this pack does NOT provide. Map them onto your host's equivalents before running the SDD commands.",
