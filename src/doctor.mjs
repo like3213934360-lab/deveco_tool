@@ -62,7 +62,7 @@ export async function collectDoctorReport(options = {}) {
     environment: collectEnvironmentStatus(),
     project: getProjectContext(),
     scripts: listScripts(),
-    python: pythonStatus(),
+    python: await pythonStatus(),
     codegenie: {
       // Advertised from a static table, so these stay callable names even when the child is down.
       advertised: PROXIED_CODEGENIE_TOOL_NAMES,
@@ -80,6 +80,6 @@ export async function collectDoctorReport(options = {}) {
     devecoCli: devecoCliStatus(),
     lsp: lspStatus(),
     hdc: hdcStatus(),
-    auth: authStatus(),
+    auth: await authStatus(),
   };
 }

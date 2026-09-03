@@ -2,7 +2,7 @@ import path from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { ListRootsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
-import { REPO_ROOT, resolveDevecoHome } from "./config.mjs";
+import { REPO_ROOT, resolveDevecoHome, resolveDevecoToolchain } from "./config.mjs";
 import { getProjectPath } from "./project-context.mjs";
 
 let client;
@@ -65,8 +65,10 @@ function wrapperPath() {
 
 function childEnvironment() {
   const devecoHome = resolveDevecoHome().path;
+  const toolchain = resolveDevecoToolchain();
   return {
-    ...(devecoHome ? { DEVECO_PATH: devecoHome, DEVECO_HOME: devecoHome } : {}),
+    ...(devecoHome && toolchain.kind === "studio" ? { DEVECO_PATH: devecoHome, DEVECO_HOME: devecoHome } : {}),
+    ...(toolchain.kind === "clt" ? { DEVECO_CLI_CLT_PATH: toolchain.root } : {}),
     // UI_VERIFY_* is deliberately not forwarded: the gateway disables the
     // verify_ui chain, so passing model credentials through would be dead config.
     ...(process.env.PROJECT_PATH ? { PROJECT_PATH: process.env.PROJECT_PATH } : {}),

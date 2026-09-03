@@ -1,13 +1,13 @@
 import { spawn } from "node:child_process";
 import fs from "node:fs";
 import { resolveHdcPath } from "./config.mjs";
+import { terminateProcessTree } from "./process-tree.mjs";
 
 function targetArgs(deviceId) {
   return deviceId ? ["-t", String(deviceId)] : [];
 }
 
-/** hdc ignoring SIGTERM would leave a process holding the device, so escalate rather than leak it. */
-const SIGKILL_GRACE_MS = 2000;
+const MAX_HDC_STREAM_BYTES = 8 * 1024 * 1024;
 
 /**
  * Run hdc under a deadline.
@@ -28,15 +28,15 @@ function run(command, timeoutMs = 120000, { resolveOnTimeout = false } = {}) {
     const child = spawn(command[0], command.slice(1), {
       stdio: ["ignore", "pipe", "pipe"],
       env: process.env,
+      detached: process.platform !== "win32",
     });
     let stdout = "";
     let stderr = "";
+    let stdoutBytes = 0;
+    let stderrBytes = 0;
     let settled = false;
     const timer = setTimeout(() => {
-      child.kill("SIGTERM");
-      const killer = setTimeout(() => child.kill("SIGKILL"), SIGKILL_GRACE_MS);
-      killer.unref?.();
-      child.once("close", () => clearTimeout(killer));
+      terminateProcessTree(child);
       if (settled) return;
       settled = true;
       if (resolveOnTimeout) {
@@ -47,8 +47,25 @@ function run(command, timeoutMs = 120000, { resolveOnTimeout = false } = {}) {
       error.code = "HDC_TIMEOUT";
       reject(error);
     }, timeoutMs);
-    child.stdout.on("data", (chunk) => { stdout += chunk.toString(); });
-    child.stderr.on("data", (chunk) => { stderr += chunk.toString(); });
+    const append = (stream, chunk) => {
+      if (settled) return;
+      const nextBytes = stream === "stdout" ? stdoutBytes + chunk.length : stderrBytes + chunk.length;
+      if (stream === "stdout") stdoutBytes = nextBytes;
+      else stderrBytes = nextBytes;
+      if (nextBytes > MAX_HDC_STREAM_BYTES) {
+        settled = true;
+        clearTimeout(timer);
+        terminateProcessTree(child);
+        const error = new Error(`HDC ${stream} exceeded the ${MAX_HDC_STREAM_BYTES}-byte output limit`);
+        error.code = "HDC_OUTPUT_LIMIT";
+        reject(error);
+        return;
+      }
+      if (stream === "stdout") stdout += chunk.toString();
+      else stderr += chunk.toString();
+    };
+    child.stdout.on("data", (chunk) => append("stdout", chunk));
+    child.stderr.on("data", (chunk) => append("stderr", chunk));
     child.once("error", (error) => {
       clearTimeout(timer);
       if (!settled) {

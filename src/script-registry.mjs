@@ -1,7 +1,7 @@
-import { spawn, spawnSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { REPO_ROOT, resolveDevecoHome } from "./config.mjs";
+import { REPO_ROOT, resolveDevecoHome, resolveDevecoToolchain } from "./config.mjs";
 import { getProjectPath } from "./project-context.mjs";
 // Shared with the DevEco CLI runner; see that module for why the hvigor daemon stays out of reach.
 import { terminateProcessTree } from "./process-tree.mjs";
@@ -16,7 +16,7 @@ const SCRIPT_DEFINITIONS = {
   detect_sdk: {
     skill: "deveco-create-project",
     file: "scripts/detect-sdk.mjs",
-    description: "Detect the API level and SDK metadata from the configured DevEco Studio.",
+    description: "Detect the API level and SDK metadata from configured DevEco Studio or Command Line Tools.",
   },
   collect_hilog: {
     skill: "arkts-runtime-fix",
@@ -124,14 +124,40 @@ const SCRIPT_DEFINITIONS = {
  * Locate a Python interpreter for `runtime: "python"` scripts.
  * An explicit PYTHON is authoritative: if it is set but unusable, report that rather than silently
  * falling back to a different interpreter, which is how a script ends up running without Pillow.
- * @returns {string|null} The interpreter command, or null when none is usable.
+ * @returns {Promise<string|null>} The interpreter command, or null when none is usable.
  */
-export function resolvePython() {
+function probeCommand(command, args, capture = false) {
+  return new Promise((resolve) => {
+    const child = spawn(command, args, {
+      stdio: ["ignore", capture ? "pipe" : "ignore", capture ? "pipe" : "ignore"],
+      windowsHide: true,
+      detached: process.platform !== "win32",
+    });
+    let stdout = "";
+    let stderr = "";
+    let settled = false;
+    const finish = (result) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve(result);
+    };
+    const timer = setTimeout(() => {
+      terminateProcessTree(child);
+      finish({ ok: false, stdout, stderr });
+    }, 3000);
+    child.stdout?.on("data", (chunk) => { stdout = `${stdout}${chunk}`.slice(-16384); });
+    child.stderr?.on("data", (chunk) => { stderr = `${stderr}${chunk}`.slice(-16384); });
+    child.once("error", () => finish({ ok: false, stdout, stderr }));
+    child.once("close", (code) => finish({ ok: code === 0, stdout, stderr }));
+  });
+}
+
+export async function resolvePython() {
   const explicit = process.env.PYTHON;
   const candidates = explicit ? [explicit] : ["python3", "python"];
   for (const candidate of candidates) {
-    const probe = spawnSync(candidate, ["--version"], { stdio: "ignore" });
-    if (!probe.error && probe.status === 0) return candidate;
+    if ((await probeCommand(candidate, ["--version"])).ok) return candidate;
   }
   return null;
 }
@@ -140,19 +166,59 @@ export function resolvePython() {
  * Report whether Pillow is importable by the resolved interpreter.
  * ui_score.py is the only script with a third-party dependency, and the system python3 on macOS
  * usually does not have it, so this has to be checked rather than assumed.
- * @returns {{available: boolean, python: string|null, version: string|null, pillow: boolean}} Status.
+ * @returns {Promise<{available: boolean, python: string|null, version: string|null, pillow: boolean}>} Status.
  */
-export function pythonStatus() {
-  const python = resolvePython();
+export async function pythonStatus() {
+  const python = await resolvePython();
   if (!python) return { available: false, python: null, version: null, pillow: false };
-  const version = spawnSync(python, ["--version"], { encoding: "utf8" });
-  const pillow = spawnSync(python, ["-c", "import PIL"], { stdio: "ignore" });
+  const version = await probeCommand(python, ["--version"], true);
+  const pillow = await probeCommand(python, ["-c", "import PIL"]);
   return {
     available: true,
     python,
     version: (version.stdout || version.stderr || "").trim() || null,
-    pillow: !pillow.error && pillow.status === 0,
+    pillow: pillow.ok,
   };
+}
+
+/**
+ * Give registered Skill scripts the same bundled toolchain visibility as the
+ * native DevEco CLI wrappers. GUI-launched MCP hosts commonly provide a very
+ * small PATH, while the Python test runners locate `hvigorw` with
+ * `shutil.which()`. DEVECO_HOME alone is therefore not sufficient.
+ *
+ * @param {NodeJS.ProcessEnv} base Parent environment.
+ * @param {ReturnType<typeof resolveDevecoToolchain>} toolchain Resolved Studio/CLT layout.
+ * @returns {NodeJS.ProcessEnv} Child environment with bundled executables first on PATH.
+ */
+export function registeredScriptEnvironment(base, toolchain = resolveDevecoToolchain()) {
+  const env = { ...base };
+  const paths = toolchain.paths;
+  if (!paths) return env;
+
+  const pathKey = process.platform === "win32"
+    ? Object.keys(env).find((key) => key.toLowerCase() === "path") ?? "Path"
+    : "PATH";
+  const bundledDirectories = [paths.hvigor, paths.ohpm, paths.node, paths.hdc, paths.emulator]
+    .filter(Boolean)
+    .map((entry) => path.dirname(entry));
+  const inheritedDirectories = String(env[pathKey] ?? "").split(path.delimiter).filter(Boolean);
+  const seen = new Set();
+  env[pathKey] = [...bundledDirectories, ...inheritedDirectories]
+    .filter((entry) => {
+      const key = process.platform === "win32" ? entry.toLowerCase() : entry;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .join(path.delimiter);
+
+  if (!env.NODE_HOME && paths.node) {
+    env.NODE_HOME = process.platform === "win32"
+      ? path.dirname(paths.node)
+      : path.dirname(path.dirname(paths.node));
+  }
+  return env;
 }
 
 function scriptPath(definition) {
@@ -245,13 +311,15 @@ export async function runRegisteredScript(id, input = {}) {
     : objectToArgv(rawArgs);
   const timeoutMs = Math.min(Math.max(Number(input.timeoutMs ?? 120000), 1000), 600000);
   const devecoHome = resolveDevecoHome().path;
-  const childEnv = { ...process.env };
+  const toolchain = resolveDevecoToolchain();
+  const childEnv = registeredScriptEnvironment(process.env, toolchain);
   if (devecoHome) childEnv.DEVECO_HOME = devecoHome;
+  if (toolchain.paths?.sdk) childEnv.DEVECO_SDK_HOME = toolchain.paths.sdk;
 
   const runtime = definition.runtime ?? "node";
   let command = process.execPath;
   if (runtime === "python") {
-    const python = resolvePython();
+    const python = await resolvePython();
     if (!python) {
       const error = new Error(`${id} needs a Python interpreter and none was usable.`);
       error.code = "PYTHON_NOT_FOUND";
@@ -275,6 +343,8 @@ export async function runRegisteredScript(id, input = {}) {
     });
     let stdout = "";
     let stderr = "";
+    let stdoutBytes = 0;
+    let stderrBytes = 0;
     let settled = false;
 
     const timer = setTimeout(() => {
@@ -287,8 +357,26 @@ export async function runRegisteredScript(id, input = {}) {
       }
     }, timeoutMs);
 
-    child.stdout.on("data", (chunk) => { stdout += chunk.toString(); });
-    child.stderr.on("data", (chunk) => { stderr += chunk.toString(); });
+    const rejectLargeOutput = (stream, bytes, limit) => {
+      if (settled || bytes <= limit) return false;
+      settled = true;
+      clearTimeout(timer);
+      terminateProcessTree(child);
+      const error = new Error(`Script ${id} ${stream} exceeded the ${limit}-byte output limit`);
+      error.code = "SCRIPT_OUTPUT_LIMIT";
+      reject(error);
+      return true;
+    };
+    child.stdout.on("data", (chunk) => {
+      if (settled) return;
+      stdoutBytes += chunk.length;
+      if (!rejectLargeOutput("stdout", stdoutBytes, 4 * 1024 * 1024)) stdout += chunk.toString();
+    });
+    child.stderr.on("data", (chunk) => {
+      if (settled) return;
+      stderrBytes += chunk.length;
+      if (!rejectLargeOutput("stderr", stderrBytes, 1024 * 1024)) stderr += chunk.toString();
+    });
     child.once("error", (error) => {
       clearTimeout(timer);
       if (!settled) {

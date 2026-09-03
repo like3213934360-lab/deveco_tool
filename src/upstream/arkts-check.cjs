@@ -29,7 +29,8 @@ function parseArgs(argv) {
 // --- DevEco SDK detection ---
 
 function findDevecoHome() {
-  const envHome = (process.env.DEVECO_HOME || '').trim();
+  // LOCAL PATCH: Command Line Tools uses the same sdk/ layout and is the only supported Linux toolchain.
+  const envHome = (process.env.DEVECO_HOME || process.env.DEVECO_CLI_CLT_PATH || '').trim();
   if (envHome && fs.existsSync(envHome)) return envHome;
 
   const candidates = [];
@@ -308,7 +309,7 @@ function main() {
 
   const devecoHome = findDevecoHome();
   if (!devecoHome) {
-    process.stdout.write(JSON.stringify({ success: false, error: 'Cannot find DevEco Studio. Set DEVECO_HOME environment variable.', errors: [], summary: { errorCount: 0, warnCount: 0 } }));
+    process.stdout.write(JSON.stringify({ success: false, error: 'Cannot find a DevEco Studio or Command Line Tools SDK. Set DEVECO_CLI_STUDIO_PATH or DEVECO_CLI_CLT_PATH.', errors: [], summary: { errorCount: 0, warnCount: 0 } }));
     process.exit(1);
   }
 

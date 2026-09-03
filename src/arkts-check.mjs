@@ -2,10 +2,13 @@ import fs from "node:fs";
 import path from "node:path";
 import { spawn } from "node:child_process";
 import { readModuleEntries } from "./build-profile.mjs";
-import { REPO_ROOT, resolveDevecoHome } from "./config.mjs";
+import { REPO_ROOT, resolveDevecoHome, resolveDevecoToolchain } from "./config.mjs";
 import { getProjectPath } from "./project-context.mjs";
+import { terminateProcessTree } from "./process-tree.mjs";
 
 const CHECKER = path.join(REPO_ROOT, "src", "upstream", "arkts-check.cjs");
+const MAX_CHECKER_STDOUT_BYTES = 16 * 1024 * 1024;
+const MAX_CHECKER_STDERR_BYTES = 256 * 1024;
 
 function projectRoot(explicit) {
   const candidate = explicit || getProjectPath() || process.env.PROJECT_PATH;
@@ -148,12 +151,15 @@ function runNode(argv, cwd, timeoutMs, env) {
       cwd,
       env,
       stdio: ["ignore", "pipe", "pipe"],
+      detached: process.platform !== "win32",
     });
     let stdout = "";
     let stderr = "";
+    let stdoutBytes = 0;
+    let stderrBytes = 0;
     let settled = false;
     const timer = setTimeout(() => {
-      child.kill("SIGTERM");
+      terminateProcessTree(child);
       if (!settled) {
         settled = true;
         const error = new Error(`ArkTS checker timed out after ${timeoutMs}ms`);
@@ -161,8 +167,30 @@ function runNode(argv, cwd, timeoutMs, env) {
         reject(error);
       }
     }, timeoutMs);
-    child.stdout.on("data", (chunk) => { stdout += chunk.toString(); });
-    child.stderr.on("data", (chunk) => { stderr += chunk.toString(); });
+    child.stdout.on("data", (chunk) => {
+      if (settled) return;
+      stdoutBytes += chunk.length;
+      if (stdoutBytes > MAX_CHECKER_STDOUT_BYTES) {
+        settled = true;
+        clearTimeout(timer);
+        terminateProcessTree(child);
+        const error = new Error(
+          `ArkTS checker output exceeded ${MAX_CHECKER_STDOUT_BYTES} bytes; narrow the file set or run the official code_lint/build_project tool.`,
+        );
+        error.code = "ARKTS_CHECK_OUTPUT_LIMIT";
+        reject(error);
+        return;
+      }
+      stdout += chunk.toString();
+    });
+    child.stderr.on("data", (chunk) => {
+      if (settled) return;
+      stderrBytes += chunk.length;
+      const text = chunk.toString();
+      stderr = stderrBytes > MAX_CHECKER_STDERR_BYTES
+        ? `${stderr}${text}`.slice(-MAX_CHECKER_STDERR_BYTES)
+        : stderr + text;
+    });
     child.once("error", (error) => {
       clearTimeout(timer);
       if (!settled) {
@@ -242,8 +270,10 @@ export async function runArktsCheck({ files = [], project_path: explicitProject,
     600000,
   );
   const home = resolveDevecoHome().path;
+  const toolchain = resolveDevecoToolchain();
   const env = { ...process.env };
   if (home) env.DEVECO_HOME = home;
+  if (toolchain.paths?.sdk) env.DEVECO_SDK_HOME = toolchain.paths.sdk;
   const result = await runNode(argv, project, boundedTimeout, env);
   let parsed;
   try {
@@ -257,6 +287,9 @@ export async function runArktsCheck({ files = [], project_path: explicitProject,
   }
   return {
     ...parsed,
+    checkKind: "static-precheck",
+    compilationVerified: false,
+    verificationHint: "arkts_check is a fast static precheck and can miss SDK/type-resolution errors. Use build_project for authoritative compilation verification.",
     projectPath: project,
     files: normalizedFiles,
     checkedFileCount: targets.length,

@@ -27,9 +27,11 @@ import {
   APP_ID,
   PREFERRED_PORTS,
   LOGIN_TIMEOUT_MS,
+  NETWORK_TIMEOUT_MS,
   ACCESS_TOKEN_TTL_MS,
 } from "./config.mjs";
 import { deleteCredential, readCredential, writeCredential } from "./credential-store.mjs";
+import { terminateProcessTree } from "../process-tree.mjs";
 
 const STORE_DIR = path.join(os.homedir(), ".deveco-knowledge-mcp");
 const AUTH_FILE = path.join(STORE_DIR, "auth.json");
@@ -43,9 +45,9 @@ function logErr(...args) {
  * 读取本地保存的登录态
  * @returns {object|null} 存储对象或 null
  */
-function loadAuth() {
+async function loadAuth() {
   try {
-    return readCredential(AUTH_FILE);
+    return await readCredential(AUTH_FILE);
   } catch (error) {
     logErr("failed to load encrypted login state:", error.message);
     return null;
@@ -57,17 +59,27 @@ function loadAuth() {
  * @param {object} data 存储对象
  * @returns {void}
  */
-function saveAuth(data) {
+async function saveAuth(data) {
   fs.mkdirSync(STORE_DIR, { recursive: true, mode: 0o700 });
-  writeCredential(AUTH_FILE, data);
+  await writeCredential(AUTH_FILE, data);
 }
 
 /**
  * 清除本地登录态
  * @returns {void}
  */
-export function clearAuth() {
-  deleteCredential(AUTH_FILE);
+export async function clearAuth() {
+  await deleteCredential(AUTH_FILE);
+}
+
+async function fetchWithDeadline(url, options, operation) {
+  try {
+    return await fetch(url, { ...options, signal: AbortSignal.timeout(NETWORK_TIMEOUT_MS) });
+  } catch (error) {
+    const wrapped = new Error(`${operation} failed: ${error.name === "TimeoutError" ? `network timeout after ${NETWORK_TIMEOUT_MS}ms` : error.message}`);
+    wrapped.code = error.name === "TimeoutError" ? "DEVECO_NETWORK_TIMEOUT" : "DEVECO_NETWORK_FAILED";
+    throw wrapped;
+  }
 }
 
 /**
@@ -104,11 +116,27 @@ function openBrowser(url) {
       : process.platform === "darwin"
         ? ["open", [url]]
         : ["xdg-open", [url]];
-    const child = spawn(command, args, { stdio: "ignore", windowsHide: true });
-    child.once("error", reject);
+    const child = spawn(command, args, {
+      stdio: "ignore", windowsHide: true, detached: process.platform !== "win32",
+    });
+    let settled = false;
+    const finish = (error) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      if (error) reject(error);
+      else resolve();
+    };
+    const timer = setTimeout(() => {
+      terminateProcessTree(child);
+      const error = new Error(`${command} did not return after ${NETWORK_TIMEOUT_MS}ms`);
+      error.code = "DEVECO_BROWSER_TIMEOUT";
+      finish(error);
+    }, NETWORK_TIMEOUT_MS);
+    child.once("error", finish);
     child.once("close", (code) => {
-      if (code === 0) resolve();
-      else reject(new Error(`${command} exited with code ${code ?? "unknown"}`));
+      if (code === 0) finish();
+      else finish(new Error(`${command} exited with code ${code ?? "unknown"}`));
     });
   });
 }
@@ -181,10 +209,21 @@ function startLoopbackServer(nonce) {
         res.end("Not Found");
         return;
       }
-      if (req.method === "POST") {
-        let body = "";
-        req.on("data", (chunk) => (body += chunk.toString()));
-        req.on("end", () => handleParams(res, body.trim() ? new URLSearchParams(body) : url.searchParams));
+    if (req.method === "POST") {
+      let body = "";
+      let tooLarge = false;
+      req.on("data", (chunk) => {
+        if (tooLarge) return;
+        body += chunk.toString();
+        if (Buffer.byteLength(body) > 64 * 1024) {
+          tooLarge = true;
+          res.writeHead(413);
+          res.end("Payload Too Large");
+        }
+      });
+      req.on("end", () => {
+        if (!tooLarge) handleParams(res, body.trim() ? new URLSearchParams(body) : url.searchParams);
+      });
       } else {
         handleParams(res, url.searchParams);
       }
@@ -218,7 +257,10 @@ function startLoopbackServer(nonce) {
             rejectToken = rej;
             timer = setTimeout(() => settleErr(new Error("Login timeout: no callback received")), timeout);
           }),
-        close: () => new Promise((done) => server.close(() => done())),
+        close: () => new Promise((done) => {
+          settleErr(new Error("Login flow closed before a callback was received"));
+          server.close(() => done());
+        }),
       });
     });
 
@@ -234,7 +276,11 @@ function startLoopbackServer(nonce) {
 async function exchangeTempToken(tempToken) {
   const actual = tempToken.split("&")[0];
   const query = new URLSearchParams({ tempToken: actual, site: "CN", version: "1.0.0", appid: APP_ID });
-  const response = await fetch(`${BASE_URL}/${TEMP_TOKEN_CHECK_PATH}?${query.toString()}`);
+  const response = await fetchWithDeadline(
+    `${BASE_URL}/${TEMP_TOKEN_CHECK_PATH}?${query.toString()}`,
+    {},
+    "temptoken/check",
+  );
   if (!response.ok) {
     throw new Error(`temptoken/check failed: HTTP ${response.status}`);
   }
@@ -252,9 +298,9 @@ async function exchangeTempToken(tempToken) {
  * @returns {Promise<{ status: boolean, userInfo?: { accessToken: string, refreshToken?: string } }>}
  */
 async function checkJwtToken(jwtToken, refresh) {
-  const response = await fetch(`${BASE_URL}/${JWT_TOKEN_CHECK_PATH}`, {
+  const response = await fetchWithDeadline(`${BASE_URL}/${JWT_TOKEN_CHECK_PATH}`, {
     headers: { refresh: refresh ? "true" : "false", jwtToken },
-  });
+  }, "jwToken/check");
   if (!response.ok) {
     throw new Error(`jwToken/check failed: HTTP ${response.status}`);
   }
@@ -271,18 +317,23 @@ export async function login() {
   try {
     const loginUrl = `${BASE_URL}/${AUTH_PATH}?port=${server.port}&appid=${APP_ID}&code=${nonce}`;
     logErr("opening browser for Huawei DevEco login:", loginUrl);
+    const tempTokenPromise = server.waitForTempToken(LOGIN_TIMEOUT_MS);
+    // If launching the browser itself fails, finally closes the loopback server and rejects this
+    // promise before this function reaches its await. Attach a handler now to avoid an unhandled
+    // rejection while preserving the original rejection for the later await.
+    tempTokenPromise.catch(() => {});
     await openBrowser(loginUrl).catch((err) => {
       throw new Error(`Failed to open browser (${err.message}). Open this URL manually to log in: ${loginUrl}`);
     });
 
-    const tempToken = await server.waitForTempToken(LOGIN_TIMEOUT_MS);
+    const tempToken = await tempTokenPromise;
     const jwtToken = await exchangeTempToken(tempToken);
     const info = await checkJwtToken(jwtToken, false);
     if (!info.status || !info.userInfo || !info.userInfo.accessToken) {
       throw new Error("Login failed: server did not return an accessToken");
     }
     const payload = parseJwt(jwtToken);
-    saveAuth({
+    await saveAuth({
       jwtToken,
       accessToken: info.userInfo.accessToken,
       refreshToken: info.userInfo.refreshToken ?? "",
@@ -306,27 +357,30 @@ export async function ensureAccessToken(options = {}) {
   const interactive = options.interactive !== false;
   const force = options.force === true;
 
-  let auth = loadAuth();
+  let auth = await loadAuth();
   if (!auth || !auth.jwtToken) {
     if (!interactive) {
       throw new Error("Not logged in. Run `node src/index.mjs login`, or call the deveco_login tool.");
     }
     await login();
-    auth = loadAuth();
+    auth = await loadAuth();
   }
 
   // jwtToken 自身过期 -> 必须重新登录
+  let payload = null;
   try {
-    const payload = parseJwt(auth.jwtToken);
-    if (payload.exp && Date.now() >= payload.exp * 1000) {
-      if (!interactive) {
-        throw new Error("DevEco session expired. Run `node src/index.mjs login`, or call the deveco_login tool.");
-      }
-      await login();
-      auth = loadAuth();
-    }
+    payload = parseJwt(auth.jwtToken);
   } catch {
     /* 解析失败交由后续刷新校验 */
+  }
+  if (payload?.exp && Date.now() >= payload.exp * 1000) {
+    if (!interactive) {
+      const error = new Error("DevEco session expired. Call the deveco_login tool.");
+      error.code = "DEVECO_SESSION_EXPIRED";
+      throw error;
+    }
+    await login();
+    auth = await loadAuth();
   }
 
   const stale = force || !auth.accessToken || Date.now() - (auth.accessSavedAt ?? 0) >= ACCESS_TOKEN_TTL_MS;
@@ -340,17 +394,17 @@ export async function ensureAccessToken(options = {}) {
           refreshToken: info.userInfo.refreshToken ?? auth.refreshToken,
           accessSavedAt: Date.now(),
         };
-        saveAuth(auth);
+        await saveAuth(auth);
       } else if (interactive) {
         await login();
-        auth = loadAuth();
+        auth = await loadAuth();
       } else {
         throw new Error("Token refresh failed. Run `node src/index.mjs login`.");
       }
     } catch (err) {
       if (interactive) {
         await login();
-        auth = loadAuth();
+        auth = await loadAuth();
       } else {
         throw err;
       }
@@ -364,8 +418,8 @@ export async function ensureAccessToken(options = {}) {
  * 当前登录状态
  * @returns {{ loggedIn: boolean, userName?: string, userId?: string, sessionExpired?: boolean }}
  */
-export function authStatus() {
-  const auth = loadAuth();
+export async function authStatus() {
+  const auth = await loadAuth();
   if (!auth || !auth.jwtToken) {
     return { loggedIn: false };
   }
@@ -384,5 +438,5 @@ export function authStatus() {
  * @returns {Promise<void>}
  */
 export async function logout() {
-  clearAuth();
+  await clearAuth();
 }

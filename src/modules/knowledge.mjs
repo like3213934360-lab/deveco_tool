@@ -3,7 +3,7 @@
  * @author dreamlike
  */
 
-import { BIG_SEARCH_URL, MAX_RESULT_LENGTH, RESULT_MARKER } from "./config.mjs";
+import { BIG_SEARCH_URL, MAX_RESULT_LENGTH, NETWORK_TIMEOUT_MS, RESULT_MARKER } from "./config.mjs";
 import { ensureAccessToken } from "./auth.mjs";
 
 /**
@@ -13,11 +13,24 @@ import { ensureAccessToken } from "./auth.mjs";
  * @returns {Promise<object>} 原始响应 JSON
  */
 async function callBigSearch(question, token) {
-  const response = await fetch(BIG_SEARCH_URL, {
-    method: "POST",
-    headers: { Authorization: token, "Content-Type": "application/json" },
-    body: JSON.stringify({ question }),
-  });
+  let response;
+  try {
+    response = await fetch(BIG_SEARCH_URL, {
+      method: "POST",
+      headers: { Authorization: token, "Content-Type": "application/json" },
+      body: JSON.stringify({ question }),
+      signal: AbortSignal.timeout(NETWORK_TIMEOUT_MS),
+    });
+  } catch (error) {
+    const wrapped = new Error(`Knowledge request failed: ${error.name === "TimeoutError" ? `network timeout after ${NETWORK_TIMEOUT_MS}ms` : error.message}`);
+    wrapped.code = error.name === "TimeoutError" ? "DEVECO_NETWORK_TIMEOUT" : "DEVECO_NETWORK_FAILED";
+    throw wrapped;
+  }
+  if (!response.ok) {
+    const error = new Error(`Knowledge service failed: HTTP ${response.status}`);
+    error.code = "DEVECO_KNOWLEDGE_HTTP_ERROR";
+    throw error;
+  }
   return await response.json();
 }
 
@@ -54,12 +67,12 @@ function extractResult(data) {
  * @returns {Promise<string>} 检索结果文本
  */
 export async function searchKnowledge(question) {
-  let token = await ensureAccessToken();
+  let token = await ensureAccessToken({ interactive: false });
   let data = await callBigSearch(question, token);
 
   // token 失效 -> 强制刷新后重试一次
   if (isAuthError(data)) {
-    token = await ensureAccessToken({ force: true });
+    token = await ensureAccessToken({ force: true, interactive: false });
     data = await callBigSearch(question, token);
   }
 

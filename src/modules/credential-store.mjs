@@ -1,7 +1,8 @@
-import { spawnSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { terminateProcessTree } from "../process-tree.mjs";
 
 const KEY_LENGTH = 32;
 const IV_LENGTH = 12;
@@ -9,17 +10,51 @@ const TAG_LENGTH = 16;
 const PREFIX = "v1.";
 const SERVICE = "deveco-tool-auth";
 const AAD = "deveco-tool:auth:v1";
-const COMMAND_TIMEOUT_MS = 10000;
+// OS credential CLIs are local operations. A locked/broken keychain must not add ten seconds to
+// every doctor/status/search call; three seconds still leaves ample time for process startup.
+const COMMAND_TIMEOUT_MS = 3000;
+const MAX_PROVIDER_OUTPUT_BYTES = 64 * 1024;
 
 function command(command, args, input) {
-  const result = spawnSync(command, args, {
-    input,
-    encoding: "utf8",
-    stdio: ["pipe", "pipe", "ignore"],
-    timeout: COMMAND_TIMEOUT_MS,
-    windowsHide: true,
+  return new Promise((resolve) => {
+    let child;
+    try {
+      child = spawn(command, args, {
+        stdio: [input === undefined ? "ignore" : "pipe", "pipe", "ignore"],
+        windowsHide: true,
+        detached: process.platform !== "win32",
+      });
+    } catch {
+      resolve(undefined);
+      return;
+    }
+    let stdout = "";
+    let stdoutBytes = 0;
+    let settled = false;
+    const finish = (value) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve(value);
+    };
+    const timer = setTimeout(() => {
+      terminateProcessTree(child);
+      finish(undefined);
+    }, COMMAND_TIMEOUT_MS);
+    child.stdout.on("data", (chunk) => {
+      if (settled) return;
+      stdoutBytes += chunk.length;
+      if (stdoutBytes > MAX_PROVIDER_OUTPUT_BYTES) {
+        terminateProcessTree(child);
+        finish(undefined);
+        return;
+      }
+      stdout += chunk.toString();
+    });
+    child.once("error", () => finish(undefined));
+    child.once("close", (code) => finish(code === 0 ? stdout.trim() : undefined));
+    if (input !== undefined) child.stdin.end(input);
   });
-  return result.status === 0 && !result.error ? result.stdout.trim() : undefined;
 }
 
 function decodeKey(value) {
@@ -75,25 +110,25 @@ const DPAPI_UNPROTECT =
   + "[System.Security.Cryptography.ProtectedData]::Unprotect($b,$null,"
   + "[System.Security.Cryptography.DataProtectionScope]::CurrentUser)))";
 
-function dpapi(script, input) {
+async function dpapi(script, input) {
   return command("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", script], input);
 }
 
-function loadDpapiKey(file, allowCreate) {
+async function loadDpapiKey(file, allowCreate) {
   if (fs.existsSync(file)) {
     const content = fs.readFileSync(file, "utf8").trim();
-    const protectedKey = decodeKey(dpapi(DPAPI_UNPROTECT, content));
+    const protectedKey = decodeKey(await dpapi(DPAPI_UNPROTECT, content));
     if (protectedKey) return protectedKey;
 
     const legacy = decodeKey(content);
     if (!legacy) throw new Error(`Invalid credential key in ${file}`);
-    const protectedValue = dpapi(DPAPI_PROTECT, legacy.toString("base64"));
+    const protectedValue = await dpapi(DPAPI_PROTECT, legacy.toString("base64"));
     if (protectedValue) writePrivate(file, protectedValue);
     return legacy;
   }
   if (!allowCreate) throw new Error(`Credential key is unavailable for ${file}`);
   const key = crypto.randomBytes(KEY_LENGTH);
-  const protectedValue = dpapi(DPAPI_PROTECT, key.toString("base64"));
+  const protectedValue = await dpapi(DPAPI_PROTECT, key.toString("base64"));
   writePrivate(file, protectedValue ?? key.toString("base64"));
   return key;
 }
@@ -102,7 +137,7 @@ function providerForPlatform() {
   if (process.platform === "darwin") {
     return {
       read: (account) => command("security", ["find-generic-password", "-s", SERVICE, "-a", account, "-w"]),
-      write: (account, value) => command(
+      write: async (account, value) => await command(
         "security",
         ["add-generic-password", "-U", "-s", SERVICE, "-a", account, "-w", value],
       ) !== undefined,
@@ -112,7 +147,7 @@ function providerForPlatform() {
   if (process.platform === "linux") {
     return {
       read: (account) => command("secret-tool", ["lookup", "service", SERVICE, "account", account]),
-      write: (account, value) => command(
+      write: async (account, value) => await command(
         "secret-tool",
         ["store", "--label=DevEco Tool Auth", "service", SERVICE, "account", account],
         value,
@@ -123,22 +158,22 @@ function providerForPlatform() {
   return undefined;
 }
 
-function loadProviderKey(file, allowCreate, provider) {
+async function loadProviderKey(file, allowCreate, provider) {
   const account = accountFor(file);
-  const stored = decodeKey(provider.read(account));
+  const stored = decodeKey(await provider.read(account));
   if (stored) return stored;
 
   const keyFile = keyFileFor(file);
   if (fs.existsSync(keyFile)) {
     const legacy = decodeKey(fs.readFileSync(keyFile, "utf8"));
     if (!legacy) throw new Error(`Invalid credential key in ${keyFile}`);
-    if (provider.write(account, legacy.toString("base64"))) fs.rmSync(keyFile);
+    if (await provider.write(account, legacy.toString("base64"))) fs.rmSync(keyFile);
     return legacy;
   }
 
   if (!allowCreate) throw new Error(`Credential key is unavailable for ${file}`);
   const key = crypto.randomBytes(KEY_LENGTH);
-  if (!provider.write(account, key.toString("base64"))) {
+  if (!await provider.write(account, key.toString("base64"))) {
     writePrivate(keyFile, key.toString("base64"));
   }
   return key;
@@ -148,7 +183,7 @@ function keychainDisabled() {
   return /^(1|true|yes)$/i.test(process.env.DEVECO_DISABLE_CREDENTIAL_KEYCHAIN ?? "");
 }
 
-function loadKey(file, allowCreate) {
+async function loadKey(file, allowCreate) {
   const keyFile = keyFileFor(file);
   if (keychainDisabled()) return loadPlainKey(keyFile, allowCreate);
   if (process.platform === "win32") return loadDpapiKey(keyFile, allowCreate);
@@ -181,29 +216,29 @@ function envelope(value) {
   return value && value.version === 1 && typeof value.sealed === "string";
 }
 
-export function readCredential(file) {
+export async function readCredential(file) {
   if (!fs.existsSync(file)) return null;
   const stored = JSON.parse(fs.readFileSync(file, "utf8"));
   if (!envelope(stored)) {
-    writeCredential(file, stored);
+    await writeCredential(file, stored);
     return stored;
   }
-  const key = loadKey(file, false);
+  const key = await loadKey(file, false);
   return JSON.parse(open(key, stored.sealed));
 }
 
-export function writeCredential(file, value) {
+export async function writeCredential(file, value) {
   let allowCreate = true;
   if (fs.existsSync(file)) {
     try { allowCreate = !envelope(JSON.parse(fs.readFileSync(file, "utf8"))); } catch { allowCreate = false; }
   }
-  const key = loadKey(file, allowCreate);
+  const key = await loadKey(file, allowCreate);
   writePrivate(file, JSON.stringify({ version: 1, sealed: seal(key, JSON.stringify(value)) }, null, 2));
 }
 
-export function deleteCredential(file) {
+export async function deleteCredential(file) {
   try { fs.rmSync(file); } catch { /* already absent */ }
   try { fs.rmSync(keyFileFor(file)); } catch { /* key is normally in the OS keychain */ }
   if (keychainDisabled() || process.platform === "win32") return;
-  providerForPlatform()?.remove(accountFor(file));
+  await providerForPlatform()?.remove(accountFor(file));
 }

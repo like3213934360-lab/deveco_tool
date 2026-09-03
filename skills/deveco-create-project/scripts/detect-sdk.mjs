@@ -23,8 +23,23 @@ export class SkillError extends Error {
   }
 }
 
-function envPath() {
-  return String(process.env.DEVECO_HOME || '').trim();
+// LOCAL PATCH: follow the official CLI's Studio/CLT environment priority and Linux CLT layout.
+function toolchainEnv() {
+  const candidates = [
+    ['DEVECO_CLI_STUDIO_PATH', 'studio'],
+    ['DEVECO_CLI_CLT_PATH', 'clt'],
+    ['DEVECO_HOME', 'studio'],
+    ['DEVECO_PATH', 'studio'],
+  ];
+  for (const [name, kind] of candidates) {
+    let root = String(process.env[name] || '').trim();
+    if (!root) continue;
+    if (kind === 'studio' && process.platform === 'darwin' && root.endsWith('.app')) {
+      root = path.join(root, 'Contents');
+    }
+    return { root, kind, name };
+  }
+  return { root: '', kind: '', name: '' };
 }
 
 async function isDir(file) {
@@ -36,7 +51,12 @@ async function isDir(file) {
     .catch(() => false);
 }
 
-function nodePath(home) {
+function nodePath(home, kind) {
+  if (kind === 'clt') {
+    return process.platform === 'win32'
+      ? path.join(home, 'tool', 'node', 'node.exe')
+      : path.join(home, 'tool', 'node', 'bin', 'node');
+  }
   return process.platform === 'win32'
     ? path.join(home, 'tools', 'node', 'node.exe')
     : path.join(home, 'tools', 'node', 'bin', 'node');
@@ -89,28 +109,29 @@ function apiConfigForLevel(apiLevel, metadata) {
 }
 
 async function validateDevEcoHome() {
-  const env = envPath();
+  const selected = toolchainEnv();
+  const env = selected.root;
   if (!env) {
     throw new SkillError({
       code: 'DEVECO_HOME_MISSING',
-      message: 'DEVECO_HOME is not configured.',
-      hint: '请将 DEVECO_HOME 配置为 DevEco Studio 安装目录，然后重新运行；例如包含 tools/node 和 sdk/default 的目录。',
+      message: 'DevEco Studio or Command Line Tools is not configured.',
+      hint: '请设置 DEVECO_CLI_STUDIO_PATH 或 DEVECO_CLI_CLT_PATH，然后重新运行。',
     });
   }
   if (!(await isDir(env))) {
     throw new SkillError({
       code: 'DEVECO_HOME_INVALID',
-      message: `DEVECO_HOME points to a missing directory: ${env}`,
-      hint: '请检查 DEVECO_HOME 是否指向 DevEco Studio 根目录，而不是 SDK 子目录或项目目录。',
+      message: `${selected.name} points to a missing directory: ${env}`,
+      hint: `请检查 ${selected.name} 是否指向完整的 ${selected.kind === 'clt' ? 'Command Line Tools' : 'DevEco Studio'} 根目录。`,
       details: { devecoHome: env },
     });
   }
-  const builtInNode = nodePath(env);
+  const builtInNode = nodePath(env, selected.kind);
   if (!(await exists(builtInNode))) {
     throw new SkillError({
       code: 'DEVECO_HOME_INVALID',
       message: `DevEco built-in Node not found at ${builtInNode}.`,
-      hint: '请检查 DEVECO_HOME 是否指向 DevEco Studio 根目录，而不是 SDK 子目录或项目目录。',
+      hint: `请检查 ${selected.name} 是否指向完整的 ${selected.kind === 'clt' ? 'Command Line Tools' : 'DevEco Studio'} 根目录。`,
       details: { devecoHome: env, nodePath: builtInNode },
     });
   }

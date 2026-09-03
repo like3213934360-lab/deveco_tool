@@ -7,10 +7,11 @@ import {
   StreamMessageWriter,
 } from "vscode-jsonrpc/node.js";
 import { URI } from "vscode-uri";
-import { resolveDevecoHome, REPO_ROOT } from "./config.mjs";
+import { resolveDevecoToolchain, REPO_ROOT } from "./config.mjs";
 import { getProjectPath } from "./project-context.mjs";
+import { terminateProcessTree } from "./process-tree.mjs";
 
-const LSP_BINARY = path.join(
+const BUNDLED_LSP_BINARY = path.join(
   REPO_ROOT,
   "node_modules",
   "@arkts",
@@ -18,6 +19,24 @@ const LSP_BINARY = path.join(
   "bin",
   "ets-language-server.js",
 );
+const DEFAULT_LSP_TIMEOUT_MS = 15000;
+const MAX_LSP_TIMEOUT_MS = 120000;
+const LSP_SHUTDOWN_TIMEOUT_MS = 2000;
+const RG_OUTPUT_LIMIT = 2 * 1024 * 1024;
+
+function lspBinary() {
+  return process.env.ARKTS_LSP_ENTRY
+    ? path.resolve(process.env.ARKTS_LSP_ENTRY)
+    : BUNDLED_LSP_BINARY;
+}
+
+function boundedTimeout(value, fallback = DEFAULT_LSP_TIMEOUT_MS) {
+  const parsed = Number(value);
+  return Math.min(
+    Math.max(Number.isFinite(parsed) && parsed > 0 ? parsed : fallback, 1000),
+    MAX_LSP_TIMEOUT_MS,
+  );
+}
 
 const SYMBOL_KIND_NAMES = {
   1: "File", 2: "Module", 3: "Namespace", 4: "Package", 5: "Class",
@@ -105,34 +124,67 @@ function activeProjectFor(filePath) {
 function sdkPath() {
   const configured = process.env.OHOS_SDK_PATH;
   if (configured) return path.resolve(configured);
-  const home = resolveDevecoHome().path;
-  return home ? path.join(home, "sdk", "default", "openharmony") : "";
+  const sdk = resolveDevecoToolchain().paths?.sdk;
+  return sdk ? path.join(sdk, "default", "openharmony") : "";
+}
+
+function disposeInstance(current) {
+  if (!current) return;
+  try { current.connection.dispose(); } catch { /* already disposed */ }
+  if (current.child && !current.child.killed) terminateProcessTree(current.child);
+  if (state === current) state = null;
 }
 
 function disposeState() {
-  if (!state) return;
-  try { state.connection.dispose(); } catch { /* already disposed */ }
-  if (state.child && !state.child.killed) {
-    try { state.child.kill(); } catch { /* already exited */ }
-  }
-  state = null;
+  disposeInstance(state);
 }
 
-async function start(projectPath) {
-  if (!fs.existsSync(LSP_BINARY)) {
-    const error = new Error(`ArkTS language server is not installed: ${LSP_BINARY}`);
+function sendLspRequest(current, method, params, timeoutMs) {
+  const bounded = boundedTimeout(timeoutMs);
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      disposeInstance(current);
+      const error = new Error(`ArkTS language server timed out after ${bounded}ms while handling ${method}`);
+      error.code = "LSP_TIMEOUT";
+      reject(error);
+    }, bounded);
+    current.connection.sendRequest(method, params).then(
+      (value) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
+}
+
+async function start(projectPath, timeoutMs) {
+  const binary = lspBinary();
+  if (!fs.existsSync(binary)) {
+    const error = new Error(`ArkTS language server is not installed: ${binary}`);
     error.code = "LSP_NOT_INSTALLED";
     throw error;
   }
 
   disposeState();
-  const child = spawn(process.execPath, [LSP_BINARY, "--stdio"], {
+  const child = spawn(process.execPath, [binary, "--stdio"], {
     cwd: projectPath,
     env: {
       ...process.env,
       ...(sdkPath() ? { OHOS_SDK_PATH: sdkPath() } : {}),
     },
     stdio: ["pipe", "pipe", "pipe"],
+    detached: process.platform !== "win32",
   });
   child.stderr?.on("data", (data) => {
     process.stderr.write(`[deveco-tool/ets-lsp] ${data.toString()}`);
@@ -174,25 +226,27 @@ async function start(projectPath) {
     },
   };
   try {
-    const capabilities = await connection.sendRequest("initialize", initializeParams);
+    const initializing = { child, connection, projectPath, documents: new Map(), capabilities: {} };
+    const response = await sendLspRequest(initializing, "initialize", initializeParams, timeoutMs);
     await connection.sendNotification("initialized", {});
-    process.stderr.write(`[deveco-tool/ets-lsp] initialized (${Object.keys(capabilities?.capabilities ?? {}).length} capabilities)\n`);
+    initializing.capabilities = response?.capabilities ?? {};
+    state = initializing;
+    process.stderr.write(`[deveco-tool/ets-lsp] initialized (${Object.keys(initializing.capabilities).length} capabilities)\n`);
   } catch (error) {
     try { connection.dispose(); } catch { /* ignore */ }
-    try { child.kill(); } catch { /* ignore */ }
+    terminateProcessTree(child);
     throw error;
   }
 
-  state = { child, connection, projectPath, documents: new Map() };
   return state;
 }
 
-async function getState(filePath) {
+async function getState(filePath, timeoutMs) {
   const projectPath = activeProjectFor(filePath);
   if (state?.projectPath === projectPath) return state;
   if (starting) await starting;
   if (state?.projectPath === projectPath) return state;
-  starting = start(projectPath);
+  starting = start(projectPath, timeoutMs);
   try {
     return await starting;
   } finally {
@@ -202,13 +256,19 @@ async function getState(filePath) {
 
 async function ensureOpen(current, filePath) {
   const absolute = resolveSourcePath(filePath);
-  if (!fs.existsSync(absolute) || !fs.statSync(absolute).isFile()) {
+  let stat;
+  try {
+    stat = await fs.promises.stat(absolute);
+  } catch {
+    stat = null;
+  }
+  if (!stat?.isFile()) {
     const error = new Error(`Source file does not exist: ${absolute}`);
     error.code = "LSP_FILE_NOT_FOUND";
     throw error;
   }
   const uri = filePathToUri(absolute);
-  const text = fs.readFileSync(absolute, "utf8");
+  const text = await fs.promises.readFile(absolute, "utf8");
   const existing = current.documents.get(uri);
   if (!existing) {
     await current.connection.sendNotification("textDocument/didOpen", {
@@ -231,20 +291,27 @@ const PREOPEN_SKIP_DIRECTORIES = new Set(["node_modules", "oh_modules", "build",
 const PREOPEN_FILE_LIMIT = 400;
 const PREOPEN_MAX_DEPTH = 12;
 
-function collectSourceFiles(directory, results, depth = 0) {
-  if (depth > PREOPEN_MAX_DEPTH) return results;
+async function collectSourceFiles(directory, results, deadline, scanState, depth = 0) {
+  if (depth > PREOPEN_MAX_DEPTH || Date.now() >= deadline) {
+    if (Date.now() >= deadline) scanState.truncated = true;
+    return results;
+  }
   let entries;
   try {
-    entries = fs.readdirSync(directory, { withFileTypes: true });
+    entries = await fs.promises.readdir(directory, { withFileTypes: true });
   } catch {
     return results;
   }
   for (const entry of entries) {
+    if (Date.now() >= deadline) {
+      scanState.truncated = true;
+      break;
+    }
     if (entry.name.startsWith(".")) continue;
     const full = path.join(directory, entry.name);
     if (entry.isDirectory()) {
       if (PREOPEN_SKIP_DIRECTORIES.has(entry.name)) continue;
-      collectSourceFiles(full, results, depth + 1);
+      await collectSourceFiles(full, results, deadline, scanState, depth + 1);
       continue;
     }
     if (!PREOPEN_EXTENSIONS.has(path.extname(entry.name).toLowerCase())) continue;
@@ -252,6 +319,74 @@ function collectSourceFiles(directory, results, depth = 0) {
     results.push(full);
   }
   return results;
+}
+
+async function rgSourceFiles(projectPath, symbol, timeoutMs) {
+  return new Promise((resolve) => {
+    const args = [
+      "--files-with-matches", "--fixed-strings", "--word-regexp", "--max-count", "1",
+      "--glob", "*.ets", "--glob", "*.ts",
+      "--glob", "!**/*.d.ets", "--glob", "!**/*.d.ts",
+      "--glob", "!**/node_modules/**", "--glob", "!**/oh_modules/**",
+      "--glob", "!**/build/**", "--glob", "!**/.hvigor/**", "--glob", "!**/dist/**",
+      symbol, ".",
+    ];
+    const child = spawn("rg", args, {
+      cwd: projectPath,
+      env: process.env,
+      stdio: ["ignore", "pipe", "ignore"],
+      windowsHide: true,
+      detached: process.platform !== "win32",
+    });
+    let output = "";
+    let unavailable = false;
+    const timer = setTimeout(() => {
+      terminateProcessTree(child);
+      unavailable = true;
+    }, Math.min(boundedTimeout(timeoutMs), 5000));
+    child.stdout.on("data", (chunk) => {
+      if (output.length < RG_OUTPUT_LIMIT) output += chunk.toString();
+    });
+    child.once("error", () => {
+      unavailable = true;
+    });
+    child.once("close", (code) => {
+      clearTimeout(timer);
+      if (unavailable || (code !== 0 && code !== 1)) {
+        resolve(null);
+        return;
+      }
+      resolve(output.split(/\r?\n/).filter(Boolean).map((file) => path.resolve(projectPath, file)));
+    });
+  });
+}
+
+async function filesContainingSymbol(projectPath, symbol, timeoutMs) {
+  const scanDeadline = Date.now() + Math.min(boundedTimeout(timeoutMs), 5000);
+  const fromRg = await rgSourceFiles(projectPath, symbol, Math.max(1000, scanDeadline - Date.now()));
+  if (fromRg !== null) return { files: fromRg, scanner: "rg" };
+
+  const scanState = { truncated: false };
+  const candidates = await collectSourceFiles(projectPath, [], scanDeadline, scanState);
+  const expression = new RegExp(`\\b${symbol.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`);
+  const matches = [];
+  let index = 0;
+  const workers = Array.from({ length: Math.min(16, candidates.length) }, async () => {
+    while (index < candidates.length && Date.now() < scanDeadline) {
+      const candidate = candidates[index++];
+      try {
+        if (expression.test(await fs.promises.readFile(candidate, "utf8"))) matches.push(candidate);
+      } catch {
+        // A file can disappear while an editor or build task is replacing it.
+      }
+    }
+  });
+  await Promise.all(workers);
+  if (index < candidates.length || Date.now() >= scanDeadline) scanState.truncated = true;
+  return {
+    files: matches, scanner: "async-fallback", scanned: index,
+    truncated: scanState.truncated, deadline: scanDeadline,
+  };
 }
 
 /**
@@ -262,10 +397,10 @@ function collectSourceFiles(directory, results, depth = 0) {
  * @param {number} column 1-based column.
  * @returns {string} The identifier, or '' when the position is not on one.
  */
-function symbolNameAt(absolutePath, line, column) {
+async function symbolNameAt(absolutePath, line, column) {
   let text;
   try {
-    text = fs.readFileSync(absolutePath, "utf8");
+    text = await fs.promises.readFile(absolutePath, "utf8");
   } catch {
     return "";
   }
@@ -293,53 +428,60 @@ function symbolNameAt(absolutePath, line, column) {
  * @param {number} column 1-based column.
  * @returns {Promise<{symbol: string, scanned: number, opened: number, truncated: boolean}>} Coverage report.
  */
-async function preopenForSymbol(current, absolutePath, line, column) {
-  const symbol = symbolNameAt(absolutePath, line, column);
-  if (symbol.length < 2) return { symbol, scanned: 0, opened: 0, truncated: false };
+async function preopenForSymbol(current, absolutePath, line, column, timeoutMs) {
+  const symbol = await symbolNameAt(absolutePath, line, column);
+  if (symbol.length < 2) return { symbol, scanned: 0, matched: 0, opened: 0, truncated: false, scanner: "none" };
 
-  const pattern = new RegExp(`\\b${symbol.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`);
-  const candidates = collectSourceFiles(current.projectPath, []);
+  const found = await filesContainingSymbol(current.projectPath, symbol, timeoutMs);
+  const candidates = found.files;
   let opened = 0;
-  let truncated = false;
+  let truncated = found.truncated === true;
+  const deadline = found.deadline ?? (Date.now() + Math.min(boundedTimeout(timeoutMs), 5000));
   for (const candidate of candidates) {
-    if (opened >= PREOPEN_FILE_LIMIT) {
+    if (opened >= PREOPEN_FILE_LIMIT || Date.now() >= deadline) {
       truncated = true;
       break;
     }
     if (current.documents.has(filePathToUri(candidate))) continue;
-    let text;
-    try {
-      text = fs.readFileSync(candidate, "utf8");
-    } catch {
-      continue;
-    }
-    if (!pattern.test(text)) continue;
     const document = await ensureOpen(current, candidate);
     // didOpen is a notification, so the server may still be parsing when the
     // reference query arrives and would answer from a state that does not know
     // this file yet. A cheap round-trip forces the parse to complete first.
-    await current.connection
-      .sendRequest("textDocument/documentSymbol", { textDocument: { uri: document.uri } })
+    const remaining = deadline - Date.now();
+    if (remaining < 1000) {
+      truncated = true;
+      break;
+    }
+    await sendLspRequest(current, "textDocument/documentSymbol", {
+      textDocument: { uri: document.uri },
+    }, Math.min(boundedTimeout(timeoutMs), remaining))
       .catch(() => {});
     opened += 1;
   }
-  return { symbol, scanned: candidates.length, opened, truncated };
+  return {
+    symbol,
+    scanned: found.scanned ?? candidates.length,
+    matched: candidates.length,
+    opened,
+    truncated,
+    scanner: found.scanner,
+  };
 }
 
-function coverageNote({ scanned, opened, truncated }) {
+function coverageNote({ scanned, matched, opened, truncated, scanner }) {
   if (!scanned) return "";
   const limit = truncated ? `, stopped at the ${PREOPEN_FILE_LIMIT}-file preopen limit` : "";
-  return `\n(scanned ${scanned} project files, opened ${opened} new one(s) before querying${limit})`;
+  return `\n(${scanner} scanned ${scanned} candidate file(s), matched ${matched}, opened ${opened} new one(s) before querying${limit})`;
 }
 
-async function request(file, line, column, method, params = {}) {
-  const current = await getState(file);
+async function request(file, line, column, method, params = {}, timeoutMs) {
+  const current = await getState(file, timeoutMs);
   const document = await ensureOpen(current, file);
-  return current.connection.sendRequest(method, {
+  return sendLspRequest(current, method, {
     textDocument: { uri: document.uri },
     position: userPosition(line, column),
     ...params,
-  });
+  }, timeoutMs);
 }
 
 function locationParts(location) {
@@ -360,15 +502,15 @@ function formatHoverContents(contents) {
   return contents == null ? "" : String(contents);
 }
 
-export async function findReferences({ file, line, column, includeDeclaration = true }) {
-  const current = await getState(file);
+export async function findReferences({ file, line, column, includeDeclaration = true, timeoutMs }) {
+  const current = await getState(file, timeoutMs);
   const document = await ensureOpen(current, file);
-  const coverage = await preopenForSymbol(current, document.absolute, line, column);
-  const result = await current.connection.sendRequest("textDocument/references", {
+  const coverage = await preopenForSymbol(current, document.absolute, line, column, timeoutMs);
+  const result = await sendLspRequest(current, "textDocument/references", {
     textDocument: { uri: document.uri },
     position: userPosition(line, column),
     context: { includeDeclaration: Boolean(includeDeclaration) },
-  });
+  }, timeoutMs);
   if (!result?.length) {
     return `No references found for symbol at ${file}:${line}:${column}${coverageNote(coverage)}`;
   }
@@ -388,8 +530,8 @@ export async function findReferences({ file, line, column, includeDeclaration = 
   return `${lines.join("\n")}${coverageNote(coverage)}`;
 }
 
-export async function goToDefinition({ file, line, column }) {
-  const result = await request(file, line, column, "textDocument/definition");
+export async function goToDefinition({ file, line, column, timeoutMs }) {
+  const result = await request(file, line, column, "textDocument/definition", {}, timeoutMs);
   if (!result) return `No definition found for symbol at ${file}:${line}:${column}`;
   const locations = Array.isArray(result) ? result : [result];
   const parts = locations.map(locationParts).filter(Boolean);
@@ -397,27 +539,34 @@ export async function goToDefinition({ file, line, column }) {
   return `Definition(s):\n${parts.map((item) => `${item.file}:${item.line}:${item.column}  ${item.text}`).join("\n")}`;
 }
 
-export async function goToDeclaration({ file, line, column }) {
-  const result = await request(file, line, column, "textDocument/declaration");
+export async function goToDeclaration({ file, line, column, timeoutMs }) {
+  const current = await getState(file, timeoutMs);
+  const method = current.capabilities?.declarationProvider
+    ? "textDocument/declaration"
+    : "textDocument/definition";
+  const result = await request(file, line, column, method, {}, timeoutMs);
   if (!result) return `No declaration found for symbol at ${file}:${line}:${column}`;
   const locations = Array.isArray(result) ? result : [result];
   const parts = locations.map(locationParts).filter(Boolean);
   if (!parts.length) return `No declaration found for symbol at ${file}:${line}:${column}`;
-  return `Declaration(s):\n${parts.map((item) => `${item.file}:${item.line}:${item.column}  ${item.text}`).join("\n")}`;
+  const label = method === "textDocument/declaration"
+    ? "Declaration(s)"
+    : "Declaration fallback via definition(s) (server has no declarationProvider)";
+  return `${label}:\n${parts.map((item) => `${item.file}:${item.line}:${item.column}  ${item.text}`).join("\n")}`;
 }
 
-export async function getHover({ file, line, column }) {
-  const result = await request(file, line, column, "textDocument/hover");
+export async function getHover({ file, line, column, timeoutMs }) {
+  const result = await request(file, line, column, "textDocument/hover", {}, timeoutMs);
   if (!result) return `No hover info for symbol at ${file}:${line}:${column}`;
   return formatHoverContents(result.contents);
 }
 
-export async function listSymbols({ file }) {
-  const current = await getState(file);
+export async function listSymbols({ file, timeoutMs }) {
+  const current = await getState(file, timeoutMs);
   const document = await ensureOpen(current, file);
-  const result = await current.connection.sendRequest("textDocument/documentSymbol", {
+  const result = await sendLspRequest(current, "textDocument/documentSymbol", {
     textDocument: { uri: document.uri },
-  });
+  }, timeoutMs);
   if (!result?.length) return `No symbols found in ${file}`;
   const lines = [`Symbols in ${file}:\n`];
   const formatSymbol = (symbol, indent) => {
@@ -431,36 +580,36 @@ export async function listSymbols({ file }) {
   return lines.join("\n");
 }
 
-export async function findCallHierarchy({ file, line, column, direction }) {
+export async function findCallHierarchy({ file, line, column, direction, timeoutMs }) {
   if (direction !== "incoming" && direction !== "outgoing") {
     const error = new Error("direction must be incoming or outgoing");
     error.code = "LSP_INVALID_DIRECTION";
     throw error;
   }
-  const current = await getState(file);
+  const current = await getState(file, timeoutMs);
   const document = await ensureOpen(current, file);
   // Callers can live anywhere; callees are reachable from this file already.
   const coverage = direction === "incoming"
-    ? await preopenForSymbol(current, document.absolute, line, column)
-    : { symbol: "", scanned: 0, opened: 0, truncated: false };
-  const prepared = await current.connection.sendRequest("textDocument/prepareCallHierarchy", {
+    ? await preopenForSymbol(current, document.absolute, line, column, timeoutMs)
+    : { symbol: "", scanned: 0, matched: 0, opened: 0, truncated: false, scanner: "none" };
+  const prepared = await sendLspRequest(current, "textDocument/prepareCallHierarchy", {
     textDocument: { uri: document.uri },
     position: userPosition(line, column),
-  });
+  }, timeoutMs);
   if (!prepared?.length) {
     return `No call hierarchy available for symbol at ${file}:${line}:${column}${coverageNote(coverage)}`;
   }
   const item = prepared[0];
   const title = [`Call hierarchy for: ${item.name} (${direction})\n`];
   if (direction === "incoming") {
-    const calls = await current.connection.sendRequest("callHierarchy/incomingCalls", { item });
+    const calls = await sendLspRequest(current, "callHierarchy/incomingCalls", { item }, timeoutMs);
     if (!calls?.length) return `No incoming calls found for ${item.name}${coverageNote(coverage)}`;
     for (const call of calls) {
       const source = locationParts({ uri: call.from.uri, range: call.from.selectionRange });
       if (source) title.push(`  <- ${call.from.name}  ${source.file}:${source.line}:${source.column}`);
     }
   } else {
-    const calls = await current.connection.sendRequest("callHierarchy/outgoingCalls", { item });
+    const calls = await sendLspRequest(current, "callHierarchy/outgoingCalls", { item }, timeoutMs);
     if (!calls?.length) return `No outgoing calls found for ${item.name}`;
     for (const call of calls) {
       const target = locationParts({ uri: call.to.uri, range: call.to.selectionRange });
@@ -475,7 +624,7 @@ export async function findCallHierarchy({ file, line, column, direction }) {
  * helpers above keep the older ArkTS-LSP MCP names available, while this
  * operation-shaped entry point covers every operation in the official tool.
  */
-export async function lspOperation({ operation, filePath, line, character, query = "" }) {
+export async function lspOperation({ operation, filePath, line, character, query = "", timeoutMs }) {
   const supported = [
     "goToDefinition",
     "goToDeclaration",
@@ -493,7 +642,7 @@ export async function lspOperation({ operation, filePath, line, character, query
     error.code = "LSP_OPERATION_INVALID";
     throw error;
   }
-  const current = await getState(filePath);
+  const current = await getState(filePath, timeoutMs);
   const document = operation === "workspaceSymbol" ? null : await ensureOpen(current, filePath);
   const position = operation === "workspaceSymbol" || operation === "documentSymbol"
     ? null
@@ -501,42 +650,45 @@ export async function lspOperation({ operation, filePath, line, character, query
   const textDocument = document ? { textDocument: { uri: document.uri } } : {};
 
   if (operation === "goToDefinition") {
-    return current.connection.sendRequest("textDocument/definition", { ...textDocument, position });
+    return sendLspRequest(current, "textDocument/definition", { ...textDocument, position }, timeoutMs);
   }
   if (operation === "goToDeclaration") {
-    return current.connection.sendRequest("textDocument/declaration", { ...textDocument, position });
+    const method = current.capabilities?.declarationProvider
+      ? "textDocument/declaration"
+      : "textDocument/definition";
+    return sendLspRequest(current, method, { ...textDocument, position }, timeoutMs);
   }
   if (operation === "findReferences") {
-    return current.connection.sendRequest("textDocument/references", {
+    return sendLspRequest(current, "textDocument/references", {
       ...textDocument,
       position,
       context: { includeDeclaration: true },
-    });
+    }, timeoutMs);
   }
   if (operation === "hover") {
-    return current.connection.sendRequest("textDocument/hover", { ...textDocument, position });
+    return sendLspRequest(current, "textDocument/hover", { ...textDocument, position }, timeoutMs);
   }
   if (operation === "documentSymbol") {
-    return current.connection.sendRequest("textDocument/documentSymbol", textDocument);
+    return sendLspRequest(current, "textDocument/documentSymbol", textDocument, timeoutMs);
   }
   if (operation === "workspaceSymbol") {
-    return current.connection.sendRequest("workspace/symbol", { query: String(query ?? "") });
+    return sendLspRequest(current, "workspace/symbol", { query: String(query ?? "") }, timeoutMs);
   }
   if (operation === "goToImplementation") {
-    return current.connection.sendRequest("textDocument/implementation", { ...textDocument, position });
+    return sendLspRequest(current, "textDocument/implementation", { ...textDocument, position }, timeoutMs);
   }
   if (operation === "prepareCallHierarchy") {
-    return current.connection.sendRequest("textDocument/prepareCallHierarchy", { ...textDocument, position });
+    return sendLspRequest(current, "textDocument/prepareCallHierarchy", { ...textDocument, position }, timeoutMs);
   }
-  const prepared = await current.connection.sendRequest("textDocument/prepareCallHierarchy", {
+  const prepared = await sendLspRequest(current, "textDocument/prepareCallHierarchy", {
     ...textDocument,
     position,
-  });
+  }, timeoutMs);
   if (!prepared?.length) return [];
   if (operation === "incomingCalls") {
-    return current.connection.sendRequest("callHierarchy/incomingCalls", { item: prepared[0] });
+    return sendLspRequest(current, "callHierarchy/incomingCalls", { item: prepared[0] }, timeoutMs);
   }
-  return current.connection.sendRequest("callHierarchy/outgoingCalls", { item: prepared[0] });
+  return sendLspRequest(current, "callHierarchy/outgoingCalls", { item: prepared[0] }, timeoutMs);
 }
 
 export async function resetLsp() {
@@ -548,9 +700,10 @@ export async function resetLsp() {
 
 export async function shutdownLsp() {
   if (!state) return;
+  const current = state;
   try {
-    await state.connection.sendRequest("shutdown");
-    await state.connection.sendNotification("exit");
+    await sendLspRequest(current, "shutdown", {}, LSP_SHUTDOWN_TIMEOUT_MS);
+    await current.connection.sendNotification("exit");
   } catch {
     // The server may already have exited; cleanup below is still sufficient.
   }
@@ -559,8 +712,8 @@ export async function shutdownLsp() {
 
 export function lspStatus() {
   return {
-    installed: fs.existsSync(LSP_BINARY),
-    binary: LSP_BINARY,
+    installed: fs.existsSync(lspBinary()),
+    binary: lspBinary(),
     running: Boolean(state?.child && !state.child.killed),
     projectPath: state?.projectPath ?? null,
     sdkPath: sdkPath() || null,

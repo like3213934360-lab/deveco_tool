@@ -8,6 +8,8 @@
  * cleanup problem. The timeouts are this pack's addition, so the cleanup is this pack's job.
  */
 
+import { spawn } from "node:child_process";
+
 // How long a timed-out process group gets to honour SIGTERM before SIGKILL. Long enough for a
 // Python worker or a node script to run its cleanup, short enough that nothing lingers.
 export const SIGKILL_GRACE_MS = 2000;
@@ -30,6 +32,30 @@ export const SIGKILL_GRACE_MS = 2000;
  * @returns {() => void} Cancels the pending escalation; called automatically once the child exits.
  */
 export function terminateProcessTree(child, graceMs = SIGKILL_GRACE_MS) {
+  if (!child?.pid) return () => {};
+
+  if (process.platform === "win32") {
+    const taskkill = (force) => {
+      const args = ["/pid", String(child.pid), "/t"];
+      if (force) args.push("/f");
+      try {
+        const killer = spawn("taskkill.exe", args, {
+          stdio: "ignore",
+          windowsHide: true,
+        });
+        killer.unref();
+      } catch {
+        try { child.kill(); } catch { /* already exited */ }
+      }
+    };
+    taskkill(false);
+    const escalation = setTimeout(() => taskkill(true), graceMs);
+    escalation.unref();
+    const cancel = () => clearTimeout(escalation);
+    child.once("close", cancel);
+    return cancel;
+  }
+
   const signalGroup = (signal) => {
     try {
       process.kill(-child.pid, signal);
