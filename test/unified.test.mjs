@@ -4,6 +4,7 @@ import fsSync from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { spawn } from "node:child_process";
+import { getEventListeners } from "node:events";
 import test from "node:test";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
@@ -26,7 +27,7 @@ import { readTar } from "../src/device-tar.mjs";
 import { withUitestLock, lockInternals } from "../src/device-lock.mjs";
 import { analyseDump, dumpSignatures, flattenDump, readSelector } from "../src/device-dump.mjs";
 import { uiFind, uiObserve, uiSnapshot, uiTap } from "../src/device-ui.mjs";
-import { hdcFailureMessage, hdcLog, hdcStatus } from "../src/hdc-log.mjs";
+import { hdcFailureMessage, hdcLog, hdcStatus, runHdc } from "../src/hdc-log.mjs";
 import { getHover, goToDeclaration, lspStatus, resetLsp } from "../src/lsp.mjs";
 import {
   hdcFailureMessage as skillHdcFailureMessage,
@@ -329,11 +330,11 @@ test("unified MCP advertises scripts, diagnostics, LSP, and CodeGenie tools", as
     "arkts_check", "hdc_log", "find_references", "go_to_definition",
     "go_to_declaration", "get_hover", "list_symbols", "find_call_hierarchy", "lsp", "build_project",
     "project_sync", "api_compat_check", "apply_changes",
-    "document_validate", "ui_snapshot", "ui_observe", "ui_find", "ui_tap",
+    "document_validate", "ui_snapshot", "ui_observe", "ui_find", "ui_tap", "ui_flow",
     "code_lint", "hot_reload", "harmony_docs", "device_info", "ui_inspect",
     "emulator_manage", "emulator_scenario", "app_signature", "deveco_cli_auth", "ui_control",
   ]) assert.ok(names.has(name), `missing tool ${name}`);
-  assert.equal(result.tools.length, 43);
+  assert.equal(result.tools.length, 44);
   assert.equal(result.tools.filter((tool) => tool.name === "check_ets_files").length, 1);
   for (const disabled of ["verify_ui", "save_ui_screenshot", "get_ui_verification_log"]) {
     assert.ok(!names.has(disabled), `disabled tool ${disabled} is still advertised`);
@@ -345,6 +346,25 @@ test("unified MCP advertises scripts, diagnostics, LSP, and CodeGenie tools", as
   const catalog = await client.callTool({ name: "deveco_script_catalog", arguments: {} });
   const parsed = JSON.parse(catalog.content[0].text);
   assert.equal(parsed.count, 19);
+
+  const flowValidation = await client.callTool({
+    name: "ui_flow",
+    arguments: {
+      action: "validate",
+      flow: {
+        version: 1,
+        id: "schema-probe",
+        name: "Schema probe",
+        app: { bundleName: "com.example.test", module: "entry", ability: "EntryAbility" },
+        start: { mode: "restart" },
+        variables: {},
+        steps: [],
+        assert: { visible: { key: "ready" }, timeoutMs: 1000 },
+      },
+    },
+  });
+  assert.notEqual(flowValidation.isError, true);
+  assert.equal(JSON.parse(flowValidation.content[0].text).valid, true);
 
   const rejected = await client.callTool({
     name: "deveco_status", arguments: { surprise: "must never reach the handler" },
@@ -1270,6 +1290,17 @@ test("HDC failure markers are errors even when the process exits zero", () => {
   assert.equal(hdcFailureMessage({ stdout: "device-1\n", stderr: "", exitCode: 0 }), "");
 });
 
+test("a timed-out HDC call releases its abort listener immediately", async (t) => {
+  const fake = await makeFakeHdc("sleep 3");
+  t.after(async () => await fs.rm(fake.directory, { recursive: true, force: true }));
+  const controller = new AbortController();
+  await assert.rejects(
+    () => runHdc([fake.executable], 50, { signal: controller.signal }),
+    (error) => error.code === "HDC_TIMEOUT",
+  );
+  assert.equal(getEventListeners(controller.signal, "abort").length, 0);
+});
+
 test("runtime Skill scripts reject HDC failure text with a zero exit code", async () => {
   const devecoHome = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-skill-hdc-"));
   const nodeMarker = path.join(devecoHome, "tools/node/bin/node");
@@ -1641,10 +1672,10 @@ test("a CodeGenie child that never answers cannot delay tool discovery", { timeo
   const elapsed = Date.now() - startedAt;
   assert.ok(elapsed < 1000, `tools/list must not wait on the child; took ${elapsed}ms`);
 
-  assert.equal(names.length, 43, "all 43 tools must be advertised even while the child is stalled");
+  assert.equal(names.length, 44, "all 44 tools must be advertised even while the child is stalled");
   assert.ok(names.includes("arkts_check"));
   // The capture/find/tap loop runs over hdc in-process, so a stalled child must not reach it.
-  for (const local of ["ui_snapshot", "ui_observe", "ui_find", "ui_tap"]) {
+  for (const local of ["ui_snapshot", "ui_observe", "ui_find", "ui_tap", "ui_flow"]) {
     assert.ok(names.includes(local), `${local} must survive a stalled CodeGenie child`);
   }
   // build_project and start_app run through the bundled DevEco CLI, so a stalled

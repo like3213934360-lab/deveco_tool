@@ -9,7 +9,7 @@
 |---|---|---|
 | 知识 | `skills/` | 56 个 Skill，分两层。**core 17 个**（DevEco Code 提取，MIT）：ArkTS 语法规则、编译错误库、崩溃诊断、工程脚手架、构建循环、插桩调试、计划文档、SDD 编排，以及 ArkUI 组件最佳实践、逻辑补全、工程理解、方案设计、响应式布局、HDS 迁移、设备管理、设计稿转代码、UI 还原度评分。**extended 39 个**（华为官方 Skill 仓库 `v0.0.2`）：多设备适配、崩溃与冻屏诊断、Kit 接入、状态管理迁移、MVVM、测试、上架审查等。路由索引见 [`skills/INDEX.md`](./skills/INDEX.md) |
 | 工作流 | `commands/` + `templates/` | SDD 五阶段命令 + 三份产物模板 |
-| 工具 | `src/server.mjs` | 一个 stdio MCP，43 个工具（官方 Linter、冷热更新、Studio/CLT、文档、设备/UI、模拟器、签名、LSP） |
+| 工具 | `src/server.mjs` | 一个 stdio MCP，44 个工具（官方 Linter、冷热更新、Studio/CLT、文档、设备/UI、ArkPilot 流程、模拟器、签名、LSP） |
 
 三层可以独立使用。只要 Skill 也行；只要 MCP 也行。但方法论 Skill（`harmony-build-loop` 等）里的指令会引用
 MCP 工具名，缺了 MCP 就只剩流程说明。
@@ -152,7 +152,7 @@ Phase 4/5 的委派契约。只用命令、不装该 Skill 时行为与之前一
    文件发现逻辑没有留在上游文件里：`collectEtsFiles` 只认 `entry/src/main/ets` 单模块布局，多模块工程一个文件都扫不到，改由 `src/arkts-check.mjs` 的 `discoverProjectEtsFiles` 按 `build-profile.json5` 的 `modules[].srcPath` 解析后显式传 `--files`。
 6. **`detect-sdk.mjs` 补了 CLI 入口和 CLT 探测**：上游只 export 函数，而本包的脚本注册表把 `detect_sdk` 登记为可执行脚本，直接跑会 stdout 全空、退出 0，看起来像成功。现在直接运行会打印 SDK 元数据 JSON，import 用法不变；工具链路径同时支持官方 Studio/CLT 环境变量及 Linux CLT 目录。
 7. **崩溃日志 `error_message` 取值修正**：`shared/jscrash-parse.mjs` 的 `detectErrorMessage` 原本返回整行且优先命中 `Error name:`（`CRASH_SIGNAL_RE` 含裸词 `error`），真实的 `Error message:` 被盖掉；无崩溃时还会回落到日志最后一行。现在优先解析显式的 `Error message:` 并只取冒号后的负载，无信号时返回 `(not found)`。
-8. **CodeGenie 子进程不再能拖死整个网关，也不再拖慢工具发现**：上游子进程的 MCP 握手会间歇性永久挂死（空闲机器 12 次复现 2 次）。现在 `tools/list` 完全由静态表回答，挂死场景下实测 1ms，43 个工具照常通告；只有 3 个代理工具在调用时会连接子进程。
+8. **CodeGenie 子进程不再能拖死整个网关，也不再拖慢工具发现**：上游子进程的 MCP 握手会间歇性永久挂死（空闲机器 12 次复现 2 次）。现在 `tools/list` 完全由静态表回答，挂死场景下实测 1ms，44 个工具照常通告；只有 3 个代理工具在调用时会连接子进程。
 9. **UI 自动校验链路已移除**：见下一节。
 10. **知识层是混合来源**：`arkts-error-fixes` / `arkts-grammar-standards` / `arkts-runtime-fix` / `deveco-create-project` 以发布线 v0.1.6 为基线（逐文件核对一致），另外 10 个来自尚未发版的 `0.2.0-release`。这四个不从 0.2.0 重取的理由是它们带本仓的 `LOCAL PATCH`，重取只会丢补丁——前三个在 v0.1.6 与 0.2.0 之间的 diff 本身是空的。0.2.0 只剩 `d2c` 未取（它硬依赖 `verify_ui`），原因见 `provenance/INVENTORY.md`。
 11. **`build_project` / `start_app` 改为原生实现**：跟进上游 0.2.0 的方向，从 CodeGenie 代理换成通过 `@deveco/deveco-cli` 调用。参数保持向后兼容（保留 `log_path`、`module` 单值、`clean` 先清后建），`enable_inspector_source_jump` 无对应能力时显式提示而非静默忽略。`build_project` 默认以 `start` 动作立即返回任务 ID，调用方用 `status`（可长轮询 20 秒）或 `cancel` 继续，绕过 MCP 宿主独立于内部 `timeoutMs` 的 30 秒固定超时；`action: "run"` 保留同步模式。`start_app` 与 DevEco Studio 保持一致，只把选中的一个可运行模块交给 CLI；CLI 会自动收集它的非 HAR 依赖。省略 `module` 时仅在候选唯一的情况下自动选择，多候选会要求调用方明确指定，避免把两个 Entry HAP 同时安装到真机。
@@ -166,7 +166,8 @@ Phase 4/5 的委派契约。只用命令、不装该 Skill 时行为与之前一
 19. **新增可选的宿主适配层**：`scripts/install-host.mjs`，把 Skill 装进 Claude 的 `~/.claude/skills` 和 Codex 的 `~/.agents/skills`。核心资产仍然宿主无关，这一层不装也不影响任何东西。隐式调用策略集中在 `manifest.json` 的 `invocationPolicy`，由安装器按宿主渲染，**不改 `skills/` 下的任何文件**。
 20. **登录凭证改为加密存储**：token 以 AES-256-GCM 密文落盘，密钥优先保存在 macOS Keychain、Windows DPAPI 或 Linux Secret Service；旧明文 `auth.json` 首次读取时自动迁移。浏览器启动也改为参数数组调用，不再把登录 URL 拼进 shell 命令。
 21. **对齐 DevEco CLI 1.3.1 完整能力**：新增官方 Code Linter、常驻 Hot Reload、文档中心、设备详情、高级 UI、模拟器完整管理/场景、签名及 CLI auth/team；工具链解析与官方源码保持同一优先级，并支持 `DEVECO_CLI_CLT_PATH` 和 Linux CLT 布局。
-22. **通用 MCP 稳定性与安全收口**：43 个工具在分派前执行 JSON Schema 校验；耗时构建和浏览器登录提供短调用任务协议，避免宿主固定 30 秒超时；LSP、CLI、HDC、脚本、凭证提供程序和网络请求均有截止时间及进程树清理。CLI/脚本输出采用有界内存并将完整构建记录流式落盘，避免巨量输出拖垮网关。`apply_changes` 在停止应用前锁定唯一 Entry 模块，失败后尽力恢复同一应用。`ui_snapshot`/`ui_observe` 默认不覆盖已有路径；`ui_tap` 在 UI 树缺失自绘控件时支持屏幕百分比手势，并明确区分“命令已接收”和“界面结果已验证”。npm 包用 `files` 白名单控制发布内容，当前审计为 0 漏洞。
+22. **通用 MCP 稳定性与安全收口**：44 个工具在分派前执行 JSON Schema 校验；耗时构建和浏览器登录提供短调用任务协议，避免宿主固定 30 秒超时；LSP、CLI、HDC、脚本、凭证提供程序和网络请求均有截止时间及进程树清理。CLI/脚本输出采用有界内存并将完整构建记录流式落盘，避免巨量输出拖垮网关。`apply_changes` 在停止应用前锁定唯一 Entry 模块，失败后尽力恢复同一应用。`ui_snapshot`/`ui_observe` 默认不覆盖已有路径；`ui_tap` 在 UI 树缺失自绘控件时支持屏幕百分比手势，并明确区分“命令已接收”和“界面结果已验证”。`ui_flow` 将成功的 UI 操作保存为项目内 `.arkpilot` 语义流程，回放时只在失败路径截图。npm 包用 `files` 白名单控制发布内容，当前审计为 0 漏洞。
+23. **ArkPilot Flow 独立限界上下文**：`src/arkpilot/` 按领域、应用、基础设施和接口边界组织，保持既有工具的行为不变。流程仓库使用版本化 JSON、原子替换、写锁及路径/符号链接逃逸检查；执行器为每个任务设置单调用、单步骤和总截止时间，整段回放只持有一次跨进程设备租约。同设备并发立即返回 `UI_DEVICE_BUSY`，不同设备可独立执行。默认发布后端仍是实测的 HDC/uitest；Hypium 仅保留动态端口，在真机和模拟器正确率及延迟门禁通过前不会启用。
 
 ## 关于 UI 自动校验
 

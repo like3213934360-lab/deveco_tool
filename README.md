@@ -1,6 +1,6 @@
 # deveco-tool
 
-`deveco-tool` 是面向 HarmonyOS / OpenHarmony 开发的统一 stdio MCP 服务。它把 DevEco CLI、ArkTS 语言服务、CodeGenie、HDC 真机控制和仓库内的诊断脚本统一成 **43 个 MCP 工具**，AI 客户端只需连接一个进程。
+`deveco-tool` 是面向 HarmonyOS / OpenHarmony 开发的统一 stdio MCP 服务。它把 DevEco CLI、ArkTS 语言服务、CodeGenie、HDC 真机控制和仓库内的诊断脚本统一成 **44 个 MCP 工具**，AI 客户端只需连接一个进程。
 
 这个仓库还包含可选的 Skill、SDD 命令和模板；它们不是运行 MCP 的必要条件。机器可读清单见 [`manifest.json`](./manifest.json)，能力包接入和来源细节见 [`PACK.md`](./PACK.md)。
 
@@ -30,7 +30,7 @@ npm install
 | `@deveco-codegenie/mcp` | C/C++ 检查及 CodeGenie UI 代理能力 |
 | `vscode-jsonrpc`、`vscode-languageserver-protocol`、`vscode-uri` | ArkTS LSP 协议与 URI 支持 |
 
-到这里已经可以启动 MCP、列出 43 个工具，以及使用不依赖鸿蒙工具链的工具。
+到这里已经可以启动 MCP、列出 44 个工具，以及使用不依赖鸿蒙工具链的工具。
 
 ### 使用鸿蒙工程能力
 
@@ -40,7 +40,7 @@ npm install
 |---|---|
 | 构建、同步、官方 Linter、API 兼容、热重载、官方文档 | DevEco Studio，或 DevEco Command Line Tools（CLT），并安装对应 HarmonyOS/OpenHarmony SDK |
 | ArkTS 检查和语言服务 | HarmonyOS/OpenHarmony SDK；建议配置完整 DevEco Studio/CLT 工具链 |
-| 真机安装、日志、截图、UI 树和手势 | 工具链中的 `hdc`；真机已连接、已授权调试且能被 `hdc list targets` 识别 |
+| 真机安装、日志、截图、UI 树、手势和 `ui_flow` 回放 | 工具链中的 `hdc`；真机已连接、已授权调试且能被 `hdc list targets` 识别 |
 | 模拟器管理和场景模拟 | DevEco 模拟器组件、系统镜像及已接受的许可证 |
 | `arkts_knowledge_search` | 可访问华为 DevEco CodeGenie 服务的网络，以及通过 `deveco_login` 建立的会话 |
 | 自动签名和团队列表 | 华为开发者账号，以及通过 `deveco_cli_auth` 建立的官方 CLI 会话 |
@@ -102,7 +102,7 @@ MCP 客户端配置示例：
 node scripts/install.mjs --print-mcp
 ```
 
-## 43 个 MCP 工具
+## 44 个 MCP 工具
 
 表格中的“依赖”是在 Node.js 和 `npm install` 之外的条件。
 
@@ -172,7 +172,7 @@ node scripts/install.mjs --print-mcp
 
 只有一个设备在线时，多数工具可自动选择；多个设备在线时应显式传 `hvd` 或 `target`，避免操作错误设备。
 
-### UI 检查和控制（8）
+### UI 检查和控制（9）
 
 | 工具 | 用途 | 额外依赖 |
 |---|---|---|
@@ -180,6 +180,7 @@ node scripts/install.mjs --print-mcp
 | `ui_find` | 解析 UI 布局树，按文本、key、类型和可点击状态返回可操作坐标 | HDC 设备 |
 | `ui_observe` | 并行获取截图和布局树，一次返回画面、节点和坐标 | HDC 设备 |
 | `ui_tap` | 点击、双击、长按、滑动、fling、drag、方向 fling、文本和按键；支持节点百分比及屏幕百分比定位 | HDC 设备 |
+| `ui_flow` | 自动录制 `ui_tap` 成项目内 ArkPilot 流程，并直接启动、等待、断言和一键回放 | HDC 设备、HarmonyOS 工程 |
 | `ui_inspect` | 官方窗口列表和布局树；支持窗口/显示选择、全窗口、深度过滤及精简/完整输出 | DevEco Studio/CLT、设备或模拟器 |
 | `ui_control` | 官方 UI 控制器；支持坐标手势和 node-id/window 定位 | DevEco Studio/CLT、设备或模拟器 |
 | `get_app_ui_tree` | 通过 CodeGenie 获取前台调试应用的 UI 树 | DevEco Studio、CodeGenie 子进程、设备 |
@@ -262,6 +263,17 @@ switch_cwd → deveco_doctor → project_sync → arkts_check/code_lint
 hdc_log(list_devices) → ui_observe → ui_tap → ui_observe/ui_snapshot
 ```
 
+重复页面路径建议先录制再一键回放：
+
+```text
+ui_flow(record_start) → ui_observe/ui_tap... → ui_flow(record_stop)
+ui_flow(run) → 必要时 ui_flow(status)
+```
+
+流程默认保存在项目的 `.arkpilot/flows/*.json`，项目驱动配置保存在 `.arkpilot/config.json`，首次访问时会生成 `{ "driver": "hdc-shell" }`。录制只接收成功的本地 `ui_tap` 操作；输入值会保存为运行变量而不是明文。回放使用 `aa force-stop` / `aa start` 直接启动已安装应用，不构建也不重新安装，成功路径不截图，失败时才返回截图路径和精简 UI 树。默认后端是 `hdc-shell`；`hypium-driver` 不是必需依赖，`hypium` 名称已预留，但在真机与模拟器性能门禁通过前会明确返回不可用，不会静默切换。
+
+ArkPilot Flow 是独立限界上下文，代码集中在 `src/arkpilot/`：领域层负责版本、步骤、选择器、变量和超时规则；应用层负责录制及执行任务状态机；基础设施层负责项目清单解析、原子 JSON 仓库、HDC 会话和可选驱动端口；`src/server.mjs` 只负责 MCP Schema 与错误转换。它不会重构或改变既有工具，也没有任何 LingDong 专用路由。标准 UI 树无法识别 Canvas、XComponent 或游戏画面时，只能录制标记为 `fragile` 的屏幕百分比步骤。
+
 代码改动后的快速验证：
 
 ```text
@@ -289,7 +301,7 @@ node scripts/install-host.mjs --host all --profile full
 
 ## 运行约束
 
-- 43 个工具的参数都会先按公开 JSON Schema 校验。
+- 44 个工具的参数都会先按公开 JSON Schema 校验。
 - `tools/list` 使用本地静态表，不等待 CodeGenie 子进程；CodeGenie 不可用只影响其 3 个代理工具。
 - 构建和浏览器登录默认使用“启动任务 + 状态查询”，避免常见 MCP 客户端的 30 秒调用上限。
 - CLI、LSP、HDC、脚本和网络请求均有截止时间；超时会终止所启动的子进程树。
@@ -300,6 +312,7 @@ node scripts/install-host.mjs --host all --profile full
 
 ```bash
 npm test
+npm run test:flow:unit
 ```
 
 连接测试设备后运行真机 canary：
@@ -307,6 +320,15 @@ npm test
 ```bash
 npm run test:device
 ```
+
+已有确定性流程后，可做指定设备的连续回放和性能基准：
+
+```bash
+npm run test:flow:device -- --project /absolute/path/to/project --flow <flow-id> --device <device-id> --iterations 30
+npm run bench:ui-flow -- --project /absolute/path/to/project --flow <flow-id> --device <device-id> --iterations 50
+```
+
+流程含输入变量时，用 `--variables-file /absolute/path/to/variables.json` 传值，脚本不会把变量写入流程文件。真机与模拟器同时连接时必须传 `--device`。
 
 列出注册脚本：
 
