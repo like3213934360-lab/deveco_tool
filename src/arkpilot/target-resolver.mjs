@@ -1,0 +1,77 @@
+import fs from "node:fs";
+import path from "node:path";
+import { readModuleEntries, stripJson5 } from "../build-profile.mjs";
+import { flowError } from "./domain.mjs";
+
+function readJson5(file, code) {
+  if (!fs.existsSync(file)) throw flowError(`Required HarmonyOS manifest is missing: ${file}`, code);
+  try {
+    return JSON.parse(stripJson5(fs.readFileSync(file, "utf8")));
+  } catch (error) {
+    throw flowError(`HarmonyOS manifest is invalid: ${file} (${error.message})`, code);
+  }
+}
+
+function pickUnique(items, explicit, label, code) {
+  if (explicit) {
+    const match = items.find((entry) => entry.name === explicit || entry.buildName === explicit);
+    if (!match) throw flowError(`${label} was not found: ${explicit}`, code);
+    return match;
+  }
+  if (items.length !== 1) {
+    throw flowError(
+      `${items.length ? `Multiple ${label}s are available (${items.map((entry) => entry.name).join(", ")})` : `No ${label} is available`}; pass ${label} explicitly`,
+      code,
+    );
+  }
+  return items[0];
+}
+
+export function resolveAppTarget(projectPath, overrides = {}) {
+  const project = path.resolve(projectPath);
+  const app = readJson5(path.join(project, "AppScope", "app.json5"), "FLOW_APP_MANIFEST_INVALID");
+  const bundleName = overrides.bundleName ?? app?.app?.bundleName;
+  if (typeof bundleName !== "string" || !bundleName.trim()) {
+    throw flowError("AppScope/app.json5 does not declare app.bundleName", "FLOW_APP_TARGET_INVALID");
+  }
+
+  const buildProfile = path.join(project, "build-profile.json5");
+  if (!fs.existsSync(buildProfile)) {
+    throw flowError(`Required HarmonyOS manifest is missing: ${buildProfile}`, "FLOW_BUILD_PROFILE_INVALID");
+  }
+  const rawEntries = readModuleEntries(project);
+  if (!Array.isArray(rawEntries)) {
+    throw flowError(`HarmonyOS manifest is invalid: ${buildProfile}`, "FLOW_BUILD_PROFILE_INVALID");
+  }
+  const entries = rawEntries.map((entry) => ({
+    name: typeof entry?.name === "string" ? entry.name.trim() : "",
+    srcPath: typeof entry?.srcPath === "string" ? entry.srcPath : entry?.name,
+  })).filter((entry) => entry.name && entry.srcPath);
+
+  const candidates = [];
+  for (const entry of entries) {
+    const moduleFile = path.join(project, entry.srcPath, "src", "main", "module.json5");
+    if (!fs.existsSync(moduleFile)) {
+      throw flowError(`Required HarmonyOS manifest is missing: ${moduleFile}`, "FLOW_MODULE_MANIFEST_INVALID");
+    }
+    const manifest = readJson5(moduleFile, "FLOW_MODULE_MANIFEST_INVALID");
+    if (manifest?.module?.type !== "entry") continue;
+    candidates.push({
+      ...entry,
+      buildName: entry.name,
+      name: manifest?.module?.name || entry.name,
+      manifest,
+      moduleFile,
+    });
+  }
+  const selectedModule = pickUnique(candidates, overrides.module, "module", "FLOW_MODULE_REQUIRED");
+  const abilities = Array.isArray(selectedModule.manifest?.module?.abilities)
+    ? selectedModule.manifest.module.abilities.filter((item) => typeof item?.name === "string" && item.name)
+    : [];
+  const selectedAbility = pickUnique(abilities, overrides.ability, "ability", "FLOW_ABILITY_REQUIRED");
+  return {
+    bundleName: bundleName.trim(),
+    module: selectedModule.name,
+    ability: selectedAbility.name,
+  };
+}
