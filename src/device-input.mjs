@@ -16,11 +16,12 @@ function fail(message, code, hint) {
 }
 
 export const TAP_ACTIONS = new Set([
-  "click", "doubleClick", "longClick", "swipe", "dircFling", "inputText", "keyEvent",
+  "click", "doubleClick", "longClick", "swipe", "fling", "drag", "dircFling", "inputText", "keyEvent",
 ]);
 
 /** Actions a selector can aim, because they take exactly one point. */
 export const POINT_ACTIONS = new Set(["click", "doubleClick", "longClick"]);
+export const RECT_GESTURE_ACTIONS = new Set(["swipe", "fling", "drag"]);
 
 /**
  * `hdc shell a b c` joins its arguments into one command line and wraps any argument containing
@@ -93,9 +94,9 @@ export function buildInputArgs(input) {
   if (POINT_ACTIONS.has(action)) {
     return [action, String(requireCoordinate(input.x, "x")), String(requireCoordinate(input.y, "y"))];
   }
-  if (action === "swipe") {
+  if (["swipe", "fling", "drag"].includes(action)) {
     const args = [
-      "swipe",
+      action,
       String(requireCoordinate(input.x, "x")),
       String(requireCoordinate(input.y, "y")),
       String(requireCoordinate(input.x2, "x2")),
@@ -138,6 +139,103 @@ export function buildInputArgs(input) {
     fail("key names may only contain letters, digits, and underscores", "UI_ARGS_INVALID");
   }
   return ["keyEvent", ...keys];
+}
+
+function requirePercent(value, name) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 0 || parsed > 100) {
+    fail(`${name} must be a number between 0 and 100`, "UI_ARGS_INVALID");
+  }
+  return parsed;
+}
+
+/**
+ * Build a gesture inside a selected node instead of relying on screenshot coordinates.
+ * Horizontal percentages run left-to-right; vertical percentages run bottom-to-top, matching
+ * the usual meaning of a slider value. A small edge inset lands on an endpoint thumb rather than
+ * just outside the component's interactive track.
+ *
+ * @param {object} input Tool arguments.
+ * @param {{rect: number[]}} target Selected node returned by analyseDump.
+ * @returns {string[]} Arguments after `uiInput`.
+ */
+export function buildTargetGestureArgs(input, target) {
+  if (!RECT_GESTURE_ACTIONS.has(input.action)) {
+    fail(`${input.action} cannot use a percentage gesture`, "UI_ARGS_INVALID");
+  }
+  if (!Array.isArray(target?.rect) || target.rect.length !== 4) {
+    fail("The selected node has no usable bounds", "UI_TARGET_BOUNDS_MISSING");
+  }
+  const fromPercent = requirePercent(input.from_percent, "from_percent");
+  const toPercent = requirePercent(input.to_percent, "to_percent");
+  const axis = input.axis ?? "horizontal";
+  if (axis !== "horizontal" && axis !== "vertical") {
+    fail("axis must be horizontal or vertical", "UI_ARGS_INVALID");
+  }
+
+  const [x1, y1, x2, y2] = target.rect.map(Number);
+  const width = x2 - x1;
+  const height = y2 - y1;
+  if (!(width > 0) || !(height > 0)) {
+    fail("The selected node has zero-area bounds", "UI_TARGET_BOUNDS_MISSING");
+  }
+
+  let pointAt;
+  if (axis === "horizontal") {
+    const inset = Math.min(height / 2, width * 0.05);
+    const usable = Math.max(0, width - (2 * inset));
+    pointAt = (percent) => ({
+      x: Math.round(x1 + inset + ((usable * percent) / 100)),
+      y: Math.round((y1 + y2) / 2),
+    });
+  } else {
+    const inset = Math.min(width / 2, height * 0.05);
+    const usable = Math.max(0, height - (2 * inset));
+    pointAt = (percent) => ({
+      x: Math.round((x1 + x2) / 2),
+      y: Math.round(y2 - inset - ((usable * percent) / 100)),
+    });
+  }
+
+  const from = pointAt(fromPercent);
+  const to = pointAt(toPercent);
+  return buildInputArgs({ ...input, x: from.x, y: from.y, x2: to.x, y2: to.y });
+}
+
+/**
+ * Build a raw gesture from percentages of the current device screen.
+ *
+ * Unlike selector percentages, both axes use normal screen coordinates: x grows left-to-right
+ * and y grows top-to-bottom. This is the stable fallback for controls omitted from dumpLayout --
+ * it preserves the intended location across devices without pretending that a missing node can be
+ * semantically selected or verified.
+ *
+ * @param {object} input Tool arguments.
+ * @param {number[]} screen Root screen rectangle [x1, y1, x2, y2].
+ * @returns {string[]} Arguments after `uiInput`.
+ */
+export function buildScreenGestureArgs(input, screen) {
+  if (!RECT_GESTURE_ACTIONS.has(input.action)) {
+    fail(`${input.action} cannot use a screen-percentage gesture`, "UI_ARGS_INVALID");
+  }
+  if (!Array.isArray(screen) || screen.length !== 4) {
+    fail("The UI dump has no usable screen bounds", "UI_SCREEN_BOUNDS_MISSING");
+  }
+  const [x1, y1, x2, y2] = screen.map(Number);
+  if (!(x2 > x1) || !(y2 > y1)) {
+    fail("The UI dump has invalid screen bounds", "UI_SCREEN_BOUNDS_MISSING");
+  }
+  const fromX = requirePercent(input.from_x_percent, "from_x_percent");
+  const fromY = requirePercent(input.from_y_percent, "from_y_percent");
+  const toX = requirePercent(input.to_x_percent, "to_x_percent");
+  const toY = requirePercent(input.to_y_percent, "to_y_percent");
+  const point = (xPercent, yPercent) => ({
+    x: Math.round(x1 + (((x2 - x1) * xPercent) / 100)),
+    y: Math.round(y1 + (((y2 - y1) * yPercent) / 100)),
+  });
+  const from = point(fromX, fromY);
+  const to = point(toX, toY);
+  return buildInputArgs({ ...input, x: from.x, y: from.y, x2: to.x, y2: to.y });
 }
 
 function describeCandidate(match) {

@@ -1,4 +1,6 @@
 import fs from "node:fs";
+import crypto from "node:crypto";
+import Ajv from "ajv";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
@@ -16,10 +18,26 @@ import {
   apiCompatibilityCheck,
   applyChanges,
   buildProject,
+  cancelBuildProjectJob,
+  closeBuildProjectJobs,
   devecoCliStatus,
+  getBuildProjectJob,
   projectSync,
+  startBuildProjectJob,
   startApp,
 } from "./deveco-cli.mjs";
+import {
+  cliAuth,
+  codeLint,
+  deviceInfo,
+  emulatorManage,
+  emulatorScenario,
+  harmonyDocs,
+  signatureGenerate,
+  uiControl,
+  uiInspect,
+} from "./deveco-official.mjs";
+import { closeHotReload, hotReload } from "./hotreload.mjs";
 import { uiFind, uiObserve, uiSnapshot, uiTap } from "./device-ui.mjs";
 import { validateDocument } from "./document-validate.mjs";
 import { hdcLog, hdcStatus } from "./hdc-log.mjs";
@@ -83,8 +101,151 @@ function codegenieTools() {
   return codegenieToolsPromise;
 }
 
+const commonTimeout = { type: "integer", minimum: 1000, maximum: 3600000 };
+const deviceTypes = ["phone", "foldable", "widefold", "triplefold", "tablet", "2in1", "2in1 foldable", "wearable", "tv"];
+
+const officialTools = [
+  {
+    name: "code_lint",
+    description: "Run the official project-level DevEco Code Linter, with incremental checking, JSON/report output, and optional automatic fixes.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        path: { type: "string", description: "Optional file or directory to lint, relative to the project." },
+        fix: { type: "boolean", description: "Apply the linter's automatic fixes." },
+        incremental: { type: "boolean" },
+        config_path: { type: "string" },
+        product: { type: "string" },
+        format: { type: "string", enum: ["default", "json"] },
+        output_path: { type: "string" },
+        limit: { type: "integer", minimum: 1 },
+        project_path: { type: "string" }, timeoutMs: commonTimeout,
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "hot_reload",
+    description: "Manage one real persistent DevEco hot-reload watch session: start, apply changed .ets files without restarting the app, inspect status, or stop.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        action: { type: "string", enum: ["start", "apply", "status", "stop"] },
+        files: { type: "array", minItems: 1, items: { type: "string" } },
+        hvd: { type: "string" }, module: { type: "string" }, product: { type: "string" },
+        build_mode: { type: "string" }, ability: { type: "string" }, project_path: { type: "string" },
+        timeoutMs: commonTimeout,
+      },
+      required: ["action"], additionalProperties: false,
+    },
+  },
+  {
+    name: "harmony_docs",
+    description: "Use the official local DevEco documentation center: list catalogs, search a catalog, or read a document by ID.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        action: { type: "string", enum: ["catalog", "search", "read"] },
+        keywords: { type: "array", minItems: 1, items: { type: "string" } }, catalog: { type: "string" },
+        document_id: { type: "string" }, format: { type: "string", enum: ["default", "json"] },
+        limit: { type: "integer", minimum: 1 }, project_path: { type: "string" }, timeoutMs: commonTimeout,
+      },
+      required: ["action"], additionalProperties: false,
+    },
+  },
+  {
+    name: "device_info",
+    description: "Return official detailed device information: name, serial, kind, device type, and OS version when supplied by the target.",
+    inputSchema: {
+      type: "object",
+      properties: { target: { type: "string" }, format: { type: "string", enum: ["table", "json"] }, project_path: { type: "string" }, timeoutMs: commonTimeout },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "ui_inspect",
+    description: "Inspect official UI window lists or layout trees with window/display selection, all-window mode, depth filtering, and full/simplified output.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        action: { type: "string", enum: ["layout", "windows"] }, hvd: { type: "string" }, id: { type: "string", minLength: 1 },
+        window: { type: "string", minLength: 1 }, all_windows: { type: "boolean" }, all: { type: "boolean" }, depth: { type: "integer", minimum: 0 },
+        format: { type: "string", enum: ["default", "json"] }, mode: { type: "string", enum: ["full", "simplified"] },
+        project_path: { type: "string" }, timeoutMs: commonTimeout,
+      },
+      required: ["action"], additionalProperties: false,
+    },
+  },
+  {
+    name: "ui_control",
+    description: "Use the official DevEco UI controller for coordinate gestures or node-id/window-targeted clicks and text input.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        action: { type: "string", enum: ["click", "doubleclick", "longclick", "swipe", "fling", "drag", "dircfling", "text"] },
+        x: { type: "integer", minimum: 1 }, y: { type: "integer", minimum: 1 }, x2: { type: "integer", minimum: 1 }, y2: { type: "integer", minimum: 1 },
+        direction: { type: "string", enum: ["up", "down", "left", "right"] }, text: { type: "string" },
+        node_id: { type: "string", minLength: 1 }, window: { type: "string", minLength: 1, pattern: "^[a-zA-Z0-9_-]+$" }, speed: { type: "integer", minimum: 200, maximum: 40000 }, hvd: { type: "string" },
+        project_path: { type: "string" }, timeoutMs: commonTimeout,
+      },
+      required: ["action"], additionalProperties: false,
+    },
+  },
+  {
+    name: "emulator_manage",
+    description: "Manage official DevEco emulators, system images, and licenses: list/start/stop/create/delete, download/remove images, and view/accept licenses.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        action: { type: "string", enum: ["list", "start", "stop", "create", "delete", "image_list", "image_download", "image_remove", "license_view", "license_accept"] },
+        names: { type: "array", items: { type: "string" } }, name: { type: "string" }, device_type: { type: "string", enum: deviceTypes },
+        os_version: { type: "string" }, force: { type: "boolean" }, all: { type: "boolean" }, format: { type: "string", enum: ["table", "json"] },
+        project_path: { type: "string" }, timeoutMs: commonTimeout,
+      },
+      required: ["action"], additionalProperties: false,
+    },
+  },
+  {
+    name: "emulator_scenario",
+    description: "Simulate official emulator hardware/environment scenarios: shake, power, rotation, volume, folding, battery, location, sports/navigation, and sensors.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        action: { type: "string", enum: ["shake", "power", "rotate", "volume", "fold", "battery", "geolocation", "scene", "sensor"] },
+        target: { type: "string" }, direction: { oneOf: [{ type: "string" }, { type: "number" }] }, state: { type: "string" },
+        level: { type: "integer", minimum: 0, maximum: 100 }, status: { type: "string", enum: ["charging", "discharging"] },
+        longitude: { type: "number", minimum: -180, maximum: 180 }, latitude: { type: "number", minimum: -90, maximum: 90 },
+        altitude: { type: "number", minimum: -10000, maximum: 10000 }, scene: { type: "string", enum: ["outdoorRunning", "outdoorCycling", "drivingNavigation"] },
+        light_intensity: { type: "number", minimum: 0, maximum: 100000 }, humidity: { type: "number", minimum: 0, maximum: 100 },
+        temperature: { type: "number", minimum: -273.1, maximum: 100 }, steps: { type: "integer", minimum: 0, maximum: 10000 }, heartrate: { type: "integer", minimum: 0, maximum: 255 },
+        project_path: { type: "string" }, timeoutMs: commonTimeout,
+      },
+      required: ["action"], additionalProperties: false,
+    },
+  },
+  {
+    name: "app_signature",
+    description: "Generate or update HarmonyOS project signing configuration using the official CLI account/team/device flow.",
+    inputSchema: {
+      type: "object",
+      properties: { force: { type: "boolean" }, team_id: { type: "string" }, product: { type: "string" }, project_path: { type: "string" }, timeoutMs: commonTimeout },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "deveco_cli_auth",
+    description: "Manage the official DevEco CLI account session or list available signing teams. This is separate from the CodeGenie knowledge-service login.",
+    inputSchema: {
+      type: "object",
+      properties: { action: { type: "string", enum: ["login", "logout", "status", "team_list"] }, project_path: { type: "string" }, timeoutMs: commonTimeout },
+      required: ["action"], additionalProperties: false,
+    },
+  },
+];
+
 
 const localTools = [
+  ...officialTools,
   {
     name: "deveco_script_catalog",
     description: "List the allowlisted DevEco skill scripts that can be executed through this unified MCP.",
@@ -159,8 +320,20 @@ const localTools = [
   },
   {
     name: "deveco_login",
-    description: "Open the China-site Huawei DevEco login page and persist the local session token.",
-    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+    description: "Start or poll a China-site Huawei DevEco browser login. Start returns immediately so MCP hosts with a 30-second deadline do not abort the five-minute browser callback window; poll with action=status and the returned login_id.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        action: { type: "string", enum: ["start", "status"], description: "Defaults to start." },
+        login_id: { type: "string", description: "Required for status." },
+        wait_ms: { type: "integer", minimum: 0, maximum: 20000, description: "Status may wait this long for completion." },
+      },
+      allOf: [{
+        if: { properties: { action: { const: "status" } }, required: ["action"] },
+        then: { required: ["login_id"] },
+      }],
+      additionalProperties: false,
+    },
   },
   {
     name: "deveco_logout",
@@ -203,12 +376,21 @@ const localTools = [
   },
   {
     name: "build_project",
-    description: "Build a HarmonyOS project or specific modules through the bundled DevEco CLI. "
+    description: "Build a HarmonyOS project or specific modules through the bundled DevEco CLI. Builds start asynchronously by default so MCP hosts with a fixed 30-second timeout do not abort them: keep the returned job_id and call this tool with action=status until it finishes. "
+      + "Use action=cancel to terminate the build, or action=run only when the MCP host is known to allow a long synchronous request. "
       + "Omit modules to build the whole product. Set clean only when a full rebuild is explicitly wanted: "
       + "it cleans and then builds, which discards incremental caches and makes the build much slower.",
     inputSchema: {
       type: "object",
       properties: {
+        action: {
+          type: "string",
+          enum: ["start", "status", "cancel", "run"],
+          default: "start",
+          description: "start (default) returns a job_id immediately; status polls it; cancel stops it; run waits synchronously.",
+        },
+        job_id: { type: "string", description: "Job ID returned by start; required for status and cancel." },
+        wait_ms: { type: "integer", minimum: 0, maximum: 20000, description: "For status, wait up to this long for completion before returning; 20000 reduces polling while staying below common 30-second host limits." },
         modules: {
           type: "array",
           items: { type: "string" },
@@ -226,6 +408,10 @@ const localTools = [
         project_path: { type: "string", description: "Optional project root; otherwise the active project from switch_cwd." },
         timeoutMs: { type: "integer", minimum: 1000, maximum: 3600000 },
       },
+      allOf: [{
+        if: { properties: { action: { enum: ["status", "cancel"] } }, required: ["action"] },
+        then: { required: ["job_id"] },
+      }],
       additionalProperties: false,
     },
   },
@@ -286,12 +472,15 @@ const localTools = [
   },
   {
     name: "apply_changes",
-    description: "Cold-build and deploy only changed project files through DevEco CLI 1.3 apply mode. Run start_app once first; this is not a persistent hot-reload process.",
+    description: "Cold-build and deploy changed project files through DevEco CLI 1.3 apply mode. Exactly one Entry module is selected so a multi-Entry project cannot deploy sibling HAPs; pass module when the project has several runnable entries. On apply failure the tool makes a best-effort relaunch of the previously installed app.",
     inputSchema: {
       type: "object",
       properties: {
         files: { type: "array", minItems: 1, items: { type: "string" }, description: "Changed files inside the selected project." },
         hvd: { type: "string", description: "Target device; resolved automatically when exactly one is connected." },
+        module: { type: "string", description: "Runnable Entry module. Required when the project has multiple runnable modules." },
+        target: { type: "string", description: "Optional build target, combined as module@target." },
+        ability: { type: "string", description: "Optional ability used only when relaunching after a failed apply." },
         product: { type: "string", description: "Product name from build-profile.json5." },
         build_mode: { type: "string", description: "Build mode, such as debug or release." },
         project_path: { type: "string", description: "Optional project root; otherwise the active project from switch_cwd." },
@@ -327,6 +516,7 @@ const localTools = [
         line: { type: "integer", minimum: 1 },
         column: { type: "integer", minimum: 1 },
         includeDeclaration: { type: "boolean" },
+        timeoutMs: { type: "integer", minimum: 1000, maximum: 120000, description: "Hard deadline; a timed-out language server is terminated and restarted lazily." },
       },
       required: ["file", "line", "column"],
       additionalProperties: false,
@@ -346,8 +536,22 @@ const localTools = [
         line: { type: "integer", minimum: 1 },
         character: { type: "integer", minimum: 1 },
         query: { type: "string", description: "Workspace-symbol search query; empty string requests all symbols." },
+        timeoutMs: { type: "integer", minimum: 1000, maximum: 120000 },
       },
-      required: ["operation", "filePath", "line", "character"],
+      required: ["operation"],
+      allOf: [
+        {
+          if: { properties: { operation: { not: { const: "workspaceSymbol" } } }, required: ["operation"] },
+          then: { required: ["filePath"] },
+        },
+        {
+          if: {
+            properties: { operation: { not: { enum: ["workspaceSymbol", "documentSymbol"] } } },
+            required: ["operation"],
+          },
+          then: { required: ["line", "character"] },
+        },
+      ],
       additionalProperties: false,
     },
   },
@@ -360,6 +564,7 @@ const localTools = [
         file: { type: "string" },
         line: { type: "integer", minimum: 1 },
         column: { type: "integer", minimum: 1 },
+        timeoutMs: { type: "integer", minimum: 1000, maximum: 120000 },
       },
       required: ["file", "line", "column"],
       additionalProperties: false,
@@ -367,13 +572,14 @@ const localTools = [
   },
   {
     name: "go_to_declaration",
-    description: "Go to the ArkTS/TypeScript declaration at an absolute file position.",
+    description: "Go to the ArkTS/TypeScript declaration at an absolute file position. If the installed ArkTS server does not advertise declarationProvider, this safely falls back to definition instead of returning JSON-RPC -32601.",
     inputSchema: {
       type: "object",
       properties: {
         file: { type: "string" },
         line: { type: "integer", minimum: 1 },
         column: { type: "integer", minimum: 1 },
+        timeoutMs: { type: "integer", minimum: 1000, maximum: 120000 },
       },
       required: ["file", "line", "column"],
       additionalProperties: false,
@@ -388,6 +594,7 @@ const localTools = [
         file: { type: "string" },
         line: { type: "integer", minimum: 1 },
         column: { type: "integer", minimum: 1 },
+        timeoutMs: { type: "integer", minimum: 1000, maximum: 120000 },
       },
       required: ["file", "line", "column"],
       additionalProperties: false,
@@ -398,7 +605,7 @@ const localTools = [
     description: "List functions, classes, variables, and other symbols defined in an ArkTS/TypeScript file.",
     inputSchema: {
       type: "object",
-      properties: { file: { type: "string" } },
+      properties: { file: { type: "string" }, timeoutMs: { type: "integer", minimum: 1000, maximum: 120000 } },
       required: ["file"],
       additionalProperties: false,
     },
@@ -413,6 +620,7 @@ const localTools = [
         line: { type: "integer", minimum: 1 },
         column: { type: "integer", minimum: 1 },
         direction: { type: "string", enum: ["incoming", "outgoing"] },
+        timeoutMs: { type: "integer", minimum: 1000, maximum: 120000 },
       },
       required: ["file", "line", "column", "direction"],
       additionalProperties: false,
@@ -443,6 +651,7 @@ const localTools = [
       properties: {
         hvd: { type: "string", description: "hdc connect key as printed by hdc_log list_devices; optional when exactly one device is connected." },
         localPath: { type: "string", description: "Where to write the image. Defaults to a timestamped file under the system temp directory." },
+        overwrite: { type: "boolean", description: "Allow replacing an existing localPath. Defaults to false so a typo cannot destroy an unrelated file." },
         width: { type: "integer", minimum: 64, maximum: 4096, description: "Capture width, aspect ratio preserved. Defaults to the display’s own width, capped so the long edge stays within 2576px. Lower it to cut image cost on a long loop; coordinateScale reports the ratio either way." },
         format: { type: "string", enum: ["jpeg", "png"], description: "jpeg (default) is lossy but small; png is lossless and uncapped, for pixel-exact work. Both come from snapshot_display. Format does not change image cost, which follows pixel area only." },
         displayId: { type: "integer", minimum: 0, description: "Only for multi-display devices. Left unset, the device picks its active display." },
@@ -455,7 +664,7 @@ const localTools = [
   },
   {
     name: "ui_find",
-    description: "Locate on-screen controls in a uitest layout dump and return tap-ready device coordinates, without capturing a frame. Use ui_observe instead when you also want to see the screen. Exact where reading coordinates off a screenshot is not, and unlike get_app_ui_tree it does not require the debugged app to be in the foreground. Pass dumpPath to re-query a dump you already have instead of spending ~1.4s on another one.",
+    description: "Locate on-screen controls in a uitest layout dump and return tap-ready device coordinates, without capturing a frame. Use ui_observe instead when you also want to see the screen. Exact where reading coordinates off a screenshot is not, and unlike get_app_ui_tree it does not require the debugged app to be in the foreground. Pass dumpPath to re-query a dump you already have instead of spending ~1.4s on another one. A truncated default result does not mean later controls are absent: inspect componentTypes and re-query by type, such as type=Slider.",
     inputSchema: {
       type: "object",
       properties: {
@@ -475,7 +684,7 @@ const localTools = [
   },
   {
     name: "ui_observe",
-    description: "Capture the screen AND the layout tree in one device round trip, and return the frame inline beside tap-ready coordinates. This is the tool to reach for in a UI loop: the capture is overlapped with the dump on the device, which measured 1238ms against 1731ms for calling ui_snapshot and ui_find separately. Takes the same selectors as ui_find. Also returns structureSignature, which is stable while the layout is unchanged, so you can tell whether anything actually happened without re-reading the screen.",
+    description: "Capture the screen AND the layout tree in one device round trip, and return the frame inline beside tap-ready coordinates. This is the tool to reach for in a UI loop: the capture is overlapped with the dump on the device, which measured 1238ms against 1731ms for calling ui_snapshot and ui_find separately. Takes the same selectors as ui_find. If matches are truncated, componentTypes still shows which later controls exist; re-query dumpPath with ui_find and a type such as Slider. Also returns structureSignature, which is stable while the layout is unchanged, so you can tell whether anything actually happened without re-reading the screen.",
     inputSchema: {
       type: "object",
       properties: {
@@ -488,6 +697,7 @@ const localTools = [
         displayId: { type: "integer", minimum: 0, description: "Restrict matches to one display, and capture that display. Only for multi-display devices; a foldable or an external screen puts nodes from both displays in one dump." },
         hvd: { type: "string", description: "hdc connect key as printed by hdc_log list_devices; optional when exactly one device is connected." },
         localPath: { type: "string", description: "Where to write the frame. Defaults to a timestamped file under the system temp directory." },
+        overwrite: { type: "boolean", description: "Allow replacing an existing localPath. Defaults to false so a typo cannot destroy an unrelated file." },
         width: { type: "integer", minimum: 64, maximum: 4096, description: "Capture width, aspect ratio preserved. Defaults to the display’s own width, capped so the long edge stays within 2576px." },
         inline: { type: "boolean", description: "Return the frame as a content block (default true)." },
         timeoutMs: { type: "integer", minimum: 1000, maximum: 600000 },
@@ -497,27 +707,33 @@ const localTools = [
   },
   {
     name: "ui_tap",
-    description: "Send a touch, gesture, or key event through uitest uiInput over hdc. Same actions as perform_ui_action but without the CodeGenie child, so it survives that child stalling. Prefer aiming click/doubleClick/longClick with key/text/type over passing x/y: coordinates go stale between the find and the tap (a point addressing a home-screen widget addressed the notification list moments later), and the selector form resolves and taps while holding the device. Note dircFling direction is the scroll direction, and flinging at a list boundary succeeds without moving anything.",
+    description: "Send a touch, gesture, or key event through uitest uiInput over hdc. Despite the compatibility name ui_tap, this tool also performs swipe/fling/drag/text/key actions. Prefer aiming click/doubleClick/longClick with key/text/type over passing x/y: coordinates go stale between the find and the tap. A swipe/fling/drag can target a node with from_percent/to_percent; if dumpLayout omits the target (for example a custom Slider), use all four screen-percentage fields instead of hard-coded pixels. Raw-coordinate and screen-percentage success only mean uitest accepted the command, not that the UI changed. Note dircFling direction is the scroll direction, and flinging at a list boundary succeeds without moving anything.",
     inputSchema: {
       type: "object",
       properties: {
         action: {
           type: "string",
-          enum: ["click", "doubleClick", "longClick", "swipe", "dircFling", "inputText", "keyEvent"],
+          enum: ["click", "doubleClick", "longClick", "swipe", "fling", "drag", "dircFling", "inputText", "keyEvent"],
         },
         key: { type: "string", description: "Aim a click/doubleClick/longClick at the node with this exact key instead of at coordinates. Refuses rather than guesses when it matches no node or several." },
-        text: { type: "string", description: "Aim at the node whose visible text contains this, instead of at coordinates. For inputText this is the text to type, not a selector." },
+        text: { type: "string", description: "For click/doubleClick/longClick or percentage gestures, select a node whose visible text contains this. For inputText, this is the text to type." },
         type: { type: "string", description: "Aim at the node of this exact component type, or narrow a key/text selector." },
         clickableOnly: { type: "boolean", description: "Narrow a selector to nodes the device reports as clickable. The node that handles a tap is often a container wrapping the label you can see." },
-        verify: { type: "boolean", description: "After a selector-aimed tap, dump again and report whether the target is still present. Off by default: it doubles the cost." },
+        verify: { type: "boolean", description: "Dump again after a selector action. Defaults to true for percentage gestures and false for point taps because it doubles the layout-dump cost." },
+        from_percent: { type: "number", minimum: 0, maximum: 100, description: "Start position inside a selector-targeted swipe/fling/drag." },
+        to_percent: { type: "number", minimum: 0, maximum: 100, description: "End position inside a selector-targeted swipe/fling/drag." },
+        axis: { type: "string", enum: ["horizontal", "vertical"], description: "Percentage direction. Horizontal is left-to-right; vertical is bottom-to-top. Defaults to horizontal." },
+        from_x_percent: { type: "number", minimum: 0, maximum: 100, description: "Start x as a percentage of the current device screen when the target is absent from the UI tree. Supply all four screen-percentage fields and omit pixel coordinates/selectors." },
+        from_y_percent: { type: "number", minimum: 0, maximum: 100, description: "Start y as a percentage from the top of the current device screen." },
+        to_x_percent: { type: "number", minimum: 0, maximum: 100, description: "Destination x as a percentage of the current device screen." },
+        to_y_percent: { type: "number", minimum: 0, maximum: 100, description: "Destination y as a percentage from the top of the current device screen." },
         x: { type: "integer", minimum: 0, description: "Device x for click/doubleClick/longClick/swipe/inputText. Omit when using a selector." },
         y: { type: "integer", minimum: 0, description: "Device y for click/doubleClick/longClick/swipe/inputText. Omit when using a selector." },
-        x2: { type: "integer", minimum: 0, description: "Destination x for swipe." },
-        y2: { type: "integer", minimum: 0, description: "Destination y for swipe." },
+        x2: { type: "integer", minimum: 0, description: "Destination x for swipe/fling/drag." },
+        y2: { type: "integer", minimum: 0, description: "Destination y for swipe/fling/drag." },
         direction: { type: "integer", enum: [0, 1, 2, 3], description: "dircFling scroll direction: 0 left, 1 right, 2 toward the top, 3 toward the bottom." },
-        velocity: { type: "integer", minimum: 200, maximum: 40000, description: "Gesture speed in px/s for swipe and dircFling." },
+        velocity: { type: "integer", minimum: 200, maximum: 40000, description: "Gesture speed in px/s for swipe/fling/drag and dircFling." },
         stepLength: { type: "integer", minimum: 1, description: "dircFling step length in px." },
-        text: { type: "string", description: "Text for inputText. Anything without whitespace is quoted for the device shell and accepted as-is; text that mixes whitespace with \" $ ` or \\ is refused because hdc's own quoting leaves those live, and perform_ui_action stays available for it." },
         key1: { type: "string", description: "Key name or keycode, e.g. Back, Home, Power." },
         key2: { type: "string", description: "Second key of a combination." },
         key3: { type: "string", description: "Third key of a combination." },
@@ -581,10 +797,97 @@ const server = new Server(
   { capabilities: { tools: {} } },
 );
 
+const advertisedTools = [...localTools, ...PROXIED_CODEGENIE_TOOLS];
+const schemaCompiler = new Ajv({ allErrors: true, strict: false });
+// The upstream CodeGenie schemas use the OpenAPI integer format. Register it explicitly so Ajv
+// validates the range instead of printing one warning per field to the MCP server's stderr.
+schemaCompiler.addFormat("int32", {
+  type: "number",
+  validate: (value) => Number.isInteger(value) && value >= -2147483648 && value <= 2147483647,
+});
+const argumentValidators = new Map(
+  advertisedTools.map((tool) => [tool.name, schemaCompiler.compile(tool.inputSchema)]),
+);
+
+function argumentValidationFailure(name, args) {
+  const validator = argumentValidators.get(name);
+  if (!validator || validator(args)) return null;
+  return {
+    code: "SCHEMA_VALIDATION_FAILED",
+    message: `Arguments for ${name} do not match its published input schema.`,
+    details: (validator.errors ?? []).map((error) => ({
+      path: error.instancePath || "/",
+      keyword: error.keyword,
+      message: error.message,
+      params: error.params,
+    })),
+  };
+}
+
+let loginJob = null;
+
+function loginJobResult(job) {
+  const result = {
+    login_id: job.id,
+    status: job.status,
+    started_at: new Date(job.startedAt).toISOString(),
+    elapsed_ms: (job.finishedAt ?? Date.now()) - job.startedAt,
+  };
+  if (job.status === "waiting") {
+    result.message = "The browser login is waiting for its loopback callback.";
+    result.next_action = { tool: "deveco_login", arguments: { action: "status", login_id: job.id, wait_ms: 20000 } };
+  } else if (job.status === "succeeded") {
+    result.loggedIn = true;
+    result.userId = job.user?.userId;
+    result.userName = job.user?.userName;
+  } else {
+    result.error = job.error;
+  }
+  return result;
+}
+
+function startLoginJob() {
+  if (loginJob?.status === "waiting") return loginJobResult(loginJob);
+  const job = {
+    id: crypto.randomUUID(), status: "waiting", startedAt: Date.now(), finishedAt: null,
+    user: null, error: null, completion: null,
+  };
+  loginJob = job;
+  job.completion = login().then(
+    (user) => {
+      job.status = "succeeded";
+      job.user = user;
+      job.finishedAt = Date.now();
+    },
+    (error) => {
+      job.status = "failed";
+      job.error = { code: error.code ?? "DEVECO_LOGIN_FAILED", message: error.message };
+      job.finishedAt = Date.now();
+    },
+  );
+  return loginJobResult(job);
+}
+
+async function getLoginJob(id, waitMs) {
+  if (!loginJob || String(id ?? "") !== loginJob.id) {
+    const error = new Error(`Login job not found: ${id ?? ""}`);
+    error.code = "DEVECO_LOGIN_JOB_NOT_FOUND";
+    throw error;
+  }
+  const bounded = Math.min(Math.max(Number(waitMs) || 0, 0), 20000);
+  if (bounded && loginJob.status === "waiting") {
+    await Promise.race([
+      loginJob.completion,
+      new Promise((resolve) => setTimeout(resolve, bounded)),
+    ]);
+  }
+  return loginJobResult(loginJob);
+}
+
 // Answered entirely from static tables: no await, so a stalled CodeGenie child cannot delay
 // tool discovery. The child is contacted only when one of the proxied tools is called.
 server.setRequestHandler(ListToolsRequestSchema, async () => ({
-  tools: [...localTools, ...PROXIED_CODEGENIE_TOOLS],
+  tools: advertisedTools,
 }));
 
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
@@ -592,6 +895,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const args = request.params.arguments ?? {};
 
   try {
+    const validationFailure = argumentValidationFailure(name, args);
+    if (validationFailure) return textResult(validationFailure, true);
+
     if (name === "deveco_script_catalog") {
       return textResult({ scripts: listScripts(), count: scriptIds.length });
     }
@@ -657,8 +963,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     }
 
     if (name === "deveco_login") {
-      const user = await login();
-      return textResult({ loggedIn: true, userId: user.userId, userName: user.userName });
+      const action = args.action ?? "start";
+      if (action === "start") return textResult(startLoginJob());
+      const result = await getLoginJob(args.login_id, args.wait_ms);
+      return textResult(result, result.status === "failed");
     }
 
     if (name === "deveco_logout") {
@@ -667,12 +975,23 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     }
 
     if (name === "deveco_status") {
-      return textResult(authStatus());
+      return textResult(await authStatus());
     }
 
     if (name === "arkts_check") {
       return textResult(await runArktsCheck(args));
     }
+
+    if (name === "code_lint") return plainResult(await codeLint(args));
+    if (name === "hot_reload") return textResult(await hotReload(args));
+    if (name === "harmony_docs") return plainResult(await harmonyDocs(args));
+    if (name === "device_info") return plainResult(await deviceInfo(args));
+    if (name === "ui_inspect") return plainResult(await uiInspect(args));
+    if (name === "ui_control") return plainResult(await uiControl(args));
+    if (name === "emulator_manage") return plainResult(await emulatorManage(args));
+    if (name === "emulator_scenario") return plainResult(await emulatorScenario(args));
+    if (name === "app_signature") return plainResult(await signatureGenerate(args));
+    if (name === "deveco_cli_auth") return plainResult(await cliAuth(args));
 
     if (name === "check_ets_files") {
       if (!Array.isArray(args.files)) {
@@ -682,7 +1001,23 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     }
 
     if (name === "build_project") {
-      return plainResult(await buildProject(args));
+      const action = args.action ?? "start";
+      if (action === "run") {
+        const { action: ignoredAction, job_id: ignoredJobId, wait_ms: ignoredWaitMs, ...buildArgs } = args;
+        return plainResult(await buildProject(buildArgs));
+      }
+      if (action === "status") {
+        const result = await getBuildProjectJob(args.job_id, args.wait_ms);
+        return textResult(result, result.status === "failed");
+      }
+      if (action === "cancel") {
+        return textResult(await cancelBuildProjectJob(args.job_id));
+      }
+      if (action !== "start") {
+        return textResult({ code: "BUILD_ACTION_INVALID", message: `Unknown build action: ${action}` }, true);
+      }
+      const { action: ignoredAction, job_id: ignoredJobId, wait_ms: ignoredWaitMs, ...buildArgs } = args;
+      return textResult(startBuildProjectJob(buildArgs));
     }
 
     if (name === "project_sync") {
@@ -818,7 +1153,7 @@ function waitForShutdownTimeout(timeoutMs) {
 async function shutdown() {
   if (shutdownPromise) return shutdownPromise;
   shutdownPromise = (async () => {
-    const cleanup = Promise.allSettled([shutdownLsp(), closeCodeGenie()]);
+    const cleanup = Promise.allSettled([shutdownLsp(), closeCodeGenie(), closeHotReload(), closeBuildProjectJobs()]);
     await Promise.race([cleanup, waitForShutdownTimeout(5000)]);
     process.exit(0);
   })();

@@ -295,11 +295,23 @@ export function analyseDump({ root, dumpPath = null, deviceId = null, selector }
   const { matches, matchCount } = selectNodes(flattened, selector);
   const { signature, structureSignature } = dumpSignatures(flattened.nodes);
   const screen = flattened.screen;
+  const componentTypes = Object.create(null);
+  for (const node of flattened.nodes) {
+    if (!node.type || !node.rect || node.visible === false) continue;
+    const hasArea = node.rect.x2 > node.rect.x1 && node.rect.y2 > node.rect.y1;
+    if (!hasArea || !intersects(node.rect, screen)) continue;
+    componentTypes[node.type] = (componentTypes[node.type] ?? 0) + 1;
+  }
+  const truncated = matchCount > matches.length;
   return {
     deviceId,
     nodeCount: flattened.nodes.length,
     matchCount,
-    truncated: matchCount > matches.length,
+    truncated,
+    truncationHint: truncated
+      ? `Only ${matches.length} of ${matchCount} matches are included. Re-query dumpPath with text, key, or type (for example type: Slider), or raise limit.`
+      : undefined,
+    componentTypes,
     dumpPath,
     screen: screen ? [screen.x1, screen.y1, screen.x2, screen.y2] : null,
     signature,

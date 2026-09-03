@@ -1,9 +1,10 @@
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import crypto from "node:crypto";
 import { createRequire } from "node:module";
 import { spawn } from "node:child_process";
-import { REPO_ROOT, resolveDevecoHome } from "./config.mjs";
+import { REPO_ROOT, resolveDevecoHome, resolveDevecoToolchain } from "./config.mjs";
 import { getProjectPath } from "./project-context.mjs";
 import { hdcLog } from "./hdc-log.mjs";
 import { terminateProcessTree } from "./process-tree.mjs";
@@ -13,6 +14,75 @@ const require = createRequire(import.meta.url);
 const DEFAULT_TIMEOUT_MS = 900000;
 const MAX_TIMEOUT_MS = 3600000;
 const LOG_TAIL_LINES = 50;
+const BUILD_JOB_TTL_MS = 60 * 60 * 1000;
+const MAX_BUILD_JOBS = 32;
+const MAX_BUILD_STATUS_WAIT_MS = 20000;
+const MAX_CAPTURE_BYTES = 256 * 1024;
+const MAX_FULL_LOG_BYTES = 128 * 1024 * 1024;
+const buildJobs = new Map();
+
+function tailBuffer(limit = MAX_CAPTURE_BYTES) {
+  let value = Buffer.alloc(0);
+  let totalBytes = 0;
+  return {
+    push(chunk) {
+      const next = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+      totalBytes += next.length;
+      if (next.length >= limit) {
+        value = next.subarray(next.length - limit);
+      } else if (value.length + next.length > limit) {
+        value = Buffer.concat([value.subarray(value.length + next.length - limit), next]);
+      } else {
+        value = Buffer.concat([value, next]);
+      }
+    },
+    text() { return value.toString("utf8"); },
+    get truncated() { return totalBytes > value.length; },
+  };
+}
+
+function processCapture(command, explicitLogPath) {
+  const stdout = tailBuffer();
+  const stderr = tailBuffer();
+  const automatic = !explicitLogPath;
+  const logPath = explicitLogPath
+    ? path.resolve(explicitLogPath)
+    : path.join(os.tmpdir(), "deveco-tool", "logs", `cli-${Date.now()}-${crypto.randomUUID()}.log`);
+  fs.mkdirSync(path.dirname(logPath), { recursive: true });
+  const handle = fs.openSync(logPath, automatic ? "w" : "a", 0o600);
+  const header = `> ${command}\n\n`;
+  fs.writeSync(handle, header);
+  let loggedBytes = Buffer.byteLength(header);
+  let closed = false;
+  return {
+    write(stream, chunk) {
+      if (closed) return;
+      if (loggedBytes + chunk.length > MAX_FULL_LOG_BYTES) {
+        const error = new Error(`DevEco process log exceeded the ${MAX_FULL_LOG_BYTES}-byte safety limit`);
+        error.code = "DEVECO_OUTPUT_LIMIT";
+        throw error;
+      }
+      if (stream === "stdout") stdout.push(chunk);
+      else stderr.push(chunk);
+      fs.writeSync(handle, chunk);
+      loggedBytes += chunk.length;
+    },
+    finish() {
+      if (!closed) {
+        closed = true;
+        fs.closeSync(handle);
+      }
+      const outputTruncated = stdout.truncated || stderr.truncated;
+      if (automatic && !outputTruncated) fs.rmSync(logPath, { force: true });
+      return {
+        stdout: stdout.text(),
+        stderr: stderr.text(),
+        outputTruncated,
+        logPath: automatic && !outputTruncated ? null : logPath,
+      };
+    },
+  };
+}
 
 /**
  * Locate the bundled DevEco CLI entry point.
@@ -51,7 +121,7 @@ export function devecoCliStatus() {
   }
 }
 
-function projectRoot(explicit) {
+export function projectRoot(explicit) {
   const candidate = explicit || getProjectPath() || process.env.PROJECT_PATH;
   if (!candidate) {
     const error = new Error("No HarmonyOS project is selected. Call switch_cwd first or pass project_path.");
@@ -67,10 +137,11 @@ function projectRoot(explicit) {
   return absolute;
 }
 
-function childEnvironment() {
+export function childEnvironment() {
   const env = { ...process.env };
+  const toolchain = resolveDevecoToolchain();
   const home = resolveDevecoHome().path;
-  if (home) {
+  if (home && toolchain.kind === "studio") {
     env.DEVECO_HOME = home;
     // hvigor refuses to configure without this; DevEco Studio injects it, a
     // plain shell does not.
@@ -79,20 +150,16 @@ function childEnvironment() {
   return env;
 }
 
-function toolchainPaths() {
-  const home = resolveDevecoHome().path;
-  if (!home) {
-    const error = new Error("DevEco Studio is not configured. Set DEVECO_HOME or DEVECO_PATH.");
+export function toolchainPaths() {
+  const toolchain = resolveDevecoToolchain();
+  if (!toolchain.paths) {
+    const error = new Error("DevEco toolchain is not configured. Set DEVECO_CLI_STUDIO_PATH or DEVECO_CLI_CLT_PATH.");
     error.code = "DEVECO_HOME_REQUIRED";
     throw error;
   }
-  const windows = process.platform === "win32";
-  const paths = {
-    node: path.join(home, "tools", "node", windows ? "node.exe" : "bin/node"),
-    ohpm: path.join(home, "tools", "ohpm", "bin", "pm-cli.js"),
-    hvigor: path.join(home, "tools", "hvigor", "bin", "hvigorw.js"),
-  };
-  for (const [name, entry] of Object.entries(paths)) {
+  const paths = toolchain.paths;
+  for (const name of ["node", "ohpm", "hvigor"]) {
+    const entry = paths[name];
     if (!fs.existsSync(entry)) {
       const error = new Error(`DevEco ${name} entry does not exist: ${entry}`);
       error.code = "DEVECO_TOOLCHAIN_NOT_FOUND";
@@ -102,7 +169,7 @@ function toolchainPaths() {
   return paths;
 }
 
-function commandText(entry, args) {
+export function commandText(entry, args) {
   const rendered = args.map((arg) => (/\s/.test(arg) ? JSON.stringify(arg) : arg)).join(" ");
   return `devecocli ${rendered}`;
 }
@@ -111,49 +178,97 @@ function commandText(entry, args) {
  * Run the DevEco CLI and capture its output.
  *
  * @param {string[]} args CLI arguments.
- * @param {{cwd: string, timeoutMs?: number}} options Working directory and timeout.
- * @returns {Promise<{command: string, exitCode: number|null, signal: string|null, stdout: string, stderr: string}>} Result.
+ * @param {{cwd: string, timeoutMs?: number, input?: string, signal?: AbortSignal, logPath?: string}} options Working directory, timeout, optional stdin, cancellation signal, and optional full log destination.
+ * @returns {Promise<{command: string, exitCode: number|null, signal: string|null, stdout: string, stderr: string, outputTruncated: boolean, logPath: string|null}>} Result.
  */
-export function runDevecoCli(args, { cwd, timeoutMs = DEFAULT_TIMEOUT_MS } = {}) {
+export function runDevecoCli(args, { cwd, timeoutMs = DEFAULT_TIMEOUT_MS, input, signal, logPath } = {}) {
   const entry = resolveDevecoCli();
+  const command = commandText(entry, args);
   const bounded = Math.min(Math.max(Number(timeoutMs) || DEFAULT_TIMEOUT_MS, 1000), MAX_TIMEOUT_MS);
+  if (signal?.aborted) {
+    const error = new Error(`DevEco CLI execution was cancelled: ${command}`);
+    error.code = "DEVECO_CLI_CANCELLED";
+    return Promise.reject(error);
+  }
+  const env = childEnvironment();
   return new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, [entry, ...args], {
-      cwd,
-      env: childEnvironment(),
-      stdio: ["ignore", "pipe", "pipe"],
-      // Own process group, so a timeout can reach the hvigor client front-end and the ohpm
-      // downloads the CLI starts rather than only the CLI itself. The hvigor daemon re-parents
-      // itself to pid 1 and is already outside this group, which is what we want: it is a shared,
-      // persistent build server, not a leaked grandchild.
-      detached: true,
-    });
-    let stdout = "";
-    let stderr = "";
+    const capture = processCapture(command, logPath);
+    let child;
+    try {
+      child = spawn(process.execPath, [entry, ...args], {
+        cwd,
+        env,
+        stdio: [input === undefined ? "ignore" : "pipe", "pipe", "pipe"],
+        // Own process group, so a timeout can reach the hvigor client front-end and the ohpm
+        // downloads the CLI starts rather than only the CLI itself. The hvigor daemon re-parents
+        // itself to pid 1 and is already outside this group, which is what we want: it is a shared,
+        // persistent build server, not a leaked grandchild.
+        detached: true,
+        windowsHide: true,
+      });
+    } catch (error) {
+      capture.finish();
+      reject(error);
+      return;
+    }
     let settled = false;
+    const cleanup = () => {
+      clearTimeout(timer);
+      signal?.removeEventListener("abort", onAbort);
+    };
+    const onAbort = () => {
+      terminateProcessTree(child);
+      if (!settled) {
+        settled = true;
+        cleanup();
+        const captured = capture.finish();
+        const error = new Error(`DevEco CLI execution was cancelled: ${command}`);
+        error.code = "DEVECO_CLI_CANCELLED";
+        Object.assign(error, captured);
+        reject(error);
+      }
+    };
     const timer = setTimeout(() => {
       terminateProcessTree(child);
       if (!settled) {
         settled = true;
-        const error = new Error(`DevEco CLI timed out after ${bounded}ms: ${commandText(entry, args)}`);
+        cleanup();
+        const captured = capture.finish();
+        const error = new Error(`DevEco CLI timed out after ${bounded}ms: ${command}`);
         error.code = "DEVECO_CLI_TIMEOUT";
+        Object.assign(error, captured);
         reject(error);
       }
     }, bounded);
-    child.stdout.on("data", (chunk) => { stdout += chunk.toString(); });
-    child.stderr.on("data", (chunk) => { stderr += chunk.toString(); });
+    signal?.addEventListener("abort", onAbort, { once: true });
+    const captureChunk = (stream, chunk) => {
+      if (settled) return;
+      try {
+        capture.write(stream, chunk);
+      } catch (error) {
+        settled = true;
+        cleanup();
+        terminateProcessTree(child);
+        Object.assign(error, capture.finish());
+        reject(error);
+      }
+    };
+    child.stdout.on("data", (chunk) => captureChunk("stdout", chunk));
+    child.stderr.on("data", (chunk) => captureChunk("stderr", chunk));
+    if (input !== undefined) child.stdin.end(input);
     child.once("error", (error) => {
-      clearTimeout(timer);
+      cleanup();
       if (!settled) {
         settled = true;
+        Object.assign(error, capture.finish());
         reject(error);
       }
     });
     child.once("close", (exitCode, signal) => {
-      clearTimeout(timer);
+      cleanup();
       if (settled) return;
       settled = true;
-      resolve({ command: commandText(entry, args), exitCode, signal, stdout, stderr });
+      resolve({ command, exitCode, signal, ...capture.finish() });
     });
   });
 }
@@ -161,31 +276,55 @@ export function runDevecoCli(args, { cwd, timeoutMs = DEFAULT_TIMEOUT_MS } = {})
 function runToolchainScript(script, args, { cwd, timeoutMs = DEFAULT_TIMEOUT_MS } = {}) {
   const { node } = toolchainPaths();
   const bounded = Math.min(Math.max(Number(timeoutMs) || DEFAULT_TIMEOUT_MS, 1000), MAX_TIMEOUT_MS);
+  const env = childEnvironment();
   return new Promise((resolve, reject) => {
-    const child = spawn(node, [script, ...args], {
-      cwd,
-      env: childEnvironment(),
-      stdio: ["ignore", "pipe", "pipe"],
-      detached: true,
-    });
-    let stdout = "";
-    let stderr = "";
+    const command = `${path.basename(node)} ${path.basename(script)} ${args.join(" ")}`;
+    const capture = processCapture(command);
+    let child;
+    try {
+      child = spawn(node, [script, ...args], {
+        cwd,
+        env,
+        stdio: ["ignore", "pipe", "pipe"],
+        detached: true,
+        windowsHide: true,
+      });
+    } catch (error) {
+      capture.finish();
+      reject(error);
+      return;
+    }
     let settled = false;
     const timer = setTimeout(() => {
       terminateProcessTree(child);
       if (!settled) {
         settled = true;
+        const captured = capture.finish();
         const error = new Error(`DevEco toolchain timed out after ${bounded}ms: ${path.basename(script)} ${args.join(" ")}`);
         error.code = "DEVECO_TOOLCHAIN_TIMEOUT";
+        Object.assign(error, captured);
         reject(error);
       }
     }, bounded);
-    child.stdout.on("data", (chunk) => { stdout += chunk.toString(); });
-    child.stderr.on("data", (chunk) => { stderr += chunk.toString(); });
+    const captureChunk = (stream, chunk) => {
+      if (settled) return;
+      try {
+        capture.write(stream, chunk);
+      } catch (error) {
+        settled = true;
+        clearTimeout(timer);
+        terminateProcessTree(child);
+        Object.assign(error, capture.finish());
+        reject(error);
+      }
+    };
+    child.stdout.on("data", (chunk) => captureChunk("stdout", chunk));
+    child.stderr.on("data", (chunk) => captureChunk("stderr", chunk));
     child.once("error", (error) => {
       clearTimeout(timer);
       if (!settled) {
         settled = true;
+        Object.assign(error, capture.finish());
         reject(error);
       }
     });
@@ -194,11 +333,10 @@ function runToolchainScript(script, args, { cwd, timeoutMs = DEFAULT_TIMEOUT_MS 
       if (settled) return;
       settled = true;
       resolve({
-        command: `${path.basename(node)} ${path.basename(script)} ${args.join(" ")}`,
+        command,
         exitCode,
         signal,
-        stdout,
-        stderr,
+        ...capture.finish(),
       });
     });
   });
@@ -221,9 +359,12 @@ export function buildArgs({ product, modules = [], build_mode: buildMode } = {})
   return args;
 }
 
-function combineOutput(result) {
-  if (result.stdout && result.stderr) return `${result.stdout}${result.stderr}`;
-  return result.stdout || result.stderr;
+export function combineOutput(result) {
+  const output = result.stdout && result.stderr
+    ? `${result.stdout}${result.stderr}`
+    : result.stdout || result.stderr || "";
+  if (!result.outputTruncated) return output;
+  return `${output}\n\n[Output truncated to the last ${MAX_CAPTURE_BYTES} bytes per stream. Full log: ${result.logPath}]`;
 }
 
 // The CLI prints `error: ...` and still exits 0 in some paths (a failed ability
@@ -233,6 +374,7 @@ const CLI_FAILURE_PATTERNS = [
   /^\s*error:/im,
   /failed to (install|start|launch|build)/i,
   /BUILD FAILED/i,
+  /Please run devecocli auth login first/i,
 ];
 
 export function devecoCliFailureMessage(result) {
@@ -277,7 +419,28 @@ async function runnableModules(project, device, product, timeoutMs) {
     .filter(Boolean);
 }
 
-async function resolveDevice(explicit) {
+async function runnableModule({ project, device, product, module, timeoutMs }) {
+  const requested = typeof module === "string" ? module.trim() : "";
+  if (requested) return requested;
+  const discovered = await runnableModules(project, device, product, timeoutMs);
+  if (discovered.length > 1) {
+    const error = new Error(
+      `Multiple runnable modules found (${discovered.join(", ")}); pass module explicitly.`,
+    );
+    error.code = "DEVECO_CLI_MODULE_REQUIRED";
+    throw error;
+  }
+  if (discovered.length === 0) {
+    const error = new Error(
+      `No runnable modules found for ${project}. Build the project first, or pass module explicitly.`,
+    );
+    error.code = "DEVECO_CLI_NO_MODULES";
+    throw error;
+  }
+  return discovered[0];
+}
+
+export async function resolveDevice(explicit) {
   const requested = typeof explicit === "string" ? explicit.trim() : "";
   if (requested) return requested;
   const { devices } = await hdcLog({ action: "list_devices" });
@@ -312,10 +475,16 @@ function presentLog(fullText, logPath) {
  * upstream's clean-only.
  *
  * @param {object} input Tool arguments.
+ * @param {{signal?: AbortSignal}} options Cancellation options.
  * @returns {Promise<string>} Human-readable build report.
  */
-export async function buildProject(input = {}) {
+export async function buildProject(input = {}, { signal } = {}) {
   const project = projectRoot(input.project_path);
+  const logPath = input.log_path ? path.resolve(project, input.log_path) : undefined;
+  if (logPath) {
+    fs.mkdirSync(path.dirname(logPath), { recursive: true });
+    fs.writeFileSync(logPath, "", { encoding: "utf8", mode: 0o600 });
+  }
   const modules = [];
   if (typeof input.module === "string" && input.module.trim()) modules.push(input.module.trim());
   if (Array.isArray(input.modules)) {
@@ -329,7 +498,9 @@ export async function buildProject(input = {}) {
   const transcript = [];
 
   if (input.clean) {
-    const cleaned = await runDevecoCli(["build", "clean"], { cwd: project, timeoutMs: input.timeoutMs });
+    const cleaned = await runDevecoCli(["build", "clean"], {
+      cwd: project, timeoutMs: input.timeoutMs, signal, logPath,
+    });
     transcript.push(`> ${cleaned.command}\n\n${combineOutput(cleaned)}`);
     const cleanFailure = devecoCliFailureMessage(cleaned);
     if (cleanFailure) {
@@ -341,16 +512,15 @@ export async function buildProject(input = {}) {
   }
 
   const args = buildArgs({ product: input.product, modules, build_mode: input.build_mode });
-  const result = await runDevecoCli(args, { cwd: project, timeoutMs: input.timeoutMs });
+  const result = await runDevecoCli(args, {
+    cwd: project, timeoutMs: input.timeoutMs, signal, logPath,
+  });
   transcript.push(`> ${result.command}\n\n${combineOutput(result)}`);
 
   const fullText = transcript.join("\n\n");
   let logNotice = "";
-  if (input.log_path) {
-    const target = path.resolve(project, input.log_path);
-    fs.mkdirSync(path.dirname(target), { recursive: true });
-    fs.writeFileSync(target, fullText, "utf8");
-    logNotice = `\n\n[Log Saved] The full build log has been saved to: ${target}\nYou can read this file to view the complete log.`;
+  if (logPath) {
+    logNotice = `\n\n[Log Saved] The full build log has been saved to: ${logPath}\nYou can read this file to view the complete log.`;
   }
 
   if (input.enable_inspector_source_jump) {
@@ -361,7 +531,7 @@ export async function buildProject(input = {}) {
   }
 
   const header = sections.length ? `${sections.join("\n")}\n\n` : "";
-  const body = presentLog(fullText, input.log_path);
+  const body = presentLog(fullText, logPath);
   const buildFailure = devecoCliFailureMessage(result);
   const status = buildFailure
     ? `\n\nBuild failed (exit code ${result.exitCode}).`
@@ -373,6 +543,136 @@ export async function buildProject(input = {}) {
     throw error;
   }
   return `${header}=== Build Output ===\n${body}${status}${logNotice}`;
+}
+
+function pruneBuildJobs(now = Date.now(), makeRoom = false) {
+  for (const [id, job] of buildJobs) {
+    if (job.finishedAt && now - job.finishedAt >= BUILD_JOB_TTL_MS) buildJobs.delete(id);
+  }
+  if (!makeRoom || buildJobs.size < MAX_BUILD_JOBS) return;
+  const completed = [...buildJobs.values()]
+    .filter((job) => job.finishedAt)
+    .sort((left, right) => left.finishedAt - right.finishedAt);
+  while (buildJobs.size >= MAX_BUILD_JOBS && completed.length) {
+    buildJobs.delete(completed.shift().id);
+  }
+}
+
+function buildJobResult(job) {
+  const result = {
+    job_id: job.id,
+    status: job.status,
+    started_at: new Date(job.startedAt).toISOString(),
+    elapsed_ms: (job.finishedAt ?? Date.now()) - job.startedAt,
+  };
+  if (job.finishedAt) result.finished_at = new Date(job.finishedAt).toISOString();
+  if (job.status === "running") {
+    result.message = "Build is still running.";
+    result.next_action = {
+      tool: "build_project",
+      arguments: { action: "status", job_id: job.id, wait_ms: MAX_BUILD_STATUS_WAIT_MS },
+    };
+  } else if (job.status === "succeeded") {
+    result.report = job.report;
+  } else if (job.status === "failed") {
+    result.error = job.error;
+  } else if (job.status === "cancelled") {
+    result.message = "Build was cancelled and its DevEco CLI process tree was terminated.";
+  }
+  return result;
+}
+
+function requireBuildJob(jobId) {
+  const id = String(jobId ?? "").trim();
+  if (!id) {
+    const error = new Error("job_id is required for build_project status or cancel.");
+    error.code = "BUILD_JOB_ID_REQUIRED";
+    throw error;
+  }
+  const job = buildJobs.get(id);
+  if (!job) {
+    const error = new Error(`Build job not found or expired: ${id}`);
+    error.code = "BUILD_JOB_NOT_FOUND";
+    throw error;
+  }
+  return job;
+}
+
+function waitForBuildJob(job, waitMs) {
+  const bounded = Math.min(Math.max(Number(waitMs) || 0, 0), MAX_BUILD_STATUS_WAIT_MS);
+  if (!bounded || job.status !== "running") return Promise.resolve();
+  return new Promise((resolve) => {
+    const timer = setTimeout(resolve, bounded);
+    job.completion.then(() => {
+      clearTimeout(timer);
+      resolve();
+    });
+  });
+}
+
+/**
+ * Start a build without holding the MCP request open. Some MCP hosts impose a
+ * fixed 30-second deadline that is independent of the tool's timeoutMs.
+ *
+ * @param {object} input Build arguments without action/job_id/wait_ms.
+ * @returns {object} Initial job status.
+ */
+export function startBuildProjectJob(input = {}) {
+  pruneBuildJobs(Date.now(), true);
+  if (buildJobs.size >= MAX_BUILD_JOBS) {
+    const error = new Error(`Too many retained or running build jobs (${MAX_BUILD_JOBS}).`);
+    error.code = "BUILD_JOB_LIMIT";
+    throw error;
+  }
+  // Fail an invalid project path in the initial short request instead of creating
+  // a job that can only report the same validation error on the next poll.
+  projectRoot(input.project_path);
+  const job = {
+    id: crypto.randomUUID(),
+    status: "running",
+    startedAt: Date.now(),
+    finishedAt: null,
+    report: null,
+    error: null,
+    controller: new AbortController(),
+    completion: null,
+  };
+  buildJobs.set(job.id, job);
+  job.completion = buildProject(input, { signal: job.controller.signal }).then(
+    (report) => {
+      job.status = "succeeded";
+      job.report = report;
+      job.finishedAt = Date.now();
+    },
+    (error) => {
+      job.status = error.code === "DEVECO_CLI_CANCELLED" ? "cancelled" : "failed";
+      job.error = { code: error.code ?? "BUILD_FAILED", message: error.message };
+      job.finishedAt = Date.now();
+    },
+  );
+  return buildJobResult(job);
+}
+
+export async function getBuildProjectJob(jobId, waitMs = 0) {
+  pruneBuildJobs();
+  const job = requireBuildJob(jobId);
+  await waitForBuildJob(job, waitMs);
+  return buildJobResult(job);
+}
+
+export async function cancelBuildProjectJob(jobId) {
+  const job = requireBuildJob(jobId);
+  if (job.status === "running") {
+    job.controller.abort();
+    await job.completion;
+  }
+  return buildJobResult(job);
+}
+
+export async function closeBuildProjectJobs() {
+  const active = [...buildJobs.values()].filter((job) => job.status === "running");
+  for (const job of active) job.controller.abort();
+  await Promise.allSettled(active.map((job) => job.completion));
 }
 
 /** Synchronise ohpm dependencies and the Hvigor project model. */
@@ -493,6 +793,16 @@ export async function applyChanges(input = {}) {
   }
 
   const device = await resolveDevice(input.hvd);
+  const product = typeof input.product === "string" ? input.product.trim() : "";
+  const selectedModule = await runnableModule({
+    project,
+    device,
+    product,
+    module: input.module,
+    timeoutMs: input.timeoutMs,
+  });
+  const target = typeof input.target === "string" ? input.target.trim() : "";
+  const selected = target ? `${selectedModule}@${target}` : selectedModule;
   const hvigor = path.join(project, ".hvigor");
   fs.mkdirSync(hvigor, { recursive: true });
   const manifestName = `deveco-tool-apply-${process.pid}-${crypto.randomBytes(6).toString("hex")}.txt`;
@@ -500,19 +810,32 @@ export async function applyChanges(input = {}) {
   fs.writeFileSync(manifest, `${files.join("\n")}\n`, { encoding: "utf8", mode: 0o600 });
 
   try {
-    const args = ["run", "--device", device];
-    if (input.product) args.push("--product", String(input.product));
+    const args = ["run", "--device", device, "--module", selected];
+    if (product) args.push("--product", product);
     if (input.build_mode) args.push("--build-mode", String(input.build_mode));
     args.push("--apply", manifestName);
     const result = await runDevecoCli(args, { cwd: project, timeoutMs: input.timeoutMs });
     const output = combineOutput(result);
     const failure = devecoCliFailureMessage(result);
     if (failure) {
-      const error = new Error(`> ${result.command}\n\n${output}`);
+      const recoveryArgs = ["run", "--skip-build", "--device", device, "--module", selected];
+      if (product) recoveryArgs.push("--product", product);
+      if (input.ability) recoveryArgs.push("--ability", String(input.ability));
+      let recoveryNote;
+      try {
+        const recovery = await runDevecoCli(recoveryArgs, { cwd: project, timeoutMs: input.timeoutMs });
+        const recoveryFailure = devecoCliFailureMessage(recovery);
+        recoveryNote = recoveryFailure
+          ? `Recovery launch also failed:\n> ${recovery.command}\n\n${combineOutput(recovery)}`
+          : `The previous installed app was relaunched after the failed apply:\n> ${recovery.command}`;
+      } catch (recoveryError) {
+        recoveryNote = `Recovery launch could not complete: ${recoveryError.message}`;
+      }
+      const error = new Error(`> ${result.command}\n\n${output}\n\n${recoveryNote}`);
       error.code = "DEVECO_CLI_APPLY_FAILED";
       throw error;
     }
-    return `Device: ${device}\nApplied ${files.length} changed file(s):\n${files.map((file) => `- ${file}`).join("\n")}\n\n> ${result.command}\n\n${output}`;
+    return `Device: ${device}\nModule: ${selected}\nApplied ${files.length} changed file(s):\n${files.map((file) => `- ${file}`).join("\n")}\n\n> ${result.command}\n\n${output}`;
   } finally {
     fs.rmSync(manifest, { force: true });
   }
@@ -528,31 +851,13 @@ export async function startApp(input = {}) {
   const project = projectRoot(input.project_path);
   const device = await resolveDevice(input.hvd);
 
-  const module = typeof input.module === "string" ? input.module.trim() : "";
   const target = typeof input.target === "string" ? input.target.trim() : "";
   const ability = typeof input.ability === "string" ? input.ability.trim() : "";
   const product = typeof input.product === "string" ? input.product.trim() : "";
 
-  let selectedModule = module;
-  if (!selectedModule) {
-    const discovered = await runnableModules(project, device, product, input.timeoutMs);
-    if (discovered.length > 1) {
-      const error = new Error(
-        `Multiple runnable modules found (${discovered.join(", ")}); pass module explicitly.`,
-      );
-      error.code = "DEVECO_CLI_MODULE_REQUIRED";
-      throw error;
-    }
-    [selectedModule = ""] = discovered;
-  }
-
-  if (!selectedModule) {
-    const error = new Error(
-      `No runnable modules found for ${project}. Build the project first, or pass module explicitly.`,
-    );
-    error.code = "DEVECO_CLI_NO_MODULES";
-    throw error;
-  }
+  const selectedModule = await runnableModule({
+    project, device, product, module: input.module, timeoutMs: input.timeoutMs,
+  });
 
   // DevEco CLI resolves and installs non-HAR dependencies of the selected
   // module itself. Passing sibling Entry modules here creates an invalid

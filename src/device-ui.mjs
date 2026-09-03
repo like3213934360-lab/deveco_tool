@@ -37,7 +37,8 @@ import {
   analyseDump, hasSelector, parseDump, readDump, readSelector,
 } from "./device-dump.mjs";
 import {
-  TAP_ACTIONS, POINT_ACTIONS, buildInputArgs, requireSingleTarget,
+  TAP_ACTIONS, POINT_ACTIONS, RECT_GESTURE_ACTIONS,
+  buildInputArgs, buildScreenGestureArgs, buildTargetGestureArgs, requireSingleTarget,
 } from "./device-input.mjs";
 import { withUitestLock } from "./device-lock.mjs";
 import { entryByBaseName, readTar } from "./device-tar.mjs";
@@ -353,6 +354,15 @@ function withExtension(filePath, extension) {
   return filePath.replace(/\.[^.\\/]*$/, "") + `.${extension}`;
 }
 
+function assertOutputAvailable(filePath, overwrite) {
+  if (!fs.existsSync(filePath) || overwrite === true) return;
+  const error = new Error(
+    `Refusing to overwrite an existing UI artifact: ${filePath}. Pass overwrite=true only when replacement is intentional.`,
+  );
+  error.code = "UI_OUTPUT_EXISTS";
+  throw error;
+}
+
 function readMagic(filePath, length) {
   const handle = fs.openSync(filePath, "r");
   try {
@@ -583,6 +593,7 @@ export async function uiSnapshot(input = {}) {
       // overwriting would silently rewrite history. Dumps are the opposite case.
       `snapshot-${startedAt}-${(snapshotCounter += 1)}.${format}`,
     );
+  assertOutputAvailable(requestedPath, input.overwrite);
 
   const cachedUnavailable = snapshotUnavailable.get(deviceId);
   // snapshot_display writes png as well as jpeg -- the earlier belief that it was jpeg-only sent
@@ -623,6 +634,7 @@ export async function uiSnapshot(input = {}) {
     // screenCap only writes PNG. Handing back PNG bytes at a .jpeg path would be a lie the caller
     // cannot detect, so the destination moves and both paths are reported.
     localPath = withExtension(requestedPath, "png");
+    if (localPath !== requestedPath) assertOutputAvailable(localPath, input.overwrite);
     // This one is uitest, so unlike the path above it has to hold the device.
     await withUitest(deviceId, "screenCap", timeoutMs,
       () => captureWithScreenCap(hdc, deviceId, devicePath, timeoutMs));
@@ -753,6 +765,7 @@ export async function uiObserve(input = {}) {
     const localImage = input.localPath
       ? path.resolve(input.localPath)
       : path.join(directory, `snapshot-${startedAt}-${(snapshotCounter += 1)}.jpeg`);
+    assertOutputAvailable(localImage, input.overwrite);
     const localDump = path.join(directory, "layout.json");
 
     const targets = {
@@ -897,6 +910,23 @@ async function sendInput(hdc, deviceId, inputArgs, timeoutMs, action) {
   }
 }
 
+function closestMatchingNode(analysis, target) {
+  let closest = null;
+  let closestDistance = Number.POSITIVE_INFINITY;
+  for (const match of analysis.matches) {
+    const overlaps = Array.isArray(match.rect) && Array.isArray(target.rect)
+      && Math.min(match.rect[2], target.rect[2]) > Math.max(match.rect[0], target.rect[0])
+      && Math.min(match.rect[3], target.rect[3]) > Math.max(match.rect[1], target.rect[1]);
+    if (!overlaps) continue;
+    const distance = ((match.center.x - target.center.x) ** 2) + ((match.center.y - target.center.y) ** 2);
+    if (distance < closestDistance) {
+      closest = match;
+      closestDistance = distance;
+    }
+  }
+  return closest;
+}
+
 /**
  * Send a touch, gesture, or key event through `uitest uiInput`.
  *
@@ -920,14 +950,33 @@ export async function uiTap(input = {}) {
 
   const selector = readSelector(input);
   const aimed = hasSelector(selector) && input.x === undefined && input.y === undefined;
-  if (aimed && !POINT_ACTIONS.has(input.action)) {
+  const screenPercentFields = [
+    input.from_x_percent, input.from_y_percent, input.to_x_percent, input.to_y_percent,
+  ];
+  const screenAimed = !aimed && input.x === undefined && input.y === undefined
+    && screenPercentFields.some((value) => value !== undefined);
+  if (screenAimed && (!RECT_GESTURE_ACTIONS.has(input.action)
+    || screenPercentFields.some((value) => value === undefined))) {
     fail(
-      `${input.action} needs explicit coordinates; only ${[...POINT_ACTIONS].join(", ")} can be aimed by selector`,
+      "Screen-percentage gestures require swipe/fling/drag and all four from_x_percent, from_y_percent, to_x_percent, and to_y_percent values",
+      "UI_ARGS_INVALID",
+    );
+  }
+  if (aimed && !POINT_ACTIONS.has(input.action) && !RECT_GESTURE_ACTIONS.has(input.action)) {
+    fail(
+      `${input.action} needs explicit coordinates; selectors support ${[...POINT_ACTIONS, ...RECT_GESTURE_ACTIONS].join(", ")}`,
+      "UI_ARGS_INVALID",
+    );
+  }
+  if (aimed && RECT_GESTURE_ACTIONS.has(input.action)
+    && (input.from_percent === undefined || input.to_percent === undefined)) {
+    fail(
+      `Selector-targeted ${input.action} requires from_percent and to_percent; use explicit x/y/x2/y2 for a raw-coordinate gesture`,
       "UI_ARGS_INVALID",
     );
   }
 
-  if (!aimed) {
+  if (!aimed && !screenAimed) {
     const inputArgs = buildInputArgs(input);
     return withUitest(deviceId, `uiInput ${input.action}`, timeoutMs, async () => {
       const startedAt = Date.now();
@@ -936,6 +985,41 @@ export async function uiTap(input = {}) {
         deviceId,
         action: input.action,
         sent: `uitest uiInput ${inputArgs.join(" ")}`,
+        commandAccepted: true,
+        outcomeVerified: false,
+        verificationHint: RECT_GESTURE_ACTIONS.has(input.action)
+          ? "Raw-coordinate gestures only prove that uitest accepted the command. Prefer type/text/key with from_percent and to_percent so ui_tap can resolve and verify the target."
+          : undefined,
+        elapsedMs: Date.now() - startedAt,
+      };
+    });
+  }
+
+  if (screenAimed) {
+    sweepStaleArtifacts(hdc, deviceId);
+    return withUitest(deviceId, `uiInput ${input.action} by screen percentage`, timeoutMs, async () => {
+      const startedAt = Date.now();
+      const dumpPath = await dumpLayout(hdc, deviceId, timeoutMs);
+      const analysis = analyseDump({
+        root: readDump(dumpPath), dumpPath, deviceId, selector: readSelector({}),
+      });
+      const inputArgs = buildScreenGestureArgs(input, analysis.screen);
+      await sendInput(hdc, deviceId, inputArgs, timeoutMs, input.action);
+      return {
+        deviceId,
+        action: input.action,
+        sent: `uitest uiInput ${inputArgs.join(" ")}`,
+        commandAccepted: true,
+        outcomeVerified: false,
+        coordinateSpace: "device-screen-percent",
+        screen: analysis.screen,
+        requestedScreenRange: {
+          from: { xPercent: Number(input.from_x_percent), yPercent: Number(input.from_y_percent) },
+          to: { xPercent: Number(input.to_x_percent), yPercent: Number(input.to_y_percent) },
+        },
+        dumpPath,
+        structureSignature: analysis.structureSignature,
+        verificationHint: "The gesture was mapped from current screen bounds, but no UI node represented its target; commandAccepted does not prove that the control value changed.",
         elapsedMs: Date.now() - startedAt,
       };
     });
@@ -948,24 +1032,50 @@ export async function uiTap(input = {}) {
     const analysis = analyseDump({ root: readDump(dumpPath), dumpPath, deviceId, selector });
     const target = requireSingleTarget(analysis, selector);
 
-    const inputArgs = [input.action, String(target.center.x), String(target.center.y)];
+    const gesture = RECT_GESTURE_ACTIONS.has(input.action);
+    const inputArgs = gesture
+      ? buildTargetGestureArgs(input, target)
+      : [input.action, String(target.center.x), String(target.center.y)];
     await sendInput(hdc, deviceId, inputArgs, timeoutMs, input.action);
 
     let verified;
-    if (input.verify === true) {
+    const shouldVerify = input.verify === true || (gesture && input.verify !== false);
+    if (shouldVerify) {
       // Opt-in because it doubles the cost: confirming the target is still there afterwards means
-      // a second dump, which is the expensive half of the whole operation.
+      // a second dump, which is the expensive half of the whole operation. Selector gestures are
+      // verified by default because their purpose is a state change, not merely a delivered event.
+      const afterSelector = gesture
+        ? readSelector({ type: target.type, onScreenOnly: false, limit: 200 })
+        : selector;
       const after = analyseDump({
-        root: readDump(await dumpLayout(hdc, deviceId, timeoutMs)), dumpPath, deviceId, selector,
+        root: readDump(await dumpLayout(hdc, deviceId, timeoutMs)), dumpPath, deviceId,
+        selector: afterSelector,
       });
-      verified = { stillPresent: after.matchCount > 0, structureSignature: after.structureSignature };
+      const afterTarget = gesture ? closestMatchingNode(after, target) : null;
+      verified = gesture
+        ? {
+          stillPresent: Boolean(afterTarget),
+          beforeText: target.text,
+          afterText: afterTarget?.text ?? null,
+          valueChanged: Boolean(afterTarget) && target.text !== afterTarget.text,
+          target: afterTarget,
+          structureSignature: after.structureSignature,
+        }
+        : { stillPresent: after.matchCount > 0, structureSignature: after.structureSignature };
     }
 
     return {
       deviceId,
       action: input.action,
       sent: `uitest uiInput ${inputArgs.join(" ")}`,
+      commandAccepted: true,
+      outcomeVerified: Boolean(verified),
       target,
+      requestedRange: gesture ? {
+        axis: input.axis ?? "horizontal",
+        fromPercent: Number(input.from_percent),
+        toPercent: Number(input.to_percent),
+      } : undefined,
       dumpPath,
       structureSignature: analysis.structureSignature,
       verified,

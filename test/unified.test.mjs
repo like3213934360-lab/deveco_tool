@@ -7,20 +7,31 @@ import { spawn } from "node:child_process";
 import test from "node:test";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-import { listScripts, parseScriptOutput, runRegisteredScript } from "../src/script-registry.mjs";
+import {
+  listScripts, parseScriptOutput, registeredScriptEnvironment, runRegisteredScript,
+} from "../src/script-registry.mjs";
 import { arktsCheckStatus, runArktsCheck } from "../src/arkts-check.mjs";
-import { resolveDevecoHome } from "../src/config.mjs";
+import { resolveDevecoHome, resolveDevecoToolchain } from "../src/config.mjs";
 import {
   apiCompatibilityCheck, applyChanges, buildArgs, buildProject,
   devecoCliFailureMessage, projectSync, startApp,
 } from "../src/deveco-cli.mjs";
+import {
+  cliAuth, codeLint, deviceInfo, emulatorManage, emulatorScenario,
+  harmonyDocs, signatureGenerate, uiControl, uiInspect,
+} from "../src/deveco-official.mjs";
+import { closeHotReload, hotReload } from "../src/hotreload.mjs";
 import { deleteCredential, readCredential, writeCredential } from "../src/modules/credential-store.mjs";
 import { readTar } from "../src/device-tar.mjs";
 import { withUitestLock, lockInternals } from "../src/device-lock.mjs";
 import { analyseDump, dumpSignatures, flattenDump, readSelector } from "../src/device-dump.mjs";
 import { uiFind, uiObserve, uiSnapshot, uiTap } from "../src/device-ui.mjs";
 import { hdcFailureMessage, hdcLog, hdcStatus } from "../src/hdc-log.mjs";
-import { hdcFailureMessage as skillHdcFailureMessage } from "../skills/arkts-runtime-fix/scripts/shared/hdc.mjs";
+import { getHover, goToDeclaration, lspStatus, resetLsp } from "../src/lsp.mjs";
+import {
+  hdcFailureMessage as skillHdcFailureMessage,
+  resolveHdcBinary as resolveSkillHdcBinary,
+} from "../skills/arkts-runtime-fix/scripts/shared/hdc.mjs";
 
 const REPO_ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
 
@@ -130,6 +141,33 @@ test("the script registry exposes the allowlisted Skill scripts", () => {
   assert.equal(scripts.filter((script) => script.runtime === "python").length, 11);
 });
 
+test("registered scripts can discover DevEco's bundled hvigorw from a GUI host PATH", () => {
+  const root = path.join(os.tmpdir(), "deveco studio with spaces");
+  const toolchain = {
+    paths: {
+      hvigor: path.join(root, "tools", "hvigor", "bin", "hvigorw.js"),
+      ohpm: path.join(root, "tools", "ohpm", "bin", "pm-cli.js"),
+      node: path.join(root, "tools", "node", process.platform === "win32" ? "node.exe" : "bin/node"),
+      hdc: path.join(root, "sdk", "default", "openharmony", "toolchains", process.platform === "win32" ? "hdc.exe" : "hdc"),
+      emulator: path.join(root, "tools", "emulator", process.platform === "win32" ? "Emulator.exe" : "Emulator"),
+    },
+  };
+  const pathKey = process.platform === "win32" ? "Path" : "PATH";
+  const env = registeredScriptEnvironment({ [pathKey]: "/host/bin" }, toolchain);
+  const entries = env[pathKey].split(path.delimiter);
+
+  assert.equal(entries[0], path.dirname(toolchain.paths.hvigor));
+  assert.ok(entries.includes(path.dirname(toolchain.paths.node)));
+  assert.ok(entries.includes(path.dirname(toolchain.paths.hdc)));
+  assert.equal(entries.at(-1), "/host/bin");
+  assert.equal(
+    env.NODE_HOME,
+    process.platform === "win32"
+      ? path.dirname(toolchain.paths.node)
+      : path.dirname(path.dirname(toolchain.paths.node)),
+  );
+});
+
 test("registered scripts return parsed key/value output", async () => {
   const result = await runRegisteredScript("parse_jscrash_log", {
     args: {
@@ -154,23 +192,122 @@ test("credentials are encrypted at rest and plaintext stores migrate automatical
   });
 
   const secret = { jwtToken: "secret-jwt", refreshToken: "secret-refresh" };
-  writeCredential(file, secret);
+  await writeCredential(file, secret);
   const stored = await fs.readFile(file, "utf8");
   assert.doesNotMatch(stored, /secret-jwt|secret-refresh/);
-  assert.deepEqual(readCredential(file), secret);
+  assert.deepEqual(await readCredential(file), secret);
 
-  deleteCredential(file);
+  await deleteCredential(file);
   await fs.writeFile(file, JSON.stringify(secret), { mode: 0o600 });
-  assert.deepEqual(readCredential(file), secret);
+  assert.deepEqual(await readCredential(file), secret);
   assert.doesNotMatch(await fs.readFile(file, "utf8"), /secret-jwt|secret-refresh/);
-  deleteCredential(file);
+  await deleteCredential(file);
   assert.equal(fsSync.existsSync(file), false);
   assert.equal(fsSync.existsSync(`${file}.key`), false);
+});
+
+test("non-interactive auth rejects an expired session without opening a browser", async (t) => {
+  const home = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-auth-home-"));
+  t.after(async () => await fs.rm(home, { recursive: true, force: true }));
+  const authFile = path.join(home, ".deveco-knowledge-mcp", "auth.json");
+  const expiredPayload = Buffer.from(JSON.stringify({ exp: 1 })).toString("base64url");
+  const script = [
+    `const { writeCredential } = await import(${JSON.stringify(new URL("../src/modules/credential-store.mjs", import.meta.url).href)});`,
+    `const { ensureAccessToken } = await import(${JSON.stringify(new URL("../src/modules/auth.mjs", import.meta.url).href)});`,
+    `await writeCredential(${JSON.stringify(authFile)}, { jwtToken: ${JSON.stringify(`x.${expiredPayload}.x`)}, accessToken: "stale", accessSavedAt: Date.now() });`,
+    "try { await ensureAccessToken({ interactive: false }); process.exitCode = 2; }",
+    "catch (error) { process.stdout.write(String(error.code)); }",
+  ].join("\n");
+
+  const outcome = await new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, ["--input-type=module", "--eval", script], {
+      env: { ...process.env, HOME: home, USERPROFILE: home, DEVECO_DISABLE_CREDENTIAL_KEYCHAIN: "1" },
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.on("data", (chunk) => { stdout += chunk.toString(); });
+    child.stderr.on("data", (chunk) => { stderr += chunk.toString(); });
+    child.once("error", reject);
+    child.once("close", (code) => resolve({ code, stdout, stderr }));
+  });
+  assert.equal(outcome.code, 0, outcome.stderr);
+  assert.equal(outcome.stdout, "DEVECO_SESSION_EXPIRED");
 });
 
 test("local diagnostics dependencies are discoverable", { skip: NEEDS_DEVECO_SDK }, () => {
   assert.equal(arktsCheckStatus().installed, true);
   assert.equal(hdcStatus().installed, true);
+});
+
+test("LSP falls back from unsupported declaration and kills a server that misses its deadline", async (t) => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-lsp-test-"));
+  const source = path.join(directory, "Main.ets");
+  const entry = path.join(directory, "fake-lsp.mjs");
+  const methodLog = path.join(directory, "methods.log");
+  await fs.writeFile(source, "const answer: number = 42;\n");
+  const sourceUri = `file://${source}`;
+  await fs.writeFile(entry, [
+    'import fs from "node:fs";',
+    "let pending = Buffer.alloc(0);",
+    "function send(id, result) {",
+    "  const body = Buffer.from(JSON.stringify({ jsonrpc: '2.0', id, result }));",
+    "  process.stdout.write(`Content-Length: ${body.length}\\r\\n\\r\\n`);",
+    "  process.stdout.write(body);",
+    "}",
+    "process.stdin.on('data', (chunk) => {",
+    "  pending = Buffer.concat([pending, chunk]);",
+    "  while (true) {",
+    "    const headerEnd = pending.indexOf('\\r\\n\\r\\n');",
+    "    if (headerEnd < 0) return;",
+    "    const match = /Content-Length:\\s*(\\d+)/i.exec(pending.subarray(0, headerEnd).toString());",
+    "    if (!match) process.exit(2);",
+    "    const length = Number(match[1]);",
+    "    const bodyStart = headerEnd + 4;",
+    "    if (pending.length < bodyStart + length) return;",
+    "    const message = JSON.parse(pending.subarray(bodyStart, bodyStart + length).toString());",
+    "    pending = pending.subarray(bodyStart + length);",
+    `    if (message.method) fs.appendFileSync(${JSON.stringify(methodLog)}, message.method + "\\n");`,
+    "    if (message.id === undefined) { if (message.method === 'exit') process.exit(0); continue; }",
+    "    if (message.method === 'initialize') send(message.id, { capabilities: { definitionProvider: true } });",
+    `    else if (message.method === 'textDocument/definition') send(message.id, [{ uri: ${JSON.stringify(sourceUri)}, range: { start: { line: 0, character: 6 }, end: { line: 0, character: 12 } } }]);`,
+    "    else if (message.method === 'textDocument/hover') { /* intentionally never reply */ }",
+    "    else if (message.method === 'shutdown') send(message.id, null);",
+    "    else send(message.id, []);",
+    "  }",
+    "});",
+  ].join("\n"));
+
+  const previousEntry = process.env.ARKTS_LSP_ENTRY;
+  const previousProject = process.env.PROJECT_PATH;
+  process.env.ARKTS_LSP_ENTRY = entry;
+  process.env.PROJECT_PATH = directory;
+  await resetLsp();
+  t.after(async () => {
+    await resetLsp();
+    if (previousEntry === undefined) delete process.env.ARKTS_LSP_ENTRY;
+    else process.env.ARKTS_LSP_ENTRY = previousEntry;
+    if (previousProject === undefined) delete process.env.PROJECT_PATH;
+    else process.env.PROJECT_PATH = previousProject;
+    await fs.rm(directory, { recursive: true, force: true });
+  });
+
+  const declaration = await goToDeclaration({ file: source, line: 1, column: 7, timeoutMs: 2000 });
+  assert.match(declaration, /Declaration fallback via definition/);
+  let methods = await fs.readFile(methodLog, "utf8");
+  assert.match(methods, /textDocument\/definition/);
+  assert.doesNotMatch(methods, /textDocument\/declaration/,
+    "an unadvertised declaration method must not be sent to the server");
+
+  const startedAt = Date.now();
+  await assert.rejects(
+    () => getHover({ file: source, line: 1, column: 7, timeoutMs: 1000 }),
+    (error) => error.code === "LSP_TIMEOUT",
+  );
+  assert.ok(Date.now() - startedAt < 2500, "the MCP deadline must bound a stalled LSP call");
+  assert.equal(lspStatus().running, false, "a timed-out server must be discarded, not reused");
+  methods = await fs.readFile(methodLog, "utf8");
+  assert.match(methods, /textDocument\/hover/);
 });
 
 test("unified MCP advertises scripts, diagnostics, LSP, and CodeGenie tools", async (t) => {
@@ -193,8 +330,10 @@ test("unified MCP advertises scripts, diagnostics, LSP, and CodeGenie tools", as
     "go_to_declaration", "get_hover", "list_symbols", "find_call_hierarchy", "lsp", "build_project",
     "project_sync", "api_compat_check", "apply_changes",
     "document_validate", "ui_snapshot", "ui_observe", "ui_find", "ui_tap",
+    "code_lint", "hot_reload", "harmony_docs", "device_info", "ui_inspect",
+    "emulator_manage", "emulator_scenario", "app_signature", "deveco_cli_auth", "ui_control",
   ]) assert.ok(names.has(name), `missing tool ${name}`);
-  assert.equal(result.tools.length, 33);
+  assert.equal(result.tools.length, 43);
   assert.equal(result.tools.filter((tool) => tool.name === "check_ets_files").length, 1);
   for (const disabled of ["verify_ui", "save_ui_screenshot", "get_ui_verification_log"]) {
     assert.ok(!names.has(disabled), `disabled tool ${disabled} is still advertised`);
@@ -206,6 +345,20 @@ test("unified MCP advertises scripts, diagnostics, LSP, and CodeGenie tools", as
   const catalog = await client.callTool({ name: "deveco_script_catalog", arguments: {} });
   const parsed = JSON.parse(catalog.content[0].text);
   assert.equal(parsed.count, 19);
+
+  const rejected = await client.callTool({
+    name: "deveco_status", arguments: { surprise: "must never reach the handler" },
+  });
+  assert.equal(rejected.isError, true);
+  const validation = JSON.parse(rejected.content[0].text);
+  assert.equal(validation.code, "SCHEMA_VALIDATION_FAILED");
+  assert.ok(validation.details.some((detail) => detail.keyword === "additionalProperties"));
+
+  const incompleteLoginPoll = await client.callTool({
+    name: "deveco_login", arguments: { action: "status" },
+  });
+  assert.equal(incompleteLoginPoll.isError, true);
+  assert.equal(JSON.parse(incompleteLoginPoll.content[0].text).code, "SCHEMA_VALIDATION_FAILED");
 });
 
 test("a timed-out script takes its grandchildren with it", async () => {
@@ -295,6 +448,35 @@ test("a timed-out DevEco CLI run does not leave its children behind", async () =
   }
 });
 
+test("DevEco CLI output is memory-bounded while its complete transcript is streamed to disk", async (t) => {
+  const { combineOutput, runDevecoCli } = await import("../src/deveco-cli.mjs");
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-cli-output-"));
+  const fakeCli = path.join(directory, "cli.mjs");
+  await fs.writeFile(fakeCli, [
+    'process.stdout.write("A".repeat(400000));',
+    'process.stderr.write("B".repeat(350000));',
+  ].join("\n"));
+  const previous = process.env.DEVECO_CLI_ENTRY;
+  process.env.DEVECO_CLI_ENTRY = fakeCli;
+  let report;
+  t.after(async () => {
+    if (previous === undefined) delete process.env.DEVECO_CLI_ENTRY;
+    else process.env.DEVECO_CLI_ENTRY = previous;
+    if (report?.logPath) await fs.rm(report.logPath, { force: true });
+    await fs.rm(directory, { recursive: true, force: true });
+  });
+
+  report = await runDevecoCli([], { cwd: directory, timeoutMs: 5000 });
+  assert.equal(report.outputTruncated, true);
+  assert.ok(Buffer.byteLength(report.stdout) <= 256 * 1024);
+  assert.ok(Buffer.byteLength(report.stderr) <= 256 * 1024);
+  assert.ok(report.logPath && fsSync.existsSync(report.logPath));
+  assert.ok((await fs.stat(report.logPath)).size > 750000,
+    "the on-disk log must contain the complete output, not only the in-memory tail");
+  assert.match(combineOutput(report), /Output truncated/);
+  assert.match(combineOutput(report), new RegExp(report.logPath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+});
+
 test("the CLI and the MCP report the same doctor findings", async (t) => {
   // PACK.md told people to run `npm run doctor` to check DevEco Studio, HDC, the ArkTS checker
   // and login state, but the CLI only ever reported the environment and the script registry --
@@ -379,6 +561,9 @@ test("ArkTS checker and check_ets_files accept a stock HarmonyOS project", { ski
     const payload = JSON.parse(result.content[0].text);
     assert.equal(payload.success, true);
     assert.equal(payload.summary.errorCount, 0);
+    assert.equal(payload.checkKind, "static-precheck");
+    assert.equal(payload.compilationVerified, false);
+    assert.match(payload.verificationHint, /build_project/);
 
     const compatibleResult = await client.callTool({ name: "check_ets_files", arguments: { files: [file] } });
     assert.equal(compatibleResult.isError, false);
@@ -577,6 +762,56 @@ test("build_project keeps the parameter contract the CodeGenie tool had", async 
   );
 });
 
+test("build_project background jobs finish without holding one MCP request open", async (t) => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-cli-job-"));
+  const project = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-cli-job-project-"));
+  const entry = path.join(directory, "fake-cli.mjs");
+  await fs.writeFile(entry, "setTimeout(() => console.log('job finished'), 80);\n");
+  await fs.writeFile(path.join(project, "build-profile.json5"), '{"modules": []}\n');
+
+  const previous = process.env.DEVECO_CLI_ENTRY;
+  process.env.DEVECO_CLI_ENTRY = entry;
+  t.after(async () => {
+    if (previous === undefined) delete process.env.DEVECO_CLI_ENTRY;
+    else process.env.DEVECO_CLI_ENTRY = previous;
+    await fs.rm(directory, { recursive: true, force: true });
+    await fs.rm(project, { recursive: true, force: true });
+  });
+
+  const { getBuildProjectJob, startBuildProjectJob } = await import("../src/deveco-cli.mjs");
+  const started = startBuildProjectJob({ project_path: project });
+  assert.equal(started.status, "running");
+  assert.ok(started.job_id);
+  assert.equal(started.next_action.arguments.wait_ms, 20000);
+
+  const finished = await getBuildProjectJob(started.job_id, 1000);
+  assert.equal(finished.status, "succeeded");
+  assert.match(finished.report, /job finished/);
+});
+
+test("build_project background jobs can terminate their DevEco CLI process tree", async (t) => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-cli-cancel-"));
+  const project = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-cli-cancel-project-"));
+  const entry = path.join(directory, "fake-cli.mjs");
+  await fs.writeFile(entry, "setInterval(() => {}, 1000);\n");
+  await fs.writeFile(path.join(project, "build-profile.json5"), '{"modules": []}\n');
+
+  const previous = process.env.DEVECO_CLI_ENTRY;
+  process.env.DEVECO_CLI_ENTRY = entry;
+  t.after(async () => {
+    if (previous === undefined) delete process.env.DEVECO_CLI_ENTRY;
+    else process.env.DEVECO_CLI_ENTRY = previous;
+    await fs.rm(directory, { recursive: true, force: true });
+    await fs.rm(project, { recursive: true, force: true });
+  });
+
+  const { cancelBuildProjectJob, startBuildProjectJob } = await import("../src/deveco-cli.mjs");
+  const started = startBuildProjectJob({ project_path: project, timeoutMs: 60000 });
+  const cancelled = await cancelBuildProjectJob(started.job_id);
+  assert.equal(cancelled.status, "cancelled");
+  assert.match(cancelled.message, /process tree was terminated/);
+});
+
 test("start_app deploys only the explicitly selected Entry module", async (t) => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-cli-start-"));
   const project = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-cli-project-"));
@@ -649,7 +884,7 @@ test("start_app requires a module instead of deploying multiple Entry modules", 
   assert.deepEqual(invocations, [["run", "--skip-build", "--device", "device-1"]]);
 });
 
-test("apply_changes uses the CLI apply manifest and never selects multiple Entry modules", async (t) => {
+test("apply_changes scopes the CLI apply manifest to exactly one Entry module", async (t) => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-cli-apply-"));
   const project = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-cli-project-"));
   const entry = path.join(directory, "fake-cli.mjs");
@@ -678,16 +913,91 @@ test("apply_changes uses the CLI apply manifest and never selects multiple Entry
     project_path: project,
     hvd: "device-1",
     files: ["entry/src/Main.ets"],
+    module: "entry",
+    target: "default",
     product: "default",
   });
   const invocation = JSON.parse(await fs.readFile(log, "utf8"));
   assert.deepEqual(invocation.manifest, "entry/src/Main.ets\n");
-  assert.deepEqual(invocation.args.slice(0, 5), ["run", "--device", "device-1", "--product", "default"]);
+  assert.deepEqual(invocation.args.slice(0, 7), ["run", "--device", "device-1", "--module", "entry@default", "--product", "default"]);
   assert.ok(invocation.args.includes("--apply"));
-  assert.ok(!invocation.args.includes("--module"));
+  assert.equal(invocation.args.filter((arg) => arg === "--module").length, 1);
   assert.match(report, /Applied 1 changed file/);
   const hvigorFiles = await fs.readdir(path.join(project, ".hvigor"));
   assert.deepEqual(hvigorFiles, [], "the temporary apply manifest must be removed");
+});
+
+test("apply_changes refuses an ambiguous multi-Entry project before creating an apply manifest", async (t) => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-cli-apply-modules-"));
+  const project = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-cli-project-"));
+  const entry = path.join(directory, "fake-cli.mjs");
+  await fs.mkdir(path.join(project, "entry", "src"), { recursive: true });
+  await fs.writeFile(path.join(project, "entry", "src", "Main.ets"), "@Entry struct Main {}\n");
+  await fs.writeFile(entry,
+    'console.log("Specify module(s) to run. Available runnable modules:\\n- entry\\n- watch");\n');
+  const previous = process.env.DEVECO_CLI_ENTRY;
+  process.env.DEVECO_CLI_ENTRY = entry;
+  t.after(async () => {
+    if (previous === undefined) delete process.env.DEVECO_CLI_ENTRY;
+    else process.env.DEVECO_CLI_ENTRY = previous;
+    await fs.rm(directory, { recursive: true, force: true });
+    await fs.rm(project, { recursive: true, force: true });
+  });
+
+  await assert.rejects(
+    () => applyChanges({
+      project_path: project, hvd: "device-1", files: ["entry/src/Main.ets"],
+    }),
+    (error) => error.code === "DEVECO_CLI_MODULE_REQUIRED" && /entry, watch/.test(error.message),
+  );
+  assert.equal(fsSync.existsSync(path.join(project, ".hvigor")), false,
+    "ambiguity must be rejected before a manifest can trigger any apply operation");
+});
+
+test("apply_changes relaunches the same selected module after a failed apply", async (t) => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-cli-apply-recover-"));
+  const project = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-cli-project-"));
+  const entry = path.join(directory, "fake-cli.mjs");
+  const argvLog = path.join(directory, "argv.log");
+  await fs.mkdir(path.join(project, "entry", "src"), { recursive: true });
+  await fs.writeFile(path.join(project, "entry", "src", "Main.ets"), "@Entry struct Main {}\n");
+  await fs.writeFile(entry, [
+    'import fs from "node:fs";',
+    'const args = process.argv.slice(2);',
+    `fs.appendFileSync(${JSON.stringify(argvLog)}, JSON.stringify(args) + "\\n");`,
+    'if (args.includes("--apply")) console.log("error: failed to install changed application");',
+    'else console.log("Application launched");',
+  ].join("\n"));
+  const previous = process.env.DEVECO_CLI_ENTRY;
+  process.env.DEVECO_CLI_ENTRY = entry;
+  t.after(async () => {
+    if (previous === undefined) delete process.env.DEVECO_CLI_ENTRY;
+    else process.env.DEVECO_CLI_ENTRY = previous;
+    await fs.rm(directory, { recursive: true, force: true });
+    await fs.rm(project, { recursive: true, force: true });
+  });
+
+  await assert.rejects(
+    () => applyChanges({
+      project_path: project,
+      hvd: "device-1",
+      files: ["entry/src/Main.ets"],
+      module: "entry",
+      target: "default",
+      product: "default",
+      ability: "EntryAbility",
+    }),
+    (error) => error.code === "DEVECO_CLI_APPLY_FAILED"
+      && /previous installed app was relaunched/.test(error.message),
+  );
+  const invocations = (await fs.readFile(argvLog, "utf8")).trim().split("\n").map(JSON.parse);
+  assert.equal(invocations.length, 2);
+  assert.ok(invocations[0].includes("--apply"));
+  assert.deepEqual(invocations[1], [
+    "run", "--skip-build", "--device", "device-1", "--module", "entry@default",
+    "--product", "default", "--ability", "EntryAbility",
+  ]);
+  assert.deepEqual(await fs.readdir(path.join(project, ".hvigor")), []);
 });
 
 test("api_compat_check emits the DevEco CLI 1.3 compat command", async (t) => {
@@ -737,6 +1047,189 @@ test("project_sync uses DevEco Studio's bundled ohpm and Hvigor entries", async 
   const report = await projectSync({ project_path: project, product: "wearable" });
   assert.match(report, /ohpm install --all/);
   assert.match(report, /hvigor --sync -p product=wearable --analyze=normal --parallel --incremental --no-daemon/);
+});
+
+test("CLT layout is resolved for project sync, SDK, HDC, and emulator paths", async (t) => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-clt-"));
+  const project = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-clt-project-"));
+  await fs.writeFile(path.join(root, "version.txt"), "# Version: 26.0.0\n");
+  const node = path.join(root, "tool", "node", process.platform === "win32" ? "node.exe" : "bin/node");
+  const ohpm = path.join(root, "ohpm", "bin", "pm-cli.js");
+  const hvigor = path.join(root, "hvigor", "bin", "hvigorw.js");
+  const hdc = path.join(root, "sdk", "default", "openharmony", "toolchains", process.platform === "win32" ? "hdc.exe" : "hdc");
+  const sdkPkg = path.join(root, "sdk", "default", "sdk-pkg.json");
+  await fs.mkdir(path.dirname(node), { recursive: true });
+  await fs.mkdir(path.dirname(ohpm), { recursive: true });
+  await fs.mkdir(path.dirname(hvigor), { recursive: true });
+  await fs.mkdir(path.dirname(hdc), { recursive: true });
+  await fs.symlink(process.execPath, node);
+  await fs.writeFile(ohpm, 'console.log("clt-ohpm", ...process.argv.slice(2));\n');
+  await fs.writeFile(hvigor, 'console.log("clt-hvigor", ...process.argv.slice(2));\n');
+  await fs.writeFile(hdc, "fake hdc\n");
+  await fs.writeFile(sdkPkg, JSON.stringify({ data: { apiVersion: 24, platformVersion: "6.1.1" } }));
+  const previous = process.env.DEVECO_CLI_CLT_PATH;
+  const previousStudio = process.env.DEVECO_CLI_STUDIO_PATH;
+  process.env.DEVECO_CLI_CLT_PATH = root;
+  delete process.env.DEVECO_CLI_STUDIO_PATH;
+  t.after(async () => {
+    if (previous === undefined) delete process.env.DEVECO_CLI_CLT_PATH;
+    else process.env.DEVECO_CLI_CLT_PATH = previous;
+    if (previousStudio === undefined) delete process.env.DEVECO_CLI_STUDIO_PATH;
+    else process.env.DEVECO_CLI_STUDIO_PATH = previousStudio;
+    await fs.rm(root, { recursive: true, force: true });
+    await fs.rm(project, { recursive: true, force: true });
+  });
+  const resolved = resolveDevecoToolchain();
+  assert.equal(resolved.kind, "clt");
+  assert.equal(resolved.root, root);
+  assert.equal(resolved.paths.node, path.join(root, "tool", "node", process.platform === "win32" ? "node.exe" : "bin/node"));
+  assert.equal(resolved.paths.sdk, path.join(root, "sdk"));
+  assert.equal(resolved.paths.hdc, path.join(root, "sdk", "default", "openharmony", "toolchains", process.platform === "win32" ? "hdc.exe" : "hdc"));
+  assert.equal(resolved.paths.emulator, path.join(root, "emulator", process.platform === "win32" ? "Emulator.exe" : "Emulator"));
+  const syncReport = await projectSync({ project_path: project });
+  assert.match(syncReport, /clt-ohpm install --all/);
+  assert.match(syncReport, /clt-hvigor --sync/);
+  const sdkResult = await runRegisteredScript("detect_sdk", {});
+  assert.equal(sdkResult.ok, true);
+  assert.equal(sdkResult.parsed?.apiLevel, 24);
+  const skillHdc = await resolveSkillHdcBinary();
+  assert.equal(skillHdc.hdc, hdc);
+});
+
+test("official DevEco wrappers preserve the 1.3.1 CLI command interfaces", async (t) => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-official-"));
+  const project = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-project-"));
+  const entry = path.join(directory, "fake-cli.mjs");
+  const argvLog = path.join(directory, "argv.log");
+  const stdinLog = path.join(directory, "stdin.log");
+  await fs.writeFile(entry, [
+    'import fs from "node:fs";',
+    'const args = process.argv.slice(2);',
+    `fs.appendFileSync(${JSON.stringify(argvLog)}, JSON.stringify(args) + "\\n");`,
+    'if (args[0] === "auth" && args[1] === "login") {',
+    '  let input = "";',
+    '  process.stdin.setEncoding("utf8");',
+    '  for await (const chunk of process.stdin) input += chunk;',
+    `  fs.writeFileSync(${JSON.stringify(stdinLog)}, input);`,
+    '}',
+    'console.log("ok");',
+  ].join("\n"));
+  const previous = process.env.DEVECO_CLI_ENTRY;
+  process.env.DEVECO_CLI_ENTRY = entry;
+  t.after(async () => {
+    if (previous === undefined) delete process.env.DEVECO_CLI_ENTRY;
+    else process.env.DEVECO_CLI_ENTRY = previous;
+    await fs.rm(directory, { recursive: true, force: true });
+    await fs.rm(project, { recursive: true, force: true });
+  });
+
+  await codeLint({ project_path: project, path: "entry", fix: true, incremental: true, config_path: "lint.json", product: "default", format: "json", output_path: "lint-report.json", limit: 50 });
+  await harmonyDocs({ action: "catalog", project_path: project });
+  await harmonyDocs({ action: "search", keywords: ["default"], project_path: project });
+  await harmonyDocs({ action: "search", keywords: ["ArkUI", "animation"], catalog: "arkui", limit: 5, project_path: project });
+  await harmonyDocs({ action: "read", document_id: "doc-1", project_path: project });
+  await deviceInfo({ target: "device-1", project_path: project });
+  await uiInspect({ action: "layout", hvd: "device-1", project_path: project });
+  await uiInspect({ action: "layout", hvd: "device-1", id: "2", window: "7", depth: 4, mode: "simplified", project_path: project });
+  await uiInspect({ action: "windows", hvd: "device-1", all: true, project_path: project });
+  await uiControl({ action: "click", node_id: "button-1", window: "7", hvd: "device-1", project_path: project });
+  await uiControl({ action: "drag", x: 1, y: 2, x2: 3, y2: 4, speed: 500, hvd: "device-1", project_path: project });
+  await cliAuth({ action: "team_list", project_path: project });
+  await cliAuth({ action: "login", project_path: project });
+  await signatureGenerate({ project_path: project, force: true, team_id: "team-1", product: "default" });
+  await emulatorManage({ action: "image_list", all: true, project_path: project });
+  await emulatorManage({ action: "create", name: "phone-1", device_type: "phone", os_version: "6.0.0", force: true, project_path: project });
+  await emulatorManage({ action: "image_download", device_type: "tablet", os_version: "6.0.0", force: true, project_path: project });
+  await emulatorManage({ action: "license_accept", project_path: project });
+  await emulatorScenario({ action: "battery", target: "phone-1", level: 42, project_path: project });
+  await emulatorScenario({ action: "battery", target: "phone-1", status: "charging", project_path: project });
+  await emulatorScenario({ action: "geolocation", target: "phone-1", longitude: 120.2, project_path: project });
+  await emulatorScenario({ action: "sensor", target: "phone-1", heartrate: 80, project_path: project });
+
+  const calls = (await fs.readFile(argvLog, "utf8")).trim().split("\n").map(JSON.parse);
+  assert.deepEqual(calls, [
+    ["check", "lint", "entry", "--fix", "--incremental", "--config-path", "lint.json", "--product", "default", "--format", "json", "--output-path", "lint-report.json", "--limit", "50"],
+    ["docs", "catalog", "--format", "json"],
+    ["docs", "search", "default", "--catalog", "all", "--format", "json"],
+    ["docs", "search", "ArkUI", "animation", "--catalog", "arkui", "--format", "json", "--limit", "5"],
+    ["docs", "read", "doc-1"],
+    ["device", "view", "--target", "device-1", "--format", "json"],
+    ["ui", "layout", "--device", "device-1", "--format", "json", "--mode", "simplified"],
+    ["ui", "layout", "--device", "device-1", "--id", "2", "--window", "7", "--depth", "4", "--format", "json", "--mode", "simplified"],
+    ["ui", "window", "list", "--device", "device-1", "--format", "json", "--all"],
+    ["ui", "click", "--device", "device-1", "--id", "button-1", "--window", "7"],
+    ["ui", "drag", "1", "2", "3", "4", "--device", "device-1", "--speed", "500"],
+    ["auth", "team", "list"],
+    ["auth", "login"],
+    ["signature", "generate", "--force", "--team-id", "team-1", "--product", "default"],
+    ["emulator", "image", "list", "--all", "--format", "json"],
+    ["emulator", "create", "phone-1", "--device-type", "phone", "--os-version", "6.0.0", "--force"],
+    ["emulator", "image", "download", "--device-type", "tablet", "--os-version", "6.0.0", "--force"],
+    ["emulator", "license", "accept"],
+    ["emulator", "battery", "--level", "42", "--target", "phone-1"],
+    ["emulator", "battery", "--status", "charging", "--target", "phone-1"],
+    ["emulator", "geolocation", "--longitude", "120.2", "--target", "phone-1"],
+    ["emulator", "sensor", "--heartrate", "80", "--target", "phone-1"],
+  ]);
+  assert.equal(await fs.readFile(stdinLog, "utf8"), "\n");
+});
+
+test("official wrappers reject invalid option combinations before execution", async () => {
+  await assert.rejects(() => uiInspect({ action: "layout", window: "7", all_windows: true }), /mutually exclusive/);
+  await assert.rejects(() => uiControl({ action: "click" }), /require x\/y coordinates or node_id/);
+  await assert.rejects(() => uiControl({ action: "click", x: 1, y: 2, node_id: "button" }), /mutually exclusive/);
+  await assert.rejects(() => uiControl({ action: "text", text: "hello", window: "7" }), /window must be used with node_id/);
+  await assert.rejects(() => uiControl({ action: "drag", x: 1, y: 2, x2: 3, y2: 4, speed: 100 }), /between 200 and 40000/);
+  await assert.rejects(() => emulatorManage({ action: "start" }), /names must be a non-empty array/);
+  await assert.rejects(() => emulatorManage({ action: "create", name: "phone", os_version: "6.0.0" }), /device_type/);
+  await assert.rejects(() => emulatorManage({ action: "image_download", os_version: "6.0.0" }), /device_type/);
+  await assert.rejects(() => emulatorManage({ action: "image_remove", os_version: "6.0.0" }), /device_type/);
+  await assert.rejects(() => emulatorScenario({ action: "shake" }), /target is required/);
+  await assert.rejects(() => emulatorScenario({ action: "battery", target: "phone", level: 50, status: "charging" }), /exactly one/);
+  await assert.rejects(() => emulatorScenario({ action: "geolocation", target: "phone" }), /exactly one/);
+  await assert.rejects(() => emulatorScenario({ action: "geolocation", target: "phone", longitude: 1, latitude: 2 }), /exactly one/);
+  await assert.rejects(() => emulatorScenario({ action: "sensor", target: "phone", humidity: 50, temperature: 20 }), /exactly one/);
+});
+
+test("hot_reload owns a persistent watch process and applies a temporary manifest", async (t) => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-hotreload-"));
+  const project = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-project-"));
+  const entry = path.join(directory, "fake-cli.mjs");
+  const log = path.join(directory, "argv.log");
+  await fs.mkdir(path.join(project, "entry", "src"), { recursive: true });
+  await fs.writeFile(path.join(project, "entry", "src", "Main.ets"), "@Entry struct Main {}\n");
+  await fs.writeFile(entry, [
+    'import fs from "node:fs";', 'import path from "node:path";',
+    'const args = process.argv.slice(2);',
+    `const log = ${JSON.stringify(log)};`,
+    'const apply = args.indexOf("--hotreload-apply");',
+    'const record = { args };',
+    'if (apply >= 0) record.manifest = fs.readFileSync(path.join(process.cwd(), ".hvigor", args[apply + 1]), "utf8");',
+    'fs.appendFileSync(log, JSON.stringify(record) + "\\n");',
+    'if (args.includes("--hotreload") && !args.includes("stop")) { console.log("Hot-reload watch session active (socket persistent). Edit code"); setInterval(() => {}, 1000); }',
+    'else console.log("ok");',
+  ].join("\n"));
+  const previous = process.env.DEVECO_CLI_ENTRY;
+  process.env.DEVECO_CLI_ENTRY = entry;
+  t.after(async () => {
+    await closeHotReload();
+    if (previous === undefined) delete process.env.DEVECO_CLI_ENTRY;
+    else process.env.DEVECO_CLI_ENTRY = previous;
+    await fs.rm(directory, { recursive: true, force: true });
+    await fs.rm(project, { recursive: true, force: true });
+  });
+  const started = await hotReload({ action: "start", project_path: project, hvd: "device-1", module: "entry", product: "default", timeoutMs: 5000 });
+  assert.equal(started.active, true);
+  const applied = await hotReload({ action: "apply", files: ["entry/src/Main.ets"], timeoutMs: 5000 });
+  assert.deepEqual(applied.appliedFiles, ["entry/src/Main.ets"]);
+  const stopped = await hotReload({ action: "stop", timeoutMs: 5000 });
+  assert.equal(stopped.stopped, true);
+  const records = (await fs.readFile(log, "utf8")).trim().split("\n").map(JSON.parse);
+  assert.deepEqual(records[0].args, ["run", "--device", "device-1", "--module", "entry", "--product", "default", "--hotreload"]);
+  assert.equal(records[1].manifest, "entry/src/Main.ets\n");
+  assert.deepEqual(records[1].args.slice(0, 2), ["run", "--hotreload-apply"]);
+  assert.deepEqual(records[2].args, ["run", "--hotreload", "stop"]);
+  assert.deepEqual(await fs.readdir(path.join(project, ".hvigor")), []);
 });
 
 test("DevEco CLI failures are errors even when the process exits zero", () => {
@@ -1131,7 +1624,7 @@ test("a CodeGenie child that never answers cannot delay tool discovery", { timeo
   const elapsed = Date.now() - startedAt;
   assert.ok(elapsed < 1000, `tools/list must not wait on the child; took ${elapsed}ms`);
 
-  assert.equal(names.length, 33, "all 33 tools must be advertised even while the child is stalled");
+  assert.equal(names.length, 43, "all 43 tools must be advertised even while the child is stalled");
   assert.ok(names.includes("arkts_check"));
   // The capture/find/tap loop runs over hdc in-process, so a stalled child must not reach it.
   for (const local of ["ui_snapshot", "ui_observe", "ui_find", "ui_tap"]) {
@@ -1333,7 +1826,7 @@ test("an explicit width at or above native asks for no rescale", async (t) => {
   });
 
   await withHdcPath(fake.executable, () => uiSnapshot({ localPath: target }));
-  await withHdcPath(fake.executable, () => uiSnapshot({ localPath: target, width: 4096 }));
+  await withHdcPath(fake.executable, () => uiSnapshot({ localPath: target, width: 4096, overwrite: true }));
   const captures = (await fake.argv()).filter((line) => line.includes("snapshot_display"));
   // An explicit width only ever scales down -- asking for more pixels than the display has would
   // upscale a blurry frame and charge for the extra area.
@@ -1355,7 +1848,7 @@ test("a display within the ceiling is captured untouched", async (t) => {
   });
 
   await withHdcPath(fake.executable, () => uiSnapshot({ localPath: target }));
-  const report = await withHdcPath(fake.executable, () => uiSnapshot({ localPath: target }));
+  const report = await withHdcPath(fake.executable, () => uiSnapshot({ localPath: target, overwrite: true }));
   const captures = (await fake.argv()).filter((line) => line.includes("snapshot_display"));
   assert.ok(!captures[1].includes(" -w "), `nothing to cap on this display: ${captures[1]}`);
   assert.equal(report.coordinateScale, 1);
@@ -1431,7 +1924,9 @@ test("format png is lossless, uncapped, and does not need the uitest lock", asyn
   });
 
   await withHdcPath(fake.executable, () => uiSnapshot({ localPath: target, format: "png" }));
-  const report = await withHdcPath(fake.executable, () => uiSnapshot({ localPath: target, format: "png" }));
+  const report = await withHdcPath(fake.executable, () => uiSnapshot({
+    localPath: target, format: "png", overwrite: true,
+  }));
   assert.equal(report.method, "snapshot_display");
   assert.equal(report.mimeType, "image/png");
   assert.equal(report.localPath, target);
@@ -1503,7 +1998,7 @@ test("a failed ui_snapshot never leaves the previous frame in place as if it wer
 
   await withHdcPath(fake.executable, async () => {
     await assert.rejects(
-      () => uiSnapshot({ localPath: target }),
+      () => uiSnapshot({ localPath: target, overwrite: true }),
       (error) => error.code === "UI_SNAPSHOT_EMPTY",
     );
   });
@@ -1529,6 +2024,27 @@ test("ui_snapshot resolves devices the same way hdc_log does", async (t) => {
       (error) => error.code === "HDC_DEVICE_NOT_FOUND",
     );
   });
+});
+
+test("ui_snapshot refuses to overwrite an existing destination unless explicitly allowed", async (t) => {
+  const fake = await makeUiHdc();
+  const target = uiTempTarget("overwrite-guard.jpeg");
+  const original = Buffer.from("belongs to the caller");
+  await fs.writeFile(target, original);
+  t.after(async () => {
+    await fs.rm(fake.directory, { recursive: true, force: true });
+    await fs.rm(target, { force: true });
+  });
+
+  await withHdcPath(fake.executable, async () => {
+    await assert.rejects(
+      () => uiSnapshot({ localPath: target }),
+      (error) => error.code === "UI_OUTPUT_EXISTS",
+    );
+  });
+  assert.deepEqual(await fs.readFile(target), original);
+  assert.equal((await fake.argv()).some((line) => line.includes("snapshot_display")), false,
+    "the guard must run before taking a device capture");
 });
 
 test("captures overlap while uitest work is serialised", async (t) => {
@@ -1647,6 +2163,8 @@ test("ui_find turns a layout dump into tap coordinates without touching a device
   assert.equal(limited.matches.length, 1);
   assert.equal(limited.matchCount, 4);
   assert.equal(limited.truncated, true);
+  assert.match(limited.truncationHint, /type: Slider/);
+  assert.equal(limited.componentTypes.Text, 2, "only visible, non-zero-area component types are counted");
 });
 
 test("ui_find reads the accessibility dump shape that uitest actually emits", async (t) => {
@@ -1824,11 +2342,76 @@ test("ui_tap builds the uiInput command for each action", async (t) => {
 
   await withHdcPath(fake.executable, async () => {
     assert.match((await uiTap({ action: "click", x: 640, y: 2710 })).sent, /uiInput click 640 2710$/);
-    assert.match((await uiTap({ action: "swipe", x: 1, y: 2, x2: 3, y2: 4, velocity: 600 })).sent, /uiInput swipe 1 2 3 4 600$/);
+    const rawSwipe = await uiTap({ action: "swipe", x: 1, y: 2, x2: 3, y2: 4, velocity: 600 });
+    assert.match(rawSwipe.sent, /uiInput swipe 1 2 3 4 600$/);
+    assert.equal(rawSwipe.commandAccepted, true);
+    assert.equal(rawSwipe.outcomeVerified, false);
+    assert.match(rawSwipe.verificationHint, /from_percent/);
+    assert.match((await uiTap({ action: "fling", x: 1, y: 2, x2: 3, y2: 4, velocity: 800 })).sent, /uiInput fling 1 2 3 4 800$/);
+    assert.match((await uiTap({ action: "drag", x: 1, y: 2, x2: 3, y2: 4, velocity: 400 })).sent, /uiInput drag 1 2 3 4 400$/);
     assert.match((await uiTap({ action: "dircFling", direction: 3 })).sent, /uiInput dircFling 3$/);
     assert.match((await uiTap({ action: "keyEvent", key1: "Back" })).sent, /uiInput keyEvent Back$/);
     assert.match((await uiTap({ action: "inputText", x: 5, y: 6, text: "BMI" })).sent, /uiInput inputText 5 6 'BMI'$/);
   });
+});
+
+test("ui_tap targets and verifies a slider by percentage instead of guessed coordinates", async (t) => {
+  const sliderDump = {
+    attributes: { type: "root", bounds: "[0,0][1276,2848]" },
+    children: [{
+      attributes: {
+        type: "Slider", bounds: "[100,200][900,300]", text: "100.000000",
+        clickable: "true", enabled: "true", visible: "true",
+      },
+    }],
+  };
+  const fake = await makeUiHdc({ recv: `printf '%s' '${JSON.stringify(sliderDump)}' > "$last"` });
+  t.after(async () => await fs.rm(fake.directory, { recursive: true, force: true }));
+
+  const report = await withHdcPath(fake.executable, () => uiTap({
+    action: "drag", type: "Slider", text: "100", from_percent: 100, to_percent: 0, velocity: 800,
+  }));
+  // 5% horizontal inset keeps both points on the slider's endpoint thumbs.
+  assert.match(report.sent, /uiInput drag 860 250 140 250 800$/);
+  assert.equal(report.target.type, "Slider");
+  assert.deepEqual(report.requestedRange, { axis: "horizontal", fromPercent: 100, toPercent: 0 });
+  assert.equal(report.outcomeVerified, true);
+  assert.equal(report.verified.beforeText, "100.000000");
+  assert.equal(report.verified.afterText, "100.000000");
+  assert.equal(report.verified.valueChanged, false, "a no-change device response must not be reported as changed");
+});
+
+test("ui_tap maps screen percentages when a custom control is absent from the UI tree", async (t) => {
+  const treeWithoutSlider = {
+    attributes: { type: "root", bounds: "[0,0][1276,2848]" },
+    children: [{ attributes: { type: "Canvas", bounds: "[0,0][1276,2848]", visible: "true" } }],
+  };
+  const fake = await makeUiHdc({
+    recv: `printf '%s' '${JSON.stringify(treeWithoutSlider)}' > "$last"`,
+  });
+  t.after(async () => await fs.rm(fake.directory, { recursive: true, force: true }));
+
+  const report = await withHdcPath(fake.executable, () => uiTap({
+    action: "swipe",
+    from_x_percent: 92.5,
+    from_y_percent: 59.2,
+    to_x_percent: 40.75,
+    to_y_percent: 59.2,
+    velocity: 800,
+  }));
+  assert.equal(report.sent, "uitest uiInput swipe 1180 1686 520 1686 800");
+  assert.equal(report.coordinateSpace, "device-screen-percent");
+  assert.deepEqual(report.screen, [0, 0, 1276, 2848]);
+  assert.equal(report.commandAccepted, true);
+  assert.equal(report.outcomeVerified, false);
+  assert.match(report.verificationHint, /does not prove/);
+
+  await assert.rejects(
+    () => withHdcPath(fake.executable, () => uiTap({
+      action: "swipe", from_x_percent: 10, from_y_percent: 20, to_x_percent: 30,
+    })),
+    (error) => error.code === "UI_ARGS_INVALID" && /all four/.test(error.message),
+  );
 });
 
 test("ui_tap quotes whitespace-free text instead of restricting which characters it may contain", async (t) => {
@@ -2142,6 +2725,22 @@ async function makeObserveHdc(t, { archive = observeArchive(), observe } = {}) {
   return fake;
 }
 
+test("ui_observe refuses to overwrite an existing destination unless explicitly allowed", async (t) => {
+  const fake = await makeObserveHdc(t);
+  const target = uiTempTarget("observe-overwrite-guard.jpeg");
+  const original = Buffer.from("belongs to the caller");
+  await fs.writeFile(target, original);
+  t.after(async () => await fs.rm(target, { force: true }));
+
+  await assert.rejects(
+    () => withHdcPath(fake.executable, () => uiObserve({ localPath: target })),
+    (error) => error.code === "UI_OUTPUT_EXISTS",
+  );
+  assert.deepEqual(await fs.readFile(target), original);
+  assert.equal((await fake.argv()).some((line) => line.includes("OBSERVE_OK")), false,
+    "the guard must run before starting the fused device operation");
+});
+
 test("ui_observe returns one frame and one tree from a single device round trip", async (t) => {
   // Fusing the two calls without overlapping them measured 1736ms against 1731ms for doing them
   // separately, because file recv is only ~48ms while dumpLayout alone is 1.25s. The win comes
@@ -2267,10 +2866,10 @@ test("ui_tap refuses to guess which of several matches to hit", async (t) => {
       () => uiTap({ action: "click", key: "does-not-exist" }),
       (error) => error.code === "UI_TARGET_NOT_FOUND",
     );
-    // Only single-point actions can be aimed; a swipe needs two points and a fling a direction.
+    // Selector gestures are accepted only when their start and end percentages are explicit.
     await assert.rejects(
       () => uiTap({ action: "swipe", key: "tab_tools" }),
-      (error) => error.code === "UI_ARGS_INVALID" && /explicit coordinates/.test(error.message),
+      (error) => error.code === "UI_ARGS_INVALID" && /from_percent and to_percent/.test(error.message),
     );
   });
   assert.equal((await fake.argv()).filter((line) => line.includes("uiInput")).length, 0);
@@ -2409,7 +3008,7 @@ test("ifChangedFrom answers with a boolean instead of a frame the caller already
   assert.equal(first.unchanged, undefined, "nothing to compare against on the first capture");
 
   const again = await withHdcPath(fake.executable, () => uiSnapshot({
-    localPath: target, ifChangedFrom: first.frameSignature,
+    localPath: target, ifChangedFrom: first.frameSignature, overwrite: true,
   }));
   assert.equal(again.unchanged, true);
   assert.equal(again.frameSignature, first.frameSignature);
@@ -2417,7 +3016,7 @@ test("ifChangedFrom answers with a boolean instead of a frame the caller already
   assert.equal((await fake.argv()).filter((line) => line.includes("snapshot_display")).length, 2);
 
   const mismatched = await withHdcPath(fake.executable, () => uiSnapshot({
-    localPath: target, ifChangedFrom: "0".repeat(32),
+    localPath: target, ifChangedFrom: "0".repeat(32), overwrite: true,
   }));
   assert.equal(mismatched.unchanged, undefined, "a different screen must report as changed");
 });
