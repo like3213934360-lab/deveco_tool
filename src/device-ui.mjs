@@ -151,9 +151,9 @@ function boundedTimeout(value) {
  * @param {number} timeoutMs Bound for the call.
  * @returns {Promise<{stdout: string, stderr: string, exitCode: number|null, signal: string|null}>} Result.
  */
-async function execHdc(command, timeoutMs) {
+async function execHdc(command, timeoutMs, options) {
   try {
-    return await runHdc(command, timeoutMs);
+    return await runHdc(command, timeoutMs, options);
   } catch (error) {
     if (error.code === "ENOENT") {
       fail(`hdc could not be executed: ${command[0]}`, "HDC_NOT_FOUND");
@@ -184,9 +184,9 @@ function serializePerDevice(deviceId, task) {
  * @param {() => Promise<any>} task Work to run under the lock.
  * @returns {Promise<any>} Whatever `task` resolves to.
  */
-function withUitest(deviceId, op, timeoutMs, task) {
+function withUitest(deviceId, op, timeoutMs, task, lockWaitMs = Math.min(timeoutMs, MAX_LOCK_WAIT_MS)) {
   return serializePerDevice(deviceId, () => withUitestLock(
-    { directory: defaultLocalDirectory(deviceId), op, timeoutMs: Math.min(timeoutMs, MAX_LOCK_WAIT_MS) },
+    { directory: defaultLocalDirectory(deviceId), op, timeoutMs: lockWaitMs },
     task,
   ));
 }
@@ -389,7 +389,7 @@ function readMagic(filePath, length) {
  * @param {{emptyCode: string, magic?: Buffer, minBytes?: number}} expectations Validation rules.
  * @returns {Promise<number>} Byte size of the delivered file.
  */
-async function pullArtifact(hdc, deviceId, devicePath, localPath, timeoutMs, expectations) {
+async function pullArtifact(hdc, deviceId, devicePath, localPath, timeoutMs, expectations, signal) {
   const staging = `${localPath}.part`;
   fs.mkdirSync(path.dirname(localPath), { recursive: true });
   fs.rmSync(staging, { force: true });
@@ -397,6 +397,7 @@ async function pullArtifact(hdc, deviceId, devicePath, localPath, timeoutMs, exp
   const received = await execHdc(
     [hdc, ...targetArgs(deviceId), "file", "recv", devicePath, staging],
     timeoutMs,
+    { signal },
   );
   const transportFailure = hdcFailureMessage(received);
   if (transportFailure) {
@@ -662,6 +663,9 @@ export async function uiSnapshot(input = {}) {
     }),
     frameSignature,
     unchanged: unchanged || undefined,
+    // Internal workflow adapters can request this so they can delete the exact device-side
+    // artifact after the local diagnostic copy is safe. It is never exposed by the public schema.
+    ...(input.includeDevicePath === true ? { devicePath } : {}),
   };
 }
 
@@ -670,11 +674,12 @@ export async function uiSnapshot(input = {}) {
  *
  * @returns {Promise<string>} Local path of the pulled dump.
  */
-async function dumpLayout(hdc, deviceId, timeoutMs) {
+async function dumpLayout(hdc, deviceId, timeoutMs, signal) {
   const devicePath = devicePathFor("dump", "json");
   const result = await execHdc(
     [hdc, ...targetArgs(deviceId), "shell", "uitest", "dumpLayout", "-p", devicePath],
     timeoutMs,
+    { signal },
   );
   const combined = `${result.stdout}\n${result.stderr}`;
   assertNoUitestConflict(combined, "uitest dumpLayout");
@@ -684,7 +689,7 @@ async function dumpLayout(hdc, deviceId, timeoutMs) {
   // Stable name, overwritten every call: unlike a screenshot, a stale layout is actively harmful,
   // and dumpPath only has to stay valid until the next dump.
   const localPath = path.join(defaultLocalDirectory(deviceId), "layout.json");
-  await pullArtifact(hdc, deviceId, devicePath, localPath, timeoutMs, { emptyCode: "UI_DUMP_EMPTY" });
+  await pullArtifact(hdc, deviceId, devicePath, localPath, timeoutMs, { emptyCode: "UI_DUMP_EMPTY" }, signal);
   return localPath;
 }
 
@@ -896,10 +901,11 @@ async function observeSeparately({ hdc, deviceId, timeoutMs, selector, targetWid
   };
 }
 
-async function sendInput(hdc, deviceId, inputArgs, timeoutMs, action) {
+async function sendInput(hdc, deviceId, inputArgs, timeoutMs, action, signal) {
   const result = await execHdc(
     [hdc, ...targetArgs(deviceId), "shell", "uitest", "uiInput", ...inputArgs],
     timeoutMs,
+    { signal },
   );
   const combined = `${result.stdout}\n${result.stderr}`;
   assertNoUitestConflict(combined, `uitest uiInput ${action}`);
@@ -999,7 +1005,7 @@ export async function uiTap(input = {}) {
     sweepStaleArtifacts(hdc, deviceId);
     return withUitest(deviceId, `uiInput ${input.action} by screen percentage`, timeoutMs, async () => {
       const startedAt = Date.now();
-      const dumpPath = await dumpLayout(hdc, deviceId, timeoutMs);
+      const dumpPath = await dumpLayout(hdc, deviceId, timeoutMs, input.signal);
       const analysis = analyseDump({
         root: readDump(dumpPath), dumpPath, deviceId, selector: readSelector({}),
       });
@@ -1082,4 +1088,98 @@ export async function uiTap(input = {}) {
       elapsedMs: Date.now() - startedAt,
     };
   });
+}
+
+/**
+ * Hold the device's uitest lease for a complete higher-level workflow.
+ *
+ * The public uiFind/uiTap helpers intentionally acquire the lease per call. A flow cannot compose
+ * those helpers while already holding the same filesystem lock because the lock is not re-entrant.
+ * This narrow session API exposes the same proven dump/input primitives under one lease without
+ * changing the behaviour of any existing tool.
+ *
+ * @param {{hvd?: string, resolvedDeviceId?: string, timeoutMs?: number, lockWaitMs?: number, signal?: AbortSignal}} input Session options.
+ * @param {(session: object) => Promise<any>} task Work performed under the lease.
+ * @returns {Promise<any>} Task result.
+ */
+export async function withUiAutomationSession(input = {}, task) {
+  const hdc = requireHdc();
+  const timeoutMs = boundedTimeout(input.timeoutMs);
+  // Higher-level workflows already resolve and reserve one exact device. Accepting that internal
+  // result avoids a second `hdc list targets` call per replay while public callers keep the usual
+  // connectivity and ambiguity checks.
+  const deviceId = input.resolvedDeviceId
+    ? String(input.resolvedDeviceId)
+    : await resolveDevice(hdc, input.hvd);
+  sweepStaleArtifacts(hdc, deviceId);
+
+  const checkAbort = () => {
+    if (!input.signal?.aborted) return;
+    const error = new Error("UI flow was cancelled");
+    error.code = "FLOW_CANCELLED";
+    throw error;
+  };
+
+  return withUitest(deviceId, "ArkPilot flow", timeoutMs, async () => {
+    const find = async (selectorInput = {}) => {
+      checkAbort();
+      const dumpPath = await dumpLayout(hdc, deviceId, timeoutMs, input.signal);
+      checkAbort();
+      return analyseDump({
+        root: readDump(dumpPath), dumpPath, deviceId, selector: readSelector(selectorInput),
+      });
+    };
+
+    const action = async (step, preparedAnalysis = null) => {
+      checkAbort();
+      const actionNames = { tap: "click", doubleTap: "doubleClick", longTap: "longClick" };
+      if (step.action === "key") {
+        const args = buildInputArgs({ action: "keyEvent", key1: step.key });
+        await sendInput(hdc, deviceId, args, timeoutMs, "keyEvent", input.signal);
+        return { action: step.action, commandAccepted: true };
+      }
+      if (["swipe", "fling", "drag"].includes(step.action)) {
+        const analysis = preparedAnalysis ?? await find({});
+        const args = buildScreenGestureArgs({
+          action: step.action,
+          from_x_percent: step.gesture.fromXPercent,
+          from_y_percent: step.gesture.fromYPercent,
+          to_x_percent: step.gesture.toXPercent,
+          to_y_percent: step.gesture.toYPercent,
+          velocity: step.gesture.velocity,
+        }, analysis.screen);
+        await sendInput(hdc, deviceId, args, timeoutMs, step.action, input.signal);
+        return { action: step.action, commandAccepted: true, screen: analysis.screen };
+      }
+
+      let analysis = preparedAnalysis;
+      let target;
+      if (step.point) {
+        analysis = analysis ?? await find({});
+        const [x1, y1, x2, y2] = analysis.screen ?? [];
+        if (!(x2 > x1) || !(y2 > y1)) {
+          const error = new Error("The UI dump has no usable screen bounds");
+          error.code = "UI_SCREEN_BOUNDS_MISSING";
+          throw error;
+        }
+        target = {
+          center: {
+            x: Math.round(x1 + (((x2 - x1) * step.point.xPercent) / 100)),
+            y: Math.round(y1 + (((y2 - y1) * step.point.yPercent) / 100)),
+          },
+        };
+      } else {
+        analysis = analysis ?? await find(step.selector);
+        target = requireSingleTarget(analysis, readSelector(step.selector));
+      }
+      const inputAction = step.action === "input" ? "inputText" : actionNames[step.action];
+      const args = step.action === "input"
+        ? buildInputArgs({ action: inputAction, x: target.center.x, y: target.center.y, text: step.value })
+        : [inputAction, String(target.center.x), String(target.center.y)];
+      await sendInput(hdc, deviceId, args, timeoutMs, inputAction, input.signal);
+      return { action: step.action, commandAccepted: true, target, structureSignature: analysis.structureSignature };
+    };
+
+    return task({ deviceId, find, action, checkAbort });
+  }, input.lockWaitMs ?? Math.min(timeoutMs, MAX_LOCK_WAIT_MS));
 }

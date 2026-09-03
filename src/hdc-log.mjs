@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { AsyncLocalStorage } from "node:async_hooks";
 import fs from "node:fs";
 import { resolveHdcPath } from "./config.mjs";
 import { terminateProcessTree } from "./process-tree.mjs";
@@ -8,6 +9,11 @@ function targetArgs(deviceId) {
 }
 
 const MAX_HDC_STREAM_BYTES = 8 * 1024 * 1024;
+const hdcCommandObserver = new AsyncLocalStorage();
+
+export function withHdcCommandObserver(observer, task) {
+  return hdcCommandObserver.run(observer, task);
+}
 
 /**
  * Run hdc under a deadline.
@@ -20,10 +26,11 @@ const MAX_HDC_STREAM_BYTES = 8 * 1024 * 1024;
  *
  * @param {string[]} command Full argv.
  * @param {number} timeoutMs Deadline for the call.
- * @param {{resolveOnTimeout?: boolean}} [options] Deadline behaviour.
+ * @param {{resolveOnTimeout?: boolean, signal?: AbortSignal}} [options] Deadline behaviour.
  * @returns {Promise<{stdout: string, stderr: string, exitCode: number|null, signal: string|null, timedOut?: boolean}>} Result.
  */
-function run(command, timeoutMs = 120000, { resolveOnTimeout = false } = {}) {
+function run(command, timeoutMs = 120000, { resolveOnTimeout = false, signal: abortSignal } = {}) {
+  hdcCommandObserver.getStore()?.(command);
   return new Promise((resolve, reject) => {
     const child = spawn(command[0], command.slice(1), {
       stdio: ["ignore", "pipe", "pipe"],
@@ -35,10 +42,20 @@ function run(command, timeoutMs = 120000, { resolveOnTimeout = false } = {}) {
     let stdoutBytes = 0;
     let stderrBytes = 0;
     let settled = false;
+    const finishAbort = () => {
+      terminateProcessTree(child);
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      const error = new Error("HDC command was cancelled");
+      error.code = "HDC_ABORTED";
+      reject(error);
+    };
     const timer = setTimeout(() => {
       terminateProcessTree(child);
       if (settled) return;
       settled = true;
+      abortSignal?.removeEventListener("abort", finishAbort);
       if (resolveOnTimeout) {
         resolve({ stdout, stderr, exitCode: null, signal: "SIGTERM", timedOut: true });
         return;
@@ -47,6 +64,11 @@ function run(command, timeoutMs = 120000, { resolveOnTimeout = false } = {}) {
       error.code = "HDC_TIMEOUT";
       reject(error);
     }, timeoutMs);
+    if (abortSignal?.aborted) {
+      finishAbort();
+      return;
+    }
+    abortSignal?.addEventListener("abort", finishAbort, { once: true });
     const append = (stream, chunk) => {
       if (settled) return;
       const nextBytes = stream === "stdout" ? stdoutBytes + chunk.length : stderrBytes + chunk.length;
@@ -55,6 +77,7 @@ function run(command, timeoutMs = 120000, { resolveOnTimeout = false } = {}) {
       if (nextBytes > MAX_HDC_STREAM_BYTES) {
         settled = true;
         clearTimeout(timer);
+        abortSignal?.removeEventListener("abort", finishAbort);
         terminateProcessTree(child);
         const error = new Error(`HDC ${stream} exceeded the ${MAX_HDC_STREAM_BYTES}-byte output limit`);
         error.code = "HDC_OUTPUT_LIMIT";
@@ -68,6 +91,7 @@ function run(command, timeoutMs = 120000, { resolveOnTimeout = false } = {}) {
     child.stderr.on("data", (chunk) => append("stderr", chunk));
     child.once("error", (error) => {
       clearTimeout(timer);
+      abortSignal?.removeEventListener("abort", finishAbort);
       if (!settled) {
         settled = true;
         reject(error);
@@ -75,6 +99,7 @@ function run(command, timeoutMs = 120000, { resolveOnTimeout = false } = {}) {
     });
     child.once("close", (exitCode, signal) => {
       clearTimeout(timer);
+      abortSignal?.removeEventListener("abort", finishAbort);
       if (settled) return;
       settled = true;
       resolve({ stdout, stderr, exitCode, signal });
@@ -130,8 +155,12 @@ function assertHdcSuccess(result, operation) {
 // was even issued.
 const LIST_TARGETS_TIMEOUT_MS = 30000;
 
-async function listConnectedDevices(hdc) {
-  const result = await run([hdc, "list", "targets"], LIST_TARGETS_TIMEOUT_MS);
+async function listConnectedDevices(hdc, { timeoutMs = LIST_TARGETS_TIMEOUT_MS, signal } = {}) {
+  const result = await run(
+    [hdc, "list", "targets"],
+    Math.min(Math.max(Number(timeoutMs) || LIST_TARGETS_TIMEOUT_MS, 1000), LIST_TARGETS_TIMEOUT_MS),
+    { signal },
+  );
   assertHdcSuccess(result, "hdc list targets");
   return cleanLines(result.stdout).filter((item) => !item.includes("[Empty]"));
 }
@@ -187,8 +216,8 @@ function deviceGrepCommand(prefix) {
   return `hilog -x | grep -F -- '${prefix}'`;
 }
 
-async function resolveDevice(hdc, deviceId) {
-  const devices = await listConnectedDevices(hdc);
+async function resolveDevice(hdc, deviceId, options = {}) {
+  const devices = await listConnectedDevices(hdc, options);
   if (devices.length === 0) {
     fail("No connected HarmonyOS devices detected.", "HDC_NO_DEVICE");
   }
