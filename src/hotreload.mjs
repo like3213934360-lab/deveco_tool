@@ -148,15 +148,22 @@ export async function hotReloadApply(input = {}) {
   const manifest = path.join(hvigor, name);
   fs.writeFileSync(manifest, `${files.join("\n")}\n`, { encoding: "utf8", mode: 0o600 });
   try {
-    const result = await runDevecoCli(["run", "--hotreload-apply", name], {
+    const args = ["run", "--device", session.device];
+    if (session.module) args.push("--module", session.module);
+    args.push("--hotreload-apply", name);
+    const result = await runDevecoCli(args, {
       cwd: session.project,
       timeoutMs: input.timeoutMs,
     });
     const output = combineOutput(result);
     const failure = devecoCliFailureMessage(result);
     if (failure) {
-      const error = new Error(`> ${result.command}\n\n${output}`);
-      error.code = "DEVECO_HOT_RELOAD_APPLY_FAILED";
+      const signingRequired = /\[HotReload\]\s*Signing prerequisites not met\./i.test(output);
+      const guidance = signingRequired
+        ? "\n\nThe patch compiled, but DevEco CLI could not sign the HQF. Log in with deveco_cli_auth, then run app_signature for this project before retrying."
+        : "";
+      const error = new Error(`> ${result.command}\n\n${output}${guidance}`);
+      error.code = signingRequired ? "DEVECO_HOT_RELOAD_SIGNING_REQUIRED" : "DEVECO_HOT_RELOAD_APPLY_FAILED";
       throw error;
     }
     return { ...snapshot(), appliedFiles: files, applyCommand: result.command, output };

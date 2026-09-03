@@ -375,6 +375,7 @@ const CLI_FAILURE_PATTERNS = [
   /failed to (install|start|launch|build)/i,
   /BUILD FAILED/i,
   /Please run devecocli auth login first/i,
+  /did not appear in hdc list targets/i,
 ];
 
 export function devecoCliFailureMessage(result) {

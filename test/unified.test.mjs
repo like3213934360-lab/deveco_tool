@@ -1207,14 +1207,18 @@ test("hot_reload owns a persistent watch process and applies a temporary manifes
     'if (apply >= 0) record.manifest = fs.readFileSync(path.join(process.cwd(), ".hvigor", args[apply + 1]), "utf8");',
     'fs.appendFileSync(log, JSON.stringify(record) + "\\n");',
     'if (args.includes("--hotreload") && !args.includes("stop")) { console.log("Hot-reload watch session active (socket persistent). Edit code"); setInterval(() => {}, 1000); }',
+    'else if (apply >= 0 && process.env.DEVECO_FAKE_SIGNING_FAILURE === "1") { console.log("[HotReload] Signing prerequisites not met."); process.exitCode = 1; }',
     'else console.log("ok");',
   ].join("\n"));
   const previous = process.env.DEVECO_CLI_ENTRY;
+  const previousSigningFailure = process.env.DEVECO_FAKE_SIGNING_FAILURE;
   process.env.DEVECO_CLI_ENTRY = entry;
   t.after(async () => {
     await closeHotReload();
     if (previous === undefined) delete process.env.DEVECO_CLI_ENTRY;
     else process.env.DEVECO_CLI_ENTRY = previous;
+    if (previousSigningFailure === undefined) delete process.env.DEVECO_FAKE_SIGNING_FAILURE;
+    else process.env.DEVECO_FAKE_SIGNING_FAILURE = previousSigningFailure;
     await fs.rm(directory, { recursive: true, force: true });
     await fs.rm(project, { recursive: true, force: true });
   });
@@ -1222,13 +1226,21 @@ test("hot_reload owns a persistent watch process and applies a temporary manifes
   assert.equal(started.active, true);
   const applied = await hotReload({ action: "apply", files: ["entry/src/Main.ets"], timeoutMs: 5000 });
   assert.deepEqual(applied.appliedFiles, ["entry/src/Main.ets"]);
+  process.env.DEVECO_FAKE_SIGNING_FAILURE = "1";
+  await assert.rejects(
+    () => hotReload({ action: "apply", files: ["entry/src/Main.ets"], timeoutMs: 5000 }),
+    (error) => error.code === "DEVECO_HOT_RELOAD_SIGNING_REQUIRED" && /app_signature/.test(error.message),
+  );
+  delete process.env.DEVECO_FAKE_SIGNING_FAILURE;
   const stopped = await hotReload({ action: "stop", timeoutMs: 5000 });
   assert.equal(stopped.stopped, true);
   const records = (await fs.readFile(log, "utf8")).trim().split("\n").map(JSON.parse);
   assert.deepEqual(records[0].args, ["run", "--device", "device-1", "--module", "entry", "--product", "default", "--hotreload"]);
   assert.equal(records[1].manifest, "entry/src/Main.ets\n");
-  assert.deepEqual(records[1].args.slice(0, 2), ["run", "--hotreload-apply"]);
-  assert.deepEqual(records[2].args, ["run", "--hotreload", "stop"]);
+  assert.deepEqual(records[1].args.slice(0, 6), ["run", "--device", "device-1", "--module", "entry", "--hotreload-apply"]);
+  assert.match(records[1].args[6], /^deveco-tool-hotreload-.+\.txt$/);
+  assert.deepEqual(records[2].args.slice(0, 6), ["run", "--device", "device-1", "--module", "entry", "--hotreload-apply"]);
+  assert.deepEqual(records[3].args, ["run", "--hotreload", "stop"]);
   assert.deepEqual(await fs.readdir(path.join(project, ".hvigor")), []);
 });
 
@@ -1237,6 +1249,11 @@ test("DevEco CLI failures are errors even when the process exits zero", () => {
   assert.ok(devecoCliFailureMessage({
     exitCode: 0,
     stdout: "Launching com.example/EntryAbility...\nerror: failed to start ability.",
+    stderr: "",
+  }));
+  assert.ok(devecoCliFailureMessage({
+    exitCode: 0,
+    stdout: 'Emulator "Pura 90" was launched but did not appear in hdc list targets within the timeout.',
     stderr: "",
   }));
   assert.ok(devecoCliFailureMessage({ exitCode: 1, stdout: "", stderr: "boom" }));
