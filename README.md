@@ -1,131 +1,322 @@
 # deveco-tool
 
-本目录是本机使用的 DevEco Code 能力整理仓库，同时是一个宿主无关的**鸿蒙开发能力包**：把 DevEco Code v0.1.5 的知识、工作流和工具三层能力整理成任何 AI agent 都能自己接入的形态。核心资产不含宿主适配；Claude Code 与 Codex 的适配是**单独一层、可选安装**（`scripts/install-host.mjs`），不装它核心照常可用。
+`deveco-tool` 是面向 HarmonyOS / OpenHarmony 开发的统一 stdio MCP 服务。它把 DevEco CLI、ArkTS 语言服务、CodeGenie、HDC 真机控制和仓库内的诊断脚本统一成 **43 个 MCP 工具**，AI 客户端只需连接一个进程。
 
-接入方先读这两个文件：
+这个仓库还包含可选的 Skill、SDD 命令和模板；它们不是运行 MCP 的必要条件。机器可读清单见 [`manifest.json`](./manifest.json)，能力包接入和来源细节见 [`PACK.md`](./PACK.md)。
 
-- [`manifest.json`](./manifest.json) — 机器可读清单（Skill / 命令 / 模板 / MCP 工具分组 / 宿主工具映射）
-- [`PACK.md`](./PACK.md) — 人读的接入说明与工具名映射表
+## 必须依赖
 
-```
-skills/      56 个 Skill，分两层：core 17 个（DevEco Code 提取，MIT）+ extended 39 个（华为官方 Skill 仓库 v0.0.2）
-             路由索引见 skills/INDEX.md；安装器默认只装 core 层，--profile full 才加装 extended
-commands/    SDD 五阶段命令
-templates/   SDD 三份产物模板
-src/         统一 stdio MCP，33 个工具
-scripts/     install.mjs 通用安装器；install-host.mjs 宿主适配层（Claude / Codex，可选）
-docs/        customize-deveco（上游第 5 个 Skill，仅作参考，不进包）
-provenance/  来源、许可与改动记录
-```
+### 仅启动 MCP
 
-一键装到目标目录：
+| 依赖 | 要求 | 用途 |
+|---|---:|---|
+| Node.js | `>= 22` | 运行 MCP 服务、Node 脚本和随包安装的 CLI/LSP 子进程 |
+| npm | 与 Node.js 配套 | 按 `package-lock.json` 安装固定版本依赖 |
+
+安装依赖：
 
 ```bash
+cd /absolute/path/to/deveco_tool
 npm install
-node scripts/install.mjs --dest <目标目录>   # 装 skills(core 18)/commands/templates/manifest.json
-node scripts/install.mjs --dest <目标目录> --profile full   # 加装 extended 层，共 56 个
-node scripts/install.mjs --print-mcp         # 打印 stdio MCP 配置片段
 ```
 
-默认 profile 是 `core`。`--profile full` 会加装 extended 层并在 stderr 打印许可警告——该层上游没有任何仓库级许可声明，其中 30 个自身也没有声明，默认处于保留所有权利状态，详见 [`LICENSE`](./LICENSE) 的 Scope 段与 `NOTICE.harmonyos-agent-skills`。
+`npm install` 会安装下面的运行时组件，不需要再全局安装 `devecocli`、ArkTS LSP 或 CodeGenie MCP：
 
-`install.mjs` 只动目标目录，不改 `~/.claude.json`、`~/.codex/config.toml` 等任何宿主配置。
+| npm 依赖 | 作用 |
+|---|---|
+| `@modelcontextprotocol/sdk`、`zod`、`ajv` | MCP 通信和工具参数校验 |
+| `@deveco/deveco-cli` | 构建、部署、Linter、文档、设备、UI、模拟器和签名等官方 CLI 能力 |
+| `@arkts/language-server` | ArkTS/TypeScript 定义、引用、悬停、符号和调用层级 |
+| `@deveco-codegenie/mcp` | C/C++ 检查及 CodeGenie UI 代理能力 |
+| `vscode-jsonrpc`、`vscode-languageserver-protocol`、`vscode-uri` | ArkTS LSP 协议与 URI 支持 |
 
-想让宿主**自动发现**这些 Skill，再装可选的适配层：
+到这里已经可以启动 MCP、列出 43 个工具，以及使用不依赖鸿蒙工具链的工具。
+
+### 使用鸿蒙工程能力
+
+下列依赖按实际调用的工具安装，不是 MCP 进程启动的前置条件。
+
+| 能力 | 必需依赖 |
+|---|---|
+| 构建、同步、官方 Linter、API 兼容、热重载、官方文档 | DevEco Studio，或 DevEco Command Line Tools（CLT），并安装对应 HarmonyOS/OpenHarmony SDK |
+| ArkTS 检查和语言服务 | HarmonyOS/OpenHarmony SDK；建议配置完整 DevEco Studio/CLT 工具链 |
+| 真机安装、日志、截图、UI 树和手势 | 工具链中的 `hdc`；真机已连接、已授权调试且能被 `hdc list targets` 识别 |
+| 模拟器管理和场景模拟 | DevEco 模拟器组件、系统镜像及已接受的许可证 |
+| `arkts_knowledge_search` | 可访问华为 DevEco CodeGenie 服务的网络，以及通过 `deveco_login` 建立的会话 |
+| 自动签名和团队列表 | 华为开发者账号，以及通过 `deveco_cli_auth` 建立的官方 CLI 会话 |
+| Python 类注册脚本 | Python 3；只有 `ui_score` 额外强制要求 Pillow |
+
+工程类工具还需要一个有效的 HarmonyOS 工程根目录。可以先调用 `switch_cwd`，也可以在单次工具调用中传 `project_path`。
+
+## 工具链配置
+
+服务会自动识别 macOS 默认安装位置 `/Applications/DevEco-Studio.app`。其他位置、Windows 或纯 CLT/Linux 环境应显式配置：
+
+| 环境变量 | 用途 |
+|---|---|
+| `DEVECO_CLI_STUDIO_PATH` | DevEco Studio 安装根目录；macOS 可指向 `.app` |
+| `DEVECO_CLI_CLT_PATH` | DevEco Command Line Tools 根目录；纯 CLT/Linux 优先使用它 |
+| `DEVECO_HOME` / `DEVECO_PATH` | Studio 路径的兼容配置，优先级低于上面两项 |
+| `PROJECT_PATH` | MCP 启动后的默认 HarmonyOS 工程根目录 |
+| `HDC_PATH` | 自定义 `hdc` 可执行文件；通常无需设置 |
+| `PYTHON` | Python 注册脚本使用的解释器；未设置时依次尝试 `python3`、`python` |
+
+高级覆盖项包括 `DEVECO_CLI_ENTRY`、`ARKTS_LSP_ENTRY`、`DEVECO_CODEGENIE_ENTRY`、`OHOS_SDK_PATH` 和 `TSDK_PATH`。它们主要用于非标准安装或调试；常规安装不要设置。
+
+安装后先运行环境诊断：
 
 ```bash
-node scripts/install-host.mjs --host claude    # → ~/.claude/skills，默认 core 17 个
-node scripts/install-host.mjs --host codex     # → ~/.agents/skills，默认 core 17 个
-node scripts/install-host.mjs --host all --profile full   # 加装 extended，会打许可警告
-node scripts/install-host.mjs --host codex --print-mcp     # MCP 注册片段
-```
-
-**两个宿主都默认只装 core，原因一样**：它们都会把全部 Skill 的描述加载进上下文，也都会在超预算时裁剪——裁掉的正是让 Skill 被正确匹配的关键词，而且不报错。实测本包描述合计：56 个 **17,947** 字符，core 17 个 **5,561** 字符（口径：SKILL.md frontmatter 的 `description` 字段，空白归一后计长）。
-
-| 宿主 | 限制 | 结论 |
-|---|---|---|
-| Claude | 单个 Skill 的 `description` + `when_to_use` ≤ **1536**；整个列表预算 = 上下文的 **1%**，超出后**从最少使用的 Skill 开始删描述** | 单条限制 56 个全部合格（最长 1076）；但 1M 上下文对应约 10,000 字符预算，全量 17,947 会被削，core 5,561 安全 |
-| Codex | 初始列表预算 = 上下文的 **2%**、未知时 **8000** 字符，**且含每个 Skill 的路径** | 全量约 22,300 会被压缩甚至省略 Skill；core 含路径约 6,900 安全 |
-
-想在 Claude 上装全量，可以先用宿主侧设置抬高预算（`skillListingBudgetFraction`，或 `SLASH_COMMAND_TOOL_CHAR_BUDGET`），或把低价值条目用 `skillOverrides` 设成 `name-only`。安装器不会替你改这些设置。`/doctor` 能看列表的上下文开销估算。
-
-Skill 默认软链，改仓库即时生效。少数「自动加载即可能产生副作用」的 Skill（建工程、批量写产物、起模拟器、真机跑测试、上架审查）会以打过补丁的副本安装，关闭隐式调用——Claude 用 `disable-model-invocation: true`，Codex 用 `agents/openai.yaml` 的 `allow_implicit_invocation: false`。名单在 `manifest.json` 的 `invocationPolicy`，`skills/` 下的原文件一字不改。
-
-适配层按 Skill 记录归属，可以和目录里已有的其他来源 Skill 共存，`--uninstall` 也只删自己装的。
-
-不移植的部分：内置 agent 的 harness 机制（permission 表、mode/temperature 配置、轮次协议）与 UI 自动校验链路。11 个 agent 里可移植的是 prompt 内容，`build` / `debug` / `plan` / `goal` 四个已提取成 `harmony-build-loop` / `harmony-debug-instrumentation` / `harmony-plan-doc` / `harmony-sdd-workflow`；其余 7 个是 OpenCode 通用会话 agent，零鸿蒙内容。UI 自动校验的相关 MCP 工具被禁用，但截图与 UI 树能力保留，详见 `PACK.md`。
-
-## 统一 MCP
-
-可以把多个 Skill 脚本注册在一个 MCP 服务里。本仓库的 `src/server.mjs` 采用白名单脚本注册表，当前通过一个 `deveco_script` 工具调度 19 个脚本：
-
-- 工程与 SDK：`copy_template`、`detect_sdk`
-- 崩溃与日志：`collect_hilog`、`fetch_faultlog`、`jscrash_report`、`parse_jscrash_log`、`probe_faultlogger`
-- 检索与生成：`search_practices`、`d2c_pixso_arkts`、`arkts_docs_search`、`arkui_docs_search`、`arkui_docs_rebuild_index`
-- 诊断（Python）：`appfreeze_analyze`、`appfreeze_sample_stack`、`apifault_collect_hilog`、`apifault_analyze_media`、`memleak_analyze`
-- 测试与评分（Python）：`local_test_run`、`instrument_test_run`、`ui_score`
-
-注册表按条目的 `runtime` 分派解释器：`node` 走 `process.execPath`，`python` 依次尝试 `PYTHON` 环境变量、`python3`、`python`。解释器不可用时返回 `PYTHON_NOT_FOUND` 而不是静默失败。`ui_score` 还需要 Pillow——系统自带的 python3 通常没有，`deveco_doctor` 会报告本机状态。
-
-同一个 stdio MCP 入口还代理了 CodeGenie UI/构建工具、ArkTS 知识检索、ArkTS LSP、ArkTS 静态检查和 HDC 日志工具，不需要为每一组能力启动独立 MCP。
-
-## 本地运行
-
-```bash
-npm install
 npm run doctor
-npm run scripts
+```
+
+诊断会检查 Node.js、DevEco/CLT、SDK、HDC、Python/Pillow、当前工程、Skill 和 CodeGenie 子进程状态。
+
+## 启动和接入
+
+直接启动：
+
+```bash
 npm run mcp
 ```
 
-MCP 工具按来源分为：
+MCP 客户端配置示例：
 
-- 统一脚本入口：`deveco_script_catalog`、`deveco_script`；脚本参数可以通过 `args` 对象传入，也可以通过 `argv` 数组原样传给上游脚本。
-- 项目和环境：`switch_cwd`、`init_project_path`、`deveco_doctor`。
-- 登录和知识：`deveco_login`、`deveco_logout`、`deveco_status`、`arkts_knowledge_search`。登录态使用 AES-256-GCM 加密，密钥优先存入系统钥匙串；首次读取旧的明文 `~/.deveco-knowledge-mcp/auth.json` 时会自动迁移。
-- ArkTS 语言服务：官方兼容入口 `lsp`（支持 `goToDefinition`、`goToDeclaration`、`findReferences`、`hover`、`documentSymbol`、`workspaceSymbol`、`goToImplementation`、`prepareCallHierarchy`、`incomingCalls`、`outgoingCalls`），以及易用的独立入口 `find_references`、`go_to_definition`、`go_to_declaration`、`get_hover`、`list_symbols`、`find_call_hierarchy`。位置参数均为 1-based；首次调用时按当前项目启动本地 `@arkts/language-server`。
-- ArkTS 和设备诊断：`arkts_check`、`check_ets_files`、`api_compat_check`、`hdc_log`。`api_compat_check` 使用 DevEco CLI 1.3 的兼容性扫描能力；`hdc_log` 支持 `list_devices`、`collect`、`clear` 三种操作。
-- 构建与运行：`project_sync`、`build_project`、`start_app`、`apply_changes`。`project_sync` 执行官方的 `ohpm install --all` 与 Hvigor `--sync` 流程；`apply_changes` 使用 CLI 1.3 的冷增量模式，仅构建部署给定的工程内文件，需先用 `start_app` 完成一次全量安装。`start_app` 只部署指定的可运行模块，其非 HAR 依赖由 CLI 自动包含，避免多 Entry HAP 同时安装。
-- CodeGenie 代理：`check_cpp_files`、`get_app_ui_tree`、`perform_ui_action`。这些工具由固定版本的 `@deveco-codegenie/mcp` 子进程提供。`perform_ui_action` 省略 `hvd` 时由本服务按已连接设备解析，不会把未启动的模拟器算作候选。
-- 设备 UI 快速通道：`ui_observe`、`ui_snapshot`、`ui_find`、`ui_tap`。覆盖「截图 → 找控件 → 点击」同一条循环，但由本服务直接经 hdc 实现，不经 CodeGenie 子进程，因此子进程挂死时依然可用。**常规循环用 `ui_observe`**：它在一次设备往返里同时拿回截图和控件树，把截图与 dump 在设备端重叠执行，实测 1289ms，对比分开调用的 1656ms。`ui_snapshot` 只要画面；`ui_find` 只要坐标，或用 `dumpPath` 重查已有的树；`ui_tap` 映射到 `uitest uiInput`，并支持按 `key` / `text` 定位而不是给坐标——坐标会在查到与点下之间失效。截图默认降分辨率（原生约 4845 图像 token，默认 480px 约 685），精确坐标一律来自控件树而不是图。驱动 `uitest` 的调用会取一把跨进程锁，见 [PACK.md](./PACK.md)。上面两个代理工具原样保留，未作任何改动。
+```json
+{
+  "mcpServers": {
+    "deveco": {
+      "command": "node",
+      "args": ["/absolute/path/to/deveco_tool/src/server.mjs"],
+      "env": {
+        "DEVECO_CLI_STUDIO_PATH": "/Applications/DevEco-Studio.app",
+        "PROJECT_PATH": "/absolute/path/to/HarmonyProject"
+      }
+    }
+  }
+}
+```
 
-UI 自动校验链路（`verify_ui`、`save_ui_screenshot`、`get_ui_verification_log`）已被本服务禁用，既不出现在工具列表里，直接调用也会返回 `TOOL_DISABLED`。原因见 [PACK.md](./PACK.md)。
+也可以让安装器输出配置片段：
 
-工具数量恒为 33：`tools/list` 由静态表回答，不等 CodeGenie 子进程，所以子进程挂死时列表照常返回（实测 1ms），只是那 3 个代理工具在调用时返回 `CODEGENIE_UNAVAILABLE`。`check_ets_files` 不依赖 CodeGenie 子进程。
+```bash
+node scripts/install.mjs --print-mcp
+```
 
-### 直接调用示例
+## 43 个 MCP 工具
+
+表格中的“依赖”是在 Node.js 和 `npm install` 之外的条件。
+
+### 项目、脚本和服务管理（7）
+
+| 工具 | 用途 | 额外依赖 |
+|---|---|---|
+| `deveco_script_catalog` | 列出允许通过 MCP 执行的 19 个仓库脚本、运行时和说明 | 无 |
+| `deveco_script` | 通过 `args` 或原始 `argv` 执行一个白名单脚本 | 取决于所选脚本 |
+| `switch_cwd` | 设置后续调用使用的活动 HarmonyOS 工程根目录 | 有效工程目录 |
+| `init_project_path` | `switch_cwd` 的兼容别名 | 有效工程目录 |
+| `deveco_doctor` | 检查工具链、SDK、HDC、Python、工程、Skill 和 CodeGenie 状态 | 无；缺失项会作为诊断结果返回 |
+| `deveco_restart` | 就地重置 ArkTS LSP、CodeGenie 子进程或两者，不断开 MCP | 对应子进程在下次调用时按需启动 |
+| `document_validate` | 检查 `spec.md`、`plan.md`、`tasks.md` 的必需章节和标题结构 | 无 |
+
+### 登录、知识和文档（6）
+
+| 工具 | 用途 | 额外依赖 |
+|---|---|---|
+| `deveco_login` | 启动或查询 CodeGenie 中国站浏览器登录任务；采用异步状态查询避免客户端 30 秒超时 | 浏览器、网络、华为账号 |
+| `deveco_logout` | 清除本地 CodeGenie 登录会话 | 无 |
+| `deveco_status` | 查询 CodeGenie 登录状态，不返回访问令牌 | 无 |
+| `arkts_knowledge_search` | 搜索官方 ArkTS、ArkUI、HarmonyOS 和 OpenHarmony 知识库 | 网络、`deveco_login` 会话 |
+| `deveco_cli_auth` | 官方 CLI 登录、登出、状态查询和签名团队列表 | DevEco Studio/CLT；登录及团队操作需要网络和华为账号 |
+| `harmony_docs` | 列出官方本地文档目录、关键词搜索、按文档 ID 阅读 | DevEco Studio/CLT |
+
+`deveco_login` 与 `deveco_cli_auth` 是两套独立会话：前者服务于 CodeGenie 知识检索，后者服务于官方 CLI、团队和签名能力。
+
+### 代码检查和语言服务（12）
+
+| 工具 | 用途 | 额外依赖 |
+|---|---|---|
+| `arkts_check` | 对整个工程或指定 `.ets` 文件运行 ArkTS 静态检查 | 工程、SDK |
+| `check_ets_files` | 对明确给出的 `.ets` / `.ts` 文件运行本地 ArkTS 检查 | 活动工程、SDK |
+| `code_lint` | 官方工程级 Code Linter；支持增量检查、JSON、报告文件和自动修复 | 工程、DevEco Studio/CLT |
+| `api_compat_check` | 扫描文件/模块的 API 版本兼容性，或列出支持的 API 版本 | 工程、DevEco Studio/CLT |
+| `lsp` | 通用 ArkTS LSP 入口，支持定义、声明、引用、悬停、符号、实现和调用层级 | 工程、SDK |
+| `find_references` | 查询符号引用 | 工程、SDK |
+| `go_to_definition` | 跳转到符号定义 | 工程、SDK |
+| `go_to_declaration` | 跳转到声明；服务端不支持时安全回退到定义 | 工程、SDK |
+| `get_hover` | 获取位置上的类型和文档 | 工程、SDK |
+| `list_symbols` | 列出文件内函数、类、变量等符号 | 工程、SDK |
+| `find_call_hierarchy` | 查询符号的调用方或被调用方 | 工程、SDK |
+| `check_cpp_files` | 通过 CodeGenie 子进程检查 C/C++ 文件 | 工程、DevEco Studio、CodeGenie 子进程 |
+
+`arkts_check` 是静态预检，不能代替真实编译；是否可以产出 HAP/HAR 应以 `build_project` 为准。
+
+### 构建、部署和签名（6）
+
+| 工具 | 用途 | 额外依赖 |
+|---|---|---|
+| `project_sync` | 执行 `ohpm install --all` 并同步 Hvigor 工程模型 | 工程、DevEco Studio/CLT、SDK；安装依赖时需要网络 |
+| `build_project` | 构建整个产品或指定模块；支持启动、查询、取消和同步运行 | 工程、DevEco Studio/CLT、SDK |
+| `start_app` | 安装已构建的单个 Entry HAP 并启动 Ability；不会隐式构建 | 工程、已构建产物、HDC 设备 |
+| `apply_changes` | 冷增量构建并安装修改文件，精确部署一个 Entry 模块 | 工程、DevEco Studio/CLT、HDC 设备 |
+| `hot_reload` | 管理常驻热重载：启动、应用 `.ets` 改动、查询和停止 | 工程、DevEco Studio/CLT、支持热重载的 HDC 设备 |
+| `app_signature` | 通过官方 CLI 生成或更新工程签名配置 | 工程、DevEco Studio/CLT、官方 CLI 登录和团队/设备信息 |
+
+`build_project` 默认 `action: "start"`，会立即返回 `job_id`。之后用 `action: "status"` 查询，或用 `action: "cancel"` 终止。只有确认 MCP 客户端允许长请求时才使用 `action: "run"`；工具参数中的 `timeoutMs` 无法提高客户端自身固定的 30 秒外层超时。
+
+### 设备和日志（2）
+
+| 工具 | 用途 | 额外依赖 |
+|---|---|---|
+| `device_info` | 返回设备名称、序列号、设备类型和系统版本等官方信息 | DevEco Studio/CLT、HDC 设备或已启动模拟器 |
+| `hdc_log` | 列出设备、采集/过滤/清理 Hilog | HDC、已连接设备 |
+
+只有一个设备在线时，多数工具可自动选择；多个设备在线时应显式传 `hvd` 或 `target`，避免操作错误设备。
+
+### UI 检查和控制（8）
+
+| 工具 | 用途 | 额外依赖 |
+|---|---|---|
+| `ui_snapshot` | 通过 HDC 截图，可内联返回、缩放、选择显示屏和检测画面是否变化 | HDC 设备 |
+| `ui_find` | 解析 UI 布局树，按文本、key、类型和可点击状态返回可操作坐标 | HDC 设备 |
+| `ui_observe` | 并行获取截图和布局树，一次返回画面、节点和坐标 | HDC 设备 |
+| `ui_tap` | 点击、双击、长按、滑动、fling、drag、方向 fling、文本和按键；支持节点百分比及屏幕百分比定位 | HDC 设备 |
+| `ui_inspect` | 官方窗口列表和布局树；支持窗口/显示选择、全窗口、深度过滤及精简/完整输出 | DevEco Studio/CLT、设备或模拟器 |
+| `ui_control` | 官方 UI 控制器；支持坐标手势和 node-id/window 定位 | DevEco Studio/CLT、设备或模拟器 |
+| `get_app_ui_tree` | 通过 CodeGenie 获取前台调试应用的 UI 树 | DevEco Studio、CodeGenie 子进程、设备 |
+| `perform_ui_action` | 通过 CodeGenie 执行应用 UI 操作 | DevEco Studio、CodeGenie 子进程、设备 |
+
+优先使用 `ui_tap` 的 `key`、`text` 或 `type` 选择器。自绘控件没有出现在 UI 树中时，使用 `from_x_percent`、`from_y_percent`、`to_x_percent`、`to_y_percent` 按当前屏幕比例生成手势；不要长期保存某台设备的绝对像素坐标。返回“手势发送成功”只代表设备接受了事件，不代表界面一定发生变化，可配合 `ui_observe` 或 `verify` 验证。
+
+### 模拟器（2）
+
+| 工具 | 用途 | 额外依赖 |
+|---|---|---|
+| `emulator_manage` | 列出、启动、停止、创建和删除模拟器；管理镜像和许可证 | DevEco Studio/CLT 的模拟器组件 |
+| `emulator_scenario` | 模拟摇晃、电源、旋转、音量、折叠、电池、位置、运动/导航和传感器 | 已启动的 DevEco 模拟器 |
+
+## `deveco_script` 的 19 个脚本
+
+所有脚本只能从静态白名单调用，不能用它执行任意路径或 Shell 命令。先调用 `deveco_script_catalog` 可以得到当前注册表。
+
+| 脚本 ID | 用途 | 额外依赖 |
+|---|---|---|
+| `copy_template` | 复制内置 ArkTS 工程模板并补全 SDK 元数据 | DevEco Studio/CLT |
+| `detect_sdk` | 检测工具链中的 API Level 和 SDK 元数据 | DevEco Studio/CLT |
+| `collect_hilog` | 采集有界 Hilog 快照 | HDC 设备 |
+| `fetch_faultlog` | 拉取指定 faultlogger 文件 | HDC 设备 |
+| `jscrash_report` | 采集或分析 JS crash 并生成结构化诊断 | 采集模式需要 HDC 设备 |
+| `parse_jscrash_log` | 分析本地文件或内联 JS crash 文本 | 无 |
+| `probe_faultlogger` | 探测设备最近的 faultlogger 条目 | HDC 设备 |
+| `search_practices` | 按组件名或关键词搜索 ArkUI 最佳实践 | 无 |
+| `ui_score` | 比较参考图与候选图的 UI 还原度 | Python 3、Pillow |
+| `apifault_collect_hilog` | 采集并过滤 API 故障 Hilog | Python 3、HDC 设备 |
+| `apifault_analyze_media` | 分析媒体容器和编解码信息 | Python 3 |
+| `appfreeze_analyze` | 分析 AppFreeze 日志、Binder 链和堆栈 | Python 3 |
+| `appfreeze_sample_stack` | 分析卡死期间采样的堆栈 | Python 3 |
+| `arkts_docs_search` | 搜索随 Skill 提供的 ArkTS 本地文档索引 | Python 3、相应 Skill 数据 |
+| `arkui_docs_search` | 查询 ArkUI 本地知识库 | Python 3、相应 Skill 数据 |
+| `arkui_docs_rebuild_index` | 文档变化后重建 ArkUI 索引 | Python 3、相应 Skill 数据 |
+| `instrument_test_run` | 运行 HarmonyOS 真机仪器测试 | Python 3、工程、工具链、HDC 设备 |
+| `local_test_run` | 运行 HarmonyOS 主机侧单元测试 | Python 3、工程、工具链 |
+| `memleak_analyze` | 分析 ArkTS heap snapshot 的泄漏嫌疑和保留路径 | Python 3 |
+
+示例：
 
 ```json
 {
   "name": "deveco_script",
   "arguments": {
     "script": "parse_jscrash_log",
-    "args": { "logFile": "/tmp/jscrash.log", "source": "file" }
+    "args": {
+      "logFile": "/tmp/jscrash.log",
+      "source": "file"
+    }
   }
 }
 ```
 
+需要位置参数的脚本使用 `argv`，例如：
+
 ```json
 {
-  "name": "switch_cwd",
-  "arguments": { "project_path": "/path/to/MyHarmonyProject" }
+  "name": "deveco_script",
+  "arguments": {
+    "script": "search_practices",
+    "argv": ["Swiper", "--limit=5", "--json"]
+  }
 }
 ```
 
-## 内容来源
+## 推荐工作流
 
-**core 层 17 个**分四类来源：四个原始 Skill 来自 DevEco Code 的 `packages/opencode/resources/skills`，与发布线 v0.1.7 逐文件核对一致；九个（`arkui-component-best-practices`、`arkts-logic-completer`、`repo-understand-skill`、`solution-design`、`responsive-layout-generator`、`arkui2hds`、`deveco-cli`、`ui-reconstruction-score`、`arkui-scoring-workflow`）来自尚未发版的 `0.2.0-release` 分支；四个方法论 Skill 是从内置 agent 的 system prompt 提取的衍生内容。SDD 命令与模板取自本机物化目录 `~/.local/share/deveco/specs/`（`.version` 为 `0.1.5`）。
-
-**extended 层 39 个**来自另一个仓库：`gitcode.com/HarmonyOS_Skills/harmonyos-agent-skills`，锁定 tag `v0.0.2`。它不是 DevEco Code 的一部分，许可状态也不同（上游无仓库级 LICENSE），详见 `NOTICE.harmonyos-agent-skills` 与 `PACK.md` 的「许可与来源」。
-
-具体提交、提取范围、逐项改动和许可证信息见 `provenance/`。
-
-除 `arkts-runtime-fix` 中 HDC 调用增加失败文本识别外，原始 Skill 内容保持上游版本；DevEco 环境自定义配置 Skill 未纳入包体，保留在 `docs/customize-deveco/`。命令与模板做了宿主中立化改写（去 `agent:` 绑定、`CONFIG_ROOT` 改 `PACK_ROOT`、`spec-verify` 锁 build-only），每个文件头部注释都记了改动内容。
-
-`src/` 是本仓库新增的适配层：它只注册白名单脚本、连接本地语言服务和代理已安装的 CodeGenie MCP，不会把旧的 `deveco-knowledge-mcp` 或旧 ArkTS LSP MCP 复制进来。迁移时只需把 stdio MCP 指向：
+构建并安装：
 
 ```text
-node /Users/dreamlike/DreamLike/deveco_tool/src/server.mjs
+switch_cwd → deveco_doctor → project_sync → arkts_check/code_lint
+           → build_project(start/status) → start_app
 ```
 
-当前 Codex CLI 支持的最高推理强度是 `xhigh`；如果全局配置使用不受支持的值，Codex 会在加载 MCP 配置前直接退出。
+真机 UI 操作：
+
+```text
+hdc_log(list_devices) → ui_observe → ui_tap → ui_observe/ui_snapshot
+```
+
+代码改动后的快速验证：
+
+```text
+arkts_check → build_project(start/status) → apply_changes
+```
+
+如果工程和设备支持真正热重载，可将最后一步改为常驻的 `hot_reload(start/apply/status/stop)`。
+
+## 可选 Skill 和宿主适配
+
+MCP 之外，仓库包含 56 个 Skill：默认安装 `core` 17 个，`full` profile 再加入 `extended` 39 个。
+
+```bash
+node scripts/install.mjs --dest <目标目录>
+node scripts/install.mjs --dest <目标目录> --profile full
+
+node scripts/install-host.mjs --host claude
+node scripts/install-host.mjs --host codex
+node scripts/install-host.mjs --host all --profile full
+```
+
+`install.mjs` 只写入指定目标目录；`install-host.mjs` 才负责 Claude/Codex 的 Skill 发现目录。默认使用 `core` 是为了控制宿主的 Skill 描述上下文开销。
+
+`extended` 层来自 `HarmonyOS_Skills/harmonyos-agent-skills`，上游缺少仓库级许可证，部分条目也没有独立许可声明。安装 `full` 前请阅读 [`LICENSE`](./LICENSE)、[`NOTICE.harmonyos-agent-skills`](./NOTICE.harmonyos-agent-skills) 和 [`provenance/`](./provenance/)。
+
+## 运行约束
+
+- 43 个工具的参数都会先按公开 JSON Schema 校验。
+- `tools/list` 使用本地静态表，不等待 CodeGenie 子进程；CodeGenie 不可用只影响其 3 个代理工具。
+- 构建和浏览器登录默认使用“启动任务 + 状态查询”，避免常见 MCP 客户端的 30 秒调用上限。
+- CLI、LSP、HDC、脚本和网络请求均有截止时间；超时会终止所启动的子进程树。
+- `ui_snapshot` 和 `ui_observe` 默认不覆盖明确指定的已有文件，确需覆盖时传 `overwrite: true`。
+- 已禁用 `verify_ui`、`save_ui_screenshot`、`get_ui_verification_log`；它们不会出现在工具列表中，原因见 [`PACK.md`](./PACK.md)。
+
+## 开发和验证
+
+```bash
+npm test
+```
+
+连接测试设备后运行真机 canary：
+
+```bash
+npm run test:device
+```
+
+列出注册脚本：
+
+```bash
+npm run scripts
+```
+
+## 来源与许可
+
+- `core` Skill 主要提取自 DevEco Code，具体版本、提交和改动见 [`provenance/`](./provenance/)。
+- `extended` Skill 的来源和不同许可边界见 [`NOTICE.harmonyos-agent-skills`](./NOTICE.harmonyos-agent-skills)。
+- 完整包结构、宿主映射和接入约定见 [`PACK.md`](./PACK.md)。
+- 本仓库许可范围见 [`LICENSE`](./LICENSE)。

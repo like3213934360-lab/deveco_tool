@@ -9,7 +9,7 @@
 |---|---|---|
 | 知识 | `skills/` | 56 个 Skill，分两层。**core 17 个**（DevEco Code 提取，MIT）：ArkTS 语法规则、编译错误库、崩溃诊断、工程脚手架、构建循环、插桩调试、计划文档、SDD 编排，以及 ArkUI 组件最佳实践、逻辑补全、工程理解、方案设计、响应式布局、HDS 迁移、设备管理、设计稿转代码、UI 还原度评分。**extended 39 个**（华为官方 Skill 仓库 `v0.0.2`）：多设备适配、崩溃与冻屏诊断、Kit 接入、状态管理迁移、MVVM、测试、上架审查等。路由索引见 [`skills/INDEX.md`](./skills/INDEX.md) |
 | 工作流 | `commands/` + `templates/` | SDD 五阶段命令 + 三份产物模板 |
-| 工具 | `src/server.mjs` | 一个 stdio MCP，33 个工具（工程同步、构建、冷增量部署、API 兼容检查、LSP、知识检索、日志采集、子进程重启） |
+| 工具 | `src/server.mjs` | 一个 stdio MCP，43 个工具（官方 Linter、冷热更新、Studio/CLT、文档、设备/UI、模拟器、签名、LSP） |
 
 三层可以独立使用。只要 Skill 也行；只要 MCP 也行。但方法论 Skill（`harmony-build-loop` 等）里的指令会引用
 MCP 工具名，缺了 MCP 就只剩流程说明。
@@ -21,7 +21,7 @@ MCP 工具名，缺了 MCP 就只剩流程说明。
 ```bash
 cd <PACK_ROOT>
 npm install
-npm run doctor     # 检查 DevEco Studio / HDC / ArkTS checker / Python+Pillow / LSP / 登录态
+npm run doctor     # 检查 DevEco Studio/CLT / HDC / ArkTS checker / Python+Pillow / LSP / 登录态
 npm run doctor -- --probe-codegenie   # 额外启动 CodeGenie 子进程并报告握手耗时
 ```
 
@@ -29,10 +29,10 @@ npm run doctor -- --probe-codegenie   # 额外启动 CodeGenie 子进程并报�
 默认不启动 CodeGenie 子进程（省一次 spawn）；加 `--probe-codegenie` 才探测，并会报 `handshakeMs`——
 上游握手会间歇性卡死，正常约 100ms，超过 1 秒会附一条说明，这本身就是诊断信息。
 
-需要 Node >= 22。构建、设备、ArkTS 检查类工具需要本机装有 DevEco Studio 并配置 `DEVECO_HOME`。
+需要 Node >= 22。可用 `DEVECO_CLI_STUDIO_PATH` 指向 DevEco Studio，或用 `DEVECO_CLI_CLT_PATH` 指向纯 Command Line Tools；后者覆盖 Linux/无 IDE 环境。
 
 本包锁定 `@deveco/deveco-cli@1.3.1`；该版本要求 Node 22，并已不需要本包此前为旧 CLI 添加的
-`axios` / `adm-zip` 强制覆盖。依赖升级后以 `npm audit` 0 漏洞和完整测试作为门禁。
+运行依赖由锁文件固定；已对存在公告的传递依赖使用 npm `overrides` 收口。依赖升级后以 `npm audit` 0 漏洞和完整测试作为门禁。
 
 ### 2. 装资产
 
@@ -103,12 +103,14 @@ Codex 侧还会为用到脚本的 Skill 生成 `dependencies.tools` 声明本 MC
 
 | 工具名 | 来源 | 说明 |
 |---|---|---|
-| `project_sync` / `build_project` / `start_app` / `apply_changes` | 本包 MCP | 工程同步、构建、全量部署与冷增量部署 |
-| `arkts_check` / `check_ets_files` / `api_compat_check` | 本包 MCP | ArkTS 静态检查与 API 版本兼容检查 |
+| `project_sync` / `build_project` / `start_app` / `apply_changes` / `hot_reload` / `app_signature` | 本包 MCP | 工程同步、构建、冷热增量部署与自动签名 |
+| `arkts_check` / `check_ets_files` / `code_lint` / `api_compat_check` | 本包 MCP | ArkTS 检查、官方工程级 Linter 与 API 兼容检查 |
+| `harmony_docs` / `device_info` | 本包 MCP | 官方文档中心与设备详细信息 |
+| `emulator_manage` / `emulator_scenario` | 本包 MCP | 模拟器、镜像、许可证与设备场景模拟 |
 | `arkts_knowledge_search` | 本包 MCP | 官方知识库检索，需华为账号登录（`deveco_login`） |
 | `hdc_log` | 本包 MCP | 设备日志采集/清理/列设备 |
 | `ui_observe` | 本包 MCP | 一次往返同时拿截图与控件树，常规 UI 循环的入口 |
-| `ui_snapshot` / `ui_find` / `ui_tap` | 本包 MCP | 设备 UI 快速通道，直接经 hdc，不经 CodeGenie 子进程 |
+| `ui_snapshot` / `ui_find` / `ui_tap` / `ui_inspect` / `ui_control` | 本包 MCP | 设备 UI 快速通道及官方窗口/控件树高级检查与控制 |
 | `lsp` 及别名 | 本包 MCP | ArkTS 语言服务，1-based 行列 |
 | `deveco_script` | 本包 MCP | 调用 Skill 私有脚本（崩溃解析、faultlog、模板拷贝等） |
 | `document_validate` | 本包 MCP | SDD 产物的章节结构校验，写盘后调用；只报告不阻断 |
@@ -136,23 +138,24 @@ Phase 4/5 的委派契约。只用命令、不装该 Skill 时行为与之前一
 
 ## 与上游的差异
 
-1. **HDC `[Fail]` 补丁**：`arkts-runtime-fix` 的 HDC 调用会把退出码为 0 但输出含 `[Fail]` 的情况判为失败，修上游误报。改动在 `skills/arkts-runtime-fix/scripts/shared/hdc.mjs` 及四个调用脚本。
+1. **HDC `[Fail]` 与 CLT 补丁**：`arkts-runtime-fix` 的 HDC 调用会把退出码为 0 但输出含 `[Fail]` 的情况判为失败，修上游误报；共享 HDC 解析同时支持官方 Studio/CLT 环境变量和 Linux CLT 目录。改动在 `skills/arkts-runtime-fix/scripts/shared/hdc.mjs` 及四个调用脚本。
 2. **`spec-verify` 锁定 build-only**：本包不移植 UI 自动校验，所以 `Verification_Scope` 固定为 `build-only`，UI 校验相关的 Phase 1 step 3/4 与 Phase 2 已移除。`build-only` 是上游自带分支，不是新造的。`spec-tasks` 与 `tasks-template.md` 同步只发 build-only。
 3. **三个方法论 Skill 是提取产物**：`harmony-build-loop` / `harmony-debug-instrumentation` / `harmony-plan-doc` 的内容来自上游 `build` / `debug` / `plan` agent 的 system prompt 尾部，不是上游的 Skill 文件。只搬了 HarmonyOS 方法论，agent 机制（`plan_write` / `plan_exit` / `debug_exit` / permission 表）没有搬。
 4. **命令去掉了宿主绑定**：`agent:` frontmatter、`CONFIG_ROOT`（原 `~/.local/share/deveco/`）、`goal.txt` 编排器引用、`spec_write` 专用工具，全部改成宿主中立表述。每个文件头部有注释说明改了什么。
-5. **ArkTS 检查器四处修复**：`src/upstream/arkts-check.cjs` 打了四个本地补丁，每处都有 `LOCAL PATCH` 注释。
+5. **ArkTS 检查器六处修复**：`src/upstream/arkts-check.cjs` 打了六个本地补丁，每处都有 `LOCAL PATCH` 注释。
    (a) 空文件集原本输出 `success: true` 并退出 0，让"没找到文件"和"检查通过"无法区分；现在报错退出 1。
    (b) `etsStandaloneChecker` 抛出的异常原本只塞进 `captured`，而诊断解析器匹配不上就丢弃，检查器崩溃会呈现为干净结果；现在带 `internalError` 字段返回且 `success: false`。
    (c) SDK 的 `WhiteListValidator` 读 `projectConfig.globalModulePaths`，但 ets-loader 的 `main.js` 只维护自己的模块级同名变量、从不写到 projectConfig 上，未定义时任何走到 `@since` 抑制逻辑的文件都会让检查器崩；现在按 `main.js` 的口径补齐 `<sdk>/ets/{api,arkts,kits}` 及 HMS 侧路径。
    (d) `process.stdout.write` 后立刻 `process.exit()`，管道上是异步写，结果超过 64 KiB 就被截断成非法 JSON；现在在写入回调里退出。
    (e) 诊断结果只保留被请求检查的那批文件。检查器会连带报告它传递引入的声明文件，全项目扫描因此把 SDK 自己的 `ets/arkts/@arkts.lang.d.ets` 的解析错误算进来，让一个源码干净的工程判为失败。显式传入项目外的文件时不受影响，仍照常报错。
+   (f) SDK 根目录探测支持 `DEVECO_CLI_CLT_PATH`，使检查器可在 Linux/纯 Command Line Tools 环境工作。
    文件发现逻辑没有留在上游文件里：`collectEtsFiles` 只认 `entry/src/main/ets` 单模块布局，多模块工程一个文件都扫不到，改由 `src/arkts-check.mjs` 的 `discoverProjectEtsFiles` 按 `build-profile.json5` 的 `modules[].srcPath` 解析后显式传 `--files`。
-6. **`detect-sdk.mjs` 补了 CLI 入口**：上游只 export 函数，而本包的脚本注册表把 `detect_sdk` 登记为可执行脚本，直接跑会 stdout 全空、退出 0，看起来像成功。现在直接运行会打印 SDK 元数据 JSON，import 用法不变。
+6. **`detect-sdk.mjs` 补了 CLI 入口和 CLT 探测**：上游只 export 函数，而本包的脚本注册表把 `detect_sdk` 登记为可执行脚本，直接跑会 stdout 全空、退出 0，看起来像成功。现在直接运行会打印 SDK 元数据 JSON，import 用法不变；工具链路径同时支持官方 Studio/CLT 环境变量及 Linux CLT 目录。
 7. **崩溃日志 `error_message` 取值修正**：`shared/jscrash-parse.mjs` 的 `detectErrorMessage` 原本返回整行且优先命中 `Error name:`（`CRASH_SIGNAL_RE` 含裸词 `error`），真实的 `Error message:` 被盖掉；无崩溃时还会回落到日志最后一行。现在优先解析显式的 `Error message:` 并只取冒号后的负载，无信号时返回 `(not found)`。
-8. **CodeGenie 子进程不再能拖死整个网关，也不再拖慢工具发现**：上游子进程的 MCP 握手会间歇性永久挂死（空闲机器 12 次复现 2 次）。第一版问题是在 `server.connect()` 之前 `await` 它，一挂死连 `initialize` 都不回应；第二版把 `initialize` 救了回来，但 `tools/list` 仍然同步等子进程，握手 5 秒封顶重试一次意味着子进程挂死时**一次 `tools/list` 实测要 14.1 秒**，超出宿主的工具发现超时——宿主表现为「已连接但取不到工具」。现在 `tools/list` 完全由静态表回答（`src/codegenie-tools.mjs`，与子进程逐字节一致，有漂移测试守护），挂死场景下**实测 1ms**，33 个工具照常通告。子进程只在真正调用那 3 个代理工具时才连接，连不上就返回 `CODEGENIE_UNAVAILABLE`，而不是让工具从列表里消失——后者在宿主看来和「工具从不存在」无法区分。
+8. **CodeGenie 子进程不再能拖死整个网关，也不再拖慢工具发现**：上游子进程的 MCP 握手会间歇性永久挂死（空闲机器 12 次复现 2 次）。现在 `tools/list` 完全由静态表回答，挂死场景下实测 1ms，43 个工具照常通告；只有 3 个代理工具在调用时会连接子进程。
 9. **UI 自动校验链路已移除**：见下一节。
 10. **知识层是混合来源**：`arkts-error-fixes` / `arkts-grammar-standards` / `arkts-runtime-fix` / `deveco-create-project` 以发布线 v0.1.6 为基线（逐文件核对一致），另外 10 个来自尚未发版的 `0.2.0-release`。这四个不从 0.2.0 重取的理由是它们带本仓的 `LOCAL PATCH`，重取只会丢补丁——前三个在 v0.1.6 与 0.2.0 之间的 diff 本身是空的。0.2.0 只剩 `d2c` 未取（它硬依赖 `verify_ui`），原因见 `provenance/INVENTORY.md`。
-11. **`build_project` / `start_app` 改为原生实现**：跟进上游 0.2.0 的方向，从 CodeGenie 代理换成通过 `@deveco/deveco-cli` 调用。参数保持向后兼容（保留 `log_path`、`module` 单值、`clean` 先清后建），`enable_inspector_source_jump` 无对应能力时显式提示而非静默忽略。`start_app` 与 DevEco Studio 保持一致，只把选中的一个可运行模块交给 CLI；CLI 会自动收集它的非 HAR 依赖。省略 `module` 时仅在候选唯一的情况下自动选择，多候选会要求调用方明确指定，避免把两个 Entry HAP 同时安装到真机。
+11. **`build_project` / `start_app` 改为原生实现**：跟进上游 0.2.0 的方向，从 CodeGenie 代理换成通过 `@deveco/deveco-cli` 调用。参数保持向后兼容（保留 `log_path`、`module` 单值、`clean` 先清后建），`enable_inspector_source_jump` 无对应能力时显式提示而非静默忽略。`build_project` 默认以 `start` 动作立即返回任务 ID，调用方用 `status`（可长轮询 20 秒）或 `cancel` 继续，绕过 MCP 宿主独立于内部 `timeoutMs` 的 30 秒固定超时；`action: "run"` 保留同步模式。`start_app` 与 DevEco Studio 保持一致，只把选中的一个可运行模块交给 CLI；CLI 会自动收集它的非 HAR 依赖。省略 `module` 时仅在候选唯一的情况下自动选择，多候选会要求调用方明确指定，避免把两个 Entry HAP 同时安装到真机。
 12. **建工程改走 `devecocli create`**：跟进上游 0.2.0——它把建工程从「拷贝内置模板」改成调 DevEco CLI，31 个模板文件随之删除。本包同样不再分发工程模板，但不复制上游那句写死的 `spawnSync('devecocli')`（它依赖 PATH 上的 shim，本包不提供），改为 `DEVECO_CLI_ENTRY` 环境变量 → `require.resolve("@deveco/deveco-cli/dist/cli.js")` → PATH 三级解析，都失败时报 `DEVECO_CLI_NOT_FOUND`。原模板目录移到 `test/fixtures/harmony-app/` 只作 ArkTS 检查器的测试夹具，不随包分发；上游那 5 个被 UTF-8 写坏的 PNG 因此与本包彻底无关。
 13. **`document_validate` 独立成工具**：上游在 `spec_write` 写完产物后自动追加章节校验报告。本包用宿主的写文件工具，这个链路断了，所以把校验逻辑提取成独立 MCP 工具，由三条 SDD 命令在写盘后显式调用。保留上游「只报告不阻断」的语义，另修了两处上游报告缺陷（缺失章节一律按一级标题渲染、level-2 上限那行打的是实测值而非上限），并把上游从不读取的 `ruleId` / `suggestion` 放进结构化返回。
 14. **新增 `harmony-sdd-workflow` 编排层**：见「SDD 五阶段」一节。
@@ -162,6 +165,8 @@ Phase 4/5 的委派契约。只用命令、不装该 Skill 时行为与之前一
 18. **`tools/list` 静态化**：见第 8 条。3 个 CodeGenie 代理工具的 schema 落在 `src/codegenie-tools.mjs`，与子进程逐字节一致，`test/unified.test.mjs` 有漂移测试；子进程可达时不一致就红。
 19. **新增可选的宿主适配层**：`scripts/install-host.mjs`，把 Skill 装进 Claude 的 `~/.claude/skills` 和 Codex 的 `~/.agents/skills`。核心资产仍然宿主无关，这一层不装也不影响任何东西。隐式调用策略集中在 `manifest.json` 的 `invocationPolicy`，由安装器按宿主渲染，**不改 `skills/` 下的任何文件**。
 20. **登录凭证改为加密存储**：token 以 AES-256-GCM 密文落盘，密钥优先保存在 macOS Keychain、Windows DPAPI 或 Linux Secret Service；旧明文 `auth.json` 首次读取时自动迁移。浏览器启动也改为参数数组调用，不再把登录 URL 拼进 shell 命令。
+21. **对齐 DevEco CLI 1.3.1 完整能力**：新增官方 Code Linter、常驻 Hot Reload、文档中心、设备详情、高级 UI、模拟器完整管理/场景、签名及 CLI auth/team；工具链解析与官方源码保持同一优先级，并支持 `DEVECO_CLI_CLT_PATH` 和 Linux CLT 布局。
+22. **通用 MCP 稳定性与安全收口**：43 个工具在分派前执行 JSON Schema 校验；耗时构建和浏览器登录提供短调用任务协议，避免宿主固定 30 秒超时；LSP、CLI、HDC、脚本、凭证提供程序和网络请求均有截止时间及进程树清理。CLI/脚本输出采用有界内存并将完整构建记录流式落盘，避免巨量输出拖垮网关。`apply_changes` 在停止应用前锁定唯一 Entry 模块，失败后尽力恢复同一应用。`ui_snapshot`/`ui_observe` 默认不覆盖已有路径；`ui_tap` 在 UI 树缺失自绘控件时支持屏幕百分比手势，并明确区分“命令已接收”和“界面结果已验证”。npm 包用 `files` 白名单控制发布内容，当前审计为 0 漏洞。
 
 ## 关于 UI 自动校验
 
@@ -187,7 +192,7 @@ Phase 4/5 的委派契约。只用命令、不装该 Skill 时行为与之前一
 **另有一条不经子进程的快速通道。** `ui_snapshot` / `ui_find` / `ui_tap` 覆盖同一条「截图 → 找控件 →
 点击」循环，由 `src/device-ui.mjs` 直接经 hdc 实现。上面那两个代理工具**未作任何改动**，两套并存，
 按需选用。实测差异：截图 `snapshot_display` 出 JPEG 是 0.42s / 约 260KB，`uitest screenCap` 出 PNG 是
-1.05s / 5.2MB；坐标由 `uitest dumpLayout` 的 `$rect` 直接给出，不必从截图上估（一次实测估值偏了 40px）。
+1.05s / 5.2MB；坐标由 `uitest dumpLayout` 的 `$rect` 直接给出，不必从截图上估（一次实测估值偏了 40px）。树结果被 `limit` 截断时仍返回屏幕内组件类型计数和继续查询提示；Slider 等矩形控件可由 `ui_tap` 按 `type` / `text` / `key` 定位，再用 `from_percent` / `to_percent` 生成节点内手势并默认复查值变化。自绘控件未进入 UI 树时，可改用 `from_x_percent` / `from_y_percent` / `to_x_percent` / `to_y_percent` 映射当前屏幕尺寸。纯坐标和屏幕百分比手势只报告设备接受了命令，不再暗示界面一定改变。
 更关键的是这三个不经 CodeGenie 子进程，所以子进程挂死时整条循环依然可用——而代理的那两个不是。
 取舍与实测数据见 `provenance/INVENTORY.md` 的「设备 UI 快速通道」。
 

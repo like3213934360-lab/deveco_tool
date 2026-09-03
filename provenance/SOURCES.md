@@ -11,11 +11,11 @@
 
 **两个版本号各有分工，不要混为一谈。** 文件字节取自 `v0.1.5`；`v0.1.6` 是发布线上的核对基线。二者对本包提取过的内容**没有任何差异**，这一点是逐提交验证过的而非抽样：`v0.1.5...v0.1.6` 共 20 个提交、140 个文件变更（compare 结果 `truncated: false`），其中落在 `packages/opencode/resources/skills/**`、`packages/opencode/src/agent/prompt/**`、`src/tool/arkts-check.cjs`、`src/tool/hdc_log.ts` 的**为 0 个**；`resources/` 下唯一的变更是 `models.dev.json`，与本包无关。因此 `v0.1.5` 的提取内容与 `v0.1.6` 发布线一致，两处标注都成立。
 
-`arkts-runtime-fix` 的 HDC 共享调用及四个调用脚本在本仓库增加了失败文本识别，修复 HDC 返回退出码 0 但输出 `[Fail]` 时的误报。
+`arkts-runtime-fix` 的 HDC 共享调用及四个调用脚本在本仓库增加了失败文本识别，修复 HDC 返回退出码 0 但输出 `[Fail]` 时的误报；共享调用还增加了官方 Studio/CLT 环境变量及 Linux CLT 目录解析。
 
 `arkts-runtime-fix` 的 `scripts/shared/jscrash-parse.mjs` 修正了 `detectErrorMessage`：上游返回整行且 `CRASH_SIGNAL_RE` 含裸词 `error`，导致 `Error name:TypeError` 抢在真实的 `Error message:` 之前命中；无崩溃信号时又回落到日志最后一行，把无关日志当成崩溃消息。现在优先解析显式的 `Error message:` 并只取负载，无信号时返回 `(not found)`。
 
-`deveco-create-project` 的 `scripts/detect-sdk.mjs` 增加了 CLI 入口。上游只 export 函数，而本仓库的脚本注册表把 `detect_sdk` 登记为可执行脚本，直接运行会 stdout 全空且退出 0，与成功无法区分。现有 export 未改动。
+`deveco-create-project` 的 `scripts/detect-sdk.mjs` 增加了 CLI 入口和 Studio/CLT 工具链探测。上游只 export 函数，而本仓库的脚本注册表把 `detect_sdk` 登记为可执行脚本，直接运行会 stdout 全空且退出 0，与成功无法区分。现有 export 未改动。
 
 以上改动均在文件内以 `LOCAL PATCH` 注释标注；原许可证文件头和其余上游内容保持不变。
 
@@ -33,7 +33,7 @@ DevEco Code 仓库主体采用 MIT；其中 Huawei 工具和脚本文件保留�
 
 > 原文记的是「`0.2.0-release` 的 `deveco-create-project` 只剩 4 个文件，31 个工程模板文件不存在（`copy-template.mjs` 期望的 `application/` 目录整个消失），照搬会让建工程能力不可用」。**这个判断不成立。** 0.2.0 的 `copy-template.mjs` 根本不再期待模板目录——它改成了调用 `devecocli create` 由 CLI 生成工程，模板文件是因此被删的，不是缺失。
 
-现在的理由是：`arkts-error-fixes`、`arkts-grammar-standards`、`arkts-runtime-fix` 三个在 v0.1.6 与 0.2.0-release 之间的 diff 本身为空，重取没有收益，反而会丢掉本仓的 `LOCAL PATCH`；`deveco-create-project` 的 0.2.0 路线本包**已经跟进**（见下），保留发布线基线的是它的 `detect-sdk.mjs` CLI 入口补丁。四者的字节仍取自 `v0.1.5`，并已按上文的 compare 结果确认与 `v0.1.6` 发布线无差异；逐文件核对结果是 129 个文件中 124 个与上游逐字节相同，5 个是本仓 HDC `[Fail]` 补丁。
+现在的理由是：`arkts-error-fixes`、`arkts-grammar-standards`、`arkts-runtime-fix` 三个在 v0.1.6 与 0.2.0-release 之间的 diff 本身为空，重取没有收益，反而会丢掉本仓的 `LOCAL PATCH`；`deveco-create-project` 的 0.2.0 路线本包**已经跟进**（见下），保留发布线基线的是它的 `detect-sdk.mjs` CLI/CLT 补丁。四者的原始字节取自 `v0.1.5`，并已按上文的 compare 结果确认与 `v0.1.6` 发布线无差异；本地差异均在文件内以 `LOCAL PATCH` 标记并在本页列明。
 
 `deveco-create-project` 的建工程实现已按 0.2.0 的方向改写：`copy-template.mjs` 不再拷贝模板，改为调用本机 DevEco CLI 的 `create` 子命令。与上游的差别是它不复制那句写死的 `spawnSync('devecocli')`——上游靠 PATH 上的 shim，本包不提供，改为 `DEVECO_CLI_ENTRY` → `require.resolve("@deveco/deveco-cli/dist/cli.js")` → PATH 三级解析，全部失败时返回结构化的 `DEVECO_CLI_NOT_FOUND`。脚本对外的 CLI 契约（`--project-path` / `--app-name` / `--bundle-name` / `--api-level`）保持不变。原来的 31 个模板文件移到 `test/fixtures/harmony-app/`，只作 ArkTS 检查器的测试夹具，不随包分发（`scripts/install.mjs` 的 `ASSETS` 不含 `test/`）。
 
@@ -116,8 +116,8 @@ DevEco Code 仓库主体采用 MIT；其中 Huawei 工具和脚本文件保留�
 - `@modelcontextprotocol/sdk@1.30.0`：统一 stdio MCP 协议服务和 CodeGenie 子进程客户端。1.29.0 → 1.30.0 是为消掉 GHSA-frvp-7c67-39w9（它把 `@hono/node-server` 放宽到 `^1.19.9 || ^2.0.5`）。另有两条 `overrides` 强制 `axios@1.18.1` 和 `adm-zip@0.6.0`，理由与回归见 `PACK.md`「装依赖」。
 - `@deveco-codegenie/mcp@1.1.11`：固定版本的 CodeGenie MCP 子进程；其平台包由 npm 按当前平台安装。
 - `@arkts/language-server@1.3.10`：本地 ArkTS LSP；通过 `vscode-jsonrpc` 和 `vscode-uri` 连接。
-- `@deveco/deveco-cli`：`build_project` 与 `start_app` 的实现依赖。上游 0.2.0 把这两个工具从 CodeGenie 代理改成了原生实现，本仓跟进；`src/deveco-cli.mjs` 是按上游 `packages/opencode/src/tool/build_project.ts`、`start_app.ts` 与 `lib/deveco-cli.ts` 的公开行为写的 Node 适配层，不复制上游的 vendor-root 探测与 PATH shim（那是为 CLI 分发准备的），并把 `Bun.spawn` 换成 `node:child_process`。
-- `src/upstream/arkts-check.cjs`：从 DevEco Code v0.1.5 `packages/opencode/src/tool/arkts-check.cjs` 提取。本仓库打了四处补丁（空文件集不再报成功、检查器内部异常不再被吞、补齐 SDK 校验器需要的 `projectConfig.globalModulePaths`、写完 stdout 再退出以免截断），每处都有 `LOCAL PATCH` 注释，详见 `PACK.md`「与上游的差异」第 5 条。文件发现逻辑没有改在这里，而是上移到 `src/arkts-check.mjs`。
+- `@deveco/deveco-cli@1.3.1`：官方 CLI npm 包。新增命令包装逐项用已安装包的 `--help` 和实际 argv 核对；实现细节再对照 `https://gitcode.com/openharmony-sig/deveco-cli.git` 提交 `0082a92b3b3967a90517b17a285982cf6805022b`（2026-08-27）。`src/deveco-official.mjs` 覆盖 lint、docs、device、UI、emulator、signature、auth；`src/hotreload.mjs` 按源码真实行为持有 `--hotreload` 的常驻 socket 进程。Studio/CLT 的环境变量优先级与目录布局对照同提交的 `src/toolchain/tool-provider.ts`。
+- `src/upstream/arkts-check.cjs`：从 DevEco Code v0.1.5 `packages/opencode/src/tool/arkts-check.cjs` 提取。本仓库打了六处补丁（空文件集、内部异常、SDK 校验器路径、stdout 截断、诊断范围和 CLT SDK 探测），每处都有 `LOCAL PATCH` 注释，详见 `PACK.md`「与上游的差异」第 5 条。文件发现逻辑没有改在这里，而是上移到 `src/arkts-check.mjs`。
 - `src/upstream/arkts-check.txt`、`src/upstream/hdc-log.txt`、`src/upstream/lsp.txt`、`src/upstream/switch-cwd.txt`：对应官方工具说明原文。
 - `src/hdc-log.mjs`：按 DevEco Code v0.1.5 `packages/opencode/src/tool/hdc_log.ts` 的公开行为实现 Node 适配层。
 - `src/lsp.mjs`：新的统一 LSP 适配层；操作格式参考本机旧 `deveco-arkts-lsp` 项目，但没有复制旧 MCP 入口或客户端配置。

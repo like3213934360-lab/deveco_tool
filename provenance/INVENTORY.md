@@ -2,7 +2,7 @@
 
 ## 原始 Skill
 
-以下目录均从 DevEco Code v0.1.5（`537543c5`）提取，合计 129 个文件；该内容与发布线 v0.1.6（`ab476caf`）无差异，验证过程见 `SOURCES.md`。DevEco 环境自定义配置 Skill 未纳入包体（保留在 `docs/customize-deveco/`）；`arkts-runtime-fix` 的 HDC 共享调用和四个调用脚本增加了退出码与失败文本联合判断，其余 Skill 内容保持上游版本。
+以下目录均从 DevEco Code v0.1.5（`537543c5`）提取，合计 129 个文件；该内容与发布线 v0.1.6（`ab476caf`）无差异，验证过程见 `SOURCES.md`。DevEco 环境自定义配置 Skill 未纳入包体（保留在 `docs/customize-deveco/`）；本包对 HDC 失败判断、崩溃消息、`detect-sdk` CLI 入口以及 Studio/CLT 路径做了有标记的本地修复，详见 `SOURCES.md`。
 
 | Skill | 文件数 | 内容 |
 | --- | ---: | --- |
@@ -171,7 +171,7 @@ CodeGenie 的 `verify_ui`、`save_ui_screenshot`、`get_ui_verification_log` 被
 - **观察这条路已经贴着地板，剩下的省法是不走它。** 逐项量过：`uitest dumpLayout` 约 1200ms，占融合观察 1419ms 的绝大部分，而这 1200ms 是与无障碍服务通信的固有开销，不是可以削的启动成本——常驻 `uitest start-daemon` 只改变 5ms，`-b <bundle>` 把输出从 105KB 降到 36KB 却仍要 1122ms（只省不到 20%，还丢掉其余窗口），`-m false` 反而更慢（1737ms）。非 dump 的部分只剩 `tar` 约 60ms 加 `recv` 约 57ms，加上 hdc 每次调用 68ms 的往返地板。**「用设备端 base64 经 stdout 回传以省掉一次 recv」这个想法实测作废：1255ms，比 `file recv` 的 57ms 慢 20 倍**——shell 通道不适合传批量数据，好在量了才没写进去。因此新增的是 `ui_snapshot` 的 `ifChangedFrom`：JPEG 编码是确定性的，静止画面连续 8 次截图得到同一个摘要，所以帧摘要是可靠的相等性判据（不是相似度；时钟跳一下就会变，这是正确行为）。命中时返回 `unchanged:true` 且不回传图片。实测轮询 425ms 且零图像 token，对比完整观察 1301ms 加约 2400 图像 token；而不带该参数的普通截图是 432ms——**问这个问题不比不问贵，任何分支都不会更慢**。
 - **按选择器点击时，由设备的 `clickable` 标志消歧。** 可见文字几乎总是命中两个节点：实测底部 tab 是 `Column "互动卡片" clickable=true` 包着 `Text "互动卡片" clickable=false`。若一律拒绝，文字选择器基本不可用；取那个设备称为可点的节点不是猜测，另一个根本点不动。两个都可点则仍然拒绝并列出候选。
 
-统一服务固定暴露 33 个工具；如果 CodeGenie 包缺失，30 个本地工具仍可以使用，其中设备 UI 快速通道完全不依赖该子进程。
+统一服务固定暴露 43 个工具；如果 CodeGenie 包缺失，40 个本地工具仍可以使用，其中设备 UI 快速通道完全不依赖该子进程。
 
 DevEco Code 内部的 `debug_exit` 会话调试工具没有迁移；CodeGenie 的同名 `init_project_path` 也没有重复暴露，而是统一由本服务的项目上下文管理。其余未迁移的 DevEco 专有工具：`spec_write`、`plan_enter`、`plan_exit`、`plan_write`、`question`、`skill`、`doom_loop`、`repo_overview`（后者只出现在内置 agent 的 permission 表中，二进制里没有找到对应实现，可能是预留名）。这些属于 agent harness 级能力，由接入方宿主自备，`manifest.json` 的 `hostToolMapping` 有对应关系。
 
@@ -245,7 +245,7 @@ DevEco Code 内部的 `debug_exit` 会话调试工具没有迁移；CodeGenie �
 
 原先 `src/server.mjs` 在模块顶层 `await getCodeGenieTools()`，位置在 `server.connect(transport)` **之前**，因此子进程一挂死，网关自身的 stdio transport 永远不会连接，整个 MCP 连 `initialize` 都不会回应。表现是本地那些与 CodeGenie 完全无关的工具（ArkTS 检查、LSP、日志、脚本）被一个只提供五个工具的子进程一起拖死。
 
-本仓库的处置：`tools/list` 完全读取静态表，不启动也不等待 CodeGenie；只有调用那 3 个代理工具时才建立子进程连接，握手失败返回 `CODEGENIE_UNAVAILABLE`，后续请求仍可重试。子进程不可用时 30 个本地工具继续工作，工具列表仍固定为 33 个。
+本仓库的处置：`tools/list` 完全读取静态表，不启动也不等待 CodeGenie；只有调用那 3 个代理工具时才建立子进程连接，握手失败返回 `CODEGENIE_UNAVAILABLE`，后续请求仍可重试。子进程不可用时 40 个本地工具继续工作，工具列表仍固定为 43 个。
 
 挂死的成因未定位到上游代码的具体位置，只能观测到现象；修复方式是让它不再致命，不是消除它。
 
