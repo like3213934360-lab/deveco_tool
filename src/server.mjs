@@ -38,7 +38,9 @@ import {
   uiInspect,
 } from "./deveco-official.mjs";
 import { closeHotReload, hotReload } from "./hotreload.mjs";
-import { uiFind, uiObserve, uiSnapshot, uiTap } from "./device-ui.mjs";
+import {
+  cleanupUiTemporaryFiles, removeUiTemporaryFile, uiFind, uiObserve, uiSnapshot, uiTap,
+} from "./device-ui.mjs";
 import { closeUiFlows, recordSuccessfulUiAction, uiFlow } from "./arkpilot/flow-service.mjs";
 import { validateDocument } from "./document-validate.mjs";
 import { hdcLog, hdcStatus } from "./hdc-log.mjs";
@@ -817,6 +819,7 @@ const MAX_INLINE_IMAGE_BYTES = 1500000;
 function imageResult(report) {
   const blocks = [];
   let inlined = false;
+  let temporaryFileRemoved = false;
   // ui_observe degrades to a dump-only result when the frame does not arrive; the layout is the
   // half that decides where a tap lands, so that is a usable answer with no image to inline.
   const hasFrame = Boolean(report.localPath) && report.bytes > 0;
@@ -835,7 +838,18 @@ function imageResult(report) {
       // capture, so fall through to the text-only shape rather than turning this into an error.
     }
   }
+  if (hasFrame && report.temporary && (inlined || report.unchanged)) {
+    try {
+      temporaryFileRemoved = removeUiTemporaryFile(report.localPath);
+    } catch {
+      // The session cleanup below is the second chance; capture delivery still succeeded.
+    }
+  }
   const payload = { ...report, inlined };
+  if (temporaryFileRemoved) {
+    payload.localPath = null;
+    payload.temporaryFileRemoved = true;
+  }
   delete payload.inline;
   blocks.push({ type: "text", text: JSON.stringify(payload, null, 2) });
   return { isError: false, content: blocks };
@@ -1213,6 +1227,7 @@ async function shutdown() {
       shutdownLsp(), closeCodeGenie(), closeHotReload(), closeBuildProjectJobs(), closeUiFlows(),
     ]);
     await Promise.race([cleanup, waitForShutdownTimeout(5000)]);
+    cleanupUiTemporaryFiles();
     process.exit(0);
   })();
   return shutdownPromise;

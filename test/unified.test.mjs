@@ -26,7 +26,9 @@ import { deleteCredential, readCredential, writeCredential } from "../src/module
 import { readTar } from "../src/device-tar.mjs";
 import { withUitestLock, lockInternals } from "../src/device-lock.mjs";
 import { analyseDump, dumpSignatures, flattenDump, readSelector } from "../src/device-dump.mjs";
-import { uiFind, uiObserve, uiSnapshot, uiTap } from "../src/device-ui.mjs";
+import {
+  cleanupUiTemporaryFiles, removeUiTemporaryFile, uiFind, uiObserve, uiSnapshot, uiTap,
+} from "../src/device-ui.mjs";
 import { hdcFailureMessage, hdcLog, hdcStatus, runHdc } from "../src/hdc-log.mjs";
 import { getHover, goToDeclaration, lspStatus, resetLsp } from "../src/lsp.mjs";
 import {
@@ -1831,6 +1833,47 @@ test("ui_snapshot reads the native size from one line and the written size from 
   // the aspect ratio, and the height needs a native size nobody has reported yet. So it comes back
   // native and teaches the cache, which is what the next test picks up.
   assert.ok(!capture.includes(" -w "), `nothing to scale against yet: ${capture}`);
+});
+
+test("default screenshots are session-temporary and their device copies are removed immediately", async (t) => {
+  const fake = await makeUiHdc();
+  t.after(async () => await fs.rm(fake.directory, { recursive: true, force: true }));
+
+  const report = await withHdcPath(fake.executable, () => uiSnapshot());
+  assert.equal(report.temporary, true);
+  assert.ok(report.localPath.startsWith(path.join(os.tmpdir(), "deveco-ui", "sessions")));
+  assert.equal(fsSync.existsSync(report.localPath), true);
+  const argv = await fake.argv();
+  assert.ok(argv.some((line) => line.includes("shell rm -f /data/local/tmp/deveco_ui_")));
+
+  assert.equal(removeUiTemporaryFile(report.localPath), true);
+  assert.equal(fsSync.existsSync(report.localPath), false);
+  cleanupUiTemporaryFiles();
+});
+
+test("the MCP deletes a default screenshot after returning it inline", async (t) => {
+  const fake = await makeUiHdc();
+  const transport = new StdioClientTransport({
+    command: process.execPath,
+    args: ["src/server.mjs"],
+    cwd: REPO_ROOT,
+    env: { ...process.env, HDC_PATH: fake.executable },
+    stderr: "ignore",
+  });
+  const client = new Client({ name: "deveco-ui-temp-test", version: "0.1.0" });
+  t.after(async () => {
+    await transport.close();
+    await fs.rm(fake.directory, { recursive: true, force: true });
+  });
+  await client.connect(transport);
+
+  const result = await client.callTool({ name: "ui_snapshot", arguments: {} });
+  assert.ok(result.content.some((item) => item.type === "image"));
+  const payload = JSON.parse(result.content.find((item) => item.type === "text").text);
+  assert.equal(payload.inlined, true);
+  assert.equal(payload.temporary, true);
+  assert.equal(payload.temporaryFileRemoved, true);
+  assert.equal(payload.localPath, null);
 });
 
 test("the display size is learned once and reused by later processes", async (t) => {

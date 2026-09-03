@@ -176,7 +176,7 @@ node scripts/install.mjs --print-mcp
 
 | 工具 | 用途 | 额外依赖 |
 |---|---|---|
-| `ui_snapshot` | 通过 HDC 截图，可内联返回、缩放、选择显示屏和检测画面是否变化 | HDC 设备 |
+| `ui_snapshot` | 通过 HDC 截图，可内联返回、缩放、选择显示屏和检测画面是否变化；默认使用临时会话目录 | HDC 设备 |
 | `ui_find` | 解析 UI 布局树，按文本、key、类型和可点击状态返回可操作坐标 | HDC 设备 |
 | `ui_observe` | 并行获取截图和布局树，一次返回画面、节点和坐标 | HDC 设备 |
 | `ui_tap` | 点击、双击、长按、滑动、fling、drag、方向 fling、文本和按键；支持节点百分比及屏幕百分比定位 | HDC 设备 |
@@ -271,6 +271,8 @@ ui_flow(run) → 必要时 ui_flow(status)
 ```
 
 流程默认保存在项目的 `.arkpilot/flows/*.json`，项目驱动配置保存在 `.arkpilot/config.json`，首次访问时会生成 `{ "driver": "hdc-shell" }`。录制只接收成功的本地 `ui_tap` 操作；输入值会保存为运行变量而不是明文。回放使用 `aa force-stop` / `aa start` 直接启动已安装应用，不构建也不重新安装，成功路径不截图，失败时才返回截图路径和精简 UI 树。默认后端是 `hdc-shell`；`hypium-driver` 不是必需依赖，`hypium` 名称已预留，但在真机与模拟器性能门禁通过前会明确返回不可用，不会静默切换。
+
+未指定 `localPath` 的截图不会写进工程目录：电脑端保存在系统 `tmp/deveco-ui/sessions/` 下的当前 MCP 会话目录，内联返回后立即删除，未内联的大图和失败诊断最长保留 10 分钟，并在 MCP 退出时统一删除；异常退出留下的会话目录会被下一个 MCP 进程回收。设备端截图只在 `/data/local/tmp` 短暂停留，拉取完成后立即删除。只有调用方显式传入 `localPath` 时才会保留文件。
 
 ArkPilot Flow 是独立限界上下文，代码集中在 `src/arkpilot/`：领域层负责版本、步骤、选择器、变量和超时规则；应用层负责录制及执行任务状态机；基础设施层负责项目清单解析、原子 JSON 仓库、HDC 会话和可选驱动端口；`src/server.mjs` 只负责 MCP Schema 与错误转换。它不会重构或改变既有工具，也没有任何 LingDong 专用路由。标准 UI 树无法识别 Canvas、XComponent 或游戏画面时，只能录制标记为 `fragile` 的屏幕百分比步骤。
 

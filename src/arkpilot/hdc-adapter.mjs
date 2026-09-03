@@ -68,13 +68,8 @@ export class HdcUiAutomationAdapter {
   async diagnostics(deviceId, timeoutMs = 5000) {
     const [tree, frame] = await Promise.allSettled([
       uiFind({ hvd: deviceId, timeoutMs, limit: 20 }),
-      uiSnapshot({ hvd: deviceId, timeoutMs, inline: false, includeDevicePath: true }),
+      uiSnapshot({ hvd: deviceId, timeoutMs, inline: false }),
     ]);
-    if (frame.status === "fulfilled" && frame.value.devicePath) {
-      await runHdc([
-        requireHdc(), ...targetArgs(deviceId), "shell", "rm", "-f", frame.value.devicePath,
-      ], Math.min(timeoutMs, 2000)).catch(() => {});
-    }
     return {
       tree: tree.status === "fulfilled" ? {
         dumpPath: tree.value.dumpPath,

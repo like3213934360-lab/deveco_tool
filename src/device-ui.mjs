@@ -128,6 +128,16 @@ const sweptDevices = new Set();
 let snapshotCounter = 0;
 let devicePathCounter = 0;
 
+const UI_TEMP_ROOT = path.join(os.tmpdir(), "deveco-ui");
+const UI_TEMP_SESSION = path.join(
+  UI_TEMP_ROOT,
+  "sessions",
+  `session-${process.pid}-${Date.now()}-${crypto.randomUUID()}`,
+);
+const UI_TEMP_FILE_TTL_MS = 10 * 60 * 1000;
+const uiTemporaryFileTimers = new Map();
+let localSessionsSwept = false;
+
 function fail(message, code, hint) {
   const error = new Error(message);
   error.code = code;
@@ -212,6 +222,63 @@ function sanitizeForPath(value) {
   return String(value).replace(/[^A-Za-z0-9_.-]/g, "_");
 }
 
+function processIsAlive(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return error.code === "EPERM";
+  }
+}
+
+function sweepAbandonedLocalSessions() {
+  if (localSessionsSwept) return;
+  localSessionsSwept = true;
+  const sessions = path.join(UI_TEMP_ROOT, "sessions");
+  if (!fs.existsSync(sessions)) return;
+  for (const entry of fs.readdirSync(sessions, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    const match = /^session-(\d+)-/.exec(entry.name);
+    if (!match) continue;
+    const entryPath = path.join(sessions, entry.name);
+    const ownerPid = Number(match[1]);
+    if (entryPath === UI_TEMP_SESSION || (ownerPid !== process.pid && processIsAlive(ownerPid))) continue;
+    fs.rmSync(entryPath, { recursive: true, force: true });
+  }
+}
+
+function isManagedTemporaryFile(file) {
+  const relative = path.relative(UI_TEMP_SESSION, path.resolve(file));
+  return relative !== "" && !relative.startsWith("..") && !path.isAbsolute(relative);
+}
+
+export function removeUiTemporaryFile(file) {
+  if (!file || !isManagedTemporaryFile(file)) return false;
+  const resolved = path.resolve(file);
+  const timer = uiTemporaryFileTimers.get(resolved);
+  if (timer) clearTimeout(timer);
+  uiTemporaryFileTimers.delete(resolved);
+  fs.rmSync(resolved, { force: true });
+  return true;
+}
+
+function trackUiTemporaryFile(file) {
+  if (!isManagedTemporaryFile(file)) return;
+  const resolved = path.resolve(file);
+  const previous = uiTemporaryFileTimers.get(resolved);
+  if (previous) clearTimeout(previous);
+  const timer = setTimeout(() => removeUiTemporaryFile(resolved), UI_TEMP_FILE_TTL_MS);
+  timer.unref?.();
+  uiTemporaryFileTimers.set(resolved, timer);
+}
+
+/** Remove only the automatically managed files owned by this MCP process. */
+export function cleanupUiTemporaryFiles() {
+  for (const timer of uiTemporaryFileTimers.values()) clearTimeout(timer);
+  uiTemporaryFileTimers.clear();
+  fs.rmSync(UI_TEMP_SESSION, { recursive: true, force: true });
+}
+
 /**
  * Device-side scratch path.
  *
@@ -259,10 +326,23 @@ function sweepStaleArtifacts(hdc, deviceId) {
   ).catch(() => {});
 }
 
+async function removeDeviceArtifacts(hdc, deviceId, devicePaths, timeoutMs) {
+  const paths = [...new Set(devicePaths)].filter(
+    (item) => typeof item === "string" && item.startsWith("/data/local/tmp/deveco_ui_"),
+  );
+  if (!paths.length) return;
+  await execHdc(
+    [hdc, ...targetArgs(deviceId), "shell", "rm", "-f", ...paths],
+    Math.min(timeoutMs, 2000),
+  ).catch(() => {});
+}
+
 function defaultLocalDirectory(deviceId) {
   // Never a relative path: the MCP server's cwd is the pack root, so a relative default would drop
-  // screenshots into the repository.
-  return path.join(os.tmpdir(), "deveco-ui", sanitizeForPath(deviceId));
+  // screenshots into the repository. Each process owns one session directory, which is removed on
+  // normal MCP shutdown; abandoned sessions are reclaimed by the next process.
+  sweepAbandonedLocalSessions();
+  return path.join(UI_TEMP_SESSION, sanitizeForPath(deviceId));
 }
 
 /**
@@ -273,7 +353,7 @@ function defaultLocalDirectory(deviceId) {
  * spend one unscaled capture learning it before it could scale anything.
  */
 function displayCachePath(deviceId) {
-  return path.join(defaultLocalDirectory(deviceId), "display.json");
+  return path.join(UI_TEMP_ROOT, sanitizeForPath(deviceId), "display.json");
 }
 
 function readDisplaySize(deviceId) {
@@ -312,8 +392,9 @@ function rememberDisplaySize(deviceId, size) {
   nativeSizes.set(deviceId, size);
   if (!previous || changed) {
     try {
-      fs.mkdirSync(defaultLocalDirectory(deviceId), { recursive: true });
-      fs.writeFileSync(displayCachePath(deviceId), JSON.stringify(size));
+      const cachePath = displayCachePath(deviceId);
+      fs.mkdirSync(path.dirname(cachePath), { recursive: true });
+      fs.writeFileSync(cachePath, JSON.stringify(size));
     } catch {
       // A cache that cannot be written just means the next process re-learns it.
     }
@@ -394,42 +475,41 @@ async function pullArtifact(hdc, deviceId, devicePath, localPath, timeoutMs, exp
   fs.mkdirSync(path.dirname(localPath), { recursive: true });
   fs.rmSync(staging, { force: true });
 
-  const received = await execHdc(
-    [hdc, ...targetArgs(deviceId), "file", "recv", devicePath, staging],
-    timeoutMs,
-    { signal },
-  );
-  const transportFailure = hdcFailureMessage(received);
-  if (transportFailure) {
-    fs.rmSync(staging, { force: true });
-    fail(`hdc file recv failed: ${transportFailure}`, "UI_RECV_FAILED");
-  }
-
-  const size = fs.existsSync(staging) ? fs.statSync(staging).size : 0;
-  const minimum = expectations.minBytes ?? 1;
-  if (size < minimum) {
-    fs.rmSync(staging, { force: true });
-    fail(
-      `Transferred file is ${size} bytes, below the ${minimum} byte minimum: ${devicePath}`,
-      expectations.emptyCode,
+  try {
+    const received = await execHdc(
+      [hdc, ...targetArgs(deviceId), "file", "recv", devicePath, staging],
+      timeoutMs,
+      { signal },
     );
-  }
-  if (expectations.magic) {
-    const magic = readMagic(staging, expectations.magic.length);
-    if (!magic.equals(expectations.magic)) {
-      // uitest and snapshot_display write plain-text failures into the -p/-f target, and recv pulls
-      // those faithfully. Without this check they would arrive as a "successful" screenshot.
-      const preview = magic.toString("utf8").replace(/[^\x20-\x7e]/g, ".");
-      fs.rmSync(staging, { force: true });
+    const transportFailure = hdcFailureMessage(received);
+    if (transportFailure) fail(`hdc file recv failed: ${transportFailure}`, "UI_RECV_FAILED");
+
+    const size = fs.existsSync(staging) ? fs.statSync(staging).size : 0;
+    const minimum = expectations.minBytes ?? 1;
+    if (size < minimum) {
       fail(
-        `Transferred file is not the expected image format (starts with "${preview}")`,
+        `Transferred file is ${size} bytes, below the ${minimum} byte minimum: ${devicePath}`,
         expectations.emptyCode,
       );
     }
-  }
+    if (expectations.magic) {
+      const magic = readMagic(staging, expectations.magic.length);
+      if (!magic.equals(expectations.magic)) {
+        // uitest and snapshot_display write plain-text failures into the -p/-f target, and recv pulls
+        // those faithfully. Without this check they would arrive as a "successful" screenshot.
+        const preview = magic.toString("utf8").replace(/[^\x20-\x7e]/g, ".");
+        fail(
+          `Transferred file is not the expected image format (starts with "${preview}")`,
+          expectations.emptyCode,
+        );
+      }
+    }
 
-  fs.renameSync(staging, localPath);
-  return size;
+    fs.renameSync(staging, localPath);
+    return size;
+  } finally {
+    fs.rmSync(staging, { force: true });
+  }
 }
 
 function parseSize(pattern, text) {
@@ -548,13 +628,14 @@ function readCaptureOptions(input) {
   return { format, targetWidth, displayId };
 }
 
-function captureReport({ deviceId, method, localPath, requestedPath, fallbackReason, isPng, bytes, outputSize, nativeSize, nativeSizeChanged, startedAt }) {
+function captureReport({ deviceId, method, localPath, requestedPath, fallbackReason, isPng, bytes, outputSize, nativeSize, nativeSizeChanged, startedAt, temporary }) {
   const width = outputSize?.width ?? nativeSize?.width ?? null;
   const height = outputSize?.height ?? nativeSize?.height ?? null;
   return {
     deviceId,
     method,
     localPath,
+    temporary: temporary || undefined,
     requestedPath: localPath === requestedPath ? undefined : requestedPath,
     fallbackReason: fallbackReason ?? undefined,
     mimeType: isPng ? "image/png" : "image/jpeg",
@@ -606,10 +687,12 @@ export async function uiSnapshot(input = {}) {
   let fallbackReason = cachedUnavailable ?? null;
   let localPath = requestedPath;
   let devicePath = devicePathFor("snap", format, true);
+  const devicePaths = [devicePath];
   let outputSize = null;
   let nativeSize = readDisplaySize(deviceId);
   let nativeSizeChanged = false;
 
+  try {
   if (!skipSnapshotDisplay) {
     // No probe capture when the size is unknown: the first call simply comes back native and
     // teaches the cache, and every later call -- in this process or the next -- can scale.
@@ -632,6 +715,7 @@ export async function uiSnapshot(input = {}) {
   if (method !== "snapshot_display") {
     method = "uitest-screenCap";
     devicePath = devicePathFor("snap", "png", true);
+    devicePaths.push(devicePath);
     // screenCap only writes PNG. Handing back PNG bytes at a .jpeg path would be a lie the caller
     // cannot detect, so the destination moves and both paths are reported.
     localPath = withExtension(requestedPath, "png");
@@ -647,6 +731,7 @@ export async function uiSnapshot(input = {}) {
     magic: isPng ? PNG_MAGIC : JPEG_MAGIC,
     minBytes: MIN_IMAGE_BYTES,
   });
+  if (!input.localPath) trackUiTemporaryFile(localPath);
 
   const frameSignature = frameSignatureOf(localPath);
   // Comparing here rather than making the caller do it is what saves the tokens: an unchanged
@@ -659,14 +744,14 @@ export async function uiSnapshot(input = {}) {
   return {
     ...captureReport({
       deviceId, method, localPath, requestedPath, fallbackReason, isPng, bytes,
-      outputSize, nativeSize, nativeSizeChanged, startedAt,
+      outputSize, nativeSize, nativeSizeChanged, startedAt, temporary: !input.localPath,
     }),
     frameSignature,
     unchanged: unchanged || undefined,
-    // Internal workflow adapters can request this so they can delete the exact device-side
-    // artifact after the local diagnostic copy is safe. It is never exposed by the public schema.
-    ...(input.includeDevicePath === true ? { devicePath } : {}),
   };
+  } finally {
+    await removeDeviceArtifacts(hdc, deviceId, devicePaths, timeoutMs);
+  }
 }
 
 /**
@@ -770,6 +855,7 @@ export async function uiObserve(input = {}) {
     const localImage = input.localPath
       ? path.resolve(input.localPath)
       : path.join(directory, `snapshot-${startedAt}-${(snapshotCounter += 1)}.jpeg`);
+    const temporary = !input.localPath;
     assertOutputAvailable(localImage, input.overwrite);
     const localDump = path.join(directory, "layout.json");
 
@@ -783,6 +869,7 @@ export async function uiObserve(input = {}) {
       displayId,
     };
 
+    try {
     const result = await execHdc(
       [hdc, ...targetArgs(deviceId), "shell", buildObserveCommand(targets)],
       timeoutMs,
@@ -794,7 +881,7 @@ export async function uiObserve(input = {}) {
       // this degrades rather than fails.
       return observeSeparately({
         hdc, deviceId, timeoutMs, selector, targetWidth, displayId,
-        localImage, startedAt, reason: combined.trim().split(/\r?\n/).filter(Boolean).slice(-1)[0]
+        localImage, temporary, startedAt, reason: combined.trim().split(/\r?\n/).filter(Boolean).slice(-1)[0]
           || "the fused observe command produced no OBSERVE_OK marker",
       });
     }
@@ -823,6 +910,7 @@ export async function uiObserve(input = {}) {
       && imageBytes.subarray(0, JPEG_MAGIC.length).equals(JPEG_MAGIC)) {
       fs.mkdirSync(path.dirname(localImage), { recursive: true });
       fs.writeFileSync(localImage, imageBytes);
+      if (temporary) trackUiTemporaryFile(localImage);
       bytes = imageBytes.length;
     } else {
       // The dump is the half that decides where a tap lands, so a missing frame degrades the
@@ -850,6 +938,7 @@ export async function uiObserve(input = {}) {
         nativeSize,
         nativeSizeChanged: captured.nativeSizeChanged,
         startedAt,
+        temporary,
       }),
       // captureReport rebuilds these from the frame; the analysis values are the authoritative ones.
       dumpPath: analysis.dumpPath,
@@ -858,6 +947,11 @@ export async function uiObserve(input = {}) {
       // costs a capture instead of a capture plus a dump.
       frameSignature: bytes ? frameSignatureOf(localImage) : null,
     };
+    } finally {
+      await removeDeviceArtifacts(hdc, deviceId, [
+        targets.snap, targets.dump, targets.snapLog, targets.dumpLog, targets.archive,
+      ], timeoutMs);
+    }
   });
 }
 
@@ -866,21 +960,24 @@ export async function uiObserve(input = {}) {
  *
  * @returns {Promise<object>} Same shape as the fused path.
  */
-async function observeSeparately({ hdc, deviceId, timeoutMs, selector, targetWidth, displayId, localImage, startedAt, reason }) {
+async function observeSeparately({ hdc, deviceId, timeoutMs, selector, targetWidth, displayId, localImage, temporary, startedAt, reason }) {
   const dumpPath = await dumpLayout(hdc, deviceId, timeoutMs);
   const analysis = analyseDump({ root: readDump(dumpPath), dumpPath, deviceId, selector });
 
   const devicePath = devicePathFor("snap", "jpeg", true);
-  const captured = await captureWithSnapshotDisplay(
-    hdc, deviceId, devicePath, scaleArguments(readDisplaySize(deviceId), targetWidth), displayId, timeoutMs,
-  );
-  let bytes = 0;
-  if (captured.ok) {
-    bytes = await pullArtifact(hdc, deviceId, devicePath, localImage, timeoutMs, {
-      emptyCode: "UI_SNAPSHOT_EMPTY", magic: JPEG_MAGIC, minBytes: MIN_IMAGE_BYTES,
-    });
-  }
-  return {
+  try {
+    const captured = await captureWithSnapshotDisplay(
+      hdc, deviceId, devicePath, "jpeg",
+      scaleArguments(readDisplaySize(deviceId), targetWidth), displayId, timeoutMs,
+    );
+    let bytes = 0;
+    if (captured.ok) {
+      bytes = await pullArtifact(hdc, deviceId, devicePath, localImage, timeoutMs, {
+        emptyCode: "UI_SNAPSHOT_EMPTY", magic: JPEG_MAGIC, minBytes: MIN_IMAGE_BYTES,
+      });
+      if (temporary) trackUiTemporaryFile(localImage);
+    }
+    return {
     ...analysis,
     ...captureReport({
       deviceId,
@@ -894,11 +991,15 @@ async function observeSeparately({ hdc, deviceId, timeoutMs, selector, targetWid
       nativeSize: readDisplaySize(deviceId),
       nativeSizeChanged: captured.ok ? captured.nativeSizeChanged : false,
       startedAt,
+      temporary,
     }),
     dumpPath: analysis.dumpPath,
     deviceId,
     frameSignature: bytes ? frameSignatureOf(localImage) : null,
-  };
+    };
+  } finally {
+    await removeDeviceArtifacts(hdc, deviceId, [devicePath], timeoutMs);
+  }
 }
 
 async function sendInput(hdc, deviceId, inputArgs, timeoutMs, action, signal) {
