@@ -197,7 +197,7 @@ function serializePerDevice(deviceId, task) {
  */
 function withUitest(deviceId, op, timeoutMs, task, lockWaitMs = Math.min(timeoutMs, MAX_LOCK_WAIT_MS)) {
   return serializePerDevice(deviceId, () => withUitestLock(
-    { directory: defaultLocalDirectory(deviceId), op, timeoutMs: lockWaitMs },
+    { directory: path.join(UI_TEMP_ROOT, "locks", sanitizeForPath(deviceId)), op, timeoutMs: lockWaitMs },
     task,
   ));
 }
@@ -801,21 +801,28 @@ export async function uiSnapshot(input = {}) {
  */
 async function dumpLayout(hdc, deviceId, timeoutMs, signal) {
   const devicePath = devicePathFor("dump", "json");
-  const result = await execHdc(
-    [hdc, ...targetArgs(deviceId), "shell", "uitest", "dumpLayout", "-p", devicePath],
-    timeoutMs,
-    { signal },
-  );
-  const combined = `${result.stdout}\n${result.stderr}`;
-  assertNoUitestConflict(combined, "uitest dumpLayout");
-  if (!DUMP_SUCCESS_PATTERN.test(combined)) {
-    fail(`uitest dumpLayout failed: ${combined.trim() || "no output"}`, "UI_DUMP_FAILED");
+  try {
+    const result = await execHdc(
+      [hdc, ...targetArgs(deviceId), "shell", "uitest", "dumpLayout", "-p", devicePath],
+      timeoutMs,
+      { signal },
+    );
+    const combined = `${result.stdout}\n${result.stderr}`;
+    assertNoUitestConflict(combined, "uitest dumpLayout");
+    if (!DUMP_SUCCESS_PATTERN.test(combined)) {
+      fail(`uitest dumpLayout failed: ${combined.trim() || "no output"}`, "UI_DUMP_FAILED");
+    }
+    // Stable name, overwritten every call: unlike a screenshot, a stale layout is actively harmful,
+    // and dumpPath only has to stay valid until the next dump.
+    const localPath = path.join(defaultLocalDirectory(deviceId), "layout.json");
+    await pullArtifact(hdc, deviceId, devicePath, localPath, timeoutMs, { emptyCode: "UI_DUMP_EMPTY" }, signal);
+    return localPath;
+  } finally {
+    // The local copy remains available for dumpPath reuse inside the temp session, but the device
+    // has no reason to retain the tree after recv. This also covers public ui_find/ui_tap calls,
+    // which do not pass through ArkPilot's end-of-flow cleanup hook.
+    await removeDeviceArtifacts(hdc, deviceId, [devicePath], Math.min(timeoutMs, 500));
   }
-  // Stable name, overwritten every call: unlike a screenshot, a stale layout is actively harmful,
-  // and dumpPath only has to stay valid until the next dump.
-  const localPath = path.join(defaultLocalDirectory(deviceId), "layout.json");
-  await pullArtifact(hdc, deviceId, devicePath, localPath, timeoutMs, { emptyCode: "UI_DUMP_EMPTY" }, signal);
-  return localPath;
 }
 
 /**
@@ -1255,33 +1262,68 @@ export async function withUiAutomationSession(input = {}, task) {
     : await resolveDevice(hdc, input.hvd);
   sweepStaleArtifacts(hdc, deviceId);
 
-  const checkAbort = () => {
-    if (!input.signal?.aborted) return;
+  const checkAbort = (signal = input.signal) => {
+    if (!signal?.aborted) return;
     const error = new Error("UI flow was cancelled");
     error.code = "FLOW_CANCELLED";
     throw error;
   };
 
   return withUitest(deviceId, "ArkPilot flow", timeoutMs, async () => {
-    const find = async (selectorInput = {}) => {
-      checkAbort();
-      const dumpPath = await dumpLayout(hdc, deviceId, timeoutMs, input.signal);
-      checkAbort();
+    const operation = (options = {}) => {
+      const requested = Number(options.timeoutMs);
+      return {
+        // Public calls retain their 1s minimum, while a flow's remaining step budget may be below
+        // one second. Respect that internal deadline instead of silently overshooting it.
+        timeoutMs: Number.isFinite(requested)
+          ? Math.min(timeoutMs, Math.max(100, requested)) : timeoutMs,
+        signal: options.signal ?? input.signal,
+      };
+    };
+    const find = async (selectorInput = {}, options = {}) => {
+      const current = operation(options);
+      checkAbort(current.signal);
+      const dumpPath = await dumpLayout(hdc, deviceId, current.timeoutMs, current.signal);
+      checkAbort(current.signal);
       return analyseDump({
         root: readDump(dumpPath), dumpPath, deviceId, selector: readSelector(selectorInput),
       });
     };
 
-    const action = async (step, preparedAnalysis = null) => {
-      checkAbort();
+    // Resolve a primary selector and its semantic fallbacks from one layout dump. This is the
+    // performance-critical primitive used by ArkPilot healing: trying five candidates must not
+    // turn into five 1.2s dumpLayout calls.
+    const findAny = async (selectorInputs = [], options = {}) => {
+      const current = operation(options);
+      checkAbort(current.signal);
+      if (!Array.isArray(selectorInputs) || selectorInputs.length === 0) {
+        const error = new Error("findAny requires at least one selector");
+        error.code = "UI_ARGS_INVALID";
+        throw error;
+      }
+      const dumpPath = await dumpLayout(hdc, deviceId, current.timeoutMs, current.signal);
+      checkAbort(current.signal);
+      const root = readDump(dumpPath);
+      return selectorInputs.map((selectorInput, index) => ({
+        index,
+        selector: selectorInput,
+        analysis: analyseDump({
+          root, dumpPath, deviceId, selector: readSelector(selectorInput),
+        }),
+      }));
+    };
+
+    const action = async (step, preparedAnalysis = null, options = {}) => {
+      const current = operation(options);
+      checkAbort(current.signal);
       const actionNames = { tap: "click", doubleTap: "doubleClick", longTap: "longClick" };
       if (step.action === "key") {
         const args = buildInputArgs({ action: "keyEvent", key1: step.key });
-        await sendInput(hdc, deviceId, args, timeoutMs, "keyEvent", input.signal);
+        await sendInput(hdc, deviceId, args, current.timeoutMs, "keyEvent", current.signal);
         return { action: step.action, commandAccepted: true };
       }
       if (["swipe", "fling", "drag"].includes(step.action)) {
-        const analysis = preparedAnalysis ?? await find({});
+        const analysis = preparedAnalysis ?? await find({}, current);
         const args = buildScreenGestureArgs({
           action: step.action,
           from_x_percent: step.gesture.fromXPercent,
@@ -1290,14 +1332,14 @@ export async function withUiAutomationSession(input = {}, task) {
           to_y_percent: step.gesture.toYPercent,
           velocity: step.gesture.velocity,
         }, analysis.screen);
-        await sendInput(hdc, deviceId, args, timeoutMs, step.action, input.signal);
+        await sendInput(hdc, deviceId, args, current.timeoutMs, step.action, current.signal);
         return { action: step.action, commandAccepted: true, screen: analysis.screen };
       }
 
       let analysis = preparedAnalysis;
       let target;
       if (step.point) {
-        analysis = analysis ?? await find({});
+        analysis = analysis ?? await find({}, current);
         const [x1, y1, x2, y2] = analysis.screen ?? [];
         if (!(x2 > x1) || !(y2 > y1)) {
           const error = new Error("The UI dump has no usable screen bounds");
@@ -1311,17 +1353,17 @@ export async function withUiAutomationSession(input = {}, task) {
           },
         };
       } else {
-        analysis = analysis ?? await find(step.selector);
+        analysis = analysis ?? await find(step.selector, current);
         target = requireSingleTarget(analysis, readSelector(step.selector));
       }
       const inputAction = step.action === "input" ? "inputText" : actionNames[step.action];
       const args = step.action === "input"
         ? buildInputArgs({ action: inputAction, x: target.center.x, y: target.center.y, text: step.value })
         : [inputAction, String(target.center.x), String(target.center.y)];
-      await sendInput(hdc, deviceId, args, timeoutMs, inputAction, input.signal);
+      await sendInput(hdc, deviceId, args, current.timeoutMs, inputAction, current.signal);
       return { action: step.action, commandAccepted: true, target, structureSignature: analysis.structureSignature };
     };
 
-    return task({ deviceId, find, action, checkAbort });
+    return task({ deviceId, find, findAny, action, checkAbort });
   }, input.lockWaitMs ?? Math.min(timeoutMs, MAX_LOCK_WAIT_MS));
 }

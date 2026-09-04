@@ -221,6 +221,7 @@ export function readSelector(input = {}) {
     // so being able to ask only for tappable nodes is the difference between a hit and a no-op.
     clickableOnly: input.clickableOnly === true,
     text: typeof input.text === "string" && input.text ? input.text.toLowerCase() : null,
+    textMode: input.textMode === "exact" ? "exact" : "contains",
     key: typeof input.key === "string" && input.key ? input.key : null,
     type: typeof input.type === "string" && input.type ? input.type.toLowerCase() : null,
     displayId: input.displayId === undefined || input.displayId === null
@@ -245,7 +246,13 @@ export function selectNodes({ nodes, screen }, selector) {
   const matches = [];
   let matchCount = 0;
   for (const node of nodes) {
-    if (selector.text && !node.text.toLowerCase().includes(selector.text)) continue;
+    if (selector.text) {
+      const nodeText = node.text.toLowerCase();
+      const matched = selector.textMode === "exact"
+        ? nodeText === selector.text
+        : nodeText.includes(selector.text);
+      if (!matched) continue;
+    }
     if (selector.key && node.key !== selector.key) continue;
     if (selector.type && node.type.toLowerCase() !== selector.type) continue;
     if (selector.displayId && node.displayId !== null && node.displayId !== selector.displayId) continue;

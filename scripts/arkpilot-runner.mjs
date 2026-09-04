@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { closeUiFlows, uiFlow } from "../src/arkpilot/flow-service.mjs";
+import { cleanupUiTemporaryFiles } from "../src/device-ui.mjs";
 
 export function parseArguments(argv) {
   const result = {};
@@ -64,7 +65,14 @@ export async function replay(options) {
 }
 
 export async function shutdownRunner() {
-  await closeUiFlows();
+  try {
+    await closeUiFlows();
+  } finally {
+    // A failed replay may have produced one diagnostic frame. The standalone benchmark/device
+    // runners do not execute the MCP server's shutdown hook, so remove their whole temp session
+    // explicitly instead of leaving cleanup to the next process or the operating system.
+    cleanupUiTemporaryFiles();
+  }
 }
 
 export function percentile(values, quantile) {

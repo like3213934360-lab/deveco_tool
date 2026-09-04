@@ -60,6 +60,12 @@ export function normalizeSelector(value, { required = true } = {}) {
   if (typeof source.text === "string" && source.text.trim()) selector.text = source.text.trim();
   if (typeof source.type === "string" && source.type.trim()) selector.type = source.type.trim();
   if (source.clickableOnly === true) selector.clickableOnly = true;
+  if (source.textMode !== undefined) {
+    if (!selector.text || !["exact", "contains"].includes(source.textMode)) {
+      throw flowError("selector.textMode requires text and must be exact or contains", "FLOW_SELECTOR_INVALID");
+    }
+    selector.textMode = source.textMode;
+  }
   if (!selector.key && !selector.text && !selector.type) {
     throw flowError("selector requires key, text, or type", "FLOW_SELECTOR_INVALID");
   }
@@ -106,6 +112,20 @@ function normalizeStep(value, index, variables) {
       step.fragile = true;
     } else {
       step.selector = normalizeSelector(source.selector);
+      if (source.alternates !== undefined) {
+        if (!Array.isArray(source.alternates) || source.alternates.length > 5) {
+          throw flowError(`steps[${index}].alternates must contain at most five selectors`, "FLOW_SELECTOR_INVALID");
+        }
+        const seen = new Set([JSON.stringify(step.selector)]);
+        step.alternates = source.alternates.map((candidate) => normalizeSelector(candidate))
+          .filter((candidate) => {
+            const signature = JSON.stringify(candidate);
+            if (seen.has(signature)) return false;
+            seen.add(signature);
+            return true;
+          });
+        if (step.alternates.length === 0) delete step.alternates;
+      }
     }
   }
   if (action === "input") {
@@ -173,6 +193,20 @@ export function validateFlow(value, { allowUnverified = false } = {}) {
       [kind]: normalizeSelector(rawAssert[kind]),
       timeoutMs: timeout(rawAssert.timeoutMs, 5000, "flow.assert.timeoutMs"),
     };
+    if (rawAssert.alternates !== undefined) {
+      if (!Array.isArray(rawAssert.alternates) || rawAssert.alternates.length > 5) {
+        throw flowError("flow.assert.alternates must contain at most five selectors", "FLOW_SELECTOR_INVALID");
+      }
+      const seen = new Set([JSON.stringify(assertion[kind])]);
+      assertion.alternates = rawAssert.alternates.map((candidate) => normalizeSelector(candidate))
+        .filter((candidate) => {
+          const signature = JSON.stringify(candidate);
+          if (seen.has(signature)) return false;
+          seen.add(signature);
+          return true;
+        });
+      if (assertion.alternates.length === 0) delete assertion.alternates;
+    }
   } else if (!allowUnverified) {
     throw flowError("A final assertion is required", "FLOW_ASSERT_REQUIRED");
   }

@@ -3,7 +3,12 @@ import path from "node:path";
 import { flowError, validateFlow, validateFlowId } from "./domain.mjs";
 
 const LOCK_STALE_MS = 30000;
-const DEFAULT_CONFIG = { driver: "hdc-shell" };
+const DEFAULT_CONFIG = {
+  driver: "hdc-shell",
+  autoRecord: true,
+  selectorHealing: true,
+  hypiumPerformanceGate: false,
+};
 
 function rejectSymlink(file) {
   if (!fs.existsSync(file)) return;
@@ -49,7 +54,17 @@ function readConfig(file) {
     || !["hdc-shell", "hypium"].includes(parsed.driver)) {
     throw flowError(".arkpilot/config.json driver must be hdc-shell or hypium", "FLOW_CONFIG_INVALID");
   }
-  return { driver: parsed.driver };
+  for (const name of ["autoRecord", "selectorHealing", "hypiumPerformanceGate"]) {
+    if (parsed[name] !== undefined && typeof parsed[name] !== "boolean") {
+      throw flowError(`.arkpilot/config.json ${name} must be boolean`, "FLOW_CONFIG_INVALID");
+    }
+  }
+  return {
+    driver: parsed.driver,
+    autoRecord: parsed.autoRecord !== false,
+    selectorHealing: parsed.selectorHealing !== false,
+    hypiumPerformanceGate: parsed.hypiumPerformanceGate === true,
+  };
 }
 
 function fileFor(flows, id) {
@@ -102,6 +117,44 @@ export class JsonFlowRepository {
         }
       })
       .sort((a, b) => a.id.localeCompare(b.id));
+  }
+
+  /**
+   * Resolve natural-language navigation intent without guessing between similarly named flows.
+   * Exact id/name matches win; partial matches are returned only when one candidate is clearly
+   * stronger. The caller can then start exploration instead of replaying a plausible wrong flow.
+   */
+  findForNavigation(query, { bundleName } = {}) {
+    const wanted = String(query ?? "").trim().toLocaleLowerCase();
+    if (!wanted) return { match: null, candidates: [] };
+    const compact = (value) => String(value).toLocaleLowerCase().replace(/[\p{P}\p{S}\s_]+/gu, "");
+    const wantedCompact = compact(wanted);
+    const terms = wanted.split(/[\p{P}\p{S}\s_]+/u).filter((term) => term.length >= 2);
+    const scored = this.list().filter((entry) => !entry.invalid)
+      .filter((entry) => !bundleName || entry.app?.bundleName === bundleName)
+      .map((entry) => {
+        const id = entry.id.toLocaleLowerCase();
+        const name = entry.name.toLocaleLowerCase();
+        const nameCompact = compact(name);
+        let score = 0;
+        if (wanted === id || wanted === name) score = 100;
+        else if (wantedCompact && wantedCompact === nameCompact) score = 95;
+        else if (wantedCompact.length >= 2 && (nameCompact.includes(wantedCompact) || wantedCompact.includes(nameCompact))) {
+          score = 70 + Math.round((Math.min(nameCompact.length, wantedCompact.length)
+            / Math.max(nameCompact.length, wantedCompact.length)) * 20);
+        } else if (terms.length) {
+          const hits = terms.filter((term) => id.includes(term) || name.includes(term)).length;
+          score = Math.round((hits / terms.length) * 60);
+        }
+        return { ...entry, score };
+      })
+      .filter((entry) => entry.score > 0)
+      .sort((a, b) => b.score - a.score || a.id.localeCompare(b.id));
+    if (!scored.length || scored[0].score < 60) return { match: null, candidates: scored.slice(0, 5) };
+    if (scored[1] && scored[0].score - scored[1].score < 10) {
+      return { match: null, ambiguous: true, candidates: scored.slice(0, 5) };
+    }
+    return { match: this.get(scored[0].id), candidates: scored.slice(0, 5) };
   }
 
   get(id, options = {}) {

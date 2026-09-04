@@ -200,7 +200,7 @@ test("no tool group is optional and nothing in the pack depends on a removed too
   const optional = MANIFEST.mcp.toolGroups.filter((group) => group.optional === true);
   assert.equal(optional.length, 0);
 
-  const removedTools = new Set(["verify_ui", "save_ui_screenshot", "get_ui_verification_log"]);
+  const removedTools = new Set(["save_ui_screenshot", "get_ui_verification_log"]);
   const advertised = new Set(MANIFEST.mcp.toolGroups.flatMap((group) => group.tools));
   for (const tool of removedTools) {
     assert.ok(!advertised.has(tool), `manifest still advertises removed tool ${tool}`);

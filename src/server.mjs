@@ -42,6 +42,7 @@ import {
   cleanupUiTemporaryFiles, removeUiTemporaryFile, uiFind, uiObserve, uiSnapshot, uiTap,
 } from "./device-ui.mjs";
 import { closeUiFlows, recordSuccessfulUiAction, uiFlow } from "./arkpilot/flow-service.mjs";
+import { closeVisualVerifier, verifyUi } from "./arkpilot/visual-verifier.mjs";
 import { validateDocument } from "./document-validate.mjs";
 import { hdcLog, hdcStatus } from "./hdc-log.mjs";
 import {
@@ -67,14 +68,12 @@ const scriptIds = listScripts().map((script) => script.id);
 // proxied copies so each name resolves once. build_project and start_app run
 // through the bundled DevEco CLI so that building and launching keep working
 // even when the CodeGenie child is unavailable.
-const LOCAL_OVERRIDE_TOOLS = ["init_project_path", "check_ets_files", "build_project", "start_app"];
+const LOCAL_OVERRIDE_TOOLS = ["init_project_path", "check_ets_files", "build_project", "start_app", "verify_ui"];
 
-// The UI auto-verification chain is not part of this pack. verify_ui needs a
-// multimodal model that nothing here configures, and save_ui_screenshot /
-// get_ui_verification_log are keyed by a verify_ui run id, so without it they
-// can only ever answer "not found". They are hidden from the tool list and
-// rejected on call rather than proxied.
-const DISABLED_CODEGENIE_TOOLS = ["verify_ui", "save_ui_screenshot", "get_ui_verification_log"];
+// The upstream stateful verification-log chain is not part of this pack. Its save/read tools use
+// upstream run ids that the local, temporary-only verify_ui implementation deliberately does not
+// create. Hide those two tools and reject direct calls instead of exposing a broken mixed chain.
+const DISABLED_CODEGENIE_TOOLS = ["save_ui_screenshot", "get_ui_verification_log"];
 
 // The tool list used to be filtered at request time, which made these two tables self-enforcing.
 // Now that the proxy table is static, nothing would notice if a name ended up in two of them and
@@ -251,16 +250,17 @@ const localTools = [
   ...officialTools,
   {
     name: "ui_flow",
-    description: "Record, validate, store, and replay deterministic HarmonyOS UI flows through ArkPilot. Start recording before driving the device with ui_tap; successful local actions are appended automatically. Replays launch the already-installed app directly, use semantic waits instead of screenshots, and capture diagnostics only on failure. Long runs return a job_id instead of exceeding common 30-second MCP deadlines.",
+    description: "Primary tool for entering a known HarmonyOS page or repeating multi-step UI navigation. For a new navigation call action=navigate first: ArkPilot safely prefers an exact manifest-declared Ability/App Link/Want route, otherwise finds and replays a matching saved flow, and if none exists starts exploration recording automatically. During exploration use ui_observe then semantic ui_tap; successful actions are learned without another command, then finish with navigate+recording_id+success_selector. Replay uses no screenshots on success, safely heals a changed key only from a unique exact semantic fallback, writes that repair only after the final assertion passes, and returns job_id for long runs. Use run only when the exact flow id is already known; use routes to inspect standard module.json5 routes. Never use repeated screenshot guessing for a navigation that this tool can replay.",
     inputSchema: {
       type: "object",
       properties: {
         action: {
           type: "string",
-          enum: ["record_start", "record_status", "record_stop", "record_cancel", "run", "status", "cancel", "list", "get", "validate", "delete"],
+          enum: ["navigate", "routes", "driver_status", "record_start", "record_status", "record_stop", "record_cancel", "run", "status", "cancel", "list", "get", "validate", "delete"],
         },
         id: { type: "string", pattern: "^[a-z0-9](?:[a-z0-9_-]{0,62}[a-z0-9])?$" },
         name: { type: "string", minLength: 1 },
+        goal: { type: "string", minLength: 1, description: "Natural-language navigation goal used to safely match a saved flow. Exact declared route names can also be used." },
         recording_id: { type: "string" },
         job_id: { type: "string" },
         project_path: { type: "string" },
@@ -268,6 +268,14 @@ const localTools = [
         bundle_name: { type: "string" },
         module: { type: "string" },
         ability: { type: "string" },
+        route_id: { type: "string", description: "Exact id returned by action=routes. Preferred over natural-language route guessing." },
+        route_action: { type: "string", description: "Exact action declared by an Ability skill in module.json5." },
+        uri: { type: "string", description: "Concrete URI for an App Link or a manifest route containing pathRegex." },
+        want_parameters: {
+          type: "object",
+          description: "Explicit Want parameters only. ArkPilot never invents app-specific route parameters.",
+          additionalProperties: { type: ["string", "integer", "boolean"] },
+        },
         start_policy: { type: "string", enum: ["restart", "attach"] },
         backend: { type: "string", enum: ["hdc-shell", "hypium"] },
         wait_ms: { type: "integer", minimum: 0, maximum: 20000 },
@@ -278,13 +286,14 @@ const localTools = [
           type: "object",
           properties: {
             key: { type: "string" }, text: { type: "string" }, type: { type: "string" },
-            clickableOnly: { type: "boolean" },
+            clickableOnly: { type: "boolean" }, textMode: { type: "string", enum: ["exact", "contains"] },
           },
           additionalProperties: false,
         },
         success_state: { type: "string", enum: ["visible", "hidden"] },
         success_timeout_ms: { type: "integer", minimum: 100, maximum: 600000 },
         allow_unverified: { type: "boolean" },
+        selector_healing: { type: "boolean", description: "Allow unique exact semantic fallbacks and persist promotions only after final success. Defaults to project config." },
       },
       required: ["action"],
       allOf: [
@@ -293,6 +302,37 @@ const localTools = [
         { if: { properties: { action: { enum: ["run", "get", "delete"] } } }, then: { required: ["id"] } },
         { if: { properties: { action: { enum: ["status", "cancel"] } } }, then: { required: ["job_id"] } },
         { if: { properties: { action: { const: "validate" } } }, then: { anyOf: [{ required: ["id"] }, { required: ["flow"] }] } },
+      ],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "verify_ui",
+    description: "Optional final UI verification and failure-diagnosis tool. Use after navigation, not for aiming ordinary taps. capture/assert returns one temporary screenshot inline; when a semantic selector is provided it overlaps the screenshot and UI-tree dump. Canvas/XComponent screens can be judged by the host AI from visual_prompt. compare checks a short-lived in-memory frame signature against baseline_id. Screenshots are written only under the OS temp directory, deleted after inline delivery, never stored in the HarmonyOS project, and all baseline metadata expires after ten minutes.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        action: { type: "string", enum: ["capture", "assert", "compare"] },
+        hvd: { type: "string", description: "Exact device id; required when several devices are connected." },
+        selector: {
+          type: "object",
+          properties: {
+            key: { type: "string" }, text: { type: "string" }, type: { type: "string" },
+            clickableOnly: { type: "boolean" }, textMode: { type: "string", enum: ["exact", "contains"] },
+          },
+          additionalProperties: false,
+        },
+        success_state: { type: "string", enum: ["visible", "hidden"] },
+        visual_prompt: { type: "string", description: "Appearance requirement for the host AI to judge from the returned image." },
+        baseline_id: { type: "string" },
+        expect: { type: "string", enum: ["changed", "unchanged"] },
+        width: { type: "integer", minimum: 64, maximum: 4096 },
+        inline: { type: "boolean" },
+        timeoutMs: { type: "integer", minimum: 1000, maximum: 600000 },
+      },
+      allOf: [
+        { if: { properties: { action: { const: "assert" } }, required: ["action"] }, then: { required: ["selector"] } },
+        { if: { properties: { action: { const: "compare" } }, required: ["action"] }, then: { required: ["baseline_id"] } },
       ],
       additionalProperties: false,
     },
@@ -720,6 +760,7 @@ const localTools = [
       type: "object",
       properties: {
         text: { type: "string", description: "Case-insensitive substring of the node's visible text." },
+        textMode: { type: "string", enum: ["exact", "contains"], description: "Text matching mode. Defaults to contains; recorded fallback selectors use exact." },
         key: { type: "string", description: "Exact match on the node's key (what ArkUI .id() sets). Survives copy and locale changes, unlike text." },
         type: { type: "string", description: "Exact component type, e.g. Text, Button, Image." },
         dumpPath: { type: "string", description: "Parse this existing dump instead of dumping again. The path returned by a previous call." },
@@ -740,6 +781,7 @@ const localTools = [
       type: "object",
       properties: {
         text: { type: "string", description: "Case-insensitive substring of the node's visible text (or its accessibility label)." },
+        textMode: { type: "string", enum: ["exact", "contains"], description: "Text matching mode. Defaults to contains." },
         key: { type: "string", description: "Exact match on the node's key (what ArkUI .id() sets). Survives copy and locale changes, unlike text." },
         type: { type: "string", description: "Exact component type, e.g. Text, Button, Image." },
         clickableOnly: { type: "boolean", description: "Keep only nodes the device reports as clickable. Usable on its own." },
@@ -758,7 +800,7 @@ const localTools = [
   },
   {
     name: "ui_tap",
-    description: "Send a touch, gesture, or key event through uitest uiInput over hdc. Despite the compatibility name ui_tap, this tool also performs swipe/fling/drag/text/key actions. Prefer aiming click/doubleClick/longClick with key/text/type over passing x/y: coordinates go stale between the find and the tap. A swipe/fling/drag can target a node with from_percent/to_percent; if dumpLayout omits the target (for example a custom Slider), use all four screen-percentage fields instead of hard-coded pixels. Raw-coordinate and screen-percentage success only mean uitest accepted the command, not that the UI changed. Note dircFling direction is the scroll direction, and flinging at a list boundary succeeds without moving anything.",
+    description: "Low-level single UI action. For a new multi-step page navigation, call ui_flow action=navigate before this tool so the action is automatically learned or an existing flow is replayed. During active exploration, every successful semantic action here is recorded automatically. Prefer key/text/type over x/y: semantic targets survive layout movement and record a safe fallback for key changes. Use verify_ui only for final visual acceptance. Despite the compatibility name this also performs swipe/fling/drag/text/key actions.",
     inputSchema: {
       type: "object",
       properties: {
@@ -768,6 +810,7 @@ const localTools = [
         },
         key: { type: "string", description: "Aim a click/doubleClick/longClick at the node with this exact key instead of at coordinates. Refuses rather than guesses when it matches no node or several." },
         text: { type: "string", description: "For click/doubleClick/longClick or percentage gestures, select a node whose visible text contains this. For inputText, this is the text to type." },
+        textMode: { type: "string", enum: ["exact", "contains"], description: "Selector text matching mode for non-input actions. Defaults to contains." },
         type: { type: "string", description: "Aim at the node of this exact component type, or narrow a key/text selector." },
         clickableOnly: { type: "boolean", description: "Narrow a selector to nodes the device reports as clickable. The node that handles a tap is often a container wrapping the label you can see." },
         verify: { type: "boolean", description: "Dump again after a selector action. Defaults to true for percentage gestures and false for point taps because it doubles the layout-dump cost." },
@@ -816,7 +859,7 @@ function plainResult(text, isError = false) {
 // blob in the transcript, and the report says which happened.
 const MAX_INLINE_IMAGE_BYTES = 1500000;
 
-function imageResult(report) {
+function imageResult(report, isError = false) {
   const blocks = [];
   let inlined = false;
   let temporaryFileRemoved = false;
@@ -852,7 +895,7 @@ function imageResult(report) {
   }
   delete payload.inline;
   blocks.push({ type: "text", text: JSON.stringify(payload, null, 2) });
-  return { isError: false, content: blocks };
+  return { isError, content: blocks };
 }
 
 const server = new Server(
@@ -1135,7 +1178,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       return textResult(validateDocument(args));
     }
 
-    // These three run over hdc in this process. They are dispatched here, ahead of the proxy
+    // These local UI tools run over hdc in this process. They are dispatched ahead of the proxy
     // fallthrough, so a stalled CodeGenie child cannot reach the capture/find/tap loop at all.
     if (name === "ui_snapshot") {
       return imageResult({ ...await uiSnapshot(args), inline: args.inline });
@@ -1157,14 +1200,22 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
     if (name === "ui_flow") {
       const result = await uiFlow(args);
-      return textResult(result, result.status === "FAILED");
+      const executionStatus = result.execution?.status;
+      return textResult(result, result.status === "FAILED" || executionStatus === "FAILED");
+    }
+
+    if (name === "verify_ui") {
+      const result = await verifyUi(args);
+      const failedAssertion = args.action === "assert" && result.verification?.passed === false;
+      const failedComparison = args.action === "compare" && result.verification?.passed === false;
+      return imageResult({ ...result, inline: args.inline }, failedAssertion || failedComparison);
     }
 
     if (DISABLED_CODEGENIE_TOOLS.includes(name)) {
       return textResult({
         code: "TOOL_DISABLED",
-        message: `${name} is not available: this pack does not ship the UI auto-verification chain.`,
-        hint: "Use get_app_ui_tree and perform_ui_action to inspect and drive the UI directly.",
+        message: `${name} is not available: local verify_ui does not persist upstream verification run logs.`,
+        hint: "Use verify_ui for a temporary final check, or ui_observe/ui_tap to inspect and drive the UI.",
       }, true);
     }
 
@@ -1228,6 +1279,7 @@ async function shutdown() {
     ]);
     await Promise.race([cleanup, waitForShutdownTimeout(5000)]);
     cleanupUiTemporaryFiles();
+    closeVisualVerifier();
     process.exit(0);
   })();
   return shutdownPromise;

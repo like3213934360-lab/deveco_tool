@@ -315,13 +315,13 @@ test("unified MCP advertises scripts, diagnostics, LSP, and CodeGenie tools", as
     "arkts_check", "hdc_log", "find_references", "go_to_definition",
     "go_to_declaration", "get_hover", "list_symbols", "find_call_hierarchy", "lsp", "build_project",
     "project_sync", "api_compat_check", "apply_changes",
-    "document_validate", "ui_snapshot", "ui_observe", "ui_find", "ui_tap", "ui_flow",
+    "document_validate", "ui_snapshot", "ui_observe", "ui_find", "ui_tap", "ui_flow", "verify_ui",
     "code_lint", "hot_reload", "harmony_docs", "device_info", "ui_inspect",
     "emulator_manage", "emulator_scenario", "app_signature", "deveco_cli_auth", "ui_control",
   ]) assert.ok(names.has(name), `missing tool ${name}`);
-  assert.equal(result.tools.length, 44);
+  assert.equal(result.tools.length, 45);
   assert.equal(result.tools.filter((tool) => tool.name === "check_ets_files").length, 1);
-  for (const disabled of ["verify_ui", "save_ui_screenshot", "get_ui_verification_log"]) {
+  for (const disabled of ["save_ui_screenshot", "get_ui_verification_log"]) {
     assert.ok(!names.has(disabled), `disabled tool ${disabled} is still advertised`);
     const call = await client.callTool({ name: disabled, arguments: {} });
     assert.equal(call.isError, true);
@@ -350,6 +350,12 @@ test("unified MCP advertises scripts, diagnostics, LSP, and CodeGenie tools", as
   });
   assert.notEqual(flowValidation.isError, true);
   assert.equal(JSON.parse(flowValidation.content[0].text).valid, true);
+
+  const incompleteUiAssertion = await client.callTool({
+    name: "verify_ui", arguments: { action: "assert" },
+  });
+  assert.equal(incompleteUiAssertion.isError, true);
+  assert.equal(JSON.parse(incompleteUiAssertion.content[0].text).code, "SCHEMA_VALIDATION_FAILED");
 
   const rejected = await client.callTool({
     name: "deveco_status", arguments: { surprise: "must never reach the handler" },
@@ -1603,10 +1609,10 @@ test("a CodeGenie child that never answers cannot delay tool discovery", { timeo
   const elapsed = Date.now() - startedAt;
   assert.ok(elapsed < 1000, `tools/list must not wait on the child; took ${elapsed}ms`);
 
-  assert.equal(names.length, 44, "all 44 tools must be advertised even while the child is stalled");
+  assert.equal(names.length, 45, "all 45 tools must be advertised even while the child is stalled");
   assert.ok(names.includes("arkts_check"));
   // The capture/find/tap loop runs over hdc in-process, so a stalled child must not reach it.
-  for (const local of ["ui_snapshot", "ui_observe", "ui_find", "ui_tap", "ui_flow"]) {
+  for (const local of ["ui_snapshot", "ui_observe", "ui_find", "ui_tap", "ui_flow", "verify_ui"]) {
     assert.ok(names.includes(local), `${local} must survive a stalled CodeGenie child`);
   }
   // build_project and start_app run through the bundled DevEco CLI, so a stalled

@@ -27,10 +27,10 @@ function pickUnique(items, explicit, label, code) {
   return items[0];
 }
 
-export function resolveAppTarget(projectPath, overrides = {}) {
+export function readHarmonyAppModel(projectPath) {
   const project = path.resolve(projectPath);
   const app = readJson5(path.join(project, "AppScope", "app.json5"), "FLOW_APP_MANIFEST_INVALID");
-  const bundleName = overrides.bundleName ?? app?.app?.bundleName;
+  const bundleName = app?.app?.bundleName;
   if (typeof bundleName !== "string" || !bundleName.trim()) {
     throw flowError("AppScope/app.json5 does not declare app.bundleName", "FLOW_APP_TARGET_INVALID");
   }
@@ -64,13 +64,33 @@ export function resolveAppTarget(projectPath, overrides = {}) {
       moduleFile,
     });
   }
-  const selectedModule = pickUnique(candidates, overrides.module, "module", "FLOW_MODULE_REQUIRED");
-  const abilities = Array.isArray(selectedModule.manifest?.module?.abilities)
-    ? selectedModule.manifest.module.abilities.filter((item) => typeof item?.name === "string" && item.name)
-    : [];
-  const selectedAbility = pickUnique(abilities, overrides.ability, "ability", "FLOW_ABILITY_REQUIRED");
   return {
+    projectPath: project,
     bundleName: bundleName.trim(),
+    modules: candidates.map((candidate) => ({
+      buildName: candidate.buildName,
+      name: candidate.name,
+      srcPath: candidate.srcPath,
+      moduleFile: candidate.moduleFile,
+      mainElement: candidate.manifest?.module?.mainElement ?? null,
+      abilities: Array.isArray(candidate.manifest?.module?.abilities)
+        ? candidate.manifest.module.abilities.filter((item) => typeof item?.name === "string" && item.name)
+        : [],
+    })),
+  };
+}
+
+export function resolveAppTarget(projectPath, overrides = {}) {
+  const model = readHarmonyAppModel(projectPath);
+  if (overrides.bundleName && overrides.bundleName !== model.bundleName) {
+    throw flowError(`bundleName does not match AppScope/app.json5: ${overrides.bundleName}`, "FLOW_APP_TARGET_INVALID");
+  }
+  const selectedModule = pickUnique(model.modules, overrides.module, "module", "FLOW_MODULE_REQUIRED");
+  const preferredAbility = overrides.ability
+    ?? (overrides.preferMain === true ? selectedModule.mainElement : undefined);
+  const selectedAbility = pickUnique(selectedModule.abilities, preferredAbility, "ability", "FLOW_ABILITY_REQUIRED");
+  return {
+    bundleName: model.bundleName,
     module: selectedModule.name,
     ability: selectedAbility.name,
   };
