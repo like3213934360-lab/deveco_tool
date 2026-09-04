@@ -1,6 +1,6 @@
 # ArkPilot UI 自动化架构
 
-ArkPilot 是 `deveco-tool` 中独立的 UI 自动化限界上下文。它不修改 HarmonyOS 应用代码，也不依赖 LingDong 的页面约定；可用边界是标准 HarmonyOS 清单和 ArkXTest/`uitest` 能识别的 UI 节点。
+ArkPilot 是 `deveco-tool` 中独立的 UI 自动化限界上下文，基于标准 HarmonyOS 清单和 ArkXTest/`uitest` 可识别的 UI 节点工作。
 
 ## 生成时机和文件边界
 

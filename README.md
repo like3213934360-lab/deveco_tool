@@ -249,11 +249,11 @@ ui_observe → ui_tap → 必要时 verify_ui
 
 流程默认保存在项目的 `.arkpilot/flows/*.json`，项目驱动配置保存在 `.arkpilot/config.json`。安装和启动 MCP 不会生成它们；首次使用 `navigate`、`run`、`list` 等项目级流程仓库能力时才按需创建。显式录制开始时只保留内存草稿，直到 `record_stop` 验证成功才落盘，因此取消录制不会留下流程文件。新配置会写入 `hdc-shell`、自动录制、安全自愈和 Hypium 性能门禁的显式默认值。录制只接收成功的本地 `ui_tap` 操作；输入值会保存为运行变量而不是明文。回放使用 `aa force-stop` / `aa start` 直接启动已安装应用，不构建也不重新安装，成功路径不截图，失败时才返回截图路径和精简 UI 树。选择器 key 失效时，只允许唯一、精确且指向同一节点的录制备用选择器接管，并且必须等最终断言成功后才原子更新流程；候选歧义时停止，不猜测点击。
 
-默认后端是 `hdc-shell`。可选 `hypium-driver` 适配器使用常驻连接、10 秒以内 RPC 截止时间和取消清理，但只有关闭其遥测且项目性能门禁通过时才允许配置为 `hypium`；未通过门禁不会静默切换后端。Ability、Action 和 App Link 只从标准 `AppScope/app.json5`、`build-profile.json5`、`module.json5` 发现，不读取 LingDong 或其他单一项目约定。动态 URI 和业务 Want 参数必须由调用方明确提供。
+默认后端是 `hdc-shell`。可选 `hypium-driver` 适配器使用常驻连接、10 秒以内 RPC 截止时间和取消清理，但只有关闭其遥测且项目性能门禁通过时才允许配置为 `hypium`；未通过门禁不会静默切换后端。Ability、Action 和 App Link 从标准 `AppScope/app.json5`、`build-profile.json5`、`module.json5` 发现。动态 URI 和业务 Want 参数必须由调用方明确提供。
 
 未指定 `localPath` 的截图不会写进工程目录：电脑端保存在系统 `tmp/deveco-ui/sessions/` 下的当前 MCP 会话目录，内联返回后立即删除，未内联的大图和失败诊断最长保留 10 分钟，并在 MCP 退出时统一删除；异常退出留下的会话目录会被下一个 MCP 进程回收。设备端截图只在 `/data/local/tmp` 短暂停留，拉取完成后立即删除。只有调用方显式传入 `localPath` 时才会保留文件。
 
-ArkPilot Flow 是独立限界上下文，代码集中在 `src/arkpilot/`：领域层负责版本、步骤、选择器、变量和超时规则；应用层负责录制及执行任务状态机；基础设施层负责项目清单解析、原子 JSON 仓库、HDC 会话和可选驱动端口；`src/server.mjs` 只负责 MCP Schema 与错误转换。它不会重构或改变既有工具，也没有任何 LingDong 专用路由。标准 UI 树无法识别 Canvas、XComponent 或游戏画面时，只能录制标记为 `fragile` 的屏幕百分比步骤。
+ArkPilot Flow 是独立限界上下文，代码集中在 `src/arkpilot/`：领域层负责版本、步骤、选择器、变量和超时规则；应用层负责录制及执行任务状态机；基础设施层负责项目清单解析、原子 JSON 仓库、HDC 会话和可选驱动端口；`src/server.mjs` 只负责 MCP Schema 与错误转换。既有工具保持兼容。标准 UI 树无法识别 Canvas、XComponent 或游戏画面时，只能录制标记为 `fragile` 的屏幕百分比步骤。
 
 代码改动后的快速验证：
 
