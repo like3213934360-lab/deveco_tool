@@ -254,13 +254,10 @@
         "tools": [
           "lsp",
           "go_to_definition",
-          "go_to_declaration",
           "find_references",
-          "get_hover",
-          "list_symbols",
-          "find_call_hierarchy"
+          "get_hover"
         ],
-        "note": "Request positions are 1-based everywhere. The aliases also return 1-based positions; `lsp` returns the raw LSP payload, whose positions are 0-based. `lsp` exposes the 10 official operations. find_references and find_call_hierarchy (incoming) load project files mentioning the symbol into the language server before querying, so results are not limited to files opened earlier in the session."
+        "note": "The current official ace-server advertises definition, references, hover and implementation. The dedicated aliases return readable 1-based positions; `lsp` exposes those four operations and preserves raw 0-based LSP response positions."
       },
       {
         "group": "diagnostics",
@@ -317,7 +314,7 @@
         "note": "Section-structure check for spec.md / plan.md / tasks.md, ported from the upstream spec_write pipeline. Upstream ran it automatically after its own writer; this pack uses the host's write tool, so the SDD commands call it explicitly once the artifact is written. It reports and never blocks."
       }
     ],
-    "toolCount": 45
+    "toolCount": 42
   },
   "hostToolMapping": {
     "$comment": "Tools the upstream commands assumed, which this pack does NOT provide. Map them onto your host's equivalents before running the SDD commands.",

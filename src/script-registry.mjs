@@ -265,6 +265,19 @@ function normalizeParsedResult(id, input, parsed) {
   return declared ? { ...parsed, error_message: declared } : parsed;
 }
 
+export function classifyScriptCompletion({ exitCode, stdout }) {
+  if (exitCode === 0 && !String(stdout ?? "").trim()) {
+    return {
+      ok: false,
+      error: {
+        code: "SCRIPT_NO_RESULT",
+        message: "Script exited 0 without writing a result to stdout.",
+      },
+    };
+  }
+  return { ok: exitCode === 0 };
+}
+
 export async function runRegisteredScript(id, input = {}) {
   const definition = SCRIPT_DEFINITIONS[id];
   if (!definition) {
@@ -375,10 +388,7 @@ export async function runRegisteredScript(id, input = {}) {
     });
   });
 
-  // A zero exit with nothing on stdout means the script produced no result at
-  // all; say so rather than letting an empty `parsed` read as a clean run.
-  const silentSuccess = result.exitCode === 0 && !result.stdout.trim();
-
+  const completion = classifyScriptCompletion(result);
   const parsed = normalizeParsedResult(id, input, parseScriptOutput(result.stdout));
 
   return {
@@ -391,9 +401,9 @@ export async function runRegisteredScript(id, input = {}) {
     cwd: getProjectPath() ?? REPO_ROOT,
     exitCode: result.exitCode,
     signal: result.signal,
-    ok: result.exitCode === 0,
+    ok: completion.ok,
     parsed,
-    ...(silentSuccess ? { warning: "Script exited 0 without writing to stdout; it produced no result." } : {}),
+    ...(completion.error ? { error: completion.error } : {}),
     stdout: result.stdout,
     stderr: result.stderr,
   };

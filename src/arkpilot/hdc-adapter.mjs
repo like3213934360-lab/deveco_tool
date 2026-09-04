@@ -6,13 +6,17 @@ import { withUitestLock } from "../device-lock.mjs";
 import { hdcFailureMessage, requireHdc, resolveDevice, runHdc, targetArgs } from "../hdc-log.mjs";
 import { flowError } from "./domain.mjs";
 
-function remoteFailure(result, operation) {
+function remoteFailure(result, operation, { requireOutput = false, successPattern, code = "FLOW_APP_START_FAILED" } = {}) {
   const transport = hdcFailureMessage(result);
   const combined = `${result.stdout ?? ""}\n${result.stderr ?? ""}`.trim();
   if (transport) throw flowError(`${operation} failed: ${transport}`, "HDC_COMMAND_FAILED");
-  if (/(?:error|failed|not found|does not exist|unknown bundle)/i.test(combined)
-    && !/(?:success|successfully|no error)/i.test(combined)) {
-    throw flowError(`${operation} failed: ${combined || "no output"}`, "FLOW_APP_START_FAILED");
+  const withoutBenignNoError = combined.replace(/\bno\s+error\b/gi, "");
+  if (/(?:\berror\b|fail(?:ed|ure)?|not found|does not exist|unknown bundle)/i.test(withoutBenignNoError)) {
+    throw flowError(`${operation} failed: ${combined || "no output"}`, code);
+  }
+  if (requireOutput && !combined) throw flowError(`${operation} produced no success acknowledgement`, code);
+  if (successPattern && !successPattern.test(combined)) {
+    throw flowError(`${operation} did not report success: ${combined || "no output"}`, code);
   }
   return combined;
 }
@@ -27,32 +31,51 @@ export class HdcUiAutomationAdapter {
   }
 
   async launch(target, { deviceId, mode = "restart", timeoutMs = 10000, signal } = {}) {
-    if (mode === "attach") return { mode, attached: true, deviceId };
+    await this.assertInstalled(target.bundleName, { deviceId, timeoutMs, signal });
+    if (mode === "attach") {
+      const running = await this.isAppRunning(deviceId, target.bundleName, Math.min(timeoutMs, 3000));
+      if (running === false) {
+        throw flowError(`Application is not running: ${target.bundleName}`, "FLOW_APP_NOT_RUNNING");
+      }
+      if (running === null) {
+        throw flowError(
+          `Application running state could not be verified: ${target.bundleName}`,
+          "FLOW_APP_STATE_UNVERIFIED",
+        );
+      }
+      return { mode, attached: true, processVerified: true, deviceId, target };
+    }
     const hdc = requireHdc();
     const base = [hdc, ...targetArgs(deviceId), "shell"];
-    await this.assertInstalled(target.bundleName, { deviceId, timeoutMs, signal });
     remoteFailure(
       await runHdc([...base, "aa", "force-stop", target.bundleName], timeoutMs, { signal }),
       "aa force-stop",
     );
     const output = remoteFailure(await runHdc([
       ...base, "aa", "start", "-b", target.bundleName, "-m", target.module, "-a", target.ability,
-    ], timeoutMs, { signal }), "aa start");
-    return { mode, deviceId, target, output };
+    ], timeoutMs, { signal }), "aa start", {
+      requireOutput: true,
+      successPattern: /(?:success|succeed|no error)/i,
+    });
+    return { mode, deviceId, target, output, launchAcknowledged: true };
   }
 
   async assertInstalled(bundleName, { deviceId, timeoutMs = 10000, signal } = {}) {
     const hdc = requireHdc();
     const base = [hdc, ...targetArgs(deviceId), "shell"];
     const inspect = await runHdc([...base, "bm", "dump", "-n", bundleName], timeoutMs, { signal });
-    const inspectText = `${inspect.stdout ?? ""}\n${inspect.stderr ?? ""}`;
-    if (hdcFailureMessage(inspect) || /(?:not exist|not found|failed|error)/i.test(inspectText)) {
+    const inspectText = `${inspect.stdout ?? ""}\n${inspect.stderr ?? ""}`.trim();
+    if (hdcFailureMessage(inspect)
+      || /(?:not exist|not found|failed|error)/i.test(inspectText)
+      || !inspectText
+      || !inspectText.includes(bundleName)) {
       throw flowError(
         `Application is not installed: ${bundleName}`,
         "FLOW_APP_NOT_INSTALLED",
         "Build and deploy it once with start_app; ArkPilot never installs implicitly.",
       );
     }
+    return { installed: true, bundleName, output: inspectText };
   }
 
   async launchRoute(route, {
@@ -81,8 +104,14 @@ export class HdcUiAutomationAdapter {
       else if (typeof value === "string") args.push("--ps", key, value);
       else throw flowError(`Want parameter ${key} must be a string, integer, or boolean`, "FLOW_ROUTE_PARAMETER_INVALID");
     }
-    const output = remoteFailure(await runHdc(args, timeoutMs, { signal }), "aa start route");
-    return { mode, deviceId, routeId: route.id, target: route.app, uri: selectedUri, output };
+    const output = remoteFailure(await runHdc(args, timeoutMs, { signal }), "aa start route", {
+      requireOutput: true,
+      successPattern: /(?:success|succeed|no error)/i,
+    });
+    return {
+      mode, deviceId, routeId: route.id, target: route.app, uri: selectedUri, output,
+      launchAcknowledged: true,
+    };
   }
 
   async withSession(options, task) {
@@ -97,7 +126,9 @@ export class HdcUiAutomationAdapter {
     if (transport) throw flowError(`Application state check failed: ${transport}`, "HDC_COMMAND_FAILED");
     const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}`.trim();
     if (/(?:pidof:.*not found|unknown command|inaccessible)/i.test(output)) return null;
-    return output.length > 0;
+    if (!output) return false;
+    if (/^\d+(?:\s+\d+)*$/.test(output)) return true;
+    return null;
   }
 
   async screen(deviceId, timeoutMs = 5000) {

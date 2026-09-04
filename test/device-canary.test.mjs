@@ -19,8 +19,11 @@
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import test from "node:test";
 import { resolveHdcPath } from "../src/config.mjs";
+import { withUitestLock } from "../src/device-lock.mjs";
 import { readTar } from "../src/device-tar.mjs";
 
 const REQUEST = process.env.DEVECO_CANARY_DEVICE;
@@ -50,6 +53,15 @@ function quoteForDevice(text) {
 }
 
 const SCRATCH = "/data/local/tmp/deveco_canary";
+
+function withDeviceUitestLock(op, task) {
+  const safeDevice = String(device).replace(/[^A-Za-z0-9_.-]/g, "_");
+  return withUitestLock({
+    directory: path.join(os.tmpdir(), "deveco-ui", "locks", safeDevice),
+    op,
+    timeoutMs: 60000,
+  }, task);
+}
 
 test("hdc passes a whitespace-free argument through untouched", { skip }, () => {
   // This is the whole basis of deviceTextArgument: with no whitespace, our single quotes are
@@ -87,33 +99,41 @@ test("a lone shell argument is forwarded as the command line", { skip }, () => {
   assert.match(shell("echo one && echo two"), /one\s+two/);
 });
 
-test("the success markers this pack matches on are the ones the tools print", { skip }, () => {
-  shell("mkdir", "-p", SCRATCH);
-  const capture = shell("snapshot_display", "-f", `${SCRATCH}/c.jpeg`, "-t", "jpeg");
-  assert.match(capture, /success:/i, "snapshot_display success marker");
-  assert.match(capture, /process:[^\n]*?width:\s*\d+[^\n]*?height:\s*\d+/i, "native size line");
-  assert.match(capture, /success:[^\n]*?width:\s*\d+[^\n]*?height:\s*\d+/i, "written size line");
+test("the success markers this pack matches on are the ones the tools print", { skip }, async () => {
+  await withDeviceUitestLock("device canary success markers", () => {
+    shell("mkdir", "-p", SCRATCH);
+    const capture = shell("snapshot_display", "-f", `${SCRATCH}/c.jpeg`, "-t", "jpeg");
+    assert.match(capture, /success:/i, "snapshot_display success marker");
+    assert.match(capture, /process:[^\n]*?width:\s*\d+[^\n]*?height:\s*\d+/i, "native size line");
+    assert.match(capture, /success:[^\n]*?width:\s*\d+[^\n]*?height:\s*\d+/i, "written size line");
 
-  assert.match(shell("uitest", "dumpLayout", "-p", `${SCRATCH}/c.json`), /DumpLayout saved to/i);
-  assert.match(shell("uitest", "screenCap", "-p", `${SCRATCH}/c.png`), /ScreenCap saved to/i);
-  // uiInput reports a successful gesture as this literal string; there is no exit code to trust.
-  assert.match(shell("uitest", "uiInput", "keyEvent", "Back"), /No Error/i);
+    assert.match(shell("uitest", "dumpLayout", "-p", `${SCRATCH}/c.json`), /DumpLayout saved to/i);
+    assert.match(shell("uitest", "screenCap", "-p", `${SCRATCH}/c.png`), /ScreenCap saved to/i);
+    // uiInput reports a successful gesture as this literal string; there is no exit code to trust.
+    assert.match(shell("uitest", "uiInput", "keyEvent", "Back"), /No Error/i);
+  });
 });
 
-test("the device tar is readable by the bundled ustar reader", { skip }, () => {
+test("the device tar is readable by the bundled ustar reader", { skip }, async () => {
   // toybox writes the older GNU magic ("ustar ", not POSIX "ustar\0"). The reader was written
   // against the POSIX one and rejected every real archive until this was measured.
-  shell("mkdir", "-p", SCRATCH);
-  shell("snapshot_display", "-f", `${SCRATCH}/t.jpeg`, "-t", "jpeg");
-  shell("uitest", "dumpLayout", "-p", `${SCRATCH}/t.json`);
-  assert.match(shell(`cd ${SCRATCH} && rm -f t.tar && tar cf t.tar t.jpeg t.json && echo TAR_OK`), /TAR_OK/);
+  await withDeviceUitestLock("device canary tar", () => {
+    shell("mkdir", "-p", SCRATCH);
+    shell("snapshot_display", "-f", `${SCRATCH}/t.jpeg`, "-t", "jpeg");
+    const dump = shell("uitest", "dumpLayout", "-p", `${SCRATCH}/t.json`);
+    assert.match(dump, /DumpLayout saved to/i,
+      `dumpLayout must succeed before archiving its output: ${dump || "no output"}`);
+    assert.match(shell(`cd ${SCRATCH} && rm -f t.tar && tar cf t.tar t.jpeg t.json && echo TAR_OK`), /TAR_OK/);
 
-  const local = `${process.env.TMPDIR ?? "/tmp"}/deveco-canary-${process.pid}.tar`;
-  spawnSync(HDC, ["-t", device, "file", "recv", `${SCRATCH}/t.tar`, local], { encoding: "utf8" });
-  const files = readTar(readFileSync(local));
-  assert.equal(files.size, 2);
-  assert.equal(files.get("t.jpeg").subarray(0, 2).toString("hex"), "ffd8", "JPEG magic survived the round trip");
-  assert.equal(typeof JSON.parse(files.get("t.json").toString("utf8")), "object");
+    const local = `${process.env.TMPDIR ?? "/tmp"}/deveco-canary-${process.pid}.tar`;
+    spawnSync(HDC, ["-t", device, "file", "recv", `${SCRATCH}/t.tar`, local], { encoding: "utf8" });
+    const files = readTar(readFileSync(local));
+    assert.equal(files.size, 2);
+    assert.equal(files.get("t.jpeg").subarray(0, 2).toString("hex"), "ffd8", "JPEG magic survived the round trip");
+    const json = files.get("t.json");
+    assert.ok(json?.length > 0, "dumpLayout archive entry must not be empty");
+    assert.equal(typeof JSON.parse(json.toString("utf8")), "object");
+  });
 });
 
 test("find supports the age-bounded sweep", { skip }, () => {
@@ -131,32 +151,33 @@ test("find supports the age-bounded sweep", { skip }, () => {
 test("two concurrent uitest clients still collide the way the lock assumes", { skip, timeout: 120000 }, async () => {
   // The entire reason src/device-lock.mjs exists. The loser does not fail fast: it blocks for
   // roughly 30 seconds and then reports this string, which is what UI_DEVICE_BUSY keys on.
-  shell("mkdir", "-p", SCRATCH);
-  // spawn, not spawnSync: the point is two clients in flight at once, and a synchronous spawn
-  // inside Promise.all would simply run them one after the other and observe no collision at all.
-  const dump = (target) => new Promise((resolve) => {
-    const started = Date.now();
-    const child = spawn(HDC, ["-t", device, "shell", "uitest", "dumpLayout", "-p", target]);
-    let out = "";
-    child.stdout.on("data", (chunk) => { out += chunk; });
-    child.stderr.on("data", (chunk) => { out += chunk; });
-    child.once("close", () => resolve({ out, ms: Date.now() - started }));
+  await withDeviceUitestLock("device canary intentional collision", async () => {
+    shell("mkdir", "-p", SCRATCH);
+    // spawn, not spawnSync: the point is two clients in flight at once, and a synchronous spawn
+    // inside Promise.all would simply run them one after the other and observe no collision at all.
+    const dump = (target) => new Promise((resolve) => {
+      const started = Date.now();
+      const child = spawn(HDC, ["-t", device, "shell", "uitest", "dumpLayout", "-p", target]);
+      let out = "";
+      child.stdout.on("data", (chunk) => { out += chunk; });
+      child.stderr.on("data", (chunk) => { out += chunk; });
+      child.once("close", () => resolve({ out, ms: Date.now() - started }));
+    });
+    const results = await Promise.all([dump(`${SCRATCH}/p1.json`), dump(`${SCRATCH}/p2.json`)]);
+    const outputs = results.map((entry) => entry.out);
+    const succeeded = outputs.filter((out) => /DumpLayout saved to/i.test(out));
+    assert.ok(succeeded.length >= 1, "at least one client must win");
+    if (succeeded.length === 1) {
+      const loser = outputs.find((out) => !/DumpLayout saved to/i.test(out));
+      assert.match(
+        loser,
+        /Wait for subscribe uitest\.broadcast\.command\.reply timeout/i,
+        "the contention signature UI_DEVICE_BUSY keys on has changed",
+      );
+    }
   });
-  const results = await Promise.all([dump(`${SCRATCH}/p1.json`), dump(`${SCRATCH}/p2.json`)]);
-  const outputs = results.map((entry) => entry.out);
-  const succeeded = outputs.filter((out) => /DumpLayout saved to/i.test(out));
-  assert.ok(succeeded.length >= 1, "at least one client must win");
-  if (succeeded.length === 1) {
-    const loser = outputs.find((out) => !/DumpLayout saved to/i.test(out));
-    assert.match(
-      loser,
-      /Wait for subscribe uitest\.broadcast\.command\.reply timeout/i,
-      "the contention signature UI_DEVICE_BUSY keys on has changed",
-    );
-  }
 });
 
 test.after(() => {
   if (!skip) shell("rm", "-rf", SCRATCH);
 });
-

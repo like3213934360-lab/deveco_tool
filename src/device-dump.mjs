@@ -132,6 +132,16 @@ export function flattenDump(root) {
       // Present on the accessibility shape. Surfaced so a caller on a foldable or an external screen
       // can tell which display a node belongs to; nodes from two displays share one dump.
       displayId: attributes.displayId === undefined ? null : String(attributes.displayId),
+      // Accessibility dumps identify each application window on its root node. Keep this
+      // metadata out of selectors/signatures, but surface it so a flow can prove that `aa start`
+      // has actually replaced the previous foreground UI before sending its first action.
+      bundleName: typeof attributes.bundleName === "string" && attributes.bundleName
+        ? attributes.bundleName : null,
+      abilityName: typeof attributes.abilityName === "string" && attributes.abilityName
+        ? attributes.abilityName : null,
+      pagePath: typeof attributes.pagePath === "string" && attributes.pagePath
+        ? attributes.pagePath : null,
+      focused: readFlag(attributes.focused),
       rect,
     });
     for (const child of childrenOf(node)) visit(child);
@@ -303,11 +313,25 @@ export function analyseDump({ root, dumpPath = null, deviceId = null, selector }
   const { signature, structureSignature } = dumpSignatures(flattened.nodes);
   const screen = flattened.screen;
   const componentTypes = Object.create(null);
+  const applications = [];
+  const seenApplications = new Set();
   for (const node of flattened.nodes) {
     if (!node.type || !node.rect || node.visible === false) continue;
     const hasArea = node.rect.x2 > node.rect.x1 && node.rect.y2 > node.rect.y1;
     if (!hasArea || !intersects(node.rect, screen)) continue;
     componentTypes[node.type] = (componentTypes[node.type] ?? 0) + 1;
+    if (node.bundleName) {
+      const identity = `${node.bundleName}\u0000${node.abilityName ?? ""}\u0000${node.pagePath ?? ""}`;
+      if (!seenApplications.has(identity)) {
+        seenApplications.add(identity);
+        applications.push({
+          bundleName: node.bundleName,
+          abilityName: node.abilityName ?? undefined,
+          pagePath: node.pagePath ?? undefined,
+          focused: node.focused ?? undefined,
+        });
+      }
+    }
   }
   const truncated = matchCount > matches.length;
   return {
@@ -319,6 +343,7 @@ export function analyseDump({ root, dumpPath = null, deviceId = null, selector }
       ? `Only ${matches.length} of ${matchCount} matches are included. Re-query dumpPath with text, key, or type (for example type: Slider), or raise limit.`
       : undefined,
     componentTypes,
+    applications,
     dumpPath,
     screen: screen ? [screen.x1, screen.y1, screen.x2, screen.y2] : null,
     signature,

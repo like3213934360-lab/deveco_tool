@@ -76,6 +76,8 @@ async function withHdc(executable, operation) {
 
 async function fakeFlowHdc({
   layout, hangOnBundle = false, hangFirstDump = false, emptyFirstDump = false,
+  dumpDelayMs = 0, hangOnInput = false, emptyBundle = false, emptyAa = false,
+  foregroundBundle = "com.example.test",
 } = {}) {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "arkpilot-hdc-"));
   const executable = path.join(directory, "hdc");
@@ -83,7 +85,7 @@ async function fakeFlowHdc({
   const layoutPath = path.join(directory, "layout.json");
   const imagePath = path.join(directory, "frame.jpeg");
   const firstDumpMarker = path.join(directory, "first-dump-seen");
-  await fs.writeFile(layoutPath, JSON.stringify(layout ?? {
+  const layoutDocument = structuredClone(layout ?? {
     attributes: { type: "root", bounds: "[0,0][1000,2000]" },
     children: [{
       attributes: {
@@ -91,14 +93,20 @@ async function fakeFlowHdc({
         clickable: "true", visible: "true", enabled: "true",
       },
     }],
-  }));
+  });
+  if (foregroundBundle !== null) layoutDocument.attributes.bundleName = foregroundBundle;
+  await fs.writeFile(layoutPath, JSON.stringify(layoutDocument));
   await fs.writeFile(imagePath, Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(600, 0x41)]));
-  const bundleCase = hangOnBundle ? "sleep 10" : "echo 'bundleName: com.example.test'";
+  const bundleCase = hangOnBundle
+    ? "sleep 10"
+    : emptyBundle ? ":" : "echo 'bundleName: com.example.test'";
+  const aaCase = emptyAa ? ":" : "echo 'success'";
   const dumpCase = hangFirstDump
     ? `if [ ! -f '${firstDumpMarker}' ]; then touch '${firstDumpMarker}'; sleep 10; fi; echo "DumpLayout saved to $4"`
     : emptyFirstDump
       ? `if [ ! -f '${firstDumpMarker}' ]; then touch '${firstDumpMarker}'; exit 0; fi; echo "DumpLayout saved to $4"`
-      : "echo \"DumpLayout saved to $4\"";
+      : `${dumpDelayMs ? `sleep ${dumpDelayMs / 1000}; ` : ""}echo \"DumpLayout saved to $4\"`;
+  const inputCase = hangOnInput ? "sleep 10" : "echo 'No Error'";
   const script = `#!/bin/sh
 { printf '===\\n'; printf '%s\\n' "$@"; } >> '${argvLog}'
 if [ "$1" = "list" ]; then echo "device-1"; exit 0; fi
@@ -106,14 +114,18 @@ if [ "$1" = "-t" ]; then shift 2; fi
 if [ "$1" = "shell" ]; then
   shift
   if [ "$1" = "bm" ]; then ${bundleCase}; exit 0; fi
-  if [ "$1" = "aa" ]; then echo "success"; exit 0; fi
+  if [ "$1" = "aa" ]; then ${aaCase}; exit 0; fi
+  if [ "$1" = "hidumper" ]; then
+    echo "screen[0]: id=0, render resolution=1000x2000, physical resolution=1000x2000"
+    exit 0
+  fi
   if [ "$1" = "snapshot_display" ]; then
     echo "process: display 0, file type: jpeg, width: 1000, height: 2000"
     echo "success: snapshot display 0, write jpeg, width: 1000, height: 2000"
     exit 0
   fi
   if [ "$1" = "uitest" ] && [ "$2" = "dumpLayout" ]; then ${dumpCase}; exit 0; fi
-  if [ "$1" = "uitest" ] && [ "$2" = "uiInput" ]; then echo "No Error"; exit 0; fi
+  if [ "$1" = "uitest" ] && [ "$2" = "uiInput" ]; then ${inputCase}; exit 0; fi
 fi
 if [ "$1" = "file" ] && [ "$2" = "recv" ]; then
   case "$3" in
@@ -240,6 +252,30 @@ test("Harmony manifest resolver handles custom srcPath and build/runtime module 
   assert.equal(resolveAppTarget(project, { module: "entry" }).module, "entry");
 });
 
+test("Harmony manifest resolver accepts complete JSON5 syntax without skipping deep modules", async (t) => {
+  const project = await temporaryProject();
+  t.after(() => fs.rm(project, { recursive: true, force: true }));
+  await fs.writeFile(path.join(project, "AppScope", "app.json5"), `{
+    app: { bundleName: 'com.example.json5' },
+  }`);
+  await fs.writeFile(path.join(project, "build-profile.json5"), `{
+    modules: [{ name: 'customBuild', srcPath: 'features/deep/home' }],
+  }`);
+  const moduleDirectory = path.join(project, "features", "deep", "home", "src", "main");
+  await fs.mkdir(moduleDirectory, { recursive: true });
+  await fs.writeFile(path.join(moduleDirectory, "module.json5"), `{
+    module: {
+      name: 'runtimeHome',
+      type: 'entry',
+      abilities: [{ name: 'HomeAbility' }],
+    },
+  }`);
+
+  assert.deepEqual(resolveAppTarget(project), {
+    bundleName: "com.example.json5", module: "runtimeHome", ability: "HomeAbility",
+  });
+});
+
 test("Harmony manifest resolver refuses ambiguous targets and missing manifests", async (t) => {
   const multi = await temporaryProject({ modules: [
     { buildName: "one", srcPath: "features/one", runtimeName: "one", type: "entry", abilities: ["A"] },
@@ -325,11 +361,33 @@ test("only successful external ui_tap events enter an active recording", async (
   const recorded = await recordSuccessfulUiAction({ action: "click", key: "settings" }, {
     deviceId: "device-1", target: { key: "settings" },
   });
-  assert.deepEqual(recorded, { recordingId: "recording-1", stepId: "step-1" });
+  assert.deepEqual(recorded, { recorded: true, recordingId: "recording-1", stepId: "step-1" });
   assert.equal(session.steps.length, 1);
   session.replaying = true;
   assert.equal(await recordSuccessfulUiAction({ action: "click", key: "x" }, { deviceId: "device-1" }), null);
   assert.equal(session.steps.length, 1);
+  flowServiceInternals.recordings.clear();
+});
+
+test("recording failures cannot turn an already-sent UI action into a retryable failure", async () => {
+  flowServiceInternals.recordings.clear();
+  const session = {
+    id: "recording-unsupported", status: "recording", deviceId: "device-1",
+    steps: [], variables: {}, replaying: false,
+  };
+  flowServiceInternals.recordings.set(session.id, session);
+  const result = await recordSuccessfulUiAction({ action: "dircFling", direction: "left" }, {
+    deviceId: "device-1",
+  });
+  assert.deepEqual(result, {
+    recorded: false,
+    recordingId: "recording-unsupported",
+    error: {
+      code: "FLOW_RECORDING_UNSUPPORTED_ACTION",
+      message: "Action cannot be recorded: dircFling",
+    },
+  });
+  assert.equal(session.steps.length, 0);
   flowServiceInternals.recordings.clear();
 });
 
@@ -362,6 +420,9 @@ test("record_stop verifies the final selector on-device before replacing a saved
       action: "record_stop", recording_id: recording.recordingId,
       success_selector: { key: "settings" }, success_timeout_ms: 1000,
     });
+    assert.equal(saved.persisted, true);
+    assert.equal(saved.retentionPolicy, "persistent-until-explicit-ui-flow-delete");
+    assert.match(saved.artifactNote, /do not remove/);
     assert.equal(saved.flow.name, "新流程");
     assert.equal(saved.flow.steps.length, 1);
   });
@@ -432,6 +493,11 @@ test("navigate launches an exact manifest route with typed Want parameters and n
     assert.equal(ability.mode, "direct-route");
     assert.equal(ability.route.kind, "ability");
     assert.equal(ability.execution.status, "SUCCEEDED");
+    assert.deepEqual(ability.execution.result.completionEvidence, {
+      type: "launch-acknowledgement", verified: true,
+    });
+    assert.equal(ability.execution.result.assertionPassed, null,
+      "a launch acknowledgement must not be mislabeled as a UI assertion");
 
     const link = discoverAppRoutes(project).routes.find((route) => route.kind === "link");
     const opened = await uiFlow({
@@ -455,6 +521,36 @@ test("navigate launches an exact manifest route with typed Want parameters and n
   assert.ok(routed.includes("--ps") && routed.includes("--pi") && routed.includes("--pb"));
   assert.equal(calls.some((args) => args.includes("dumpLayout")), false,
     "an unverified direct route must not pay for UI exploration");
+});
+
+test("direct navigation refuses empty HDC installation and launch output", async (t) => {
+  const project = await temporaryProject({ modules: [{
+    buildName: "default", srcPath: "entry", runtimeName: "entry", type: "entry",
+    mainElement: "EntryAbility", abilities: ["EntryAbility"],
+  }] });
+  t.after(async () => await fs.rm(project, { recursive: true, force: true }));
+
+  const missing = await fakeFlowHdc({ emptyBundle: true });
+  t.after(async () => await fs.rm(missing.directory, { recursive: true, force: true }));
+  await withHdc(missing.executable, async () => {
+    const result = await uiFlow({
+      action: "navigate", project_path: project, ability: "EntryAbility",
+      hvd: "device-1", wait_ms: 5000,
+    });
+    assert.equal(result.execution.status, "FAILED");
+    assert.equal(result.execution.error.code, "FLOW_APP_NOT_INSTALLED");
+  });
+
+  const unacknowledged = await fakeFlowHdc({ emptyAa: true });
+  t.after(async () => await fs.rm(unacknowledged.directory, { recursive: true, force: true }));
+  await withHdc(unacknowledged.executable, async () => {
+    const result = await uiFlow({
+      action: "navigate", project_path: project, ability: "EntryAbility",
+      hvd: "device-1", wait_ms: 5000,
+    });
+    assert.equal(result.execution.status, "FAILED");
+    assert.equal(result.execution.error.code, "FLOW_APP_START_FAILED");
+  });
 });
 
 test("selector self-healing resolves all candidates from one dump and persists only after success", async (t) => {
@@ -630,13 +726,14 @@ test("a complete HDC flow launches directly, uses semantic dumps, and takes no s
   assert.equal(calls.filter((args) => args.includes("dumpLayout")).length, 2, "step wait and final assertion each dump once");
   assert.equal(calls.filter((args) => args.includes("uiInput")).length, 1, "a successful action is never replayed twice");
   assert.equal(calls.some((args) => args.includes("snapshot_display") || args.includes("screenCap")), false);
-  assert.ok(calls.some((args) => args.includes("rm") && args.some((arg) => arg.endsWith("_dump.json"))),
-    "the device-side UI dump must be removed after the flow");
+  assert.equal(calls.filter((args) => args.includes("rm")
+    && args.some((arg) => arg.endsWith("_dump.json"))).length, 1,
+  "one session cleanup removes the stable device-side dump after the complete flow");
   assert.ok(calls.some((args) => args.includes("force-stop")));
   assert.ok(calls.some((args) => args.includes("start")));
 });
 
-test("point-step metrics include the UI dump used to resolve current screen bounds", async (t) => {
+test("point steps verify the launched application surface before using lightweight display bounds", async (t) => {
   const project = await temporaryProject();
   const fake = await fakeFlowHdc();
   t.after(async () => {
@@ -653,9 +750,37 @@ test("point-step metrics include the UI dump used to resolve current screen boun
     action: "run", project_path: project, id: "open-settings", hvd: "device-1", wait_ms: 5000,
   }));
   assert.equal(result.status, "SUCCEEDED");
-  assert.equal(result.metrics.uiDumps, 2, "point bounds and final assertion are both real UI dumps");
+  assert.equal(result.metrics.uiDumps, 2,
+    "a fragile first action needs one readiness dump and the final assertion needs one dump");
   const calls = await fake.invocations();
   assert.equal(calls.filter((args) => args.includes("dumpLayout")).length, 2);
+  assert.equal(calls.filter((args) => args.includes("hidumper")).length, 1);
+  assert.ok(calls.some((args) => args.includes("uiInput") && args.includes("500") && args.includes("1000")));
+  assert.ok(
+    calls.findIndex((args) => args.includes("dumpLayout"))
+      < calls.findIndex((args) => args.includes("uiInput")),
+    "the first coordinate action must not run before the target application's UI root is visible",
+  );
+});
+
+test("a flow refuses to click a matching control from the wrong foreground application", async (t) => {
+  const project = await temporaryProject();
+  const fake = await fakeFlowHdc({ foregroundBundle: "com.example.other" });
+  t.after(async () => {
+    await fs.rm(project, { recursive: true, force: true });
+    await fs.rm(fake.directory, { recursive: true, force: true });
+  });
+  new JsonFlowRepository(project).save(validFlow());
+  const result = await withHdc(fake.executable, () => uiFlow({
+    action: "run", project_path: project, id: "open-settings", hvd: "device-1",
+    wait_ms: 5000,
+  }));
+  assert.equal(result.status, "FAILED");
+  assert.equal(result.error.code, "FLOW_APP_UI_NOT_READY");
+  assert.equal(result.metrics.actions, 0);
+  const calls = await fake.invocations();
+  assert.equal(calls.filter((args) => args.includes("uiInput")).length, 0,
+    "a selector collision in another application must never receive a click");
 });
 
 test("a transient read-only UI dump failure is retried without repeating the action", async (t) => {
@@ -771,6 +896,31 @@ test("a step deadline terminates a hanging UI dump without waiting for the total
   assert.equal(result.error.code, "FLOW_STEP_TIMEOUT");
   assert.ok(Date.now() - startedAt < 4000, "the 1s step deadline must terminate the child process");
   assert.equal(result.metrics.actions, 0);
+});
+
+test("a step shares one deadline across semantic lookup and the following action", async (t) => {
+  const project = await temporaryProject();
+  const fake = await fakeFlowHdc({ dumpDelayMs: 700, hangOnInput: true });
+  t.after(async () => {
+    await fs.rm(project, { recursive: true, force: true });
+    await fs.rm(fake.directory, { recursive: true, force: true });
+  });
+  new JsonFlowRepository(project).save(validFlow({
+    steps: [{ id: "step-1", action: "tap", selector: { key: "settings" }, timeoutMs: 1200 }],
+  }));
+  const startedAt = Date.now();
+  const result = await withHdc(fake.executable, () => uiFlow({
+    action: "run", project_path: project, id: "open-settings", hvd: "device-1",
+    timeoutMs: 60000, wait_ms: 5000,
+  }));
+  assert.equal(result.status, "FAILED");
+  assert.equal(result.error.code, "FLOW_STEP_TIMEOUT");
+  assert.ok(Date.now() - startedAt < 2800,
+    "lookup and action must not each receive a fresh 1.2s business timeout; failure diagnostics are included");
+  assert.equal(result.metrics.actions, 1);
+  const calls = await fake.invocations();
+  assert.equal(calls.filter((args) => args.includes("uiInput")).length, 1,
+    "an action interrupted at its shared deadline is never replayed");
 });
 
 test("the optional Hypium adapter keeps a bounded persistent session and supports semantic and point actions", async (t) => {

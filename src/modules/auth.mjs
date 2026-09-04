@@ -50,7 +50,10 @@ async function loadAuth() {
     return await readCredential(AUTH_FILE);
   } catch (error) {
     logErr("failed to load encrypted login state:", error.message);
-    return null;
+    const wrapped = new Error(`Stored DevEco login state cannot be read: ${error.message}`);
+    wrapped.code = "DEVECO_AUTH_STATE_UNREADABLE";
+    wrapped.cause = error;
+    throw wrapped;
   }
 }
 

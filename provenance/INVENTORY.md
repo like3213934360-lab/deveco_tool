@@ -24,7 +24,7 @@
 
 这些入口由 `src/script-registry.mjs` 以静态白名单公开，不允许执行任意路径或 Shell 文本。
 
-## MCP（45 个工具）
+## MCP（42 个工具）
 
 统一入口是 `src/server.mjs`。工具按项目上下文、认证和知识、语言服务、诊断、构建部署、
 设备 UI、模拟器及 SDD 文档分组；完整名称和数量见 `manifest.json` 的 `mcp.toolGroups`。

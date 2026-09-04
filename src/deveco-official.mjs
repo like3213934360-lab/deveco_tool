@@ -47,7 +47,7 @@ function numberInRange(value, name, minimum, maximum, integer = false) {
 async function execute(args, { cwd, timeoutMs, errorCode = "DEVECO_CLI_COMMAND_FAILED" } = {}) {
   const result = await runDevecoCli(args, { cwd, timeoutMs, input: args[0] === "auth" && args[1] === "login" ? "\n" : undefined });
   const output = combineOutput(result);
-  const failure = devecoCliFailureMessage(result);
+  const failure = devecoCliFailureMessage(result, { requireOutput: true });
   if (failure) {
     const error = new Error(`> ${result.command}\n\n${output}`);
     error.code = errorCode;

@@ -29,14 +29,11 @@ import path from "node:path";
 
 const LOCK_FILE = "uitest.lock";
 
-/**
- * A live holder older than this is treated as wedged and its lock is reclaimed.
- *
- * A healthy dumpLayout takes about 1.3s and the observed contention failure resolves in ~30s, so
- * 90s is comfortably past anything that is still making progress. Without a ceiling, one hung
- * process would block every future one for as long as it stays alive.
- */
-const STALE_AFTER_MS = 90000;
+// A complete ArkPilot flow can legitimately hold the lease for up to ten minutes. Never reclaim a
+// live process merely because the lease is old; callers already have a bounded wait and receive
+// UI_DEVICE_BUSY instead. The heartbeat keeps diagnostics current and distinguishes a healthy long
+// flow from an unreadable half-written lock without weakening ownership.
+const HEARTBEAT_INTERVAL_MS = 30000;
 
 /**
  * A lock file is created first and written immediately after, so a competitor can briefly observe
@@ -98,7 +95,7 @@ function readHolder(lockPath) {
 function isReclaimable(holder, ageMs) {
   if (!holder) return ageMs > UNREADABLE_GRACE_MS;
   if (!processAlive(holder.pid)) return true;
-  return ageMs > STALE_AFTER_MS;
+  return false;
 }
 
 /**
@@ -109,9 +106,11 @@ function isReclaimable(holder, ageMs) {
  * @returns {string} Human-readable holder description.
  */
 function describeHolder(holder, ageMs) {
-  const age = `held for ${Math.round(ageMs)}ms`;
-  if (!holder) return `an unidentified process (${age})`;
-  return `pid ${holder.pid}${holder.op ? ` running ${holder.op}` : ""} (${age})`;
+  const heartbeat = `last heartbeat ${Math.round(ageMs)}ms ago`;
+  if (!holder) return `an unidentified process (${heartbeat})`;
+  const heldMs = Number.isFinite(holder.startedAt) ? Date.now() - holder.startedAt : null;
+  const held = heldMs === null ? "" : `, held for ${Math.max(0, Math.round(heldMs))}ms`;
+  return `pid ${holder.pid}${holder.op ? ` running ${holder.op}` : ""} (${heartbeat}${held})`;
 }
 
 /**
@@ -131,6 +130,7 @@ export async function withUitestLock({ directory, op = "uitest", timeoutMs = 600
   let poll = MIN_POLL_MS;
   let lastHolder = null;
   let lastAgeMs = 0;
+  let heartbeat = null;
 
   for (;;) {
     try {
@@ -175,9 +175,22 @@ export async function withUitestLock({ directory, op = "uitest", timeoutMs = 600
     }
   }
 
+  heartbeat = setInterval(() => {
+    const current = readHolder(lockPath);
+    if (!current || current.pid !== token.pid || current.startedAt !== token.startedAt) return;
+    try {
+      const now = new Date();
+      fs.utimesSync(lockPath, now, now);
+    } catch {
+      // Release/cleanup may race this best-effort diagnostic heartbeat.
+    }
+  }, HEARTBEAT_INTERVAL_MS);
+  heartbeat.unref?.();
+
   try {
     return await task();
   } finally {
+    clearInterval(heartbeat);
     // Only remove the file if it is still ours. A reclaim by a process that (wrongly) judged us
     // stale would otherwise see its own fresh lock deleted by our release.
     const current = readHolder(lockPath);
@@ -187,4 +200,6 @@ export async function withUitestLock({ directory, op = "uitest", timeoutMs = 600
   }
 }
 
-export const lockInternals = { STALE_AFTER_MS, UNREADABLE_GRACE_MS, LOCK_FILE, processAlive };
+export const lockInternals = {
+  HEARTBEAT_INTERVAL_MS, UNREADABLE_GRACE_MS, LOCK_FILE, processAlive, isReclaimable,
+};

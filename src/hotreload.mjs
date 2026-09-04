@@ -10,12 +10,14 @@ import {
   projectRoot,
   resolveDevecoCli,
   resolveDevice,
+  resolveRunnableModule,
   runDevecoCli,
 } from "./deveco-cli.mjs";
 import { terminateProcessTree } from "./process-tree.mjs";
 
 const READY = /Hot-reload watch session active \(socket persistent\)/;
 const MAX_LOG_CHARS = 200000;
+const MAX_START_WAIT_MS = 20000;
 let session = null;
 
 function appendLog(current, chunk) {
@@ -25,9 +27,9 @@ function appendLog(current, chunk) {
 
 function snapshot() {
   if (!session) return { active: false };
-  return {
-    active: session.ready && session.child.exitCode === null,
-    starting: !session.ready && session.child.exitCode === null,
+  const state = {
+    active: session.ready && !session.startError && session.child.exitCode === null,
+    starting: !session.ready && !session.startError && session.child.exitCode === null,
     pid: session.child.pid,
     projectPath: session.project,
     device: session.device,
@@ -37,6 +39,57 @@ function snapshot() {
     stdout: session.stdout,
     stderr: session.stderr,
   };
+  if (session.startError) state.error = session.startError;
+  if (state.starting) {
+    state.nextAction = { tool: "hot_reload", arguments: { action: "status" } };
+  }
+  return state;
+}
+
+function startLifecycle(current, timeoutMs) {
+  current.startup = new Promise((resolve) => {
+    let settled = false;
+    const finish = (error) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      if (error) {
+        current.startError = {
+          code: error.code ?? "DEVECO_HOT_RELOAD_START_FAILED",
+          message: error.message,
+        };
+      }
+      resolve();
+    };
+    const inspect = () => {
+      if (settled) return;
+      if (READY.test(`${current.stdout}\n${current.stderr}`)) {
+        current.ready = true;
+        finish();
+      }
+    };
+    const timer = setTimeout(() => {
+      terminateProcessTree(current.child);
+      const error = new Error(`Hot-reload session did not become ready within ${timeoutMs}ms`);
+      error.code = "DEVECO_HOT_RELOAD_START_TIMEOUT";
+      finish(error);
+    }, timeoutMs);
+    current.child.stdout.on("data", (chunk) => {
+      current.stdout = appendLog(current.stdout, chunk);
+      inspect();
+    });
+    current.child.stderr.on("data", (chunk) => {
+      current.stderr = appendLog(current.stderr, chunk);
+      inspect();
+    });
+    current.child.once("error", (cause) => finish(cause));
+    current.child.once("close", (exitCode, signal) => {
+      if (current.ready || current.startError) return;
+      const error = new Error(`Hot-reload process exited before becoming ready (code=${exitCode}, signal=${signal ?? "none"})\n${current.stdout}${current.stderr}`);
+      error.code = "DEVECO_HOT_RELOAD_START_FAILED";
+      finish(error);
+    });
+  });
 }
 
 function validateFiles(project, entries) {
@@ -74,11 +127,13 @@ export async function hotReloadStart(input = {}) {
   session = null;
   const project = projectRoot(input.project_path);
   const device = await resolveDevice(input.hvd);
-  const module = typeof input.module === "string" ? input.module.trim() : "";
+  const product = typeof input.product === "string" ? input.product.trim() : "";
+  const module = await resolveRunnableModule({
+    project, device, product, module: input.module, timeoutMs: input.timeoutMs,
+  });
   const entry = resolveDevecoCli();
-  const args = ["run", "--device", device];
-  if (module) args.push("--module", module);
-  if (input.product) args.push("--product", String(input.product));
+  const args = ["run", "--device", device, "--module", module];
+  if (product) args.push("--product", product);
   if (input.build_mode) args.push("--build-mode", String(input.build_mode));
   if (input.ability) args.push("--ability", String(input.ability));
   args.push("--hotreload");
@@ -90,42 +145,30 @@ export async function hotReloadStart(input = {}) {
   });
   const current = {
     child, project, device, module, ready: false, stdout: "", stderr: "",
-    startedAt: new Date().toISOString(), command: commandText(entry, args),
+    startedAt: new Date().toISOString(), command: commandText(entry, args), startError: null,
   };
   session = current;
 
   const timeoutMs = Math.min(Math.max(Number(input.timeoutMs) || 900000, 1000), 3600000);
-  await new Promise((resolve, reject) => {
-    let settled = false;
-    const finish = (error) => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      if (error) reject(error); else resolve();
-    };
-    const inspect = () => {
-      if (READY.test(`${current.stdout}\n${current.stderr}`)) {
-        current.ready = true;
-        finish();
-      }
-    };
-    const timer = setTimeout(() => {
-      terminateProcessTree(child);
-      const error = new Error(`Hot-reload session did not become ready within ${timeoutMs}ms`);
-      error.code = "DEVECO_HOT_RELOAD_START_TIMEOUT";
-      finish(error);
-    }, timeoutMs);
-    child.stdout.on("data", (chunk) => { current.stdout = appendLog(current.stdout, chunk); inspect(); });
-    child.stderr.on("data", (chunk) => { current.stderr = appendLog(current.stderr, chunk); inspect(); });
-    child.once("error", (cause) => finish(cause));
-    child.once("close", (exitCode, signal) => {
-      if (!settled) {
-        const error = new Error(`Hot-reload process exited before becoming ready (code=${exitCode}, signal=${signal ?? "none"})\n${current.stdout}${current.stderr}`);
-        error.code = "DEVECO_HOT_RELOAD_START_FAILED";
-        finish(error);
-      }
-    });
-  });
+  startLifecycle(current, timeoutMs);
+  const requestedWait = input.wait_ms === undefined ? MAX_START_WAIT_MS : Number(input.wait_ms);
+  const waitMs = Math.min(Math.max(Number.isFinite(requestedWait) ? requestedWait : 0, 0), MAX_START_WAIT_MS);
+  if (waitMs > 0) {
+    let waitTimer;
+    try {
+      await Promise.race([
+        current.startup,
+        new Promise((resolve) => { waitTimer = setTimeout(resolve, waitMs); }),
+      ]);
+    } finally {
+      clearTimeout(waitTimer);
+    }
+  }
+  if (current.startError) {
+    const error = new Error(current.startError.message);
+    error.code = current.startError.code;
+    throw error;
+  }
   return snapshot();
 }
 

@@ -1,10 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
+import JSON5 from "json5";
 
 /**
- * Strip JSON5 comments and trailing commas so `JSON.parse` can read a
- * `build-profile.json5`. Deliberately dependency-free; anything this cannot
- * normalise falls back to the regex scan in `readModuleEntries`.
+ * Strip comments and trailing commas for callers that need normalized text.
+ * Manifest parsing itself uses the full JSON5 parser below.
  *
  * @param {string} text Raw JSON5 document.
  * @returns {string} Text with comments and trailing commas removed.
@@ -49,6 +49,11 @@ export function stripJson5(text) {
   return output.replace(/,(\s*[}\]])/g, "$1");
 }
 
+/** Parse a HarmonyOS JSON5 manifest with the complete JSON5 grammar. */
+export function parseJson5(text) {
+  return JSON5.parse(text);
+}
+
 /**
  * Read the `modules` array out of a project's `build-profile.json5`.
  *
@@ -58,22 +63,19 @@ export function stripJson5(text) {
 export function readModuleEntries(projectRoot) {
   const profile = path.join(projectRoot, "build-profile.json5");
   if (!fs.existsSync(profile)) return null;
-  let raw;
   try {
-    raw = fs.readFileSync(profile, "utf8");
-  } catch {
-    return null;
+    const parsed = parseJson5(fs.readFileSync(profile, "utf8"));
+    if (Array.isArray(parsed?.modules)) return parsed.modules;
+    const error = new Error(`${profile} does not contain a modules array`);
+    error.code = "BUILD_PROFILE_INVALID";
+    throw error;
+  } catch (error) {
+    if (error.code === "BUILD_PROFILE_INVALID") throw error;
+    const invalid = new Error(`Invalid HarmonyOS build profile ${profile}: ${error.message}`);
+    invalid.code = "BUILD_PROFILE_INVALID";
+    invalid.cause = error;
+    throw invalid;
   }
-  for (const candidate of [raw, stripJson5(raw)]) {
-    try {
-      const parsed = JSON.parse(candidate);
-      if (Array.isArray(parsed?.modules)) return parsed.modules;
-    } catch {
-      // Fall through to the next candidate.
-    }
-  }
-  const matches = [...raw.matchAll(/"srcPath"\s*:\s*"([^"]+)"/g)];
-  return matches.length ? matches.map((match) => ({ srcPath: match[1] })) : null;
 }
 
 /**

@@ -2,9 +2,11 @@
  * @file Fast device-UI tools that talk to hdc directly: capture, locate, observe, and input.
  * @author deveco-tool
  *
- * CodeGenie already proxies `perform_ui_action` and `get_app_ui_tree`, and both keep working
- * untouched. These exist beside them because the screenshot-driven loop (capture, find a control,
- * tap it) was paying for three avoidable things, all measured on a real device:
+ * The gateway keeps CodeGenie's `perform_ui_action` contract as a compatibility alias and routes
+ * its standard operations here. Only text that HDC cannot quote safely falls back to the child;
+ * `get_app_ui_tree` remains a direct child proxy. These primitives exist because the
+ * screenshot-driven loop (capture, find a control, tap it) was paying for three avoidable things,
+ * all measured on a real device:
  *
  *   - `uitest screenCap` writes a full-resolution PNG: 1.05s end to end for 5.2MB. The same frame
  *     as JPEG through `snapshot_display` is 0.42s for ~260KB, with no visible loss for UI work.
@@ -91,6 +93,7 @@ const PNG_MAGIC = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 /** snapshot_display prints the display's own size before scaling, then what it actually wrote. */
 const NATIVE_SIZE_PATTERN = /process:[^\n]*?width:\s*(\d+)[^\n]*?height:\s*(\d+)/i;
 const OUTPUT_SIZE_PATTERN = /success:[^\n]*?width:\s*(\d+)[^\n]*?height:\s*(\d+)/i;
+const RENDER_SIZE_PATTERN = /render resolution\s*=\s*(\d+)x(\d+)/i;
 const SCREENCAP_SUCCESS_PATTERN = /ScreenCap saved to/i;
 const DUMP_SUCCESS_PATTERN = /DumpLayout saved to/i;
 const OBSERVE_SUCCESS_PATTERN = /OBSERVE_OK/;
@@ -318,6 +321,13 @@ export function cleanupUiTemporaryFiles() {
   fs.rmSync(UI_TEMP_SESSION, { recursive: true, force: true });
 }
 
+// The MCP server and standalone runners call the cleanup explicitly so they can also release
+// devices. This synchronous exit hook covers short-lived library/CLI consumers and the test
+// runner: no successful process should leave its screenshots or layout dumps behind. A hard crash
+// is reclaimed by sweepAbandonedLocalSessions on the next UI call, and the OS temp root remains the
+// final reboot/session-cleanup boundary.
+process.once("exit", cleanupUiTemporaryFiles);
+
 /**
  * Device-side scratch path.
  *
@@ -409,6 +419,32 @@ function readDisplaySize(deviceId) {
     }
   } catch {
     // No cache yet, or an unreadable one. Either way the next capture reports the real size.
+  }
+  return null;
+}
+
+/**
+ * Read the active display size without paying for a complete accessibility dump.
+ *
+ * Percentage-only flow steps need two integers, not the UI tree. RenderService answers this in a
+ * small shell response (about 0.2s on the reference device), while dumpLayout is the 1.2s long
+ * pole and also occupies the singleton uitest daemon. Cache only within the surrounding flow
+ * session; each new session queries again so rotation and fold-state changes are observed.
+ */
+async function queryScreenBounds(hdc, deviceId, timeoutMs, signal) {
+  const result = await execHdc([
+    hdc, ...targetArgs(deviceId), "shell", "hidumper", "-s", "RenderService", "-a", "screen",
+  ], Math.min(timeoutMs, 2000), { signal });
+  const combined = `${result.stdout ?? ""}\n${result.stderr ?? ""}`;
+  if (!hdcFailureMessage(result)) {
+    const match = combined.match(RENDER_SIZE_PATTERN);
+    if (match) {
+      const size = { width: Number(match[1]), height: Number(match[2]) };
+      if (size.width > 0 && size.height > 0) {
+        rememberDisplaySize(deviceId, size);
+        return [0, 0, size.width, size.height];
+      }
+    }
   }
   return null;
 }
@@ -799,7 +835,7 @@ export async function uiSnapshot(input = {}) {
  *
  * @returns {Promise<string>} Local path of the pulled dump.
  */
-async function dumpLayout(hdc, deviceId, timeoutMs, signal) {
+async function dumpLayout(hdc, deviceId, timeoutMs, signal, options = {}) {
   const devicePath = devicePathFor("dump", "json");
   try {
     const result = await execHdc(
@@ -818,10 +854,11 @@ async function dumpLayout(hdc, deviceId, timeoutMs, signal) {
     await pullArtifact(hdc, deviceId, devicePath, localPath, timeoutMs, { emptyCode: "UI_DUMP_EMPTY" }, signal);
     return localPath;
   } finally {
-    // The local copy remains available for dumpPath reuse inside the temp session, but the device
-    // has no reason to retain the tree after recv. This also covers public ui_find/ui_tap calls,
-    // which do not pass through ArkPilot's end-of-flow cleanup hook.
-    await removeDeviceArtifacts(hdc, deviceId, [devicePath], Math.min(timeoutMs, 500));
+    // Public ui_find/ui_tap calls remove the device copy immediately. A higher-level session may
+    // defer this because it overwrites one stable path and removes it once at flow completion.
+    if (!options.deferDeviceCleanup) {
+      await removeDeviceArtifacts(hdc, deviceId, [devicePath], Math.min(timeoutMs, 500));
+    }
   }
 }
 
@@ -1270,6 +1307,7 @@ export async function withUiAutomationSession(input = {}, task) {
   };
 
   return withUitest(deviceId, "ArkPilot flow", timeoutMs, async () => {
+    let sessionScreen = null;
     const operation = (options = {}) => {
       const requested = Number(options.timeoutMs);
       return {
@@ -1283,7 +1321,12 @@ export async function withUiAutomationSession(input = {}, task) {
     const find = async (selectorInput = {}, options = {}) => {
       const current = operation(options);
       checkAbort(current.signal);
-      const dumpPath = await dumpLayout(hdc, deviceId, current.timeoutMs, current.signal);
+      const dumpPath = await dumpLayout(hdc, deviceId, current.timeoutMs, current.signal, {
+        // A flow uses one stable remote path and already removes it once when its device session
+        // ends. Deleting the same file after every read adds an HDC round trip to every semantic
+        // step without improving isolation or correctness.
+        deferDeviceCleanup: true,
+      });
       checkAbort(current.signal);
       return analyseDump({
         root: readDump(dumpPath), dumpPath, deviceId, selector: readSelector(selectorInput),
@@ -1301,7 +1344,9 @@ export async function withUiAutomationSession(input = {}, task) {
         error.code = "UI_ARGS_INVALID";
         throw error;
       }
-      const dumpPath = await dumpLayout(hdc, deviceId, current.timeoutMs, current.signal);
+      const dumpPath = await dumpLayout(hdc, deviceId, current.timeoutMs, current.signal, {
+        deferDeviceCleanup: true,
+      });
       checkAbort(current.signal);
       const root = readDump(dumpPath);
       return selectorInputs.map((selectorInput, index) => ({
@@ -1311,6 +1356,21 @@ export async function withUiAutomationSession(input = {}, task) {
           root, dumpPath, deviceId, selector: readSelector(selectorInput),
         }),
       }));
+    };
+
+    const screen = async (options = {}) => {
+      if (sessionScreen) return sessionScreen;
+      const current = operation(options);
+      checkAbort(current.signal);
+      sessionScreen = await queryScreenBounds(
+        hdc, deviceId, current.timeoutMs, current.signal,
+      );
+      if (!sessionScreen) {
+        // Older or restricted systems may not expose RenderService through hidumper. Retain the
+        // portable dumpLayout fallback rather than making percentage flows platform-specific.
+        sessionScreen = (await find({}, current)).screen;
+      }
+      return sessionScreen;
     };
 
     const action = async (step, preparedAnalysis = null, options = {}) => {
@@ -1323,7 +1383,7 @@ export async function withUiAutomationSession(input = {}, task) {
         return { action: step.action, commandAccepted: true };
       }
       if (["swipe", "fling", "drag"].includes(step.action)) {
-        const analysis = preparedAnalysis ?? await find({}, current);
+        const analysis = preparedAnalysis ?? { screen: await screen(current) };
         const args = buildScreenGestureArgs({
           action: step.action,
           from_x_percent: step.gesture.fromXPercent,
@@ -1339,7 +1399,7 @@ export async function withUiAutomationSession(input = {}, task) {
       let analysis = preparedAnalysis;
       let target;
       if (step.point) {
-        analysis = analysis ?? await find({}, current);
+        analysis = analysis ?? { screen: await screen(current) };
         const [x1, y1, x2, y2] = analysis.screen ?? [];
         if (!(x2 > x1) || !(y2 > y1)) {
           const error = new Error("The UI dump has no usable screen bounds");
@@ -1364,6 +1424,6 @@ export async function withUiAutomationSession(input = {}, task) {
       return { action: step.action, commandAccepted: true, target, structureSignature: analysis.structureSignature };
     };
 
-    return task({ deviceId, find, findAny, action, checkAbort });
+    return task({ deviceId, find, findAny, screen, action, checkAbort });
   }, input.lockWaitMs ?? Math.min(timeoutMs, MAX_LOCK_WAIT_MS));
 }

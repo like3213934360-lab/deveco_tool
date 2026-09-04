@@ -181,9 +181,23 @@ async function recordedStep(session, input, result) {
 export async function recordSuccessfulUiAction(input, result) {
   const session = recordings.activeForDevice(result.deviceId);
   if (!session || session.replaying) return null;
-  const step = await recordedStep(session, input, result);
-  session.steps.push(step);
-  return { recordingId: session.id, stepId: step.id };
+  try {
+    const step = await recordedStep(session, input, result);
+    session.steps.push(step);
+    return { recorded: true, recordingId: session.id, stepId: step.id };
+  } catch (error) {
+    // The physical UI action has already been accepted at this point. A secondary recording
+    // failure must never turn that success into an MCP error: an agent might retry and double-tap
+    // a destructive control. Report the unsaved step explicitly so it can be re-recorded safely.
+    return {
+      recorded: false,
+      recordingId: session.id,
+      error: {
+        code: error.code ?? "FLOW_RECORDING_FAILED",
+        message: error.message,
+      },
+    };
+  }
 }
 
 async function recordStart(input) {
@@ -248,7 +262,14 @@ async function recordStop(input) {
   });
   session.status = "saved";
   recordings.delete(session.id);
-  return { ...recordingResult(session), path: saved.path, flow: saved.flow };
+  return {
+    ...recordingResult(session),
+    path: saved.path,
+    flow: saved.flow,
+    persisted: true,
+    retentionPolicy: "persistent-until-explicit-ui-flow-delete",
+    artifactNote: "Reusable project flow; do not remove it as temporary test output.",
+  };
 }
 
 function sleep(ms, signal) {
@@ -283,8 +304,19 @@ const RETRYABLE_UI_READ_ERRORS = new Set([
   "UI_DUMP_FAILED", "UI_DUMP_EMPTY", "UI_DUMP_PARSE_FAILED", "UI_RECV_FAILED", "HDC_TIMEOUT",
 ]);
 
-async function waitFor(session, selector, wantedVisible, timeoutMs, signal, alternates = []) {
+async function waitFor(
+  session,
+  selector,
+  wantedVisible,
+  timeoutMs,
+  signal,
+  alternates = [],
+  expectedBundle = null,
+) {
   const deadline = Date.now() + timeoutMs;
+  const applicationDeadline = expectedBundle
+    ? deadline - Math.min(50, Math.max(10, Math.floor(timeoutMs / 10)))
+    : deadline;
   let last;
   let lastReadError;
   do {
@@ -311,6 +343,12 @@ async function waitFor(session, selector, wantedVisible, timeoutMs, signal, alte
     }
     const primary = candidates[0].analysis;
     last = primary;
+    if (expectedBundle
+      && !primary.applications?.some((application) => application.bundleName === expectedBundle)) {
+      if (Date.now() >= applicationDeadline) break;
+      await sleep(Math.min(100, Math.max(1, applicationDeadline - Date.now())), signal);
+      continue;
+    }
     const anyVisible = candidates.some((candidate) => candidate.analysis.matchCount > 0);
     if (wantedVisible && primary.matchCount === 0) {
       const matchingFallbacks = candidates.slice(1)
@@ -354,6 +392,18 @@ async function waitFor(session, selector, wantedVisible, timeoutMs, signal, alte
     if (Date.now() >= deadline) break;
     await sleep(Math.min(100, Math.max(1, deadline - Date.now())), signal);
   } while (Date.now() <= deadline);
+  if (expectedBundle
+    && !last?.applications?.some((application) => application.bundleName === expectedBundle)) {
+    const error = flowError(
+      `The launched application did not become the visible UI surface before ${timeoutMs}ms: ${expectedBundle}`,
+      "FLOW_APP_UI_NOT_READY",
+      lastReadError
+        ? `The last read-only UI-tree attempt failed: ${lastReadError.message}`
+        : "The UI tree belongs to another application or does not identify its application root.",
+    );
+    error.analysis = last;
+    throw error;
+  }
   const state = wantedVisible ? "visible" : "hidden";
   const error = flowError(
     `Selector did not become ${state} before ${timeoutMs}ms`,
@@ -362,6 +412,69 @@ async function waitFor(session, selector, wantedVisible, timeoutMs, signal, alte
   );
   error.analysis = last;
   throw error;
+}
+
+async function waitForApplicationSurface(session, bundleName, timeoutMs, signal) {
+  // Keep a small margin inside the enclosing step timer so this distinct diagnosis wins over the
+  // generic FLOW_STEP_TIMEOUT raised by the outer AbortController.
+  const deadline = Date.now() + timeoutMs
+    - Math.min(50, Math.max(10, Math.floor(timeoutMs / 10)));
+  let last;
+  let lastReadError;
+  do {
+    if (signal.aborted) throw flowError("UI flow was cancelled", "FLOW_CANCELLED");
+    try {
+      last = await session.find({}, {
+        timeoutMs: Math.min(MAX_UI_READ_ATTEMPT_MS, Math.max(100, deadline - Date.now())),
+        signal,
+      });
+      lastReadError = null;
+    } catch (error) {
+      if (!RETRYABLE_UI_READ_ERRORS.has(error.code) || Date.now() >= deadline) throw error;
+      lastReadError = error;
+      const backoffMs = error.code === "HDC_TIMEOUT" ? 500 : 100;
+      await sleep(Math.min(backoffMs, Math.max(1, deadline - Date.now())), signal);
+      continue;
+    }
+    if (last.applications?.some((application) => application.bundleName === bundleName
+      && application.focused !== false)) return last;
+    if (Date.now() >= deadline) break;
+    await sleep(Math.min(100, Math.max(1, deadline - Date.now())), signal);
+  } while (Date.now() <= deadline);
+  const error = flowError(
+    `The launched application did not become the visible UI surface before ${timeoutMs}ms: ${bundleName}`,
+    "FLOW_APP_UI_NOT_READY",
+    lastReadError
+      ? `The last read-only UI-tree attempt failed: ${lastReadError.message}`
+      : "The UI tree belongs to another application or does not identify its application root.",
+  );
+  error.analysis = last;
+  throw error;
+}
+
+async function withinStepDeadline(job, stepId, timeoutMs, operation) {
+  const stepController = new AbortController();
+  let expired = false;
+  const timer = setTimeout(() => {
+    expired = true;
+    stepController.abort();
+  }, timeoutMs);
+  const signal = AbortSignal.any([job.controller.signal, stepController.signal]);
+  const timeoutError = () => flowError(
+    `Step ${stepId} exceeded its ${timeoutMs}ms deadline`,
+    "FLOW_STEP_TIMEOUT",
+    `The ${job.backend} operation was terminated; the action was not retried.`,
+  );
+  try {
+    const result = await operation(signal);
+    if (expired && !job.controller.signal.aborted) throw timeoutError();
+    return result;
+  } catch (error) {
+    if (expired && !job.controller.signal.aborted) throw timeoutError();
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 function applySuccessfulHealings(flow, healings) {
@@ -432,6 +545,7 @@ async function executeJob(job, flow, input, repo) {
     secretValues = Object.entries(flow.variables)
       .filter(([name, definition]) => definition.secret && values[name])
       .map(([name]) => values[name]);
+    let launchEvidence;
     await adapter.withSession({
       resolvedDeviceId: deviceId, timeoutMs: totalTimeoutMs, lockWaitMs: 100,
       signal: job.controller.signal,
@@ -440,13 +554,13 @@ async function executeJob(job, flow, input, repo) {
       // deliberately acquired before restarting the application, so two MCP processes cannot
       // both mutate the same device and only discover the collision at the first UI dump.
       if (input.route) {
-        await hdcAdapter.launchRoute(input.route, {
+        launchEvidence = await hdcAdapter.launchRoute(input.route, {
           deviceId, mode: input.start_policy ?? flow.start.mode,
           uri: input.uri, parameters: input.want_parameters,
           timeoutMs: Math.min(totalTimeoutMs, 10000), signal: job.controller.signal,
         });
       } else {
-        await hdcAdapter.launch(flow.app, {
+        launchEvidence = await hdcAdapter.launch(flow.app, {
           deviceId, mode: input.start_policy ?? flow.start.mode,
           timeoutMs: Math.min(totalTimeoutMs, 10000), signal: job.controller.signal,
         });
@@ -460,6 +574,9 @@ async function executeJob(job, flow, input, repo) {
         async findAny(selectors, options) {
           job.metrics.uiDumps += 1;
           return session.findAny(selectors, options);
+        },
+        async screen(options) {
+          return session.screen(options);
         },
         async action(step, analysis, options) {
           job.metrics.actions += 1;
@@ -475,31 +592,41 @@ async function executeJob(job, flow, input, repo) {
           ...(step.point ? { point: step.point } : {}),
         };
         job.status = step.action.startsWith("wait") || step.action.startsWith("assert") ? "WAITING" : "ACTING";
-        let analysis = null;
-        if (step.selector) {
-          const hidden = step.action === "waitHidden" || step.action === "assertHidden";
-          analysis = await waitFor(
-            measuredSession, step.selector, !hidden, step.timeoutMs, job.controller.signal,
-            input.selectorHealing ? (step.alternates ?? []) : [],
-          );
-          if (analysis.healed) {
-            job.healings.push({
-              stepId: step.id, from: step.selector, selector: analysis.resolvedSelector,
+        await withinStepDeadline(job, step.id, step.timeoutMs, async (stepSignal) => {
+          let analysis = null;
+          if (step.selector) {
+            const hidden = step.action === "waitHidden" || step.action === "assertHidden";
+            analysis = await waitFor(
+              measuredSession, step.selector, !hidden, step.timeoutMs, stepSignal,
+              input.selectorHealing ? (step.alternates ?? []) : [],
+              index === 0 ? flow.app.bundleName : null,
+            );
+            if (analysis.healed) {
+              job.healings.push({
+                stepId: step.id, from: step.selector, selector: analysis.resolvedSelector,
+              });
+            }
+          } else if (step.point || ["swipe", "fling", "drag"].includes(step.action)) {
+            if (index === 0) {
+              await waitForApplicationSurface(
+                measuredSession,
+                flow.app.bundleName,
+                step.timeoutMs,
+                stepSignal,
+              );
+            }
+            // Percentage actions need only the active display bounds. RenderService provides those
+            // without occupying uitest or transferring a complete accessibility tree.
+            analysis = { screen: await measuredSession.screen({
+              timeoutMs: step.timeoutMs, signal: stepSignal,
+            }) };
+          }
+          if (!["waitVisible", "waitHidden", "assertVisible", "assertHidden"].includes(step.action)) {
+            await measuredSession.action(step, analysis, {
+              timeoutMs: step.timeoutMs, signal: stepSignal,
             });
           }
-        } else if (step.point || ["swipe", "fling", "drag"].includes(step.action)) {
-          // Point and screen-percentage gestures still need current screen bounds. Resolve that
-          // tree here, through the measured wrapper, rather than letting session.action perform an
-          // invisible dump that would make benchmark reports under-count device work.
-          analysis = await measuredSession.find({}, {
-            timeoutMs: step.timeoutMs, signal: job.controller.signal,
-          });
-        }
-        if (!["waitVisible", "waitHidden", "assertVisible", "assertHidden"].includes(step.action)) {
-          await measuredSession.action(step, analysis, {
-            timeoutMs: step.timeoutMs, signal: job.controller.signal,
-          });
-        }
+        });
         job.steps.push({ id: step.id, action: step.action, elapsedMs: Date.now() - stepStartedAt });
       }
       if (flow.assert) {
@@ -511,13 +638,19 @@ async function executeJob(job, flow, input, repo) {
           action: hidden ? "assertHidden" : "assertVisible",
           selector: flow.assert.visible ?? flow.assert.hidden,
         };
-        const finalAnalysis = await waitFor(
-          measuredSession,
-          flow.assert.visible ?? flow.assert.hidden,
-          !hidden,
+        const finalAnalysis = await withinStepDeadline(
+          job,
+          "final-assertion",
           flow.assert.timeoutMs,
-          job.controller.signal,
-          input.selectorHealing ? (flow.assert.alternates ?? []) : [],
+          (stepSignal) => waitFor(
+            measuredSession,
+            flow.assert.visible ?? flow.assert.hidden,
+            !hidden,
+            flow.assert.timeoutMs,
+            stepSignal,
+            input.selectorHealing ? (flow.assert.alternates ?? []) : [],
+            flow.steps.length === 0 ? flow.app.bundleName : null,
+          ),
         );
         if (finalAnalysis.healed) {
           job.healings.push({
@@ -535,7 +668,14 @@ async function executeJob(job, flow, input, repo) {
     }
     job.status = "SUCCEEDED";
     job.result = {
-      assertionPassed: Boolean(flow.assert), stepCount: flow.steps.length,
+      assertionPassed: flow.assert ? true : null,
+      completionEvidence: flow.assert
+        ? { type: "final-assertion", verified: true }
+        : {
+          type: launchEvidence?.processVerified ? "running-process" : "launch-acknowledgement",
+          verified: Boolean(launchEvidence?.processVerified || launchEvidence?.launchAcknowledged),
+        },
+      stepCount: flow.steps.length,
       selectorHealings: job.healings.length,
       ...(job.healedFlowPath ? { healedFlowPath: job.healedFlowPath } : {}),
     };

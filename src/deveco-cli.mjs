@@ -21,6 +21,47 @@ const MAX_CAPTURE_BYTES = 256 * 1024;
 const MAX_FULL_LOG_BYTES = 128 * 1024 * 1024;
 const buildJobs = new Map();
 
+// DevEco CLI and bundled toolchain scripts occasionally print a failure while still exiting 0.
+// These patterns are also evaluated while output is streaming, so an early error cannot disappear
+// when the bounded in-memory tail drops it from a very long log.
+const CLI_FAILURE_PATTERNS = [
+  /^\s*error:/im,
+  /failed to (install|start|launch|build)/i,
+  /BUILD FAILED/i,
+  /Please run devecocli auth login first/i,
+  /did not appear in hdc list targets/i,
+];
+
+const CLI_SUCCESS_PATTERNS = [
+  /Clean completed successfully\.?/i,
+  /Build completed successfully\.?/i,
+  /(?:\[Apply\]\s*(?:Apply complete|完成)|Apply completed successfully)/i,
+  /Application\s+'[^']+'\s*:.*(?:success|succeed)/i,
+  /installed successfully/i,
+];
+
+function evidenceTracker(patterns) {
+  let tail = "";
+  let evidence = "";
+  return {
+    push(chunk) {
+      if (evidence) return;
+      const text = `${tail}${Buffer.isBuffer(chunk) ? chunk.toString("utf8") : String(chunk)}`;
+      for (const pattern of patterns) {
+        const match = pattern.exec(text);
+        if (!match) continue;
+        const lineStart = text.lastIndexOf("\n", match.index) + 1;
+        const lineEnd = text.indexOf("\n", match.index + match[0].length);
+        evidence = text.slice(lineStart, lineEnd < 0 ? text.length : lineEnd).trim().slice(0, 2000)
+          || match[0].trim();
+        break;
+      }
+      tail = text.slice(-4096);
+    },
+    get evidence() { return evidence; },
+  };
+}
+
 function tailBuffer(limit = MAX_CAPTURE_BYTES) {
   let value = Buffer.alloc(0);
   let totalBytes = 0;
@@ -44,6 +85,10 @@ function tailBuffer(limit = MAX_CAPTURE_BYTES) {
 function processCapture(command, explicitLogPath) {
   const stdout = tailBuffer();
   const stderr = tailBuffer();
+  const stdoutFailures = evidenceTracker(CLI_FAILURE_PATTERNS);
+  const stderrFailures = evidenceTracker(CLI_FAILURE_PATTERNS);
+  const stdoutSuccesses = evidenceTracker(CLI_SUCCESS_PATTERNS);
+  const stderrSuccesses = evidenceTracker(CLI_SUCCESS_PATTERNS);
   const automatic = !explicitLogPath;
   const logPath = explicitLogPath
     ? path.resolve(explicitLogPath)
@@ -62,8 +107,15 @@ function processCapture(command, explicitLogPath) {
         error.code = "DEVECO_OUTPUT_LIMIT";
         throw error;
       }
-      if (stream === "stdout") stdout.push(chunk);
-      else stderr.push(chunk);
+      if (stream === "stdout") {
+        stdout.push(chunk);
+        stdoutFailures.push(chunk);
+        stdoutSuccesses.push(chunk);
+      } else {
+        stderr.push(chunk);
+        stderrFailures.push(chunk);
+        stderrSuccesses.push(chunk);
+      }
       fs.writeSync(handle, chunk);
       loggedBytes += chunk.length;
     },
@@ -77,6 +129,8 @@ function processCapture(command, explicitLogPath) {
       return {
         stdout: stdout.text(),
         stderr: stderr.text(),
+        detectedFailure: stdoutFailures.evidence || stderrFailures.evidence || "",
+        detectedSuccess: stdoutSuccesses.evidence || stderrSuccesses.evidence || "",
         outputTruncated,
         logPath: automatic && !outputTruncated ? null : logPath,
       };
@@ -367,24 +421,41 @@ export function combineOutput(result) {
   return `${output}\n\n[Output truncated to the last ${MAX_CAPTURE_BYTES} bytes per stream. Full log: ${result.logPath}]`;
 }
 
-// The CLI prints `error: ...` and still exits 0 in some paths (a failed ability
-// launch, for one), so exit codes alone would report those as success. Same
-// defensive stance the pack already takes for HDC's `[Fail]` output.
-const CLI_FAILURE_PATTERNS = [
-  /^\s*error:/im,
-  /failed to (install|start|launch|build)/i,
-  /BUILD FAILED/i,
-  /Please run devecocli auth login first/i,
-  /did not appear in hdc list targets/i,
-];
-
-export function devecoCliFailureMessage(result) {
+export function devecoCliFailureMessage(result, { requireOutput = false, successPattern } = {}) {
   const combined = combineOutput(result).trim();
   if (result.exitCode !== 0) {
     return combined || `DevEco CLI exited with code ${result.exitCode ?? "unknown"}`;
   }
+  // BUILD FAILED is an unambiguous terminal marker. Generic `error:`/`failed to ...`
+  // lines are not: hvigor and plugins can emit those during a recovered attempt. The
+  // official CLI prints its command-level acknowledgement only after the operation
+  // has completed, so an exit-0 acknowledgement is authoritative over earlier soft
+  // failure text. Track it while streaming as it may otherwise fall out of the tail.
+  if (/BUILD FAILED/i.test(result.detectedFailure || "") || /BUILD FAILED/i.test(combined)) {
+    return result.detectedFailure || "BUILD FAILED";
+  }
+  const detectedSuccess = result.detectedSuccess || "";
+  if (successPattern && (successPattern.test(combined) || successPattern.test(detectedSuccess))) {
+    return "";
+  }
+  if (result.detectedFailure) {
+    const suffix = result.logPath ? ` (full log: ${result.logPath})` : "";
+    return `${result.detectedFailure}${suffix}`;
+  }
   const hit = CLI_FAILURE_PATTERNS.find((pattern) => pattern.test(combined));
-  return hit ? combined : "";
+  if (hit) {
+    const match = hit.exec(combined);
+    if (!match) return "DevEco CLI reported a failure.";
+    const lineStart = combined.lastIndexOf("\n", match.index) + 1;
+    const lineEnd = combined.indexOf("\n", match.index + match[0].length);
+    return combined.slice(lineStart, lineEnd < 0 ? combined.length : lineEnd).trim().slice(0, 2000)
+      || match[0].trim();
+  }
+  if (requireOutput && !combined) return "DevEco command exited 0 without producing any result.";
+  if (successPattern && !successPattern.test(combined)) {
+    return "DevEco command exited 0 but did not print the expected success acknowledgement.";
+  }
+  return "";
 }
 
 /**
@@ -409,7 +480,15 @@ async function runnableModules(project, device, product, timeoutMs) {
   });
   const text = combineOutput(probe);
   const marker = text.indexOf("Available runnable modules:");
-  if (marker < 0) return [];
+  if (marker < 0) {
+    const failure = devecoCliFailureMessage(probe, { requireOutput: true });
+    if (failure) {
+      const error = new Error(`Runnable-module discovery failed: ${failure}`);
+      error.code = "DEVECO_CLI_MODULE_DISCOVERY_FAILED";
+      throw error;
+    }
+    return [];
+  }
   return text
     .slice(marker)
     .split(/\r?\n/)
@@ -420,7 +499,7 @@ async function runnableModules(project, device, product, timeoutMs) {
     .filter(Boolean);
 }
 
-async function runnableModule({ project, device, product, module, timeoutMs }) {
+export async function resolveRunnableModule({ project, device, product, module, timeoutMs }) {
   const requested = typeof module === "string" ? module.trim() : "";
   if (requested) return requested;
   const discovered = await runnableModules(project, device, product, timeoutMs);
@@ -503,7 +582,10 @@ export async function buildProject(input = {}, { signal } = {}) {
       cwd: project, timeoutMs: input.timeoutMs, signal, logPath,
     });
     transcript.push(`> ${cleaned.command}\n\n${combineOutput(cleaned)}`);
-    const cleanFailure = devecoCliFailureMessage(cleaned);
+    const cleanFailure = devecoCliFailureMessage(cleaned, {
+      requireOutput: true,
+      successPattern: /Clean completed successfully\.?/i,
+    });
     if (cleanFailure) {
       const error = new Error(`Clean failed: ${cleanFailure.slice(-500)}`);
       error.code = "DEVECO_CLI_CLEAN_FAILED";
@@ -533,9 +615,12 @@ export async function buildProject(input = {}, { signal } = {}) {
 
   const header = sections.length ? `${sections.join("\n")}\n\n` : "";
   const body = presentLog(fullText, logPath);
-  const buildFailure = devecoCliFailureMessage(result);
+  const buildFailure = devecoCliFailureMessage(result, {
+    requireOutput: true,
+    successPattern: /Build completed successfully\.?/i,
+  });
   const status = buildFailure
-    ? `\n\nBuild failed (exit code ${result.exitCode}).`
+    ? `\n\nBuild failed (exit code ${result.exitCode}). Evidence: ${buildFailure.slice(0, 2000)}`
     : "\n\nBuild completed successfully.";
 
   if (buildFailure) {
@@ -696,7 +781,8 @@ export async function projectSync(input = {}) {
       timeoutMs: input.timeoutMs,
     });
     transcript.push(`> ${install.command}\n\n${combineOutput(install)}`);
-    if (install.exitCode !== 0) {
+    const installFailure = devecoCliFailureMessage(install, { requireOutput: true });
+    if (installFailure) {
       const error = new Error(`Dependency installation failed:\n${transcript.join("\n\n")}`);
       error.code = "DEVECO_PROJECT_SYNC_FAILED";
       throw error;
@@ -712,7 +798,8 @@ export async function projectSync(input = {}) {
     "--no-daemon",
   ], { cwd: project, timeoutMs: input.timeoutMs });
   transcript.push(`> ${sync.command}\n\n${combineOutput(sync)}`);
-  if (sync.exitCode !== 0) {
+  const syncFailure = devecoCliFailureMessage(sync, { requireOutput: true });
+  if (syncFailure) {
     const error = new Error(`Project sync failed:\n${transcript.join("\n\n")}`);
     error.code = "DEVECO_PROJECT_SYNC_FAILED";
     throw error;
@@ -758,7 +845,7 @@ export async function apiCompatibilityCheck(input = {}) {
 
   const result = await runDevecoCli(args, { cwd: project, timeoutMs: input.timeoutMs });
   const output = combineOutput(result);
-  const failure = devecoCliFailureMessage(result);
+  const failure = devecoCliFailureMessage(result, { requireOutput: true });
   if (failure) {
     const error = new Error(`> ${result.command}\n\n${output}`);
     error.code = "DEVECO_API_COMPAT_FAILED";
@@ -795,7 +882,7 @@ export async function applyChanges(input = {}) {
 
   const device = await resolveDevice(input.hvd);
   const product = typeof input.product === "string" ? input.product.trim() : "";
-  const selectedModule = await runnableModule({
+  const selectedModule = await resolveRunnableModule({
     project,
     device,
     product,
@@ -817,7 +904,10 @@ export async function applyChanges(input = {}) {
     args.push("--apply", manifestName);
     const result = await runDevecoCli(args, { cwd: project, timeoutMs: input.timeoutMs });
     const output = combineOutput(result);
-    const failure = devecoCliFailureMessage(result);
+    const failure = devecoCliFailureMessage(result, {
+      requireOutput: true,
+      successPattern: /(?:\[Apply\]\s*(?:Apply complete|完成)|Apply completed successfully|Application\s+'[^']+'\s*:.*(?:success|succeed)|installed successfully)/i,
+    });
     if (failure) {
       const recoveryArgs = ["run", "--skip-build", "--device", device, "--module", selected];
       if (product) recoveryArgs.push("--product", product);
@@ -825,7 +915,10 @@ export async function applyChanges(input = {}) {
       let recoveryNote;
       try {
         const recovery = await runDevecoCli(recoveryArgs, { cwd: project, timeoutMs: input.timeoutMs });
-        const recoveryFailure = devecoCliFailureMessage(recovery);
+        const recoveryFailure = devecoCliFailureMessage(recovery, {
+          requireOutput: true,
+          successPattern: /(?:Application\s+'[^']+'\s*:.*(?:success|succeed)|installed successfully)/i,
+        });
         recoveryNote = recoveryFailure
           ? `Recovery launch also failed:\n> ${recovery.command}\n\n${combineOutput(recovery)}`
           : `The previous installed app was relaunched after the failed apply:\n> ${recovery.command}`;
@@ -856,7 +949,7 @@ export async function startApp(input = {}) {
   const ability = typeof input.ability === "string" ? input.ability.trim() : "";
   const product = typeof input.product === "string" ? input.product.trim() : "";
 
-  const selectedModule = await runnableModule({
+  const selectedModule = await resolveRunnableModule({
     project, device, product, module: input.module, timeoutMs: input.timeoutMs,
   });
 
@@ -870,7 +963,10 @@ export async function startApp(input = {}) {
 
   const result = await runDevecoCli(args, { cwd: project, timeoutMs: input.timeoutMs });
   const output = combineOutput(result);
-  const failure = devecoCliFailureMessage(result);
+  const failure = devecoCliFailureMessage(result, {
+    requireOutput: true,
+    successPattern: /(?:Application\s+'[^']+'\s*:.*(?:success|succeed)|installed successfully)/i,
+  });
   if (failure) {
     const error = new Error(`> ${result.command}\n\n${output}`);
     error.code = "DEVECO_CLI_RUN_FAILED";

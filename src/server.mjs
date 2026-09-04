@@ -46,12 +46,9 @@ import { closeVisualVerifier, verifyUi } from "./arkpilot/visual-verifier.mjs";
 import { validateDocument } from "./document-validate.mjs";
 import { hdcLog, hdcStatus } from "./hdc-log.mjs";
 import {
-  findCallHierarchy,
   findReferences,
   getHover,
-  goToDeclaration,
   goToDefinition,
-  listSymbols,
   lspOperation,
   lspStatus,
   resetLsp,
@@ -128,7 +125,7 @@ const officialTools = [
   },
   {
     name: "hot_reload",
-    description: "Manage one real persistent DevEco hot-reload watch session: start, apply changed .ets files without restarting the app, inspect status, or stop.",
+    description: "Manage one real persistent DevEco hot-reload watch session: start, apply changed .ets files without restarting the app, inspect status, or stop. start waits at most 20 seconds per MCP call; if it returns starting=true, poll action=status instead of starting a duplicate session.",
     inputSchema: {
       type: "object",
       properties: {
@@ -136,6 +133,7 @@ const officialTools = [
         files: { type: "array", minItems: 1, items: { type: "string" } },
         hvd: { type: "string" }, module: { type: "string" }, product: { type: "string" },
         build_mode: { type: "string" }, ability: { type: "string" }, project_path: { type: "string" },
+        wait_ms: { type: "integer", minimum: 0, maximum: 20000, description: "For start only, wait this long for readiness before returning starting=true; defaults to 20000." },
         timeoutMs: commonTimeout,
       },
       required: ["action"], additionalProperties: false,
@@ -166,7 +164,7 @@ const officialTools = [
   },
   {
     name: "ui_inspect",
-    description: "Inspect official UI window lists or layout trees with window/display selection, all-window mode, depth filtering, and full/simplified output.",
+    description: "Use the official DevEco inspector only when window/display selection, all-window output, or depth filtering is required. For routine semantic targeting use ui_find, or ui_observe when a screenshot is also needed; those local HDC paths avoid starting the DevEco CLI for every observation.",
     inputSchema: {
       type: "object",
       properties: {
@@ -180,7 +178,7 @@ const officialTools = [
   },
   {
     name: "ui_control",
-    description: "Use the official DevEco UI controller for coordinate gestures or node-id/window-targeted clicks and text input.",
+    description: "Use the official DevEco UI controller only for its node-id/window-targeted operations. Prefer ui_flow action=navigate for multi-step navigation and ui_tap for ordinary semantic clicks, text, keys, and gestures; the local HDC path avoids DevEco CLI startup overhead.",
     inputSchema: {
       type: "object",
       properties: {
@@ -250,7 +248,7 @@ const localTools = [
   ...officialTools,
   {
     name: "ui_flow",
-    description: "Primary tool for entering a known HarmonyOS page or repeating multi-step UI navigation. For a new navigation call action=navigate first: ArkPilot safely prefers an exact manifest-declared Ability/App Link/Want route, otherwise finds and replays a matching saved flow, and if none exists starts exploration recording automatically. During exploration use ui_observe then semantic ui_tap; successful actions are learned without another command, then finish with navigate+recording_id+success_selector. Replay uses no screenshots on success, safely heals a changed key only from a unique exact semantic fallback, writes that repair only after the final assertion passes, and returns job_id for long runs. Use run only when the exact flow id is already known; use routes to inspect standard module.json5 routes. Never use repeated screenshot guessing for a navigation that this tool can replay.",
+    description: "Primary tool for entering a known HarmonyOS page or repeating multi-step UI navigation. action is always required. For a new navigation call action=navigate first: ArkPilot safely prefers an exact manifest-declared Ability/App Link/Want route, otherwise finds and replays a matching saved flow, and if none exists starts exploration recording automatically. Use goal for natural-language intent (not target), and id for a known flow (not flow_id); product is not a ui_flow argument. During exploration use ui_observe then semantic ui_tap; successful actions are learned without another command, then finish with navigate+recording_id+success_selector. Replay uses no screenshots on success, safely heals a changed key only from a unique exact semantic fallback, writes that repair only after the final assertion passes, and returns job_id for long runs. A successfully saved .arkpilot/flows JSON file is a persistent reusable project artifact, not temporary test output: never remove it during cleanup unless the user explicitly requests ui_flow action=delete. Use run only when the exact flow id is already known; use routes to inspect standard module.json5 routes. Never use repeated screenshot guessing for a navigation that this tool can replay.",
     inputSchema: {
       type: "object",
       properties: {
@@ -258,11 +256,11 @@ const localTools = [
           type: "string",
           enum: ["navigate", "routes", "driver_status", "record_start", "record_status", "record_stop", "record_cancel", "run", "status", "cancel", "list", "get", "validate", "delete"],
         },
-        id: { type: "string", pattern: "^[a-z0-9](?:[a-z0-9_-]{0,62}[a-z0-9])?$" },
-        name: { type: "string", minLength: 1 },
+        id: { type: "string", pattern: "^[a-z0-9](?:[a-z0-9_-]{0,62}[a-z0-9])?$", description: "Flow id. Required for record_start, run, get, and delete; validate accepts either id or flow." },
+        name: { type: "string", minLength: 1, description: "Human-readable flow name. Required for record_start." },
         goal: { type: "string", minLength: 1, description: "Natural-language navigation goal used to safely match a saved flow. Exact declared route names can also be used." },
-        recording_id: { type: "string" },
-        job_id: { type: "string" },
+        recording_id: { type: "string", description: "Recording id returned by record_start or navigate. Required for record_status, record_stop, record_cancel, and finishing navigate." },
+        job_id: { type: "string", description: "Execution job id returned by run or navigate. Required for status and cancel." },
         project_path: { type: "string" },
         hvd: { type: "string", description: "Exact hdc device id; required when several devices are connected." },
         bundle_name: { type: "string" },
@@ -281,7 +279,7 @@ const localTools = [
         wait_ms: { type: "integer", minimum: 0, maximum: 20000 },
         timeoutMs: { type: "integer", minimum: 1000, maximum: 600000 },
         variables: { type: "object", additionalProperties: { type: ["string", "number", "boolean"] } },
-        flow: { type: "object", additionalProperties: true },
+        flow: { type: "object", description: "Inline flow definition for validate; use this or id.", additionalProperties: true },
         success_selector: {
           type: "object",
           properties: {
@@ -296,13 +294,6 @@ const localTools = [
         selector_healing: { type: "boolean", description: "Allow unique exact semantic fallbacks and persist promotions only after final success. Defaults to project config." },
       },
       required: ["action"],
-      allOf: [
-        { if: { properties: { action: { const: "record_start" } } }, then: { required: ["id", "name"] } },
-        { if: { properties: { action: { enum: ["record_status", "record_stop", "record_cancel"] } } }, then: { required: ["recording_id"] } },
-        { if: { properties: { action: { enum: ["run", "get", "delete"] } } }, then: { required: ["id"] } },
-        { if: { properties: { action: { enum: ["status", "cancel"] } } }, then: { required: ["job_id"] } },
-        { if: { properties: { action: { const: "validate" } } }, then: { anyOf: [{ required: ["id"] }, { required: ["flow"] }] } },
-      ],
       additionalProperties: false,
     },
   },
@@ -324,16 +315,12 @@ const localTools = [
         },
         success_state: { type: "string", enum: ["visible", "hidden"] },
         visual_prompt: { type: "string", description: "Appearance requirement for the host AI to judge from the returned image." },
-        baseline_id: { type: "string" },
+        baseline_id: { type: "string", description: "Snapshot id returned by capture/assert. Required for compare." },
         expect: { type: "string", enum: ["changed", "unchanged"] },
         width: { type: "integer", minimum: 64, maximum: 4096 },
         inline: { type: "boolean" },
         timeoutMs: { type: "integer", minimum: 1000, maximum: 600000 },
       },
-      allOf: [
-        { if: { properties: { action: { const: "assert" } }, required: ["action"] }, then: { required: ["selector"] } },
-        { if: { properties: { action: { const: "compare" } }, required: ["action"] }, then: { required: ["baseline_id"] } },
-      ],
       additionalProperties: false,
     },
   },
@@ -388,8 +375,8 @@ const localTools = [
       "Restart this server's long-lived children in place, without dropping the client connection. "
       + "Use to recover from a stuck or erroring language service after fixing the root cause, instead of "
       + "restarting the whole agent session. `arkts` resets the ArkTS language server (affects lsp and its "
-      + "five aliases). `cpp` drops the CodeGenie child, which also backs get_app_ui_tree and "
-      + "perform_ui_action, so those reconnect on their next call too. `all` (default) does both. Nothing is "
+      + "five aliases). `cpp` drops the CodeGenie child, which also backs get_app_ui_tree, so those "
+      + "operations reconnect on their next call too. `all` (default) does both. Nothing is "
       + "respawned eagerly: the next call that needs a child starts it. Caution: if the service fails again "
       + "right after a restart, the cause is a persistent project or SDK configuration problem -- do not call "
       + "this repeatedly, run deveco_doctor and fix the project first.",
@@ -419,10 +406,6 @@ const localTools = [
         login_id: { type: "string", description: "Required for status." },
         wait_ms: { type: "integer", minimum: 0, maximum: 20000, description: "Status may wait this long for completion." },
       },
-      allOf: [{
-        if: { properties: { action: { const: "status" } }, required: ["action"] },
-        then: { required: ["login_id"] },
-      }],
       additionalProperties: false,
     },
   },
@@ -499,10 +482,6 @@ const localTools = [
         project_path: { type: "string", description: "Optional project root; otherwise the active project from switch_cwd." },
         timeoutMs: { type: "integer", minimum: 1000, maximum: 3600000 },
       },
-      allOf: [{
-        if: { properties: { action: { enum: ["status", "cancel"] } }, required: ["action"] },
-        then: { required: ["job_id"] },
-      }],
       additionalProperties: false,
     },
   },
@@ -599,7 +578,7 @@ const localTools = [
   },
   {
     name: "find_references",
-    description: "Find all ArkTS/TypeScript references to the symbol at an absolute file position. Project files mentioning the symbol are loaded into the language server first, so results cover the whole project rather than only files opened earlier this session.",
+    description: "Find ArkTS references through the official DevEco ace-server. The project is initialized by `devecocli serve lsp`; unsupported server capabilities fail explicitly instead of returning fabricated empty results.",
     inputSchema: {
       type: "object",
       properties: {
@@ -607,7 +586,7 @@ const localTools = [
         line: { type: "integer", minimum: 1 },
         column: { type: "integer", minimum: 1 },
         includeDeclaration: { type: "boolean" },
-        timeoutMs: { type: "integer", minimum: 1000, maximum: 120000, description: "Hard deadline; a timed-out language server is terminated and restarted lazily." },
+        timeoutMs: { type: "integer", minimum: 1000, maximum: 120000, description: "Per-call deadline. Official project initialization may continue in the background and return LSP_INITIALIZING for a later retry." },
       },
       required: ["file", "line", "column"],
       additionalProperties: false,
@@ -615,55 +594,26 @@ const localTools = [
   },
   {
     name: "lsp",
-    description: "Run any official DevEco LSP operation: definition, declaration, references, hover, document/workspace symbols, implementation, or call hierarchy. Request line/character are 1-based, but the response is the raw LSP payload, so positions inside it are 0-based; the dedicated wrappers normalise theirs to 1-based.",
+    description: "Official ArkTS LSP entry point backed only by `devecocli serve lsp --arkts` and the DevEco ace-server. Exposes only the four capabilities advertised by the current official server: definition, references, hover, and implementation. Request positions are 1-based; raw LSP response positions remain 0-based.",
     inputSchema: {
       type: "object",
       properties: {
         operation: {
           type: "string",
-          enum: ["goToDefinition", "goToDeclaration", "findReferences", "hover", "documentSymbol", "workspaceSymbol", "goToImplementation", "prepareCallHierarchy", "incomingCalls", "outgoingCalls"],
+          enum: ["goToDefinition", "findReferences", "hover", "goToImplementation"],
         },
-        filePath: { type: "string", description: "Absolute or project-relative source file path." },
-        line: { type: "integer", minimum: 1 },
-        character: { type: "integer", minimum: 1 },
-        query: { type: "string", description: "Workspace-symbol search query; empty string requests all symbols." },
-        timeoutMs: { type: "integer", minimum: 1000, maximum: 120000 },
+        filePath: { type: "string", description: "Absolute or project-relative .ets file used to select and initialize the official project server." },
+        line: { type: "integer", minimum: 1, description: "Required 1-based line number." },
+        character: { type: "integer", minimum: 1, description: "Required 1-based character offset." },
+        timeoutMs: { type: "integer", minimum: 1000, maximum: 120000, description: "One deadline shared by official server startup and the requested operation." },
       },
-      required: ["operation"],
-      allOf: [
-        {
-          if: { properties: { operation: { not: { const: "workspaceSymbol" } } }, required: ["operation"] },
-          then: { required: ["filePath"] },
-        },
-        {
-          if: {
-            properties: { operation: { not: { enum: ["workspaceSymbol", "documentSymbol"] } } },
-            required: ["operation"],
-          },
-          then: { required: ["line", "character"] },
-        },
-      ],
+      required: ["operation", "filePath", "line", "character"],
       additionalProperties: false,
     },
   },
   {
     name: "go_to_definition",
-    description: "Go to the ArkTS/TypeScript definition at an absolute file position.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        file: { type: "string" },
-        line: { type: "integer", minimum: 1 },
-        column: { type: "integer", minimum: 1 },
-        timeoutMs: { type: "integer", minimum: 1000, maximum: 120000 },
-      },
-      required: ["file", "line", "column"],
-      additionalProperties: false,
-    },
-  },
-  {
-    name: "go_to_declaration",
-    description: "Go to the ArkTS/TypeScript declaration at an absolute file position. If the installed ArkTS server does not advertise declarationProvider, this safely falls back to definition instead of returning JSON-RPC -32601.",
+    description: "Go to an ArkTS definition through the official DevEco ace-server.",
     inputSchema: {
       type: "object",
       properties: {
@@ -678,7 +628,7 @@ const localTools = [
   },
   {
     name: "get_hover",
-    description: "Get ArkTS/TypeScript type information and documentation at an absolute file position.",
+    description: "Get ArkTS type information and documentation from the official DevEco ace-server.",
     inputSchema: {
       type: "object",
       properties: {
@@ -688,32 +638,6 @@ const localTools = [
         timeoutMs: { type: "integer", minimum: 1000, maximum: 120000 },
       },
       required: ["file", "line", "column"],
-      additionalProperties: false,
-    },
-  },
-  {
-    name: "list_symbols",
-    description: "List functions, classes, variables, and other symbols defined in an ArkTS/TypeScript file.",
-    inputSchema: {
-      type: "object",
-      properties: { file: { type: "string" }, timeoutMs: { type: "integer", minimum: 1000, maximum: 120000 } },
-      required: ["file"],
-      additionalProperties: false,
-    },
-  },
-  {
-    name: "find_call_hierarchy",
-    description: "Find incoming callers or outgoing callees for an ArkTS/TypeScript symbol. For direction=incoming, project files mentioning the symbol are loaded into the language server first so callers outside the current module are found.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        file: { type: "string" },
-        line: { type: "integer", minimum: 1 },
-        column: { type: "integer", minimum: 1 },
-        direction: { type: "string", enum: ["incoming", "outgoing"] },
-        timeoutMs: { type: "integer", minimum: 1000, maximum: 120000 },
-      },
-      required: ["file", "line", "column", "direction"],
       additionalProperties: false,
     },
   },
@@ -898,12 +822,111 @@ function imageResult(report, isError = false) {
   return { isError, content: blocks };
 }
 
+/**
+ * Keep DevEco Code's legacy UI action contract while executing it through the in-process HDC
+ * adapter. Starting the CodeGenie child for one input command costs several seconds and also made
+ * its default screenshots persistent on both the host and device. The local adapter is the same
+ * bounded, device-selecting implementation used by ui_tap/ui_snapshot and removes its device
+ * artifact in a finally block.
+ */
+async function performCompatibleUiAction(args) {
+  if (args.actionType === "screenshot") {
+    const report = await uiSnapshot({
+      hvd: args.hvd,
+      displayId: args.displayId,
+      localPath: args.localPath,
+      timeoutMs: args.timeoutMs,
+      // An explicitly named local file is the opt-in persistence boundary. With no localPath the
+      // frame lives under the OS temp directory and imageResult deletes it after inline delivery.
+      overwrite: Boolean(args.localPath),
+    });
+    return imageResult({
+      ...report,
+      compatibilityTool: "perform_ui_action",
+      backend: "hdc-shell",
+      deviceSavePathIgnored: args.savePath
+        ? "ArkPilot does not retain screenshot copies on the device; the transient copy was removed."
+        : undefined,
+    });
+  }
+
+  const mapped = {
+    click: { action: "click", x: args.x, y: args.y },
+    directionalFling: {
+      action: "dircFling",
+      direction: args.direction ?? 0,
+      velocity: args.velocity ?? 600,
+      stepLength: args.stepLength,
+    },
+    inputText: { action: "inputText", x: args.x, y: args.y, text: args.text },
+    keyEvent: { action: "keyEvent", key1: args.key1, key2: args.key2, key3: args.key3 },
+  }[args.actionType];
+  if (!mapped) {
+    const error = new Error("actionType must be click, directionalFling, inputText, keyEvent, or screenshot");
+    error.code = "UI_ARGS_INVALID";
+    throw error;
+  }
+  try {
+    const result = await uiTap({ ...mapped, hvd: args.hvd, timeoutMs: args.timeoutMs });
+    return textResult({ ...result, compatibilityTool: "perform_ui_action", backend: "hdc-shell" });
+  } catch (error) {
+    // HDC inserts its own double quotes around argv containing whitespace. Four characters remain
+    // active inside those quotes, so the local adapter deliberately rejects that narrow input-text
+    // case before acquiring the uitest lock or sending anything. Preserve the legacy tool's useful
+    // escape hatch by delegating only that pre-action rejection to CodeGenie. Never fall back after
+    // an HDC command: a timeout cannot prove an action did not land, and retrying could type twice.
+    const needsCodeGenieTextTransport = args.actionType === "inputText"
+      && error?.code === "UI_ARGS_INVALID"
+      && /use perform_ui_action/i.test(String(error?.hint ?? ""));
+    if (needsCodeGenieTextTransport) {
+      return callCodeGenieTool("perform_ui_action", args);
+    }
+    throw error;
+  }
+}
+
 const server = new Server(
   { name: "deveco-tool", version: "0.1.0" },
   { capabilities: { tools: {} } },
 );
 
-const advertisedTools = [...localTools, ...PROXIED_CODEGENIE_TOOLS];
+const advertisedTools = [
+  ...localTools,
+  ...PROXIED_CODEGENIE_TOOLS.map((tool) => {
+    if (tool.name === "get_app_ui_tree") {
+      return {
+        ...tool,
+        description:
+          "Legacy CodeGenie full-tree compatibility tool. Prefer ui_find for semantic coordinates or ui_observe for one-round-trip screenshot plus tree; both are faster local HDC paths and do not require the CodeGenie child. Use this proxy only when the caller specifically needs CodeGenie's original full-tree response contract.",
+      };
+    }
+    if (tool.name === "perform_ui_action") {
+      return {
+      ...tool,
+      description:
+        "Compatibility UI action entry point. Prefer ui_flow navigate for multi-step navigation and ui_tap for new single actions. Click, fling, keys, screenshots, and shell-safe text use the local HDC fast path; only text that HDC cannot quote safely falls back to CodeGenie before any device action is sent. Default screenshots are temporary.",
+      inputSchema: {
+        ...tool.inputSchema,
+        properties: {
+          ...tool.inputSchema.properties,
+          localPath: {
+            ...tool.inputSchema.properties.localPath,
+            description:
+              "Optional explicit local destination. Omit it for an OS-temporary image that is deleted after inline delivery.",
+          },
+          savePath: {
+            ...tool.inputSchema.properties.savePath,
+            description:
+              "Accepted for compatibility but never retained: the local fast path always removes its transient device screenshot.",
+          },
+          timeoutMs: { type: "integer", minimum: 1000, maximum: 600000 },
+        },
+      },
+      };
+    }
+    return tool;
+  }),
+];
 const schemaCompiler = new Ajv({ allErrors: true, strict: false });
 // The upstream CodeGenie schemas use the OpenAPI integer format. Register it explicitly so Ajv
 // validates the range instead of printing one warning per field to the MCP server's stderr.
@@ -915,18 +938,66 @@ const argumentValidators = new Map(
   advertisedTools.map((tool) => [tool.name, schemaCompiler.compile(tool.inputSchema)]),
 );
 
+function conditionalArgumentErrors(name, args) {
+  const errors = [];
+  const has = (property) => Object.prototype.hasOwnProperty.call(args, property);
+  const requireProperty = (property) => {
+    if (!has(property)) {
+      errors.push({
+        path: "/",
+        keyword: "required",
+        message: `must have required property '${property}'`,
+        params: { missingProperty: property },
+      });
+    }
+  };
+
+  if (name === "ui_flow") {
+    if (args.action === "record_start") {
+      requireProperty("id");
+      requireProperty("name");
+    }
+    if (["record_status", "record_stop", "record_cancel"].includes(args.action)) {
+      requireProperty("recording_id");
+    }
+    if (["run", "get", "delete"].includes(args.action)) requireProperty("id");
+    if (["status", "cancel"].includes(args.action)) requireProperty("job_id");
+    if (args.action === "validate" && !has("id") && !has("flow")) {
+      errors.push({
+        path: "/",
+        keyword: "anyOf",
+        message: "must have either id or flow",
+        params: { requiredAlternatives: ["id", "flow"] },
+      });
+    }
+  } else if (name === "verify_ui") {
+    if (args.action === "assert") requireProperty("selector");
+    if (args.action === "compare") requireProperty("baseline_id");
+  } else if (name === "deveco_login") {
+    if (args.action === "status") requireProperty("login_id");
+  } else if (name === "build_project") {
+    if (["status", "cancel"].includes(args.action)) requireProperty("job_id");
+  }
+  return errors;
+}
+
 function argumentValidationFailure(name, args) {
   const validator = argumentValidators.get(name);
-  if (!validator || validator(args)) return null;
-  return {
-    code: "SCHEMA_VALIDATION_FAILED",
-    message: `Arguments for ${name} do not match its published input schema.`,
-    details: (validator.errors ?? []).map((error) => ({
+  if (!validator) return null;
+  const schemaValid = validator(args);
+  const details = schemaValid
+    ? conditionalArgumentErrors(name, args)
+    : (validator.errors ?? []).map((error) => ({
       path: error.instancePath || "/",
       keyword: error.keyword,
       message: error.message,
       params: error.params,
-    })),
+    }));
+  if (details.length === 0) return null;
+  return {
+    code: "SCHEMA_VALIDATION_FAILED",
+    message: `Arguments for ${name} do not match its published input schema.`,
+    details,
   };
 }
 
@@ -1085,7 +1156,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     }
 
     if (name === "arkts_check") {
-      return textResult(await runArktsCheck(args));
+      const result = await runArktsCheck(args);
+      return textResult(result, result.success === false || Number(result.exitCode ?? 0) !== 0);
     }
 
     if (name === "code_lint") return plainResult(await codeLint(args));
@@ -1103,7 +1175,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       if (!Array.isArray(args.files)) {
         return textResult({ code: "ARKTS_FILES_INVALID", message: "files must be an array of .ets or .ts paths" }, true);
       }
-      return textResult(await runArktsCheck({ files: args.files }));
+      const result = await runArktsCheck({ files: args.files });
+      return textResult(result, result.success === false || Number(result.exitCode ?? 0) !== 0);
     }
 
     if (name === "build_project") {
@@ -1158,20 +1231,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       return textResult(await goToDefinition(args));
     }
 
-    if (name === "go_to_declaration") {
-      return textResult(await goToDeclaration(args));
-    }
-
     if (name === "get_hover") {
       return textResult(await getHover(args));
-    }
-
-    if (name === "list_symbols") {
-      return textResult(await listSymbols(args));
-    }
-
-    if (name === "find_call_hierarchy") {
-      return textResult(await findCallHierarchy(args));
     }
 
     if (name === "document_validate") {
@@ -1219,22 +1280,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }, true);
     }
 
-    // CodeGenie counts installed-but-stopped emulators as selectable targets and
-    // demands hvd even when exactly one device is actually online, while
-    // get_app_ui_tree picks that device on its own. Resolve it the same way here.
-    if (name === "perform_ui_action" && !args.hvd) {
-      const { devices } = await hdcLog({ action: "list_devices" });
-      if (devices.length === 0) {
-        return textResult({ code: "HDC_NO_DEVICE", message: "No connected HarmonyOS devices detected." }, true);
-      }
-      if (devices.length > 1) {
-        return textResult({
-          code: "HDC_DEVICE_REQUIRED",
-          message: `Multiple HarmonyOS devices are connected (${devices.join(", ")}); pass hvd.`,
-        }, true);
-      }
-      return await callCodeGenieTool(name, { ...args, hvd: devices[0] });
-    }
+    if (name === "perform_ui_action") return performCompatibleUiAction(args);
 
     // Dispatch off the static table, not off a list fetched from the child. An unreachable child
     // now surfaces as a CODEGENIE_UNAVAILABLE error from the call itself, which is actionable,
@@ -1249,6 +1295,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       code: error.code ?? "TOOL_ERROR",
       message: error.message,
       hint: error.hint,
+      details: error.details,
     }, true);
   }
 });
@@ -1259,8 +1306,8 @@ await server.connect(transport);
 // No eager warm-up. It existed so the first tools/list would find the child ready, and that
 // reason disappeared when tools/list moved to a static table. Keeping it spawned a CodeGenie
 // child in every session -- including the majority that never touch check_cpp_files,
-// perform_ui_action or get_app_ui_tree -- and logged a handshake failure when it stalled, for a
-// child nothing was waiting on. The three proxied tools now start it on first call, which is what
+// get_app_ui_tree -- and logged a handshake failure when it stalled, for a
+// child nothing was waiting on. The remaining proxied tools now start it on first call, which is what
 // PACK.md has been describing all along.
 
 let shutdownPromise;

@@ -1,8 +1,16 @@
 # deveco-tool
 
-`deveco-tool` 是面向 HarmonyOS / OpenHarmony 开发的统一 stdio MCP 服务。它把 DevEco CLI、ArkTS 语言服务、CodeGenie、HDC 真机控制和仓库内的诊断脚本统一成 **45 个 MCP 工具**，AI 客户端只需连接一个进程。
+`deveco-tool` 是面向 HarmonyOS / OpenHarmony 开发的统一 stdio MCP 服务。它把 DevEco CLI、ArkTS 语言服务、CodeGenie、HDC 真机控制和仓库内的诊断脚本统一成 **42 个 MCP 工具**，AI 客户端只需连接一个进程。
 
 这个仓库还包含可选的 Skill、SDD 命令和模板；它们不是运行 MCP 的必要条件。机器可读清单见 [`manifest.json`](./manifest.json)，能力包接入和来源细节见 [`PACK.md`](./PACK.md)，UI 自动化的分层、生成时机和性能边界见 [`docs/arkpilot-architecture.md`](./docs/arkpilot-architecture.md)。
+
+## 自主研发的 ArkPilot UI 录制与回放
+
+ArkPilot 是本仓库自主研发的通用 HarmonyOS UI 自动化能力。它把 AI 首次进入页面时反复执行的“截图、识别、点击”过程录制成语义化流程，后续通过一次 `ui_flow` 调用直接回放。它不修改应用代码，也不要求项目预先维护路由 JSON。
+
+首次导航时调用 `ui_flow action=navigate`：ArkPilot 会先尝试从标准工程清单中发现可直接启动的 Ability、App Link 或 Want；无法直达时查找已有流程；仍未命中才进入探索录制。录制期间，成功的 `ui_tap` 操作会自动写入内存草稿，最终断言通过后才原子保存到项目的 `.arkpilot/flows/`。保存后的流程是项目资产，只有明确调用 `ui_flow action=delete` 才会删除。
+
+回放优先使用组件 `key`，并保留严格的语义备用选择器。控件只改变屏幕位置时会在最新 UI 树中重新定位，不依赖旧坐标；主选择器失效时，只有唯一候选且整个流程最终验证成功才会更新流程。成功路径不截图，失败诊断截图保存在系统临时目录并自动清理。完整设计和边界见 [`docs/arkpilot-architecture.md`](./docs/arkpilot-architecture.md)。
 
 ## 必须依赖
 
@@ -20,17 +28,16 @@ cd /absolute/path/to/deveco_tool
 npm install
 ```
 
-`npm install` 会安装下面的运行时组件，不需要再全局安装 `devecocli`、ArkTS LSP 或 CodeGenie MCP：
+`npm install` 会安装 MCP 依赖和官方 `devecocli` 桥接器，不需要再全局安装 `devecocli` 或 CodeGenie MCP。ArkTS 语言服务本体不再使用 npm 第三方实现，而是从本机 DevEco Studio/CLT 中发现官方 `ace-server`：
 
 | npm 依赖 | 作用 |
 |---|---|
 | `@modelcontextprotocol/sdk`、`zod`、`ajv` | MCP 通信和工具参数校验 |
-| `@deveco/deveco-cli` | 构建、部署、Linter、文档、设备、UI、模拟器和签名等官方 CLI 能力 |
-| `@arkts/language-server` | ArkTS/TypeScript 定义、引用、悬停、符号和调用层级 |
-| `@deveco-codegenie/mcp` | C/C++ 检查及 CodeGenie UI 代理能力 |
-| `vscode-jsonrpc`、`vscode-languageserver-protocol`、`vscode-uri` | ArkTS LSP 协议与 URI 支持 |
+| `@deveco/deveco-cli` | 构建、部署、Linter、文档、设备、UI、模拟器和签名，以及 `serve lsp --arkts` 官方语言服务桥接 |
+| `@deveco-codegenie/mcp` | C/C++ 检查及 CodeGenie UI 树代理能力 |
+| `vscode-jsonrpc`、`vscode-uri` | 与官方 `ace-server` 通信所需的标准 LSP/URI 支持 |
 
-到这里已经可以启动 MCP、列出 45 个工具，以及使用不依赖鸿蒙工具链的工具。
+到这里已经可以启动 MCP、列出 42 个工具，以及使用不依赖鸿蒙工具链的工具。
 
 ### 使用鸿蒙工程能力
 
@@ -39,7 +46,8 @@ npm install
 | 能力 | 必需依赖 |
 |---|---|
 | 构建、同步、官方 Linter、API 兼容、热重载、官方文档 | DevEco Studio，或 DevEco Command Line Tools（CLT），并安装对应 HarmonyOS/OpenHarmony SDK |
-| ArkTS 检查和语言服务 | HarmonyOS/OpenHarmony SDK；建议配置完整 DevEco Studio/CLT 工具链 |
+| ArkTS 检查 | HarmonyOS/OpenHarmony SDK |
+| ArkTS 语言服务 | 带官方 `ace-server` 的 DevEco Studio，或带 `arkts-lsp` 的官方 CLT；Linux 使用 CLT 并配置 `DEVECO_CLI_CLT_PATH` |
 | 真机安装、日志、截图、UI 树、手势、`ui_flow` 导航和 `verify_ui` | 工具链中的 `hdc`；真机已连接、已授权调试且能被 `hdc list targets` 识别 |
 | 模拟器管理和场景模拟 | DevEco 模拟器组件、系统镜像及已接受的许可证 |
 | `arkts_knowledge_search` | 可访问华为 DevEco CodeGenie 服务的网络，以及通过 `deveco_login` 建立的会话 |
@@ -59,7 +67,7 @@ npm install
 | `PROJECT_PATH` | MCP 启动后的默认 HarmonyOS 工程根目录 |
 | `HDC_PATH` | 自定义 `hdc` 可执行文件；通常无需设置 |
 
-高级覆盖项包括 `DEVECO_CLI_ENTRY`、`ARKTS_LSP_ENTRY`、`DEVECO_CODEGENIE_ENTRY`、`OHOS_SDK_PATH` 和 `TSDK_PATH`。它们主要用于非标准安装或调试；常规安装不要设置。
+高级覆盖项包括 `DEVECO_CLI_ENTRY`、`DEVECO_CODEGENIE_ENTRY`、`OHOS_SDK_PATH` 和 `TSDK_PATH`。它们主要用于非标准安装或调试；常规安装不要设置。ArkTS LSP 后端固定由官方 DevEco CLI 和工具链发现，不接受第三方语言服务入口覆盖。
 
 安装后先运行环境诊断：
 
@@ -100,7 +108,7 @@ MCP 客户端配置示例：
 node scripts/install.mjs --print-mcp
 ```
 
-## 45 个 MCP 工具
+## 42 个 MCP 工具
 
 表格中的“依赖”是在 Node.js 和 `npm install` 之外的条件。
 
@@ -129,7 +137,7 @@ node scripts/install.mjs --print-mcp
 
 `deveco_login` 与 `deveco_cli_auth` 是两套独立会话：前者服务于 CodeGenie 知识检索，后者服务于官方 CLI、团队和签名能力。
 
-### 代码检查和语言服务（12）
+### 代码检查和语言服务（9）
 
 | 工具 | 用途 | 额外依赖 |
 |---|---|---|
@@ -137,16 +145,17 @@ node scripts/install.mjs --print-mcp
 | `check_ets_files` | 对明确给出的 `.ets` / `.ts` 文件运行本地 ArkTS 检查 | 活动工程、SDK |
 | `code_lint` | 官方工程级 Code Linter；支持增量检查、JSON、报告文件和自动修复 | 工程、DevEco Studio/CLT |
 | `api_compat_check` | 扫描文件/模块的 API 版本兼容性，或列出支持的 API 版本 | 工程、DevEco Studio/CLT |
-| `lsp` | 通用 ArkTS LSP 入口，支持定义、声明、引用、悬停、符号、实现和调用层级 | 工程、SDK |
-| `find_references` | 查询符号引用 | 工程、SDK |
-| `go_to_definition` | 跳转到符号定义 | 工程、SDK |
-| `go_to_declaration` | 跳转到声明；服务端不支持时安全回退到定义 | 工程、SDK |
-| `get_hover` | 获取位置上的类型和文档 | 工程、SDK |
-| `list_symbols` | 列出文件内函数、类、变量等符号 | 工程、SDK |
-| `find_call_hierarchy` | 查询符号的调用方或被调用方 | 工程、SDK |
+| `lsp` | 官方 ArkTS LSP 原始入口，仅支持定义、引用、悬停和实现四类请求 | 工程、官方 `ace-server` |
+| `find_references` | 通过官方服务查询符号引用 | 工程、官方 `ace-server` |
+| `go_to_definition` | 通过官方服务跳转到符号定义 | 工程、官方 `ace-server` |
+| `get_hover` | 通过官方服务获取位置上的类型和文档 | 工程、官方 `ace-server` |
 | `check_cpp_files` | 通过 CodeGenie 子进程检查 C/C++ 文件 | 工程、DevEco Studio、CodeGenie 子进程 |
 
 `arkts_check` 是静态预检，不能代替真实编译；是否可以产出 HAP/HAR 应以 `build_project` 为准。
+
+ArkTS LSP 只封装当前官方服务真实声明的 `definitionProvider`、`referencesProvider`、`hoverProvider` 和 `implementationProvider`。`lsp` 的 `operation` 分别为 `goToDefinition`、`findReferences`、`hover`、`goToImplementation`；四种请求都必须提供 `.ets` 文件和从 1 开始的行列位置。专用工具返回便于阅读的 1-based 路径和源码行，`lsp` 保留官方原始响应中的 0-based 位置。
+
+语言服务按工程延迟启动并复用同一个官方进程，连续查询不会重复索引或重复读取未修改的源文件。文档状态最多保留 32 个文件、合计 16 MiB，空闲 60 秒后会关闭 `devecocli` 与 `ace-server` 进程树，以释放官方索引器占用的内存；可用 `DEVECO_LSP_IDLE_MS` 在 30000～1800000 毫秒范围内调整。首次初始化尚未完成时返回可重试的 `LSP_INITIALIZING`，请求或初始化达到硬超时会终止对应进程树。
 
 ### 构建、部署和签名（6）
 
@@ -156,7 +165,7 @@ node scripts/install.mjs --print-mcp
 | `build_project` | 构建整个产品或指定模块；支持启动、查询、取消和同步运行 | 工程、DevEco Studio/CLT、SDK |
 | `start_app` | 安装已构建的单个 Entry HAP 并启动 Ability；不会隐式构建 | 工程、已构建产物、HDC 设备 |
 | `apply_changes` | 冷增量构建并安装修改文件，精确部署一个 Entry 模块 | 工程、DevEco Studio/CLT、HDC 设备 |
-| `hot_reload` | 管理常驻热重载：启动、应用 `.ets` 改动、查询和停止 | 工程、DevEco Studio/CLT、支持热重载的 HDC 设备 |
+| `hot_reload` | 管理常驻热重载：启动、应用 `.ets` 改动、查询和停止；启动单次最多等待 20 秒，尚未就绪时用 `status` 继续查询 | 工程、DevEco Studio/CLT、支持热重载的 HDC 设备 |
 | `app_signature` | 通过官方 CLI 生成或更新工程签名配置 | 工程、DevEco Studio/CLT、官方 CLI 登录和团队/设备信息 |
 
 `build_project` 默认 `action: "start"`，会立即返回 `job_id`。之后用 `action: "status"` 查询，或用 `action: "cancel"` 终止。只有确认 MCP 客户端允许长请求时才使用 `action: "run"`；工具参数中的 `timeoutMs` 无法提高客户端自身固定的 30 秒外层超时。
@@ -183,7 +192,7 @@ node scripts/install.mjs --print-mcp
 | `ui_inspect` | 官方窗口列表和布局树；支持窗口/显示选择、全窗口、深度过滤及精简/完整输出 | DevEco Studio/CLT、设备或模拟器 |
 | `ui_control` | 官方 UI 控制器；支持坐标手势和 node-id/window 定位 | DevEco Studio/CLT、设备或模拟器 |
 | `get_app_ui_tree` | 通过 CodeGenie 获取前台调试应用的 UI 树 | DevEco Studio、CodeGenie 子进程、设备 |
-| `perform_ui_action` | 通过 CodeGenie 执行应用 UI 操作 | DevEco Studio、CodeGenie 子进程、设备 |
+| `perform_ui_action` | 兼容旧 UI 调用；点击、截图和可安全转义的文本走本地 HDC 快速路径，只有 HDC 无法安全引用的文本才回退 CodeGenie；新调用优先使用 `ui_flow` / `ui_tap` | HDC 设备；特殊文本回退还需 CodeGenie 子进程 |
 
 优先使用 `ui_tap` 的 `key`、`text` 或 `type` 选择器。自绘控件没有出现在 UI 树中时，使用 `from_x_percent`、`from_y_percent`、`to_x_percent`、`to_y_percent` 按当前屏幕比例生成手势；不要长期保存某台设备的绝对像素坐标。返回“手势发送成功”只代表设备接受了事件，不代表界面一定发生变化，可配合 `ui_observe` 或 `verify_ui` 验证。
 
@@ -247,7 +256,7 @@ ui_flow(navigate, goal=目标页面)
 ui_observe → ui_tap → 必要时 verify_ui
 ```
 
-流程默认保存在项目的 `.arkpilot/flows/*.json`，项目驱动配置保存在 `.arkpilot/config.json`。安装和启动 MCP 不会生成它们；首次使用 `navigate`、`run`、`list` 等项目级流程仓库能力时才按需创建。显式录制开始时只保留内存草稿，直到 `record_stop` 验证成功才落盘，因此取消录制不会留下流程文件。新配置会写入 `hdc-shell`、自动录制、安全自愈和 Hypium 性能门禁的显式默认值。录制只接收成功的本地 `ui_tap` 操作；输入值会保存为运行变量而不是明文。回放使用 `aa force-stop` / `aa start` 直接启动已安装应用，不构建也不重新安装，成功路径不截图，失败时才返回截图路径和精简 UI 树。选择器 key 失效时，只允许唯一、精确且指向同一节点的录制备用选择器接管，并且必须等最终断言成功后才原子更新流程；候选歧义时停止，不猜测点击。
+流程默认保存在项目的 `.arkpilot/flows/*.json`，项目驱动配置保存在 `.arkpilot/config.json`。安装和启动 MCP 不会生成它们；首次使用 `navigate`、`run`、`list` 等项目级流程仓库能力时才按需创建。显式录制开始时只保留内存草稿，直到 `record_stop` 验证成功才落盘，因此取消录制不会留下流程文件。成功保存的流程是可复用的项目资产，不是测试临时文件；除非用户明确调用 `ui_flow action=delete`，清理验证产物时不得删除。新配置会写入 `hdc-shell`、自动录制、安全自愈和 Hypium 性能门禁的显式默认值。录制只接收成功的本地 `ui_tap` 操作；输入值会保存为运行变量而不是明文。回放使用 `aa force-stop` / `aa start` 直接启动已安装应用，不构建也不重新安装，成功路径不截图，失败时才返回截图路径和精简 UI 树。选择器 key 失效时，只允许唯一、精确且指向同一节点的录制备用选择器接管，并且必须等最终断言成功后才原子更新流程；候选歧义时停止，不猜测点击。
 
 默认后端是 `hdc-shell`。可选 `hypium-driver` 适配器使用常驻连接、10 秒以内 RPC 截止时间和取消清理，但只有关闭其遥测且项目性能门禁通过时才允许配置为 `hypium`；未通过门禁不会静默切换后端。Ability、Action 和 App Link 从标准 `AppScope/app.json5`、`build-profile.json5`、`module.json5` 发现。动态 URI 和业务 Want 参数必须由调用方明确提供。
 
@@ -280,10 +289,10 @@ node scripts/install-host.mjs --host all
 
 ## 运行约束
 
-- 45 个工具的参数都会先按公开 JSON Schema 校验。
-- `tools/list` 使用本地静态表，不等待 CodeGenie 子进程；CodeGenie 不可用只影响其 3 个代理工具。
+- 42 个工具的参数都会先按公开 JSON Schema 校验。
+- `tools/list` 使用本地静态表，不等待 CodeGenie 子进程；CodeGenie 不可用只影响 C/C++ 检查和 UI 树两个代理工具。
 - 构建和浏览器登录默认使用“启动任务 + 状态查询”，避免常见 MCP 客户端的 30 秒调用上限。
-- CLI、LSP、HDC、脚本和网络请求均有截止时间；超时会终止所启动的子进程树。
+- CLI、LSP、HDC、脚本和网络请求均有截止时间。LSP 首次工程初始化超过单次调用时间时返回 `LSP_INITIALIZING` 并在后台继续，真实请求超时或 120 秒初始化硬超时会终止所启动的子进程树。
 - `ui_snapshot` 和 `ui_observe` 默认不覆盖明确指定的已有文件，确需覆盖时传 `overwrite: true`。
 - `verify_ui` 是本地受控实现；上游 `save_ui_screenshot`、`get_ui_verification_log` 仍未公开，因为本实现不持久化上游验证会话。
 

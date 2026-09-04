@@ -9,13 +9,14 @@ import test from "node:test";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import {
-  listScripts, parseScriptOutput, registeredScriptEnvironment, runRegisteredScript,
+  classifyScriptCompletion, listScripts, parseScriptOutput, registeredScriptEnvironment,
+  runRegisteredScript,
 } from "../src/script-registry.mjs";
 import { arktsCheckStatus, runArktsCheck } from "../src/arkts-check.mjs";
 import { resolveDevecoHome, resolveDevecoToolchain, resolveHdcPath } from "../src/config.mjs";
 import {
   apiCompatibilityCheck, applyChanges, buildArgs, buildProject,
-  devecoCliFailureMessage, projectSync, startApp,
+  devecoCliFailureMessage, projectSync, runDevecoCli, startApp,
 } from "../src/deveco-cli.mjs";
 import {
   cliAuth, codeLint, deviceInfo, emulatorManage, emulatorScenario,
@@ -30,7 +31,11 @@ import {
   cleanupUiTemporaryFiles, removeUiTemporaryFile, uiFind, uiObserve, uiSnapshot, uiTap,
 } from "../src/device-ui.mjs";
 import { hdcFailureMessage, hdcLog, hdcStatus, runHdc } from "../src/hdc-log.mjs";
-import { getHover, goToDeclaration, lspStatus, resetLsp } from "../src/lsp.mjs";
+import {
+  findReferences, getHover, goToDefinition, lspOperation, lspStatus, resetLsp,
+  setOfficialLspServerForTests,
+} from "../src/lsp.mjs";
+import { resolveLspTarget } from "../src/lsp/project-root.mjs";
 
 const REPO_ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
 
@@ -192,6 +197,34 @@ test("credentials are encrypted at rest and plaintext stores migrate automatical
   assert.equal(fsSync.existsSync(`${file}.key`), false);
 });
 
+test("auth status exposes an unreadable credential store instead of reporting logged out", async (t) => {
+  const home = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-auth-corrupt-"));
+  t.after(async () => await fs.rm(home, { recursive: true, force: true }));
+  const store = path.join(home, ".deveco-knowledge-mcp");
+  await fs.mkdir(store, { recursive: true });
+  await fs.writeFile(path.join(store, "auth.json"), "{ definitely-not-json");
+  const script = [
+    `const { authStatus } = await import(${JSON.stringify(new URL("../src/modules/auth.mjs", import.meta.url).href)});`,
+    "try { await authStatus(); process.exitCode = 2; }",
+    "catch (error) { process.stdout.write(String(error.code)); }",
+  ].join("\n");
+
+  const outcome = await new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, ["--input-type=module", "--eval", script], {
+      env: { ...process.env, HOME: home, USERPROFILE: home, DEVECO_DISABLE_CREDENTIAL_KEYCHAIN: "1" },
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.on("data", (chunk) => { stdout += chunk.toString(); });
+    child.stderr.on("data", (chunk) => { stderr += chunk.toString(); });
+    child.once("error", reject);
+    child.once("close", (code) => resolve({ code, stdout, stderr }));
+  });
+  assert.equal(outcome.code, 0, outcome.stderr);
+  assert.equal(outcome.stdout, "DEVECO_AUTH_STATE_UNREADABLE");
+});
+
 test("non-interactive auth rejects an expired session without opening a browser", async (t) => {
   const home = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-auth-home-"));
   t.after(async () => await fs.rm(home, { recursive: true, force: true }));
@@ -226,21 +259,47 @@ test("local diagnostics dependencies are discoverable", { skip: NEEDS_DEVECO_SDK
   assert.equal(hdcStatus().installed, true);
 });
 
-test("LSP falls back from unsupported declaration and kills a server that misses its deadline", async (t) => {
-  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-lsp-test-"));
+test("LSP registry resolves only the official DevEco bridge and ace-server", () => {
+  const status = lspStatus();
+  assert.equal(status.provider, "@deveco/deveco-cli");
+  assert.match(status.bridge, /@deveco\/deveco-cli[\\/]dist[\\/]cli\.js$/);
+  if (status.installed) {
+    assert.match(status.backend, /[\\/]out[\\/]standardIndex[\\/]index\.js$/);
+  }
+  assert.equal(typeof status.installed, "boolean");
+  assert.doesNotMatch(JSON.stringify(status), /@arkts\/language-server/);
+});
+
+async function makeFakeOfficialLsp(options = {}) {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-official-lsp-"));
   const source = path.join(directory, "Main.ets");
-  const entry = path.join(directory, "fake-lsp.mjs");
+  const entry = path.join(directory, "fake-official-lsp.mjs");
   const methodLog = path.join(directory, "methods.log");
+  const pidFile = path.join(directory, "server.pid");
+  const sourceUri = "file://" + source;
+  await fs.writeFile(path.join(directory, "build-profile.json5"), "{ app: {}, modules: [] }\n");
   await fs.writeFile(source, "const answer: number = 42;\n");
-  const sourceUri = `file://${source}`;
   await fs.writeFile(entry, [
     'import fs from "node:fs";',
+    "const sourceUri = " + JSON.stringify(sourceUri) + ";",
+    "const methodLog = " + JSON.stringify(methodLog) + ";",
+    "const pidFile = " + JSON.stringify(pidFile) + ";",
+    "const initializeDelay = " + Number(options.initializeDelayMs ?? 0) + ";",
+    "const hoverDelay = " + Number(options.hoverDelayMs ?? 0) + ";",
+    "const stallHover = " + Boolean(options.stallHover) + ";",
+    "const ignoreSigterm = " + Boolean(options.ignoreSigterm) + ";",
+    "const hoverContents = " + JSON.stringify(options.hoverContents
+      ?? { kind: "plaintext", value: "const answer: number" }) + ";",
+    "const referenceCount = " + Number(options.referenceCount ?? 1) + ";",
+    "fs.writeFileSync(pidFile, String(process.pid));",
+    "if (ignoreSigterm) process.on('SIGTERM', () => {});",
     "let pending = Buffer.alloc(0);",
     "function send(id, result) {",
     "  const body = Buffer.from(JSON.stringify({ jsonrpc: '2.0', id, result }));",
-    "  process.stdout.write(`Content-Length: ${body.length}\\r\\n\\r\\n`);",
+    "  process.stdout.write('Content-Length: ' + body.length + '\\r\\n\\r\\n');",
     "  process.stdout.write(body);",
     "}",
+    "const capabilities = { definitionProvider: true, referencesProvider: true, hoverProvider: true, implementationProvider: true };",
     "process.stdin.on('data', (chunk) => {",
     "  pending = Buffer.concat([pending, chunk]);",
     "  while (true) {",
@@ -253,47 +312,280 @@ test("LSP falls back from unsupported declaration and kills a server that misses
     "    if (pending.length < bodyStart + length) return;",
     "    const message = JSON.parse(pending.subarray(bodyStart, bodyStart + length).toString());",
     "    pending = pending.subarray(bodyStart + length);",
-    `    if (message.method) fs.appendFileSync(${JSON.stringify(methodLog)}, message.method + "\\n");`,
+    "    if (message.method) fs.appendFileSync(methodLog, message.method + '\\n');",
     "    if (message.id === undefined) { if (message.method === 'exit') process.exit(0); continue; }",
-    "    if (message.method === 'initialize') send(message.id, { capabilities: { definitionProvider: true } });",
-    `    else if (message.method === 'textDocument/definition') send(message.id, [{ uri: ${JSON.stringify(sourceUri)}, range: { start: { line: 0, character: 6 }, end: { line: 0, character: 12 } } }]);`,
-    "    else if (message.method === 'textDocument/hover') { /* intentionally never reply */ }",
-    "    else if (message.method === 'shutdown') send(message.id, null);",
-    "    else send(message.id, []);",
+    "    if (message.method === 'initialize') { setTimeout(() => send(message.id, { capabilities }), initializeDelay); continue; }",
+    "    if (message.method === 'textDocument/definition') { send(message.id, [{ targetUri: sourceUri, targetRange: { start: { line: 0, character: 0 }, end: { line: 0, character: 26 } }, targetSelectionRange: { start: { line: 0, character: 6 }, end: { line: 0, character: 12 } } }]); continue; }",
+    "    if (message.method === 'textDocument/references') { send(message.id, Array.from({ length: referenceCount }, () => ({ uri: sourceUri, range: { start: { line: 0, character: 6 }, end: { line: 0, character: 12 } } }))); continue; }",
+    "    if (message.method === 'textDocument/hover') { if (!stallHover) setTimeout(() => send(message.id, { contents: hoverContents }), hoverDelay); continue; }",
+    "    if (message.method === 'textDocument/implementation') { send(message.id, [{ uri: sourceUri, range: { start: { line: 0, character: 6 }, end: { line: 0, character: 12 } } }]); continue; }",
+    "    if (message.method === 'shutdown') { send(message.id, null); continue; }",
+    "    send(message.id, []);",
     "  }",
     "});",
   ].join("\n"));
+  return { directory, source, entry, methodLog, pidFile };
+}
 
-  const previousEntry = process.env.ARKTS_LSP_ENTRY;
+async function useFakeOfficialLsp(t, options = {}) {
+  const fixture = await makeFakeOfficialLsp(options);
   const previousProject = process.env.PROJECT_PATH;
-  process.env.ARKTS_LSP_ENTRY = entry;
-  process.env.PROJECT_PATH = directory;
-  await resetLsp();
+  process.env.PROJECT_PATH = fixture.directory;
+  await setOfficialLspServerForTests({
+    command: process.execPath,
+    args: [fixture.entry],
+    backend: "fake-official-ace-server",
+  });
   t.after(async () => {
-    await resetLsp();
-    if (previousEntry === undefined) delete process.env.ARKTS_LSP_ENTRY;
-    else process.env.ARKTS_LSP_ENTRY = previousEntry;
+    await setOfficialLspServerForTests(null);
     if (previousProject === undefined) delete process.env.PROJECT_PATH;
     else process.env.PROJECT_PATH = previousProject;
-    await fs.rm(directory, { recursive: true, force: true });
+    await fs.rm(fixture.directory, { recursive: true, force: true });
   });
+  return fixture;
+}
 
-  const declaration = await goToDeclaration({ file: source, line: 1, column: 7, timeoutMs: 2000 });
-  assert.match(declaration, /Declaration fallback via definition/);
-  let methods = await fs.readFile(methodLog, "utf8");
-  assert.match(methods, /textDocument\/definition/);
-  assert.doesNotMatch(methods, /textDocument\/declaration/,
-    "an unadvertised declaration method must not be sent to the server");
+async function waitForFile(filePath, timeoutMs = 2000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (fsSync.existsSync(filePath)) return;
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  assert.fail(`Timed out waiting for ${filePath}`);
+}
 
+function processIsAlive(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function waitForProcessExit(pid, timeoutMs = 3000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (!processIsAlive(pid)) return;
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  assert.fail(`Process ${pid} remained alive after ${timeoutMs}ms`);
+}
+
+test("LSP project discovery prefers the Harmony project root over a module marker", async (t) => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-lsp-root-"));
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  const moduleRoot = path.join(root, "feature");
+  const source = path.join(moduleRoot, "src", "main", "ets", "Main.ets");
+  await fs.mkdir(path.dirname(source), { recursive: true });
+  await fs.writeFile(path.join(root, "build-profile.json5"), "{ app: {}, modules: [] }\n");
+  await fs.writeFile(path.join(moduleRoot, "build-profile.json5"), "{ apiType: 'stageMode' }\n");
+  await fs.writeFile(path.join(moduleRoot, "oh-package.json5"), "{}\n");
+  await fs.writeFile(source, "const value: number = 1;\n");
+
+  const previousProject = process.env.PROJECT_PATH;
+  delete process.env.PROJECT_PATH;
+  try {
+    assert.equal(resolveLspTarget(source).projectRoot, await fs.realpath(root));
+    process.env.PROJECT_PATH = moduleRoot;
+    assert.equal(
+      resolveLspTarget(source).projectRoot,
+      await fs.realpath(root),
+      "a selected module directory must be promoted to the application project root",
+    );
+  } finally {
+    if (previousProject === undefined) delete process.env.PROJECT_PATH;
+    else process.env.PROJECT_PATH = previousProject;
+  }
+});
+
+test("official LSP contract exposes only capabilities declared by the current server", async (t) => {
+  const fixture = await useFakeOfficialLsp(t);
+  const definition = await goToDefinition({
+    file: fixture.source, line: 1, column: 7, timeoutMs: 3000,
+  });
+  assert.match(definition, /Main\.ets:1:7/);
+
+  const references = await findReferences({
+    file: fixture.source, line: 1, column: 7, timeoutMs: 3000,
+  });
+  assert.match(references, /Found 1 references/);
+
+  const hover = await getHover({
+    file: fixture.source, line: 1, column: 7, timeoutMs: 3000,
+  });
+  assert.equal(hover, "const answer: number");
+
+  assert.equal((await lspOperation({
+    operation: "goToImplementation", filePath: fixture.source,
+    line: 1, character: 7, timeoutMs: 3000,
+  })).length, 1);
+  assert.equal(lspStatus().provider, "test-only");
+  assert.equal(lspStatus().openDocumentCount, 1);
+});
+
+test("official LSP bounds document state and avoids rereading unchanged source", async (t) => {
+  const fixture = await useFakeOfficialLsp(t);
+  const sources = [];
+  for (let index = 0; index < 40; index += 1) {
+    const source = path.join(fixture.directory, `Source${index}.ets`);
+    await fs.writeFile(source, `const value${index}: number = ${index};\n`);
+    sources.push(source);
+    await lspOperation({
+      operation: "hover", filePath: source, line: 1, character: 7, timeoutMs: 3000,
+    });
+  }
+
+  let status = lspStatus();
+  assert.equal(status.openDocumentCount, 32);
+  assert.equal(status.pendingDocumentCount, 0);
+  assert.equal(status.documentReadCount, 40);
+  assert.ok(status.openDocumentBytes < status.documentCacheLimits.bytes);
+  assert.equal(status.processLimits.idleMs, 60000);
+
+  for (let index = 0; index < 50; index += 1) {
+    await lspOperation({
+      operation: "hover", filePath: sources.at(-1), line: 1, character: 7, timeoutMs: 3000,
+    });
+  }
+  status = lspStatus();
+  assert.equal(status.pendingDocumentCount, 0);
+  assert.equal(status.documentReadCount, 40);
+  assert.equal(status.documentCacheHitCount, 50);
+
+  await fs.writeFile(sources.at(-1), "const changed: number = 99;\n");
+  await lspOperation({
+    operation: "hover", filePath: sources.at(-1), line: 1, character: 7, timeoutMs: 3000,
+  });
+  assert.equal(lspStatus().documentReadCount, 41);
+});
+
+test("reference formatting reads each source file once per result", async (t) => {
+  const fixture = await useFakeOfficialLsp(t, { referenceCount: 100 });
+  const originalReadFileSync = fsSync.readFileSync;
+  let sourceReads = 0;
+  fsSync.readFileSync = function countedRead(filePath, ...args) {
+    if (path.resolve(String(filePath)) === fixture.source) sourceReads += 1;
+    return originalReadFileSync.call(this, filePath, ...args);
+  };
+  try {
+    const output = await findReferences({
+      file: fixture.source, line: 1, column: 7, timeoutMs: 3000,
+    });
+    assert.match(output, /Found 100 references/);
+    assert.equal(sourceReads, 1);
+  } finally {
+    fsSync.readFileSync = originalReadFileSync;
+  }
+});
+
+test("official DevEco hover payload is rendered as readable type documentation", async (t) => {
+  const fixture = await useFakeOfficialLsp(t, {
+    hoverContents: {
+      kind: "plaintext",
+      value: JSON.stringify({
+        info: [{
+          code: { language: "ts", value: "(method) run(callback: () =&gt; void): void" },
+          data: [{ document: "Runs the callback.", tags: ["@param callback work to run"] }],
+        }],
+      }),
+    },
+  });
+  const output = await getHover({
+    file: fixture.source, line: 1, column: 7, timeoutMs: 3000,
+  });
+  assert.equal(output, [
+    "(method) run(callback: () => void): void",
+    "Runs the callback.",
+    "@param callback work to run",
+  ].join("\n"));
+});
+
+test("slow official initialization returns a retryable state without killing warm-up", async (t) => {
+  const fixture = await useFakeOfficialLsp(t, { initializeDelayMs: 1300 });
   const startedAt = Date.now();
   await assert.rejects(
-    () => getHover({ file: source, line: 1, column: 7, timeoutMs: 1000 }),
-    (error) => error.code === "LSP_TIMEOUT",
+    () => lspOperation({
+      operation: "hover",
+      filePath: fixture.source,
+      line: 1,
+      character: 7,
+      timeoutMs: 1000,
+    }),
+    (error) => error.code === "LSP_INITIALIZING" && error.details.retryable === true,
   );
-  assert.ok(Date.now() - startedAt < 2500, "the MCP deadline must bound a stalled LSP call");
-  assert.equal(lspStatus().running, false, "a timed-out server must be discarded, not reused");
-  methods = await fs.readFile(methodLog, "utf8");
-  assert.match(methods, /textDocument\/hover/);
+  assert.ok(Date.now() - startedAt < 1800);
+  assert.equal(lspStatus().state, "starting");
+
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  const result = await lspOperation({
+    operation: "hover",
+    filePath: fixture.source,
+    line: 1,
+    character: 7,
+    timeoutMs: 3000,
+  });
+  assert.equal(result.contents.value, "const answer: number");
+  assert.equal(lspStatus().state, "ready");
+});
+
+test("reset terminates an official LSP process that is still initializing", async (t) => {
+  const fixture = await useFakeOfficialLsp(t, { initializeDelayMs: 60000 });
+  const pending = lspOperation({
+    operation: "hover",
+    filePath: fixture.source,
+    line: 1,
+    character: 7,
+    timeoutMs: 5000,
+  });
+  pending.catch(() => {});
+  await waitForFile(fixture.pidFile);
+  const pid = Number(await fs.readFile(fixture.pidFile, "utf8"));
+  assert.equal(processIsAlive(pid), true);
+
+  const startedAt = Date.now();
+  await resetLsp();
+  await assert.rejects(pending, (error) => error.code === "LSP_RESET");
+  assert.ok(Date.now() - startedAt < 3000);
+  assert.equal(processIsAlive(pid), false);
+  assert.equal(lspStatus().state, "idle");
+});
+
+test("one LSP deadline covers initialization and the requested operation", async (t) => {
+  const fixture = await useFakeOfficialLsp(t, {
+    initializeDelayMs: 650,
+    hoverDelayMs: 650,
+  });
+  const startedAt = Date.now();
+  await assert.rejects(
+    () => lspOperation({
+      operation: "hover",
+      filePath: fixture.source,
+      line: 1,
+      character: 7,
+      timeoutMs: 1000,
+    }),
+    (error) => error.code === "LSP_TIMEOUT" && error.details.method === "textDocument/hover",
+  );
+  assert.ok(Date.now() - startedAt < 1300);
+});
+
+test("a stalled official LSP request is terminated and retained as an explicit error", async (t) => {
+  const fixture = await useFakeOfficialLsp(t, { stallHover: true, ignoreSigterm: true });
+  const startedAt = Date.now();
+  await assert.rejects(
+    () => getHover({
+      file: fixture.source, line: 1, column: 7, timeoutMs: 1000,
+    }),
+    (error) => error.code === "LSP_TIMEOUT"
+      && error.details.method === "textDocument/hover",
+  );
+  assert.ok(Date.now() - startedAt < 2500);
+  assert.equal(lspStatus().running, false);
+  assert.equal(lspStatus().state, "error");
+  assert.equal(lspStatus().lastError.code, "LSP_TIMEOUT");
+  const pid = Number(await fs.readFile(fixture.pidFile, "utf8"));
+  await waitForProcessExit(pid);
 });
 
 test("unified MCP advertises scripts, diagnostics, LSP, and CodeGenie tools", async (t) => {
@@ -313,14 +605,69 @@ test("unified MCP advertises scripts, diagnostics, LSP, and CodeGenie tools", as
   for (const name of [
     "deveco_script_catalog", "deveco_script", "switch_cwd", "deveco_doctor",
     "arkts_check", "hdc_log", "find_references", "go_to_definition",
-    "go_to_declaration", "get_hover", "list_symbols", "find_call_hierarchy", "lsp", "build_project",
+    "get_hover", "lsp", "build_project",
     "project_sync", "api_compat_check", "apply_changes",
     "document_validate", "ui_snapshot", "ui_observe", "ui_find", "ui_tap", "ui_flow", "verify_ui",
     "code_lint", "hot_reload", "harmony_docs", "device_info", "ui_inspect",
     "emulator_manage", "emulator_scenario", "app_signature", "deveco_cli_auth", "ui_control",
   ]) assert.ok(names.has(name), `missing tool ${name}`);
-  assert.equal(result.tools.length, 45);
+  assert.equal(result.tools.length, 42);
   assert.equal(result.tools.filter((tool) => tool.name === "check_ets_files").length, 1);
+
+  // Some MCP hosts turn a root-level JSON Schema conditional into `unknown & unknown` instead
+  // of exposing the useful fields to the model. Keep public schemas flat and enforce the few
+  // action-dependent requirements inside the gateway, where every host gets the same result.
+  const flatSchemas = {
+    ui_flow: ["action", "id", "name", "recording_id", "job_id", "project_path", "flow"],
+    verify_ui: ["action", "selector", "baseline_id", "timeoutMs"],
+    deveco_login: ["action", "login_id", "wait_ms"],
+    build_project: ["action", "job_id", "modules", "project_path", "timeoutMs"],
+    lsp: ["operation", "filePath", "line", "character", "timeoutMs"],
+  };
+  for (const [name, properties] of Object.entries(flatSchemas)) {
+    const schema = result.tools.find((tool) => tool.name === name)?.inputSchema;
+    assert.equal(schema?.type, "object", `${name} must advertise an object schema`);
+    for (const keyword of ["allOf", "if", "then"]) {
+      assert.equal(schema?.[keyword], undefined, `${name} must not expose root ${keyword}`);
+    }
+    for (const property of properties) {
+      assert.ok(schema?.properties?.[property], `${name} must advertise ${property}`);
+    }
+  }
+  assert.deepEqual(
+    result.tools.find((tool) => tool.name === "lsp")?.inputSchema?.properties?.operation?.enum,
+    ["goToDefinition", "findReferences", "hover", "goToImplementation"],
+  );
+
+  // Exercise the validation route for every advertised tool without allowing any handler to
+  // reach a compiler, device, account, emulator, or child MCP. This catches a tool whose schema
+  // was listed but never compiled, and makes the 42-tool smoke claim exhaustive rather than a
+  // spot-check of whichever tools happen to be safe on the test machine.
+  for (const tool of result.tools) {
+    assert.ok(tool.description?.trim(), `${tool.name} must explain when it should be used`);
+    assert.equal(tool.inputSchema?.type, "object", `${tool.name} must advertise object arguments`);
+    const invalid = await client.callTool({
+      name: tool.name,
+      arguments: { __deveco_schema_probe__: true },
+    });
+    assert.equal(invalid.isError, true, `${tool.name} must reject an invalid contract probe`);
+    assert.equal(
+      JSON.parse(invalid.content[0].text).code,
+      "SCHEMA_VALIDATION_FAILED",
+      `${tool.name} must reject invalid input before its handler runs`,
+    );
+  }
+  const description = (name) => result.tools.find((tool) => tool.name === name)?.description ?? "";
+  assert.match(description("ui_flow"), /action=navigate/);
+  assert.match(description("ui_flow"), /action is always required/);
+  assert.match(description("ui_flow"), /not target/);
+  assert.match(description("ui_flow"), /not flow_id/);
+  assert.match(description("ui_flow"), /persistent reusable project artifact/);
+  assert.match(description("ui_tap"), /ui_flow action=navigate/);
+  assert.match(description("ui_control"), /Prefer ui_flow action=navigate/);
+  assert.match(description("ui_inspect"), /use ui_find/);
+  assert.match(description("get_app_ui_tree"), /Prefer ui_find/);
+  assert.match(description("perform_ui_action"), /Prefer ui_flow navigate/);
   for (const disabled of ["save_ui_screenshot", "get_ui_verification_log"]) {
     assert.ok(!names.has(disabled), `disabled tool ${disabled} is still advertised`);
     const call = await client.callTool({ name: disabled, arguments: {} });
@@ -357,6 +704,24 @@ test("unified MCP advertises scripts, diagnostics, LSP, and CodeGenie tools", as
   assert.equal(incompleteUiAssertion.isError, true);
   assert.equal(JSON.parse(incompleteUiAssertion.content[0].text).code, "SCHEMA_VALIDATION_FAILED");
 
+  const incompleteUiComparison = await client.callTool({
+    name: "verify_ui", arguments: { action: "compare" },
+  });
+  assert.equal(incompleteUiComparison.isError, true);
+  assert.equal(JSON.parse(incompleteUiComparison.content[0].text).code, "SCHEMA_VALIDATION_FAILED");
+
+  for (const arguments_ of [
+    { action: "record_start" },
+    { action: "record_status" },
+    { action: "run" },
+    { action: "status" },
+    { action: "validate" },
+  ]) {
+    const incompleteFlowCall = await client.callTool({ name: "ui_flow", arguments: arguments_ });
+    assert.equal(incompleteFlowCall.isError, true);
+    assert.equal(JSON.parse(incompleteFlowCall.content[0].text).code, "SCHEMA_VALIDATION_FAILED");
+  }
+
   const rejected = await client.callTool({
     name: "deveco_status", arguments: { surprise: "must never reach the handler" },
   });
@@ -370,6 +735,23 @@ test("unified MCP advertises scripts, diagnostics, LSP, and CodeGenie tools", as
   });
   assert.equal(incompleteLoginPoll.isError, true);
   assert.equal(JSON.parse(incompleteLoginPoll.content[0].text).code, "SCHEMA_VALIDATION_FAILED");
+
+  for (const action of ["status", "cancel"]) {
+    const incompleteBuildJobCall = await client.callTool({
+      name: "build_project", arguments: { action },
+    });
+    assert.equal(incompleteBuildJobCall.isError, true);
+    assert.equal(JSON.parse(incompleteBuildJobCall.content[0].text).code, "SCHEMA_VALIDATION_FAILED");
+  }
+
+  for (const arguments_ of [
+    { operation: "hover" },
+    { operation: "hover", filePath: "entry/src/main/ets/pages/Index.ets" },
+  ]) {
+    const incompleteLspCall = await client.callTool({ name: "lsp", arguments: arguments_ });
+    assert.equal(incompleteLspCall.isError, true);
+    assert.equal(JSON.parse(incompleteLspCall.content[0].text).code, "SCHEMA_VALIDATION_FAILED");
+  }
 });
 
 test("a timed-out script takes its grandchildren with it", async () => {
@@ -603,6 +985,13 @@ test("ArkTS checker returns structured diagnostics for invalid source", { skip: 
     brokenFile,
     "@Entry\n@Component\nstruct Broken {\n  build() {\n    Image($r('sys.media.__deveco_tool_missing_resource__'))\n  }\n}\n",
   );
+  const transport = new StdioClientTransport({
+    command: process.execPath,
+    args: ["src/server.mjs"],
+    cwd: REPO_ROOT,
+    stderr: "ignore",
+  });
+  const client = new Client({ name: "deveco-tool-invalid-check-test", version: "0.1.0" });
   try {
     const payload = await runArktsCheck({
       files: [brokenFile],
@@ -612,7 +1001,18 @@ test("ArkTS checker returns structured diagnostics for invalid source", { skip: 
     assert.equal(payload.success, false);
     assert.ok(payload.summary.errorCount > 0);
     assert.ok(payload.errors.some((diagnostic) => diagnostic.file.endsWith("Broken.ets")));
+
+    await client.connect(transport);
+    await client.callTool({ name: "switch_cwd", arguments: { project_path: projectPath } });
+    const mcpResult = await client.callTool({
+      name: "arkts_check",
+      arguments: { files: [brokenFile] },
+    });
+    assert.equal(mcpResult.isError, true,
+      "structured compiler diagnostics must still set the MCP error bit");
+    assert.equal(JSON.parse(mcpResult.content[0].text).success, false);
   } finally {
+    await transport.close().catch(() => {});
     await fs.rm(projectPath, { recursive: true, force: true });
   }
 });
@@ -681,6 +1081,18 @@ test("script output parsing ignores narrative lines that look like fields", () =
   assert.equal(parsed.error_message, "Cannot read property 'cardList' of undefined");
 });
 
+test("a silent zero-exit script is a failure, not a warning on a successful result", () => {
+  assert.deepEqual(classifyScriptCompletion({ exitCode: 0, stdout: "\n" }), {
+    ok: false,
+    error: {
+      code: "SCRIPT_NO_RESULT",
+      message: "Script exited 0 without writing a result to stdout.",
+    },
+  });
+  assert.deepEqual(classifyScriptCompletion({ exitCode: 0, stdout: "status: done\n" }), { ok: true });
+  assert.deepEqual(classifyScriptCompletion({ exitCode: 2, stdout: "error: failed\n" }), { ok: false });
+});
+
 test("detect_sdk runs as a script instead of exiting silently", { skip: NEEDS_DEVECO_SDK }, async () => {
   const result = await runRegisteredScript("detect_sdk", {});
   assert.equal(result.ok, true);
@@ -718,7 +1130,10 @@ test("build_project keeps the parameter contract the CodeGenie tool had", async 
   const project = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-cli-project-"));
   const entry = path.join(directory, "fake-cli.mjs");
   // Echo the arguments so the orchestration can be asserted without a real build.
-  await fs.writeFile(entry, "console.log(JSON.stringify(process.argv.slice(2)));\n");
+  await fs.writeFile(entry, [
+    "console.log(JSON.stringify(process.argv.slice(2)));",
+    "console.log(process.argv.includes('clean') ? 'Clean completed successfully.' : 'Build completed successfully.');",
+  ].join("\n"));
   await fs.writeFile(path.join(project, "build-profile.json5"), '{"modules": []}\n');
 
   const previous = process.env.DEVECO_CLI_ENTRY;
@@ -761,7 +1176,7 @@ test("build_project background jobs finish without holding one MCP request open"
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-cli-job-"));
   const project = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-cli-job-project-"));
   const entry = path.join(directory, "fake-cli.mjs");
-  await fs.writeFile(entry, "setTimeout(() => console.log('job finished'), 80);\n");
+  await fs.writeFile(entry, "setTimeout(() => console.log('job finished\\nBuild completed successfully.'), 80);\n");
   await fs.writeFile(path.join(project, "build-profile.json5"), '{"modules": []}\n');
 
   const previous = process.env.DEVECO_CLI_ENTRY;
@@ -815,7 +1230,7 @@ test("start_app deploys only the explicitly selected Entry module", async (t) =>
   await fs.writeFile(entry, [
     'import fs from "node:fs";',
     `fs.appendFileSync(${JSON.stringify(argvLog)}, JSON.stringify(process.argv.slice(2)) + "\\n");`,
-    'console.log("Application launched successfully");',
+    'console.log("Application \'com.example.test\': launch success");',
   ].join("\n"));
 
   const previous = process.env.DEVECO_CLI_ENTRY;
@@ -961,7 +1376,7 @@ test("apply_changes relaunches the same selected module after a failed apply", a
     'const args = process.argv.slice(2);',
     `fs.appendFileSync(${JSON.stringify(argvLog)}, JSON.stringify(args) + "\\n");`,
     'if (args.includes("--apply")) console.log("error: failed to install changed application");',
-    'else console.log("Application launched");',
+    'else console.log("Application \'com.example.test\': launch success");',
   ].join("\n"));
   const previous = process.env.DEVECO_CLI_ENTRY;
   process.env.DEVECO_CLI_ENTRY = entry;
@@ -1044,7 +1459,7 @@ test("project_sync uses DevEco Studio's bundled ohpm and Hvigor entries", async 
   assert.match(report, /hvigor --sync -p product=wearable --analyze=normal --parallel --incremental --no-daemon/);
 });
 
-test("CLT layout is resolved for project sync, SDK, HDC, and emulator paths", async (t) => {
+test("CLT layout is resolved for project sync, SDK, HDC, emulator, and official LSP paths", async (t) => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-clt-"));
   const project = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-clt-project-"));
   await fs.writeFile(path.join(root, "version.txt"), "# Version: 26.0.0\n");
@@ -1053,14 +1468,17 @@ test("CLT layout is resolved for project sync, SDK, HDC, and emulator paths", as
   const hvigor = path.join(root, "hvigor", "bin", "hvigorw.js");
   const hdc = path.join(root, "sdk", "default", "openharmony", "toolchains", process.platform === "win32" ? "hdc.exe" : "hdc");
   const sdkPkg = path.join(root, "sdk", "default", "sdk-pkg.json");
+  const lspBackend = path.join(root, "arkts-lsp", "lib", "out", "standardIndex", "index.js");
   await fs.mkdir(path.dirname(node), { recursive: true });
   await fs.mkdir(path.dirname(ohpm), { recursive: true });
   await fs.mkdir(path.dirname(hvigor), { recursive: true });
   await fs.mkdir(path.dirname(hdc), { recursive: true });
+  await fs.mkdir(path.dirname(lspBackend), { recursive: true });
   await fs.symlink(process.execPath, node);
   await fs.writeFile(ohpm, 'console.log("clt-ohpm", ...process.argv.slice(2));\n');
   await fs.writeFile(hvigor, 'console.log("clt-hvigor", ...process.argv.slice(2));\n');
   await fs.writeFile(hdc, "fake hdc\n");
+  await fs.writeFile(lspBackend, "// official CLT ArkTS server fixture\n");
   await fs.writeFile(sdkPkg, JSON.stringify({ data: { apiVersion: 24, platformVersion: "6.1.1" } }));
   const previous = process.env.DEVECO_CLI_CLT_PATH;
   const previousStudio = process.env.DEVECO_CLI_STUDIO_PATH;
@@ -1088,6 +1506,10 @@ test("CLT layout is resolved for project sync, SDK, HDC, and emulator paths", as
   assert.equal(sdkResult.ok, true);
   assert.equal(sdkResult.parsed?.apiLevel, 24);
   assert.equal(resolveHdcPath(), hdc);
+  const lsp = lspStatus();
+  assert.equal(lsp.installed, true);
+  assert.equal(lsp.toolchainKind, "clt");
+  assert.equal(lsp.backend, lspBackend);
 });
 
 test("official DevEco wrappers preserve the 1.3.1 CLI command interfaces", async (t) => {
@@ -1200,12 +1622,13 @@ test("hot_reload owns a persistent watch process and applies a temporary manifes
     'const record = { args };',
     'if (apply >= 0) record.manifest = fs.readFileSync(path.join(process.cwd(), ".hvigor", args[apply + 1]), "utf8");',
     'fs.appendFileSync(log, JSON.stringify(record) + "\\n");',
-    'if (args.includes("--hotreload") && !args.includes("stop")) { console.log("Hot-reload watch session active (socket persistent). Edit code"); setInterval(() => {}, 1000); }',
+    'if (args.includes("--hotreload") && !args.includes("stop")) { setTimeout(() => console.log("Hot-reload watch session active (socket persistent). Edit code"), Number(process.env.DEVECO_FAKE_HOTRELOAD_READY_MS || 0)); setInterval(() => {}, 1000); }',
     'else if (apply >= 0 && process.env.DEVECO_FAKE_SIGNING_FAILURE === "1") { console.log("[HotReload] Signing prerequisites not met."); process.exitCode = 1; }',
     'else console.log("ok");',
   ].join("\n"));
   const previous = process.env.DEVECO_CLI_ENTRY;
   const previousSigningFailure = process.env.DEVECO_FAKE_SIGNING_FAILURE;
+  const previousReadyDelay = process.env.DEVECO_FAKE_HOTRELOAD_READY_MS;
   process.env.DEVECO_CLI_ENTRY = entry;
   t.after(async () => {
     await closeHotReload();
@@ -1213,6 +1636,8 @@ test("hot_reload owns a persistent watch process and applies a temporary manifes
     else process.env.DEVECO_CLI_ENTRY = previous;
     if (previousSigningFailure === undefined) delete process.env.DEVECO_FAKE_SIGNING_FAILURE;
     else process.env.DEVECO_FAKE_SIGNING_FAILURE = previousSigningFailure;
+    if (previousReadyDelay === undefined) delete process.env.DEVECO_FAKE_HOTRELOAD_READY_MS;
+    else process.env.DEVECO_FAKE_HOTRELOAD_READY_MS = previousReadyDelay;
     await fs.rm(directory, { recursive: true, force: true });
     await fs.rm(project, { recursive: true, force: true });
   });
@@ -1236,6 +1661,53 @@ test("hot_reload owns a persistent watch process and applies a temporary manifes
   assert.deepEqual(records[2].args.slice(0, 6), ["run", "--device", "device-1", "--module", "entry", "--hotreload-apply"]);
   assert.deepEqual(records[3].args, ["run", "--hotreload", "stop"]);
   assert.deepEqual(await fs.readdir(path.join(project, ".hvigor")), []);
+
+  process.env.DEVECO_FAKE_HOTRELOAD_READY_MS = "1000";
+  const pendingStartedAt = Date.now();
+  const pending = await hotReload({
+    action: "start", project_path: project, hvd: "device-1", module: "entry",
+    timeoutMs: 5000, wait_ms: 100,
+  });
+  assert.equal(pending.starting, true);
+  assert.deepEqual(pending.nextAction, { tool: "hot_reload", arguments: { action: "status" } });
+  assert.ok(Date.now() - pendingStartedAt < 500, "start must return within its MCP wait budget");
+  await new Promise((resolve) => setTimeout(resolve, 1100));
+  assert.equal((await hotReload({ action: "status" })).active, true);
+  await hotReload({ action: "stop", timeoutMs: 5000 });
+  delete process.env.DEVECO_FAKE_HOTRELOAD_READY_MS;
+});
+
+test("hot_reload resolves and pins the only runnable module when start omits it", async (t) => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-hotreload-module-"));
+  const project = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-hotreload-module-project-"));
+  const entry = path.join(directory, "fake-cli.mjs");
+  const log = path.join(directory, "argv.log");
+  await fs.writeFile(entry, [
+    'import fs from "node:fs";',
+    "const args = process.argv.slice(2);",
+    `fs.appendFileSync(${JSON.stringify(log)}, JSON.stringify(args) + "\\n");`,
+    "if (!args.includes('--hotreload')) console.log('Specify module(s) to run. Available runnable modules:\\n- entry');",
+    "else if (args.includes('stop')) console.log('ok');",
+    "else { console.log('Hot-reload watch session active (socket persistent). Edit code'); setInterval(() => {}, 1000); }",
+  ].join("\n"));
+  const previous = process.env.DEVECO_CLI_ENTRY;
+  process.env.DEVECO_CLI_ENTRY = entry;
+  t.after(async () => {
+    await closeHotReload();
+    if (previous === undefined) delete process.env.DEVECO_CLI_ENTRY;
+    else process.env.DEVECO_CLI_ENTRY = previous;
+    await fs.rm(directory, { recursive: true, force: true });
+    await fs.rm(project, { recursive: true, force: true });
+  });
+
+  const started = await hotReload({
+    action: "start", project_path: project, hvd: "device-1", wait_ms: 2000, timeoutMs: 5000,
+  });
+  assert.equal(started.active, true);
+  await hotReload({ action: "stop", timeoutMs: 5000 });
+  const calls = (await fs.readFile(log, "utf8")).trim().split("\n").map(JSON.parse);
+  assert.deepEqual(calls[0], ["run", "--skip-build", "--device", "device-1"]);
+  assert.deepEqual(calls[1], ["run", "--device", "device-1", "--module", "entry", "--hotreload"]);
 });
 
 test("DevEco CLI failures are errors even when the process exits zero", () => {
@@ -1251,6 +1723,72 @@ test("DevEco CLI failures are errors even when the process exits zero", () => {
     stderr: "",
   }));
   assert.ok(devecoCliFailureMessage({ exitCode: 1, stdout: "", stderr: "boom" }));
+});
+
+test("DevEco CLI wrappers reject silent success and retain early failures past the output tail", async (t) => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-cli-evidence-"));
+  const project = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-cli-evidence-project-"));
+  const entry = path.join(directory, "fake-cli.mjs");
+  const explicitLog = path.join(directory, "build.log");
+  await fs.writeFile(entry, [
+    "if (process.env.DEVECO_FAKE_MODE === 'early-error') {",
+    "  process.stdout.write('error: build failed before verbose cleanup\\n');",
+    "  process.stdout.write('x'.repeat(400 * 1024));",
+    "} else if (process.env.DEVECO_FAKE_MODE === 'recovered-build') {",
+    "  process.stderr.write('error: compiler worker restarted before retry\\n');",
+    "  process.stderr.write(('WARN: Duplicate file names detected, which may cause compilation errors.\\n\\0fixture\\n').repeat(5000));",
+    "  process.stdout.write('> hvigor BUILD SUCCESSFUL in 1 s\\nBuild completed successfully.\\n');",
+    "} else if (process.env.DEVECO_FAKE_MODE === 'late-error') {",
+    "  process.stdout.write('Build completed successfully.\\n');",
+    "  process.stderr.write('> hvigor BUILD FAILED in 1 s\\n');",
+    "}",
+  ].join("\n"));
+  const previousEntry = process.env.DEVECO_CLI_ENTRY;
+  const previousMode = process.env.DEVECO_FAKE_MODE;
+  process.env.DEVECO_CLI_ENTRY = entry;
+  t.after(async () => {
+    if (previousEntry === undefined) delete process.env.DEVECO_CLI_ENTRY;
+    else process.env.DEVECO_CLI_ENTRY = previousEntry;
+    if (previousMode === undefined) delete process.env.DEVECO_FAKE_MODE;
+    else process.env.DEVECO_FAKE_MODE = previousMode;
+    await fs.rm(directory, { recursive: true, force: true });
+    await fs.rm(project, { recursive: true, force: true });
+  });
+
+  process.env.DEVECO_FAKE_MODE = "early-error";
+  const streamed = await runDevecoCli(["build"], { cwd: project, timeoutMs: 5000 });
+  assert.equal(streamed.outputTruncated, true);
+  assert.match(streamed.detectedFailure, /error: build failed before verbose cleanup/);
+  assert.match(devecoCliFailureMessage(streamed), /error: build failed before verbose cleanup/);
+  if (streamed.logPath) await fs.rm(streamed.logPath, { force: true });
+
+  process.env.DEVECO_FAKE_MODE = "recovered-build";
+  const { getBuildProjectJob, startBuildProjectJob } = await import("../src/deveco-cli.mjs");
+  const started = startBuildProjectJob({ project_path: project, log_path: explicitLog });
+  const recovered = await getBuildProjectJob(started.job_id, 5000);
+  assert.equal(recovered.status, "succeeded");
+  assert.match(recovered.report, /Build completed successfully/);
+
+  process.env.DEVECO_FAKE_MODE = "late-error";
+  await assert.rejects(
+    () => buildProject({ project_path: project }),
+    (error) => error.code === "DEVECO_CLI_BUILD_FAILED"
+      && /BUILD FAILED/.test(error.message),
+  );
+
+  process.env.DEVECO_FAKE_MODE = "silent";
+  await assert.rejects(
+    () => buildProject({ project_path: project }),
+    (error) => error.code === "DEVECO_CLI_BUILD_FAILED",
+  );
+  await assert.rejects(
+    () => startApp({ project_path: project, hvd: "device-1", module: "entry" }),
+    (error) => error.code === "DEVECO_CLI_RUN_FAILED",
+  );
+  await assert.rejects(
+    () => deviceInfo({ project_path: project, target: "device-1" }),
+    (error) => error.code === "DEVECO_DEVICE_VIEW_FAILED",
+  );
 });
 
 test("HDC failure markers are errors even when the process exits zero", () => {
@@ -1609,7 +2147,7 @@ test("a CodeGenie child that never answers cannot delay tool discovery", { timeo
   const elapsed = Date.now() - startedAt;
   assert.ok(elapsed < 1000, `tools/list must not wait on the child; took ${elapsed}ms`);
 
-  assert.equal(names.length, 45, "all 45 tools must be advertised even while the child is stalled");
+  assert.equal(names.length, 42, "all 42 tools must be advertised even while the child is stalled");
   assert.ok(names.includes("arkts_check"));
   // The capture/find/tap loop runs over hdc in-process, so a stalled child must not reach it.
   for (const local of ["ui_snapshot", "ui_observe", "ui_find", "ui_tap", "ui_flow", "verify_ui"]) {
@@ -1839,6 +2377,120 @@ test("the MCP deletes a default screenshot after returning it inline", async (t)
   assert.equal(payload.temporary, true);
   assert.equal(payload.temporaryFileRemoved, true);
   assert.equal(payload.localPath, null);
+});
+
+test("perform_ui_action uses the local HDC fast path and keeps default screenshots temporary", async (t) => {
+  const fake = await makeUiHdc();
+  const childMarker = path.join(fake.directory, "codegenie-started");
+  const stalledChild = path.join(fake.directory, "stalled-codegenie.mjs");
+  await fs.writeFile(stalledChild, [
+    'import fs from "node:fs";',
+    `fs.writeFileSync(${JSON.stringify(childMarker)}, "started");`,
+    "setInterval(() => {}, 1000);",
+  ].join("\n"));
+  const transport = new StdioClientTransport({
+    command: process.execPath,
+    args: ["src/server.mjs"],
+    cwd: REPO_ROOT,
+    env: {
+      ...process.env,
+      HDC_PATH: fake.executable,
+      DEVECO_CODEGENIE_ENTRY: stalledChild,
+    },
+    stderr: "ignore",
+  });
+  const client = new Client({ name: "deveco-ui-compat-test", version: "0.1.0" });
+  t.after(async () => {
+    await transport.close();
+    await fs.rm(fake.directory, { recursive: true, force: true });
+  });
+  await client.connect(transport);
+
+  const screenshot = await client.callTool({
+    name: "perform_ui_action",
+    arguments: { actionType: "screenshot" },
+  });
+  assert.ok(screenshot.content.some((item) => item.type === "image"));
+  const capture = JSON.parse(screenshot.content.find((item) => item.type === "text").text);
+  assert.equal(capture.backend, "hdc-shell");
+  assert.equal(capture.compatibilityTool, "perform_ui_action");
+  assert.equal(capture.temporaryFileRemoved, true);
+  assert.equal(capture.localPath, null);
+
+  const click = await client.callTool({
+    name: "perform_ui_action",
+    arguments: { actionType: "click", x: 45, y: 67 },
+  });
+  const action = JSON.parse(click.content[0].text);
+  assert.equal(action.backend, "hdc-shell");
+  assert.equal(action.commandAccepted, true);
+  assert.equal(action.sent, "uitest uiInput click 45 67");
+  assert.equal(fsSync.existsSync(childMarker), false, "the compatibility alias must not start CodeGenie");
+  assert.ok((await fake.argv()).some((line) => line.includes("uiInput click 45 67")));
+});
+
+test("perform_ui_action delegates only text that HDC cannot quote safely", async (t) => {
+  const fake = await makeUiHdc();
+  const childLog = path.join(fake.directory, "codegenie-call.json");
+  const child = path.join(fake.directory, "codegenie-input.mjs");
+  await fs.writeFile(child, `
+import fs from "node:fs";
+let buffer = "";
+process.stdin.on("data", (chunk) => {
+  buffer += chunk;
+  let index;
+  while ((index = buffer.indexOf("\\n")) >= 0) {
+    const line = buffer.slice(0, index).trim();
+    buffer = buffer.slice(index + 1);
+    if (!line) continue;
+    let message;
+    try { message = JSON.parse(line); } catch { continue; }
+    if (message.id === undefined) continue;
+    const reply = (result) => process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id: message.id, result }) + "\\n");
+    if (message.method === "initialize") {
+      reply({ protocolVersion: "2024-11-05", capabilities: { tools: {} }, serverInfo: { name: "input-stub", version: "0" } });
+    } else if (message.method === "tools/list") {
+      reply({ tools: [{ name: "perform_ui_action", description: "stub", inputSchema: { type: "object" } }] });
+    } else if (message.method === "tools/call") {
+      fs.writeFileSync(${JSON.stringify(childLog)}, JSON.stringify(message.params.arguments));
+      reply({ content: [{ type: "text", text: JSON.stringify({ backend: "codegenie", accepted: true }) }] });
+    }
+  }
+});
+setInterval(() => {}, 1000);
+`);
+
+  const transport = new StdioClientTransport({
+    command: process.execPath,
+    args: ["src/server.mjs"],
+    cwd: REPO_ROOT,
+    env: {
+      ...process.env,
+      HDC_PATH: fake.executable,
+      DEVECO_CODEGENIE_ENTRY: child,
+    },
+    stderr: "ignore",
+  });
+  const client = new Client({ name: "deveco-ui-input-compat-test", version: "0.1.0" });
+  t.after(async () => {
+    await transport.close();
+    await fs.rm(fake.directory, { recursive: true, force: true });
+  });
+  await client.connect(transport);
+
+  const result = await client.callTool({
+    name: "perform_ui_action",
+    arguments: { actionType: "inputText", x: 5, y: 6, text: "$HOME value" },
+  });
+  assert.notEqual(result.isError, true);
+  assert.deepEqual(JSON.parse(await fs.readFile(childLog, "utf8")), {
+    actionType: "inputText", x: 5, y: 6, text: "$HOME value",
+  });
+  assert.equal(
+    (await fake.argv()).some((line) => line.includes("uiInput")),
+    false,
+    "the rejected local transport must not send the input before delegating",
+  );
 });
 
 test("the display size is learned once and reused by later processes", async (t) => {
@@ -2229,7 +2881,11 @@ test("ui_find reads the accessibility dump shape that uitest actually emits", as
   // with no comma between the pairs, and type/key/clickable all inside attributes. Captured from a
   // real device, where the first pass returned every type as "" because it only looked at $type.
   const dumpPath = await writeDump(t, {
-    attributes: { type: "root", bounds: "[0,0][1276,2848]", text: "" },
+    attributes: {
+      type: "root", bounds: "[0,0][1276,2848]", text: "",
+      bundleName: "com.example.app", abilityName: "EntryAbility", pagePath: "pages/Index",
+      focused: "true",
+    },
     children: [
       {
         attributes: {
@@ -2259,6 +2915,9 @@ test("ui_find reads the accessibility dump shape that uitest actually emits", as
   assert.equal(clock.matches[0].key, "sl_clock");
   assert.equal(clock.matches[0].clickable, true, "string flags must be read as booleans");
   assert.deepEqual(clock.matches[0].center, { x: 639, y: 921 });
+  assert.deepEqual(clock.applications, [{
+    bundleName: "com.example.app", abilityName: "EntryAbility", pagePath: "pages/Index", focused: true,
+  }]);
 
   // The visible text is frequently a label nested inside whatever handles the tap.
   const tappable = await uiFind({ dumpPath, clickableOnly: true });
@@ -2644,7 +3303,7 @@ test("the uitest lock serialises holders and releases on failure", async (t) => 
   assert.equal(fsSync.existsSync(path.join(directory, lockInternals.LOCK_FILE)), false);
 });
 
-test("the uitest lock reclaims a dead holder but waits for a live one", async (t) => {
+test("the uitest lock reclaims a dead holder but never steals from a live one", async (t) => {
   const directory = await lockDirectory(t);
   const lockPath = path.join(directory, lockInternals.LOCK_FILE);
 
@@ -2655,15 +3314,15 @@ test("the uitest lock reclaims a dead holder but waits for a live one", async (t
   await withUitestLock({ directory, op: "after-ghost", timeoutMs: 2000 }, async () => { ran = true; });
   assert.equal(ran, true, "a dead holder must not block the device forever");
 
-  // A live holder that has been in there past the ceiling is wedged, and is also reclaimed --
-  // otherwise one hung process blocks every future one for as long as it stays alive. Age comes
-  // from the file's mtime, so the fixture has to backdate that and not just the recorded startedAt.
-  const wedgedAt = Date.now() - lockInternals.STALE_AFTER_MS - 1000;
+  // Age is not proof that a live holder is dead. Stealing this lease while its process is still
+  // driving uitest would allow two agents to act on the same device concurrently.
+  const wedgedAt = Date.now() - 24 * 60 * 60 * 1000;
   await fs.writeFile(lockPath, JSON.stringify({ pid: process.pid, startedAt: wedgedAt, op: "wedged" }));
   await fs.utimes(lockPath, new Date(wedgedAt), new Date(wedgedAt));
-  ran = false;
-  await withUitestLock({ directory, op: "after-wedged", timeoutMs: 2000 }, async () => { ran = true; });
-  assert.equal(ran, true);
+  await assert.rejects(
+    () => withUitestLock({ directory, op: "after-wedged", timeoutMs: 1000 }, async () => {}),
+    (error) => error.code === "UI_DEVICE_BUSY" && /wedged/.test(error.message),
+  );
 
   // A live, recent holder is respected, and the wait is bounded and actionable.
   await fs.writeFile(lockPath, JSON.stringify({ pid: process.pid, startedAt: Date.now(), op: "dumpLayout" }));

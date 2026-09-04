@@ -1,12 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
-import { readModuleEntries, stripJson5 } from "../build-profile.mjs";
+import { parseJson5, readModuleEntries } from "../build-profile.mjs";
 import { flowError } from "./domain.mjs";
 
 function readJson5(file, code) {
   if (!fs.existsSync(file)) throw flowError(`Required HarmonyOS manifest is missing: ${file}`, code);
   try {
-    return JSON.parse(stripJson5(fs.readFileSync(file, "utf8")));
+    return parseJson5(fs.readFileSync(file, "utf8"));
   } catch (error) {
     throw flowError(`HarmonyOS manifest is invalid: ${file} (${error.message})`, code);
   }
@@ -39,7 +39,12 @@ export function readHarmonyAppModel(projectPath) {
   if (!fs.existsSync(buildProfile)) {
     throw flowError(`Required HarmonyOS manifest is missing: ${buildProfile}`, "FLOW_BUILD_PROFILE_INVALID");
   }
-  const rawEntries = readModuleEntries(project);
+  let rawEntries;
+  try {
+    rawEntries = readModuleEntries(project);
+  } catch (error) {
+    throw flowError(`HarmonyOS manifest is invalid: ${buildProfile} (${error.message})`, "FLOW_BUILD_PROFILE_INVALID");
+  }
   if (!Array.isArray(rawEntries)) {
     throw flowError(`HarmonyOS manifest is invalid: ${buildProfile}`, "FLOW_BUILD_PROFILE_INVALID");
   }
