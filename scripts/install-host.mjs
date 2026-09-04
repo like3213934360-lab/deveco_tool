@@ -17,24 +17,8 @@
  *     implicitly is materialised here as a patched copy instead of a symlink. manifest.json's
  *     `invocationPolicy` is the single source of truth for which ones those are.
  *
- * Both hosts default to the core tier, and for the same reason: each budgets the skill listing it
- * loads into context, and the full 56 blow through both budgets. Measured across this pack --
- * descriptions total 17,947 characters for all 56 and 5,561 for the core 17.
- *
- *   - Claude Code reads `~/.claude/skills/<skill>/SKILL.md`. Two separate limits apply. Per skill,
- *     description + when_to_use is capped at 1,536 characters; every skill here fits that (the
- *     longest is 1,076). Across the whole listing the budget is 1% of the model's context window,
- *     and when it overflows Claude Code drops descriptions starting with the skills you invoke
- *     least -- which silently strips the keywords that make a skill match. On a 1M-context model
- *     that budget is ~10,000 characters: the core tier fits, all 56 do not.
- *   - Codex reads `$HOME/.agents/skills` and budgets the initial listing at 2% of the context
- *     window, or 8,000 characters when it is unknown, counting each skill's path as well as its
- *     description. All 57 need ~22,300; the core 18 need ~6,900.
- *
- * `--profile full` stays available for both, and prints the licence warning that goes with the
- * extended tier. Raising Claude's own budget is a host-side setting (`skillListingBudgetFraction`,
- * or `SLASH_COMMAND_TOOL_CHAR_BUDGET`); low-value entries can also be set to `name-only` via
- * `skillOverrides`. Neither is something an installer should change on the user's behalf.
+ * Both hosts default to the compatibility `core` profile. The current pack contains only five
+ * official DevEco Code skills and no extended tier, so `core` and `full` select the same skills.
  */
 
 import fs from "node:fs/promises";
@@ -63,7 +47,7 @@ const HOSTS = {
 const USAGE = `Usage: node scripts/install-host.mjs --host <claude|codex|all> [options]
 
   --host <h>      Which host to install for: claude, codex, or all (required)
-  --profile <p>   Override the host default: core or full
+  --profile <p>   Compatibility option: core or full; both currently install all 5
   --dest <dir>    Override the host's skills directory (mainly for testing)
   --copy          Materialise every skill as a copy instead of a symlink
   --dry-run       Print the planned actions without touching the filesystem
@@ -71,16 +55,8 @@ const USAGE = `Usage: node scripts/install-host.mjs --host <claude|codex|all> [o
   --print-mcp     Print the MCP registration snippet for the host and exit
   --help          Show this message
 
-Defaults per host (from each host's own documentation):
-
-  claude  ~/.claude/skills   profile core  (listing budget is 1% of the context window; all 56
-                                            descriptions total 17,947 chars and overflow it, and
-                                            Claude then drops descriptions from least-used skills)
-  codex   ~/.agents/skills   profile core  (listing budget is 2% of the context window, or 8,000
-                                            chars when unknown, and counts paths too; all 57 need
-                                            ~22,300, the core 18 need ~6,900)
-
---profile full installs the extended tier on either host and prints a licence warning.
+Defaults: Claude installs into ~/.claude/skills; Codex installs into ~/.agents/skills. Both use
+profile core. The full profile is retained as a compatibility alias while no extended tier exists.
 
 Skills are symlinked so edits in this repository take effect immediately. Skills whose
 invocation policy has to be expressed in the installed copy are written out as patched copies
@@ -122,27 +98,6 @@ function parseArgs(argv) {
     else throw new Error(`Unknown argument: ${argument}`);
   }
   return options;
-}
-
-/**
- * Tell the operator what the full profile pulls in, licence-wise.
- *
- * scripts/install.mjs has warned about this since the default flipped to core; this installer did
- * not, so choosing --profile full here silently exposed the extended tier to a host. Written to
- * stderr and deliberately non-blocking: the exit code stays 0 and the install proceeds.
- *
- * @param {string} hostName Host the warning applies to.
- * @param {number} extendedCount How many extended-tier skills the profile adds.
- * @returns {void}
- */
-function warnExtendedLicence(hostName, extendedCount) {
-  process.stderr.write(
-    `warning: [${hostName}] --profile full installs the extended layer (${extendedCount} skills).\n`
-      + "  Upstream (harmonyos-agent-skills) ships no repository-level LICENSE, NOTICE or COPYING\n"
-      + "  file, and 30 of those skills declare no licence at all — by default all rights reserved.\n"
-      + "  It also overflows this host's skill-listing budget, so descriptions get shortened.\n"
-      + "  Read NOTICE.harmonyos-agent-skills before redistributing. Installing anyway.\n\n",
-  );
 }
 
 /**
@@ -190,7 +145,7 @@ function withModelInvocationDisabled(text, name) {
 // Top-level agents/openai.yaml sections this installer owns. Anything else in an upstream file --
 // `interface` with its display_name, short_description, icons and default_prompt -- is the skill
 // author's and must survive reinstallation. An earlier version rewrote the whole file and silently
-// erased that metadata from arkui-component-best-practices.
+// erased that metadata from source skills carrying their own host metadata.
 const OWNED_YAML_SECTIONS = new Set(["policy", "dependencies"]);
 
 /**
@@ -279,8 +234,7 @@ function renderOpenAiYaml(spec) {
 function planSkills(manifest, hostName, profile, forceCopy) {
   const policy = manifest.invocationPolicy;
   const disabled = new Set(Object.keys(policy.disableImplicitInvocation).filter((key) => key !== "$comment"));
-  // Explicit list, not `skill.scripts`: instruction-only skills like harmony-build-loop declare no
-  // scripts yet call build_project and start_app straight from their prose.
+  // Explicit list, not `skill.scripts`: an instruction-only skill may call an MCP tool directly.
   const needsMcp = new Set(policy.mcpDependency.skills);
   const host = HOSTS[hostName];
 
@@ -393,10 +347,6 @@ async function runHost(hostName, options, manifest) {
 
   const plan = planSkills(manifest, hostName, profile, options.copy);
 
-  if (profile === "full") {
-    warnExtendedLicence(hostName, manifest.skills.filter((skill) => skill.tier === "extended").length);
-  }
-
   // Only entries this script created may be replaced. A skill someone else put here — or wrote by
   // hand — is left untouched and reported, rather than silently overwritten.
   const foreign = [];
@@ -414,9 +364,7 @@ async function runHost(hostName, options, manifest) {
   if (!options.dryRun) await fs.mkdir(skillsDir, { recursive: true });
 
   // Reinstalling under a narrower profile has to retire what the previous run installed and this
-  // one no longer covers. Without this, full -> core left the 39 extended skills on disk while the
-  // marker recorded only 18, so they became orphans that --uninstall could no longer reach: the
-  // host kept routing to them and nothing here could clean them up.
+  // one no longer covers. This also retires skills removed by a later pack release.
   const planned = new Set(plan.map((entry) => entry.name));
   const retired = [...owned.keys()].filter((name) => !planned.has(name));
   for (const name of retired) {

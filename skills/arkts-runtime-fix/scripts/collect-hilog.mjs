@@ -17,7 +17,7 @@ import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
-import { assertHdcSuccess, resolveHdcOrThrow, runHdc, targetArgs } from './shared/hdc.mjs';
+import { resolveHdcOrThrow, runHdc, targetArgs } from './shared/hdc.mjs';
 import { printKv, toErrorMessage } from './shared/utils.mjs';
 
 function cleanLines(input) {
@@ -73,9 +73,10 @@ function printCollectFailed(nextAction) {
 }
 
 async function collectHilogText(hdc, deviceId, lines) {
-  // hilog -x 全量导出缓冲在部分设备上会卡住不退出, 改用 -z 只取缓冲尾部 lines 行。
-  const out = await runHdc([hdc, ...targetArgs(deviceId), 'shell', 'hilog', '-z', String(lines)]);
-  assertHdcSuccess(out, 'hdc hilog -z');
+  const out = await runHdc([hdc, ...targetArgs(deviceId), 'shell', 'hilog', '-x']);
+  if (out.exitCode !== 0) {
+    throw new Error(out.stderr || out.stdout || `hdc hilog -x failed (code=${out.exitCode})`);
+  }
 
   const all = cleanLines(out.stdout);
   return all.slice(Math.max(0, all.length - lines)).join('\n');

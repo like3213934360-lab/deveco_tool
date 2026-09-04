@@ -22,23 +22,8 @@ function binary(name) {
   return process.platform === 'win32' ? `${name}.exe` : name;
 }
 
-// LOCAL PATCH: follow the official CLI's Studio/CLT environment priority and Linux CLT layout.
-function toolchainEnv() {
-  const candidates = [
-    ['DEVECO_CLI_STUDIO_PATH', 'studio'],
-    ['DEVECO_CLI_CLT_PATH', 'clt'],
-    ['DEVECO_HOME', 'studio'],
-    ['DEVECO_PATH', 'studio'],
-  ];
-  for (const [name, kind] of candidates) {
-    let root = String(process.env[name] || '').trim();
-    if (!root) continue;
-    if (kind === 'studio' && process.platform === 'darwin' && root.endsWith('.app')) {
-      root = path.join(root, 'Contents');
-    }
-    return { root, kind };
-  }
-  return { root: '', kind: '' };
+function envPath() {
+  return String(process.env.DEVECO_HOME || '').trim();
 }
 
 async function isDir(file) {
@@ -48,12 +33,7 @@ async function isDir(file) {
   return fs.stat(file).then((info) => info.isDirectory()).catch(() => false);
 }
 
-function nodePath(home, kind) {
-  if (kind === 'clt') {
-    return process.platform === 'win32'
-      ? path.join(home, 'tool', 'node', 'node.exe')
-      : path.join(home, 'tool', 'node', 'bin', 'node');
-  }
+function nodePath(home) {
   return process.platform === 'win32'
     ? path.join(home, 'tools', 'node', 'node.exe')
     : path.join(home, 'tools', 'node', 'bin', 'node');
@@ -68,9 +48,9 @@ async function exists(file) {
 }
 
 async function findDevEcoHome() {
-  const selected = toolchainEnv();
-  if (selected.root && (await isDir(selected.root)) && (await exists(nodePath(selected.root, selected.kind)))) {
-    return selected.root;
+  const env = envPath();
+  if (env && (await isDir(env)) && (await exists(nodePath(env)))) {
+    return env;
   }
 }
 
@@ -81,7 +61,7 @@ export function targetArgs(deviceId) {
 export async function resolveHdcBinary() {
   const home = await findDevEcoHome();
   if (!home) {
-    return { hdc: '', home: '', error: 'DevEco toolchain path not found. Set DEVECO_CLI_STUDIO_PATH or DEVECO_CLI_CLT_PATH and retry.' };
+    return { hdc: '', home: '', error: 'DevEco Studio path not found. Set DEVECO_HOME and retry.' };
   }
 
   const hdc = hdcPath(home);
@@ -124,29 +104,4 @@ export async function runHdc(cmd) {
       resolve({ stdout, stderr, exitCode: code ?? 1 });
     });
   });
-}
-
-const HDC_FAILURE_PATTERNS = [
-  /^\s*\[Fail\]/im,
-  /Not match target(?: founded)?/i,
-  /check connect-key/i,
-  /(?:target|device)\s+(?:not found|not connected|offline)/i,
-  /no\s+(?:matching|connected|available)\s+(?:target|device)/i,
-];
-
-export function hdcFailureMessage(result) {
-  const stdout = String(result?.stdout ?? '');
-  const stderr = String(result?.stderr ?? '');
-  const combined = [stderr, stdout].filter(Boolean).join('\n').trim();
-  if (result?.exitCode !== 0) {
-    return combined || `hdc exited with code ${result?.exitCode ?? 'unknown'}`;
-  }
-  return HDC_FAILURE_PATTERNS.some((pattern) => pattern.test(combined)) ? combined : '';
-}
-
-export function assertHdcSuccess(result, operation = 'hdc command') {
-  const message = hdcFailureMessage(result);
-  if (message) {
-    throw new Error(`${operation} failed: ${message}`);
-  }
 }

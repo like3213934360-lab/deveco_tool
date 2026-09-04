@@ -1,6 +1,5 @@
 import path from 'node:path';
 import fs from 'node:fs/promises';
-import { pathToFileURL } from 'node:url';
 
 const MIN_API_LEVEL = 17;
 
@@ -23,23 +22,8 @@ export class SkillError extends Error {
   }
 }
 
-// LOCAL PATCH: follow the official CLI's Studio/CLT environment priority and Linux CLT layout.
-function toolchainEnv() {
-  const candidates = [
-    ['DEVECO_CLI_STUDIO_PATH', 'studio'],
-    ['DEVECO_CLI_CLT_PATH', 'clt'],
-    ['DEVECO_HOME', 'studio'],
-    ['DEVECO_PATH', 'studio'],
-  ];
-  for (const [name, kind] of candidates) {
-    let root = String(process.env[name] || '').trim();
-    if (!root) continue;
-    if (kind === 'studio' && process.platform === 'darwin' && root.endsWith('.app')) {
-      root = path.join(root, 'Contents');
-    }
-    return { root, kind, name };
-  }
-  return { root: '', kind: '', name: '' };
+function envPath() {
+  return String(process.env.DEVECO_HOME || '').trim();
 }
 
 async function isDir(file) {
@@ -51,12 +35,7 @@ async function isDir(file) {
     .catch(() => false);
 }
 
-function nodePath(home, kind) {
-  if (kind === 'clt') {
-    return process.platform === 'win32'
-      ? path.join(home, 'tool', 'node', 'node.exe')
-      : path.join(home, 'tool', 'node', 'bin', 'node');
-  }
+function nodePath(home) {
   return process.platform === 'win32'
     ? path.join(home, 'tools', 'node', 'node.exe')
     : path.join(home, 'tools', 'node', 'bin', 'node');
@@ -109,29 +88,28 @@ function apiConfigForLevel(apiLevel, metadata) {
 }
 
 async function validateDevEcoHome() {
-  const selected = toolchainEnv();
-  const env = selected.root;
+  const env = envPath();
   if (!env) {
     throw new SkillError({
       code: 'DEVECO_HOME_MISSING',
-      message: 'DevEco Studio or Command Line Tools is not configured.',
-      hint: '请设置 DEVECO_CLI_STUDIO_PATH 或 DEVECO_CLI_CLT_PATH，然后重新运行。',
+      message: 'DEVECO_HOME is not configured.',
+      hint: '请将 DEVECO_HOME 配置为 DevEco Studio 安装目录，然后重新运行；例如包含 tools/node 和 sdk/default 的目录。',
     });
   }
   if (!(await isDir(env))) {
     throw new SkillError({
       code: 'DEVECO_HOME_INVALID',
-      message: `${selected.name} points to a missing directory: ${env}`,
-      hint: `请检查 ${selected.name} 是否指向完整的 ${selected.kind === 'clt' ? 'Command Line Tools' : 'DevEco Studio'} 根目录。`,
+      message: `DEVECO_HOME points to a missing directory: ${env}`,
+      hint: '请检查 DEVECO_HOME 是否指向 DevEco Studio 根目录，而不是 SDK 子目录或项目目录。',
       details: { devecoHome: env },
     });
   }
-  const builtInNode = nodePath(env, selected.kind);
+  const builtInNode = nodePath(env);
   if (!(await exists(builtInNode))) {
     throw new SkillError({
       code: 'DEVECO_HOME_INVALID',
       message: `DevEco built-in Node not found at ${builtInNode}.`,
-      hint: `请检查 ${selected.name} 是否指向完整的 ${selected.kind === 'clt' ? 'Command Line Tools' : 'DevEco Studio'} 根目录。`,
+      hint: '请检查 DEVECO_HOME 是否指向 DevEco Studio 根目录，而不是 SDK 子目录或项目目录。',
       details: { devecoHome: env, nodePath: builtInNode },
     });
   }
@@ -232,28 +210,4 @@ export function resolveApiLevel(metadata, userApiLevel) {
 export async function detectApiLevel() {
   const metadata = await loadSdkMetadata();
   return resolveApiLevel(metadata);
-}
-
-/*
- * LOCAL PATCH: upstream ships this file as a library only, but the pack's script
- * registry advertises `detect_sdk` as a runnable script. With no entry point it
- * exited 0 with empty stdout, which is indistinguishable from success. Running
- * it directly now prints the resolved SDK metadata as JSON; importing it is
- * unchanged, so copy-template.mjs keeps using the exports above.
- */
-async function main() {
-  const resolved = await detectApiLevel();
-  process.stdout.write(`${JSON.stringify(resolved, null, 2)}\n`);
-}
-
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  try {
-    await main();
-  } catch (error) {
-    const payload = error instanceof SkillError
-      ? error.payload
-      : { code: 'SCRIPT_ERROR', message: error instanceof Error ? error.message : String(error) };
-    process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
-    process.exitCode = 1;
-  }
 }

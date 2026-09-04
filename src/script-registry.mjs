@@ -16,6 +16,7 @@ const SCRIPT_DEFINITIONS = {
   detect_sdk: {
     skill: "deveco-create-project",
     file: "scripts/detect-sdk.mjs",
+    adapterFile: "src/script-adapters/detect-sdk.mjs",
     description: "Detect the API level and SDK metadata from configured DevEco Studio or Command Line Tools.",
   },
   collect_hilog: {
@@ -42,81 +43,6 @@ const SCRIPT_DEFINITIONS = {
     skill: "arkts-runtime-fix",
     file: "scripts/probe-faultlogger.mjs",
     description: "Probe recent faultlogger entries on a connected HarmonyOS device.",
-  },
-  search_practices: {
-    skill: "arkui-component-best-practices",
-    file: "scripts/search-practices.mjs",
-    description: "Search the ArkUI component practice library by component name or keyword. "
-      + "Takes a positional query and --limit=N / --json, so pass argv (e.g. [\"Swiper\", \"--limit=5\", \"--json\"]); "
-      + "the args object form cannot express a positional query.",
-  },
-  ui_score: {
-    skill: "ui-reconstruction-score",
-    runtime: "python",
-    description: "Score UI reconstruction fidelity between a reference and a candidate screenshot (or "
-      + "two directories). Takes two positional paths, so pass argv (e.g. [\"ref.png\", \"cand.png\", "
-      + "\"--out\", \"report\", \"--ignore-top-px\", \"44\"]). Needs Pillow; check deveco_doctor first.",
-    file: "scripts/ui_score.py",
-  },
-  apifault_collect_hilog: {
-    skill: "hmos-apifault-analysis",
-    runtime: "python",
-    file: "references/scripts/hilog_collector.py",
-    description: "Collect and filter device hilog for API fault analysis.",
-  },
-  apifault_analyze_media: {
-    skill: "hmos-apifault-analysis",
-    runtime: "python",
-    file: "references/scripts/media_file_analyzer.py",
-    description: "Inspect a media file's container and codec metadata when diagnosing a media API fault.",
-  },
-  appfreeze_analyze: {
-    skill: "hmos-appfreeze-analysis",
-    runtime: "python",
-    file: "scripts/freeze/main.py",
-    description: "Analyze an appfreeze fault log: binder chains, stack sections, and a structured report.",
-  },
-  appfreeze_sample_stack: {
-    skill: "hmos-appfreeze-analysis",
-    runtime: "python",
-    file: "scripts/sample_stack_analyzer.py",
-    description: "Analyze a sampled stack trace collected during an appfreeze.",
-  },
-  arkts_docs_search: {
-    skill: "hmos-arkts-knowledge-retriever",
-    runtime: "python",
-    file: "scripts/search_docs.py",
-    description: "Search the bundled ArkTS documentation index shipped with this skill.",
-  },
-  arkui_docs_search: {
-    skill: "hmos-arkui-knowledge-retriever",
-    runtime: "python",
-    file: "scripts/run.py",
-    description: "Query the bundled ArkUI knowledge base for API usage, parameters, and version support.",
-  },
-  arkui_docs_rebuild_index: {
-    skill: "hmos-arkui-knowledge-retriever",
-    runtime: "python",
-    file: "scripts/rebuild_index.py",
-    description: "Rebuild the ArkUI knowledge base index after its documents change.",
-  },
-  instrument_test_run: {
-    skill: "hmos-instrument-test",
-    runtime: "python",
-    file: "scripts/run_instrument_test.py",
-    description: "Run instrumented (on-device) tests for a HarmonyOS module and report the results.",
-  },
-  local_test_run: {
-    skill: "hmos-local-test",
-    runtime: "python",
-    file: "scripts/run_local_test.py",
-    description: "Run local (host-side) unit tests for a HarmonyOS module and report the results.",
-  },
-  memleak_analyze: {
-    skill: "hmos-memleak-analysis",
-    runtime: "python",
-    file: "scripts/skill_main.py",
-    description: "Analyze an ArkTS heap snapshot for leak suspects and risky retain paths.",
   },
 };
 
@@ -163,9 +89,9 @@ export async function resolvePython() {
 }
 
 /**
- * Report whether Pillow is importable by the resolved interpreter.
- * ui_score.py is the only script with a third-party dependency, and the system python3 on macOS
- * usually does not have it, so this has to be checked rather than assumed.
+ * Report whether Python and Pillow are available for environment diagnostics.
+ * The current official DevEco skills only register Node.js scripts, but the doctor keeps this
+ * optional probe for compatibility with hosts that add their own Python-backed script entries.
  * @returns {Promise<{available: boolean, python: string|null, version: string|null, pillow: boolean}>} Status.
  */
 export async function pythonStatus() {
@@ -223,6 +149,12 @@ export function registeredScriptEnvironment(base, toolchain = resolveDevecoToolc
 
 function scriptPath(definition) {
   return path.join(REPO_ROOT, "skills", definition.skill, definition.file);
+}
+
+function executionPath(definition) {
+  return definition.adapterFile
+    ? path.join(REPO_ROOT, definition.adapterFile)
+    : scriptPath(definition);
 }
 
 export function listScripts() {
@@ -288,6 +220,51 @@ export function parseScriptOutput(stdout) {
   }
 }
 
+function inputOption(input, flag, property) {
+  if (Array.isArray(input.argv)) {
+    const index = input.argv.indexOf(flag);
+    if (index >= 0 && index + 1 < input.argv.length) return String(input.argv[index + 1]);
+  }
+  for (const values of [input.args, input]) {
+    if (!values || typeof values !== "object") continue;
+    if (values[property] !== undefined) return String(values[property]);
+    const entry = Object.entries(values).find(([key]) => `--${kebabCase(key)}` === flag);
+    if (entry) return String(entry[1]);
+  }
+  return "";
+}
+
+function crashLogText(input) {
+  const inline = inputOption(input, "--log-text", "logText");
+  if (inline) return inline;
+
+  const file = inputOption(input, "--log-file", "logFile");
+  if (!file) return "";
+  try {
+    const resolved = path.isAbsolute(file)
+      ? file
+      : path.resolve(getProjectPath() ?? REPO_ROOT, file);
+    const stats = fs.statSync(resolved);
+    if (!stats.isFile() || stats.size > 4 * 1024 * 1024) return "";
+    return fs.readFileSync(resolved, "utf8");
+  } catch {
+    return "";
+  }
+}
+
+// DevEco Code v0.1.11's crash parser sometimes promotes "Error name" (or even the final
+// unrelated hilog line) to error_message. Keep the official source byte-for-byte intact and
+// normalize only the MCP result contract that existing callers already depend on.
+function normalizeParsedResult(id, input, parsed) {
+  if (!parsed || !["parse_jscrash_log", "jscrash_report"].includes(id)) return parsed;
+  if (parsed.status === "no_crash_signature") {
+    return { ...parsed, error_message: "(not found)" };
+  }
+
+  const declared = /^\s*Error\s+message\s*[:：]\s*(.+?)\s*$/im.exec(crashLogText(input))?.[1];
+  return declared ? { ...parsed, error_message: declared } : parsed;
+}
+
 export async function runRegisteredScript(id, input = {}) {
   const definition = SCRIPT_DEFINITIONS[id];
   if (!definition) {
@@ -296,9 +273,15 @@ export async function runRegisteredScript(id, input = {}) {
     throw error;
   }
 
-  const file = scriptPath(definition);
+  const sourceFile = scriptPath(definition);
+  const file = executionPath(definition);
+  if (!fs.existsSync(sourceFile)) {
+    const error = new Error(`Registered script is missing: ${sourceFile}`);
+    error.code = "SCRIPT_NOT_FOUND";
+    throw error;
+  }
   if (!fs.existsSync(file)) {
-    const error = new Error(`Registered script is missing: ${file}`);
+    const error = new Error(`Registered script adapter is missing: ${file}`);
     error.code = "SCRIPT_NOT_FOUND";
     throw error;
   }
@@ -325,7 +308,7 @@ export async function runRegisteredScript(id, input = {}) {
       error.code = "PYTHON_NOT_FOUND";
       error.hint = process.env.PYTHON
         ? `PYTHON is set to "${process.env.PYTHON}" but it did not run. Point it at a working interpreter or unset it.`
-        : "安装 Python 3,或把 PYTHON 环境变量指向可用的解释器。ui_score 还额外需要 Pillow。";
+        : "安装 Python 3,或把 PYTHON 环境变量指向可用的解释器。";
       throw error;
     }
     command = python;
@@ -396,17 +379,20 @@ export async function runRegisteredScript(id, input = {}) {
   // all; say so rather than letting an empty `parsed` read as a clean run.
   const silentSuccess = result.exitCode === 0 && !result.stdout.trim();
 
+  const parsed = normalizeParsedResult(id, input, parseScriptOutput(result.stdout));
+
   return {
     script: id,
     skill: definition.skill,
-    file: path.relative(REPO_ROOT, file),
+    file: path.relative(REPO_ROOT, sourceFile),
+    ...(definition.adapterFile ? { adapter: path.relative(REPO_ROOT, file) } : {}),
     runtime,
     argv,
     cwd: getProjectPath() ?? REPO_ROOT,
     exitCode: result.exitCode,
     signal: result.signal,
     ok: result.exitCode === 0,
-    parsed: parseScriptOutput(result.stdout),
+    parsed,
     ...(silentSuccess ? { warning: "Script exited 0 without writing to stdout; it produced no result." } : {}),
     stdout: result.stdout,
     stderr: result.stderr,

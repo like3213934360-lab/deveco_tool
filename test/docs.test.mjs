@@ -101,17 +101,15 @@ test("no OS metadata file ships with the installable assets", async () => {
   assert.deepEqual(offenders, [], `OS metadata must not ship: ${offenders.join(", ")}`);
 });
 
-test("the LICENSE scope section agrees with the manifest and the files on disk", async () => {
-  // The root licence used to be a verbatim copy of upstream's, which both misattributed this
-  // repository's own code and implied MIT for the extended tier. Every number it now states is
-  // derived from something checkable, so the three licence documents cannot drift apart again.
+test("the LICENSE scope section agrees with the official skills and file headers", async () => {
   const license = await fs.readFile(path.join(PACK_ROOT, "LICENSE"), "utf8");
-  const core = MANIFEST.skills.filter((skill) => skill.tier === "core").length;
-  const extended = MANIFEST.skills.length - core;
 
   assert.match(license, /Copyright \(c\) \d{4} dreamlike/, "the licence must not claim upstream's copyright");
-  assert.match(license, new RegExp(`the ${core} skills under`), `LICENSE must state ${core} core skills`);
-  assert.match(license, new RegExp(`the ${extended} skills under`), `LICENSE must state ${extended} extended skills`);
+  assert.match(
+    license,
+    new RegExp(`The ${MANIFEST.skills.length} official skills under`),
+    `LICENSE must state ${MANIFEST.skills.length} official skills`,
+  );
 
   // Files carrying a third-party header are governed by that header, not by the root licence,
   // so the count has to match reality rather than a number someone typed once.
@@ -138,17 +136,16 @@ test("the LICENSE scope section agrees with the manifest and the files on disk",
 
 test("every provenance source file referenced by the docs exists", async () => {
   for (const file of ["provenance/SOURCES.md", "provenance/INVENTORY.md", "NOTICE.deveco-code",
-    "NOTICE.harmonyos-agent-skills", "provenance/deveco-code-v0.1.5.commit",
-    "provenance/deveco-code-v0.1.6.commit",
-    "provenance/harmonyos-agent-skills-v0.0.2.commit", "skills/INDEX.md"]) {
+    "provenance/deveco-code-v0.1.5.commit", "provenance/deveco-code-v0.1.6.commit",
+    "provenance/deveco-code-v0.1.11.commit", "provenance/deveco-code-v0.1.11.skills.sha256",
+    "skills/INDEX.md"]) {
     await fs.access(path.join(PACK_ROOT, file));
   }
 });
 
 test("every pinned commit is a real sha and is cited by SOURCES.md", async () => {
-  // Two upstream refs are in play: v0.1.5 is where the bytes came from, v0.1.6 is the release
-  // line they were verified against. A pin file whose sha appears nowhere in the prose is how
-  // those two roles silently drift apart, so require each pin to be spelled out in the record.
+  // Skill bytes and historical adapted assets use different pins. Require every lock file to be
+  // cited so those roles cannot silently drift apart.
   const provenance = path.join(PACK_ROOT, "provenance");
   const sources = await fs.readFile(path.join(provenance, "SOURCES.md"), "utf8");
   const pins = (await fs.readdir(provenance)).filter((name) => name.endsWith(".commit"));

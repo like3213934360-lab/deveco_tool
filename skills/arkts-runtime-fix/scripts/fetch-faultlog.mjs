@@ -17,7 +17,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import fsp from 'node:fs/promises';
-import { assertHdcSuccess, resolveHdcOrThrow, runHdc, targetArgs } from './shared/hdc.mjs';
+import { resolveHdcOrThrow, runHdc, targetArgs } from './shared/hdc.mjs';
 import { printKv, toErrorMessage } from './shared/utils.mjs';
 
 function parseArgs(argv) {
@@ -73,7 +73,9 @@ function printFetchFailed(faultlogName, remotePath, nextAction) {
 async function recvFaultlog(hdc, deviceId, remotePath, localPath) {
   const args = [hdc, ...targetArgs(deviceId), 'file', 'recv', remotePath, localPath];
   const out = await runHdc(args);
-  assertHdcSuccess(out, 'hdc file recv');
+  if (out.exitCode !== 0) {
+    throw new Error(out.stderr || out.stdout || `hdc file recv failed (code=${out.exitCode})`);
+  }
 
   await fsp.access(localPath).catch(() => {
     throw new Error('Local file missing after recv.');

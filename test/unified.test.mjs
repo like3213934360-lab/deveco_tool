@@ -12,7 +12,7 @@ import {
   listScripts, parseScriptOutput, registeredScriptEnvironment, runRegisteredScript,
 } from "../src/script-registry.mjs";
 import { arktsCheckStatus, runArktsCheck } from "../src/arkts-check.mjs";
-import { resolveDevecoHome, resolveDevecoToolchain } from "../src/config.mjs";
+import { resolveDevecoHome, resolveDevecoToolchain, resolveHdcPath } from "../src/config.mjs";
 import {
   apiCompatibilityCheck, applyChanges, buildArgs, buildProject,
   devecoCliFailureMessage, projectSync, startApp,
@@ -31,10 +31,6 @@ import {
 } from "../src/device-ui.mjs";
 import { hdcFailureMessage, hdcLog, hdcStatus, runHdc } from "../src/hdc-log.mjs";
 import { getHover, goToDeclaration, lspStatus, resetLsp } from "../src/lsp.mjs";
-import {
-  hdcFailureMessage as skillHdcFailureMessage,
-  resolveHdcBinary as resolveSkillHdcBinary,
-} from "../skills/arkts-runtime-fix/scripts/shared/hdc.mjs";
 
 const REPO_ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
 
@@ -112,7 +108,7 @@ async function withHdcPath(executable, operation) {
 
 test("the script registry exposes the allowlisted Skill scripts", () => {
   const scripts = listScripts();
-  assert.equal(scripts.length, 19);
+  assert.equal(scripts.length, 7);
   assert.deepEqual(scripts.map((script) => script.id), [
     "copy_template",
     "detect_sdk",
@@ -121,18 +117,6 @@ test("the script registry exposes the allowlisted Skill scripts", () => {
     "jscrash_report",
     "parse_jscrash_log",
     "probe_faultlogger",
-    "search_practices",
-    "ui_score",
-    "apifault_collect_hilog",
-    "apifault_analyze_media",
-    "appfreeze_analyze",
-    "appfreeze_sample_stack",
-    "arkts_docs_search",
-    "arkui_docs_search",
-    "arkui_docs_rebuild_index",
-    "instrument_test_run",
-    "local_test_run",
-    "memleak_analyze",
   ]);
   assert.ok(scripts.every((script) => script.file.startsWith("skills/")));
   // Every registered script must exist on disk; a typo in a path would otherwise only surface
@@ -140,8 +124,7 @@ test("the script registry exposes the allowlisted Skill scripts", () => {
   for (const script of scripts) {
     assert.ok(fsSync.existsSync(path.resolve(script.file)), `${script.id} points at a missing file`);
   }
-  assert.ok(scripts.every((script) => ["node", "python"].includes(script.runtime)));
-  assert.equal(scripts.filter((script) => script.runtime === "python").length, 11);
+  assert.ok(scripts.every((script) => script.runtime === "node"));
 });
 
 test("registered scripts can discover DevEco's bundled hvigorw from a GUI host PATH", () => {
@@ -347,7 +330,7 @@ test("unified MCP advertises scripts, diagnostics, LSP, and CodeGenie tools", as
 
   const catalog = await client.callTool({ name: "deveco_script_catalog", arguments: {} });
   const parsed = JSON.parse(catalog.content[0].text);
-  assert.equal(parsed.count, 19);
+  assert.equal(parsed.count, 7);
 
   const flowValidation = await client.callTool({
     name: "ui_flow",
@@ -669,18 +652,11 @@ test("a project-wide scan refuses to report success when it resolves no sources"
   }
 });
 
-test("a python script reports a missing interpreter instead of failing obscurely", async () => {
-  const saved = process.env.PYTHON;
-  process.env.PYTHON = path.join(os.tmpdir(), "deveco-no-such-python");
-  try {
-    await assert.rejects(
-      () => runRegisteredScript("ui_score", { argv: ["--help"] }),
-      (error) => error.code === "PYTHON_NOT_FOUND",
-    );
-  } finally {
-    if (saved === undefined) delete process.env.PYTHON;
-    else process.env.PYTHON = saved;
-  }
+test("removed non-official scripts are rejected by the registry", async () => {
+  await assert.rejects(
+    () => runRegisteredScript("non_official_script", { argv: ["--help"] }),
+    (error) => error.code === "UNKNOWN_SCRIPT",
+  );
 });
 
 test("script output parsing ignores narrative lines that look like fields", () => {
@@ -729,15 +705,6 @@ test("crash parsing reports the declared message, not the nearest crash-ish line
   });
   assert.equal(clean.parsed.status, "no_crash_signature");
   assert.equal(clean.parsed.error_message, "(not found)");
-});
-
-test("search_practices returns entries from the ArkUI practice library", async () => {
-  const result = await runRegisteredScript("search_practices", {
-    argv: ["Swiper", "--limit=3", "--json"],
-  });
-  assert.equal(result.ok, true);
-  assert.ok(Array.isArray(result.parsed?.results));
-  assert.ok(result.parsed.results.length > 0, "a common component must match at least one practice");
 });
 
 test("build_project keeps the parameter contract the CodeGenie tool had", async (t) => {
@@ -1114,8 +1081,7 @@ test("CLT layout is resolved for project sync, SDK, HDC, and emulator paths", as
   const sdkResult = await runRegisteredScript("detect_sdk", {});
   assert.equal(sdkResult.ok, true);
   assert.equal(sdkResult.parsed?.apiLevel, 24);
-  const skillHdc = await resolveSkillHdcBinary();
-  assert.equal(skillHdc.hdc, hdc);
+  assert.equal(resolveHdcPath(), hdc);
 });
 
 test("official DevEco wrappers preserve the 1.3.1 CLI command interfaces", async (t) => {
@@ -1288,7 +1254,6 @@ test("HDC failure markers are errors even when the process exits zero", () => {
     exitCode: 0,
   };
   assert.match(hdcFailureMessage(result), /Not match target/);
-  assert.match(skillHdcFailureMessage(result), /Not match target/);
   assert.equal(hdcFailureMessage({ stdout: "device-1\n", stderr: "", exitCode: 0 }), "");
 });
 
@@ -1301,42 +1266,6 @@ test("a timed-out HDC call releases its abort listener immediately", async (t) =
     (error) => error.code === "HDC_TIMEOUT",
   );
   assert.equal(getEventListeners(controller.signal, "abort").length, 0);
-});
-
-test("runtime Skill scripts reject HDC failure text with a zero exit code", async () => {
-  const devecoHome = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-skill-hdc-"));
-  const nodeMarker = path.join(devecoHome, "tools/node/bin/node");
-  const hdc = path.join(devecoHome, "sdk/default/openharmony/toolchains/hdc");
-  const outputDirectory = path.join(devecoHome, "output");
-  await fs.mkdir(path.dirname(nodeMarker), { recursive: true });
-  await fs.mkdir(path.dirname(hdc), { recursive: true });
-  await fs.writeFile(nodeMarker, "", { mode: 0o755 });
-  await fs.writeFile(hdc, "#!/bin/sh\nprintf '[Fail]Not match target founded, check connect-key please\\n'\nexit 0\n", { mode: 0o755 });
-
-  try {
-    const outcome = await new Promise((resolve, reject) => {
-      const child = spawn(process.execPath, [
-        path.join(REPO_ROOT, "skills/arkts-runtime-fix/scripts/collect-hilog.mjs"),
-        "--output-dir",
-        outputDirectory,
-      ], {
-        cwd: REPO_ROOT,
-        env: { ...process.env, DEVECO_HOME: devecoHome },
-        stdio: ["ignore", "pipe", "pipe"],
-      });
-      let stdout = "";
-      let stderr = "";
-      child.stdout.on("data", (chunk) => { stdout += chunk.toString(); });
-      child.stderr.on("data", (chunk) => { stderr += chunk.toString(); });
-      child.once("error", reject);
-      child.once("close", (exitCode) => resolve({ exitCode, stdout, stderr }));
-    });
-    assert.equal(outcome.exitCode, 1);
-    assert.match(outcome.stdout, /status:\s*collect_failed/);
-    assert.match(outcome.stdout, /Not match target/);
-  } finally {
-    await fs.rm(devecoHome, { recursive: true, force: true });
-  }
 });
 
 test("hdc_log rejects missing, unknown, and ambiguous devices", async () => {

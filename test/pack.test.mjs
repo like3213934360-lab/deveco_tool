@@ -3,6 +3,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { spawn } from "node:child_process";
+import { createHash } from "node:crypto";
 import test from "node:test";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
@@ -84,6 +85,17 @@ async function markdownFiles(dir) {
   return found;
 }
 
+async function filesRecursively(dir) {
+  const entries = await fs.readdir(dir, { withFileTypes: true });
+  const found = [];
+  for (const entry of entries) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) found.push(...(await filesRecursively(full)));
+    else found.push(full);
+  }
+  return found;
+}
+
 test("every manifest path exists on disk", async () => {
   const paths = [
     ...MANIFEST.skills.map((skill) => skill.path),
@@ -108,6 +120,24 @@ test("manifest skills match the skills directory exactly", async () => {
   }
 });
 
+test("official skill files match the pinned DevEco Code checksums", async () => {
+  const checksumFile = path.join(PACK_ROOT, "provenance", "deveco-code-v0.1.11.skills.sha256");
+  const expected = new Map((await fs.readFile(checksumFile, "utf8")).trim().split(/\r?\n/).map((line) => {
+    const match = /^([0-9a-f]{64})  (skills\/.+)$/.exec(line);
+    assert.ok(match, `invalid checksum line: ${line}`);
+    return [match[2], match[1]];
+  }));
+  const actualFiles = (await filesRecursively(path.join(PACK_ROOT, "skills")))
+    .map((file) => path.relative(PACK_ROOT, file).split(path.sep).join("/"))
+    .filter((file) => file !== "skills/INDEX.md")
+    .sort();
+  assert.deepEqual(actualFiles, [...expected.keys()].sort(), "official skill file set drifted");
+  for (const relative of actualFiles) {
+    const digest = createHash("sha256").update(await fs.readFile(path.join(PACK_ROOT, relative))).digest("hex");
+    assert.equal(digest, expected.get(relative), `${relative} differs from the pinned official source`);
+  }
+});
+
 test("skill names are unique and every origin is a known provenance value", () => {
   const names = MANIFEST.skills.map((skill) => skill.name);
   assert.equal(new Set(names).size, names.length, "duplicate skill names in manifest");
@@ -115,12 +145,7 @@ test("skill names are unique and every origin is a known provenance value", () =
   // Every value here must have a matching section in provenance/SOURCES.md. Skills that carry a
   // different licence story than the DevEco Code tree get their own value rather than sharing one.
   const knownOrigins = new Set([
-    "upstream",
-    "upstream+patched",
-    "upstream-0.2.0",
-    "upstream-0.2.0+patched",
-    "extracted-from-agent-prompt",
-    "harmonyos-agent-skills-v0.0.2",
+    "deveco-code-v0.1.11",
   ]);
   const knownCategories = new Set(["design", "solutions", "development", "test", "launch", "tools"]);
   for (const skill of MANIFEST.skills) {
@@ -206,28 +231,6 @@ test("no tool group is optional and nothing in the pack depends on a removed too
   }
 });
 
-test("no skill instructs the model to call a host-specific tool by name", async () => {
-  // This pack is host-neutral: naming Claude's AskUserQuestion or TodoWrite, or upstream's
-  // subagent registry, tells a Codex or OpenCode session to call something that does not exist.
-  // Capabilities are named instead, with the mapping in manifest.json hostToolMapping.
-  const BINDINGS = ["AskUserQuestion", "TodoWrite", "subagent_type"];
-  // Two kinds of legitimate mention: a LOCAL PATCH comment recording what upstream said, and the
-  // one skill whose job is to explain which parts of upstream's harness were deliberately dropped.
-  const EXPLAINS_NON_PORTAGE = ["skills/harmony-sdd-workflow/SKILL.md"];
-
-  const offenders = [];
-  for (const file of await markdownFiles(path.join(PACK_ROOT, "skills"))) {
-    const relative = path.relative(PACK_ROOT, file);
-    if (EXPLAINS_NON_PORTAGE.includes(relative)) continue;
-    // Strip HTML comments: a LOCAL PATCH note names the upstream tool it replaced, on purpose.
-    const text = (await fs.readFile(file, "utf8")).replace(/<!--[\s\S]*?-->/g, "");
-    for (const binding of BINDINGS) {
-      if (text.includes(binding)) offenders.push(`${relative}: ${binding}`);
-    }
-  }
-  assert.deepEqual(offenders, [], `host-specific tool bindings must be expressed as capabilities:\n${offenders.join("\n")}`);
-});
-
 test("SDD commands cover the five phases in order", () => {
   assert.deepEqual(MANIFEST.commands.map((command) => command.phase), [1, 2, 3, 4, 5]);
   assert.equal(MANIFEST.commands.at(-1).variant, "build-only");
@@ -289,10 +292,7 @@ test("--profile core installs only the core layer but still ships the full manif
   }
 });
 
-test("the default profile is core, and full warns about the extended licence without blocking", async () => {
-  // The extended tier's upstream ships no repository-level licence declaration and 30 of its
-  // 39 skills declare none either, so shipping it must be an explicit choice rather than the
-  // path of least resistance. The warning is advisory: it must not change the exit code.
+test("core and full compatibility profiles install the same official skills", async () => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "harmony-pack-default-"));
   try {
     const core = MANIFEST.skills.filter((skill) => skill.tier === "core").map((skill) => skill.name);
@@ -307,8 +307,8 @@ test("the default profile is core, and full warns about the extended licence wit
     assert.equal(defaulted.stderr, "", "the default profile has nothing to warn about");
 
     const full = await runInstaller(["--dest", path.join(root, "full"), "--profile", "full"]);
-    assert.equal(full.exitCode, 0, "the licence warning must not block the install");
-    assert.match(full.stderr, /NOTICE\.harmonyos-agent-skills/);
+    assert.equal(full.exitCode, 0);
+    assert.equal(full.stderr, "", "there is no extended licence warning in the official-only pack");
     assert.equal(
       (await fs.readdir(path.join(root, "full", "skills"))).length,
       MANIFEST.skills.length + 1,
@@ -481,19 +481,16 @@ test("the core tier fits both hosts' skill-listing budgets", async () => {
     coreWithPaths < CODEX_LISTING,
     `core metadata is ${coreWithPaths} chars, over Codex's ${CODEX_LISTING} floor`,
   );
-  // The reason for the default. If trimming the extended tier ever brings it under budget, this
-  // assertion is what says the default can be revisited.
+  // The official-only catalog should fit without dropping routing descriptions.
   assert.ok(
-    allDescriptions > CLAUDE_LISTING,
-    `all ${MANIFEST.skills.length} descriptions now total ${allDescriptions} chars, which fits `
-      + "Claude's listing budget — the core-only default may no longer be necessary",
+    allDescriptions < CLAUDE_LISTING,
+    `all ${MANIFEST.skills.length} official descriptions total ${allDescriptions} chars, over Claude's listing budget`,
   );
 });
 
 test("the MCP dependency list matches the skills that actually need the MCP", async () => {
-  // This used to be derived from each skill's `scripts` field, which missed every instruction-only
-  // skill: harmony-build-loop declares no scripts but its whole workflow is build_project and
-  // start_app. The list is explicit in the manifest now, and recomputed here so it cannot drift.
+  // A script-only derivation misses instruction-only skills that call MCP tools. The list is
+  // explicit in the manifest and recomputed here so the official catalog cannot drift.
   const declared = new Set(MANIFEST.invocationPolicy.mcpDependency.skills);
   const toolNames = MANIFEST.mcp.toolGroups.flatMap((group) => group.tools);
   const reference = new RegExp(`\\b(${toolNames.join("|")})\\b`);
@@ -512,31 +509,18 @@ test("the MCP dependency list matches the skills that actually need the MCP", as
   assert.deepEqual(stale, [], `these skills are declared but no longer call MCP tools: ${stale.join(", ")}`);
 });
 
-test("installing for Codex preserves a skill's own openai.yaml metadata", async () => {
-  // Skills may ship their own agents/openai.yaml with display_name, short_description and
-  // default_prompt. The installer owns only `policy` and `dependencies`; rewriting the whole file
-  // erased the rest, which is how arkui-component-best-practices lost its Codex UI metadata.
-  const withYaml = [];
-  for (const skill of MANIFEST.skills) {
-    const source = path.join(PACK_ROOT, "skills", skill.name, "agents", "openai.yaml");
-    try { await fs.access(source); withYaml.push(skill.name); } catch { /* most ship none */ }
-  }
-  assert.ok(withYaml.length > 0, "this test needs at least one skill shipping its own openai.yaml");
-
+test("installing for Codex writes MCP dependencies outside the official source tree", async () => {
   const dest = path.join(await fs.mkdtemp(path.join(os.tmpdir(), "harmony-host-yaml-")), "skills");
   try {
     assert.equal((await runHostInstaller(["--host", "codex", "--dest", dest, "--profile", "full"])).exitCode, 0);
-    for (const name of withYaml) {
-      const before = await fs.readFile(path.join(PACK_ROOT, "skills", name, "agents", "openai.yaml"), "utf8");
-      const after = await fs.readFile(path.join(dest, name, "agents", "openai.yaml"), "utf8");
-      for (const line of before.split("\n")) {
-        const trimmed = line.trim();
-        // Only `policy` and `dependencies` bodies may change; everything else must come through.
-        if (!trimmed || trimmed.startsWith("#")) continue;
-        if (/^(policy|dependencies):/.test(trimmed) || /allow_implicit_invocation|^-\s|^tools:/.test(trimmed)) continue;
-        assert.ok(after.includes(trimmed), `${name}/agents/openai.yaml lost: ${trimmed}`);
-      }
-      assert.match(after, /dependencies:/, `${name} must still declare its MCP dependency`);
+    for (const name of MANIFEST.invocationPolicy.mcpDependency.skills) {
+      const yaml = await fs.readFile(path.join(dest, name, "agents", "openai.yaml"), "utf8");
+      assert.match(yaml, /dependencies:/, `${name} must declare its MCP dependency`);
+      await assert.rejects(
+        fs.access(path.join(PACK_ROOT, "skills", name, "agents", "openai.yaml")),
+        undefined,
+        `${name} source must remain byte-identical with upstream`,
+      );
     }
   } finally {
     await fs.rm(path.dirname(dest), { recursive: true, force: true });

@@ -7,4 +7,4 @@ scripts/detect-sdk.mjs
 scripts/copy-template.ts
 scripts/copy-template.mjs
 .version
-@note This skill carries no project template. copy-template.mjs invokes the local DevEco CLI's `create` subcommand, which generates the project itself.
+@note application/ (built-in project template directory — the script uses this automatically; do NOT manually copy files from here)

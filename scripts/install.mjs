@@ -20,7 +20,7 @@ const MARKER = ".harmony-pack.json";
 const USAGE = `Usage: node scripts/install.mjs [options]
 
   --dest <dir>    Target directory to install into (required unless --print-mcp)
-  --profile <p>   Which skills to install: core (default) or full
+  --profile <p>   Compatibility option: core (default) or full; both currently install all 5
   --copy          Copy assets instead of symlinking them (default: symlink)
   --dry-run       Print the planned actions without touching the filesystem
   --uninstall     Remove assets previously installed by this script from <dir>
@@ -29,19 +29,12 @@ const USAGE = `Usage: node scripts/install.mjs [options]
 
 Installed assets: ${ASSETS.join(", ")}
 
-Profiles differ only in which skill directories are linked. manifest.json is always installed
-whole, so the routing index in skills/INDEX.md stays accurate about what exists upstream:
-
-  core   (default) only tier "core" skills — the DevEco Code extraction, MIT throughout.
-  full   core + the extended layer. That upstream ships no repository-level licence
-         declaration and 30 of its 39 skills carry none at all, so this profile prints a
-         licence warning. Read NOTICE.harmonyos-agent-skills before redistributing.
+The profile flag is retained for compatibility. The current pack has no extended tier, so both
+profiles install the same 5 official DevEco Code skills.
 `;
 
 // OS metadata and build residue are never part of an asset. They would otherwise ride along into
 // a host's skill directory, where they are at best noise and at worst indexed as a skill.
-// __pycache__ is not hypothetical: running any of the 11 registered Python scripts leaves one
-// inside the skill that owns it.
 const JUNK_NAMES = new Set([".DS_Store", "Thumbs.db", "desktop.ini", "__pycache__"]);
 
 /**
@@ -51,22 +44,6 @@ const JUNK_NAMES = new Set([".DS_Store", "Thumbs.db", "desktop.ini", "__pycache_
  */
 function notJunk(source) {
   return !JUNK_NAMES.has(path.basename(source));
-}
-
-/**
- * Tell the operator what the full profile actually pulls in, licence-wise.
- * Written to stderr so it survives piping stdout, and deliberately non-blocking:
- * the exit code stays 0 and the install proceeds.
- * @param {number} extendedCount How many extended-tier skills the profile adds.
- * @returns {void}
- */
-function warnExtendedLicence(extendedCount) {
-  process.stderr.write(
-    `warning: --profile full installs the extended layer (${extendedCount} skills).\n`
-      + "  Upstream (harmonyos-agent-skills) ships no repository-level LICENSE, NOTICE or COPYING\n"
-      + "  file, and 30 of those skills declare no licence at all — by default all rights reserved.\n"
-      + "  Read NOTICE.harmonyos-agent-skills before redistributing. Installing anyway.\n\n",
-  );
 }
 
 /**
@@ -163,8 +140,7 @@ async function installAsset(name, dest, options) {
   const source = path.join(PACK_ROOT, name);
   const target = path.join(dest, name);
   const mode = options.copy ? "copy" : "symlink";
-  // Under the core profile the skills directory is assembled entry by entry rather than linked
-  // whole, so the extended layer stays out of the host's skill index.
+  // A filtered profile is assembled entry by entry rather than linked as one directory.
   const selective = name === "skills" && options.coreSkills !== undefined;
   const suffix = selective ? `, core profile: ${options.coreSkills.length} skills` : "";
 
@@ -289,10 +265,6 @@ async function main() {
   const coreSkills = options.profile === "core"
     ? manifestForProfile.skills.filter((skill) => skill.tier === "core").map((skill) => skill.name)
     : undefined;
-
-  if (options.profile === "full") {
-    warnExtendedLicence(manifestForProfile.skills.filter((skill) => skill.tier === "extended").length);
-  }
 
   try {
     for (const name of ASSETS) {

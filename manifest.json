@@ -1,11 +1,12 @@
 {
-  "$comment": "Machine-readable inventory of this HarmonyOS capability pack. Read this first, then wire the pieces into your own host. Paths are relative to the pack root (the directory containing this file). Full skill descriptions live in each SKILL.md frontmatter; the summaries here are for routing only.",
+  "$comment": "Machine-readable inventory for deveco-tool. Skill paths are relative to this repository; every directory under skills/ is copied from the official DevEco Code repository at the pinned upstream commit.",
   "name": "harmony-capability-pack",
   "version": "0.1.0",
   "packVersion": "0.1.0",
   "upstream": {
     "project": "DevEco Code",
-    "version": "0.1.5",
+    "version": "0.1.11",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
     "repository": "https://gitcode.com/openharmony-sig/deveco-code",
     "license": "MIT"
   },
@@ -16,578 +17,98 @@
   },
   "skills": [
     {
-      "name": "arkts-grammar-standards",
-      "path": "skills/arkts-grammar-standards/SKILL.md",
-      "origin": "upstream",
-      "tier": "core",
-      "category": "development",
-      "summary": "ArkTS linter rule dictionary, forbidden syntax, TS-to-ArkTS rewrites, ArkUI structural constraints, Kit API quick reference.",
-      "loadWhen": "Before writing or modifying the first .ets file of a session.",
-      "triggers": ["ArkTS", "ArkUI", ".ets", "struct", "@Component", "arkts-no-*", "TS migration", "语法"]
-    },
-    {
       "name": "arkts-error-fixes",
       "path": "skills/arkts-error-fixes/SKILL.md",
-      "origin": "upstream",
+      "origin": "deveco-code-v0.1.11",
       "tier": "core",
       "category": "development",
-      "summary": "30 categories of ArkTS compilation errors, each with a reference note and a runnable counter-example under assets/.",
-      "loadWhen": "Compilation fails or an ArkTS type error needs fixing.",
-      "triggers": ["compile error", "编译失败", "type error", "arkts_check ERROR"]
+      "summary": "ArkTS 编译错误和类型不匹配问题的分类修复参考。",
+      "loadWhen": "ArkTS 编译失败或需要修复类型错误时。",
+      "triggers": [
+        "compile error",
+        "编译失败",
+        "type error",
+        "ArkTS"
+      ]
+    },
+    {
+      "name": "arkts-grammar-standards",
+      "path": "skills/arkts-grammar-standards/SKILL.md",
+      "origin": "deveco-code-v0.1.11",
+      "tier": "core",
+      "category": "development",
+      "summary": "ArkTSLinter 规则、ArkTS 语法约束、ArkUI 结构约束和 TypeScript 迁移规则。",
+      "loadWhen": "每个会话首次编写或修改 .ets 文件前。",
+      "triggers": [
+        "ArkTS",
+        "ArkUI",
+        ".ets",
+        "@Component",
+        "arkts-no-*",
+        "语法"
+      ]
     },
     {
       "name": "arkts-runtime-fix",
       "path": "skills/arkts-runtime-fix/SKILL.md",
-      "origin": "upstream+patched",
+      "origin": "deveco-code-v0.1.11",
       "tier": "core",
       "category": "solutions",
-      "summary": "JS/ArkTS crash diagnosis: fault-mode library, 8 error-type pattern files, and 5 private Node scripts for faultlogger/hilog evidence collection.",
-      "loadWhen": "The app crashes, flashes back, or white-screens; a jscrash log or stack trace is available.",
-      "triggers": ["jscrash", "闪退", "崩溃", "白屏", "TypeError", "BusinessError", "faultlog", "hilog"],
-      "scripts": ["collect_hilog", "fetch_faultlog", "jscrash_report", "parse_jscrash_log", "probe_faultlogger"],
-      "patch": "HDC calls also treat [Fail] output as failure when the exit code is 0."
-    },
-    {
-      "name": "deveco-create-project",
-      "path": "skills/deveco-create-project/SKILL.md",
-      "origin": "upstream",
-      "tier": "core",
-      "category": "tools",
-      "summary": "Scaffold a HarmonyOS stage-model project through the local DevEco CLI via copy-template.mjs / detect-sdk.mjs.",
-      "loadWhen": "Creating, initializing, or scaffolding a new ArkTS project.",
-      "triggers": ["新建工程", "创建项目", "new ArkTS project", "scaffold", "0-1"],
-      "scripts": ["copy_template", "detect_sdk"]
-    },
-    {
-      "name": "harmony-build-loop",
-      "path": "skills/harmony-build-loop/SKILL.md",
-      "origin": "extracted-from-agent-prompt",
-      "tier": "core",
-      "category": "tools",
-      "summary": "edit -> arkts_check -> build_project -> start_app orchestration, device/emulator selection, ArkTS hard rules, five build-failure diagnosis categories.",
-      "loadWhen": "Any session that edits, builds, or runs an ArkTS project.",
-      "triggers": ["build", "编译", "hvigor", "start_app", "真机", "emulator", "DEVECO_HOME"]
-    },
-    {
-      "name": "harmony-debug-instrumentation",
-      "path": "skills/harmony-debug-instrumentation/SKILL.md",
-      "origin": "extracted-from-agent-prompt",
-      "tier": "core",
-      "category": "solutions",
-      "summary": "Hypothesis-driven debugging loop with a greppable [DEBUG][H<id>] log protocol, hdc_log collection, pre-fix/post-fix comparison, and a mandatory cleanup gate.",
-      "loadWhen": "The app builds and runs but behaves wrong and the bug reproduces on device.",
-      "triggers": ["debug", "调试", "排查", "不刷新", "状态不更新", "打日志", "hdc_log"]
-    },
-    {
-      "name": "harmony-plan-doc",
-      "path": "skills/harmony-plan-doc/SKILL.md",
-      "origin": "extracted-from-agent-prompt",
-      "tier": "core",
-      "category": "design",
-      "summary": "ArkTS planning dimensions (strictness, lifecycle, state, navigation, permissions, resources, performance) and the required sections of a HarmonyOS implementation plan.",
-      "loadWhen": "Writing an implementation plan or technical design for a HarmonyOS change.",
-      "triggers": ["方案", "设计", "计划", "implementation plan", "technical design"]
-    },
-    {
-      "name": "harmony-sdd-workflow",
-      "path": "skills/harmony-sdd-workflow/SKILL.md",
-      "origin": "extracted-from-agent-prompt",
-      "tier": "core",
-      "category": "tools",
-      "summary": "Orchestration layer over the five SDD commands: review gates, the backtracking rule, the verification-scope handshake, and the Phase 4/5 delegation contracts.",
-      "loadWhen": "Running the five-phase SDD workflow end to end instead of invoking the commands one at a time.",
-      "triggers": ["SDD", "spec-driven", "五阶段", "需求到验收", "spec-specify", "编排"]
-    },
-    {
-      "name": "arkui-component-best-practices",
-      "path": "skills/arkui-component-best-practices/SKILL.md",
-      "origin": "upstream-0.2.0",
-      "tier": "core",
-      "category": "development",
-      "summary": "22 component pattern libraries (swiper, tabs, navigation, list/grid/scroll, stack, input, picker, video, xcomponent and more) plus a keyword search script over them.",
-      "loadWhen": "Writing, reviewing, or debugging ArkUI component code.",
-      "triggers": ["ArkUI 组件最佳实践", "Swiper", "Tabs", "Navigation", "List", "Grid", "Scroll", "Stack"],
-      "scripts": ["search_practices"]
-    },
-    {
-      "name": "arkts-logic-completer",
-      "path": "skills/arkts-logic-completer/SKILL.md",
-      "origin": "upstream-0.2.0",
-      "tier": "core",
-      "category": "development",
-      "summary": "Per-component logic completion references for around 50 ArkUI components, with a five-element checklist covering state declaration, event handling, data binding, and component interaction.",
-      "loadWhen": "Filling functional logic into a generated or skeletal ArkUI page.",
-      "triggers": ["逻辑补全", "状态声明", "事件处理", "数据绑定", "组件联动"]
-    },
-    {
-      "name": "repo-understand-skill",
-      "path": "skills/repo-understand-skill/SKILL.md",
-      "origin": "upstream-0.2.0",
-      "tier": "core",
-      "category": "development",
-      "summary": "Eight-step ArkTS repository comprehension across UI, routing/communication, logic, and data dimensions, including a behavioural-equivalence audit and a structured output format.",
-      "loadWhen": "Locating functionality or understanding architecture in an unfamiliar ArkTS project.",
-      "triggers": ["工程理解", "架构", "代码定位", "差异分析", "repo understand"]
-    },
-    {
-      "name": "solution-design",
-      "path": "skills/solution-design/SKILL.md",
-      "origin": "upstream-0.2.0",
-      "tier": "core",
-      "category": "design",
-      "summary": "Technical design generation with class and sequence diagrams and effort estimation, plus templates for UI pages, network, multimedia, data storage, and device capability.",
-      "loadWhen": "Producing a module design document or software architecture for a feature.",
-      "triggers": ["方案设计", "设计说明书", "类图", "时序图", "solution design"]
-    },
-    {
-      "name": "responsive-layout-generator",
-      "path": "skills/responsive-layout-generator/SKILL.md",
-      "origin": "upstream-0.2.0",
-      "tier": "core",
-      "category": "design",
-      "summary": "Converts absolute-position DSL into responsive layout DSL, with breakpoint, chunk, and multi-device layout references.",
-      "loadWhen": "Turning fixed-position layout data into an adaptive ArkUI layout.",
-      "triggers": ["响应式布局", "断点", "自适应", "responsive layout", "DSL"]
-    },
-    {
-      "name": "arkui2hds",
-      "path": "skills/arkui2hds/SKILL.md",
-      "origin": "upstream-0.2.0",
-      "tier": "core",
-      "category": "development",
-      "summary": "Migrating standard or custom ArkUI components to HDS (UI Design Kit) components, with a complete before/after Tabs migration case.",
-      "loadWhen": "Replacing ArkUI components with HDS equivalents.",
-      "triggers": ["HDS", "UI Design Kit", "组件替换", "arkui2hds"]
-    },
-    {
-      "name": "ui-reconstruction-score",
-      "path": "skills/ui-reconstruction-score/SKILL.md",
-      "origin": "upstream-0.2.0+patched",
-      "tier": "core",
-      "category": "design",
-      "summary": "Score UI reconstruction fidelity by comparing a design reference against an implementation screenshot, and surface the most actionable visual/layout problems.",
-      "loadWhen": "Judging how closely an implemented ArkUI page matches its design reference.",
-      "triggers": ["还原度", "评分", "对比截图", "UI 相似度", "reconstruction score"],
-      "patch": "Added a preamble covering the Pillow prerequisite (system pythons often lack it) and a note that the vlm_prompt.md step is an enhancement, not a gate. The upstream agents/openai.yaml is not carried: it binds the DevEco Code IDE front end and the upstream skill loader never reads it. ui_score.py and the three references are byte-identical.",
-      "scripts": ["ui_score"]
-    },
-    {
-      "name": "arkui-scoring-workflow",
-      "path": "skills/arkui-scoring-workflow/SKILL.md",
-      "origin": "upstream-0.2.0+patched",
-      "tier": "core",
-      "category": "design",
-      "summary": "Build, deploy, drive and screenshot an ArkUI page, then score it against a design reference through ui-reconstruction-score, iterating over multiple calibration rounds.",
-      "loadWhen": "An ArkUI page is implemented and needs to be compared against its design reference on a real target.",
-      "triggers": ["视觉校准", "评分流程", "截图对比", "还原度打分"],
-      "patch": "Upstream writes the tool layer as a generic 'MCP tool' because it targets DevEco Code's own tool set. Added a binding table onto this pack's tools (build_project / start_app / perform_ui_action screenshot / get_app_ui_tree / hdc_log), plus get_app_ui_tree as a structural evidence source upstream does not use. The multi-round calibration flow (round/status state machine, invoked->completed, blocked tier, code edits allowed between rounds) is synced from 0.2.0-release HEAD, with upstream's compare_images fallback dropped since this pack does not ship that tool. agents/openai.yaml not carried, same reason as ui-reconstruction-score."
+      "summary": "ArkTS/JavaScript 运行时崩溃、faultlogger 和 Hilog 证据诊断。",
+      "loadWhen": "应用闪退、崩溃、白屏或出现 JS crash 时。",
+      "triggers": [
+        "jscrash",
+        "闪退",
+        "崩溃",
+        "白屏",
+        "TypeError",
+        "faultlog",
+        "hilog"
+      ],
+      "scripts": [
+        "collect_hilog",
+        "fetch_faultlog",
+        "jscrash_report",
+        "parse_jscrash_log",
+        "probe_faultlogger"
+      ]
     },
     {
       "name": "deveco-cli",
       "path": "skills/deveco-cli/SKILL.md",
-      "origin": "upstream-0.2.0",
+      "origin": "deveco-code-v0.1.11",
       "tier": "core",
       "category": "tools",
-      "summary": "Device and emulator management through the DevEco CLI, including starting and stopping emulator instances.",
-      "loadWhen": "Listing connected devices or managing emulators.",
-      "triggers": ["设备", "模拟器", "emulator", "device", "devecocli"]
+      "summary": "DevEco CLI 的设备、模拟器、签名、UI、Skill 和兼容性检查命令参考。",
+      "loadWhen": "管理 HarmonyOS 设备、模拟器、签名、Skill 或 UI 操作时。",
+      "triggers": [
+        "devecocli",
+        "设备",
+        "模拟器",
+        "签名",
+        "UI",
+        "skill"
+      ]
     },
     {
-      "name": "hmos-design-visual-mobile",
-      "path": "skills/hmos-design-visual-mobile/SKILL.md",
-      "origin": "harmonyos-agent-skills-v0.0.2",
-      "tier": "extended",
-      "category": "design",
-      "summary": "HarmonyOS 移动端页面视觉还原技能。基于仓库内设计规范文档与组件模板，生成符合 HarmonyOS Design Token 标准的高保真移动端 HTML 页面。触发场景：(1) 用户要求生成/还原 HarmonyOS 移动端页面 (2) 用户提供设计稿/截图/参考图，要求还原为 HarmonyOS 风格 HTML 页面 (3) 用户提到\"视觉还原\"/\"高保真页面\"/\"移动端页面\"并...",
-      "loadWhen": "(1) 用户要求生成/还原 HarmonyOS 移动端页面 (2) 用户提供设计稿/截图/参考图，要求还原为 HarmonyOS 风格 HTML 页面 (3) 用户提到\"视觉还原\"/\"高保真页面\"/\"移动端页面\"并...",
-      "triggers": ["hmos-design-visual-mobile", "design", "visual", "mobile"]
-    },
-    {
-      "name": "hmos-multidevice-avoid-areas",
-      "path": "skills/hmos-multidevice-avoid-areas/SKILL.md",
-      "origin": "harmonyos-agent-skills-v0.0.2",
-      "tier": "extended",
-      "category": "solutions",
-      "summary": "Handle HarmonyOS avoid-area adaptation through a declarative scene and resource index. Use when the task involves safe area expansion, status bar or navigation bar avoidance, notch or cutout handli...",
-      "loadWhen": "the task involves safe area expansion, status bar or navigation bar avoidance, notch or cutout handli...",
-      "triggers": ["hmos-multidevice-avoid-areas", "multidevice", "avoid", "areas"]
-    },
-    {
-      "name": "hmos-multidevice-fold-state",
-      "path": "skills/hmos-multidevice-fold-state/SKILL.md",
-      "origin": "harmonyos-agent-skills-v0.0.2",
-      "tier": "extended",
-      "category": "solutions",
-      "summary": "HarmonyOS foldable-device adaptation skill for requirements, development, bug-fix, and verification phases. Activate when the task involves fold status detection, hover-mode split-screen layouts, c...",
-      "loadWhen": "the task involves fold status detection, hover-mode split-screen layouts, c...",
-      "triggers": ["hmos-multidevice-fold-state", "multidevice", "fold", "state"]
-    },
-    {
-      "name": "hmos-multidevice-hardware-access",
-      "path": "skills/hmos-multidevice-hardware-access/SKILL.md",
-      "origin": "harmonyos-agent-skills-v0.0.2",
-      "tier": "extended",
-      "category": "solutions",
-      "summary": "Handle HarmonyOS hardware-capability adaptation through a declarative scene and resource index. Use when the task involves camera selection, camera rotation/stride/foldable adaptation, canIUse or S...",
-      "loadWhen": "the task involves camera selection, camera rotation/stride/foldable adaptation, canIUse or S...",
-      "triggers": ["hmos-multidevice-hardware-access", "multidevice", "hardware", "access"]
-    },
-    {
-      "name": "hmos-multidevice-interaction-methods",
-      "path": "skills/hmos-multidevice-interaction-methods/SKILL.md",
-      "origin": "harmonyos-agent-skills-v0.0.2",
-      "tier": "extended",
-      "category": "solutions",
-      "summary": "HarmonyOS应用多设备交互适配开发方案skill，提供触摸、鼠标、键盘、手写笔等多输入方式的交互方案和事件归一策略。当涉及触摸、鼠标、键盘、手写笔等设备的交互以及实现交互归一化、悬停效果、右键菜单、焦点导航、键盘快捷键、手写板输入和压感等功能时调用。",
-      "loadWhen": "HarmonyOS应用多设备交互适配开发方案skill，提供触摸、鼠标、键盘、手写笔等多输入方式的交互方案和事件归一策略。当涉及触摸、鼠标、键盘、手写笔等设备的交互以及实现交互归一化、悬停效果、右键菜单、焦点导航、键盘快捷键、手写板输入和压",
-      "triggers": ["hmos-multidevice-interaction-methods", "multidevice", "interaction", "methods"]
-    },
-    {
-      "name": "hmos-multidevice-natural-orientation",
-      "path": "skills/hmos-multidevice-natural-orientation/SKILL.md",
-      "origin": "harmonyos-agent-skills-v0.0.2",
-      "tier": "extended",
-      "category": "solutions",
-      "summary": "鸿蒙 HarmonyOS 屏幕方向与旋转相关的需求分析、开发实现、问题修复和功能验证。当任务涉及以下场景时使用：setPreferredOrientation、屏幕旋转(rotation)、屏幕方向(orientation)、自然方向、折叠屏方向、三折叠G态、follow_desktop、视频横竖屏切换、短视频自适应旋转、多设备方向策略、module.json5方向配置、方向监听、旋转检测、...",
-      "loadWhen": "鸿蒙 HarmonyOS 屏幕方向与旋转相关的需求分析、开发实现、问题修复和功能验证。当任务涉及以下场景时使用：setPreferredOrientation、屏幕旋转(rotation)、屏幕方向(orientation)、自然方向、折叠",
-      "triggers": ["hmos-multidevice-natural-orientation", "multidevice", "natural", "orientation"]
-    },
-    {
-      "name": "hmos-multidevice-screen-window-size",
-      "path": "skills/hmos-multidevice-screen-window-size/SKILL.md",
-      "origin": "harmonyos-agent-skills-v0.0.2",
-      "tier": "extended",
-      "category": "solutions",
-      "summary": "HarmonyOS 多设备屏幕窗口尺寸适配。当任务涉及以下任一场景时必须调用：（1）比价与分屏：比价/比价场景/比价窗口/价格对比/创建新窗口/多窗口并行/双窗口；（2）平行视界与分栏：平行视界/EasyGo/easy_go.json/分栏效果/分栏布局/列表详情分栏/navigationSplit/routerSplit/Navigation分栏；（3）响应式与自适应布局：响应式布局/自适...",
-      "loadWhen": "HarmonyOS 多设备屏幕窗口尺寸适配。当任务涉及以下任一场景时必须调用：（1）比价与分屏：比价/比价场景/比价窗口/价格对比/创建新窗口/多窗口并行/双窗口；（2）平行视界与分栏：平行视界/EasyGo/easy_go.json/分栏",
-      "triggers": ["hmos-multidevice-screen-window-size", "multidevice", "screen", "window", "size"]
-    },
-    {
-      "name": "hmos-apifault-analysis",
-      "path": "skills/hmos-apifault-analysis/SKILL.md",
-      "origin": "harmonyos-agent-skills-v0.0.2",
-      "tier": "extended",
-      "category": "solutions",
-      "summary": "定位开发者问题。当遇到 API 调用失败或报错、错误码（如 5400xxx、801、9200 等）、crash/freeze 日志（hilog、HiviewDFX）、或需要根据日志与源码定位问题根因时使用——即使用户没明说要做诊断也应触发。输出结构化诊断报告（错误码映射 + 根因候选 + 代码修改建议）。",
-      "loadWhen": "定位开发者问题。当遇到 API 调用失败或报错、错误码（如 5400xxx、801、9200 等）、crash/freeze 日志（hilog、HiviewDFX）、或需要根据日志与源码定位问题根因时使用——即使用户没明说要做诊断也应触发。",
-      "triggers": ["hmos-apifault-analysis", "apifault", "analysis"],
-      "scripts": ["apifault_collect_hilog", "apifault_analyze_media"]
-    },
-    {
-      "name": "hmos-appfreeze-analysis",
-      "path": "skills/hmos-appfreeze-analysis/SKILL.md",
-      "origin": "harmonyos-agent-skills-v0.0.2",
-      "tier": "extended",
-      "category": "solutions",
-      "summary": ">",
-      "loadWhen": ">",
-      "triggers": ["hmos-appfreeze-analysis", "appfreeze", "analysis"],
-      "scripts": ["appfreeze_analyze", "appfreeze_sample_stack"]
-    },
-    {
-      "name": "hmos-jscrash-analysis",
-      "path": "skills/hmos-jscrash-analysis/SKILL.md",
-      "origin": "harmonyos-agent-skills-v0.0.2",
-      "tier": "extended",
-      "category": "solutions",
-      "summary": ">",
-      "loadWhen": ">",
-      "triggers": ["hmos-jscrash-analysis", "jscrash", "analysis"]
-    },
-    {
-      "name": "hmos-memleak-analysis",
-      "path": "skills/hmos-memleak-analysis/SKILL.md",
-      "origin": "harmonyos-agent-skills-v0.0.2",
-      "tier": "extended",
-      "category": "solutions",
-      "summary": "Analyzes HarmonyOS source code (ArkTS, JS, C/C++) to detect memory leaks.Use when (1) Performing static code analysis to catch potential leaks before deployment, (2) Reviewing PRs involving complex...",
-      "loadWhen": "(1) Performing static code analysis to catch potential leaks before deployment, (2) Reviewing PRs involving complex...",
-      "triggers": ["hmos-memleak-analysis", "memleak", "analysis"],
-      "scripts": ["memleak_analyze"]
-    },
-    {
-      "name": "hmos-ability-insight-intent-generator",
-      "path": "skills/hmos-ability-insight-intent-generator/SKILL.md",
-      "origin": "harmonyos-agent-skills-v0.0.2",
-      "tier": "extended",
-      "category": "development",
-      "summary": "|",
-      "loadWhen": "|",
-      "triggers": ["hmos-ability-insight-intent-generator", "ability", "insight", "intent", "generator"]
-    },
-    {
-      "name": "hmos-arkts-deprecated-interface-checker",
-      "path": "skills/hmos-arkts-deprecated-interface-checker/SKILL.md",
-      "origin": "harmonyos-agent-skills-v0.0.2",
-      "tier": "extended",
-      "category": "development",
-      "summary": "检查 HarmonyOS 项目中的废弃 SDK 接口并提供修复建议。当需要清理废弃 API、升级 API 版本、优化代码质量或进行静态语法检查时使用。提供详细的迁移方案、修复优先级分类和代码示例。",
-      "loadWhen": "检查 HarmonyOS 项目中的废弃 SDK 接口并提供修复建议。当需要清理废弃 API、升级 API 版本、优化代码质量或进行静态语法检查时使用。提供详细的迁移方案、修复优先级分类和代码示例。",
-      "triggers": ["hmos-arkts-deprecated-interface-checker", "arkts", "deprecated", "interface", "checker"]
-    },
-    {
-      "name": "hmos-arkts-knowledge-retriever",
-      "path": "skills/hmos-arkts-knowledge-retriever/SKILL.md",
-      "origin": "harmonyos-agent-skills-v0.0.2",
-      "tier": "extended",
-      "category": "development",
-      "summary": "Retrieve grounded ArkTS references for pure non-UI ArkTS work and ArkTS API usage. Use this skill whenever the user is writing, reviewing, testing, validating, running, or debugging ArkTS code and ...",
-      "loadWhen": "Retrieve grounded ArkTS references for pure non-UI ArkTS work and ArkTS API usage. Use this skill whenever the user is w",
-      "triggers": ["hmos-arkts-knowledge-retriever", "arkts", "knowledge", "retriever"],
-      "scripts": ["arkts_docs_search"]
-    },
-    {
-      "name": "hmos-arkui-develop-skill",
-      "path": "skills/hmos-arkui-develop-skill/SKILL.md",
-      "origin": "harmonyos-agent-skills-v0.0.2",
-      "tier": "extended",
-      "category": "development",
-      "summary": "|",
-      "loadWhen": "|",
-      "triggers": ["hmos-arkui-develop-skill", "arkui", "develop"]
-    },
-    {
-      "name": "hmos-arkui-knowledge-retriever",
-      "path": "skills/hmos-arkui-knowledge-retriever/SKILL.md",
-      "origin": "harmonyos-agent-skills-v0.0.2",
-      "tier": "extended",
-      "category": "development",
-      "summary": "ArkUI 知识检索层，按问题语境自动路由到 ArkTS 声明式或 NDK(C-API)知识库进行精准检索，不涉及代码生成或修改。触发场景：(1) 用户查询 ArkUI/ArkTS API 用法、参数细节或版本支持 (2) 验证组件/装饰器的正确用法 (3) 排查 ArkUI 编译错误码或运行时异常 (4) 询问状态管理 V1/V2 差异或迁移 (5) 查询 NDK / Native / C...",
-      "loadWhen": "(1) 用户查询 ArkUI/ArkTS API 用法、参数细节或版本支持 (2) 验证组件/装饰器的正确用法 (3) 排查 ArkUI 编译错误码或运行时异常 (4) 询问状态管理 V1/V2 差异或迁移 (5) 查询 NDK / Native / C...",
-      "triggers": ["hmos-arkui-knowledge-retriever", "arkui", "knowledge", "retriever"],
-      "scripts": ["arkui_docs_search", "arkui_docs_rebuild_index"]
-    },
-    {
-      "name": "hmos-arkui-longtake-transition",
-      "path": "skills/hmos-arkui-longtake-transition/SKILL.md",
-      "origin": "harmonyos-agent-skills-v0.0.2",
-      "tier": "extended",
-      "category": "development",
-      "summary": "为鸿蒙(HarmonyOS)应用添加一镜到底转场效果。当用户提到一镜到底、转场动画、页面跳转动画、Navigation转场、卡片展开动画、图片查看大图动画、ezcustomtransition、自定义NavContentTransition、longtake、连续转场、沉浸式转场等关键词时，务必使用此skill。也适用于用户想要在鸿蒙应用中实现类似iOS的卡片展开、图片预览等流畅过渡效果的场...",
-      "loadWhen": "为鸿蒙(HarmonyOS)应用添加一镜到底转场效果。当用户提到一镜到底、转场动画、页面跳转动画、Navigation转场、卡片展开动画、图片查看大图动画、ezcustomtransition、自定义NavContentTransition",
-      "triggers": ["hmos-arkui-longtake-transition", "arkui", "longtake", "transition"]
-    },
-    {
-      "name": "hmos-arkui-mvvm-pattern",
-      "path": "skills/hmos-arkui-mvvm-pattern/SKILL.md",
-      "origin": "harmonyos-agent-skills-v0.0.2",
-      "tier": "extended",
-      "category": "development",
-      "summary": "HarmonyOS ArkUI MVVM 架构技能。适用于：(1) 项目分层设计 Model/ViewModel/View (2) 目录结构规划 (3) 组件职责与数据流规范 (4) 视图架构检视以及整改项目为MVVM模式等场景。在有以下请求时触发：1.在ArkUI中明确要求使用MVVM架构来添加或重构功能，并要求保持架构简洁。2.明确要求使用MVVM架构创建或改进视图模型，并将逻辑从视图中...",
-      "loadWhen": "HarmonyOS ArkUI MVVM 架构技能。适用于：(1) 项目分层设计 Model/ViewModel/View (2) 目录结构规划 (3) 组件职责与数据流规范 (4) 视图架构检视以及整改项目为MVVM模式等场景。在有以下请",
-      "triggers": ["hmos-arkui-mvvm-pattern", "arkui", "mvvm", "pattern"]
-    },
-    {
-      "name": "hmos-arkui-scenario-development",
-      "path": "skills/hmos-arkui-scenario-development/SKILL.md",
-      "origin": "harmonyos-agent-skills-v0.0.2",
-      "tier": "extended",
-      "category": "development",
-      "summary": "HarmonyOS/鸿蒙 ArkUI 场景化开发技能，用于实现、排查或验证 ArkUI(.ets) 功能，并按需求(REQ)/开发(DEV)/修复(FIX)/验证(VAL)四阶段路由到4个一级场景：ARKUI-01 ArkUI基础语法（声明式UI、条件渲染、自定义组件、Builder/BuilderParam、AttributeModifier、组件复用）;ARKUI-02 基于UI框架构建...",
-      "loadWhen": "HarmonyOS/鸿蒙 ArkUI 场景化开发技能，用于实现、排查或验证 ArkUI(.ets) 功能，并按需求(REQ)/开发(DEV)/修复(FIX)/验证(VAL)四阶段路由到4个一级场景：ARKUI-01 ArkUI基础语法（声明",
-      "triggers": ["hmos-arkui-scenario-development", "arkui", "scenario", "development"]
-    },
-    {
-      "name": "hmos-arkui-statemgt-migration",
-      "path": "skills/hmos-arkui-statemgt-migration/SKILL.md",
-      "origin": "harmonyos-agent-skills-v0.0.2",
-      "tier": "extended",
-      "category": "development",
-      "summary": "帮助开发者将ArkUI状态管理从V1迁移到V2。触发场景：(1) V1项目升级到V2；(2) 迁移@Component/@State/@Prop/@Link/@Observed/@ObjectLink/@Provide/@Consume/@Watch/@Reusable装饰器；(3) 迁移LocalStorage/AppStorage/PersistentStorage/Environmen...",
-      "loadWhen": "(1) V1项目升级到V2；(2) 迁移@Component/@State/@Prop/@Link/@Observed/@ObjectLink/@Provide/@Consume/@Watch/@Reusable装饰器；(3) 迁移LocalStorage/AppStorage/",
-      "triggers": ["hmos-arkui-statemgt-migration", "arkui", "statemgt", "migration"]
-    },
-    {
-      "name": "hmos-ascf-assistant",
-      "path": "skills/hmos-ascf-assistant/SKILL.md",
-      "origin": "harmonyos-agent-skills-v0.0.2",
-      "tier": "extended",
-      "category": "development",
-      "summary": "辅助开发者使用 ASCF 工具链开发 HarmonyOS 元服务。触发场景：(1) 任何提到 ASCF 的问题；(2) 检测到项目包含 ascf/ascf_src 目录（即 ASCF 项目）；(3) 需要生成元服务睫毛图；(4) 将小程序转换为 ASCF 元服务；(5) 开发ASCF元服务页面/组件/平台能力（华为账号登录、隐私托管、授权、支付、分享、web-view、定位等）；(6) 将 ...",
-      "loadWhen": "(1) 任何提到 ASCF 的问题；(2) 检测到项目包含 ascf/ascf_src 目录（即 ASCF 项目）；(3) 需要生成元服务睫毛图；(4) 将小程序转换为 ASCF 元服务；(5) 开发ASCF元服务页面/组件/平台能力（华为账号登录、隐私托管、授权、支付、分享、w",
-      "triggers": ["hmos-ascf-assistant", "ascf", "assistant"]
-    },
-    {
-      "name": "hmos-ascf-convert-taro",
-      "path": "skills/hmos-ascf-convert-taro/SKILL.md",
-      "origin": "harmonyos-agent-skills-v0.0.2",
-      "tier": "extended",
-      "category": "development",
-      "summary": "辅助开发者将 Taro 项目适配（转换）为 ASCF 元服务。当需要在 Taro（React/Vue）项目中支持 ASCF 元服务平台，或将现有 Taro 项目迁移到 ASCF 时使用此技能。提供完整的环境搭建、项目配置、package.json 脚本、常见问题排查和发布流程。",
-      "loadWhen": "辅助开发者将 Taro 项目适配（转换）为 ASCF 元服务。当需要在 Taro（React/Vue）项目中支持 ASCF 元服务平台，或将现有 Taro 项目迁移到 ASCF 时使用此技能。提供完整的环境搭建、项目配置、package.j",
-      "triggers": ["hmos-ascf-convert-taro", "ascf", "convert", "taro"]
-    },
-    {
-      "name": "hmos-ascf-convert-uniapp",
-      "path": "skills/hmos-ascf-convert-uniapp/SKILL.md",
-      "origin": "harmonyos-agent-skills-v0.0.2",
-      "tier": "extended",
-      "category": "development",
-      "summary": "辅助开发者将 uni-app 项目适配(转换)为 ASCF 元服务。当需要使用 uni-app（HBuilderX 或 CLI）开发 HarmonyOS 元服务（MP-HARMONY），或将现有 uni-app 项目迁移(转换)到 ASCF 时使用此技能。提供完整的环境搭建、HBuilderX 开发流程、CLI 配置、常见问题排查和上架审核指引。",
-      "loadWhen": "辅助开发者将 uni-app 项目适配(转换)为 ASCF 元服务。当需要使用 uni-app（HBuilderX 或 CLI）开发 HarmonyOS 元服务（MP-HARMONY），或将现有 uni-app 项目迁移(转换)到 ASCF",
-      "triggers": ["hmos-ascf-convert-uniapp", "ascf", "convert", "uniapp"]
-    },
-    {
-      "name": "hmos-atomicservice-assistant",
-      "path": "skills/hmos-atomicservice-assistant/SKILL.md",
-      "origin": "harmonyos-agent-skills-v0.0.2",
-      "tier": "extended",
-      "category": "development",
-      "summary": "辅助鸿蒙开发者构建元服务（Atomic Service / 免安装应用）。只要用户提到元服务、atomicService、免安装、atomic service，或遇到以下任意问题，都必须使用本 Skill：创建/改造元服务项目、@atomicservice API 报错、配置隐私托管、设置可信域名、静默登录/免密登录、接入鸿蒙支付、包大小超限、AtomicServiceEnhancedWeb...",
-      "loadWhen": "辅助鸿蒙开发者构建元服务（Atomic Service / 免安装应用）。只要用户提到元服务、atomicService、免安装、atomic service，或遇到以下任意问题，都必须使用本 Skill：创建/改造元服务项目、@atomi",
-      "triggers": ["hmos-atomicservice-assistant", "atomicservice", "assistant"]
-    },
-    {
-      "name": "hmos-scan-kit-customscan",
-      "path": "skills/hmos-scan-kit-customscan/SKILL.md",
-      "origin": "harmonyos-agent-skills-v0.0.2",
-      "tier": "extended",
-      "category": "development",
-      "summary": "帮助开发者快速接入华为 Scan Kit 自定义界面扫码能力，仅在需要支持完全自定义相机预览流 UI 界面、闪光灯控制、变焦、对焦等功能的场景使用",
-      "loadWhen": "帮助开发者快速接入华为 Scan Kit 自定义界面扫码能力，仅在需要支持完全自定义相机预览流 UI 界面、闪光灯控制、变焦、对焦等功能的场景使用",
-      "triggers": ["hmos-scan-kit-customscan", "scan", "kit", "customscan"]
-    },
-    {
-      "name": "hmos-scan-kit-defaultscan",
-      "path": "skills/hmos-scan-kit-defaultscan/SKILL.md",
-      "origin": "harmonyos-agent-skills-v0.0.2",
-      "tier": "extended",
-      "category": "development",
-      "summary": "帮助开发者快速接入华为 Scan Kit 默认界面扫码能力，在不需要完全自定义相机界面、闪光灯控制、变焦、对焦等高级功能时优先使用",
-      "loadWhen": "帮助开发者快速接入华为 Scan Kit 默认界面扫码能力，在不需要完全自定义相机界面、闪光灯控制、变焦、对焦等高级功能时优先使用",
-      "triggers": ["hmos-scan-kit-defaultscan", "scan", "kit", "defaultscan"]
-    },
-    {
-      "name": "hmos-account-kit-quicklogin-client",
-      "path": "skills/hmos-account-kit-quicklogin-client/SKILL.md",
-      "origin": "harmonyos-agent-skills-v0.0.2",
-      "tier": "extended",
-      "category": "development",
-      "summary": "基于 HarmonyOS Account Kit 提供华为账号一键登录客户端接入指引，实现获取匿名手机号接口与华为账号一键登录组件集成。支持获取匿名手机号后一键登录页面跳转、失败Toast提示等。在用户提及\"华为账号一键登录\"、\"接入华为账号一键登录\"、\"Account Kit一键登录\"或要求实现华为账号一键登录功能时使用（当前仅支持原生ArkTS框架）",
-      "loadWhen": "基于 HarmonyOS Account Kit 提供华为账号一键登录客户端接入指引，实现获取匿名手机号接口与华为账号一键登录组件集成。支持获取匿名手机号后一键登录页面跳转、失败Toast提示等。在用户提及\"华为账号一键登录\"、\"接入华为账",
-      "triggers": ["hmos-account-kit-quicklogin-client", "account", "kit", "quicklogin", "client"]
-    },
-    {
-      "name": "hmos-live-view-kit-build-location",
-      "path": "skills/hmos-live-view-kit-build-location/SKILL.md",
-      "origin": "harmonyos-agent-skills-v0.0.2",
-      "tier": "extended",
-      "category": "development",
-      "summary": "HarmonyOS实况窗（LiveView）代码生成助手，支持创建、更新、停止实况窗。用户输入创建/更新/结束/完整/补全实况窗代码时触发，覆盖即时配送、打车、排队、计时、航班、高铁、共享租赁、运动锻炼、导航九大场景。",
-      "loadWhen": "HarmonyOS实况窗（LiveView）代码生成助手，支持创建、更新、停止实况窗。用户输入创建/更新/结束/完整/补全实况窗代码时触发，覆盖即时配送、打车、排队、计时、航班、高铁、共享租赁、运动锻炼、导航九大场景。",
-      "triggers": ["hmos-live-view-kit-build-location", "live", "view", "kit", "build", "location"]
-    },
-    {
-      "name": "hmos-push-kit",
-      "path": "skills/hmos-push-kit/SKILL.md",
-      "origin": "harmonyos-agent-skills-v0.0.2",
-      "tier": "extended",
-      "category": "development",
-      "summary": "|",
-      "loadWhen": "|",
-      "triggers": ["hmos-push-kit", "push", "kit"]
-    },
-    {
-      "name": "hmos-push-kit-token",
-      "path": "skills/hmos-push-kit-token/SKILL.md",
-      "origin": "harmonyos-agent-skills-v0.0.2",
-      "tier": "extended",
-      "category": "development",
-      "summary": "|",
-      "loadWhen": "|",
-      "triggers": ["hmos-push-kit-token", "push", "kit", "token"]
-    },
-    {
-      "name": "hmos-push-kit-notification",
-      "path": "skills/hmos-push-kit-notification/SKILL.md",
-      "origin": "harmonyos-agent-skills-v0.0.2",
-      "tier": "extended",
-      "category": "development",
-      "summary": "|",
-      "loadWhen": "|",
-      "triggers": ["hmos-push-kit-notification", "push", "kit", "notification"]
-    },
-    {
-      "name": "hmos-push-kit-voip",
-      "path": "skills/hmos-push-kit-voip/SKILL.md",
-      "origin": "harmonyos-agent-skills-v0.0.2",
-      "tier": "extended",
-      "category": "development",
-      "summary": "|",
-      "loadWhen": "|",
-      "triggers": ["hmos-push-kit-voip", "push", "kit", "voip"]
-    },
-    {
-      "name": "hmos-push-kit-background",
-      "path": "skills/hmos-push-kit-background/SKILL.md",
-      "origin": "harmonyos-agent-skills-v0.0.2",
-      "tier": "extended",
-      "category": "development",
-      "summary": "|",
-      "loadWhen": "|",
-      "triggers": ["hmos-push-kit-background", "push", "kit", "background"]
-    },
-    {
-      "name": "hmos-instrument-test",
-      "path": "skills/hmos-instrument-test/SKILL.md",
-      "origin": "harmonyos-agent-skills-v0.0.2",
-      "tier": "extended",
-      "category": "test",
-      "summary": "在 HarmonyOS 应用/服务开发中执行模块的 Instrument Test（包括 ArkTS/JS 和 C++ 测试），支持运行、覆盖率统计、ASan 检测等模式，并可指定测试范围（模块、测试套件、单个用例）。",
-      "loadWhen": "在 HarmonyOS 应用/服务开发中执行模块的 Instrument Test（包括 ArkTS/JS 和 C++ 测试），支持运行、覆盖率统计、ASan 检测等模式，并可指定测试范围（模块、测试套件、单个用例）。",
-      "triggers": ["hmos-instrument-test", "instrument", "test"],
-      "scripts": ["instrument_test_run"]
-    },
-    {
-      "name": "hmos-local-test",
-      "path": "skills/hmos-local-test/SKILL.md",
-      "origin": "harmonyos-agent-skills-v0.0.2",
-      "tier": "extended",
-      "category": "test",
-      "summary": "在 HarmonyOS 应用/服务开发中执行模块的 Local Test（ArkTS/JS 单元测试），支持运行、覆盖率统计等模式，并可指定测试范围（模块、测试套件、单个用例）。",
-      "loadWhen": "在 HarmonyOS 应用/服务开发中执行模块的 Local Test（ArkTS/JS 单元测试），支持运行、覆盖率统计等模式，并可指定测试范围（模块、测试套件、单个用例）。",
-      "triggers": ["hmos-local-test", "local", "test"],
-      "scripts": ["local_test_run"]
-    },
-    {
-      "name": "app-metadata-audit-skill",
-      "path": "skills/app-metadata-audit-skill/SKILL.md",
-      "origin": "harmonyos-agent-skills-v0.0.2",
-      "tier": "extended",
-      "category": "launch",
-      "summary": "开发者在app开发提交agc前，可利用该skill规范对应用市场的元数据（名称、描述、关键词、隐私链接等）进行自动化合规性审查。支持华为应用市场审核规范，防止因低级错误导致被拒。",
-      "loadWhen": "开发者在app开发提交agc前，可利用该skill规范对应用市场的元数据（名称、描述、关键词、隐私链接等）进行自动化合规性审查。支持华为应用市场审核规范，防止因低级错误导致被拒。",
-      "triggers": ["app-metadata-audit-skill", "app", "metadata", "audit"]
-    },
-    {
-      "name": "deveco-studio-codelinter",
-      "path": "skills/deveco-studio-codelinter/SKILL.md",
-      "origin": "harmonyos-agent-skills-v0.0.2",
-      "tier": "extended",
+      "name": "deveco-create-project",
+      "path": "skills/deveco-create-project/SKILL.md",
+      "origin": "deveco-code-v0.1.11",
+      "tier": "core",
       "category": "tools",
-      "summary": "对 HarmonyOS（鸿蒙）项目运行 DevEco Studio CodeLinter 静态代码检查，解读检查结果并提供修复建议。支持 ArkTS、TS、JS 文件，涵盖性能、安全、代码规范、正确性、跨设备适配、API 兼容性等规则集。当用户提到 codelinter、code linting、鸿蒙代码检查、鸿蒙应用质量、HarmonyOS 代码质量检查、静态代码分析、规范扫描、性能检查、...",
-      "loadWhen": "对 HarmonyOS（鸿蒙）项目运行 DevEco Studio CodeLinter 静态代码检查，解读检查结果并提供修复建议。支持 ArkTS、TS、JS 文件，涵盖性能、安全、代码规范、正确性、跨设备适配、API 兼容性等规则集。当",
-      "triggers": ["deveco-studio-codelinter", "studio", "codelinter"]
-    },
-    {
-      "name": "deveco-studio-emulator",
-      "path": "skills/deveco-studio-emulator/SKILL.md",
-      "origin": "harmonyos-agent-skills-v0.0.2",
-      "tier": "extended",
-      "category": "tools",
-      "summary": "HarmonyOS模拟器管理助手。**首次使用必须先运行 `node scripts/setup.js --force` 配置路径**，然后才能执行模拟器启动、应用安装调试等操作。包含完整的场景化设备控制命令（旋转、电源、截屏、音量、摇一摇、折叠）。支持Windows/macOS/Linux。触发词：模拟器、emulator、hdc、推包、安装应用、启动模拟器、构建推包。",
-      "loadWhen": "HarmonyOS模拟器管理助手。**首次使用必须先运行 `node scripts/setup.js --force` 配置路径**，然后才能执行模拟器启动、应用安装调试等操作。包含完整的场景化设备控制命令（旋转、电源、截屏、音量、摇一摇",
-      "triggers": ["deveco-studio-emulator", "studio", "emulator"]
-    },
-    {
-      "name": "deveco-studio-verify",
-      "path": "skills/deveco-studio-verify/SKILL.md",
-      "origin": "harmonyos-agent-skills-v0.0.2",
-      "tier": "extended",
-      "category": "tools",
-      "summary": "HarmonyOS 设备验证工具 - 支持多设备类型验证（手机/折叠屏/平板）、应用安装、UI自动化操作、截图验证、日志收集和 Journey 测试框架。使用 hdc 命令行工具直接操作设备。适用于测试 HarmonyOS 应用在不同设备类型上的表现、验证 UI 在不同屏幕尺寸下的适配、执行 Journey 自动化测试、收集设备日志进行调试、构建产物发布前的完整验证。",
-      "loadWhen": "HarmonyOS 设备验证工具 - 支持多设备类型验证（手机/折叠屏/平板）、应用安装、UI自动化操作、截图验证、日志收集和 Journey 测试框架。使用 hdc 命令行工具直接操作设备。适用于测试 HarmonyOS 应用在不同设备类",
-      "triggers": ["deveco-studio-verify", "studio", "verify"]
+      "summary": "使用官方脚本创建和初始化 ArkTS Stage 模型工程。",
+      "loadWhen": "从零创建、初始化或搭建 ArkTS 工程时。",
+      "triggers": [
+        "新建工程",
+        "创建项目",
+        "new ArkTS project",
+        "scaffold",
+        "0-1"
+      ],
+      "scripts": [
+        "copy_template",
+        "detect_sdk"
+      ]
     }
   ],
   "commands": [
@@ -596,27 +117,49 @@
       "path": "commands/spec-specify.md",
       "phase": 1,
       "summary": "Create or update the feature specification from a natural language description.",
-      "templates": ["templates/spec-template.md"],
-      "packTools": ["arkts_knowledge_search", "document_validate"],
-      "hostTools": ["write", "ask-user"]
+      "templates": [
+        "templates/spec-template.md"
+      ],
+      "packTools": [
+        "arkts_knowledge_search",
+        "document_validate"
+      ],
+      "hostTools": [
+        "write",
+        "ask-user"
+      ]
     },
     {
       "name": "spec-plan",
       "path": "commands/spec-plan.md",
       "phase": 2,
       "summary": "Run the implementation planning workflow and produce design artifacts.",
-      "templates": ["templates/plan-template.md"],
-      "packTools": ["arkts_knowledge_search", "document_validate"],
-      "hostTools": ["write"]
+      "templates": [
+        "templates/plan-template.md"
+      ],
+      "packTools": [
+        "arkts_knowledge_search",
+        "document_validate"
+      ],
+      "hostTools": [
+        "write"
+      ]
     },
     {
       "name": "spec-tasks",
       "path": "commands/spec-tasks.md",
       "phase": 3,
       "summary": "Generate an actionable, dependency-ordered tasks.md from the design artifacts.",
-      "templates": ["templates/tasks-template.md"],
-      "packTools": ["arkts_knowledge_search", "document_validate"],
-      "hostTools": ["write"]
+      "templates": [
+        "templates/tasks-template.md"
+      ],
+      "packTools": [
+        "arkts_knowledge_search",
+        "document_validate"
+      ],
+      "hostTools": [
+        "write"
+      ]
     },
     {
       "name": "spec-implement",
@@ -624,8 +167,15 @@
       "phase": 4,
       "summary": "Execute every task in tasks.md up to and including the Polish phase.",
       "templates": [],
-      "packTools": ["arkts_knowledge_search", "arkts_check"],
-      "hostTools": ["read", "edit", "write"]
+      "packTools": [
+        "arkts_knowledge_search",
+        "arkts_check"
+      ],
+      "hostTools": [
+        "read",
+        "edit",
+        "write"
+      ]
     },
     {
       "name": "spec-verify",
@@ -633,65 +183,136 @@
       "phase": 5,
       "summary": "Build-only verification: build_project (max 10 attempts) then start_app, then report.",
       "templates": [],
-      "packTools": ["build_project", "start_app", "arkts_knowledge_search"],
-      "hostTools": ["read", "edit"],
+      "packTools": [
+        "build_project",
+        "start_app",
+        "arkts_knowledge_search"
+      ],
+      "hostTools": [
+        "read",
+        "edit"
+      ],
       "variant": "build-only"
     }
   ],
   "templates": [
-    { "name": "spec-template", "path": "templates/spec-template.md" },
-    { "name": "plan-template", "path": "templates/plan-template.md" },
-    { "name": "tasks-template", "path": "templates/tasks-template.md" }
+    {
+      "name": "spec-template",
+      "path": "templates/spec-template.md"
+    },
+    {
+      "name": "plan-template",
+      "path": "templates/plan-template.md"
+    },
+    {
+      "name": "tasks-template",
+      "path": "templates/tasks-template.md"
+    }
   ],
   "mcp": {
     "transport": "stdio",
     "entry": "src/server.mjs",
     "config": {
       "command": "node",
-      "args": ["<PACK_ROOT>/src/server.mjs"]
+      "args": [
+        "<PACK_ROOT>/src/server.mjs"
+      ]
     },
     "note": "Requires Node >= 22 and `npm install` inside the pack root. Configure DEVECO_CLI_STUDIO_PATH for DevEco Studio or DEVECO_CLI_CLT_PATH for Command Line Tools.",
     "toolGroups": [
       {
         "group": "project-context",
-        "tools": ["switch_cwd", "init_project_path", "deveco_doctor", "deveco_restart"],
+        "tools": [
+          "switch_cwd",
+          "init_project_path",
+          "deveco_doctor",
+          "deveco_restart"
+        ],
         "note": "deveco_restart tears down the two long-lived children (ArkTS language server, CodeGenie child) in place, so a wedged language service can be recovered without restarting the agent session. Children are respawned lazily by the next call that needs one. Upstream ships the same capability as `restart` on its standalone deveco-mcp server; it matters more here because this pack folds four upstream MCPs into one process, where a stuck child would otherwise take a whole group of tools down with no in-session way out."
       },
       {
         "group": "skill-scripts",
-        "tools": ["deveco_script_catalog", "deveco_script"]
+        "tools": [
+          "deveco_script_catalog",
+          "deveco_script"
+        ]
       },
       {
         "group": "auth-and-knowledge",
-        "tools": ["deveco_login", "deveco_logout", "deveco_status", "deveco_cli_auth", "arkts_knowledge_search", "harmony_docs"],
+        "tools": [
+          "deveco_login",
+          "deveco_logout",
+          "deveco_status",
+          "deveco_cli_auth",
+          "arkts_knowledge_search",
+          "harmony_docs"
+        ],
         "note": "arkts_knowledge_search requires a China-site Huawei DevEco login."
       },
       {
         "group": "arkts-language-service",
-        "tools": ["lsp", "go_to_definition", "go_to_declaration", "find_references", "get_hover", "list_symbols", "find_call_hierarchy"],
+        "tools": [
+          "lsp",
+          "go_to_definition",
+          "go_to_declaration",
+          "find_references",
+          "get_hover",
+          "list_symbols",
+          "find_call_hierarchy"
+        ],
         "note": "Request positions are 1-based everywhere. The aliases also return 1-based positions; `lsp` returns the raw LSP payload, whose positions are 0-based. `lsp` exposes the 10 official operations. find_references and find_call_hierarchy (incoming) load project files mentioning the symbol into the language server before querying, so results are not limited to files opened earlier in the session."
       },
       {
         "group": "diagnostics",
-        "tools": ["arkts_check", "check_ets_files", "code_lint", "api_compat_check", "device_info", "hdc_log", "check_cpp_files"]
+        "tools": [
+          "arkts_check",
+          "check_ets_files",
+          "code_lint",
+          "api_compat_check",
+          "device_info",
+          "hdc_log",
+          "check_cpp_files"
+        ]
       },
       {
         "group": "build-and-run",
-        "tools": ["project_sync", "build_project", "start_app", "apply_changes", "hot_reload", "app_signature"]
+        "tools": [
+          "project_sync",
+          "build_project",
+          "start_app",
+          "apply_changes",
+          "hot_reload",
+          "app_signature"
+        ]
       },
       {
         "group": "device-ui",
-        "tools": ["get_app_ui_tree", "perform_ui_action", "ui_snapshot", "ui_observe", "ui_find", "ui_tap", "ui_flow", "ui_inspect", "ui_control"],
+        "tools": [
+          "get_app_ui_tree",
+          "perform_ui_action",
+          "ui_snapshot",
+          "ui_observe",
+          "ui_find",
+          "ui_tap",
+          "ui_flow",
+          "ui_inspect",
+          "ui_control"
+        ],
         "note": "Read and drive the UI of a connected device. ui_flow records successful ui_tap actions into project-local .arkpilot flows and replays them without model/screenshot round trips. The upstream UI auto-verification tools (verify_ui, save_ui_screenshot, get_ui_verification_log) are disabled by this gateway: verify_ui needs a multimodal model this pack does not configure, and the other two are keyed by a verify_ui run id. Calling them returns TOOL_DISABLED. perform_ui_action resolves `hvd` from the connected devices when it is omitted. get_app_ui_tree and perform_ui_action are proxied to the CodeGenie child and stay exactly as upstream shipped them; ui_snapshot / ui_find / ui_tap / ui_flow are local implementations over hdc and still work when that child stalls."
       },
       {
         "group": "emulator",
-        "tools": ["emulator_manage", "emulator_scenario"],
+        "tools": [
+          "emulator_manage",
+          "emulator_scenario"
+        ],
         "note": "Manage emulator instances, images and licenses, and simulate device scenarios through the official DevEco CLI."
       },
       {
         "group": "sdd-artifacts",
-        "tools": ["document_validate"],
+        "tools": [
+          "document_validate"
+        ],
         "note": "Section-structure check for spec.md / plan.md / tasks.md, ported from the upstream spec_write pipeline. Upstream ran it automatically after its own writer; this pack uses the host's write tool, so the SDD commands call it explicitly once the artifact is written. It reports and never blocks."
       }
     ],
@@ -705,48 +326,25 @@
     "read/edit/write/glob/grep": "Your host's own file and search tools."
   },
   "invocationPolicy": {
-    "$comment": "Single source of truth for how hosts may auto-trigger these skills. scripts/install-host.mjs renders it per host: Claude gets `disable-model-invocation: true` in SKILL.md frontmatter, Codex gets `policy.allow_implicit_invocation: false` in agents/openai.yaml. Never edit the skills under skills/ to express this — they are byte-identical with upstream and tests enforce that.",
+    "$comment": "Host adapters may add local invocation policy without modifying the official skill files.",
     "disableImplicitInvocation": {
-      "$comment": "Skills where merely deciding to load them can cause an irreversible or outward-facing action. The test is the side effect, NOT the manifest category: harmony-build-loop is category `tools` but is pure methodology, and auto-loading it is precisely the point.",
-      "deveco-create-project": "Creates directories and writes a project tree.",
-      "deveco-studio-emulator": "Starts and stops emulators.",
-      "hmos-instrument-test": "Runs instrumented tests on a real device.",
-      "hmos-local-test": "Runs tests on a real device.",
-      "app-metadata-audit-skill": "Pre-release store audit."
+      "$comment": "Only project creation is disabled for implicit invocation because it writes a new project tree.",
+      "deveco-create-project": "Creates directories and writes a project tree."
     },
     "mcpDependency": {
-      "$comment": "Skills that need the deveco-tool MCP. Codex renders these into agents/openai.yaml dependencies.tools so the host can surface the requirement. This list is EXPLICIT on purpose: it was previously derived from each skill's `scripts` field, which missed every instruction-only skill whose prose calls build_project / start_app / arkts_check directly — harmony-build-loop and four others declare no scripts yet cannot work without the MCP. test/pack.test.mjs recomputes the set from the skill bodies and fails if this list drifts.",
+      "$comment": "Official skills whose instructions or bundled scripts use tools exposed by this MCP. Recomputed by tests from the skill contents.",
       "server": "deveco-tool",
       "transport": "stdio",
       "skills": [
         "arkts-grammar-standards",
         "arkts-runtime-fix",
-        "arkui-component-best-practices",
-        "arkui-scoring-workflow",
-        "deveco-create-project",
-        "deveco-studio-verify",
-        "harmony-build-loop",
-        "harmony-debug-instrumentation",
-        "harmony-plan-doc",
-        "harmony-sdd-workflow",
-        "hmos-ability-insight-intent-generator",
-        "hmos-account-kit-quicklogin-client",
-        "hmos-apifault-analysis",
-        "hmos-appfreeze-analysis",
-        "hmos-arkts-knowledge-retriever",
-        "hmos-arkui-knowledge-retriever",
-        "hmos-arkui-mvvm-pattern",
-        "hmos-instrument-test",
-        "hmos-local-test",
-        "hmos-memleak-analysis",
-        "ui-reconstruction-score"
+        "deveco-create-project"
       ]
     }
   },
   "excluded": {
-    "$comment": "Deliberately not ported from upstream.",
-    "agents": "The 11 built-in agent definitions. What was portable is their prompt content: build, plan, debug and goal were harvested into the four `extracted-from-agent-prompt` skills. What is not ported is the harness around them — the permission tables (upstream has no tools allowlist; tool visibility is expressed entirely through permissions), the mode/hidden/temperature configuration, and the plan_enter/plan_exit/debug_exit turn protocols. The remaining 7 agents are generic OpenCode session agents with no HarmonyOS content.",
-    "uiVerification": "The UI auto-verification chain: four tools, not three. verify_ui, save_ui_screenshot and get_ui_verification_log come from the CodeGenie MCP; compare_images is upstream's src/tool/image-compare, added in 0.2.0. All four share one root dependency, which is why they are excluded as a unit: image-compare resolves its endpoint through resolveUIVerifyParams() in the ui-verification module and POSTs both images to an OpenAI-compatible chat completion endpoint, so it needs a multimodal model endpoint plus a DevEco account login. It is not a local image-diff. It is also redundant for a host-neutral pack: upstream's own SKILL.md scopes it to the case where the host model has no vision, which does not apply to Claude Code or Codex. spec-verify ships build-only.",
-    "customizeDeveco": "The 5th upstream skill, `customize-deveco`, documents DevEco Code's own config format. Kept under docs/ for reference; not part of the pack."
+    "$comment": "Non-skill DevEco Code capabilities that are intentionally not copied into skills/.",
+    "agents": "DevEco Code agent definitions and runtime permission harness are application internals, not built-in skills.",
+    "uiVerification": "The CodeGenie model-based UI verification chain is not part of the official built-in skill directory and remains disabled in this MCP gateway."
   }
 }

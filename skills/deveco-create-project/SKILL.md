@@ -1,11 +1,11 @@
 ---
 name: deveco-create-project
-description: Load this skill when creating, initializing, or scaffolding an ArkTS project, including "0-1", "from scratch", "new ArkTS project", "新建工程", "创建项目", and empty directory initialization tasks. Load this skill even if the target directory already exists — never assume an existing same-named directory is the user's intended project and skip to build_project/start_app. If the user provides a Chinese or other non-ASCII project name (e.g. 购物车, 天气预报), you MUST propose 2-3 UpperCamelCase ASCII candidates (e.g. 购物车 → ShoppingCart / ShopCart / Cart) and let the user choose BEFORE invoking the script — never pass non-ASCII names through to the script, and never pick a single translation on the user's behalf. Use the skill's private TypeScript script to create ArkTS projects reliably.
+description: Load this skill when creating, initializing, or scaffolding an ArkTS project, including "0-1", "from scratch", "new ArkTS project", "新建工程", "创建项目", and empty directory initialization tasks. Load this skill even if the target directory already exists — never assume an existing same-named directory is the user's intended project and skip to build_project/start_app. If the user provides a Chinese or other non-ASCII project name (e.g. 购物车, 天气预报), you MUST propose 2-3 UpperCamelCase ASCII candidates (e.g. 购物车 → ShoppingCart / ShopCart / Cart) and let the user choose via AskUserQuestion BEFORE invoking the script — never pass non-ASCII names through to the script, and never pick a single translation on the user's behalf. Use the skill's private script to create ArkTS projects reliably.
 ---
 
 # deveco-create-project
 
-Use the skill's private script to create an ArkTS project, instead of relying on the model to write project files one by one.
+Use the skill's private script to create an ArkTS project, instead of relying on the model to copy template files one by one.
 
 ## Required Parameters
 
@@ -24,13 +24,12 @@ Confirm the following parameters before execution. Ask the user if any required 
 
 When the user provides a Chinese or other non-ASCII name, you MUST:
 1. Propose 2-3 UpperCamelCase ASCII candidates based on meaning (e.g. `购物车` → `ShoppingCart` / `ShopCart` / `Cart`; `天气预报` → `WeatherForecast` / `Weather` / `Forecast`). Fall back to pinyin only when meaning is unclear.
-2. Let the user pick one using your host's ask-the-user mechanism before invoking the script — do NOT pick on the user's behalf, even if one option seems obviously best. <!-- LOCAL PATCH: upstream named Claude's AskUserQuestion tool; see manifest.json hostToolMapping.question -->
-   If your host has no such mechanism, present the candidates in your reply and stop until the user answers. Never guess.
+2. Let the user pick one via `AskUserQuestion` before invoking the script — do NOT pick on the user's behalf, even if one option seems obviously best.
 3. Never pass the original non-ASCII name to the script.
 
 ### Target directory conflict
 
-If `{projectPath}/{appName}` already exists and is not empty, the script will exit with code `2` and emit a `PROJECT_EXISTS` JSON payload. When you see it, ask the user — using your host's ask-the-user mechanism, or plainly in your reply if it has none — whether to overwrite, rename, or cancel. Do NOT silently re-run, and do NOT delete the directory yourself. <!-- LOCAL PATCH: upstream named Claude's AskUserQuestion tool; see manifest.json hostToolMapping.question -->
+If `{projectPath}/{appName}` already exists and is not empty, the script will exit with code `2` and emit a `PROJECT_EXISTS` JSON payload. When you see it, ask the user via `AskUserQuestion` whether to overwrite, rename, or cancel — do NOT silently re-run or delete the directory yourself.
 
 If the user explicitly specifies an SDK/API level, pass it through directly. It must fall within the supported range `17..defaultApiVersion`, where `defaultApiVersion` comes from `DEVECO_HOME/sdk/default/sdk-pkg.json` → `data.apiVersion`.
 If the user does not specify one, do not let the model invent a version. Let the script auto-detect from `DEVECO_HOME/sdk/default/sdk-pkg.json`.
@@ -51,7 +50,6 @@ When the script exits with a non-zero code and emits one of the following error 
 | `SDK_PLATFORM_VERSION_MISSING` | `data.platformVersion` missing | Do NOT invent a platform version |
 | `API_LEVEL_OUT_OF_RANGE` | User `--api-level` outside `17..defaultApiVersion` | Do NOT silently clamp or substitute |
 | `API_CONFIG_MISSING` | No template mapping for the requested API level | Do NOT fall back to a different API level without explicit user consent |
-| `DEVECO_CLI_NOT_FOUND` | DevEco CLI could not be located | Do NOT hand-write a project skeleton. Report the hint and stop |
 | `TEMPLATE_COPY_INCOMPLETE` | Generated project is missing required files | Do NOT attempt to manually create the missing files |
 
 In all cases: **stop, report the JSON error payload verbatim, and let the user fix their environment before retrying.** Do not search the filesystem for SDK files, do not examine the SDK directory structure or scan subdirectories, do not copy/create `sdk-pkg.json`, and do not modify anything under `DEVECO_HOME/sdk/`.
@@ -76,7 +74,7 @@ Do not expand this skill into ArkUI design guidance; load `arkts-grammar-standar
 
 ## Execution Steps
 
-> `copy-template.mjs` generates and validates the project by invoking the local DevEco CLI's `create` subcommand; this skill does not carry or copy its own application template.
+> `copy-template.mjs` creates and validates the project; this skill does not carry or copy its own application template.
 > This script runs with Node.js. If `node` is not available in the environment, stop immediately and explain that to the user.
 > Default skills are extracted to a local user skill directory before execution. Keep all scripts in this skill self-contained and do not import repo-only source files.
 
@@ -92,8 +90,8 @@ If `apiLevel` is not explicitly provided by the user, omit `--api-level` and let
 
 Execution requirements:
 
-- Do not create project files one by one.
-- Let the script handle project generation, the required compatibility adjustments, and validation.
+- Do not manually copy template files one by one.
+- Let the script handle project generation, required compatibility adjustments, and validation.
 - The script is responsible for SDK detection. Do not decide the SDK version in the prompt by guesswork.
 - If the script exits with a non-zero code, report the JSON error payload (`code`, `message`, `hint`) to the user and stop.
 
@@ -117,10 +115,9 @@ If the user's request includes app behavior, UI, pages, or business requirements
 
 Before implementing the feature:
 
-1. Read `entry/src/main/resources/base/profile/main_pages.json` to identify the launch page list.
-2. Read the launch page file, usually `entry/src/main/ets/pages/Index.ets`, and `entry/src/main/ets/entryability/EntryAbility.ets`.
-3. Do NOT glob/search the project tree blindly — the three files above are all a fresh project needs.
-4. Modify the actual launch page or its navigation path so the requested feature is reachable from the first screen.
+- Read `entry/src/main/resources/base/profile/main_pages.json` to identify the launch page list.
+- Read the launch page file, usually `entry/src/main/ets/pages/Index.ets` and `entry/src/main/ets/entryability/EntryAbility.ets`.
+- Modify the actual launch page or its navigation path so the requested feature is reachable from the first screen.
 
 > **CRITICAL: `EntryAbility.ets` and `main_pages.json` must stay in sync.**
 >
@@ -145,6 +142,6 @@ Output:
 - The absolute project path
 - App name / bundle name / API Level
 - `source` of the selected API level: `user_input` / `sdk_pkg`
-- Whether the generated-project integrity check passed
+- Whether the generated project integrity check passed
 - Whether session context was set (auto-switched or manual)
 - Build/run/verification status when feature work was requested

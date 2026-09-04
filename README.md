@@ -44,7 +44,6 @@ npm install
 | 模拟器管理和场景模拟 | DevEco 模拟器组件、系统镜像及已接受的许可证 |
 | `arkts_knowledge_search` | 可访问华为 DevEco CodeGenie 服务的网络，以及通过 `deveco_login` 建立的会话 |
 | 自动签名和团队列表 | 华为开发者账号，以及通过 `deveco_cli_auth` 建立的官方 CLI 会话 |
-| Python 类注册脚本 | Python 3；只有 `ui_score` 额外强制要求 Pillow |
 
 工程类工具还需要一个有效的 HarmonyOS 工程根目录。可以先调用 `switch_cwd`，也可以在单次工具调用中传 `project_path`。
 
@@ -59,7 +58,6 @@ npm install
 | `DEVECO_HOME` / `DEVECO_PATH` | Studio 路径的兼容配置，优先级低于上面两项 |
 | `PROJECT_PATH` | MCP 启动后的默认 HarmonyOS 工程根目录 |
 | `HDC_PATH` | 自定义 `hdc` 可执行文件；通常无需设置 |
-| `PYTHON` | Python 注册脚本使用的解释器；未设置时依次尝试 `python3`、`python` |
 
 高级覆盖项包括 `DEVECO_CLI_ENTRY`、`ARKTS_LSP_ENTRY`、`DEVECO_CODEGENIE_ENTRY`、`OHOS_SDK_PATH` 和 `TSDK_PATH`。它们主要用于非标准安装或调试；常规安装不要设置。
 
@@ -69,7 +67,7 @@ npm install
 npm run doctor
 ```
 
-诊断会检查 Node.js、DevEco/CLT、SDK、HDC、Python/Pillow、当前工程、Skill 和 CodeGenie 子进程状态。
+诊断会检查 Node.js、DevEco/CLT、SDK、HDC、当前工程、Skill 和 CodeGenie 子进程状态；兼容性字段还会报告本机可选的 Python/Pillow 环境，但当前官方 Skill 不依赖它们。
 
 ## 启动和接入
 
@@ -110,7 +108,7 @@ node scripts/install.mjs --print-mcp
 
 | 工具 | 用途 | 额外依赖 |
 |---|---|---|
-| `deveco_script_catalog` | 列出允许通过 MCP 执行的 19 个仓库脚本、运行时和说明 | 无 |
+| `deveco_script_catalog` | 列出允许通过 MCP 执行的 7 个官方 Skill 脚本、运行时和说明 | 无 |
 | `deveco_script` | 通过 `args` 或原始 `argv` 执行一个白名单脚本 | 取决于所选脚本 |
 | `switch_cwd` | 设置后续调用使用的活动 HarmonyOS 工程根目录 | 有效工程目录 |
 | `init_project_path` | `switch_cwd` 的兼容别名 | 有效工程目录 |
@@ -195,7 +193,7 @@ node scripts/install.mjs --print-mcp
 | `emulator_manage` | 列出、启动、停止、创建和删除模拟器；管理镜像和许可证 | DevEco Studio/CLT 的模拟器组件 |
 | `emulator_scenario` | 模拟摇晃、电源、旋转、音量、折叠、电池、位置、运动/导航和传感器 | 已启动的 DevEco 模拟器 |
 
-## `deveco_script` 的 19 个脚本
+## `deveco_script` 的 7 个脚本
 
 所有脚本只能从静态白名单调用，不能用它执行任意路径或 Shell 命令。先调用 `deveco_script_catalog` 可以得到当前注册表。
 
@@ -208,18 +206,6 @@ node scripts/install.mjs --print-mcp
 | `jscrash_report` | 采集或分析 JS crash 并生成结构化诊断 | 采集模式需要 HDC 设备 |
 | `parse_jscrash_log` | 分析本地文件或内联 JS crash 文本 | 无 |
 | `probe_faultlogger` | 探测设备最近的 faultlogger 条目 | HDC 设备 |
-| `search_practices` | 按组件名或关键词搜索 ArkUI 最佳实践 | 无 |
-| `ui_score` | 比较参考图与候选图的 UI 还原度 | Python 3、Pillow |
-| `apifault_collect_hilog` | 采集并过滤 API 故障 Hilog | Python 3、HDC 设备 |
-| `apifault_analyze_media` | 分析媒体容器和编解码信息 | Python 3 |
-| `appfreeze_analyze` | 分析 AppFreeze 日志、Binder 链和堆栈 | Python 3 |
-| `appfreeze_sample_stack` | 分析卡死期间采样的堆栈 | Python 3 |
-| `arkts_docs_search` | 搜索随 Skill 提供的 ArkTS 本地文档索引 | Python 3、相应 Skill 数据 |
-| `arkui_docs_search` | 查询 ArkUI 本地知识库 | Python 3、相应 Skill 数据 |
-| `arkui_docs_rebuild_index` | 文档变化后重建 ArkUI 索引 | Python 3、相应 Skill 数据 |
-| `instrument_test_run` | 运行 HarmonyOS 真机仪器测试 | Python 3、工程、工具链、HDC 设备 |
-| `local_test_run` | 运行 HarmonyOS 主机侧单元测试 | Python 3、工程、工具链 |
-| `memleak_analyze` | 分析 ArkTS heap snapshot 的泄漏嫌疑和保留路径 | Python 3 |
 
 示例：
 
@@ -232,18 +218,6 @@ node scripts/install.mjs --print-mcp
       "logFile": "/tmp/jscrash.log",
       "source": "file"
     }
-  }
-}
-```
-
-需要位置参数的脚本使用 `argv`，例如：
-
-```json
-{
-  "name": "deveco_script",
-  "arguments": {
-    "script": "search_practices",
-    "argv": ["Swiper", "--limit=5", "--json"]
   }
 }
 ```
@@ -284,22 +258,20 @@ arkts_check → build_project(start/status) → apply_changes
 
 如果工程和设备支持真正热重载，可将最后一步改为常驻的 `hot_reload(start/apply/status/stop)`。
 
-## 可选 Skill 和宿主适配
+## 官方 Skill 和宿主适配
 
-MCP 之外，仓库包含 56 个 Skill：默认安装 `core` 17 个，`full` profile 再加入 `extended` 39 个。
+MCP 之外，仓库从 DevEco Code `v0.1.11` 的 6 个官方内置 Skill 中保留 5 个；面向 DevEco Code 自身配置的 `customize-deveco` 按当前产品范围删除，其他非官方 Skill 也不再分发。
 
 ```bash
 node scripts/install.mjs --dest <目标目录>
-node scripts/install.mjs --dest <目标目录> --profile full
+node scripts/install.mjs --dest <目标目录>
 
 node scripts/install-host.mjs --host claude
 node scripts/install-host.mjs --host codex
-node scripts/install-host.mjs --host all --profile full
+node scripts/install-host.mjs --host all
 ```
 
-`install.mjs` 只写入指定目标目录；`install-host.mjs` 才负责 Claude/Codex 的 Skill 发现目录。默认使用 `core` 是为了控制宿主的 Skill 描述上下文开销。
-
-`extended` 层来自 `HarmonyOS_Skills/harmonyos-agent-skills`，上游缺少仓库级许可证，部分条目也没有独立许可声明。安装 `full` 前请阅读 [`LICENSE`](./LICENSE)、[`NOTICE.harmonyos-agent-skills`](./NOTICE.harmonyos-agent-skills) 和 [`provenance/`](./provenance/)。
+`install.mjs` 只写入指定目标目录；`install-host.mjs` 才负责 Claude/Codex 的 Skill 发现目录。为兼容旧命令，安装器仍接受 `--profile core|full`，两者在当前版本都会安装同一组 5 个官方 Skill。
 
 ## 运行约束
 
@@ -340,7 +312,6 @@ npm run scripts
 
 ## 来源与许可
 
-- `core` Skill 主要提取自 DevEco Code，具体版本、提交和改动见 [`provenance/`](./provenance/)。
-- `extended` Skill 的来源和不同许可边界见 [`NOTICE.harmonyos-agent-skills`](./NOTICE.harmonyos-agent-skills)。
+- 保留的 5 个 Skill 均完整同步自 DevEco Code `v0.1.11`，具体提交、选用范围与校验方式见 [`provenance/`](./provenance/)。
 - 完整包结构、宿主映射和接入约定见 [`PACK.md`](./PACK.md)。
 - 本仓库许可范围见 [`LICENSE`](./LICENSE)。

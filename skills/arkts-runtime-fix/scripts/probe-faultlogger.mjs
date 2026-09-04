@@ -21,7 +21,7 @@ import {
   selectWithinMaxAge,
   sortFaultlogsByRecency,
 } from './shared/jscrash-faultlogger.mjs';
-import { hdcFailureMessage, resolveHdcOrThrow, runHdc, targetArgs } from './shared/hdc.mjs';
+import { resolveHdcOrThrow, runHdc, targetArgs } from './shared/hdc.mjs';
 import { printKv, toErrorMessage } from './shared/utils.mjs';
 
 function parseArgs(argv) {
@@ -121,16 +121,11 @@ function printProbeFound(bundleName, names, limit) {
 
 async function loadCandidateNames(hdc, deviceId, bundleName, maxAgeMinutes) {
   const hidumper = await readFaultloggerViaHidumper(hdc, deviceId);
-  const hidumperError = hdcFailureMessage(hidumper);
-  let combined = hidumperError ? '' : hidumper.stdout;
+  let combined = hidumper.exitCode === 0 ? hidumper.stdout : '';
 
   const ls = await readFaultloggerViaLs(hdc, deviceId);
-  const lsError = hdcFailureMessage(ls);
-  if (!lsError) {
+  if (ls.exitCode === 0) {
     combined = `${combined}\n${ls.stdout}`;
-  }
-  if (hidumperError && lsError) {
-    throw new Error(`FaultLogger probe failed: ${hidumperError}; fallback failed: ${lsError}`);
   }
 
   let names = extractJscrashFaultlogNames(combined);

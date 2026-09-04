@@ -59,7 +59,7 @@ import {
 import { authStatus, login, logout } from "./modules/auth.mjs";
 import { searchKnowledge } from "./modules/knowledge.mjs";
 import { getProjectContext, setProjectPath } from "./project-context.mjs";
-import { listScripts, pythonStatus, runRegisteredScript } from "./script-registry.mjs";
+import { listScripts, runRegisteredScript } from "./script-registry.mjs";
 
 const scriptIds = listScripts().map((script) => script.id);
 
