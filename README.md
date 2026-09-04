@@ -1,8 +1,8 @@
 # deveco-tool
 
-`deveco-tool` 是面向 HarmonyOS / OpenHarmony 开发的统一 stdio MCP 服务。它把 DevEco CLI、ArkTS 语言服务、CodeGenie、HDC 真机控制和仓库内的诊断脚本统一成 **44 个 MCP 工具**，AI 客户端只需连接一个进程。
+`deveco-tool` 是面向 HarmonyOS / OpenHarmony 开发的统一 stdio MCP 服务。它把 DevEco CLI、ArkTS 语言服务、CodeGenie、HDC 真机控制和仓库内的诊断脚本统一成 **45 个 MCP 工具**，AI 客户端只需连接一个进程。
 
-这个仓库还包含可选的 Skill、SDD 命令和模板；它们不是运行 MCP 的必要条件。机器可读清单见 [`manifest.json`](./manifest.json)，能力包接入和来源细节见 [`PACK.md`](./PACK.md)。
+这个仓库还包含可选的 Skill、SDD 命令和模板；它们不是运行 MCP 的必要条件。机器可读清单见 [`manifest.json`](./manifest.json)，能力包接入和来源细节见 [`PACK.md`](./PACK.md)，UI 自动化的分层、生成时机和性能边界见 [`docs/arkpilot-architecture.md`](./docs/arkpilot-architecture.md)。
 
 ## 必须依赖
 
@@ -30,7 +30,7 @@ npm install
 | `@deveco-codegenie/mcp` | C/C++ 检查及 CodeGenie UI 代理能力 |
 | `vscode-jsonrpc`、`vscode-languageserver-protocol`、`vscode-uri` | ArkTS LSP 协议与 URI 支持 |
 
-到这里已经可以启动 MCP、列出 44 个工具，以及使用不依赖鸿蒙工具链的工具。
+到这里已经可以启动 MCP、列出 45 个工具，以及使用不依赖鸿蒙工具链的工具。
 
 ### 使用鸿蒙工程能力
 
@@ -40,7 +40,7 @@ npm install
 |---|---|
 | 构建、同步、官方 Linter、API 兼容、热重载、官方文档 | DevEco Studio，或 DevEco Command Line Tools（CLT），并安装对应 HarmonyOS/OpenHarmony SDK |
 | ArkTS 检查和语言服务 | HarmonyOS/OpenHarmony SDK；建议配置完整 DevEco Studio/CLT 工具链 |
-| 真机安装、日志、截图、UI 树、手势和 `ui_flow` 回放 | 工具链中的 `hdc`；真机已连接、已授权调试且能被 `hdc list targets` 识别 |
+| 真机安装、日志、截图、UI 树、手势、`ui_flow` 导航和 `verify_ui` | 工具链中的 `hdc`；真机已连接、已授权调试且能被 `hdc list targets` 识别 |
 | 模拟器管理和场景模拟 | DevEco 模拟器组件、系统镜像及已接受的许可证 |
 | `arkts_knowledge_search` | 可访问华为 DevEco CodeGenie 服务的网络，以及通过 `deveco_login` 建立的会话 |
 | 自动签名和团队列表 | 华为开发者账号，以及通过 `deveco_cli_auth` 建立的官方 CLI 会话 |
@@ -100,7 +100,7 @@ MCP 客户端配置示例：
 node scripts/install.mjs --print-mcp
 ```
 
-## 44 个 MCP 工具
+## 45 个 MCP 工具
 
 表格中的“依赖”是在 Node.js 和 `npm install` 之外的条件。
 
@@ -170,7 +170,7 @@ node scripts/install.mjs --print-mcp
 
 只有一个设备在线时，多数工具可自动选择；多个设备在线时应显式传 `hvd` 或 `target`，避免操作错误设备。
 
-### UI 检查和控制（9）
+### UI 检查和控制（10）
 
 | 工具 | 用途 | 额外依赖 |
 |---|---|---|
@@ -178,13 +178,14 @@ node scripts/install.mjs --print-mcp
 | `ui_find` | 解析 UI 布局树，按文本、key、类型和可点击状态返回可操作坐标 | HDC 设备 |
 | `ui_observe` | 并行获取截图和布局树，一次返回画面、节点和坐标 | HDC 设备 |
 | `ui_tap` | 点击、双击、长按、滑动、fling、drag、方向 fling、文本和按键；支持节点百分比及屏幕百分比定位 | HDC 设备 |
-| `ui_flow` | 自动录制 `ui_tap` 成项目内 ArkPilot 流程，并直接启动、等待、断言和一键回放 | HDC 设备、HarmonyOS 工程 |
+| `ui_flow` | 统一导航决策：优先使用清单声明的 Ability/App Link/Want 直达，其次匹配流程回放，否则自动开始探索录制；支持安全选择器自愈和异步任务 | HDC 设备、HarmonyOS 工程 |
+| `verify_ui` | 最终视觉验收：临时截图、语义断言和短期帧签名比较；不用于普通点击定位 | HDC 设备 |
 | `ui_inspect` | 官方窗口列表和布局树；支持窗口/显示选择、全窗口、深度过滤及精简/完整输出 | DevEco Studio/CLT、设备或模拟器 |
 | `ui_control` | 官方 UI 控制器；支持坐标手势和 node-id/window 定位 | DevEco Studio/CLT、设备或模拟器 |
 | `get_app_ui_tree` | 通过 CodeGenie 获取前台调试应用的 UI 树 | DevEco Studio、CodeGenie 子进程、设备 |
 | `perform_ui_action` | 通过 CodeGenie 执行应用 UI 操作 | DevEco Studio、CodeGenie 子进程、设备 |
 
-优先使用 `ui_tap` 的 `key`、`text` 或 `type` 选择器。自绘控件没有出现在 UI 树中时，使用 `from_x_percent`、`from_y_percent`、`to_x_percent`、`to_y_percent` 按当前屏幕比例生成手势；不要长期保存某台设备的绝对像素坐标。返回“手势发送成功”只代表设备接受了事件，不代表界面一定发生变化，可配合 `ui_observe` 或 `verify` 验证。
+优先使用 `ui_tap` 的 `key`、`text` 或 `type` 选择器。自绘控件没有出现在 UI 树中时，使用 `from_x_percent`、`from_y_percent`、`to_x_percent`、`to_y_percent` 按当前屏幕比例生成手势；不要长期保存某台设备的绝对像素坐标。返回“手势发送成功”只代表设备接受了事件，不代表界面一定发生变化，可配合 `ui_observe` 或 `verify_ui` 验证。
 
 ### 模拟器（2）
 
@@ -231,20 +232,24 @@ switch_cwd → deveco_doctor → project_sync → arkts_check/code_lint
            → build_project(start/status) → start_app
 ```
 
-真机 UI 操作：
+首次或重复的多步骤页面导航：
 
 ```text
-hdc_log(list_devices) → ui_observe → ui_tap → ui_observe/ui_snapshot
+ui_flow(navigate, goal=目标页面)
+  ├─ 清单存在精确 Ability/App Link/Action → 直接 aa start
+  ├─ 已有流程 → 一次回放
+  └─ 没有流程 → 返回 explore，AI 用 ui_observe/ui_tap 探索，成功后再次 navigate 保存
 ```
 
-重复页面路径建议先录制再一键回放：
+单步操作或探索过程：
 
 ```text
-ui_flow(record_start) → ui_observe/ui_tap... → ui_flow(record_stop)
-ui_flow(run) → 必要时 ui_flow(status)
+ui_observe → ui_tap → 必要时 verify_ui
 ```
 
-流程默认保存在项目的 `.arkpilot/flows/*.json`，项目驱动配置保存在 `.arkpilot/config.json`，首次访问时会生成 `{ "driver": "hdc-shell" }`。录制只接收成功的本地 `ui_tap` 操作；输入值会保存为运行变量而不是明文。回放使用 `aa force-stop` / `aa start` 直接启动已安装应用，不构建也不重新安装，成功路径不截图，失败时才返回截图路径和精简 UI 树。默认后端是 `hdc-shell`；`hypium-driver` 不是必需依赖，`hypium` 名称已预留，但在真机与模拟器性能门禁通过前会明确返回不可用，不会静默切换。
+流程默认保存在项目的 `.arkpilot/flows/*.json`，项目驱动配置保存在 `.arkpilot/config.json`。安装和启动 MCP 不会生成它们；首次使用 `navigate`、`run`、`list` 等项目级流程仓库能力时才按需创建。显式录制开始时只保留内存草稿，直到 `record_stop` 验证成功才落盘，因此取消录制不会留下流程文件。新配置会写入 `hdc-shell`、自动录制、安全自愈和 Hypium 性能门禁的显式默认值。录制只接收成功的本地 `ui_tap` 操作；输入值会保存为运行变量而不是明文。回放使用 `aa force-stop` / `aa start` 直接启动已安装应用，不构建也不重新安装，成功路径不截图，失败时才返回截图路径和精简 UI 树。选择器 key 失效时，只允许唯一、精确且指向同一节点的录制备用选择器接管，并且必须等最终断言成功后才原子更新流程；候选歧义时停止，不猜测点击。
+
+默认后端是 `hdc-shell`。可选 `hypium-driver` 适配器使用常驻连接、10 秒以内 RPC 截止时间和取消清理，但只有关闭其遥测且项目性能门禁通过时才允许配置为 `hypium`；未通过门禁不会静默切换后端。Ability、Action 和 App Link 只从标准 `AppScope/app.json5`、`build-profile.json5`、`module.json5` 发现，不读取 LingDong 或其他单一项目约定。动态 URI 和业务 Want 参数必须由调用方明确提供。
 
 未指定 `localPath` 的截图不会写进工程目录：电脑端保存在系统 `tmp/deveco-ui/sessions/` 下的当前 MCP 会话目录，内联返回后立即删除，未内联的大图和失败诊断最长保留 10 分钟，并在 MCP 退出时统一删除；异常退出留下的会话目录会被下一个 MCP 进程回收。设备端截图只在 `/data/local/tmp` 短暂停留，拉取完成后立即删除。只有调用方显式传入 `localPath` 时才会保留文件。
 
@@ -275,12 +280,12 @@ node scripts/install-host.mjs --host all
 
 ## 运行约束
 
-- 44 个工具的参数都会先按公开 JSON Schema 校验。
+- 45 个工具的参数都会先按公开 JSON Schema 校验。
 - `tools/list` 使用本地静态表，不等待 CodeGenie 子进程；CodeGenie 不可用只影响其 3 个代理工具。
 - 构建和浏览器登录默认使用“启动任务 + 状态查询”，避免常见 MCP 客户端的 30 秒调用上限。
 - CLI、LSP、HDC、脚本和网络请求均有截止时间；超时会终止所启动的子进程树。
 - `ui_snapshot` 和 `ui_observe` 默认不覆盖明确指定的已有文件，确需覆盖时传 `overwrite: true`。
-- 已禁用 `verify_ui`、`save_ui_screenshot`、`get_ui_verification_log`；它们不会出现在工具列表中，原因见 [`PACK.md`](./PACK.md)。
+- `verify_ui` 是本地受控实现；上游 `save_ui_screenshot`、`get_ui_verification_log` 仍未公开，因为本实现不持久化上游验证会话。
 
 ## 开发和验证
 

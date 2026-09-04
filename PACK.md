@@ -4,7 +4,7 @@
 
 - `skills/`：从 DevEco Code 官方内置 Skill 中选用的 5 个项目开发 Skill。
 - `commands/` 与 `templates/`：宿主中立的 SDD 五阶段工作流。
-- `src/server.mjs`：统一 stdio MCP 服务，共 44 个工具。
+- `src/server.mjs`：统一 stdio MCP 服务，共 45 个工具。
 
 机器可读清单以 `manifest.json` 为准，工具说明和运行依赖以 `README.md` 为准。
 

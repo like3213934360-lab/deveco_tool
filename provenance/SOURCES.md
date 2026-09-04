@@ -48,7 +48,7 @@ shasum -a 256 -c provenance/deveco-code-v0.1.11.skills.sha256
 ## DevEco CLI 与 MCP 依赖
 
 实际 npm 版本以 `package-lock.json` 为准。`@deveco/deveco-cli` 提供构建、运行、Linter、文档、
-设备、模拟器、UI、签名和认证入口；本仓库通过 `src/` 中的适配层提供 44 个 MCP 工具。
+设备、模拟器、UI、签名和认证入口；本仓库通过 `src/` 中的适配层提供 45 个 MCP 工具。
 
 ## 已移除来源
 
