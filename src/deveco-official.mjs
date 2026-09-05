@@ -1,4 +1,5 @@
 import path from "node:path";
+import { stripVTControlCharacters } from "node:util";
 import { getProjectPath } from "./project-context.mjs";
 import {
   combineOutput,
@@ -44,12 +45,38 @@ function numberInRange(value, name, minimum, maximum, integer = false) {
   return parsed;
 }
 
+// These acknowledgements are the public output of the pinned official CLI (1.3.1).
+// Auth commands sometimes exit 0 after printing a refusal, so require evidence for
+// the requested action instead of trying to enumerate every possible failure sentence.
+const AUTH_COMPLETION = {
+  login: /^(?:Already logged in, User Name:|Login successful\. Logged in as )/m,
+  logout: /^(?:Logout successful|Already logged out\.)\s*$/m,
+  status: /^(?:Current user: .+|Not logged in)\s*$/m,
+  team: /^(?:No teams found for the current user\.|Id[ \t]+Name\r?\n-+[ \t]+-+\r?\n[^\r\n]+)\s*$/m,
+};
+
+function completionFailure(args, result) {
+  if (args[0] !== "docs" && args[0] !== "auth") {
+    return devecoCliFailureMessage(result, { requireOutput: true });
+  }
+  if (result.exitCode !== 0 || result.signal) {
+    return `DevEco CLI exited with ${result.signal || `code ${result.exitCode ?? "unknown"}`}`;
+  }
+  if (!result.stdout.trim()) return "DevEco CLI returned no output.";
+  // Documentation is data, including troubleshooting errors and code samples.
+  // The docs commands set a nonzero exit code themselves when execution fails.
+  if (args[0] === "docs") return "";
+  const output = stripVTControlCharacters(result.stdout);
+  return AUTH_COMPLETION[args[1]]?.test(output)
+    ? "" : "DevEco CLI did not confirm completion of the requested authentication action.";
+}
+
 async function execute(args, { cwd, timeoutMs, errorCode = "DEVECO_CLI_COMMAND_FAILED" } = {}) {
   const result = await runDevecoCli(args, { cwd, timeoutMs, input: args[0] === "auth" && args[1] === "login" ? "\n" : undefined });
   const output = combineOutput(result);
-  const failure = devecoCliFailureMessage(result, { requireOutput: true });
+  const failure = completionFailure(args, result);
   if (failure) {
-    const error = new Error(`> ${result.command}\n\n${output}`);
+    const error = new Error(`> ${result.command}\n\n${output.trim() || failure}`);
     error.code = errorCode;
     throw error;
   }

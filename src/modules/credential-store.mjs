@@ -216,29 +216,30 @@ function envelope(value) {
   return value && value.version === 1 && typeof value.sealed === "string";
 }
 
-export async function readCredential(file) {
+export async function readCredential(file, options) {
   if (!fs.existsSync(file)) return null;
   const stored = JSON.parse(fs.readFileSync(file, "utf8"));
   if (!envelope(stored)) {
-    await writeCredential(file, stored);
+    await writeCredential(file, stored, options);
     return stored;
   }
   const key = await loadKey(file, false);
   return JSON.parse(open(key, stored.sealed));
 }
 
-export async function writeCredential(file, value) {
+export async function writeCredential(file, value, { beforeWrite = () => {} } = {}) {
   let allowCreate = true;
   if (fs.existsSync(file)) {
     try { allowCreate = !envelope(JSON.parse(fs.readFileSync(file, "utf8"))); } catch { allowCreate = false; }
   }
   const key = await loadKey(file, allowCreate);
+  beforeWrite();
   writePrivate(file, JSON.stringify({ version: 1, sealed: seal(key, JSON.stringify(value)) }, null, 2));
 }
 
 export async function deleteCredential(file) {
-  try { fs.rmSync(file); } catch { /* already absent */ }
-  try { fs.rmSync(keyFileFor(file)); } catch { /* key is normally in the OS keychain */ }
+  fs.rmSync(file, { force: true });
+  fs.rmSync(keyFileFor(file), { force: true });
   if (keychainDisabled() || process.platform === "win32") return;
   await providerForPlatform()?.remove(accountFor(file));
 }

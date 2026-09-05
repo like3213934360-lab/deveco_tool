@@ -67,12 +67,12 @@ function extractResult(data) {
  * @returns {Promise<string>} 检索结果文本
  */
 export async function searchKnowledge(question) {
-  let token = await ensureAccessToken({ interactive: false });
+  let token = await ensureAccessToken();
   let data = await callBigSearch(question, token);
 
   // token 失效 -> 强制刷新后重试一次
   if (isAuthError(data)) {
-    token = await ensureAccessToken({ force: true, interactive: false });
+    token = await ensureAccessToken({ force: true });
     data = await callBigSearch(question, token);
   }
 

@@ -117,13 +117,17 @@ MCP 固定提供 40 个工具，其中项目、脚本和服务管理入口为 5 
 | 工具 | 用途 | 额外依赖 |
 |---|---|---|
 | `deveco_login` | 启动或查询 CodeGenie 中国站浏览器登录任务 | 浏览器、网络、华为账号 |
-| `deveco_logout` | 清除本地 CodeGenie 会话 | 无 |
+| `deveco_logout` | 取消未完成的 CodeGenie 登录和令牌刷新，再清除本地会话 | 无 |
 | `deveco_status` | 查询 CodeGenie 登录状态，不返回访问令牌 | 无 |
 | `arkts_knowledge_search` | 搜索官方 ArkTS、ArkUI、HarmonyOS 和 OpenHarmony 知识库 | 网络、CodeGenie 会话 |
 | `deveco_cli_auth` | 官方 CLI 登录、登出、状态和签名团队列表 | DevEco Studio/CLT；在线操作需要账号和网络 |
 | `harmony_docs` | 列出、搜索和阅读官方本地文档 | DevEco Studio/CLT |
 
 `deveco_login` 与 `deveco_cli_auth` 使用两套独立会话，分别服务于 CodeGenie 知识检索和官方 CLI 认证能力。
+
+`deveco_login` 启动后返回 `login_id`，用 `action=status` 查询进度。等待期间会提供 `login_url`；若 `browser_status=manual_required`，请在运行 MCP 的机器上手动打开该地址，回调服务仍会等待到五分钟超时。退出登录会取消该任务，旧回调或未完成的令牌刷新不能恢复会话；这一规则同样适用于本机多个 MCP 进程共享同一账号存储的情况。重新登录须再次调用 `deveco_login`。
+
+本地文档正文中的报错示例不会被当作工具执行失败。`deveco_cli_auth` 则按所请求操作的完成结果判断成功；未登录或令牌失效导致无法列出签名团队时，MCP 返回 `isError=true`。
 
 ### 代码检查和语言服务
 

@@ -1530,7 +1530,7 @@ test("official DevEco wrappers preserve the 1.3.1 CLI command interfaces", async
     '  for await (const chunk of process.stdin) input += chunk;',
     `  fs.writeFileSync(${JSON.stringify(stdinLog)}, input);`,
     '}',
-    'console.log("ok");',
+    'console.log(args[0] !== "auth" ? "ok" : args[1] === "login" ? "Login successful. Logged in as fixture." : "No teams found for the current user.");',
   ].join("\n"));
   const previous = process.env.DEVECO_CLI_ENTRY;
   process.env.DEVECO_CLI_ENTRY = entry;

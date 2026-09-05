@@ -53,7 +53,7 @@ import {
   resetLsp,
   shutdownLsp,
 } from "./lsp.mjs";
-import { authStatus, login, logout } from "./modules/auth.mjs";
+import { authStatus, closeAuth, login, logout } from "./modules/auth.mjs";
 import { searchKnowledge } from "./modules/knowledge.mjs";
 import { getProjectContext, setProjectPath } from "./project-context.mjs";
 import { listScripts, runRegisteredScript } from "./script-registry.mjs";
@@ -366,7 +366,7 @@ const localTools = [
   },
   {
     name: "deveco_login",
-    description: "Start or poll a China-site Huawei DevEco browser login. Start returns immediately so MCP hosts with a 30-second deadline do not abort the five-minute browser callback window; poll with action=status and the returned login_id.",
+    description: "Start or poll a China-site Huawei DevEco browser login. Start returns immediately; poll with action=status and login_id. Waiting status includes login_url for manual opening on the MCP machine if browser_status is manual_required. The callback window lasts five minutes. deveco_logout cancels pending authentication.",
     inputSchema: {
       type: "object",
       properties: {
@@ -379,7 +379,7 @@ const localTools = [
   },
   {
     name: "deveco_logout",
-    description: "Clear the local DevEco login session.",
+    description: "Cancel pending CodeGenie login and token refresh, then clear the local session.",
     inputSchema: { type: "object", properties: {}, additionalProperties: false },
   },
   {
@@ -962,7 +962,10 @@ function loginJobResult(job) {
     elapsed_ms: (job.finishedAt ?? Date.now()) - job.startedAt,
   };
   if (job.status === "waiting") {
-    result.message = "The browser login is waiting for its loopback callback.";
+    Object.assign(result, job.progress);
+    result.message = job.progress.browser_status === "manual_required"
+      ? "Open login_url in a browser on the MCP machine. The callback server is still waiting."
+      : "The browser login is waiting for its loopback callback.";
     result.next_action = { tool: "deveco_login", arguments: { action: "status", login_id: job.id, wait_ms: 20000 } };
   } else if (job.status === "succeeded") {
     result.loggedIn = true;
@@ -979,16 +982,17 @@ function startLoginJob() {
   const job = {
     id: crypto.randomUUID(), status: "waiting", startedAt: Date.now(), finishedAt: null,
     user: null, error: null, completion: null,
+    progress: {},
   };
   loginJob = job;
-  job.completion = login().then(
+  job.completion = login({ onProgress: (progress) => Object.assign(job.progress, progress) }).then(
     (user) => {
       job.status = "succeeded";
       job.user = user;
       job.finishedAt = Date.now();
     },
     (error) => {
-      job.status = "failed";
+      job.status = error.code === "DEVECO_AUTH_CANCELLED" ? "cancelled" : "failed";
       job.error = { code: error.code ?? "DEVECO_LOGIN_FAILED", message: error.message };
       job.finishedAt = Date.now();
     },
@@ -997,19 +1001,23 @@ function startLoginJob() {
 }
 
 async function getLoginJob(id, waitMs) {
-  if (!loginJob || String(id ?? "") !== loginJob.id) {
+  const job = loginJob;
+  if (!job || String(id ?? "") !== job.id) {
     const error = new Error(`Login job not found: ${id ?? ""}`);
     error.code = "DEVECO_LOGIN_JOB_NOT_FOUND";
     throw error;
   }
   const bounded = Math.min(Math.max(Number(waitMs) || 0, 0), 20000);
-  if (bounded && loginJob.status === "waiting") {
-    await Promise.race([
-      loginJob.completion,
-      new Promise((resolve) => setTimeout(resolve, bounded)),
-    ]);
+  if (bounded && job.status === "waiting") {
+    let timer;
+    try {
+      await Promise.race([
+        job.completion,
+        new Promise((resolve) => { timer = setTimeout(resolve, bounded); }),
+      ]);
+    } finally { clearTimeout(timer); }
   }
-  return loginJobResult(loginJob);
+  return loginJobResult(job);
 }
 
 // Answered entirely from static tables: no await, so a stalled CodeGenie child cannot delay
@@ -1094,11 +1102,18 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const action = args.action ?? "start";
       if (action === "start") return textResult(startLoginJob());
       const result = await getLoginJob(args.login_id, args.wait_ms);
-      return textResult(result, result.status === "failed");
+      return textResult(result, ["failed", "cancelled"].includes(result.status));
     }
 
     if (name === "deveco_logout") {
+      const job = loginJob;
       await logout();
+      if (job) {
+        job.status = "cancelled";
+        job.user = null;
+        job.finishedAt = Date.now();
+        job.error = { code: "DEVECO_AUTH_CANCELLED", message: "Logged out. Start a new login to continue." };
+      }
       return textResult({ loggedIn: false });
     }
 
@@ -1269,7 +1284,7 @@ async function shutdown() {
   if (shutdownPromise) return shutdownPromise;
   shutdownPromise = (async () => {
     const cleanup = Promise.allSettled([
-      shutdownLsp(), closeCodeGenie(), closeHotReload(), closeBuildProjectJobs(), closeUiFlows(),
+      closeAuth(), shutdownLsp(), closeCodeGenie(), closeHotReload(), closeBuildProjectJobs(), closeUiFlows(),
     ]);
     await Promise.race([cleanup, waitForShutdownTimeout(5000)]);
     cleanupUiTemporaryFiles();
