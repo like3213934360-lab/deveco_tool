@@ -158,13 +158,17 @@ test("official LSP launch disables stdout notices without changing global enviro
 });
 
 for (const locationLink of ["0", "1"]) test(`LSP synchronizes dependencies and filters declarations (LocationLink=${locationLink})`, async (t) => {
-  const directory = await temp(t);
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-code-中文 空格-"));
+  t.after(async () => {
+    // Windows locks a running child's cwd. Close it before removing its project.
+    await setOfficialLspServerForTests(null);
+    await fs.rm(directory, { recursive: true, force: true });
+  });
   await write(directory, "build-profile.json5", "{app:{},modules:[]}");
   const model = await write(directory, "Model.ets", "export class Model { value: number = 1; }");
   await write(directory, "Implementation.ets", "export class Implementation extends Model {}");
   const consumer = await write(directory, "Consumer.ets", 'import { Model } from "./Model";\nconst model: Model = new Model();');
   await setOfficialLspServerForTests({ command: process.execPath, args: [path.join(repo, "test/fixtures/code-tools-lsp.mjs")], env: { LOCATION_LINK: locationLink } });
-  t.after(() => setOfficialLspServerForTests(null));
   const hover = (filePath) => lspOperation({ operation: "hover", filePath, line: 1, character: 14 });
   await hover(model);
   await hover(consumer);
