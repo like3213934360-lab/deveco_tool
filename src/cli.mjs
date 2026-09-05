@@ -23,7 +23,7 @@ if (command === "doctor") {
 }
 
 if (command === "scripts") {
-  console.log(JSON.stringify({ scripts: listScripts() }, null, 2));
+  console.log(JSON.stringify({ scripts: listScripts(process.argv[3]) }, null, 2));
   process.exit(0);
 }
 
@@ -35,5 +35,5 @@ if (command === "mcp") {
 console.log(`deveco-tool commands:
   doctor   inspect the local DevEco environment
            --probe-codegenie  also start the CodeGenie child and report its tools
-  scripts  list the allowlisted Skill scripts
+  scripts [id]  list scripts, or describe one script's parameters and example
   mcp      start the unified stdio MCP server`);

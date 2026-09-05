@@ -26,7 +26,7 @@
 
 官方 `skills/` 镜像未修改，适配层及来源说明位于 `src/script-adapters/` 和 `provenance/SOURCES.md`。
 
-## 已执行验证
+## 此前管理工具修复的验证
 
 - macOS：运行全量 `npm test`，包括官方 Skill 摘要、既有 LSP/进程恢复和管理工具回归。
 - Node 24：单独运行管理工具和文档校验回归。
@@ -39,8 +39,37 @@
 
 ```bash
 npm test
-node --test --test-concurrency=1 test/management.test.mjs test/document-validate.test.mjs
+node --test --test-concurrency=1 test/management.test.mjs test/management-contracts.test.mjs test/document-validate.test.mjs
 ```
+
+## 工具入口与参数优化（2026-09-05）
+
+本次优化覆盖实现、安装器配置、命令依赖、清单、文档和测试，没有需要后续补做的接口迁移实现。
+
+- `core` 默认暴露 40 个 MCP 工具，其中管理工具为 5 个；`sdd` 增加 `document_validate`；`legacy` 再增加 `init_project_path`。隐藏入口的直接调用也会拒绝。CodeGenie 内部的项目绑定仍使用上游协议，不依赖公开兼容别名。
+- 脚本目录默认只列摘要；按 `script` 查询才返回该脚本的参数 Schema、flag 映射和示例。执行入口保持扁平 Schema，以兼容现有宿主对工具签名的转换。
+- 七个脚本的命名参数与原始 `argv` 使用同一套服务端规则。必填项、字段范围、数值类型、互斥输入、未知参数与重复 flag 在启动脚本前检查；错误返回目录查询提示。注册表也拒绝继承自对象原型的伪脚本名。
+- `deveco_restart` 缩短说明并保留失败恢复指引；查询工具增加只读提示。Windows 下脚本隐藏控制台并继续使用进程树终止机制。
+- 完整能力包的安装器默认生成 `sdd` MCP 配置，Skill 宿主安装器默认生成 `core`；两者均支持 `--mcp-profile`。SDD 命令与机器可读清单同步声明其工具要求。
+
+同一次测量分别启动提交 `6ddcaa5` 中的服务入口与优化后的源码，通过真实 `tools/list` 获取结果：
+
+| 模式 | 总工具数 | 管理入口数 | 管理工具定义 JSON 字符数 | 全部定义 JSON 字符数 |
+| --- | ---: | ---: | ---: | ---: |
+| 优化前 | 42 | 7 | 3218 | 43516 |
+| core | 40 | 5 | 2460 | 42758 |
+| sdd | 41 | 6 | 3240 | 43538 |
+| legacy | 42 | 7 | 3511 | 43809 |
+
+默认管理定义减少约 23.6%，整个默认工具列表减少约 1.7%。这些是 JSON 字符数，不能等同于 token 节省或 AI 调用准确率提升。完整参数说明在查询具体脚本时返回，查询结果同样会消耗上下文。
+
+本次已执行：
+
+- macOS、Node 24.14.1：全量 `node --test --test-concurrency=1 test/*.test.mjs`，220 项中 212 通过、8 项既有设备门控测试跳过、0 失败。
+- macOS、Node 22.23.2 / 24.14.1 / 26.0.0：管理工具、参数契约和文档校验专项各 35 项全部通过。
+- 三种模式均经独立 stdio MCP 验证工具发现、公开 Schema、禁用入口、项目切换、三个模板文档校验和后台重置；覆盖中文、空格、特殊字符路径，以及 Windows 风格参数值。
+- Node 24 + 已连接真机：执行 23 次 MCP 调用，覆盖七个管理工具和七个脚本。实际 SDK 为 API 26；新模板创建成功；Hilog 采集、Faultlogger 探测、真实日志下载、两种解析入口均成功，识别出 `TypeError`。重启前后 CodeGenie 诊断均可用。
+- 真机验证创建的临时工程、文档和下载日志已删除，未安装测试应用。
 
 ## 兼容性边界
 

@@ -51,7 +51,7 @@ jobs:
           node-version: ${{ matrix.node }}
           cache: npm
       - run: npm ci
-      - run: node --test --test-concurrency=1 test/management.test.mjs test/document-validate.test.mjs
+      - run: node --test --test-concurrency=1 test/management.test.mjs test/management-contracts.test.mjs test/document-validate.test.mjs
 
   audit:
     runs-on: ubuntu-latest
@@ -82,11 +82,12 @@ jobs:
           node scripts/install.mjs --dest "$RUNNER_TEMP/pack-default" --dry-run | tee /tmp/default.txt
           grep -q "profile                core" /tmp/default.txt
 
-      - name: pack installer warns about the extended licence but does not block
+      - name: pack full profile installs the same five official skills
         run: |
           node scripts/install.mjs --dest "$RUNNER_TEMP/pack-full" --profile full --dry-run \
             >/tmp/full.out 2>/tmp/full.err
-          grep -q "NOTICE.harmonyos-agent-skills" /tmp/full.err
+          grep -Eq "^skills +5$" /tmp/full.out
+          test ! -s /tmp/full.err
           grep -q "profile                full" /tmp/full.out
 
       - name: host adapter defaults both hosts to core
@@ -96,11 +97,12 @@ jobs:
           grep -q "profile core" /tmp/claude.txt
           grep -q "profile core" /tmp/codex.txt
 
-      - name: host adapter warns about the extended licence on either host
+      - name: host full profile installs the same five official skills
         run: |
           node scripts/install-host.mjs --host claude --profile full --dry-run \
             >/tmp/full-claude.out 2>/tmp/full-claude.err
-          grep -q "NOTICE.harmonyos-agent-skills" /tmp/full-claude.err
+          grep -Fq "5 skill(s):" /tmp/full-claude.out
+          test ! -s /tmp/full-claude.err
           grep -q "profile full" /tmp/full-claude.out
 
       - name: host adapter merges into a directory it does not own

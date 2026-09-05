@@ -5,6 +5,7 @@ import { REPO_ROOT, resolveDevecoHome, resolveDevecoToolchain } from "./config.m
 import { getProjectPath } from "./project-context.mjs";
 // Shared with the DevEco CLI runner; see that module for why the hvigor daemon stays out of reach.
 import { terminateProcessTree } from "./process-tree.mjs";
+import { describeScriptContract, validateScriptInput } from "./script-contracts.mjs";
 
 
 const SCRIPT_DEFINITIONS = {
@@ -166,13 +167,15 @@ function executionPath(definition) {
     : scriptPath(definition);
 }
 
-export function listScripts() {
-  return Object.entries(SCRIPT_DEFINITIONS).map(([id, definition]) => ({
+export function listScripts(selected) {
+  if (selected !== undefined) describeScriptContract(selected);
+  return Object.entries(SCRIPT_DEFINITIONS).filter(([id]) => selected === undefined || id === selected).map(([id, definition]) => ({
     id,
     skill: definition.skill,
     file: path.relative(REPO_ROOT, scriptPath(definition)).split(path.sep).join("/"),
     runtime: definition.runtime ?? "node",
     description: definition.description,
+    ...(selected === undefined ? {} : describeScriptContract(id)),
   }));
 }
 
@@ -289,12 +292,13 @@ export function classifyScriptCompletion({ exitCode, stdout }) {
 
 export async function runRegisteredScript(id, input = {}) {
   const cwd = getProjectPath() ?? REPO_ROOT;
-  const definition = SCRIPT_DEFINITIONS[id];
+  const definition = Object.hasOwn(SCRIPT_DEFINITIONS, id) ? SCRIPT_DEFINITIONS[id] : null;
   if (!definition) {
     const error = new Error(`Unknown registered script: ${id}`);
     error.code = "UNKNOWN_SCRIPT";
     throw error;
   }
+  const rawArgs = validateScriptInput(id, input);
 
   const sourceFile = scriptPath(definition);
   const file = executionPath(definition);
@@ -309,11 +313,8 @@ export async function runRegisteredScript(id, input = {}) {
     throw error;
   }
 
-  const rawArgs = input.args ?? Object.fromEntries(
-    Object.entries(input).filter(([key]) => !["script", "argv", "timeoutMs"].includes(key)),
-  );
   const argv = Array.isArray(input.argv)
-    ? input.argv.map(String)
+    ? [...input.argv]
     : objectToArgv(rawArgs);
   const timeoutMs = Math.min(Math.max(Number(input.timeoutMs ?? 120000), 1000), 600000);
   const devecoHome = resolveDevecoHome().path;
@@ -345,7 +346,8 @@ export async function runRegisteredScript(id, input = {}) {
       // Own process group. Several registered scripts shell out to hvigor, ohpm or hdc, and
       // signalling only the direct child left those grandchildren running: hvigor daemons and
       // Python workers survived every timeout and accumulated across a session.
-      detached: true,
+      detached: process.platform !== "win32",
+      windowsHide: true,
     });
     let stdout = "";
     let stderr = "";

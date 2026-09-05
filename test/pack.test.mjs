@@ -189,17 +189,12 @@ test("manifest tool groups match the tools the MCP actually advertises", async (
   await client.connect(transport);
 
   const live = (await client.listTools()).tools.map((tool) => tool.name).sort();
-  const declared = MANIFEST.mcp.toolGroups.flatMap((group) => group.tools).sort();
+  const declared = MANIFEST.mcp.toolGroups.filter(group => !group.profiles || group.profiles.includes("core")).flatMap((group) => group.tools).sort();
   assert.deepEqual(declared, live);
   assert.equal(MANIFEST.mcp.toolCount, live.length);
 });
 
-test("no tool group is optional and nothing in the pack depends on a removed tool", async () => {
-  // The UI auto-verification chain used to ship as an optional, degraded group.
-  // It is now disabled outright, so every advertised group must be usable.
-  const optional = MANIFEST.mcp.toolGroups.filter((group) => group.optional === true);
-  assert.equal(optional.length, 0);
-
+test("removed tools remain excluded from every profile and command", async () => {
   const removedTools = new Set(["save_ui_screenshot", "get_ui_verification_log"]);
   const advertised = new Set(MANIFEST.mcp.toolGroups.flatMap((group) => group.tools));
   for (const tool of removedTools) {

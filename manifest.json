@@ -127,7 +127,8 @@
       "hostTools": [
         "write",
         "ask-user"
-      ]
+      ],
+      "mcpProfile": "sdd"
     },
     {
       "name": "spec-plan",
@@ -143,7 +144,8 @@
       ],
       "hostTools": [
         "write"
-      ]
+      ],
+      "mcpProfile": "sdd"
     },
     {
       "name": "spec-tasks",
@@ -159,7 +161,8 @@
       ],
       "hostTools": [
         "write"
-      ]
+      ],
+      "mcpProfile": "sdd"
     },
     {
       "name": "spec-implement",
@@ -175,7 +178,8 @@
         "read",
         "edit",
         "write"
-      ]
+      ],
+      "mcpProfile": "sdd"
     },
     {
       "name": "spec-verify",
@@ -192,7 +196,8 @@
         "read",
         "edit"
       ],
-      "variant": "build-only"
+      "variant": "build-only",
+      "mcpProfile": "sdd"
     }
   ],
   "templates": [
@@ -216,7 +221,10 @@
       "command": "node",
       "args": [
         "<PACK_ROOT>/src/server.mjs"
-      ]
+      ],
+      "env": {
+        "DEVECO_TOOL_PROFILE": "core"
+      }
     },
     "note": "Requires Node >= 22 and `npm install` inside the pack root. Configure DEVECO_CLI_STUDIO_PATH for DevEco Studio or DEVECO_CLI_CLT_PATH for Command Line Tools.",
     "toolGroups": [
@@ -224,11 +232,10 @@
         "group": "project-context",
         "tools": [
           "switch_cwd",
-          "init_project_path",
           "deveco_doctor",
           "deveco_restart"
         ],
-        "note": "deveco_restart tears down the two long-lived children (ArkTS language server, CodeGenie child) in place, so a wedged language service can be recovered without restarting the agent session. Children are respawned lazily by the next call that needs one. Upstream ships the same capability as `restart` on its standalone deveco-mcp server; it matters more here because this pack folds four upstream MCPs into one process, where a stuck child would otherwise take a whole group of tools down with no in-session way out."
+        "note": "Select project context, inspect the environment, or reset a stuck backend. CodeGenie project binding continues to use its upstream init_project_path internally."
       },
       {
         "group": "skill-scripts",
@@ -311,10 +318,37 @@
         "tools": [
           "document_validate"
         ],
-        "note": "Section-structure check for spec.md / plan.md / tasks.md, ported from the upstream spec_write pipeline. Upstream ran it automatically after its own writer; this pack uses the host's write tool, so the SDD commands call it explicitly once the artifact is written. It reports and never blocks."
+        "note": "Enabled in sdd and legacy profiles. Checks spec.md / plan.md / tasks.md after the host writes them; required by the bundled SDD commands.",
+        "profiles": [
+          "sdd",
+          "legacy"
+        ]
+      },
+      {
+        "group": "legacy-project-alias",
+        "tools": [
+          "init_project_path"
+        ],
+        "profiles": [
+          "legacy"
+        ],
+        "note": "Compatibility for existing callers. New clients use switch_cwd."
       }
     ],
-    "toolCount": 42
+    "toolCount": 40,
+    "defaultProfile": "core",
+    "profileEnvironment": "DEVECO_TOOL_PROFILE",
+    "profiles": {
+      "core": {
+        "toolCount": 40
+      },
+      "sdd": {
+        "toolCount": 41
+      },
+      "legacy": {
+        "toolCount": 42
+      }
+    }
   },
   "hostToolMapping": {
     "$comment": "Tools the upstream commands assumed, which this pack does NOT provide. Map them onto your host's equivalents before running the SDD commands.",

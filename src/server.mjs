@@ -58,8 +58,10 @@ import { authStatus, login, logout } from "./modules/auth.mjs";
 import { searchKnowledge } from "./modules/knowledge.mjs";
 import { getProjectContext, setProjectPath } from "./project-context.mjs";
 import { listScripts, runRegisteredScript } from "./script-registry.mjs";
+import { resolveToolProfile, toolEnabled } from "./tool-profile.mjs";
 
 const scriptIds = listScripts().map((script) => script.id);
+const toolProfile = resolveToolProfile();
 
 // CodeGenie also ships these, but this gateway implements them itself; hide the
 // proxied copies so each name resolves once. build_project and start_app run
@@ -307,18 +309,20 @@ const localTools = [
   },
   {
     name: "deveco_script_catalog",
-    description: "List the allowlisted DevEco skill scripts that can be executed through this unified MCP.",
-    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+    description: "List script summaries. Pass script to get its parameter schema and a valid example before execution.",
+    annotations: { readOnlyHint: true, openWorldHint: false },
+    inputSchema: { type: "object", properties: { script: { type: "string", enum: scriptIds } }, additionalProperties: false },
   },
   {
     name: "deveco_script",
-    description: "Run one allowlisted DevEco skill script. Use args for named values or argv for exact script arguments.",
+    description: "Run an allowlisted script. Use args or argv, never both. Get script-specific requirements from deveco_script_catalog; invalid parameters are rejected before execution.",
     inputSchema: {
       type: "object",
       properties: {
         script: { type: "string", enum: scriptIds },
-        args: { type: "object", additionalProperties: true },
-        argv: { type: "array", items: { type: "string" } },
+        args: { type: "object", description: "Named parameters from deveco_script_catalog(script). Unknown keys and invalid values are rejected per script.",
+          additionalProperties: { type: ["string", "number", "boolean"] } },
+        argv: { type: "array", items: { type: "string" }, description: "Alternative --flag/value array; validated against the same script contract." },
         timeoutMs: { type: "integer", minimum: 1000, maximum: 600000 },
       },
       required: ["script"],
@@ -327,10 +331,11 @@ const localTools = [
   },
   {
     name: "switch_cwd",
-    description: "Set the active HarmonyOS project root for subsequent script calls.",
+    description: "Select the HarmonyOS project for subsequent tools. Use when changing projects; PROJECT_PATH can select the initial project.",
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
     inputSchema: {
       type: "object",
-      properties: { project_path: { type: "string" } },
+      properties: { project_path: { type: "string", minLength: 1 } },
       required: ["project_path"],
       additionalProperties: false,
     },
@@ -340,7 +345,7 @@ const localTools = [
     description: "Compatibility alias for switch_cwd; set the active HarmonyOS project root.",
     inputSchema: {
       type: "object",
-      properties: { project_path: { type: "string" } },
+      properties: { project_path: { type: "string", minLength: 1 } },
       required: ["project_path"],
       additionalProperties: false,
     },
@@ -348,22 +353,17 @@ const localTools = [
   {
     name: "deveco_doctor",
     description: "Inspect local DevEco, HDC, project-context, and extracted Skill availability.",
+    annotations: { readOnlyHint: true, openWorldHint: false },
     inputSchema: { type: "object", properties: {}, additionalProperties: false },
   },
   {
     name: "deveco_restart",
     description:
-      "Restart this server's long-lived children in place, without dropping the client connection. "
-      + "Use to recover from a stuck or erroring language service after fixing the root cause, instead of "
-      + "restarting the whole agent session. `arkts` resets the ArkTS language server (affects lsp and its "
-      + "five aliases). `cpp` drops the CodeGenie child, which also backs get_app_ui_tree, so those "
-      + "operations reconnect on their next call too. `all` (default) does both. Nothing is "
-      + "respawned eagerly: the next call that needs a child starts it. Caution: if the service fails again "
-      + "right after a restart, the cause is a persistent project or SDK configuration problem -- do not call "
-      + "this repeatedly, run deveco_doctor and fix the project first.",
+      "Reset a stuck backend without disconnecting MCP. arkts resets the language service; cpp resets CodeGenie; all resets both. Children restart on next use. If failure recurs, diagnose with deveco_doctor before retrying.",
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
     inputSchema: {
       type: "object",
-      properties: { target: { type: "string", enum: ["arkts", "cpp", "all"] } },
+      properties: { target: { type: "string", enum: ["arkts", "cpp", "all"], default: "all" } },
       additionalProperties: false,
     },
   },
@@ -624,11 +624,12 @@ const localTools = [
   },
   {
     name: "document_validate",
-    description: "Check an SDD artifact (spec.md / plan.md / tasks.md) against the section structure its template mandates: missing required sections, duplicate headings, disallowed level-2 sections, and the level-2 ceiling. Reports; never blocks. Call it after writing the artifact.",
+    description: "Validate headings and required sections in spec.md, plan.md or tasks.md after writing. Returns valid and issues; does not edit the document.",
+    annotations: { readOnlyHint: true, openWorldHint: false },
     inputSchema: {
       type: "object",
       properties: {
-        file: { type: "string", description: "Path to the artifact. Relative paths resolve against the active project." },
+        file: { type: "string", minLength: 1, description: "Artifact path, relative to the active project or absolute." },
         content: { type: "string", description: "Document text to validate instead of reading from disk. Wins over the file's contents when both are given." },
         documentType: {
           type: "string",
@@ -871,7 +872,7 @@ const server = new Server(
   { capabilities: { tools: {} } },
 );
 
-const advertisedTools = [
+const availableTools = [
   ...localTools,
   ...PROXIED_CODEGENIE_TOOLS.map((tool) => {
     if (tool.name === "get_app_ui_tree") {
@@ -908,6 +909,7 @@ const advertisedTools = [
     return tool;
   }),
 ];
+const advertisedTools = availableTools.filter(tool => toolEnabled(tool.name, toolProfile));
 const schemaCompiler = new Ajv({ allErrors: true, strict: false });
 // The upstream CodeGenie schemas use the OpenAPI integer format. Register it explicitly so Ajv
 // validates the range instead of printing one warning per field to the MCP server's stderr.
@@ -1053,11 +1055,18 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const args = request.params.arguments ?? {};
 
   try {
+    if (!toolEnabled(name, toolProfile)) {
+      return textResult({ code: "TOOL_DISABLED", tool: name, profile: toolProfile,
+        message: name === "init_project_path"
+          ? "Use switch_cwd. The init_project_path alias is available only with DEVECO_TOOL_PROFILE=legacy."
+          : "document_validate requires DEVECO_TOOL_PROFILE=sdd (or legacy) when starting the server." }, true);
+    }
     const validationFailure = argumentValidationFailure(name, args);
     if (validationFailure) return textResult(validationFailure, true);
 
     if (name === "deveco_script_catalog") {
-      return textResult({ scripts: listScripts(), count: scriptIds.length });
+      const scripts = listScripts(args.script);
+      return textResult({ scripts, count: scripts.length });
     }
 
     if (name === "deveco_script") {

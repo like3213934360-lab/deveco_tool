@@ -10,6 +10,8 @@ DevEco-only `spec_write` tool with the host's own file-write tool, and pinned th
 Verification phase to `verification_scope: build-only` because this pack excludes UI verification.
 -->
 
+MCP prerequisite: start deveco-tool with `DEVECO_TOOL_PROFILE=sdd` (or `legacy`) so `document_validate` is available. `node scripts/install.mjs --print-mcp` generates the SDD configuration.
+
 ## Pre-Flow: Confirmed_Feature_Dir Resolution (STRICT SEQUENCE)
 1. Resolve feature directory:
     - Read the `feature_directory` value from `{PROJECT_ROOT}/spec/feature.json`. This value is a **relative path** (relative to `{PROJECT_ROOT}`). Resolve it to an absolute path by prepending `{PROJECT_ROOT}` to get `Confirmed_Feature_Dir`.

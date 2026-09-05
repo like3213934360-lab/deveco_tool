@@ -25,6 +25,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { resolveToolProfile } from "../src/tool-profile.mjs";
 
 const PACK_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const MARKER = ".deveco-tool-host.json";
@@ -53,6 +54,7 @@ const USAGE = `Usage: node scripts/install-host.mjs --host <claude|codex|all> [o
   --dry-run       Print the planned actions without touching the filesystem
   --uninstall     Remove only the skills this script installed, leaving others alone
   --print-mcp     Print the MCP registration snippet for the host and exit
+  --mcp-profile <p>  core (default), sdd, or legacy; independent of the skill profile
   --help          Show this message
 
 Defaults: Claude installs into ~/.claude/skills; Codex installs into ~/.agents/skills. Both use
@@ -70,7 +72,7 @@ instead; manifest.json invocationPolicy says which, and the run reports each one
  */
 function parseArgs(argv) {
   const options = {
-    hosts: [], profile: null, dest: "", copy: false,
+    hosts: [], profile: null, mcpProfile: "core", dest: "", copy: false,
     dryRun: false, uninstall: false, printMcp: false, help: false,
   };
   for (let index = 0; index < argv.length; index += 1) {
@@ -85,6 +87,10 @@ function parseArgs(argv) {
     } else if (argument === "--profile") {
       if (!value || !["core", "full"].includes(value)) throw new Error("--profile must be core or full");
       options.profile = value;
+      index += 1;
+    } else if (argument === "--mcp-profile") {
+      if (!value) throw new Error("--mcp-profile requires core, sdd or legacy");
+      options.mcpProfile = resolveToolProfile(value);
       index += 1;
     } else if (argument === "--dest") {
       if (!value || value.startsWith("--")) throw new Error("--dest requires a directory path");
@@ -308,12 +314,12 @@ async function materialise(entry, skillsDir, hostName) {
  * @param {string} hostName Host key in HOSTS.
  * @returns {string} A snippet to paste into that host's configuration.
  */
-function mcpSnippet(hostName) {
+function mcpSnippet(hostName, profile) {
   const entry = path.join(PACK_ROOT, "src", "server.mjs");
   if (hostName === "codex") {
-    return `# Append to ~/.codex/config.toml\n[mcp_servers.deveco-tool]\ncommand = "node"\nargs = ["${entry}"]\n`;
+    return `# Append to ~/.codex/config.toml\n[mcp_servers.deveco-tool]\ncommand = "node"\nargs = [${JSON.stringify(entry)}]\n[mcp_servers.deveco-tool.env]\nDEVECO_TOOL_PROFILE = "${profile}"\n`;
   }
-  return `${JSON.stringify({ mcpServers: { "deveco-tool": { command: "node", args: [entry] } } }, null, 2)}\n`;
+  return `${JSON.stringify({ mcpServers: { "deveco-tool": { command: "node", args: [entry], env: { DEVECO_TOOL_PROFILE: profile } } } }, null, 2)}\n`;
 }
 
 /**
@@ -423,7 +429,7 @@ async function main() {
     return;
   }
   if (options.printMcp) {
-    process.stdout.write(options.hosts.map(mcpSnippet).join("\n"));
+    process.stdout.write(options.hosts.map(host => mcpSnippet(host, options.mcpProfile)).join("\n"));
     return;
   }
   if (options.dest && options.hosts.length > 1) {

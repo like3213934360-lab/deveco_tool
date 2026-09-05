@@ -607,11 +607,13 @@ test("unified MCP advertises scripts, diagnostics, LSP, and CodeGenie tools", as
     "arkts_check", "hdc_log", "find_references", "go_to_definition",
     "get_hover", "lsp", "build_project",
     "project_sync", "api_compat_check", "apply_changes",
-    "document_validate", "ui_snapshot", "ui_observe", "ui_find", "ui_tap", "ui_flow", "verify_ui",
+    "ui_snapshot", "ui_observe", "ui_find", "ui_tap", "ui_flow", "verify_ui",
     "code_lint", "hot_reload", "harmony_docs", "device_info", "ui_inspect",
     "emulator_manage", "emulator_scenario", "app_signature", "deveco_cli_auth", "ui_control",
   ]) assert.ok(names.has(name), `missing tool ${name}`);
-  assert.equal(result.tools.length, 42);
+  assert.equal(result.tools.length, 40);
+  assert.ok(!names.has("document_validate"));
+  assert.ok(!names.has("init_project_path"));
   assert.equal(result.tools.filter((tool) => tool.name === "check_ets_files").length, 1);
 
   // Some MCP hosts turn a root-level JSON Schema conditional into `unknown & unknown` instead
@@ -2147,7 +2149,7 @@ test("a CodeGenie child that never answers cannot delay tool discovery", { timeo
   const elapsed = Date.now() - startedAt;
   assert.ok(elapsed < 1000, `tools/list must not wait on the child; took ${elapsed}ms`);
 
-  assert.equal(names.length, 42, "all 42 tools must be advertised even while the child is stalled");
+  assert.equal(names.length, 40, "all core tools must be advertised even while the child is stalled");
   assert.ok(names.includes("arkts_check"));
   // The capture/find/tap loop runs over hdc in-process, so a stalled child must not reach it.
   for (const local of ["ui_snapshot", "ui_observe", "ui_find", "ui_tap", "ui_flow", "verify_ui"]) {

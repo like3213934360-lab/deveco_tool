@@ -254,7 +254,7 @@ test("doctor reports a failed replacement backend after restart", async (t) => {
     const after = await call("deveco_doctor");
     assert.equal(after.codegenie.available, false);
     assert.equal(after.codegenie.error.code, "CODEGENIE_UNAVAILABLE");
-    assert.ok((await client.listTools()).tools.some(t => t.name === "document_validate"));
+    assert.ok((await client.listTools()).tools.some(t => t.name === "deveco_script"));
   } finally { await transport.close(); }
 });
 
@@ -303,7 +303,9 @@ test("device scripts honor HDC_PATH under CLT and reject exit-zero HDC failures"
   const f = await fixture(t);
   await fakeHdc(f, `if(process.argv[2]==='list') console.log('device-one'); else console.log('[Fail]Device not found');`);
   for (const id of ["collect_hilog", "jscrash_report", "probe_faultlogger", "fetch_faultlog"]) {
-    const result = await script(f, id, { args: { outputDir: path.join(f.dir,"logs"), faultlogName: "jscrash-test.log" } });
+    const args = id === "collect_hilog" ? { outputDir: path.join(f.dir,"logs") }
+      : id === "fetch_faultlog" ? { outputDir: path.join(f.dir,"logs"), faultlogName: "jscrash-test.log" } : {};
+    const result = await script(f, id, { args });
     assert.equal(result.ok, false, JSON.stringify(result));
     assert.match(result.parsed.next_action, /Device not found/);
   }
