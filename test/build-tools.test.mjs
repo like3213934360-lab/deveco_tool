@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
+import childProcess from "node:child_process";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { syncBuiltinESMExports } from "node:module";
 import { setTimeout as delay } from "node:timers/promises";
 import test from "node:test";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
@@ -195,11 +197,26 @@ test("stop cancels startup before spawning and failed discovery releases its res
   assert.equal((await hotReload({ ...f.args, action: 'start', module: 'phone' })).active, true);
 });
 
-test("startup timeout reports failure and permits restart after the child closes", async (t) => {
+test("startup timeout reports failure and permits restart after the child closes", { timeout: 15000 }, async (t) => {
   const f = await fixture(t);
+  const spawn = childProcess.spawn;
+  let closed;
+  t.mock.method(childProcess, "spawn", (file, args, options) => {
+    const child = spawn(file, args, options);
+    if (args[0] === f.cli && args.includes("--hotreload")) {
+      closed = new Promise((resolve) => child.once("close", resolve));
+    }
+    return child;
+  });
+  syncBuiltinESMExports();
+  t.after(() => { t.mock.restoreAll(); syncBuiltinESMExports(); });
   process.env.BUILD_TEST_READY_DELAY = '30000';
   await assert.rejects(hotReload({ ...f.args, action: 'start', timeoutMs: 1000 }), { code: 'DEVECO_HOT_RELOAD_START_TIMEOUT' });
-  await until(async () => !(await hotReload({ action: 'status' })).starting && !(await f.records()).some((r) => alive(r.pid)));
+  // On Windows the PID can disappear before Node dispatches the exit/close events.
+  // The restart contract is after close, when the session has released its reservation.
+  assert.ok(closed);
+  await closed;
+  assert.equal((await f.records()).some((r) => alive(r.pid)), false);
   process.env.BUILD_TEST_READY_DELAY = '';
   assert.equal((await hotReload({ ...f.args, action: 'start' })).active, true);
 });
