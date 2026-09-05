@@ -60,16 +60,18 @@ function completionFailure(args, result) {
       && /\[Increase Check\] Your project is not under git\./.test(stripVTControlCharacters(combineOutput(result)))) {
     return "Incremental lint requires a Git working tree; no files were checked.";
   }
-  if (args[0] !== "docs" && args[0] !== "auth") {
+  const dataCommand = args[0] === "docs" || (args[0] === "ui"
+    && (args[1] === "layout" || (args[1] === "window" && args[2] === "list")));
+  if (!dataCommand && args[0] !== "auth") {
     return devecoCliFailureMessage(result, { requireOutput: true });
   }
   if (result.exitCode !== 0 || result.signal) {
     return `DevEco CLI exited with ${result.signal || `code ${result.exitCode ?? "unknown"}`}`;
   }
   if (!result.stdout.trim()) return "DevEco CLI returned no output.";
-  // Documentation is data, including troubleshooting errors and code samples.
-  // The docs commands set a nonzero exit code themselves when execution fails.
-  if (args[0] === "docs") return "";
+  // Documentation and UI trees can contain arbitrary error text. These read commands
+  // throw on execution failures, which the official CLI reports with a nonzero exit code.
+  if (dataCommand) return "";
   const output = stripVTControlCharacters(result.stdout);
   return AUTH_COMPLETION[args[1]]?.test(output)
     ? "" : "DevEco CLI did not confirm completion of the requested authentication action.";

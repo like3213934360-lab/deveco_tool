@@ -3,7 +3,8 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { hdcLog, requireHdc, resolveDevice, runHdc, targetArgs, hdcFailureMessage } from "../hdc-log.mjs";
-import { buildCrashReport, buildNextActionText, formatCrashReportText } from "../../skills/arkts-runtime-fix/scripts/shared/jscrash-parse.mjs";
+import { buildNextActionText, formatCrashReportText } from "../../skills/arkts-runtime-fix/scripts/shared/jscrash-parse.mjs";
+import { buildCrashReport } from "./crash-report.mjs";
 import { faultlogMatchesBundle } from "../../skills/arkts-runtime-fix/scripts/shared/jscrash-faultlogger.mjs";
 
 // Inherit the registry's process group so its deadline reaches HDC as well.
@@ -12,7 +13,7 @@ const REMOTE_EXIT = "__DEVECO_REMOTE_EXIT__=";
 
 function parseArgs(argv) {
   const values = new Map();
-  const optional = new Set(["device-id", "bundle-name", "process-hint", "log-file", "log-text"]);
+  const optional = new Set(["device-id", "bundle-name", "process-hint", "log-file", "log-text", "source", "device"]);
   for (let i = 0; i < argv.length; i += 1) {
     const token = argv[i];
     if (!token.startsWith("--")) continue;
@@ -104,13 +105,17 @@ async function remoteListing(hdc, device, command) {
 
 export async function runRuntimeScript(id, argv) {
   const args = parseArgs(argv);
-  if (id === "jscrash_report") {
+  if (id === "jscrash_report" || id === "parse_jscrash_log") {
     if (args.get("log-text") && args.get("log-file")) throw new Error("Provide at most one of --log-text or --log-file");
+    if (id === "parse_jscrash_log" && !args.get("log-text") && !args.get("log-file")) {
+      throw new Error("Provide exactly one of --log-text or --log-file");
+    }
     const lines = numberArg(args, "lines", 4000, 200, 10000);
-    const source = args.get("log-text") ? "text" : args.get("log-file") ? "file" : "device_hilog";
-    const text = source === "text" ? args.get("log-text") : source === "file"
+    const kind = args.get("log-text") ? "text" : args.get("log-file") ? "file" : "device_hilog";
+    const source = args.get("source") || kind;
+    const text = kind === "text" ? args.get("log-text") : kind === "file"
       ? await fs.readFile(args.get("log-file"), "utf8") : await collect(args, lines);
-    const report = buildCrashReport(text, source, args.get("device-id") || "default", args.get("bundle-name") || "", args.get("process-hint") || "");
+    const report = buildCrashReport(text, source, args.get("device-id") || args.get("device") || "default", args.get("bundle-name") || "", args.get("process-hint") || "");
     return { status: report.status === "detected" ? "detected" : "no_crash_signature", source,
       error_type: report.errorType, error_message: report.errorMessage, suspected_file: report.suspectedFile,
       top_stack: report.topStack.join("|"), keywords: report.keywords.join(","), next_action: buildNextActionText(report),
@@ -179,7 +184,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
   try {
     process.stdout.write(`${JSON.stringify(await runRuntimeScript(id, process.argv.slice(3)))}\n`);
   } catch (error) {
-    const status = { collect_hilog: "collect_failed", fetch_faultlog: "fetch_failed", probe_faultlogger: "probe_failed", jscrash_report: "parse_failed" }[id];
+    const status = { collect_hilog: "collect_failed", fetch_faultlog: "fetch_failed", probe_faultlogger: "probe_failed", jscrash_report: "parse_failed", parse_jscrash_log: "parse_failed" }[id];
     process.stdout.write(`${JSON.stringify({ status, code: error.code ?? "SCRIPT_ERROR", next_action: error.message })}\n`);
     process.exitCode = 1;
   }

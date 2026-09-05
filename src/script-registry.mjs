@@ -45,6 +45,8 @@ const SCRIPT_DEFINITIONS = {
   parse_jscrash_log: {
     skill: "arkts-runtime-fix",
     file: "scripts/parse-jscrash-log.mjs",
+    adapterFile: "src/script-adapters/runtime.mjs",
+    adapterArgs: ["parse_jscrash_log"],
     description: "Parse a JS crash log from a file or inline text.",
   },
   probe_faultlogger: {
@@ -232,51 +234,6 @@ export function parseScriptOutput(stdout) {
   }
 }
 
-function inputOption(input, flag, property) {
-  if (Array.isArray(input.argv)) {
-    const index = input.argv.indexOf(flag);
-    if (index >= 0 && index + 1 < input.argv.length) return String(input.argv[index + 1]);
-  }
-  for (const values of [input.args, input]) {
-    if (!values || typeof values !== "object") continue;
-    if (values[property] !== undefined) return String(values[property]);
-    const entry = Object.entries(values).find(([key]) => `--${kebabCase(key)}` === flag);
-    if (entry) return String(entry[1]);
-  }
-  return "";
-}
-
-function crashLogText(input, cwd) {
-  const inline = inputOption(input, "--log-text", "logText");
-  if (inline) return inline;
-
-  const file = inputOption(input, "--log-file", "logFile");
-  if (!file) return "";
-  try {
-    const resolved = path.isAbsolute(file)
-      ? file
-      : path.resolve(cwd, file);
-    const stats = fs.statSync(resolved);
-    if (!stats.isFile() || stats.size > 4 * 1024 * 1024) return "";
-    return fs.readFileSync(resolved, "utf8");
-  } catch {
-    return "";
-  }
-}
-
-// DevEco Code v0.1.11's crash parser sometimes promotes "Error name" (or even the final
-// unrelated hilog line) to error_message. Keep the official source byte-for-byte intact and
-// normalize only the MCP result contract that existing callers already depend on.
-function normalizeParsedResult(id, input, parsed, cwd) {
-  if (!parsed || !["parse_jscrash_log", "jscrash_report"].includes(id)) return parsed;
-  if (parsed.status === "no_crash_signature") {
-    return { ...parsed, error_message: "(not found)" };
-  }
-
-  const declared = /^\s*Error\s+message\s*[:：]\s*(.+?)\s*$/im.exec(crashLogText(input, cwd))?.[1];
-  return declared ? { ...parsed, error_message: declared } : parsed;
-}
-
 export function classifyScriptCompletion({ exitCode, stdout }) {
   if (exitCode === 0 && !String(stdout ?? "").trim()) {
     return {
@@ -401,7 +358,7 @@ export async function runRegisteredScript(id, input = {}) {
   });
 
   const completion = classifyScriptCompletion(result);
-  const parsed = normalizeParsedResult(id, input, parseScriptOutput(result.stdout), cwd);
+  const parsed = parseScriptOutput(result.stdout);
 
   return {
     script: id,

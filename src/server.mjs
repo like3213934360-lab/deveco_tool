@@ -287,6 +287,7 @@ const localTools = [
         hvd: { type: "string", description: "Exact device id; required when several devices are connected." },
         selector: {
           type: "object",
+          description: "Requires a non-empty key, text, or type.",
           properties: {
             key: { type: "string" }, text: { type: "string" }, type: { type: "string" },
             clickableOnly: { type: "boolean" }, textMode: { type: "string", enum: ["exact", "contains"] },
@@ -689,7 +690,7 @@ const localTools = [
         textMode: { type: "string", enum: ["exact", "contains"], description: "Selector text matching mode for non-input actions. Defaults to contains." },
         type: { type: "string", description: "Aim at the node of this exact component type, or narrow a key/text selector." },
         clickableOnly: { type: "boolean", description: "Narrow a selector to nodes the device reports as clickable. The node that handles a tap is often a container wrapping the label you can see." },
-        verify: { type: "boolean", description: "Dump again after a selector action. Defaults to true for percentage gestures and false for point taps because it doubles the layout-dump cost." },
+        verify: { type: "boolean", description: "Observe the UI tree after a selector action; this does not verify the intended outcome. Defaults to true for percentage gestures and false for point taps." },
         from_percent: { type: "number", minimum: 0, maximum: 100, description: "Start position inside a selector-targeted swipe/fling/drag." },
         to_percent: { type: "number", minimum: 0, maximum: 100, description: "End position inside a selector-targeted swipe/fling/drag." },
         axis: { type: "string", enum: ["horizontal", "vertical"], description: "Percentage direction. Horizontal is left-to-right; vertical is bottom-to-top. Defaults to horizontal." },

@@ -192,6 +192,8 @@ MCP 固定提供 40 个工具，其中项目、脚本和服务管理入口为 5 
 
 新 UI 调用优先使用 `ui_flow`、`ui_observe` 和 `ui_tap`。手势发送成功只代表设备接受事件，必要时用 `verify_ui` 检查最终界面。多设备同时在线时，按所选工具的 Schema 显式指定 `hvd`、`target` 或 `deviceId`。
 
+`ui_tap` 的 `verify` 会补采 UI 树，`observationCompleted` 表示观察已完成；目标仍存在或文字变化不代表操作目的已经达成，`outcomeVerified` 仍为 `false`。`verify_ui` 的语义断言需要非空的 `key`、`text` 或 `type`；画面比较会复用基线的实际捕获宽度和格式，改变宽度需要重新捕获基线。动态画面仍建议用语义断言验收。
+
 ## 白名单脚本
 
 `deveco_script` 只执行注册表中的 7 个脚本，不接受任意脚本路径或 Shell 命令。
@@ -205,6 +207,8 @@ MCP 固定提供 40 个工具，其中项目、脚本和服务管理入口为 5 
 | `jscrash_report` | 采集或分析 JS crash，生成结构化诊断 | 采集模式需要 HDC 设备 |
 | `parse_jscrash_log` | 分析本地文件或内联崩溃文本 | 无 |
 | `probe_faultlogger` | 查找设备 faultlogger 条目 | HDC 设备 |
+
+两个崩溃分析脚本按单个事件生成类型、消息和堆栈；多段日志默认选择最新匹配事件，可用 `bundleName`、`processHint` 限定目标。普通的 crash reporting 初始化或计数日志不会作为崩溃证据。
 
 先调用 `deveco_script_catalog`，参数为 `{"script":"parse_jscrash_log"}`，获取该脚本的 `argsSchema`、`argvFlags` 和 `example`。省略 `script` 只返回摘要。也可在终端查询：
 

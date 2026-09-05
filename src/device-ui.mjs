@@ -1233,9 +1233,8 @@ export async function uiTap(input = {}) {
     let verified;
     const shouldVerify = input.verify === true || (gesture && input.verify !== false);
     if (shouldVerify) {
-      // Opt-in because it doubles the cost: confirming the target is still there afterwards means
-      // a second dump, which is the expensive half of the whole operation. Selector gestures are
-      // verified by default because their purpose is a state change, not merely a delivered event.
+      // A second dump observes the target after the event. It cannot establish the caller's
+      // intended outcome; that requires an explicit postcondition through verify_ui or ui_flow.
       const afterSelector = gesture
         ? readSelector({ type: target.type, onScreenOnly: false, limit: 200 })
         : selector;
@@ -1261,7 +1260,9 @@ export async function uiTap(input = {}) {
       action: input.action,
       sent: `uitest uiInput ${inputArgs.join(" ")}`,
       commandAccepted: true,
-      outcomeVerified: Boolean(verified),
+      outcomeVerified: false,
+      observationCompleted: Boolean(verified),
+      verificationHint: "Use verify_ui with the expected final state, or ui_flow with a final assertion, to verify the outcome.",
       target,
       requestedRange: gesture ? {
         axis: input.axis ?? "horizontal",

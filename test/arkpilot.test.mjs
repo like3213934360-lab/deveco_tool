@@ -684,7 +684,7 @@ test("verify_ui keeps only short-lived signatures and writes captures under the 
     assert.ok(path.resolve(baseline.localPath).startsWith(path.resolve(os.tmpdir()) + path.sep));
     const remembered = visualVerifierInternals.snapshots.get(baseline.verification.snapshotId);
     assert.deepEqual(Object.keys(remembered).sort(), [
-      "createdAt", "deviceId", "frameSignature", "id", "structureSignature",
+      "createdAt", "deviceId", "format", "frameSignature", "id", "structureSignature", "width",
     ]);
     assert.equal(JSON.stringify(remembered).includes(baseline.localPath), false,
       "an in-memory baseline must never retain a screenshot path");

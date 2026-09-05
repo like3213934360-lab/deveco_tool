@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import { uiObserve, uiSnapshot } from "../device-ui.mjs";
-import { flowError } from "./domain.mjs";
+import { flowError, normalizeSelector } from "./domain.mjs";
 
 const SNAPSHOT_TTL_MS = 10 * 60 * 1000;
 const snapshots = new Map();
@@ -19,6 +19,8 @@ function remember(report) {
     id,
     createdAt: Date.now(),
     deviceId: report.deviceId,
+    width: report.width,
+    format: report.mimeType === "image/png" ? "png" : "jpeg",
     frameSignature: report.frameSignature,
     structureSignature: report.structureSignature ?? null,
   });
@@ -53,9 +55,17 @@ export async function verifyUi(input = {}) {
       throw flowError("Visual baseline is missing or expired", "VERIFY_UI_BASELINE_NOT_FOUND",
         "Capture a new baseline; in-memory baselines expire after ten minutes and never persist in the project.");
     }
+    if (!baseline.frameSignature) {
+      throw flowError("The baseline contains no screenshot", "VERIFY_UI_BASELINE_NO_IMAGE");
+    }
+    if (input.width !== undefined && input.width !== baseline.width) {
+      throw flowError(`Compare requires the baseline capture width (${baseline.width}); capture a new baseline to change width.`,
+        "VERIFY_UI_CAPTURE_MISMATCH");
+    }
     const report = await uiSnapshot({
       hvd: input.hvd ?? baseline.deviceId,
-      width: input.width,
+      width: baseline.width ?? undefined,
+      format: baseline.format,
       timeoutMs: input.timeoutMs,
       ifChangedFrom: baseline.frameSignature,
       inline: input.inline,
@@ -77,7 +87,8 @@ export async function verifyUi(input = {}) {
     };
   }
 
-  const selector = selectorInput(input);
+  const rawSelector = selectorInput(input);
+  const selector = rawSelector === null ? null : normalizeSelector(rawSelector);
   const report = selector
     ? await uiObserve({
       ...selector,

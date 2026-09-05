@@ -3104,7 +3104,8 @@ test("ui_tap targets and verifies a slider by percentage instead of guessed coor
   assert.match(report.sent, /uiInput drag 860 250 140 250 800$/);
   assert.equal(report.target.type, "Slider");
   assert.deepEqual(report.requestedRange, { axis: "horizontal", fromPercent: 100, toPercent: 0 });
-  assert.equal(report.outcomeVerified, true);
+  assert.equal(report.outcomeVerified, false);
+  assert.equal(report.observationCompleted, true);
   assert.equal(report.verified.beforeText, "100.000000");
   assert.equal(report.verified.afterText, "100.000000");
   assert.equal(report.verified.valueChanged, false, "a no-change device response must not be reported as changed");

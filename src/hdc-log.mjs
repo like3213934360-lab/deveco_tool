@@ -262,8 +262,17 @@ export async function hdcLog({
   const selectedDevice = await resolveDevice(hdc, deviceId, processOptions);
 
   if (action === "clear") {
-    const result = await run([hdc, ...targetArgs(selectedDevice), "shell", "hilog", "-r"], undefined, processOptions);
+    // HDC's local exit status does not propagate the remote shell's exit status.
+    const marker = "__DEVECO_HILOG_EXIT__=";
+    const result = await run([hdc, ...targetArgs(selectedDevice), "shell",
+      `hilog -r; rc=$?; printf '\\n${marker}%s\\n' "$rc"`], undefined, processOptions);
     assertHdcSuccess(result, "hdc hilog -r");
+    const remoteExit = new RegExp(`\\r?\\n${marker}(\\d+)\\s*$`).exec(result.stdout);
+    const output = remoteExit ? result.stdout.slice(0, remoteExit.index) : result.stdout;
+    if (!remoteExit || Number(remoteExit[1]) !== 0
+        || /permission denied|operation not permitted|not found|invalid (?:argument|option)|failed|failure/i.test(`${output}\n${result.stderr}`)) {
+      fail(`hdc hilog -r failed: ${output.trim() || result.stderr.trim() || "remote exit status missing"}`, "HDC_CLEAR_FAILED");
+    }
     return { action, deviceId: selectedDevice, cleared: true, output: "Device log buffer cleared." };
   }
 
