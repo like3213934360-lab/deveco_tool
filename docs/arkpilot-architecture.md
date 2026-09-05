@@ -60,7 +60,7 @@ Infrastructure
 ## 验证层级
 
 - `npm run test:flow:unit`：领域校验、仓库安全、清单路由、录制、执行、自愈、超时、临时截图和双后端契约。
-- `npm test`：现有工具兼容性、各模式的工具静态列表、Schema、子进程截止时间和完整回归。
+- `npm test`：现有工具兼容性、工具静态列表、Schema、子进程截止时间和完整回归。
 - `npm run test:device`：连接设备的 HDC/UI canary。
 - `npm run test:flow:device -- ...`：确定性流程真机/模拟器连续回放。
 - `npm run bench:ui-flow -- ...`：记录成功率、p50/p95/max、HDC 命令、UI dump、截图和进程内存。

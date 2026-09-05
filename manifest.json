@@ -121,14 +121,12 @@
         "templates/spec-template.md"
       ],
       "packTools": [
-        "arkts_knowledge_search",
-        "document_validate"
+        "arkts_knowledge_search"
       ],
       "hostTools": [
         "write",
         "ask-user"
-      ],
-      "mcpProfile": "sdd"
+      ]
     },
     {
       "name": "spec-plan",
@@ -139,13 +137,11 @@
         "templates/plan-template.md"
       ],
       "packTools": [
-        "arkts_knowledge_search",
-        "document_validate"
+        "arkts_knowledge_search"
       ],
       "hostTools": [
         "write"
-      ],
-      "mcpProfile": "sdd"
+      ]
     },
     {
       "name": "spec-tasks",
@@ -156,13 +152,11 @@
         "templates/tasks-template.md"
       ],
       "packTools": [
-        "arkts_knowledge_search",
-        "document_validate"
+        "arkts_knowledge_search"
       ],
       "hostTools": [
         "write"
-      ],
-      "mcpProfile": "sdd"
+      ]
     },
     {
       "name": "spec-implement",
@@ -178,8 +172,7 @@
         "read",
         "edit",
         "write"
-      ],
-      "mcpProfile": "sdd"
+      ]
     },
     {
       "name": "spec-verify",
@@ -196,8 +189,7 @@
         "read",
         "edit"
       ],
-      "variant": "build-only",
-      "mcpProfile": "sdd"
+      "variant": "build-only"
     }
   ],
   "templates": [
@@ -221,10 +213,7 @@
       "command": "node",
       "args": [
         "<PACK_ROOT>/src/server.mjs"
-      ],
-      "env": {
-        "DEVECO_TOOL_PROFILE": "core"
-      }
+      ]
     },
     "note": "Requires Node >= 22 and `npm install` inside the pack root. Configure DEVECO_CLI_STUDIO_PATH for DevEco Studio or DEVECO_CLI_CLT_PATH for Command Line Tools.",
     "toolGroups": [
@@ -312,29 +301,9 @@
           "emulator_scenario"
         ],
         "note": "Manage emulator instances, images and licenses, and simulate device scenarios through the official DevEco CLI."
-      },
-      {
-        "group": "sdd-artifacts",
-        "tools": [
-          "document_validate"
-        ],
-        "note": "Enabled in the sdd profile. Checks spec.md / plan.md / tasks.md after the host writes them; required by the bundled SDD commands.",
-        "profiles": [
-          "sdd"
-        ]
       }
     ],
-    "toolCount": 40,
-    "defaultProfile": "core",
-    "profileEnvironment": "DEVECO_TOOL_PROFILE",
-    "profiles": {
-      "core": {
-        "toolCount": 40
-      },
-      "sdd": {
-        "toolCount": 41
-      }
-    }
+    "toolCount": 40
   },
   "hostToolMapping": {
     "$comment": "Tools the upstream commands assumed, which this pack does NOT provide. Map them onto your host's equivalents before running the SDD commands.",

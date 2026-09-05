@@ -2,7 +2,7 @@
 
 面向 HarmonyOS / OpenHarmony 项目开发的本地 stdio MCP 服务。让 AI 客户端通过一个连接完成工程检查、构建部署、设备操作、崩溃诊断和 UI 流程回放。
 
-默认提供 **40 个 MCP 工具**。Skill、SDD 命令和模板可单独安装，不是启动 MCP 的前置条件。
+固定提供 **40 个 MCP 工具**。Skill、SDD 命令和模板可单独安装，不是启动 MCP 的前置条件。
 
 ## 这个项目解决什么问题
 
@@ -47,10 +47,7 @@ npm run doctor -- --probe-codegenie
   "mcpServers": {
     "deveco": {
       "command": "node",
-      "args": ["/absolute/path/to/deveco_tool/src/server.mjs"],
-      "env": {
-        "DEVECO_TOOL_PROFILE": "core"
-      }
+      "args": ["/absolute/path/to/deveco_tool/src/server.mjs"]
     }
   }
 }
@@ -61,7 +58,7 @@ Windows 的 JSON 路径需要转义反斜杠，例如 `C:\\dev\\deveco_tool\\src
 安装器可以按本机仓库位置输出配置，不会自动改写客户端的 MCP 配置文件：
 
 ```bash
-node scripts/install.mjs --print-mcp --mcp-profile core
+node scripts/install.mjs --print-mcp
 node scripts/install-host.mjs --host claude --print-mcp
 node scripts/install-host.mjs --host codex --print-mcp
 ```
@@ -79,7 +76,6 @@ macOS 默认安装位置 `/Applications/DevEco-Studio.app` 会自动发现。非
 | `DEVECO_CLI_STUDIO_PATH` | DevEco Studio 根目录；macOS 可指向 `.app` |
 | `DEVECO_CLI_CLT_PATH` | DevEco Command Line Tools 根目录；纯 CLT 环境使用此项 |
 | `PROJECT_PATH` | 启动后的默认工程根目录；也可通过 `switch_cwd` 设置 |
-| `DEVECO_TOOL_PROFILE` | 选择 `core` 或 `sdd` 工具集合 |
 | `HDC_PATH` | 可选的 HDC 可执行文件覆盖路径 |
 | `DEVECO_HOME` / `DEVECO_PATH` | Studio 路径的兼容配置，优先级低于上述 Studio/CLT 配置 |
 
@@ -94,20 +90,13 @@ macOS 默认安装位置 `/Applications/DevEco-Studio.app` 会自动发现。非
 | CodeGenie 知识检索 | 网络、华为账号及 `deveco_login` 会话 |
 | 自动签名与团队操作 | 官方 CLI 环境、网络、华为账号及 `deveco_cli_auth` 会话 |
 
-## 工具模式
+## 工具接口
 
-模式在 MCP 进程启动时确定，不随后台服务状态变化。
+MCP 固定提供 40 个工具，其中项目、脚本和服务管理入口为 5 个。工程切换使用 `switch_cwd`，SDD 命令使用同一套接口。
 
-| 模式 | 工具总数 | 管理入口数 | 适用场景 |
-|---|---:|---:|---|
-| `core`（默认） | 40 | 5 | 日常开发、设备操作和诊断 |
-| `sdd` | 41 | 6 | 在 core 基础上增加 `document_validate`，运行 SDD 文档工作流 |
+更新服务代码后，需要由宿主重新连接 MCP。`deveco_restart` 只重置后台子服务，不会加载新的网关代码。
 
-工程切换统一使用 `switch_cwd`。`document_validate` 在 core 模式下不会出现在工具列表中，直接调用会返回 `TOOL_DISABLED` 和启用提示。
-
-修改模式或更新服务代码后，需要由宿主重新连接 MCP。`deveco_restart` 只重置后台子服务，不会加载新的网关代码。
-
-工具数量不直接决定 AI 是否正确选择工具或遵循流程。本项目减少重复入口、按需提供脚本参数，并在服务端校验实际调用；工具说明不能代替执行校验。默认模式下管理工具定义的 JSON 字符数较优化前减少约 24%，完整工具列表减少约 1.7%；这不是 token 节省或模型准确率提升的测量。方法见 [验证记录](./docs/management-tools-validation.md)。
+工具数量不直接决定 AI 是否正确选择工具或遵循流程。本项目减少重复入口、按需提供脚本参数，并在服务端校验实际调用；工具说明不能代替执行校验。管理工具定义的 JSON 字符数较优化前减少约 24%，完整工具列表减少约 1.7%；这不是 token 节省或模型准确率提升的测量。方法见 [验证记录](./docs/management-tools-validation.md)。
 
 ## 工具清单
 
@@ -122,7 +111,6 @@ macOS 默认安装位置 `/Applications/DevEco-Studio.app` 会自动发现。非
 | `switch_cwd` | 切换后续调用使用的活动工程根目录 | 有效工程 |
 | `deveco_doctor` | 诊断工具链、SDK、HDC、工程、Skill 和 CodeGenie 状态 | 无；缺失项作为诊断返回 |
 | `deveco_restart` | 重置 ArkTS LSP、CodeGenie 或两者；后续调用按需启动，无需断开 MCP | 无 |
-| `document_validate` | 检查 spec、plan、tasks 文档的必需章节和标题结构 | `sdd` 模式 |
 
 ### 登录、知识和文档
 
@@ -265,15 +253,15 @@ ui_flow(navigate, goal=目标页面)
 
 按用途选择安装方式：
 
-| 安装方式 | 安装内容 | `--print-mcp` 默认模式 |
-|---|---|---|
-| `node scripts/install.mjs --dest <目标目录>` | Skill、SDD 命令、模板和清单 | `sdd` |
-| `node scripts/install-host.mjs --host claude` | Claude 的 Skill 发现目录 | `core` |
-| `node scripts/install-host.mjs --host codex` | Codex 的 Skill 发现目录 | `core` |
+| 安装方式 | 安装内容 |
+|---|---|
+| `node scripts/install.mjs --dest <目标目录>` | Skill、SDD 命令、模板和清单 |
+| `node scripts/install-host.mjs --host claude` | Claude 的 Skill 发现目录 |
+| `node scripts/install-host.mjs --host codex` | Codex 的 Skill 发现目录 |
 
 安装器支持 `--dry-run` 预览、`--copy` 使用副本、`--uninstall` 移除本安装器拥有的资产。默认采用符号链接，不支持创建链接的环境可选择 `--copy`。宿主安装器还接受 `--host all`。
 
-`--mcp-profile core|sdd` 控制输出配置中的 MCP 模式。另一个兼容参数 `--profile core|full` 控制 Skill 安装范围，当前两种取值安装相同的官方 Skill 集合；两者不是同一个选项。
+`--profile core|full` 控制 Skill 安装范围，当前两种取值安装相同的官方 Skill 集合。
 
 SDD 工作流为：
 
@@ -281,7 +269,7 @@ SDD 工作流为：
 /spec-specify → /spec-plan → /spec-tasks → /spec-implement → /spec-verify
 ```
 
-它需要 `sdd` 模式中的 `document_validate`。安装资产不会自动注册 MCP，也不会替宿主实现文件读写、用户提问或命令发现；宿主接入约定见 [PACK.md](./PACK.md)。
+SDD 文档由宿主的文件工具读写，命令和模板提供工作流与内容结构。安装资产不会自动注册 MCP，也不会替宿主实现文件读写、用户提问或命令发现；宿主接入约定见 [PACK.md](./PACK.md)。
 
 ## 运行和兼容性边界
 
@@ -298,7 +286,7 @@ SDD 工作流为：
 ```bash
 npm test
 npm run test:flow:unit
-node --test --test-concurrency=1 test/management.test.mjs test/management-contracts.test.mjs test/document-validate.test.mjs
+node --test --test-concurrency=1 test/management.test.mjs test/management-contracts.test.mjs
 ```
 
 CI 配置在 Linux 运行全量测试，在 macOS、Windows 运行管理工具专项，Node 版本矩阵为 22/24。部分模拟 HDC 用例只适用于 POSIX；CI 通过不等于对应平台真机链路通过。最近一次本地验证范围、结果及限制见 [管理工具验证记录](./docs/management-tools-validation.md)。

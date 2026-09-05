@@ -189,13 +189,13 @@ test("manifest tool groups match the tools the MCP actually advertises", async (
   await client.connect(transport);
 
   const live = (await client.listTools()).tools.map((tool) => tool.name).sort();
-  const declared = MANIFEST.mcp.toolGroups.filter(group => !group.profiles || group.profiles.includes("core")).flatMap((group) => group.tools).sort();
+  const declared = MANIFEST.mcp.toolGroups.flatMap((group) => group.tools).sort();
   assert.deepEqual(declared, live);
   assert.equal(MANIFEST.mcp.toolCount, live.length);
 });
 
-test("removed tools remain excluded from every profile and command", async () => {
-  const removedTools = new Set(["save_ui_screenshot", "get_ui_verification_log"]);
+test("removed tools remain excluded from the inventory and commands", async () => {
+  const removedTools = new Set(["save_ui_screenshot", "get_ui_verification_log", "document_validate", "init_project_path"]);
   const advertised = new Set(MANIFEST.mcp.toolGroups.flatMap((group) => group.tools));
   for (const tool of removedTools) {
     assert.ok(!advertised.has(tool), `manifest still advertises removed tool ${tool}`);
@@ -204,6 +204,10 @@ test("removed tools remain excluded from every profile and command", async () =>
   for (const command of MANIFEST.commands) {
     for (const tool of command.packTools) {
       assert.ok(!removedTools.has(tool), `${command.name} depends on removed tool ${tool}`);
+    }
+    const text = await fs.readFile(path.join(PACK_ROOT, command.path), "utf8");
+    for (const tool of removedTools) {
+      assert.ok(!text.includes(`\`${tool}\``), `${command.name} references removed tool ${tool}`);
     }
   }
 

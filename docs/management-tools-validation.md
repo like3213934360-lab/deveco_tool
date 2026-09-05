@@ -1,13 +1,21 @@
 # 项目、脚本和服务管理工具验证
 
 验证日期：2026-09-05。当前范围是 `deveco_script_catalog`、`deveco_script`、
-`switch_cwd`、`deveco_doctor`、`deveco_restart`、`document_validate`，
+`switch_cwd`、`deveco_doctor`、`deveco_restart`，
 以及这些入口实际调用的脚本、项目上下文和后台进程。
 
-当前只提供 `core`（40 个 MCP 工具）和 `sdd`（41 个 MCP 工具）。公开的 `init_project_path`
-别名及 `legacy` 模式已删除；下面的旧版本验证保留当时的实际结果，不代表当前仍提供这些入口。
+当前固定提供 40 个 MCP 工具。`document_validate`、公开的 `init_project_path` 别名和工具模式配置均已删除；下面的旧版本验证保留当时的实际结果，不代表当前仍提供这些入口。
 
-## 修复内容
+## 移除文档校验及工具模式（2026-09-05）
+
+- 删除文档校验工具的 Schema、分发、实现和专项测试，同时删除 MCP 工具模式模块、环境变量读取、安装器 `--mcp-profile` 参数及清单字段。
+- 保留 SDD 五阶段命令和三个模板，移除命令中的文档校验调用要求。文档由宿主文件工具读写，两个安装器均生成无需模式配置的 MCP 接入片段。
+- 文档校验模块只使用 Node 内置模块与项目上下文，没有专用 npm 依赖可删除。现有依赖继续服务于其余工具。
+- macOS、Node 24.14.1 全量回归：206 项中 198 通过、8 项既有设备门控测试跳过、0 失败。
+- 独立 stdio MCP 验证固定 40 个工具、Schema 编译、工程切换和三种后台重置；已删除入口返回 `UNKNOWN_TOOL`。安装器配置、SDD 命令依赖、README 工具清单和本地文档链接检查通过。
+- CI 已删除文档校验专项的调用。本轮未运行真机测试或 Windows/Linux 主机验证。
+
+## 此前管理工具修复内容
 
 | 工具 | 已处理的问题 |
 | --- | --- |
@@ -33,7 +41,7 @@
 
 - macOS：运行全量 `npm test`，包括官方 Skill 摘要、既有 LSP/进程恢复和管理工具回归。
 - Node 24：单独运行管理工具和文档校验回归。
-- 当前仓库源码启动独立 MCP：七个工具均可调用；完成项目切换、兼容别名、文档校验、后台重启和重新探测。
+- 当时的仓库源码启动独立 MCP：七个工具均可调用；完成项目切换、兼容别名、文档校验、后台重启和重新探测。
 - 已连接真机：完成 HILOG 采集、Faultlogger 探测、真实日志下载、两种解析入口分析；成功识别设备中的 `TypeError` 日志。
 - 新项目模板：在中文、空格和 shell 特殊字符目录中成功创建；在 Hvigor 支持的含空格目录中构建成功。模板未配置签名，未安装这个测试应用。
 - 回归覆盖 CLT、显式 HDC 路径、项目切换并发、绑定拒绝/超时、后台进程不响应终止、失效诊断缓存、旧下载文件和故障返回码。
@@ -42,7 +50,7 @@
 
 ```bash
 npm test
-node --test --test-concurrency=1 test/management.test.mjs test/management-contracts.test.mjs test/document-validate.test.mjs
+node --test --test-concurrency=1 test/management.test.mjs test/management-contracts.test.mjs
 ```
 
 ## 此前工具入口与参数优化（2026-09-05，提交 26a68c6）
@@ -74,7 +82,7 @@ node --test --test-concurrency=1 test/management.test.mjs test/management-contra
 - Node 24 + 已连接真机：执行 23 次 MCP 调用，覆盖七个管理工具和七个脚本。实际 SDK 为 API 26；新模板创建成功；Hilog 采集、Faultlogger 探测、真实日志下载、两种解析入口均成功，识别出 `TypeError`。重启前后 CodeGenie 诊断均可用。
 - 真机验证创建的临时工程、文档和下载日志已删除，未安装测试应用。
 
-## 移除旧客户端兼容入口（2026-09-05）
+## 此前移除旧客户端兼容入口（2026-09-05，提交 08f3d12）
 
 - 删除公开的 `init_project_path` Schema、分发分支及 `legacy` 模式，仅保留 core / sdd。CodeGenie 内部工程绑定继续使用其上游协议。
 - 安装器、命令前置条件、清单和 README 同步更新；启动服务或生成安装配置时传 `legacy` 均会明确拒绝。
@@ -84,7 +92,7 @@ node --test --test-concurrency=1 test/management.test.mjs test/management-contra
 
 ## 兼容性边界
 
-1. 无外部依赖的目录和文档工具使用 Node 跨平台 API。SDK、设备、语言服务功能仍要求目标系统有对应的 DevEco SDK、HDC 和官方后台二进制。
+1. 无外部依赖的脚本目录等工具使用 Node 跨平台 API。SDK、设备、语言服务功能仍要求目标系统有对应的 DevEco SDK、HDC 和官方后台二进制。
 2. 工程切换不要求模块名为 `entry`；它按现有 Harmony 工程标记识别目录。新建模板仍使用官方模板本身的工程结构。
 3. Hvigor 实测拒绝中文和 `&` 路径，错误码为 `00306003`。MCP 能创建该目录，并不意味着官方构建器接受它；需要构建时请使用 Hvigor 支持的路径。
 4. 设备权限不足、HDC 不可用或多个设备未指定目标时，返回可诊断错误。不能把这些情况解释为工具已经成功工作。

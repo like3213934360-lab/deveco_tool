@@ -16,7 +16,7 @@ const root = fileURLToPath(new URL("../", import.meta.url));
 const run = promisify(execFile);
 const manifest = JSON.parse(await fs.readFile(path.join(root, "manifest.json"), "utf8"));
 
-async function session(t, profile = "core") {
+async function session(t) {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "deveco 参数 & schema-"));
   t.after(() => fs.rm(dir, { recursive: true, force: true }));
   const project = path.join(dir, "项目 A");
@@ -25,7 +25,7 @@ async function session(t, profile = "core") {
   const clt = path.join(dir, "Command Line Tools");
   await fs.mkdir(path.join(clt, "sdk/default"), { recursive: true });
   await fs.writeFile(path.join(clt, "sdk/default/sdk-pkg.json"), JSON.stringify({ data: { apiVersion: 22, platformVersion: "6.0.2" } }));
-  const env = { ...process.env, PROJECT_PATH: project, DEVECO_TOOL_PROFILE: profile,
+  const env = { ...process.env, PROJECT_PATH: project,
     DEVECO_CLI_STUDIO_PATH: "", DEVECO_HOME: "", DEVECO_PATH: "", DEVECO_SDK_HOME: "", DEVECO_CLI_CLT_PATH: clt };
   const transport = new StdioClientTransport({ command: process.execPath, args: ["src/server.mjs"], cwd: root, env, stderr: "pipe" });
   let stderr = "";
@@ -41,39 +41,35 @@ async function session(t, profile = "core") {
   return { client, call, dir, project, env };
 }
 
-for (const [profile, expected] of [["core", 40], ["sdd", 41]]) {
-  test(`${profile} discovery and dispatch agree, including disabled documents and removed project alias`, async t => {
-    const { client, call, project } = await session(t, profile);
-    const tools = (await client.listTools()).tools;
-    const names = tools.map(tool => tool.name).sort();
-    const declared = manifest.mcp.toolGroups.filter(group => !group.profiles || group.profiles.includes(profile)).flatMap(group => group.tools).sort();
-    assert.deepEqual(names, declared);
-    assert.equal(names.length, expected);
-    assert.equal(new Set(names).size, expected);
-    assert.ok(!names.includes("init_project_path"));
-    assert.equal(manifest.mcp.profiles[profile].toolCount, expected);
-    for (const tool of tools) new Ajv({ strict: false, formats: { int32: true } }).compile(tool.inputSchema);
-    const switchResult = await call("switch_cwd", { project_path: project });
-    assert.equal(switchResult.error, false);
-    assert.equal(switchResult.value.projectPath, project);
-    const alias = await call("init_project_path", { project_path: project });
-    assert.equal(alias.error, true);
-    assert.equal(alias.value.code, "UNKNOWN_TOOL");
-    for (const [file, template] of [["spec.md", "spec"], ["plan.md", "plan"], ["tasks.md", "tasks"]]) {
-      await fs.copyFile(path.join(root, `templates/${template}-template.md`), path.join(project, file));
-      const document = await call("document_validate", { file });
-      assert.equal(document.error, profile === "core");
-      if (profile === "core") assert.equal(document.value.code, "TOOL_DISABLED");
-      else assert.equal(document.value.valid, true, JSON.stringify(document));
-    }
-    for (const target of ["arkts", "cpp", "all"]) {
-      const result = await call("deveco_restart", { target });
-      assert.equal(result.error, false);
-      assert.deepEqual(result.value.restarted, target === "all" ? ["arkts", "cpp"] : [target]);
-    }
-    assert.deepEqual((await client.listTools()).tools.map(tool => tool.name).sort(), names);
-  });
-}
+test("tool discovery and dispatch agree with the fixed inventory", async t => {
+  const { client, call, project } = await session(t);
+  const tools = (await client.listTools()).tools;
+  const names = tools.map(tool => tool.name).sort();
+  const declared = manifest.mcp.toolGroups.flatMap(group => group.tools).sort();
+  assert.deepEqual(names, declared);
+  assert.equal(names.length, 40);
+  assert.equal(new Set(names).size, 40);
+  assert.equal(manifest.mcp.toolCount, 40);
+  for (const tool of tools) new Ajv({ strict: false, formats: { int32: true } }).compile(tool.inputSchema);
+  const switchResult = await call("switch_cwd", { project_path: project });
+  assert.equal(switchResult.error, false);
+  assert.equal(switchResult.value.projectPath, project);
+  for (const [name, args] of [
+    ["init_project_path", { project_path: project }],
+    ["document_validate", { content: "# Feature", documentType: "spec" }],
+  ]) {
+    assert.ok(!names.includes(name));
+    const removed = await call(name, args);
+    assert.equal(removed.error, true);
+    assert.equal(removed.value.code, "UNKNOWN_TOOL");
+  }
+  for (const target of ["arkts", "cpp", "all"]) {
+    const result = await call("deveco_restart", { target });
+    assert.equal(result.error, false);
+    assert.deepEqual(result.value.restarted, target === "all" ? ["arkts", "cpp"] : [target]);
+  }
+  assert.deepEqual((await client.listTools()).tools.map(tool => tool.name).sort(), names);
+});
 
 test("catalog returns compact discovery and per-script schemas usable by the execution entry", async t => {
   const { call, project, dir } = await session(t);
@@ -155,32 +151,23 @@ test("raw argv validates numeric ranges, flags and optional text consistently on
 });
 
 test("installer configurations enable the exact tools their bundled workflows require", async () => {
+  const entry = { command: "node", args: [path.join(root, "src/server.mjs")] };
   const base = await run(process.execPath, ["scripts/install.mjs", "--print-mcp"], { cwd: root });
-  assert.equal(JSON.parse(base.stdout).env.DEVECO_TOOL_PROFILE, "sdd");
-  for (const profile of ["core", "sdd"]) {
-    const out = await run(process.execPath, ["scripts/install.mjs", "--print-mcp", "--mcp-profile", profile], { cwd: root });
-    assert.equal(JSON.parse(out.stdout).env.DEVECO_TOOL_PROFILE, profile);
-    const host = await run(process.execPath, ["scripts/install-host.mjs", "--host", "claude", "--print-mcp", "--mcp-profile", profile], { cwd: root });
-    assert.equal(JSON.parse(host.stdout).mcpServers["deveco-tool"].env.DEVECO_TOOL_PROFILE, profile);
-    const codex = await run(process.execPath, ["scripts/install-host.mjs", "--host", "codex", "--print-mcp", "--mcp-profile", profile], { cwd: root });
-    assert.ok(codex.stdout.includes(`DEVECO_TOOL_PROFILE = "${profile}"`));
-  }
-  const tools = new Set(manifest.mcp.toolGroups.filter(group => !group.profiles || group.profiles.includes("sdd")).flatMap(group => group.tools));
+  assert.deepEqual(JSON.parse(base.stdout), entry);
+  const host = await run(process.execPath, ["scripts/install-host.mjs", "--host", "claude", "--print-mcp"], { cwd: root });
+  assert.deepEqual(JSON.parse(host.stdout), { mcpServers: { "deveco-tool": entry } });
+  const codex = await run(process.execPath, ["scripts/install-host.mjs", "--host", "codex", "--print-mcp"], { cwd: root });
+  assert.equal(codex.stdout, `# Append to ~/.codex/config.toml\n[mcp_servers.deveco-tool]\ncommand = "node"\nargs = [${JSON.stringify(entry.args[0])}]\n`);
+  const tools = new Set(manifest.mcp.toolGroups.flatMap(group => group.tools));
   for (const command of manifest.commands) {
-    assert.equal(command.mcpProfile, "sdd");
     for (const tool of command.packTools) assert.ok(tools.has(tool), `${command.name} needs ${tool}`);
-  }
-  assert.deepEqual(Object.keys(manifest.mcp.profiles).sort(), ["core", "sdd"]);
-  for (const profile of ["typo", "legacy"]) {
-    await assert.rejects(run(process.execPath, ["src/server.mjs"], { cwd: root, env: { ...process.env, DEVECO_TOOL_PROFILE: profile } }),
-      error => /DEVECO_TOOL_PROFILE must be core, sdd;/.test(error.stderr));
   }
   for (const command of [
     ["scripts/install.mjs"],
     ["scripts/install-host.mjs", "--host", "claude"],
     ["scripts/install-host.mjs", "--host", "codex"],
   ]) {
-    await assert.rejects(run(process.execPath, [...command, "--print-mcp", "--mcp-profile", "legacy"], { cwd: root }),
-      error => /DEVECO_TOOL_PROFILE must be core, sdd;/.test(error.stderr));
+    await assert.rejects(run(process.execPath, [...command, "--print-mcp", "--mcp-profile", "sdd"], { cwd: root }),
+      error => /Unknown argument: --mcp-profile/.test(error.stderr));
   }
 });

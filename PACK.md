@@ -4,7 +4,7 @@
 
 - `skills/`：从 DevEco Code 官方内置 Skill 中选用的 5 个项目开发 Skill。
 - `commands/` 与 `templates/`：宿主中立的 SDD 五阶段工作流。
-- `src/server.mjs`：统一 stdio MCP 服务，默认 40 个工具。
+- `src/server.mjs`：统一 stdio MCP 服务，固定 40 个工具。
 
 机器可读清单以 `manifest.json` 为准，工具说明和运行依赖以 `README.md` 为准。
 
@@ -69,11 +69,11 @@ node scripts/install-host.mjs --host all
 - 实际依赖 deveco-tool MCP 的 Skill 会在 Codex 元数据中声明 `dependencies.tools`。
 - 其他内容保留官方 `SKILL.md` 原文。
 
-## MCP 工具模式
+## MCP 接入
 
-MCP 仅提供 `core` 和 `sdd` 两种模式，默认使用 `DEVECO_TOOL_PROFILE=core`；`sdd` 增加文档校验。工程切换统一使用 `switch_cwd`。工具数及清单见 `manifest.json`。
+MCP 固定提供 40 个工具。工程切换使用 `switch_cwd`。工具数及清单见 `manifest.json`。
 
-`scripts/install.mjs` 安装的资产包含 SDD 命令，因此其 `--print-mcp` 默认输出 `sdd` 配置。只安装 Skill 的 `scripts/install-host.mjs --print-mcp` 默认输出 `core`。两者都支持 `--mcp-profile core|sdd`，与 Skill 的 `--profile` 参数独立。
+`scripts/install.mjs --print-mcp` 输出单个服务的 JSON 配置项；`scripts/install-host.mjs --host claude|codex --print-mcp` 输出对应宿主的配置片段。两种安装方式连接同一套 MCP 接口。
 
 ## SDD 命令
 
@@ -81,10 +81,8 @@ MCP 仅提供 `core` 和 `sdd` 两种模式，默认使用 `DEVECO_TOOL_PROFILE=
 /spec-specify -> /spec-plan -> /spec-tasks -> /spec-implement -> /spec-verify
 ```
 
-运行这套命令需使用 `sdd` MCP 模式；完整能力包安装器会生成对应配置。
-
 这些命令和模板是历史适配资产，不属于 DevEco Code 当前的内置 Skill 目录。它们仍使用 MCP 中的
-`arkts_knowledge_search`、`arkts_check`、`build_project`、`start_app` 和 `document_validate` 等工具。
+`arkts_knowledge_search`、`arkts_check`、`build_project` 和 `start_app` 等工具，文档由宿主的文件工具读写。
 
 ## 来源与许可
 

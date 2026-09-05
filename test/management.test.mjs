@@ -111,23 +111,19 @@ test("copy_template expands the shipped template with CLT, spaces, CJK, and shel
   assert.equal((await script(f, "detect_sdk")).parsed.apiLevel, 21);
 });
 
-test("PROJECT_PATH supplies the initial cwd to scripts, document validation, and doctor context", async (t) => {
+test("PROJECT_PATH supplies the initial cwd to scripts and project context", async (t) => {
   const f = await fixture(t);
-  await fs.copyFile(path.join(root, "templates/spec-template.md"), path.join(f.project, "spec.md"));
   await fs.writeFile(path.join(f.project, "crash.log"), "Error name: TypeError\nError message: project-specific failure\nStacktrace:\nat run (pages/Index.ets:12:5)\n");
   const result = await script(f, "jscrash_report", { args: { logFile: "crash.log" } });
   assert.equal(result.cwd, f.project);
   assert.equal(result.ok, true);
   assert.equal(result.parsed.error_message, "project-specific failure");
   const out = await runFile(process.execPath, ["--input-type=module", "-e", `
-    import { validateDocument } from './src/document-validate.mjs';
     import { getProjectContext } from './src/project-context.mjs';
-    console.log(JSON.stringify({document:validateDocument({file:'spec.md'}),project:getProjectContext()}));
+    console.log(JSON.stringify(getProjectContext()));
   `], { cwd: root, env: f.env });
   const state = JSON.parse(out.stdout);
-  assert.equal(state.document.valid, true);
-  assert.equal(state.document.file, path.join(f.project, "spec.md"));
-  assert.equal(state.project.projectPath, f.project);
+  assert.equal(state.projectPath, f.project);
 });
 
 test("doctor reports invalid project and unreadable auth without losing other diagnostics", async (t) => {

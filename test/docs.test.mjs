@@ -38,7 +38,7 @@ test("prose skill counts agree with the manifest", async () => {
 
 test("prose tool counts agree with the manifest", async () => {
   const expected = MANIFEST.mcp.toolCount;
-  const advertised = MANIFEST.mcp.toolGroups.filter(group => !group.profiles || group.profiles.includes(MANIFEST.mcp.defaultProfile)).flatMap((group) => group.tools).length;
+  const advertised = MANIFEST.mcp.toolGroups.flatMap((group) => group.tools).length;
   assert.equal(advertised, expected, "toolGroups and toolCount disagree inside the manifest itself");
 
   for (const doc of DOCS) {

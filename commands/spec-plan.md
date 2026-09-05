@@ -9,8 +9,6 @@ Host-neutral edits: dropped the `agent: goal` binding, replaced `CONFIG_ROOT`
 DevEco-only `spec_write` tool with the host's own file-write tool.
 -->
 
-MCP prerequisite: start deveco-tool with `DEVECO_TOOL_PROFILE=sdd` so `document_validate` is available. `node scripts/install.mjs --print-mcp` generates the SDD configuration.
-
 ## STRICT OPERATIONAL CONSTRAINTS (ENFORCED WITH ZERO EXCEPTIONS)
 1. **No Early Coding (Non-Negotiable):** You are strictly forbidden from generating, writing, editing, outlining, or suggesting application code in `src/` or any other source directory during this workflow. Architecture diagrams, data models, interface contracts, and implementation target descriptions are permitted; pseudocode, code snippets, and implementation-level logic are not. Main Agent must comply fully; no implicit code generation is allowed.
 2. **No Auto-Execute Next Phase**: This command covers only its own scope. Upon completion, it must NOT auto-trigger the next SDD phase. Phase transitions (to Phase 3 and beyond) are managed by the caller (the host agent or workflow that invoked this command), which controls Review Gates and progression. The command simply completes its artifact and returns control to the caller.
@@ -53,9 +51,8 @@ MCP prerequisite: start deveco-tool with `DEVECO_TOOL_PROFILE=sdd` so `document_
     - Finalize and validate the complete plan
 
 5. **Write Plan Artifact**: Write the completed implementation plan to `{IMPL_PLAN}` using the host's file-write tool.
-6. **Validate Plan Artifact**: Call `document_validate` with `file` set to `{IMPL_PLAN}`. A non-empty `report` means the section structure does not match the template: fix the headings and rewrite before moving on. Do not skip this because the content reads well; the check is about structure, and later phases parse these headings.
 
-7. **Stop and Report**: Command ends after Phase 1 Design & Contracts. Report the absolute path of `IMPL_PLAN` and list all generated artifacts. Do not trigger further actions.
+6. **Stop and Report**: Command ends after Phase 1 Design & Contracts. Report the absolute path of `IMPL_PLAN` and list all generated artifacts. Do not trigger further actions.
 
 ## Phases
 ### Phase 0: Research & Resolution

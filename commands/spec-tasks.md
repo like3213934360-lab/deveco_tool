@@ -10,8 +10,6 @@ DevEco-only `spec_write` tool with the host's own file-write tool, and pinned th
 Verification phase to `verification_scope: build-only` because this pack excludes UI verification.
 -->
 
-MCP prerequisite: start deveco-tool with `DEVECO_TOOL_PROFILE=sdd` so `document_validate` is available. `node scripts/install.mjs --print-mcp` generates the SDD configuration.
-
 ## Pre-Flow: Confirmed_Feature_Dir Resolution (STRICT SEQUENCE)
 1. Resolve feature directory:
     - Read the `feature_directory` value from `{PROJECT_ROOT}/spec/feature.json`. This value is a **relative path** (relative to `{PROJECT_ROOT}`). Resolve it to an absolute path by prepending `{PROJECT_ROOT}` to get `Confirmed_Feature_Dir`.
@@ -50,10 +48,9 @@ MCP prerequisite: start deveco-tool with `DEVECO_TOOL_PROFILE=sdd` so `document_
     - Correct feature name from `plan.md`
     - Phased tasks (Setup → Foundational → Stories → Polish → Verification)
     - Dependency graph & parallel execution guide
-    - Summary report & format validation confirmation
+    - Summary report
 4. **Write Tasks Artifact**: Write the completed task list to `{Confirmed_Feature_Dir}/tasks.md` using the host's file-write tool.
-5. **Validate Tasks Artifact**: Call `document_validate` with `file` set to `{Confirmed_Feature_Dir}/tasks.md`. A non-empty `report` means the section structure does not match the template: fix the headings and rewrite before moving on. Do not skip this because the content reads well; the check is about structure, and later phases parse these headings.
-6. **Report**: Output final path to `tasks.md` and append a summary block containing: total tasks, per-story count, parallel opportunities, independent test criteria, suggested MVP scope.
+5. **Report**: Output final path to `tasks.md` and append a summary block containing: total tasks, per-story count, parallel opportunities, independent test criteria, suggested MVP scope.
 
 ## Task Generation Rules
 **CRITICAL**: Tasks MUST be organized by user story to enable independent implementation and testing.

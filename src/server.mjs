@@ -43,7 +43,6 @@ import {
 } from "./device-ui.mjs";
 import { closeUiFlows, recordSuccessfulUiAction, uiFlow } from "./arkpilot/flow-service.mjs";
 import { closeVisualVerifier, verifyUi } from "./arkpilot/visual-verifier.mjs";
-import { validateDocument } from "./document-validate.mjs";
 import { hdcLog, hdcStatus } from "./hdc-log.mjs";
 import {
   findReferences,
@@ -58,10 +57,8 @@ import { authStatus, login, logout } from "./modules/auth.mjs";
 import { searchKnowledge } from "./modules/knowledge.mjs";
 import { getProjectContext, setProjectPath } from "./project-context.mjs";
 import { listScripts, runRegisteredScript } from "./script-registry.mjs";
-import { resolveToolProfile, toolEnabled } from "./tool-profile.mjs";
 
 const scriptIds = listScripts().map((script) => script.id);
-const toolProfile = resolveToolProfile();
 
 // CodeGenie also ships these, but this gateway implements them itself; hide the
 // proxied copies so each name resolves once. build_project and start_app run
@@ -613,24 +610,6 @@ const localTools = [
     },
   },
   {
-    name: "document_validate",
-    description: "Validate headings and required sections in spec.md, plan.md or tasks.md after writing. Returns valid and issues; does not edit the document.",
-    annotations: { readOnlyHint: true, openWorldHint: false },
-    inputSchema: {
-      type: "object",
-      properties: {
-        file: { type: "string", minLength: 1, description: "Artifact path, relative to the active project or absolute." },
-        content: { type: "string", description: "Document text to validate instead of reading from disk. Wins over the file's contents when both are given." },
-        documentType: {
-          type: "string",
-          enum: ["spec", "design", "tasks"],
-          description: "Rule set to apply. Inferred from the basename (spec.md, plan.md, tasks.md) when omitted; plan.md maps to design.",
-        },
-      },
-      additionalProperties: false,
-    },
-  },
-  {
     name: "ui_snapshot",
     description: "Capture the device screen over hdc and return it inline. Use this when you only need to see the screen; use ui_observe when you also need coordinates, since it gets both in one device round trip. Runs locally, so it still works when the CodeGenie child is unavailable. Captures at the display's own resolution, scaled down only when its long edge exceeds 2576px — the point past which a vision model resizes the image anyway, so a larger capture costs bytes without adding detail. Lower width when a long loop needs cheaper frames: image cost follows pixel area, so halving width quarters it.",
     inputSchema: {
@@ -862,7 +841,7 @@ const server = new Server(
   { capabilities: { tools: {} } },
 );
 
-const availableTools = [
+const advertisedTools = [
   ...localTools,
   ...PROXIED_CODEGENIE_TOOLS.map((tool) => {
     if (tool.name === "get_app_ui_tree") {
@@ -899,7 +878,6 @@ const availableTools = [
     return tool;
   }),
 ];
-const advertisedTools = availableTools.filter(tool => toolEnabled(tool.name, toolProfile));
 const schemaCompiler = new Ajv({ allErrors: true, strict: false });
 // The upstream CodeGenie schemas use the OpenAPI integer format. Register it explicitly so Ajv
 // validates the range instead of printing one warning per field to the MCP server's stderr.
@@ -1045,10 +1023,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const args = request.params.arguments ?? {};
 
   try {
-    if (!toolEnabled(name, toolProfile)) {
-      return textResult({ code: "TOOL_DISABLED", tool: name, profile: toolProfile,
-        message: "document_validate requires DEVECO_TOOL_PROFILE=sdd when starting the server." }, true);
-    }
     const validationFailure = argumentValidationFailure(name, args);
     if (validationFailure) return textResult(validationFailure, true);
 
@@ -1210,10 +1184,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
     if (name === "get_hover") {
       return textResult(await getHover(args));
-    }
-
-    if (name === "document_validate") {
-      return textResult(validateDocument(args));
     }
 
     // These local UI tools run over hdc in this process. They are dispatched ahead of the proxy

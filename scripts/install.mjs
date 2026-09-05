@@ -12,7 +12,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { resolveToolProfile } from "../src/tool-profile.mjs";
 
 const PACK_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const ASSETS = ["skills", "commands", "templates", "manifest.json"];
@@ -26,7 +25,6 @@ const USAGE = `Usage: node scripts/install.mjs [options]
   --dry-run       Print the planned actions without touching the filesystem
   --uninstall     Remove assets previously installed by this script from <dir>
   --print-mcp     Print the stdio MCP config snippet as JSON and exit
-  --mcp-profile <p>  core or sdd (default for this pack's commands)
   --help          Show this message
 
 Installed assets: ${ASSETS.join(", ")}
@@ -57,7 +55,6 @@ function parseArgs(argv) {
   const options = {
     dest: "",
     profile: "core",
-    mcpProfile: "sdd",
     copy: false,
     dryRun: false,
     uninstall: false,
@@ -76,9 +73,6 @@ function parseArgs(argv) {
       if (!value || !["core", "full"].includes(value)) throw new Error("--profile must be core or full");
       options.profile = value;
       index += 1;
-    } else if (argument === "--mcp-profile") {
-      if (!argv[index + 1]) throw new Error("--mcp-profile requires core or sdd");
-      options.mcpProfile = resolveToolProfile(argv[++index]);
     } else if (argument === "--copy") options.copy = true;
     else if (argument === "--dry-run") options.dryRun = true;
     else if (argument === "--uninstall") options.uninstall = true;
@@ -93,8 +87,8 @@ function parseArgs(argv) {
  * Build the stdio MCP configuration snippet for this pack.
  * @returns {{command: string, args: string[]}} A host-agnostic stdio MCP entry.
  */
-function mcpSnippet(profile) {
-  return { command: "node", args: [path.join(PACK_ROOT, "src", "server.mjs")], env: { DEVECO_TOOL_PROFILE: profile } };
+function mcpSnippet() {
+  return { command: "node", args: [path.join(PACK_ROOT, "src", "server.mjs")] };
 }
 
 /**
@@ -214,7 +208,7 @@ async function main() {
   }
 
   if (options.printMcp) {
-    process.stdout.write(`${JSON.stringify(mcpSnippet(options.mcpProfile), null, 2)}\n`);
+    process.stdout.write(`${JSON.stringify(mcpSnippet(), null, 2)}\n`);
     return;
   }
 
@@ -305,10 +299,9 @@ async function main() {
   lines.push(`skills                 ${coreSkills ? `${coreSkills.length} of ${manifest.skills.length}` : manifest.skills.length}`);
   lines.push(`commands               ${manifest.commands.length}`);
   lines.push(`templates              ${manifest.templates.length}`);
-  lines.push(`mcp                    node ${mcpSnippet(options.mcpProfile).args[0]}`);
-  lines.push(`mcp profile            ${options.mcpProfile}`);
+  lines.push(`mcp                    node ${mcpSnippet().args[0]}`);
   lines.push("");
-  lines.push(`Next: run \`node scripts/install.mjs --print-mcp --mcp-profile ${options.mcpProfile}\` and paste the snippet into your host's MCP config.`);
+  lines.push(`Next: run \`node scripts/install.mjs --print-mcp\` and paste the snippet into your host's MCP config.`);
   process.stdout.write(`${lines.join("\n")}\n`);
 }
 
