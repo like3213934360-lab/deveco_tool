@@ -2,7 +2,7 @@ name: CI
 
 # The repository had no CI, so every guarantee in PACK.md rested on someone remembering to run
 # `npm test` locally. These jobs run on a machine without DevEco Studio, which is deliberate: the
-# four tests that genuinely need its SDK announce themselves as skipped, and everything else --
+# tests that need its SDK announce themselves as skipped, and everything else --
 # including the MCP cold-start deadline and the licence accounting -- has to hold anywhere.
 
 on:
@@ -26,7 +26,7 @@ jobs:
           node-version: ${{ matrix.node }}
           cache: npm
       - run: npm ci
-      # Covers all 60 tests, including the ones that are the point of having CI at all:
+      # Covers the full suite, including these contracts:
       #   - tools/list must answer in under 1s while the CodeGenie child is stalled
       #   - the static proxy schemas must still match what the child advertises
       #   - a timed-out script must take its whole process group with it
@@ -36,7 +36,7 @@ jobs:
 
   management-platforms:
     # Linux is covered by the full suite above. These portable regressions cover
-    # project context, template expansion, backend tree cleanup, doctor, and tool contracts on
+    # project context, templates, backend cleanup, authentication, docs, and code tools on
     # the other hosts; POSIX-only fake HDC executable cases skip on Windows.
     runs-on: ${{ matrix.os }}
     strategy:
@@ -51,7 +51,7 @@ jobs:
           node-version: ${{ matrix.node }}
           cache: npm
       - run: npm ci
-      - run: node --test --test-concurrency=1 test/management.test.mjs test/management-contracts.test.mjs test/auth-docs.test.mjs
+      - run: node --test --test-concurrency=1 test/management.test.mjs test/management-contracts.test.mjs test/auth-docs.test.mjs test/code-tools.test.mjs
 
   audit:
     runs-on: ubuntu-latest

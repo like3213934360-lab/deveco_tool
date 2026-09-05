@@ -157,7 +157,9 @@ export function resolveOfficialArktsServer(projectRoot) {
       projectRoot,
     ],
     cwd: projectRoot,
-    env: { ...process.env },
+    // The CLI's postAction update notice and debug logs use stdout, which is
+    // reserved for JSON-RPC frames in this child. Keep user/global settings intact.
+    env: { ...process.env, DEVECO_CLI_DISABLE_UPDATE: "check", DEVECO_CLI_DEBUG: "" },
     backend: status.backend,
   };
 }

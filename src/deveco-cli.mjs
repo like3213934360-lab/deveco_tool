@@ -8,6 +8,7 @@ import { REPO_ROOT, resolveDevecoHome, resolveDevecoToolchain } from "./config.m
 import { getProjectPath } from "./project-context.mjs";
 import { hdcLog } from "./hdc-log.mjs";
 import { terminateProcessTree } from "./process-tree.mjs";
+import { compatScanResult } from "./api-compat-result.mjs";
 
 const require = createRequire(import.meta.url);
 
@@ -232,10 +233,10 @@ export function commandText(entry, args) {
  * Run the DevEco CLI and capture its output.
  *
  * @param {string[]} args CLI arguments.
- * @param {{cwd: string, timeoutMs?: number, input?: string, signal?: AbortSignal, logPath?: string}} options Working directory, timeout, optional stdin, cancellation signal, and optional full log destination.
+ * @param {{cwd: string, timeoutMs?: number, input?: string, signal?: AbortSignal, logPath?: string, env?: object}} options Working directory, timeout, optional stdin, cancellation signal, log destination, and child-only environment overrides.
  * @returns {Promise<{command: string, exitCode: number|null, signal: string|null, stdout: string, stderr: string, outputTruncated: boolean, logPath: string|null}>} Result.
  */
-export function runDevecoCli(args, { cwd, timeoutMs = DEFAULT_TIMEOUT_MS, input, signal, logPath } = {}) {
+export function runDevecoCli(args, { cwd, timeoutMs = DEFAULT_TIMEOUT_MS, input, signal, logPath, env: extraEnv } = {}) {
   const entry = resolveDevecoCli();
   const command = commandText(entry, args);
   const bounded = Math.min(Math.max(Number(timeoutMs) || DEFAULT_TIMEOUT_MS, 1000), MAX_TIMEOUT_MS);
@@ -244,7 +245,7 @@ export function runDevecoCli(args, { cwd, timeoutMs = DEFAULT_TIMEOUT_MS, input,
     error.code = "DEVECO_CLI_CANCELLED";
     return Promise.reject(error);
   }
-  const env = childEnvironment();
+  const env = { ...childEnvironment(), ...extraEnv };
   return new Promise((resolve, reject) => {
     const capture = processCapture(command, logPath);
     let child;
@@ -831,7 +832,7 @@ export async function apiCompatibilityCheck(input = {}) {
       error.code = "DEVECO_COMPAT_SCOPE_INVALID";
       throw error;
     }
-    if (files.length) args.push(...files);
+    if (files.length) args.push(...files.map((file) => path.resolve(project, file)));
     args.push("--source-version", source, "--target-version", target);
     if (modules.length) args.push("--modules", ...modules);
     args.push("--format", format);
@@ -843,7 +844,13 @@ export async function apiCompatibilityCheck(input = {}) {
     throw error;
   }
 
-  const result = await runDevecoCli(args, { cwd: project, timeoutMs: input.timeoutMs });
+  // CLI 1.3.1 hides the scanner's successful no-change result unless debug is
+  // enabled. Capture it once so the adapter can distinguish it from a crash.
+  const rawResult = await runDevecoCli(args, {
+    cwd: project, timeoutMs: input.timeoutMs,
+    ...(action === "scan" ? { env: { DEVECO_CLI_DEBUG: "1" } } : {}),
+  });
+  const result = action === "scan" ? compatScanResult(rawResult, input, project, format) : rawResult;
   const output = combineOutput(result);
   const failure = devecoCliFailureMessage(result, { requireOutput: true });
   if (failure) {

@@ -221,7 +221,7 @@ class OfficialLspService {
     this.active += 1;
     try {
       this.requireCapability(client, operation);
-      const uri = await client.touchFile(
+      const uri = await client.syncDocuments(
         target.filePath,
         remainingMs(startedAt, timeoutMs, "documentSync"),
       );
@@ -232,11 +232,38 @@ class OfficialLspService {
         }, remainingMs(startedAt, timeoutMs, "request"));
       }
       if (operation === "findReferences") {
-        return await client.request("textDocument/references", {
+        const references = await client.request("textDocument/references", {
           ...textDocument,
           position: at,
           context: { includeDeclaration: args.includeDeclaration !== false },
         }, remainingMs(startedAt, timeoutMs, "request"));
+        if (args.includeDeclaration !== false || !references?.length) return references;
+        // Current ace-server ignores includeDeclaration. Resolve declaration
+        // locations through its own semantic service, never by matching text.
+        this.requireCapability(client, "goToDefinition");
+        const declarations = new Map();
+        const usages = [];
+        for (const reference of references) {
+          const referenceUri = URI.parse(reference.uri).toString();
+          const start = reference.range.start;
+          const key = `${referenceUri}\0${start.line}\0${start.character}`;
+          if (!declarations.has(key)) {
+            // An interface's references may include several implementation
+            // declarations. Resolve each location, not just the queried symbol.
+            const definitions = await client.request("textDocument/definition", {
+              textDocument: { uri: referenceUri }, position: start,
+            }, remainingMs(startedAt, timeoutMs, "declarationFilter"));
+            const entries = Array.isArray(definitions) ? definitions : definitions ? [definitions] : [];
+            declarations.set(key, entries.some((definition) => {
+              const targetUri = definition.targetUri ?? definition.uri;
+              const range = definition.targetSelectionRange ?? definition.range;
+              return targetUri && URI.parse(targetUri).toString() === referenceUri && range
+                && range.start.line === start.line && range.start.character === start.character;
+            }));
+          }
+          if (!declarations.get(key)) usages.push(reference);
+        }
+        return usages;
       }
       if (operation === "hover") {
         return await client.request("textDocument/hover", {

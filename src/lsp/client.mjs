@@ -237,13 +237,40 @@ export class OfficialLspClient {
       || Boolean(method && this.dynamicCapabilities.has(method));
   }
 
-  async touchFile(filePath, timeoutMs) {
+  async syncDocuments(filePath, timeoutMs) {
+    const startedAt = Date.now();
+    const sync = async () => {
+      // The server owns snapshots for every didOpen document. Filesystem edits
+      // to dependencies must reach it before any query of their consumers.
+      for (const uri of [...this.documents.keys()]) {
+        const openPath = URI.parse(uri).fsPath;
+        if (openPath !== filePath) {
+          await this.touchFile(openPath, Math.max(1, timeoutMs - (Date.now() - startedAt)), true);
+        }
+      }
+      return this.touchFile(filePath, Math.max(1, timeoutMs - (Date.now() - startedAt)));
+    };
+    return raceTimeout(sync(), timeoutMs, () => this.forceClose());
+  }
+
+  async touchFile(filePath, timeoutMs, background = false) {
     const previous = this.documentChains.get(filePath) ?? Promise.resolve();
     const next = previous.then(async () => {
       if (this.closed) {
         throw codedError("LSP_NOT_RUNNING", "The official ArkTS language server is not running.");
       }
-      const stat = await fs.stat(filePath, { bigint: true });
+      const uri = URI.file(filePath).toString();
+      const current = this.documents.get(uri);
+      if (background && !current) return uri; // Evicted during another query.
+      let stat;
+      try {
+        stat = await fs.stat(filePath, { bigint: true });
+      } catch (error) {
+        if (!background || error.code !== "ENOENT") throw error;
+        this.documents.delete(uri);
+        await this.connection.sendNotification("textDocument/didClose", { textDocument: { uri } });
+        return uri;
+      }
       const bytes = Number(stat.size);
       if (bytes > MAX_DOCUMENT_BYTES) {
         throw codedError(
@@ -252,12 +279,12 @@ export class OfficialLspClient {
           { filePath, bytes, maxBytes: MAX_DOCUMENT_BYTES },
         );
       }
-      const uri = URI.file(filePath).toString();
-      const current = this.documents.get(uri);
       const signature = statSignature(stat);
       if (current?.signature === signature) {
-        current.lastUsedAt = Date.now();
-        this.documentCacheHitCount += 1;
+        if (!background) {
+          current.lastUsedAt = Date.now();
+          this.documentCacheHitCount += 1;
+        }
       } else {
         const content = await fs.readFile(filePath, "utf8");
         const contentBytes = Buffer.byteLength(content);
@@ -286,7 +313,7 @@ export class OfficialLspClient {
           current.version += 1;
           current.signature = signature;
           current.bytes = contentBytes;
-          current.lastUsedAt = Date.now();
+          if (!background) current.lastUsedAt = Date.now();
           await this.connection.sendNotification("textDocument/didChange", {
             textDocument: { uri, version: current.version },
             contentChanges: [{ text: content }],

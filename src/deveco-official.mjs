@@ -56,6 +56,10 @@ const AUTH_COMPLETION = {
 };
 
 function completionFailure(args, result) {
+  if (args[0] === "check" && args[1] === "lint" && args.includes("--incremental")
+      && /\[Increase Check\] Your project is not under git\./.test(stripVTControlCharacters(combineOutput(result)))) {
+    return "Incremental lint requires a Git working tree; no files were checked.";
+  }
   if (args[0] !== "docs" && args[0] !== "auth") {
     return devecoCliFailureMessage(result, { requireOutput: true });
   }
@@ -76,7 +80,7 @@ async function execute(args, { cwd, timeoutMs, errorCode = "DEVECO_CLI_COMMAND_F
   const output = combineOutput(result);
   const failure = completionFailure(args, result);
   if (failure) {
-    const error = new Error(`> ${result.command}\n\n${output.trim() || failure}`);
+    const error = new Error(`> ${result.command}\n\n${failure}\n${output.trim()}`);
     error.code = errorCode;
     throw error;
   }
@@ -87,7 +91,8 @@ async function execute(args, { cwd, timeoutMs, errorCode = "DEVECO_CLI_COMMAND_F
 export async function codeLint(input = {}) {
   const project = projectRoot(input.project_path);
   const args = ["check", "lint"];
-  if (input.path) args.push(String(input.path));
+  // Positional paths such as a real `--fix/` directory must never become flags.
+  if (input.path) args.push(path.resolve(project, String(input.path)));
   if (input.fix) args.push("--fix");
   if (input.incremental) args.push("--incremental");
   if (input.config_path) args.push("--config-path", String(input.config_path));

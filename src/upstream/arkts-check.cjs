@@ -131,71 +131,33 @@ function loadSystemResourceNames(devecoHome) {
   return names;
 }
 
-function validateSystemResources(files, devecoHome, projectPath) {
+function validateSystemResources(files, devecoHome, projectPath, ts) {
+  // LOCAL PATCH: parse actual calls with the SDK's ArkTS grammar. Source text
+  // examples in comments, strings, or template text are not resource references.
   const validNames = loadSystemResourceNames(devecoHome);
   if (!validNames) return [];
-
   const diagnostics = [];
-  const refPattern = /\$r\(\s*['"]sys\.(media|symbol)\.([^'"]+)['"]\s*\)/g;
-
   for (const filePath of files) {
-    if (!fs.existsSync(filePath)) continue;
     const content = fs.readFileSync(filePath, 'utf-8');
-    const fileLines = content.split('\n');
-    for (let i = 0; i < fileLines.length; i++) {
-      let match;
-      refPattern.lastIndex = 0;
-      while ((match = refPattern.exec(fileLines[i])) !== null) {
-        const resName = match[2];
-        if (!validNames.has(resName)) {
+    const source = ts.createSourceFile(filePath, content, ts.ScriptTarget.Latest, true,
+      filePath.endsWith('.ets') ? ts.ScriptKind.ETS : ts.ScriptKind.TS);
+    const visit = (node) => {
+      if (ts.isCallExpression(node) && ts.isIdentifier(node.expression)
+          && node.expression.text === '$r' && node.arguments.length >= 1
+          && ts.isStringLiteral(node.arguments[0])) {
+        const match = /^sys\.(media|symbol)\.(.+)$/.exec(node.arguments[0].text);
+        if (match && !validNames.has(match[2])) {
+          const at = source.getLineAndCharacterOfPosition(node.getStart(source));
           diagnostics.push({
-            file: path.relative(projectPath, filePath),
-            line: i + 1,
-            column: match.index + 1,
-            severity: 'error',
-            message: `Unknown resource name '${resName}'. No matching sys.${match[1]} resource found in SDK.`,
-            rule: 'resource-name-check',
+            file: path.relative(projectPath, filePath), line: at.line + 1, column: at.character + 1,
+            severity: 'error', rule: 'resource-name-check',
+            message: `Unknown resource name '${match[2]}'. No matching sys.${match[1]} resource found in SDK.`,
           });
         }
       }
-    }
-  }
-  return diagnostics;
-}
-
-function validateRouterPages(projectPath) {
-  const candidates = [
-    path.join(projectPath, 'entry', 'src', 'main', 'resources', 'base', 'profile', 'main_pages.json'),
-    path.join(projectPath, 'src', 'main', 'resources', 'base', 'profile', 'main_pages.json'),
-  ];
-  let mainPagesPath = '';
-  for (const c of candidates) {
-    if (fs.existsSync(c)) { mainPagesPath = c; break; }
-  }
-  if (!mainPagesPath) return [];
-
-  let config;
-  try {
-    config = JSON.parse(fs.readFileSync(mainPagesPath, 'utf-8'));
-  } catch { return []; }
-
-  const pages = config.src || [];
-  const diagnostics = [];
-  const etsBase = path.join(projectPath, 'entry', 'src', 'main', 'ets');
-
-  for (let i = 0; i < pages.length; i++) {
-    const pagePath = pages[i];
-    const etsFile = path.join(etsBase, pagePath + '.ets');
-    if (!fs.existsSync(etsFile)) {
-      diagnostics.push({
-        file: path.relative(projectPath, mainPagesPath),
-        line: i + 2,
-        column: 1,
-        severity: 'error',
-        message: `Page '${pagePath}.ets' does not exist. Registered in main_pages.json but file not found at entry/src/main/ets/${pagePath}.ets`,
-        rule: 'page-file-exists',
-      });
-    }
+      ts.forEachChild(node, visit);
+    };
+    visit(source);
   }
   return diagnostics;
 }
@@ -294,7 +256,7 @@ function isBindingSyntaxFalsePositive(diag, projectPath) {
 
 // --- Main ---
 
-function main() {
+async function main() {
   const args = parseArgs(process.argv);
 
   if (!args.project) {
@@ -342,11 +304,9 @@ function main() {
   const fileMap = {};
   files.forEach((f, i) => { fileMap[`file_${i}`] = f; });
 
-  const moduleJsonCandidates = [
-    path.join(args.project, 'entry', 'src', 'main', 'module.json5'),
-    path.join(args.project, 'src', 'main', 'module.json5'),
-    path.join(args.project, 'entry', 'module.json5'),
-  ];
+  const { discoverProjectEtsFiles, validateRouterPages } = await import('../arkts-project.mjs');
+  const { moduleDirectories } = discoverProjectEtsFiles(args.project);
+  const moduleJsonCandidates = moduleDirectories.map(directory => path.join(directory, 'src', 'main', 'module.json5'));
   let aceModuleJsonPath = '';
   for (const candidate of moduleJsonCandidates) {
     if (fs.existsSync(candidate)) {
@@ -483,8 +443,8 @@ function main() {
 
   // A-class project-level checks
   const extraDiags = [
-    ...validateSystemResources(files, devecoHome, args.project),
-    ...validateRouterPages(args.project),
+    ...validateSystemResources(files, devecoHome, args.project, require(require.resolve('typescript', { paths: [etsLoaderPath] }))),
+    ...validateRouterPages(args.project, moduleDirectories),
     ...validateModelVersion(args.project),
   ];
   diagnostics.push(...extraDiags);
@@ -517,9 +477,11 @@ function main() {
 }
 
 // Exported for unit testing the whitelist logic without a DevEco SDK.
-module.exports = { isBindingSyntaxFalsePositive, getStateFields, stateFieldCache };
+module.exports = { validateSystemResources, isBindingSyntaxFalsePositive, getStateFields, stateFieldCache };
 
 // Run as a CLI only when invoked directly (node arkts-check.cjs ...), not when required by tests.
 if (require.main === module) {
-  main();
+  main().catch((error) => {
+    process.stdout.write(JSON.stringify({ success: false, error: error.message, errors: [] }), () => process.exit(1));
+  });
 }

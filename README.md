@@ -133,8 +133,8 @@ MCP 固定提供 40 个工具，其中项目、脚本和服务管理入口为 5 
 
 | 工具 | 用途 | 额外依赖 |
 |---|---|---|
-| `arkts_check` | 检查整个工程或指定 `.ets` 文件 | 工程、SDK |
-| `check_ets_files` | 检查明确给出的 `.ets` / `.ts` 文件 | 活动工程、SDK |
+| `arkts_check` | 静态预检整个工程或指定 `.ets` / `.ts` 源码 | 工程、SDK |
+| `check_ets_files` | 检查非空列表明确给出的 `.ets` / `.ts` 文件 | 活动工程、SDK |
 | `code_lint` | 官方工程级 Linter，支持增量检查、报告和自动修复 | 工程、DevEco Studio/CLT |
 | `api_compat_check` | 检查文件或模块的 API 兼容性，或列出支持的版本 | 工程、DevEco Studio/CLT |
 | `lsp` | 官方 ArkTS 定义、引用、悬停和实现查询的原始入口 | 工程、官方语言服务 |
@@ -144,6 +144,10 @@ MCP 固定提供 40 个工具，其中项目、脚本和服务管理入口为 5 
 | `check_cpp_files` | 通过 CodeGenie 检查 C/C++ 文件 | 工程、DevEco Studio、CodeGenie 后台 |
 
 `arkts_check` 是静态预检，产物能否构建仍以 `build_project` 为准。LSP 请求输入使用从 1 开始的行列位置；专用工具返回可读的 1-based 位置，`lsp` 保留官方响应中的 0-based 位置。原始入口的 `operation` 支持 `goToDefinition`、`findReferences`、`hover`、`goToImplementation`。
+
+整工程预检按 `build-profile.json5` 的模块路径发现源码，包含模块根目录的源码入口，排除声明文件、依赖目录、构建产物及 `hvigorfile.ts`。Stage 页面检查使用各模块 `module.json5` 的 `$profile:` 配置，支持模块改名和自定义页面清单；`check_ets_files` 的空数组会报参数错误。资源存在性检查使用 SDK 的语法树，注释和字符串示例不会触发资源调用检查。
+
+`code_lint` 仅在 `fix:true` 时请求自动修复，路径按字面处理；增量检查需要 Git 工作树，未执行的检查会返回错误。`api_compat_check` 区分扫描失败与明确的无 API 变更结果；空结果也支持 JSON/CSV 报告。当前官方 Hvigor 会拒绝中文工程根目录，依赖 `compileNative` 的 API 兼容扫描仍受此限制。LSP 在查询前同步已打开文件的磁盘改动，并在 `includeDeclaration:false` 时根据定义位置排除声明。
 
 ### 构建、部署和签名
 
@@ -285,9 +289,10 @@ ui_flow(navigate, goal=目标页面)
 npm test
 npm run test:flow:unit
 node --test --test-concurrency=1 test/management.test.mjs test/management-contracts.test.mjs
+node --test --test-concurrency=1 test/code-tools.test.mjs test/code-tools.integration.test.mjs
 ```
 
-CI 配置在 Linux 运行全量测试，在 macOS、Windows 运行管理工具专项，Node 版本矩阵为 22/24。部分模拟 HDC 用例只适用于 POSIX；CI 通过不等于对应平台真机链路通过。最近一次本地验证范围、结果及限制见 [管理工具验证记录](./docs/management-tools-validation.md)。
+CI 配置在 Linux 运行全量测试，在 macOS、Windows 运行管理、认证文档及代码工具专项，Node 版本矩阵为 22/24。代码工具集成测试需要官方 SDK 和 LSP 后端，未安装时明确跳过；部分模拟 HDC 用例只适用于 POSIX。CI 通过不等于对应平台真机链路通过。验证范围及限制见 [管理工具验证记录](./docs/management-tools-validation.md) 和 [代码工具修复记录](./docs/code-tools-validation.md)。
 
 连接测试设备后可运行设备 canary；已有确定性流程时可运行指定设备的连续回放和基准：
 

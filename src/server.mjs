@@ -389,11 +389,11 @@ const localTools = [
   },
   {
     name: "arkts_check",
-    description: "Run the official DevEco ArkTS static checker against the selected project or explicit .ets files.",
+    description: "Run the official DevEco ArkTS static checker against project .ets/.ts sources or explicit files. This is a static precheck, not compilation verification.",
     inputSchema: {
       type: "object",
       properties: {
-        files: { type: "array", items: { type: "string" }, description: "Optional project-relative or absolute .ets paths; omit to scan the project." },
+        files: { type: "array", items: { type: "string" }, description: "Optional project-relative or absolute .ets/.ts paths; omit to scan the project." },
         project_path: { type: "string", description: "Optional project root; otherwise use the active project from switch_cwd." },
         timeoutMs: { type: "integer", minimum: 1000, maximum: 600000 },
       },
@@ -408,6 +408,7 @@ const localTools = [
       properties: {
         files: {
           type: "array",
+          minItems: 1,
           items: { type: "string" },
           description: "Project-relative or absolute .ets/.ts file paths.",
         },
@@ -1138,8 +1139,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     if (name === "deveco_cli_auth") return plainResult(await cliAuth(args));
 
     if (name === "check_ets_files") {
-      if (!Array.isArray(args.files)) {
-        return textResult({ code: "ARKTS_FILES_INVALID", message: "files must be an array of .ets or .ts paths" }, true);
+      if (!Array.isArray(args.files) || args.files.length === 0) {
+        return textResult({ code: "ARKTS_FILES_INVALID", message: "files must be a non-empty array of .ets or .ts paths" }, true);
       }
       const result = await runArktsCheck({ files: args.files });
       return textResult(result, result.success === false || Number(result.exitCode ?? 0) !== 0);

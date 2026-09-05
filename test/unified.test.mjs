@@ -1566,7 +1566,7 @@ test("official DevEco wrappers preserve the 1.3.1 CLI command interfaces", async
 
   const calls = (await fs.readFile(argvLog, "utf8")).trim().split("\n").map(JSON.parse);
   assert.deepEqual(calls, [
-    ["check", "lint", "entry", "--fix", "--incremental", "--config-path", "lint.json", "--product", "default", "--format", "json", "--output-path", "lint-report.json", "--limit", "50"],
+    ["check", "lint", path.join(project, "entry"), "--fix", "--incremental", "--config-path", "lint.json", "--product", "default", "--format", "json", "--output-path", "lint-report.json", "--limit", "50"],
     ["docs", "catalog", "--format", "json"],
     ["docs", "search", "default", "--catalog", "all", "--format", "json"],
     ["docs", "search", "ArkUI", "animation", "--catalog", "arkui", "--format", "json", "--limit", "5"],
