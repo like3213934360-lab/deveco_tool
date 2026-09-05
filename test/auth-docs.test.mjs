@@ -287,12 +287,16 @@ async function mcpFixture(t, { realCli = false, sharedHome, refreshGate } = {}) 
   delete env.DEVECO_CLI_AUTH_SOURCE;
   const transport = new StdioClientTransport({
     command: process.execPath, cwd: root, env, stderr: "pipe",
-    args: ["--import", fileURLToPath(new URL("fixtures/auth-preload.mjs", import.meta.url)), "src/server.mjs"],
+    args: ["--import", new URL("fixtures/auth-preload.mjs", import.meta.url).href, "src/server.mjs"],
   });
   let stderr = "";
   transport.stderr.on("data", (chunk) => { stderr += chunk; });
   const client = new Client({ name: "auth-docs-tests", version: "1" });
-  await client.connect(transport);
+  try { await client.connect(transport); }
+  catch (error) {
+    await transport.close();
+    throw new Error(`Fixture MCP startup failed: ${stderr || error.message}`, { cause: error });
+  }
   t.after(async () => { await transport.close(); assert.doesNotMatch(stderr, /unhandled|uncaught/i); });
   const call = async (name, args = {}) => {
     const result = await client.callTool({ name, arguments: args });
