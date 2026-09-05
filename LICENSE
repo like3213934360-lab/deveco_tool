@@ -31,10 +31,6 @@ The 5 official skills under `skills/` are copied from DevEco Code v0.1.11 at
 commit b5911d2ad6daa66d4ca1bd673a9be260da19e1db. DevEco Code is MIT licensed;
 its notice is reproduced in `NOTICE.deveco-code`.
 
-The SDD files under `commands/` and `templates/` are historical adaptations of
-MIT-licensed DevEco Code assets. Their exact source history is recorded in
-`provenance/SOURCES.md`.
-
 10 files in this repository carry an Apache-2.0 and Huawei copyright header.
 Those headers are preserved and govern the individual files:
 

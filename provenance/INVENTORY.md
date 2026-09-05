@@ -29,12 +29,6 @@
 统一入口是 `src/server.mjs`。工具按项目上下文、认证和知识、语言服务、诊断、构建部署、
 设备 UI 和模拟器分组；完整名称和数量见 `manifest.json` 的 `mcp.toolGroups`。
 
-## SDD 工作流
-
-`commands/` 包含 `spec-specify`、`spec-plan`、`spec-tasks`、`spec-implement`、`spec-verify`，
-`templates/` 包含对应的规范、计划和任务模板。这些是本仓库保留的历史 DevEco Code 提取与适配资产，
-不属于当前官方内置 Skill 目录。
-
 ## 不再分发的 Skill
 
 此前的派生 Skill、未发布分支 Skill 以及 `HarmonyOS_Skills/harmonyos-agent-skills` 内容均已删除。

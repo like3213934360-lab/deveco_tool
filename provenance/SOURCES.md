@@ -41,16 +41,16 @@ shasum -a 256 -c provenance/deveco-code-v0.1.11.skills.sha256
 `sdk.mjs` 共用网关的 Studio/CLT 路径和官方 API 映射；`runtime.mjs` 共用 HDC 执行器，
 修正设备失败判定、Faultlogger 命令参数及设备日历时间解析。代码中的许可声明随适配器保留。
 
-## 旧版 DevEco Code 提取资产
+## 旧版 DevEco Code 提取来源（历史记录）
 
-本仓库的 SDD 命令、模板，以及一部分 MCP 适配实现早于本次 Skill 同步，仍保留原有历史来源锁，
+此前提取的 SDD 资产和部分 MCP 适配实现早于本次 Skill 同步，其原始来源锁保留用于历史追溯，
 不能误写成来自 `v0.1.11`：
 
 - `v0.1.5`：`537543c5732d03b7ba9bbe6082e3380677a520fb`
 - `v0.1.6`：`ab476cafd27e6418cca35257a456baa1b8cba391`
 
-这些资产已经过宿主中立化和本仓库功能修复，不承诺与最新版上游逐字节一致。具体职责见
-`provenance/INVENTORY.md` 和各源码中的 `LOCAL PATCH` 注释。
+SDD 命令和文档模板现已删除，不再安装或发布。保留的 MCP 适配实现经过本仓库功能修复，
+不承诺与最新版上游逐字节一致；具体职责见 `provenance/INVENTORY.md` 和源码中的 `LOCAL PATCH` 注释。
 
 ## DevEco CLI 与 MCP 依赖
 

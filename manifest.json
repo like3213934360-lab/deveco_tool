@@ -12,7 +12,6 @@
   },
   "layers": {
     "knowledge": "skills/",
-    "workflow": "commands/ + templates/",
     "tools": "src/server.mjs (stdio MCP)"
   },
   "skills": [
@@ -109,101 +108,6 @@
         "copy_template",
         "detect_sdk"
       ]
-    }
-  ],
-  "commands": [
-    {
-      "name": "spec-specify",
-      "path": "commands/spec-specify.md",
-      "phase": 1,
-      "summary": "Create or update the feature specification from a natural language description.",
-      "templates": [
-        "templates/spec-template.md"
-      ],
-      "packTools": [
-        "arkts_knowledge_search"
-      ],
-      "hostTools": [
-        "write",
-        "ask-user"
-      ]
-    },
-    {
-      "name": "spec-plan",
-      "path": "commands/spec-plan.md",
-      "phase": 2,
-      "summary": "Run the implementation planning workflow and produce design artifacts.",
-      "templates": [
-        "templates/plan-template.md"
-      ],
-      "packTools": [
-        "arkts_knowledge_search"
-      ],
-      "hostTools": [
-        "write"
-      ]
-    },
-    {
-      "name": "spec-tasks",
-      "path": "commands/spec-tasks.md",
-      "phase": 3,
-      "summary": "Generate an actionable, dependency-ordered tasks.md from the design artifacts.",
-      "templates": [
-        "templates/tasks-template.md"
-      ],
-      "packTools": [
-        "arkts_knowledge_search"
-      ],
-      "hostTools": [
-        "write"
-      ]
-    },
-    {
-      "name": "spec-implement",
-      "path": "commands/spec-implement.md",
-      "phase": 4,
-      "summary": "Execute every task in tasks.md up to and including the Polish phase.",
-      "templates": [],
-      "packTools": [
-        "arkts_knowledge_search",
-        "arkts_check"
-      ],
-      "hostTools": [
-        "read",
-        "edit",
-        "write"
-      ]
-    },
-    {
-      "name": "spec-verify",
-      "path": "commands/spec-verify.md",
-      "phase": 5,
-      "summary": "Build-only verification: build_project (max 10 attempts) then start_app, then report.",
-      "templates": [],
-      "packTools": [
-        "build_project",
-        "start_app",
-        "arkts_knowledge_search"
-      ],
-      "hostTools": [
-        "read",
-        "edit"
-      ],
-      "variant": "build-only"
-    }
-  ],
-  "templates": [
-    {
-      "name": "spec-template",
-      "path": "templates/spec-template.md"
-    },
-    {
-      "name": "plan-template",
-      "path": "templates/plan-template.md"
-    },
-    {
-      "name": "tasks-template",
-      "path": "templates/tasks-template.md"
     }
   ],
   "mcp": {
@@ -304,13 +208,6 @@
       }
     ],
     "toolCount": 40
-  },
-  "hostToolMapping": {
-    "$comment": "Tools the upstream commands assumed, which this pack does NOT provide. Map them onto your host's equivalents before running the SDD commands.",
-    "spec_write": "Any file-write tool. Upstream used a dedicated spec artifact writer; the commands here just say 'the host's file-write tool'.",
-    "question": "Your host's ask-the-user mechanism. spec-specify needs it for clarification gates.",
-    "task": "Your host's subagent/delegation mechanism. Optional - the commands run fine single-threaded.",
-    "read/edit/write/glob/grep": "Your host's own file and search tools."
   },
   "invocationPolicy": {
     "$comment": "Host adapters may add local invocation policy without modifying the official skill files.",

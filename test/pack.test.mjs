@@ -99,9 +99,6 @@ async function filesRecursively(dir) {
 test("every manifest path exists on disk", async () => {
   const paths = [
     ...MANIFEST.skills.map((skill) => skill.path),
-    ...MANIFEST.commands.map((command) => command.path),
-    ...MANIFEST.templates.map((template) => template.path),
-    ...MANIFEST.commands.flatMap((command) => command.templates),
     MANIFEST.mcp.entry,
   ];
   for (const relative of paths) {
@@ -169,14 +166,6 @@ test("manifest script declarations match the script registry exactly", async () 
   }
 });
 
-test("manifest commands and templates match their directories exactly", async () => {
-  const commands = (await fs.readdir(path.join(PACK_ROOT, "commands"))).filter((f) => f.endsWith(".md")).sort();
-  assert.deepEqual(MANIFEST.commands.map((c) => path.basename(c.path)).sort(), commands);
-
-  const templates = (await fs.readdir(path.join(PACK_ROOT, "templates"))).filter((f) => f.endsWith(".md")).sort();
-  assert.deepEqual(MANIFEST.templates.map((t) => path.basename(t.path)).sort(), templates);
-});
-
 test("manifest tool groups match the tools the MCP actually advertises", async (t) => {
   const transport = new StdioClientTransport({
     command: process.execPath,
@@ -194,21 +183,11 @@ test("manifest tool groups match the tools the MCP actually advertises", async (
   assert.equal(MANIFEST.mcp.toolCount, live.length);
 });
 
-test("removed tools remain excluded from the inventory and commands", async () => {
+test("removed tools remain excluded from the inventory and skill instructions", async () => {
   const removedTools = new Set(["save_ui_screenshot", "get_ui_verification_log", "document_validate", "init_project_path"]);
   const advertised = new Set(MANIFEST.mcp.toolGroups.flatMap((group) => group.tools));
   for (const tool of removedTools) {
     assert.ok(!advertised.has(tool), `manifest still advertises removed tool ${tool}`);
-  }
-
-  for (const command of MANIFEST.commands) {
-    for (const tool of command.packTools) {
-      assert.ok(!removedTools.has(tool), `${command.name} depends on removed tool ${tool}`);
-    }
-    const text = await fs.readFile(path.join(PACK_ROOT, command.path), "utf8");
-    for (const tool of removedTools) {
-      assert.ok(!text.includes(`\`${tool}\``), `${command.name} references removed tool ${tool}`);
-    }
   }
 
   // Skills must not instruct the reader to call an excluded tool. Prose that explains a tool was
@@ -230,11 +209,6 @@ test("removed tools remain excluded from the inventory and commands", async () =
   }
 });
 
-test("SDD commands cover the five phases in order", () => {
-  assert.deepEqual(MANIFEST.commands.map((command) => command.phase), [1, 2, 3, 4, 5]);
-  assert.equal(MANIFEST.commands.at(-1).variant, "build-only");
-});
-
 test("the installer is idempotent, guards foreign files, and uninstalls cleanly", async () => {
   const dest = path.join(await fs.mkdtemp(path.join(os.tmpdir(), "harmony-pack-")), "pack");
   try {
@@ -249,6 +223,7 @@ test("the installer is idempotent, guards foreign files, and uninstalls cleanly"
 
     const installed = await fs.readFile(path.join(dest, "manifest.json"), "utf8");
     assert.equal(JSON.parse(installed).skills.length, MANIFEST.skills.length);
+    assert.deepEqual((await fs.readdir(dest)).sort(), [".harmony-pack.json", "manifest.json", "skills"]);
 
     const removed = await runInstaller(["--dest", dest, "--uninstall"]);
     assert.equal(removed.exitCode, 0);

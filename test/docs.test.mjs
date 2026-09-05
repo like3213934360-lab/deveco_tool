@@ -91,11 +91,9 @@ test("no OS metadata file ships with the installable assets", async () => {
   // one that actually recurs.
   const junk = new Set([".DS_Store", "Thumbs.db", "desktop.ini", "__pycache__"]);
   const offenders = [];
-  for (const asset of ["skills", "commands", "templates"]) {
-    for (const file of await allFiles(path.join(PACK_ROOT, asset))) {
-      if (junk.has(path.basename(file)) || file.includes(`${path.sep}__pycache__${path.sep}`)) {
-        offenders.push(path.relative(PACK_ROOT, file));
-      }
+  for (const file of await allFiles(path.join(PACK_ROOT, "skills"))) {
+    if (junk.has(path.basename(file)) || file.includes(`${path.sep}__pycache__${path.sep}`)) {
+      offenders.push(path.relative(PACK_ROOT, file));
     }
   }
   assert.deepEqual(offenders, [], `OS metadata must not ship: ${offenders.join(", ")}`);

@@ -3,7 +3,7 @@
  * @file Host-neutral installer for the HarmonyOS capability pack.
  * @author deveco-tool
  *
- * Materialises `skills/`, `commands/`, `templates/` and `manifest.json` into a target
+ * Materialises `skills/` and `manifest.json` into a target
  * directory. It deliberately does NOT touch any host configuration file — wiring the pack
  * into a specific AI tool is the consumer's decision. Use `--print-mcp` to obtain the stdio
  * MCP snippet to paste wherever the host expects it.
@@ -14,7 +14,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const PACK_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const ASSETS = ["skills", "commands", "templates", "manifest.json"];
+const ASSETS = ["skills", "manifest.json"];
 const MARKER = ".harmony-pack.json";
 
 const USAGE = `Usage: node scripts/install.mjs [options]
@@ -297,8 +297,6 @@ async function main() {
   lines.push(`source                 ${PACK_ROOT}`);
   lines.push(`profile                ${options.profile}`);
   lines.push(`skills                 ${coreSkills ? `${coreSkills.length} of ${manifest.skills.length}` : manifest.skills.length}`);
-  lines.push(`commands               ${manifest.commands.length}`);
-  lines.push(`templates              ${manifest.templates.length}`);
   lines.push(`mcp                    node ${mcpSnippet().args[0]}`);
   lines.push("");
   lines.push(`Next: run \`node scripts/install.mjs --print-mcp\` and paste the snippet into your host's MCP config.`);

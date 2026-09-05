@@ -2,7 +2,7 @@
 
 面向 HarmonyOS / OpenHarmony 项目开发的本地 stdio MCP 服务。让 AI 客户端通过一个连接完成工程检查、构建部署、设备操作、崩溃诊断和 UI 流程回放。
 
-固定提供 **40 个 MCP 工具**。Skill、SDD 命令和模板可单独安装，不是启动 MCP 的前置条件。
+固定提供 **40 个 MCP 工具**。官方 Skill 可单独安装，不是启动 MCP 的前置条件。
 
 ## 这个项目解决什么问题
 
@@ -13,7 +13,7 @@ DevEco CLI、官方 ArkTS 语言服务、CodeGenie 和 HDC 提供底层开发能
 | 官方开发能力 | 通过固定版本的 npm 依赖接入 DevEco CLI 和 CodeGenie；从本机工具链发现官方 ArkTS `ace-server`；通过 HDC 操作设备 |
 | MCP 适配与管理 | 统一工具入口、工程切换、环境诊断、后台重启，以及白名单脚本的参数发现和校验 |
 | ArkPilot | 本仓库实现的 UI 导航、语义流程录制与回放、选择器修复和最终验收 |
-| 可选能力包 | 从 DevEco Code 固定版本同步的 5 个官方 Skill，以及独立维护的 SDD 命令和模板 |
+| 可选能力包 | 从 DevEco Code 固定版本同步的 5 个官方 Skill |
 
 本项目依赖官方工具链执行编译、签名和设备操作。官方 Skill 保持原始文件内容；本地修复位于 MCP 适配层。同步版本及历史来源见 [来源记录](./provenance/SOURCES.md)。
 
@@ -92,7 +92,7 @@ macOS 默认安装位置 `/Applications/DevEco-Studio.app` 会自动发现。非
 
 ## 工具接口
 
-MCP 固定提供 40 个工具，其中项目、脚本和服务管理入口为 5 个。工程切换使用 `switch_cwd`，SDD 命令使用同一套接口。
+MCP 固定提供 40 个工具，其中项目、脚本和服务管理入口为 5 个。工程切换使用 `switch_cwd`。
 
 更新服务代码后，需要由宿主重新连接 MCP。`deveco_restart` 只重置后台子服务，不会加载新的网关代码。
 
@@ -247,7 +247,7 @@ ui_flow(navigate, goal=目标页面)
 
 普通截图默认使用系统临时会话目录，内联返回后删除，未内联截图和失败诊断最长保留 10 分钟；显式提供 `localPath` 才会保留文件。成功的流程回放不截图，需要最终视觉验收时调用 `verify_ui`。更多行为、后端选择和性能边界见 [ArkPilot 架构说明](./docs/arkpilot-architecture.md)。
 
-## 可选 Skill 和 SDD 能力包
+## 可选官方 Skill
 
 仓库保留 DevEco Code `v0.1.11` 中的 5 个官方 Skill：`arkts-error-fixes`、`arkts-grammar-standards`、`arkts-runtime-fix`、`deveco-cli`、`deveco-create-project`。面向 DevEco Code 自身配置的 `customize-deveco` 不在分发范围内。
 
@@ -255,7 +255,7 @@ ui_flow(navigate, goal=目标页面)
 
 | 安装方式 | 安装内容 |
 |---|---|
-| `node scripts/install.mjs --dest <目标目录>` | Skill、SDD 命令、模板和清单 |
+| `node scripts/install.mjs --dest <目标目录>` | 官方 Skill 和清单 |
 | `node scripts/install-host.mjs --host claude` | Claude 的 Skill 发现目录 |
 | `node scripts/install-host.mjs --host codex` | Codex 的 Skill 发现目录 |
 
@@ -263,13 +263,7 @@ ui_flow(navigate, goal=目标页面)
 
 `--profile core|full` 控制 Skill 安装范围，当前两种取值安装相同的官方 Skill 集合。
 
-SDD 工作流为：
-
-```text
-/spec-specify → /spec-plan → /spec-tasks → /spec-implement → /spec-verify
-```
-
-SDD 文档由宿主的文件工具读写，命令和模板提供工作流与内容结构。安装资产不会自动注册 MCP，也不会替宿主实现文件读写、用户提问或命令发现；宿主接入约定见 [PACK.md](./PACK.md)。
+安装 Skill 不会自动注册 MCP；宿主接入约定见 [PACK.md](./PACK.md)。
 
 ## 运行和兼容性边界
 

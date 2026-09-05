@@ -13,8 +13,6 @@
   "files": [
     "src/",
     "skills/",
-    "commands/",
-    "templates/",
     "docs/",
     "scripts/",
     "provenance/",

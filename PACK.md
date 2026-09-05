@@ -1,9 +1,8 @@
 # deveco-tool 能力包
 
-本仓库由三层组成：
+本仓库包含 MCP 服务和可选官方 Skill：
 
 - `skills/`：从 DevEco Code 官方内置 Skill 中选用的 5 个项目开发 Skill。
-- `commands/` 与 `templates/`：宿主中立的 SDD 五阶段工作流。
 - `src/server.mjs`：统一 stdio MCP 服务，固定 40 个工具。
 
 机器可读清单以 `manifest.json` 为准，工具说明和运行依赖以 `README.md` 为准。
@@ -36,7 +35,7 @@ npm run doctor
 npm run mcp
 ```
 
-安装 Skill 到普通目录：
+安装官方 Skill 和清单到普通目录：
 
 ```bash
 node scripts/install.mjs --dest <目标目录>
@@ -74,15 +73,6 @@ node scripts/install-host.mjs --host all
 MCP 固定提供 40 个工具。工程切换使用 `switch_cwd`。工具数及清单见 `manifest.json`。
 
 `scripts/install.mjs --print-mcp` 输出单个服务的 JSON 配置项；`scripts/install-host.mjs --host claude|codex --print-mcp` 输出对应宿主的配置片段。两种安装方式连接同一套 MCP 接口。
-
-## SDD 命令
-
-```text
-/spec-specify -> /spec-plan -> /spec-tasks -> /spec-implement -> /spec-verify
-```
-
-这些命令和模板是历史适配资产，不属于 DevEco Code 当前的内置 Skill 目录。它们仍使用 MCP 中的
-`arkts_knowledge_search`、`arkts_check`、`build_project` 和 `start_app` 等工具，文档由宿主的文件工具读写。
 
 ## 来源与许可
 
