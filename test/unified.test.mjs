@@ -39,6 +39,17 @@ import { resolveLspTarget } from "../src/lsp/project-root.mjs";
 
 const REPO_ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
 
+async function writeRunnableModules(project, names) {
+  await fs.writeFile(path.join(project, "build-profile.json5"), JSON.stringify({
+    modules: names.map((name) => ({ name, srcPath: `./${name}` })),
+  }));
+  for (const name of names) {
+    const directory = path.join(project, name, "src/main");
+    await fs.mkdir(directory, { recursive: true });
+    await fs.writeFile(path.join(directory, "module.json5"), '{"module":{"type":"entry"}}');
+  }
+}
+
 // A few tests need a real DevEco Studio SDK on this machine: the ArkTS linter resolves its rule
 // set out of it, hdc ships inside its toolchain, and detect_sdk reads its sdk-pkg.json. CI runners
 // and contributors without DevEco installed must not see those as failures, so they announce
@@ -1269,6 +1280,7 @@ test("start_app requires a module instead of deploying multiple Entry modules", 
   const project = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-cli-project-"));
   const entry = path.join(directory, "fake-cli.mjs");
   const argvLog = path.join(directory, "argv.log");
+  await writeRunnableModules(project, ["default", "watch"]);
   await fs.writeFile(entry, [
     'import fs from "node:fs";',
     `fs.appendFileSync(${JSON.stringify(argvLog)}, JSON.stringify(process.argv.slice(2)) + "\\n");`,
@@ -1289,11 +1301,7 @@ test("start_app requires a module instead of deploying multiple Entry modules", 
     (error) => error.code === "DEVECO_CLI_MODULE_REQUIRED"
       && /default, watch/.test(error.message),
   );
-  const invocations = (await fs.readFile(argvLog, "utf8"))
-    .trim()
-    .split("\n")
-    .map((line) => JSON.parse(line));
-  assert.deepEqual(invocations, [["run", "--skip-build", "--device", "device-1"]]);
+  assert.equal(fsSync.existsSync(argvLog), false, "module discovery must never run a deployment command");
 });
 
 test("apply_changes scopes the CLI apply manifest to exactly one Entry module", async (t) => {
@@ -1343,6 +1351,7 @@ test("apply_changes refuses an ambiguous multi-Entry project before creating an 
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-cli-apply-modules-"));
   const project = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-cli-project-"));
   const entry = path.join(directory, "fake-cli.mjs");
+  await writeRunnableModules(project, ["entry", "watch"]);
   await fs.mkdir(path.join(project, "entry", "src"), { recursive: true });
   await fs.writeFile(path.join(project, "entry", "src", "Main.ets"), "@Entry struct Main {}\n");
   await fs.writeFile(entry,
@@ -1658,9 +1667,9 @@ test("hot_reload owns a persistent watch process and applies a temporary manifes
   const records = (await fs.readFile(log, "utf8")).trim().split("\n").map(JSON.parse);
   assert.deepEqual(records[0].args, ["run", "--device", "device-1", "--module", "entry", "--product", "default", "--hotreload"]);
   assert.equal(records[1].manifest, "entry/src/Main.ets\n");
-  assert.deepEqual(records[1].args.slice(0, 6), ["run", "--device", "device-1", "--module", "entry", "--hotreload-apply"]);
-  assert.match(records[1].args[6], /^deveco-tool-hotreload-.+\.txt$/);
-  assert.deepEqual(records[2].args.slice(0, 6), ["run", "--device", "device-1", "--module", "entry", "--hotreload-apply"]);
+  assert.deepEqual(records[1].args.slice(0, 8), ["run", "--device", "device-1", "--module", "entry", "--product", "default", "--hotreload-apply"]);
+  assert.match(records[1].args[8], /^deveco-tool-hotreload-.+\.txt$/);
+  assert.deepEqual(records[2].args.slice(0, 8), ["run", "--device", "device-1", "--module", "entry", "--product", "default", "--hotreload-apply"]);
   assert.deepEqual(records[3].args, ["run", "--hotreload", "stop"]);
   assert.deepEqual(await fs.readdir(path.join(project, ".hvigor")), []);
 
@@ -1684,6 +1693,7 @@ test("hot_reload resolves and pins the only runnable module when start omits it"
   const project = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-hotreload-module-project-"));
   const entry = path.join(directory, "fake-cli.mjs");
   const log = path.join(directory, "argv.log");
+  await writeRunnableModules(project, ["entry"]);
   await fs.writeFile(entry, [
     'import fs from "node:fs";',
     "const args = process.argv.slice(2);",
@@ -1708,8 +1718,10 @@ test("hot_reload resolves and pins the only runnable module when start omits it"
   assert.equal(started.active, true);
   await hotReload({ action: "stop", timeoutMs: 5000 });
   const calls = (await fs.readFile(log, "utf8")).trim().split("\n").map(JSON.parse);
-  assert.deepEqual(calls[0], ["run", "--skip-build", "--device", "device-1"]);
-  assert.deepEqual(calls[1], ["run", "--device", "device-1", "--module", "entry", "--hotreload"]);
+  assert.deepEqual(calls, [
+    ["run", "--device", "device-1", "--module", "entry", "--hotreload"],
+    ["run", "--hotreload", "stop"],
+  ]);
 });
 
 test("DevEco CLI failures are errors even when the process exits zero", () => {

@@ -25,21 +25,27 @@ function appendLog(current, chunk) {
   return combined.length > MAX_LOG_CHARS ? combined.slice(-MAX_LOG_CHARS) : combined;
 }
 
-function snapshot() {
-  if (!session) return { active: false };
+function isRunning(current) {
+  return Boolean(current && !current.closed && (!current.child
+    || (current.child.exitCode === null && current.child.signalCode === null)));
+}
+
+function snapshot(current = session) {
+  if (!current) return { active: false };
   const state = {
-    active: session.ready && !session.startError && session.child.exitCode === null,
-    starting: !session.ready && !session.startError && session.child.exitCode === null,
-    pid: session.child.pid,
-    projectPath: session.project,
-    device: session.device,
-    module: session.module || null,
-    startedAt: session.startedAt,
-    command: session.command,
-    stdout: session.stdout,
-    stderr: session.stderr,
+    active: current.ready && !current.startError && !current.stopping && isRunning(current),
+    starting: !current.ready && !current.startError && !current.stopping && isRunning(current),
+    pid: current.child?.pid ?? null,
+    projectPath: current.project,
+    device: current.device ?? null,
+    module: current.module || null,
+    product: current.product || "default",
+    startedAt: current.startedAt,
+    command: current.command ?? null,
+    stdout: current.stdout,
+    stderr: current.stderr,
   };
-  if (session.startError) state.error = session.startError;
+  if (current.startError) state.error = current.startError;
   if (state.starting) {
     state.nextAction = { tool: "hot_reload", arguments: { action: "status" } };
   }
@@ -47,6 +53,8 @@ function snapshot() {
 }
 
 function startLifecycle(current, timeoutMs) {
+  let onClosed;
+  current.exited = new Promise((resolve) => { onClosed = resolve; });
   current.startup = new Promise((resolve) => {
     let settled = false;
     const finish = (error) => {
@@ -84,10 +92,12 @@ function startLifecycle(current, timeoutMs) {
     });
     current.child.once("error", (cause) => finish(cause));
     current.child.once("close", (exitCode, signal) => {
-      if (current.ready || current.startError) return;
-      const error = new Error(`Hot-reload process exited before becoming ready (code=${exitCode}, signal=${signal ?? "none"})\n${current.stdout}${current.stderr}`);
-      error.code = "DEVECO_HOT_RELOAD_START_FAILED";
-      finish(error);
+      current.closed = true;
+      const error = new Error(`Hot-reload process exited ${current.ready ? "after" : "before"} becoming ready (code=${exitCode}, signal=${signal ?? "none"})\n${current.stdout}${current.stderr}`);
+      error.code = current.ready ? "DEVECO_HOT_RELOAD_EXITED" : "DEVECO_HOT_RELOAD_START_FAILED";
+      if (!current.ready) finish(error);
+      else if (!current.stopping && !current.startError) current.startError = { code: error.code, message: error.message };
+      onClosed();
     });
   });
 }
@@ -119,36 +129,42 @@ function validateFiles(project, entries) {
 }
 
 export async function hotReloadStart(input = {}) {
-  if (session?.child?.exitCode === null) {
+  if (isRunning(session) || session?.stopping) {
     const error = new Error(`A hot-reload session is already running for ${session.project}`);
     error.code = "DEVECO_HOT_RELOAD_ALREADY_RUNNING";
     throw error;
   }
-  session = null;
   const project = projectRoot(input.project_path);
-  const device = await resolveDevice(input.hvd);
   const product = typeof input.product === "string" ? input.product.trim() : "";
-  const module = await resolveRunnableModule({
-    project, device, product, module: input.module, timeoutMs: input.timeoutMs,
-  });
-  const entry = resolveDevecoCli();
-  const args = ["run", "--device", device, "--module", module];
-  if (product) args.push("--product", product);
-  if (input.build_mode) args.push("--build-mode", String(input.build_mode));
-  if (input.ability) args.push("--ability", String(input.ability));
-  args.push("--hotreload");
-  const child = spawn(process.execPath, [entry, ...args], {
-    cwd: project,
-    env: childEnvironment(),
-    stdio: ["ignore", "pipe", "pipe"],
-    detached: true,
-  });
+  // Reserve the session before device/module resolution can yield to another call.
   const current = {
-    child, project, device, module, ready: false, stdout: "", stderr: "",
-    startedAt: new Date().toISOString(), command: commandText(entry, args), startError: null,
+    child: null, project, product, buildMode: input.build_mode, ability: input.ability,
+    ready: false, closed: false, stopping: false, stdout: "", stderr: "",
+    startedAt: new Date().toISOString(), startError: null,
   };
   session = current;
-
+  try {
+    const device = await resolveDevice(input.hvd);
+    const module = await resolveRunnableModule({ project, module: input.module });
+    if (session !== current) {
+      const error = new Error("Hot-reload startup was stopped before the process was launched");
+      error.code = "DEVECO_HOT_RELOAD_START_CANCELLED";
+      throw error;
+    }
+    const entry = resolveDevecoCli();
+    const args = ["run", "--device", device, "--module", module];
+    if (product) args.push("--product", product);
+    if (current.buildMode) args.push("--build-mode", String(current.buildMode));
+    if (current.ability) args.push("--ability", String(current.ability));
+    args.push("--hotreload");
+    Object.assign(current, { device, module, command: commandText(entry, args) });
+    current.child = spawn(process.execPath, [entry, ...args], {
+      cwd: project, env: childEnvironment(), stdio: ["ignore", "pipe", "pipe"], detached: true,
+    });
+  } catch (error) {
+    if (session === current) session = null;
+    throw error;
+  }
   const timeoutMs = Math.min(Math.max(Number(input.timeoutMs) || 900000, 1000), 3600000);
   startLifecycle(current, timeoutMs);
   const requestedWait = input.wait_ms === undefined ? MAX_START_WAIT_MS : Number(input.wait_ms);
@@ -169,15 +185,16 @@ export async function hotReloadStart(input = {}) {
     error.code = current.startError.code;
     throw error;
   }
-  return snapshot();
+  return snapshot(current);
 }
 
 export async function hotReloadApply(input = {}) {
-  if (!session?.ready || session.child.exitCode !== null) {
+  if (!session?.ready || session.startError || session.stopping || !isRunning(session)) {
     const error = new Error("No active hot-reload session. Start one first.");
     error.code = "DEVECO_HOT_RELOAD_NOT_RUNNING";
     throw error;
   }
+  const current = session;
   const requestedProject = input.project_path ? projectRoot(input.project_path) : session.project;
   if (requestedProject !== session.project) {
     const error = new Error(`The active hot-reload session belongs to ${session.project}`);
@@ -191,11 +208,13 @@ export async function hotReloadApply(input = {}) {
   const manifest = path.join(hvigor, name);
   fs.writeFileSync(manifest, `${files.join("\n")}\n`, { encoding: "utf8", mode: 0o600 });
   try {
-    const args = ["run", "--device", session.device];
-    if (session.module) args.push("--module", session.module);
+    const args = ["run", "--device", current.device, "--module", current.module];
+    if (current.product) args.push("--product", current.product);
+    if (current.buildMode) args.push("--build-mode", String(current.buildMode));
+    if (current.ability) args.push("--ability", String(current.ability));
     args.push("--hotreload-apply", name);
     const result = await runDevecoCli(args, {
-      cwd: session.project,
+      cwd: current.project,
       timeoutMs: input.timeoutMs,
     });
     const output = combineOutput(result);
@@ -209,7 +228,7 @@ export async function hotReloadApply(input = {}) {
       error.code = signingRequired ? "DEVECO_HOT_RELOAD_SIGNING_REQUIRED" : "DEVECO_HOT_RELOAD_APPLY_FAILED";
       throw error;
     }
-    return { ...snapshot(), appliedFiles: files, applyCommand: result.command, output };
+    return { ...snapshot(current), appliedFiles: files, applyCommand: result.command, output };
   } finally {
     fs.rmSync(manifest, { force: true });
   }
@@ -222,6 +241,18 @@ export function hotReloadStatus() {
 export async function hotReloadStop(input = {}) {
   const current = session;
   if (!current) return { active: false, stopped: false };
+  if (current.stopPromise) return current.stopPromise;
+  current.stopping = true;
+  if (!current.child) {
+    current.closed = true;
+    session = null;
+    return { active: false, stopped: true };
+  }
+  current.stopPromise = stopSession(current, input);
+  return current.stopPromise;
+}
+
+async function stopSession(current, input) {
   let result;
   try {
     result = await runDevecoCli(["run", "--hotreload", "stop"], {
@@ -229,8 +260,8 @@ export async function hotReloadStop(input = {}) {
       timeoutMs: input.timeoutMs ?? 30000,
     });
   } finally {
-    if (current.child.exitCode === null) terminateProcessTree(current.child);
-    session = null;
+    await terminateSession(current);
+    if (session === current) session = null;
   }
   const output = combineOutput(result);
   const failure = devecoCliFailureMessage(result);
@@ -256,5 +287,12 @@ export async function hotReload(input = {}) {
 export async function closeHotReload() {
   const current = session;
   session = null;
-  if (current?.child?.exitCode === null) terminateProcessTree(current.child);
+  if (current) await terminateSession(current);
+}
+
+async function terminateSession(current) {
+  current.stopping = true;
+  if (!current.child) { current.closed = true; return; }
+  if (isRunning(current)) terminateProcessTree(current.child);
+  await current.exited;
 }

@@ -9,6 +9,7 @@ import { getProjectPath } from "./project-context.mjs";
 import { hdcLog } from "./hdc-log.mjs";
 import { terminateProcessTree } from "./process-tree.mjs";
 import { compatScanResult } from "./api-compat-result.mjs";
+import { parseJson5, readModuleEntries } from "./build-profile.mjs";
 
 const require = createRequire(import.meta.url);
 
@@ -33,12 +34,14 @@ const CLI_FAILURE_PATTERNS = [
   /did not appear in hdc list targets/i,
 ];
 
+// Installation is only an intermediate step when an Ability must be launched.
+const DEPLOY_SUCCESS = /Application\s+'[^']+'(?:\s*:\s*(?:start ability|launch)\s+(?:success(?:fully)?|succeed(?:ed)?)\b|\s+installed successfully \(no ability to launch\))/i;
+const APPLY_SUCCESS = /(?:\[Apply\]\s*(?:Apply complete|完成)|Apply completed successfully)/i;
 const CLI_SUCCESS_PATTERNS = [
   /Clean completed successfully\.?/i,
   /Build completed successfully\.?/i,
-  /(?:\[Apply\]\s*(?:Apply complete|完成)|Apply completed successfully)/i,
-  /Application\s+'[^']+'\s*:.*(?:success|succeed)/i,
-  /installed successfully/i,
+  APPLY_SUCCESS,
+  DEPLOY_SUCCESS,
 ];
 
 function evidenceTracker(patterns) {
@@ -88,8 +91,8 @@ function processCapture(command, explicitLogPath) {
   const stderr = tailBuffer();
   const stdoutFailures = evidenceTracker(CLI_FAILURE_PATTERNS);
   const stderrFailures = evidenceTracker(CLI_FAILURE_PATTERNS);
-  const stdoutSuccesses = evidenceTracker(CLI_SUCCESS_PATTERNS);
-  const stderrSuccesses = evidenceTracker(CLI_SUCCESS_PATTERNS);
+  const stdoutSuccesses = CLI_SUCCESS_PATTERNS.map((pattern) => evidenceTracker([pattern]));
+  const stderrSuccesses = CLI_SUCCESS_PATTERNS.map((pattern) => evidenceTracker([pattern]));
   const automatic = !explicitLogPath;
   const logPath = explicitLogPath
     ? path.resolve(explicitLogPath)
@@ -111,11 +114,11 @@ function processCapture(command, explicitLogPath) {
       if (stream === "stdout") {
         stdout.push(chunk);
         stdoutFailures.push(chunk);
-        stdoutSuccesses.push(chunk);
+        for (const tracker of stdoutSuccesses) tracker.push(chunk);
       } else {
         stderr.push(chunk);
         stderrFailures.push(chunk);
-        stderrSuccesses.push(chunk);
+        for (const tracker of stderrSuccesses) tracker.push(chunk);
       }
       fs.writeSync(handle, chunk);
       loggedBytes += chunk.length;
@@ -131,7 +134,7 @@ function processCapture(command, explicitLogPath) {
         stdout: stdout.text(),
         stderr: stderr.text(),
         detectedFailure: stdoutFailures.evidence || stderrFailures.evidence || "",
-        detectedSuccess: stdoutSuccesses.evidence || stderrSuccesses.evidence || "",
+        detectedSuccess: [...stdoutSuccesses, ...stderrSuccesses].map((tracker) => tracker.evidence).filter(Boolean).join("\n"),
         outputTruncated,
         logPath: automatic && !outputTruncated ? null : logPath,
       };
@@ -460,50 +463,33 @@ export function devecoCliFailureMessage(result, { requireOutput = false, success
 }
 
 /**
- * Ask the CLI which modules it can actually deploy.
- *
- * `build-profile.json5` lists HARs too, and passing those to `--module` is an
- * error, so the runnable set comes from the CLI itself rather than from a guess
- * about module types. This probe is only needed when the caller omitted the
- * module and the wrapper has to decide whether there is a unique choice.
- *
- * @param {string} project Absolute project root.
- * @param {string} device Device name or serial.
- * @param {number|undefined} timeoutMs Optional timeout.
- * @returns {Promise<string[]>} Runnable module names.
+ * Read runnable modules without executing `run`: the CLI automatically deploys
+ * single-module projects instead of printing a discovery list. Match its Stage
+ * module types and its entry default for manifests without a declared type.
  */
-async function runnableModules(project, device, product, timeoutMs) {
-  const args = ["run", "--skip-build", "--device", device];
-  if (product) args.push("--product", product);
-  const probe = await runDevecoCli(args, {
-    cwd: project,
-    timeoutMs,
-  });
-  const text = combineOutput(probe);
-  const marker = text.indexOf("Available runnable modules:");
-  if (marker < 0) {
-    const failure = devecoCliFailureMessage(probe, { requireOutput: true });
-    if (failure) {
-      const error = new Error(`Runnable-module discovery failed: ${failure}`);
+function runnableModules(project) {
+  const names = [];
+  for (const entry of readModuleEntries(project) ?? []) {
+    try {
+      if (!entry?.name || typeof entry.srcPath !== "string") throw new Error("Module requires name and srcPath");
+      const manifest = path.resolve(project, entry.srcPath, "src/main/module.json5");
+      const type = fs.existsSync(manifest)
+        ? parseJson5(fs.readFileSync(manifest, "utf8"))?.module?.type || "entry"
+        : "entry";
+      if (["entry", "feature", "shared"].includes(type)) names.push(entry.name);
+    } catch (cause) {
+      const error = new Error(`Cannot read module '${entry?.name ?? "unknown"}': ${cause.message}`, { cause });
       error.code = "DEVECO_CLI_MODULE_DISCOVERY_FAILED";
       throw error;
     }
-    return [];
   }
-  return text
-    .slice(marker)
-    .split(/\r?\n/)
-    .slice(1)
-    .map((line) => line.trim())
-    .filter((line) => line.startsWith("- "))
-    .map((line) => line.slice(2).trim())
-    .filter(Boolean);
+  return names;
 }
 
-export async function resolveRunnableModule({ project, device, product, module, timeoutMs }) {
+export async function resolveRunnableModule({ project, module }) {
   const requested = typeof module === "string" ? module.trim() : "";
   if (requested) return requested;
-  const discovered = await runnableModules(project, device, product, timeoutMs);
+  const discovered = runnableModules(project);
   if (discovered.length > 1) {
     const error = new Error(
       `Multiple runnable modules found (${discovered.join(", ")}); pass module explicitly.`,
@@ -913,7 +899,7 @@ export async function applyChanges(input = {}) {
     const output = combineOutput(result);
     const failure = devecoCliFailureMessage(result, {
       requireOutput: true,
-      successPattern: /(?:\[Apply\]\s*(?:Apply complete|完成)|Apply completed successfully|Application\s+'[^']+'\s*:.*(?:success|succeed)|installed successfully)/i,
+      successPattern: new RegExp(`${APPLY_SUCCESS.source}|${DEPLOY_SUCCESS.source}`, "i"),
     });
     if (failure) {
       const recoveryArgs = ["run", "--skip-build", "--device", device, "--module", selected];
@@ -924,7 +910,7 @@ export async function applyChanges(input = {}) {
         const recovery = await runDevecoCli(recoveryArgs, { cwd: project, timeoutMs: input.timeoutMs });
         const recoveryFailure = devecoCliFailureMessage(recovery, {
           requireOutput: true,
-          successPattern: /(?:Application\s+'[^']+'\s*:.*(?:success|succeed)|installed successfully)/i,
+          successPattern: DEPLOY_SUCCESS,
         });
         recoveryNote = recoveryFailure
           ? `Recovery launch also failed:\n> ${recovery.command}\n\n${combineOutput(recovery)}`
@@ -972,7 +958,7 @@ export async function startApp(input = {}) {
   const output = combineOutput(result);
   const failure = devecoCliFailureMessage(result, {
     requireOutput: true,
-    successPattern: /(?:Application\s+'[^']+'\s*:.*(?:success|succeed)|installed successfully)/i,
+    successPattern: DEPLOY_SUCCESS,
   });
   if (failure) {
     const error = new Error(`> ${result.command}\n\n${output}`);

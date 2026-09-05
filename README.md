@@ -162,6 +162,10 @@ MCP 固定提供 40 个工具，其中项目、脚本和服务管理入口为 5 
 
 `build_project` 默认以 `action: "start"` 返回 `job_id`，随后用 `status` 查询或 `cancel` 取消。`start_app` 不会隐式构建。服务端 `timeoutMs` 无法延长客户端自身的请求时限，长任务应使用启动和查询方式。
 
+`start_app`、`apply_changes`、`hot_reload` 省略 `module` 时，从工程 `build-profile.json5` 和模块 `module.json5` 读取可运行模块；只有一个候选时自动选择，多个候选时要求明确指定。模块发现不会安装或启动应用。`start_app` 区分安装成功与 Ability 启动成功，启动失败会返回工具错误。
+
+`hot_reload apply` 沿用启动会话的模块、产品、构建模式及 Ability 参数。并发启动只允许一个会话；进程异常退出后状态转为不可用并记录原因，可以重新启动；`stop` 等待常驻进程退出后返回。实际补丁构建与签名仍受官方 CLI、SDK 和设备能力约束，中文工程根目录也仍受 Hvigor 路径限制。
+
 ### 设备、日志和模拟器
 
 | 工具 | 用途 | 额外依赖 |
@@ -292,7 +296,7 @@ node --test --test-concurrency=1 test/management.test.mjs test/management-contra
 node --test --test-concurrency=1 test/code-tools.test.mjs test/code-tools.integration.test.mjs
 ```
 
-CI 配置在 Linux 运行全量测试，在 macOS、Windows 运行管理、认证文档及代码工具专项，Node 版本矩阵为 22/24。代码工具集成测试需要官方 SDK 和 LSP 后端，未安装时明确跳过；部分模拟 HDC 用例只适用于 POSIX。CI 通过不等于对应平台真机链路通过。验证范围及限制见 [管理工具验证记录](./docs/management-tools-validation.md) 和 [代码工具修复记录](./docs/code-tools-validation.md)。
+CI 配置在 Linux 运行全量测试，在 macOS、Windows 运行管理、认证文档、代码及构建工具专项，Node 版本矩阵为 22/24。代码工具集成测试需要官方 SDK 和 LSP 后端，未安装时明确跳过；部分模拟 HDC 用例只适用于 POSIX。CI 通过不等于对应平台真机链路通过。验证范围及限制见 [管理工具验证记录](./docs/management-tools-validation.md)、[代码工具修复记录](./docs/code-tools-validation.md) 和 [构建工具修复记录](./docs/build-tools-validation.md)。
 
 连接测试设备后可运行设备 canary；已有确定性流程时可运行指定设备的连续回放和基准：
 
