@@ -643,7 +643,7 @@ test("unified MCP advertises scripts, diagnostics, LSP, and CodeGenie tools", as
 
   // Exercise the validation route for every advertised tool without allowing any handler to
   // reach a compiler, device, account, emulator, or child MCP. This catches a tool whose schema
-  // was listed but never compiled, and makes the 42-tool smoke claim exhaustive rather than a
+  // was listed but never compiled, and makes the advertised-tool smoke claim exhaustive rather than a
   // spot-check of whichever tools happen to be safe on the test machine.
   for (const tool of result.tools) {
     assert.ok(tool.description?.trim(), `${tool.name} must explain when it should be used`);

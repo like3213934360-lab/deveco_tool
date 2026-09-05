@@ -318,21 +318,10 @@
         "tools": [
           "document_validate"
         ],
-        "note": "Enabled in sdd and legacy profiles. Checks spec.md / plan.md / tasks.md after the host writes them; required by the bundled SDD commands.",
+        "note": "Enabled in the sdd profile. Checks spec.md / plan.md / tasks.md after the host writes them; required by the bundled SDD commands.",
         "profiles": [
-          "sdd",
-          "legacy"
+          "sdd"
         ]
-      },
-      {
-        "group": "legacy-project-alias",
-        "tools": [
-          "init_project_path"
-        ],
-        "profiles": [
-          "legacy"
-        ],
-        "note": "Compatibility for existing callers. New clients use switch_cwd."
       }
     ],
     "toolCount": 40,
@@ -344,9 +333,6 @@
       },
       "sdd": {
         "toolCount": 41
-      },
-      "legacy": {
-        "toolCount": 42
       }
     }
   },

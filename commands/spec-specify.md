@@ -9,7 +9,7 @@ Host-neutral edits: dropped the `agent: goal` binding, replaced `CONFIG_ROOT`
 DevEco-only `spec_write` tool with the host's own file-write tool.
 -->
 
-MCP prerequisite: start deveco-tool with `DEVECO_TOOL_PROFILE=sdd` (or `legacy`) so `document_validate` is available. `node scripts/install.mjs --print-mcp` generates the SDD configuration.
+MCP prerequisite: start deveco-tool with `DEVECO_TOOL_PROFILE=sdd` so `document_validate` is available. `node scripts/install.mjs --print-mcp` generates the SDD configuration.
 
 ## STRICT OPERATIONAL CONSTRAINTS (ZERO EXCEPTIONS)
 1. **No Early Coding**: You are strictly forbidden from generating, writing, editing, outlining, or suggesting application code in the `src/` or any other source directory during this step. Specification-level descriptions (requirements, user stories, acceptance criteria) are permitted; pseudocode, code snippets, and implementation-level detail are not.

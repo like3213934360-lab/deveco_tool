@@ -71,9 +71,9 @@ node scripts/install-host.mjs --host all
 
 ## MCP 工具模式
 
-MCP 默认使用 `DEVECO_TOOL_PROFILE=core`。`sdd` 增加文档校验，`legacy` 再增加旧项目切换别名。工具数及清单见 `manifest.json`。
+MCP 仅提供 `core` 和 `sdd` 两种模式，默认使用 `DEVECO_TOOL_PROFILE=core`；`sdd` 增加文档校验。工程切换统一使用 `switch_cwd`。工具数及清单见 `manifest.json`。
 
-`scripts/install.mjs` 安装的资产包含 SDD 命令，因此其 `--print-mcp` 默认输出 `sdd` 配置。只安装 Skill 的 `scripts/install-host.mjs --print-mcp` 默认输出 `core`。两者都支持 `--mcp-profile core|sdd|legacy`，与 Skill 的 `--profile` 参数独立。
+`scripts/install.mjs` 安装的资产包含 SDD 命令，因此其 `--print-mcp` 默认输出 `sdd` 配置。只安装 Skill 的 `scripts/install-host.mjs --print-mcp` 默认输出 `core`。两者都支持 `--mcp-profile core|sdd`，与 Skill 的 `--profile` 参数独立。
 
 ## SDD 命令
 
@@ -81,7 +81,7 @@ MCP 默认使用 `DEVECO_TOOL_PROFILE=core`。`sdd` 增加文档校验，`legacy
 /spec-specify -> /spec-plan -> /spec-tasks -> /spec-implement -> /spec-verify
 ```
 
-运行这套命令需使用 `sdd` 或 `legacy` MCP 模式；完整能力包安装器会生成对应配置。
+运行这套命令需使用 `sdd` MCP 模式；完整能力包安装器会生成对应配置。
 
 这些命令和模板是历史适配资产，不属于 DevEco Code 当前的内置 Skill 目录。它们仍使用 MCP 中的
 `arkts_knowledge_search`、`arkts_check`、`build_project`、`start_app` 和 `document_validate` 等工具。

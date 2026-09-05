@@ -79,7 +79,7 @@ macOS 默认安装位置 `/Applications/DevEco-Studio.app` 会自动发现。非
 | `DEVECO_CLI_STUDIO_PATH` | DevEco Studio 根目录；macOS 可指向 `.app` |
 | `DEVECO_CLI_CLT_PATH` | DevEco Command Line Tools 根目录；纯 CLT 环境使用此项 |
 | `PROJECT_PATH` | 启动后的默认工程根目录；也可通过 `switch_cwd` 设置 |
-| `DEVECO_TOOL_PROFILE` | 选择 `core`、`sdd` 或 `legacy` 工具集合 |
+| `DEVECO_TOOL_PROFILE` | 选择 `core` 或 `sdd` 工具集合 |
 | `HDC_PATH` | 可选的 HDC 可执行文件覆盖路径 |
 | `DEVECO_HOME` / `DEVECO_PATH` | Studio 路径的兼容配置，优先级低于上述 Studio/CLT 配置 |
 
@@ -102,9 +102,8 @@ macOS 默认安装位置 `/Applications/DevEco-Studio.app` 会自动发现。非
 |---|---:|---:|---|
 | `core`（默认） | 40 | 5 | 日常开发、设备操作和诊断 |
 | `sdd` | 41 | 6 | 在 core 基础上增加 `document_validate`，运行 SDD 文档工作流 |
-| `legacy` | 42 | 7 | 在 sdd 基础上增加 `init_project_path`，兼容旧客户端 |
 
-新客户端使用 `switch_cwd`；旧客户端仍调用 `init_project_path` 时选择 `legacy`。未启用的入口不会出现在工具列表中，直接调用也会返回 `TOOL_DISABLED` 和启用提示。
+工程切换统一使用 `switch_cwd`。`document_validate` 在 core 模式下不会出现在工具列表中，直接调用会返回 `TOOL_DISABLED` 和启用提示。
 
 修改模式或更新服务代码后，需要由宿主重新连接 MCP。`deveco_restart` 只重置后台子服务，不会加载新的网关代码。
 
@@ -123,8 +122,7 @@ macOS 默认安装位置 `/Applications/DevEco-Studio.app` 会自动发现。非
 | `switch_cwd` | 切换后续调用使用的活动工程根目录 | 有效工程 |
 | `deveco_doctor` | 诊断工具链、SDK、HDC、工程、Skill 和 CodeGenie 状态 | 无；缺失项作为诊断返回 |
 | `deveco_restart` | 重置 ArkTS LSP、CodeGenie 或两者；后续调用按需启动，无需断开 MCP | 无 |
-| `document_validate` | 检查 spec、plan、tasks 文档的必需章节和标题结构 | `sdd` 或 `legacy` 模式 |
-| `init_project_path` | `switch_cwd` 的兼容别名 | `legacy` 模式、有效工程 |
+| `document_validate` | 检查 spec、plan、tasks 文档的必需章节和标题结构 | `sdd` 模式 |
 
 ### 登录、知识和文档
 
@@ -275,7 +273,7 @@ ui_flow(navigate, goal=目标页面)
 
 安装器支持 `--dry-run` 预览、`--copy` 使用副本、`--uninstall` 移除本安装器拥有的资产。默认采用符号链接，不支持创建链接的环境可选择 `--copy`。宿主安装器还接受 `--host all`。
 
-`--mcp-profile core|sdd|legacy` 控制输出配置中的 MCP 模式。另一个兼容参数 `--profile core|full` 控制 Skill 安装范围，当前两种取值安装相同的官方 Skill 集合；两者不是同一个选项。
+`--mcp-profile core|sdd` 控制输出配置中的 MCP 模式。另一个兼容参数 `--profile core|full` 控制 Skill 安装范围，当前两种取值安装相同的官方 Skill 集合；两者不是同一个选项。
 
 SDD 工作流为：
 
@@ -283,7 +281,7 @@ SDD 工作流为：
 /spec-specify → /spec-plan → /spec-tasks → /spec-implement → /spec-verify
 ```
 
-它需要 `sdd` 或 `legacy` 模式中的 `document_validate`。安装资产不会自动注册 MCP，也不会替宿主实现文件读写、用户提问或命令发现；宿主接入约定见 [PACK.md](./PACK.md)。
+它需要 `sdd` 模式中的 `document_validate`。安装资产不会自动注册 MCP，也不会替宿主实现文件读写、用户提问或命令发现；宿主接入约定见 [PACK.md](./PACK.md)。
 
 ## 运行和兼容性边界
 

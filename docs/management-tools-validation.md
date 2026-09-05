@@ -1,8 +1,11 @@
 # 项目、脚本和服务管理工具验证
 
-验证日期：2026-09-05。范围是 `deveco_script_catalog`、`deveco_script`、
-`switch_cwd`、`init_project_path`、`deveco_doctor`、`deveco_restart`、`document_validate`，
+验证日期：2026-09-05。当前范围是 `deveco_script_catalog`、`deveco_script`、
+`switch_cwd`、`deveco_doctor`、`deveco_restart`、`document_validate`，
 以及这些入口实际调用的脚本、项目上下文和后台进程。
+
+当前只提供 `core`（40 个 MCP 工具）和 `sdd`（41 个 MCP 工具）。公开的 `init_project_path`
+别名及 `legacy` 模式已删除；下面的旧版本验证保留当时的实际结果，不代表当前仍提供这些入口。
 
 ## 修复内容
 
@@ -42,9 +45,9 @@ npm test
 node --test --test-concurrency=1 test/management.test.mjs test/management-contracts.test.mjs test/document-validate.test.mjs
 ```
 
-## 工具入口与参数优化（2026-09-05）
+## 此前工具入口与参数优化（2026-09-05，提交 26a68c6）
 
-本次优化覆盖实现、安装器配置、命令依赖、清单、文档和测试，没有需要后续补做的接口迁移实现。
+以下记录对应移除兼容模式前的实现、安装器配置、命令依赖、清单、文档和测试。
 
 - `core` 默认暴露 40 个 MCP 工具，其中管理工具为 5 个；`sdd` 增加 `document_validate`；`legacy` 再增加 `init_project_path`。隐藏入口的直接调用也会拒绝。CodeGenie 内部的项目绑定仍使用上游协议，不依赖公开兼容别名。
 - 脚本目录默认只列摘要；按 `script` 查询才返回该脚本的参数 Schema、flag 映射和示例。执行入口保持扁平 Schema，以兼容现有宿主对工具签名的转换。
@@ -70,6 +73,14 @@ node --test --test-concurrency=1 test/management.test.mjs test/management-contra
 - 三种模式均经独立 stdio MCP 验证工具发现、公开 Schema、禁用入口、项目切换、三个模板文档校验和后台重置；覆盖中文、空格、特殊字符路径，以及 Windows 风格参数值。
 - Node 24 + 已连接真机：执行 23 次 MCP 调用，覆盖七个管理工具和七个脚本。实际 SDK 为 API 26；新模板创建成功；Hilog 采集、Faultlogger 探测、真实日志下载、两种解析入口均成功，识别出 `TypeError`。重启前后 CodeGenie 诊断均可用。
 - 真机验证创建的临时工程、文档和下载日志已删除，未安装测试应用。
+
+## 移除旧客户端兼容入口（2026-09-05）
+
+- 删除公开的 `init_project_path` Schema、分发分支及 `legacy` 模式，仅保留 core / sdd。CodeGenie 内部工程绑定继续使用其上游协议。
+- 安装器、命令前置条件、清单和 README 同步更新；启动服务或生成安装配置时传 `legacy` 均会明确拒绝。
+- macOS、Node 24.14.1 全量回归：219 项中 211 通过、8 项既有设备门控测试跳过、0 失败。
+- 两种模式均通过真实 stdio MCP 验证：工具列表与清单一致，已移除别名返回 `UNKNOWN_TOOL`，`switch_cwd`、文档模式控制和后台重置正常；既有上游工程绑定回归通过。
+- README 的 41 个可选及默认入口与清单逐项一致，本地文档链接检查通过。本轮未重复运行真机脚本或 Windows/Linux 主机验证。
 
 ## 兼容性边界
 

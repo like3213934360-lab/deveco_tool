@@ -26,7 +26,7 @@ const USAGE = `Usage: node scripts/install.mjs [options]
   --dry-run       Print the planned actions without touching the filesystem
   --uninstall     Remove assets previously installed by this script from <dir>
   --print-mcp     Print the stdio MCP config snippet as JSON and exit
-  --mcp-profile <p>  core, sdd (default for this pack's commands), or legacy
+  --mcp-profile <p>  core or sdd (default for this pack's commands)
   --help          Show this message
 
 Installed assets: ${ASSETS.join(", ")}
@@ -77,7 +77,7 @@ function parseArgs(argv) {
       options.profile = value;
       index += 1;
     } else if (argument === "--mcp-profile") {
-      if (!argv[index + 1]) throw new Error("--mcp-profile requires core, sdd or legacy");
+      if (!argv[index + 1]) throw new Error("--mcp-profile requires core or sdd");
       options.mcpProfile = resolveToolProfile(argv[++index]);
     } else if (argument === "--copy") options.copy = true;
     else if (argument === "--dry-run") options.dryRun = true;

@@ -54,7 +54,7 @@ const USAGE = `Usage: node scripts/install-host.mjs --host <claude|codex|all> [o
   --dry-run       Print the planned actions without touching the filesystem
   --uninstall     Remove only the skills this script installed, leaving others alone
   --print-mcp     Print the MCP registration snippet for the host and exit
-  --mcp-profile <p>  core (default), sdd, or legacy; independent of the skill profile
+  --mcp-profile <p>  core (default) or sdd; independent of the skill profile
   --help          Show this message
 
 Defaults: Claude installs into ~/.claude/skills; Codex installs into ~/.agents/skills. Both use
@@ -89,7 +89,7 @@ function parseArgs(argv) {
       options.profile = value;
       index += 1;
     } else if (argument === "--mcp-profile") {
-      if (!value) throw new Error("--mcp-profile requires core, sdd or legacy");
+      if (!value) throw new Error("--mcp-profile requires core or sdd");
       options.mcpProfile = resolveToolProfile(value);
       index += 1;
     } else if (argument === "--dest") {

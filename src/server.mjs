@@ -67,7 +67,7 @@ const toolProfile = resolveToolProfile();
 // proxied copies so each name resolves once. build_project and start_app run
 // through the bundled DevEco CLI so that building and launching keep working
 // even when the CodeGenie child is unavailable.
-const LOCAL_OVERRIDE_TOOLS = ["init_project_path", "check_ets_files", "build_project", "start_app", "verify_ui"];
+const LOCAL_OVERRIDE_TOOLS = ["check_ets_files", "build_project", "start_app", "verify_ui"];
 
 // The upstream stateful verification-log chain is not part of this pack. Its save/read tools use
 // upstream run ids that the local, temporary-only verify_ui implementation deliberately does not
@@ -333,16 +333,6 @@ const localTools = [
     name: "switch_cwd",
     description: "Select the HarmonyOS project for subsequent tools. Use when changing projects; PROJECT_PATH can select the initial project.",
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
-    inputSchema: {
-      type: "object",
-      properties: { project_path: { type: "string", minLength: 1 } },
-      required: ["project_path"],
-      additionalProperties: false,
-    },
-  },
-  {
-    name: "init_project_path",
-    description: "Compatibility alias for switch_cwd; set the active HarmonyOS project root.",
     inputSchema: {
       type: "object",
       properties: { project_path: { type: "string", minLength: 1 } },
@@ -1057,9 +1047,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   try {
     if (!toolEnabled(name, toolProfile)) {
       return textResult({ code: "TOOL_DISABLED", tool: name, profile: toolProfile,
-        message: name === "init_project_path"
-          ? "Use switch_cwd. The init_project_path alias is available only with DEVECO_TOOL_PROFILE=legacy."
-          : "document_validate requires DEVECO_TOOL_PROFILE=sdd (or legacy) when starting the server." }, true);
+        message: "document_validate requires DEVECO_TOOL_PROFILE=sdd when starting the server." }, true);
     }
     const validationFailure = argumentValidationFailure(name, args);
     if (validationFailure) return textResult(validationFailure, true);
@@ -1077,7 +1065,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       return textResult(result, !result.ok);
     }
 
-    if (name === "switch_cwd" || name === "init_project_path") {
+    if (name === "switch_cwd") {
       const project = setProjectPath(args.project_path);
       await resetLsp();
       // The child used to be told the new path here, which meant switching projects waited on
