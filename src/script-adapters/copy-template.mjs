@@ -14,6 +14,7 @@
  */
 
 import fs from 'node:fs';
+import { cp } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
 import { createRequire } from 'node:module';
@@ -148,10 +149,18 @@ function setupProject(args) {
   return targetRoot;
 }
 
-function createProjectFromTemplate(targetRoot, args, resolved) {
+async function createProjectFromTemplate(targetRoot, args, resolved) {
   const require = createRequire(import.meta.url);
   const template = path.join(path.dirname(require.resolve('@deveco/deveco-cli/package.json')), 'templates', 'application');
-  fs.cpSync(template, targetRoot, { recursive: true, force: false, errorOnExist: true });
+  // Node 22's native cpSync directory fast path corrupts non-ASCII Windows paths.
+  // Async cp uses the UTF-8-safe filesystem calls. Copy each entry so an existing
+  // empty project root is allowed while destination collisions still fail.
+  fs.mkdirSync(targetRoot, { recursive: true });
+  for (const entry of fs.readdirSync(template)) {
+    await cp(path.join(template, entry), path.join(targetRoot, entry), {
+      recursive: true, force: false, errorOnExist: true,
+    });
+  }
   for (const relative of ['gitignore.txt', 'entry/gitignore.txt']) {
     const file = path.join(targetRoot, relative);
     fs.renameSync(file, path.join(path.dirname(file), '.gitignore'));
@@ -225,7 +234,7 @@ async function main() {
   validateBundleName(args.bundleName);
   const resolved = await resolve(args);
   const targetRoot = setupProject(args);
-  createProjectFromTemplate(targetRoot, args, resolved);
+  await createProjectFromTemplate(targetRoot, args, resolved);
   applyCompatibilityReplacements(targetRoot, args);
   verifyTemplate(targetRoot);
   outputResult(targetRoot, args, resolved);

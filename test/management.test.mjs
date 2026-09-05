@@ -5,6 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { createRequire } from "node:module";
 import test from "node:test";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
@@ -89,6 +90,7 @@ test("copy_template expands the shipped template with CLT, spaces, CJK, and shel
   const f = await fixture(t);
   f.env.PATH = path.dirname(process.execPath); // No global devecocli installation.
   const parent = path.join(f.dir, "项目 & $(not-a-command)");
+  const parentEntries = await fs.readdir(f.dir);
   const result = await script(f, "copy_template", { args: { projectPath: parent, appName: "ReviewApp", apiLevel: 21 } });
   assert.equal(result.ok, true, JSON.stringify(result));
   assert.equal(result.parsed.verified, true);
@@ -99,16 +101,36 @@ test("copy_template expands the shipped template with CLT, spaces, CJK, and shel
   assert.match(await fs.readFile(path.join(appRoot, 'build-profile.json5'), 'utf8'), /6\.0\.1\(21\)/);
   assert.match(await fs.readFile(path.join(appRoot, 'entry/src/main/resources/base/element/string.json'), 'utf8'), /ReviewApp/);
   assert.ok((await fs.stat(path.join(appRoot, 'entry/src/main/ets/pages/Index.ets'))).isFile());
-  assert.ok((await fs.stat(path.join(appRoot, '.gitignore'))).isFile());
+  const require = createRequire(import.meta.url);
+  const template = path.join(path.dirname(require.resolve('@deveco/deveco-cli/package.json')), 'templates/application');
+  for (const relative of ['', 'entry']) {
+    assert.equal(await fs.readFile(path.join(appRoot, relative, '.gitignore'), 'utf8'),
+      await fs.readFile(path.join(template, relative, 'gitignore.txt'), 'utf8'));
+    await assert.rejects(fs.stat(path.join(appRoot, relative, 'gitignore.txt')), { code: 'ENOENT' });
+  }
+  assert.deepEqual((await fs.readdir(f.dir)).sort(), [...parentEntries, path.basename(parent)].sort(),
+    'template copying must not create a second directory with a corrupted Unicode name');
+  const originalApp = await fs.readFile(path.join(appRoot, 'AppScope/app.json5'), 'utf8');
   const again = await script(f, "copy_template", { args: { projectPath: parent, appName: "ReviewApp" } });
   assert.equal(again.ok, false);
   assert.match(again.stderr, /PROJECT_EXISTS/);
+  assert.equal(await fs.readFile(path.join(appRoot, 'AppScope/app.json5'), 'utf8'), originalApp);
   assert.equal((await script(f, "detect_sdk")).parsed.apiLevel, 22);
   const sdkOverride = path.join(f.dir, "External SDK");
   await fs.mkdir(path.join(sdkOverride, "default"), { recursive: true });
   await fs.writeFile(path.join(sdkOverride, "default/sdk-pkg.json"), JSON.stringify({ data: { apiVersion: 21, platformVersion: "6.0.1" } }));
   f.env.DEVECO_SDK_HOME = sdkOverride;
   assert.equal((await script(f, "detect_sdk")).parsed.apiLevel, 21);
+});
+
+test("copy_template accepts an existing empty destination", async (t) => {
+  const f = await fixture(t);
+  const appRoot = path.join(f.dir, 'EmptyApp');
+  await fs.mkdir(appRoot);
+  const result = await script(f, 'copy_template', { args: { projectPath: f.dir, appName: 'EmptyApp' } });
+  assert.equal(result.ok, true, JSON.stringify(result));
+  assert.equal(result.parsed.projectRoot, appRoot);
+  assert.ok((await fs.stat(path.join(appRoot, 'entry/.gitignore'))).isFile());
 });
 
 test("PROJECT_PATH supplies the initial cwd to scripts and project context", async (t) => {
