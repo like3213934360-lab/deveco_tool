@@ -280,7 +280,10 @@ async function mcpFixture(t, { realCli = false, sharedHome, refreshGate } = {}) 
   const home = sharedHome || fs.mkdtempSync(path.join(directory, "mcp-"));
   const entry = path.join(home, "cli.mjs");
   fs.writeFileSync(entry, `const args=process.argv.slice(2); console.log(args[0]==='docs' ? '# Example\\nBUILD FAILED\\nFailed to start pip' : 'Please run \`devecocli auth login\` first.');`);
-  const env = { ...process.env, DEVECO_TEST_AUTH_HOME: home, DEVECO_CLI_DATA_DIR: path.join(home, "official"), DEVECO_CLI_DISABLE_UPDATE: "all" };
+  // The official CLI starts background SDK/toolchain discovery for telemetry even on auth
+  // commands. Keep this isolated authentication test independent of that host-dependent work.
+  const env = { ...process.env, DEVECO_TEST_AUTH_HOME: home, DEVECO_CLI_DATA_DIR: path.join(home, "official"),
+    DEVECO_CLI_DISABLE_UPDATE: "all", DEVECO_CLI_DISABLE_TELEMETRY: "1" };
   if (refreshGate) env.DEVECO_TEST_REFRESH_GATE = refreshGate;
   if (realCli) delete env.DEVECO_CLI_ENTRY;
   else env.DEVECO_CLI_ENTRY = entry;
