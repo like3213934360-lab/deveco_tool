@@ -1,6 +1,6 @@
 import path from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { CodeGenieTransport } from "./codegenie-transport.mjs";
 import { ListRootsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import { REPO_ROOT, resolveDevecoHome, resolveDevecoToolchain } from "./config.mjs";
 import { getProjectPath } from "./project-context.mjs";
@@ -10,6 +10,8 @@ let transport;
 let childTools = [];
 let boundProject = null;
 let starting = null;
+let generation = 0;
+let callQueue = Promise.resolve();
 
 // The CodeGenie child normally completes its handshake in about 100ms, but it
 // intermittently never completes it at all -- no error, no exit, just silence.
@@ -71,42 +73,46 @@ function childEnvironment() {
     ...(toolchain.kind === "clt" ? { DEVECO_CLI_CLT_PATH: toolchain.root } : {}),
     // UI_VERIFY_* is deliberately not forwarded: the gateway disables the
     // verify_ui chain, so passing model credentials through would be dead config.
-    ...(process.env.PROJECT_PATH ? { PROJECT_PATH: process.env.PROJECT_PATH } : {}),
+    ...(getProjectPath() ? { PROJECT_PATH: getProjectPath() } : {}),
   };
 }
 
 async function handshake() {
+  const epoch = generation;
+  const localTransport = new CodeGenieTransport({
+    command: process.execPath, args: [wrapperPath()], cwd: REPO_ROOT, env: childEnvironment(),
+  });
+  const localClient = new Client(
+    { name: "deveco-tool-gateway", version: "0.1.0" },
+    { capabilities: { roots: { listChanged: false } } },
+  );
+  transport = localTransport;
+  client = localClient;
+  localClient.setRequestHandler(ListRootsRequestSchema, async () => ({ roots: [] }));
+  localClient.onclose = () => {
+    if (client === localClient) {
+      client = undefined;
+      transport = undefined;
+      childTools = [];
+      boundProject = null;
+    }
+  };
   try {
-    transport = new StdioClientTransport({
-      command: process.execPath,
-      args: [wrapperPath()],
-      cwd: REPO_ROOT,
-      env: childEnvironment(),
-      stderr: "inherit",
-    });
-    // CodeGenie asks its parent for roots during initialization. The unified
-    // gateway manages project context explicitly through switch_cwd, so return
-    // an empty roots list instead of letting that optional request hang.
-    client = new Client(
-      { name: "deveco-tool-gateway", version: "0.1.0" },
-      { capabilities: { roots: { listChanged: false } } },
-    );
-    client.setRequestHandler(ListRootsRequestSchema, async () => ({ roots: [] }));
-    await withTimeout(
-      client.connect(transport),
-      HANDSHAKE_TIMEOUT_MS,
-      `CodeGenie MCP did not complete its handshake within ${HANDSHAKE_TIMEOUT_MS}ms`,
-    );
-    const result = await withTimeout(
-      client.listTools(),
-      HANDSHAKE_TIMEOUT_MS,
-      `CodeGenie MCP did not answer tools/list within ${HANDSHAKE_TIMEOUT_MS}ms`,
-    );
+    await withTimeout(localClient.connect(localTransport), HANDSHAKE_TIMEOUT_MS,
+      `CodeGenie MCP did not complete its handshake within ${HANDSHAKE_TIMEOUT_MS}ms`);
+    const result = await withTimeout(localClient.listTools(), HANDSHAKE_TIMEOUT_MS,
+      `CodeGenie MCP did not answer tools/list within ${HANDSHAKE_TIMEOUT_MS}ms`);
+    if (epoch !== generation || client !== localClient) throw new Error("CodeGenie startup was superseded by a restart");
     childTools = result.tools ?? [];
     return childTools;
   } catch (error) {
-    // Leave no half-connected client behind, so the next call starts clean.
-    await closeCodeGenie().catch(() => {});
+    await localTransport.close().catch(() => {});
+    if (client === localClient) {
+      client = undefined;
+      transport = undefined;
+      childTools = [];
+      boundProject = null;
+    }
     throw error;
   }
 }
@@ -114,7 +120,8 @@ async function handshake() {
 export async function ensureCodeGenie() {
   if (client && !starting) return childTools;
   if (!starting) {
-    starting = handshake().finally(() => { starting = null; });
+    const pending = handshake().finally(() => { if (starting === pending) starting = null; });
+    starting = pending;
   }
   return starting;
 }
@@ -126,7 +133,6 @@ export async function getCodeGenieTools() {
       return await ensureCodeGenie();
     } catch (error) {
       lastError = error;
-      await closeCodeGenie().catch(() => {});
       // Only a stall is worth another spawn; a missing package or a crash on
       // startup will fail exactly the same way the second time.
       if (error.code !== "CODEGENIE_TIMEOUT") break;
@@ -137,15 +143,24 @@ export async function getCodeGenieTools() {
   throw wrapped;
 }
 
-async function syncProjectPath() {
-  const projectPath = getProjectPath();
+async function syncProjectPath(activeClient, projectPath) {
   if (!projectPath || boundProject === projectPath) return;
   if (!childTools.some((tool) => tool.name === "init_project_path")) return;
-  await client.callTool(
+  // A rejected initialization may already have changed part of the child's
+  // state. Require a fresh bind even when the next call selects the old project.
+  boundProject = null;
+  const result = await activeClient.callTool(
     { name: "init_project_path", arguments: { project_path: projectPath } },
     undefined,
     { timeout: CALL_TIMEOUT_MS },
   );
+  if (result.isError) {
+    const detail = (result.content ?? []).filter((item) => item.type === "text").map((item) => item.text).join("\n");
+    const error = new Error(`CodeGenie rejected project ${projectPath}: ${detail}`);
+    error.code = "CODEGENIE_PROJECT_SYNC_FAILED";
+    throw error;
+  }
+  if (client !== activeClient) throw new Error("CodeGenie restarted while switching projects");
   boundProject = projectPath;
 }
 
@@ -160,7 +175,16 @@ function circuitRemainingMs() {
   return Math.max(0, CIRCUIT_COOLDOWN_MS - (Date.now() - circuitOpenedAt));
 }
 
-export async function callCodeGenieTool(name, args = {}) {
+// Binding and the dependent call are one transaction. Capture the requested
+// project before queuing; another switch must not redirect an in-flight request.
+export function callCodeGenieTool(name, args = {}) {
+  const projectPath = getProjectPath();
+  const pending = callQueue.then(() => callBoundTool(name, args, projectPath));
+  callQueue = pending.catch(() => {});
+  return pending;
+}
+
+async function callBoundTool(name, args, projectPath) {
   const cooling = circuitRemainingMs();
   if (cooling > 0) {
     const error = new Error(
@@ -176,9 +200,10 @@ export async function callCodeGenieTool(name, args = {}) {
   // a call is the first thing that starts it, so it needs the same retry-a-stalled-spawn
   // behaviour and the same CODEGENIE_UNAVAILABLE wrapper that tool discovery used to provide.
   await getCodeGenieTools();
-  await syncProjectPath();
+  const activeClient = client;
   try {
-    const result = await client.callTool({ name, arguments: args }, undefined, { timeout: CALL_TIMEOUT_MS });
+    await syncProjectPath(activeClient, projectPath);
+    const result = await activeClient.callTool({ name, arguments: args }, undefined, { timeout: CALL_TIMEOUT_MS });
     consecutiveTimeouts = 0;
     return result;
   } catch (error) {
@@ -188,7 +213,7 @@ export async function callCodeGenieTool(name, args = {}) {
     // tap twice. Tearing the child down is the recovery: the next call spawns a fresh one.
     consecutiveTimeouts += 1;
     if (consecutiveTimeouts === CIRCUIT_TRIP_AFTER) circuitOpenedAt = Date.now();
-    await closeCodeGenie().catch(() => {});
+    if (client === activeClient) await closeCodeGenie().catch(() => {});
     const wrapped = new Error(`CodeGenie MCP did not answer ${name} within ${CALL_TIMEOUT_MS}ms`);
     wrapped.code = "CODEGENIE_TIMEOUT";
     wrapped.hint = "The child has been torn down; the next call starts a fresh one. Nothing was retried,"
@@ -212,6 +237,7 @@ export function resetCodeGenieCircuit() {
 }
 
 export async function closeCodeGenie() {
+  generation += 1;
   const activeClient = client;
   const activeTransport = transport;
   client = undefined;
@@ -223,5 +249,21 @@ export async function closeCodeGenie() {
     await activeClient.close();
   } else if (activeTransport) {
     await activeTransport.close();
+  }
+}
+
+/** Doctor checks the running child, not a previously successful handshake. */
+export async function probeCodeGenieTools() {
+  await getCodeGenieTools();
+  const activeClient = client;
+  try {
+    const result = await withTimeout(activeClient.listTools(), HANDSHAKE_TIMEOUT_MS,
+      "CodeGenie MCP did not answer the doctor probe");
+    if (client !== activeClient) throw new Error("CodeGenie restarted during the doctor probe");
+    childTools = result.tools ?? [];
+    return childTools;
+  } catch (error) {
+    if (client === activeClient) await closeCodeGenie().catch(() => {});
+    throw error;
   }
 }

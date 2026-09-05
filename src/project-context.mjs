@@ -1,7 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
 
-let activeProject = null;
+// GUI MCP hosts commonly configure the initial project through the environment.
+// Keep it even if unavailable so doctor can diagnose it and file operations fail
+// at the configured location, instead of silently using the gateway repository.
+let activeProject = process.env.PROJECT_PATH?.trim() ? path.resolve(process.env.PROJECT_PATH) : null;
 
 const PROJECT_MARKERS = [
   "build-profile.json5",
@@ -43,9 +46,20 @@ export function setProjectPath(projectPath) {
 }
 
 export function getProjectContext() {
+  let issue;
+  if (activeProject) {
+    try {
+      if (!fs.statSync(activeProject).isDirectory() || !hasProjectMarker(activeProject)) {
+        issue = "The configured path is not recognized as a HarmonyOS project";
+      }
+    } catch (error) {
+      issue = error.message;
+    }
+  }
   return {
     projectPath: activeProject,
     projectSelected: Boolean(activeProject),
+    ...(issue ? { issue } : {}),
   };
 }
 

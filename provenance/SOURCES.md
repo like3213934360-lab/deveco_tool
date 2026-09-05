@@ -34,6 +34,13 @@ cd /path/to/deveco_tool
 shasum -a 256 -c provenance/deveco-code-v0.1.11.skills.sha256
 ```
 
+`src/script-adapters/` 是 MCP 的本地执行适配层，不改变上述官方文件摘要。
+`copy-template.mjs` 保留官方 Skill 的参数和结果格式，直接展开
+`@deveco/deveco-cli@1.3.1/templates/application`，避免其命令行入口对中文、空格目录的限制；
+模板展开、图标处理参照同版本 `dist/cli.js` 的 create 实现（MIT，Huawei Device Co., Ltd.）。
+`sdk.mjs` 共用网关的 Studio/CLT 路径和官方 API 映射；`runtime.mjs` 共用 HDC 执行器，
+修正设备失败判定、Faultlogger 命令参数及设备日历时间解析。代码中的许可声明随适配器保留。
+
 ## 旧版 DevEco Code 提取资产
 
 本仓库的 SDD 命令、模板，以及一部分 MCP 适配实现早于本次 Skill 同步，仍保留原有历史来源锁，

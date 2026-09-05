@@ -37,19 +37,22 @@ const CODEGENIE_SLOW_MS = 1000;
  */
 async function probeCodeGenie(loadTools) {
   const startedAt = Date.now();
+  let timer;
+  let failure;
   const tools = await Promise.race([
-    loadTools().catch(() => []),
+    loadTools().catch((error) => { failure = { code: error.code, message: error.message }; return []; }),
     new Promise((resolve) => {
-      setTimeout(() => resolve(null), CODEGENIE_PROBE_MS).unref();
+      timer = setTimeout(() => resolve(null), CODEGENIE_PROBE_MS);
+      timer.unref();
     }),
-  ]);
-  return { tools, elapsedMs: Date.now() - startedAt };
+  ]).finally(() => clearTimeout(timer));
+  return { tools, elapsedMs: Date.now() - startedAt, failure };
 }
 
 /**
  * Collect the full local environment report.
  * @param {{loadCodeGenieTools?: () => Promise<Array<{name: string}>>}} [options] Injection point for the
- *   CodeGenie loader, so the MCP server can reuse its own memoised one instead of spawning a second child.
+ *   CodeGenie loader, so diagnostics probe the gateway's current child.
  * @returns {Promise<object>} The report, shaped identically for both callers.
  */
 export async function collectDoctorReport(options = {}) {
@@ -68,6 +71,7 @@ export async function collectDoctorReport(options = {}) {
       advertised: PROXIED_CODEGENIE_TOOL_NAMES,
       available: probe === null ? "not probed" : proxied !== null && proxied.length > 0,
       toolCount: proxied === null ? null : proxied.length,
+      ...(probe?.failure ? { error: probe.failure } : {}),
       ...(probe === null ? {} : { handshakeMs: probe.elapsedMs }),
       ...(probe !== null && proxied === null
         ? { note: `child did not answer within ${CODEGENIE_PROBE_MS}ms; the proxied tools stay advertised and fail on call` }
@@ -80,6 +84,6 @@ export async function collectDoctorReport(options = {}) {
     devecoCli: devecoCliStatus(),
     lsp: lspStatus(),
     hdc: hdcStatus(),
-    auth: await authStatus(),
+    auth: await authStatus().catch((error) => ({ available: false, error: { code: error.code, message: error.message } })),
   };
 }

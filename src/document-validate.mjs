@@ -154,7 +154,7 @@ function normalizeSectionTitle(title) {
 class SddMarkdownParser {
   /** @param {string} content Full markdown document. */
   constructor(content) {
-    const normalized = content.replace(/\r\n?/g, "\n");
+    const normalized = content.replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n");
     this.lines = normalized.split("\n");
     this.codeFenceMask = this.buildCodeFenceMask(this.lines);
   }
@@ -189,10 +189,10 @@ class SddMarkdownParser {
     const stack = [];
     for (let i = 0; i < this.lines.length; i += 1) {
       if (this.codeFenceMask[i]) continue;
-      const match = this.lines[i].match(/^(#{1,6})\s+(.+)$/);
+      const match = this.lines[i].match(/^ {0,3}(#{1,6})[\t ]+(.+)$/);
       if (!match) continue;
       const level = match[1].length;
-      const title = match[2].trim();
+      const title = match[2].replace(/[\t ]+#+[\t ]*$/, "").trim();
       const section = {
         level,
         title,
@@ -254,7 +254,7 @@ function findDuplicateSections(sections) {
 
 function isAllowedLevel2Section(title, documentType, allowedSections) {
   // `tasks` carries a Phase heading per implementation stage, so those are allowed dynamically.
-  if (documentType === "tasks" && /^Phase /.test(title)) return true;
+  if (documentType === "tasks" && /^(?:Phase\s+|阶段\s*[\d一二三四五六七八九十百]+|第\s*[\d一二三四五六七八九十百]+\s*阶段)/i.test(title)) return true;
   return allowedSections.some((allowed) => matchesSectionTitle(title, allowed, 2));
 }
 

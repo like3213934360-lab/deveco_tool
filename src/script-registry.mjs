@@ -11,6 +11,7 @@ const SCRIPT_DEFINITIONS = {
   copy_template: {
     skill: "deveco-create-project",
     file: "scripts/copy-template.mjs",
+    adapterFile: "src/script-adapters/copy-template.mjs",
     description: "Copy the bundled ArkTS project template and resolve its SDK metadata.",
   },
   detect_sdk: {
@@ -22,16 +23,22 @@ const SCRIPT_DEFINITIONS = {
   collect_hilog: {
     skill: "arkts-runtime-fix",
     file: "scripts/collect-hilog.mjs",
+    adapterFile: "src/script-adapters/runtime.mjs",
+    adapterArgs: ["collect_hilog"],
     description: "Collect a bounded HILOG snapshot from a connected HarmonyOS device.",
   },
   fetch_faultlog: {
     skill: "arkts-runtime-fix",
     file: "scripts/fetch-faultlog.mjs",
+    adapterFile: "src/script-adapters/runtime.mjs",
+    adapterArgs: ["fetch_faultlog"],
     description: "Fetch a named faultlogger file from a connected HarmonyOS device.",
   },
   jscrash_report: {
     skill: "arkts-runtime-fix",
     file: "scripts/jscrash-report.mjs",
+    adapterFile: "src/script-adapters/runtime.mjs",
+    adapterArgs: ["jscrash_report"],
     description: "Collect or analyze a JS crash report and produce structured diagnostics.",
   },
   parse_jscrash_log: {
@@ -42,6 +49,8 @@ const SCRIPT_DEFINITIONS = {
   probe_faultlogger: {
     skill: "arkts-runtime-fix",
     file: "scripts/probe-faultlogger.mjs",
+    adapterFile: "src/script-adapters/runtime.mjs",
+    adapterArgs: ["probe_faultlogger"],
     description: "Probe recent faultlogger entries on a connected HarmonyOS device.",
   },
 };
@@ -161,7 +170,7 @@ export function listScripts() {
   return Object.entries(SCRIPT_DEFINITIONS).map(([id, definition]) => ({
     id,
     skill: definition.skill,
-    file: path.relative(REPO_ROOT, scriptPath(definition)),
+    file: path.relative(REPO_ROOT, scriptPath(definition)).split(path.sep).join("/"),
     runtime: definition.runtime ?? "node",
     description: definition.description,
   }));
@@ -234,7 +243,7 @@ function inputOption(input, flag, property) {
   return "";
 }
 
-function crashLogText(input) {
+function crashLogText(input, cwd) {
   const inline = inputOption(input, "--log-text", "logText");
   if (inline) return inline;
 
@@ -243,7 +252,7 @@ function crashLogText(input) {
   try {
     const resolved = path.isAbsolute(file)
       ? file
-      : path.resolve(getProjectPath() ?? REPO_ROOT, file);
+      : path.resolve(cwd, file);
     const stats = fs.statSync(resolved);
     if (!stats.isFile() || stats.size > 4 * 1024 * 1024) return "";
     return fs.readFileSync(resolved, "utf8");
@@ -255,13 +264,13 @@ function crashLogText(input) {
 // DevEco Code v0.1.11's crash parser sometimes promotes "Error name" (or even the final
 // unrelated hilog line) to error_message. Keep the official source byte-for-byte intact and
 // normalize only the MCP result contract that existing callers already depend on.
-function normalizeParsedResult(id, input, parsed) {
+function normalizeParsedResult(id, input, parsed, cwd) {
   if (!parsed || !["parse_jscrash_log", "jscrash_report"].includes(id)) return parsed;
   if (parsed.status === "no_crash_signature") {
     return { ...parsed, error_message: "(not found)" };
   }
 
-  const declared = /^\s*Error\s+message\s*[:：]\s*(.+?)\s*$/im.exec(crashLogText(input))?.[1];
+  const declared = /^\s*Error\s+message\s*[:：]\s*(.+?)\s*$/im.exec(crashLogText(input, cwd))?.[1];
   return declared ? { ...parsed, error_message: declared } : parsed;
 }
 
@@ -279,6 +288,7 @@ export function classifyScriptCompletion({ exitCode, stdout }) {
 }
 
 export async function runRegisteredScript(id, input = {}) {
+  const cwd = getProjectPath() ?? REPO_ROOT;
   const definition = SCRIPT_DEFINITIONS[id];
   if (!definition) {
     const error = new Error(`Unknown registered script: ${id}`);
@@ -310,7 +320,7 @@ export async function runRegisteredScript(id, input = {}) {
   const toolchain = resolveDevecoToolchain();
   const childEnv = registeredScriptEnvironment(process.env, toolchain);
   if (devecoHome) childEnv.DEVECO_HOME = devecoHome;
-  if (toolchain.paths?.sdk) childEnv.DEVECO_SDK_HOME = toolchain.paths.sdk;
+  if (!childEnv.DEVECO_SDK_HOME && toolchain.paths?.sdk) childEnv.DEVECO_SDK_HOME = toolchain.paths.sdk;
 
   const runtime = definition.runtime ?? "node";
   let command = process.execPath;
@@ -328,8 +338,8 @@ export async function runRegisteredScript(id, input = {}) {
   }
 
   const result = await new Promise((resolve, reject) => {
-    const child = spawn(command, [file, ...argv], {
-      cwd: getProjectPath() ?? REPO_ROOT,
+    const child = spawn(command, [file, ...(definition.adapterArgs ?? []), ...argv], {
+      cwd,
       env: childEnv,
       stdio: ["ignore", "pipe", "pipe"],
       // Own process group. Several registered scripts shell out to hvigor, ohpm or hdc, and
@@ -389,7 +399,7 @@ export async function runRegisteredScript(id, input = {}) {
   });
 
   const completion = classifyScriptCompletion(result);
-  const parsed = normalizeParsedResult(id, input, parseScriptOutput(result.stdout));
+  const parsed = normalizeParsedResult(id, input, parseScriptOutput(result.stdout), cwd);
 
   return {
     script: id,
@@ -398,7 +408,7 @@ export async function runRegisteredScript(id, input = {}) {
     ...(definition.adapterFile ? { adapter: path.relative(REPO_ROOT, file) } : {}),
     runtime,
     argv,
-    cwd: getProjectPath() ?? REPO_ROOT,
+    cwd,
     exitCode: result.exitCode,
     signal: result.signal,
     ok: completion.ok,

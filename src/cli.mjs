@@ -9,12 +9,16 @@ if (command === "doctor") {
   // the child costs a spawn, and the CLI is often run just to check the local toolchain.
   const { collectDoctorReport } = await import("./doctor.mjs");
   const probe = process.argv.includes("--probe-codegenie");
-  const { getCodeGenieTools } = probe ? await import("./codegenie-client.mjs") : {};
-  console.log(JSON.stringify(
-    await collectDoctorReport(probe ? { loadCodeGenieTools: getCodeGenieTools } : {}),
-    null,
-    2,
-  ));
+  const { probeCodeGenieTools, closeCodeGenie } = probe ? await import("./codegenie-client.mjs") : {};
+  try {
+    console.log(JSON.stringify(
+      await collectDoctorReport(probe ? { loadCodeGenieTools: probeCodeGenieTools } : {}),
+      null,
+      2,
+    ));
+  } finally {
+    if (probe) await closeCodeGenie();
+  }
   process.exit(0);
 }
 

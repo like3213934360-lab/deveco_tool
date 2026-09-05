@@ -29,7 +29,7 @@ export const SIGKILL_GRACE_MS = 2000;
  *
  * @param {import("node:child_process").ChildProcess} child The spawned child.
  * @param {number} [graceMs] How long to wait between SIGTERM and SIGKILL.
- * @returns {() => void} Cancels the pending escalation; called automatically once the child exits.
+ * @returns {() => void} Cancels the pending escalation.
  */
 export function terminateProcessTree(child, graceMs = SIGKILL_GRACE_MS) {
   if (!child?.pid) return () => {};
@@ -43,16 +43,17 @@ export function terminateProcessTree(child, graceMs = SIGKILL_GRACE_MS) {
           stdio: "ignore",
           windowsHide: true,
         });
+        killer.once("error", () => { try { child.kill(); } catch { /* already exited */ } });
         killer.unref();
       } catch {
         try { child.kill(); } catch { /* already exited */ }
       }
     };
-    taskkill(false);
+    // Kill the tree before its root can exit and make descendants undiscoverable.
+    taskkill(true);
     const escalation = setTimeout(() => taskkill(true), graceMs);
     escalation.unref();
     const cancel = () => clearTimeout(escalation);
-    child.once("close", cancel);
     return cancel;
   }
 
@@ -71,6 +72,7 @@ export function terminateProcessTree(child, graceMs = SIGKILL_GRACE_MS) {
   const escalation = setTimeout(() => signalGroup("SIGKILL"), graceMs);
   escalation.unref();
   const cancel = () => clearTimeout(escalation);
-  child.once("close", cancel);
+  // The group can outlive its leader (including descendants with redirected
+  // stdio). Do not cancel escalation just because the direct child has closed.
   return cancel;
 }

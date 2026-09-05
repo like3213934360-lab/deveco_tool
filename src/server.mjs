@@ -8,7 +8,7 @@ import {
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import {
-  callCodeGenieTool, closeCodeGenie, getCodeGenieTools, resetCodeGenieCircuit,
+  callCodeGenieTool, closeCodeGenie, probeCodeGenieTools, resetCodeGenieCircuit,
 } from "./codegenie-client.mjs";
 import { PROXIED_CODEGENIE_TOOLS, PROXIED_CODEGENIE_TOOL_NAMES } from "./codegenie-tools.mjs";
 import { collectDoctorReport } from "./doctor.mjs";
@@ -79,25 +79,6 @@ for (const tool of PROXIED_CODEGENIE_TOOLS) {
   if (LOCAL_OVERRIDE_TOOLS.includes(tool.name) || DISABLED_CODEGENIE_TOOLS.includes(tool.name)) {
     throw new Error(`${tool.name} is proxied to CodeGenie but is also overridden or disabled locally`);
   }
-}
-
-// Resolving the CodeGenie child is deliberately not awaited during startup.
-// Its handshake intermittently never completes, and awaiting it here meant the
-// gateway never reached server.connect(), so the whole MCP silently failed to
-// answer `initialize` -- taking every local tool down with a child process that
-// only five tools need. Handlers await this instead, and a failed attempt is
-// forgotten so the next request can retry.
-let codegenieToolsPromise = null;
-
-function codegenieTools() {
-  if (!codegenieToolsPromise) {
-    codegenieToolsPromise = getCodeGenieTools().catch((error) => {
-      console.error(`[deveco-tool] ${error.code}: ${error.message}`);
-      codegenieToolsPromise = null;
-      return [];
-    });
-  }
-  return codegenieToolsPromise;
 }
 
 const commonTimeout = { type: "integer", minimum: 1000, maximum: 3600000 };
@@ -1127,9 +1108,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     }
 
     if (name === "deveco_doctor") {
-      // Same report the CLI renders; the memoised loader is passed in so the probe reuses the
-      // child this process already started rather than spawning a second one.
-      return textResult(await collectDoctorReport({ loadCodeGenieTools: codegenieTools }));
+      // Probe this process's current child; a successful earlier handshake can go stale.
+      return textResult(await collectDoctorReport({ loadCodeGenieTools: probeCodeGenieTools }));
     }
 
     if (name === "arkts_knowledge_search") {

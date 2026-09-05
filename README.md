@@ -217,6 +217,13 @@ ArkTS LSP 只封装当前官方服务真实声明的 `definitionProvider`、`ref
 | `parse_jscrash_log` | 分析本地文件或内联 JS crash 文本 | 无 |
 | `probe_faultlogger` | 探测设备最近的 faultlogger 条目 | HDC 设备 |
 
+MCP 通过 `src/script-adapters/` 适配执行，官方 Skill 文件保持原始校验值。
+`copy_template` 直接展开依赖包自带模板，支持含中文、空格的目标目录，无需全局安装 `devecocli`。
+创建成功不代表构建器支持该目录：Hvigor 会拒绝中文、`&` 等路径字符；需要构建时请使用其允许的目录名称。
+设备脚本共用网关的 `HDC_PATH` 和 Studio/CLT 解析；同时连接多个设备时须指定 `deviceId`。
+`probe_faultlogger` 严格按包名、设备时钟与时间窗口筛选；无匹配时返回 `not_found`，
+设备或探测命令失败时返回 `probe_failed`。`maxAgeMinutes: 0` 表示查询全部历史记录。
+
 示例：
 
 ```json
@@ -302,6 +309,16 @@ node scripts/install-host.mjs --host all
 npm test
 npm run test:flow:unit
 ```
+
+项目、脚本和服务管理的回归检查：
+
+```bash
+node --test --test-concurrency=1 test/management.test.mjs test/document-validate.test.mjs
+```
+
+CI 在 Linux 上运行全量测试，在 macOS、Windows 上运行上述管理工具测试（Node 22/24）。
+模拟 HDC 可执行文件的用例仅在 POSIX 主机运行；Windows 真机仍需对应 SDK 的 HDC。
+跨平台支持以相应系统有可用的 DevEco SDK、HDC、官方后台二进制为前提。
 
 连接测试设备后运行真机 canary：
 

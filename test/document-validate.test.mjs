@@ -3,9 +3,10 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 import { validateDocument } from "../src/document-validate.mjs";
 
-const PACK_ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
+const PACK_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 /** A spec that satisfies every rule, used as the base for the negative cases. */
 const VALID_SPEC = `# Feature Specification: Demo
@@ -34,6 +35,20 @@ text
 
 text
 `;
+
+test("BOM, Windows newlines, and ATX closing markers preserve valid headings", () => {
+  const content = "\uFEFF" + VALID_SPEC.replace(/^(#+ .+)$/gm, "  $1 ###").replace(/\n/g, "\r\n");
+  assert.equal(validateDocument({ documentType: "spec", content }).valid, true);
+});
+
+test("translated implementation phases are allowed in Chinese tasks", async () => {
+  const template = await fs.readFile(path.join(PACK_ROOT, "templates/tasks-template.md"), "utf8");
+  for (const replacement of ["阶段 $1", "第 $1 阶段"]) {
+    const content = template.replace(/Phase (\d+)/g, replacement);
+    const result = validateDocument({ documentType: "tasks", content });
+    assert.equal(result.valid, true, result.report);
+  }
+});
 
 test("the bundled templates satisfy the section rules they are validated against", async () => {
   // This pins both ends at once: the ported rule table and the three templates this pack ships.

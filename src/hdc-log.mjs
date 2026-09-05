@@ -26,16 +26,16 @@ export function withHdcCommandObserver(observer, task) {
  *
  * @param {string[]} command Full argv.
  * @param {number} timeoutMs Deadline for the call.
- * @param {{resolveOnTimeout?: boolean, signal?: AbortSignal}} [options] Deadline behaviour.
+ * @param {{resolveOnTimeout?: boolean, signal?: AbortSignal, detached?: boolean}} [options] Deadline and process-group behaviour.
  * @returns {Promise<{stdout: string, stderr: string, exitCode: number|null, signal: string|null, timedOut?: boolean}>} Result.
  */
-function run(command, timeoutMs = 120000, { resolveOnTimeout = false, signal: abortSignal } = {}) {
+function run(command, timeoutMs = 120000, { resolveOnTimeout = false, signal: abortSignal, detached = process.platform !== "win32" } = {}) {
   hdcCommandObserver.getStore()?.(command);
   return new Promise((resolve, reject) => {
     const child = spawn(command[0], command.slice(1), {
       stdio: ["ignore", "pipe", "pipe"],
       env: process.env,
-      detached: process.platform !== "win32",
+      detached,
     });
     let stdout = "";
     let stderr = "";
@@ -155,11 +155,11 @@ function assertHdcSuccess(result, operation) {
 // was even issued.
 const LIST_TARGETS_TIMEOUT_MS = 30000;
 
-async function listConnectedDevices(hdc, { timeoutMs = LIST_TARGETS_TIMEOUT_MS, signal } = {}) {
+async function listConnectedDevices(hdc, { timeoutMs = LIST_TARGETS_TIMEOUT_MS, signal, detached } = {}) {
   const result = await run(
     [hdc, "list", "targets"],
     Math.min(Math.max(Number(timeoutMs) || LIST_TARGETS_TIMEOUT_MS, 1000), LIST_TARGETS_TIMEOUT_MS),
-    { signal },
+    { signal, detached },
   );
   assertHdcSuccess(result, "hdc list targets");
   return cleanLines(result.stdout).filter((item) => !item.includes("[Empty]"));
@@ -244,13 +244,13 @@ export async function hdcLog({
   log_prefix: prefix = "[VCODER_DEBUG]",
   lines = 2000,
   timeoutMs,
-} = {}) {
+} = {}, processOptions = {}) {
   if (!["collect", "clear", "list_devices"].includes(action)) {
     fail("action must be collect, clear, or list_devices", "HDC_ACTION_INVALID");
   }
   const hdc = requireHdc();
   if (action === "list_devices") {
-    const devices = await listConnectedDevices(hdc);
+    const devices = await listConnectedDevices(hdc, processOptions);
     return {
       action,
       deviceCount: devices.length,
@@ -259,15 +259,15 @@ export async function hdcLog({
     };
   }
 
-  const selectedDevice = await resolveDevice(hdc, deviceId);
+  const selectedDevice = await resolveDevice(hdc, deviceId, processOptions);
 
   if (action === "clear") {
-    const result = await run([hdc, ...targetArgs(selectedDevice), "shell", "hilog", "-r"]);
+    const result = await run([hdc, ...targetArgs(selectedDevice), "shell", "hilog", "-r"], undefined, processOptions);
     assertHdcSuccess(result, "hdc hilog -r");
     return { action, deviceId: selectedDevice, cleared: true, output: "Device log buffer cleared." };
   }
 
-  const limit = Math.min(Math.max(Number(lines) || 2000, 1), 5000);
+  const limit = Math.min(Math.max(Number(lines) || 2000, 1), 10000);
   const budget = Math.min(
     Math.max(Number(timeoutMs) || DEFAULT_COLLECT_TIMEOUT_MS, MIN_COLLECT_TIMEOUT_MS),
     MAX_COLLECT_TIMEOUT_MS,
@@ -290,7 +290,7 @@ export async function hdcLog({
 
   const startedAt = Date.now();
   let deviceFiltered = filteredCommand !== null;
-  let result = await run(filteredCommand ?? plainCommand, budget, { resolveOnTimeout: true });
+  let result = await run(filteredCommand ?? plainCommand, budget, { ...processOptions, resolveOnTimeout: true });
   let all = cleanLines(result.stdout);
   if (!result.timedOut) {
     assertHdcSuccess(result, "hdc hilog");
@@ -305,7 +305,7 @@ export async function hdcLog({
         fail(`hdc hilog failed: ${diagnostic}`, "HDC_HILOG_ERROR");
       }
       deviceFiltered = false;
-      result = await run(plainCommand, remaining, { resolveOnTimeout: true });
+      result = await run(plainCommand, remaining, { ...processOptions, resolveOnTimeout: true });
       all = cleanLines(result.stdout);
       if (!result.timedOut) {
         assertHdcSuccess(result, "hdc hilog -x");
