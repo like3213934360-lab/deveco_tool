@@ -89,7 +89,7 @@ function runNode(argv, cwd, timeoutMs, env) {
   });
 }
 
-export async function runArktsCheck({ files = [], project_path: explicitProject, timeoutMs } = {}) {
+export async function runArktsCheck({ files = [], project_path: explicitProject, product, timeoutMs } = {}) {
   if (!fs.existsSync(CHECKER)) {
     const error = new Error(`ArkTS checker is missing: ${CHECKER}`);
     error.code = "ARKTS_CHECKER_NOT_FOUND";
@@ -145,6 +145,7 @@ export async function runArktsCheck({ files = [], project_path: explicitProject,
   }
 
   const argv = [CHECKER, "--project", project, "--files", ...targets];
+  if (product !== undefined) argv.push("--product", product);
   const requested = Number(timeoutMs);
   const fallbackTimeout = scan ? 600000 : 180000;
   const boundedTimeout = Math.min(

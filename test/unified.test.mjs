@@ -1309,6 +1309,7 @@ test("apply_changes scopes the CLI apply manifest to exactly one Entry module", 
   const project = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-cli-project-"));
   const entry = path.join(directory, "fake-cli.mjs");
   const log = path.join(directory, "apply.json");
+  await writeRunnableModules(project, ["entry"]);
   await fs.mkdir(path.join(project, "entry", "src"), { recursive: true });
   await fs.writeFile(path.join(project, "entry", "src", "Main.ets"), "@Entry struct Main {}\n");
   await fs.writeFile(entry, [
@@ -1380,6 +1381,7 @@ test("apply_changes relaunches the same selected module after a failed apply", a
   const project = await fs.mkdtemp(path.join(os.tmpdir(), "deveco-cli-project-"));
   const entry = path.join(directory, "fake-cli.mjs");
   const argvLog = path.join(directory, "argv.log");
+  await writeRunnableModules(project, ["entry"]);
   await fs.mkdir(path.join(project, "entry", "src"), { recursive: true });
   await fs.writeFile(path.join(project, "entry", "src", "Main.ets"), "@Entry struct Main {}\n");
   await fs.writeFile(entry, [
@@ -2272,6 +2274,12 @@ async function makeUiHdc({
     "  *dumpLayout*) printf 'DumpLayout saved to:/d/x.json\\n' ;;",
     "  *uiInput*) printf 'No Error\\n' ;;",
     `  *"file recv"*) ${recv} ;;`,
+    "  *\"shell uname -m\"*) printf 'aarch64\\n' ;;",
+    "  *\"file send\"*) printf 'FileTransfer finish\\n' ;;",
+    "  *\"uitest --version\"*) printf '7.0.0.1\\n' ;;",
+    "  *DEVECO_TEXT_READY*) printf 'DEVECO_TEXT_READY\\n' ;;",
+    "  *\"fport rm\"*) printf 'Forwardport result:OK\\n' ;;",
+    `  *\"fport tcp:\"*) '${process.execPath.replace(/'/g, "'\\''")}' '${path.join(REPO_ROOT,"test/fixtures/text-agent.mjs").replace(/'/g, "'\\''")}' start "$4" ;;`,
     "esac",
   ].join("\n");
   const executable = path.join(directory, "hdc");
@@ -2443,68 +2451,27 @@ test("perform_ui_action uses the local HDC fast path and keeps default screensho
   assert.ok((await fake.argv()).some((line) => line.includes("uiInput click 45 67")));
 });
 
-test("perform_ui_action delegates only text that HDC cannot quote safely", async (t) => {
+test("perform_ui_action transports special text locally without starting CodeGenie", async (t) => {
   const fake = await makeUiHdc();
-  const childLog = path.join(fake.directory, "codegenie-call.json");
+  const marker = path.join(fake.directory, "codegenie-started");
   const child = path.join(fake.directory, "codegenie-input.mjs");
-  await fs.writeFile(child, `
-import fs from "node:fs";
-let buffer = "";
-process.stdin.on("data", (chunk) => {
-  buffer += chunk;
-  let index;
-  while ((index = buffer.indexOf("\\n")) >= 0) {
-    const line = buffer.slice(0, index).trim();
-    buffer = buffer.slice(index + 1);
-    if (!line) continue;
-    let message;
-    try { message = JSON.parse(line); } catch { continue; }
-    if (message.id === undefined) continue;
-    const reply = (result) => process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id: message.id, result }) + "\\n");
-    if (message.method === "initialize") {
-      reply({ protocolVersion: "2024-11-05", capabilities: { tools: {} }, serverInfo: { name: "input-stub", version: "0" } });
-    } else if (message.method === "tools/list") {
-      reply({ tools: [{ name: "perform_ui_action", description: "stub", inputSchema: { type: "object" } }] });
-    } else if (message.method === "tools/call") {
-      fs.writeFileSync(${JSON.stringify(childLog)}, JSON.stringify(message.params.arguments));
-      reply({ content: [{ type: "text", text: JSON.stringify({ backend: "codegenie", accepted: true }) }] });
-    }
-  }
-});
-setInterval(() => {}, 1000);
-`);
-
+  await fs.writeFile(child, `import fs from "node:fs"; fs.writeFileSync(${JSON.stringify(marker)}, "started");`);
   const transport = new StdioClientTransport({
-    command: process.execPath,
-    args: ["src/server.mjs"],
-    cwd: REPO_ROOT,
-    env: {
-      ...process.env,
-      HDC_PATH: fake.executable,
-      DEVECO_CODEGENIE_ENTRY: child,
-    },
-    stderr: "ignore",
+    command: process.execPath, args: ["src/server.mjs"], cwd: REPO_ROOT,
+    env: { ...process.env, HDC_PATH: fake.executable, DEVECO_CODEGENIE_ENTRY: child }, stderr: "ignore",
   });
   const client = new Client({ name: "deveco-ui-input-compat-test", version: "0.1.0" });
-  t.after(async () => {
-    await transport.close();
-    await fs.rm(fake.directory, { recursive: true, force: true });
-  });
+  t.after(async () => { await transport.close(); await fs.rm(fake.directory, { recursive: true, force: true }); });
   await client.connect(transport);
-
   const result = await client.callTool({
-    name: "perform_ui_action",
-    arguments: { actionType: "inputText", x: 5, y: 6, text: "$HOME value" },
+    name: "perform_ui_action", arguments: { actionType: "inputText", x: 5, y: 6, text: "$HOME value" },
   });
   assert.notEqual(result.isError, true);
-  assert.deepEqual(JSON.parse(await fs.readFile(childLog, "utf8")), {
-    actionType: "inputText", x: 5, y: 6, text: "$HOME value",
-  });
-  assert.equal(
-    (await fake.argv()).some((line) => line.includes("uiInput")),
-    false,
-    "the rejected local transport must not send the input before delegating",
-  );
+  assert.equal(JSON.parse(result.content[0].text).backend, "hdc-shell");
+  assert.equal(fsSync.existsSync(marker), false);
+  assert.equal(JSON.parse(result.content[0].text).method, "uitest-forced-paste");
+  assert.ok((await fake.argv()).some(line => line.includes("fport tcp:")));
+  assert.ok((await fake.argv()).every(line => !line.includes("$HOME")));
 });
 
 test("the display size is learned once and reused by later processes", async (t) => {
@@ -3080,7 +3047,7 @@ test("ui_tap builds the uiInput command for each action", async (t) => {
     assert.match((await uiTap({ action: "drag", x: 1, y: 2, x2: 3, y2: 4, velocity: 400 })).sent, /uiInput drag 1 2 3 4 400$/);
     assert.match((await uiTap({ action: "dircFling", direction: 3 })).sent, /uiInput dircFling 3$/);
     assert.match((await uiTap({ action: "keyEvent", key1: "Back" })).sent, /uiInput keyEvent Back$/);
-    assert.match((await uiTap({ action: "inputText", x: 5, y: 6, text: "BMI" })).sent, /uiInput inputText 5 6 'BMI'$/);
+    assert.match((await uiTap({ action: "inputText", x: 5, y: 6, text: "BMI" })).sent, /Driver.inputText 5 6 \(paste\)$/);
   });
 });
 
@@ -3144,53 +3111,12 @@ test("ui_tap maps screen percentages when a custom control is absent from the UI
   );
 });
 
-test("ui_tap quotes whitespace-free text instead of restricting which characters it may contain", async (t) => {
-  // Measured on a real device. hdc forwards an argument with no whitespace untouched, so a
-  // single-quoted form is unquoted once by the device shell and everything inside arrives literally:
-  // `id` printed the backticks rather than a uid, $HOME and ~ stayed unexpanded, and (b) no longer
-  // raised the `/bin/sh: syntax error: unexpected '('` that the previous allowlist walked straight
-  // into by permitting parentheses.
+test("ui_tap refuses control characters and invalid keys before device input", async (t) => {
   const fake = await makeUiHdc();
   t.after(async () => await fs.rm(fake.directory, { recursive: true, force: true }));
 
   await withHdcPath(fake.executable, async () => {
-    const cases = [
-      ["BMI", "'BMI'"],
-      ["`id`", "'`id`'"],
-      ["$HOME", "'$HOME'"],
-      ["a(b)c", "'a(b)c'"],
-      ["a;echo", "'a;echo'"],
-      ['a"b', `'a"b'`],
-      ["a?b", "'a?b'"],
-      // The old allowlist was letters/marks/digits plus an ASCII punctuation set, so it rejected
-      // every CJK punctuation mark: `，` is none of \p{L}, \p{M}, \p{N}.
-      ["你好，世界。", "'你好，世界。'"],
-      // Close, escape, reopen -- and still no whitespace, so it stays in the regime that protects it.
-      ["it's", `'it'\\''s'`],
-    ];
-    for (const [text, expected] of cases) {
-      const report = await uiTap({ action: "inputText", x: 1, y: 1, text });
-      assert.equal(report.sent, `uitest uiInput inputText 1 1 ${expected}`, `text: ${text}`);
-    }
-
-    // With whitespace, hdc wraps the argument in double quotes of its own. That already neutralises
-    // parentheses, globs, # and ;, so the text passes through unquoted by us.
-    assert.equal(
-      (await uiTap({ action: "inputText", x: 1, y: 1, text: "hello world 你好，再见" })).sent,
-      "uitest uiInput inputText 1 1 hello world 你好，再见",
-    );
-  });
-});
-
-test("ui_tap refuses text and keys the device shell would still expand", async (t) => {
-  // The four that survive hdc's own double quotes, all confirmed live on a real device: $HOME
-  // expanded to /root, a backtick ran id, a backslash was consumed, and a double quote closed the
-  // wrapper outright -- `a" ; id ; "b` executed id. perform_ui_action stays available for these.
-  const fake = await makeUiHdc();
-  t.after(async () => await fs.rm(fake.directory, { recursive: true, force: true }));
-
-  await withHdcPath(fake.executable, async () => {
-    for (const text of ["$HOME y", "`id` x", 'a" ; id ; "b', "a\\b c", "line\nbreak"]) {
+    for (const text of ["nul\0text", "bell\x07", "\ud800", "\x7f"]) {
       await assert.rejects(
         () => uiTap({ action: "inputText", x: 1, y: 1, text }),
         (error) => error.code === "UI_ARGS_INVALID",
@@ -3527,20 +3453,25 @@ test("ui_observe falls back to separate calls when the device cannot archive", a
 
 test("ui_observe reports a dump failure inside the archive rather than a plausible empty tree", async (t) => {
   const pid = process.pid;
-  const archive = buildTar([
-    [`deveco_ui_${pid}_obs_snap.jpeg`, Buffer.concat([Buffer.from([0xff, 0xd8]), Buffer.alloc(1024, 0x41)])],
-    [`deveco_ui_${pid}_obs_dump.json`, "dump layout failed: no permission"],
-    [`deveco_ui_${pid}_obs_snap.log`, SNAPSHOT_OK_TEXT],
-    [`deveco_ui_${pid}_obs_dump.log`, "DumpLayout failed:Wait for subscribe uitest.broadcast.command.reply timeout\n"],
-  ], { magic: "ustar ", version: " \0" });
-  const fake = await makeObserveHdc(t, { archive });
+  for (const [output, code] of [
+    ["DumpLayout failed:Wait for subscribe uitest.broadcast.command.reply timeout", "UI_DEVICE_BUSY"],
+    ["DumpLayout failed:Get window nodes failed", "UI_TREE_UNAVAILABLE"],
+    ["DumpLayout failed:permission denied", "UI_DUMP_FAILED"],
+  ]) {
+    const archive = buildTar([
+      [`deveco_ui_${pid}_obs_snap.jpeg`, Buffer.concat([Buffer.from([0xff, 0xd8]), Buffer.alloc(1024, 0x41)])],
+      [`deveco_ui_${pid}_obs_dump.json`, "dump layout failed: no permission"],
+      [`deveco_ui_${pid}_obs_snap.log`, SNAPSHOT_OK_TEXT],
+      [`deveco_ui_${pid}_obs_dump.log`, `${output}\n`],
+    ], { magic: "ustar ", version: " \0" });
+    const fake = await makeObserveHdc(t, { archive });
 
-  // The archive step succeeds even when the commands inside it failed, so the logs are the only
-  // proof either did anything. Losing the device to another uitest client is called out by name.
-  await assert.rejects(
-    () => withHdcPath(fake.executable, () => uiObserve({})),
-    (error) => error.code === "UI_DEVICE_BUSY" && /DevEco Studio/.test(error.hint),
-  );
+    // Archive success alone does not prove that dumpLayout succeeded.
+    await assert.rejects(
+      () => withHdcPath(fake.executable, () => uiObserve({})),
+      (error) => error.code === code,
+    );
+  }
 });
 
 test("a uitest client stealing the device is named, not left as a puzzling timeout", async (t) => {

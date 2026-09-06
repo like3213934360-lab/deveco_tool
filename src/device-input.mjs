@@ -23,58 +23,6 @@ export const TAP_ACTIONS = new Set([
 export const POINT_ACTIONS = new Set(["click", "doubleClick", "longClick"]);
 export const RECT_GESTURE_ACTIONS = new Set(["swipe", "fling", "drag"]);
 
-/**
- * `hdc shell a b c` joins its arguments into one command line and wraps any argument containing
- * whitespace in double quotes of its own, so what the device shell finally parses depends on
- * whether the text has a space in it. Both regimes were measured on a real device:
- *
- *   - No whitespace: the argument is passed through untouched, so a single-quoted form is unquoted
- *     by the device shell exactly once and everything inside arrives literally. Backtick, $, ~, ;,
- *     |, >, ", parentheses and globs were each confirmed inert this way.
- *   - Whitespace: hdc's own double quotes already make parentheses, globs, #, ~ and ; inert, but
- *     $, a backtick and a backslash stay live inside them, and a double quote closes the wrapper
- *     outright -- `a" ; id ; "b` ran id. Our own quoting cannot help in this regime: it lands
- *     inside hdc's quotes and reaches the input field as literal characters nobody typed.
- *
- * Hence: quote whatever has no whitespace and accept it whatever it contains, and screen the rest
- * for exactly the four characters that survive. This replaced an allowlist of permitted characters,
- * which had the two failures such a list tends to have -- it passed `(` and `)`, which are a hard
- * `/bin/sh: syntax error` in the first regime, and it rejected every CJK punctuation mark, since
- * `，` and `。` are in neither \p{L}, \p{M} nor \p{N}.
- *
- * `test/device-canary.test.mjs` pins both regimes against a real device, because this is a
- * measurement of someone else's binary and an SDK upgrade could quietly invalidate it.
- */
-const ACTIVE_INSIDE_HDC_QUOTES = /["$`\\]/;
-
-/** uiInput cannot type these, and a newline would end the command line hdc builds. */
-const CONTROL_CHARACTERS = new RegExp("[\\u0000-\\u001f\\u007f]");
-
-/**
- * Render text as one argv element that reaches `uitest uiInput` unchanged.
- *
- * @param {string} text Text the caller wants typed.
- * @returns {string} The argument to pass, quoted where quoting is what protects it.
- */
-export function deviceTextArgument(text) {
-  if (CONTROL_CHARACTERS.test(text)) {
-    fail("text may not contain control characters", "UI_ARGS_INVALID");
-  }
-  if (!/\s/.test(text)) {
-    // The standard sh idiom for a single quote inside a single-quoted string: close, escape, reopen.
-    // It introduces no whitespace, so the result stays in the regime where quoting works at all.
-    return `'${text.split("'").join("'\\''")}'`;
-  }
-  if (ACTIVE_INSIDE_HDC_QUOTES.test(text)) {
-    fail(
-      "text mixes whitespace with a character the device shell still expands inside hdc's quoting",
-      "UI_ARGS_INVALID",
-      'Remove the " $ ` or \\, remove the spaces, or use perform_ui_action for this text.',
-    );
-  }
-  return text;
-}
-
 function requireCoordinate(value, name) {
   const parsed = Number(value);
   if (!Number.isInteger(parsed) || parsed < 0) {
@@ -121,16 +69,7 @@ export function buildInputArgs(input) {
     }
     return args;
   }
-  if (action === "inputText") {
-    const text = typeof input.text === "string" ? input.text : "";
-    if (!text) fail("text is required for inputText", "UI_ARGS_INVALID");
-    return [
-      "inputText",
-      String(requireCoordinate(input.x, "x")),
-      String(requireCoordinate(input.y, "y")),
-      deviceTextArgument(text),
-    ];
-  }
+  if (action !== "keyEvent") fail(`Unsupported uiInput action: ${action}`, "UI_ARGS_INVALID");
   const keys = [input.key1, input.key2, input.key3]
     .filter((entry) => entry !== undefined && entry !== null && String(entry).trim())
     .map((entry) => String(entry).trim());

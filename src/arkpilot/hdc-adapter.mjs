@@ -355,7 +355,7 @@ export class HypiumUiAutomationAdapter {
         } else if (step.action === "tap") await component.click();
         else if (step.action === "doubleTap") await component.doubleClick();
         else if (step.action === "longTap") await component.longClick();
-        else if (step.action === "input") await component.inputText(step.value);
+        else if (step.action === "input") await component.inputText(step.value, { paste: true });
         else if (step.action === "key") {
           const key = state.api.KeyCode[String(step.key).toUpperCase()];
           if (key === undefined) throw flowError(`Hypium does not expose key ${step.key}`, "FLOW_KEY_UNSUPPORTED");

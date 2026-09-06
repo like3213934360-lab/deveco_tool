@@ -42,7 +42,7 @@ const skip = !REQUEST
   ? "set DEVECO_CANARY_DEVICE=1 (or to a connect key) to run the device canary"
   : (!device ? "no HarmonyOS device is connected" : false);
 
-/** One `hdc shell` call built exactly the way the source builds it: argv, never a joined string. */
+/** Exercise both the single-command and historical multi-argument HDC transports. */
 function shell(...args) {
   const result = spawnSync(HDC, ["-t", device, "shell", ...args], { encoding: "utf8", maxBuffer: 1 << 28 });
   return `${result.stdout ?? ""}${result.stderr ?? ""}`.replace(/\r?\n$/, "");
@@ -64,7 +64,7 @@ function withDeviceUitestLock(op, task) {
 }
 
 test("hdc passes a whitespace-free argument through untouched", { skip }, () => {
-  // This is the whole basis of deviceTextArgument: with no whitespace, our single quotes are
+  // In the historical multi-argument transport, with no whitespace, our single quotes are
   // unquoted exactly once by the device shell and everything inside arrives literally. If this
   // ever stops holding, text with a backtick starts executing on the device again.
   for (const text of ["`id`", "$HOME", "~/x", "a(b)c", "a;id", "a|b", 'a"b', "a?b", "*", "it's", "你好，世界。"]) {
@@ -74,7 +74,7 @@ test("hdc passes a whitespace-free argument through untouched", { skip }, () => 
 
 test("hdc re-quotes a whitespace-bearing argument, and four characters survive that", { skip }, () => {
   // The other regime. hdc wraps the argument in double quotes of its own, which neutralises globs,
-  // parentheses, # and ;, but not these -- which is exactly the set deviceTextArgument refuses.
+  // parentheses, # and ;, but not these. Text input now avoids this transport entirely.
   for (const inert of ["a(b)c d", "a?b c", "~/x y", "a #b", "a[0-9]b c", "it's fine", "100% off", "a; id"]) {
     assert.equal(shell("echo", inert), inert, `must be inert with whitespace: ${inert}`);
   }
@@ -149,8 +149,8 @@ test("find supports the age-bounded sweep", { skip }, () => {
 });
 
 test("two concurrent uitest clients still collide the way the lock assumes", { skip, timeout: 120000 }, async () => {
-  // The entire reason src/device-lock.mjs exists. The loser does not fail fast: it blocks for
-  // roughly 30 seconds and then reports this string, which is what UI_DEVICE_BUSY keys on.
+  // Observed losers either time out (~30s) or fail to obtain window nodes (~600ms on API 24).
+  // Establish serial health first: a persistent inaccessible tree is not a contention verdict.
   await withDeviceUitestLock("device canary intentional collision", async () => {
     shell("mkdir", "-p", SCRATCH);
     // spawn, not spawnSync: the point is two clients in flight at once, and a synchronous spawn
@@ -163,6 +163,8 @@ test("two concurrent uitest clients still collide the way the lock assumes", { s
       child.stderr.on("data", (chunk) => { out += chunk; });
       child.once("close", () => resolve({ out, ms: Date.now() - started }));
     });
+    const baseline = await dump(`${SCRATCH}/baseline.json`);
+    assert.match(baseline.out, /DumpLayout saved to/i, "serial layout capture must work before testing contention");
     const results = await Promise.all([dump(`${SCRATCH}/p1.json`), dump(`${SCRATCH}/p2.json`)]);
     const outputs = results.map((entry) => entry.out);
     const succeeded = outputs.filter((out) => /DumpLayout saved to/i.test(out));
@@ -171,8 +173,8 @@ test("two concurrent uitest clients still collide the way the lock assumes", { s
       const loser = outputs.find((out) => !/DumpLayout saved to/i.test(out));
       assert.match(
         loser,
-        /Wait for subscribe uitest\.broadcast\.command\.reply timeout/i,
-        "the contention signature UI_DEVICE_BUSY keys on has changed",
+        /Wait for subscribe uitest\.broadcast\.command\.reply timeout|DumpLayout failed:\s*Get window nodes failed/i,
+        "the parallel dump returned an unrecognized failure",
       );
     }
   });

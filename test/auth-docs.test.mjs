@@ -259,12 +259,15 @@ test("CLI authentication requires an action-specific acknowledgement, including 
   for (const message of [
     "Please run `devecocli auth login` first.", "Please run devecocli auth login first.",
     "Token expired. Run `devecocli auth login` again.", "Unexpected upstream message",
+    "Id  Name  \n--  ---- \n", "Id  Name\n--  ----\nToken expired",
   ]) {
     output(message);
     await assert.rejects(cliAuth({ action: "team_list", project_path: directory }), { code: "DEVECO_AUTH_FAILED" });
   }
   for (const [action, message] of [
     ["team_list", "No teams found for the current user."], ["team_list", "Id  Name\n--  ----\n12  BUILD FAILED team\n"],
+    ["team_list", "Id                  Name        \n------------------ ------------\n10000000000000001   示例中文团队有限公司\n100000000000000002  测试用户        \n"],
+    ["team_list", "Id  Name  \r\n--  ----  \r\n12  Team name  \r\n"],
     ["login", "Login successful. Logged in as fixture."], ["login", "Already logged in, User Name:fixture"],
     ["logout", "Logout successful"], ["logout", "Already logged out."],
     ["status", "Not logged in"], ["status", "Current user: Failed to start"],

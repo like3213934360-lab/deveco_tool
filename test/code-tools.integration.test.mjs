@@ -9,6 +9,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { officialArktsServerStatus } from "../src/lsp/server-registry.mjs";
 import { resolveDevecoToolchain } from "../src/config.mjs";
+import { parseJson5 } from "../src/build-profile.mjs";
 
 const repo = fileURLToPath(new URL("../", import.meta.url));
 const available = officialArktsServerStatus().installed;
@@ -123,6 +124,40 @@ test("live MCP: resource syntax, TS project scan and renamed module pages", opti
   await write("features/phone/src/main/resources/base/profile/main_pages.json", '{"src":["pages/Index","pages/Missing"]}');
   const missing = JSON.parse(await call("arkts_check", {}, true));
   assert.ok(missing.errors.some((error) => error.rule === "page-file-exists" && /Missing/.test(error.message)));
+});
+
+test("live MCP: project SDK removes API 12 false positives without suppressing real compatibility warnings", options, async (t) => {
+  const { project, call, write } = await fixture(t);
+  const file = "entry/src/main/ets/model/SdkApi.ets";
+  await write(file, "export function translate(tabs: TabsController): void {\n  tabs.setTabBarTranslate({ x: 0, y: 1 });\n}\n");
+  const profile = parseJson5(await fs.readFile(path.join(project, "build-profile.json5"), "utf8"));
+  profile.app.products.push({ name: "legacy", compatibleSdkVersion: 12, runtimeOS: "OpenHarmony" });
+  profile.app.products[0].compatibleSdkVersion = "6.1.0(23)";
+  profile.app.products[0].targetSdkVersion = "6.1.0(23)";
+  await write("build-profile.json5", JSON.stringify(profile));
+  for (const name of ["arkts_check", "check_ets_files"]) {
+    for (const product of ["legacy", "default"]) {
+      const result = JSON.parse(await call(name, { files: [file], product }));
+      assert.equal(result.sdkConfiguration.compatibleSdkVersion, product === "legacy" ? 12 : 23);
+      assert.equal(result.sdkConfiguration.runtimeOS, product === "legacy" ? "OpenHarmony" : "HarmonyOS");
+      const warnings = result.errors.filter((error) => /setTabBarTranslate.*supported since SDK version 13/.test(error.message));
+      assert.equal(warnings.length, product === "legacy" ? 1 : 0, JSON.stringify(result));
+    }
+    const bad = JSON.parse(await call(name, { files: [file], product: "missing" }, true));
+    assert.equal(bad.code, "ARKTS_SDK_CONFIG_INVALID");
+  }
+  // Re-read on every call: do not retain a product's previous compatible API in a long-lived MCP.
+  profile.app.products[0].compatibleSdkVersion = "5.0.0(12)";
+  await write("build-profile.json5", JSON.stringify(profile));
+  const changed = JSON.parse(await call("arkts_check", {}));
+  assert.equal(changed.sdkConfiguration.compatibleSdkVersion, 12);
+  assert.ok(changed.errors.some((error) => /setTabBarTranslate.*current compatible SDK version is 5\.0\.0\(12\)/.test(error.message)));
+  profile.app.products[0].compatibleSdkVersion = "26.0.0";
+  profile.app.products[0].targetSdkVersion = "26.0.0";
+  await write("build-profile.json5", JSON.stringify(profile));
+  const msf = JSON.parse(await call("check_ets_files", { files: [file] }));
+  assert.equal(msf.sdkConfiguration.compatibleSdkVersion, 260000);
+  assert.ok(!msf.errors.some((error) => /setTabBarTranslate.*supported since/.test(error.message)));
 });
 
 test("live MCP: C++ diagnostics remain fresh after editing with a prepared compilation database", options, async (t) => {

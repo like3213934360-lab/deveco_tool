@@ -37,6 +37,8 @@ const CLI_FAILURE_PATTERNS = [
 // Installation is only an intermediate step when an Ability must be launched.
 const DEPLOY_SUCCESS = /Application\s+'[^']+'(?:\s*:\s*(?:start ability|launch)\s+(?:success(?:fully)?|succeed(?:ed)?)\b|\s+installed successfully \(no ability to launch\))/i;
 const APPLY_SUCCESS = /(?:\[Apply\]\s*(?:Apply complete|完成)|Apply completed successfully)/i;
+const APPLY_FAILURE = /(?:\[Apply\]\s*(?:失败|failed|launch app failed\b)|Lock is already released|\[DevEco MCP\] (?:HDC launch failed|Build lock lost):)/i;
+const APPLY_FALLBACK = /\[Apply\]\s*(?:自动回退|fall(?:ing)? back)/i;
 const CLI_SUCCESS_PATTERNS = [
   /Clean completed successfully\.?/i,
   /Build completed successfully\.?/i,
@@ -93,6 +95,7 @@ function processCapture(command, explicitLogPath) {
   const stderrFailures = evidenceTracker(CLI_FAILURE_PATTERNS);
   const stdoutSuccesses = CLI_SUCCESS_PATTERNS.map((pattern) => evidenceTracker([pattern]));
   const stderrSuccesses = CLI_SUCCESS_PATTERNS.map((pattern) => evidenceTracker([pattern]));
+  const applyEvidence = ["stdout", "stderr"].map(() => ({ failure: evidenceTracker([APPLY_FAILURE]), fallback: evidenceTracker([APPLY_FALLBACK]) }));
   const automatic = !explicitLogPath;
   const logPath = explicitLogPath
     ? path.resolve(explicitLogPath)
@@ -120,6 +123,9 @@ function processCapture(command, explicitLogPath) {
         stderrFailures.push(chunk);
         for (const tracker of stderrSuccesses) tracker.push(chunk);
       }
+      const apply = applyEvidence[stream === "stdout" ? 0 : 1];
+      apply.failure.push(chunk);
+      apply.fallback.push(chunk);
       fs.writeSync(handle, chunk);
       loggedBytes += chunk.length;
     },
@@ -135,6 +141,8 @@ function processCapture(command, explicitLogPath) {
         stderr: stderr.text(),
         detectedFailure: stdoutFailures.evidence || stderrFailures.evidence || "",
         detectedSuccess: [...stdoutSuccesses, ...stderrSuccesses].map((tracker) => tracker.evidence).filter(Boolean).join("\n"),
+        applyFailure: applyEvidence.find((item) => item.failure.evidence)?.failure.evidence || "",
+        applyFallback: applyEvidence.find((item) => item.fallback.evidence)?.fallback.evidence || "",
         outputTruncated,
         logPath: automatic && !outputTruncated ? null : logPath,
       };
@@ -236,10 +244,10 @@ export function commandText(entry, args) {
  * Run the DevEco CLI and capture its output.
  *
  * @param {string[]} args CLI arguments.
- * @param {{cwd: string, timeoutMs?: number, input?: string, signal?: AbortSignal, logPath?: string, env?: object}} options Working directory, timeout, optional stdin, cancellation signal, log destination, and child-only environment overrides.
+ * @param {{cwd: string, timeoutMs?: number, input?: string, signal?: AbortSignal, logPath?: string, env?: object, observeApply?: boolean}} options Working directory, timeout, optional stdin, cancellation signal, log destination, child-only environment overrides, and cold-apply launch/lock error observation.
  * @returns {Promise<{command: string, exitCode: number|null, signal: string|null, stdout: string, stderr: string, outputTruncated: boolean, logPath: string|null}>} Result.
  */
-export function runDevecoCli(args, { cwd, timeoutMs = DEFAULT_TIMEOUT_MS, input, signal, logPath, env: extraEnv } = {}) {
+export function runDevecoCli(args, { cwd, timeoutMs = DEFAULT_TIMEOUT_MS, input, signal, logPath, env: extraEnv, observeApply = false } = {}) {
   const entry = resolveDevecoCli();
   const command = commandText(entry, args);
   const bounded = Math.min(Math.max(Number(timeoutMs) || DEFAULT_TIMEOUT_MS, 1000), MAX_TIMEOUT_MS);
@@ -253,7 +261,9 @@ export function runDevecoCli(args, { cwd, timeoutMs = DEFAULT_TIMEOUT_MS, input,
     const capture = processCapture(command, logPath);
     let child;
     try {
-      child = spawn(process.execPath, [entry, ...args], {
+      const preloads = observeApply
+        ? ["--import", new URL("./deveco-cli-apply-runtime.mjs", import.meta.url).href] : [];
+      child = spawn(process.execPath, [...preloads, entry, ...args], {
         cwd,
         env,
         stdio: [input === undefined ? "ignore" : "pipe", "pipe", "pipe"],
@@ -847,7 +857,39 @@ export async function apiCompatibilityCheck(input = {}) {
   return `> ${result.command}\n\n${output}`;
 }
 
-/** Build and deploy only the changed project files via DevEco CLI's cold apply mode. */
+// CLI 1.3.1's cold branch chooses the first Entry, uses product as target,
+// and omits buildMode. Its changed-file writer also fans library changes out
+// to every consumer. Use the normal run branch when those assumptions cannot
+// represent the requested deployment; that branch resolves modules and targets.
+function coldApplyFallbackReason(project, selected, product, buildMode, files) {
+  if (product && product !== "default") return `Cold apply does not separate product '${product}' from the module target.`;
+  if (buildMode && buildMode !== "debug") return `Cold apply does not honor build mode '${buildMode}'.`;
+  const [moduleName, target] = selected.split("@");
+  if (target && target !== "default") return `Cold apply does not honor target '${target}'.`;
+  const entries = readModuleEntries(project) ?? [];
+  const entry = entries.find((item) => item.name === moduleName);
+  if (!entry || runnableModules(project).length !== 1) return "Cold apply cannot isolate the selected module in this project.";
+  const root = path.resolve(project, entry.srcPath);
+  const manifestPath = path.join(root, "src/main/module.json5");
+  const manifest = fs.existsSync(manifestPath) ? parseJson5(fs.readFileSync(manifestPath, "utf8")) : null;
+  if ((manifest?.module?.type || "entry") !== "entry") return "Cold apply requires one Entry module.";
+  if (entry.targets?.length && !entry.targets.some((item) => item.name === "default"
+    && (!item.applyToProducts?.length || item.applyToProducts.includes("default")))) {
+    return "Cold apply requires a default module target for the default product.";
+  }
+  for (const file of files) {
+    const relative = path.relative(root, path.resolve(project, file));
+    if (!relative || relative === ".." || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
+      return "Changed files include a dependency or project configuration outside the selected Entry module.";
+    }
+    if (!/\.(?:ets|ts)$/i.test(file) && !/\/resources\/(?:rawfile|resfile)\//.test(file)) {
+      return "Changed files include content that the cold-apply patch writer does not compile.";
+    }
+  }
+  return "";
+}
+
+/** Update changed project files, using full deployment when cold apply cannot honor the requested configuration. */
 export async function applyChanges(input = {}) {
   const project = projectRoot(input.project_path);
   if (!Array.isArray(input.files) || input.files.length === 0) {
@@ -884,6 +926,7 @@ export async function applyChanges(input = {}) {
   });
   const target = typeof input.target === "string" ? input.target.trim() : "";
   const selected = target ? `${selectedModule}@${target}` : selectedModule;
+  const fullBuildReason = coldApplyFallbackReason(project, selected, product, input.build_mode, files);
   const hvigor = path.join(project, ".hvigor");
   fs.mkdirSync(hvigor, { recursive: true });
   const manifestName = `deveco-tool-apply-${process.pid}-${crypto.randomBytes(6).toString("hex")}.txt`;
@@ -894,12 +937,16 @@ export async function applyChanges(input = {}) {
     const args = ["run", "--device", device, "--module", selected];
     if (product) args.push("--product", product);
     if (input.build_mode) args.push("--build-mode", String(input.build_mode));
-    args.push("--apply", manifestName);
-    const result = await runDevecoCli(args, { cwd: project, timeoutMs: input.timeoutMs });
+    if (!fullBuildReason) args.push("--apply", manifestName);
+    const result = await runDevecoCli(args, { cwd: project, timeoutMs: input.timeoutMs, observeApply: !fullBuildReason });
     const output = combineOutput(result);
-    const failure = devecoCliFailureMessage(result, {
+    const fallback = Boolean(fullBuildReason || result.applyFallback || APPLY_FALLBACK.test(output));
+    const applyFailure = fullBuildReason || result.applyFailure || (APPLY_FAILURE.test(output) ? "Incremental apply reported a failure." : "");
+    const failure = (!fallback && applyFailure) || devecoCliFailureMessage(result, {
       requireOutput: true,
-      successPattern: new RegExp(`${APPLY_SUCCESS.source}|${DEPLOY_SUCCESS.source}`, "i"),
+      // An inner Apply complete line can precede a lock-release failure. If the CLI
+      // falls back, require the final full deployment acknowledgement instead.
+      successPattern: fallback ? DEPLOY_SUCCESS : APPLY_SUCCESS,
     });
     if (failure) {
       const recoveryArgs = ["run", "--skip-build", "--device", device, "--module", selected];
@@ -918,11 +965,14 @@ export async function applyChanges(input = {}) {
       } catch (recoveryError) {
         recoveryNote = `Recovery launch could not complete: ${recoveryError.message}`;
       }
-      const error = new Error(`> ${result.command}\n\n${output}\n\n${recoveryNote}`);
+      const error = new Error(`> ${result.command}\n\nFailure: ${failure}\n\n${output}\n\n${recoveryNote}`);
       error.code = "DEVECO_CLI_APPLY_FAILED";
       throw error;
     }
-    return `Device: ${device}\nModule: ${selected}\nApplied ${files.length} changed file(s):\n${files.map((file) => `- ${file}`).join("\n")}\n\n> ${result.command}\n\n${output}`;
+    const mode = fallback
+      ? `Update mode: full-build-fallback\n${fullBuildReason ? "The requested configuration requires a full build; the CLI completed deployment." : "Incremental apply did not complete; the CLI deployed a full build."}\nReason: ${applyFailure || result.applyFallback}\nUpdated`
+      : "Update mode: incremental\nApplied";
+    return `Device: ${device}\nModule: ${selected}\n${mode} ${files.length} changed file(s):\n${files.map((file) => `- ${file}`).join("\n")}\n\n> ${result.command}\n\n${output}`;
   } finally {
     fs.rmSync(manifest, { force: true });
   }

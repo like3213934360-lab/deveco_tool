@@ -1,6 +1,7 @@
 import path from "node:path";
 import { stripVTControlCharacters } from "node:util";
 import { getProjectPath } from "./project-context.mjs";
+import { uiText } from "./device-ui.mjs";
 import {
   combineOutput,
   devecoCliFailureMessage,
@@ -52,7 +53,7 @@ const AUTH_COMPLETION = {
   login: /^(?:Already logged in, User Name:|Login successful\. Logged in as )/m,
   logout: /^(?:Logout successful|Already logged out\.)\s*$/m,
   status: /^(?:Current user: .+|Not logged in)\s*$/m,
-  team: /^(?:No teams found for the current user\.|Id[ \t]+Name\r?\n-+[ \t]+-+\r?\n[^\r\n]+)\s*$/m,
+  team: /^(?:No teams found for the current user\.|Id[ \t]+Name[ \t]*\r?\n-+[ \t]+-+[ \t]*\r?\n\d+[ \t]+\S[^\r\n]*)[ \t]*\r?$/m,
 };
 
 function completionFailure(args, result) {
@@ -77,7 +78,7 @@ function completionFailure(args, result) {
     ? "" : "DevEco CLI did not confirm completion of the requested authentication action.";
 }
 
-async function execute(args, { cwd, timeoutMs, errorCode = "DEVECO_CLI_COMMAND_FAILED" } = {}) {
+async function executeResult(args, { cwd, timeoutMs, errorCode = "DEVECO_CLI_COMMAND_FAILED" } = {}) {
   const result = await runDevecoCli(args, { cwd, timeoutMs, input: args[0] === "auth" && args[1] === "login" ? "\n" : undefined });
   const output = combineOutput(result);
   const failure = completionFailure(args, result);
@@ -86,7 +87,12 @@ async function execute(args, { cwd, timeoutMs, errorCode = "DEVECO_CLI_COMMAND_F
     error.code = errorCode;
     throw error;
   }
-  return `> ${result.command}\n\n${output}`;
+  return result;
+}
+
+async function execute(args, options) {
+  const result = await executeResult(args, options);
+  return `> ${result.command}\n\n${combineOutput(result)}`;
 }
 
 /** Official engineering Code Linter (`devecocli check lint`). */
@@ -170,8 +176,8 @@ export async function uiControl(input = {}) {
   if (targetAction && hasCoordinates && hasNode) fail("coordinates and node_id are mutually exclusive");
   if (hasNode) nonEmpty(input.node_id, "node_id");
   if (hasWindow && !/^[a-zA-Z0-9_-]+$/.test(nonEmpty(input.window, "window"))) fail("window must contain only letters, digits, - or _");
-  if (action !== "text" && ["click", "doubleclick", "longclick"].includes(action) && !hasCoordinates && !hasNode) {
-    fail("click actions require x/y coordinates or node_id");
+  if (targetAction && !hasCoordinates && !hasNode) {
+    fail("click and text actions require x/y coordinates or node_id");
   }
   if (["click", "doubleclick", "longclick"].includes(action)) {
     if (input.x !== undefined || input.y !== undefined) {
@@ -183,7 +189,8 @@ export async function uiControl(input = {}) {
   } else if (action === "dircfling") {
     args.push(choice(input.direction, ["up", "down", "left", "right"], "direction"));
   } else {
-    args.push(nonEmpty(input.text, "text"));
+    if (typeof input.text !== "string" || !input.text.length) fail("text is required");
+    args.push(input.text);
     if (input.x !== undefined || input.y !== undefined) {
       args.push(String(numberInRange(input.x, "x", 1, Number.MAX_SAFE_INTEGER, true)));
       args.push(String(numberInRange(input.y, "y", 1, Number.MAX_SAFE_INTEGER, true)));
@@ -197,7 +204,23 @@ export async function uiControl(input = {}) {
   } else if (input.speed !== undefined) {
     fail("speed is only valid for swipe, fling, or drag");
   }
-  return execute(args, { cwd: globalCwd(input.project_path), timeoutMs: input.timeoutMs, errorCode: "DEVECO_UI_CONTROL_FAILED" });
+  const options = { cwd: globalCwd(input.project_path), timeoutMs: input.timeoutMs, errorCode: "DEVECO_UI_CONTROL_FAILED" };
+  if (action === "text") {
+    // Keep official unique-node/window checks. Use its actual resolved coordinates
+    // for forced paste, never a guessed current caret or a coordinate in echoed argv.
+    const resolveTarget = hasNode ? async (deviceId) => {
+      const result = await executeResult([
+        "ui", "click", "--device", deviceId, "--id", input.node_id,
+        ...(hasWindow ? ["--window", input.window] : []),
+      ], options);
+      // The official spinner writes its successful coordinate receipt to stderr.
+      const match = stripVTControlCharacters(combineOutput(result)).match(/^(?:[✔✓]\s*)?click at \((\d+),\s*(\d+)\)\s*$/m);
+      if (!match) fail("Official node focus returned no resolved coordinates", "DEVECO_UI_CONTROL_FAILED");
+      return { x: Number(match[1]), y: Number(match[2]) };
+    } : undefined;
+    return JSON.stringify(await uiText(input, resolveTarget));
+  }
+  return execute(args, options);
 }
 
 /** Generate/update project signing configuration through the official CLI. */

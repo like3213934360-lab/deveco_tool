@@ -12,6 +12,8 @@ function parseArgs(argv) {
   while (i < argv.length) {
     if (argv[i] === '--project' && argv[i + 1]) {
       args.project = path.resolve(argv[++i]);
+    } else if (argv[i] === '--product' && argv[i + 1]) {
+      args.product = argv[++i];
     } else if (argv[i] === '--files') {
       i++;
       while (i < argv.length && !argv[i].startsWith('--')) {
@@ -305,6 +307,14 @@ async function main() {
   files.forEach((f, i) => { fileMap[`file_${i}`] = f; });
 
   const { discoverProjectEtsFiles, validateRouterPages } = await import('../arkts-project.mjs');
+  // LOCAL PATCH: the upstream API 12 constant misdiagnoses newer projects.
+  // Resolve each invocation so a product or manifest change updates the effective SDK options.
+  const { readProjectSdkConfig } = await import('../build-profile.mjs');
+  const sdkConfiguration = readProjectSdkConfig(args.project, args.product);
+  // The standalone SDK path reuses .tsbuildinfo without checking sdkInfo. In a real SDK run,
+  // switching API 12 -> 23 otherwise kept the API 12 diagnostic. Its build-info file lives one
+  // directory above cachePath, so isolate that parent by the effective SDK configuration too.
+  const sdkCacheDirectory = `${sdkConfiguration.runtimeOS}-${sdkConfiguration.originCompatibleSdkVersion}-${sdkConfiguration.targetSdkVersion ?? 'unspecified'}`;
   const { moduleDirectories } = discoverProjectEtsFiles(args.project);
   const moduleJsonCandidates = moduleDirectories.map(directory => path.join(directory, 'src', 'main', 'module.json5'));
   let aceModuleJsonPath = '';
@@ -364,15 +374,16 @@ async function main() {
       projectPath: args.project,
       projectRootPath: args.project,
       modulePath: args.project,
-      cachePath: path.join(args.project, '.cache', 'arkts-check'),
+      cachePath: path.join(args.project, '.cache', 'arkts-check', sdkCacheDirectory, 'cache'),
       aceModuleJsonPath: aceModuleJsonPath,
       compileMode: 'esmodule',
       etsLoaderPath: etsLoaderPath,
       packageManagerType: 'ohpm',
       packageDir: 'oh_modules',
-      runtimeOS: 'OpenHarmony',
-      sdkInfo: '5.0.0',
-      compatibleSdkVersion: 12,
+      runtimeOS: sdkConfiguration.runtimeOS,
+      sdkInfo: JSON.stringify(sdkConfiguration),
+      compatibleSdkVersion: sdkConfiguration.compatibleSdkVersion,
+      originCompatibleSdkVersion: sdkConfiguration.originCompatibleSdkVersion,
       bundleType: '',
       compilerTypes: [],
       resolveModulePaths: [],
@@ -464,6 +475,7 @@ async function main() {
     success: errorCount === 0 && !internalError,
     errors: filtered,
     summary: { errorCount, warnCount },
+    sdkConfiguration,
     ...(internalError ? { internalError } : {}),
   };
 
@@ -482,6 +494,6 @@ module.exports = { validateSystemResources, isBindingSyntaxFalsePositive, getSta
 // Run as a CLI only when invoked directly (node arkts-check.cjs ...), not when required by tests.
 if (require.main === module) {
   main().catch((error) => {
-    process.stdout.write(JSON.stringify({ success: false, error: error.message, errors: [] }), () => process.exit(1));
+    process.stdout.write(JSON.stringify({ success: false, code: error.code, error: error.message, errors: [] }), () => process.exit(1));
   });
 }

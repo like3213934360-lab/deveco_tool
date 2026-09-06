@@ -158,7 +158,7 @@ const officialTools = [
   },
   {
     name: "ui_control",
-    description: "Use the official DevEco UI controller only for its node-id/window-targeted operations. Prefer ui_flow action=navigate for multi-step navigation and ui_tap for ordinary semantic clicks, text, keys, and gestures; the local HDC path avoids DevEco CLI startup overhead.",
+    description: "Use the official DevEco UI controller for node-id/window-targeted operations. Text uses UiTest forced paste and requires node_id or x/y; current-caret input without a target is unsupported. Prefer ui_flow action=navigate for multi-step navigation and ui_tap for ordinary semantic clicks, text, keys, and gestures.",
     inputSchema: {
       type: "object",
       properties: {
@@ -396,6 +396,7 @@ const localTools = [
       properties: {
         files: { type: "array", items: { type: "string" }, description: "Optional project-relative or absolute .ets/.ts paths; omit to scan the project." },
         project_path: { type: "string", description: "Optional project root; otherwise use the active project from switch_cwd." },
+        product: { type: "string", minLength: 1, description: "SDK configuration product; defaults to the named default product or the only product. Required when ambiguous." },
         timeoutMs: { type: "integer", minimum: 1000, maximum: 600000 },
       },
       additionalProperties: false,
@@ -407,6 +408,7 @@ const localTools = [
     inputSchema: {
       type: "object",
       properties: {
+        product: { type: "string", minLength: 1, description: "SDK configuration product; defaults to the named default product or the only product. Required when ambiguous." },
         files: {
           type: "array",
           minItems: 1,
@@ -512,7 +514,7 @@ const localTools = [
   },
   {
     name: "apply_changes",
-    description: "Cold-build and deploy changed project files through DevEco CLI 1.3 apply mode. Exactly one Entry module is selected so a multi-Entry project cannot deploy sibling HAPs; pass module when the project has several runnable entries. On apply failure the tool makes a best-effort relaunch of the previously installed app.",
+    description: "Build and deploy changed project files. Uses cold apply for the supported single-Entry default configuration; otherwise uses a full build to honor module, target, product and build mode. Reports incremental or full-build-fallback with the reason. Exactly one Entry module is selected; pass module when the project has several runnable entries. On failure the tool makes a best-effort relaunch of the previously installed app.",
     inputSchema: {
       type: "object",
       properties: {
@@ -685,8 +687,8 @@ const localTools = [
           type: "string",
           enum: ["click", "doubleClick", "longClick", "swipe", "fling", "drag", "dircFling", "inputText", "keyEvent"],
         },
-        key: { type: "string", description: "Aim a click/doubleClick/longClick at the node with this exact key instead of at coordinates. Refuses rather than guesses when it matches no node or several." },
-        text: { type: "string", description: "For click/doubleClick/longClick or percentage gestures, select a node whose visible text contains this. For inputText, this is the text to type." },
+        key: { type: "string", description: "Aim a click or inputText at the node with this exact key instead of coordinates. Refuses when no unique target matches." },
+        text: { type: "string", description: "For click/doubleClick/longClick or percentage gestures, select a node whose visible text contains this. For inputText, this is the exact text to paste, including tabs/newlines; provide key/type or x/y as the target. Paste acceptance does not verify the app's final text." },
         textMode: { type: "string", enum: ["exact", "contains"], description: "Selector text matching mode for non-input actions. Defaults to contains." },
         type: { type: "string", description: "Aim at the node of this exact component type, or narrow a key/text selector." },
         clickableOnly: { type: "boolean", description: "Narrow a selector to nodes the device reports as clickable. The node that handles a tap is often a container wrapping the label you can see." },
@@ -819,23 +821,8 @@ async function performCompatibleUiAction(args) {
     error.code = "UI_ARGS_INVALID";
     throw error;
   }
-  try {
-    const result = await uiTap({ ...mapped, hvd: args.hvd, timeoutMs: args.timeoutMs });
-    return textResult({ ...result, compatibilityTool: "perform_ui_action", backend: "hdc-shell" });
-  } catch (error) {
-    // HDC inserts its own double quotes around argv containing whitespace. Four characters remain
-    // active inside those quotes, so the local adapter deliberately rejects that narrow input-text
-    // case before acquiring the uitest lock or sending anything. Preserve the legacy tool's useful
-    // escape hatch by delegating only that pre-action rejection to CodeGenie. Never fall back after
-    // an HDC command: a timeout cannot prove an action did not land, and retrying could type twice.
-    const needsCodeGenieTextTransport = args.actionType === "inputText"
-      && error?.code === "UI_ARGS_INVALID"
-      && /use perform_ui_action/i.test(String(error?.hint ?? ""));
-    if (needsCodeGenieTextTransport) {
-      return callCodeGenieTool("perform_ui_action", args);
-    }
-    throw error;
-  }
+  const result = await uiTap({ ...mapped, hvd: args.hvd, timeoutMs: args.timeoutMs });
+  return textResult({ ...result, compatibilityTool: "perform_ui_action", backend: "hdc-shell" });
 }
 
 const server = new Server(
@@ -857,7 +844,7 @@ const advertisedTools = [
       return {
       ...tool,
       description:
-        "Compatibility UI action entry point. Prefer ui_flow navigate for multi-step navigation and ui_tap for new single actions. Click, fling, keys, screenshots, and shell-safe text use the local HDC fast path; only text that HDC cannot quote safely falls back to CodeGenie before any device action is sent. Default screenshots are temporary.",
+        "Compatibility UI action entry point. Prefer ui_flow navigate for multi-step navigation and ui_tap for new single actions. Click, fling, keys, screenshots, and text use the local HDC path. Text requires x/y and uses official UiTest forced paste over a UTF-8 RPC connection. Default screenshots are temporary.",
       inputSchema: {
         ...tool.inputSchema,
         properties: {
@@ -1143,7 +1130,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       if (!Array.isArray(args.files) || args.files.length === 0) {
         return textResult({ code: "ARKTS_FILES_INVALID", message: "files must be a non-empty array of .ets or .ts paths" }, true);
       }
-      const result = await runArktsCheck({ files: args.files });
+      const result = await runArktsCheck({ files: args.files, product: args.product });
       return textResult(result, result.success === false || Number(result.exitCode ?? 0) !== 0);
     }
 

@@ -12,6 +12,7 @@ import { codeLint } from "../src/deveco-official.mjs";
 import { apiCompatibilityCheck } from "../src/deveco-cli.mjs";
 import { compatScanResult } from "../src/api-compat-result.mjs";
 import { discoverProjectEtsFiles, validateRouterPages } from "../src/arkts-project.mjs";
+import { readProjectSdkConfig } from "../src/build-profile.mjs";
 import { resolveDevecoHome } from "../src/config.mjs";
 import { lspOperation, findReferences, setOfficialLspServerForTests } from "../src/lsp.mjs";
 import { resolveOfficialArktsServer } from "../src/lsp/server-registry.mjs";
@@ -133,6 +134,52 @@ test("single-module layouts resolve pages relative to the module itself", async 
   await write(directory, "src/main/ets/pages/Home.ets", "@Entry @Component struct Home { build() { Text('home') } }");
   const found = discoverProjectEtsFiles(directory);
   assert.deepEqual(validateRouterPages(directory, found.moduleDirectories), []);
+});
+
+test("ArkTS SDK configuration reads JSON5 products, numeric APIs and app-level inheritance", async (t) => {
+  const directory = await temp(t);
+  await write(directory, "build-profile.json5", `{
+    app: { compatibleSdkVersion: 12, targetSdkVersion: 23, runtimeOS: 'OpenHarmony',
+      products: [
+        { name: 'legacy' },
+        { name: 'default', compatibleSdkVersion: '6.1.0(23)', runtimeOS: 'HarmonyOS' },
+      ],
+    }, modules: [],
+  }`);
+  assert.deepEqual(readProjectSdkConfig(directory), {
+    product: "default", compatibleSdkVersion: 23, originCompatibleSdkVersion: "6.1.0(23)", targetSdkVersion: 23, runtimeOS: "HarmonyOS",
+  });
+  assert.deepEqual(readProjectSdkConfig(directory, "legacy"), {
+    product: "legacy", compatibleSdkVersion: 12, originCompatibleSdkVersion: "12", targetSdkVersion: 23, runtimeOS: "OpenHarmony",
+  });
+  await write(directory, "build-profile.json5", "{app:{products:[{name:'phone',compatibleSdkVersion:'22'}]}}");
+  assert.deepEqual(readProjectSdkConfig(directory), { product: "phone", compatibleSdkVersion: 22, originCompatibleSdkVersion: "22", runtimeOS: "OpenHarmony" });
+  await write(directory, "build-profile.json5", "{app:{compatibleSdkVersion:10}}");
+  assert.deepEqual(readProjectSdkConfig(directory), { product: null, compatibleSdkVersion: 10, originCompatibleSdkVersion: "10", runtimeOS: "OpenHarmony" });
+  await write(directory, "build-profile.json5", "{app:{compatibleSdkVersion:'26.1.2',runtimeOS:'HarmonyOS'}}");
+  assert.equal(readProjectSdkConfig(directory).compatibleSdkVersion, 260102);
+  assert.equal(readProjectSdkConfig(directory).originCompatibleSdkVersion, "26.1.2");
+});
+
+test("ArkTS SDK configuration rejects ambiguity and invalid or absent declarations", async (t) => {
+  const directory = await temp(t);
+  const rejects = (product) => assert.throws(() => readProjectSdkConfig(directory, product),
+    (error) => error.code === "ARKTS_SDK_CONFIG_INVALID");
+  rejects();
+  for (const profile of ["{broken", "{}", "{app:{}}", "{app:{products:{}}}", "{app:{products:[null]}}", "{app:{runtimeOS:'HarmonyOS',compatibleSdkVersion:23}}"]) {
+    await write(directory, "build-profile.json5", profile);
+    rejects();
+  }
+  for (const version of [0, -1, 12.5, null, true, "invalid", "6.1.0", "SDK 6.1.0(23)", "23suffix"]) {
+    await write(directory, "build-profile.json5", JSON.stringify({ app: { compatibleSdkVersion: version } }));
+    rejects();
+  }
+  await write(directory, "build-profile.json5", JSON.stringify({ app: { products: [
+    { name: "phone", compatibleSdkVersion: 23 }, { name: "watch", compatibleSdkVersion: 12 },
+  ] } }));
+  rejects();
+  rejects("missing");
+  assert.equal(readProjectSdkConfig(directory, "watch").compatibleSdkVersion, 12);
 });
 
 test("check_ets_files rejects an empty list at the MCP boundary", async (t) => {

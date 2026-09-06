@@ -147,6 +147,8 @@ MCP 固定提供 40 个工具，其中项目、脚本和服务管理入口为 5 
 
 整工程预检按 `build-profile.json5` 的模块路径发现源码，包含模块根目录的源码入口，排除声明文件、依赖目录、构建产物及 `hvigorfile.ts`。Stage 页面检查使用各模块 `module.json5` 的 `$profile:` 配置，支持模块改名和自定义页面清单；`check_ets_files` 的空数组会报参数错误。资源存在性检查使用 SDK 的语法树，注释和字符串示例不会触发资源调用检查。
 
+两个预检入口均读取工程声明的 `compatibleSdkVersion` 和 `runtimeOS`，返回实际采用的 `sdkConfiguration`。默认选择名为 `default` 的产品或唯一产品；其他多产品工程须传 `product`。支持旧版 app 层 SDK 字段、OpenHarmony 数字 API，以及 HarmonyOS 的 `6.1.0(23)` / `26.0.0` 版本格式；缺少、无效或歧义配置会明确报错。HarmonyOS 版本原文会交给官方比较器，检查缓存按有效 SDK 配置隔离，避免修改配置后继续使用旧诊断。
+
 `code_lint` 仅在 `fix:true` 时请求自动修复，路径按字面处理；增量检查需要 Git 工作树，未执行的检查会返回错误。`api_compat_check` 区分扫描失败与明确的无 API 变更结果；空结果也支持 JSON/CSV 报告。当前官方 Hvigor 会拒绝中文工程根目录，依赖 `compileNative` 的 API 兼容扫描仍受此限制。LSP 在查询前同步已打开文件的磁盘改动，并在 `includeDeclaration:false` 时根据定义位置排除声明。
 
 ### 构建、部署和签名
@@ -163,6 +165,10 @@ MCP 固定提供 40 个工具，其中项目、脚本和服务管理入口为 5 
 `build_project` 默认以 `action: "start"` 返回 `job_id`，随后用 `status` 查询或 `cancel` 取消。`start_app` 不会隐式构建。服务端 `timeoutMs` 无法延长客户端自身的请求时限，长任务应使用启动和查询方式。
 
 `start_app`、`apply_changes`、`hot_reload` 省略 `module` 时，从工程 `build-profile.json5` 和模块 `module.json5` 读取可运行模块；只有一个候选时自动选择，多个候选时要求明确指定。模块发现不会安装或启动应用。`start_app` 区分安装成功与 Ability 启动成功，启动失败会返回工具错误。
+
+`apply_changes` 返回实际更新模式：`incremental` 表示冷增量完成，`full-build-fallback` 表示已通过完整构建完成部署，同时保留采用完整构建的原因。锁释放失败、Ability 启动失败或未完成的回退不会被报告为增量成功。冷增量的构建锁失效时，报告会保留原始错误，便于定位后续的 `Lock is already released`。启动结果会核对设备实际回执；恢复原应用成功也不会把失败的更新改报为成功。
+
+官方 CLI 1.3.1 的冷增量分支没有完整使用模块、目标和构建模式参数。多可运行模块、自定义产品或目标、非 debug 模式，以及依赖或冷补丁不支持的文件修改，均直接采用完整构建部署所选模块及其依赖，并返回 `full-build-fallback` 和原因。单 Entry、默认产品与目标下受支持的源文件或资源修改继续使用冷增量。
 
 `hot_reload apply` 沿用启动会话的模块、产品、构建模式及 Ability 参数。并发启动只允许一个会话；进程异常退出后状态转为不可用并记录原因，可以重新启动；`stop` 等待常驻进程退出后返回。实际补丁构建与签名仍受官方 CLI、SDK 和设备能力约束，中文工程根目录也仍受 Hvigor 路径限制。
 
@@ -188,9 +194,15 @@ MCP 固定提供 40 个工具，其中项目、脚本和服务管理入口为 5 
 | `ui_inspect` | 官方窗口列表和布局树查询 | DevEco Studio/CLT、设备或模拟器 |
 | `ui_control` | 官方坐标手势及 node-id/window 控制 | DevEco Studio/CLT、设备或模拟器 |
 | `get_app_ui_tree` | 通过 CodeGenie 获取前台调试应用的 UI 树 | DevEco Studio、CodeGenie 后台、设备 |
-| `perform_ui_action` | 兼容旧 UI 调用；本地 HDC 快速路径，部分文本操作回退 CodeGenie | HDC 设备；回退时需要 CodeGenie |
+| `perform_ui_action` | 兼容旧 UI 调用；通过本地 HDC 输入，保留文本中的空格和特殊字符 | HDC 设备 |
+
+文本输入统一使用官方 UiTest 的强制粘贴模式，避免输入法将 ASCII 标点改成弯引号。`ui_tap` 必须指定 key/type 或 x/y，`ui_control` 必须指定 node-id/window 或 x/y；不提供仅依赖当前光标的输入。官方节点定位仍由 CLI 校验，默认 `ui_flow` 输入和 `perform_ui_action` 也使用同一通路，可选 Hypium 后端同样显式启用粘贴。
+
+文本以 UTF-8 JSON 经 HDC 转发的 RPC 连接传输，不进入 Shell 参数；支持空格、引号、`$`、反引号、反斜杠、中文、换行和制表符，编码后的请求上限为 60 KiB。包内包含官方 Hypium 发布的 arm64 和 x86_64 设备组件，无需自行编译，也不使用公司签名；其他设备架构或缺少强制粘贴 API 的系统会返回错误。调用会关闭自己的连接并移除端口转发；共享的官方服务按上游空闲超时退出。输入会覆盖设备剪贴板并点击目标控件，应用仍可能过滤或转换内容。工具返回只表示 UiTest 已接受操作，需要时用 UI 树或 `verify_ui` 核对回显。组件来源、版本选择及限制见 [src/native/hypium](src/native/hypium/README.md)。
 
 新 UI 调用优先使用 `ui_flow`、`ui_observe` 和 `ui_tap`。手势发送成功只代表设备接受事件，必要时用 `verify_ui` 检查最终界面。多设备同时在线时，按所选工具的 Schema 显式指定 `hvd`、`target` 或 `deviceId`。
+
+UI 树采集失败时，订阅回复超时返回 `UI_DEVICE_BUSY`；`Get window nodes failed` 返回 `UI_TREE_UNAVAILABLE`，提示等待窗口稳定并检查其他 UI 采集客户端。后者曾在并发采集时出现，但单凭这条消息不能确定是设备争用。其他未识别的 dump 失败仍返回 `UI_DUMP_FAILED`，不会当成空 UI 树成功返回。
 
 `ui_tap` 的 `verify` 会补采 UI 树，`observationCompleted` 表示观察已完成；目标仍存在或文字变化不代表操作目的已经达成，`outcomeVerified` 仍为 `false`。`verify_ui` 的语义断言需要非空的 `key`、`text` 或 `type`；画面比较会复用基线的实际捕获宽度和格式，改变宽度需要重新捕获基线。动态画面仍建议用语义断言验收。
 
@@ -300,7 +312,7 @@ node --test --test-concurrency=1 test/management.test.mjs test/management-contra
 node --test --test-concurrency=1 test/code-tools.test.mjs test/code-tools.integration.test.mjs
 ```
 
-CI 配置在 Linux 运行全量测试，在 macOS、Windows 运行管理、认证文档、代码及构建工具专项，Node 版本矩阵为 22/24。代码工具集成测试需要官方 SDK 和 LSP 后端，未安装时明确跳过；部分模拟 HDC 用例只适用于 POSIX。CI 通过不等于对应平台真机链路通过。验证范围及限制见 [管理工具验证记录](./docs/management-tools-validation.md)、[代码工具修复记录](./docs/code-tools-validation.md) 和 [构建工具修复记录](./docs/build-tools-validation.md)。
+CI 配置在 Linux 运行全量测试，在 macOS、Windows 运行管理、认证文档、代码及构建工具专项，Node 版本矩阵为 22/24。代码工具集成测试需要官方 SDK 和 LSP 后端，未安装时明确跳过；部分模拟 HDC 用例只适用于 POSIX。CI 通过不等于对应平台真机链路通过。验证范围及限制见 [管理工具验证记录](./docs/management-tools-validation.md)、[代码工具修复记录](./docs/code-tools-validation.md)、[构建工具修复记录](./docs/build-tools-validation.md) 和 [SDK 与 UI 修复验证](./docs/sdk-ui-fixes-validation.md)。
 
 连接测试设备后可运行设备 canary；已有确定性流程时可运行指定设备的连续回放和基准：
 

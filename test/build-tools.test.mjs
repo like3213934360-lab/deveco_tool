@@ -57,7 +57,18 @@ async function fixture(t) {
       console.log("App installed successfully\\nApplication 'com.example.test': error: failed to start ability.\\nerror: code: 16000001");
     } else if (process.env.BUILD_TEST_MODE === 'install-only') console.log('App installed successfully');
     else if (process.env.BUILD_TEST_MODE === 'no-ability') console.log("Application 'com.example.test' installed successfully (no ability to launch).");
-    else if (args.includes('--apply')) console.log('[Apply] Apply complete.');
+    else if (args.includes('--apply')) {
+      const mode = process.env.BUILD_TEST_MODE || '';
+      if (mode.startsWith('apply-launch-failed')) console.warn('[Apply] launch app failed: requested Ability was not found');
+      console.log('[Apply] Apply complete.');
+      if (mode === 'apply-launch-failed-verbose') console.error('x'.repeat(600000));
+      if (mode.startsWith('apply-') && !mode.startsWith('apply-launch-failed')) {
+        console.error('[Apply] 失败：Lock is already released');
+        if (mode !== 'apply-lock-only') console.error('[Apply] 自动回退到全量 devecocli run...');
+        if (mode === 'apply-fallback-verbose') console.error('x'.repeat(600000));
+        if (mode === 'apply-fallback-ok' || mode === 'apply-fallback-verbose') console.log("Application 'com.example.test': start ability successfully.");
+      }
+    }
     else {
       console.log("Build completed successfully.\\nApp installed successfully\\nApplication 'com.example.test': start ability successfully.");
       if (process.env.BUILD_TEST_MODE === 'verbose') console.log('x'.repeat(600000));
@@ -142,6 +153,77 @@ test("final launch acknowledgement survives a verbose tail after build and insta
   const f = await fixture(t);
   process.env.BUILD_TEST_MODE = "verbose";
   assert.match(await startApp(f.args), /Output truncated/);
+});
+
+test("apply lock failures cannot masquerade as incremental success or hide an unfinished fallback", async (t) => {
+  const f = await fixture(t);
+  for (const mode of ["apply-lock-only", "apply-fallback-incomplete"]) {
+    process.env.BUILD_TEST_MODE = mode;
+    await assert.rejects(applyChanges({ ...f.args, files: [f.changed] }), { code: "DEVECO_CLI_APPLY_FAILED" });
+  }
+  for (const mode of ["apply-fallback-ok", "apply-fallback-verbose"]) {
+    process.env.BUILD_TEST_MODE = mode;
+    const result = await applyChanges({ ...f.args, files: [f.changed] });
+    assert.match(result, /Update mode: full-build-fallback/);
+    assert.match(result, /Reason: .*Lock is already released/);
+    assert.doesNotMatch(result, /Applied 1 changed file/);
+  }
+});
+
+test("cold apply completion cannot hide a launch failure, even when recovery succeeds", async (t) => {
+  const f = await fixture(t);
+  for (const mode of ["apply-launch-failed", "apply-launch-failed-verbose"]) {
+    process.env.BUILD_TEST_MODE = mode;
+    await assert.rejects(applyChanges({ ...f.args, files: [f.changed] }), (error) => {
+      assert.equal(error.code, "DEVECO_CLI_APPLY_FAILED");
+      assert.match(error.message, /launch app failed: requested Ability was not found/);
+      assert.match(error.message, /previous installed app was relaunched/);
+      return true;
+    });
+  }
+  const calls = await f.records();
+  assert.equal(calls.length, 4);
+  assert.ok(calls[1].args.includes("--skip-build"));
+  assert.ok(calls[3].args.includes("--skip-build"));
+});
+
+test("apply uses full deployment when the official cold branch cannot honor the requested configuration", async (t) => {
+  const f = await fixture(t);
+  const libraryFile = "lib/src/main/library.ts";
+  await write(f.root, libraryFile, "export const library = 1;\n");
+  for (const input of [
+    { product: "wearable", target: "default" },
+    { target: "preview" },
+    { build_mode: "release" },
+    { files: [libraryFile] },
+    { files: ["build-profile.json5"] },
+  ]) {
+    const result = await applyChanges({ ...f.args, files: [f.changed], ...input });
+    assert.match(result, /Update mode: full-build-fallback/);
+    assert.match(result, /Reason: .+/);
+    const args = (await f.records()).at(-1).args;
+    assert.equal(args.includes("--apply"), false);
+    assert.equal(args.includes("--skip-build"), false);
+    if (input.product) assert.equal(args[args.indexOf("--product") + 1], input.product);
+    if (input.target) assert.equal(args[args.indexOf("--module") + 1], `phone@${input.target}`);
+    if (input.build_mode) assert.equal(args[args.indexOf("--build-mode") + 1], input.build_mode);
+  }
+  await write(f.root, "lib/src/main/module.json5", "{module:{type:'entry',abilities:[{name:'SecondAbility'}]}}");
+  const result = await applyChanges({ ...f.args, module: "library", files: [libraryFile] });
+  assert.match(result, /Update mode: full-build-fallback/);
+  const args = (await f.records()).at(-1).args;
+  assert.equal(args[args.indexOf("--module") + 1], "library");
+  assert.equal(args.includes("--apply"), false, "normal run resolves the selected module's Ability");
+});
+
+test("configuration fallback still requires a final deployment receipt", async (t) => {
+  const f = await fixture(t);
+  process.env.BUILD_TEST_MODE = "install-only";
+  await assert.rejects(applyChanges({ ...f.args, product: "wearable", files: [f.changed] }), { code: "DEVECO_CLI_APPLY_FAILED" });
+  process.env.BUILD_TEST_MODE = "";
+  await write(f.root, "build-profile.json5", "{modules:[{name:'phone',srcPath:'./features/手机',targets:[{name:'preview',applyToProducts:['default']}]},{name:'library',srcPath:'./lib'}]}");
+  assert.match(await applyChanges({ ...f.args, files: [f.changed] }), /Reason: Cold apply requires a default module target/);
+  assert.equal((await f.records()).at(-1).args.includes("--apply"), false);
 });
 
 test("hot reload applies the pinned product, mode, ability and deduplicated file list", async (t) => {
@@ -234,7 +316,11 @@ test("CLT project sync forwards product and can omit dependency installation on 
   const clt = path.join(f.root, 'clt');
   const node = process.platform === 'win32' ? 'tool/node/node.exe' : 'tool/node/bin/node';
   await write(clt, node, '');
-  await fs.copyFile(process.execPath, path.join(clt, node));
+  // A bundled Node can load adjacent shared libraries and cannot be copied alone.
+  const spawn = childProcess.spawn;
+  childProcess.spawn = (file, args, options) => spawn(file === path.join(clt, node) ? process.execPath : file, args, options);
+  syncBuiltinESMExports();
+  t.after(() => { childProcess.spawn = spawn; syncBuiltinESMExports(); });
   await write(clt, 'ohpm/bin/pm-cli.js', "console.log('dependencies installed');");
   await write(clt, 'hvigor/bin/hvigorw.js', "console.log('synced',...process.argv.slice(2));");
   await write(clt, 'version.txt', '# Version: 26.0.0\n');

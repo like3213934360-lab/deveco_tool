@@ -93,3 +93,61 @@ export function readModuleNames(projectRoot) {
   }
   return names;
 }
+
+/** Resolve the selected product's declared SDK instead of guessing an API level. */
+export function readProjectSdkConfig(projectRoot, productName) {
+  const profile = path.join(projectRoot, "build-profile.json5");
+  const invalid = (message) => {
+    const error = new Error(`${profile}: ${message}`);
+    error.code = "ARKTS_SDK_CONFIG_INVALID";
+    throw error;
+  };
+  let app;
+  try {
+    app = parseJson5(fs.readFileSync(profile, "utf8"))?.app;
+  } catch (error) {
+    invalid(`Cannot read project SDK configuration: ${error.message}`);
+  }
+  if (!app || typeof app !== "object") invalid("Missing app SDK configuration");
+  const products = app.products ?? [];
+  if (!Array.isArray(products) || products.some((product) => !product || typeof product.name !== "string")) {
+    invalid("app.products must contain named products");
+  }
+  let product;
+  if (productName !== undefined) {
+    const matches = products.filter((entry) => entry.name === productName);
+    if (matches.length !== 1) invalid(`Product ${JSON.stringify(productName)} does not identify exactly one product`);
+    [product] = matches;
+  } else if (products.length) {
+    const defaults = products.filter((entry) => entry.name === "default");
+    if (defaults.length === 1) [product] = defaults;
+    else if (products.length === 1) [product] = products;
+    else invalid("Multiple products are declared without a unique default; pass product explicitly");
+  }
+  const apiLevel = (value, field) => {
+    const text = typeof value === "string" ? value.trim() : "";
+    const match = /^\d+\.\d+\.\d+\((\d+)\)$/.exec(text);
+    const msf = /^(\d{1,2})\.(\d{1,2})\.(\d{1,2})$/.exec(text);
+    const api = typeof value === "number" ? value : /^\d+$/.test(text) ? Number(text) : match ? Number(match[1])
+      : msf && Number(msf[1]) >= 26 ? Number(msf[1]) * 10000 + Number(msf[2]) * 100 + Number(msf[3]) : NaN;
+    if (!Number.isSafeInteger(api) || api <= 0) invalid(`${field} must be an API integer or a version such as 6.1.0(23)`);
+    return api;
+  };
+  // Older profiles put the SDK fields on app; product fields override those values.
+  const compatible = product?.compatibleSdkVersion ?? app.compatibleSdkVersion;
+  const target = product?.targetSdkVersion ?? app.targetSdkVersion;
+  const runtimeOS = product?.runtimeOS ?? app.runtimeOS ?? "OpenHarmony";
+  if (!["HarmonyOS", "OpenHarmony"].includes(runtimeOS)) invalid(`Unsupported runtimeOS: ${JSON.stringify(runtimeOS)}`);
+  // HarmonyOS's SDK comparison hook requires the distribution version, not a bare OpenHarmony
+  // API integer. Losing this text makes it warn even when 13 <= 23.
+  if (runtimeOS === "HarmonyOS" && !String(compatible).includes(".")) {
+    invalid("HarmonyOS compatibleSdkVersion requires the distribution version, such as 6.1.0(23) or 26.0.0");
+  }
+  return {
+    product: product?.name ?? null,
+    runtimeOS,
+    compatibleSdkVersion: apiLevel(compatible, "compatibleSdkVersion"),
+    originCompatibleSdkVersion: String(compatible).trim(),
+    ...(target !== undefined ? { targetSdkVersion: apiLevel(target, "targetSdkVersion") } : {}),
+  };
+}

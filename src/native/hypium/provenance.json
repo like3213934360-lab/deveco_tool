@@ -1,0 +1,11 @@
+{
+  "package": "hypium-driver",
+  "version": "6.1.210",
+  "url": "https://registry.npmjs.org/hypium-driver/-/hypium-driver-6.1.210.tgz",
+  "license": "ISC",
+  "files": {
+    "uitest_agent_v1.2.2.so": "e1b8e75fad983aa29640784ee4b457fe7ac1c916a15f72c8b899d5a7716da651",
+    "uitest_agent_v1.1.9.so": "19719eccb246d1e1b669d297d06af4bc88419ac08748465bd6196d8c088673d7",
+    "uitest_agent_v1.1.9.x86_64.so": "24a14a7841ec376dad4e1fa741de8f9f218c652a7e6d0100077798006367b274"
+  }
+}

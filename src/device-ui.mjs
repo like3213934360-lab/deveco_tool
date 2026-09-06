@@ -3,7 +3,7 @@
  * @author deveco-tool
  *
  * The gateway keeps CodeGenie's `perform_ui_action` contract as a compatibility alias and routes
- * its standard operations here. Only text that HDC cannot quote safely falls back to the child;
+ * its standard operations here, including text transported through official UiTest RPC.
  * `get_app_ui_tree` remains a direct child proxy. These primitives exist because the
  * screenshot-driven loop (capture, find a control, tap it) was paying for three avoidable things,
  * all measured on a real device:
@@ -42,6 +42,7 @@ import {
   TAP_ACTIONS, POINT_ACTIONS, RECT_GESTURE_ACTIONS,
   buildInputArgs, buildScreenGestureArgs, buildTargetGestureArgs, requireSingleTarget,
 } from "./device-input.mjs";
+import { pasteDeviceText, textRequest } from "./device-text.mjs";
 import { withUitestLock } from "./device-lock.mjs";
 import { entryByBaseName, readTar } from "./device-tar.mjs";
 import { hdcFailureMessage, requireHdc, resolveDevice, runHdc, targetArgs } from "./hdc-log.mjs";
@@ -105,6 +106,9 @@ const OBSERVE_SUCCESS_PATTERN = /OBSERVE_OK/;
  * drives uitest through its own client and will never take it, so this has to stay recognisable.
  */
 const UITEST_CONFLICT_PATTERN = /Wait for subscribe uitest\.broadcast\.command\.reply timeout/i;
+// API 24 also produced this fast failure during parallel dumps. It does not by itself prove
+// contention: the window's nodes may be unavailable for another reason.
+const WINDOW_NODES_FAILED_PATTERN = /DumpLayout failed:\s*Get window nodes failed/i;
 
 /**
  * A device that has no `snapshot_display` at all will never grow one, so that verdict is cached and
@@ -220,6 +224,21 @@ function assertNoUitestConflict(combined, operation) {
     "DevEco Studio's device panel drives uitest through its own client and cannot see this pack's"
     + " lock. Close it (or stop whatever else is driving the device) and retry.",
   );
+}
+
+function assertLayoutDumpSucceeded(output) {
+  assertNoUitestConflict(output, "uitest dumpLayout");
+  if (WINDOW_NODES_FAILED_PATTERN.test(output)) {
+    fail(
+      `uitest dumpLayout could not obtain window nodes: ${output.trim()}`,
+      "UI_TREE_UNAVAILABLE",
+      "Wait for the foreground window to settle and retry. If another UI inspector is active,"
+      + " stop its capture first. This message alone does not establish device contention.",
+    );
+  }
+  if (!DUMP_SUCCESS_PATTERN.test(output)) {
+    fail(`uitest dumpLayout failed: ${output.trim() || "no output"}`, "UI_DUMP_FAILED");
+  }
 }
 
 function sanitizeForPath(value) {
@@ -844,10 +863,7 @@ async function dumpLayout(hdc, deviceId, timeoutMs, signal, options = {}) {
       { signal },
     );
     const combined = `${result.stdout}\n${result.stderr}`;
-    assertNoUitestConflict(combined, "uitest dumpLayout");
-    if (!DUMP_SUCCESS_PATTERN.test(combined)) {
-      fail(`uitest dumpLayout failed: ${combined.trim() || "no output"}`, "UI_DUMP_FAILED");
-    }
+    assertLayoutDumpSucceeded(combined);
     // Stable name, overwritten every call: unlike a screenshot, a stale layout is actively harmful,
     // and dumpPath only has to stay valid until the next dump.
     const localPath = path.join(defaultLocalDirectory(deviceId), "layout.json");
@@ -979,10 +995,7 @@ export async function uiObserve(input = {}) {
     const readEntry = (target) => entryByBaseName(files, path.posix.basename(target));
 
     const dumpLogText = readEntry(targets.dumpLog)?.toString("utf8") ?? "";
-    assertNoUitestConflict(dumpLogText, "uitest dumpLayout");
-    if (!DUMP_SUCCESS_PATTERN.test(dumpLogText)) {
-      fail(`uitest dumpLayout failed: ${dumpLogText.trim() || "no output"}`, "UI_DUMP_FAILED");
-    }
+    assertLayoutDumpSucceeded(dumpLogText);
     const dumpBytes = readEntry(targets.dump);
     if (!dumpBytes || dumpBytes.length === 0) fail("Layout dump came back empty", "UI_DUMP_EMPTY");
 
@@ -1088,6 +1101,7 @@ async function observeSeparately({ hdc, deviceId, timeoutMs, selector, targetWid
 }
 
 async function sendInput(hdc, deviceId, inputArgs, timeoutMs, action, signal) {
+  if (["inputText", "text"].includes(inputArgs[0])) fail("Text must use the forced-paste path", "UI_ARGS_INVALID");
   const result = await execHdc(
     [hdc, ...targetArgs(deviceId), "shell", "uitest", "uiInput", ...inputArgs],
     timeoutMs,
@@ -1100,6 +1114,36 @@ async function sendInput(hdc, deviceId, inputArgs, timeoutMs, action, signal) {
   if (!/No Error/i.test(combined)) {
     fail(`uitest uiInput ${action} failed: ${combined.trim() || "no output"}`, "UI_TAP_FAILED");
   }
+}
+
+/** Forced paste, with target lookup and input under the same device UI lock. */
+export async function uiText(input = {}, resolveOfficialTarget) {
+  const selector = readSelector({ ...input, text: undefined });
+  const coordinates = input.x !== undefined || input.y !== undefined;
+  if (coordinates && hasSelector(selector)) fail("Use coordinates or a text-input selector, not both", "UI_ARGS_INVALID");
+  if (!coordinates && !hasSelector(selector) && !resolveOfficialTarget) {
+    fail("Text input requires x/y, key/type, or an official node_id", "UI_ARGS_INVALID");
+  }
+  let point = coordinates ? { x: input.x, y: input.y } : undefined;
+  if (point && input.displayId !== undefined) point.displayId = Number(input.displayId);
+  textRequest(point ?? { x: 0, y: 0 }, input.text);
+  const hdc = requireHdc();
+  const timeoutMs = boundedTimeout(input.timeoutMs);
+  const deviceId = await resolveDevice(hdc, input.hvd);
+  return withUitest(deviceId, "UiTest forced paste", timeoutMs, async () => {
+    let target;
+    if (resolveOfficialTarget) point = await resolveOfficialTarget(deviceId);
+    else if (!point) {
+      const dumpPath = await dumpLayout(hdc, deviceId, timeoutMs, input.signal);
+      target = requireSingleTarget(analyseDump({ root: readDump(dumpPath), dumpPath, deviceId, selector }), selector);
+      point = { ...target.center };
+      if (target.displayId !== null && target.displayId !== undefined) point.displayId = Number(target.displayId);
+    }
+    const result = await pasteDeviceText({ hdc, deviceId, point, text: input.text, timeoutMs, signal: input.signal });
+    return { deviceId, action: "inputText", ...result, ...(target ? { target } : {}),
+      sent: `UiTest Driver.inputText ${point.x} ${point.y} (paste)`,
+      verificationHint: "Paste was accepted; read the input's UI text or assert its application result to verify the final content." };
+  });
 }
 
 function closestMatchingNode(analysis, target) {
@@ -1136,6 +1180,7 @@ export async function uiTap(input = {}) {
   if (!TAP_ACTIONS.has(input.action)) {
     fail(`action must be one of ${[...TAP_ACTIONS].join(", ")}`, "UI_ARGS_INVALID");
   }
+  if (input.action === "inputText") return uiText(input);
   const hdc = requireHdc();
   const timeoutMs = boundedTimeout(input.timeoutMs);
   const deviceId = await resolveDevice(hdc, input.hvd);
@@ -1418,10 +1463,13 @@ export async function withUiAutomationSession(input = {}, task) {
         target = requireSingleTarget(analysis, readSelector(step.selector));
       }
       const inputAction = step.action === "input" ? "inputText" : actionNames[step.action];
-      const args = step.action === "input"
-        ? buildInputArgs({ action: inputAction, x: target.center.x, y: target.center.y, text: step.value })
-        : [inputAction, String(target.center.x), String(target.center.y)];
-      await sendInput(hdc, deviceId, args, current.timeoutMs, inputAction, current.signal);
+      if (step.action === "input") {
+        const point = { ...target.center };
+        if (target.displayId !== null && target.displayId !== undefined) point.displayId = Number(target.displayId);
+        await pasteDeviceText({ hdc, deviceId, point, text: step.value, timeoutMs: current.timeoutMs, signal: current.signal });
+      } else {
+        await sendInput(hdc, deviceId, [inputAction, String(target.center.x), String(target.center.y)], current.timeoutMs, inputAction, current.signal);
+      }
       return { action: step.action, commandAccepted: true, target, structureSignature: analysis.structureSignature };
     };
 

@@ -932,7 +932,7 @@ test("the optional Hypium adapter keeps a bounded persistent session and support
   const calls = { connect: 0, find: 0, click: 0, point: null, disconnect: 0 };
   const component = {
     async click() { calls.click += 1; },
-    async doubleClick() {}, async longClick() {}, async inputText() {},
+    async doubleClick() {}, async longClick() {}, async inputText(text, mode) { calls.input = { text, mode }; },
   };
   const driver = {
     async findComponents() { calls.find += 1; return [component]; },
@@ -964,6 +964,7 @@ test("the optional Hypium adapter keeps a bounded persistent session and support
         const found = await session.find({ key: "settings" }, { timeoutMs: 500 });
         assert.equal(found.matchCount, 1);
         await session.action({ action: "tap", selector: { key: "settings" } }, found, { timeoutMs: 500 });
+        await session.action({ action: "input", selector: { key: "settings" }, value: "it's $VALUE" }, found, { timeoutMs: 500 });
       });
     }
     await adapter.withSession({ resolvedDeviceId: "device-1", timeoutMs: 1000 }, (session) => session.action({
@@ -973,6 +974,7 @@ test("the optional Hypium adapter keeps a bounded persistent session and support
   assert.equal(calls.connect, 1, "the driver connection must be reused between flows");
   assert.equal(calls.find, 2);
   assert.equal(calls.click, 2);
+  assert.deepEqual(calls.input, { text: "it's $VALUE", mode: { paste: true } });
   assert.deepEqual(calls.point, { x: 250, y: 1500 });
 });
 
