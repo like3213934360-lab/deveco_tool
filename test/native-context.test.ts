@@ -8,6 +8,7 @@ import { z } from "zod";
 import { Runtime } from "../src/services/runtime.js";
 import { atomicWrite } from "../src/core/files.js";
 import type { Project } from "../src/services/project.js";
+import { errorResult } from "../src/core/errors.js";
 
 test("doctor follows selected projects while submitted diagnostic workflows retain their captured project", async (t) => {
   const root = fs.realpathSync.native(
@@ -49,6 +50,7 @@ test("doctor follows selected projects while submitted diagnostic workflows reta
       summary: { errorCount: 0, warnCount: 0 },
     };
   });
+  let stage = "doctor-empty";
   try {
     assert.equal(
       z
@@ -56,6 +58,7 @@ test("doctor follows selected projects while submitted diagnostic workflows reta
         .parse(await runtime.call("deveco_doctor", {})).project,
       null,
     );
+    stage = "switch-alias";
     assert.deepEqual(
       await runtime.call("switch_cwd", { project_path: alias }),
       { project_path: first },
@@ -66,6 +69,7 @@ test("doctor follows selected projects while submitted diagnostic workflows reta
         .parse(await runtime.call("deveco_doctor", {})).project.root,
       first,
     );
+    stage = "submit-workflow";
     const run = z.object({ run_id: z.string() }).parse(
       await runtime.call("workflow_run", {
         action: "start",
@@ -83,6 +87,7 @@ test("doctor follows selected projects while submitted diagnostic workflows reta
     } finally {
       clearTimeout(deadline);
     }
+    stage = "switch-second";
     await runtime.call("switch_cwd", { project_path: second });
     assert.equal(
       z
@@ -113,6 +118,7 @@ test("doctor follows selected projects while submitted diagnostic workflows reta
       ).status;
     assert.equal(status, "succeeded");
     assert.deepEqual(observed, [first]);
+    stage = "remove-second";
     fs.rmSync(second, { recursive: true });
     const failed = z
       .object({ project: z.object({ error: z.object({ code: z.string() }) }) })
@@ -125,6 +131,32 @@ test("doctor follows selected projects while submitted diagnostic workflows reta
         .project.root,
       first,
     );
+  } catch (error) {
+    const observe = (read: () => unknown) => {
+      try {
+        return read();
+      } catch (failure) {
+        return { error: errorResult(failure) };
+      }
+    };
+    t.diagnostic(
+      JSON.stringify({
+        stage,
+        error: errorResult(error),
+        paths: [root, first, second, alias].map((file) => ({
+          file,
+          stat: observe(() => {
+            const s = fs.lstatSync(file);
+            return { directory: s.isDirectory(), link: s.isSymbolicLink() };
+          }),
+          target: observe(() => fs.readlinkSync(file)),
+          native: observe(() => fs.realpathSync.native(file)),
+          javascript: observe(() => fs.realpathSync(file)),
+          entries: observe(() => fs.readdirSync(file)),
+        })),
+      }),
+    );
+    throw error;
   } finally {
     release.resolve();
     await runtime.close();

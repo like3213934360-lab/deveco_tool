@@ -14,6 +14,8 @@ import { PersistentProcessObserver } from "../src/core/process-observer.js";
 import { withTrace } from "../src/core/trace.js";
 import { ToolError } from "../src/core/errors.js";
 import { BuildDiagnostics } from "../src/core/build-diagnostics.js";
+import Database from "better-sqlite3";
+import { protocolVersion } from "../src/core/config.js";
 
 const temporary = () =>
   fs.realpathSync.native(
@@ -231,6 +233,49 @@ test("a crashed log owner publishes incomplete actual bytes on restart", async (
       maxRetries: 3,
       retryDelay: 40,
     });
+  }
+});
+
+test("failed schema initialization is atomic and rejects ambiguous protocol identities", () => {
+  const root = temporary(),
+    file = path.join(root, "state.sqlite");
+  try {
+    for (const versions of [
+      ["unsupported-protocol"],
+      [protocolVersion, "unsupported-protocol"],
+    ]) {
+      const seed = new Database(file);
+      try {
+        seed.exec(
+          "CREATE TABLE IF NOT EXISTS runtime_meta (version TEXT PRIMARY KEY); DELETE FROM runtime_meta;",
+        );
+        for (const version of versions)
+          seed.prepare("INSERT INTO runtime_meta VALUES (?)").run(version);
+      } finally {
+        seed.close();
+      }
+      assert.throws(() => new StateStore(root), code("STATE_VERSION_MISMATCH"));
+      const check = new Database(file);
+      try {
+        assert.deepEqual(
+          check
+            .prepare("SELECT name FROM sqlite_master WHERE type='table'")
+            .all(),
+          [{ name: "runtime_meta" }],
+          "Failed opening must roll back every newly created table",
+        );
+        assert.deepEqual(
+          check
+            .prepare("SELECT version FROM runtime_meta ORDER BY version")
+            .all(),
+          [...versions].sort().map((version) => ({ version })),
+        );
+      } finally {
+        check.close();
+      }
+    }
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
   }
 });
 

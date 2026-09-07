@@ -11,3 +11,5 @@
 2026-09-08 验证：`test/native-project.test.ts` 覆盖真实路径/别名、Windows 临时短路径、多个无默认产品、失败切换保留旧默认、目录删除和显式工程覆盖。`test/native-context.test.ts` 使用两个专用工程、真实 LangGraph/SQLite、受控诊断服务，验证 `doctor`、切换、持久化上下文及原任务完成。
 
 本机 Node 26 完整回归 212 项通过，0 跳过；原始证据 `/private/tmp/deveco-native-regression-node26-20260908-33/evidence.json`。这些上下文用例不需要真实 SDK、设备或登录，也不代替构建/部署验收。此前六组 CI 已覆盖旧有路径规范化，本次新增行为在新的 Node 22/24 三平台 CI 单独验证。
+
+后续 [CI 34168044469](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34168044469)：macOS/Linux 四组通过；Windows Node 24 全量回归通过，但恢复压力第 9 轮超时；Windows Node 22 本用例在 `switch_cwd` 解析刚创建的目录 junction 时出现 `ENOENT`。已加入失败阶段、链接目标、原生/JavaScript 路径解析及目录内容诊断，并将本用例纳入 20 轮压力检查。原因未确认，不添加猜测性的生产路径回退或把重跑成功记成已修复。

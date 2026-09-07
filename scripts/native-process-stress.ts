@@ -21,9 +21,12 @@ fs.mkdirSync(output, { recursive: true });
 const identity = evidenceIdentity(),
   service = new ProcessService(),
   root = fileURLToPath(new URL("../../", import.meta.url)),
-  files = ["native-runtime", "native-process-tree", "native-emulator"].map(
-    (name) => path.join(root, "dist/test", `${name}.test.js`),
-  ),
+  files = [
+    "native-runtime",
+    "native-process-tree",
+    "native-emulator",
+    "native-context",
+  ].map((name) => path.join(root, "dist/test", `${name}.test.js`)),
   results: {
     round: number;
     passed: boolean;

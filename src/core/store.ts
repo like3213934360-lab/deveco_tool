@@ -68,8 +68,12 @@ export class StateStore {
       this.db.pragma("journal_mode = WAL");
       this.db.pragma("synchronous = FULL");
       this.db.pragma("busy_timeout = 2000");
+      // Publish schema and protocol identity atomically. FULL durability then
+      // flushes one schema transaction instead of every individual DDL statement.
       this.db
-        .exec(`CREATE TABLE IF NOT EXISTS runtime_meta (version TEXT PRIMARY KEY);
+        .transaction(() => {
+          this.db
+            .exec(`CREATE TABLE IF NOT EXISTS runtime_meta (version TEXT PRIMARY KEY);
       CREATE TABLE IF NOT EXISTS runs (id TEXT PRIMARY KEY, workflow TEXT NOT NULL, input TEXT NOT NULL, input_hash TEXT NOT NULL, request_key TEXT UNIQUE, protocol TEXT NOT NULL, status TEXT NOT NULL, owner TEXT, updated INTEGER NOT NULL, created INTEGER NOT NULL, result TEXT, error TEXT);
       CREATE TABLE IF NOT EXISTS leases (resource TEXT PRIMARY KEY, owner TEXT NOT NULL, pid INTEGER NOT NULL, updated INTEGER NOT NULL, token TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS operations (run_id TEXT NOT NULL, node TEXT NOT NULL, input_hash TEXT NOT NULL, status TEXT NOT NULL, result TEXT, PRIMARY KEY(run_id,node));
@@ -82,17 +86,21 @@ export class StateStore {
       CREATE TABLE IF NOT EXISTS managed_processes (id TEXT PRIMARY KEY, owner TEXT NOT NULL, run_id TEXT, pid INTEGER, resources TEXT NOT NULL, status TEXT NOT NULL, created INTEGER NOT NULL, updated INTEGER NOT NULL, windows_job TEXT);
       CREATE TABLE IF NOT EXISTS external_sessions (id TEXT PRIMARY KEY, owner TEXT NOT NULL, run_id TEXT, kind TEXT NOT NULL, resources TEXT NOT NULL, metadata TEXT NOT NULL, status TEXT NOT NULL, updated INTEGER NOT NULL);
       CREATE TABLE IF NOT EXISTS events (id INTEGER PRIMARY KEY AUTOINCREMENT, run_id TEXT, kind TEXT NOT NULL, data TEXT NOT NULL, created INTEGER NOT NULL);`);
-      const versions = this.db
-        .prepare("SELECT version FROM runtime_meta")
-        .all() as { version: string }[];
-      invariant(
-        versions.length === 0 || versions[0]?.version === protocolVersion,
-        "STATE_VERSION_MISMATCH",
-        "Export historical reports and select a fresh state directory for this execution protocol",
-      );
-      this.db
-        .prepare("INSERT OR IGNORE INTO runtime_meta VALUES (?)")
-        .run(protocolVersion);
+          const versions = this.db
+            .prepare("SELECT version FROM runtime_meta")
+            .all() as { version: string }[];
+          invariant(
+            versions.length === 0 ||
+              (versions.length === 1 &&
+                versions[0]?.version === protocolVersion),
+            "STATE_VERSION_MISMATCH",
+            "Export historical reports and select a fresh state directory for this execution protocol",
+          );
+          this.db
+            .prepare("INSERT OR IGNORE INTO runtime_meta VALUES (?)")
+            .run(protocolVersion);
+        })
+        .immediate();
       this.reconcile();
       this.prune();
       this.heartbeat = setInterval(() => {
