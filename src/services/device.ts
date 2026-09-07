@@ -32,6 +32,11 @@ import { currentTrace } from "../core/trace.js";
 import { CpuPool } from "../core/cpu-pool.js";
 import { parseUiDump } from "./ui-parse.js";
 import { ScreenshotService } from "./screenshot.js";
+import {
+  needsControlSnapshot,
+  resolveControl,
+  uiInputArguments,
+} from "./ui-control.js";
 export {
   UiIndex,
   flattenDump,
@@ -358,9 +363,9 @@ export class DeviceService {
     return this.store.lease(
       `device:${target}`,
       async () => {
-        let { x, y } = input;
-        if (input.selector) {
-          const snapshot = captured ?? (await this.snapshot(target, signal));
+        let snapshot: Snapshot | undefined;
+        if (needsControlSnapshot(input)) {
+          snapshot = captured ?? (await this.snapshot(target, signal));
           invariant(
             snapshot.device === target &&
               Date.now() - snapshot.created <= 30000 &&
@@ -368,81 +373,33 @@ export class DeviceService {
             "SNAPSHOT_EXPIRED",
             "The prepared control snapshot is no longer available",
           );
-          const matches = snapshot.query.select({
-            ...input.selector,
-            limit: 2,
-          });
-          invariant(
-            matches.length === 1 && matches[0]?.rect,
-            "UI_TARGET_AMBIGUOUS",
-            `Expected one target, found ${matches.length}`,
-          );
-          const rect = matches[0].rect;
-          invariant(
-            matches[0].enabled !== false,
-            "UI_DISABLED",
-            "Target is disabled",
-          );
-          x = Math.max(
-            0,
-            Math.min(
-              Math.ceil(rect.x2) - 1,
-              Math.round((rect.x1 + rect.x2) / 2),
-            ),
-          );
-          y = Math.max(
-            0,
-            Math.min(
-              Math.ceil(rect.y2) - 1,
-              Math.round((rect.y1 + rect.y2) / 2),
-            ),
-          );
         }
+        const resolved = resolveControl(input, snapshot);
+        const args = uiInputArguments(resolved);
         this.invalidate(target);
-        if (input.action === "inputText") {
-          invariant(
-            x !== undefined && y !== undefined && input.text !== undefined,
-            "UI_INPUT_REQUIRED",
-            "Text and target coordinates are required",
-          );
+        if (resolved.action === "inputText") {
           const { pasteText } = await import("./text.js");
-          return pasteText(this, target, { x, y }, input.text, signal);
-        }
-        const args: string[] = [input.action];
-        if (input.action === "keyEvent") {
-          invariant(input.keys, "UI_KEYS_REQUIRED", "keys required");
-          args.push(...input.keys);
-        } else if (input.action === "dircFling") {
-          invariant(
-            input.direction !== undefined,
-            "UI_DIRECTION_REQUIRED",
-            "direction required",
+          return pasteText(
+            this,
+            target,
+            {
+              x: resolved.x!,
+              y: resolved.y!,
+              ...(resolved.display_id === undefined
+                ? {}
+                : { displayId: resolved.display_id }),
+            },
+            resolved.text!,
+            signal,
           );
-          args.push(String(input.direction));
-        } else {
-          invariant(
-            x !== undefined && y !== undefined,
-            "UI_COORDINATES_REQUIRED",
-            "x/y or selector required",
-          );
-          args.push(String(x), String(y));
-          if (["swipe", "fling", "drag"].includes(input.action)) {
-            invariant(
-              input.x2 !== undefined && input.y2 !== undefined,
-              "UI_COORDINATES_REQUIRED",
-              "x2/y2 required",
-            );
-            args.push(String(input.x2), String(input.y2));
-          }
         }
-        if (input.velocity !== undefined) args.push(String(input.velocity));
         const result = await this.shell(
           target,
           ["uitest", "uiInput", ...args],
           signal,
         );
         invariant(
-          !/error|failed|another uitest/i.test(result.stdout + result.stderr),
+          !(result.stdout + result.stderr).trim(),
           "UI_ACTION_FAILED",
           result.stdout + result.stderr,
         );

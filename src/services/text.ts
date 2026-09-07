@@ -7,7 +7,7 @@ import { invariant, object, ToolError } from "../core/errors.js";
 import type { DeviceService } from "./device.js";
 
 export function textRequest(
-  point: { x: number; y: number },
+  point: { x: number; y: number; displayId?: number },
   value: string,
 ): unknown[] {
   invariant(
@@ -16,6 +16,14 @@ export function textRequest(
     ),
     "UI_COORDINATES_INVALID",
     "Invalid input coordinates",
+  );
+  invariant(
+    point.displayId === undefined ||
+      (Number.isInteger(point.displayId) &&
+        point.displayId >= 0 &&
+        point.displayId <= 2147483647),
+    "UI_DISPLAY_INVALID",
+    "Invalid input display",
   );
   invariant(
     value.length > 0 &&
@@ -145,7 +153,7 @@ async function freePort(): Promise<number> {
 export async function pasteText(
   device: DeviceService,
   target: string,
-  point: { x: number; y: number },
+  point: { x: number; y: number; displayId?: number },
   value: string,
   signal?: AbortSignal,
 ) {

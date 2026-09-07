@@ -1,3 +1,4 @@
+import { percentagePoint, controlDisplay } from "./ui-control.js";
 import fs from "node:fs";
 import path from "node:path";
 import { z } from "zod";
@@ -360,7 +361,11 @@ export class FlowService {
                     } else if (step.action === "key")
                       await this.devices.control(
                         target,
-                        { action: "keyEvent", keys: [step.key] },
+                        {
+                          action: "keyEvent",
+                          keys: [step.key],
+                          window: { bundle_name: flow.app.bundleName },
+                        },
                         signal,
                       );
                     else {
@@ -387,22 +392,7 @@ export class FlowService {
                           "FLOW_SCREEN_UNKNOWN",
                           "Cannot resolve percentage coordinates without screen bounds",
                         );
-                        return {
-                          x: Math.min(
-                            rect.x2 - 1,
-                            Math.round(
-                              rect.x1 +
-                                ((rect.x2 - rect.x1) * position.xPercent) / 100,
-                            ),
-                          ),
-                          y: Math.min(
-                            rect.y2 - 1,
-                            Math.round(
-                              rect.y1 +
-                                ((rect.y2 - rect.y1) * position.yPercent) / 100,
-                            ),
-                          ),
-                        };
+                        return percentagePoint(rect, position);
                       };
                       const action =
                         step.action === "tap"
@@ -445,7 +435,13 @@ export class FlowService {
                                 x2: to.x,
                                 y2: to.y,
                                 velocity: step.gesture?.velocity,
+                                step_length: step.gesture?.stepLength,
                               }
+                            : {}),
+                          ...((step.point || step.gesture) &&
+                          surfaces[0] &&
+                          controlDisplay(surfaces[0]) !== undefined
+                            ? { display_id: controlDisplay(surfaces[0]) }
                             : {}),
                           ...(step.action === "input"
                             ? { text: variables[step.value!.slice(2, -1)] }

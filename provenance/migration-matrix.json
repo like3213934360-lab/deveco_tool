@@ -1554,68 +1554,72 @@
         "tool:ui_snapshot"
       ],
       "adapters": [
-        "src/services/device.ts"
+        "src/services/device.ts",
+        "src/services/ui-control.ts",
+        "src/services/recording.ts"
       ],
       "checks": [
-        "test/native-text.test.ts"
+        "test/native-text.test.ts",
+        "test/native-ui-control.test.ts",
+        "test/native-recording.test.ts"
       ],
       "behavior": "动作统一到 HDC/UiTest/Hypium 原生服务。",
       "parameters": {
         "actionType": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "replaced",
+          "replacement": "click/inputText/keyEvent 对应 operation.action；directionalFling 改为 dircFling；screenshot 改为 ui_snapshot"
         },
         "direction": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "mapped",
+          "replacement": "operation.direction；dircFling 的 0–3 方向"
         },
         "displayId": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "mapped",
+          "replacement": "operation.display_id 或 capture.display_id；选择器携带 displayId 时自动传递"
         },
         "hvd": {
           "status": "mapped",
           "replacement": "target；设备目标"
         },
         "key1": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "replaced",
+          "replacement": "operation.keys 数组；一个 Home/Back/Power 或最多三个数字键码，拒绝混用"
         },
         "key2": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "replaced",
+          "replacement": "operation.keys 数组；数字组合键保留顺序"
         },
         "key3": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "replaced",
+          "replacement": "operation.keys 数组；数字组合键保留顺序"
         },
         "localPath": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "replaced",
+          "replacement": "截图使用受管理制品引用和 workflow_run.read_artifact，不保留任意文件覆盖输出"
         },
         "savePath": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "replaced",
+          "replacement": "删除设备端永久截图路径；快照临时文件传输后删除"
         },
         "stepLength": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "mapped",
+          "replacement": "operation.step_length；fling 为像素步长，dircFling 为原生采样次数"
         },
         "text": {
           "status": "mapped",
           "replacement": "selector.text 或 operation.text；按动作区分"
         },
         "velocity": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "mapped",
+          "replacement": "operation.velocity；仅手势，200–40000"
         },
         "x": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "mapped",
+          "replacement": "operation.x；UiTest 正 int32 坐标"
         },
         "y": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "mapped",
+          "replacement": "operation.y；UiTest 正 int32 坐标"
         },
         "timeoutMs": {
           "status": "replaced",
@@ -1624,8 +1628,8 @@
       },
       "actions": [],
       "remaining": [
-        "完整 actionType 取值对照",
-        "滚动步长及显示器路由"
+        "真实设备中文输入及多显示器路由验收",
+        "原生滚动采样的实际设备结果验证"
       ],
       "acceptance": "pending",
       "evidence": []
@@ -2423,16 +2427,20 @@
         "tool:ui_control"
       ],
       "adapters": [
-        "src/services/device.ts"
+        "src/services/device.ts",
+        "src/services/ui-control.ts",
+        "src/services/recording.ts"
       ],
       "checks": [
-        "test/native-ui.test.ts"
+        "test/native-ui.test.ts",
+        "test/native-ui-control.test.ts",
+        "test/native-recording.test.ts"
       ],
       "behavior": "语义点击保留，其他动作统一在 ui_control。",
       "parameters": {
         "action": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "replaced",
+          "replacement": "operation.action；click 可直接使用 ui_tap，其余 8 种动作使用 ui_control"
         },
         "key": {
           "status": "mapped",
@@ -2455,76 +2463,76 @@
           "replacement": "selector.clickableOnly"
         },
         "verify": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "replaced",
+          "replacement": "调用 ui_observe 获取操作后树，或 verify_ui 执行明确断言；旧布尔值只表示观察，不保留为成功条件"
         },
         "from_percent": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "replaced",
+          "replacement": "selector + gesture 起点；水平方向 fromXPercent，纵向旧值 p 转为 fromYPercent=100-p；原滑块内缩改由显式端点表达"
         },
         "to_percent": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "replaced",
+          "replacement": "selector + gesture 终点；水平方向 toXPercent，纵向旧值 p 转为 toYPercent=100-p；原滑块内缩改由显式端点表达"
         },
         "axis": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "replaced",
+          "replacement": "gesture 明确两轴；水平时 Y=50，垂直时 X=50，Y 从上向下增长"
         },
         "from_x_percent": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "replaced",
+          "replacement": "window + gesture.fromXPercent；无树控件需明确应用窗口，不猜测屏幕尺寸"
         },
         "from_y_percent": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "replaced",
+          "replacement": "window + gesture.fromYPercent；相对已识别窗口"
         },
         "to_x_percent": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "replaced",
+          "replacement": "window + gesture.toXPercent；相对已识别窗口"
         },
         "to_y_percent": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "replaced",
+          "replacement": "window + gesture.toYPercent；相对已识别窗口"
         },
         "x": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "mapped",
+          "replacement": "operation.x；UiTest 正 int32 坐标"
         },
         "y": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "mapped",
+          "replacement": "operation.y；UiTest 正 int32 坐标"
         },
         "x2": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "mapped",
+          "replacement": "operation.x2；手势结束坐标"
         },
         "y2": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "mapped",
+          "replacement": "operation.y2；手势结束坐标"
         },
         "direction": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "mapped",
+          "replacement": "operation.direction；dircFling 的 0–3 方向"
         },
         "velocity": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "mapped",
+          "replacement": "operation.velocity；仅手势，200–40000"
         },
         "stepLength": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "mapped",
+          "replacement": "operation.step_length；fling 为像素步长，dircFling 为原生采样次数"
         },
         "key1": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "replaced",
+          "replacement": "operation.keys 数组；一个 Home/Back/Power 或最多三个数字键码，拒绝混用"
         },
         "key2": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "replaced",
+          "replacement": "operation.keys 数组；数字组合键保留顺序"
         },
         "key3": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "replaced",
+          "replacement": "operation.keys 数组；数字组合键保留顺序"
         },
         "hvd": {
           "status": "mapped",
@@ -2555,61 +2563,61 @@
         {
           "field": "action",
           "value": "click",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "mapped",
+          "replacement": "ui_control.operation.action=click；编码、歧义和录制回归通过，真实设备动作仍待验收"
         },
         {
           "field": "action",
           "value": "doubleClick",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "mapped",
+          "replacement": "ui_control.operation.action=doubleClick；编码、歧义和录制回归通过，真实设备动作仍待验收"
         },
         {
           "field": "action",
           "value": "longClick",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "mapped",
+          "replacement": "ui_control.operation.action=longClick；编码、歧义和录制回归通过，真实设备动作仍待验收"
         },
         {
           "field": "action",
           "value": "swipe",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "mapped",
+          "replacement": "ui_control.operation.action=swipe；编码、歧义和录制回归通过，真实设备动作仍待验收"
         },
         {
           "field": "action",
           "value": "fling",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "mapped",
+          "replacement": "ui_control.operation.action=fling；编码、歧义和录制回归通过，真实设备动作仍待验收"
         },
         {
           "field": "action",
           "value": "drag",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "mapped",
+          "replacement": "ui_control.operation.action=drag；编码、歧义和录制回归通过，真实设备动作仍待验收"
         },
         {
           "field": "action",
           "value": "dircFling",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "mapped",
+          "replacement": "ui_control.operation.action=dircFling；编码、歧义和录制回归通过，真实设备动作仍待验收"
         },
         {
           "field": "action",
           "value": "inputText",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "mapped",
+          "replacement": "ui_control.operation.action=inputText；编码、歧义和录制回归通过，真实设备动作仍待验收"
         },
         {
           "field": "action",
           "value": "keyEvent",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "mapped",
+          "replacement": "ui_control.operation.action=keyEvent；编码、歧义和录制回归通过，真实设备动作仍待验收"
         }
       ],
       "remaining": [
-        "百分比手势独立入口",
-        "原 verify 参数与后置断言说明"
+        "真实设备动作、中文输入与完整录制/重放",
+        "真实多显示器手势与最终性能门槛"
       ],
       "acceptance": "pending",
       "evidence": []

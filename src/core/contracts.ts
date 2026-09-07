@@ -60,6 +60,18 @@ function checkQueries(
       message: "Query IDs must be unique",
     });
 }
+const point = z.strictObject({
+  xPercent: z.number().min(0).max(100),
+  yPercent: z.number().min(0).max(100),
+});
+const gesture = z.strictObject({
+  fromXPercent: z.number().min(0).max(100),
+  fromYPercent: z.number().min(0).max(100),
+  toXPercent: z.number().min(0).max(100),
+  toYPercent: z.number().min(0).max(100),
+  velocity: z.number().int().min(200).max(40000).optional(),
+  stepLength: z.number().int().min(1).max(65535).optional(),
+});
 export const controlSchema = z.strictObject({
   action: z.enum([
     "click",
@@ -78,6 +90,20 @@ export const controlSchema = z.strictObject({
   y2: z.number().int().nonnegative().optional(),
   direction: z.number().int().min(0).max(3).optional(),
   velocity: z.number().int().min(200).max(40000).optional(),
+  step_length: z.number().int().min(1).max(65535).optional(),
+  display_id: z.number().int().min(0).max(2147483647).optional(),
+  window: z
+    .strictObject({
+      id: z.string().min(1).optional(),
+      bundle_name: z.string().min(1).optional(),
+    })
+    .refine(
+      (value) => !!(value.id || value.bundle_name),
+      "Window needs an id or bundle_name",
+    )
+    .optional(),
+  point: point.optional(),
+  gesture: gesture.optional(),
   text: z.string().min(1).optional(),
   keys: z
     .array(z.string().regex(/^[A-Za-z0-9_]+$/))
@@ -104,10 +130,6 @@ export const assertionSchema = z
     (input) => (input.visible !== undefined) !== (input.hidden !== undefined),
     "Provide exactly one visible or hidden assertion",
   );
-const point = z.strictObject({
-  xPercent: z.number().min(0).max(100),
-  yPercent: z.number().min(0).max(100),
-});
 export const stepSchema = z.strictObject({
   id: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/),
   action: z.enum([
@@ -137,15 +159,7 @@ export const stepSchema = z.strictObject({
     .string()
     .regex(/^[A-Za-z0-9_]+$/)
     .optional(),
-  gesture: z
-    .strictObject({
-      fromXPercent: z.number().min(0).max(100),
-      fromYPercent: z.number().min(0).max(100),
-      toXPercent: z.number().min(0).max(100),
-      toYPercent: z.number().min(0).max(100),
-      velocity: z.number().int().min(200).max(40000).optional(),
-    })
-    .optional(),
+  gesture: gesture.optional(),
 });
 export const flowSchema = z
   .strictObject({
@@ -781,7 +795,7 @@ export const tools = {
   },
   ui_control: {
     description:
-      "Send a validated UiTest operation or lossless Unicode input; accepted commands still require outcome verification.",
+      "Send a validated UiTest operation or lossless Unicode input. Use selector or absolute x/y; point/gesture percentages are relative to a unique selector or explicit window id/bundle_name. Display follows the selected node/window; display_id may be explicit. Accepted commands still require verify_ui.",
     schema: z.strictObject({ target, operation: controlSchema }),
   },
   emulator_manage: {

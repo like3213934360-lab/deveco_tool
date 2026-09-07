@@ -7,6 +7,7 @@ import {
   flowSchema,
   meaningfulSelector,
   stepSchema,
+  selectorSchema,
   type Flow,
 } from "../core/contracts.js";
 import { PayloadCipher } from "../core/crypto.js";
@@ -15,6 +16,8 @@ import { digest } from "../core/files.js";
 import { StateStore } from "../core/store.js";
 import { withTrace } from "../core/trace.js";
 import { DeviceService, type Snapshot, type UiNode } from "./device.js";
+
+import { resolveControl, uiInputArguments } from "./ui-control.js";
 
 const payloadSchema = z.strictObject({
   flow: flowSchema,
@@ -337,7 +340,24 @@ export class RecordingService {
           async () => {
             this.devices.invalidate(target);
             const snapshot = await this.devices.snapshot(target, combined);
-            const step = recordedStep(snapshot, value.flow, input);
+            const resolved = resolveControl(input, snapshot);
+            uiInputArguments(resolved);
+            const step = recordedStep(snapshot, value.flow, {
+              ...resolved,
+              ...(input.selector && !input.point && !input.gesture
+                ? {
+                    selector: selectorSchema.parse({
+                      ...input.selector,
+                      ...(resolved.display_id === undefined
+                        ? {}
+                        : { displayId: resolved.display_id }),
+                      ...(input.window?.id
+                        ? { window_id: input.window.id }
+                        : {}),
+                    }),
+                  }
+                : {}),
+            });
             if (step.action === "input")
               value.flow.variables[step.value!.slice(2, -1)] = {
                 required: true,
@@ -380,7 +400,7 @@ export class RecordingService {
             try {
               const result = await this.devices.control(
                 target,
-                input,
+                resolved,
                 combined,
                 snapshot,
               );
@@ -443,7 +463,10 @@ export function recordedStep(
   input: z.infer<typeof controlSchema>,
 ): z.infer<typeof stepSchema> {
   const nodes = snapshot.nodes.filter(
-      (node) => node.bundleName === flow.app.bundleName,
+      (node) =>
+        node.bundleName === flow.app.bundleName &&
+        (input.display_id === undefined ||
+          node.displayId === String(input.display_id)),
     ),
     windows = nodes.filter(
       (node) =>
@@ -509,6 +532,9 @@ export function recordedStep(
         toXPercent: to.xPercent,
         toYPercent: to.yPercent,
         velocity: input.velocity,
+        ...(input.step_length === undefined
+          ? {}
+          : { stepLength: input.step_length }),
       },
     });
   }

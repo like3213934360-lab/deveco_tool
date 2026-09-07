@@ -397,6 +397,95 @@ test("a lost recording receipt reports the accepted action, blocks further repla
     await f.close();
   }
 });
+test("recording resolves percentages once, retains fling sampling and rejects invalid controls before writing a pending receipt", async (t) => {
+  const f = await fixture(t);
+  try {
+    const id = await start(f.runtime);
+    let captures = 0;
+    t.mock.method(f.runtime.devices, "snapshot", async () => {
+      captures++;
+      const tree = snapshot();
+      for (const node of tree.nodes) node.displayId = "1";
+      return tree;
+    });
+    const control = t.mock.method(f.runtime.devices, "control", async () => ({
+      commandAccepted: true,
+      outcomeVerified: false,
+    }));
+    await assert.rejects(
+      f.runtime.call("ui_control", {
+        operation: { action: "click", x: 200, y: 400, velocity: 600 },
+      }),
+      { code: "UI_INPUT_CONFLICT" },
+    );
+    assert.equal(control.mock.callCount(), 0);
+    assert.equal(f.runtime.recordings.status(id).step_count, 0);
+    assert.ok(!f.runtime.recordings.status(id).uncertain_operation);
+    const before = captures;
+    await f.runtime.call("ui_control", {
+      operation: {
+        action: "fling",
+        window: { bundle_name: bundle },
+        display_id: 1,
+        gesture: {
+          fromXPercent: 25,
+          fromYPercent: 25,
+          toXPercent: 75,
+          toYPercent: 75,
+          velocity: 800,
+          stepLength: 4,
+        },
+      },
+    });
+    assert.equal(captures - before, 1);
+    assert.deepEqual(control.mock.calls[0]!.arguments[1], {
+      action: "fling",
+      display_id: 1,
+      x: 200,
+      y: 400,
+      x2: 400,
+      y2: 800,
+      velocity: 800,
+      step_length: 4,
+    });
+    assert.deepEqual(f.runtime.recordings.flow(id).steps[0]?.gesture, {
+      fromXPercent: 25,
+      fromYPercent: 25,
+      toXPercent: 75,
+      toYPercent: 75,
+      velocity: 800,
+      stepLength: 4,
+    });
+    assert.equal(f.runtime.recordings.status(id).receipt_count, 1);
+    await f.runtime.call("ui_control", {
+      operation: {
+        action: "drag",
+        selector: { key: "submit", displayId: 1 },
+        gesture: {
+          fromXPercent: 10,
+          fromYPercent: 50,
+          toXPercent: 90,
+          toYPercent: 50,
+        },
+      },
+    });
+    const recorded = f.runtime.recordings.flow(id).steps[1]!;
+    assert.equal(recorded.selector, undefined);
+    assert.equal(recorded.fragile, true);
+    assert.ok(Math.abs(recorded.gesture!.fromXPercent - 7) < 1e-10);
+    assert.deepEqual(
+      { ...recorded.gesture, fromXPercent: 7 },
+      {
+        fromXPercent: 7,
+        fromYPercent: 10,
+        toXPercent: 43,
+        toYPercent: 10,
+      },
+    );
+  } finally {
+    await f.close();
+  }
+});
 test("recording cancellation reaches an in-flight UI action and waits for its operation guard before declaring cancelled", async (t) => {
   const f = await fixture(t);
   try {

@@ -63,6 +63,8 @@
 
 上例为 `ui_tap` 输入。`ui_control.inputText` 的实际文字不会写入流程或录制草稿；它生成 `input1` 等必需的私密变量，步骤只保存 `${input1}`。输入框的当前文本和值也不作为选择器备选项。
 
+百分比手势可相对于控件或明确的窗口，显示器编号随解析结果传给原生输入；录制保存实际执行位置和 fling 步长。参数、示例和多窗口限制见 [原生 UI 操作](native-ui-controls.md)。
+
 4. 调用 `ui_flow.record_stop` 提交最终断言。提交后断言固定，任务重新进入 LangGraph，验证成功才保存 `.arkpilot/flows/<id>.json`。已有同名文件不会被覆盖。
 
 ```json
