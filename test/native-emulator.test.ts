@@ -9,8 +9,9 @@ import { ProcessService } from "../src/core/process.js";
 import { StateStore } from "../src/core/store.js";
 import { PersistentProcessObserver } from "../src/core/process-observer.js";
 import { EmulatorService } from "../src/services/emulator.js";
+import { errorResult } from "../src/core/errors.js";
 
-test("emulator readiness returns while its launcher stays alive; shutdown confirms inventory and closes logs", async () => {
+test("emulator readiness returns while its launcher stays alive; shutdown confirms inventory and closes logs", async (t) => {
   const root = fs.realpathSync(
     fs.mkdtempSync(path.join(os.tmpdir(), "deveco-emulator-")),
   );
@@ -46,6 +47,10 @@ test("emulator readiness returns while its launcher stays alive; shutdown confir
       store.db.prepare("SELECT * FROM artifact_streams").all().length,
       0,
     );
+  } catch (error) {
+    // Preserve the native stderr/receipt in TAP before temporary artifacts are removed.
+    t.diagnostic(JSON.stringify(errorResult(error)));
+    throw error;
   } finally {
     await service.close();
     await processes.close();

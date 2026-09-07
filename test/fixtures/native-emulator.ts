@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import { z } from "zod";
+import { atomicWrite } from "../../src/core/files.js";
 
 const file = z.string().parse(process.argv[2]);
 const action = process.argv[3];
@@ -14,15 +15,12 @@ const read = () =>
 if (action === "-list") process.stdout.write(JSON.stringify([read()]));
 else if (action === "-start") {
   const state = read();
-  fs.writeFileSync(
+  atomicWrite(
     file,
     JSON.stringify({ ...state, isRunning: true, pid: process.pid }),
   );
   const stop = () => {
-    fs.writeFileSync(
-      file,
-      JSON.stringify({ name: state.name, isRunning: false }),
-    );
+    atomicWrite(file, JSON.stringify({ name: state.name, isRunning: false }));
     process.exit(0);
   };
   process.on("SIGTERM", stop);
