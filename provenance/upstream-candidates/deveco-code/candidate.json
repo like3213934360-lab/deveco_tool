@@ -1,0 +1,1407 @@
+{
+  "format": 1,
+  "source": "deveco-code",
+  "url": "https://gitcode.com/openharmony-sig/deveco-code.git",
+  "base": {
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "tree": "5620203eb2a04274afd9f9edb9d4b289427439b4"
+  },
+  "candidate": {
+    "commit": "325aff05706b9b04a9816a987e9672dda991c630",
+    "tree": "9232f44a15bed9f948662af74f23264b34be457c"
+  },
+  "mapping_sha256": "38984052edc05a359cb3381e64994e7fb78aace38560d91a3ed782aca671d42b",
+  "changes": [
+    {
+      "path": ".gitcode/scripts/gitcode-api.sh",
+      "status": "modified",
+      "before": {
+        "path": ".gitcode/scripts/gitcode-api.sh",
+        "oid": "49c5e9b33cc539c0b9e35ce33573c7da9041e2b5",
+        "mode": "100755",
+        "type": "blob"
+      },
+      "after": {
+        "path": ".gitcode/scripts/gitcode-api.sh",
+        "oid": "fc5082f10ae4b37da945b14f2af4820be0bd0d08",
+        "mode": "100755",
+        "type": "blob"
+      },
+      "mapping": "code-host-gitcode",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": ".gitcode/workflows/auto-merge.yml",
+      "status": "modified",
+      "before": {
+        "path": ".gitcode/workflows/auto-merge.yml",
+        "oid": "378361172ea10acea01196b902009668639c4974",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": ".gitcode/workflows/auto-merge.yml",
+        "oid": "7bc750d289b7cdcfc587c25222061b3143bee719",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-gitcode",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": ".gitcode/workflows/test.yml",
+      "status": "modified",
+      "before": {
+        "path": ".gitcode/workflows/test.yml",
+        "oid": "484e0b6dabca309e31f7aa7eda1cf17a260d4eb8",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": ".gitcode/workflows/test.yml",
+        "oid": "56f275af3664b8689a3e5341f4c8151c6e123cc8",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-gitcode",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "CHANGELOG.md",
+      "status": "modified",
+      "before": {
+        "path": "CHANGELOG.md",
+        "oid": "75c518a1a8bec20efa0f2792692800e895f784d3",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "CHANGELOG.md",
+        "oid": "e691c4db45c501473ef20b1f73f19354f391310e",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-legal-CHANGELOG.md",
+      "disposition": "adapt",
+      "reason": "Review license, version or upstream release changes before updating resource provenance.",
+      "targets": [
+        "provenance/upstream-lock.json"
+      ],
+      "tests": [
+        "test/native-upstream.test.ts"
+      ]
+    },
+    {
+      "path": "install",
+      "status": "modified",
+      "before": {
+        "path": "install",
+        "oid": "247546a30f8f08f5a450d0cfaefe5d2d51d2ac8e",
+        "mode": "100755",
+        "type": "blob"
+      },
+      "after": {
+        "path": "install",
+        "oid": "5daa0d9fe1a075d47d1e7f97f8b70f300c03eb63",
+        "mode": "100755",
+        "type": "blob"
+      },
+      "mapping": "code-host-install",
+      "disposition": "exclude",
+      "reason": "Bash installer and installation telemetry for the upstream DevEco Code host. Native MCP installation does not execute this script.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "install.ps1",
+      "status": "modified",
+      "before": {
+        "path": "install.ps1",
+        "oid": "02c5132421be42298523ae7b1e578aa6b6b1d711",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "install.ps1",
+        "oid": "a3ebc44a137ec56daafc8a2dbe6b5dcdcbf34241",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-install-ps1",
+      "disposition": "exclude",
+      "reason": "PowerShell installer and installation telemetry for the upstream DevEco Code host. Native MCP installation does not execute this script.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/core/script/migration.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/core/script/migration.ts",
+        "oid": "48b555b593742e4a63317f44b08ad3651bdb78e5",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/core/script/migration.ts",
+        "oid": "860e89138e31b7d90bc0dfda9a96a26b85b4ab5e",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/core/src/database/schema.gen.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/core/src/database/schema.gen.ts",
+        "oid": "5c044ec60f90b14b71c7cda122b4ae6770119e4e",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/core/src/database/schema.gen.ts",
+        "oid": "5190e58384a52111f28f025b31df3212b15c31c7",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/core/test/database-migration.test.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/core/test/database-migration.test.ts",
+        "oid": "f73612e58394fc3725274993079d215ad7d58bb3",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/core/test/database-migration.test.ts",
+        "oid": "665e039b63004fb55f846e46fbe0db5fa35ebd97",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/core/test/effect/cross-spawn-spawner.test.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/core/test/effect/cross-spawn-spawner.test.ts",
+        "oid": "36695ccd87bb64aaa6a561ac29bd8b183455d905",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/core/test/effect/cross-spawn-spawner.test.ts",
+        "oid": "36dfaf0ef5601a54bcb5cf3362ba13ba8bc23fd0",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/core/test/filesystem/search.test.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/core/test/filesystem/search.test.ts",
+        "oid": "cdc8344de5039ab2b126a1bd1a01d40a042f2385",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/core/test/filesystem/search.test.ts",
+        "oid": "12d54106294be8b5f3fc46d4d8261bf5bd9596a0",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/core/test/npm.test.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/core/test/npm.test.ts",
+        "oid": "c149116cd5e55fe7e581e59d276e7863da4c02ed",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/core/test/npm.test.ts",
+        "oid": "ee7642b3e240c8581fe778e62f66527a7117e12b",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/core/test/plugin/provider-azure.test.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/core/test/plugin/provider-azure.test.ts",
+        "oid": "c4bdd806c9d0cead61a9636b0e11eb61ff31ac40",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/core/test/plugin/provider-azure.test.ts",
+        "oid": "557c488d4ee4a404f86fc874f09d5a97bb63c409",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/core/test/plugin/provider-cloudflare-workers-ai.test.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/core/test/plugin/provider-cloudflare-workers-ai.test.ts",
+        "oid": "208ab8710d3ed5b67891ec8ca19b6bd1916da042",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/core/test/plugin/provider-cloudflare-workers-ai.test.ts",
+        "oid": "6d75cbfbef910b995e1b86f380139f1dff74a49c",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/core/test/plugin/provider-gitlab.test.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/core/test/plugin/provider-gitlab.test.ts",
+        "oid": "dab52a1f7fa5f032c0e75a15063b6c4fe2501abe",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/core/test/plugin/provider-gitlab.test.ts",
+        "oid": "a57f16372c2a14dc4ab717f0a993dc31f0a267de",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/core/test/plugin/provider-helper.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/core/test/plugin/provider-helper.ts",
+        "oid": "c15928435bcd24c4c7a15af15399d585a77ccb6b",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/core/test/plugin/provider-helper.ts",
+        "oid": "1f827e39e7d05169dcf43365c55949631bfa0e48",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/core/test/public-opencode.test.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/core/test/public-opencode.test.ts",
+        "oid": "34dd9cf58244dde86ee94ee08836a94866d1ee14",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/core/test/public-opencode.test.ts",
+        "oid": "561c03f398b5c83761d88c72d005e09963b23f7b",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/core/test/session-runner.test.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/core/test/session-runner.test.ts",
+        "oid": "c3089da0dba44a2e751b57d3f54e30a266e68541",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/core/test/session-runner.test.ts",
+        "oid": "6ff969fb62a82622ced88e18312d087376734f00",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/core/test/tool-edit.test.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/core/test/tool-edit.test.ts",
+        "oid": "57a354fc7c0beb6a48b3329dea145d28ffd23423",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/core/test/tool-edit.test.ts",
+        "oid": "0ba5b44a150d53454f6f8063c10acf4c1e00ebee",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/core/test/tool-read.test.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/core/test/tool-read.test.ts",
+        "oid": "605a1e17da566e7874e57c6c85860ceb0d2060cf",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/core/test/tool-read.test.ts",
+        "oid": "30693753314c27b65f00e829d42c1be6511495e3",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/core/test/tool-write.test.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/core/test/tool-write.test.ts",
+        "oid": "de5c7c264aacdf415bb42c1ca5c5f5fc74603312",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/core/test/tool-write.test.ts",
+        "oid": "887ad00fe43962b58a49e1fcb666648ffc3dc332",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/package.json",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/package.json",
+        "oid": "4767091a4f731135a380ef75749aa8c33beb54a6",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/package.json",
+        "oid": "ae6fc751bf512ab65db75142df9444088bd075b0",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/resources/models.dev.json",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/resources/models.dev.json",
+        "oid": "ac379246dccfdffd526c00c3962cf72b58f9358d",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/resources/models.dev.json",
+        "oid": "9c9c9e41f474827c0b4481ea136c72a22626412a",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/src/installation/index.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/src/installation/index.ts",
+        "oid": "433fd3f9c59fd6899656bbed2e445b083bf92567",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/src/installation/index.ts",
+        "oid": "f556e0f81d53ef09ec4d42f039230eec6f957dce",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/src/plugin/deveco-models.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/src/plugin/deveco-models.ts",
+        "oid": "32a49c1a49631716375eb93350f599f7d70514cb",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/src/plugin/deveco-models.ts",
+        "oid": "450671574f81a56aad55ae5c1e4a75c017ae0853",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/src/plugin/index.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/src/plugin/index.ts",
+        "oid": "14f2cf622039ebd467466557c717dae418130e27",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/src/plugin/index.ts",
+        "oid": "0c4030ef504fd0e0254daab51aaf008ba312b51f",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/src/provider/provider.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/src/provider/provider.ts",
+        "oid": "61ae4863c2a4aa1a3d9be0439fba06175efee4e2",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/src/provider/provider.ts",
+        "oid": "f159e52d737bcde5f559c94beb31d97d78fe9ffb",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/src/session/prompt.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/src/session/prompt.ts",
+        "oid": "d919a1393a69c10fe3b9f77204411cf50755f3de",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/src/session/prompt.ts",
+        "oid": "b0704efc998ebb1f52b2d23d1f9acea5bc59a339",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/src/tool/lib/deveco-cli.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/src/tool/lib/deveco-cli.ts",
+        "oid": "a2e53846715a0c268072b3972741d7f564655519",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/src/tool/lib/deveco-cli.ts",
+        "oid": "8925e320c1ea4d351dbef511b2731001225dcc25",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/cli/cmd/tui.test.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/test/cli/cmd/tui.test.ts",
+        "oid": "73b5276099b052b1d9f6a4e524e688c7d428d283",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/test/cli/cmd/tui.test.ts",
+        "oid": "26fd2f527e732764936635d94f0ec92da2fe9e0f",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/cli/help/help-snapshots.test.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/test/cli/help/help-snapshots.test.ts",
+        "oid": "54df4c67b8e0d55cb6a5640f36ab8b1fb4d33dcd",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/test/cli/help/help-snapshots.test.ts",
+        "oid": "92e76827e1a76a405a0f107279ff30933f47f57b",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/config/tui.test.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/test/config/tui.test.ts",
+        "oid": "ec22be9136a092a2f14afcd1f35d10c4d957ba71",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/test/config/tui.test.ts",
+        "oid": "1146b9d8edf536c6ffa0284361b452acbad0fed7",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/installation/install-script.test.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/test/installation/install-script.test.ts",
+        "oid": "948a9563858953f286cd0675ebf62bc80d1bd4e8",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/test/installation/install-script.test.ts",
+        "oid": "96a629cb994cc210cf69da6583cdf5e17e9da63d",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/installation/install-telemetry.test.ts",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "packages/opencode/test/installation/install-telemetry.test.ts",
+        "oid": "683638c5fef491a3945c3f0ce84b8b8637299228",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/installation/installation.test.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/test/installation/installation.test.ts",
+        "oid": "86a4e30339dee5a861153e87fd91b3f9db9ef597",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/test/installation/installation.test.ts",
+        "oid": "f3b5071c6ac93522d769ae9a85b2c57fb23ece32",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/lib/llm-server.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/test/lib/llm-server.ts",
+        "oid": "cfa2f254ed0eac5e76282b98957d88e1b579d8de",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/test/lib/llm-server.ts",
+        "oid": "0d160639b214fb958866aa8aa1068d79e8626a17",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/plugin/deveco-models.test.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/test/plugin/deveco-models.test.ts",
+        "oid": "591a1c1082f28c4e0980305c853184dc91fb9592",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/test/plugin/deveco-models.test.ts",
+        "oid": "b626865336dd53d333abe5fc02fdcd5348162c27",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/preload.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/test/preload.ts",
+        "oid": "f9a82dcf6969803cdb162b3d8b84802bb6d753a5",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/test/preload.ts",
+        "oid": "34ce7743e239c7b13b08e976c9eb51c7cfab0cad",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/project/worktree-remove.test.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/test/project/worktree-remove.test.ts",
+        "oid": "c7175780248ef28a95bc306c8b522966e0cd29ac",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/test/project/worktree-remove.test.ts",
+        "oid": "eb960cb62f1d94ad86ea261c811c036a22120138",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/project/worktree.test.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/test/project/worktree.test.ts",
+        "oid": "eebd0f55bdef26fbaa35f791796159ffa26afea7",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/test/project/worktree.test.ts",
+        "oid": "814435e417fac38bfa7ba4b78c08232a7e83b6d7",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/server/httpapi-layer.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/test/server/httpapi-layer.ts",
+        "oid": "889ec51b377919f387319949442e5a57815b458b",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/test/server/httpapi-layer.ts",
+        "oid": "f9b41d61ff2bcf27aac5467b55af78e5fc8d6e3d",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/server/httpapi-listen.test.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/test/server/httpapi-listen.test.ts",
+        "oid": "08ad46f69594b2815f3f90d97e6c74522a15069a",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/test/server/httpapi-listen.test.ts",
+        "oid": "6db863e771774c585b9f643908ac4ec7954cc585",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/server/httpapi-pty.test.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/test/server/httpapi-pty.test.ts",
+        "oid": "b8a2894ab4df84dd6e033e2ecb608a1cc44926ae",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/test/server/httpapi-pty.test.ts",
+        "oid": "893c9d2f05cef9d6e7f2cf90dbc87f259c3ecdca",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/server/httpapi-query-schema-drift.test.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/test/server/httpapi-query-schema-drift.test.ts",
+        "oid": "715ad8cbefd4f42d55af32633195af33224cbe8c",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/test/server/httpapi-query-schema-drift.test.ts",
+        "oid": "61d01c13caba41e2390bcb94ff09760ed1ca6278",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/server/httpapi-schema-error-body.test.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/test/server/httpapi-schema-error-body.test.ts",
+        "oid": "c650b3772ad90ab5d38817322de2a453bf956707",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/test/server/httpapi-schema-error-body.test.ts",
+        "oid": "adab310ad3394bf05d49c4c9a7fe1eca9aff7447",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/server/httpapi-sync.test.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/test/server/httpapi-sync.test.ts",
+        "oid": "560cafe8a2541ec11950ab922a6aa9986cdedeef",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/test/server/httpapi-sync.test.ts",
+        "oid": "e90ecd2a9b28d4ef8acba68b09becf4e791774ba",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/server/session-list.test.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/test/server/session-list.test.ts",
+        "oid": "213e3cdce3ccf3a57768b4b8623844278400a466",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/test/server/session-list.test.ts",
+        "oid": "f20dd424909ee3e693e2470e660e917b9ef3105d",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/server/worktree-endpoint-repro.test.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/test/server/worktree-endpoint-repro.test.ts",
+        "oid": "3b86f379beaacba918409f3961c66818ff3cf88b",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/test/server/worktree-endpoint-repro.test.ts",
+        "oid": "abdf0aaf9c0a48116bef341e9d72064860544d96",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/session/prompt.test.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/test/session/prompt.test.ts",
+        "oid": "9968744d10ce04b5f4f1bea05d55e18ed6842e7a",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/test/session/prompt.test.ts",
+        "oid": "380e191e759999b3d345c7c0495e99bdce0e5749",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/skill/discovery.test.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/test/skill/discovery.test.ts",
+        "oid": "5dc5d5195bbc13506e2cb72b89e3d7589e5ff739",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/test/skill/discovery.test.ts",
+        "oid": "e1b99e9842dbd630900f3a1e0f534b33904b11d9",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/skill/hdc.test.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/test/skill/hdc.test.ts",
+        "oid": "46bc332e957a7f7014642704682d4d54e29a3e06",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/test/skill/hdc.test.ts",
+        "oid": "d41f3dd0a9566aa0bafcd6c67a1e59d53feac923",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/skill/index.test.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/test/skill/index.test.ts",
+        "oid": "e7742cb76e264ea42470e3c765f745d5de3685e0",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/test/skill/index.test.ts",
+        "oid": "9f39b705f274f4364a0d6a77d5e45522eae0cb82",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/tool/grep.test.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/test/tool/grep.test.ts",
+        "oid": "01b7220755428fa0c9ae8e538a4bffed35a36cf5",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/test/tool/grep.test.ts",
+        "oid": "4946f19c0166783dcd74af291b30a5efc2751a4b",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/tool/hdc_log.test.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/test/tool/hdc_log.test.ts",
+        "oid": "f66bbcd1a3043794e31a298633b69b049f21d853",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/test/tool/hdc_log.test.ts",
+        "oid": "3aa42d07cbaf3309f1cbd14318b90fe61ed1c07d",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/tool/lib/deveco-cli.test.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/test/tool/lib/deveco-cli.test.ts",
+        "oid": "e67f7382c93863ccaff9fc1efa70f20d87b5affa",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/test/tool/lib/deveco-cli.test.ts",
+        "oid": "71be66f0ca854d05f46dd09019123c5e6a239884",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/tool/webfetch.test.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/test/tool/webfetch.test.ts",
+        "oid": "fdf5210b9c13eef6c7fe73653e8e012abeb72659",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/test/tool/webfetch.test.ts",
+        "oid": "e2243259d6b36a2873717259ca2622095254920c",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/tui/src/component/prompt/index.tsx",
+      "status": "modified",
+      "before": {
+        "path": "packages/tui/src/component/prompt/index.tsx",
+        "oid": "8ba02418cd18637ba61f3719358033d0fac05e71",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/tui/src/component/prompt/index.tsx",
+        "oid": "52c88ec6348b17e99c242ac839a9848f16846e46",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/tui/src/context/local.tsx",
+      "status": "modified",
+      "before": {
+        "path": "packages/tui/src/context/local.tsx",
+        "oid": "7980112de40dbd3fc7fb0cbcafd63c8ab4b40e8f",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/tui/src/context/local.tsx",
+        "oid": "48808a5fcd55a54bc8415414c8f2c2920198524d",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/tui/test/audio.test.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/tui/test/audio.test.ts",
+        "oid": "6fdfa456538a69fe3cdd19817ff5271fce16a542",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/tui/test/audio.test.ts",
+        "oid": "b59941c7f42f68bba3b81404057e1cf463dc0eb0",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/tui/test/cli/cmd/tui/provider-options.test.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/tui/test/cli/cmd/tui/provider-options.test.ts",
+        "oid": "36cc7b6ee4a4aa524f60e794827dfea10508f677",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/tui/test/cli/cmd/tui/provider-options.test.ts",
+        "oid": "c393124b31e78d4b5105341077654b4306d5ccdf",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/tui/test/cli/cmd/tui/sync-fixture.tsx",
+      "status": "modified",
+      "before": {
+        "path": "packages/tui/test/cli/cmd/tui/sync-fixture.tsx",
+        "oid": "583536ff14d4a3da304cf643a43ca0bb98aa2f73",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/tui/test/cli/cmd/tui/sync-fixture.tsx",
+        "oid": "415e9bde7fe0eafc70043465409d3040b7428d85",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/tui/test/cli/tui/__snapshots__/inline-tool-wrap-snapshot.test.tsx.snap",
+      "status": "modified",
+      "before": {
+        "path": "packages/tui/test/cli/tui/__snapshots__/inline-tool-wrap-snapshot.test.tsx.snap",
+        "oid": "13110be0bc7dc9914db867818cab4dccdcc9117b",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/tui/test/cli/tui/__snapshots__/inline-tool-wrap-snapshot.test.tsx.snap",
+        "oid": "29053fdfbd6fe1ae5e6b6bc072faef8432f7f814",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/tui/test/context/local.test.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/tui/test/context/local.test.ts",
+        "oid": "e2f1e45f75a9428ed86afa26d382f732d805a611",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/tui/test/context/local.test.ts",
+        "oid": "274f7bbf753869784b6337c37202c1f77c23a87b",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/tui/test/fixture/tui-environment.tsx",
+      "status": "modified",
+      "before": {
+        "path": "packages/tui/test/fixture/tui-environment.tsx",
+        "oid": "543332ba1821f6ae61a579107780d136007f565d",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/tui/test/fixture/tui-environment.tsx",
+        "oid": "b7c49a2bdf3be9f832cb0de708b573475eb3c408",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/tui/test/runtime.test.tsx",
+      "status": "modified",
+      "before": {
+        "path": "packages/tui/test/runtime.test.tsx",
+        "oid": "3ee9817dfe42996e8d7bb5702f85a7c05260548f",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/tui/test/runtime.test.tsx",
+        "oid": "6b537677b174a3faadce4f20394cf0545fe7abe1",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "turbo.json",
+      "status": "modified",
+      "before": {
+        "path": "turbo.json",
+        "oid": "75a29a9ee77883ccba73541c4b0506f3ae24cb79",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "turbo.json",
+        "oid": "f3cd0b3ab64c959dadb41dcd0e2da134997f6958",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-turbo-json",
+      "disposition": "exclude",
+      "reason": "Upstream monorepo build/test scheduling. This MCP uses its own strict TypeScript build and Node Test Runner matrix.",
+      "targets": [],
+      "tests": []
+    }
+  ],
+  "gate": "requires_adapter_review",
+  "required_tests": [
+    "test/native-upstream.test.ts"
+  ],
+  "note": "Source classification is a review proposal. It does not convert natural language into code, approve protocol semantics, modify the active source lock or authorize release.",
+  "sha256": "a0c2a97d2e1cb1e6a11e0ef734d656ec461d69b75f0a0415815c16c4918eb6a0"
+}
