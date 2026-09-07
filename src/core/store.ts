@@ -64,11 +64,12 @@ export class StateStore {
     privateDirectory(path.join(root, "artifacts"));
     this.cipher = new PayloadCipher(path.join(root, "workflow.key"));
     this.db = new Database(path.join(root, "state.sqlite"));
-    this.db.pragma("journal_mode = WAL");
-    this.db.pragma("synchronous = FULL");
-    this.db.pragma("busy_timeout = 2000");
-    this.db
-      .exec(`CREATE TABLE IF NOT EXISTS runtime_meta (version TEXT PRIMARY KEY);
+    try {
+      this.db.pragma("journal_mode = WAL");
+      this.db.pragma("synchronous = FULL");
+      this.db.pragma("busy_timeout = 2000");
+      this.db
+        .exec(`CREATE TABLE IF NOT EXISTS runtime_meta (version TEXT PRIMARY KEY);
       CREATE TABLE IF NOT EXISTS runs (id TEXT PRIMARY KEY, workflow TEXT NOT NULL, input TEXT NOT NULL, input_hash TEXT NOT NULL, request_key TEXT UNIQUE, protocol TEXT NOT NULL, status TEXT NOT NULL, owner TEXT, updated INTEGER NOT NULL, created INTEGER NOT NULL, result TEXT, error TEXT);
       CREATE TABLE IF NOT EXISTS leases (resource TEXT PRIMARY KEY, owner TEXT NOT NULL, pid INTEGER NOT NULL, updated INTEGER NOT NULL, token TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS operations (run_id TEXT NOT NULL, node TEXT NOT NULL, input_hash TEXT NOT NULL, status TEXT NOT NULL, result TEXT, PRIMARY KEY(run_id,node));
@@ -80,35 +81,41 @@ export class StateStore {
       CREATE TABLE IF NOT EXISTS managed_processes (id TEXT PRIMARY KEY, owner TEXT NOT NULL, run_id TEXT, pid INTEGER, resources TEXT NOT NULL, status TEXT NOT NULL, created INTEGER NOT NULL, updated INTEGER NOT NULL, windows_job TEXT);
       CREATE TABLE IF NOT EXISTS external_sessions (id TEXT PRIMARY KEY, owner TEXT NOT NULL, run_id TEXT, kind TEXT NOT NULL, resources TEXT NOT NULL, metadata TEXT NOT NULL, status TEXT NOT NULL, updated INTEGER NOT NULL);
       CREATE TABLE IF NOT EXISTS events (id INTEGER PRIMARY KEY AUTOINCREMENT, run_id TEXT, kind TEXT NOT NULL, data TEXT NOT NULL, created INTEGER NOT NULL);`);
-    const versions = this.db
-      .prepare("SELECT version FROM runtime_meta")
-      .all() as { version: string }[];
-    invariant(
-      versions.length === 0 || versions[0]?.version === protocolVersion,
-      "STATE_VERSION_MISMATCH",
-      "Export historical reports and select a fresh state directory for this execution protocol",
-    );
-    this.db
-      .prepare("INSERT OR IGNORE INTO runtime_meta VALUES (?)")
-      .run(protocolVersion);
-    this.reconcile();
-    this.prune();
-    this.heartbeat = setInterval(() => {
-      try {
-        this.db
-          .prepare("UPDATE leases SET updated=? WHERE owner=?")
-          .run(Date.now(), this.owner);
-        if (Date.now() - this.lastPrune >= 60000) this.prune();
-        this.db
-          .prepare(
-            "UPDATE runs SET updated=? WHERE owner=? AND status IN ('running','cancelling')",
-          )
-          .run(Date.now(), this.owner);
-      } catch {
-        /* A busy writer is retried on the next tick; leases are never stolen by age alone. */
-      }
-    }, 5000);
-    this.heartbeat.unref();
+      const versions = this.db
+        .prepare("SELECT version FROM runtime_meta")
+        .all() as { version: string }[];
+      invariant(
+        versions.length === 0 || versions[0]?.version === protocolVersion,
+        "STATE_VERSION_MISMATCH",
+        "Export historical reports and select a fresh state directory for this execution protocol",
+      );
+      this.db
+        .prepare("INSERT OR IGNORE INTO runtime_meta VALUES (?)")
+        .run(protocolVersion);
+      this.reconcile();
+      this.prune();
+      this.heartbeat = setInterval(() => {
+        try {
+          this.db
+            .prepare("UPDATE leases SET updated=? WHERE owner=?")
+            .run(Date.now(), this.owner);
+          if (Date.now() - this.lastPrune >= 60000) this.prune();
+          this.db
+            .prepare(
+              "UPDATE runs SET updated=? WHERE owner=? AND status IN ('running','cancelling')",
+            )
+            .run(Date.now(), this.owner);
+        } catch {
+          /* A busy writer is retried on the next tick; leases are never stolen by age alone. */
+        }
+      }, 5000);
+      this.heartbeat.unref();
+    } catch (error) {
+      // Construction can fail during WAL recovery, schema validation or quota
+      // checks. No caller has a StateStore to close in that case.
+      this.db.close();
+      throw error;
+    }
   }
   private alive(pid: number): boolean {
     try {

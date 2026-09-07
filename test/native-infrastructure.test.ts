@@ -225,8 +225,34 @@ test("a crashed log owner publishes incomplete actual bytes on restart", async (
   } finally {
     await processes.close();
     store?.close();
-    fs.rmSync(root, { recursive: true, force: true });
+    await fs.promises.rm(root, {
+      recursive: true,
+      force: true,
+      maxRetries: 3,
+      retryDelay: 40,
+    });
   }
+});
+
+test("failed state construction closes SQLite before an incompatible directory is removed", async () => {
+  const root = temporary(),
+    store = new StateStore(root);
+  store.db
+    .prepare("UPDATE runtime_meta SET version=?")
+    .run("unsupported-protocol");
+  store.close();
+  try {
+    for (let attempt = 0; attempt < 20; attempt++)
+      assert.throws(() => new StateStore(root), code("STATE_VERSION_MISMATCH"));
+  } finally {
+    await fs.promises.rm(root, {
+      recursive: true,
+      force: true,
+      maxRetries: 3,
+      retryDelay: 40,
+    });
+  }
+  assert.equal(fs.existsSync(root), false);
 });
 
 test("a surviving native child blocks resource reuse after its MCP owner dies", async () => {

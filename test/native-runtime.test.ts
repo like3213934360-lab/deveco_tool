@@ -419,6 +419,13 @@ test("hard interruption resumes from SQLite without repeating a completed effect
       "effect\n",
     );
     trace("verified");
+  } catch (error) {
+    if (process.env.DEVECO_TEST_RECOVERY_TRACE === "1")
+      fs.writeSync(
+        2,
+        `recovery error: ${error instanceof Error ? error.stack : String(error)}\n`,
+      );
+    throw error;
   } finally {
     trace("close-engine");
     await engine?.close();
@@ -427,7 +434,12 @@ test("hard interruption resumes from SQLite without repeating a completed effect
     trace("close-store");
     store?.close();
     trace("remove-root");
-    fs.rmSync(root, { recursive: true, force: true });
+    await fs.promises.rm(root, {
+      recursive: true,
+      force: true,
+      maxRetries: 3,
+      retryDelay: 40,
+    });
     trace("done");
   }
 });
