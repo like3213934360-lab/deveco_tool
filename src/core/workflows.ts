@@ -6,7 +6,7 @@ import {
   StateGraph,
   interrupt,
 } from "@langchain/langgraph";
-import { SqliteSaver } from "@langchain/langgraph-checkpoint-sqlite";
+import { BoundedSqliteSaver } from "./checkpointer.js";
 import { setTimeout as delay } from "node:timers/promises";
 import { StateStore, type RunRecord } from "./store.js";
 import { errorResult, invariant, ToolError } from "./errors.js";
@@ -63,7 +63,7 @@ interface Execution {
 
 /** The execution map contains only cancellation handles. SQLite and LangGraph own all task state. */
 export class WorkflowEngine {
-  readonly checkpointer: SqliteSaver;
+  readonly checkpointer: BoundedSqliteSaver;
   private readonly executions = new Map<string, Execution>();
   private readonly definitions = new Map<string, WorkflowDefinition>();
   get activeCount(): number {
@@ -77,7 +77,7 @@ export class WorkflowEngine {
       workflow: string,
     ) => Promise<void>,
   ) {
-    this.checkpointer = new SqliteSaver(store.db);
+    this.checkpointer = new BoundedSqliteSaver(store);
     for (const definition of definitions) {
       invariant(
         !this.definitions.has(definition.id),
@@ -245,7 +245,7 @@ export class WorkflowEngine {
           // Large outputs live in artifacts. Operators explicitly resolve references when they need the full result.
           const json = JSON.stringify(output ?? null),
             value =
-              json.length > 16384
+              Buffer.byteLength(json) > 16384
                 ? {
                     result_artifact: this.store.artifact(
                       state.run_id,
