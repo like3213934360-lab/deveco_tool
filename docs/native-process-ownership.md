@@ -27,4 +27,6 @@ Windows 使用本项目的 TypeScript 启动器与系统 Job Object。Koffi 3.2.
 
 `test/native-shutdown.test.ts` 使用真实运行 Worker 验证并发关闭和再次启动，使用持有端口的故障 Worker 验证失败回执后的隔离，并注入引擎/文档关闭错误来核对其他子进程和 SQLite 仍然退出。录制中断、watch 停止和进程所有权另由对应行为回归验证；这些测试不能代替真实设备热补丁验收。
 
+2026-09-08，提交 `6f206053873ac962707ba8c9c8c4cde098abe278` 的 [CI 34161610703](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34161610703) 六组 Node 22/24 × macOS/Windows/Linux 均通过，每组 182 项回归；Windows 两组还分别完成 20 轮进程压力检查。并发重启、清理失败隔离和 Windows 路径身份已覆盖，`deveco_restart` 迁移项据此完成行为验收。真实 SDK 会话的最终性能和设备操作仍受各自门槛约束。
+
 依据：[Microsoft Job Objects](https://learn.microsoft.com/en-us/windows/win32/procthread/job-objects)、[QueryInformationJobObject](https://learn.microsoft.com/en-us/windows/win32/api/jobapi2/nf-jobapi2-queryinformationjobobject)、[Koffi 文档](https://koffi.dev/output)、[libuv Windows 进程实现](https://github.com/libuv/libuv/blob/v1.x/src/win/process.c)。

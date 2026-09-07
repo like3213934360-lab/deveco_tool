@@ -27,4 +27,4 @@
 
 `test/native-resources.test.ts` 使用真实发布资源验证六目录及数量、跨页无重复、中文与 API 查询、限定目录、正文拼接、未知 ID、特殊查询字符和规则分页；`test/native-reports.test.ts` 验证正文与条目不同的输入限额。
 
-2026-09-08，本机全量回归 178 项通过，证据 `/private/tmp/deveco-native-regression-node26-20260908-21/evidence.json`。这不包含真实云端登录/检索，也不声称复现官方 CLI 的完整排序算法或所有 SDK 文档版本。三平台的新筛选/分页 CI 单独记录后才能计入跨平台验收。
+2026-09-08，本机全量回归 178 项通过，证据 `/private/tmp/deveco-native-regression-node26-20260908-21/evidence.json`。随后提交 `6f206053873ac962707ba8c9c8c4cde098abe278` 的 [CI 34161610703](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34161610703) 完成 Node 22/24 × macOS/Windows/Linux 六组验证，每组 182 项通过；文档资源筛选、分页和参数契约已计入。对应迁移项可按这组证据完成验收。这不包含真实云端登录/检索，也不声称复现官方 CLI 的完整排序算法或所有 SDK 文档版本。
