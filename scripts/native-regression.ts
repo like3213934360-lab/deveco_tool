@@ -39,7 +39,14 @@ try {
   const result = await processes.run(
     {
       executable: process.execPath,
-      args: ["--test", "--test-reporter=spec", ...tests],
+      args: [
+        "--test",
+        "--test-reporter=spec",
+        "--test-reporter-destination=stdout",
+        "--test-reporter=tap",
+        `--test-reporter-destination=${path.join(output, "tests.tap")}`,
+        ...tests,
+      ],
       cwd: root,
     },
     {

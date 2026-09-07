@@ -63,7 +63,7 @@ export interface ProcessObservation {
 }
 interface ProcessTracker {
   spawned(pid: number | null, windowsJob?: string): void;
-  closed(): void;
+  closed(confirmed?: boolean): void;
   unconfirmed(): void;
 }
 export interface ProcessObserver {
@@ -146,7 +146,7 @@ export class ProcessService {
         if (!this.groupAlive(child)) {
           this.children.delete(child);
           job?.close();
-          tracking?.closed();
+          tracking?.closed(true);
         } else tracking?.unconfirmed();
       } catch {
         /* The durable active row remains a conservative recovery guard. */
@@ -197,7 +197,16 @@ export class ProcessService {
   }
   async terminate(child: ChildProcess): Promise<void> {
     const state = this.lifecycle.get(child);
-    if (!state || (state.closed && !this.groupAlive(child))) return;
+    if (!state) return;
+    if (state.closed && !this.groupAlive(child)) {
+      // Windows accounting may reach zero just after the close callback.
+      // Finalize a naturally finished session too, rather than leaving its
+      // handle and durable guard behind through this early return.
+      this.children.delete(child);
+      state.job?.close();
+      state.tracking?.closed(true);
+      return;
+    }
     if (state.terminating) return state.terminating;
     const kill = (signal: NodeJS.Signals) => {
       if (!child.pid) return;
@@ -227,7 +236,7 @@ export class ProcessService {
               await delay(25, undefined, { signal: polling.signal });
             this.children.delete(child);
             state.job?.close();
-            state.tracking?.closed();
+            state.tracking?.closed(true);
           })(),
           new Promise<never>((_, reject) => {
             deadline = setTimeout(
@@ -390,7 +399,7 @@ export class ProcessService {
         }),
       ]);
       await stopping;
-      if (!options.keepDescendants && this.groupAlive(child))
+      if (!options.keepDescendants || !this.groupAlive(child))
         await this.terminate(child);
       if (output && !output.destroyed)
         await new Promise<void>((resolve, reject) => {

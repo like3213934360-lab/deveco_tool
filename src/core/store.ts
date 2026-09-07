@@ -175,14 +175,16 @@ export class StateStore {
             id,
           );
       },
-      closed: () => {
+      closed: (confirmed = false) => {
         const row = this.db
           .prepare("SELECT pid,windows_job FROM managed_processes WHERE id=?")
           .get(id) as { pid: number | null; windows_job: string | null };
         this.db
           .prepare("UPDATE managed_processes SET status=?,updated=? WHERE id=?")
           .run(
-            row.pid !== null && this.processAlive(row.pid, row.windows_job)
+            !confirmed &&
+              row.pid !== null &&
+              this.processAlive(row.pid, row.windows_job)
               ? "unconfirmed"
               : "exited",
             Date.now(),

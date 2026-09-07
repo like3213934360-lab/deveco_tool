@@ -36,11 +36,11 @@ test("emulator readiness returns while its launcher stays alive; shutdown confir
     await service.close();
     await processes.close();
     assert.equal((await service.list())[0]?.isRunning, false);
-    assert.equal(
+    assert.deepEqual(
       store.db
         .prepare("SELECT * FROM managed_processes WHERE status<>'exited'")
-        .all().length,
-      0,
+        .all(),
+      [],
     );
     assert.equal(
       store.db.prepare("SELECT * FROM artifact_streams").all().length,
