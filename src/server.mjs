@@ -642,7 +642,7 @@ const localTools = [
         textMode: { type: "string", enum: ["exact", "contains"], description: "Text matching mode. Defaults to contains; recorded fallback selectors use exact." },
         key: { type: "string", description: "Exact match on the node's key (what ArkUI .id() sets). Survives copy and locale changes, unlike text." },
         type: { type: "string", description: "Exact component type, e.g. Text, Button, Image." },
-        dumpPath: { type: "string", description: "Parse this existing dump instead of dumping again. The path returned by a previous call." },
+        dumpPath: { type: "string", description: "Re-query an immutable snapshot without device I/O. Managed dumps expire after 10 minutes or 64 newer snapshots; capture again after changing the UI." },
         hvd: { type: "string", description: "hdc connect key as printed by hdc_log list_devices; optional when exactly one device is connected." },
         limit: { type: "integer", minimum: 1, maximum: 200, description: "Maximum matches to return (default 20); matchCount reports the true total." },
         onScreenOnly: { type: "boolean", description: "Drop nodes outside the screen box or marked invisible (default true). Their centres are in the dump but tapping them does nothing." },
@@ -655,7 +655,7 @@ const localTools = [
   },
   {
     name: "ui_observe",
-    description: "Capture the screen AND the layout tree in one device round trip, and return the frame inline beside tap-ready coordinates. This is the tool to reach for in a UI loop: the capture is overlapped with the dump on the device, which measured 1238ms against 1731ms for calling ui_snapshot and ui_find separately. Takes the same selectors as ui_find. If matches are truncated, componentTypes still shows which later controls exist; re-query dumpPath with ui_find and a type such as Slider. Also returns structureSignature, which is stable while the layout is unchanged, so you can tell whether anything actually happened without re-reading the screen.",
+    description: "Capture the screen AND the layout tree in one device round trip, and return the frame inline beside tap-ready coordinates. This is the tool to reach for in a UI loop: the capture is overlapped with the dump on the device, which measured 1238ms against 1731ms for calling ui_snapshot and ui_find separately. Takes the same selectors as ui_find. If matches are truncated, componentTypes still shows which later controls exist; re-query dumpPath with ui_find and a type such as Slider. Also returns structureSignature, which is stable while the layout is unchanged, for layout changes only; signature also covers text and reported control states. Use selectors to query multiple controls from the same snapshot.",
     inputSchema: {
       type: "object",
       properties: {
@@ -692,7 +692,7 @@ const localTools = [
         textMode: { type: "string", enum: ["exact", "contains"], description: "Selector text matching mode for non-input actions. Defaults to contains." },
         type: { type: "string", description: "Aim at the node of this exact component type, or narrow a key/text selector." },
         clickableOnly: { type: "boolean", description: "Narrow a selector to nodes the device reports as clickable. The node that handles a tap is often a container wrapping the label you can see." },
-        verify: { type: "boolean", description: "Observe the UI tree after a selector action; this does not verify the intended outcome. Defaults to true for percentage gestures and false for point taps." },
+        verify: { type: "boolean", description: "Observe the UI tree after any action, including coordinates, keys and text; does not verify the intended outcome. Defaults to true for selector-targeted gestures, false otherwise. Returns verifyApplied and observationCompleted." },
         from_percent: { type: "number", minimum: 0, maximum: 100, description: "Start position inside a selector-targeted swipe/fling/drag." },
         to_percent: { type: "number", minimum: 0, maximum: 100, description: "End position inside a selector-targeted swipe/fling/drag." },
         axis: { type: "string", enum: ["horizontal", "vertical"], description: "Percentage direction. Horizontal is left-to-right; vertical is bottom-to-top. Defaults to horizontal." },
@@ -718,6 +718,35 @@ const localTools = [
     },
   },
 ];
+
+// Shared state filters keep query, action and verification contracts aligned.
+const stateSelectorProperties = {
+  checked: { type: "boolean", description: "Require an explicitly reported checked state; missing state never matches false." },
+  selected: { type: "boolean" }, enabled: { type: "boolean" },
+  value: { anyOf: [{ type: "string" }, { type: "number" }] },
+};
+for (const name of ["ui_find", "ui_observe", "ui_tap"]) {
+  Object.assign(localTools.find(tool => tool.name === name).inputSchema.properties, stateSelectorProperties);
+}
+for (const name of ["verify_ui", "ui_flow"]) {
+  const properties = localTools.find(tool => tool.name === name).inputSchema.properties;
+  const schema = properties.selector ?? properties.success_selector;
+  if (schema) Object.assign(schema.properties, stateSelectorProperties);
+}
+const batchSelectorSchema = {
+  type: "array", minItems: 1, maxItems: 32,
+  description: "Query up to 32 selectors from one captured tree. Returns queries in input order; use this for multiple controls on the same screen instead of repeated device dumps.",
+  items: { type: "object", additionalProperties: false, properties: {
+    ...stateSelectorProperties,
+    text: { type: "string" }, key: { type: "string" }, type: { type: "string" },
+    textMode: { type: "string", enum: ["exact", "contains"] },
+    clickableOnly: { type: "boolean" }, onScreenOnly: { type: "boolean" },
+    displayId: { type: "integer", minimum: 0 }, limit: { type: "integer", minimum: 1, maximum: 200 },
+  } },
+};
+for (const name of ["ui_find", "ui_observe"]) {
+  localTools.find(tool => tool.name === name).inputSchema.properties.selectors = batchSelectorSchema;
+}
 
 function textResult(value, isError = false) {
   return {
@@ -1246,6 +1275,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       code: error.code ?? "TOOL_ERROR",
       message: error.message,
       hint: error.hint,
+      performance: error.performance,
       details: error.details,
     }, true);
   }

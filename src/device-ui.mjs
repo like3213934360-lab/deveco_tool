@@ -31,12 +31,14 @@
  *     unreadable on a dense display. See MAX_CAPTURE_LONG_EDGE.
  */
 
+import { performance } from "node:perf_hooks";
+import { measureUiOperation, recordUiStage } from "./ui-performance.mjs";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import {
-  analyseDump, hasSelector, parseDump, readDump, readSelector,
+  analyseDump as analyseLayoutDump, hasSelector, parseDump, readDump, readSelector,
 } from "./device-dump.mjs";
 import {
   TAP_ACTIONS, POINT_ACTIONS, RECT_GESTURE_ACTIONS,
@@ -50,6 +52,39 @@ import { hdcFailureMessage, requireHdc, resolveDevice, runHdc, targetArgs } from
 const DEFAULT_TIMEOUT_MS = 60000;
 const MIN_TIMEOUT_MS = 1000;
 const MAX_TIMEOUT_MS = 600000;
+const layoutSnapshots = new Map();
+const MAX_LAYOUT_SNAPSHOTS = 64;
+
+function createLayoutPath(deviceId) {
+  const snapshotId = crypto.randomUUID();
+  const dumpPath = path.join(defaultLocalDirectory(deviceId), `layout-${snapshotId}.json`);
+  const capturedAt = new Date().toISOString();
+  layoutSnapshots.set(dumpPath, { snapshotId, capturedAt, deviceId,
+    expiresAt: new Date(Date.now() + UI_TEMP_FILE_TTL_MS).toISOString(),
+    retention: "10 minutes or the latest 64 snapshots in this process, whichever comes first" });
+  trackUiTemporaryFile(dumpPath);
+  while (layoutSnapshots.size > MAX_LAYOUT_SNAPSHOTS) {
+    removeUiTemporaryFile(layoutSnapshots.keys().next().value);
+  }
+  return dumpPath;
+}
+
+function analyseDump(options) {
+  const snapshot = layoutSnapshots.get(options.dumpPath);
+  const started = performance.now();
+  const report = analyseLayoutDump(options);
+  recordUiStage("analyseDump", performance.now() - started);
+  return { ...report, ...(snapshot ? { snapshot } : {}) };
+}
+
+function readBatchSelectors(input) {
+  if (input.selectors === undefined) return undefined;
+  if (!Array.isArray(input.selectors) || input.selectors.length < 1 || input.selectors.length > 32
+    || input.selectors.some(value => !value || typeof value !== "object" || Array.isArray(value))) {
+    fail("selectors must contain 1–32 selector objects", "UI_ARGS_INVALID");
+  }
+  return input.selectors;
+}
 
 /**
  * How long to wait for another process to release the device before giving up.
@@ -203,10 +238,18 @@ function serializePerDevice(deviceId, task) {
  * @returns {Promise<any>} Whatever `task` resolves to.
  */
 function withUitest(deviceId, op, timeoutMs, task, lockWaitMs = Math.min(timeoutMs, MAX_LOCK_WAIT_MS)) {
-  return serializePerDevice(deviceId, () => withUitestLock(
-    { directory: path.join(UI_TEMP_ROOT, "locks", sanitizeForPath(deviceId)), op, timeoutMs: lockWaitMs },
-    task,
-  ));
+  const queued = performance.now();
+  return serializePerDevice(deviceId, () => {
+    recordUiStage("queueWait", performance.now() - queued);
+    const lockStarted = performance.now();
+    return withUitestLock(
+      { directory: path.join(UI_TEMP_ROOT, "locks", sanitizeForPath(deviceId)), op, timeoutMs: lockWaitMs },
+      () => {
+        recordUiStage("lockWait", performance.now() - lockStarted);
+        return task();
+      },
+    );
+  });
 }
 
 /**
@@ -319,6 +362,7 @@ export function removeUiTemporaryFile(file) {
   const timer = uiTemporaryFileTimers.get(resolved);
   if (timer) clearTimeout(timer);
   uiTemporaryFileTimers.delete(resolved);
+  layoutSnapshots.delete(resolved);
   fs.rmSync(resolved, { force: true });
   return true;
 }
@@ -337,6 +381,7 @@ function trackUiTemporaryFile(file) {
 export function cleanupUiTemporaryFiles() {
   for (const timer of uiTemporaryFileTimers.values()) clearTimeout(timer);
   uiTemporaryFileTimers.clear();
+  layoutSnapshots.clear();
   fs.rmSync(UI_TEMP_SESSION, { recursive: true, force: true });
 }
 
@@ -566,6 +611,7 @@ function readMagic(filePath, length) {
  * @returns {Promise<number>} Byte size of the delivered file.
  */
 async function pullArtifact(hdc, deviceId, devicePath, localPath, timeoutMs, expectations, signal) {
+  const started = performance.now();
   const staging = `${localPath}.part`;
   fs.mkdirSync(path.dirname(localPath), { recursive: true });
   fs.rmSync(staging, { force: true });
@@ -601,6 +647,7 @@ async function pullArtifact(hdc, deviceId, devicePath, localPath, timeoutMs, exp
     }
 
     fs.renameSync(staging, localPath);
+    recordUiStage("artifactTransferAndValidation", performance.now() - started, size);
     return size;
   } finally {
     fs.rmSync(staging, { force: true });
@@ -753,7 +800,7 @@ function captureReport({ deviceId, method, localPath, requestedPath, fallbackRea
  * @param {object} input Tool arguments.
  * @returns {Promise<object>} Capture report including the local path and coordinate scale.
  */
-export async function uiSnapshot(input = {}) {
+async function uiSnapshotImpl(input = {}) {
   const hdc = requireHdc();
   const timeoutMs = boundedTimeout(input.timeoutMs);
   const deviceId = await resolveDevice(hdc, input.hvd);
@@ -864,9 +911,8 @@ async function dumpLayout(hdc, deviceId, timeoutMs, signal, options = {}) {
     );
     const combined = `${result.stdout}\n${result.stderr}`;
     assertLayoutDumpSucceeded(combined);
-    // Stable name, overwritten every call: unlike a screenshot, a stale layout is actively harmful,
-    // and dumpPath only has to stay valid until the next dump.
-    const localPath = path.join(defaultLocalDirectory(deviceId), "layout.json");
+    // An old caller must never silently read a newer frame through the same path.
+    const localPath = createLayoutPath(deviceId);
     await pullArtifact(hdc, deviceId, devicePath, localPath, timeoutMs, { emptyCode: "UI_DUMP_EMPTY" }, signal);
     return localPath;
   } finally {
@@ -884,15 +930,16 @@ async function dumpLayout(hdc, deviceId, timeoutMs, signal, options = {}) {
  * @param {object} input Tool arguments.
  * @returns {Promise<object>} Matches with centres, plus the dump path for further digging.
  */
-export async function uiFind(input = {}) {
+async function uiFindImpl(input = {}) {
   const timeoutMs = boundedTimeout(input.timeoutMs);
   const selector = readSelector(input);
+  const selectors = readBatchSelectors(input);
 
   // Re-parsing a dump the caller already has costs nothing, where dumping again costs ~1.4s. It is
   // opt-in so nobody gets a stale tree by accident, and it makes this whole path device-free.
   if (typeof input.dumpPath === "string" && input.dumpPath) {
     const dumpPath = path.resolve(input.dumpPath);
-    return analyseDump({ root: readDump(dumpPath), dumpPath, deviceId: null, selector });
+    return analyseDump({ root: readDump(dumpPath), dumpPath, deviceId: null, selector, selectors });
   }
 
   const hdc = requireHdc();
@@ -900,7 +947,7 @@ export async function uiFind(input = {}) {
   sweepStaleArtifacts(hdc, deviceId);
   return withUitest(deviceId, "dumpLayout", timeoutMs, async () => {
     const dumpPath = await dumpLayout(hdc, deviceId, timeoutMs);
-    return analyseDump({ root: readDump(dumpPath), dumpPath, deviceId, selector });
+    return analyseDump({ root: readDump(dumpPath), dumpPath, deviceId, selector, selectors });
   });
 }
 
@@ -941,7 +988,8 @@ function buildObserveCommand({ snap, dump, snapLog, dumpLog, archive, scale, dis
  * @param {object} input Tool arguments.
  * @returns {Promise<object>} Capture report merged with the ui_find-shaped selection.
  */
-export async function uiObserve(input = {}) {
+async function uiObserveImpl(input = {}) {
+  const selectors = readBatchSelectors(input);
   const hdc = requireHdc();
   const timeoutMs = boundedTimeout(input.timeoutMs);
   const deviceId = await resolveDevice(hdc, input.hvd);
@@ -957,7 +1005,7 @@ export async function uiObserve(input = {}) {
       : path.join(directory, `snapshot-${startedAt}-${(snapshotCounter += 1)}.jpeg`);
     const temporary = !input.localPath;
     assertOutputAvailable(localImage, input.overwrite);
-    const localDump = path.join(directory, "layout.json");
+    const localDump = createLayoutPath(deviceId);
 
     const targets = {
       snap: devicePathFor("obs_snap", "jpeg"),
@@ -980,8 +1028,9 @@ export async function uiObserve(input = {}) {
     if (!OBSERVE_SUCCESS_PATTERN.test(combined)) {
       // No tar on the device, or the archive step failed. The two-round-trip path still works, so
       // this degrades rather than fails.
+      removeUiTemporaryFile(localDump);
       return observeSeparately({
-        hdc, deviceId, timeoutMs, selector, targetWidth, displayId,
+        hdc, deviceId, timeoutMs, selector, selectors, targetWidth, displayId,
         localImage, temporary, startedAt, reason: combined.trim().split(/\r?\n/).filter(Boolean).slice(-1)[0]
           || "the fused observe command produced no OBSERVE_OK marker",
       });
@@ -1018,7 +1067,7 @@ export async function uiObserve(input = {}) {
 
     fs.writeFileSync(localDump, dumpBytes);
     const analysis = analyseDump({
-      root: parseDump(dumpBytes.toString("utf8"), localDump), dumpPath: localDump, deviceId, selector,
+      root: parseDump(dumpBytes.toString("utf8"), localDump), dumpPath: localDump, deviceId, selector, selectors,
     });
     const nativeSize = readDisplaySize(deviceId);
     return {
@@ -1058,9 +1107,9 @@ export async function uiObserve(input = {}) {
  *
  * @returns {Promise<object>} Same shape as the fused path.
  */
-async function observeSeparately({ hdc, deviceId, timeoutMs, selector, targetWidth, displayId, localImage, temporary, startedAt, reason }) {
+async function observeSeparately({ hdc, deviceId, timeoutMs, selector, selectors, targetWidth, displayId, localImage, temporary, startedAt, reason }) {
   const dumpPath = await dumpLayout(hdc, deviceId, timeoutMs);
-  const analysis = analyseDump({ root: readDump(dumpPath), dumpPath, deviceId, selector });
+  const analysis = analyseDump({ root: readDump(dumpPath), dumpPath, deviceId, selector, selectors });
 
   const devicePath = devicePathFor("snap", "jpeg", true);
   try {
@@ -1140,7 +1189,9 @@ export async function uiText(input = {}, resolveOfficialTarget) {
       if (target.displayId !== null && target.displayId !== undefined) point.displayId = Number(target.displayId);
     }
     const result = await pasteDeviceText({ hdc, deviceId, point, text: input.text, timeoutMs, signal: input.signal });
+    const observation = await observeAction(input, hdc, deviceId, timeoutMs);
     return { deviceId, action: "inputText", ...result, ...(target ? { target } : {}),
+      ...observation,
       sent: `UiTest Driver.inputText ${point.x} ${point.y} (paste)`,
       verificationHint: "Paste was accepted; read the input's UI text or assert its application result to verify the final content." };
   });
@@ -1163,6 +1214,17 @@ function closestMatchingNode(analysis, target) {
   return closest;
 }
 
+async function observeAction(input, hdc, deviceId, timeoutMs) {
+  if (input.verify !== true) return { verifyApplied: false, observationCompleted: false };
+  const dumpPath = await dumpLayout(hdc, deviceId, timeoutMs, input.signal);
+  const after = analyseDump({ root: readDump(dumpPath), dumpPath, deviceId, selector: readSelector({}) });
+  return {
+    verifyApplied: true, observationCompleted: true,
+    observation: { dumpPath, snapshot: after.snapshot, signature: after.signature,
+      structureSignature: after.structureSignature, nodeCount: after.nodeCount },
+  };
+}
+
 /**
  * Send a touch, gesture, or key event through `uitest uiInput`.
  *
@@ -1176,7 +1238,7 @@ function closestMatchingNode(analysis, target) {
  * @param {object} input Tool arguments.
  * @returns {Promise<object>} What was sent, so a caller can confirm the coordinates it hit.
  */
-export async function uiTap(input = {}) {
+async function uiTapImpl(input = {}) {
   if (!TAP_ACTIONS.has(input.action)) {
     fail(`action must be one of ${[...TAP_ACTIONS].join(", ")}`, "UI_ARGS_INVALID");
   }
@@ -1218,15 +1280,16 @@ export async function uiTap(input = {}) {
     return withUitest(deviceId, `uiInput ${input.action}`, timeoutMs, async () => {
       const startedAt = Date.now();
       await sendInput(hdc, deviceId, inputArgs, timeoutMs, input.action);
+      const observation = await observeAction(input, hdc, deviceId, timeoutMs);
       return {
         deviceId,
         action: input.action,
         sent: `uitest uiInput ${inputArgs.join(" ")}`,
         commandAccepted: true,
         outcomeVerified: false,
-        verificationHint: RECT_GESTURE_ACTIONS.has(input.action)
-          ? "Raw-coordinate gestures only prove that uitest accepted the command. Prefer type/text/key with from_percent and to_percent so ui_tap can resolve and verify the target."
-          : undefined,
+        ...observation,
+        verificationHint: "Command acceptance and post-action observation do not prove the intended outcome. Use verify_ui with an expected state."
+          + (RECT_GESTURE_ACTIONS.has(input.action) ? " Prefer selector-targeted from_percent/to_percent gestures for controls exposed in the tree." : ""),
         elapsedMs: Date.now() - startedAt,
       };
     });
@@ -1242,6 +1305,7 @@ export async function uiTap(input = {}) {
       });
       const inputArgs = buildScreenGestureArgs(input, analysis.screen);
       await sendInput(hdc, deviceId, inputArgs, timeoutMs, input.action);
+      const observation = await observeAction(input, hdc, deviceId, timeoutMs);
       return {
         deviceId,
         action: input.action,
@@ -1249,6 +1313,7 @@ export async function uiTap(input = {}) {
         commandAccepted: true,
         outcomeVerified: false,
         coordinateSpace: "device-screen-percent",
+        ...observation,
         screen: analysis.screen,
         requestedScreenRange: {
           from: { xPercent: Number(input.from_x_percent), yPercent: Number(input.from_y_percent) },
@@ -1276,6 +1341,7 @@ export async function uiTap(input = {}) {
     await sendInput(hdc, deviceId, inputArgs, timeoutMs, input.action);
 
     let verified;
+    let after;
     const shouldVerify = input.verify === true || (gesture && input.verify !== false);
     if (shouldVerify) {
       // A second dump observes the target after the event. It cannot establish the caller's
@@ -1283,8 +1349,9 @@ export async function uiTap(input = {}) {
       const afterSelector = gesture
         ? readSelector({ type: target.type, onScreenOnly: false, limit: 200 })
         : selector;
-      const after = analyseDump({
-        root: readDump(await dumpLayout(hdc, deviceId, timeoutMs)), dumpPath, deviceId,
+      const afterPath = await dumpLayout(hdc, deviceId, timeoutMs);
+      after = analyseDump({
+        root: readDump(afterPath), dumpPath: afterPath, deviceId,
         selector: afterSelector,
       });
       const afterTarget = gesture ? closestMatchingNode(after, target) : null;
@@ -1297,7 +1364,8 @@ export async function uiTap(input = {}) {
           target: afterTarget,
           structureSignature: after.structureSignature,
         }
-        : { stillPresent: after.matchCount > 0, structureSignature: after.structureSignature };
+        : { stillPresent: after.matchCount > 0, structureSignature: after.structureSignature,
+          matches: after.matches };
     }
 
     return {
@@ -1307,6 +1375,9 @@ export async function uiTap(input = {}) {
       commandAccepted: true,
       outcomeVerified: false,
       observationCompleted: Boolean(verified),
+      verifyApplied: shouldVerify,
+      observation: after ? { dumpPath: after.dumpPath, snapshot: after.snapshot,
+        signature: after.signature, structureSignature: after.structureSignature, nodeCount: after.nodeCount } : undefined,
       verificationHint: "Use verify_ui with the expected final state, or ui_flow with a final assertion, to verify the outcome.",
       target,
       requestedRange: gesture ? {
@@ -1476,3 +1547,11 @@ export async function withUiAutomationSession(input = {}, task) {
     return task({ deviceId, find, findAny, screen, action, checkAbort });
   }, input.lockWaitMs ?? Math.min(timeoutMs, MAX_LOCK_WAIT_MS));
 }
+
+export function uiFind(input = {}) { return measureUiOperation("uiFind", () => uiFindImpl(input)); }
+
+export function uiObserve(input = {}) { return measureUiOperation("uiObserve", () => uiObserveImpl(input)); }
+
+export function uiTap(input = {}) { return measureUiOperation("uiTap", () => uiTapImpl(input)); }
+
+export function uiSnapshot(input = {}) { return measureUiOperation("uiSnapshot", () => uiSnapshotImpl(input)); }

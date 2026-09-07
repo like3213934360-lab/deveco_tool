@@ -1,3 +1,5 @@
+import { measureUiStage } from "./ui-performance.mjs";
+import { hdcEnvironment } from "./hdc-environment.mjs";
 import { spawn } from "node:child_process";
 import { AsyncLocalStorage } from "node:async_hooks";
 import fs from "node:fs";
@@ -29,12 +31,12 @@ export function withHdcCommandObserver(observer, task) {
  * @param {{resolveOnTimeout?: boolean, signal?: AbortSignal, detached?: boolean}} [options] Deadline and process-group behaviour.
  * @returns {Promise<{stdout: string, stderr: string, exitCode: number|null, signal: string|null, timedOut?: boolean}>} Result.
  */
-function run(command, timeoutMs = 120000, { resolveOnTimeout = false, signal: abortSignal, detached = process.platform !== "win32" } = {}) {
+function runInternal(command, timeoutMs = 120000, { resolveOnTimeout = false, signal: abortSignal, detached = process.platform !== "win32" } = {}) {
   hdcCommandObserver.getStore()?.(command);
   return new Promise((resolve, reject) => {
     const child = spawn(command[0], command.slice(1), {
       stdio: ["ignore", "pipe", "pipe"],
-      env: process.env,
+      env: hdcEnvironment(),
       detached,
     });
     let stdout = "";
@@ -105,6 +107,18 @@ function run(command, timeoutMs = 120000, { resolveOnTimeout = false, signal: ab
       resolve({ stdout, stderr, exitCode, signal });
     });
   });
+}
+
+function run(command, timeoutMs, options) {
+  const category = command.includes("recv") ? "transfer"
+    : command.some(arg => arg.includes("OBSERVE_OK")) ? "captureAndDump"
+    : command.includes("dumpLayout") ? "dump"
+    : command.includes("snapshot_display") || command.includes("screenCap") ? "capture"
+    : command.includes("uiInput") ? "input"
+    : command.includes("list") ? "resolveDevice"
+    : command.includes("rm") || command.some(arg => arg.startsWith("find /data/local/tmp")) ? "cleanup"
+    : "other";
+  return measureUiStage(`hdc.${category}`, () => runInternal(command, timeoutMs, options));
 }
 
 function requireHdc() {

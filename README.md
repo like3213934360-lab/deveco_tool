@@ -202,6 +202,26 @@ MCP 固定提供 40 个工具，其中项目、脚本和服务管理入口为 5 
 
 新 UI 调用优先使用 `ui_flow`、`ui_observe` 和 `ui_tap`。手势发送成功只代表设备接受事件，必要时用 `verify_ui` 检查最终界面。多设备同时在线时，按所选工具的 Schema 显式指定 `hvd`、`target` 或 `deviceId`。
 
+同屏查多个控件时，使用 `ui_find` / `ui_observe` 的 `selectors` 数组（1–32 项），一次抓树、一次解析，结果在 `queries` 中按输入顺序返回。例如：
+
+```json
+{"selectors":[{"key":"settings-toggle","checked":false},{"type":"Slider","limit":5}]}
+```
+
+`checked`、`selected`、`enabled`、`value` 可用于查询和语义断言；仅匹配设备明确报告的值，缺失状态不会被当作 `false`。`signature` 覆盖文本和状态，`structureSignature` 只反映布局。新抓取返回独立 `dumpPath` 和 `snapshot` 元数据；托管快照在 10 分钟后或超过进程最近 64 份时删除。复用 `dumpPath` 不访问设备，仍代表原始时刻，操作后请重新抓取。
+
+`ui_tap` 的 `verify:true` 也适用于原始坐标、按键和文本输入，返回 `verifyApplied`、`observationCompleted` 及操作后的 `observation.dumpPath`。这些字段仅表示观察已完成；预期业务结果仍需 `verify_ui` 或流程断言。
+
+UI 工具返回 `performance`，包含总耗时、排队/锁等待、HDC 抓树/传输、树解析以及宿主进程 CPU、RSS、堆指标。分段耗时有重叠，不能直接相加；进程指标包含并发任务，排除 HDC 子进程和设备 CPU。
+
+`ui_find`、`ui_observe`、`ui_tap`、`ui_snapshot` 的每个顶层操作，无论成功或失败，默认会在返回前独立写入 `~/.deveco-tool/logs/ui-performance.jsonl`，调用方不打印返回值也能留存。每份最多 5 MiB，含当前文件共保留 5 份，多个进程通过文件锁协调写入和轮转。记录包含时间、进程/会话 ID、operationId、耗时、阶段、内存和错误码，不记录工具参数、UI 文本、图片或错误详情。`performance.log` 表示写入状态与路径，日志写入耗时单列在其中；操作耗时和 CPU 指标不含落盘开销。写入失败会返回明确状态并限频输出 stderr 提示，不改变设备操作结果。可用 `DEVECO_TOOL_LOG_DIR` 指定目录，或设置 `DEVECO_UI_PERFORMANCE_LOG=0` 关闭独立落盘。这里的落盘不承诺断电后的持久性。
+
+构建摘要按优先级保留编译错误、SDK 兼容、弃用、依赖打包和 sourceMaps 示例；各类别分别保留 3/3/2/1/1 条，重复示例不占名额，计数仍为诊断行数。构建 CLI 的显式退出会先等待 stdout/stderr 排空（最多 2 秒），保留原退出码，并返回 `[Output Integrity]` 状态。失败时即使没有传 `log_path` 也保留捕获日志；响应摘要/尾部的大小限制不截断保存的 CLI 输出。`drained`/`natural` 表示 CLI 管道排空，不能保证编译器自身未输出的诊断；排空失败、超时或回执缺失会明确报告诊断可能不完整。
+
+macOS 上，MCP 宿主若没有传入 `TMPDIR`，HDC/DevEco CLI 子进程会使用系统 `getconf DARWIN_USER_TEMP_DIR` 提供的目录；仅探测一次，保留显式配置，探测失败则沿用原环境。这修复了最小环境下实测每个 HDC 命令约 1.3 秒的额外启动延迟；其他系统不执行该探测。
+
+只读真机基准（不发送点击或导航）：`npm run bench:ui -- --iterations 12 --output /tmp/ui-benchmark.json`；多设备时追加 `--hvd DEVICE`。它比较独立查询、批量查询、快照复用和截图抓树，并记录 GC 后内存与事件循环延迟；短基准不能证明没有长期泄漏。
+
 UI 树采集失败时，订阅回复超时返回 `UI_DEVICE_BUSY`；`Get window nodes failed` 返回 `UI_TREE_UNAVAILABLE`，提示等待窗口稳定并检查其他 UI 采集客户端。后者曾在并发采集时出现，但单凭这条消息不能确定是设备争用。其他未识别的 dump 失败仍返回 `UI_DUMP_FAILED`，不会当成空 UI 树成功返回。
 
 `ui_tap` 的 `verify` 会补采 UI 树，`observationCompleted` 表示观察已完成；目标仍存在或文字变化不代表操作目的已经达成，`outcomeVerified` 仍为 `false`。`verify_ui` 的语义断言需要非空的 `key`、`text` 或 `type`；画面比较会复用基线的实际捕获宽度和格式，改变宽度需要重新捕获基线。动态画面仍建议用语义断言验收。

@@ -31,7 +31,8 @@
     "test:device": "node --test --test-concurrency=1 test/device-canary.test.mjs",
     "test:flow:unit": "node --test --test-concurrency=1 test/arkpilot.test.mjs",
     "test:flow:device": "node scripts/arkpilot-device-test.mjs",
-    "bench:ui-flow": "node scripts/arkpilot-benchmark.mjs"
+    "bench:ui-flow": "node scripts/arkpilot-benchmark.mjs",
+    "bench:ui": "node --expose-gc scripts/ui-performance-benchmark.mjs"
   },
   "dependencies": {
     "@deveco-codegenie/mcp": "1.1.11",

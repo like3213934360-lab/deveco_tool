@@ -60,6 +60,19 @@ export function normalizeSelector(value, { required = true } = {}) {
   if (typeof source.text === "string" && source.text.trim()) selector.text = source.text.trim();
   if (typeof source.type === "string" && source.type.trim()) selector.type = source.type.trim();
   if (source.clickableOnly === true) selector.clickableOnly = true;
+  for (const field of ["checked", "selected", "enabled"]) {
+    if (source[field] === undefined) continue;
+    if (typeof source[field] !== "boolean") {
+      throw flowError(`selector.${field} must be a boolean`, "FLOW_SELECTOR_INVALID");
+    }
+    selector[field] = source[field];
+  }
+  if (source.value !== undefined) {
+    if (typeof source.value !== "string" && !(typeof source.value === "number" && Number.isFinite(source.value))) {
+      throw flowError("selector.value must be a string or finite number", "FLOW_SELECTOR_INVALID");
+    }
+    selector.value = source.value;
+  }
   if (source.textMode !== undefined) {
     if (!selector.text || !["exact", "contains"].includes(source.textMode)) {
       throw flowError("selector.textMode requires text and must be exact or contains", "FLOW_SELECTOR_INVALID");

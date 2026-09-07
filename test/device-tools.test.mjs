@@ -46,7 +46,7 @@ async function deviceFixture(t) {
       const source=args.at(-2), dest=args.at(-1);
       if(source.endsWith('.json')) fs.writeFileSync(dest,JSON.stringify({
         attributes:{type:'root',bounds:'[0,0][1320,2856]'},children:[{
-          attributes:{key:'settings',text:'设置',type:'Text',bounds:'[100,100][300,200]',clickable:'true',enabled:'true',visible:'true'}
+          attributes:{checked:String(c.checked ?? false),key:'settings',text:c.label ?? '设置',type:'Text',bounds:'[100,100][300,200]',clickable:'true',enabled:'true',visible:'true'}
         }] }));
       else fs.writeFileSync(dest,Buffer.concat([Buffer.from([255,216,255]),Buffer.from((c.frame+':'+(c.captureWidth||c.width)).repeat(100))]));
       console.log('File transfer finish');
@@ -347,3 +347,63 @@ for (const id of ["parse_jscrash_log", "jscrash_report"]) {
     assert.doesNotMatch(parsed.top_stack, /Second\.ets/);
   });
 }
+
+
+test("batch queries share one immutable dump and preserve false state", async (t) => {
+  const f = await deviceFixture(t);
+  const first = await uiFind({ hvd: f.device, selectors: [{ key: "settings", checked: false }, { checked: true }] });
+  assert.equal(first.queries[0].matchCount, 1);
+  assert.equal(first.queries[0].matches[0].checked, false);
+  assert.equal(first.queries[1].matchCount, 0);
+  assert.equal((await f.calls()).filter(args => args.includes("dumpLayout")).length, 1);
+  await f.set({ checked: true });
+  const second = await uiFind({ hvd: f.device, type: "Text" });
+  assert.notEqual(first.dumpPath, second.dumpPath);
+  assert.notEqual(first.snapshot.snapshotId, second.snapshot.snapshotId);
+  assert.notEqual(first.signature, second.signature);
+  assert.equal(first.structureSignature, second.structureSignature);
+  const commandsBefore = (await f.calls()).length;
+  const old = await uiFind({ dumpPath: first.dumpPath, checked: false });
+  assert.equal(old.matches[0].checked, false);
+  assert.equal((await f.calls()).length, commandsBefore, "snapshot reuse performs no device I/O");
+  assert.equal(old.snapshot.snapshotId, first.snapshot.snapshotId);
+  assert.equal(second.performance.stages["hdc.dump"].calls, 1);
+  assert.ok(second.performance.process.rssBytes > 0);
+  removeUiTemporaryFile(first.dumpPath);
+  removeUiTemporaryFile(second.dumpPath);
+});
+
+test("verify=true observes raw coordinates, keys, and screen-percentage gestures", async (t) => {
+  const f = await deviceFixture(t);
+  for (const args of [
+    { action: "click", x: 100, y: 150 },
+    { action: "keyEvent", key1: "Back" },
+    { action: "swipe", from_x_percent: 50, from_y_percent: 80, to_x_percent: 50, to_y_percent: 20 },
+  ]) {
+    const report = await uiTap({ ...args, hvd: f.device, verify: true });
+    assert.equal(report.verifyApplied, true);
+    assert.equal(report.observationCompleted, true);
+    assert.equal(report.outcomeVerified, false);
+    assert.ok(report.observation.snapshot.snapshotId);
+    const calls = await f.calls();
+    const inputIndex = calls.findLastIndex(args => args.includes("uiInput"));
+    assert.ok(calls.slice(inputIndex + 1).some(args => args.includes("dumpLayout")), "dump follows the input");
+    removeUiTemporaryFile(report.observation.dumpPath);
+    removeUiTemporaryFile(report.dumpPath);
+  }
+  const raw = await uiTap({ hvd: f.device, action: "click", x: 100, y: 150, verify: false });
+  assert.equal(raw.verifyApplied, false);
+  assert.equal(raw.observationCompleted, false);
+});
+
+test("semantic assertions check reported state, not just control presence", async (t) => {
+  const f = await deviceFixture(t);
+  assert.equal((await f.verify({ action: "assert", selector: { key: "settings", checked: false } })).verification.passed, true);
+  assert.equal((await f.verify({ action: "assert", selector: { key: "settings", checked: true } })).verification.passed, false);
+  await f.set({ checked: true });
+  assert.equal((await f.verify({ action: "assert", selector: { key: "settings", checked: true } })).verification.passed, true);
+  const observed = await uiObserve({ hvd: f.device, selectors: [{ checked: true }, { checked: false }] });
+  assert.deepEqual(observed.queries.map(query => query.matchCount), [1, 0]);
+  removeUiTemporaryFile(observed.localPath);
+  removeUiTemporaryFile(observed.dumpPath);
+});

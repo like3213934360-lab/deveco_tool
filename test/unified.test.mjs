@@ -623,6 +623,16 @@ test("unified MCP advertises scripts, diagnostics, LSP, and CodeGenie tools", as
     "emulator_manage", "emulator_scenario", "app_signature", "deveco_cli_auth", "ui_control",
   ]) assert.ok(names.has(name), `missing tool ${name}`);
   assert.equal(result.tools.length, 40);
+  for (const name of ["ui_find", "ui_observe"]) {
+    const properties = result.tools.find(tool => tool.name === name).inputSchema.properties;
+    assert.equal(properties.checked.type, "boolean");
+    assert.equal(properties.selectors.maxItems, 32);
+    assert.equal(properties.selectors.items.properties.checked.type, "boolean");
+    const invalidBatch = await client.callTool({ name, arguments: { selectors: [{ checked: "false" }] } });
+    assert.equal(JSON.parse(invalidBatch.content[0].text).code, "SCHEMA_VALIDATION_FAILED");
+  }
+  assert.equal(result.tools.find(tool => tool.name === "verify_ui").inputSchema.properties.selector.properties.checked.type, "boolean");
+  assert.equal(result.tools.find(tool => tool.name === "ui_flow").inputSchema.properties.success_selector.properties.checked.type, "boolean");
   assert.ok(!names.has("document_validate"));
   assert.ok(!names.has("init_project_path"));
   assert.equal(result.tools.filter((tool) => tool.name === "check_ets_files").length, 1);

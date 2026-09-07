@@ -129,6 +129,11 @@ export function flattenDump(root) {
       clickable: readFlag(attributes.clickable),
       enabled: readFlag(attributes.enabled),
       visible: readFlag(attributes.visible),
+      checked: readFlag(attributes.checked ?? attributes.isChecked ?? attributes.isOn),
+      checkable: readFlag(attributes.checkable),
+      selected: readFlag(attributes.selected ?? attributes.isSelected),
+      value: typeof attributes.value === "string" || typeof attributes.value === "number"
+        ? attributes.value : null,
       // Present on the accessibility shape. Surfaced so a caller on a foldable or an external screen
       // can tell which display a node belongs to; nodes from two displays share one dump.
       displayId: attributes.displayId === undefined ? null : String(attributes.displayId),
@@ -179,7 +184,8 @@ export function dumpSignatures(nodes) {
   for (const node of nodes) {
     const skeleton = `${node.type}|${rectKey(node.rect)}|${node.key ?? ""}`;
     structureOnly.push(skeleton);
-    withText.push(`${skeleton}|${node.text}`);
+    withText.push(JSON.stringify([skeleton, node.text, node.checked, node.checkable,
+      node.selected, node.value, node.enabled, node.visible, node.clickable]));
   }
   return { signature: hash(withText), structureSignature: hash(structureOnly) };
 }
@@ -230,6 +236,10 @@ export function readSelector(input = {}) {
     // The text you can see is often a label nested inside the node that actually handles the tap,
     // so being able to ask only for tappable nodes is the difference between a hit and a no-op.
     clickableOnly: input.clickableOnly === true,
+    checked: typeof input.checked === "boolean" ? input.checked : null,
+    selected: typeof input.selected === "boolean" ? input.selected : null,
+    enabled: typeof input.enabled === "boolean" ? input.enabled : null,
+    value: typeof input.value === "string" || typeof input.value === "number" ? input.value : null,
     text: typeof input.text === "string" && input.text ? input.text.toLowerCase() : null,
     textMode: input.textMode === "exact" ? "exact" : "contains",
     key: typeof input.key === "string" && input.key ? input.key : null,
@@ -242,7 +252,8 @@ export function readSelector(input = {}) {
 
 /** True when the caller named something to look for, rather than taking the default. */
 export function hasSelector(selector) {
-  return Boolean(selector.text || selector.key || selector.type || selector.clickableOnly);
+  return Boolean(selector.text || selector.key || selector.type || selector.clickableOnly
+    || [selector.checked, selector.selected, selector.enabled, selector.value].some(value => value != null));
 }
 
 /**
@@ -265,6 +276,9 @@ export function selectNodes({ nodes, screen }, selector) {
     }
     if (selector.key && node.key !== selector.key) continue;
     if (selector.type && node.type.toLowerCase() !== selector.type) continue;
+    if (["checked", "selected", "enabled", "value"].some(
+      field => selector[field] != null && node[field] !== selector[field],
+    )) continue;
     if (selector.displayId && node.displayId !== null && node.displayId !== selector.displayId) continue;
     // With no selector at all, "everything that shows text" is the useful default; without this
     // the answer would be every layout container on screen. clickableOnly counts as a selector:
@@ -295,6 +309,10 @@ export function selectNodes({ nodes, screen }, selector) {
       onScreen,
       clickable: node.clickable ?? undefined,
       enabled: node.enabled ?? undefined,
+      checked: node.checked ?? undefined,
+      checkable: node.checkable ?? undefined,
+      selected: node.selected ?? undefined,
+      value: node.value ?? undefined,
       displayId: node.displayId ?? undefined,
     });
   }
@@ -307,9 +325,9 @@ export function selectNodes({ nodes, screen }, selector) {
  * @param {{root: unknown, dumpPath: string|null, deviceId: string|null, selector: object}} input Source.
  * @returns {object} Report with matches, counts and both signatures.
  */
-export function analyseDump({ root, dumpPath = null, deviceId = null, selector }) {
+export function analyseDump({ root, dumpPath = null, deviceId = null, selector, selectors }) {
   const flattened = flattenDump(root);
-  const { matches, matchCount } = selectNodes(flattened, selector);
+  const { matches, matchCount } = selectors ? { matches: [], matchCount: 0 } : selectNodes(flattened, selector);
   const { signature, structureSignature } = dumpSignatures(flattened.nodes);
   const screen = flattened.screen;
   const componentTypes = Object.create(null);
@@ -334,20 +352,24 @@ export function analyseDump({ root, dumpPath = null, deviceId = null, selector }
     }
   }
   const truncated = matchCount > matches.length;
+  const queries = selectors?.map(input => {
+    const result = selectNodes(flattened, readSelector(input));
+    return { selector: input, ...result, truncated: result.matchCount > result.matches.length };
+  });
   return {
     deviceId,
     nodeCount: flattened.nodes.length,
-    matchCount,
-    truncated,
-    truncationHint: truncated
-      ? `Only ${matches.length} of ${matchCount} matches are included. Re-query dumpPath with text, key, or type (for example type: Slider), or raise limit.`
-      : undefined,
+    ...(queries ? { queries } : {
+      matchCount, truncated, matches,
+      truncationHint: truncated
+        ? `Only ${matches.length} of ${matchCount} matches are included. Re-query dumpPath with text, key, or type (for example type: Slider), or raise limit.`
+        : undefined,
+    }),
     componentTypes,
     applications,
     dumpPath,
     screen: screen ? [screen.x1, screen.y1, screen.x2, screen.y2] : null,
     signature,
     structureSignature,
-    matches,
   };
 }

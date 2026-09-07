@@ -10,6 +10,8 @@ import { hdcLog } from "./hdc-log.mjs";
 import { terminateProcessTree } from "./process-tree.mjs";
 import { compatScanResult } from "./api-compat-result.mjs";
 import { parseJson5, readModuleEntries } from "./build-profile.mjs";
+import { createBuildDiagnostics, formatBuildDiagnostics } from "./build-diagnostics.mjs";
+import { hdcEnvironment } from "./hdc-environment.mjs";
 
 const require = createRequire(import.meta.url);
 
@@ -89,6 +91,7 @@ function tailBuffer(limit = MAX_CAPTURE_BYTES) {
 }
 
 function processCapture(command, explicitLogPath) {
+  const diagnostics = createBuildDiagnostics();
   const stdout = tailBuffer();
   const stderr = tailBuffer();
   const stdoutFailures = evidenceTracker(CLI_FAILURE_PATTERNS);
@@ -109,6 +112,7 @@ function processCapture(command, explicitLogPath) {
   return {
     write(stream, chunk) {
       if (closed) return;
+      diagnostics.push(stream, chunk);
       if (loggedBytes + chunk.length > MAX_FULL_LOG_BYTES) {
         const error = new Error(`DevEco process log exceeded the ${MAX_FULL_LOG_BYTES}-byte safety limit`);
         error.code = "DEVECO_OUTPUT_LIMIT";
@@ -129,13 +133,16 @@ function processCapture(command, explicitLogPath) {
       fs.writeSync(handle, chunk);
       loggedBytes += chunk.length;
     },
-    finish() {
+    finish(retain = false, requireBuildSuccess = false) {
       if (!closed) {
         closed = true;
         fs.closeSync(handle);
       }
       const outputTruncated = stdout.truncated || stderr.truncated;
-      if (automatic && !outputTruncated) fs.rmSync(logPath, { force: true });
+      const acknowledgedBuild = [...stdoutSuccesses.slice(0, 2), ...stderrSuccesses.slice(0, 2)].some(tracker => tracker.evidence);
+      const keepLog = outputTruncated || retain || !!stdoutFailures.evidence || !!stderrFailures.evidence
+        || (requireBuildSuccess && !acknowledgedBuild);
+      if (automatic && !keepLog) fs.rmSync(logPath, { force: true });
       return {
         stdout: stdout.text(),
         stderr: stderr.text(),
@@ -144,7 +151,8 @@ function processCapture(command, explicitLogPath) {
         applyFailure: applyEvidence.find((item) => item.failure.evidence)?.failure.evidence || "",
         applyFallback: applyEvidence.find((item) => item.fallback.evidence)?.fallback.evidence || "",
         outputTruncated,
-        logPath: automatic && !outputTruncated ? null : logPath,
+        diagnostics: diagnostics.finish(),
+        logPath: automatic && !keepLog ? null : logPath,
       };
     },
   };
@@ -204,7 +212,7 @@ export function projectRoot(explicit) {
 }
 
 export function childEnvironment() {
-  const env = { ...process.env };
+  const env = { ...hdcEnvironment() };
   const toolchain = resolveDevecoToolchain();
   const home = resolveDevecoHome().path;
   if (home && toolchain.kind === "studio") {
@@ -259,13 +267,27 @@ export function runDevecoCli(args, { cwd, timeoutMs = DEFAULT_TIMEOUT_MS, input,
   const env = { ...childEnvironment(), ...extraEnv };
   return new Promise((resolve, reject) => {
     const capture = processCapture(command, logPath);
+    const observeOutput = args[0] === "build";
+    const drainPath = observeOutput
+      ? path.join(os.tmpdir(), "deveco-tool", "logs", `drain-${crypto.randomUUID()}.json`) : null;
+    if (drainPath) fs.mkdirSync(path.dirname(drainPath), { recursive: true });
+    const finish = (retain = false) => {
+      let status = "unknown";
+      if (drainPath) {
+        try { status = JSON.parse(fs.readFileSync(drainPath, "utf8")).status; } catch { /* interrupted or missing receipt */ }
+        fs.rmSync(drainPath, { force: true });
+      }
+      return { ...capture.finish(retain || (observeOutput && !["natural", "drained"].includes(status)), observeOutput),
+        ...(drainPath ? { outputDrain: status } : {}) };
+    };
     let child;
     try {
       const preloads = observeApply
         ? ["--import", new URL("./deveco-cli-apply-runtime.mjs", import.meta.url).href] : [];
+      if (observeOutput) preloads.push("--import", new URL("./deveco-cli-output-runtime.mjs", import.meta.url).href);
       child = spawn(process.execPath, [...preloads, entry, ...args], {
         cwd,
-        env,
+        env: { ...env, ...(drainPath ? { DEVECO_CLI_DRAIN_STATUS: drainPath } : {}) },
         stdio: [input === undefined ? "ignore" : "pipe", "pipe", "pipe"],
         // Own process group, so a timeout can reach the hvigor client front-end and the ohpm
         // downloads the CLI starts rather than only the CLI itself. The hvigor daemon re-parents
@@ -275,7 +297,7 @@ export function runDevecoCli(args, { cwd, timeoutMs = DEFAULT_TIMEOUT_MS, input,
         windowsHide: true,
       });
     } catch (error) {
-      capture.finish();
+      finish(true);
       reject(error);
       return;
     }
@@ -289,7 +311,7 @@ export function runDevecoCli(args, { cwd, timeoutMs = DEFAULT_TIMEOUT_MS, input,
       if (!settled) {
         settled = true;
         cleanup();
-        const captured = capture.finish();
+        const captured = finish(true);
         const error = new Error(`DevEco CLI execution was cancelled: ${command}`);
         error.code = "DEVECO_CLI_CANCELLED";
         Object.assign(error, captured);
@@ -301,7 +323,7 @@ export function runDevecoCli(args, { cwd, timeoutMs = DEFAULT_TIMEOUT_MS, input,
       if (!settled) {
         settled = true;
         cleanup();
-        const captured = capture.finish();
+        const captured = finish(true);
         const error = new Error(`DevEco CLI timed out after ${bounded}ms: ${command}`);
         error.code = "DEVECO_CLI_TIMEOUT";
         Object.assign(error, captured);
@@ -317,7 +339,7 @@ export function runDevecoCli(args, { cwd, timeoutMs = DEFAULT_TIMEOUT_MS, input,
         settled = true;
         cleanup();
         terminateProcessTree(child);
-        Object.assign(error, capture.finish());
+        Object.assign(error, finish(true));
         reject(error);
       }
     };
@@ -328,7 +350,7 @@ export function runDevecoCli(args, { cwd, timeoutMs = DEFAULT_TIMEOUT_MS, input,
       cleanup();
       if (!settled) {
         settled = true;
-        Object.assign(error, capture.finish());
+        Object.assign(error, finish(true));
         reject(error);
       }
     });
@@ -336,7 +358,7 @@ export function runDevecoCli(args, { cwd, timeoutMs = DEFAULT_TIMEOUT_MS, input,
       cleanup();
       if (settled) return;
       settled = true;
-      resolve({ command, exitCode, signal, ...capture.finish() });
+      resolve({ command, exitCode, signal, ...finish(exitCode !== 0 || !!signal) });
     });
   });
 }
@@ -437,6 +459,9 @@ export function combineOutput(result) {
 
 export function devecoCliFailureMessage(result, { requireOutput = false, successPattern } = {}) {
   const combined = combineOutput(result).trim();
+  if (result.outputDrain && !["natural", "drained"].includes(result.outputDrain)) {
+    return `DevEco CLI output drain ${result.outputDrain}; diagnostics may be incomplete. Exit code: ${result.exitCode ?? "unknown"}. ${result.logPath ? `Captured log: ${result.logPath}` : ""}`;
+  }
   if (result.exitCode !== 0) {
     return combined || `DevEco CLI exited with code ${result.exitCode ?? "unknown"}`;
   }
@@ -599,9 +624,11 @@ export async function buildProject(input = {}, { signal } = {}) {
 
   const fullText = transcript.join("\n\n");
   let logNotice = "";
-  if (logPath) {
-    logNotice = `\n\n[Log Saved] The full build log has been saved to: ${logPath}\nYou can read this file to view the complete log.`;
+  const savedLogPath = result.logPath || logPath;
+  if (savedLogPath) {
+    logNotice = `\n\n[Log Saved] Captured DevEco CLI output: ${savedLogPath}`;
   }
+  logNotice += `\n[Output Integrity] CLI stream drain: ${result.outputDrain ?? "unknown"}. This log captures what the CLI emitted; it cannot guarantee diagnostics the compiler itself did not emit.`;
 
   if (input.enable_inspector_source_jump) {
     sections.push(
@@ -611,7 +638,7 @@ export async function buildProject(input = {}, { signal } = {}) {
   }
 
   const header = sections.length ? `${sections.join("\n")}\n\n` : "";
-  const body = presentLog(fullText, logPath);
+  const body = formatBuildDiagnostics(result.diagnostics) + presentLog(fullText, savedLogPath);
   const buildFailure = devecoCliFailureMessage(result, {
     requireOutput: true,
     successPattern: /Build completed successfully\.?/i,
