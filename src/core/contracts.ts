@@ -340,11 +340,18 @@ export const workflowInputs = {
       .default("assembleHap"),
   }),
   app_deploy: z.strictObject({
-    artifact: z.string().min(1),
-    sha256: z
-      .string()
-      .regex(/^[a-f0-9]{64}$/)
-      .optional(),
+    packages: z
+      .array(
+        z.strictObject({
+          path: z.string().min(1),
+          sha256: z
+            .string()
+            .regex(/^[a-f0-9]{64}$/)
+            .optional(),
+        }),
+      )
+      .min(1)
+      .max(64),
     target,
     app: appSchema,
   }),

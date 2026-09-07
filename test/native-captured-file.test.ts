@@ -4,7 +4,11 @@ import fs from "node:fs";
 import fsp from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { captureFile, verifyCapturedFile } from "../src/core/captured-file.js";
+import {
+  captureFile,
+  captureFiles,
+  verifyCapturedFile,
+} from "../src/core/captured-file.js";
 import { StateStore } from "../src/core/store.js";
 import { fileDigest } from "../src/core/files.js";
 import { ProcessService } from "../src/core/process.js";
@@ -18,6 +22,25 @@ function clean(root: string, store: StateStore) {
   store.close();
   fs.rmSync(root, { recursive: true, force: true });
 }
+test("partial package-set capture reclaims all earlier copies and their quota", async () => {
+  const root = temp(),
+    store = new StateStore(path.join(root, "state")),
+    source = path.join(root, "input.hap");
+  try {
+    fs.writeFileSync(source, Buffer.alloc(65536));
+    await assert.rejects(
+      captureFiles(store, "workflow-input", [
+        { path: source },
+        { path: path.join(root, "missing.hsp") },
+      ]),
+    );
+    assert.deepEqual(fs.readdirSync(path.join(store.root, "artifacts")), []);
+    for (const table of ["artifacts", "artifact_streams", "artifact_gc"])
+      assert.deepEqual(store.db.prepare(`SELECT * FROM ${table}`).all(), []);
+  } finally {
+    clean(root, store);
+  }
+});
 
 test("captured packages retain submission bytes across source rebuilds and belong to their workflow", async () => {
   const root = temp(),
@@ -35,7 +58,7 @@ test("captured packages retain submission bytes across source rebuilds and belon
     assert.equal(fileDigest(captured.path), hash);
     const { run } = store.create(
       "app_deploy",
-      { deployment: captured },
+      { deployment: [captured] },
       undefined,
       {},
       [captured.artifact_id],
@@ -209,7 +232,7 @@ test("device installation checks a captured package after its lease wait and nev
       installs++;
       throw new Error("Must not install changed bytes");
     });
-    const blocked = devices.install("test", captured, app),
+    const blocked = devices.install("test", [captured], app),
       rejected = assert.rejects(blocked, { code: "ARTIFACT_CHANGED" });
     await waiting.promise;
     // ZIP identity was checked before waiting; append a byte while installation waits for the lease.

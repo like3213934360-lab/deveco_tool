@@ -10,7 +10,7 @@ import { atomicWrite, readObject } from "../src/core/files.js";
 import { errorResult, object } from "../src/core/errors.js";
 import type { WorkflowName } from "../src/core/contracts.js";
 import { validateCsrPem } from "../src/services/signature.js";
-import { inspectApplicationPackage } from "../src/services/package.js";
+import { inspectApplicationPackages } from "../src/services/package.js";
 import { evidenceIdentity } from "./lib/evidence.js";
 
 const tested = evidenceIdentity();
@@ -118,7 +118,7 @@ try {
       assert.ok(packages.length > 0);
       return Promise.all(
         packages.map((artifact) =>
-          inspectApplicationPackage(artifact.path, {
+          inspectApplicationPackages([artifact.path], {
             bundle_name: "com.deveco.nativecanary",
             module: "entry",
             ability: "EntryAbility",

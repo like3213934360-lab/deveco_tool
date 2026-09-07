@@ -26,7 +26,7 @@ export interface WorkflowContext {
   source_hash?: string;
   flow?: Flow;
   input_artifacts?: string[];
-  deployment?: CapturedFile;
+  deployment?: CapturedFile[];
 }
 export interface StepContext {
   run_id: string;
@@ -112,7 +112,7 @@ export class WorkflowEngine {
   ) {
     this.definition(workflow);
     invariant(
-      JSON.stringify(context).length <= 65536,
+      Buffer.byteLength(JSON.stringify(context)) <= 65536,
       "WORKFLOW_INPUT_TOO_LARGE",
       "Workflow input exceeds 64 KiB",
     );

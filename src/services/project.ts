@@ -21,6 +21,7 @@ import {
 } from "../core/toolchain.js";
 import { ProcessService } from "../core/process.js";
 import { BuildDiagnostics } from "../core/build-diagnostics.js";
+import { readPackageMetadata } from "./package.js";
 
 const sdkVersion = z.union([
   z.number().int().positive(),
@@ -385,7 +386,7 @@ export class ProjectService {
   ) {
     assertNoHotWatch(project);
     const toolchain = this.toolchain();
-    const modules = input.modules
+    let modules = input.modules
       ? project.modules.filter((module) => input.modules!.includes(module.name))
       : project.modules;
     invariant(
@@ -406,6 +407,24 @@ export class ProjectService {
       "BUILD_TASK_INVALID",
       "Unsupported build task",
     );
+    const kinds: Record<string, readonly string[]> = {
+      assembleHap: ["entry", "feature"],
+      assembleHar: ["har"],
+      assembleHsp: ["shared"],
+    };
+    const supported = kinds[task];
+    if (supported) {
+      const matching = modules.filter((module) =>
+        supported.includes(this.moduleType(module)),
+      );
+      invariant(
+        matching.length > 0 &&
+          (!input.modules || matching.length === modules.length),
+        "MODULE_TASK_MISMATCH",
+        "Selected module types do not support this build task",
+      );
+      modules = matching;
+    }
     const args = [
       "--no-daemon",
       "--mode",
@@ -481,6 +500,102 @@ export class ProjectService {
       truncated: result.truncated,
       log: result.log,
     };
+  }
+  private moduleType(module: Project["modules"][number]): string {
+    return z
+      .object({
+        module: z.object({
+          type: z.enum(["entry", "feature", "har", "shared"]),
+        }),
+      })
+      .parse(readObject(path.join(module.root, "src/main/module.json5"))).module
+      .type;
+  }
+  async buildApplication(
+    project: Project,
+    input: { modules?: string[]; mode?: string; clean?: boolean },
+    signal?: AbortSignal,
+  ) {
+    const selected = input.modules
+      ? project.modules.filter((module) => input.modules!.includes(module.name))
+      : project.modules;
+    invariant(
+      selected.length > 0 &&
+        (!input.modules || selected.length === new Set(input.modules).size),
+      "MODULE_INVALID",
+      "Unknown or empty module selection",
+    );
+    const haps = selected.filter((module) =>
+      ["entry", "feature"].includes(this.moduleType(module)),
+    );
+    invariant(
+      haps.length > 0,
+      "DEPLOY_ARTIFACT_MISSING",
+      "Select at least one launchable application module",
+    );
+    const result = await this.build(
+      project,
+      {
+        ...input,
+        modules: haps.map((module) => module.name),
+        task: "assembleHap",
+      },
+      signal,
+    );
+    const artifacts = [...result.artifacts],
+      built = new Set<string>(),
+      pending = new Set<string>(),
+      reports: { modules: string[]; elapsedMs: number }[] = [];
+    // Respect explicitly requested HSPs and derive other shared dependencies
+    // from the actual compiled package model, including transitive HSPs.
+    for (const module of selected)
+      if (input.modules && this.moduleType(module) === "shared")
+        pending.add(module.name);
+    let inspected = 0;
+    for (;;) {
+      while (inspected < artifacts.length) {
+        const metadata = await readPackageMetadata(
+          artifacts[inspected++]!.path,
+          signal,
+        );
+        if (metadata.module.type === "shared") built.add(metadata.module.name);
+        for (const dependency of metadata.module.dependencies) {
+          invariant(
+            !dependency.bundleName ||
+              dependency.bundleName === metadata.app.bundleName,
+            "DEPLOY_DEPENDENCY_UNAVAILABLE",
+            "Application uses an external shared bundle that must be installed separately",
+          );
+          if (!built.has(dependency.moduleName))
+            pending.add(dependency.moduleName);
+        }
+      }
+      const names = [...pending].filter((name) => !built.has(name));
+      pending.clear();
+      if (!names.length) break;
+      invariant(
+        built.size + names.length <= 64,
+        "PACKAGE_COUNT_INVALID",
+        "Application shared dependency graph exceeds 64 modules",
+      );
+      for (const name of names) {
+        const module = project.modules.find((module) => module.name === name);
+        invariant(
+          module && this.moduleType(module) === "shared",
+          "DEPLOY_DEPENDENCY_UNAVAILABLE",
+          `No selected-product HSP source exists for dependency ${name}`,
+        );
+      }
+      const shared = await this.build(
+        project,
+        { ...input, modules: names, task: "assembleHsp" },
+        signal,
+      );
+      for (const name of names) built.add(name);
+      artifacts.push(...shared.artifacts);
+      reports.push({ modules: names, elapsedMs: shared.elapsedMs });
+    }
+    return { ...result, artifacts, dependency_builds: reports };
   }
   model(project: Project): Record<string, unknown> {
     const file = path.join(project.root, ".hvigor/outputs/sync/output.json");

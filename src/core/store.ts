@@ -871,6 +871,27 @@ export class StateStore {
   }
   prune(): void {
     this.db.transaction(() => this.pruneOwned()).immediate();
+    this.collectArtifacts();
+    this.lastPrune = Date.now();
+  }
+  discardArtifacts(runId: string, ids: readonly string[]): void {
+    this.db
+      .transaction(() => {
+        for (const id of ids) {
+          this.db
+            .prepare(
+              "INSERT OR IGNORE INTO artifact_gc SELECT file,bytes FROM artifacts WHERE id=? AND run_id=?",
+            )
+            .run(id, runId);
+          this.db
+            .prepare("DELETE FROM artifacts WHERE id=? AND run_id=?")
+            .run(id, runId);
+        }
+      })
+      .immediate();
+    this.collectArtifacts();
+  }
+  private collectArtifacts(): void {
     // Commit removal of all references before unlinking bytes. A crash or failed
     // transaction must never leave a retained run pointing at deleted evidence.
     // Tombstones also keep pending deletions charged against the storage budget.
@@ -884,7 +905,6 @@ export class StateStore {
       }
       this.db.prepare("DELETE FROM artifact_gc WHERE file=?").run(row.file);
     }
-    this.lastPrune = Date.now();
   }
   private pruneOwned(): void {
     const config = configuration(),

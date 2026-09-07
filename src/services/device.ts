@@ -20,7 +20,7 @@ import { discoverToolchain, toolCommand } from "../core/toolchain.js";
 import { StateStore } from "../core/store.js";
 import { privateDirectory } from "../core/files.js";
 import { withinDeadline } from "../core/deadline.js";
-import { inspectApplicationPackage } from "./package.js";
+import { inspectApplicationPackages } from "./package.js";
 
 import { UiIndex, type Rect, type UiNode } from "./ui-tree.js";
 import {
@@ -552,7 +552,7 @@ export class DeviceService {
           undefined,
           signal,
         );
-        const installed = await this.install(target, captured, app, signal);
+        const installed = await this.install(target, [captured], app, signal);
         return { ...installed, ...(await this.launch(target, app, signal)) };
       },
       signal,
@@ -560,12 +560,12 @@ export class DeviceService {
   }
   async install(
     target: string,
-    artifact: CapturedFile,
+    artifacts: CapturedFile[],
     app: { bundle_name: string; module?: string; ability: string },
     signal?: AbortSignal,
   ) {
-    const identity = await inspectApplicationPackage(
-      artifact.path,
+    const identity = await inspectApplicationPackages(
+      artifacts.map((file) => file.path),
       app,
       signal,
     );
@@ -573,15 +573,20 @@ export class DeviceService {
       `device:${target}`,
       async () => {
         // Recheck after waiting for the device lease, immediately before dispatch.
-        await verifyCapturedFile(artifact, signal);
-        const receipt = await this.command(
-          ["-t", target, "install", artifact.path],
-          signal,
-          180000,
-        );
+        for (const artifact of artifacts)
+          await verifyCapturedFile(artifact, signal);
+        const receipt =
+          artifacts.length === 1
+            ? await this.command(
+                ["-t", target, "install", artifacts[0]!.path],
+                signal,
+                180000,
+              )
+            : await this.installBatch(target, artifacts, signal);
         invariant(
-          /success/i.test(receipt.stdout) &&
-            !/fail|error:/i.test(receipt.stdout),
+          !receipt.truncated &&
+            /install bundle successfully/i.test(receipt.stdout) &&
+            !/fail|error:/i.test(receipt.stdout + receipt.stderr),
           "INSTALL_UNCONFIRMED",
           "HDC did not confirm installation",
         );
@@ -590,13 +595,83 @@ export class DeviceService {
           installed: true,
           target,
           ...identity,
-          package_sha256: artifact.sha256,
-          package_artifact_id: artifact.artifact_id,
+          packages: artifacts.map((artifact, index) => ({
+            module: identity.modules[index]!.name,
+            sha256: artifact.sha256,
+            artifact_id: artifact.artifact_id,
+          })),
           log: receipt.log,
         };
       },
       signal,
     );
+  }
+  private async installBatch(
+    target: string,
+    artifacts: CapturedFile[],
+    signal?: AbortSignal,
+  ): Promise<ProcessResult> {
+    const remote = `/data/local/tmp/deveco-${crypto.randomUUID()}`;
+    let uncertain = false,
+      installing = false;
+    try {
+      await this.shell(target, ["mkdir", "-m", "700", remote], signal);
+      for (const [index, file] of artifacts.entries()) {
+        const transfer = await this.command(
+          [
+            "-t",
+            target,
+            "file",
+            "send",
+            file.path,
+            `${remote}/${index}${path.extname(file.path)}`,
+          ],
+          signal,
+          180000,
+        );
+        invariant(
+          !transfer.truncated &&
+            /FileTransfer finish/i.test(transfer.stdout) &&
+            !/fail|error:/i.test(transfer.stdout + transfer.stderr),
+          "PACKAGE_TRANSFER_UNCONFIRMED",
+          "HDC did not confirm all package bytes reached the device",
+        );
+      }
+      // One bm operation makes dependencies available together; passing multiple
+      // host paths to hdc install would install them separately.
+      installing = true;
+      return await this.shell(
+        target,
+        ["bm", "install", "-p", remote],
+        signal,
+        180000,
+      );
+    } catch (error) {
+      uncertain =
+        installing ||
+        (error instanceof ToolError && error.code === "CANCEL_UNCONFIRMED");
+      throw error;
+    } finally {
+      // Do not remove inputs while a managed command may still be reading them.
+      // Cleanup failure must not turn a confirmed installation into an unknown effect.
+      if (uncertain)
+        this.store.event(
+          currentTrace().run_id ?? null,
+          "device_package_cleanup_pending",
+          { target, remote },
+        );
+      else {
+        try {
+          await this.shell(target, ["rm", "-rf", remote], undefined, 10000);
+        } catch {
+          this.store.event(
+            currentTrace().run_id ?? null,
+            "device_package_cleanup_pending",
+            { target, remote },
+          );
+        }
+      }
+    }
   }
   async launch(target: string, raw: ApplicationTarget, signal?: AbortSignal) {
     const app = appSchema.parse(raw);

@@ -28,7 +28,7 @@ import {
 } from "../core/toolchain.js";
 import { StateStore } from "../core/store.js";
 import {
-  captureFile,
+  captureFiles,
   capturedFileSchema,
   verifyCapturedFile,
 } from "../core/captured-file.js";
@@ -55,7 +55,7 @@ import { KnowledgeService } from "./knowledge.js";
 import { SignatureService } from "./signature.js";
 import { EmulatorService } from "./emulator.js";
 import { HotReloadService } from "./hotreload.js";
-import { inspectApplicationPackage } from "./package.js";
+import { inspectApplicationPackages } from "./package.js";
 import { discoverAppRoutes, resolveAppRoute } from "./routes.js";
 import {
   resolveNavigationGoal,
@@ -223,26 +223,19 @@ export class Runtime {
       record.log_artifact_id = artifact.artifact_id;
     }
     if (name === "app_deploy") {
-      const file = path.resolve(text(record.artifact, "artifact"));
-      invariant(
-        fs.existsSync(file),
-        "ARTIFACT_MISSING",
-        "Deployment artifact is missing",
-      );
-      const captured = await captureFile(
+      const input = workflowInputs.app_deploy.parse(record);
+      const captured = await captureFiles(
         this.store,
         "workflow-input",
-        file,
-        typeof record.sha256 === "string" ? record.sha256 : undefined,
+        input.packages,
         signal,
       );
       context.deployment = captured;
-      context.input_artifacts = [
-        ...(context.input_artifacts ?? []),
-        captured.artifact_id,
-      ];
-      record.artifact = file;
-      record.sha256 = captured.sha256;
+      context.input_artifacts = captured.map((file) => file.artifact_id);
+      record.packages = captured.map((file) => ({
+        path: file.path,
+        sha256: file.sha256,
+      }));
     }
     if (name === "build_deploy_verify" && record.flow_id) {
       const input = workflowInputs.build_deploy_verify.parse(record);
@@ -300,7 +293,7 @@ export class Runtime {
         "FLOW_CHANGED",
         "Saved flow changed after submission; start a new run",
       );
-    if (context.deployment) await verifyCapturedFile(context.deployment);
+    for (const file of context.deployment ?? []) await verifyCapturedFile(file);
   }
   private definitions(): WorkflowDefinition[] {
     const definitions: WorkflowDefinition[] = [];
@@ -560,9 +553,12 @@ export class Runtime {
       read("validate_artifact", async (call) => {
         const input = workflowInputs.app_deploy.parse(call.context.parameters);
         return {
-          package: capturedFileSchema.parse(call.context.deployment),
-          identity: await inspectApplicationPackage(
-            capturedFileSchema.parse(call.context.deployment).path,
+          packages: capturedFileSchema.array().parse(call.context.deployment),
+          identity: await inspectApplicationPackages(
+            capturedFileSchema
+              .array()
+              .parse(call.context.deployment)
+              .map((file) => file.path),
             input.app,
             call.signal,
           ),
@@ -572,7 +568,7 @@ export class Runtime {
         const input = workflowInputs.app_deploy.parse(call.context.parameters);
         return this.devices.install(
           text(call.context.target, "target"),
-          capturedFileSchema.parse(call.context.deployment),
+          capturedFileSchema.array().parse(call.context.deployment),
           input.app,
           call.signal,
         );
@@ -603,7 +599,7 @@ export class Runtime {
             ),
           };
         if (input.sync) await this.projects.sync(project, true, call.signal);
-        return this.projects.build(project, input, call.signal);
+        return this.projects.buildApplication(project, input, call.signal);
       }),
       read("prepare_installation", async (call) => {
         const input = workflowInputs.build_deploy_verify.parse(
@@ -613,19 +609,13 @@ export class Runtime {
           return { skipped: true, reason: "hot patch already applied" };
         const artifacts = artifactsSchema
           .parse(object(this.output(call, "build_or_hot_apply")).artifacts)
-          .filter((a) => a.path.endsWith("-signed.hap"));
+          .filter((a) => /-signed\.(hap|hsp)$/.test(a.path));
         invariant(
-          artifacts.length === 1 && artifacts[0],
-          "DEPLOY_ARTIFACT_AMBIGUOUS",
-          "Select one application module producing a signed HAP",
+          artifacts.length > 0,
+          "DEPLOY_ARTIFACT_MISSING",
+          "Build did not produce signed application packages",
         );
-        return captureFile(
-          this.store,
-          call.run_id,
-          artifacts[0].path,
-          artifacts[0].sha256,
-          call.signal,
-        );
+        return captureFiles(this.store, call.run_id, artifacts, call.signal);
       }),
       effect("install_application", async (call) => {
         const input = workflowInputs.build_deploy_verify.parse(
@@ -635,7 +625,9 @@ export class Runtime {
           return { skipped: true, reason: "hot patch already applied" };
         return this.devices.install(
           text(call.context.target, "target"),
-          capturedFileSchema.parse(this.output(call, "prepare_installation")),
+          capturedFileSchema
+            .array()
+            .parse(this.output(call, "prepare_installation")),
           input.app,
           call.signal,
         );
@@ -894,12 +886,24 @@ export class Runtime {
               deduplicated: true,
             };
           }
-          return engine.start(
-            input.workflow,
-            await this.capture(input.workflow, identity, signal),
-            input.request_key,
-            identity,
-          );
+          const captured = await this.capture(input.workflow, identity, signal);
+          try {
+            return engine.start(
+              input.workflow,
+              captured,
+              input.request_key,
+              identity,
+            );
+          } finally {
+            // Concurrent submissions can both capture files before one wins
+            // the request-key transaction. Only unbound copies are discarded;
+            // the winning run already owns its evidence in that transaction.
+            if (captured.input_artifacts?.length)
+              this.store.discardArtifacts(
+                "workflow-input",
+                captured.input_artifacts,
+              );
+          }
         }
         const id = text(input.run_id, "run_id");
         if (input.action === "status") return engine.status(id, input.wait_ms);

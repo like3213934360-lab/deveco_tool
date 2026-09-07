@@ -13,6 +13,32 @@ export const capturedFileSchema = z.strictObject({
   artifact_id: z.string().uuid(),
 });
 export type CapturedFile = z.infer<typeof capturedFileSchema>;
+export async function captureFiles(
+  store: StateStore,
+  runId: string,
+  inputs: readonly { path: string; sha256?: string }[],
+  signal?: AbortSignal,
+): Promise<CapturedFile[]> {
+  invariant(
+    inputs.length > 0 && inputs.length <= 64,
+    "PACKAGE_COUNT_INVALID",
+    "Provide between 1 and 64 application packages",
+  );
+  const captured: CapturedFile[] = [];
+  try {
+    for (const input of inputs)
+      captured.push(
+        await captureFile(store, runId, input.path, input.sha256, signal),
+      );
+    return captured;
+  } catch (error) {
+    store.discardArtifacts(
+      runId,
+      captured.map((file) => file.artifact_id),
+    );
+    throw error;
+  }
+}
 /** Copy from a stable file handle into charged, owned storage using bounded I/O.
  * Nothing becomes a usable input until copying, hashing and fsync complete. */
 export async function captureFile(

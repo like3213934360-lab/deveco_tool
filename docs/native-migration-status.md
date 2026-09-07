@@ -27,18 +27,18 @@ MCP 主进程提供静态工具目录和参数校验；Worker 持有领域服务
 - 制品分页读取与清理使用同一套 SQLite 写事务协调；短读继续读取，长度不匹配明确失败。清理先提交引用删除，再通过持久化删除记录清除文件，失败后重试。
 - UI/崩溃大文本使用按需启动的 CPU Worker 池：最多 2 个 Worker、16 个排队任务、64 MiB 输入记账预算，空闲 30 秒释放；取消与超时等待 Worker 退出后才完成。普通小查询仍在运行服务中执行。VM 堆限制不是进程 RSS 硬上限。
 - UI 快照缓存最多 8 份、64 MiB 估算预算，有实际到期定时器。批量选择器在同一份树上查询，真实匹配总数不被输出 `limit` 改写；父节点和深度参与结构摘要，层级变化不再被漏报。窗口、显示器、深度与分页检查使用完整快照的父节点索引。
-- 部署提交时把 HAP/HSP 复制为任务拥有的只读制品，固定大小和 SHA-256，等待设备租约后再次核对。普通工程重建不会替换已提交的安装输入；多包安装仍待补齐。
+- 部署提交时把 HAP/HSP 复制为任务拥有的只读制品，固定大小和 SHA-256，等待设备租约后再次核对。普通工程重建不会替换已提交的安装输入；多个包通过一次设备端安装提交，捕获失败和并发重复提交释放未绑定副本。详见 `docs/native-deployment.md`。
 - ArkTS LSP 增加查找实现，检查初始化能力声明和 UTF-16 编码，校验真实发送内容的行列范围。文件读取、摘要和通知使用同一批字节；无结果、能力不可用、非法响应有不同处理。详见 `docs/native-language-service.md`。
 - TypeScript 编译使用完整临时输出目录；错误不覆盖上一次完整构建，成功后整体替换并删除失效输出。`native-stage.ts` 可在安装依赖前准备只含原生架构的私有验证目录。
 - `ui_snapshot` 默认只截图，支持 JPEG/PNG、宽度、显示器和画面变化比较；树用 `mode:tree/both` 显式获取。传输前预留额度，按块校验，未变化的画面不保存重复制品。详见 `docs/native-screenshots.md`。
-- 执行协议更新为 `native-2`，进程记录保存 Windows Job 身份；不读取旧开发状态。Windows Job Object 的 TypeScript 启动、查询与取消已实现，新增隔离、孤儿、长期会话回归，待远程 Windows 复查。详见 `docs/native-process-ownership.md`。
+- 执行协议更新为 `native-3`，部署状态保存包集合、进程记录保存 Windows Job 身份；不读取旧开发状态。Windows 取消等待受管进程同步句柄和 Job 活动数，失败启动会话也确认后代清理；持续压力验收仍在进行。详见 `docs/native-process-ownership.md`。
 
 ## 能力与验收缺口
 
 | 能力 | 新实现 | 当前证据与待补项 |
 | --- | --- | --- |
 | 工具链探测、工程模板 | `core/toolchain.ts`、`services/project.ts`、`resources/templates` | 本机 Studio/API 26 创建与构建通过；其他平台、CLT 布局及更广版本范围待验收 |
-| OHPM、同步、Hvigor 构建 | `services/project.ts` | 真实同步、ArkTS/C++ 构建、输出模型通过；多产品、多模块、HAR/HSP、历史制品识别场景待补齐 |
+| OHPM、同步、Hvigor 构建 | `services/project.ts` | 真实同步、ArkTS/C++ 构建、输出模型通过；四模块、双产品、HAR/HSP、默认任务筛选和实际包依赖补全共 15 项通过；更多历史制品场景待验收 |
 | ArkTS LSP、clangd、静态预检 | `services/lsp.ts`、`checker.ts`、`compilation-database.ts` | 真实悬停、引用、错误诊断、C++ 检查通过；静态预检不作为编译通过的替代证明 |
 | Linter、API 扫描 | `services/diagnostics.ts` | 真实空报告、兼容性问题和无差异扫描通过；更多 API/组件组合待验证 |
 | HDC、部署、启动 | `services/device.ts`、`package.ts` | HAP 元数据在真实构建产物上通过；丢失启动回执的恢复回归通过。真实签名安装/启动及可核实的外部恢复证据未齐全 |
@@ -57,11 +57,12 @@ MCP 主进程提供静态工具目录和参数校验；Worker 持有领域服务
 
 | 检查 | 结果 | 范围与原始证据 |
 | --- | --- | --- |
-| 编译及回归 | 137 项通过，0 跳过 | `/private/tmp/deveco-native-regression-node26-20260908-5/evidence.json`；Node 26.0.0，109 个 TypeScript 文件，包含 CPU 池、包捕获、构建替换、上游 PR、LSP、批量 UI 和层级回归。随后只修正 SDK 空 Hover 验收的合法空数组假设及补充相应用例 |
-| Node 22/24 干净原生验证目录 | Node 22 为 137 项；较早 Node 24 为 125 项，均 0 跳过 | `/private/tmp/deveco-native-kit-node22-evidence-20260908-2/evidence.json`、`/private/tmp/deveco-native-kit-node24-evidence-20260908-1/evidence.json`；未安装官方 CLI、子 MCP 或 Skill。Node 24 证据早于最新 LSP/UI/上游 PR 修改，待 CI 刷新；均为 macOS 证据 |
+| 编译及回归 | 158 项通过，0 跳过 | `/private/tmp/deveco-native-regression-node26-20260908-12/evidence.json`；Node 26.0.0，120 个 TypeScript 文件，包含单包/多包部署、并发去重副本释放和 Windows 失败会话退出路径修复；本机不能证明 Windows 行为 |
+| Node 22/24 干净原生验证目录 | 最近 CI 六组全量回归通过，Windows 压力门槛尚未全部通过 | [CI 34154538553](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34154538553)，提交 `8dd3239`；Windows Node 24 为 20/20 轮通过，Node 22 第 16 轮失败会话登记未释放。后续修复在本机验证后推送重查；此 CI 早于包集合改动 |
 | 迁移清单 | 40 工具、7 脚本、330 参数、95 动作覆盖检查通过 | `provenance/baseline-capabilities.json`、`provenance/migration-matrix.json`；47 项完整行为验收仍为 pending，`native-migration-audit --release` 会阻止发布 |
 | 真实 SDK | 19 项通过 | `/private/tmp/deveco-native-sdk-20260908-4/evidence.json`；Studio 26.0.0.821、SDK 26.0.0.105；创建/构建、HAP、静态预检、Linter、ArkTS 四种查询及空结果/位置边界、C++、API 版本和扫描、本地密钥/CSR、模拟器列表通过，不包含签名安装/热补丁 |
-| 真实设备只读验证 | 10 项通过 | `/private/tmp/deveco-native-device-readonly-20260908-3/evidence.json`；新增批量查询、缓存 ID 复用、窗口/层级分页，其余包括设备属性、UI 断言、Hilog、故障查询及关闭。故障目录权限不足，返回 `complete:false`，不能计为完整故障采集证明；没有点击、安装或业务路径验证 |
+| 真实多模块 SDK | 15 项通过 | `/private/tmp/deveco-native-multimodule-20260908-3/evidence.json`；entry/feature/HAR/HSP、default/tablet 两产品，含默认构建模块筛选与编译元数据驱动的 HSP 依赖构建；未签名、未安装设备 |
+| 真实设备只读验证 | 12 项通过 | `/private/tmp/deveco-native-device-readonly-20260908-4/evidence.json`；新增批量查询、缓存 ID 复用、窗口/层级分页，其余包括设备属性、UI 断言、Hilog、故障查询及关闭。故障目录权限不足，返回 `complete:false`，不能计为完整故障采集证明；没有点击、安装或业务路径验证 |
 | 真实 Hvigor watch | 7 项通过 | `/private/tmp/deveco-native-hvigor-20260907-4/evidence.json`；未验证签名和设备热补丁 |
 | 真实模拟器 | 6 项通过 | `/private/tmp/deveco-native-emulator-20260907-1/evidence.json`；早期代码快照，未记录源码摘要 |
 | 一小时基础设施运行 | 通过 | `/private/tmp/deveco-native-soak-20260907-2/evidence.json`；352 轮、2816 个子进程；最终活动任务/子进程/租约为 0，RSS 95,600,640 字节。只使用合成子进程，且早于最新制品与会话修改，不能算最终版本或 SDK 会话长稳验收 |
@@ -70,17 +71,13 @@ MCP 主进程提供静态工具目录和参数校验；Worker 持有领域服务
 
 ## 尚未通过的发布门槛
 
-远程 [CI 34150816491](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34150816491) 在 `04a5b49` 上六组通过，Windows Node 24 原始报告确认 142 项通过、0 跳过。截图修复使用可写句柄同步；孤儿恢复夹具显式创建会存活的外部进程。此结果早于 Job Object 改动，后者继续单独验收。
-
-2026-09-08 远程 [CI 34149797134](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34149797134) 在 `f7bce2f` 上六组任务通过。Linux/macOS × Node 22/24 各 137 项、0 跳过；Windows × Node 22/24 各 135 项通过、2 项 POSIX 用例跳过。证据保存在 `/private/tmp/deveco-ci-34149797134`，不能记成 Windows 无跳过验收。随后将孤儿进程恢复用例改为直接模拟 MCP 进程死亡、设备 POSIX 管道用例改用 Windows Git Bash，并把任何 skipped/todo 作为回归失败条件；待新一轮 CI 核实。
-
-新增截图后，本机 `/private/tmp/deveco-native-regression-node26-20260908-6/evidence.json` 为 142 项通过、0 跳过，真实只读设备 `/private/tmp/deveco-native-device-readonly-20260908-4/evidence.json` 为 12 项通过。111 个 TypeScript 文件；这些证据早于上面两项测试和门禁调整，运行服务代码相同。设备证据包含原生 JPEG 640px 缩放与 PNG/画面比较，没有输入或安装。
+Windows 压力测试已暴露并保留三类失败证据：SQLite 初始化失败未关闭句柄、进程退出确认早于文件映射释放、失败会话留下进程登记。当前代码分别修复初始化清理、等待同步句柄和失败会话强制清理，仍须新一轮重复测试证明。任何失败轮次都阻止门槛通过，不能用随后成功的诊断重跑覆盖。
 
 1. 完成冻结清单中逐个旧工具、参数、动作和历史缺陷的行为验收。覆盖审计会拦截漏项、重复项及没有证据的 verified 标记；当前的代码和测试位置映射不等于完整验收。
-2. 完成签名部署、设备热补丁、云端签名、真实 UI 输入/流程，以及多产品、多模块、HAR/HSP 工程验收。
+2. 完成签名部署、设备热补丁、云端签名、真实 UI 输入/流程；已完成多产品、多模块、HAR/HSP 构建，继续完成签名包集合的设备验收。
 3. 完成副作用外部状态核对。当前无法证明已执行结果时会停在 `needs_input`；不得把这种保守停止写成恢复能力全部完成。
 4. 完成新的 Windows Job Object 进程所有权与退出确认的真实 CI、SDK 和性能验证。`taskkill` 已从原生实现删除；macOS 通过不能代替 Windows 证明。
-5. 将 Checkpointer、临时文件、LSP 日志等所有状态写入纳入容量控制；目前制品/流/数据库已有预算控制，但不能宣称所有磁盘写入都满足统一上限。
+5. 将临时文件、LSP 日志等剩余状态写入纳入容量控制；目前官方 Checkpointer 的序列化边界、制品/流/数据库已有预算控制，但不能宣称所有磁盘写入都满足统一上限。
 6. CPU UI/崩溃解析池已通过边界回归；继续完成其他大报告路径、会话协调与最终性能优化，在固定工程和空闲机器上执行完整直接能力对比，以及最终代码的一小时 SDK/LSP/UI/watch 会话验收。
 7. 完成 Node 22/24 × macOS/Windows/Linux 的基础运行矩阵，逐项记录 SDK/设备支持范围。
 8. 上游候选、草稿 PR 和 CI 门禁的代码与模拟验证已完成；继续完成远程端到端验证、人工适配证据和正式发布门禁。
@@ -101,6 +98,7 @@ node dist/scripts/native-migration-audit.js --release
 node dist/scripts/resources.js
 node dist/scripts/native-device-readonly.js /absolute/new-device-evidence device-id
 node dist/scripts/native-sdk-acceptance.js /absolute/new-sdk-evidence
+node dist/scripts/native-multimodule-acceptance.js /absolute/new-module-evidence
 node dist/scripts/native-hvigor-acceptance.js /absolute/new-watch-evidence
 node dist/scripts/native-emulator-acceptance.js /absolute/new-emulator-evidence
 node --expose-gc dist/scripts/native-soak.js /absolute/new-soak-evidence 3600
@@ -111,5 +109,3 @@ node dist/scripts/native-benchmark.js /absolute/baseline-checkout /absolute/new-
 使用 Node 22/24 时必须在对应环境安装 SQLite 原生依赖，不能直接使用另一 Node ABI 编译的 `node_modules`。验收必须记录实际 SDK、设备、源码与锁文件，不以语言迁移本身证明性能改善。
 
 日志协议对照：[OpenHarmony Hilog 文档](https://raw.githubusercontent.com/openharmony/docs/master/zh-cn/application-dev/dfx/hilog.md)。`-e` 仅筛选消息内容，整行 `contains` 使用 `grep -F`；`-r` 的默认范围是 app/core buffer。新实现未继承旧组件参数回退分支。
-
-2026-09-08 三套 Node 回归、17 项 SDK/设备验证与 8 项真实设备只读证据使用同一运行摘要 `cb88d797949f8413f45213f6742a6244ab2c1a4f512dfb33bde6d104645ffb30`，编译文件摘要为 `b7744e976d38138de5eb2b606b3bb079260bf91b69f26a769b72aa8c978986af`。设备只读初次运行中，测试脚本的 1 秒 UI 断言期限不足，明确失败；改用默认 5 秒后通过。UI 获取实测约 1.4–1.9 秒、字面量无匹配筛选约 5.2–5.6 秒；这些是验证过程观测值，期间并行运行其他测试，不是正式性能基准。
