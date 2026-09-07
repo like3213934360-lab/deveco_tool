@@ -220,7 +220,9 @@ export class ScreenshotService {
           );
           const file = await fs.open(
             stream.file,
-            constants.O_RDONLY | constants.O_NONBLOCK,
+            // Windows FlushFileBuffers requires a handle opened for writing.
+            // Verification and durability use the same existing-file handle.
+            constants.O_RDWR | constants.O_NONBLOCK,
           );
           let sha256: string;
           try {
