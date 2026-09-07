@@ -17,6 +17,6 @@
 
 ## 边界与后续门槛
 
-当前候选包 private=true，类型为 installation-validation。基础安装检查已经加入 Node 22 / 24、macOS / Windows / Linux 六组 CI，新增步骤的远程结果仍待核对。当前本机证据不证明另外两个操作系统的 SDK 或设备能力。
+当前候选包 private=true，类型为 installation-validation。[CI 34164299338](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34164299338) 在提交 `33a6a72ae9ed4c57b6b5614701d30818340198f1` 上的 Node 22 / 24、macOS / Windows / Linux 六组全部通过；已逐组核对日志，每组均为完整回归 194 项通过、0 跳过、ZIP 干净安装检查 10 项通过，两个 Windows 作业还完成各 20 轮进程压力检查。日志保留于 `/private/tmp/deveco-ci-34164299338.log`。这证明对应平台的基础编译包安装与运行，不证明这些平台的实际 SDK 或设备能力。
 
 封装测试还覆盖未归一化锁、旧依赖、开发依赖、软链接、本地链接依赖、版本偏移、缺少完整性、资源篡改、路径穿越、Windows 保留名、大小写冲突和虚报解压大小。校验和不是发布者签名；仍须在正式发布时绑定受信任的发布记录。完整迁移、专项能力、升级回退及性能门槛没有因此完成。用户步骤见 [编译产物安装与升级验证](native-installation.md)。
