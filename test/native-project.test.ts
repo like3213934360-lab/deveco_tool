@@ -6,6 +6,7 @@ import os from "node:os";
 import { ProjectService } from "../src/services/project.js";
 import { ProcessService } from "../src/core/process.js";
 import { atomicWrite, destinationPath, readObject } from "../src/core/files.js";
+import { resourceRoot } from "../src/core/config.js";
 
 function fixture() {
   const root = fs.realpathSync.native(
@@ -100,6 +101,45 @@ test("a completed project creation can be reconciled only for its operation, inp
   }
 });
 
+test("project templates copy complete nested files into Unicode paths without changing source resources", async () => {
+  const f = fixture();
+  try {
+    const project_path = path.join(f.root, "中文 空格🙂", "工程"),
+      source = path.join(
+        resourceRoot,
+        "templates/application/entry/src/main/ets/pages/Index.ets",
+      ),
+      bytes = fs.readFileSync(source),
+      created = await f.service.create(
+        { ...f.input, project_path },
+        undefined,
+        "unicode-create",
+      );
+    assert.equal(created.root, fs.realpathSync.native(project_path));
+    assert.deepEqual(
+      fs.readFileSync(
+        path.join(created.root, "entry/src/main/ets/pages/Index.ets"),
+      ),
+      bytes,
+    );
+    assert.deepEqual(fs.readFileSync(source), bytes);
+    assert.equal(
+      f.service.reconcileCreate({ ...f.input, project_path }, "unicode-create")
+        ?.root,
+      created.root,
+    );
+    assert.equal(
+      fs.statSync(path.join(created.root, ".gitignore")).isFile(),
+      true,
+    );
+    await assert.rejects(f.service.create({ ...f.input, project_path }), {
+      code: "PROJECT_EXISTS",
+    });
+  } finally {
+    f.close();
+  }
+});
+
 test("project aliases, Windows short temp names and asynchronous file paths share one captured identity", async () => {
   const f = fixture(),
     alias = `${f.root}-alias`;
@@ -173,6 +213,31 @@ test("project switching is independent of product selection and invalid switches
       f.service.resolve(first.root, "tablet").product.name,
       "tablet",
     );
+  } finally {
+    f.close();
+  }
+});
+
+test("cancelling an asynchronous template copy preserves an incomplete receipt and never permits blind replay", async () => {
+  const f = fixture(),
+    controller = new AbortController();
+  try {
+    const creating = f.service.create(
+      f.input,
+      controller.signal,
+      "cancel-copy",
+    );
+    controller.abort();
+    await assert.rejects(creating, { name: "AbortError" });
+    assert.equal(
+      readObject(path.join(f.input.project_path, ".deveco-mcp/create.json"))
+        .status,
+      "started",
+    );
+    assert.equal(f.service.reconcileCreate(f.input, "cancel-copy"), undefined);
+    await assert.rejects(f.service.create(f.input, undefined, "cancel-copy"), {
+      code: "PROJECT_EXISTS",
+    });
   } finally {
     f.close();
   }

@@ -234,11 +234,24 @@ export class ProjectService {
       JSON.stringify({ ...receipt, status: "started" }),
       false,
     );
-    fs.cpSync(path.join(resourceRoot, "templates/application"), root, {
-      recursive: true,
-      errorOnExist: true,
-      force: false,
-    });
+    const templateRoot = path.join(resourceRoot, "templates/application");
+    // Copy children into the exclusively claimed root. Copying the template
+    // directory itself would conflict with that root under errorOnExist.
+    for (const entry of await fs.promises.readdir(templateRoot))
+      await fs.promises.cp(
+        path.join(templateRoot, entry),
+        path.join(root, entry),
+        {
+          recursive: true,
+          errorOnExist: true,
+          force: false,
+          filter: () => {
+            signal?.throwIfAborted();
+            return true;
+          },
+        },
+      );
+    signal?.throwIfAborted();
     for (const file of walk(root)) {
       if (path.basename(file) === "gitignore.txt")
         fs.renameSync(file, path.join(path.dirname(file), ".gitignore"));

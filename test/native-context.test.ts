@@ -21,12 +21,17 @@ test("doctor follows selected projects while submitted diagnostic workflows reta
     alias = path.join(root, "alias"),
     config = path.join(root, "config.json");
   for (const project of [first, second])
-    fs.cpSync(
+    await fs.promises.cp(
       fileURLToPath(
         new URL("../../test/fixtures/harmony-app", import.meta.url),
       ),
       project,
       { recursive: true },
+    );
+  for (const project of [first, second])
+    assert.ok(
+      fs.statSync(path.join(project, "build-profile.json5")).isFile(),
+      "The fixture copy must finish before aliases or the runtime are created",
     );
   fs.symlinkSync(first, alias, "junction");
   const sdkRoot = path.join(root, "clt");
