@@ -14,7 +14,7 @@ MCP 主进程提供静态工具目录和参数校验；Worker 持有领域服务
 - LangGraph 1.4.14、SQLite Checkpointer 1.0.4、MCP SDK 1.30.0、Zod 4.4.3 已锁定。
 - 新运行代码不启动官方 CLI 或 CodeGenie 子 MCP。Hvigor watch 直接使用所选 SDK 的 worker 协议，拥有自己的进程组，不启动或终止共享 SDK master/Java 守护进程。
 - 25 个公开 MCP 工具、8 个工作流已注册；这表示接口与实现已存在，不等于每项能力已完成真实环境验收。
-- 项目、产品、设备和输入在任务提交时固定。重复请求键会去重，不同输入会冲突。
+- 项目、产品、设备和输入在任务提交时固定。重复请求键会去重，不同输入会冲突。默认工程选择与产品选择分别处理，doctor 与业务请求共享当前工程，切换不改变在途任务；见 `docs/native-project-context.md`。
 - 工具链身份包含 SDK/组件包版本摘要和可执行入口的文件标识。同一 Studio 路径内更新 SDK 会阻止旧任务继续恢复，也会使 LSP 新请求使用新的会话缓存身份；入口文件标识不是对整个 SDK 的密码学签名验证。
 - 已发生但未获得可靠回执的副作用进入 `needs_input`，只允许声明的 `recheck` 输入。安装与启动已拆为两个检查点，启动结果不明时不重复安装。
 - 已保存的 `.arkpilot/flows` 继续由新 UI 服务读取。替代选择器必须通过原有最终断言后才能保存。
@@ -59,7 +59,7 @@ MCP 主进程提供静态工具目录和参数校验；Worker 持有领域服务
 
 | 检查 | 结果 | 范围与原始证据 |
 | --- | --- | --- |
-| 编译及回归 | 210 项通过，0 跳过 | `/private/tmp/deveco-native-regression-node26-20260908-32/evidence.json`；153 个 TypeScript 文件，新增静态诊断扫描/报告边界。本次独立 Node 22.23.2 / 24.14.1 原生目录也各 210 项通过，具体版本与范围见各能力文档 |
+| 编译及回归 | 212 项通过，0 跳过 | `/private/tmp/deveco-native-regression-node26-20260908-33/evidence.json`；154 个 TypeScript 文件，新增默认工程/产品和在途任务隔离验证。前一批静态诊断在独立 Node 22.23.2 / 24.14.1 原生目录也各 210 项通过，具体版本与范围见各能力文档 |
 | Node 22/24 干净原生验证目录 | 六组全量回归、安装与 Windows 压力门槛通过 | [CI 34166221456](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34166221456)，提交 `4eebcad`；六组成功，包含按内容复用的离线 UI 树；本次静态预检改动的 CI 单独核对 |
 | 迁移清单 | 40 工具、7 脚本、330 参数、95 动作覆盖检查通过 | `provenance/baseline-capabilities.json`、`provenance/migration-matrix.json`；文档与重启 2 项完成行为验收，45 项仍为 pending，`native-migration-audit --release` 会阻止发布 |
 | 真实 SDK | 19 项通过 | `/private/tmp/deveco-native-sdk-20260908-7/evidence.json`；Studio 26.0.0.821、SDK 26.0.0.105；创建/构建、HAP、静态预检、Linter、ArkTS 四种查询及空结果/位置边界、C++、API 版本和扫描、本地密钥/CSR、模拟器列表通过，不包含签名安装/热补丁 |

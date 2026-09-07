@@ -67,10 +67,7 @@ export interface Project {
   modules: { name: string; root: string; target: string }[];
   fingerprint: string;
 }
-export function inspectProject(
-  candidate: string,
-  productName?: string,
-): Project {
+function readProjectProfile(candidate: string) {
   const root = fs.realpathSync.native(path.resolve(candidate));
   const file = path.join(root, "build-profile.json5");
   invariant(
@@ -79,6 +76,13 @@ export function inspectProject(
     "build-profile.json5 is required",
   );
   const profile = profileSchema.parse(readObject(file));
+  return { root, profile, file };
+}
+export function inspectProject(
+  candidate: string,
+  productName?: string,
+): Project {
+  const { root, profile, file } = readProjectProfile(candidate);
   const selected = productName
     ? profile.app.products.find((item) => item.name === productName)
     : (profile.app.products.find((item) => item.name === "default") ??
@@ -153,7 +157,9 @@ export class ProjectService {
     private readonly toolchain: () => Toolchain = discoverToolchain,
   ) {}
   select(root: string) {
-    const project = inspectProject(root);
+    // Selecting a project does not pick a product. A later operation must name
+    // one when the project has several products and no unambiguous default.
+    const project = readProjectProfile(root);
     this.selected = project.root;
     return { project_path: project.root };
   }

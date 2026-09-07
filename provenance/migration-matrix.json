@@ -1763,10 +1763,12 @@
         "tool:switch_cwd"
       ],
       "adapters": [
-        "src/services/project.ts"
+        "src/services/project.ts",
+        "src/services/runtime.ts"
       ],
       "checks": [
-        "test/native-runtime.test.ts"
+        "test/native-project.test.ts",
+        "test/native-context.test.ts"
       ],
       "behavior": "切换默认工程，已提交任务使用捕获上下文。",
       "parameters": {
@@ -1777,10 +1779,12 @@
       },
       "actions": [],
       "remaining": [
-        "旧工程路径别名/目录失效回归清单"
+        "本次默认工程/产品分离及 doctor 行为的 Node 22/24 三平台回归确认"
       ],
       "acceptance": "pending",
-      "evidence": []
+      "evidence": [
+        "docs/native-project-context.md"
+      ]
     },
     {
       "source": "ui_control",

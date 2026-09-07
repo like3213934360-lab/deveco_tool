@@ -937,12 +937,12 @@ export class Runtime {
         } catch (error) {
           api_compatibility = { error: errorResult(error) };
         }
-        if (input.project_path || configuration().default_project)
-          try {
-            project = this.projects.resolve(input.project_path, input.product);
-          } catch (error) {
-            project = { error: errorResult(error) };
-          }
+        try {
+          project = this.projects.resolve(input.project_path, input.product);
+        } catch (error) {
+          const failure = errorResult(error);
+          if (failure.code !== "PROJECT_REQUIRED") project = { error: failure };
+        }
         return {
           release,
           execution_protocol: protocolVersion,

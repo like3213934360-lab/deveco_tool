@@ -5,7 +5,7 @@ import path from "node:path";
 import os from "node:os";
 import { ProjectService } from "../src/services/project.js";
 import { ProcessService } from "../src/core/process.js";
-import { atomicWrite, destinationPath } from "../src/core/files.js";
+import { atomicWrite, destinationPath, readObject } from "../src/core/files.js";
 
 function fixture() {
   const root = fs.realpathSync.native(
@@ -128,6 +128,52 @@ test("project aliases, Windows short temp names and asynchronous file paths shar
       assert.equal(module.root, await fs.promises.realpath(module.root));
   } finally {
     fs.rmSync(alias, { force: true });
+    f.close();
+  }
+});
+
+test("project switching is independent of product selection and invalid switches preserve the previous default", async () => {
+  const f = fixture();
+  try {
+    const first = await f.service.create(f.input),
+      file = path.join(first.root, "build-profile.json5"),
+      profile = readObject(file);
+    profile.app = {
+      products: [
+        { name: "phone", compatibleSdkVersion: 26 },
+        { name: "tablet", compatibleSdkVersion: 23 },
+      ],
+    };
+    profile.modules = [{ name: "entry", srcPath: "./entry" }];
+    atomicWrite(file, JSON.stringify(profile));
+    assert.deepEqual(f.service.select(first.root), {
+      project_path: first.root,
+    });
+    assert.throws(() => f.service.resolve(), { code: "PRODUCT_AMBIGUOUS" });
+    const phone = f.service.resolve(undefined, "phone");
+    assert.equal(phone.product.name, "phone");
+    for (const invalid of [path.join(f.root, "missing"), file, f.root]) {
+      assert.throws(() => f.service.select(invalid));
+      assert.deepEqual(f.service.resolve(undefined, "phone"), phone);
+    }
+    const second = await f.service.create({
+      ...f.input,
+      project_path: path.join(f.root, "second"),
+    });
+    f.service.select(second.root);
+    assert.equal(f.service.resolve().root, second.root);
+    assert.equal(
+      phone.root,
+      first.root,
+      "Previously captured context is not mutated",
+    );
+    fs.rmSync(second.root, { recursive: true });
+    assert.throws(() => f.service.resolve(), { code: "ENOENT" });
+    assert.equal(
+      f.service.resolve(first.root, "tablet").product.name,
+      "tablet",
+    );
+  } finally {
     f.close();
   }
 });
