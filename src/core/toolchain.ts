@@ -26,6 +26,20 @@ export interface Toolchain {
   fingerprint: string;
   components: Partial<Record<Component, string>>;
 }
+function isFile(file: string): boolean {
+  try {
+    return fs.statSync(file).isFile();
+  } catch (error) {
+    if (
+      error &&
+      typeof error === "object" &&
+      "code" in error &&
+      ["ENOENT", "ENOTDIR"].includes(String(error.code))
+    )
+      return false;
+    throw error;
+  }
+}
 export function discoverToolchain(): Toolchain {
   const config = configuration();
   const defaultRoot =
@@ -49,6 +63,17 @@ export function discoverToolchain(): Toolchain {
   const sdk = path.join(content, "sdk");
   const windows = process.platform === "win32";
   const executable = (name: string) => (windows ? `${name}.exe` : name);
+  const javaHome =
+    config.java_home ||
+    (kind === "clt" ? process.env.JAVA_HOME?.trim() : undefined);
+  const externalJava = javaHome
+    ? path.join(path.resolve(javaHome), "bin", executable("java"))
+    : undefined;
+  invariant(
+    !externalJava || isFile(externalJava),
+    "JAVA_HOME_INVALID",
+    "java_home or JAVA_HOME must identify a JDK containing bin/java",
+  );
   const candidates: Record<Component, string[]> = {
     node: [
       path.join(
@@ -57,14 +82,17 @@ export function discoverToolchain(): Toolchain {
         windows ? "node.exe" : "bin/node",
       ),
     ],
-    java: [
-      path.join(
-        content,
-        kind === "clt" ? "tool/jbr/bin" : "jbr/Contents/Home/bin",
-        executable("java"),
-      ),
-      path.join(content, "jbr/bin", executable("java")),
-    ],
+    java: externalJava
+      ? [externalJava]
+      : kind === "clt"
+        ? (process.env.Path ?? process.env.PATH ?? "")
+            .split(path.delimiter)
+            .filter((directory) => path.isAbsolute(directory.trim()))
+            .map((directory) => path.join(directory.trim(), executable("java")))
+        : [
+            path.join(content, "jbr/Contents/Home/bin", executable("java")),
+            path.join(content, "jbr/bin", executable("java")),
+          ],
     ohpm: [path.join(tools, "ohpm/bin/pm-cli.js")],
     hvigor: [path.join(tools, "hvigor/bin/hvigorw.js")],
     hdc: [
@@ -86,10 +114,20 @@ export function discoverToolchain(): Toolchain {
         executable("clangd"),
       ),
     ],
-    linter: [
-      path.join(content, "plugins/codelinter/run/index.js"),
-      path.join(content, "codelinter/runner.js"),
-    ],
+    linter: (kind === "clt"
+      ? [
+          "codelinter/index.js",
+          "codelinter/run/index.js",
+          "tool/codelinter/bin/codelinter.js",
+          "tool/codelinter/codelinter.js",
+        ]
+      : [
+          "plugins/codelinter/run/index.js",
+          "plugins/codelinter/index.js",
+          "tools/codelinter/bin/codelinter.js",
+          "tools/codelinter/codelinter.js",
+        ]
+    ).map((file) => path.join(content, file)),
     apiscan: [
       path.join(
         content,
@@ -103,10 +141,22 @@ export function discoverToolchain(): Toolchain {
   };
   const components: Partial<Record<Component, string>> = {};
   for (const [name, values] of Object.entries(candidates)) {
-    const value = values.find((file) => fs.existsSync(file));
+    const value = values.find(isFile);
     if (value) components[name as Component] = value;
   }
   let version = "unknown";
+  const cltVersion = path.join(root, "version.txt");
+  if (kind === "clt" && isFile(cltVersion)) {
+    invariant(
+      fs.statSync(cltVersion).size <= 65536,
+      "TOOLCHAIN_METADATA_INVALID",
+      "CLT version metadata exceeds 64 KiB",
+    );
+    version =
+      fs
+        .readFileSync(cltVersion, "utf8")
+        .match(/^#\s*Version:\s*(\S+)/m)?.[1] ?? "unknown";
+  }
   for (const file of [
     path.join(content, "Resources/product-info.json"),
     path.join(content, "product-info.json"),
@@ -114,7 +164,7 @@ export function discoverToolchain(): Toolchain {
   ]) {
     if (fs.existsSync(file)) {
       const data = readObject(file);
-      version = String(data.version ?? "unknown");
+      version = String(data.version ?? version);
       break;
     }
   }
@@ -169,6 +219,28 @@ export function discoverToolchain(): Toolchain {
     if (typeof version === "string") versions[relative] = version;
     return [[relative, fileDigest(file)]];
   });
+  if (kind === "clt" && isFile(cltVersion)) {
+    metadata.push(["version.txt", fileDigest(cltVersion)]);
+    versions["version.txt"] = version;
+  }
+  if (components.java) {
+    const release = path.join(
+      path.dirname(path.dirname(components.java)),
+      "release",
+    );
+    if (isFile(release)) {
+      invariant(
+        fs.statSync(release).size <= 65536,
+        "TOOLCHAIN_METADATA_INVALID",
+        "JDK release metadata exceeds 64 KiB",
+      );
+      metadata.push(["java/release", fileDigest(release)]);
+      const value = fs
+        .readFileSync(release, "utf8")
+        .match(/^JAVA_VERSION="([^"]+)"/m)?.[1];
+      if (value) versions["java/release"] = value;
+    }
+  }
   return {
     root,
     kind,
@@ -182,7 +254,7 @@ export function discoverToolchain(): Toolchain {
 export function component(toolchain: Toolchain, name: Component): string {
   const file = toolchain.components[name];
   invariant(
-    file && fs.existsSync(file),
+    file && isFile(file),
     "CAPABILITY_UNAVAILABLE",
     `${name} is unavailable in selected ${toolchain.kind} ${toolchain.version}`,
   );

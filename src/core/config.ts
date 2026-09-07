@@ -8,6 +8,7 @@ import { invariant } from "./errors.js";
 export const configSchema = z.strictObject({
   studio: z.string().min(1).optional(),
   clt: z.string().min(1).optional(),
+  java_home: z.string().min(1).optional(),
   default_project: z.string().min(1).optional(),
   state_dir: z.string().min(1).optional(),
   max_runs: z.number().int().positive().default(100),

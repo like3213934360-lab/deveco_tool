@@ -3,13 +3,113 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { discoverToolchain } from "../src/core/toolchain.js";
+import {
+  discoverToolchain,
+  component,
+  toolCommand,
+} from "../src/core/toolchain.js";
 import { atomicWrite } from "../src/core/files.js";
 import { ProcessService } from "../src/core/process.js";
 import { PersistentProcessObserver } from "../src/core/process-observer.js";
 import { StateStore } from "../src/core/store.js";
 import { LanguageService } from "../src/services/lsp.js";
 import type { Project } from "../src/services/project.js";
+
+test("CLT resolves documented linter layouts and external JDK identity, without accepting directories or losing command argument boundaries", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-clt-布局 空格-")),
+    previous = {
+      config: process.env.DEVECO_CONFIG,
+      java: process.env.JAVA_HOME,
+    },
+    clt = path.join(root, "clt"),
+    config = path.join(root, "config.json"),
+    jdk = path.join(root, "external-jdk"),
+    exe = (name: string) =>
+      process.platform === "win32" ? `${name}.exe` : name;
+  try {
+    atomicWrite(config, JSON.stringify({ clt, java_home: jdk }));
+    process.env.DEVECO_CONFIG = config;
+    process.env.JAVA_HOME = path.join(root, "unselected-jdk");
+    atomicWrite(path.join(jdk, "bin", exe("java")), "java-fixture");
+    atomicWrite(path.join(jdk, "release"), 'JAVA_VERSION="21.0.1"\n');
+    atomicWrite(path.join(clt, "version.txt"), "# Version: 6.0.0.100\r\n");
+    const paths = {
+      node:
+        process.platform === "win32"
+          ? "tool/node/node.exe"
+          : "tool/node/bin/node",
+      ohpm: "ohpm/bin/pm-cli.js",
+      hvigor: "hvigor/bin/hvigorw.js",
+      hdc: `sdk/default/openharmony/toolchains/${exe("hdc")}`,
+      arkts: "arkts-lsp/lib/out/standardIndex/index.js",
+      clangd: `sdk/default/openharmony/native/llvm/bin/${exe("clangd")}`,
+      emulator: `emulator/${exe("Emulator")}`,
+      signer: "sdk/default/openharmony/toolchains/lib/hap-sign-tool.jar",
+    } as const;
+    for (const file of Object.values(paths))
+      atomicWrite(path.join(clt, file), "fixture");
+    for (const file of [
+      "codelinter/index.js",
+      "codelinter/run/index.js",
+      "tool/codelinter/bin/codelinter.js",
+      "tool/codelinter/codelinter.js",
+    ]) {
+      const entry = path.join(clt, file);
+      atomicWrite(entry, "linter-fixture");
+      const chain = discoverToolchain();
+      assert.equal(chain.kind, "clt");
+      assert.equal(chain.version, "6.0.0.100");
+      assert.equal(chain.versions["java/release"], "21.0.1");
+      assert.equal(component(chain, "linter"), entry);
+      for (const [name, relative] of Object.entries(paths))
+        assert.equal(
+          chain.components[name as keyof typeof paths],
+          path.join(clt, relative),
+        );
+      assert.equal(
+        component(chain, "java"),
+        path.join(jdk, "bin", exe("java")),
+      );
+      const args = ["--path", "中文 path; $(ignored)"];
+      const lint = toolCommand(chain, "linter", args, root);
+      assert.deepEqual(lint.args, [entry, ...args]);
+      assert.equal(lint.executable, component(chain, "node"));
+      assert.equal(lint.env?.JAVA_HOME, jdk);
+      assert.deepEqual(toolCommand(chain, "signer", args).args, [
+        "-jar",
+        component(chain, "signer"),
+        ...args,
+      ]);
+      fs.rmSync(entry);
+    }
+    const first = discoverToolchain();
+    assert.equal(first.components.linter, undefined);
+    fs.mkdirSync(path.join(clt, "codelinter/index.js"));
+    assert.equal(discoverToolchain().components.linter, undefined);
+    atomicWrite(path.join(jdk, "release"), 'JAVA_VERSION="21.0.2"\n');
+    assert.notEqual(discoverToolchain().fingerprint, first.fingerprint);
+    const second = discoverToolchain();
+    atomicWrite(path.join(clt, "version.txt"), "# Version: 6.0.0.101\n");
+    assert.notEqual(discoverToolchain().fingerprint, second.fingerprint);
+    atomicWrite(config, JSON.stringify({ clt }));
+    process.env.JAVA_HOME = jdk;
+    assert.equal(
+      discoverToolchain().components.java,
+      path.join(jdk, "bin", exe("java")),
+    );
+    atomicWrite(
+      config,
+      JSON.stringify({ clt, java_home: path.join(root, "missing") }),
+    );
+    assert.throws(discoverToolchain, { code: "JAVA_HOME_INVALID" });
+  } finally {
+    if (previous.config === undefined) delete process.env.DEVECO_CONFIG;
+    else process.env.DEVECO_CONFIG = previous.config;
+    if (previous.java === undefined) delete process.env.JAVA_HOME;
+    else process.env.JAVA_HOME = previous.java;
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
 
 test("SDK package updates and executable replacement change captured toolchain identity even when Studio is unchanged", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-toolchain-"));
