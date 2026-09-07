@@ -20,6 +20,7 @@ import { apiReport } from "../core/csv.js";
 import type { CpuPool } from "../core/cpu-pool.js";
 import { parseLintReport } from "./lint-report.js";
 import { lintInput } from "./lint-input.js";
+import { parseCheckerReport } from "./checker-report.js";
 
 export function apiVersions(scanner: string): string[] {
   const directory = path.join(path.dirname(scanner), "resources/apiChange");
@@ -79,9 +80,10 @@ export class DiagnosticService {
           project_path: project.root,
           product: project.product.name,
           files,
+          cache_path: path.join(directory, "checker-cache"),
         }),
       );
-      await this.processes.run(
+      const result = await this.processes.run(
         {
           executable: component(discoverToolchain(), "node"),
           args: [
@@ -94,11 +96,43 @@ export class DiagnosticService {
         { signal, timeoutMs: 180000 },
       );
       invariant(
+        result.exitCode === 0 && result.signal === null,
+        "CHECKER_EXECUTION_FAILED",
+        "SDK checker did not exit successfully",
+      );
+      invariant(
         fs.existsSync(output),
         "CHECKER_NO_RESULT",
         "SDK checker did not return a result",
       );
-      return JSON.parse(fs.readFileSync(output, "utf8")) as unknown;
+      const stat = await fs.promises.lstat(output);
+      invariant(
+        stat.isFile() && stat.size <= 16 * 1024 * 1024,
+        "CHECKER_REPORT_INVALID",
+        "Expected a regular static preflight report no larger than 16 MiB",
+      );
+      const content = await fs.promises.readFile(output, {
+        encoding: "utf8",
+        signal,
+      });
+      invariant(
+        content.length <= 256 * 1024 || this.cpu,
+        "CPU_POOL_REQUIRED",
+        "Large diagnostic reports require the bounded parser pool",
+      );
+      const parsed =
+        content.length > 256 * 1024
+          ? await this.cpu!.run({ kind: "checker", content }, signal)
+          : parseCheckerReport(content);
+      signal.throwIfAborted();
+      return {
+        ...parsed,
+        artifact: this.store.artifact(
+          "diagnostics",
+          content,
+          "application/json",
+        ),
+      };
     }, signal);
   }
   async lint(

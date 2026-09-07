@@ -594,7 +594,7 @@ export const tools = {
       "SDK-backed ArkTS static preflight. This does not compile or validate a device build.",
     schema: z.strictObject({
       ...projectFields,
-      files: z.array(z.string()).min(1).optional(),
+      files: z.array(z.string().min(1)).min(1).max(100000).optional(),
     }),
   },
   code_lint: {

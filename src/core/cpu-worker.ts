@@ -4,6 +4,7 @@ import { errorResult, invariant } from "./errors.js";
 import { parseUiDump } from "../services/ui-parse.js";
 import { parseCrash } from "../services/crash.js";
 import { parseLintReport } from "../services/lint-report.js";
+import { parseCheckerReport } from "../services/checker-report.js";
 
 invariant(
   parentPort,
@@ -20,7 +21,9 @@ port.on("message", (raw: unknown) => {
         ? parseUiDump(task.content, task.format)
         : task.kind === "lint"
           ? parseLintReport(task.content, task.limit)
-          : parseCrash(task.content, task.options);
+          : task.kind === "checker"
+            ? parseCheckerReport(task.content)
+            : parseCrash(task.content, task.options);
     port.postMessage({
       id,
       ok: true,

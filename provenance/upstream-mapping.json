@@ -42,11 +42,15 @@
       "reason": "Review the upstream behavior against its native replacement and regression evidence.",
       "targets": [
         "src/services/checker.ts",
-        "resources/knowledge.json"
+        "resources/knowledge.json",
+        "src/services/checker-project.ts",
+        "src/services/checker-report.ts"
       ],
       "tests": [
         "test/native-runtime.test.ts",
-        "scripts/native-sdk-acceptance.ts"
+        "scripts/native-sdk-acceptance.ts",
+        "test/native-checker.test.ts",
+        "scripts/native-checker-acceptance.ts"
       ]
     },
     {
@@ -58,11 +62,15 @@
       "reason": "Review the upstream behavior against its native replacement and regression evidence.",
       "targets": [
         "src/services/checker.ts",
-        "resources/knowledge.json"
+        "resources/knowledge.json",
+        "src/services/checker-project.ts",
+        "src/services/checker-report.ts"
       ],
       "tests": [
         "test/native-runtime.test.ts",
-        "scripts/native-sdk-acceptance.ts"
+        "scripts/native-sdk-acceptance.ts",
+        "test/native-checker.test.ts",
+        "scripts/native-checker-acceptance.ts"
       ]
     },
     {

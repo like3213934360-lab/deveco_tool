@@ -19,6 +19,7 @@ async function main() {
         project_path: z.string(),
         product: z.string().optional(),
         files: z.array(z.string()).optional(),
+        cache_path: z.string().min(1),
       })
       .parse(JSON.parse(fs.readFileSync(inputFile, "utf8")) as unknown);
     const { staticCheck } = await import("./services/checker.js");

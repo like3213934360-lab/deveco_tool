@@ -25,7 +25,7 @@ MCP 主进程提供静态工具目录和参数校验；Worker 持有领域服务
 - `hdc_log` 支持收集、整行字面量筛选、清空默认 app/core buffer、故障记录探测及按原名读取。筛选使用设备端管道，分别核对生产进程退出结果；故障时间筛选使用设备时钟和时区，不回退到其他应用或过期记录。
 - 崩溃解析按事件和进程组织证据，区分普通日志、其他进程错误、截断和无法归属的记录。文件、制品或内联证据在提交时转为任务拥有的制品，和任务创建一起绑定；检查点及任务输入只保留引用。Hilog 崩溃采集不要求应用进程仍存活。
 - 制品分页读取与清理使用同一套 SQLite 写事务协调；短读继续读取，长度不匹配明确失败。清理先提交引用删除，再通过持久化删除记录清除文件，失败后重试。
-- UI/崩溃/Linter 大文本使用按需启动的 CPU Worker 池：最多 2 个 Worker、16 个排队任务、64 MiB 输入记账预算，空闲 30 秒释放；取消与超时等待 Worker 退出后才完成。普通小查询仍在运行服务中执行。VM 堆限制不是进程 RSS 硬上限。
+- UI/崩溃/Linter/静态诊断大文本使用按需启动的 CPU Worker 池：最多 2 个 Worker、16 个排队任务、64 MiB 输入记账预算，空闲 30 秒释放；取消与超时等待 Worker 退出后才完成。普通小查询仍在运行服务中执行。VM 堆限制不是进程 RSS 硬上限。
 - UI 快照缓存最多 8 份、64 MiB 估算预算，有实际到期定时器。批量选择器在同一份树上查询，真实匹配总数不被输出 `limit` 改写；父节点和深度参与结构摘要，层级变化不再被漏报。窗口、显示器、深度与分页检查使用完整快照的父节点索引。
 - 部署提交时把 HAP/HSP 复制为任务拥有的只读制品，固定大小和 SHA-256，等待设备租约后再次核对。普通工程重建不会替换已提交的安装输入；多个包通过一次设备端安装提交，捕获失败和并发重复提交释放未绑定副本。详见 `docs/native-deployment.md`。
 - ArkTS LSP 增加查找实现，检查初始化能力声明和 UTF-16 编码，校验真实发送内容的行列范围。文件读取、摘要和通知使用同一批字节；无结果、能力不可用、非法响应有不同处理。详见 `docs/native-language-service.md`。
@@ -59,10 +59,11 @@ MCP 主进程提供静态工具目录和参数校验；Worker 持有领域服务
 
 | 检查 | 结果 | 范围与原始证据 |
 | --- | --- | --- |
-| 编译及回归 | 201 项通过，0 跳过 | `/private/tmp/deveco-native-regression-node26-20260908-30/evidence.json`；149 个 TypeScript 文件，本机独立 Node 22/24 原生验证目录也各 201 项通过；新增离线 UI 树、按内容复用与失效、缓存容量/空闲清理、干净编译包安装检查。具体版本与范围见各能力文档 |
-| Node 22/24 干净原生验证目录 | 六组全量回归、安装与 Windows 压力门槛通过 | [CI 34165175036](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34165175036)，提交 `2844d1d`；每组 199 项回归、10 项编译包干净安装检查，Windows Node 22/24 各 20/20 轮通过；已包含模拟器协议、设备属性和离线 UI 树，后续内容缓存改动的 CI 单独核对 |
+| 编译及回归 | 210 项通过，0 跳过 | `/private/tmp/deveco-native-regression-node26-20260908-32/evidence.json`；153 个 TypeScript 文件，新增静态诊断扫描/报告边界。本次独立 Node 22.23.2 / 24.14.1 原生目录也各 210 项通过，具体版本与范围见各能力文档 |
+| Node 22/24 干净原生验证目录 | 六组全量回归、安装与 Windows 压力门槛通过 | [CI 34166221456](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34166221456)，提交 `4eebcad`；六组成功，包含按内容复用的离线 UI 树；本次静态预检改动的 CI 单独核对 |
 | 迁移清单 | 40 工具、7 脚本、330 参数、95 动作覆盖检查通过 | `provenance/baseline-capabilities.json`、`provenance/migration-matrix.json`；文档与重启 2 项完成行为验收，45 项仍为 pending，`native-migration-audit --release` 会阻止发布 |
 | 真实 SDK | 19 项通过 | `/private/tmp/deveco-native-sdk-20260908-7/evidence.json`；Studio 26.0.0.821、SDK 26.0.0.105；创建/构建、HAP、静态预检、Linter、ArkTS 四种查询及空结果/位置边界、C++、API 版本和扫描、本地密钥/CSR、模拟器列表通过，不包含签名安装/热补丁 |
+| 真实 ArkTS 静态预检 | 13 项通过 | `/private/tmp/deveco-native-checker-20260908-4/evidence.json`，Node 24 无旧依赖独立目录也通过 `/private/tmp/deveco-native-checker-node24-20260908-1/evidence.json`；扫描范围、HMS、路由、资源 AST、API 版本、并发缓存、模型版本、绑定、700 条完整报告和中文模块；边界与失败记录见 `docs/native-static-checker.md` |
 | 真实 Linter | 6 项通过 | `/private/tmp/deveco-native-lint-20260908-4/evidence.json`；独立 canary 工程，没有构建、签名或设备操作。前两轮失败记录保留，范围及原因见 Linter 文档 |
 | 真实多模块 SDK | 15 项通过 | `/private/tmp/deveco-native-multimodule-20260908-3/evidence.json`；entry/feature/HAR/HSP、default/tablet 两产品，含默认构建模块筛选与编译元数据驱动的 HSP 依赖构建；未签名、未安装设备 |
 | 真实设备只读验证 | 13 项通过 | `/private/tmp/deveco-native-device-readonly-20260908-7/evidence.json`；Node 24 原生独立目录，新增保存树文件/制品查询，包含批量查询、缓存 ID 复用、窗口/层级分页、设备属性、UI 断言、Hilog、故障查询及关闭。故障目录权限不足，返回 `complete:false`，不能计为完整故障采集证明；没有点击、安装或业务路径验证 |
@@ -105,6 +106,7 @@ node dist/scripts/resources.js
 node dist/scripts/native-device-readonly.js /absolute/new-device-evidence device-id
 node dist/scripts/native-sdk-acceptance.js /absolute/new-sdk-evidence
 node dist/scripts/native-lint-acceptance.js /absolute/new-lint-evidence
+node dist/scripts/native-checker-acceptance.js /absolute/new-checker-evidence
 node dist/scripts/native-multimodule-acceptance.js /absolute/new-module-evidence
 node dist/scripts/native-hvigor-acceptance.js /absolute/new-watch-evidence
 node dist/scripts/native-emulator-acceptance.js /absolute/new-emulator-evidence

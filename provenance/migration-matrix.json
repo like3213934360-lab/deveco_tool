@@ -187,12 +187,17 @@
         "tool:arkts_check"
       ],
       "adapters": [
-        "src/services/checker.ts"
+        "src/services/checker.ts",
+        "src/services/checker-project.ts",
+        "src/services/checker-report.ts",
+        "src/services/diagnostics.ts"
       ],
       "checks": [
-        "test/native-project.test.ts"
+        "test/native-project.test.ts",
+        "test/native-checker.test.ts",
+        "scripts/native-checker-acceptance.ts"
       ],
-      "behavior": "静态预检明确标注为非编译结果。",
+      "behavior": "直接 SDK 静态预检，显式非编译；选定产品/模块源码、路由/资源/模型版本检查，完整诊断制品与有界预览。",
       "parameters": {
         "files": {
           "status": "mapped",
@@ -213,10 +218,12 @@
       },
       "actions": [],
       "remaining": [
-        "逐项旧规则与历史误报对照"
+        "本次扫描范围、HMS 初始化与报告改动的 Node 22/24 三平台回归确认；本机 13 项历史行为 SDK 验收已通过"
       ],
       "acceptance": "pending",
-      "evidence": []
+      "evidence": [
+        "docs/native-static-checker.md"
+      ]
     },
     {
       "source": "arkts_knowledge_search",

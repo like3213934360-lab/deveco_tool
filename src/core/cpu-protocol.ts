@@ -2,9 +2,17 @@ import { z } from "zod";
 import type { parseCrash } from "../services/crash.js";
 import type { parseUiDump } from "../services/ui-parse.js";
 import type { parseLintReport } from "../services/lint-report.js";
+import {
+  checkerPreviewSchema,
+  type parseCheckerReport,
+} from "../services/checker-report.js";
 import { uiNodesSchema } from "../services/ui-node-schema.js";
 
 export const cpuTaskSchema = z.discriminatedUnion("kind", [
+  z.strictObject({
+    kind: z.literal("checker"),
+    content: z.string().max(16 * 1024 * 1024),
+  }),
   z.strictObject({
     kind: z.literal("lint"),
     content: z.string().max(16 * 1024 * 1024),
@@ -34,7 +42,9 @@ export type CpuResult<K extends CpuTask["kind"]> = K extends "ui"
   ? ReturnType<typeof parseUiDump>
   : K extends "lint"
     ? ReturnType<typeof parseLintReport>
-    : ReturnType<typeof parseCrash>;
+    : K extends "checker"
+      ? ReturnType<typeof parseCheckerReport>
+      : ReturnType<typeof parseCrash>;
 const nullableText = z.string().nullable();
 const uiResult = z.object({
   nodes: uiNodesSchema,
@@ -88,6 +98,7 @@ export const cpuResultSchemas = {
   ui: uiResult,
   crash: crashResult,
   lint: lintResult,
+  checker: checkerPreviewSchema,
 };
 export const cpuReplySchema = z.discriminatedUnion("ok", [
   z.strictObject({

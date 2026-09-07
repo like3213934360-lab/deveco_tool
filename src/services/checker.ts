@@ -6,7 +6,12 @@ import type ts from "typescript";
 import { inspectProject } from "./project.js";
 import { discoverToolchain } from "../core/toolchain.js";
 import { invariant, object } from "../core/errors.js";
-import { digest, readObject, walk } from "../core/files.js";
+import { digest, readObject } from "../core/files.js";
+import {
+  checkerSources,
+  checkerRouterPages,
+  checkerSdkEnvironment,
+} from "./checker-project.js";
 export interface CheckDiagnostic {
   file: string;
   line: number;
@@ -61,6 +66,7 @@ export async function staticCheck(input: {
   project_path: string;
   product?: string;
   files?: string[];
+  cache_path: string;
 }) {
   const project = inspectProject(input.project_path, input.product),
     toolchain = discoverToolchain();
@@ -68,18 +74,13 @@ export async function staticCheck(input: {
     toolchain.sdk,
     "default/openharmony/ets/build-tools/ets-loader",
   );
-  const files =
-    input.files?.map((file) => path.resolve(project.root, file)) ??
-    project.modules.flatMap((module) =>
-      walk(module.root, new Set([".ets", ".ts"])),
-    );
-  invariant(
-    files.length > 0,
-    "NO_FILES_CHECKED",
-    "No source files were selected",
-  );
-  for (const file of files)
-    invariant(fs.existsSync(file), "SOURCE_MISSING", `Missing source ${file}`);
+  const scope = checkerSources(project, input.files),
+    files = scope.files;
+  const { etsRoots, externalApiPaths } = checkerSdkEnvironment(toolchain.sdk);
+  // The SDK reads these variables while its modules are being initialized.
+  // This function runs in the owned checker child, never the MCP runtime Worker.
+  process.env.compileMode = "moduleJson";
+  process.env.externalApiPaths = externalApiPaths;
   const require = createRequire(import.meta.url);
   const checker = require(
     path.join(loader, "lib/ets_checker.js"),
@@ -109,24 +110,23 @@ export async function staticCheck(input: {
     originCompatibleSdkVersion: version,
     targetSdkVersion: project.product.targetSdkVersion,
   };
-  const etsRoots = [
-    path.join(toolchain.sdk, "default/openharmony/ets"),
-    path.join(toolchain.sdk, "default/hms/ets"),
-  ].filter((file) => fs.existsSync(file));
-  process.env.compileMode = "moduleJson";
-  process.env.externalApiPaths = etsRoots
-    .filter((root) => root.includes("/hms/"))
-    .join(path.delimiter);
   const cachePath = path.join(
-    project.root,
-    ".cache/deveco-static",
+    input.cache_path,
     digest(sdkConfiguration),
     "cache",
   );
   fs.mkdirSync(cachePath, { recursive: true });
   const lines: string[] = [];
+  let logBytes = 0;
   const capture = (...args: unknown[]) => {
-    lines.push(args.map(String).join(" "));
+    const line = args.map(String).join(" ");
+    logBytes += Buffer.byteLength(line);
+    invariant(
+      logBytes <= 8 * 1024 * 1024,
+      "CHECKER_OUTPUT_LIMIT",
+      "SDK checker log exceeded 8 MiB; narrow the file selection",
+    );
+    lines.push(line);
   };
   checker.etsStandaloneChecker(
     Object.fromEntries(files.map((file, index) => [`file_${index}`, file])),
@@ -235,39 +235,7 @@ export async function staticCheck(input: {
     };
     visit(source);
   }
-  for (const module of project.modules) {
-    const manifest = readObject(
-      path.join(module.root, "src/main/module.json5"),
-    );
-    const config = object(manifest.module);
-    const pages = config.pages;
-    if (typeof pages === "string" && pages.startsWith("$profile:")) {
-      const profile = path.join(
-        module.root,
-        "src/main/resources/base/profile",
-        pages.slice(9) + ".json",
-      );
-      if (fs.existsSync(profile)) {
-        const content = readObject(profile);
-        for (const page of Array.isArray(content.src) ? content.src : []) {
-          if (
-            typeof page === "string" &&
-            ![".ets", ".ts"].some((ext) =>
-              fs.existsSync(path.join(module.root, "src/main/ets", page + ext)),
-            )
-          )
-            diagnostics.push({
-              file: path.relative(project.root, profile),
-              line: 1,
-              column: 1,
-              severity: "error",
-              message: `Router page not found: ${page}`,
-              rule: "router-page-check",
-            });
-        }
-      }
-    }
-  }
+  diagnostics.push(...checkerRouterPages(project));
   const hvigorFile = path.join(project.root, "hvigor/hvigor-config.json5"),
     packageFile = path.join(project.root, "oh-package.json5");
   if (fs.existsSync(hvigorFile) && fs.existsSync(packageFile)) {
@@ -296,6 +264,23 @@ export async function staticCheck(input: {
     success: !filtered.some((item) => item.severity === "error"),
     checkKind: "static-precheck",
     compilationVerified: false,
+    checked_file_count: files.length,
+    scan: {
+      mode: scope.mode,
+      source_roots: scope.roots.map((root) =>
+        path.relative(project.root, root),
+      ),
+      source_bytes: scope.bytes,
+    },
+    checks: {
+      sdk: "executed",
+      system_resources: resourceNames ? "executed" : "unavailable",
+      router_pages: "executed",
+      model_version:
+        fs.existsSync(hvigorFile) && fs.existsSync(packageFile)
+          ? "executed"
+          : "unavailable",
+    },
     diagnostics: filtered,
     sdkConfiguration,
     summary: {
