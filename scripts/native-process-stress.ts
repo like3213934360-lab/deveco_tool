@@ -106,6 +106,7 @@ try {
             files[0]!,
           ],
           cwd: root,
+          env: { ...process.env, DEVECO_TEST_RECOVERY_TRACE: "1" },
         },
         {
           allowFailure: true,

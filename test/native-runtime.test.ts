@@ -356,10 +356,16 @@ test("workflow input is encrypted and lease ownership crosses processes", async 
   }
 });
 test("hard interruption resumes from SQLite without repeating a completed effect", async () => {
+  const trace = (stage: string) => {
+    if (process.env.DEVECO_TEST_RECOVERY_TRACE === "1")
+      fs.writeSync(2, `recovery stage: ${stage}\n`);
+  };
+  trace("create-root");
   const root = temporary(),
     processes = new ProcessService();
   let store: StateStore | undefined, engine: WorkflowEngine | undefined;
   try {
+    trace("spawn-peer");
     const child = processes.spawn({
       executable: process.execPath,
       args: [
@@ -372,9 +378,13 @@ test("hard interruption resumes from SQLite without repeating a completed effect
     });
     child.stdout?.resume();
     child.stderr?.resume();
+    trace("wait-ready");
     await until(() => fs.existsSync(path.join(root, "ready")));
+    trace("terminate-peer");
     await processes.terminate(child);
+    trace("open-store");
     store = new StateStore(root);
+    trace("read-run");
     const id = fs.readFileSync(path.join(root, "run"), "utf8");
     assert.equal(store.get(id).status, "interrupted");
     const definition: WorkflowDefinition = {
@@ -401,17 +411,24 @@ test("hard interruption resumes from SQLite without repeating a completed effect
       ],
     };
     engine = new WorkflowEngine(store, [definition], async () => {});
+    trace("resume");
     await engine.resume(id);
     await until(() => store!.get(id).status === "succeeded");
     assert.equal(
       fs.readFileSync(path.join(root, "effects"), "utf8"),
       "effect\n",
     );
+    trace("verified");
   } finally {
+    trace("close-engine");
     await engine?.close();
+    trace("close-processes");
     await processes.close();
+    trace("close-store");
     store?.close();
+    trace("remove-root");
     fs.rmSync(root, { recursive: true, force: true });
+    trace("done");
   }
 });
 test("HAR source changes propagate to consumers and native changes require cold deploy", () => {
