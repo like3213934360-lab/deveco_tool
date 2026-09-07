@@ -37,6 +37,44 @@ interface Login {
   error?: ReturnType<typeof errorResult>;
 }
 
+const teamSchema = z.object({
+  id: z
+    .union([z.string().min(1), z.number().int().nonnegative()])
+    .transform(String),
+  name: z.string(),
+  countryCode: z.string().optional(),
+  siteId: z.number().int().optional(),
+  userType: z.number().int().optional(),
+});
+export function developerTeams(raw: unknown) {
+  const response = z
+    .object({
+      ret: z
+        .object({ code: z.number(), msg: z.string().optional() })
+        .optional(),
+      teams: z.unknown().optional(),
+    })
+    .safeParse(raw);
+  invariant(
+    response.success,
+    "TEAM_LIST_INVALID",
+    "Invalid developer team response",
+  );
+  if (response.data.ret && response.data.ret.code !== 0)
+    throw new ToolError(
+      "TEAM_LIST_REJECTED",
+      "Developer service rejected the team query",
+      { code: response.data.ret.code },
+    );
+  const teams = z.array(teamSchema).max(1000).safeParse(response.data.teams);
+  invariant(
+    teams.success,
+    "TEAM_LIST_INVALID",
+    "Developer service did not return a valid team inventory",
+  );
+  return { teams: teams.data };
+}
+
 /** Bounded HTTP response reader. Errors deliberately exclude authentication headers and URLs containing tokens. */
 export async function httpRequest(
   url: string,
@@ -388,13 +426,22 @@ export class AuthService {
   }
   async teams(signal?: AbortSignal) {
     const auth = await this.credentials("developer", signal);
-    return JSON.parse(
-      await httpRequest(
-        "https://connect-api.cloud.huawei.com/api/ups/user-permission-service/v1/user-team-list",
-        { headers: { uid: auth.userId, oauth2Token: auth.access } },
-        signal,
-      ),
-    ) as unknown;
+    return developerTeams(
+      JSON.parse(
+        await httpRequest(
+          "https://connect-api.cloud.huawei.com/api/ups/user-permission-service/v1/user-team-list",
+          {
+            headers: {
+              uid: auth.userId,
+              oauth2Token: auth.access,
+              source: "cli",
+              lang: "zh_CN",
+            },
+          },
+          signal,
+        ),
+      ) as unknown,
+    );
   }
   async logout(provider: Provider) {
     this.store.db
