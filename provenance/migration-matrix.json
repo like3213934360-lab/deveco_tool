@@ -627,11 +627,11 @@
         }
       },
       "actions": [],
-      "remaining": [
-        "最新关闭协议在 Node 22/24 三平台 CI 验证"
-      ],
-      "acceptance": "pending",
-      "evidence": []
+      "remaining": [],
+      "acceptance": "verified",
+      "evidence": [
+        "docs/native-process-ownership.md"
+      ]
     },
     {
       "source": "deveco_script",
@@ -847,48 +847,53 @@
         "tool:emulator_manage"
       ],
       "adapters": [
-        "src/services/emulator.ts"
+        "src/services/emulator.ts",
+        "src/core/emulator-contracts.ts",
+        "src/services/emulator-license.ts"
       ],
       "checks": [
-        "test/native-emulator.test.ts"
+        "test/native-emulator.test.ts",
+        "test/native-emulator-protocol.test.ts",
+        "scripts/native-emulator-readonly.ts",
+        "scripts/native-emulator-acceptance.ts"
       ],
-      "behavior": "直接驱动模拟器、镜像和许可证管理组件。",
+      "behavior": "直接驱动模拟器、镜像和许可证组件；查看读取当前 SDK 协议文本，接受要求审阅摘要并核对配置。",
       "parameters": {
         "action": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "replaced",
+          "replacement": "新 action；镜像 actions 为 images/image_install/image_uninstall，协议为 license_view/license_accept"
         },
         "names": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "replaced",
+          "replacement": "逐个精确 name 提交独立结果；移除旧批量进程 argv 和部分成功的合并文本"
         },
         "name": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "mapped",
+          "replacement": "清单中的精确 name；不接受前导选项符或换行"
         },
         "device_type": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "mapped",
+          "replacement": "images 可筛选；create/image_install/image_uninstall 必须指定"
         },
         "os_version": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "mapped",
+          "replacement": "创建/镜像操作显式指定版本，镜像要求唯一匹配"
         },
         "force": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "removed",
+          "replacement": "不保留跳过应用前置校验的 force；删除要求实例停止，原生命令交互由明确动作替代"
         },
         "all": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "removed",
+          "replacement": "不隐式操作所有实例/镜像；必须先读取清单并指定目标"
         },
         "format": {
           "status": "replaced",
           "replacement": "固定结构化输出与制品"
         },
         "project_path": {
-          "status": "mapped",
-          "replacement": "project_path；请求提交时固定工程"
+          "status": "removed",
+          "replacement": "模拟器与许可证独立于工程；移除旧 CLI 进程工作目录字段"
         },
         "timeoutMs": {
           "status": "replaced",
@@ -899,70 +904,72 @@
         {
           "field": "action",
           "value": "list",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "mapped",
+          "replacement": "emulator_manage action=list"
         },
         {
           "field": "action",
           "value": "start",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "mapped",
+          "replacement": "emulator_manage action=start"
         },
         {
           "field": "action",
           "value": "stop",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "mapped",
+          "replacement": "emulator_manage action=stop"
         },
         {
           "field": "action",
           "value": "create",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "mapped",
+          "replacement": "emulator_manage action=create"
         },
         {
           "field": "action",
           "value": "delete",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "mapped",
+          "replacement": "emulator_manage action=delete"
         },
         {
           "field": "action",
           "value": "image_list",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "replaced",
+          "replacement": "emulator_manage action=images"
         },
         {
           "field": "action",
           "value": "image_download",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "replaced",
+          "replacement": "emulator_manage action=image_install"
         },
         {
           "field": "action",
           "value": "image_remove",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "replaced",
+          "replacement": "emulator_manage action=image_uninstall"
         },
         {
           "field": "action",
           "value": "license_view",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "mapped",
+          "replacement": "emulator_manage action=license_view"
         },
         {
           "field": "action",
           "value": "license_accept",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "mapped",
+          "replacement": "emulator_manage action=license_accept；需要当前 license_sha256，原生配置确认两项接受，禁止默认接受"
         }
       ],
       "remaining": [
-        "真实镜像下载/删除/许可证接受",
-        "三平台模拟器入口验收"
+        "真实镜像下载/卸载、协议接受及组件异常/取消恢复验收",
+        "三平台真实模拟器及与目标设备 UI 共同资源协调验收"
       ],
       "acceptance": "pending",
-      "evidence": []
+      "evidence": [
+        "docs/native-emulator.md"
+      ]
     },
     {
       "source": "emulator_scenario",
@@ -970,76 +977,78 @@
         "tool:emulator_scenario"
       ],
       "adapters": [
-        "src/services/emulator.ts"
+        "src/services/emulator.ts",
+        "src/core/emulator-contracts.ts"
       ],
       "checks": [
-        "test/native-emulator.test.ts"
+        "test/native-emulator-protocol.test.ts",
+        "scripts/native-emulator-acceptance.ts"
       ],
       "behavior": "使用模拟器组件的场景协议。",
       "parameters": {
         "action": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "replaced",
+          "replacement": "新 action；旋转 rotation、折叠 folded_state、GPS gps；三种预设场景为单独 action"
         },
         "target": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "replaced",
+          "replacement": "name；必须使用模拟器清单中的精确实例名称，旧 HDC 别名解析移除"
         },
         "direction": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "replaced",
+          "replacement": "rotation/volume 使用 direction；GPS 方位使用 key=bearing/value"
         },
         "state": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "replaced",
+          "replacement": "folded_state 的明确枚举 state，实际产品支持由原生回执核对"
         },
         "level": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "replaced",
+          "replacement": "battery action 的整数 value 0–100"
         },
         "status": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "replaced",
+          "replacement": "battery_status 的 value=1（charging）/0（discharging）"
         },
         "longitude": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "replaced",
+          "replacement": "gps key=longitude/value；±180，最多 8 位小数"
         },
         "latitude": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "replaced",
+          "replacement": "gps key=latitude/value；±90，最多 8 位小数"
         },
         "altitude": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "replaced",
+          "replacement": "gps key=altitude/value；±10000，最多 2 位小数"
         },
         "scene": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "replaced",
+          "replacement": "outdoor_running/outdoor_cycling/driving_navigation action"
         },
         "light_intensity": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "replaced",
+          "replacement": "sensor key=light/value；0–100000，最多 1 位小数"
         },
         "humidity": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "replaced",
+          "replacement": "sensor key=humidity/value；0–100，最多 1 位小数；组件未声明时能力不可用"
         },
         "temperature": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "replaced",
+          "replacement": "sensor key=temperature/value；-273.1–100，最多 1 位小数；组件未声明时能力不可用"
         },
         "steps": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "replaced",
+          "replacement": "sensor key=steps/value；现代组件声明的 0–100000 整数范围"
         },
         "heartrate": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "replaced",
+          "replacement": "sensor key=heartrate/value；0–255 整数"
         },
         "project_path": {
-          "status": "mapped",
-          "replacement": "project_path；请求提交时固定工程"
+          "status": "removed",
+          "replacement": "场景通过明确模拟器实例定位，不使用旧 CLI 工程工作目录"
         },
         "timeoutMs": {
           "status": "replaced",
@@ -1050,63 +1059,66 @@
         {
           "field": "action",
           "value": "shake",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "mapped",
+          "replacement": "emulator_scenario action=shake；参数前置校验、组件能力声明和正向回执验证"
         },
         {
           "field": "action",
           "value": "power",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "mapped",
+          "replacement": "emulator_scenario action=power；参数前置校验、组件能力声明和正向回执验证"
         },
         {
           "field": "action",
           "value": "rotate",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "replaced",
+          "replacement": "emulator_scenario action=rotation；参数前置校验、组件能力声明和正向回执验证"
         },
         {
           "field": "action",
           "value": "volume",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "mapped",
+          "replacement": "emulator_scenario action=volume；参数前置校验、组件能力声明和正向回执验证"
         },
         {
           "field": "action",
           "value": "fold",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "replaced",
+          "replacement": "emulator_scenario action=folded_state；参数前置校验、组件能力声明和正向回执验证"
         },
         {
           "field": "action",
           "value": "battery",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "replaced",
+          "replacement": "emulator_scenario action=battery/battery_status；参数前置校验、组件能力声明和正向回执验证"
         },
         {
           "field": "action",
           "value": "geolocation",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "replaced",
+          "replacement": "emulator_scenario action=gps；参数前置校验、组件能力声明和正向回执验证"
         },
         {
           "field": "action",
           "value": "scene",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "replaced",
+          "replacement": "emulator_scenario action=outdoor_running/outdoor_cycling/driving_navigation；参数前置校验、组件能力声明和正向回执验证"
         },
         {
           "field": "action",
           "value": "sensor",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "mapped",
+          "replacement": "emulator_scenario action=sensor；参数前置校验、组件能力声明和正向回执验证"
         }
       ],
       "remaining": [
-        "应用实际感知传感器/场景结果"
+        "应用实际感知传感器/场景结果及原生命令取消结果验收",
+        "与目标设备 UI 共同资源协调验收"
       ],
       "acceptance": "pending",
-      "evidence": []
+      "evidence": [
+        "docs/native-emulator.md"
+      ]
     },
     {
       "source": "find_references",
@@ -1333,11 +1345,11 @@
           "replacement": "harmony_knowledge action=read、kind=docs；六类目录、检索与正文分页见 test/native-resources.test.ts"
         }
       ],
-      "remaining": [
-        "新目录筛选/分页的 Node 22/24 三平台 CI 验证"
-      ],
-      "acceptance": "pending",
-      "evidence": []
+      "remaining": [],
+      "acceptance": "verified",
+      "evidence": [
+        "docs/native-knowledge.md"
+      ]
     },
     {
       "source": "hdc_log",

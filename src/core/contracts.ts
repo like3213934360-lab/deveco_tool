@@ -1,5 +1,9 @@
 import { z } from "zod";
 import { docCatalogNames } from "./doc-catalog.js";
+import {
+  emulatorManageSchema,
+  emulatorScenarioSchema,
+} from "./emulator-contracts.js";
 
 export const screenshotOptionsSchema = z.strictObject({
   format: z.enum(["jpeg", "png"]).default("jpeg"),
@@ -811,60 +815,13 @@ export const tools = {
   },
   emulator_manage: {
     description:
-      "Manage native emulator instances and images. Mutations verify the resulting inventory.",
-    schema: z.strictObject({
-      action: z.enum([
-        "list",
-        "start",
-        "stop",
-        "create",
-        "delete",
-        "images",
-        "image_install",
-        "image_uninstall",
-      ]),
-      name: name.optional(),
-      device_type: name.optional(),
-      os_version: name.optional(),
-      downloaded: z.boolean().optional(),
-    }),
+      "Manage native emulator instances, images and licenses. license_view reads installed agreement files without changing acceptance. license_accept requires the exact reviewed license_sha256. Instance and image mutations verify inventory.",
+    schema: emulatorManageSchema,
   },
   emulator_scenario: {
     description:
-      "Control a running modern emulator scenario through its native management component.",
-    schema: z.strictObject({
-      name,
-      action: z.enum([
-        "shake",
-        "power",
-        "rotation",
-        "volume",
-        "folded_state",
-        "battery",
-        "battery_status",
-        "gps",
-        "outdoor_running",
-        "outdoor_cycling",
-        "driving_navigation",
-        "sensor",
-      ]),
-      direction: z.enum(["left", "right", "up", "down"]).optional(),
-      state: z.string().optional(),
-      value: z.number().optional(),
-      key: z
-        .enum([
-          "longitude",
-          "latitude",
-          "altitude",
-          "bearing",
-          "light",
-          "humidity",
-          "temperature",
-          "steps",
-          "heartrate",
-        ])
-        .optional(),
-    }),
+      "Control a running modern emulator. Range and operation fields are checked before SDK calls; native help must declare the selected capability. Command acceptance does not prove application sensor state.",
+    schema: emulatorScenarioSchema,
   },
 };
 export type ToolName = keyof typeof tools;

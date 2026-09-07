@@ -1,4 +1,6 @@
 import { z } from "zod";
+import fs from "node:fs";
+import { digest } from "../core/files.js";
 import { setTimeout as delay } from "node:timers/promises";
 import { ProcessService } from "../core/process.js";
 import { StateStore } from "../core/store.js";
@@ -7,6 +9,12 @@ import type { Command } from "../core/process.js";
 import { withinDeadline } from "../core/deadline.js";
 import { invariant } from "../core/errors.js";
 import { tools } from "../core/contracts.js";
+import {
+  emulatorLicenseLocation,
+  emulatorLicenseStatus,
+  readEmulatorLicenses,
+  type EmulatorLicenseLocation,
+} from "./emulator-license.js";
 
 const instanceSchema = z.object({
   name: z.string().min(1),
@@ -18,6 +26,7 @@ const instanceSchema = z.object({
   "os.osVersion": z.string().optional(),
 });
 export class EmulatorService {
+  private protocol?: { identity: string; help: string };
   private readonly sessions = new Map<
     string,
     ReturnType<ProcessService["startSession"]>
@@ -27,6 +36,10 @@ export class EmulatorService {
     readonly store: StateStore,
     private readonly command: (args: string[]) => Command = (args) =>
       toolCommand(discoverToolchain(), "emulator", args),
+    private readonly licenseLocation: (
+      executable: string,
+      version: string,
+    ) => EmulatorLicenseLocation = emulatorLicenseLocation,
   ) {}
   private async execute(
     args: string[],
@@ -38,7 +51,12 @@ export class EmulatorService {
       timeoutMs,
     });
     invariant(
-      !/Invalid command|无效命令|please attach the correct parameter|Scenario simulation failed|Device create fail|no images are available/i.test(
+      !result.truncated,
+      "EMULATOR_OUTPUT_TRUNCATED",
+      "Native emulator response exceeded its output budget",
+    );
+    invariant(
+      !/Invalid command|无效命令|please attach the correct parameter|Scenario simulation failed|Device create fail|no images are available|license.*(?:not accepted|need to be reviewed)|agreement.*(?:not accepted|not agree)/i.test(
         result.stdout + result.stderr,
       ),
       "EMULATOR_FAILED",
@@ -123,6 +141,7 @@ export class EmulatorService {
     this.sessions.delete(name);
   }
   async close() {
+    this.protocol = undefined;
     const results = await Promise.allSettled(
       [...this.sessions].map(([name, session]) =>
         this.stopOwned(name, session),
@@ -133,6 +152,8 @@ export class EmulatorService {
   }
   async manage(raw: unknown, signal?: AbortSignal) {
     const input = tools.emulator_manage.schema.parse(raw);
+    if (input.action === "license_view" || input.action === "license_accept")
+      return this.license(input.action, input.license_sha256, signal);
     if (input.action === "list") return { instances: await this.list(signal) };
     if (input.action === "images")
       return {
@@ -279,6 +300,70 @@ export class EmulatorService {
       signal,
     );
   }
+  private async license(
+    action: "license_view" | "license_accept",
+    expected: string | undefined,
+    signal?: AbortSignal,
+  ) {
+    return this.store.lease(
+      "emulator:inventory",
+      async () => {
+        const command = this.command(["-version"]),
+          version = (
+            await this.processes.run(command, { signal, timeoutMs: 30000 })
+          ).stdout;
+        const location = this.licenseLocation(command.executable, version),
+          review = await readEmulatorLicenses(location, signal);
+        if (action === "license_view") {
+          const status = await emulatorLicenseStatus(location, signal);
+          return {
+            action,
+            license_sha256: review.license_sha256,
+            accepted: status.accepted,
+            agreements: review.agreements.map((item) => ({
+              name: item.name,
+              bytes: item.bytes,
+              sha256: item.sha256,
+              accepted:
+                status.agreements.find((entry) => entry.name === item.name)
+                  ?.accepted === true,
+              artifact: this.store.artifact("emulator-license", item.content),
+            })),
+          };
+        }
+        invariant(
+          expected === review.license_sha256,
+          "EMULATOR_LICENSE_CHANGED",
+          "Read and review the current license files before accepting their exact license_sha256",
+        );
+        const before = await emulatorLicenseStatus(location, signal);
+        if (before.accepted)
+          return {
+            action,
+            accepted: true,
+            verified: true,
+            unchanged: true,
+            license_sha256: review.license_sha256,
+          };
+        // Only this explicit action may accept; view/start/image operations never write agreement flags.
+        await this.execute(["-license", "accept"], signal);
+        const after = await emulatorLicenseStatus(location, signal),
+          current = await readEmulatorLicenses(location, signal);
+        invariant(
+          after.accepted && current.license_sha256 === review.license_sha256,
+          "EMULATOR_LICENSE_UNCONFIRMED",
+          "Native configuration did not confirm acceptance of the reviewed agreements",
+        );
+        return {
+          action,
+          accepted: true,
+          verified: true,
+          license_sha256: review.license_sha256,
+        };
+      },
+      signal,
+    );
+  }
   private async images(
     deviceType?: string,
     downloaded?: boolean,
@@ -309,17 +394,32 @@ export class EmulatorService {
       ) as unknown,
     );
   }
-  async scenario(raw: unknown, signal?: AbortSignal) {
-    const input = tools.emulator_scenario.schema.parse(raw);
+  private async scenarioHelp(signal?: AbortSignal) {
+    const command = this.command(["-version"]),
+      stat = await fs.promises.stat(command.executable);
+    const identity = digest({
+      command,
+      size: stat.size,
+      mtime: stat.mtimeMs,
+      ctime: stat.ctimeMs,
+    });
+    if (this.protocol?.identity === identity) return this.protocol.help;
     const version = await this.execute(["-version"], signal);
     invariant(
-      Number(version.match(/\d+/)?.[0]) >= 7,
+      Number(version.match(/\b(\d+)\.\d+\.\d+/)?.[1]) >= 7,
       "EMULATOR_PROTOCOL_UNSUPPORTED",
       "Scenario control needs emulator component 7 or later",
     );
+    const help = await this.execute(["-help"], signal);
+    this.protocol = { identity, help };
+    return help;
+  }
+  async scenario(raw: unknown, signal?: AbortSignal) {
+    const input = tools.emulator_scenario.schema.parse(raw);
     return this.store.lease(
       "emulator:inventory",
       async () => {
+        const help = await this.scenarioHelp(signal);
         invariant(
           (await this.list(signal)).some(
             (item) => item.name === input.name && item.isRunning,
@@ -382,7 +482,24 @@ export class EmulatorService {
           );
           args.push(`-${input.key}`, String(input.value));
         }
+        for (const option of [
+          args[2],
+          ...(input.action === "gps" || input.action === "sensor"
+            ? [args[3]]
+            : []),
+        ])
+          invariant(
+            option &&
+              new RegExp(`(?:^|[^\\w-])${option}(?![\\w-])`, "m").test(help),
+            "EMULATOR_CAPABILITY_UNAVAILABLE",
+            `Installed emulator does not declare ${option}`,
+          );
         const output = await this.execute(args, signal);
+        invariant(
+          /Scenario simulation success\./i.test(output),
+          "EMULATOR_SCENARIO_UNCONFIRMED",
+          "Native emulator did not confirm accepting the scenario command",
+        );
         return { commandAccepted: true, stateVerified: false, output };
       },
       signal,

@@ -531,11 +531,15 @@
       "disposition": "adapt",
       "reason": "Review the upstream behavior against its native replacement and regression evidence.",
       "targets": [
-        "src/services/emulator.ts"
+        "src/services/emulator.ts",
+        "src/core/emulator-contracts.ts",
+        "src/services/emulator-license.ts"
       ],
       "tests": [
         "test/native-emulator.test.ts",
-        "scripts/native-emulator-acceptance.ts"
+        "scripts/native-emulator-acceptance.ts",
+        "test/native-emulator-protocol.test.ts",
+        "scripts/native-emulator-readonly.ts"
       ]
     },
     {
@@ -560,10 +564,14 @@
       "disposition": "adapt",
       "reason": "Review the upstream behavior against its native replacement and regression evidence.",
       "targets": [
-        "src/services/emulator.ts"
+        "src/services/emulator.ts",
+        "src/core/emulator-contracts.ts",
+        "src/services/emulator-license.ts"
       ],
       "tests": [
-        "test/native-emulator.test.ts"
+        "test/native-emulator.test.ts",
+        "test/native-emulator-protocol.test.ts",
+        "scripts/native-emulator-readonly.ts"
       ]
     },
     {
@@ -771,10 +779,14 @@
       "disposition": "adapt",
       "reason": "Review the upstream behavior against its native replacement and regression evidence.",
       "targets": [
-        "src/services/emulator.ts"
+        "src/services/emulator.ts",
+        "src/core/emulator-contracts.ts",
+        "src/services/emulator-license.ts"
       ],
       "tests": [
-        "test/native-emulator.test.ts"
+        "test/native-emulator.test.ts",
+        "test/native-emulator-protocol.test.ts",
+        "scripts/native-emulator-readonly.ts"
       ]
     },
     {
@@ -1059,6 +1071,22 @@
       "reason": "Upstream monorepo build/test scheduling. This MCP uses its own strict TypeScript build and Node Test Runner matrix.",
       "targets": [],
       "tests": []
+    },
+    {
+      "id": "cli-emulator-license-protocol",
+      "source": "deveco-cli",
+      "path": "src/utils/emulator-license.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Review native agreement paths, acceptance flags and protocol changes; never import bundled outdated texts or direct config writes.",
+      "targets": [
+        "src/services/emulator-license.ts",
+        "src/services/emulator.ts"
+      ],
+      "tests": [
+        "test/native-emulator-protocol.test.ts",
+        "scripts/native-emulator-readonly.ts"
+      ]
     }
   ]
 }

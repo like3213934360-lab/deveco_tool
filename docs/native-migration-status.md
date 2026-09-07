@@ -59,14 +59,15 @@ MCP 主进程提供静态工具目录和参数校验；Worker 持有领域服务
 
 | 检查 | 结果 | 范围与原始证据 |
 | --- | --- | --- |
-| 编译及回归 | 182 项通过，0 跳过 | `/private/tmp/deveco-native-regression-node26-20260908-24/evidence.json`；Node 26.0.0，134 个 TypeScript 文件，包含显示器/坐标、CLT/JDK 探测及有界 Linter 报告、配置和失败回执、文档目录筛选与分页、并发重启及 Windows 别名路径回归；本机不能证明 Windows 行为 |
-| Node 22/24 干净原生验证目录 | 六组全量回归和 Windows 压力门槛通过 | [CI 34158666170](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34158666170)，提交 `01dd93a`；Windows Node 22/24 各 20/20 轮通过；此 CI 早于 CLT/JDK 和 Linter 新改动，不能覆盖这些代码 |
-| 迁移清单 | 40 工具、7 脚本、330 参数、95 动作覆盖检查通过 | `provenance/baseline-capabilities.json`、`provenance/migration-matrix.json`；47 项完整行为验收仍为 pending，`native-migration-audit --release` 会阻止发布 |
-| 真实 SDK | 19 项通过 | `/private/tmp/deveco-native-sdk-20260908-6/evidence.json`；Studio 26.0.0.821、SDK 26.0.0.105；创建/构建、HAP、静态预检、Linter、ArkTS 四种查询及空结果/位置边界、C++、API 版本和扫描、本地密钥/CSR、模拟器列表通过，不包含签名安装/热补丁 |
-| 真实 Linter | 6 项通过 | `/private/tmp/deveco-native-lint-20260908-3/evidence.json`；独立 canary 工程，没有构建、签名或设备操作。前两轮失败记录保留，范围及原因见 Linter 文档 |
+| 编译及回归 | 186 项通过，0 跳过 | `/private/tmp/deveco-native-regression-node26-20260908-25/evidence.json`；Node 26.0.0，138 个 TypeScript 文件，包含显示器/坐标、CLT/JDK 探测及有界 Linter 报告、配置和失败回执、文档目录筛选与分页、并发重启、Windows 别名路径及模拟器场景/许可证回归；本机不能证明 Windows 行为 |
+| Node 22/24 干净原生验证目录 | 六组全量回归和 Windows 压力门槛通过 | [CI 34161610703](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34161610703)，提交 `6f20605`；每组 182 项，Windows Node 22/24 各 20/20 轮通过；已覆盖 CLT/JDK、Linter、文档、关闭与路径修复，尚未包含后续模拟器协议修改 |
+| 迁移清单 | 40 工具、7 脚本、330 参数、95 动作覆盖检查通过 | `provenance/baseline-capabilities.json`、`provenance/migration-matrix.json`；文档与重启 2 项完成行为验收，45 项仍为 pending，`native-migration-audit --release` 会阻止发布 |
+| 真实 SDK | 19 项通过 | `/private/tmp/deveco-native-sdk-20260908-7/evidence.json`；Studio 26.0.0.821、SDK 26.0.0.105；创建/构建、HAP、静态预检、Linter、ArkTS 四种查询及空结果/位置边界、C++、API 版本和扫描、本地密钥/CSR、模拟器列表通过，不包含签名安装/热补丁 |
+| 真实 Linter | 6 项通过 | `/private/tmp/deveco-native-lint-20260908-4/evidence.json`；独立 canary 工程，没有构建、签名或设备操作。前两轮失败记录保留，范围及原因见 Linter 文档 |
 | 真实多模块 SDK | 15 项通过 | `/private/tmp/deveco-native-multimodule-20260908-3/evidence.json`；entry/feature/HAR/HSP、default/tablet 两产品，含默认构建模块筛选与编译元数据驱动的 HSP 依赖构建；未签名、未安装设备 |
 | 真实设备只读验证 | 12 项通过 | `/private/tmp/deveco-native-device-readonly-20260908-4/evidence.json`；新增批量查询、缓存 ID 复用、窗口/层级分页，其余包括设备属性、UI 断言、Hilog、故障查询及关闭。故障目录权限不足，返回 `complete:false`，不能计为完整故障采集证明；没有点击、安装或业务路径验证 |
 | 真实 Hvigor watch | 7 项通过 | `/private/tmp/deveco-native-hvigor-20260907-4/evidence.json`；未验证签名和设备热补丁 |
+| 真实模拟器只读协议 | 7 项通过 | `/private/tmp/deveco-native-emulator-readonly-20260908-1/evidence.json`；当前组件清单、镜像、两份协议全文/摘要、旧摘要拒绝及原生配置字节/mtime 不变；没有接受协议或操作实例，副作用探测记录见 `docs/native-emulator.md` |
 | 真实模拟器 | 6 项通过 | `/private/tmp/deveco-native-emulator-20260907-1/evidence.json`；早期代码快照，未记录源码摘要 |
 | 一小时基础设施运行 | 通过 | `/private/tmp/deveco-native-soak-20260907-2/evidence.json`；352 轮、2816 个子进程；最终活动任务/子进程/租约为 0，RSS 95,600,640 字节。只使用合成子进程，且早于最新制品与会话修改，不能算最终版本或 SDK 会话长稳验收 |
 | 一小时真实 SDK 会话 | 通过 | `/private/tmp/deveco-native-sdk-soak-node24-20260908-1/evidence.json`；Node 24 原生独立验证目录、717 次 LSP 查询、60 次不同 ABC 补丁，同一 watch worker，最终会话/临时目录为 0，配置恢复成功，运行时 RSS 107,511,808 字节。基于记录的较早编译摘要，未包含后续 Linter/文档修改；未测 SDK 子进程 CPU/RSS、设备 HQF/UI 或空闲会话过期，不能当作完整最终性能验收 |
@@ -75,7 +76,7 @@ MCP 主进程提供静态工具目录和参数校验；Worker 持有领域服务
 
 ## 尚未通过的发布门槛
 
-Windows 压力测试已暴露并保留三类失败证据：SQLite 初始化失败未关闭句柄、进程退出确认早于文件映射释放、失败会话留下进程登记。当前代码分别修复初始化清理、等待同步句柄和失败会话强制清理，提交 `7bed2ef` 的新一轮 Windows Node 22/24 各 20 轮全部通过，历史失败证据仍保留。该证据只覆盖受管测试进程，不代替真实 Windows SDK 验收。后续 CI `34160484334` 的 macOS/Linux 四组通过，Windows 两组因 8.3 短路径断言各失败两项；已统一生产与测试的原生路径规范化，下一轮 CI 结果单独记录。
+Windows 压力测试已暴露并保留三类失败证据：SQLite 初始化失败未关闭句柄、进程退出确认早于文件映射释放、失败会话留下进程登记。当前代码分别修复初始化清理、等待同步句柄和失败会话强制清理，提交 `7bed2ef` 的新一轮 Windows Node 22/24 各 20 轮全部通过，历史失败证据仍保留。该证据只覆盖受管测试进程，不代替真实 Windows SDK 验收。后续 CI `34160484334` 的 macOS/Linux 四组通过，Windows 两组因 8.3 短路径断言各失败两项；已统一生产与测试的原生路径规范化，后续 CI `34161610703` 六组全通过，Windows 两组也各通过 20 轮压力检查。
 
 1. 完成冻结清单中逐个旧工具、参数、动作和历史缺陷的行为验收。覆盖审计会拦截漏项、重复项及没有证据的 verified 标记；当前的代码和测试位置映射不等于完整验收。
 2. 完成签名部署、设备热补丁、云端签名、真实 UI 输入/流程；已完成多产品、多模块、HAR/HSP 构建，继续完成签名包集合的设备验收。
@@ -106,6 +107,7 @@ node dist/scripts/native-lint-acceptance.js /absolute/new-lint-evidence
 node dist/scripts/native-multimodule-acceptance.js /absolute/new-module-evidence
 node dist/scripts/native-hvigor-acceptance.js /absolute/new-watch-evidence
 node dist/scripts/native-emulator-acceptance.js /absolute/new-emulator-evidence
+node dist/scripts/native-emulator-readonly.js /absolute/new-emulator-readonly-evidence
 node --expose-gc dist/scripts/native-sdk-soak.js /absolute/new-sdk-soak-evidence 3600
 node --expose-gc dist/scripts/native-soak.js /absolute/new-soak-evidence 3600
 node --expose-gc dist/scripts/native-ui-benchmark.js /absolute/baseline-checkout /absolute/new-ui-report.json
