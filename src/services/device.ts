@@ -32,6 +32,7 @@ import { currentTrace } from "../core/trace.js";
 import { CpuPool } from "../core/cpu-pool.js";
 import { parseUiDump } from "./ui-parse.js";
 import { ScreenshotService } from "./screenshot.js";
+import { connectedTargets, deviceProperties } from "./device-info.js";
 import {
   needsControlSnapshot,
   resolveControl,
@@ -143,12 +144,11 @@ export class DeviceService {
     );
     return result;
   }
+  async targets(signal?: AbortSignal): Promise<string[]> {
+    return connectedTargets(await this.command(["list", "targets"], signal));
+  }
   async target(target?: string, signal?: AbortSignal): Promise<string> {
-    const result = await this.command(["list", "targets"], signal);
-    const targets = result.stdout
-      .split(/\r?\n/)
-      .map((line) => line.trim())
-      .filter((line) => line && !line.startsWith("["));
+    const targets = await this.targets(signal);
     if (target) {
       invariant(
         targets.includes(target),
@@ -208,27 +208,7 @@ export class DeviceService {
   async info(target?: string, signal?: AbortSignal) {
     const id = await this.target(target, signal);
     const result = await this.shell(id, ["param", "get"], signal);
-    const keys = [
-      "const.product.name",
-      "const.product.devicetype",
-      "const.product.model",
-      "const.product.cpu.abilist",
-      "const.ohos.fullname",
-      "const.ohos.apiversion",
-    ];
-    return {
-      target: id,
-      properties: Object.fromEntries(
-        result.stdout.split(/\r?\n/).flatMap((line) => {
-          const index = line.indexOf("=");
-          if (index < 0) return [];
-          const key = line.slice(0, index).trim();
-          return keys.includes(key)
-            ? [[key, line.slice(index + 1).trim()]]
-            : [];
-        }),
-      ),
-    };
+    return deviceProperties(id, result);
   }
   invalidate(target: string): void {
     for (const [key, value] of this.snapshots)

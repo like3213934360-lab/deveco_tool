@@ -1053,14 +1053,7 @@ export class Runtime {
       case "device_info": {
         const input = tools[name].schema.parse(raw);
         return input.list
-          ? {
-              targets: (
-                await this.devices.command(["list", "targets"], signal)
-              ).stdout
-                .trim()
-                .split(/\r?\n/)
-                .filter((x) => x && !x.startsWith("[")),
-            }
+          ? { targets: await this.devices.targets(signal) }
           : this.devices.info(input.target, signal);
       }
       case "hdc_log": {

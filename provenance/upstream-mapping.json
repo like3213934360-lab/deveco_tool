@@ -765,10 +765,13 @@
       "disposition": "adapt",
       "reason": "Review the upstream behavior against its native replacement and regression evidence.",
       "targets": [
-        "src/services/device.ts"
+        "src/services/device.ts",
+        "src/services/device-info.ts"
       ],
       "tests": [
-        "test/native-text.test.ts"
+        "test/native-text.test.ts",
+        "test/native-device-info.test.ts",
+        "scripts/native-device-readonly.ts"
       ]
     },
     {

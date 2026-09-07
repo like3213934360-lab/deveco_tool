@@ -810,24 +810,26 @@
         "tool:device_info"
       ],
       "adapters": [
-        "src/services/device.ts"
+        "src/services/device.ts",
+        "src/services/device-info.ts"
       ],
       "checks": [
-        "test/native-reports.test.ts"
+        "test/native-device-info.test.ts",
+        "scripts/native-device-readonly.ts"
       ],
-      "behavior": "HDC 直接查询设备属性，结果结构化。",
+      "behavior": "统一 HDC 清单解析与目标捕获；名称、类型、API 版本及属性结构化，缺失/截断显式报告；模拟器推断有来源标记。",
       "parameters": {
         "target": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "mapped",
+          "replacement": "精确 HDC 标识；完整清单验证后固定目标，省略时要求唯一可访问设备；名称别名删除"
         },
         "format": {
           "status": "replaced",
           "replacement": "固定结构化输出与制品"
         },
         "project_path": {
-          "status": "mapped",
-          "replacement": "project_path；请求提交时固定工程"
+          "status": "removed",
+          "replacement": "设备属性独立于工程；移除旧 CLI 进程工作目录参数"
         },
         "timeoutMs": {
           "status": "replaced",
@@ -836,10 +838,13 @@
       },
       "actions": [],
       "remaining": [
-        "多设备与设备型号/版本缺失验收"
+        "新设备属性与清单契约的 Node 22/24 三平台 CI",
+        "真实多设备及跨平台 HDC/SDK 验收"
       ],
       "acceptance": "pending",
-      "evidence": []
+      "evidence": [
+        "docs/native-device-info.md"
+      ]
     },
     {
       "source": "emulator_manage",

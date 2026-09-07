@@ -623,8 +623,14 @@ export const tools = {
     }),
   },
   device_info: {
-    description: "Read connected devices and selected device properties.",
-    schema: z.strictObject({ target, list: z.boolean().default(false) }),
+    description:
+      "List reachable device IDs or read one device's name, type and OS properties. Missing/truncated properties are explicit; kind_source identifies transport-address inference. A complete inventory is required before selecting a device.",
+    schema: z
+      .strictObject({ target, list: z.boolean().default(false) })
+      .refine((input) => !input.list || input.target === undefined, {
+        path: ["target"],
+        message: "Target is not used by a device inventory query",
+      }),
   },
   hdc_log: {
     description:
