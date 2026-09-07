@@ -207,6 +207,7 @@ for (const packageCount of [1, 3])
       JSON.stringify({ clt: path.join(root, "fixture-clt") }),
     );
     process.env.DEVECO_CONFIG = config;
+    fs.mkdirSync(path.join(root, "fixture-clt"));
     process.env.DEVECO_STATE_DIR = path.join(root, "state");
     const runtime = new Runtime();
     try {

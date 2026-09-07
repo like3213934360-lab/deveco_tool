@@ -68,7 +68,7 @@ const draft = () =>
     steps: [],
   });
 async function fixture(t: TestContext) {
-  const root = fs.realpathSync(
+  const root = fs.realpathSync.native(
       fs.mkdtempSync(path.join(os.tmpdir(), "deveco-recording-")),
     ),
     project = path.join(root, "project"),
@@ -106,6 +106,7 @@ async function fixture(t: TestContext) {
     JSON.stringify({ clt: path.join(root, "clt"), default_project: project }),
   );
   process.env.DEVECO_CONFIG = path.join(root, "config.json");
+  fs.mkdirSync(path.join(root, "clt"));
   process.env.DEVECO_STATE_DIR = path.join(root, "state");
   let runtime = new Runtime();
   const configure = () => {

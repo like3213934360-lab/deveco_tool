@@ -8,7 +8,7 @@ import { ProcessService } from "../src/core/process.js";
 import { atomicWrite, destinationPath } from "../src/core/files.js";
 
 function fixture() {
-  const root = fs.realpathSync(
+  const root = fs.realpathSync.native(
     fs.mkdtempSync(path.join(os.tmpdir(), "deveco-project-")),
   );
   const sdk = path.join(root, "sdk");
@@ -96,6 +96,38 @@ test("a completed project creation can be reconciled only for its operation, inp
       "user modification",
     );
   } finally {
+    f.close();
+  }
+});
+
+test("project aliases, Windows short temp names and asynchronous file paths share one captured identity", async () => {
+  const f = fixture(),
+    alias = `${f.root}-alias`;
+  try {
+    fs.symlinkSync(f.root, alias, "junction");
+    const created = await f.service.create({
+        ...f.input,
+        project_path: path.join(alias, "application"),
+      }),
+      direct = f.service.resolve(f.input.project_path),
+      linked = f.service.resolve(path.join(alias, "application")),
+      temporaryAlias = f.service.resolve(
+        path.join(os.tmpdir(), path.basename(f.root), "application"),
+      );
+    assert.equal(
+      created.root,
+      await fs.promises.realpath(f.input.project_path),
+    );
+    assert.deepEqual(linked, direct);
+    assert.deepEqual(temporaryAlias, direct);
+    assert.equal(
+      destinationPath(path.join(alias, "future", "output")),
+      destinationPath(path.join(f.root, "future", "output")),
+    );
+    for (const module of created.modules)
+      assert.equal(module.root, await fs.promises.realpath(module.root));
+  } finally {
+    fs.rmSync(alias, { force: true });
     f.close();
   }
 });

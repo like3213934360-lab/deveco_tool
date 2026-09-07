@@ -55,7 +55,10 @@ export function inside(root: string, candidate: string): string {
 export function destinationPath(candidate: string): string {
   const resolved = path.resolve(candidate);
   try {
-    return fs.realpathSync(resolved);
+    // Match fs.promises.realpath: native Windows resolution expands 8.3 names.
+    // The JavaScript realpathSync implementation can retain short aliases and
+    // split one project's identity/lease keys across equivalent paths.
+    return fs.realpathSync.native(resolved);
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
     const parent = path.dirname(resolved);
@@ -80,7 +83,7 @@ export function atomicWrite(
   // User-selected output directories may contain OS aliases, such as /tmp on macOS.
   // State directories are checked separately by their owner before use.
   fs.mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
-  const parent = fs.realpathSync(path.dirname(file));
+  const parent = fs.realpathSync.native(path.dirname(file));
   const destination = path.join(parent, path.basename(file));
   const temporary = `${destination}.${crypto.randomUUID()}.tmp`;
   const fd = fs.openSync(temporary, "wx", 0o600);

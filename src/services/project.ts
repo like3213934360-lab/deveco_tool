@@ -71,7 +71,7 @@ export function inspectProject(
   candidate: string,
   productName?: string,
 ): Project {
-  const root = fs.realpathSync(path.resolve(candidate));
+  const root = fs.realpathSync.native(path.resolve(candidate));
   const file = path.join(root, "build-profile.json5");
   invariant(
     fs.existsSync(file),
@@ -112,7 +112,7 @@ export function inspectProject(
         "TARGET_AMBIGUOUS",
         `Module ${item.name} has ambiguous targets for product ${product.name}`,
       );
-      const moduleRoot = fs.realpathSync(inside(root, item.srcPath));
+      const moduleRoot = fs.realpathSync.native(inside(root, item.srcPath));
       inside(root, moduleRoot);
       return { name: item.name, root: moduleRoot, target: target.name };
     })
@@ -330,7 +330,7 @@ export class ProjectService {
         fileDigest(file) !== entry.sha256
       )
         return undefined;
-      inside(root, fs.realpathSync(file));
+      inside(root, fs.realpathSync.native(file));
     }
     return inspectProject(root);
   }

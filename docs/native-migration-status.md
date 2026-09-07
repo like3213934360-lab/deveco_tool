@@ -59,7 +59,7 @@ MCP 主进程提供静态工具目录和参数校验；Worker 持有领域服务
 
 | 检查 | 结果 | 范围与原始证据 |
 | --- | --- | --- |
-| 编译及回归 | 178 项通过，0 跳过 | `/private/tmp/deveco-native-regression-node26-20260908-21/evidence.json`；Node 26.0.0，132 个 TypeScript 文件，包含显示器/坐标、CLT/JDK 探测及有界 Linter 报告、配置和失败回执、文档目录筛选与分页回归；本机不能证明 Windows 行为 |
+| 编译及回归 | 182 项通过，0 跳过 | `/private/tmp/deveco-native-regression-node26-20260908-24/evidence.json`；Node 26.0.0，134 个 TypeScript 文件，包含显示器/坐标、CLT/JDK 探测及有界 Linter 报告、配置和失败回执、文档目录筛选与分页、并发重启及 Windows 别名路径回归；本机不能证明 Windows 行为 |
 | Node 22/24 干净原生验证目录 | 六组全量回归和 Windows 压力门槛通过 | [CI 34158666170](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34158666170)，提交 `01dd93a`；Windows Node 22/24 各 20/20 轮通过；此 CI 早于 CLT/JDK 和 Linter 新改动，不能覆盖这些代码 |
 | 迁移清单 | 40 工具、7 脚本、330 参数、95 动作覆盖检查通过 | `provenance/baseline-capabilities.json`、`provenance/migration-matrix.json`；47 项完整行为验收仍为 pending，`native-migration-audit --release` 会阻止发布 |
 | 真实 SDK | 19 项通过 | `/private/tmp/deveco-native-sdk-20260908-6/evidence.json`；Studio 26.0.0.821、SDK 26.0.0.105；创建/构建、HAP、静态预检、Linter、ArkTS 四种查询及空结果/位置边界、C++、API 版本和扫描、本地密钥/CSR、模拟器列表通过，不包含签名安装/热补丁 |
@@ -75,7 +75,7 @@ MCP 主进程提供静态工具目录和参数校验；Worker 持有领域服务
 
 ## 尚未通过的发布门槛
 
-Windows 压力测试已暴露并保留三类失败证据：SQLite 初始化失败未关闭句柄、进程退出确认早于文件映射释放、失败会话留下进程登记。当前代码分别修复初始化清理、等待同步句柄和失败会话强制清理，提交 `7bed2ef` 的新一轮 Windows Node 22/24 各 20 轮全部通过，历史失败证据仍保留。该证据只覆盖受管测试进程，不代替真实 Windows SDK 验收。
+Windows 压力测试已暴露并保留三类失败证据：SQLite 初始化失败未关闭句柄、进程退出确认早于文件映射释放、失败会话留下进程登记。当前代码分别修复初始化清理、等待同步句柄和失败会话强制清理，提交 `7bed2ef` 的新一轮 Windows Node 22/24 各 20 轮全部通过，历史失败证据仍保留。该证据只覆盖受管测试进程，不代替真实 Windows SDK 验收。后续 CI `34160484334` 的 macOS/Linux 四组通过，Windows 两组因 8.3 短路径断言各失败两项；已统一生产与测试的原生路径规范化，下一轮 CI 结果单独记录。
 
 1. 完成冻结清单中逐个旧工具、参数、动作和历史缺陷的行为验收。覆盖审计会拦截漏项、重复项及没有证据的 verified 标记；当前的代码和测试位置映射不等于完整验收。
 2. 完成签名部署、设备热补丁、云端签名、真实 UI 输入/流程；已完成多产品、多模块、HAR/HSP 构建，继续完成签名包集合的设备验收。

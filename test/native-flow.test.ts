@@ -76,7 +76,7 @@ class FixtureDevice extends DeviceService {
   }
 }
 function fixture() {
-  const root = fs.realpathSync(
+  const root = fs.realpathSync.native(
       fs.mkdtempSync(path.join(os.tmpdir(), "deveco-flow-")),
     ),
     store = new StateStore(path.join(root, "state"));

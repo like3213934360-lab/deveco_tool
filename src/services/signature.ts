@@ -364,7 +364,7 @@ export class SignatureService {
     );
     fs.mkdirSync(path.dirname(output), { recursive: true, mode: 0o700 });
     return path.join(
-      fs.realpathSync(path.dirname(output)),
+      fs.realpathSync.native(path.dirname(output)),
       path.basename(output),
     );
   }

@@ -11,7 +11,7 @@ import { BuildReceipts } from "./receipts.js";
 
 // Own the SDK cluster worker directly. Do not run SDK master boot: it manages
 // a shared registry and may terminate Java daemons belonging to other clients.
-const sdkRoot = fs.realpathSync(z.string().min(1).parse(process.argv[2]));
+const sdkRoot = fs.realpathSync.native(z.string().min(1).parse(process.argv[2]));
 if (cluster.isWorker) {
   const load = createRequire(import.meta.url);
   const entry = z
@@ -43,7 +43,7 @@ if (cluster.isWorker) {
     .string()
     .min(1)
     .parse(workspace.getHvigorProjectHome());
-  const installedEngine = fs.realpathSync(
+  const installedEngine = fs.realpathSync.native(
     path.join(workspaceRoot, "node_modules/@ohos/hvigor"),
   );
   if (installedEngine !== sdkRoot)

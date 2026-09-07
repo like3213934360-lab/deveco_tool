@@ -21,7 +21,7 @@ async function fixture(
   env: Record<string, string>,
   check: (service: LanguageService, project: Project) => Promise<void>,
 ) {
-  const root = fs.realpathSync(
+  const root = fs.realpathSync.native(
       fs.mkdtempSync(path.join(os.tmpdir(), "deveco-lsp-boundary-中文 ")),
     ),
     processes = new ProcessService(),

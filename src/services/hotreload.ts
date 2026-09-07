@@ -86,7 +86,7 @@ export function hotChanges(
   }
   const result = new Map<string, string[]>();
   for (const input of files) {
-    const file = fs.realpathSync(inside(project.root, input));
+    const file = fs.realpathSync.native(inside(project.root, input));
     invariant(
       /\.(ets|ts)$/.test(file),
       "COLD_DEPLOY_REQUIRED",

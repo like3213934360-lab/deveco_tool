@@ -5,7 +5,7 @@ import { HotConfiguration } from "../../src/services/hvigor/hot-config.js";
 import { buildRequest } from "../../src/services/hvigor/protocol.js";
 const mode = process.argv[2];
 if (mode === "prepare-config") {
-  const root = fs.realpathSync(process.argv[3]!);
+  const root = fs.realpathSync.native(process.argv[3]!);
   HotConfiguration.prepare(
     {
       root,

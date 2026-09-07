@@ -17,7 +17,7 @@ import { flowSchema, appSchema } from "../src/core/contracts.js";
 import type { ProcessResult } from "../src/core/process.js";
 
 function fixture() {
-  const root = fs.realpathSync(
+  const root = fs.realpathSync.native(
     fs.mkdtempSync(path.join(os.tmpdir(), "deveco-routes-")),
   );
   const project = path.join(root, "project");
@@ -378,6 +378,7 @@ async function runtimeFixture() {
     }),
   );
   process.env.DEVECO_CONFIG = config;
+  fs.mkdirSync(path.join(f.root, "clt"));
   process.env.DEVECO_STATE_DIR = path.join(f.root, "state");
   const runtime = new Runtime();
   let closed = false;

@@ -24,7 +24,7 @@ import { hotChanges } from "../src/services/hotreload.js";
 import { ToolError, errorResult } from "../src/core/errors.js";
 
 const temporary = () =>
-  fs.realpathSync(
+  fs.realpathSync.native(
     fs.mkdtempSync(path.join(os.tmpdir(), "deveco-native-中文 空格-")),
   );
 async function until(check: () => boolean, timeout = 10000) {

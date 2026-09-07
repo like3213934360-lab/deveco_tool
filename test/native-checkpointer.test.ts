@@ -13,7 +13,7 @@ import { StateStore } from "../src/core/store.js";
 import { ToolError } from "../src/core/errors.js";
 
 const temporary = () =>
-    fs.realpathSync(
+    fs.realpathSync.native(
       fs.mkdtempSync(path.join(os.tmpdir(), "deveco-checkpointer-")),
     ),
   config = {

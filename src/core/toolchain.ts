@@ -48,12 +48,16 @@ export function discoverToolchain(): Toolchain {
       : process.platform === "win32"
         ? "C:\\Program Files\\Huawei\\DevEco Studio"
         : "";
-  const root = path.resolve(config.clt || config.studio || defaultRoot || ".");
+  const requestedRoot = path.resolve(
+    config.clt || config.studio || defaultRoot || ".",
+  );
   invariant(
-    config.clt || config.studio || (defaultRoot && fs.existsSync(defaultRoot)),
+    (config.clt || config.studio || defaultRoot) &&
+      fs.existsSync(requestedRoot),
     "TOOLCHAIN_MISSING",
     "Configure studio or clt in DEVECO_CONFIG",
   );
+  const root = fs.realpathSync.native(requestedRoot);
   const kind = config.clt ? "clt" : "studio";
   const content =
     kind === "studio" && fs.existsSync(path.join(root, "Contents"))
@@ -142,7 +146,7 @@ export function discoverToolchain(): Toolchain {
   const components: Partial<Record<Component, string>> = {};
   for (const [name, values] of Object.entries(candidates)) {
     const value = values.find(isFile);
-    if (value) components[name as Component] = value;
+    if (value) components[name as Component] = fs.realpathSync.native(value);
   }
   let version = "unknown";
   const cltVersion = path.join(root, "version.txt");
@@ -199,7 +203,7 @@ export function discoverToolchain(): Toolchain {
     }
     return [
       name,
-      fs.realpathSync(file),
+      file,
       String(stat.ino),
       String(stat.size),
       String(stat.mtimeNs),

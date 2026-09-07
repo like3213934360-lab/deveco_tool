@@ -12,7 +12,7 @@ import { EmulatorService } from "../src/services/emulator.js";
 import { errorResult } from "../src/core/errors.js";
 
 test("emulator readiness returns while its launcher stays alive; shutdown confirms inventory and closes logs", async (t) => {
-  const root = fs.realpathSync(
+  const root = fs.realpathSync.native(
     fs.mkdtempSync(path.join(os.tmpdir(), "deveco-emulator-")),
   );
   const store = new StateStore(root),

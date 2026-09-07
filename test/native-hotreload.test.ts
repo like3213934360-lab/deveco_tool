@@ -161,7 +161,7 @@ test("watch baseline rejects build-time edits and retains installation-time edit
   }
 });
 test("watch config enables patch output, distinguishes product and target, and restores existing bytes", () => {
-  const root = fs.realpathSync(
+  const root = fs.realpathSync.native(
     fs.mkdtempSync(path.join(os.tmpdir(), "deveco-hot-config-")),
   );
   try {
@@ -192,7 +192,7 @@ test("watch config enables patch output, distinguishes product and target, and r
   }
 });
 test("watch cleanup preserves external configuration changes and its recovery marker", () => {
-  const root = fs.realpathSync(
+  const root = fs.realpathSync.native(
     fs.mkdtempSync(path.join(os.tmpdir(), "deveco-hot-config-")),
   );
   try {
@@ -208,7 +208,7 @@ test("watch cleanup preserves external configuration changes and its recovery ma
   }
 });
 test("a new runtime restores a dead owner's watch config but cannot recover a live owner", async () => {
-  const root = fs.realpathSync(
+  const root = fs.realpathSync.native(
     fs.mkdtempSync(path.join(os.tmpdir(), "deveco-hot-recover-")),
   );
   const processes = new ProcessService();
@@ -269,7 +269,7 @@ test("a failing process lifecycle hook still stops and observes its child", asyn
   }
 });
 test("unconfirmed SDK sessions survive runtime restart and prevent reusing the project", async () => {
-  const root = fs.realpathSync(
+  const root = fs.realpathSync.native(
     fs.mkdtempSync(path.join(os.tmpdir(), "deveco-sdk-guard-")),
   );
   let store = new StateStore(root);

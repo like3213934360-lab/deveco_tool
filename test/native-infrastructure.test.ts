@@ -16,7 +16,7 @@ import { ToolError } from "../src/core/errors.js";
 import { BuildDiagnostics } from "../src/core/build-diagnostics.js";
 
 const temporary = () =>
-  fs.realpathSync(
+  fs.realpathSync.native(
     fs.mkdtempSync(path.join(os.tmpdir(), "deveco-infrastructure-")),
   );
 async function until(check: () => boolean) {

@@ -9,7 +9,7 @@ import { ProcessService } from "../src/core/process.js";
 import { PersistentProcessObserver } from "../src/core/process-observer.js";
 
 const temporary = () =>
-  fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "deveco-native-dir-")));
+  fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), "deveco-native-dir-")));
 test("SDK output exceeding reservation cancels its writer and reports a capacity error after exit", async () => {
   const root = temporary(),
     store = new StateStore(root),

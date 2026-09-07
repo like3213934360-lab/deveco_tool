@@ -95,7 +95,7 @@ export function compilationDatabase(
   ];
   const files = new Set(
     unique.map((command) =>
-      fs.realpathSync(path.resolve(command.directory, command.file)),
+      fs.realpathSync.native(path.resolve(command.directory, command.file)),
     ),
   );
   privateDirectory(directory);

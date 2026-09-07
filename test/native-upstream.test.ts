@@ -114,7 +114,7 @@ test("deleted files, mode changes and unknown paths cannot disappear from an upg
 });
 
 test("Git candidates lock their base tree and origin, preserve Unicode paths and require review before changing source locks", async () => {
-  const root = fs.realpathSync(
+  const root = fs.realpathSync.native(
     fs.mkdtempSync(path.join(os.tmpdir(), "deveco-upstream-")),
   );
   try {

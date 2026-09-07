@@ -16,7 +16,9 @@ import { LanguageService } from "../src/services/lsp.js";
 import type { Project } from "../src/services/project.js";
 
 test("CLT resolves documented linter layouts and external JDK identity, without accepting directories or losing command argument boundaries", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-clt-布局 空格-")),
+  const root = fs.realpathSync.native(
+      fs.mkdtempSync(path.join(os.tmpdir(), "deveco-clt-布局 空格-")),
+    ),
     previous = {
       config: process.env.DEVECO_CONFIG,
       java: process.env.JAVA_HOME,
@@ -84,6 +86,20 @@ test("CLT resolves documented linter layouts and external JDK identity, without 
     }
     const first = discoverToolchain();
     assert.equal(first.components.linter, undefined);
+    const alias = path.join(root, "clt-alias");
+    fs.symlinkSync(clt, alias, "junction");
+    for (const configured of [
+      alias,
+      path.join(os.tmpdir(), path.basename(root), "clt"),
+    ]) {
+      atomicWrite(config, JSON.stringify({ clt: configured, java_home: jdk }));
+      assert.deepEqual(
+        discoverToolchain(),
+        first,
+        "Equivalent SDK paths must preserve the captured identity",
+      );
+    }
+    atomicWrite(config, JSON.stringify({ clt, java_home: jdk }));
     fs.mkdirSync(path.join(clt, "codelinter/index.js"));
     assert.equal(discoverToolchain().components.linter, undefined);
     atomicWrite(path.join(jdk, "release"), 'JAVA_VERSION="21.0.2"\n');

@@ -16,7 +16,7 @@ const script = fileURLToPath(
     new URL("./fixtures/native-process-tree.js", import.meta.url),
   ),
   temp = () =>
-    fs.realpathSync(
+    fs.realpathSync.native(
       fs.mkdtempSync(path.join(os.tmpdir(), "deveco-process-tree-")),
     );
 async function until(check: () => boolean) {

@@ -97,7 +97,7 @@ test("linter rejects malformed trailing records, unbounded inputs and unrelated 
 });
 
 test("native lint uses bounded parsing, literal scope/config arguments and retained evidence; failed SDK runs cannot pass with partial findings", async (t) => {
-  const root = fs.realpathSync(
+  const root = await fs.promises.realpath(
       fs.mkdtempSync(path.join(os.tmpdir(), "deveco-lint-中文 空格-")),
     ),
     oldConfig = process.env.DEVECO_CONFIG,
@@ -282,9 +282,10 @@ test("native lint uses bounded parsing, literal scope/config arguments and retai
 });
 
 test("linter rejects broken configs and escaped real paths before execution without rejecting external read-only configs", async () => {
-  const root = fs.realpathSync(
-      fs.mkdtempSync(path.join(os.tmpdir(), "deveco-lint-input-")),
+  const originalRoot = fs.mkdtempSync(
+      path.join(os.tmpdir(), "deveco-lint-input-"),
     ),
+    root = await fs.promises.realpath(originalRoot),
     project = path.join(root, "project"),
     config = path.join(project, "code-linter.json5");
   fs.mkdirSync(project);
@@ -308,6 +309,10 @@ test("linter rejects broken configs and escaped real paths before execution with
       "{ rules: { 'prefer-const': ['error', {foo: true}] }, overrides: [{files:['*.ets'],rules:{}}] }",
     );
     assert.equal((await lintInput(project, {})).target, project);
+    assert.equal(
+      (await lintInput(path.join(originalRoot, "project"), {})).target,
+      project,
+    );
     atomicWrite(path.join(root, "external.ets"), "export const value = 1;");
     await assert.rejects(lintInput(project, { path: "../external.ets" }), {
       code: "LINT_PATH_INVALID",

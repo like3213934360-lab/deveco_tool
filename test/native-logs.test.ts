@@ -32,7 +32,7 @@ function receipt(stdout: string, truncated = false): ProcessResult {
   };
 }
 function fixture() {
-  const root = fs.realpathSync(
+  const root = fs.realpathSync.native(
       fs.mkdtempSync(path.join(os.tmpdir(), "deveco-logs-")),
     ),
     store = new StateStore(root),
@@ -582,7 +582,7 @@ test("collected faultlogs select the latest event and their artifacts belong to 
 });
 
 test("local crash submission snapshots bounded evidence, deduplicates and retains input without SDK or device access", async (t) => {
-  const root = fs.realpathSync(
+  const root = fs.realpathSync.native(
       fs.mkdtempSync(path.join(os.tmpdir(), "deveco-crash-input-")),
     ),
     previous = process.env.DEVECO_STATE_DIR,
@@ -662,6 +662,7 @@ test("local crash submission snapshots bounded evidence, deduplicates and retain
     // The following live collection is mocked, but still captures a toolchain
     // identity. Give it its own fixture instead of relying on the developer SDK.
     fs.writeFileSync(config, JSON.stringify({ clt: path.join(root, "clt") }));
+    fs.mkdirSync(path.join(root, "clt"));
     t.mock.method(runtime.devices, "target", async () => "device");
     let collected = false;
     t.mock.method(
