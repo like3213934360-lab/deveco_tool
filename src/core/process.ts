@@ -399,7 +399,16 @@ export class ProcessService {
         }),
       ]);
       await stopping;
-      if (!options.keepDescendants || !this.groupAlive(child))
+      // Only a successful session launcher may hand off living descendants.
+      // A failed launcher must confirm teardown even while Windows accounting
+      // briefly still reports the exiting bootstrap as active.
+      if (
+        !options.keepDescendants ||
+        failure ||
+        exitCode !== 0 ||
+        exitSignal ||
+        !this.groupAlive(child)
+      )
         await this.terminate(child);
       if (output && !output.destroyed)
         await new Promise<void>((resolve, reject) => {
