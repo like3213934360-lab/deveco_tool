@@ -67,6 +67,7 @@ class FakeApi implements GitHubApi {
     html_url: string;
     state: "open" | "closed";
     draft: boolean;
+    base: { ref: string };
   }[] = [];
   async request(method: "GET" | "POST", endpoint: string, body?: unknown) {
     this.calls.push({ method, endpoint, body });
@@ -84,7 +85,10 @@ class FakeApi implements GitHubApi {
           content: Buffer.from(this.report!).toString("base64"),
         };
       if (endpoint.includes("/git/ref/"))
-        return { ref: "refs/heads/main", object: { sha: "1".repeat(40) } };
+        return {
+          ref: `refs/heads/${decodeURIComponent(endpoint.split("/git/ref/heads/")[1]!)}`,
+          object: { sha: "1".repeat(40) },
+        };
       if (endpoint.includes("/git/commits/"))
         return { tree: { sha: "2".repeat(40) } };
     } else {
@@ -136,6 +140,7 @@ class FakeApi implements GitHubApi {
           html_url: "https://github.com/test/repo/pull/7",
           state: "open" as const,
           draft: true,
+          base: { ref: z.object({ base: z.string() }).parse(body).base },
         };
         this.pulls.push(pull);
         if (this.lostPull) {
@@ -227,6 +232,40 @@ test("stale/tampered candidate inputs and conflicting branch content block write
   await assert.rejects(publishCandidate(api, "test/repo", input), {
     code: "UPSTREAM_BRANCH_CONFLICT",
   });
+  assert.equal(
+    api.calls.filter((call) => call.method === "POST").length,
+    writes,
+  );
+});
+
+test("an explicit candidate base is used for its commit and PR and cannot deduplicate against a retargeted proposal", async () => {
+  const api = new FakeApi(),
+    input = report();
+  const result = await publishCandidate(
+    api,
+    "test/repo",
+    input,
+    "codex/native-typescript-runtime",
+  );
+  assert.equal(result.base.ref, "codex/native-typescript-runtime");
+  assert.ok(
+    api.calls.some((call) =>
+      call.endpoint.endsWith(
+        "/git/ref/heads/codex%2Fnative-typescript-runtime",
+      ),
+    ),
+  );
+  const writes = api.calls.filter((call) => call.method === "POST").length;
+  api.pulls[0]!.base.ref = "main";
+  await assert.rejects(
+    publishCandidate(
+      api,
+      "test/repo",
+      input,
+      "codex/native-typescript-runtime",
+    ),
+    { code: "UPSTREAM_BASE_CONFLICT" },
+  );
   assert.equal(
     api.calls.filter((call) => call.method === "POST").length,
     writes,

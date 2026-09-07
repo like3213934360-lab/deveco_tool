@@ -56,6 +56,7 @@ const oid = z.string().regex(/^[a-f0-9]{40}$/),
     html_url: z.url(),
     state: z.enum(["open", "closed"]),
     draft: z.boolean().optional(),
+    base: z.object({ ref: z.string() }),
   });
 /** Create only an immutable candidate report on a dedicated draft branch. Never
  * change the source lock, execute upstream code, overwrite refs, or merge. */
@@ -63,14 +64,14 @@ export async function publishCandidate(
   api: GitHubApi,
   repository: string,
   raw: unknown,
+  baseBranch?: string,
 ) {
   z.string()
     .regex(/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/)
     .parse(repository);
   const report = candidateSchema.parse(raw),
     base = `repos/${repository}`,
-    owner = repository.split("/")[0]!,
-    branch = `codex/upstream-${report.source}-${report.candidate.commit.slice(0, 12)}-${report.sha256.slice(0, 12)}`;
+    owner = repository.split("/")[0]!;
   invariant(
     report.base.commit !== report.candidate.commit,
     "UPSTREAM_UNCHANGED",
@@ -95,6 +96,22 @@ export async function publishCandidate(
     "UPSTREAM_REPORT_TOO_LARGE",
     "Draft report limit is 1 MiB",
   );
+  const repo = z
+    .object({ default_branch: z.string() })
+    .parse(await api.request("GET", base));
+  const selectedBase = z
+    .string()
+    .min(1)
+    .max(255)
+    .refine(
+      (value) =>
+        !/[\x00-\x20~^:?*[\\]/.test(value) &&
+        !value.includes("..") &&
+        !value.includes("@{"),
+      "Expected a branch name",
+    )
+    .parse(baseBranch ?? repo.default_branch);
+  const branch = `codex/upstream-${report.source}-${report.candidate.commit.slice(0, 12)}-${report.sha256.slice(0, 12)}-${digest(selectedBase).slice(0, 8)}`;
   const existing = z
     .array(pullSchema)
     .parse(
@@ -108,10 +125,14 @@ export async function publishCandidate(
     "UPSTREAM_PR_AMBIGUOUS",
     "Too many candidate pull requests",
   );
-  if (existing.length) return { ...existing[0]!, branch, deduplicated: true };
-  const repo = z
-    .object({ default_branch: z.string() })
-    .parse(await api.request("GET", base));
+  if (existing.length) {
+    invariant(
+      existing[0]!.base.ref === selectedBase,
+      "UPSTREAM_BASE_CONFLICT",
+      "Existing proposal targets another base branch",
+    );
+    return { ...existing[0]!, branch, deduplicated: true };
+  }
   const refs = z
       .array(refSchema)
       .parse(
@@ -140,16 +161,21 @@ export async function publishCandidate(
     );
   } else {
     const head = refSchema.parse(
-        await api.request(
-          "GET",
-          `${base}/git/ref/heads/${repo.default_branch}`,
-        ),
+      await api.request(
+        "GET",
+        `${base}/git/ref/heads/${encodeURIComponent(selectedBase)}`,
       ),
-      commit = z
-        .object({ tree: z.object({ sha: oid }) })
-        .parse(
-          await api.request("GET", `${base}/git/commits/${head.object.sha}`),
-        );
+    );
+    invariant(
+      head.ref === `refs/heads/${selectedBase}`,
+      "UPSTREAM_BASE_CONFLICT",
+      "GitHub returned another base ref",
+    );
+    const commit = z
+      .object({ tree: z.object({ sha: oid }) })
+      .parse(
+        await api.request("GET", `${base}/git/commits/${head.object.sha}`),
+      );
     const tree = z.object({ sha: oid }).parse(
       await api.request("POST", `${base}/git/trees`, {
         base_tree: commit.tree.sha,
@@ -182,7 +208,7 @@ export async function publishCandidate(
     await api.request("POST", `${base}/pulls`, {
       title: `chore: review ${report.source} ${report.candidate.commit.slice(0, 12)}`,
       head: branch,
-      base: repo.default_branch,
+      base: selectedBase,
       body,
       draft: true,
       maintainer_can_modify: true,
@@ -193,5 +219,10 @@ export async function publishCandidate(
       "UPSTREAM_DRAFT_UNCONFIRMED",
       "GitHub did not confirm a draft pull request",
     );
+  invariant(
+    pull.base.ref === selectedBase,
+    "UPSTREAM_BASE_CONFLICT",
+    "GitHub did not confirm the selected base branch",
+  );
   return { ...pull, branch, deduplicated: false };
 }

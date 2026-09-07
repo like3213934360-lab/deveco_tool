@@ -6,13 +6,15 @@
 
 ```sh
 node dist/scripts/upstream-prepare.js deveco-code /absolute/new-candidate-directory
-node dist/scripts/upstream.js gate /absolute/new-candidate-directory/candidate.json
+node dist/scripts/upstream.js gate deveco-code /absolute/new-candidate-directory/candidate.json
 node dist/scripts/upstream.js pr deveco-code /absolute/new-candidate-directory/candidate.json --dispatch-validation
 ```
 
 第一步读取锁定观察引用，下载只供检查的裸 Git 仓库，固定候选提交、计算分类差异，输出 detection.json、candidate.json 和 UPGRADE.md，然后删除临时裸仓库。未变化时只输出检测记录，不创建空候选。`gate` 在存在未映射变化时退出 2，待人工适配评审时退出 1，不能把报告生成视为发布通过。
 
 第三步需要已配置的 `gh` 认证和 `GH_REPO=owner/repository`。它核对来源、基线、映射和报告摘要，仅在 `codex/upstream-...` 分支添加两个评审文件并创建草稿 PR，不推进正在使用的源锁、不自动合并。相同报告重复调用复用已有 PR（包括已关闭的 PR）；远程写入回执丢失时核对分支和 PR 状态，避免重建或覆盖已有内容。
+
+默认基于仓库默认分支。迁移尚未合并时，可追加 `--base codex/native-typescript-runtime`，在新架构分支上验证候选。分支身份包含目标分支摘要，创建提交和 PR 时核对同一个基线；已有 PR 被手动改到别的分支时明确报冲突，不复用错误的候选。
 
 ## CI 和评审
 

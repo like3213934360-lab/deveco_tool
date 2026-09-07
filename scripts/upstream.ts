@@ -114,8 +114,17 @@ if (command === "detect") {
       .parse(
         argument && !argument.startsWith("--") ? argument : process.env.GH_REPO,
       );
+    const baseAt = process.argv.indexOf("--base");
+    const baseBranch =
+      baseAt < 0
+        ? undefined
+        : z
+            .string()
+            .min(1)
+            .refine((value) => !value.startsWith("--"))
+            .parse(process.argv[baseAt + 1]);
     const api = new GhApi(),
-      pull = await publishCandidate(api, repository, report);
+      pull = await publishCandidate(api, repository, report, baseBranch);
     console.log(JSON.stringify(pull));
     if (
       process.argv.includes("--dispatch-validation") &&
