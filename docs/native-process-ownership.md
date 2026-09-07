@@ -17,4 +17,14 @@ Windows 使用本项目的 TypeScript 启动器与系统 Job Object。Koffi 3.2.
 
 测试包含 Windows 上主动脱离 libuv 默认 Job 的子进程、独立命令隔离、启动器提前退出、长期会话持久化保护和 MCP 直接被杀死。Windows 真实执行证据必须由 CI 记录；本机 POSIX 通过不能代替 Windows 证明。启动器新增一个 Node 进程，其启动/RSS 成本仍须纳入最终性能对比，不能据此宣称满足 5% 门槛。通过外部系统服务另行启动的进程必须由具体 SDK 会话服务核对。
 
+## 重启和清理失败
+
+`deveco_restart` 关闭原生运行 Worker，下一次请求按需启动新的 Worker。旧 `target` 选择分支已删除，官方 CLI/子 MCP 不再是原生服务的重启对象。
+
+并发重启共用同一个关闭 Promise；关闭开始后拒绝新业务请求。关闭成功必须等到 Worker 的实际退出事件。清理失败回执不会立刻清除旧 Worker 身份：退出前继续拒绝新请求和创建替代 Worker，避免尚未确认的 SDK 操作与新实例并存。
+
+运行服务依次关闭工作流、录制、watch、模拟器、LSP、认证、UI、CPU 池、受管进程、文档索引和存储。某一项失败不跳过后续清理，最终汇总 `CANCEL_UNCONFIRMED`。重复关闭复用结果，避免重入已关闭数据库。
+
+`test/native-shutdown.test.ts` 使用真实运行 Worker 验证并发关闭和再次启动，使用持有端口的故障 Worker 验证失败回执后的隔离，并注入引擎/文档关闭错误来核对其他子进程和 SQLite 仍然退出。录制中断、watch 停止和进程所有权另由对应行为回归验证；这些测试不能代替真实设备热补丁验收。
+
 依据：[Microsoft Job Objects](https://learn.microsoft.com/en-us/windows/win32/procthread/job-objects)、[QueryInformationJobObject](https://learn.microsoft.com/en-us/windows/win32/api/jobapi2/nf-jobapi2-queryinformationjobobject)、[Koffi 文档](https://koffi.dev/output)、[libuv Windows 进程实现](https://github.com/libuv/libuv/blob/v1.x/src/win/process.c)。

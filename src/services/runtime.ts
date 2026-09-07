@@ -118,6 +118,7 @@ export class Runtime {
   );
   private engine?: Promise<WorkflowEngine>;
   private stopping = false;
+  private shutdown?: Promise<{ closed: boolean }>;
   private workflows() {
     return (this.engine ??= (async () => {
       const { WorkflowEngine } = await import("../core/workflows.js");
@@ -1459,11 +1460,16 @@ export class Runtime {
         throw new Error("Runtime restart is dispatched by the MCP host");
     }
   }
-  async close() {
+  close(): Promise<{ closed: boolean }> {
+    return (this.shutdown ??= this.closeServices());
+  }
+  private async closeServices() {
     this.stopping = true;
     const errors: unknown[] = [];
-    if (this.engine) await (await this.engine).close();
     for (const close of [
+      async () => {
+        if (this.engine) await (await this.engine).close();
+      },
       () => this.recordings.close(),
       () => this.hot.close(),
       () => this.emulator.close(),
@@ -1472,14 +1478,14 @@ export class Runtime {
       () => this.devices.close(),
       () => this.cpu.close(),
       () => this.processes.close(),
+      () => this.knowledge.close(),
+      () => this.store.close(),
     ])
       try {
         await close();
       } catch (error) {
         errors.push(errorResult(error));
       }
-    this.knowledge.close();
-    this.store.close();
     if (errors.length)
       throw new ToolError(
         "CANCEL_UNCONFIRMED",

@@ -609,21 +609,26 @@
         "tool:deveco_restart"
       ],
       "adapters": [
+        "src/server.ts",
+        "src/core/worker-client.ts",
         "src/services/runtime.ts"
       ],
       "checks": [
-        "test/native-runtime.test.ts"
+        "test/native-shutdown.test.ts",
+        "test/native-runtime.test.ts",
+        "test/native-recording.test.ts",
+        "test/native-hotreload.test.ts"
       ],
       "behavior": "重启原生 Worker 及受管会话，不保留子 MCP 重连分支。",
       "parameters": {
         "target": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "removed",
+          "replacement": "统一关闭原生 Worker 和受管会话；官方 CLI/子 MCP 不再是重启对象，旧 target 和重连分支删除"
         }
       },
       "actions": [],
       "remaining": [
-        "活动 LSP/watch/UI 任务下完整退出验证"
+        "最新关闭协议在 Node 22/24 三平台 CI 验证"
       ],
       "acceptance": "pending",
       "evidence": []

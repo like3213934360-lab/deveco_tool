@@ -7,6 +7,7 @@ import type { ToolName } from "./contracts.js";
 export class WorkerClient {
   private worker?: Worker;
   private closing = false;
+  private shutdown?: Promise<unknown>;
   private readonly pending = new Map<
     string,
     {
@@ -15,13 +16,17 @@ export class WorkerClient {
       cleanup: () => void;
     }
   >();
-  constructor(readonly fatal: (error: Error) => void) {}
+  constructor(
+    readonly fatal: (error: Error) => void,
+    private readonly createWorker = () =>
+      new Worker(new URL("../worker.js", import.meta.url), {
+        stdout: true,
+        stderr: true,
+      }),
+  ) {}
   private start(): Worker {
     if (this.worker) return this.worker;
-    const worker = new Worker(new URL("../worker.js", import.meta.url), {
-      stdout: true,
-      stderr: true,
-    });
+    const worker = this.createWorker();
     this.worker = worker;
     // Native libraries must never contaminate MCP's stdout protocol stream.
     worker.stdout.resume();
@@ -45,7 +50,7 @@ export class WorkerClient {
     });
     worker.on("error", (error) => this.fail(error));
     worker.on("exit", (code) => {
-      this.worker = undefined;
+      if (this.worker === worker) this.worker = undefined;
       if (!this.closing || this.pending.size > 0)
         this.fail(
           new ToolError(
@@ -53,6 +58,8 @@ export class WorkerClient {
             `Runtime worker exited (${code}) before completing its requests`,
           ),
         );
+      this.closing = false;
+      this.shutdown = undefined;
     });
     return worker;
   }
@@ -87,11 +94,14 @@ export class WorkerClient {
       if (signal?.aborted) abort();
     });
   }
-  async close(): Promise<unknown> {
-    if (!this.worker) return { closed: true };
+  close(): Promise<unknown> {
+    if (this.shutdown) return this.shutdown;
+    if (!this.worker) return Promise.resolve({ closed: true });
     this.closing = true;
-    const worker = this.worker,
-      id = crypto.randomUUID(),
+    return (this.shutdown = this.closeWorker(this.worker));
+  }
+  private async closeWorker(worker: Worker): Promise<unknown> {
+    const id = crypto.randomUUID(),
       exited = new Promise<void>((resolve) =>
         worker.once("exit", () => resolve()),
       );
@@ -103,8 +113,10 @@ export class WorkerClient {
       await exited;
       return result;
     } finally {
-      this.worker = undefined;
-      this.closing = false;
+      this.pending.delete(id);
+      // An error reply does not prove the worker and its owned children exited.
+      // Keep it quarantined until its actual exit event, including when callers
+      // retry restart. Never spawn a replacement alongside unconfirmed owners.
     }
   }
 }
