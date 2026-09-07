@@ -23,6 +23,7 @@ import {
 } from "../core/toolchain.js";
 import { ProcessService } from "../core/process.js";
 import { StateStore } from "../core/store.js";
+import { currentTrace } from "../core/trace.js";
 import { ProjectService, type Project } from "./project.js";
 import { DeviceService } from "./device.js";
 import { SignatureService } from "./signature.js";
@@ -161,7 +162,7 @@ export class HotReloadService {
             target: session.target,
             created_at: new Date(session.created).toISOString(),
             log: this.store.artifact(
-              "hot_reload",
+              currentTrace().run_id ?? "hot_reload",
               JSON.stringify(session.connection.log()),
               "application/json",
             ),
@@ -662,9 +663,12 @@ export class HotReloadService {
         outcomeVerified: false,
         patch_versions: patchVersions,
         files: changed.length,
-        receipt: this.store.artifact("hot_reload", receipt.stdout),
+        receipt: this.store.artifact(
+          currentTrace().run_id ?? "hot_reload",
+          receipt.stdout,
+        ),
         compile_log: this.store.artifact(
-          "hot_reload",
+          currentTrace().run_id ?? "hot_reload",
           JSON.stringify(session.connection.log()),
           "application/json",
         ),

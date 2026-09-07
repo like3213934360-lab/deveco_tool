@@ -13,6 +13,7 @@ import { StateStore } from "../src/core/store.js";
 import type { ProcessResult } from "../src/core/process.js";
 import { Runtime } from "../src/services/runtime.js";
 import { tools } from "../src/core/contracts.js";
+import { withTrace } from "../src/core/trace.js";
 
 function image(format: string, width: number, height: number) {
   if (format === "png") {
@@ -163,6 +164,55 @@ test("screenshots reserve before receiving, reuse capture dimensions and discard
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
+test("queued screenshots keep separate workflow owners and survive retention until each run ends", async () => {
+  const root = fs.mkdtempSync(
+      path.join(os.tmpdir(), "deveco-image-ownership-"),
+    ),
+    store = new StateStore(root),
+    f = fixture(store),
+    service = new ScreenshotService(store, f.io);
+  try {
+    const runs = [
+      store.create("verify", {}).run,
+      store.create("verify", {}).run,
+    ];
+    const results = await Promise.all(
+      runs.map((run) =>
+        withTrace({ run_id: run.id }, () => service.capture("device")),
+      ),
+    );
+    for (const [index, run] of runs.entries()) {
+      assert.ok(results[index]!.artifact);
+      store.update(run.id, "interrupted", results[index]);
+    }
+    store.db.prepare("UPDATE artifacts SET created=0").run();
+    store.db.prepare("UPDATE runs SET updated=0").run();
+    store.prune();
+    for (const [index, run] of runs.entries()) {
+      const artifact = results[index]!.artifact!;
+      assert.ok(store.readArtifact(artifact.artifact_id).bytes > 0);
+      assert.deepEqual(
+        store.db
+          .prepare("SELECT run_id FROM artifacts WHERE id=?")
+          .get(artifact.artifact_id),
+        { run_id: run.id },
+      );
+      store.claim(run.id);
+      store.update(run.id, "cancelled");
+      store.db.prepare("UPDATE runs SET updated=0 WHERE id=?").run(run.id);
+      store.prune();
+      assert.throws(() => store.readArtifact(artifact.artifact_id), {
+        code: "ARTIFACT_NOT_FOUND",
+      });
+    }
+    assert.deepEqual(fs.readdirSync(path.join(root, "artifacts")), []);
+  } finally {
+    service.close();
+    store.close();
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test("display-specific captures preserve aspect ratio after rotation and return independent coordinate scales", async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-image-")),
     store = new StateStore(root),

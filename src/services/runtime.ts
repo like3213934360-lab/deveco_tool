@@ -1378,7 +1378,7 @@ export class Runtime {
               tree: {
                 format: "nodes",
                 ...this.store.artifact(
-                  "ui",
+                  currentTrace().run_id ?? "ui",
                   JSON.stringify(snapshot.nodes),
                   "application/json",
                 ),

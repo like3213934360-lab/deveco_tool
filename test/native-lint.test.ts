@@ -17,6 +17,7 @@ import { CpuPool } from "../src/core/cpu-pool.js";
 import { atomicWrite } from "../src/core/files.js";
 import { ToolError } from "../src/core/errors.js";
 import { lintInput } from "../src/services/lint-input.js";
+import { withTrace } from "../src/core/trace.js";
 
 const issue = {
   line: 3,
@@ -225,7 +226,10 @@ test("native lint uses bounded parsing, literal scope/config arguments and retai
       content,
     );
     content = encode(Array.from({ length: 5000 }, () => issue));
-    const large = await service.lint(project, { limit: 3 });
+    const run = store.create("code_diagnose", {}).run;
+    const large = await withTrace({ run_id: run.id }, () =>
+      service.lint(project, { limit: 3 }),
+    );
     assert.equal(large.summary.issues, 5000);
     assert.equal(large.report.length, 3);
     assert.equal(cpu.metrics.spawned, 1);
@@ -253,9 +257,29 @@ test("native lint uses bounded parsing, literal scope/config arguments and retai
     });
     nativeError = false;
     content = "{";
-    await assert.rejects(service.lint(project, {}), {
-      code: "LINT_REPORT_INVALID",
-    });
+    await assert.rejects(
+      withTrace({ run_id: run.id }, () => service.lint(project, {})),
+      {
+        code: "LINT_REPORT_INVALID",
+      },
+    );
+    store.update(run.id, "needs_input");
+    store.db.prepare("UPDATE artifacts SET created=0").run();
+    store.prune();
+    assert.equal(
+      store.readArtifact(large.artifact.artifact_id).bytes,
+      large.artifact.bytes,
+    );
+    const retained = store.db.prepare("SELECT run_id FROM artifacts").all();
+    assert.equal(
+      retained.length,
+      4,
+      "Keep successful and malformed reports plus their native logs",
+    );
+    assert.deepEqual(
+      retained,
+      Array.from({ length: 4 }, () => ({ run_id: run.id })),
+    );
     content = undefined;
     await assert.rejects(service.lint(project, {}), {
       code: "LINT_NOT_EXECUTED",

@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
 import { StateStore } from "../src/core/store.js";
+import { withTrace } from "../src/core/trace.js";
 
 function fixture() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-retention-"));
@@ -16,6 +17,30 @@ function fixture() {
     },
   };
 }
+test("explicit artifact ownership and staged workflow inputs never inherit an unrelated trace", () => {
+  const f = fixture();
+  try {
+    const original = f.store.create("original", {}).run;
+    const { explicit, staged } = withTrace({ run_id: original.id }, () => ({
+      explicit: f.store.artifact("external-owner", "independent evidence"),
+      staged: f.store.artifact("workflow-input", "captured input"),
+    }));
+    const next = f.store.create("next", {}, undefined, {}, [
+      staged.artifact_id,
+    ]).run;
+    for (const [id, run_id] of [
+      [explicit.artifact_id, "external-owner"],
+      [staged.artifact_id, next.id],
+    ])
+      assert.deepEqual(
+        f.store.db.prepare("SELECT run_id FROM artifacts WHERE id=?").get(id),
+        { run_id },
+      );
+  } finally {
+    f.close();
+  }
+});
+
 test("artifact ranges complete short reads and reject truncated persisted data", (t) => {
   const f = fixture();
   try {

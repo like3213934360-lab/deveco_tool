@@ -7,6 +7,7 @@ import { resourceRoot } from "../core/config.js";
 import { fileDigest, inside } from "../core/files.js";
 import { invariant } from "../core/errors.js";
 import { StateStore } from "../core/store.js";
+import { currentTrace } from "../core/trace.js";
 import { AuthService, httpRequest } from "./auth.js";
 import {
   docCatalogNames,
@@ -327,7 +328,12 @@ export class KnowledgeService {
       source: "cloud",
       content: content.slice(0, 16384),
       ...(content.length > 16384
-        ? { artifact: this.store.artifact("knowledge", content) }
+        ? {
+            artifact: this.store.artifact(
+              currentTrace().run_id ?? "knowledge",
+              content,
+            ),
+          }
         : {}),
     };
   }

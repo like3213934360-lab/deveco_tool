@@ -4,6 +4,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { invariant } from "../core/errors.js";
 import { screenshotOptionsSchema } from "../core/contracts.js";
 import { StateStore } from "../core/store.js";
+import { currentTrace } from "../core/trace.js";
 import type { ProcessResult } from "../core/process.js";
 
 interface Size {
@@ -212,7 +213,10 @@ export class ScreenshotService {
             "Missing, empty or oversized screenshot (maximum 32 MiB)",
           );
           const mime = `image/${input.format}`;
-          stream = this.store.streamArtifact("ui", mime);
+          stream = this.store.streamArtifact(
+            currentTrace().run_id ?? "ui",
+            mime,
+          );
           stream.reserve(bytes);
           await this.io.command(
             ["-t", target, "file", "recv", remote, stream.file],

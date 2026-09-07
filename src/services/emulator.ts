@@ -4,6 +4,7 @@ import { digest } from "../core/files.js";
 import { setTimeout as delay } from "node:timers/promises";
 import { ProcessService } from "../core/process.js";
 import { StateStore } from "../core/store.js";
+import { currentTrace } from "../core/trace.js";
 import { discoverToolchain, toolCommand } from "../core/toolchain.js";
 import type { Command } from "../core/process.js";
 import { withinDeadline } from "../core/deadline.js";
@@ -327,7 +328,10 @@ export class EmulatorService {
               accepted:
                 status.agreements.find((entry) => entry.name === item.name)
                   ?.accepted === true,
-              artifact: this.store.artifact("emulator-license", item.content),
+              artifact: this.store.artifact(
+                currentTrace().run_id ?? "emulator-license",
+                item.content,
+              ),
             })),
           };
         }

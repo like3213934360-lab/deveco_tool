@@ -35,6 +35,8 @@ SDK 的 `compileMode` 与 HMS `externalApiPaths` 必须在加载 SDK 模块前�
 
 这些是静态预检行为证据，不是跨平台 SDK、编译或性能门槛证明。Windows/Linux 的路径与报告回归走 Node 22/24 CI，实际 SDK 支持仍须分别验证。每次 SDK 检查在独立子进程执行，本记录中的单次耗时不构成固定机器、固定输入的 1000 次 P95 对比。
 
+提交 `23c08ab` 的 [CI 34167674814](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34167674814) 已完成：macOS、Windows、Linux 的 Node 22/24 六组各 210 项通过、0 跳过，Windows 各 20 轮进程压力通过。此后复查修复了工作流中报告的制品归属，见 `docs/native-artifact-ownership.md`；后续修改的跨平台结果分别记录，不继承此前 CI 的成功状态。
+
 ```sh
 npm run build
 node dist/scripts/native-regression.js /absolute/new-regression-evidence

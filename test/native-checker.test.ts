@@ -11,6 +11,7 @@ import {
 } from "../src/services/checker-project.js";
 import { parseDiagnostics } from "../src/services/checker.js";
 import { parseCheckerReport } from "../src/services/checker-report.js";
+import { withTrace } from "../src/core/trace.js";
 import { DiagnosticService } from "../src/services/diagnostics.js";
 import { ProcessService, type Command } from "../src/core/process.js";
 import { StateStore } from "../src/core/store.js";
@@ -383,7 +384,10 @@ test("checker service owns each child's cache, validates exit and report contrac
         })),
       ),
     );
-    const large = (await service.arkts(selected)) as {
+    const run = store.create("code_diagnose", {}).run;
+    const large = (await withTrace({ run_id: run.id }, () =>
+      service.arkts(selected),
+    )) as {
       summary: { errorCount: number };
       diagnostics: unknown[];
       artifact: { artifact_id: string; bytes: number };
@@ -400,6 +404,28 @@ test("checker service owns each child's cache, validates exit and report contrac
       offset = chunk.next_offset;
     }
     assert.equal(Buffer.concat(chunks).toString("utf8"), content);
+    // Both the CPU parser and the native-directory scope must preserve the
+    // workflow owner. Retention may run while this task awaits more input.
+    store.update(run.id, "needs_input", large);
+    store.db.prepare("UPDATE artifacts SET created=0").run();
+    store.db.prepare("UPDATE runs SET updated=0 WHERE id=?").run(run.id);
+    store.prune();
+    assert.equal(
+      store.readArtifact(large.artifact.artifact_id).bytes,
+      large.artifact.bytes,
+    );
+    assert.deepEqual(
+      store.db.prepare("SELECT run_id FROM artifacts").all(),
+      [{ run_id: run.id }],
+      "An unfinished task retains its report; the expired direct-call report is pruned",
+    );
+    store.claim(run.id);
+    store.update(run.id, "succeeded", large);
+    store.db.prepare("UPDATE runs SET updated=0 WHERE id=?").run(run.id);
+    store.prune();
+    assert.throws(() => store.readArtifact(large.artifact.artifact_id), {
+      code: "ARTIFACT_NOT_FOUND",
+    });
     exitCode = 1;
     await assert.rejects(service.arkts(selected), {
       code: "CHECKER_EXECUTION_FAILED",

@@ -59,8 +59,8 @@ MCP 主进程提供静态工具目录和参数校验；Worker 持有领域服务
 
 | 检查 | 结果 | 范围与原始证据 |
 | --- | --- | --- |
-| 编译及回归 | 212 项通过，0 跳过 | `/private/tmp/deveco-native-regression-node26-20260908-33/evidence.json`；154 个 TypeScript 文件，新增默认工程/产品和在途任务隔离验证。前一批静态诊断在独立 Node 22.23.2 / 24.14.1 原生目录也各 210 项通过，具体版本与范围见各能力文档 |
-| Node 22/24 干净原生验证目录 | 六组全量回归、安装与 Windows 压力门槛通过 | [CI 34166221456](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34166221456)，提交 `4eebcad`；六组成功，包含按内容复用的离线 UI 树；本次静态预检改动的 CI 单独核对 |
+| 编译及回归 | 214 项通过，0 跳过 | `/private/tmp/deveco-native-regression-node26-20260908-34/evidence.json`；154 个 TypeScript 文件，新增默认工程/产品、在途任务隔离及服务制品归属验证，见 `docs/native-artifact-ownership.md`。前一批静态诊断在独立 Node 22.23.2 / 24.14.1 原生目录也各 210 项通过，具体版本与范围见各能力文档 |
+| Node 22/24 干净原生验证目录 | 静态预检版本六组通过；后续版本两组 Windows 失败待处理 | [CI 34167674814](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34167674814)，提交 `23c08ab`，六组各 210 项通过、Windows 各 20 轮压力通过。后续 [CI 34168044469](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34168044469) 的 Node 22 目录链接解析失败、Node 24 恢复压力第 9 轮超时，不能由之前成功记录覆盖 |
 | 迁移清单 | 40 工具、7 脚本、330 参数、95 动作覆盖检查通过 | `provenance/baseline-capabilities.json`、`provenance/migration-matrix.json`；文档与重启 2 项完成行为验收，45 项仍为 pending，`native-migration-audit --release` 会阻止发布 |
 | 真实 SDK | 19 项通过 | `/private/tmp/deveco-native-sdk-20260908-7/evidence.json`；Studio 26.0.0.821、SDK 26.0.0.105；创建/构建、HAP、静态预检、Linter、ArkTS 四种查询及空结果/位置边界、C++、API 版本和扫描、本地密钥/CSR、模拟器列表通过，不包含签名安装/热补丁 |
 | 真实 ArkTS 静态预检 | 13 项通过 | `/private/tmp/deveco-native-checker-20260908-4/evidence.json`，Node 24 无旧依赖独立目录也通过 `/private/tmp/deveco-native-checker-node24-20260908-1/evidence.json`；扫描范围、HMS、路由、资源 AST、API 版本、并发缓存、模型版本、绑定、700 条完整报告和中文模块；边界与失败记录见 `docs/native-static-checker.md` |

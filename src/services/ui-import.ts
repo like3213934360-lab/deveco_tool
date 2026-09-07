@@ -5,6 +5,7 @@ import { setImmediate } from "node:timers/promises";
 import type { z } from "zod";
 import { tools, selectorSchema } from "../core/contracts.js";
 import type { StateStore } from "../core/store.js";
+import { currentTrace } from "../core/trace.js";
 import type { CpuPool } from "../core/cpu-pool.js";
 import { invariant, ToolError } from "../core/errors.js";
 import { parseUiDump } from "./ui-parse.js";
@@ -216,7 +217,11 @@ export async function findInSavedTree(
         format,
         ...(input.tree_artifact_id
           ? { artifact_id: input.tree_artifact_id }
-          : store.artifact("ui-import", bytes, "application/json")),
+          : store.artifact(
+              currentTrace().run_id ?? "ui-import",
+              bytes,
+              "application/json",
+            )),
       }
     : undefined;
   return {

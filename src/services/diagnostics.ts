@@ -10,6 +10,7 @@ import {
 import { invariant, ToolError, errorResult } from "../core/errors.js";
 import { readObject, atomicWrite } from "../core/files.js";
 import { StateStore } from "../core/store.js";
+import { currentTrace } from "../core/trace.js";
 import { NativeDirectory } from "../core/native-directory.js";
 import type { Project } from "./project.js";
 import { ProjectService } from "./project.js";
@@ -128,7 +129,7 @@ export class DiagnosticService {
       return {
         ...parsed,
         artifact: this.store.artifact(
-          "diagnostics",
+          currentTrace().run_id ?? "diagnostics",
           content,
           "application/json",
         ),
@@ -259,7 +260,10 @@ export class DiagnosticService {
           name,
           original_bytes: stat.size,
           truncated: stat.size > data.length,
-          artifact: this.store.artifact("diagnostics", data),
+          artifact: this.store.artifact(
+            currentTrace().run_id ?? "diagnostics",
+            data,
+          ),
         });
       }
       if (!fs.existsSync(report))
@@ -302,7 +306,7 @@ export class DiagnosticService {
         const failure = errorResult(error);
         throw new ToolError(failure.code, failure.message, {
           artifact: this.store.artifact(
-            "diagnostics",
+            currentTrace().run_id ?? "diagnostics",
             content,
             "application/json",
           ),
@@ -311,7 +315,7 @@ export class DiagnosticService {
         });
       }
       const artifact = this.store.artifact(
-        "diagnostics",
+        currentTrace().run_id ?? "diagnostics",
         content,
         "application/json",
       );
@@ -484,7 +488,11 @@ export class DiagnosticService {
           const csv = fs.readFileSync(source, "utf8");
           return {
             findings: apiReport(csv),
-            artifact: this.store.artifact("compatibility", csv, "text/csv"),
+            artifact: this.store.artifact(
+              currentTrace().run_id ?? "compatibility",
+              csv,
+              "text/csv",
+            ),
           };
         }),
         findings = parsed.flatMap((report) => report.findings);
@@ -495,7 +503,7 @@ export class DiagnosticService {
         affected_locations: findings.length,
         findings: findings.slice(0, 100),
         normalized_report: this.store.artifact(
-          "compatibility",
+          currentTrace().run_id ?? "compatibility",
           JSON.stringify(findings),
           "application/json",
         ),
