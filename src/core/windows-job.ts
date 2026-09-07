@@ -72,6 +72,13 @@ function loadApi() {
     openProcess: bind(
       "void * __stdcall OpenProcess(uint32_t access, int inherit, uint32_t pid)",
     ),
+    wait: bind(
+      "uint32_t __stdcall WaitForSingleObject(void *handle, uint32_t milliseconds)",
+    ),
+    inJob: bind(
+      "int __stdcall IsProcessInJob(void *process, void *job, _Out_ int *result)",
+    ),
+    pointerSize: koffi.sizeof("uintptr_t"),
     terminate: bind(
       "int __stdcall TerminateJobObject(void *job, uint32_t code)",
     ),
@@ -118,6 +125,7 @@ export function windowsJobAlive(name: string): boolean {
 export class WindowsJob {
   readonly name = `Local\\deveco-${randomUUID()}`;
   private handle: unknown;
+  private readonly terminatingProcesses = new Map<number, unknown>();
   constructor() {
     this.handle = api().create(null, this.name);
     if (!this.handle) throw failure("job creation");
@@ -143,13 +151,62 @@ export class WindowsJob {
     }
   }
   alive() {
-    return this.handle ? count(this.handle) > 0 : false;
+    for (const [pid, handle] of this.terminatingProcesses) {
+      const status = api().wait(handle, 0);
+      if (status === 0) {
+        api().close(handle);
+        this.terminatingProcesses.delete(pid);
+      } else if (status !== 258) throw failure("process exit wait");
+    }
+    return (
+      this.terminatingProcesses.size > 0 ||
+      (this.handle ? count(this.handle) > 0 : false)
+    );
   }
   terminate() {
+    // Accounting can reach zero before the kernel finishes process teardown.
+    // Keep synchronization handles until each process object is signaled, so
+    // callers can safely reopen SQLite mappings and reuse SDK outputs.
+    if (this.handle) {
+      const data = Buffer.alloc(8 + 4096 * api().pointerSize),
+        returned = [0];
+      if (!api().query(this.handle, 3, data, data.length, returned))
+        throw failure("process list query");
+      const length = data.readUInt32LE(4);
+      invariant(
+        length <= 4096 && returned[0]! >= 8 + length * api().pointerSize,
+        "WINDOWS_JOB_FAILED",
+        "Windows returned an incomplete process list",
+      );
+      for (let index = 0; index < length; index++) {
+        const offset = 8 + index * api().pointerSize;
+        const pid =
+          api().pointerSize === 8
+            ? Number(data.readBigUInt64LE(offset))
+            : data.readUInt32LE(offset);
+        if (this.terminatingProcesses.has(pid)) continue;
+        const handle = api().openProcess(0x100000 | 0x1000, 0, pid); // SYNCHRONIZE | QUERY_LIMITED_INFORMATION
+        if (!handle) {
+          if (api().error() === 87) continue; // Process already gone.
+          throw failure("termination process open");
+        }
+        const member = [0];
+        if (!api().inJob(handle, this.handle, member)) {
+          const error = failure("process membership query");
+          api().close(handle);
+          throw error;
+        }
+        if (member[0]) this.terminatingProcesses.set(pid, handle);
+        else api().close(handle); // PID was reused outside this job.
+      }
+    }
     if (this.handle && !api().terminate(this.handle, 1))
       throw failure("job termination");
   }
   close() {
+    for (const handle of this.terminatingProcesses.values())
+      api().close(handle);
+    this.terminatingProcesses.clear();
     if (this.handle) {
       if (!api().close(this.handle)) throw failure("job handle close");
       this.handle = undefined;
