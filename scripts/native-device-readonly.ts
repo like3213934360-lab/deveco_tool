@@ -80,8 +80,77 @@ try {
         tree: z.unknown(),
       })
       .passthrough()
-      .parse(await runtime.call("ui_snapshot", { target })),
+      .parse(await runtime.call("ui_snapshot", { target, mode: "tree" })),
   );
+  await observe("ui_jpeg_native_resize", async () => {
+    const result = z
+      .object({
+        screenshot: z
+          .object({
+            format: z.literal("jpeg"),
+            width: z.literal(640),
+            height: z.number().positive(),
+            native_width: z.number().positive(),
+            native_height: z.number().positive(),
+            artifact: z.object({ artifact_id: z.string() }),
+          })
+          .passthrough(),
+      })
+      .parse(
+        await runtime.call("ui_snapshot", { target, capture: { width: 640 } }),
+      );
+    assert.equal(
+      result.screenshot.height,
+      Math.max(
+        1,
+        Math.round(
+          (result.screenshot.native_height * 640) /
+            result.screenshot.native_width,
+        ),
+      ),
+    );
+    return result;
+  });
+  await observe("ui_png_native_frame_comparison", async () => {
+    const schema = z.object({
+        screenshot: z
+          .object({
+            format: z.literal("png"),
+            width: z.number().positive(),
+            height: z.number().positive(),
+            native_width: z.number().positive(),
+            native_height: z.number().positive(),
+            frame_signature: z.string(),
+            unchanged: z.boolean(),
+            artifact: z.unknown().optional(),
+          })
+          .passthrough(),
+      }),
+      first = schema.parse(
+        await runtime.call("ui_snapshot", {
+          target,
+          capture: { format: "png" },
+        }),
+      ),
+      second = schema.parse(
+        await runtime.call("ui_snapshot", {
+          target,
+          capture: {
+            format: "png",
+            if_changed_from: first.screenshot.frame_signature,
+          },
+        }),
+      );
+    assert.equal(first.screenshot.width, first.screenshot.native_width);
+    assert.equal(first.screenshot.height, first.screenshot.native_height);
+    assert.equal(
+      second.screenshot.unchanged,
+      second.screenshot.frame_signature === first.screenshot.frame_signature,
+    );
+    if (second.screenshot.unchanged)
+      assert.equal(second.screenshot.artifact, undefined);
+    return { first, second };
+  });
   await observe("ui_window_find", () =>
     runtime.call("ui_find", { target, selector: { type: "WindowScene" } }),
   );

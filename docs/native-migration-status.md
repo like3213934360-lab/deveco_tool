@@ -30,6 +30,7 @@ MCP 主进程提供静态工具目录和参数校验；Worker 持有领域服务
 - 部署提交时把 HAP/HSP 复制为任务拥有的只读制品，固定大小和 SHA-256，等待设备租约后再次核对。普通工程重建不会替换已提交的安装输入；多包安装仍待补齐。
 - ArkTS LSP 增加查找实现，检查初始化能力声明和 UTF-16 编码，校验真实发送内容的行列范围。文件读取、摘要和通知使用同一批字节；无结果、能力不可用、非法响应有不同处理。详见 `docs/native-language-service.md`。
 - TypeScript 编译使用完整临时输出目录；错误不覆盖上一次完整构建，成功后整体替换并删除失效输出。`native-stage.ts` 可在安装依赖前准备只含原生架构的私有验证目录。
+- `ui_snapshot` 默认只截图，支持 JPEG/PNG、宽度、显示器和画面变化比较；树用 `mode:tree/both` 显式获取。传输前预留额度，按块校验，未变化的画面不保存重复制品。详见 `docs/native-screenshots.md`。
 
 ## 能力与验收缺口
 
@@ -67,6 +68,10 @@ MCP 主进程提供静态工具目录和参数校验；Worker 持有领域服务
 | UI 树算法性能 | 已有小/中/大树测量，完整门槛未通过 | `/private/tmp/deveco-native-ui-benchmark-20260908-1.json`；100/1000/10000 个控件，每种查询 1000 次，晚于文本/矩形优化，早于父子层级字段。精确定位、类型查询改善；部分包含文本查询仍有开销。结果形式不同，不能充当直接能力 P95 发布门槛 |
 
 ## 尚未通过的发布门槛
+
+2026-09-08 远程 [CI 34149797134](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34149797134) 在 `f7bce2f` 上六组任务通过。Linux/macOS × Node 22/24 各 137 项、0 跳过；Windows × Node 22/24 各 135 项通过、2 项 POSIX 用例跳过。证据保存在 `/private/tmp/deveco-ci-34149797134`，不能记成 Windows 无跳过验收。随后将孤儿进程恢复用例改为直接模拟 MCP 进程死亡、设备 POSIX 管道用例改用 Windows Git Bash，并把任何 skipped/todo 作为回归失败条件；待新一轮 CI 核实。
+
+新增截图后，本机 `/private/tmp/deveco-native-regression-node26-20260908-6/evidence.json` 为 142 项通过、0 跳过，真实只读设备 `/private/tmp/deveco-native-device-readonly-20260908-4/evidence.json` 为 12 项通过。111 个 TypeScript 文件；这些证据早于上面两项测试和门禁调整，运行服务代码相同。设备证据包含原生 JPEG 640px 缩放与 PNG/画面比较，没有输入或安装。
 
 1. 完成冻结清单中逐个旧工具、参数、动作和历史缺陷的行为验收。覆盖审计会拦截漏项、重复项及没有证据的 verified 标记；当前的代码和测试位置映射不等于完整验收。
 2. 完成签名部署、设备热补丁、云端签名、真实 UI 输入/流程，以及多产品、多模块、HAR/HSP 工程验收。

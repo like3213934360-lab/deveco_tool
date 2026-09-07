@@ -393,68 +393,76 @@ test("log contracts reject ignored fields, conflicting sources, traversal and ov
   assert.equal(tools.hdc_log.schema.parse({}).action, "collect");
 });
 
-test(
-  "the literal filter pipeline preserves last matching lines and does not hide a failed producer behind successful tail",
-  { skip: process.platform === "win32" },
-  async (t) => {
-    const f = fixture(),
-      processes = new ProcessService();
-    try {
-      let body =
-          "[DEBUG] first\n" +
-          "other\n".repeat(200) +
-          "[DEBUG] second\n" +
-          "other\n".repeat(200),
-        exitCode = "0";
-      t.mock.method(
-        f.devices,
-        "shell",
-        async (_target: string, args: string[], signal?: AbortSignal) => {
-          assert.equal(args[0], "sh");
-          return processes.run(
-            {
-              executable: "/bin/sh",
-              args: [
-                "-c",
-                `hilog() { printf '%s\\n' "$DEVECO_TEST_LOG"; return "$DEVECO_TEST_EXIT"; }\n${args[2]!}`,
-                ...args.slice(3),
-              ],
-              env: {
-                ...process.env,
-                DEVECO_TEST_LOG: body,
-                DEVECO_TEST_EXIT: exitCode,
-              },
+test("the literal filter pipeline preserves last matching lines and does not hide a failed producer behind successful tail", async (t) => {
+  const f = fixture(),
+    processes = new ProcessService(),
+    shell =
+      process.platform === "win32"
+        ? path.join(
+            process.env.ProgramFiles ?? "C:\\Program Files",
+            "Git",
+            "bin",
+            "bash.exe",
+          )
+        : "/bin/sh";
+  try {
+    assert.ok(
+      fs.existsSync(shell),
+      "POSIX pipeline regression requires Git Bash on Windows",
+    );
+    let body =
+        "[DEBUG] first\n" +
+        "other\n".repeat(200) +
+        "[DEBUG] second\n" +
+        "other\n".repeat(200),
+      exitCode = "0";
+    t.mock.method(
+      f.devices,
+      "shell",
+      async (_target: string, args: string[], signal?: AbortSignal) => {
+        assert.equal(args[0], "sh");
+        return processes.run(
+          {
+            executable: shell,
+            args: [
+              "-c",
+              `hilog() { printf '%s\\n' "$DEVECO_TEST_LOG"; return "$DEVECO_TEST_EXIT"; }\n${args[2]!}`,
+              ...args.slice(3),
+            ],
+            env: {
+              ...process.env,
+              DEVECO_TEST_LOG: body,
+              DEVECO_TEST_EXIT: exitCode,
             },
-            { signal },
-          );
-        },
-      );
-      const result = await f.logs.collect("d", {
-        contains: "[DEBUG]",
-        lines: 2,
-      });
-      assert.equal(result.line_count, 2);
-      assert.equal(
-        readArtifact(f.store, result.artifact.artifact_id),
-        "[DEBUG] first\n[DEBUG] second",
-      );
-      body = "no matching lines";
-      assert.equal(
-        (await f.logs.collect("d", { contains: "[DEBUG]", lines: 2 }))
-          .line_count,
-        0,
-      );
-      exitCode = "7";
-      await assert.rejects(
-        f.logs.collect("d", { contains: "[DEBUG]", lines: 2 }),
-        { code: "HILOG_FAILED" },
-      );
-    } finally {
-      await processes.close();
-      f.close();
-    }
-  },
-);
+          },
+          { signal },
+        );
+      },
+    );
+    const result = await f.logs.collect("d", {
+      contains: "[DEBUG]",
+      lines: 2,
+    });
+    assert.equal(result.line_count, 2);
+    assert.equal(
+      readArtifact(f.store, result.artifact.artifact_id),
+      "[DEBUG] first\n[DEBUG] second",
+    );
+    body = "no matching lines";
+    assert.equal(
+      (await f.logs.collect("d", { contains: "[DEBUG]", lines: 2 })).line_count,
+      0,
+    );
+    exitCode = "7";
+    await assert.rejects(
+      f.logs.collect("d", { contains: "[DEBUG]", lines: 2 }),
+      { code: "HILOG_FAILED" },
+    );
+  } finally {
+    await processes.close();
+    f.close();
+  }
+});
 
 const first =
   "bundleName: com.example.first\nProcess name: com.example.first:worker\nError name: TypeError\nError message: first failure\nStacktrace:\nat run (pages/First.ets:7:3)";

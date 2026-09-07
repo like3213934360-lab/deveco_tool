@@ -2260,13 +2260,15 @@
         "tool:ui_snapshot"
       ],
       "adapters": [
-        "src/services/device.ts"
+        "src/services/device.ts",
+        "src/services/screenshot.ts"
       ],
       "checks": [
         "test/native-ui.test.ts",
-        "test/native-ui-query.test.ts"
+        "test/native-ui-query.test.ts",
+        "test/native-screenshot.test.ts"
       ],
-      "behavior": "复用一次快照的查询和制品读取。",
+      "behavior": "同一快照批量查询；显式 capture 可在同一设备租约内追加图像证据。",
       "parameters": {
         "text": {
           "status": "mapped",
@@ -2305,20 +2307,20 @@
           "replacement": "target；设备目标"
         },
         "localPath": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "replaced",
+          "replacement": "只返回摘要和受管理制品引用；workflow_run.read_artifact 分页读取，不写任意输出路径或内联完整图像"
         },
         "overwrite": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "replaced",
+          "replacement": "只返回摘要和受管理制品引用；workflow_run.read_artifact 分页读取，不写任意输出路径或内联完整图像"
         },
         "width": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "mapped",
+          "replacement": "capture.width；保持宽高比，设备旋转后重新核对"
         },
         "inline": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "replaced",
+          "replacement": "只返回摘要和受管理制品引用；workflow_run.read_artifact 分页读取，不写任意输出路径或内联完整图像"
         },
         "timeoutMs": {
           "status": "replaced",
@@ -2347,8 +2349,8 @@
       },
       "actions": [],
       "remaining": [
-        "旧 selectors 批查询",
-        "图像宽度/内联和指定显示器功能"
+        "实际多显示器与旋转验收",
+        "图像和树联合获取的固定输入性能门槛"
       ],
       "acceptance": "pending",
       "evidence": []
@@ -2359,44 +2361,47 @@
         "tool:ui_snapshot"
       ],
       "adapters": [
-        "src/services/device.ts"
+        "src/services/device.ts",
+        "src/services/screenshot.ts"
       ],
       "checks": [
-        "test/native-ui.test.ts"
+        "test/native-ui.test.ts",
+        "test/native-screenshot.test.ts",
+        "test/native-ui-query.test.ts"
       ],
-      "behavior": "快照、签名、制品及可选截图。",
+      "behavior": "默认只截图；mode=tree/both 明确请求树。尺寸、原生格式、显示器、变化检测与有界制品。",
       "parameters": {
         "hvd": {
           "status": "mapped",
           "replacement": "target；设备目标"
         },
         "localPath": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "replaced",
+          "replacement": "只返回摘要和受管理制品引用；workflow_run.read_artifact 分页读取，不写任意输出路径或内联完整图像"
         },
         "overwrite": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "replaced",
+          "replacement": "只返回摘要和受管理制品引用；workflow_run.read_artifact 分页读取，不写任意输出路径或内联完整图像"
         },
         "width": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "mapped",
+          "replacement": "capture.width；保持宽高比，设备旋转后重新核对"
         },
         "format": {
-          "status": "replaced",
-          "replacement": "固定结构化输出与制品"
+          "status": "mapped",
+          "replacement": "capture.format：jpeg/png，原生 snapshot_display 编码"
         },
         "displayId": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "mapped",
+          "replacement": "capture.display_id；未指定时由设备选择显示器"
         },
         "inline": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "replaced",
+          "replacement": "只返回摘要和受管理制品引用；workflow_run.read_artifact 分页读取，不写任意输出路径或内联完整图像"
         },
         "ifChangedFrom": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "mapped",
+          "replacement": "capture.if_changed_from：比较 fresh frame_signature，未变化时不保存重复图像制品"
         },
         "timeoutMs": {
           "status": "replaced",
@@ -2405,8 +2410,8 @@
       },
       "actions": [],
       "remaining": [
-        "ifChangedFrom 变化检测接口",
-        "多显示器、JPEG/PNG、尺寸和内联读取"
+        "实际多显示器与旋转验收",
+        "图像和树联合获取的固定输入性能门槛"
       ],
       "acceptance": "pending",
       "evidence": []

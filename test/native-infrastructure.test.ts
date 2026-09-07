@@ -4,6 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { once } from "node:events";
 import { setTimeout as delay } from "node:timers/promises";
 import { atomicWrite, privateDirectory } from "../src/core/files.js";
 import { StateStore } from "../src/core/store.js";
@@ -227,60 +228,63 @@ test("a crashed log owner publishes incomplete actual bytes on restart", async (
   }
 });
 
-test(
-  "a surviving native child blocks resource reuse after its MCP owner dies",
-  { skip: process.platform === "win32" },
-  async () => {
-    const root = temporary(),
-      processes = new ProcessService();
-    let orphan: number | undefined, store: StateStore | undefined;
-    try {
-      const owner = processes.spawn({
-        executable: process.execPath,
-        args: [
-          fileURLToPath(
-            new URL("./fixtures/native-state-peer.js", import.meta.url),
-          ),
-          root,
-          "orphan",
-        ],
-      });
-      owner.stdout?.resume();
-      owner.stderr?.resume();
-      await until(() => fs.existsSync(path.join(root, "ready")));
-      orphan = Number(fs.readFileSync(path.join(root, "orphan"), "utf8"));
-      await processes.terminate(owner);
-      process.kill(orphan, 0);
-      store = new StateStore(root);
-      await assert.rejects(
-        store.lease("project:shared", async () => null),
-        code("RESOURCE_RECOVERY_REQUIRED"),
-      );
-      process.kill(-orphan, "SIGTERM");
-      await until(() => {
-        try {
-          process.kill(orphan!, 0);
-          return false;
-        } catch {
-          return true;
-        }
-      });
-      orphan = undefined;
-      assert.equal(
-        await store.lease("project:shared", async () => "acquired"),
-        "acquired",
-      );
-    } finally {
-      if (orphan)
-        try {
-          process.kill(-orphan, "SIGKILL");
-        } catch {}
-      await processes.close();
-      store?.close();
-      fs.rmSync(root, { recursive: true, force: true });
-    }
-  },
-);
+test("a surviving native child blocks resource reuse after its MCP owner dies", async () => {
+  const root = temporary(),
+    processes = new ProcessService();
+  let orphan: number | undefined, store: StateStore | undefined;
+  try {
+    const owner = processes.spawn({
+      executable: process.execPath,
+      args: [
+        fileURLToPath(
+          new URL("./fixtures/native-state-peer.js", import.meta.url),
+        ),
+        root,
+        "orphan",
+      ],
+    });
+    owner.stdout?.resume();
+    owner.stderr?.resume();
+    await until(() => fs.existsSync(path.join(root, "ready")));
+    orphan = Number(fs.readFileSync(path.join(root, "orphan"), "utf8"));
+    // Model abrupt MCP death on every platform. Managed cancellation would
+    // intentionally kill descendants on Windows and exercise a different case.
+    const closed = once(owner, "close");
+    owner.kill("SIGKILL");
+    await closed;
+    process.kill(orphan, 0);
+    store = new StateStore(root);
+    await assert.rejects(
+      store.lease("project:shared", async () => null),
+      code("RESOURCE_RECOVERY_REQUIRED"),
+    );
+    process.kill(process.platform === "win32" ? orphan : -orphan, "SIGTERM");
+    await until(() => {
+      try {
+        process.kill(orphan!, 0);
+        return false;
+      } catch {
+        return true;
+      }
+    });
+    orphan = undefined;
+    assert.equal(
+      await store.lease("project:shared", async () => "acquired"),
+      "acquired",
+    );
+  } finally {
+    if (orphan)
+      try {
+        process.kill(
+          process.platform === "win32" ? orphan : -orphan,
+          "SIGKILL",
+        );
+      } catch {}
+    await processes.close();
+    store?.close();
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
 
 test("build diagnostics preserve UTF-8, early errors and category budgets", () => {
   const tracker = new BuildDiagnostics();

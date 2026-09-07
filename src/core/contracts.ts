@@ -1,5 +1,15 @@
 import { z } from "zod";
 
+export const screenshotOptionsSchema = z.strictObject({
+  format: z.enum(["jpeg", "png"]).default("jpeg"),
+  width: z.number().int().min(64).max(4096).optional(),
+  display_id: z.number().int().nonnegative().safe().optional(),
+  if_changed_from: z
+    .string()
+    .regex(/^[a-f0-9]{64}$/)
+    .optional(),
+});
+
 export const selectorSchema = z.strictObject({
   text: z.string().optional(),
   textMode: z.enum(["contains", "exact"]).default("contains"),
@@ -668,8 +678,16 @@ export const tools = {
   },
   ui_snapshot: {
     description:
-      "Capture a UI tree once and return its summary and artifact; snapshot IDs expire after changes or 30 seconds.",
-    schema: z.strictObject({ target, screenshot: z.boolean().default(false) }),
+      "Capture an image, tree or both as artifacts. Image mode skips the layout dump. JPEG preserves aspect ratio and caps the long edge at 2576px; PNG stays native unless width is explicit. if_changed_from compares fresh encoded bytes and omits an unchanged image artifact. Tree snapshot IDs expire after actions or 30 seconds.",
+    schema: z
+      .strictObject({
+        target,
+        mode: z.enum(["image", "tree", "both"]).default("image"),
+        capture: screenshotOptionsSchema.optional(),
+      })
+      .refine((input) => input.mode !== "tree" || !input.capture, {
+        message: "Tree-only capture does not accept image options",
+      }),
   },
   ui_observe: {
     description:
@@ -678,6 +696,7 @@ export const tools = {
       .strictObject({
         target,
         ...queryFields,
+        capture: screenshotOptionsSchema.optional(),
       })
       .superRefine(checkQueries),
   },
@@ -743,6 +762,7 @@ export const tools = {
       target,
       selector: selectorSchema.optional(),
       screenshot: z.boolean().default(false),
+      capture: screenshotOptionsSchema.optional(),
       display_id: z
         .union([z.string(), z.number().int().nonnegative()])
         .optional(),

@@ -78,7 +78,11 @@ try {
     "Node did not return a complete regression summary",
   );
   const passed =
-    result.exitCode === 0 && summary.fail === 0 && summary.cancelled === 0;
+    result.exitCode === 0 &&
+    summary.fail === 0 &&
+    summary.cancelled === 0 &&
+    summary.skipped === 0 &&
+    summary.todo === 0;
   fs.writeFileSync(
     path.join(output, "evidence.json"),
     JSON.stringify(

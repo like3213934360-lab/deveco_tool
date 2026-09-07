@@ -1347,6 +1347,14 @@ export class Runtime {
               : undefined,
           input = inspection ?? tools.ui_snapshot.schema.parse(raw),
           target = await this.devices.target(input.target, signal);
+        if ("mode" in input && input.mode === "image")
+          return {
+            screenshot: await this.devices.screenshot(
+              target,
+              input.capture,
+              signal,
+            ),
+          };
         return this.store.lease(
           `device:${target}`,
           async () => {
@@ -1362,8 +1370,18 @@ export class Runtime {
                 JSON.stringify(snapshot.nodes),
                 "application/json",
               ),
-              ...(input.screenshot
-                ? { screenshot: await this.devices.screenshot(target, signal) }
+              ...((
+                "mode" in input
+                  ? input.mode === "both"
+                  : input.screenshot || input.capture
+              )
+                ? {
+                    screenshot: await this.devices.screenshot(
+                      target,
+                      input.capture,
+                      signal,
+                    ),
+                  }
                 : {}),
             };
           },
@@ -1378,9 +1396,29 @@ export class Runtime {
             "snapshot_id" in input && typeof input.snapshot_id === "string"
               ? input.snapshot_id
               : undefined;
-        return input.selectors
-          ? this.devices.findMany(target, input.selectors, snapshotId, signal)
-          : this.devices.find(target, input.selector ?? {}, snapshotId, signal);
+        const query = () =>
+          input.selectors
+            ? this.devices.findMany(target, input.selectors, snapshotId, signal)
+            : this.devices.find(
+                target,
+                input.selector ?? {},
+                snapshotId,
+                signal,
+              );
+        if ("capture" in input && input.capture)
+          return this.store.lease(
+            `device:${target}`,
+            async () => ({
+              ...(await query()),
+              screenshot: await this.devices.screenshot(
+                target,
+                input.capture,
+                signal,
+              ),
+            }),
+            signal,
+          );
+        return query();
       }
       case "ui_tap": {
         const input = tools[name].schema.parse(raw);

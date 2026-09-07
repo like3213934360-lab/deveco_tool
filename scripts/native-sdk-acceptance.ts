@@ -387,7 +387,7 @@ try {
       const result = z
         .object({ node_count: z.number().positive() })
         .passthrough()
-        .parse(await runtime.call("ui_snapshot", { target }));
+        .parse(await runtime.call("ui_snapshot", { target, mode: "tree" }));
       return result;
     });
   }

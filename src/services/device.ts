@@ -31,6 +31,7 @@ import {
 import { currentTrace } from "../core/trace.js";
 import { CpuPool } from "../core/cpu-pool.js";
 import { parseUiDump } from "./ui-parse.js";
+import { ScreenshotService } from "./screenshot.js";
 export {
   UiIndex,
   flattenDump,
@@ -49,6 +50,7 @@ export interface Snapshot {
   structureSignature: string;
 }
 export class DeviceService {
+  private readonly screenshots: ScreenshotService;
   private readonly snapshots = new Map<string, Snapshot>();
   private readonly snapshotBytes = new Map<string, number>();
   private cacheBytes = 0;
@@ -104,6 +106,7 @@ export class DeviceService {
     this.expireSnapshots();
   }
   close() {
+    this.screenshots.close();
     clearTimeout(this.cacheTimer);
     this.snapshots.clear();
     this.snapshotBytes.clear();
@@ -113,7 +116,9 @@ export class DeviceService {
     readonly processes: ProcessService,
     readonly store: StateStore,
     readonly cpu?: CpuPool,
-  ) {}
+  ) {
+    this.screenshots = new ScreenshotService(store, this);
+  }
   async command(
     args: string[],
     signal?: AbortSignal,
@@ -340,38 +345,8 @@ export class DeviceService {
       }),
     };
   }
-  async screenshot(target: string, signal?: AbortSignal) {
-    return this.store.lease(
-      `device:${target}`,
-      async () => {
-        const id = crypto.randomUUID(),
-          remote = `/data/local/tmp/deveco-${id}.png`,
-          local = path.join(this.store.root, "tmp", `${id}.png`);
-        privateDirectory(path.dirname(local));
-        try {
-          await this.shell(target, ["snapshot_display", "-f", remote], signal);
-          await this.command(
-            ["-t", target, "file", "recv", remote, local],
-            signal,
-          );
-          const image = fs.readFileSync(local);
-          invariant(
-            image
-              .subarray(0, 8)
-              .equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])),
-            "SCREENSHOT_INVALID",
-            "Device did not return PNG",
-          );
-          return this.store.artifact("ui", image, "image/png");
-        } finally {
-          fs.rmSync(local, { force: true });
-          await this.shell(target, ["rm", "-f", remote], undefined, 5000).catch(
-            () => {},
-          );
-        }
-      },
-      signal,
-    );
+  screenshot(target: string, input: unknown = {}, signal?: AbortSignal) {
+    return this.screenshots.capture(target, input, signal);
   }
   async control(
     target: string,
