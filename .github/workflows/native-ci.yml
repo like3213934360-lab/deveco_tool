@@ -42,6 +42,10 @@ jobs:
       - name: Verify attributed resources
         working-directory: ${{ runner.temp }}/native
         run: node dist/scripts/resources.js
+      - name: Repeat Windows process ownership and recovery checks
+        if: runner.os == 'Windows'
+        working-directory: ${{ runner.temp }}/native
+        run: node dist/scripts/native-process-stress.js "${{ runner.temp }}/native-process-evidence" 20
       - name: Check migration source coverage
         working-directory: ${{ runner.temp }}/native
         run: node dist/scripts/native-migration-audit.js
@@ -58,5 +62,6 @@ jobs:
           name: native-${{ matrix.os }}-node${{ matrix.node }}
           path: |
             ${{ runner.temp }}/native-evidence
+            ${{ runner.temp }}/native-process-evidence
             ${{ runner.temp }}/native/package-lock.json
           if-no-files-found: warn
