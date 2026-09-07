@@ -67,4 +67,18 @@ if (process.argv[3] === "stream") {
   const engine = new WorkflowEngine(store, [definition], async () => {}),
     run = engine.start("restart", { parameters: {} });
   fs.writeFileSync(path.join(root, "run"), run.run_id);
+  setInterval(() => {
+    const state = store.get(run.run_id);
+    if (
+      ["failed", "needs_input", "cancelled", "interrupted"].includes(
+        state.status,
+      )
+    ) {
+      fs.writeFileSync(
+        path.join(root, "peer-error"),
+        JSON.stringify({ status: state.status, error: state.error }),
+      );
+      process.exit(1);
+    }
+  }, 25);
 }

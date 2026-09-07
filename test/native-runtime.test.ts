@@ -379,7 +379,20 @@ test("hard interruption resumes from SQLite without repeating a completed effect
     child.stdout?.resume();
     child.stderr?.resume();
     trace("wait-ready");
-    await until(() => fs.existsSync(path.join(root, "ready")));
+    let peerError = "";
+    child.stderr?.on("data", (chunk: Buffer) => {
+      peerError = (peerError + chunk.toString()).slice(-8192);
+    });
+    await until(() => {
+      const failure = path.join(root, "peer-error");
+      if (fs.existsSync(failure)) assert.fail(fs.readFileSync(failure, "utf8"));
+      assert.equal(
+        child.exitCode,
+        null,
+        `Peer exited before readiness: ${peerError}`,
+      );
+      return fs.existsSync(path.join(root, "ready"));
+    });
     trace("terminate-peer");
     await processes.terminate(child);
     trace("open-store");
