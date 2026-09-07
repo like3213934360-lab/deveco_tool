@@ -14,9 +14,9 @@ import {
 import {
   atomicWrite,
   digest,
-  fileDigest,
   readObject,
   privateDirectory,
+  publishFile,
 } from "../core/files.js";
 import { invariant, object } from "../core/errors.js";
 import { AuthService, httpRequest, httpBytes } from "./auth.js";
@@ -323,19 +323,14 @@ export class SignatureService {
         "SIGN_FAILED",
         "Native signing tool rejected the request",
       );
+      let published: Awaited<ReturnType<typeof publishFile>> | undefined;
       if (output && staged) {
         invariant(
           fs.existsSync(staged) && fs.statSync(staged).size > 0,
           "SIGN_OUTPUT_MISSING",
           "Signing tool produced no output",
         );
-        fs.copyFileSync(staged, output, fs.constants.COPYFILE_EXCL);
-        const fd = fs.openSync(output, "r");
-        try {
-          fs.fsyncSync(fd);
-        } finally {
-          fs.closeSync(fd);
-        }
+        published = await publishFile(staged, output, signal);
       }
       return {
         action: input.action,
@@ -343,8 +338,7 @@ export class SignatureService {
         ...(output
           ? {
               path: output,
-              sha256: fileDigest(output),
-              bytes: fs.statSync(output).size,
+              ...published,
             }
           : { verified: true }),
       };

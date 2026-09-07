@@ -105,6 +105,103 @@ export function atomicWrite(
     fs.rmSync(temporary, { force: true });
   }
 }
+/** Publish an SDK-produced file only after its private destination copy is
+ * durable. The exclusive link prevents a concurrent request being overwritten. */
+export async function publishFile(
+  source: string,
+  destination: string,
+  signal?: AbortSignal,
+): Promise<{ bytes: number; sha256: string }> {
+  signal?.throwIfAborted();
+  const parent = await fs.promises.realpath(path.dirname(destination)),
+    target = path.join(parent, path.basename(destination)),
+    temporary = `${target}.${crypto.randomUUID()}.tmp`;
+  try {
+    const input = await fs.promises.open(
+      source,
+      fs.constants.O_RDONLY | fs.constants.O_NONBLOCK,
+    );
+    const hash = crypto.createHash("sha256");
+    let bytes = 0;
+    try {
+      const before = await input.stat();
+      invariant(
+        before.isFile(),
+        "OUTPUT_INVALID",
+        "SDK output must be a regular file",
+      );
+      // Private from creation, including keystores written by a permissive SDK.
+      // Keep the writable handle through sync; Windows rejects read-only fsync.
+      const file = await fs.promises.open(temporary, "wx", 0o600);
+      try {
+        const buffer = Buffer.allocUnsafe(65536);
+        while (bytes < before.size) {
+          signal?.throwIfAborted();
+          const { bytesRead } = await input.read(
+            buffer,
+            0,
+            Math.min(buffer.length, before.size - bytes),
+            bytes,
+          );
+          invariant(
+            bytesRead > 0,
+            "OUTPUT_CHANGED",
+            "SDK output was truncated during publication",
+          );
+          hash.update(buffer.subarray(0, bytesRead));
+          let written = 0;
+          while (written < bytesRead) {
+            signal?.throwIfAborted();
+            const result = await file.write(
+              buffer,
+              written,
+              bytesRead - written,
+              bytes + written,
+            );
+            invariant(
+              result.bytesWritten > 0,
+              "OUTPUT_WRITE_FAILED",
+              "Output publication made no progress",
+            );
+            written += result.bytesWritten;
+          }
+          bytes += bytesRead;
+        }
+        const after = await input.stat();
+        invariant(
+          before.size === after.size &&
+            before.mtimeMs === after.mtimeMs &&
+            before.ctimeMs === after.ctimeMs,
+          "OUTPUT_CHANGED",
+          "SDK output changed during publication",
+        );
+        await file.sync();
+      } finally {
+        await file.close();
+      }
+    } finally {
+      await input.close();
+    }
+    signal?.throwIfAborted();
+    await fs.promises.link(temporary, target);
+    if (process.platform !== "win32") {
+      const directory = await fs.promises.open(parent, "r");
+      try {
+        await directory.sync();
+      } finally {
+        await directory.close();
+      }
+    }
+    return { bytes, sha256: hash.digest("hex") };
+  } finally {
+    await fs.promises.rm(temporary, {
+      force: true,
+      recursive: true,
+      maxRetries: 3,
+      retryDelay: 40,
+    });
+  }
+}
 export function walk(
   root: string,
   extensions?: ReadonlySet<string>,
