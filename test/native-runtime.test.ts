@@ -21,7 +21,7 @@ import {
 } from "../src/services/device.js";
 import type { Project } from "../src/services/project.js";
 import { hotChanges } from "../src/services/hotreload.js";
-import { ToolError } from "../src/core/errors.js";
+import { ToolError, errorResult } from "../src/core/errors.js";
 
 const temporary = () =>
   fs.realpathSync(
@@ -355,8 +355,12 @@ test("workflow input is encrypted and lease ownership crosses processes", async 
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
-test("hard interruption resumes from SQLite without repeating a completed effect", async () => {
-  const trace = (stage: string) => {
+test("hard interruption resumes from SQLite without repeating a completed effect", async (t) => {
+  let stage = "initial",
+    peerError = "";
+  let peerState: () => unknown = () => null;
+  const trace = (value: string) => {
+    stage = value;
     if (process.env.DEVECO_TEST_RECOVERY_TRACE === "1")
       fs.writeSync(2, `recovery stage: ${stage}\n`);
   };
@@ -375,11 +379,16 @@ test("hard interruption resumes from SQLite without repeating a completed effect
         root,
         "run",
       ],
+      env: { ...process.env, DEVECO_TEST_RECOVERY_TRACE: "1" },
+    });
+    peerState = () => ({
+      pid: child.pid,
+      exitCode: child.exitCode,
+      signalCode: child.signalCode,
     });
     child.stdout?.resume();
     child.stderr?.resume();
     trace("wait-ready");
-    let peerError = "";
     child.stderr?.on("data", (chunk: Buffer) => {
       peerError = (peerError + chunk.toString()).slice(-8192);
     });
@@ -390,6 +399,11 @@ test("hard interruption resumes from SQLite without repeating a completed effect
         child.exitCode,
         null,
         `Peer exited before readiness: ${peerError}`,
+      );
+      assert.equal(
+        child.signalCode,
+        null,
+        `Peer terminated before readiness: ${peerError}`,
       );
       return fs.existsSync(path.join(root, "ready"));
     });
@@ -433,6 +447,15 @@ test("hard interruption resumes from SQLite without repeating a completed effect
     );
     trace("verified");
   } catch (error) {
+    t.diagnostic(
+      JSON.stringify({
+        stage,
+        peer: peerState(),
+        stderr: peerError,
+        error: errorResult(error),
+        files: fs.readdirSync(root),
+      }),
+    );
     if (process.env.DEVECO_TEST_RECOVERY_TRACE === "1")
       fs.writeSync(
         2,

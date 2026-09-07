@@ -7,7 +7,16 @@ import {
   type WorkflowDefinition,
 } from "../../src/core/workflows.js";
 const root = process.argv[2]!;
+const trace = (stage: string, state?: unknown) => {
+  if (process.env.DEVECO_TEST_RECOVERY_TRACE === "1")
+    fs.writeSync(
+      2,
+      JSON.stringify({ stage, state, uptime: process.uptime() }) + "\n",
+    );
+};
+trace("open-store");
 const store = new StateStore(root);
+trace("store-ready");
 // Model a live MCP transport while the peer owns its lease or interrupted node.
 setInterval(() => {}, 1000);
 if (process.argv[3] === "stream") {
@@ -49,6 +58,7 @@ if (process.argv[3] === "stream") {
         id: "effect",
         kind: "effect",
         async execute() {
+          trace("effect-enter");
           fs.appendFileSync(path.join(root, "effects"), "effect\n");
           return { written: true };
         },
@@ -57,6 +67,7 @@ if (process.argv[3] === "stream") {
         id: "pause",
         kind: "read",
         async execute() {
+          trace("pause-enter");
           fs.writeFileSync(path.join(root, "ready"), "1");
           await new Promise(() => {});
           return null;
@@ -64,11 +75,18 @@ if (process.argv[3] === "stream") {
       },
     ],
   };
+  trace("create-engine");
   const engine = new WorkflowEngine(store, [definition], async () => {}),
     run = engine.start("restart", { parameters: {} });
+  trace("run-submitted", run);
   fs.writeFileSync(path.join(root, "run"), run.run_id);
+  let lastStatus = "";
   setInterval(() => {
     const state = store.get(run.run_id);
+    if (state.status !== lastStatus) {
+      trace("run-state", { status: state.status, error: state.error });
+      lastStatus = state.status;
+    }
     if (
       ["failed", "needs_input", "cancelled", "interrupted"].includes(
         state.status,
