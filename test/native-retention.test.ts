@@ -222,7 +222,7 @@ test("finished process and SDK session history is bounded while unresolved recor
       for (let i = 0; i < 1010; i++) {
         f.store.db
           .prepare(
-            "INSERT INTO managed_processes VALUES (?,?,NULL,NULL,'[]','exited',?,?)",
+            "INSERT INTO managed_processes VALUES (?,?,NULL,NULL,'[]','exited',?,?,NULL)",
           )
           .run(`process-${i}`, f.store.owner, now + i, now + i);
         f.store.db

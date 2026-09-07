@@ -9,6 +9,7 @@ import { atomicWrite, digest, privateDirectory } from "./files.js";
 import { errorResult, invariant, ToolError } from "./errors.js";
 import { PayloadCipher } from "./crypto.js";
 import { currentTrace } from "./trace.js";
+import { windowsJobAlive } from "./windows-job.js";
 
 export type RunStatus =
   | "queued"
@@ -45,6 +46,7 @@ interface ManagedProcess {
   owner: string;
   run_id: string | null;
   pid: number | null;
+  windows_job: string | null;
   resources: string;
   status: "starting" | "running" | "unconfirmed" | "exited";
 }
@@ -75,7 +77,7 @@ export class StateStore {
       CREATE TABLE IF NOT EXISTS artifacts (id TEXT PRIMARY KEY, run_id TEXT NOT NULL, file TEXT NOT NULL, bytes INTEGER NOT NULL, mime TEXT NOT NULL, created INTEGER NOT NULL);
       CREATE TABLE IF NOT EXISTS artifact_gc (file TEXT PRIMARY KEY, bytes INTEGER NOT NULL);
       CREATE TABLE IF NOT EXISTS artifact_streams (id TEXT PRIMARY KEY, run_id TEXT NOT NULL, file TEXT NOT NULL, bytes INTEGER NOT NULL, owner TEXT NOT NULL, created INTEGER NOT NULL);
-      CREATE TABLE IF NOT EXISTS managed_processes (id TEXT PRIMARY KEY, owner TEXT NOT NULL, run_id TEXT, pid INTEGER, resources TEXT NOT NULL, status TEXT NOT NULL, created INTEGER NOT NULL, updated INTEGER NOT NULL);
+      CREATE TABLE IF NOT EXISTS managed_processes (id TEXT PRIMARY KEY, owner TEXT NOT NULL, run_id TEXT, pid INTEGER, resources TEXT NOT NULL, status TEXT NOT NULL, created INTEGER NOT NULL, updated INTEGER NOT NULL, windows_job TEXT);
       CREATE TABLE IF NOT EXISTS external_sessions (id TEXT PRIMARY KEY, owner TEXT NOT NULL, run_id TEXT, kind TEXT NOT NULL, resources TEXT NOT NULL, metadata TEXT NOT NULL, status TEXT NOT NULL, updated INTEGER NOT NULL);
       CREATE TABLE IF NOT EXISTS events (id INTEGER PRIMARY KEY AUTOINCREMENT, run_id TEXT, kind TEXT NOT NULL, data TEXT NOT NULL, created INTEGER NOT NULL);`);
     const versions = this.db
@@ -116,7 +118,14 @@ export class StateStore {
       return (error as NodeJS.ErrnoException).code === "EPERM";
     }
   }
-  private processAlive(pid: number): boolean {
+  private processAlive(pid: number, windowsJob?: string | null): boolean {
+    if (windowsJob) {
+      try {
+        return windowsJobAlive(windowsJob);
+      } catch {
+        return true;
+      } // A failed OS query never authorizes resource reuse.
+    }
     return (
       this.alive(pid) || (process.platform !== "win32" && this.alive(-pid))
     );
@@ -138,7 +147,7 @@ export class StateStore {
           "At most 64 owned or unresolved native processes",
         );
         this.db
-          .prepare("INSERT INTO managed_processes VALUES (?,?,?,?,?,?,?,?)")
+          .prepare("INSERT INTO managed_processes VALUES (?,?,?,?,?,?,?,?,?)")
           .run(
             id,
             this.owner,
@@ -148,25 +157,32 @@ export class StateStore {
             "starting",
             now,
             now,
+            null,
           );
       })
       .immediate();
     return {
-      spawned: (pid: number | null) => {
+      spawned: (pid: number | null, windowsJob?: string) => {
         this.db
           .prepare(
-            "UPDATE managed_processes SET pid=?,status=?,updated=? WHERE id=?",
+            "UPDATE managed_processes SET pid=?,windows_job=?,status=?,updated=? WHERE id=?",
           )
-          .run(pid, pid === null ? "exited" : "running", Date.now(), id);
+          .run(
+            pid,
+            windowsJob ?? null,
+            pid === null ? "exited" : "running",
+            Date.now(),
+            id,
+          );
       },
       closed: () => {
         const row = this.db
-          .prepare("SELECT pid FROM managed_processes WHERE id=?")
-          .get(id) as { pid: number | null };
+          .prepare("SELECT pid,windows_job FROM managed_processes WHERE id=?")
+          .get(id) as { pid: number | null; windows_job: string | null };
         this.db
           .prepare("UPDATE managed_processes SET status=?,updated=? WHERE id=?")
           .run(
-            row.pid !== null && this.processAlive(row.pid)
+            row.pid !== null && this.processAlive(row.pid, row.windows_job)
               ? "unconfirmed"
               : "exited",
             Date.now(),
@@ -323,7 +339,10 @@ export class StateStore {
   }
   reconcile(): void {
     for (const child of this.processGuards())
-      if (child.pid !== null && !this.processAlive(child.pid))
+      if (
+        child.pid !== null &&
+        !this.processAlive(child.pid, child.windows_job)
+      )
         this.db
           .prepare(
             "UPDATE managed_processes SET status='exited',updated=? WHERE id=?",

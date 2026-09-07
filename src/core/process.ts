@@ -3,6 +3,8 @@ import fs from "node:fs";
 import { performance } from "node:perf_hooks";
 import { setTimeout as delay } from "node:timers/promises";
 import { ToolError } from "./errors.js";
+import { fileURLToPath } from "node:url";
+import { WindowsJob } from "./windows-job.js";
 
 export interface Command {
   executable: string;
@@ -60,7 +62,7 @@ export interface ProcessObservation {
   }) => unknown;
 }
 interface ProcessTracker {
-  spawned(pid: number | null): void;
+  spawned(pid: number | null, windowsJob?: string): void;
   closed(): void;
   unconfirmed(): void;
 }
@@ -79,6 +81,7 @@ export class ProcessService {
       done: Promise<void>;
       terminating?: Promise<void>;
       tracking?: ProcessTracker;
+      job?: WindowsJob;
     }
   >();
   get size(): number {
@@ -88,6 +91,8 @@ export class ProcessService {
     return this.sessions.size;
   }
   private groupAlive(child: ChildProcess): boolean {
+    const job = this.lifecycle.get(child)?.job;
+    if (job) return job.alive();
     if (process.platform === "win32" || !child.pid) return false;
     try {
       process.kill(-child.pid, 0);
@@ -96,39 +101,95 @@ export class ProcessService {
       return (error as NodeJS.ErrnoException).code === "EPERM";
     }
   }
-  spawn(command: Command, processId?: string): ChildProcess {
+  spawn(
+    command: Command,
+    processId?: string,
+    keepDescendants = false,
+  ): ChildProcess {
     const tracking = this.observer?.track?.(processId);
     let child: ChildProcess;
+    let job: WindowsJob | undefined;
     try {
-      child = spawn(command.executable, command.args, {
-        cwd: command.cwd,
-        env: command.env ?? process.env,
-        stdio: "pipe",
-        windowsHide: true,
-        detached: process.platform !== "win32",
-      });
+      if (process.platform === "win32") job = new WindowsJob();
+      const bootstrapEnv = { ...(command.env ?? process.env) };
+      // Only the captured SDK command receives user Node configuration, after
+      // containment. Bootstrap preload hooks must not run before assignment.
+      for (const key of Object.keys(bootstrapEnv))
+        if (["NODE_OPTIONS", "NODE_PATH"].includes(key.toUpperCase()))
+          delete bootstrapEnv[key];
+      child = spawn(
+        job ? process.execPath : command.executable,
+        job
+          ? [fileURLToPath(new URL("./windows-bootstrap.js", import.meta.url))]
+          : command.args,
+        {
+          cwd: command.cwd,
+          env: job ? bootstrapEnv : (command.env ?? process.env),
+          stdio: job ? ["pipe", "pipe", "pipe", "ipc"] : "pipe",
+          windowsHide: true,
+          detached: process.platform !== "win32",
+        },
+      );
     } catch (error) {
+      job?.close();
       tracking?.spawned(null);
       throw error;
     }
     const done = Promise.withResolvers<void>(),
-      state = { closed: false, done: done.promise, tracking };
+      state = { closed: false, done: done.promise, tracking, job };
     this.lifecycle.set(child, state);
     this.children.add(child);
     child.on("error", () => {});
     child.once("close", () => {
       state.closed = true;
-      if (!this.groupAlive(child)) this.children.delete(child);
       try {
-        tracking?.closed();
+        if (!this.groupAlive(child)) {
+          this.children.delete(child);
+          job?.close();
+          tracking?.closed();
+        } else tracking?.unconfirmed();
       } catch {
         /* The durable active row remains a conservative recovery guard. */
+        try {
+          tracking?.unconfirmed();
+        } catch {}
       }
       done.resolve();
     });
+    child.once("exit", () => {
+      // Descendants may still hold stdout/stderr after their launcher exits;
+      // terminate the owned job before waiting for stream close, unless this
+      // is an explicit long-lived session (for example an emulator launcher).
+      if (job && !keepDescendants) {
+        try {
+          job.terminate();
+        } catch (error) {
+          child.emit("error", error);
+        }
+      }
+    });
     try {
-      tracking?.spawned(child.pid ?? null);
+      if (job && child.pid) job.assign(child.pid);
+      tracking?.spawned(child.pid ?? null, job?.name);
+      if (job && child.pid)
+        child.send(
+          {
+            executable: command.executable,
+            args: command.args,
+            cwd: command.cwd,
+            env: command.env ?? process.env,
+          },
+          (error) => {
+            if (error) {
+              child.emit("error", error);
+              void this.terminate(child).catch(() => {});
+            }
+          },
+        );
     } catch (error) {
+      // Before assignment/dispatch there is no SDK child to recover. Stopping
+      // the bootstrap itself also covers a failed OpenProcess/Assign call.
+      child.kill();
       void this.terminate(child).catch(() => {});
       throw error;
     }
@@ -141,12 +202,7 @@ export class ProcessService {
     const kill = (signal: NodeJS.Signals) => {
       if (!child.pid) return;
       if (process.platform === "win32") {
-        const killer = spawn(
-          "taskkill.exe",
-          ["/pid", String(child.pid), "/t", "/f"],
-          { windowsHide: true, stdio: "ignore" },
-        );
-        killer.on("error", () => child.kill(signal));
+        state.job?.terminate();
       } else {
         try {
           process.kill(-child.pid, signal);
@@ -156,17 +212,21 @@ export class ProcessService {
       }
     };
     state.terminating = (async () => {
-      kill("SIGTERM");
-      const escalation = setTimeout(() => kill("SIGKILL"), 1500),
+      const escalation =
+          process.platform === "win32"
+            ? undefined
+            : setTimeout(() => kill("SIGKILL"), 1500),
         polling = new AbortController();
       let deadline: NodeJS.Timeout | undefined;
       try {
+        kill("SIGTERM");
         await Promise.race([
           (async () => {
             await state.done;
             while (this.groupAlive(child))
               await delay(25, undefined, { signal: polling.signal });
             this.children.delete(child);
+            state.job?.close();
             state.tracking?.closed();
           })(),
           new Promise<never>((_, reject) => {
@@ -184,7 +244,11 @@ export class ProcessService {
         ]);
       } catch (error) {
         state.tracking?.unconfirmed();
-        throw error;
+        throw new ToolError(
+          "CANCEL_UNCONFIRMED",
+          "Owned processes did not confirm exit",
+          { cause: String(error) },
+        );
       } finally {
         clearTimeout(escalation);
         clearTimeout(deadline);
@@ -213,7 +277,11 @@ export class ProcessService {
           value,
         );
     try {
-      child = this.spawn(command, observation?.processId);
+      child = this.spawn(
+        command,
+        observation?.processId,
+        options.keepDescendants,
+      );
     } catch (error) {
       observation?.finish({
         exitCode: null,

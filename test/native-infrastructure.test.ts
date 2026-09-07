@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { once } from "node:events";
+import { spawn } from "node:child_process";
 import { setTimeout as delay } from "node:timers/promises";
 import { atomicWrite, privateDirectory } from "../src/core/files.js";
 import { StateStore } from "../src/core/store.js";
@@ -229,20 +230,23 @@ test("a crashed log owner publishes incomplete actual bytes on restart", async (
 });
 
 test("a surviving native child blocks resource reuse after its MCP owner dies", async () => {
-  const root = temporary(),
-    processes = new ProcessService();
+  const root = temporary();
   let orphan: number | undefined, store: StateStore | undefined;
+  let owner: ReturnType<typeof spawn> | undefined;
   try {
-    const owner = processes.spawn({
-      executable: process.execPath,
-      args: [
+    // This fixture explicitly simulates an external native process outside the
+    // new managed Windows job; wrapping it in ProcessService would contain it.
+    owner = spawn(
+      process.execPath,
+      [
         fileURLToPath(
           new URL("./fixtures/native-state-peer.js", import.meta.url),
         ),
         root,
         "orphan",
       ],
-    });
+      { stdio: "pipe", windowsHide: true },
+    );
     owner.stdout?.resume();
     owner.stderr?.resume();
     await until(() => fs.existsSync(path.join(root, "ready")));
@@ -280,7 +284,7 @@ test("a surviving native child blocks resource reuse after its MCP owner dies", 
           "SIGKILL",
         );
       } catch {}
-    await processes.close();
+    owner?.kill("SIGKILL");
     store?.close();
     fs.rmSync(root, { recursive: true, force: true });
   }

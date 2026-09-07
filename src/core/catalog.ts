@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { createHash } from "node:crypto";
+import { protocolVersion } from "./config.js";
 import {
   tools,
   workflowInputs,
@@ -69,7 +70,7 @@ export const workflowMetadata: Record<
 };
 export function workflowCatalog(id?: WorkflowName) {
   return {
-    protocol: "native-1",
+    protocol: protocolVersion,
     workflows: (id ? [id] : workflowNames).map((name) => ({
       id: name,
       ...workflowMetadata[name],
