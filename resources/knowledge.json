@@ -1,0 +1,1106 @@
+[
+  {
+    "id": "arkts-error-fixes/any_type_errors",
+    "file": "knowledge/arkts-error-fixes/any_type_errors.md",
+    "title": "Any Type Errors",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/any_type_errors.md",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "5bfbfdc685f076c54e7f186e64cce852884f459490698c1e92beefb476395bef",
+    "kind": "case",
+    "summary": "Upstream arkts-error-fixes reference: Any Type Errors",
+    "applicability": "ArkTS language and API guidance. Compiler and target API version applicability must be checked against the selected SDK; static advice is not compilation proof.",
+    "related_ids": [
+      "arkts-error-fixes/examples/AnyTypeError"
+    ]
+  },
+  {
+    "id": "arkts-error-fixes/appstorage_errors",
+    "file": "knowledge/arkts-error-fixes/appstorage_errors.md",
+    "title": "AppStorage Type Errors",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/appstorage_errors.md",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "40bce616251feebc3211760dc77bfdfee6349a57b10125573e43201a5d1b38fc",
+    "kind": "case",
+    "summary": "Upstream arkts-error-fixes reference: AppStorage Type Errors",
+    "applicability": "ArkTS language and API guidance. Compiler and target API version applicability must be checked against the selected SDK; static advice is not compilation proof.",
+    "related_ids": [
+      "arkts-error-fixes/examples/AppStorageError"
+    ]
+  },
+  {
+    "id": "arkts-error-fixes/arrow_function_conversion_errors",
+    "file": "knowledge/arkts-error-fixes/arrow_function_conversion_errors.md",
+    "title": "Function.bind 错误",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/arrow_function_conversion_errors.md",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "8e80f29d564fb803e362f0ff8def5c80f9541b4590780f9667cdc17dd5ffed0e",
+    "kind": "case",
+    "summary": "Upstream arkts-error-fixes reference: Function.bind 错误",
+    "applicability": "ArkTS language and API guidance. Compiler and target API version applicability must be checked against the selected SDK; static advice is not compilation proof.",
+    "related_ids": [
+      "arkts-error-fixes/examples/ArrowFunctionConversionError"
+    ]
+  },
+  {
+    "id": "arkts-error-fixes/avoid_area_type_errors",
+    "file": "knowledge/arkts-error-fixes/avoid_area_type_errors.md",
+    "title": "AvoidArea Type Error",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/avoid_area_type_errors.md",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "1cf8184731916fee2c98a1fbe838f116663b8687af1a7c3970393650657c3b54",
+    "kind": "case",
+    "summary": "Upstream arkts-error-fixes reference: AvoidArea Type Error",
+    "applicability": "ArkTS language and API guidance. Compiler and target API version applicability must be checked against the selected SDK; static advice is not compilation proof.",
+    "related_ids": [
+      "arkts-error-fixes/examples/AvoidAreaTypeError"
+    ]
+  },
+  {
+    "id": "arkts-error-fixes/breakpoint_type_errors",
+    "file": "knowledge/arkts-error-fixes/breakpoint_type_errors.md",
+    "title": "BreakpointType 类型错误",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/breakpoint_type_errors.md",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "b9bbc32dc1776ff6356671a39b0722c0058259b31238f8e15ed7961183ec952b",
+    "kind": "case",
+    "summary": "Upstream arkts-error-fixes reference: BreakpointType 类型错误",
+    "applicability": "ArkTS language and API guidance. Compiler and target API version applicability must be checked against the selected SDK; static advice is not compilation proof.",
+    "related_ids": [
+      "arkts-error-fixes/examples/BreakpointTypeError"
+    ]
+  },
+  {
+    "id": "arkts-error-fixes/catch_clause_type_errors",
+    "file": "knowledge/arkts-error-fixes/catch_clause_type_errors.md",
+    "title": "Catch Clause Variable Type Annotation Error",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/catch_clause_type_errors.md",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "3600c3effc4b77be8d6945cefd21eca91441245153bb97f20da53d12f273a897",
+    "kind": "case",
+    "summary": "Upstream arkts-error-fixes reference: Catch Clause Variable Type Annotation Error",
+    "applicability": "ArkTS language and API guidance. Compiler and target API version applicability must be checked against the selected SDK; static advice is not compilation proof.",
+    "related_ids": [
+      "arkts-error-fixes/examples/CatchClauseTypeError"
+    ]
+  },
+  {
+    "id": "arkts-error-fixes/color_consistency_errors",
+    "file": "knowledge/arkts-error-fixes/color_consistency_errors.md",
+    "title": "颜色一致性错误解决方案",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/color_consistency_errors.md",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "4a31348e7215271e58d78e4d7f1fb4a9f83555e49525843177dbbfdb4800afe9",
+    "kind": "case",
+    "summary": "Upstream arkts-error-fixes reference: 颜色一致性错误解决方案",
+    "applicability": "ArkTS language and API guidance. Compiler and target API version applicability must be checked against the selected SDK; static advice is not compilation proof.",
+    "related_ids": [
+      "arkts-error-fixes/examples/ColorConsistencyError"
+    ]
+  },
+  {
+    "id": "arkts-error-fixes/color_property_errors",
+    "file": "knowledge/arkts-error-fixes/color_property_errors.md",
+    "title": "Color Property Errors",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/color_property_errors.md",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "4fd9962d5a9aa0ddcf15df0cbdb1cb24794233039091a8d94d2e571f1d606085",
+    "kind": "case",
+    "summary": "Upstream arkts-error-fixes reference: Color Property Errors",
+    "applicability": "ArkTS language and API guidance. Compiler and target API version applicability must be checked against the selected SDK; static advice is not compilation proof.",
+    "related_ids": [
+      "arkts-error-fixes/examples/ColorPropertyError"
+    ]
+  },
+  {
+    "id": "arkts-error-fixes/context_type_errors",
+    "file": "knowledge/arkts-error-fixes/context_type_errors.md",
+    "title": "Context 类型错误解决方案",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/context_type_errors.md",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "77b965502ebc2647eb887b91683accfc5d3796100d1cd9fcb33165b780e00181",
+    "kind": "case",
+    "summary": "Upstream arkts-error-fixes reference: Context 类型错误解决方案",
+    "applicability": "ArkTS language and API guidance. Compiler and target API version applicability must be checked against the selected SDK; static advice is not compilation proof.",
+    "related_ids": [
+      "arkts-error-fixes/examples/ContextTypeError"
+    ]
+  },
+  {
+    "id": "arkts-error-fixes/decorator_state_errors",
+    "file": "knowledge/arkts-error-fixes/decorator_state_errors.md",
+    "title": "@State 装饰器错误",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/decorator_state_errors.md",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "09748e8a82b35f4e9a942f6244b8bbdd63b2c3f09b266f40a635100193ffba58",
+    "kind": "case",
+    "summary": "Upstream arkts-error-fixes reference: @State 装饰器错误",
+    "applicability": "ArkTS language and API guidance. Compiler and target API version applicability must be checked against the selected SDK; static advice is not compilation proof.",
+    "related_ids": [
+      "arkts-error-fixes/examples/DecoratorStateError"
+    ]
+  },
+  {
+    "id": "arkts-error-fixes/display_listener_type_errors",
+    "file": "knowledge/arkts-error-fixes/display_listener_type_errors.md",
+    "title": "Display Listener Type Errors",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/display_listener_type_errors.md",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "142579cbc2183e05295c3d3c32bdd7b55eba9788513da1da5c20a76061d5c945",
+    "kind": "case",
+    "summary": "Upstream arkts-error-fixes reference: Display Listener Type Errors",
+    "applicability": "ArkTS language and API guidance. Compiler and target API version applicability must be checked against the selected SDK; static advice is not compilation proof.",
+    "related_ids": [
+      "arkts-error-fixes/examples/DisplayListenerTypeError"
+    ]
+  },
+  {
+    "id": "arkts-error-fixes/duplicate_entry_errors",
+    "file": "knowledge/arkts-error-fixes/duplicate_entry_errors.md",
+    "title": "多个 @Entry 装饰器错误",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/duplicate_entry_errors.md",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "e7c2a1df9baf8230e6a753c360921fce88ce44b9258acee72ab2991c79095f49",
+    "kind": "case",
+    "summary": "Upstream arkts-error-fixes reference: 多个 @Entry 装饰器错误",
+    "applicability": "ArkTS language and API guidance. Compiler and target API version applicability must be checked against the selected SDK; static advice is not compilation proof.",
+    "related_ids": [
+      "arkts-error-fixes/examples/DuplicateEntryError"
+    ]
+  },
+  {
+    "id": "arkts-error-fixes/esobject_type_errors",
+    "file": "knowledge/arkts-error-fixes/esobject_type_errors.md",
+    "title": "ESObject 类型限制错误",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/esobject_type_errors.md",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "1cfb1e5b2198df38e4ab9c1037449a8d111c8efed91a4763b2f9067f410af63a",
+    "kind": "case",
+    "summary": "Upstream arkts-error-fixes reference: ESObject 类型限制错误",
+    "applicability": "ArkTS language and API guidance. Compiler and target API version applicability must be checked against the selected SDK; static advice is not compilation proof.",
+    "related_ids": [
+      "arkts-error-fixes/examples/ESObjectTypeError"
+    ]
+  },
+  {
+    "id": "arkts-error-fixes/examples/AnyTypeError",
+    "file": "knowledge/arkts-error-fixes/examples/AnyTypeError.ets",
+    "title": "AnyTypeError",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-error-fixes/assets/AnyTypeError.ets",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "e7e11f7245fe4fe7c7be05f8ffdc2f71ff5600536f10a3e4f883709546005e62",
+    "kind": "example",
+    "summary": "Upstream ArkTS error/corrected code example: AnyTypeError",
+    "applicability": "Illustrative ArkTS examples, including intentionally invalid code. Not a complete application or proof of compatibility with every target API.",
+    "related_ids": []
+  },
+  {
+    "id": "arkts-error-fixes/examples/AppStorageError",
+    "file": "knowledge/arkts-error-fixes/examples/AppStorageError.ets",
+    "title": "AppStorageError",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-error-fixes/assets/AppStorageError.ets",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "2984caa5096c24e0aa84f298f110062c5a3460063bf29a84f9bf950acf1f1c30",
+    "kind": "example",
+    "summary": "Upstream ArkTS error/corrected code example: AppStorageError",
+    "applicability": "Illustrative ArkTS examples, including intentionally invalid code. Not a complete application or proof of compatibility with every target API.",
+    "related_ids": []
+  },
+  {
+    "id": "arkts-error-fixes/examples/ArrowFunctionConversionError",
+    "file": "knowledge/arkts-error-fixes/examples/ArrowFunctionConversionError.ets",
+    "title": "ArrowFunctionConversionError",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-error-fixes/assets/ArrowFunctionConversionError.ets",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "02e919c96aade14d1fd15cc978a48fc7680fde9ff1a3da0c46e877aecf64b2a2",
+    "kind": "example",
+    "summary": "Upstream ArkTS error/corrected code example: ArrowFunctionConversionError",
+    "applicability": "Illustrative ArkTS examples, including intentionally invalid code. Not a complete application or proof of compatibility with every target API.",
+    "related_ids": []
+  },
+  {
+    "id": "arkts-error-fixes/examples/AvoidAreaTypeError",
+    "file": "knowledge/arkts-error-fixes/examples/AvoidAreaTypeError.ets",
+    "title": "AvoidAreaTypeError",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-error-fixes/assets/AvoidAreaTypeError.ets",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "1541083328bede80fce9caa9832277de5c074384bcaaceb47b837c33adb09f13",
+    "kind": "example",
+    "summary": "Upstream ArkTS error/corrected code example: AvoidAreaTypeError",
+    "applicability": "Illustrative ArkTS examples, including intentionally invalid code. Not a complete application or proof of compatibility with every target API.",
+    "related_ids": []
+  },
+  {
+    "id": "arkts-error-fixes/examples/BreakpointTypeError",
+    "file": "knowledge/arkts-error-fixes/examples/BreakpointTypeError.ets",
+    "title": "BreakpointTypeError",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-error-fixes/assets/BreakpointTypeError.ets",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "c257f8b623706f8072059901d6f9a03572fe3498f0bee56a6314bd2bdc8b4ec6",
+    "kind": "example",
+    "summary": "Upstream ArkTS error/corrected code example: BreakpointTypeError",
+    "applicability": "Illustrative ArkTS examples, including intentionally invalid code. Not a complete application or proof of compatibility with every target API.",
+    "related_ids": []
+  },
+  {
+    "id": "arkts-error-fixes/examples/CatchClauseTypeError",
+    "file": "knowledge/arkts-error-fixes/examples/CatchClauseTypeError.ets",
+    "title": "CatchClauseTypeError",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-error-fixes/assets/CatchClauseTypeError.ets",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "e084e27f2d07ad402e8b391ae92afed3943452965c9e7f874ef5c3fb596c8ef6",
+    "kind": "example",
+    "summary": "Upstream ArkTS error/corrected code example: CatchClauseTypeError",
+    "applicability": "Illustrative ArkTS examples, including intentionally invalid code. Not a complete application or proof of compatibility with every target API.",
+    "related_ids": []
+  },
+  {
+    "id": "arkts-error-fixes/examples/ColorConsistencyError",
+    "file": "knowledge/arkts-error-fixes/examples/ColorConsistencyError.ets",
+    "title": "ColorConsistencyError",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-error-fixes/assets/ColorConsistencyError.ets",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "4965a04a46b5f27bec4f11fee294226f4a65dd721f9c63f17c268f3f67c2071e",
+    "kind": "example",
+    "summary": "Upstream ArkTS error/corrected code example: ColorConsistencyError",
+    "applicability": "Illustrative ArkTS examples, including intentionally invalid code. Not a complete application or proof of compatibility with every target API.",
+    "related_ids": []
+  },
+  {
+    "id": "arkts-error-fixes/examples/ColorPropertyError",
+    "file": "knowledge/arkts-error-fixes/examples/ColorPropertyError.ets",
+    "title": "ColorPropertyError",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-error-fixes/assets/ColorPropertyError.ets",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "425930364d23e17942e0fb4c76f1208f26519f6e77c4b2c49ad92f28d541f1fe",
+    "kind": "example",
+    "summary": "Upstream ArkTS error/corrected code example: ColorPropertyError",
+    "applicability": "Illustrative ArkTS examples, including intentionally invalid code. Not a complete application or proof of compatibility with every target API.",
+    "related_ids": []
+  },
+  {
+    "id": "arkts-error-fixes/examples/ContextTypeError",
+    "file": "knowledge/arkts-error-fixes/examples/ContextTypeError.ets",
+    "title": "ContextTypeError",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-error-fixes/assets/ContextTypeError.ets",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "00a5f87edf367b54840464a0d7dce3a68f2395e1316d94171a687c4f1443407b",
+    "kind": "example",
+    "summary": "Upstream ArkTS error/corrected code example: ContextTypeError",
+    "applicability": "Illustrative ArkTS examples, including intentionally invalid code. Not a complete application or proof of compatibility with every target API.",
+    "related_ids": []
+  },
+  {
+    "id": "arkts-error-fixes/examples/DecoratorStateError",
+    "file": "knowledge/arkts-error-fixes/examples/DecoratorStateError.ets",
+    "title": "DecoratorStateError",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-error-fixes/assets/DecoratorStateError.ets",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "7b83d83621bc8c1453c1a8a491958c157caed9c98aa02ca84b0ed2571549e4a8",
+    "kind": "example",
+    "summary": "Upstream ArkTS error/corrected code example: DecoratorStateError",
+    "applicability": "Illustrative ArkTS examples, including intentionally invalid code. Not a complete application or proof of compatibility with every target API.",
+    "related_ids": []
+  },
+  {
+    "id": "arkts-error-fixes/examples/DisplayListenerTypeError",
+    "file": "knowledge/arkts-error-fixes/examples/DisplayListenerTypeError.ets",
+    "title": "DisplayListenerTypeError",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-error-fixes/assets/DisplayListenerTypeError.ets",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "86f9fd7063fbc430b09485edb459ce0f1b2c3c8faaac5f446983928341bcbcbd",
+    "kind": "example",
+    "summary": "Upstream ArkTS error/corrected code example: DisplayListenerTypeError",
+    "applicability": "Illustrative ArkTS examples, including intentionally invalid code. Not a complete application or proof of compatibility with every target API.",
+    "related_ids": []
+  },
+  {
+    "id": "arkts-error-fixes/examples/DuplicateEntryError",
+    "file": "knowledge/arkts-error-fixes/examples/DuplicateEntryError.ets",
+    "title": "DuplicateEntryError",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-error-fixes/assets/DuplicateEntryError.ets",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "2c1b691928904fcb0288b927393163ba54f8cfc15020db8caebb2a52b178ce3b",
+    "kind": "example",
+    "summary": "Upstream ArkTS error/corrected code example: DuplicateEntryError",
+    "applicability": "Illustrative ArkTS examples, including intentionally invalid code. Not a complete application or proof of compatibility with every target API.",
+    "related_ids": []
+  },
+  {
+    "id": "arkts-error-fixes/examples/ESObjectTypeError",
+    "file": "knowledge/arkts-error-fixes/examples/ESObjectTypeError.ets",
+    "title": "ESObjectTypeError",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-error-fixes/assets/ESObjectTypeError.ets",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "1514fbde7418a405495de1ff74cddf19170c228ef4c741e4390cecaa4ed086d7",
+    "kind": "example",
+    "summary": "Upstream ArkTS error/corrected code example: ESObjectTypeError",
+    "applicability": "Illustrative ArkTS examples, including intentionally invalid code. Not a complete application or proof of compatibility with every target API.",
+    "related_ids": []
+  },
+  {
+    "id": "arkts-error-fixes/examples/FontColorPropertyError",
+    "file": "knowledge/arkts-error-fixes/examples/FontColorPropertyError.ets",
+    "title": "FontColorPropertyError",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-error-fixes/assets/FontColorPropertyError.ets",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "69e616c2391242282254f56c2e2ed3e682049b541e97ae2aa29ae30aaf69c595",
+    "kind": "example",
+    "summary": "Upstream ArkTS error/corrected code example: FontColorPropertyError",
+    "applicability": "Illustrative ArkTS examples, including intentionally invalid code. Not a complete application or proof of compatibility with every target API.",
+    "related_ids": []
+  },
+  {
+    "id": "arkts-error-fixes/examples/FunctionReturnTypeError",
+    "file": "knowledge/arkts-error-fixes/examples/FunctionReturnTypeError.ets",
+    "title": "FunctionReturnTypeError",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-error-fixes/assets/FunctionReturnTypeError.ets",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "3f0cefbb53735038f60fa912238fd440eef3548adc3a5fc314fed7bd8a967d2e",
+    "kind": "example",
+    "summary": "Upstream ArkTS error/corrected code example: FunctionReturnTypeError",
+    "applicability": "Illustrative ArkTS examples, including intentionally invalid code. Not a complete application or proof of compatibility with every target API.",
+    "related_ids": []
+  },
+  {
+    "id": "arkts-error-fixes/examples/IDataSourceError",
+    "file": "knowledge/arkts-error-fixes/examples/IDataSourceError.ets",
+    "title": "IDataSourceError",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-error-fixes/assets/IDataSourceError.ets",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "102e63da47a2a352a6fe0cfee467e1fe623e1783491dbd43c912b827b932c7e2",
+    "kind": "example",
+    "summary": "Upstream ArkTS error/corrected code example: IDataSourceError",
+    "applicability": "Illustrative ArkTS examples, including intentionally invalid code. Not a complete application or proof of compatibility with every target API.",
+    "related_ids": []
+  },
+  {
+    "id": "arkts-error-fixes/examples/ImplementationNotAllowedError",
+    "file": "knowledge/arkts-error-fixes/examples/ImplementationNotAllowedError.ets",
+    "title": "ImplementationNotAllowedError",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-error-fixes/assets/ImplementationNotAllowedError.ets",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "d003a335807c0cefbc8614953f2a34ddc03994d2202cf809de4d8f41b8d3186e",
+    "kind": "example",
+    "summary": "Upstream ArkTS error/corrected code example: ImplementationNotAllowedError",
+    "applicability": "Illustrative ArkTS examples, including intentionally invalid code. Not a complete application or proof of compatibility with every target API.",
+    "related_ids": []
+  },
+  {
+    "id": "arkts-error-fixes/examples/InterfaceMethodSignatureError",
+    "file": "knowledge/arkts-error-fixes/examples/InterfaceMethodSignatureError.ets",
+    "title": "InterfaceMethodSignatureError",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-error-fixes/assets/InterfaceMethodSignatureError.ets",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "040063f3942b3086f83478c267086dca450e7e085facf636b1ed27737bd1e115",
+    "kind": "example",
+    "summary": "Upstream ArkTS error/corrected code example: InterfaceMethodSignatureError",
+    "applicability": "Illustrative ArkTS examples, including intentionally invalid code. Not a complete application or proof of compatibility with every target API.",
+    "related_ids": []
+  },
+  {
+    "id": "arkts-error-fixes/examples/NotificationError",
+    "file": "knowledge/arkts-error-fixes/examples/NotificationError.ets",
+    "title": "NotificationError",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-error-fixes/assets/NotificationError.ets",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "a061f54be935220cca48de64a1d1fdbdd8cbd04d10d71ed1381d37c331c4b3c5",
+    "kind": "example",
+    "summary": "Upstream ArkTS error/corrected code example: NotificationError",
+    "applicability": "Illustrative ArkTS examples, including intentionally invalid code. Not a complete application or proof of compatibility with every target API.",
+    "related_ids": []
+  },
+  {
+    "id": "arkts-error-fixes/examples/ObjectLiteralInterfaceError",
+    "file": "knowledge/arkts-error-fixes/examples/ObjectLiteralInterfaceError.ets",
+    "title": "ObjectLiteralInterfaceError",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-error-fixes/assets/ObjectLiteralInterfaceError.ets",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "f0c803daad0ed19ab4007f26b3b416da91a2b1a441a552e7d63bf7f9c5d55295",
+    "kind": "example",
+    "summary": "Upstream ArkTS error/corrected code example: ObjectLiteralInterfaceError",
+    "applicability": "Illustrative ArkTS examples, including intentionally invalid code. Not a complete application or proof of compatibility with every target API.",
+    "related_ids": []
+  },
+  {
+    "id": "arkts-error-fixes/examples/ObjectLiteralTypeError",
+    "file": "knowledge/arkts-error-fixes/examples/ObjectLiteralTypeError.ets",
+    "title": "ObjectLiteralTypeError",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-error-fixes/assets/ObjectLiteralTypeError.ets",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "806772cf746ed749d1054b43e693a45dcea0c62628ff53f1fac1f069bd03470b",
+    "kind": "example",
+    "summary": "Upstream ArkTS error/corrected code example: ObjectLiteralTypeError",
+    "applicability": "Illustrative ArkTS examples, including intentionally invalid code. Not a complete application or proof of compatibility with every target API.",
+    "related_ids": []
+  },
+  {
+    "id": "arkts-error-fixes/examples/ObjectSpreadError",
+    "file": "knowledge/arkts-error-fixes/examples/ObjectSpreadError.ets",
+    "title": "ObjectSpreadError",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-error-fixes/assets/ObjectSpreadError.ets",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "024e69dd57fce32af3b5c04dbe9ca8e150a91a4dd8472c569ad63daf1aad3477",
+    "kind": "example",
+    "summary": "Upstream ArkTS error/corrected code example: ObjectSpreadError",
+    "applicability": "Illustrative ArkTS examples, including intentionally invalid code. Not a complete application or proof of compatibility with every target API.",
+    "related_ids": []
+  },
+  {
+    "id": "arkts-error-fixes/examples/PossiblyNullError",
+    "file": "knowledge/arkts-error-fixes/examples/PossiblyNullError.ets",
+    "title": "PossiblyNullError",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-error-fixes/assets/PossiblyNullError.ets",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "2badc43120e2b78d0836083f1ed98fe63f86e5e72d816930100c2f86ea34af09",
+    "kind": "example",
+    "summary": "Upstream ArkTS error/corrected code example: PossiblyNullError",
+    "applicability": "Illustrative ArkTS examples, including intentionally invalid code. Not a complete application or proof of compatibility with every target API.",
+    "related_ids": []
+  },
+  {
+    "id": "arkts-error-fixes/examples/ResourceConversionError",
+    "file": "knowledge/arkts-error-fixes/examples/ResourceConversionError.ets",
+    "title": "ResourceConversionError",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-error-fixes/assets/ResourceConversionError.ets",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "163975bc288cf4fd00e4f460393b801331583e4daa6d608665e65101bc509074",
+    "kind": "example",
+    "summary": "Upstream ArkTS error/corrected code example: ResourceConversionError",
+    "applicability": "Illustrative ArkTS examples, including intentionally invalid code. Not a complete application or proof of compatibility with every target API.",
+    "related_ids": []
+  },
+  {
+    "id": "arkts-error-fixes/examples/StandaloneFunctionContext",
+    "file": "knowledge/arkts-error-fixes/examples/StandaloneFunctionContext.ets",
+    "title": "StandaloneFunctionContext",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-error-fixes/assets/StandaloneFunctionContext.ets",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "9cf4555e76ef14f4c1b44d2d44d129d423b676a131740ba55a0484841188bfa9",
+    "kind": "example",
+    "summary": "Upstream ArkTS error/corrected code example: StandaloneFunctionContext",
+    "applicability": "Illustrative ArkTS examples, including intentionally invalid code. Not a complete application or proof of compatibility with every target API.",
+    "related_ids": []
+  },
+  {
+    "id": "arkts-error-fixes/examples/StandaloneFunctionError",
+    "file": "knowledge/arkts-error-fixes/examples/StandaloneFunctionError.ets",
+    "title": "StandaloneFunctionError",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-error-fixes/assets/StandaloneFunctionError.ets",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "2c76b1dfdc3b50ac6af5d2380316cbe4d91d29f63e7909ba027caa7b6e2d8685",
+    "kind": "example",
+    "summary": "Upstream ArkTS error/corrected code example: StandaloneFunctionError",
+    "applicability": "Illustrative ArkTS examples, including intentionally invalid code. Not a complete application or proof of compatibility with every target API.",
+    "related_ids": []
+  },
+  {
+    "id": "arkts-error-fixes/examples/StorageLinkDefaultError",
+    "file": "knowledge/arkts-error-fixes/examples/StorageLinkDefaultError.ets",
+    "title": "StorageLinkDefaultError",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-error-fixes/assets/StorageLinkDefaultError.ets",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "286b44baa5f46c0029d73fad6fc58556faf6e8eeeb723dcc8fbf50db9959a02c",
+    "kind": "example",
+    "summary": "Upstream ArkTS error/corrected code example: StorageLinkDefaultError",
+    "applicability": "Illustrative ArkTS examples, including intentionally invalid code. Not a complete application or proof of compatibility with every target API.",
+    "related_ids": []
+  },
+  {
+    "id": "arkts-error-fixes/examples/TitleButtonRectTypeError",
+    "file": "knowledge/arkts-error-fixes/examples/TitleButtonRectTypeError.ets",
+    "title": "TitleButtonRectTypeError",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-error-fixes/assets/TitleButtonRectTypeError.ets",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "80424784263ebd7ba037f413045c8dd25c62fd28f78c85e1cf37cb96f5aec018",
+    "kind": "example",
+    "summary": "Upstream ArkTS error/corrected code example: TitleButtonRectTypeError",
+    "applicability": "Illustrative ArkTS examples, including intentionally invalid code. Not a complete application or proof of compatibility with every target API.",
+    "related_ids": []
+  },
+  {
+    "id": "arkts-error-fixes/examples/UnusedVariableWarning",
+    "file": "knowledge/arkts-error-fixes/examples/UnusedVariableWarning.ets",
+    "title": "UnusedVariableWarning",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-error-fixes/assets/UnusedVariableWarning.ets",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "77e8e70b30d601815bddad2d0e471765111cc7e0c606160ac1bb2756ec30695c",
+    "kind": "example",
+    "summary": "Upstream ArkTS error/corrected code example: UnusedVariableWarning",
+    "applicability": "Illustrative ArkTS examples, including intentionally invalid code. Not a complete application or proof of compatibility with every target API.",
+    "related_ids": []
+  },
+  {
+    "id": "arkts-error-fixes/examples/UtilityTypeError",
+    "file": "knowledge/arkts-error-fixes/examples/UtilityTypeError.ets",
+    "title": "UtilityTypeError",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-error-fixes/assets/UtilityTypeError.ets",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "f7da664702d1337c40839eab3d8e463c45d08d85b665260f22e2c45260f3d6b3",
+    "kind": "example",
+    "summary": "Upstream ArkTS error/corrected code example: UtilityTypeError",
+    "applicability": "Illustrative ArkTS examples, including intentionally invalid code. Not a complete application or proof of compatibility with every target API.",
+    "related_ids": []
+  },
+  {
+    "id": "arkts-error-fixes/examples/WindowRectSizeError",
+    "file": "knowledge/arkts-error-fixes/examples/WindowRectSizeError.ets",
+    "title": "WindowRectSizeError",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-error-fixes/assets/WindowRectSizeError.ets",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "4bc90c91e6396a4304c4a4e237ce3f466e22e3ca01e748c20c3e0a048fa736f1",
+    "kind": "example",
+    "summary": "Upstream ArkTS error/corrected code example: WindowRectSizeError",
+    "applicability": "Illustrative ArkTS examples, including intentionally invalid code. Not a complete application or proof of compatibility with every target API.",
+    "related_ids": []
+  },
+  {
+    "id": "arkts-error-fixes/examples/WindowTypeError",
+    "file": "knowledge/arkts-error-fixes/examples/WindowTypeError.ets",
+    "title": "WindowTypeError",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-error-fixes/assets/WindowTypeError.ets",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "59cd0862b8fc76db762d3363e6b608a8d79afcca252afb68f3d7892aefcc82a7",
+    "kind": "example",
+    "summary": "Upstream ArkTS error/corrected code example: WindowTypeError",
+    "applicability": "Illustrative ArkTS examples, including intentionally invalid code. Not a complete application or proof of compatibility with every target API.",
+    "related_ids": []
+  },
+  {
+    "id": "arkts-error-fixes/fontcolor_property_errors",
+    "file": "knowledge/arkts-error-fixes/fontcolor_property_errors.md",
+    "title": "fontColor 属性错误",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/fontcolor_property_errors.md",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "dd5b75e30a2a9ed4a4a3eab0a3f2b94b3f411a2d7f100fc70126ced49a8095a9",
+    "kind": "case",
+    "summary": "Upstream arkts-error-fixes reference: fontColor 属性错误",
+    "applicability": "ArkTS language and API guidance. Compiler and target API version applicability must be checked against the selected SDK; static advice is not compilation proof.",
+    "related_ids": [
+      "arkts-error-fixes/examples/FontColorPropertyError"
+    ]
+  },
+  {
+    "id": "arkts-error-fixes/function_return_type_errors",
+    "file": "knowledge/arkts-error-fixes/function_return_type_errors.md",
+    "title": "Function Return Type Errors",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/function_return_type_errors.md",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "bbf46d738bd81ba20617d1b3d25c1cbc259f90e74c5f0813a1b047784f767fe1",
+    "kind": "case",
+    "summary": "Upstream arkts-error-fixes reference: Function Return Type Errors",
+    "applicability": "ArkTS language and API guidance. Compiler and target API version applicability must be checked against the selected SDK; static advice is not compilation proof.",
+    "related_ids": [
+      "arkts-error-fixes/examples/FunctionReturnTypeError"
+    ]
+  },
+  {
+    "id": "arkts-error-fixes/idata_source_errors",
+    "file": "knowledge/arkts-error-fixes/idata_source_errors.md",
+    "title": "IDataSource 类型错误",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/idata_source_errors.md",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "7ed0bdf53255ffe39c4fcd7704da7b182821c21331cff09776adf472498ea575",
+    "kind": "case",
+    "summary": "Upstream arkts-error-fixes reference: IDataSource 类型错误",
+    "applicability": "ArkTS language and API guidance. Compiler and target API version applicability must be checked against the selected SDK; static advice is not compilation proof.",
+    "related_ids": [
+      "arkts-error-fixes/examples/IDataSourceError"
+    ]
+  },
+  {
+    "id": "arkts-error-fixes/implementation_not_allowed_errors",
+    "file": "knowledge/arkts-error-fixes/implementation_not_allowed_errors.md",
+    "title": "实现不允许错误",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/implementation_not_allowed_errors.md",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "432ad45eb8f6a1aeebbc604cdaed951a3326e22468e333c4ac6e0ded6e017fd4",
+    "kind": "case",
+    "summary": "Upstream arkts-error-fixes reference: 实现不允许错误",
+    "applicability": "ArkTS language and API guidance. Compiler and target API version applicability must be checked against the selected SDK; static advice is not compilation proof.",
+    "related_ids": [
+      "arkts-error-fixes/examples/ImplementationNotAllowedError"
+    ]
+  },
+  {
+    "id": "arkts-error-fixes/interface_method_signature_errors",
+    "file": "knowledge/arkts-error-fixes/interface_method_signature_errors.md",
+    "title": "Interface Method Signature Errors",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/interface_method_signature_errors.md",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "a52e80a42889e7dbaef5721ecb2ed48136eb828cda56485e25b24985c0ca8627",
+    "kind": "case",
+    "summary": "Upstream arkts-error-fixes reference: Interface Method Signature Errors",
+    "applicability": "ArkTS language and API guidance. Compiler and target API version applicability must be checked against the selected SDK; static advice is not compilation proof.",
+    "related_ids": [
+      "arkts-error-fixes/examples/InterfaceMethodSignatureError",
+      "arkts-error-fixes/object_literal_interface_errors"
+    ]
+  },
+  {
+    "id": "arkts-error-fixes/notification_errors",
+    "file": "knowledge/arkts-error-fixes/notification_errors.md",
+    "title": "Notification API Type Errors",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/notification_errors.md",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "b2c4e031241386e5916a7ea154f435c24cf072f15d67efb644dbdb6cf8e688ba",
+    "kind": "case",
+    "summary": "Upstream arkts-error-fixes reference: Notification API Type Errors",
+    "applicability": "ArkTS language and API guidance. Compiler and target API version applicability must be checked against the selected SDK; static advice is not compilation proof.",
+    "related_ids": [
+      "arkts-error-fixes/examples/NotificationError"
+    ]
+  },
+  {
+    "id": "arkts-error-fixes/object_literal_interface_errors",
+    "file": "knowledge/arkts-error-fixes/object_literal_interface_errors.md",
+    "title": "Object Literal Interface Errors",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/object_literal_interface_errors.md",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "c7026886d07af6081a59700dd61c3872e9c7fc60e50593329e5b868c4f17ec7f",
+    "kind": "case",
+    "summary": "Upstream arkts-error-fixes reference: Object Literal Interface Errors",
+    "applicability": "ArkTS language and API guidance. Compiler and target API version applicability must be checked against the selected SDK; static advice is not compilation proof.",
+    "related_ids": [
+      "arkts-error-fixes/examples/ObjectLiteralInterfaceError",
+      "arkts-error-fixes/object_spread_errors"
+    ]
+  },
+  {
+    "id": "arkts-error-fixes/object_literal_type_errors",
+    "file": "knowledge/arkts-error-fixes/object_literal_type_errors.md",
+    "title": "Object Literal Type Declaration Error",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/object_literal_type_errors.md",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "828ff2011d7752e580d8d48c15667173a189e31b1e5b7c4e929ebe3f1685b6dc",
+    "kind": "case",
+    "summary": "Upstream arkts-error-fixes reference: Object Literal Type Declaration Error",
+    "applicability": "ArkTS language and API guidance. Compiler and target API version applicability must be checked against the selected SDK; static advice is not compilation proof.",
+    "related_ids": [
+      "arkts-error-fixes/examples/ObjectLiteralTypeError"
+    ]
+  },
+  {
+    "id": "arkts-error-fixes/object_spread_errors",
+    "file": "knowledge/arkts-error-fixes/object_spread_errors.md",
+    "title": "Object Spread Type Errors",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/object_spread_errors.md",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "4ef8dd75018b00f2832b97a14845ffec5e19f595e2f02ca7d2b4cbbcc2b48933",
+    "kind": "case",
+    "summary": "Upstream arkts-error-fixes reference: Object Spread Type Errors",
+    "applicability": "ArkTS language and API guidance. Compiler and target API version applicability must be checked against the selected SDK; static advice is not compilation proof.",
+    "related_ids": [
+      "arkts-error-fixes/examples/ObjectSpreadError"
+    ]
+  },
+  {
+    "id": "arkts-error-fixes/possibly_null_errors",
+    "file": "knowledge/arkts-error-fixes/possibly_null_errors.md",
+    "title": "对象可能为 null 错误",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/possibly_null_errors.md",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "1835a7a3a33f18a4e0ba331ac9f0ddce020cbe170ccf9a1f80c8ddea1940424b",
+    "kind": "case",
+    "summary": "Upstream arkts-error-fixes reference: 对象可能为 null 错误",
+    "applicability": "ArkTS language and API guidance. Compiler and target API version applicability must be checked against the selected SDK; static advice is not compilation proof.",
+    "related_ids": [
+      "arkts-error-fixes/examples/PossiblyNullError"
+    ]
+  },
+  {
+    "id": "arkts-error-fixes/resource_conversion_errors",
+    "file": "knowledge/arkts-error-fixes/resource_conversion_errors.md",
+    "title": "Resource 类型转换错误",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/resource_conversion_errors.md",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "3f6a2b66443dbd512c1ff5328d5b0560afe699f37dc6a1e7108b2b36a210e145",
+    "kind": "case",
+    "summary": "Upstream arkts-error-fixes reference: Resource 类型转换错误",
+    "applicability": "ArkTS language and API guidance. Compiler and target API version applicability must be checked against the selected SDK; static advice is not compilation proof.",
+    "related_ids": [
+      "arkts-error-fixes/examples/ResourceConversionError"
+    ]
+  },
+  {
+    "id": "arkts-error-fixes/standalone_function_errors",
+    "file": "knowledge/arkts-error-fixes/standalone_function_errors.md",
+    "title": "Standalone Function `this` Usage Error",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/standalone_function_errors.md",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "0c36db72f8b94154e7d101db45e8187752743b23cfb83f7221da782542764550",
+    "kind": "case",
+    "summary": "Upstream arkts-error-fixes reference: Standalone Function `this` Usage Error",
+    "applicability": "ArkTS language and API guidance. Compiler and target API version applicability must be checked against the selected SDK; static advice is not compilation proof.",
+    "related_ids": [
+      "arkts-error-fixes/examples/StandaloneFunctionError"
+    ]
+  },
+  {
+    "id": "arkts-error-fixes/storage_link_default_errors",
+    "file": "knowledge/arkts-error-fixes/storage_link_default_errors.md",
+    "title": "@StorageLink Default Value Errors",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/storage_link_default_errors.md",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "04240664bb5d2050f5db295a2e6c539b826f204163836a992297e18a451be9c4",
+    "kind": "case",
+    "summary": "Upstream arkts-error-fixes reference: @StorageLink Default Value Errors",
+    "applicability": "ArkTS language and API guidance. Compiler and target API version applicability must be checked against the selected SDK; static advice is not compilation proof.",
+    "related_ids": [
+      "arkts-error-fixes/examples/StorageLinkDefaultError",
+      "arkts-error-fixes/appstorage_errors"
+    ]
+  },
+  {
+    "id": "arkts-error-fixes/title_button_rect_type_errors",
+    "file": "knowledge/arkts-error-fixes/title_button_rect_type_errors.md",
+    "title": "TitleButtonRect Type Error",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/title_button_rect_type_errors.md",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "8eab82e1eb6f5c4aec8f18dee7e594bc6fd012154ba5c5f0bc45ea7e7ed0ed1c",
+    "kind": "case",
+    "summary": "Upstream arkts-error-fixes reference: TitleButtonRect Type Error",
+    "applicability": "ArkTS language and API guidance. Compiler and target API version applicability must be checked against the selected SDK; static advice is not compilation proof.",
+    "related_ids": [
+      "arkts-error-fixes/examples/TitleButtonRectTypeError",
+      "arkts-error-fixes/examples/StandaloneFunctionContext",
+      "arkts-error-fixes/examples/StandaloneFunctionError"
+    ]
+  },
+  {
+    "id": "arkts-error-fixes/unused_variable_warnings",
+    "file": "knowledge/arkts-error-fixes/unused_variable_warnings.md",
+    "title": "未使用变量警告解决方案",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/unused_variable_warnings.md",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "2fda8af360153d9ac1a28820e79440094d96dd721d69d277fbf9faa18205af49",
+    "kind": "case",
+    "summary": "Upstream arkts-error-fixes reference: 未使用变量警告解决方案",
+    "applicability": "ArkTS language and API guidance. Compiler and target API version applicability must be checked against the selected SDK; static advice is not compilation proof.",
+    "related_ids": [
+      "arkts-error-fixes/examples/UnusedVariableWarning"
+    ]
+  },
+  {
+    "id": "arkts-error-fixes/utility_type_errors",
+    "file": "knowledge/arkts-error-fixes/utility_type_errors.md",
+    "title": "Utility Type Errors",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/utility_type_errors.md",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "6ec3d8dc6d91a164af2042be0dedb614c0da44751a9b58b442d854c19650495b",
+    "kind": "case",
+    "summary": "Upstream arkts-error-fixes reference: Utility Type Errors",
+    "applicability": "ArkTS language and API guidance. Compiler and target API version applicability must be checked against the selected SDK; static advice is not compilation proof.",
+    "related_ids": [
+      "arkts-error-fixes/examples/UtilityTypeError"
+    ]
+  },
+  {
+    "id": "arkts-error-fixes/window_rect_size_errors",
+    "file": "knowledge/arkts-error-fixes/window_rect_size_errors.md",
+    "title": "window.Rect 和 window.Size 类型错误",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/window_rect_size_errors.md",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "90354682b15dcade293c942d6f65f4b44de08e4210b22eef35175e9ba45d9303",
+    "kind": "case",
+    "summary": "Upstream arkts-error-fixes reference: window.Rect 和 window.Size 类型错误",
+    "applicability": "ArkTS language and API guidance. Compiler and target API version applicability must be checked against the selected SDK; static advice is not compilation proof.",
+    "related_ids": [
+      "arkts-error-fixes/examples/WindowRectSizeError"
+    ]
+  },
+  {
+    "id": "arkts-error-fixes/window_type_errors",
+    "file": "knowledge/arkts-error-fixes/window_type_errors.md",
+    "title": "Window API Type Errors",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/window_type_errors.md",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "33e7068e89a062a10c428626094a80e5cea04d8816a6edd11afee0fcf853aaca",
+    "kind": "case",
+    "summary": "Upstream arkts-error-fixes reference: Window API Type Errors",
+    "applicability": "ArkTS language and API guidance. Compiler and target API version applicability must be checked against the selected SDK; static advice is not compilation proof.",
+    "related_ids": [
+      "arkts-error-fixes/examples/WindowTypeError"
+    ]
+  },
+  {
+    "id": "arkts-grammar-standards/arkts-rules",
+    "file": "knowledge/arkts-grammar-standards/arkts-rules.md",
+    "title": "ArkTS Syntax Rules Dictionary",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-grammar-standards/references/arkts-rules.md",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "fa9cc79aa8691696398292dc9b8c4a43b0208085f32b9c21720b0ccaa493b7b3",
+    "kind": "rule",
+    "summary": "Upstream arkts-grammar-standards reference: ArkTS Syntax Rules Dictionary",
+    "applicability": "ArkTS language and API guidance. Compiler and target API version applicability must be checked against the selected SDK; static advice is not compilation proof.",
+    "related_ids": []
+  },
+  {
+    "id": "arkts-grammar-standards/arkui-structure-rules",
+    "file": "knowledge/arkts-grammar-standards/arkui-structure-rules.md",
+    "title": "ArkUI Structure Rules",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-grammar-standards/references/arkui-structure-rules.md",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "5f5b6ffdd2cd685711fbdc4453f7a6b581f857adf63f6c12159cc2239d185610",
+    "kind": "rule",
+    "summary": "Upstream arkts-grammar-standards reference: ArkUI Structure Rules",
+    "applicability": "ArkTS language and API guidance. Compiler and target API version applicability must be checked against the selected SDK; static advice is not compilation proof.",
+    "related_ids": []
+  },
+  {
+    "id": "arkts-grammar-standards/kit-api-quick-ref",
+    "file": "knowledge/arkts-grammar-standards/kit-api-quick-ref.md",
+    "title": "System Kit API Quick Reference",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-grammar-standards/references/kit-api-quick-ref.md",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "f6fa5e62c356c24e5ed49203e4ea461e3bb7667b3ca69015fe746e03e2ea4ead",
+    "kind": "rule",
+    "summary": "Upstream arkts-grammar-standards reference: System Kit API Quick Reference",
+    "applicability": "ArkTS language and API guidance. Compiler and target API version applicability must be checked against the selected SDK; static advice is not compilation proof.",
+    "related_ids": []
+  },
+  {
+    "id": "arkts-grammar-standards/recipes-core",
+    "file": "knowledge/arkts-grammar-standards/recipes-core.md",
+    "title": "Recipes: Data model, Navigation, Layout",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-grammar-standards/references/recipes-core.md",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "58cf731b2678ed337e51ebd33108f749462f327342f2aca7655a75d3f86eb984",
+    "kind": "rule",
+    "summary": "Upstream arkts-grammar-standards reference: Recipes: Data model, Navigation, Layout",
+    "applicability": "ArkTS language and API guidance. Compiler and target API version applicability must be checked against the selected SDK; static advice is not compilation proof.",
+    "related_ids": []
+  },
+  {
+    "id": "arkts-grammar-standards/recipes-forms",
+    "file": "knowledge/arkts-grammar-standards/recipes-forms.md",
+    "title": "Recipes: TextInput/forms, DatePicker, dialogs and toasts",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-grammar-standards/references/recipes-forms.md",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "da3983289f00b40badbe1184d04f21a5ff52de6749377e51624a03b1b9d37331",
+    "kind": "rule",
+    "summary": "Upstream arkts-grammar-standards reference: Recipes: TextInput/forms, DatePicker, dialogs and toasts",
+    "applicability": "ArkTS language and API guidance. Compiler and target API version applicability must be checked against the selected SDK; static advice is not compilation proof.",
+    "related_ids": []
+  },
+  {
+    "id": "arkts-grammar-standards/ts-to-arkts-rewrites",
+    "file": "knowledge/arkts-grammar-standards/ts-to-arkts-rewrites.md",
+    "title": "TypeScript → ArkTS Rewrite Table",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-grammar-standards/references/ts-to-arkts-rewrites.md",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "dbc381287fb63cfde8f6f167e8f5d53b3787f0ddff454c09a36743bd3513f694",
+    "kind": "rule",
+    "summary": "Upstream arkts-grammar-standards reference: TypeScript → ArkTS Rewrite Table",
+    "applicability": "ArkTS language and API guidance. Compiler and target API version applicability must be checked against the selected SDK; static advice is not compilation proof.",
+    "related_ids": [
+      "arkts-grammar-standards/arkts-rules"
+    ]
+  },
+  {
+    "id": "arkts-grammar-standards/ui-quality-checklist",
+    "file": "knowledge/arkts-grammar-standards/ui-quality-checklist.md",
+    "title": "ArkUI UI Quality Checklist",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-grammar-standards/references/ui-quality-checklist.md",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "8915c64df6b846e92adb9bf1f531cbfdcdf8be00de76691a11b5372075bfc118",
+    "kind": "rule",
+    "summary": "Upstream arkts-grammar-standards reference: ArkUI UI Quality Checklist",
+    "applicability": "ArkTS language and API guidance. Compiler and target API version applicability must be checked against the selected SDK; static advice is not compilation proof.",
+    "related_ids": []
+  },
+  {
+    "id": "arkts-runtime-fix/businesserror_patterns",
+    "file": "knowledge/arkts-runtime-fix/businesserror_patterns.md",
+    "title": "BusinessError Crash Patterns",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-runtime-fix/reference/businesserror_patterns.md",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "0b523ca5d4cc585bccddb72bb23fcdb7e162b0f6efe82308b480cea84e6683ae",
+    "kind": "case",
+    "summary": "Upstream arkts-runtime-fix reference: BusinessError Crash Patterns",
+    "applicability": "HarmonyOS runtime error analysis; compare the case with captured logs and the project's target SDK before recommending a change. No automatic code modification.",
+    "related_ids": []
+  },
+  {
+    "id": "arkts-runtime-fix/error_patterns",
+    "file": "knowledge/arkts-runtime-fix/error_patterns.md",
+    "title": "Error (Framework / API) Crash Patterns",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-runtime-fix/reference/error_patterns.md",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "8a6ff8e995d5ad53a21b138ea60431cb7e21575e8d9f3e9e04261e4a8ff55027",
+    "kind": "case",
+    "summary": "Upstream arkts-runtime-fix reference: Error (Framework / API) Crash Patterns",
+    "applicability": "HarmonyOS runtime error analysis; compare the case with captured logs and the project's target SDK before recommending a change. No automatic code modification.",
+    "related_ids": [
+      "arkts-runtime-fix/fault-mode-library"
+    ]
+  },
+  {
+    "id": "arkts-runtime-fix/fault-mode-library",
+    "file": "knowledge/arkts-runtime-fix/fault-mode-library.md",
+    "title": "JSError 故障模式库",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-runtime-fix/reference/fault-mode-library.md",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "453ce1c924db7547a1919eca3a29068fa921cd4510bc77fa11270ba9bef4738b",
+    "kind": "case",
+    "summary": "Upstream arkts-runtime-fix reference: JSError 故障模式库",
+    "applicability": "HarmonyOS runtime error analysis; compare the case with captured logs and the project's target SDK before recommending a change. No automatic code modification.",
+    "related_ids": []
+  },
+  {
+    "id": "arkts-runtime-fix/outofmemoryerror_patterns",
+    "file": "knowledge/arkts-runtime-fix/outofmemoryerror_patterns.md",
+    "title": "OutOfMemoryError Crash Patterns",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-runtime-fix/reference/outofmemoryerror_patterns.md",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "8c2ab8a318e33f8c202bd6f91e342b08f4d2dcf4b51ca542923b797fa71caa65",
+    "kind": "case",
+    "summary": "Upstream arkts-runtime-fix reference: OutOfMemoryError Crash Patterns",
+    "applicability": "HarmonyOS runtime error analysis; compare the case with captured logs and the project's target SDK before recommending a change. No automatic code modification.",
+    "related_ids": [
+      "arkts-runtime-fix/fault-mode-library"
+    ]
+  },
+  {
+    "id": "arkts-runtime-fix/rangeerror_patterns",
+    "file": "knowledge/arkts-runtime-fix/rangeerror_patterns.md",
+    "title": "RangeError Crash Patterns",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-runtime-fix/reference/rangeerror_patterns.md",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "af8ba134ca52ab105f46f2f97adf81c92e14fee210ea1dfb15f7b27d48d04cb4",
+    "kind": "case",
+    "summary": "Upstream arkts-runtime-fix reference: RangeError Crash Patterns",
+    "applicability": "HarmonyOS runtime error analysis; compare the case with captured logs and the project's target SDK before recommending a change. No automatic code modification.",
+    "related_ids": []
+  },
+  {
+    "id": "arkts-runtime-fix/referenceerror_patterns",
+    "file": "knowledge/arkts-runtime-fix/referenceerror_patterns.md",
+    "title": "ReferenceError Crash Patterns",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-runtime-fix/reference/referenceerror_patterns.md",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "44af4b86889d359968ee66a8b81b35aa9ea3bfbcaefe40cb99b4811866ad7600",
+    "kind": "case",
+    "summary": "Upstream arkts-runtime-fix reference: ReferenceError Crash Patterns",
+    "applicability": "HarmonyOS runtime error analysis; compare the case with captured logs and the project's target SDK before recommending a change. No automatic code modification.",
+    "related_ids": [
+      "arkts-runtime-fix/fault-mode-library"
+    ]
+  },
+  {
+    "id": "arkts-runtime-fix/syntaxerror_patterns",
+    "file": "knowledge/arkts-runtime-fix/syntaxerror_patterns.md",
+    "title": "SyntaxError Crash Patterns",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-runtime-fix/reference/syntaxerror_patterns.md",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "7b5a79dd68afe3995de25d56e1f68c43453a0393ddae0ef3aa373148e61ef806",
+    "kind": "case",
+    "summary": "Upstream arkts-runtime-fix reference: SyntaxError Crash Patterns",
+    "applicability": "HarmonyOS runtime error analysis; compare the case with captured logs and the project's target SDK before recommending a change. No automatic code modification.",
+    "related_ids": []
+  },
+  {
+    "id": "arkts-runtime-fix/typeerror_patterns",
+    "file": "knowledge/arkts-runtime-fix/typeerror_patterns.md",
+    "title": "TypeError Crash Patterns",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-runtime-fix/reference/typeerror_patterns.md",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "5dc7350e08f78a5b69b7fa65da93b57051e32e721376e54ccd6773362a1a92a5",
+    "kind": "case",
+    "summary": "Upstream arkts-runtime-fix reference: TypeError Crash Patterns",
+    "applicability": "HarmonyOS runtime error analysis; compare the case with captured logs and the project's target SDK before recommending a change. No automatic code modification.",
+    "related_ids": []
+  },
+  {
+    "id": "arkts-runtime-fix/urierror_patterns",
+    "file": "knowledge/arkts-runtime-fix/urierror_patterns.md",
+    "title": "URIError Crash Patterns",
+    "source": "deveco-code",
+    "source_path": "packages/opencode/resources/skills/arkts-runtime-fix/reference/urierror_patterns.md",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "sha256": "a16cbe0684043919d8480f55327ce3a2f5105df02050793bc1d564d266394d8f",
+    "kind": "case",
+    "summary": "Upstream arkts-runtime-fix reference: URIError Crash Patterns",
+    "applicability": "HarmonyOS runtime error analysis; compare the case with captured logs and the project's target SDK before recommending a change. No automatic code modification.",
+    "related_ids": [
+      "arkts-runtime-fix/fault-mode-library"
+    ]
+  }
+]

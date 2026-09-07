@@ -1,0 +1,589 @@
+import { assertNoHotWatch } from "./hvigor/hot-config.js";
+import fs from "node:fs";
+import path from "node:path";
+import crypto from "node:crypto";
+import { z } from "zod";
+import { configuration, resourceRoot } from "../core/config.js";
+import { invariant, ToolError } from "../core/errors.js";
+import {
+  atomicWrite,
+  digest,
+  destinationPath,
+  fileDigest,
+  inside,
+  readObject,
+  walk,
+} from "../core/files.js";
+import {
+  discoverToolchain,
+  toolCommand,
+  type Toolchain,
+} from "../core/toolchain.js";
+import { ProcessService } from "../core/process.js";
+import { BuildDiagnostics } from "../core/build-diagnostics.js";
+
+const sdkVersion = z.union([
+  z.number().int().positive(),
+  z.string().regex(/^(?:\d+|\d+\.\d+\.\d+(?:\(\d+\))?)$/),
+]);
+const productSchema = z.object({
+  name: z.string().min(1),
+  compatibleSdkVersion: sdkVersion,
+  targetSdkVersion: sdkVersion.optional(),
+  runtimeOS: z.enum(["HarmonyOS", "OpenHarmony"]).default("HarmonyOS"),
+  signingConfig: z.string().optional(),
+});
+const profileSchema = z.object({
+  app: z.object({
+    compatibleSdkVersion: sdkVersion.optional(),
+    targetSdkVersion: sdkVersion.optional(),
+    products: z
+      .array(
+        productSchema.extend({ compatibleSdkVersion: sdkVersion.optional() }),
+      )
+      .min(1),
+  }),
+  modules: z
+    .array(
+      z.object({
+        name: z.string().min(1),
+        srcPath: z.string().min(1),
+        targets: z
+          .array(
+            z.object({
+              name: z.string(),
+              applyToProducts: z.array(z.string()).optional(),
+            }),
+          )
+          .optional(),
+      }),
+    )
+    .min(1),
+});
+export interface Project {
+  root: string;
+  product: z.infer<typeof productSchema>;
+  modules: { name: string; root: string; target: string }[];
+  fingerprint: string;
+}
+export function inspectProject(
+  candidate: string,
+  productName?: string,
+): Project {
+  const root = fs.realpathSync(path.resolve(candidate));
+  const file = path.join(root, "build-profile.json5");
+  invariant(
+    fs.existsSync(file),
+    "PROJECT_INVALID",
+    "build-profile.json5 is required",
+  );
+  const profile = profileSchema.parse(readObject(file));
+  const selected = productName
+    ? profile.app.products.find((item) => item.name === productName)
+    : (profile.app.products.find((item) => item.name === "default") ??
+      (profile.app.products.length === 1
+        ? profile.app.products[0]
+        : undefined));
+  invariant(
+    selected,
+    "PRODUCT_AMBIGUOUS",
+    "Specify exactly one existing product",
+  );
+  const product = productSchema.parse({
+    ...selected,
+    compatibleSdkVersion:
+      selected.compatibleSdkVersion ?? profile.app.compatibleSdkVersion,
+    targetSdkVersion: selected.targetSdkVersion ?? profile.app.targetSdkVersion,
+  });
+  const modules = profile.modules
+    .map((item) => {
+      const targets = item.targets?.filter(
+        (target) =>
+          !target.applyToProducts ||
+          target.applyToProducts.includes(product.name),
+      ) ?? [{ name: "default" }];
+      if (targets.length === 0) return undefined;
+      const target =
+        targets.find((target) => target.name === "default") ??
+        (targets.length === 1 ? targets[0] : undefined);
+      invariant(
+        target,
+        "TARGET_AMBIGUOUS",
+        `Module ${item.name} has ambiguous targets for product ${product.name}`,
+      );
+      const moduleRoot = fs.realpathSync(inside(root, item.srcPath));
+      inside(root, moduleRoot);
+      return { name: item.name, root: moduleRoot, target: target.name };
+    })
+    .filter(
+      (module): module is { name: string; root: string; target: string } =>
+        module !== undefined,
+    );
+  invariant(
+    modules.length > 0,
+    "PRODUCT_HAS_NO_MODULES",
+    "No modules apply to the selected product",
+  );
+  const files = [
+    file,
+    path.join(root, "AppScope/app.json5"),
+    path.join(root, "oh-package.json5"),
+    path.join(root, "hvigor/hvigor-config.json5"),
+    ...modules.flatMap((item) =>
+      [
+        "src/main/module.json5",
+        "build-profile.json5",
+        "oh-package.json5",
+        "hvigorfile.ts",
+      ].map((relative) => path.join(item.root, relative)),
+    ),
+  ].filter((item) => fs.existsSync(item));
+  return {
+    root,
+    product,
+    modules,
+    fingerprint: digest(files.map((file) => [file, fileDigest(file)])),
+  };
+}
+export class ProjectService {
+  private selected: string | undefined = configuration().default_project;
+  constructor(
+    readonly processes: ProcessService,
+    private readonly toolchain: () => Toolchain = discoverToolchain,
+  ) {}
+  select(root: string) {
+    const project = inspectProject(root);
+    this.selected = project.root;
+    return { project_path: project.root };
+  }
+  resolve(root?: string, product?: string): Project {
+    invariant(
+      root || this.selected,
+      "PROJECT_REQUIRED",
+      "Specify project_path or switch_cwd",
+    );
+    return inspectProject(root || this.selected!, product);
+  }
+  async create(
+    input: {
+      project_path: string;
+      app_name: string;
+      bundle_name: string;
+      sdk_version: string | number;
+    },
+    signal?: AbortSignal,
+    operationId: string = crypto.randomUUID(),
+  ) {
+    signal?.throwIfAborted();
+    const toolchain = this.toolchain();
+    invariant(
+      /^[A-Za-z][A-Za-z0-9_]{0,127}$/.test(input.app_name),
+      "APP_NAME_INVALID",
+      "Invalid application name",
+    );
+    invariant(
+      /^[A-Za-z][A-Za-z0-9_.]*$/.test(input.bundle_name),
+      "BUNDLE_INVALID",
+      "Invalid bundle name",
+    );
+    const root = destinationPath(input.project_path);
+    const metadata = z
+      .object({
+        apiVersion: z.string(),
+        platformVersion: z.string(),
+        version: z.string(),
+      })
+      .parse(readObject(path.join(toolchain.sdk, "default/sdk-pkg.json")).data);
+    const available = [
+      metadata.apiVersion,
+      metadata.platformVersion,
+      `${metadata.platformVersion}(${metadata.apiVersion})`,
+    ];
+    invariant(
+      available.includes(String(input.sdk_version)),
+      "SDK_VERSION_UNAVAILABLE",
+      `Requested SDK version is unavailable; installed API is ${metadata.apiVersion}`,
+    );
+    fs.mkdirSync(path.dirname(root), { recursive: true });
+    try {
+      // The successful mkdir is the exclusive claim. An existence pre-check
+      // followed by cp would merge with a directory created by another writer.
+      fs.mkdirSync(root, { mode: 0o700 });
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "EEXIST")
+        throw new ToolError(
+          "PROJECT_EXISTS",
+          "Project directory already exists; no files were changed",
+        );
+      throw error;
+    }
+    const receiptFile = path.join(root, ".deveco-mcp/create.json");
+    const receipt = {
+      operation_id: operationId,
+      input_hash: digest({ ...input, project_path: root }),
+    };
+    atomicWrite(
+      receiptFile,
+      JSON.stringify({ ...receipt, status: "started" }),
+      false,
+    );
+    fs.cpSync(path.join(resourceRoot, "templates/application"), root, {
+      recursive: true,
+      errorOnExist: true,
+      force: false,
+    });
+    for (const file of walk(root)) {
+      if (path.basename(file) === "gitignore.txt")
+        fs.renameSync(file, path.join(path.dirname(file), ".gitignore"));
+    }
+    const identity = readObject(path.join(root, "AppScope/app.json5"));
+    identity.app = {
+      ...z.record(z.string(), z.unknown()).parse(identity.app),
+      bundleName: input.bundle_name,
+    };
+    atomicWrite(
+      path.join(root, "AppScope/app.json5"),
+      JSON.stringify(identity, null, 2),
+    );
+    atomicWrite(
+      path.join(root, "AppScope/resources/base/element/string.json"),
+      JSON.stringify(
+        { string: [{ name: "app_name", value: input.app_name }] },
+        null,
+        2,
+      ),
+    );
+    const profile = readObject(path.join(root, "build-profile.json5"));
+    const app = z.record(z.string(), z.unknown()).parse(profile.app);
+    app.products = [
+      {
+        name: "default",
+        compatibleSdkVersion: metadata.platformVersion,
+        targetSdkVersion: metadata.platformVersion,
+        runtimeOS: "HarmonyOS",
+        buildOption: {
+          strictMode: { caseSensitiveCheck: true, useNormalizedOHMUrl: true },
+        },
+      },
+    ];
+    profile.app = app;
+    atomicWrite(
+      path.join(root, "build-profile.json5"),
+      JSON.stringify(profile, null, 2),
+    );
+    for (const relative of ["oh-package.json5", "hvigor/hvigor-config.json5"]) {
+      const file = path.join(root, relative),
+        config = readObject(file);
+      config.modelVersion = metadata.platformVersion;
+      atomicWrite(file, JSON.stringify(config, null, 2));
+    }
+    signal?.throwIfAborted();
+    const project = inspectProject(root);
+    const files = walk(root)
+      .filter((file) => file !== receiptFile)
+      .map((file) => ({
+        file: path.relative(root, file).replaceAll("\\", "/"),
+        sha256: fileDigest(file),
+      }));
+    atomicWrite(
+      receiptFile,
+      JSON.stringify({ ...receipt, status: "completed", files }),
+    );
+    return project;
+  }
+  reconcileCreate(
+    input: {
+      project_path: string;
+      app_name: string;
+      bundle_name: string;
+      sdk_version: string | number;
+    },
+    operationId: string,
+  ): Project | undefined {
+    const root = destinationPath(input.project_path),
+      receiptFile = path.join(root, ".deveco-mcp/create.json");
+    if (!fs.existsSync(receiptFile)) return undefined;
+    const parsed = z
+      .object({
+        operation_id: z.string(),
+        input_hash: z.string(),
+        status: z.literal("completed"),
+        files: z
+          .array(z.object({ file: z.string(), sha256: z.string() }))
+          .min(1)
+          .max(10000),
+      })
+      .safeParse(readObject(receiptFile));
+    if (
+      !parsed.success ||
+      parsed.data.operation_id !== operationId ||
+      parsed.data.input_hash !== digest({ ...input, project_path: root })
+    )
+      return undefined;
+    for (const entry of parsed.data.files) {
+      const file = inside(root, entry.file);
+      if (
+        !fs.existsSync(file) ||
+        fs.lstatSync(file).isSymbolicLink() ||
+        !fs.statSync(file).isFile() ||
+        fileDigest(file) !== entry.sha256
+      )
+        return undefined;
+      inside(root, fs.realpathSync(file));
+    }
+    return inspectProject(root);
+  }
+  async sync(project: Project, install = true, signal?: AbortSignal) {
+    assertNoHotWatch(project);
+    const toolchain = this.toolchain();
+    if (install)
+      await this.processes.run(
+        toolCommand(toolchain, "ohpm", ["install", "--all"], project.root),
+        { signal, timeoutMs: 600000 },
+      );
+    const result = await this.processes.run(
+      toolCommand(
+        toolchain,
+        "hvigor",
+        [
+          "--sync",
+          "--no-daemon",
+          "-p",
+          `product=${project.product.name}`,
+          "--analyze=normal",
+          "--parallel",
+          "--incremental",
+        ],
+        project.root,
+      ),
+      { signal, timeoutMs: 600000 },
+    );
+    const model = this.model(project);
+    return {
+      project_path: project.root,
+      synced: true,
+      elapsedMs: result.elapsedMs,
+      model: {
+        product: project.product.name,
+        modules: Object.keys(model).filter((key) =>
+          key.startsWith("ohos-module-"),
+        ),
+      },
+    };
+  }
+  async build(
+    project: Project,
+    input: {
+      modules?: string[];
+      mode?: string;
+      clean?: boolean;
+      task?: string;
+      hotReload?: boolean;
+      deviceType?: string;
+    },
+    signal?: AbortSignal,
+  ) {
+    assertNoHotWatch(project);
+    const toolchain = this.toolchain();
+    const modules = input.modules
+      ? project.modules.filter((module) => input.modules!.includes(module.name))
+      : project.modules;
+    invariant(
+      modules.length > 0 &&
+        (!input.modules || modules.length === new Set(input.modules).size),
+      "MODULE_INVALID",
+      "Unknown or empty module selection",
+    );
+    const task = input.task ?? "assembleHap";
+    invariant(
+      [
+        "assembleHap",
+        "assembleHar",
+        "assembleHsp",
+        "assembleApp",
+        "compileNative",
+      ].includes(task),
+      "BUILD_TASK_INVALID",
+      "Unsupported build task",
+    );
+    const args = [
+      "--no-daemon",
+      "--mode",
+      task === "assembleApp" ? "project" : "module",
+      "-p",
+      `product=${project.product.name}`,
+      "-p",
+      `buildMode=${input.mode ?? "debug"}`,
+    ];
+    if (task !== "assembleApp")
+      args.push(
+        "-p",
+        `module=${modules.map((module) => `${module.name}@${module.target}`).join(",")}`,
+      );
+    if (input.mode !== "release") args.push("-p", "debuggable=true");
+    if (input.hotReload) {
+      invariant(
+        input.deviceType && /^[a-z][a-z0-9_]{0,31}$/.test(input.deviceType),
+        "DEVICE_TYPE_REQUIRED",
+        "Hot reload requires the captured device type",
+      );
+      args.push(
+        "-p",
+        "hotReload=true",
+        "-p",
+        `requiredDeviceType=${input.deviceType}`,
+      );
+    }
+    args.push(
+      ...(input.clean ? ["clean", task] : [task]),
+      "--parallel",
+      "--incremental",
+    );
+    const diagnostics = new BuildDiagnostics();
+    const result = await this.processes
+      .run(toolCommand(toolchain, "hvigor", args, project.root), {
+        signal,
+        timeoutMs: 1200000,
+        onOutput: (name, chunk) => diagnostics.push(name, chunk),
+      })
+      .catch((error) => {
+        if (error instanceof ToolError && error.code === "PROCESS_FAILED")
+          throw new ToolError(
+            "PROJECT_BUILD_FAILED",
+            "Native compiler/build failed",
+            { execution: error.details, diagnostics: diagnostics.finish() },
+          );
+        throw error;
+      });
+    const artifacts =
+      task === "compileNative"
+        ? []
+        : this.buildArtifacts(
+            project,
+            modules.map((module) => module.root),
+            task,
+          );
+    if (task !== "compileNative")
+      invariant(
+        artifacts.length > 0,
+        "BUILD_ARTIFACT_MISSING",
+        "Build returned without a matching artifact",
+      );
+    return {
+      success: true,
+      compilationVerified: true,
+      product: project.product.name,
+      artifacts,
+      diagnostics: diagnostics.finish(),
+      elapsedMs: result.elapsedMs,
+      output: result.stdout,
+      stderr: result.stderr,
+      truncated: result.truncated,
+      log: result.log,
+    };
+  }
+  model(project: Project): Record<string, unknown> {
+    const file = path.join(project.root, ".hvigor/outputs/sync/output.json");
+    invariant(
+      fs.existsSync(file),
+      "SYNC_MODEL_MISSING",
+      "Synchronize the project to generate its SDK model",
+    );
+    const model = readObject(file);
+    invariant(
+      z.object({ SELECT_PRODUCT_NAME: z.string() }).parse(model["ohos-project"])
+        .SELECT_PRODUCT_NAME === project.product.name,
+      "SYNC_MODEL_PRODUCT_MISMATCH",
+      "SDK model belongs to another product; synchronize this product",
+    );
+    for (const module of project.modules) {
+      const item = z
+        .object({ TARGETS: z.record(z.string(), z.unknown()) })
+        .parse(model[`ohos-module-${module.name}`]);
+      invariant(
+        item.TARGETS[module.target],
+        "SYNC_MODEL_TARGET_MISSING",
+        `SDK model has no target ${module.name}@${module.target}`,
+      );
+    }
+    return model;
+  }
+  buildArtifacts(
+    project: Project,
+    roots = project.modules.map((module) => module.root),
+    task = "assembleHap",
+  ): { path: string; sha256: string; bytes: number }[] {
+    const model = this.model(project);
+    const files: string[] = [];
+    const suffix: Record<string, string> = {
+        assembleHap: ".hap",
+        assembleHar: ".har",
+        assembleHsp: ".hsp",
+        assembleApp: ".app",
+      },
+      extension = suffix[task];
+    invariant(extension, "BUILD_TASK_INVALID", "Unsupported artifact task");
+    const outputs: { directory: string; metadata?: string }[] = [];
+    if (task === "assembleApp") {
+      const info = z
+        .object({ BUILD_PATH: z.object({ OUTPUT_PATH: z.string() }) })
+        .parse(model["ohos-project"]);
+      outputs.push({
+        directory: inside(project.root, info.BUILD_PATH.OUTPUT_PATH),
+      });
+    } else
+      for (const module of project.modules.filter((m) =>
+        roots.includes(m.root),
+      )) {
+        const info = z
+          .object({
+            TARGETS: z.record(
+              z.string(),
+              z.object({
+                BUILD_PATH: z.object({
+                  OUTPUT_PATH: z.string(),
+                  OUTPUT_METADATA_JSON: z.string().optional(),
+                }),
+              }),
+            ),
+          })
+          .parse(model[`ohos-module-${module.name}`]).TARGETS[module.target]!;
+        outputs.push({
+          directory: inside(project.root, info.BUILD_PATH.OUTPUT_PATH),
+          metadata: info.BUILD_PATH.OUTPUT_METADATA_JSON,
+        });
+      }
+    for (const output of outputs) {
+      if (task === "assembleHap" && output.metadata) {
+        const metadata = inside(project.root, output.metadata);
+        invariant(
+          fs.existsSync(metadata),
+          "BUILD_METADATA_MISSING",
+          "Native HAP output metadata is missing",
+        );
+        const entries = z
+          .array(z.object({ hapName: z.string(), isSigned: z.boolean() }))
+          .parse(JSON.parse(fs.readFileSync(metadata, "utf8")) as unknown);
+        for (const entry of entries) {
+          const file = inside(output.directory, entry.hapName);
+          invariant(
+            fs.existsSync(file) && file.endsWith(extension),
+            "BUILD_ARTIFACT_MISSING",
+            "SDK metadata references a missing artifact",
+          );
+          files.push(file);
+        }
+      } else if (fs.existsSync(output.directory))
+        for (const entry of fs.readdirSync(output.directory, {
+          withFileTypes: true,
+        }))
+          if (entry.isFile() && entry.name.endsWith(extension))
+            files.push(path.join(output.directory, entry.name));
+    }
+    return files.map((file) => ({
+      path: file,
+      sha256: fileDigest(file),
+      bytes: fs.statSync(file).size,
+    }));
+  }
+}

@@ -1,4 +1,5 @@
 node_modules/
+dist/
 .DS_Store
 npm-debug.log*
 yarn-debug.log*
@@ -9,3 +10,5 @@ yarn-error.log*
 # either, and test/docs.test.mjs fails if one is committed anyway.
 __pycache__/
 *.py[cod]
+
+.native-build-*/

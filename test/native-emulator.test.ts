@@ -1,0 +1,69 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { setTimeout as delay } from "node:timers/promises";
+import { ProcessService } from "../src/core/process.js";
+import { StateStore } from "../src/core/store.js";
+import { PersistentProcessObserver } from "../src/core/process-observer.js";
+import { EmulatorService } from "../src/services/emulator.js";
+
+test("emulator readiness returns while its launcher stays alive; shutdown confirms inventory and closes logs", async () => {
+  const root = fs.realpathSync(
+    fs.mkdtempSync(path.join(os.tmpdir(), "deveco-emulator-")),
+  );
+  const store = new StateStore(root),
+    processes = new ProcessService(new PersistentProcessObserver(store));
+  const file = path.join(root, "instance.json");
+  fs.writeFileSync(file, JSON.stringify({ name: "fixture", isRunning: false }));
+  const service = new EmulatorService(processes, store, (args) => ({
+    executable: process.execPath,
+    args: [
+      fileURLToPath(new URL("./fixtures/native-emulator.js", import.meta.url)),
+      file,
+      ...args,
+    ],
+  }));
+  try {
+    const start = await service.manage({ action: "start", name: "fixture" });
+    assert.ok("verified" in start);
+    assert.equal(start.verified, true);
+    assert.equal((await service.list())[0]?.isRunning, true);
+    await delay(100);
+    assert.ok(processes.size >= 1);
+    await service.close();
+    await processes.close();
+    assert.equal((await service.list())[0]?.isRunning, false);
+    assert.equal(
+      store.db
+        .prepare("SELECT * FROM managed_processes WHERE status<>'exited'")
+        .all().length,
+      0,
+    );
+    assert.equal(
+      store.db.prepare("SELECT * FROM artifact_streams").all().length,
+      0,
+    );
+  } finally {
+    await service.close();
+    await processes.close();
+    store.close();
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("failed session launch is observable and does not turn confirmed cleanup into a second failure", async () => {
+  const processes = new ProcessService();
+  const session = processes.startSession({
+    executable: process.execPath,
+    args: ["-e", "process.exit(12)"],
+  });
+  while (!session.settled) await delay(10);
+  assert.throws(() => session.check(), { code: "PROCESS_FAILED" });
+  assert.equal(processes.sessionCount, 0);
+  await session.stop();
+  await processes.close();
+  assert.equal(processes.size, 0);
+});

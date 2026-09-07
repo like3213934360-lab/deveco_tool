@@ -1,0 +1,1060 @@
+{
+  "format": 1,
+  "rules": [
+    {
+      "id": "code-deveco-create-project",
+      "source": "deveco-code",
+      "path": "packages/opencode/resources/skills/deveco-create-project/",
+      "prefix": true,
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/project.ts",
+        "resources/templates/application"
+      ],
+      "tests": [
+        "test/native-project.test.ts",
+        "scripts/native-sdk-acceptance.ts"
+      ]
+    },
+    {
+      "id": "code-deveco-cli",
+      "source": "deveco-code",
+      "path": "packages/opencode/resources/skills/deveco-cli/",
+      "prefix": true,
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/runtime.ts",
+        "src/services/project.ts"
+      ],
+      "tests": [
+        "test/workflows.test.ts",
+        "scripts/native-sdk-acceptance.ts"
+      ]
+    },
+    {
+      "id": "code-arkts-error-fixes",
+      "source": "deveco-code",
+      "path": "packages/opencode/resources/skills/arkts-error-fixes/",
+      "prefix": true,
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/checker.ts",
+        "resources/knowledge.json"
+      ],
+      "tests": [
+        "test/native-runtime.test.ts",
+        "scripts/native-sdk-acceptance.ts"
+      ]
+    },
+    {
+      "id": "code-arkts-grammar-standards",
+      "source": "deveco-code",
+      "path": "packages/opencode/resources/skills/arkts-grammar-standards/",
+      "prefix": true,
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/checker.ts",
+        "resources/knowledge.json"
+      ],
+      "tests": [
+        "test/native-runtime.test.ts",
+        "scripts/native-sdk-acceptance.ts"
+      ]
+    },
+    {
+      "id": "code-arkts-runtime-fix",
+      "source": "deveco-code",
+      "path": "packages/opencode/resources/skills/arkts-runtime-fix/",
+      "prefix": true,
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/crash.ts",
+        "src/services/logs.ts",
+        "resources/knowledge.json"
+      ],
+      "tests": [
+        "test/native-logs.test.ts"
+      ]
+    },
+    {
+      "id": "code-new-skill",
+      "source": "deveco-code",
+      "path": "packages/opencode/resources/skills/",
+      "prefix": true,
+      "disposition": "unmapped",
+      "reason": "New upstream skills require an explicit workflow, rule or exclusion mapping.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "id": "code-host-customization",
+      "source": "deveco-code",
+      "path": "packages/opencode/resources/skills/customize-deveco/",
+      "prefix": true,
+      "disposition": "exclude",
+      "reason": "Configures DevEco Code's own host; this MCP does not install host skills, agents or plugins.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "id": "code-defaults.ts",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/skill/defaults.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "resources/knowledge.json",
+        "provenance/upstream-mapping.json"
+      ],
+      "tests": [
+        "test/native-upstream.test.ts"
+      ]
+    },
+    {
+      "id": "code-discovery.ts",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/skill/discovery.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "resources/knowledge.json",
+        "provenance/upstream-mapping.json"
+      ],
+      "tests": [
+        "test/native-upstream.test.ts"
+      ]
+    },
+    {
+      "id": "code-index.ts",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/skill/index.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "resources/knowledge.json",
+        "provenance/upstream-mapping.json"
+      ],
+      "tests": [
+        "test/native-upstream.test.ts"
+      ]
+    },
+    {
+      "id": "code-host-packages",
+      "source": "deveco-code",
+      "path": "packages/",
+      "prefix": true,
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "id": "code-host-script",
+      "source": "deveco-code",
+      "path": "script/",
+      "prefix": true,
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "id": "code-host-patches",
+      "source": "deveco-code",
+      "path": "patches/",
+      "prefix": true,
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "id": "code-host-docs",
+      "source": "deveco-code",
+      "path": "docs/",
+      "prefix": true,
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "id": "code-host-specs",
+      "source": "deveco-code",
+      "path": "specs/",
+      "prefix": true,
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "id": "code-host-assets",
+      "source": "deveco-code",
+      "path": "assets/",
+      "prefix": true,
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "id": "code-host-agents",
+      "source": "deveco-code",
+      "path": ".agents/",
+      "prefix": true,
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "id": "code-host-opencode",
+      "source": "deveco-code",
+      "path": ".opencode/",
+      "prefix": true,
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "id": "code-host-github",
+      "source": "deveco-code",
+      "path": ".github/",
+      "prefix": true,
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "id": "code-host-gitcode",
+      "source": "deveco-code",
+      "path": ".gitcode/",
+      "prefix": true,
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "id": "code-legal-LICENSE",
+      "source": "deveco-code",
+      "path": "LICENSE",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Review license, version or upstream release changes before updating resource provenance.",
+      "targets": [
+        "provenance/upstream-lock.json"
+      ],
+      "tests": [
+        "test/native-upstream.test.ts"
+      ]
+    },
+    {
+      "id": "code-legal-NOTICE",
+      "source": "deveco-code",
+      "path": "NOTICE",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Review license, version or upstream release changes before updating resource provenance.",
+      "targets": [
+        "provenance/upstream-lock.json"
+      ],
+      "tests": [
+        "test/native-upstream.test.ts"
+      ]
+    },
+    {
+      "id": "code-legal-OAT.xml",
+      "source": "deveco-code",
+      "path": "OAT.xml",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Review license, version or upstream release changes before updating resource provenance.",
+      "targets": [
+        "provenance/upstream-lock.json"
+      ],
+      "tests": [
+        "test/native-upstream.test.ts"
+      ]
+    },
+    {
+      "id": "code-legal-package.json",
+      "source": "deveco-code",
+      "path": "package.json",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Review license, version or upstream release changes before updating resource provenance.",
+      "targets": [
+        "provenance/upstream-lock.json"
+      ],
+      "tests": [
+        "test/native-upstream.test.ts"
+      ]
+    },
+    {
+      "id": "code-legal-bun.lock",
+      "source": "deveco-code",
+      "path": "bun.lock",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Review license, version or upstream release changes before updating resource provenance.",
+      "targets": [
+        "provenance/upstream-lock.json"
+      ],
+      "tests": [
+        "test/native-upstream.test.ts"
+      ]
+    },
+    {
+      "id": "code-legal-CHANGELOG.md",
+      "source": "deveco-code",
+      "path": "CHANGELOG.md",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Review license, version or upstream release changes before updating resource provenance.",
+      "targets": [
+        "provenance/upstream-lock.json"
+      ],
+      "tests": [
+        "test/native-upstream.test.ts"
+      ]
+    },
+    {
+      "id": "cli-core-toolchain",
+      "source": "deveco-cli",
+      "path": "src/toolchain/",
+      "prefix": true,
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/core/toolchain.ts",
+        "src/core/process.ts",
+        "src/core/store.ts"
+      ],
+      "tests": [
+        "test/native-infrastructure.test.ts",
+        "test/native-runtime.test.ts"
+      ]
+    },
+    {
+      "id": "cli-core-config",
+      "source": "deveco-cli",
+      "path": "src/config/",
+      "prefix": true,
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/core/toolchain.ts",
+        "src/core/process.ts",
+        "src/core/store.ts"
+      ],
+      "tests": [
+        "test/native-infrastructure.test.ts",
+        "test/native-runtime.test.ts"
+      ]
+    },
+    {
+      "id": "cli-core-types",
+      "source": "deveco-cli",
+      "path": "src/types/",
+      "prefix": true,
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/core/toolchain.ts",
+        "src/core/process.ts",
+        "src/core/store.ts"
+      ],
+      "tests": [
+        "test/native-infrastructure.test.ts",
+        "test/native-runtime.test.ts"
+      ]
+    },
+    {
+      "id": "cli-core-utils",
+      "source": "deveco-cli",
+      "path": "src/utils/",
+      "prefix": true,
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/core/toolchain.ts",
+        "src/core/process.ts",
+        "src/core/store.ts"
+      ],
+      "tests": [
+        "test/native-infrastructure.test.ts",
+        "test/native-runtime.test.ts"
+      ]
+    },
+    {
+      "id": "cli-core-trace",
+      "source": "deveco-cli",
+      "path": "src/trace/",
+      "prefix": true,
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/core/toolchain.ts",
+        "src/core/process.ts",
+        "src/core/store.ts"
+      ],
+      "tests": [
+        "test/native-infrastructure.test.ts",
+        "test/native-runtime.test.ts"
+      ]
+    },
+    {
+      "id": "cli-core-internal",
+      "source": "deveco-cli",
+      "path": "src/internal/",
+      "prefix": true,
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/core/toolchain.ts",
+        "src/core/process.ts",
+        "src/core/store.ts"
+      ],
+      "tests": [
+        "test/native-infrastructure.test.ts",
+        "test/native-runtime.test.ts"
+      ]
+    },
+    {
+      "id": "cli-src-apply-",
+      "source": "deveco-cli",
+      "path": "src/apply/",
+      "prefix": true,
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/hotreload.ts"
+      ],
+      "tests": [
+        "test/native-hotreload.test.ts"
+      ]
+    },
+    {
+      "id": "cli-src-auth-",
+      "source": "deveco-cli",
+      "path": "src/auth/",
+      "prefix": true,
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/auth.ts"
+      ],
+      "tests": [
+        "test/native-reports.test.ts"
+      ]
+    },
+    {
+      "id": "cli-src-signature-",
+      "source": "deveco-cli",
+      "path": "src/signature/",
+      "prefix": true,
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/signature.ts"
+      ],
+      "tests": [
+        "test/native-reports.test.ts",
+        "scripts/native-sdk-acceptance.ts"
+      ]
+    },
+    {
+      "id": "cli-src-codelinter-",
+      "source": "deveco-cli",
+      "path": "src/codelinter/",
+      "prefix": true,
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/diagnostics.ts"
+      ],
+      "tests": [
+        "test/native-reports.test.ts",
+        "scripts/native-sdk-acceptance.ts"
+      ]
+    },
+    {
+      "id": "cli-src-docs-",
+      "source": "deveco-cli",
+      "path": "src/docs/",
+      "prefix": true,
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/knowledge.ts"
+      ],
+      "tests": [
+        "test/native-reports.test.ts"
+      ]
+    },
+    {
+      "id": "cli-src-ui-",
+      "source": "deveco-cli",
+      "path": "src/ui/",
+      "prefix": true,
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/device.ts"
+      ],
+      "tests": [
+        "test/native-flow.test.ts",
+        "test/native-text.test.ts"
+      ]
+    },
+    {
+      "id": "cli-src-service-",
+      "source": "deveco-cli",
+      "path": "src/service/",
+      "prefix": true,
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/emulator.ts"
+      ],
+      "tests": [
+        "test/native-emulator.test.ts",
+        "scripts/native-emulator-acceptance.ts"
+      ]
+    },
+    {
+      "id": "cli-src-resources-",
+      "source": "deveco-cli",
+      "path": "src/resources/",
+      "prefix": true,
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/project.ts"
+      ],
+      "tests": [
+        "test/native-project.test.ts"
+      ]
+    },
+    {
+      "id": "cli-src-data-",
+      "source": "deveco-cli",
+      "path": "src/data/",
+      "prefix": true,
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/emulator.ts"
+      ],
+      "tests": [
+        "test/native-emulator.test.ts"
+      ]
+    },
+    {
+      "id": "cli-templates-",
+      "source": "deveco-cli",
+      "path": "templates/",
+      "prefix": true,
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/project.ts"
+      ],
+      "tests": [
+        "test/native-project.test.ts",
+        "scripts/native-sdk-acceptance.ts"
+      ]
+    },
+    {
+      "id": "cli-index-",
+      "source": "deveco-cli",
+      "path": "index/",
+      "prefix": true,
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/knowledge.ts"
+      ],
+      "tests": [
+        "test/native-reports.test.ts"
+      ]
+    },
+    {
+      "id": "cli-command-build.ts",
+      "source": "deveco-cli",
+      "path": "src/commands/build.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/project.ts"
+      ],
+      "tests": [
+        "scripts/native-sdk-acceptance.ts"
+      ]
+    },
+    {
+      "id": "cli-command-create.ts",
+      "source": "deveco-cli",
+      "path": "src/commands/create.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/project.ts"
+      ],
+      "tests": [
+        "test/native-project.test.ts"
+      ]
+    },
+    {
+      "id": "cli-command-init.ts",
+      "source": "deveco-cli",
+      "path": "src/commands/init.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/project.ts"
+      ],
+      "tests": [
+        "test/native-project.test.ts"
+      ]
+    },
+    {
+      "id": "cli-command-run.ts",
+      "source": "deveco-cli",
+      "path": "src/commands/run.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/device.ts"
+      ],
+      "tests": [
+        "test/native-flow.test.ts"
+      ]
+    },
+    {
+      "id": "cli-command-check.ts",
+      "source": "deveco-cli",
+      "path": "src/commands/check.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/diagnostics.ts"
+      ],
+      "tests": [
+        "scripts/native-sdk-acceptance.ts"
+      ]
+    },
+    {
+      "id": "cli-command-serve-lsp.ts",
+      "source": "deveco-cli",
+      "path": "src/commands/serve-lsp.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/lsp.ts"
+      ],
+      "tests": [
+        "test/native-runtime.test.ts"
+      ]
+    },
+    {
+      "id": "cli-command-serve-lsp-cpp.ts",
+      "source": "deveco-cli",
+      "path": "src/commands/serve-lsp-cpp.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/lsp.ts"
+      ],
+      "tests": [
+        "scripts/native-sdk-acceptance.ts"
+      ]
+    },
+    {
+      "id": "cli-command-signature.ts",
+      "source": "deveco-cli",
+      "path": "src/commands/signature.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/signature.ts"
+      ],
+      "tests": [
+        "test/native-reports.test.ts"
+      ]
+    },
+    {
+      "id": "cli-command-auth.ts",
+      "source": "deveco-cli",
+      "path": "src/commands/auth.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/auth.ts"
+      ],
+      "tests": [
+        "test/native-reports.test.ts"
+      ]
+    },
+    {
+      "id": "cli-command-doc.ts",
+      "source": "deveco-cli",
+      "path": "src/commands/doc.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/knowledge.ts"
+      ],
+      "tests": [
+        "test/native-reports.test.ts"
+      ]
+    },
+    {
+      "id": "cli-command-log.ts",
+      "source": "deveco-cli",
+      "path": "src/commands/log.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/logs.ts"
+      ],
+      "tests": [
+        "test/native-reports.test.ts"
+      ]
+    },
+    {
+      "id": "cli-command-device.ts",
+      "source": "deveco-cli",
+      "path": "src/commands/device.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/device.ts"
+      ],
+      "tests": [
+        "test/native-text.test.ts"
+      ]
+    },
+    {
+      "id": "cli-command-emulator.ts",
+      "source": "deveco-cli",
+      "path": "src/commands/emulator.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/emulator.ts"
+      ],
+      "tests": [
+        "test/native-emulator.test.ts"
+      ]
+    },
+    {
+      "id": "cli-command-ui.ts",
+      "source": "deveco-cli",
+      "path": "src/commands/ui.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/device.ts"
+      ],
+      "tests": [
+        "test/native-flow.test.ts",
+        "test/native-text.test.ts"
+      ]
+    },
+    {
+      "id": "cli-command-ui-input.ts",
+      "source": "deveco-cli",
+      "path": "src/commands/ui-input.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/device.ts"
+      ],
+      "tests": [
+        "test/native-flow.test.ts",
+        "test/native-text.test.ts"
+      ]
+    },
+    {
+      "id": "cli-command-ui-layout.ts",
+      "source": "deveco-cli",
+      "path": "src/commands/ui-layout.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/device.ts"
+      ],
+      "tests": [
+        "test/native-flow.test.ts",
+        "test/native-text.test.ts"
+      ]
+    },
+    {
+      "id": "cli-command-ui-window.ts",
+      "source": "deveco-cli",
+      "path": "src/commands/ui-window.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/device.ts"
+      ],
+      "tests": [
+        "test/native-flow.test.ts",
+        "test/native-text.test.ts"
+      ]
+    },
+    {
+      "id": "cli-command-ui-screenshot.ts",
+      "source": "deveco-cli",
+      "path": "src/commands/ui-screenshot.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/device.ts"
+      ],
+      "tests": [
+        "test/native-flow.test.ts",
+        "test/native-text.test.ts"
+      ]
+    },
+    {
+      "id": "cli-retired-src-compat-",
+      "source": "deveco-cli",
+      "path": "src/compat/",
+      "prefix": true,
+      "disposition": "exclude",
+      "reason": "The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "id": "cli-retired-src-skills-",
+      "source": "deveco-cli",
+      "path": "src/skills/",
+      "prefix": true,
+      "disposition": "exclude",
+      "reason": "The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "id": "cli-retired-src-install-check-",
+      "source": "deveco-cli",
+      "path": "src/install-check/",
+      "prefix": true,
+      "disposition": "exclude",
+      "reason": "The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "id": "cli-retired-src-update-",
+      "source": "deveco-cli",
+      "path": "src/update/",
+      "prefix": true,
+      "disposition": "exclude",
+      "reason": "The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "id": "cli-retired-src-commands-skills.ts",
+      "source": "deveco-cli",
+      "path": "src/commands/skills.ts",
+      "prefix": false,
+      "disposition": "exclude",
+      "reason": "The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "id": "cli-retired-src-commands-update.ts",
+      "source": "deveco-cli",
+      "path": "src/commands/update.ts",
+      "prefix": false,
+      "disposition": "exclude",
+      "reason": "The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "id": "cli-retired-src-commands-serve.ts",
+      "source": "deveco-cli",
+      "path": "src/commands/serve.ts",
+      "prefix": false,
+      "disposition": "exclude",
+      "reason": "The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "id": "cli-retired-mcp-",
+      "source": "deveco-cli",
+      "path": "mcp/",
+      "prefix": true,
+      "disposition": "exclude",
+      "reason": "The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "id": "cli-release-LICENSE",
+      "source": "deveco-cli",
+      "path": "LICENSE",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Review release, dependency, dispatch or license changes; the CLI remains a reference, not a runtime dependency.",
+      "targets": [
+        "provenance/upstream-lock.json"
+      ],
+      "tests": [
+        "test/native-upstream.test.ts"
+      ]
+    },
+    {
+      "id": "cli-release-OAT.xml",
+      "source": "deveco-cli",
+      "path": "OAT.xml",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Review release, dependency, dispatch or license changes; the CLI remains a reference, not a runtime dependency.",
+      "targets": [
+        "provenance/upstream-lock.json"
+      ],
+      "tests": [
+        "test/native-upstream.test.ts"
+      ]
+    },
+    {
+      "id": "cli-release-PRIVACY.md",
+      "source": "deveco-cli",
+      "path": "PRIVACY.md",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Review release, dependency, dispatch or license changes; the CLI remains a reference, not a runtime dependency.",
+      "targets": [
+        "provenance/upstream-lock.json"
+      ],
+      "tests": [
+        "test/native-upstream.test.ts"
+      ]
+    },
+    {
+      "id": "cli-release-package.json",
+      "source": "deveco-cli",
+      "path": "package.json",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Review release, dependency, dispatch or license changes; the CLI remains a reference, not a runtime dependency.",
+      "targets": [
+        "provenance/upstream-lock.json"
+      ],
+      "tests": [
+        "test/native-upstream.test.ts"
+      ]
+    },
+    {
+      "id": "cli-release-package-lock.json",
+      "source": "deveco-cli",
+      "path": "package-lock.json",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Review release, dependency, dispatch or license changes; the CLI remains a reference, not a runtime dependency.",
+      "targets": [
+        "provenance/upstream-lock.json"
+      ],
+      "tests": [
+        "test/native-upstream.test.ts"
+      ]
+    },
+    {
+      "id": "cli-release-CHANGELOG.md",
+      "source": "deveco-cli",
+      "path": "CHANGELOG.md",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Review release, dependency, dispatch or license changes; the CLI remains a reference, not a runtime dependency.",
+      "targets": [
+        "provenance/upstream-lock.json"
+      ],
+      "tests": [
+        "test/native-upstream.test.ts"
+      ]
+    },
+    {
+      "id": "cli-release-src/cli.ts",
+      "source": "deveco-cli",
+      "path": "src/cli.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Review release, dependency, dispatch or license changes; the CLI remains a reference, not a runtime dependency.",
+      "targets": [
+        "provenance/upstream-lock.json"
+      ],
+      "tests": [
+        "test/native-upstream.test.ts"
+      ]
+    },
+    {
+      "id": "code-host-install",
+      "source": "deveco-code",
+      "path": "install",
+      "prefix": false,
+      "disposition": "exclude",
+      "reason": "Bash installer and installation telemetry for the upstream DevEco Code host. Native MCP installation does not execute this script.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "id": "code-host-install-ps1",
+      "source": "deveco-code",
+      "path": "install.ps1",
+      "prefix": false,
+      "disposition": "exclude",
+      "reason": "PowerShell installer and installation telemetry for the upstream DevEco Code host. Native MCP installation does not execute this script.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "id": "code-host-turbo-json",
+      "source": "deveco-code",
+      "path": "turbo.json",
+      "prefix": false,
+      "disposition": "exclude",
+      "reason": "Upstream monorepo build/test scheduling. This MCP uses its own strict TypeScript build and Node Test Runner matrix.",
+      "targets": [],
+      "tests": []
+    }
+  ]
+}

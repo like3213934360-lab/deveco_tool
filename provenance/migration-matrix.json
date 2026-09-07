@@ -1,0 +1,2967 @@
+{
+  "format": 1,
+  "baseline_commit": "aab1405b51e00e4036bdc8f18ae4229835de77b0",
+  "baseline_inventory_sha256": "f6bebe2a202f6d9a5262a4185f5b8d312fb1515022358a1a9507cbb9449b4f42",
+  "tools": [
+    {
+      "source": "api_compat_check",
+      "targets": [
+        "workflow:api_compatibility",
+        "tool:deveco_doctor"
+      ],
+      "adapters": [
+        "src/services/diagnostics.ts"
+      ],
+      "checks": [
+        "test/native-reports.test.ts",
+        "test/native-api-versions.test.ts"
+      ],
+      "behavior": "扫描保留；版本查询改由能力与工具链数据提供。",
+      "parameters": {
+        "action": {
+          "status": "replaced",
+          "replacement": "scan 合并到 workflow:api_compatibility；versions 由 deveco_doctor.api_compatibility.versions 提供"
+        },
+        "source_version": {
+          "status": "mapped",
+          "replacement": "source_version；只接受已安装 scanner 数据内的版本，按数值顺序验证组合"
+        },
+        "target_version": {
+          "status": "mapped",
+          "replacement": "target_version；只接受已安装 scanner 数据内的版本，按数值顺序验证组合"
+        },
+        "files": {
+          "status": "mapped",
+          "replacement": "files；批量边界按各原生能力验证"
+        },
+        "modules": {
+          "status": "mapped",
+          "replacement": "modules；目标模块"
+        },
+        "format": {
+          "status": "replaced",
+          "replacement": "固定结构化输出与制品"
+        },
+        "output_path": {
+          "status": "replaced",
+          "replacement": "制品引用与 read_artifact"
+        },
+        "limit": {
+          "status": "replaced",
+          "replacement": "结构化摘要和完整报告制品，分页读取由 read_artifact 提供"
+        },
+        "project_path": {
+          "status": "mapped",
+          "replacement": "project_path；请求提交时固定工程"
+        },
+        "timeoutMs": {
+          "status": "replaced",
+          "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
+        }
+      },
+      "actions": [
+        {
+          "field": "action",
+          "value": "scan",
+          "status": "replaced",
+          "replacement": "workflow_run.start api_compatibility；完整结果写入制品"
+        },
+        {
+          "field": "action",
+          "value": "versions",
+          "status": "replaced",
+          "replacement": "deveco_doctor.api_compatibility.versions；空、缺失和非法数据明确失败"
+        }
+      ],
+      "remaining": [
+        "更多 SDK/API 版本数据组合与扫描范围验收"
+      ],
+      "acceptance": "pending",
+      "evidence": []
+    },
+    {
+      "source": "app_signature",
+      "targets": [
+        "tool:app_signature",
+        "tool:harmony_auth"
+      ],
+      "adapters": [
+        "src/services/signature.ts"
+      ],
+      "checks": [
+        "test/native-reports.test.ts"
+      ],
+      "behavior": "本地签名与云端证书/Profile 分开调用，使用开发者认证。",
+      "parameters": {
+        "force": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "team_id": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "product": {
+          "status": "mapped",
+          "replacement": "product；固定产品"
+        },
+        "project_path": {
+          "status": "mapped",
+          "replacement": "project_path；请求提交时固定工程"
+        },
+        "timeoutMs": {
+          "status": "replaced",
+          "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
+        }
+      },
+      "actions": [],
+      "remaining": [
+        "完整云端证书/Profile/团队验收",
+        "原 force 与自动签名选择策略对照"
+      ],
+      "acceptance": "pending",
+      "evidence": []
+    },
+    {
+      "source": "apply_changes",
+      "targets": [
+        "tool:hot_reload",
+        "workflow:build_deploy_verify"
+      ],
+      "adapters": [
+        "src/services/hotreload.ts"
+      ],
+      "checks": [
+        "test/native-hotreload.test.ts"
+      ],
+      "behavior": "固定热补丁流程与冷构建部署分别执行。",
+      "parameters": {
+        "files": {
+          "status": "mapped",
+          "replacement": "files；批量边界按各原生能力验证"
+        },
+        "hvd": {
+          "status": "mapped",
+          "replacement": "target；设备目标"
+        },
+        "module": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "target": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "ability": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "product": {
+          "status": "mapped",
+          "replacement": "product；固定产品"
+        },
+        "build_mode": {
+          "status": "mapped",
+          "replacement": "mode；debug/release"
+        },
+        "project_path": {
+          "status": "mapped",
+          "replacement": "project_path；请求提交时固定工程"
+        },
+        "timeoutMs": {
+          "status": "replaced",
+          "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
+        }
+      },
+      "actions": [],
+      "remaining": [
+        "原冷增量部署行为对照",
+        "实际 HQF 签名和设备应用"
+      ],
+      "acceptance": "pending",
+      "evidence": []
+    },
+    {
+      "source": "arkts_check",
+      "targets": [
+        "tool:arkts_check"
+      ],
+      "adapters": [
+        "src/services/checker.ts"
+      ],
+      "checks": [
+        "test/native-project.test.ts"
+      ],
+      "behavior": "静态预检明确标注为非编译结果。",
+      "parameters": {
+        "files": {
+          "status": "mapped",
+          "replacement": "files；批量边界按各原生能力验证"
+        },
+        "project_path": {
+          "status": "mapped",
+          "replacement": "project_path；请求提交时固定工程"
+        },
+        "product": {
+          "status": "mapped",
+          "replacement": "product；固定产品"
+        },
+        "timeoutMs": {
+          "status": "replaced",
+          "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
+        }
+      },
+      "actions": [],
+      "remaining": [
+        "逐项旧规则与历史误报对照"
+      ],
+      "acceptance": "pending",
+      "evidence": []
+    },
+    {
+      "source": "arkts_knowledge_search",
+      "targets": [
+        "tool:harmony_knowledge"
+      ],
+      "adapters": [
+        "src/services/knowledge.ts"
+      ],
+      "checks": [
+        "test/native-resources.test.ts"
+      ],
+      "behavior": "显式选择云端知识；认证与签名隔离。",
+      "parameters": {
+        "question": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        }
+      },
+      "actions": [],
+      "remaining": [
+        "实际云端网络和认证验证"
+      ],
+      "acceptance": "pending",
+      "evidence": []
+    },
+    {
+      "source": "build_project",
+      "targets": [
+        "workflow:project_build",
+        "tool:workflow_run"
+      ],
+      "adapters": [
+        "src/services/project.ts"
+      ],
+      "checks": [
+        "test/native-project.test.ts"
+      ],
+      "behavior": "构建及异步任务由持久化工作流承担，默认不 clean。",
+      "parameters": {
+        "action": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "job_id": {
+          "status": "mapped",
+          "replacement": "workflow_run.run_id"
+        },
+        "wait_ms": {
+          "status": "mapped",
+          "replacement": "workflow_run.wait_ms；最长 20 秒"
+        },
+        "modules": {
+          "status": "mapped",
+          "replacement": "modules；目标模块"
+        },
+        "module": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "product": {
+          "status": "mapped",
+          "replacement": "product；固定产品"
+        },
+        "build_mode": {
+          "status": "mapped",
+          "replacement": "mode；debug/release"
+        },
+        "clean": {
+          "status": "mapped",
+          "replacement": "clean；默认 false"
+        },
+        "log_path": {
+          "status": "replaced",
+          "replacement": "制品引用与 read_artifact"
+        },
+        "enable_inspector_source_jump": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "project_path": {
+          "status": "mapped",
+          "replacement": "project_path；请求提交时固定工程"
+        },
+        "timeoutMs": {
+          "status": "replaced",
+          "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
+        }
+      },
+      "actions": [
+        {
+          "field": "action",
+          "value": "start",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        },
+        {
+          "field": "action",
+          "value": "status",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        },
+        {
+          "field": "action",
+          "value": "cancel",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        },
+        {
+          "field": "action",
+          "value": "run",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        }
+      ],
+      "remaining": [
+        "多模块/多产品/HAR/HSP",
+        "源跳转 inspector 配置能力核对"
+      ],
+      "acceptance": "pending",
+      "evidence": []
+    },
+    {
+      "source": "check_cpp_files",
+      "targets": [
+        "tool:check_cpp_files"
+      ],
+      "adapters": [
+        "src/services/lsp.ts"
+      ],
+      "checks": [
+        "test/native-runtime.test.ts"
+      ],
+      "behavior": "clangd 使用真实编译数据库。",
+      "parameters": {
+        "files": {
+          "status": "mapped",
+          "replacement": "files；批量边界按各原生能力验证"
+        }
+      },
+      "actions": [],
+      "remaining": [
+        "跨 ABI、多模块编译数据库和旧 C++ 缺陷验收"
+      ],
+      "acceptance": "pending",
+      "evidence": []
+    },
+    {
+      "source": "check_ets_files",
+      "targets": [
+        "tool:lsp",
+        "workflow:code_diagnose"
+      ],
+      "adapters": [
+        "src/services/lsp.ts"
+      ],
+      "checks": [
+        "test/native-runtime.test.ts"
+      ],
+      "behavior": "ArkTS 语言诊断统一到原生 LSP。",
+      "parameters": {
+        "product": {
+          "status": "mapped",
+          "replacement": "product；固定产品"
+        },
+        "files": {
+          "status": "mapped",
+          "replacement": "files；批量边界按各原生能力验证"
+        }
+      },
+      "actions": [],
+      "remaining": [
+        "旧批量诊断语义和缺失 SDK 行为对照"
+      ],
+      "acceptance": "pending",
+      "evidence": []
+    },
+    {
+      "source": "code_lint",
+      "targets": [
+        "tool:code_lint"
+      ],
+      "adapters": [
+        "src/services/diagnostics.ts"
+      ],
+      "checks": [
+        "test/native-reports.test.ts"
+      ],
+      "behavior": "结构化 Code Linter 报告和显式修复。",
+      "parameters": {
+        "path": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "fix": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "incremental": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "config_path": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "product": {
+          "status": "mapped",
+          "replacement": "product；固定产品"
+        },
+        "format": {
+          "status": "replaced",
+          "replacement": "固定结构化输出与制品"
+        },
+        "output_path": {
+          "status": "replaced",
+          "replacement": "制品引用与 read_artifact"
+        },
+        "limit": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "project_path": {
+          "status": "mapped",
+          "replacement": "project_path；请求提交时固定工程"
+        },
+        "timeoutMs": {
+          "status": "replaced",
+          "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
+        }
+      },
+      "actions": [],
+      "remaining": [
+        "增量、配置覆盖与大报告验收；运行时已使用工程写租约保护修复"
+      ],
+      "acceptance": "pending",
+      "evidence": []
+    },
+    {
+      "source": "deveco_cli_auth",
+      "targets": [
+        "tool:harmony_auth"
+      ],
+      "adapters": [
+        "src/services/auth.ts"
+      ],
+      "checks": [
+        "test/native-runtime.test.ts"
+      ],
+      "behavior": "provider=developer 的登录、登出、状态和团队查询。",
+      "parameters": {
+        "action": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "project_path": {
+          "status": "mapped",
+          "replacement": "project_path；请求提交时固定工程"
+        },
+        "timeoutMs": {
+          "status": "replaced",
+          "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
+        }
+      },
+      "actions": [
+        {
+          "field": "action",
+          "value": "login",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        },
+        {
+          "field": "action",
+          "value": "logout",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        },
+        {
+          "field": "action",
+          "value": "status",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        },
+        {
+          "field": "action",
+          "value": "team_list",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        }
+      ],
+      "remaining": [
+        "实际开发者登录/刷新/团队验收"
+      ],
+      "acceptance": "pending",
+      "evidence": []
+    },
+    {
+      "source": "deveco_doctor",
+      "targets": [
+        "tool:deveco_doctor"
+      ],
+      "adapters": [
+        "src/services/runtime.ts"
+      ],
+      "checks": [
+        "test/native-runtime.test.ts"
+      ],
+      "behavior": "原生组件、配置与能力诊断，不再检查已安装 Skill。",
+      "parameters": {},
+      "actions": [],
+      "remaining": [
+        "三操作系统与 CLT 布局验收"
+      ],
+      "acceptance": "pending",
+      "evidence": []
+    },
+    {
+      "source": "deveco_login",
+      "targets": [
+        "tool:harmony_auth"
+      ],
+      "adapters": [
+        "src/services/auth.ts"
+      ],
+      "checks": [
+        "test/native-runtime.test.ts"
+      ],
+      "behavior": "provider=codegenie 的浏览器登录和状态。",
+      "parameters": {
+        "action": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "login_id": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "wait_ms": {
+          "status": "mapped",
+          "replacement": "workflow_run.wait_ms；最长 20 秒"
+        }
+      },
+      "actions": [
+        {
+          "field": "action",
+          "value": "start",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        },
+        {
+          "field": "action",
+          "value": "status",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        }
+      ],
+      "remaining": [
+        "回调取消、登录窗口过期、浏览器失败实际验收"
+      ],
+      "acceptance": "pending",
+      "evidence": []
+    },
+    {
+      "source": "deveco_logout",
+      "targets": [
+        "tool:harmony_auth"
+      ],
+      "adapters": [
+        "src/services/auth.ts"
+      ],
+      "checks": [
+        "test/native-runtime.test.ts"
+      ],
+      "behavior": "provider=codegenie 的登出及待登录取消。",
+      "parameters": {},
+      "actions": [],
+      "remaining": [
+        "旧刷新/登出竞争行为回归"
+      ],
+      "acceptance": "pending",
+      "evidence": []
+    },
+    {
+      "source": "deveco_restart",
+      "targets": [
+        "tool:deveco_restart"
+      ],
+      "adapters": [
+        "src/services/runtime.ts"
+      ],
+      "checks": [
+        "test/native-runtime.test.ts"
+      ],
+      "behavior": "重启原生 Worker 及受管会话，不保留子 MCP 重连分支。",
+      "parameters": {
+        "target": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        }
+      },
+      "actions": [],
+      "remaining": [
+        "活动 LSP/watch/UI 任务下完整退出验证"
+      ],
+      "acceptance": "pending",
+      "evidence": []
+    },
+    {
+      "source": "deveco_script",
+      "targets": [
+        "tool:workflow_catalog",
+        "tool:workflow_run",
+        "tool:hdc_log"
+      ],
+      "adapters": [
+        "src/services/runtime.ts"
+      ],
+      "checks": [
+        "test/workflows.test.ts"
+      ],
+      "behavior": "删除脚本执行和 argv 入口，七个注册脚本逐项迁移。",
+      "parameters": {
+        "script": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "args": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "argv": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "timeoutMs": {
+          "status": "replaced",
+          "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
+        }
+      },
+      "actions": [
+        {
+          "field": "script",
+          "value": "copy_template",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        },
+        {
+          "field": "script",
+          "value": "detect_sdk",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        },
+        {
+          "field": "script",
+          "value": "collect_hilog",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        },
+        {
+          "field": "script",
+          "value": "fetch_faultlog",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        },
+        {
+          "field": "script",
+          "value": "jscrash_report",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        },
+        {
+          "field": "script",
+          "value": "parse_jscrash_log",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        },
+        {
+          "field": "script",
+          "value": "probe_faultlogger",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        }
+      ],
+      "remaining": [
+        "见 scripts 七项验收记录"
+      ],
+      "acceptance": "pending",
+      "evidence": []
+    },
+    {
+      "source": "deveco_script_catalog",
+      "targets": [
+        "tool:workflow_catalog",
+        "tool:harmony_knowledge"
+      ],
+      "adapters": [
+        "src/services/runtime.ts"
+      ],
+      "checks": [
+        "test/workflows.test.ts"
+      ],
+      "behavior": "发现入口替换为工作流目录和按需知识。",
+      "parameters": {
+        "script": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        }
+      },
+      "actions": [
+        {
+          "field": "script",
+          "value": "copy_template",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        },
+        {
+          "field": "script",
+          "value": "detect_sdk",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        },
+        {
+          "field": "script",
+          "value": "collect_hilog",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        },
+        {
+          "field": "script",
+          "value": "fetch_faultlog",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        },
+        {
+          "field": "script",
+          "value": "jscrash_report",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        },
+        {
+          "field": "script",
+          "value": "parse_jscrash_log",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        },
+        {
+          "field": "script",
+          "value": "probe_faultlogger",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        }
+      ],
+      "remaining": [
+        "见 scripts 七项验收记录"
+      ],
+      "acceptance": "pending",
+      "evidence": []
+    },
+    {
+      "source": "deveco_status",
+      "targets": [
+        "tool:harmony_auth"
+      ],
+      "adapters": [
+        "src/services/auth.ts"
+      ],
+      "checks": [
+        "test/native-runtime.test.ts"
+      ],
+      "behavior": "provider=codegenie 的认证状态。",
+      "parameters": {},
+      "actions": [],
+      "remaining": [
+        "真实过期 Token 与离线行为"
+      ],
+      "acceptance": "pending",
+      "evidence": []
+    },
+    {
+      "source": "device_info",
+      "targets": [
+        "tool:device_info"
+      ],
+      "adapters": [
+        "src/services/device.ts"
+      ],
+      "checks": [
+        "test/native-reports.test.ts"
+      ],
+      "behavior": "HDC 直接查询设备属性，结果结构化。",
+      "parameters": {
+        "target": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "format": {
+          "status": "replaced",
+          "replacement": "固定结构化输出与制品"
+        },
+        "project_path": {
+          "status": "mapped",
+          "replacement": "project_path；请求提交时固定工程"
+        },
+        "timeoutMs": {
+          "status": "replaced",
+          "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
+        }
+      },
+      "actions": [],
+      "remaining": [
+        "多设备与设备型号/版本缺失验收"
+      ],
+      "acceptance": "pending",
+      "evidence": []
+    },
+    {
+      "source": "emulator_manage",
+      "targets": [
+        "tool:emulator_manage"
+      ],
+      "adapters": [
+        "src/services/emulator.ts"
+      ],
+      "checks": [
+        "test/native-emulator.test.ts"
+      ],
+      "behavior": "直接驱动模拟器、镜像和许可证管理组件。",
+      "parameters": {
+        "action": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "names": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "name": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "device_type": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "os_version": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "force": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "all": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "format": {
+          "status": "replaced",
+          "replacement": "固定结构化输出与制品"
+        },
+        "project_path": {
+          "status": "mapped",
+          "replacement": "project_path；请求提交时固定工程"
+        },
+        "timeoutMs": {
+          "status": "replaced",
+          "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
+        }
+      },
+      "actions": [
+        {
+          "field": "action",
+          "value": "list",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        },
+        {
+          "field": "action",
+          "value": "start",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        },
+        {
+          "field": "action",
+          "value": "stop",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        },
+        {
+          "field": "action",
+          "value": "create",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        },
+        {
+          "field": "action",
+          "value": "delete",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        },
+        {
+          "field": "action",
+          "value": "image_list",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        },
+        {
+          "field": "action",
+          "value": "image_download",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        },
+        {
+          "field": "action",
+          "value": "image_remove",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        },
+        {
+          "field": "action",
+          "value": "license_view",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        },
+        {
+          "field": "action",
+          "value": "license_accept",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        }
+      ],
+      "remaining": [
+        "真实镜像下载/删除/许可证接受",
+        "三平台模拟器入口验收"
+      ],
+      "acceptance": "pending",
+      "evidence": []
+    },
+    {
+      "source": "emulator_scenario",
+      "targets": [
+        "tool:emulator_scenario"
+      ],
+      "adapters": [
+        "src/services/emulator.ts"
+      ],
+      "checks": [
+        "test/native-emulator.test.ts"
+      ],
+      "behavior": "使用模拟器组件的场景协议。",
+      "parameters": {
+        "action": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "target": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "direction": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "state": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "level": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "status": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "longitude": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "latitude": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "altitude": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "scene": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "light_intensity": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "humidity": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "temperature": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "steps": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "heartrate": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "project_path": {
+          "status": "mapped",
+          "replacement": "project_path；请求提交时固定工程"
+        },
+        "timeoutMs": {
+          "status": "replaced",
+          "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
+        }
+      },
+      "actions": [
+        {
+          "field": "action",
+          "value": "shake",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        },
+        {
+          "field": "action",
+          "value": "power",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        },
+        {
+          "field": "action",
+          "value": "rotate",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        },
+        {
+          "field": "action",
+          "value": "volume",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        },
+        {
+          "field": "action",
+          "value": "fold",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        },
+        {
+          "field": "action",
+          "value": "battery",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        },
+        {
+          "field": "action",
+          "value": "geolocation",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        },
+        {
+          "field": "action",
+          "value": "scene",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        },
+        {
+          "field": "action",
+          "value": "sensor",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        }
+      ],
+      "remaining": [
+        "应用实际感知传感器/场景结果"
+      ],
+      "acceptance": "pending",
+      "evidence": []
+    },
+    {
+      "source": "find_references",
+      "targets": [
+        "tool:lsp"
+      ],
+      "adapters": [
+        "src/services/lsp.ts"
+      ],
+      "checks": [
+        "test/native-runtime.test.ts",
+        "test/native-lsp.test.ts",
+        "test/native-toolchain.test.ts"
+      ],
+      "behavior": "合并到 lsp references。",
+      "parameters": {
+        "file": {
+          "status": "mapped",
+          "replacement": "file；工程相对或绝对路径，realpath 去重，同一批读取字节用于摘要与通知"
+        },
+        "line": {
+          "status": "replaced",
+          "replacement": "line；从零开始，按当前文件内容检查范围"
+        },
+        "column": {
+          "status": "replaced",
+          "replacement": "character；从零开始的 UTF-16 偏移，检查 CRLF 和末尾空行"
+        },
+        "includeDeclaration": {
+          "status": "mapped",
+          "replacement": "includeDeclaration；关闭时使用语义定义核对过滤所有声明，保留真实引用"
+        },
+        "timeoutMs": {
+          "status": "replaced",
+          "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
+        }
+      },
+      "actions": [],
+      "remaining": [
+        "跨平台和最终性能验证；相对路径、未同步文件和去声明回归已通过"
+      ],
+      "acceptance": "pending",
+      "evidence": []
+    },
+    {
+      "source": "get_app_ui_tree",
+      "targets": [
+        "tool:ui_snapshot",
+        "tool:ui_inspect"
+      ],
+      "adapters": [
+        "src/services/device.ts",
+        "src/services/ui-inspection.ts"
+      ],
+      "checks": [
+        "test/native-ui.test.ts",
+        "test/native-ui-query.test.ts"
+      ],
+      "behavior": "删除重复代理，返回快照和制品。",
+      "parameters": {
+        "hvd": {
+          "status": "mapped",
+          "replacement": "target；设备目标"
+        },
+        "mode": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "outputDirectory": {
+          "status": "replaced",
+          "replacement": "制品引用与 read_artifact"
+        }
+      },
+      "actions": [],
+      "remaining": [
+        "真实多显示器与多窗口属性完整对照；简化树和父子层级已实现"
+      ],
+      "acceptance": "pending",
+      "evidence": []
+    },
+    {
+      "source": "get_hover",
+      "targets": [
+        "tool:lsp"
+      ],
+      "adapters": [
+        "src/services/lsp.ts"
+      ],
+      "checks": [
+        "test/native-runtime.test.ts",
+        "test/native-lsp.test.ts",
+        "test/native-toolchain.test.ts"
+      ],
+      "behavior": "合并到 lsp hover。",
+      "parameters": {
+        "file": {
+          "status": "mapped",
+          "replacement": "file；工程相对或绝对路径，realpath 去重，同一批读取字节用于摘要与通知"
+        },
+        "line": {
+          "status": "replaced",
+          "replacement": "line；从零开始，按当前文件内容检查范围"
+        },
+        "column": {
+          "status": "replaced",
+          "replacement": "character；从零开始的 UTF-16 偏移，检查 CRLF 和末尾空行"
+        },
+        "timeoutMs": {
+          "status": "replaced",
+          "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
+        }
+      },
+      "actions": [],
+      "remaining": [
+        "跨平台和最终性能验证；合法空结果及位置边界已通过"
+      ],
+      "acceptance": "pending",
+      "evidence": []
+    },
+    {
+      "source": "go_to_definition",
+      "targets": [
+        "tool:lsp"
+      ],
+      "adapters": [
+        "src/services/lsp.ts"
+      ],
+      "checks": [
+        "test/native-runtime.test.ts",
+        "test/native-lsp.test.ts",
+        "test/native-toolchain.test.ts"
+      ],
+      "behavior": "合并到 lsp definition。",
+      "parameters": {
+        "file": {
+          "status": "mapped",
+          "replacement": "file；工程相对或绝对路径，realpath 去重，同一批读取字节用于摘要与通知"
+        },
+        "line": {
+          "status": "replaced",
+          "replacement": "line；从零开始，按当前文件内容检查范围"
+        },
+        "column": {
+          "status": "replaced",
+          "replacement": "character；从零开始的 UTF-16 偏移，检查 CRLF 和末尾空行"
+        },
+        "timeoutMs": {
+          "status": "replaced",
+          "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
+        }
+      },
+      "actions": [],
+      "remaining": [
+        "真实跨模块/SDK 定义位置验收"
+      ],
+      "acceptance": "pending",
+      "evidence": []
+    },
+    {
+      "source": "harmony_docs",
+      "targets": [
+        "tool:harmony_knowledge"
+      ],
+      "adapters": [
+        "src/services/knowledge.ts"
+      ],
+      "checks": [
+        "test/native-resources.test.ts"
+      ],
+      "behavior": "本地文档数据库和压缩资源按需读取。",
+      "parameters": {
+        "action": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "keywords": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "catalog": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "document_id": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "format": {
+          "status": "replaced",
+          "replacement": "固定结构化输出与制品"
+        },
+        "limit": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "project_path": {
+          "status": "mapped",
+          "replacement": "project_path；请求提交时固定工程"
+        },
+        "timeoutMs": {
+          "status": "replaced",
+          "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
+        }
+      },
+      "actions": [
+        {
+          "field": "action",
+          "value": "catalog",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        },
+        {
+          "field": "action",
+          "value": "search",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        },
+        {
+          "field": "action",
+          "value": "read",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        }
+      ],
+      "remaining": [
+        "旧 catalog/keywords 组合和文档分页对照"
+      ],
+      "acceptance": "pending",
+      "evidence": []
+    },
+    {
+      "source": "hdc_log",
+      "targets": [
+        "tool:hdc_log",
+        "tool:device_info",
+        "workflow:crash_diagnose"
+      ],
+      "adapters": [
+        "src/services/logs.ts",
+        "src/services/runtime.ts"
+      ],
+      "checks": [
+        "test/native-logs.test.ts"
+      ],
+      "behavior": "原生 Hilog 收集、字面量整行过滤、清空、faultlog 探测与命名读取；输出制品及截断证据。",
+      "parameters": {
+        "action": {
+          "status": "mapped",
+          "replacement": "hdc_log.action；设备列表移至 device_info.list"
+        },
+        "device_id": {
+          "status": "mapped",
+          "replacement": "target；设备目标"
+        },
+        "log_prefix": {
+          "status": "replaced",
+          "replacement": "contains；整行字面量匹配，默认不过滤，不隐式使用旧调试标签"
+        },
+        "lines": {
+          "status": "mapped",
+          "replacement": "lines；无过滤取日志尾部，有 contains 时在设备筛选后取最后 N 条"
+        },
+        "timeoutMs": {
+          "status": "replaced",
+          "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
+        }
+      },
+      "actions": [
+        {
+          "field": "action",
+          "value": "collect",
+          "status": "mapped",
+          "replacement": "hdc_log(action=collect)"
+        },
+        {
+          "field": "action",
+          "value": "clear",
+          "status": "mapped",
+          "replacement": "hdc_log(action=clear)"
+        },
+        {
+          "field": "action",
+          "value": "list_devices",
+          "status": "mapped",
+          "replacement": "device_info(list=true)"
+        }
+      ],
+      "remaining": [
+        "真实设备 Hilog、整行筛选性能、默认 app/core buffer 清空和 faultlog 读取验收"
+      ],
+      "acceptance": "pending",
+      "evidence": []
+    },
+    {
+      "source": "hot_reload",
+      "targets": [
+        "tool:hot_reload"
+      ],
+      "adapters": [
+        "src/services/hotreload.ts"
+      ],
+      "checks": [
+        "test/native-hotreload.test.ts"
+      ],
+      "behavior": "原生持久化 watch 会话、补丁制作及应用。",
+      "parameters": {
+        "action": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "files": {
+          "status": "mapped",
+          "replacement": "files；批量边界按各原生能力验证"
+        },
+        "hvd": {
+          "status": "mapped",
+          "replacement": "target；设备目标"
+        },
+        "module": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "product": {
+          "status": "mapped",
+          "replacement": "product；固定产品"
+        },
+        "build_mode": {
+          "status": "mapped",
+          "replacement": "mode；debug/release"
+        },
+        "ability": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "project_path": {
+          "status": "mapped",
+          "replacement": "project_path；请求提交时固定工程"
+        },
+        "wait_ms": {
+          "status": "mapped",
+          "replacement": "workflow_run.wait_ms；最长 20 秒"
+        },
+        "timeoutMs": {
+          "status": "replaced",
+          "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
+        }
+      },
+      "actions": [
+        {
+          "field": "action",
+          "value": "start",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        },
+        {
+          "field": "action",
+          "value": "apply",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        },
+        {
+          "field": "action",
+          "value": "status",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        },
+        {
+          "field": "action",
+          "value": "stop",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        }
+      ],
+      "remaining": [
+        "设备热补丁与最终效果验收",
+        "启动等待与跨进程会话竞争"
+      ],
+      "acceptance": "pending",
+      "evidence": []
+    },
+    {
+      "source": "lsp",
+      "targets": [
+        "tool:lsp"
+      ],
+      "adapters": [
+        "src/services/lsp.ts"
+      ],
+      "checks": [
+        "test/native-runtime.test.ts",
+        "test/native-lsp.test.ts",
+        "test/native-toolchain.test.ts"
+      ],
+      "behavior": "现代原生 LSP 生命周期与工程/SDK 会话缓存。",
+      "parameters": {
+        "operation": {
+          "status": "replaced",
+          "replacement": "action：definition / references / hover / implementation；旧操作名称不建立别名"
+        },
+        "filePath": {
+          "status": "mapped",
+          "replacement": "file；工程相对或绝对路径，realpath 去重，同一批读取字节用于摘要与通知"
+        },
+        "line": {
+          "status": "replaced",
+          "replacement": "line；从零开始，按当前文件内容检查范围"
+        },
+        "character": {
+          "status": "replaced",
+          "replacement": "character；从零开始的 UTF-16 偏移，检查 CRLF 和末尾空行"
+        },
+        "timeoutMs": {
+          "status": "replaced",
+          "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
+        }
+      },
+      "actions": [
+        {
+          "field": "operation",
+          "value": "goToDefinition",
+          "status": "replaced",
+          "replacement": "lsp.action=definition；真实本机 SDK 和原生回归通过"
+        },
+        {
+          "field": "operation",
+          "value": "findReferences",
+          "status": "replaced",
+          "replacement": "lsp.action=references；真实本机 SDK 和原生回归通过"
+        },
+        {
+          "field": "operation",
+          "value": "hover",
+          "status": "replaced",
+          "replacement": "lsp.action=hover；真实本机 SDK 和原生回归通过"
+        },
+        {
+          "field": "operation",
+          "value": "goToImplementation",
+          "status": "replaced",
+          "replacement": "lsp.action=implementation；真实本机 SDK 和原生回归通过"
+        }
+      ],
+      "remaining": [
+        "跨平台与更广 SDK 组合的语言会话验收、最终性能门槛"
+      ],
+      "acceptance": "pending",
+      "evidence": []
+    },
+    {
+      "source": "perform_ui_action",
+      "targets": [
+        "tool:ui_control",
+        "tool:ui_tap",
+        "tool:ui_snapshot"
+      ],
+      "adapters": [
+        "src/services/device.ts"
+      ],
+      "checks": [
+        "test/native-text.test.ts"
+      ],
+      "behavior": "动作统一到 HDC/UiTest/Hypium 原生服务。",
+      "parameters": {
+        "actionType": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "direction": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "displayId": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "hvd": {
+          "status": "mapped",
+          "replacement": "target；设备目标"
+        },
+        "key1": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "key2": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "key3": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "localPath": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "savePath": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "stepLength": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "text": {
+          "status": "mapped",
+          "replacement": "selector.text 或 operation.text；按动作区分"
+        },
+        "velocity": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "x": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "y": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "timeoutMs": {
+          "status": "replaced",
+          "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
+        }
+      },
+      "actions": [],
+      "remaining": [
+        "完整 actionType 取值对照",
+        "滚动步长及显示器路由"
+      ],
+      "acceptance": "pending",
+      "evidence": []
+    },
+    {
+      "source": "project_sync",
+      "targets": [
+        "workflow:project_sync"
+      ],
+      "adapters": [
+        "src/services/project.ts"
+      ],
+      "checks": [
+        "test/native-project.test.ts"
+      ],
+      "behavior": "固定安装/模型同步/验证顺序。",
+      "parameters": {
+        "product": {
+          "status": "mapped",
+          "replacement": "product；固定产品"
+        },
+        "install_dependencies": {
+          "status": "mapped",
+          "replacement": "workflow project_sync 的 install"
+        },
+        "project_path": {
+          "status": "mapped",
+          "replacement": "project_path；请求提交时固定工程"
+        },
+        "timeoutMs": {
+          "status": "replaced",
+          "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
+        }
+      },
+      "actions": [],
+      "remaining": [
+        "多产品与 OHPM 中断恢复"
+      ],
+      "acceptance": "pending",
+      "evidence": []
+    },
+    {
+      "source": "start_app",
+      "targets": [
+        "workflow:build_deploy_verify",
+        "workflow:app_deploy"
+      ],
+      "adapters": [
+        "src/services/runtime.ts"
+      ],
+      "checks": [
+        "test/native-deploy.test.ts"
+      ],
+      "behavior": "构建、安装、启动及断言分别留存回执。",
+      "parameters": {
+        "hvd": {
+          "status": "mapped",
+          "replacement": "target；设备目标"
+        },
+        "module": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "target": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "product": {
+          "status": "mapped",
+          "replacement": "product；固定产品"
+        },
+        "ability": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "project_path": {
+          "status": "mapped",
+          "replacement": "project_path；请求提交时固定工程"
+        },
+        "timeoutMs": {
+          "status": "replaced",
+          "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
+        }
+      },
+      "actions": [],
+      "remaining": [
+        "签名包真实安装启动",
+        "多模块包选择"
+      ],
+      "acceptance": "pending",
+      "evidence": []
+    },
+    {
+      "source": "switch_cwd",
+      "targets": [
+        "tool:switch_cwd"
+      ],
+      "adapters": [
+        "src/services/project.ts"
+      ],
+      "checks": [
+        "test/native-runtime.test.ts"
+      ],
+      "behavior": "切换默认工程，已提交任务使用捕获上下文。",
+      "parameters": {
+        "project_path": {
+          "status": "mapped",
+          "replacement": "project_path；请求提交时固定工程"
+        }
+      },
+      "actions": [],
+      "remaining": [
+        "旧工程路径别名/目录失效回归清单"
+      ],
+      "acceptance": "pending",
+      "evidence": []
+    },
+    {
+      "source": "ui_control",
+      "targets": [
+        "tool:ui_control"
+      ],
+      "adapters": [
+        "src/services/device.ts"
+      ],
+      "checks": [
+        "test/native-text.test.ts"
+      ],
+      "behavior": "原生操作对象，选择器/窗口条件与动作共享设备租约。",
+      "parameters": {
+        "action": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "x": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "y": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "x2": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "y2": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "direction": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "text": {
+          "status": "mapped",
+          "replacement": "selector.text 或 operation.text；按动作区分"
+        },
+        "node_id": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "window": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "speed": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "hvd": {
+          "status": "mapped",
+          "replacement": "target；设备目标"
+        },
+        "project_path": {
+          "status": "mapped",
+          "replacement": "project_path；请求提交时固定工程"
+        },
+        "timeoutMs": {
+          "status": "replaced",
+          "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
+        }
+      },
+      "actions": [
+        {
+          "field": "action",
+          "value": "click",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        },
+        {
+          "field": "action",
+          "value": "doubleclick",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        },
+        {
+          "field": "action",
+          "value": "longclick",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        },
+        {
+          "field": "action",
+          "value": "swipe",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        },
+        {
+          "field": "action",
+          "value": "fling",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        },
+        {
+          "field": "action",
+          "value": "drag",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        },
+        {
+          "field": "action",
+          "value": "dircfling",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        },
+        {
+          "field": "action",
+          "value": "text",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        }
+      ],
+      "remaining": [
+        "真实中文输入和窗口定位",
+        "所有手势路径验收"
+      ],
+      "acceptance": "pending",
+      "evidence": []
+    },
+    {
+      "source": "ui_find",
+      "targets": [
+        "tool:ui_find"
+      ],
+      "adapters": [
+        "src/services/device.ts"
+      ],
+      "checks": [
+        "test/native-ui.test.ts",
+        "test/native-ui-query.test.ts"
+      ],
+      "behavior": "使用快照 ID 和复用索引。",
+      "parameters": {
+        "text": {
+          "status": "mapped",
+          "replacement": "selector.text 或 operation.text；按动作区分"
+        },
+        "textMode": {
+          "status": "mapped",
+          "replacement": "selector.textMode"
+        },
+        "key": {
+          "status": "mapped",
+          "replacement": "selector.key"
+        },
+        "type": {
+          "status": "mapped",
+          "replacement": "selector.type"
+        },
+        "dumpPath": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "hvd": {
+          "status": "mapped",
+          "replacement": "target；设备目标"
+        },
+        "limit": {
+          "status": "replaced",
+          "replacement": "selector.limit 只限制返回条数，真实匹配数量完整保留；inspect 使用 offset/limit 分页"
+        },
+        "onScreenOnly": {
+          "status": "mapped",
+          "replacement": "selector.onScreenOnly"
+        },
+        "clickableOnly": {
+          "status": "mapped",
+          "replacement": "selector.clickableOnly"
+        },
+        "displayId": {
+          "status": "replaced",
+          "replacement": "selector.displayId；inspect 使用 display_id。显示器与窗口联合定位"
+        },
+        "timeoutMs": {
+          "status": "replaced",
+          "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
+        },
+        "checked": {
+          "status": "mapped",
+          "replacement": "selector.checked"
+        },
+        "selected": {
+          "status": "mapped",
+          "replacement": "selector.selected"
+        },
+        "enabled": {
+          "status": "mapped",
+          "replacement": "selector.enabled"
+        },
+        "value": {
+          "status": "mapped",
+          "replacement": "selector.value"
+        },
+        "selectors": {
+          "status": "replaced",
+          "replacement": "selectors：[id, selector] 对象列表，最多 32 项、ID 唯一，同一快照批量求值"
+        }
+      },
+      "actions": [],
+      "remaining": [
+        "dumpPath 文件导入替代",
+        "真实多显示器及直接能力性能门槛"
+      ],
+      "acceptance": "pending",
+      "evidence": []
+    },
+    {
+      "source": "ui_flow",
+      "targets": [
+        "tool:ui_flow",
+        "tool:workflow_run"
+      ],
+      "adapters": [
+        "src/services/flow.ts",
+        "src/services/routes.ts",
+        "src/services/runtime.ts",
+        "src/services/navigation.ts",
+        "src/services/recording.ts"
+      ],
+      "checks": [
+        "test/native-flow.test.ts",
+        "test/native-routes.test.ts",
+        "test/native-recording.test.ts"
+      ],
+      "behavior": "公开入口优先的目标导航、保存流程与持久化录制；每次动作有回执，只在原断言通过后保存流程或选择器修复。",
+      "parameters": {
+        "action": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "id": {
+          "status": "mapped",
+          "replacement": "id；保存流程标识"
+        },
+        "name": {
+          "status": "mapped",
+          "replacement": "record_start.name；流程名称"
+        },
+        "goal": {
+          "status": "mapped",
+          "replacement": "navigate.goal；优先匹配公开入口，其次按名称匹配所选产品的保存流程；歧义拒绝执行"
+        },
+        "recording_id": {
+          "status": "mapped",
+          "replacement": "recording_id 等于 ui_record 内部工作流 run_id，SQLite 持久化"
+        },
+        "job_id": {
+          "status": "mapped",
+          "replacement": "workflow_run.run_id"
+        },
+        "project_path": {
+          "status": "mapped",
+          "replacement": "project_path；请求提交时固定工程"
+        },
+        "hvd": {
+          "status": "mapped",
+          "replacement": "target；设备目标"
+        },
+        "bundle_name": {
+          "status": "replaced",
+          "replacement": "根据所选工程 AppScope 与产品解析，不允许 UI 流程跨应用执行"
+        },
+        "module": {
+          "status": "mapped",
+          "replacement": "route.module；与其他约束取交集"
+        },
+        "ability": {
+          "status": "mapped",
+          "replacement": "route.ability；校验已声明且公开的 Ability"
+        },
+        "route_id": {
+          "status": "mapped",
+          "replacement": "route.id；稳定标识"
+        },
+        "route_action": {
+          "status": "mapped",
+          "replacement": "route.action"
+        },
+        "uri": {
+          "status": "mapped",
+          "replacement": "route.uri；匹配真实声明，不编造动态路径"
+        },
+        "want_parameters": {
+          "status": "mapped",
+          "replacement": "parameters；布尔、无符号整数、字符串和空字符串"
+        },
+        "start_policy": {
+          "status": "mapped",
+          "replacement": "record_start.mode 与保存流程 start.mode；restart/attach"
+        },
+        "backend": {
+          "status": "removed",
+          "replacement": "由原生组件能力选择实现，不保留代理后端协议"
+        },
+        "wait_ms": {
+          "status": "mapped",
+          "replacement": "workflow_run.wait_ms；最长 20 秒"
+        },
+        "timeoutMs": {
+          "status": "replaced",
+          "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
+        },
+        "variables": {
+          "status": "mapped",
+          "replacement": "variables；只接受已声明且满足必需条件的变量"
+        },
+        "flow": {
+          "status": "mapped",
+          "replacement": "flow；严格校验已保存流程"
+        },
+        "success_selector": {
+          "status": "mapped",
+          "replacement": "assert.visible 或 assert.hidden 中的 selector"
+        },
+        "success_state": {
+          "status": "mapped",
+          "replacement": "assert.visible / assert.hidden；两者互斥"
+        },
+        "success_timeout_ms": {
+          "status": "mapped",
+          "replacement": "assert.timeoutMs"
+        },
+        "allow_unverified": {
+          "status": "removed",
+          "replacement": "用户计划要求最终断言；删除无验证成功分支"
+        },
+        "selector_healing": {
+          "status": "replaced",
+          "replacement": "原生流程执行固定进行无歧义修复，且只有原最终断言通过后保存；删除开关分支"
+        }
+      },
+      "actions": [
+        {
+          "field": "action",
+          "value": "navigate",
+          "status": "mapped",
+          "replacement": "ui_flow(action=navigate)"
+        },
+        {
+          "field": "action",
+          "value": "routes",
+          "status": "mapped",
+          "replacement": "ui_flow(action=routes)"
+        },
+        {
+          "field": "action",
+          "value": "driver_status",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        },
+        {
+          "field": "action",
+          "value": "record_start",
+          "status": "mapped",
+          "replacement": "ui_flow(action=record_start)；内部 LangGraph 任务管理"
+        },
+        {
+          "field": "action",
+          "value": "record_status",
+          "status": "mapped",
+          "replacement": "ui_flow(action=record_status)；内部 LangGraph 任务管理"
+        },
+        {
+          "field": "action",
+          "value": "record_stop",
+          "status": "mapped",
+          "replacement": "ui_flow(action=record_stop)；内部 LangGraph 任务管理"
+        },
+        {
+          "field": "action",
+          "value": "record_cancel",
+          "status": "mapped",
+          "replacement": "ui_flow(action=record_cancel)；内部 LangGraph 任务管理"
+        },
+        {
+          "field": "action",
+          "value": "run",
+          "status": "mapped",
+          "replacement": "ui_flow(action=run)"
+        },
+        {
+          "field": "action",
+          "value": "status",
+          "status": "replaced",
+          "replacement": "workflow_run(action=status, run_id)"
+        },
+        {
+          "field": "action",
+          "value": "cancel",
+          "status": "replaced",
+          "replacement": "workflow_run(action=cancel, run_id)"
+        },
+        {
+          "field": "action",
+          "value": "list",
+          "status": "mapped",
+          "replacement": "ui_flow(action=list)"
+        },
+        {
+          "field": "action",
+          "value": "get",
+          "status": "replaced",
+          "replacement": "ui_flow(action=read)"
+        },
+        {
+          "field": "action",
+          "value": "validate",
+          "status": "mapped",
+          "replacement": "ui_flow(action=validate)"
+        },
+        {
+          "field": "action",
+          "value": "delete",
+          "status": "mapped",
+          "replacement": "ui_flow(action=delete)"
+        }
+      ],
+      "remaining": [
+        "goal 未匹配时自动进入录制的体验与适用入口选择",
+        "driver_status 诊断映射",
+        "真实用户保存流程与设备录制/重放验收",
+        "录制期间热重载等长期会话对 UI 状态的干扰协调"
+      ],
+      "acceptance": "pending",
+      "evidence": []
+    },
+    {
+      "source": "ui_inspect",
+      "targets": [
+        "tool:ui_inspect"
+      ],
+      "adapters": [
+        "src/services/device.ts",
+        "src/services/ui-inspection.ts"
+      ],
+      "checks": [
+        "test/native-ui.test.ts",
+        "test/native-ui-query.test.ts"
+      ],
+      "behavior": "快照和结构化元数据、查询与可选截图。",
+      "parameters": {
+        "action": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "hvd": {
+          "status": "mapped",
+          "replacement": "target；设备目标"
+        },
+        "id": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "window": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "all_windows": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "all": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "depth": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "format": {
+          "status": "replaced",
+          "replacement": "固定结构化输出与制品"
+        },
+        "mode": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "project_path": {
+          "status": "mapped",
+          "replacement": "project_path；请求提交时固定工程"
+        },
+        "timeoutMs": {
+          "status": "replaced",
+          "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
+        }
+      },
+      "actions": [
+        {
+          "field": "action",
+          "value": "layout",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        },
+        {
+          "field": "action",
+          "value": "windows",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        }
+      ],
+      "remaining": [
+        "真实多显示器与更复杂窗口/浮层布局验收；单设备层级和批量读取已通过"
+      ],
+      "acceptance": "pending",
+      "evidence": []
+    },
+    {
+      "source": "ui_observe",
+      "targets": [
+        "tool:ui_observe",
+        "tool:ui_snapshot"
+      ],
+      "adapters": [
+        "src/services/device.ts"
+      ],
+      "checks": [
+        "test/native-ui.test.ts",
+        "test/native-ui-query.test.ts"
+      ],
+      "behavior": "复用一次快照的查询和制品读取。",
+      "parameters": {
+        "text": {
+          "status": "mapped",
+          "replacement": "selector.text 或 operation.text；按动作区分"
+        },
+        "textMode": {
+          "status": "mapped",
+          "replacement": "selector.textMode"
+        },
+        "key": {
+          "status": "mapped",
+          "replacement": "selector.key"
+        },
+        "type": {
+          "status": "mapped",
+          "replacement": "selector.type"
+        },
+        "clickableOnly": {
+          "status": "mapped",
+          "replacement": "selector.clickableOnly"
+        },
+        "onScreenOnly": {
+          "status": "mapped",
+          "replacement": "selector.onScreenOnly"
+        },
+        "limit": {
+          "status": "replaced",
+          "replacement": "selector.limit 只限制返回条数，真实匹配数量完整保留；inspect 使用 offset/limit 分页"
+        },
+        "displayId": {
+          "status": "replaced",
+          "replacement": "selector.displayId；inspect 使用 display_id。显示器与窗口联合定位"
+        },
+        "hvd": {
+          "status": "mapped",
+          "replacement": "target；设备目标"
+        },
+        "localPath": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "overwrite": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "width": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "inline": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "timeoutMs": {
+          "status": "replaced",
+          "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
+        },
+        "checked": {
+          "status": "mapped",
+          "replacement": "selector.checked"
+        },
+        "selected": {
+          "status": "mapped",
+          "replacement": "selector.selected"
+        },
+        "enabled": {
+          "status": "mapped",
+          "replacement": "selector.enabled"
+        },
+        "value": {
+          "status": "mapped",
+          "replacement": "selector.value"
+        },
+        "selectors": {
+          "status": "replaced",
+          "replacement": "selectors：[id, selector] 对象列表，最多 32 项、ID 唯一，同一快照批量求值"
+        }
+      },
+      "actions": [],
+      "remaining": [
+        "旧 selectors 批查询",
+        "图像宽度/内联和指定显示器功能"
+      ],
+      "acceptance": "pending",
+      "evidence": []
+    },
+    {
+      "source": "ui_snapshot",
+      "targets": [
+        "tool:ui_snapshot"
+      ],
+      "adapters": [
+        "src/services/device.ts"
+      ],
+      "checks": [
+        "test/native-ui.test.ts"
+      ],
+      "behavior": "快照、签名、制品及可选截图。",
+      "parameters": {
+        "hvd": {
+          "status": "mapped",
+          "replacement": "target；设备目标"
+        },
+        "localPath": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "overwrite": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "width": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "format": {
+          "status": "replaced",
+          "replacement": "固定结构化输出与制品"
+        },
+        "displayId": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "inline": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "ifChangedFrom": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "timeoutMs": {
+          "status": "replaced",
+          "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
+        }
+      },
+      "actions": [],
+      "remaining": [
+        "ifChangedFrom 变化检测接口",
+        "多显示器、JPEG/PNG、尺寸和内联读取"
+      ],
+      "acceptance": "pending",
+      "evidence": []
+    },
+    {
+      "source": "ui_tap",
+      "targets": [
+        "tool:ui_tap",
+        "tool:ui_control"
+      ],
+      "adapters": [
+        "src/services/device.ts"
+      ],
+      "checks": [
+        "test/native-ui.test.ts"
+      ],
+      "behavior": "语义点击保留，其他动作统一在 ui_control。",
+      "parameters": {
+        "action": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "key": {
+          "status": "mapped",
+          "replacement": "selector.key"
+        },
+        "text": {
+          "status": "mapped",
+          "replacement": "selector.text 或 operation.text；按动作区分"
+        },
+        "textMode": {
+          "status": "mapped",
+          "replacement": "selector.textMode"
+        },
+        "type": {
+          "status": "mapped",
+          "replacement": "selector.type"
+        },
+        "clickableOnly": {
+          "status": "mapped",
+          "replacement": "selector.clickableOnly"
+        },
+        "verify": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "from_percent": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "to_percent": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "axis": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "from_x_percent": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "from_y_percent": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "to_x_percent": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "to_y_percent": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "x": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "y": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "x2": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "y2": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "direction": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "velocity": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "stepLength": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "key1": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "key2": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "key3": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "hvd": {
+          "status": "mapped",
+          "replacement": "target；设备目标"
+        },
+        "timeoutMs": {
+          "status": "replaced",
+          "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
+        },
+        "checked": {
+          "status": "mapped",
+          "replacement": "selector.checked"
+        },
+        "selected": {
+          "status": "mapped",
+          "replacement": "selector.selected"
+        },
+        "enabled": {
+          "status": "mapped",
+          "replacement": "selector.enabled"
+        },
+        "value": {
+          "status": "mapped",
+          "replacement": "selector.value"
+        }
+      },
+      "actions": [
+        {
+          "field": "action",
+          "value": "click",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        },
+        {
+          "field": "action",
+          "value": "doubleClick",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        },
+        {
+          "field": "action",
+          "value": "longClick",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        },
+        {
+          "field": "action",
+          "value": "swipe",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        },
+        {
+          "field": "action",
+          "value": "fling",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        },
+        {
+          "field": "action",
+          "value": "drag",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        },
+        {
+          "field": "action",
+          "value": "dircFling",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        },
+        {
+          "field": "action",
+          "value": "inputText",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        },
+        {
+          "field": "action",
+          "value": "keyEvent",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        }
+      ],
+      "remaining": [
+        "百分比手势独立入口",
+        "原 verify 参数与后置断言说明"
+      ],
+      "acceptance": "pending",
+      "evidence": []
+    },
+    {
+      "source": "verify_ui",
+      "targets": [
+        "tool:verify_ui",
+        "tool:ui_snapshot"
+      ],
+      "adapters": [
+        "src/services/device.ts"
+      ],
+      "checks": [
+        "test/native-flow.test.ts"
+      ],
+      "behavior": "显式断言用于通过判定，截图不作为完成证据。",
+      "parameters": {
+        "action": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "hvd": {
+          "status": "mapped",
+          "replacement": "target；设备目标"
+        },
+        "selector": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "success_state": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "visual_prompt": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "baseline_id": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "expect": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "width": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "inline": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "timeoutMs": {
+          "status": "replaced",
+          "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
+        }
+      },
+      "actions": [
+        {
+          "field": "action",
+          "value": "capture",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        },
+        {
+          "field": "action",
+          "value": "assert",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        },
+        {
+          "field": "action",
+          "value": "compare",
+          "status": "pending",
+          "replacement": "逐项行为验收待完成"
+        }
+      ],
+      "remaining": [
+        "capture/compare 的变化证据替代",
+        "保留人工 visual_prompt 审阅所需制品"
+      ],
+      "acceptance": "pending",
+      "evidence": []
+    }
+  ],
+  "scripts": [
+    {
+      "source": "copy_template",
+      "targets": [
+        "workflow:project_create"
+      ],
+      "adapters": [
+        "src/services/project.ts"
+      ],
+      "checks": [
+        "scripts/native-sdk-acceptance.ts"
+      ],
+      "behavior": "删除脚本运行入口，保留其领域能力。",
+      "parameters": {
+        "projectPath": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "appName": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "apiLevel": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        },
+        "bundleName": {
+          "status": "pending",
+          "replacement": "需要按本条能力确认新参数或明确删除理由"
+        }
+      },
+      "actions": [],
+      "remaining": [
+        "所有原参数和历史错误边界逐项对照"
+      ],
+      "acceptance": "pending",
+      "evidence": []
+    },
+    {
+      "source": "detect_sdk",
+      "targets": [
+        "tool:deveco_doctor"
+      ],
+      "adapters": [
+        "src/core/toolchain.ts"
+      ],
+      "checks": [
+        "scripts/native-sdk-acceptance.ts"
+      ],
+      "behavior": "删除脚本运行入口，保留其领域能力。",
+      "parameters": {},
+      "actions": [],
+      "remaining": [
+        "所有原参数和历史错误边界逐项对照"
+      ],
+      "acceptance": "pending",
+      "evidence": []
+    },
+    {
+      "source": "collect_hilog",
+      "targets": [
+        "tool:hdc_log"
+      ],
+      "adapters": [
+        "src/services/logs.ts",
+        "src/services/crash.ts",
+        "src/services/runtime.ts"
+      ],
+      "checks": [
+        "test/native-logs.test.ts"
+      ],
+      "behavior": "hdc_log.collect 原生日志收集；独立制品替代输出目录。",
+      "parameters": {
+        "deviceId": {
+          "status": "mapped",
+          "replacement": "target；真实设备采集目标"
+        },
+        "outputDir": {
+          "status": "replaced",
+          "replacement": "固定制品目录与 read_artifact；不写入任意调用方输出目录"
+        },
+        "lines": {
+          "status": "mapped",
+          "replacement": "lines；日志行数上限"
+        }
+      },
+      "actions": [],
+      "remaining": [
+        "真实设备日志采集及直接能力性能验收"
+      ],
+      "acceptance": "pending",
+      "evidence": []
+    },
+    {
+      "source": "fetch_faultlog",
+      "targets": [
+        "tool:hdc_log"
+      ],
+      "adapters": [
+        "src/services/logs.ts",
+        "src/services/crash.ts",
+        "src/services/runtime.ts"
+      ],
+      "checks": [
+        "test/native-logs.test.ts"
+      ],
+      "behavior": "hdc_log.fetch 精确读取命名 faultlog，保留截断证据。",
+      "parameters": {
+        "deviceId": {
+          "status": "mapped",
+          "replacement": "target；真实设备采集目标"
+        },
+        "faultlogName": {
+          "status": "mapped",
+          "replacement": "faultlog_name；保留原名，不添加扩展名"
+        },
+        "outputDir": {
+          "status": "replaced",
+          "replacement": "固定制品目录与 read_artifact；不写入任意调用方输出目录"
+        }
+      },
+      "actions": [],
+      "remaining": [
+        "真实设备命名 faultlog、时间范围、权限与截断边界验收"
+      ],
+      "acceptance": "pending",
+      "evidence": []
+    },
+    {
+      "source": "jscrash_report",
+      "targets": [
+        "workflow:crash_diagnose"
+      ],
+      "adapters": [
+        "src/services/logs.ts",
+        "src/services/crash.ts",
+        "src/services/runtime.ts"
+      ],
+      "checks": [
+        "test/native-logs.test.ts"
+      ],
+      "behavior": "crash_diagnose 持久化收集、按进程分离事件、匹配知识；结果保留证据不足状态。",
+      "parameters": {
+        "deviceId": {
+          "status": "mapped",
+          "replacement": "target；真实设备采集目标"
+        },
+        "bundleName": {
+          "status": "mapped",
+          "replacement": "bundle_name；精确应用归属过滤，不回退到其他应用"
+        },
+        "processHint": {
+          "status": "mapped",
+          "replacement": "process_hint；匹配进程名或 PID"
+        },
+        "logFile": {
+          "status": "mapped",
+          "replacement": "log_file；提交时有界读取并保存为任务制品"
+        },
+        "logText": {
+          "status": "mapped",
+          "replacement": "log_text；最多 32 KiB，提交时转为任务制品"
+        },
+        "lines": {
+          "status": "mapped",
+          "replacement": "lines；日志行数上限"
+        },
+        "includeText": {
+          "status": "replaced",
+          "replacement": "始终返回结构化诊断摘要和原始证据制品引用"
+        }
+      },
+      "actions": [],
+      "remaining": [
+        "应用栈帧位置排序和知识建议完整性对照",
+        "真实崩溃与进程交错日志验收"
+      ],
+      "acceptance": "pending",
+      "evidence": []
+    },
+    {
+      "source": "parse_jscrash_log",
+      "targets": [
+        "workflow:crash_diagnose"
+      ],
+      "adapters": [
+        "src/services/logs.ts",
+        "src/services/crash.ts",
+        "src/services/runtime.ts"
+      ],
+      "checks": [
+        "test/native-logs.test.ts"
+      ],
+      "behavior": "crash_diagnose 使用本地文件或内联证据；排队和恢复使用提交时制品。",
+      "parameters": {
+        "logFile": {
+          "status": "mapped",
+          "replacement": "log_file；提交时有界读取并保存为任务制品"
+        },
+        "logText": {
+          "status": "mapped",
+          "replacement": "log_text；最多 32 KiB，提交时转为任务制品"
+        },
+        "bundleName": {
+          "status": "mapped",
+          "replacement": "bundle_name；精确应用归属过滤，不回退到其他应用"
+        },
+        "processHint": {
+          "status": "mapped",
+          "replacement": "process_hint；匹配进程名或 PID"
+        },
+        "source": {
+          "status": "replaced",
+          "replacement": "报告记录实际采集文件/制品来源；不采信调用方标签作为来源证明"
+        },
+        "device": {
+          "status": "replaced",
+          "replacement": "本地证据不伪装为已验证设备采集；现场采集使用 target"
+        },
+        "includeText": {
+          "status": "replaced",
+          "replacement": "始终返回结构化诊断摘要和原始证据制品引用"
+        }
+      },
+      "actions": [],
+      "remaining": [
+        "应用栈帧位置排序和知识建议完整性对照",
+        "真实崩溃与进程交错日志验收"
+      ],
+      "acceptance": "pending",
+      "evidence": []
+    },
+    {
+      "source": "probe_faultlogger",
+      "targets": [
+        "tool:hdc_log"
+      ],
+      "adapters": [
+        "src/services/logs.ts",
+        "src/services/crash.ts",
+        "src/services/runtime.ts"
+      ],
+      "checks": [
+        "test/native-logs.test.ts"
+      ],
+      "behavior": "hdc_log.probe 查询两个 faultlog 来源，使用设备时钟进行精确应用和时间筛选。",
+      "parameters": {
+        "deviceId": {
+          "status": "mapped",
+          "replacement": "target；真实设备采集目标"
+        },
+        "bundleName": {
+          "status": "mapped",
+          "replacement": "bundle_name；精确应用归属过滤，不回退到其他应用"
+        },
+        "maxAgeMinutes": {
+          "status": "mapped",
+          "replacement": "max_age_minutes；使用设备时钟和时区，0 表示不按时间筛选"
+        },
+        "limit": {
+          "status": "mapped",
+          "replacement": "limit；匹配记录的返回上限"
+        }
+      },
+      "actions": [],
+      "remaining": [
+        "真实设备命名 faultlog、时间范围、权限与截断边界验收"
+      ],
+      "acceptance": "pending",
+      "evidence": []
+    }
+  ]
+}
