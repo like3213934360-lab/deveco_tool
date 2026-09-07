@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { docCatalogNames } from "./doc-catalog.js";
 
 export const screenshotOptionsSchema = z.strictObject({
   format: z.enum(["jpeg", "png"]).default("jpeg"),
@@ -514,12 +515,13 @@ export const tools = {
   },
   harmony_knowledge: {
     description:
-      "Search local HarmonyOS documentation and rule/case resources. Read returns 16 KiB characters by default; catalog/search return at most 100 entries. Cloud search requires source=cloud and a CodeGenie login.",
+      "Search local HarmonyOS documentation and rule/case resources. kind=docs catalog returns the six catalog names and paged documents; catalog filters local docs catalog/search. Read pages UTF-16 characters (default 16384); catalog/search pages at most 100 entries. Cloud search requires source=cloud and a CodeGenie login.",
     schema: z
       .strictObject({
         action: z.enum(["catalog", "search", "read"]),
         source: z.enum(["local", "cloud"]).default("local"),
         kind: z.enum(["rules", "docs"]).default("rules"),
+        catalog: z.enum(["all", ...docCatalogNames]).optional(),
         query: z.string().min(1).max(4096).optional(),
         id: z.string().optional(),
         offset: pagination.offset,
@@ -531,6 +533,14 @@ export const tools = {
           input.limit === undefined ||
           input.limit <= 100,
         "Catalog/search limit is at most 100",
+      )
+      .refine(
+        (input) =>
+          input.catalog === undefined ||
+          (input.source === "local" &&
+            input.kind === "docs" &&
+            input.action !== "read"),
+        "Catalog filters apply only to local docs catalog/search",
       ),
   },
   harmony_auth: {

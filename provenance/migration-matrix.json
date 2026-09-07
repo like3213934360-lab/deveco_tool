@@ -1266,40 +1266,42 @@
         "tool:harmony_knowledge"
       ],
       "adapters": [
-        "src/services/knowledge.ts"
+        "src/services/knowledge.ts",
+        "src/core/doc-catalog.ts"
       ],
       "checks": [
-        "test/native-resources.test.ts"
+        "test/native-resources.test.ts",
+        "test/native-reports.test.ts"
       ],
-      "behavior": "本地文档数据库和压缩资源按需读取。",
+      "behavior": "本地文档数据库和压缩资源按需读取；六类目录、限定目录检索和稳定分页。",
       "parameters": {
         "action": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "replaced",
+          "replacement": "harmony_knowledge action=catalog/search/read、kind=docs；目录列表与分页文档条目一起返回"
         },
         "keywords": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "replaced",
+          "replacement": "query；空白分隔查询，最多 12 个词，文字按字面构造 FTS 表达式，标题命中优先"
         },
         "catalog": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "mapped",
+          "replacement": "catalog=all 或六个官方目录名称；只适用于本地文档列表/检索，不会在其他动作中静默忽略"
         },
         "document_id": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "replaced",
+          "replacement": "id=docs:<document_id>；ID 指向发布包只读索引中的文档，正文 offset/limit 分页"
         },
         "format": {
           "status": "replaced",
           "replacement": "固定结构化输出与制品"
         },
         "limit": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "mapped",
+          "replacement": "目录/检索最多 100 条，正文最多 65536 个 UTF-16 代码单元；返回完整数量和 next_offset"
         },
         "project_path": {
-          "status": "mapped",
-          "replacement": "project_path；请求提交时固定工程"
+          "status": "removed",
+          "replacement": "文档资源独立于工程；移除旧 CLI 仅为进程工作目录使用的 project_path"
         },
         "timeoutMs": {
           "status": "replaced",
@@ -1310,24 +1312,24 @@
         {
           "field": "action",
           "value": "catalog",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "replaced",
+          "replacement": "harmony_knowledge action=catalog、kind=docs；六类目录、检索与正文分页见 test/native-resources.test.ts"
         },
         {
           "field": "action",
           "value": "search",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "replaced",
+          "replacement": "harmony_knowledge action=search、kind=docs；六类目录、检索与正文分页见 test/native-resources.test.ts"
         },
         {
           "field": "action",
           "value": "read",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "replaced",
+          "replacement": "harmony_knowledge action=read、kind=docs；六类目录、检索与正文分页见 test/native-resources.test.ts"
         }
       ],
       "remaining": [
-        "旧 catalog/keywords 组合和文档分页对照"
+        "新目录筛选/分页的 Node 22/24 三平台 CI 验证"
       ],
       "acceptance": "pending",
       "evidence": []

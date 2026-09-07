@@ -991,12 +991,15 @@ export class Runtime {
             input.offset,
             input.limit ?? 50,
             input.kind,
+            input.catalog,
           );
         if (input.action === "search")
           return this.knowledge.search(
             text(input.query, "query"),
             input.limit ?? 20,
             input.kind,
+            input.catalog,
+            input.offset,
           );
         return this.knowledge.read(
           text(input.id, "id"),

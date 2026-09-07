@@ -8,6 +8,11 @@ import { fileDigest, inside } from "../core/files.js";
 import { invariant } from "../core/errors.js";
 import { StateStore } from "../core/store.js";
 import { AuthService, httpRequest } from "./auth.js";
+import {
+  docCatalogNames,
+  docCatalogTitles,
+  type DocCatalog,
+} from "../core/doc-catalog.js";
 
 export const knowledgeEntrySchema = z.strictObject({
   id: z.string(),
@@ -22,9 +27,31 @@ export const knowledgeEntrySchema = z.strictObject({
   summary: z.string(),
   related_ids: z.array(z.string()),
 });
-interface Doc {
-  document_id: string;
-  doc_title: string;
+const docSchema = z.object({
+  document_id: z.string(),
+  doc_title: z.string(),
+  catalog_id: z.number().int().nonnegative(),
+});
+type Doc = z.infer<typeof docSchema>;
+function docMetadata(doc: Doc) {
+  const catalog = docCatalogNames[doc.catalog_id];
+  invariant(
+    catalog,
+    "DOC_CATALOG_INVALID",
+    "Bundled document has an unknown catalog",
+  );
+  return {
+    id: `docs:${doc.document_id}`,
+    title: doc.doc_title,
+    catalog,
+    source: "deveco-cli/docs.zip",
+  };
+}
+function catalogId(catalog: DocCatalog): number | null {
+  if (catalog === "all") return null;
+  const id = docCatalogNames.indexOf(catalog);
+  invariant(id >= 0, "DOC_CATALOG_INVALID", "Unknown documentation catalog");
+  return id;
 }
 export class KnowledgeService {
   private readonly entries = z
@@ -49,35 +76,74 @@ export class KnowledgeService {
     this.index.pragma("query_only = ON");
     return this.index;
   }
-  catalog(offset = 0, limit = 50, kind: "rules" | "docs" = "rules") {
+  catalog(
+    offset = 0,
+    limit = 50,
+    kind: "rules" | "docs" = "rules",
+    catalog: DocCatalog = "all",
+  ) {
     if (kind === "rules")
       return {
         source: "local",
         total: this.entries.length,
+        offset,
+        next_offset: Math.min(this.entries.length, offset + limit),
         entries: this.entries
           .slice(offset, offset + limit)
           .map(({ file: _file, ...entry }) => entry),
       };
     const database = this.documents();
-    const count = database
-      .prepare("SELECT COUNT(*) AS count FROM documents")
-      .get() as { count: number };
-    const documents = database
-      .prepare(
-        "SELECT document_id,doc_title FROM documents ORDER BY document_id LIMIT ? OFFSET ?",
+    const id = catalogId(catalog);
+    const counts = z
+      .array(
+        z.object({ catalog_id: z.number().int(), count: z.number().int() }),
       )
-      .all(limit, offset) as Doc[];
+      .parse(
+        database
+          .prepare(
+            "SELECT catalog_id,COUNT(*) AS count FROM documents GROUP BY catalog_id",
+          )
+          .all(),
+      );
+    invariant(
+      counts.every((row) => docCatalogNames[row.catalog_id]),
+      "DOC_CATALOG_INVALID",
+      "Bundled document index has an unknown catalog",
+    );
+    const catalogs = docCatalogNames.map((name, i) => ({
+      name,
+      title: docCatalogTitles[i],
+      total: counts.find((row) => row.catalog_id === i)?.count ?? 0,
+    }));
+    const total = catalogs.reduce(
+      (sum, item, i) => sum + (id === null || id === i ? item.total : 0),
+      0,
+    );
+    const documents = z
+      .array(docSchema)
+      .parse(
+        database
+          .prepare(
+            "SELECT document_id,doc_title,catalog_id FROM documents WHERE (? IS NULL OR catalog_id=?) ORDER BY document_id LIMIT ? OFFSET ?",
+          )
+          .all(id, id, limit, offset),
+      );
     return {
       source: "local",
-      total: count.count,
-      entries: documents.map((doc) => ({
-        id: `docs:${doc.document_id}`,
-        title: doc.doc_title,
-        source: "deveco-cli/docs.zip",
-      })),
+      total,
+      offset,
+      next_offset: Math.min(total, offset + limit),
+      catalogs,
+      entries: documents.map(docMetadata),
     };
   }
-  search(query: string, limit = 20, kind: "rules" | "docs" = "rules") {
+  search(
+    query: string,
+    limit = 20,
+    kind: "rules" | "docs" = "rules",
+    catalog: DocCatalog = "all",
+    offset = 0,
+  ) {
     const terms = query.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
     invariant(
       terms.length > 0,
@@ -112,53 +178,77 @@ export class KnowledgeService {
         };
       })
       .filter((item) => item.score > 0)
-      .sort((a, b) => b.score - a.score)
-      .slice(0, limit);
-    if (kind === "rules") return { source: "local", rules, documents: [] };
+      .sort((a, b) => b.score - a.score || a.id.localeCompare(b.id));
+    if (kind === "rules")
+      return {
+        source: "local",
+        rules: rules.slice(offset, offset + limit),
+        documents: [],
+        total: rules.length,
+        offset,
+        next_offset: Math.min(rules.length, offset + limit),
+      };
+    invariant(
+      terms.length <= 12,
+      "QUERY_TOO_COMPLEX",
+      "Local documentation search accepts at most 12 whitespace-separated terms",
+    );
     const expression = terms
-      .slice(0, 12)
       .map((term) => `"${term.replaceAll('"', '""')}"`)
       .join(" OR ");
     const database = this.documents();
-    let documents = database
-      .prepare(
-        "SELECT DISTINCT d.document_id,d.doc_title FROM segments_fts f JOIN segments s ON s.id=f.rowid JOIN documents d ON d.id=s.doc_id WHERE segments_fts MATCH ? LIMIT ?",
-      )
-      .all(expression, limit) as Doc[];
-    if (documents.length < limit) {
-      const escaped = query
+    const id = catalogId(catalog),
+      escaped = query
+        .trim()
         .replaceAll("\\", "\\\\")
         .replaceAll("%", "\\%")
-        .replaceAll("_", "\\_");
-      const titles = database
-        .prepare(
-          "SELECT document_id,doc_title FROM documents WHERE doc_title LIKE ? ESCAPE '\\' LIMIT ?",
-        )
-        .all(`%${escaped}%`, limit) as Doc[];
-      documents = [
-        ...new Map(
-          [...titles, ...documents].map((doc) => [doc.document_id, doc]),
-        ).values(),
-      ].slice(0, limit);
-    }
+        .replaceAll("_", "\\_"),
+      // Title hits first, then full-text hits, with a stable ID tie-breaker.
+      // All candidates stay in SQLite; LIMIT/OFFSET cannot silently change
+      // directory filtering or duplicate documents across pages.
+      matches = `WITH hits AS (
+        SELECT id AS doc_id,1 AS title_hit FROM documents WHERE doc_title LIKE ? ESCAPE '\\' AND (? IS NULL OR catalog_id=?)
+        UNION ALL
+        SELECT s.doc_id,0 AS title_hit FROM segments_fts f JOIN segments s ON s.id=f.rowid JOIN documents d ON d.id=s.doc_id WHERE segments_fts MATCH ? AND (? IS NULL OR d.catalog_id=?)
+      ), matched AS (SELECT doc_id,MAX(title_hit) AS title_hit FROM hits GROUP BY doc_id)`,
+      args = [`%${escaped}%`, id, id, expression, id, id],
+      total = z
+        .object({ total: z.number().int() })
+        .parse(
+          database
+            .prepare(`${matches} SELECT COUNT(*) AS total FROM matched`)
+            .get(...args),
+        ).total,
+      documents = z
+        .array(docSchema)
+        .parse(
+          database
+            .prepare(
+              `${matches} SELECT d.document_id,d.doc_title,d.catalog_id FROM matched m JOIN documents d ON d.id=m.doc_id ORDER BY m.title_hit DESC,d.document_id LIMIT ? OFFSET ?`,
+            )
+            .all(...args, limit, offset),
+        );
     return {
       source: "local",
       rules,
-      documents: documents.map((doc) => ({
-        id: `docs:${doc.document_id}`,
-        title: doc.doc_title,
-        source: "deveco-cli/docs.zip",
-      })),
+      total,
+      offset,
+      next_offset: Math.min(total, offset + limit),
+      documents: documents.map(docMetadata),
     };
   }
   read(id: string, offset = 0, limit = 16384) {
     let content: string, source: unknown;
     if (id.startsWith("docs:")) {
-      const document = this.documents()
-        .prepare(
-          "SELECT document_id,doc_title FROM documents WHERE document_id=?",
-        )
-        .get(id.slice(5)) as Doc | undefined;
+      const document = docSchema
+        .optional()
+        .parse(
+          this.documents()
+            .prepare(
+              "SELECT document_id,doc_title,catalog_id FROM documents WHERE document_id=?",
+            )
+            .get(id.slice(5)),
+        );
       invariant(document, "KNOWLEDGE_NOT_FOUND", "Unknown document");
       this.archive ??= new AdmZip(path.join(resourceRoot, "docs.zip"));
       const entry = this.archive.getEntry(`${document.document_id}.md`);
@@ -169,9 +259,7 @@ export class KnowledgeService {
       );
       content = entry.getData().toString("utf8");
       source = {
-        id,
-        title: document.doc_title,
-        source: "deveco-cli/docs.zip",
+        ...docMetadata(document),
         version: "1.3.1",
       };
     } else {

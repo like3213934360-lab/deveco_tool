@@ -50,7 +50,7 @@ MCP 主进程提供静态工具目录和参数校验；Worker 持有领域服务
 | 热重载 | `services/hotreload.ts`、`services/hvigor` | SDK watch 基线、同一 worker 两次生成不同 ABC、停止与配置恢复通过；签名 HQF、设备应用及运行效果未通过完整验收 |
 | 本地和云端签名 | `services/signature.ts`、`auth.ts` | 真实密钥与 CSR 生成通过；证书/Profile/团队、云端认证和完整签名安装待验收 |
 | 模拟器与场景 | `services/emulator.ts` | 本机创建、启动、保持运行、场景命令、停止、删除通过；场景命令接受不等于应用感知结果已验证 |
-| 文档与知识 | `services/knowledge.ts`、`resources/knowledge.json` | 119 个资源、79 条知识、4 个来源的摘要与许可证校验通过；本地查询直接打开发布资源数据库，无每版本状态目录解压副本 |
+| 文档与知识 | `services/knowledge.ts`、`resources/knowledge.json` | 119 个资源、79 条知识、4 个来源的摘要与许可证校验通过；本地查询直接打开发布资源数据库，无每版本状态目录解压副本；六目录筛选、中文检索与稳定分页通过，详见 `docs/native-knowledge.md` |
 | 上游更新 | `scripts/upstream.ts`、`provenance/upstream-*` | 检测、分类、报告摘要核对、草稿 PR 幂等创建、CI 调度、候选评审阻断和框架/官方升级分离已实现；模拟 GitHub 故障恢复测试通过，真实草稿 PR #1、重复调用去重和候选评审阻断通过；定时身份权限、人工适配与正式发布门禁待验收 |
 
 ## 本机验证记录
@@ -59,7 +59,7 @@ MCP 主进程提供静态工具目录和参数校验；Worker 持有领域服务
 
 | 检查 | 结果 | 范围与原始证据 |
 | --- | --- | --- |
-| 编译及回归 | 177 项通过，0 跳过 | `/private/tmp/deveco-native-regression-node26-20260908-20/evidence.json`；Node 26.0.0，131 个 TypeScript 文件，包含显示器/坐标、CLT/JDK 探测及有界 Linter 报告、配置和失败回执回归；本机不能证明 Windows 行为 |
+| 编译及回归 | 178 项通过，0 跳过 | `/private/tmp/deveco-native-regression-node26-20260908-21/evidence.json`；Node 26.0.0，132 个 TypeScript 文件，包含显示器/坐标、CLT/JDK 探测及有界 Linter 报告、配置和失败回执、文档目录筛选与分页回归；本机不能证明 Windows 行为 |
 | Node 22/24 干净原生验证目录 | 六组全量回归和 Windows 压力门槛通过 | [CI 34158666170](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34158666170)，提交 `01dd93a`；Windows Node 22/24 各 20/20 轮通过；此 CI 早于 CLT/JDK 和 Linter 新改动，不能覆盖这些代码 |
 | 迁移清单 | 40 工具、7 脚本、330 参数、95 动作覆盖检查通过 | `provenance/baseline-capabilities.json`、`provenance/migration-matrix.json`；47 项完整行为验收仍为 pending，`native-migration-audit --release` 会阻止发布 |
 | 真实 SDK | 19 项通过 | `/private/tmp/deveco-native-sdk-20260908-6/evidence.json`；Studio 26.0.0.821、SDK 26.0.0.105；创建/构建、HAP、静态预检、Linter、ArkTS 四种查询及空结果/位置边界、C++、API 版本和扫描、本地密钥/CSR、模拟器列表通过，不包含签名安装/热补丁 |
@@ -69,6 +69,7 @@ MCP 主进程提供静态工具目录和参数校验；Worker 持有领域服务
 | 真实 Hvigor watch | 7 项通过 | `/private/tmp/deveco-native-hvigor-20260907-4/evidence.json`；未验证签名和设备热补丁 |
 | 真实模拟器 | 6 项通过 | `/private/tmp/deveco-native-emulator-20260907-1/evidence.json`；早期代码快照，未记录源码摘要 |
 | 一小时基础设施运行 | 通过 | `/private/tmp/deveco-native-soak-20260907-2/evidence.json`；352 轮、2816 个子进程；最终活动任务/子进程/租约为 0，RSS 95,600,640 字节。只使用合成子进程，且早于最新制品与会话修改，不能算最终版本或 SDK 会话长稳验收 |
+| 一小时真实 SDK 会话 | 通过 | `/private/tmp/deveco-native-sdk-soak-node24-20260908-1/evidence.json`；Node 24 原生独立验证目录、717 次 LSP 查询、60 次不同 ABC 补丁，同一 watch worker，最终会话/临时目录为 0，配置恢复成功，运行时 RSS 107,511,808 字节。基于记录的较早编译摘要，未包含后续 Linter/文档修改；未测 SDK 子进程 CPU/RSS、设备 HQF/UI 或空闲会话过期，不能当作完整最终性能验收 |
 | MCP 目录性能 | 30 次冷启动、1000 次热查询 | `/tmp/deveco-native-benchmark-20260907-optimized.json`；基线/新版冷 P95 为 153.48/101.92 ms，热 P95 为 0.346/0.263 ms。只测目录，不代表其他工具性能；早期快照 |
 | UI 树算法性能 | 已有小/中/大树测量，完整门槛未通过 | `/private/tmp/deveco-native-ui-benchmark-20260908-1.json`；100/1000/10000 个控件，每种查询 1000 次，晚于文本/矩形优化，早于父子层级字段。精确定位、类型查询改善；部分包含文本查询仍有开销。结果形式不同，不能充当直接能力 P95 发布门槛 |
 
@@ -105,6 +106,7 @@ node dist/scripts/native-lint-acceptance.js /absolute/new-lint-evidence
 node dist/scripts/native-multimodule-acceptance.js /absolute/new-module-evidence
 node dist/scripts/native-hvigor-acceptance.js /absolute/new-watch-evidence
 node dist/scripts/native-emulator-acceptance.js /absolute/new-emulator-evidence
+node --expose-gc dist/scripts/native-sdk-soak.js /absolute/new-sdk-soak-evidence 3600
 node --expose-gc dist/scripts/native-soak.js /absolute/new-soak-evidence 3600
 node --expose-gc dist/scripts/native-ui-benchmark.js /absolute/baseline-checkout /absolute/new-ui-report.json
 node dist/scripts/native-benchmark.js /absolute/baseline-checkout /absolute/new-catalog-report.json

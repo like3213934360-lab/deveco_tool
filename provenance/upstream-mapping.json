@@ -483,11 +483,13 @@
       "disposition": "adapt",
       "reason": "Review the upstream behavior against its native replacement and regression evidence.",
       "targets": [
-        "src/services/diagnostics.ts"
+        "src/services/diagnostics.ts",
+        "src/services/lint-input.ts",
+        "src/services/lint-report.ts"
       ],
       "tests": [
-        "test/native-reports.test.ts",
-        "scripts/native-sdk-acceptance.ts"
+        "test/native-lint.test.ts",
+        "scripts/native-lint-acceptance.ts"
       ]
     },
     {
@@ -498,9 +500,11 @@
       "disposition": "adapt",
       "reason": "Review the upstream behavior against its native replacement and regression evidence.",
       "targets": [
-        "src/services/knowledge.ts"
+        "src/services/knowledge.ts",
+        "src/core/doc-catalog.ts"
       ],
       "tests": [
+        "test/native-resources.test.ts",
         "test/native-reports.test.ts"
       ]
     },
