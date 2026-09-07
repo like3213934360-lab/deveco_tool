@@ -1,6 +1,5 @@
 import fs from "node:fs";
 import path from "node:path";
-import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { ProcessService } from "../core/process.js";
 import {
@@ -9,8 +8,9 @@ import {
   toolCommand,
 } from "../core/toolchain.js";
 import { invariant } from "../core/errors.js";
-import { privateDirectory, readObject, atomicWrite } from "../core/files.js";
+import { readObject, atomicWrite } from "../core/files.js";
 import { StateStore } from "../core/store.js";
+import { NativeDirectory } from "../core/native-directory.js";
 import type { Project } from "./project.js";
 import { ProjectService } from "./project.js";
 import { LanguageService } from "./lsp.js";
@@ -57,26 +57,26 @@ export class DiagnosticService {
     readonly processes: ProcessService,
     readonly store: StateStore,
   ) {
-    this.lsp = new LanguageService(processes);
+    this.lsp = new LanguageService(processes, undefined, undefined, store);
   }
   async arkts(
     project: Project,
     files?: string[],
     signal?: AbortSignal,
   ): Promise<unknown> {
-    const directory = path.join(this.store.root, "tmp", crypto.randomUUID());
-    privateDirectory(directory);
-    const input = path.join(directory, "input.json"),
-      output = path.join(directory, "output.json");
-    atomicWrite(
-      input,
-      JSON.stringify({
-        project_path: project.root,
-        product: project.product.name,
-        files,
-      }),
-    );
-    try {
+    const scope = new NativeDirectory(this.store, 16 * 1024 * 1024),
+      directory = scope.file;
+    return scope.execute(async (signal) => {
+      const input = path.join(directory, "input.json"),
+        output = path.join(directory, "output.json");
+      atomicWrite(
+        input,
+        JSON.stringify({
+          project_path: project.root,
+          product: project.product.name,
+          files,
+        }),
+      );
       await this.processes.run(
         {
           executable: component(discoverToolchain(), "node"),
@@ -95,9 +95,7 @@ export class DiagnosticService {
         "SDK checker did not return a result",
       );
       return JSON.parse(fs.readFileSync(output, "utf8")) as unknown;
-    } finally {
-      fs.rmSync(directory, { recursive: true, force: true });
-    }
+    }, signal);
   }
   async lint(
     project: Project,
@@ -119,24 +117,24 @@ export class DiagnosticService {
         { signal },
       );
     const toolchain = discoverToolchain(),
-      directory = path.join(this.store.root, "tmp", crypto.randomUUID());
-    privateDirectory(directory);
-    const report = path.join(directory, "report.json");
-    const args = [
-      toolchain.sdk,
-      "--config",
-      path.resolve(project.root, input.config_path ?? "code-linter.json5"),
-      "--product",
-      project.product.name,
-      "--format",
-      "json",
-      "--output",
-      report,
-    ];
-    if (input.fix) args.push("--fix");
-    if (input.incremental) args.push("--incremental");
-    args.push(path.resolve(project.root, input.path ?? "."));
-    try {
+      scope = new NativeDirectory(this.store, 32 * 1024 * 1024),
+      directory = scope.file;
+    return scope.execute(async (signal) => {
+      const report = path.join(directory, "report.json");
+      const args = [
+        toolchain.sdk,
+        "--config",
+        path.resolve(project.root, input.config_path ?? "code-linter.json5"),
+        "--product",
+        project.product.name,
+        "--format",
+        "json",
+        "--output",
+        report,
+      ];
+      if (input.fix) args.push("--fix");
+      if (input.incremental) args.push("--incremental");
+      args.push(path.resolve(project.root, input.path ?? "."));
       const command = toolCommand(toolchain, "linter", args, project.root);
       command.env = {
         ...command.env,
@@ -179,9 +177,7 @@ export class DiagnosticService {
           "application/json",
         ),
       };
-    } finally {
-      fs.rmSync(directory, { recursive: true, force: true });
-    }
+    }, signal);
   }
   versions(): string[] {
     return apiVersions(component(discoverToolchain(), "apiscan"));
@@ -215,48 +211,50 @@ export class DiagnosticService {
       "Select files or modules",
     );
     const toolchain = discoverToolchain(),
-      directory = path.join(this.store.root, "tmp", crypto.randomUUID());
-    privateDirectory(directory);
-    const args = [
-      "--startVersion",
-      input.source_version,
-      "--endVersion",
-      input.target_version,
-      "--outputPath",
-      directory,
-      "--sdkPath",
-      toolchain.sdk,
-      "--nodePath",
-      component(toolchain, "node"),
-    ];
-    if (input.files) {
-      const files = input.files.map((file) => path.resolve(project.root, file));
-      for (const file of files)
-        invariant(fs.existsSync(file), "SOURCE_MISSING", file);
-      const ets = files.filter((file) => file.endsWith(".ets")),
-        cpp = files.filter((file) => /\.(c|cpp)$/.test(file));
-      invariant(
-        ets.length + cpp.length === files.length,
-        "API_EXTENSION_INVALID",
-        "API scan supports .ets/.c/.cpp",
-      );
-      if (ets.length) args.push("--arkTsFiles", ets.join(","));
-      if (cpp.length) args.push("--cppFiles", cpp.join(","));
-    } else if (input.modules) {
-      const selected = project.modules.filter((module) =>
-        input.modules!.includes(module.name),
-      );
-      invariant(
-        selected.length === new Set(input.modules).size,
-        "MODULE_INVALID",
-        "Unknown modules",
-      );
-      args.push(
-        "--modulePaths",
-        selected.map((module) => module.root).join(","),
-      );
-    } else args.push("--projectPath", project.root);
-    try {
+      scope = new NativeDirectory(this.store, 32 * 1024 * 1024),
+      directory = scope.file;
+    return scope.execute(async (signal) => {
+      const args = [
+        "--startVersion",
+        input.source_version,
+        "--endVersion",
+        input.target_version,
+        "--outputPath",
+        directory,
+        "--sdkPath",
+        toolchain.sdk,
+        "--nodePath",
+        component(toolchain, "node"),
+      ];
+      if (input.files) {
+        const files = input.files.map((file) =>
+          path.resolve(project.root, file),
+        );
+        for (const file of files)
+          invariant(fs.existsSync(file), "SOURCE_MISSING", file);
+        const ets = files.filter((file) => file.endsWith(".ets")),
+          cpp = files.filter((file) => /\.(c|cpp)$/.test(file));
+        invariant(
+          ets.length + cpp.length === files.length,
+          "API_EXTENSION_INVALID",
+          "API scan supports .ets/.c/.cpp",
+        );
+        if (ets.length) args.push("--arkTsFiles", ets.join(","));
+        if (cpp.length) args.push("--cppFiles", cpp.join(","));
+      } else if (input.modules) {
+        const selected = project.modules.filter((module) =>
+          input.modules!.includes(module.name),
+        );
+        invariant(
+          selected.length === new Set(input.modules).size,
+          "MODULE_INVALID",
+          "Unknown modules",
+        );
+        args.push(
+          "--modulePaths",
+          selected.map((module) => module.root).join(","),
+        );
+      } else args.push("--projectPath", project.root);
       await new ProjectService(this.processes).build(
         project,
         { modules: input.modules, task: "compileNative" },
@@ -342,8 +340,6 @@ export class DiagnosticService {
         reports: parsed.map((report) => report.artifact),
         log: result.log,
       };
-    } finally {
-      fs.rmSync(directory, { recursive: true, force: true });
-    }
+    }, signal);
   }
 }

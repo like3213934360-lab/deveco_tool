@@ -78,6 +78,7 @@ export class StateStore {
       CREATE TABLE IF NOT EXISTS artifacts (id TEXT PRIMARY KEY, run_id TEXT NOT NULL, file TEXT NOT NULL, bytes INTEGER NOT NULL, mime TEXT NOT NULL, created INTEGER NOT NULL);
       CREATE TABLE IF NOT EXISTS artifact_gc (file TEXT PRIMARY KEY, bytes INTEGER NOT NULL);
       CREATE TABLE IF NOT EXISTS artifact_streams (id TEXT PRIMARY KEY, run_id TEXT NOT NULL, file TEXT NOT NULL, bytes INTEGER NOT NULL, owner TEXT NOT NULL, created INTEGER NOT NULL);
+      CREATE TABLE IF NOT EXISTS native_directories (id TEXT PRIMARY KEY, owner TEXT NOT NULL, file TEXT NOT NULL, bytes INTEGER NOT NULL, created INTEGER NOT NULL, closing INTEGER NOT NULL);
       CREATE TABLE IF NOT EXISTS managed_processes (id TEXT PRIMARY KEY, owner TEXT NOT NULL, run_id TEXT, pid INTEGER, resources TEXT NOT NULL, status TEXT NOT NULL, created INTEGER NOT NULL, updated INTEGER NOT NULL, windows_job TEXT);
       CREATE TABLE IF NOT EXISTS external_sessions (id TEXT PRIMARY KEY, owner TEXT NOT NULL, run_id TEXT, kind TEXT NOT NULL, resources TEXT NOT NULL, metadata TEXT NOT NULL, status TEXT NOT NULL, updated INTEGER NOT NULL);
       CREATE TABLE IF NOT EXISTS events (id INTEGER PRIMARY KEY AUTOINCREMENT, run_id TEXT, kind TEXT NOT NULL, data TEXT NOT NULL, created INTEGER NOT NULL);`);
@@ -114,6 +115,7 @@ export class StateStore {
       // Construction can fail during WAL recovery, schema validation or quota
       // checks. No caller has a StateStore to close in that case.
       this.db.close();
+      this.cipher.close();
       throw error;
     }
   }
@@ -854,7 +856,7 @@ export class StateStore {
   capacity(additional = 0): void {
     const row = this.db
       .prepare(
-        "SELECT COALESCE(SUM(bytes),0) AS bytes FROM (SELECT bytes FROM artifacts UNION ALL SELECT bytes FROM artifact_streams UNION ALL SELECT bytes FROM artifact_gc)",
+        "SELECT COALESCE(SUM(bytes),0) AS bytes FROM (SELECT bytes FROM artifacts UNION ALL SELECT bytes FROM artifact_streams UNION ALL SELECT bytes FROM artifact_gc UNION ALL SELECT bytes FROM native_directories)",
       )
       .get() as { bytes: number };
     const pageSize = this.db.pragma("page_size", { simple: true }) as number,
@@ -872,7 +874,90 @@ export class StateStore {
   prune(): void {
     this.db.transaction(() => this.pruneOwned()).immediate();
     this.collectArtifacts();
+    for (const row of this.db
+      .prepare("SELECT id,owner,closing FROM native_directories")
+      .all() as { id: string; owner: string; closing: number }[])
+      if (row.closing || !this.alive(Number(row.owner.split(":")[0])))
+        this.releaseNativeDirectory(row.id);
     this.lastPrune = Date.now();
+  }
+  /** Private resource identities are inherited by every managed process spawned inside task. */
+  withNativeDirectory<T>(id: string, task: () => T): T {
+    return this.held.run(
+      new Set([...(this.held.getStore() ?? []), `native-directory:${id}`]),
+      task,
+    );
+  }
+  reserveNativeDirectory(bytes: number) {
+    invariant(
+      Number.isSafeInteger(bytes) && bytes > 0,
+      "NATIVE_DIRECTORY_SIZE_INVALID",
+      "Reserve a positive byte budget",
+    );
+    const id = crypto.randomUUID(),
+      file = path.join(this.root, "tmp", id);
+    this.db
+      .transaction(() => {
+        this.capacity(bytes + 4096);
+        this.db
+          .prepare("INSERT INTO native_directories VALUES (?,?,?,?,?,0)")
+          .run(id, this.owner, file, bytes, Date.now());
+      })
+      .immediate();
+    try {
+      privateDirectory(file);
+    } catch (error) {
+      this.db.prepare("DELETE FROM native_directories WHERE id=?").run(id);
+      throw error;
+    }
+    return { id, file, bytes };
+  }
+  chargeNativeDirectory(id: string, bytes: number): void {
+    // An external writer may exceed its reservation between observations.
+    // Charge the observed bytes even when already over quota, blocking new work.
+    this.db
+      .prepare("UPDATE native_directories SET bytes=MAX(bytes,?) WHERE id=?")
+      .run(bytes, id);
+  }
+  releaseNativeDirectory(id: string): boolean {
+    const row = this.db
+      .prepare("SELECT file FROM native_directories WHERE id=?")
+      .get(id) as { file: string } | undefined;
+    if (!row) return true;
+    this.db
+      .prepare("UPDATE native_directories SET closing=1 WHERE id=?")
+      .run(id);
+    const resource = `native-directory:${id}`;
+    // A failed cancellation must retain the inputs and budget of surviving writers.
+    const writers = this.db
+      .prepare(
+        "SELECT pid,windows_job,resources FROM managed_processes WHERE status<>'exited'",
+      )
+      .all() as {
+      pid: number | null;
+      windows_job: string | null;
+      resources: string;
+    }[];
+    if (
+      writers.some(
+        (writer) =>
+          (JSON.parse(writer.resources) as string[]).includes(resource) &&
+          (!writer.pid || this.processAlive(writer.pid, writer.windows_job)),
+      )
+    )
+      return false;
+    invariant(
+      row.file === path.join(this.root, "tmp", id),
+      "NATIVE_DIRECTORY_PATH_INVALID",
+      "Owned directory path changed",
+    );
+    try {
+      fs.rmSync(row.file, { recursive: true, force: true });
+    } catch {
+      return false;
+    }
+    this.db.prepare("DELETE FROM native_directories WHERE id=?").run(id);
+    return true;
   }
   discardArtifacts(runId: string, ids: readonly string[]): void {
     this.db

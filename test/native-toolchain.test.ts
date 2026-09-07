@@ -6,6 +6,8 @@ import path from "node:path";
 import { discoverToolchain } from "../src/core/toolchain.js";
 import { atomicWrite } from "../src/core/files.js";
 import { ProcessService } from "../src/core/process.js";
+import { PersistentProcessObserver } from "../src/core/process-observer.js";
+import { StateStore } from "../src/core/store.js";
 import { LanguageService } from "../src/services/lsp.js";
 import type { Project } from "../src/services/project.js";
 
@@ -57,8 +59,9 @@ test("a native language request reuses unchanged SDK sessions and replaces the c
   atomicWrite(config, JSON.stringify({ clt }));
   process.env.DEVECO_CONFIG = config;
   process.env.DEVECO_STATE_DIR = path.join(root, "state");
-  const processes = new ProcessService(),
-    service = new LanguageService(processes);
+  const store = new StateStore(),
+    processes = new ProcessService(new PersistentProcessObserver(store)),
+    service = new LanguageService(processes, undefined, undefined, store);
   try {
     const node = path.join(
       clt,
@@ -109,6 +112,11 @@ test("a native language request reuses unchanged SDK sessions and replaces the c
   } finally {
     await service.close();
     await processes.close();
+    assert.deepEqual(
+      store.db.prepare("SELECT * FROM native_directories").all(),
+      [],
+    );
+    store.close();
     if (previous.config === undefined) delete process.env.DEVECO_CONFIG;
     else process.env.DEVECO_CONFIG = previous.config;
     if (previous.state === undefined) delete process.env.DEVECO_STATE_DIR;

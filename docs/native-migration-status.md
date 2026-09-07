@@ -31,7 +31,9 @@ MCP 主进程提供静态工具目录和参数校验；Worker 持有领域服务
 - ArkTS LSP 增加查找实现，检查初始化能力声明和 UTF-16 编码，校验真实发送内容的行列范围。文件读取、摘要和通知使用同一批字节；无结果、能力不可用、非法响应有不同处理。详见 `docs/native-language-service.md`。
 - TypeScript 编译使用完整临时输出目录；错误不覆盖上一次完整构建，成功后整体替换并删除失效输出。`native-stage.ts` 可在安装依赖前准备只含原生架构的私有验证目录。
 - `ui_snapshot` 默认只截图，支持 JPEG/PNG、宽度、显示器和画面变化比较；树用 `mode:tree/both` 显式获取。传输前预留额度，按块校验，未变化的画面不保存重复制品。详见 `docs/native-screenshots.md`。
-- 执行协议更新为 `native-3`，部署状态保存包集合、进程记录保存 Windows Job 身份；不读取旧开发状态。Windows 取消等待受管进程同步句柄和 Job 活动数，失败启动会话也确认后代清理；持续压力验收仍在进行。详见 `docs/native-process-ownership.md`。
+- 执行协议更新为 `native-3`，部署状态保存包集合、进程记录保存 Windows Job 身份；不读取旧开发状态。Windows 取消等待受管进程同步句柄和 Job 活动数，失败启动会话也确认后代清理；Windows Node 22/24 各连续 20 轮压力验收通过；实际 Windows SDK 仍需单独验证。详见 `docs/native-process-ownership.md`。
+
+- 原生 SDK 临时目录与 LSP 日志通过 SQLite 预留统一预算，关联受管进程所有权；超额取消后确认进程退出才清理。外部 SDK 的突发写入不是 OS 硬配额，详见 `docs/native-storage.md`。
 
 ## 能力与验收缺口
 
@@ -57,10 +59,10 @@ MCP 主进程提供静态工具目录和参数校验；Worker 持有领域服务
 
 | 检查 | 结果 | 范围与原始证据 |
 | --- | --- | --- |
-| 编译及回归 | 158 项通过，0 跳过 | `/private/tmp/deveco-native-regression-node26-20260908-12/evidence.json`；Node 26.0.0，120 个 TypeScript 文件，包含单包/多包部署、并发去重副本释放和 Windows 失败会话退出路径修复；本机不能证明 Windows 行为 |
-| Node 22/24 干净原生验证目录 | 最近 CI 六组全量回归通过，Windows 压力门槛尚未全部通过 | [CI 34154538553](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34154538553)，提交 `8dd3239`；Windows Node 24 为 20/20 轮通过，Node 22 第 16 轮失败会话登记未释放。后续修复在本机验证后推送重查；此 CI 早于包集合改动 |
+| 编译及回归 | 162 项通过，0 跳过 | `/private/tmp/deveco-native-regression-node26-20260908-14/evidence.json`；Node 26.0.0，122 个 TypeScript 文件，新增 SDK 临时目录超额取消、活跃输入保留、共享预算和启动失败释放；本机不能证明 Windows 行为 |
+| Node 22/24 干净原生验证目录 | 六组全量回归和 Windows 压力门槛通过 | [CI 34155214753](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34155214753)，提交 `7bed2ef`；每组 158 项回归，Windows Node 22/24 各 20/20 轮进程所有权与恢复检查通过；此 CI 早于新增临时目录预算 |
 | 迁移清单 | 40 工具、7 脚本、330 参数、95 动作覆盖检查通过 | `provenance/baseline-capabilities.json`、`provenance/migration-matrix.json`；47 项完整行为验收仍为 pending，`native-migration-audit --release` 会阻止发布 |
-| 真实 SDK | 19 项通过 | `/private/tmp/deveco-native-sdk-20260908-4/evidence.json`；Studio 26.0.0.821、SDK 26.0.0.105；创建/构建、HAP、静态预检、Linter、ArkTS 四种查询及空结果/位置边界、C++、API 版本和扫描、本地密钥/CSR、模拟器列表通过，不包含签名安装/热补丁 |
+| 真实 SDK | 19 项通过 | `/private/tmp/deveco-native-sdk-20260908-6/evidence.json`；Studio 26.0.0.821、SDK 26.0.0.105；创建/构建、HAP、静态预检、Linter、ArkTS 四种查询及空结果/位置边界、C++、API 版本和扫描、本地密钥/CSR、模拟器列表通过，不包含签名安装/热补丁 |
 | 真实多模块 SDK | 15 项通过 | `/private/tmp/deveco-native-multimodule-20260908-3/evidence.json`；entry/feature/HAR/HSP、default/tablet 两产品，含默认构建模块筛选与编译元数据驱动的 HSP 依赖构建；未签名、未安装设备 |
 | 真实设备只读验证 | 12 项通过 | `/private/tmp/deveco-native-device-readonly-20260908-4/evidence.json`；新增批量查询、缓存 ID 复用、窗口/层级分页，其余包括设备属性、UI 断言、Hilog、故障查询及关闭。故障目录权限不足，返回 `complete:false`，不能计为完整故障采集证明；没有点击、安装或业务路径验证 |
 | 真实 Hvigor watch | 7 项通过 | `/private/tmp/deveco-native-hvigor-20260907-4/evidence.json`；未验证签名和设备热补丁 |
@@ -71,13 +73,13 @@ MCP 主进程提供静态工具目录和参数校验；Worker 持有领域服务
 
 ## 尚未通过的发布门槛
 
-Windows 压力测试已暴露并保留三类失败证据：SQLite 初始化失败未关闭句柄、进程退出确认早于文件映射释放、失败会话留下进程登记。当前代码分别修复初始化清理、等待同步句柄和失败会话强制清理，仍须新一轮重复测试证明。任何失败轮次都阻止门槛通过，不能用随后成功的诊断重跑覆盖。
+Windows 压力测试已暴露并保留三类失败证据：SQLite 初始化失败未关闭句柄、进程退出确认早于文件映射释放、失败会话留下进程登记。当前代码分别修复初始化清理、等待同步句柄和失败会话强制清理，提交 `7bed2ef` 的新一轮 Windows Node 22/24 各 20 轮全部通过，历史失败证据仍保留。该证据只覆盖受管测试进程，不代替真实 Windows SDK 验收。
 
 1. 完成冻结清单中逐个旧工具、参数、动作和历史缺陷的行为验收。覆盖审计会拦截漏项、重复项及没有证据的 verified 标记；当前的代码和测试位置映射不等于完整验收。
 2. 完成签名部署、设备热补丁、云端签名、真实 UI 输入/流程；已完成多产品、多模块、HAR/HSP 构建，继续完成签名包集合的设备验收。
 3. 完成副作用外部状态核对。当前无法证明已执行结果时会停在 `needs_input`；不得把这种保守停止写成恢复能力全部完成。
-4. 完成新的 Windows Job Object 进程所有权与退出确认的真实 CI、SDK 和性能验证。`taskkill` 已从原生实现删除；macOS 通过不能代替 Windows 证明。
-5. 将临时文件、LSP 日志等剩余状态写入纳入容量控制；目前官方 Checkpointer 的序列化边界、制品/流/数据库已有预算控制，但不能宣称所有磁盘写入都满足统一上限。
+4. Windows Job Object 进程所有权与退出确认已通过六组 CI 和 Windows 连续压力检查；继续完成 SDK 和性能验证。`taskkill` 已从原生实现删除；macOS 通过不能代替 Windows 证明。
+5. Checkpointer、制品、流、数据库、原生工具临时目录与 LSP 日志已有预算控制；继续完成真实长时间运行的容量验收。外部 SDK 的突发写入不是操作系统硬配额，不能宣称所有物理磁盘写入始终满足统一上限。
 6. CPU UI/崩溃解析池已通过边界回归；继续完成其他大报告路径、会话协调与最终性能优化，在固定工程和空闲机器上执行完整直接能力对比，以及最终代码的一小时 SDK/LSP/UI/watch 会话验收。
 7. 完成 Node 22/24 × macOS/Windows/Linux 的基础运行矩阵，逐项记录 SDK/设备支持范围。
 8. 上游候选、草稿 PR 和 CI 门禁的代码与模拟验证已完成；继续完成远程端到端验证、人工适配证据和正式发布门禁。

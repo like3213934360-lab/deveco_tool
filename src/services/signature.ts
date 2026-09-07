@@ -6,19 +6,14 @@ import { z } from "zod";
 import { tools } from "../core/contracts.js";
 import { ProcessService } from "../core/process.js";
 import { StateStore } from "../core/store.js";
+import { NativeDirectory } from "../core/native-directory.js";
 import {
   component,
   discoverToolchain,
   toolCommand,
 } from "../core/toolchain.js";
-import {
-  atomicWrite,
-  digest,
-  readObject,
-  privateDirectory,
-  publishFile,
-} from "../core/files.js";
-import { invariant, object } from "../core/errors.js";
+import { atomicWrite, digest, readObject, publishFile } from "../core/files.js";
+import { invariant, object, ToolError } from "../core/errors.js";
 import { AuthService, httpRequest, httpBytes } from "./auth.js";
 import type { Project } from "./project.js";
 
@@ -254,10 +249,15 @@ export class SignatureService {
       );
       output = this.outputPath(input.output);
     }
-    const stage = output
-      ? path.join(this.store.root, "tmp", crypto.randomUUID())
+    const scope = output
+      ? new NativeDirectory(
+          this.store,
+          input.action === "sign" && input.file
+            ? fs.statSync(input.file).size * 2 + 16 * 1024 * 1024
+            : 1024 * 1024,
+        )
       : undefined;
-    if (stage) privateDirectory(stage);
+    const stage = scope?.file;
     const staged =
       stage && output ? path.join(stage, path.basename(output)) : undefined;
     try {
@@ -314,10 +314,13 @@ export class SignatureService {
           continue;
         args.push(`-${key}`, value);
       }
-      const result = await this.processes.run(
-        toolCommand(discoverToolchain(), "signer", args, project?.root),
-        { signal, timeoutMs: 120000 },
-      );
+      const execute = () =>
+        this.processes.run(
+          toolCommand(discoverToolchain(), "signer", args, project?.root),
+          { signal: scope?.signal(signal) ?? signal, timeoutMs: 120000 },
+        );
+      const result = await (scope ? scope.own(execute) : execute());
+      await scope?.check();
       invariant(
         !/ERROR|FAILED|Exception/.test(result.stdout + result.stderr),
         "SIGN_FAILED",
@@ -342,8 +345,14 @@ export class SignatureService {
             }
           : { verified: true }),
       };
+    } catch (error) {
+      if (error instanceof ToolError && error.code === "CANCEL_UNCONFIRMED")
+        throw error;
+      if (scope?.controller.signal.aborted)
+        throw scope.controller.signal.reason;
+      throw error;
     } finally {
-      if (stage) fs.rmSync(stage, { recursive: true, force: true });
+      await scope?.close();
     }
   }
   private outputPath(candidate: string): string {

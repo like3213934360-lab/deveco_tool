@@ -18,8 +18,9 @@ import {
   type Toolchain,
 } from "../core/toolchain.js";
 import { invariant, ToolError } from "../core/errors.js";
-import { privateDirectory, digest } from "../core/files.js";
-import { stateDirectory } from "../core/config.js";
+import { digest } from "../core/files.js";
+import { NativeDirectory } from "../core/native-directory.js";
+import type { StateStore } from "../core/store.js";
 import type { Project } from "./project.js";
 import { compilationDatabase } from "./compilation-database.js";
 import { withinDeadline } from "../core/deadline.js";
@@ -209,6 +210,7 @@ interface Session {
   active: number;
   capabilities: z.infer<typeof capabilities>;
   closing?: Promise<void>;
+  directory?: NativeDirectory;
 }
 interface LanguageRequest {
   action:
@@ -326,6 +328,7 @@ export class LanguageService {
     readonly processes: ProcessService,
     readonly launch?: (project: Project, language: "arkts" | "cpp") => Command,
     readonly limits = { request_ms: 20000, opened_files: 128 },
+    readonly store?: StateStore,
   ) {
     this.sweeper = setInterval(() => {
       for (const [key, session] of this.sessions)
@@ -337,8 +340,12 @@ export class LanguageService {
   private closeSession(key: string, session: Session): Promise<void> {
     return (session.closing ??= (async () => {
       session.connection.dispose();
-      await this.processes.terminate(session.child);
-      this.sessions.delete(key);
+      try {
+        await this.processes.terminate(session.child);
+        this.sessions.delete(key);
+      } finally {
+        await session.directory?.close();
+      }
     })());
   }
   private session(
@@ -378,7 +385,25 @@ export class LanguageService {
       "LSP_CAPACITY",
       "At most four active language servers; close an idle session",
     );
-    const child = this.processes.spawn(command);
+    let directory: NativeDirectory | undefined;
+    if (!this.launch && language === "arkts") {
+      invariant(
+        this.store,
+        "LSP_STORE_REQUIRED",
+        "ArkTS sessions require shared log storage accounting",
+      );
+      directory = new NativeDirectory(this.store, 16 * 1024 * 1024);
+      command.args.push(`--logger-path=${directory.file}`);
+    }
+    let child: ChildProcess;
+    try {
+      child = directory
+        ? directory.own(() => this.processes.spawn(command))
+        : this.processes.spawn(command);
+    } catch (error) {
+      void directory?.close();
+      throw error;
+    }
     invariant(
       child.stdout && child.stdin,
       "LSP_PIPE_MISSING",
@@ -399,7 +424,15 @@ export class LanguageService {
       queued: Promise.resolve(),
       active: 0,
       capabilities: {},
+      directory,
     };
+    directory?.controller.signal.addEventListener(
+      "abort",
+      () => {
+        void this.closeSession(key, session).catch(() => {});
+      },
+      { once: true },
+    );
     this.sessions.set(key, session);
     connection.listen();
     connection.onNotification(
@@ -470,14 +503,11 @@ export class LanguageService {
       throw error;
     });
     void session.ready.catch(() => {});
-    child.on("error", () => {
-      this.sessions.delete(key);
-      connection.dispose();
-    });
-    child.once("close", () => {
-      this.sessions.delete(key);
-      connection.dispose();
-    });
+    const exited = () => {
+      void this.closeSession(key, session).catch(() => {});
+    };
+    child.on("error", exited);
+    child.once("close", exited);
     return session;
   }
   private arguments(
@@ -499,13 +529,10 @@ export class LanguageService {
         "--background-index=false",
       ];
     }
-    const logs = path.join(stateDirectory(), "lsp");
-    privateDirectory(logs);
     return [
       "--max-old-space-size=2048",
       component(toolchain, "arkts"),
       "--stdio",
-      `--logger-path=${logs}`,
       "--logger-level=ERROR",
       `--projectPath=${project.root}`,
       `--sdkPath=${toolchain.sdk}`,
@@ -551,6 +578,7 @@ export class LanguageService {
       finished = Promise.withResolvers<void>();
     session.queued = previous.then(() => finished.promise);
     session.active++;
+    signal = session.directory?.signal(signal) ?? signal;
     try {
       await waitFor(previous, signal);
       await waitFor(session.ready, signal);
@@ -639,6 +667,7 @@ export class LanguageService {
           "DIAGNOSTICS_TIMEOUT",
           "Language server did not publish diagnostics",
         );
+        await session.directory?.check();
         return {
           file,
           diagnostics: session.diagnostics.get(uri),
@@ -677,6 +706,7 @@ export class LanguageService {
           : {}),
       });
       const validated = languageResult(input.action, result);
+      await session.directory?.check();
       return input.action === "references" && !input.includeDeclaration
         ? await filterDeclarations(validated, (uri, position) =>
             query("textDocument/definition", {
@@ -685,6 +715,10 @@ export class LanguageService {
             }),
           )
         : validated;
+    } catch (error) {
+      if (session.directory?.controller.signal.aborted)
+        throw session.directory.controller.signal.reason;
+      throw error;
     } finally {
       session.active--;
       session.touched = Date.now();
