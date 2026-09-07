@@ -37,6 +37,10 @@ SDK 的 `compileMode` 与 HMS `externalApiPaths` 必须在加载 SDK 模块前�
 
 提交 `23c08ab` 的 [CI 34167674814](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34167674814) 已完成：macOS、Windows、Linux 的 Node 22/24 六组各 210 项通过、0 跳过，Windows 各 20 轮进程压力通过。此后复查修复了工作流中报告的制品归属，见 `docs/native-artifact-ownership.md`；后续修改的跨平台结果分别记录，不继承此前 CI 的成功状态。
 
+提交 `2ac0811` 后的干净 Node 24.14.1 原生目录重新通过全部 13 项 SDK 静态预检，证据 `/private/tmp/deveco-native-checker-node24-20260908-2/evidence.json`；运行源码摘要 `a03c05b59eb0e0e32efdc279487ef2746aceca60f2b612b5309665cf7953d009`。这次包含最新制品归属和异步工程模板复制，没有使用旧运行依赖。
+
+同一提交的 [CI 34169432690](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34169432690) 六组各 217 项通过、0 跳过，Windows 两组各 20 轮压力通过；六组运行源码摘要与最新 SDK 验收一致。静态预检迁移行为据此标记 verified，真实 SDK 范围仍限于上述本机组件，其他平台 SDK 与最终性能门槛独立保留。
+
 ```sh
 npm run build
 node dist/scripts/native-regression.js /absolute/new-regression-evidence

@@ -60,10 +60,10 @@ MCP 主进程提供静态工具目录和参数校验；Worker 持有领域服务
 | 检查 | 结果 | 范围与原始证据 |
 | --- | --- | --- |
 | 编译及回归 | 217 项通过，0 跳过 | `/private/tmp/deveco-native-regression-node26-20260908-36/evidence.json`；154 个 TypeScript 文件，含默认工程/产品、在途任务隔离、服务制品归属、状态库初始化事务、Unicode 路径模板复制及复制取消验证。含工程切换的本机压力检查 20 轮通过，见 `docs/native-storage.md`；本机证据不代替 Windows 验证 |
-| Node 22/24 干净原生验证目录 | 上一轮五组通过；Windows Node 22 复制修复待新一轮确认 | [CI 34168822000](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34168822000)，提交 `e6ed5a0`，macOS/Linux 四组及 Windows Node 24 通过，Windows Node 24 的 20 轮压力也通过。Windows Node 22 诊断确认 `cpSync` 没有创建中文目标目录，已统一更换异步复制；详见 `docs/native-project-context.md`。此前 [CI 34168044469](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34168044469) 的恢复压力第 9 轮超时证据仍保留，不能由单次成功证明完整原因已经确定 |
-| 迁移清单 | 40 工具、7 脚本、330 参数、95 动作覆盖检查通过 | `provenance/baseline-capabilities.json`、`provenance/migration-matrix.json`；文档与重启 2 项完成行为验收，45 项仍为 pending，`native-migration-audit --release` 会阻止发布 |
-| 真实 SDK | 19 项通过 | `/private/tmp/deveco-native-sdk-20260908-7/evidence.json`；Studio 26.0.0.821、SDK 26.0.0.105；创建/构建、HAP、静态预检、Linter、ArkTS 四种查询及空结果/位置边界、C++、API 版本和扫描、本地密钥/CSR、模拟器列表通过，不包含签名安装/热补丁 |
-| 真实 ArkTS 静态预检 | 13 项通过 | `/private/tmp/deveco-native-checker-20260908-4/evidence.json`，Node 24 无旧依赖独立目录也通过 `/private/tmp/deveco-native-checker-node24-20260908-1/evidence.json`；扫描范围、HMS、路由、资源 AST、API 版本、并发缓存、模型版本、绑定、700 条完整报告和中文模块；边界与失败记录见 `docs/native-static-checker.md` |
+| Node 22/24 干净原生验证目录 | 六组全部通过 | [CI 34169432690](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34169432690)，提交 `2ac0811`，macOS/Windows/Linux × Node 22/24 各 217 项通过、0 跳过，Windows 各 20 轮压力通过，六组安装检查通过。Windows Node 22 的中文路径复制修复已复验；原始证据及失败定位见 `docs/native-project-context.md`。历史恢复压力超时证据仍保留，本次成功不构成全部性能门槛证明 |
+| 迁移清单 | 40 工具、7 脚本、330 参数、95 动作覆盖检查通过 | `provenance/baseline-capabilities.json`、`provenance/migration-matrix.json`；文档、重启、默认工程切换和 ArkTS 静态预检 4 项完成行为验收，43 项仍为 pending，`native-migration-audit --release` 会阻止发布 |
+| 真实 SDK | 19 项通过 | `/private/tmp/deveco-native-sdk-node24-20260908-1/evidence.json`；Node 24 干净原生目录、Studio 26.0.0.821、SDK 26.0.0.105，包含最新异步模板复制；创建/构建、HAP、静态预检、Linter、ArkTS 四种查询及空结果/位置边界、C++、API 版本和扫描、本地密钥/CSR、模拟器列表通过，不包含签名安装/热补丁 |
+| 真实 ArkTS 静态预检 | 13 项通过 | `/private/tmp/deveco-native-checker-node24-20260908-2/evidence.json`；Node 24 无旧依赖独立目录在最新代码上复查，包含制品归属改动；扫描范围、HMS、路由、资源 AST、API 版本、并发缓存、模型版本、绑定、700 条完整报告和中文模块；边界与保留的历史证据见 `docs/native-static-checker.md` |
 | 真实 Linter | 6 项通过 | `/private/tmp/deveco-native-lint-20260908-4/evidence.json`；独立 canary 工程，没有构建、签名或设备操作。前两轮失败记录保留，范围及原因见 Linter 文档 |
 | 真实多模块 SDK | 15 项通过 | `/private/tmp/deveco-native-multimodule-20260908-3/evidence.json`；entry/feature/HAR/HSP、default/tablet 两产品，含默认构建模块筛选与编译元数据驱动的 HSP 依赖构建；未签名、未安装设备 |
 | 真实设备只读验证 | 13 项通过 | `/private/tmp/deveco-native-device-readonly-20260908-7/evidence.json`；Node 24 原生独立目录，新增保存树文件/制品查询，包含批量查询、缓存 ID 复用、窗口/层级分页、设备属性、UI 断言、Hilog、故障查询及关闭。故障目录权限不足，返回 `complete:false`，不能计为完整故障采集证明；没有点击、安装或业务路径验证 |

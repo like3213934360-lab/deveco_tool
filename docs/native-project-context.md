@@ -18,4 +18,10 @@
 
 工程模板创建与测试工程准备统一使用异步 `fs.promises.cp`，避免该同步实现的路径问题，也避免在运行服务中同步复制整棵模板树。生产创建仍先独占认领新目录，再逐个复制顶层条目；不覆盖已有目录或文件。每个复制条目检查取消，取消后留下未完成操作记录，不报告成功或允许盲目重放。新增真实文件检查覆盖中文、空格、表情、嵌套源码、源模板不变及取消后的核对。
 
-这只验证文件系统创建能力；本机 Hvigor 26 对中文工程根路径的拒绝仍是独立的 SDK 限制，不能据此宣布中文路径工程可构建。新一轮三平台 CI 用于验证异步复制改动。
+这只验证文件系统创建能力；本机 Hvigor 26 对中文工程根路径的拒绝仍是独立的 SDK 限制，不能据此宣布中文路径工程可构建。
+
+异步复制改动的本机完整回归 217 项通过，0 跳过：`/private/tmp/deveco-native-regression-node26-20260908-36/evidence.json`。干净 Node 24.14.1 原生目录在实际 Studio 26.0.0.821 / SDK 26.0.0.105 上完成创建、构建等 19 项验收：`/private/tmp/deveco-native-sdk-node24-20260908-1/evidence.json`，运行源码摘要 `a03c05b59eb0e0e32efdc279487ef2746aceca60f2b612b5309665cf7953d009`。未安装官方 CLI、子 MCP 或 Skill；构建使用非中文工程根目录，没有签名安装或设备操作。三平台 CI 独立验证路径与复制取消行为。
+
+同一干净 Node 24 目录的完整回归也通过 217 项、0 跳过，证据 `/private/tmp/deveco-native-regression-node24-20260908-12/evidence.json`。
+
+提交 `2ac0811` 的 [CI 34169432690](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34169432690) 六组全部通过：macOS/Windows/Linux × Node 22/24 各 217 项、0 跳过，Windows 各 20 轮压力通过，六组安装检查也通过。各平台运行源码摘要与上述一致。前五组原始制品在 `/private/tmp/deveco-ci-34169432690-first-five`，Windows Node 22 在 `/private/tmp/deveco-ci-34169432690-win22`。Windows Node 22 的相同中文路径 fixture 和新建工程用例已验证；不再将之前的复制失败归因于目录链接解析。

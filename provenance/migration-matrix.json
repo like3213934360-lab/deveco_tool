@@ -217,10 +217,8 @@
         }
       },
       "actions": [],
-      "remaining": [
-        "本次扫描范围、HMS 初始化与报告改动的 Node 22/24 三平台回归确认；本机 13 项历史行为 SDK 验收已通过"
-      ],
-      "acceptance": "pending",
+      "remaining": [],
+      "acceptance": "verified",
       "evidence": [
         "docs/native-static-checker.md"
       ]
@@ -1778,10 +1776,8 @@
         }
       },
       "actions": [],
-      "remaining": [
-        "本次默认工程/产品分离及 doctor 行为的 Node 22/24 三平台回归确认"
-      ],
-      "acceptance": "pending",
+      "remaining": [],
+      "acceptance": "verified",
       "evidence": [
         "docs/native-project-context.md"
       ]

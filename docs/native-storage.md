@@ -4,6 +4,8 @@
 
 2026-09-08：`test/native-infrastructure.test.ts` 验证失败初始化不遗留半套表及多个协议标记的拒绝；本机完整回归 215 项通过、0 跳过，证据 `/private/tmp/deveco-native-regression-node26-20260908-35/evidence.json`。本机含工程切换的进程/恢复压力检查 20 轮通过，证据 `/private/tmp/deveco-native-process-stress-node26-20260908-4/evidence.json`。此前 Windows CI `34168044469` 的恢复用例在 10 秒内未到达就绪点，子进程记录的状态库初始化约 5.6 秒；本次减少提交的改动有明确作用位置，但尚不能据此确定该超时的完整原因或宣布性能门槛通过。原始失败记录保留。
 
+后续 [CI 34169432690](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34169432690) 六组回归各 217 项通过，Windows Node 22/24 各 20 轮压力通过。真实 SDK 和最新平台证据见 `docs/native-migration-status.md`；恢复用例仍使用原先 10 秒就绪期限，未添加自动重试掩盖历史失败。
+
 应用制品、过程输出流、待删除文件、数据库和原生 SDK 临时目录共用 `max_bytes` 预算，默认 256 MiB。申请临时目录前用 SQLite 写事务预留额度；其他 MCP 进程同时看到该预留。没有额度时在启动 SDK 之前返回 `STATE_CAPACITY`。
 
 工作流使用官方 SQLite Checkpointer。`BoundedSqliteSaver` 只包装公开的序列化与写入接口，框架仍负责编码、SQL 和恢复。每次写入建立独立的异步预留作用域，序列化完成后、交给官方 SQL 之前，按编码字节数预留主数据库/WAL 页面和索引余量。`putWrites` 的所有行分别计量；单个编码值限制为 512 KiB。节点结果超过 16 KiB（UTF-8 字节）先变为制品引用。
