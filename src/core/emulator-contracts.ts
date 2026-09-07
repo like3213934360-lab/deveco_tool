@@ -6,7 +6,11 @@ const nativeName = z
   .trim()
   .min(1)
   .max(256)
-  .regex(/^[^-\0\r\n][^\0\r\n]*$/);
+  .regex(/^[^-\\/\0\r\n][^\\/\0\r\n]*$/)
+  .refine(
+    (value) => value !== "." && value !== "..",
+    "Native names cannot be path segments",
+  );
 const sha256 = z.string().regex(/^[a-f0-9]{64}$/);
 export const emulatorManageSchema = z
   .strictObject({
