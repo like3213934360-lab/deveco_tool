@@ -43,7 +43,7 @@ jobs:
         working-directory: ${{ runner.temp }}/native
         run: node dist/scripts/resources.js
       - name: Repeat Windows process ownership and recovery checks
-        if: runner.os == 'Windows'
+        if: always() && runner.os == 'Windows'
         working-directory: ${{ runner.temp }}/native
         run: node dist/scripts/native-process-stress.js "${{ runner.temp }}/native-process-evidence" 20
       - name: Check migration source coverage

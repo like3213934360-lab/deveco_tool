@@ -88,7 +88,43 @@ try {
       2,
     ) + "\n",
   );
-  if (!passed) process.exitCode = 1;
+  if (!passed) {
+    process.exitCode = 1;
+    // A native test-child abort can lose stderr while the test runner drains
+    // its IPC reporting channel. Reproduce in the runner process itself to
+    // retain the OS/CRT diagnostic; this never changes the original failure.
+    const diagnostics = path.join(output, "diagnostics");
+    fs.mkdirSync(diagnostics);
+    for (let round = 1; round <= 10; round++) {
+      const result = await service.run(
+        {
+          executable: process.execPath,
+          args: [
+            "--test",
+            "--test-isolation=none",
+            "--test-reporter=tap",
+            files[0]!,
+          ],
+          cwd: root,
+        },
+        {
+          allowFailure: true,
+          timeoutMs: 120000,
+          outputFile: path.join(diagnostics, `direct-${round}.log`),
+        },
+      );
+      const row = {
+        round,
+        exit_code: result.exitCode,
+        signal: result.signal,
+      };
+      fs.writeFileSync(
+        path.join(diagnostics, `direct-${round}.json`),
+        JSON.stringify(row) + "\n",
+      );
+      if (result.exitCode !== 0 || result.signal !== null) break;
+    }
+  }
 } finally {
   await service.close();
 }
