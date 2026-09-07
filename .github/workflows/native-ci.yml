@@ -42,6 +42,24 @@ jobs:
       - name: Verify attributed resources
         working-directory: ${{ runner.temp }}/native
         run: node dist/scripts/resources.js
+      - name: Prepare compiled distribution without development or legacy runtime inputs
+        working-directory: ${{ runner.temp }}/native
+        run: node dist/scripts/native-distribution.js prepare "${{ runner.temp }}/native-distribution"
+      - name: Normalize production-only installation lock
+        working-directory: ${{ runner.temp }}/native-distribution
+        run: npm install --package-lock-only --ignore-scripts
+      - name: Seal compiled archive and file checksums
+        working-directory: ${{ runner.temp }}/native
+        run: node dist/scripts/native-distribution.js seal "${{ runner.temp }}/native-distribution" "${{ runner.temp }}/native-distribution.zip"
+      - name: Extract archive into a fresh installation directory
+        working-directory: ${{ runner.temp }}/native
+        run: node dist/scripts/native-distribution.js extract "${{ runner.temp }}/native-clean-install" "${{ runner.temp }}/native-distribution.zip"
+      - name: Install production dependencies without a TypeScript build
+        working-directory: ${{ runner.temp }}/native-clean-install
+        run: npm ci --omit=dev
+      - name: Verify installed MCP resources and workflow persistence
+        working-directory: ${{ runner.temp }}/native
+        run: node dist/scripts/native-installation-check.js "${{ runner.temp }}/native-clean-install" "${{ runner.temp }}/native-installation-evidence"
       - name: Repeat Windows process ownership and recovery checks
         if: always() && runner.os == 'Windows'
         working-directory: ${{ runner.temp }}/native
@@ -63,5 +81,9 @@ jobs:
           path: |
             ${{ runner.temp }}/native-evidence
             ${{ runner.temp }}/native-process-evidence
+            ${{ runner.temp }}/native-installation-evidence
+            ${{ runner.temp }}/native-distribution/distribution.json
+            ${{ runner.temp }}/native-distribution/package-lock.json
+            ${{ runner.temp }}/native-distribution.zip.sha256
             ${{ runner.temp }}/native/package-lock.json
           if-no-files-found: warn

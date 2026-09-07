@@ -1,0 +1,19 @@
+{
+  "format": 1,
+  "dependencies": [
+    "@langchain/core",
+    "@langchain/langgraph",
+    "@langchain/langgraph-checkpoint",
+    "@langchain/langgraph-checkpoint-sqlite",
+    "@modelcontextprotocol/sdk",
+    "adm-zip",
+    "ajv",
+    "better-sqlite3",
+    "json5",
+    "koffi",
+    "vscode-jsonrpc",
+    "vscode-uri",
+    "yauzl",
+    "zod"
+  ]
+}

@@ -30,22 +30,25 @@ function record(value: unknown): Record<string, string> {
   return Object.fromEntries(entries) as Record<string, string>;
 }
 const sourceDependencies = record(raw.dependencies),
-  names = [
-    "@langchain/core",
-    "@langchain/langgraph",
-    "@langchain/langgraph-checkpoint",
-    "@langchain/langgraph-checkpoint-sqlite",
-    "@modelcontextprotocol/sdk",
-    "adm-zip",
-    "ajv",
-    "better-sqlite3",
-    "json5",
-    "koffi",
-    "vscode-jsonrpc",
-    "vscode-uri",
-    "yauzl",
-    "zod",
-  ],
+  policy: unknown = JSON.parse(
+    fs.readFileSync(
+      path.join(root, "provenance/native-dependencies.json"),
+      "utf8",
+    ),
+  );
+if (
+  !policy ||
+  typeof policy !== "object" ||
+  !("format" in policy) ||
+  policy.format !== 1 ||
+  !("dependencies" in policy) ||
+  !Array.isArray(policy.dependencies) ||
+  policy.dependencies.length === 0 ||
+  policy.dependencies.some((name: unknown) => typeof name !== "string") ||
+  new Set(policy.dependencies).size !== policy.dependencies.length
+)
+  throw new Error("Invalid native dependency policy");
+const names = policy.dependencies as string[],
   dependencies = Object.fromEntries(
     names.map((name) => {
       const version = sourceDependencies[name];
@@ -108,6 +111,7 @@ fs.writeFileSync(
         test: "node dist/scripts/native-regression.js",
       },
       dependencies,
+      overrides: "overrides" in raw ? record(raw.overrides) : {},
       devDependencies: record(raw.devDependencies),
     },
     null,
