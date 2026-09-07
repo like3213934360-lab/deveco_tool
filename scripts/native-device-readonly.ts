@@ -25,6 +25,14 @@ const observations: {
   error?: unknown;
 }[] = [];
 let failed = false;
+let capturedTree:
+  | {
+      snapshot_id: string;
+      signature: string;
+      node_count: number;
+      tree: { format: "nodes"; artifact_id: string };
+    }
+  | undefined;
 const save = () =>
   atomicWrite(
     path.join(root, "evidence.json"),
@@ -72,16 +80,58 @@ try {
     z.object({ properties: z.record(z.string(), z.string()) }).parse(result);
     return result;
   });
-  await observe("ui_snapshot", async () =>
-    z
+  await observe("ui_snapshot", async () => {
+    capturedTree = z
       .object({
         node_count: z.number().positive(),
         snapshot_id: z.string(),
-        tree: z.unknown(),
+        signature: z.string(),
+        tree: z.object({ format: z.literal("nodes"), artifact_id: z.string() }),
       })
       .passthrough()
-      .parse(await runtime.call("ui_snapshot", { target, mode: "tree" })),
-  );
+      .parse(await runtime.call("ui_snapshot", { target, mode: "tree" }));
+    return capturedTree;
+  });
+  await observe("ui_saved_tree_offline_queries", async () => {
+    assert.ok(capturedTree);
+    const artifact = capturedTree.tree.artifact_id,
+      parts: Buffer[] = [];
+    for (let offset = 0; ;) {
+      const part = runtime.store.readArtifact(artifact, offset);
+      parts.push(Buffer.from(part.data, "base64"));
+      offset = part.next_offset;
+      if (offset >= part.bytes) break;
+    }
+    const file = path.join(root, "saved-ui-nodes.json");
+    fs.writeFileSync(file, Buffer.concat(parts));
+    const oldTarget = runtime.devices.target;
+    runtime.devices.target = async () => {
+      throw new Error("Offline tree query attempted device discovery");
+    };
+    try {
+      const query = { tree_format: "nodes", selector: { type: "WindowScene" } },
+        artifactResult = await runtime.call("ui_find", {
+          ...query,
+          tree_artifact_id: artifact,
+        }),
+        fileResult = await runtime.call("ui_find", {
+          ...query,
+          tree_file: file,
+        });
+      const schema = z.object({
+        source: z.literal("saved_tree"),
+        device_state_verified: z.literal(false),
+        node_count: z.literal(capturedTree.node_count),
+        signature: z.literal(capturedTree.signature),
+        match_count: z.number().positive(),
+        matches: z.array(z.unknown()),
+      });
+      assert.deepEqual(schema.parse(artifactResult), schema.parse(fileResult));
+      return { artifact: artifactResult, file: fileResult };
+    } finally {
+      runtime.devices.target = oldTarget;
+    }
+  });
   await observe("ui_jpeg_native_resize", async () => {
     const result = z
       .object({

@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import { inspectSnapshot } from "./ui-inspection.js";
+import { findInSavedTree } from "./ui-import.js";
 import path from "node:path";
 import { z } from "zod";
 import {
@@ -119,6 +120,7 @@ export class Runtime {
   private engine?: Promise<WorkflowEngine>;
   private stopping = false;
   private shutdown?: Promise<{ closed: boolean }>;
+  private savedTreeQueries = 0;
   private workflows() {
     return (this.engine ??= (async () => {
       const { WorkflowEngine } = await import("../core/workflows.js");
@@ -1370,11 +1372,14 @@ export class Runtime {
               signature: snapshot.signature,
               structure_signature: snapshot.structureSignature,
               ...(inspection ? inspectSnapshot(snapshot, inspection) : {}),
-              tree: this.store.artifact(
-                "ui",
-                JSON.stringify(snapshot.nodes),
-                "application/json",
-              ),
+              tree: {
+                format: "nodes",
+                ...this.store.artifact(
+                  "ui",
+                  JSON.stringify(snapshot.nodes),
+                  "application/json",
+                ),
+              },
               ...((
                 "mode" in input
                   ? input.mode === "both"
@@ -1396,6 +1401,24 @@ export class Runtime {
       case "ui_observe":
       case "ui_find": {
         const input = tools[name].schema.parse(raw);
+        if (
+          ("tree_file" in input && input.tree_file) ||
+          ("tree_artifact_id" in input && input.tree_artifact_id)
+        ) {
+          if (this.savedTreeQueries >= 2)
+            throw new ToolError(
+              "UI_TREE_QUERY_BUSY",
+              "At most two saved UI tree reads/parses may run concurrently",
+              null,
+              true,
+            );
+          this.savedTreeQueries++;
+          try {
+            return await findInSavedTree(input, this.store, this.cpu, signal);
+          } finally {
+            this.savedTreeQueries--;
+          }
+        }
         const target = await this.devices.target(input.target, signal),
           snapshotId =
             "snapshot_id" in input && typeof input.snapshot_id === "string"

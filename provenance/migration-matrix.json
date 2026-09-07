@@ -1904,13 +1904,17 @@
         "tool:ui_find"
       ],
       "adapters": [
-        "src/services/device.ts"
+        "src/services/device.ts",
+        "src/services/ui-import.ts",
+        "src/services/ui-node-schema.ts"
       ],
       "checks": [
         "test/native-ui.test.ts",
-        "test/native-ui-query.test.ts"
+        "test/native-ui-query.test.ts",
+        "test/native-ui-import.test.ts",
+        "scripts/native-device-readonly.ts"
       ],
-      "behavior": "使用快照 ID 和复用索引。",
+      "behavior": "实时设备查询复用快照索引；已有文件或本 MCP 节点制品可离线查询，保留输入摘要且不验证当前设备状态。",
       "parameters": {
         "text": {
           "status": "mapped",
@@ -1929,8 +1933,8 @@
           "replacement": "selector.type"
         },
         "dumpPath": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "replaced",
+          "replacement": "tree_file 绝对路径；也可用 tree_artifact_id。tree_format 区分原生 uitest JSON 与本 MCP nodes 格式，离线来源与 target/snapshot_id 互斥，无旧名称别名。"
         },
         "hvd": {
           "status": "mapped",
@@ -1979,11 +1983,12 @@
       },
       "actions": [],
       "remaining": [
-        "dumpPath 文件导入替代",
         "真实多显示器及直接能力性能门槛"
       ],
       "acceptance": "pending",
-      "evidence": []
+      "evidence": [
+        "docs/native-ui-import.md"
+      ]
     },
     {
       "source": "ui_flow",

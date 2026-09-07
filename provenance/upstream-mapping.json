@@ -516,11 +516,16 @@
       "disposition": "adapt",
       "reason": "Review the upstream behavior against its native replacement and regression evidence.",
       "targets": [
-        "src/services/device.ts"
+        "src/services/device.ts",
+        "src/services/ui-import.ts",
+        "src/services/ui-parse.ts",
+        "src/services/ui-node-schema.ts"
       ],
       "tests": [
         "test/native-flow.test.ts",
-        "test/native-text.test.ts"
+        "test/native-text.test.ts",
+        "test/native-ui-import.test.ts",
+        "scripts/native-device-readonly.ts"
       ]
     },
     {
@@ -830,11 +835,16 @@
       "disposition": "adapt",
       "reason": "Review the upstream behavior against its native replacement and regression evidence.",
       "targets": [
-        "src/services/device.ts"
+        "src/services/device.ts",
+        "src/services/ui-import.ts",
+        "src/services/ui-parse.ts",
+        "src/services/ui-node-schema.ts"
       ],
       "tests": [
         "test/native-flow.test.ts",
-        "test/native-text.test.ts"
+        "test/native-text.test.ts",
+        "test/native-ui-import.test.ts",
+        "scripts/native-device-readonly.ts"
       ]
     },
     {

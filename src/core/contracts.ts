@@ -744,14 +744,33 @@ export const tools = {
   },
   ui_find: {
     description:
-      "Find UI nodes by stable selectors and explicit state, window or display. Multiple matches are reported.",
+      "Find UI nodes by stable selectors and explicit state, window or display. For offline queries provide tree_file (absolute path) or tree_artifact_id and tree_format=uitest or nodes. Saved trees never verify current device state and cannot be combined with target or snapshot_id. Multiple matches are reported.",
     schema: z
       .strictObject({
         target,
         ...queryFields,
         snapshot_id: z.string().uuid().optional(),
+        tree_file: z.string().min(1).max(4096).optional(),
+        tree_artifact_id: z.string().uuid().optional(),
+        tree_format: z.enum(["uitest", "nodes"]).optional(),
       })
-      .superRefine(checkQueries),
+      .superRefine(checkQueries)
+      .superRefine((input, ctx) => {
+        const sources = [input.tree_file, input.tree_artifact_id].filter(
+          (value) => value !== undefined,
+        );
+        if (
+          sources.length > 1 ||
+          (sources.length === 1 &&
+            (input.target !== undefined || input.snapshot_id !== undefined)) ||
+          (sources.length === 0 && input.tree_format !== undefined)
+        )
+          ctx.addIssue({
+            code: "custom",
+            message:
+              "Use one saved tree source without a device target or live snapshot; tree_format requires a saved source",
+          });
+      }),
   },
   ui_tap: {
     description:

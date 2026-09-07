@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { parseCrash } from "../services/crash.js";
 import type { parseUiDump } from "../services/ui-parse.js";
 import type { parseLintReport } from "../services/lint-report.js";
+import { uiNodesSchema } from "../services/ui-node-schema.js";
 
 export const cpuTaskSchema = z.discriminatedUnion("kind", [
   z.strictObject({
@@ -12,6 +13,7 @@ export const cpuTaskSchema = z.discriminatedUnion("kind", [
   z.strictObject({
     kind: z.literal("ui"),
     content: z.string().max(32 * 1024 * 1024),
+    format: z.enum(["uitest", "nodes"]).optional(),
   }),
   z.strictObject({
     kind: z.literal("crash"),
@@ -33,42 +35,9 @@ export type CpuResult<K extends CpuTask["kind"]> = K extends "ui"
   : K extends "lint"
     ? ReturnType<typeof parseLintReport>
     : ReturnType<typeof parseCrash>;
-const rect = z.object({
-  x1: z.number().finite(),
-  x2: z.number().finite(),
-  y1: z.number().finite(),
-  y2: z.number().finite(),
-});
-const nullableText = z.string().nullable(),
-  flag = z.boolean().nullable();
+const nullableText = z.string().nullable();
 const uiResult = z.object({
-  nodes: z
-    .array(
-      z.object({
-        parent: z.number().int().nonnegative().nullable(),
-        depth: z.number().int().nonnegative(),
-        id: nullableText,
-        type: z.string(),
-        key: nullableText,
-        text: z.string(),
-        rect: rect.nullable(),
-        checked: flag,
-        selected: flag,
-        enabled: flag,
-        clickable: flag,
-        visible: flag,
-        value: z.union([z.string(), z.number()]).nullable(),
-        displayId: nullableText,
-        windowId: nullableText,
-        bundleName: nullableText,
-        abilityName: nullableText,
-        focused: flag,
-        checkable: flag,
-        pagePath: nullableText,
-      }),
-    )
-    .min(1)
-    .max(100000),
+  nodes: uiNodesSchema,
   signature: z.string().regex(/^[a-f0-9]{64}$/),
   structureSignature: z.string().regex(/^[a-f0-9]{64}$/),
 });

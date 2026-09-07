@@ -17,7 +17,7 @@ port.on("message", (raw: unknown) => {
     const start = performance.now();
     const data =
       task.kind === "ui"
-        ? parseUiDump(task.content)
+        ? parseUiDump(task.content, task.format)
         : task.kind === "lint"
           ? parseLintReport(task.content, task.limit)
           : parseCrash(task.content, task.options);
