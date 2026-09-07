@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import { inspectSnapshot } from "./ui-inspection.js";
 import { findInSavedTree } from "./ui-import.js";
+import { SavedUiTreeCache } from "./ui-import-cache.js";
 import path from "node:path";
 import { z } from "zod";
 import {
@@ -121,6 +122,7 @@ export class Runtime {
   private stopping = false;
   private shutdown?: Promise<{ closed: boolean }>;
   private savedTreeQueries = 0;
+  readonly savedTrees = new SavedUiTreeCache();
   private workflows() {
     return (this.engine ??= (async () => {
       const { WorkflowEngine } = await import("../core/workflows.js");
@@ -954,6 +956,7 @@ export class Runtime {
           processes: this.processes.size,
           parsers: this.cpu.metrics,
           ui_cache: this.devices.cacheMetrics,
+          saved_ui_cache: this.savedTrees.metrics,
           recovery_required: this.store
             .externalGuards()
             .map(({ id, kind, run_id, metadata }) => ({
@@ -1414,7 +1417,13 @@ export class Runtime {
             );
           this.savedTreeQueries++;
           try {
-            return await findInSavedTree(input, this.store, this.cpu, signal);
+            return await findInSavedTree(
+              input,
+              this.store,
+              this.cpu,
+              signal,
+              this.savedTrees,
+            );
           } finally {
             this.savedTreeQueries--;
           }
@@ -1492,6 +1501,7 @@ export class Runtime {
       () => this.diagnostics.lsp.close(),
       () => this.auth.close(),
       () => this.devices.close(),
+      () => this.savedTrees.close(),
       () => this.cpu.close(),
       () => this.processes.close(),
       () => this.knowledge.close(),

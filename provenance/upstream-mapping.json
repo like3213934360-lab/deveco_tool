@@ -519,13 +519,15 @@
         "src/services/device.ts",
         "src/services/ui-import.ts",
         "src/services/ui-parse.ts",
-        "src/services/ui-node-schema.ts"
+        "src/services/ui-node-schema.ts",
+        "src/services/ui-import-cache.ts"
       ],
       "tests": [
         "test/native-flow.test.ts",
         "test/native-text.test.ts",
         "test/native-ui-import.test.ts",
-        "scripts/native-device-readonly.ts"
+        "scripts/native-device-readonly.ts",
+        "scripts/native-ui-mcp-benchmark.ts"
       ]
     },
     {
@@ -838,13 +840,15 @@
         "src/services/device.ts",
         "src/services/ui-import.ts",
         "src/services/ui-parse.ts",
-        "src/services/ui-node-schema.ts"
+        "src/services/ui-node-schema.ts",
+        "src/services/ui-import-cache.ts"
       ],
       "tests": [
         "test/native-flow.test.ts",
         "test/native-text.test.ts",
         "test/native-ui-import.test.ts",
-        "scripts/native-device-readonly.ts"
+        "scripts/native-device-readonly.ts",
+        "scripts/native-ui-mcp-benchmark.ts"
       ]
     },
     {

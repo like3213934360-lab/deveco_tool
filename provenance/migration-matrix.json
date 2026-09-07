@@ -1906,13 +1906,15 @@
       "adapters": [
         "src/services/device.ts",
         "src/services/ui-import.ts",
-        "src/services/ui-node-schema.ts"
+        "src/services/ui-node-schema.ts",
+        "src/services/ui-import-cache.ts"
       ],
       "checks": [
         "test/native-ui.test.ts",
         "test/native-ui-query.test.ts",
         "test/native-ui-import.test.ts",
-        "scripts/native-device-readonly.ts"
+        "scripts/native-device-readonly.ts",
+        "scripts/native-ui-mcp-benchmark.ts"
       ],
       "behavior": "实时设备查询复用快照索引；已有文件或本 MCP 节点制品可离线查询，保留输入摘要且不验证当前设备状态。",
       "parameters": {
@@ -1983,11 +1985,12 @@
       },
       "actions": [],
       "remaining": [
-        "真实多显示器及直接能力性能门槛"
+        "真实多显示器、实时获取及其他选择器的完整直接能力性能门槛；固定文件精确 key 查询已在本机 Node 22/24 各三轮通过"
       ],
       "acceptance": "pending",
       "evidence": [
-        "docs/native-ui-import.md"
+        "docs/native-ui-import.md",
+        "docs/native-ui-performance.md"
       ]
     },
     {

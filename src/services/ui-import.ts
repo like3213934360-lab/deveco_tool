@@ -9,6 +9,7 @@ import type { CpuPool } from "../core/cpu-pool.js";
 import { invariant, ToolError } from "../core/errors.js";
 import { parseUiDump } from "./ui-parse.js";
 import { UiIndex, type UiNode } from "./ui-tree.js";
+import type { SavedUiTreeCache } from "./ui-import-cache.js";
 
 const maximum = 32 * 1024 * 1024;
 export async function readUiTreeFile(file: string, signal?: AbortSignal) {
@@ -32,13 +33,13 @@ export async function readUiTreeFile(file: string, signal?: AbortSignal) {
       );
     });
   try {
-    const before = await handle.stat();
+    const before = await handle.stat({ bigint: true });
     invariant(
       before.isFile() && before.size > 0 && before.size <= maximum,
       "UI_TREE_FILE_INVALID",
       "UI tree must be a nonempty regular file at most 32 MiB",
     );
-    const bytes = Buffer.allocUnsafe(before.size);
+    const bytes = Buffer.allocUnsafe(Number(before.size));
     for (let offset = 0; offset < bytes.length;) {
       signal?.throwIfAborted();
       const { bytesRead } = await handle.read(
@@ -54,11 +55,11 @@ export async function readUiTreeFile(file: string, signal?: AbortSignal) {
       );
       offset += bytesRead;
     }
-    const after = await handle.stat();
+    const after = await handle.stat({ bigint: true });
     invariant(
       after.size === before.size &&
-        after.mtimeMs === before.mtimeMs &&
-        after.ctimeMs === before.ctimeMs,
+        after.mtimeNs === before.mtimeNs &&
+        after.ctimeNs === before.ctimeNs,
       "UI_TREE_FILE_CHANGED",
       "UI tree changed while reading",
     );
@@ -101,6 +102,7 @@ export async function findInSavedTree(
   store: StateStore,
   cpu: CpuPool,
   signal?: AbortSignal,
+  cache?: SavedUiTreeCache,
 ) {
   const input = tools.ui_find.schema.parse(raw);
   invariant(
@@ -111,45 +113,59 @@ export async function findInSavedTree(
   const bytes = input.tree_file
     ? await readUiTreeFile(input.tree_file, signal)
     : await readUiTreeArtifact(store, input.tree_artifact_id!, signal);
-  const format = input.tree_format ?? "uitest";
-  // A fatal decoder prevents invalid UTF-8 from silently changing selectors.
-  let content: string;
-  try {
-    content = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
-  } catch {
-    throw new ToolError(
-      "UI_TREE_ENCODING_INVALID",
-      "Saved UI tree must be valid UTF-8 JSON",
-    );
-  }
-  signal?.throwIfAborted();
+  const format = input.tree_format ?? "uitest",
+    sha256 = createHash("sha256").update(bytes).digest("hex"),
+    cacheKey = `${format}:${sha256}`,
+    cached = cache?.get(cacheKey);
   let parsed: ReturnType<typeof parseUiDump>;
-  try {
-    parsed =
-      bytes.length >= 128 * 1024
-        ? await cpu.run({ kind: "ui", content, format }, signal)
-        : parseUiDump(content, format);
-  } catch (error) {
-    if (error instanceof SyntaxError)
-      throw new ToolError("UI_TREE_INVALID", "Saved UI tree is not valid JSON");
-    throw error;
+  let index: UiIndex;
+  if (cached) {
+    parsed = cached.parsed;
+    index = cached.index;
+  } else {
+    // A fatal decoder prevents invalid UTF-8 from silently changing selectors.
+    let content: string;
+    try {
+      content = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    } catch {
+      throw new ToolError(
+        "UI_TREE_ENCODING_INVALID",
+        "Saved UI tree must be valid UTF-8 JSON",
+      );
+    }
+    signal?.throwIfAborted();
+    try {
+      parsed =
+        bytes.length >= 128 * 1024
+          ? await cpu.run({ kind: "ui", content, format }, signal)
+          : parseUiDump(content, format);
+    } catch (error) {
+      if (error instanceof SyntaxError)
+        throw new ToolError(
+          "UI_TREE_INVALID",
+          "Saved UI tree is not valid JSON",
+        );
+      throw error;
+    }
+    invariant(
+      parsed.nodes.some(
+        (node) => node.type || node.key || node.text || node.rect,
+      ),
+      "UI_TREE_INVALID",
+      "Saved UI tree contains no recognizable UI attributes",
+    );
+    signal?.throwIfAborted();
+    index = new UiIndex(parsed.nodes);
+    cache?.put(cacheKey, parsed, index, bytes.length);
   }
-  invariant(
-    parsed.nodes.some(
-      (node) => node.type || node.key || node.text || node.rect,
-    ),
-    "UI_TREE_INVALID",
-    "Saved UI tree contains no recognizable UI attributes",
-  );
   signal?.throwIfAborted();
-  const index = new UiIndex(parsed.nodes);
   let remainingBytes = 24 * 1024,
     contentTruncated = false;
   const query = (selector: z.infer<typeof selectorSchema>) => {
     const found = index.select(selector),
       matches: (UiNode & { truncated_fields: string[] })[] = [];
     for (const node of found.slice(0, selector.limit)) {
-      const preview = { ...node },
+      const preview = { ...node, rect: node.rect ? { ...node.rect } : null },
         fields: string[] = [];
       for (const field of [
         "id",
@@ -209,7 +225,7 @@ export async function findInSavedTree(
     input: {
       format,
       bytes: bytes.length,
-      sha256: createHash("sha256").update(bytes).digest("hex"),
+      sha256,
       ...(input.tree_file
         ? { file: input.tree_file }
         : { artifact_id: input.tree_artifact_id }),

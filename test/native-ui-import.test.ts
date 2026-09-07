@@ -10,6 +10,8 @@ import { tools } from "../src/core/contracts.js";
 import { findInSavedTree, readUiTreeFile } from "../src/services/ui-import.js";
 import { parseUiDump } from "../src/services/ui-parse.js";
 import { Runtime } from "../src/services/runtime.js";
+import { SavedUiTreeCache } from "../src/services/ui-import-cache.js";
+import { UiIndex } from "../src/services/ui-tree.js";
 
 function setup(t: import("node:test").TestContext) {
   const root = fs.mkdtempSync(
@@ -260,11 +262,111 @@ test("runtime offline UI queries never discover a device or use its cached live 
     });
     await Promise.all([first, second]);
     await assert.doesNotReject(runtime.call("ui_find", { tree_file: f.file }));
+    assert.equal(runtime.savedTrees.metrics.entries, 1);
+    assert.equal(runtime.savedTrees.metrics.hits, 3);
   } finally {
     await runtime.close();
+    assert.equal(runtime.savedTrees.metrics.entries, 0);
     if (previous === undefined) delete process.env.DEVECO_STATE_DIR;
     else process.env.DEVECO_STATE_DIR = previous;
   }
+});
+test("saved UI cache uses freshly read content identity, preserves format boundaries and cannot bypass missing sources", async (t) => {
+  const f = setup(t),
+    cache = new SavedUiTreeCache();
+  t.after(() => cache.close());
+  const find = (input: unknown) =>
+    findInSavedTree(
+      tools.ui_find.schema.parse(input),
+      f.store,
+      f.cpu,
+      undefined,
+      cache,
+    );
+  const first = await find({
+    tree_file: f.file,
+    selector: { key: "button-1" },
+  });
+  assert.equal(cache.metrics.misses, 1);
+  const second = await find({
+    tree_file: f.file,
+    selector: { key: "button-1" },
+  });
+  assert.deepEqual(second, first);
+  assert.equal(cache.metrics.hits, 1);
+  // Returned rectangles must not expose the cached node's mutable object.
+  if ("matches" in second && second.matches[0]?.rect)
+    second.matches[0].rect.x1 = 99;
+  assert.deepEqual(
+    await find({ tree_file: f.file, selector: { key: "button-1" } }),
+    first,
+  );
+  const stat = fs.statSync(f.file),
+    raw = fs.readFileSync(f.file, "utf8");
+  fs.writeFileSync(f.file, raw.replaceAll("中文按钮", "内容更新"));
+  fs.utimesSync(f.file, stat.atime, stat.mtime);
+  assert.equal(fs.statSync(f.file).size, stat.size);
+  const changed = await find({
+    tree_file: f.file,
+    selector: { text: "内容更新" },
+  });
+  assert.notEqual(changed.signature, first.signature);
+  assert.equal(
+    z.object({ match_count: z.literal(2) }).parse(changed).match_count,
+    2,
+  );
+  await assert.rejects(find({ tree_file: f.file, tree_format: "nodes" }));
+  const artifact = f.store.artifact(
+    "test",
+    fs.readFileSync(f.file),
+    "application/json",
+  );
+  const hits = cache.metrics.hits;
+  assert.equal(
+    (await find({ tree_artifact_id: artifact.artifact_id })).signature,
+    changed.signature,
+  );
+  assert.equal(cache.metrics.hits, hits + 1);
+  fs.unlinkSync(path.join(f.store.root, "artifacts", artifact.artifact_id));
+  await assert.rejects(find({ tree_artifact_id: artifact.artifact_id }));
+  fs.unlinkSync(f.file);
+  await assert.rejects(find({ tree_file: f.file }), {
+    code: "UI_TREE_FILE_INVALID",
+  });
+  cache.close();
+  assert.equal(cache.metrics.entries, 0);
+  assert.equal(cache.metrics.estimated_bytes, 0);
+});
+test("saved UI cache bounds parsed trees and lazy indexes, evicts least recent content and releases idle memory", (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const cache = new SavedUiTreeCache(),
+    parsed = parseUiDump(JSON.stringify({ attributes: { type: "Button" } })),
+    index = new UiIndex(parsed.nodes);
+  t.after(() => cache.close());
+  cache.put("one", parsed, index, 100);
+  cache.put("two", parsed, index, 100);
+  assert.ok(cache.get("one"));
+  cache.put("three", parsed, index, 100);
+  assert.equal(cache.get("two"), undefined);
+  assert.equal(cache.metrics.entries, 2);
+  cache.put("oversized", parsed, index, cache.limits.estimated_bytes);
+  assert.equal(cache.get("oversized"), undefined);
+  assert.equal(cache.metrics.entries, 2);
+  cache.put("large", parsed, index, cache.limits.estimated_bytes - 2048);
+  assert.ok(cache.metrics.estimated_bytes <= cache.limits.estimated_bytes);
+  assert.equal(cache.metrics.entries, 1);
+  t.mock.timers.tick(cache.limits.idle_ms - 1);
+  assert.equal(cache.metrics.entries, 1);
+  assert.ok(cache.get("large"));
+  t.mock.timers.tick(cache.limits.idle_ms - 1);
+  assert.equal(cache.metrics.entries, 1);
+  t.mock.timers.tick(1);
+  assert.equal(cache.metrics.entries, 0);
+  assert.equal(cache.metrics.estimated_bytes, 0);
+  cache.close();
+  assert.throws(() => cache.put("closed", parsed, index, 100), {
+    code: "RUNTIME_STOPPING",
+  });
 });
 test("saved UI previews bound repeated matches and retain full input as a readable artifact", async (t) => {
   const f = setup(t);
