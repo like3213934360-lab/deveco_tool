@@ -18,16 +18,20 @@ else if (action === "-start") {
     file,
     JSON.stringify({ ...state, isRunning: true, pid: process.pid }),
   );
-  process.on("SIGTERM", () => {
+  const stop = () => {
     fs.writeFileSync(
       file,
       JSON.stringify({ name: state.name, isRunning: false }),
     );
     process.exit(0);
-  });
+  };
+  process.on("SIGTERM", stop);
   process.stdout.write("ready\n");
-  setInterval(() => {}, 1000);
+  // Model the emulator's stop protocol rather than POSIX signal handlers, which
+  // do not run when another process calls kill(SIGTERM) on Windows.
+  setInterval(() => {
+    if (fs.existsSync(file + ".stop")) stop();
+  }, 20);
 } else if (action === "-stop") {
-  const state = read();
-  if (state.pid) process.kill(state.pid, "SIGTERM");
+  fs.writeFileSync(file + ".stop", "stop");
 } else throw new Error(`Unexpected action: ${action}`);

@@ -577,7 +577,12 @@ test("local crash submission snapshots bounded evidence, deduplicates and retain
   const root = fs.realpathSync(
       fs.mkdtempSync(path.join(os.tmpdir(), "deveco-crash-input-")),
     ),
-    previous = process.env.DEVECO_STATE_DIR;
+    previous = process.env.DEVECO_STATE_DIR,
+    previousConfig = process.env.DEVECO_CONFIG,
+    config = path.join(root, "config.json");
+  // Use no configured SDK; this also runs on CI hosts without Studio installed.
+  fs.writeFileSync(config, "{}");
+  process.env.DEVECO_CONFIG = config;
   process.env.DEVECO_STATE_DIR = path.join(root, "state");
   const runtime = new Runtime();
   try {
@@ -646,6 +651,9 @@ test("local crash submission snapshots bounded evidence, deduplicates and retain
       runtime.store.get(inline.run_id).input,
       /first failure|log_text/,
     );
+    // The following live collection is mocked, but still captures a toolchain
+    // identity. Give it its own fixture instead of relying on the developer SDK.
+    fs.writeFileSync(config, JSON.stringify({ clt: path.join(root, "clt") }));
     t.mock.method(runtime.devices, "target", async () => "device");
     let collected = false;
     t.mock.method(
@@ -710,6 +718,8 @@ test("local crash submission snapshots bounded evidence, deduplicates and retain
     await runtime.close();
     if (previous === undefined) delete process.env.DEVECO_STATE_DIR;
     else process.env.DEVECO_STATE_DIR = previous;
+    if (previousConfig === undefined) delete process.env.DEVECO_CONFIG;
+    else process.env.DEVECO_CONFIG = previousConfig;
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
