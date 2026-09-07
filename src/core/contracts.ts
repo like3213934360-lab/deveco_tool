@@ -585,13 +585,14 @@ export const tools = {
   },
   code_lint: {
     description:
-      "Run the native Code Linter. Fixing requires fix=true; incremental requires a Git working tree.",
+      "Run the native Code Linter with a bounded issue preview and complete report artifact. Fixing requires fix=true; incremental requires a Git working tree. Counts cover the complete report, not only the preview.",
     schema: z.strictObject({
       ...projectFields,
       path: z.string().optional(),
       config_path: z.string().optional(),
       fix: z.boolean().default(false),
       incremental: z.boolean().default(false),
+      limit: z.number().int().min(1).max(200).default(50),
     }),
   },
   check_cpp_files: {

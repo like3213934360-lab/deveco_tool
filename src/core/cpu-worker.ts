@@ -3,6 +3,7 @@ import { cpuRequestSchema } from "./cpu-protocol.js";
 import { errorResult, invariant } from "./errors.js";
 import { parseUiDump } from "../services/ui-parse.js";
 import { parseCrash } from "../services/crash.js";
+import { parseLintReport } from "../services/lint-report.js";
 
 invariant(
   parentPort,
@@ -17,7 +18,9 @@ port.on("message", (raw: unknown) => {
     const data =
       task.kind === "ui"
         ? parseUiDump(task.content)
-        : parseCrash(task.content, task.options);
+        : task.kind === "lint"
+          ? parseLintReport(task.content, task.limit)
+          : parseCrash(task.content, task.options);
     port.postMessage({
       id,
       ok: true,

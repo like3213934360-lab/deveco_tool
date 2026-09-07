@@ -25,7 +25,7 @@ MCP 主进程提供静态工具目录和参数校验；Worker 持有领域服务
 - `hdc_log` 支持收集、整行字面量筛选、清空默认 app/core buffer、故障记录探测及按原名读取。筛选使用设备端管道，分别核对生产进程退出结果；故障时间筛选使用设备时钟和时区，不回退到其他应用或过期记录。
 - 崩溃解析按事件和进程组织证据，区分普通日志、其他进程错误、截断和无法归属的记录。文件、制品或内联证据在提交时转为任务拥有的制品，和任务创建一起绑定；检查点及任务输入只保留引用。Hilog 崩溃采集不要求应用进程仍存活。
 - 制品分页读取与清理使用同一套 SQLite 写事务协调；短读继续读取，长度不匹配明确失败。清理先提交引用删除，再通过持久化删除记录清除文件，失败后重试。
-- UI/崩溃大文本使用按需启动的 CPU Worker 池：最多 2 个 Worker、16 个排队任务、64 MiB 输入记账预算，空闲 30 秒释放；取消与超时等待 Worker 退出后才完成。普通小查询仍在运行服务中执行。VM 堆限制不是进程 RSS 硬上限。
+- UI/崩溃/Linter 大文本使用按需启动的 CPU Worker 池：最多 2 个 Worker、16 个排队任务、64 MiB 输入记账预算，空闲 30 秒释放；取消与超时等待 Worker 退出后才完成。普通小查询仍在运行服务中执行。VM 堆限制不是进程 RSS 硬上限。
 - UI 快照缓存最多 8 份、64 MiB 估算预算，有实际到期定时器。批量选择器在同一份树上查询，真实匹配总数不被输出 `limit` 改写；父节点和深度参与结构摘要，层级变化不再被漏报。窗口、显示器、深度与分页检查使用完整快照的父节点索引。
 - 部署提交时把 HAP/HSP 复制为任务拥有的只读制品，固定大小和 SHA-256，等待设备租约后再次核对。普通工程重建不会替换已提交的安装输入；多个包通过一次设备端安装提交，捕获失败和并发重复提交释放未绑定副本。详见 `docs/native-deployment.md`。
 - ArkTS LSP 增加查找实现，检查初始化能力声明和 UTF-16 编码，校验真实发送内容的行列范围。文件读取、摘要和通知使用同一批字节；无结果、能力不可用、非法响应有不同处理。详见 `docs/native-language-service.md`。
@@ -42,7 +42,7 @@ MCP 主进程提供静态工具目录和参数校验；Worker 持有领域服务
 | 工具链探测、工程模板 | `core/toolchain.ts`、`services/project.ts`、`resources/templates` | 本机 Studio/API 26 创建与构建通过；其他平台、CLT 布局及更广版本范围待验收 |
 | OHPM、同步、Hvigor 构建 | `services/project.ts` | 真实同步、ArkTS/C++ 构建、输出模型通过；四模块、双产品、HAR/HSP、默认任务筛选和实际包依赖补全共 15 项通过；更多历史制品场景待验收 |
 | ArkTS LSP、clangd、静态预检 | `services/lsp.ts`、`checker.ts`、`compilation-database.ts` | 真实悬停、引用、错误诊断、C++ 检查通过；静态预检不作为编译通过的替代证明 |
-| Linter、API 扫描 | `services/diagnostics.ts` | 真实空报告、兼容性问题和无差异扫描通过；更多 API/组件组合待验证 |
+| Linter、API 扫描 | `services/diagnostics.ts` | 真实 Linter 指定文件/配置、发现缺陷、增量、显式修复后复查和拒绝坏配置 6 项通过；API 兼容性问题和无差异扫描通过。Linter 空报告不证明全部规则执行，详见 `docs/native-linter.md` |
 | HDC、部署、启动 | `services/device.ts`、`package.ts` | HAP 元数据在真实构建产物上通过；丢失启动回执的恢复回归通过。真实签名安装/启动及可核实的外部恢复证据未齐全 |
 | UI、中文输入、保存流程与录制 | `services/device.ts`、`text.ts`、`flow.ts`、`recording.ts` | 重启恢复、原断言约束、丢失回执、取消、关闭、保留期限与设备竞争回归通过；真实设备 UI 读取和窗口断言通过，中文输入与完整录制/重放待验收 |
 | 公开入口、目标导航与 Want | `services/routes.ts`、`navigation.ts`、`runtime.ts` | 产品/模块/公开性、URI/MIME、中文目标匹配、歧义、Want 类型和任务恢复回归通过；实际设备导航与未匹配目标自动录制待完成 |
@@ -51,7 +51,7 @@ MCP 主进程提供静态工具目录和参数校验；Worker 持有领域服务
 | 本地和云端签名 | `services/signature.ts`、`auth.ts` | 真实密钥与 CSR 生成通过；证书/Profile/团队、云端认证和完整签名安装待验收 |
 | 模拟器与场景 | `services/emulator.ts` | 本机创建、启动、保持运行、场景命令、停止、删除通过；场景命令接受不等于应用感知结果已验证 |
 | 文档与知识 | `services/knowledge.ts`、`resources/knowledge.json` | 119 个资源、79 条知识、4 个来源的摘要与许可证校验通过；本地查询直接打开发布资源数据库，无每版本状态目录解压副本 |
-| 上游更新 | `scripts/upstream.ts`、`provenance/upstream-*` | 检测、分类、报告摘要核对、草稿 PR 幂等创建、CI 调度、候选评审阻断和框架/官方升级分离已实现；模拟 GitHub 故障恢复测试通过，真实远程候选集成与正式发布门禁待验收 |
+| 上游更新 | `scripts/upstream.ts`、`provenance/upstream-*` | 检测、分类、报告摘要核对、草稿 PR 幂等创建、CI 调度、候选评审阻断和框架/官方升级分离已实现；模拟 GitHub 故障恢复测试通过，真实草稿 PR #1、重复调用去重和候选评审阻断通过；定时身份权限、人工适配与正式发布门禁待验收 |
 
 ## 本机验证记录
 
@@ -59,10 +59,11 @@ MCP 主进程提供静态工具目录和参数校验；Worker 持有领域服务
 
 | 检查 | 结果 | 范围与原始证据 |
 | --- | --- | --- |
-| 编译及回归 | 162 项通过，0 跳过 | `/private/tmp/deveco-native-regression-node26-20260908-14/evidence.json`；Node 26.0.0，122 个 TypeScript 文件，新增 SDK 临时目录超额取消、活跃输入保留、共享预算和启动失败释放；本机不能证明 Windows 行为 |
-| Node 22/24 干净原生验证目录 | 六组全量回归和 Windows 压力门槛通过 | [CI 34155214753](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34155214753)，提交 `7bed2ef`；每组 158 项回归，Windows Node 22/24 各 20/20 轮进程所有权与恢复检查通过；此 CI 早于新增临时目录预算 |
+| 编译及回归 | 177 项通过，0 跳过 | `/private/tmp/deveco-native-regression-node26-20260908-20/evidence.json`；Node 26.0.0，131 个 TypeScript 文件，包含显示器/坐标、CLT/JDK 探测及有界 Linter 报告、配置和失败回执回归；本机不能证明 Windows 行为 |
+| Node 22/24 干净原生验证目录 | 六组全量回归和 Windows 压力门槛通过 | [CI 34158666170](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34158666170)，提交 `01dd93a`；Windows Node 22/24 各 20/20 轮通过；此 CI 早于 CLT/JDK 和 Linter 新改动，不能覆盖这些代码 |
 | 迁移清单 | 40 工具、7 脚本、330 参数、95 动作覆盖检查通过 | `provenance/baseline-capabilities.json`、`provenance/migration-matrix.json`；47 项完整行为验收仍为 pending，`native-migration-audit --release` 会阻止发布 |
 | 真实 SDK | 19 项通过 | `/private/tmp/deveco-native-sdk-20260908-6/evidence.json`；Studio 26.0.0.821、SDK 26.0.0.105；创建/构建、HAP、静态预检、Linter、ArkTS 四种查询及空结果/位置边界、C++、API 版本和扫描、本地密钥/CSR、模拟器列表通过，不包含签名安装/热补丁 |
+| 真实 Linter | 6 项通过 | `/private/tmp/deveco-native-lint-20260908-3/evidence.json`；独立 canary 工程，没有构建、签名或设备操作。前两轮失败记录保留，范围及原因见 Linter 文档 |
 | 真实多模块 SDK | 15 项通过 | `/private/tmp/deveco-native-multimodule-20260908-3/evidence.json`；entry/feature/HAR/HSP、default/tablet 两产品，含默认构建模块筛选与编译元数据驱动的 HSP 依赖构建；未签名、未安装设备 |
 | 真实设备只读验证 | 12 项通过 | `/private/tmp/deveco-native-device-readonly-20260908-4/evidence.json`；新增批量查询、缓存 ID 复用、窗口/层级分页，其余包括设备属性、UI 断言、Hilog、故障查询及关闭。故障目录权限不足，返回 `complete:false`，不能计为完整故障采集证明；没有点击、安装或业务路径验证 |
 | 真实 Hvigor watch | 7 项通过 | `/private/tmp/deveco-native-hvigor-20260907-4/evidence.json`；未验证签名和设备热补丁 |
@@ -80,9 +81,9 @@ Windows 压力测试已暴露并保留三类失败证据：SQLite 初始化失�
 3. 完成副作用外部状态核对。当前无法证明已执行结果时会停在 `needs_input`；不得把这种保守停止写成恢复能力全部完成。
 4. Windows Job Object 进程所有权与退出确认已通过六组 CI 和 Windows 连续压力检查；继续完成 SDK 和性能验证。`taskkill` 已从原生实现删除；macOS 通过不能代替 Windows 证明。
 5. Checkpointer、制品、流、数据库、原生工具临时目录与 LSP 日志已有预算控制；继续完成真实长时间运行的容量验收。外部 SDK 的突发写入不是操作系统硬配额，不能宣称所有物理磁盘写入始终满足统一上限。
-6. CPU UI/崩溃解析池已通过边界回归；继续完成其他大报告路径、会话协调与最终性能优化，在固定工程和空闲机器上执行完整直接能力对比，以及最终代码的一小时 SDK/LSP/UI/watch 会话验收。
+6. CPU UI/崩溃/Linter 解析池已通过边界回归；继续完成其他大报告路径、会话协调与最终性能优化，在固定工程和空闲机器上执行完整直接能力对比，以及最终代码的一小时 SDK/LSP/UI/watch 会话验收。
 7. 完成 Node 22/24 × macOS/Windows/Linux 的基础运行矩阵，逐项记录 SDK/设备支持范围。
-8. 上游候选、草稿 PR 和 CI 门禁的代码与模拟验证已完成；继续完成远程端到端验证、人工适配证据和正式发布门禁。
+8. 上游候选、草稿 PR 和 CI 门禁的代码与模拟验证已完成；真实候选 PR #1 和去重已完成，继续完成定时身份权限、人工适配证据和正式发布门禁。
 9. 最终切换 `package.json` 的 bin/scripts/files，删除 84 个旧 `.mjs/.cjs` 文件、官方 CLI/子 MCP 依赖、旧 Skill/安装器、代理、补丁、旧工具别名和旧 CI；同步重写 README/PACK/NOTICE。当前仍保留它们作迁移对照，默认启动入口仍是旧实现。
 10. 完成干净 Release 安装、用户配置升级、凭据重新登录、用户流程校验、按安装记录清理本项目安装过的 Skill，以及完整版本回退验证。
 11. 开发分支可提前推送以执行跨平台 CI；全部门槛通过后才合入最终切换并发布候选与正式版本。不得根据当前本机回归通过直接发布。
@@ -100,6 +101,7 @@ node dist/scripts/native-migration-audit.js --release
 node dist/scripts/resources.js
 node dist/scripts/native-device-readonly.js /absolute/new-device-evidence device-id
 node dist/scripts/native-sdk-acceptance.js /absolute/new-sdk-evidence
+node dist/scripts/native-lint-acceptance.js /absolute/new-lint-evidence
 node dist/scripts/native-multimodule-acceptance.js /absolute/new-module-evidence
 node dist/scripts/native-hvigor-acceptance.js /absolute/new-watch-evidence
 node dist/scripts/native-emulator-acceptance.js /absolute/new-emulator-evidence

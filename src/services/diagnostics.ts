@@ -7,7 +7,7 @@ import {
   component,
   toolCommand,
 } from "../core/toolchain.js";
-import { invariant } from "../core/errors.js";
+import { invariant, ToolError, errorResult } from "../core/errors.js";
 import { readObject, atomicWrite } from "../core/files.js";
 import { StateStore } from "../core/store.js";
 import { NativeDirectory } from "../core/native-directory.js";
@@ -17,6 +17,9 @@ import { LanguageService } from "./lsp.js";
 import { z } from "zod";
 import { StringDecoder } from "node:string_decoder";
 import { apiReport } from "../core/csv.js";
+import type { CpuPool } from "../core/cpu-pool.js";
+import { parseLintReport } from "./lint-report.js";
+import { lintInput } from "./lint-input.js";
 
 export function apiVersions(scanner: string): string[] {
   const directory = path.join(path.dirname(scanner), "resources/apiChange");
@@ -56,6 +59,7 @@ export class DiagnosticService {
   constructor(
     readonly processes: ProcessService,
     readonly store: StateStore,
+    readonly cpu?: CpuPool,
   ) {
     this.lsp = new LanguageService(processes, undefined, undefined, store);
   }
@@ -104,9 +108,11 @@ export class DiagnosticService {
       fix?: boolean;
       incremental?: boolean;
       config_path?: string;
+      limit?: number;
     },
     signal?: AbortSignal,
   ) {
+    const validated = await lintInput(project.root, input, signal);
     if (input.incremental)
       await this.processes.run(
         {
@@ -122,9 +128,9 @@ export class DiagnosticService {
     return scope.execute(async (signal) => {
       const report = path.join(directory, "report.json");
       const args = [
-        toolchain.sdk,
+        ...(toolchain.kind === "clt" ? [toolchain.sdk] : []),
         "--config",
-        path.resolve(project.root, input.config_path ?? "code-linter.json5"),
+        validated.config,
         "--product",
         project.product.name,
         "--format",
@@ -134,10 +140,21 @@ export class DiagnosticService {
       ];
       if (input.fix) args.push("--fix");
       if (input.incremental) args.push("--incremental");
-      args.push(path.resolve(project.root, input.path ?? "."));
+      args.push(validated.target);
       const command = toolCommand(toolchain, "linter", args, project.root);
       command.env = {
         ...command.env,
+        // Select the current file-report contract, independent of IDE variables
+        // inherited by the MCP host. This is the SDK's declared mode switch.
+        isPlugin: "false",
+        debuggerTriggerCodeLinter: "false",
+        fixKeys: "",
+        targets: "",
+        isTooManyFiles: "false",
+        logPath: path.join(directory, "codelinter.log"),
+        TMPDIR: directory,
+        TMP: directory,
+        TEMP: directory,
         PATH: [
           path.dirname(component(toolchain, "node")),
           toolchain.components.java
@@ -148,34 +165,145 @@ export class DiagnosticService {
           .filter(Boolean)
           .join(path.delimiter),
       };
+      // The current native CmdPrinter prints execution errors in ANSI red but
+      // can still return 0 and write []. Inspect every chunk, including output
+      // discarded from the bounded process tail. Code findings stay in JSON.
+      const tails = { stdout: "", stderr: "" };
+      let executionError = false;
       const result = await this.processes.run(command, {
         signal,
         timeoutMs: 180000,
         allowFailure: true,
+        onOutput: (stream, chunk) => {
+          const text = tails[stream] + chunk.toString("utf8");
+          if (text.includes("\u001b[31m")) executionError = true;
+          tails[stream] = text.slice(-8);
+        },
+      });
+      // Keep bounded evidence for SDK engines before deleting their directory.
+      const native_logs: {
+        name: string;
+        original_bytes: number;
+        truncated: boolean;
+        artifact: ReturnType<StateStore["artifact"]>;
+      }[] = [];
+      for (const name of [
+        "codelinter.log",
+        "arkPerfCheck.log",
+        "hpauditor.log",
+      ]) {
+        const file = path.join(directory, name);
+        if (!fs.existsSync(file)) continue;
+        const stat = await fs.promises.lstat(file);
+        invariant(
+          stat.isFile(),
+          "LINT_LOG_INVALID",
+          "Expected a regular native log",
+        );
+        const handle = await fs.promises.open(file, "r"),
+          data = Buffer.alloc(Math.min(stat.size, 65536));
+        try {
+          let read = 0;
+          while (read < data.length) {
+            const { bytesRead } = await handle.read(
+              data,
+              read,
+              data.length - read,
+              stat.size - data.length + read,
+            );
+            invariant(
+              bytesRead > 0,
+              "LINT_LOG_CHANGED",
+              "Native log changed after process exit",
+            );
+            read += bytesRead;
+          }
+        } finally {
+          await handle.close();
+        }
+        native_logs.push({
+          name,
+          original_bytes: stat.size,
+          truncated: stat.size > data.length,
+          artifact: this.store.artifact("diagnostics", data),
+        });
+      }
+      if (!fs.existsSync(report))
+        throw new ToolError("LINT_NOT_EXECUTED", "Linter produced no report", {
+          exit_code: result.exitCode,
+          process_log: result.log,
+          native_logs,
+        });
+      const stat = await fs.promises.lstat(report);
+      invariant(
+        stat.isFile(),
+        "LINT_REPORT_INVALID",
+        "Expected a regular linter report file",
+      );
+      invariant(
+        stat.size <= 16 * 1024 * 1024,
+        "LINT_REPORT_TOO_LARGE",
+        "Expected a regular report file no larger than 16 MiB",
+      );
+      const content = await fs.promises.readFile(report, {
+        encoding: "utf8",
+        signal,
       });
       invariant(
-        fs.existsSync(report),
-        "LINT_NOT_EXECUTED",
-        `Linter produced no report: ${result.stderr || result.stdout}`,
+        content.length <= 256 * 1024 || this.cpu,
+        "CPU_POOL_REQUIRED",
+        "Large diagnostic reports require the bounded parser pool",
       );
-      const parsed = z
-        .array(z.record(z.string(), z.unknown()))
-        .parse(JSON.parse(fs.readFileSync(report, "utf8")) as unknown);
-      invariant(
-        result.exitCode === 0 || parsed.length > 0,
-        "LINT_TOOL_FAILED",
-        "Linter failed without diagnostic findings",
+      let parsed: ReturnType<typeof parseLintReport>;
+      try {
+        parsed =
+          content.length > 256 * 1024
+            ? await this.cpu!.run(
+                { kind: "lint", content, limit: input.limit ?? 50 },
+                signal,
+              )
+            : parseLintReport(content, input.limit);
+      } catch (error) {
+        signal.throwIfAborted();
+        const failure = errorResult(error);
+        throw new ToolError(failure.code, failure.message, {
+          artifact: this.store.artifact(
+            "diagnostics",
+            content,
+            "application/json",
+          ),
+          process_log: result.log,
+          native_logs,
+        });
+      }
+      const artifact = this.store.artifact(
+        "diagnostics",
+        content,
+        "application/json",
       );
+      // No --exit-on is requested: modern native reports findings with exit 0.
+      // A nonzero exit must never be converted to success by partial findings.
+      if (result.exitCode !== 0 || result.signal !== null || executionError)
+        throw new ToolError(
+          "LINT_TOOL_FAILED",
+          "Linter reported an execution failure; findings may be incomplete",
+          {
+            exit_code: result.exitCode,
+            execution_error: executionError,
+            summary: parsed.summary,
+            artifact,
+            process_log: result.log,
+            native_logs,
+          },
+        );
       return {
         checkKind: "linter",
         compilationVerified: false,
+        ruleCoverageVerified: false,
         exitCode: result.exitCode,
-        report: parsed,
-        artifact: this.store.artifact(
-          "diagnostics",
-          fs.readFileSync(report),
-          "application/json",
-        ),
+        ...parsed,
+        artifact,
+        native_logs,
       };
     }, signal);
   }

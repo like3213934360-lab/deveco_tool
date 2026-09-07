@@ -93,7 +93,11 @@ export class Runtime {
   );
   readonly projects = new ProjectService(this.processes);
   readonly devices = new DeviceService(this.processes, this.store, this.cpu);
-  readonly diagnostics = new DiagnosticService(this.processes, this.store);
+  readonly diagnostics = new DiagnosticService(
+    this.processes,
+    this.store,
+    this.cpu,
+  );
   readonly flows = new FlowService(this.devices, this.store);
   readonly recordings = new RecordingService(this.store, this.devices);
   readonly logs = new LogService(this.devices, this.store);

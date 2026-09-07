@@ -1,8 +1,14 @@
 import { z } from "zod";
 import type { parseCrash } from "../services/crash.js";
 import type { parseUiDump } from "../services/ui-parse.js";
+import type { parseLintReport } from "../services/lint-report.js";
 
 export const cpuTaskSchema = z.discriminatedUnion("kind", [
+  z.strictObject({
+    kind: z.literal("lint"),
+    content: z.string().max(16 * 1024 * 1024),
+    limit: z.number().int().min(1).max(200),
+  }),
   z.strictObject({
     kind: z.literal("ui"),
     content: z.string().max(32 * 1024 * 1024),
@@ -24,7 +30,9 @@ export const cpuTaskSchema = z.discriminatedUnion("kind", [
 export type CpuTask = z.infer<typeof cpuTaskSchema>;
 export type CpuResult<K extends CpuTask["kind"]> = K extends "ui"
   ? ReturnType<typeof parseUiDump>
-  : ReturnType<typeof parseCrash>;
+  : K extends "lint"
+    ? ReturnType<typeof parseLintReport>
+    : ReturnType<typeof parseCrash>;
 const rect = z.object({
   x1: z.number().finite(),
   x2: z.number().finite(),
@@ -83,7 +91,35 @@ const crashResult = z.object({
   diagnosisComplete: z.boolean(),
   compilationVerified: z.boolean(),
 });
-export const cpuResultSchemas = { ui: uiResult, crash: crashResult };
+const lintResult = z.object({
+  summary: z.object({
+    files_reported: z.number().int().nonnegative(),
+    issues: z.number().int().nonnegative(),
+    errors: z.number().int().nonnegative(),
+    warnings: z.number().int().nonnegative(),
+    suggestions: z.number().int().nonnegative(),
+    other: z.number().int().nonnegative(),
+  }),
+  report: z
+    .array(
+      z.object({
+        file: z.string().max(1024),
+        line: z.number().int().nonnegative(),
+        column: z.number().int().nonnegative(),
+        severity: z.string().max(64),
+        message: z.string().max(2048),
+        rule: z.string().max(256),
+        truncated: z.boolean(),
+      }),
+    )
+    .max(200),
+  truncated: z.boolean(),
+});
+export const cpuResultSchemas = {
+  ui: uiResult,
+  crash: crashResult,
+  lint: lintResult,
+};
 export const cpuReplySchema = z.discriminatedUnion("ok", [
   z.strictObject({
     id: z.number().int(),

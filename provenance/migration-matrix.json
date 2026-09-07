@@ -400,28 +400,32 @@
         "tool:code_lint"
       ],
       "adapters": [
-        "src/services/diagnostics.ts"
+        "src/services/diagnostics.ts",
+        "src/services/lint-input.ts",
+        "src/services/lint-report.ts"
       ],
       "checks": [
-        "test/native-reports.test.ts"
+        "test/native-lint.test.ts",
+        "test/native-cpu.test.ts",
+        "scripts/native-lint-acceptance.ts"
       ],
       "behavior": "结构化 Code Linter 报告和显式修复。",
       "parameters": {
         "path": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "mapped",
+          "replacement": "path；校验真实路径位于固定工程内，按单文件或目录传给原生 Linter"
         },
         "fix": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "mapped",
+          "replacement": "fix；仅显式开启修复，使用工程写租约，真实 SDK 修复后复查"
         },
         "incremental": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "mapped",
+          "replacement": "incremental；先验证 Git 工程，再使用原生 --incremental；已跟踪变更文件验证通过"
         },
         "config_path": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "mapped",
+          "replacement": "config_path；允许显式外部配置，调用前严格 JSON5/字段校验且最大 1 MiB"
         },
         "product": {
           "status": "mapped",
@@ -436,8 +440,8 @@
           "replacement": "制品引用与 read_artifact"
         },
         "limit": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "mapped",
+          "replacement": "limit；1–200 条预览并限制 24 KiB；全量统计不受预览截断影响，原始报告保留为制品"
         },
         "project_path": {
           "status": "mapped",
@@ -450,7 +454,7 @@
       },
       "actions": [],
       "remaining": [
-        "增量、配置覆盖与大报告验收；运行时已使用工程写租约保护修复"
+        "更多 SDK/CLT 实机规则执行范围验收；原生空报告不证明全部配置规则已生效，返回 ruleCoverageVerified:false"
       ],
       "acceptance": "pending",
       "evidence": []
