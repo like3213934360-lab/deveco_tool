@@ -1,17 +1,14 @@
 import fs from "node:fs";
 import path from "node:path";
+import os from "node:os";
+import { randomUUID } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { ProcessService } from "../src/core/process.js";
 import { invariant, errorResult } from "../src/core/errors.js";
 import { evidenceIdentity } from "./lib/evidence.js";
 import { digest } from "../src/core/files.js";
 
-const output = path.resolve(process.argv[2] ?? "");
-invariant(
-  process.argv[2],
-  "OUTPUT_REQUIRED",
-  "Provide a new evidence directory",
-);
+const output = path.resolve(process.argv[2] ?? path.join(os.tmpdir(), `deveco-regression-${randomUUID()}`));
 invariant(
   !fs.existsSync(output),
   "OUTPUT_EXISTS",
@@ -100,6 +97,7 @@ try {
         passed,
         ...summary,
         test_files: tests.length,
+        executed_tests: tests.map((file) => path.relative(root, file).split(path.sep).join("/")),
         elapsed_ms: result.elapsedMs,
         exit_code: result.exitCode,
       },

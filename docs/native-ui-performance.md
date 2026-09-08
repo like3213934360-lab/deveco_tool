@@ -1,5 +1,30 @@
 # UI 查询性能记录
 
+本页既有数值属于各自历史快照，不是当前 native-6 的验收。新的采集器已实现；本批已开始长稳采集，首轮因会话数量变化中止，后续诊断发现工具链时间戳身份变化；第二轮因 UiTest 非法 JSON 中止，失败证据保留，完整一小时与统一性能报告仍待通过。
+
+## 当前统一采集入口
+
+全部实现冻结并宣布进入统一测试后，用同一支持的 Node 与机器运行，输出文件或目录必须是新的：
+
+```sh
+node dist/scripts/native-benchmark.js /private/benchmark-plan.json /absolute/new-direct-evidence
+node dist/scripts/native-ui-benchmark.js /absolute/frozen-baseline /absolute/new-ui.json
+node dist/scripts/native-orchestration-benchmark.js /absolute/new-orchestration.json
+node dist/scripts/native-performance-report.js /absolute/new-direct-evidence/direct.json /absolute/new-ui.json /absolute/new-orchestration.json /absolute/new-performance.json
+node dist/scripts/native-sdk-soak.js /absolute/new-soak-directory 3600 TARGET
+```
+
+长稳脚本在新证据目录内创建专用工程，时长参数单位为秒；运行前选择当前获准使用的设备。benchmark plan 固定旧版 Git 提交、入口、工具链环境、不可变输入文件摘要及 19 个直接能力的两版调用映射。每个 step 要声明结果 JSON Pointer 与预期值；异步写操作使用 `await_run: { "run_id_pointer": "/data/run_id" }`，计时包含直到成功终态的等待，断言针对最终状态的结果。不可用能力明确失败，不以工具目录代替。计划仅保留在私有证据目录，公共报告只记录其摘要。
+
+冷启动两版各 30 次交替测量，分别记录初始化、工具目录与总时长。直接能力每版各 1000 次，交替 100 次一组，保留逐次样本。UI 微基准针对 101 / 1001 / 10001 节点，六个独立进程分别测量两版解析和四种选择器；每次延迟、CPU 和 RSS 保留原始值。编排基准单独记录官方 LangGraph 单节点、SQLite 检查点写入/待提交写入/读回，以及启用检查点的图调用，不混入 SDK 时间。
+
+长稳持续执行真实 SDK 增量构建、LSP、UI 树获取及 watch，之后自然空闲至少六分钟。MCP 与当前 SDK 子进程树分别记录 CPU/RSS、受管进程启动次数和可用的磁盘写入字节；不支持的指标用 `value:null` 和理由，不能用文件系统调用次数代替写入字节。SDK 进程树 RSS 可能重复计入共享页，已退出 SDK 的 CPU 不伪装成完整累计值。空闲末尾和关闭后，受管任务、监听器、连接、进程、缓存和 Worker 必须归零；不接受报告自行放宽容量。真实效果、旧/新语义一致性与跨平台范围仍需实际环境验证。
+
+
+当前基线对照仍有一项明确缺口：冻结旧版 `aab1405` 的公开 `app_signature` 只执行官方 `signature generate`，没有检查工程签名配置的 `inspect` 动作。不能将签名生成或工具目录耗时冒充 `app_signature.inspect` 的同输入性能对照。该缺口保留，19 项门禁没有降低；完整性能报告尚不能通过。
+
+## 历史测量
+
 2026-09-08，在同一 macOS arm64 开发机比较冻结基线 `aab1405b51e00e4036bdc8f18ae4229835de77b0` 与原生编译入口。原生运行文件摘要为 `6473b9c693ff3f80db3d42ec5015b6bfbbad7bbdd0fcf257321b97867384e028`，原始证据保存逐次测量和全部编译文件、依赖锁、资源摘要。Node 22/24 分别在不含官方 CLI、子 MCP 或 Skill 的独立原生验证目录安装相应 ABI 的依赖。
 
 `scripts/native-ui-mcp-benchmark.ts` 使用完整 stdio MCP 调用。每轮分别启动新旧服务器，轮换测量顺序；每种大小先预热 20 次，再重复 1000 次固定精确 key 查询，连续三轮。两版读取相同的不可变 UiTest JSON，逐次核对节点总数、真实匹配数量和命中 key。保留默认日志写入，新版测量包含文件读取、摘要、缓存或解析、Worker 通信及完整响应传输。两版公开结果结构不同，按各自正常输出计时；不在 SDK 设备操作中加入模拟延迟。
@@ -54,3 +79,12 @@ node dist/scripts/native-ui-mcp-benchmark.js /absolute/frozen-baseline /absolute
 九组逐对结果均通过 5% 退化门槛；证据 `~/Library/Application Support/DevEcoMCP/acceptance/20260908-current-ui-performance-1/evidence.json` 的 `completed:true`、`error:null`，并保存逐次数据和输入身份。
 
 首次小树请求原生约 92–93 ms，基线约 4.5–4.7 ms；首次大树请求原生约 84–86 ms，基线约 9.7–10.2 ms。首次加载运行服务与 CPU Worker 的成本仍然存在。本次没有覆盖其他查询类型、实时设备、服务端与 SDK 的 CPU/RSS、磁盘写入或一小时会话运行，不解除相应发布门槛。历史失败和早期版本数据继续保留。
+
+
+## native-6 当前采样
+
+`20260908-native6-ui-mcp-performance-1` 在 Node24/source-8 中完成三轮、每版每规模1000次完整离线查询（共18000次）。101/1001/10001节点的每一轮P95均在5%预算内，逐对下降范围分别为9.3%–74.6%、52.4%–72.0%、58.3%–83.0%。该项只覆盖离线精确key查询，不能替代19项直接能力。
+
+`20260908-native6-ui-performance-1.json` 保留三规模解析与四种选择器的延迟、CPU、RSS。中/大树首次解析P95分别为原生1.304/10.936ms、旧版0.983/9.075ms；索引查询较快不代表首次解析也较快。`20260908-native6-orchestration-performance-1.json` 各1000次独立采样，LangGraph无持久化、SQLite检查点往返及持久化图的P95分别为0.918/1.457/4.571ms。
+
+第三次长稳 `sdk-soak-3` 在约22分钟、212轮时因设备不存在结束。原始HDC进程退出0、未截断且返回 `[Empty]`；前一轮和后续复查均能识别手机，具体USB或服务原因尚未证明。失败不计一小时通过。`device-readonly-2` 的14项复查通过后，启动独立第四次长稳。

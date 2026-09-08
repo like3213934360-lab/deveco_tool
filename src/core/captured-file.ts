@@ -51,9 +51,9 @@ export async function captureFile(
   signal?.throwIfAborted();
   const extension = path.extname(source);
   invariant(
-    extension === ".hap" || extension === ".hsp",
+    extension === ".hap" || extension === ".hsp" || extension === ".hqf",
     "ARTIFACT_INVALID",
-    "A HAP or HSP file is required",
+    "A HAP, HSP or HQF file is required",
   );
   const input = await fs.open(
     path.resolve(source),

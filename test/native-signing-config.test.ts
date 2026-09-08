@@ -127,7 +127,7 @@ test("project signing creates private Hvigor material and preserves other produc
         f.output,
         "Next",
       ),
-      { code: "EEXIST" },
+      { code: "SIGN_OUTPUT_EXISTS" },
     );
     await assert.rejects(
       configureSigning(

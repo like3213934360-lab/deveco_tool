@@ -4,6 +4,7 @@ import { z } from "zod";
 import { fileDigest, inside, walk } from "../../src/core/files.js";
 import { invariant } from "../../src/core/errors.js";
 import { knowledgeEntrySchema } from "../../src/services/knowledge.js";
+import { compileCrashReference } from "../../src/services/crash-patterns.js";
 
 const relative = z
   .string()
@@ -122,6 +123,11 @@ export function verifyResources(root: string) {
       "KNOWLEDGE_SOURCE_MISMATCH",
       `Knowledge metadata does not match its resource: ${entry.id}`,
     );
+    if (entry.id.startsWith("arkts-runtime-fix/"))
+      compileCrashReference(
+        entry.id,
+        fs.readFileSync(inside(root, file), "utf8"),
+      );
   }
   const knowledgeFiles = actual.filter((file) =>
     file.startsWith("resources/knowledge/"),

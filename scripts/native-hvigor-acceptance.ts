@@ -1,3 +1,4 @@
+import { finishAcceptance } from "./lib/acceptance-report.js";
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
@@ -217,4 +218,5 @@ try {
     ),
   );
   store.close();
+  finishAcceptance(path.join(root, "evidence.json"), tested, failure === undefined, processes.size === 0);
 }

@@ -22,7 +22,7 @@ invariant(
   "Use a new evidence directory",
 );
 fs.mkdirSync(output, { recursive: true });
-const results: { name: string; elapsed_ms: number }[] = [];
+const results: { name: string; passed: true; elapsed_ms: number }[] = [];
 let transport: StdioClientTransport | undefined, client: Client | undefined;
 let identity: ReturnType<typeof verifyDistribution> | undefined;
 let stderr = "",
@@ -30,7 +30,7 @@ let stderr = "",
 async function check<T>(name: string, action: () => Promise<T> | T) {
   const started = performance.now(),
     result = await action();
-  results.push({ name, elapsed_ms: performance.now() - started });
+  results.push({ name, passed: true, elapsed_ms: performance.now() - started });
   return result;
 }
 async function call(name: string, args: Record<string, unknown>) {

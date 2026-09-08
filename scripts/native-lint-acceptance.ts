@@ -1,3 +1,4 @@
+import { finishAcceptance } from "./lib/acceptance-report.js";
 import fs from "node:fs";
 import path from "node:path";
 import assert from "node:assert/strict";
@@ -8,6 +9,7 @@ import { atomicWrite, readObject } from "../src/core/files.js";
 import { errorResult } from "../src/core/errors.js";
 import { evidenceIdentity } from "./lib/evidence.js";
 
+let completed = false;
 const tested = evidenceIdentity(),
   root = path.resolve(z.string().min(1).parse(process.argv[2]));
 assert.equal(fs.existsSync(root), false, "Use a new evidence directory");
@@ -191,6 +193,7 @@ try {
     assert.equal(result.summary.errors, 2);
     return result;
   });
+  completed = true;
 } catch (error) {
   failed = true;
   atomicWrite(
@@ -199,6 +202,7 @@ try {
   );
   process.stderr.write(JSON.stringify(errorResult(error)) + "\n");
 } finally {
-  await runtime.close();
+  const closed = await runtime.close();
+  finishAcceptance(path.join(root, "evidence.json"), tested, completed && !failed, closed.closed);
   if (failed) process.exitCode = 1;
 }

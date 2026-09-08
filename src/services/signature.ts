@@ -19,11 +19,12 @@ import {
   publishFile,
   fileDigest,
 } from "../core/files.js";
-import { invariant, object, ToolError } from "../core/errors.js";
+import { invariant, object, ToolError, SettledEffectError } from "../core/errors.js";
 import { AuthService, httpRequest, httpBytes } from "./auth.js";
 import type { Project } from "./project.js";
 import { decryptMaterial } from "./signing-material.js";
 import { configureSigning } from "./signing-config.js";
+import { preparePublication, completePublication, publicationSchema } from "../core/publication.js";
 
 /** Validate the PKCS#10 PEM envelope; the signing provider verifies the request signature. */
 export function validateCsrPem(value: string): string {
@@ -74,6 +75,45 @@ export function validateCsrPem(value: string): string {
   return value.trim() + "\n";
 }
 
+/** Extract SubjectPublicKeyInfo from the bounded PKCS#10 DER structure. */
+export function csrPublicKey(pem: string) {
+  const encoded = validateCsrPem(pem).split("\n").slice(1, -2).join("");
+  const bytes = Buffer.from(encoded, "base64");
+  const field = (offset: number, end: number) => {
+    const start = offset, tag = bytes[offset++], first = bytes[offset++];
+    invariant(tag !== undefined && first !== undefined && offset <= end, "CSR_INVALID", "Truncated CSR field");
+    let length = first;
+    if (first >= 128) {
+      const count = first & 127;
+      invariant(count > 0 && count <= 3 && offset + count <= end && bytes[offset] !== 0, "CSR_INVALID", "Invalid CSR field length");
+      length = bytes.readUIntBE(offset, count); offset += count;
+      invariant(length >= 128, "CSR_INVALID", "Noncanonical CSR field length");
+    }
+    invariant(offset + length <= end, "CSR_INVALID", "CSR field exceeds its parent");
+    return { start, tag, content: offset, end: offset + length };
+  };
+  const outer = field(0, bytes.length), info = field(outer.content, outer.end);
+  invariant(outer.tag === 48 && info.tag === 48, "CSR_INVALID", "Expected CSR sequences");
+  const version = field(info.content, info.end), subject = field(version.end, info.end), key = field(subject.end, info.end);
+  invariant(version.tag === 2 && subject.tag === 48 && key.tag === 48, "CSR_INVALID", "Invalid CSR request info");
+  return crypto.createPublicKey({ key: bytes.subarray(key.start, key.end), format: "der", type: "spki" });
+}
+/** Providers may return a root-first PEM chain. Match the CSR's key against
+ * exactly one certificate, without assuming the first certificate is the leaf. */
+export function certificateForCsr(bytes: Buffer, csr: string): crypto.X509Certificate {
+  invariant(bytes.length <= 1024 * 1024, "CERT_CHAIN_INVALID", "Certificate chain exceeds 1 MiB");
+  const pem = bytes.toString("utf8"), blocks = pem.match(/-----BEGIN CERTIFICATE-----[\s\S]*?-----END CERTIFICATE-----/g);
+  invariant(!blocks || (blocks.length <= 16 && pem.replace(/-----BEGIN CERTIFICATE-----[\s\S]*?-----END CERTIFICATE-----/g, "").trim() === ""), "CERT_CHAIN_INVALID", "Expected a bounded PEM certificate chain");
+  const certificates = (blocks ?? [bytes]).map((value) => new crypto.X509Certificate(value)),
+    key = csrPublicKey(csr).export({ format: "der", type: "spki" }),
+    matches = certificates.filter((cert) => cert.publicKey.export({ format: "der", type: "spki" }).equals(key));
+  invariant(matches.length === 1, "CERT_KEY_MISMATCH", "Expected exactly one certificate matching the submitted CSR public key");
+  return matches[0]!;
+}
+const configurationCommit = z.object({ result: z.record(z.string(), z.unknown()), before: z.string(), content: z.string(), files: z.array(publicationSchema).max(64) });
+function signatureIdentity(input: z.infer<typeof tools.app_signature.schema>, project?: Project) {
+  return { input, project: project?.root, product: project?.product.name };
+}
 const certificateSchema = z.object({
   id: z.string(),
   certName: z.string(),
@@ -92,6 +132,35 @@ export class SignatureService {
     signal?: AbortSignal,
   ): Promise<unknown> {
     const input = tools.app_signature.schema.parse(raw);
+    if (["inspect", "verify", "certificates", "devices", "certificate_create", "certificate_delete", "profile_create", "profile_delete", "device_register"].includes(input.action)) return this.callNative(input, project, signal);
+    const identity = signatureIdentity(input, project);
+    const execute = async () => object(await this.callNative(input, project, signal));
+    return this.store.privateEffect("native-signature", identity, execute, object, async () => {
+      if (input.action === "configure") {
+        const prepared = await this.store.readPrivateMemo("sign-config-commit", identity, (raw) => configurationCommit.parse(raw));
+        if (!prepared || !project || !input.output) {
+          if (input.output && !fs.existsSync(input.output)) return execute();
+          return undefined;
+        }
+        const profile = path.join(project.root, "build-profile.json5");
+        const hash = fileDigest(profile);
+        invariant(hash === prepared.before || hash === prepared.result.build_profile_sha256, "SIGN_PROJECT_CHANGED", "Build profile changed outside the prepared signing commit");
+        for (const file of prepared.files) await completePublication(this.store, file, signal);
+        signal?.throwIfAborted();
+        if (hash === prepared.before) {
+          invariant(fileDigest(profile) === prepared.before, "SIGN_PROJECT_CHANGED", "Build profile changed during signing recovery");
+          atomicWrite(profile, prepared.content);
+        }
+        return { ...prepared.result, recovered: true };
+      }
+      const publication = await this.store.readPrivateMemo("sign-publication", identity, (value) => publicationSchema.parse(value));
+      if (!publication) return input.output && !fs.existsSync(input.output) ? execute() : undefined;
+      return { ...(await completePublication(this.store, publication, signal)), action: input.action, completed: true, recovered: true };
+    });
+  }
+  private async callNative(raw: unknown, project?: Project, signal?: AbortSignal): Promise<unknown> {
+    const input = tools.app_signature.schema.parse(raw);
+    const identity = signatureIdentity(structuredClone(input), project);
     if (input.action === "configure") {
       invariant(
         project && input.file && input.output,
@@ -110,6 +179,11 @@ export class SignatureService {
             input.output!,
             options.name,
             signal,
+            (result, plan) => this.store.privateMemo("sign-config-commit", identity, async () => {
+              const files: z.infer<typeof publicationSchema>[] = [];
+              for (const file of plan.files) files.push(await preparePublication(this.store, file.source, file.path, true, signal));
+              return { result, before: plan.before, content: plan.content, files };
+            }, (raw) => configurationCommit.parse(raw)),
           ),
         signal,
       );
@@ -308,7 +382,8 @@ export class SignatureService {
           "SIGN_OUTPUT_MISSING",
           "Signing tool produced no output",
         );
-        published = await publishFile(staged, output, signal);
+        const prepared = await this.store.privateMemo("sign-publication", identity, () => preparePublication(this.store, staged, output!, input.action !== "sign", signal), (value) => publicationSchema.parse(value));
+        published = await completePublication(this.store, prepared, signal);
       }
       return {
         action: input.action,
@@ -394,11 +469,17 @@ export class SignatureService {
     method: string,
     body: unknown,
     signal?: AbortSignal,
+    reconcile?: () => Promise<Record<string, unknown> | undefined>,
   ): Promise<Record<string, unknown>> {
-    const auth = await this.auth.credentials("developer", signal);
+    const execute = () => this.requestOnce(team, route, method, body, signal);
+    const read = method === "GET" || route.endsWith("/list") || route.endsWith("/reapply");
+    return read ? execute() : this.store.privateEffect(`cloud:${digest({ team, route, method, body })}`, { team, route, method, body }, execute, object, reconcile);
+  }
+  private async requestOnce(team: string, route: string, method: string, body: unknown, signal?: AbortSignal): Promise<Record<string, unknown>> {
+    let auth = await this.auth.credentials("developer", signal);
     let response: string;
     try {
-      response = await httpRequest(
+      const send = () => httpRequest(
         cloudBase + route,
         {
           method,
@@ -412,6 +493,12 @@ export class SignatureService {
         },
         signal,
       );
+      try { response = await send(); } catch (error) {
+        // HTTP 401 confirms rejection before authentication. No timeout/5xx mutation is retried.
+        if (!(error instanceof ToolError && error.code === "HTTP_ERROR" && object(error.details).status === 401)) throw error;
+        auth = await this.auth.credentials("developer", signal, true);
+        response = await send();
+      }
     } catch (error) {
       if (error instanceof ToolError && error.code === "HTTP_ERROR")
         throw new ToolError(error.code, error.message, {
@@ -425,11 +512,7 @@ export class SignatureService {
       const ret = z
         .object({ code: z.number(), msg: z.string().optional() })
         .parse(data.ret);
-      invariant(
-        ret.code === 0,
-        "SIGN_CLOUD_REJECTED",
-        `Cloud signing rejected request (${ret.code}): ${ret.msg ?? ""}`,
-      );
+      if (ret.code !== 0) throw new SettledEffectError("SIGN_CLOUD_REJECTED", `Cloud signing rejected request (${ret.code}): ${ret.msg ?? ""}`);
     } else
       invariant(
         method === "GET" ||
@@ -446,11 +529,6 @@ export class SignatureService {
     output: string,
     signal?: AbortSignal,
   ) {
-    invariant(
-      !fs.existsSync(output),
-      "SIGN_OUTPUT_EXISTS",
-      "Download output already exists",
-    );
     const reply = await this.request(
       team,
       "/api/amis/app-manage/v1/objects/url/reapply",
@@ -468,6 +546,16 @@ export class SignatureService {
       .min(1)
       .parse(reply.urlsInfo);
     const first = urls[0]!;
+    const expected = await this.store.privateMemo("download", { team, source, output }, async () => {
+      invariant(!fs.existsSync(output), "SIGN_OUTPUT_EXISTS", "Download output already exists");
+      return { sha256: first.sha256.toLowerCase() };
+    }, (value) => z.object({ sha256: z.string().regex(/^[a-f0-9]{64}$/) }).parse(value));
+    invariant(expected.sha256 === first.sha256.toLowerCase(), "SIGN_DOWNLOAD_CHANGED", "Cloud signing object changed since submission");
+    if (fs.existsSync(output)) {
+      const stat = fs.lstatSync(output);
+      invariant(stat.isFile() && !stat.isSymbolicLink() && fileDigest(output) === expected.sha256, "SIGN_OUTPUT_CHANGED", "Published signing material changed");
+      return { path: output, sha256: expected.sha256, bytes: stat.size };
+    }
     invariant(
       new URL(first.newUrl).protocol === "https:",
       "SIGN_DOWNLOAD_URL_INVALID",
@@ -528,7 +616,7 @@ export class SignatureService {
         "SIGN_OUTPUT_REQUIRED",
         "Output file is required",
       );
-      input.output = this.outputPath(input.output);
+      input.output = await this.store.privateMemo("cloud-output", { output: input.output }, async () => this.outputPath(input.output!), (value) => z.string().parse(value));
     }
     return this.store.lease(
       `signing:${team}`,
@@ -635,6 +723,7 @@ export class SignatureService {
             "DELETE",
             { certIds: [id] },
             signal,
+            async () => !(await certificates()).some((cert) => cert.id === id) ? { ret: { code: 0 }, reconciled: true } : undefined,
           );
           invariant(
             !(await certificates()).some((cert) => cert.id === id),
@@ -656,17 +745,17 @@ export class SignatureService {
           );
           const csr = validateCsrPem(fs.readFileSync(input.file, "utf8"));
           const name = required("cert_name");
-          invariant(
-            !(await certificates()).some((cert) => cert.certName === name),
-            "CERT_EXISTS",
-            "A certificate with this name already exists",
-          );
+          await this.store.privateMemo("certificate-name", { team, name, csr }, async () => {
+            invariant(!(await certificates()).some((cert) => cert.certName === name), "CERT_EXISTS", "A certificate with this name already exists");
+            return { available: true };
+          }, (value) => z.object({ available: z.literal(true) }).parse(value));
           await this.request(
             team,
             "/api/cps/harmony-cert-manage/v1/cert/add",
             "POST",
             { csr, certName: name, certType: "1" },
             signal,
+            async () => (await certificates()).filter((cert) => cert.certName === name).length === 1 ? { ret: { code: 0 }, reconciled: true } : undefined,
           );
           const cert = (await certificates()).find(
             (cert) => cert.certName === name,
@@ -682,7 +771,7 @@ export class SignatureService {
             path.resolve(input.output),
             signal,
           );
-          const x509 = new crypto.X509Certificate(fs.readFileSync(file.path));
+          const x509 = certificateForCsr(fs.readFileSync(file.path), csr);
           return {
             certificate_id: cert.id,
             ...file,
@@ -769,6 +858,7 @@ export class SignatureService {
               deviceType: required("device_type"),
             },
             signal,
+            async () => (await devices()).some((device) => device.udid === udid && device.deviceName === required("device_name")) ? { ret: { code: 0 }, reconciled: true } : undefined,
           );
           invariant(
             (await devices()).some((device) => device.udid === udid),

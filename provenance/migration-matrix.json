@@ -103,8 +103,8 @@
       "behavior": "本地签名、私密配置生成与云端证书/Profile 分开调用，使用开发者认证；测试团队显式指定。",
       "parameters": {
         "force": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "removed",
+          "replacement": "删除 CLI --force 覆盖选项；configure 必须使用新配置名称及新材料目录，文件发布不覆盖现有输出"
         },
         "team_id": {
           "status": "mapped",
@@ -157,16 +157,16 @@
           "replacement": "target；设备目标"
         },
         "module": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "mapped",
+          "replacement": "build_deploy_verify.modules；app.module 选择启动组件"
         },
         "target": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "mapped",
+          "replacement": "build_deploy_verify.target 固定 HDC 设备"
         },
         "ability": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "mapped",
+          "replacement": "build_deploy_verify.app.ability"
         },
         "product": {
           "status": "mapped",
@@ -575,12 +575,12 @@
       "behavior": "provider=codegenie 的浏览器登录和状态。",
       "parameters": {
         "action": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "mapped",
+          "replacement": "harmony_auth.action=login/status；provider=developer"
         },
         "login_id": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "removed",
+          "replacement": "认证会话由 provider 隔离并持久保存；不再通过旧 CLI login_id 查询"
         },
         "wait_ms": {
           "status": "mapped",
@@ -591,14 +591,14 @@
         {
           "field": "action",
           "value": "start",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "mapped",
+          "replacement": "harmony_auth.action=login，provider=developer"
         },
         {
           "field": "action",
           "value": "status",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "mapped",
+          "replacement": "harmony_auth.action=status，provider=developer"
         }
       ],
       "remaining": [
@@ -673,16 +673,16 @@
       "behavior": "删除脚本执行和 argv 入口，七个注册脚本逐项迁移。",
       "parameters": {
         "script": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "removed",
+          "replacement": "删除脚本执行入口；七种能力分别进入有类型工具及工作流"
         },
         "args": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "replaced",
+          "replacement": "迁入各原生工具及工作流的结构化参数，不执行参数化脚本"
         },
         "argv": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "removed",
+          "replacement": "删除任意 argv 传递；底层命令由服务按参数数组生成"
         },
         "timeoutMs": {
           "status": "replaced",
@@ -693,44 +693,44 @@
         {
           "field": "script",
           "value": "copy_template",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "replaced",
+          "replacement": "workflow:project_create；校验 SDK、展开模板并验证工程"
         },
         {
           "field": "script",
           "value": "detect_sdk",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "replaced",
+          "replacement": "tool:deveco_doctor；原生工具链组件探测"
         },
         {
           "field": "script",
           "value": "collect_hilog",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "replaced",
+          "replacement": "tool:hdc_log action=collect"
         },
         {
           "field": "script",
           "value": "fetch_faultlog",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "replaced",
+          "replacement": "tool:hdc_log action=fetch，使用精确 faultlog_name"
         },
         {
           "field": "script",
           "value": "jscrash_report",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "replaced",
+          "replacement": "workflow:crash_diagnose；保留制品、日志证据、规则来源及帧排序"
         },
         {
           "field": "script",
           "value": "parse_jscrash_log",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "replaced",
+          "replacement": "workflow:crash_diagnose；log_file/log_artifact_id/log_text 输入"
         },
         {
           "field": "script",
           "value": "probe_faultlogger",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "replaced",
+          "replacement": "tool:hdc_log action=probe"
         }
       ],
       "remaining": [
@@ -754,52 +754,52 @@
       "behavior": "发现入口替换为工作流目录和按需知识。",
       "parameters": {
         "script": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "replaced",
+          "replacement": "通过 workflow_catalog 或 MCP tools/list 读取新接口 Schema；无脚本注册目录"
         }
       },
       "actions": [
         {
           "field": "script",
           "value": "copy_template",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "replaced",
+          "replacement": "workflow:project_create；校验 SDK、展开模板并验证工程"
         },
         {
           "field": "script",
           "value": "detect_sdk",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "replaced",
+          "replacement": "tool:deveco_doctor；原生工具链组件探测"
         },
         {
           "field": "script",
           "value": "collect_hilog",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "replaced",
+          "replacement": "tool:hdc_log action=collect"
         },
         {
           "field": "script",
           "value": "fetch_faultlog",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "replaced",
+          "replacement": "tool:hdc_log action=fetch，使用精确 faultlog_name"
         },
         {
           "field": "script",
           "value": "jscrash_report",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "replaced",
+          "replacement": "workflow:crash_diagnose；保留制品、日志证据、规则来源及帧排序"
         },
         {
           "field": "script",
           "value": "parse_jscrash_log",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "replaced",
+          "replacement": "workflow:crash_diagnose；log_file/log_artifact_id/log_text 输入"
         },
         {
           "field": "script",
           "value": "probe_faultlogger",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "replaced",
+          "replacement": "tool:hdc_log action=probe"
         }
       ],
       "remaining": [
@@ -1213,8 +1213,8 @@
           "replacement": "target；设备目标"
         },
         "mode": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "mapped",
+          "replacement": "ui_snapshot.mode=tree/both；分页检索使用 ui_inspect"
         },
         "outputDirectory": {
           "status": "replaced",
@@ -1458,8 +1458,8 @@
       "behavior": "原生持久化 watch 会话、补丁制作及应用。",
       "parameters": {
         "action": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "mapped",
+          "replacement": "hot_reload.action=start/apply/status/stop；apply 返回持久化 run_id"
         },
         "files": {
           "status": "mapped",
@@ -1470,8 +1470,8 @@
           "replacement": "target；设备目标"
         },
         "module": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "mapped",
+          "replacement": "hot_reload.modules；模块依赖传播由 hotChanges 解析"
         },
         "product": {
           "status": "mapped",
@@ -1482,8 +1482,8 @@
           "replacement": "mode；debug/release"
         },
         "ability": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "mapped",
+          "replacement": "hot_reload.app.ability"
         },
         "project_path": {
           "status": "mapped",
@@ -1502,26 +1502,26 @@
         {
           "field": "action",
           "value": "start",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "mapped",
+          "replacement": "hot_reload.action=start；有界会话及原生进程生命周期"
         },
         {
           "field": "action",
           "value": "apply",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "mapped",
+          "replacement": "hot_reload.action=apply；持久化任务，恢复时核对签名 HQF 和设备回执"
         },
         {
           "field": "action",
           "value": "status",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "mapped",
+          "replacement": "hot_reload.action=status；有界会话及原生进程生命周期"
         },
         {
           "field": "action",
           "value": "stop",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "mapped",
+          "replacement": "hot_reload.action=stop；有界会话及原生进程生命周期"
         }
       ],
       "remaining": [
@@ -1745,20 +1745,20 @@
           "replacement": "target；设备目标"
         },
         "module": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "mapped",
+          "replacement": "ui_flow.navigate.route.module 或 app_deploy.app.module"
         },
         "target": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "mapped",
+          "replacement": "ui_flow.navigate.target 或 app_deploy.target"
         },
         "product": {
           "status": "mapped",
           "replacement": "product；固定产品"
         },
         "ability": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "mapped",
+          "replacement": "ui_flow.navigate.route.ability 或 app_deploy.app.ability"
         },
         "project_path": {
           "status": "mapped",
@@ -1819,44 +1819,44 @@
       "behavior": "原生操作对象，选择器/窗口条件与动作共享设备租约。",
       "parameters": {
         "action": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "mapped",
+          "replacement": "ui_control.operation.action 使用标准动作名"
         },
         "x": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "mapped",
+          "replacement": "ui_control.operation.x"
         },
         "y": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "mapped",
+          "replacement": "ui_control.operation.y"
         },
         "x2": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "mapped",
+          "replacement": "ui_control.operation.x2"
         },
         "y2": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "mapped",
+          "replacement": "ui_control.operation.y2"
         },
         "direction": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "mapped",
+          "replacement": "ui_control.operation.direction"
         },
         "text": {
           "status": "mapped",
           "replacement": "selector.text 或 operation.text；按动作区分"
         },
         "node_id": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "mapped",
+          "replacement": "ui_control.operation.selector.node_id"
         },
         "window": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "mapped",
+          "replacement": "ui_control.operation.window.id 或 window.bundle_name"
         },
         "speed": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "mapped",
+          "replacement": "ui_control.operation.velocity，按原生 UiTest 范围校验"
         },
         "hvd": {
           "status": "mapped",
@@ -1875,50 +1875,50 @@
         {
           "field": "action",
           "value": "click",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "mapped",
+          "replacement": "ui_control.operation.action=click；节点/窗口/显示器定位及操作后快照失效"
         },
         {
           "field": "action",
           "value": "doubleclick",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "mapped",
+          "replacement": "ui_control.operation.action=doubleClick；节点/窗口/显示器定位及操作后快照失效"
         },
         {
           "field": "action",
           "value": "longclick",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "mapped",
+          "replacement": "ui_control.operation.action=longClick；节点/窗口/显示器定位及操作后快照失效"
         },
         {
           "field": "action",
           "value": "swipe",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "mapped",
+          "replacement": "ui_control.operation.action=swipe；节点/窗口/显示器定位及操作后快照失效"
         },
         {
           "field": "action",
           "value": "fling",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "mapped",
+          "replacement": "ui_control.operation.action=fling；节点/窗口/显示器定位及操作后快照失效"
         },
         {
           "field": "action",
           "value": "drag",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "mapped",
+          "replacement": "ui_control.operation.action=drag；节点/窗口/显示器定位及操作后快照失效"
         },
         {
           "field": "action",
           "value": "dircfling",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "mapped",
+          "replacement": "ui_control.operation.action=dircFling；节点/窗口/显示器定位及操作后快照失效"
         },
         {
           "field": "action",
           "value": "text",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "mapped",
+          "replacement": "ui_control.operation.action=inputText；节点/窗口/显示器定位及操作后快照失效"
         }
       ],
       "remaining": [
@@ -2270,40 +2270,40 @@
       "behavior": "快照和结构化元数据、查询与可选截图。",
       "parameters": {
         "action": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "replaced",
+          "replacement": "ui_inspect 返回节点分页及窗口元数据；移除 layout/windows 动作分流"
         },
         "hvd": {
           "status": "mapped",
           "replacement": "target；设备目标"
         },
         "id": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "mapped",
+          "replacement": "ui_inspect.selector.node_id"
         },
         "window": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "mapped",
+          "replacement": "ui_inspect.window_id"
         },
         "all_windows": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "replaced",
+          "replacement": "不指定 window_id 时读取全部窗口并分页输出"
         },
         "all": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "replaced",
+          "replacement": "分页 offset/limit 读取完整结果；禁止无界返回 UI 树"
         },
         "depth": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "mapped",
+          "replacement": "ui_inspect.max_depth"
         },
         "format": {
           "status": "replaced",
           "replacement": "固定结构化输出与制品"
         },
         "mode": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "replaced",
+          "replacement": "统一结构化输出，完整树使用 ui_snapshot.mode=tree"
         },
         "project_path": {
           "status": "mapped",
@@ -2318,14 +2318,14 @@
         {
           "field": "action",
           "value": "layout",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "replaced",
+          "replacement": "ui_inspect 返回节点分页"
         },
         {
           "field": "action",
           "value": "windows",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "replaced",
+          "replacement": "ui_inspect 返回窗口元数据"
         }
       ],
       "remaining": [
@@ -2806,20 +2806,20 @@
       "behavior": "删除脚本运行入口，保留其领域能力。",
       "parameters": {
         "projectPath": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "mapped",
+          "replacement": "project_create.project_path"
         },
         "appName": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "mapped",
+          "replacement": "project_create.app_name"
         },
         "apiLevel": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "mapped",
+          "replacement": "project_create.sdk_version；目标 API 与工具链版本分别判断"
         },
         "bundleName": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "mapped",
+          "replacement": "project_create.bundle_name"
         }
       },
       "actions": [],

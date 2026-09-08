@@ -1,45 +1,36 @@
 {
   "name": "deveco-tool",
-  "version": "0.1.0",
+  "version": "0.2.0-rc.1",
   "private": false,
-  "description": "Local unified MCP gateway for DevEco Code skills and HarmonyOS diagnostics.",
+  "description": "Native HarmonyOS MCP with typed tools, deterministic LangGraph workflows and durable SQLite execution.",
   "type": "module",
   "engines": {
-    "node": ">=22"
+    "node": "^22.18.0 || ^24.0.0"
   },
   "bin": {
-    "deveco-tool": "src/cli.mjs"
+    "deveco-tool": "dist/src/cli.js"
   },
   "files": [
-    "src/",
-    "skills/",
-    "docs/",
-    "scripts/",
+    "dist/src/",
+    "resources/",
     "provenance/",
-    "manifest.json",
-    "PACK.md",
+    "docs/",
     "README.md",
     "LICENSE",
     "NOTICE.*"
   ],
   "scripts": {
-    "mcp": "node src/server.mjs",
-    "doctor": "node src/cli.mjs doctor",
-    "scripts": "node src/cli.mjs scripts",
-    "install-pack": "node scripts/install.mjs",
-    "test": "node --test --test-concurrency=1 test/*.test.mjs",
-    "test:device": "node --test --test-concurrency=1 test/device-canary.test.mjs",
-    "test:flow:unit": "node --test --test-concurrency=1 test/arkpilot.test.mjs",
-    "test:flow:device": "node scripts/arkpilot-device-test.mjs",
-    "bench:ui-flow": "node scripts/arkpilot-benchmark.mjs",
-    "bench:ui": "node --expose-gc scripts/ui-performance-benchmark.mjs",
     "build": "node --experimental-strip-types scripts/build.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test:native": "npm run build && node --test --test-reporter=spec dist/test/*.test.js"
+    "mcp": "node dist/src/cli.js mcp",
+    "doctor": "node dist/src/cli.js doctor",
+    "test": "npm run build && node dist/scripts/native-regression.js",
+    "test:native": "npm test",
+    "migration:audit": "node dist/scripts/native-migration-audit.js",
+    "upstream:gate": "node dist/scripts/upstream-gate.js",
+    "release:gate": "node dist/scripts/release-gate.js"
   },
   "dependencies": {
-    "@deveco-codegenie/mcp": "1.1.11",
-    "@deveco/deveco-cli": "1.3.1",
     "@langchain/core": "1.2.9",
     "@langchain/langgraph": "1.4.14",
     "@langchain/langgraph-checkpoint": "1.1.5",
@@ -50,16 +41,13 @@
     "better-sqlite3": "12.10.0",
     "json5": "2.2.3",
     "koffi": "3.2.1",
-    "proper-lockfile": "4.1.2",
-    "socket.io-client": "4.7.5",
     "vscode-jsonrpc": "8.2.1",
     "vscode-uri": "3.1.0",
     "yauzl": "3.4.0",
     "zod": "4.4.3"
   },
   "overrides": {
-    "fast-uri": "3.1.7",
-    "qs": "6.16.0"
+    "fast-uri": "3.1.7"
   },
   "devDependencies": {
     "@types/adm-zip": "0.5.8",

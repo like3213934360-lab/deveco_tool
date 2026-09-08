@@ -1,0 +1,504 @@
+{
+  "format": 1,
+  "source": {
+    "id": "deveco-cli",
+    "url": "https://gitcode.com/openharmony-sig/deveco-cli.git",
+    "ref": "refs/heads/develop",
+    "commit": "08c2f57ffbe83c817d64a728a17971872dd9ddcf",
+    "tree": "36fc532ea8ddb6c4eec3168e6301d0240e61b45d",
+    "version": "1.3.3-Test.1",
+    "role": "protocol_reference",
+    "acceptance": "pending"
+  },
+  "mapping_sha256": "6ed14fd75d9f81f88ba6413804926b16a79172d5d1678fe364c135270e9e3b8e",
+  "reviews": [
+    {
+      "rule": "cli-core-toolchain",
+      "reason": "Resolve Studio/CLT layouts and SDK executable identities directly; native owned process groups and durable records replace CLI subprocess dispatch. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "cli-core-config",
+      "reason": "Use strict native configuration and explicit toolchain selection; preserve the protocol constants needed by adapters without importing CLI host configuration or credentials. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "cli-core-types",
+      "reason": "Express HTTP and native adapter inputs through strict TypeScript and schemas; upstream Skill metadata is reference context rather than a native execution dependency. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "cli-core-utils",
+      "reason": "Replace CLI shell helpers, build locks and data paths with argv-based owned processes, resource leases and private durable state; uncertain external completion is paused. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "cli-core-trace",
+      "reason": "Use bounded local structured logs and encrypted private operation records. CLI installation IDs and telemetry upload are outside native execution and are not ported. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "cli-core-internal",
+      "reason": "Use packaged local document resources; upstream background document initialization and telemetry upload workers are not started by the native runtime. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "cli-src-apply-",
+      "reason": "Preserve SDK HQF build, signing and device quickfix behavior in native hot reload; freeze input hashes and process identity before persistent start/apply mutations. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "cli-src-auth-",
+      "reason": "Use native browser authentication and encrypted token storage with explicit personal/team identity and refresh; no old CLI credential import during installation migration. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "cli-src-signature-",
+      "reason": "Preserve certificate, CSR, profile and signing protocols with encrypted preparation and digest-checked publication. Certificate/device inventories permit reconciliation; reviewed Profile endpoints provide no equivalent query, so ambiguous writes pause. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "cli-src-codelinter-",
+      "reason": "Call the selected SDK linter directly with bounded project inputs, independent report parsing and cancellation; retain real SDK validation as a required pending check. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "cli-src-docs-",
+      "reason": "Use attributed packaged document archives and catalog routing, bounded extraction and lookup. Native services do not run official document helper processes. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "cli-src-ui-",
+      "reason": "Use native UI import, bounded parsing and indexed snapshots with display/window scope; actions use frozen coordinates and completion receipts instead of replaying uncertain input. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "cli-src-service-",
+      "reason": "Use SDK emulator management with durable mutations, inventory reconciliation and resource leases. UUID/path/HDC-port binding remains subject to real running-instance acceptance. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "cli-src-resources-",
+      "reason": "The upstream ACL recommendation table is not applied as automatic permission expansion. Native profile creation accepts explicit ACL permissions, and project templates retain their declared permissions; no upstream resource code executes. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "cli-src-data-",
+      "reason": "Do not use the bundled upstream privacy text as current agreement evidence. Native license service reads installed SDK agreements and uses supported acceptance commands with explicit consent data. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "cli-templates-",
+      "reason": "Preserve attributed application template bytes and use native project creation with product/module metadata and SDK selection; successful real builds remain pending acceptance. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "cli-index-",
+      "reason": "Replace upstream index construction scripts with the native packaged document catalog and bounded local search; dictionary resources are reference data, not a background CLI service. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "cli-command-build.ts",
+      "reason": "Map product, module and build-mode selection to direct OHPM/Hvigor durable stages; preserve output package identity and command completion records. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "cli-command-create.ts",
+      "reason": "Map app/template creation to native bounded file publication and project metadata; do not install host Skills as part of creation. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "cli-command-init.ts",
+      "reason": "Retain project initialization through native project workflows and explicit configuration. Upstream init options that overwrite host Skill/MCP settings are replaced by separate reviewed maintenance plans. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "cli-command-run.ts",
+      "reason": "Separate build, frozen signed-package deployment and Ability/Want launch into durable nodes; uncertain device completion is reconciled from receipts rather than replayed. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "cli-command-check.ts",
+      "reason": "Expose SDK checks and supported API versions as native diagnostics and fixed workflows; outputs are bounded structured artifacts. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "cli-command-serve-lsp.ts",
+      "reason": "Own an ArkTS LSP connection for the frozen project/toolchain and reclaim it after idle; do not start the official CLI LSP proxy. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "cli-command-serve-lsp-cpp.ts",
+      "reason": "Start SDK clangd directly with module and ABI compile database context; require real cross-module C++ acceptance rather than assuming ArkTS results transfer. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "cli-command-signature.ts",
+      "reason": "Expose typed signing operations with explicit identity and durable writes; local material and package publication use encrypted preparation and hash reconciliation. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "cli-command-auth.ts",
+      "reason": "Expose native login, status, logout and team selection while keeping tokens private; expired-auth and reauthentication scenarios remain required. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "cli-command-doc.ts",
+      "reason": "Preserve catalog/search/read through attributed local archives with bounded result and content sizes. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "cli-command-log.ts",
+      "reason": "Preserve bounded log collection, literal filtering, follow sessions and named crash files; retain timestamps, process boundaries and truncation metadata. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "cli-command-device.ts",
+      "reason": "Preserve explicit target selection and native device information/file/SQLite tools under schema boundaries; aliases share canonical resource ownership. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "cli-command-emulator.ts",
+      "reason": "Map inventory, images, creation, start/stop/delete and license actions to native SDK services; mutations return durable run IDs and unknown outcomes retain leases. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "cli-command-ui.ts",
+      "reason": "Expose the UI action group through typed native contracts and durable flow execution, with selector ambiguity checks and final assertions. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "cli-command-ui-input.ts",
+      "reason": "Preserve gestures, click variants and text input with display/window scope; coordinate/selector inputs are frozen before uncertain external effects. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "cli-command-ui-layout.ts",
+      "reason": "Parse and query complete native dump snapshots with bounded caches, parent/depth indexes and accurate match totals independent of pagination. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "cli-command-ui-window.ts",
+      "reason": "Preserve device window enumeration and visible/system-window scope through native UI inspection; retain window/process identity in snapshots. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "cli-command-ui-screenshot.ts",
+      "reason": "Capture the selected display using owned temporary files and native HDC transfer, expose image artifacts, and keep visual review separate from structural assertions. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "cli-retired-src-compat-",
+      "reason": "Reviewed scope of src/compat/: The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "cli-retired-src-skills-",
+      "reason": "Reviewed scope of src/skills/: The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "cli-retired-src-install-check-",
+      "reason": "Reviewed scope of src/install-check/: The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "cli-retired-src-update-",
+      "reason": "Reviewed scope of src/update/: The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "cli-retired-src-commands-skills.ts",
+      "reason": "Reviewed scope of src/commands/skills.ts: The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "cli-retired-src-commands-update.ts",
+      "reason": "Reviewed scope of src/commands/update.ts: The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "cli-retired-src-commands-serve.ts",
+      "reason": "Reviewed scope of src/commands/serve.ts: The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "cli-retired-mcp-",
+      "reason": "Reviewed scope of mcp/: The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "cli-release-LICENSE",
+      "reason": "Review LICENSE as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "cli-release-OAT.xml",
+      "reason": "Review OAT.xml as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "cli-release-PRIVACY.md",
+      "reason": "Review PRIVACY.md as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "cli-release-package.json",
+      "reason": "Review package.json as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "cli-release-package-lock.json",
+      "reason": "Review package-lock.json as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "cli-release-CHANGELOG.md",
+      "reason": "Review CHANGELOG.md as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "cli-release-src/cli.ts",
+      "reason": "Review src/cli.ts as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "cli-emulator-license-protocol",
+      "reason": "Reviewed HarmonyOS Software Service and SDK agreement keys. Native acceptance delegates to supported SDK commands, checks installed agreements, and reconciles child command records only after process/session closure. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    }
+  ],
+  "targets": [
+    {
+      "path": "provenance/upstream-lock.json",
+      "sha256": "f219f524944b8fb4de9bcb4513fb334517fad1331ea35f8141cd64ee569459c3"
+    },
+    {
+      "path": "scripts/native-device-readonly.ts",
+      "sha256": "b8e843a86e8b9440fb2c269d0f32c8c3fb962368cf097f29f35abf407b803c95"
+    },
+    {
+      "path": "scripts/native-emulator-acceptance.ts",
+      "sha256": "6270d021be962fe18ea162cf950f53fa2c671cadd483026665643c35d56b70ee"
+    },
+    {
+      "path": "scripts/native-emulator-readonly.ts",
+      "sha256": "65aaff10ac9af01125c9245231ea35839bfc7b5387b4b11be11ffe093d03f382"
+    },
+    {
+      "path": "scripts/native-hot-device-acceptance.ts",
+      "sha256": "b5b84ad59d863db29d90563d793bc796b558e3f8db3978eee3e21308a2b0a53d"
+    },
+    {
+      "path": "scripts/native-lint-acceptance.ts",
+      "sha256": "11a5b120b25735593d34274d5920e3ed5d597cde6a1d00ea7fcfcebf3ad5b6c3"
+    },
+    {
+      "path": "scripts/native-sdk-acceptance.ts",
+      "sha256": "51044fca6cf08bcd7c9a3ebfb9764b1fef6de387ca6961e165328c18440d46ed"
+    },
+    {
+      "path": "scripts/native-signing-acceptance.ts",
+      "sha256": "8ce653d16fa45bcd326b927a79f77b72e91f5b8a5f6887c760b676cb564414b8"
+    },
+    {
+      "path": "scripts/native-ui-mcp-benchmark.ts",
+      "sha256": "11a353c555e6991c7276349642b316e189d134807b3f36401ca5a5fb8bb0eeb2"
+    },
+    {
+      "path": "src/core/doc-catalog.ts",
+      "sha256": "1eab48ef1292552245a0c152b43a3ac8122c9c4a14dab52da1c7ff0d50cdc873"
+    },
+    {
+      "path": "src/core/emulator-contracts.ts",
+      "sha256": "91084d264fc008478c56a93410875762ce81238f7f2d3c97a6f7c9f3d88ef8c6"
+    },
+    {
+      "path": "src/core/process.ts",
+      "sha256": "763a7d74f9c8049ec23d6ec182c6bb5943c1dd86bb559e8fc8c7e0da7c66a1c8"
+    },
+    {
+      "path": "src/core/store.ts",
+      "sha256": "6c8351e8700701134275adaf6d515db64235305616efbcbc988c8705b3c907a2"
+    },
+    {
+      "path": "src/core/toolchain.ts",
+      "sha256": "8ffb66777c1363c77c714d998f4c57a503cc215a401eca2fac5db67e563081b7"
+    },
+    {
+      "path": "src/services/auth.ts",
+      "sha256": "799ff9958e1e0a57b339af2d979e113167d5d5ddc15e442a78c9f8ac94fade58"
+    },
+    {
+      "path": "src/services/device-info.ts",
+      "sha256": "b819e6f31e281b8b4b45245f44d295134b00e06310a5efbab5950e3a74f7239b"
+    },
+    {
+      "path": "src/services/device.ts",
+      "sha256": "3d2cb487d3b4eb9065a36f5c237a1ce9cbfb62ab67c93cba4c1cf8a4b5f86c92"
+    },
+    {
+      "path": "src/services/diagnostics.ts",
+      "sha256": "5204c1d3ad946e62bd568c2933d1f176983e8286f2d888fd3eee70c129d4905d"
+    },
+    {
+      "path": "src/services/emulator-license.ts",
+      "sha256": "b358191a6699e0c58be0c76ab69bb117fbff958deec8e26918f99fc9dec734bb"
+    },
+    {
+      "path": "src/services/emulator.ts",
+      "sha256": "88a4af1fd1cd297a8bfbf8caaf10c3e8c298ef1cdd3232e6e5ee29b671226e09"
+    },
+    {
+      "path": "src/services/hotreload.ts",
+      "sha256": "bbf592c2829b42d09d1fc54543742f3792b486d2f23c5fc2e99b10d92e7a41c9"
+    },
+    {
+      "path": "src/services/knowledge.ts",
+      "sha256": "5f9422aa166519e994e910e0462091757a22c04cdfc509dc9515423faf18d41d"
+    },
+    {
+      "path": "src/services/lint-input.ts",
+      "sha256": "8dfb586c102eb8fdcd05819a9321a47da208325065ea73de7c314588d51618e9"
+    },
+    {
+      "path": "src/services/lint-report.ts",
+      "sha256": "643d36ece86a87412aa28b8812009e7dc0245b1c49f6313969ff372e12f8a6c9"
+    },
+    {
+      "path": "src/services/logs.ts",
+      "sha256": "be5d46ca8aab73bceb6ecaadbac8d1b7475afca6865eec910e729d2baf533608"
+    },
+    {
+      "path": "src/services/lsp.ts",
+      "sha256": "b3ba9c2f5970c2167d6d2603cf0f7ac32087c8f9b46859870c72dba16b24168b"
+    },
+    {
+      "path": "src/services/project.ts",
+      "sha256": "216a0059dcae5b95a98f3445f5cc22eef8af108a9a21d782dc7951c6a888d6fd"
+    },
+    {
+      "path": "src/services/signature.ts",
+      "sha256": "e1984b87bb4e2266ebd6220b9bf47e1439393c89e6d8317e96d1b87cd6b4bd17"
+    },
+    {
+      "path": "src/services/signing-config.ts",
+      "sha256": "30ccb2d07455018ae5ab02db9abbc0f9682100f21d7434580541f3a17c3805c5"
+    },
+    {
+      "path": "src/services/signing-material.ts",
+      "sha256": "ebabfc7a4c67883f3d9e4fbd9725c76c35d5415849eaf1db020be89306d51d27"
+    },
+    {
+      "path": "src/services/ui-import-cache.ts",
+      "sha256": "670172b889a318997e57a81b8b2e96b03f052ab21f38930fec52d5418d276539"
+    },
+    {
+      "path": "src/services/ui-import.ts",
+      "sha256": "1ddd265fd7f402bb5696f2254801c186493831a37df7710ba2f825a85cb0948d"
+    },
+    {
+      "path": "src/services/ui-node-schema.ts",
+      "sha256": "f6e9acd1be447dfb86b7e09be0fcab26f926e66b0c6147ad47cebb103ae07be7"
+    },
+    {
+      "path": "src/services/ui-parse.ts",
+      "sha256": "ef90ad1451dae6a40a61cb858bcfde32afdd9279672489129c29fd4b8d6fba94"
+    },
+    {
+      "path": "test/native-cloud-profile.test.ts",
+      "sha256": "e52ff5cad56da5512be94239fa737777bd72bbdcb7b1c072fdae91d188cef987"
+    },
+    {
+      "path": "test/native-device-info.test.ts",
+      "sha256": "9a567179548d1f96b0f2effb0bc55561c6a61845f47e0bca5e23b568efafe15e"
+    },
+    {
+      "path": "test/native-emulator-protocol.test.ts",
+      "sha256": "97265b2c2917519f8598d3ba305452a24cc6c9a5ecccd0d4c87b62dcf02d7ac9"
+    },
+    {
+      "path": "test/native-emulator.test.ts",
+      "sha256": "68ff31960cad600498b4197f2490fd5f59f96ab2964bdd1afd35ef1dc2431638"
+    },
+    {
+      "path": "test/native-flow.test.ts",
+      "sha256": "782554fe1c4fdec2d6f9e53f2a0322fb873885094643d0cd594c47a6f4aded56"
+    },
+    {
+      "path": "test/native-hotreload.test.ts",
+      "sha256": "7c94d9b5ceee15d85669fb470d36c41aa3e6da3fa5695b568ed580bb12aec1a6"
+    },
+    {
+      "path": "test/native-infrastructure.test.ts",
+      "sha256": "03f987f258d3c2822aa3246c1a9dcc0f2c03f8f4d21c5166a94596f285895c21"
+    },
+    {
+      "path": "test/native-lint.test.ts",
+      "sha256": "6be04f5ad685c931e09bff6b3c4edd17cac8d43ca347a427bc830f34b6d467f8"
+    },
+    {
+      "path": "test/native-project.test.ts",
+      "sha256": "9b374c09b19086d80a577a80f8169e36c0e5f9c4fd81d6ac8cf24ef54b1674e8"
+    },
+    {
+      "path": "test/native-reports.test.ts",
+      "sha256": "98dd60e5e965348d9a16c93d4144e96c894ced9bf3a9da95c4da1815eea61c78"
+    },
+    {
+      "path": "test/native-resources.test.ts",
+      "sha256": "67b671621a232e166184ae3e2a6193ce47f18c39906ce23bf801e77ce2b5986a"
+    },
+    {
+      "path": "test/native-runtime.test.ts",
+      "sha256": "7904ac1fa20416b77456069aa724c87791b776230a18690f3ff15dae936872c9"
+    },
+    {
+      "path": "test/native-signature.test.ts",
+      "sha256": "537543c239cfa3cd280c93ca543a0d472b6e8c1712da53f79ceab848f072f624"
+    },
+    {
+      "path": "test/native-signing-config.test.ts",
+      "sha256": "dcd71d9f8e8369fa0a5c64af892311a6c66cea93073f26d1a9eaeee40d68f5fa"
+    },
+    {
+      "path": "test/native-text.test.ts",
+      "sha256": "764e67b35c3587e3000d7a93bfecca102cd208af6313828b7f62a050d0b52ca1"
+    },
+    {
+      "path": "test/native-ui-import.test.ts",
+      "sha256": "7f47ebb7dde9a852fc86f235305c9bb6477d3cb8dd388dc1e775dcdd01522136"
+    },
+    {
+      "path": "test/native-upstream.test.ts",
+      "sha256": "d4aa5eea4dc9fca4cec768867641af74cbde1178937fb51a634aea06c0ca5e01"
+    }
+  ],
+  "required_tests": [
+    "scripts/native-device-readonly.ts",
+    "scripts/native-emulator-acceptance.ts",
+    "scripts/native-emulator-readonly.ts",
+    "scripts/native-hot-device-acceptance.ts",
+    "scripts/native-lint-acceptance.ts",
+    "scripts/native-sdk-acceptance.ts",
+    "scripts/native-signing-acceptance.ts",
+    "scripts/native-ui-mcp-benchmark.ts",
+    "test/native-cloud-profile.test.ts",
+    "test/native-device-info.test.ts",
+    "test/native-emulator-protocol.test.ts",
+    "test/native-emulator.test.ts",
+    "test/native-flow.test.ts",
+    "test/native-hotreload.test.ts",
+    "test/native-infrastructure.test.ts",
+    "test/native-lint.test.ts",
+    "test/native-project.test.ts",
+    "test/native-reports.test.ts",
+    "test/native-resources.test.ts",
+    "test/native-runtime.test.ts",
+    "test/native-signature.test.ts",
+    "test/native-signing-config.test.ts",
+    "test/native-text.test.ts",
+    "test/native-ui-import.test.ts",
+    "test/native-upstream.test.ts"
+  ]
+}

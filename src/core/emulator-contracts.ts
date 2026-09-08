@@ -14,6 +14,8 @@ const nativeName = z
 const sha256 = z.string().regex(/^[a-f0-9]{64}$/);
 export const emulatorManageSchema = z
   .strictObject({
+    request_key: z.string().min(1).max(200).optional(),
+    target: z.string().min(1).optional(),
     action: z.enum([
       "list",
       "start",
@@ -33,8 +35,9 @@ export const emulatorManageSchema = z
     license_sha256: sha256.optional(),
   })
   .superRefine((input, ctx) => {
-    const allowed: string[] = ["action"];
+    const allowed: string[] = ["action", "request_key", "target"];
     const required: string[] = [];
+    if (input.action === "stop") required.push("target");
     if (["start", "stop", "create", "delete"].includes(input.action))
       required.push("name");
     if (["create", "image_install", "image_uninstall"].includes(input.action))
@@ -71,6 +74,8 @@ const ranges = {
 } as const;
 export const emulatorScenarioSchema = z
   .strictObject({
+    request_key: z.string().min(1).max(200).optional(),
+    target: z.string().min(1),
     name: nativeName,
     action: z.enum([
       "shake",
@@ -120,7 +125,7 @@ export const emulatorScenarioSchema = z
       .optional(),
   })
   .superRefine((input, ctx) => {
-    const used: string[] = ["name", "action"];
+    const used: string[] = ["name", "action", "request_key", "target"];
     const issue = (field: string, message: string) =>
       ctx.addIssue({ code: "custom", path: [field], message });
     if (input.action === "rotation" || input.action === "volume") {

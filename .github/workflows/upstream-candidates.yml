@@ -23,24 +23,15 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
-      - name: Stage native tooling without upstream runtime dependencies
-        run: node --experimental-strip-types scripts/native-stage.ts "$RUNNER_TEMP/native"
-      - name: Normalize native lock
-        working-directory: ${{ runner.temp }}/native
-        run: npm install --package-lock-only --ignore-scripts
       - name: Install candidate tooling
-        working-directory: ${{ runner.temp }}/native
         run: npm ci
       - name: Compile candidate tooling
-        working-directory: ${{ runner.temp }}/native
         run: npm run build
       - name: Detect and prepare a pinned source proposal
         id: prepare
-        working-directory: ${{ runner.temp }}/native
         run: node dist/scripts/upstream-prepare.js '${{ matrix.source }}' "$RUNNER_TEMP/candidate"
       - name: Publish a draft report and dispatch its validation
         if: steps.prepare.outputs.changed == 'true'
-        working-directory: ${{ runner.temp }}/native
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}

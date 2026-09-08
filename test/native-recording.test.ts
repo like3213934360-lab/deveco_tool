@@ -23,6 +23,7 @@ import { atomicWrite } from "../src/core/files.js";
 import { inspectProject } from "../src/services/project.js";
 import { ToolError } from "../src/core/errors.js";
 import { ProcessService } from "../src/core/process.js";
+import { StateStore } from "../src/core/store.js";
 import { HvigorSession } from "../src/services/hvigor/session.js";
 import { assertNoHotWatch } from "../src/services/hvigor/hot-config.js";
 
@@ -148,6 +149,45 @@ async function fixture(t: TestContext) {
     },
   };
 }
+for (const transport of ["receipt", ...(process.platform === "win32" ? [] : ["posix"])]) test(`consecutive recorded controls keep separate durable receipts and an uncertain next step cannot replay (${transport})`, async (t) => {
+  const f = await fixture(t);
+  try {
+    const id = await start(f.runtime), log = path.join(f.root, "actions");
+    fs.writeFileSync(path.join(f.root, "uitest"), '#!/bin/sh\nprintf "%s\\n" "$*" >> "$DEVECO_TEST_ACTIONS"\nprintf "No Error\\n"\n', { mode: 0o700 });
+    t.mock.method(f.runtime.devices, "control", DeviceService.prototype.control);
+    let loseReply = false;
+    t.mock.method(f.runtime.devices, "shell", async (_target: string, input: string[], signal?: AbortSignal) => {
+      if (transport === "receipt") {
+        const script = input[2] ?? "";
+        if (!script.includes("mkdir -m 700")) return { stdout: "", stderr: "", exitCode: 0, signal: null, truncated: false, elapsedMs: 0, pid: null };
+        const identity = /'DEVECO_DEVICE_RECEIPT_V1' '([a-f0-9]{64})'/.exec(script)?.[1];
+        assert.ok(identity);
+        const command = script.split("\n").find((line) => line.trim().startsWith("'uitest'"));
+        assert.ok(command);
+        fs.appendFileSync(log, command + "\n");
+        if (loseReply) throw new Error("lost action acknowledgement");
+        return { stdout: `DEVECO_DEVICE_RECEIPT_V1\n${identity}\n0\nNo Error\n`, stderr: "", exitCode: 0, signal: null, truncated: false, elapsedMs: 0, pid: null };
+      }
+      const mapped = input.map((value) => value.replaceAll("/data/local/tmp/", f.root + "/"));
+      const result = await f.runtime.processes.run({ executable: mapped[0]!, args: mapped.slice(1), cwd: f.root,
+        env: { ...process.env, PATH: f.root + path.delimiter + process.env.PATH, DEVECO_TEST_ACTIONS: log } }, { signal });
+      if (loseReply && input[2]?.includes("mkdir -m 700")) throw new Error("lost action acknowledgement");
+      return result;
+    });
+    await f.runtime.call("ui_tap", { selector: { key: "submit" } });
+    await f.runtime.call("ui_control", { operation: { action: "click", x: 120, y: 220 } });
+    assert.equal(f.runtime.recordings.status(id).step_count, 2);
+    assert.equal(f.runtime.recordings.status(id).receipt_count, 2);
+    const accepted = fs.readFileSync(log, "utf8").trim().split("\n");
+    assert.equal(accepted.length, 2);
+    assert.notEqual(accepted[0], accepted[1]);
+    loseReply = true;
+    await assert.rejects(f.runtime.call("ui_control", { operation: { action: "click", x: 130, y: 230 } }));
+    assert.ok(f.runtime.recordings.status(id).uncertain_operation);
+    await assert.rejects(f.runtime.call("ui_control", { operation: { action: "click", x: 140, y: 240 } }), { code: "RESOURCE_RECOVERY_REQUIRED" });
+    assert.equal(fs.readFileSync(log, "utf8").trim().split("\n").length, 3);
+  } finally { await f.close(); }
+});
 async function settled(runtime: Runtime, id: string) {
   for (let n = 0; n < 100; n++) {
     const state = z
@@ -193,19 +233,12 @@ test("unknown navigation records once across concurrent submissions and restart,
       stops = 0;
     t.mock.method(
       f.runtime.devices,
-      "shell",
-      async (_target: string, args: string[]) => {
-        assert.deepEqual(args, ["aa", "force-stop", bundle]);
+      "stopApplication",
+      async (target: string, appBundle: string) => {
+        assert.equal(target, "device");
+        assert.equal(appBundle, bundle);
         stops++;
-        return {
-          stdout: "",
-          stderr: "",
-          elapsedMs: 1,
-          pid: null,
-          exitCode: 0,
-          signal: null,
-          truncated: false,
-        };
+        return { stopped: true };
       },
     );
     t.mock.method(f.runtime.devices, "launch", async () => {
@@ -837,8 +870,12 @@ test("hot baseline installation and patch application honor a recording created 
     });
     return worker;
   });
+  // Exercise the service's recheck after compilation. The public workflow also
+  // reserves the device for the entire operation, tested separately below.
+  const completeHot = (input: Record<string, unknown>) =>
+    f.runtime.hot.call(input, inspectProject(f.project));
   const startWatch = () =>
-    f.runtime.call("hot_reload", {
+    completeHot({
       action: "start",
       modules: ["entry"],
       app: { bundle_name: bundle, module: "entry", ability: "MainAbility" },
@@ -892,12 +929,12 @@ test("hot baseline installation and patch application honor a recording created 
       "An unrelated device recording must not block the baseline",
     );
     const current = await recordInPeer("device");
-    await assert.rejects(f.runtime.call("hot_reload", { action: "apply" }), {
+    await assert.rejects(completeHot({ action: "apply" }), {
       code: "RECORDING_ACTIVE",
     });
     assert.equal(builds, 2, "Reject before preparing or compiling any patch");
     await cancel(current);
-    await assert.rejects(f.runtime.call("hot_reload", { action: "apply" }), {
+    await assert.rejects(completeHot({ action: "apply" }), {
       code: "HOT_NO_CHANGES",
     });
     const active = await recordInPeer("device");
@@ -913,6 +950,37 @@ test("hot baseline installation and patch application honor a recording created 
     finishBuild.resolve();
     await pending?.catch(() => {});
     await peers.close();
+    await f.close();
+  }
+});
+test("hot workflow reserves its captured device until completion and deduplicates the submission", async (t) => {
+  const f = await fixture(t), peer = new StateStore(path.join(f.root, "state")),
+    entered = Promise.withResolvers<void>(), finish = Promise.withResolvers<void>();
+  let peerEntered = false, waiting: Promise<void> | undefined;
+  const hot = t.mock.method(f.runtime.hot, "call", async () => {
+    entered.resolve();
+    await finish.promise;
+    assert.equal(peerEntered, false);
+    return { active: true };
+  });
+  try {
+    const input = { action: "start", request_key: "hot-reservation", app: { bundle_name: bundle, module: "entry", ability: "MainAbility" } };
+    const submitted = z.object({ run_id: z.string() }).parse(await f.runtime.call("hot_reload", input));
+    await entered.promise;
+    const duplicate = z.object({ run_id: z.string() }).parse(await f.runtime.call("hot_reload", input));
+    assert.equal(duplicate.run_id, submitted.run_id);
+    waiting = peer.lease("device:device", async () => { peerEntered = true; });
+    await delay(100);
+    assert.equal(peerEntered, false, "A competing owner cannot acquire the device during compilation");
+    finish.resolve();
+    assert.equal((await settled(f.runtime, submitted.run_id)).status, "succeeded");
+    await waiting;
+    assert.equal(peerEntered, true);
+    assert.equal(hot.mock.callCount(), 1);
+  } finally {
+    finish.resolve();
+    await waiting;
+    peer.close();
     await f.close();
   }
 });

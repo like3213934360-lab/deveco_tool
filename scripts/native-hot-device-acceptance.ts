@@ -1,3 +1,4 @@
+import { finishAcceptance } from "./lib/acceptance-report.js";
 import fs from "node:fs";
 import path from "node:path";
 import assert from "node:assert/strict";
@@ -5,6 +6,7 @@ import { z } from "zod";
 import { Runtime } from "../src/services/runtime.js";
 import { atomicWrite, fileDigest } from "../src/core/files.js";
 import { errorResult, invariant } from "../src/core/errors.js";
+import { nativeOperation } from "./lib/native-operation.js";
 import { evidenceIdentity } from "./lib/evidence.js";
 
 // Only operate on a prepared, personally selected signing canary. Each attempt
@@ -74,7 +76,7 @@ const tested = evidenceIdentity(),
     error?: unknown;
     elapsed_ms: number;
   }[] = [];
-let written = original;
+let written = original, completed = false, closed = false, failed = false;
 const save = () =>
   atomicWrite(
     path.join(root, "evidence.json"),
@@ -101,7 +103,7 @@ async function observe<T>(name: string, task: () => Promise<T>) {
 }
 try {
   await observe("start_signed_watch", () =>
-    runtime.call("hot_reload", {
+    nativeOperation(runtime, "hot_reload", {
       action: "start",
       project_path,
       target,
@@ -111,7 +113,7 @@ try {
         module: prepared.module,
         ability: prepared.ability,
       },
-    }),
+    }, path.join(root, "start.operation.private.json")),
   );
   await observe("baseline_assertion", () =>
     runtime.call("verify_ui", {
@@ -140,12 +142,12 @@ try {
         .object({ applied: z.literal(true), processPreserved: z.literal(true) })
         .passthrough()
         .parse(
-          await runtime.call("hot_reload", {
+          await nativeOperation(runtime, "hot_reload", {
             action: "apply",
             project_path,
             target,
             files: [source],
-          }),
+          }, path.join(root, `patch-${index + 1}.operation.private.json`)),
         );
       return result;
     });
@@ -167,7 +169,9 @@ try {
   await observe("screenshot_evidence", () =>
     runtime.call("ui_snapshot", { target }),
   );
+  completed = true;
 } catch {
+  failed = true;
   process.exitCode = 1;
 } finally {
   try {
@@ -194,11 +198,14 @@ try {
       return { restored: fs.readFileSync(source, "utf8") === original };
     });
   } catch {
+    failed = true;
     process.exitCode = 1;
   }
   try {
-    await observe("close", () => runtime.close());
+    await observe("close", async () => { const result = await runtime.close(); closed = result.closed; return result; });
   } catch {
+    failed = true;
     process.exitCode = 1;
   }
+  finishAcceptance(path.join(root, "evidence.json"), tested, completed && !failed, closed);
 }

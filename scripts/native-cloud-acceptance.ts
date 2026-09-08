@@ -1,3 +1,4 @@
+import { finishAcceptance } from "./lib/acceptance-report.js";
 import fs from "node:fs";
 import path from "node:path";
 import assert from "node:assert/strict";
@@ -22,7 +23,7 @@ const observations: {
   result?: unknown;
   error?: unknown;
 }[] = [];
-let failed = false;
+let failed = false, completed = false;
 async function observe<T>(
   name: string,
   task: () => Promise<T>,
@@ -112,8 +113,9 @@ try {
       return { codegenie_logged_in: false };
     });
   }
+  completed = true;
 } finally {
   const closed = await runtime.close();
   assert.equal(closed.closed, true, JSON.stringify(closed));
-  process.exitCode = failed ? 1 : 0;
+  finishAcceptance(path.join(root, "evidence.json"), tested, completed && !failed, closed.closed);
 }

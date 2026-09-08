@@ -27,6 +27,7 @@ export interface WorkflowContext {
   flow?: Flow;
   input_artifacts?: string[];
   deployment?: CapturedFile[];
+  input_files?: { path: string; sha256: string }[];
 }
 export interface StepContext {
   run_id: string;
@@ -372,7 +373,7 @@ export class WorkflowEngine {
         }
         const uncertain =
           failure instanceof ToolError &&
-          ["EFFECT_UNCERTAIN", "CANCEL_UNCONFIRMED"].includes(failure.code);
+          ["EFFECT_UNCERTAIN", "CANCEL_UNCONFIRMED", "RESOURCE_RECOVERY_REQUIRED"].includes(failure.code);
         this.store.update(
           id,
           uncertain
@@ -408,7 +409,7 @@ export class WorkflowEngine {
         "RESUME_INPUT_REQUIRED",
         "Supply action=recheck to reconcile external state",
       );
-    await this.validate(JSON.parse(run.input) as WorkflowContext, run.workflow);
+    await withTrace({ run_id: id }, () => this.validate(JSON.parse(run.input) as WorkflowContext, run.workflow));
     this.dispatch(id, true);
     return { run_id: id, status: "queued" };
   }

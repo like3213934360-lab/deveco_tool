@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import { createHash } from "node:crypto";
 import path from "node:path";
 import { z } from "zod";
 import {
@@ -30,6 +31,12 @@ const descriptorSchema = z.strictObject({
     ])
     .default("SHA256withECDSA"),
 });
+export function signingDescriptorFiles(descriptor: string): string[] {
+  const file = fs.realpathSync.native(path.resolve(descriptor));
+  invariant(fs.statSync(file).isFile() && fs.statSync(file).size <= 65536, "SIGN_DESCRIPTOR_INVALID", "Signing descriptor must be a regular JSON file of at most 64 KiB");
+  const input = descriptorSchema.parse(JSON.parse(fs.readFileSync(file, "utf8")) as unknown);
+  return [input.keystoreFile, input.appCertFile, input.profileFile].map((source) => fs.realpathSync.native(path.resolve(path.dirname(file), source)));
+}
 
 /** Called under the canonical project lease. Publish private material before the
  * atomic configuration commit, retaining it if the commit's outcome is unclear. */
@@ -39,6 +46,7 @@ export async function configureSigning(
   destination: string,
   name: string,
   signal?: AbortSignal,
+  prepareCommit?: (result: Record<string, unknown>, plan: { before: string; content: string; files: { source: string; path: string }[] }) => Promise<unknown>,
 ) {
   z.string()
     .regex(/^[A-Za-z0-9]{1,64}$/)
@@ -106,8 +114,8 @@ export async function configureSigning(
     );
   }
   fs.mkdirSync(path.dirname(output), { recursive: true, mode: 0o700 });
-  fs.mkdirSync(output, { mode: 0o700 }); // Exclusive ownership, never reuse an existing directory.
-  let committing = false;
+  invariant(!fs.existsSync(output), "SIGN_OUTPUT_EXISTS", "Signing material directory must be new");
+  const staging = fs.mkdtempSync(path.join(path.dirname(output), ".deveco-signing-"));
   try {
     const material: Record<string, string> = {
       keyAlias: input.keyAlias,
@@ -118,13 +126,13 @@ export async function configureSigning(
       material[field] = path.join(output, filename);
       copied[field] = await publishFile(
         path.resolve(path.dirname(descriptorPath), source),
-        material[field],
+        path.join(staging, filename),
         signal,
       );
     }
     Object.assign(
       material,
-      createSigningMaterial(path.join(output, "material"), input),
+      createSigningMaterial(path.join(staging, "material"), input),
     );
     configs.push({ name, type: project.product.runtimeOS, material });
     selected.signingConfig = name;
@@ -137,18 +145,40 @@ export async function configureSigning(
       "SIGN_PROJECT_CHANGED",
       "Build profile changed during preparation",
     );
-    committing = true;
-    atomicWrite(file, JSON.stringify(profile, null, 2) + "\n");
-    return {
+    const content = JSON.stringify(profile, null, 2) + "\n";
+    const result = {
       configured: true,
       product: project.product.name,
       name,
       directory: output,
-      build_profile_sha256: fileDigest(file),
+      build_profile_sha256: createHash("sha256").update(content).digest("hex"),
       files: copied,
     };
+    const files: { source: string; path: string }[] = [];
+    const visit = (directory: string) => {
+      for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+        const file = path.join(directory, entry.name);
+        invariant(!entry.isSymbolicLink(), "SIGN_OUTPUT_CHANGED", "Signing output contains a symlink");
+        if (entry.isDirectory()) visit(file); else { invariant(entry.isFile(), "SIGN_OUTPUT_CHANGED", "Signing output contains a special file"); files.push({ source: file, path: path.join(output, path.relative(staging, file)) }); }
+      }
+    };
+    visit(staging);
+    await prepareCommit?.(result, { before, content, files });
+    signal?.throwIfAborted();
+    unchanged();
+    invariant(fileDigest(file) === before, "SIGN_PROJECT_CHANGED", "Build profile changed before publication");
+    // Prepared bytes have been durably captured before the first destination write.
+    fs.mkdirSync(output, { mode: 0o700 });
+    for (const item of files) {
+      fs.mkdirSync(path.dirname(item.path), { recursive: true, mode: 0o700 });
+      await publishFile(item.source, item.path, signal);
+    }
+    unchanged();
+    invariant(fileDigest(file) === before, "SIGN_PROJECT_CHANGED", "Build profile changed before final commit");
+    atomicWrite(file, content);
+    return result;
   } finally {
-    // A failed fsync may follow a successful rename: keep material once commit starts.
-    if (!committing) fs.rmSync(output, { recursive: true, force: true });
+    // Retain partial publications for hash-based recovery; temporary preparation is owned.
+    fs.rmSync(staging, { recursive: true, force: true });
   }
 }

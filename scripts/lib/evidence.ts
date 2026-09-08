@@ -6,8 +6,7 @@ import { digest, fileDigest } from "../../src/core/files.js";
 import { verifyResources } from "./resources.js";
 
 /** Capture the tested bytes before running, including uncommitted compiled code. */
-export function evidenceIdentity() {
-  const root = fileURLToPath(new URL("../../../", import.meta.url));
+export function evidenceIdentity(root = fileURLToPath(new URL("../../../", import.meta.url))) {
   const compiled: { file: string; sha256: string }[] = [];
   const visit = (directory: string) => {
     for (const item of fs.readdirSync(directory, { withFileTypes: true })) {
@@ -37,6 +36,7 @@ export function evidenceIdentity() {
   }
   return {
     captured_at: new Date().toISOString(),
+    entrypoint: process.argv[1] ? path.relative(root, process.argv[1]).split(path.sep).join("/") : null,
     base_commit: baseCommit,
     runtime_sha256: digest(
       compiled.filter((item) => item.file.startsWith("dist/src/")),

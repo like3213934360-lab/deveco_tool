@@ -7,6 +7,7 @@ import { StateStore } from "../core/store.js";
 import { errorResult, invariant, ToolError } from "../core/errors.js";
 import { faultlogNameSchema } from "../core/contracts.js";
 import { currentTrace } from "../core/trace.js";
+import { NativeDirectory } from "../core/native-directory.js";
 
 import { faultlogTimestamp, faultlogBundle } from "./faultlog-format.js";
 export { faultlogTimestamp, faultlogBundle } from "./faultlog-format.js";
@@ -197,32 +198,120 @@ export class LogService {
       target,
       ["head", "-c", String(fileLimit + 1), path.posix.join(directory, name)],
       signal,
+      30000,
+      true,
     );
-    invariant(
-      !rejected.test(result.stderr) && !/^head:/.test(result.stdout),
-      "FAULTLOG_FETCH_FAILED",
-      "Device rejected faultlog read",
-    );
-    const bytes = Buffer.from(result.stdout);
-    // HDC retains the tail after its own output limit; never label that as the file's beginning.
     invariant(
       !result.truncated,
       "FAULTLOG_TRANSPORT_TRUNCATED",
       "Faultlog transport did not retain the complete bounded read",
     );
+    if (
+      (result.exitCode !== 0 ||
+        /^head:/.test(result.stdout) ||
+        result.stderr) &&
+      /permission denied|operation not permitted/i.test(
+        result.stdout + result.stderr,
+      )
+    )
+      return this.receiveFaultlog(target, name, signal);
+    invariant(
+      result.exitCode === 0 &&
+        !rejected.test(result.stderr) &&
+        !/^head:/.test(result.stdout),
+      "FAULTLOG_FETCH_FAILED",
+      "Device rejected faultlog read",
+    );
+    const bytes = Buffer.from(result.stdout);
     return {
       name,
+      read_method: "shell_head" as const,
       content: new TextDecoder().decode(bytes.subarray(0, fileLimit), {
         stream: bytes.length > fileLimit,
       }),
       truncated: bytes.length > fileLimit,
     };
   }
+  private async receiveFaultlog(
+    target: string,
+    name: string,
+    signal?: AbortSignal,
+  ) {
+    // On production devices shell cannot read the faultlogger directory, while
+    // the supported HDC file service can. Fetch only the exact validated name.
+    signal?.throwIfAborted();
+    const scope = new NativeDirectory(this.store, 8 * 1024 * 1024);
+    return scope.execute(async (managedSignal) => {
+      const local = path.join(scope.file, "faultlog.txt");
+      const result = await this.devices.command(
+        ["-t", target, "file", "recv", path.posix.join(directory, name), local],
+        managedSignal,
+      );
+      invariant(
+        result.exitCode === 0 &&
+          !result.truncated &&
+          /FileTransfer finish/i.test(result.stdout) &&
+          !/\[Fail\]|error:|permission denied/i.test(
+            result.stdout + result.stderr,
+          ),
+        "FAULTLOG_FETCH_FAILED",
+        "HDC did not confirm the requested faultlog transfer",
+      );
+      await scope.check();
+      const handle = await fs.open(
+        local,
+        constants.O_RDONLY | constants.O_NONBLOCK,
+      );
+      try {
+        const before = await handle.stat();
+        invariant(
+          before.isFile(),
+          "LOG_FILE_INVALID",
+          "Transferred faultlog must be a regular file",
+        );
+        const bytes = Buffer.alloc(Math.min(before.size, fileLimit) + 1);
+        let offset = 0;
+        while (offset < bytes.length) {
+          const { bytesRead } = await handle.read(
+            bytes,
+            offset,
+            bytes.length - offset,
+            offset,
+          );
+          if (!bytesRead) break;
+          offset += bytesRead;
+        }
+        const after = await handle.stat();
+        invariant(
+          before.size === after.size &&
+            before.mtimeMs === after.mtimeMs &&
+            offset === Math.min(before.size, bytes.length),
+          "LOG_CHANGED",
+          "Transferred faultlog changed while being read",
+        );
+        managedSignal.throwIfAborted();
+        return {
+          name,
+          read_method: "hdc_file_recv" as const,
+          content: new TextDecoder().decode(
+            bytes.subarray(0, Math.min(offset, fileLimit)),
+            {
+              stream: before.size > fileLimit,
+            },
+          ),
+          truncated: before.size > fileLimit,
+        };
+      } finally {
+        await handle.close();
+      }
+    }, signal);
+  }
   async fetch(target: string, name: string, signal?: AbortSignal) {
     const file = await this.readFaultlog(target, name, signal);
     return {
       ...this.report(target, "crash", file.content, file.truncated),
       faultlog_name: name,
+      read_method: file.read_method,
     };
   }
   async clear(target: string, signal?: AbortSignal) {
@@ -293,7 +382,11 @@ export class LogService {
         ),
         inventory,
         selection_complete: inventory.complete && !inventory.has_more,
-        files: files.map(({ name, truncated }) => ({ name, truncated })),
+        files: files.map(({ name, truncated, read_method }) => ({
+          name,
+          truncated,
+          read_method,
+        })),
       };
     }
     const args = ["hilog", "-z", String(input.lines ?? 200)];

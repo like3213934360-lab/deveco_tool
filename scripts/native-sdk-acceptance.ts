@@ -1,3 +1,4 @@
+import { finishAcceptance } from "./lib/acceptance-report.js";
 import fs from "node:fs";
 import path from "node:path";
 import assert from "node:assert/strict";
@@ -13,6 +14,7 @@ import { validateCsrPem } from "../src/services/signature.js";
 import { inspectApplicationPackages } from "../src/services/package.js";
 import { evidenceIdentity } from "./lib/evidence.js";
 
+let completed = false;
 const tested = evidenceIdentity();
 const root = path.resolve(z.string().min(1).parse(process.argv[2]));
 assert.equal(fs.existsSync(root), false, "Acceptance directory must be new");
@@ -391,8 +393,10 @@ try {
       return result;
     });
   }
+  completed = true;
 } finally {
   const closed = await runtime.close();
+  finishAcceptance(path.join(root, "evidence.json"), tested, completed && !failed, closed.closed);
   assert.equal(closed.closed, true, JSON.stringify(closed));
-  process.exitCode = failed ? 1 : 0;
+  if (failed) process.exitCode = 1;
 }

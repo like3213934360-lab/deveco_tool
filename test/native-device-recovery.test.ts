@@ -17,6 +17,7 @@ import {
   DeviceEffectJournal,
   deviceReceiptScripts,
   parseDeviceReceipt,
+  parseStreamedDeviceReceipt,
 } from "../src/services/device-effect.js";
 
 const result = (
@@ -35,6 +36,45 @@ const result = (
 const identity = digest("fixture");
 const receipt = (body = "start ability successfully") =>
   `DEVECO_DEVICE_RECEIPT_V1\n${identity}\n0\n${body}`;
+
+test("streamed acknowledgement requires complete bounded matching frames", () => {
+  const stream = `DEVECO_DEVICE_STREAM_V1\n${identity}\nstart ability successfully.\n\nDEVECO_DEVICE_STREAM_END_V1\n${identity}\n0\nDEVECO_DEVICE_RECEIPT_PENDING\n`;
+  assert.deepEqual(parseStreamedDeviceReceipt(result(stream), identity), { exitCode: 0, stdout: "start ability successfully.\n" });
+  for (const raw of [stream.slice(0, -1), stream.replace(identity, digest("other")), stream.replace("\n0\n", "\n999\n"), stream.replace("start ability successfully.", "x".repeat(65536))]) assert.equal(parseStreamedDeviceReceipt(result(raw), identity), undefined);
+  assert.equal(parseStreamedDeviceReceipt(result(stream, { truncated: true }), identity), undefined);
+});
+
+for (const lost of ["none", "stream", "publication"] as const) test(`aa acknowledgement publication preserves non-replayable recovery after lost ${lost}`, async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-streamed-receipt-"));
+  let store = new StateStore(root), executions = 0, publications = 0, remote: string | undefined;
+  const transport = { shell: async (_target: string, args: string[]) => {
+    const script = args[2] ?? "";
+    if (script.includes("mkdir -m 700")) {
+      executions++;
+      assert.ok(script.includes("DEVECO_DEVICE_STREAM_V1"));
+      assert.ok(!script.includes("| (head"));
+      const id = /'DEVECO_DEVICE_STREAM_V1' '([a-f0-9]{64})'/.exec(script)![1]!;
+      if (lost === "stream") throw new Error("lost stream");
+      return result(`DEVECO_DEVICE_STREAM_V1\n${id}\nstart ability successfully.\n\nDEVECO_DEVICE_STREAM_END_V1\n${id}\n0\nDEVECO_DEVICE_RECEIPT_PENDING\n`);
+    }
+    if (script.includes("base64 -d")) {
+      publications++;
+      remote = Buffer.from(/printf '%s' '([A-Za-z0-9+/=]+)' \| base64 -d/.exec(script)![1]!, "base64").toString();
+      if (lost === "publication") throw new Error("lost publication reply");
+      return result(remote);
+    }
+    return result(remote ?? "DEVECO_DEVICE_RECEIPT_PENDING\n");
+  } };
+  const run = (recovery = false) => withTrace({ run_id: "run", node: "launch" }, () => new DeviceEffectJournal(store, transport).run("device", "launch", ["aa", "start"], (value) => { assert.match(value.stdout, /start ability successfully/); return { accepted: true }; }, undefined, recovery));
+  try {
+    if (lost === "none") assert.deepEqual(await run(), { accepted: true });
+    else await assert.rejects(run(), { code: "EFFECT_UNCERTAIN" });
+    store.close(); store = new StateStore(root);
+    assert.deepEqual(await run(true), lost === "stream" ? undefined : { accepted: true });
+    assert.equal(executions, 1);
+    assert.equal(publications, lost === "stream" ? 0 : 1);
+  } finally { store.close(); fs.rmSync(root, { recursive: true, force: true }); }
+});
 
 test("confirmed failures persist across restart, remain non-replayable and can be cancelled", async () => {
   const root = fs.mkdtempSync(
@@ -186,8 +226,8 @@ test("local completion survives cleanup failure and rejects changed inputs on re
 // HarmonyOS executes this POSIX script regardless of the host OS. Windows also
 // runs the protocol/SQLite tests above; macOS and Linux execute the actual script.
 if (process.platform !== "win32") {
-  for (const accepted of [true, false]) {
-    test(`LangGraph recovers a ${accepted ? "successful" : "rejected"} launch after reopening SQLite without replay`, async (t) => {
+  for (const accepted of [true, false]) for (const lossPoint of ["stream", "publication"]) {
+    test(`LangGraph ${lossPoint === "stream" ? "pauses" : "recovers"} a ${accepted ? "successful" : "rejected"} launch after lost ${lossPoint} without replay`, async (t) => {
       const root = fs.mkdtempSync(
           path.join(os.tmpdir(), "deveco-launch-graph-"),
         ),
@@ -230,10 +270,10 @@ if (process.platform !== "win32") {
             if (
               loseResponse &&
               input[0] === "sh" &&
-              input[2]?.includes("mkdir -m 700")
+              input[2]?.includes(lossPoint === "stream" ? "mkdir -m 700" : "base64 -d")
             ) {
               loseResponse = false;
-              throw new Error("transport lost the completed launch response");
+              throw new Error(`transport lost the completed ${lossPoint} response`);
             }
             return output;
           },
@@ -302,10 +342,15 @@ if (process.platform !== "win32") {
         await engine.resume(run_id, { action: "recheck" });
         assert.equal(
           (await settle(run_id)).status,
-          accepted ? "succeeded" : "failed",
+          lossPoint === "stream" ? "needs_input" : accepted ? "succeeded" : "failed",
         );
-        assert.equal(verifies, accepted ? 1 : 0);
+        assert.equal(verifies, lossPoint === "publication" && accepted ? 1 : 0);
         assert.equal(fs.readFileSync(counter, "utf8"), "x");
+        if (lossPoint === "stream") {
+          await assert.rejects(engine.cancel(run_id), { code: "CANCEL_UNCONFIRMED" });
+          await assert.rejects(store.lease("device:fixture", async () => true), { code: "RESOURCE_RECOVERY_REQUIRED" });
+          return;
+        }
         assert.deepEqual(store.uncertainOperations(run_id), []);
         assert.deepEqual(store.externalGuards(), []);
         assert.equal(

@@ -70,6 +70,10 @@ test("changed device package bytes prevent dispatch of an installation", async (
       return receipt("FileTransfer finish");
     });
     t.mock.method(devices, "shell", async (_target: string, args: string[]) => {
+      if (args[0] === "sh" && args[2]?.startsWith("test ! -L ")) {
+        assert.match(args[2], /test -d .*mkdir -m 700/);
+        return receipt("");
+      }
       if (args[0] === "sha256sum")
         return receipt(`${"0".repeat(64)}  ${args[1]}`);
       assert.ok(

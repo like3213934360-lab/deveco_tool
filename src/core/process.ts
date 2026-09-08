@@ -74,6 +74,7 @@ export interface ProcessObserver {
 }
 export class ProcessService {
   constructor(readonly observer?: ProcessObserver) {}
+  private starts = 0;
   private readonly children = new Set<ChildProcess>();
   private readonly sessions = new Set<{ stop(): Promise<void> }>();
   private readonly lifecycle = new WeakMap<
@@ -91,6 +92,15 @@ export class ProcessService {
   }
   get sessionCount(): number {
     return this.sessions.size;
+  }
+  get metrics() {
+    return {
+      process_starts: this.starts,
+      processes: this.children.size,
+      sessions: this.sessions.size,
+      pids: [...this.children].flatMap((child) => child.pid ? [child.pid] : []),
+      listeners: [...this.children].reduce((sum, child) => sum + child.eventNames().reduce((count, event) => count + child.listenerCount(event), 0), 0),
+    };
   }
   private groupAlive(child: ChildProcess): boolean {
     const job = this.lifecycle.get(child)?.job;
@@ -141,6 +151,7 @@ export class ProcessService {
       state = { closed: false, done: done.promise, tracking, job };
     this.lifecycle.set(child, state);
     this.children.add(child);
+    child.once("spawn", () => { this.starts++; });
     child.on("error", () => {});
     child.once("close", () => {
       state.closed = true;

@@ -86,6 +86,14 @@ test("CLT resolves documented linter layouts and external JDK identity, without 
     }
     const first = discoverToolchain();
     assert.equal(first.components.linter, undefined);
+    const emulator = first.components.emulator!, initialStat = fs.statSync(emulator);
+    fs.utimesSync(emulator, initialStat.atime, new Date(initialStat.mtimeMs + 10000));
+    assert.deepEqual(discoverToolchain(), first, "SDK startup touching an unchanged executable preserves its content identity");
+    fs.writeFileSync(emulator, "changed"); // Same size as the original fixture.
+    fs.utimesSync(emulator, initialStat.atime, initialStat.mtime);
+    assert.notEqual(discoverToolchain().fingerprint, first.fingerprint, "Same-size replacement with restored mtime must invalidate the cached digest");
+    fs.writeFileSync(emulator, "fixture");
+    assert.deepEqual(discoverToolchain(), first);
     const alias = path.join(root, "clt-alias");
     fs.symlinkSync(clt, alias, "junction");
     for (const configured of [

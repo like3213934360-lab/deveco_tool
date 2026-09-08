@@ -1,3 +1,4 @@
+import { finishAcceptance } from "./lib/acceptance-report.js";
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
@@ -47,6 +48,7 @@ const statusSchema = z.object({
     .optional(),
 });
 let client: Client | undefined, transport: StdioClientTransport | undefined;
+let completed = false, runtimeClosed = false, mcpClosed = false;
 let failed = false,
   stderrBytes = 0;
 let callback: z.infer<typeof statusSchema>["callback"];
@@ -369,16 +371,18 @@ try {
       return { provider: other, logged_in: current.logged_in };
     });
   }
+  completed = true;
 } finally {
   if (client)
-    await observe("runtime_shutdown", async () =>
-      z
-        .object({ closed: z.literal(true) })
-        .parse(await call("deveco_restart", {})),
-    );
+    await observe("runtime_shutdown", async () => {
+      const result = z.object({ closed: z.literal(true) }).parse(await call("deveco_restart", {}));
+      runtimeClosed = result.closed;
+      return result;
+    });
   await observe("mcp_shutdown", async () => {
     await disconnect();
+    mcpClosed = true;
     return { closed: true };
   });
-  process.exitCode = failed ? 1 : 0;
+  finishAcceptance(path.join(root, "evidence.json"), tested, completed && !failed, runtimeClosed && mcpClosed);
 }

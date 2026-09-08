@@ -11,6 +11,22 @@ import { PersistentProcessObserver } from "../src/core/process-observer.js";
 import { EmulatorService } from "../src/services/emulator.js";
 import { errorResult } from "../src/core/errors.js";
 
+test("SDK's exact no-matching-images stderr denotes an empty inventory without hiding malformed output", async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-emulator-images-")), store = new StateStore(root), processes = new ProcessService();
+  let stdout = "", stderr = "No images matching the criteria were found.\n";
+  t.mock.method(processes, "run", async () => ({ stdout, stderr, truncated: false }));
+  const service = new EmulatorService(processes, store, (args) => ({ executable: "fixture", args }));
+  try {
+    assert.deepEqual(await service.manage({ action: "images", downloaded: true }), { images: [] });
+    stderr += "SDK connection failed\n";
+    await assert.rejects(service.manage({ action: "images", downloaded: true }));
+    stderr = "";
+    await assert.rejects(service.manage({ action: "images", downloaded: true }));
+    stdout = "[]";
+    assert.deepEqual(await service.manage({ action: "images", downloaded: true }), { images: [] });
+  } finally { await service.close(); await processes.close(); store.close(); fs.rmSync(root, { recursive: true, force: true }); }
+});
+
 test("emulator readiness returns while its launcher stays alive; shutdown confirms inventory and closes logs", async (t) => {
   const root = fs.realpathSync.native(
     fs.mkdtempSync(path.join(os.tmpdir(), "deveco-emulator-")),

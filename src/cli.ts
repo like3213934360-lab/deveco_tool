@@ -6,6 +6,11 @@ import { atomicWrite } from "./core/files.js";
 
 async function main() {
   const command = process.argv[2] ?? "mcp";
+  if (command === "maintenance") {
+    const { maintenance } = await import("./maintenance/upgrade.js");
+    await maintenance(process.argv.slice(3));
+    return;
+  }
   if (command === "internal-check") {
     const inputFile = process.argv[3],
       outputFile = process.argv[4];
@@ -46,7 +51,7 @@ async function main() {
     }
     return;
   }
-  throw new Error("Usage: deveco-tool [mcp|doctor]");
+  throw new Error("Usage: deveco-tool [mcp|doctor|maintenance]");
 }
 main().catch((error) => {
   process.stderr.write(JSON.stringify(errorResult(error)) + "\n");

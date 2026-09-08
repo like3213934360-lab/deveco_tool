@@ -42,19 +42,22 @@ export class PayloadCipher {
     this.key = localKey(file);
   }
   seal(id: string, payload: string): string {
+    return this.sealBytes(id, Buffer.from(payload)).toString("base64");
+  }
+  sealBytes(id: string, payload: Buffer): Buffer {
     const iv = crypto.randomBytes(12),
       encoder = crypto.createCipheriv("aes-256-gcm", this.key, iv);
     encoder.setAAD(Buffer.from(id));
     const encrypted = Buffer.concat([
-      encoder.update(payload, "utf8"),
+      encoder.update(payload),
       encoder.final(),
     ]);
-    return Buffer.concat([iv, encoder.getAuthTag(), encrypted]).toString(
-      "base64",
-    );
+    return Buffer.concat([iv, encoder.getAuthTag(), encrypted]);
   }
   open(id: string, value: string): string {
-    const bytes = Buffer.from(value, "base64");
+    return this.openBytes(id, Buffer.from(value, "base64")).toString("utf8");
+  }
+  openBytes(id: string, bytes: Buffer): Buffer {
     invariant(
       bytes.length >= 28,
       "STATE_INPUT_INVALID",
@@ -70,7 +73,7 @@ export class PayloadCipher {
     return Buffer.concat([
       decoder.update(bytes.subarray(28)),
       decoder.final(),
-    ]).toString("utf8");
+    ]);
   }
   close() {
     this.key.fill(0);

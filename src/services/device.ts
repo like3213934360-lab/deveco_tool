@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import { z } from "zod";
 import path from "node:path";
 import crypto from "node:crypto";
 import {
@@ -348,48 +349,48 @@ export class DeviceService {
     return this.store.lease(
       `device:${target}`,
       async () => {
-        let snapshot: Snapshot | undefined;
-        if (needsControlSnapshot(input)) {
-          snapshot = captured ?? (await this.snapshot(target, signal));
-          invariant(
-            snapshot.device === target &&
-              Date.now() - snapshot.created <= 30000 &&
+        const resolved = await this.store.privateMemo("control", { target, input }, async () => {
+          let snapshot: Snapshot | undefined;
+          if (needsControlSnapshot(input)) {
+            snapshot = captured ?? (await this.snapshot(target, signal));
+            invariant(snapshot.device === target && Date.now() - snapshot.created <= 30000 &&
               (!captured || this.snapshots.get(captured.id) === captured),
-            "SNAPSHOT_EXPIRED",
-            "The prepared control snapshot is no longer available",
-          );
-        }
-        const resolved = resolveControl(input, snapshot);
+              "SNAPSHOT_EXPIRED", "The prepared control snapshot is no longer available");
+          }
+          return resolveControl(input, snapshot);
+        }, (value) => controlSchema.parse(value));
         const args = uiInputArguments(resolved);
         this.invalidate(target);
         if (resolved.action === "inputText") {
           const { pasteText } = await import("./text.js");
-          return pasteText(
-            this,
-            target,
-            {
-              x: resolved.x!,
-              y: resolved.y!,
-              ...(resolved.display_id === undefined
-                ? {}
-                : { displayId: resolved.display_id }),
-            },
-            resolved.text!,
-            signal,
-          );
+          const resultSchema = z.object({ method: z.string(), commandAccepted: z.boolean(), outcomeVerified: z.boolean() });
+          return this.store.privateEffect("paste", { target, input, resolved }, () => pasteText(
+            this, target, { x: resolved.x!, y: resolved.y!,
+              ...(resolved.display_id === undefined ? {} : { displayId: resolved.display_id }) }, resolved.text!, signal),
+            (value) => resultSchema.parse(value), async () => {
+              // Only an explicit, stable field identity can establish the desired text after a lost RPC reply.
+              const selector = input.selector;
+              if (!selector || !(selector.key && selector.bundle_name)) return undefined;
+              const nodes = (await this.snapshot(target, signal)).query.select({ ...selector, text: undefined, value: undefined, limit: 2 });
+              const node = nodes.length === 1 ? nodes[0] : undefined;
+              if (!node || !/TextInput|TextArea|Search/.test(node.type ?? "") ||
+                (node.text !== resolved.text && node.value !== resolved.text)) return undefined;
+              return { method: "recovered-field-value", commandAccepted: false, outcomeVerified: true };
+            });
         }
-        const result = await this.shell(
-          target,
-          ["uitest", "uiInput", ...args],
-          signal,
-        );
-        const receipt = result.stdout.trim();
-        invariant(
-          !result.stderr.trim() && (receipt === "" || receipt === "No Error"),
-          "UI_ACTION_FAILED",
-          result.stdout + result.stderr,
-        );
-        return { commandAccepted: true, outcomeVerified: false };
+        const accept = (result: DeviceReceipt & { stderr?: string }) => {
+          const receipt = result.stdout.trim();
+          invariant(result.exitCode === 0 && !(result.stderr ?? "").trim() && (receipt === "" || receipt === "No Error"),
+            "UI_ACTION_FAILED", result.stdout + (result.stderr ?? ""));
+          return { commandAccepted: true, outcomeVerified: false };
+        };
+        const trace = currentTrace();
+        if (trace.run_id && trace.node) {
+          const result = await new DeviceEffectJournal(this.store, this).run(target, "control", ["uitest", "uiInput", ...args], accept, signal);
+          invariant(result, "UI_ACTION_UNCONFIRMED", "UI operation has no complete receipt");
+          return result;
+        }
+        return accept(await this.shell(target, ["uitest", "uiInput", ...args], signal));
       },
       signal,
     );
@@ -623,8 +624,11 @@ export class DeviceService {
     let uncertain = false,
       installing = false;
     try {
-      if (!recovery) {
-        await this.shell(target, ["mkdir", "-m", "700", remote], signal);
+      const dispatched = durable && this.store.operationState(trace.run_id!, `${trace.node}:device:install`) !== undefined;
+      if (!dispatched) {
+        // The private staging directory is repeatable only before bm dispatch.
+        // A durable install intent always takes the receipt path, never uploads again.
+        await this.shell(target, ["sh", "-c", `test ! -L '${remote}' && { test -d '${remote}' || mkdir -m 700 '${remote}'; }`], signal);
         for (const [index, file] of artifacts.entries()) {
           const transfer = await this.command(
             ["-t", target, "file", "send", file.path, remoteFiles[index]!],
@@ -685,7 +689,7 @@ export class DeviceService {
             };
           },
           signal,
-          recovery,
+          false,
           180000,
         );
         uncertain = result === undefined;
@@ -723,6 +727,21 @@ export class DeviceService {
         }
       }
     }
+  }
+  async stopApplication(target: string, bundle: string, signal?: AbortSignal) {
+    const args = ["aa", "force-stop", bundle];
+    const accept = (result: DeviceReceipt & { stderr?: string }) => {
+      invariant(result.exitCode === 0 && !/error|failed/i.test(result.stdout + (result.stderr ?? "")), "APP_STOP_FAILED", "Device did not confirm application stop");
+      this.invalidate(target);
+      return { stopped: true };
+    };
+    const trace = currentTrace();
+    if (trace.run_id && trace.node) {
+      const result = await new DeviceEffectJournal(this.store, this).run(target, "stop", args, accept, signal);
+      invariant(result, "APP_STOP_UNCONFIRMED", "Application stop has no completion receipt");
+      return result;
+    }
+    return accept(await this.shell(target, args, signal));
   }
   async launch(
     target: string,

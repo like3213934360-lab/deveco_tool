@@ -51,16 +51,44 @@ const uiResult = z.object({
   signature: z.string().regex(/^[a-f0-9]{64}$/),
   structureSignature: z.string().regex(/^[a-f0-9]{64}$/),
 });
+const crashLocation = z.object({
+  raw: z.string().max(2048),
+  stack_index: z.number().int().min(0).max(99),
+  file: z.string().max(2048),
+  line: z.number().int().min(1).max(2147483647),
+  column: z.number().int().min(1).max(2147483647).nullable(),
+  frame_bundle: z.string().max(256).nullable(),
+  module: z.string().max(256).nullable(),
+  version: z.string().max(128).nullable(),
+  score: z.number(),
+  classification: z.enum([
+    "dependency",
+    "application_candidate",
+    "unclassified",
+  ]),
+  reasons: z.array(z.string()).max(5),
+  file_verified: z.literal(false),
+});
 const crashResult = z.object({
   evidencePresent: z.boolean(),
   status: z.string(),
-  kind: z.string(),
-  error_message: nullableText,
+  kind: z.string().max(256),
+  error_message: z.string().max(2048).nullable(),
+  error_code: z.string().max(64).nullable(),
+  source_map_status: z.enum(["unavailable", "unspecified"]),
   source: nullableText,
   bundle: nullableText,
   process: nullableText,
   pid: nullableText,
   frames: z.array(z.string()).max(100),
+  ranked_frames: z.array(crashLocation).max(100),
+  suspected_location: crashLocation.nullable(),
+  suspected_file: z.string().max(2048).nullable(),
+  next_action: z.enum([
+    "collect_attributed_crash_evidence",
+    "inspect_candidate_source_and_compare_pattern_evidence",
+    "inspect_stack_or_collect_symbolized_evidence",
+  ]),
   excerpt: z.array(z.string()).max(32),
   event_count: z.number().int(),
   matching_event_count: z.number().int(),
@@ -69,7 +97,7 @@ const crashResult = z.object({
   unattributed_events: z.boolean(),
   diagnosisComplete: z.boolean(),
   compilationVerified: z.boolean(),
-});
+}) satisfies z.ZodType<ReturnType<typeof parseCrash>>;
 const lintResult = z.object({
   summary: z.object({
     files_reported: z.number().int().nonnegative(),

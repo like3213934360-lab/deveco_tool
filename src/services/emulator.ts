@@ -3,6 +3,7 @@ import fs from "node:fs";
 import { digest } from "../core/files.js";
 import { setTimeout as delay } from "node:timers/promises";
 import { ProcessService } from "../core/process.js";
+import { ManagedCommand } from "../core/managed-command.js";
 import { StateStore } from "../core/store.js";
 import { currentTrace } from "../core/trace.js";
 import { discoverToolchain, toolCommand } from "../core/toolchain.js";
@@ -10,6 +11,7 @@ import type { Command } from "../core/process.js";
 import { withinDeadline } from "../core/deadline.js";
 import { invariant } from "../core/errors.js";
 import { tools } from "../core/contracts.js";
+import { emulatorBinding, emulatorBindingSchema } from "./emulator-identity.js";
 import {
   emulatorLicenseLocation,
   emulatorLicenseStatus,
@@ -26,8 +28,17 @@ const instanceSchema = z.object({
   instancePath: z.string().optional(),
   "os.osVersion": z.string().optional(),
 });
+const resultSchema = z.object({
+  action: z.string().optional(), verified: z.boolean().optional(), recovered: z.boolean().optional(),
+  unchanged: z.boolean().optional(), accepted: z.boolean().optional(), license_sha256: z.string().optional(),
+  instance: instanceSchema.nullable().optional(), instances: z.array(instanceSchema).optional(),
+  images: z.array(z.object({ deviceType: z.string(), osVersion: z.string(), SoftWareVersion: z.string(), downloaded: z.union([z.boolean(), z.enum(["true", "false"])]).optional() })).optional(),
+  launcher_pid: z.number().optional(),
+  agreements: z.array(z.object({ name: z.string(), bytes: z.number(), sha256: z.string(), accepted: z.boolean(), artifact: z.object({ artifact_id: z.string(), bytes: z.number(), mime_type: z.string().optional() }).passthrough() })).optional(),
+});
 export class EmulatorService {
   private protocol?: { identity: string; help: string };
+  private readonly instanceGuards = new Map<string, ReturnType<StateStore["trackExternalSession"]>>();
   private readonly sessions = new Map<
     string,
     ReturnType<ProcessService["startSession"]>
@@ -47,10 +58,18 @@ export class EmulatorService {
     signal?: AbortSignal,
     timeoutMs = 30000,
   ) {
-    const result = await this.processes.run(this.command(args), {
-      signal,
-      timeoutMs,
-    });
+    const command = this.command(args), options = { signal, timeoutMs };
+    const mutation = !["-list", "-imageList", "-version", "-help"].includes(args[0] ?? "");
+    const trace = currentTrace();
+    if (mutation && trace.run_id && trace.node) {
+      const saved = await this.store.privateMemo(`emulator-command-${args[0]}`, {}, async () => args, (value) => z.array(z.string()).parse(value));
+      invariant(digest(saved) === digest(args), "INPUT_CHANGED", "Emulator command changed after preparation");
+    }
+    const result = mutation && trace.run_id && trace.node
+      ? await new ManagedCommand(this.store, this.processes).run(`emulator-${digest(args)}`, command, options,
+          (result) => ({ stdout: result.stdout, stderr: result.stderr, truncated: result.truncated }),
+          (value) => z.object({ stdout: z.string(), stderr: z.string(), truncated: z.boolean() }).parse(value), () => [])
+      : await this.processes.run(command, options);
     invariant(
       !result.truncated,
       "EMULATOR_OUTPUT_TRUNCATED",
@@ -63,6 +82,11 @@ export class EmulatorService {
       "EMULATOR_FAILED",
       (result.stdout + result.stderr).slice(-4000),
     );
+    // The installed SDK reports an empty image selection on stderr with exit 0.
+    // Only this exact read-only response denotes an empty list; other text and
+    // silent/malformed responses must not hide an SDK failure.
+    if (args[0] === "-imageList" && !result.stdout.trim() &&
+        result.stderr.trim() === "No images matching the criteria were found.") return "[]";
     return result.stdout;
   }
   async list(signal?: AbortSignal) {
@@ -80,9 +104,17 @@ export class EmulatorService {
       "EMULATOR_SESSION_CAPACITY",
       "At most four owned emulator sessions",
     );
-    const session = this.processes.startSession(
-      this.command(["-start", name, "-bootmode", "snapshot"]),
-    );
+    // Native launchers may detach outside their original process group. Preserve
+    // an inventory guard until BOTH the owned launcher and instance have stopped.
+    const guard = this.store.trackExternalSession("emulator_instance", ["emulator:inventory"], { name });
+    this.instanceGuards.set(name, guard);
+    let session: ReturnType<ProcessService["startSession"]>;
+    try {
+      session = this.processes.startSession(this.command(["-start", name, "-bootmode", "snapshot"]));
+    } catch (error) {
+      guard.unconfirmed();
+      throw error;
+    }
     this.sessions.set(name, session);
     try {
       return await withinDeadline(
@@ -140,6 +172,24 @@ export class EmulatorService {
       },
     );
     this.sessions.delete(name);
+    this.instanceGuards.get(name)?.confirmClosed();
+    this.instanceGuards.delete(name);
+  }
+  /** Orphaned live instances remain guarded. Inventory may retire a guard only
+   * after absence/stopped state and all launcher process groups confirm exit. */
+  async reconcileSessions(signal?: AbortSignal) {
+    const guards = this.store.externalGuards().filter((guard) => guard.kind === "emulator_instance");
+    if (!guards.length) return;
+    this.store.reconcile();
+    const inventory = await this.list(signal);
+    for (const guard of guards) {
+      const metadata = z.strictObject({ name: z.string() }).parse(JSON.parse(guard.metadata) as unknown);
+      if (inventory.some((item) => item.name === metadata.name && item.isRunning)) continue;
+      if (guard.run_id && this.store.db.prepare("SELECT id FROM managed_processes WHERE run_id=? AND status<>'exited'").get(guard.run_id)) continue;
+      this.store.recoverExternalSession(guard.id, (kind, raw) => {
+        invariant(kind === "emulator_instance" && digest(raw) === digest(metadata), "EMULATOR_IDENTITY_CHANGED", "Orphaned session identity changed");
+      });
+    }
   }
   async close() {
     this.protocol = undefined;
@@ -152,6 +202,57 @@ export class EmulatorService {
     if (failed?.status === "rejected") throw failed.reason;
   }
   async manage(raw: unknown, signal?: AbortSignal) {
+    const input = tools.emulator_manage.schema.parse(raw);
+    if (["list", "images", "license_view"].includes(input.action)) return resultSchema.parse(await this.manageNative(input, signal));
+    if (input.action === "stop") {
+      const instance = (await this.list(signal)).find((item) => item.name === input.name);
+      if (instance?.isRunning) await this.bindTarget(instance, input.target!, signal);
+    }
+    const execute = async () => resultSchema.parse(await this.manageNative(input, signal));
+    const verified = async (result: z.infer<typeof resultSchema>) => {
+      const trace = currentTrace();
+      if (trace.run_id && trace.node && input.action !== "start") {
+        const flag = input.action === "license_accept" ? "-license" : input.action === "image_install" ? "-install" : input.action === "image_uninstall" ? "-uninstall" : `-${input.action}`;
+        const args = await this.store.readPrivateMemo(`emulator-command-${flag}`, {}, (value) => z.array(z.string()).parse(value));
+        if (args) this.store.settleReconciledChildren([`emulator-${digest(args)}`], { action: input.action, input_sha256: digest(input), result });
+      }
+      return result;
+    };
+    return this.store.privateEffect(`emulator-${input.action}`, input, execute, (value) => resultSchema.parse(value), async () => {
+      if (input.action === "license_accept") return verified(await execute());
+      if (input.action === "image_install" || input.action === "image_uninstall") {
+        const images = await this.images(input.device_type, true, signal);
+        const present = images.some((item) => item.osVersion === input.os_version || item.SoftWareVersion === input.os_version);
+        if (present === (input.action === "image_install")) return verified({ action: input.action, verified: true, recovered: true });
+        return execute(); // The command journal prevents redispatch of an existing uncertain command.
+      }
+      const instance = (await this.list(signal)).find((item) => item.name === input.name);
+      if ((input.action === "delete" && !instance) ||
+        (input.action === "stop" && instance && !instance.isRunning) ||
+        (input.action === "create" && instance && instance.deviceType === input.device_type && instance["os.osVersion"] === input.os_version))
+        return verified({ action: input.action, verified: true, recovered: true, instance: instance ?? null });
+      // Launchers are long-lived sessions and must never be relaunched after an ambiguous start.
+      if (input.action === "start") return undefined;
+      return execute();
+    });
+  }
+  async binding(name: string, target: string, signal?: AbortSignal) {
+    const matches = (await this.list(signal)).filter((item) => item.name === name && item.isRunning);
+    invariant(matches.length === 1, "EMULATOR_IDENTITY_UNAVAILABLE", "Select one running native instance before binding its device");
+    return this.bindTarget(matches[0]!, target, signal);
+  }
+  private async bindTarget(instance: z.infer<typeof instanceSchema>, target: string, signal?: AbortSignal) {
+    const current = await emulatorBinding(instance.name, instance.instancePath, target, async () => {
+      const result = await this.processes.run(toolCommand(discoverToolchain(), "hdc", ["-t", target, "shell", "param", "get", "ohos.qemu.hvd.name"]), { signal, timeoutMs: 10000 });
+      invariant(!result.truncated && !result.stderr.trim() && Buffer.byteLength(result.stdout) <= 1024,
+        "EMULATOR_IDENTITY_INVALID", "Guest instance identity response is incomplete");
+      return result.stdout.trim();
+    });
+    const saved = await this.store.privateMemo(`emulator-binding-${instance.name}`, { name: instance.name, target }, () => Promise.resolve(current), (value) => emulatorBindingSchema.parse(value));
+    invariant(saved.name === current.name && saved.instance === current.instance && saved.uuid === current.uuid && saved.target === current.target && saved.port === current.port, "EMULATOR_IDENTITY_CHANGED", "Emulator target changed after this operation was submitted");
+    return current;
+  }
+  private async manageNative(raw: unknown, signal?: AbortSignal) {
     const input = tools.emulator_manage.schema.parse(raw);
     if (input.action === "license_view" || input.action === "license_accept")
       return this.license(input.action, input.license_sha256, signal);
@@ -172,6 +273,7 @@ export class EmulatorService {
             "IMAGE_INPUT_REQUIRED",
             "device_type and os_version required",
           );
+          if (input.action === "image_uninstall") invariant(!(await this.list(signal)).some((instance) => instance.isRunning && (!instance.deviceType || instance.deviceType === input.device_type)), "IMAGE_IN_USE", "Stop instances using this image before uninstalling it");
           const before = await this.images(
             input.device_type,
             undefined,
@@ -283,6 +385,8 @@ export class EmulatorService {
             if (input.action === "stop" && owned) {
               await owned.stop();
               this.sessions.delete(input.name);
+              this.instanceGuards.get(input.name)?.confirmClosed();
+              this.instanceGuards.delete(input.name);
             }
             return {
               action: input.action,
@@ -424,13 +528,13 @@ export class EmulatorService {
       "emulator:inventory",
       async () => {
         const help = await this.scenarioHelp(signal);
+        const instance = (await this.list(signal)).find((item) => item.name === input.name && item.isRunning);
         invariant(
-          (await this.list(signal)).some(
-            (item) => item.name === input.name && item.isRunning,
-          ),
+          instance,
           "EMULATOR_NOT_RUNNING",
           "Scenario requires a running emulator",
         );
+        await this.bindTarget(instance, input.target, signal);
         const commands = {
           shake: "shake",
           power: "power",

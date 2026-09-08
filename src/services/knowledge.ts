@@ -10,6 +10,11 @@ import { StateStore } from "../core/store.js";
 import { currentTrace } from "../core/trace.js";
 import { AuthService, httpRequest } from "./auth.js";
 import {
+  compileCrashReference,
+  matchCrashPatterns,
+  type CrashPattern,
+} from "./crash-patterns.js";
+import {
   docCatalogNames,
   docCatalogTitles,
   type DocCatalog,
@@ -64,6 +69,7 @@ export class KnowledgeService {
     );
   private index?: Database.Database;
   private archive?: AdmZip;
+  private runtimePatterns?: CrashPattern[];
   constructor(
     readonly store: StateStore,
     readonly auth: AuthService,
@@ -236,6 +242,67 @@ export class KnowledgeService {
       offset,
       next_offset: Math.min(total, offset + limit),
       documents: documents.map(docMetadata),
+    };
+  }
+  crashCases(raw: unknown) {
+    const signature = z
+      .object({
+        status: z.enum([
+          "detected",
+          "insufficient_evidence",
+          "no_crash_signature",
+        ]),
+        kind: z.string().max(256),
+        error_message: z.string().max(2048).nullable(),
+        error_code: z.string().max(64).nullable(),
+        selection_complete: z.boolean(),
+      })
+      .parse(raw);
+    if (!this.runtimePatterns) {
+      const entries = this.entries.filter((entry) =>
+        entry.id.startsWith("arkts-runtime-fix/"),
+      );
+      invariant(
+        entries.length > 0 && entries.length <= 16,
+        "CRASH_KNOWLEDGE_MISSING",
+        "Reviewed runtime case references are missing or exceed the bound",
+      );
+      this.runtimePatterns = entries.flatMap((entry) => {
+        const file = inside(resourceRoot, entry.file);
+        invariant(
+          fileDigest(file) === entry.sha256,
+          "KNOWLEDGE_DIGEST_MISMATCH",
+          "Runtime case reference failed integrity verification",
+        );
+        return compileCrashReference(entry.id, fs.readFileSync(file, "utf8"));
+      });
+    }
+    const matches = matchCrashPatterns(this.runtimePatterns, signature);
+    const selected =
+      signature.status === "detected"
+        ? this.runtimePatterns.filter(
+            (pattern) =>
+              pattern.error_name === signature.kind ||
+              (pattern.error_name === "Error" && signature.kind === "ApiError"),
+          )
+        : [];
+    const ids = new Set(selected.map((pattern) => pattern.source_id));
+    return {
+      source: "local",
+      matches,
+      status:
+        signature.status !== "detected"
+          ? "evidence_required"
+          : matches.length
+            ? "candidate_patterns"
+            : ids.size
+              ? "unlisted_subtype"
+              : "unlisted_error_type",
+      // Only metadata is returned; complete references remain available through harmony_knowledge.read.
+      references: this.entries
+        .filter((entry) => ids.has(entry.id))
+        .map(({ file: _file, ...entry }) => entry),
+      root_cause_verified: false,
     };
   }
   read(id: string, offset = 0, limit = 16384) {

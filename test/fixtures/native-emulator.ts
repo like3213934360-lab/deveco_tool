@@ -14,6 +14,7 @@ const read = () =>
       name: z.string(),
       isRunning: z.boolean(),
       pid: z.number().optional(),
+      instancePath: z.string().optional(),
     })
     .parse(JSON.parse(fs.readFileSync(file, "utf8")) as unknown);
 if (action === "-list") process.stdout.write(JSON.stringify([read()]));
@@ -24,7 +25,7 @@ else if (action === "-start") {
     JSON.stringify({ ...state, isRunning: true, pid: process.pid }),
   );
   const stop = () => {
-    atomicWrite(file, JSON.stringify({ name: state.name, isRunning: false }));
+    atomicWrite(file, JSON.stringify({ ...state, isRunning: false, pid: undefined }));
     process.exit(0);
   };
   process.on("SIGTERM", stop);

@@ -1,3 +1,4 @@
+import { finishAcceptance } from "./lib/acceptance-report.js";
 import fs from "node:fs";
 import path from "node:path";
 import assert from "node:assert/strict";
@@ -14,6 +15,7 @@ const root = path.resolve(z.string().min(1).parse(process.argv[2]));
 assert.equal(fs.existsSync(root), false, "Use a new evidence directory");
 fs.mkdirSync(root, { recursive: true, mode: 0o700 });
 process.env.DEVECO_STATE_DIR = path.join(root, "state");
+let completed = false;
 const tested = evidenceIdentity(),
   runtime = new Runtime(),
   toolchain = discoverToolchain();
@@ -127,13 +129,28 @@ try {
     const stale =
       (review.license_sha256.startsWith("0") ? "1" : "0") +
       review.license_sha256.slice(1);
-    await assert.rejects(
-      runtime.call("emulator_manage", {
+    const submitted = z.object({ run_id: z.string() }).parse(
+      await runtime.call("emulator_manage", {
         action: "license_accept",
         license_sha256: stale,
       }),
-      { code: "EMULATOR_LICENSE_CHANGED" },
     );
+    const deadline = performance.now() + 30000;
+    for (;;) {
+      const state = z.object({ status: z.string(), error: z.unknown().optional(), result: z.unknown().optional() }).parse(
+        await runtime.call("workflow_run", { action: "status", run_id: submitted.run_id, wait_ms: 1000 }),
+      );
+      if (["queued", "running"].includes(state.status)) { assert.ok(performance.now() < deadline); continue; }
+      assert.ok(["failed", "needs_input"].includes(state.status));
+      let failure: unknown = state.error ?? z.object({ interrupts: z.array(z.object({ value: z.object({ error: z.unknown() }) })).length(1) }).parse(state.result).interrupts[0]!.value.error;
+      for (let depth = 0; depth < 8; depth++) {
+        const parsed = z.object({ code: z.string(), details: z.object({ cause: z.unknown() }).nullish() }).parse(failure);
+        if (parsed.code !== "EFFECT_UNCERTAIN") { assert.equal(parsed.code, "EMULATOR_LICENSE_CHANGED"); break; }
+        assert.ok(parsed.details && depth < 7);
+        failure = parsed.details.cause;
+      }
+      break;
+    }
     return { rejected: true };
   });
   await observe("native_configuration_unchanged", async () => {
@@ -147,7 +164,14 @@ try {
     );
     return { byte_identical: true, mtime_unchanged: true };
   });
+  completed = true;
 } finally {
-  await observe("runtime_shutdown", () => runtime.close());
-  process.exitCode = failed ? 1 : 0;
+  let closed = false;
+  await observe("runtime_shutdown", async () => {
+    const result = await runtime.close();
+    closed = result.closed;
+    return result;
+  });
+  finishAcceptance(path.join(root, "evidence.json"), tested, completed && !failed, closed);
+  if (failed) process.exitCode = 1;
 }

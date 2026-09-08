@@ -1,6 +1,6 @@
 # 编译产物安装与升级验证
 
-当前生成的是安装验收候选包，`private: true`；迁移、设备及性能发布门槛仍须完成，不能将此包当成正式 Release。包中只包含编译后的原生运行模块、已核对出处的资源、生产依赖锁、许可证和本说明。不会携带 TypeScript 编译器、官方 CLI、CodeGenie 子 MCP、Skill 安装程序、开发测试或旧启动入口。
+分发工具生成的安装验收候选包使用 `private: true`（仓库根 package.json 为 `private: false`，仅正式发布流水线允许发布）；迁移、设备及性能发布门槛仍须完成，不能将此包当成正式 Release。包中只包含编译后的原生运行模块、已核对出处的资源、生产依赖锁、许可证和本说明。不会携带 TypeScript 编译器、官方 CLI、CodeGenie 子 MCP、Skill 安装程序、开发测试或旧启动入口。
 
 ## 生成候选包
 
@@ -28,4 +28,32 @@ ZIP 包含 package-lock.json（npm pack 默认会排除这个文件）。封装�
 6. 运行 `node dist/src/cli.js doctor`，再执行创建、构建、设备及既有 UI 流程验收。安装检查只证明基础运行、资源和持久化可用，不代替这些专项验证。
 7. 依据可核对的本项目安装记录清理其安装的官方 Skill；用户自行维护的 Skill 不属于自动删除范围。
 
-回退时先结束新版任务和会话，再将宿主切回前一个完整安装目录及对应配置；按其 Node 版本重新安装依赖。执行协议不同的版本使用独立状态目录，历史报告导出为静态文件，不用旧引擎解码新版任务。软件回退不会撤销工程修改、签名、安装或设备输入。当前步骤不自动改写宿主配置、不自动删除 Skill，也不发布 Release。
+回退时先结束新版任务和会话，再将宿主切回前一个完整安装目录及对应配置；按其 Node 版本重新安装依赖。执行协议不同的版本使用独立状态目录，历史报告导出为静态文件，不用旧引擎解码新版任务。软件回退不会撤销工程修改、签名、安装或设备输入。维护命令可以在固定计划和摘要核对后改写所选宿主配置；Skill 清理由独立计划明确列出删除及保留项。它们不会发布 Release。
+
+
+## 持久化切换命令
+
+先完成新目录的生产依赖安装和 `native-installation-check`，再使用该目录的 Node 22.18+ / 24 与 `dist/src/cli.js maintenance`。不要用系统 Node 26 安装的原生模块充当新安装。维护计划固定运行文件、实际 node_modules 字节、依赖锁、Node 可执行文件、宿主配置和用户流程摘要。
+
+```sh
+/absolute/node24 /absolute/new-install/dist/src/cli.js maintenance plan /private/spec.json /private/plan.json
+/absolute/node24 /absolute/new-install/dist/src/cli.js maintenance apply /private/plan.json /private/new-upgrade-journal --sessions-ended
+/absolute/node24 /absolute/new-install/dist/src/cli.js maintenance rollback /private/new-upgrade-journal --sessions-ended
+```
+
+spec 包含 `host_config`、`host_format`（`codex-toml` 或 `mcp-json`）、`server`、`installation`、`node`、新的 `state_dir`、`configuration`、`flow_files` 和旧状态目录 `previous_state_dirs`。两个完整安装目录必须互不包含。`--sessions-ended` 是操作者已经结束会话的声明；命令仍只读检查进程和指定状态库，发现未终结任务或未关闭外部会话会拒绝。不会替用户强杀不明进程。
+
+Codex TOML 保留所选 MCP 的超时、启用和工具权限字段，也保留其他 MCP 配置，仅替换启动字段及环境；不支持无损处理的启动字段语法明确拒绝。[Codex MCP 配置字段](https://learn.chatgpt.com/docs/extend/mcp?surface=cli)定义了这些启动和权限设置。全配置回退记录加密存储在私有 journal，不复制到仓库。认证重新登录，旧状态库不导入新执行协议；计划中的用户流程文件逐个核对并原位保留。
+
+### 当前旧入口缺失的修复
+
+当宿主记录的 `src/server.mjs` 已不存在，使用 `mode: "repair_missing_entry"`。该模式只允许旧入口确实缺失、有可识别的旧安装根目录、新目录完整且会话检查通过的情况。它不要求虚假的 `--sessions-ended` 声明，返回 `rollback_available:false`。记录旧配置用于审计，但拒绝将恢复损坏入口称为软件回退。普通升级仍要求保留前一个完整安装。
+
+### 已安装 Skill 的精确清理
+
+```sh
+/absolute/node24 /absolute/new-install/dist/src/cli.js maintenance skills-plan /absolute/host/skills /absolute/old-install /private/skills-plan.json
+/absolute/node24 /absolute/new-install/dist/src/cli.js maintenance skills-apply /private/skills-plan.json
+```
+
+只识别 `.deveco-tool-host.json` 声明属于指定旧安装、且匹配 `provenance/installed-skill-fingerprints.json` 的副本或链接。修改过的文件、额外空目录、链接目标变化及未知来源均保留。断开的原有链接只删除链接本身。执行前再次核对文件身份与摘要；中断记录支持同一计划继续，第三种内容拒绝，用户维护的 Skill 不受影响。

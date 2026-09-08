@@ -1,3 +1,4 @@
+import { finishAcceptance } from "./lib/acceptance-report.js";
 import fs from "node:fs";
 import path from "node:path";
 import assert from "node:assert/strict";
@@ -14,6 +15,7 @@ const root = path.resolve(z.string().min(1).parse(process.argv[2])),
 assert.equal(fs.existsSync(root), false, "Evidence directory must be new");
 fs.mkdirSync(root, { recursive: true, mode: 0o700 });
 process.env.DEVECO_STATE_DIR = path.join(root, "state");
+let completed = false;
 const tested = evidenceIdentity(),
   runtime = new Runtime(),
   toolchain = discoverToolchain();
@@ -303,7 +305,14 @@ try {
       limit: 3,
     }),
   );
+  completed = true;
 } finally {
-  await observe("runtime_shutdown", async () => runtime.close());
-  process.exitCode = failed ? 1 : 0;
+  let closed = false;
+  await observe("runtime_shutdown", async () => {
+    const result = await runtime.close();
+    closed = result.closed;
+    return result;
+  });
+  finishAcceptance(path.join(root, "evidence.json"), tested, completed && !failed, closed);
+  if (failed) process.exitCode = 1;
 }

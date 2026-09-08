@@ -1,3 +1,4 @@
+import { finishAcceptance } from "./lib/acceptance-report.js";
 import fs from "node:fs";
 import path from "node:path";
 import assert from "node:assert/strict";
@@ -155,6 +156,7 @@ function save() {
       2,
     ),
   );
+  return comparisons.every((item) => item.within_five_percent_every_round);
 }
 try {
   for (let round = 1; round <= rounds; round++) {
@@ -302,5 +304,6 @@ try {
     cause instanceof Error ? (cause.stack ?? cause.message) : String(cause);
   throw cause;
 } finally {
-  save();
+  const withinLimits = save();
+  finishAcceptance(path.join(output, "evidence.json"), tested, completed && withinLimits && error === null, completed);
 }

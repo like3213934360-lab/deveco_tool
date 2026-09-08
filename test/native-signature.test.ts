@@ -3,11 +3,24 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { StateStore } from "../src/core/store.js";
 import { ProcessService, type Command } from "../src/core/process.js";
 import { AuthService } from "../src/services/auth.js";
-import { SignatureService } from "../src/services/signature.js";
+import { SignatureService, certificateForCsr } from "../src/services/signature.js";
 import { atomicWrite, fileDigest } from "../src/core/files.js";
+
+test("CSR identity selects the matching certificate in any chain order and rejects absent or duplicated keys", () => {
+  const root = fileURLToPath(new URL("../../test/fixtures/certificate-key/", import.meta.url)),
+    csr = fs.readFileSync(path.join(root, "request.pem"), "utf8"),
+    matching = fs.readFileSync(path.join(root, "matching.pem")), other = fs.readFileSync(path.join(root, "other.pem"));
+  const expected = certificateForCsr(matching, csr);
+  for (const chain of [Buffer.concat([other, matching]), Buffer.concat([matching, other]), expected.raw])
+    assert.equal(certificateForCsr(chain, csr).fingerprint256, expected.fingerprint256);
+  assert.throws(() => certificateForCsr(other, csr), { code: "CERT_KEY_MISMATCH" });
+  assert.throws(() => certificateForCsr(Buffer.concat([matching, matching]), csr), { code: "CERT_KEY_MISMATCH" });
+  assert.throws(() => certificateForCsr(Buffer.concat([matching, Buffer.from("unexpected suffix")]), csr), { code: "CERT_CHAIN_INVALID" });
+});
 
 test("signature verification supplies required SDK output paths, checks both extracts, and releases its bounded directory on failure", async (t) => {
   const root = fs.realpathSync(

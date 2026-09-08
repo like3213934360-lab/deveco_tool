@@ -10,7 +10,8 @@
       "reason": "Review the upstream behavior against its native replacement and regression evidence.",
       "targets": [
         "src/services/project.ts",
-        "resources/templates/application"
+        "resources/templates/application",
+        "provenance/resources.json"
       ],
       "tests": [
         "test/native-project.test.ts",
@@ -44,7 +45,9 @@
         "src/services/checker.ts",
         "resources/knowledge.json",
         "src/services/checker-project.ts",
-        "src/services/checker-report.ts"
+        "src/services/checker-report.ts",
+        "resources/knowledge/arkts-error-fixes",
+        "provenance/resources.json"
       ],
       "tests": [
         "test/native-runtime.test.ts",
@@ -64,7 +67,9 @@
         "src/services/checker.ts",
         "resources/knowledge.json",
         "src/services/checker-project.ts",
-        "src/services/checker-report.ts"
+        "src/services/checker-report.ts",
+        "resources/knowledge/arkts-grammar-standards",
+        "provenance/resources.json"
       ],
       "tests": [
         "test/native-runtime.test.ts",
@@ -82,11 +87,18 @@
       "reason": "Review the upstream behavior against its native replacement and regression evidence.",
       "targets": [
         "src/services/crash.ts",
+        "src/services/crash-frames.ts",
+        "src/services/crash-patterns.ts",
+        "src/services/knowledge.ts",
         "src/services/logs.ts",
-        "resources/knowledge.json"
+        "resources/knowledge.json",
+        "resources/knowledge/arkts-runtime-fix",
+        "provenance/resources.json"
       ],
       "tests": [
-        "test/native-logs.test.ts"
+        "test/native-logs.test.ts",
+        "test/native-crash.test.ts",
+        "scripts/native-crash-acceptance.ts"
       ]
     },
     {

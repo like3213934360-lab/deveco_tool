@@ -1,35 +1,12 @@
-# 当前资产清单
+# 当前资产与运行入口
 
-`manifest.json` 是机器可读的唯一清单；本文件说明各层职责。
+本仓库仅运行编译后的原生 TypeScript MCP。入口为 `dist/src/cli.js`；`src`、`scripts`、`test` 为严格 TypeScript，HarmonyOS 工程夹具及原生设备库按各自格式保留。
 
-## 选用的官方 Skill（5 个）
+- 25 个公开工具与 8 个公开工作流：`src/core/contracts.ts`、`src/core/catalog.ts`。
+- 内部固定任务：UI 流程、录制、签名变更、热重载准备/应用和模拟器变更，共用 LangGraph 与 SQLite；不是公开的任意脚本执行器。
+- 资源：`resources/knowledge.json`、规则和案例、工程模板、文档、Hypium 原生组件。每份资源均列入 `resources.json`，保留来源与摘要。
+- 上游更新：`upstream-lock.json` 固定来源，`upstream-mapping.json` 指定适配/排除与检查目标；候选使用检测、审阅、应用、验收和发布门禁。
+- 迁移审计：`baseline-capabilities.json` 保存旧能力契约，`migration-matrix.json` 记录每个参数和动作的替代或删除理由。归类完成不等于验收通过。
+- 安装清理：`installed-skill-fingerprints.json` 仅保存旧安装器输出的摘要；维护工具同时要求本项目安装记录，拒绝删除用户改过的副本或改变目标的链接。
 
-| Skill | 文件构成 | 主要用途 |
-|---|---:|---|
-| `arkts-error-fixes` | `SKILL.md`、`references/`、`assets/` | ArkTS 编译错误和类型问题 |
-| `arkts-grammar-standards` | `SKILL.md`、`references/` | ArkTSLinter、语法与 ArkUI 结构规则 |
-| `arkts-runtime-fix` | `SKILL.md`、`references/`、`scripts/` | JS crash、faultlogger、Hilog 诊断 |
-| `deveco-cli` | `SKILL.md` | DevEco CLI 命令使用规范 |
-| `deveco-create-project` | `SKILL.md`、`FILES.md`、`scripts/` | ArkTS 工程创建 |
-
-这 5 个目录与 DevEco Code `v0.1.11` 固定提交中的对应 Skill 目录逐字节一致；本地只额外维护
-`skills/INDEX.md` 作为索引。上游第 6 个 `customize-deveco` 因只服务于 DevEco Code 自身配置而未纳入当前产品范围。
-
-## 注册脚本（7 个）
-
-| Skill | 脚本 ID |
-|---|---|
-| `deveco-create-project` | `copy_template`、`detect_sdk` |
-| `arkts-runtime-fix` | `collect_hilog`、`fetch_faultlog`、`jscrash_report`、`parse_jscrash_log`、`probe_faultlogger` |
-
-这些入口由 `src/script-registry.mjs` 以静态白名单公开，不允许执行任意路径或 Shell 文本。
-
-## MCP（40 个工具）
-
-统一入口是 `src/server.mjs`。工具按项目上下文、认证和知识、语言服务、诊断、构建部署、
-设备 UI 和模拟器分组；完整名称和数量见 `manifest.json` 的 `mcp.toolGroups`。
-
-## 不再分发的 Skill
-
-此前的派生 Skill、未发布分支 Skill 以及 `HarmonyOS_Skills/harmonyos-agent-skills` 内容均已删除。
-安装器只会发现并安装上表中的官方 Skill，不再区分 core/extended 内容来源。
+旧 CLI、子 MCP、Skill 定义、安装器、脚本注册和兼容启动入口已退出当前运行图。历史来源锁与缺陷记录用于追溯，不加载旧执行引擎。

@@ -1,6 +1,8 @@
 # 原生 TypeScript 迁移执行记录
 
-更新日期：2026-09-08。当前处于开发与验收阶段，尚未切换默认入口或发布重构版本。开发分支用于跨平台 CI，最终发布仍受下列门槛约束。
+> 以下保留历史迁移与验收记录。当前代码已切到唯一原生入口并删除旧架构，本批实现与待统一测试范围以 [完成清单](native-completion.md) 为准；历史数字不证明当前代码通过。
+
+更新日期：2026-09-08。当前处于统一验收阶段，仓库和本机宿主已使用编译入口，重构版本尚未发布。下方保留各历史阶段的原始范围；最新分项结果见 [完成清单](native-completion.md)。开发分支用于跨平台 CI，最终发布仍受验收门槛约束。
 
 基线提交：`aab1405b51e00e4036bdc8f18ae4229835de77b0`。开发分支：`codex/native-typescript-runtime`。
 
@@ -132,3 +134,9 @@ node dist/scripts/native-benchmark.js /absolute/baseline-checkout /absolute/new-
 使用 Node 22/24 时必须在对应环境安装 SQLite 原生依赖，不能直接使用另一 Node ABI 编译的 `node_modules`。验收必须记录实际 SDK、设备、源码与锁文件，不以语言迁移本身证明性能改善。
 
 日志协议对照：[OpenHarmony Hilog 文档](https://raw.githubusercontent.com/openharmony/docs/master/zh-cn/application-dev/dfx/hilog.md)。`-e` 仅筛选消息内容，整行 `contains` 使用 `grep -F`；`-r` 的默认范围是 app/core buffer。新实现未继承旧组件参数回退分支。
+
+## 接收当前行为验收
+
+使用 `node dist/scripts/migration-accept.js PLAN.json` 接收一行已完成的迁移验收。计划包含 `format: 1`、`source`（`tools:旧工具名` 或 `scripts:旧脚本ID`）、`reviewer`、具体 `reason`、与该行全部 `remaining` 相符的 `completed_scenarios`，以及 `checks: [{check, report, sha256}]`。每个映射检查必须在当前版本的通过报告中实际执行；报告绑定运行代码、全部编译文件、依赖锁、资源和上游锁的摘要。
+
+程序写入字段白名单凭证，原始路径、设备和凭据不进入出处目录；同一计划可重试。发布门禁重新核对全部行与凭证，历史文档或手动修改 `verified` 不能替代当前验收。此命令不运行测试，也不会自动证明人工声明的场景，评审者必须先核实报告的真实覆盖范围。

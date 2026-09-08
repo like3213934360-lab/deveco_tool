@@ -36,6 +36,7 @@ import {
 } from "../core/captured-file.js";
 import { CpuPool } from "../core/cpu-pool.js";
 import { currentTrace } from "../core/trace.js";
+import { signingDescriptorFiles } from "./signing-config.js";
 import { ProcessService } from "../core/process.js";
 import { PersistentProcessObserver } from "../core/process-observer.js";
 import type {
@@ -266,6 +267,8 @@ export class Runtime {
     return context;
   }
   private async validate(context: WorkflowContext, workflow: string) {
+    if (workflow === "native_operation" && String(context.parameters.tool).startsWith("emulator_")) await this.emulator.reconcileSessions();
+    for (const file of context.input_files ?? []) invariant(fs.existsSync(file.path) && fileDigest(file.path) === file.sha256, "INPUT_CHANGED", "A captured operation input file changed");
     if (context.toolchain_hash)
       invariant(
         digest(discoverToolchain()) === context.toolchain_hash,
@@ -288,7 +291,7 @@ export class Runtime {
     if (context.target) {
       const recording = recordingTaskSchema.safeParse(context.parameters);
       if (
-        ["ui_flow", "ui_record", "app_deploy", "build_deploy_verify"].includes(
+        ["ui_flow", "ui_record", "app_deploy", "build_deploy_verify", "native_operation"].includes(
           workflow,
         )
       )
@@ -296,12 +299,14 @@ export class Runtime {
           context.target,
           recording.success ? recording.data.draft.id : undefined,
         );
-      await this.devices.target(context.target);
+      if (!(workflow === "native_operation" && context.parameters.tool === "emulator_manage" && object(context.parameters.input).action === "stop")) await this.devices.target(context.target);
     }
     if (context.flow)
       invariant(
-        digest(this.flows.read(this.project(context), context.flow.id)) ===
-          digest(context.flow),
+        digest(this.flows.read(this.project(context), context.flow.id)) === digest(context.flow) ||
+          (!!currentTrace().run_id && this.store.operationMatches(currentTrace().run_id!, `execute_ui_path:flow:${context.flow.id}:save-repairs:private:save`, {
+            before: digest(context.flow), after: digest(this.flows.read(this.project(context), context.flow.id)),
+          })),
         "FLOW_CHANGED",
         "Saved flow changed after submission; start a new run",
       );
@@ -324,10 +329,30 @@ export class Runtime {
       execute: WorkflowStep["execute"],
       reconcile?: WorkflowStep["reconcile"],
     ): WorkflowStep => ({ id, kind: "effect", execute, reconcile });
+    const resumable = (id: string, execute: WorkflowStep["execute"]): WorkflowStep => effect(id, execute, execute);
     const read = (
       id: string,
       execute: WorkflowStep["execute"],
     ): WorkflowStep => ({ id, kind: "read", execute });
+    definitions.push({
+      id: "native_operation", description: "A fixed native signing, emulator or hot-patch operation",
+      capabilities: [], completion: "The native service returns a verified result or a durable acknowledgement with explicit verification limits",
+      resources: (context) => [
+        ...(context.project_path ? [`project:${context.project_path}`] : []),
+        ...(context.target ? [`device:${context.target}`] : []),
+        ...(String(context.parameters.tool).startsWith("emulator_") ? ["emulator:inventory"] : []),
+        ...(context.parameters.tool === "app_signature" && typeof object(context.parameters.input).team_id === "string" ? [`signing:${String(object(context.parameters.input).team_id)}`] : []),
+        ...(typeof object(context.parameters.input).output === "string" ? [`file:${String(object(context.parameters.input).output)}`] : []),
+      ],
+      steps: [resumable("execute_native_operation", async (call) => {
+        const input = object(call.context.parameters.input), name = call.context.parameters.tool;
+        if (name === "app_signature") return this.signatures.call(input, call.context.project_path ? this.project(call.context) : undefined, call.signal);
+        if (name === "emulator_manage") return this.emulator.manage(input, call.signal);
+        if (name === "emulator_scenario") return this.emulator.scenario(input, call.signal);
+        invariant(name === "hot_reload", "OPERATION_UNKNOWN", "Unknown native operation");
+        return this.hot.call(input, this.project(call.context), call.signal);
+      })],
+    });
     // Existing saved flows and declared navigation are fixed internal jobs, managed
     // through workflow_run. They do not add a client-supplied workflow DSL/catalog entry.
     definitions.push({
@@ -387,7 +412,7 @@ export class Runtime {
                   input.app,
                   call.signal,
                 )
-              : undefined;
+              : this.flows.run(this.project(call.context), call.context.flow!.id, text(call.context.target, "target"), input.variables, call.signal, call.context.flow);
           },
         ),
         read("final_assertion", async (call) => {
@@ -431,12 +456,12 @@ export class Runtime {
             draft,
           );
         }),
-        effect("stop_recording_app", async (call) => {
+        resumable("stop_recording_app", async (call) => {
           const { draft } = recordingTaskSchema.parse(call.context.parameters);
           if (draft.start.mode === "attach") return { skipped: true };
-          await this.devices.shell(
+          await this.devices.stopApplication(
             text(call.context.target, "target"),
-            ["aa", "force-stop", draft.app.bundleName],
+            draft.app.bundleName,
             call.signal,
           );
           return { stopped: true };
@@ -679,7 +704,7 @@ export class Runtime {
     define("build_deploy_verify", [
       effect("sync_project", syncBeforeDeploy, syncBeforeDeploy),
       effect("build_or_hot_apply", buildOrApply, async (call) =>
-        call.context.parameters.hot_reload ? undefined : buildOrApply(call),
+        buildOrApply(call),
       ),
       read("prepare_installation", async (call) => {
         const input = workflowInputs.build_deploy_verify.parse(
@@ -765,7 +790,7 @@ export class Runtime {
               );
         },
       ),
-      effect("execute_ui_path", async (call) => {
+      resumable("execute_ui_path", async (call) => {
         const input = workflowInputs.build_deploy_verify.parse(
           call.context.parameters,
         );
@@ -899,7 +924,7 @@ export class Runtime {
         const parsed = this.output(call, "parse_crash");
         return {
           diagnosis: parsed,
-          knowledge: this.knowledge.search(String(object(parsed).kind), 10),
+          knowledge: this.knowledge.crashCases(parsed),
         };
       }),
     ]);
@@ -946,6 +971,38 @@ export class Runtime {
       target: call.context.target,
       bundle_name: input.app.bundle_name,
     };
+  }
+  private async startOperation(name: "app_signature" | "hot_reload" | "emulator_manage" | "emulator_scenario", raw: unknown, project?: Project, signal?: AbortSignal) {
+    if (name.startsWith("emulator_")) await this.emulator.reconcileSessions(signal);
+    const { request_key, ...input } = object(tools[name].schema.parse(raw));
+    const key = typeof request_key === "string" ? request_key : undefined, identity = { tool: name, input: structuredClone(input) };
+    const previous = key ? this.store.byRequest(key) : undefined;
+    if (previous) {
+      invariant(previous.workflow === "native_operation" && previous.input_hash === digest(identity), "REQUEST_KEY_CONFLICT", "Request key already has different input");
+      return { run_id: previous.id, status: previous.status, deduplicated: true };
+    }
+    const context: WorkflowContext = { parameters: { tool: name, input }, toolchain_hash: digest(discoverToolchain()) };
+    if (project) {
+      context.project_path = project.root; context.product = project.product.name;
+      input.project_path = project.root; input.product = project.product.name;
+      // configure deliberately changes the project model. Its service journals the original model and publication.
+      if (input.action !== "configure") { context.project_hash = project.fingerprint; context.source_hash = sourceHash(project); }
+    }
+    if (name === "hot_reload" && input.action === "apply" && !input.target && project) input.target = this.hot.activeTarget(project);
+    if (name === "hot_reload" || typeof input.target === "string") {
+      context.target = name === "emulator_manage" && input.action === "stop" && typeof input.target === "string"
+        ? input.target : await this.devices.target(typeof input.target === "string" ? input.target : undefined, signal);
+      input.target = context.target;
+    }
+    if (typeof input.file === "string") input.file = fs.realpathSync.native(path.resolve(input.file));
+    if (typeof input.output === "string") input.output = destinationPath(input.output);
+    if (name === "app_signature" && input.action === "sign" && project && Object.keys(object(input.options)).length === 0) input.options = this.signatures.projectOptions(project);
+    const options = object(input.options ?? {});
+    for (const key of ["keystoreFile", "appCertFile", "profileFile"]) if (typeof options[key] === "string") options[key] = fs.realpathSync.native(path.resolve(options[key]));
+    const files = [input.file, ...Object.entries(options).filter(([key]) => ["keystoreFile", "appCertFile", "profileFile"].includes(key)).map(([, value]) => value)].filter((file): file is string => typeof file === "string");
+    if (name === "app_signature" && input.action === "configure" && typeof input.file === "string") files.push(...signingDescriptorFiles(input.file));
+    context.input_files = files.map((file) => { const absolute = fs.realpathSync.native(file); return { path: absolute, sha256: fileDigest(absolute) }; });
+    return (await this.workflows()).start("native_operation", context, key, identity);
   }
   async call(
     name: ToolName,
@@ -1207,20 +1264,23 @@ export class Runtime {
           (input.action === "sign" && Object.keys(input.options).length === 0)
         )
           project = this.projects.resolve(input.project_path, input.product);
+        if (!["inspect", "verify", "certificates", "devices"].includes(input.action)) return this.startOperation("app_signature", input, project, signal);
         return this.signatures.call(input, project, signal);
       }
       case "hot_reload": {
         const input = tools[name].schema.parse(raw);
+        if (["start", "apply"].includes(input.action)) return this.startOperation("hot_reload", input, this.projects.resolve(input.project_path, input.product), signal);
         return this.hot.call(
           input,
           this.projects.resolve(input.project_path, input.product),
           signal,
         );
       }
-      case "emulator_manage":
-        return this.emulator.manage(raw, signal);
-      case "emulator_scenario":
-        return this.emulator.scenario(raw, signal);
+      case "emulator_manage": {
+        const input = tools[name].schema.parse(raw);
+        return ["list", "images", "license_view"].includes(input.action) ? this.emulator.manage(input, signal) : this.startOperation(name, input, undefined, signal);
+      }
+      case "emulator_scenario": return this.startOperation(name, raw, undefined, signal);
       case "ui_flow": {
         const input = tools[name].schema.parse(raw);
         invariant(
@@ -1632,6 +1692,19 @@ export class Runtime {
   }
   close(): Promise<{ closed: boolean }> {
     return (this.shutdown ??= this.closeServices());
+  }
+  async lifecycleMetrics() {
+    const processes = this.processes.metrics, lsp = this.diagnostics.lsp.metrics, cpu = this.cpu.metrics;
+    return {
+      tasks: (this.engine ? (await this.engine).activeCount : 0) + cpu.active + cpu.queued + lsp.active_requests,
+      listeners: processes.listeners,
+      connections: lsp.connections + processes.sessions,
+      processes: processes.processes,
+      cache_entries: this.devices.cacheMetrics.snapshots + this.savedTrees.metrics.entries,
+      workers: cpu.workers,
+      process_starts: processes.process_starts,
+      scope: "Owned workflow/parser/LSP work, process listeners and sessions, LSP connections, UI caches and parser workers. This is not a count of all V8 objects or SDK internals.",
+    };
   }
   private async closeServices() {
     this.stopping = true;

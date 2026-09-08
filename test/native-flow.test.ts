@@ -291,9 +291,11 @@ test("saved replay scopes primary and repaired indexes to the requested applicat
     f.close();
   }
 });
-test("percentage gestures use the identified application surface and stay inside its last pixel", async () => {
+test("percentage gestures use the identified application surface and stay inside its last pixel", async (t) => {
   const f = fixture();
   try {
+    t.mock.method(f.device, "control", DeviceService.prototype.control.bind(f.device));
+    const shell = t.mock.method(f.device, "shell", async () => ({ stdout: "No Error", stderr: "", elapsedMs: 1, pid: null, exitCode: 0, signal: null, truncated: false }));
     await f.flows.save(
       f.project,
       f.draft([
@@ -306,7 +308,8 @@ test("percentage gestures use the identified application surface and stay inside
       ]),
     );
     await f.flows.run(f.project, "example", "device", {});
-    assert.deepEqual(f.device.actions, [{ action: "click", x: 149, y: 249 }]);
+    assert.equal(shell.mock.callCount(), 1);
+    assert.deepEqual(shell.mock.calls[0]!.arguments.slice(0, 2), ["device", ["uitest", "uiInput", "click", "149", "249"]]);
   } finally {
     f.close();
   }

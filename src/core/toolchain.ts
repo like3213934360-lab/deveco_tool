@@ -26,6 +26,20 @@ export interface Toolchain {
   fingerprint: string;
   components: Partial<Record<Component, string>>;
 }
+const entryDigests = new Map<string, { metadata: string; sha256: string }>();
+function entryDigest(file: string): string {
+  const identity = () => {
+    const stat = fs.statSync(file, { bigint: true });
+    return [stat.dev, stat.ino, stat.size, stat.mtimeNs, stat.ctimeNs, stat.mode].join(":");
+  };
+  const metadata = identity(), cached = entryDigests.get(file);
+  if (cached?.metadata === metadata) return cached.sha256;
+  const sha256 = fileDigest(file);
+  invariant(identity() === metadata, "TOOLCHAIN_CHANGED", "Toolchain entry changed while its content was captured");
+  if (!entryDigests.has(file) && entryDigests.size >= 128) entryDigests.delete(entryDigests.keys().next().value!);
+  entryDigests.set(file, { metadata, sha256 });
+  return sha256;
+}
 function isFile(file: string): boolean {
   try {
     return fs.statSync(file).isFile();
@@ -192,23 +206,16 @@ export function discoverToolchain(): Toolchain {
         if (item.isDirectory())
           manifests.add(path.join(directory, item.name, "oh-uni-package.json"));
     }
-  // Capture entry-file replacement and package metadata without hashing SDK binaries
-  // on every device call. SDK packages below the selected root are never executed.
+  // The native emulator touches its own entry on startup without changing bytes.
+  // Freeze content identity; stat metadata only invalidates the bounded digest
+  // cache, so real replacements are detected without treating a touch as an SDK upgrade.
   const entries = Object.entries(components).map(([name, file]) => {
-    const stat = fs.statSync(file, { bigint: true });
     let parent = path.dirname(file);
     while (parent.startsWith(content + path.sep)) {
       manifests.add(path.join(parent, "package.json"));
       parent = path.dirname(parent);
     }
-    return [
-      name,
-      file,
-      String(stat.ino),
-      String(stat.size),
-      String(stat.mtimeNs),
-      String(stat.ctimeNs),
-    ];
+    return [name, file, entryDigest(file)];
   });
   const versions: Record<string, string> = {};
   const metadata = [...manifests].sort().flatMap((file) => {

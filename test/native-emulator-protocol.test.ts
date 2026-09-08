@@ -9,6 +9,9 @@ import { tools } from "../src/core/contracts.js";
 import { ProcessService } from "../src/core/process.js";
 import { StateStore } from "../src/core/store.js";
 import { EmulatorService } from "../src/services/emulator.js";
+import { withTrace } from "../src/core/trace.js";
+import { ToolError } from "../src/core/errors.js";
+import { PersistentProcessObserver } from "../src/core/process-observer.js";
 
 function fixture() {
   const root = fs.realpathSync.native(
@@ -18,7 +21,10 @@ function fixture() {
     directory = path.join(root, "agreement"),
     config = file + ".config";
   fs.mkdirSync(directory);
-  fs.writeFileSync(file, JSON.stringify({ name: "fixture", isRunning: true }));
+  const instancePath = path.join(root, "instance");
+  fs.mkdirSync(instancePath);
+  fs.writeFileSync(path.join(instancePath, "config.ini"), `name=fixture\nuuid=fixture-uuid\ninstancePath=${instancePath}\nhw.hdc.port=5555\n`);
+  fs.writeFileSync(file, JSON.stringify({ name: "fixture", isRunning: true, instancePath }));
   for (const name of [
     "HarmonyOS_Software_Service_Agreement",
     "HarmonyOS_SDK_Agreement",
@@ -32,7 +38,7 @@ function fixture() {
     "unrelated:keep\nHarmonyOS_Software_Service_Agreement:disagree\nHarmonyOS_SDK_Agreement:agree\n",
   );
   const store = new StateStore(path.join(root, "state")),
-    processes = new ProcessService();
+    processes = new ProcessService(new PersistentProcessObserver(store));
   const service = new EmulatorService(
     processes,
     store,
@@ -101,13 +107,14 @@ test("emulator schemas reject ignored fields and invalid scenario values before 
       { action: "sensor", key: "temperature", value: -273.2 },
       { action: "sensor", key: "light", value: 20.33 },
     ])
-      await assert.rejects(f.service.scenario({ name: "fixture", ...input }), {
+      await assert.rejects(f.service.scenario({ name: "fixture", target: "127.0.0.1:5555", ...input }), {
         name: "ZodError",
       });
     assert.deepEqual(f.commands(), []);
     assert.equal(
       tools.emulator_scenario.schema.safeParse({
         name: "fixture",
+        target: "127.0.0.1:5555",
         action: "sensor",
         key: "steps",
         value: 100000,
@@ -140,7 +147,7 @@ test("emulator scenarios require advertised native options and positive receipts
       [{ action: "driving_navigation" }, ["-drivingNavigation"]],
     ] as const;
     for (const [input, args] of cases) {
-      const result = await f.service.scenario({ name: "fixture", ...input });
+      const result = await f.service.scenario({ name: "fixture", target: "127.0.0.1:5555", ...input });
       assert.equal(result.commandAccepted, true);
       assert.equal(result.stateVerified, false);
       assert.deepEqual(f.commands().at(-1), ["-instance", "fixture", ...args]);
@@ -152,6 +159,7 @@ test("emulator scenarios require advertised native options and positive receipts
       await assert.rejects(
         f.service.scenario({
           name: "fixture",
+          target: "127.0.0.1:5555",
           action: "sensor",
           key,
           value: 20,
@@ -177,7 +185,7 @@ test("emulator scenarios require advertised native options and positive receipts
     ]) {
       fs.writeFileSync(f.file + ".response", output!);
       await assert.rejects(
-        f.service.scenario({ name: "fixture", action: "shake" }),
+        f.service.scenario({ name: "fixture", target: "127.0.0.1:5555", action: "shake" }),
         { code },
       );
     }
@@ -284,6 +292,36 @@ test("missing or oversized installed license files and ambiguous native config n
       false,
     );
   } finally {
+    await f.close();
+  }
+});
+
+test("license recovery retires only its exact interrupted command after SDK acceptance without redispatch", async () => {
+  const f = fixture();
+  const originalRun = f.processes.run.bind(f.processes);
+  try {
+    const review = await f.service.manage({ action: "license_view" });
+    const input = { action: "license_accept", license_sha256: review.license_sha256 };
+    const { run } = f.store.create("native_operation", input);
+    f.processes.run = async (command, options = {}) => {
+      if (!command.args.includes("-license")) return originalRun(command, options);
+      await originalRun(command, { ...options, onSettled: undefined });
+      throw new ToolError("FIXTURE_RESPONSE_LOST", "SDK accepted the license before the host lost its completion receipt");
+    };
+    await withTrace({ run_id: run.id, node: "execute_native_operation" }, async () => {
+      await assert.rejects(f.service.manage(input), { code: "EFFECT_UNCERTAIN" });
+      assert.equal(f.store.uncertainOperations(run.id).length, 2);
+      f.processes.run = originalRun;
+      const recovered = await f.service.manage(input);
+      assert.equal(recovered.accepted, true);
+      assert.equal(recovered.unchanged, true);
+      assert.deepEqual(f.store.uncertainOperations(run.id), []);
+      f.store.assertStopped(run.id);
+      await f.service.manage(input);
+    });
+    assert.equal(f.commands().filter((args) => args[0] === "-license").length, 1);
+  } finally {
+    f.processes.run = originalRun;
     await f.close();
   }
 });

@@ -1,6 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
+import { captureFile, capturedFileSchema, verifyCapturedFile } from "../core/captured-file.js";
+import { DeviceEffectJournal, type DeviceReceipt } from "./device-effect.js";
+import { withTrace } from "../core/trace.js";
 import { z } from "zod";
 import { HvigorSession } from "./hvigor/session.js";
 import { HotConfiguration, hotPaths } from "./hvigor/hot-config.js";
@@ -131,10 +134,23 @@ interface WatchSession {
   release: () => void;
   finished: Promise<void>;
   created: number;
+  lastUsed: number;
+  startedRun?: string;
 }
+const readyPatchSchema = z.object({
+  target: z.string(), app: appSchema, before_pid: z.string(),
+  sources: z.array(z.tuple([z.string(), z.string()])),
+  patches: z.array(capturedFileSchema).min(1).max(64),
+  patch_versions: z.record(z.string(), z.number()), changed_files: z.number(),
+  toolchain_hash: z.string(), compile_log: z.object({ artifact_id: z.string(), bytes: z.number(), mime: z.string() }).passthrough(),
+});
+type ReadyPatch = z.infer<typeof readyPatchSchema>;
 export class HotReloadService {
   private readonly sessions = new Map<string, WatchSession>();
   private starting = 0;
+  private readonly idleTimer: NodeJS.Timeout;
+  private sweeping = false;
+  private closing = false;
   constructor(
     readonly processes: ProcessService,
     readonly store: StateStore,
@@ -142,7 +158,25 @@ export class HotReloadService {
     readonly devices: DeviceService,
     readonly signatures: SignatureService,
     private readonly assertDeviceIdle: (target: string) => void,
-  ) {}
+  ) {
+    this.idleTimer = setInterval(() => { void this.reapIdle(); }, 60000);
+    this.idleTimer.unref();
+  }
+  private async reapIdle() {
+    if (this.sweeping || this.closing) return;
+    this.sweeping = true;
+    try {
+      for (const [key, session] of this.sessions) {
+        if (Date.now() - session.lastUsed < 30 * 60000) continue;
+        await this.store.lease(`project:${session.project.root}`, async () => {
+          if (!this.closing && this.sessions.get(key) === session && Date.now() - session.lastUsed >= 30 * 60000) await this.stop(key, session);
+        });
+      }
+    } catch (error) {
+      try { this.store.event(null, "hot_idle_cleanup_failed", { message: error instanceof Error ? error.message : "Watch cleanup failed" }); } catch { /* Retain ownership if cleanup is unconfirmed. */ }
+    } finally { this.sweeping = false; }
+  }
+  activeTarget(project: Project): string | undefined { return this.sessions.get(this.key(project))?.target; }
   private key(project: Project) {
     return digest([project.root, project.product.name]);
   }
@@ -154,6 +188,7 @@ export class HotReloadService {
     const input = tools.hot_reload.schema.parse(raw),
       key = this.key(project);
     const session = this.sessions.get(key);
+    if (session) session.lastUsed = Date.now();
     if (input.action === "status")
       return session
         ? {
@@ -226,6 +261,7 @@ export class HotReloadService {
           return { active: false, closureAcknowledged: true };
         }
         if (input.action === "start") {
+          if (session?.startedRun && session.startedRun === currentTrace().run_id) return { active: session.connection.connected, target: session.target, project_path: project.root, recovered: true };
           invariant(
             !session,
             "HOT_SESSION_EXISTS",
@@ -356,6 +392,8 @@ export class HotReloadService {
                 release: hold.resolve,
                 finished,
                 created: Date.now(),
+                lastUsed: Date.now(),
+                startedRun: currentTrace().run_id,
               });
               return {
                 active: true,
@@ -381,6 +419,8 @@ export class HotReloadService {
             this.starting--;
           }
         }
+        const prepared = await this.store.readPrivateMemo("hot-ready", { project: project.root, product: project.product.name }, (value) => readyPatchSchema.parse(value));
+        if (prepared) return this.finishApply(project, prepared, signal);
         invariant(
           session,
           "HOT_SESSION_REQUIRED",
@@ -569,8 +609,7 @@ export class HotReloadService {
       ),
       signal,
     );
-    const temporary = fs.mkdtempSync(path.join(this.store.root, "hot-patch-")),
-      remote = `/data/local/tmp/deveco-hqf-${crypto.randomUUID()}`;
+    const temporary = fs.mkdtempSync(path.join(this.store.root, "hot-patch-"));
     try {
       const toolchain = session.toolchain,
         packer = path.join(
@@ -618,11 +657,9 @@ export class HotReloadService {
           },
           { signal, timeoutMs: 120000 },
         );
-        await this.signatures.call(
-          { action: "sign", file: unsigned, output: signed },
-          project,
-          signal,
-        );
+        await withTrace({ node: `${currentTrace().node ?? "hot"}:sign:${module.name}` }, () => this.signatures.call(
+          { action: "sign", file: unsigned, output: signed }, project, signal,
+        ));
         patches.push(signed);
       }
       const before = (
@@ -634,61 +671,59 @@ export class HotReloadService {
         "Application must already be running",
       );
       assertHotSourcesUnchanged(project, current);
-      await this.devices.shell(target, ["mkdir", "-p", remote], signal);
-      const remoteFiles: string[] = [];
-      for (const file of patches) {
-        const dest = `${remote}/${path.basename(file)}`;
-        await this.devices.command(
-          ["-t", target, "file", "send", file, dest],
-          signal,
-        );
-        remoteFiles.push(dest);
-      }
-      const receipt = await this.devices.shell(
-        target,
-        ["bm", "quickfix", "-a", "-f", ...remoteFiles, "-d", "-o"],
-        signal,
-        180000,
-      );
-      invariant(
-        /succe(?:ss|ed)/i.test(receipt.stdout) &&
-          !/fail|error:/i.test(receipt.stdout),
-        "HOT_APPLY_UNCONFIRMED",
-        "Device did not confirm quickfix application",
-      );
-      const after = (
-        await this.devices.shell(target, ["pidof", app.bundle_name], signal)
-      ).stdout.trim();
-      invariant(
-        after === before,
-        "HOT_APP_RESTARTED",
-        "Application process changed during hot reload",
-      );
-      this.devices.invalidate(target);
-      session.files = current;
-      return {
-        applied: true,
-        processPreserved: true,
-        outcomeVerified: false,
-        patch_versions: patchVersions,
-        files: changed.length,
-        receipt: this.store.artifact(
-          currentTrace().run_id ?? "hot_reload",
-          receipt.stdout,
-        ),
-        compile_log: this.store.artifact(
-          currentTrace().run_id ?? "hot_reload",
-          JSON.stringify(session.connection.log()),
-          "application/json",
-        ),
-      };
+      const retained: ReadyPatch["patches"] = [];
+      for (const file of patches) retained.push(await captureFile(this.store, currentTrace().run_id ?? "hot_reload", file, undefined, signal));
+      const prepared = await this.store.privateMemo("hot-ready", { project: project.root, product: project.product.name }, async () => ({
+        target, app, before_pid: before, sources: [...current], patches: retained,
+        patch_versions: patchVersions, changed_files: changed.length, toolchain_hash: digest(toolchain),
+        compile_log: this.store.artifact(currentTrace().run_id ?? "hot_reload", JSON.stringify(session.connection.log()), "application/json"),
+      }), (value) => readyPatchSchema.parse(value));
+      return await this.finishApply(project, prepared, signal);
     } finally {
       fs.rmSync(temporary, { recursive: true, force: true });
-      await this.devices
-        .shell(target, ["rm", "-rf", remote], undefined, 10000)
-        .catch(() => {});
     }
   }
+  private async finishApply(project: Project, prepared: ReadyPatch, signal?: AbortSignal) {
+    invariant(digest(discoverToolchain()) === prepared.toolchain_hash, "HOT_TOOLCHAIN_CHANGED", "Prepared patch belongs to another toolchain");
+    assertHotSourcesUnchanged(project, new Map(prepared.sources));
+    const { target, app } = prepared;
+    return this.store.lease(`device:${target}`, async () => {
+      this.assertDeviceIdle(target);
+      for (const file of prepared.patches) await verifyCapturedFile(file, signal);
+      const trace = currentTrace(), remote = `/data/local/tmp/deveco-hqf-${digest({ state: this.store.root, run: trace.run_id, node: trace.node, prepared })}`;
+      const remoteFiles = prepared.patches.map((file, index) => `${remote}/${index}-${file.sha256}.hqf`);
+      const durable = !!trace.run_id && !!trace.node;
+      const dispatched = durable && this.store.operationState(trace.run_id!, `${trace.node}:device:quickfix`) !== undefined;
+      if (!dispatched) {
+        const pid = (await this.devices.shell(target, ["pidof", app.bundle_name], signal)).stdout.trim();
+        invariant(pid === prepared.before_pid, "HOT_APP_RESTARTED", "Prepared patch requires the original application process");
+        await this.devices.shell(target, ["sh", "-c", `test ! -L '${remote}' && { test -d '${remote}' || mkdir -m 700 '${remote}'; }`], signal);
+        for (const [index, file] of prepared.patches.entries()) {
+          await this.devices.command(["-t", target, "file", "send", file.path, remoteFiles[index]!], signal);
+          const hash = (await this.devices.shell(target, ["sha256sum", remoteFiles[index]!], signal)).stdout.trim().split(/\s+/)[0];
+          invariant(hash === file.sha256, "HOT_UPLOAD_CHANGED", "Device patch digest did not match its captured artifact");
+        }
+      }
+      const args = ["bm", "quickfix", "-a", "-f", ...remoteFiles, "-d", "-o"];
+      const accept = (receipt: DeviceReceipt) => {
+        invariant(receipt.exitCode === 0 && /succe(?:ss|ed)/i.test(receipt.stdout) && !/fail|error:/i.test(receipt.stdout), "HOT_APPLY_UNCONFIRMED", "Device did not confirm quickfix application");
+        return { accepted: true, stdout: receipt.stdout };
+      };
+      const receipt = durable ? await new DeviceEffectJournal(this.store, this.devices).run(target, "quickfix", args, accept, signal, false, 180000)
+        : accept(await this.devices.shell(target, args, signal, 180000));
+      invariant(receipt, "HOT_APPLY_UNCONFIRMED", "Quickfix has no matching completion receipt");
+      // Never remove an uncertain operation's files. The device journal commits before this cleanup.
+      await this.devices.shell(target, ["rm", "-rf", remote], undefined, 10000).catch(() => {});
+      const after = (await this.devices.shell(target, ["pidof", app.bundle_name], signal)).stdout.trim();
+      invariant(after === prepared.before_pid, "HOT_APP_RESTARTED", "Application process changed during hot reload");
+      this.devices.invalidate(target);
+      const session = this.sessions.get(this.key(project));
+      if (session) { session.files = new Map(prepared.sources); session.lastUsed = Date.now(); }
+      return { applied: true, processPreserved: true, outcomeVerified: false, patch_versions: prepared.patch_versions,
+        files: prepared.changed_files, receipt: this.store.artifact(trace.run_id ?? "hot_reload", receipt.stdout), compile_log: prepared.compile_log };
+    }, signal);
+  }
+
   private async stop(key: string, session: WatchSession) {
     try {
       await session.connection.stop();
@@ -703,6 +738,8 @@ export class HotReloadService {
     this.sessions.delete(key);
   }
   async close() {
+    this.closing = true;
+    clearInterval(this.idleTimer);
     const results = await Promise.allSettled(
       [...this.sessions].map(([key, session]) => this.stop(key, session)),
     );

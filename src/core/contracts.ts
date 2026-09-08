@@ -695,9 +695,10 @@ export const tools = {
   },
   hot_reload: {
     description:
-      "Start, inspect, apply or stop a native Hvigor watch session. Applying builds and signs HQF patches and verifies quickfix receipts.",
+      "Start, inspect, apply or stop a native Hvigor watch session. Start and apply return a persistent run_id: inspect/resume/cancel with workflow_run. It builds and signs HQF patches and verifies quickfix receipts.",
     schema: z.strictObject({
       ...projectFields,
+      request_key: z.string().min(1).max(200).optional(),
       action: z.enum(["start", "status", "apply", "stop"]),
       target,
       app: appSchema.optional(),
@@ -707,9 +708,10 @@ export const tools = {
   },
   app_signature: {
     description:
-      "Use native SDK signing tools and developer cloud certificate/profile management. configure reads a private JSON descriptor from file, creates a new material directory at output, and selects options.name for the current product; existing configurations are preserved.",
+      "Use native SDK signing tools and developer cloud certificate/profile management. Mutations return a persistent run_id; use workflow_run for status, resume, cancellation and artifact reads. configure reads a private JSON descriptor from file, creates a new material directory at output, and selects options.name for the current product; existing configurations are preserved.",
     schema: z.strictObject({
       ...projectFields,
+      request_key: z.string().min(1).max(200).optional(),
       action: z.enum([
         "inspect",
         "configure",
@@ -867,12 +869,12 @@ export const tools = {
   },
   emulator_manage: {
     description:
-      "Manage native emulator instances, images and licenses. license_view reads installed agreement files without changing acceptance. license_accept requires the exact reviewed license_sha256. Instance and image mutations verify inventory.",
+      "Manage native emulator instances, images and licenses. license_view reads installed agreement files without changing acceptance. license_accept requires the exact reviewed license_sha256. Mutations return a persistent run_id for workflow_run status/resume/cancel; instance and image mutations verify inventory.",
     schema: emulatorManageSchema,
   },
   emulator_scenario: {
     description:
-      "Control a running modern emulator. Range and operation fields are checked before SDK calls; native help must declare the selected capability. Command acceptance does not prove application sensor state.",
+      "Control a running modern emulator as a persistent job returning run_id; use workflow_run for status/resume/cancel. Range and operation fields are checked before SDK calls; native help must declare the selected capability. Command acceptance does not prove application sensor state.",
     schema: emulatorScenarioSchema,
   },
 };

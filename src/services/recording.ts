@@ -337,7 +337,10 @@ export class RecordingService {
           ? AbortSignal.any([signal, controller.signal])
           : controller.signal;
         return withTrace(
-          { run_id: row.run_id, node: "record_ui_action" },
+          // Completed step count is stable until its receipt is persisted. A
+          // pending action is rejected above, so retries cannot acquire a new
+          // effect identity and silently repeat an uncertain physical action.
+          { run_id: row.run_id, node: `record_ui_action:${value.flow.steps.length}` },
           async () => {
             this.devices.invalidate(target);
             const snapshot = await this.devices.snapshot(target, combined);

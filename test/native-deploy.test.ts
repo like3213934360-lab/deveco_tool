@@ -266,6 +266,11 @@ for (const packageCount of [1, 3])
             );
           }
           if (args[0] === "sh") {
+            if (args[2]!.startsWith("test ! -L ")) {
+              assert.match(args[2]!, /test -d .*mkdir -m 700/);
+              assert.equal(installs, 0);
+              return receipt("");
+            }
             assert.ok(args[2]!.includes("'bm' 'install' '-p'"));
             const identity = /'DEVECO_DEVICE_RECEIPT_V1' '([a-f0-9]{64})'/.exec(
               args[2]!,

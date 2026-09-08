@@ -323,6 +323,9 @@ export async function filterDeclarations(
 }
 export class LanguageService {
   private readonly sessions = new Map<string, Session>();
+  get metrics() {
+    return { connections: this.sessions.size, active_requests: [...this.sessions.values()].reduce((sum, session) => sum + session.active, 0), idle_ms: 300000, sweep_ms: 30000 };
+  }
   private readonly sweeper: NodeJS.Timeout;
   constructor(
     readonly processes: ProcessService,

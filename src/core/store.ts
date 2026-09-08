@@ -16,6 +16,7 @@ import { z } from "zod";
 import { PayloadCipher } from "./crypto.js";
 import { currentTrace } from "./trace.js";
 import { windowsJobAlive } from "./windows-job.js";
+import { resourceIdentity } from "./resource-identity.js";
 
 export type RunStatus =
   | "queued"
@@ -236,6 +237,7 @@ export class StateStore {
   }
   /** Record SDK work before dispatch; only verified completion/termination may close it. */
   trackExternalSession(kind: string, resources: string[], metadata: unknown) {
+    resources = [...new Set(resources.map(resourceIdentity))];
     const id = crypto.randomUUID();
     this.db
       .transaction(() => {
@@ -325,6 +327,23 @@ export class StateStore {
         "SELECT node FROM operations WHERE run_id=? AND status='started'",
       )
       .all(runId) as { node: string }[];
+  }
+  /** A domain's independently verified final state can retire its interrupted child commands.
+   * Preserve the distinction from a CLI completion receipt: those commands are never replayable. */
+  settleReconciledChildren(names: readonly string[], proof: unknown): void {
+    const trace = currentTrace();
+    invariant(trace.run_id && trace.node && names.length > 0 && names.every((name) => /^[a-zA-Z0-9_-]+$/.test(name)), "RECONCILIATION_CONTEXT_INVALID", "Only explicitly named child commands of this workflow node can be reconciled");
+    const runId = trace.run_id;
+    const allowed = new Set(names.flatMap((name) => [`${trace.node}:command:${name}`, `${trace.node}:command:${name}:completion`]));
+    const proofHash = digest(proof);
+    this.reconcile();
+    invariant(!this.db.prepare("SELECT id FROM managed_processes WHERE run_id=? AND status<>'exited'").get(runId), "CANCEL_UNCONFIRMED", "A native command has not confirmed exit");
+    invariant(!this.db.prepare("SELECT id FROM external_sessions WHERE run_id=? AND status<>'closed'").get(runId), "CANCEL_UNCONFIRMED", "An external session has not confirmed exit");
+    this.db.transaction(() => {
+      const nodes = this.uncertainOperations(runId).filter((item) => allowed.has(item.node));
+      for (const { node } of nodes) this.failureReceipt(runId, node, new SettledEffectError("EFFECT_RECONCILED_EXTERNALLY", "The parent operation verified the external result; this incomplete command receipt cannot be replayed", { proof_sha256: proofHash }));
+      if (nodes.length) this.event(runId, "child_commands_reconciled", { nodes: nodes.map((item) => item.node), proof_sha256: proofHash });
+    }).immediate();
   }
   assertStopped(runId: string): void {
     this.reconcile();
@@ -576,6 +595,7 @@ export class StateStore {
     task: () => Promise<T>,
     signal?: AbortSignal,
   ): Promise<T> {
+    resource = resourceIdentity(resource);
     const inherited = this.held.getStore();
     if (inherited?.has(resource)) {
       signal?.throwIfAborted();
@@ -588,11 +608,11 @@ export class StateStore {
       signal?.throwIfAborted();
       this.reconcile();
       const guards = this.processGuards().filter((row) =>
-        (JSON.parse(row.resources) as string[]).includes(resource),
+        (JSON.parse(row.resources) as string[]).map(resourceIdentity).includes(resource),
       );
       const external = this.externalGuards().filter(
         (row) =>
-          (JSON.parse(row.resources) as string[]).includes(resource) &&
+          (JSON.parse(row.resources) as string[]).map(resourceIdentity).includes(resource) &&
           // The original workflow must acquire its lease to read a remote receipt.
           // Other runs remain blocked until that receipt proves the command ended.
           !(
@@ -646,6 +666,65 @@ export class StateStore {
         .prepare("DELETE FROM leases WHERE resource=? AND owner=? AND token=?")
         .run(resource, this.owner, token);
     }
+  }
+  operationState(runId: string, node: string): "started" | "done" | "failed" | undefined {
+    return (this.db.prepare("SELECT status FROM operations WHERE run_id=? AND node=?")
+      .get(runId, node) as { status: "started" | "done" | "failed" } | undefined)?.status;
+  }
+  operationMatches(runId: string, node: string, input: unknown): boolean {
+    const row = this.db.prepare("SELECT input_hash,status FROM operations WHERE run_id=? AND node=?")
+      .get(runId, node) as { input_hash: string; status: string } | undefined;
+    return !!row && row.status !== "failed" && row.input_hash === digest(input);
+  }
+  privateBytes(data: Buffer) {
+    invariant(data.length <= 16 * 1024 * 1024, "PRIVATE_FILE_TOO_LARGE", "Private material exceeds 16 MiB");
+    const identity = crypto.randomUUID();
+    const encrypted = this.cipher.sealBytes(identity, data);
+    return { ...this.artifact(currentTrace().run_id ?? "private-material", encrypted, "application/x-deveco-encrypted"), identity };
+  }
+  openPrivateBytes(reference: { artifact_id: string; identity: string }): Buffer {
+    const encrypted = this.readBinaryArtifact(reference.artifact_id, 16 * 1024 * 1024 + 28, ["application/x-deveco-encrypted"]);
+    return this.cipher.openBytes(reference.identity, encrypted.data);
+  }
+  /** Persist a child operation without exposing its payload in checkpoints or receipts. */
+  async privateEffect<T>(name: string, input: unknown, execute: () => Promise<T>, decode: (raw: unknown) => T, reconcile?: () => Promise<T | undefined>): Promise<T> {
+    const { run_id: runId, node: parent } = currentTrace();
+    if (!runId || !parent) return decode(await execute());
+    const node = `${parent}:private:${name}`, identity = `${runId}:${node}`;
+    const encode = (value: T) => {
+      const json = JSON.stringify(decode(value));
+      invariant(Buffer.byteLength(json) <= 128 * 1024, "OPERATION_RESULT_TOO_LARGE", "Private operation result exceeds 128 KiB");
+      this.capacity(Buffer.byteLength(json) * 2);
+      return { encrypted: this.cipher.seal(identity, json) };
+    };
+    const saved = await this.effect(runId, node, input, async () => encode(await execute()), reconcile ? async () => {
+      const result = await reconcile();
+      return result === undefined ? undefined : encode(result);
+    } : undefined);
+    return decode(JSON.parse(this.cipher.open(identity, z.object({ encrypted: z.string() }).parse(saved).encrypted)) as unknown);
+  }
+  /** Freeze read-only preparation without putting credentials or UI text in graph checkpoints. */
+  async readPrivateMemo<T>(name: string, input: unknown, decode: (raw: unknown) => T): Promise<T | undefined> {
+    const { run_id: runId, node: parent } = currentTrace();
+    if (!runId || !parent) return undefined;
+    const node = `${parent}:prepared:${name}`, prior = await this.recoverEffect<unknown>(runId, node, input);
+    if (prior === undefined) return undefined;
+    return decode(JSON.parse(this.cipher.open(`${runId}:${node}`, z.object({ encrypted: z.string() }).parse(prior).encrypted)) as unknown);
+  }
+  async privateMemo<T>(name: string, input: unknown, prepare: () => Promise<T>, decode: (raw: unknown) => T): Promise<T> {
+    const { run_id: runId, node: parent } = currentTrace();
+    if (!runId || !parent) return decode(await prepare());
+    const node = `${parent}:prepared:${name}`, identity = `${runId}:${node}`;
+    const prior = await this.recoverEffect<unknown>(runId, node, input);
+    if (prior !== undefined) {
+      const saved = z.object({ encrypted: z.string() }).parse(prior);
+      return decode(JSON.parse(this.cipher.open(identity, saved.encrypted)) as unknown);
+    }
+    const value = decode(await prepare()), json = JSON.stringify(value);
+    invariant(Buffer.byteLength(json) <= 128 * 1024, "PREPARATION_TOO_LARGE", "Prepared operation exceeds 128 KiB");
+    this.capacity(Buffer.byteLength(json) * 2);
+    const saved = await this.effect(runId, node, input, async () => ({ encrypted: this.cipher.seal(identity, json) }));
+    return decode(JSON.parse(this.cipher.open(identity, saved.encrypted)) as unknown);
   }
   async effect<T>(
     runId: string,
@@ -777,10 +856,10 @@ export class StateStore {
   streamArtifact(
     runId: string,
     mime = "text/plain",
-    extension: "" | ".hap" | ".hsp" = "",
+    extension: "" | ".hap" | ".hsp" | ".hqf" = "",
   ) {
     invariant(
-      ["", ".hap", ".hsp"].includes(extension),
+      ["", ".hap", ".hsp", ".hqf"].includes(extension),
       "ARTIFACT_EXTENSION_INVALID",
       "Invalid owned artifact extension",
     );

@@ -1,111 +1,79 @@
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
-import { fileURLToPath } from "node:url";
+import { execFileSync } from "node:child_process";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { z } from "zod";
-import { atomicWrite } from "../src/core/files.js";
+import { atomicWrite, digest, fileDigest, inside } from "../src/core/files.js";
+import { invariant, errorResult } from "../src/core/errors.js";
+import { packageRoot } from "../src/core/config.js";
 import { evidenceIdentity } from "./lib/evidence.js";
+import { benchmarkPlanSchema, executeBenchmarkSteps } from "./lib/benchmark-contracts.js";
+import { readJson } from "./lib/upstream-adaptation.js";
 
-const tested = evidenceIdentity();
-const baseline = path.resolve(z.string().min(1).parse(process.argv[2]));
-const output = path.resolve(z.string().min(1).parse(process.argv[3]));
-const directory = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-benchmark-"));
-const measurements: {
-  version: string;
-  cold: number[];
-  hot: number[];
-  node: string;
-  cpu: NodeJS.CpuUsage;
-  rss: number;
-}[] = [];
-function summarize(values: number[]) {
-  const sorted = [...values].sort((a, b) => a - b);
-  return {
-    count: sorted.length,
-    p50: sorted[Math.floor((sorted.length - 1) * 0.5)],
-    p95: sorted[Math.ceil(sorted.length * 0.95) - 1],
-    max: sorted.at(-1),
-  };
+const plan = benchmarkPlanSchema.parse(readJson(path.resolve(z.string().min(1).parse(process.argv[2]))));
+const output = path.resolve(z.string().min(1).parse(process.argv[3])), tested = evidenceIdentity();
+invariant(!fs.existsSync(output), "OUTPUT_EXISTS", "Use a new benchmark evidence directory");
+invariant(new Set(plan.capabilities.map((item) => item.capability)).size === plan.capabilities.length, "BENCHMARK_COVERAGE", "Benchmark capabilities must be unique");
+fs.mkdirSync(output, { recursive: true, mode: 0o700 });
+const baseRoot = fs.realpathSync.native(plan.baseline_root), baselineEntry = inside(baseRoot, plan.baseline_entry), baselineHash = fileDigest(baselineEntry), baselineLock = fileDigest(path.join(baseRoot, "package-lock.json"));
+const env = { ...Object.fromEntries(Object.entries(process.env).filter((entry): entry is [string, string] => entry[1] !== undefined && !entry[0].startsWith("DEVECO_") && !["NODE_OPTIONS", "NODE_PATH"].includes(entry[0]))), ...plan.environment };
+const environment = digest({ hostname: os.hostname(), platform: process.platform, release: os.release(), arch: process.arch, node: process.version, cpus: os.cpus().map(({ model, speed }) => ({ model, speed })), memory: os.totalmem(), env: plan.environment });
+const cold = { native: { initialize_ms: [] as number[], directory_ms: [] as number[], total_ms: [] as number[] }, baseline: { initialize_ms: [] as number[], directory_ms: [] as number[], total_ms: [] as number[] } };
+const direct = plan.capabilities.map((item) => ({ capability: item.capability, input_sha256: digest({ input: item.logical_input, files: plan.inputs.map(({ sha256 }) => sha256) }), baseline_input_sha256: digest({ input: item.logical_input, files: plan.inputs.map(({ sha256 }) => sha256) }), native_ms: [] as number[], baseline_ms: [] as number[] }));
+let passed = false, failure: unknown;
+function verifyInputs() {
+  for (const input of plan.inputs) invariant(fileDigest(input.file) === input.sha256, "BENCHMARK_INPUT_CHANGED", "Immutable scenario input changed");
+  invariant(fileDigest(baselineEntry) === baselineHash && fileDigest(path.join(baseRoot, "package-lock.json")) === baselineLock, "BENCHMARK_BASELINE_CHANGED", "Baseline entry or dependencies changed");
+  const git = (args: string[]) => execFileSync("git", args, { cwd: baseRoot, encoding: "utf8", timeout: 10000 }).trim();
+  invariant(git(["rev-parse", "HEAD"]) === plan.baseline_commit && git(["status", "--porcelain", "--untracked-files=no"]) === "", "BENCHMARK_BASELINE_CHANGED", "Baseline must be the specified clean tracked revision");
+  const after = evidenceIdentity();
+  for (const key of ["runtime_sha256", "compiled_sha256", "package_lock_sha256", "resource_manifest_sha256", "upstream_lock_sha256"] as const) invariant(after[key] === tested[key], "BENCHMARK_RUNTIME_CHANGED", "Measured native bytes changed");
 }
-const environment = Object.fromEntries(
-  Object.entries(process.env).filter(
-    (entry): entry is [string, string] => entry[1] !== undefined,
-  ),
-);
 function save() {
-  atomicWrite(
-    output,
-    JSON.stringify(
-      {
-        tested,
-        platform: process.platform,
-        arch: process.arch,
-        scope:
-          "MCP initialize + tools/list cold, tools/list hot. Driver CPU/RSS are not server process measurements; no SDK execution or UI latency claims.",
-        measurements,
-        summaries: measurements.map((m) => ({
-          version: m.version,
-          cold_ms: summarize(m.cold),
-          hot_ms: summarize(m.hot),
-        })),
-      },
-      null,
-      2,
-    ),
-  );
+  atomicWrite(path.join(output, "direct.json"), JSON.stringify({ format: 2, tested, passed, environment, baseline_environment: environment, baseline: { commit: plan.baseline_commit, entry_sha256: baselineHash, lock_sha256: baselineLock }, plan_sha256: digest(plan), cold, cold_ms: cold.native.total_ms, direct, expected_capabilities: direct.map((item) => item.capability), scope: "Full MCP round trips including every declared workflow wait and semantic assertion. Each case uses the same logical input and immutable input-file hashes; version-specific request mappings remain in the private plan. SDK/device mutation scenarios must use dedicated fixtures. CPU and memory are collected by the separate UI and SDK soak reports.", error: failure ? errorResult(failure) : null }, null, 2) + "\n");
+}
+async function server(version: "native" | "baseline", name: string, run: (client: Client) => Promise<void>, coldSample = false) {
+  const state = path.join(output, "sessions", `${version}-${name}`);
+  fs.mkdirSync(state, { recursive: true, mode: 0o700 });
+  const client = new Client({ name: "native-capability-benchmark", version: "2" });
+  const transport = new StdioClientTransport({ command: process.execPath, args: [version === "native" ? path.join(packageRoot, "dist/src/cli.js") : baselineEntry], cwd: state, stderr: "ignore", env: { ...env, DEVECO_STATE_DIR: path.join(state, "state"), DEVECO_TOOL_LOG_DIR: path.join(state, "logs") } });
+  try {
+    const start = performance.now();
+    await client.connect(transport);
+    const initialized = performance.now();
+    const catalog = await client.listTools();
+    const listed = performance.now();
+    invariant(catalog.tools.length > 0, "BENCHMARK_DIRECTORY_EMPTY", "Tool catalog must be usable");
+    if (coldSample) { cold[version].initialize_ms.push(initialized - start); cold[version].directory_ms.push(listed - initialized); cold[version].total_ms.push(listed - start); }
+    await run(client);
+  } finally { await transport.close(); }
 }
 try {
-  for (const [version, entry] of [
-    ["baseline", path.join(baseline, "src/server.mjs")],
-    ["native", fileURLToPath(new URL("../src/cli.js", import.meta.url))],
-  ] as const) {
-    const cold: number[] = [],
-      hot: number[] = [],
-      cpu = process.cpuUsage();
-    const measurement = {
-      version,
-      cold,
-      hot,
-      node: process.version,
-      cpu: process.cpuUsage(cpu),
-      rss: process.memoryUsage().rss,
-    };
-    measurements.push(measurement);
-    for (let sample = 0; sample < 30; sample++) {
-      const client = new Client({ name: "native-benchmark", version: "1" }),
-        transport = new StdioClientTransport({
-          command: process.execPath,
-          args: [entry],
-          stderr: "ignore",
-          env: {
-            ...environment,
-            DEVECO_STATE_DIR: path.join(directory, version, String(sample)),
-          },
-        });
-      try {
-        const started = performance.now();
-        await client.connect(transport);
-        await client.listTools();
-        cold.push(performance.now() - started);
-        if (sample === 29)
-          for (let request = 0; request < 1000; request++) {
-            const started = performance.now();
-            await client.listTools();
-            hot.push(performance.now() - started);
-          }
-      } finally {
-        await transport.close();
-      }
-      measurement.cpu = process.cpuUsage(cpu);
-      measurement.rss = process.memoryUsage().rss;
-      save();
-      if ((sample + 1) % 10 === 0)
-        process.stdout.write(`${version}: ${sample + 1}/30 cold starts\n`);
-    }
+  verifyInputs();
+  for (let sample = 0; sample < 30; sample++) {
+    for (const version of sample % 2 ? ["native", "baseline"] as const : ["baseline", "native"] as const) await server(version, `cold-${sample}`, async () => {}, true);
     save();
+    process.stdout.write(`Cold starts ${sample + 1}/30 per version\n`);
   }
-} finally {
-  fs.rmSync(directory, { recursive: true, force: true });
-}
+  for (let index = 0; index < plan.capabilities.length; index++) {
+    const scenario = plan.capabilities[index]!, record = direct[index]!;
+    // Alternating 100-call blocks reduces order/thermal bias and retains all raw samples.
+    for (let block = 0; block < 10; block++) {
+      verifyInputs();
+      for (const version of block % 2 ? ["native", "baseline"] as const : ["baseline", "native"] as const) await server(version, `${scenario.capability}-${block}`, async (client) => {
+        await executeBenchmarkSteps(client, scenario[version]);
+        for (let sample = 0; sample < 100; sample++) {
+          const start = performance.now();
+          await executeBenchmarkSteps(client, scenario[version]);
+          record[version === "native" ? "native_ms" : "baseline_ms"].push(performance.now() - start);
+        }
+      });
+      save();
+      process.stdout.write(`${scenario.capability}: ${(block + 1) * 100}/1000 per version\n`);
+    }
+  }
+  verifyInputs(); passed = true;
+} catch (error) { failure = error; process.exitCode = 1; }
+finally { save(); }

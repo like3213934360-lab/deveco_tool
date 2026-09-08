@@ -1,3 +1,4 @@
+import { finishAcceptance } from "./lib/acceptance-report.js";
 import fs from "node:fs";
 import path from "node:path";
 import assert from "node:assert/strict";
@@ -54,6 +55,7 @@ const target = journal.operations.preflight.result.target,
   flowId = `canary-${randomUUID().slice(0, 8)}`;
 fs.mkdirSync(root, { recursive: true, mode: 0o700 });
 atomicWrite(path.join(root, "config.json"), "{}\n");
+let completed = false, closed = false;
 const tested = evidenceIdentity(),
   installation = fileURLToPath(new URL("../../", import.meta.url));
 const observations: {
@@ -331,8 +333,13 @@ try {
   await observe("screenshot_evidence", () =>
     call("ui_snapshot", { target, mode: "image" }),
   );
+  completed = true;
 } catch {
   process.exitCode = 1;
 } finally {
-  await observe("close", disconnect);
+  try {
+    await observe("close", async () => { await disconnect(); closed = true; });
+  } finally {
+    finishAcceptance(path.join(root, "evidence.json"), tested, completed, closed);
+  }
 }

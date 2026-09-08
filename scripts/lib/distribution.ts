@@ -27,6 +27,7 @@ const metadataFiles = new Set([
   "provenance/upstream-lock.json",
   "provenance/upstream-mapping.json",
   "provenance/native-dependencies.json",
+  "provenance/installed-skill-fingerprints.json",
 ]);
 const packageSchema = z.strictObject({
   name: z.literal("deveco-tool"),

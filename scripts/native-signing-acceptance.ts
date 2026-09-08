@@ -1,3 +1,4 @@
+import { finishAcceptance } from "./lib/acceptance-report.js";
 import fs from "node:fs";
 import path from "node:path";
 import assert from "node:assert/strict";
@@ -6,6 +7,7 @@ import { Runtime } from "../src/services/runtime.js";
 import { atomicWrite, digest, fileDigest } from "../src/core/files.js";
 import { invariant, ToolError, errorResult } from "../src/core/errors.js";
 import { inspectApplicationPackages } from "../src/services/package.js";
+import { nativeOperation } from "./lib/native-operation.js";
 import { evidenceIdentity } from "./lib/evidence.js";
 
 /** Explicit live signing stages. The caller selects a team and a prepared canary.
@@ -99,6 +101,7 @@ process.env.DEVECO_STATE_DIR = authState;
 process.env.DEVECO_CONFIG = path.join(root, "config.json");
 const runtime = new Runtime(),
   tested = evidenceIdentity();
+let finished = false;
 const evidence: {
   stage: string;
   tested: unknown;
@@ -114,6 +117,38 @@ function saveJournal() {
 }
 async function once(input: unknown, task: () => Promise<unknown>) {
   const prior = journal.operations[stage];
+  // A new deployment acceptance attempt is allowed only after a confirmed
+  // launch rejection. Preserve the failed run; do not resume or rewrite it.
+  if (stage === "deploy" && prior?.status === "failed") {
+    assert.equal(prior.input_sha256, digest(input));
+    const { run_id } = z.object({ run_id: z.string().uuid() }).parse(prior.result);
+    const status = z.object({ status: z.literal("failed") }).parse(await runtime.call("workflow_run", { action: "status", run_id }));
+    assert.equal(status.status, "failed");
+    assert.equal(runtime.store.operationState(run_id, "install_application"), "done");
+    assert.equal(runtime.store.operationState(run_id, "launch_application"), "failed");
+    assert.equal(runtime.store.operationState(run_id, "launch_application:device:launch"), "failed");
+    assert.deepEqual(runtime.store.uncertainOperations(run_id), []);
+    runtime.store.assertStopped(run_id);
+    journal.operations[`${stage}@${prior.started_at}`] = prior;
+    delete journal.operations[stage];
+    saveJournal();
+  }
+  // A separately resumed durable task can finish after this collector stopped.
+  // Import only its observed result; never invoke the mutation callback again.
+  const operationFile = path.join(root, `${stage}.operation.private.json`);
+  if (prior?.status === "failed" && ["certificate", "profile", "debug_profile", "sign"].includes(stage) && fs.existsSync(operationFile)) {
+    assert.equal(prior.input_sha256, digest(input));
+    const receipt = z.object({ run_id: z.string().uuid() }).parse(JSON.parse(fs.readFileSync(operationFile, "utf8")) as unknown);
+    const status = z.object({ run_id: z.string(), status: z.string() }).parse(await runtime.call("workflow_run", { action: "status", run_id: receipt.run_id }));
+    assert.equal(status.run_id, receipt.run_id);
+    if (status.status === "succeeded") {
+      const result = await nativeOperation(runtime, "app_signature", z.record(z.string(), z.unknown()).parse(input), operationFile);
+      journal.operations[`${stage}@${prior.started_at}`] = prior;
+      journal.operations[stage] = { status: "succeeded", input_sha256: prior.input_sha256, started_at: new Date().toISOString(), result };
+      saveJournal();
+      return result;
+    }
+  }
   if (prior?.status === "failed" && stage === "verify") {
     journal.operations[`${stage}@${prior.started_at}`] = prior;
     delete journal.operations[stage];
@@ -290,7 +325,7 @@ try {
         options: { cert_name: prepared.certificate_name },
       };
       const result = fileSchema.parse(
-        await once(input, () => runtime.call("app_signature", input)),
+        await once(input, () => nativeOperation(runtime, "app_signature", input, path.join(root, `${stage}.operation.private.json`))),
       );
       evidence.result = { bytes: result.bytes, sha256: result.sha256 };
     } else if (stage === "profile" || stage === "debug_profile") {
@@ -328,7 +363,7 @@ try {
         },
       };
       const result = fileSchema.parse(
-        await once(input, () => runtime.call("app_signature", input)),
+        await once(input, () => nativeOperation(runtime, "app_signature", input, path.join(root, `${stage}.operation.private.json`))),
       );
       evidence.result = { bytes: result.bytes, sha256: result.sha256 };
     } else if (stage === "sign" || stage === "configure") {
@@ -374,18 +409,18 @@ try {
           { project_path: prepared.project_path, options: input.options },
           async () => {
             atomicWrite(descriptor, JSON.stringify(input.options), false);
-            return runtime.call("app_signature", {
+            return nativeOperation(runtime, "app_signature", {
               action: "configure",
               project_path: prepared.project_path,
               file: descriptor,
               output: path.join(root, "project-signing"),
               options: { name: "PersonalCanary" },
-            });
+            }, path.join(root, `${stage}.operation.private.json`));
           },
         );
       } else {
         const result = fileSchema.parse(
-          await once(input, () => runtime.call("app_signature", input)),
+          await once(input, () => nativeOperation(runtime, "app_signature", input, path.join(root, `${stage}.operation.private.json`))),
         );
         evidence.result = { bytes: result.bytes, sha256: result.sha256 };
       }
@@ -422,7 +457,7 @@ try {
           await runtime.call("workflow_run", {
             action: "start",
             workflow: "app_deploy",
-            request_key: `signing-acceptance:${binding}`,
+            request_key: `signing-acceptance:${binding}:${journal.operations[stage]!.started_at}`,
             input,
           }),
         );
@@ -491,16 +526,17 @@ try {
               .object({ certificate_id: z.string() })
               .parse(completed("certificate")).certificate_id;
         await once({ stage, id }, () =>
-          runtime.call("app_signature", {
+          nativeOperation(runtime, "app_signature", {
             action: stage,
             team_id: team.id,
             options: isProfile ? { profile_id: id } : { cert_id: id },
-          }),
+          }, path.join(root, `${stage}.operation.private.json`)),
         );
         evidence.result = { deleted: true };
       }
     }
   }
+  finished = true;
   process.stdout.write(`${stage}: passed\n`);
 } catch (error) {
   evidence.diagnostic = diagnostic(error);
@@ -515,9 +551,11 @@ try {
   try {
     evidence.closed = (await runtime.close()).closed;
   } finally {
+    const file = path.join(root, `${stage}-${Date.now()}.evidence.json`);
     atomicWrite(
-      path.join(root, `${stage}-${Date.now()}.evidence.json`),
+      file,
       JSON.stringify(evidence, null, 2),
     );
+    finishAcceptance(file, tested, finished, evidence.closed === true);
   }
 }

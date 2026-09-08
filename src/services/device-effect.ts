@@ -6,6 +6,8 @@ import { currentTrace } from "../core/trace.js";
 
 const prefix = "DEVECO_DEVICE_RECEIPT_V1";
 const pending = "DEVECO_DEVICE_RECEIPT_PENDING";
+const streamBegin = "DEVECO_DEVICE_STREAM_V1";
+const streamEnd = "DEVECO_DEVICE_STREAM_END_V1";
 const outputLimit = 65536;
 const quote = (value: string) => `'${value.replaceAll("'", "'\\''")}'`;
 export interface DeviceReceipt {
@@ -53,7 +55,26 @@ if mkdir -m 700 ${dir} 2>/dev/null; then
   fi
 fi
 ${read}`;
-  return { execute, read };
+  // Some shipped aa binaries suppress output when their stdout is redirected.
+  // Keep the HDC stream intact, then publish the observed acknowledgement in a
+  // second round trip. A lost stream leaves the claim pending, never replayable.
+  const streamed = `umask 077
+if mkdir -m 700 ${dir} 2>/dev/null; then
+  printf '%s\\n%s\\n' '${streamBegin}' '${identity}'
+  ${args.map(quote).join(" ")}
+  result=$?
+  printf '%s\\n' "$result" > ${dir}/exit
+  printf '\\n%s\\n%s\\n%s\\n' '${streamEnd}' '${identity}' "$result"
+fi
+${read}`;
+  return { execute: args[0] === "aa" ? streamed : execute, read };
+}
+
+export function parseStreamedDeviceReceipt(raw: ProcessResult, identity: string): DeviceReceipt | undefined {
+  if (raw.truncated || raw.exitCode !== 0 || !/^[a-f0-9]{64}$/.test(identity)) return undefined;
+  const match = new RegExp(`^${streamBegin}\\r?\\n${identity}\\r?\\n([\\s\\S]*)\\r?\\n${streamEnd}\\r?\\n${identity}\\r?\\n(\\d{1,3})\\r?\\n${pending}\\r?\\n$`).exec(raw.stdout);
+  if (!match || Number(match[2]) > 255 || Buffer.byteLength(match[1]!) >= outputLimit) return undefined;
+  return { exitCode: Number(match[2]), stdout: match[1]! };
 }
 
 export function parseDeviceReceipt(
@@ -171,7 +192,18 @@ export class DeviceEffectJournal {
                   false,
                   true,
                 );
-                const receipt = parseDeviceReceipt(result, identity);
+                let receipt = parseDeviceReceipt(result, identity);
+                if (!receipt && args[0] === "aa") {
+                  const streamed = parseStreamedDeviceReceipt(result, identity);
+                  if (streamed) {
+                    const bytes = `${prefix}\n${identity}\n${streamed.exitCode}\n${streamed.stdout}`;
+                    const dir = quote(directory);
+                    const publication = `test ! -L ${dir} && test -d ${dir} && test ! -e ${dir}/receipt && test ! -L ${dir}/receipt.tmp && test ! -e ${dir}/receipt.tmp && test ! -L ${dir}/exit && test "$(cat ${dir}/exit)" = '${streamed.exitCode}' && (set -C; printf '%s' '${Buffer.from(bytes).toString("base64")}' | base64 -d > ${dir}/receipt.tmp) && mv ${dir}/receipt.tmp ${dir}/receipt\n${scripts.read}`;
+                    const published = await this.transport.shell(target, ["sh", "-c", publication], signal, 10000, false, true);
+                    receipt = parseDeviceReceipt(published, identity);
+                    invariant(receipt && receipt.exitCode === streamed.exitCode && receipt.stdout === streamed.stdout, "DEVICE_RECEIPT_MISSING", "Published device acknowledgement differs from the observed stream");
+                  }
+                }
                 invariant(
                   receipt,
                   "DEVICE_RECEIPT_MISSING",

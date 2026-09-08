@@ -243,6 +243,148 @@ test("named faultlog reads are path-safe, bounded and preserve exact filenames a
   }
 });
 
+test("faultlog permission failures use the exact HDC file service name and clean bounded private transfer data", async (t) => {
+  const f = fixture();
+  try {
+    const name = recent.replace(".log", ""),
+      calls: string[][] = [];
+    let mode = "success";
+    t.mock.method(f.devices, "shell", async () => ({
+      ...receipt("head: permission denied"),
+      exitCode: 1,
+    }));
+    t.mock.method(f.devices, "command", async (args: string[]) => {
+      calls.push(args);
+      fs.writeFileSync(
+        args.at(-1)!,
+        mode === "long"
+          ? "a".repeat(262145)
+          : "TypeError: handler is not callable",
+      );
+      return receipt("FileTransfer finish, Size: 33");
+    });
+    const first = await f.logs.fetch("fixed-device", name);
+    assert.equal(first.read_method, "hdc_file_recv");
+    assert.equal(first.faultlog_name, name);
+    assert.equal(first.truncated, false);
+    assert.equal(
+      readArtifact(f.store, first.artifact.artifact_id),
+      "TypeError: handler is not callable",
+    );
+    assert.deepEqual(calls[0]!.slice(0, -1), [
+      "-t",
+      "fixed-device",
+      "file",
+      "recv",
+      "/data/log/faultlog/faultlogger/" + name,
+    ]);
+    assert.ok(
+      calls[0]!.at(-1)!.startsWith(path.join(f.root, "tmp") + path.sep),
+    );
+    assert.equal(fs.existsSync(calls[0]!.at(-1)!), false);
+    mode = "long";
+    const bounded = await f.logs.fetch("fixed-device", name);
+    assert.equal(bounded.truncated, true);
+    assert.equal(bounded.artifact.bytes, 262144);
+    assert.deepEqual(
+      f.store.db.prepare("SELECT id FROM native_directories").all(),
+      [],
+    );
+  } finally {
+    f.close();
+  }
+});
+
+test("faultlog transfers reject failed receipts, oversized output and cancellation without keeping partial files", async (t) => {
+  const f = fixture();
+  try {
+    let mode = "receipt";
+    let transferred = 0;
+    t.mock.method(f.devices, "shell", async () => ({
+      ...receipt("head: permission denied"),
+      exitCode: 1,
+    }));
+    t.mock.method(
+      f.devices,
+      "command",
+      async (args: string[], signal?: AbortSignal) => {
+        transferred++;
+        const local = args.at(-1)!;
+        fs.writeFileSync(local, "partial");
+        if (mode === "oversized") fs.truncateSync(local, 8 * 1024 * 1024 + 1);
+        if (mode === "cancel") {
+          await new Promise<void>((_resolve, reject) => {
+            signal!.addEventListener("abort", () => reject(signal!.reason), {
+              once: true,
+            });
+          });
+        }
+        return receipt(
+          mode === "receipt"
+            ? "[Fail] Transfer incomplete"
+            : "FileTransfer finish",
+        );
+      },
+    );
+    for (const [value, code] of [
+      ["receipt", "FAULTLOG_FETCH_FAILED"],
+      ["oversized", "NATIVE_DIRECTORY_CAPACITY"],
+    ]) {
+      mode = value!;
+      await assert.rejects(f.logs.fetch("d", recent), { code });
+      assert.deepEqual(
+        f.store.db.prepare("SELECT id FROM native_directories").all(),
+        [],
+      );
+      assert.deepEqual(fs.readdirSync(path.join(f.root, "tmp")), []);
+    }
+    mode = "cancel";
+    const controller = new AbortController();
+    const cancelled = assert.rejects(
+      f.logs.fetch("d", recent, controller.signal),
+      { name: "AbortError" },
+    );
+    const timer = setTimeout(() => controller.abort(), 30);
+    try {
+      await cancelled;
+    } finally {
+      clearTimeout(timer);
+    }
+    assert.equal(transferred, 3);
+    assert.deepEqual(
+      f.store.db.prepare("SELECT id FROM native_directories").all(),
+      [],
+    );
+    assert.deepEqual(fs.readdirSync(path.join(f.root, "tmp")), []);
+  } finally {
+    f.close();
+  }
+});
+
+test("faultlog missing files and broken head transports do not trigger a different read", async (t) => {
+  const f = fixture();
+  try {
+    t.mock.method(f.devices, "command", async () => {
+      throw new Error("Unexpected file transfer");
+    });
+    t.mock.method(f.devices, "shell", async () => ({
+      ...receipt("head: no such file"),
+      exitCode: 1,
+    }));
+    await assert.rejects(f.logs.fetch("d", recent), {
+      code: "FAULTLOG_FETCH_FAILED",
+    });
+    t.mock.method(f.devices, "shell", async () =>
+      receipt("head: permission denied", true),
+    );
+    await assert.rejects(f.logs.fetch("d", recent), {
+      code: "FAULTLOG_TRANSPORT_TRUNCATED",
+    });
+  } finally {
+    f.close();
+  }
+});
+
 test("Hilog preserves ordinary application errors, pushes PID filters to the device and reports truncation", async (t) => {
   const f = fixture();
   try {

@@ -48,6 +48,7 @@ function fixture(t: import("node:test").TestContext) {
   });
   write("provenance/upstream-lock.json", {});
   write("provenance/upstream-mapping.json", {});
+  write("provenance/installed-skill-fingerprints.json", { format: 1, installations: [] });
   write("LICENSE", "test license");
   write("NOTICE.fixture", "fixture provenance");
   write("docs/native-installation.md", "installation test");

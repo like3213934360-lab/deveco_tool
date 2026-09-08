@@ -1,0 +1,287 @@
+{
+  "format": 1,
+  "source": {
+    "id": "deveco-code",
+    "url": "https://gitcode.com/openharmony-sig/deveco-code.git",
+    "ref": "refs/heads/develop",
+    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
+    "tree": "5620203eb2a04274afd9f9edb9d4b289427439b4",
+    "version": "v0.1.11",
+    "role": "resource_source",
+    "acceptance": "pending"
+  },
+  "mapping_sha256": "6ed14fd75d9f81f88ba6413804926b16a79172d5d1678fe364c135270e9e3b8e",
+  "reviews": [
+    {
+      "rule": "code-deveco-create-project",
+      "reason": "Replace template-copy and SDK detection Skill scripts with native ProjectService and attributed application templates; project creation stays a typed durable workflow. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "code-deveco-cli",
+      "reason": "Translate the CLI guidance into eight fixed native workflows and direct toolchain services; do not retain the CLI dispatch or execute the upstream Skill. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "code-arkts-error-fixes",
+      "reason": "Retain attributed ArkTS defect examples as knowledge resources and apply SDK checker diagnostics through native project/report adapters; imported examples are data, not executable Skills. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "code-arkts-grammar-standards",
+      "reason": "Retain attributed grammar and ArkUI reference material in local knowledge lookup; enforce actual project checks with the selected SDK instead of treating prose as a compiler. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "code-arkts-runtime-fix",
+      "reason": "Retain attributed crash patterns and runtime examples; native frame and process grouping separates interleaved events before rule matching and never invents absent frames. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "code-new-skill",
+      "reason": "The pinned tree has no files falling into this guard. Keep the unmapped fallback so a future new Skill requires a deliberate workflow, knowledge, or exclusion decision. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "code-host-customization",
+      "reason": "Reviewed scope of packages/opencode/resources/skills/customize-deveco/: Configures DevEco Code's own host; this MCP does not install host skills, agents or plugins. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "code-defaults.ts",
+      "reason": "Replace upstream default Skill discovery with the explicit knowledge inventory and source mapping. Native MCP does not create a host Skill registry. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "code-discovery.ts",
+      "reason": "Replace filesystem Skill discovery with attributed packaged resources and bounded local lookup; host-specific directory scanning is not installed. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "code-index.ts",
+      "reason": "Replace host Skill indexing and execution with typed knowledge catalog/search/read and explicit workflow contracts; source mappings retain future-change review. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "code-host-packages",
+      "reason": "Reviewed scope of packages/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "code-host-script",
+      "reason": "Reviewed scope of script/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "code-host-patches",
+      "reason": "Reviewed scope of patches/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "code-host-docs",
+      "reason": "Reviewed scope of docs/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "code-host-specs",
+      "reason": "Reviewed scope of specs/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "code-host-assets",
+      "reason": "Reviewed scope of assets/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "code-host-agents",
+      "reason": "Reviewed scope of .agents/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "code-host-opencode",
+      "reason": "Reviewed scope of .opencode/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "code-host-github",
+      "reason": "Reviewed scope of .github/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "code-host-gitcode",
+      "reason": "Reviewed scope of .gitcode/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "code-legal-LICENSE",
+      "reason": "Review LICENSE as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "code-legal-NOTICE",
+      "reason": "Review NOTICE as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "code-legal-OAT.xml",
+      "reason": "Review OAT.xml as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "code-legal-package.json",
+      "reason": "Review package.json as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "code-legal-bun.lock",
+      "reason": "Review bun.lock as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "code-legal-CHANGELOG.md",
+      "reason": "Review CHANGELOG.md as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "code-host-install",
+      "reason": "Reviewed scope of install: Bash installer and installation telemetry for the upstream DevEco Code host. Native MCP installation does not execute this script. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "code-host-install-ps1",
+      "reason": "Reviewed scope of install.ps1: PowerShell installer and installation telemetry for the upstream DevEco Code host. Native MCP installation does not execute this script. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    },
+    {
+      "rule": "code-host-turbo-json",
+      "reason": "Reviewed scope of turbo.json: Upstream monorepo build/test scheduling. This MCP uses its own strict TypeScript build and Node Test Runner matrix. Mapped checks have not yet run for this snapshot; acceptance remains pending.",
+      "reviewer": "Codex implementation review 2026-09-08"
+    }
+  ],
+  "targets": [
+    {
+      "path": "provenance/resources.json",
+      "sha256": "61ce5c5373a8482a8019e746a60678a169bff2de1f09463160003dfa6bea3186"
+    },
+    {
+      "path": "provenance/upstream-lock.json",
+      "sha256": "f219f524944b8fb4de9bcb4513fb334517fad1331ea35f8141cd64ee569459c3"
+    },
+    {
+      "path": "provenance/upstream-mapping.json",
+      "sha256": "69776c052364f35a3306eeaf5007c060770dc3753a96afac267e257e8b056681"
+    },
+    {
+      "path": "resources/knowledge.json",
+      "sha256": "ea8ee2af71ba344cb6a84c5ab522d9d414af98b36f8f845521a9522c11eea300"
+    },
+    {
+      "path": "resources/knowledge/arkts-error-fixes",
+      "sha256": "89465b0466d5f324222dde9527bd87d910cf9cf6fa4b6eb83a177c0b5a270532"
+    },
+    {
+      "path": "resources/knowledge/arkts-grammar-standards",
+      "sha256": "2f35d9f4bee57a5041737ea81aab385bab846e05c9025d04c44b826820356ae7"
+    },
+    {
+      "path": "resources/knowledge/arkts-runtime-fix",
+      "sha256": "5e9782bba4cd303b249f1d83057a19d8f3a6315843ca0b890229ad7962a37b3f"
+    },
+    {
+      "path": "resources/templates/application",
+      "sha256": "739c5c77fec53bcfd19774b8817c0692fcbefe400d3f1300af741bf0108b347e"
+    },
+    {
+      "path": "scripts/native-checker-acceptance.ts",
+      "sha256": "f1a7f87f08a9417572f23390ef9182965b4697d34fb8984b5e10c4ac6a865b4e"
+    },
+    {
+      "path": "scripts/native-crash-acceptance.ts",
+      "sha256": "a1f4b3da02eecba7f69becbf8cd940db6dcf9d09ac89ff0a44f26497c7b834d2"
+    },
+    {
+      "path": "scripts/native-sdk-acceptance.ts",
+      "sha256": "abf3ea7efdd7cf5e6f68764f6068fe087f32c1d9fd072f81a3dfc84a34c823c6"
+    },
+    {
+      "path": "src/services/checker-project.ts",
+      "sha256": "bb3548101c344ab42d9f7b722dd81d9fafe324bbc750b856473b04e76f71f9bc"
+    },
+    {
+      "path": "src/services/checker-report.ts",
+      "sha256": "0285bfc9f0c93d0b9ff912c7c31d317d993630c0e111c397bcd6b63638650253"
+    },
+    {
+      "path": "src/services/checker.ts",
+      "sha256": "78d2a1a5aa0ccb2b64306d17e543c832953186309d5c5a0c18d5c71fd87d2fb1"
+    },
+    {
+      "path": "src/services/crash-frames.ts",
+      "sha256": "3a2cabf7bb0be8f72c6fe1e704e99be2f423a715063fedf0f5ca95320ce15558"
+    },
+    {
+      "path": "src/services/crash-patterns.ts",
+      "sha256": "f427ec7854205db2422ef9a9e086bd19ed9a0ea7958e103445be44e6158debec"
+    },
+    {
+      "path": "src/services/crash.ts",
+      "sha256": "762de23d8e915c6737ae823aac733d1b2c9948da9f5da9f1074731822fcaeb5b"
+    },
+    {
+      "path": "src/services/knowledge.ts",
+      "sha256": "5f9422aa166519e994e910e0462091757a22c04cdfc509dc9515423faf18d41d"
+    },
+    {
+      "path": "src/services/logs.ts",
+      "sha256": "be5d46ca8aab73bceb6ecaadbac8d1b7475afca6865eec910e729d2baf533608"
+    },
+    {
+      "path": "src/services/project.ts",
+      "sha256": "216a0059dcae5b95a98f3445f5cc22eef8af108a9a21d782dc7951c6a888d6fd"
+    },
+    {
+      "path": "src/services/runtime.ts",
+      "sha256": "df4a10cf1e439cc8fe401d123943fae6f5b3942cc0b9b1d31f6b16158b0a290f"
+    },
+    {
+      "path": "test/native-checker.test.ts",
+      "sha256": "4832922c39181de79d365aecc28626b4d5c3d1447684a26d577fab217d14beb3"
+    },
+    {
+      "path": "test/native-crash.test.ts",
+      "sha256": "8650f6c29024bcc161c3eded1ebffe26607bd891518d3d045fe100628e734924"
+    },
+    {
+      "path": "test/native-logs.test.ts",
+      "sha256": "f86133c127a1865db4c7c17c8389ed3235c398187de9089ab4622733d66d58df"
+    },
+    {
+      "path": "test/native-project.test.ts",
+      "sha256": "9b374c09b19086d80a577a80f8169e36c0e5f9c4fd81d6ac8cf24ef54b1674e8"
+    },
+    {
+      "path": "test/native-runtime.test.ts",
+      "sha256": "7904ac1fa20416b77456069aa724c87791b776230a18690f3ff15dae936872c9"
+    },
+    {
+      "path": "test/native-upstream.test.ts",
+      "sha256": "d4aa5eea4dc9fca4cec768867641af74cbde1178937fb51a634aea06c0ca5e01"
+    },
+    {
+      "path": "test/workflows.test.ts",
+      "sha256": "016645857a2d3050fafe7f4082f23d188dfc83bbe101ee7b625ccdb131e1d49c"
+    }
+  ],
+  "required_tests": [
+    "scripts/native-checker-acceptance.ts",
+    "scripts/native-crash-acceptance.ts",
+    "scripts/native-sdk-acceptance.ts",
+    "test/native-checker.test.ts",
+    "test/native-crash.test.ts",
+    "test/native-logs.test.ts",
+    "test/native-project.test.ts",
+    "test/native-runtime.test.ts",
+    "test/native-upstream.test.ts",
+    "test/workflows.test.ts"
+  ]
+}
