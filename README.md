@@ -122,6 +122,8 @@ macOS 的 Studio 路径通常为 `/Applications/DevEco-Studio.app`。使用 CLT 
 
 默认不 clean、不升级 SDK、不自动修改业务代码。`project_build` 默认先同步，任务默认 `assembleHap`，也支持 HAR、HSP 和 APP 构建。`build_deploy_verify` 必须提交 `assert`，不接受把截图当作最终断言。
 
+创建工程时，`sdk_version` 指定已安装的编译 SDK，`target_api` 和 `compatible_api` 可分别设置目标行为 API 和最低设备 API；它们不必与编译 SDK 相同。省略时均使用所选 SDK 的 API，详见[工具链与版本配置](docs/native-toolchains.md)。
+
 例如，通过 MCP `tools/call` 查询构建工作流，再提交任务：
 
 ```json

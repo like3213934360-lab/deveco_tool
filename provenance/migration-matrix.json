@@ -2815,7 +2815,7 @@
         },
         "apiLevel": {
           "status": "mapped",
-          "replacement": "project_create.sdk_version；目标 API 与工具链版本分别判断"
+          "replacement": "project_create.target_api / compatible_api；sdk_version 独立选择已安装的编译 SDK"
         },
         "bundleName": {
           "status": "mapped",

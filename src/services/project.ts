@@ -30,7 +30,7 @@ import { currentTrace } from "../core/trace.js";
 import { ManagedCommand } from "../core/managed-command.js";
 import { BuildDiagnostics } from "../core/build-diagnostics.js";
 import { readPackageMetadata } from "./package.js";
-import { projectAppNameSchema, projectBundleNameSchema } from "../core/contracts.js";
+import { projectAppNameSchema, projectBundleNameSchema, projectCompatibleApiSchema, projectTargetApiSchema, type ProjectCreateInput } from "../core/contracts.js";
 
 const sdkVersion = z.union([
   z.number().int().positive(),
@@ -38,6 +38,7 @@ const sdkVersion = z.union([
 ]);
 const productSchema = z.object({
   name: z.string().min(1),
+  compileSdkVersion: sdkVersion.optional(),
   compatibleSdkVersion: sdkVersion,
   targetSdkVersion: sdkVersion.optional(),
   runtimeOS: z.enum(["HarmonyOS", "OpenHarmony"]).default("HarmonyOS"),
@@ -45,6 +46,7 @@ const productSchema = z.object({
 });
 const profileSchema = z.object({
   app: z.object({
+    compileSdkVersion: sdkVersion.optional(),
     compatibleSdkVersion: sdkVersion.optional(),
     targetSdkVersion: sdkVersion.optional(),
     products: z
@@ -157,6 +159,7 @@ export function inspectProject(
   );
   const product = productSchema.parse({
     ...selected,
+    compileSdkVersion: selected.compileSdkVersion ?? profile.app.compileSdkVersion,
     compatibleSdkVersion:
       selected.compatibleSdkVersion ?? profile.app.compatibleSdkVersion,
     targetSdkVersion: selected.targetSdkVersion ?? profile.app.targetSdkVersion,
@@ -262,12 +265,7 @@ export class ProjectService {
     return inspectProject(root || this.selected!, product);
   }
   async create(
-    input: {
-      project_path: string;
-      app_name: string;
-      bundle_name: string;
-      sdk_version: string | number;
-    },
+    input: ProjectCreateInput,
     signal?: AbortSignal,
     operationId: string = crypto.randomUUID(),
   ) {
@@ -300,6 +298,17 @@ export class ProjectService {
       available.includes(String(input.sdk_version)),
       "SDK_VERSION_UNAVAILABLE",
       `Requested SDK version is unavailable; installed API is ${metadata.apiVersion}`,
+    );
+    const compileApi = Number(metadata.apiVersion);
+    invariant(Number.isSafeInteger(compileApi) && compileApi >= 8, "SDK_METADATA_INVALID", "Installed SDK metadata must declare a valid compile API");
+    const targetApi = input.target_api ?? compileApi;
+    const compatibleApi = input.compatible_api ?? targetApi;
+    invariant(
+      projectCompatibleApiSchema.safeParse(compatibleApi).success &&
+        projectTargetApiSchema.safeParse(targetApi).success &&
+        compatibleApi <= targetApi && targetApi <= compileApi,
+      "SDK_API_RANGE_INVALID",
+      `API levels must satisfy minimum compatible <= target <= installed compile API ${compileApi}`,
     );
     fs.mkdirSync(path.dirname(root), { recursive: true });
     try {
@@ -368,8 +377,9 @@ export class ProjectService {
     app.products = [
       {
         name: "default",
-        compatibleSdkVersion: metadata.platformVersion,
-        targetSdkVersion: metadata.platformVersion,
+        compileSdkVersion: metadata.platformVersion,
+        compatibleSdkVersion: input.compatible_api ?? input.target_api ?? metadata.platformVersion,
+        targetSdkVersion: input.target_api ?? metadata.platformVersion,
         runtimeOS: "HarmonyOS",
         buildOption: {
           strictMode: { caseSensitiveCheck: true, useNormalizedOHMUrl: true },
@@ -402,12 +412,7 @@ export class ProjectService {
     return project;
   }
   reconcileCreate(
-    input: {
-      project_path: string;
-      app_name: string;
-      bundle_name: string;
-      sdk_version: string | number;
-    },
+    input: ProjectCreateInput,
     operationId: string,
   ): Project | undefined {
     const root = destinationPath(input.project_path),

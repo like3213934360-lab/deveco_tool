@@ -325,6 +325,51 @@ test("unavailable SDK fails before claiming the requested project directory", as
   }
 });
 
+test("project creation keeps compile SDK, target API and minimum device API independent", async () => {
+  const f = fixture();
+  try {
+    for (const [index, levels] of [
+      { target_api: 24, compatible_api: 22 },
+      { target_api: 24 },
+      { compatible_api: 22 },
+    ].entries()) {
+      const input = { ...f.input, project_path: path.join(f.root, `api-${index}`), ...levels };
+      assert.equal(workflowInputs.project_create.safeParse(input).success, true);
+      const created = await f.service.create(input);
+      assert.equal(created.product.compileSdkVersion, "26.0.0");
+      assert.equal(created.product.targetSdkVersion, levels.target_api ?? "26.0.0");
+      assert.equal(created.product.compatibleSdkVersion, levels.compatible_api ?? levels.target_api);
+      assert.equal(readObject(path.join(created.root, "hvigor/hvigor-config.json5")).modelVersion, "26.0.0");
+    }
+  } finally { f.close(); }
+});
+
+test("invalid API ranges fail before creating the destination or its parents", async () => {
+  const f = fixture();
+  try {
+    for (const levels of [
+      { target_api: 27 }, { target_api: 24, compatible_api: 25 },
+      { compatible_api: 27 }, { compatible_api: 3 }, { target_api: 7 },
+      { target_api: 24.5 }, { compatible_api: NaN }, { target_api: Infinity },
+    ]) {
+      const input = { ...f.input, project_path: path.join(f.root, "untouched/application"), ...levels };
+      await assert.rejects(f.service.create(input), { code: "SDK_API_RANGE_INVALID" });
+      assert.equal(fs.existsSync(path.dirname(input.project_path)), false);
+    }
+  } finally { f.close(); }
+});
+
+test("creation recovery binds requested runtime APIs as part of the original input", async () => {
+  const f = fixture();
+  try {
+    const input = { ...f.input, target_api: 24, compatible_api: 22 };
+    const created = await f.service.create(input, undefined, "api-recovery");
+    assert.equal(f.service.reconcileCreate(input, "api-recovery")?.root, created.root);
+    assert.equal(f.service.reconcileCreate({ ...input, target_api: 25 }, "api-recovery"), undefined);
+    assert.equal(f.service.reconcileCreate({ ...input, compatible_api: 23 }, "api-recovery"), undefined);
+  } finally { f.close(); }
+});
+
 test("resource names canonicalize existing parents of future project destinations", () => {
   const f = fixture();
   try {

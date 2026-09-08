@@ -347,12 +347,18 @@ export const projectBundleNameSchema = z.string().min(7).max(128).regex(
   /^[A-Za-z](?:[A-Za-z0-9_]*[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9_]*[A-Za-z0-9])?){2,}(?![\s\S])/,
 );
 export const projectAppNameSchema = z.string().min(1).max(128).regex(/^[A-Za-z][A-Za-z0-9_]*(?![\s\S])/);
+// Hvigor product schema separates the minimum runtime API, target behavior
+// API and SDK used for compilation. Component support is checked by the SDK.
+export const projectCompatibleApiSchema = z.number().int().min(4);
+export const projectTargetApiSchema = z.number().int().min(8);
 export const workflowInputs = {
   project_create: z.strictObject({
     project_path: z.string().min(1),
     app_name: projectAppNameSchema,
     bundle_name: projectBundleNameSchema,
     sdk_version: z.union([z.string(), z.number().int().positive()]),
+    compatible_api: projectCompatibleApiSchema.optional().describe("Minimum device API; defaults to target_api. Must not exceed the target API."),
+    target_api: projectTargetApiSchema.optional().describe("Target runtime behavior API; defaults to the selected SDK API. Must not exceed the installed compile SDK API."),
   }),
   project_sync: z.strictObject({
     ...projectFields,
@@ -468,6 +474,7 @@ export const workflowInputs = {
   }),
 };
 export type WorkflowName = keyof typeof workflowInputs;
+export type ProjectCreateInput = z.infer<typeof workflowInputs.project_create>;
 export const workflowNames = Object.keys(workflowInputs) as WorkflowName[];
 const provider = z.enum(["developer", "codegenie"]);
 const pagination = {

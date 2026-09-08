@@ -8,6 +8,7 @@ import { z } from "zod";
 import { Runtime } from "../src/services/runtime.js";
 import { discoverToolchain } from "../src/core/toolchain.js";
 import { atomicWrite, readObject } from "../src/core/files.js";
+import { archiveEntry } from "../src/core/archive.js";
 import { errorResult, object } from "../src/core/errors.js";
 import type { WorkflowName } from "../src/core/contracts.js";
 import { validateCsrPem } from "../src/services/signature.js";
@@ -372,6 +373,39 @@ try {
       validateCsrPem(fs.readFileSync(csr, "utf8"));
       return result;
     });
+    const lowerProject = path.join(root, "lower-api-application");
+    const lowerCreated = await observe("project_create_distinct_runtime_apis", async () => {
+      const result = await workflow("project_create", {
+        project_path: lowerProject,
+        app_name: "LowerApiCanary",
+        bundle_name: "com.deveco.lowerapicanary",
+        sdk_version: metadata.data.platformVersion,
+        compatible_api: 22,
+        target_api: 24,
+      });
+      const project = runtime.projects.resolve(lowerProject);
+      assert.equal(project.product.compileSdkVersion, metadata.data.platformVersion);
+      assert.equal(project.product.compatibleSdkVersion, 22);
+      assert.equal(project.product.targetSdkVersion, 24);
+      return result;
+    });
+    if (lowerCreated) {
+      await observe("project_build_distinct_runtime_apis", () => workflow("project_build", { project_path: lowerProject }));
+      await observe("native_hap_runtime_api_identity", async () => {
+        const artifacts = runtime.projects.buildArtifacts(runtime.projects.resolve(lowerProject));
+        assert.ok(artifacts.length > 0);
+        return Promise.all(artifacts.map(async (artifact) => {
+          const manifest = z.object({ app: z.object({ bundleName: z.literal("com.deveco.lowerapicanary"), minAPIVersion: z.number().int(), targetAPIVersion: z.number().int() }) }).parse(
+            JSON.parse((await archiveEntry(artifact.path, "module.json", 1048576)).toString("utf8")) as unknown,
+          );
+          // Hvigor sdk-util apiTransform appends the three-digit API number
+          // after the platform prefix; check the actual packaged API values.
+          assert.equal(manifest.app.minAPIVersion % 1000, 22);
+          assert.equal(manifest.app.targetAPIVersion % 1000, 24);
+          return { file: artifact.path, app: manifest.app };
+        }));
+      });
+    }
   }
   await observe("emulator_inventory", () =>
     runtime.call("emulator_manage", { action: "list" }),

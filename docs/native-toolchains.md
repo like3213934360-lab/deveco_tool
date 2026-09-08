@@ -2,6 +2,8 @@
 
 `DEVECO_CONFIG` 指向严格校验的 JSON 文件。`studio` 与 `clt` 只能配置一个；项目目标 API 从工程模型读取，不根据工具链版本直接排除旧 API 工程。
 
+创建工程时，`project_create.sdk_version` 选择实际安装的编译 SDK；`target_api` 单独指定应用的目标行为 API，`compatible_api` 指定允许安装的最低设备 API。目标 API 默认取所选 SDK，最低兼容 API 默认取目标 API；必须满足最低兼容 API ≤ 目标 API ≤ 编译 SDK API。生成的 `compileSdkVersion` 和工具模型版本仍来自实际 SDK，不下载或升级工具链。例如 SDK 26 可提交 `sdk_version: "26"`、`target_api: 24`、`compatible_api: 22`；具体版本组合和模板能力由实际 SDK 同步、构建验证。已有工程的三个版本字段分别读取，未提交创建工作流时不会改写它们。
+
 ```json
 {
   "clt": "/absolute/command-line-tools",
