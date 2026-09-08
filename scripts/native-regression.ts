@@ -23,6 +23,14 @@ const root = fileURLToPath(new URL("../../", import.meta.url)),
     .filter((name) => name.endsWith(".test.js"))
     .sort()
     .map((name) => path.join(root, "dist/test", name));
+// Windows process-ownership checks invoke real native enumeration. Bound their
+// parallel pressure and give the complete suite its own deadline; individual
+// process/recovery deadlines and performance acceptance remain unchanged.
+const execution = {
+  timeout_ms: process.platform === "win32" ? 600000 : 120000,
+  concurrency: process.platform === "win32" ? 2 : "node-default",
+};
+const started = performance.now();
 fs.writeFileSync(
   path.join(output, "identity.json"),
   JSON.stringify(identity, null, 2) + "\n",
@@ -38,6 +46,7 @@ try {
       executable: process.execPath,
       args: [
         "--test",
+        ...(process.platform === "win32" ? ["--test-concurrency=2"] : []),
         "--test-reporter=spec",
         "--test-reporter-destination=stdout",
         "--test-reporter=tap",
@@ -48,7 +57,7 @@ try {
     },
     {
       outputFile: path.join(output, "tests.log"),
-      timeoutMs: 120000,
+      timeoutMs: execution.timeout_ms,
       allowFailure: true,
     },
   );
@@ -92,6 +101,7 @@ try {
     JSON.stringify(
       {
         identity,
+        execution,
         scope:
           "Native compiled regressions on this Node version and operating system; mocked SDK/device cases are not real-device acceptance",
         passed,
@@ -116,10 +126,19 @@ try {
   );
   if (!passed) process.exitCode = 1;
 } catch (error) {
+  const failure = {
+    identity,
+    execution,
+    passed: false,
+    requested_tests: tests.map((file) => path.relative(root, file).split(path.sep).join("/")),
+    elapsed_ms: performance.now() - started,
+    error: errorResult(error),
+  };
   fs.writeFileSync(
     path.join(output, "failure.json"),
-    JSON.stringify({ identity, error: errorResult(error) }, null, 2) + "\n",
+    JSON.stringify(failure, null, 2) + "\n",
   );
+  fs.writeFileSync(path.join(output, "evidence.json"), JSON.stringify(failure, null, 2) + "\n");
   console.error(JSON.stringify(errorResult(error)));
   process.exitCode = 1;
 } finally {
