@@ -124,13 +124,13 @@
     },
     {
       "rule": "cli-command-serve-lsp.ts",
-      "reason": "Reviewed strict AppKit RuntimeError attribution against real multi-process Hilog and independently named faultlogs, preserving all nine reference documents and 45 complete knowledge suggestions. Reviewed bounded LSP session admission after continuous product and ABI switching exposed idle-capacity exhaustion: reclaim only idle owners, share concurrent reclamation, reserve active requests before yielding, and confirm process exit before admitting a replacement. Four active or unconfirmed owners retain capacity protection. Full current regression and mapped real SDK, device, auth, hot-patch and package checks are required; no upstream code execution or compatibility engine was introduced.",
-      "reviewer": "Codex current native acceptance review"
+      "reason": "Own an ArkTS LSP connection for the frozen project/toolchain and reclaim it after idle; do not start the official CLI LSP proxy. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
+      "reviewer": "Codex native runtime review"
     },
     {
       "rule": "cli-command-serve-lsp-cpp.ts",
-      "reason": "Reviewed strict AppKit RuntimeError attribution against real multi-process Hilog and independently named faultlogs, preserving all nine reference documents and 45 complete knowledge suggestions. Reviewed bounded LSP session admission after continuous product and ABI switching exposed idle-capacity exhaustion: reclaim only idle owners, share concurrent reclamation, reserve active requests before yielding, and confirm process exit before admitting a replacement. Four active or unconfirmed owners retain capacity protection. Full current regression and mapped real SDK, device, auth, hot-patch and package checks are required; no upstream code execution or compatibility engine was introduced.",
-      "reviewer": "Codex current native acceptance review"
+      "reason": "Start SDK clangd directly with module and ABI compile database context; require real cross-module C++ acceptance rather than assuming ArkTS results transfer. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
+      "reviewer": "Codex native runtime review"
     },
     {
       "rule": "cli-command-signature.ts",
@@ -407,7 +407,7 @@
     },
     {
       "path": "src/services/lsp.ts",
-      "sha256": "c749897d3b243c764a7b912407f7842f3ef26a2ed6bd1bcf2803cb9f9152b858"
+      "sha256": "b3ba9c2f5970c2167d6d2603cf0f7ac32087c8f9b46859870c72dba16b24168b"
     },
     {
       "path": "src/services/project.ts",

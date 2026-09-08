@@ -34,8 +34,8 @@
     },
     {
       "rule": "code-arkts-runtime-fix",
-      "reason": "Reviewed strict AppKit RuntimeError attribution against real multi-process Hilog and independently named faultlogs, preserving all nine reference documents and 45 complete knowledge suggestions. Reviewed bounded LSP session admission after continuous product and ABI switching exposed idle-capacity exhaustion: reclaim only idle owners, share concurrent reclamation, reserve active requests before yielding, and confirm process exit before admitting a replacement. Four active or unconfirmed owners retain capacity protection. Full current regression and mapped real SDK, device, auth, hot-patch and package checks are required; no upstream code execution or compatibility engine was introduced.",
-      "reviewer": "Codex current native acceptance review"
+      "reason": "Retain attributed crash patterns and runtime examples; native frame and process grouping separates interleaved events before rule matching and never invents absent frames. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
+      "reviewer": "Codex native runtime review"
     },
     {
       "rule": "code-new-skill",
@@ -241,7 +241,7 @@
     },
     {
       "path": "src/services/crash.ts",
-      "sha256": "d7e7b487ce94adab35fea1968016f13153299d6505022646fd967b454e82b9fb"
+      "sha256": "762de23d8e915c6737ae823aac733d1b2c9948da9f5da9f1074731822fcaeb5b"
     },
     {
       "path": "src/services/diagnostics.ts",
@@ -273,7 +273,7 @@
     },
     {
       "path": "test/native-crash.test.ts",
-      "sha256": "6fa5d92eda8cdf96b06b60fdcdf9f85631a8288f094a355c1fa25a9e9d049d68"
+      "sha256": "8650f6c29024bcc161c3eded1ebffe26607bd891518d3d045fe100628e734924"
     },
     {
       "path": "test/native-logs.test.ts",

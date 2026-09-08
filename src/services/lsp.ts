@@ -323,8 +323,18 @@ export async function filterDeclarations(
 }
 export class LanguageService {
   private readonly sessions = new Map<string, Session>();
+  private reclamation?: Promise<void>;
+  private stopping = false;
   get metrics() {
-    return { connections: this.sessions.size, active_requests: [...this.sessions.values()].reduce((sum, session) => sum + session.active, 0), idle_ms: 300000, sweep_ms: 30000 };
+    return {
+      connections: this.sessions.size,
+      active_requests: [...this.sessions.values()].reduce(
+        (sum, session) => sum + session.active,
+        0,
+      ),
+      idle_ms: 300000,
+      sweep_ms: 30000,
+    };
   }
   private readonly sweeper: NodeJS.Timeout;
   constructor(
@@ -351,11 +361,12 @@ export class LanguageService {
       }
     })());
   }
-  private session(
+  private async session(
     project: Project,
     language: "arkts" | "cpp",
+    signal: AbortSignal,
     compileDirectory?: string,
-  ): Session {
+  ): Promise<Session> {
     let toolchainFingerprint: string | undefined;
     const command =
       this.launch?.(project, language) ??
@@ -373,21 +384,44 @@ export class LanguageService {
         };
       })();
     const key = `${project.root}:${language}:${digest({ command, toolchainFingerprint })}:${project.fingerprint}`;
-    const found = this.sessions.get(key);
-    if (found) {
+    for (;;) {
+      signal.throwIfAborted();
+      invariant(!this.stopping, "LSP_CLOSING", "Language service is closing");
+      const found = this.sessions.get(key);
+      if (found) {
+        invariant(
+          !found.closing,
+          "LSP_CLOSING",
+          "This language session is closing or its exit has not been confirmed",
+        );
+        found.touched = Date.now();
+        // Reserve before yielding so another admission cannot evict this owner.
+        found.active++;
+        return found;
+      }
+      if (this.sessions.size < 4) break;
+      if (this.reclamation) {
+        await this.reclamation;
+        continue;
+      }
+      const idle = [...this.sessions.entries()]
+        .filter(([, session]) => session.active === 0 && !session.closing)
+        .sort((a, b) => a[1].touched - b[1].touched)[0];
       invariant(
-        !found.closing,
-        "LSP_CLOSING",
-        "This language session is closing or its exit has not been confirmed",
+        idle,
+        "LSP_CAPACITY",
+        "At most four active language servers; wait for an active request to finish",
       );
-      found.touched = Date.now();
-      return found;
+      // Keep the slot occupied until ProcessService confirms owner exit. Share
+      // this reclamation so concurrent callers do not evict extra idle owners.
+      const reclamation = this.closeSession(idle[0], idle[1]);
+      this.reclamation = reclamation;
+      try {
+        await reclamation;
+      } finally {
+        if (this.reclamation === reclamation) this.reclamation = undefined;
+      }
     }
-    invariant(
-      this.sessions.size < 4,
-      "LSP_CAPACITY",
-      "At most four active language servers; close an idle session",
-    );
     let directory: NativeDirectory | undefined;
     if (!this.launch && language === "arkts") {
       invariant(
@@ -425,7 +459,7 @@ export class LanguageService {
       touched: Date.now(),
       ready: Promise.resolve(),
       queued: Promise.resolve(),
-      active: 0,
+      active: 1,
       capabilities: {},
       directory,
     };
@@ -572,15 +606,15 @@ export class LanguageService {
         "COMPILE_DATABASE_FILE_MISSING",
         "Requested file is not a translation unit in this native compilation database",
       );
-    const session = this.session(
+    const session = await this.session(
         project,
         input.language ?? "arkts",
+        signal,
         database?.directory,
       ),
       previous = session.queued,
       finished = Promise.withResolvers<void>();
     session.queued = previous.then(() => finished.promise);
-    session.active++;
     signal = session.directory?.signal(signal) ?? signal;
     try {
       await waitFor(previous, signal);
@@ -729,6 +763,7 @@ export class LanguageService {
     }
   }
   async close(): Promise<void> {
+    this.stopping = true;
     clearInterval(this.sweeper);
     await Promise.all(
       [...this.sessions].map(([key, session]) =>

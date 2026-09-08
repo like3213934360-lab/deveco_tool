@@ -1,0 +1,271 @@
+{
+  "format": 2,
+  "candidate_sha256": "dabea7120d67904bc76291a0a8bf2ad620101b2ef76d9d30ec78821285ee475b",
+  "adaptation_sha256": "fea85009e0d0fa1709540ecdad45f4ea0c214b3eedcc414fcf667ef4403f015e",
+  "evidence_sha256": "7e297cc37f409eb1277a0180573feff0101efd5ca988848034c8d3a52581563c",
+  "before_lock_sha256": "c33ca8c6d4e226383d9cb485b118eb2dad6f1d460df2a7d6ceab61827c3075ea",
+  "accepted_lock_sha256": "c33ca8c6d4e226383d9cb485b118eb2dad6f1d460df2a7d6ceab61827c3075ea",
+  "before_lock": {
+    "format": 1,
+    "sources": [
+      {
+        "id": "deveco-code",
+        "url": "https://gitcode.com/openharmony-sig/deveco-code.git",
+        "ref": "refs/heads/develop",
+        "commit": "325aff05706b9b04a9816a987e9672dda991c630",
+        "tree": "9232f44a15bed9f948662af74f23264b34be457c",
+        "version": "325aff05706b9b04a9816a987e9672dda991c630",
+        "role": "resource_source",
+        "acceptance": "verified"
+      },
+      {
+        "id": "deveco-cli",
+        "url": "https://gitcode.com/openharmony-sig/deveco-cli.git",
+        "ref": "refs/heads/develop",
+        "commit": "08c2f57ffbe83c817d64a728a17971872dd9ddcf",
+        "tree": "36fc532ea8ddb6c4eec3168e6301d0240e61b45d",
+        "version": "1.3.3-Test.1",
+        "role": "protocol_reference",
+        "acceptance": "verified"
+      }
+    ]
+  },
+  "accepted_lock": {
+    "format": 1,
+    "sources": [
+      {
+        "id": "deveco-code",
+        "url": "https://gitcode.com/openharmony-sig/deveco-code.git",
+        "ref": "refs/heads/develop",
+        "commit": "325aff05706b9b04a9816a987e9672dda991c630",
+        "tree": "9232f44a15bed9f948662af74f23264b34be457c",
+        "version": "325aff05706b9b04a9816a987e9672dda991c630",
+        "role": "resource_source",
+        "acceptance": "verified"
+      },
+      {
+        "id": "deveco-cli",
+        "url": "https://gitcode.com/openharmony-sig/deveco-cli.git",
+        "ref": "refs/heads/develop",
+        "commit": "08c2f57ffbe83c817d64a728a17971872dd9ddcf",
+        "tree": "36fc532ea8ddb6c4eec3168e6301d0240e61b45d",
+        "version": "1.3.3-Test.1",
+        "role": "protocol_reference",
+        "acceptance": "verified"
+      }
+    ]
+  },
+  "tested": {
+    "runtime_sha256": "0adac632b689bf66af02e807119dcdc70e71dee617cd00df25cb969f9f8372a1",
+    "compiled_sha256": "5e3a48daa0881876eea7c35a1aabf9858d660d0d1e06028ee6402abce004b69e",
+    "package_lock_sha256": "68641e488a5099852216d3003664f57dd1d05b980f4c7813ee75dd7baf83d0fc",
+    "resource_manifest_sha256": "563bc3f06565e92c59c621c3ef909a37cbc4ac1db958d3d73d6e0bc99bf9ed86",
+    "upstream_lock_sha256": "bf3cc411831bd8ce6652a8085c8247c399d0c48b6d73156a7e649b9ef668164e"
+  },
+  "checks": [
+    {
+      "check": "scripts/native-auth-mcp-acceptance.ts",
+      "report": "checks/8618715e32d66a544bdee3746fc989ee9b40eaf23dad3b39cd44cfb6bf54af6c.json",
+      "sha256": "18007debda70221ba7efb44a5a075816d5dc7b584827ff9a05e48c6bb76f9c09",
+      "original_sha256": "a9f661084c8175b94c196092c4a44a8891e1e190e79baee299f741ad24cace35"
+    },
+    {
+      "check": "scripts/native-device-readonly.ts",
+      "report": "checks/077106e95549d86dac1e6d71515c448e3153558bac09f04f298185b1fe81cade.json",
+      "sha256": "5ffcd705ca938267f16c713db47c643c0177ea769c03cabd49266af8f4844e8e",
+      "original_sha256": "7870d5cf6a2b4359f7ed6fbe2b35c350cfaad00a0de29f5fde75de1fd8bbe166"
+    },
+    {
+      "check": "scripts/native-emulator-acceptance.ts",
+      "report": "checks/766cb10fbbf4735a841224c7861f4630d8aa7b55a72e38e2a30917059e05c088.json",
+      "sha256": "d48c591d030e83172d3d366b38010cbef439d4130fcf1c6f95b0464e8a9e951c",
+      "original_sha256": "3c497d290d76709f82d4b61def67339cd1b7b13ff49a0eb90a36770fdbfbd972"
+    },
+    {
+      "check": "scripts/native-emulator-readonly.ts",
+      "report": "checks/7fba370f82ed595d31c055e33d43a745e6caeb29ce851a893f93e01c136fea14.json",
+      "sha256": "688809b051ac4a9d0b59af7d66161b16f257174992bbbe3f30910530d1f7452b",
+      "original_sha256": "280b3d99a431b0674b6dbb40ca6aab90ae0b0e195e8842764116c976cc5150ab"
+    },
+    {
+      "check": "scripts/native-hot-device-acceptance.ts",
+      "report": "checks/5c377847d71872d46530b95ae14f2c1845a04cf908cbe0aa51be26e20eda476f.json",
+      "sha256": "2d7184f643d7585bb8584d21e0b1f555885297e5f6278e6f4070c37640412254",
+      "original_sha256": "303964bc054f28c3321ffeafd66c057b98bad7c6d6938bed3caecefcf9e317b5"
+    },
+    {
+      "check": "scripts/native-lint-acceptance.ts",
+      "report": "checks/5d6cf043b557f74c04c6aad2f95db1a6ec33905f66f4341388138395822575bf.json",
+      "sha256": "87d9d4a1274032dd5e4fb4e22e07f0155f24e8f18f16867f735518c33efe12a9",
+      "original_sha256": "5b2d52038bc9fec3784a03b6823d5a6eaf3bdf846e671e8957d05874d7abc15d"
+    },
+    {
+      "check": "scripts/native-multimodule-acceptance.ts",
+      "report": "checks/f26307f5844a9fb136dc586c5c05fe972fbe1f1a0b85b48f6e3a274d66db83fd.json",
+      "sha256": "8fd5c9ac4704a122708dded645bc004a3becb3b145c7d720416011795e27b2e8",
+      "original_sha256": "e84271fd294e13ec72f1b4cf76872d61ff06a392c418d4227571138d53cc3587"
+    },
+    {
+      "check": "scripts/native-sdk-acceptance.ts",
+      "report": "checks/ea0dd007d83219a9e37626d3aa7fc955f19342a3c1bd78533171431e5d0b17f3.json",
+      "sha256": "fe361e147f6f023288c450c9f2a81e49cf1c357fc65ed5e6314c383c44f50d1f",
+      "original_sha256": "1609770f3715956cf4a839b6eebcbe18f32945c0baa43b1f7064f59bb16714a9"
+    },
+    {
+      "check": "scripts/native-signing-acceptance.ts",
+      "report": "checks/b3edb7df09dcb273606ce396a0e9276ab43b9bb208147271af392bbdcda789ee.json",
+      "sha256": "cee940a061cfa28094e102efc1ed87d467680409f18f303eb44cac1d35dee34e",
+      "original_sha256": "c9013408035145f00a43c65c967f9287a087ee156f7cc47153a470b7805a120e"
+    },
+    {
+      "check": "scripts/native-ui-mcp-benchmark.ts",
+      "report": "checks/bbe7ca4dc84f3a99667e322793c6f2e0343f74cf2e3aa91ccb8ebf6a573028f6.json",
+      "sha256": "51f1dcc51c9f34ca8d85ba924b118bd67cf8ebb2cff2f401cbd579fd1596f8b6",
+      "original_sha256": "c1cff68ea42fad8d2bac745c7a7a2a8df1782ee72d42be259f29eb418c1d47e8"
+    },
+    {
+      "check": "test/native-auth.test.ts",
+      "report": "checks/1c05ee2b5c8bde972c4c785f804bde2f3959cb0170620f7051d3beec7d5c954d.json",
+      "sha256": "6c75b0dd3c96cf0a2e2b9464ae2fad4ec282e2e9948062fa5fd726ac27cfaa56",
+      "original_sha256": "302a2768354cde8402d486ae4ab079eec0a151a1f9f913f59f5898cc8b29e1aa"
+    },
+    {
+      "check": "test/native-checker.test.ts",
+      "report": "checks/6d67f4b6a02a85cfc40984db0f38f6616740f7203f7520fcd5cb937b631520a5.json",
+      "sha256": "a8282ddc8bfe744e0d21e89d5df702b80a1592a08626671e0aca9e36b52c5b9e",
+      "original_sha256": "302a2768354cde8402d486ae4ab079eec0a151a1f9f913f59f5898cc8b29e1aa"
+    },
+    {
+      "check": "test/native-cloud-profile.test.ts",
+      "report": "checks/a105e2ba7f9ebc5da851a993fc59f05cc0b17ddffa76da7e0eb7b5101f84957c.json",
+      "sha256": "a83c4b5d7bfae52cd0dbd9cb018038dd989b5d7bfc2655f5487e14c3239ee2d1",
+      "original_sha256": "302a2768354cde8402d486ae4ab079eec0a151a1f9f913f59f5898cc8b29e1aa"
+    },
+    {
+      "check": "test/native-context.test.ts",
+      "report": "checks/01e481cfbd4ae0b843cb1b6effd23a19a8a670f096839f7bc938dae5e90fc0de.json",
+      "sha256": "cccc152b32bc3b6d33f6519dca2810398e3b1f3e4d91dc8877ac7938a5bfe9f0",
+      "original_sha256": "302a2768354cde8402d486ae4ab079eec0a151a1f9f913f59f5898cc8b29e1aa"
+    },
+    {
+      "check": "test/native-device-info.test.ts",
+      "report": "checks/cf9552c9595d053e68c2cf0b8586e11dd5cbca4fbf41f6556c843f8253dcbfc1.json",
+      "sha256": "56676f09c36c53e5a7d63cc701b2b2b7fee4a38e69742824f189d0de3c40fa83",
+      "original_sha256": "302a2768354cde8402d486ae4ab079eec0a151a1f9f913f59f5898cc8b29e1aa"
+    },
+    {
+      "check": "test/native-emulator-protocol.test.ts",
+      "report": "checks/b298b85143ed2cf28ba13e433b4cc68a2ae126ba72523a696cfb623934b112a3.json",
+      "sha256": "074c45ae791ed910db76e96eef437aabf309c75e177abfe69c85d71849e70d2d",
+      "original_sha256": "302a2768354cde8402d486ae4ab079eec0a151a1f9f913f59f5898cc8b29e1aa"
+    },
+    {
+      "check": "test/native-emulator.test.ts",
+      "report": "checks/993982098197363bac2ffffe2c0eca65dbfaa37610044af5c2b2216f19f8cbab.json",
+      "sha256": "b9f4f2db82fa706cf8b538a4d375f14e58113a0e195a299d8921623f7c30fc96",
+      "original_sha256": "302a2768354cde8402d486ae4ab079eec0a151a1f9f913f59f5898cc8b29e1aa"
+    },
+    {
+      "check": "test/native-flow.test.ts",
+      "report": "checks/2e471884f5031dcf6a4f534c012d15fd12e886237c056559e10d6b1516c52d89.json",
+      "sha256": "6a843f1c3cd375b022d2a3ce2c081a388745349bb6ab7daca373fa858568efc6",
+      "original_sha256": "302a2768354cde8402d486ae4ab079eec0a151a1f9f913f59f5898cc8b29e1aa"
+    },
+    {
+      "check": "test/native-hotreload.test.ts",
+      "report": "checks/86ec335ba9b973e7307cb5a198b9270755e0354fdcbcbbfa6bbdf00e497ec324.json",
+      "sha256": "7c6c57e621bd057cb3fddac67a43c5cf7448982ad2ccc8d51f12d0914c2143be",
+      "original_sha256": "302a2768354cde8402d486ae4ab079eec0a151a1f9f913f59f5898cc8b29e1aa"
+    },
+    {
+      "check": "test/native-infrastructure.test.ts",
+      "report": "checks/76c22d26224bad561cc7c4bc17f56938fa1754dc04a0e906861384a25568b3f6.json",
+      "sha256": "2b644eca1fdb3a9d925b15f3b5632ae5d718d6605581b8619743b7d65b153b0a",
+      "original_sha256": "302a2768354cde8402d486ae4ab079eec0a151a1f9f913f59f5898cc8b29e1aa"
+    },
+    {
+      "check": "test/native-lint.test.ts",
+      "report": "checks/1fbc02affe0fded1ad22fabd65849fc848d9f17e2ee62f30e0ee96c89826f449.json",
+      "sha256": "523e224f5d61ef66a22d6dd2111316196ad4541f340cfb1aaf430a760112c0c2",
+      "original_sha256": "302a2768354cde8402d486ae4ab079eec0a151a1f9f913f59f5898cc8b29e1aa"
+    },
+    {
+      "check": "test/native-project-recovery.test.ts",
+      "report": "checks/cc96d676fc79dba18c065655b71d79abb781a169207b2b6e236941cc5e9399b1.json",
+      "sha256": "809b7528232d394e37f82b835a083a4bdbd8ae58f6528b23d64c88f8d57ac059",
+      "original_sha256": "302a2768354cde8402d486ae4ab079eec0a151a1f9f913f59f5898cc8b29e1aa"
+    },
+    {
+      "check": "test/native-project.test.ts",
+      "report": "checks/3ad310725f8b6322477acc836823b15e3eaa37b720b5f717ee786001148acd12.json",
+      "sha256": "26688e3ebeb37d3d9ac8fffcb48d0e149b197c4066ca9f8988c16e0459296268",
+      "original_sha256": "302a2768354cde8402d486ae4ab079eec0a151a1f9f913f59f5898cc8b29e1aa"
+    },
+    {
+      "check": "test/native-reports.test.ts",
+      "report": "checks/35f708ee6e12bca59084cd4ab7e1f0bd6bf908edff7794257068baab9e2eaaa8.json",
+      "sha256": "ce6c1902039534925b521b50b7efdb3e0698e59c269d904fa54c4247b82a818a",
+      "original_sha256": "302a2768354cde8402d486ae4ab079eec0a151a1f9f913f59f5898cc8b29e1aa"
+    },
+    {
+      "check": "test/native-request-log.test.ts",
+      "report": "checks/155c4dc5c260e4de6b1db2e69dbbf0908f8dc7e5b11106ca80e030bf9e9f936e.json",
+      "sha256": "dee12f9a7ec60c4201ce0fd982f546047254fb7d165e988da5fdd5a5e8c4008e",
+      "original_sha256": "302a2768354cde8402d486ae4ab079eec0a151a1f9f913f59f5898cc8b29e1aa"
+    },
+    {
+      "check": "test/native-resources.test.ts",
+      "report": "checks/06b7acadcd82c85c9d0b946babfe6c7752e655ef0929807f617e8b188b32f901.json",
+      "sha256": "777e503bb886750713307900ec796165245b879a3977d5e8627b6c4c6e798776",
+      "original_sha256": "302a2768354cde8402d486ae4ab079eec0a151a1f9f913f59f5898cc8b29e1aa"
+    },
+    {
+      "check": "test/native-runtime.test.ts",
+      "report": "checks/adf21fd6b1a0a9e9e5323e41a950a8231c19a771f2e90ce86331cd49145d2b46.json",
+      "sha256": "23ac7ee9d1aad939624ac2d15d7f34315e883877646a305dc9122c112bd58167",
+      "original_sha256": "302a2768354cde8402d486ae4ab079eec0a151a1f9f913f59f5898cc8b29e1aa"
+    },
+    {
+      "check": "test/native-shutdown.test.ts",
+      "report": "checks/f9a282e08533f04d901d07f499622ef3fff1c3320dcd3b9a7da263d09a5ab687.json",
+      "sha256": "adc598ef30c8f565f4fd7d1adc722bbdb895059549deb07fc68f32fe0f8992f2",
+      "original_sha256": "302a2768354cde8402d486ae4ab079eec0a151a1f9f913f59f5898cc8b29e1aa"
+    },
+    {
+      "check": "test/native-signature.test.ts",
+      "report": "checks/c5dabfc24c4dbeffb20d3f6e881cd1e5ec5a0bdaf6c033c95c1e8475b7b55bec.json",
+      "sha256": "40f5b122fc2b46bf09a6bf817e37a7f94c66917d2a995554171020d3ae54e0dd",
+      "original_sha256": "302a2768354cde8402d486ae4ab079eec0a151a1f9f913f59f5898cc8b29e1aa"
+    },
+    {
+      "check": "test/native-signing-config.test.ts",
+      "report": "checks/0361892f080eeb805adbcd0cd37a17c16a68f71f7b4fe56a29e3beca03cea4e3.json",
+      "sha256": "1ccb814f00d7bbfcdd11d755366cab7ab85f5377467b008352c454b955c900fd",
+      "original_sha256": "302a2768354cde8402d486ae4ab079eec0a151a1f9f913f59f5898cc8b29e1aa"
+    },
+    {
+      "check": "test/native-text.test.ts",
+      "report": "checks/048c63bfecef5e38256b14d430896c8e85bee42609aa145c645e7743cf0ca174.json",
+      "sha256": "c5cc421bf93be5b26d4d69301aa2dc93cea25884edce3f1e5aaf0397f3a82284",
+      "original_sha256": "302a2768354cde8402d486ae4ab079eec0a151a1f9f913f59f5898cc8b29e1aa"
+    },
+    {
+      "check": "test/native-toolchain.test.ts",
+      "report": "checks/9b895dd730df484e2af611ddc5d22f2c6d9ab4e6f8095bdb0360e6b86cdb40fd.json",
+      "sha256": "06550032fd795907359d36b01227572c99d6c53461194597ed81f2f140fccc93",
+      "original_sha256": "302a2768354cde8402d486ae4ab079eec0a151a1f9f913f59f5898cc8b29e1aa"
+    },
+    {
+      "check": "test/native-ui-import.test.ts",
+      "report": "checks/8e69a3e1cf7960e033861bf7aa230deec253ce618e4e6f0473bae0c843fbdc52.json",
+      "sha256": "6de21037d52f568aa72265aa40a020b6e35be5189f08342dacb0ae8d322ade36",
+      "original_sha256": "302a2768354cde8402d486ae4ab079eec0a151a1f9f913f59f5898cc8b29e1aa"
+    },
+    {
+      "check": "test/native-upstream.test.ts",
+      "report": "checks/578a998d2c29a8e1ba3f5ab025be688c54d65ba0603602c78e053ed99ace3512.json",
+      "sha256": "8c5237ace752a69507e9c65c9acf159049d5ef5e9b4bb6584045ed0f6ce31767",
+      "original_sha256": "302a2768354cde8402d486ae4ab079eec0a151a1f9f913f59f5898cc8b29e1aa"
+    }
+  ]
+}

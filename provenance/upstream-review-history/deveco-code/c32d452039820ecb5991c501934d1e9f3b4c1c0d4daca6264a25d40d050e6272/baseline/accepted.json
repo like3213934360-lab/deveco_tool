@@ -1,0 +1,145 @@
+{
+  "format": 2,
+  "candidate_sha256": "eb82c90b6fed7bf2f41b0c70cc5b9877becc9150675f11798d2857adaeaa7116",
+  "adaptation_sha256": "17023f6045061f8ea997b51d7b058391d73fb3def1947a27b1fd3eab430d9ee5",
+  "evidence_sha256": "e57e008727f30de6ae50562e726177d239d05931c13abe6a99afda51cf11ec5a",
+  "before_lock_sha256": "c33ca8c6d4e226383d9cb485b118eb2dad6f1d460df2a7d6ceab61827c3075ea",
+  "accepted_lock_sha256": "c33ca8c6d4e226383d9cb485b118eb2dad6f1d460df2a7d6ceab61827c3075ea",
+  "before_lock": {
+    "format": 1,
+    "sources": [
+      {
+        "id": "deveco-code",
+        "url": "https://gitcode.com/openharmony-sig/deveco-code.git",
+        "ref": "refs/heads/develop",
+        "commit": "325aff05706b9b04a9816a987e9672dda991c630",
+        "tree": "9232f44a15bed9f948662af74f23264b34be457c",
+        "version": "325aff05706b9b04a9816a987e9672dda991c630",
+        "role": "resource_source",
+        "acceptance": "verified"
+      },
+      {
+        "id": "deveco-cli",
+        "url": "https://gitcode.com/openharmony-sig/deveco-cli.git",
+        "ref": "refs/heads/develop",
+        "commit": "08c2f57ffbe83c817d64a728a17971872dd9ddcf",
+        "tree": "36fc532ea8ddb6c4eec3168e6301d0240e61b45d",
+        "version": "1.3.3-Test.1",
+        "role": "protocol_reference",
+        "acceptance": "verified"
+      }
+    ]
+  },
+  "accepted_lock": {
+    "format": 1,
+    "sources": [
+      {
+        "id": "deveco-code",
+        "url": "https://gitcode.com/openharmony-sig/deveco-code.git",
+        "ref": "refs/heads/develop",
+        "commit": "325aff05706b9b04a9816a987e9672dda991c630",
+        "tree": "9232f44a15bed9f948662af74f23264b34be457c",
+        "version": "325aff05706b9b04a9816a987e9672dda991c630",
+        "role": "resource_source",
+        "acceptance": "verified"
+      },
+      {
+        "id": "deveco-cli",
+        "url": "https://gitcode.com/openharmony-sig/deveco-cli.git",
+        "ref": "refs/heads/develop",
+        "commit": "08c2f57ffbe83c817d64a728a17971872dd9ddcf",
+        "tree": "36fc532ea8ddb6c4eec3168e6301d0240e61b45d",
+        "version": "1.3.3-Test.1",
+        "role": "protocol_reference",
+        "acceptance": "verified"
+      }
+    ]
+  },
+  "tested": {
+    "runtime_sha256": "0adac632b689bf66af02e807119dcdc70e71dee617cd00df25cb969f9f8372a1",
+    "compiled_sha256": "5e3a48daa0881876eea7c35a1aabf9858d660d0d1e06028ee6402abce004b69e",
+    "package_lock_sha256": "68641e488a5099852216d3003664f57dd1d05b980f4c7813ee75dd7baf83d0fc",
+    "resource_manifest_sha256": "563bc3f06565e92c59c621c3ef909a37cbc4ac1db958d3d73d6e0bc99bf9ed86",
+    "upstream_lock_sha256": "bf3cc411831bd8ce6652a8085c8247c399d0c48b6d73156a7e649b9ef668164e"
+  },
+  "checks": [
+    {
+      "check": "scripts/native-checker-acceptance.ts",
+      "report": "checks/5da9c87707faf8541f8b1087ce50c5a6a9ddfaff46fbf885f8a8d2a0cffb4f2d.json",
+      "sha256": "38bd37e2f401a7b960d7b5c5ee565bf0445b9995b184c0a5840185e81c18dad7",
+      "original_sha256": "72318bccae6dd93e6beff8aa7366e339fc7f4ec5ed54e0f33c375ada181de689"
+    },
+    {
+      "check": "scripts/native-crash-acceptance.ts",
+      "report": "checks/7b844b7a9bc88336b295f30bc11fd124c32db6cea5525267d7321602ccccce6a.json",
+      "sha256": "5d3c9b6cce8b2bddb02e4e644562583a809388e2274b95dbedbf01cc85be17b0",
+      "original_sha256": "7e2b558330890d5c37e7223a24e60e876ab1d07988cb7ef39d0028555e8c82f4"
+    },
+    {
+      "check": "scripts/native-multimodule-acceptance.ts",
+      "report": "checks/f26307f5844a9fb136dc586c5c05fe972fbe1f1a0b85b48f6e3a274d66db83fd.json",
+      "sha256": "8fd5c9ac4704a122708dded645bc004a3becb3b145c7d720416011795e27b2e8",
+      "original_sha256": "e84271fd294e13ec72f1b4cf76872d61ff06a392c418d4227571138d53cc3587"
+    },
+    {
+      "check": "scripts/native-sdk-acceptance.ts",
+      "report": "checks/ea0dd007d83219a9e37626d3aa7fc955f19342a3c1bd78533171431e5d0b17f3.json",
+      "sha256": "fe361e147f6f023288c450c9f2a81e49cf1c357fc65ed5e6314c383c44f50d1f",
+      "original_sha256": "1609770f3715956cf4a839b6eebcbe18f32945c0baa43b1f7064f59bb16714a9"
+    },
+    {
+      "check": "test/native-checker.test.ts",
+      "report": "checks/6d67f4b6a02a85cfc40984db0f38f6616740f7203f7520fcd5cb937b631520a5.json",
+      "sha256": "a8282ddc8bfe744e0d21e89d5df702b80a1592a08626671e0aca9e36b52c5b9e",
+      "original_sha256": "302a2768354cde8402d486ae4ab079eec0a151a1f9f913f59f5898cc8b29e1aa"
+    },
+    {
+      "check": "test/native-context.test.ts",
+      "report": "checks/01e481cfbd4ae0b843cb1b6effd23a19a8a670f096839f7bc938dae5e90fc0de.json",
+      "sha256": "cccc152b32bc3b6d33f6519dca2810398e3b1f3e4d91dc8877ac7938a5bfe9f0",
+      "original_sha256": "302a2768354cde8402d486ae4ab079eec0a151a1f9f913f59f5898cc8b29e1aa"
+    },
+    {
+      "check": "test/native-crash.test.ts",
+      "report": "checks/6384eb6dceb6b1c6912568df46ac1ff3bd1ba820578f2ccdf90cbfeb1c3d5722.json",
+      "sha256": "2e1f08f3b095a1099d4b38d9f45fc3823ff65ce6159918263a26e2d55639fc48",
+      "original_sha256": "302a2768354cde8402d486ae4ab079eec0a151a1f9f913f59f5898cc8b29e1aa"
+    },
+    {
+      "check": "test/native-logs.test.ts",
+      "report": "checks/39f48d44bca9d600956f61142e5fd5edb2f17f675707fcb52f3181003a519141.json",
+      "sha256": "141808250c6b2cade13195e4ff2fdae85a5076f4800df98fdcd4ac52486e91a8",
+      "original_sha256": "302a2768354cde8402d486ae4ab079eec0a151a1f9f913f59f5898cc8b29e1aa"
+    },
+    {
+      "check": "test/native-project-recovery.test.ts",
+      "report": "checks/cc96d676fc79dba18c065655b71d79abb781a169207b2b6e236941cc5e9399b1.json",
+      "sha256": "809b7528232d394e37f82b835a083a4bdbd8ae58f6528b23d64c88f8d57ac059",
+      "original_sha256": "302a2768354cde8402d486ae4ab079eec0a151a1f9f913f59f5898cc8b29e1aa"
+    },
+    {
+      "check": "test/native-project.test.ts",
+      "report": "checks/3ad310725f8b6322477acc836823b15e3eaa37b720b5f717ee786001148acd12.json",
+      "sha256": "26688e3ebeb37d3d9ac8fffcb48d0e149b197c4066ca9f8988c16e0459296268",
+      "original_sha256": "302a2768354cde8402d486ae4ab079eec0a151a1f9f913f59f5898cc8b29e1aa"
+    },
+    {
+      "check": "test/native-runtime.test.ts",
+      "report": "checks/adf21fd6b1a0a9e9e5323e41a950a8231c19a771f2e90ce86331cd49145d2b46.json",
+      "sha256": "23ac7ee9d1aad939624ac2d15d7f34315e883877646a305dc9122c112bd58167",
+      "original_sha256": "302a2768354cde8402d486ae4ab079eec0a151a1f9f913f59f5898cc8b29e1aa"
+    },
+    {
+      "check": "test/native-upstream.test.ts",
+      "report": "checks/578a998d2c29a8e1ba3f5ab025be688c54d65ba0603602c78e053ed99ace3512.json",
+      "sha256": "8c5237ace752a69507e9c65c9acf159049d5ef5e9b4bb6584045ed0f6ce31767",
+      "original_sha256": "302a2768354cde8402d486ae4ab079eec0a151a1f9f913f59f5898cc8b29e1aa"
+    },
+    {
+      "check": "test/workflows.test.ts",
+      "report": "checks/2238a99f815785d0276dc465f8fbd2066705ee90dda2833c2850723237e5a746.json",
+      "sha256": "15b4063c7668ed6fdd2ac73161bf6333a0f69cf5fef46d6cd1be907a43bb028d",
+      "original_sha256": "302a2768354cde8402d486ae4ab079eec0a151a1f9f913f59f5898cc8b29e1aa"
+    }
+  ]
+}
