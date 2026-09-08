@@ -151,6 +151,11 @@ export class HotReloadService {
   private readonly idleTimer: NodeJS.Timeout;
   private sweeping = false;
   private closing = false;
+  get processIds(): number[] {
+    return [...new Set([...this.sessions.values()].flatMap(({ connection }) =>
+      [connection.identity.pid, connection.identity.worker_pid].filter((pid): pid is number => typeof pid === "number"),
+    ))];
+  }
   constructor(
     readonly processes: ProcessService,
     readonly store: StateStore,

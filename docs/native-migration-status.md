@@ -31,28 +31,26 @@ UI 使用同一份快照执行定位、索引和操作前校验，操作后失�
 
 ## 最近完成的冻结版本证据
 
-以下表格对应目标选择修改前的冻结版本。运行摘要为 `23758f48efc3dc011a5c858a0dee6b666d3483883ae6b5c131906e6962a2ad93`，全部编译摘要为 `25b0b62cb294440fe60ee39b1bd88e8abc78cb59a6f7ba8a786c51d1f854b0bb`。报告目录位于本机 `~/Library/Application Support/DevEcoMCP/acceptance/`，以 `20260908-native6-` 开头；这些私有原始报告不会直接进入发布包。
+当前本地冻结版本 `native-6-browser-manual-dev-11` 的运行摘要为 `ef6aaeffb850969e11bf99f25c743342f94e05de350928b3408d6ee6056f552d`，全部编译摘要为 `1ecc3a3261a293b974be0858ad70f4363e84e96713872010843215d26cce7145`。以下结果来自本机 Node24/macOS，原始私有报告保存在 `~/Library/Application Support/DevEcoMCP/acceptance/20260909-native6-browser-manual-*`，按摘要接收的公开凭证不包含原始路径、凭据或设备信息。
 
 | 项目 | 当前结果与范围 |
 | --- | --- |
-| 严格编译、回归 | 225 个 TypeScript 文件；本机 Node 24/macOS arm64 的 330 项全量回归通过，无失败、取消或跳过 |
-| SDK 和诊断 | SDK 22 项、静态检查 13 项、Linter 6 项通过；包括编译 API 26、目标 API 24、最低 API 22 的实际构建 |
-| 多产品、多模块 | 23 项通过，覆盖 default/tablet、HAR/HSP/HAP、跨模块 ArkTS 定义，以及 arm64-v8a/x86_64 两模块 C++ 正常与错误诊断 |
-| 个人签名及部署 | 真实 SDK 验签通过；两产品各三包安装后注入响应丢失，重建 Runtime 后读取回执恢复，每次安装只派发一次并通过最终 UI 断言。复用已有个人资产，不是新云端资产创建或 OS 强杀证据 |
-| 热补丁 | 10 项通过；两次真实 HQF、文字断言和 PID 保持，watch 停止、源文件恢复及服务关闭均完成 |
-| 设备与 UI | 只读检查 14 项、中文输入及录制/保存/MCP 重启后重放 16 项通过；不扩展为所有手势和多显示器已通过 |
-| 崩溃与恢复 | 指定真实 faultlog、原始证据核对及重连后读取 6 项通过；真实 SDK 宿主 SIGKILL 的三种边界复验通过，有回执恢复、缺回执暂停，不重复执行命令 |
-| 模拟器 | 只读及生命周期各 7 项通过，测试实例清理后库存不变；命令成功不等于全部场景已被应用感知 |
-| 认证 | 开发者 9 项、云知识 10 项通过，包括重启后保持、服务隔离和云知识制品分页读取；复用已有登录状态，不作为真实过期 Token 刷新证据 |
-| 六组平台 CI | macOS/Linux × Node 22/24 各 330 项、Windows × Node 22/24 各 319 项适用回归通过；零失败、取消或跳过。Windows 两组各 20 轮进程压力检查通过，六组干净安装各 10 项通过 |
-| 上游验收 | 80 条规则重新核对；deveco-code 的 10 项、deveco-cli 的 28 项映射检查接收，本地上游门禁通过，旧凭证归档 |
-| 性能 | 三规模离线精确 key 查询共 18,000 次，九组 P95 对比通过；LSP 悬停、热重载状态、流程目录短查询仍未通过原定门槛，见 [性能记录](native-ui-performance.md) |
+| 严格编译、回归 | 干净安装 166 个依赖，226 个 TypeScript 文件编译通过；350 项全量回归通过，零失败、取消、跳过 |
+| SDK 和诊断 | SDK 23 项、静态检查 13 项、Linter 6 项；实际 SDK 声明定义、编译 API/目标 API/最低 API 分离验证通过，规则全覆盖仍未证明 |
+| 多产品/目标/模块 | 49 项通过，default/tablet 与 default/preview 四种选择，HAR/HSP/HAP、跨模块 ArkTS、两 ABI 两模块 C++ 正反例 |
+| 个人签名及部署 | 复用个人资产的真实 SDK 验签通过；四组各三包安装后丢失响应，重开运行时核对回执恢复，每次仅一次安装并验证控件 |
+| 热补丁和 UI | preview 目标热补丁 11 项、中文输入/录制/重启重放 16 项、图片/制品协议 8 项、设备只读 14 项通过；两次 HQF 保持 PID、最终文字断言通过 |
+| 崩溃与恢复 | 指定真实日志 6 项；真实 SDK 子命令完成回执前后 SIGKILL 3 种边界、OHPM 2 种边界通过。缺回执保持 needs_input，不重复执行 |
+| 模拟器 | 只读及生命周期各 7 项通过，专用测试实例删除后库存不变；仍需更多场景效果、取消及平台验证 |
+| 认证 | 开发者 9 项、CodeGenie 10 项；真实 MCP 并发登录合并、浏览器启动失败保留手动 URL、生产五分钟超时和取消清理通过。真实云端过期凭据仍待验收 |
+| 迁移、上游 | 47 行中 14 行凭当前身份接收，33 行 pending；80 条上游规则已评审，code/CLI 的 13/34 项映射检查接收 |
+| 性能 | 三规模离线精确 key 查询共 18,000 次，九组 P95 对比通过；解析/选择器 CPU/RSS、编排/检查点各 1,000 次已采集。完整 19 项对比正在进行 |
 
-提交 `46df984` 的 [六组 CI 34248473227](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34248473227) 全部成功，下载的原始报告已经独立核对。六份分发清单均为 404 个文件、90,568,645 字节，清单摘要一致为 `4f4d934acbb579b242fe4ee7a76c24b46bb37b9a7a2219619237ac9cf75acaea`。此后的文档及验收清单变更会改变分发内容，最终候选仍须核对最终包。该冻结版本的一小时 SDK/LSP/UI/watch 活动及六分钟空闲回收已经通过：561 轮检查、47 次 ABC 补丁构建，受管任务、监听器、连接、进程、缓存与 Worker 最终归零。该测试使用 Runtime 驱动，不含 MCP Worker 请求日志，也不含 HQF 签名或安装；后续目标选择修改仍需最终同版长稳。上述局部验收不表示最终发布就绪。
+最近已完成的六组基础 CI 对应历史提交 `146b2ab`，其 338/327 项适用回归、六组各 10 项干净安装和 Windows 两组各 20 轮压力检查通过；当前认证修复后的六组 CI 尚待完成。三平台基础 CI 不代表真实 Windows/Linux HarmonyOS SDK 或设备验收。
 
-逐项复核发现旧 `start_app.target`、`apply_changes.target` 是构建目标，原迁移清单却误写为 HDC 设备。现已补齐独立的 `module_targets`：选择、任务持久化、恢复、SDK 命令、制品路径以及 LSP/watch 身份均保留目标信息。签名配置复核和静态检查子进程也保留原目标，真实 SDK 产品打包不支持的显式 `assembleApp` 选择会提前拒绝。
+历史 dev-8 已通过一小时实际 stdio MCP/Worker 长稳、46 次 HQF 签名和设备应用，以及六分钟空闲回收；记录 1,362 次请求，最终受管资源全部归零。它早于认证修复，当前版本仍须独立完成最终长稳。更早的 Runtime 直调长稳不计作 MCP Worker 证据。各轮完整身份与失败记录见 [完成清单](native-completion.md)。
 
-新冻结版本 `a9c81e90` / `d3031330` 已通过 336 项回归、49 项多产品/目标/模块验收及 11 项指定目标热补丁验收。SDK 22 项、静态检查 13 项、Linter 6 项、设备只读 14 项、崩溃 6 项、模拟器只读及生命周期各 7 项、个人签名包重新验签均通过；三规模离线精确 key 查询 18,000 次的九组 P95 对比通过。当前报告重新接收上游 80 条规则，code/CLI 各 13/32 项映射检查通过。`start_app` 行的三项剩余场景已接收；`apply_changes` 仍需冷增量行为对照等整体验收。详见 [构建目标选择](native-module-targets.md)。
+旧 `start_app.target`、`apply_changes.target` 表示构建目标，新版通过独立 `module_targets` 固定产品和各模块目标，与 HDC `target` 分开。真实 SDK 验证覆盖 default/preview 两目标；`start_app` 已按当前报告刷新凭证，`apply_changes` 仍需冷增量等完整行为对照。旧 CodeGenie 登录 APP_ID=1008 的迁移已修正，旧等待参数明确删除；待登录状态保留手动 URL、浏览器状态和错误码。
 
 ## 仍需完成的验收与交付
 
@@ -77,7 +75,7 @@ node dist/scripts/upstream-gate.js
 node dist/scripts/native-sdk-acceptance.js /absolute/new-sdk-evidence
 node dist/scripts/native-device-readonly.js /absolute/new-device-evidence DEVICE_ID
 node dist/scripts/native-ui-mcp-benchmark.js /absolute/frozen-baseline /absolute/new-ui-evidence 3
-node --expose-gc dist/scripts/native-sdk-soak.js /absolute/new-soak-evidence 3600 DEVICE_ID
+node --expose-gc dist/scripts/native-sdk-soak.js /absolute/new-soak-evidence 3600 /absolute/personally-signed-canary-preparation
 node dist/scripts/native-benchmark.js /private/benchmark-plan.json /absolute/new-direct-evidence
 ```
 

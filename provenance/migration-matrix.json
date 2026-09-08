@@ -207,7 +207,7 @@
       "remaining": [],
       "acceptance": "verified",
       "evidence": [
-        "docs/native-static-checker.md"
+        "provenance/migration-acceptance/978970ff36d2c982e7105561f723a0b9acb78425c15a5a21c90cd8e393c882e0.json"
       ],
       "targets": [
         "tool:arkts_check"
@@ -271,13 +271,14 @@
     {
       "source": "build_project",
       "checks": [
-        "test/native-project.test.ts"
+        "test/native-project.test.ts",
+        "scripts/native-multimodule-acceptance.ts"
       ],
-      "remaining": [
-        "最终快照多产品/多模块/HAR/HSP行为复验及真实SDK硬中断恢复验收"
+      "remaining": [],
+      "acceptance": "verified",
+      "evidence": [
+        "provenance/migration-acceptance/c484096239ef04d20463f19dd1ff3efc1251760633fda8d7997f1da0d0b56b4d.json"
       ],
-      "acceptance": "pending",
-      "evidence": [],
       "targets": [
         "workflow:project_build",
         "tool:workflow_run"
@@ -366,13 +367,15 @@
     {
       "source": "check_cpp_files",
       "checks": [
-        "test/native-runtime.test.ts"
+        "test/native-runtime.test.ts",
+        "test/native-lsp.test.ts",
+        "scripts/native-multimodule-acceptance.ts"
       ],
-      "remaining": [
-        "跨 ABI、多模块编译数据库和旧 C++ 缺陷验收"
+      "remaining": [],
+      "acceptance": "verified",
+      "evidence": [
+        "provenance/migration-acceptance/8a39b208ec62b7b0bb0f873d2652b616942fed44c031f98cdbc81ff6a6a43368.json"
       ],
-      "acceptance": "pending",
-      "evidence": [],
       "targets": [
         "tool:check_cpp_files"
       ],
@@ -391,21 +394,25 @@
     {
       "source": "check_ets_files",
       "checks": [
-        "test/native-runtime.test.ts"
+        "test/native-runtime.test.ts",
+        "test/native-checker.test.ts",
+        "test/native-toolchain.test.ts",
+        "scripts/native-checker-acceptance.ts"
       ],
-      "remaining": [
-        "旧批量诊断语义和缺失 SDK 行为对照"
+      "remaining": [],
+      "acceptance": "verified",
+      "evidence": [
+        "provenance/migration-acceptance/1e4dcc103e3e062bdf6d176775b0a1272a908d8074c685febbe636d552e81ad3.json"
       ],
-      "acceptance": "pending",
-      "evidence": [],
       "targets": [
-        "tool:lsp",
+        "tool:arkts_check",
         "workflow:code_diagnose"
       ],
       "adapters": [
-        "src/services/lsp.ts"
+        "src/services/checker.ts",
+        "src/services/diagnostics.ts"
       ],
-      "behavior": "ArkTS 语言诊断统一到原生 LSP。",
+      "behavior": "旧入口实际调用 runArktsCheck；批量静态检查由 arkts_check 和 code_diagnose 保留，语言会话诊断另由 lsp 提供。",
       "parameters": {
         "product": {
           "status": "mapped",
@@ -568,13 +575,15 @@
     {
       "source": "deveco_login",
       "checks": [
-        "test/native-runtime.test.ts"
+        "test/native-runtime.test.ts",
+        "test/native-auth.test.ts",
+        "scripts/native-auth-mcp-acceptance.ts"
       ],
-      "remaining": [
-        "回调取消、登录窗口过期、浏览器失败实际验收"
+      "remaining": [],
+      "acceptance": "verified",
+      "evidence": [
+        "provenance/migration-acceptance/2f02265b1aab6b6c908d63e67c348a2b91cda4591b95f4d60dd1069e0f06ee8a.json"
       ],
-      "acceptance": "pending",
-      "evidence": [],
       "targets": [
         "tool:harmony_auth"
       ],
@@ -585,15 +594,15 @@
       "parameters": {
         "action": {
           "status": "mapped",
-          "replacement": "harmony_auth.action=login/status；provider=developer"
+          "replacement": "harmony_auth.action=login/status；provider=codegenie（旧 APP_ID=1008）"
         },
         "login_id": {
           "status": "removed",
           "replacement": "认证会话由 provider 隔离并持久保存；不再通过旧 CLI login_id 查询"
         },
         "wait_ms": {
-          "status": "mapped",
-          "replacement": "workflow_run.wait_ms；最长 20 秒"
+          "status": "removed",
+          "replacement": "登录状态使用 harmony_auth.action=status 立即读取；登录不返回工作流 run_id，不能使用 workflow_run.wait_ms 等待。五分钟回调窗口保持不变。"
         }
       },
       "actions": [
@@ -601,26 +610,27 @@
           "field": "action",
           "value": "start",
           "status": "mapped",
-          "replacement": "harmony_auth.action=login，provider=developer"
+          "replacement": "harmony_auth.action=login，provider=codegenie"
         },
         {
           "field": "action",
           "value": "status",
           "status": "mapped",
-          "replacement": "harmony_auth.action=status，provider=developer"
+          "replacement": "harmony_auth.action=status，provider=codegenie"
         }
       ]
     },
     {
       "source": "deveco_logout",
       "checks": [
-        "test/native-runtime.test.ts"
+        "test/native-runtime.test.ts",
+        "test/native-auth.test.ts"
       ],
-      "remaining": [
-        "旧刷新/登出竞争行为回归"
+      "remaining": [],
+      "acceptance": "verified",
+      "evidence": [
+        "provenance/migration-acceptance/96a53638d4a1657f31a135140538ce73165d1ac91d2d8570047a95047dc8ac5c.json"
       ],
-      "acceptance": "pending",
-      "evidence": [],
       "targets": [
         "tool:harmony_auth"
       ],
@@ -642,7 +652,7 @@
       "remaining": [],
       "acceptance": "verified",
       "evidence": [
-        "provenance/migration-acceptance/c1ca532f66eefe98e24896a2fe296ffa205d58e7c34b125b8af35697d56cbc4c.json"
+        "provenance/migration-acceptance/09ff609692d7ec1fb961f64fb46ad7c34dc8a789356182e2100a2a167e56b881.json"
       ],
       "targets": [
         "tool:deveco_restart"
@@ -1276,13 +1286,15 @@
       "checks": [
         "test/native-runtime.test.ts",
         "test/native-lsp.test.ts",
-        "test/native-toolchain.test.ts"
+        "test/native-toolchain.test.ts",
+        "scripts/native-sdk-acceptance.ts",
+        "scripts/native-multimodule-acceptance.ts"
       ],
-      "remaining": [
-        "真实跨模块/SDK 定义位置验收"
+      "remaining": [],
+      "acceptance": "verified",
+      "evidence": [
+        "provenance/migration-acceptance/6b4f070ab93c76c9d2964ee19d994d928cc5c8cb2b5ef088b27d95c91437feba.json"
       ],
-      "acceptance": "pending",
-      "evidence": [],
       "targets": [
         "tool:lsp"
       ],
@@ -1319,7 +1331,7 @@
       "remaining": [],
       "acceptance": "verified",
       "evidence": [
-        "provenance/migration-acceptance/4a2c302c16ecde5c626b67f67717cc75541052e37485686da355e7a6cabd68e5.json"
+        "provenance/migration-acceptance/6cf0fc83bcb160cd8e6ea3ffa10995a5ff0f9cdd4f6f748ff989384d501139c6.json"
       ],
       "targets": [
         "tool:harmony_knowledge"
@@ -1696,13 +1708,14 @@
     {
       "source": "project_sync",
       "checks": [
-        "test/native-project.test.ts"
+        "test/native-project.test.ts",
+        "scripts/native-multimodule-acceptance.ts"
       ],
-      "remaining": [
-        "多产品与 OHPM 中断恢复"
+      "remaining": [],
+      "acceptance": "verified",
+      "evidence": [
+        "provenance/migration-acceptance/5d404ebab923934fe8a444a70952b44c754522ffb90ea4b8ff744238a3bd5cbb.json"
       ],
-      "acceptance": "pending",
-      "evidence": [],
       "targets": [
         "workflow:project_sync"
       ],
@@ -1742,7 +1755,7 @@
       "remaining": [],
       "acceptance": "verified",
       "evidence": [
-        "provenance/migration-acceptance/e603c48f43433cc03895e6f5d868911d21adc8d46988ec2c285a8d7ad4252788.json"
+        "provenance/migration-acceptance/eac24209c455249bf2de2d3e5de390f326995f5ed2973816b736afe60f44d84c.json"
       ],
       "targets": [
         "workflow:build_deploy_verify",
@@ -1794,7 +1807,7 @@
       "remaining": [],
       "acceptance": "verified",
       "evidence": [
-        "provenance/migration-acceptance/2aa1c26cfb4f7d5cf666c3615742c023aeb5fb8f051e9468fdf66e5679cdff78.json"
+        "provenance/migration-acceptance/6400f4ad91037c6c0dd280fb7eae4bc1aea9bdad9a96af4ef2d4868da3bc0b64.json"
       ],
       "targets": [
         "tool:switch_cwd"
@@ -2720,7 +2733,7 @@
       "remaining": [],
       "acceptance": "verified",
       "evidence": [
-        "docs/native-visual-review.md"
+        "provenance/migration-acceptance/c243172f9a87b0e9a8a212fa0554ea8debf90c8aea12bf571e3b915d4efefe1d.json"
       ],
       "targets": [
         "tool:verify_ui",
@@ -2809,7 +2822,7 @@
       "remaining": [],
       "acceptance": "verified",
       "evidence": [
-        "provenance/migration-acceptance/b15fe3f52d84fea8db5ad31a147bdc4a571f517b7cd999d8fcd1fd2a0e1dab66.json"
+        "provenance/migration-acceptance/d49f6e73efec3027b6f0612d5095ae94c4be97a328b23344d0fa9d694ff1c74b.json"
       ],
       "targets": [
         "workflow:project_create"

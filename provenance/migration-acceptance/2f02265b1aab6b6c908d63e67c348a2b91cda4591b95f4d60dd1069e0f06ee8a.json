@@ -1,0 +1,32 @@
+{
+  "format": 1,
+  "passed": true,
+  "source": "tools:deveco_login",
+  "row_sha256": "53f18676f4b6b3dc41670e3a1a30982f95c26e91f8e69283d157c1249ab4b08c",
+  "tested": {
+    "runtime_sha256": "ef6aaeffb850969e11bf99f25c743342f94e05de350928b3408d6ee6056f552d",
+    "compiled_sha256": "1ecc3a3261a293b974be0858ad70f4363e84e96713872010843215d26cce7145",
+    "package_lock_sha256": "68641e488a5099852216d3003664f57dd1d05b980f4c7813ee75dd7baf83d0fc",
+    "resource_manifest_sha256": "563bc3f06565e92c59c621c3ef909a37cbc4ac1db958d3d73d6e0bc99bf9ed86",
+    "upstream_lock_sha256": "bf3cc411831bd8ce6652a8085c8247c399d0c48b6d73156a7e649b9ef668164e"
+  },
+  "reviewer": "Codex native migration review",
+  "reason": "Frozen baseline server.mjs and modules/config.mjs use APP_ID 1008 for deveco_login; mapping now selects codegenie and explicitly removes the old login status wait_ms, which has no workflow run_id. Current auth regression covers nonce validation, cancellation, callback concurrency, logout/close during startup and browser launch failure. Actual MCP supplementary driver tests both providers with a real missing launcher, ten concurrent calls each, real cancellation POSTs and closed listeners; the shared production callback timer was allowed to expire after five minutes for developer. This is macOS loopback evidence, not cloud token expiration or other OS browser coverage. Supplementary raw report SHA256 d5b586f53bf66ed725f82724a32ee388b7831ee57f5b5cb7cfbf61acf58c3af3.",
+  "completed_scenarios": [
+    "回调取消、登录窗口过期、浏览器失败实际验收"
+  ],
+  "checks": [
+    {
+      "check": "test/native-runtime.test.ts",
+      "original_sha256": "d8cd30be36383570b23d31fe43df3c412be6f12c68ed63f83f14287259ef0cf4"
+    },
+    {
+      "check": "test/native-auth.test.ts",
+      "original_sha256": "d8cd30be36383570b23d31fe43df3c412be6f12c68ed63f83f14287259ef0cf4"
+    },
+    {
+      "check": "scripts/native-auth-mcp-acceptance.ts",
+      "original_sha256": "f2fe45734f07c573a890a21bb0d3b5f0c922d3f4b56b356d32d468b379eac8da"
+    }
+  ]
+}

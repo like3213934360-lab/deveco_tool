@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import assert from "node:assert/strict";
 import crypto from "node:crypto";
+import { fileURLToPath } from "node:url";
 import { setTimeout as delay } from "node:timers/promises";
 import { z } from "zod";
 import { Runtime } from "../src/services/runtime.js";
@@ -184,6 +185,25 @@ try {
       });
       assert.ok(Array.isArray(result) && result.length > 0);
       assert.match(JSON.stringify(result), /Index\.ets/);
+      return result;
+    });
+    await observe("lsp_sdk_definition", async () => {
+      const result = z.array(z.object({
+        uri: z.string().optional(), targetUri: z.string().optional(),
+      }).passthrough()).min(1).parse(await runtime.call("lsp", {
+        action: "definition", project_path, file, line,
+        character: lines[line]!.indexOf("Text(") + 1,
+      }));
+      const sdk = fs.realpathSync.native(discoverToolchain().sdk);
+      for (const location of result) {
+        const uri = location.uri ?? location.targetUri;
+        assert.ok(uri, "SDK definition must carry a file location");
+        const target = fs.realpathSync.native(fileURLToPath(uri));
+        const relative = path.relative(sdk, target);
+        assert.ok(relative && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative));
+        assert.ok(fs.statSync(target).isFile());
+        assert.match(target, /\.d\.(?:ets|ts)$/);
+      }
       return result;
     });
     await observe("lsp_implementation", async () => {

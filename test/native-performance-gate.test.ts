@@ -79,7 +79,7 @@ function soakFixture() {
   const retained = { tasks: 0, listeners: 0, connections: 0, processes: 0, cache_entries: 0, workers: 0 };
   const metric = { value: 100, source: "fixture" }, unavailable = { value: null, reason: "unsupported fixture platform" };
   const process = { cpu_us: metric, rss_bytes: metric, written_bytes: unavailable, process_starts: metric };
-  return { format: 2, passed: true, tested: {}, scopes: ["sdk", "lsp", "ui", "watch"], elapsed_ms: 3600000, samples: Array.from({ length: 61 }, (_, index) => ({ elapsed_ms: index * 60000, mcp: process, sdk: process, retained: { ...retained }, activity: { sdk_builds: 1 + index, lsp_requests: 1 + index, ui_requests: 1 + index, watch_connected: true } })), idle_elapsed_ms: 360000, idle_samples: Array.from({ length: 13 }, (_, index) => ({ ...retained, elapsed_ms: index * 30000 })), final: { ...retained }, cancellations: [{ scope: "sdk_watch", elapsed_ms: 10, confirmed: true }, { scope: "mcp_runtime", elapsed_ms: 20, confirmed: true }], cancel_ms: [10, 20] };
+  return { format: 3, execution: { transport: "stdio", runtime: "worker", driver_pid: 123, mcp_pid: 456, requests_recorded: 1000, runtime_close_confirmed: true, transport_closed: true }, passed: true, tested: {}, scopes: ["sdk", "lsp", "ui", "watch"], elapsed_ms: 3600000, samples: Array.from({ length: 61 }, (_, index) => ({ elapsed_ms: index * 60000, mcp_pid: 456, mcp: process, sdk: process, retained: { ...retained }, activity: { sdk_builds: 1 + index, lsp_requests: 1 + index, ui_requests: 1 + index, watch_connected: true } })), idle_elapsed_ms: 360000, idle_samples: Array.from({ length: 13 }, (_, index) => ({ ...retained, elapsed_ms: index * 30000 })), final: { ...retained }, cancellations: [{ scope: "sdk_watch", elapsed_ms: 10, confirmed: true }, { scope: "mcp_runtime", elapsed_ms: 20, confirmed: true }], cancel_ms: [10, 20] };
 }
 test("soak gate requires activity, continuity and zero retained owned resources after idle", () => {
   assert.doesNotThrow(() => validateSoak(soakFixture()));
@@ -91,6 +91,12 @@ test("soak gate requires activity, continuity and zero retained owned resources 
   assert.throws(() => validateSoak(gap), { code: "RELEASE_SOAK_SAMPLE_GAP" });
   const capacity = soakFixture(); capacity.samples[1]!.retained.workers = 3;
   assert.throws(() => validateSoak(capacity), { code: "RELEASE_SOAK_CAPACITY" });
+  const inProcess = soakFixture(); inProcess.execution.mcp_pid = inProcess.execution.driver_pid;
+  assert.throws(() => validateSoak(inProcess), { code: "RELEASE_SOAK_MCP_IDENTITY" });
+  const restarted = soakFixture(); restarted.samples[2]!.mcp_pid++;
+  assert.throws(() => validateSoak(restarted), { code: "RELEASE_SOAK_MCP_IDENTITY" });
+  const logsMissing = soakFixture(); logsMissing.execution.requests_recorded = 0;
+  assert.throws(() => validateSoak(logsMissing));
 });
 
 test("soak finalization validates the serialized root and never publishes an invalid success", () => {

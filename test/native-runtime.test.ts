@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { setTimeout as delay } from "node:timers/promises";
+import { z } from "zod";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { ProcessService } from "../src/core/process.js";
@@ -83,6 +84,18 @@ test("MCP catalogs work without SDK discovery, invalid input is rejected, worker
       arguments: {},
     });
     assert.notEqual(doctor.isError, true);
+    const telemetry = z.object({ data: z.object({ runtime: z.object({
+      pid: z.number().int().positive(), rss_bytes: z.number().positive(),
+      cpu: z.object({ user: z.number().nonnegative(), system: z.number().nonnegative() }),
+      sdk: z.object({ pids: z.array(z.number()), process_starts: z.number() }),
+      retained: z.object({ processes: z.number(), connections: z.number() }),
+    }) }) }).parse(doctor.structuredContent).data.runtime;
+    assert.equal(telemetry.pid, transport.pid);
+    assert.notEqual(telemetry.pid, process.pid);
+    assert.deepEqual(telemetry.sdk.pids, []);
+    assert.equal(telemetry.sdk.process_starts, 0);
+    assert.equal(telemetry.retained.processes, 0);
+    assert.equal(telemetry.retained.connections, 0);
     assert.equal(fs.existsSync(path.join(root, "state.sqlite")), true);
     const restart = await client.callTool({
       name: "deveco_restart",
@@ -99,6 +112,41 @@ test("MCP catalogs work without SDK discovery, invalid input is rejected, worker
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
+test("MCP diagnostic calls reject a missing configured SDK without falling back to the machine installation", async () => {
+  const root = temporary(), project = path.join(root, "application"), config = path.join(root, "config.json");
+  fs.cpSync(fileURLToPath(new URL("../../test/fixtures/harmony-app", import.meta.url)), project, { recursive: true });
+  fs.writeFileSync(config, JSON.stringify({ clt: path.join(root, "absent-sdk") }));
+  const client = new Client({ name: "native-missing-sdk-test", version: "1" }),
+    transport = new StdioClientTransport({
+      command: process.execPath, args: [fileURLToPath(new URL("../src/cli.js", import.meta.url))], stderr: "ignore",
+      env: { ...Object.fromEntries(Object.entries(process.env).filter((entry): entry is [string, string] => entry[1] !== undefined && !entry[0].startsWith("DEVECO_"))),
+        DEVECO_CONFIG: config, DEVECO_STATE_DIR: path.join(root, "state") },
+    });
+  try {
+    await client.connect(transport);
+    const file = "entry/src/main/ets/pages/Index.ets";
+    for (const [name, input] of [
+      ["arkts_check", { files: [file] }],
+      ["lsp", { action: "diagnostics", file }],
+      ["code_lint", { path: file }],
+    ] as const) {
+      const result = await client.callTool({ name, arguments: { project_path: project, ...input } });
+      assert.equal(result.isError, true);
+      assert.equal(z.object({ error: z.object({ code: z.string() }) }).parse(result.structuredContent).error.code, "TOOLCHAIN_MISSING");
+    }
+    const doctor = await client.callTool({ name: "deveco_doctor", arguments: {} });
+    assert.notEqual(doctor.isError, true);
+    const data = z.object({ data: z.object({
+      toolchain: z.object({ error: z.object({ code: z.literal("TOOLCHAIN_MISSING") }) }),
+      runtime: z.object({ sdk: z.object({ process_starts: z.literal(0), pids: z.array(z.number()).length(0) }) }),
+    }) }).parse(doctor.structuredContent);
+    assert.ok(data.data.toolchain.error);
+  } finally {
+    await transport.close();
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test("managed processes bound output, handle spawn failures and confirm cancellation", async () => {
   const processes = new ProcessService(),
     controller = new AbortController();

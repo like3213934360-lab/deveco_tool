@@ -1,0 +1,28 @@
+{
+  "format": 1,
+  "passed": true,
+  "source": "tools:deveco_logout",
+  "row_sha256": "bdfc5297ccd9cec37658eab9d8f08041fb18695d8c63c45f4ec1c9feec721942",
+  "tested": {
+    "runtime_sha256": "d041960db3554b3aa6316210b3b5d79f21ace0e7c7839ff8b832f637ca35f0f0",
+    "compiled_sha256": "285099fc709bfc01ba66948f6b9ae0e2481a250cbaf927edc19fa922600aec8d",
+    "package_lock_sha256": "68641e488a5099852216d3003664f57dd1d05b980f4c7813ee75dd7baf83d0fc",
+    "resource_manifest_sha256": "563bc3f06565e92c59c621c3ef909a37cbc4ac1db958d3d73d6e0bc99bf9ed86",
+    "upstream_lock_sha256": "bf3cc411831bd8ce6652a8085c8247c399d0c48b6d73156a7e649b9ef668164e"
+  },
+  "reviewer": "Codex native auth parity review 2026-09-09",
+  "reason": "对照冻结旧版 auth-docs 的刷新/登出竞争契约。当前 12 项认证回归覆盖两个提供者、本地及对端登出中止请求、迟到响应拒绝恢复、跨 StateStore 强制刷新合并和关闭清理；345 项完整回归同时执行 MCP 契约。本凭证不扩展为真实过期云凭据验收。",
+  "completed_scenarios": [
+    "旧刷新/登出竞争行为回归"
+  ],
+  "checks": [
+    {
+      "check": "test/native-runtime.test.ts",
+      "original_sha256": "2525a842379f60c62a8a8f5010512c12813e2ed4e5c6b810c1e3a01a5ffaae87"
+    },
+    {
+      "check": "test/native-auth.test.ts",
+      "original_sha256": "2525a842379f60c62a8a8f5010512c12813e2ed4e5c6b810c1e3a01a5ffaae87"
+    }
+  ]
+}

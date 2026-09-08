@@ -4,11 +4,13 @@ import { invariant } from "../../src/core/errors.js";
 import { processSampleSchema } from "./process-metrics.js";
 
 const count = z.number().int().nonnegative(), elapsed = z.number().finite().nonnegative();
-const retained = z.object({ tasks: count, listeners: count, connections: count, processes: count, cache_entries: count, workers: count });
+export const retainedSchema = z.object({ tasks: count, listeners: count, connections: count, processes: count, cache_entries: count, workers: count });
+const retained = retainedSchema;
 export const soakReportSchema = z.object({
-  format: z.literal(2), tested: z.record(z.string(), z.unknown()), passed: z.literal(true), elapsed_ms: elapsed.min(3600000),
+  format: z.literal(3), tested: z.record(z.string(), z.unknown()), passed: z.literal(true), elapsed_ms: elapsed.min(3600000),
+  execution: z.object({ transport: z.literal("stdio"), runtime: z.literal("worker"), driver_pid: count.positive(), mcp_pid: count.positive(), requests_recorded: count.positive(), runtime_close_confirmed: z.literal(true), transport_closed: z.literal(true) }),
   scopes: z.array(z.enum(["sdk", "lsp", "ui", "watch"])).length(4),
-  samples: z.array(z.object({ elapsed_ms: elapsed, mcp: processSampleSchema, sdk: processSampleSchema, retained, activity: z.object({ sdk_builds: count.positive(), lsp_requests: count.positive(), ui_requests: count.positive(), watch_connected: z.literal(true) }) })).min(60),
+  samples: z.array(z.object({ elapsed_ms: elapsed, mcp_pid: count.positive(), mcp: processSampleSchema, sdk: processSampleSchema, retained, activity: z.object({ sdk_builds: count.positive(), lsp_requests: count.positive(), ui_requests: count.positive(), watch_connected: z.literal(true) }) })).min(60),
   idle_elapsed_ms: elapsed.min(360000), idle_samples: z.array(retained.extend({ elapsed_ms: elapsed })).min(12),
   final: retained,
   cancellations: z.array(z.object({ scope: z.enum(["sdk_watch", "mcp_runtime"]), elapsed_ms: elapsed.max(120000), confirmed: z.literal(true) })).length(2),
@@ -16,6 +18,7 @@ export const soakReportSchema = z.object({
 });
 export function validateSoak(raw: unknown) {
   const report = soakReportSchema.parse(raw);
+  invariant(report.execution.driver_pid !== report.execution.mcp_pid && report.samples.every((sample) => sample.mcp_pid === report.execution.mcp_pid), "RELEASE_SOAK_MCP_IDENTITY", "Measure one actual MCP process separately from its driver for the full soak");
   invariant(new Set(report.scopes).size === 4, "RELEASE_SOAK_INCOMPLETE", "SDK, LSP, UI and watch must all be exercised");
   const continuity = (samples: { elapsed_ms: number }[], duration: number, maximumGap: number) => {
     invariant(samples[0]!.elapsed_ms <= maximumGap && samples.at(-1)!.elapsed_ms >= duration, "RELEASE_SOAK_INCOMPLETE", "Samples must span the full active or idle window");

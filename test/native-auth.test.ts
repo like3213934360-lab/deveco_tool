@@ -5,9 +5,14 @@ import os from "node:os";
 import path from "node:path";
 import http from "node:http";
 import { setTimeout as delay } from "node:timers/promises";
-import { AuthService, developerTeams } from "../src/services/auth.js";
+import {
+  AuthService,
+  developerTeams,
+  type Provider,
+} from "../src/services/auth.js";
 import { StateStore } from "../src/core/store.js";
 import { ProcessService } from "../src/core/process.js";
+import { ToolError } from "../src/core/errors.js";
 
 test("developer team inventory validates the provider envelope and excludes unrelated remote fields", () => {
   assert.deepEqual(
@@ -235,14 +240,14 @@ test("browser authorization cancellation ends login without waiting for timeout 
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
-async function loggedIn(auth: AuthService) {
-  const login = await auth.login("developer", false);
+async function loggedIn(auth: AuthService, provider: Provider = "developer") {
+  const login = await auth.login(provider, false);
   assert.equal(await callback(login.login_url, "wrong-nonce"), 400);
-  assert.equal(auth.status("developer").logged_in, false);
+  assert.equal(auth.status(provider).logged_in, false);
   assert.equal(await callback(login.login_url), 200);
   const deadline = performance.now() + 2000;
-  while (!auth.status("developer").logged_in) {
-    assert.equal(auth.status("developer").error, undefined);
+  while (!auth.status(provider).logged_in) {
+    assert.equal(auth.status(provider).error, undefined);
     assert.ok(performance.now() < deadline, "Expected completed login");
     await delay(5);
   }
@@ -297,45 +302,192 @@ test("browser callback authenticates one provider, encrypts credentials and surv
   }
 });
 
-test("a peer logout prevents an in-flight refresh from restoring credentials", async (t) => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-auth-race-")),
-    store = new StateStore(root),
-    peer = new StateStore(root),
-    processes = new ProcessService();
-  const auth = new AuthService(store, processes),
-    other = new AuthService(peer, processes),
-    refresh = Promise.withResolvers<void>(),
-    entered = Promise.withResolvers<void>();
-  let refreshing = false;
-  t.mock.method(globalThis, "fetch", async (input: string | URL | Request) => {
-    if (String(input).includes("/temptoken/check"))
-      return new Response(sessionToken());
-    if (refreshing) {
-      entered.resolve();
-      await refresh.promise;
-    }
-    return Response.json({
-      status: true,
-      userInfo: { accessToken: "fixture-access-secret" },
+for (const provider of ["developer", "codegenie"] as const)
+  for (const remoteLogout of [false, true])
+    test(`${provider} ${remoteLogout ? "peer" : "local"} logout aborts refresh and rejects a late cloud response`, async (t) => {
+      const root = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-auth-race-")),
+        store = new StateStore(root),
+        peer = new StateStore(root),
+        processes = new ProcessService();
+      const auth = new AuthService(store, processes),
+        other = new AuthService(peer, processes),
+        refresh = Promise.withResolvers<void>(),
+        entered = Promise.withResolvers<void>();
+      let refreshing = false;
+      let refreshSignal: AbortSignal | undefined;
+      t.mock.method(
+        globalThis,
+        "fetch",
+        async (input: string | URL | Request, options?: RequestInit) => {
+          if (String(input).includes("/temptoken/check"))
+            return new Response(sessionToken());
+          if (refreshing) {
+            refreshSignal = options?.signal ?? undefined;
+            entered.resolve();
+            await refresh.promise;
+          }
+          return Response.json({
+            status: true,
+            userInfo: { accessToken: "fixture-access-secret" },
+          });
+        },
+      );
+      try {
+        await loggedIn(auth, provider);
+        refreshing = true;
+        const request = auth.credentials(provider, undefined, true);
+        const rejected = assert.rejects(request, { code: "AUTH_CANCELLED" });
+        await entered.promise;
+        await (remoteLogout ? other : auth).logout(provider);
+        const deadline = performance.now() + 2000;
+        while (!refreshSignal?.aborted && remoteLogout) {
+          assert.ok(
+            performance.now() < deadline,
+            "Peer logout must cancel the active HTTP request",
+          );
+          await delay(5);
+        }
+        assert.equal(refreshSignal?.aborted, true);
+        refresh.resolve();
+        await rejected;
+        assert.equal(auth.status(provider).logged_in, false);
+        assert.equal(other.status(provider).logged_in, false);
+      } finally {
+        refresh.resolve();
+        await auth.close();
+        await other.close();
+        await processes.close();
+        peer.close();
+        store.close();
+        fs.rmSync(root, { recursive: true, force: true });
+      }
     });
+
+for (const provider of ["developer", "codegenie"] as const)
+  test(`${provider} concurrent forced refreshes share a result across stores and queued cancellation stays isolated`, async (t) => {
+    const root = fs.mkdtempSync(
+        path.join(os.tmpdir(), "deveco-auth-shared-refresh-"),
+      ),
+      store = new StateStore(root),
+      peer = new StateStore(root),
+      processes = new ProcessService(),
+      auth = new AuthService(store, processes),
+      other = new AuthService(peer, processes),
+      entered = Promise.withResolvers<void>(),
+      response = Promise.withResolvers<void>();
+    let refreshing = false,
+      requests = 0;
+    let activeSignal: AbortSignal | undefined;
+    t.mock.method(
+      globalThis,
+      "fetch",
+      async (input: string | URL | Request, options?: RequestInit) => {
+        if (String(input).includes("/temptoken/check"))
+          return new Response(sessionToken());
+        if (refreshing) {
+          requests++;
+          activeSignal = options?.signal ?? undefined;
+          entered.resolve();
+          await response.promise;
+        }
+        return Response.json({
+          status: true,
+          userInfo: {
+            accessToken: refreshing ? "refreshed-access" : "initial-access",
+          },
+        });
+      },
+    );
+    try {
+      await loggedIn(auth, provider);
+      refreshing = true;
+      const first = auth.credentials(provider, undefined, true);
+      await entered.promise;
+      const second = other.credentials(provider, undefined, true);
+      const cancellation = new AbortController();
+      const cancelled = assert.rejects(
+        other.credentials(provider, cancellation.signal, true),
+        { name: "AbortError" },
+      );
+      cancellation.abort();
+      await cancelled;
+      assert.equal(activeSignal?.aborted, false);
+      response.resolve();
+      assert.deepEqual(
+        (await Promise.all([first, second])).map((value) => value.access),
+        ["refreshed-access", "refreshed-access"],
+      );
+      assert.equal(requests, 1);
+      // A later explicit forced request must still contact the service.
+      await auth.credentials(provider, undefined, true);
+      assert.equal(requests, 2);
+    } finally {
+      response.resolve();
+      await auth.close();
+      await other.close();
+      await processes.close();
+      peer.close();
+      store.close();
+      fs.rmSync(root, { recursive: true, force: true });
+    }
   });
+
+test("closing authentication aborts refresh and waits for its cleanup before discarding the key", async (t) => {
+  const root = fs.mkdtempSync(
+      path.join(os.tmpdir(), "deveco-auth-refresh-close-"),
+    ),
+    store = new StateStore(root),
+    processes = new ProcessService(),
+    auth = new AuthService(store, processes),
+    entered = Promise.withResolvers<void>(),
+    response = Promise.withResolvers<void>();
+  let refreshing = false,
+    activeSignal: AbortSignal | undefined;
+  t.mock.method(
+    globalThis,
+    "fetch",
+    async (input: string | URL | Request, options?: RequestInit) => {
+      if (String(input).includes("/temptoken/check"))
+        return new Response(sessionToken());
+      if (refreshing) {
+        activeSignal = options?.signal ?? undefined;
+        entered.resolve();
+        await response.promise;
+      }
+      return Response.json({
+        status: true,
+        userInfo: { accessToken: "fixture-access" },
+      });
+    },
+  );
   try {
     await loggedIn(auth);
     refreshing = true;
-    const request = auth.credentials("developer", undefined, true);
-    const rejected = assert.rejects(request, { code: "AUTH_CANCELLED" });
+    const rejected = assert.rejects(
+      auth.credentials("developer", undefined, true),
+      { code: "AUTH_CANCELLED" },
+    );
     await entered.promise;
-    await other.logout("developer");
-    refresh.resolve();
+    let closed = false;
+    const closing = auth.close().then(() => {
+      closed = true;
+    });
+    await delay(5);
+    assert.equal(activeSignal?.aborted, true);
+    assert.equal(closed, false);
+    response.resolve();
     await rejected;
-    assert.equal(auth.status("developer").logged_in, false);
-    assert.equal(other.status("developer").logged_in, false);
+    await closing;
+    await assert.rejects(auth.credentials("developer"), {
+      code: "AUTH_CLOSED",
+    });
+    await assert.rejects(auth.login("developer", false), {
+      code: "AUTH_CLOSED",
+    });
   } finally {
-    refresh.resolve();
+    response.resolve();
     await auth.close();
-    await other.close();
     await processes.close();
-    peer.close();
     store.close();
     fs.rmSync(root, { recursive: true, force: true });
   }
@@ -358,6 +510,100 @@ test("closing an unfinished login cancels its callback listener without saving a
       ).ciphertext,
       null,
     );
+  } finally {
+    await auth.close();
+    await processes.close();
+    store.close();
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+for (const provider of ["developer", "codegenie"] as const)
+  test(`${provider} concurrent login requests share one callback and a later login can restart`, async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-login-start-")),
+      store = new StateStore(root),
+      processes = new ProcessService(),
+      auth = new AuthService(store, processes);
+    try {
+      const logins = await Promise.all(
+        Array.from({ length: 10 }, () => auth.login(provider, false)),
+      );
+      assert.equal(new Set(logins.map((login) => login.login_url)).size, 1);
+      await auth.logout(provider);
+      await assert.rejects(callback(logins[0]!.login_url));
+      const next = await auth.login(provider, false);
+      assert.notEqual(next.login_url, logins[0]!.login_url);
+      await auth.close();
+      await assert.rejects(callback(next.login_url));
+    } finally {
+      await auth.close();
+      await processes.close();
+      store.close();
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+for (const action of ["logout", "close"] as const)
+  test(`${action} during login startup cancels all callers before returning`, async () => {
+    const root = fs.mkdtempSync(
+        path.join(os.tmpdir(), "deveco-login-cancel-start-"),
+      ),
+      store = new StateStore(root),
+      processes = new ProcessService(),
+      auth = new AuthService(store, processes);
+    try {
+      const first = assert.rejects(auth.login("developer", false), {
+        code: "AUTH_CANCELLED",
+      });
+      const second = assert.rejects(auth.login("developer", false), {
+        code: "AUTH_CANCELLED",
+      });
+      if (action === "logout") await auth.logout("developer");
+      else await auth.close();
+      await Promise.all([first, second]);
+      assert.equal(auth.status("developer").login_pending, false);
+      assert.equal(auth.status("developer").logged_in, false);
+      if (action === "logout") {
+        const next = await auth.login("developer", false);
+        assert.equal(next.pending, true);
+        await auth.logout("developer");
+        await assert.rejects(callback(next.login_url));
+      } else
+        await assert.rejects(auth.login("developer", false), {
+          code: "AUTH_CLOSED",
+        });
+    } finally {
+      await auth.close();
+      await processes.close();
+      store.close();
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+test("browser launch failure exposes a usable manual URL without ending the callback window", async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-browser-failed-")),
+    store = new StateStore(root),
+    processes = new ProcessService(),
+    auth = new AuthService(store, processes);
+  t.mock.method(processes, "run", async () => {
+    throw new ToolError("PROCESS_SPAWN_FAILED", "Browser launcher unavailable");
+  });
+  try {
+    const login = await auth.login("codegenie");
+    const deadline = performance.now() + 2000;
+    while (auth.status("codegenie").browser_status !== "manual_required") {
+      assert.ok(performance.now() < deadline);
+      await delay(5);
+    }
+    const status = auth.status("codegenie");
+    assert.equal(status.login_pending, true);
+    assert.equal(status.login_url, login.login_url);
+    assert.equal(status.browser_error, "PROCESS_SPAWN_FAILED");
+    assert.equal(await callback(login.login_url, "wrong-nonce"), 400);
+    assert.equal(auth.status("codegenie").login_pending, true);
+    await auth.logout("codegenie");
+    assert.equal(auth.status("codegenie").login_url, undefined);
+    await assert.rejects(callback(login.login_url));
   } finally {
     await auth.close();
     await processes.close();

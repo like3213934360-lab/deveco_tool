@@ -499,7 +499,9 @@
         "src/services/auth.ts"
       ],
       "tests": [
-        "test/native-reports.test.ts"
+        "test/native-reports.test.ts",
+        "test/native-auth.test.ts",
+        "scripts/native-auth-mcp-acceptance.ts"
       ]
     },
     {
@@ -794,7 +796,9 @@
         "src/services/auth.ts"
       ],
       "tests": [
-        "test/native-reports.test.ts"
+        "test/native-reports.test.ts",
+        "test/native-auth.test.ts",
+        "scripts/native-auth-mcp-acceptance.ts"
       ]
     },
     {

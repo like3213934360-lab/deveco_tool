@@ -35,10 +35,10 @@ function cpuTime(text: string): number {
 /** CPU totals describe the live owned launcher processes at sample time, not
  * lifetime SDK work. Short-lived commands are counted by ProcessService; their
  * exited CPU cannot be reconstructed from ps and is never silently added as zero. */
-export async function processMetrics(service: ProcessService, externalPids: number[] = []) {
-  const cpu = process.cpuUsage(), pids = [...new Set([...service.metrics.pids, ...externalPids])];
+export async function processMetrics(service: Pick<ProcessService, "metrics">, externalPids: number[] = [], remote?: { pid: number; cpu: { user: number; system: number }; rss_bytes: number }) {
+  const cpu = remote?.cpu ?? process.cpuUsage(), pids = [...new Set([...service.metrics.pids, ...externalPids])];
   let sampledPids = pids;
-  const mcp = { cpu_us: measured(cpu.user + cpu.system, "process.cpuUsage, cumulative self including benchmark driver"), rss_bytes: measured(process.memoryUsage().rss, "process.memoryUsage RSS"), written_bytes: written(process.pid), process_starts: measured(1, "this measured runtime process") };
+  const mcp = { cpu_us: measured(cpu.user + cpu.system, remote ? "MCP process.cpuUsage reported by its Runtime Worker; external driver excluded" : "process.cpuUsage, cumulative self including benchmark driver"), rss_bytes: measured(remote?.rss_bytes ?? process.memoryUsage().rss, remote ? "MCP process.memoryUsage RSS; external driver excluded" : "process.memoryUsage RSS"), written_bytes: written(remote?.pid ?? process.pid), process_starts: measured(1, "this measured runtime process") };
   let cpuMetric: Metric, rssMetric: Metric;
   if (!pids.length) {
     cpuMetric = measured(0, "No live owned SDK launcher processes"); rssMetric = measured(0, "No live owned SDK launcher processes");

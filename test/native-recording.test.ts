@@ -815,14 +815,19 @@ test("one device has one unfinished recording and status follow-ups cannot retar
       "RECORDING_ACTIVE",
     );
     for (const action of ["record_status", "record_stop", "record_cancel"])
-      await assert.rejects(
-        f.runtime.call("ui_flow", {
-          action,
-          recording_id: id,
-          target: "another-device",
-        }),
-        { code: "RECORDING_INPUT_INVALID" },
-      );
+      for (const override of [
+        { target: "another-device" },
+        { product: "another-product" },
+        { module_targets: { entry: "preview" } },
+      ])
+        await assert.rejects(
+          f.runtime.call("ui_flow", {
+            action,
+            recording_id: id,
+            ...override,
+          }),
+          { code: "RECORDING_INPUT_INVALID" },
+        );
     await f.runtime.call("ui_flow", {
       action: "record_cancel",
       recording_id: id,

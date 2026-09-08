@@ -42,6 +42,8 @@ interface Login {
   controller: AbortController;
   server: http.Server;
   url: string;
+  browser_status: "opening" | "opened" | "manual_required";
+  browser_error?: string;
   finished: Promise<void>;
   error?: ReturnType<typeof errorResult>;
   callback: {
@@ -145,6 +147,20 @@ export async function httpBytes(
 export class AuthService {
   private readonly key: Buffer;
   private readonly logins = new Map<Provider, Login>();
+  private readonly loginStarts = new Map<
+    Provider,
+    {
+      controller: AbortController;
+      finished: Promise<{
+        provider: Provider;
+        login_url: string;
+        pending: boolean;
+      }>;
+    }
+  >();
+  private readonly refreshes = new Map<Provider, Set<AbortController>>();
+  private readonly refreshClosures = new Set<Promise<void>>();
+  private closed = false;
   constructor(
     readonly store: StateStore,
     readonly processes: ProcessService,
@@ -231,18 +247,51 @@ export class AuthService {
       user_id: credentials?.userId,
       user_name: credentials?.userName,
       login_pending: !!login && !login.controller.signal.aborted,
+      ...(login && !login.controller.signal.aborted
+        ? {
+            login_url: login.url,
+            browser_status: login.browser_status,
+            ...(login.browser_error ? { browser_error: login.browser_error } : {}),
+          }
+        : {}),
       ...(login ? { callback: { ...login.callback } } : {}),
       ...(login?.error ? { error: login.error } : {}),
     };
   }
   async login(provider: Provider, openBrowser = true) {
+    invariant(!this.closed, "AUTH_CLOSED", "Authentication service is closed");
+    const previous = this.loginStarts.get(provider);
+    if (previous) return previous.finished;
+    const controller = new AbortController();
+    // Register the owner before any asynchronous logout or listener setup.
+    const finished = Promise.resolve().then(() =>
+      this.startLogin(provider, openBrowser, controller),
+    );
+    this.loginStarts.set(provider, { controller, finished });
+    try {
+      return await finished;
+    } finally {
+      if (this.loginStarts.get(provider)?.finished === finished)
+        this.loginStarts.delete(provider);
+    }
+  }
+  private async startLogin(
+    provider: Provider,
+    openBrowser: boolean,
+    controller: AbortController,
+  ) {
+    controller.signal.throwIfAborted();
     const active = this.logins.get(provider);
     if (active && !active.controller.signal.aborted)
       return { provider, login_url: active.url, pending: true };
-    await this.logout(provider);
-    const revision = this.row(provider).revision,
-      controller = new AbortController(),
-      nonce = crypto.randomBytes(24).toString("hex");
+    const revision = await this.clearProvider(provider);
+    controller.signal.throwIfAborted();
+    invariant(
+      this.row(provider).revision === revision,
+      "AUTH_CANCELLED",
+      "Authentication changed while starting login",
+    );
+    const nonce = crypto.randomBytes(24).toString("hex");
     let accept: (value: string) => void = () => {},
       reject: (error: unknown) => void = () => {};
     const callback = new Promise<string>((resolve, fail) => {
@@ -310,6 +359,12 @@ export class AuthService {
         resolve();
       });
     });
+    if (controller.signal.aborted) {
+      server.close();
+      server.closeAllConnections();
+      reject(controller.signal.reason);
+      controller.signal.throwIfAborted();
+    }
     const address = server.address();
     invariant(
       address && typeof address !== "string",
@@ -345,6 +400,7 @@ export class AuthService {
       controller,
       server,
       url,
+      browser_status: openBrowser ? "opening" : "manual_required",
       finished: Promise.resolve(),
       callback: callbackState,
     };
@@ -413,7 +469,14 @@ export class AuthService {
           },
           { signal: controller.signal, timeoutMs: 15000 },
         )
-        .catch(() => {});
+        .then(() => {
+          if (!controller.signal.aborted) login.browser_status = "opened";
+        })
+        .catch((error: unknown) => {
+          if (controller.signal.aborted) return;
+          login.browser_status = "manual_required";
+          login.browser_error = errorResult(error).code;
+        });
     }
     return { provider, login_url: url, pending: true };
   }
@@ -447,26 +510,68 @@ export class AuthService {
     signal?: AbortSignal,
     force = false,
   ): Promise<Credentials> {
-    return this.store.lease(
-      `auth:${provider}`,
-      async () => {
-        const { credentials, revision } = this.read(provider);
-        invariant(
-          credentials &&
-            (!credentials.expires || credentials.expires * 1000 > Date.now()),
-          "AUTH_REQUIRED",
-          `Log in to ${provider} using harmony_auth`,
+    invariant(!this.closed, "AUTH_CLOSED", "Authentication service is closed");
+    const requested = this.row(provider),
+      controller = new AbortController();
+    const finished = Promise.withResolvers<void>();
+    this.refreshClosures.add(finished.promise);
+    const pending = this.refreshes.get(provider) ?? new Set<AbortController>();
+    this.refreshes.set(provider, pending);
+    pending.add(controller);
+    const combined = AbortSignal.any([
+      controller.signal,
+      ...(signal ? [signal] : []),
+    ]);
+    // A different MCP process can log out while this process awaits the cloud.
+    const watcher = setInterval(() => {
+      if (this.row(provider).revision !== requested.revision)
+        controller.abort(
+          new ToolError(
+            "AUTH_CANCELLED",
+            "Authentication was replaced or logged out",
+          ),
         );
-        if (!force && Date.now() - credentials.saved < 1800000)
-          return credentials;
-        const access = await this.check(credentials.jwt, true, signal);
-        signal?.throwIfAborted();
-        const updated = { ...credentials, access, saved: Date.now() };
-        this.save(provider, revision, updated);
-        return updated;
-      },
-      signal,
-    );
+    }, 200);
+    watcher.unref();
+    try {
+      return await this.store.lease(
+        `auth:${provider}`,
+        async () => {
+          const { credentials, revision } = this.read(provider);
+          invariant(
+            revision === requested.revision,
+            "AUTH_CANCELLED",
+            "Authentication changed while waiting to refresh",
+          );
+          invariant(
+            credentials &&
+              (!credentials.expires || credentials.expires * 1000 > Date.now()),
+            "AUTH_REQUIRED",
+            `Log in to ${provider} using harmony_auth`,
+          );
+          // A refresh completed while this request waited for the shared lease.
+          // Compare encrypted bytes, not timestamps, so same-millisecond refreshes
+          // also coalesce across processes without retaining a credential cache.
+          const refreshed = !requested.ciphertext?.equals(
+            this.row(provider).ciphertext ?? Buffer.alloc(0),
+          );
+          if ((!force || refreshed) && Date.now() - credentials.saved < 1800000)
+            return credentials;
+          const access = await this.check(credentials.jwt, true, combined);
+          combined.throwIfAborted();
+          const updated = { ...credentials, access, saved: Date.now() };
+          this.save(provider, revision, updated);
+          return updated;
+        },
+        combined,
+      );
+    } finally {
+      clearInterval(watcher);
+      pending.delete(controller);
+      if (!pending.size) this.refreshes.delete(provider);
+      this.refreshClosures.delete(finished.promise);
+      finished.resolve();
+    }
   }
   async teams(signal?: AbortSignal) {
     const auth = await this.credentials("developer", signal);
@@ -488,20 +593,45 @@ export class AuthService {
     );
   }
   async logout(provider: Provider) {
+    const starting = this.loginStarts.get(provider);
+    starting?.controller.abort(new ToolError("AUTH_CANCELLED", "Logged out"));
+    await this.clearProvider(provider);
+    if (starting) await Promise.allSettled([starting.finished]);
+    return { provider, logged_in: false };
+  }
+  private async clearProvider(provider: Provider) {
+    const revision = crypto.randomUUID();
     this.store.db
       .prepare(
         "UPDATE credentials SET revision=?,ciphertext=NULL WHERE provider=?",
       )
-      .run(crypto.randomUUID(), provider);
+      .run(revision, provider);
+    for (const controller of this.refreshes.get(provider) ?? [])
+      controller.abort(new ToolError("AUTH_CANCELLED", "Logged out"));
     const login = this.logins.get(provider);
     login?.controller.abort(new ToolError("AUTH_CANCELLED", "Logged out"));
     await login?.finished;
-    this.logins.delete(provider);
-    return { provider, logged_in: false };
+    if (this.logins.get(provider) === login) this.logins.delete(provider);
+    return revision;
   }
   async close() {
+    this.closed = true;
+    const starting = [...this.loginStarts.values()];
+    for (const login of starting)
+      login.controller.abort(
+        new ToolError("AUTH_CANCELLED", "Authentication service is closing"),
+      );
+    for (const pending of this.refreshes.values())
+      for (const controller of pending)
+        controller.abort(
+          new ToolError("AUTH_CANCELLED", "Authentication service is closing"),
+        );
     for (const login of this.logins.values()) login.controller.abort();
-    await Promise.all([...this.logins.values()].map((login) => login.finished));
+    await Promise.all([
+      ...this.refreshClosures,
+      Promise.allSettled(starting.map((login) => login.finished)),
+      ...[...this.logins.values()].map((login) => login.finished),
+    ]);
     this.key.fill(0);
   }
 }

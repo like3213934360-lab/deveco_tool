@@ -1,0 +1,36 @@
+{
+  "format": 1,
+  "passed": true,
+  "source": "tools:check_ets_files",
+  "row_sha256": "2dd677a77971e0ae7934b4d84a95eba181c5d48c8876ce72bb413681cfe83b35",
+  "tested": {
+    "runtime_sha256": "d041960db3554b3aa6316210b3b5d79f21ace0e7c7839ff8b832f637ca35f0f0",
+    "compiled_sha256": "285099fc709bfc01ba66948f6b9ae0e2481a250cbaf927edc19fa922600aec8d",
+    "package_lock_sha256": "68641e488a5099852216d3003664f57dd1d05b980f4c7813ee75dd7baf83d0fc",
+    "resource_manifest_sha256": "563bc3f06565e92c59c621c3ef909a37cbc4ac1db958d3d73d6e0bc99bf9ed86",
+    "upstream_lock_sha256": "bf3cc411831bd8ce6652a8085c8247c399d0c48b6d73156a7e649b9ef668164e"
+  },
+  "reviewer": "Codex native auth parity review 2026-09-09",
+  "reason": "核对冻结旧版 server.mjs 的 runArktsCheck({files, product}) 调用并修正迁移映射。真实 SDK 静态检查 13 项覆盖文件/工程范围、Unicode 模块、TS、多文件错误和大诊断；345 项回归含 stdio MCP 显式缺失 SDK 的 TOOLCHAIN_MISSING 拒绝，无其他 SDK 回退或 SDK 子进程启动。",
+  "completed_scenarios": [
+    "旧批量诊断语义和缺失 SDK 行为对照"
+  ],
+  "checks": [
+    {
+      "check": "test/native-runtime.test.ts",
+      "original_sha256": "2525a842379f60c62a8a8f5010512c12813e2ed4e5c6b810c1e3a01a5ffaae87"
+    },
+    {
+      "check": "test/native-checker.test.ts",
+      "original_sha256": "2525a842379f60c62a8a8f5010512c12813e2ed4e5c6b810c1e3a01a5ffaae87"
+    },
+    {
+      "check": "test/native-toolchain.test.ts",
+      "original_sha256": "2525a842379f60c62a8a8f5010512c12813e2ed4e5c6b810c1e3a01a5ffaae87"
+    },
+    {
+      "check": "scripts/native-checker-acceptance.ts",
+      "original_sha256": "7a2a4f6ea2e33ad24b39e475ce2d1f91e0af8a50d53c9e36c4abaf8554ef9250"
+    }
+  ]
+}

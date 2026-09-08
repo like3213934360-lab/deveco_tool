@@ -11,10 +11,10 @@ node dist/scripts/native-benchmark.js /private/benchmark-plan.json /absolute/new
 node dist/scripts/native-ui-benchmark.js /absolute/frozen-baseline /absolute/new-ui.json
 node dist/scripts/native-orchestration-benchmark.js /absolute/new-orchestration.json
 node dist/scripts/native-performance-report.js /absolute/new-direct-evidence/direct.json /absolute/new-ui.json /absolute/new-orchestration.json /absolute/new-performance.json
-node dist/scripts/native-sdk-soak.js /absolute/new-soak-directory 3600 TARGET
+node dist/scripts/native-sdk-soak.js /absolute/new-soak-directory 3600 /absolute/personally-signed-canary-preparation
 ```
 
-长稳脚本在新证据目录内创建专用工程，时长参数单位为秒；运行前选择当前获准使用的设备。benchmark plan 使用 `format: 3`，固定旧版 Git 提交、入口、工具链环境、不可变输入文件摘要及 19 个直接能力。已有能力声明 `comparison: "paired"` 及两版调用映射；新增的只读签名检查按下方规则独立采样。每个 step 要声明结果 JSON Pointer 和 `equals` 预期值，或对字符串声明非空的 `contains` 字面文本。旧网关的文本报告在开发采集器内包装为 `{ "output": "完整文本" }`；需断言具体诊断、设备或流程结果，不能仅凭 transport 成功。生产 MCP 没有加入旧协议分支。异步写操作使用 `await_run: { "run_id_pointer": "/data/run_id" }`，计时包含直到成功终态的等待，断言针对最终状态的结果。不可用能力明确失败，不以工具目录代替。计划仅保留在私有证据目录，公共报告只记录其摘要。
+长稳脚本接收 `native-hot-target-prepare` 生成的专用个人签名工程目录，时长参数单位为秒；设备取自已确认的个人签名准备记录，运行前必须取得当次占用授权。脚本通过发行入口的 stdio MCP 执行真实 HQF、LSP 和 UI，不在采集进程内实例化 Runtime。报告 `format: 3` 要求 MCP PID 与驱动 PID 分离、全过程 PID 一致、实际请求日志落盘及 Worker/transport 关闭。旧 `format: 2` 进程内长稳报告仅保留为历史证据。benchmark plan 使用 `format: 3`，固定旧版 Git 提交、入口、工具链环境、不可变输入文件摘要及 19 个直接能力。已有能力声明 `comparison: "paired"` 及两版调用映射；新增的只读签名检查按下方规则独立采样。每个 step 要声明结果 JSON Pointer 和 `equals` 预期值，或对字符串声明非空的 `contains` 字面文本。旧网关的文本报告在开发采集器内包装为 `{ "output": "完整文本" }`；需断言具体诊断、设备或流程结果，不能仅凭 transport 成功。生产 MCP 没有加入旧协议分支。异步写操作使用 `await_run: { "run_id_pointer": "/data/run_id" }`，计时包含直到成功终态的等待，断言针对最终状态的结果。不可用能力明确失败，不以工具目录代替。计划仅保留在私有证据目录，公共报告只记录其摘要。
 
 冷启动两版各 30 次交替测量，分别记录初始化、工具目录与总时长。已有直接能力每版各 1000 次，交替 100 次一组，保留逐次样本及 5% 的 P95 退化门槛；新增签名检查也必须完成 1000 次原生采样。UI 微基准针对 101 / 1001 / 10001 节点，六个独立进程分别测量两版解析和四种选择器；每次延迟、CPU 和 RSS 保留原始值。编排基准单独记录官方 LangGraph 单节点、SQLite 检查点写入/待提交写入/读回，以及启用检查点的图调用，不混入 SDK 时间。
 

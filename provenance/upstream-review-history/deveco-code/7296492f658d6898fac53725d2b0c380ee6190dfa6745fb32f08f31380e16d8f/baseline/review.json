@@ -1,0 +1,318 @@
+{
+  "format": 1,
+  "source": {
+    "id": "deveco-code",
+    "url": "https://gitcode.com/openharmony-sig/deveco-code.git",
+    "ref": "refs/heads/develop",
+    "commit": "325aff05706b9b04a9816a987e9672dda991c630",
+    "tree": "9232f44a15bed9f948662af74f23264b34be457c",
+    "version": "325aff05706b9b04a9816a987e9672dda991c630",
+    "role": "resource_source",
+    "acceptance": "verified"
+  },
+  "mapping_sha256": "558373dbb2420ce97f2ffa98c43f3a8cef05342ce4be5f3034a60e1f68583de8",
+  "reviews": [
+    {
+      "rule": "code-deveco-create-project",
+      "reason": "Replace template-copy and SDK detection Skill scripts with native ProjectService and attributed application templates; project creation stays a typed durable workflow. Current module-target revision review: ProjectService now validates explicit module targets without changing template bytes, creation publication, ACL permissions or SDK discovery. Current SDK creation/build and project regression reports cover the shared service change. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native checkpoint integration review 2026-09-09"
+    },
+    {
+      "rule": "code-deveco-cli",
+      "reason": "Translate the CLI guidance into eight fixed native workflows and direct toolchain services; do not retain the CLI dispatch or execute the upstream Skill. Current module-target revision review: Typed module_targets selects a validated Hvigor target for each module independently of the HDC target. Resolved defaults are captured before submission and included in project, LSP and watch identity; restart and duplicate-request checks retain that selection. Build/HSP dependency closure and signed package-set deployment recovery are exercised across four product/target combinations. assembleApp rejects explicit module selectors according to the installed SDK PreBuildApp contract. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native checkpoint integration review 2026-09-09"
+    },
+    {
+      "rule": "code-arkts-error-fixes",
+      "reason": "Retain attributed ArkTS defect examples as knowledge resources and apply SDK checker diagnostics through native project/report adapters; imported examples are data, not executable Skills. Current module-target revision review: The static-check child input now preserves the captured module_targets through CLI schema validation, DiagnosticService and inspectProject. Target-specific real SDK prechecks run for both products and both targets; no prose rule is treated as compiler output. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness. 本轮核对只涉及原生工具链单次发现的重复读取消除及 Windows 强杀测试准备屏障等待；当前字节、路径错误和元数据身份校验保持，操作与恢复断言不变，未改变锁定上游的协议或规则语义。",
+      "reviewer": "Codex native checkpoint integration review 2026-09-09"
+    },
+    {
+      "rule": "code-arkts-grammar-standards",
+      "reason": "Retain attributed grammar and ArkUI reference material in local knowledge lookup; enforce actual project checks with the selected SDK instead of treating prose as a compiler. Current module-target revision review: The static-check child input now preserves the captured module_targets through CLI schema validation, DiagnosticService and inspectProject. Target-specific real SDK prechecks run for both products and both targets; no prose rule is treated as compiler output. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness. 本轮核对只涉及原生工具链单次发现的重复读取消除及 Windows 强杀测试准备屏障等待；当前字节、路径错误和元数据身份校验保持，操作与恢复断言不变，未改变锁定上游的协议或规则语义。",
+      "reviewer": "Codex native checkpoint integration review 2026-09-09"
+    },
+    {
+      "rule": "code-arkts-runtime-fix",
+      "reason": "Retain attributed crash patterns and runtime examples; native frame and process grouping separates interleaved events before rule matching and never invents absent frames. Current collector reads bounded result artifacts before parsing and validates either candidate patterns or an explicitly unlisted subtype against original faultlog bytes. Reconnect and duplicate request checks preserve task and artifact identity. Current module-target revision review: The pinned upstream commit, mapped native target hashes and rule scope are unchanged in this revision; the prior semantic review still applies. Required checks are supplied by newly executed reports for the current compiled identity, not reused historical attestations. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native checkpoint integration review 2026-09-09"
+    },
+    {
+      "rule": "code-new-skill",
+      "reason": "The pinned tree has no files falling into this guard. Keep the unmapped fallback so a future new Skill requires a deliberate workflow, knowledge, or exclusion decision. Current module-target revision review: The pinned upstream commit, mapped native target hashes and rule scope are unchanged in this revision; the prior semantic review still applies. Required checks are supplied by newly executed reports for the current compiled identity, not reused historical attestations. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native checkpoint integration review 2026-09-09"
+    },
+    {
+      "rule": "code-host-customization",
+      "reason": "Reviewed scope of packages/opencode/resources/skills/customize-deveco/: Configures DevEco Code's own host; this MCP does not install host skills, agents or plugins. Current module-target revision review: The pinned upstream commit, mapped native target hashes and rule scope are unchanged in this revision; the prior semantic review still applies. Required checks are supplied by newly executed reports for the current compiled identity, not reused historical attestations. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native checkpoint integration review 2026-09-09"
+    },
+    {
+      "rule": "code-defaults.ts",
+      "reason": "Replace upstream default Skill discovery with the explicit knowledge inventory and source mapping. Native MCP does not create a host Skill registry. Current module-target revision review: Mapping additions bind target selection contracts, persistence, signing and checker propagation to their regression and real SDK collectors; packaged knowledge and host Skill exclusion semantics are unchanged. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native checkpoint integration review 2026-09-09"
+    },
+    {
+      "rule": "code-discovery.ts",
+      "reason": "Replace filesystem Skill discovery with attributed packaged resources and bounded local lookup; host-specific directory scanning is not installed. Current module-target revision review: Mapping additions extend native target selection review and required evidence. No filesystem Skill discovery, installation or runtime upstream execution has been reintroduced. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native checkpoint integration review 2026-09-09"
+    },
+    {
+      "rule": "code-index.ts",
+      "reason": "Replace host Skill indexing and execution with typed knowledge catalog/search/read and explicit workflow contracts; source mappings retain future-change review. Current module-target revision review: Mapping additions require context, recovery, multimodule and checker evidence for explicit build targets. Knowledge lookup remains packaged data and does not dispatch upstream Skills. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native checkpoint integration review 2026-09-09"
+    },
+    {
+      "rule": "code-host-packages",
+      "reason": "Reviewed scope of packages/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence. Current module-target revision review: The pinned upstream commit, mapped native target hashes and rule scope are unchanged in this revision; the prior semantic review still applies. Required checks are supplied by newly executed reports for the current compiled identity, not reused historical attestations. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native checkpoint integration review 2026-09-09"
+    },
+    {
+      "rule": "code-host-script",
+      "reason": "Reviewed scope of script/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence. Current module-target revision review: The pinned upstream commit, mapped native target hashes and rule scope are unchanged in this revision; the prior semantic review still applies. Required checks are supplied by newly executed reports for the current compiled identity, not reused historical attestations. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native checkpoint integration review 2026-09-09"
+    },
+    {
+      "rule": "code-host-patches",
+      "reason": "Reviewed scope of patches/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence. Current module-target revision review: The pinned upstream commit, mapped native target hashes and rule scope are unchanged in this revision; the prior semantic review still applies. Required checks are supplied by newly executed reports for the current compiled identity, not reused historical attestations. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native checkpoint integration review 2026-09-09"
+    },
+    {
+      "rule": "code-host-docs",
+      "reason": "Reviewed scope of docs/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence. Current module-target revision review: The pinned upstream commit, mapped native target hashes and rule scope are unchanged in this revision; the prior semantic review still applies. Required checks are supplied by newly executed reports for the current compiled identity, not reused historical attestations. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native checkpoint integration review 2026-09-09"
+    },
+    {
+      "rule": "code-host-specs",
+      "reason": "Reviewed scope of specs/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence. Current module-target revision review: The pinned upstream commit, mapped native target hashes and rule scope are unchanged in this revision; the prior semantic review still applies. Required checks are supplied by newly executed reports for the current compiled identity, not reused historical attestations. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native checkpoint integration review 2026-09-09"
+    },
+    {
+      "rule": "code-host-assets",
+      "reason": "Reviewed scope of assets/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence. Current module-target revision review: The pinned upstream commit, mapped native target hashes and rule scope are unchanged in this revision; the prior semantic review still applies. Required checks are supplied by newly executed reports for the current compiled identity, not reused historical attestations. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native checkpoint integration review 2026-09-09"
+    },
+    {
+      "rule": "code-host-agents",
+      "reason": "Reviewed scope of .agents/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence. Current module-target revision review: The pinned upstream commit, mapped native target hashes and rule scope are unchanged in this revision; the prior semantic review still applies. Required checks are supplied by newly executed reports for the current compiled identity, not reused historical attestations. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native checkpoint integration review 2026-09-09"
+    },
+    {
+      "rule": "code-host-opencode",
+      "reason": "Reviewed scope of .opencode/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence. Current module-target revision review: The pinned upstream commit, mapped native target hashes and rule scope are unchanged in this revision; the prior semantic review still applies. Required checks are supplied by newly executed reports for the current compiled identity, not reused historical attestations. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native checkpoint integration review 2026-09-09"
+    },
+    {
+      "rule": "code-host-github",
+      "reason": "Reviewed scope of .github/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence. Current module-target revision review: The pinned upstream commit, mapped native target hashes and rule scope are unchanged in this revision; the prior semantic review still applies. Required checks are supplied by newly executed reports for the current compiled identity, not reused historical attestations. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native checkpoint integration review 2026-09-09"
+    },
+    {
+      "rule": "code-host-gitcode",
+      "reason": "Reviewed scope of .gitcode/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence. Current module-target revision review: The pinned upstream commit, mapped native target hashes and rule scope are unchanged in this revision; the prior semantic review still applies. Required checks are supplied by newly executed reports for the current compiled identity, not reused historical attestations. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native checkpoint integration review 2026-09-09"
+    },
+    {
+      "rule": "code-legal-LICENSE",
+      "reason": "Review LICENSE as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. Current module-target revision review: The pinned upstream commit, mapped native target hashes and rule scope are unchanged in this revision; the prior semantic review still applies. Required checks are supplied by newly executed reports for the current compiled identity, not reused historical attestations. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native checkpoint integration review 2026-09-09"
+    },
+    {
+      "rule": "code-legal-NOTICE",
+      "reason": "Review NOTICE as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. Current module-target revision review: The pinned upstream commit, mapped native target hashes and rule scope are unchanged in this revision; the prior semantic review still applies. Required checks are supplied by newly executed reports for the current compiled identity, not reused historical attestations. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native checkpoint integration review 2026-09-09"
+    },
+    {
+      "rule": "code-legal-OAT.xml",
+      "reason": "Review OAT.xml as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. Current module-target revision review: The pinned upstream commit, mapped native target hashes and rule scope are unchanged in this revision; the prior semantic review still applies. Required checks are supplied by newly executed reports for the current compiled identity, not reused historical attestations. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native checkpoint integration review 2026-09-09"
+    },
+    {
+      "rule": "code-legal-package.json",
+      "reason": "Review package.json as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. Current module-target revision review: The pinned upstream commit, mapped native target hashes and rule scope are unchanged in this revision; the prior semantic review still applies. Required checks are supplied by newly executed reports for the current compiled identity, not reused historical attestations. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native checkpoint integration review 2026-09-09"
+    },
+    {
+      "rule": "code-legal-bun.lock",
+      "reason": "Review bun.lock as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. Current module-target revision review: The pinned upstream commit, mapped native target hashes and rule scope are unchanged in this revision; the prior semantic review still applies. Required checks are supplied by newly executed reports for the current compiled identity, not reused historical attestations. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native checkpoint integration review 2026-09-09"
+    },
+    {
+      "rule": "code-legal-CHANGELOG.md",
+      "reason": "Review CHANGELOG.md as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. Current module-target revision review: The pinned upstream commit, mapped native target hashes and rule scope are unchanged in this revision; the prior semantic review still applies. Required checks are supplied by newly executed reports for the current compiled identity, not reused historical attestations. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native checkpoint integration review 2026-09-09"
+    },
+    {
+      "rule": "code-host-install",
+      "reason": "Reviewed scope of install: Bash installer and installation telemetry for the upstream DevEco Code host. Native MCP installation does not execute this script. Current module-target revision review: The pinned upstream commit, mapped native target hashes and rule scope are unchanged in this revision; the prior semantic review still applies. Required checks are supplied by newly executed reports for the current compiled identity, not reused historical attestations. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native checkpoint integration review 2026-09-09"
+    },
+    {
+      "rule": "code-host-install-ps1",
+      "reason": "Reviewed scope of install.ps1: PowerShell installer and installation telemetry for the upstream DevEco Code host. Native MCP installation does not execute this script. Current module-target revision review: The pinned upstream commit, mapped native target hashes and rule scope are unchanged in this revision; the prior semantic review still applies. Required checks are supplied by newly executed reports for the current compiled identity, not reused historical attestations. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native checkpoint integration review 2026-09-09"
+    },
+    {
+      "rule": "code-host-turbo-json",
+      "reason": "Reviewed scope of turbo.json: Upstream monorepo build/test scheduling. This MCP uses its own strict TypeScript build and Node Test Runner matrix. Current module-target revision review: The pinned upstream commit, mapped native target hashes and rule scope are unchanged in this revision; the prior semantic review still applies. Required checks are supplied by newly executed reports for the current compiled identity, not reused historical attestations. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native checkpoint integration review 2026-09-09"
+    }
+  ],
+  "targets": [
+    {
+      "path": "provenance/resources.json",
+      "sha256": "61ce5c5373a8482a8019e746a60678a169bff2de1f09463160003dfa6bea3186"
+    },
+    {
+      "path": "provenance/upstream-lock.json",
+      "sha256": "f219f524944b8fb4de9bcb4513fb334517fad1331ea35f8141cd64ee569459c3"
+    },
+    {
+      "path": "provenance/upstream-mapping.json",
+      "sha256": "c977f813cedb42d9c8a4236749d9c2d98c21300b055f77bcf01afe1005a01ff9"
+    },
+    {
+      "path": "resources/knowledge.json",
+      "sha256": "ea8ee2af71ba344cb6a84c5ab522d9d414af98b36f8f845521a9522c11eea300"
+    },
+    {
+      "path": "resources/knowledge/arkts-error-fixes",
+      "sha256": "89465b0466d5f324222dde9527bd87d910cf9cf6fa4b6eb83a177c0b5a270532"
+    },
+    {
+      "path": "resources/knowledge/arkts-grammar-standards",
+      "sha256": "2f35d9f4bee57a5041737ea81aab385bab846e05c9025d04c44b826820356ae7"
+    },
+    {
+      "path": "resources/knowledge/arkts-runtime-fix",
+      "sha256": "5e9782bba4cd303b249f1d83057a19d8f3a6315843ca0b890229ad7962a37b3f"
+    },
+    {
+      "path": "resources/templates/application",
+      "sha256": "739c5c77fec53bcfd19774b8817c0692fcbefe400d3f1300af741bf0108b347e"
+    },
+    {
+      "path": "scripts/native-checker-acceptance.ts",
+      "sha256": "f1a7f87f08a9417572f23390ef9182965b4697d34fb8984b5e10c4ac6a865b4e"
+    },
+    {
+      "path": "scripts/native-crash-acceptance.ts",
+      "sha256": "77b1e2520c63ae56a14985cbf5cca0e86879d3699cf13e0ffbb9ba422c014605"
+    },
+    {
+      "path": "scripts/native-multimodule-acceptance.ts",
+      "sha256": "c44e0916a73c6510d3048b7208d350a0e68c62b22e767174199d4cacf986427b"
+    },
+    {
+      "path": "scripts/native-sdk-acceptance.ts",
+      "sha256": "603c9d7cbb35d395b509fd1752bc3f0cb62b386a8ec6fcea8796ad73b754bea9"
+    },
+    {
+      "path": "src/cli.ts",
+      "sha256": "cd80b8c1205f1ab153fbf292cee86358a366eddf2e687a4c6ec3e09f82d572ec"
+    },
+    {
+      "path": "src/core/contracts.ts",
+      "sha256": "f43e48fee70bdd24ef7557cf380ffd5334deaabd8970261cb529d4e589d56a78"
+    },
+    {
+      "path": "src/core/workflows.ts",
+      "sha256": "b96b88ba2d63429347bcccb0a0e24fc80293ca24c1f7161951057e658f250e98"
+    },
+    {
+      "path": "src/services/checker-project.ts",
+      "sha256": "bb3548101c344ab42d9f7b722dd81d9fafe324bbc750b856473b04e76f71f9bc"
+    },
+    {
+      "path": "src/services/checker-report.ts",
+      "sha256": "0285bfc9f0c93d0b9ff912c7c31d317d993630c0e111c397bcd6b63638650253"
+    },
+    {
+      "path": "src/services/checker.ts",
+      "sha256": "da0f1aaf2e90690d9fe450d7810fc17f57483aef0f5200b5765045b2a5f16679"
+    },
+    {
+      "path": "src/services/crash-frames.ts",
+      "sha256": "3a2cabf7bb0be8f72c6fe1e704e99be2f423a715063fedf0f5ca95320ce15558"
+    },
+    {
+      "path": "src/services/crash-patterns.ts",
+      "sha256": "f427ec7854205db2422ef9a9e086bd19ed9a0ea7958e103445be44e6158debec"
+    },
+    {
+      "path": "src/services/crash.ts",
+      "sha256": "762de23d8e915c6737ae823aac733d1b2c9948da9f5da9f1074731822fcaeb5b"
+    },
+    {
+      "path": "src/services/diagnostics.ts",
+      "sha256": "b5a984675d9733d555e4d16d0690d249ed9b799cd49f8c867ad3289f320aa521"
+    },
+    {
+      "path": "src/services/knowledge.ts",
+      "sha256": "5f9422aa166519e994e910e0462091757a22c04cdfc509dc9515423faf18d41d"
+    },
+    {
+      "path": "src/services/logs.ts",
+      "sha256": "be5d46ca8aab73bceb6ecaadbac8d1b7475afca6865eec910e729d2baf533608"
+    },
+    {
+      "path": "src/services/project.ts",
+      "sha256": "703814194af52452f7e142ccf457d58ade886bc2474c1e60b3d6a20914ccc302"
+    },
+    {
+      "path": "src/services/runtime.ts",
+      "sha256": "9d3becf7337834105589a45b1a7e664deb8533f2a766e1617517f883c494dfe5"
+    },
+    {
+      "path": "test/native-checker.test.ts",
+      "sha256": "e21cb2022b94c48a3b1c03caf47c305d2f01b286899bcb4a409720681c0350f1"
+    },
+    {
+      "path": "test/native-context.test.ts",
+      "sha256": "56ec51b60783c6da6a03d1a67351ff95dac165ce517da01036428ea20e5b6cff"
+    },
+    {
+      "path": "test/native-crash.test.ts",
+      "sha256": "8650f6c29024bcc161c3eded1ebffe26607bd891518d3d045fe100628e734924"
+    },
+    {
+      "path": "test/native-logs.test.ts",
+      "sha256": "f86133c127a1865db4c7c17c8389ed3235c398187de9089ab4622733d66d58df"
+    },
+    {
+      "path": "test/native-project-recovery.test.ts",
+      "sha256": "51e7324dc42a95eca1e134a074dae0b2616ccaffc680aa51a3ac83cb91bd36a3"
+    },
+    {
+      "path": "test/native-project.test.ts",
+      "sha256": "15066b43fc112a7d47a10aaa33d96f823127203653b8294db69e55c0f37f294d"
+    },
+    {
+      "path": "test/native-runtime.test.ts",
+      "sha256": "e01a87a2ac160c52c6eac7f1f6e5244ed6348ccc8e3c4933b5de3368a60c236f"
+    },
+    {
+      "path": "test/native-upstream.test.ts",
+      "sha256": "d4aa5eea4dc9fca4cec768867641af74cbde1178937fb51a634aea06c0ca5e01"
+    },
+    {
+      "path": "test/workflows.test.ts",
+      "sha256": "016645857a2d3050fafe7f4082f23d188dfc83bbe101ee7b625ccdb131e1d49c"
+    }
+  ],
+  "required_tests": [
+    "scripts/native-checker-acceptance.ts",
+    "scripts/native-crash-acceptance.ts",
+    "scripts/native-multimodule-acceptance.ts",
+    "scripts/native-sdk-acceptance.ts",
+    "test/native-checker.test.ts",
+    "test/native-context.test.ts",
+    "test/native-crash.test.ts",
+    "test/native-logs.test.ts",
+    "test/native-project-recovery.test.ts",
+    "test/native-project.test.ts",
+    "test/native-runtime.test.ts",
+    "test/native-upstream.test.ts",
+    "test/workflows.test.ts"
+  ]
+}

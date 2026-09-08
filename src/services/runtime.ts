@@ -1138,6 +1138,16 @@ export class Runtime {
           parsers: this.cpu.metrics,
           ui_cache: this.devices.cacheMetrics,
           saved_ui_cache: this.savedTrees.metrics,
+          runtime: {
+            pid: process.pid,
+            cpu: process.cpuUsage(),
+            rss_bytes: process.memoryUsage().rss,
+            retained: await this.lifecycleMetrics(),
+            sdk: {
+              ...this.processes.metrics,
+              pids: [...new Set([...this.processes.metrics.pids, ...this.hot.processIds])],
+            },
+          },
           recovery_required: this.store
             .externalGuards()
             .map(({ id, kind, run_id, metadata }) => ({
@@ -1323,6 +1333,7 @@ export class Runtime {
               !input.route &&
               !input.project_path &&
               !input.product &&
+              !input.module_targets &&
               !input.target &&
               !input.replace &&
               !request_key &&
