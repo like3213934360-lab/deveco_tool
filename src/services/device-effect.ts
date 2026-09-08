@@ -1,5 +1,5 @@
 import { digest } from "../core/files.js";
-import { invariant } from "../core/errors.js";
+import { invariant, SettledEffectError } from "../core/errors.js";
 import type { ProcessResult } from "../core/process.js";
 import type { StateStore } from "../core/store.js";
 import { currentTrace } from "../core/trace.js";
@@ -89,6 +89,7 @@ export class DeviceEffectJournal {
     signal?: AbortSignal,
     recovery = false,
   ): Promise<T | undefined> {
+    signal?.throwIfAborted();
     const trace = currentTrace();
     invariant(
       trace.run_id && trace.node,
@@ -101,6 +102,13 @@ export class DeviceEffectJournal {
       identity = digest({ runId, node, input });
     const directory = `/data/local/tmp/deveco-mcp-op-${digest({ state: this.store.root, runId, node, target })}`;
     const scripts = deviceReceiptScripts(directory, identity, args);
+    const settle = (receipt: DeviceReceipt) => {
+      try {
+        return accept(receipt);
+      } catch (error) {
+        throw SettledEffectError.from(error);
+      }
+    };
     const matches = (metadata: unknown) =>
       metadata !== null &&
       typeof metadata === "object" &&
@@ -136,69 +144,77 @@ export class DeviceEffectJournal {
       );
       const receipt = parseDeviceReceipt(result, identity);
       if (receipt) closeRecoveredGuards();
-      return receipt ? accept(receipt) : undefined;
+      return receipt ? settle(receipt) : undefined;
     };
-    const value = recovery
-      ? await this.store.recoverEffect(runId, node, input, read)
-      : await this.store.effect(
-          runId,
-          node,
-          input,
-          async () => {
-            const guard = this.store.trackExternalSession(
-              "device_receipt",
-              [`device:${target}`],
-              { identity, directory },
-            );
-            let stopped = false;
-            try {
-              const result = await this.transport.shell(
-                target,
-                ["sh", "-c", scripts.execute],
-                signal,
-                30000,
-                false,
-                true,
+    let value: T | undefined;
+    try {
+      value = recovery
+        ? await this.store.recoverEffect(runId, node, input, read)
+        : await this.store.effect(
+            runId,
+            node,
+            input,
+            async () => {
+              const guard = this.store.trackExternalSession(
+                "device_receipt",
+                [`device:${target}`],
+                { identity, directory },
               );
-              const receipt = parseDeviceReceipt(result, identity);
-              invariant(
-                receipt,
-                "DEVICE_RECEIPT_MISSING",
-                "Device operation has no complete matching receipt",
-              );
-              guard.confirmClosed();
-              stopped = true;
-              return accept(receipt);
-            } catch (error) {
-              if (!stopped) guard.unconfirmed();
-              throw error;
-            }
-          },
-          read,
-        );
-    if (value !== undefined) {
-      // SQLite FULL has committed the normalized receipt before remote cleanup.
-      // Cleanup failure must not turn a confirmed mutation into an uncertain one.
+              let stopped = false;
+              try {
+                const result = await this.transport.shell(
+                  target,
+                  ["sh", "-c", scripts.execute],
+                  signal,
+                  30000,
+                  false,
+                  true,
+                );
+                const receipt = parseDeviceReceipt(result, identity);
+                invariant(
+                  receipt,
+                  "DEVICE_RECEIPT_MISSING",
+                  "Device operation has no complete matching receipt",
+                );
+                guard.confirmClosed();
+                stopped = true;
+                return settle(receipt);
+              } catch (error) {
+                if (!stopped) guard.unconfirmed();
+                throw error;
+              }
+            },
+            read,
+          );
+    } catch (error) {
+      if (error instanceof SettledEffectError)
+        await this.cleanup(target, directory, runId);
+      throw error;
+    }
+    if (value !== undefined) await this.cleanup(target, directory, runId);
+    return value;
+  }
+  private async cleanup(target: string, directory: string, runId: string) {
+    // SQLite FULL has committed the normalized receipt before remote cleanup.
+    // Cleanup failure must not turn a confirmed mutation into an uncertain one.
+    try {
+      await this.transport.shell(
+        target,
+        ["rm", "-rf", directory],
+        undefined,
+        10000,
+        false,
+        true,
+      );
+    } catch {
       try {
-        await this.transport.shell(
+        this.store.event(runId, "device_receipt_cleanup_pending", {
           target,
-          ["rm", "-rf", directory],
-          undefined,
-          10000,
-          false,
-          true,
-        );
+          directory,
+        });
       } catch {
-        try {
-          this.store.event(runId, "device_receipt_cleanup_pending", {
-            target,
-            directory,
-          });
-        } catch {
-          /* Receipt remains durable. */
-        }
+        /* Receipt remains durable. */
       }
     }
-    return value;
   }
 }

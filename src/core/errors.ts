@@ -9,6 +9,18 @@ export class ToolError extends Error {
     this.name = "ToolError";
   }
 }
+/** The external command has confirmed completion. Its failure is durable and
+ * must never be replayed automatically, even if the workflow is resumed. */
+export class SettledEffectError extends ToolError {
+  static from(error: unknown): SettledEffectError {
+    const result = errorResult(error);
+    return new SettledEffectError(
+      result.code,
+      result.message,
+      "details" in result ? result.details : null,
+    );
+  }
+}
 export function invariant(
   condition: unknown,
   code: string,

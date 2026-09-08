@@ -29,6 +29,9 @@
 - 验证：本机 Node26 编译回归233项通过，0失败/取消/跳过，运行摘要 `2111f6bad58c4b367d0cdcd2510c6e5f5ca14c46ecbb20814c04b0dfcf0e0cdb`；证据目录 `20260908-device-receipt-regression-1`。新增测试覆盖重开 SQLite 后 LangGraph 继续、Want 字面值、重复执行防护、资源竞争、取消拒绝、回执边界和清理失败。
 - 真机协议验证：`device-receipt-St6AFV` 使用同版回执模块，在 HarmonyOS shell 执行一次 `printf`，注入 HDC 响应丢失、重开宿主 SQLite，恢复成功且仅执行一次；这是设备回执协议证据，不是实际应用启动或跨平台完整验收。该证据的运行摘要为 `f8c33ab7639e025bfdfe1811d43cf404fa4f657ff671bac4939f15751b195d9a`，随后只追加工作流入口接线，不能将两份摘要混称为同一完整运行版本。
 - Node24 干净依赖验证：独立原生验证包以 Node24.14.1 安装166个依赖并编译，233项回归全部通过；`20260908-device-receipt-node24-1` 的运行摘要同为 `2111f6bad58c4b367d0cdcd2510c6e5f5ca14c46ecbb20814c04b0dfcf0e0cdb`。Windows/Linux及Node22仍须在最终快照复验。
+- 已结束的失败：新增 `SettledEffectError` 与持久化操作 `failed` 状态。仅由已确认结束的边界抛出；首次执行或核对时的失败均保存，恢复读取同一失败且不再次执行，未决记录不会永久阻止取消。收到完整设备回执后，命令拒绝与进程未启动属于此类；缺失回执仍为不确定。执行协议升为 `native-4`，不解码历史开发状态，使用新状态目录。
+- 新协议验证：Node26 的235项原生回归通过；新增可复现的 `scripts/native-device-receipt-acceptance.ts`，在真机上分别执行成功和失败的固定 shell 样例，注入丢失响应并重开 SQLite，两种情况均只执行一次、无未决操作。两份证据 `20260908-settled-effect-regression-1` 与 `20260908-settled-device-receipt-1` 的运行摘要均为 `ba011d04ce97eeb2d660947e1aad0f4da9cd46247e1bb5fd757cef2b0f897c0c`。未安装或启动应用，这些证据不扩展真实应用能力支持范围。
+- 新协议 Node24 复验：第二个干净安装目录以 Node24.14.1 编译，`20260908-settled-effect-node24-1` 的235项回归全部通过，运行摘要与上述新协议证据相同。其余领域操作的恢复与最终发布门槛继续保留为未完成。
 
 上述本机证据目录均位于用户目录的 `Library/Application Support/DevEcoMCP/acceptance/`。原有证据目录未修改，新 Node24 验证使用独立安装目录。
 

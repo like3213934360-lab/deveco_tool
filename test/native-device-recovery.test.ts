@@ -7,6 +7,7 @@ import { StateStore } from "../src/core/store.js";
 import { ProcessService, type ProcessResult } from "../src/core/process.js";
 import { withTrace } from "../src/core/trace.js";
 import { digest } from "../src/core/files.js";
+import { SettledEffectError } from "../src/core/errors.js";
 import {
   WorkflowEngine,
   type WorkflowDefinition,
@@ -34,6 +35,41 @@ const result = (
 const identity = digest("fixture");
 const receipt = (body = "start ability successfully") =>
   `DEVECO_DEVICE_RECEIPT_V1\n${identity}\n0\n${body}`;
+
+test("confirmed failures persist across restart, remain non-replayable and can be cancelled", async () => {
+  const root = fs.mkdtempSync(
+    path.join(os.tmpdir(), "deveco-settled-failure-"),
+  );
+  let store = new StateStore(root),
+    executions = 0;
+  const execute = () =>
+    store.effect("run", "effect", { input: 1 }, async () => {
+      executions++;
+      throw new SettledEffectError(
+        "COMMAND_REJECTED",
+        "External command completed with a rejection",
+      );
+    });
+  try {
+    await assert.rejects(execute(), { code: "COMMAND_REJECTED" });
+    assert.deepEqual(store.uncertainOperations("run"), []);
+    store.assertStopped("run");
+    store.close();
+    store = new StateStore(root);
+    await assert.rejects(execute(), { code: "COMMAND_REJECTED" });
+    await assert.rejects(
+      store.recoverEffect("run", "effect", { input: 1 }, async () => {
+        throw new Error("must not recheck a known failure");
+      }),
+      { code: "COMMAND_REJECTED" },
+    );
+    assert.equal(executions, 1);
+    assert.deepEqual(store.uncertainOperations("run"), []);
+  } finally {
+    store.close();
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
 
 test("device receipt rejects mismatched, partial, oversized and truncated evidence", () => {
   assert.deepEqual(parseDeviceReceipt(result(receipt()), identity), {
@@ -150,129 +186,148 @@ test("local completion survives cleanup failure and rejects changed inputs on re
 // HarmonyOS executes this POSIX script regardless of the host OS. Windows also
 // runs the protocol/SQLite tests above; macOS and Linux execute the actual script.
 if (process.platform !== "win32") {
-  test("LangGraph resumes a lost launch response after reopening SQLite and continues subsequent verification", async (t) => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-launch-graph-")),
-      processes = new ProcessService();
-    let store = new StateStore(path.join(root, "state")),
-      devices = new DeviceService(processes, store);
-    let loseResponse = true,
-      verifies = 0;
-    const counter = path.join(root, "counter"),
-      fakeAa = path.join(root, "aa");
-    fs.writeFileSync(
-      fakeAa,
-      '#!/bin/sh\nprintf x >> "$DEVECO_TEST_COUNTER"\nprintf "start ability successfully\\n"\n',
-      { mode: 0o700 },
-    );
-    const mockDevice = () =>
-      t.mock.method(
-        devices,
-        "shell",
-        async (_target: string, input: string[], signal?: AbortSignal) => {
-          if (input[0] === "pidof") return result("1234\n");
-          const mapped = input.map((value) =>
-            value.replaceAll("/data/local/tmp/", root + "/"),
-          );
-          const output = await processes.run(
-            {
-              executable: mapped[0]!,
-              args: mapped.slice(1),
-              cwd: root,
-              env: {
-                ...process.env,
-                PATH: root + path.delimiter + process.env.PATH,
-                DEVECO_TEST_COUNTER: counter,
+  for (const accepted of [true, false]) {
+    test(`LangGraph recovers a ${accepted ? "successful" : "rejected"} launch after reopening SQLite without replay`, async (t) => {
+      const root = fs.mkdtempSync(
+          path.join(os.tmpdir(), "deveco-launch-graph-"),
+        ),
+        processes = new ProcessService();
+      let store = new StateStore(path.join(root, "state")),
+        devices = new DeviceService(processes, store);
+      let loseResponse = true,
+        verifies = 0;
+      const counter = path.join(root, "counter"),
+        fakeAa = path.join(root, "aa");
+      fs.writeFileSync(
+        fakeAa,
+        accepted
+          ? '#!/bin/sh\nprintf x >> "$DEVECO_TEST_COUNTER"\nprintf "start ability successfully\\n"\n'
+          : '#!/bin/sh\nprintf x >> "$DEVECO_TEST_COUNTER"\nprintf "launch permission denied\\n"\nexit 1\n',
+        { mode: 0o700 },
+      );
+      const mockDevice = () =>
+        t.mock.method(
+          devices,
+          "shell",
+          async (_target: string, input: string[], signal?: AbortSignal) => {
+            if (input[0] === "pidof") return result("1234\n");
+            const mapped = input.map((value) =>
+              value.replaceAll("/data/local/tmp/", root + "/"),
+            );
+            const output = await processes.run(
+              {
+                executable: mapped[0]!,
+                args: mapped.slice(1),
+                cwd: root,
+                env: {
+                  ...process.env,
+                  PATH: root + path.delimiter + process.env.PATH,
+                  DEVECO_TEST_COUNTER: counter,
+                },
               },
-            },
-            { signal },
-          );
-          if (
-            loseResponse &&
-            input[0] === "sh" &&
-            input[2]?.includes("mkdir -m 700")
-          ) {
-            loseResponse = false;
-            throw new Error("transport lost the completed launch response");
-          }
-          return output;
-        },
-      );
-    const app = {
-      bundle_name: "com.deveco.fixture",
-      module: "feature",
-      ability: "DetailAbility",
-      uri: "fixture://detail/123",
-      parameters: { route: "中文详情", enabled: true, count: 2 },
-    };
-    const definition: WorkflowDefinition = {
-      id: "launch",
-      description: "fixture",
-      capabilities: [],
-      completion: "verified",
-      resources: () => ["device:fixture"],
-      steps: [
-        {
-          id: "launch_application",
-          kind: "effect",
-          execute: (call) => devices.launch("fixture", app, call.signal, true),
-          reconcile: (call) =>
-            devices.reconcileLaunch("fixture", app, call.signal),
-        },
-        {
-          id: "verify",
-          kind: "read",
-          execute: async () => {
-            verifies++;
-            return { verified: true };
+              { signal },
+            );
+            if (
+              loseResponse &&
+              input[0] === "sh" &&
+              input[2]?.includes("mkdir -m 700")
+            ) {
+              loseResponse = false;
+              throw new Error("transport lost the completed launch response");
+            }
+            return output;
           },
-        },
-      ],
-    };
-    let engine = new WorkflowEngine(store, [definition], async () => {});
-    const settle = async (id: string) => {
-      for (let i = 0; i < 100; i++) {
-        const value = await engine.status(id, 100);
-        if (!["running", "queued"].includes(value.status)) return value;
+        );
+      const app = {
+        bundle_name: "com.deveco.fixture",
+        module: "feature",
+        ability: "DetailAbility",
+        uri: "fixture://detail/123",
+        parameters: { route: "中文详情", enabled: true, count: 2 },
+      };
+      const definition: WorkflowDefinition = {
+        id: "launch",
+        description: "fixture",
+        capabilities: [],
+        completion: "verified",
+        resources: () => ["device:fixture"],
+        steps: [
+          {
+            id: "launch_application",
+            kind: "effect",
+            execute: (call) =>
+              devices.launch("fixture", app, call.signal, true),
+            reconcile: (call) =>
+              devices.reconcileLaunch("fixture", app, call.signal),
+          },
+          {
+            id: "verify",
+            kind: "read",
+            execute: async () => {
+              verifies++;
+              return { verified: true };
+            },
+          },
+        ],
+      };
+      let engine = new WorkflowEngine(store, [definition], async () => {});
+      const settle = async (id: string) => {
+        for (let i = 0; i < 100; i++) {
+          const value = await engine.status(id, 100);
+          if (!["running", "queued"].includes(value.status)) return value;
+        }
+        throw new Error("Workflow failed to settle");
+      };
+      try {
+        mockDevice();
+        const { run_id } = engine.start("launch", { parameters: app });
+        assert.equal((await settle(run_id)).status, "needs_input");
+        assert.equal(verifies, 0);
+        assert.equal(fs.readFileSync(counter, "utf8"), "x");
+        await assert.rejects(
+          store.lease("device:fixture", async () => true),
+          { code: "RESOURCE_RECOVERY_REQUIRED" },
+        );
+        await assert.rejects(engine.cancel(run_id), {
+          code: "CANCEL_UNCONFIRMED",
+        });
+        await engine.close();
+        devices.close();
+        store.close();
+        t.mock.restoreAll();
+        store = new StateStore(path.join(root, "state"));
+        devices = new DeviceService(processes, store);
+        engine = new WorkflowEngine(store, [definition], async () => {});
+        mockDevice();
+        await engine.resume(run_id, { action: "recheck" });
+        assert.equal(
+          (await settle(run_id)).status,
+          accepted ? "succeeded" : "failed",
+        );
+        assert.equal(verifies, accepted ? 1 : 0);
+        assert.equal(fs.readFileSync(counter, "utf8"), "x");
+        assert.deepEqual(store.uncertainOperations(run_id), []);
+        assert.deepEqual(store.externalGuards(), []);
+        assert.equal(
+          await store.lease("device:fixture", async () => true),
+          true,
+        );
+        if (!accepted) {
+          await engine.resume(run_id);
+          assert.equal((await settle(run_id)).status, "failed");
+          assert.equal(fs.readFileSync(counter, "utf8"), "x");
+          assert.equal((await engine.cancel(run_id)).status, "cancelled");
+        }
+      } finally {
+        await engine.close();
+        devices.close();
+        await processes.close();
+        store.close();
+        t.mock.restoreAll();
+        fs.rmSync(root, { recursive: true, force: true });
       }
-      throw new Error("Workflow failed to settle");
-    };
-    try {
-      mockDevice();
-      const { run_id } = engine.start("launch", { parameters: app });
-      assert.equal((await settle(run_id)).status, "needs_input");
-      assert.equal(verifies, 0);
-      assert.equal(fs.readFileSync(counter, "utf8"), "x");
-      await assert.rejects(
-        store.lease("device:fixture", async () => true),
-        { code: "RESOURCE_RECOVERY_REQUIRED" },
-      );
-      await assert.rejects(engine.cancel(run_id), {
-        code: "CANCEL_UNCONFIRMED",
-      });
-      await engine.close();
-      devices.close();
-      store.close();
-      t.mock.restoreAll();
-      store = new StateStore(path.join(root, "state"));
-      devices = new DeviceService(processes, store);
-      engine = new WorkflowEngine(store, [definition], async () => {});
-      mockDevice();
-      await engine.resume(run_id, { action: "recheck" });
-      assert.equal((await settle(run_id)).status, "succeeded");
-      assert.equal(verifies, 1);
-      assert.equal(fs.readFileSync(counter, "utf8"), "x");
-      assert.deepEqual(store.uncertainOperations(run_id), []);
-      assert.deepEqual(store.externalGuards(), []);
-      assert.equal(await store.lease("device:fixture", async () => true), true);
-    } finally {
-      await engine.close();
-      devices.close();
-      await processes.close();
-      store.close();
-      t.mock.restoreAll();
-      fs.rmSync(root, { recursive: true, force: true });
-    }
-  });
+    });
+  }
 
   test("device acknowledgement lost after command completion is recovered after host restart without replaying Want arguments", async () => {
     const root = fs.mkdtempSync(

@@ -6,7 +6,13 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import { setTimeout as delay } from "node:timers/promises";
 import { configuration, protocolVersion, stateDirectory } from "./config.js";
 import { atomicWrite, digest, privateDirectory } from "./files.js";
-import { errorResult, invariant, ToolError } from "./errors.js";
+import {
+  errorResult,
+  invariant,
+  SettledEffectError,
+  ToolError,
+} from "./errors.js";
+import { z } from "zod";
 import { PayloadCipher } from "./crypto.js";
 import { currentTrace } from "./trace.js";
 import { windowsJobAlive } from "./windows-job.js";
@@ -674,6 +680,10 @@ export class StateStore {
       this.receipt(runId, node, value);
       return value;
     } catch (error) {
+      if (error instanceof SettledEffectError) {
+        this.failureReceipt(runId, node, error);
+        throw error;
+      }
       // Dispatch may have reached the external system even when its response,
       // parsing or local receipt write failed. Pause on the first uncertainty;
       // a failed status would incorrectly suggest the mutation never happened.
@@ -705,9 +715,41 @@ export class StateStore {
     );
     if (prior.status === "done" && prior.result !== null)
       return JSON.parse(prior.result) as T;
-    const recovered = await reconcile?.();
+    if (prior.status === "failed" && prior.result !== null) {
+      const failure = z
+        .object({
+          code: z.string(),
+          message: z.string(),
+          details: z.unknown().optional(),
+        })
+        .parse(JSON.parse(prior.result) as unknown);
+      throw new SettledEffectError(
+        failure.code,
+        failure.message,
+        failure.details,
+      );
+    }
+    let recovered: T | undefined;
+    try {
+      recovered = await reconcile?.();
+    } catch (error) {
+      if (error instanceof SettledEffectError)
+        this.failureReceipt(runId, node, error);
+      throw error;
+    }
     if (recovered !== undefined) this.receipt(runId, node, recovered);
     return recovered;
+  }
+  private failureReceipt(
+    runId: string,
+    node: string,
+    error: SettledEffectError,
+  ) {
+    this.db
+      .prepare(
+        "UPDATE operations SET status='failed',result=? WHERE run_id=? AND node=?",
+      )
+      .run(JSON.stringify(errorResult(error)), runId, node);
   }
   private receipt(runId: string, node: string, value: unknown): void {
     this.db

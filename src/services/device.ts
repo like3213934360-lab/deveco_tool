@@ -14,7 +14,7 @@ export {
   type Selector,
 } from "../core/contracts.js";
 import { setTimeout as delay } from "node:timers/promises";
-import { invariant, ToolError } from "../core/errors.js";
+import { invariant, SettledEffectError, ToolError } from "../core/errors.js";
 import { ProcessService, type ProcessResult } from "../core/process.js";
 import { discoverToolchain, toolCommand } from "../core/toolchain.js";
 import { StateStore } from "../core/store.js";
@@ -710,7 +710,9 @@ export class DeviceService {
       }
     } catch (error) {
       if (signal?.aborted) throw error;
-      throw new ToolError(
+      const Failure =
+        error instanceof SettledEffectError ? SettledEffectError : ToolError;
+      throw new Failure(
         error instanceof ToolError ? error.code : "LAUNCH_FAILED",
         "Application launch failed; Want arguments and raw output are withheld",
       );
@@ -734,7 +736,7 @@ export class DeviceService {
         };
       await delay(200, undefined, { signal });
     }
-    throw new ToolError(
+    throw new SettledEffectError(
       "LAUNCH_NOT_RUNNING",
       "Application launch was accepted but its process was not found",
     );
