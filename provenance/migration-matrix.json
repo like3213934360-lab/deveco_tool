@@ -2801,13 +2801,14 @@
         "src/services/project.ts"
       ],
       "checks": [
-        "scripts/native-sdk-acceptance.ts"
+        "scripts/native-sdk-acceptance.ts",
+        "test/native-project.test.ts"
       ],
-      "behavior": "删除脚本运行入口，保留其领域能力。",
+      "behavior": "以 project_create 工作流替代脚本入口；project_path 是完整目标目录，不再追加 app_name；bundle_name 显式必填。拒绝任何已存在目录，默认不升级 SDK。",
       "parameters": {
         "projectPath": {
           "status": "mapped",
-          "replacement": "project_create.project_path"
+          "replacement": "project_create.project_path；完整目标目录，迁移时由调用方追加原 appName 子目录"
         },
         "appName": {
           "status": "mapped",
@@ -2819,15 +2820,15 @@
         },
         "bundleName": {
           "status": "mapped",
-          "replacement": "project_create.bundle_name"
+          "replacement": "project_create.bundle_name；显式必填，不再隐式生成 com.example 前缀"
         }
       },
       "actions": [],
-      "remaining": [
-        "所有原参数和历史错误边界逐项对照"
-      ],
-      "acceptance": "pending",
-      "evidence": []
+      "remaining": [],
+      "acceptance": "verified",
+      "evidence": [
+        "provenance/migration-acceptance/b15fe3f52d84fea8db5ad31a147bdc4a571f517b7cd999d8fcd1fd2a0e1dab66.json"
+      ]
     },
     {
       "source": "detect_sdk",

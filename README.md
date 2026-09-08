@@ -124,6 +124,8 @@ macOS 的 Studio 路径通常为 `/Applications/DevEco-Studio.app`。使用 CLT 
 
 创建工程时，`sdk_version` 指定已安装的编译 SDK，`target_api` 和 `compatible_api` 可分别设置目标行为 API 和最低设备 API；它们不必与编译 SDK 相同。省略时均使用所选 SDK 的 API，详见[工具链与版本配置](docs/native-toolchains.md)。
 
+`project_path` 是要创建的完整工程目录，`app_name` 是应用名称，`bundle_name` 必须显式填写。迁移旧 `copy_template` 调用时，请将原来的父目录和应用子目录合并为 `project_path`；新工作流不追加目录名，也不自动生成包名。目标目录即使为空也必须尚不存在。
+
 例如，通过 MCP `tools/call` 查询构建工作流，再提交任务：
 
 ```json
