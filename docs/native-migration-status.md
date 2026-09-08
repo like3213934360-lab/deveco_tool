@@ -124,11 +124,11 @@ node dist/scripts/native-multimodule-acceptance.js /absolute/new-module-evidence
 node dist/scripts/native-hvigor-acceptance.js /absolute/new-watch-evidence
 node dist/scripts/native-emulator-acceptance.js /absolute/new-emulator-evidence
 node dist/scripts/native-emulator-readonly.js /absolute/new-emulator-readonly-evidence
-node --expose-gc dist/scripts/native-sdk-soak.js /absolute/new-sdk-soak-evidence 3600
+node --expose-gc dist/scripts/native-sdk-soak.js /absolute/new-sdk-soak-evidence 3600 TARGET
 node --expose-gc dist/scripts/native-soak.js /absolute/new-soak-evidence 3600
 node --expose-gc dist/scripts/native-ui-benchmark.js /absolute/baseline-checkout /absolute/new-ui-report.json
 node dist/scripts/native-ui-mcp-benchmark.js /absolute/baseline-checkout /absolute/new-ui-mcp-evidence 3
-node dist/scripts/native-benchmark.js /absolute/baseline-checkout /absolute/new-catalog-report.json
+node dist/scripts/native-benchmark.js /private/benchmark-plan.json /absolute/new-direct-evidence
 ```
 
 使用 Node 22/24 时必须在对应环境安装 SQLite 原生依赖，不能直接使用另一 Node ABI 编译的 `node_modules`。验收必须记录实际 SDK、设备、源码与锁文件，不以语言迁移本身证明性能改善。

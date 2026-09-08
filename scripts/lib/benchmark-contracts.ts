@@ -10,15 +10,18 @@ export const benchmarkStepSchema = z.strictObject({
   assertions: z.array(assertionSchema).min(1),
   await_run: z.strictObject({ run_id_pointer: z.string().startsWith("/"), timeout_ms: z.number().int().min(1000).max(1200000).default(600000) }).optional(),
 });
+const scenarioInput = {
+  logical_input: z.record(z.string(), z.unknown()), native: z.array(benchmarkStepSchema).min(1),
+};
 export const benchmarkPlanSchema = z.strictObject({
-  format: z.literal(1), baseline_root: z.string().min(1), baseline_entry: z.string().min(1),
+  format: z.literal(3), baseline_root: z.string().min(1), baseline_entry: z.string().min(1),
   baseline_commit: z.string().regex(/^[a-f0-9]{40}$/),
   environment: z.record(z.string(), z.string()).default({}),
   inputs: z.array(z.strictObject({ file: z.string().min(1), sha256: sha })).min(1),
-  capabilities: z.array(z.strictObject({
-    capability: z.enum(requiredPerformance), logical_input: z.record(z.string(), z.unknown()),
-    native: z.array(benchmarkStepSchema).min(1), baseline: z.array(benchmarkStepSchema).min(1),
-  })).length(requiredPerformance.length),
+  capabilities: z.array(z.discriminatedUnion("comparison", [
+    z.strictObject({ ...scenarioInput, comparison: z.literal("paired"), capability: z.enum(requiredPerformance), baseline: z.array(benchmarkStepSchema).min(1) }),
+    z.strictObject({ ...scenarioInput, comparison: z.literal("new"), capability: z.literal("app_signature.inspect") }),
+  ])).length(requiredPerformance.length),
 });
 export function pointer(value: unknown, location: string): unknown {
   let current = value;
