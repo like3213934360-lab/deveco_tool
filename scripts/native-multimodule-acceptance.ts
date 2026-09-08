@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import { z } from "zod";
 import { Runtime } from "../src/services/runtime.js";
 import { discoverToolchain } from "../src/core/toolchain.js";
-import { atomicWrite, readObject, fileDigest } from "../src/core/files.js";
+import { atomicWrite, readObject, fileDigest, digest } from "../src/core/files.js";
 import { errorResult, object } from "../src/core/errors.js";
 import { inspectApplicationPackages } from "../src/services/package.js";
 import { evidenceIdentity } from "./lib/evidence.js";
@@ -15,16 +15,17 @@ let completed = false;
 const tested = evidenceIdentity(),
   root = path.resolve(z.string().min(1).parse(process.argv[2]));
 const signing = process.argv.length > 3 ? (() => {
-  const [preparedRoot, signingRoot] = z.tuple([z.string(), z.string()]).parse(process.argv.slice(3));
+  const [preparedRoot, signingRoot, target] = z.tuple([z.string(), z.string(), z.string().min(1).optional()]).parse(process.argv.slice(3));
   const prepared = z.object({ bundle_name: z.string().startsWith("com.deveco.mcpacceptance.") }).parse(readObject(path.join(preparedRoot, "prepared.json")));
   const journal = z.object({ operations: z.object({
-    preflight: z.object({ result: z.object({ target: z.string() }) }),
+    preflight: z.object({ result: z.object({ target: z.string(), udid_sha256: z.string().regex(/^[a-f0-9]{64}$/) }) }),
     configure: z.object({ status: z.literal("succeeded") }),
     certificate: z.object({ result: z.object({ path: z.string(), sha256: z.string() }) }),
   }) }).parse(readObject(path.join(signingRoot, "operations.private.json")));
   assert.equal(fileDigest(journal.operations.certificate.result.path), journal.operations.certificate.result.sha256);
   const options = z.record(z.string(), z.string()).parse(readObject(path.join(signingRoot, "project-signing.private.json")));
-  return { bundle: prepared.bundle_name, target: journal.operations.preflight.result.target, options, descriptor: path.join(signingRoot, "project-signing.private.json") };
+  return { bundle: prepared.bundle_name, target: target ?? journal.operations.preflight.result.target,
+    udid_sha256: journal.operations.preflight.result.udid_sha256, options, descriptor: path.join(signingRoot, "project-signing.private.json") };
 })() : undefined;
 const bundle = signing?.bundle ?? "com.deveco.nativemodules";
 assert.equal(fs.existsSync(root), false, "Acceptance directory must be new");
@@ -72,6 +73,15 @@ async function observe(name: string, execute: () => Promise<unknown>) {
   }
 }
 try {
+  if (signing) await observe("signing_device_identity", async () => {
+    const target = await runtime.devices.target(signing.target);
+    const result = await runtime.devices.shell(target, ["bm", "get", "-u"], undefined, 30000, false, true);
+    const ids = result.stdout.split(/\r?\n/).map((line) => line.trim()).filter((line) => /^[a-fA-F0-9]{64}$/.test(line));
+    assert.equal(ids.length, 1, "Device must report one UDID before acceptance can change its application");
+    const udid_sha256 = digest(ids[0]!.toUpperCase());
+    assert.equal(udid_sha256, signing.udid_sha256, "The selected transport must belong to the original personally signed test device");
+    return { target, udid_sha256 };
+  });
   const sdk = z
     .object({ data: z.object({ platformVersion: z.string() }) })
     .parse(
@@ -346,7 +356,7 @@ try {
         return nativeOperation(runtime, "app_signature", {
           action: "configure", project_path: projectPath, product,
           file: signing.descriptor, output: path.join(root, `cold-signing-${product}`),
-          options: { name: `PersonalCold_${product}` },
+          options: { name: `PersonalCold${product}` },
         }, path.join(root, `${product}-cold-configure.operation.private.json`));
       });
       for (const target of ["default", "preview"]) await observe(`${product}_${target}_cold_incremental_update`, async () => {

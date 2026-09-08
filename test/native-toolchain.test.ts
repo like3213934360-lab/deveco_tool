@@ -202,6 +202,11 @@ test("SDK package updates and executable replacement change captured toolchain i
     const restoredTime = discoverToolchain();
     assert.equal(restoredTime.versions["sdk/default/openharmony/toolchains/oh-uni-package.json"], "26.0.0.107");
     assert.notEqual(restoredTime.fingerprint, updated.fingerprint, "Parsed metadata must follow actual bytes even when size and mtime match the cached file");
+    const replacement = path.join(component, "replacement.json");
+    atomicWrite(replacement, JSON.stringify({ version: "26.0.0.109" }));
+    fs.utimesSync(replacement, stat.atime, stat.mtime);
+    fs.renameSync(replacement, manifest);
+    assert.equal(discoverToolchain().versions["sdk/default/openharmony/toolchains/oh-uni-package.json"], "26.0.0.109", "An atomic replacement cannot reuse metadata from the previous inode");
     fs.writeFileSync(manifest, '{version: "26.0.0.108",}');
     assert.equal(discoverToolchain().versions["sdk/default/openharmony/toolchains/oh-uni-package.json"], "26.0.0.108");
     fs.writeFileSync(manifest, "invalid updated metadata");

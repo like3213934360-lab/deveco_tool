@@ -50,20 +50,34 @@ export function installedSdkMetadata(toolchain: Pick<Toolchain, "sdk">) {
   };
 }
 const entryDigests = new Map<string, { metadata: string; sha256: string }>();
-const metadataRecords = new Map<string, { sha256: string; record: Record<string, unknown>; bytes: number }>();
+const metadataRecords = new Map<string, { identity: string; sha256: string; record: Record<string, unknown>; bytes: number }>();
 let metadataBytes = 0;
-/** Read current bytes on every discovery. Only parsing is cached: even a
- * same-size edit with a restored timestamp must change the SDK identity. */
+function fileIdentity(file: string): string {
+  const stat = fs.statSync(file, { bigint: true });
+  return [stat.dev, stat.ino, stat.size, stat.mtimeNs, stat.ctimeNs, stat.mode].join(":");
+}
+/** Match the executable digest cache: validate inode, size, nanosecond change
+ * and modification times, and mode before reusing parsed SDK metadata. */
 function readMetadata(file: string) {
-  const bytes = fs.readFileSync(file);
-  const sha256 = createHash("sha256").update(bytes).digest("hex");
-  const previous = metadataRecords.get(file);
-  if (previous?.sha256 === sha256) {
+  const identity = fileIdentity(file), previous = metadataRecords.get(file);
+  if (previous?.identity === identity) {
     metadataRecords.delete(file);
     metadataRecords.set(file, previous);
     return previous;
   }
-  const result = { sha256, record: parseObject(bytes.toString("utf8")), bytes: bytes.length };
+  const bytes = fs.readFileSync(file);
+  invariant(fileIdentity(file) === identity, "TOOLCHAIN_CHANGED", "SDK metadata changed while its content was captured");
+  const sha256 = createHash("sha256").update(bytes).digest("hex");
+  if (previous?.sha256 === sha256) {
+    previous.identity = identity;
+    metadataRecords.delete(file);
+    metadataRecords.set(file, previous);
+    return previous;
+  }
+  let record: Record<string, unknown>;
+  try { record = parseObject(bytes.toString("utf8")); }
+  catch { throw new ToolError("SDK_METADATA_INVALID", "SDK metadata is not a valid object"); }
+  const result = { identity, sha256, record, bytes: bytes.length };
   if (previous) {
     metadataBytes -= previous.bytes;
     metadataRecords.delete(file);
@@ -80,14 +94,10 @@ function readMetadata(file: string) {
   return result;
 }
 function entryDigest(file: string): string {
-  const identity = () => {
-    const stat = fs.statSync(file, { bigint: true });
-    return [stat.dev, stat.ino, stat.size, stat.mtimeNs, stat.ctimeNs, stat.mode].join(":");
-  };
-  const metadata = identity(), cached = entryDigests.get(file);
+  const metadata = fileIdentity(file), cached = entryDigests.get(file);
   if (cached?.metadata === metadata) return cached.sha256;
   const sha256 = fileDigest(file);
-  invariant(identity() === metadata, "TOOLCHAIN_CHANGED", "Toolchain entry changed while its content was captured");
+  invariant(fileIdentity(file) === metadata, "TOOLCHAIN_CHANGED", "Toolchain entry changed while its content was captured");
   if (!entryDigests.has(file) && entryDigests.size >= 128) entryDigests.delete(entryDigests.keys().next().value!);
   entryDigests.set(file, { metadata, sha256 });
   return sha256;
@@ -97,8 +107,8 @@ function isFile(file: string): boolean {
 }
 export function discoverToolchain(): Toolchain {
   const config = configuration();
-  // A discovery observes fresh bytes, but each metadata file is read only once
-  // in that observation (product-info is also part of the manifest identity).
+  // Each discovery validates current file identities, observing each metadata
+  // file once (product-info is also part of the manifest identity).
   const observedMetadata = new Map<string, ReturnType<typeof readMetadata>>();
   const metadataAt = (file: string) => {
     const previous = observedMetadata.get(file);

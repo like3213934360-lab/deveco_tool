@@ -13,6 +13,7 @@ import { invariant, object, ToolError } from "../core/errors.js";
 import { inspectProject, projectTargets, type Project } from "./project.js";
 import { assertNoHotWatch } from "./hvigor/hot-config.js";
 import { createSigningMaterial } from "./signing-material.js";
+import { signingConfigurationOptionsSchema } from "../core/contracts.js";
 
 const descriptorSchema = z.strictObject({
   keystoreFile: z.string().min(1),
@@ -48,9 +49,7 @@ export async function configureSigning(
   signal?: AbortSignal,
   prepareCommit?: (result: Record<string, unknown>, plan: { before: string; content: string; files: { source: string; path: string }[] }) => Promise<unknown>,
 ) {
-  z.string()
-    .regex(/^[A-Za-z0-9]{1,64}$/)
-    .parse(name);
+  signingConfigurationOptionsSchema.parse({ name });
   const unchanged = () =>
     invariant(
       inspectProject(project.root, project.product.name, projectTargets(project)).fingerprint ===

@@ -1,0 +1,318 @@
+{
+  "format": 1,
+  "source": {
+    "id": "deveco-code",
+    "url": "https://gitcode.com/openharmony-sig/deveco-code.git",
+    "ref": "refs/heads/develop",
+    "commit": "325aff05706b9b04a9816a987e9672dda991c630",
+    "tree": "9232f44a15bed9f948662af74f23264b34be457c",
+    "version": "325aff05706b9b04a9816a987e9672dda991c630",
+    "role": "resource_source",
+    "acceptance": "verified"
+  },
+  "mapping_sha256": "6a2b6c1596635a6ddd7aba7d07f43180d25a7d850f94cd2d965bdd82fb144dd8",
+  "reviews": [
+    {
+      "rule": "code-deveco-create-project",
+      "reason": "Replace template-copy and SDK detection Skill scripts with native ProjectService and attributed application templates; project creation stays a typed durable workflow. The SDK suite now checks that a real Text definition resolves to an existing declaration file beneath the selected SDK, in addition to project and API-version builds. Acceptance requires newly executed reports matching the current compiled identity; this source review does not declare migration or release readiness. Login lifecycle inventory comparison: all mapped native targets and checks for this rule are unchanged from the reviewed auth-parity snapshot; this carries the semantic review only, not acceptance of the changed runtime. Browser failure inventory comparison: this rule has unchanged mapped targets and checks relative to the reviewed login-lifecycle snapshot; runtime acceptance remains a separate current-report requirement.",
+      "reviewer": "Codex native TypeScript integration review"
+    },
+    {
+      "rule": "code-deveco-cli",
+      "reason": "Translate the CLI guidance into eight fixed native workflows and direct toolchain services; do not retain the CLI dispatch or execute the upstream Skill. Recording follow-up calls reject module target replacement. Doctor metrics now expose actual MCP CPU/RSS and known owned SDK PIDs without touching watch activity timestamps; soak collection uses the published MCP entry and verifies HQF application and closure. The SDK suite now checks that a real Text definition resolves to an existing declaration file beneath the selected SDK, in addition to project and API-version builds. Acceptance requires newly executed reports matching the current compiled identity; this source review does not declare migration or release readiness. Login lifecycle inventory comparison: all mapped native targets and checks for this rule are unchanged from the reviewed auth-parity snapshot; this carries the semantic review only, not acceptance of the changed runtime. Browser failure inventory comparison: this rule has unchanged mapped targets and checks relative to the reviewed login-lifecycle snapshot; runtime acceptance remains a separate current-report requirement.",
+      "reviewer": "Codex native TypeScript integration review"
+    },
+    {
+      "rule": "code-arkts-error-fixes",
+      "reason": "Retain attributed ArkTS defect examples as knowledge resources and apply SDK checker diagnostics through native project/report adapters; imported examples are data, not executable Skills. The SDK suite now checks that a real Text definition resolves to an existing declaration file beneath the selected SDK, in addition to project and API-version builds. The current actual stdio MCP regression explicitly configures a missing SDK and requires TOOLCHAIN_MISSING with zero SDK process starts for all three diagnostic entry points. Acceptance requires newly executed reports matching the current compiled identity; this source review does not declare migration or release readiness. Login lifecycle inventory comparison: all mapped native targets and checks for this rule are unchanged from the reviewed auth-parity snapshot; this carries the semantic review only, not acceptance of the changed runtime. Browser failure inventory comparison: this rule has unchanged mapped targets and checks relative to the reviewed login-lifecycle snapshot; runtime acceptance remains a separate current-report requirement.",
+      "reviewer": "Codex native TypeScript integration review"
+    },
+    {
+      "rule": "code-arkts-grammar-standards",
+      "reason": "Retain attributed grammar and ArkUI reference material in local knowledge lookup; enforce actual project checks with the selected SDK instead of treating prose as a compiler. The SDK suite now checks that a real Text definition resolves to an existing declaration file beneath the selected SDK, in addition to project and API-version builds. The current actual stdio MCP regression explicitly configures a missing SDK and requires TOOLCHAIN_MISSING with zero SDK process starts for all three diagnostic entry points. Acceptance requires newly executed reports matching the current compiled identity; this source review does not declare migration or release readiness. Login lifecycle inventory comparison: all mapped native targets and checks for this rule are unchanged from the reviewed auth-parity snapshot; this carries the semantic review only, not acceptance of the changed runtime. Browser failure inventory comparison: this rule has unchanged mapped targets and checks relative to the reviewed login-lifecycle snapshot; runtime acceptance remains a separate current-report requirement.",
+      "reviewer": "Codex native TypeScript integration review"
+    },
+    {
+      "rule": "code-arkts-runtime-fix",
+      "reason": "Retain attributed crash patterns and runtime examples; native frame and process grouping separates interleaved events before rule matching and never invents absent frames. Current collector reads bounded result artifacts before parsing and validates either candidate patterns or an explicitly unlisted subtype against original faultlog bytes. Reconnect and duplicate request checks preserve task and artifact identity. The locked source and this rule's native target and test inventories match the preceding reviewed bytes; its existing semantic scope is retained. Acceptance requires newly executed reports matching the current compiled identity; this source review does not declare migration or release readiness. Login lifecycle inventory comparison: all mapped native targets and checks for this rule are unchanged from the reviewed auth-parity snapshot; this carries the semantic review only, not acceptance of the changed runtime. Browser failure inventory comparison: this rule has unchanged mapped targets and checks relative to the reviewed login-lifecycle snapshot; runtime acceptance remains a separate current-report requirement.",
+      "reviewer": "Codex native TypeScript integration review"
+    },
+    {
+      "rule": "code-new-skill",
+      "reason": "The pinned tree has no files falling into this guard. Keep the unmapped fallback so a future new Skill requires a deliberate workflow, knowledge, or exclusion decision. The locked source and this rule's native target and test inventories match the preceding reviewed bytes; its existing semantic scope is retained. Acceptance requires newly executed reports matching the current compiled identity; this source review does not declare migration or release readiness. Login lifecycle inventory comparison: all mapped native targets and checks for this rule are unchanged from the reviewed auth-parity snapshot; this carries the semantic review only, not acceptance of the changed runtime. Browser failure inventory comparison: this rule has unchanged mapped targets and checks relative to the reviewed login-lifecycle snapshot; runtime acceptance remains a separate current-report requirement.",
+      "reviewer": "Codex native TypeScript integration review"
+    },
+    {
+      "rule": "code-host-customization",
+      "reason": "Reviewed scope of packages/opencode/resources/skills/customize-deveco/: Configures DevEco Code's own host; this MCP does not install host skills, agents or plugins. The locked source and this rule's native target and test inventories match the preceding reviewed bytes; its existing semantic scope is retained. Acceptance requires newly executed reports matching the current compiled identity; this source review does not declare migration or release readiness. Login lifecycle inventory comparison: all mapped native targets and checks for this rule are unchanged from the reviewed auth-parity snapshot; this carries the semantic review only, not acceptance of the changed runtime. Browser failure inventory comparison: this rule has unchanged mapped targets and checks relative to the reviewed login-lifecycle snapshot; runtime acceptance remains a separate current-report requirement.",
+      "reviewer": "Codex native TypeScript integration review"
+    },
+    {
+      "rule": "code-defaults.ts",
+      "reason": "Replace upstream default Skill discovery with the explicit knowledge inventory and source mapping. Native MCP does not create a host Skill registry. Additional reviewed inventory changes: provenance/upstream-mapping.json. Acceptance requires newly executed reports matching the current compiled identity; this source review does not declare migration or release readiness. Login lifecycle inventory comparison: all mapped native targets and checks for this rule are unchanged from the reviewed auth-parity snapshot; this carries the semantic review only, not acceptance of the changed runtime. Browser failure inventory comparison: this rule has unchanged mapped targets and checks relative to the reviewed login-lifecycle snapshot; runtime acceptance remains a separate current-report requirement.",
+      "reviewer": "Codex native TypeScript integration review"
+    },
+    {
+      "rule": "code-discovery.ts",
+      "reason": "Replace filesystem Skill discovery with attributed packaged resources and bounded local lookup; host-specific directory scanning is not installed. Additional reviewed inventory changes: provenance/upstream-mapping.json. Acceptance requires newly executed reports matching the current compiled identity; this source review does not declare migration or release readiness. Login lifecycle inventory comparison: all mapped native targets and checks for this rule are unchanged from the reviewed auth-parity snapshot; this carries the semantic review only, not acceptance of the changed runtime. Browser failure inventory comparison: this rule has unchanged mapped targets and checks relative to the reviewed login-lifecycle snapshot; runtime acceptance remains a separate current-report requirement.",
+      "reviewer": "Codex native TypeScript integration review"
+    },
+    {
+      "rule": "code-index.ts",
+      "reason": "Replace host Skill indexing and execution with typed knowledge catalog/search/read and explicit workflow contracts; source mappings retain future-change review. Additional reviewed inventory changes: provenance/upstream-mapping.json. Acceptance requires newly executed reports matching the current compiled identity; this source review does not declare migration or release readiness. Login lifecycle inventory comparison: all mapped native targets and checks for this rule are unchanged from the reviewed auth-parity snapshot; this carries the semantic review only, not acceptance of the changed runtime. Browser failure inventory comparison: this rule has unchanged mapped targets and checks relative to the reviewed login-lifecycle snapshot; runtime acceptance remains a separate current-report requirement.",
+      "reviewer": "Codex native TypeScript integration review"
+    },
+    {
+      "rule": "code-host-packages",
+      "reason": "Reviewed scope of packages/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence. The locked source and this rule's native target and test inventories match the preceding reviewed bytes; its existing semantic scope is retained. Acceptance requires newly executed reports matching the current compiled identity; this source review does not declare migration or release readiness. Login lifecycle inventory comparison: all mapped native targets and checks for this rule are unchanged from the reviewed auth-parity snapshot; this carries the semantic review only, not acceptance of the changed runtime. Browser failure inventory comparison: this rule has unchanged mapped targets and checks relative to the reviewed login-lifecycle snapshot; runtime acceptance remains a separate current-report requirement.",
+      "reviewer": "Codex native TypeScript integration review"
+    },
+    {
+      "rule": "code-host-script",
+      "reason": "Reviewed scope of script/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence. The locked source and this rule's native target and test inventories match the preceding reviewed bytes; its existing semantic scope is retained. Acceptance requires newly executed reports matching the current compiled identity; this source review does not declare migration or release readiness. Login lifecycle inventory comparison: all mapped native targets and checks for this rule are unchanged from the reviewed auth-parity snapshot; this carries the semantic review only, not acceptance of the changed runtime. Browser failure inventory comparison: this rule has unchanged mapped targets and checks relative to the reviewed login-lifecycle snapshot; runtime acceptance remains a separate current-report requirement.",
+      "reviewer": "Codex native TypeScript integration review"
+    },
+    {
+      "rule": "code-host-patches",
+      "reason": "Reviewed scope of patches/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence. The locked source and this rule's native target and test inventories match the preceding reviewed bytes; its existing semantic scope is retained. Acceptance requires newly executed reports matching the current compiled identity; this source review does not declare migration or release readiness. Login lifecycle inventory comparison: all mapped native targets and checks for this rule are unchanged from the reviewed auth-parity snapshot; this carries the semantic review only, not acceptance of the changed runtime. Browser failure inventory comparison: this rule has unchanged mapped targets and checks relative to the reviewed login-lifecycle snapshot; runtime acceptance remains a separate current-report requirement.",
+      "reviewer": "Codex native TypeScript integration review"
+    },
+    {
+      "rule": "code-host-docs",
+      "reason": "Reviewed scope of docs/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence. The locked source and this rule's native target and test inventories match the preceding reviewed bytes; its existing semantic scope is retained. Acceptance requires newly executed reports matching the current compiled identity; this source review does not declare migration or release readiness. Login lifecycle inventory comparison: all mapped native targets and checks for this rule are unchanged from the reviewed auth-parity snapshot; this carries the semantic review only, not acceptance of the changed runtime. Browser failure inventory comparison: this rule has unchanged mapped targets and checks relative to the reviewed login-lifecycle snapshot; runtime acceptance remains a separate current-report requirement.",
+      "reviewer": "Codex native TypeScript integration review"
+    },
+    {
+      "rule": "code-host-specs",
+      "reason": "Reviewed scope of specs/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence. The locked source and this rule's native target and test inventories match the preceding reviewed bytes; its existing semantic scope is retained. Acceptance requires newly executed reports matching the current compiled identity; this source review does not declare migration or release readiness. Login lifecycle inventory comparison: all mapped native targets and checks for this rule are unchanged from the reviewed auth-parity snapshot; this carries the semantic review only, not acceptance of the changed runtime. Browser failure inventory comparison: this rule has unchanged mapped targets and checks relative to the reviewed login-lifecycle snapshot; runtime acceptance remains a separate current-report requirement.",
+      "reviewer": "Codex native TypeScript integration review"
+    },
+    {
+      "rule": "code-host-assets",
+      "reason": "Reviewed scope of assets/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence. The locked source and this rule's native target and test inventories match the preceding reviewed bytes; its existing semantic scope is retained. Acceptance requires newly executed reports matching the current compiled identity; this source review does not declare migration or release readiness. Login lifecycle inventory comparison: all mapped native targets and checks for this rule are unchanged from the reviewed auth-parity snapshot; this carries the semantic review only, not acceptance of the changed runtime. Browser failure inventory comparison: this rule has unchanged mapped targets and checks relative to the reviewed login-lifecycle snapshot; runtime acceptance remains a separate current-report requirement.",
+      "reviewer": "Codex native TypeScript integration review"
+    },
+    {
+      "rule": "code-host-agents",
+      "reason": "Reviewed scope of .agents/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence. The locked source and this rule's native target and test inventories match the preceding reviewed bytes; its existing semantic scope is retained. Acceptance requires newly executed reports matching the current compiled identity; this source review does not declare migration or release readiness. Login lifecycle inventory comparison: all mapped native targets and checks for this rule are unchanged from the reviewed auth-parity snapshot; this carries the semantic review only, not acceptance of the changed runtime. Browser failure inventory comparison: this rule has unchanged mapped targets and checks relative to the reviewed login-lifecycle snapshot; runtime acceptance remains a separate current-report requirement.",
+      "reviewer": "Codex native TypeScript integration review"
+    },
+    {
+      "rule": "code-host-opencode",
+      "reason": "Reviewed scope of .opencode/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence. The locked source and this rule's native target and test inventories match the preceding reviewed bytes; its existing semantic scope is retained. Acceptance requires newly executed reports matching the current compiled identity; this source review does not declare migration or release readiness. Login lifecycle inventory comparison: all mapped native targets and checks for this rule are unchanged from the reviewed auth-parity snapshot; this carries the semantic review only, not acceptance of the changed runtime. Browser failure inventory comparison: this rule has unchanged mapped targets and checks relative to the reviewed login-lifecycle snapshot; runtime acceptance remains a separate current-report requirement.",
+      "reviewer": "Codex native TypeScript integration review"
+    },
+    {
+      "rule": "code-host-github",
+      "reason": "Reviewed scope of .github/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence. The locked source and this rule's native target and test inventories match the preceding reviewed bytes; its existing semantic scope is retained. Acceptance requires newly executed reports matching the current compiled identity; this source review does not declare migration or release readiness. Login lifecycle inventory comparison: all mapped native targets and checks for this rule are unchanged from the reviewed auth-parity snapshot; this carries the semantic review only, not acceptance of the changed runtime. Browser failure inventory comparison: this rule has unchanged mapped targets and checks relative to the reviewed login-lifecycle snapshot; runtime acceptance remains a separate current-report requirement.",
+      "reviewer": "Codex native TypeScript integration review"
+    },
+    {
+      "rule": "code-host-gitcode",
+      "reason": "Reviewed scope of .gitcode/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence. The locked source and this rule's native target and test inventories match the preceding reviewed bytes; its existing semantic scope is retained. Acceptance requires newly executed reports matching the current compiled identity; this source review does not declare migration or release readiness. Login lifecycle inventory comparison: all mapped native targets and checks for this rule are unchanged from the reviewed auth-parity snapshot; this carries the semantic review only, not acceptance of the changed runtime. Browser failure inventory comparison: this rule has unchanged mapped targets and checks relative to the reviewed login-lifecycle snapshot; runtime acceptance remains a separate current-report requirement.",
+      "reviewer": "Codex native TypeScript integration review"
+    },
+    {
+      "rule": "code-legal-LICENSE",
+      "reason": "Review LICENSE as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. The locked source and this rule's native target and test inventories match the preceding reviewed bytes; its existing semantic scope is retained. Acceptance requires newly executed reports matching the current compiled identity; this source review does not declare migration or release readiness. Login lifecycle inventory comparison: all mapped native targets and checks for this rule are unchanged from the reviewed auth-parity snapshot; this carries the semantic review only, not acceptance of the changed runtime. Browser failure inventory comparison: this rule has unchanged mapped targets and checks relative to the reviewed login-lifecycle snapshot; runtime acceptance remains a separate current-report requirement.",
+      "reviewer": "Codex native TypeScript integration review"
+    },
+    {
+      "rule": "code-legal-NOTICE",
+      "reason": "Review NOTICE as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. The locked source and this rule's native target and test inventories match the preceding reviewed bytes; its existing semantic scope is retained. Acceptance requires newly executed reports matching the current compiled identity; this source review does not declare migration or release readiness. Login lifecycle inventory comparison: all mapped native targets and checks for this rule are unchanged from the reviewed auth-parity snapshot; this carries the semantic review only, not acceptance of the changed runtime. Browser failure inventory comparison: this rule has unchanged mapped targets and checks relative to the reviewed login-lifecycle snapshot; runtime acceptance remains a separate current-report requirement.",
+      "reviewer": "Codex native TypeScript integration review"
+    },
+    {
+      "rule": "code-legal-OAT.xml",
+      "reason": "Review OAT.xml as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. The locked source and this rule's native target and test inventories match the preceding reviewed bytes; its existing semantic scope is retained. Acceptance requires newly executed reports matching the current compiled identity; this source review does not declare migration or release readiness. Login lifecycle inventory comparison: all mapped native targets and checks for this rule are unchanged from the reviewed auth-parity snapshot; this carries the semantic review only, not acceptance of the changed runtime. Browser failure inventory comparison: this rule has unchanged mapped targets and checks relative to the reviewed login-lifecycle snapshot; runtime acceptance remains a separate current-report requirement.",
+      "reviewer": "Codex native TypeScript integration review"
+    },
+    {
+      "rule": "code-legal-package.json",
+      "reason": "Review package.json as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. The locked source and this rule's native target and test inventories match the preceding reviewed bytes; its existing semantic scope is retained. Acceptance requires newly executed reports matching the current compiled identity; this source review does not declare migration or release readiness. Login lifecycle inventory comparison: all mapped native targets and checks for this rule are unchanged from the reviewed auth-parity snapshot; this carries the semantic review only, not acceptance of the changed runtime. Browser failure inventory comparison: this rule has unchanged mapped targets and checks relative to the reviewed login-lifecycle snapshot; runtime acceptance remains a separate current-report requirement.",
+      "reviewer": "Codex native TypeScript integration review"
+    },
+    {
+      "rule": "code-legal-bun.lock",
+      "reason": "Review bun.lock as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. The locked source and this rule's native target and test inventories match the preceding reviewed bytes; its existing semantic scope is retained. Acceptance requires newly executed reports matching the current compiled identity; this source review does not declare migration or release readiness. Login lifecycle inventory comparison: all mapped native targets and checks for this rule are unchanged from the reviewed auth-parity snapshot; this carries the semantic review only, not acceptance of the changed runtime. Browser failure inventory comparison: this rule has unchanged mapped targets and checks relative to the reviewed login-lifecycle snapshot; runtime acceptance remains a separate current-report requirement.",
+      "reviewer": "Codex native TypeScript integration review"
+    },
+    {
+      "rule": "code-legal-CHANGELOG.md",
+      "reason": "Review CHANGELOG.md as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. The locked source and this rule's native target and test inventories match the preceding reviewed bytes; its existing semantic scope is retained. Acceptance requires newly executed reports matching the current compiled identity; this source review does not declare migration or release readiness. Login lifecycle inventory comparison: all mapped native targets and checks for this rule are unchanged from the reviewed auth-parity snapshot; this carries the semantic review only, not acceptance of the changed runtime. Browser failure inventory comparison: this rule has unchanged mapped targets and checks relative to the reviewed login-lifecycle snapshot; runtime acceptance remains a separate current-report requirement.",
+      "reviewer": "Codex native TypeScript integration review"
+    },
+    {
+      "rule": "code-host-install",
+      "reason": "Reviewed scope of install: Bash installer and installation telemetry for the upstream DevEco Code host. Native MCP installation does not execute this script. The locked source and this rule's native target and test inventories match the preceding reviewed bytes; its existing semantic scope is retained. Acceptance requires newly executed reports matching the current compiled identity; this source review does not declare migration or release readiness. Login lifecycle inventory comparison: all mapped native targets and checks for this rule are unchanged from the reviewed auth-parity snapshot; this carries the semantic review only, not acceptance of the changed runtime. Browser failure inventory comparison: this rule has unchanged mapped targets and checks relative to the reviewed login-lifecycle snapshot; runtime acceptance remains a separate current-report requirement.",
+      "reviewer": "Codex native TypeScript integration review"
+    },
+    {
+      "rule": "code-host-install-ps1",
+      "reason": "Reviewed scope of install.ps1: PowerShell installer and installation telemetry for the upstream DevEco Code host. Native MCP installation does not execute this script. The locked source and this rule's native target and test inventories match the preceding reviewed bytes; its existing semantic scope is retained. Acceptance requires newly executed reports matching the current compiled identity; this source review does not declare migration or release readiness. Login lifecycle inventory comparison: all mapped native targets and checks for this rule are unchanged from the reviewed auth-parity snapshot; this carries the semantic review only, not acceptance of the changed runtime. Browser failure inventory comparison: this rule has unchanged mapped targets and checks relative to the reviewed login-lifecycle snapshot; runtime acceptance remains a separate current-report requirement.",
+      "reviewer": "Codex native TypeScript integration review"
+    },
+    {
+      "rule": "code-host-turbo-json",
+      "reason": "Reviewed scope of turbo.json: Upstream monorepo build/test scheduling. This MCP uses its own strict TypeScript build and Node Test Runner matrix. The locked source and this rule's native target and test inventories match the preceding reviewed bytes; its existing semantic scope is retained. Acceptance requires newly executed reports matching the current compiled identity; this source review does not declare migration or release readiness. Login lifecycle inventory comparison: all mapped native targets and checks for this rule are unchanged from the reviewed auth-parity snapshot; this carries the semantic review only, not acceptance of the changed runtime. Browser failure inventory comparison: this rule has unchanged mapped targets and checks relative to the reviewed login-lifecycle snapshot; runtime acceptance remains a separate current-report requirement.",
+      "reviewer": "Codex native TypeScript integration review"
+    }
+  ],
+  "targets": [
+    {
+      "path": "provenance/resources.json",
+      "sha256": "61ce5c5373a8482a8019e746a60678a169bff2de1f09463160003dfa6bea3186"
+    },
+    {
+      "path": "provenance/upstream-lock.json",
+      "sha256": "f219f524944b8fb4de9bcb4513fb334517fad1331ea35f8141cd64ee569459c3"
+    },
+    {
+      "path": "provenance/upstream-mapping.json",
+      "sha256": "4d2b9b1c9e41e7d902f65d1a61317f67a8b1ba934a06f00ef0afa74565952812"
+    },
+    {
+      "path": "resources/knowledge.json",
+      "sha256": "ea8ee2af71ba344cb6a84c5ab522d9d414af98b36f8f845521a9522c11eea300"
+    },
+    {
+      "path": "resources/knowledge/arkts-error-fixes",
+      "sha256": "89465b0466d5f324222dde9527bd87d910cf9cf6fa4b6eb83a177c0b5a270532"
+    },
+    {
+      "path": "resources/knowledge/arkts-grammar-standards",
+      "sha256": "2f35d9f4bee57a5041737ea81aab385bab846e05c9025d04c44b826820356ae7"
+    },
+    {
+      "path": "resources/knowledge/arkts-runtime-fix",
+      "sha256": "5e9782bba4cd303b249f1d83057a19d8f3a6315843ca0b890229ad7962a37b3f"
+    },
+    {
+      "path": "resources/templates/application",
+      "sha256": "739c5c77fec53bcfd19774b8817c0692fcbefe400d3f1300af741bf0108b347e"
+    },
+    {
+      "path": "scripts/native-checker-acceptance.ts",
+      "sha256": "f1a7f87f08a9417572f23390ef9182965b4697d34fb8984b5e10c4ac6a865b4e"
+    },
+    {
+      "path": "scripts/native-crash-acceptance.ts",
+      "sha256": "77b1e2520c63ae56a14985cbf5cca0e86879d3699cf13e0ffbb9ba422c014605"
+    },
+    {
+      "path": "scripts/native-multimodule-acceptance.ts",
+      "sha256": "c44e0916a73c6510d3048b7208d350a0e68c62b22e767174199d4cacf986427b"
+    },
+    {
+      "path": "scripts/native-sdk-acceptance.ts",
+      "sha256": "24b0b25a0e551109025c282811fa7632a0d91d73bc6d98a26e7326e6320fb700"
+    },
+    {
+      "path": "src/cli.ts",
+      "sha256": "cd80b8c1205f1ab153fbf292cee86358a366eddf2e687a4c6ec3e09f82d572ec"
+    },
+    {
+      "path": "src/core/contracts.ts",
+      "sha256": "f43e48fee70bdd24ef7557cf380ffd5334deaabd8970261cb529d4e589d56a78"
+    },
+    {
+      "path": "src/core/workflows.ts",
+      "sha256": "b96b88ba2d63429347bcccb0a0e24fc80293ca24c1f7161951057e658f250e98"
+    },
+    {
+      "path": "src/services/checker-project.ts",
+      "sha256": "bb3548101c344ab42d9f7b722dd81d9fafe324bbc750b856473b04e76f71f9bc"
+    },
+    {
+      "path": "src/services/checker-report.ts",
+      "sha256": "0285bfc9f0c93d0b9ff912c7c31d317d993630c0e111c397bcd6b63638650253"
+    },
+    {
+      "path": "src/services/checker.ts",
+      "sha256": "da0f1aaf2e90690d9fe450d7810fc17f57483aef0f5200b5765045b2a5f16679"
+    },
+    {
+      "path": "src/services/crash-frames.ts",
+      "sha256": "3a2cabf7bb0be8f72c6fe1e704e99be2f423a715063fedf0f5ca95320ce15558"
+    },
+    {
+      "path": "src/services/crash-patterns.ts",
+      "sha256": "f427ec7854205db2422ef9a9e086bd19ed9a0ea7958e103445be44e6158debec"
+    },
+    {
+      "path": "src/services/crash.ts",
+      "sha256": "762de23d8e915c6737ae823aac733d1b2c9948da9f5da9f1074731822fcaeb5b"
+    },
+    {
+      "path": "src/services/diagnostics.ts",
+      "sha256": "b5a984675d9733d555e4d16d0690d249ed9b799cd49f8c867ad3289f320aa521"
+    },
+    {
+      "path": "src/services/knowledge.ts",
+      "sha256": "5f9422aa166519e994e910e0462091757a22c04cdfc509dc9515423faf18d41d"
+    },
+    {
+      "path": "src/services/logs.ts",
+      "sha256": "be5d46ca8aab73bceb6ecaadbac8d1b7475afca6865eec910e729d2baf533608"
+    },
+    {
+      "path": "src/services/project.ts",
+      "sha256": "703814194af52452f7e142ccf457d58ade886bc2474c1e60b3d6a20914ccc302"
+    },
+    {
+      "path": "src/services/runtime.ts",
+      "sha256": "93029748360abc660a4403079f91143033d9deaa66b457e5c2a30518f6f36137"
+    },
+    {
+      "path": "test/native-checker.test.ts",
+      "sha256": "e21cb2022b94c48a3b1c03caf47c305d2f01b286899bcb4a409720681c0350f1"
+    },
+    {
+      "path": "test/native-context.test.ts",
+      "sha256": "56ec51b60783c6da6a03d1a67351ff95dac165ce517da01036428ea20e5b6cff"
+    },
+    {
+      "path": "test/native-crash.test.ts",
+      "sha256": "8650f6c29024bcc161c3eded1ebffe26607bd891518d3d045fe100628e734924"
+    },
+    {
+      "path": "test/native-logs.test.ts",
+      "sha256": "f86133c127a1865db4c7c17c8389ed3235c398187de9089ab4622733d66d58df"
+    },
+    {
+      "path": "test/native-project-recovery.test.ts",
+      "sha256": "51e7324dc42a95eca1e134a074dae0b2616ccaffc680aa51a3ac83cb91bd36a3"
+    },
+    {
+      "path": "test/native-project.test.ts",
+      "sha256": "15066b43fc112a7d47a10aaa33d96f823127203653b8294db69e55c0f37f294d"
+    },
+    {
+      "path": "test/native-runtime.test.ts",
+      "sha256": "c098055275dac3162cd76e4270c6dc8ab880c39f743c29a204f4ffe73a8c17b2"
+    },
+    {
+      "path": "test/native-upstream.test.ts",
+      "sha256": "d4aa5eea4dc9fca4cec768867641af74cbde1178937fb51a634aea06c0ca5e01"
+    },
+    {
+      "path": "test/workflows.test.ts",
+      "sha256": "016645857a2d3050fafe7f4082f23d188dfc83bbe101ee7b625ccdb131e1d49c"
+    }
+  ],
+  "required_tests": [
+    "scripts/native-checker-acceptance.ts",
+    "scripts/native-crash-acceptance.ts",
+    "scripts/native-multimodule-acceptance.ts",
+    "scripts/native-sdk-acceptance.ts",
+    "test/native-checker.test.ts",
+    "test/native-context.test.ts",
+    "test/native-crash.test.ts",
+    "test/native-logs.test.ts",
+    "test/native-project-recovery.test.ts",
+    "test/native-project.test.ts",
+    "test/native-runtime.test.ts",
+    "test/native-upstream.test.ts",
+    "test/workflows.test.ts"
+  ]
+}

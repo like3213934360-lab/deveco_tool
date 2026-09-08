@@ -21,7 +21,7 @@
 - `profile_create`：默认使用现代 IDE 的 `test` 调试 Profile 协议。该接口可能只返回下载地址而没有远程 ID，此时返回 `remote_deletion_available:false`，不能伪造 ID 或宣称可删除。显式 `kind:real` 仍要求返回 ID，本次未完成其成功验收。
 - `sign`：直接使用 SDK 签名工具，支持显式参数或读取指定产品的签名配置。
 - `verify`：提供 SDK 必需的证书链/Profile 输出参数，在有预算的私有临时目录中提取两份结果，检查非空，返回 SHA-256 后清理。验收核对了 HAP 内的 Profile 与云端下载文件完全一致。
-- `configure`：从 `file` 指定的私密 JSON 描述文件读取材料和密码，在 `output` 指定的新目录生成完整 Hvigor 签名材料，以 `options.name` 新建配置并选中当前产品。目录和配置名称均不得已存在；其他配置与产品保留。
+- `configure`：从 `file` 指定的私密 JSON 描述文件读取材料和密码，在 `output` 指定的新目录生成完整 Hvigor 签名材料，以 `options.name`（1–64 个英文字母或数字）新建配置并选中当前产品。描述文件、输出目录或名称格式不合法时，公开接口在创建 Worker 和持久化任务之前拒绝请求。目录和配置名称均不得已存在；其他配置与产品保留。
 
 `configure` 描述文件字段为 `keystoreFile`、`keystorePwd`、`keyAlias`、`keyPwd`、`appCertFile`、`profileFile`、可选 `signAlg`（默认 `SHA256withECDSA`）。相对输入路径相对于描述文件目录解析。文件只在本地创建，不把真实密码贴入对话、命令行或 Git。
 

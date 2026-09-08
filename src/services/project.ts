@@ -11,6 +11,7 @@ import {
   destinationPath,
   fileDigest,
   inside,
+  parseObject,
   readObject,
   walk,
 } from "../core/files.js";
@@ -151,6 +152,8 @@ export interface Project extends ProjectSelection {
 export function projectTargets(project: ProjectSelection): ModuleTargets {
   return Object.fromEntries(project.modules.map((module) => [module.name, module.target]));
 }
+const projectProfiles = new Map<string, { bytes: Buffer; sha256: string; profile: z.infer<typeof profileSchema> }>();
+let projectProfileBytes = 0;
 function readProjectProfile(candidate: string) {
   const root = fs.realpathSync.native(path.resolve(candidate));
   const file = path.join(root, "build-profile.json5");
@@ -159,15 +162,37 @@ function readProjectProfile(candidate: string) {
     "PROJECT_INVALID",
     "build-profile.json5 is required",
   );
-  const profile = profileSchema.parse(readObject(file));
-  return { root, profile, file };
+  // Observe current bytes even when metadata timestamps have been restored.
+  // Parsed profiles never escape this module; public selections are new objects.
+  const bytes = fs.readFileSync(file), previous = projectProfiles.get(file);
+  if (previous?.bytes.equals(bytes)) {
+    projectProfiles.delete(file);
+    projectProfiles.set(file, previous);
+    return { root, file, profile: previous.profile, sha256: previous.sha256 };
+  }
+  const profile = profileSchema.parse(parseObject(bytes.toString("utf8"))),
+    sha256 = crypto.createHash("sha256").update(bytes).digest("hex");
+  if (previous) {
+    projectProfileBytes -= previous.bytes.length;
+    projectProfiles.delete(file);
+  }
+  if (bytes.length <= 4 * 1024 * 1024) {
+    while (projectProfiles.size >= 128 || projectProfileBytes + bytes.length > 4 * 1024 * 1024) {
+      const oldest = projectProfiles.keys().next().value!;
+      projectProfileBytes -= projectProfiles.get(oldest)!.bytes.length;
+      projectProfiles.delete(oldest);
+    }
+    projectProfiles.set(file, { bytes, profile, sha256 });
+    projectProfileBytes += bytes.length;
+  }
+  return { root, profile, file, sha256 };
 }
 function inspectSelection(
   candidate: string,
   productName?: string,
   moduleTargets?: ModuleTargets,
-): ProjectSelection {
-  const { root, profile } = readProjectProfile(candidate);
+) {
+  const { root, profile, file, sha256 } = readProjectProfile(candidate);
   const requested = moduleTargetsSchema.parse(moduleTargets ?? {});
   for (const name of Object.keys(requested)) invariant(profile.modules.some((module) => module.name === name), "MODULE_INVALID", `Unknown module in module_targets: ${name}`);
   const selected = productName
@@ -220,10 +245,10 @@ function inspectSelection(
     "PRODUCT_HAS_NO_MODULES",
     "No modules apply to the selected product",
   );
-  return { root, product, modules };
+  return { selection: { root, product, modules }, profileFile: file, profileHash: sha256 };
 }
 export function inspectProject(candidate: string, productName?: string, moduleTargets?: ModuleTargets): Project {
-  const selection = inspectSelection(candidate, productName, moduleTargets),
+  const { selection, profileFile, profileHash } = inspectSelection(candidate, productName, moduleTargets),
     { root, modules } = selection;
   const files = [
     path.join(root, "build-profile.json5"),
@@ -241,7 +266,7 @@ export function inspectProject(candidate: string, productName?: string, moduleTa
   ].filter((item) => fs.existsSync(item));
   return {
     ...selection,
-    fingerprint: digest({ files: files.map((file) => [file, fileDigest(file)]), product: selection.product.name, module_targets: projectTargets(selection) }),
+    fingerprint: digest({ files: files.map((file) => [file, file === profileFile ? profileHash : fileDigest(file)]), product: selection.product.name, module_targets: projectTargets(selection) }),
   };
 }
 export class ProjectService {
@@ -299,7 +324,7 @@ export class ProjectService {
    * to capture the full content fingerprint before they are submitted. */
   resolveSelection(root?: string, product?: string, moduleTargets?: ModuleTargets): ProjectSelection {
     invariant(root || this.selected, "PROJECT_REQUIRED", "Specify project_path or switch_cwd");
-    return inspectSelection(root || this.selected!, product, moduleTargets);
+    return inspectSelection(root || this.selected!, product, moduleTargets).selection;
   }
   async create(
     input: ProjectCreateInput,

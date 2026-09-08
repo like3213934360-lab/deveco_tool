@@ -29,9 +29,15 @@ UI 使用同一份快照执行定位、索引和操作前校验，操作后失�
 
 进程输出、CPU Worker、UI 缓存、日志和制品有明确上限。普通请求日志按 20 ms/128 条/64 KiB 批次持久化，失败时阻止后续请求；关键检查点和副作用回执仍同步保存。普通日志的强杀丢失窗口及外部 SDK 写入边界见 [存储](native-storage.md)。
 
-## 最近完成的冻结版本证据
+## 当前验收进展
 
-当前本地冻结版本 `native-6-browser-manual-dev-11` 的运行摘要为 `ef6aaeffb850969e11bf99f25c743342f94e05de350928b3408d6ee6056f552d`，全部编译摘要为 `1ecc3a3261a293b974be0858ad70f4363e84e96713872010843215d26cce7145`。以下结果来自本机 Node24/macOS，原始私有报告保存在 `~/Library/Application Support/DevEcoMCP/acceptance/20260909-native6-browser-manual-*`，按摘要接收的公开凭证不包含原始路径、凭据或设备信息。
+最新 dev16 运行摘要 `ce286ca1518fa1ef98b0be66813660df6a571a9641133132ace340aeecdb0753`、编译摘要 `2f1393a46bba5528b98d78bd22733cc1699217e87f88dc181429740589161327`。本机 Node24/macOS 全量回归 352、多模块真机 56、SDK 24、静态检查 13、Linter 6、设备只读 14、崩溃 6、模拟器两组各 7、CodeGenie 认证 10、preview 热补丁 11 项及个人签名包重新验签通过。固定 UI 树 MCP 查询 18,000 次、九组 P95 对比通过。多模块新增四组冷增量更新，实际 UI 已显示新 HAR 源码、共享模块和资源文字；两次 HQF 保持 PID 并通过最终断言。
+
+`detect_sdk` 和 `apply_changes` 已凭本版报告关闭行为缺口；累计 16 行有迁移接收记录，31 行 pending，先前 14 行的历史身份仍需在最终版本刷新。上游 80 条规则已重新评审，13/34 项当前报告接收通过。Windows Node22 的 Unicode 复制夹具修复等待新 CI；LSP、hot status、flow catalog 的隔离性能对比仍未达标。最终完整性能、长稳、真实跨平台 SDK 及其他剩余场景仍需完成。
+
+## 历史 dev11 冻结版本证据
+
+历史本地冻结版本 `native-6-browser-manual-dev-11` 的运行摘要为 `ef6aaeffb850969e11bf99f25c743342f94e05de350928b3408d6ee6056f552d`，全部编译摘要为 `1ecc3a3261a293b974be0858ad70f4363e84e96713872010843215d26cce7145`。以下结果来自本机 Node24/macOS，原始私有报告保存在 `~/Library/Application Support/DevEcoMCP/acceptance/20260909-native6-browser-manual-*`，按摘要接收的公开凭证不包含原始路径、凭据或设备信息。
 
 | 项目 | 当前结果与范围 |
 | --- | --- |
@@ -50,7 +56,7 @@ UI 使用同一份快照执行定位、索引和操作前校验，操作后失�
 
 历史 dev-8 已通过一小时实际 stdio MCP/Worker 长稳、46 次 HQF 签名和设备应用，以及六分钟空闲回收；记录 1,362 次请求，最终受管资源全部归零。它早于认证修复，当前版本仍须独立完成最终长稳。更早的 Runtime 直调长稳不计作 MCP Worker 证据。各轮完整身份与失败记录见 [完成清单](native-completion.md)。
 
-旧 `start_app.target`、`apply_changes.target` 表示构建目标，新版通过独立 `module_targets` 固定产品和各模块目标，与 HDC `target` 分开。真实 SDK 验证覆盖 default/preview 两目标；`start_app` 已按当前报告刷新凭证，`apply_changes` 仍需冷增量等完整行为对照。旧 CodeGenie 登录 APP_ID=1008 的迁移已修正，旧等待参数明确删除；待登录状态保留手动 URL、浏览器状态和错误码。
+旧 `start_app.target`、`apply_changes.target` 表示构建目标，新版通过独立 `module_targets` 固定产品和各模块目标，与 HDC `target` 分开。真实 SDK 验证覆盖 default/preview 两目标；`start_app` 已按当前报告刷新凭证，`apply_changes` 的冷增量、HQF 和构建目标行为已由后续 dev16 报告接收。旧 CodeGenie 登录 APP_ID=1008 的迁移已修正，旧等待参数明确删除；待登录状态保留手动 URL、浏览器状态和错误码。
 
 ## 仍需完成的验收与交付
 

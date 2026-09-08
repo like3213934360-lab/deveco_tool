@@ -3,7 +3,7 @@ import path from "node:path";
 import os from "node:os";
 import crypto from "node:crypto";
 import { z } from "zod";
-import { tools } from "../core/contracts.js";
+import { tools, signingConfigurationOptionsSchema } from "../core/contracts.js";
 import { ProcessService } from "../core/process.js";
 import { StateStore } from "../core/store.js";
 import { NativeDirectory } from "../core/native-directory.js";
@@ -167,9 +167,7 @@ export class SignatureService {
         "SIGN_CONFIG_INPUT_REQUIRED",
         "Configure requires a project, private descriptor file and new output directory",
       );
-      const options = z
-        .strictObject({ name: z.string().min(1) })
-        .parse(input.options);
+      const options = signingConfigurationOptionsSchema.parse(input.options);
       return this.store.lease(
         `project:${project.root}`,
         () =>

@@ -138,15 +138,14 @@
         "test/native-project.test.ts",
         "test/native-context.test.ts",
         "test/native-project-recovery.test.ts",
-        "scripts/native-multimodule-acceptance.ts"
+        "scripts/native-multimodule-acceptance.ts",
+        "scripts/native-hot-device-acceptance.ts"
       ],
-      "remaining": [
-        "原冷增量部署行为对照",
-        "实际 HQF 签名和设备应用",
-        "显式构建目标选择：旧 target 不得误映射为 HDC 设备，覆盖同一产品的多个模块目标"
+      "remaining": [],
+      "acceptance": "verified",
+      "evidence": [
+        "provenance/migration-acceptance/2d2e6d205403a8644e1d4162657ef6dd8f7a4c1fd5d91896870b6ae6b3080552.json"
       ],
-      "acceptance": "pending",
-      "evidence": [],
       "targets": [
         "tool:hot_reload",
         "workflow:build_deploy_verify"
@@ -2854,13 +2853,16 @@
     {
       "source": "detect_sdk",
       "checks": [
-        "scripts/native-sdk-acceptance.ts"
+        "scripts/native-sdk-acceptance.ts",
+        "test/native-toolchain.test.ts",
+        "test/native-runtime.test.ts",
+        "test/native-project.test.ts"
       ],
-      "remaining": [
-        "所有原参数和历史错误边界逐项对照"
+      "remaining": [],
+      "acceptance": "verified",
+      "evidence": [
+        "provenance/migration-acceptance/ccfe8a69b73e6323f201c7eecfd3e8586321ad9e3ff504022b32a51c7f289210.json"
       ],
-      "acceptance": "pending",
-      "evidence": [],
       "targets": [
         "tool:deveco_doctor"
       ],

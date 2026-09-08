@@ -79,6 +79,12 @@ test("MCP catalogs work without SDK discovery, invalid input is rejected, worker
       arguments: { action: "status", run_id: "bad" },
     });
     assert.equal(invalid.isError, true);
+    for (const options of [{ name: "invalid_name" }, { name: "" }, {}, { name: "Valid", extra: "rejected" }]) {
+      const configure = await client.callTool({ name: "app_signature", arguments: { action: "configure", file: "descriptor.json", output: "signing", options } });
+      assert.equal(configure.isError, true);
+      assert.equal(z.object({ error: z.object({ code: z.string() }) }).parse(configure.structuredContent).error.code, "INVALID_ARGUMENT");
+      assert.equal(fs.existsSync(path.join(root, "state.sqlite")), false, "Invalid signing configuration must be rejected before starting a runtime or durable effect");
+    }
     const doctor = await client.callTool({
       name: "deveco_doctor",
       arguments: {},
@@ -114,7 +120,11 @@ test("MCP catalogs work without SDK discovery, invalid input is rejected, worker
 });
 test("MCP diagnostic calls reject a missing configured SDK without falling back to the machine installation", async () => {
   const root = temporary(), project = path.join(root, "application"), config = path.join(root, "config.json");
-  fs.cpSync(fileURLToPath(new URL("../../test/fixtures/harmony-app", import.meta.url)), project, { recursive: true });
+  // Traverse through Node's JavaScript copy implementation: the native recursive
+  // fast path on Windows Node 22 did not create this Unicode destination in CI.
+  fs.cpSync(fileURLToPath(new URL("../../test/fixtures/harmony-app", import.meta.url)), project, { recursive: true, filter: () => true });
+  assert.equal(fs.realpathSync.native(project), project, "The missing-SDK test requires an existing canonical project");
+  assert.ok(fs.statSync(path.join(project, "entry/src/main/ets/pages/Index.ets")).isFile());
   fs.writeFileSync(config, JSON.stringify({ clt: path.join(root, "absent-sdk") }));
   const client = new Client({ name: "native-missing-sdk-test", version: "1" }),
     transport = new StdioClientTransport({
@@ -170,6 +180,8 @@ test("MCP doctor exposes default SDK API metadata and reports missing or invalid
     fs.writeFileSync(metadata, JSON.stringify({ data: { apiVersion: "26", platformVersion: "26.0.0", version: "26.0.0.105" } }));
     assert.deepEqual(await doctor(), { api_level: 26, platform_version: "26.0.0", package_version: "26.0.0.105", metadata_path: metadata });
     fs.writeFileSync(metadata, JSON.stringify({ data: { apiVersion: "invalid", platformVersion: "26.0.0" } }));
+    assert.equal(z.object({ error: z.object({ code: z.string() }) }).parse(await doctor()).error.code, "SDK_METADATA_INVALID");
+    fs.writeFileSync(metadata, "invalid updated SDK metadata");
     assert.equal(z.object({ error: z.object({ code: z.string() }) }).parse(await doctor()).error.code, "SDK_METADATA_INVALID");
   } finally { await transport.close(); fs.rmSync(root, { recursive: true, force: true }); }
 });

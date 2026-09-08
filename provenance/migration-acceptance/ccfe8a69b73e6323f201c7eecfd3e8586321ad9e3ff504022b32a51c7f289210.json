@@ -1,0 +1,36 @@
+{
+  "format": 1,
+  "passed": true,
+  "source": "scripts:detect_sdk",
+  "row_sha256": "960609d556e5d0348af4bcf6fb83330f524e147cbec09f6476e80ae03493d789",
+  "tested": {
+    "runtime_sha256": "ce286ca1518fa1ef98b0be66813660df6a571a9641133132ace340aeecdb0753",
+    "compiled_sha256": "2f1393a46bba5528b98d78bd22733cc1699217e87f88dc181429740589161327",
+    "package_lock_sha256": "68641e488a5099852216d3003664f57dd1d05b980f4c7813ee75dd7baf83d0fc",
+    "resource_manifest_sha256": "563bc3f06565e92c59c621c3ef909a37cbc4ac1db958d3d73d6e0bc99bf9ed86",
+    "upstream_lock_sha256": "bf3cc411831bd8ce6652a8085c8247c399d0c48b6d73156a7e649b9ef668164e"
+  },
+  "reviewer": "Codex native TypeScript integration review",
+  "reason": "Reviewed frozen aab1405 detect-sdk adapter and SDK helper: the public script has no parameters and resolves the selected SDK default metadata. Native doctor reports API, platform, package and metadata location separately from executable versions. Missing installations, absent metadata, malformed JSON/objects, invalid API/platform fields and restored timestamps are covered by current MCP and toolchain regression; project creation separately validates runtime API ranges and SDK mappings instead of copying the old hardcoded template version table. Actual SDK metadata and API builds passed. Legacy script execution, stdout shape and legacy error aliases are intentionally removed; this receipt does not claim real Windows/Linux SDK acceptance.",
+  "completed_scenarios": [
+    "所有原参数和历史错误边界逐项对照"
+  ],
+  "checks": [
+    {
+      "check": "scripts/native-sdk-acceptance.ts",
+      "original_sha256": "fbf11bed64cc145ec861ccd5f3c107530f5b1c3dadd7a01d7fdb50551b6d4ac9"
+    },
+    {
+      "check": "test/native-toolchain.test.ts",
+      "original_sha256": "d41aa0048c196250001244a6e1385e68b0db9a6b3a07f0a1a9c1c775f4901489"
+    },
+    {
+      "check": "test/native-runtime.test.ts",
+      "original_sha256": "d41aa0048c196250001244a6e1385e68b0db9a6b3a07f0a1a9c1c775f4901489"
+    },
+    {
+      "check": "test/native-project.test.ts",
+      "original_sha256": "d41aa0048c196250001244a6e1385e68b0db9a6b3a07f0a1a9c1c775f4901489"
+    }
+  ]
+}

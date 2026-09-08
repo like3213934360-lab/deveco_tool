@@ -5,6 +5,10 @@ import {
   emulatorScenarioSchema,
 } from "./emulator-contracts.js";
 
+export const signingConfigurationOptionsSchema = z.strictObject({
+  name: z.string().regex(/^[A-Za-z0-9]{1,64}$/),
+});
+
 export const screenshotOptionsSchema = z.strictObject({
   format: z.enum(["jpeg", "png"]).default("jpeg"),
   width: z.number().int().min(64).max(4096).optional(),
@@ -752,6 +756,11 @@ export const tools = {
       output: z.string().optional(),
       team_id: z.string().optional(),
       options: z.record(z.string(), z.string()).default({}),
+    }).superRefine((input, ctx) => {
+      if (input.action !== "configure") return;
+      const options = signingConfigurationOptionsSchema.safeParse(input.options);
+      if (!options.success) for (const issue of options.error.issues) ctx.addIssue({ ...issue, path: ["options", ...issue.path] });
+      for (const field of ["file", "output"] as const) if (!input[field]) ctx.addIssue({ code: "custom", path: [field], message: "Signing configuration requires a descriptor file and a new output directory" });
     }),
   },
   ui_snapshot: {
