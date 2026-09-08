@@ -4,158 +4,158 @@
     "id": "deveco-code",
     "url": "https://gitcode.com/openharmony-sig/deveco-code.git",
     "ref": "refs/heads/develop",
-    "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
-    "tree": "5620203eb2a04274afd9f9edb9d4b289427439b4",
-    "version": "v0.1.11",
+    "commit": "325aff05706b9b04a9816a987e9672dda991c630",
+    "tree": "9232f44a15bed9f948662af74f23264b34be457c",
+    "version": "325aff05706b9b04a9816a987e9672dda991c630",
     "role": "resource_source",
-    "acceptance": "pending"
+    "acceptance": "verified"
   },
   "mapping_sha256": "6ed14fd75d9f81f88ba6413804926b16a79172d5d1678fe364c135270e9e3b8e",
   "reviews": [
     {
       "rule": "code-deveco-create-project",
-      "reason": "Replace template-copy and SDK detection Skill scripts with native ProjectService and attributed application templates; project creation stays a typed durable workflow. This is a semantic review; acceptance still requires current compiled evidence for every mapped check.",
-      "reviewer": "Codex native-6 source-8 review 2026-09-08"
+      "reason": "Replace template-copy and SDK detection Skill scripts with native ProjectService and attributed application templates; project creation stays a typed durable workflow. This is a semantic review; acceptance still requires current compiled evidence for every mapped check. Re-reviewed at pinned commit 325aff0: mapped implementation and required checks are byte-identical to the prior review; the accepted 66-file upstream update does not modify mapped Skill resources. Current acceptance will be collected for compiled identity 8c84b369 after the Windows regression harness adjustment.",
+      "reviewer": "Codex native-6 source-12 review 2026-09-08"
     },
     {
       "rule": "code-deveco-cli",
-      "reason": "Translate the CLI guidance into eight fixed native workflows and direct toolchain services; do not retain the CLI dispatch or execute the upstream Skill. This is a semantic review; acceptance still requires current compiled evidence for every mapped check.",
-      "reviewer": "Codex native-6 source-8 review 2026-09-08"
+      "reason": "Translate the CLI guidance into eight fixed native workflows and direct toolchain services; do not retain the CLI dispatch or execute the upstream Skill. This is a semantic review; acceptance still requires current compiled evidence for every mapped check. Re-reviewed at pinned commit 325aff0: mapped implementation and required checks are byte-identical to the prior review; the accepted 66-file upstream update does not modify mapped Skill resources. Current acceptance will be collected for compiled identity 8c84b369 after the Windows regression harness adjustment.",
+      "reviewer": "Codex native-6 source-12 review 2026-09-08"
     },
     {
       "rule": "code-arkts-error-fixes",
-      "reason": "Retain attributed ArkTS defect examples as knowledge resources and apply SDK checker diagnostics through native project/report adapters; imported examples are data, not executable Skills. This is a semantic review; acceptance still requires current compiled evidence for every mapped check.",
-      "reviewer": "Codex native-6 source-8 review 2026-09-08"
+      "reason": "Retain attributed ArkTS defect examples as knowledge resources and apply SDK checker diagnostics through native project/report adapters; imported examples are data, not executable Skills. This is a semantic review; acceptance still requires current compiled evidence for every mapped check. Re-reviewed at pinned commit 325aff0: mapped implementation and required checks are byte-identical to the prior review; the accepted 66-file upstream update does not modify mapped Skill resources. Current acceptance will be collected for compiled identity 8c84b369 after the Windows regression harness adjustment.",
+      "reviewer": "Codex native-6 source-12 review 2026-09-08"
     },
     {
       "rule": "code-arkts-grammar-standards",
-      "reason": "Retain attributed grammar and ArkUI reference material in local knowledge lookup; enforce actual project checks with the selected SDK instead of treating prose as a compiler. This is a semantic review; acceptance still requires current compiled evidence for every mapped check.",
-      "reviewer": "Codex native-6 source-8 review 2026-09-08"
+      "reason": "Retain attributed grammar and ArkUI reference material in local knowledge lookup; enforce actual project checks with the selected SDK instead of treating prose as a compiler. This is a semantic review; acceptance still requires current compiled evidence for every mapped check. Re-reviewed at pinned commit 325aff0: mapped implementation and required checks are byte-identical to the prior review; the accepted 66-file upstream update does not modify mapped Skill resources. Current acceptance will be collected for compiled identity 8c84b369 after the Windows regression harness adjustment.",
+      "reviewer": "Codex native-6 source-12 review 2026-09-08"
     },
     {
       "rule": "code-arkts-runtime-fix",
-      "reason": "Retain attributed crash patterns and runtime examples; native frame and process grouping separates interleaved events before rule matching and never invents absent frames. Current collector reads bounded result artifacts before parsing and validates either candidate patterns or an explicitly unlisted subtype against original faultlog bytes. Reconnect and duplicate request checks preserve task and artifact identity. This is a semantic review; acceptance still requires current compiled evidence for every mapped check.",
-      "reviewer": "Codex native-6 source-8 review 2026-09-08"
+      "reason": "Retain attributed crash patterns and runtime examples; native frame and process grouping separates interleaved events before rule matching and never invents absent frames. Current collector reads bounded result artifacts before parsing and validates either candidate patterns or an explicitly unlisted subtype against original faultlog bytes. Reconnect and duplicate request checks preserve task and artifact identity. This is a semantic review; acceptance still requires current compiled evidence for every mapped check. Re-reviewed at pinned commit 325aff0: mapped implementation and required checks are byte-identical to the prior review; the accepted 66-file upstream update does not modify mapped Skill resources. Current acceptance will be collected for compiled identity 8c84b369 after the Windows regression harness adjustment.",
+      "reviewer": "Codex native-6 source-12 review 2026-09-08"
     },
     {
       "rule": "code-new-skill",
-      "reason": "The pinned tree has no files falling into this guard. Keep the unmapped fallback so a future new Skill requires a deliberate workflow, knowledge, or exclusion decision. This is a semantic review; acceptance still requires current compiled evidence for every mapped check.",
-      "reviewer": "Codex native-6 source-8 review 2026-09-08"
+      "reason": "The pinned tree has no files falling into this guard. Keep the unmapped fallback so a future new Skill requires a deliberate workflow, knowledge, or exclusion decision. This is a semantic review; acceptance still requires current compiled evidence for every mapped check. Re-reviewed at pinned commit 325aff0: mapped implementation and required checks are byte-identical to the prior review; the accepted 66-file upstream update does not modify mapped Skill resources. Current acceptance will be collected for compiled identity 8c84b369 after the Windows regression harness adjustment.",
+      "reviewer": "Codex native-6 source-12 review 2026-09-08"
     },
     {
       "rule": "code-host-customization",
-      "reason": "Reviewed scope of packages/opencode/resources/skills/customize-deveco/: Configures DevEco Code's own host; this MCP does not install host skills, agents or plugins. This is a semantic review; acceptance still requires current compiled evidence for every mapped check.",
-      "reviewer": "Codex native-6 source-8 review 2026-09-08"
+      "reason": "Reviewed scope of packages/opencode/resources/skills/customize-deveco/: Configures DevEco Code's own host; this MCP does not install host skills, agents or plugins. This is a semantic review; acceptance still requires current compiled evidence for every mapped check. Re-reviewed at pinned commit 325aff0: mapped implementation and required checks are byte-identical to the prior review; the accepted 66-file upstream update does not modify mapped Skill resources. Current acceptance will be collected for compiled identity 8c84b369 after the Windows regression harness adjustment.",
+      "reviewer": "Codex native-6 source-12 review 2026-09-08"
     },
     {
       "rule": "code-defaults.ts",
-      "reason": "Replace upstream default Skill discovery with the explicit knowledge inventory and source mapping. Native MCP does not create a host Skill registry. This is a semantic review; acceptance still requires current compiled evidence for every mapped check.",
-      "reviewer": "Codex native-6 source-8 review 2026-09-08"
+      "reason": "Replace upstream default Skill discovery with the explicit knowledge inventory and source mapping. Native MCP does not create a host Skill registry. This is a semantic review; acceptance still requires current compiled evidence for every mapped check. Re-reviewed at pinned commit 325aff0: mapped implementation and required checks are byte-identical to the prior review; the accepted 66-file upstream update does not modify mapped Skill resources. Current acceptance will be collected for compiled identity 8c84b369 after the Windows regression harness adjustment.",
+      "reviewer": "Codex native-6 source-12 review 2026-09-08"
     },
     {
       "rule": "code-discovery.ts",
-      "reason": "Replace filesystem Skill discovery with attributed packaged resources and bounded local lookup; host-specific directory scanning is not installed. This is a semantic review; acceptance still requires current compiled evidence for every mapped check.",
-      "reviewer": "Codex native-6 source-8 review 2026-09-08"
+      "reason": "Replace filesystem Skill discovery with attributed packaged resources and bounded local lookup; host-specific directory scanning is not installed. This is a semantic review; acceptance still requires current compiled evidence for every mapped check. Re-reviewed at pinned commit 325aff0: mapped implementation and required checks are byte-identical to the prior review; the accepted 66-file upstream update does not modify mapped Skill resources. Current acceptance will be collected for compiled identity 8c84b369 after the Windows regression harness adjustment.",
+      "reviewer": "Codex native-6 source-12 review 2026-09-08"
     },
     {
       "rule": "code-index.ts",
-      "reason": "Replace host Skill indexing and execution with typed knowledge catalog/search/read and explicit workflow contracts; source mappings retain future-change review. This is a semantic review; acceptance still requires current compiled evidence for every mapped check.",
-      "reviewer": "Codex native-6 source-8 review 2026-09-08"
+      "reason": "Replace host Skill indexing and execution with typed knowledge catalog/search/read and explicit workflow contracts; source mappings retain future-change review. This is a semantic review; acceptance still requires current compiled evidence for every mapped check. Re-reviewed at pinned commit 325aff0: mapped implementation and required checks are byte-identical to the prior review; the accepted 66-file upstream update does not modify mapped Skill resources. Current acceptance will be collected for compiled identity 8c84b369 after the Windows regression harness adjustment.",
+      "reviewer": "Codex native-6 source-12 review 2026-09-08"
     },
     {
       "rule": "code-host-packages",
-      "reason": "Reviewed scope of packages/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence. This is a semantic review; acceptance still requires current compiled evidence for every mapped check.",
-      "reviewer": "Codex native-6 source-8 review 2026-09-08"
+      "reason": "Reviewed scope of packages/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence. This is a semantic review; acceptance still requires current compiled evidence for every mapped check. Re-reviewed at pinned commit 325aff0: mapped implementation and required checks are byte-identical to the prior review; the accepted 66-file upstream update does not modify mapped Skill resources. Current acceptance will be collected for compiled identity 8c84b369 after the Windows regression harness adjustment.",
+      "reviewer": "Codex native-6 source-12 review 2026-09-08"
     },
     {
       "rule": "code-host-script",
-      "reason": "Reviewed scope of script/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence. This is a semantic review; acceptance still requires current compiled evidence for every mapped check.",
-      "reviewer": "Codex native-6 source-8 review 2026-09-08"
+      "reason": "Reviewed scope of script/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence. This is a semantic review; acceptance still requires current compiled evidence for every mapped check. Re-reviewed at pinned commit 325aff0: mapped implementation and required checks are byte-identical to the prior review; the accepted 66-file upstream update does not modify mapped Skill resources. Current acceptance will be collected for compiled identity 8c84b369 after the Windows regression harness adjustment.",
+      "reviewer": "Codex native-6 source-12 review 2026-09-08"
     },
     {
       "rule": "code-host-patches",
-      "reason": "Reviewed scope of patches/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence. This is a semantic review; acceptance still requires current compiled evidence for every mapped check.",
-      "reviewer": "Codex native-6 source-8 review 2026-09-08"
+      "reason": "Reviewed scope of patches/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence. This is a semantic review; acceptance still requires current compiled evidence for every mapped check. Re-reviewed at pinned commit 325aff0: mapped implementation and required checks are byte-identical to the prior review; the accepted 66-file upstream update does not modify mapped Skill resources. Current acceptance will be collected for compiled identity 8c84b369 after the Windows regression harness adjustment.",
+      "reviewer": "Codex native-6 source-12 review 2026-09-08"
     },
     {
       "rule": "code-host-docs",
-      "reason": "Reviewed scope of docs/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence. This is a semantic review; acceptance still requires current compiled evidence for every mapped check.",
-      "reviewer": "Codex native-6 source-8 review 2026-09-08"
+      "reason": "Reviewed scope of docs/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence. This is a semantic review; acceptance still requires current compiled evidence for every mapped check. Re-reviewed at pinned commit 325aff0: mapped implementation and required checks are byte-identical to the prior review; the accepted 66-file upstream update does not modify mapped Skill resources. Current acceptance will be collected for compiled identity 8c84b369 after the Windows regression harness adjustment.",
+      "reviewer": "Codex native-6 source-12 review 2026-09-08"
     },
     {
       "rule": "code-host-specs",
-      "reason": "Reviewed scope of specs/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence. This is a semantic review; acceptance still requires current compiled evidence for every mapped check.",
-      "reviewer": "Codex native-6 source-8 review 2026-09-08"
+      "reason": "Reviewed scope of specs/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence. This is a semantic review; acceptance still requires current compiled evidence for every mapped check. Re-reviewed at pinned commit 325aff0: mapped implementation and required checks are byte-identical to the prior review; the accepted 66-file upstream update does not modify mapped Skill resources. Current acceptance will be collected for compiled identity 8c84b369 after the Windows regression harness adjustment.",
+      "reviewer": "Codex native-6 source-12 review 2026-09-08"
     },
     {
       "rule": "code-host-assets",
-      "reason": "Reviewed scope of assets/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence. This is a semantic review; acceptance still requires current compiled evidence for every mapped check.",
-      "reviewer": "Codex native-6 source-8 review 2026-09-08"
+      "reason": "Reviewed scope of assets/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence. This is a semantic review; acceptance still requires current compiled evidence for every mapped check. Re-reviewed at pinned commit 325aff0: mapped implementation and required checks are byte-identical to the prior review; the accepted 66-file upstream update does not modify mapped Skill resources. Current acceptance will be collected for compiled identity 8c84b369 after the Windows regression harness adjustment.",
+      "reviewer": "Codex native-6 source-12 review 2026-09-08"
     },
     {
       "rule": "code-host-agents",
-      "reason": "Reviewed scope of .agents/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence. This is a semantic review; acceptance still requires current compiled evidence for every mapped check.",
-      "reviewer": "Codex native-6 source-8 review 2026-09-08"
+      "reason": "Reviewed scope of .agents/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence. This is a semantic review; acceptance still requires current compiled evidence for every mapped check. Re-reviewed at pinned commit 325aff0: mapped implementation and required checks are byte-identical to the prior review; the accepted 66-file upstream update does not modify mapped Skill resources. Current acceptance will be collected for compiled identity 8c84b369 after the Windows regression harness adjustment.",
+      "reviewer": "Codex native-6 source-12 review 2026-09-08"
     },
     {
       "rule": "code-host-opencode",
-      "reason": "Reviewed scope of .opencode/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence. This is a semantic review; acceptance still requires current compiled evidence for every mapped check.",
-      "reviewer": "Codex native-6 source-8 review 2026-09-08"
+      "reason": "Reviewed scope of .opencode/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence. This is a semantic review; acceptance still requires current compiled evidence for every mapped check. Re-reviewed at pinned commit 325aff0: mapped implementation and required checks are byte-identical to the prior review; the accepted 66-file upstream update does not modify mapped Skill resources. Current acceptance will be collected for compiled identity 8c84b369 after the Windows regression harness adjustment.",
+      "reviewer": "Codex native-6 source-12 review 2026-09-08"
     },
     {
       "rule": "code-host-github",
-      "reason": "Reviewed scope of .github/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence. This is a semantic review; acceptance still requires current compiled evidence for every mapped check.",
-      "reviewer": "Codex native-6 source-8 review 2026-09-08"
+      "reason": "Reviewed scope of .github/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence. This is a semantic review; acceptance still requires current compiled evidence for every mapped check. Re-reviewed at pinned commit 325aff0: mapped implementation and required checks are byte-identical to the prior review; the accepted 66-file upstream update does not modify mapped Skill resources. Current acceptance will be collected for compiled identity 8c84b369 after the Windows regression harness adjustment.",
+      "reviewer": "Codex native-6 source-12 review 2026-09-08"
     },
     {
       "rule": "code-host-gitcode",
-      "reason": "Reviewed scope of .gitcode/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence. This is a semantic review; acceptance still requires current compiled evidence for every mapped check.",
-      "reviewer": "Codex native-6 source-8 review 2026-09-08"
+      "reason": "Reviewed scope of .gitcode/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence. This is a semantic review; acceptance still requires current compiled evidence for every mapped check. Re-reviewed at pinned commit 325aff0: mapped implementation and required checks are byte-identical to the prior review; the accepted 66-file upstream update does not modify mapped Skill resources. Current acceptance will be collected for compiled identity 8c84b369 after the Windows regression harness adjustment.",
+      "reviewer": "Codex native-6 source-12 review 2026-09-08"
     },
     {
       "rule": "code-legal-LICENSE",
-      "reason": "Review LICENSE as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. This is a semantic review; acceptance still requires current compiled evidence for every mapped check.",
-      "reviewer": "Codex native-6 source-8 review 2026-09-08"
+      "reason": "Review LICENSE as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. This is a semantic review; acceptance still requires current compiled evidence for every mapped check. Re-reviewed at pinned commit 325aff0: mapped implementation and required checks are byte-identical to the prior review; the accepted 66-file upstream update does not modify mapped Skill resources. Current acceptance will be collected for compiled identity 8c84b369 after the Windows regression harness adjustment.",
+      "reviewer": "Codex native-6 source-12 review 2026-09-08"
     },
     {
       "rule": "code-legal-NOTICE",
-      "reason": "Review NOTICE as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. This is a semantic review; acceptance still requires current compiled evidence for every mapped check.",
-      "reviewer": "Codex native-6 source-8 review 2026-09-08"
+      "reason": "Review NOTICE as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. This is a semantic review; acceptance still requires current compiled evidence for every mapped check. Re-reviewed at pinned commit 325aff0: mapped implementation and required checks are byte-identical to the prior review; the accepted 66-file upstream update does not modify mapped Skill resources. Current acceptance will be collected for compiled identity 8c84b369 after the Windows regression harness adjustment.",
+      "reviewer": "Codex native-6 source-12 review 2026-09-08"
     },
     {
       "rule": "code-legal-OAT.xml",
-      "reason": "Review OAT.xml as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. This is a semantic review; acceptance still requires current compiled evidence for every mapped check.",
-      "reviewer": "Codex native-6 source-8 review 2026-09-08"
+      "reason": "Review OAT.xml as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. This is a semantic review; acceptance still requires current compiled evidence for every mapped check. Re-reviewed at pinned commit 325aff0: mapped implementation and required checks are byte-identical to the prior review; the accepted 66-file upstream update does not modify mapped Skill resources. Current acceptance will be collected for compiled identity 8c84b369 after the Windows regression harness adjustment.",
+      "reviewer": "Codex native-6 source-12 review 2026-09-08"
     },
     {
       "rule": "code-legal-package.json",
-      "reason": "Review package.json as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. This is a semantic review; acceptance still requires current compiled evidence for every mapped check.",
-      "reviewer": "Codex native-6 source-8 review 2026-09-08"
+      "reason": "Review package.json as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. This is a semantic review; acceptance still requires current compiled evidence for every mapped check. Re-reviewed at pinned commit 325aff0: mapped implementation and required checks are byte-identical to the prior review; the accepted 66-file upstream update does not modify mapped Skill resources. Current acceptance will be collected for compiled identity 8c84b369 after the Windows regression harness adjustment.",
+      "reviewer": "Codex native-6 source-12 review 2026-09-08"
     },
     {
       "rule": "code-legal-bun.lock",
-      "reason": "Review bun.lock as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. This is a semantic review; acceptance still requires current compiled evidence for every mapped check.",
-      "reviewer": "Codex native-6 source-8 review 2026-09-08"
+      "reason": "Review bun.lock as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. This is a semantic review; acceptance still requires current compiled evidence for every mapped check. Re-reviewed at pinned commit 325aff0: mapped implementation and required checks are byte-identical to the prior review; the accepted 66-file upstream update does not modify mapped Skill resources. Current acceptance will be collected for compiled identity 8c84b369 after the Windows regression harness adjustment.",
+      "reviewer": "Codex native-6 source-12 review 2026-09-08"
     },
     {
       "rule": "code-legal-CHANGELOG.md",
-      "reason": "Review CHANGELOG.md as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. This is a semantic review; acceptance still requires current compiled evidence for every mapped check.",
-      "reviewer": "Codex native-6 source-8 review 2026-09-08"
+      "reason": "Review CHANGELOG.md as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. This is a semantic review; acceptance still requires current compiled evidence for every mapped check. Re-reviewed at pinned commit 325aff0: mapped implementation and required checks are byte-identical to the prior review; the accepted 66-file upstream update does not modify mapped Skill resources. Current acceptance will be collected for compiled identity 8c84b369 after the Windows regression harness adjustment.",
+      "reviewer": "Codex native-6 source-12 review 2026-09-08"
     },
     {
       "rule": "code-host-install",
-      "reason": "Reviewed scope of install: Bash installer and installation telemetry for the upstream DevEco Code host. Native MCP installation does not execute this script. This is a semantic review; acceptance still requires current compiled evidence for every mapped check.",
-      "reviewer": "Codex native-6 source-8 review 2026-09-08"
+      "reason": "Reviewed scope of install: Bash installer and installation telemetry for the upstream DevEco Code host. Native MCP installation does not execute this script. This is a semantic review; acceptance still requires current compiled evidence for every mapped check. Re-reviewed at pinned commit 325aff0: mapped implementation and required checks are byte-identical to the prior review; the accepted 66-file upstream update does not modify mapped Skill resources. Current acceptance will be collected for compiled identity 8c84b369 after the Windows regression harness adjustment.",
+      "reviewer": "Codex native-6 source-12 review 2026-09-08"
     },
     {
       "rule": "code-host-install-ps1",
-      "reason": "Reviewed scope of install.ps1: PowerShell installer and installation telemetry for the upstream DevEco Code host. Native MCP installation does not execute this script. This is a semantic review; acceptance still requires current compiled evidence for every mapped check.",
-      "reviewer": "Codex native-6 source-8 review 2026-09-08"
+      "reason": "Reviewed scope of install.ps1: PowerShell installer and installation telemetry for the upstream DevEco Code host. Native MCP installation does not execute this script. This is a semantic review; acceptance still requires current compiled evidence for every mapped check. Re-reviewed at pinned commit 325aff0: mapped implementation and required checks are byte-identical to the prior review; the accepted 66-file upstream update does not modify mapped Skill resources. Current acceptance will be collected for compiled identity 8c84b369 after the Windows regression harness adjustment.",
+      "reviewer": "Codex native-6 source-12 review 2026-09-08"
     },
     {
       "rule": "code-host-turbo-json",
-      "reason": "Reviewed scope of turbo.json: Upstream monorepo build/test scheduling. This MCP uses its own strict TypeScript build and Node Test Runner matrix. This is a semantic review; acceptance still requires current compiled evidence for every mapped check.",
-      "reviewer": "Codex native-6 source-8 review 2026-09-08"
+      "reason": "Reviewed scope of turbo.json: Upstream monorepo build/test scheduling. This MCP uses its own strict TypeScript build and Node Test Runner matrix. This is a semantic review; acceptance still requires current compiled evidence for every mapped check. Re-reviewed at pinned commit 325aff0: mapped implementation and required checks are byte-identical to the prior review; the accepted 66-file upstream update does not modify mapped Skill resources. Current acceptance will be collected for compiled identity 8c84b369 after the Windows regression harness adjustment.",
+      "reviewer": "Codex native-6 source-12 review 2026-09-08"
     }
   ],
   "targets": [

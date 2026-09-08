@@ -1,15 +1,11 @@
-# Upstream skill content is carried verbatim and provenance/SOURCES.md claims it is
-# byte-for-byte identical to its source. With core.autocrlf=input git would silently
-# rewrite CRLF files on staging and quietly break that claim, so line-ending
-# normalisation is off for everything under skills/. Files this repo authors itself are
-# already LF, so nothing changes for them.
-skills/** -text
-
 # Keep owned source and metadata identical on the supported CI platforms.
 *.ts text eol=lf
 *.json text eol=lf
 *.yml text eol=lf
-docs/native-*.md text eol=lf
+*.md text eol=lf
+# Preserve the exact committed legal notices on every platform.
+LICENSE -text
+NOTICE.* -text
 # Resource digests describe exact upstream bytes, including original whitespace.
 # This takes precedence over the general source rules above.
 resources/** -text -whitespace
