@@ -11,7 +11,7 @@ import { SignatureService } from "../src/services/signature.js";
 import { errorResult } from "../src/core/errors.js";
 
 test("debug profiles use the modern test route and distinguish request, URL and download failures without leaking credentials", async (t) => {
-  const root = fs.realpathSync(
+  const root = fs.realpathSync.native(
     fs.mkdtempSync(path.join(os.tmpdir(), "deveco-cloud-profile-")),
   );
   const store = new StateStore(root),
