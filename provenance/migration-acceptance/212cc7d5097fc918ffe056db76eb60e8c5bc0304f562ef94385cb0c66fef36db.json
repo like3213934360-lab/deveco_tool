@@ -1,0 +1,40 @@
+{
+  "format": 1,
+  "passed": true,
+  "source": "tools:go_to_definition",
+  "row_sha256": "18ed5507f91d9d0df2e48368a80d24eab564c426bf84590f982cec2dcc2db06d",
+  "tested": {
+    "runtime_sha256": "0adac632b689bf66af02e807119dcdc70e71dee617cd00df25cb969f9f8372a1",
+    "compiled_sha256": "5e3a48daa0881876eea7c35a1aabf9858d660d0d1e06028ee6402abce004b69e",
+    "package_lock_sha256": "68641e488a5099852216d3003664f57dd1d05b980f4c7813ee75dd7baf83d0fc",
+    "resource_manifest_sha256": "563bc3f06565e92c59c621c3ef909a37cbc4ac1db958d3d73d6e0bc99bf9ed86",
+    "upstream_lock_sha256": "bf3cc411831bd8ce6652a8085c8247c399d0c48b6d73156a7e649b9ef668164e"
+  },
+  "reviewer": "Codex current native runtime evidence review",
+  "reason": "Current 24-observation actual SDK report verifies Text definition resolves to an existing declaration in the selected SDK; current 56-observation module report verifies cross-module definition locations across both products and targets. Current LSP regression covers UTF-16 positions, aliases and changed contents.",
+  "completed_scenarios": [
+    "真实跨模块/SDK 定义位置验收"
+  ],
+  "checks": [
+    {
+      "check": "test/native-runtime.test.ts",
+      "original_sha256": "302a2768354cde8402d486ae4ab079eec0a151a1f9f913f59f5898cc8b29e1aa"
+    },
+    {
+      "check": "test/native-lsp.test.ts",
+      "original_sha256": "302a2768354cde8402d486ae4ab079eec0a151a1f9f913f59f5898cc8b29e1aa"
+    },
+    {
+      "check": "test/native-toolchain.test.ts",
+      "original_sha256": "302a2768354cde8402d486ae4ab079eec0a151a1f9f913f59f5898cc8b29e1aa"
+    },
+    {
+      "check": "scripts/native-sdk-acceptance.ts",
+      "original_sha256": "1609770f3715956cf4a839b6eebcbe18f32945c0baa43b1f7064f59bb16714a9"
+    },
+    {
+      "check": "scripts/native-multimodule-acceptance.ts",
+      "original_sha256": "e84271fd294e13ec72f1b4cf76872d61ff06a392c418d4227571138d53cc3587"
+    }
+  ]
+}

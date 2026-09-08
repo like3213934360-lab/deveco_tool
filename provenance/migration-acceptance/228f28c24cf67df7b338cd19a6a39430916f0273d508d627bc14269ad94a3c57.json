@@ -1,0 +1,32 @@
+{
+  "format": 1,
+  "passed": true,
+  "source": "tools:deveco_login",
+  "row_sha256": "53f18676f4b6b3dc41670e3a1a30982f95c26e91f8e69283d157c1249ab4b08c",
+  "tested": {
+    "runtime_sha256": "0adac632b689bf66af02e807119dcdc70e71dee617cd00df25cb969f9f8372a1",
+    "compiled_sha256": "5e3a48daa0881876eea7c35a1aabf9858d660d0d1e06028ee6402abce004b69e",
+    "package_lock_sha256": "68641e488a5099852216d3003664f57dd1d05b980f4c7813ee75dd7baf83d0fc",
+    "resource_manifest_sha256": "563bc3f06565e92c59c621c3ef909a37cbc4ac1db958d3d73d6e0bc99bf9ed86",
+    "upstream_lock_sha256": "bf3cc411831bd8ce6652a8085c8247c399d0c48b6d73156a7e649b9ef668164e"
+  },
+  "reviewer": "Codex current native runtime evidence review",
+  "reason": "Current regression and actual authenticated CodeGenie MCP report revalidate the existing login contract. Supplementary real stdio MCP callback lifecycle report SHA-256 b44bb5af97389c6928541f933fcd3e207bf9070a4a86e3f816cf7278a1f6b734 verifies both providers: actual missing browser launcher preserves manual callback, ten concurrent logins share one listener, actual cancellation closes it, and the production five-minute timeout closes it after 300079 ms. This does not claim expired JWT or cloud mutation recovery.",
+  "completed_scenarios": [
+    "回调取消、登录窗口过期、浏览器失败实际验收"
+  ],
+  "checks": [
+    {
+      "check": "test/native-runtime.test.ts",
+      "original_sha256": "302a2768354cde8402d486ae4ab079eec0a151a1f9f913f59f5898cc8b29e1aa"
+    },
+    {
+      "check": "test/native-auth.test.ts",
+      "original_sha256": "302a2768354cde8402d486ae4ab079eec0a151a1f9f913f59f5898cc8b29e1aa"
+    },
+    {
+      "check": "scripts/native-auth-mcp-acceptance.ts",
+      "original_sha256": "a9f661084c8175b94c196092c4a44a8891e1e190e79baee299f741ad24cace35"
+    }
+  ]
+}

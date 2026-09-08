@@ -1,0 +1,36 @@
+{
+  "format": 1,
+  "passed": true,
+  "source": "tools:check_ets_files",
+  "row_sha256": "2dd677a77971e0ae7934b4d84a95eba181c5d48c8876ce72bb413681cfe83b35",
+  "tested": {
+    "runtime_sha256": "0adac632b689bf66af02e807119dcdc70e71dee617cd00df25cb969f9f8372a1",
+    "compiled_sha256": "5e3a48daa0881876eea7c35a1aabf9858d660d0d1e06028ee6402abce004b69e",
+    "package_lock_sha256": "68641e488a5099852216d3003664f57dd1d05b980f4c7813ee75dd7baf83d0fc",
+    "resource_manifest_sha256": "563bc3f06565e92c59c621c3ef909a37cbc4ac1db958d3d73d6e0bc99bf9ed86",
+    "upstream_lock_sha256": "bf3cc411831bd8ce6652a8085c8247c399d0c48b6d73156a7e649b9ef668164e"
+  },
+  "reviewer": "Codex current native runtime evidence review",
+  "reason": "Frozen baseline batch checking maps to the static checker, not LSP. Current regression and actual 13-observation checker report repeat Unicode, file/project scopes, multi-file and large diagnostics, plus explicit missing-SDK refusal without fallback.",
+  "completed_scenarios": [
+    "旧批量诊断语义和缺失 SDK 行为对照"
+  ],
+  "checks": [
+    {
+      "check": "test/native-runtime.test.ts",
+      "original_sha256": "302a2768354cde8402d486ae4ab079eec0a151a1f9f913f59f5898cc8b29e1aa"
+    },
+    {
+      "check": "test/native-checker.test.ts",
+      "original_sha256": "302a2768354cde8402d486ae4ab079eec0a151a1f9f913f59f5898cc8b29e1aa"
+    },
+    {
+      "check": "test/native-toolchain.test.ts",
+      "original_sha256": "302a2768354cde8402d486ae4ab079eec0a151a1f9f913f59f5898cc8b29e1aa"
+    },
+    {
+      "check": "scripts/native-checker-acceptance.ts",
+      "original_sha256": "72318bccae6dd93e6beff8aa7366e339fc7f4ec5ed54e0f33c375ada181de689"
+    }
+  ]
+}
