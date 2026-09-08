@@ -71,21 +71,20 @@ function entryDigest(file: string): string {
   return sha256;
 }
 function isFile(file: string): boolean {
-  try {
-    return fs.statSync(file).isFile();
-  } catch (error) {
-    if (
-      error &&
-      typeof error === "object" &&
-      "code" in error &&
-      ["ENOENT", "ENOTDIR"].includes(String(error.code))
-    )
-      return false;
-    throw error;
-  }
+  return fs.statSync(file, { throwIfNoEntry: false })?.isFile() ?? false;
 }
 export function discoverToolchain(): Toolchain {
   const config = configuration();
+  // A discovery observes fresh bytes, but each metadata file is read only once
+  // in that observation (product-info is also part of the manifest identity).
+  const observedMetadata = new Map<string, ReturnType<typeof readMetadata>>();
+  const metadataAt = (file: string) => {
+    const previous = observedMetadata.get(file);
+    if (previous) return previous;
+    const value = readMetadata(file);
+    observedMetadata.set(file, value);
+    return value;
+  };
   const defaultRoot =
     process.platform === "darwin"
       ? "/Applications/DevEco-Studio.app"
@@ -194,16 +193,16 @@ export function discoverToolchain(): Toolchain {
   }
   let version = "unknown";
   const cltVersion = path.join(root, "version.txt");
+  let cltVersionBytes: Buffer | undefined;
   if (kind === "clt" && isFile(cltVersion)) {
     invariant(
       fs.statSync(cltVersion).size <= 65536,
       "TOOLCHAIN_METADATA_INVALID",
       "CLT version metadata exceeds 64 KiB",
     );
-    version =
-      fs
-        .readFileSync(cltVersion, "utf8")
-        .match(/^#\s*Version:\s*(\S+)/m)?.[1] ?? "unknown";
+    cltVersionBytes = fs.readFileSync(cltVersion);
+    version = cltVersionBytes.toString("utf8")
+      .match(/^#\s*Version:\s*(\S+)/m)?.[1] ?? "unknown";
   }
   for (const file of [
     path.join(content, "Resources/product-info.json"),
@@ -211,7 +210,7 @@ export function discoverToolchain(): Toolchain {
     path.join(root, "sdk-pkg.json"),
   ]) {
     if (fs.existsSync(file)) {
-      const data = readMetadata(file).record;
+      const data = metadataAt(file).record;
       version = String(data.version ?? version);
       break;
     }
@@ -250,7 +249,7 @@ export function discoverToolchain(): Toolchain {
   const versions: Record<string, string> = {};
   const metadata = [...manifests].sort().flatMap((file) => {
     if (!fs.existsSync(file)) return [];
-    const { record, sha256 } = readMetadata(file);
+    const { record, sha256 } = metadataAt(file);
     const data = record.data;
     const version =
       data && typeof data === "object" && "version" in data
@@ -260,8 +259,8 @@ export function discoverToolchain(): Toolchain {
     if (typeof version === "string") versions[relative] = version;
     return [[relative, sha256]];
   });
-  if (kind === "clt" && isFile(cltVersion)) {
-    metadata.push(["version.txt", fileDigest(cltVersion)]);
+  if (cltVersionBytes) {
+    metadata.push(["version.txt", createHash("sha256").update(cltVersionBytes).digest("hex")]);
     versions["version.txt"] = version;
   }
   if (components.java) {
@@ -275,10 +274,9 @@ export function discoverToolchain(): Toolchain {
         "TOOLCHAIN_METADATA_INVALID",
         "JDK release metadata exceeds 64 KiB",
       );
-      metadata.push(["java/release", fileDigest(release)]);
-      const value = fs
-        .readFileSync(release, "utf8")
-        .match(/^JAVA_VERSION="([^"]+)"/m)?.[1];
+      const bytes = fs.readFileSync(release);
+      metadata.push(["java/release", createHash("sha256").update(bytes).digest("hex")]);
+      const value = bytes.toString("utf8").match(/^JAVA_VERSION="([^"]+)"/m)?.[1];
       if (value) versions["java/release"] = value;
     }
   }

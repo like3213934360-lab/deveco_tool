@@ -204,3 +204,21 @@ test("LSP refreshes the exact changed bytes and ignores old-version or invalid-U
     );
   });
 });
+
+test("LSP reads fresh bytes across chunk boundaries and rejects oversized files", async () => {
+  await fixture({}, async (service, project) => {
+    const file = path.join(project.root, "Model.ets");
+    for (const size of [65536, 65537]) {
+      fs.writeFileSync(file, "fixed!".padEnd(size, " "));
+      const before = fs.statSync(file);
+      const read = async () => z.object({ diagnostics: z.array(z.object({ message: z.string() })) })
+        .parse(await service.request(project, { action: "diagnostics", file })).diagnostics;
+      assert.deepEqual(await read(), []);
+      fs.writeFileSync(file, "BROKEN".padEnd(size, " "));
+      fs.utimesSync(file, before.atime, before.mtime);
+      assert.deepEqual((await read()).map((item) => item.message), ["current diagnostic"]);
+    }
+    fs.writeFileSync(file, Buffer.alloc(4 * 1024 * 1024 + 1));
+    await assert.rejects(service.request(project, { action: "hover", file }), code("LSP_FILE_TOO_LARGE"));
+  });
+});

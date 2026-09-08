@@ -406,7 +406,10 @@ test("hard interruption resumes from SQLite without repeating a completed effect
         `Peer terminated before readiness: ${peerError}`,
       );
       return fs.existsSync(path.join(root, "ready"));
-    });
+    // This is fixture preparation (SQLite creation and durable checkpointing),
+    // not the operation/recovery deadline. Loaded Windows runners can spend
+    // over ten seconds reaching the interruption barrier; retain a finite cap.
+    }, process.platform === "win32" ? 30000 : 10000);
     trace("terminate-peer");
     await processes.terminate(child);
     trace("open-store");

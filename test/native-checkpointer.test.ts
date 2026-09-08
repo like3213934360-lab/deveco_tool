@@ -149,3 +149,47 @@ test("an oversized intermediate value rejects the entire official write batch an
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
+
+test("a failed serializer cannot let a late encoding recharge a discarded checkpoint reservation", async () => {
+  const root = temporary(), store = new StateStore(root),
+    original = new SqliteSaver(store.db).serde,
+    entered = Promise.withResolvers<void>(),
+    release = Promise.withResolvers<void>(),
+    finished = Promise.withResolvers<void>();
+  const saver = new BoundedSqliteSaver(store, {
+    async dumpsTyped(value: unknown) {
+      if (value === "late") {
+        entered.resolve();
+        await release.promise;
+        const encoded = await original.dumpsTyped(value);
+        finished.resolve();
+        return encoded;
+      }
+      if (value === "failure") {
+        await entered.promise;
+        throw new Error("serializer failed before its peer finished");
+      }
+      return original.dumpsTyped(value);
+    },
+    async loadsTyped(type, value): Promise<unknown> {
+      return original.loadsTyped(type, value) as Promise<unknown>;
+    },
+  });
+  try {
+    await assert.rejects(saver.putWrites(config, [["first", "late"], ["second", "failure"]], "failed-task"), /serializer failed/);
+    assert.equal(count(store, "artifact_streams"), 0);
+    release.resolve();
+    await finished.promise;
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    assert.equal(count(store, "writes"), 0);
+    assert.equal(count(store, "artifact_streams"), 0);
+    // A separate successful batch must retain its own accounting and contents.
+    await saver.putWrites(config, [["third", "accepted"]], "successful-task");
+    assert.equal(count(store, "writes"), 1);
+    assert.equal(count(store, "artifact_streams"), 0);
+  } finally {
+    release.resolve();
+    store.close();
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});

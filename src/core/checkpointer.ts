@@ -6,7 +6,7 @@ import { invariant } from "./errors.js";
 
 interface Reservation {
   active: boolean;
-  reserve(bytes: number): void;
+  reserve(bytes: number): Promise<void>;
 }
 /** The official saver owns encoding, SQL and recovery; this adapter only
  * reserves storage for the bytes its serializer is about to hand to SQLite. */
@@ -37,7 +37,7 @@ export class BoundedSqliteSaver extends SqliteSaver {
         // Reserve main-file and WAL payload pages plus B-tree/index overhead.
         // Every serialized row contributes; a pending putWrites batch cannot
         // claim the same free bytes as another MCP or artifact producer.
-        scope.reserve(
+        await scope.reserve(
           2 * Math.ceil(encoded[1].byteLength / pageSize) * pageSize +
             16 * pageSize,
         );
@@ -62,13 +62,35 @@ export class BoundedSqliteSaver extends SqliteSaver {
       "CHECKPOINT_THREAD_REQUIRED",
       "Checkpoint write requires thread_id",
     );
-    const stream = this.store.streamArtifact(
+    // Creation and the initial allocation are one synchronous transaction. No
+    // SQLite transaction remains open while a third-party serializer awaits.
+    const stream = this.store.db.transaction(() => {
+      const stream = this.store.streamArtifact(
         thread,
         "application/x-checkpoint-reservation",
-      ),
-      scope: Reservation = { active: true, reserve: stream.reserve };
+      );
+      stream.reserve(16 * this.pageSize);
+      return stream;
+    }).immediate();
+    let pendingBytes = 0, pending: Promise<void> | undefined;
+    const scope: Reservation = {
+      active: true,
+      reserve(bytes) {
+        pendingBytes += bytes;
+        // The official saver serializes checkpoint/metadata and write batches
+        // concurrently. Combine reservations ready in the same microtask turn;
+        // every encoded value still waits for a durable cross-process charge
+        // before the official saver can insert it. Later encodings form a new
+        // batch; this does not depend on the saver's number of serializer calls.
+        return (pending ??= Promise.resolve().then(() => {
+          const bytes = pendingBytes;
+          pendingBytes = 0;
+          pending = undefined;
+          stream.reserve(bytes);
+        }));
+      },
+    };
     try {
-      scope.reserve(16 * this.pageSize);
       return await this.reservations.run(scope, write);
     } finally {
       scope.active = false;
