@@ -7,10 +7,19 @@ import { StateStore } from "../core/store.js";
 import { ProcessService } from "../core/process.js";
 import { invariant, ToolError, errorResult } from "../core/errors.js";
 import { localKey } from "../core/crypto.js";
+import { CallbackError, readAuthCallback } from "./auth-callback.js";
 
 export const providerSchema = z.enum(["developer", "codegenie"]);
 export type Provider = z.infer<typeof providerSchema>;
 const base = "https://cn.devecostudio.huawei.com";
+function callbackPage(kind: "received" | "cancelled" | "invalid"): string {
+  const message = {
+    received: "授权回调已接收。请返回 MCP 客户端确认登录结果。",
+    cancelled: "本次登录已取消。可以返回 MCP 客户端。",
+    invalid: "登录回调无效。请返回 MCP 客户端查看状态或重新发起登录。",
+  }[kind];
+  return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DevEco MCP 登录</title></head><body><h1>DevEco MCP 登录</h1><p>${message}</p></body></html>`;
+}
 const credentialsSchema = z.object({
   jwt: z.string(),
   access: z.string(),
@@ -35,6 +44,12 @@ interface Login {
   url: string;
   finished: Promise<void>;
   error?: ReturnType<typeof errorResult>;
+  callback: {
+    received: number;
+    rejected: number;
+    accepted: boolean;
+    last_rejection?: string;
+  };
 }
 
 const teamSchema = z.object({
@@ -213,6 +228,7 @@ export class AuthService {
       user_id: credentials?.userId,
       user_name: credentials?.userName,
       login_pending: !!login && !login.controller.signal.aborted,
+      ...(login ? { callback: { ...login.callback } } : {}),
       ...(login?.error ? { error: login.error } : {}),
     };
   }
@@ -231,31 +247,55 @@ export class AuthService {
       reject = fail;
     });
     void callback.catch(() => {});
-    let accepted = false;
+    const callbackState: Login["callback"] = {
+      received: 0,
+      rejected: 0,
+      accepted: false,
+    };
     const server = http.createServer((request, response) => {
-      const url = new URL(request.url ?? "/", "http://127.0.0.1");
-      const code = Buffer.from(url.searchParams.get("code") ?? "");
-      const expected = Buffer.from(nonce);
-      const valid =
-        request.method === "GET" &&
-        url.pathname === "/callback" &&
-        code.length === expected.length &&
-        crypto.timingSafeEqual(code, expected) &&
-        url.searchParams.get("siteId") === "1" &&
-        !!url.searchParams.get("tempToken") &&
-        !accepted;
-      if (!valid) {
-        response.writeHead(400);
-        response.end("Invalid login callback");
-        return;
-      }
-      accepted = true;
-      response.writeHead(200, {
-        "Content-Type": "text/plain; charset=utf-8",
-        "Cache-Control": "no-store",
+      callbackState.received++;
+      request.setTimeout(10000, () => request.destroy());
+      response.setHeader("Content-Type", "text/html; charset=utf-8");
+      response.setHeader(
+        "Content-Security-Policy",
+        "default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'",
+      );
+      response.setHeader("Cache-Control", "no-store");
+      response.setHeader("Connection", "close");
+      response.setHeader("Referrer-Policy", "no-referrer");
+      response.setHeader("X-Content-Type-Options", "nosniff");
+      void (async () => {
+        const address = server.address();
+        if (!address || typeof address === "string")
+          throw new CallbackError(503, "CALLBACK_CLOSED");
+        const result = await readAuthCallback(request, address.port, nonce);
+        if (callbackState.accepted || controller.signal.aborted)
+          throw new CallbackError(409, "CALLBACK_ALREADY_FINISHED");
+        callbackState.accepted = true;
+        response.writeHead(200);
+        if (result.cancelled) {
+          response.end(callbackPage("cancelled"));
+          reject(
+            new ToolError(
+              "LOGIN_CANCELLED",
+              "Browser authorization was cancelled",
+            ),
+          );
+        } else {
+          response.end(callbackPage("received"));
+          accept(result.token);
+        }
+      })().catch((error: unknown) => {
+        callbackState.rejected++;
+        callbackState.last_rejection =
+          error instanceof CallbackError ? error.code : "CALLBACK_READ_FAILED";
+        if (!response.destroyed) {
+          response.writeHead(
+            error instanceof CallbackError ? error.status : 400,
+          );
+          response.end(callbackPage("invalid"));
+        }
       });
-      response.end("Login received. Return to your MCP client.");
-      accept(url.searchParams.get("tempToken")!);
     });
     server.requestTimeout = 10000;
     server.headersTimeout = 10000;
@@ -303,6 +343,7 @@ export class AuthService {
       server,
       url,
       finished: Promise.resolve(),
+      callback: callbackState,
     };
     this.logins.set(provider, login);
     login.finished = (async () => {

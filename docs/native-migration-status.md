@@ -48,7 +48,7 @@ MCP 主进程提供静态工具目录和参数校验；Worker 持有领域服务
 | 公开入口、目标导航与 Want | `services/routes.ts`、`navigation.ts`、`runtime.ts` | 产品/模块/公开性、URI/MIME、中文目标匹配、歧义、Want 类型和任务恢复回归通过；实际设备导航与未匹配目标自动录制待完成 |
 | 日志与崩溃 | `services/logs.ts`、`crash.ts` | 命名故障记录、设备时间筛选、整行过滤、权限、截断、多进程事件和提交时证据保存的回归通过；真实设备 tail/无匹配字面量筛选、故障查询的部分权限失败已验证；实际故障文件读取、过滤性能门槛与应用栈帧排序待验收 |
 | 热重载 | `services/hotreload.ts`、`services/hvigor` | SDK watch 基线、同一 worker 两次生成不同 ABC、停止与配置恢复通过；签名 HQF、设备应用及运行效果未通过完整验收 |
-| 本地和云端签名 | `services/signature.ts`、`auth.ts` | 真实密钥与 CSR 生成通过；证书/Profile/团队、云端认证和完整签名安装待验收 |
+| 本地和云端签名 | `services/signature.ts`、`auth.ts` | 真实密钥/CSR、Chrome 开发者认证、团队及证书/设备清单、两种重启后的认证保持通过；POST 回调、浏览器结果页和设备总数字段修复后复验。云端证书/Profile 变更、过期刷新与完整签名安装待验收，见 `docs/native-authentication.md` |
 | 模拟器与场景 | `services/emulator.ts` | 本机创建、启动、保持运行、场景命令、停止、删除通过；场景命令接受不等于应用感知结果已验证 |
 | 文档与知识 | `services/knowledge.ts`、`resources/knowledge.json` | 119 个资源、79 条知识、4 个来源的摘要与许可证校验通过；本地查询直接打开发布资源数据库，无每版本状态目录解压副本；六目录筛选、中文检索与稳定分页通过，详见 `docs/native-knowledge.md` |
 | 上游更新 | `scripts/upstream.ts`、`provenance/upstream-*` | 检测、分类、报告摘要核对、草稿 PR 幂等创建、CI 调度、候选评审阻断和框架/官方升级分离已实现；模拟 GitHub 故障恢复测试通过，真实草稿 PR #1、重复调用去重和候选评审阻断通过；定时身份权限、人工适配与正式发布门禁待验收 |
@@ -69,6 +69,7 @@ MCP 主进程提供静态工具目录和参数校验；Worker 持有领域服务
 | 真实设备只读验证 | 13 项通过 | `/private/tmp/deveco-native-device-readonly-20260908-7/evidence.json`；Node 24 原生独立目录，新增保存树文件/制品查询，包含批量查询、缓存 ID 复用、窗口/层级分页、设备属性、UI 断言、Hilog、故障查询及关闭。故障目录权限不足，返回 `complete:false`，不能计为完整故障采集证明；没有点击、安装或业务路径验证 |
 | 真实 Hvigor watch | 7 项通过 | `/private/tmp/deveco-native-hvigor-20260907-4/evidence.json`；未验证签名和设备热补丁 |
 | 真实模拟器只读协议 | 7 项通过 | `/private/tmp/deveco-native-emulator-readonly-20260908-1/evidence.json`；当前组件清单、镜像、两份协议全文/摘要、旧摘要拒绝及原生配置字节/mtime 不变；没有接受协议或操作实例，副作用探测记录见 `docs/native-emulator.md` |
+| Chrome 双 provider 认证 | 开发者、知识服务各 9 项通过；另一次已有凭据复查 9 项通过 | 通过真实 MCP 接口执行，开发者读取三个团队清单，CodeGenie 执行云端查询，两种重启后复查成功；同一最终运行摘要在 Node 24/26 各 220 项回归通过，见 `docs/native-authentication.md`。本次模拟器只读 7 项复查证据保存在持久目录 `~/Library/Application Support/DevEcoMCP/acceptance/20260908-emulator-readonly-1`；以前临时目录目前不可用，不据此补造历史证据 |
 | 真实模拟器 | 6 项通过 | `/private/tmp/deveco-native-emulator-20260907-1/evidence.json`；早期代码快照，未记录源码摘要 |
 | 一小时基础设施运行 | 通过 | `/private/tmp/deveco-native-soak-20260907-2/evidence.json`；352 轮、2816 个子进程；最终活动任务/子进程/租约为 0，RSS 95,600,640 字节。只使用合成子进程，且早于最新制品与会话修改，不能算最终版本或 SDK 会话长稳验收 |
 | 一小时真实 SDK 会话 | 通过 | `/private/tmp/deveco-native-sdk-soak-node24-20260908-1/evidence.json`；Node 24 原生独立验证目录、717 次 LSP 查询、60 次不同 ABC 补丁，同一 watch worker，最终会话/临时目录为 0，配置恢复成功，运行时 RSS 107,511,808 字节。基于记录的较早编译摘要，未包含后续 Linter/文档修改；未测 SDK 子进程 CPU/RSS、设备 HQF/UI 或空闲会话过期，不能当作完整最终性能验收 |

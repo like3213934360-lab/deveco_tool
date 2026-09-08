@@ -55,6 +55,186 @@ function callback(url: string, nonce?: string) {
     request.once("error", reject);
   });
 }
+function formCallback(
+  url: string,
+  values: Record<string, string> = {},
+  options: {
+    host?: string;
+    contentType?: string;
+    suffix?: string;
+    chunked?: boolean;
+  } = {},
+) {
+  const entry = new URL(url),
+    port = entry.searchParams.get("port")!;
+  const body =
+    new URLSearchParams({
+      code: entry.searchParams.get("code")!,
+      siteId: "1",
+      tempToken: "fixture-temporary-token",
+      ...values,
+    }).toString() + (options.suffix ?? "");
+  return new Promise<number>((resolve, reject) => {
+    const request = http.request(
+      `http://127.0.0.1:${port}/callback`,
+      {
+        method: "POST",
+        headers: {
+          host: options.host ?? `localhost:${port}`,
+          "content-type":
+            options.contentType ??
+            "application/x-www-form-urlencoded; charset=UTF-8",
+          ...(options.chunked
+            ? {}
+            : { "content-length": String(Buffer.byteLength(body)) }),
+        },
+      },
+      (response) => {
+        response.resume();
+        response.once("end", () => {
+          try {
+            assert.equal(
+              response.headers["content-type"],
+              "text/html; charset=utf-8",
+            );
+            assert.equal(response.headers["cache-control"], "no-store");
+            assert.equal(response.headers["referrer-policy"], "no-referrer");
+            resolve(response.statusCode!);
+          } catch (error) {
+            reject(error);
+          }
+        });
+      },
+    );
+    request.setTimeout(2000, () =>
+      request.destroy(new Error("Callback timeout")),
+    );
+    request.once("error", reject);
+    if (options.chunked) {
+      request.write(body.slice(0, 100));
+      request.end(body.slice(100));
+    } else request.end(body);
+  });
+}
+
+test("current browser form POST authenticates, rejects ambiguous and oversized callbacks, and exchanges only once", async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-auth-form-"));
+  const store = new StateStore(root),
+    processes = new ProcessService(),
+    auth = new AuthService(store, processes);
+  const exchange = Promise.withResolvers<void>();
+  let exchanges = 0;
+  t.mock.method(globalThis, "fetch", async (input: string | URL | Request) => {
+    if (String(input).includes("/temptoken/check")) {
+      exchanges++;
+      await exchange.promise;
+      return new Response(sessionToken());
+    }
+    return Response.json({
+      status: true,
+      userInfo: { accessToken: "fixture-access-secret" },
+    });
+  });
+  try {
+    const login = await auth.login("developer", false);
+    assert.equal(
+      await formCallback(login.login_url, {}, { host: "attacker.example" }),
+      400,
+    );
+    assert.equal(await formCallback(login.login_url, { code: "wrong" }), 400);
+    assert.equal(
+      await formCallback(
+        login.login_url,
+        {},
+        { contentType: "application/json" },
+      ),
+      415,
+    );
+    assert.equal(
+      await formCallback(login.login_url, {}, { suffix: "&code=duplicate" }),
+      400,
+    );
+    assert.equal(
+      await formCallback(login.login_url, { tempToken: "x".repeat(65537) }),
+      413,
+    );
+    assert.equal(
+      await formCallback(
+        login.login_url,
+        { tempToken: "x".repeat(65537) },
+        { chunked: true },
+      ),
+      413,
+    );
+    assert.equal(auth.status("developer").login_pending, true);
+    assert.equal(exchanges, 0);
+    assert.equal(
+      await formCallback(login.login_url, {}, { chunked: true }),
+      200,
+    );
+    assert.equal(await formCallback(login.login_url), 409);
+    assert.equal(exchanges, 1);
+    exchange.resolve();
+    const deadline = performance.now() + 2000;
+    while (!auth.status("developer").logged_in) {
+      assert.ok(performance.now() < deadline);
+      await delay(5);
+    }
+    assert.deepEqual(auth.status("developer").callback, {
+      received: 8,
+      rejected: 7,
+      accepted: true,
+      last_rejection: "CALLBACK_ALREADY_FINISHED",
+    });
+    const visible = JSON.stringify(auth.status("developer"));
+    for (const secret of [
+      "fixture-temporary-token",
+      "fixture-access-secret",
+      new URL(login.login_url).searchParams.get("code")!,
+    ])
+      assert.equal(visible.includes(secret), false);
+  } finally {
+    exchange.resolve();
+    await auth.close();
+    await processes.close();
+    store.close();
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("browser authorization cancellation ends login without waiting for timeout or storing credentials", async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-auth-cancel-"));
+  const store = new StateStore(root),
+    processes = new ProcessService(),
+    auth = new AuthService(store, processes);
+  const remote = t.mock.method(globalThis, "fetch", async () => {
+    throw new Error("Cancellation must not contact cloud");
+  });
+  try {
+    const login = await auth.login("developer", false);
+    assert.equal(
+      await formCallback(login.login_url, {
+        quit: "access_denied",
+        tempToken: "",
+        siteId: "",
+      }),
+      200,
+    );
+    const deadline = performance.now() + 2000;
+    while (auth.status("developer").login_pending) {
+      assert.ok(performance.now() < deadline);
+      await delay(5);
+    }
+    assert.equal(auth.status("developer").error?.code, "LOGIN_CANCELLED");
+    assert.equal(auth.status("developer").logged_in, false);
+    assert.equal(remote.mock.callCount(), 0);
+  } finally {
+    await auth.close();
+    await processes.close();
+    store.close();
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
 async function loggedIn(auth: AuthService) {
   const login = await auth.login("developer", false);
   assert.equal(await callback(login.login_url, "wrong-nonce"), 400);

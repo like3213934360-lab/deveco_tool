@@ -541,10 +541,10 @@ export class SignatureService {
     return this.store.lease(
       `signing:${team}`,
       async () => {
-        const certificates = async () =>
-          z
+        const certificates = async () => {
+          const result = z
             .array(certificateSchema)
-            .parse(
+            .safeParse(
               (
                 await this.request(
                   team,
@@ -555,9 +555,18 @@ export class SignatureService {
                 )
               ).certList,
             );
+          invariant(
+            result.success,
+            "SIGN_CLOUD_RESPONSE_INVALID",
+            "Cloud service returned an invalid certificate inventory",
+          );
+          return result.data;
+        };
         const devices = async () => {
           const devices: { id: string; udid: string; deviceName: string }[] =
             [];
+          const seen = new Set<string>();
+          let total: number | undefined;
           for (let page = 1; page <= 100; page++) {
             const response = await this.request(
               team,
@@ -568,20 +577,47 @@ export class SignatureService {
             );
             const result = z
               .object({
-                list: z.array(
-                  z.object({
-                    id: z.string(),
-                    udid: z.string(),
-                    deviceName: z.string(),
-                  }),
-                ),
-                total: z.number().int().nonnegative(),
+                list: z
+                  .array(
+                    z.object({
+                      id: z.string().min(1),
+                      udid: z.string(),
+                      deviceName: z.string(),
+                    }),
+                  )
+                  .max(100),
+                totalCount: z.number().int().nonnegative(),
               })
-              .parse(response);
-            devices.push(...result.list);
-            if (devices.length >= result.total) return devices;
+              .safeParse(response);
             invariant(
-              result.list.length > 0,
+              result.success,
+              "SIGN_CLOUD_RESPONSE_INVALID",
+              "Cloud service returned an invalid device inventory",
+            );
+            const data = result.data;
+            total ??= data.totalCount;
+            invariant(
+              total === data.totalCount,
+              "SIGN_INVENTORY_CHANGED",
+              "Device inventory changed during pagination; repeat the read",
+            );
+            for (const device of data.list) {
+              invariant(
+                !seen.has(device.id),
+                "SIGN_PAGINATION_INVALID",
+                "Device inventory repeated an item during pagination",
+              );
+              seen.add(device.id);
+              devices.push(device);
+            }
+            invariant(
+              devices.length <= total,
+              "SIGN_PAGINATION_INVALID",
+              "Device inventory exceeds its declared total",
+            );
+            if (devices.length === total) return devices;
+            invariant(
+              data.list.length > 0,
               "SIGN_PAGINATION_INVALID",
               "Incomplete device inventory",
             );

@@ -89,7 +89,9 @@
         "src/services/signature.ts"
       ],
       "checks": [
-        "test/native-reports.test.ts"
+        "test/native-reports.test.ts",
+        "test/native-cloud-inventory.test.ts",
+        "scripts/native-auth-mcp-acceptance.ts"
       ],
       "behavior": "本地签名与云端证书/Profile 分开调用，使用开发者认证。",
       "parameters": {
@@ -98,8 +100,8 @@
           "replacement": "需要按本条能力确认新参数或明确删除理由"
         },
         "team_id": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "mapped",
+          "replacement": "app_signature.team_id 必须显式指定；harmony_auth.teams 查询团队，不能自动跨团队选择"
         },
         "product": {
           "status": "mapped",
@@ -116,11 +118,13 @@
       },
       "actions": [],
       "remaining": [
-        "完整云端证书/Profile/团队验收",
+        "完整云端证书/Profile 变更与签名安装验收；团队/证书/设备只读清单已通过",
         "原 force 与自动签名选择策略对照"
       ],
       "acceptance": "pending",
-      "evidence": []
+      "evidence": [
+        "docs/native-authentication.md"
+      ]
     },
     {
       "source": "apply_changes",
@@ -232,21 +236,24 @@
         "src/services/knowledge.ts"
       ],
       "checks": [
-        "test/native-resources.test.ts"
+        "test/native-resources.test.ts",
+        "scripts/native-auth-mcp-acceptance.ts"
       ],
       "behavior": "显式选择云端知识；认证与签名隔离。",
       "parameters": {
         "question": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "replaced",
+          "replacement": "harmony_knowledge action=search、source=cloud、query；使用独立 codegenie 认证"
         }
       },
       "actions": [],
       "remaining": [
-        "实际云端网络和认证验证"
+        "云端过期认证重试与异常响应回归；真实大结果制品完整读取验收"
       ],
       "acceptance": "pending",
-      "evidence": []
+      "evidence": [
+        "docs/native-authentication.md"
+      ]
     },
     {
       "source": "build_project",
@@ -470,20 +477,22 @@
         "tool:harmony_auth"
       ],
       "adapters": [
-        "src/services/auth.ts"
+        "src/services/auth.ts",
+        "src/services/auth-callback.ts"
       ],
       "checks": [
-        "test/native-runtime.test.ts"
+        "test/native-auth.test.ts",
+        "scripts/native-auth-mcp-acceptance.ts"
       ],
       "behavior": "provider=developer 的登录、登出、状态和团队查询。",
       "parameters": {
         "action": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "replaced",
+          "replacement": "harmony_auth action=login/status/logout/teams，provider=developer；team_list 改为 teams"
         },
         "project_path": {
-          "status": "mapped",
-          "replacement": "project_path；请求提交时固定工程"
+          "status": "removed",
+          "replacement": "认证属于 provider 和本地状态目录，不随项目切换；新版不接受 project_path"
         },
         "timeoutMs": {
           "status": "replaced",
@@ -494,33 +503,35 @@
         {
           "field": "action",
           "value": "login",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "mapped",
+          "replacement": "harmony_auth action=login，provider=developer"
         },
         {
           "field": "action",
           "value": "logout",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "mapped",
+          "replacement": "harmony_auth action=logout，provider=developer"
         },
         {
           "field": "action",
           "value": "status",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "mapped",
+          "replacement": "harmony_auth action=status，provider=developer"
         },
         {
           "field": "action",
           "value": "team_list",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "replaced",
+          "replacement": "harmony_auth action=teams，provider=developer"
         }
       ],
       "remaining": [
-        "实际开发者登录/刷新/团队验收"
+        "实际过期凭据刷新及云端拒绝/登出验收；不同操作系统浏览器支持范围"
       ],
       "acceptance": "pending",
-      "evidence": []
+      "evidence": [
+        "docs/native-authentication.md"
+      ]
     },
     {
       "source": "deveco_doctor",
