@@ -255,3 +255,26 @@ dev-11 完整性能采集确认 LSP 各 1,000 次 P95 为原生 2.427 ms、旧�
 提交 `582c656` 的 CI 34273343790 已完成：五组回归和安装通过，最后因上游评审摘要过期失败；Windows Node22 的 Unicode 测试工程复制缺失，导致 SDK 检查之前 ENOENT，UI 歧义用例已通过。当前改为 Node JavaScript 复制遍历并在启动 MCP 前验证工程实际存在，保留 TOOLCHAIN_MISSING 断言，修复后的 Windows 结果待新 CI。
 
 已对照旧 `detect_sdk` 无参数入口和 `apply_changes` 冷/热路径，分别以当前 SDK/回归、56 项多模块和 11 项 HQF 报告接收这两行迁移。累计 16 行有接收记录，31 行 pending；其余历史凭证仍须刷新到最终版本。80 条上游规则重新核对，code/CLI 的 13/34 项当前报告已接收，旧回执归档；`release_ready` 仍为 false。完整性能、最终同版长稳、真实 Windows/Linux SDK、多显示器和其他迁移场景未完成，main 未合并。
+
+
+## 2026-09-09 dev16 平台矩阵及未知目标录制补验
+
+提交 `e3b7c26` 的 [CI 34276927746](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34276927746) 六组全部通过。macOS/Ubuntu 的 Node22/24 各 352 项回归，Windows Node22/24 各 341 项适用回归，均零失败、取消、跳过；六组各 10 项干净安装通过并关闭，Windows 两组各 20 轮进程压力检查通过。原始制品保存在 `20260909-native6-platform-ci-e3b7c26-1`。这证明基础平台和分发路径，不能代替 Windows/Linux 的真实 HarmonyOS SDK、设备或模拟器验收。
+
+同一 dev16 字节的私有补充驱动 `20260909-native6-unknown-recording-dev16-1` 通过 14 项实际 MCP/Worker 真机检查：未知目标生成空录制、重复键去重、录制阻止热重载启动、MCP 重启后恢复、中文输入与点击、最终断言后保存，以及保存后的目标重放。驱动完整关闭；它不是仓库标准验收入口，也没有据此关闭整行 ui_flow 的其他迁移缺口。
+
+后续多模块 watch 补测复现新的运行问题：磁盘增量缓存将部分 HotReloadArkTS 任务判为 UP-TO-DATE，没有创建新进程所需的 watch worker；基线只接受单个 HAP，且 feature 类型与模块根目录导出源码未完整纳入热补丁范围。保留 `20260909-native6-multi-hot-dev16-1` 的 needs_input 任务和两轮独立 SDK 协议探测结果。实际 SDK 已确认 HAP/HSP 联合任务、首次 watch 非增量构建可创建三个 worker。修复后的完整包部署、多模块补丁与跨进程竞争正在独立验收，dev16 报告不能视为修复后版本通过。
+
+## 2026-09-09 多模块 watch 收尾（dev22）
+
+真机统一验收发现并修复了五类问题：新 watch 命中 Hvigor 增量缓存时没有启动全部编译 worker；基线只取一个 HAP、漏装 feature/HSP；模块根目录的 HAR/HSP ArkTS 源文件未纳入变更检测；另一进程持有工程锁等待长期 watch 锁造成互相等待；后续 HQF 只包含最新改动，覆盖先前 HAR 补丁，且各模块分别递增会产生不一致版本号。
+
+现在新 watch 执行完整基线任务，HAP/HSP 按模块类型整组校验并部署；源文件追踪包含模块根目录，feature 参与依赖映射。竞争进程在取得工程锁后立即拒绝已有 watch。每轮 HQF 包含会话累计修改（包括恢复原代码），整组使用同一递增版本；设备拒绝时保留可读取的回执制品。普通冷构建及补丁编译继续使用增量构建。
+
+新增 `native-hot-multimodule-acceptance.ts`。`20260909-native6-multi-hot-dev22-formal-1` 的 18 项通过，包括三模块基线、跨进程拒绝后原会话可继续、三轮联合补丁与真实界面断言、撤回 HAR 修改、无源码改动的新 watch、源码恢复和关闭。单模块 preview 的 11 项、全量回归 354 项、SDK 24 项、静态检查 13 项、Linter 6 项均通过。运行摘要 `0adac632b689bf66af02e807119dcdc70e71dee617cd00df25cb969f9f8372a1`，227 个 TS 文件编译摘要 `5e3a48daa0881876eea7c35a1aabf9858d660d0d1e06028ee6402abce004b69e`。多模块脚本使用真实 SDK/设备和直接 Runtime，不计作 MCP Worker 长稳。
+
+dev16/dev18 的 worker 数量和锁等待失败、dev19 的后续补丁回退失败、dev20 的不同版本 HQF 拒绝均保留原始报告；dev21 的修复探测通过。dev22 认证第一次误选历史状态目录，握手后失败；改用当前已登录宿主状态，10 项实际 MCP/Worker 认证和云知识读取通过，没有重新创建云端签名资产。
+
+`tools:hot_reload` 凭当前三份检查报告接收，累计 17 行有迁移记录、30 行 pending。其余历史记录仍须在最终身份刷新。最终平台矩阵、性能、长稳、真实其他平台 SDK、升级回退及剩余场景尚未全部完成，main 尚未合并。
+
+同版 dev22 的多产品/目标/模块冷部署 56 项、设备只读 14 项、真实崩溃日志 6 项、模拟器只读及生命周期各 7 项、个人签名包重新验签通过；固定 UI 树实际 MCP 查询 18,000 次、九组 P95 对比通过。80 条上游映射规则复核并接收 code/CLI 的 13/34 项当前报告，历史回执归档；上游门禁通过，正式发布门禁仍未通过。

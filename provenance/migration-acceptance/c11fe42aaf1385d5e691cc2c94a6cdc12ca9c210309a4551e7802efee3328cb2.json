@@ -1,0 +1,33 @@
+{
+  "format": 1,
+  "passed": true,
+  "source": "tools:hot_reload",
+  "row_sha256": "1cb0cbb96fefbb8748d34b3d9bb6b8a6e0e6a325417ccd68dbb0f5a88f2657b1",
+  "tested": {
+    "runtime_sha256": "0adac632b689bf66af02e807119dcdc70e71dee617cd00df25cb969f9f8372a1",
+    "compiled_sha256": "5e3a48daa0881876eea7c35a1aabf9858d660d0d1e06028ee6402abce004b69e",
+    "package_lock_sha256": "68641e488a5099852216d3003664f57dd1d05b980f4c7813ee75dd7baf83d0fc",
+    "resource_manifest_sha256": "563bc3f06565e92c59c621c3ef909a37cbc4ac1db958d3d73d6e0bc99bf9ed86",
+    "upstream_lock_sha256": "bf3cc411831bd8ce6652a8085c8247c399d0c48b6d73156a7e649b9ef668164e"
+  },
+  "reviewer": "Codex native runtime review",
+  "reason": "Reviewed current watch/session and device deployment changes against real SDK behavior. Node24/macOS regressions, personally signed preview watch, and entry/feature/HSP plus HAR device fixture prove worker readiness, cross-process refusal without deadlock, cumulative HQFs with one version, HAR reversal, unchanged-source restart, final UI assertions and closure. This receipt does not claim other SDK platforms or device families.",
+  "completed_scenarios": [
+    "多模块/设备热补丁范围；专用个人签名应用的两次 HQF 和最终文字断言已通过",
+    "启动等待与跨进程会话竞争"
+  ],
+  "checks": [
+    {
+      "check": "test/native-hotreload.test.ts",
+      "original_sha256": "302a2768354cde8402d486ae4ab079eec0a151a1f9f913f59f5898cc8b29e1aa"
+    },
+    {
+      "check": "scripts/native-hot-device-acceptance.ts",
+      "original_sha256": "303964bc054f28c3321ffeafd66c057b98bad7c6d6938bed3caecefcf9e317b5"
+    },
+    {
+      "check": "scripts/native-hot-multimodule-acceptance.ts",
+      "original_sha256": "9955b8050586766ae999c832a35ad1edcffa8a791b485fa6107c514a945548f7"
+    }
+  ]
+}

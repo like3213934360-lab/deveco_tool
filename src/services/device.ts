@@ -485,21 +485,20 @@ export class DeviceService {
   }
   async deploy(
     target: string,
-    artifact: string,
+    artifacts: readonly string[],
     app: { bundle_name: string; module?: string; ability: string },
     signal?: AbortSignal,
   ) {
     return this.store.lease(
       `device:${target}`,
       async () => {
-        const captured = await captureFile(
-          this.store,
-          currentTrace().run_id ?? "deployment",
-          artifact,
-          undefined,
-          signal,
-        );
-        const installed = await this.install(target, [captured], app, signal);
+        invariant(artifacts.length > 0 && artifacts.length <= 64,
+          "PACKAGE_COUNT_INVALID", "Provide between 1 and 64 application packages");
+        const captured: CapturedFile[] = [];
+        for (const artifact of artifacts) captured.push(await captureFile(
+          this.store, currentTrace().run_id ?? "deployment", artifact, undefined, signal,
+        ));
+        const installed = await this.install(target, captured, app, signal);
         return { ...installed, ...(await this.launch(target, app, signal)) };
       },
       signal,

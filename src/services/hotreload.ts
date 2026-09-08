@@ -6,7 +6,7 @@ import { DeviceEffectJournal, type DeviceReceipt } from "./device-effect.js";
 import { withTrace } from "../core/trace.js";
 import { z } from "zod";
 import { HvigorSession } from "./hvigor/session.js";
-import { HotConfiguration, hotPaths } from "./hvigor/hot-config.js";
+import { HotConfiguration, hotPaths, assertNoHotWatch } from "./hvigor/hot-config.js";
 import type { BuildOptions } from "./hvigor/protocol.js";
 import { appSchema, tools } from "../core/contracts.js";
 import { invariant, object, ToolError } from "../core/errors.js";
@@ -30,16 +30,80 @@ import { currentTrace } from "../core/trace.js";
 import { ProjectService, projectTargets, type Project, type ProjectSelection } from "./project.js";
 import { DeviceService } from "./device.js";
 import { SignatureService } from "./signature.js";
+import { inspectApplicationPackages, readPackageMetadata } from "./package.js";
 
 type App = z.infer<typeof appSchema>;
+
+function hotModuleType(module: Project["modules"][number]): string {
+  return z.object({ module: z.object({ type: z.string() }) })
+    .parse(readObject(path.join(module.root, "src/main/module.json5"))).module.type;
+}
+
+/** HSPs need their own assembly task, while both entry and feature produce HAPs. */
+export function hotBaselineTasks(modules: Project["modules"]): BuildOptions["_"] {
+  const types = modules.map(hotModuleType);
+  invariant(types.length > 0 && types.every((type) => ["entry", "feature", "shared"].includes(type)),
+    "HOT_MODULE_INVALID", "Watch modules must be entry, feature or shared modules");
+  return [
+    ...(types.some((type) => type !== "shared") ? ["assembleHap" as const] : []),
+    ...(types.includes("shared") ? ["assembleHsp" as const] : []),
+  ];
+}
+
+/** Read the selected target's outputs and reject missing or stale module identities
+ * before any device effect. The complete shared dependency set travels together. */
+export async function hotBaselinePackages(projects: ProjectService, project: Project, modules: Project["modules"], app: App, signal?: AbortSignal) {
+  const packages: { path: string; sha256: string; bytes: number }[] = [];
+  const metadata: Awaited<ReturnType<typeof readPackageMetadata>>[] = [];
+  for (const module of modules) {
+    const type = hotModuleType(module), shared = type === "shared";
+    const artifacts = projects.buildArtifacts(project, [module.root], shared ? "assembleHsp" : "assembleHap")
+      .filter((artifact) => artifact.path.endsWith(shared ? "-signed.hsp" : "-signed.hap"));
+    invariant(artifacts.length === 1, "HOT_BASE_ARTIFACT_AMBIGUOUS", `Expected one signed baseline for ${module.name}@${module.target}`);
+    const artifact = artifacts[0]!, identity = await readPackageMetadata(artifact.path, signal);
+    invariant(identity.module.name === module.name && identity.module.type === type,
+      "HOT_BASE_MODULE_MISMATCH", "Watch baseline does not match its selected module");
+    packages.push(artifact);
+    metadata.push(identity);
+  }
+  await inspectApplicationPackages(packages.map((artifact) => artifact.path), app, signal);
+  for (const item of metadata) for (const dependency of item.module.dependencies) {
+    invariant((!dependency.bundleName || dependency.bundleName === app.bundle_name) &&
+      metadata.some((other) => other.module.type === "shared" && other.module.name === dependency.moduleName),
+      "HOT_BASE_DEPENDENCY_MISSING", "Include every application HSP dependency in the watch module selection");
+  }
+  return packages;
+}
+
+/** A package set has one patch version, even after only one module changed. */
+export function nextHotPatchVersion(modules: Project["modules"], app: { bundleName: string; versionCode: number }): number {
+  let version = 2000000;
+  for (const module of modules) {
+    const patchFile = path.join(module.root, "patch.json");
+    if (!fs.existsSync(patchFile)) continue;
+    const old = z.object({ app: z.object({
+      bundleName: z.string(), versionCode: z.number(),
+      patchVersionCode: z.number().int().nonnegative().max(2147483646),
+    }) }).parse(readObject(patchFile));
+    invariant(old.app.bundleName === app.bundleName && old.app.versionCode === app.versionCode,
+      "HOT_PATCH_BASE_CHANGED", "Existing patch belongs to a different application version");
+    version = Math.max(version, old.app.patchVersionCode + 1);
+  }
+  return version;
+}
 
 export function sourceFiles(project: Project): Map<string, string> {
   return new Map(
     project.modules.flatMap((module) => {
       const root = path.join(module.root, "src");
-      return fs.existsSync(root)
-        ? walk(root).map((file) => [file, fileDigest(file)] as const)
-        : [];
+      // Libraries commonly expose Index.ets beside oh-package.json5. Such
+      // sources still belong to the watch baseline even though they are outside src.
+      const files = new Set([
+        ...(fs.existsSync(root) ? walk(root) : []),
+        ...walk(module.root, new Set([".ets", ".ts"]))
+          .filter((file) => file !== path.join(module.root, "hvigorfile.ts")),
+      ]);
+      return [...files].map((file) => [file, fileDigest(file)] as const);
     }),
   );
 }
@@ -107,7 +171,7 @@ export function hotChanges(
       const name = pending.pop()!;
       if (seen.has(name)) continue;
       seen.add(name);
-      if (["entry", "shared"].includes(types.get(name) ?? "")) {
+      if (["entry", "feature", "shared"].includes(types.get(name) ?? "")) {
         result.set(name, [...(result.get(name) ?? []), file]);
         consumers++;
       } else pending.push(...(reverse.get(name) ?? []));
@@ -131,6 +195,7 @@ interface WatchSession {
   toolchain: Toolchain;
   guard: ReturnType<StateStore["trackExternalSession"]>;
   files: Map<string, string>;
+  patchedFiles: Set<string>;
   release: () => void;
   finished: Promise<void>;
   created: number;
@@ -140,6 +205,7 @@ interface WatchSession {
 const readyPatchSchema = z.object({
   target: z.string(), app: appSchema, before_pid: z.string(),
   sources: z.array(z.tuple([z.string(), z.string()])),
+  patched_files: z.array(z.string()).min(1),
   patches: z.array(capturedFileSchema).min(1).max(64),
   patch_versions: z.record(z.string(), z.number()), changed_files: z.number(),
   toolchain_hash: z.string(), compile_log: z.object({ artifact_id: z.string(), bytes: z.number(), mime: z.string() }).passthrough(),
@@ -276,6 +342,10 @@ export class HotReloadService {
             "HOT_SESSION_EXISTS",
             "Stop the current watch before starting another",
           );
+          // A peer owns watch for its entire session but releases project after
+          // startup. Never hold project while waiting for that peer's watch lock:
+          // its apply/stop operations need project to make progress.
+          assertNoHotWatch(project);
           invariant(
             this.sessions.size + this.starting < 4,
             "HOT_SESSION_LIMIT",
@@ -292,7 +362,7 @@ export class HotReloadService {
               modules = input.modules
                 ? project.modules.filter((m) => input.modules!.includes(m.name))
                 : project.modules.filter((m) =>
-                    ["entry", "shared"].includes(
+                    ["entry", "feature", "shared"].includes(
                       String(
                         object(
                           readObject(path.join(m.root, "src/main/module.json5"))
@@ -308,6 +378,7 @@ export class HotReloadService {
               "HOT_MODULE_INVALID",
               "Invalid runnable module selection",
             );
+            hotBaselineTasks(modules);
             this.assertDeviceIdle(target);
             this.signatures.projectOptions(project); // Fail before building/installing if patch signing cannot work.
             const deviceType = (
@@ -359,17 +430,7 @@ export class HotReloadService {
                 signal,
               );
               assertHotSourcesUnchanged(project, baseline);
-              const haps = this.projects
-                .buildArtifacts(
-                  project,
-                  modules.map((m) => m.root),
-                )
-                .filter((a) => a.path.endsWith("-signed.hap"));
-              invariant(
-                haps.length === 1 && haps[0],
-                "HOT_BASE_ARTIFACT_AMBIGUOUS",
-                "Select one signed application module for hot reload",
-              );
+              const packages = await hotBaselinePackages(this.projects, project, modules, input.app, signal);
               await this.store.lease(
                 `device:${target}`,
                 () => {
@@ -378,7 +439,7 @@ export class HotReloadService {
                   this.assertDeviceIdle(target);
                   return this.devices.deploy(
                     target,
-                    haps[0]!.path,
+                    packages.map((artifact) => artifact.path),
                     input.app!,
                     signal,
                   );
@@ -398,6 +459,7 @@ export class HotReloadService {
                 // Edits made during device installation belong to the next patch,
                 // not to the already compiled and installed baseline.
                 files: baseline,
+                patchedFiles: new Set(),
                 release: hold.resolve,
                 finished,
                 created: Date.now(),
@@ -408,7 +470,7 @@ export class HotReloadService {
                 active: true,
                 target,
                 project_path: project.root,
-                baseline_sha256: haps[0].sha256,
+                baseline_packages: packages,
               };
             } catch (error) {
               try {
@@ -470,7 +532,7 @@ export class HotReloadService {
     sdk: string,
   ): BuildOptions {
     return {
-      _: [watch ? "assembleHap" : "assembleDevHqf"],
+      _: watch ? hotBaselineTasks(modules) : ["assembleDevHqf"],
       mode: "module",
       daemon: true,
       ...(watch ? { watch: true, hotReloadBuild: true } : { hotCompile: true }),
@@ -482,7 +544,9 @@ export class HotReloadService {
         `requiredDeviceType=${deviceType}`,
       ],
       parallel: true,
-      incremental: true,
+      // An on-disk UP-TO-DATE result cannot recreate a previous process's watch
+      // workers. Every new baseline must execute the SDK's watch compile tasks.
+      incremental: !watch,
       analyze: "normal",
       env: { DEVECO_SDK_HOME: sdk },
     };
@@ -522,7 +586,11 @@ export class HotReloadService {
       "COLD_DEPLOY_REQUIRED",
       "Added or removed files require cold incremental deployment",
     );
-    const changes = hotChanges(project, changed),
+    // Each HQF replaces that module's previous patch against the installed
+    // baseline. Retain earlier changed files, including explicit reversions,
+    // so a later edit cannot silently restore a previously patched HAR body.
+    const patchedFiles = [...new Set([...session.patchedFiles, ...changed])];
+    const changes = hotChanges(project, patchedFiles),
       modules = project.modules.filter((m) => changes.has(m.name));
     invariant(
       modules.every((m) => session.modules.some((w) => w.name === m.name)),
@@ -542,6 +610,7 @@ export class HotReloadService {
       "HOT_BUNDLE_MISMATCH",
       "Watch application does not match the project",
     );
+    const version = nextHotPatchVersion(session.modules, appInfo);
     const patchVersions: Record<string, number> = {};
     for (const module of modules) {
       const entries = changes.get(module.name)!,
@@ -577,25 +646,6 @@ export class HotReloadService {
         atomicWrite(file, JSON.stringify(data));
       }
       const patchFile = path.join(module.root, "patch.json");
-      let version = 2000000;
-      if (fs.existsSync(patchFile)) {
-        const old = z
-          .object({
-            app: z.object({
-              bundleName: z.string(),
-              versionCode: z.number(),
-              patchVersionCode: z.number().int().nonnegative(),
-            }),
-          })
-          .parse(readObject(patchFile));
-        invariant(
-          old.app.bundleName === app.bundle_name &&
-            old.app.versionCode === appInfo.versionCode,
-          "HOT_PATCH_BASE_CHANGED",
-          "Existing patch belongs to a different application version",
-        );
-        version = old.app.patchVersionCode + 1;
-      }
       patchVersions[module.name] = version;
       atomicWrite(
         patchFile,
@@ -683,7 +733,7 @@ export class HotReloadService {
       const retained: ReadyPatch["patches"] = [];
       for (const file of patches) retained.push(await captureFile(this.store, currentTrace().run_id ?? "hot_reload", file, undefined, signal));
       const prepared = await this.store.privateMemo("hot-ready", { project: project.root, product: project.product.name, module_targets: projectTargets(project) }, async () => ({
-        target, app, before_pid: before, sources: [...current], patches: retained,
+        target, app, before_pid: before, sources: [...current], patched_files: patchedFiles, patches: retained,
         patch_versions: patchVersions, changed_files: changed.length, toolchain_hash: digest(toolchain),
         compile_log: this.store.artifact(currentTrace().run_id ?? "hot_reload", JSON.stringify(session.connection.log()), "application/json"),
       }), (value) => readyPatchSchema.parse(value));
@@ -715,7 +765,12 @@ export class HotReloadService {
       }
       const args = ["bm", "quickfix", "-a", "-f", ...remoteFiles, "-d", "-o"];
       const accept = (receipt: DeviceReceipt) => {
-        invariant(receipt.exitCode === 0 && /succe(?:ss|ed)/i.test(receipt.stdout) && !/fail|error:/i.test(receipt.stdout), "HOT_APPLY_UNCONFIRMED", "Device did not confirm quickfix application");
+        if (receipt.exitCode !== 0 || !/succe(?:ss|ed)/i.test(receipt.stdout) || /fail|error:/i.test(receipt.stdout)) {
+          throw new ToolError("HOT_APPLY_UNCONFIRMED", "Device did not confirm quickfix application", {
+            exitCode: receipt.exitCode,
+            receipt: this.store.artifact(trace.run_id ?? "hot_reload", receipt.stdout),
+          });
+        }
         return { accepted: true, stdout: receipt.stdout };
       };
       const receipt = durable ? await new DeviceEffectJournal(this.store, this.devices).run(target, "quickfix", args, accept, signal, false, 180000)
@@ -727,7 +782,7 @@ export class HotReloadService {
       invariant(after === prepared.before_pid, "HOT_APP_RESTARTED", "Application process changed during hot reload");
       this.devices.invalidate(target);
       const session = this.sessions.get(this.key(project));
-      if (session) { session.files = new Map(prepared.sources); session.lastUsed = Date.now(); }
+      if (session) { session.files = new Map(prepared.sources); session.patchedFiles = new Set(prepared.patched_files); session.lastUsed = Date.now(); }
       return { applied: true, processPreserved: true, outcomeVerified: false, patch_versions: prepared.patch_versions,
         files: prepared.changed_files, receipt: this.store.artifact(trace.run_id ?? "hot_reload", receipt.stdout), compile_log: prepared.compile_log };
     }, signal);

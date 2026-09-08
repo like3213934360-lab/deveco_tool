@@ -91,3 +91,15 @@ UI 运行摘要为 `9013fe230df8872061a7f2a707c542f9f3e2551a1e38bdb13791e26dde46
 专用应用已卸载，并通过成功、未截断的完整应用清单确认包名不存在，结果保存在 `20260908-hot-device-1/cleanup.json`。专用证书已按记录的精确 ID 删除，随后读取个人团队完整证书清单确认 ID 不存在。调试 Profile 未返回远程 ID，清理标记为不适用，没有调用 Profile 删除接口。私有本地材料仅作验收追溯保留，不作为用户业务工程签名配置。
 
 仍需覆盖真实签名操作中断后的外部状态核对、过期认证刷新、更多签名类型、多包部署、其他 SDK/设备平台及完整性能门槛。根包已使用 `dist/src/cli.js`，旧源码入口已删除；当前宿主配置迁移仍需完整新安装及检查。历史通过不等于当前重构完成。
+
+## 多模块热补丁验收
+
+`hot_reload.start` 可选择 entry、feature、shared 模块。新 watch 构建并安装完整的签名 HAP/HSP 集合；所依赖的应用 HSP 必须包含在模块选择中。HAR 改动传播到消费模块，模块根目录中的 ArkTS 文件也参与检测。后续 HQF 保留本次 watch 累计改动，并为整组分配相同版本号；撤回某个源文件的修改不会丢弃其他已应用修改。
+
+已通过的隔离多模块签名夹具可复用以下检查。最后一个参数的设备 UDID 必须与原个人签名准备一致；脚本操作界面并在结束时恢复它修改的三个源文件。
+
+```sh
+node dist/scripts/native-hot-multimodule-acceptance.js /absolute/new-hot-evidence /absolute/passed-multimodule-evidence /absolute/signing-preparation /absolute/signing-evidence DEVICE_ID
+```
+
+同组 HQF 的版本字段约束参见[华为打包工具说明](https://developer.huawei.com/consumer/cn/doc/doccenter-capabilities/packing-tool)。当前真机范围仍为上述 macOS/Node24/SDK26 环境，详见完成清单。

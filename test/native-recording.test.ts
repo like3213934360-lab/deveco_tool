@@ -6,6 +6,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { setTimeout as delay } from "node:timers/promises";
 import { z } from "zod";
+import AdmZip from "adm-zip";
 import { Runtime } from "../src/services/runtime.js";
 import { recordedStep } from "../src/services/recording.js";
 import {
@@ -844,6 +845,12 @@ test("hot baseline installation and patch application honor a recording created 
     building = Promise.withResolvers<void>(),
     finishBuild = Promise.withResolvers<void>();
   let builds = 0;
+  const baseline = new AdmZip();
+  baseline.addFile("module.json", Buffer.from(JSON.stringify({
+    app: { bundleName: bundle, versionCode: 1, versionName: "1.0.0" },
+    module: { name: "entry", type: "entry", abilities: [{ name: "MainAbility" }] },
+  })));
+  baseline.writeZip(path.join(f.root, "fixture-signed.hap"));
   t.mock.method(f.runtime.signatures, "projectOptions", () => ({}));
   t.mock.method(f.runtime.projects, "sync", async () => ({}));
   t.mock.method(f.runtime.projects, "buildArtifacts", () => [
@@ -933,6 +940,14 @@ test("hot baseline installation and patch application honor a recording created 
       1,
       "An unrelated device recording must not block the baseline",
     );
+    const peer = new Runtime();
+    try {
+      await assert.rejects(peer.hot.call({
+        action: "start", modules: ["entry"],
+        app: { bundle_name: bundle, module: "entry", ability: "MainAbility" },
+      }, inspectProject(f.project), AbortSignal.timeout(1000)), { code: "HOT_SESSION_ACTIVE" });
+      assert.equal(peer.processes.size, 0, "A competing owner must not start an SDK worker or wait with the project lease held");
+    } finally { await peer.close(); }
     const current = await recordInPeer("device");
     await assert.rejects(completeHot({ action: "apply" }), {
       code: "RECORDING_ACTIVE",

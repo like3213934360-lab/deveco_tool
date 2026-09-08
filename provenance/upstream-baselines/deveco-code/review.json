@@ -14,148 +14,148 @@
   "reviews": [
     {
       "rule": "code-deveco-create-project",
-      "reason": "Replace template-copy and SDK detection Skill scripts with native ProjectService and attributed application templates; project creation stays a typed durable workflow. The SDK suite now checks that a real Text definition resolves to an existing declaration file beneath the selected SDK, in addition to project and API-version builds. Current dev16 review: Actual SDK metadata is compared field by field with doctor; existing build, language, C++ and API compatibility checks remain required. Project profile bytes are reread on every selection; bounded private parsed data and its captured digest are reused only for equal bytes, and caller mutations cannot alter later selections. Regression checks uncached current bytes, same-size restored-timestamp updates, invalid profiles, and isolation from caller mutations. Current matching reports are required separately; this review does not assert complete migration, platform or release readiness.",
-      "reviewer": "Codex native TypeScript integration review"
+      "reason": "Replace template-copy and SDK detection Skill scripts with native ProjectService and attributed application templates; project creation stays a typed durable workflow. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
+      "reviewer": "Codex native runtime review"
     },
     {
       "rule": "code-deveco-cli",
-      "reason": "Translate the CLI guidance into eight fixed native workflows and direct toolchain services; do not retain the CLI dispatch or execute the upstream Skill. Recording follow-up calls reject module target replacement. Doctor metrics now expose actual MCP CPU/RSS and known owned SDK PIDs without touching watch activity timestamps; soak collection uses the published MCP entry and verifies HQF application and closure. The SDK suite now checks that a real Text definition resolves to an existing declaration file beneath the selected SDK, in addition to project and API-version builds. Current dev16 review: Acceptance verifies the original signed UDID before using a new transport address, then tests new HAR sources, HSP content and resource changes through four product/target cold deployments with actual UI assertions. No original signing receipt is rewritten. Actual SDK metadata is compared field by field with doctor; existing build, language, C++ and API compatibility checks remain required. Configure requires descriptor/output and a 1-64 alphanumeric configuration name before a Worker or durable side effect starts; other public tool contracts remain unchanged. Project profile bytes are reread on every selection; bounded private parsed data and its captured digest are reused only for equal bytes, and caller mutations cannot alter later selections. Doctor exposes default SDK API/platform/package metadata separately from tool executable versions and reports missing or malformed SDK metadata without manufacturing a successful SDK. Current matching reports are required separately; this review does not assert complete migration, platform or release readiness.",
-      "reviewer": "Codex native TypeScript integration review"
+      "reason": "Translate the CLI guidance into eight fixed native workflows and direct toolchain services; do not retain the CLI dispatch or execute the upstream Skill. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
+      "reviewer": "Codex native runtime review"
     },
     {
       "rule": "code-arkts-error-fixes",
-      "reason": "Retain attributed ArkTS defect examples as knowledge resources and apply SDK checker diagnostics through native project/report adapters; imported examples are data, not executable Skills. The SDK suite now checks that a real Text definition resolves to an existing declaration file beneath the selected SDK, in addition to project and API-version builds. The current actual stdio MCP regression explicitly configures a missing SDK and requires TOOLCHAIN_MISSING with zero SDK process starts for all three diagnostic entry points. Current dev16 review: Actual SDK metadata is compared field by field with doctor; existing build, language, C++ and API compatibility checks remain required. Actual MCP checks malformed metadata and configure rejection before Worker creation; the missing-SDK fixture uses JavaScript traversal and verifies its Unicode destination before SDK error assertions. Windows Node22 confirmation remains pending CI. Current matching reports are required separately; this review does not assert complete migration, platform or release readiness.",
-      "reviewer": "Codex native TypeScript integration review"
+      "reason": "Retain attributed ArkTS defect examples as knowledge resources and apply SDK checker diagnostics through native project/report adapters; imported examples are data, not executable Skills. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
+      "reviewer": "Codex native runtime review"
     },
     {
       "rule": "code-arkts-grammar-standards",
-      "reason": "Retain attributed grammar and ArkUI reference material in local knowledge lookup; enforce actual project checks with the selected SDK instead of treating prose as a compiler. The SDK suite now checks that a real Text definition resolves to an existing declaration file beneath the selected SDK, in addition to project and API-version builds. The current actual stdio MCP regression explicitly configures a missing SDK and requires TOOLCHAIN_MISSING with zero SDK process starts for all three diagnostic entry points. Current dev16 review: Actual SDK metadata is compared field by field with doctor; existing build, language, C++ and API compatibility checks remain required. Actual MCP checks malformed metadata and configure rejection before Worker creation; the missing-SDK fixture uses JavaScript traversal and verifies its Unicode destination before SDK error assertions. Windows Node22 confirmation remains pending CI. Current matching reports are required separately; this review does not assert complete migration, platform or release readiness.",
-      "reviewer": "Codex native TypeScript integration review"
+      "reason": "Retain attributed grammar and ArkUI reference material in local knowledge lookup; enforce actual project checks with the selected SDK instead of treating prose as a compiler. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
+      "reviewer": "Codex native runtime review"
     },
     {
       "rule": "code-arkts-runtime-fix",
-      "reason": "Retain attributed crash patterns and runtime examples; native frame and process grouping separates interleaved events before rule matching and never invents absent frames. Current collector reads bounded result artifacts before parsing and validates either candidate patterns or an explicitly unlisted subtype against original faultlog bytes. Reconnect and duplicate request checks preserve task and artifact identity. The locked source and this rule's native target and test inventories match the preceding reviewed bytes; its existing semantic scope is retained. Current dev16 review: All mapped target and test digests for this rule match the prior reviewed dev11 source; its stated adaptation or exclusion remains applicable. Current matching reports are required separately; this review does not assert complete migration, platform or release readiness.",
-      "reviewer": "Codex native TypeScript integration review"
+      "reason": "Retain attributed crash patterns and runtime examples; native frame and process grouping separates interleaved events before rule matching and never invents absent frames. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
+      "reviewer": "Codex native runtime review"
     },
     {
       "rule": "code-new-skill",
-      "reason": "The pinned tree has no files falling into this guard. Keep the unmapped fallback so a future new Skill requires a deliberate workflow, knowledge, or exclusion decision. The locked source and this rule's native target and test inventories match the preceding reviewed bytes; its existing semantic scope is retained. Current dev16 review: All mapped target and test digests for this rule match the prior reviewed dev11 source; its stated adaptation or exclusion remains applicable. Current matching reports are required separately; this review does not assert complete migration, platform or release readiness.",
-      "reviewer": "Codex native TypeScript integration review"
+      "reason": "The pinned tree has no files falling into this guard. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
+      "reviewer": "Codex native runtime review"
     },
     {
       "rule": "code-host-customization",
-      "reason": "Reviewed scope of packages/opencode/resources/skills/customize-deveco/: Configures DevEco Code's own host; this MCP does not install host skills, agents or plugins. The locked source and this rule's native target and test inventories match the preceding reviewed bytes; its existing semantic scope is retained. Current dev16 review: All mapped target and test digests for this rule match the prior reviewed dev11 source; its stated adaptation or exclusion remains applicable. Current matching reports are required separately; this review does not assert complete migration, platform or release readiness.",
-      "reviewer": "Codex native TypeScript integration review"
+      "reason": "Reviewed scope of packages/opencode/resources/skills/customize-deveco/: Configures DevEco Code's own host; this MCP does not install host skills, agents or plugins. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
+      "reviewer": "Codex native runtime review"
     },
     {
       "rule": "code-defaults.ts",
-      "reason": "Replace upstream default Skill discovery with the explicit knowledge inventory and source mapping. Native MCP does not create a host Skill registry. Additional reviewed inventory changes: provenance/upstream-mapping.json. Current dev16 review: All mapped target and test digests for this rule match the prior reviewed dev11 source; its stated adaptation or exclusion remains applicable. Current matching reports are required separately; this review does not assert complete migration, platform or release readiness.",
-      "reviewer": "Codex native TypeScript integration review"
+      "reason": "Replace upstream default Skill discovery with the explicit knowledge inventory and source mapping. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
+      "reviewer": "Codex native runtime review"
     },
     {
       "rule": "code-discovery.ts",
-      "reason": "Replace filesystem Skill discovery with attributed packaged resources and bounded local lookup; host-specific directory scanning is not installed. Additional reviewed inventory changes: provenance/upstream-mapping.json. Current dev16 review: All mapped target and test digests for this rule match the prior reviewed dev11 source; its stated adaptation or exclusion remains applicable. Current matching reports are required separately; this review does not assert complete migration, platform or release readiness.",
-      "reviewer": "Codex native TypeScript integration review"
+      "reason": "Replace filesystem Skill discovery with attributed packaged resources and bounded local lookup; host-specific directory scanning is not installed. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
+      "reviewer": "Codex native runtime review"
     },
     {
       "rule": "code-index.ts",
-      "reason": "Replace host Skill indexing and execution with typed knowledge catalog/search/read and explicit workflow contracts; source mappings retain future-change review. Additional reviewed inventory changes: provenance/upstream-mapping.json. Current dev16 review: All mapped target and test digests for this rule match the prior reviewed dev11 source; its stated adaptation or exclusion remains applicable. Current matching reports are required separately; this review does not assert complete migration, platform or release readiness.",
-      "reviewer": "Codex native TypeScript integration review"
+      "reason": "Replace host Skill indexing and execution with typed knowledge catalog/search/read and explicit workflow contracts; source mappings retain future-change review. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
+      "reviewer": "Codex native runtime review"
     },
     {
       "rule": "code-host-packages",
-      "reason": "Reviewed scope of packages/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence. The locked source and this rule's native target and test inventories match the preceding reviewed bytes; its existing semantic scope is retained. Current dev16 review: All mapped target and test digests for this rule match the prior reviewed dev11 source; its stated adaptation or exclusion remains applicable. Current matching reports are required separately; this review does not assert complete migration, platform or release readiness.",
-      "reviewer": "Codex native TypeScript integration review"
+      "reason": "Reviewed scope of packages/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
+      "reviewer": "Codex native runtime review"
     },
     {
       "rule": "code-host-script",
-      "reason": "Reviewed scope of script/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence. The locked source and this rule's native target and test inventories match the preceding reviewed bytes; its existing semantic scope is retained. Current dev16 review: All mapped target and test digests for this rule match the prior reviewed dev11 source; its stated adaptation or exclusion remains applicable. Current matching reports are required separately; this review does not assert complete migration, platform or release readiness.",
-      "reviewer": "Codex native TypeScript integration review"
+      "reason": "Reviewed scope of script/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
+      "reviewer": "Codex native runtime review"
     },
     {
       "rule": "code-host-patches",
-      "reason": "Reviewed scope of patches/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence. The locked source and this rule's native target and test inventories match the preceding reviewed bytes; its existing semantic scope is retained. Current dev16 review: All mapped target and test digests for this rule match the prior reviewed dev11 source; its stated adaptation or exclusion remains applicable. Current matching reports are required separately; this review does not assert complete migration, platform or release readiness.",
-      "reviewer": "Codex native TypeScript integration review"
+      "reason": "Reviewed scope of patches/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
+      "reviewer": "Codex native runtime review"
     },
     {
       "rule": "code-host-docs",
-      "reason": "Reviewed scope of docs/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence. The locked source and this rule's native target and test inventories match the preceding reviewed bytes; its existing semantic scope is retained. Current dev16 review: All mapped target and test digests for this rule match the prior reviewed dev11 source; its stated adaptation or exclusion remains applicable. Current matching reports are required separately; this review does not assert complete migration, platform or release readiness.",
-      "reviewer": "Codex native TypeScript integration review"
+      "reason": "Reviewed scope of docs/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
+      "reviewer": "Codex native runtime review"
     },
     {
       "rule": "code-host-specs",
-      "reason": "Reviewed scope of specs/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence. The locked source and this rule's native target and test inventories match the preceding reviewed bytes; its existing semantic scope is retained. Current dev16 review: All mapped target and test digests for this rule match the prior reviewed dev11 source; its stated adaptation or exclusion remains applicable. Current matching reports are required separately; this review does not assert complete migration, platform or release readiness.",
-      "reviewer": "Codex native TypeScript integration review"
+      "reason": "Reviewed scope of specs/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
+      "reviewer": "Codex native runtime review"
     },
     {
       "rule": "code-host-assets",
-      "reason": "Reviewed scope of assets/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence. The locked source and this rule's native target and test inventories match the preceding reviewed bytes; its existing semantic scope is retained. Current dev16 review: All mapped target and test digests for this rule match the prior reviewed dev11 source; its stated adaptation or exclusion remains applicable. Current matching reports are required separately; this review does not assert complete migration, platform or release readiness.",
-      "reviewer": "Codex native TypeScript integration review"
+      "reason": "Reviewed scope of assets/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
+      "reviewer": "Codex native runtime review"
     },
     {
       "rule": "code-host-agents",
-      "reason": "Reviewed scope of .agents/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence. The locked source and this rule's native target and test inventories match the preceding reviewed bytes; its existing semantic scope is retained. Current dev16 review: All mapped target and test digests for this rule match the prior reviewed dev11 source; its stated adaptation or exclusion remains applicable. Current matching reports are required separately; this review does not assert complete migration, platform or release readiness.",
-      "reviewer": "Codex native TypeScript integration review"
+      "reason": "Reviewed scope of .agents/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
+      "reviewer": "Codex native runtime review"
     },
     {
       "rule": "code-host-opencode",
-      "reason": "Reviewed scope of .opencode/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence. The locked source and this rule's native target and test inventories match the preceding reviewed bytes; its existing semantic scope is retained. Current dev16 review: All mapped target and test digests for this rule match the prior reviewed dev11 source; its stated adaptation or exclusion remains applicable. Current matching reports are required separately; this review does not assert complete migration, platform or release readiness.",
-      "reviewer": "Codex native TypeScript integration review"
+      "reason": "Reviewed scope of .opencode/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
+      "reviewer": "Codex native runtime review"
     },
     {
       "rule": "code-host-github",
-      "reason": "Reviewed scope of .github/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence. The locked source and this rule's native target and test inventories match the preceding reviewed bytes; its existing semantic scope is retained. Current dev16 review: All mapped target and test digests for this rule match the prior reviewed dev11 source; its stated adaptation or exclusion remains applicable. Current matching reports are required separately; this review does not assert complete migration, platform or release readiness.",
-      "reviewer": "Codex native TypeScript integration review"
+      "reason": "Reviewed scope of .github/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
+      "reviewer": "Codex native runtime review"
     },
     {
       "rule": "code-host-gitcode",
-      "reason": "Reviewed scope of .gitcode/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence. The locked source and this rule's native target and test inventories match the preceding reviewed bytes; its existing semantic scope is retained. Current dev16 review: All mapped target and test digests for this rule match the prior reviewed dev11 source; its stated adaptation or exclusion remains applicable. Current matching reports are required separately; this review does not assert complete migration, platform or release readiness.",
-      "reviewer": "Codex native TypeScript integration review"
+      "reason": "Reviewed scope of .gitcode/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
+      "reviewer": "Codex native runtime review"
     },
     {
       "rule": "code-legal-LICENSE",
-      "reason": "Review LICENSE as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. The locked source and this rule's native target and test inventories match the preceding reviewed bytes; its existing semantic scope is retained. Current dev16 review: All mapped target and test digests for this rule match the prior reviewed dev11 source; its stated adaptation or exclusion remains applicable. Current matching reports are required separately; this review does not assert complete migration, platform or release readiness.",
-      "reviewer": "Codex native TypeScript integration review"
+      "reason": "Review LICENSE as locked source provenance and release/dispatch metadata. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
+      "reviewer": "Codex native runtime review"
     },
     {
       "rule": "code-legal-NOTICE",
-      "reason": "Review NOTICE as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. The locked source and this rule's native target and test inventories match the preceding reviewed bytes; its existing semantic scope is retained. Current dev16 review: All mapped target and test digests for this rule match the prior reviewed dev11 source; its stated adaptation or exclusion remains applicable. Current matching reports are required separately; this review does not assert complete migration, platform or release readiness.",
-      "reviewer": "Codex native TypeScript integration review"
+      "reason": "Review NOTICE as locked source provenance and release/dispatch metadata. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
+      "reviewer": "Codex native runtime review"
     },
     {
       "rule": "code-legal-OAT.xml",
-      "reason": "Review OAT.xml as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. The locked source and this rule's native target and test inventories match the preceding reviewed bytes; its existing semantic scope is retained. Current dev16 review: All mapped target and test digests for this rule match the prior reviewed dev11 source; its stated adaptation or exclusion remains applicable. Current matching reports are required separately; this review does not assert complete migration, platform or release readiness.",
-      "reviewer": "Codex native TypeScript integration review"
+      "reason": "Review OAT.xml as locked source provenance and release/dispatch metadata. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
+      "reviewer": "Codex native runtime review"
     },
     {
       "rule": "code-legal-package.json",
-      "reason": "Review package.json as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. The locked source and this rule's native target and test inventories match the preceding reviewed bytes; its existing semantic scope is retained. Current dev16 review: All mapped target and test digests for this rule match the prior reviewed dev11 source; its stated adaptation or exclusion remains applicable. Current matching reports are required separately; this review does not assert complete migration, platform or release readiness.",
-      "reviewer": "Codex native TypeScript integration review"
+      "reason": "Review package.json as locked source provenance and release/dispatch metadata. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
+      "reviewer": "Codex native runtime review"
     },
     {
       "rule": "code-legal-bun.lock",
-      "reason": "Review bun.lock as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. The locked source and this rule's native target and test inventories match the preceding reviewed bytes; its existing semantic scope is retained. Current dev16 review: All mapped target and test digests for this rule match the prior reviewed dev11 source; its stated adaptation or exclusion remains applicable. Current matching reports are required separately; this review does not assert complete migration, platform or release readiness.",
-      "reviewer": "Codex native TypeScript integration review"
+      "reason": "Review bun.lock as locked source provenance and release/dispatch metadata. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
+      "reviewer": "Codex native runtime review"
     },
     {
       "rule": "code-legal-CHANGELOG.md",
-      "reason": "Review CHANGELOG.md as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. The locked source and this rule's native target and test inventories match the preceding reviewed bytes; its existing semantic scope is retained. Current dev16 review: All mapped target and test digests for this rule match the prior reviewed dev11 source; its stated adaptation or exclusion remains applicable. Current matching reports are required separately; this review does not assert complete migration, platform or release readiness.",
-      "reviewer": "Codex native TypeScript integration review"
+      "reason": "Review CHANGELOG.md as locked source provenance and release/dispatch metadata. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
+      "reviewer": "Codex native runtime review"
     },
     {
       "rule": "code-host-install",
-      "reason": "Reviewed scope of install: Bash installer and installation telemetry for the upstream DevEco Code host. Native MCP installation does not execute this script. The locked source and this rule's native target and test inventories match the preceding reviewed bytes; its existing semantic scope is retained. Current dev16 review: All mapped target and test digests for this rule match the prior reviewed dev11 source; its stated adaptation or exclusion remains applicable. Current matching reports are required separately; this review does not assert complete migration, platform or release readiness.",
-      "reviewer": "Codex native TypeScript integration review"
+      "reason": "Reviewed scope of install: Bash installer and installation telemetry for the upstream DevEco Code host. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
+      "reviewer": "Codex native runtime review"
     },
     {
       "rule": "code-host-install-ps1",
-      "reason": "Reviewed scope of install.ps1: PowerShell installer and installation telemetry for the upstream DevEco Code host. Native MCP installation does not execute this script. The locked source and this rule's native target and test inventories match the preceding reviewed bytes; its existing semantic scope is retained. Current dev16 review: All mapped target and test digests for this rule match the prior reviewed dev11 source; its stated adaptation or exclusion remains applicable. Current matching reports are required separately; this review does not assert complete migration, platform or release readiness.",
-      "reviewer": "Codex native TypeScript integration review"
+      "reason": "Reviewed scope of install.ps1: PowerShell installer and installation telemetry for the upstream DevEco Code host. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
+      "reviewer": "Codex native runtime review"
     },
     {
       "rule": "code-host-turbo-json",
-      "reason": "Reviewed scope of turbo.json: Upstream monorepo build/test scheduling. This MCP uses its own strict TypeScript build and Node Test Runner matrix. The locked source and this rule's native target and test inventories match the preceding reviewed bytes; its existing semantic scope is retained. Current dev16 review: All mapped target and test digests for this rule match the prior reviewed dev11 source; its stated adaptation or exclusion remains applicable. Current matching reports are required separately; this review does not assert complete migration, platform or release readiness.",
-      "reviewer": "Codex native TypeScript integration review"
+      "reason": "Reviewed scope of turbo.json: Upstream monorepo build/test scheduling. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
+      "reviewer": "Codex native runtime review"
     }
   ],
   "targets": [

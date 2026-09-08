@@ -1462,15 +1462,13 @@
       "source": "hot_reload",
       "checks": [
         "test/native-hotreload.test.ts",
-        "scripts/native-hot-device-acceptance.ts"
+        "scripts/native-hot-device-acceptance.ts",
+        "scripts/native-hot-multimodule-acceptance.ts"
       ],
-      "remaining": [
-        "多模块/设备热补丁范围；专用个人签名应用的两次 HQF 和最终文字断言已通过",
-        "启动等待与跨进程会话竞争"
-      ],
-      "acceptance": "pending",
+      "remaining": [],
+      "acceptance": "verified",
       "evidence": [
-        "docs/native-signing.md"
+        "provenance/migration-acceptance/c11fe42aaf1385d5e691cc2c94a6cdc12ca9c210309a4551e7802efee3328cb2.json"
       ],
       "targets": [
         "tool:hot_reload"
