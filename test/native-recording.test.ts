@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { setTimeout as delay } from "node:timers/promises";
 import { z } from "zod";
 import { Runtime } from "../src/services/runtime.js";
@@ -17,6 +18,9 @@ import { controlSchema, flowSchema } from "../src/core/contracts.js";
 import { atomicWrite } from "../src/core/files.js";
 import { inspectProject } from "../src/services/project.js";
 import { ToolError } from "../src/core/errors.js";
+import { ProcessService } from "../src/core/process.js";
+import { HvigorSession } from "../src/services/hvigor/session.js";
+import { assertNoHotWatch } from "../src/services/hvigor/hot-config.js";
 
 const bundle = "com.example.recording";
 function snapshot(): Snapshot {
@@ -596,6 +600,123 @@ test("one device has one unfinished recording and status follow-ups cannot retar
     });
     assert.equal(f.runtime.recordings.status(id).state, "cancelled");
   } finally {
+    await f.close();
+  }
+});
+
+test("hot baseline installation and patch application honor a recording created by another process during compilation", async (t) => {
+  const f = await fixture(t),
+    peers = new ProcessService(),
+    building = Promise.withResolvers<void>(),
+    finishBuild = Promise.withResolvers<void>();
+  let builds = 0;
+  t.mock.method(f.runtime.signatures, "projectOptions", () => ({}));
+  t.mock.method(f.runtime.projects, "sync", async () => ({}));
+  t.mock.method(f.runtime.projects, "buildArtifacts", () => [
+    {
+      path: path.join(f.root, "fixture-signed.hap"),
+      bytes: 1,
+      sha256: "fixture",
+    },
+  ]);
+  t.mock.method(f.runtime.devices, "shell", async () => ({
+    stdout: "phone\n",
+  }));
+  const deploy = t.mock.method(f.runtime.devices, "deploy", async () => ({}));
+  const open = t.mock.method(HvigorSession, "open", async () => {
+    const worker = new HvigorSession(f.runtime.processes, {
+      executable: process.execPath,
+      args: [
+        fileURLToPath(new URL("./fixtures/native-hvigor.js", import.meta.url)),
+        "normal",
+      ],
+    });
+    await worker.ready();
+    t.mock.method(worker, "build", async () => {
+      if (++builds === 1) {
+        building.resolve();
+        await finishBuild.promise;
+      }
+      return { elapsedMs: 1, text: "", truncated: false };
+    });
+    return worker;
+  });
+  const startWatch = () =>
+    f.runtime.call("hot_reload", {
+      action: "start",
+      modules: ["entry"],
+      app: { bundle_name: bundle, module: "entry", ability: "MainAbility" },
+    });
+  const recordInPeer = async (target: string) => {
+    const result = await peers.run({
+      executable: process.execPath,
+      args: [
+        fileURLToPath(
+          new URL("./fixtures/native-recording-peer.js", import.meta.url),
+        ),
+        path.join(f.root, "state"),
+        target,
+      ],
+    });
+    return z
+      .object({ recording_id: z.string() })
+      .parse(JSON.parse(result.stdout) as unknown).recording_id;
+  };
+  const cancel = (recording_id: string) =>
+    f.runtime.call("ui_flow", { action: "record_cancel", recording_id });
+  let pending: Promise<unknown> | undefined;
+  try {
+    pending = startWatch();
+    const rejected = assert.rejects(pending, { code: "RECORDING_ACTIVE" });
+    await Promise.race([building.promise, pending]);
+    const id = await recordInPeer("device");
+    finishBuild.resolve();
+    await rejected;
+    assert.equal(
+      deploy.mock.callCount(),
+      0,
+      "Do not install after a recording starts during compilation",
+    );
+    assert.equal(f.runtime.processes.size, 0);
+    assertNoHotWatch(inspectProject(f.project));
+    assert.equal(f.runtime.store.externalGuards().length, 0);
+    await assert.rejects(startWatch(), { code: "RECORDING_ACTIVE" });
+    assert.equal(
+      open.mock.callCount(),
+      1,
+      "Reject known recordings before starting another SDK process",
+    );
+    await cancel(id);
+
+    const other = await recordInPeer("another-device");
+    await startWatch();
+    assert.equal(
+      deploy.mock.callCount(),
+      1,
+      "An unrelated device recording must not block the baseline",
+    );
+    const current = await recordInPeer("device");
+    await assert.rejects(f.runtime.call("hot_reload", { action: "apply" }), {
+      code: "RECORDING_ACTIVE",
+    });
+    assert.equal(builds, 2, "Reject before preparing or compiling any patch");
+    await cancel(current);
+    await assert.rejects(f.runtime.call("hot_reload", { action: "apply" }), {
+      code: "HOT_NO_CHANGES",
+    });
+    const active = await recordInPeer("device");
+    await f.runtime.call("hot_reload", { action: "stop" });
+    assert.equal(
+      f.runtime.processes.size,
+      0,
+      "Watch cleanup remains available during recording",
+    );
+    await cancel(active);
+    await cancel(other);
+  } finally {
+    finishBuild.resolve();
+    await pending?.catch(() => {});
+    await peers.close();
     await f.close();
   }
 });

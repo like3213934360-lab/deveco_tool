@@ -141,6 +141,7 @@ export class HotReloadService {
     readonly projects: ProjectService,
     readonly devices: DeviceService,
     readonly signatures: SignatureService,
+    private readonly assertDeviceIdle: (target: string) => void,
   ) {}
   private key(project: Project) {
     return digest([project.root, project.product.name]);
@@ -262,6 +263,7 @@ export class HotReloadService {
               "HOT_MODULE_INVALID",
               "Invalid runnable module selection",
             );
+            this.assertDeviceIdle(target);
             this.signatures.projectOptions(project); // Fail before building/installing if patch signing cannot work.
             const deviceType = (
               await this.devices.shell(
@@ -325,13 +327,17 @@ export class HotReloadService {
               );
               await this.store.lease(
                 `device:${target}`,
-                () =>
-                  this.devices.deploy(
+                () => {
+                  // A recording can start in another project/process during the
+                  // baseline build. Recheck only after acquiring the device.
+                  this.assertDeviceIdle(target);
+                  return this.devices.deploy(
                     target,
                     haps[0]!.path,
                     input.app!,
                     signal,
-                  ),
+                  );
+                },
                 signal,
               );
               this.sessions.set(key, {
@@ -393,7 +399,10 @@ export class HotReloadService {
         try {
           return await this.store.lease(
             `device:${session.target}`,
-            () => this.apply(session, input.files, signal),
+            () => {
+              this.assertDeviceIdle(session.target);
+              return this.apply(session, input.files, signal);
+            },
             signal,
           );
         } catch (error) {

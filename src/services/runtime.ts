@@ -117,6 +117,7 @@ export class Runtime {
     this.projects,
     this.devices,
     this.signatures,
+    (target) => this.recordings.assertTaskTarget(target),
   );
   private engine?: Promise<WorkflowEngine>;
   private stopping = false;
