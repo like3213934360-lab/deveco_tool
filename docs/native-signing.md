@@ -57,6 +57,10 @@ UI 运行摘要为 `9013fe230df8872061a7f2a707c542f9f3e2551a1e38bdb13791e26dde46
 
 首轮 [CI 34180595865](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34180595865) 验证提交 `957a84b`：macOS/Linux × Node 22/24 四组各 226 项通过，Windows 两组各 225 项通过、1 项失败，两组进程压力检查仍各 20 轮通过。失败是新增 Profile 测试使用 `RUNNER~1` 短路径作为期望值，而生产代码返回规范化长路径；测试改为与生产边界一致的 `realpathSync.native`，没有放宽文件内容和摘要断言。六组原始证据下载保存在 `ci-34180595865`，失败不由后续成功覆盖。
 
+修复后的 [CI 34181035610](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34181035610) 验证提交 `0fc8c2b`：macOS/Windows/Linux × Node 22/24 六组各 227 项通过、0 跳过，各 10 项干净编译包安装检查通过，Windows 两组各 20 轮进程压力检查通过。六组证据已下载至 `ci-34181035610` 并逐项核对，运行摘要均为上述 `348c98d…`，与本机 `20260908-signing-regression-8/evidence.json` 及性能复测一致。CI 验证基础运行和模拟 SDK/设备回归，不代表在 Windows/Linux 完成了真实工具链、云端签名或手机验收。
+
+同版本目录与离线 UI 查询复测记录见 `docs/native-ui-performance.md`；单独保留首次查询加载成本，没有把已缓存查询或下列两次设备样本代替完整性能门槛。
+
 本轮单次 watch 基线 5.55 秒，两次热补丁分别 1.67/1.50 秒，最终 UI 断言另计约 1 秒。这是专用小工程的单次耗时，不是 P95 性能门槛或旧版对比。
 
 ## 本轮发现与修复

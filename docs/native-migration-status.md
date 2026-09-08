@@ -74,11 +74,13 @@ MCP 主进程提供静态工具目录和参数校验；Worker 持有领域服务
 | 认证修复三平台 CI | 六组各 220 项通过、0 跳过 | [CI 34176653392](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34176653392)，提交 `8ec532b`；各 10 项干净编译包安装检查通过，Windows Node 22/24 各 20 轮压力通过。六组原始证据已下载核对，运行文件摘要与本机浏览器通过版本相同，见 `docs/native-authentication.md` |
 | 云端知识完整制品 | 10 项通过 | 已保存凭据、真实查询、完整字节分页、两种重启后读取原制品并核对摘要；见 `docs/native-knowledge.md`。未把两次独立查询的不同内容误判为持久化失败 |
 | 个人签名与真机操作 | 云端签名部署、UI 16 项、热补丁 10 项通过 | 专用个人团队材料、直接 SDK/HDC、原生加密工程签名配置、MCP 重启后流程重放、连续两次 HQF 和 PID 保持；本轮回归 226 项通过。具体源码摘要、失败记录、清理边界和待验收项见 `docs/native-signing.md` |
+| 签名及录制协调修复后的三平台 CI | 六组各 227 项通过、0 跳过 | [CI 34181035610](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34181035610)，代码提交 `0fc8c2b`；各 10 项干净编译包安装检查通过，Windows 各 20 轮压力检查通过。本机 `20260908-signing-regression-8` 与六组下载证据的运行摘要一致，详见签名文档；不代替其他平台真实 SDK 验收 |
 | 独立签名工程准备 | 6 项通过 | 创建、构建、未签名 HAP 身份、密钥、CSR 与关闭；未操作云端或设备，详见 `docs/native-signing.md` |
 | 真实模拟器 | 6 项通过 | `/private/tmp/deveco-native-emulator-20260907-1/evidence.json`；早期代码快照，未记录源码摘要 |
 | 一小时基础设施运行 | 通过 | `/private/tmp/deveco-native-soak-20260907-2/evidence.json`；352 轮、2816 个子进程；最终活动任务/子进程/租约为 0，RSS 95,600,640 字节。只使用合成子进程，且早于最新制品与会话修改，不能算最终版本或 SDK 会话长稳验收 |
 | 一小时真实 SDK 会话 | 通过 | `/private/tmp/deveco-native-sdk-soak-node24-20260908-1/evidence.json`；Node 24 原生独立验证目录、717 次 LSP 查询、60 次不同 ABC 补丁，同一 watch worker，最终会话/临时目录为 0，配置恢复成功，运行时 RSS 107,511,808 字节。基于记录的较早编译摘要，未包含后续 Linter/文档修改；未测 SDK 子进程 CPU/RSS、设备 HQF/UI 或空闲会话过期，不能当作完整最终性能验收 |
 | MCP 目录性能 | 30 次冷启动、1000 次热查询 | `/tmp/deveco-native-benchmark-20260907-optimized.json`；基线/新版冷 P95 为 153.48/101.92 ms，热 P95 为 0.346/0.263 ms。只测目录，不代表其他工具性能；早期快照 |
+| 当前代码目录与保存树性能 | Node 24 目录复测、UI 三轮通过 | `~/Library/Application Support/DevEcoMCP/acceptance/20260908-current-catalog-1`、`20260908-current-ui-performance-1`；运行摘要与提交 `0fc8c2b` 一致。目录冷 P95 为基线/原生 127.632/84.556 ms；每种树每轮 1000 次精确查询，九组 P95 对比均通过 5% 门槛，首次加载成本仍存在。范围与原始证据见 `docs/native-ui-performance.md` |
 | UI 树算法性能 | 已有小/中/大树测量，完整门槛未通过 | `/private/tmp/deveco-native-ui-benchmark-20260908-1.json`；100/1000/10000 个控件，每种查询 1000 次，晚于文本/矩形优化，早于父子层级字段。精确定位、类型查询改善；部分包含文本查询仍有开销。结果形式不同，不能充当直接能力 P95 发布门槛 |
 | 保存树完整 MCP 精确查询 | 本机 Node 22/24 各三轮通过 5% 门槛 | 每种树规模每轮 1000 次固定查询；修复重复解析导致的退化，保留首次请求成本与原始失败证据。仅覆盖离线精确 key 查询，详见 `docs/native-ui-performance.md`，不代表实时设备、其他选择器或服务器/SDK CPU/RSS 已验收 |
 
