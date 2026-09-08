@@ -46,13 +46,14 @@ function fixture() {
     path.join(project, "AppScope/app.json5"),
     JSON.stringify({ app: { bundleName: "com.example.routes" } }),
   );
-  const manifest = (name: string, abilities: unknown[]) =>
+  const manifest = (name: string, abilities: unknown[], mainElement?: string) =>
     atomicWrite(
       path.join(project, name, "src/main/module.json5"),
       JSON.stringify({
         module: {
           name,
           type: name === "entry" ? "entry" : "feature",
+          ...(mainElement ? { mainElement } : {}),
           abilities,
         },
       }),
@@ -146,10 +147,18 @@ test("navigation goals preserve route priority, ambiguity, URI case and product-
     assert.throws(() => resolveNavigationGoal(catalog, [], "?!"), {
       code: "NAVIGATION_GOAL_INVALID",
     });
-    assert.throws(
-      () => resolveNavigationGoal(catalog, [flow("blank", "!!!")], "unknown"),
-      { code: "NAVIGATION_NOT_FOUND" },
+    const unknown = resolveNavigationGoal(
+      catalog,
+      [flow("blank", "!!!")],
+      "unknown",
     );
+    assert.equal(unknown.kind, "recording");
+    if (unknown.kind === "recording") {
+      assert.equal(unknown.draft.app.module, "entry");
+      assert.equal(unknown.draft.name, "unknown");
+      assert.deepEqual(unknown.draft.steps, []);
+      assert.equal(unknown.draft.assert, undefined);
+    }
     const flows = [
       flow("home-settings", "打开 设置"),
       flow("home-account", "打开账号"),
@@ -176,14 +185,13 @@ test("navigation goals preserve route priority, ambiguity, URI case and product-
         ),
       { code: "FLOW_AMBIGUOUS" },
     );
-    assert.throws(
-      () =>
-        resolveNavigationGoal(
-          catalog,
-          [flow("excluded", "设置", "excluded")],
-          "设置",
-        ),
-      { code: "NAVIGATION_NOT_FOUND" },
+    assert.equal(
+      resolveNavigationGoal(
+        catalog,
+        [flow("excluded", "设置", "excluded")],
+        "设置",
+      ).kind,
+      "recording",
     );
     const saved = flowSchema.parse({
       version: 1,
@@ -198,6 +206,99 @@ test("navigation goals preserve route priority, ambiguity, URI case and product-
     assert.throws(() => validateFlowApplication(catalog, saved), {
       code: "FLOW_APP_MISMATCH",
     });
+  } finally {
+    f.close();
+  }
+});
+test("automatic recording selects declared home then mainElement and refuses ambiguous or absent exported entries", () => {
+  const f = fixture();
+  try {
+    const choose = (product = "default") =>
+      resolveNavigationGoal(
+        discoverAppRoutes(inspectProject(f.project, product)),
+        [],
+        "新的导航目标",
+      );
+    const ability = (name: string, home = false) => ({
+      name,
+      exported: true,
+      skills: home
+        ? [
+            {
+              actions: ["action.system.home"],
+              entities: ["entity.system.home"],
+            },
+          ]
+        : [],
+    });
+    f.manifest("entry", [ability("Home", true), ability("Main")], "Main");
+    const home = choose();
+    assert.equal(home.kind, "recording");
+    if (home.kind === "recording") assert.equal(home.draft.app.ability, "Home");
+    f.manifest(
+      "entry",
+      [ability("Home", true), ability("AnotherHome", true)],
+      "Home",
+    );
+    assert.throws(choose, { code: "RECORDING_ENTRY_AMBIGUOUS" });
+    f.manifest(
+      "entry",
+      [
+        {
+          ...ability("UnpairedHome"),
+          skills: [{ actions: ["action.system.home"] }],
+        },
+        ability("Main"),
+      ],
+      "Main",
+    );
+    const main = choose();
+    assert.equal(main.kind, "recording");
+    if (main.kind === "recording") assert.equal(main.draft.app.ability, "Main");
+    f.manifest("entry", [ability("A"), ability("B")]);
+    assert.throws(choose, { code: "RECORDING_ENTRY_AMBIGUOUS" });
+    f.manifest("entry", [{ name: "Private", exported: false }], "Private");
+    const unique = choose();
+    assert.equal(unique.kind, "recording");
+    if (unique.kind === "recording")
+      assert.equal(unique.draft.app.module, "feature");
+    f.manifest("feature", []);
+    assert.throws(choose, { code: "RECORDING_ENTRY_MISSING" });
+    const other = choose("other");
+    assert.equal(other.kind, "recording");
+    if (other.kind === "recording")
+      assert.equal(other.draft.app.module, "excluded");
+  } finally {
+    f.close();
+  }
+});
+test("automatic recording keeps the complete goal and uses a stable ID scoped to product and entry", () => {
+  const f = fixture();
+  try {
+    const catalog = discoverAppRoutes(inspectProject(f.project));
+    const goal = "新".repeat(512);
+    const choice = resolveNavigationGoal(catalog, [], goal);
+    assert.equal(choice.kind, "recording");
+    if (choice.kind !== "recording") throw new Error("Expected recording");
+    assert.equal(choice.draft.name, goal);
+    assert.equal(choice.draft.start.mode, "restart");
+    assert.match(choice.draft.id, /^navigation-[a-f0-9]{24}$/);
+    assert.deepEqual(resolveNavigationGoal(catalog, [], ` ${goal} `), choice);
+    for (const modified of [
+      { ...catalog, product: "other-product" },
+      {
+        ...catalog,
+        routes: catalog.routes.map((route) => ({
+          ...route,
+          app: { ...route.app, ability: `Other${route.app.ability}` },
+        })),
+      },
+    ]) {
+      const different = resolveNavigationGoal(modified, [], goal);
+      assert.equal(different.kind, "recording");
+      if (different.kind === "recording")
+        assert.notEqual(different.draft.id, choice.draft.id);
+    }
   } finally {
     f.close();
   }
@@ -546,7 +647,11 @@ test("goal navigation captures a saved flow and rejects ignored overrides before
       { goal: "设置", assert: { visible: { text: "Override" } } },
       { id: "settings", parameters: { ignored: "no" } },
       { goal: "设置", id: "settings" },
-      { goal: "unknown" },
+      { goal: "unknown", parameters: { ignored: "no" } },
+      { goal: "unknown", variables: { ignored: "no" } },
+      { goal: "unknown", assert: { visible: { text: "Done" } } },
+      { goal: "unknown", replace: true },
+      { goal: "unknown", flow },
     ])
       await assert.rejects(
         f.runtime.call("ui_flow", { action: "navigate", ...input }),

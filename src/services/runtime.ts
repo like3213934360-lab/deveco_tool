@@ -1301,8 +1301,11 @@ export class Runtime {
           const previous = this.store.byRequest(request_key);
           if (previous) {
             invariant(
-              previous.workflow ===
-                (input.action === "record_start" ? "ui_record" : "ui_flow") &&
+              (previous.workflow ===
+                (input.action === "record_start" ? "ui_record" : "ui_flow") ||
+                (input.action === "navigate" &&
+                  input.goal &&
+                  previous.workflow === "ui_record")) &&
                 previous.input_hash === digest(identity),
               "REQUEST_KEY_CONFLICT",
               "Request key already has different input",
@@ -1311,8 +1314,12 @@ export class Runtime {
               run_id: previous.id,
               status: previous.status,
               deduplicated: true,
-              ...(input.action === "record_start"
+              ...(previous.workflow === "ui_record"
                 ? { recording_id: previous.id }
+                : {}),
+              ...(input.action === "navigate" &&
+              previous.workflow === "ui_record"
+                ? { navigation: "recording" }
                 : {}),
             };
           }
@@ -1367,30 +1374,22 @@ export class Runtime {
             "RECORDING_ROUTE_INVALID",
             "Saved recordings currently start at an explicit ability",
           );
-          const draft = flowSchema.parse({
-            version: 1,
-            id: input.id,
-            name: input.name,
-            app: {
-              bundleName: route.app.bundle_name,
-              module: route.app.module,
-              ability: route.app.ability,
-            },
-            start: { mode: input.mode ?? "restart" },
-            steps: [],
-          });
-          this.flows.assertAvailable(project, draft.id);
-          context.parameters = recordingTaskSchema.parse({ draft });
-          context.target = await this.devices.target(input.target, signal);
-          const run = (await this.workflows()).start(
-            "ui_record",
-            context,
-            request_key,
-            identity,
-          );
-          return { ...run, recording_id: run.run_id };
-        }
-        if (input.action === "navigate") {
+          choice = {
+            kind: "recording",
+            draft: flowSchema.parse({
+              version: 1,
+              id: input.id,
+              name: input.name,
+              app: {
+                bundleName: route.app.bundle_name,
+                module: route.app.module,
+                ability: route.app.ability,
+              },
+              start: { mode: input.mode ?? "restart" },
+              steps: [],
+            }),
+          };
+        } else if (input.action === "navigate") {
           invariant(
             [input.route, input.id, input.goal].filter(
               (value) => value !== undefined,
@@ -1424,6 +1423,32 @@ export class Runtime {
             "Saved replay does not accept route overrides",
           );
           choice = { kind: "flow", id: text(input.id, "id") };
+        }
+        if (choice.kind === "recording") {
+          invariant(
+            !input.assert &&
+              !input.flow &&
+              !input.replace &&
+              Object.keys(input.parameters).length === 0 &&
+              Object.keys(input.variables).length === 0,
+            "RECORDING_INPUT_INVALID",
+            "An unmatched goal starts an empty recording; provide its final assertion with record_stop and no replay inputs",
+          );
+          const { draft } = choice;
+          this.flows.assertAvailable(project, draft.id);
+          context.parameters = recordingTaskSchema.parse({ draft });
+          context.target = await this.devices.target(input.target, signal);
+          const run = (await this.workflows()).start(
+            "ui_record",
+            context,
+            request_key,
+            identity,
+          );
+          return {
+            ...run,
+            recording_id: run.run_id,
+            ...(input.action === "navigate" ? { navigation: "recording" } : {}),
+          };
         }
         if (choice.kind === "route") {
           invariant(

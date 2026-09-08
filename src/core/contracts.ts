@@ -792,7 +792,7 @@ export const tools = {
   },
   ui_flow: {
     description:
-      "Inspect declared app routes and saved flows. Run/navigate/record_start persist tasks; use workflow_run for status, resume and cancel. Navigate selects one route, flow ID or goal. Routes require assert; saved flows keep their original assertion. Record_start needs id, name and ability route; wait for needs_input, then ui_tap/ui_control records accepted actions. Record_stop needs recording_id and assert; saving follows verification. Input text becomes secret variables. Ambiguous goals never execute; selector repairs require the original assertion to pass.",
+      "Inspect declared app routes and saved flows. Run/navigate/record_start persist tasks; use workflow_run for status, resume and cancel. Navigate selects one route, flow ID or goal. Routes require assert; saved flows keep their original assertion. An unmatched goal starts a recording at one exported entry (home, mainElement, then unique ability), returning navigation=recording and recording_id; no replay inputs or assertion are accepted at this point. Ambiguous entries/goals never execute. Record_start needs id, name and ability route. Wait for needs_input, then ui_tap/ui_control records accepted actions. Record_stop needs recording_id and assert; saving follows verification. Input text becomes secret variables; selector repairs require the original assertion to pass.",
     schema: z.strictObject({
       ...projectFields,
       action: z.enum([

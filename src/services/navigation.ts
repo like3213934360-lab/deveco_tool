@@ -1,4 +1,5 @@
-import type { Flow } from "../core/contracts.js";
+import { flowSchema, type Flow } from "../core/contracts.js";
+import { digest } from "../core/files.js";
 import { invariant, ToolError } from "../core/errors.js";
 import { resolveAppRoute, type AppRoute, type RouteCatalog } from "./routes.js";
 
@@ -8,7 +9,9 @@ export interface SavedFlowSummary {
   app: Flow["app"];
 }
 export type NavigationChoice =
-  { kind: "route"; route: AppRoute } | { kind: "flow"; id: string };
+  | { kind: "route"; route: AppRoute }
+  | { kind: "flow"; id: string }
+  | { kind: "recording"; draft: Flow };
 
 const normalize = (value: string) =>
   value.normalize("NFKC").trim().toLowerCase();
@@ -104,15 +107,47 @@ export function resolveNavigationGoal(
     .filter((candidate) => candidate.score >= 60)
     .sort((a, b) => b.score - a.score || a.id.localeCompare(b.id));
   const selected = candidates[0];
-  if (!selected)
-    throw new ToolError(
-      "NAVIGATION_NOT_FOUND",
-      "No declared route or saved flow matches the goal",
-      {
-        goal,
-        product: catalog.product,
-      },
+  if (!selected) {
+    const abilities = catalog.routes.filter(
+      (route) => route.kind === "ability" && route.exported,
     );
+    const home = abilities.filter((route) => route.entry_point === "home"),
+      main = abilities.filter((route) => route.entry_point === "main"),
+      entries = home.length ? home : main.length ? main : abilities;
+    if (entries.length !== 1)
+      throw new ToolError(
+        entries.length
+          ? "RECORDING_ENTRY_AMBIGUOUS"
+          : "RECORDING_ENTRY_MISSING",
+        "Unknown goal needs one exported entry; inspect routes and use record_start with an explicit ability",
+        {
+          product: catalog.product,
+          route_ids: entries.map((route) => route.id),
+        },
+      );
+    const app = entries[0]!.app;
+    return {
+      kind: "recording",
+      draft: flowSchema.parse({
+        version: 1,
+        id: `navigation-${digest({
+          goal: wanted,
+          product: catalog.product,
+          bundle: catalog.bundle_name,
+          module: app.module,
+          ability: app.ability,
+        }).slice(0, 24)}`,
+        name: goal.trim(),
+        app: {
+          bundleName: app.bundle_name,
+          module: app.module,
+          ability: app.ability,
+        },
+        start: { mode: "restart" },
+        steps: [],
+      }),
+    };
+  }
   if (candidates[1] && selected.score - candidates[1].score < 10)
     throw new ToolError(
       "FLOW_AMBIGUOUS",

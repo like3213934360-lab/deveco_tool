@@ -2237,7 +2237,7 @@
         }
       ],
       "remaining": [
-        "goal 未匹配时自动进入录制的体验与适用入口选择",
+        "未知目标自动录制的真实设备与本轮跨平台验收；入口选择、并发去重、重启和最终断言回归已通过",
         "driver_status 诊断映射",
         "既有用户保存流程迁移验收；专用应用录制、MCP 重启和重放已通过",
         "录制期间热重载等长期会话对 UI 状态的干扰协调"
@@ -2777,10 +2777,8 @@
           "replacement": "ui_snapshot.capture.if_changed_from；固定捕获设置后核对 unchanged"
         }
       ],
-      "remaining": [
-        "本轮 Node22/24 三平台CI；真实 PNG/JPEG、整进程重启和图像显示已通过"
-      ],
-      "acceptance": "pending",
+      "remaining": [],
+      "acceptance": "verified",
       "evidence": [
         "docs/native-visual-review.md"
       ]

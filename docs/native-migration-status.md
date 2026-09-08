@@ -20,7 +20,7 @@ MCP 主进程提供静态工具目录和参数校验；Worker 持有领域服务
 - 部署工作流的安装和启动均有设备命令回执核对。安装输入在传输后核对设备端 SHA-256；安装完成但宿主响应丢失时不重新上传或安装。单包/三包的成功、失败及重开 SQLite 后继续已通过回归，真实签名包恢复与安装准备阶段中断仍待验收；见 `docs/native-deployment.md`。
 - 已保存的 `.arkpilot/flows` 继续由新 UI 服务读取。替代选择器必须通过原有最终断言后才能保存。
 - `ui_flow.routes/navigate` 直接读取所选产品的模块与公开 Ability，支持 Action、URI/MIME 和类型明确的 Want 参数。导航与保存流程执行持久化为内部任务，通过 `workflow_run` 查询、恢复和取消；公开工作流目录仍为 8 个。流程内容与应用配置在提交时固定。
-- 目标导航支持中文流程名称匹配，并在公开入口、同名流程、产品/模块不匹配时明确处理歧义；未知目标自动进入录制尚未实现。
+- 目标导航支持中文流程名称匹配，并在公开入口、同名流程、产品/模块不匹配时明确处理歧义。未知目标按声明的 home/mainElement/唯一公开 Ability 选择录制入口，创建持久化空草稿；入口歧义不操作设备。并发去重、重启后继续、取消和断言失败不保存已有回归，当前新增路径的真实设备与跨平台验收待补，见 `docs/native-ui-workflows.md`。
 - `ui_flow.record_start/status/stop/cancel` 使用内部 LangGraph 任务和加密 SQLite 草稿，记录回执与输入占位变量；最终断言固定后验证，通过才保存。取消传递给在途操作，关闭运行时会等待录制操作退出。未完成录制不被历史任务清理。详见 `docs/native-ui-workflows.md`。
 - 热重载基线安装和补丁应用在设备租约内重新核对持久化录制，拒绝打断同一设备的未完成录制；跨 Node 进程的构建期间竞争、拒绝后清理和其他设备隔离已通过回归。该约束适用于共享状态目录的原生 MCP，不控制手工操作或其他软件。
 - UI 快照复用按需构造的索引；录制、流程定位与点击使用同一份操作前快照，避免二次 dump，操作后失效。动作与断言备选选择器的歧义判断不受 `limit:1` 绕过。显示器与窗口共同决定可见范围，截图仍不作为业务成功证据。
@@ -33,7 +33,7 @@ MCP 主进程提供静态工具目录和参数校验；Worker 持有领域服务
 - ArkTS LSP 增加查找实现，检查初始化能力声明和 UTF-16 编码，校验真实发送内容的行列范围。文件读取、摘要和通知使用同一批字节；无结果、能力不可用、非法响应有不同处理。详见 `docs/native-language-service.md`。
 - TypeScript 编译使用完整临时输出目录；错误不覆盖上一次完整构建，成功后整体替换并删除失效输出。`native-stage.ts` 可在安装依赖前准备只含原生架构的私有验证目录。
 - `ui_snapshot` 默认只截图，支持 JPEG/PNG、宽度、显示器和画面变化比较；树用 `mode:tree/both` 显式获取。传输前预留额度，按块校验，未变化的画面不保存重复制品。详见 `docs/native-screenshots.md`。
-- `verify_ui.review.requirement` 保存外观要求、截图和报告，宿主使用 `workflow_run.read_artifact as=image` 直接读取 PNG/JPEG。控件断言与外观审阅分开记录，请求审阅时不自动通过。完整图片和最大分页不再被通用响应阈值重复包装为制品。Node26/24各259项回归、真实设备八项和返回图像显示检查通过，范围与首轮失败记录见 `docs/native-visual-review.md`；本轮跨平台CI仍待完成。
+- `verify_ui.review.requirement` 保存外观要求、截图和报告，宿主使用 `workflow_run.read_artifact as=image` 直接读取 PNG/JPEG。控件断言与外观审阅分开记录，请求审阅时不自动通过。完整图片和最大分页不再被通用响应阈值重复包装为制品。Node26/24各259项回归、真实设备八项和返回图像显示检查通过，提交 `331af6c` 六组跨平台 CI 通过；范围与首轮失败记录见 `docs/native-visual-review.md`。
 - 此前 `native-3` 阶段已验证部署包集合、Windows Job 身份和 Windows Node 22/24 各连续20轮进程压力检查；当前执行协议为 `native-5`，在设备回执和已确认失败状态上增加同步/构建命令完成记录，需要新的状态目录。当前协议的最终跨平台矩阵仍须复验，不能复用历史 CI 结论。详见 `docs/native-process-ownership.md`、`docs/native-command-recovery.md` 及 `docs/native-completion.md`。
 
 - 原生 SDK 临时目录与 LSP 日志通过 SQLite 预留统一预算，关联受管进程所有权；超额取消后确认进程退出才清理。外部 SDK 的突发写入不是 OS 硬配额，详见 `docs/native-storage.md`。
@@ -48,7 +48,7 @@ MCP 主进程提供静态工具目录和参数校验；Worker 持有领域服务
 | Linter、API 扫描 | `services/diagnostics.ts` | 真实 Linter 指定文件/配置、发现缺陷、增量、显式修复后复查和拒绝坏配置 6 项通过；API 兼容性问题和无差异扫描通过。Linter 空报告不证明全部规则执行，详见 `docs/native-linter.md` |
 | HDC、部署、启动 | `services/device.ts`、`package.ts` | HAP 元数据在真实构建产物上通过；丢失启动回执的恢复回归通过。专用个人签名包真实安装/启动通过；多包签名部署及可核实的外部恢复证据仍未齐全 |
 | UI、中文输入、保存流程与录制 | `services/device.ts`、`text.ts`、`flow.ts`、`recording.ts` | 重启恢复、原断言约束、丢失回执、取消、关闭、保留期限与设备竞争回归通过；真实设备 UI 读取和窗口断言通过，专用应用中文输入、最终断言及 MCP 重启后的完整录制/重放 16 项通过，见 `docs/native-signing.md` |
-| 公开入口、目标导航与 Want | `services/routes.ts`、`navigation.ts`、`runtime.ts` | 产品/模块/公开性、URI/MIME、中文目标匹配、歧义、Want 类型和任务恢复回归通过；实际设备导航与未匹配目标自动录制待完成 |
+| 公开入口、目标导航与 Want | `services/routes.ts`、`navigation.ts`、`runtime.ts` | 产品/模块/公开性、URI/MIME、中文目标匹配、歧义、Want 类型和任务恢复回归通过；未匹配目标自动录制已实现，当前路径真实设备与跨平台复验待完成 |
 | 日志与崩溃 | `services/logs.ts`、`crash.ts` | 命名故障记录、设备时间筛选、整行过滤、权限、截断、多进程事件和提交时证据保存的回归通过；真实设备 tail/无匹配字面量筛选、故障查询的部分权限失败已验证；实际故障文件读取、过滤性能门槛与应用栈帧排序待验收 |
 | 热重载 | `services/hotreload.ts`、`services/hvigor` | SDK watch 基线、同一 worker 两次生成不同 ABC、停止与配置恢复通过；个人签名基线及两次 HQF 真机应用通过，PID 不变、两次按钮文字断言通过，停止和源码恢复通过；更多模块/设备场景待验收 |
 | 本地和云端签名 | `services/signature.ts`、`auth.ts` | 真实密钥/CSR、Chrome 开发者认证、团队及证书/设备清单、两种重启后的认证保持通过；POST 回调、浏览器结果页和设备总数字段修复后复验。个人团队云端证书、调试 Profile、签名安装及原生工程配置生成通过；过期刷新、更多签名类型与外部恢复待验收，见 `docs/native-signing.md` |
@@ -64,7 +64,7 @@ MCP 主进程提供静态工具目录和参数校验；Worker 持有领域服务
 | --- | --- | --- |
 | 编译及回归 | 217 项通过，0 跳过 | `/private/tmp/deveco-native-regression-node26-20260908-36/evidence.json`；154 个 TypeScript 文件，含默认工程/产品、在途任务隔离、服务制品归属、状态库初始化事务、Unicode 路径模板复制及复制取消验证。含工程切换的本机压力检查 20 轮通过，见 `docs/native-storage.md`；本机证据不代替 Windows 验证 |
 | Node 22/24 干净原生验证目录 | 六组全部通过 | [CI 34169432690](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34169432690)，提交 `2ac0811`，macOS/Windows/Linux × Node 22/24 各 217 项通过、0 跳过，Windows 各 20 轮压力通过，六组安装检查通过。Windows Node 22 的中文路径复制修复已复验；原始证据及失败定位见 `docs/native-project-context.md`。历史恢复压力超时证据仍保留，本次成功不构成全部性能门槛证明 |
-| 迁移清单 | 40 工具、7 脚本、330 参数、95 动作覆盖检查通过 | `provenance/baseline-capabilities.json`、`provenance/migration-matrix.json`；文档、重启、默认工程切换和 ArkTS 静态预检 4 项完成行为验收，43 项仍为 pending，`native-migration-audit --release` 会阻止发布 |
+| 迁移清单 | 40 工具、7 脚本、330 参数、95 动作覆盖检查通过 | `provenance/baseline-capabilities.json`、`provenance/migration-matrix.json`；文档、重启、默认工程切换、ArkTS 静态预检和 UI 审阅 5 项完成行为验收，42 项仍为 pending，`native-migration-audit --release` 会阻止发布 |
 | 真实 SDK | 19 项通过 | `/private/tmp/deveco-native-sdk-node24-20260908-1/evidence.json`；Node 24 干净原生目录、Studio 26.0.0.821、SDK 26.0.0.105，包含最新异步模板复制；创建/构建、HAP、静态预检、Linter、ArkTS 四种查询及空结果/位置边界、C++、API 版本和扫描、本地密钥/CSR、模拟器列表通过，不包含签名安装/热补丁 |
 | 真实 ArkTS 静态预检 | 13 项通过 | `/private/tmp/deveco-native-checker-node24-20260908-2/evidence.json`；Node 24 无旧依赖独立目录在最新代码上复查，包含制品归属改动；扫描范围、HMS、路由、资源 AST、API 版本、并发缓存、模型版本、绑定、700 条完整报告和中文模块；边界与保留的历史证据见 `docs/native-static-checker.md` |
 | 真实 Linter | 6 项通过 | `/private/tmp/deveco-native-lint-20260908-4/evidence.json`；独立 canary 工程，没有构建、签名或设备操作。前两轮失败记录保留，范围及原因见 Linter 文档 |

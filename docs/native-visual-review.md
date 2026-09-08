@@ -42,3 +42,5 @@
 2026-09-08 的 `20260908-visual-review-device-2` 八项全部通过；独立 Node 24 安装仅含166个原生依赖，未安装旧 CLI、子 MCP 或 Skill。实际打开 MCP 返回字节保存的 JPEG 和 PNG，图像可正常显示，中文日期可读。本轮画面是锁屏，不构成业务页面的外观或功能验收。
 
 同版 Node 26 `20260908-visual-review-regression-2` 和 Node 24 `20260908-visual-review-node24-2` 各259项回归通过，均为0失败/取消/跳过。三份证据的运行摘要均为 `2d87fca1e813f3c70eec3037578b346321f73f5e4635907c024eaadeef689aed`，完整编译摘要均为 `0e8f0c9f9f56628fad825b3cd4ddee2152a991d8f9847727bc3bb4374367ebb4`。首轮 `20260908-visual-review-device-1` 的失败和第一套安装目录保持原样。证据位于用户目录 `Library/Application Support/DevEcoMCP/acceptance/`；图片不进入 Git 或发布包。
+
+提交 `331af6c` 的 [CI 34188722653](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34188722653) 六组 macOS/Windows/Linux × Node22/24 全部成功。结合上述独立安装、真实设备和图像呈现证据，迁移表中的 `verify_ui` 已完成本项行为验收；最终入口切换后的全仓发布验证仍需单独完成。

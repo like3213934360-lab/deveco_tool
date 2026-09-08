@@ -14,7 +14,11 @@ import {
   UiIndex,
   type Snapshot,
 } from "../src/services/device.js";
-import { controlSchema, flowSchema } from "../src/core/contracts.js";
+import {
+  assertionSchema,
+  controlSchema,
+  flowSchema,
+} from "../src/core/contracts.js";
 import { atomicWrite } from "../src/core/files.js";
 import { inspectProject } from "../src/services/project.js";
 import { ToolError } from "../src/core/errors.js";
@@ -182,6 +186,198 @@ async function start(runtime: Runtime, id = "recorded") {
   );
   return result.run_id;
 }
+test("unknown navigation records once across concurrent submissions and restart, then saves only after the final assertion", async (t) => {
+  const f = await fixture(t);
+  try {
+    let launches = 0,
+      stops = 0;
+    t.mock.method(
+      f.runtime.devices,
+      "shell",
+      async (_target: string, args: string[]) => {
+        assert.deepEqual(args, ["aa", "force-stop", bundle]);
+        stops++;
+        return {
+          stdout: "",
+          stderr: "",
+          elapsedMs: 1,
+          pid: null,
+          exitCode: 0,
+          signal: null,
+          truncated: false,
+        };
+      },
+    );
+    t.mock.method(f.runtime.devices, "launch", async () => {
+      launches++;
+      assert.equal(f.runtime.store.runCount(), 1);
+      return {
+        started: true,
+        processVerified: true,
+        outcomeVerified: false,
+        bundle_name: bundle,
+        target: "device",
+      };
+    });
+    const input = {
+      action: "navigate",
+      goal: "打开新的设置页面",
+      request_key: "automatic-recording",
+    };
+    const result = z.object({
+      run_id: z.string(),
+      recording_id: z.string(),
+      navigation: z.literal("recording"),
+      deduplicated: z.boolean(),
+    });
+    const submissions = await Promise.all([
+      f.runtime.call("ui_flow", input),
+      f.runtime.call("ui_flow", input),
+    ]);
+    const [first, duplicate] = submissions.map((value) => result.parse(value));
+    assert.ok(first && duplicate);
+    assert.equal(first.run_id, duplicate.run_id);
+    assert.equal(first.recording_id, first.run_id);
+    assert.equal(
+      submissions.filter((value) => result.parse(value).deduplicated).length,
+      1,
+    );
+    assert.equal(
+      (await settled(f.runtime, first.run_id)).status,
+      "needs_input",
+    );
+    assert.equal(launches, 1);
+    assert.equal(stops, 1);
+    const draft = f.runtime.recordings.flow(first.run_id);
+    assert.equal(draft.name, input.goal);
+    assert.equal(draft.app.ability, "MainAbility");
+    const file = path.join(f.project, ".arkpilot/flows", `${draft.id}.json`);
+    assert.equal(fs.existsSync(file), false);
+    await f.runtime.call("ui_tap", { selector: { key: "submit" } });
+    await f.reopen();
+    t.mock.method(f.runtime.devices, "launch", async () => {
+      throw new Error("A captured recording must not relaunch");
+    });
+    assert.equal(
+      result.parse(await f.runtime.call("ui_flow", input)).recording_id,
+      first.run_id,
+    );
+    assert.equal(f.runtime.recordings.status(first.run_id).step_count, 1);
+    await assert.rejects(
+      f.runtime.call("ui_flow", { ...input, goal: "另一个目标" }),
+      { code: "REQUEST_KEY_CONFLICT" },
+    );
+    const stop = {
+      action: "record_stop",
+      recording_id: first.run_id,
+      assert: { visible: { key: "submit" } },
+    };
+    t.mock.method(f.runtime.devices, "verify", async () => {
+      throw new ToolError("VERIFICATION_FAILED", "Goal not reached");
+    });
+    await f.runtime.call("ui_flow", stop);
+    assert.equal((await settled(f.runtime, first.run_id)).status, "failed");
+    assert.equal(fs.existsSync(file), false);
+    t.mock.method(f.runtime.devices, "verify", async () => ({
+      verified: true,
+    }));
+    await f.runtime.call("ui_flow", stop);
+    assert.equal((await settled(f.runtime, first.run_id)).status, "succeeded");
+    const saved = f.runtime.flows.read(inspectProject(f.project), draft.id);
+    assert.equal(saved.steps.length, 1);
+    assert.deepEqual(saved.assert, assertionSchema.parse(stop.assert));
+    // The same request remains the original recording even after the new flow can match the goal.
+    assert.equal(
+      result.parse(await f.runtime.call("ui_flow", input)).run_id,
+      first.run_id,
+    );
+    let replays = 0;
+    t.mock.method(f.runtime.flows, "run", async () => {
+      replays++;
+      return { id: saved.id, verified: true, steps: [], repairSaved: false };
+    });
+    const replay = z.object({ run_id: z.string() }).parse(
+      await f.runtime.call("ui_flow", {
+        ...input,
+        request_key: "replay-newly-saved",
+      }),
+    );
+    assert.equal((await settled(f.runtime, replay.run_id)).status, "succeeded");
+    assert.equal(f.runtime.store.get(replay.run_id).workflow, "ui_flow");
+    assert.equal(replays, 1);
+  } finally {
+    await f.close();
+  }
+});
+test("ambiguous automatic entries never touch a device and queued recording cancellation prevents launch", async (t) => {
+  const f = await fixture(t);
+  const gate = Promise.withResolvers<void>();
+  let lease: Promise<unknown> | undefined;
+  try {
+    let targets = 0,
+      launches = 0;
+    t.mock.method(f.runtime.devices, "target", async () => {
+      targets++;
+      return "device";
+    });
+    t.mock.method(f.runtime.devices, "launch", async () => {
+      launches++;
+      throw new Error("Cancelled recording must not launch");
+    });
+    const manifest = path.join(f.project, "entry/src/main/module.json5");
+    const original = fs.readFileSync(manifest);
+    atomicWrite(
+      manifest,
+      JSON.stringify({
+        module: {
+          name: "entry",
+          type: "entry",
+          abilities: [
+            { name: "One", exported: true },
+            { name: "Two", exported: true },
+          ],
+        },
+      }),
+    );
+    const input = {
+      action: "navigate",
+      goal: "未保存的路径",
+      request_key: "cancel-automatic",
+    };
+    await assert.rejects(f.runtime.call("ui_flow", input), {
+      code: "RECORDING_ENTRY_AMBIGUOUS",
+    });
+    assert.equal(targets, 0);
+    assert.equal(f.runtime.store.runCount(), 0);
+    atomicWrite(manifest, original);
+    const locked = Promise.withResolvers<void>();
+    lease = f.runtime.store.lease(`project:${f.project}`, async () => {
+      locked.resolve();
+      await gate.promise;
+    });
+    await locked.promise;
+    const run = z
+      .object({ run_id: z.string() })
+      .parse(await f.runtime.call("ui_flow", input));
+    await f.runtime.call("ui_flow", {
+      action: "record_cancel",
+      recording_id: run.run_id,
+    });
+    assert.equal((await settled(f.runtime, run.run_id)).status, "cancelled");
+    assert.equal(launches, 0);
+    assert.equal(f.runtime.recordings.statusIfInitialized(run.run_id), null);
+    assert.equal(
+      z
+        .object({ run_id: z.string(), status: z.string() })
+        .parse(await f.runtime.call("ui_flow", input)).status,
+      "cancelled",
+    );
+  } finally {
+    gate.resolve();
+    await lease;
+    await f.close();
+  }
+});
 test("modern application root windows can record controls without requiring a SceneBoard WindowScene", () => {
   const tree = snapshot();
   tree.nodes[0]!.type = "root";

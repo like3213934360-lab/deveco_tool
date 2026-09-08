@@ -57,6 +57,7 @@ const manifestSchema = z.object({
   module: z.object({
     name: z.string().min(1),
     type: z.enum(["entry", "feature", "har", "shared"]),
+    mainElement: z.string().min(1).optional(),
     abilities: z
       .array(
         z.object({
@@ -83,6 +84,7 @@ export interface AppRoute {
   kind: "ability" | "action" | "link" | "mime";
   app: ApplicationTarget;
   exported: boolean;
+  entry_point: "home" | "main" | null;
   source: string;
   uri_pattern?: UriPattern;
   requires_uri: boolean;
@@ -198,6 +200,18 @@ export function discoverAppRoutes(project: Project): RouteCatalog {
           kind,
           app,
           exported: ability.exported,
+          entry_point:
+            kind !== "ability" || manifest.type !== "entry"
+              ? null
+              : ability.skills.some(
+                    (skill) =>
+                      skill.actions.includes("action.system.home") &&
+                      skill.entities.includes("entity.system.home"),
+                  )
+                ? "home"
+                : manifest.mainElement === ability.name
+                  ? "main"
+                  : null,
           source: path.relative(project.root, file),
           ...(pattern ? { uri_pattern: pattern } : {}),
           requires_uri: kind === "link" && app.uri === undefined,
