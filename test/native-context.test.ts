@@ -6,9 +6,70 @@ import os from "node:os";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
 import { Runtime } from "../src/services/runtime.js";
-import { atomicWrite } from "../src/core/files.js";
-import type { Project } from "../src/services/project.js";
+import { atomicWrite, readObject } from "../src/core/files.js";
+import { projectTargets, type Project } from "../src/services/project.js";
 import { errorResult } from "../src/core/errors.js";
+
+test("workflow restart retains explicit module targets and request deduplication rejects a different target", async (t) => {
+  const root = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), "deveco-target-context-"))),
+    first = path.join(root, "first"), second = path.join(root, "second"),
+    oldState = process.env.DEVECO_STATE_DIR, oldConfig = process.env.DEVECO_CONFIG;
+  let runtime: Runtime | undefined;
+  try {
+    for (const project of [first, second]) {
+      fs.cpSync(fileURLToPath(new URL("../../test/fixtures/harmony-app", import.meta.url)), project, { recursive: true });
+      const file = path.join(project, "build-profile.json5"), profile = readObject(file);
+      profile.modules = [{ name: "entry", srcPath: "./entry", targets: [
+        { name: "default", applyToProducts: ["default"] },
+        { name: "preview", applyToProducts: ["default"] },
+      ] }];
+      atomicWrite(file, JSON.stringify(profile));
+    }
+    fs.mkdirSync(path.join(root, "clt"));
+    process.env.DEVECO_STATE_DIR = path.join(root, "state");
+    process.env.DEVECO_CONFIG = path.join(root, "config.json");
+    atomicWrite(process.env.DEVECO_CONFIG, JSON.stringify({ clt: path.join(root, "clt") }));
+    runtime = new Runtime();
+    const seen: { root: string; targets: Record<string, string> }[] = [];
+    t.mock.method(runtime.projects, "sync", async (project: Project) => {
+      seen.push({ root: project.root, targets: projectTargets(project) });
+      throw new Error("Response loss at synchronization boundary");
+    });
+    const request = { action: "start", workflow: "project_sync", request_key: "captured-target", input: {
+      project_path: first, product: "default", module_targets: { entry: "preview" }, install: false,
+    } };
+    const { run_id } = z.object({ run_id: z.string() }).parse(await runtime.call("workflow_run", request));
+    const settle = async () => {
+      for (let i = 0; i < 100; i++) {
+        const result = z.object({ status: z.string() }).passthrough().parse(await runtime!.call("workflow_run", { action: "status", run_id, wait_ms: 100 }));
+        if (!["queued", "running"].includes(result.status)) return result;
+      }
+      throw new Error("Target workflow did not settle");
+    };
+    assert.equal((await settle()).status, "needs_input");
+    const captured = z.object({ project_path: z.literal(first), module_targets: z.record(z.string(), z.string()) }).parse(JSON.parse(runtime.store.get(run_id).input) as unknown);
+    assert.deepEqual(captured.module_targets, { entry: "preview" });
+    assert.equal((await runtime.close()).closed, true);
+    t.mock.restoreAll();
+    runtime = new Runtime();
+    await runtime.call("switch_cwd", { project_path: second });
+    t.mock.method(runtime.projects, "sync", async (project: Project) => {
+      seen.push({ root: project.root, targets: projectTargets(project) });
+      return { synchronized: true };
+    });
+    await runtime.call("workflow_run", { action: "resume", run_id, resume_input: { action: "recheck" } });
+    const status = await settle();
+    assert.equal(status.status, "succeeded", JSON.stringify(status));
+    assert.deepEqual(seen, [0, 1].map(() => ({ root: first, targets: { entry: "preview" } })));
+    assert.equal(z.object({ run_id: z.string() }).parse(await runtime.call("workflow_run", request)).run_id, run_id);
+    await assert.rejects(runtime.call("workflow_run", { ...request, input: { ...request.input, module_targets: { entry: "default" } } }), { code: "REQUEST_KEY_CONFLICT" });
+  } finally {
+    await runtime?.close(); t.mock.restoreAll();
+    if (oldState === undefined) delete process.env.DEVECO_STATE_DIR; else process.env.DEVECO_STATE_DIR = oldState;
+    if (oldConfig === undefined) delete process.env.DEVECO_CONFIG; else process.env.DEVECO_CONFIG = oldConfig;
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
 
 test("doctor follows selected projects while submitted diagnostic workflows retain their captured project", async (t) => {
   const root = fs.realpathSync.native(

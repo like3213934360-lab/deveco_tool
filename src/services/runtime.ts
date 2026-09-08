@@ -10,6 +10,7 @@ import {
   flowSchema,
   uiTaskSchema,
   recordingTaskSchema,
+  moduleTargetsSchema,
   type ToolName,
   type WorkflowName,
 } from "../core/contracts.js";
@@ -46,7 +47,7 @@ import type {
   WorkflowStep,
   StepContext,
 } from "../core/workflows.js";
-import { ProjectService, inspectProject, type Project } from "./project.js";
+import { ProjectService, inspectProject, projectTargets, type Project } from "./project.js";
 import { DeviceService } from "./device.js";
 import { VerificationService } from "./verification.js";
 import { DiagnosticService } from "./diagnostics.js";
@@ -141,6 +142,7 @@ export class Runtime {
     return inspectProject(
       text(context.project_path, "project_path"),
       context.product,
+      context.module_targets,
     );
   }
   private output(call: StepContext, node: string): unknown {
@@ -192,9 +194,10 @@ export class Runtime {
         text(record.project_path, "project_path"),
       );
     } else if (name !== "app_deploy" && name !== "crash_diagnose") {
-      const project = this.projects.resolve(projectName, product);
+      const project = this.projects.resolve(projectName, product, moduleTargetsSchema.optional().parse(record.module_targets));
       context.project_path = project.root;
       context.product = project.product.name;
+      context.module_targets = projectTargets(project);
       context.project_hash = project.fingerprint;
       context.source_hash = sourceHash(project);
     }
@@ -592,6 +595,7 @@ export class Runtime {
         model: inspectProject(
           text(call.context.project_path, "project_path"),
           call.context.product,
+          call.context.module_targets,
         ),
       })),
     ]);
@@ -984,6 +988,7 @@ export class Runtime {
     const context: WorkflowContext = { parameters: { tool: name, input }, toolchain_hash: digest(discoverToolchain()) };
     if (project) {
       context.project_path = project.root; context.product = project.product.name;
+      context.module_targets = projectTargets(project);
       input.project_path = project.root; input.product = project.product.name;
       // configure deliberately changes the project model. Its service journals the original model and publication.
       if (input.action !== "configure") { context.project_hash = project.fingerprint; context.source_hash = sourceHash(project); }
@@ -1113,7 +1118,7 @@ export class Runtime {
           api_compatibility = { error: errorResult(error) };
         }
         try {
-          project = this.projects.resolve(input.project_path, input.product);
+          project = this.projects.resolve(input.project_path, input.product, input.module_targets);
         } catch (error) {
           const failure = errorResult(error);
           if (failure.code !== "PROJECT_REQUIRED") project = { error: failure };
@@ -1192,14 +1197,14 @@ export class Runtime {
       case "arkts_check": {
         const input = tools[name].schema.parse(raw);
         return this.diagnostics.arkts(
-          this.projects.resolve(input.project_path, input.product),
+          this.projects.resolve(input.project_path, input.product, input.module_targets),
           input.files,
           signal,
         );
       }
       case "code_lint": {
         const input = tools[name].schema.parse(raw),
-          project = this.projects.resolve(input.project_path, input.product);
+          project = this.projects.resolve(input.project_path, input.product, input.module_targets);
         return this.store.lease(
           `project:${project.root}`,
           () => this.diagnostics.lint(project, input, signal),
@@ -1208,12 +1213,12 @@ export class Runtime {
       }
       case "lsp": {
         const input = tools[name].schema.parse(raw),
-          project = this.projects.resolve(input.project_path, input.product);
+          project = this.projects.resolve(input.project_path, input.product, input.module_targets);
         return this.diagnostics.lsp.request(project, input, signal);
       }
       case "check_cpp_files": {
         const input = tools[name].schema.parse(raw),
-          project = this.projects.resolve(input.project_path, input.product),
+          project = this.projects.resolve(input.project_path, input.product, input.module_targets),
           reports: unknown[] = [];
         for (const file of input.files)
           reports.push(
@@ -1263,17 +1268,17 @@ export class Runtime {
           input.action === "configure" ||
           (input.action === "sign" && Object.keys(input.options).length === 0)
         )
-          project = this.projects.resolve(input.project_path, input.product);
+          project = this.projects.resolve(input.project_path, input.product, input.module_targets);
         if (!["inspect", "verify", "certificates", "devices"].includes(input.action)) return this.startOperation("app_signature", input, project, signal);
         return this.signatures.call(input, project, signal);
       }
       case "hot_reload": {
         const input = tools[name].schema.parse(raw);
-        if (input.action === "status") return this.hot.status(this.projects.resolveSelection(input.project_path, input.product));
-        if (["start", "apply"].includes(input.action)) return this.startOperation("hot_reload", input, this.projects.resolve(input.project_path, input.product), signal);
+        if (input.action === "status") return this.hot.status(this.projects.resolveSelection(input.project_path, input.product, input.module_targets));
+        if (["start", "apply"].includes(input.action)) return this.startOperation("hot_reload", input, this.projects.resolve(input.project_path, input.product, input.module_targets), signal);
         return this.hot.call(
           input,
-          this.projects.resolve(input.project_path, input.product),
+          this.projects.resolve(input.project_path, input.product, input.module_targets),
           signal,
         );
       }
@@ -1387,10 +1392,11 @@ export class Runtime {
             };
           }
         }
-        if (input.action === "list") return { flows: this.flows.list(this.projects.resolveSelection(input.project_path, input.product)) };
+        if (input.action === "list") return { flows: this.flows.list(this.projects.resolveSelection(input.project_path, input.product, input.module_targets)) };
         const project = this.projects.resolve(
           input.project_path,
           input.product,
+          input.module_targets,
         );
         if (input.action === "read")
           return this.flows.read(project, text(input.id, "id"));
@@ -1412,6 +1418,7 @@ export class Runtime {
           parameters: {},
           project_path: project.root,
           product: project.product.name,
+          module_targets: projectTargets(project),
           project_hash: project.fingerprint,
           source_hash: sourceHash(project),
           toolchain_hash: digest(discoverToolchain()),

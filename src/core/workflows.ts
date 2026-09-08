@@ -14,12 +14,13 @@ import { digest } from "./files.js";
 import { protocolVersion } from "./config.js";
 import { withTrace } from "./trace.js";
 import type { CapturedFile } from "./captured-file.js";
-import type { Flow } from "./contracts.js";
+import type { Flow, ModuleTargets } from "./contracts.js";
 
 export interface WorkflowContext {
   parameters: Record<string, unknown>;
   project_path?: string;
   product?: string;
+  module_targets?: ModuleTargets;
   target?: string;
   toolchain_hash?: string;
   project_hash?: string;

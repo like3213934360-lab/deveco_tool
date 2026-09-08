@@ -1,5 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
+import { readObject } from "../../src/core/files.js";
+import { z } from "zod";
 
 const root = process.cwd(),
   args = process.argv.slice(2),
@@ -15,19 +17,23 @@ if (phase === "ohpm")
     '{"lockVersion":1}',
   );
 else {
-  const output = path.join(root, "entry/build/default/outputs/default");
-  fs.mkdirSync(output, { recursive: true });
+  const targets = z.object({ modules: z.array(z.object({ name: z.string(), targets: z.array(z.object({ name: z.string() })) })) })
+    .parse(readObject(path.join(root, "build-profile.json5"))).modules.find((module) => module.name === "entry")!.targets;
+  const selected = args.find((arg) => arg.startsWith("module=entry@"))?.slice("module=entry@".length) ?? "default";
+  const output = path.join(root, "entry/build/default/outputs", selected);
+  for (const target of targets) fs.mkdirSync(path.join(root, "entry/build/default/outputs", target.name), { recursive: true });
   fs.mkdirSync(path.join(root, ".hvigor/outputs/sync"), { recursive: true });
   fs.writeFileSync(
     path.join(root, ".hvigor/outputs/sync/output.json"),
     JSON.stringify({
       "ohos-project": { SELECT_PRODUCT_NAME: "default" },
       "ohos-module-entry": {
-        TARGETS: { default: { BUILD_PATH: { OUTPUT_PATH: output } } },
+        TARGETS: Object.fromEntries(targets.map((target) => [target.name, { BUILD_PATH: { OUTPUT_PATH: path.join(root, "entry/build/default/outputs", target.name) } }])),
       },
     }),
   );
   if (phase === "build") {
+    fs.writeFileSync(path.join(root, "build-args.json"), JSON.stringify(args));
     if (fs.existsSync(path.join(root, "reject-build"))) {
       fs.writeSync(
         2,

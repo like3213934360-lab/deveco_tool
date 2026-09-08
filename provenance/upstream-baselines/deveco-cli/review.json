@@ -10,262 +10,262 @@
     "role": "protocol_reference",
     "acceptance": "verified"
   },
-  "mapping_sha256": "1a51d8393536fe8de5d037aaf2cdbc1f0752e636f023701b3549f565df3197e2",
+  "mapping_sha256": "558373dbb2420ce97f2ffa98c43f3a8cef05342ce4be5f3034a60e1f68583de8",
   "reviews": [
     {
       "rule": "cli-core-toolchain",
-      "reason": "Resolve Studio/CLT layouts and SDK executable identities directly; native owned process groups and durable records replace CLI subprocess dispatch. SDK entry identity now uses content digests with a bounded 128-entry stat-invalidated cache and before/after stat verification; timestamp-only SDK touches no longer cause false session replacement. Current performance revision review: Standard JSON uses native parsing and JSON5 remains supported. SDK metadata parsing is cached by freshly read content hash with 128-entry/4 MiB source bounds; same-size/restored-time edits, deletion and malformed data retain immediate rejection or identity change. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
-      "reviewer": "Codex"
+      "reason": "Resolve Studio/CLT layouts and SDK executable identities directly; native owned process groups and durable records replace CLI subprocess dispatch. SDK entry identity now uses content digests with a bounded 128-entry stat-invalidated cache and before/after stat verification; timestamp-only SDK touches no longer cause false session replacement. Current module-target revision review: The pinned upstream commit, mapped native target hashes and rule scope are unchanged in this revision; the prior semantic review still applies. Required checks are supplied by newly executed reports for the current compiled identity, not reused historical attestations. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native module target review 2026-09-09"
     },
     {
       "rule": "cli-core-config",
-      "reason": "Use strict native configuration and explicit toolchain selection; preserve the protocol constants needed by adapters without importing CLI host configuration or credentials. Current performance revision review: Standard JSON uses native parsing and JSON5 remains supported. SDK metadata parsing is cached by freshly read content hash with 128-entry/4 MiB source bounds; same-size/restored-time edits, deletion and malformed data retain immediate rejection or identity change. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
-      "reviewer": "Codex"
+      "reason": "Use strict native configuration and explicit toolchain selection; preserve the protocol constants needed by adapters without importing CLI host configuration or credentials. Current module-target revision review: The pinned upstream commit, mapped native target hashes and rule scope are unchanged in this revision; the prior semantic review still applies. Required checks are supplied by newly executed reports for the current compiled identity, not reused historical attestations. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native module target review 2026-09-09"
     },
     {
       "rule": "cli-core-types",
-      "reason": "Express HTTP and native adapter inputs through strict TypeScript and schemas; upstream Skill metadata is reference context rather than a native execution dependency. Current performance revision review: Standard JSON uses native parsing and JSON5 remains supported. SDK metadata parsing is cached by freshly read content hash with 128-entry/4 MiB source bounds; same-size/restored-time edits, deletion and malformed data retain immediate rejection or identity change. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
-      "reviewer": "Codex"
+      "reason": "Express HTTP and native adapter inputs through strict TypeScript and schemas; upstream Skill metadata is reference context rather than a native execution dependency. Current module-target revision review: Typed module_targets selects a validated Hvigor target for each module independently of the HDC target. Resolved defaults are captured before submission and included in project, LSP and watch identity; restart and duplicate-request checks retain that selection. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native module target review 2026-09-09"
     },
     {
       "rule": "cli-core-utils",
-      "reason": "Replace CLI shell helpers, build locks and data paths with argv-based owned processes, resource leases and private durable state; uncertain external completion is paused. Current performance revision review: Standard JSON uses native parsing and JSON5 remains supported. SDK metadata parsing is cached by freshly read content hash with 128-entry/4 MiB source bounds; same-size/restored-time edits, deletion and malformed data retain immediate rejection or identity change. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
-      "reviewer": "Codex"
+      "reason": "Replace CLI shell helpers, build locks and data paths with argv-based owned processes, resource leases and private durable state; uncertain external completion is paused. Current module-target revision review: The pinned upstream commit, mapped native target hashes and rule scope are unchanged in this revision; the prior semantic review still applies. Required checks are supplied by newly executed reports for the current compiled identity, not reused historical attestations. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native module target review 2026-09-09"
     },
     {
       "rule": "cli-core-trace",
-      "reason": "Use bounded local structured logs and encrypted private operation records. CLI installation IDs and telemetry upload are outside native execution and are not ported. Current performance revision review: Standard JSON uses native parsing and JSON5 remains supported. SDK metadata parsing is cached by freshly read content hash with 128-entry/4 MiB source bounds; same-size/restored-time edits, deletion and malformed data retain immediate rejection or identity change. Request telemetry and its tests are explicitly mapped to the new bounded RequestLog and Worker implementation: 64 KiB shared reservation, 128-event/20 ms batches, FULL atomic flush, sticky persistence failure and cleanup even when flush fails. Hard crashes may lose the final ordinary telemetry window; workflow checkpoints and side-effect receipts remain synchronous. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
-      "reviewer": "Codex"
+      "reason": "Use bounded local structured logs and encrypted private operation records. CLI installation IDs and telemetry upload are outside native execution and are not ported. Current module-target revision review: The pinned upstream commit, mapped native target hashes and rule scope are unchanged in this revision; the prior semantic review still applies. Required checks are supplied by newly executed reports for the current compiled identity, not reused historical attestations. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native module target review 2026-09-09"
     },
     {
       "rule": "cli-core-internal",
-      "reason": "Use packaged local document resources; upstream background document initialization and telemetry upload workers are not started by the native runtime. Current performance revision review: Standard JSON uses native parsing and JSON5 remains supported. SDK metadata parsing is cached by freshly read content hash with 128-entry/4 MiB source bounds; same-size/restored-time edits, deletion and malformed data retain immediate rejection or identity change. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
-      "reviewer": "Codex"
+      "reason": "Use packaged local document resources; upstream background document initialization and telemetry upload workers are not started by the native runtime. Current module-target revision review: The pinned upstream commit, mapped native target hashes and rule scope are unchanged in this revision; the prior semantic review still applies. Required checks are supplied by newly executed reports for the current compiled identity, not reused historical attestations. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native module target review 2026-09-09"
     },
     {
       "rule": "cli-src-apply-",
-      "reason": "Preserve SDK HQF build, signing and device quickfix behavior in native hot reload; freeze input hashes and process identity before persistent start/apply mutations. Current performance revision review: Read-only flow catalogs and hot-session status validate current product/module selection without hashing unused build inputs; tasks and LSP still capture the full content fingerprint and previously captured contexts remain immutable. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
-      "reviewer": "Codex"
+      "reason": "Preserve SDK HQF build, signing and device quickfix behavior in native hot reload; freeze input hashes and process identity before persistent start/apply mutations. Current module-target revision review: Typed module_targets selects a validated Hvigor target for each module independently of the HDC target. Resolved defaults are captured before submission and included in project, LSP and watch identity; restart and duplicate-request checks retain that selection. The hot-ready memo and active watch are separated by resolved targets. A fresh preview canary uses actual native personal signing configuration, not a modified success receipt; two HQFs preserve PID and reach their final text assertions. Unknown-operation replay rules are unchanged. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native module target review 2026-09-09"
     },
     {
       "rule": "cli-src-auth-",
-      "reason": "Use native browser authentication and encrypted token storage with explicit personal/team identity and refresh; no old CLI credential import during installation migration. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
-      "reviewer": "Codex"
+      "reason": "Use native browser authentication and encrypted token storage with explicit personal/team identity and refresh; no old CLI credential import during installation migration. Current module-target revision review: The pinned upstream commit, mapped native target hashes and rule scope are unchanged in this revision; the prior semantic review still applies. Required checks are supplied by newly executed reports for the current compiled identity, not reused historical attestations. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native module target review 2026-09-09"
     },
     {
       "rule": "cli-src-signature-",
-      "reason": "Preserve certificate, CSR, profile and signing protocols with encrypted preparation and digest-checked publication. Certificate/device inventories permit reconciliation; reviewed Profile endpoints provide no equivalent query, so ambiguous writes pause. Current certificate handling accepts a bounded root-first or leaf-first chain only when exactly one certificate matches the submitted CSR SPKI. Mismatched, duplicated and malformed chains are rejected; sign/verify collection preserves durable stage receipts. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
-      "reviewer": "Codex"
+      "reason": "Preserve certificate, CSR, profile and signing protocols with encrypted preparation and digest-checked publication. Certificate/device inventories permit reconciliation; reviewed Profile endpoints provide no equivalent query, so ambiguous writes pause. Current certificate handling accepts a bounded root-first or leaf-first chain only when exactly one certificate matches the submitted CSR SPKI. Mismatched, duplicated and malformed chains are rejected; sign/verify collection preserves durable stage receipts. Current module-target revision review: Signing configuration revalidation now reconstructs the captured target selection instead of implicitly selecting default. A real preview canary configured with the existing personal descriptor and applied two signed HQFs with unchanged PID and final text assertions. Existing assets are reused; this does not prove fresh cloud mutations or expired-token refresh. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native module target review 2026-09-09"
     },
     {
       "rule": "cli-src-codelinter-",
-      "reason": "Call the selected SDK linter directly with bounded project inputs, independent report parsing and cancellation; retain real SDK validation as a required pending check. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
-      "reviewer": "Codex"
+      "reason": "Call the selected SDK linter directly with bounded project inputs, independent report parsing and cancellation; retain real SDK validation as a required pending check. Current module-target revision review: DiagnosticService adds target propagation for its static-check sibling. Linter invocation and structured report parsing remain unchanged; the current real linter and SDK reports verify their mapped scope. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native module target review 2026-09-09"
     },
     {
       "rule": "cli-src-docs-",
-      "reason": "Use attributed packaged document archives and catalog routing, bounded extraction and lookup. Native services do not run official document helper processes. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
-      "reviewer": "Codex"
+      "reason": "Use attributed packaged document archives and catalog routing, bounded extraction and lookup. Native services do not run official document helper processes. Current module-target revision review: The pinned upstream commit, mapped native target hashes and rule scope are unchanged in this revision; the prior semantic review still applies. Required checks are supplied by newly executed reports for the current compiled identity, not reused historical attestations. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native module target review 2026-09-09"
     },
     {
       "rule": "cli-src-ui-",
-      "reason": "Use native UI import, bounded parsing and indexed snapshots with display/window scope; actions use frozen coordinates and completion receipts instead of replaying uncertain input. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
-      "reviewer": "Codex"
+      "reason": "Use native UI import, bounded parsing and indexed snapshots with display/window scope; actions use frozen coordinates and completion receipts instead of replaying uncertain input. Current module-target revision review: The pinned upstream commit, mapped native target hashes and rule scope are unchanged in this revision; the prior semantic review still applies. Required checks are supplied by newly executed reports for the current compiled identity, not reused historical attestations. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native module target review 2026-09-09"
     },
     {
       "rule": "cli-src-service-",
-      "reason": "Use SDK emulator management with durable mutations, inventory reconciliation and resource leases. UUID/path/HDC-port binding remains subject to real running-instance acceptance. Running emulator binding verifies configured port or, only when unset, a loopback guest instance name plus unchanged UUID and instance path. Physical devices and mismatched endpoints are rejected. The lifecycle collector waits up to two minutes for the unique guest and verifies original inventory after deletion. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
-      "reviewer": "Codex"
+      "reason": "Use SDK emulator management with durable mutations, inventory reconciliation and resource leases. UUID/path/HDC-port binding remains subject to real running-instance acceptance. Running emulator binding verifies configured port or, only when unset, a loopback guest instance name plus unchanged UUID and instance path. Physical devices and mismatched endpoints are rejected. The lifecycle collector waits up to two minutes for the unique guest and verifies original inventory after deletion. Current module-target revision review: The pinned upstream commit, mapped native target hashes and rule scope are unchanged in this revision; the prior semantic review still applies. Required checks are supplied by newly executed reports for the current compiled identity, not reused historical attestations. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native module target review 2026-09-09"
     },
     {
       "rule": "cli-src-resources-",
-      "reason": "The upstream ACL recommendation table is not applied as automatic permission expansion. Native profile creation accepts explicit ACL permissions, and project templates retain their declared permissions; no upstream resource code executes. Current performance revision review: Read-only flow catalogs and hot-session status validate current product/module selection without hashing unused build inputs; tasks and LSP still capture the full content fingerprint and previously captured contexts remain immutable. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
-      "reviewer": "Codex"
+      "reason": "The upstream ACL recommendation table is not applied as automatic permission expansion. Native profile creation accepts explicit ACL permissions, and project templates retain their declared permissions; no upstream resource code executes. Current module-target revision review: ProjectService now validates explicit module targets without changing template bytes, creation publication, ACL permissions or SDK discovery. Current SDK creation/build and project regression reports cover the shared service change. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native module target review 2026-09-09"
     },
     {
       "rule": "cli-src-data-",
-      "reason": "Do not use the bundled upstream privacy text as current agreement evidence. Native license service reads installed SDK agreements and uses supported acceptance commands with explicit consent data. Current read-only collector waits for durable stale-license rejection, unwraps the original cause and verifies byte-identical configuration plus unchanged mtime. No bundled agreement text is substituted for installed SDK evidence. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
-      "reviewer": "Codex"
+      "reason": "Do not use the bundled upstream privacy text as current agreement evidence. Native license service reads installed SDK agreements and uses supported acceptance commands with explicit consent data. Current read-only collector waits for durable stale-license rejection, unwraps the original cause and verifies byte-identical configuration plus unchanged mtime. No bundled agreement text is substituted for installed SDK evidence. Current module-target revision review: The pinned upstream commit, mapped native target hashes and rule scope are unchanged in this revision; the prior semantic review still applies. Required checks are supplied by newly executed reports for the current compiled identity, not reused historical attestations. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native module target review 2026-09-09"
     },
     {
       "rule": "cli-templates-",
-      "reason": "Preserve attributed application template bytes and use native project creation with product/module metadata and SDK selection; successful real builds remain pending acceptance. Current performance revision review: Read-only flow catalogs and hot-session status validate current product/module selection without hashing unused build inputs; tasks and LSP still capture the full content fingerprint and previously captured contexts remain immutable. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
-      "reviewer": "Codex"
+      "reason": "Preserve attributed application template bytes and use native project creation with product/module metadata and SDK selection; successful real builds remain pending acceptance. Current module-target revision review: ProjectService now validates explicit module targets without changing template bytes, creation publication, ACL permissions or SDK discovery. Current SDK creation/build and project regression reports cover the shared service change. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native module target review 2026-09-09"
     },
     {
       "rule": "cli-index-",
-      "reason": "Replace upstream index construction scripts with the native packaged document catalog and bounded local search; dictionary resources are reference data, not a background CLI service. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
-      "reviewer": "Codex"
+      "reason": "Replace upstream index construction scripts with the native packaged document catalog and bounded local search; dictionary resources are reference data, not a background CLI service. Current module-target revision review: The pinned upstream commit, mapped native target hashes and rule scope are unchanged in this revision; the prior semantic review still applies. Required checks are supplied by newly executed reports for the current compiled identity, not reused historical attestations. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native module target review 2026-09-09"
     },
     {
       "rule": "cli-command-build.ts",
-      "reason": "Map product, module and build-mode selection to direct OHPM/Hvigor durable stages; preserve output package identity and command completion records. Current performance revision review: Read-only flow catalogs and hot-session status validate current product/module selection without hashing unused build inputs; tasks and LSP still capture the full content fingerprint and previously captured contexts remain immutable. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
-      "reviewer": "Codex"
+      "reason": "Map product, module and build-mode selection to direct OHPM/Hvigor durable stages; preserve output package identity and command completion records. Current module-target revision review: Typed module_targets selects a validated Hvigor target for each module independently of the HDC target. Resolved defaults are captured before submission and included in project, LSP and watch identity; restart and duplicate-request checks retain that selection. Real default/tablet products each build default/preview HAR, HSP and HAP outputs; selected HSP dependency closure and output paths are checked. Explicit module/target selection is rejected for assembleApp because modern SDK product packaging disallows non-HAR module selectors. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native module target review 2026-09-09"
     },
     {
       "rule": "cli-command-create.ts",
-      "reason": "Map app/template creation to native bounded file publication and project metadata; do not install host Skills as part of creation. Current performance revision review: Read-only flow catalogs and hot-session status validate current product/module selection without hashing unused build inputs; tasks and LSP still capture the full content fingerprint and previously captured contexts remain immutable. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
-      "reviewer": "Codex"
+      "reason": "Map app/template creation to native bounded file publication and project metadata; do not install host Skills as part of creation. Current module-target revision review: ProjectService now validates explicit module targets without changing template bytes, creation publication, ACL permissions or SDK discovery. Current SDK creation/build and project regression reports cover the shared service change. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native module target review 2026-09-09"
     },
     {
       "rule": "cli-command-init.ts",
-      "reason": "Retain project initialization through native project workflows and explicit configuration. Upstream init options that overwrite host Skill/MCP settings are replaced by separate reviewed maintenance plans. Current performance revision review: Read-only flow catalogs and hot-session status validate current product/module selection without hashing unused build inputs; tasks and LSP still capture the full content fingerprint and previously captured contexts remain immutable. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
-      "reviewer": "Codex"
+      "reason": "Retain project initialization through native project workflows and explicit configuration. Upstream init options that overwrite host Skill/MCP settings are replaced by separate reviewed maintenance plans. Current module-target revision review: ProjectService now validates explicit module targets without changing template bytes, creation publication, ACL permissions or SDK discovery. Current SDK creation/build and project regression reports cover the shared service change. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native module target review 2026-09-09"
     },
     {
       "rule": "cli-command-run.ts",
-      "reason": "Separate build, frozen signed-package deployment and Ability/Want launch into durable nodes; uncertain device completion is reconciled from receipts rather than replayed. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
-      "reviewer": "Codex"
+      "reason": "Separate build, frozen signed-package deployment and Ability/Want launch into durable nodes; uncertain device completion is reconciled from receipts rather than replayed. Current module-target revision review: Typed module_targets selects a validated Hvigor target for each module independently of the HDC target. Resolved defaults are captured before submission and included in project, LSP and watch identity; restart and duplicate-request checks retain that selection. Four signed three-package sets are installed on the dedicated phone, completion-response loss is injected, and a reconstructed Runtime reuses receipts without reinstalling before the final UI assertion. This covers receipt recovery, not every OS-kill window. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native module target review 2026-09-09"
     },
     {
       "rule": "cli-command-check.ts",
-      "reason": "Expose SDK checks and supported API versions as native diagnostics and fixed workflows; outputs are bounded structured artifacts. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
-      "reviewer": "Codex"
+      "reason": "Expose SDK checks and supported API versions as native diagnostics and fixed workflows; outputs are bounded structured artifacts. Current module-target revision review: The static-check child input now preserves the captured module_targets through CLI schema validation, DiagnosticService and inspectProject. Target-specific real SDK prechecks run for both products and both targets; no prose rule is treated as compiler output. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native module target review 2026-09-09"
     },
     {
       "rule": "cli-command-serve-lsp.ts",
-      "reason": "Own an ArkTS LSP connection for the frozen project/toolchain and reclaim it after idle; do not start the official CLI LSP proxy. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
-      "reviewer": "Codex"
+      "reason": "Own an ArkTS LSP connection for the frozen project/toolchain and reclaim it after idle; do not start the official CLI LSP proxy. Current module-target revision review: The pinned upstream commit, mapped native target hashes and rule scope are unchanged in this revision; the prior semantic review still applies. Required checks are supplied by newly executed reports for the current compiled identity, not reused historical attestations. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native module target review 2026-09-09"
     },
     {
       "rule": "cli-command-serve-lsp-cpp.ts",
-      "reason": "Start SDK clangd directly with module and ABI compile database context; require real cross-module C++ acceptance rather than assuming ArkTS results transfer. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
-      "reviewer": "Codex"
+      "reason": "Start SDK clangd directly with module and ABI compile database context; require real cross-module C++ acceptance rather than assuming ArkTS results transfer. Current module-target revision review: The pinned upstream commit, mapped native target hashes and rule scope are unchanged in this revision; the prior semantic review still applies. Required checks are supplied by newly executed reports for the current compiled identity, not reused historical attestations. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native module target review 2026-09-09"
     },
     {
       "rule": "cli-command-signature.ts",
-      "reason": "Expose typed signing operations with explicit identity and durable writes; local material and package publication use encrypted preparation and hash reconciliation. Inspect remains a read-only project signing-configuration query. Certificate download selects the unique CSR key match from a bounded chain; no official CLI runtime is imported. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
-      "reviewer": "Codex"
+      "reason": "Expose typed signing operations with explicit identity and durable writes; local material and package publication use encrypted preparation and hash reconciliation. Inspect remains a read-only project signing-configuration query. Certificate download selects the unique CSR key match from a bounded chain; no official CLI runtime is imported. Current module-target revision review: Signing configuration revalidation now reconstructs the captured target selection instead of implicitly selecting default. A real preview canary configured with the existing personal descriptor and applied two signed HQFs with unchanged PID and final text assertions. Existing assets are reused; this does not prove fresh cloud mutations or expired-token refresh. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native module target review 2026-09-09"
     },
     {
       "rule": "cli-command-auth.ts",
-      "reason": "Expose native login, status, logout and team selection while keeping tokens private; expired-auth and reauthentication scenarios remain required. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
-      "reviewer": "Codex"
+      "reason": "Expose native login, status, logout and team selection while keeping tokens private; expired-auth and reauthentication scenarios remain required. Current module-target revision review: The pinned upstream commit, mapped native target hashes and rule scope are unchanged in this revision; the prior semantic review still applies. Required checks are supplied by newly executed reports for the current compiled identity, not reused historical attestations. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native module target review 2026-09-09"
     },
     {
       "rule": "cli-command-doc.ts",
-      "reason": "Preserve catalog/search/read through attributed local archives with bounded result and content sizes. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
-      "reviewer": "Codex"
+      "reason": "Preserve catalog/search/read through attributed local archives with bounded result and content sizes. Current module-target revision review: The pinned upstream commit, mapped native target hashes and rule scope are unchanged in this revision; the prior semantic review still applies. Required checks are supplied by newly executed reports for the current compiled identity, not reused historical attestations. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native module target review 2026-09-09"
     },
     {
       "rule": "cli-command-log.ts",
-      "reason": "Preserve bounded log collection, literal filtering, follow sessions and named crash files; retain timestamps, process boundaries and truncation metadata. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
-      "reviewer": "Codex"
+      "reason": "Preserve bounded log collection, literal filtering, follow sessions and named crash files; retain timestamps, process boundaries and truncation metadata. Current module-target revision review: The pinned upstream commit, mapped native target hashes and rule scope are unchanged in this revision; the prior semantic review still applies. Required checks are supplied by newly executed reports for the current compiled identity, not reused historical attestations. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native module target review 2026-09-09"
     },
     {
       "rule": "cli-command-device.ts",
-      "reason": "Preserve explicit target selection and native device information/file/SQLite tools under schema boundaries; aliases share canonical resource ownership. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
-      "reviewer": "Codex"
+      "reason": "Preserve explicit target selection and native device information/file/SQLite tools under schema boundaries; aliases share canonical resource ownership. Current module-target revision review: The pinned upstream commit, mapped native target hashes and rule scope are unchanged in this revision; the prior semantic review still applies. Required checks are supplied by newly executed reports for the current compiled identity, not reused historical attestations. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native module target review 2026-09-09"
     },
     {
       "rule": "cli-command-emulator.ts",
-      "reason": "Map inventory, images, creation, start/stop/delete and license actions to native SDK services; mutations return durable run IDs and unknown outcomes retain leases. Current adapter reconciles only declared operation children after confirmed process exit. Binding supports unset native ports through verified loopback guest identity; lifecycle operations keep durable receipts and preserve unrelated instances. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
-      "reviewer": "Codex"
+      "reason": "Map inventory, images, creation, start/stop/delete and license actions to native SDK services; mutations return durable run IDs and unknown outcomes retain leases. Current adapter reconciles only declared operation children after confirmed process exit. Binding supports unset native ports through verified loopback guest identity; lifecycle operations keep durable receipts and preserve unrelated instances. Current module-target revision review: The pinned upstream commit, mapped native target hashes and rule scope are unchanged in this revision; the prior semantic review still applies. Required checks are supplied by newly executed reports for the current compiled identity, not reused historical attestations. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native module target review 2026-09-09"
     },
     {
       "rule": "cli-command-ui.ts",
-      "reason": "Expose the UI action group through typed native contracts and durable flow execution, with selector ambiguity checks and final assertions. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
-      "reviewer": "Codex"
+      "reason": "Expose the UI action group through typed native contracts and durable flow execution, with selector ambiguity checks and final assertions. Current module-target revision review: The pinned upstream commit, mapped native target hashes and rule scope are unchanged in this revision; the prior semantic review still applies. Required checks are supplied by newly executed reports for the current compiled identity, not reused historical attestations. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native module target review 2026-09-09"
     },
     {
       "rule": "cli-command-ui-input.ts",
-      "reason": "Preserve gestures, click variants and text input with display/window scope; coordinate/selector inputs are frozen before uncertain external effects. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
-      "reviewer": "Codex"
+      "reason": "Preserve gestures, click variants and text input with display/window scope; coordinate/selector inputs are frozen before uncertain external effects. Current module-target revision review: The pinned upstream commit, mapped native target hashes and rule scope are unchanged in this revision; the prior semantic review still applies. Required checks are supplied by newly executed reports for the current compiled identity, not reused historical attestations. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native module target review 2026-09-09"
     },
     {
       "rule": "cli-command-ui-layout.ts",
-      "reason": "Parse and query complete native dump snapshots with bounded caches, parent/depth indexes and accurate match totals independent of pagination. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
-      "reviewer": "Codex"
+      "reason": "Parse and query complete native dump snapshots with bounded caches, parent/depth indexes and accurate match totals independent of pagination. Current module-target revision review: The pinned upstream commit, mapped native target hashes and rule scope are unchanged in this revision; the prior semantic review still applies. Required checks are supplied by newly executed reports for the current compiled identity, not reused historical attestations. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native module target review 2026-09-09"
     },
     {
       "rule": "cli-command-ui-window.ts",
-      "reason": "Preserve device window enumeration and visible/system-window scope through native UI inspection; retain window/process identity in snapshots. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
-      "reviewer": "Codex"
+      "reason": "Preserve device window enumeration and visible/system-window scope through native UI inspection; retain window/process identity in snapshots. Current module-target revision review: The pinned upstream commit, mapped native target hashes and rule scope are unchanged in this revision; the prior semantic review still applies. Required checks are supplied by newly executed reports for the current compiled identity, not reused historical attestations. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native module target review 2026-09-09"
     },
     {
       "rule": "cli-command-ui-screenshot.ts",
-      "reason": "Capture the selected display using owned temporary files and native HDC transfer, expose image artifacts, and keep visual review separate from structural assertions. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
-      "reviewer": "Codex"
+      "reason": "Capture the selected display using owned temporary files and native HDC transfer, expose image artifacts, and keep visual review separate from structural assertions. Current module-target revision review: The pinned upstream commit, mapped native target hashes and rule scope are unchanged in this revision; the prior semantic review still applies. Required checks are supplied by newly executed reports for the current compiled identity, not reused historical attestations. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native module target review 2026-09-09"
     },
     {
       "rule": "cli-retired-src-compat-",
-      "reason": "Reviewed scope of src/compat/: The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
-      "reviewer": "Codex"
+      "reason": "Reviewed scope of src/compat/: The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths. Current module-target revision review: The pinned upstream commit, mapped native target hashes and rule scope are unchanged in this revision; the prior semantic review still applies. Required checks are supplied by newly executed reports for the current compiled identity, not reused historical attestations. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native module target review 2026-09-09"
     },
     {
       "rule": "cli-retired-src-skills-",
-      "reason": "Reviewed scope of src/skills/: The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
-      "reviewer": "Codex"
+      "reason": "Reviewed scope of src/skills/: The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths. Current module-target revision review: The pinned upstream commit, mapped native target hashes and rule scope are unchanged in this revision; the prior semantic review still applies. Required checks are supplied by newly executed reports for the current compiled identity, not reused historical attestations. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native module target review 2026-09-09"
     },
     {
       "rule": "cli-retired-src-install-check-",
-      "reason": "Reviewed scope of src/install-check/: The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
-      "reviewer": "Codex"
+      "reason": "Reviewed scope of src/install-check/: The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths. Current module-target revision review: The pinned upstream commit, mapped native target hashes and rule scope are unchanged in this revision; the prior semantic review still applies. Required checks are supplied by newly executed reports for the current compiled identity, not reused historical attestations. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native module target review 2026-09-09"
     },
     {
       "rule": "cli-retired-src-update-",
-      "reason": "Reviewed scope of src/update/: The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
-      "reviewer": "Codex"
+      "reason": "Reviewed scope of src/update/: The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths. Current module-target revision review: The pinned upstream commit, mapped native target hashes and rule scope are unchanged in this revision; the prior semantic review still applies. Required checks are supplied by newly executed reports for the current compiled identity, not reused historical attestations. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native module target review 2026-09-09"
     },
     {
       "rule": "cli-retired-src-commands-skills.ts",
-      "reason": "Reviewed scope of src/commands/skills.ts: The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
-      "reviewer": "Codex"
+      "reason": "Reviewed scope of src/commands/skills.ts: The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths. Current module-target revision review: The pinned upstream commit, mapped native target hashes and rule scope are unchanged in this revision; the prior semantic review still applies. Required checks are supplied by newly executed reports for the current compiled identity, not reused historical attestations. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native module target review 2026-09-09"
     },
     {
       "rule": "cli-retired-src-commands-update.ts",
-      "reason": "Reviewed scope of src/commands/update.ts: The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
-      "reviewer": "Codex"
+      "reason": "Reviewed scope of src/commands/update.ts: The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths. Current module-target revision review: The pinned upstream commit, mapped native target hashes and rule scope are unchanged in this revision; the prior semantic review still applies. Required checks are supplied by newly executed reports for the current compiled identity, not reused historical attestations. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native module target review 2026-09-09"
     },
     {
       "rule": "cli-retired-src-commands-serve.ts",
-      "reason": "Reviewed scope of src/commands/serve.ts: The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
-      "reviewer": "Codex"
+      "reason": "Reviewed scope of src/commands/serve.ts: The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths. Current module-target revision review: The pinned upstream commit, mapped native target hashes and rule scope are unchanged in this revision; the prior semantic review still applies. Required checks are supplied by newly executed reports for the current compiled identity, not reused historical attestations. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native module target review 2026-09-09"
     },
     {
       "rule": "cli-retired-mcp-",
-      "reason": "Reviewed scope of mcp/: The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
-      "reviewer": "Codex"
+      "reason": "Reviewed scope of mcp/: The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths. Current module-target revision review: The pinned upstream commit, mapped native target hashes and rule scope are unchanged in this revision; the prior semantic review still applies. Required checks are supplied by newly executed reports for the current compiled identity, not reused historical attestations. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native module target review 2026-09-09"
     },
     {
       "rule": "cli-release-LICENSE",
-      "reason": "Review LICENSE as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
-      "reviewer": "Codex"
+      "reason": "Review LICENSE as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. Current module-target revision review: The pinned upstream commit, mapped native target hashes and rule scope are unchanged in this revision; the prior semantic review still applies. Required checks are supplied by newly executed reports for the current compiled identity, not reused historical attestations. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native module target review 2026-09-09"
     },
     {
       "rule": "cli-release-OAT.xml",
-      "reason": "Review OAT.xml as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
-      "reviewer": "Codex"
+      "reason": "Review OAT.xml as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. Current module-target revision review: The pinned upstream commit, mapped native target hashes and rule scope are unchanged in this revision; the prior semantic review still applies. Required checks are supplied by newly executed reports for the current compiled identity, not reused historical attestations. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native module target review 2026-09-09"
     },
     {
       "rule": "cli-release-PRIVACY.md",
-      "reason": "Review PRIVACY.md as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
-      "reviewer": "Codex"
+      "reason": "Review PRIVACY.md as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. Current module-target revision review: The pinned upstream commit, mapped native target hashes and rule scope are unchanged in this revision; the prior semantic review still applies. Required checks are supplied by newly executed reports for the current compiled identity, not reused historical attestations. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native module target review 2026-09-09"
     },
     {
       "rule": "cli-release-package.json",
-      "reason": "Review package.json as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
-      "reviewer": "Codex"
+      "reason": "Review package.json as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. Current module-target revision review: The pinned upstream commit, mapped native target hashes and rule scope are unchanged in this revision; the prior semantic review still applies. Required checks are supplied by newly executed reports for the current compiled identity, not reused historical attestations. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native module target review 2026-09-09"
     },
     {
       "rule": "cli-release-package-lock.json",
-      "reason": "Review package-lock.json as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
-      "reviewer": "Codex"
+      "reason": "Review package-lock.json as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. Current module-target revision review: The pinned upstream commit, mapped native target hashes and rule scope are unchanged in this revision; the prior semantic review still applies. Required checks are supplied by newly executed reports for the current compiled identity, not reused historical attestations. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native module target review 2026-09-09"
     },
     {
       "rule": "cli-release-CHANGELOG.md",
-      "reason": "Review CHANGELOG.md as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
-      "reviewer": "Codex"
+      "reason": "Review CHANGELOG.md as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. Current module-target revision review: The pinned upstream commit, mapped native target hashes and rule scope are unchanged in this revision; the prior semantic review still applies. Required checks are supplied by newly executed reports for the current compiled identity, not reused historical attestations. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native module target review 2026-09-09"
     },
     {
       "rule": "cli-release-src/cli.ts",
-      "reason": "Review src/cli.ts as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
-      "reviewer": "Codex"
+      "reason": "Review src/cli.ts as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. Current module-target revision review: The pinned upstream commit, mapped native target hashes and rule scope are unchanged in this revision; the prior semantic review still applies. Required checks are supplied by newly executed reports for the current compiled identity, not reused historical attestations. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native module target review 2026-09-09"
     },
     {
       "rule": "cli-emulator-license-protocol",
-      "reason": "Reviewed HarmonyOS Software Service and SDK agreement keys. Native acceptance delegates to supported SDK commands, checks installed agreements, and reconciles child command records only after process/session closure. Already-accepted license reconciliation settles only matching recorded child commands after process closure. Stale review digests fail before SDK acceptance and the collector checks native config bytes and mtime remain unchanged. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
-      "reviewer": "Codex"
+      "reason": "Reviewed HarmonyOS Software Service and SDK agreement keys. Native acceptance delegates to supported SDK commands, checks installed agreements, and reconciles child command records only after process/session closure. Already-accepted license reconciliation settles only matching recorded child commands after process closure. Stale review digests fail before SDK acceptance and the collector checks native config bytes and mtime remain unchanged. Current module-target revision review: The pinned upstream commit, mapped native target hashes and rule scope are unchanged in this revision; the prior semantic review still applies. Required checks are supplied by newly executed reports for the current compiled identity, not reused historical attestations. Acceptance binds runtime a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b and compiled d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c. This is mapped-source acceptance, not full migration or release readiness.",
+      "reviewer": "Codex native module target review 2026-09-09"
     }
   ],
   "targets": [
@@ -287,11 +287,19 @@
     },
     {
       "path": "scripts/native-hot-device-acceptance.ts",
-      "sha256": "b5b84ad59d863db29d90563d793bc796b558e3f8db3978eee3e21308a2b0a53d"
+      "sha256": "730cfe903d730c4d7c4d3ccbbbe537d2dc314bbbebeea54f7023b095a6008059"
+    },
+    {
+      "path": "scripts/native-hot-target-prepare.ts",
+      "sha256": "434fbb5dfc67a5a6b9006ce6966a87f2d909b568a3315f0d148fd8bc99c20abf"
     },
     {
       "path": "scripts/native-lint-acceptance.ts",
       "sha256": "11a5b120b25735593d34274d5920e3ed5d597cde6a1d00ea7fcfcebf3ad5b6c3"
+    },
+    {
+      "path": "scripts/native-multimodule-acceptance.ts",
+      "sha256": "c44e0916a73c6510d3048b7208d350a0e68c62b22e767174199d4cacf986427b"
     },
     {
       "path": "scripts/native-sdk-acceptance.ts",
@@ -304,6 +312,14 @@
     {
       "path": "scripts/native-ui-mcp-benchmark.ts",
       "sha256": "11a353c555e6991c7276349642b316e189d134807b3f36401ca5a5fb8bb0eeb2"
+    },
+    {
+      "path": "src/cli.ts",
+      "sha256": "cd80b8c1205f1ab153fbf292cee86358a366eddf2e687a4c6ec3e09f82d572ec"
+    },
+    {
+      "path": "src/core/contracts.ts",
+      "sha256": "f43e48fee70bdd24ef7557cf380ffd5334deaabd8970261cb529d4e589d56a78"
     },
     {
       "path": "src/core/doc-catalog.ts",
@@ -334,8 +350,16 @@
       "sha256": "84ddc259d305babab1dba7750c88c86f7627e38be054bede90728063e8e5677d"
     },
     {
+      "path": "src/core/workflows.ts",
+      "sha256": "b96b88ba2d63429347bcccb0a0e24fc80293ca24c1f7161951057e658f250e98"
+    },
+    {
       "path": "src/services/auth.ts",
       "sha256": "799ff9958e1e0a57b339af2d979e113167d5d5ddc15e442a78c9f8ac94fade58"
+    },
+    {
+      "path": "src/services/checker.ts",
+      "sha256": "da0f1aaf2e90690d9fe450d7810fc17f57483aef0f5200b5765045b2a5f16679"
     },
     {
       "path": "src/services/device-info.ts",
@@ -347,7 +371,7 @@
     },
     {
       "path": "src/services/diagnostics.ts",
-      "sha256": "5204c1d3ad946e62bd568c2933d1f176983e8286f2d888fd3eee70c129d4905d"
+      "sha256": "b5a984675d9733d555e4d16d0690d249ed9b799cd49f8c867ad3289f320aa521"
     },
     {
       "path": "src/services/emulator-license.ts",
@@ -359,7 +383,7 @@
     },
     {
       "path": "src/services/hotreload.ts",
-      "sha256": "0284a9f7d792d23e6ed5ed370a840a81bc6bbbb4e87f90082608837a5705920e"
+      "sha256": "f55bdc3655f363d3a81c1f9abf1b96d0d7d82e226bb2de1ceabe65275277b916"
     },
     {
       "path": "src/services/knowledge.ts",
@@ -383,7 +407,11 @@
     },
     {
       "path": "src/services/project.ts",
-      "sha256": "d1c9eb9ee0ed6a90d7f8639815bb74a1fc6658fab7ceebea534669e3f588ff54"
+      "sha256": "703814194af52452f7e142ccf457d58ade886bc2474c1e60b3d6a20914ccc302"
+    },
+    {
+      "path": "src/services/runtime.ts",
+      "sha256": "9d3becf7337834105589a45b1a7e664deb8533f2a766e1617517f883c494dfe5"
     },
     {
       "path": "src/services/signature.ts",
@@ -391,7 +419,7 @@
     },
     {
       "path": "src/services/signing-config.ts",
-      "sha256": "30ccb2d07455018ae5ab02db9abbc0f9682100f21d7434580541f3a17c3805c5"
+      "sha256": "0747f4af452cd8653ca237a2b5d310372ee78681afb7b4f818dae8b0ad0c124f"
     },
     {
       "path": "src/services/signing-material.ts",
@@ -418,8 +446,16 @@
       "sha256": "b4aa33ebec1486c8ea5eaa1d7fd12154963415dda9abb7389f15ae26296ed628"
     },
     {
+      "path": "test/native-checker.test.ts",
+      "sha256": "e21cb2022b94c48a3b1c03caf47c305d2f01b286899bcb4a409720681c0350f1"
+    },
+    {
       "path": "test/native-cloud-profile.test.ts",
       "sha256": "e52ff5cad56da5512be94239fa737777bd72bbdcb7b1c072fdae91d188cef987"
+    },
+    {
+      "path": "test/native-context.test.ts",
+      "sha256": "56ec51b60783c6da6a03d1a67351ff95dac165ce517da01036428ea20e5b6cff"
     },
     {
       "path": "test/native-device-info.test.ts",
@@ -450,8 +486,12 @@
       "sha256": "6be04f5ad685c931e09bff6b3c4edd17cac8d43ca347a427bc830f34b6d467f8"
     },
     {
+      "path": "test/native-project-recovery.test.ts",
+      "sha256": "51e7324dc42a95eca1e134a074dae0b2616ccaffc680aa51a3ac83cb91bd36a3"
+    },
+    {
       "path": "test/native-project.test.ts",
-      "sha256": "aa0e122a25debdaa10658cf94328122c822791b69af8d4c287b477a7e956463f"
+      "sha256": "15066b43fc112a7d47a10aaa33d96f823127203653b8294db69e55c0f37f294d"
     },
     {
       "path": "test/native-reports.test.ts",
@@ -479,7 +519,7 @@
     },
     {
       "path": "test/native-signing-config.test.ts",
-      "sha256": "dcd71d9f8e8369fa0a5c64af892311a6c66cea93073f26d1a9eaeee40d68f5fa"
+      "sha256": "4917d14f19861dd2c9df496b41c2e9d56ce4323d226da0f72b90958d75d1312f"
     },
     {
       "path": "test/native-text.test.ts",
@@ -504,10 +544,13 @@
     "scripts/native-emulator-readonly.ts",
     "scripts/native-hot-device-acceptance.ts",
     "scripts/native-lint-acceptance.ts",
+    "scripts/native-multimodule-acceptance.ts",
     "scripts/native-sdk-acceptance.ts",
     "scripts/native-signing-acceptance.ts",
     "scripts/native-ui-mcp-benchmark.ts",
+    "test/native-checker.test.ts",
     "test/native-cloud-profile.test.ts",
+    "test/native-context.test.ts",
     "test/native-device-info.test.ts",
     "test/native-emulator-protocol.test.ts",
     "test/native-emulator.test.ts",
@@ -515,6 +558,7 @@
     "test/native-hotreload.test.ts",
     "test/native-infrastructure.test.ts",
     "test/native-lint.test.ts",
+    "test/native-project-recovery.test.ts",
     "test/native-project.test.ts",
     "test/native-reports.test.ts",
     "test/native-request-log.test.ts",

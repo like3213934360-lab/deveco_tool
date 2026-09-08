@@ -160,6 +160,21 @@ test("project signing creates private Hvigor material and preserves other produc
   }
 });
 
+test("signing configuration revalidates the captured module targets without falling back to default", async () => {
+  const f = fixture();
+  try {
+    const profile = readObject(f.file);
+    profile.modules = [{ name: "entry", srcPath: "entry", targets: [{ name: "default" }, { name: "preview" }] }];
+    atomicWrite(f.file, JSON.stringify(profile));
+    const selected = inspectProject(f.project, "default", { entry: "preview" });
+    const result = await configureSigning(selected, f.descriptor, f.output, "Personal");
+    assert.equal(result.configured, true);
+    assert.equal(inspectProject(f.project, "default", { entry: "preview" }).modules[0]?.target, "preview");
+    assert.equal(fileDigest(f.file), result.build_profile_sha256);
+    await assert.rejects(configureSigning(selected, f.descriptor, f.output + "-new", "New"), { code: "SIGN_PROJECT_CHANGED" });
+  } finally { fs.rmSync(f.root, { recursive: true, force: true }); }
+});
+
 test("signing configuration stops before mutation for stale projects, active watch, missing inputs and cancellation", async () => {
   const f = fixture();
   try {

@@ -8,6 +8,7 @@ import { atomicWrite, fileDigest } from "../src/core/files.js";
 import { errorResult, invariant } from "../src/core/errors.js";
 import { nativeOperation } from "./lib/native-operation.js";
 import { evidenceIdentity } from "./lib/evidence.js";
+import { moduleTargetsSchema } from "../src/core/contracts.js";
 
 // Only operate on a prepared, personally selected signing canary. Each attempt
 // has its own evidence directory and never automatically retries a device effect.
@@ -27,6 +28,8 @@ const prepared = z
     project_path: z.string(),
     module: z.string(),
     ability: z.string(),
+    product: z.string().optional(),
+    module_targets: moduleTargetsSchema.optional(),
   })
   .parse(
     JSON.parse(
@@ -52,6 +55,7 @@ const journal = z
     ) as unknown,
   );
 const project_path = prepared.project_path,
+  selection = { project_path, product: prepared.product, module_targets: prepared.module_targets },
   target = journal.operations.preflight.result.target,
   source = path.join(
     project_path,
@@ -105,7 +109,7 @@ try {
   await observe("start_signed_watch", () =>
     nativeOperation(runtime, "hot_reload", {
       action: "start",
-      project_path,
+      ...selection,
       target,
       modules: [prepared.module],
       app: {
@@ -115,6 +119,12 @@ try {
       },
     }, path.join(root, "start.operation.private.json")),
   );
+  if (prepared.module_targets) await observe("target_session_isolation", async () => {
+    const selected = z.object({ active: z.literal(true), module_targets: moduleTargetsSchema }).parse(await runtime.call("hot_reload", { action: "status", ...selection }));
+    assert.deepEqual(selected.module_targets, prepared.module_targets);
+    const implicit = z.object({ active: z.literal(false) }).parse(await runtime.call("hot_reload", { action: "status", project_path, product: prepared.product }));
+    return { selected, implicit };
+  });
   await observe("baseline_assertion", () =>
     runtime.call("verify_ui", {
       target,
@@ -144,7 +154,7 @@ try {
         .parse(
           await nativeOperation(runtime, "hot_reload", {
             action: "apply",
-            project_path,
+            ...selection,
             target,
             files: [source],
           }, path.join(root, `patch-${index + 1}.operation.private.json`)),
@@ -178,12 +188,12 @@ try {
     await observe("stop_watch", async () => {
       const result = await runtime.call("hot_reload", {
         action: "stop",
-        project_path,
+        ...selection,
       });
       const status = z
         .object({ active: z.boolean() })
         .parse(
-          await runtime.call("hot_reload", { action: "status", project_path }),
+          await runtime.call("hot_reload", { action: "status", ...selection }),
         );
       assert.equal(status.active, false);
       return result;

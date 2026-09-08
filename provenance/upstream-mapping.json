@@ -27,11 +27,16 @@
       "reason": "Review the upstream behavior against its native replacement and regression evidence.",
       "targets": [
         "src/services/runtime.ts",
-        "src/services/project.ts"
+        "src/services/project.ts",
+        "src/core/contracts.ts",
+        "src/core/workflows.ts"
       ],
       "tests": [
         "test/workflows.test.ts",
-        "scripts/native-sdk-acceptance.ts"
+        "scripts/native-sdk-acceptance.ts",
+        "test/native-context.test.ts",
+        "test/native-project-recovery.test.ts",
+        "scripts/native-multimodule-acceptance.ts"
       ]
     },
     {
@@ -47,7 +52,9 @@
         "src/services/checker-project.ts",
         "src/services/checker-report.ts",
         "resources/knowledge/arkts-error-fixes",
-        "provenance/resources.json"
+        "provenance/resources.json",
+        "src/cli.ts",
+        "src/services/diagnostics.ts"
       ],
       "tests": [
         "test/native-runtime.test.ts",
@@ -394,11 +401,14 @@
       "targets": [
         "src/core/toolchain.ts",
         "src/core/process.ts",
-        "src/core/store.ts"
+        "src/core/store.ts",
+        "src/core/contracts.ts",
+        "src/core/workflows.ts"
       ],
       "tests": [
         "test/native-infrastructure.test.ts",
-        "test/native-runtime.test.ts"
+        "test/native-runtime.test.ts",
+        "test/native-context.test.ts"
       ]
     },
     {
@@ -466,10 +476,16 @@
       "disposition": "adapt",
       "reason": "Review the upstream behavior against its native replacement and regression evidence.",
       "targets": [
-        "src/services/hotreload.ts"
+        "src/services/hotreload.ts",
+        "src/services/project.ts",
+        "src/services/runtime.ts",
+        "scripts/native-hot-target-prepare.ts"
       ],
       "tests": [
-        "test/native-hotreload.test.ts"
+        "test/native-hotreload.test.ts",
+        "test/native-context.test.ts",
+        "test/native-project-recovery.test.ts",
+        "scripts/native-hot-device-acceptance.ts"
       ]
     },
     {
@@ -651,10 +667,13 @@
       "disposition": "adapt",
       "reason": "Review the upstream behavior against its native replacement and regression evidence.",
       "targets": [
-        "src/services/project.ts"
+        "src/services/project.ts",
+        "src/core/contracts.ts"
       ],
       "tests": [
-        "scripts/native-sdk-acceptance.ts"
+        "scripts/native-sdk-acceptance.ts",
+        "test/native-project-recovery.test.ts",
+        "scripts/native-multimodule-acceptance.ts"
       ]
     },
     {
@@ -693,10 +712,14 @@
       "disposition": "adapt",
       "reason": "Review the upstream behavior against its native replacement and regression evidence.",
       "targets": [
-        "src/services/device.ts"
+        "src/services/device.ts",
+        "src/services/project.ts",
+        "src/services/runtime.ts"
       ],
       "tests": [
-        "test/native-flow.test.ts"
+        "test/native-flow.test.ts",
+        "test/native-context.test.ts",
+        "scripts/native-multimodule-acceptance.ts"
       ]
     },
     {
@@ -707,10 +730,13 @@
       "disposition": "adapt",
       "reason": "Review the upstream behavior against its native replacement and regression evidence.",
       "targets": [
-        "src/services/diagnostics.ts"
+        "src/services/diagnostics.ts",
+        "src/cli.ts",
+        "src/services/checker.ts"
       ],
       "tests": [
-        "scripts/native-sdk-acceptance.ts"
+        "scripts/native-sdk-acceptance.ts",
+        "test/native-checker.test.ts"
       ]
     },
     {
@@ -749,10 +775,12 @@
       "disposition": "adapt",
       "reason": "Review the upstream behavior against its native replacement and regression evidence.",
       "targets": [
-        "src/services/signature.ts"
+        "src/services/signature.ts",
+        "src/services/signing-config.ts"
       ],
       "tests": [
-        "test/native-reports.test.ts"
+        "test/native-reports.test.ts",
+        "test/native-signing-config.test.ts"
       ]
     },
     {

@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
 import type ts from "typescript";
+import type { ModuleTargets } from "../core/contracts.js";
 import { inspectProject } from "./project.js";
 import { discoverToolchain } from "../core/toolchain.js";
 import { invariant, object } from "../core/errors.js";
@@ -65,10 +66,11 @@ export function parseDiagnostics(
 export async function staticCheck(input: {
   project_path: string;
   product?: string;
+  module_targets?: ModuleTargets;
   files?: string[];
   cache_path: string;
 }) {
-  const project = inspectProject(input.project_path, input.product),
+  const project = inspectProject(input.project_path, input.product, input.module_targets),
     toolchain = discoverToolchain();
   const loader = path.join(
     toolchain.sdk,

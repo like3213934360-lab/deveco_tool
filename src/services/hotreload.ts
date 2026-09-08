@@ -27,7 +27,7 @@ import {
 import { ProcessService } from "../core/process.js";
 import { StateStore } from "../core/store.js";
 import { currentTrace } from "../core/trace.js";
-import { ProjectService, type Project, type ProjectSelection } from "./project.js";
+import { ProjectService, projectTargets, type Project, type ProjectSelection } from "./project.js";
 import { DeviceService } from "./device.js";
 import { SignatureService } from "./signature.js";
 
@@ -178,7 +178,7 @@ export class HotReloadService {
   }
   activeTarget(project: Project): string | undefined { return this.sessions.get(this.key(project))?.target; }
   private key(project: ProjectSelection) {
-    return digest([project.root, project.product.name]);
+    return digest([project.root, project.product.name, projectTargets(project)]);
   }
   status(project: ProjectSelection) {
     const session = this.sessions.get(this.key(project));
@@ -188,6 +188,7 @@ export class HotReloadService {
       active: session.connection.connected,
       project_path: project.root,
       product: project.product.name,
+      module_targets: projectTargets(project),
       target: session.target,
       created_at: new Date(session.created).toISOString(),
       log: this.store.artifact(
@@ -422,7 +423,7 @@ export class HotReloadService {
             this.starting--;
           }
         }
-        const prepared = await this.store.readPrivateMemo("hot-ready", { project: project.root, product: project.product.name }, (value) => readyPatchSchema.parse(value));
+        const prepared = await this.store.readPrivateMemo("hot-ready", { project: project.root, product: project.product.name, module_targets: projectTargets(project) }, (value) => readyPatchSchema.parse(value));
         if (prepared) return this.finishApply(project, prepared, signal);
         invariant(
           session,
@@ -676,7 +677,7 @@ export class HotReloadService {
       assertHotSourcesUnchanged(project, current);
       const retained: ReadyPatch["patches"] = [];
       for (const file of patches) retained.push(await captureFile(this.store, currentTrace().run_id ?? "hot_reload", file, undefined, signal));
-      const prepared = await this.store.privateMemo("hot-ready", { project: project.root, product: project.product.name }, async () => ({
+      const prepared = await this.store.privateMemo("hot-ready", { project: project.root, product: project.product.name, module_targets: projectTargets(project) }, async () => ({
         target, app, before_pid: before, sources: [...current], patches: retained,
         patch_versions: patchVersions, changed_files: changed.length, toolchain_hash: digest(toolchain),
         compile_log: this.store.artifact(currentTrace().run_id ?? "hot_reload", JSON.stringify(session.connection.log()), "application/json"),

@@ -1,20 +1,22 @@
 {
-  "format": 1,
-  "baseline_commit": "aab1405b51e00e4036bdc8f18ae4229835de77b0",
-  "baseline_inventory_sha256": "f6bebe2a202f6d9a5262a4185f5b8d312fb1515022358a1a9507cbb9449b4f42",
   "tools": [
     {
       "source": "api_compat_check",
+      "checks": [
+        "test/native-reports.test.ts",
+        "test/native-api-versions.test.ts"
+      ],
+      "remaining": [
+        "更多 SDK/API 版本数据组合与扫描范围验收"
+      ],
+      "acceptance": "pending",
+      "evidence": [],
       "targets": [
         "workflow:api_compatibility",
         "tool:deveco_doctor"
       ],
       "adapters": [
         "src/services/diagnostics.ts"
-      ],
-      "checks": [
-        "test/native-reports.test.ts",
-        "test/native-api-versions.test.ts"
       ],
       "behavior": "扫描保留；版本查询改由能力与工具链数据提供。",
       "parameters": {
@@ -72,24 +74,10 @@
           "status": "replaced",
           "replacement": "deveco_doctor.api_compatibility.versions；空、缺失和非法数据明确失败"
         }
-      ],
-      "remaining": [
-        "更多 SDK/API 版本数据组合与扫描范围验收"
-      ],
-      "acceptance": "pending",
-      "evidence": []
+      ]
     },
     {
       "source": "app_signature",
-      "targets": [
-        "tool:app_signature",
-        "tool:harmony_auth"
-      ],
-      "adapters": [
-        "src/services/signature.ts",
-        "src/services/signing-config.ts",
-        "src/services/signing-material.ts"
-      ],
       "checks": [
         "test/native-reports.test.ts",
         "test/native-cloud-inventory.test.ts",
@@ -99,6 +87,24 @@
         "test/native-cloud-profile.test.ts",
         "scripts/native-signing-acceptance.ts",
         "scripts/native-hot-device-acceptance.ts"
+      ],
+      "remaining": [
+        "真实云端变更中断后的外部状态核对、过期认证刷新和更多签名类型",
+        "原 force 与自动签名选择策略对照"
+      ],
+      "acceptance": "pending",
+      "evidence": [
+        "docs/native-authentication.md",
+        "docs/native-signing.md"
+      ],
+      "targets": [
+        "tool:app_signature",
+        "tool:harmony_auth"
+      ],
+      "adapters": [
+        "src/services/signature.ts",
+        "src/services/signing-config.ts",
+        "src/services/signing-material.ts"
       ],
       "behavior": "本地签名、私密配置生成与云端证书/Profile 分开调用，使用开发者认证；测试团队显式指定。",
       "parameters": {
@@ -123,28 +129,32 @@
           "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
         }
       },
-      "actions": [],
-      "remaining": [
-        "真实云端变更中断后的外部状态核对、过期认证刷新和更多签名类型",
-        "原 force 与自动签名选择策略对照"
-      ],
-      "acceptance": "pending",
-      "evidence": [
-        "docs/native-authentication.md",
-        "docs/native-signing.md"
-      ]
+      "actions": []
     },
     {
       "source": "apply_changes",
+      "checks": [
+        "test/native-hotreload.test.ts",
+        "test/native-project.test.ts",
+        "test/native-context.test.ts",
+        "test/native-project-recovery.test.ts",
+        "scripts/native-multimodule-acceptance.ts"
+      ],
+      "remaining": [
+        "原冷增量部署行为对照",
+        "实际 HQF 签名和设备应用",
+        "显式构建目标选择：旧 target 不得误映射为 HDC 设备，覆盖同一产品的多个模块目标"
+      ],
+      "acceptance": "pending",
+      "evidence": [],
       "targets": [
         "tool:hot_reload",
         "workflow:build_deploy_verify"
       ],
       "adapters": [
-        "src/services/hotreload.ts"
-      ],
-      "checks": [
-        "test/native-hotreload.test.ts"
+        "src/services/hotreload.ts",
+        "src/services/project.ts",
+        "src/services/runtime.ts"
       ],
       "behavior": "固定热补丁流程与冷构建部署分别执行。",
       "parameters": {
@@ -161,8 +171,8 @@
           "replacement": "build_deploy_verify.modules；app.module 选择启动组件"
         },
         "target": {
-          "status": "pending",
-          "replacement": "旧 target 为构建目标（module@target），不是 HDC 设备；当前实现仅按产品选择 default 或唯一适用目标，显式构建目标选择尚待实现和验收"
+          "status": "mapped",
+          "replacement": "module_targets[module]；显式 Hvigor 构建目标，与 HDC target 独立；提交时固定，恢复核对原选择。app_deploy 使用已选定制品，不重新选择构建目标"
         },
         "ability": {
           "status": "mapped",
@@ -185,17 +195,20 @@
           "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
         }
       },
-      "actions": [],
-      "remaining": [
-        "原冷增量部署行为对照",
-        "实际 HQF 签名和设备应用",
-        "显式构建目标选择：旧 target 不得误映射为 HDC 设备，覆盖同一产品的多个模块目标"
-      ],
-      "acceptance": "pending",
-      "evidence": []
+      "actions": []
     },
     {
       "source": "arkts_check",
+      "checks": [
+        "test/native-project.test.ts",
+        "test/native-checker.test.ts",
+        "scripts/native-checker-acceptance.ts"
+      ],
+      "remaining": [],
+      "acceptance": "verified",
+      "evidence": [
+        "docs/native-static-checker.md"
+      ],
       "targets": [
         "tool:arkts_check"
       ],
@@ -204,11 +217,6 @@
         "src/services/checker-project.ts",
         "src/services/checker-report.ts",
         "src/services/diagnostics.ts"
-      ],
-      "checks": [
-        "test/native-project.test.ts",
-        "test/native-checker.test.ts",
-        "scripts/native-checker-acceptance.ts"
       ],
       "behavior": "直接 SDK 静态预检，显式非编译；选定产品/模块源码、路由/资源/模型版本检查，完整诊断制品与有界预览。",
       "parameters": {
@@ -229,24 +237,27 @@
           "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
         }
       },
-      "actions": [],
-      "remaining": [],
-      "acceptance": "verified",
-      "evidence": [
-        "docs/native-static-checker.md"
-      ]
+      "actions": []
     },
     {
       "source": "arkts_knowledge_search",
+      "checks": [
+        "test/native-resources.test.ts",
+        "scripts/native-auth-mcp-acceptance.ts"
+      ],
+      "remaining": [
+        "云端过期认证重试与异常响应回归"
+      ],
+      "acceptance": "pending",
+      "evidence": [
+        "docs/native-authentication.md",
+        "docs/native-knowledge.md"
+      ],
       "targets": [
         "tool:harmony_knowledge"
       ],
       "adapters": [
         "src/services/knowledge.ts"
-      ],
-      "checks": [
-        "test/native-resources.test.ts",
-        "scripts/native-auth-mcp-acceptance.ts"
       ],
       "behavior": "显式选择云端知识；认证与签名隔离。",
       "parameters": {
@@ -255,27 +266,24 @@
           "replacement": "harmony_knowledge action=search、source=cloud、query；使用独立 codegenie 认证"
         }
       },
-      "actions": [],
-      "remaining": [
-        "云端过期认证重试与异常响应回归"
-      ],
-      "acceptance": "pending",
-      "evidence": [
-        "docs/native-authentication.md",
-        "docs/native-knowledge.md"
-      ]
+      "actions": []
     },
     {
       "source": "build_project",
+      "checks": [
+        "test/native-project.test.ts"
+      ],
+      "remaining": [
+        "最终快照多产品/多模块/HAR/HSP行为复验及真实SDK硬中断恢复验收"
+      ],
+      "acceptance": "pending",
+      "evidence": [],
       "targets": [
         "workflow:project_build",
         "tool:workflow_run"
       ],
       "adapters": [
         "src/services/project.ts"
-      ],
-      "checks": [
-        "test/native-project.test.ts"
       ],
       "behavior": "构建及异步任务由持久化工作流承担，默认不 clean。",
       "parameters": {
@@ -353,23 +361,23 @@
           "status": "replaced",
           "replacement": "workflow_run.start 后查询 status，统一持久化任务协议"
         }
-      ],
-      "remaining": [
-        "最终快照多产品/多模块/HAR/HSP行为复验及真实SDK硬中断恢复验收"
-      ],
-      "acceptance": "pending",
-      "evidence": []
+      ]
     },
     {
       "source": "check_cpp_files",
+      "checks": [
+        "test/native-runtime.test.ts"
+      ],
+      "remaining": [
+        "跨 ABI、多模块编译数据库和旧 C++ 缺陷验收"
+      ],
+      "acceptance": "pending",
+      "evidence": [],
       "targets": [
         "tool:check_cpp_files"
       ],
       "adapters": [
         "src/services/lsp.ts"
-      ],
-      "checks": [
-        "test/native-runtime.test.ts"
       ],
       "behavior": "clangd 使用真实编译数据库。",
       "parameters": {
@@ -378,24 +386,24 @@
           "replacement": "files；批量边界按各原生能力验证"
         }
       },
-      "actions": [],
-      "remaining": [
-        "跨 ABI、多模块编译数据库和旧 C++ 缺陷验收"
-      ],
-      "acceptance": "pending",
-      "evidence": []
+      "actions": []
     },
     {
       "source": "check_ets_files",
+      "checks": [
+        "test/native-runtime.test.ts"
+      ],
+      "remaining": [
+        "旧批量诊断语义和缺失 SDK 行为对照"
+      ],
+      "acceptance": "pending",
+      "evidence": [],
       "targets": [
         "tool:lsp",
         "workflow:code_diagnose"
       ],
       "adapters": [
         "src/services/lsp.ts"
-      ],
-      "checks": [
-        "test/native-runtime.test.ts"
       ],
       "behavior": "ArkTS 语言诊断统一到原生 LSP。",
       "parameters": {
@@ -408,15 +416,20 @@
           "replacement": "files；批量边界按各原生能力验证"
         }
       },
-      "actions": [],
-      "remaining": [
-        "旧批量诊断语义和缺失 SDK 行为对照"
-      ],
-      "acceptance": "pending",
-      "evidence": []
+      "actions": []
     },
     {
       "source": "code_lint",
+      "checks": [
+        "test/native-lint.test.ts",
+        "test/native-cpu.test.ts",
+        "scripts/native-lint-acceptance.ts"
+      ],
+      "remaining": [
+        "更多 SDK/CLT 实机规则执行范围验收；原生空报告不证明全部配置规则已生效，返回 ruleCoverageVerified:false"
+      ],
+      "acceptance": "pending",
+      "evidence": [],
       "targets": [
         "tool:code_lint"
       ],
@@ -424,11 +437,6 @@
         "src/services/diagnostics.ts",
         "src/services/lint-input.ts",
         "src/services/lint-report.ts"
-      ],
-      "checks": [
-        "test/native-lint.test.ts",
-        "test/native-cpu.test.ts",
-        "scripts/native-lint-acceptance.ts"
       ],
       "behavior": "结构化 Code Linter 报告和显式修复。",
       "parameters": {
@@ -473,25 +481,27 @@
           "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
         }
       },
-      "actions": [],
-      "remaining": [
-        "更多 SDK/CLT 实机规则执行范围验收；原生空报告不证明全部配置规则已生效，返回 ruleCoverageVerified:false"
-      ],
-      "acceptance": "pending",
-      "evidence": []
+      "actions": []
     },
     {
       "source": "deveco_cli_auth",
+      "checks": [
+        "test/native-auth.test.ts",
+        "scripts/native-auth-mcp-acceptance.ts"
+      ],
+      "remaining": [
+        "实际过期凭据刷新及云端拒绝/登出验收；不同操作系统浏览器支持范围"
+      ],
+      "acceptance": "pending",
+      "evidence": [
+        "docs/native-authentication.md"
+      ],
       "targets": [
         "tool:harmony_auth"
       ],
       "adapters": [
         "src/services/auth.ts",
         "src/services/auth-callback.ts"
-      ],
-      "checks": [
-        "test/native-auth.test.ts",
-        "scripts/native-auth-mcp-acceptance.ts"
       ],
       "behavior": "provider=developer 的登录、登出、状态和团队查询。",
       "parameters": {
@@ -533,45 +543,43 @@
           "status": "replaced",
           "replacement": "harmony_auth action=teams，provider=developer"
         }
-      ],
-      "remaining": [
-        "实际过期凭据刷新及云端拒绝/登出验收；不同操作系统浏览器支持范围"
-      ],
-      "acceptance": "pending",
-      "evidence": [
-        "docs/native-authentication.md"
       ]
     },
     {
       "source": "deveco_doctor",
+      "checks": [
+        "test/native-runtime.test.ts"
+      ],
+      "remaining": [
+        "三操作系统与 CLT 布局验收"
+      ],
+      "acceptance": "pending",
+      "evidence": [],
       "targets": [
         "tool:deveco_doctor"
       ],
       "adapters": [
         "src/services/runtime.ts"
       ],
-      "checks": [
-        "test/native-runtime.test.ts"
-      ],
       "behavior": "原生组件、配置与能力诊断，不再检查已安装 Skill。",
       "parameters": {},
-      "actions": [],
-      "remaining": [
-        "三操作系统与 CLT 布局验收"
-      ],
-      "acceptance": "pending",
-      "evidence": []
+      "actions": []
     },
     {
       "source": "deveco_login",
+      "checks": [
+        "test/native-runtime.test.ts"
+      ],
+      "remaining": [
+        "回调取消、登录窗口过期、浏览器失败实际验收"
+      ],
+      "acceptance": "pending",
+      "evidence": [],
       "targets": [
         "tool:harmony_auth"
       ],
       "adapters": [
         "src/services/auth.ts"
-      ],
-      "checks": [
-        "test/native-runtime.test.ts"
       ],
       "behavior": "provider=codegenie 的浏览器登录和状态。",
       "parameters": {
@@ -601,35 +609,41 @@
           "status": "mapped",
           "replacement": "harmony_auth.action=status，provider=developer"
         }
-      ],
-      "remaining": [
-        "回调取消、登录窗口过期、浏览器失败实际验收"
-      ],
-      "acceptance": "pending",
-      "evidence": []
+      ]
     },
     {
       "source": "deveco_logout",
+      "checks": [
+        "test/native-runtime.test.ts"
+      ],
+      "remaining": [
+        "旧刷新/登出竞争行为回归"
+      ],
+      "acceptance": "pending",
+      "evidence": [],
       "targets": [
         "tool:harmony_auth"
       ],
       "adapters": [
         "src/services/auth.ts"
       ],
-      "checks": [
-        "test/native-runtime.test.ts"
-      ],
       "behavior": "provider=codegenie 的登出及待登录取消。",
       "parameters": {},
-      "actions": [],
-      "remaining": [
-        "旧刷新/登出竞争行为回归"
-      ],
-      "acceptance": "pending",
-      "evidence": []
+      "actions": []
     },
     {
       "source": "deveco_restart",
+      "checks": [
+        "test/native-shutdown.test.ts",
+        "test/native-runtime.test.ts",
+        "test/native-recording.test.ts",
+        "test/native-hotreload.test.ts"
+      ],
+      "remaining": [],
+      "acceptance": "verified",
+      "evidence": [
+        "provenance/migration-acceptance/c1ca532f66eefe98e24896a2fe296ffa205d58e7c34b125b8af35697d56cbc4c.json"
+      ],
       "targets": [
         "tool:deveco_restart"
       ],
@@ -638,12 +652,6 @@
         "src/core/worker-client.ts",
         "src/services/runtime.ts"
       ],
-      "checks": [
-        "test/native-shutdown.test.ts",
-        "test/native-runtime.test.ts",
-        "test/native-recording.test.ts",
-        "test/native-hotreload.test.ts"
-      ],
       "behavior": "重启原生 Worker 及受管会话，不保留子 MCP 重连分支。",
       "parameters": {
         "target": {
@@ -651,15 +659,18 @@
           "replacement": "统一关闭原生 Worker 和受管会话；官方 CLI/子 MCP 不再是重启对象，旧 target 和重连分支删除"
         }
       },
-      "actions": [],
-      "remaining": [],
-      "acceptance": "verified",
-      "evidence": [
-        "provenance/migration-acceptance/c1ca532f66eefe98e24896a2fe296ffa205d58e7c34b125b8af35697d56cbc4c.json"
-      ]
+      "actions": []
     },
     {
       "source": "deveco_script",
+      "checks": [
+        "test/workflows.test.ts"
+      ],
+      "remaining": [
+        "见 scripts 七项验收记录"
+      ],
+      "acceptance": "pending",
+      "evidence": [],
       "targets": [
         "tool:workflow_catalog",
         "tool:workflow_run",
@@ -667,9 +678,6 @@
       ],
       "adapters": [
         "src/services/runtime.ts"
-      ],
-      "checks": [
-        "test/workflows.test.ts"
       ],
       "behavior": "删除脚本执行和 argv 入口，七个注册脚本逐项迁移。",
       "parameters": {
@@ -733,24 +741,24 @@
           "status": "replaced",
           "replacement": "tool:hdc_log action=probe"
         }
+      ]
+    },
+    {
+      "source": "deveco_script_catalog",
+      "checks": [
+        "test/workflows.test.ts"
       ],
       "remaining": [
         "见 scripts 七项验收记录"
       ],
       "acceptance": "pending",
-      "evidence": []
-    },
-    {
-      "source": "deveco_script_catalog",
+      "evidence": [],
       "targets": [
         "tool:workflow_catalog",
         "tool:harmony_knowledge"
       ],
       "adapters": [
         "src/services/runtime.ts"
-      ],
-      "checks": [
-        "test/workflows.test.ts"
       ],
       "behavior": "发现入口替换为工作流目录和按需知识。",
       "parameters": {
@@ -802,45 +810,48 @@
           "status": "replaced",
           "replacement": "tool:hdc_log action=probe"
         }
-      ],
-      "remaining": [
-        "见 scripts 七项验收记录"
-      ],
-      "acceptance": "pending",
-      "evidence": []
+      ]
     },
     {
       "source": "deveco_status",
+      "checks": [
+        "test/native-runtime.test.ts"
+      ],
+      "remaining": [
+        "真实过期 Token 与离线行为"
+      ],
+      "acceptance": "pending",
+      "evidence": [],
       "targets": [
         "tool:harmony_auth"
       ],
       "adapters": [
         "src/services/auth.ts"
       ],
-      "checks": [
-        "test/native-runtime.test.ts"
-      ],
       "behavior": "provider=codegenie 的认证状态。",
       "parameters": {},
-      "actions": [],
-      "remaining": [
-        "真实过期 Token 与离线行为"
-      ],
-      "acceptance": "pending",
-      "evidence": []
+      "actions": []
     },
     {
       "source": "device_info",
+      "checks": [
+        "test/native-device-info.test.ts",
+        "scripts/native-device-readonly.ts"
+      ],
+      "remaining": [
+        "新设备属性与清单契约的 Node 22/24 三平台 CI",
+        "真实多设备及跨平台 HDC/SDK 验收"
+      ],
+      "acceptance": "pending",
+      "evidence": [
+        "docs/native-device-info.md"
+      ],
       "targets": [
         "tool:device_info"
       ],
       "adapters": [
         "src/services/device.ts",
         "src/services/device-info.ts"
-      ],
-      "checks": [
-        "test/native-device-info.test.ts",
-        "scripts/native-device-readonly.ts"
       ],
       "behavior": "统一 HDC 清单解析与目标捕获；名称、类型、API 版本及属性结构化，缺失/截断显式报告；模拟器推断有来源标记。",
       "parameters": {
@@ -861,18 +872,24 @@
           "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
         }
       },
-      "actions": [],
-      "remaining": [
-        "新设备属性与清单契约的 Node 22/24 三平台 CI",
-        "真实多设备及跨平台 HDC/SDK 验收"
-      ],
-      "acceptance": "pending",
-      "evidence": [
-        "docs/native-device-info.md"
-      ]
+      "actions": []
     },
     {
       "source": "emulator_manage",
+      "checks": [
+        "test/native-emulator.test.ts",
+        "test/native-emulator-protocol.test.ts",
+        "scripts/native-emulator-readonly.ts",
+        "scripts/native-emulator-acceptance.ts"
+      ],
+      "remaining": [
+        "真实镜像下载/卸载、协议接受及组件异常/取消恢复验收",
+        "三平台真实模拟器及与目标设备 UI 共同资源协调验收"
+      ],
+      "acceptance": "pending",
+      "evidence": [
+        "docs/native-emulator.md"
+      ],
       "targets": [
         "tool:emulator_manage"
       ],
@@ -880,12 +897,6 @@
         "src/services/emulator.ts",
         "src/core/emulator-contracts.ts",
         "src/services/emulator-license.ts"
-      ],
-      "checks": [
-        "test/native-emulator.test.ts",
-        "test/native-emulator-protocol.test.ts",
-        "scripts/native-emulator-readonly.ts",
-        "scripts/native-emulator-acceptance.ts"
       ],
       "behavior": "直接驱动模拟器、镜像和许可证组件；查看读取当前 SDK 协议文本，接受要求审阅摘要并核对配置。",
       "parameters": {
@@ -991,28 +1002,28 @@
           "status": "mapped",
           "replacement": "emulator_manage action=license_accept；需要当前 license_sha256，原生配置确认两项接受，禁止默认接受"
         }
-      ],
-      "remaining": [
-        "真实镜像下载/卸载、协议接受及组件异常/取消恢复验收",
-        "三平台真实模拟器及与目标设备 UI 共同资源协调验收"
-      ],
-      "acceptance": "pending",
-      "evidence": [
-        "docs/native-emulator.md"
       ]
     },
     {
       "source": "emulator_scenario",
+      "checks": [
+        "test/native-emulator-protocol.test.ts",
+        "scripts/native-emulator-acceptance.ts"
+      ],
+      "remaining": [
+        "应用实际感知传感器/场景结果及原生命令取消结果验收",
+        "与目标设备 UI 共同资源协调验收"
+      ],
+      "acceptance": "pending",
+      "evidence": [
+        "docs/native-emulator.md"
+      ],
       "targets": [
         "tool:emulator_scenario"
       ],
       "adapters": [
         "src/services/emulator.ts",
         "src/core/emulator-contracts.ts"
-      ],
-      "checks": [
-        "test/native-emulator-protocol.test.ts",
-        "scripts/native-emulator-acceptance.ts"
       ],
       "behavior": "使用模拟器组件的场景协议。",
       "parameters": {
@@ -1140,28 +1151,25 @@
           "status": "mapped",
           "replacement": "emulator_scenario action=sensor；参数前置校验、组件能力声明和正向回执验证"
         }
-      ],
-      "remaining": [
-        "应用实际感知传感器/场景结果及原生命令取消结果验收",
-        "与目标设备 UI 共同资源协调验收"
-      ],
-      "acceptance": "pending",
-      "evidence": [
-        "docs/native-emulator.md"
       ]
     },
     {
       "source": "find_references",
+      "checks": [
+        "test/native-runtime.test.ts",
+        "test/native-lsp.test.ts",
+        "test/native-toolchain.test.ts"
+      ],
+      "remaining": [
+        "跨平台和最终性能验证；相对路径、未同步文件和去声明回归已通过"
+      ],
+      "acceptance": "pending",
+      "evidence": [],
       "targets": [
         "tool:lsp"
       ],
       "adapters": [
         "src/services/lsp.ts"
-      ],
-      "checks": [
-        "test/native-runtime.test.ts",
-        "test/native-lsp.test.ts",
-        "test/native-toolchain.test.ts"
       ],
       "behavior": "合并到 lsp references。",
       "parameters": {
@@ -1186,15 +1194,19 @@
           "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
         }
       },
-      "actions": [],
-      "remaining": [
-        "跨平台和最终性能验证；相对路径、未同步文件和去声明回归已通过"
-      ],
-      "acceptance": "pending",
-      "evidence": []
+      "actions": []
     },
     {
       "source": "get_app_ui_tree",
+      "checks": [
+        "test/native-ui.test.ts",
+        "test/native-ui-query.test.ts"
+      ],
+      "remaining": [
+        "真实多显示器与多窗口属性完整对照；简化树和父子层级已实现"
+      ],
+      "acceptance": "pending",
+      "evidence": [],
       "targets": [
         "tool:ui_snapshot",
         "tool:ui_inspect"
@@ -1202,10 +1214,6 @@
       "adapters": [
         "src/services/device.ts",
         "src/services/ui-inspection.ts"
-      ],
-      "checks": [
-        "test/native-ui.test.ts",
-        "test/native-ui-query.test.ts"
       ],
       "behavior": "删除重复代理，返回快照和制品。",
       "parameters": {
@@ -1222,25 +1230,25 @@
           "replacement": "制品引用与 read_artifact"
         }
       },
-      "actions": [],
-      "remaining": [
-        "真实多显示器与多窗口属性完整对照；简化树和父子层级已实现"
-      ],
-      "acceptance": "pending",
-      "evidence": []
+      "actions": []
     },
     {
       "source": "get_hover",
+      "checks": [
+        "test/native-runtime.test.ts",
+        "test/native-lsp.test.ts",
+        "test/native-toolchain.test.ts"
+      ],
+      "remaining": [
+        "跨平台和最终性能验证；合法空结果及位置边界已通过"
+      ],
+      "acceptance": "pending",
+      "evidence": [],
       "targets": [
         "tool:lsp"
       ],
       "adapters": [
         "src/services/lsp.ts"
-      ],
-      "checks": [
-        "test/native-runtime.test.ts",
-        "test/native-lsp.test.ts",
-        "test/native-toolchain.test.ts"
       ],
       "behavior": "合并到 lsp hover。",
       "parameters": {
@@ -1261,25 +1269,25 @@
           "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
         }
       },
-      "actions": [],
-      "remaining": [
-        "跨平台和最终性能验证；合法空结果及位置边界已通过"
-      ],
-      "acceptance": "pending",
-      "evidence": []
+      "actions": []
     },
     {
       "source": "go_to_definition",
+      "checks": [
+        "test/native-runtime.test.ts",
+        "test/native-lsp.test.ts",
+        "test/native-toolchain.test.ts"
+      ],
+      "remaining": [
+        "真实跨模块/SDK 定义位置验收"
+      ],
+      "acceptance": "pending",
+      "evidence": [],
       "targets": [
         "tool:lsp"
       ],
       "adapters": [
         "src/services/lsp.ts"
-      ],
-      "checks": [
-        "test/native-runtime.test.ts",
-        "test/native-lsp.test.ts",
-        "test/native-toolchain.test.ts"
       ],
       "behavior": "合并到 lsp definition。",
       "parameters": {
@@ -1300,25 +1308,25 @@
           "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
         }
       },
-      "actions": [],
-      "remaining": [
-        "真实跨模块/SDK 定义位置验收"
-      ],
-      "acceptance": "pending",
-      "evidence": []
+      "actions": []
     },
     {
       "source": "harmony_docs",
+      "checks": [
+        "test/native-resources.test.ts",
+        "test/native-reports.test.ts"
+      ],
+      "remaining": [],
+      "acceptance": "verified",
+      "evidence": [
+        "provenance/migration-acceptance/4a2c302c16ecde5c626b67f67717cc75541052e37485686da355e7a6cabd68e5.json"
+      ],
       "targets": [
         "tool:harmony_knowledge"
       ],
       "adapters": [
         "src/services/knowledge.ts",
         "src/core/doc-catalog.ts"
-      ],
-      "checks": [
-        "test/native-resources.test.ts",
-        "test/native-reports.test.ts"
       ],
       "behavior": "本地文档数据库和压缩资源按需读取；六类目录、限定目录检索和稳定分页。",
       "parameters": {
@@ -1374,15 +1382,18 @@
           "status": "replaced",
           "replacement": "harmony_knowledge action=read、kind=docs；六类目录、检索与正文分页见 test/native-resources.test.ts"
         }
-      ],
-      "remaining": [],
-      "acceptance": "verified",
-      "evidence": [
-        "provenance/migration-acceptance/4a2c302c16ecde5c626b67f67717cc75541052e37485686da355e7a6cabd68e5.json"
       ]
     },
     {
       "source": "hdc_log",
+      "checks": [
+        "test/native-logs.test.ts"
+      ],
+      "remaining": [
+        "真实设备 Hilog、整行筛选性能、默认 app/core buffer 清空和 faultlog 读取验收"
+      ],
+      "acceptance": "pending",
+      "evidence": [],
       "targets": [
         "tool:hdc_log",
         "tool:device_info",
@@ -1391,9 +1402,6 @@
       "adapters": [
         "src/services/logs.ts",
         "src/services/runtime.ts"
-      ],
-      "checks": [
-        "test/native-logs.test.ts"
       ],
       "behavior": "原生 Hilog 收集、字面量整行过滤、清空、faultlog 探测与命名读取；输出制品及截断证据。",
       "parameters": {
@@ -1437,24 +1445,27 @@
           "status": "mapped",
           "replacement": "device_info(list=true)"
         }
-      ],
-      "remaining": [
-        "真实设备 Hilog、整行筛选性能、默认 app/core buffer 清空和 faultlog 读取验收"
-      ],
-      "acceptance": "pending",
-      "evidence": []
+      ]
     },
     {
       "source": "hot_reload",
+      "checks": [
+        "test/native-hotreload.test.ts",
+        "scripts/native-hot-device-acceptance.ts"
+      ],
+      "remaining": [
+        "多模块/设备热补丁范围；专用个人签名应用的两次 HQF 和最终文字断言已通过",
+        "启动等待与跨进程会话竞争"
+      ],
+      "acceptance": "pending",
+      "evidence": [
+        "docs/native-signing.md"
+      ],
       "targets": [
         "tool:hot_reload"
       ],
       "adapters": [
         "src/services/hotreload.ts"
-      ],
-      "checks": [
-        "test/native-hotreload.test.ts",
-        "scripts/native-hot-device-acceptance.ts"
       ],
       "behavior": "原生持久化 watch 会话、补丁制作及应用。",
       "parameters": {
@@ -1524,28 +1535,25 @@
           "status": "mapped",
           "replacement": "hot_reload.action=stop；有界会话及原生进程生命周期"
         }
-      ],
-      "remaining": [
-        "多模块/设备热补丁范围；专用个人签名应用的两次 HQF 和最终文字断言已通过",
-        "启动等待与跨进程会话竞争"
-      ],
-      "acceptance": "pending",
-      "evidence": [
-        "docs/native-signing.md"
       ]
     },
     {
       "source": "lsp",
+      "checks": [
+        "test/native-runtime.test.ts",
+        "test/native-lsp.test.ts",
+        "test/native-toolchain.test.ts"
+      ],
+      "remaining": [
+        "跨平台与更广 SDK 组合的语言会话验收、最终性能门槛"
+      ],
+      "acceptance": "pending",
+      "evidence": [],
       "targets": [
         "tool:lsp"
       ],
       "adapters": [
         "src/services/lsp.ts"
-      ],
-      "checks": [
-        "test/native-runtime.test.ts",
-        "test/native-lsp.test.ts",
-        "test/native-toolchain.test.ts"
       ],
       "behavior": "现代原生 LSP 生命周期与工程/SDK 会话缓存。",
       "parameters": {
@@ -1595,15 +1603,21 @@
           "status": "replaced",
           "replacement": "lsp.action=implementation；真实本机 SDK 和原生回归通过"
         }
-      ],
-      "remaining": [
-        "跨平台与更广 SDK 组合的语言会话验收、最终性能门槛"
-      ],
-      "acceptance": "pending",
-      "evidence": []
+      ]
     },
     {
       "source": "perform_ui_action",
+      "checks": [
+        "test/native-text.test.ts",
+        "test/native-ui-control.test.ts",
+        "test/native-recording.test.ts"
+      ],
+      "remaining": [
+        "真实设备中文输入及多显示器路由验收",
+        "原生滚动采样的实际设备结果验证"
+      ],
+      "acceptance": "pending",
+      "evidence": [],
       "targets": [
         "tool:ui_control",
         "tool:ui_tap",
@@ -1613,11 +1627,6 @@
         "src/services/device.ts",
         "src/services/ui-control.ts",
         "src/services/recording.ts"
-      ],
-      "checks": [
-        "test/native-text.test.ts",
-        "test/native-ui-control.test.ts",
-        "test/native-recording.test.ts"
       ],
       "behavior": "动作统一到 HDC/UiTest/Hypium 原生服务。",
       "parameters": {
@@ -1682,24 +1691,23 @@
           "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
         }
       },
-      "actions": [],
-      "remaining": [
-        "真实设备中文输入及多显示器路由验收",
-        "原生滚动采样的实际设备结果验证"
-      ],
-      "acceptance": "pending",
-      "evidence": []
+      "actions": []
     },
     {
       "source": "project_sync",
+      "checks": [
+        "test/native-project.test.ts"
+      ],
+      "remaining": [
+        "多产品与 OHPM 中断恢复"
+      ],
+      "acceptance": "pending",
+      "evidence": [],
       "targets": [
         "workflow:project_sync"
       ],
       "adapters": [
         "src/services/project.ts"
-      ],
-      "checks": [
-        "test/native-project.test.ts"
       ],
       "behavior": "固定安装/模型同步/验证顺序。",
       "parameters": {
@@ -1720,24 +1728,29 @@
           "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
         }
       },
-      "actions": [],
-      "remaining": [
-        "多产品与 OHPM 中断恢复"
-      ],
-      "acceptance": "pending",
-      "evidence": []
+      "actions": []
     },
     {
       "source": "start_app",
+      "checks": [
+        "test/native-deploy.test.ts",
+        "test/native-project.test.ts",
+        "test/native-context.test.ts",
+        "test/native-project-recovery.test.ts",
+        "scripts/native-multimodule-acceptance.ts"
+      ],
+      "remaining": [],
+      "acceptance": "verified",
+      "evidence": [
+        "provenance/migration-acceptance/e603c48f43433cc03895e6f5d868911d21adc8d46988ec2c285a8d7ad4252788.json"
+      ],
       "targets": [
         "workflow:build_deploy_verify",
         "workflow:app_deploy"
       ],
       "adapters": [
-        "src/services/runtime.ts"
-      ],
-      "checks": [
-        "test/native-deploy.test.ts"
+        "src/services/runtime.ts",
+        "src/services/project.ts"
       ],
       "behavior": "构建、安装、启动及断言分别留存回执。",
       "parameters": {
@@ -1750,8 +1763,8 @@
           "replacement": "ui_flow.navigate.route.module 或 app_deploy.app.module"
         },
         "target": {
-          "status": "pending",
-          "replacement": "旧 target 为构建目标（module@target），不是 HDC 设备；当前实现仅按产品选择 default 或唯一适用目标，显式构建目标选择尚待实现和验收"
+          "status": "mapped",
+          "replacement": "module_targets[module]；显式 Hvigor 构建目标，与 HDC target 独立；提交时固定，恢复核对原选择。app_deploy 使用已选定制品，不重新选择构建目标"
         },
         "product": {
           "status": "mapped",
@@ -1770,27 +1783,25 @@
           "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
         }
       },
-      "actions": [],
-      "remaining": [
-        "签名包真实安装启动",
-        "多模块包选择",
-        "显式构建目标选择：旧 target 不得误映射为 HDC 设备，覆盖同一产品的多个模块目标"
-      ],
-      "acceptance": "pending",
-      "evidence": []
+      "actions": []
     },
     {
       "source": "switch_cwd",
+      "checks": [
+        "test/native-project.test.ts",
+        "test/native-context.test.ts"
+      ],
+      "remaining": [],
+      "acceptance": "verified",
+      "evidence": [
+        "provenance/migration-acceptance/2aa1c26cfb4f7d5cf666c3615742c023aeb5fb8f051e9468fdf66e5679cdff78.json"
+      ],
       "targets": [
         "tool:switch_cwd"
       ],
       "adapters": [
         "src/services/project.ts",
         "src/services/runtime.ts"
-      ],
-      "checks": [
-        "test/native-project.test.ts",
-        "test/native-context.test.ts"
       ],
       "behavior": "切换默认工程，已提交任务使用捕获上下文。",
       "parameters": {
@@ -1799,24 +1810,26 @@
           "replacement": "project_path；请求提交时固定工程"
         }
       },
-      "actions": [],
-      "remaining": [],
-      "acceptance": "verified",
-      "evidence": [
-        "provenance/migration-acceptance/2aa1c26cfb4f7d5cf666c3615742c023aeb5fb8f051e9468fdf66e5679cdff78.json"
-      ]
+      "actions": []
     },
     {
       "source": "ui_control",
+      "checks": [
+        "test/native-text.test.ts",
+        "scripts/native-canary-ui-acceptance.ts"
+      ],
+      "remaining": [
+        "所有手势路径与真实多显示器验收；专用应用中文输入、窗口定位和点击已通过"
+      ],
+      "acceptance": "pending",
+      "evidence": [
+        "docs/native-signing.md"
+      ],
       "targets": [
         "tool:ui_control"
       ],
       "adapters": [
         "src/services/device.ts"
-      ],
-      "checks": [
-        "test/native-text.test.ts",
-        "scripts/native-canary-ui-acceptance.ts"
       ],
       "behavior": "原生操作对象，选择器/窗口条件与动作共享设备租约。",
       "parameters": {
@@ -1922,17 +1935,25 @@
           "status": "mapped",
           "replacement": "ui_control.operation.action=inputText；节点/窗口/显示器定位及操作后快照失效"
         }
-      ],
-      "remaining": [
-        "所有手势路径与真实多显示器验收；专用应用中文输入、窗口定位和点击已通过"
-      ],
-      "acceptance": "pending",
-      "evidence": [
-        "docs/native-signing.md"
       ]
     },
     {
       "source": "ui_find",
+      "checks": [
+        "test/native-ui.test.ts",
+        "test/native-ui-query.test.ts",
+        "test/native-ui-import.test.ts",
+        "scripts/native-device-readonly.ts",
+        "scripts/native-ui-mcp-benchmark.ts"
+      ],
+      "remaining": [
+        "真实多显示器、实时获取及其他选择器的完整直接能力性能门槛；固定文件精确 key 查询已在本机 Node 22/24 各三轮通过"
+      ],
+      "acceptance": "pending",
+      "evidence": [
+        "docs/native-ui-import.md",
+        "docs/native-ui-performance.md"
+      ],
       "targets": [
         "tool:ui_find"
       ],
@@ -1941,13 +1962,6 @@
         "src/services/ui-import.ts",
         "src/services/ui-node-schema.ts",
         "src/services/ui-import-cache.ts"
-      ],
-      "checks": [
-        "test/native-ui.test.ts",
-        "test/native-ui-query.test.ts",
-        "test/native-ui-import.test.ts",
-        "scripts/native-device-readonly.ts",
-        "scripts/native-ui-mcp-benchmark.ts"
       ],
       "behavior": "实时设备查询复用快照索引；已有文件或本 MCP 节点制品可离线查询，保留输入摘要且不验证当前设备状态。",
       "parameters": {
@@ -2016,18 +2030,30 @@
           "replacement": "selectors：[id, selector] 对象列表，最多 32 项、ID 唯一，同一快照批量求值"
         }
       },
-      "actions": [],
-      "remaining": [
-        "真实多显示器、实时获取及其他选择器的完整直接能力性能门槛；固定文件精确 key 查询已在本机 Node 22/24 各三轮通过"
-      ],
-      "acceptance": "pending",
-      "evidence": [
-        "docs/native-ui-import.md",
-        "docs/native-ui-performance.md"
-      ]
+      "actions": []
     },
     {
       "source": "ui_flow",
+      "checks": [
+        "test/native-flow.test.ts",
+        "test/native-routes.test.ts",
+        "test/native-recording.test.ts",
+        "test/native-ui-driver.test.ts",
+        "scripts/native-canary-ui-acceptance.ts",
+        "scripts/native-device-readonly.ts"
+      ],
+      "remaining": [
+        "未知目标自动录制的真实设备验收；入口选择、并发去重、重启、最终断言回归及提交 1ecafae 六组跨平台 CI 已通过",
+        "原生 driver 诊断的最终跨平台快照复验；本机 Node26/24 回归和真机只读探测已通过",
+        "既有用户保存流程迁移验收；专用应用录制、MCP 重启和重放已通过",
+        "录制期间热重载等长期会话对 UI 状态的干扰协调"
+      ],
+      "acceptance": "pending",
+      "evidence": [
+        "docs/native-signing.md",
+        "docs/native-ui-workflows.md",
+        "docs/native-ui-driver.md"
+      ],
       "targets": [
         "tool:ui_flow",
         "tool:workflow_run",
@@ -2041,14 +2067,6 @@
         "src/services/recording.ts",
         "src/services/ui-driver.ts",
         "src/services/text-component.ts"
-      ],
-      "checks": [
-        "test/native-flow.test.ts",
-        "test/native-routes.test.ts",
-        "test/native-recording.test.ts",
-        "test/native-ui-driver.test.ts",
-        "scripts/native-canary-ui-acceptance.ts",
-        "scripts/native-device-readonly.ts"
       ],
       "behavior": "公开入口优先的目标导航、保存流程与持久化录制；每次动作有回执，只在原断言通过后保存流程或选择器修复。",
       "parameters": {
@@ -2242,32 +2260,25 @@
           "status": "mapped",
           "replacement": "ui_flow(action=delete)"
         }
-      ],
-      "remaining": [
-        "未知目标自动录制的真实设备验收；入口选择、并发去重、重启、最终断言回归及提交 1ecafae 六组跨平台 CI 已通过",
-        "原生 driver 诊断的最终跨平台快照复验；本机 Node26/24 回归和真机只读探测已通过",
-        "既有用户保存流程迁移验收；专用应用录制、MCP 重启和重放已通过",
-        "录制期间热重载等长期会话对 UI 状态的干扰协调"
-      ],
-      "acceptance": "pending",
-      "evidence": [
-        "docs/native-signing.md",
-        "docs/native-ui-workflows.md",
-        "docs/native-ui-driver.md"
       ]
     },
     {
       "source": "ui_inspect",
+      "checks": [
+        "test/native-ui.test.ts",
+        "test/native-ui-query.test.ts"
+      ],
+      "remaining": [
+        "真实多显示器与更复杂窗口/浮层布局验收；单设备层级和批量读取已通过"
+      ],
+      "acceptance": "pending",
+      "evidence": [],
       "targets": [
         "tool:ui_inspect"
       ],
       "adapters": [
         "src/services/device.ts",
         "src/services/ui-inspection.ts"
-      ],
-      "checks": [
-        "test/native-ui.test.ts",
-        "test/native-ui-query.test.ts"
       ],
       "behavior": "快照和结构化元数据、查询与可选截图。",
       "parameters": {
@@ -2329,15 +2340,21 @@
           "status": "replaced",
           "replacement": "ui_inspect 返回窗口元数据"
         }
-      ],
-      "remaining": [
-        "真实多显示器与更复杂窗口/浮层布局验收；单设备层级和批量读取已通过"
-      ],
-      "acceptance": "pending",
-      "evidence": []
+      ]
     },
     {
       "source": "ui_observe",
+      "checks": [
+        "test/native-ui.test.ts",
+        "test/native-ui-query.test.ts",
+        "test/native-screenshot.test.ts"
+      ],
+      "remaining": [
+        "实际多显示器与旋转验收",
+        "图像和树联合获取的固定输入性能门槛"
+      ],
+      "acceptance": "pending",
+      "evidence": [],
       "targets": [
         "tool:ui_observe",
         "tool:ui_snapshot"
@@ -2345,11 +2362,6 @@
       "adapters": [
         "src/services/device.ts",
         "src/services/screenshot.ts"
-      ],
-      "checks": [
-        "test/native-ui.test.ts",
-        "test/native-ui-query.test.ts",
-        "test/native-screenshot.test.ts"
       ],
       "behavior": "同一快照批量查询；显式 capture 可在同一设备租约内追加图像证据。",
       "parameters": {
@@ -2430,27 +2442,27 @@
           "replacement": "selectors：[id, selector] 对象列表，最多 32 项、ID 唯一，同一快照批量求值"
         }
       },
-      "actions": [],
+      "actions": []
+    },
+    {
+      "source": "ui_snapshot",
+      "checks": [
+        "test/native-ui.test.ts",
+        "test/native-screenshot.test.ts",
+        "test/native-ui-query.test.ts"
+      ],
       "remaining": [
         "实际多显示器与旋转验收",
         "图像和树联合获取的固定输入性能门槛"
       ],
       "acceptance": "pending",
-      "evidence": []
-    },
-    {
-      "source": "ui_snapshot",
+      "evidence": [],
       "targets": [
         "tool:ui_snapshot"
       ],
       "adapters": [
         "src/services/device.ts",
         "src/services/screenshot.ts"
-      ],
-      "checks": [
-        "test/native-ui.test.ts",
-        "test/native-screenshot.test.ts",
-        "test/native-ui-query.test.ts"
       ],
       "behavior": "默认只截图；mode=tree/both 明确请求树。尺寸、原生格式、显示器、变化检测与有界制品。",
       "parameters": {
@@ -2491,16 +2503,23 @@
           "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
         }
       },
-      "actions": [],
-      "remaining": [
-        "实际多显示器与旋转验收",
-        "图像和树联合获取的固定输入性能门槛"
-      ],
-      "acceptance": "pending",
-      "evidence": []
+      "actions": []
     },
     {
       "source": "ui_tap",
+      "checks": [
+        "test/native-ui.test.ts",
+        "test/native-ui-control.test.ts",
+        "test/native-recording.test.ts",
+        "scripts/native-canary-ui-acceptance.ts"
+      ],
+      "remaining": [
+        "真实多显示器手势与最终性能门槛；专用应用中文输入、点击、录制和重放已通过"
+      ],
+      "acceptance": "pending",
+      "evidence": [
+        "docs/native-signing.md"
+      ],
       "targets": [
         "tool:ui_tap",
         "tool:ui_control"
@@ -2509,12 +2528,6 @@
         "src/services/device.ts",
         "src/services/ui-control.ts",
         "src/services/recording.ts"
-      ],
-      "checks": [
-        "test/native-ui.test.ts",
-        "test/native-ui-control.test.ts",
-        "test/native-recording.test.ts",
-        "scripts/native-canary-ui-acceptance.ts"
       ],
       "behavior": "语义点击保留，其他动作统一在 ui_control。",
       "parameters": {
@@ -2694,17 +2707,21 @@
           "status": "mapped",
           "replacement": "ui_control.operation.action=keyEvent；编码、歧义和录制回归通过，真实设备动作仍待验收"
         }
-      ],
-      "remaining": [
-        "真实多显示器手势与最终性能门槛；专用应用中文输入、点击、录制和重放已通过"
-      ],
-      "acceptance": "pending",
-      "evidence": [
-        "docs/native-signing.md"
       ]
     },
     {
       "source": "verify_ui",
+      "checks": [
+        "test/native-verification.test.ts",
+        "test/native-screenshot.test.ts",
+        "test/native-retention.test.ts",
+        "scripts/native-visual-review-acceptance.ts"
+      ],
+      "remaining": [],
+      "acceptance": "verified",
+      "evidence": [
+        "docs/native-visual-review.md"
+      ],
       "targets": [
         "tool:verify_ui",
         "tool:ui_snapshot",
@@ -2716,12 +2733,6 @@
         "src/services/artifact.ts",
         "src/server.ts",
         "src/worker.ts"
-      ],
-      "checks": [
-        "test/native-verification.test.ts",
-        "test/native-screenshot.test.ts",
-        "test/native-retention.test.ts",
-        "scripts/native-visual-review-acceptance.ts"
       ],
       "behavior": "控件断言与宿主外观审阅分离；请求审阅时 verified=false，要求和截图引用持久化，原生 MCP 图片按需读取。",
       "parameters": {
@@ -2785,26 +2796,26 @@
           "status": "replaced",
           "replacement": "ui_snapshot.capture.if_changed_from；固定捕获设置后核对 unchanged"
         }
-      ],
-      "remaining": [],
-      "acceptance": "verified",
-      "evidence": [
-        "docs/native-visual-review.md"
       ]
     }
   ],
   "scripts": [
     {
       "source": "copy_template",
+      "checks": [
+        "scripts/native-sdk-acceptance.ts",
+        "test/native-project.test.ts"
+      ],
+      "remaining": [],
+      "acceptance": "verified",
+      "evidence": [
+        "provenance/migration-acceptance/b15fe3f52d84fea8db5ad31a147bdc4a571f517b7cd999d8fcd1fd2a0e1dab66.json"
+      ],
       "targets": [
         "workflow:project_create"
       ],
       "adapters": [
         "src/services/project.ts"
-      ],
-      "checks": [
-        "scripts/native-sdk-acceptance.ts",
-        "test/native-project.test.ts"
       ],
       "behavior": "以 project_create 工作流替代脚本入口；project_path 是完整目标目录，不再追加 app_name；bundle_name 显式必填。拒绝任何已存在目录，默认不升级 SDK。",
       "parameters": {
@@ -2825,35 +2836,38 @@
           "replacement": "project_create.bundle_name；显式必填，不再隐式生成 com.example 前缀"
         }
       },
-      "actions": [],
-      "remaining": [],
-      "acceptance": "verified",
-      "evidence": [
-        "provenance/migration-acceptance/b15fe3f52d84fea8db5ad31a147bdc4a571f517b7cd999d8fcd1fd2a0e1dab66.json"
-      ]
+      "actions": []
     },
     {
       "source": "detect_sdk",
+      "checks": [
+        "scripts/native-sdk-acceptance.ts"
+      ],
+      "remaining": [
+        "所有原参数和历史错误边界逐项对照"
+      ],
+      "acceptance": "pending",
+      "evidence": [],
       "targets": [
         "tool:deveco_doctor"
       ],
       "adapters": [
         "src/core/toolchain.ts"
       ],
-      "checks": [
-        "scripts/native-sdk-acceptance.ts"
-      ],
       "behavior": "删除脚本运行入口，保留其领域能力。",
       "parameters": {},
-      "actions": [],
-      "remaining": [
-        "所有原参数和历史错误边界逐项对照"
-      ],
-      "acceptance": "pending",
-      "evidence": []
+      "actions": []
     },
     {
       "source": "collect_hilog",
+      "checks": [
+        "test/native-logs.test.ts"
+      ],
+      "remaining": [
+        "真实设备日志采集及直接能力性能验收"
+      ],
+      "acceptance": "pending",
+      "evidence": [],
       "targets": [
         "tool:hdc_log"
       ],
@@ -2861,9 +2875,6 @@
         "src/services/logs.ts",
         "src/services/crash.ts",
         "src/services/runtime.ts"
-      ],
-      "checks": [
-        "test/native-logs.test.ts"
       ],
       "behavior": "hdc_log.collect 原生日志收集；独立制品替代输出目录。",
       "parameters": {
@@ -2880,15 +2891,18 @@
           "replacement": "lines；日志行数上限"
         }
       },
-      "actions": [],
-      "remaining": [
-        "真实设备日志采集及直接能力性能验收"
-      ],
-      "acceptance": "pending",
-      "evidence": []
+      "actions": []
     },
     {
       "source": "fetch_faultlog",
+      "checks": [
+        "test/native-logs.test.ts"
+      ],
+      "remaining": [
+        "真实设备命名 faultlog、时间范围、权限与截断边界验收"
+      ],
+      "acceptance": "pending",
+      "evidence": [],
       "targets": [
         "tool:hdc_log"
       ],
@@ -2896,9 +2910,6 @@
         "src/services/logs.ts",
         "src/services/crash.ts",
         "src/services/runtime.ts"
-      ],
-      "checks": [
-        "test/native-logs.test.ts"
       ],
       "behavior": "hdc_log.fetch 精确读取命名 faultlog，保留截断证据。",
       "parameters": {
@@ -2915,15 +2926,19 @@
           "replacement": "固定制品目录与 read_artifact；不写入任意调用方输出目录"
         }
       },
-      "actions": [],
-      "remaining": [
-        "真实设备命名 faultlog、时间范围、权限与截断边界验收"
-      ],
-      "acceptance": "pending",
-      "evidence": []
+      "actions": []
     },
     {
       "source": "jscrash_report",
+      "checks": [
+        "test/native-logs.test.ts"
+      ],
+      "remaining": [
+        "应用栈帧位置排序和知识建议完整性对照",
+        "真实崩溃与进程交错日志验收"
+      ],
+      "acceptance": "pending",
+      "evidence": [],
       "targets": [
         "workflow:crash_diagnose"
       ],
@@ -2931,9 +2946,6 @@
         "src/services/logs.ts",
         "src/services/crash.ts",
         "src/services/runtime.ts"
-      ],
-      "checks": [
-        "test/native-logs.test.ts"
       ],
       "behavior": "crash_diagnose 持久化收集、按进程分离事件、匹配知识；结果保留证据不足状态。",
       "parameters": {
@@ -2966,16 +2978,19 @@
           "replacement": "始终返回结构化诊断摘要和原始证据制品引用"
         }
       },
-      "actions": [],
+      "actions": []
+    },
+    {
+      "source": "parse_jscrash_log",
+      "checks": [
+        "test/native-logs.test.ts"
+      ],
       "remaining": [
         "应用栈帧位置排序和知识建议完整性对照",
         "真实崩溃与进程交错日志验收"
       ],
       "acceptance": "pending",
-      "evidence": []
-    },
-    {
-      "source": "parse_jscrash_log",
+      "evidence": [],
       "targets": [
         "workflow:crash_diagnose"
       ],
@@ -2983,9 +2998,6 @@
         "src/services/logs.ts",
         "src/services/crash.ts",
         "src/services/runtime.ts"
-      ],
-      "checks": [
-        "test/native-logs.test.ts"
       ],
       "behavior": "crash_diagnose 使用本地文件或内联证据；排队和恢复使用提交时制品。",
       "parameters": {
@@ -3018,16 +3030,18 @@
           "replacement": "始终返回结构化诊断摘要和原始证据制品引用"
         }
       },
-      "actions": [],
-      "remaining": [
-        "应用栈帧位置排序和知识建议完整性对照",
-        "真实崩溃与进程交错日志验收"
-      ],
-      "acceptance": "pending",
-      "evidence": []
+      "actions": []
     },
     {
       "source": "probe_faultlogger",
+      "checks": [
+        "test/native-logs.test.ts"
+      ],
+      "remaining": [
+        "真实设备命名 faultlog、时间范围、权限与截断边界验收"
+      ],
+      "acceptance": "pending",
+      "evidence": [],
       "targets": [
         "tool:hdc_log"
       ],
@@ -3035,9 +3049,6 @@
         "src/services/logs.ts",
         "src/services/crash.ts",
         "src/services/runtime.ts"
-      ],
-      "checks": [
-        "test/native-logs.test.ts"
       ],
       "behavior": "hdc_log.probe 查询两个 faultlog 来源，使用设备时钟进行精确应用和时间筛选。",
       "parameters": {
@@ -3058,12 +3069,10 @@
           "replacement": "limit；匹配记录的返回上限"
         }
       },
-      "actions": [],
-      "remaining": [
-        "真实设备命名 faultlog、时间范围、权限与截断边界验收"
-      ],
-      "acceptance": "pending",
-      "evidence": []
+      "actions": []
     }
-  ]
+  ],
+  "format": 1,
+  "baseline_commit": "aab1405b51e00e4036bdc8f18ae4229835de77b0",
+  "baseline_inventory_sha256": "f6bebe2a202f6d9a5262a4185f5b8d312fb1515022358a1a9507cbb9449b4f42"
 }

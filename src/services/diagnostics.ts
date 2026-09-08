@@ -13,7 +13,7 @@ import { StateStore } from "../core/store.js";
 import { currentTrace } from "../core/trace.js";
 import { NativeDirectory } from "../core/native-directory.js";
 import type { Project } from "./project.js";
-import { ProjectService } from "./project.js";
+import { ProjectService, projectTargets } from "./project.js";
 import { LanguageService } from "./lsp.js";
 import { z } from "zod";
 import { StringDecoder } from "node:string_decoder";
@@ -80,6 +80,7 @@ export class DiagnosticService {
         JSON.stringify({
           project_path: project.root,
           product: project.product.name,
+          module_targets: projectTargets(project),
           files,
           cache_path: path.join(directory, "checker-cache"),
         }),

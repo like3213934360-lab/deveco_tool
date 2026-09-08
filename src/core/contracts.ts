@@ -245,9 +245,14 @@ export const recordingTaskSchema = z
     "A recording starts with an empty draft and receives its final assertion when sealed",
   );
 
+export const moduleTargetsSchema = z.record(z.string().min(1).max(256), z.string().min(1).max(256))
+  .refine((value) => Object.keys(value).length <= 128, "At most 128 module targets")
+  .describe("Build target per module, for example {entry: phone, shared: default}. These are Hvigor targets, independent of the HDC device target.");
+export type ModuleTargets = z.infer<typeof moduleTargetsSchema>;
 const projectFields = {
   project_path: z.string().min(1).optional(),
   product: z.string().min(1).optional(),
+  module_targets: moduleTargetsSchema.optional(),
 };
 const target = z.string().min(1).optional();
 const wantText = z
@@ -369,6 +374,9 @@ export const workflowInputs = {
     task: z
       .enum(["assembleHap", "assembleHar", "assembleHsp", "assembleApp"])
       .default("assembleHap"),
+  }).refine((input) => input.task !== "assembleApp" || (!input.modules && Object.keys(input.module_targets ?? {}).length === 0), {
+    message: "assembleApp packages the product's configured targets; use assembleHap/Har/Hsp for explicit module or target selection",
+    path: ["task"],
   }),
   app_deploy: z.strictObject({
     packages: z

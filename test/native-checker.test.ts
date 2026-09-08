@@ -339,6 +339,7 @@ test("checker service owns each child's cache, validates exit and report contrac
     service = new DiagnosticService(processes, store, cpu);
   const selected = {
       ...project,
+      modules: project.modules.map((module, index) => ({ ...module, target: index === 0 ? "preview" : "default" })),
       product: {
         name: "default",
         compatibleSdkVersion: 26,
@@ -353,8 +354,10 @@ test("checker service owns each child's cache, validates exit and report contrac
     const input = JSON.parse(fs.readFileSync(command.args[2]!, "utf8")) as {
       cache_path: string;
       product: string;
+      module_targets: Record<string, string>;
     };
     assert.equal(input.product, "default");
+    assert.deepEqual(input.module_targets, { "features/手机": "preview", library: "default" });
     assert.ok(
       input.cache_path.startsWith(path.dirname(command.args[2]!) + path.sep),
     );

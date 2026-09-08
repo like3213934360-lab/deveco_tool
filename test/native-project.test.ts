@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
-import { ProjectService } from "../src/services/project.js";
+import { ProjectService, projectTargets } from "../src/services/project.js";
 import { ProcessService } from "../src/core/process.js";
 import { atomicWrite, destinationPath, readObject } from "../src/core/files.js";
 import { resourceRoot } from "../src/core/config.js";
@@ -49,6 +49,64 @@ function fixture() {
     close: () => fs.rmSync(root, { recursive: true, force: true }),
   };
 }
+
+test("module target selection is independent of product, retains defaults and separates fingerprints", async () => {
+  const f = fixture();
+  try {
+    await f.service.create(f.input);
+    const file = path.join(f.input.project_path, "build-profile.json5"), profile = readObject(file);
+    profile.modules = [{ name: "entry", srcPath: "./entry", targets: [
+      { name: "default", applyToProducts: ["default"] },
+      { name: "preview", applyToProducts: ["default"] },
+    ] }];
+    atomicWrite(file, JSON.stringify(profile));
+    const implicit = f.service.resolve(f.input.project_path),
+      explicit = f.service.resolve(f.input.project_path, "default", { entry: "default" }),
+      requested = { entry: "preview" },
+      preview = f.service.resolve(f.input.project_path, "default", requested);
+    requested.entry = "default";
+    assert.deepEqual(projectTargets(preview), { entry: "preview" });
+    assert.equal(implicit.fingerprint, explicit.fingerprint);
+    assert.notEqual(preview.fingerprint, implicit.fingerprint);
+    assert.deepEqual(f.service.resolveSelection(f.input.project_path, "default", { entry: "preview" }).modules, preview.modules);
+    const extracted = projectTargets(preview);
+    extracted.entry = "default";
+    assert.equal(preview.modules[0]?.target, "preview");
+  } finally { f.close(); }
+});
+
+test("explicit targets resolve ambiguity and reject unknown modules and inapplicable targets", async () => {
+  const f = fixture();
+  try {
+    await f.service.create(f.input);
+    const file = path.join(f.input.project_path, "build-profile.json5"), profile = readObject(file);
+    profile.modules = [{ name: "entry", srcPath: "./entry", targets: [
+      { name: "phone", applyToProducts: ["default"] },
+      { name: "preview", applyToProducts: ["default"] },
+      { name: "tablet", applyToProducts: ["tablet"] },
+    ] }];
+    atomicWrite(file, JSON.stringify(profile));
+    assert.throws(() => f.service.resolve(f.input.project_path), { code: "TARGET_AMBIGUOUS" });
+    assert.equal(f.service.resolve(f.input.project_path, undefined, { entry: "preview" }).modules[0]?.target, "preview");
+    assert.throws(() => f.service.resolve(f.input.project_path, undefined, { missing: "preview" }), { code: "MODULE_INVALID" });
+    for (const target of ["missing", "tablet"]) assert.throws(
+      () => f.service.resolve(f.input.project_path, undefined, { entry: target }), { code: "TARGET_INVALID" },
+    );
+  } finally { f.close(); }
+});
+
+test("product APP packaging cannot silently discard explicit module selectors", async () => {
+  const f = fixture();
+  try {
+    const project = await f.service.create(f.input);
+    for (const selector of [{ modules: ["entry"] }, { module_targets: { entry: "default" } }]) {
+      const input = { task: "assembleApp", ...selector };
+      assert.equal(workflowInputs.project_build.safeParse(input).success, false);
+      await assert.rejects(f.service.build(project, input), { code: "APP_TARGET_SELECTION_UNSUPPORTED" });
+    }
+    assert.equal(workflowInputs.project_build.safeParse({ task: "assembleApp" }).success, true);
+  } finally { f.close(); }
+});
 
 test("project creation rejects SDK-invalid bundle names before allocating any destination files", async () => {
   const f = fixture();

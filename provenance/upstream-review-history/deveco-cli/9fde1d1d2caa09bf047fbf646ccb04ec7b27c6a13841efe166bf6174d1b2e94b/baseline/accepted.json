@@ -1,0 +1,235 @@
+{
+  "format": 2,
+  "candidate_sha256": "dabea7120d67904bc76291a0a8bf2ad620101b2ef76d9d30ec78821285ee475b",
+  "adaptation_sha256": "72ac694e393f109110c77ca568614837b06d933297362b5d6fe30f8c450e5acf",
+  "evidence_sha256": "affb65f3b19579be5196d1cee55a2902ea94f3506bda3b098c5c67d2c9c5b6fe",
+  "before_lock_sha256": "c33ca8c6d4e226383d9cb485b118eb2dad6f1d460df2a7d6ceab61827c3075ea",
+  "accepted_lock_sha256": "c33ca8c6d4e226383d9cb485b118eb2dad6f1d460df2a7d6ceab61827c3075ea",
+  "before_lock": {
+    "format": 1,
+    "sources": [
+      {
+        "id": "deveco-code",
+        "url": "https://gitcode.com/openharmony-sig/deveco-code.git",
+        "ref": "refs/heads/develop",
+        "commit": "325aff05706b9b04a9816a987e9672dda991c630",
+        "tree": "9232f44a15bed9f948662af74f23264b34be457c",
+        "version": "325aff05706b9b04a9816a987e9672dda991c630",
+        "role": "resource_source",
+        "acceptance": "verified"
+      },
+      {
+        "id": "deveco-cli",
+        "url": "https://gitcode.com/openharmony-sig/deveco-cli.git",
+        "ref": "refs/heads/develop",
+        "commit": "08c2f57ffbe83c817d64a728a17971872dd9ddcf",
+        "tree": "36fc532ea8ddb6c4eec3168e6301d0240e61b45d",
+        "version": "1.3.3-Test.1",
+        "role": "protocol_reference",
+        "acceptance": "verified"
+      }
+    ]
+  },
+  "accepted_lock": {
+    "format": 1,
+    "sources": [
+      {
+        "id": "deveco-code",
+        "url": "https://gitcode.com/openharmony-sig/deveco-code.git",
+        "ref": "refs/heads/develop",
+        "commit": "325aff05706b9b04a9816a987e9672dda991c630",
+        "tree": "9232f44a15bed9f948662af74f23264b34be457c",
+        "version": "325aff05706b9b04a9816a987e9672dda991c630",
+        "role": "resource_source",
+        "acceptance": "verified"
+      },
+      {
+        "id": "deveco-cli",
+        "url": "https://gitcode.com/openharmony-sig/deveco-cli.git",
+        "ref": "refs/heads/develop",
+        "commit": "08c2f57ffbe83c817d64a728a17971872dd9ddcf",
+        "tree": "36fc532ea8ddb6c4eec3168e6301d0240e61b45d",
+        "version": "1.3.3-Test.1",
+        "role": "protocol_reference",
+        "acceptance": "verified"
+      }
+    ]
+  },
+  "tested": {
+    "runtime_sha256": "23758f48efc3dc011a5c858a0dee6b666d3483883ae6b5c131906e6962a2ad93",
+    "compiled_sha256": "25b0b62cb294440fe60ee39b1bd88e8abc78cb59a6f7ba8a786c51d1f854b0bb",
+    "package_lock_sha256": "68641e488a5099852216d3003664f57dd1d05b980f4c7813ee75dd7baf83d0fc",
+    "resource_manifest_sha256": "563bc3f06565e92c59c621c3ef909a37cbc4ac1db958d3d73d6e0bc99bf9ed86",
+    "upstream_lock_sha256": "bf3cc411831bd8ce6652a8085c8247c399d0c48b6d73156a7e649b9ef668164e"
+  },
+  "checks": [
+    {
+      "check": "scripts/native-device-readonly.ts",
+      "report": "checks/95d02bcf7fa7f6a61a04864e276d7e16c259523fb54981fa32f2163eea990eaa.json",
+      "sha256": "43064b11de13d7a1c48d31874b69825bdd2a7f8be2242aee620a181129c09b9e",
+      "original_sha256": "ea3a26bf63fa69d0d2adad964e0be68bcb8606e8df6c8d60b8335e12c8670a61"
+    },
+    {
+      "check": "scripts/native-emulator-acceptance.ts",
+      "report": "checks/60b84490c5c9735fc3358d5659890494bf2b50347353792c5330838ce343fd27.json",
+      "sha256": "f1b878a12d85f9f6ac095370dfe2b51e460e21a7b6cd718a7c917181922a7839",
+      "original_sha256": "d040e69d3131ac6b887db2cc22b891814f1beb2d8f33d3c3ccf85c8930ce44e3"
+    },
+    {
+      "check": "scripts/native-emulator-readonly.ts",
+      "report": "checks/10c2c07e9060acbf87875198b2bd6771297f3d414a67f580c2c6818be9b0e9e0.json",
+      "sha256": "cbd126fe82cecff9eef581415f3fc2977d0acf3a7eb8cef649e09d6efe0c9e08",
+      "original_sha256": "3882754f3d4b323a7c846432875e1567bea528cfe4ee2f6a861324baf5e9db18"
+    },
+    {
+      "check": "scripts/native-hot-device-acceptance.ts",
+      "report": "checks/7e9932b019b7fa6f543a23c2ee535f08bfda23996dac18f1f826df150586229b.json",
+      "sha256": "7c9dee976e590adfea2d4c7933420eaa1733e5ef7124f17ff180a8f7396487fd",
+      "original_sha256": "f41b085192f2d613ec864eb6a5d2080df2e885be51bca98ba0f3cbf061f10066"
+    },
+    {
+      "check": "scripts/native-lint-acceptance.ts",
+      "report": "checks/9c25f163e95554fb614a325b986e41d65312781e5a06190c86b3cf89b2d63ed4.json",
+      "sha256": "5f0b7ce4cac994029fb00fa1ac6fa0e0e3e86ef6d88f7a57cce733dd946d5e66",
+      "original_sha256": "1210c83d6895269764764519ad82c90044fb0f45fb77d303bf97f5aab835afd2"
+    },
+    {
+      "check": "scripts/native-sdk-acceptance.ts",
+      "report": "checks/706fbd9922ad02d0573d8627b108ed300406f61c949da96d97634291d5835fee.json",
+      "sha256": "3ed8748f85a89a5b409cc9505b30b337034e7eb0fceeb236460ca4dbabf4ada1",
+      "original_sha256": "505d928a0b2d2524e2131db8c02b5c8d8edc52be38cac2fa8cf24e7b2b0b58cb"
+    },
+    {
+      "check": "scripts/native-signing-acceptance.ts",
+      "report": "checks/e3e861e834e1584f709199ee031604b5a014710da12f276efa1b93aee24235ba.json",
+      "sha256": "82f9934bf6d0391e439cb491511d75d598fea142544d1a5e76fb849389ed926a",
+      "original_sha256": "f0bd892f4b6d69fba99bb13254e9035de6a7044965acd1ac3bc654ce7e39d3e7"
+    },
+    {
+      "check": "scripts/native-ui-mcp-benchmark.ts",
+      "report": "checks/76239bada6fd126f95b6af7f11fdf343d456853b1fe40c8690b6521a3757d50f.json",
+      "sha256": "73f2886688c89406c6134fc4b7397ccbf1fde2a42e9b5cb859a0657946d372b4",
+      "original_sha256": "151d00f2e053bcd81a2c2c4329373b1fac43f3c3e5bc2c1de418740581d49222"
+    },
+    {
+      "check": "test/native-cloud-profile.test.ts",
+      "report": "checks/45c53a4d48b8a7d33b8b630aa03d5d613fbda20d8034a5a2f739d3ae7f9d7448.json",
+      "sha256": "b3810750580ce3588e8654f532cf5f2f364267d1c32f3ce9f1b4061257a47662",
+      "original_sha256": "2865dd9d29dac1487086950afdb48f4dadecf2ac8323ba84a6d0902d50b22faf"
+    },
+    {
+      "check": "test/native-device-info.test.ts",
+      "report": "checks/48dec4a0a645d79ce7a7c50511ef7fc9d5241e19d63f1c77951d8f24e63ecac3.json",
+      "sha256": "2d9245c9e6bf8cfc5d90b60b963368f1b7b7a4ec31bffc43c2980567d99a6639",
+      "original_sha256": "2865dd9d29dac1487086950afdb48f4dadecf2ac8323ba84a6d0902d50b22faf"
+    },
+    {
+      "check": "test/native-emulator-protocol.test.ts",
+      "report": "checks/fba4ab299eff26ca4294d9b78a16e8cbcc50d924679ab3dc212d7c64489702e4.json",
+      "sha256": "75ac19ca0276d92f21e78452b24b68e8f12bfa0ece911c6d3e51e36190bc2cf8",
+      "original_sha256": "2865dd9d29dac1487086950afdb48f4dadecf2ac8323ba84a6d0902d50b22faf"
+    },
+    {
+      "check": "test/native-emulator.test.ts",
+      "report": "checks/445fdbec49cfbf5c260a06b82e934696ea4165eb82fb9cece126053dd577d9f6.json",
+      "sha256": "e0bb6ad74c8792e20ece849ac6fafe2ffa02e38c400043d745e6b8f96813e6f9",
+      "original_sha256": "2865dd9d29dac1487086950afdb48f4dadecf2ac8323ba84a6d0902d50b22faf"
+    },
+    {
+      "check": "test/native-flow.test.ts",
+      "report": "checks/ee4f2e6ec3f8dbfdd6ee098b60b61dc4573de5d45d78adb685ef7b22b7a4d69f.json",
+      "sha256": "5816a349804bc5331a3768b1ae90fb27776707c311ec97ba02e9dfce0f597f90",
+      "original_sha256": "2865dd9d29dac1487086950afdb48f4dadecf2ac8323ba84a6d0902d50b22faf"
+    },
+    {
+      "check": "test/native-hotreload.test.ts",
+      "report": "checks/4950ff080219af087bbe1d8b794c4141d2ff81dbd435df18063d71de89808327.json",
+      "sha256": "69da75a737015d63ab46d8179df26e12ca546e7b2739d4b9deac14731370c444",
+      "original_sha256": "2865dd9d29dac1487086950afdb48f4dadecf2ac8323ba84a6d0902d50b22faf"
+    },
+    {
+      "check": "test/native-infrastructure.test.ts",
+      "report": "checks/7dcca06f44ec51b9e8634f3f1ae3c8b99b396476322f25e298833a43848c6493.json",
+      "sha256": "7e83b1151c08b1dbc9108c775a34305d456c4b900b47e98106a722e746e74baf",
+      "original_sha256": "2865dd9d29dac1487086950afdb48f4dadecf2ac8323ba84a6d0902d50b22faf"
+    },
+    {
+      "check": "test/native-lint.test.ts",
+      "report": "checks/8b92e02f4ac9eadcd36a8b4a71d66869395267f36caccc24ad7977d55c858965.json",
+      "sha256": "36393d401cdf58c0cd36b96aec3039ba7d1bcc61596773f168ad4829b76891b3",
+      "original_sha256": "2865dd9d29dac1487086950afdb48f4dadecf2ac8323ba84a6d0902d50b22faf"
+    },
+    {
+      "check": "test/native-project.test.ts",
+      "report": "checks/fa1c8dcf2c54f94869c1010902de8a64e67d2961cf3e183ea47de24f72573aa4.json",
+      "sha256": "480a60764b4b9f34921bf26aee0199b092158ae3671deed57100d5c88c899ab0",
+      "original_sha256": "2865dd9d29dac1487086950afdb48f4dadecf2ac8323ba84a6d0902d50b22faf"
+    },
+    {
+      "check": "test/native-reports.test.ts",
+      "report": "checks/0bbd43b73cded65c13dfa08f3fc7bdf8ecc77575f9cbc303f2690da81afdb681.json",
+      "sha256": "ed89a4bf11dd6985d71cd6c647f849f62a20cb7ddffb0bec1fb2f59c7148bd8e",
+      "original_sha256": "2865dd9d29dac1487086950afdb48f4dadecf2ac8323ba84a6d0902d50b22faf"
+    },
+    {
+      "check": "test/native-request-log.test.ts",
+      "report": "checks/df5f5419abfd0a506eead281cf082004b41c4774f2605ba5e835e261c937ca8f.json",
+      "sha256": "0c4a30f554f92e2022b06e95c4197419decd742af303ed3189e293363a85292a",
+      "original_sha256": "2865dd9d29dac1487086950afdb48f4dadecf2ac8323ba84a6d0902d50b22faf"
+    },
+    {
+      "check": "test/native-resources.test.ts",
+      "report": "checks/da10d0886aeceb89c1b27dec850009bfd8cd4e738c3d05fd4ecefc4601c5e89d.json",
+      "sha256": "961e03062439087e40d566228c22f2fa17f8e65fa14aa0eb16cf9c6599c31f91",
+      "original_sha256": "2865dd9d29dac1487086950afdb48f4dadecf2ac8323ba84a6d0902d50b22faf"
+    },
+    {
+      "check": "test/native-runtime.test.ts",
+      "report": "checks/f7688280871ae9fcf47089eab1e120afa62957d4176255d81e0982b2b205eccc.json",
+      "sha256": "61ab57144c6ed2293c440f57cb7b7137e3f7f614740cf28f44159056796a847d",
+      "original_sha256": "2865dd9d29dac1487086950afdb48f4dadecf2ac8323ba84a6d0902d50b22faf"
+    },
+    {
+      "check": "test/native-shutdown.test.ts",
+      "report": "checks/c94cef118d5d3a5538064d9c0d83018e3a3eca6ab11c366492660c7d3d0a363c.json",
+      "sha256": "2ff51b25aaa14693196ccea3294c900a7613b707f55040e572f244b6fe7beeaa",
+      "original_sha256": "2865dd9d29dac1487086950afdb48f4dadecf2ac8323ba84a6d0902d50b22faf"
+    },
+    {
+      "check": "test/native-signature.test.ts",
+      "report": "checks/2abaeff6773a09e9c3769ce1b5fd3f5d544f79316f49cc898b603ea42721f1ea.json",
+      "sha256": "071b51be7a8773c6e32cce0a71bb867d446e7ad8fbaa4bb99d2843bcbdcacfe0",
+      "original_sha256": "2865dd9d29dac1487086950afdb48f4dadecf2ac8323ba84a6d0902d50b22faf"
+    },
+    {
+      "check": "test/native-signing-config.test.ts",
+      "report": "checks/c4d6b45bd372b3cef58dbf0543a7b27e3d75934132821c34094bbe4ab6f49841.json",
+      "sha256": "3d36ebadf064b708f29efc5080216b2db09bc8c80e972d72676e7655a4b71f8e",
+      "original_sha256": "2865dd9d29dac1487086950afdb48f4dadecf2ac8323ba84a6d0902d50b22faf"
+    },
+    {
+      "check": "test/native-text.test.ts",
+      "report": "checks/91149c145b92ff57c573fbd1f1ecfc4f05aff8a413a81ffb0e28b870c1ec0501.json",
+      "sha256": "fd6ceae63f16e5bc58ea963f3c2400e1ebcb60e5812052f3683d910efa17be94",
+      "original_sha256": "2865dd9d29dac1487086950afdb48f4dadecf2ac8323ba84a6d0902d50b22faf"
+    },
+    {
+      "check": "test/native-toolchain.test.ts",
+      "report": "checks/7775aaa747ea1ec0cc6581b176f91ca0481e5291a900dca344c2f3f3771e357a.json",
+      "sha256": "0d14474830d12310f49b8b3b541cf2a3015678c03fa62a186fea5004bb24738a",
+      "original_sha256": "2865dd9d29dac1487086950afdb48f4dadecf2ac8323ba84a6d0902d50b22faf"
+    },
+    {
+      "check": "test/native-ui-import.test.ts",
+      "report": "checks/59b9e144ac149dae5f568adecafa70f6249b214af40ceb1ad5bba92c58977c74.json",
+      "sha256": "8ba13cda17e43769b1df6d4f4d8b484f32b74ebcb88d28e0f2a632d103e809c9",
+      "original_sha256": "2865dd9d29dac1487086950afdb48f4dadecf2ac8323ba84a6d0902d50b22faf"
+    },
+    {
+      "check": "test/native-upstream.test.ts",
+      "report": "checks/cb23a87e1f563a0b87411bab5eb400e107916a818e154e9e8e628b1cb745e4ab.json",
+      "sha256": "43636678d7517c2d4db9b0480d08913cb881de8dc8ff12e1962b447b563991ae",
+      "original_sha256": "2865dd9d29dac1487086950afdb48f4dadecf2ac8323ba84a6d0902d50b22faf"
+    }
+  ]
+}

@@ -30,7 +30,7 @@ import { currentTrace } from "../core/trace.js";
 import { ManagedCommand } from "../core/managed-command.js";
 import { BuildDiagnostics } from "../core/build-diagnostics.js";
 import { readPackageMetadata } from "./package.js";
-import { projectAppNameSchema, projectBundleNameSchema, projectCompatibleApiSchema, projectTargetApiSchema, type ProjectCreateInput } from "../core/contracts.js";
+import { moduleTargetsSchema, projectAppNameSchema, projectBundleNameSchema, projectCompatibleApiSchema, projectTargetApiSchema, type ModuleTargets, type ProjectCreateInput } from "../core/contracts.js";
 
 const sdkVersion = z.union([
   z.number().int().positive(),
@@ -147,6 +147,10 @@ export interface ProjectSelection {
 export interface Project extends ProjectSelection {
   fingerprint: string;
 }
+/** Persist the resolved selection, including implicit defaults, independently of the caller's object. */
+export function projectTargets(project: ProjectSelection): ModuleTargets {
+  return Object.fromEntries(project.modules.map((module) => [module.name, module.target]));
+}
 function readProjectProfile(candidate: string) {
   const root = fs.realpathSync.native(path.resolve(candidate));
   const file = path.join(root, "build-profile.json5");
@@ -161,8 +165,11 @@ function readProjectProfile(candidate: string) {
 function inspectSelection(
   candidate: string,
   productName?: string,
+  moduleTargets?: ModuleTargets,
 ): ProjectSelection {
   const { root, profile } = readProjectProfile(candidate);
+  const requested = moduleTargetsSchema.parse(moduleTargets ?? {});
+  for (const name of Object.keys(requested)) invariant(profile.modules.some((module) => module.name === name), "MODULE_INVALID", `Unknown module in module_targets: ${name}`);
   const selected = productName
     ? profile.app.products.find((item) => item.name === productName)
     : (profile.app.products.find((item) => item.name === "default") ??
@@ -188,14 +195,17 @@ function inspectSelection(
           !target.applyToProducts ||
           target.applyToProducts.includes(product.name),
       ) ?? [{ name: "default" }];
+      const explicit = Object.hasOwn(requested, item.name) ? requested[item.name] : undefined;
+      if (explicit !== undefined) invariant(targets.some((target) => target.name === explicit), "TARGET_INVALID", `Target ${item.name}@${explicit} does not apply to product ${product.name}`);
       if (targets.length === 0) return undefined;
       const target =
-        targets.find((target) => target.name === "default") ??
-        (targets.length === 1 ? targets[0] : undefined);
+        explicit !== undefined ? targets.find((target) => target.name === explicit) :
+          (targets.find((target) => target.name === "default") ??
+          (targets.length === 1 ? targets[0] : undefined));
       invariant(
         target,
         "TARGET_AMBIGUOUS",
-        `Module ${item.name} has ambiguous targets for product ${product.name}`,
+        `Module ${item.name} has ambiguous targets for product ${product.name}; provide module_targets`,
       );
       const moduleRoot = fs.realpathSync.native(inside(root, item.srcPath));
       inside(root, moduleRoot);
@@ -212,8 +222,8 @@ function inspectSelection(
   );
   return { root, product, modules };
 }
-export function inspectProject(candidate: string, productName?: string): Project {
-  const selection = inspectSelection(candidate, productName),
+export function inspectProject(candidate: string, productName?: string, moduleTargets?: ModuleTargets): Project {
+  const selection = inspectSelection(candidate, productName, moduleTargets),
     { root, modules } = selection;
   const files = [
     path.join(root, "build-profile.json5"),
@@ -231,7 +241,7 @@ export function inspectProject(candidate: string, productName?: string): Project
   ].filter((item) => fs.existsSync(item));
   return {
     ...selection,
-    fingerprint: digest(files.map((file) => [file, fileDigest(file)])),
+    fingerprint: digest({ files: files.map((file) => [file, fileDigest(file)]), product: selection.product.name, module_targets: projectTargets(selection) }),
   };
 }
 export class ProjectService {
@@ -276,20 +286,20 @@ export class ProjectService {
     this.selected = project.root;
     return { project_path: project.root };
   }
-  resolve(root?: string, product?: string): Project {
+  resolve(root?: string, product?: string, moduleTargets?: ModuleTargets): Project {
     invariant(
       root || this.selected,
       "PROJECT_REQUIRED",
       "Specify project_path or switch_cwd",
     );
-    return inspectProject(root || this.selected!, product);
+    return inspectProject(root || this.selected!, product, moduleTargets);
   }
   /** Read-only catalogs/session lookups need a current, validated selection,
    * but never consume build inputs. Tasks and language sessions use resolve()
    * to capture the full content fingerprint before they are submitted. */
-  resolveSelection(root?: string, product?: string): ProjectSelection {
+  resolveSelection(root?: string, product?: string, moduleTargets?: ModuleTargets): ProjectSelection {
     invariant(root || this.selected, "PROJECT_REQUIRED", "Specify project_path or switch_cwd");
-    return inspectSelection(root || this.selected!, product);
+    return inspectSelection(root || this.selected!, product, moduleTargets);
   }
   async create(
     input: ProjectCreateInput,
@@ -531,6 +541,7 @@ export class ProjectService {
     project: Project,
     input: {
       modules?: string[];
+      module_targets?: ModuleTargets;
       mode?: string;
       clean?: boolean;
       task?: string;
@@ -551,6 +562,10 @@ export class ProjectService {
       "Unknown or empty module selection",
     );
     const task = input.task ?? "assembleHap";
+    // The SDK rejects non-HAR module selectors for assembleApp. Product packaging
+    // chooses its own configured targets; do not silently ignore caller selectors.
+    invariant(task !== "assembleApp" || (!input.modules && Object.keys(input.module_targets ?? {}).length === 0),
+      "APP_TARGET_SELECTION_UNSUPPORTED", "assembleApp packages the product's configured targets; use assembleHap/Har/Hsp for explicit module or target selection");
     invariant(
       [
         "assembleHap",

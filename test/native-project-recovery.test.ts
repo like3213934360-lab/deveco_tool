@@ -8,11 +8,11 @@ import { StateStore } from "../src/core/store.js";
 import { ProcessService } from "../src/core/process.js";
 import { PersistentProcessObserver } from "../src/core/process-observer.js";
 import { WorkflowEngine, type StepContext } from "../src/core/workflows.js";
-import { atomicWrite } from "../src/core/files.js";
+import { atomicWrite, readObject } from "../src/core/files.js";
 import { ProjectService } from "../src/services/project.js";
 import type { Toolchain } from "../src/core/toolchain.js";
 
-for (const phase of ["ohpm", "sync", "build", "rejected-build"]) {
+for (const phase of ["ohpm", "sync", "build", "rejected-build", "build-preview"]) {
   test(`project ${phase} response loss preserves command results and resumes fixed phases once`, async (t) => {
     const root = fs.realpathSync.native(
         fs.mkdtempSync(path.join(os.tmpdir(), "deveco-project-recovery-")),
@@ -45,12 +45,18 @@ for (const phase of ["ohpm", "sync", "build", "rejected-build"]) {
       projects = new ProjectService(processes, () => toolchain, store),
       engine: WorkflowEngine | undefined;
     try {
-      const project = await projects.create({
+      let project = await projects.create({
         project_path: path.join(root, "application"),
         app_name: "Recovery",
         bundle_name: "com.deveco.recovery",
         sdk_version: "26",
       });
+      if (phase === "build-preview") {
+        const file = path.join(project.root, "build-profile.json5"), profile = readObject(file);
+        profile.modules = [{ name: "entry", srcPath: "./entry", targets: [{ name: "default" }, { name: "preview" }] }];
+        atomicWrite(file, JSON.stringify(profile));
+        project = projects.resolve(project.root, "default", { entry: "preview" });
+      }
       if (phase === "rejected-build")
         atomicWrite(path.join(project.root, "reject-build"), "reject");
       const definitions = () => [
@@ -97,7 +103,7 @@ for (const phase of ["ohpm", "sync", "build", "rejected-build"]) {
           try {
             return await original(command, options);
           } finally {
-            if (loseResponse && actual === phase.replace("rejected-", "")) {
+            if (loseResponse && actual === phase.replace("rejected-", "").replace("-preview", "")) {
               loseResponse = false;
               throw new Error(
                 "Response lost after the command completion was persisted",
@@ -145,7 +151,14 @@ for (const phase of ["ohpm", "sync", "build", "rejected-build"]) {
           failure.length < 20000,
           "Large compiler output stays in an artifact",
         );
-      } else assert.equal(projects.buildArtifacts(project).length, 1);
+      } else {
+        const artifacts = projects.buildArtifacts(project);
+        assert.equal(artifacts.length, 1);
+        const target = phase === "build-preview" ? "preview" : "default";
+        assert.equal(path.dirname(artifacts[0]!.path), path.join(project.root, "entry/build/default/outputs", target));
+        const args: unknown = JSON.parse(fs.readFileSync(path.join(project.root, "build-args.json"), "utf8"));
+        assert.ok(Array.isArray(args) && args.includes(`module=entry@${target}`));
+      }
     } finally {
       await engine?.close();
       await processes.close();

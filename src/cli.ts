@@ -12,6 +12,7 @@ async function main() {
     return;
   }
   if (command === "internal-check") {
+    const { moduleTargetsSchema } = await import("./core/contracts.js");
     const inputFile = process.argv[3],
       outputFile = process.argv[4];
     invariant(
@@ -23,6 +24,7 @@ async function main() {
       .strictObject({
         project_path: z.string(),
         product: z.string().optional(),
+        module_targets: moduleTargetsSchema.optional(),
         files: z.array(z.string()).optional(),
         cache_path: z.string().min(1),
       })

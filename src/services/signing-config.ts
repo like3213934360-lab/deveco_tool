@@ -10,7 +10,7 @@ import {
   publishFile,
 } from "../core/files.js";
 import { invariant, object, ToolError } from "../core/errors.js";
-import { inspectProject, type Project } from "./project.js";
+import { inspectProject, projectTargets, type Project } from "./project.js";
 import { assertNoHotWatch } from "./hvigor/hot-config.js";
 import { createSigningMaterial } from "./signing-material.js";
 
@@ -53,7 +53,7 @@ export async function configureSigning(
     .parse(name);
   const unchanged = () =>
     invariant(
-      inspectProject(project.root, project.product.name).fingerprint ===
+      inspectProject(project.root, project.product.name, projectTargets(project)).fingerprint ===
         project.fingerprint,
       "SIGN_PROJECT_CHANGED",
       "Project configuration changed; submit again with current inputs",
