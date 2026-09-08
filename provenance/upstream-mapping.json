@@ -476,11 +476,18 @@
       "disposition": "adapt",
       "reason": "Review the upstream behavior against its native replacement and regression evidence.",
       "targets": [
-        "src/services/signature.ts"
+        "src/services/signature.ts",
+        "src/services/signing-material.ts",
+        "src/services/signing-config.ts"
       ],
       "tests": [
         "test/native-reports.test.ts",
-        "scripts/native-sdk-acceptance.ts"
+        "scripts/native-sdk-acceptance.ts",
+        "test/native-signature.test.ts",
+        "test/native-signing-config.test.ts",
+        "test/native-cloud-profile.test.ts",
+        "scripts/native-signing-acceptance.ts",
+        "scripts/native-hot-device-acceptance.ts"
       ]
     },
     {

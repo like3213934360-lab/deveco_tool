@@ -442,7 +442,7 @@ export class Runtime {
           const { draft } = recordingTaskSchema.parse(call.context.parameters);
           await this.devices.verify(
             text(call.context.target, "target"),
-            { visible: { type: "WindowScene" }, timeoutMs: 5000 },
+            { visible: { bundle_name: draft.app.bundleName }, timeoutMs: 5000 },
             call.signal,
             draft.app.bundleName,
           );
@@ -1084,6 +1084,7 @@ export class Runtime {
         if (
           input.project_path ||
           input.action === "inspect" ||
+          input.action === "configure" ||
           (input.action === "sign" && Object.keys(input.options).length === 0)
         )
           project = this.projects.resolve(input.project_path, input.product);

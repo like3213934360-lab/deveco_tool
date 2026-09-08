@@ -1,38 +1,73 @@
-# 原生签名验收
+# 原生签名与设备验收
 
-更新：2026-09-08。当前完成本地准备和云端只读认证；云端证书、Profile 变更及签名部署尚未验收。浏览器与认证证据见 `docs/native-authentication.md`。
+更新：2026-09-08。使用用户明确选择的个人开发者团队，已通过专用证书、调试 Profile、本地签名及验签、真实部署、中文输入录制/重放和两次连续设备热补丁。本机证据限 macOS arm64、Node 24.14.1、Studio 26.0.0.821 / SDK 26.0.0.105、API 26 真机；不代表所有平台、签名类型或发布门槛均通过。
 
-## 可复现的本地准备
+## 签名接口
 
-在干净原生验证目录中执行：
+`app_signature` 的云端动作要求显式 `team_id`，通过 `harmony_auth.teams` 查询；认证使用 developer provider。不会按名称猜测团队，也不会混用知识服务 Token。
+
+- `certificate_create`：校验 CSR，在所选团队创建专用证书，保存远程 ID 与下载摘要。
+- `profile_create`：默认使用现代 IDE 的 `test` 调试 Profile 协议。该接口可能只返回下载地址而没有远程 ID，此时返回 `remote_deletion_available:false`，不能伪造 ID 或宣称可删除。显式 `kind:real` 仍要求返回 ID，本次未完成其成功验收。
+- `sign`：直接使用 SDK 签名工具，支持显式参数或读取指定产品的签名配置。
+- `verify`：提供 SDK 必需的证书链/Profile 输出参数，在有预算的私有临时目录中提取两份结果，检查非空，返回 SHA-256 后清理。验收核对了 HAP 内的 Profile 与云端下载文件完全一致。
+- `configure`：从 `file` 指定的私密 JSON 描述文件读取材料和密码，在 `output` 指定的新目录生成完整 Hvigor 签名材料，以 `options.name` 新建配置并选中当前产品。目录和配置名称均不得已存在；其他配置与产品保留。
+
+`configure` 描述文件字段为 `keystoreFile`、`keystorePwd`、`keyAlias`、`keyPwd`、`appCertFile`、`profileFile`、可选 `signAlg`（默认 `SHA256withECDSA`）。相对输入路径相对于描述文件目录解析。文件只在本地创建，不把真实密码贴入对话、命令行或 Git。
+
+```json
+{
+  "action": "configure",
+  "project_path": "/absolute/project",
+  "product": "default",
+  "file": "/private/signing-input.json",
+  "output": "/private/new-signing-directory",
+  "options": { "name": "Personal" }
+}
+```
+
+生成目录含密钥库、证书、Profile，以及 `material/fd`、`material/ac`、`material/ce`。采用当前 Hvigor 的 PBKDF2/AES-GCM 格式，密码以密文写入 `build-profile.json5`。材料和密文放在一起可以解密，保密性依赖文件权限，不能当成远端密钥托管。目录/文件创建权限为 0700/0600，Windows 按系统 ACL 管理。
+
+配置写入使用工程租约，并拒绝配置已变化或存在 hot watch 的工程。先准备材料，再原子写入配置；提交前失败清理本次拥有的目录。若配置提交的持久化结果不确定，保留材料供核对，避免删除已经被配置引用的文件。该直接入口尚不等于持久化云端签名工作流。
+
+## 验收入口与证据
+
+所有验收使用未安装官方 CLI、CodeGenie 子 MCP 或 Skill 的独立原生验证目录。目录一经编译验收不再修改，记录实际运行文件、锁文件和资源摘要。
 
 ```sh
 node dist/scripts/native-signing-prepare.js /absolute/new-preparation-directory
+node dist/scripts/native-signing-acceptance.js /absolute/signing-evidence /absolute/preparation /absolute/auth-state TEAM_NAME STAGE
+node dist/scripts/native-canary-ui-acceptance.js /absolute/new-ui-evidence /absolute/preparation /absolute/signing-evidence /absolute/auth-state
+node dist/scripts/native-hot-device-acceptance.js /absolute/new-hot-evidence /absolute/preparation /absolute/signing-evidence /absolute/auth-state
 ```
 
-`native-signing-prepare.ts` 根据实际 SDK 元数据，用项目创建和构建工作流生成独立工程，校验未签名 HAP 的包名、模块和 Ability，再调用 SDK 签名工具生成密钥与 CSR。目录必须尚不存在，应用包名及云端候选资源名称带随机标识。此步骤不需要选择团队，也不操作云端或设备。
+签名阶段依次为 `preflight`、`certificate`、`profile`、`sign`、`verify`、`deploy`、`configure`。测试脚本保留 `debug_profile` 阶段，只用于本轮已记录失败并经过远端核对的验收恢复；它不是 MCP 的兼容入口。清理阶段为 `profile_delete` 和 `certificate_delete`。脚本在变更前写入私有操作记录，阻止无核对重复执行；部署立即保存 LangGraph run_id。清理按已登记的精确远程 ID 进行，不要求工程构建输出仍与最初未签名 HAP 相同。
 
-工程包含状态文字、中文输入框、确认按钮和回显文字，各有稳定组件 ID，供签名部署后的 UI 输入、最终断言、流程录制和热重载验证复用。
+原始证据根目录：`~/Library/Application Support/DevEcoMCP/acceptance/`。私有操作记录和签名描述文件不提交 Git。准备目录在 `~/Library/Caches/DevEcoMCP/acceptance-projects/20260908-signing-1`。
 
-输出包括：
+| 证据 | 结果与范围 |
+| --- | --- |
+| `20260908-signing-1` | 个人团队选择、已登记设备匹配、专用证书、调试 Profile、HAP 签名/验签和部署通过；未新登记设备。签名 HAP SHA-256 为 `1ff2e87062d1ac7f332356b748256fcf3a552810e7a6b7d5dde833e5c4658c33` |
+| `20260908-canary-ui-5/evidence.json` | 16 项通过：实际 MCP/Worker 传输、签名 Profile 身份、录制、中文输入、点击、最终断言、保存、MCP 关闭/重启、持久化流程摘要、重放及截图；截图仅为辅助证据 |
+| `20260908-hot-device-1/evidence.json` | 10 项通过：签名 watch 基线、初始断言、两次 HQF 应用及文字断言、截图、watch 停止、源码恢复、关闭。两次补丁均保持应用 PID，版本为 2000000/2000001 |
+| `20260908-signing-regression-5/evidence.json` | 226 项回归通过、0 跳过；含材料生成、其他配置保留、拒绝重复目录/名称、GCM 篡改拒绝、取消、旧工程上下文、活跃 watch 拒绝和损坏私密 JSON 不回显密码 |
 
-- `prepared.json`：包身份、工程路径、CSR 摘要和未签名制品。
-- `evidence.json`：实际编译产物身份和六项执行结果。
-- `validation.p12`、`validation.csr`：加密密钥库与公开证书请求。
-- `signing.private.json`：本地签名密码、别名和密钥库路径，权限为 0600；不属于可共享证据，不提交 Git、不打印到日志。
+UI 运行摘要为 `9013fe230df8872061a7f2a707c542f9f3e2551a1e38bdb13791e26dde4691c8`。随后增加配置生成能力，配置/热补丁运行摘要为 `4e3f8d2b8b1f13eb7ac84237d377c3576e4ddf365021be2fd80ad2a03ff7a14b`；不把不同快照描述为同一份二进制。
 
-## 本次准备结果
+本轮单次 watch 基线 5.55 秒，两次热补丁分别 1.67/1.50 秒，最终 UI 断言另计约 1 秒。这是专用小工程的单次耗时，不是 P95 性能门槛或旧版对比。
 
-原始证据位于 `~/Library/Caches/DevEcoMCP/acceptance-projects/20260908-signing-1/evidence.json`，macOS arm64、Node 24.14.1，运行文件摘要为 `a98fa378c5fe9aa447f1ae02c02bf4a245e990eed6160599fe3efb9c75dad3e4`。
+## 本轮发现与修复
 
-创建、构建、包身份校验、密钥、CSR 和关闭六项通过。专用包名为 `com.deveco.mcpacceptance.a65188f22`，证书/Profile 候选名称为 `MCPValidation65188f22`。未签名 HAP 为 24,545 字节，SHA-256 为 `b1b564e96a8423b2e667b340e47bae8c0e094156229ffa3d27c490858934994c`。这只证明本地准备成功。
+1. 调试 Profile 默认误用 `real` 路由；对照官方自动签名调用改为 `test`，实际下载成功。此前请求失败记录保留，最早一次未保存 HTTP 状态，不反推其具体原因。
+2. 成功调试 Profile 响应可能没有 `id`，旧校验误报参数错误；按测试 Profile 语义接受并明确不可按 ID 删除。每次不明确结果先核对个人团队完整列表，再决定后续操作。
+3. SDK `verify-app` 缺少必需输出参数导致失败；补齐并核对提取摘要与私有目录清理。
+4. 真实 UiTest 的应用窗口根为 `root`，之前只识别 `WindowScene`，导致录制入口等待失败；统一浅层窗口识别，并拒绝把深层普通 `root` 控件当窗口。
+5. UiTest 点击成功返回 `No Error`，之前被非空输出判断误报失败；现在仅接受空标准输出或完整成功短语，混合错误及异常标准错误仍失败。物理动作成功但回执误判的旧录制已取消，没有盲目重复点击。
+6. 云端 HTTP 错误现在保留状态和请求/下载阶段，及时取消失败响应流，不保存授权 URL、响应正文或 Token。
 
-## 剩余执行顺序
+早期 UI 验收的窗口失败、成功回执误判和其他任务切换手机前台造成的定位失败均保留在 `20260908-canary-ui-1` 至 `-4`。成功结果来自独立的 `-5`，没有覆盖旧证据。
 
-1. 明确选择账号下的团队；在该团队读取证书和设备清单，核对专用名称未被占用、连接设备与已登记 UDID 的对应关系。
-2. 以本地 CSR 创建专用证书，记录远程 ID 与证书摘要；为专用包和目标设备创建调试 Profile，保存操作回执。收到不明确的副作用结果时先核对远程状态，不盲目重试。
-3. 使用本地私密文件中的参数签名 HAP，验证证书、Profile 和最终包身份；通过部署工作流安装、启动并核对应用状态。
-4. 在专用应用验证中文输入、最终断言、流程录制/重放及签名热补丁；签名成功或截图不能替代这些结果。
-5. 根据本轮创建的精确资源 ID 清理专用云端 Profile、证书和设备上的专用应用，核对结果。若目标设备尚未登记，先明确登记的长期影响；当前没有设备删除入口，不承诺自动撤销登记。
+## 清理与剩余门槛
 
-现有项目和账号内其他签名资源不用于这一专用工程。本次尚未执行上述云端变更及设备步骤，仍受迁移发布门槛约束。
+专用应用已卸载，并通过成功、未截断的完整应用清单确认包名不存在，结果保存在 `20260908-hot-device-1/cleanup.json`。专用证书已按记录的精确 ID 删除，随后读取个人团队完整证书清单确认 ID 不存在。调试 Profile 未返回远程 ID，清理标记为不适用，没有调用 Profile 删除接口。私有本地材料仅作验收追溯保留，不作为用户业务工程签名配置。
+
+仍需覆盖真实签名操作中断后的外部状态核对、过期认证刷新、更多签名类型、多包部署、其他 SDK/设备平台及完整性能门槛。当前默认入口仍是迁移前实现，最终删除与 Release 切换另受迁移清单约束；本轮通过不等于整个重构完成。

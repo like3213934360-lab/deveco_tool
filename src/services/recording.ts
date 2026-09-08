@@ -16,6 +16,7 @@ import { digest } from "../core/files.js";
 import { StateStore } from "../core/store.js";
 import { withTrace } from "../core/trace.js";
 import { DeviceService, type Snapshot, type UiNode } from "./device.js";
+import { isWindowSurface } from "./ui-tree.js";
 
 import { resolveControl, uiInputArguments } from "./ui-control.js";
 
@@ -470,7 +471,7 @@ export function recordedStep(
     ),
     windows = nodes.filter(
       (node) =>
-        node.type === "WindowScene" &&
+        isWindowSurface(node) &&
         node.rect &&
         node.focused !== false &&
         node.visible !== false,

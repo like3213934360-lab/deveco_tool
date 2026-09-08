@@ -1,4 +1,5 @@
 import { percentagePoint, controlDisplay } from "./ui-control.js";
+import { isWindowSurface } from "./ui-tree.js";
 import fs from "node:fs";
 import path from "node:path";
 import { z } from "zod";
@@ -53,7 +54,10 @@ export class FlowService {
             if (
               nodes.some(
                 (node) =>
-                  node.rect && node.visible !== false && node.focused !== false,
+                  isWindowSurface(node) &&
+                  node.rect &&
+                  node.visible !== false &&
+                  node.focused !== false,
               )
             )
               return {
@@ -371,7 +375,7 @@ export class FlowService {
                     else {
                       const surfaces = application.filter(
                         (node) =>
-                          node.type === "WindowScene" &&
+                          isWindowSurface(node) &&
                           node.rect &&
                           node.visible !== false &&
                           node.focused !== false,

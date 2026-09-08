@@ -3,6 +3,7 @@ import { controlSchema, selectorSchema } from "../core/contracts.js";
 import { invariant } from "../core/errors.js";
 import type { Snapshot } from "./device.js";
 import type { Rect, UiNode } from "./ui-tree.js";
+import { isWindowSurface } from "./ui-tree.js";
 
 type Control = z.infer<typeof controlSchema>;
 export const needsControlSnapshot = (input: Control) =>
@@ -92,7 +93,7 @@ export function resolveControl(input: Control, snapshot?: Snapshot): Control {
     if (input.window) {
       const windows = snapshot.nodes.filter(
         (node) =>
-          node.type === "WindowScene" &&
+          isWindowSurface(node) &&
           node.rect &&
           node.visible !== false &&
           (!input.window!.id || node.windowId === input.window!.id) &&

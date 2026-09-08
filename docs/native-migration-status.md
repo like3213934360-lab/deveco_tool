@@ -43,12 +43,12 @@ MCP 主进程提供静态工具目录和参数校验；Worker 持有领域服务
 | OHPM、同步、Hvigor 构建 | `services/project.ts` | 真实同步、ArkTS/C++ 构建、输出模型通过；四模块、双产品、HAR/HSP、默认任务筛选和实际包依赖补全共 15 项通过；更多历史制品场景待验收 |
 | ArkTS LSP、clangd、静态预检 | `services/lsp.ts`、`checker.ts`、`compilation-database.ts` | 真实悬停、引用、错误诊断、C++ 检查通过；静态预检不作为编译通过的替代证明 |
 | Linter、API 扫描 | `services/diagnostics.ts` | 真实 Linter 指定文件/配置、发现缺陷、增量、显式修复后复查和拒绝坏配置 6 项通过；API 兼容性问题和无差异扫描通过。Linter 空报告不证明全部规则执行，详见 `docs/native-linter.md` |
-| HDC、部署、启动 | `services/device.ts`、`package.ts` | HAP 元数据在真实构建产物上通过；丢失启动回执的恢复回归通过。真实签名安装/启动及可核实的外部恢复证据未齐全 |
-| UI、中文输入、保存流程与录制 | `services/device.ts`、`text.ts`、`flow.ts`、`recording.ts` | 重启恢复、原断言约束、丢失回执、取消、关闭、保留期限与设备竞争回归通过；真实设备 UI 读取和窗口断言通过，中文输入与完整录制/重放待验收 |
+| HDC、部署、启动 | `services/device.ts`、`package.ts` | HAP 元数据在真实构建产物上通过；丢失启动回执的恢复回归通过。专用个人签名包真实安装/启动通过；多包签名部署及可核实的外部恢复证据仍未齐全 |
+| UI、中文输入、保存流程与录制 | `services/device.ts`、`text.ts`、`flow.ts`、`recording.ts` | 重启恢复、原断言约束、丢失回执、取消、关闭、保留期限与设备竞争回归通过；真实设备 UI 读取和窗口断言通过，专用应用中文输入、最终断言及 MCP 重启后的完整录制/重放 16 项通过，见 `docs/native-signing.md` |
 | 公开入口、目标导航与 Want | `services/routes.ts`、`navigation.ts`、`runtime.ts` | 产品/模块/公开性、URI/MIME、中文目标匹配、歧义、Want 类型和任务恢复回归通过；实际设备导航与未匹配目标自动录制待完成 |
 | 日志与崩溃 | `services/logs.ts`、`crash.ts` | 命名故障记录、设备时间筛选、整行过滤、权限、截断、多进程事件和提交时证据保存的回归通过；真实设备 tail/无匹配字面量筛选、故障查询的部分权限失败已验证；实际故障文件读取、过滤性能门槛与应用栈帧排序待验收 |
-| 热重载 | `services/hotreload.ts`、`services/hvigor` | SDK watch 基线、同一 worker 两次生成不同 ABC、停止与配置恢复通过；签名 HQF、设备应用及运行效果未通过完整验收 |
-| 本地和云端签名 | `services/signature.ts`、`auth.ts` | 真实密钥/CSR、Chrome 开发者认证、团队及证书/设备清单、两种重启后的认证保持通过；POST 回调、浏览器结果页和设备总数字段修复后复验。云端证书/Profile 变更、过期刷新与完整签名安装待验收，见 `docs/native-authentication.md` |
+| 热重载 | `services/hotreload.ts`、`services/hvigor` | SDK watch 基线、同一 worker 两次生成不同 ABC、停止与配置恢复通过；个人签名基线及两次 HQF 真机应用通过，PID 不变、两次按钮文字断言通过，停止和源码恢复通过；更多模块/设备场景待验收 |
+| 本地和云端签名 | `services/signature.ts`、`auth.ts` | 真实密钥/CSR、Chrome 开发者认证、团队及证书/设备清单、两种重启后的认证保持通过；POST 回调、浏览器结果页和设备总数字段修复后复验。个人团队云端证书、调试 Profile、签名安装及原生工程配置生成通过；过期刷新、更多签名类型与外部恢复待验收，见 `docs/native-signing.md` |
 | 模拟器与场景 | `services/emulator.ts` | 本机创建、启动、保持运行、场景命令、停止、删除通过；场景命令接受不等于应用感知结果已验证 |
 | 文档与知识 | `services/knowledge.ts`、`resources/knowledge.json` | 119 个资源、79 条知识、4 个来源的摘要与许可证校验通过；本地查询直接打开发布资源数据库，无每版本状态目录解压副本；六目录筛选、中文检索与稳定分页通过，详见 `docs/native-knowledge.md` |
 | 上游更新 | `scripts/upstream.ts`、`provenance/upstream-*` | 检测、分类、报告摘要核对、草稿 PR 幂等创建、CI 调度、候选评审阻断和框架/官方升级分离已实现；模拟 GitHub 故障恢复测试通过，真实草稿 PR #1、重复调用去重和候选评审阻断通过；定时身份权限、人工适配与正式发布门禁待验收 |
@@ -72,6 +72,7 @@ MCP 主进程提供静态工具目录和参数校验；Worker 持有领域服务
 | Chrome 双 provider 认证 | 开发者、知识服务各 9 项通过；另一次已有凭据复查 9 项通过 | 通过真实 MCP 接口执行，开发者读取三个团队清单，CodeGenie 执行云端查询，两种重启后复查成功；同一最终运行摘要在 Node 24/26 各 220 项回归通过，见 `docs/native-authentication.md`。本次模拟器只读 7 项复查证据保存在持久目录 `~/Library/Application Support/DevEcoMCP/acceptance/20260908-emulator-readonly-1`；以前临时目录目前不可用，不据此补造历史证据 |
 | 认证修复三平台 CI | 六组各 220 项通过、0 跳过 | [CI 34176653392](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34176653392)，提交 `8ec532b`；各 10 项干净编译包安装检查通过，Windows Node 22/24 各 20 轮压力通过。六组原始证据已下载核对，运行文件摘要与本机浏览器通过版本相同，见 `docs/native-authentication.md` |
 | 云端知识完整制品 | 10 项通过 | 已保存凭据、真实查询、完整字节分页、两种重启后读取原制品并核对摘要；见 `docs/native-knowledge.md`。未把两次独立查询的不同内容误判为持久化失败 |
+| 个人签名与真机操作 | 云端签名部署、UI 16 项、热补丁 10 项通过 | 专用个人团队材料、直接 SDK/HDC、原生加密工程签名配置、MCP 重启后流程重放、连续两次 HQF 和 PID 保持；本轮回归 226 项通过。具体源码摘要、失败记录、清理边界和待验收项见 `docs/native-signing.md` |
 | 独立签名工程准备 | 6 项通过 | 创建、构建、未签名 HAP 身份、密钥、CSR 与关闭；未操作云端或设备，详见 `docs/native-signing.md` |
 | 真实模拟器 | 6 项通过 | `/private/tmp/deveco-native-emulator-20260907-1/evidence.json`；早期代码快照，未记录源码摘要 |
 | 一小时基础设施运行 | 通过 | `/private/tmp/deveco-native-soak-20260907-2/evidence.json`；352 轮、2816 个子进程；最终活动任务/子进程/租约为 0，RSS 95,600,640 字节。只使用合成子进程，且早于最新制品与会话修改，不能算最终版本或 SDK 会话长稳验收 |
@@ -85,7 +86,7 @@ MCP 主进程提供静态工具目录和参数校验；Worker 持有领域服务
 Windows 压力测试已暴露并保留三类失败证据：SQLite 初始化失败未关闭句柄、进程退出确认早于文件映射释放、失败会话留下进程登记。当前代码分别修复初始化清理、等待同步句柄和失败会话强制清理，提交 `7bed2ef` 的新一轮 Windows Node 22/24 各 20 轮全部通过，历史失败证据仍保留。该证据只覆盖受管测试进程，不代替真实 Windows SDK 验收。后续 CI `34160484334` 的 macOS/Linux 四组通过，Windows 两组因 8.3 短路径断言各失败两项；已统一生产与测试的原生路径规范化，后续 CI `34161610703` 六组全通过，Windows 两组也各通过 20 轮压力检查。
 
 1. 完成冻结清单中逐个旧工具、参数、动作和历史缺陷的行为验收。覆盖审计会拦截漏项、重复项及没有证据的 verified 标记；当前的代码和测试位置映射不等于完整验收。
-2. 完成签名部署、设备热补丁、云端签名、真实 UI 输入/流程；已完成多产品、多模块、HAR/HSP 构建，继续完成签名包集合的设备验收。
+2. 专用个人团队签名部署、两次设备热补丁、中文输入和持久化录制/重放已通过。继续完成多产品、多模块的签名包集合设备验收及更广设备场景。
 3. 完成副作用外部状态核对。当前无法证明已执行结果时会停在 `needs_input`；不得把这种保守停止写成恢复能力全部完成。
 4. Windows Job Object 进程所有权与退出确认已通过六组 CI 和 Windows 连续压力检查；继续完成 SDK 和性能验证。`taskkill` 已从原生实现删除；macOS 通过不能代替 Windows 证明。
 5. Checkpointer、制品、流、数据库、原生工具临时目录与 LSP 日志已有预算控制；继续完成真实长时间运行的容量验收。外部 SDK 的突发写入不是操作系统硬配额，不能宣称所有物理磁盘写入始终满足统一上限。

@@ -22,7 +22,7 @@ import { privateDirectory } from "../core/files.js";
 import { withinDeadline } from "../core/deadline.js";
 import { inspectApplicationPackages } from "./package.js";
 
-import { UiIndex, type Rect, type UiNode } from "./ui-tree.js";
+import { UiIndex, isWindowSurface, type Rect, type UiNode } from "./ui-tree.js";
 import {
   captureFile,
   verifyCapturedFile,
@@ -378,8 +378,9 @@ export class DeviceService {
           ["uitest", "uiInput", ...args],
           signal,
         );
+        const receipt = result.stdout.trim();
         invariant(
-          !(result.stdout + result.stderr).trim(),
+          !result.stderr.trim() && (receipt === "" || receipt === "No Error"),
           "UI_ACTION_FAILED",
           result.stdout + result.stderr,
         );
@@ -427,7 +428,10 @@ export class DeviceService {
             !expectedBundle ||
             nodes.some(
               (node) =>
-                node.rect && node.visible !== false && node.focused !== false,
+                isWindowSurface(node) &&
+                node.rect &&
+                node.visible !== false &&
+                node.focused !== false,
             );
           const query = expectedBundle ? new UiIndex(nodes) : snapshot.query;
           const primary = query.select(selector),

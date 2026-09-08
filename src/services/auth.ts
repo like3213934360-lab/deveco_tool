@@ -111,11 +111,14 @@ export async function httpBytes(
       ...(signal ? [signal] : []),
     ]),
   });
-  invariant(
-    response.ok,
-    "HTTP_ERROR",
-    `Remote service returned HTTP ${response.status}`,
-  );
+  if (!response.ok) {
+    await response.body?.cancel().catch(() => {});
+    throw new ToolError(
+      "HTTP_ERROR",
+      `Remote service returned HTTP ${response.status}`,
+      { status: response.status },
+    );
+  }
   invariant(response.body, "HTTP_EMPTY", "Remote service returned no body");
   const reader = response.body.getReader();
   const chunks: Uint8Array[] = [];

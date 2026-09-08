@@ -51,6 +51,26 @@ function snapshot(): Snapshot {
   };
 }
 const encode = (value: unknown) => uiInputArguments(controlSchema.parse(value));
+test("modern root windows retain explicit display selection and reject ambiguous application windows", () => {
+  const tree = snapshot();
+  for (const node of tree.nodes)
+    if (node.type === "WindowScene") node.type = "root";
+  const raw = {
+    action: "click",
+    window: { bundle_name: "com.test" },
+    point: { xPercent: 50, yPercent: 50 },
+  };
+  assert.throws(() => resolveControl(controlSchema.parse(raw), tree), {
+    code: "UI_WINDOW_AMBIGUOUS",
+  });
+  const operation = resolveControl(
+    controlSchema.parse({ ...raw, display_id: 1 }),
+    tree,
+  );
+  assert.equal(operation.x, 300);
+  assert.equal(operation.y, 600);
+  assert.equal(operation.display_id, 1);
+});
 
 test("native UI display routing fills gesture and numeric chord slots without treating the display as another key", () => {
   for (const [input, expected] of [
@@ -180,7 +200,7 @@ test("window percentages clamp to the selected display while duplicate window ID
     assert.throws(() => resolveControl(controlSchema.parse(value), captured));
 });
 
-test("direct controls use one capture, route the selected display and reject nonempty native error receipts even on exit zero", async (t) => {
+test("direct controls use one capture, route the selected display and distinguish native success from exit-zero errors", async (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-ui-control-")),
     store = new StateStore(root),
     processes = new ProcessService(),
@@ -222,11 +242,23 @@ test("direct controls use one capture, route the selected display and reject non
       { code: "UI_TARGET_AMBIGUOUS" },
     );
     assert.equal(shell.mock.callCount(), 1);
-    receipt.stdout = "No target window found";
-    await assert.rejects(
-      device.control("device", { action: "click", x: 10, y: 20 }),
-      { code: "UI_ACTION_FAILED" },
+    receipt.stdout = "No Error\r\n";
+    assert.deepEqual(
+      await device.control("device", { action: "click", x: 10, y: 20 }),
+      { commandAccepted: true, outcomeVerified: false },
     );
+    for (const output of [
+      { stdout: "No target window found", stderr: "" },
+      { stdout: "No Error\nError: target disappeared", stderr: "" },
+      { stdout: "No Error", stderr: "Error: operation failed" },
+      { stdout: "", stderr: "No Error" },
+    ]) {
+      Object.assign(receipt, output);
+      await assert.rejects(
+        device.control("device", { action: "click", x: 10, y: 20 }),
+        { code: "UI_ACTION_FAILED" },
+      );
+    }
   } finally {
     await device.close();
     await processes.close();

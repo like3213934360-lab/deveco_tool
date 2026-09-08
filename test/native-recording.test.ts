@@ -178,6 +178,26 @@ async function start(runtime: Runtime, id = "recorded") {
   );
   return result.run_id;
 }
+test("modern application root windows can record controls without requiring a SceneBoard WindowScene", () => {
+  const tree = snapshot();
+  tree.nodes[0]!.type = "root";
+  const step = recordedStep(
+    tree,
+    draft(),
+    controlSchema.parse({ action: "click", selector: { key: "submit" } }),
+  );
+  assert.equal(step.selector?.key, "submit");
+  tree.nodes[0]!.depth = 3;
+  assert.throws(
+    () =>
+      recordedStep(
+        tree,
+        draft(),
+        controlSchema.parse({ action: "click", selector: { key: "submit" } }),
+      ),
+    { code: "RECORDING_WINDOW_UNKNOWN" },
+  );
+});
 test("recorded selectors exclude input values, gestures retain window geometry and unsupported chords reject before execution", () => {
   const flow = draft(),
     tree = snapshot();

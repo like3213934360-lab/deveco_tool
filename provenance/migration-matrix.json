@@ -86,14 +86,21 @@
         "tool:harmony_auth"
       ],
       "adapters": [
-        "src/services/signature.ts"
+        "src/services/signature.ts",
+        "src/services/signing-config.ts",
+        "src/services/signing-material.ts"
       ],
       "checks": [
         "test/native-reports.test.ts",
         "test/native-cloud-inventory.test.ts",
-        "scripts/native-auth-mcp-acceptance.ts"
+        "scripts/native-auth-mcp-acceptance.ts",
+        "test/native-signature.test.ts",
+        "test/native-signing-config.test.ts",
+        "test/native-cloud-profile.test.ts",
+        "scripts/native-signing-acceptance.ts",
+        "scripts/native-hot-device-acceptance.ts"
       ],
-      "behavior": "本地签名与云端证书/Profile 分开调用，使用开发者认证。",
+      "behavior": "本地签名、私密配置生成与云端证书/Profile 分开调用，使用开发者认证；测试团队显式指定。",
       "parameters": {
         "force": {
           "status": "pending",
@@ -118,12 +125,13 @@
       },
       "actions": [],
       "remaining": [
-        "完整云端证书/Profile 变更与签名安装验收；团队/证书/设备只读清单已通过",
+        "真实云端变更中断后的外部状态核对、过期认证刷新和更多签名类型",
         "原 force 与自动签名选择策略对照"
       ],
       "acceptance": "pending",
       "evidence": [
-        "docs/native-authentication.md"
+        "docs/native-authentication.md",
+        "docs/native-signing.md"
       ]
     },
     {
@@ -1445,7 +1453,8 @@
         "src/services/hotreload.ts"
       ],
       "checks": [
-        "test/native-hotreload.test.ts"
+        "test/native-hotreload.test.ts",
+        "scripts/native-hot-device-acceptance.ts"
       ],
       "behavior": "原生持久化 watch 会话、补丁制作及应用。",
       "parameters": {
@@ -1517,11 +1526,13 @@
         }
       ],
       "remaining": [
-        "设备热补丁与最终效果验收",
+        "多模块/设备热补丁范围；专用个人签名应用的两次 HQF 和最终文字断言已通过",
         "启动等待与跨进程会话竞争"
       ],
       "acceptance": "pending",
-      "evidence": []
+      "evidence": [
+        "docs/native-signing.md"
+      ]
     },
     {
       "source": "lsp",
@@ -1803,7 +1814,8 @@
         "src/services/device.ts"
       ],
       "checks": [
-        "test/native-text.test.ts"
+        "test/native-text.test.ts",
+        "scripts/native-canary-ui-acceptance.ts"
       ],
       "behavior": "原生操作对象，选择器/窗口条件与动作共享设备租约。",
       "parameters": {
@@ -1911,11 +1923,12 @@
         }
       ],
       "remaining": [
-        "真实中文输入和窗口定位",
-        "所有手势路径验收"
+        "所有手势路径与真实多显示器验收；专用应用中文输入、窗口定位和点击已通过"
       ],
       "acceptance": "pending",
-      "evidence": []
+      "evidence": [
+        "docs/native-signing.md"
+      ]
     },
     {
       "source": "ui_find",
@@ -2028,7 +2041,8 @@
       "checks": [
         "test/native-flow.test.ts",
         "test/native-routes.test.ts",
-        "test/native-recording.test.ts"
+        "test/native-recording.test.ts",
+        "scripts/native-canary-ui-acceptance.ts"
       ],
       "behavior": "公开入口优先的目标导航、保存流程与持久化录制；每次动作有回执，只在原断言通过后保存流程或选择器修复。",
       "parameters": {
@@ -2226,11 +2240,13 @@
       "remaining": [
         "goal 未匹配时自动进入录制的体验与适用入口选择",
         "driver_status 诊断映射",
-        "真实用户保存流程与设备录制/重放验收",
+        "既有用户保存流程迁移验收；专用应用录制、MCP 重启和重放已通过",
         "录制期间热重载等长期会话对 UI 状态的干扰协调"
       ],
       "acceptance": "pending",
-      "evidence": []
+      "evidence": [
+        "docs/native-signing.md"
+      ]
     },
     {
       "source": "ui_inspect",
@@ -2489,7 +2505,8 @@
       "checks": [
         "test/native-ui.test.ts",
         "test/native-ui-control.test.ts",
-        "test/native-recording.test.ts"
+        "test/native-recording.test.ts",
+        "scripts/native-canary-ui-acceptance.ts"
       ],
       "behavior": "语义点击保留，其他动作统一在 ui_control。",
       "parameters": {
@@ -2671,11 +2688,12 @@
         }
       ],
       "remaining": [
-        "真实设备动作、中文输入与完整录制/重放",
-        "真实多显示器手势与最终性能门槛"
+        "真实多显示器手势与最终性能门槛；专用应用中文输入、点击、录制和重放已通过"
       ],
       "acceptance": "pending",
-      "evidence": []
+      "evidence": [
+        "docs/native-signing.md"
+      ]
     },
     {
       "source": "verify_ui",

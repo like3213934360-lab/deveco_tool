@@ -12,10 +12,18 @@ import {
   discoverToolchain,
   toolCommand,
 } from "../core/toolchain.js";
-import { atomicWrite, digest, readObject, publishFile } from "../core/files.js";
+import {
+  atomicWrite,
+  digest,
+  readObject,
+  publishFile,
+  fileDigest,
+} from "../core/files.js";
 import { invariant, object, ToolError } from "../core/errors.js";
 import { AuthService, httpRequest, httpBytes } from "./auth.js";
 import type { Project } from "./project.js";
+import { decryptMaterial } from "./signing-material.js";
+import { configureSigning } from "./signing-config.js";
 
 /** Validate the PKCS#10 PEM envelope; the signing provider verifies the request signature. */
 export function validateCsrPem(value: string): string {
@@ -66,82 +74,6 @@ export function validateCsrPem(value: string): string {
   return value.trim() + "\n";
 }
 
-/** Modern Studio/Hvigor material protocol, derived from Huawei's MIT implementation. */
-export function decryptMaterial(
-  directory: string,
-  encryptedHex: string,
-): string {
-  const read = (file: string): Buffer => {
-    if (!fs.statSync(file).isDirectory()) return fs.readFileSync(file);
-    const children = fs
-      .readdirSync(file)
-      .filter((name) => name !== ".DS_Store");
-    invariant(
-      children.length === 1 && children[0],
-      "MATERIAL_INVALID",
-      "Expected one material component",
-    );
-    return read(path.join(file, children[0]));
-  };
-  const decrypt = (key: Buffer, data: Buffer) => {
-    invariant(
-      data.length >= 32,
-      "MATERIAL_INVALID",
-      "Encrypted material is too short",
-    );
-    const length = data.readUInt32BE(0),
-      ivLength = data.length - 4 - length;
-    invariant(
-      ivLength === 12 && length >= 16,
-      "MATERIAL_INVALID",
-      "Unsupported material frame",
-    );
-    const cipher = crypto.createDecipheriv(
-      "aes-128-gcm",
-      key,
-      data.subarray(4, 16),
-    );
-    cipher.setAuthTag(data.subarray(-16));
-    return Buffer.concat([
-      cipher.update(data.subarray(16, -16)),
-      cipher.final(),
-    ]);
-  };
-  const fd = path.join(directory, "fd"),
-    entries = fs.readdirSync(fd).filter((name) => name !== ".DS_Store");
-  invariant(
-    entries.length === 3,
-    "MATERIAL_INVALID",
-    "Expected three key components",
-  );
-  const components = entries.map((name) => read(path.join(fd, name)));
-  invariant(
-    components.every((item) => item.length === 16),
-    "MATERIAL_INVALID",
-    "Invalid key component size",
-  );
-  const merged = Buffer.from([
-    49, 243, 9, 115, 214, 175, 91, 184, 211, 190, 177, 88, 101, 131, 192, 119,
-  ]);
-  for (const part of components)
-    for (let i = 0; i < 16; i++) merged[i] = merged[i]! ^ part[i]!;
-  const root = crypto.pbkdf2Sync(
-    merged.toString(),
-    read(path.join(directory, "ac")),
-    10000,
-    16,
-    "sha256",
-  );
-  const work = decrypt(root, read(path.join(directory, "ce")));
-  try {
-    return decrypt(work, Buffer.from(encryptedHex, "hex")).toString("utf8");
-  } finally {
-    merged.fill(0);
-    root.fill(0);
-    work.fill(0);
-  }
-}
-
 const certificateSchema = z.object({
   id: z.string(),
   certName: z.string(),
@@ -160,6 +92,28 @@ export class SignatureService {
     signal?: AbortSignal,
   ): Promise<unknown> {
     const input = tools.app_signature.schema.parse(raw);
+    if (input.action === "configure") {
+      invariant(
+        project && input.file && input.output,
+        "SIGN_CONFIG_INPUT_REQUIRED",
+        "Configure requires a project, private descriptor file and new output directory",
+      );
+      const options = z
+        .strictObject({ name: z.string().min(1) })
+        .parse(input.options);
+      return this.store.lease(
+        `project:${project.root}`,
+        () =>
+          configureSigning(
+            project,
+            input.file!,
+            input.output!,
+            options.name,
+            signal,
+          ),
+        signal,
+      );
+    }
     if (
       [
         "certificates",
@@ -249,14 +203,12 @@ export class SignatureService {
       );
       output = this.outputPath(input.output);
     }
-    const scope = output
-      ? new NativeDirectory(
-          this.store,
-          input.action === "sign" && input.file
-            ? fs.statSync(input.file).size * 2 + 16 * 1024 * 1024
-            : 1024 * 1024,
-        )
-      : undefined;
+    const scope = new NativeDirectory(
+      this.store,
+      input.action === "sign" && input.file
+        ? fs.statSync(input.file).size * 2 + 16 * 1024 * 1024
+        : 1024 * 1024,
+    );
     const stage = scope?.file;
     const staged =
       stage && output ? path.join(stage, path.basename(output)) : undefined;
@@ -304,7 +256,15 @@ export class SignatureService {
           "SIGN_INPUT_REQUIRED",
           "Input package is missing",
         );
-        args.push("verify-app", "-inFile", path.resolve(input.file));
+        args.push(
+          "verify-app",
+          "-inFile",
+          path.resolve(input.file),
+          "-outCertChain",
+          path.join(scope.file, "certificate-chain.cer"),
+          "-outProfile",
+          path.join(scope.file, "profile.p7b"),
+        );
       }
       for (const [key, value] of Object.entries(opts)) {
         if (
@@ -327,6 +287,21 @@ export class SignatureService {
         "Native signing tool rejected the request",
       );
       let published: Awaited<ReturnType<typeof publishFile>> | undefined;
+      const verifiedFiles: Record<string, string> = {};
+      if (input.action === "verify") {
+        for (const [name, file] of Object.entries({
+          certificate_chain_sha256: "certificate-chain.cer",
+          profile_sha256: "profile.p7b",
+        })) {
+          const extracted = path.join(scope.file, file);
+          invariant(
+            fs.existsSync(extracted) && fs.statSync(extracted).size > 0,
+            "SIGN_VERIFY_OUTPUT_MISSING",
+            "Verification did not extract certificate chain and profile",
+          );
+          verifiedFiles[name] = fileDigest(extracted);
+        }
+      }
       if (output && staged) {
         invariant(
           fs.existsSync(staged) && fs.statSync(staged).size > 0,
@@ -343,7 +318,7 @@ export class SignatureService {
               path: output,
               ...published,
             }
-          : { verified: true }),
+          : { verified: true, ...verifiedFiles }),
       };
     } catch (error) {
       if (error instanceof ToolError && error.code === "CANCEL_UNCONFIRMED")
@@ -421,24 +396,31 @@ export class SignatureService {
     signal?: AbortSignal,
   ): Promise<Record<string, unknown>> {
     const auth = await this.auth.credentials("developer", signal);
-    const data = object(
-      JSON.parse(
-        await httpRequest(
-          cloudBase + route,
-          {
-            method,
-            headers: {
-              uid: auth.userId,
-              teamId: team,
-              oauth2Token: auth.access,
-              "Content-Type": "application/json",
-            },
-            ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    let response: string;
+    try {
+      response = await httpRequest(
+        cloudBase + route,
+        {
+          method,
+          headers: {
+            uid: auth.userId,
+            teamId: team,
+            oauth2Token: auth.access,
+            "Content-Type": "application/json",
           },
-          signal,
-        ),
-      ) as unknown,
-    );
+          ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+        },
+        signal,
+      );
+    } catch (error) {
+      if (error instanceof ToolError && error.code === "HTTP_ERROR")
+        throw new ToolError(error.code, error.message, {
+          ...object(error.details),
+          stage: route.endsWith("/reapply") ? "download_url" : "cloud_request",
+        });
+      throw error;
+    }
+    const data = object(JSON.parse(response) as unknown);
     if (data.ret !== undefined) {
       const ret = z
         .object({ code: z.number(), msg: z.string().optional() })
@@ -491,7 +473,17 @@ export class SignatureService {
       "SIGN_DOWNLOAD_URL_INVALID",
       "Expected HTTPS download",
     );
-    const bytes = await httpBytes(first.newUrl, {}, signal);
+    let bytes: Buffer;
+    try {
+      bytes = await httpBytes(first.newUrl, {}, signal);
+    } catch (error) {
+      if (error instanceof ToolError && error.code === "HTTP_ERROR")
+        throw new ToolError(error.code, error.message, {
+          ...object(error.details),
+          stage: "download_file",
+        });
+      throw error;
+    }
     invariant(
       crypto.createHash("sha256").update(bytes).digest("hex") ===
         first.sha256.toLowerCase(),
@@ -718,7 +710,8 @@ export class SignatureService {
               ? { aclPermissionList: list("acl_permissions") }
               : {}),
           };
-          const kind = opts.kind ?? "real";
+          // The modern IDE automatic debug signing protocol uses test profiles.
+          const kind = opts.kind ?? "test";
           invariant(
             ["real", "test"].includes(kind),
             "PROFILE_KIND_INVALID",
@@ -732,10 +725,19 @@ export class SignatureService {
             signal,
           );
           const parsed = z
-            .object({ id: z.string(), provisionFileUrl: z.string() })
+            .object({
+              id: z.string().min(1).optional(),
+              provisionFileUrl: z.string().min(1),
+            })
             .parse(response);
+          invariant(
+            kind === "test" || parsed.id,
+            "PROFILE_ID_UNCONFIRMED",
+            "A retained profile must return its remote ID",
+          );
           return {
-            profile_id: parsed.id,
+            ...(parsed.id ? { profile_id: parsed.id } : {}),
+            remote_deletion_available: !!parsed.id,
             ...(await this.download(
               team,
               parsed.provisionFileUrl,

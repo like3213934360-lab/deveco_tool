@@ -29,6 +29,13 @@ export interface UiNode {
   checkable: boolean | null;
   pagePath: string | null;
 }
+/** UiTest emits application window roots as root; SceneBoard uses WindowScene.
+ * A nested control named root is not an independent window. */
+export function isWindowSurface(node: UiNode): boolean {
+  return (
+    node.type === "WindowScene" || (node.type === "root" && node.depth <= 1)
+  );
+}
 export function parseRect(value: unknown): Rect | null {
   if (typeof value !== "string") return null;
   const pattern = /-?\d+(?:\.\d+)?/g;

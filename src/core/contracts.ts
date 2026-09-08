@@ -695,11 +695,12 @@ export const tools = {
   },
   app_signature: {
     description:
-      "Use native SDK signing tools and developer cloud certificate/profile management.",
+      "Use native SDK signing tools and developer cloud certificate/profile management. configure reads a private JSON descriptor from file, creates a new material directory at output, and selects options.name for the current product; existing configurations are preserved.",
     schema: z.strictObject({
       ...projectFields,
       action: z.enum([
         "inspect",
+        "configure",
         "keypair",
         "csr",
         "sign",

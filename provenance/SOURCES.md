@@ -62,3 +62,7 @@ SDD 命令和文档模板现已删除，不再安装或发布。保留的 MCP �
 `HarmonyOS_Skills/harmonyos-agent-skills` 和此前由 DevEco agent prompt、未发布分支或本地规则派生的
 Skill 已从 `skills/` 删除。它们不再出现在 `manifest.json`、脚本注册表、安装清单或许可范围中。
 历史内容仍可通过本仓库 Git 历史恢复，但不是当前版本的一部分。
+
+## 原生签名协议适配
+
+`src/services/signing-material.ts` 的解密协议从 `@deveco/deveco-cli@1.3.1`（MIT）迁入 TypeScript；版权和许可完整保留于 `NOTICE.deveco-cli`。加密生成器与工程配置发布器为自有实现，使用相同现代 Hvigor 材料格式。2026-09-08 对照本机 Studio 26 的 `hvigor-ohos-plugin/src/utils/decipher-util.js` 核对目录与密码帧协议，并用实际 Hvigor 签名构建和连续两次 HQF 验证互操作。云端自动调试签名的 test Profile 路由及可缺省远程 ID 对照官方 CLI 同版本调用逻辑，并通过个人团队真实操作核实。新实现不导入或执行 CLI 包；证据见 `docs/native-signing.md`。
