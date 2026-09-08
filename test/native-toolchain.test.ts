@@ -8,12 +8,18 @@ import {
   component,
   toolCommand,
 } from "../src/core/toolchain.js";
-import { atomicWrite } from "../src/core/files.js";
+import { atomicWrite, parseObject } from "../src/core/files.js";
 import { ProcessService } from "../src/core/process.js";
 import { PersistentProcessObserver } from "../src/core/process-observer.js";
 import { StateStore } from "../src/core/store.js";
 import { LanguageService } from "../src/services/lsp.js";
 import type { Project } from "../src/services/project.js";
+
+test("object parsing accepts JSON and JSON5 while rejecting non-object documents", () => {
+  assert.deepEqual(parseObject('{"version":"26.0.0", "data":{"api":26}}'), { version: "26.0.0", data: { api: 26 } });
+  assert.deepEqual(parseObject("{ // SDK configuration\n version: '26.0.0', data: {api: 26,}, }"), { version: "26.0.0", data: { api: 26 } });
+  for (const source of ["null", "[]", "42", '"version"', "{version:"]) assert.throws(() => parseObject(source));
+});
 
 test("CLT resolves documented linter layouts and external JDK identity, without accepting directories or losing command argument boundaries", () => {
   const root = fs.realpathSync.native(
@@ -163,6 +169,20 @@ test("SDK package updates and executable replacement change captured toolchain i
     const updated = discoverToolchain();
     assert.equal(updated.version, first.version);
     assert.notEqual(updated.fingerprint, first.fingerprint);
+    const stat = fs.statSync(manifest);
+    fs.writeFileSync(manifest, JSON.stringify({ version: "26.0.0.107" }));
+    fs.utimesSync(manifest, stat.atime, stat.mtime);
+    const restoredTime = discoverToolchain();
+    assert.equal(restoredTime.versions["sdk/default/openharmony/toolchains/oh-uni-package.json"], "26.0.0.107");
+    assert.notEqual(restoredTime.fingerprint, updated.fingerprint, "Parsed metadata must follow actual bytes even when size and mtime match the cached file");
+    fs.writeFileSync(manifest, '{version: "26.0.0.108",}');
+    assert.equal(discoverToolchain().versions["sdk/default/openharmony/toolchains/oh-uni-package.json"], "26.0.0.108");
+    fs.writeFileSync(manifest, "invalid updated metadata");
+    assert.throws(discoverToolchain, "A previous valid record must never hide a malformed update");
+    fs.rmSync(manifest);
+    assert.equal(discoverToolchain().versions["sdk/default/openharmony/toolchains/oh-uni-package.json"], undefined);
+    atomicWrite(manifest, JSON.stringify({ version: "26.0.0.106" }));
+    assert.equal(discoverToolchain().fingerprint, updated.fingerprint);
     atomicWrite(entry, "entry-v2");
     assert.notEqual(discoverToolchain().fingerprint, updated.fingerprint);
   } finally {

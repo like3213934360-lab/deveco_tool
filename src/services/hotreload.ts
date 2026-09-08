@@ -27,7 +27,7 @@ import {
 import { ProcessService } from "../core/process.js";
 import { StateStore } from "../core/store.js";
 import { currentTrace } from "../core/trace.js";
-import { ProjectService, type Project } from "./project.js";
+import { ProjectService, type Project, type ProjectSelection } from "./project.js";
 import { DeviceService } from "./device.js";
 import { SignatureService } from "./signature.js";
 
@@ -177,8 +177,25 @@ export class HotReloadService {
     } finally { this.sweeping = false; }
   }
   activeTarget(project: Project): string | undefined { return this.sessions.get(this.key(project))?.target; }
-  private key(project: Project) {
+  private key(project: ProjectSelection) {
     return digest([project.root, project.product.name]);
+  }
+  status(project: ProjectSelection) {
+    const session = this.sessions.get(this.key(project));
+    if (!session) return { active: false };
+    session.lastUsed = Date.now();
+    return {
+      active: session.connection.connected,
+      project_path: project.root,
+      product: project.product.name,
+      target: session.target,
+      created_at: new Date(session.created).toISOString(),
+      log: this.store.artifact(
+        currentTrace().run_id ?? "hot_reload",
+        JSON.stringify(session.connection.log()),
+        "application/json",
+      ),
+    };
   }
   async call(
     raw: unknown,
@@ -189,21 +206,7 @@ export class HotReloadService {
       key = this.key(project);
     const session = this.sessions.get(key);
     if (session) session.lastUsed = Date.now();
-    if (input.action === "status")
-      return session
-        ? {
-            active: session.connection.connected,
-            project_path: project.root,
-            product: project.product.name,
-            target: session.target,
-            created_at: new Date(session.created).toISOString(),
-            log: this.store.artifact(
-              currentTrace().run_id ?? "hot_reload",
-              JSON.stringify(session.connection.log()),
-              "application/json",
-            ),
-          }
-        : { active: false };
+    if (input.action === "status") return this.status(project);
     if (input.action === "stop" && !session) {
       // A restarted runtime may restore generated config only after both the
       // previous runtime and every recorded owned SDK process are absent.

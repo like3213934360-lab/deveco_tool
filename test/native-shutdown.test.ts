@@ -9,6 +9,51 @@ import { WorkerClient } from "../src/core/worker-client.js";
 import { Runtime } from "../src/services/runtime.js";
 import { WorkflowEngine } from "../src/core/workflows.js";
 import { ToolError } from "../src/core/errors.js";
+import Database from "better-sqlite3";
+import { setTimeout as delay } from "node:timers/promises";
+
+test("a real worker closes its runtime and releases log reservations after request telemetry persistence fails", { timeout: 20000 }, async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-worker-log-failure-"));
+  const workers: Worker[] = [], failures: Error[] = [];
+  const client = new WorkerClient((error) => failures.push(error), () => {
+    const worker = new Worker(new URL("../src/worker.js", import.meta.url), {
+      stdout: true, stderr: true, env: { ...process.env, DEVECO_STATE_DIR: root },
+    });
+    workers.push(worker);
+    return worker;
+  });
+  let db: Database.Database | undefined;
+  try {
+    await client.call("workflow_run", { action: "list" });
+    db = new Database(path.join(root, "state.sqlite"));
+    db.pragma("busy_timeout = 2000");
+    db.exec("CREATE TRIGGER fail_request_log BEFORE INSERT ON events WHEN NEW.kind IN ('request_start','request_finish','request_failed') BEGIN SELECT RAISE(ABORT,'fixture request log failure'); END");
+    const deadline = Date.now() + 5000;
+    let rejected = false;
+    while (!rejected && Date.now() < deadline) {
+      try { await client.call("workflow_run", { action: "list" }); }
+      catch (error) {
+        assert.match(error instanceof Error ? error.message : String(error), /fixture request log failure/);
+        rejected = true;
+      }
+      if (!rejected) await delay(10);
+    }
+    assert.equal(rejected, true, "A failed timer flush must block the next request");
+    const exited = once(workers[0]!, "exit");
+    await assert.rejects(client.close(), /fixture request log failure/);
+    await exited;
+    assert.deepEqual(db.prepare("SELECT * FROM artifact_streams").all(), []);
+    assert.deepEqual(db.prepare("SELECT * FROM leases").all(), []);
+    assert.deepEqual(db.prepare("SELECT * FROM managed_processes WHERE status<>'exited'").all(), []);
+    assert.deepEqual(failures, []);
+  } finally {
+    const exited = workers.filter((worker) => worker.threadId !== -1).map((worker) => once(worker, "exit"));
+    await client.close().catch(() => {});
+    await Promise.all(exited);
+    db?.close();
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
 
 test(
   "concurrent restart joins one close and waits for the real runtime worker to exit",

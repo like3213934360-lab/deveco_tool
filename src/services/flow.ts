@@ -80,7 +80,7 @@ export class FlowService {
       },
     );
   }
-  private file(project: Project, id: string): string {
+  private file(project: Pick<Project, "root">, id: string): string {
     const directory = path.join(project.root, ".arkpilot", "flows");
     for (const file of [path.dirname(directory), directory])
       if (fs.existsSync(file))
@@ -98,7 +98,7 @@ export class FlowService {
       );
     return file;
   }
-  list(project: Project) {
+  list(project: Pick<Project, "root">) {
     const directory = path.dirname(this.file(project, "placeholder"));
     if (!fs.existsSync(directory)) return [];
     return fs
@@ -123,7 +123,7 @@ export class FlowService {
         }
       });
   }
-  read(project: Project, id: string): Flow {
+  read(project: Pick<Project, "root">, id: string): Flow {
     return flowSchema.parse(readObject(this.file(project, id)));
   }
   assertAvailable(project: Project, id: string): void {

@@ -411,11 +411,13 @@
       "targets": [
         "src/core/toolchain.ts",
         "src/core/process.ts",
-        "src/core/store.ts"
+        "src/core/store.ts",
+        "src/core/files.ts"
       ],
       "tests": [
         "test/native-infrastructure.test.ts",
-        "test/native-runtime.test.ts"
+        "test/native-runtime.test.ts",
+        "test/native-toolchain.test.ts"
       ]
     },
     {
@@ -428,11 +430,15 @@
       "targets": [
         "src/core/toolchain.ts",
         "src/core/process.ts",
-        "src/core/store.ts"
+        "src/core/store.ts",
+        "src/core/request-log.ts",
+        "src/worker.ts"
       ],
       "tests": [
         "test/native-infrastructure.test.ts",
-        "test/native-runtime.test.ts"
+        "test/native-runtime.test.ts",
+        "test/native-request-log.test.ts",
+        "test/native-shutdown.test.ts"
       ]
     },
     {

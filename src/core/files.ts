@@ -6,7 +6,16 @@ import { invariant, object } from "./errors.js";
 const hashBuffer = Buffer.allocUnsafe(1024 * 1024);
 
 export function readObject(file: string): Record<string, unknown> {
-  return object(JSON5.parse(fs.readFileSync(file, "utf8")) as unknown);
+  return parseObject(fs.readFileSync(file, "utf8"));
+}
+export function parseObject(source: string): Record<string, unknown> {
+  let value: unknown;
+  try {
+    value = JSON.parse(source) as unknown;
+  } catch {
+    value = JSON5.parse(source) as unknown;
+  }
+  return object(value);
 }
 export function digest(value: unknown): string {
   const canonical = (v: unknown): unknown =>

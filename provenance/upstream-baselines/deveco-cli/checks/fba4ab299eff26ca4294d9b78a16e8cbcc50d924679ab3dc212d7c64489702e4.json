@@ -1,0 +1,15 @@
+{
+  "format": 1,
+  "passed": true,
+  "tested": {
+    "runtime_sha256": "23758f48efc3dc011a5c858a0dee6b666d3483883ae6b5c131906e6962a2ad93",
+    "compiled_sha256": "25b0b62cb294440fe60ee39b1bd88e8abc78cb59a6f7ba8a786c51d1f854b0bb",
+    "package_lock_sha256": "68641e488a5099852216d3003664f57dd1d05b980f4c7813ee75dd7baf83d0fc",
+    "resource_manifest_sha256": "563bc3f06565e92c59c621c3ef909a37cbc4ac1db958d3d73d6e0bc99bf9ed86",
+    "upstream_lock_sha256": "bf3cc411831bd8ce6652a8085c8247c399d0c48b6d73156a7e649b9ef668164e"
+  },
+  "executed_tests": [
+    "dist/test/native-emulator-protocol.test.js"
+  ],
+  "original_sha256": "2865dd9d29dac1487086950afdb48f4dadecf2ac8323ba84a6d0902d50b22faf"
+}

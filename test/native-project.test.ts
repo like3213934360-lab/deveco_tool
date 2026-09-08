@@ -271,6 +271,35 @@ test("project switching is independent of product selection and invalid switches
   }
 });
 
+test("read-only project selections stay fresh while task contexts retain their captured build fingerprint", async () => {
+  const f = fixture();
+  try {
+    const created = await f.service.create(f.input);
+    f.service.select(created.root);
+    const captured = f.service.resolve(), selection = f.service.resolveSelection();
+    const { fingerprint, ...location } = captured;
+    assert.deepEqual(selection, location);
+    const appFile = path.join(created.root, "AppScope/app.json5");
+    const app = readObject(appFile);
+    atomicWrite(appFile, JSON.stringify({ ...app, queryFixture: "changed-build-input" }));
+    assert.deepEqual(f.service.resolveSelection(), selection);
+    assert.notEqual(f.service.resolve().fingerprint, fingerprint);
+    assert.equal(captured.fingerprint, fingerprint);
+
+    const file = path.join(created.root, "build-profile.json5"), profile = readObject(file);
+    profile.app = { products: [{ name: "phone", compatibleSdkVersion: 26 }, { name: "tablet", compatibleSdkVersion: 24 }] };
+    atomicWrite(file, JSON.stringify(profile));
+    assert.throws(() => f.service.resolveSelection(), { code: "PRODUCT_AMBIGUOUS" });
+    assert.throws(() => f.service.resolveSelection(undefined, "tablet"), { code: "PRODUCT_HAS_NO_MODULES" });
+    profile.modules = [{ name: "entry", srcPath: "./entry" }];
+    atomicWrite(file, JSON.stringify(profile));
+    assert.equal(f.service.resolveSelection(undefined, "tablet").product.compatibleSdkVersion, 24);
+    assert.equal(selection.product.name, "default");
+    fs.rmSync(path.join(created.root, "entry"), { recursive: true });
+    assert.throws(() => f.service.resolveSelection(undefined, "phone"), { code: "ENOENT" });
+  } finally { f.close(); }
+});
+
 test("cancelling an asynchronous template copy preserves an incomplete receipt and never permits blind replay", async () => {
   const f = fixture(),
     controller = new AbortController();

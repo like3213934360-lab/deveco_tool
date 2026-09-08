@@ -1269,6 +1269,7 @@ export class Runtime {
       }
       case "hot_reload": {
         const input = tools[name].schema.parse(raw);
+        if (input.action === "status") return this.hot.status(this.projects.resolveSelection(input.project_path, input.product));
         if (["start", "apply"].includes(input.action)) return this.startOperation("hot_reload", input, this.projects.resolve(input.project_path, input.product), signal);
         return this.hot.call(
           input,
@@ -1386,11 +1387,11 @@ export class Runtime {
             };
           }
         }
+        if (input.action === "list") return { flows: this.flows.list(this.projects.resolveSelection(input.project_path, input.product)) };
         const project = this.projects.resolve(
           input.project_path,
           input.product,
         );
-        if (input.action === "list") return { flows: this.flows.list(project) };
         if (input.action === "read")
           return this.flows.read(project, text(input.id, "id"));
         if (input.action === "validate")
@@ -1650,14 +1651,18 @@ export class Runtime {
         if ("capture" in input && input.capture)
           return this.store.lease(
             `device:${target}`,
-            async () => ({
-              ...(await query()),
-              screenshot: await this.devices.screenshot(
-                target,
-                input.capture,
-                signal,
-              ),
-            }),
+            async () => {
+              // Both operations are reads under the same device lease. Wait
+              // for both cleanup paths even if one fails or is cancelled;
+              // releasing early would let a tap race the remaining capture.
+              const [found, screenshot] = await Promise.allSettled([
+                query(),
+                this.devices.screenshot(target, input.capture, signal),
+              ]);
+              if (found.status === "rejected") throw found.reason;
+              if (screenshot.status === "rejected") throw screenshot.reason;
+              return { ...found.value, screenshot: screenshot.value };
+            },
             signal,
           );
         return query();

@@ -4,6 +4,7 @@ import { errorResult, invariant } from "./core/errors.js";
 import { Runtime } from "./services/runtime.js";
 import { withTrace } from "./core/trace.js";
 import { tools } from "./core/contracts.js";
+import { RequestLog } from "./core/request-log.js";
 
 invariant(
   parentPort,
@@ -12,6 +13,9 @@ invariant(
 );
 const port = parentPort,
   runtime = new Runtime();
+const requestLog = new RequestLog(runtime.store, (error) => {
+  process.stderr.write(JSON.stringify({ kind: "request_log_failed", error: errorResult(error) }) + "\n");
+});
 const requests = new Map<
   string,
   { controller: AbortController; finished: Promise<void> }
@@ -31,7 +35,11 @@ port.on("message", (raw: unknown) => {
         await Promise.allSettled(
           [...requests.values()].map((request) => request.finished),
         );
+        // Finish runtime cleanup even when ordinary log persistence failed.
+        let logFailure: { error: unknown } | undefined;
+        try { requestLog.close(); } catch (error) { logFailure = { error }; }
         const result = await runtime.close();
+        if (logFailure) throw logFailure.error;
         port.postMessage({ id: input.id, ok: true, data: result });
       } catch (error) {
         port.postMessage({
@@ -60,7 +68,7 @@ port.on("message", (raw: unknown) => {
         "At most 64 concurrent runtime requests",
       );
       const started = performance.now();
-      runtime.store.event(null, "request_start", {
+      requestLog.write("request_start", {
         request_id: input.id,
         tool: input.name,
       });
@@ -85,13 +93,16 @@ port.on("message", (raw: unknown) => {
             ),
           };
       }
-      runtime.store.event(null, "request_finish", {
+      requestLog.write("request_finish", {
         request_id: input.id,
         tool: input.name,
         elapsed_ms: performance.now() - started,
       });
       port.postMessage({ id: input.id, ok: true, data: data ?? null });
     } catch (error) {
+      try {
+        requestLog.write("request_failed", { request_id: input.id, tool: input.name, code: errorResult(error).code });
+      } catch { /* The original failure remains the tool result. Flush errors also surface on close. */ }
       port.postMessage({ id: input.id, ok: false, error: errorResult(error) });
     } finally {
       requests.delete(input.id);

@@ -1,8 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
+import { createHash } from "node:crypto";
 import { configuration } from "./config.js";
 import { invariant } from "./errors.js";
-import { readObject, digest, fileDigest } from "./files.js";
+import { parseObject, digest, fileDigest } from "./files.js";
 import type { Command } from "./process.js";
 
 export type Component =
@@ -27,6 +28,35 @@ export interface Toolchain {
   components: Partial<Record<Component, string>>;
 }
 const entryDigests = new Map<string, { metadata: string; sha256: string }>();
+const metadataRecords = new Map<string, { sha256: string; record: Record<string, unknown>; bytes: number }>();
+let metadataBytes = 0;
+/** Read current bytes on every discovery. Only parsing is cached: even a
+ * same-size edit with a restored timestamp must change the SDK identity. */
+function readMetadata(file: string) {
+  const bytes = fs.readFileSync(file);
+  const sha256 = createHash("sha256").update(bytes).digest("hex");
+  const previous = metadataRecords.get(file);
+  if (previous?.sha256 === sha256) {
+    metadataRecords.delete(file);
+    metadataRecords.set(file, previous);
+    return previous;
+  }
+  const result = { sha256, record: parseObject(bytes.toString("utf8")), bytes: bytes.length };
+  if (previous) {
+    metadataBytes -= previous.bytes;
+    metadataRecords.delete(file);
+  }
+  if (bytes.length <= 4 * 1024 * 1024) {
+    while (metadataRecords.size >= 128 || metadataBytes + bytes.length > 4 * 1024 * 1024) {
+      const oldest = metadataRecords.keys().next().value!;
+      metadataBytes -= metadataRecords.get(oldest)!.bytes;
+      metadataRecords.delete(oldest);
+    }
+    metadataRecords.set(file, result);
+    metadataBytes += bytes.length;
+  }
+  return result;
+}
 function entryDigest(file: string): string {
   const identity = () => {
     const stat = fs.statSync(file, { bigint: true });
@@ -181,7 +211,7 @@ export function discoverToolchain(): Toolchain {
     path.join(root, "sdk-pkg.json"),
   ]) {
     if (fs.existsSync(file)) {
-      const data = readObject(file);
+      const data = readMetadata(file).record;
       version = String(data.version ?? version);
       break;
     }
@@ -220,7 +250,7 @@ export function discoverToolchain(): Toolchain {
   const versions: Record<string, string> = {};
   const metadata = [...manifests].sort().flatMap((file) => {
     if (!fs.existsSync(file)) return [];
-    const record = readObject(file);
+    const { record, sha256 } = readMetadata(file);
     const data = record.data;
     const version =
       data && typeof data === "object" && "version" in data
@@ -228,7 +258,7 @@ export function discoverToolchain(): Toolchain {
         : record.version;
     const relative = path.relative(root, file).split(path.sep).join("/");
     if (typeof version === "string") versions[relative] = version;
-    return [[relative, fileDigest(file)]];
+    return [[relative, sha256]];
   });
   if (kind === "clt" && isFile(cltVersion)) {
     metadata.push(["version.txt", fileDigest(cltVersion)]);

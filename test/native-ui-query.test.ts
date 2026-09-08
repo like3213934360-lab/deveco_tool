@@ -13,6 +13,8 @@ import { inspectSnapshot } from "../src/services/ui-inspection.js";
 import { StateStore } from "../src/core/store.js";
 import { ProcessService } from "../src/core/process.js";
 import { selectorSchema, tools } from "../src/core/contracts.js";
+import { Runtime } from "../src/services/runtime.js";
+import { setImmediate as nextTurn } from "node:timers/promises";
 
 const tree = () =>
   [0, 1].map((displayId) => ({
@@ -179,5 +181,59 @@ test("UI named queries share one capture and retain untruncated counts for ambig
     await processes.close();
     store.close();
     fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("observation overlaps tree and image reads but retains the device lease until both finish on success, failure and cancellation", async () => {
+  for (const mode of ["success", "failure", "cancel"] as const) {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-observe-"));
+    const previous = process.env.DEVECO_STATE_DIR;
+    process.env.DEVECO_STATE_DIR = root;
+    const runtime = new Runtime();
+    if (previous === undefined) delete process.env.DEVECO_STATE_DIR;
+    else process.env.DEVECO_STATE_DIR = previous;
+    let treeStarted = false, imageStarted = false;
+    const treeDone = Promise.withResolvers<void>(), imageDone = Promise.withResolvers<void>();
+    const controller = new AbortController(), failure = new Error("tree failed");
+    const frame = {
+      target: "device", display_id: null, format: "jpeg" as const, mime: "image/jpeg",
+      bytes: 100, width: 100, height: 200, native_width: 100, native_height: 200,
+      coordinate_scale: { x: 1, y: 1 }, sha256: "frame", frame_signature: "frame", unchanged: true,
+    };
+    runtime.devices.target = async () => "device";
+    runtime.devices.find = async (_target, input, _snapshot, signal) => runtime.store.lease("device:device", async () => {
+      treeStarted = true;
+      await treeDone.promise;
+      signal?.throwIfAborted();
+      if (mode === "failure") throw failure;
+      return runtime.devices.query(snapshot(), input);
+    }, signal);
+    runtime.devices.screenshot = async (_target, _input, signal) => runtime.store.lease("device:device", async () => {
+      imageStarted = true;
+      await imageDone.promise;
+      signal?.throwIfAborted();
+      return frame;
+    }, signal);
+    let settled = false;
+    const operation = runtime.call("ui_observe", { selector: { key: "button-0" }, capture: {} }, controller.signal);
+    void operation.then(() => { settled = true; }, () => { settled = true; });
+    try {
+      await nextTurn();
+      assert.equal(treeStarted && imageStarted, true, "Both reads must start before either finishes");
+      if (mode === "cancel") controller.abort(failure);
+      treeDone.resolve();
+      await nextTurn();
+      assert.equal(settled, false, "A completed/failed tree must not release the still-running image capture");
+      assert.deepEqual(runtime.store.db.prepare("SELECT resource FROM leases").all(), [{ resource: "device:device" }]);
+      imageDone.resolve();
+      if (mode === "success") assert.deepEqual(await operation, { ...runtime.devices.query(snapshot(), { key: "button-0" }), screenshot: frame });
+      else await assert.rejects(operation, (error: unknown) => error === failure);
+      assert.deepEqual(runtime.store.db.prepare("SELECT resource FROM leases").all(), []);
+    } finally {
+      treeDone.resolve(); imageDone.resolve();
+      await operation.catch(() => {});
+      await runtime.close();
+      fs.rmSync(root, { recursive: true, force: true });
+    }
   }
 });

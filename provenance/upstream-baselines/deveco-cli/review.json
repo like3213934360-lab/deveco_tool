@@ -10,261 +10,261 @@
     "role": "protocol_reference",
     "acceptance": "verified"
   },
-  "mapping_sha256": "6ed14fd75d9f81f88ba6413804926b16a79172d5d1678fe364c135270e9e3b8e",
+  "mapping_sha256": "1a51d8393536fe8de5d037aaf2cdbc1f0752e636f023701b3549f565df3197e2",
   "reviews": [
     {
       "rule": "cli-core-toolchain",
-      "reason": "Resolve Studio/CLT layouts and SDK executable identities directly; native owned process groups and durable records replace CLI subprocess dispatch. SDK entry identity now uses content digests with a bounded 128-entry stat-invalidated cache and before/after stat verification; timestamp-only SDK touches no longer cause false session replacement. Reviewed native changes through 8148ebb: complete SDK bundle/application name constraints; independent installed compile SDK, target API and minimum runtime API; HarmonyOS platform spellings read from the installed SDK version map, with unknown or ambiguous mappings rejected before directory creation. Creation recovery binds the requested APIs. Actual sdk-8 builds API 26 with minimum 22 and target 24 and verifies packaged HAP values; regression-17 passes 322 tests. All other mapped target digests and the pinned upstream tree are unchanged. Acceptance requires fresh current-identity reports for every mapped check; historical reports are not relabeled.",
+      "reason": "Resolve Studio/CLT layouts and SDK executable identities directly; native owned process groups and durable records replace CLI subprocess dispatch. SDK entry identity now uses content digests with a bounded 128-entry stat-invalidated cache and before/after stat verification; timestamp-only SDK touches no longer cause false session replacement. Current performance revision review: Standard JSON uses native parsing and JSON5 remains supported. SDK metadata parsing is cached by freshly read content hash with 128-entry/4 MiB source bounds; same-size/restored-time edits, deletion and malformed data retain immediate rejection or identity change. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
       "reviewer": "Codex"
     },
     {
       "rule": "cli-core-config",
-      "reason": "Use strict native configuration and explicit toolchain selection; preserve the protocol constants needed by adapters without importing CLI host configuration or credentials. Toolchain identity is content-based with bounded stat-validated caching; owned process and configuration boundaries are unchanged. Reviewed native changes through 8148ebb: complete SDK bundle/application name constraints; independent installed compile SDK, target API and minimum runtime API; HarmonyOS platform spellings read from the installed SDK version map, with unknown or ambiguous mappings rejected before directory creation. Creation recovery binds the requested APIs. Actual sdk-8 builds API 26 with minimum 22 and target 24 and verifies packaged HAP values; regression-17 passes 322 tests. All other mapped target digests and the pinned upstream tree are unchanged. Acceptance requires fresh current-identity reports for every mapped check; historical reports are not relabeled.",
+      "reason": "Use strict native configuration and explicit toolchain selection; preserve the protocol constants needed by adapters without importing CLI host configuration or credentials. Current performance revision review: Standard JSON uses native parsing and JSON5 remains supported. SDK metadata parsing is cached by freshly read content hash with 128-entry/4 MiB source bounds; same-size/restored-time edits, deletion and malformed data retain immediate rejection or identity change. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
       "reviewer": "Codex"
     },
     {
       "rule": "cli-core-types",
-      "reason": "Express HTTP and native adapter inputs through strict TypeScript and schemas; upstream Skill metadata is reference context rather than a native execution dependency. Toolchain identity is content-based with bounded stat-validated caching; owned process and configuration boundaries are unchanged. Reviewed native changes through 8148ebb: complete SDK bundle/application name constraints; independent installed compile SDK, target API and minimum runtime API; HarmonyOS platform spellings read from the installed SDK version map, with unknown or ambiguous mappings rejected before directory creation. Creation recovery binds the requested APIs. Actual sdk-8 builds API 26 with minimum 22 and target 24 and verifies packaged HAP values; regression-17 passes 322 tests. All other mapped target digests and the pinned upstream tree are unchanged. Acceptance requires fresh current-identity reports for every mapped check; historical reports are not relabeled.",
+      "reason": "Express HTTP and native adapter inputs through strict TypeScript and schemas; upstream Skill metadata is reference context rather than a native execution dependency. Current performance revision review: Standard JSON uses native parsing and JSON5 remains supported. SDK metadata parsing is cached by freshly read content hash with 128-entry/4 MiB source bounds; same-size/restored-time edits, deletion and malformed data retain immediate rejection or identity change. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
       "reviewer": "Codex"
     },
     {
       "rule": "cli-core-utils",
-      "reason": "Replace CLI shell helpers, build locks and data paths with argv-based owned processes, resource leases and private durable state; uncertain external completion is paused. Toolchain identity is content-based with bounded stat-validated caching; owned process and configuration boundaries are unchanged. Reviewed native changes through 8148ebb: complete SDK bundle/application name constraints; independent installed compile SDK, target API and minimum runtime API; HarmonyOS platform spellings read from the installed SDK version map, with unknown or ambiguous mappings rejected before directory creation. Creation recovery binds the requested APIs. Actual sdk-8 builds API 26 with minimum 22 and target 24 and verifies packaged HAP values; regression-17 passes 322 tests. All other mapped target digests and the pinned upstream tree are unchanged. Acceptance requires fresh current-identity reports for every mapped check; historical reports are not relabeled.",
+      "reason": "Replace CLI shell helpers, build locks and data paths with argv-based owned processes, resource leases and private durable state; uncertain external completion is paused. Current performance revision review: Standard JSON uses native parsing and JSON5 remains supported. SDK metadata parsing is cached by freshly read content hash with 128-entry/4 MiB source bounds; same-size/restored-time edits, deletion and malformed data retain immediate rejection or identity change. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
       "reviewer": "Codex"
     },
     {
       "rule": "cli-core-trace",
-      "reason": "Use bounded local structured logs and encrypted private operation records. CLI installation IDs and telemetry upload are outside native execution and are not ported. Toolchain identity is content-based with bounded stat-validated caching; owned process and configuration boundaries are unchanged. Reviewed native changes through 8148ebb: complete SDK bundle/application name constraints; independent installed compile SDK, target API and minimum runtime API; HarmonyOS platform spellings read from the installed SDK version map, with unknown or ambiguous mappings rejected before directory creation. Creation recovery binds the requested APIs. Actual sdk-8 builds API 26 with minimum 22 and target 24 and verifies packaged HAP values; regression-17 passes 322 tests. All other mapped target digests and the pinned upstream tree are unchanged. Acceptance requires fresh current-identity reports for every mapped check; historical reports are not relabeled.",
+      "reason": "Use bounded local structured logs and encrypted private operation records. CLI installation IDs and telemetry upload are outside native execution and are not ported. Current performance revision review: Standard JSON uses native parsing and JSON5 remains supported. SDK metadata parsing is cached by freshly read content hash with 128-entry/4 MiB source bounds; same-size/restored-time edits, deletion and malformed data retain immediate rejection or identity change. Request telemetry and its tests are explicitly mapped to the new bounded RequestLog and Worker implementation: 64 KiB shared reservation, 128-event/20 ms batches, FULL atomic flush, sticky persistence failure and cleanup even when flush fails. Hard crashes may lose the final ordinary telemetry window; workflow checkpoints and side-effect receipts remain synchronous. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
       "reviewer": "Codex"
     },
     {
       "rule": "cli-core-internal",
-      "reason": "Use packaged local document resources; upstream background document initialization and telemetry upload workers are not started by the native runtime. Toolchain identity is content-based with bounded stat-validated caching; owned process and configuration boundaries are unchanged. Reviewed native changes through 8148ebb: complete SDK bundle/application name constraints; independent installed compile SDK, target API and minimum runtime API; HarmonyOS platform spellings read from the installed SDK version map, with unknown or ambiguous mappings rejected before directory creation. Creation recovery binds the requested APIs. Actual sdk-8 builds API 26 with minimum 22 and target 24 and verifies packaged HAP values; regression-17 passes 322 tests. All other mapped target digests and the pinned upstream tree are unchanged. Acceptance requires fresh current-identity reports for every mapped check; historical reports are not relabeled.",
+      "reason": "Use packaged local document resources; upstream background document initialization and telemetry upload workers are not started by the native runtime. Current performance revision review: Standard JSON uses native parsing and JSON5 remains supported. SDK metadata parsing is cached by freshly read content hash with 128-entry/4 MiB source bounds; same-size/restored-time edits, deletion and malformed data retain immediate rejection or identity change. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
       "reviewer": "Codex"
     },
     {
       "rule": "cli-src-apply-",
-      "reason": "Preserve SDK HQF build, signing and device quickfix behavior in native hot reload; freeze input hashes and process identity before persistent start/apply mutations. Reviewed native changes through 8148ebb: complete SDK bundle/application name constraints; independent installed compile SDK, target API and minimum runtime API; HarmonyOS platform spellings read from the installed SDK version map, with unknown or ambiguous mappings rejected before directory creation. Creation recovery binds the requested APIs. Actual sdk-8 builds API 26 with minimum 22 and target 24 and verifies packaged HAP values; regression-17 passes 322 tests. All other mapped target digests and the pinned upstream tree are unchanged. Acceptance requires fresh current-identity reports for every mapped check; historical reports are not relabeled.",
+      "reason": "Preserve SDK HQF build, signing and device quickfix behavior in native hot reload; freeze input hashes and process identity before persistent start/apply mutations. Current performance revision review: Read-only flow catalogs and hot-session status validate current product/module selection without hashing unused build inputs; tasks and LSP still capture the full content fingerprint and previously captured contexts remain immutable. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
       "reviewer": "Codex"
     },
     {
       "rule": "cli-src-auth-",
-      "reason": "Use native browser authentication and encrypted token storage with explicit personal/team identity and refresh; no old CLI credential import during installation migration. Reviewed native changes through 8148ebb: complete SDK bundle/application name constraints; independent installed compile SDK, target API and minimum runtime API; HarmonyOS platform spellings read from the installed SDK version map, with unknown or ambiguous mappings rejected before directory creation. Creation recovery binds the requested APIs. Actual sdk-8 builds API 26 with minimum 22 and target 24 and verifies packaged HAP values; regression-17 passes 322 tests. All other mapped target digests and the pinned upstream tree are unchanged. Acceptance requires fresh current-identity reports for every mapped check; historical reports are not relabeled.",
+      "reason": "Use native browser authentication and encrypted token storage with explicit personal/team identity and refresh; no old CLI credential import during installation migration. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
       "reviewer": "Codex"
     },
     {
       "rule": "cli-src-signature-",
-      "reason": "Preserve certificate, CSR, profile and signing protocols with encrypted preparation and digest-checked publication. Certificate/device inventories permit reconciliation; reviewed Profile endpoints provide no equivalent query, so ambiguous writes pause. Current certificate handling accepts a bounded root-first or leaf-first chain only when exactly one certificate matches the submitted CSR SPKI. Mismatched, duplicated and malformed chains are rejected; sign/verify collection preserves durable stage receipts. Reviewed native changes through 8148ebb: complete SDK bundle/application name constraints; independent installed compile SDK, target API and minimum runtime API; HarmonyOS platform spellings read from the installed SDK version map, with unknown or ambiguous mappings rejected before directory creation. Creation recovery binds the requested APIs. Actual sdk-8 builds API 26 with minimum 22 and target 24 and verifies packaged HAP values; regression-17 passes 322 tests. All other mapped target digests and the pinned upstream tree are unchanged. Acceptance requires fresh current-identity reports for every mapped check; historical reports are not relabeled.",
+      "reason": "Preserve certificate, CSR, profile and signing protocols with encrypted preparation and digest-checked publication. Certificate/device inventories permit reconciliation; reviewed Profile endpoints provide no equivalent query, so ambiguous writes pause. Current certificate handling accepts a bounded root-first or leaf-first chain only when exactly one certificate matches the submitted CSR SPKI. Mismatched, duplicated and malformed chains are rejected; sign/verify collection preserves durable stage receipts. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
       "reviewer": "Codex"
     },
     {
       "rule": "cli-src-codelinter-",
-      "reason": "Call the selected SDK linter directly with bounded project inputs, independent report parsing and cancellation; retain real SDK validation as a required pending check. Reviewed native changes through 8148ebb: complete SDK bundle/application name constraints; independent installed compile SDK, target API and minimum runtime API; HarmonyOS platform spellings read from the installed SDK version map, with unknown or ambiguous mappings rejected before directory creation. Creation recovery binds the requested APIs. Actual sdk-8 builds API 26 with minimum 22 and target 24 and verifies packaged HAP values; regression-17 passes 322 tests. All other mapped target digests and the pinned upstream tree are unchanged. Acceptance requires fresh current-identity reports for every mapped check; historical reports are not relabeled.",
+      "reason": "Call the selected SDK linter directly with bounded project inputs, independent report parsing and cancellation; retain real SDK validation as a required pending check. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
       "reviewer": "Codex"
     },
     {
       "rule": "cli-src-docs-",
-      "reason": "Use attributed packaged document archives and catalog routing, bounded extraction and lookup. Native services do not run official document helper processes. Reviewed native changes through 8148ebb: complete SDK bundle/application name constraints; independent installed compile SDK, target API and minimum runtime API; HarmonyOS platform spellings read from the installed SDK version map, with unknown or ambiguous mappings rejected before directory creation. Creation recovery binds the requested APIs. Actual sdk-8 builds API 26 with minimum 22 and target 24 and verifies packaged HAP values; regression-17 passes 322 tests. All other mapped target digests and the pinned upstream tree are unchanged. Acceptance requires fresh current-identity reports for every mapped check; historical reports are not relabeled.",
+      "reason": "Use attributed packaged document archives and catalog routing, bounded extraction and lookup. Native services do not run official document helper processes. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
       "reviewer": "Codex"
     },
     {
       "rule": "cli-src-ui-",
-      "reason": "Use native UI import, bounded parsing and indexed snapshots with display/window scope; actions use frozen coordinates and completion receipts instead of replaying uncertain input. Reviewed native changes through 8148ebb: complete SDK bundle/application name constraints; independent installed compile SDK, target API and minimum runtime API; HarmonyOS platform spellings read from the installed SDK version map, with unknown or ambiguous mappings rejected before directory creation. Creation recovery binds the requested APIs. Actual sdk-8 builds API 26 with minimum 22 and target 24 and verifies packaged HAP values; regression-17 passes 322 tests. All other mapped target digests and the pinned upstream tree are unchanged. Acceptance requires fresh current-identity reports for every mapped check; historical reports are not relabeled.",
+      "reason": "Use native UI import, bounded parsing and indexed snapshots with display/window scope; actions use frozen coordinates and completion receipts instead of replaying uncertain input. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
       "reviewer": "Codex"
     },
     {
       "rule": "cli-src-service-",
-      "reason": "Use SDK emulator management with durable mutations, inventory reconciliation and resource leases. UUID/path/HDC-port binding remains subject to real running-instance acceptance. Running emulator binding verifies configured port or, only when unset, a loopback guest instance name plus unchanged UUID and instance path. Physical devices and mismatched endpoints are rejected. The lifecycle collector waits up to two minutes for the unique guest and verifies original inventory after deletion. Reviewed native changes through 8148ebb: complete SDK bundle/application name constraints; independent installed compile SDK, target API and minimum runtime API; HarmonyOS platform spellings read from the installed SDK version map, with unknown or ambiguous mappings rejected before directory creation. Creation recovery binds the requested APIs. Actual sdk-8 builds API 26 with minimum 22 and target 24 and verifies packaged HAP values; regression-17 passes 322 tests. All other mapped target digests and the pinned upstream tree are unchanged. Acceptance requires fresh current-identity reports for every mapped check; historical reports are not relabeled.",
+      "reason": "Use SDK emulator management with durable mutations, inventory reconciliation and resource leases. UUID/path/HDC-port binding remains subject to real running-instance acceptance. Running emulator binding verifies configured port or, only when unset, a loopback guest instance name plus unchanged UUID and instance path. Physical devices and mismatched endpoints are rejected. The lifecycle collector waits up to two minutes for the unique guest and verifies original inventory after deletion. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
       "reviewer": "Codex"
     },
     {
       "rule": "cli-src-resources-",
-      "reason": "The upstream ACL recommendation table is not applied as automatic permission expansion. Native profile creation accepts explicit ACL permissions, and project templates retain their declared permissions; no upstream resource code executes. Reviewed native changes through 8148ebb: complete SDK bundle/application name constraints; independent installed compile SDK, target API and minimum runtime API; HarmonyOS platform spellings read from the installed SDK version map, with unknown or ambiguous mappings rejected before directory creation. Creation recovery binds the requested APIs. Actual sdk-8 builds API 26 with minimum 22 and target 24 and verifies packaged HAP values; regression-17 passes 322 tests. All other mapped target digests and the pinned upstream tree are unchanged. Acceptance requires fresh current-identity reports for every mapped check; historical reports are not relabeled.",
+      "reason": "The upstream ACL recommendation table is not applied as automatic permission expansion. Native profile creation accepts explicit ACL permissions, and project templates retain their declared permissions; no upstream resource code executes. Current performance revision review: Read-only flow catalogs and hot-session status validate current product/module selection without hashing unused build inputs; tasks and LSP still capture the full content fingerprint and previously captured contexts remain immutable. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
       "reviewer": "Codex"
     },
     {
       "rule": "cli-src-data-",
-      "reason": "Do not use the bundled upstream privacy text as current agreement evidence. Native license service reads installed SDK agreements and uses supported acceptance commands with explicit consent data. Current read-only collector waits for durable stale-license rejection, unwraps the original cause and verifies byte-identical configuration plus unchanged mtime. No bundled agreement text is substituted for installed SDK evidence. Reviewed native changes through 8148ebb: complete SDK bundle/application name constraints; independent installed compile SDK, target API and minimum runtime API; HarmonyOS platform spellings read from the installed SDK version map, with unknown or ambiguous mappings rejected before directory creation. Creation recovery binds the requested APIs. Actual sdk-8 builds API 26 with minimum 22 and target 24 and verifies packaged HAP values; regression-17 passes 322 tests. All other mapped target digests and the pinned upstream tree are unchanged. Acceptance requires fresh current-identity reports for every mapped check; historical reports are not relabeled.",
+      "reason": "Do not use the bundled upstream privacy text as current agreement evidence. Native license service reads installed SDK agreements and uses supported acceptance commands with explicit consent data. Current read-only collector waits for durable stale-license rejection, unwraps the original cause and verifies byte-identical configuration plus unchanged mtime. No bundled agreement text is substituted for installed SDK evidence. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
       "reviewer": "Codex"
     },
     {
       "rule": "cli-templates-",
-      "reason": "Preserve attributed application template bytes and use native project creation with product/module metadata and SDK selection; successful real builds remain pending acceptance. Reviewed native changes through 8148ebb: complete SDK bundle/application name constraints; independent installed compile SDK, target API and minimum runtime API; HarmonyOS platform spellings read from the installed SDK version map, with unknown or ambiguous mappings rejected before directory creation. Creation recovery binds the requested APIs. Actual sdk-8 builds API 26 with minimum 22 and target 24 and verifies packaged HAP values; regression-17 passes 322 tests. All other mapped target digests and the pinned upstream tree are unchanged. Acceptance requires fresh current-identity reports for every mapped check; historical reports are not relabeled.",
+      "reason": "Preserve attributed application template bytes and use native project creation with product/module metadata and SDK selection; successful real builds remain pending acceptance. Current performance revision review: Read-only flow catalogs and hot-session status validate current product/module selection without hashing unused build inputs; tasks and LSP still capture the full content fingerprint and previously captured contexts remain immutable. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
       "reviewer": "Codex"
     },
     {
       "rule": "cli-index-",
-      "reason": "Replace upstream index construction scripts with the native packaged document catalog and bounded local search; dictionary resources are reference data, not a background CLI service. Reviewed native changes through 8148ebb: complete SDK bundle/application name constraints; independent installed compile SDK, target API and minimum runtime API; HarmonyOS platform spellings read from the installed SDK version map, with unknown or ambiguous mappings rejected before directory creation. Creation recovery binds the requested APIs. Actual sdk-8 builds API 26 with minimum 22 and target 24 and verifies packaged HAP values; regression-17 passes 322 tests. All other mapped target digests and the pinned upstream tree are unchanged. Acceptance requires fresh current-identity reports for every mapped check; historical reports are not relabeled.",
+      "reason": "Replace upstream index construction scripts with the native packaged document catalog and bounded local search; dictionary resources are reference data, not a background CLI service. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
       "reviewer": "Codex"
     },
     {
       "rule": "cli-command-build.ts",
-      "reason": "Map product, module and build-mode selection to direct OHPM/Hvigor durable stages; preserve output package identity and command completion records. Reviewed native changes through 8148ebb: complete SDK bundle/application name constraints; independent installed compile SDK, target API and minimum runtime API; HarmonyOS platform spellings read from the installed SDK version map, with unknown or ambiguous mappings rejected before directory creation. Creation recovery binds the requested APIs. Actual sdk-8 builds API 26 with minimum 22 and target 24 and verifies packaged HAP values; regression-17 passes 322 tests. All other mapped target digests and the pinned upstream tree are unchanged. Acceptance requires fresh current-identity reports for every mapped check; historical reports are not relabeled.",
+      "reason": "Map product, module and build-mode selection to direct OHPM/Hvigor durable stages; preserve output package identity and command completion records. Current performance revision review: Read-only flow catalogs and hot-session status validate current product/module selection without hashing unused build inputs; tasks and LSP still capture the full content fingerprint and previously captured contexts remain immutable. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
       "reviewer": "Codex"
     },
     {
       "rule": "cli-command-create.ts",
-      "reason": "Map app/template creation to native bounded file publication and project metadata; do not install host Skills as part of creation. Reviewed native changes through 8148ebb: complete SDK bundle/application name constraints; independent installed compile SDK, target API and minimum runtime API; HarmonyOS platform spellings read from the installed SDK version map, with unknown or ambiguous mappings rejected before directory creation. Creation recovery binds the requested APIs. Actual sdk-8 builds API 26 with minimum 22 and target 24 and verifies packaged HAP values; regression-17 passes 322 tests. All other mapped target digests and the pinned upstream tree are unchanged. Acceptance requires fresh current-identity reports for every mapped check; historical reports are not relabeled.",
+      "reason": "Map app/template creation to native bounded file publication and project metadata; do not install host Skills as part of creation. Current performance revision review: Read-only flow catalogs and hot-session status validate current product/module selection without hashing unused build inputs; tasks and LSP still capture the full content fingerprint and previously captured contexts remain immutable. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
       "reviewer": "Codex"
     },
     {
       "rule": "cli-command-init.ts",
-      "reason": "Retain project initialization through native project workflows and explicit configuration. Upstream init options that overwrite host Skill/MCP settings are replaced by separate reviewed maintenance plans. Reviewed native changes through 8148ebb: complete SDK bundle/application name constraints; independent installed compile SDK, target API and minimum runtime API; HarmonyOS platform spellings read from the installed SDK version map, with unknown or ambiguous mappings rejected before directory creation. Creation recovery binds the requested APIs. Actual sdk-8 builds API 26 with minimum 22 and target 24 and verifies packaged HAP values; regression-17 passes 322 tests. All other mapped target digests and the pinned upstream tree are unchanged. Acceptance requires fresh current-identity reports for every mapped check; historical reports are not relabeled.",
+      "reason": "Retain project initialization through native project workflows and explicit configuration. Upstream init options that overwrite host Skill/MCP settings are replaced by separate reviewed maintenance plans. Current performance revision review: Read-only flow catalogs and hot-session status validate current product/module selection without hashing unused build inputs; tasks and LSP still capture the full content fingerprint and previously captured contexts remain immutable. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
       "reviewer": "Codex"
     },
     {
       "rule": "cli-command-run.ts",
-      "reason": "Separate build, frozen signed-package deployment and Ability/Want launch into durable nodes; uncertain device completion is reconciled from receipts rather than replayed. Reviewed native changes through 8148ebb: complete SDK bundle/application name constraints; independent installed compile SDK, target API and minimum runtime API; HarmonyOS platform spellings read from the installed SDK version map, with unknown or ambiguous mappings rejected before directory creation. Creation recovery binds the requested APIs. Actual sdk-8 builds API 26 with minimum 22 and target 24 and verifies packaged HAP values; regression-17 passes 322 tests. All other mapped target digests and the pinned upstream tree are unchanged. Acceptance requires fresh current-identity reports for every mapped check; historical reports are not relabeled.",
+      "reason": "Separate build, frozen signed-package deployment and Ability/Want launch into durable nodes; uncertain device completion is reconciled from receipts rather than replayed. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
       "reviewer": "Codex"
     },
     {
       "rule": "cli-command-check.ts",
-      "reason": "Expose SDK checks and supported API versions as native diagnostics and fixed workflows; outputs are bounded structured artifacts. Reviewed native changes through 8148ebb: complete SDK bundle/application name constraints; independent installed compile SDK, target API and minimum runtime API; HarmonyOS platform spellings read from the installed SDK version map, with unknown or ambiguous mappings rejected before directory creation. Creation recovery binds the requested APIs. Actual sdk-8 builds API 26 with minimum 22 and target 24 and verifies packaged HAP values; regression-17 passes 322 tests. All other mapped target digests and the pinned upstream tree are unchanged. Acceptance requires fresh current-identity reports for every mapped check; historical reports are not relabeled.",
+      "reason": "Expose SDK checks and supported API versions as native diagnostics and fixed workflows; outputs are bounded structured artifacts. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
       "reviewer": "Codex"
     },
     {
       "rule": "cli-command-serve-lsp.ts",
-      "reason": "Own an ArkTS LSP connection for the frozen project/toolchain and reclaim it after idle; do not start the official CLI LSP proxy. Reviewed native changes through 8148ebb: complete SDK bundle/application name constraints; independent installed compile SDK, target API and minimum runtime API; HarmonyOS platform spellings read from the installed SDK version map, with unknown or ambiguous mappings rejected before directory creation. Creation recovery binds the requested APIs. Actual sdk-8 builds API 26 with minimum 22 and target 24 and verifies packaged HAP values; regression-17 passes 322 tests. All other mapped target digests and the pinned upstream tree are unchanged. Acceptance requires fresh current-identity reports for every mapped check; historical reports are not relabeled.",
+      "reason": "Own an ArkTS LSP connection for the frozen project/toolchain and reclaim it after idle; do not start the official CLI LSP proxy. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
       "reviewer": "Codex"
     },
     {
       "rule": "cli-command-serve-lsp-cpp.ts",
-      "reason": "Start SDK clangd directly with module and ABI compile database context; require real cross-module C++ acceptance rather than assuming ArkTS results transfer. Reviewed native changes through 8148ebb: complete SDK bundle/application name constraints; independent installed compile SDK, target API and minimum runtime API; HarmonyOS platform spellings read from the installed SDK version map, with unknown or ambiguous mappings rejected before directory creation. Creation recovery binds the requested APIs. Actual sdk-8 builds API 26 with minimum 22 and target 24 and verifies packaged HAP values; regression-17 passes 322 tests. All other mapped target digests and the pinned upstream tree are unchanged. Acceptance requires fresh current-identity reports for every mapped check; historical reports are not relabeled.",
+      "reason": "Start SDK clangd directly with module and ABI compile database context; require real cross-module C++ acceptance rather than assuming ArkTS results transfer. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
       "reviewer": "Codex"
     },
     {
       "rule": "cli-command-signature.ts",
-      "reason": "Expose typed signing operations with explicit identity and durable writes; local material and package publication use encrypted preparation and hash reconciliation. Inspect remains a read-only project signing-configuration query. Certificate download selects the unique CSR key match from a bounded chain; no official CLI runtime is imported. Reviewed native changes through 8148ebb: complete SDK bundle/application name constraints; independent installed compile SDK, target API and minimum runtime API; HarmonyOS platform spellings read from the installed SDK version map, with unknown or ambiguous mappings rejected before directory creation. Creation recovery binds the requested APIs. Actual sdk-8 builds API 26 with minimum 22 and target 24 and verifies packaged HAP values; regression-17 passes 322 tests. All other mapped target digests and the pinned upstream tree are unchanged. Acceptance requires fresh current-identity reports for every mapped check; historical reports are not relabeled.",
+      "reason": "Expose typed signing operations with explicit identity and durable writes; local material and package publication use encrypted preparation and hash reconciliation. Inspect remains a read-only project signing-configuration query. Certificate download selects the unique CSR key match from a bounded chain; no official CLI runtime is imported. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
       "reviewer": "Codex"
     },
     {
       "rule": "cli-command-auth.ts",
-      "reason": "Expose native login, status, logout and team selection while keeping tokens private; expired-auth and reauthentication scenarios remain required. Reviewed native changes through 8148ebb: complete SDK bundle/application name constraints; independent installed compile SDK, target API and minimum runtime API; HarmonyOS platform spellings read from the installed SDK version map, with unknown or ambiguous mappings rejected before directory creation. Creation recovery binds the requested APIs. Actual sdk-8 builds API 26 with minimum 22 and target 24 and verifies packaged HAP values; regression-17 passes 322 tests. All other mapped target digests and the pinned upstream tree are unchanged. Acceptance requires fresh current-identity reports for every mapped check; historical reports are not relabeled.",
+      "reason": "Expose native login, status, logout and team selection while keeping tokens private; expired-auth and reauthentication scenarios remain required. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
       "reviewer": "Codex"
     },
     {
       "rule": "cli-command-doc.ts",
-      "reason": "Preserve catalog/search/read through attributed local archives with bounded result and content sizes. Reviewed native changes through 8148ebb: complete SDK bundle/application name constraints; independent installed compile SDK, target API and minimum runtime API; HarmonyOS platform spellings read from the installed SDK version map, with unknown or ambiguous mappings rejected before directory creation. Creation recovery binds the requested APIs. Actual sdk-8 builds API 26 with minimum 22 and target 24 and verifies packaged HAP values; regression-17 passes 322 tests. All other mapped target digests and the pinned upstream tree are unchanged. Acceptance requires fresh current-identity reports for every mapped check; historical reports are not relabeled.",
+      "reason": "Preserve catalog/search/read through attributed local archives with bounded result and content sizes. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
       "reviewer": "Codex"
     },
     {
       "rule": "cli-command-log.ts",
-      "reason": "Preserve bounded log collection, literal filtering, follow sessions and named crash files; retain timestamps, process boundaries and truncation metadata. Reviewed native changes through 8148ebb: complete SDK bundle/application name constraints; independent installed compile SDK, target API and minimum runtime API; HarmonyOS platform spellings read from the installed SDK version map, with unknown or ambiguous mappings rejected before directory creation. Creation recovery binds the requested APIs. Actual sdk-8 builds API 26 with minimum 22 and target 24 and verifies packaged HAP values; regression-17 passes 322 tests. All other mapped target digests and the pinned upstream tree are unchanged. Acceptance requires fresh current-identity reports for every mapped check; historical reports are not relabeled.",
+      "reason": "Preserve bounded log collection, literal filtering, follow sessions and named crash files; retain timestamps, process boundaries and truncation metadata. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
       "reviewer": "Codex"
     },
     {
       "rule": "cli-command-device.ts",
-      "reason": "Preserve explicit target selection and native device information/file/SQLite tools under schema boundaries; aliases share canonical resource ownership. Reviewed native changes through 8148ebb: complete SDK bundle/application name constraints; independent installed compile SDK, target API and minimum runtime API; HarmonyOS platform spellings read from the installed SDK version map, with unknown or ambiguous mappings rejected before directory creation. Creation recovery binds the requested APIs. Actual sdk-8 builds API 26 with minimum 22 and target 24 and verifies packaged HAP values; regression-17 passes 322 tests. All other mapped target digests and the pinned upstream tree are unchanged. Acceptance requires fresh current-identity reports for every mapped check; historical reports are not relabeled.",
+      "reason": "Preserve explicit target selection and native device information/file/SQLite tools under schema boundaries; aliases share canonical resource ownership. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
       "reviewer": "Codex"
     },
     {
       "rule": "cli-command-emulator.ts",
-      "reason": "Map inventory, images, creation, start/stop/delete and license actions to native SDK services; mutations return durable run IDs and unknown outcomes retain leases. Current adapter reconciles only declared operation children after confirmed process exit. Binding supports unset native ports through verified loopback guest identity; lifecycle operations keep durable receipts and preserve unrelated instances. Reviewed native changes through 8148ebb: complete SDK bundle/application name constraints; independent installed compile SDK, target API and minimum runtime API; HarmonyOS platform spellings read from the installed SDK version map, with unknown or ambiguous mappings rejected before directory creation. Creation recovery binds the requested APIs. Actual sdk-8 builds API 26 with minimum 22 and target 24 and verifies packaged HAP values; regression-17 passes 322 tests. All other mapped target digests and the pinned upstream tree are unchanged. Acceptance requires fresh current-identity reports for every mapped check; historical reports are not relabeled.",
+      "reason": "Map inventory, images, creation, start/stop/delete and license actions to native SDK services; mutations return durable run IDs and unknown outcomes retain leases. Current adapter reconciles only declared operation children after confirmed process exit. Binding supports unset native ports through verified loopback guest identity; lifecycle operations keep durable receipts and preserve unrelated instances. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
       "reviewer": "Codex"
     },
     {
       "rule": "cli-command-ui.ts",
-      "reason": "Expose the UI action group through typed native contracts and durable flow execution, with selector ambiguity checks and final assertions. Reviewed native changes through 8148ebb: complete SDK bundle/application name constraints; independent installed compile SDK, target API and minimum runtime API; HarmonyOS platform spellings read from the installed SDK version map, with unknown or ambiguous mappings rejected before directory creation. Creation recovery binds the requested APIs. Actual sdk-8 builds API 26 with minimum 22 and target 24 and verifies packaged HAP values; regression-17 passes 322 tests. All other mapped target digests and the pinned upstream tree are unchanged. Acceptance requires fresh current-identity reports for every mapped check; historical reports are not relabeled.",
+      "reason": "Expose the UI action group through typed native contracts and durable flow execution, with selector ambiguity checks and final assertions. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
       "reviewer": "Codex"
     },
     {
       "rule": "cli-command-ui-input.ts",
-      "reason": "Preserve gestures, click variants and text input with display/window scope; coordinate/selector inputs are frozen before uncertain external effects. Reviewed native changes through 8148ebb: complete SDK bundle/application name constraints; independent installed compile SDK, target API and minimum runtime API; HarmonyOS platform spellings read from the installed SDK version map, with unknown or ambiguous mappings rejected before directory creation. Creation recovery binds the requested APIs. Actual sdk-8 builds API 26 with minimum 22 and target 24 and verifies packaged HAP values; regression-17 passes 322 tests. All other mapped target digests and the pinned upstream tree are unchanged. Acceptance requires fresh current-identity reports for every mapped check; historical reports are not relabeled.",
+      "reason": "Preserve gestures, click variants and text input with display/window scope; coordinate/selector inputs are frozen before uncertain external effects. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
       "reviewer": "Codex"
     },
     {
       "rule": "cli-command-ui-layout.ts",
-      "reason": "Parse and query complete native dump snapshots with bounded caches, parent/depth indexes and accurate match totals independent of pagination. Reviewed native changes through 8148ebb: complete SDK bundle/application name constraints; independent installed compile SDK, target API and minimum runtime API; HarmonyOS platform spellings read from the installed SDK version map, with unknown or ambiguous mappings rejected before directory creation. Creation recovery binds the requested APIs. Actual sdk-8 builds API 26 with minimum 22 and target 24 and verifies packaged HAP values; regression-17 passes 322 tests. All other mapped target digests and the pinned upstream tree are unchanged. Acceptance requires fresh current-identity reports for every mapped check; historical reports are not relabeled.",
+      "reason": "Parse and query complete native dump snapshots with bounded caches, parent/depth indexes and accurate match totals independent of pagination. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
       "reviewer": "Codex"
     },
     {
       "rule": "cli-command-ui-window.ts",
-      "reason": "Preserve device window enumeration and visible/system-window scope through native UI inspection; retain window/process identity in snapshots. Reviewed native changes through 8148ebb: complete SDK bundle/application name constraints; independent installed compile SDK, target API and minimum runtime API; HarmonyOS platform spellings read from the installed SDK version map, with unknown or ambiguous mappings rejected before directory creation. Creation recovery binds the requested APIs. Actual sdk-8 builds API 26 with minimum 22 and target 24 and verifies packaged HAP values; regression-17 passes 322 tests. All other mapped target digests and the pinned upstream tree are unchanged. Acceptance requires fresh current-identity reports for every mapped check; historical reports are not relabeled.",
+      "reason": "Preserve device window enumeration and visible/system-window scope through native UI inspection; retain window/process identity in snapshots. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
       "reviewer": "Codex"
     },
     {
       "rule": "cli-command-ui-screenshot.ts",
-      "reason": "Capture the selected display using owned temporary files and native HDC transfer, expose image artifacts, and keep visual review separate from structural assertions. Reviewed native changes through 8148ebb: complete SDK bundle/application name constraints; independent installed compile SDK, target API and minimum runtime API; HarmonyOS platform spellings read from the installed SDK version map, with unknown or ambiguous mappings rejected before directory creation. Creation recovery binds the requested APIs. Actual sdk-8 builds API 26 with minimum 22 and target 24 and verifies packaged HAP values; regression-17 passes 322 tests. All other mapped target digests and the pinned upstream tree are unchanged. Acceptance requires fresh current-identity reports for every mapped check; historical reports are not relabeled.",
+      "reason": "Capture the selected display using owned temporary files and native HDC transfer, expose image artifacts, and keep visual review separate from structural assertions. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
       "reviewer": "Codex"
     },
     {
       "rule": "cli-retired-src-compat-",
-      "reason": "Reviewed scope of src/compat/: The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths. Reviewed native changes through 8148ebb: complete SDK bundle/application name constraints; independent installed compile SDK, target API and minimum runtime API; HarmonyOS platform spellings read from the installed SDK version map, with unknown or ambiguous mappings rejected before directory creation. Creation recovery binds the requested APIs. Actual sdk-8 builds API 26 with minimum 22 and target 24 and verifies packaged HAP values; regression-17 passes 322 tests. All other mapped target digests and the pinned upstream tree are unchanged. Acceptance requires fresh current-identity reports for every mapped check; historical reports are not relabeled.",
+      "reason": "Reviewed scope of src/compat/: The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
       "reviewer": "Codex"
     },
     {
       "rule": "cli-retired-src-skills-",
-      "reason": "Reviewed scope of src/skills/: The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths. Reviewed native changes through 8148ebb: complete SDK bundle/application name constraints; independent installed compile SDK, target API and minimum runtime API; HarmonyOS platform spellings read from the installed SDK version map, with unknown or ambiguous mappings rejected before directory creation. Creation recovery binds the requested APIs. Actual sdk-8 builds API 26 with minimum 22 and target 24 and verifies packaged HAP values; regression-17 passes 322 tests. All other mapped target digests and the pinned upstream tree are unchanged. Acceptance requires fresh current-identity reports for every mapped check; historical reports are not relabeled.",
+      "reason": "Reviewed scope of src/skills/: The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
       "reviewer": "Codex"
     },
     {
       "rule": "cli-retired-src-install-check-",
-      "reason": "Reviewed scope of src/install-check/: The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths. Reviewed native changes through 8148ebb: complete SDK bundle/application name constraints; independent installed compile SDK, target API and minimum runtime API; HarmonyOS platform spellings read from the installed SDK version map, with unknown or ambiguous mappings rejected before directory creation. Creation recovery binds the requested APIs. Actual sdk-8 builds API 26 with minimum 22 and target 24 and verifies packaged HAP values; regression-17 passes 322 tests. All other mapped target digests and the pinned upstream tree are unchanged. Acceptance requires fresh current-identity reports for every mapped check; historical reports are not relabeled.",
+      "reason": "Reviewed scope of src/install-check/: The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
       "reviewer": "Codex"
     },
     {
       "rule": "cli-retired-src-update-",
-      "reason": "Reviewed scope of src/update/: The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths. Reviewed native changes through 8148ebb: complete SDK bundle/application name constraints; independent installed compile SDK, target API and minimum runtime API; HarmonyOS platform spellings read from the installed SDK version map, with unknown or ambiguous mappings rejected before directory creation. Creation recovery binds the requested APIs. Actual sdk-8 builds API 26 with minimum 22 and target 24 and verifies packaged HAP values; regression-17 passes 322 tests. All other mapped target digests and the pinned upstream tree are unchanged. Acceptance requires fresh current-identity reports for every mapped check; historical reports are not relabeled.",
+      "reason": "Reviewed scope of src/update/: The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
       "reviewer": "Codex"
     },
     {
       "rule": "cli-retired-src-commands-skills.ts",
-      "reason": "Reviewed scope of src/commands/skills.ts: The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths. Reviewed native changes through 8148ebb: complete SDK bundle/application name constraints; independent installed compile SDK, target API and minimum runtime API; HarmonyOS platform spellings read from the installed SDK version map, with unknown or ambiguous mappings rejected before directory creation. Creation recovery binds the requested APIs. Actual sdk-8 builds API 26 with minimum 22 and target 24 and verifies packaged HAP values; regression-17 passes 322 tests. All other mapped target digests and the pinned upstream tree are unchanged. Acceptance requires fresh current-identity reports for every mapped check; historical reports are not relabeled.",
+      "reason": "Reviewed scope of src/commands/skills.ts: The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
       "reviewer": "Codex"
     },
     {
       "rule": "cli-retired-src-commands-update.ts",
-      "reason": "Reviewed scope of src/commands/update.ts: The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths. Reviewed native changes through 8148ebb: complete SDK bundle/application name constraints; independent installed compile SDK, target API and minimum runtime API; HarmonyOS platform spellings read from the installed SDK version map, with unknown or ambiguous mappings rejected before directory creation. Creation recovery binds the requested APIs. Actual sdk-8 builds API 26 with minimum 22 and target 24 and verifies packaged HAP values; regression-17 passes 322 tests. All other mapped target digests and the pinned upstream tree are unchanged. Acceptance requires fresh current-identity reports for every mapped check; historical reports are not relabeled.",
+      "reason": "Reviewed scope of src/commands/update.ts: The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
       "reviewer": "Codex"
     },
     {
       "rule": "cli-retired-src-commands-serve.ts",
-      "reason": "Reviewed scope of src/commands/serve.ts: The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths. Reviewed native changes through 8148ebb: complete SDK bundle/application name constraints; independent installed compile SDK, target API and minimum runtime API; HarmonyOS platform spellings read from the installed SDK version map, with unknown or ambiguous mappings rejected before directory creation. Creation recovery binds the requested APIs. Actual sdk-8 builds API 26 with minimum 22 and target 24 and verifies packaged HAP values; regression-17 passes 322 tests. All other mapped target digests and the pinned upstream tree are unchanged. Acceptance requires fresh current-identity reports for every mapped check; historical reports are not relabeled.",
+      "reason": "Reviewed scope of src/commands/serve.ts: The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
       "reviewer": "Codex"
     },
     {
       "rule": "cli-retired-mcp-",
-      "reason": "Reviewed scope of mcp/: The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths. Reviewed native changes through 8148ebb: complete SDK bundle/application name constraints; independent installed compile SDK, target API and minimum runtime API; HarmonyOS platform spellings read from the installed SDK version map, with unknown or ambiguous mappings rejected before directory creation. Creation recovery binds the requested APIs. Actual sdk-8 builds API 26 with minimum 22 and target 24 and verifies packaged HAP values; regression-17 passes 322 tests. All other mapped target digests and the pinned upstream tree are unchanged. Acceptance requires fresh current-identity reports for every mapped check; historical reports are not relabeled.",
+      "reason": "Reviewed scope of mcp/: The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
       "reviewer": "Codex"
     },
     {
       "rule": "cli-release-LICENSE",
-      "reason": "Review LICENSE as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. Reviewed native changes through 8148ebb: complete SDK bundle/application name constraints; independent installed compile SDK, target API and minimum runtime API; HarmonyOS platform spellings read from the installed SDK version map, with unknown or ambiguous mappings rejected before directory creation. Creation recovery binds the requested APIs. Actual sdk-8 builds API 26 with minimum 22 and target 24 and verifies packaged HAP values; regression-17 passes 322 tests. All other mapped target digests and the pinned upstream tree are unchanged. Acceptance requires fresh current-identity reports for every mapped check; historical reports are not relabeled.",
+      "reason": "Review LICENSE as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
       "reviewer": "Codex"
     },
     {
       "rule": "cli-release-OAT.xml",
-      "reason": "Review OAT.xml as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. Reviewed native changes through 8148ebb: complete SDK bundle/application name constraints; independent installed compile SDK, target API and minimum runtime API; HarmonyOS platform spellings read from the installed SDK version map, with unknown or ambiguous mappings rejected before directory creation. Creation recovery binds the requested APIs. Actual sdk-8 builds API 26 with minimum 22 and target 24 and verifies packaged HAP values; regression-17 passes 322 tests. All other mapped target digests and the pinned upstream tree are unchanged. Acceptance requires fresh current-identity reports for every mapped check; historical reports are not relabeled.",
+      "reason": "Review OAT.xml as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
       "reviewer": "Codex"
     },
     {
       "rule": "cli-release-PRIVACY.md",
-      "reason": "Review PRIVACY.md as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. Reviewed native changes through 8148ebb: complete SDK bundle/application name constraints; independent installed compile SDK, target API and minimum runtime API; HarmonyOS platform spellings read from the installed SDK version map, with unknown or ambiguous mappings rejected before directory creation. Creation recovery binds the requested APIs. Actual sdk-8 builds API 26 with minimum 22 and target 24 and verifies packaged HAP values; regression-17 passes 322 tests. All other mapped target digests and the pinned upstream tree are unchanged. Acceptance requires fresh current-identity reports for every mapped check; historical reports are not relabeled.",
+      "reason": "Review PRIVACY.md as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
       "reviewer": "Codex"
     },
     {
       "rule": "cli-release-package.json",
-      "reason": "Review package.json as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. Reviewed native changes through 8148ebb: complete SDK bundle/application name constraints; independent installed compile SDK, target API and minimum runtime API; HarmonyOS platform spellings read from the installed SDK version map, with unknown or ambiguous mappings rejected before directory creation. Creation recovery binds the requested APIs. Actual sdk-8 builds API 26 with minimum 22 and target 24 and verifies packaged HAP values; regression-17 passes 322 tests. All other mapped target digests and the pinned upstream tree are unchanged. Acceptance requires fresh current-identity reports for every mapped check; historical reports are not relabeled.",
+      "reason": "Review package.json as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
       "reviewer": "Codex"
     },
     {
       "rule": "cli-release-package-lock.json",
-      "reason": "Review package-lock.json as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. Reviewed native changes through 8148ebb: complete SDK bundle/application name constraints; independent installed compile SDK, target API and minimum runtime API; HarmonyOS platform spellings read from the installed SDK version map, with unknown or ambiguous mappings rejected before directory creation. Creation recovery binds the requested APIs. Actual sdk-8 builds API 26 with minimum 22 and target 24 and verifies packaged HAP values; regression-17 passes 322 tests. All other mapped target digests and the pinned upstream tree are unchanged. Acceptance requires fresh current-identity reports for every mapped check; historical reports are not relabeled.",
+      "reason": "Review package-lock.json as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
       "reviewer": "Codex"
     },
     {
       "rule": "cli-release-CHANGELOG.md",
-      "reason": "Review CHANGELOG.md as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. Reviewed native changes through 8148ebb: complete SDK bundle/application name constraints; independent installed compile SDK, target API and minimum runtime API; HarmonyOS platform spellings read from the installed SDK version map, with unknown or ambiguous mappings rejected before directory creation. Creation recovery binds the requested APIs. Actual sdk-8 builds API 26 with minimum 22 and target 24 and verifies packaged HAP values; regression-17 passes 322 tests. All other mapped target digests and the pinned upstream tree are unchanged. Acceptance requires fresh current-identity reports for every mapped check; historical reports are not relabeled.",
+      "reason": "Review CHANGELOG.md as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
       "reviewer": "Codex"
     },
     {
       "rule": "cli-release-src/cli.ts",
-      "reason": "Review src/cli.ts as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. Reviewed native changes through 8148ebb: complete SDK bundle/application name constraints; independent installed compile SDK, target API and minimum runtime API; HarmonyOS platform spellings read from the installed SDK version map, with unknown or ambiguous mappings rejected before directory creation. Creation recovery binds the requested APIs. Actual sdk-8 builds API 26 with minimum 22 and target 24 and verifies packaged HAP values; regression-17 passes 322 tests. All other mapped target digests and the pinned upstream tree are unchanged. Acceptance requires fresh current-identity reports for every mapped check; historical reports are not relabeled.",
+      "reason": "Review src/cli.ts as locked source provenance and release/dispatch metadata. Preserve license attribution; dependencies, host installation and official entrypoints are not imported into the native runtime. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
       "reviewer": "Codex"
     },
     {
       "rule": "cli-emulator-license-protocol",
-      "reason": "Reviewed HarmonyOS Software Service and SDK agreement keys. Native acceptance delegates to supported SDK commands, checks installed agreements, and reconciles child command records only after process/session closure. Already-accepted license reconciliation settles only matching recorded child commands after process closure. Stale review digests fail before SDK acceptance and the collector checks native config bytes and mtime remain unchanged. Reviewed native changes through 8148ebb: complete SDK bundle/application name constraints; independent installed compile SDK, target API and minimum runtime API; HarmonyOS platform spellings read from the installed SDK version map, with unknown or ambiguous mappings rejected before directory creation. Creation recovery binds the requested APIs. Actual sdk-8 builds API 26 with minimum 22 and target 24 and verifies packaged HAP values; regression-17 passes 322 tests. All other mapped target digests and the pinned upstream tree are unchanged. Acceptance requires fresh current-identity reports for every mapped check; historical reports are not relabeled.",
+      "reason": "Reviewed HarmonyOS Software Service and SDK agreement keys. Native acceptance delegates to supported SDK commands, checks installed agreements, and reconciles child command records only after process/session closure. Already-accepted license reconciliation settles only matching recorded child commands after process closure. Stale review digests fail before SDK acceptance and the collector checks native config bytes and mtime remain unchanged. Current performance revision review: Mapped native target bytes are unchanged from the archived review; the pinned upstream Git commit/tree and exclusions remain unchanged. Acceptance requires new reports with runtime 23758f48 and compiled 25b0b62c; broader release and performance gates remain independent.",
       "reviewer": "Codex"
     }
   ],
@@ -314,8 +314,16 @@
       "sha256": "91084d264fc008478c56a93410875762ce81238f7f2d3c97a6f7c9f3d88ef8c6"
     },
     {
+      "path": "src/core/files.ts",
+      "sha256": "3fba338983b609d47b64fb38f55cded9b50f5c59b300da2c647d8f0ca61e9a85"
+    },
+    {
       "path": "src/core/process.ts",
       "sha256": "763a7d74f9c8049ec23d6ec182c6bb5943c1dd86bb559e8fc8c7e0da7c66a1c8"
+    },
+    {
+      "path": "src/core/request-log.ts",
+      "sha256": "f92b638b7a9a68220386079764faa662136436b4905c70df56d4d87b7a517260"
     },
     {
       "path": "src/core/store.ts",
@@ -323,7 +331,7 @@
     },
     {
       "path": "src/core/toolchain.ts",
-      "sha256": "61c4429efcf109b35cb165b0dee44ce307b80a34a38401b753a4dc815c8930ae"
+      "sha256": "84ddc259d305babab1dba7750c88c86f7627e38be054bede90728063e8e5677d"
     },
     {
       "path": "src/services/auth.ts",
@@ -351,7 +359,7 @@
     },
     {
       "path": "src/services/hotreload.ts",
-      "sha256": "bbf592c2829b42d09d1fc54543742f3792b486d2f23c5fc2e99b10d92e7a41c9"
+      "sha256": "0284a9f7d792d23e6ed5ed370a840a81bc6bbbb4e87f90082608837a5705920e"
     },
     {
       "path": "src/services/knowledge.ts",
@@ -375,7 +383,7 @@
     },
     {
       "path": "src/services/project.ts",
-      "sha256": "3d62772b63491b4d8d0f0aafa5d67f7a69fe02027c6f55250ee96c51628db130"
+      "sha256": "d1c9eb9ee0ed6a90d7f8639815bb74a1fc6658fab7ceebea534669e3f588ff54"
     },
     {
       "path": "src/services/signature.ts",
@@ -404,6 +412,10 @@
     {
       "path": "src/services/ui-parse.ts",
       "sha256": "ef90ad1451dae6a40a61cb858bcfde32afdd9279672489129c29fd4b8d6fba94"
+    },
+    {
+      "path": "src/worker.ts",
+      "sha256": "b4aa33ebec1486c8ea5eaa1d7fd12154963415dda9abb7389f15ae26296ed628"
     },
     {
       "path": "test/native-cloud-profile.test.ts",
@@ -439,11 +451,15 @@
     },
     {
       "path": "test/native-project.test.ts",
-      "sha256": "bd26e35b0ebe11d53b18daad66dbaf2cfaa9e95f8ea3a9bd7c014b3a634c96ba"
+      "sha256": "aa0e122a25debdaa10658cf94328122c822791b69af8d4c287b477a7e956463f"
     },
     {
       "path": "test/native-reports.test.ts",
       "sha256": "98dd60e5e965348d9a16c93d4144e96c894ced9bf3a9da95c4da1815eea61c78"
+    },
+    {
+      "path": "test/native-request-log.test.ts",
+      "sha256": "074f591760ee2ea4bfe8ccbced78e1b721607ddfd29d3cb212dcd4defe71f50b"
     },
     {
       "path": "test/native-resources.test.ts",
@@ -452,6 +468,10 @@
     {
       "path": "test/native-runtime.test.ts",
       "sha256": "7904ac1fa20416b77456069aa724c87791b776230a18690f3ff15dae936872c9"
+    },
+    {
+      "path": "test/native-shutdown.test.ts",
+      "sha256": "33d5eca71920d070a98f52ff5b0147a65cf944795c68fc8480efbab1b49a4079"
     },
     {
       "path": "test/native-signature.test.ts",
@@ -464,6 +484,10 @@
     {
       "path": "test/native-text.test.ts",
       "sha256": "764e67b35c3587e3000d7a93bfecca102cd208af6313828b7f62a050d0b52ca1"
+    },
+    {
+      "path": "test/native-toolchain.test.ts",
+      "sha256": "a1001dc6839f80bd9e12969f59c843b8cbb5ad8c1ea82a1cbf860b962e52b792"
     },
     {
       "path": "test/native-ui-import.test.ts",
@@ -493,11 +517,14 @@
     "test/native-lint.test.ts",
     "test/native-project.test.ts",
     "test/native-reports.test.ts",
+    "test/native-request-log.test.ts",
     "test/native-resources.test.ts",
     "test/native-runtime.test.ts",
+    "test/native-shutdown.test.ts",
     "test/native-signature.test.ts",
     "test/native-signing-config.test.ts",
     "test/native-text.test.ts",
+    "test/native-toolchain.test.ts",
     "test/native-ui-import.test.ts",
     "test/native-upstream.test.ts"
   ]

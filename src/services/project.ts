@@ -139,10 +139,12 @@ const builtSchema = z.object({
   truncated: z.boolean(),
   log: z.unknown().optional(),
 });
-export interface Project {
+export interface ProjectSelection {
   root: string;
   product: z.infer<typeof productSchema>;
   modules: { name: string; root: string; target: string }[];
+}
+export interface Project extends ProjectSelection {
   fingerprint: string;
 }
 function readProjectProfile(candidate: string) {
@@ -156,11 +158,11 @@ function readProjectProfile(candidate: string) {
   const profile = profileSchema.parse(readObject(file));
   return { root, profile, file };
 }
-export function inspectProject(
+function inspectSelection(
   candidate: string,
   productName?: string,
-): Project {
-  const { root, profile, file } = readProjectProfile(candidate);
+): ProjectSelection {
+  const { root, profile } = readProjectProfile(candidate);
   const selected = productName
     ? profile.app.products.find((item) => item.name === productName)
     : (profile.app.products.find((item) => item.name === "default") ??
@@ -208,8 +210,13 @@ export function inspectProject(
     "PRODUCT_HAS_NO_MODULES",
     "No modules apply to the selected product",
   );
+  return { root, product, modules };
+}
+export function inspectProject(candidate: string, productName?: string): Project {
+  const selection = inspectSelection(candidate, productName),
+    { root, modules } = selection;
   const files = [
-    file,
+    path.join(root, "build-profile.json5"),
     path.join(root, "AppScope/app.json5"),
     path.join(root, "oh-package.json5"),
     path.join(root, "hvigor/hvigor-config.json5"),
@@ -223,9 +230,7 @@ export function inspectProject(
     ),
   ].filter((item) => fs.existsSync(item));
   return {
-    root,
-    product,
-    modules,
+    ...selection,
     fingerprint: digest(files.map((file) => [file, fileDigest(file)])),
   };
 }
@@ -278,6 +283,13 @@ export class ProjectService {
       "Specify project_path or switch_cwd",
     );
     return inspectProject(root || this.selected!, product);
+  }
+  /** Read-only catalogs/session lookups need a current, validated selection,
+   * but never consume build inputs. Tasks and language sessions use resolve()
+   * to capture the full content fingerprint before they are submitted. */
+  resolveSelection(root?: string, product?: string): ProjectSelection {
+    invariant(root || this.selected, "PROJECT_REQUIRED", "Specify project_path or switch_cwd");
+    return inspectSelection(root || this.selected!, product);
   }
   async create(
     input: ProjectCreateInput,
