@@ -104,6 +104,12 @@ SDK 诊断确认 Emulator 每次启动修改自身文件 mtime/ctime，字节摘
 
 随后复核 `copy_template.apiLevel` 发现原迁移说明与创建行为不一致：创建仅接受已安装 SDK，并把目标、最低兼容版本都设为该 SDK。现增加独立的 `target_api`、`compatible_api`，保留 `sdk_version` 选择编译 SDK，生成与读取三个独立版本字段；范围不合法时不创建目录，恢复绑定原 API 输入。新增三个回归及实际 SDK 的较低目标 API 创建、构建和 HAP 版本检查。该批仍待编译、CI 与 SDK 验收；迁移行继续保持 pending，旧报告不作为新增功能的通过证据。
 
+提交 `8148ebb` 的 [CI 34239847065](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34239847065) 完成修复后的三平台复验：macOS/Linux × Node22/24 各 322 项、Windows × Node22/24 各 311 项适用回归全部通过，零失败、取消、跳过。六组干净安装各 10 项、Windows 各 20 轮进程压力检查通过。六份分发清单逐文件摘要一致，共 401 个文件、90,552,676 字节，文件清单摘要为 `3f1f4a6efd00d40af6760463b89fce09f6218482de9fdcddb797d8dc6bfe4347`。整轮 CI 当时仍因上游凭证过期失败，原始制品和失败日志保存在 `20260908-native6-platform-ci-9`。
+
+本机同版 `sdk-8` 通过 22 项，包括用编译 API 26 创建目标 API 24、最低 API 22 的工程，真实构建后核对 HAP 版本；`checker-6`、`lint-6`、`crash-9`、`device-readonly-4` 分别通过 13、6、6、14 项。`hot-device-3` 的两次真实 HQF、界面断言及进程保持通过，watch 已停止、原源文件已恢复；`signing-reverify-4` 的真实 SDK 验签通过，但未重新创建云端签名资产。`emulator-readonly-7` 和 `emulator-7` 各通过 7 项，后者已删除本轮专用实例。
+
+上述当前快照的运行摘要为 `b33f2c9b71c9a5afbde7e9774e3b67488dbb843e0417fb76834d6f4316cfc67e`，编译摘要为 `348309c9d81d02a2201627a37f1d3e1d0e4a6ca1f9db63bc65b1c0cabb48bfa6`，源锁摘要为 `bf3cc411`。`ui-mcp-performance-3` 完成 18,000 次离线查询；101/1001/10001 节点各轮 P95 分别下降约 31.8%–33.1%、68.2%–69.4%、77.9%–81.2%。该结果只覆盖离线 `ui_find`，不替代真机及全部直接能力性能验收。`deveco-code` 的 10 项、`deveco-cli` 的 25 项映射检查现已使用同版原始报告重新接收，两个历史评审原样归档，本地上游门禁通过；最终长稳、迁移矩阵及正式发布门槛仍未全部通过。
+
 ## 无法自动核实的外部结果
 
 本轮补充记录（2026-09-08）：`sdk-soak-7` 已完成一小时活动和六分钟空闲回收，566 轮 LSP/UI 检查、48 次 ABC 补丁构建均无错误；任务、监听器、连接、进程、缓存与 Worker 最终全部归零，watch 停止 1046 ms，服务关闭 5.8 ms。原始报告摘要为 `d83038254c8941f237d873fe130c94390a7f26d7e49b73b72ea74ab9755b6cae`，运行摘要 `6da7f2351c4a1c99672ab9dc472787274df18e11de5271c659a247aa70c729ae`。该冻结版本早于后续项目创建修改；不包含 HQF 签名、安装，也不替代最终版本长稳。
