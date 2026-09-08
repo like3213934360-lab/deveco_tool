@@ -19,8 +19,9 @@ MCP 主进程提供静态工具目录和参数校验；Worker 持有领域服务
 - 已发生但未获得可靠回执的副作用进入 `needs_input`，只允许声明的 `recheck` 输入。安装与启动已拆为两个检查点，启动结果不明时不重复安装。
 - 部署工作流的安装和启动均有设备命令回执核对。安装输入在传输后核对设备端 SHA-256；安装完成但宿主响应丢失时不重新上传或安装。单包/三包的成功、失败及重开 SQLite 后继续已通过回归，真实签名包恢复与安装准备阶段中断仍待验收；见 `docs/native-deployment.md`。
 - 已保存的 `.arkpilot/flows` 继续由新 UI 服务读取。替代选择器必须通过原有最终断言后才能保存。
+- `deveco_doctor(target).ui_driver` 替代旧 `driver_status`：固定设备上的只读架构/UiTest版本与原生文字组件检查，默认不访问设备。Node26/24各266项回归和真机只读14项通过，当前改动的跨平台复验待完成，见 `docs/native-ui-driver.md`。
 - `ui_flow.routes/navigate` 直接读取所选产品的模块与公开 Ability，支持 Action、URI/MIME 和类型明确的 Want 参数。导航与保存流程执行持久化为内部任务，通过 `workflow_run` 查询、恢复和取消；公开工作流目录仍为 8 个。流程内容与应用配置在提交时固定。
-- 目标导航支持中文流程名称匹配，并在公开入口、同名流程、产品/模块不匹配时明确处理歧义。未知目标按声明的 home/mainElement/唯一公开 Ability 选择录制入口，创建持久化空草稿；入口歧义不操作设备。并发去重、重启后继续、取消和断言失败不保存已有回归，当前新增路径的真实设备与跨平台验收待补，见 `docs/native-ui-workflows.md`。
+- 目标导航支持中文流程名称匹配，并在公开入口、同名流程、产品/模块不匹配时明确处理歧义。未知目标按声明的 home/mainElement/唯一公开 Ability 选择录制入口，创建持久化空草稿；入口歧义不操作设备。并发去重、重启后继续、取消和断言失败不保存已有回归，提交 `1ecafae` 六组跨平台CI通过；当前新增路径的真实设备验收待补，见 `docs/native-ui-workflows.md`。
 - `ui_flow.record_start/status/stop/cancel` 使用内部 LangGraph 任务和加密 SQLite 草稿，记录回执与输入占位变量；最终断言固定后验证，通过才保存。取消传递给在途操作，关闭运行时会等待录制操作退出。未完成录制不被历史任务清理。详见 `docs/native-ui-workflows.md`。
 - 热重载基线安装和补丁应用在设备租约内重新核对持久化录制，拒绝打断同一设备的未完成录制；跨 Node 进程的构建期间竞争、拒绝后清理和其他设备隔离已通过回归。该约束适用于共享状态目录的原生 MCP，不控制手工操作或其他软件。
 - UI 快照复用按需构造的索引；录制、流程定位与点击使用同一份操作前快照，避免二次 dump，操作后失效。动作与断言备选选择器的歧义判断不受 `limit:1` 绕过。显示器与窗口共同决定可见范围，截图仍不作为业务成功证据。
@@ -48,7 +49,7 @@ MCP 主进程提供静态工具目录和参数校验；Worker 持有领域服务
 | Linter、API 扫描 | `services/diagnostics.ts` | 真实 Linter 指定文件/配置、发现缺陷、增量、显式修复后复查和拒绝坏配置 6 项通过；API 兼容性问题和无差异扫描通过。Linter 空报告不证明全部规则执行，详见 `docs/native-linter.md` |
 | HDC、部署、启动 | `services/device.ts`、`package.ts` | HAP 元数据在真实构建产物上通过；丢失启动回执的恢复回归通过。专用个人签名包真实安装/启动通过；多包签名部署及可核实的外部恢复证据仍未齐全 |
 | UI、中文输入、保存流程与录制 | `services/device.ts`、`text.ts`、`flow.ts`、`recording.ts` | 重启恢复、原断言约束、丢失回执、取消、关闭、保留期限与设备竞争回归通过；真实设备 UI 读取和窗口断言通过，专用应用中文输入、最终断言及 MCP 重启后的完整录制/重放 16 项通过，见 `docs/native-signing.md` |
-| 公开入口、目标导航与 Want | `services/routes.ts`、`navigation.ts`、`runtime.ts` | 产品/模块/公开性、URI/MIME、中文目标匹配、歧义、Want 类型和任务恢复回归通过；未匹配目标自动录制已实现，当前路径真实设备与跨平台复验待完成 |
+| 公开入口、目标导航与 Want | `services/routes.ts`、`navigation.ts`、`runtime.ts` | 产品/模块/公开性、URI/MIME、中文目标匹配、歧义、Want 类型和任务恢复回归通过；未匹配目标自动录制已实现，1ecafae 六组跨平台通过，当前路径真实设备复验待完成 |
 | 日志与崩溃 | `services/logs.ts`、`crash.ts` | 命名故障记录、设备时间筛选、整行过滤、权限、截断、多进程事件和提交时证据保存的回归通过；真实设备 tail/无匹配字面量筛选、故障查询的部分权限失败已验证；实际故障文件读取、过滤性能门槛与应用栈帧排序待验收 |
 | 热重载 | `services/hotreload.ts`、`services/hvigor` | SDK watch 基线、同一 worker 两次生成不同 ABC、停止与配置恢复通过；个人签名基线及两次 HQF 真机应用通过，PID 不变、两次按钮文字断言通过，停止和源码恢复通过；更多模块/设备场景待验收 |
 | 本地和云端签名 | `services/signature.ts`、`auth.ts` | 真实密钥/CSR、Chrome 开发者认证、团队及证书/设备清单、两种重启后的认证保持通过；POST 回调、浏览器结果页和设备总数字段修复后复验。个人团队云端证书、调试 Profile、签名安装及原生工程配置生成通过；过期刷新、更多签名类型与外部恢复待验收，见 `docs/native-signing.md` |

@@ -103,6 +103,6 @@
 
 `test/native-recording.test.ts` 使用真实 LangGraph/SQLite 和替代设备服务验证并发提交只启动一次、运行时重开后保留步骤、原请求在保存前后持续去重、断言失败不保存、通过后按目标重放、入口歧义不触碰设备，以及排队取消不启动。既有显式录制和路由回归同时运行。
 
-本机 Node26 的 `20260908-navigation-regression-1` 和独立原生安装 Node24 的 `20260908-navigation-node24-1` 各263项回归全部通过，0失败/取消/跳过。运行摘要均为 `e9518fa013250056e14744a48f38c2ca1d929ed066105093ea52f500c8edff4f`，编译摘要均为 `c31ede7a1ba4a31c22a209bf87b50f4f633699c9c00601e9b98ba0d0bf02e2ef`。证据位于用户目录 `Library/Application Support/DevEcoMCP/acceptance/`；独立安装目录为 `Library/Caches/DevEcoMCP/validation/20260908-navigation-1`。本轮没有操作真实设备，新自动录制路径的真机与跨平台验证仍待完成。
+本机 Node26 的 `20260908-navigation-regression-1` 和独立原生安装 Node24 的 `20260908-navigation-node24-1` 各263项回归全部通过，0失败/取消/跳过。运行摘要均为 `e9518fa013250056e14744a48f38c2ca1d929ed066105093ea52f500c8edff4f`，编译摘要均为 `c31ede7a1ba4a31c22a209bf87b50f4f633699c9c00601e9b98ba0d0bf02e2ef`。证据位于用户目录 `Library/Application Support/DevEcoMCP/acceptance/`；独立安装目录为 `Library/Caches/DevEcoMCP/validation/20260908-navigation-1`。[CI 34189579814](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34189579814) 对应 `1ecafae`，macOS/Windows/Linux × Node22/24 六组全部通过。本轮没有操作真实设备，新自动录制路径的真机验证仍待完成。
 
 跨进程竞争回归使用真实 SQLite、设备租约和两个 Node 进程，模拟 SDK 编译和设备调用，验证拒绝发生在安装/补丁之前，并核对 watch 退出及配置恢复。这不是新的真机竞争验收；真实 UI 与两次热补丁证据记录的是之前的独立运行快照。

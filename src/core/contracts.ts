@@ -575,8 +575,8 @@ export const tools = {
   },
   deveco_doctor: {
     description:
-      "Inspect runtime, component paths, versions and available capabilities. Availability does not imply completed platform validation.",
-    schema: z.strictObject({ ...projectFields }),
+      "Inspect runtime, component paths, versions and available capabilities. With explicit target, read device architecture/UiTest version and native text component availability without starting a daemon or injecting input. Without target no device is probed. Detection does not imply a verified UI operation or completed platform validation.",
+    schema: z.strictObject({ ...projectFields, target }),
   },
   deveco_restart: {
     description:

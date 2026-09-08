@@ -1043,6 +1043,7 @@ export class Runtime {
         return this.projects.select(tools[name].schema.parse(raw).project_path);
       case "deveco_doctor": {
         const input = tools[name].schema.parse(raw);
+        const { inspectUiDriver } = await import("./ui-driver.js");
         let toolchain: unknown, project: unknown, api_compatibility: unknown;
         try {
           toolchain = discoverToolchain();
@@ -1070,6 +1071,7 @@ export class Runtime {
           toolchain,
           api_compatibility,
           project: project ?? null,
+          ui_driver: await inspectUiDriver(this.devices, input.target, signal),
           processes: this.processes.size,
           parsers: this.cpu.metrics,
           ui_cache: this.devices.cacheMetrics,

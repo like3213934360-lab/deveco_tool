@@ -2028,26 +2028,31 @@
       "source": "ui_flow",
       "targets": [
         "tool:ui_flow",
-        "tool:workflow_run"
+        "tool:workflow_run",
+        "tool:deveco_doctor"
       ],
       "adapters": [
         "src/services/flow.ts",
         "src/services/routes.ts",
         "src/services/runtime.ts",
         "src/services/navigation.ts",
-        "src/services/recording.ts"
+        "src/services/recording.ts",
+        "src/services/ui-driver.ts",
+        "src/services/text-component.ts"
       ],
       "checks": [
         "test/native-flow.test.ts",
         "test/native-routes.test.ts",
         "test/native-recording.test.ts",
-        "scripts/native-canary-ui-acceptance.ts"
+        "test/native-ui-driver.test.ts",
+        "scripts/native-canary-ui-acceptance.ts",
+        "scripts/native-device-readonly.ts"
       ],
       "behavior": "公开入口优先的目标导航、保存流程与持久化录制；每次动作有回执，只在原断言通过后保存流程或选择器修复。",
       "parameters": {
         "action": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "replaced",
+          "replacement": "ui_flow 的导航、路由、录制及流程管理动作；异步状态与取消使用 workflow_run；driver_status 整合为 deveco_doctor(target).ui_driver"
         },
         "id": {
           "status": "mapped",
@@ -2166,8 +2171,8 @@
         {
           "field": "action",
           "value": "driver_status",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "replaced",
+          "replacement": "deveco_doctor(target).ui_driver 只读检测指定设备架构、UiTest 版本与原生文字组件；默认不探测设备，删除可选代理包和后端配置探测"
         },
         {
           "field": "action",
@@ -2237,14 +2242,16 @@
         }
       ],
       "remaining": [
-        "未知目标自动录制的真实设备与本轮跨平台验收；入口选择、并发去重、重启和最终断言回归已通过",
-        "driver_status 诊断映射",
+        "未知目标自动录制的真实设备验收；入口选择、并发去重、重启、最终断言回归及提交 1ecafae 六组跨平台 CI 已通过",
+        "原生 driver 诊断的最终跨平台快照复验；本机 Node26/24 回归和真机只读探测已通过",
         "既有用户保存流程迁移验收；专用应用录制、MCP 重启和重放已通过",
         "录制期间热重载等长期会话对 UI 状态的干扰协调"
       ],
       "acceptance": "pending",
       "evidence": [
-        "docs/native-signing.md"
+        "docs/native-signing.md",
+        "docs/native-ui-workflows.md",
+        "docs/native-ui-driver.md"
       ]
     },
     {

@@ -5,6 +5,7 @@ import { setTimeout as delay } from "node:timers/promises";
 import { resourceRoot } from "../core/config.js";
 import { invariant, object, ToolError } from "../core/errors.js";
 import type { DeviceService } from "./device.js";
+import { textComponent } from "./text-component.js";
 
 export function textRequest(
   point: { x: number; y: number; displayId?: number },
@@ -161,33 +162,10 @@ export async function pasteText(
   const machine = (
     await device.shell(target, ["uname", "-m"], signal)
   ).stdout.trim();
-  invariant(
-    ["aarch64", "arm64", "x86_64"].includes(machine),
-    "UI_TEXT_UNSUPPORTED",
-    "No verified text component for this device architecture",
-  );
   const version = (
     await device.shell(target, ["uitest", "--version"], signal)
   ).stdout.trim();
-  invariant(
-    /^\d+\.\d+\.\d+\.\d+$/.test(version),
-    "UI_TEXT_UNSUPPORTED",
-    "Cannot identify UiTest protocol",
-  );
-  const parts = version.split(".").map(Number);
-  const min = [6, 0, 2, 2];
-  invariant(
-    (parts
-      .map((value, index) => value - min[index]!)
-      .find((value) => value !== 0) ?? 0) >= 0,
-    "UI_TEXT_UNSUPPORTED",
-    "Modern UiTest 6.0.2.2 or newer is required",
-  );
-  const unix = machine !== "x86_64";
-  const asset = unix
-    ? "uitest_agent_v1.2.2.so"
-    : "uitest_agent_v1.1.9.x86_64.so";
-  const endpoint = unix ? "localabstract:uitest_socket" : "tcp:8012";
+  const { unix, asset, endpoint } = textComponent(machine, version);
   const ready = async () => {
     const output = unix
       ? (await device.shell(target, ["cat", "/proc/net/unix"], signal)).stdout

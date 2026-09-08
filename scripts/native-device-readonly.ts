@@ -75,6 +75,27 @@ async function observe(name: string, task: () => Promise<unknown>) {
   save();
 }
 try {
+  await observe("ui_driver_readonly_detection", async () => {
+    const result = await runtime.call("deveco_doctor", { target });
+    const driver = z
+      .object({
+        ui_driver: z
+          .object({
+            status: z.literal("detected"),
+            target: z.literal(target),
+            architecture: z.string().min(1),
+            uitest_version: z.string().min(1),
+            operation_verified: z.literal(false),
+            text_input: z.object({
+              status: z.literal("component_detected"),
+              component: z.string().min(1),
+            }),
+          })
+          .passthrough(),
+      })
+      .parse(result).ui_driver;
+    return driver;
+  });
   await observe("device_properties", async () => {
     const result = await runtime.call("device_info", { target });
     z.object({ properties: z.record(z.string(), z.string()) }).parse(result);

@@ -106,6 +106,8 @@ macOS 的 Studio 路径通常为 `/Applications/DevEco-Studio.app`。使用 CLT 
 
 连接后先调用 `deveco_doctor` 核对工具链、工程和能力，再按需登录或运行工作流。也可在设置了同样两个环境变量的终端执行 `node dist/src/cli.js doctor`。修改编译产物后需让宿主重新连接 MCP；`deveco_restart` 只重启运行服务 Worker。
 
+通过 MCP 给 `deveco_doctor` 显式提供 `target` 可只读检测设备的 UiTest 与文字输入组件；未提供时不访问设备。检测结果不等于实际 UI 操作已经验证，详见[驱动诊断](docs/native-ui-driver.md)。
+
 ## 工作流
 
 `workflow_catalog` 提供工作流定义、输入 Schema、所需能力和完成条件。当前公开目录包括：
@@ -183,7 +185,7 @@ macOS 的 Studio 路径通常为 `/Applications/DevEco-Studio.app`。使用 CLT 
 
 ### UI 流程与知识使用
 
-UI 流程保存在工程的 `.arkpilot/flows/<id>.json`。公开 Ability 可作为直接入口，已保存流程可按 ID 或目标导航；未知目标需要显式开始录制。录制草稿持久化并加密，文本输入转为运行时变量，最终断言通过后才保存流程或修复选择器。保留的旧流程需先通过新版校验，详见[UI 工作流](docs/native-ui-workflows.md)。
+UI 流程保存在工程的 `.arkpilot/flows/<id>.json`。公开 Ability 可作为直接入口，已保存流程可按 ID 或目标导航；未知目标在工程存在明确公开入口时建立空录制，入口歧义则返回候选供显式选择。返回录制任务不表示已经到达目标。录制草稿持久化并加密，文本输入转为运行时变量，最终断言通过后才保存流程或修复选择器。保留的旧流程需先通过新版校验，详见[UI 工作流](docs/native-ui-workflows.md)。
 
 `ui_snapshot` 默认只截图，读取树需指定 `mode: "tree"` 或 `"both"`。`ui_find` 可复用快照，也可查询保存的树；离线结果不代表设备当前状态。点击前需要明确目标，手势和中文输入使用 `ui_control`，流程完成使用 `verify_ui` 或工作流断言核对。
 
