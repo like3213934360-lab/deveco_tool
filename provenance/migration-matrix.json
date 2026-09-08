@@ -2946,12 +2946,11 @@
       "checks": [
         "test/native-logs.test.ts"
       ],
-      "remaining": [
-        "应用栈帧位置排序和知识建议完整性对照",
-        "真实崩溃与进程交错日志验收"
+      "remaining": [],
+      "acceptance": "verified",
+      "evidence": [
+        "provenance/migration-acceptance/92e5a5dce193c2f243844f08ba62994d5dcfba1a6749de70cfd66e79a28c0f27.json"
       ],
-      "acceptance": "pending",
-      "evidence": [],
       "targets": [
         "workflow:crash_diagnose"
       ],
@@ -2998,12 +2997,11 @@
       "checks": [
         "test/native-logs.test.ts"
       ],
-      "remaining": [
-        "应用栈帧位置排序和知识建议完整性对照",
-        "真实崩溃与进程交错日志验收"
+      "remaining": [],
+      "acceptance": "verified",
+      "evidence": [
+        "provenance/migration-acceptance/7ecaaba17bc8c8d57ec7e6e3c47940af49510bac494ad579942dba7778560711.json"
       ],
-      "acceptance": "pending",
-      "evidence": [],
       "targets": [
         "workflow:crash_diagnose"
       ],

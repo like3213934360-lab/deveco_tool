@@ -404,3 +404,90 @@ test("large interleaved logs produce identical attributed crash evidence through
     await pool.close();
   }
 });
+
+test("AppKit RuntimeError exit headers attribute the following exception to that process only", async () => {
+  const line = (pid: number, tag: string, message: string) =>
+    `09-09 07:11:50.282 ${pid} ${pid} E C01317/application/${tag}: ${message}`;
+  const log = [
+    line(11, "ArkCompiler", "TypeError: earlier unattributed error"),
+    line(11, "ArkCompiler", "at old (entry/src/pages/Old.ets:2:1)"),
+    line(
+      11,
+      "AppKit",
+      "com.example.target is about to exit due to RuntimeError",
+    ),
+    line(
+      22,
+      "AppKit",
+      "com.example.other is about to exit due to RuntimeError",
+    ),
+    line(11, "AppKit", "Error type:TypeError"),
+    line(22, "AppKit", "Error type:RangeError"),
+    line(11, "AppKit", "Error name:TypeError"),
+    line(22, "AppKit", "Error message:unrelated exception"),
+    line(
+      11,
+      "AppKit",
+      "Error message:Cannot load property of null or undefined",
+    ),
+    line(11, "AppKit", "Stacktrace:"),
+    line(22, "AppKit", "at other (entry/src/pages/Other.ets:7:3)"),
+    line(
+      11,
+      "AppKit",
+      "at anonymous entry (entry/src/main/ets/pages/Index.ets:18:15)",
+    ),
+  ].join("\n");
+  const options = { bundle_name: "com.example.target", process_hint: "11" };
+  const parsed = parseCrash(log, options);
+  assert.equal(parsed.status, "detected");
+  assert.equal(parsed.bundle, options.bundle_name);
+  assert.equal(parsed.pid, "11");
+  assert.equal(parsed.kind, "TypeError");
+  assert.equal(
+    parsed.error_message,
+    "Cannot load property of null or undefined",
+  );
+  assert.equal(parsed.suspected_location?.line, 18);
+  assert.equal(parsed.suspected_location?.column, 15);
+  assert.equal(parsed.matching_event_count, 1);
+  assert.doesNotMatch(
+    JSON.stringify(parsed),
+    /Other\.ets|Old\.ets|unrelated exception|earlier unattributed/,
+  );
+  assert.equal(parsed.diagnosisComplete, false);
+  const pool = new CpuPool();
+  try {
+    assert.deepEqual(
+      await pool.run({ kind: "crash", content: log, options }),
+      parsed,
+    );
+  } finally {
+    await pool.close();
+  }
+
+  for (const prefix of ["", "ApplicationNote"]) {
+    const unrelated = [
+      prefix
+        ? line(
+            11,
+            prefix,
+            "com.example.target is about to exit due to RuntimeError",
+          )
+        : "com.example.target is about to exit due to RuntimeError",
+      line(11, "AppKit", "TypeError: unrelated failure"),
+    ].join("\n");
+    assert.equal(parseCrash(unrelated, options).matching_event_count, 0);
+  }
+  assert.equal(
+    parseCrash(
+      line(
+        11,
+        "AppKit",
+        "com.example.target is about to exit due to RuntimeError",
+      ),
+      options,
+    ).matching_event_count,
+    0,
+  );
+});

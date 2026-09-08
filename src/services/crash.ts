@@ -88,13 +88,13 @@ export function parseCrash(log: string, options: CrashOptions = {}) {
     }
     if (embeddedHilog) continue;
     const hilog =
-      /^\s*(?:\d{4}-)?\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}(?:\.\d+)?\s+(\d+)\s+\d+\s+[VDIWEF]\s+[^:]*:\s?(.*)$/.exec(
+      /^\s*(?:\d{4}-)?\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}(?:\.\d+)?\s+(\d+)\s+\d+\s+[VDIWEF]\s+([^:]*):\s?(.*)$/.exec(
         raw,
       );
     if (hilog) lastPid = hilog[1]!;
     const pid = hilog?.[1] ?? lastPid,
       key = pid ?? "file",
-      text = (hilog?.[2] ?? raw).trim();
+      text = (hilog?.[3] ?? raw).trim();
     if (!streams.has(key)) {
       if (streams.size >= 512) {
         bounded = true;
@@ -103,6 +103,22 @@ export function parseCrash(log: string, options: CrashOptions = {}) {
       streams.set(key, empty(pid));
     }
     let event = streams.get(key)!;
+    // AppKit emits the full bundle before its exception fields. The log tag
+    // itself can abbreviate the bundle and cannot establish attribution.
+    const appKitExit = hilog?.[2]?.endsWith("/AppKit")
+      ? /^([A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)+) is about to exit due to RuntimeError$/.exec(
+          text,
+        )
+      : null;
+    if (appKitExit) {
+      flush(event);
+      event = empty(pid);
+      if (appKitExit[1]!.length <= 256) {
+        event.bundle = appKitExit[1]!;
+        event.process = appKitExit[1]!;
+      } else bounded = true;
+      streams.set(key, event);
+    }
     const field =
         /^(bundle\s*name|bundle|app|process\s*name|process|pid|timestamp)\s*[:：]\s*(.*)$/i.exec(
           text,
