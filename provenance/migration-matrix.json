@@ -654,7 +654,7 @@
       "remaining": [],
       "acceptance": "verified",
       "evidence": [
-        "docs/native-process-ownership.md"
+        "provenance/migration-acceptance/c1ca532f66eefe98e24896a2fe296ffa205d58e7c34b125b8af35697d56cbc4c.json"
       ]
     },
     {
@@ -1377,7 +1377,7 @@
       "remaining": [],
       "acceptance": "verified",
       "evidence": [
-        "docs/native-knowledge.md"
+        "provenance/migration-acceptance/4a2c302c16ecde5c626b67f67717cc75541052e37485686da355e7a6cabd68e5.json"
       ]
     },
     {
@@ -1801,7 +1801,7 @@
       "remaining": [],
       "acceptance": "verified",
       "evidence": [
-        "docs/native-project-context.md"
+        "provenance/migration-acceptance/2aa1c26cfb4f7d5cf666c3615742c023aeb5fb8f051e9468fdf66e5679cdff78.json"
       ]
     },
     {

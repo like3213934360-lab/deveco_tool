@@ -1,0 +1,34 @@
+{
+  "format": 1,
+  "passed": true,
+  "source": "tools:deveco_restart",
+  "row_sha256": "b88f982664661efe8595de12c2b0cce0d1a9ab4f48f74adac31dcde0e1d49c1c",
+  "tested": {
+    "runtime_sha256": "6da7f2351c4a1c99672ab9dc472787274df18e11de5271c659a247aa70c729ae",
+    "compiled_sha256": "90b34d8895b31a700139d9a303a73c295e4278b26076d97d62ec3ed793309f8b",
+    "package_lock_sha256": "68641e488a5099852216d3003664f57dd1d05b980f4c7813ee75dd7baf83d0fc",
+    "resource_manifest_sha256": "563bc3f06565e92c59c621c3ef909a37cbc4ac1db958d3d73d6e0bc99bf9ed86",
+    "upstream_lock_sha256": "bf3cc411831bd8ce6652a8085c8247c399d0c48b6d73156a7e649b9ef668164e"
+  },
+  "reviewer": "Codex native-6 acceptance review 2026-09-08",
+  "reason": "Reviewed current six-platform regression results and the real MCP worker restart contract. Concurrent close joins actual worker exit, rejects requests during shutdown, waits for recorded controls, and preserves unresolved SDK sessions; fixture SDK cleanup coverage is not a claim of all external recovery scenarios.",
+  "completed_scenarios": [],
+  "checks": [
+    {
+      "check": "test/native-shutdown.test.ts",
+      "original_sha256": "23d205927e3502421d9ec9c00999d1623148df72b5d1fe5cd9982ec08da153c8"
+    },
+    {
+      "check": "test/native-runtime.test.ts",
+      "original_sha256": "23d205927e3502421d9ec9c00999d1623148df72b5d1fe5cd9982ec08da153c8"
+    },
+    {
+      "check": "test/native-recording.test.ts",
+      "original_sha256": "23d205927e3502421d9ec9c00999d1623148df72b5d1fe5cd9982ec08da153c8"
+    },
+    {
+      "check": "test/native-hotreload.test.ts",
+      "original_sha256": "23d205927e3502421d9ec9c00999d1623148df72b5d1fe5cd9982ec08da153c8"
+    }
+  ]
+}
