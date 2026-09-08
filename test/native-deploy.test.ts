@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { createHash } from "node:crypto";
 import AdmZip from "adm-zip";
 import { z } from "zod";
 import { archiveEntry } from "../src/core/archive.js";
@@ -231,41 +232,49 @@ for (const packageCount of [1, 3])
       }
       let installs = 0,
         launches = 0;
+      const transferred = new Map<string, string>();
       t.mock.method(runtime.devices, "target", async () => "fixture-device");
       t.mock.method(runtime.devices, "command", async (args: string[]) => {
-        if (packageCount > 1) {
-          assert.deepEqual(args.slice(0, 4), [
-            "-t",
-            "fixture-device",
-            "file",
-            "send",
-          ]);
-          assert.ok(
-            args[4]!.startsWith(
-              path.join(runtime.store.root, "artifacts") + path.sep,
-            ),
-          );
-          return receipt("FileTransfer finish");
-        }
-        assert.deepEqual(args.slice(0, 3), ["-t", "fixture-device", "install"]);
-        assert.notEqual(args[3], artifact);
-        assert.equal(
-          path.dirname(args[3]!),
-          path.join(runtime.store.root, "artifacts"),
+        assert.deepEqual(args.slice(0, 4), [
+          "-t",
+          "fixture-device",
+          "file",
+          "send",
+        ]);
+        assert.ok(
+          args[4]!.startsWith(
+            path.join(runtime.store.root, "artifacts") + path.sep,
+          ),
         );
-        assert.ok(args[3]?.endsWith(".hap"));
-        installs++;
-        return receipt("install bundle successfully");
+        transferred.set(
+          args[5]!,
+          createHash("sha256").update(fs.readFileSync(args[4]!)).digest("hex"),
+        );
+        return receipt("FileTransfer finish");
       });
       t.mock.method(
         runtime.devices,
         "shell",
         async (_target: string, args: string[]) => {
-          assert.equal(packageCount, 3);
-          if (args[0] === "bm") {
-            assert.deepEqual(args.slice(0, 3), ["bm", "install", "-p"]);
+          if (args[0] === "sha256sum") {
+            assert.equal(transferred.size, packageCount);
+            return receipt(
+              args
+                .slice(1)
+                .map((file) => `${transferred.get(file)}  ${file}`)
+                .join("\n"),
+            );
+          }
+          if (args[0] === "sh") {
+            assert.ok(args[2]!.includes("'bm' 'install' '-p'"));
+            const identity = /'DEVECO_DEVICE_RECEIPT_V1' '([a-f0-9]{64})'/.exec(
+              args[2]!,
+            );
+            assert.ok(identity);
             installs++;
-            return receipt("install bundle successfully");
+            return receipt(
+              `DEVECO_DEVICE_RECEIPT_V1\n${identity[1]}\n0\ninstall bundle successfully`,
+            );
           }
           assert.ok(["mkdir", "rm"].includes(args[0]!));
           return receipt("");
@@ -342,6 +351,7 @@ for (const packageCount of [1, 3])
           .all(run.run_id),
         [
           { node: "install_application", status: "done" },
+          { node: "install_application:device:install", status: "done" },
           { node: "launch_application", status: "started" },
         ],
       );

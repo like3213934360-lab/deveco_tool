@@ -610,15 +610,28 @@ export class Runtime {
           ),
         };
       }),
-      effect("install_application", async (call) => {
-        const input = workflowInputs.app_deploy.parse(call.context.parameters);
-        return this.devices.install(
-          text(call.context.target, "target"),
-          capturedFileSchema.array().parse(call.context.deployment),
-          input.app,
-          call.signal,
-        );
-      }),
+      effect(
+        "install_application",
+        async (call) => {
+          const input = workflowInputs.app_deploy.parse(
+            call.context.parameters,
+          );
+          return this.devices.install(
+            text(call.context.target, "target"),
+            capturedFileSchema.array().parse(call.context.deployment),
+            input.app,
+            call.signal,
+            true,
+          );
+        },
+        async (call) =>
+          this.devices.reconcileInstall(
+            text(call.context.target, "target"),
+            capturedFileSchema.array().parse(call.context.deployment),
+            workflowInputs.app_deploy.parse(call.context.parameters).app,
+            call.signal,
+          ),
+      ),
       effect(
         "launch_application",
         async (call) => {
@@ -675,21 +688,40 @@ export class Runtime {
         );
         return captureFiles(this.store, call.run_id, artifacts, call.signal);
       }),
-      effect("install_application", async (call) => {
-        const input = workflowInputs.build_deploy_verify.parse(
-          call.context.parameters,
-        );
-        if (input.hot_reload)
-          return { skipped: true, reason: "hot patch already applied" };
-        return this.devices.install(
-          text(call.context.target, "target"),
-          capturedFileSchema
-            .array()
-            .parse(this.output(call, "prepare_installation")),
-          input.app,
-          call.signal,
-        );
-      }),
+      effect(
+        "install_application",
+        async (call) => {
+          const input = workflowInputs.build_deploy_verify.parse(
+            call.context.parameters,
+          );
+          if (input.hot_reload)
+            return { skipped: true, reason: "hot patch already applied" };
+          return this.devices.install(
+            text(call.context.target, "target"),
+            capturedFileSchema
+              .array()
+              .parse(this.output(call, "prepare_installation")),
+            input.app,
+            call.signal,
+            true,
+          );
+        },
+        async (call) => {
+          const input = workflowInputs.build_deploy_verify.parse(
+            call.context.parameters,
+          );
+          return input.hot_reload
+            ? { skipped: true, reason: "hot patch already applied" }
+            : this.devices.reconcileInstall(
+                text(call.context.target, "target"),
+                capturedFileSchema
+                  .array()
+                  .parse(this.output(call, "prepare_installation")),
+                input.app,
+                call.signal,
+              );
+        },
+      ),
       effect(
         "launch_application",
         async (call) => {

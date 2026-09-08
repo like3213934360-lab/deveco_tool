@@ -88,6 +88,7 @@ export class DeviceEffectJournal {
     accept: (receipt: DeviceReceipt) => T,
     signal?: AbortSignal,
     recovery = false,
+    timeoutMs = 30000,
   ): Promise<T | undefined> {
     signal?.throwIfAborted();
     const trace = currentTrace();
@@ -166,7 +167,7 @@ export class DeviceEffectJournal {
                   target,
                   ["sh", "-c", scripts.execute],
                   signal,
-                  30000,
+                  timeoutMs,
                   false,
                   true,
                 );
