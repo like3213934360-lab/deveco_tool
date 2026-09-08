@@ -21,14 +21,18 @@
 | Chrome 开发者登录 | 9 项通过；有效 POST 回调、三个团队的证书/设备清单、Worker 重启、服务器进程重启、重启后清单、provider 分离与关闭 | `~/Library/Application Support/DevEcoMCP/acceptance/20260908-browser-4/evidence.json` |
 | 已保存开发者凭据 | 9 项通过；从前次加密状态重新启动 MCP，且开发者登录不能用于云端知识请求 | `~/Library/Application Support/DevEcoMCP/acceptance/20260908-developer-persistence-1/evidence.json` |
 | Chrome CodeGenie 登录与知识查询 | 9 项通过；独立浏览器登录、真实云端查询、两种重启、重启后查询及 developer 未登录 | `~/Library/Application Support/DevEcoMCP/acceptance/20260908-codegenie-1/evidence.json` |
+| 云端知识完整制品 | 10 项通过；从已有加密状态启动 MCP，按字节分页读取真实大结果，重启后读取原制品并核对完整摘要 | `~/Library/Application Support/DevEcoMCP/acceptance/20260908-codegenie-artifacts-1/evidence.json` |
 | Node 24 全量回归 | 220 通过，0 失败、0 跳过 | `~/Library/Application Support/DevEcoMCP/acceptance/20260908-auth-regression-node24-1/evidence.json` |
 | Node 26 开发环境回归 | 220 通过，0 失败、0 跳过；不替代 Node 22/24 发布矩阵 | `~/Library/Application Support/DevEcoMCP/acceptance/20260908-auth-regression-node26-2/evidence.json` |
+| Node 22/24 三平台 CI | 六组各 220 项通过、0 跳过；各 10 项干净编译包安装检查通过；Windows 两组各连续 20 轮进程压力通过 | [CI 34176653392，提交 8ec532b](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34176653392)；下载证据位于 `~/Library/Application Support/DevEcoMCP/acceptance/ci-34176653392` |
 
 原始失败记录同目录下保留：`20260908-browser-1`、`20260908-browser-2` 是登录超时；`20260908-browser-3` 已接收 POST 并保持认证，但设备清单字段校验失败。前两轮没有回调计数，不能据此断言网络请求完全没有到达。新的计数及分阶段证据避免这种归因歧义。
 
 开发者清单初次/重启后整轮约 518/547 ms，CodeGenie 查询约 2740/2624 ms，MCP 握手约 85–86 ms。这只是两次真实观察，包含云端网络耗时，不是 P95 性能验收或浏览器扫码耗时。
 
-本轮只读取账号、团队、证书和设备清单并查询知识，未创建/删除云端证书、Profile、注册设备或安装签名包。云端变更、完整签名部署、过期凭据真实刷新、不同平台浏览器行为仍需独立验收；不能把本轮认证通过计作签名能力全部完成。
+补充验证中，第一次云端结果为 1,393,331 字节、969,276 个 UTF-16 代码单元，通过 43 页读取完整内容，严格 UTF-8 解码后与内联前缀匹配。原制品在两种重启后保持相同 SHA-256。再次查询返回的完整内容不同，验证没有要求两次云端检索相同，只核对同一已保存制品没有改变。证据只保存长度、页数和摘要。
+
+本轮只读取账号、团队、证书和设备清单并查询知识，未创建/删除云端证书、Profile、注册设备或安装签名包。独立签名工程和本地密钥已准备，见 `docs/native-signing.md`。云端变更、完整签名部署、过期凭据真实刷新、不同平台浏览器行为仍需独立验收；不能把本轮认证通过计作签名能力全部完成。
 
 ## 复现
 

@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 import assert from "node:assert/strict";
 import { setTimeout as delay } from "node:timers/promises";
@@ -49,6 +50,22 @@ let client: Client | undefined, transport: StdioClientTransport | undefined;
 let failed = false,
   stderrBytes = 0;
 let callback: z.infer<typeof statusSchema>["callback"];
+const artifactSchema = z.object({
+  artifact_id: z.string().uuid(),
+  bytes: z
+    .number()
+    .int()
+    .positive()
+    .max(8 * 1024 * 1024),
+  mime: z.string(),
+});
+let firstKnowledgeArtifact:
+  | {
+      reference: z.infer<typeof artifactSchema>;
+      prefix: string;
+      sha256: string;
+    }
+  | undefined;
 async function observe<T>(
   name: string,
   action: () => Promise<T>,
@@ -181,11 +198,61 @@ async function inventories() {
   }
   return { teams: inventory.teams.length, inventories: counts };
 }
+async function readKnowledgeArtifact(
+  reference: z.infer<typeof artifactSchema>,
+  prefix: string,
+) {
+  const chunks: Buffer[] = [];
+  let offset = 0;
+  while (offset < reference.bytes) {
+    const page = z
+      .object({
+        artifact_id: z.string(),
+        bytes: z.number().int(),
+        mime: z.string(),
+        offset: z.number().int(),
+        next_offset: z.number().int(),
+        encoding: z.literal("base64"),
+        data: z.string(),
+      })
+      .parse(
+        await call("workflow_run", {
+          action: "read_artifact",
+          artifact_id: reference.artifact_id,
+          offset,
+          // An unaligned byte boundary also exercises split UTF-8 characters.
+          limit: 32749,
+        }),
+      );
+    assert.equal(page.artifact_id, reference.artifact_id);
+    assert.equal(page.bytes, reference.bytes);
+    assert.equal(page.mime, reference.mime);
+    assert.equal(page.offset, offset);
+    const chunk = Buffer.from(page.data, "base64");
+    assert.ok(chunk.length > 0 && chunk.length <= 32749);
+    assert.equal(page.next_offset, offset + chunk.length);
+    assert.ok(page.next_offset <= reference.bytes);
+    chunks.push(chunk);
+    offset = page.next_offset;
+  }
+  const bytes = Buffer.concat(chunks);
+  assert.equal(bytes.length, reference.bytes);
+  const content = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+  assert.ok(content.length > 16384);
+  assert.equal(content.slice(0, 16384), prefix);
+  return {
+    bytes: bytes.length,
+    characters: content.length,
+    pages: chunks.length,
+    sha256: crypto.createHash("sha256").update(bytes).digest("hex"),
+  };
+}
 async function knowledgeQuery() {
   const result = z
     .object({
       source: z.literal("cloud"),
       content: z.string().min(1).max(16384),
+      artifact: artifactSchema.optional(),
     })
     .parse(
       await call("harmony_knowledge", {
@@ -194,10 +261,20 @@ async function knowledgeQuery() {
         query: "ArkTS 中如何声明 const 变量？",
       }),
     );
+  const artifact = result.artifact
+    ? await readKnowledgeArtifact(result.artifact, result.content)
+    : undefined;
+  if (result.artifact && artifact && !firstKnowledgeArtifact)
+    firstKnowledgeArtifact = {
+      reference: result.artifact,
+      prefix: result.content,
+      sha256: artifact.sha256,
+    };
   return {
     source: result.source,
     characters: result.content.length,
     content_sha256: digest(result.content),
+    ...(artifact ? { artifact } : {}),
   };
 }
 try {
@@ -257,6 +334,20 @@ try {
     if (provider === "developer")
       await observe("cloud_inventories_after_restart", inventories);
     else await observe("cloud_knowledge_after_restart", knowledgeQuery);
+    if (firstKnowledgeArtifact)
+      await observe("knowledge_artifact_after_restart", async () => {
+        invariant(
+          firstKnowledgeArtifact,
+          "ARTIFACT_MISSING",
+          "No prior artifact",
+        );
+        const artifact = await readKnowledgeArtifact(
+          firstKnowledgeArtifact.reference,
+          firstKnowledgeArtifact.prefix,
+        );
+        assert.equal(artifact.sha256, firstKnowledgeArtifact.sha256);
+        return artifact;
+      });
     await observe("provider_separation", async () => {
       const other = provider === "developer" ? "codegenie" : "developer";
       const current = statusSchema.parse(

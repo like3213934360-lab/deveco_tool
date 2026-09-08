@@ -70,6 +70,9 @@ MCP 主进程提供静态工具目录和参数校验；Worker 持有领域服务
 | 真实 Hvigor watch | 7 项通过 | `/private/tmp/deveco-native-hvigor-20260907-4/evidence.json`；未验证签名和设备热补丁 |
 | 真实模拟器只读协议 | 7 项通过 | `/private/tmp/deveco-native-emulator-readonly-20260908-1/evidence.json`；当前组件清单、镜像、两份协议全文/摘要、旧摘要拒绝及原生配置字节/mtime 不变；没有接受协议或操作实例，副作用探测记录见 `docs/native-emulator.md` |
 | Chrome 双 provider 认证 | 开发者、知识服务各 9 项通过；另一次已有凭据复查 9 项通过 | 通过真实 MCP 接口执行，开发者读取三个团队清单，CodeGenie 执行云端查询，两种重启后复查成功；同一最终运行摘要在 Node 24/26 各 220 项回归通过，见 `docs/native-authentication.md`。本次模拟器只读 7 项复查证据保存在持久目录 `~/Library/Application Support/DevEcoMCP/acceptance/20260908-emulator-readonly-1`；以前临时目录目前不可用，不据此补造历史证据 |
+| 认证修复三平台 CI | 六组各 220 项通过、0 跳过 | [CI 34176653392](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34176653392)，提交 `8ec532b`；各 10 项干净编译包安装检查通过，Windows Node 22/24 各 20 轮压力通过。六组原始证据已下载核对，运行文件摘要与本机浏览器通过版本相同，见 `docs/native-authentication.md` |
+| 云端知识完整制品 | 10 项通过 | 已保存凭据、真实查询、完整字节分页、两种重启后读取原制品并核对摘要；见 `docs/native-knowledge.md`。未把两次独立查询的不同内容误判为持久化失败 |
+| 独立签名工程准备 | 6 项通过 | 创建、构建、未签名 HAP 身份、密钥、CSR 与关闭；未操作云端或设备，详见 `docs/native-signing.md` |
 | 真实模拟器 | 6 项通过 | `/private/tmp/deveco-native-emulator-20260907-1/evidence.json`；早期代码快照，未记录源码摘要 |
 | 一小时基础设施运行 | 通过 | `/private/tmp/deveco-native-soak-20260907-2/evidence.json`；352 轮、2816 个子进程；最终活动任务/子进程/租约为 0，RSS 95,600,640 字节。只使用合成子进程，且早于最新制品与会话修改，不能算最终版本或 SDK 会话长稳验收 |
 | 一小时真实 SDK 会话 | 通过 | `/private/tmp/deveco-native-sdk-soak-node24-20260908-1/evidence.json`；Node 24 原生独立验证目录、717 次 LSP 查询、60 次不同 ABC 补丁，同一 watch worker，最终会话/临时目录为 0，配置恢复成功，运行时 RSS 107,511,808 字节。基于记录的较早编译摘要，未包含后续 Linter/文档修改；未测 SDK 子进程 CPU/RSS、设备 HQF/UI 或空闲会话过期，不能当作完整最终性能验收 |

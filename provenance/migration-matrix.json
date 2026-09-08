@@ -248,11 +248,12 @@
       },
       "actions": [],
       "remaining": [
-        "云端过期认证重试与异常响应回归；真实大结果制品完整读取验收"
+        "云端过期认证重试与异常响应回归"
       ],
       "acceptance": "pending",
       "evidence": [
-        "docs/native-authentication.md"
+        "docs/native-authentication.md",
+        "docs/native-knowledge.md"
       ]
     },
     {
