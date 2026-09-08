@@ -341,11 +341,17 @@ const logBundle = z
   .regex(/^[A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)+$/)
   .optional();
 const faultlogAge = z.number().min(0).max(525600).optional();
+// SDK modulecheck/app.json: 7–128 ASCII characters, at least three domain
+// segments, and no empty segment or leading/trailing segment underscore.
+export const projectBundleNameSchema = z.string().min(7).max(128).regex(
+  /^[A-Za-z](?:[A-Za-z0-9_]*[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9_]*[A-Za-z0-9])?){2,}(?![\s\S])/,
+);
+export const projectAppNameSchema = z.string().min(1).max(128).regex(/^[A-Za-z][A-Za-z0-9_]*(?![\s\S])/);
 export const workflowInputs = {
   project_create: z.strictObject({
     project_path: z.string().min(1),
-    app_name: z.string().min(1),
-    bundle_name: z.string().min(1),
+    app_name: projectAppNameSchema,
+    bundle_name: projectBundleNameSchema,
     sdk_version: z.union([z.string(), z.number().int().positive()]),
   }),
   project_sync: z.strictObject({

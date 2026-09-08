@@ -7,6 +7,7 @@ import { ProjectService } from "../src/services/project.js";
 import { ProcessService } from "../src/core/process.js";
 import { atomicWrite, destinationPath, readObject } from "../src/core/files.js";
 import { resourceRoot } from "../src/core/config.js";
+import { workflowInputs } from "../src/core/contracts.js";
 
 function fixture() {
   const root = fs.realpathSync.native(
@@ -45,6 +46,55 @@ function fixture() {
     close: () => fs.rmSync(root, { recursive: true, force: true }),
   };
 }
+
+test("project creation rejects SDK-invalid bundle names before allocating any destination files", async () => {
+  const f = fixture();
+  try {
+    for (const bundle_name of [
+      "a", "a.b.c", "com.example", "com..example.app", "com.example.app.",
+      "_com.example.app", "com._example.app", "com.example_.app",
+      "com.example._app", "com.example.app_", "1com.example.app",
+      "com.example.应用", "com.example.app\n", `com.example.${"a".repeat(117)}`,
+    ]) {
+      const input = { ...f.input, project_path: path.join(f.root, "unused", "application"), bundle_name };
+      assert.equal(workflowInputs.project_create.safeParse(input).success, false, bundle_name);
+      await assert.rejects(f.service.create(input), { code: "BUNDLE_INVALID" });
+      assert.equal(fs.existsSync(path.dirname(input.project_path)), false);
+    }
+  } finally { f.close(); }
+});
+
+test("project creation preserves valid SDK bundle names including interior underscores and length boundaries", async () => {
+  const f = fixture();
+  try {
+    for (const [index, bundle_name] of ["a.b.cde", "C_om.1example.App_2", `com.example.${"a".repeat(116)}`].entries()) {
+      const input = { ...f.input, project_path: path.join(f.root, `valid-${index}`), bundle_name };
+      assert.equal(workflowInputs.project_create.safeParse(input).success, true);
+      const created = await f.service.create(input);
+      const app = readObject(path.join(created.root, "AppScope/app.json5"));
+      assert.equal((app.app as Record<string, unknown>).bundleName, bundle_name);
+    }
+  } finally { f.close(); }
+});
+
+test("project creation validates the complete application name before allocating the destination", async () => {
+  const f = fixture();
+  try {
+    for (const app_name of ["", "1App", "_App", "My App", "应用", "Canary\n", "Canary\r\n", "Canary\u2028", "A".repeat(129)]) {
+      const input = { ...f.input, app_name };
+      assert.equal(workflowInputs.project_create.safeParse(input).success, false);
+      await assert.rejects(f.service.create(input), { code: "APP_NAME_INVALID" });
+      assert.equal(fs.existsSync(input.project_path), false);
+    }
+    for (const [index, app_name] of ["A", `A${"_".repeat(127)}`].entries()) {
+      const input = { ...f.input, project_path: path.join(f.root, `name-${index}`), app_name };
+      assert.equal(workflowInputs.project_create.safeParse(input).success, true);
+      const created = await f.service.create(input);
+      const label = readObject(path.join(created.root, "AppScope/resources/base/element/string.json"));
+      assert.deepEqual(label.string, [{ name: "app_name", value: app_name }]);
+    }
+  } finally { f.close(); }
+});
 
 test("project creation exclusively claims a new directory and never merges into existing files or an empty directory", async () => {
   const f = fixture();

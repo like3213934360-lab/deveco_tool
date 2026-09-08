@@ -30,6 +30,7 @@ import { currentTrace } from "../core/trace.js";
 import { ManagedCommand } from "../core/managed-command.js";
 import { BuildDiagnostics } from "../core/build-diagnostics.js";
 import { readPackageMetadata } from "./package.js";
+import { projectAppNameSchema, projectBundleNameSchema } from "../core/contracts.js";
 
 const sdkVersion = z.union([
   z.number().int().positive(),
@@ -273,14 +274,14 @@ export class ProjectService {
     signal?.throwIfAborted();
     const toolchain = this.toolchain();
     invariant(
-      /^[A-Za-z][A-Za-z0-9_]{0,127}$/.test(input.app_name),
+      projectAppNameSchema.safeParse(input.app_name).success,
       "APP_NAME_INVALID",
       "Invalid application name",
     );
     invariant(
-      /^[A-Za-z][A-Za-z0-9_.]*$/.test(input.bundle_name),
+      projectBundleNameSchema.safeParse(input.bundle_name).success,
       "BUNDLE_INVALID",
-      "Invalid bundle name",
+      "Bundle name must contain 7–128 ASCII characters in at least three dot-separated segments, with no empty segments or edge underscores",
     );
     const root = destinationPath(input.project_path);
     const metadata = z
