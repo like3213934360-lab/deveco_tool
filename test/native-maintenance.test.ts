@@ -7,7 +7,8 @@ import Database from "better-sqlite3";
 import { release } from "../src/core/config.js";
 import { atomicWrite } from "../src/core/files.js";
 import { planUpgrade, applyUpgrade, rollbackUpgrade } from "../src/maintenance/upgrade.js";
-import { assertQuiescent } from "../src/maintenance/quiescence.js";
+import { assertQuiescent, readProcessInventory } from "../src/maintenance/quiescence.js";
+import { ToolError } from "../src/core/errors.js";
 import { planSkillCleanup, applySkillCleanup } from "../src/maintenance/skill-cleanup.js";
 
 function fixture(missing = false) {
@@ -24,6 +25,47 @@ function fixture(missing = false) {
   const spec = { mode: missing ? "repair_missing_entry" : "upgrade", host_config: config, host_format: "codex-toml", installation: current, node: fs.realpathSync.native(process.execPath), state_dir: path.join(root, "state"), previous_state_dirs: [] };
   return { root, old, current, config, original, spec };
 }
+
+test("a transient inventory timeout retries the read and preserves Unicode process paths", () => {
+  let calls = 0;
+  const rows = readProcessInventory("win32", (file, args, options) => {
+    assert.equal(file, "powershell.exe");
+    assert.equal(options.encoding, "utf8");
+    assert.ok(args.some((arg) => arg.includes("OutputEncoding") && arg.includes("-ErrorAction Stop")));
+    if (++calls === 1) throw Object.assign(new Error("sensitive stderr"), { code: "ETIMEDOUT", signal: "SIGTERM" });
+    return JSON.stringify([{ ProcessId: 123, ParentProcessId: 1, CommandLine: 'node "C:\\项目\\dist\\src\\cli.js" mcp' }]);
+  });
+  assert.equal(calls, 2);
+  assert.equal(rows[0]?.command, 'node "C:\\项目\\dist\\src\\cli.js" mcp');
+});
+
+test("inventory timeout exhaustion blocks switching with bounded, redacted diagnostics", () => {
+  let calls = 0;
+  assert.throws(() => readProcessInventory("win32", () => {
+    calls++;
+    throw Object.assign(new Error("private-command-line"), { code: "ETIMEDOUT", signal: "SIGTERM", stdout: "secret", stderr: "secret" });
+  }), (error: unknown) => {
+    assert.ok(error instanceof ToolError);
+    assert.equal(error.code, "UPGRADE_PROCESS_SCAN_FAILED");
+    assert.equal(JSON.stringify(error.details).includes("ETIMEDOUT"), true);
+    assert.equal(JSON.stringify(error).includes("secret"), false);
+    assert.equal(JSON.stringify(error).includes("private-command-line"), false);
+    return true;
+  });
+  assert.equal(calls, 3);
+});
+
+test("invalid inventory and non-transient failures never become an empty successful scan", () => {
+  for (const value of ["invalid-json", "{}", '[{"ProcessId":-1}]', Object.assign(new Error("private"), { code: "ENOENT" })]) {
+    let calls = 0;
+    assert.throws(() => readProcessInventory("win32", () => {
+      calls++;
+      if (value instanceof Error) throw value;
+      return value;
+    }), { code: "UPGRADE_PROCESS_SCAN_FAILED" });
+    assert.equal(calls, 1);
+  }
+});
 
 test("missing-entry repair preserves MCP policies, journals secrets encrypted and refuses fictitious rollback", () => {
   const f = fixture(true);

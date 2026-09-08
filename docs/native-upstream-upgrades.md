@@ -85,6 +85,8 @@ node dist/scripts/upstream-gate.js
 
 `.github/workflows/upstream-candidates.yml` 每日或手动检测两项官方来源，根目录 `npm ci` 安装锁定依赖并编译，创建候选草稿。令牌能否在实际仓库创建 PR 由仓库权限决定，工作流失败会保留错误；不能把一次个人认证调用当成定时令牌的权限证明。
 
+仓库 Settings → Actions → General 需要允许 Actions 创建 PR。GitHub 将创建与批准 PR 合并为同一开关；默认工作流权限仍保持只读，候选工作流单独声明所需写权限，代码只创建草稿，不批准或合并。2026-09-08 已通过仓库 API 开启并回读确认，前后原始记录保存在私有验收目录 `20260908-native6-upstream-permissions-1`。这只验证设置；定时工作流仍须进入默认分支后，实际运行并验证工作流令牌创建候选。参见 [GitHub 仓库 Actions 权限说明](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/enabling-features-for-your-repository/managing-github-actions-settings-for-a-repository)。
+
 `.github/workflows/native-ci.yml` 运行 macOS/Windows/Linux × Node 22/24 基础矩阵和安装检查。`upstream-scope.ts` 将框架版本升级与官方适配分开，初次建立源锁不视为普通升级。
 
 `.github/workflows/release.yml` 只接受同一仓库、同一最终提交的成功工作流中的 release-evidence 制品。发布门禁核对六组回归和安装、43 项功能/升级范围、固定直接能力的原始性能样本以及一小时 SDK/LSP/UI/watch 长稳。随后重新封装并核对分发摘要，经 release 环境发布到不可覆盖的版本标签。缺少或版本不匹配的证据明确阻断；不会因为生成候选包就发布正式版。

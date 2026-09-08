@@ -19,12 +19,12 @@ const script = fileURLToPath(
     fs.realpathSync.native(
       fs.mkdtempSync(path.join(os.tmpdir(), "deveco-process-tree-")),
     );
-async function until(check: () => boolean) {
-  const end = Date.now() + 10000;
+async function until(check: () => boolean, timeoutMs = 10000) {
+  const end = Date.now() + timeoutMs;
   while (!check()) {
     assert.ok(
       Date.now() < end,
-      "Process state did not converge within 10 seconds",
+      `Process state did not converge within ${timeoutMs} ms`,
     );
     await delay(20);
   }
@@ -133,14 +133,17 @@ test("abrupt MCP death closes Windows jobs and leaves POSIX survivors guarded fo
       stdio: "ignore",
       windowsHide: true,
     });
+  // Register before readiness checks so failed startup still has a close
+  // barrier. kill() only requests termination; SQLite can remain open until
+  // close arrives, especially on loaded Windows runners.
+  const ownerClosed = once(owner, "close");
   let store: StateStore | undefined;
   try {
-    await until(() => fs.existsSync(path.join(root, "ready")));
+    await until(() => fs.existsSync(path.join(root, "ready")), 30000);
     const leaf = pid(root, "leaf"),
-      launcher = pid(root, "launcher"),
-      closed = once(owner, "close");
+      launcher = pid(root, "launcher");
     owner.kill("SIGKILL");
-    await closed;
+    await ownerClosed;
     store = new StateStore(path.join(root, "state"));
     if (process.platform === "win32") {
       await until(() => !alive(leaf) && !alive(launcher));
@@ -161,13 +164,18 @@ test("abrupt MCP death closes Windows jobs and leaves POSIX survivors guarded fo
     );
   } finally {
     owner.kill("SIGKILL");
+    await ownerClosed;
+    const descendants: number[] = [];
     for (const name of ["leaf", "launcher"])
       if (fs.existsSync(path.join(root, name))) {
+        const child = pid(root, name);
+        descendants.push(child);
         try {
-          process.kill(pid(root, name), "SIGKILL");
+          process.kill(child, "SIGKILL");
         } catch {}
       }
     store?.close();
+    await until(() => descendants.every((child) => !alive(child)));
     fs.rmSync(root, { recursive: true, force: true });
   }
 });

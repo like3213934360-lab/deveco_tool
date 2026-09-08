@@ -1,26 +1,42 @@
 import fs from "node:fs";
 import path from "node:path";
-import { execFileSync } from "node:child_process";
+import { execFileSync, type ExecFileSyncOptionsWithStringEncoding } from "node:child_process";
 import Database from "better-sqlite3";
 import { z } from "zod";
 import { invariant, ToolError } from "../core/errors.js";
 
-/** Read only. Never terminate an unknown host or SDK session during a switch. */
-export function assertQuiescent(installations: readonly string[], stateDirectories: readonly string[]) {
-  let rows: { pid: number; parent: number; command: string }[];
-  try {
-    if (process.platform === "win32") {
-      const raw = execFileSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", "@(Get-CimInstance Win32_Process | Select-Object ProcessId,ParentProcessId,CommandLine) | ConvertTo-Json -Compress"], { encoding: "utf8", timeout: 15000, maxBuffer: 16 * 1024 * 1024, windowsHide: true });
-      rows = z.array(z.object({ ProcessId: z.number(), ParentProcessId: z.number(), CommandLine: z.string().nullable() })).parse(JSON.parse(raw)).map((row) => ({ pid: row.ProcessId, parent: row.ParentProcessId, command: row.CommandLine ?? "" }));
-    } else {
-      const raw = execFileSync("ps", ["-ww", "-axo", "pid=,ppid=,command="], { encoding: "utf8", timeout: 15000, maxBuffer: 16 * 1024 * 1024, env: { ...process.env, LC_ALL: "C" } });
-      rows = raw.trim().split("\n").map((line) => {
+type InventoryReader = (file: string, args: string[], options: ExecFileSyncOptionsWithStringEncoding) => string;
+export function readProcessInventory(platform: NodeJS.Platform = process.platform, execute: InventoryReader = execFileSync) {
+  const attempts: { elapsed_ms: number; code: string; status: number | null; signal: string | null }[] = [];
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    const started = performance.now();
+    try {
+      if (platform === "win32") {
+        const raw = execute("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", "$ErrorActionPreference='Stop'; [Console]::OutputEncoding=[System.Text.UTF8Encoding]::new($false); $rows=@(Get-CimInstance -ClassName Win32_Process -Property ProcessId,ParentProcessId,CommandLine -ErrorAction Stop | Select-Object ProcessId,ParentProcessId,CommandLine); ConvertTo-Json -InputObject $rows -Compress"], { encoding: "utf8", timeout: 15000, maxBuffer: 16 * 1024 * 1024, windowsHide: true });
+        return z.array(z.object({ ProcessId: z.number().int().nonnegative(), ParentProcessId: z.number().int().nonnegative(), CommandLine: z.string().nullable() })).parse(JSON.parse(raw)).map((row) => ({ pid: row.ProcessId, parent: row.ParentProcessId, command: row.CommandLine ?? "" }));
+      }
+      const raw = execute("ps", ["-ww", "-axo", "pid=,ppid=,command="], { encoding: "utf8", timeout: 15000, maxBuffer: 16 * 1024 * 1024, env: { ...process.env, LC_ALL: "C" } });
+      return raw.trim().split("\n").map((line) => {
         const match = /^\s*(\d+)\s+(\d+)\s+(.*)$/.exec(line);
         invariant(match, "UPGRADE_PROCESS_SCAN_FAILED", "Unsupported process inventory format");
         return { pid: Number(match[1]), parent: Number(match[2]), command: match[3]! };
       });
+    } catch (error) {
+      // Only a timed-out read is retried. Keep diagnostics free of process
+      // command lines, stdout and stderr: they may contain credentials.
+      const failure = z.object({ code: z.string().optional(), status: z.number().nullable().optional(), signal: z.string().nullable().optional() }).safeParse(error);
+      const code = failure.success ? failure.data.code ?? "INVENTORY_INVALID" : "INVENTORY_INVALID";
+      attempts.push({ elapsed_ms: performance.now() - started, code, status: failure.success ? failure.data.status ?? null : null, signal: failure.success ? failure.data.signal ?? null : null });
+      if (code === "ETIMEDOUT" && attempt < 3) continue;
+      throw new ToolError("UPGRADE_PROCESS_SCAN_FAILED", "Cannot verify host process quiescence; no configuration was changed", { platform, attempts });
     }
-  } catch { invariant(false, "UPGRADE_PROCESS_SCAN_FAILED", "Cannot verify host process quiescence; no configuration was changed"); }
+  }
+  throw new ToolError("UPGRADE_PROCESS_SCAN_FAILED", "Process inventory attempt limit reached");
+}
+
+/** Read only. Never terminate an unknown host or SDK session during a switch. */
+export function assertQuiescent(installations: readonly string[], stateDirectories: readonly string[]) {
+  const rows = readProcessInventory();
   // The maintenance command and its shell ancestors are not the MCP being switched.
   const ancestors = new Set([process.pid]);
   let parent = process.ppid;

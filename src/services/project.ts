@@ -36,6 +36,21 @@ const sdkVersion = z.union([
   z.number().int().positive(),
   z.string().regex(/^(?:\d+|\d+\.\d+\.\d+(?:\(\d+\))?)$/),
 ]);
+/** HarmonyOS build profiles require the SDK's platform spelling, not a bare
+ * API integer. Read the installed version map so upstream releases supply the
+ * mapping; never invent a platform version for an unknown API. */
+function runtimeSdkVersion(toolchain: Toolchain, api: number, compileApi: number, platformVersion: string): string {
+  if (api === compileApi) return sdkVersion.and(z.string()).parse(platformVersion);
+  const file = path.join(toolchain.sdk, "default/hms/ets/build-tools/ts-checker-hooks/sdkApiVersionMap.json");
+  invariant(fs.existsSync(file), "SDK_API_MAPPING_UNAVAILABLE", "The installed SDK does not provide its HarmonyOS runtime API version map");
+  const versions = z.record(z.string(), z.array(z.string())).parse(readObject(file));
+  const candidates = new Set(Object.values(versions).flat().filter((value) => {
+    const match = /^(\d+)\.\d+\.\d+(?:\((\d+)\))?(?![\s\S])/.exec(value);
+    return match && Number(match[2] ?? match[1]) === api;
+  }));
+  invariant(candidates.size === 1, "SDK_API_MAPPING_UNAVAILABLE", `Installed SDK must declare exactly one HarmonyOS platform version for API ${api}`);
+  return [...candidates][0]!;
+}
 const productSchema = z.object({
   name: z.string().min(1),
   compileSdkVersion: sdkVersion.optional(),
@@ -310,6 +325,8 @@ export class ProjectService {
       "SDK_API_RANGE_INVALID",
       `API levels must satisfy minimum compatible <= target <= installed compile API ${compileApi}`,
     );
+    const targetVersion = runtimeSdkVersion(toolchain, targetApi, compileApi, metadata.platformVersion);
+    const compatibleVersion = compatibleApi === targetApi ? targetVersion : runtimeSdkVersion(toolchain, compatibleApi, compileApi, metadata.platformVersion);
     fs.mkdirSync(path.dirname(root), { recursive: true });
     try {
       // The successful mkdir is the exclusive claim. An existence pre-check
@@ -378,8 +395,8 @@ export class ProjectService {
       {
         name: "default",
         compileSdkVersion: metadata.platformVersion,
-        compatibleSdkVersion: input.compatible_api ?? input.target_api ?? metadata.platformVersion,
-        targetSdkVersion: input.target_api ?? metadata.platformVersion,
+        compatibleSdkVersion: compatibleVersion,
+        targetSdkVersion: targetVersion,
         runtimeOS: "HarmonyOS",
         buildOption: {
           strictMode: { caseSensitiveCheck: true, useNormalizedOHMUrl: true },

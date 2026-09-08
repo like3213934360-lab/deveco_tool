@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { ProcessService } from "../src/core/process.js";
 import { invariant } from "../src/core/errors.js";
 import { evidenceIdentity } from "./lib/evidence.js";
@@ -103,10 +103,10 @@ try {
         {
           executable: process.execPath,
           args: [
-            "--test",
-            "--test-isolation=none",
+            "--input-type=module",
             "--test-reporter=tap",
-            files[0]!,
+            "--eval",
+            `await import(${JSON.stringify(pathToFileURL(files[0]!).href)})`,
           ],
           cwd: root,
           env: { ...process.env, DEVECO_TEST_RECOVERY_TRACE: "1" },

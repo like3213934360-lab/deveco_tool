@@ -24,6 +24,9 @@ function fixture() {
       },
     }),
   );
+  atomicWrite(path.join(sdk, "default/hms/ets/build-tools/ts-checker-hooks/sdkApiVersionMap.json"), JSON.stringify({
+    "22": ["6.0.2(22)"], "24": ["6.1.1(24)"], "26.0.0": ["26.0.0"],
+  }));
   const service = new ProjectService(new ProcessService(), () => ({
     root,
     sdk,
@@ -337,9 +340,23 @@ test("project creation keeps compile SDK, target API and minimum device API inde
       assert.equal(workflowInputs.project_create.safeParse(input).success, true);
       const created = await f.service.create(input);
       assert.equal(created.product.compileSdkVersion, "26.0.0");
-      assert.equal(created.product.targetSdkVersion, levels.target_api ?? "26.0.0");
-      assert.equal(created.product.compatibleSdkVersion, levels.compatible_api ?? levels.target_api);
+      assert.equal(created.product.targetSdkVersion, levels.target_api ? "6.1.1(24)" : "26.0.0");
+      assert.equal(created.product.compatibleSdkVersion, levels.compatible_api ? "6.0.2(22)" : "6.1.1(24)");
       assert.equal(readObject(path.join(created.root, "hvigor/hvigor-config.json5")).modelVersion, "26.0.0");
+    }
+  } finally { f.close(); }
+});
+
+test("missing, ambiguous or malformed SDK API mappings fail before allocating a project", async () => {
+  const f = fixture();
+  try {
+    const map = path.join(f.root, "sdk/default/hms/ets/build-tools/ts-checker-hooks/sdkApiVersionMap.json");
+    for (const mapping of [undefined, {}, { "24": ["6.1.1(23)"] }, { "24": ["6.1.1(24)", "6.1.2(24)"] }, { "24": ["6.1.1(24)\n"] }]) {
+      if (mapping === undefined) fs.unlinkSync(map);
+      else atomicWrite(map, JSON.stringify(mapping));
+      const input = { ...f.input, project_path: path.join(f.root, "untouched/application"), target_api: 24 };
+      await assert.rejects(f.service.create(input), { code: "SDK_API_MAPPING_UNAVAILABLE" });
+      assert.equal(fs.existsSync(path.dirname(input.project_path)), false);
     }
   } finally { f.close(); }
 });

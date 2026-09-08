@@ -385,8 +385,8 @@ try {
       });
       const project = runtime.projects.resolve(lowerProject);
       assert.equal(project.product.compileSdkVersion, metadata.data.platformVersion);
-      assert.equal(project.product.compatibleSdkVersion, 22);
-      assert.equal(project.product.targetSdkVersion, 24);
+      assert.equal(project.product.compatibleSdkVersion, "6.0.2(22)");
+      assert.equal(project.product.targetSdkVersion, "6.1.1(24)");
       return result;
     });
     if (lowerCreated) {
