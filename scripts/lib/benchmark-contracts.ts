@@ -4,7 +4,10 @@ import { invariant } from "../../src/core/errors.js";
 import type { Client } from "@modelcontextprotocol/sdk/client/index.js";
 
 const sha = z.string().regex(/^[a-f0-9]{64}$/);
-export const assertionSchema = z.strictObject({ pointer: z.string().startsWith("/"), equals: z.unknown() });
+export const assertionSchema = z.union([
+  z.strictObject({ pointer: z.string().startsWith("/"), equals: z.unknown() }),
+  z.strictObject({ pointer: z.string().startsWith("/"), contains: z.string().min(1) }),
+]);
 export const benchmarkStepSchema = z.strictObject({
   tool: z.string().min(1), arguments: z.record(z.string(), z.unknown()),
   assertions: z.array(assertionSchema).min(1),
@@ -40,7 +43,16 @@ export async function executeBenchmarkSteps(client: Client, steps: z.infer<typeo
     invariant(!response.isError, "BENCHMARK_TOOL_FAILED", `Benchmark call failed: ${tool}`);
     if (response.structuredContent !== undefined) return response.structuredContent;
     const content = z.array(z.object({ type: z.string(), text: z.string().optional() })).parse(response.content);
-    return JSON.parse(z.string().parse(content.find((item) => item.type === "text")?.text)) as unknown;
+    const texts = content.filter((item) => item.type === "text").map((item) => z.string().parse(item.text));
+    invariant(texts.length > 0, "BENCHMARK_RESULT_MISSING", "Tool returned no structured result or text");
+    const text = texts.join("\n");
+    let decoded: unknown;
+    try { decoded = JSON.parse(text) as unknown; }
+    catch { decoded = text; }
+    // The frozen CLI gateway wraps successful lint/clangd/device output as
+    // text (sometimes as a JSON string). Keep all of it for explicit semantic
+    // assertions; do not treat a successful transport as a successful check.
+    return typeof decoded === "string" ? { output: decoded } : decoded;
   };
   const resolve = (value: unknown): unknown => {
     if (Array.isArray(value)) return value.map(resolve);
@@ -69,7 +81,11 @@ export async function executeBenchmarkSteps(client: Client, steps: z.infer<typeo
         invariant(["queued", "running", "cancelling"].includes(state.status), "BENCHMARK_WORKFLOW_FAILED", "Task failed or needs reconciliation; no automatic replay is allowed");
       }
     }
-    for (const assertion of step.assertions) invariant(JSON.stringify(pointer(data, assertion.pointer)) === JSON.stringify(assertion.equals), "BENCHMARK_RESULT_MISMATCH", `Benchmark result assertion failed: ${step.tool} ${assertion.pointer}`);
+    for (const assertion of step.assertions) {
+      const actual = pointer(data, assertion.pointer);
+      const matches = "contains" in assertion ? typeof actual === "string" && actual.includes(assertion.contains) : JSON.stringify(actual) === JSON.stringify(assertion.equals);
+      invariant(matches, "BENCHMARK_RESULT_MISMATCH", `Benchmark result assertion failed: ${step.tool} ${assertion.pointer}`);
+    }
     results.push(data);
   }
   return results;

@@ -14,7 +14,7 @@ import { discoverToolchain } from "../src/core/toolchain.js";
 import { atomicWrite, fileDigest, readObject } from "../src/core/files.js";
 import { errorResult } from "../src/core/errors.js";
 import { processMetrics } from "./lib/process-metrics.js";
-import { validateSoak } from "./lib/soak-gate.js";
+import { writeSoakReport } from "./lib/soak-gate.js";
 import { evidenceIdentity } from "./lib/evidence.js";
 
 const root = path.resolve(z.string().min(1).parse(process.argv[2]));
@@ -44,9 +44,8 @@ let cycles = 0,
   lspRequests = 0, uiRequests = 0;
 let lastSample = -Infinity;
 function save(status: string) {
-  atomicWrite(
+  writeSoakReport(
     path.join(root, "evidence.json"),
-    JSON.stringify(
       {
         tested,
         toolchain,
@@ -71,9 +70,6 @@ function save(status: string) {
         cancel_ms: cancellations.map((item) => item.elapsed_ms),
         error: failure === undefined ? null : errorResult(failure),
       },
-      null,
-      2,
-    ),
   );
 }
 try {
@@ -250,7 +246,6 @@ try {
     "Tested compiled files changed during the soak",
   );
   save("passed");
-  validateSoak(readObject(path.join(root, "evidence.json")).data);
 } catch (error) {
   failure = error;
   try {

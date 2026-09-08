@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { digest } from "../../src/core/files.js";
+import { atomicWrite, digest } from "../../src/core/files.js";
 import { invariant } from "../../src/core/errors.js";
 import { processSampleSchema } from "./process-metrics.js";
 
@@ -32,4 +32,13 @@ export function validateSoak(raw: unknown) {
   for (const row of [report.final, report.idle_samples.at(-1)!]) for (const key of ["tasks", "listeners", "connections", "processes", "cache_entries", "workers"] as const) invariant(row[key] === 0, "RELEASE_RECLAMATION_FAILED", `Owned ${key} must fully reclaim; report-defined limits cannot waive this`);
   invariant(new Set(report.cancellations.map((item) => item.scope)).size === 2 && digest(report.cancel_ms) === digest(report.cancellations.map((item) => item.elapsed_ms)), "RELEASE_CANCELLATION_INCOMPLETE", "Both SDK watch and runtime closure need matching confirmed cancellation timings");
   return report;
+}
+
+// Validate the same root object that is serialized, before publishing success.
+// Failed/running reports stay available when final validation rejects a report.
+export function writeSoakReport(file: string, raw: unknown): void {
+  const envelope = z.object({ status: z.enum(["running", "idle_reclamation", "passed", "failed"]), passed: z.boolean() }).parse(raw);
+  invariant(envelope.passed === (envelope.status === "passed"), "SOAK_STATUS_MISMATCH", "Soak status and passed flag must agree");
+  if (envelope.passed) validateSoak(raw);
+  atomicWrite(file, JSON.stringify(raw, null, 2) + "\n");
 }

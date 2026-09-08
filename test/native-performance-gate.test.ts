@@ -2,9 +2,13 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { requiredPerformance } from "../scripts/lib/acceptance-requirements.js";
 import { validatePerformance } from "../scripts/lib/performance-gate.js";
-import { validateSoak } from "../scripts/lib/soak-gate.js";
+import { validateSoak, writeSoakReport } from "../scripts/lib/soak-gate.js";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { confirmBaselineAbsence } from "../scripts/lib/benchmark-comparison.js";
-import { benchmarkPlanSchema } from "../scripts/lib/benchmark-contracts.js";
+import { benchmarkPlanSchema, executeBenchmarkSteps } from "../scripts/lib/benchmark-contracts.js";
+import type { Client } from "@modelcontextprotocol/sdk/client/index.js";
 
 const samples = (count: number, value = 1) => Array<number>(count).fill(value), hash = "a".repeat(64);
 function performanceFixture() {
@@ -57,6 +61,20 @@ test("benchmark plans reject missing baseline steps and arbitrary unpaired capab
   assert.equal(benchmarkPlanSchema.safeParse({ ...plan, capabilities: plan.capabilities.map((item) => ({ capability: item.capability, comparison: "new", logical_input: {}, native: [step] })) }).success, false);
 });
 
+test("baseline text responses require semantic assertions, preserving every text block and tool failures", async () => {
+  const client = (response: unknown) => ({ callTool: async () => response }) as unknown as Client;
+  const step = { tool: "code_lint", arguments: {}, assertions: [{ pointer: "/output", contains: "No defects found." }, { pointer: "/output", contains: "Issues: 0" }] };
+  for (const content of [
+    [{ type: "text", text: "No defects found.\nIssues: 0" }],
+    [{ type: "text", text: JSON.stringify("No defects found.\nIssues: 0") }],
+    [{ type: "text", text: "No defects found." }, { type: "text", text: "Issues: 0" }],
+  ]) await executeBenchmarkSteps(client({ content }), [step]);
+  await assert.rejects(executeBenchmarkSteps(client({ content: [{ type: "text", text: "Issues: 2" }] }), [step]), { code: "BENCHMARK_RESULT_MISMATCH" });
+  await assert.rejects(executeBenchmarkSteps(client({ content: [{ type: "text", text: "No defects found.\nIssues: 0" }], isError: true }), [step]), { code: "BENCHMARK_TOOL_FAILED" });
+  await assert.rejects(executeBenchmarkSteps(client({ content: [] }), [step]), { code: "BENCHMARK_RESULT_MISSING" });
+  await executeBenchmarkSteps(client({ structuredContent: { ok: true, data: { reports: [] } } }), [{ tool: "check_cpp_files", arguments: {}, assertions: [{ pointer: "/ok", equals: true }, { pointer: "/data/reports", equals: [] }] }]);
+});
+
 function soakFixture() {
   const retained = { tasks: 0, listeners: 0, connections: 0, processes: 0, cache_entries: 0, workers: 0 };
   const metric = { value: 100, source: "fixture" }, unavailable = { value: null, reason: "unsupported fixture platform" };
@@ -73,4 +91,22 @@ test("soak gate requires activity, continuity and zero retained owned resources 
   assert.throws(() => validateSoak(gap), { code: "RELEASE_SOAK_SAMPLE_GAP" });
   const capacity = soakFixture(); capacity.samples[1]!.retained.workers = 3;
   assert.throws(() => validateSoak(capacity), { code: "RELEASE_SOAK_CAPACITY" });
+});
+
+test("soak finalization validates the serialized root and never publishes an invalid success", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "native-soak-publication-")), file = path.join(root, "evidence.json");
+  try {
+    const running = { status: "running", passed: false, samples: [] };
+    writeSoakReport(file, running);
+    const original = fs.readFileSync(file);
+    const final = { ...soakFixture(), status: "passed" };
+    assert.throws(() => writeSoakReport(file, { ...final, elapsed_ms: 3599999 }));
+    assert.deepEqual(fs.readFileSync(file), original);
+    assert.throws(() => writeSoakReport(file, { ...final, status: "failed" }), { code: "SOAK_STATUS_MISMATCH" });
+    assert.deepEqual(fs.readFileSync(file), original);
+    writeSoakReport(file, final);
+    assert.deepEqual(JSON.parse(fs.readFileSync(file, "utf8")), final);
+    assert.doesNotThrow(() => validateSoak(JSON.parse(fs.readFileSync(file, "utf8"))));
+    assert.throws(() => writeSoakReport(file, { data: final }));
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });

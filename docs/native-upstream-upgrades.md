@@ -105,7 +105,9 @@ node dist/scripts/release-evidence.js prepare /private/final-evidence/release.js
 
 2026-09-08 曾针对 deveco-code 提交 `325aff05706b9b04a9816a987e9672dda991c630` 创建[草稿 PR #1](https://github.com/like3213934360-lab/deveco_tool/pull/1)。当时报告 66 项变化，65 项为不进入本 MCP 的宿主/构建内容，另有 CHANGELOG 的版本记录。旧报告摘要和旧 CI 仅证明当时的检测/草稿链路；本批映射及门禁已变化，需要重新计算并完成适配验收。
 
-本批已为上述 66 项候选变化逐项写入理由并受控应用到 `provenance/upstream-candidates/deveco-code/`，源锁保持基线与 pending。CHANGELOG 的 v0.1.12 记录不改变原生 MCP 协议或资源语义，其余项为映射明确排除的上游宿主实现。应用记录属于实现准备，尚无本批基线/候选验收成功凭证。
+上述 66 项候选变化已逐项审查、受控应用并经映射检查接收，现已归入 `325aff05706b9b04a9816a987e9672dda991c630` 基线，原候选及评审凭证保存在 `provenance/upstream-review-history/deveco-code/`。CHANGELOG 的 v0.1.12 记录不改变原生 MCP 协议或资源语义，其余项为映射明确排除的上游宿主实现。
+
+2026-09-08，编译摘要 `90b34d88` 的新鲜报告完成 code 基线 10 项、CLI 基线 25 项映射检查接收；CLI 仍锁定 `08c2f57ffbe83c817d64a728a17971872dd9ddcf`。两项来源的 `upstream-gate` 通过，接收器明确返回 `release_ready: false`：上游映射验证通过不等于完整迁移、性能、长稳或正式发布通过。定时工作流的实际权限和最终提交的发布门禁仍需分别验证。
 
 ### 后续评审轮次
 
