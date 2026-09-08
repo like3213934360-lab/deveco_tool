@@ -132,12 +132,14 @@ test("MCP diagnostic calls reject a missing configured SDK without falling back 
     ] as const) {
       const result = await client.callTool({ name, arguments: { project_path: project, ...input } });
       assert.equal(result.isError, true);
-      assert.equal(z.object({ error: z.object({ code: z.string() }) }).parse(result.structuredContent).error.code, "TOOLCHAIN_MISSING");
+      const failure = z.object({ error: z.object({ code: z.string(), message: z.string() }) }).parse(result.structuredContent).error;
+      assert.equal(failure.code, "TOOLCHAIN_MISSING", `${name}: ${JSON.stringify(failure)}`);
     }
     const doctor = await client.callTool({ name: "deveco_doctor", arguments: {} });
     assert.notEqual(doctor.isError, true);
     const data = z.object({ data: z.object({
       toolchain: z.object({ error: z.object({ code: z.literal("TOOLCHAIN_MISSING") }) }),
+      default_sdk: z.object({ error: z.object({ code: z.literal("TOOLCHAIN_MISSING") }) }),
       runtime: z.object({ sdk: z.object({ process_starts: z.literal(0), pids: z.array(z.number()).length(0) }) }),
     }) }).parse(doctor.structuredContent);
     assert.ok(data.data.toolchain.error);
@@ -145,6 +147,31 @@ test("MCP diagnostic calls reject a missing configured SDK without falling back 
     await transport.close();
     fs.rmSync(root, { recursive: true, force: true });
   }
+});
+
+test("MCP doctor exposes default SDK API metadata and reports missing or invalid fields independently of component detection", async () => {
+  const root = temporary(), clt = path.join(root, "clt"), config = path.join(root, "config.json");
+  const metadata = path.join(clt, "sdk/default/sdk-pkg.json");
+  fs.mkdirSync(path.dirname(metadata), { recursive: true });
+  fs.writeFileSync(config, JSON.stringify({ clt }));
+  const client = new Client({ name: "native-default-sdk-test", version: "1" });
+  const transport = new StdioClientTransport({
+    command: process.execPath, args: [fileURLToPath(new URL("../src/cli.js", import.meta.url))], stderr: "ignore",
+    env: { ...Object.fromEntries(Object.entries(process.env).filter((entry): entry is [string, string] => entry[1] !== undefined && !entry[0].startsWith("DEVECO_"))), DEVECO_CONFIG: config, DEVECO_STATE_DIR: path.join(root, "state") },
+  });
+  try {
+    await client.connect(transport);
+    const doctor = async () => {
+      const result = await client.callTool({ name: "deveco_doctor", arguments: {} });
+      assert.notEqual(result.isError, true);
+      return z.object({ data: z.object({ default_sdk: z.unknown() }) }).parse(result.structuredContent).data.default_sdk;
+    };
+    assert.equal(z.object({ error: z.object({ code: z.string() }) }).parse(await doctor()).error.code, "SDK_METADATA_MISSING");
+    fs.writeFileSync(metadata, JSON.stringify({ data: { apiVersion: "26", platformVersion: "26.0.0", version: "26.0.0.105" } }));
+    assert.deepEqual(await doctor(), { api_level: 26, platform_version: "26.0.0", package_version: "26.0.0.105", metadata_path: metadata });
+    fs.writeFileSync(metadata, JSON.stringify({ data: { apiVersion: "invalid", platformVersion: "26.0.0" } }));
+    assert.equal(z.object({ error: z.object({ code: z.string() }) }).parse(await doctor()).error.code, "SDK_METADATA_INVALID");
+  } finally { await transport.close(); fs.rmSync(root, { recursive: true, force: true }); }
 });
 
 test("managed processes bound output, handle spawn failures and confirm cancellation", async () => {

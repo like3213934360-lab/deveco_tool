@@ -24,7 +24,7 @@ const signing = process.argv.length > 3 ? (() => {
   }) }).parse(readObject(path.join(signingRoot, "operations.private.json")));
   assert.equal(fileDigest(journal.operations.certificate.result.path), journal.operations.certificate.result.sha256);
   const options = z.record(z.string(), z.string()).parse(readObject(path.join(signingRoot, "project-signing.private.json")));
-  return { bundle: prepared.bundle_name, target: journal.operations.preflight.result.target, options };
+  return { bundle: prepared.bundle_name, target: journal.operations.preflight.result.target, options, descriptor: path.join(signingRoot, "project-signing.private.json") };
 })() : undefined;
 const bundle = signing?.bundle ?? "com.deveco.nativemodules";
 assert.equal(fs.existsSync(root), false, "Acceptance directory must be new");
@@ -334,6 +334,49 @@ try {
         runtime.devices.shell = recoveredShell;
       }
     });
+  }
+  if (signing) {
+    // Cold updates use Hvigor's incremental build graph, then deploy the whole
+    // selected package set. They accept source additions and resource changes
+    // that a live HQF session must reject; no legacy changed-file writer runs.
+    const descriptorHash = fileDigest(signing.descriptor);
+    for (const product of ["default", "tablet"]) {
+      await observe(`${product}_cold_signing_configuration`, async () => {
+        assert.equal(fileDigest(signing.descriptor), descriptorHash);
+        return nativeOperation(runtime, "app_signature", {
+          action: "configure", project_path: projectPath, product,
+          file: signing.descriptor, output: path.join(root, `cold-signing-${product}`),
+          options: { name: `PersonalCold_${product}` },
+        }, path.join(root, `${product}-cold-configure.operation.private.json`));
+      });
+      for (const target of ["default", "preview"]) await observe(`${product}_${target}_cold_incremental_update`, async () => {
+        const marker = `${product}-${target}`, library = `library-${marker}`, shared = `shared-${marker}`;
+        atomicWrite(path.join(projectPath, "library/Cold.ets"), `export function coldMessage(): string { return '${library}'; }\n`);
+        atomicWrite(path.join(projectPath, "library/Index.ets"), "import { coldMessage } from './Cold';\nexport function libraryMessage(): string { return coldMessage(); }\n");
+        atomicWrite(path.join(projectPath, "shared/Index.ets"), `export function sharedMessage(): string { return '${shared}'; }\n`);
+        for (const module of ["entry", "feature"]) {
+          write(`${module}/src/main/resources/base/element/cold.json`, { string: [{ name: "cold_evidence", value: marker }] });
+          atomicWrite(path.join(projectPath, module, "src/main/ets/pages/Index.ets"), "import { libraryMessage } from 'library';\nimport { sharedMessage } from 'shared';\n@Entry\n@Component\nstruct Index { build() { Column() { Text(libraryMessage() + sharedMessage()).id('ModuleEvidence'); Text($r('app.string.cold_evidence')).id('ColdResourceEvidence') } } }\n");
+        }
+        const module_targets = Object.fromEntries(["entry", "feature", "shared", "library"].map((name) => [name, target]));
+        const submitted = z.object({ run_id: z.string() }).parse(await runtime.call("workflow_run", {
+          action: "start", workflow: "build_deploy_verify", request_key: `cold-${marker}`,
+          input: { project_path: projectPath, product, module_targets, modules: ["entry", "feature", "shared"],
+            target: signing.target, mode: "debug", clean: false,
+            app: { bundle_name: bundle, module: "entry", ability: "EntryAbility" },
+            assert: { visible: { key: "ModuleEvidence", text: library + shared, bundle_name: bundle }, timeoutMs: 10000 } },
+        }));
+        atomicWrite(path.join(root, `${marker}-cold-deploy.operation.private.json`), JSON.stringify(submitted));
+        const deadline = Date.now() + 1500000;
+        for (;;) {
+          const status = z.object({ status: z.string() }).passthrough().parse(await runtime.call("workflow_run", { action: "status", run_id: submitted.run_id, wait_ms: 1000 }));
+          if (!["queued", "running"].includes(status.status)) { assert.equal(status.status, "succeeded", JSON.stringify(status)); break; }
+          assert.ok(Date.now() < deadline, "Cold package-set update did not settle");
+        }
+        await runtime.call("verify_ui", { target: signing.target, assert: { visible: { key: "ColdResourceEvidence", text: marker, bundle_name: bundle }, timeoutMs: 10000 } });
+        return { run_id: submitted.run_id, product, module_targets, added_library_source: "library/Cold.ets", shared_text: shared, resource_text: marker, native_hvigor_incremental: true, package_set_deployment: true };
+      });
+    }
   }
   completed = true;
 } catch (error) {

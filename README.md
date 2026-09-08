@@ -105,6 +105,8 @@ macOS 的 Studio 路径通常为 `/Applications/DevEco-Studio.app`。使用 CLT 
 
 通过 MCP 给 `deveco_doctor` 显式提供 `target` 可只读检测设备的 UiTest 与文字输入组件；未提供时不访问设备。检测结果不等于实际 UI 操作已经验证，详见[驱动诊断](docs/native-ui-driver.md)。
 
+`deveco_doctor.default_sdk` 单独返回已安装默认 SDK 的 `api_level`、`platform_version`、可用的 `package_version` 和元数据路径；这些值与 Studio 版本及 API 兼容性扫描目录分开。默认 SDK 未安装或元数据不完整时，该字段返回明确错误，不用其他组件版本推断 API 级别。
+
 ## 工作流
 
 `workflow_catalog` 提供工作流定义、输入 Schema、所需能力和完成条件。当前公开目录包括：

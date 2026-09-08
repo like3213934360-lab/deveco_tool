@@ -159,8 +159,8 @@
       "behavior": "固定热补丁流程与冷构建部署分别执行。",
       "parameters": {
         "files": {
-          "status": "mapped",
-          "replacement": "files；批量边界按各原生能力验证"
+          "status": "replaced",
+          "replacement": "hot_reload.files 可核对完整变更集合；冷更新使用 build_deploy_verify 按所选产品和 module_targets 执行 Hvigor 增量构建并部署完整包集合，不接收旧 files 清单或运行旧冷补丁写入器"
         },
         "hvd": {
           "status": "mapped",

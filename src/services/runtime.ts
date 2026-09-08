@@ -26,6 +26,7 @@ import {
 import { fileDigest, digest, walk, destinationPath } from "../core/files.js";
 import {
   discoverToolchain,
+  installedSdkMetadata,
   component,
   type Component,
 } from "../core/toolchain.js";
@@ -1106,11 +1107,15 @@ export class Runtime {
       case "deveco_doctor": {
         const input = tools[name].schema.parse(raw);
         const { inspectUiDriver } = await import("./ui-driver.js");
-        let toolchain: unknown, project: unknown, api_compatibility: unknown;
+        let toolchain: unknown, project: unknown, api_compatibility: unknown, default_sdk: unknown;
         try {
-          toolchain = discoverToolchain();
+          const selected = discoverToolchain();
+          toolchain = selected;
+          try { default_sdk = installedSdkMetadata(selected); }
+          catch (error) { default_sdk = { error: errorResult(error) }; }
         } catch (error) {
           toolchain = { error: errorResult(error) };
+          default_sdk = { error: errorResult(error) };
         }
         try {
           api_compatibility = { versions: this.diagnostics.versions() };
@@ -1131,6 +1136,7 @@ export class Runtime {
           arch: process.arch,
           state_dir: this.store.root,
           toolchain,
+          default_sdk,
           api_compatibility,
           project: project ?? null,
           ui_driver: await inspectUiDriver(this.devices, input.target, signal),

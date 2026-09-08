@@ -99,10 +99,21 @@ async function workflow(
 }
 try {
   const metadata = z
-    .object({ data: z.object({ platformVersion: z.string() }) })
+    .object({ data: z.object({ platformVersion: z.string(), apiVersion: z.string(), version: z.string() }) })
     .parse(
       readObject(path.join(discoverToolchain().sdk, "default/sdk-pkg.json")),
     );
+  await observe("default_sdk_metadata", async () => {
+    const result = z.object({ default_sdk: z.object({
+      api_level: z.number().int().positive(), platform_version: z.string(),
+      package_version: z.string(), metadata_path: z.string(),
+    }) }).parse(await runtime.call("deveco_doctor", {})).default_sdk;
+    assert.equal(result.api_level, Number(metadata.data.apiVersion));
+    assert.equal(result.platform_version, metadata.data.platformVersion);
+    assert.equal(result.package_version, metadata.data.version);
+    assert.equal(fs.realpathSync.native(result.metadata_path), fs.realpathSync.native(path.join(discoverToolchain().sdk, "default/sdk-pkg.json")));
+    return result;
+  });
   const created = await observe("project_create", () =>
     workflow("project_create", {
       project_path,

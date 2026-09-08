@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import {
   discoverToolchain,
+  installedSdkMetadata,
   component,
   toolCommand,
 } from "../src/core/toolchain.js";
@@ -14,6 +15,32 @@ import { PersistentProcessObserver } from "../src/core/process-observer.js";
 import { StateStore } from "../src/core/store.js";
 import { LanguageService } from "../src/services/lsp.js";
 import type { Project } from "../src/services/project.js";
+
+test("default SDK metadata reports the installed API independently and never reuses stale or malformed fields", () => {
+  const sdk = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-sdk-metadata-"));
+  const file = path.join(sdk, "default/sdk-pkg.json");
+  try {
+    assert.throws(() => installedSdkMetadata({ sdk }), { code: "SDK_METADATA_MISSING" });
+    atomicWrite(file, JSON.stringify({ data: { apiVersion: "26", platformVersion: "26.0.0", version: "26.0.0.105" } }));
+    assert.deepEqual(installedSdkMetadata({ sdk }), { api_level: 26, platform_version: "26.0.0", package_version: "26.0.0.105", metadata_path: file });
+    const stamp = fs.statSync(file);
+    fs.writeFileSync(file, JSON.stringify({ data: { apiVersion: "27", platformVersion: "27.0.0", version: "27.0.0.105" } }));
+    fs.utimesSync(file, stamp.atime, stamp.mtime);
+    assert.equal(installedSdkMetadata({ sdk }).api_level, 27);
+    atomicWrite(file, JSON.stringify({ data: { apiVersion: 24, platformVersion: "6.1.1" } }));
+    assert.deepEqual(installedSdkMetadata({ sdk }), { api_level: 24, platform_version: "6.1.1", metadata_path: file });
+    for (const data of [undefined, [], { apiVersion: null, platformVersion: "26.0.0" }, { apiVersion: true, platformVersion: "26.0.0" }, { apiVersion: "", platformVersion: "26.0.0" }, { apiVersion: "26.5", platformVersion: "26.0.0" }, { apiVersion: 0, platformVersion: "26.0.0" }, { apiVersion: "26", platformVersion: " " }]) {
+      atomicWrite(file, JSON.stringify({ data }));
+      assert.throws(() => installedSdkMetadata({ sdk }), { code: "SDK_METADATA_INVALID" });
+    }
+    for (const source of ["broken metadata", "[]", " ".repeat(65537)]) {
+      atomicWrite(file, source);
+      assert.throws(() => installedSdkMetadata({ sdk }), { code: "SDK_METADATA_INVALID" });
+    }
+    fs.rmSync(file); fs.mkdirSync(file);
+    assert.throws(() => installedSdkMetadata({ sdk }), { code: "SDK_METADATA_INVALID" });
+  } finally { fs.rmSync(sdk, { recursive: true, force: true }); }
+});
 
 test("object parsing accepts JSON and JSON5 while rejecting non-object documents", () => {
   assert.deepEqual(parseObject('{"version":"26.0.0", "data":{"api":26}}'), { version: "26.0.0", data: { api: 26 } });

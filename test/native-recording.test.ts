@@ -1132,7 +1132,9 @@ test("a prepared control snapshot is consumed once without a second dump and ass
       device.verify("device", {
         visible: { text: "Missing" },
         alternates: [{ text: "Duplicate", limit: 1 }],
-        timeoutMs: 500,
+        // This checks selector ambiguity, not SDK or host execution latency.
+        // Snapshot ownership also performs real process-identity checks on Windows.
+        timeoutMs: 5000,
       }),
       { code: "UI_TARGET_AMBIGUOUS" },
     );

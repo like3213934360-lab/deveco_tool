@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { createHash } from "node:crypto";
 import { configuration } from "./config.js";
-import { invariant } from "./errors.js";
+import { invariant, ToolError } from "./errors.js";
 import { parseObject, digest, fileDigest } from "./files.js";
 import type { Command } from "./process.js";
 
@@ -26,6 +26,28 @@ export interface Toolchain {
   versions: Record<string, string>;
   fingerprint: string;
   components: Partial<Record<Component, string>>;
+}
+/** Default SDK API metadata is distinct from the Studio and component versions. */
+export function installedSdkMetadata(toolchain: Pick<Toolchain, "sdk">) {
+  const file = path.join(toolchain.sdk, "default/sdk-pkg.json");
+  const stat = fs.statSync(file, { throwIfNoEntry: false });
+  invariant(stat, "SDK_METADATA_MISSING", "The selected toolchain has no default SDK metadata");
+  invariant(stat.isFile() && stat.size <= 65536, "SDK_METADATA_INVALID", "Default SDK metadata must be a regular file of at most 64 KiB");
+  let record: Record<string, unknown>;
+  try { record = parseObject(fs.readFileSync(file, "utf8")); }
+  catch { throw new ToolError("SDK_METADATA_INVALID", "Default SDK metadata is not a valid object"); }
+  const data = record.data;
+  invariant(data && typeof data === "object" && !Array.isArray(data), "SDK_METADATA_INVALID", "Default SDK metadata must contain its data object");
+  const fields = data as Record<string, unknown>;
+  const api = typeof fields.apiVersion === "number" || typeof fields.apiVersion === "string" ? Number(fields.apiVersion) : NaN;
+  invariant(Number.isSafeInteger(api) && api > 0, "SDK_METADATA_INVALID", "Default SDK metadata must declare a positive integer API level");
+  invariant(typeof fields.platformVersion === "string" && fields.platformVersion.trim(), "SDK_METADATA_INVALID", "Default SDK metadata must declare its platform version");
+  return {
+    api_level: api,
+    platform_version: fields.platformVersion.trim(),
+    ...(typeof fields.version === "string" && fields.version.trim() ? { package_version: fields.version.trim() } : {}),
+    metadata_path: file,
+  };
 }
 const entryDigests = new Map<string, { metadata: string; sha256: string }>();
 const metadataRecords = new Map<string, { sha256: string; record: Record<string, unknown>; bytes: number }>();
