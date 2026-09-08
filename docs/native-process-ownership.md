@@ -1,6 +1,6 @@
 # 原生进程所有权与取消
 
-执行协议 `native-5`。部署状态保留完整包集合、Windows Job 身份、设备执行回执及已确认结束的失败状态；同步和构建新增分阶段命令完成记录。历史开发协议不能恢复到本协议，使用新的状态目录，无旧格式解码器。下文历史 CI 记录按其提交保留，不能代替当前协议的最终矩阵验收。
+执行协议 `native-6`。部署状态保留完整包集合、Windows Job 身份、设备执行回执及已确认结束的失败状态；同步和构建新增分阶段命令完成记录。历史开发协议不能恢复到本协议，使用新的状态目录，无旧格式解码器。下文历史 CI 记录按其提交保留，不能代替当前协议的最终矩阵验收。
 
 POSIX 使用进程组，先发 TERM，再按期限升级为 KILL，等待受管组退出。未能确认停止时返回 `CANCEL_UNCONFIRMED`，持久化记录继续阻止冲突资源复用。MCP 意外死亡后仍存活的组不会被下一进程直接接管或盲目重放。
 
@@ -28,5 +28,7 @@ Windows 使用本项目的 TypeScript 启动器与系统 Job Object。Koffi 3.2.
 `test/native-shutdown.test.ts` 使用真实运行 Worker 验证并发关闭和再次启动，使用持有端口的故障 Worker 验证失败回执后的隔离，并注入引擎/文档关闭错误来核对其他子进程和 SQLite 仍然退出。录制中断、watch 停止和进程所有权另由对应行为回归验证；这些测试不能代替真实设备热补丁验收。
 
 2026-09-08，提交 `6f206053873ac962707ba8c9c8c4cde098abe278` 的 [CI 34161610703](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34161610703) 六组 Node 22/24 × macOS/Windows/Linux 均通过，每组 182 项回归；Windows 两组还分别完成 20 轮进程压力检查。并发重启、清理失败隔离和 Windows 路径身份已覆盖，`deveco_restart` 迁移项据此完成行为验收。真实 SDK 会话的最终性能和设备操作仍受各自门槛约束。
+
+当前运行摘要 `23758f48`、编译摘要 `25b0b62c` 的 [CI 34248473227](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34248473227) 六组通过；Windows × Node 22/24 各 319 项适用回归及各 20 轮进程压力检查通过。下载报告已核对实际运行轮次、编译身份和无失败结果；不扩展为 Windows 真实 SDK 会话已验收。
 
 依据：[Microsoft Job Objects](https://learn.microsoft.com/en-us/windows/win32/procthread/job-objects)、[QueryInformationJobObject](https://learn.microsoft.com/en-us/windows/win32/api/jobapi2/nf-jobapi2-queryinformationjobobject)、[Koffi 文档](https://koffi.dev/output)、[libuv Windows 进程实现](https://github.com/libuv/libuv/blob/v1.x/src/win/process.c)。

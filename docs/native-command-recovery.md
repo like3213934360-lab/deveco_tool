@@ -1,6 +1,6 @@
 # 同步和构建命令恢复
 
-执行协议 `native-5`。`project_sync`、`project_build` 和 `build_deploy_verify` 的非热补丁构建接入 `ManagedCommand`。它使用现有 SQLite 操作记录和制品服务，不增加中间进程或独立任务管理器。
+执行协议 `native-6`。`project_sync`、`project_build` 和 `build_deploy_verify` 的非热补丁构建接入 `ManagedCommand`。它使用现有 SQLite 操作记录和制品服务，不增加中间进程或独立任务管理器。
 
 ## 记录与核对
 
@@ -23,3 +23,5 @@ OHPM 记录工程中的依赖锁文件，同步记录实际 SDK 模型，构建�
 `test/native-command-recovery.test.ts` 启动独立宿主和子命令，在子命令结束后、图节点提交前直接杀死宿主进程。覆盖同步后接续、构建成功、失败、大结果、完成记录缺失及同大小制品替换；恢复后执行计数必须仍为一次。
 
 `test/native-project-recovery.test.ts` 通过真实 `ProjectService`、进程管理和 LangGraph，使用替代 SDK 命令验证 OHPM、同步和构建各阶段响应丢失，重开 SQLite 后不重复执行；构建失败产生超过输出尾部上限的日志，早期编译诊断仍可读取。这些回归不计为真实 SDK 中断证据。
+
+2026-09-09，同一运行摘要 `23758f48`、编译摘要 `25b0b62c` 的 `20260908-native6-sdk-kill-performance-dev4-1` 完成三项真实 SDK 验收。OHPM/Hvigor 子命令结束后强杀宿主：同步、构建已有完成记录时恢复成功，命令各执行一次；构建尚未提交完成记录时保持 `needs_input`，核对不重复派发，取消返回 `EFFECT_UNCERTAIN`。原始 SIGKILL 标记、命令计数和结果保留在私有报告。此项不覆盖 SDK 子进程仍在执行时的所有中断窗口。

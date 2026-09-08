@@ -161,8 +161,8 @@
           "replacement": "build_deploy_verify.modules；app.module 选择启动组件"
         },
         "target": {
-          "status": "mapped",
-          "replacement": "build_deploy_verify.target 固定 HDC 设备"
+          "status": "pending",
+          "replacement": "旧 target 为构建目标（module@target），不是 HDC 设备；当前实现仅按产品选择 default 或唯一适用目标，显式构建目标选择尚待实现和验收"
         },
         "ability": {
           "status": "mapped",
@@ -188,7 +188,8 @@
       "actions": [],
       "remaining": [
         "原冷增量部署行为对照",
-        "实际 HQF 签名和设备应用"
+        "实际 HQF 签名和设备应用",
+        "显式构建目标选择：旧 target 不得误映射为 HDC 设备，覆盖同一产品的多个模块目标"
       ],
       "acceptance": "pending",
       "evidence": []
@@ -1749,8 +1750,8 @@
           "replacement": "ui_flow.navigate.route.module 或 app_deploy.app.module"
         },
         "target": {
-          "status": "mapped",
-          "replacement": "ui_flow.navigate.target 或 app_deploy.target"
+          "status": "pending",
+          "replacement": "旧 target 为构建目标（module@target），不是 HDC 设备；当前实现仅按产品选择 default 或唯一适用目标，显式构建目标选择尚待实现和验收"
         },
         "product": {
           "status": "mapped",
@@ -1772,7 +1773,8 @@
       "actions": [],
       "remaining": [
         "签名包真实安装启动",
-        "多模块包选择"
+        "多模块包选择",
+        "显式构建目标选择：旧 target 不得误映射为 HDC 设备，覆盖同一产品的多个模块目标"
       ],
       "acceptance": "pending",
       "evidence": []
