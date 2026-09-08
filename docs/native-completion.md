@@ -35,6 +35,9 @@
 - 新协议三平台 CI：[34184689357](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34184689357) 的六组 macOS/Windows/Linux × Node22/24 全部成功，对应提交 `f7be5dc`。该轮不包含随后增加的安装恢复代码，最终切换后的矩阵仍待运行。
 - 安装完成回执：`app_deploy` 和 `build_deploy_verify` 的安装节点接入核对。单包与多包统一先传输捕获制品、核对设备端 SHA-256，再提交一次带持久化回执的 `bm install`。宿主响应丢失后不重新上传或安装；完整的失败回执持久化为失败，结束后清理包目录，未知结果保留资源保护。安装准备阶段中断、缺失完成回执及真实签名包恢复验收仍为待完成。
 - 安装恢复回归：`20260908-install-recovery-regression-1` 的 Node26 原生回归240项全部通过，运行摘要 `42582f21b2e24371818cb524467df424da4e76115c4cec1358b0da8b08bc9280`。新增设备字节摘要拒绝，以及单包/三包成功与失败后的响应丢失、重开 SQLite、只执行一次、后续启动、资源竞争、取消和清理测试。测试使用替代设备命令，不计为真实多包签名部署证据；该版本 Node22/24 矩阵待运行。
+- 安装恢复三平台复验：[34185538927](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34185538927) 对应提交 `e5d58ad`，macOS/Windows/Linux × Node22/24 六组均成功；不包含随后新增的命令恢复代码。
+- 同步和构建恢复：执行协议升为 `native-5`，OHPM、Hvigor 同步和各次构建在进程退出后、向工作流返回前保存独立完成记录。恢复核对文件摘要，保留已确认的构建失败及早期诊断；已完成阶段不重跑，未登记的后续阶段继续执行。真实宿主强杀和替代 SDK 集成新增10项回归，详见 `docs/native-command-recovery.md`。尚无完整完成记录的硬中断仍暂停，其他领域恢复继续执行。
+- 命令恢复验证：`20260908-command-recovery-regression-1`（Node26）和 `20260908-command-recovery-node24-1`（Node24独立原生安装）的250项回归均通过，0失败/取消/跳过。`20260908-command-sdk-1` 的真实 SDK 创建、构建、HAP身份、ArkTS/C++、Linter、LSP、API扫描、本地密钥/CSR和模拟器清单共19项通过。三份证据的运行摘要均为 `8603bc73169d4a4bcb950e33f344479aceccef3f41d99429927bb6931a6bce91`；SDK专项没有注入真实SDK硬中断，不替代该恢复验收。当前协议的三平台CI和全部最终门槛继续保留。
 
 上述本机证据目录均位于用户目录的 `Library/Application Support/DevEcoMCP/acceptance/`。原有证据目录未修改，新 Node24 验证使用独立安装目录。
 

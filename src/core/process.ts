@@ -33,6 +33,8 @@ export interface ProcessOptions {
   onOutput?: (stream: "stdout" | "stderr", chunk: Buffer) => void;
   /** Internal lifecycle hook used by managed sessions. */
   onSpawn?: (child: ChildProcess) => void;
+  /** Runs only after owned processes and output streams have confirmed closure. */
+  onSettled?: (result: ProcessResult, failure?: Error) => Promise<void>;
   keepDescendants?: boolean;
   keepInput?: boolean;
 }
@@ -425,6 +427,17 @@ export class ProcessService {
         truncated,
         error: failure,
       });
+      const result: ProcessResult = {
+        exitCode,
+        signal: exitSignal,
+        stdout: redact(stdout.toString("utf8")),
+        stderr: redact(stderr.toString("utf8")),
+        truncated,
+        elapsedMs: performance.now() - started,
+        pid: child.pid ?? null,
+        ...(log ? { log } : {}),
+      };
+      if (!options.keepDescendants) await options.onSettled?.(result, failure);
       if (failure) {
         if (failure instanceof ToolError && log)
           throw new ToolError(
@@ -435,16 +448,6 @@ export class ProcessService {
           );
         throw failure;
       }
-      const result = {
-        exitCode,
-        signal: exitSignal,
-        stdout: redact(stdout.toString("utf8")),
-        stderr: redact(stderr.toString("utf8")),
-        truncated,
-        elapsedMs: performance.now() - started,
-        pid: child.pid ?? null,
-        ...(log ? { log } : {}),
-      };
       if (!options.allowFailure && (exitCode !== 0 || exitSignal))
         throw new ToolError(
           "PROCESS_FAILED",

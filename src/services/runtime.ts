@@ -93,7 +93,7 @@ export class Runtime {
       ...event,
     }),
   );
-  readonly projects = new ProjectService(this.processes);
+  readonly projects = new ProjectService(this.processes, undefined, this.store);
   readonly devices = new DeviceService(this.processes, this.store, this.cpu);
   readonly diagnostics = new DiagnosticService(
     this.processes,
@@ -553,14 +553,14 @@ export class Runtime {
         ),
       })),
     ]);
+    const synchronize = async (call: StepContext) =>
+      this.projects.sync(
+        this.project(call.context),
+        workflowInputs.project_sync.parse(call.context.parameters).install,
+        call.signal,
+      );
     define("project_sync", [
-      effect("sync_project", async (call) =>
-        this.projects.sync(
-          this.project(call.context),
-          workflowInputs.project_sync.parse(call.context.parameters).install,
-          call.signal,
-        ),
-      ),
+      effect("sync_project", synchronize, synchronize),
       read("verify_model", async (call) => ({
         model: inspectProject(
           text(call.context.project_path, "project_path"),
@@ -568,19 +568,19 @@ export class Runtime {
         ),
       })),
     ]);
+    const syncBeforeBuild = async (call: StepContext) =>
+      call.context.parameters.sync
+        ? this.projects.sync(this.project(call.context), true, call.signal)
+        : { skipped: true };
+    const buildProject = async (call: StepContext) =>
+      this.projects.build(
+        this.project(call.context),
+        workflowInputs.project_build.parse(call.context.parameters),
+        call.signal,
+      );
     const build: WorkflowStep[] = [
-      effect("sync_project", async (call) =>
-        call.context.parameters.sync
-          ? this.projects.sync(this.project(call.context), true, call.signal)
-          : { skipped: true },
-      ),
-      effect("build_project", async (call) =>
-        this.projects.build(
-          this.project(call.context),
-          workflowInputs.project_build.parse(call.context.parameters),
-          call.signal,
-        ),
-      ),
+      effect("sync_project", syncBeforeBuild, syncBeforeBuild),
+      effect("build_project", buildProject, buildProject),
     ];
     const verifyArtifacts = read("verify_artifacts", async (call) => {
       const list = artifactsSchema.parse(
@@ -654,24 +654,31 @@ export class Runtime {
       ),
       read("verify_process", async (call) => this.verifyProcess(call)),
     ]);
-    define("build_deploy_verify", [
-      effect("build_or_hot_apply", async (call) => {
-        const input = workflowInputs.build_deploy_verify.parse(
-            call.context.parameters,
+    const buildOrApply = async (call: StepContext) => {
+      const input = workflowInputs.build_deploy_verify.parse(
+          call.context.parameters,
+        ),
+        project = this.project(call.context);
+      if (input.hot_reload)
+        return {
+          hot_reload: true,
+          result: await this.hot.call(
+            { action: "apply", target: call.context.target },
+            project,
+            call.signal,
           ),
-          project = this.project(call.context);
-        if (input.hot_reload)
-          return {
-            hot_reload: true,
-            result: await this.hot.call(
-              { action: "apply", target: call.context.target },
-              project,
-              call.signal,
-            ),
-          };
-        if (input.sync) await this.projects.sync(project, true, call.signal);
-        return this.projects.buildApplication(project, input, call.signal);
-      }),
+        };
+      return this.projects.buildApplication(project, input, call.signal);
+    };
+    const syncBeforeDeploy = async (call: StepContext) =>
+      call.context.parameters.hot_reload
+        ? { skipped: true }
+        : syncBeforeBuild(call);
+    define("build_deploy_verify", [
+      effect("sync_project", syncBeforeDeploy, syncBeforeDeploy),
+      effect("build_or_hot_apply", buildOrApply, async (call) =>
+        call.context.parameters.hot_reload ? undefined : buildOrApply(call),
+      ),
       read("prepare_installation", async (call) => {
         const input = workflowInputs.build_deploy_verify.parse(
           call.context.parameters,

@@ -19,7 +19,15 @@ import {
   toolCommand,
   type Toolchain,
 } from "../core/toolchain.js";
-import { ProcessService } from "../core/process.js";
+import {
+  ProcessService,
+  type Command,
+  type ProcessOptions,
+  type ProcessResult,
+} from "../core/process.js";
+import { StateStore } from "../core/store.js";
+import { currentTrace } from "../core/trace.js";
+import { ManagedCommand } from "../core/managed-command.js";
 import { BuildDiagnostics } from "../core/build-diagnostics.js";
 import { readPackageMetadata } from "./package.js";
 
@@ -60,6 +68,58 @@ const profileSchema = z.object({
       }),
     )
     .min(1),
+});
+const syncedSchema = z.object({
+  project_path: z.string(),
+  synced: z.literal(true),
+  elapsedMs: z.number(),
+  model: z.object({ product: z.string(), modules: z.array(z.string()) }),
+});
+const builtSchema = z.object({
+  success: z.literal(true),
+  compilationVerified: z.literal(true),
+  product: z.string(),
+  artifacts: z.array(
+    z.object({ path: z.string(), bytes: z.number(), sha256: z.string() }),
+  ),
+  diagnostics: z.object({
+    counts: z.partialRecord(
+      z.enum([
+        "compilerError",
+        "sdkCompatibility",
+        "deprecatedApi",
+        "dependencyBundling",
+        "sourceMaps",
+      ]),
+      z.number(),
+    ),
+    examples: z.array(
+      z.object({
+        category: z.enum([
+          "compilerError",
+          "sdkCompatibility",
+          "deprecatedApi",
+          "dependencyBundling",
+          "sourceMaps",
+        ]),
+        location: z.string().nullable(),
+        message: z.string(),
+      }),
+    ),
+    exampleLimits: z.object({
+      compilerError: z.number(),
+      sdkCompatibility: z.number(),
+      deprecatedApi: z.number(),
+      dependencyBundling: z.number(),
+      sourceMaps: z.number(),
+    }),
+    scope: z.string(),
+  }),
+  elapsedMs: z.number(),
+  output: z.string(),
+  stderr: z.string(),
+  truncated: z.boolean(),
+  log: z.unknown().optional(),
 });
 export interface Project {
   root: string;
@@ -155,7 +215,36 @@ export class ProjectService {
   constructor(
     readonly processes: ProcessService,
     private readonly toolchain: () => Toolchain = discoverToolchain,
+    private readonly store?: StateStore,
   ) {}
+  private async runCommand<T>(
+    name: string,
+    command: Command,
+    options: Pick<ProcessOptions, "signal" | "timeoutMs" | "onOutput">,
+    collect: (result: ProcessResult) => T,
+    decode: (value: unknown) => T,
+    files: (value: T) => readonly string[],
+    mapFailure?: (error: ToolError) => ToolError,
+  ): Promise<T> {
+    const trace = currentTrace();
+    if (this.store && trace.run_id && trace.node)
+      return new ManagedCommand(this.store, this.processes).run(
+        name,
+        command,
+        options,
+        collect,
+        decode,
+        files,
+        mapFailure,
+      );
+    try {
+      return collect(await this.processes.run(command, options));
+    } catch (error) {
+      throw error instanceof ToolError && mapFailure
+        ? mapFailure(error)
+        : error;
+    }
+  }
   select(root: string) {
     // Selecting a project does not pick a product. A later operation must name
     // one when the project has several products and no unambiguous default.
@@ -357,11 +446,19 @@ export class ProjectService {
     assertNoHotWatch(project);
     const toolchain = this.toolchain();
     if (install)
-      await this.processes.run(
+      await this.runCommand(
+        "ohpm_install",
         toolCommand(toolchain, "ohpm", ["install", "--all"], project.root),
         { signal, timeoutMs: 600000 },
+        () => ({ installed: true }),
+        (value) => z.object({ installed: z.boolean() }).parse(value),
+        () =>
+          walk(project.root).filter(
+            (file) => path.basename(file) === "oh-package-lock.json5",
+          ),
       );
-    const result = await this.processes.run(
+    return this.runCommand(
+      "hvigor_sync",
       toolCommand(
         toolchain,
         "hvigor",
@@ -377,19 +474,23 @@ export class ProjectService {
         project.root,
       ),
       { signal, timeoutMs: 600000 },
-    );
-    const model = this.model(project);
-    return {
-      project_path: project.root,
-      synced: true,
-      elapsedMs: result.elapsedMs,
-      model: {
-        product: project.product.name,
-        modules: Object.keys(model).filter((key) =>
-          key.startsWith("ohos-module-"),
-        ),
+      (result) => {
+        const model = this.model(project);
+        return syncedSchema.parse({
+          project_path: project.root,
+          synced: true,
+          elapsedMs: result.elapsedMs,
+          model: {
+            product: project.product.name,
+            modules: Object.keys(model).filter((key) =>
+              key.startsWith("ohos-module-"),
+            ),
+          },
+        });
       },
-    };
+      (value) => syncedSchema.parse(value),
+      () => [path.join(project.root, ".hvigor/outputs/sync/output.json")],
+    );
   }
   async build(
     project: Project,
@@ -478,47 +579,53 @@ export class ProjectService {
       "--incremental",
     );
     const diagnostics = new BuildDiagnostics();
-    const result = await this.processes
-      .run(toolCommand(toolchain, "hvigor", args, project.root), {
+    return this.runCommand(
+      `hvigor_${task}_${digest(modules.map((module) => module.name))}`,
+      toolCommand(toolchain, "hvigor", args, project.root),
+      {
         signal,
         timeoutMs: 1200000,
         onOutput: (name, chunk) => diagnostics.push(name, chunk),
-      })
-      .catch((error) => {
-        if (error instanceof ToolError && error.code === "PROCESS_FAILED")
-          throw new ToolError(
-            "PROJECT_BUILD_FAILED",
-            "Native compiler/build failed",
-            { execution: error.details, diagnostics: diagnostics.finish() },
+      },
+      (result) => {
+        const artifacts =
+          task === "compileNative"
+            ? []
+            : this.buildArtifacts(
+                project,
+                modules.map((module) => module.root),
+                task,
+              );
+        if (task !== "compileNative")
+          invariant(
+            artifacts.length > 0,
+            "BUILD_ARTIFACT_MISSING",
+            "Build returned without a matching artifact",
           );
-        throw error;
-      });
-    const artifacts =
-      task === "compileNative"
-        ? []
-        : this.buildArtifacts(
-            project,
-            modules.map((module) => module.root),
-            task,
-          );
-    if (task !== "compileNative")
-      invariant(
-        artifacts.length > 0,
-        "BUILD_ARTIFACT_MISSING",
-        "Build returned without a matching artifact",
-      );
-    return {
-      success: true,
-      compilationVerified: true,
-      product: project.product.name,
-      artifacts,
-      diagnostics: diagnostics.finish(),
-      elapsedMs: result.elapsedMs,
-      output: result.stdout,
-      stderr: result.stderr,
-      truncated: result.truncated,
-      log: result.log,
-    };
+        return builtSchema.parse({
+          success: true,
+          compilationVerified: true,
+          product: project.product.name,
+          artifacts,
+          diagnostics: diagnostics.finish(),
+          elapsedMs: result.elapsedMs,
+          output: result.stdout,
+          stderr: result.stderr,
+          truncated: result.truncated,
+          log: result.log,
+        });
+      },
+      (value) => builtSchema.parse(value),
+      (value) => value.artifacts.map((artifact) => artifact.path),
+      (error) =>
+        error.code === "PROCESS_FAILED"
+          ? new ToolError(
+              "PROJECT_BUILD_FAILED",
+              "Native compiler/build failed",
+              { execution: error.details, diagnostics: diagnostics.finish() },
+            )
+          : error,
+    );
   }
   private moduleType(module: Project["modules"][number]): string {
     return z
