@@ -33,6 +33,7 @@ import { CpuPool } from "../core/cpu-pool.js";
 import { parseUiDump } from "./ui-parse.js";
 import { ScreenshotService } from "./screenshot.js";
 import { connectedTargets, deviceProperties } from "./device-info.js";
+import { DeviceEffectJournal, type DeviceReceipt } from "./device-effect.js";
 import {
   needsControlSnapshot,
   resolveControl,
@@ -614,7 +615,40 @@ export class DeviceService {
       }
     }
   }
-  async launch(target: string, raw: ApplicationTarget, signal?: AbortSignal) {
+  async launch(
+    target: string,
+    raw: ApplicationTarget,
+    signal?: AbortSignal,
+    durable = false,
+  ) {
+    const result = await this.launchOperation(
+      target,
+      raw,
+      signal,
+      durable,
+      false,
+    );
+    invariant(
+      result,
+      "LAUNCH_UNCONFIRMED",
+      "Application launch has no completion receipt",
+    );
+    return result;
+  }
+  async reconcileLaunch(
+    target: string,
+    raw: ApplicationTarget,
+    signal?: AbortSignal,
+  ) {
+    return this.launchOperation(target, raw, signal, true, true);
+  }
+  private async launchOperation(
+    target: string,
+    raw: ApplicationTarget,
+    signal: AbortSignal | undefined,
+    durable: boolean,
+    recovery: boolean,
+  ) {
     const app = appSchema.parse(raw);
     this.invalidate(target);
     const args = ["aa", "start", "-b", app.bundle_name, "-a", app.ability];
@@ -638,9 +672,42 @@ export class DeviceService {
           String(value),
         );
     }
-    let result: ProcessResult;
+    const accept = (receipt: DeviceReceipt) => {
+      invariant(
+        receipt.exitCode === 0 &&
+          /start ability successfully/i.test(receipt.stdout),
+        "LAUNCH_UNCONFIRMED",
+        "The device did not acknowledge application launch",
+      );
+      return { accepted: true };
+    };
     try {
-      result = await this.shell(target, args, signal, 30000, false, true);
+      if (durable) {
+        const receipt = await new DeviceEffectJournal(this.store, this).run(
+          target,
+          "launch",
+          args,
+          accept,
+          signal,
+          recovery,
+        );
+        if (receipt === undefined) return undefined;
+      } else {
+        const result = await this.shell(
+          target,
+          args,
+          signal,
+          30000,
+          false,
+          true,
+        );
+        invariant(
+          !result.truncated,
+          "LAUNCH_UNCONFIRMED",
+          "Launch acknowledgement was truncated",
+        );
+        accept(result);
+      }
     } catch (error) {
       if (signal?.aborted) throw error;
       throw new ToolError(
@@ -648,11 +715,6 @@ export class DeviceService {
         "Application launch failed; Want arguments and raw output are withheld",
       );
     }
-    invariant(
-      /start ability successfully/i.test(result.stdout),
-      "LAUNCH_UNCONFIRMED",
-      "The device did not acknowledge application launch",
-    );
     const deadline = Date.now() + 10000;
     while (Date.now() < deadline) {
       const state = await this.shell(

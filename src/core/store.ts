@@ -584,8 +584,15 @@ export class StateStore {
       const guards = this.processGuards().filter((row) =>
         (JSON.parse(row.resources) as string[]).includes(resource),
       );
-      const external = this.externalGuards().filter((row) =>
-        (JSON.parse(row.resources) as string[]).includes(resource),
+      const external = this.externalGuards().filter(
+        (row) =>
+          (JSON.parse(row.resources) as string[]).includes(resource) &&
+          // The original workflow must acquire its lease to read a remote receipt.
+          // Other runs remain blocked until that receipt proves the command ended.
+          !(
+            row.kind === "device_receipt" &&
+            row.run_id === currentTrace().run_id
+          ),
       );
       if (guards.length || external.length)
         throw new ToolError(
@@ -652,13 +659,8 @@ export class StateStore {
         "INPUT_CHANGED",
         "Operation inputs have changed; start a new run",
       );
-      if (prior.status === "done" && prior.result !== null)
-        return JSON.parse(prior.result) as T;
-      const recovered = await reconcile?.();
-      if (recovered !== undefined) {
-        this.receipt(runId, node, recovered);
-        return recovered;
-      }
+      const recovered = await this.recoverEffect(runId, node, input, reconcile);
+      if (recovered !== undefined) return recovered;
       throw new ToolError(
         "EFFECT_UNCERTAIN",
         `Verify external state before starting a new run: ${node}`,
@@ -681,6 +683,31 @@ export class StateStore {
         { operation: node, cause: errorResult(error) },
       );
     }
+  }
+  /** Read/reconcile an existing intent without ever dispatching a new mutation. */
+  async recoverEffect<T>(
+    runId: string,
+    node: string,
+    input: unknown,
+    reconcile?: () => Promise<T | undefined>,
+  ): Promise<T | undefined> {
+    const prior = this.db
+      .prepare(
+        "SELECT input_hash,status,result FROM operations WHERE run_id=? AND node=?",
+      )
+      .get(runId, node) as
+      { input_hash: string; status: string; result: string | null } | undefined;
+    if (!prior) return undefined;
+    invariant(
+      prior.input_hash === digest(input),
+      "INPUT_CHANGED",
+      "Operation inputs have changed; start a new run",
+    );
+    if (prior.status === "done" && prior.result !== null)
+      return JSON.parse(prior.result) as T;
+    const recovered = await reconcile?.();
+    if (recovered !== undefined) this.receipt(runId, node, recovered);
+    return recovered;
   }
   private receipt(runId: string, node: string, value: unknown): void {
     this.db

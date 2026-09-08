@@ -352,28 +352,42 @@ export class Runtime {
           }
           return { valid: true, kind: input.kind };
         }),
-        effect("execute_ui_path", async (call) => {
-          const input = uiTaskSchema.parse(call.context.parameters);
-          if (input.kind === "route")
-            return this.devices.launch(
-              text(call.context.target, "target"),
-              input.app,
-              call.signal,
+        effect(
+          "execute_ui_path",
+          async (call) => {
+            const input = uiTaskSchema.parse(call.context.parameters);
+            if (input.kind === "route")
+              return this.devices.launch(
+                text(call.context.target, "target"),
+                input.app,
+                call.signal,
+                true,
+              );
+            invariant(
+              call.context.flow,
+              "FLOW_REQUIRED",
+              "Captured flow is missing",
             );
-          invariant(
-            call.context.flow,
-            "FLOW_REQUIRED",
-            "Captured flow is missing",
-          );
-          return this.flows.run(
-            this.project(call.context),
-            call.context.flow.id,
-            text(call.context.target, "target"),
-            input.variables,
-            call.signal,
-            call.context.flow,
-          );
-        }),
+            return this.flows.run(
+              this.project(call.context),
+              call.context.flow.id,
+              text(call.context.target, "target"),
+              input.variables,
+              call.signal,
+              call.context.flow,
+            );
+          },
+          async (call) => {
+            const input = uiTaskSchema.parse(call.context.parameters);
+            return input.kind === "route"
+              ? this.devices.reconcileLaunch(
+                  text(call.context.target, "target"),
+                  input.app,
+                  call.signal,
+                )
+              : undefined;
+          },
+        ),
         read("final_assertion", async (call) => {
           const input = uiTaskSchema.parse(call.context.parameters);
           const assertion =
@@ -425,20 +439,42 @@ export class Runtime {
           );
           return { stopped: true };
         }),
-        effect("launch_recording_app", async (call) => {
-          const { draft } = recordingTaskSchema.parse(call.context.parameters);
-          return draft.start.mode === "attach"
-            ? { skipped: true }
-            : this.devices.launch(
-                text(call.context.target, "target"),
-                {
-                  bundle_name: draft.app.bundleName,
-                  module: draft.app.module,
-                  ability: draft.app.ability,
-                },
-                call.signal,
-              );
-        }),
+        effect(
+          "launch_recording_app",
+          async (call) => {
+            const { draft } = recordingTaskSchema.parse(
+              call.context.parameters,
+            );
+            return draft.start.mode === "attach"
+              ? { skipped: true }
+              : this.devices.launch(
+                  text(call.context.target, "target"),
+                  {
+                    bundle_name: draft.app.bundleName,
+                    module: draft.app.module,
+                    ability: draft.app.ability,
+                  },
+                  call.signal,
+                  true,
+                );
+          },
+          async (call) => {
+            const { draft } = recordingTaskSchema.parse(
+              call.context.parameters,
+            );
+            return draft.start.mode === "attach"
+              ? { skipped: true }
+              : this.devices.reconcileLaunch(
+                  text(call.context.target, "target"),
+                  {
+                    bundle_name: draft.app.bundleName,
+                    module: draft.app.module,
+                    ability: draft.app.ability,
+                  },
+                  call.signal,
+                );
+          },
+        ),
         read("recording_ready", async (call) => {
           const { draft } = recordingTaskSchema.parse(call.context.parameters);
           await this.devices.verify(
@@ -583,14 +619,26 @@ export class Runtime {
           call.signal,
         );
       }),
-      effect("launch_application", async (call) => {
-        const input = workflowInputs.app_deploy.parse(call.context.parameters);
-        return this.devices.launch(
-          text(call.context.target, "target"),
-          input.app,
-          call.signal,
-        );
-      }),
+      effect(
+        "launch_application",
+        async (call) => {
+          const input = workflowInputs.app_deploy.parse(
+            call.context.parameters,
+          );
+          return this.devices.launch(
+            text(call.context.target, "target"),
+            input.app,
+            call.signal,
+            true,
+          );
+        },
+        async (call) =>
+          this.devices.reconcileLaunch(
+            text(call.context.target, "target"),
+            workflowInputs.app_deploy.parse(call.context.parameters).app,
+            call.signal,
+          ),
+      ),
       read("verify_process", async (call) => this.verifyProcess(call)),
     ]);
     define("build_deploy_verify", [
@@ -642,21 +690,40 @@ export class Runtime {
           call.signal,
         );
       }),
-      effect("launch_application", async (call) => {
-        const input = workflowInputs.build_deploy_verify.parse(
-          call.context.parameters,
-        );
-        if (input.hot_reload)
-          return {
-            skipped: true,
-            reason: "hot patch preserves the running process",
-          };
-        return this.devices.launch(
-          text(call.context.target, "target"),
-          input.app,
-          call.signal,
-        );
-      }),
+      effect(
+        "launch_application",
+        async (call) => {
+          const input = workflowInputs.build_deploy_verify.parse(
+            call.context.parameters,
+          );
+          if (input.hot_reload)
+            return {
+              skipped: true,
+              reason: "hot patch preserves the running process",
+            };
+          return this.devices.launch(
+            text(call.context.target, "target"),
+            input.app,
+            call.signal,
+            true,
+          );
+        },
+        async (call) => {
+          const input = workflowInputs.build_deploy_verify.parse(
+            call.context.parameters,
+          );
+          return input.hot_reload
+            ? {
+                skipped: true,
+                reason: "hot patch preserves the running process",
+              }
+            : this.devices.reconcileLaunch(
+                text(call.context.target, "target"),
+                input.app,
+                call.signal,
+              );
+        },
+      ),
       effect("execute_ui_path", async (call) => {
         const input = workflowInputs.build_deploy_verify.parse(
           call.context.parameters,
