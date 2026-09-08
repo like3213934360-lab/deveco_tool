@@ -3,6 +3,7 @@ import { ipcInput } from "./core/ipc.js";
 import { errorResult, invariant } from "./core/errors.js";
 import { Runtime } from "./services/runtime.js";
 import { withTrace } from "./core/trace.js";
+import { tools } from "./core/contracts.js";
 
 invariant(
   parentPort,
@@ -66,16 +67,24 @@ port.on("message", (raw: unknown) => {
       let data = await withTrace({ request_id: input.id }, () =>
         runtime.call(input.name, input.input, execution.controller.signal),
       );
-      const serialized = JSON.stringify(data ?? null);
-      if (Buffer.byteLength(serialized) > 65536)
-        data = {
-          summary: "Result is available as an artifact",
-          artifact: runtime.store.artifact(
-            "request",
-            serialized,
-            "application/json",
-          ),
-        };
+      const artifactRead =
+        input.name === "workflow_run" &&
+        tools.workflow_run.schema.parse(input.input).action === "read_artifact";
+      // Explicit reads are already bounded by their page/image contracts. Wrapping
+      // base64 pages again makes large artifacts impossible to retrieve; images
+      // must reach the MCP presentation layer without creating another artifact.
+      if (!artifactRead) {
+        const serialized = JSON.stringify(data ?? null);
+        if (Buffer.byteLength(serialized) > 65536)
+          data = {
+            summary: "Result is available as an artifact",
+            artifact: runtime.store.artifact(
+              "request",
+              serialized,
+              "application/json",
+            ),
+          };
+      }
       runtime.store.event(null, "request_finish", {
         request_id: input.id,
         tool: input.name,

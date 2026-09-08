@@ -47,6 +47,7 @@ import type {
 } from "../core/workflows.js";
 import { ProjectService, inspectProject, type Project } from "./project.js";
 import { DeviceService } from "./device.js";
+import { VerificationService } from "./verification.js";
 import { DiagnosticService } from "./diagnostics.js";
 import { parseCrash } from "./crash.js";
 import { FlowService } from "./flow.js";
@@ -95,6 +96,7 @@ export class Runtime {
   );
   readonly projects = new ProjectService(this.processes, undefined, this.store);
   readonly devices = new DeviceService(this.processes, this.store, this.cpu);
+  readonly verification = new VerificationService(this.store, this.devices);
   readonly diagnostics = new DiagnosticService(
     this.processes,
     this.store,
@@ -961,6 +963,14 @@ export class Runtime {
       }
       case "workflow_run": {
         const input = tools[name].schema.parse(raw);
+        if (input.action === "read_artifact" && input.as === "image") {
+          const { readImageArtifact } = await import("./artifact.js");
+          signal?.throwIfAborted();
+          return readImageArtifact(
+            this.store,
+            text(input.artifact_id, "artifact_id"),
+          );
+        }
         if (input.action === "read_artifact")
           return this.store.readArtifact(
             text(input.artifact_id, "artifact_id"),
@@ -1583,9 +1593,9 @@ export class Runtime {
       }
       case "verify_ui": {
         const input = tools[name].schema.parse(raw);
-        return this.devices.verify(
+        return this.verification.verify(
           await this.devices.target(input.target, signal),
-          input.assert,
+          input,
           signal,
         );
       }

@@ -10,6 +10,7 @@ import { toolCatalog, workflowCatalog } from "./core/catalog.js";
 import { errorResult, invariant } from "./core/errors.js";
 import { release } from "./core/config.js";
 import { WorkerClient } from "./core/worker-client.js";
+import { artifactImageSchema } from "./core/artifact-image.js";
 
 export async function serve() {
   const runtime = new WorkerClient((error) => {
@@ -50,6 +51,17 @@ export async function serve() {
         );
       } else if (name === "deveco_restart") data = await runtime.close();
       else data = await runtime.call(name, input, extra.signal, id);
+      let image:
+        ReturnType<typeof artifactImageSchema.parse>["image"] | undefined;
+      if (name === "workflow_run") {
+        const args = tools.workflow_run.schema.parse(input);
+        if (args.action === "read_artifact" && args.as === "image") {
+          const parsed = artifactImageSchema.parse(data);
+          image = parsed.image;
+          const { image: _image, ...metadata } = parsed;
+          data = metadata;
+        }
+      }
       const structuredContent = {
         ok: true,
         request_id: id,
@@ -58,6 +70,7 @@ export async function serve() {
       return {
         content: [
           { type: "text" as const, text: JSON.stringify(structuredContent) },
+          ...(image ? [image] : []),
         ],
         structuredContent,
       };

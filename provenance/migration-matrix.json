@@ -279,8 +279,8 @@
       "behavior": "构建及异步任务由持久化工作流承担，默认不 clean。",
       "parameters": {
         "action": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "replaced",
+          "replacement": "workflow_run 的 start/status/cancel；原同步 run 使用 start 后查询 status"
         },
         "job_id": {
           "status": "mapped",
@@ -295,8 +295,8 @@
           "replacement": "modules；目标模块"
         },
         "module": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "replaced",
+          "replacement": "统一使用 modules 数组；单模块传入一个元素，不保留重复单数参数"
         },
         "product": {
           "status": "mapped",
@@ -315,8 +315,8 @@
           "replacement": "制品引用与 read_artifact"
         },
         "enable_inspector_source_jump": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "removed",
+          "replacement": "冻结基线 src/deveco-cli.mjs 仅输出 not applied 提示，未启用源跳转；删除这个无效开关，不新增空实现"
         },
         "project_path": {
           "status": "mapped",
@@ -331,31 +331,30 @@
         {
           "field": "action",
           "value": "start",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "replaced",
+          "replacement": "workflow_run.start，workflow=project_build"
         },
         {
           "field": "action",
           "value": "status",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "replaced",
+          "replacement": "workflow_run.status，使用 run_id，最长等待20秒"
         },
         {
           "field": "action",
           "value": "cancel",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "replaced",
+          "replacement": "workflow_run.cancel，取消确认后再标记已取消"
         },
         {
           "field": "action",
           "value": "run",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "replaced",
+          "replacement": "workflow_run.start 后查询 status，统一持久化任务协议"
         }
       ],
       "remaining": [
-        "多模块/多产品/HAR/HSP",
-        "源跳转 inspector 配置能力核对"
+        "最终快照多产品/多模块/HAR/HSP行为复验及真实SDK硬中断恢复验收"
       ],
       "acceptance": "pending",
       "evidence": []
@@ -2699,83 +2698,92 @@
       "source": "verify_ui",
       "targets": [
         "tool:verify_ui",
-        "tool:ui_snapshot"
+        "tool:ui_snapshot",
+        "tool:workflow_run"
       ],
       "adapters": [
-        "src/services/device.ts"
+        "src/services/verification.ts",
+        "src/services/screenshot.ts",
+        "src/services/artifact.ts",
+        "src/server.ts",
+        "src/worker.ts"
       ],
       "checks": [
-        "test/native-flow.test.ts"
+        "test/native-verification.test.ts",
+        "test/native-screenshot.test.ts",
+        "test/native-retention.test.ts",
+        "scripts/native-visual-review-acceptance.ts"
       ],
-      "behavior": "显式断言用于通过判定，截图不作为完成证据。",
+      "behavior": "控件断言与宿主外观审阅分离；请求审阅时 verified=false，要求和截图引用持久化，原生 MCP 图片按需读取。",
       "parameters": {
         "action": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "replaced",
+          "replacement": "capture 使用 ui_snapshot 或 verify_ui.review；assert 使用 verify_ui.assert；compare 使用 ui_snapshot.capture.if_changed_from"
         },
         "hvd": {
           "status": "mapped",
           "replacement": "target；设备目标"
         },
         "selector": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "replaced",
+          "replacement": "assert.visible 或 assert.hidden；使用结构化 Selector，备选选择器仍受原断言约束"
         },
         "success_state": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "replaced",
+          "replacement": "通过 assert.visible / assert.hidden 明确指定，不保留独立状态字段"
         },
         "visual_prompt": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "replaced",
+          "replacement": "review.requirement；不注入提示词，作为持久化审阅要求交给宿主"
         },
         "baseline_id": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "replaced",
+          "replacement": "调用方保存 frame_signature，并在 ui_snapshot.capture.if_changed_from 传入；无需旧内存基线 Map"
         },
         "expect": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "replaced",
+          "replacement": "调用方核对 unchanged 布尔值；画面编码变化不是业务成功或视觉质量证明"
         },
         "width": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "replaced",
+          "replacement": "capture.width；64–4096，按设备尺寸保持宽高比"
         },
         "inline": {
-          "status": "pending",
-          "replacement": "需要按本条能力确认新参数或明确删除理由"
+          "status": "replaced",
+          "replacement": "workflow_run.read_artifact as=image 显式返回 MCP ImageContent；采集响应默认只给引用"
         },
         "timeoutMs": {
           "status": "replaced",
-          "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
+          "replacement": "控件轮询使用 assert.timeoutMs；截图使用受管服务期限"
         }
       },
       "actions": [
         {
           "field": "action",
           "value": "capture",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "replaced",
+          "replacement": "ui_snapshot，或 verify_ui.review 保存外观要求与图像引用"
         },
         {
           "field": "action",
           "value": "assert",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "replaced",
+          "replacement": "verify_ui.assert.visible/hidden；失败保持错误并保存请求的截图"
         },
         {
           "field": "action",
           "value": "compare",
-          "status": "pending",
-          "replacement": "逐项行为验收待完成"
+          "status": "replaced",
+          "replacement": "ui_snapshot.capture.if_changed_from；固定捕获设置后核对 unchanged"
         }
       ],
       "remaining": [
-        "capture/compare 的变化证据替代",
-        "保留人工 visual_prompt 审阅所需制品"
+        "本轮 Node22/24 三平台CI；真实 PNG/JPEG、整进程重启和图像显示已通过"
       ],
       "acceptance": "pending",
-      "evidence": []
+      "evidence": [
+        "docs/native-visual-review.md"
+      ]
     }
   ],
   "scripts": [

@@ -496,26 +496,38 @@ export const tools = {
   },
   workflow_run: {
     description:
-      "Persist and start a workflow, inspect it, resume an interrupted run, cancel, or page through an artifact. Start requires a catalog workflow and validated input. Status waits at most 20 seconds.",
-    schema: z.strictObject({
-      action: z.enum([
-        "start",
-        "list",
-        "status",
-        "resume",
-        "cancel",
-        "read_artifact",
-      ]),
-      workflow: z.enum(workflowNames).optional(),
-      input: z.record(z.string(), z.unknown()).optional(),
-      request_key: z.string().min(1).max(256).optional(),
-      run_id: z.string().uuid().optional(),
-      wait_ms: z.number().int().min(0).max(20000).default(0),
-      resume_input: z.strictObject({ action: z.literal("recheck") }).optional(),
-      artifact_id: z.string().uuid().optional(),
-      offset: z.number().int().nonnegative().default(0),
-      limit: z.number().int().min(1).max(65536).optional(),
-    }),
+      "Persist and start a workflow, inspect it, resume an interrupted run, cancel, or read an artifact. read_artifact defaults to base64 pages; as=image returns a complete PNG/JPEG as MCP image content (at most 8 MiB), without offset/limit. Start requires a catalog workflow and validated input. Status waits at most 20 seconds.",
+    schema: z
+      .strictObject({
+        action: z.enum([
+          "start",
+          "list",
+          "status",
+          "resume",
+          "cancel",
+          "read_artifact",
+        ]),
+        workflow: z.enum(workflowNames).optional(),
+        input: z.record(z.string(), z.unknown()).optional(),
+        request_key: z.string().min(1).max(256).optional(),
+        run_id: z.string().uuid().optional(),
+        wait_ms: z.number().int().min(0).max(20000).default(0),
+        resume_input: z
+          .strictObject({ action: z.literal("recheck") })
+          .optional(),
+        artifact_id: z.string().uuid().optional(),
+        as: z.enum(["page", "image"]).default("page"),
+        offset: z.number().int().nonnegative().default(0),
+        limit: z.number().int().min(1).max(65536).optional(),
+      })
+      .refine(
+        (input) =>
+          input.as !== "image" ||
+          (input.action === "read_artifact" &&
+            input.offset === 0 &&
+            input.limit === undefined),
+        "as=image requires read_artifact with no pagination",
+      ),
   },
   harmony_knowledge: {
     description:
@@ -814,8 +826,22 @@ export const tools = {
   },
   verify_ui: {
     description:
-      "Poll an explicit final assertion. A screenshot alone does not verify an outcome.",
-    schema: z.strictObject({ target, assert: assertionSchema }),
+      "Poll a final control assertion and/or capture evidence for host visual review. review.requirement is saved with the screenshot; any requested visual review remains required and verified=false. Read its image using workflow_run.read_artifact as=image. Assertion and screenshot are sequential samples under one device lease. A screenshot alone never verifies an outcome.",
+    schema: z
+      .strictObject({
+        target,
+        assert: assertionSchema.optional(),
+        review: z
+          .strictObject({ requirement: z.string().trim().min(1).max(4096) })
+          .optional(),
+        capture: screenshotOptionsSchema
+          .omit({ if_changed_from: true })
+          .optional(),
+      })
+      .refine(
+        (input) => !!(input.assert || input.review),
+        "Provide assert or review.requirement",
+      ),
   },
   ui_inspect: {
     description:

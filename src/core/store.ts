@@ -872,6 +872,37 @@ export class StateStore {
       "INVALID_RANGE",
       "Invalid artifact range",
     );
+    const result = this.readArtifactBytes(id, offset, limit);
+    return {
+      artifact_id: id,
+      mime: result.mime,
+      bytes: result.bytes,
+      offset,
+      next_offset: offset + result.data.length,
+      encoding: "base64",
+      data: result.data.toString("base64"),
+    };
+  }
+  readBinaryArtifact(
+    id: string,
+    maximumBytes: number,
+    mimes: readonly string[],
+  ) {
+    invariant(
+      Number.isSafeInteger(maximumBytes) &&
+        maximumBytes > 0 &&
+        maximumBytes <= 32 * 1024 * 1024,
+      "INVALID_RANGE",
+      "Binary artifact reads must have a bounded size",
+    );
+    return this.readArtifactBytes(id, 0, maximumBytes, { maximumBytes, mimes });
+  }
+  private readArtifactBytes(
+    id: string,
+    offset: number,
+    limit: number,
+    complete?: { maximumBytes: number; mimes: readonly string[] },
+  ) {
     // Hold the same write reservation used by pruning until the bounded read ends.
     // Otherwise another process can commit retention and unlink between lookup/open.
     return this.db
@@ -880,13 +911,26 @@ export class StateStore {
           .prepare("SELECT * FROM artifacts WHERE id=?")
           .get(id) as { file: string; bytes: number; mime: string } | undefined;
         invariant(row, "ARTIFACT_NOT_FOUND", "Unknown artifact");
+        if (complete) {
+          invariant(
+            complete.mimes.includes(row.mime),
+            "ARTIFACT_MIME_UNSUPPORTED",
+            "This presentation does not support the artifact MIME type",
+          );
+          invariant(
+            row.bytes > 0 && row.bytes <= complete.maximumBytes,
+            "ARTIFACT_SIZE_UNSUPPORTED",
+            `Complete presentation requires 1..${complete.maximumBytes} bytes; request a smaller screenshot or read pages`,
+          );
+        }
         const data = Buffer.allocUnsafe(
           Math.min(limit, Math.max(0, row.bytes - offset)),
         );
         const fd = fs.openSync(row.file, "r");
         try {
+          const before = fs.fstatSync(fd);
           invariant(
-            fs.fstatSync(fd).size === row.bytes,
+            before.isFile() && before.size === row.bytes,
             "ARTIFACT_CHANGED",
             "Artifact size no longer matches its persisted receipt",
           );
@@ -896,7 +940,7 @@ export class StateStore {
               fd,
               data,
               read,
-              data.length - read,
+              Math.min(65536, data.length - read),
               offset + read,
             );
             invariant(
@@ -906,17 +950,21 @@ export class StateStore {
             );
             read += bytes;
           }
+          const after = fs.fstatSync(fd);
+          invariant(
+            after.size === before.size &&
+              after.mtimeMs === before.mtimeMs &&
+              after.ctimeMs === before.ctimeMs,
+            "ARTIFACT_CHANGED",
+            "Artifact changed during reading",
+          );
         } finally {
           fs.closeSync(fd);
         }
         return {
-          artifact_id: id,
           mime: row.mime,
           bytes: row.bytes,
-          offset,
-          next_offset: offset + data.length,
-          encoding: "base64",
-          data: data.toString("base64"),
+          data,
         };
       })
       .immediate();

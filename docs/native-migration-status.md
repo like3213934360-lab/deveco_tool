@@ -33,6 +33,7 @@ MCP 主进程提供静态工具目录和参数校验；Worker 持有领域服务
 - ArkTS LSP 增加查找实现，检查初始化能力声明和 UTF-16 编码，校验真实发送内容的行列范围。文件读取、摘要和通知使用同一批字节；无结果、能力不可用、非法响应有不同处理。详见 `docs/native-language-service.md`。
 - TypeScript 编译使用完整临时输出目录；错误不覆盖上一次完整构建，成功后整体替换并删除失效输出。`native-stage.ts` 可在安装依赖前准备只含原生架构的私有验证目录。
 - `ui_snapshot` 默认只截图，支持 JPEG/PNG、宽度、显示器和画面变化比较；树用 `mode:tree/both` 显式获取。传输前预留额度，按块校验，未变化的画面不保存重复制品。详见 `docs/native-screenshots.md`。
+- `verify_ui.review.requirement` 保存外观要求、截图和报告，宿主使用 `workflow_run.read_artifact as=image` 直接读取 PNG/JPEG。控件断言与外观审阅分开记录，请求审阅时不自动通过。完整图片和最大分页不再被通用响应阈值重复包装为制品。Node26/24各259项回归、真实设备八项和返回图像显示检查通过，范围与首轮失败记录见 `docs/native-visual-review.md`；本轮跨平台CI仍待完成。
 - 此前 `native-3` 阶段已验证部署包集合、Windows Job 身份和 Windows Node 22/24 各连续20轮进程压力检查；当前执行协议为 `native-5`，在设备回执和已确认失败状态上增加同步/构建命令完成记录，需要新的状态目录。当前协议的最终跨平台矩阵仍须复验，不能复用历史 CI 结论。详见 `docs/native-process-ownership.md`、`docs/native-command-recovery.md` 及 `docs/native-completion.md`。
 
 - 原生 SDK 临时目录与 LSP 日志通过 SQLite 预留统一预算，关联受管进程所有权；超额取消后确认进程退出才清理。外部 SDK 的突发写入不是 OS 硬配额，详见 `docs/native-storage.md`。

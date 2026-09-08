@@ -60,6 +60,12 @@ test("artifact ranges complete short reads and reject truncated persisted data",
     const part = f.store.readArtifact(reference.artifact_id, 2, 8);
     assert.equal(Buffer.from(part.data, "base64").toString(), "23456789");
     assert.equal(part.next_offset, 10);
+    assert.equal(
+      f.store
+        .readBinaryArtifact(reference.artifact_id, 32, ["text/plain"])
+        .data.toString(),
+      "0123456789abcdef",
+    );
     short.mock.restore();
     assert.throws(() => f.store.readArtifact(reference.artifact_id, 0, 0.5), {
       code: "INVALID_RANGE",
@@ -108,12 +114,51 @@ test("retention in another database connection cannot unlink between artifact lo
       "concurrent evidence",
     );
     assert.equal(attempted, true);
+    attempted = false;
+    assert.equal(
+      f.store
+        .readBinaryArtifact(artifact.artifact_id, 32, ["text/plain"])
+        .data.toString(),
+      "concurrent evidence",
+    );
+    assert.equal(attempted, true);
     t.mock.restoreAll();
     peer.prune();
     assert.equal(fs.existsSync(file), false);
   } finally {
     t.mock.restoreAll();
     peer.close();
+    f.close();
+  }
+});
+test("a full artifact read rejects a same-size file change instead of presenting mixed bytes", (t) => {
+  const f = fixture();
+  try {
+    const artifact = f.store.artifact("fixture", "0123456789abcdef"),
+      file = path.join(f.store.root, "artifacts", artifact.artifact_id),
+      read = fs.readSync;
+    t.mock.method(
+      fs,
+      "readSync",
+      (
+        fd: number,
+        buffer: NodeJS.ArrayBufferView,
+        offset: number,
+        length: number,
+        position: fs.ReadPosition | null,
+      ) => {
+        const result = read(fd, buffer, offset, length, position);
+        fs.utimesSync(file, new Date(0), new Date(0));
+        return result;
+      },
+    );
+    assert.throws(
+      () =>
+        f.store.readBinaryArtifact(artifact.artifact_id, 32, ["text/plain"]),
+      { code: "ARTIFACT_CHANGED" },
+    );
+  } finally {
+    t.mock.restoreAll();
     f.close();
   }
 });
