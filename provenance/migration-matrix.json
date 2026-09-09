@@ -206,7 +206,7 @@
       "remaining": [],
       "acceptance": "verified",
       "evidence": [
-        "provenance/migration-acceptance/e3e5405980513ce1c4670b513286d7713aadd41a04228426885f4558b51fbca6.json"
+        "provenance/migration-acceptance/fdcea7f5b3b331fb411c2b0e19ddd4e83fa5565c9f4b630d8dbf13d2c88372f6.json"
       ],
       "targets": [
         "tool:arkts_check"
@@ -373,7 +373,7 @@
       "remaining": [],
       "acceptance": "verified",
       "evidence": [
-        "provenance/migration-acceptance/63a458511ce6999ee6a78f2270d9f67f2878c30f659664ee49457d868227f13e.json"
+        "provenance/migration-acceptance/9a1050f1f70adcac4cb2b49f876ce3c89106e116c6b7d4b4faac0cdbbf29d370.json"
       ],
       "targets": [
         "tool:check_cpp_files"
@@ -401,7 +401,7 @@
       "remaining": [],
       "acceptance": "verified",
       "evidence": [
-        "provenance/migration-acceptance/55cacf2c960909249203a88cea295bf538064087a37957cc89583d7fb92ade3b.json"
+        "provenance/migration-acceptance/55420e83516d3181ec3510041cfc2defafc9616c816b66b68df4c43717c98f60.json"
       ],
       "targets": [
         "tool:arkts_check",
@@ -628,7 +628,7 @@
       "remaining": [],
       "acceptance": "verified",
       "evidence": [
-        "provenance/migration-acceptance/e2028dba4d1fc843b80cb8a76adf47075d85c5f2f0632ec6bf2a4ab589477fb3.json"
+        "provenance/migration-acceptance/ffdbe53836bbadcaabdc6c58a7f23cae1e23e508a43400c845eb6e6a3560a0ac.json"
       ],
       "targets": [
         "tool:harmony_auth"
@@ -651,7 +651,7 @@
       "remaining": [],
       "acceptance": "verified",
       "evidence": [
-        "provenance/migration-acceptance/a1d9ba030fd21fa9d8059d4ac16dafffa1ab2e1981a2aad999a4698f68043409.json"
+        "provenance/migration-acceptance/9cc52efe7598cae4e643368ef0f60f5918807d45c15e5b77aefd7f1f2b046fbb.json"
       ],
       "targets": [
         "tool:deveco_restart"
@@ -1291,7 +1291,7 @@
       "remaining": [],
       "acceptance": "verified",
       "evidence": [
-        "provenance/migration-acceptance/fee576f7d59bf4e42583395a8712afc1b533920042e8223aacad653f4cff5b97.json"
+        "provenance/migration-acceptance/d98756a2e102542b8949c79c071daae26952dcd5cfe37c1265bd10b7bb00f01b.json"
       ],
       "targets": [
         "tool:lsp"
@@ -1329,7 +1329,7 @@
       "remaining": [],
       "acceptance": "verified",
       "evidence": [
-        "provenance/migration-acceptance/017ecefa115e88a86574caad1113a6766ea6c934635f9bf9792490711dfd6e50.json"
+        "provenance/migration-acceptance/2cf47cee3c1c9a0432f6074dfcabd7f5beee857ad94270672acdb791089fd608.json"
       ],
       "targets": [
         "tool:harmony_knowledge"
@@ -1803,7 +1803,7 @@
       "remaining": [],
       "acceptance": "verified",
       "evidence": [
-        "provenance/migration-acceptance/c37a7deb13cbfcf3c3b65b3a7339c35a75a8d2c750c0381e44d5b042d1255a0e.json"
+        "provenance/migration-acceptance/ee76dbb6824dd101de1f0df78fb474849cda893acdaba463e68544e2ecc8920d.json"
       ],
       "targets": [
         "tool:switch_cwd"
@@ -2816,7 +2816,7 @@
       "remaining": [],
       "acceptance": "verified",
       "evidence": [
-        "provenance/migration-acceptance/ab93fef0b1986a30ba55dc942678470fb4665b25b4eeb6e804e229ee4da61015.json"
+        "provenance/migration-acceptance/a94e53ed23f803cd4c03c1656aeb5a68c7270c19f08b67ab37595a3047fdf2ce.json"
       ],
       "targets": [
         "workflow:project_create"
@@ -2856,7 +2856,7 @@
       "remaining": [],
       "acceptance": "verified",
       "evidence": [
-        "provenance/migration-acceptance/23e7749b44918522d3a7599f8992c423b95dac9e98c245755181eadb6451ecb6.json"
+        "provenance/migration-acceptance/f720d609454b764b0715c7907cd17c1289e4e78f9ff9b6c1ca625bd628ae649d.json"
       ],
       "targets": [
         "tool:deveco_doctor"

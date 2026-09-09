@@ -1,0 +1,28 @@
+{
+  "format": 1,
+  "passed": true,
+  "source": "scripts:copy_template",
+  "row_sha256": "cd9c25a21d2738f95cb15a9716e7b6b3b29793d474172f046545eefcb1c8479b",
+  "tested": {
+    "runtime_sha256": "cc3cdfd12b284fc5e85e657dac863a6cde184b18369844d9bf52336b3f903310",
+    "compiled_sha256": "680bf03b1d0f8d0c9403861be551d4d9bd8d8e727d44cb4df68f75d9517d27b6",
+    "package_lock_sha256": "68641e488a5099852216d3003664f57dd1d05b980f4c7813ee75dd7baf83d0fc",
+    "resource_manifest_sha256": "563bc3f06565e92c59c621c3ef909a37cbc4ac1db958d3d73d6e0bc99bf9ed86",
+    "upstream_lock_sha256": "bf3cc411831bd8ce6652a8085c8247c399d0c48b6d73156a7e649b9ef668164e"
+  },
+  "reviewer": "Codex",
+  "reason": "Current SDK observations create and build the application and distinct runtime API combinations; current project regressions repeat mapped template parameter and historical error boundaries.",
+  "completed_scenarios": [
+    "所有原参数和历史错误边界逐项对照"
+  ],
+  "checks": [
+    {
+      "check": "scripts/native-sdk-acceptance.ts",
+      "original_sha256": "47bbb57018e78a1846e2a3ddcc4631fd6d77fa5492eb609fa349686fbe25cc9a"
+    },
+    {
+      "check": "test/native-project.test.ts",
+      "original_sha256": "eddf880b7d4db652152d63db76b9bd9456129441d617800a8ca14a517d7fa0cc"
+    }
+  ]
+}

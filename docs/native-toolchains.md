@@ -59,7 +59,7 @@ DevEco Studio 与独立 CLT 是两种可选的工具链环境。已有可用 Stu
 | macOS ARM64 / Studio 26.0.0.821 | 24/24 通过 | 13/13 通过 | 6/6 通过 | 通过 |
 | macOS ARM64 / 独立 CLT 26.0.0.821 | 15/24 通过，整体失败 | 13/13 通过 | 6/6 通过 | 通过 |
 | Windows x64 / 独立 CLT 26.0.0.821 | 15/24 通过，整体失败 | 13/13 通过 | 6/6 通过 | 空库存通过，原解析错误已复验 |
-| Linux x64 / 独立 CLT 26.0.0.821 | 14/24 通过，整体失败 | 13/13 通过 | 6/6 通过 | 缺少 libEGL.so.1，进程退出 127 |
+| Linux x64 / 独立 CLT 26.0.0.821 | 15/24 通过，整体失败 | 13/13 通过 | 6/6 通过 | 补齐运行库后空库存通过 |
 
 Windows/Linux 来自 [Actions 34317583335](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34317583335)。三平台官方 CLT 包均通过官方 SHA-256 校验，包内未发现当前协议要求的语言服务入口 `out/standardIndex/index.js` 或 API 扫描入口 `api-change-scan.js`。九项 LSP/API 检查未通过，不将其删除或改写为成功。这里确认的是该官方版本的组件边界，不泛化为所有 CLT 版本都缺少这些组件。
 
@@ -73,3 +73,11 @@ Linux 已补充 libpulse0，随后暴露缺少 libEGL.so.1。下一轮临时 run
 | lint/evidence.json | `2ccc66d96444c69b0073ae9d7f97ff15ed67ff41de18631467d71bf06c990e62` |
 | multimodule/evidence.json | `189d8d17144687a0a40fdf144be79e92d3e72cea7df04a98ec54c569f33b3bc7` |
 | sdk/evidence.json | `47bbb57018e78a1846e2a3ddcc4631fd6d77fa5492eb609fa349686fbe25cc9a` |
+
+Linux 单平台复验 [Actions 34319010546](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34319010546) 已结束，绑定同一 `cc3cdfd1` / `680bf03b` 字节。加入 libegl1 后，Emulator 的 ldd 输出无缺失库，实际空库存查询通过；综合 SDK 为 15/24 项通过，余下九项仍是 LSP/API 组件相关失败，整体保持失败。ArkTS 13 项及 Linter 6 项通过并关闭。第一次缺库报告保留，表格更新为本次终态。原始报告和核对结果位于 `preparation/clt-platform-26.0.0.821-20260909-1/linux-run-34319010546`。
+
+| Linux 复验报告 | SHA-256 |
+| --- | --- |
+| native-clt-checker/evidence.json | `78312213112625d55b490b2499f1e6ad7c766c036b3a9457baa78d500d15e5e4` |
+| native-clt-lint/evidence.json | `669ca6d2970210dd05c7563e2e255ca94c151a18847787e6ea88d211cdcda1d5` |
+| native-clt-sdk/evidence.json | `f7c5e4a11a0c0cb63721609741d6670be4b987fcb873bfff2b606fd50786d3ba` |

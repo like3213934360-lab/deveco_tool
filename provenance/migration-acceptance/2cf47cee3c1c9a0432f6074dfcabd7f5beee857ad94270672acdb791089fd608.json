@@ -1,0 +1,26 @@
+{
+  "format": 1,
+  "passed": true,
+  "source": "tools:harmony_docs",
+  "row_sha256": "8f5a6a906eaeeb37c71be6445c22d97422ed94acadcb4ea5fa2bf50aaf9ef18c",
+  "tested": {
+    "runtime_sha256": "cc3cdfd12b284fc5e85e657dac863a6cde184b18369844d9bf52336b3f903310",
+    "compiled_sha256": "680bf03b1d0f8d0c9403861be551d4d9bd8d8e727d44cb4df68f75d9517d27b6",
+    "package_lock_sha256": "68641e488a5099852216d3003664f57dd1d05b980f4c7813ee75dd7baf83d0fc",
+    "resource_manifest_sha256": "563bc3f06565e92c59c621c3ef909a37cbc4ac1db958d3d73d6e0bc99bf9ed86",
+    "upstream_lock_sha256": "bf3cc411831bd8ce6652a8085c8247c399d0c48b6d73156a7e649b9ef668164e"
+  },
+  "reviewer": "Codex",
+  "reason": "Current regression executes the mapped resource and report contracts, validating packaged document lookup and structured artifact boundaries. No remaining external scenario is declared by this migration row.",
+  "completed_scenarios": [],
+  "checks": [
+    {
+      "check": "test/native-resources.test.ts",
+      "original_sha256": "eddf880b7d4db652152d63db76b9bd9456129441d617800a8ca14a517d7fa0cc"
+    },
+    {
+      "check": "test/native-reports.test.ts",
+      "original_sha256": "eddf880b7d4db652152d63db76b9bd9456129441d617800a8ca14a517d7fa0cc"
+    }
+  ]
+}

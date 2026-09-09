@@ -1,0 +1,32 @@
+{
+  "format": 1,
+  "passed": true,
+  "source": "tools:arkts_check",
+  "row_sha256": "5de40bc6f6681e1572ff33ff31d6b2bac1f0d0c6f6c8729e46d48e1224a0b947",
+  "tested": {
+    "runtime_sha256": "cc3cdfd12b284fc5e85e657dac863a6cde184b18369844d9bf52336b3f903310",
+    "compiled_sha256": "680bf03b1d0f8d0c9403861be551d4d9bd8d8e727d44cb4df68f75d9517d27b6",
+    "package_lock_sha256": "68641e488a5099852216d3003664f57dd1d05b980f4c7813ee75dd7baf83d0fc",
+    "resource_manifest_sha256": "563bc3f06565e92c59c621c3ef909a37cbc4ac1db958d3d73d6e0bc99bf9ed86",
+    "upstream_lock_sha256": "bf3cc411831bd8ce6652a8085c8247c399d0c48b6d73156a7e649b9ef668164e"
+  },
+  "reviewer": "Codex",
+  "reason": "Current 363-test regression and 13 real Studio checker observations cover file and project scopes, product configuration, Unicode modules, diagnostic artifacts, and explicit non-compilation semantics. Real CLT checker checks also pass on three platforms; no claim of all SDK rule coverage.",
+  "completed_scenarios": [
+    "当前版本批量文件、产品和模块静态预检、诊断制品及非编译契约复验"
+  ],
+  "checks": [
+    {
+      "check": "test/native-project.test.ts",
+      "original_sha256": "eddf880b7d4db652152d63db76b9bd9456129441d617800a8ca14a517d7fa0cc"
+    },
+    {
+      "check": "test/native-checker.test.ts",
+      "original_sha256": "eddf880b7d4db652152d63db76b9bd9456129441d617800a8ca14a517d7fa0cc"
+    },
+    {
+      "check": "scripts/native-checker-acceptance.ts",
+      "original_sha256": "b2bb98b0991454ebf26283e1d021e38b410c16f3e9a4a8980e731ef0e7243e17"
+    }
+  ]
+}
