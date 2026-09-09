@@ -25,3 +25,17 @@ CLT 的 `version.txt`、SDK/组件清单、入口文件身份以及 JDK `release
 2026-09-08 的 CI `34160484334` 在 Windows Node 22/24 均暴露两处短路径断言失败；原始记录保存在 `/private/tmp/deveco-ci-34160484334-win24`。随后统一原生规范化，并增加工程/工具链别名身份回归，同时让模拟 SDK 目录满足真实存在检查。原始失败记录保留；当前 main `bc68e0c` 的 [CI `34304363980`](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34304363980) 中，Windows Node 22/24 各 351 项适用回归已通过。该轮 CI 整体仍因上游接收凭证未刷新而失败，路径回归通过不扩大为 Windows 真实 SDK 验收通过。
 
 路径对照来源为锁定的官方 deveco-cli `08c2f57ffbe83c817d64a728a17971872dd9ddcf` 的 `src/toolchain/tool-provider.ts`，只有路径和调用协议作为参考，不加载该 CLI 运行代码。验收用 `test/native-toolchain.test.ts` 检查本平台文件布局、JDK 优先级、更新失效、文件类型与参数边界。三平台运行测试通过不等于三平台上的真实 SDK 已验收；目前真实 SDK 证据来自 macOS Studio 26.0.0.821 / SDK 26.0.0.105。
+
+## 独立 CLT 的实际平台验收
+
+2026-09-09 在用户完成[华为官方下载页](https://developer.huawei.com/consumer/cn/download/command-line-tools-for-hmos)个人账号登录后，读取 CLT 26.0.0.821 的三份安装包信息。以下摘要分别由对应平台条目的 SHA-256 复制按钮取得，不用下载文件自身计算的值充当官方预期值。
+
+| 安装包 | 官方 SHA-256 |
+| --- | --- |
+| Mac ARM | `d53802c52d3d0a6a0836333c9e8f2bb73d9f6753d1658185539e2659c46df1ad` |
+| Windows x64 | `18b66e8d7c7eabe6d29c40888492cb0d29d90490ad4f6c0deb3468a709a486bd` |
+| Linux x64 | `58da7359019e9360a8bb82da0cd1d3b3b26fedc338379f257849f2162e3ac1fc` |
+
+手动工作流 `.github/workflows/native-clt-acceptance.yml` 在 Windows/Linux 的 GitHub 托管 runner 上，按固定版本和上述摘要校验独立官方包，配置隔离 `DEVECO_CONFIG` 与 JDK 21，运行当前 `native-sdk-acceptance`、`native-checker-acceptance`、`native-lint-acceptance` 三个入口。MCP 使用 Node24；SDK 子工具使用包内 Node。SDK 入口不传设备目标，仅查询模拟器库存，不启动模拟器或部署应用。
+
+官方签名下载 URL 保存在 `DEVECO_CLT_2600821_WINDOWS_URL`、`DEVECO_CLT_2600821_LINUX_URL` 两个仓库 Actions secret 中，不写入仓库及验收制品；链接失效时从同一官方版本重新取得。工作流只上传包摘要/准备结果及三个原始验收 JSON，不上传 SDK 包、状态数据库、测试密钥或认证资料。此入口独立于基础六组 CI，不改变上游接收或发布条件；准备工作流和下载包本身不证明真实 SDK 验收通过。

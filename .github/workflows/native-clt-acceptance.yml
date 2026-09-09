@@ -1,0 +1,122 @@
+name: Native real CLT acceptance
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: native-real-clt-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  clt:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            package: linux-x64
+            sha256: 58da7359019e9360a8bb82da0cd1d3b3b26fedc338379f257849f2162e3ac1fc
+            url_secret: DEVECO_CLT_2600821_LINUX_URL
+          - os: windows-latest
+            package: windows-x64
+            sha256: 18b66e8d7c7eabe6d29c40888492cb0d29d90490ad4f6c0deb3468a709a486bd
+            url_secret: DEVECO_CLT_2600821_WINDOWS_URL
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Compile the current acceptance entrypoints
+        id: build
+        run: npm run build
+      - name: Download and verify the official isolated CLT
+        id: clt
+        shell: python {0}
+        env:
+          CLT_DOWNLOAD_URL: ${{ secrets[matrix.url_secret] }}
+          CLT_PACKAGE: ${{ matrix.package }}
+          CLT_SHA256: ${{ matrix.sha256 }}
+        run: |
+          import hashlib, json, os, pathlib, shutil, subprocess, urllib.parse, urllib.request, zipfile
+          root = pathlib.Path(os.environ['RUNNER_TEMP']) / 'native-real-clt'
+          root.mkdir()
+          report = root / 'clt-source.json'
+          record = {'version': '26.0.0.821', 'package': os.environ['CLT_PACKAGE'],
+                    'source_page': 'https://developer.huawei.com/consumer/cn/download/command-line-tools-for-hmos',
+                    'expected_sha256': os.environ['CLT_SHA256'], 'verified': False}
+          try:
+              url = os.environ['CLT_DOWNLOAD_URL']
+              parsed = urllib.parse.urlsplit(url)
+              expected_name = 'commandline-tools-' + os.environ['CLT_PACKAGE'] + '-26.0.0.821.zip'
+              assert parsed.scheme == 'https' and parsed.hostname == 'contentcenter-vali-drcn.dbankcdn.cn'
+              assert pathlib.PurePosixPath(parsed.path).name == expected_name
+              archive = root / expected_name
+              sha = hashlib.sha256()
+              size = 0
+              with urllib.request.urlopen(url, timeout=60) as response, archive.open('xb') as output:
+                  assert urllib.parse.urlsplit(response.url).hostname == parsed.hostname
+                  while block := response.read(1024 * 1024):
+                      size += len(block)
+                      assert size <= 4 * 1024**3, 'CLT archive exceeds 4 GiB'
+                      output.write(block)
+                      sha.update(block)
+              record.update(bytes=size, actual_sha256=sha.hexdigest())
+              assert sha.hexdigest() == os.environ['CLT_SHA256'], 'Official CLT checksum mismatch'
+              with zipfile.ZipFile(archive) as bundle:
+                  members = bundle.infolist()
+                  assert len(members) <= 500000
+                  expanded = sum(item.file_size for item in members)
+                  assert expanded <= 20 * 1024**3
+                  assert shutil.disk_usage(root).free > expanded + 1024**3, 'Insufficient space for isolated CLT'
+                  for item in members:
+                      name = pathlib.PurePosixPath(item.filename)
+                      assert not name.is_absolute() and '..' not in name.parts and '\\' not in item.filename
+              destination = root / 'extracted'
+              destination.mkdir()
+              if os.name == 'nt':
+                  subprocess.run(['tar', '-xf', str(archive), '-C', str(destination)], check=True)
+              else:
+                  subprocess.run(['unzip', '-q', str(archive), '-d', str(destination)], check=True)
+              toolchain = destination / 'command-line-tools'
+              assert (toolchain / 'sdk/default/sdk-pkg.json').is_file(), 'Expected official CLT SDK layout'
+              record.update(verified=True, expanded_bytes=expanded, entries=len(members),
+                            version_text=(toolchain / 'version.txt').read_text().strip())
+              config = root / 'config.json'
+              config.write_text(json.dumps({'clt': str(toolchain), 'java_home': os.environ['JAVA_HOME']}))
+              with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as env:
+                  env.write('DEVECO_CONFIG=' + str(config) + '\n')
+              archive.unlink()
+          except Exception as error:
+              # Never publish signed download URLs or request headers in artifacts.
+              record['error_type'] = type(error).__name__
+              record['http_status'] = getattr(error, 'code', None)
+              raise RuntimeError('Official CLT preparation failed: ' + type(error).__name__) from None
+          finally:
+              report.write_text(json.dumps(record, indent=2) + '\n')
+      - name: Run real SDK checks without a device target
+        if: always() && steps.build.outcome == 'success' && steps.clt.outcome == 'success'
+        run: node dist/scripts/native-sdk-acceptance.js "${{ runner.temp }}/native-clt-sdk"
+      - name: Run standalone ArkTS checker acceptance
+        if: always() && steps.build.outcome == 'success' && steps.clt.outcome == 'success'
+        run: node dist/scripts/native-checker-acceptance.js "${{ runner.temp }}/native-clt-checker"
+      - name: Run code linter acceptance
+        if: always() && steps.build.outcome == 'success' && steps.clt.outcome == 'success'
+        run: node dist/scripts/native-lint-acceptance.js "${{ runner.temp }}/native-clt-lint"
+      - name: Retain reports without credentials, keys, state or SDK binaries
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-real-clt-${{ matrix.package }}-node24
+          path: |
+            ${{ runner.temp }}/native-real-clt/clt-source.json
+            ${{ runner.temp }}/native-clt-sdk/evidence.json
+            ${{ runner.temp }}/native-clt-checker/evidence.json
+            ${{ runner.temp }}/native-clt-lint/evidence.json
+          if-no-files-found: warn
