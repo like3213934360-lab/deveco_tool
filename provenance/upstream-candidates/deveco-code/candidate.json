@@ -1,0 +1,62 @@
+{
+  "format": 1,
+  "source": "deveco-code",
+  "url": "https://gitcode.com/openharmony-sig/deveco-code.git",
+  "base": {
+    "commit": "325aff05706b9b04a9816a987e9672dda991c630",
+    "tree": "9232f44a15bed9f948662af74f23264b34be457c"
+  },
+  "candidate": {
+    "commit": "e5bc1fa4b55d498119671ac1e1d1aaf59204dea5",
+    "tree": "befc3db84451ed62c369dfa18d7654c936200bea"
+  },
+  "mapping_sha256": "6a2b6c1596635a6ddd7aba7d07f43180d25a7d850f94cd2d965bdd82fb144dd8",
+  "changes": [
+    {
+      "path": "packages/opencode/src/plugin/analytics/uploader.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/src/plugin/analytics/uploader.ts",
+        "oid": "7fd3db32d5f8fccd48913b7a6fc9c4bab70fd429",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/src/plugin/analytics/uploader.ts",
+        "oid": "4d94db219bdf132b4a1d4a058698084e83cffbef",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/plugin/analytics/uploader.test.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/test/plugin/analytics/uploader.test.ts",
+        "oid": "345f697ea79ffeb1de5469819778cd21c7fc3469",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/test/plugin/analytics/uploader.test.ts",
+        "oid": "d23addea979a9b9e99ca54691bdf7f925ab96b73",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    }
+  ],
+  "gate": "requires_release_validation",
+  "required_tests": [],
+  "note": "Source classification is a review proposal. It does not convert natural language into code, approve protocol semantics, modify the active source lock or authorize release.",
+  "sha256": "716064070bb2d654efbaf8f8e09d519dcdf489b26cebeda5ef5699126cdfc01f"
+}
