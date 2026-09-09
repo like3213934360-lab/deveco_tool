@@ -24,10 +24,12 @@
 
 ## 当前验证与历史记录
 
-main `bc68e0c` 快照 的 [CI `34304363980`](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34304363980) 已通过六组平台适用回归，包括模拟器协议与生命周期测试；整轮 CI 仍受上游接收门禁阻止。后续在相同运行/编译身份下启动了已有的专用验收模拟器，通过实例配置与回环 HDC 地址绑定后，完成 MCP 图片/报告协议 8 项检查。外层驱动在关闭 Runtime 后再次查询清单，触发已关闭数据库错误；该失败原样保留，独立新 Runtime 的只读清单确认专用实例已停止。原始记录位于本机验收目录 `20260909-main-emulator-visual-bc68e0c-1`，其验证范围见[验收证据核对](native-acceptance-review.md)。未执行物理手机操作。
+当前运行/编译身份 `cc3cdfd1` / `a3763ec3` 的 [CI `34330094583`](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34330094583) 六组平台适用回归已通过，包括模拟器协议与生命周期回归；整轮 CI 仍受上游接收门禁阻止。相同身份的已有专用模拟器完成 MCP 图片/报告协议 8 项；外层关闭后通过新的 Runtime 确认实例停止，记录在 `20260909-main-emulator-visual-579449e-1`。此前 `bc68e0c` 驱动关闭后查询数据库的失败报告原样保留。
+
+随后在原有专用实例及预装观察应用完成电量 31/80 实际感知、UI 捕获与场景共用设备租约、派发前取消无操作记录及无应用副作用、原值恢复，共 12 项；光照经真实 MCP/Worker 和 SensorServiceKit 回调验证并恢复原值，5 项通过。记录在 `20260909-main-emulator-effects-22cc66c-1` 的 `battery/evidence.json`、`light/evidence.json`；外层 7 项确认原生实例身份、应用准备与恢复，关闭后再次确认实例停止。三份报告均 completed/closed/unchanged/passed，摘要见[完成清单](native-completion.md)。未新增下载、实例或安装，未触碰物理手机。
 
 `test/native-emulator-protocol.test.ts` 验证参数前置拒绝、精确命令、能力探测、缓存复用、失败回执、协议文件限额/缺失、摘要变化、接受结果不明、重复接受去重和查看时配置字节/mtime 不变。接受写入只在测试夹具内模拟。`test/native-emulator.test.ts` 验证受管启动器与清单共同确认退出。
 
 真实组件只读验收 7 项通过：`/private/tmp/deveco-native-emulator-readonly-20260908-1/evidence.json`，记录实际编译摘要及 SDK 身份。覆盖清单、已安装镜像、两份实际协议全文与摘要、稳定复读、旧摘要拒绝、配置字节/mtime 不变和关闭。复现命令为 `node dist/scripts/native-emulator-readonly.js /absolute/new-evidence`。
 
-上述只读与当前图片协议证据不包含真实协议接受、镜像下载/卸载或其他平台真实模拟器。历史专用应用的电量与光照效果记录见[完成清单](native-completion.md)，不能扩大为当前版本全部传感器通过。组件异常/取消恢复、场景效果及模拟器动作与同一目标 UI 操作的共同资源协调，仍须按当前版本逐项核对。
+上述证据不包含真实协议接受、镜像下载/卸载或其他平台真实模拟器。电量、光照与同一目标 UI 的派发前竞争/取消已有当前专项证据；不能扩大为全部场景或传感器通过。原生命令派发后的取消结果、组件异常恢复及更多场景效果仍待验证；当前镜像的湿度和环境温度不可用记录保留。

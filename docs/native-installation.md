@@ -45,7 +45,7 @@ ZIP 包含 package-lock.json（npm pack 默认会排除这个文件）。封装�
 
 spec 包含 `host_config`、`host_format`（`codex-toml` 或 `mcp-json`）、`server`、`installation`、`node`、新的 `state_dir`、`configuration`、`flow_files` 和旧状态目录 `previous_state_dirs`。两个完整安装目录必须互不包含。`--sessions-ended` 是操作者已经结束会话的声明；命令仍只读检查进程和指定状态库，发现未终结任务或未关闭外部会话会拒绝。不会替用户强杀不明进程。
 
-Codex TOML 保留所选 MCP 的超时、启用和工具权限字段，也保留其他 MCP 配置，仅替换启动字段及环境；不支持无损处理的启动字段语法明确拒绝。[Codex MCP 配置字段](https://learn.chatgpt.com/docs/extend/mcp?surface=cli)定义了这些启动和权限设置。全配置回退记录加密存储在私有 journal，不复制到仓库。认证重新登录，旧状态库不导入新执行协议；计划中的用户流程文件逐个核对并原位保留。
+Codex TOML 保留所选 MCP 的超时、启用和工具权限字段，也保留其他 MCP 配置，仅替换启动字段及环境；不支持无损处理的启动字段语法明确拒绝。[Codex MCP 配置字段](https://learn.chatgpt.com/docs/extend/mcp?surface=cli)定义了这些启动和权限设置。全配置回退记录加密存储在私有 journal，不复制到仓库。当前维护实现即使从 native-6 升到 native-6，也无条件要求新的状态目录，既有目录返回 `UPGRADE_STATE_EXISTS`；没有保留状态或导入凭据选项。因此两方认证须重新登录，旧状态保留用于回退。这是维护入口现有限制，不代表每次升级都改变执行协议。计划中的用户流程文件逐个核对并原位保留。
 
 ### 当前旧入口缺失的修复
 

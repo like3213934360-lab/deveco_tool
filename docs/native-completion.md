@@ -4,6 +4,26 @@
 
 当前重构已通过 `943fb3d` 合入 main。当前状态见[迁移状态](native-migration-status.md)，47 项迁移记录的凭证身份与剩余范围见[验收证据核对](native-acceptance-review.md)。以下按时间保留实现及测试记录，其中“当前”“未合并”均指记录当时的状态。
 
+## 2026-09-09 本机 2 GiB 升级计划与模拟器场景复验
+
+审阅接受上一批凭证与隔离升级 11 项后，本机升级计划改为 2 GiB，保留 max_runs=100、retention_days=7 和 Studio 配置；项目默认 256 MiB 不变。新计划为 `preparation/main-host-upgrade-2gib-22cc66c-1/plan.private.json`，SHA-256 `af679fd88e6795b73f5336275b21674ce36ab10f874e8c1c8d5c22cc85b285cb`，执行/回退及剩余事项见同目录 `review-plan.md`。它取代下面历史段落中的 256 MiB 计划，尚未应用到实际宿主。
+
+定向隔离验证 7 项通过，报告 `20260909-main-upgrade-2gib-22cc66c-1/evidence.private.json`，SHA-256 `3299638c5b1c05dee2b06481d02a345247c37212d76b43142214d90de3f70b5b`。新配置通过 300 MiB 容量检查，回退恢复原宿主完整字节、旧配置再次按 256 MiB 拒绝该检查，新状态保留；实际宿主、配置及十份流程未变。此次容量检查不写入 300 MiB 文件，不代替此前已完成的真实大包捕获专项，也不代表部署完成。未重跑全量功能测试或性能采样。
+
+只读契约核对确认新旧安装均为 native-6，但维护入口无条件要求新状态；隔离使用既有 native-6 状态执行 plan，返回 `UPGRADE_STATE_EXISTS`。没有受支持的保留状态/认证升级选项，当前实现要求 Developer 与 CodeGenie 切换后重新登录，旧认证留作回退；不是本次协议版本改变，也未新增凭据导入功能。最新只读进程快照有 12 个旧安装 MCP 连接，`assertQuiescent` 仍拒绝切换；不能沿用此前 10 个进程的清单关闭连接。
+
+已有专用模拟器 `NativeMcpd0d77880` 经原生 UUID/路径/名称与回环端点一致性确认后，在当前运行/编译身份 `cc3cdfd1` / `a3763ec3` 完成电量 31/80 的应用实际感知、UI 捕获占有设备租约时场景排队、派发前取消无操作记录且应用值不变、原电量恢复，共 12 项；真实 MCP/Worker 光照回调与原值恢复 5 项通过。原有断言全部保留，私有驱动只调整新报告/状态路径、显式隔离配置及电量失败时的原值恢复。外层 7 项检查通过，原电量应用已恢复，关闭后用新 Runtime 确认实例停止；没有新增实例、镜像/CLT 下载、应用安装或物理手机操作。
+
+| 本机报告（`acceptance/` 下） | SHA-256 |
+| --- | --- |
+| `20260909-main-emulator-effects-22cc66c-1/battery/evidence.json` | `673dd236075c93055124b38790dc5dd033bf488691df3923d0647d042faecc8e` |
+| `20260909-main-emulator-effects-22cc66c-1/light/evidence.json` | `892f72e8dd051e5676befb4d2319cc32c890a340d93c426d4c468bb6b26d5c4c` |
+| `20260909-main-emulator-effects-22cc66c-1/evidence.json` | `16baa7c09df6e1e05296bb3a966f83f018914805a4f9f93e49bde8046b3a25a6` |
+
+三份模拟器报告均 completed/closed/unchanged/passed。这里只证明指定 macOS 实例上的电量、光照和派发前取消，不包括命令已派发后的取消、全部传感器、异常恢复或其他平台。矩阵仍为 19 verified / 28 pending，已完成凭证没有反复刷新。
+
+进入手机阶段前仍需处理实际宿主切换时机、应用内重连及两方登录；证书成功变更中断仍受个人团队配额限制，真实过期凭据、更多签名类型、多设备/多显示器及其他系统范围仍缺环境或场景证据。独立 CLT 不再新增下载，其覆盖缺口不擅自转为当前 Studio 用户的交付前置条件。最终两份上游接收及 Release 依赖最后的手机映射检查，不以此形成开始手机测试前必须先全部完成的循环条件。手机阶段仍保留同版签名包集合部署、跨模块 HQF、录制/热重载协调、一小时活动、六分钟空闲回收及三份 dev22 凭证更新。
+
 ## 2026-09-09 其余十份凭证与隔离升级收敛
 
 其余十份迁移凭证已正式刷新，当前共 16 份绑定 `cc3cdfd1` / `a3763ec3`，3 份 dev22 待真机阶段，28 行 pending 保留。逐项核对旧报告与当前编译清单，只变化 `dist/test/native-runtime.test.js`，生产源码、专项检查入口、资源及依赖锁未变。映射回归使用已完成的 CI 34330094583，多模块使用已完成的 45 项报告；本轮已启动的 SDK 24 项和静态预检 13 项通过并关闭，报告分别为 `20260909-main-studio-a3763ec3-1/sdk/evidence.json`（SHA-256 `5a765f0d150096ae0fb784874a35f5dbc4ac7676f20820da9df2eb478a89e3d3`）和同目录 `checker/evidence.json`（SHA-256 `85cc59d34b4e12a7b5ebf192dc20236e0dfb81a267e2ca44dc07fc37f5af32de`）。没有重跑全量回归或性能采样，适用性核对及接收计划在 `preparation/migration-final-a3763ec3-1`。
