@@ -63,7 +63,9 @@ node dist/scripts/native-sdk-soak.js /absolute/new-soak-directory 3600 /absolute
 
 系统电源日志记录本地时间 12:43:20 进入 Maintenance Sleep，12:48:21 唤醒；失败请求为 12:43:21.595 至 12:48:21.124，时间窗口重叠。`sleep-review.private.json` 保存该关联及 88 项输入摘要未变的核对结果；这支持存在系统睡眠干扰，不据此断定检查器本身超时，也不把已取得的部分样本当作完整通过。
 
-第二轮使用新目录 `20260909-main-desktop-benchmark-bc68e0c-2`，仅在采样进程存活且接电时以 `caffeinate -is` 阻止系统及用户空闲睡眠，不改全局电源配置。私有采集副本保留当前生产字节、每版 30 次冷启动、各能力 1,000 次、每 100 次交替和独立连接；每 10 次打印进度，仍按每 100 次保存报告。驱动和计划变更及各自摘要记录在 `driver-provenance.json`。终态尚未核对，不能记为通过；即使本轮选定范围完成，也只有 9/19 覆盖，不替代设备能力与一小时长稳。
+第二轮使用新目录 `20260909-main-desktop-benchmark-bc68e0c-2`，仅在采样进程存活且接电时以 `caffeinate -is` 阻止系统及用户空闲睡眠，不改全局电源配置。私有采集副本保留当时生产字节、每版 30 次冷启动、各能力 1,000 次、每 100 次交替和独立连接；每 10 次打印进度，仍按每 100 次保存报告。驱动和计划变更及各自摘要记录在 `driver-provenance.json`。该轮仅计划 9/19 覆盖，不替代设备能力与一小时长稳。
+
+Windows CLT 的真实空清单解析缺陷修复 `e2a04eb` 改变运行代码后，第二轮在北京时间 14:09 主动停止，避免继续将旧 `c9fc32c4` 字节作为最终版本采样。向该轮所属 MCP 发送 SIGTERM 后，采集驱动保留原始 `Connection closed` 错误并退出 1；捕获的所有所属进程均已退出，88 项输入摘要未变。终态保存每版 30 次冷启动，doctor/LSP/ArkTS 各每版 1,000 次，Linter 新版 200/旧版 134 次，其余未采。`direct.json` SHA-256 为 `4364928346767b43e5ba153f6ebd77bc69bc7d518bf889901c5b76e5e5601e07`，`passed:false`、`full_gate_complete:false`；停止原因和关闭核对分别保存在 `intentional-stop.private.json` 与 `intentional-stop-review.private.json`。这些是部分诊断数据，修复版仍需最终采样。
 
 该轮采样期间，本机曾以 2 MiB/s 限速下载独立 CLT：北京时间 13:34:29 至 13:44:44 首次下载被连接重置，13:45:44 至 13:52:29 续传完成，共 2,139,501,456 字节。两个窗口未解压或运行该 CLT，但网络和磁盘活动的影响未量化，因此不描述为空闲机器基准。原始下载结果及并行活动说明保存在该轮的 `download-concurrency.private.json`；性能解释需保留这一限制。
 

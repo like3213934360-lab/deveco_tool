@@ -46,6 +46,30 @@ DevEco Studio 与独立 CLT 是两种可选的工具链环境。已有可用 Stu
 
 该轮 Windows 作业 `102352464631` 已结束，官方包摘要匹配；当前候选 `85a5e037` / `c9fc32c4` 的独立 ArkTS 13 项和 Linter 6 项通过并关闭。综合 SDK 24 项中 14 项通过、10 项失败，报告为 `passed:false`、`completed:false`、`closed:true`、`unchanged:true`。LSP 六项及 API 扫描两项报告组件不可用，API 版本目录因缺失相应字段而断言失败；这些结果不能写成 CLT 已具备 Studio 全部能力。
 
-另一项实际失败是空模拟器库存返回 `[Empty]\r\n`，原实现直接解析 JSON 而报错。修复仅在 `-list` 返回精确 `[Empty]` 且 stderr 为空时识别空库存，其他异常、截断及图像查询不使用这一规则。隔离回归先以旧编译代码复现同一解析错误，再以修改代码通过；未覆盖正在采样的仓库 dist。完整编译、三平台回归及 Windows 原生复验仍待完成。三份 Windows 报告保存在 `preparation/clt-platform-26.0.0.821-20260909-1/windows-attempt-1`，SDK、ArkTS、Linter 的 SHA-256 分别为 `b455db57fca05846b2ff0d7eceb92bdcacb4d790333378c954d3a392e3711545`、`bd398626dd2ce27be5def4202c57356bdc120cbcfddd0106a73d15959fbcf9c4`、`fd6ebeef38945464bda9fa7cf1f49d166849754cc49549596422581745c40f0c`。
+另一项实际失败是空模拟器库存返回 `[Empty]\r\n`，原实现直接解析 JSON 而报错。修复仅在 `-list` 返回精确 `[Empty]` 且 stderr 为空时识别空库存，其他异常、截断及图像查询不使用这一规则。隔离回归先以旧编译代码复现同一解析错误，再以修改代码通过；未覆盖正在采样的仓库 dist。当时完整编译、三平台回归及 Windows 原生复验尚未完成；修复版结果见下文。三份 Windows 报告保存在 `preparation/clt-platform-26.0.0.821-20260909-1/windows-attempt-1`，SDK、ArkTS、Linter 的 SHA-256 分别为 `b455db57fca05846b2ff0d7eceb92bdcacb4d790333378c954d3a392e3711545`、`bd398626dd2ce27be5def4202c57356bdc120cbcfddd0106a73d15959fbcf9c4`、`fd6ebeef38945464bda9fa7cf1f49d166849754cc49549596422581745c40f0c`。
 
 同一提交的第二次运行只重试 Linux，作业 `102355362860` 已完成：包摘要匹配，独立 ArkTS 13 项和 Linter 6 项通过并关闭，综合 SDK 仍为 14/24 项通过且整体失败。LSP/API 的九项与 Windows 同类；模拟器则因缺少 `libpulse.so.0` 在启动时退出 127，尚未执行库存查询。工作流随后为临时 Linux runner 增加 Ubuntu 的 [libpulse0](https://packages.ubuntu.com/en/noble/libs/libpulse0)，并保存官方包内的顶层目录和语言服务/API 扫描入口清单，以便区分未提供组件与路径发现错误；这些准备变更仍待实际复验。Linux 三份报告位于同目录下的 `linux-attempt-2`，SDK、ArkTS、Linter 的 SHA-256 分别为 `004b0eddc94277cbea02e9683f167c8040678d6d36f7ba61f0292eec5c834765`、`3ae36669e1af074d581a922bb85dfe4d8420000a317dfb748881f76e41630a24`、`a0a381076ff80bd015761001aa75fba9d35e1f2dbe3e3a5521673dd9d39ce6ff`。第一次 HTTP 503 报告保留。
+
+### 修复版的终态结果（2026-09-09）
+
+提交 `ddec5d8` 的运行摘要为 `cc3cdfd12b284fc5e85e657dac863a6cde184b18369844d9bf52336b3f903310`，编译摘要为 `680bf03b1d0f8d0c9403861be551d4d9bd8d8e727d44cb4df68f75d9517d27b6`。以下原始报告均已按这两个身份核对。
+
+| 环境 | 综合 SDK | 独立 ArkTS | Linter | 模拟器库存 |
+| --- | --- | --- | --- | --- |
+| macOS ARM64 / Studio 26.0.0.821 | 24/24 通过 | 13/13 通过 | 6/6 通过 | 通过 |
+| macOS ARM64 / 独立 CLT 26.0.0.821 | 15/24 通过，整体失败 | 13/13 通过 | 6/6 通过 | 通过 |
+| Windows x64 / 独立 CLT 26.0.0.821 | 15/24 通过，整体失败 | 13/13 通过 | 6/6 通过 | 空库存通过，原解析错误已复验 |
+| Linux x64 / 独立 CLT 26.0.0.821 | 14/24 通过，整体失败 | 13/13 通过 | 6/6 通过 | 缺少 libEGL.so.1，进程退出 127 |
+
+Windows/Linux 来自 [Actions 34317583335](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34317583335)。三平台官方 CLT 包均通过官方 SHA-256 校验，包内未发现当前协议要求的语言服务入口 `out/standardIndex/index.js` 或 API 扫描入口 `api-change-scan.js`。九项 LSP/API 检查未通过，不将其删除或改写为成功。这里确认的是该官方版本的组件边界，不泛化为所有 CLT 版本都缺少这些组件。
+
+Linux 已补充 libpulse0，随后暴露缺少 libEGL.so.1。下一轮临时 runner 增加 Ubuntu 的 [libegl1](https://packages.ubuntu.com/noble/libegl1)，并在已验证官方包解压后保存 Emulator 的 ldd 输出，以一次检查其余动态库缺口。工作流新增平台选择，仅重试 Linux；准备变更不是复验成功证据。
+
+本机 Studio 同版另有多产品/多模块 45/45 项通过。四个入口均未提交设备目标，未进行真机安装或热补丁。本机原始报告位于 `acceptance/20260909-main-studio-cc3cdfd1-1`，Mac CLT 位于 `acceptance/20260909-main-clt-mac-ddec5d8-1`，远程原始报告位于 `preparation/clt-platform-26.0.0.821-20260909-1/fix-run-34317583335`（均相对于本机 DevEcoMCP 数据目录）。
+
+| Studio 原始报告 | SHA-256 |
+| --- | --- |
+| checker/evidence.json | `b2bb98b0991454ebf26283e1d021e38b410c16f3e9a4a8980e731ef0e7243e17` |
+| lint/evidence.json | `2ccc66d96444c69b0073ae9d7f97ff15ed67ff41de18631467d71bf06c990e62` |
+| multimodule/evidence.json | `189d8d17144687a0a40fdf144be79e92d3e72cea7df04a98ec54c569f33b3bc7` |
+| sdk/evidence.json | `47bbb57018e78a1846e2a3ddcc4631fd6d77fa5492eb609fa349686fbe25cc9a` |

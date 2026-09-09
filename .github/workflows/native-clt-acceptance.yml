@@ -1,6 +1,15 @@
 name: Native real CLT acceptance
 on:
   workflow_dispatch:
+    inputs:
+      platform:
+        description: Platform to verify with the isolated official CLT
+        type: choice
+        default: all
+        options:
+          - all
+          - linux-x64
+          - windows-x64
 permissions:
   contents: read
 concurrency:
@@ -11,16 +20,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - os: ubuntu-latest
-            package: linux-x64
-            sha256: 58da7359019e9360a8bb82da0cd1d3b3b26fedc338379f257849f2162e3ac1fc
-            url_secret: DEVECO_CLT_2600821_LINUX_URL
-          - os: windows-latest
-            package: windows-x64
-            sha256: 18b66e8d7c7eabe6d29c40888492cb0d29d90490ad4f6c0deb3468a709a486bd
-            url_secret: DEVECO_CLT_2600821_WINDOWS_URL
-    runs-on: ${{ matrix.os }}
+        package: ${{ inputs.platform == 'all' && fromJSON('["linux-x64","windows-x64"]') || fromJSON(format('["{0}"]', inputs.platform)) }}
+    runs-on: ${{ matrix.package == 'linux-x64' && 'ubuntu-latest' || 'windows-latest' }}
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
@@ -31,11 +32,11 @@ jobs:
         with:
           distribution: temurin
           java-version: "21"
-      - name: Install the observed Linux emulator runtime dependency
+      - name: Install the observed Linux emulator runtime dependencies
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install --no-install-recommends -y libpulse0
+          sudo apt-get install --no-install-recommends -y libpulse0 libegl1
       - name: Install locked dependencies
         run: npm ci
       - name: Compile the current acceptance entrypoints
@@ -45,9 +46,9 @@ jobs:
         id: clt
         shell: python {0}
         env:
-          CLT_DOWNLOAD_URL: ${{ secrets[matrix.url_secret] }}
+          CLT_DOWNLOAD_URL: ${{ matrix.package == 'linux-x64' && secrets.DEVECO_CLT_2600821_LINUX_URL || secrets.DEVECO_CLT_2600821_WINDOWS_URL }}
           CLT_PACKAGE: ${{ matrix.package }}
-          CLT_SHA256: ${{ matrix.sha256 }}
+          CLT_SHA256: ${{ matrix.package == 'linux-x64' && '58da7359019e9360a8bb82da0cd1d3b3b26fedc338379f257849f2162e3ac1fc' || '18b66e8d7c7eabe6d29c40888492cb0d29d90490ad4f6c0deb3468a709a486bd' }}
         run: |
           import hashlib, json, os, pathlib, shutil, subprocess, urllib.parse, urllib.request, zipfile
           root = pathlib.Path(os.environ['RUNNER_TEMP']) / 'native-real-clt'
@@ -100,6 +101,12 @@ jobs:
               assert (toolchain / 'sdk/default/sdk-pkg.json').is_file(), 'Expected official CLT SDK layout'
               record.update(verified=True, expanded_bytes=expanded, entries=len(members),
                             version_text=(toolchain / 'version.txt').read_text().strip())
+              if os.environ['RUNNER_OS'] == 'Linux':
+                  dependency_check = subprocess.run(['ldd', str(toolchain / 'emulator/Emulator')],
+                      capture_output=True, text=True, timeout=30)
+                  record['emulator_dependencies'] = {
+                      'exit_code': dependency_check.returncode,
+                      'stdout': dependency_check.stdout, 'stderr': dependency_check.stderr}
               config = root / 'config.json'
               config.write_text(json.dumps({'clt': str(toolchain), 'java_home': os.environ['JAVA_HOME']}))
               with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as env:
