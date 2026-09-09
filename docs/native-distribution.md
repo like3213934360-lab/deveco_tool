@@ -8,9 +8,11 @@ main `bc68e0c` 的 [CI 34304363980](https://github.com/like3213934360-lab/deveco
 
 本机候选 ZIP 的 SHA-256 为 `5d431fb091cdb0fef574b20ee996192651bc5ea82e22e999c6f9b07d0e021ab9`，分发清单 SHA-256 为 `f341a7548da0ea67771726c7fe548a3b770cd6b02ba3e9c11b337091dfda8c65`；清单含 407 个文件、90,618,384 字节。两种摘要分别对应压缩文件与清单，不能互换。macOS arm64 的 Node22.23.2 和 Node24.14.1 在两个新目录各通过 10 项干净安装检查。本轮重新核对了 ZIP 及两份原始报告的摘要。
 
-候选位于本机 preparation 目录 `main-delivery-bc68e0c-1`；报告位于 acceptance 目录 `20260909-main-install-bc68e0c-node22-1`、`20260909-main-install-bc68e0c-node24-1` 和 `20260909-main-ci-34304363980`。运行摘要为 `85a5e037`，全部编译摘要为 `c9fc32c4`；后续 `232afbc` 仅更新文档及迁移凭证，不改变安装包生产文件。该包仍是 installation-validation 候选，最终宿主切换及正式 Release 尚未完成。验收剩余范围见[当前核对清单](native-acceptance-review.md)。
+候选位于本机 preparation 目录 `main-delivery-bc68e0c-1`；报告位于 acceptance 目录 `20260909-main-install-bc68e0c-node22-1`、`20260909-main-install-bc68e0c-node24-1` 和 `20260909-main-ci-34304363980`。运行摘要为 `85a5e037`，全部编译摘要为 `c9fc32c4`；后续文档及迁移凭证更新不改变安装包生产文件。该包仍是 installation-validation 候选；实际宿主已更新并确认 Codex 应用内重连，正式 Release 尚未完成。验收剩余范围见[当前核对清单](native-acceptance-review.md)。
 
-当前候选另通过 10 项隔离升级/回退检查：旧版与新版实际 MCP 可运行，活跃会话阻止切换或回退，加密回退记录、策略保留、幂等重试和十份既有流程文件字节保留均已核对。报告为 `20260909-main-upgrade-rollback-bc68e0c-1`。真实 Codex 宿主的维护计划已生成并固定当前配置、新旧安装及十份流程的摘要，当前配置字节保持不变；计划位于 preparation 下的 `main-host-upgrade-bc68e0c-1`。执行计划和应用内 MCP 重新连接仍待最终切换时完成。
+当前候选另通过 10 项隔离升级/回退检查：旧版与新版实际 MCP 可运行，活跃会话阻止切换或回退，加密回退记录、策略保留、幂等重试和十份既有流程文件字节保留均已核对。报告为 `20260909-main-upgrade-rollback-bc68e0c-1`。
+
+真实宿主切换记录位于 preparation 下的 `main-host-upgrade-bc68e0c-2`：先核对旧状态无未完成任务、受管进程或外部会话，再向 5 个已确认归属 Codex 的旧 MCP 实例发送 SIGTERM 并确认退出。当前 Node24 安装复制到 installations 下的 `native-6-main-20260909-1`，完整安装摘要保持一致；维护 CLI 已应用新计划，保留旧完整安装和加密回退记录，十份流程字节不变。按实际新配置独立启动 MCP 的 6 项检查通过并关闭；用户重启 Codex 后，应用内实际 `deveco_doctor` 调用成功，新安装进程、Node24、新状态目录及配置摘要均匹配。重连成功原始响应及复核分别保存在 `app-reconnect-success.private.json`、`app-reconnect-review.private.json`；先前 `Transport closed` 的失败记录保留。新状态未导入旧凭据，Developer 与 CodeGenie 已分别通过真实浏览器回调重新登录，当前生产 MCP/Worker 的云端只读查询及重启后保留验证分别通过 9/10 项，报告见[完成清单](native-completion.md)末尾。
 
 ## 历史跨平台验证（caf97cc）
 

@@ -480,3 +480,19 @@ README 已改用当前 16 项凭证与 3 项历史凭证的实际归属，注明
 三份 `evidence.json` 均为 passed/completed/closed/unchanged，运行、编译、依赖锁、资源与上游锁五项身份匹配已核对的六组 CI。复核记录保存在 `20260909-main-doc-evidence-bc68e0c-1/review.private.json`。Linter 只修改新建隔离工程；API 驱动字节与已评审 dev28 驱动相同，使用历史 SDK 工程的独立副本，实际调用当前服务及本机安装的扫描器。版本数据目录、文件/模块/工程/混合语言范围和错误边界均核对，不扩大为另一套 SDK 或 CLT 已验证。
 
 当前 MCP 的 `ui_flow list/read/validate` 保留十份现存流程的原字段、坐标、私密变量声明、全部步骤与最终断言，十份文件前后摘要一致。已从迁移矩阵移除这条完成的文件迁移子项，并在 UI 工作流与验收核对文档保留证据范围；该行仍 pending，因为未知目标录制及录制/热重载协调没有当前设备证据。矩阵仍为 19 verified / 28 pending，没有据部分检查接收整行。本轮未访问手机或模拟器。
+
+
+## main 真实宿主切换、应用内重连与双提供方认证（2026-09-09）
+
+正式维护计划 `main-host-upgrade-bc68e0c-2` 已应用：先确认旧状态没有未完成任务、存活受管进程或外部会话，再对 5 个确认属于 Codex 的旧 MCP 实例执行正常 SIGTERM 关闭。当前 Node24 候选复制到 installations 下的 `native-6-main-20260909-1`，完整安装摘要不变；宿主配置指向该安装及新 native-6 状态目录，旧完整安装、加密回退记录和十份原始流程保留。新配置独立 MCP 的 6 项检查通过并关闭。
+
+最初应用内旧连接返回 `Transport closed`，记录保存在 `app-reconnect.private.json`。用户重启 Codex 后，实际应用内 `deveco_doctor` 成功响应，运行进程对应新安装且父进程为 Codex app-server，Node 为 24.14.1，Studio 为 26.0.0.821，新状态目录、宿主配置与安装摘要均匹配，无待恢复任务。成功响应 `app-reconnect-success.private.json` 的 SHA-256 为 `da1f404146863c827c419b9a78c7e614dba0a57b24e9e2e5dd12ce54b5ef094a`，复核为 `app-reconnect-review.private.json`；两者均位于上述 preparation 计划目录。未传设备目标，未探测手机。
+
+新状态未导入旧凭据。实际宿主的 Developer 与 CodeGenie 分别完成真实浏览器回调登录；随后使用仓库既有生产 MCP/Worker 验收入口复用该状态，依次完成下列检查。测试仅关闭自身 Worker/MCP，不重启 Codex 的活动连接，不创建或删除云端签名资产。
+
+| 提供方 | acceptance 报告目录 | 检查数 | evidence.json SHA-256 |
+| --- | --- | ---: | --- |
+| Developer | `20260909-main-host-auth-developer-bc68e0c-1` | 9 | `4fa8c144ec518e1bd2618438aea339ae66c36c7b5c471e0dc633f486f91b12c3` |
+| CodeGenie | `20260909-main-host-auth-codegenie-bc68e0c-1` | 10 | `44f747b18e77c633690052c701f9eff16778c83ffc2ed70683a3bf4641aa5c52` |
+
+两份报告均 passed/completed/closed/unchanged，运行身份 `85a5e037`、编译身份 `c9fc32c4` 与候选一致。Developer 团队、证书与设备清单只读查询及重启后复查成功；CodeGenie 实际云知识查询成功，1,167,262 字节制品分 36 页完整读取，重启后再次查询及原制品读取的摘要一致。两方均已登录的状态只核对提供方路由，不将其扩大为单方登录隔离的新证据；真实过期 JWT、云端变更中断仍未覆盖。早期 native-3 CodeGenie 状态不兼容的失败记录保留，本次真实重新登录补齐当前云查询证据。正式 Release 尚未发布，迁移仍为 19 verified / 28 pending，未以认证子项关闭其他未完成场景。本轮没有执行真机测试。
