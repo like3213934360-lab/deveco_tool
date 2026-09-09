@@ -507,3 +507,10 @@ README 已改用当前 16 项凭证与 3 项历史凭证的实际归属，注明
 独立只读复核 `rejection-review.evidence.json` 的 4 项检查通过：真实云端拒绝原因被持久化，同一 Runtime 和重新启动 Runtime 下重复同一 request_key 均返回原失败 run_id、没有再提交创建请求，认证及完整证书清单保持。报告 passed/completed/closed/unchanged 均为 true，SHA-256 为 `d23f02a14e834e9ffd0b084dd3a67cafbe160c3b231000ae396c9ef3d7ac2057`。运行/编译身份仍为 `85a5e037` / `c9fc32c4`；该补充仅证明云端配额拒绝后的任务和凭据保留，不覆盖真实过期认证或成功变更后的中断恢复。
 
 用户随后指定使用个人账号。实时团队清单确认本次原本即使用 `userType:1` 的个人团队，六张现有证书中包含历史验收创建并仍被后续材料引用的专用证书。腾出名额涉及撤销现有证书，已提出精确测试证书的撤销与重建确认，尚未执行撤销。其他业务证书不在此次测试清理范围内。
+
+
+## main 当前 UI 与编排采样（2026-09-09）
+
+使用未修改的 `native-ui-benchmark` 与 `native-orchestration-benchmark` 入口，在当前 `85a5e037` / `c9fc32c4`、Node24.14.1 下完成采样，两份原始报告均 `passed:true`。三种 UI 树每版各 30 次解析、四种选择器各 1,000 次查询保留延迟、CPU/RSS；编排、SQLite 检查点往返和持久化图各 1,000 次。子进程结束，临时编排状态关闭并清理，没有执行设备操作。
+
+报告为 `20260909-main-ui-benchmark-bc68e0c-1.json`（SHA-256 `fc25c4dee7cc1eb37d8a17e435acb9ff8925510c941c0998611ec3f34f95879e`）和 `20260909-main-orchestration-benchmark-bc68e0c-1.json`（SHA-256 `7221705e8068de659d89ef0efb105cb6b92adc70496ce1addd6dffedf6ea32a4`）。绝对 P95 和准确的计时/断言范围见 [UI 性能记录](native-ui-performance.md)。不由离线算法采样接收实时设备或完整 MCP 能力，迁移仍为 19 verified / 28 pending。
