@@ -8,6 +8,7 @@ import { setTimeout as delay } from "node:timers/promises";
 import { z } from "zod";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import Database from "better-sqlite3";
 import { ProcessService } from "../src/core/process.js";
 import { StateStore } from "../src/core/store.js";
 import {
@@ -118,6 +119,62 @@ test("MCP catalogs work without SDK discovery, invalid input is rejected, worker
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
+test("MCP worker failures retain matching request telemetry after a successful next call and process exit", { timeout: 20000 }, async () => {
+  const root = temporary(), project = path.join(root, "empty-project"), config = path.join(root, "config.json"), state = path.join(root, "state");
+  fs.mkdirSync(project);
+  fs.writeFileSync(config, "{}\n");
+  const client = new Client({ name: "native-worker-failure-log-test", version: "1" });
+  const transport = new StdioClientTransport({
+    command: process.execPath,
+    args: [fileURLToPath(new URL("../src/cli.js", import.meta.url))],
+    cwd: root,
+    stderr: "ignore",
+    env: {
+      ...Object.fromEntries(Object.entries(process.env).filter((entry): entry is [string, string] =>
+        entry[1] !== undefined && !entry[0].startsWith("DEVECO_") && !["NODE_OPTIONS", "NODE_PATH", "PROJECT_PATH"].includes(entry[0]))),
+      DEVECO_CONFIG: config, DEVECO_STATE_DIR: state,
+    },
+  });
+  const readEvents = () => {
+    const db = new Database(path.join(state, "state.sqlite"), { readonly: true, fileMustExist: true });
+    try {
+      return z.array(z.object({ id: z.number(), kind: z.string(), data: z.string(), created: z.number() }))
+        .parse(db.prepare("SELECT id,kind,data,created FROM events WHERE kind IN ('request_start','request_finish','request_failed') ORDER BY id").all())
+        .map(row => ({ ...row, data: z.object({ request_id: z.string(), tool: z.string(), code: z.string().optional() }).parse(JSON.parse(row.data)) }));
+    } finally { db.close(); }
+  };
+  try {
+    await client.connect(transport);
+    const pid = transport.pid;
+    assert.ok(pid);
+    // The existing empty directory passes the MCP schema and fails inside the Worker project service.
+    const failure = await client.callTool({ name: "switch_cwd", arguments: { project_path: project } });
+    assert.equal(failure.isError, true);
+    const failed = z.object({ ok: z.literal(false), request_id: z.uuid(), error: z.object({ code: z.literal("PROJECT_INVALID") }) }).parse(failure.structuredContent);
+    const success = await client.callTool({ name: "workflow_run", arguments: { action: "list" } });
+    assert.notEqual(success.isError, true);
+    const succeeded = z.object({ ok: z.literal(true), request_id: z.uuid() }).parse(success.structuredContent);
+    assert.notEqual(succeeded.request_id, failed.request_id);
+    await until(() => readEvents().length >= 4);
+    const live = readEvents();
+    assert.deepEqual(live.map(row => [row.kind, row.data.request_id, row.data.tool, row.data.code]), [
+      ["request_start", failed.request_id, "switch_cwd", undefined],
+      ["request_failed", failed.request_id, "switch_cwd", "PROJECT_INVALID"],
+      ["request_start", succeeded.request_id, "workflow_run", undefined],
+      ["request_finish", succeeded.request_id, "workflow_run", undefined],
+    ]);
+    await client.close();
+    await until(() => {
+      try { process.kill(pid, 0); return false; }
+      catch (error) { if ((error as NodeJS.ErrnoException).code === "ESRCH") return true; throw error; }
+    });
+    assert.deepEqual(readEvents(), live, "The exact request events must survive process exit");
+  } finally {
+    await transport.close();
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test("MCP diagnostic calls reject a missing configured SDK without falling back to the machine installation", async () => {
   const root = temporary(), project = path.join(root, "application"), config = path.join(root, "config.json");
   // Traverse through Node's JavaScript copy implementation: the native recursive
