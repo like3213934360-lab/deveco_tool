@@ -1,0 +1,26 @@
+{
+  "format": 1,
+  "passed": true,
+  "source": "tools:harmony_docs",
+  "row_sha256": "8f5a6a906eaeeb37c71be6445c22d97422ed94acadcb4ea5fa2bf50aaf9ef18c",
+  "tested": {
+    "runtime_sha256": "85a5e037aced7c71722bacd370dbcd727f990d623d39efff0d07e01c2d97caa7",
+    "compiled_sha256": "c9fc32c404153e7094aa879bbd4d5d67e4517b476824fbac66209cca19dd9a48",
+    "package_lock_sha256": "68641e488a5099852216d3003664f57dd1d05b980f4c7813ee75dd7baf83d0fc",
+    "resource_manifest_sha256": "563bc3f06565e92c59c621c3ef909a37cbc4ac1db958d3d73d6e0bc99bf9ed86",
+    "upstream_lock_sha256": "bf3cc411831bd8ce6652a8085c8247c399d0c48b6d73156a7e649b9ef668164e"
+  },
+  "reviewer": "Codex",
+  "reason": "Current six-platform CI passes packaged local database lookup, six catalog scopes, literal search, stable pagination, content limits, resource integrity and report regressions. This row covers local document resources and does not accept cloud authentication scenarios.",
+  "completed_scenarios": [],
+  "checks": [
+    {
+      "check": "test/native-resources.test.ts",
+      "original_sha256": "5b2c0d901f5cd9c3424a4ef41f4b5b34e624796f8e7948f2d582c6ec229d9b4a"
+    },
+    {
+      "check": "test/native-reports.test.ts",
+      "original_sha256": "5b2c0d901f5cd9c3424a4ef41f4b5b34e624796f8e7948f2d582c6ec229d9b4a"
+    }
+  ]
+}

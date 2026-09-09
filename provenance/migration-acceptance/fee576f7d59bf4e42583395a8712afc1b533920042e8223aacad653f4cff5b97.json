@@ -1,0 +1,40 @@
+{
+  "format": 1,
+  "passed": true,
+  "source": "tools:go_to_definition",
+  "row_sha256": "18ed5507f91d9d0df2e48368a80d24eab564c426bf84590f982cec2dcc2db06d",
+  "tested": {
+    "runtime_sha256": "85a5e037aced7c71722bacd370dbcd727f990d623d39efff0d07e01c2d97caa7",
+    "compiled_sha256": "c9fc32c404153e7094aa879bbd4d5d67e4517b476824fbac66209cca19dd9a48",
+    "package_lock_sha256": "68641e488a5099852216d3003664f57dd1d05b980f4c7813ee75dd7baf83d0fc",
+    "resource_manifest_sha256": "563bc3f06565e92c59c621c3ef909a37cbc4ac1db958d3d73d6e0bc99bf9ed86",
+    "upstream_lock_sha256": "bf3cc411831bd8ce6652a8085c8247c399d0c48b6d73156a7e649b9ef668164e"
+  },
+  "reviewer": "Codex",
+  "reason": "Current platform regressions, 24 real SDK observations and 45 continuous module observations verify existing selected-SDK declaration paths, cross-module definitions across products/targets, UTF-16 boundaries and current source contents.",
+  "completed_scenarios": [
+    "真实跨模块/SDK 定义位置验收"
+  ],
+  "checks": [
+    {
+      "check": "test/native-runtime.test.ts",
+      "original_sha256": "5b2c0d901f5cd9c3424a4ef41f4b5b34e624796f8e7948f2d582c6ec229d9b4a"
+    },
+    {
+      "check": "test/native-lsp.test.ts",
+      "original_sha256": "5b2c0d901f5cd9c3424a4ef41f4b5b34e624796f8e7948f2d582c6ec229d9b4a"
+    },
+    {
+      "check": "test/native-toolchain.test.ts",
+      "original_sha256": "5b2c0d901f5cd9c3424a4ef41f4b5b34e624796f8e7948f2d582c6ec229d9b4a"
+    },
+    {
+      "check": "scripts/native-sdk-acceptance.ts",
+      "original_sha256": "eb7869bb8f0f170e60295b40c8e34fa90b6a4691037dcff68431cea6311aa9fe"
+    },
+    {
+      "check": "scripts/native-multimodule-acceptance.ts",
+      "original_sha256": "447ce3fc23f98f34c7e2e4ea78a3e08b2441552fc44a34bd25bd868dce244669"
+    }
+  ]
+}

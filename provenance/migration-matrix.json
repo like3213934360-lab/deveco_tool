@@ -206,7 +206,7 @@
       "remaining": [],
       "acceptance": "verified",
       "evidence": [
-        "provenance/migration-acceptance/df98fe013b434bd34e59f3761e03c97f96349d1de73b6ec0f1f7ab6824378015.json"
+        "provenance/migration-acceptance/e3e5405980513ce1c4670b513286d7713aadd41a04228426885f4558b51fbca6.json"
       ],
       "targets": [
         "tool:arkts_check"
@@ -276,7 +276,7 @@
       "remaining": [],
       "acceptance": "verified",
       "evidence": [
-        "provenance/migration-acceptance/906b6ff7dd0b526d81d4db2a5a8d4ea40cb56b99440c12b3ca480a71cd09c231.json"
+        "provenance/migration-acceptance/68cdd09bbd924453c7085f61f7b944041d0887974fed5a9b2e7e38701aed0234.json"
       ],
       "targets": [
         "workflow:project_build",
@@ -373,7 +373,7 @@
       "remaining": [],
       "acceptance": "verified",
       "evidence": [
-        "provenance/migration-acceptance/ae22c16cdf1c7a02c985df58d5240ef270a06947b55de864f9b6293a39594aae.json"
+        "provenance/migration-acceptance/63a458511ce6999ee6a78f2270d9f67f2878c30f659664ee49457d868227f13e.json"
       ],
       "targets": [
         "tool:check_cpp_files"
@@ -401,7 +401,7 @@
       "remaining": [],
       "acceptance": "verified",
       "evidence": [
-        "provenance/migration-acceptance/a57be19b76ad0597682de35ff7fc629dca3163c8d8b68f08b3040f25b51f70ef.json"
+        "provenance/migration-acceptance/55cacf2c960909249203a88cea295bf538064087a37957cc89583d7fb92ade3b.json"
       ],
       "targets": [
         "tool:arkts_check",
@@ -628,7 +628,7 @@
       "remaining": [],
       "acceptance": "verified",
       "evidence": [
-        "provenance/migration-acceptance/a449ac46d77413dc7809bac2330565c5ba09be4c284025e351e85a9953ef526d.json"
+        "provenance/migration-acceptance/e2028dba4d1fc843b80cb8a76adf47075d85c5f2f0632ec6bf2a4ab589477fb3.json"
       ],
       "targets": [
         "tool:harmony_auth"
@@ -651,7 +651,7 @@
       "remaining": [],
       "acceptance": "verified",
       "evidence": [
-        "provenance/migration-acceptance/e166ef18ef66bb8fc768225b33c24a685c5f123114f3cb9c6dbb58c04b05a4aa.json"
+        "provenance/migration-acceptance/a1d9ba030fd21fa9d8059d4ac16dafffa1ab2e1981a2aad999a4698f68043409.json"
       ],
       "targets": [
         "tool:deveco_restart"
@@ -848,7 +848,6 @@
         "scripts/native-device-readonly.ts"
       ],
       "remaining": [
-        "新设备属性与清单契约的 Node 22/24 三平台 CI",
         "真实多设备及跨平台 HDC/SDK 验收"
       ],
       "acceptance": "pending",
@@ -1292,7 +1291,7 @@
       "remaining": [],
       "acceptance": "verified",
       "evidence": [
-        "provenance/migration-acceptance/deac1a3b03a95261bb3196411f9dcc4cf4587b3298136a51e08debe3162c0ddc.json"
+        "provenance/migration-acceptance/fee576f7d59bf4e42583395a8712afc1b533920042e8223aacad653f4cff5b97.json"
       ],
       "targets": [
         "tool:lsp"
@@ -1330,7 +1329,7 @@
       "remaining": [],
       "acceptance": "verified",
       "evidence": [
-        "provenance/migration-acceptance/676cd206ef7da5c1108bda8db751497b4a974aca3f947f50bc49b34d1bcdc6cf.json"
+        "provenance/migration-acceptance/017ecefa115e88a86574caad1113a6766ea6c934635f9bf9792490711dfd6e50.json"
       ],
       "targets": [
         "tool:harmony_knowledge"
@@ -1711,7 +1710,7 @@
       "remaining": [],
       "acceptance": "verified",
       "evidence": [
-        "provenance/migration-acceptance/b23a9ee8d6bd09f1252473a81c79901546d73572d7cee1c586933e2b7b6f69b7.json"
+        "provenance/migration-acceptance/ff63f7a7b5485bdc45f52c73be549ad5f872bac80e132160af92a41f6edbc00c.json"
       ],
       "targets": [
         "workflow:project_sync"
@@ -1804,7 +1803,7 @@
       "remaining": [],
       "acceptance": "verified",
       "evidence": [
-        "provenance/migration-acceptance/9cb000300c144e20cff1b53eddfd4340e63bb6f1c757432a4bc4589580ab6662.json"
+        "provenance/migration-acceptance/c37a7deb13cbfcf3c3b65b3a7339c35a75a8d2c750c0381e44d5b042d1255a0e.json"
       ],
       "targets": [
         "tool:switch_cwd"
@@ -2054,7 +2053,6 @@
       ],
       "remaining": [
         "未知目标自动录制的真实设备验收；入口选择、并发去重、重启、最终断言回归及提交 1ecafae 六组跨平台 CI 已通过",
-        "原生 driver 诊断的最终跨平台快照复验；本机 Node26/24 回归和真机只读探测已通过",
         "既有用户保存流程迁移验收；专用应用录制、MCP 重启和重放已通过",
         "录制期间热重载等长期会话对 UI 状态的干扰协调"
       ],
@@ -2819,7 +2817,7 @@
       "remaining": [],
       "acceptance": "verified",
       "evidence": [
-        "provenance/migration-acceptance/5f3cc0241f85d0b129a7c1f8616888c5556bf0288f9c28553259d6ee2ab5f730.json"
+        "provenance/migration-acceptance/ab93fef0b1986a30ba55dc942678470fb4665b25b4eeb6e804e229ee4da61015.json"
       ],
       "targets": [
         "workflow:project_create"
@@ -2859,7 +2857,7 @@
       "remaining": [],
       "acceptance": "verified",
       "evidence": [
-        "provenance/migration-acceptance/6e7e4a3ad558401b34b3ae5fec5addabd75bb5d255dc12d9ce2ff8fb905faf78.json"
+        "provenance/migration-acceptance/23e7749b44918522d3a7599f8992c423b95dac9e98c245755181eadb6451ecb6.json"
       ],
       "targets": [
         "tool:deveco_doctor"
