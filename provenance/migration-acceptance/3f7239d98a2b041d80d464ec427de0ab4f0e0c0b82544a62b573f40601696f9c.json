@@ -1,0 +1,28 @@
+{
+  "format": 1,
+  "passed": true,
+  "source": "tools:project_sync",
+  "row_sha256": "0d82ccf0d5dd6aeda25a1f358231b47262a176558e6b8a6e2a23061447b36c36",
+  "tested": {
+    "runtime_sha256": "cc3cdfd12b284fc5e85e657dac863a6cde184b18369844d9bf52336b3f903310",
+    "compiled_sha256": "a3763ec3934982b406594372e5e5469b0b7f9e6d22848f3962e2621eccdb364b",
+    "package_lock_sha256": "68641e488a5099852216d3003664f57dd1d05b980f4c7813ee75dd7baf83d0fc",
+    "resource_manifest_sha256": "563bc3f06565e92c59c621c3ef909a37cbc4ac1db958d3d73d6e0bc99bf9ed86",
+    "upstream_lock_sha256": "bf3cc411831bd8ce6652a8085c8247c399d0c48b6d73156a7e649b9ef668164e"
+  },
+  "reviewer": "Codex evidence review",
+  "reason": "Current compiled platform regressions and real SDK multi-module observations verify OHPM then Hvigor synchronization. Two isolated Runtime OHPM after-child-exit SIGKILL cases confirm committed completion resumes the next stage once; missing completion remains needs_input and cancellation rejects uncertain effects. No arbitrary in-flight SDK kill claim. Supplemental SHA256 e69d87edaa61bf508a97d85eb46c24ae98f106644e1a7d16c70b7e6ae6e6be23.",
+  "completed_scenarios": [
+    "多产品与 OHPM 中断恢复"
+  ],
+  "checks": [
+    {
+      "check": "test/native-project.test.ts",
+      "original_sha256": "d0d81419c3486754059baa5914ae7ab7b5ef1a601c02b5ffd3d82b1b69832164"
+    },
+    {
+      "check": "scripts/native-multimodule-acceptance.ts",
+      "original_sha256": "da6c398c9cf017d7c5853d5fd96a80d2b9bfe150ac471d909af7f5bac27a552c"
+    }
+  ]
+}

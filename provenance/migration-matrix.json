@@ -276,7 +276,7 @@
       "remaining": [],
       "acceptance": "verified",
       "evidence": [
-        "provenance/migration-acceptance/68cdd09bbd924453c7085f61f7b944041d0887974fed5a9b2e7e38701aed0234.json"
+        "provenance/migration-acceptance/1718a5735476756ee876892f1e188f14c55dcb80b1342926ace3bcde3143272d.json"
       ],
       "targets": [
         "workflow:project_build",
@@ -581,7 +581,7 @@
       "remaining": [],
       "acceptance": "verified",
       "evidence": [
-        "provenance/migration-acceptance/08800a138f58bf667ac3179f392a54e67872ab570a5f2c182a8022a4606d1226.json"
+        "provenance/migration-acceptance/268b8ca6c0d8422ecf4ea06d0c22f25d06a140c92095c9ae148a6d9cea0bc59d.json"
       ],
       "targets": [
         "tool:harmony_auth"
@@ -1710,7 +1710,7 @@
       "remaining": [],
       "acceptance": "verified",
       "evidence": [
-        "provenance/migration-acceptance/ff63f7a7b5485bdc45f52c73be549ad5f872bac80e132160af92a41f6edbc00c.json"
+        "provenance/migration-acceptance/3f7239d98a2b041d80d464ec427de0ab4f0e0c0b82544a62b573f40601696f9c.json"
       ],
       "targets": [
         "workflow:project_sync"
@@ -2727,7 +2727,7 @@
       "remaining": [],
       "acceptance": "verified",
       "evidence": [
-        "provenance/migration-acceptance/0bc84db932625386294b35ca072e356e9e8cdf745a0acc2d76c373012b05385a.json"
+        "provenance/migration-acceptance/122bbdacd58f3470d5dd7960f8384b25c19706ec70845e143ffc29e76d56c14a.json"
       ],
       "targets": [
         "tool:verify_ui",
@@ -2946,7 +2946,7 @@
       "remaining": [],
       "acceptance": "verified",
       "evidence": [
-        "provenance/migration-acceptance/6e8181654567a6f8f8df097c5501ed6fc23884de50a78c15762e75ac17965689.json"
+        "provenance/migration-acceptance/626cfdf158929a467179a2aae1f71e8b42b276bca21da0cdd5ca007359947dad.json"
       ],
       "targets": [
         "workflow:crash_diagnose"
@@ -2997,7 +2997,7 @@
       "remaining": [],
       "acceptance": "verified",
       "evidence": [
-        "provenance/migration-acceptance/5bb235252ad4472759afd2661273866aedc433ecd4de29738764884b7b135413.json"
+        "provenance/migration-acceptance/c073cfdc77db3ddf60fb007deebf18487030dbb5344bcf78055d3381b2e398c7.json"
       ],
       "targets": [
         "workflow:crash_diagnose"

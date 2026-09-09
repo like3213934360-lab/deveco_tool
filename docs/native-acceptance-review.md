@@ -6,34 +6,34 @@
 
 [迁移矩阵](../provenance/migration-matrix.json) 共 47 行（40 个旧工具、7 个旧脚本）：28 行 pending、19 行 verified。330 个参数与 95 个动作已有迁移归类；归类与接口存在不等于行为验收通过。
 
-19 行现有凭证中，10 行已按 `ddec5d8` 的当前运行/编译身份重新接收，6 行仍为 `bc68e0c`，3 行仍为 dev22。当前同版 Studio 与六组回归报告已逐项核对；需要真实中断、认证回调、崩溃重放或模拟器协议的其余旧凭证没有自动沿用。下面列出每一行及当前引用的凭证；28 行 pending 不代表缺少 28 项实现。
+19 项已有凭证中，6 项绑定 `579449e` 的 `cc3cdfd1` / `a3763ec3` 身份，10 项仍绑定相同运行源码、较早测试构建的 `cc3cdfd1` / `680bf03b`，3 项绑定 dev22。构建、同步、两项崩溃解析、认证回调和模拟器图片协议已按各自范围完成本轮复验；没有将历史凭证自动沿用。下面列出每一行及当前引用的凭证；28 行 pending 不代表缺少 28 项实现。
 
 | 迁移项 | 凭证快照 | 当前凭证 |
 | --- | --- | --- |
 | `tools:apply_changes` | dev22 | [凭证](../provenance/migration-acceptance/e47982e4c533399eac33188e2194273fe1b2d1f2968a3931708182ef605d3f8a.json) |
 | `tools:arkts_check` | main `ddec5d8` | [凭证](../provenance/migration-acceptance/fdcea7f5b3b331fb411c2b0e19ddd4e83fa5565c9f4b630d8dbf13d2c88372f6.json) |
-| `tools:build_project` | main `bc68e0c` | [凭证](../provenance/migration-acceptance/68cdd09bbd924453c7085f61f7b944041d0887974fed5a9b2e7e38701aed0234.json) |
+| `tools:build_project` | main `579449e` | [凭证](../provenance/migration-acceptance/1718a5735476756ee876892f1e188f14c55dcb80b1342926ace3bcde3143272d.json) |
 | `tools:check_cpp_files` | main `ddec5d8` | [凭证](../provenance/migration-acceptance/9a1050f1f70adcac4cb2b49f876ce3c89106e116c6b7d4b4faac0cdbbf29d370.json) |
 | `tools:check_ets_files` | main `ddec5d8` | [凭证](../provenance/migration-acceptance/55420e83516d3181ec3510041cfc2defafc9616c816b66b68df4c43717c98f60.json) |
-| `tools:deveco_login` | main `bc68e0c` | [凭证](../provenance/migration-acceptance/08800a138f58bf667ac3179f392a54e67872ab570a5f2c182a8022a4606d1226.json) |
+| `tools:deveco_login` | main `579449e` | [凭证](../provenance/migration-acceptance/268b8ca6c0d8422ecf4ea06d0c22f25d06a140c92095c9ae148a6d9cea0bc59d.json) |
 | `tools:deveco_logout` | main `ddec5d8` | [凭证](../provenance/migration-acceptance/ffdbe53836bbadcaabdc6c58a7f23cae1e23e508a43400c845eb6e6a3560a0ac.json) |
 | `tools:deveco_restart` | main `ddec5d8` | [凭证](../provenance/migration-acceptance/9cc52efe7598cae4e643368ef0f60f5918807d45c15e5b77aefd7f1f2b046fbb.json) |
 | `tools:go_to_definition` | main `ddec5d8` | [凭证](../provenance/migration-acceptance/d98756a2e102542b8949c79c071daae26952dcd5cfe37c1265bd10b7bb00f01b.json) |
 | `tools:harmony_docs` | main `ddec5d8` | [凭证](../provenance/migration-acceptance/2cf47cee3c1c9a0432f6074dfcabd7f5beee857ad94270672acdb791089fd608.json) |
 | `tools:hot_reload` | dev22 | [凭证](../provenance/migration-acceptance/c11fe42aaf1385d5e691cc2c94a6cdc12ca9c210309a4551e7802efee3328cb2.json) |
-| `tools:project_sync` | main `bc68e0c` | [凭证](../provenance/migration-acceptance/ff63f7a7b5485bdc45f52c73be549ad5f872bac80e132160af92a41f6edbc00c.json) |
+| `tools:project_sync` | main `579449e` | [凭证](../provenance/migration-acceptance/3f7239d98a2b041d80d464ec427de0ab4f0e0c0b82544a62b573f40601696f9c.json) |
 | `tools:start_app` | dev22 | [凭证](../provenance/migration-acceptance/fee244830b8e1ba1c78ad2649279d882348f88f3e874a3891f92657526901218.json) |
 | `tools:switch_cwd` | main `ddec5d8` | [凭证](../provenance/migration-acceptance/ee76dbb6824dd101de1f0df78fb474849cda893acdaba463e68544e2ecc8920d.json) |
-| `tools:verify_ui` | main `bc68e0c` | [凭证](../provenance/migration-acceptance/0bc84db932625386294b35ca072e356e9e8cdf745a0acc2d76c373012b05385a.json) |
+| `tools:verify_ui` | main `579449e` | [凭证](../provenance/migration-acceptance/122bbdacd58f3470d5dd7960f8384b25c19706ec70845e143ffc29e76d56c14a.json) |
 | `scripts:copy_template` | main `ddec5d8` | [凭证](../provenance/migration-acceptance/a94e53ed23f803cd4c03c1656aeb5a68c7270c19f08b67ab37595a3047fdf2ce.json) |
 | `scripts:detect_sdk` | main `ddec5d8` | [凭证](../provenance/migration-acceptance/f720d609454b764b0715c7907cd17c1289e4e78f9ff9b6c1ca625bd628ae649d.json) |
-| `scripts:jscrash_report` | main `bc68e0c` | [凭证](../provenance/migration-acceptance/6e8181654567a6f8f8df097c5501ed6fc23884de50a78c15762e75ac17965689.json) |
-| `scripts:parse_jscrash_log` | main `bc68e0c` | [凭证](../provenance/migration-acceptance/5bb235252ad4472759afd2661273866aedc433ecd4de29738764884b7b135413.json) |
+| `scripts:jscrash_report` | main `579449e` | [凭证](../provenance/migration-acceptance/626cfdf158929a467179a2aae1f71e8b42b276bca21da0cdd5ca007359947dad.json) |
+| `scripts:parse_jscrash_log` | main `579449e` | [凭证](../provenance/migration-acceptance/c073cfdc77db3ddf60fb007deebf18487030dbb5344bcf78055d3381b2e398c7.json) |
 
 快照身份：
 
+- main `579449e`：运行摘要 `cc3cdfd12b284fc5e85e657dac863a6cde184b18369844d9bf52336b3f903310`，编译摘要 `a3763ec3934982b406594372e5e5469b0b7f9e6d22848f3962e2621eccdb364b`，共 6 行；与下项的运行源码相同，仅新增测试改变完整编译身份。
 - main `ddec5d8`：运行摘要 `cc3cdfd12b284fc5e85e657dac863a6cde184b18369844d9bf52336b3f903310`，编译摘要 `680bf03b1d0f8d0c9403861be551d4d9bd8d8e727d44cb4df68f75d9517d27b6`，共 10 行。
-- main `bc68e0c`：运行摘要 `85a5e037aced7c71722bacd370dbcd727f990d623d39efff0d07e01c2d97caa7`，编译摘要 `c9fc32c404153e7094aa879bbd4d5d67e4517b476824fbac66209cca19dd9a48`，共 6 行。
 - dev22：运行摘要 `0adac632b689bf66af02e807119dcdc70e71dee617cd00df25cb969f9f8372a1`，编译摘要 `5e3a48daa0881876eea7c35a1aabf9858d660d0d1e06028ee6402abce004b69e`，共 3 行。
 - dev27：运行摘要 `b26deea68ae317436aafee4d904b410a415c8719ba1cdede068b627b92fbb24b`，编译摘要 `8ad78c9793841d8379cdbaa44876aeaa129ee54539ea5c5a6d554b6bb79df296`；仅两份上游凭证仍使用此身份，迁移凭证中已无此快照。
 
@@ -76,12 +76,12 @@
 
 ## 收敛顺序与接收条件
 
-当前补充：10 项凭证已通过正式接收器刷新至 `cc3cdfd1` / `680bf03b`，原始报告摘要进入新凭证，历史凭证文件保留。矩阵仍为 19 行 verified、28 行 pending，其中 verified 的 9 行仍绑定旧字节；并不意味着当前最终验收已完成。私有接收计划和返回结果在 `preparation/migration-refresh-cc3cdfd1-1`。
+当前补充：构建、同步、两项崩溃解析、登录和图片协议的 6 份凭证已通过正式接收器刷新至 `cc3cdfd1` / `a3763ec3`，计划和专项核对在 `preparation/migration-refresh-579449e-1`。此前 10 份 `cc3cdfd1` / `680bf03b` 凭证保留其测试身份；剩余 3 份 dev22 凭证仍待真机阶段刷新。矩阵仍为 19 行 verified、28 行 pending；不表示最终验收完成。
 
 本轮补充：main `bc68e0c` 的六组 CI 原始报告、本机 SDK 24 项、静态检查 13 项、连续多产品/目标/模块 45 项及真实 SDK/OHPM 中断恢复 5 项均已核对。12 项迁移凭证已通过正式接收器刷新；两项 pending 中已完成的 CI 子项已移除，28 行 pending 数量不变。私有中断驱动和原始报告的摘要已核对并单独保存，未冒充仓库映射入口；其中构建和同步凭证注明了补充报告摘要。此前离线 6 项报告仍绑定其原编译身份。 随后当前 MCP/Worker 完成历史交错 Hilog 原文重放、6 项栈帧对照与 1 项历史命名 faultlog 本地重放、9 份完整知识及 45 项模式检查，刷新两项崩溃解析凭证，累计 14 项。历史采集字节与本轮解析执行分别记录，不声明重新从设备获取日志；手机和模拟器均未访问。双提供方真实回调生命周期 7 项（含 300.75 秒自然超时）及 Developer 实际 MCP 认证/云端只读清单 9 项随后通过，登录凭证刷新后累计 15 项；真实过期认证仍未验证。随后专用模拟器的图片/报告协议 8 项通过，`verify_ui` 凭证刷新后累计 16 项；外层驱动关闭后再次查询数据库的失败单独保留，新的只读实例已确认模拟器停止。
 
 1. 冻结候选源码及编译身份，优先处理功能故障、数据正确性、资源泄漏及安装交付。hot status、LSP、flow catalog 的延迟保留为观察项，不再为达到未经用户认可的 1.05 比值而持续修改运行代码。
-2. main `bc68e0c` 的六组基础回归及各 10 项干净安装通过，Windows Node22/24 原生进程检查各 20 轮通过；整轮 CI 仍受上游门禁阻止。需核对候选身份的非真机矩阵并汇报，之后执行真机签名包集合部署、跨模块热补丁、录制与热重载协调、一小时活动及六分钟空闲回收。
+2. main `579449e` 的六组基础回归及各 10 项干净安装通过，Windows Node22/24 原生进程检查各 20 轮通过；整轮 CI 仍受上游门禁阻止。需核对候选身份的非真机矩阵并汇报，之后执行真机签名包集合部署、跨模块热补丁、录制与热重载协调、一小时活动及六分钟空闲回收。
 3. 按上表定位私有原始报告，逐项核实实际覆盖、通过状态、映射检查入口及编译/依赖/资源/上游锁身份。更多 SDK/CLT、真实过期认证、云端中断、多设备/多显示器及模拟器异常仍按实际环境验收。
 4. 只有该行全部场景具备最终同版证据时才通过 `migration-accept` 接收；剩余 3 行旧凭证和两份上游凭证也按此原则刷新。原始失败和历史通过报告保留。
-5. 当前候选的真实宿主安装与 Codex 应用内重连已确认，双提供方重新登录及云端只读复验分别通过 9/10 项。补齐其余同版发布证据后交付正式发布包及 Release；当前安装成功不解除以上条件。
+5. 较早 `bc68e0c` 候选的真实宿主安装与 Codex 应用内重连已确认，双提供方重新登录及云端只读复验分别通过 9/10 项。仍需将宿主统一到最终版本，补齐其余同版发布证据后交付正式发布包及 Release；当前安装成功不解除以上条件。

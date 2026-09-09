@@ -1,0 +1,36 @@
+{
+  "format": 1,
+  "passed": true,
+  "source": "tools:verify_ui",
+  "row_sha256": "d04980991b34aa7b0667d5809a203ea86d1fffe2833db2eaddb7523003d00fe0",
+  "tested": {
+    "runtime_sha256": "cc3cdfd12b284fc5e85e657dac863a6cde184b18369844d9bf52336b3f903310",
+    "compiled_sha256": "a3763ec3934982b406594372e5e5469b0b7f9e6d22848f3962e2621eccdb364b",
+    "package_lock_sha256": "68641e488a5099852216d3003664f57dd1d05b980f4c7813ee75dd7baf83d0fc",
+    "resource_manifest_sha256": "563bc3f06565e92c59c621c3ef909a37cbc4ac1db958d3d73d6e0bc99bf9ed86",
+    "upstream_lock_sha256": "bf3cc411831bd8ce6652a8085c8247c399d0c48b6d73156a7e649b9ef668164e"
+  },
+  "reviewer": "Codex evidence review",
+  "reason": "Current compiled public MCP verifies eight image/review observations on the explicitly bound loopback acceptance emulator: JPEG/PNG ImageContent and exact artifact bytes, assertion and human review separation, Worker and full MCP restart persistence. Parent Runtime closes its owned instance; independent fresh Runtime confirms the same instance stopped and closes. No phone, multi-display or completed human visual review claim. Outer completion SHA256 abf6f4dd3618be8f298eb9699431f6a37137cc35526e90c8d1b9f9a24313e818.",
+  "completed_scenarios": [
+    "当前版本控件断言、截图和外观要求分离、原生 MCP 图片与重启后制品读取复验"
+  ],
+  "checks": [
+    {
+      "check": "test/native-verification.test.ts",
+      "original_sha256": "d0d81419c3486754059baa5914ae7ab7b5ef1a601c02b5ffd3d82b1b69832164"
+    },
+    {
+      "check": "test/native-screenshot.test.ts",
+      "original_sha256": "d0d81419c3486754059baa5914ae7ab7b5ef1a601c02b5ffd3d82b1b69832164"
+    },
+    {
+      "check": "test/native-retention.test.ts",
+      "original_sha256": "d0d81419c3486754059baa5914ae7ab7b5ef1a601c02b5ffd3d82b1b69832164"
+    },
+    {
+      "check": "scripts/native-visual-review-acceptance.ts",
+      "original_sha256": "de6a1762eb3aa9786aa091093eba142baf35d0d0011645cbd9a3e5ea796485de"
+    }
+  ]
+}

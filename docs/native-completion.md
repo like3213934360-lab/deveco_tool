@@ -4,6 +4,18 @@
 
 当前重构已通过 `943fb3d` 合入 main。当前状态见[迁移状态](native-migration-status.md)，47 项迁移记录的凭证身份与剩余范围见[验收证据核对](native-acceptance-review.md)。以下按时间保留实现及测试记录，其中“当前”“未合并”均指记录当时的状态。
 
+## 2026-09-09 当前测试构建的非真机证据收敛
+
+`579449e` 新增真实 stdio MCP → Worker 请求失败后的日志和恢复回归，生产运行身份仍为 `cc3cdfd1`，完整编译身份变为 `a3763ec3`。[CI 34330094583](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34330094583) 六组已结束：macOS/Linux × Node22/24 各 364 项、Windows × Node22/24 各 353 项适用回归通过，失败、取消、跳过和 todo 均为零；六组各 10 项干净安装及 Windows 两组各 20 轮进程检查通过。14 份原始报告、六组身份与安装分发清单摘要已核对，记录在 `preparation/ci-34330094583-review-1/review.private.json`，SHA-256 为 `53edc24035c8f694ee3e0dcbde1087c3ec169a32f7bc52ac46d977fec6bad979`。六组均只在上游凭证校验步骤失败，整轮 CI 未通过。
+
+相同身份的六份专项报告均 completed/passed/closed/unchanged：多模块构建 45 项，Hvigor 子进程退出后对隔离 Runtime 强杀的 3 项、OHPM 对应 2 项，栈帧和历史 faultlog 本地重放 7 项、完整知识与模式检查 54 项、历史交错 Hilog 原文重放 1 项。强杀检查区分已提交与未提交完成回执，重启后确认未重复派发；不扩大为任意命令执行中断。历史日志没有重新从设备采集。六份报告的路径、完整摘要及身份记录在 `preparation/migration-refresh-579449e-1/supplemental-review.private.json`。
+
+构建、同步、两项崩溃解析、登录和图片协议的六份迁移凭证已通过正式接收器刷新；矩阵仍为 19 verified / 28 pending，版本归属见[验收核对](native-acceptance-review.md)。九项桌面直接能力采样已正常结束，仍绑定此前 `cc3cdfd1` / `680bf03b`，新增测试没有改变该采样的生产运行源码；没有为测试文件变更重跑两小时采样。其余十项、长稳、最终安装与发布仍未完成，采样限制和绝对耗时见[性能记录](native-ui-performance.md)。本轮未执行真机测试。
+
+同一身份随后完成双提供方真实回调生命周期 7 项，五分钟生产超时实际为 300,769.68 ms，监听器和测试 MCP 退出已确认；报告为 `20260909-main-browser-callback-579449e-1/evidence.private.json`，SHA-256 `80f1d50be7043b32975a57235e40c74bbb891023031035363c8884d42da0ca8d`。Developer 复用已有隔离登录状态，实际 MCP 云端只读清单与 Worker/服务重启 9 项通过并关闭，报告 `20260909-main-auth-developer-579449e-1/evidence.json`，SHA-256 `8f3fbb8bbaba93024f135ee269f1cd7ddb100d60c2f5a85a6010ca4b04640d32`；没有创建或撤销证书，也未覆盖真实过期 JWT。
+
+专用模拟器 `NativeMcpd0d77880` 的 8 项原生 MCP 图片与审阅协议检查通过，原生实例与回环端点绑定后才读取 UI；报告在 `20260909-main-emulator-visual-579449e-1/visual/evidence.json`。本轮驱动改为在关闭后通过新的 Runtime 查询库存，确认专用实例已停止后关闭复核 Runtime，外层报告 completed/closed/unchanged/passed 均为 true。旧驱动的关闭后数据库查询失败报告保留。图片协议检查不代表人工外观审阅或多显示器行为通过，未访问物理手机。
+
 ## 2026-09-09 空库存修复后的非真机复验
 
 `ddec5d8` 的 [六组 CI 34317569493](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34317569493) 已结束，14 份回归、安装及压力检查报告已下载核对。macOS/Linux × Node22/24 各 363 项适用回归通过，Windows × Node22/24 各 352 项通过；六组各 10 项干净安装通过，Windows 两组各 20 轮进程退出与恢复压力检查通过。回归报告没有失败、取消、跳过或 todo；各安装报告已关闭，其分发清单 SHA-256 与报告记录匹配。运行/编译身份为 `cc3cdfd1` / `680bf03b`，原始制品及核对记录保存在本机 `preparation/ci-34317569493-review-1`。

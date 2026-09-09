@@ -1,0 +1,32 @@
+{
+  "format": 1,
+  "passed": true,
+  "source": "tools:deveco_login",
+  "row_sha256": "53f18676f4b6b3dc41670e3a1a30982f95c26e91f8e69283d157c1249ab4b08c",
+  "tested": {
+    "runtime_sha256": "cc3cdfd12b284fc5e85e657dac863a6cde184b18369844d9bf52336b3f903310",
+    "compiled_sha256": "a3763ec3934982b406594372e5e5469b0b7f9e6d22848f3962e2621eccdb364b",
+    "package_lock_sha256": "68641e488a5099852216d3003664f57dd1d05b980f4c7813ee75dd7baf83d0fc",
+    "resource_manifest_sha256": "563bc3f06565e92c59c621c3ef909a37cbc4ac1db958d3d73d6e0bc99bf9ed86",
+    "upstream_lock_sha256": "bf3cc411831bd8ce6652a8085c8247c399d0c48b6d73156a7e649b9ef668164e"
+  },
+  "reviewer": "Codex evidence review",
+  "reason": "Current compiled actual stdio MCP checks both providers real loopback callback lifecycle: missing launcher preserves manual URL, ten concurrent logins share a listener, actual cancellation closes listener, and production five-minute timeout elapses naturally. Isolated state and empty configuration; no user credential import or fake clock. Callback SHA256 80f1d50be7043b32975a57235e40c74bbb891023031035363c8884d42da0ca8d. Current authenticated Developer cloud read-only inventories and Worker/server restart checks pass. No actual expired JWT, other OS browser or successful cloud mutation claim.",
+  "completed_scenarios": [
+    "回调取消、登录窗口过期、浏览器失败实际验收"
+  ],
+  "checks": [
+    {
+      "check": "test/native-runtime.test.ts",
+      "original_sha256": "d0d81419c3486754059baa5914ae7ab7b5ef1a601c02b5ffd3d82b1b69832164"
+    },
+    {
+      "check": "test/native-auth.test.ts",
+      "original_sha256": "d0d81419c3486754059baa5914ae7ab7b5ef1a601c02b5ffd3d82b1b69832164"
+    },
+    {
+      "check": "scripts/native-auth-mcp-acceptance.ts",
+      "original_sha256": "8f3fbb8bbaba93024f135ee269f1cd7ddb100d60c2f5a85a6010ca4b04640d32"
+    }
+  ]
+}
