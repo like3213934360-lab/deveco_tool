@@ -87,6 +87,10 @@ export class EmulatorService {
     // silent/malformed responses must not hide an SDK failure.
     if (args[0] === "-imageList" && !result.stdout.trim() &&
         result.stderr.trim() === "No images matching the criteria were found.") return "[]";
+    // CLT 26 on Windows emits this non-JSON sentinel when no instances exist.
+    // Require a clean stderr so an SDK error cannot become an empty inventory.
+    if (args[0] === "-list" && result.stdout.trim() === "[Empty]" &&
+        !result.stderr.trim()) return "[]";
     return result.stdout;
   }
   async list(signal?: AbortSignal) {

@@ -43,3 +43,7 @@ DevEco Studio 与独立 CLT 是两种可选的工具链环境。已有可用 Stu
 官方签名下载 URL 保存在 `DEVECO_CLT_2600821_WINDOWS_URL`、`DEVECO_CLT_2600821_LINUX_URL` 两个仓库 Actions secret 中，不写入仓库及验收制品；链接失效时从同一官方版本重新取得。工作流只上传包摘要/准备结果及三个原始验收 JSON，不上传 SDK 包、状态数据库、测试密钥或认证资料。此入口独立于基础六组 CI，不改变上游接收或发布条件；准备工作流和下载包本身不证明真实 SDK 验收通过。
 
 首轮 [Actions 34316076813](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34316076813) 绑定提交 `df602089741e77c275e5fd1e1754df86baa00e0f`。Linux 作业 `102352464776` 在官方下载阶段收到 HTTP 503，`clt-source.json` 为 `verified:false`，三个真实 SDK 检查均未执行；依赖安装及编译已通过。失败报告保留在该次 Linux 制品中，不据此判断 SDK 功能或 Linux 兼容性。Windows 作业及后续复验需分别以其终态报告为准。
+
+该轮 Windows 作业 `102352464631` 已结束，官方包摘要匹配；当前候选 `85a5e037` / `c9fc32c4` 的独立 ArkTS 13 项和 Linter 6 项通过并关闭。综合 SDK 24 项中 14 项通过、10 项失败，报告为 `passed:false`、`completed:false`、`closed:true`、`unchanged:true`。LSP 六项及 API 扫描两项报告组件不可用，API 版本目录因缺失相应字段而断言失败；这些结果不能写成 CLT 已具备 Studio 全部能力。
+
+另一项实际失败是空模拟器库存返回 `[Empty]\r\n`，原实现直接解析 JSON 而报错。修复仅在 `-list` 返回精确 `[Empty]` 且 stderr 为空时识别空库存，其他异常、截断及图像查询不使用这一规则。隔离回归先以旧编译代码复现同一解析错误，再以修改代码通过；未覆盖正在采样的仓库 dist。完整编译、三平台回归及 Windows 原生复验仍待完成。三份 Windows 报告保存在 `preparation/clt-platform-26.0.0.821-20260909-1/windows-attempt-1`，SDK、ArkTS、Linter 的 SHA-256 分别为 `b455db57fca05846b2ff0d7eceb92bdcacb4d790333378c954d3a392e3711545`、`bd398626dd2ce27be5def4202c57356bdc120cbcfddd0106a73d15959fbcf9c4`、`fd6ebeef38945464bda9fa7cf1f49d166849754cc49549596422581745c40f0c`。

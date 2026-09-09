@@ -11,6 +11,27 @@ import { PersistentProcessObserver } from "../src/core/process-observer.js";
 import { EmulatorService } from "../src/services/emulator.js";
 import { errorResult } from "../src/core/errors.js";
 
+test("Windows CLT empty-instance sentinel is accepted without concealing SDK errors", async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-emulator-empty-")), store = new StateStore(root), processes = new ProcessService();
+  let stdout = "[Empty]\r\n", stderr = "", truncated = false;
+  t.mock.method(processes, "run", async () => ({ stdout, stderr, truncated }));
+  const service = new EmulatorService(processes, store, (args) => ({ executable: "fixture", args }));
+  try {
+    assert.deepEqual(await service.list(), []);
+    assert.deepEqual(await service.manage({ action: "list" }), { instances: [] });
+    await assert.rejects(service.manage({ action: "images", downloaded: true }));
+    stderr = "SDK connection failed\r\n";
+    await assert.rejects(service.list());
+    stderr = "";
+    truncated = true;
+    await assert.rejects(service.list(), { code: "EMULATOR_OUTPUT_TRUNCATED" });
+    truncated = false;
+    for (stdout of ["", "[Empty] extra", "[empty]"]) await assert.rejects(service.list());
+    stdout = "[]\r\n";
+    assert.deepEqual(await service.list(), []);
+  } finally { await service.close(); await processes.close(); store.close(); fs.rmSync(root, { recursive: true, force: true }); }
+});
+
 test("SDK's exact no-matching-images stderr denotes an empty inventory without hiding malformed output", async (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-emulator-images-")), store = new StateStore(root), processes = new ProcessService();
   let stdout = "", stderr = "No images matching the criteria were found.\n";
