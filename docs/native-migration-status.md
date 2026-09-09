@@ -124,3 +124,6 @@ node dist/scripts/native-benchmark.js /private/benchmark-plan.json /absolute/new
 `node dist/scripts/migration-accept.js PLAN.json` 接收一行已完成的迁移验收。计划包含 `format: 1`、`source`（`tools:旧工具名` 或 `scripts:旧脚本ID`）、`reviewer`、具体 `reason`、该行全部 `remaining` 对应的 `completed_scenarios`，以及 `checks: [{check, report, sha256}]`。
 
 接收程序验证报告实际执行了映射检查、全部通过且编译/依赖/资源/上游锁摘要一致，再发布不含原始路径和凭据的白名单凭证。它不会自动证明人工声明的场景；评审者须核实原始证据的真实覆盖范围。历史报告或手动修改 verified 标记不能替代当前验收。
+
+
+2026-09-09 电脑端继续验收：用户已暂停手机占用。dev28 两个 Node 版本的干净安装及升级/回退通过；Windows Node24 的子进程退出断言仍需以预先捕获的原生进程句柄复验。三项查询性能诊断仍退化，不能接收正式性能门槛；当前报告与后续编译身份分开保留。详见 native-completion.md 的电脑端验收记录，main 未合并。

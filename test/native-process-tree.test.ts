@@ -6,6 +6,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawn } from "node:child_process";
 import { once } from "node:events";
+import { createRequire } from "node:module";
 import { setTimeout as delay } from "node:timers/promises";
 import { ProcessService } from "../src/core/process.js";
 import { StateStore } from "../src/core/store.js";
@@ -37,6 +38,28 @@ function alive(pid: number) {
     return (error as NodeJS.ErrnoException).code !== "ESRCH";
   }
 }
+function observeProcess(pid: number) {
+  if (process.platform !== "win32")
+    return { alive: () => alive(pid), close() {} };
+  // Pin the actual process before cancellation. Reopening a numeric PID after
+  // exit can observe a reused PID, and kill(pid, 0) also requests TERMINATE
+  // access. Neither is an independent proof that this descendant survived.
+  const koffi = createRequire(import.meta.url)("koffi") as typeof import("koffi"),
+    kernel = koffi.load("kernel32.dll"),
+    open = kernel.func("void * __stdcall OpenProcess(uint32_t access, int inherit, uint32_t pid)"),
+    wait = kernel.func("uint32_t __stdcall WaitForSingleObject(void *handle, uint32_t milliseconds)"),
+    close = kernel.func("int __stdcall CloseHandle(void *handle)"),
+    handle = open(0x100000, 0, pid); // SYNCHRONIZE only; never terminate.
+  assert.ok(handle, `Cannot observe process ${pid} before cancellation`);
+  return {
+    alive() {
+      const result = wait(handle, 0);
+      assert.ok(result === 0 || result === 258, `Process ${pid} wait failed: ${result}`);
+      return result === 258;
+    },
+    close() { assert.equal(close(handle), 1); },
+  };
+}
 const pid = (root: string, name: string) =>
   Number(fs.readFileSync(path.join(root, name), "utf8"));
 const command = (root: string, mode: string) => ({
@@ -56,21 +79,29 @@ test("cancellation confirms descendant exit without terminating a separate comma
   });
   const running = service.run(command(root, "tree"), { signal: abort.signal });
   const rejected = assert.rejects(running, cancelled);
+  const observed: ReturnType<typeof observeProcess>[] = [];
+  const observe = (pid: number) => {
+    const result = observeProcess(pid);
+    observed.push(result);
+    return result;
+  };
   try {
     await until(() => fs.existsSync(path.join(root, "ready")));
-    const leaf = pid(root, "leaf"),
-      launcher = pid(root, "launcher");
-    assert.ok(alive(leaf));
+    const leaf = observe(pid(root, "leaf")),
+      launcher = observe(pid(root, "launcher")),
+      independent = observe(unrelated.pid!);
+    assert.ok(leaf.alive());
     abort.abort();
     await rejected;
-    assert.equal(alive(leaf), false);
-    assert.equal(alive(launcher), false);
-    assert.ok(alive(unrelated.pid!));
+    assert.equal(leaf.alive(), false, "Captured descendant must have exited before cancellation returns");
+    assert.equal(launcher.alive(), false, "Captured launcher must have exited before cancellation returns");
+    assert.ok(independent.alive());
     assert.equal(service.size, 1);
   } finally {
     abort.abort();
     await service.close();
     await rejected;
+    for (const process of observed) process.close();
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
