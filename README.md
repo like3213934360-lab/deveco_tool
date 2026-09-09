@@ -210,9 +210,11 @@ UI 流程保存在工程的 `.arkpilot/flows/<id>.json`。公开 Ability 可作�
 
 ## 验证结果与当前边界
 
-核心架构重构已合入 `main`（合并提交 `943fb3d`），后续改进在 `main` 推进，正式版尚未发布。当前迁移矩阵共 47 项：28 项 pending，19 项已有凭证，其中 16 项已刷新到 main `bc68e0c` 的运行/编译身份，3 项仍绑定 dev22。凭证只证明各自已核对的范围，逐项状态见[验收证据核对](docs/native-acceptance-review.md)，当前问题见[迁移状态](docs/native-migration-status.md)。
+核心架构重构已合入 `main`（合并提交 `943fb3d`），后续改进在 `main` 推进，正式版尚未发布。当前迁移矩阵共 47 项：28 项 pending，19 项已有凭证，其中 10 项绑定当前运行/编译身份 `cc3cdfd1` / `680bf03b`，6 项仍绑定 `bc68e0c`，3 项仍绑定 dev22。凭证只证明各自已核对的范围，逐项状态见[验收证据核对](docs/native-acceptance-review.md)，当前问题见[迁移状态](docs/native-migration-status.md)。
 
-当前 `bc68e0c` 的[六组 CI](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34304363980) 中，macOS / Linux × Node 22 / 24 各 362 项、Windows × Node 22 / 24 各 351 项适用回归通过，六组干净安装各 10 项通过，两个 Windows 作业的原生进程检查各 20 轮通过。整轮 CI 仍因上游接收凭证未刷新而失败，不能写成整轮通过。当前候选包有 407 个文件，本机 Node 22 / 24 干净安装及隔离配置下的升级/回退已验证。实际宿主配置随后已切换到相同字节的当前安装，按此配置独立启动的 MCP 检查通过；用户重启后，Codex 应用内实际 MCP 重连也已确认。
+当前运行/编译身份的[六组 CI](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34319011003) 中，macOS / Linux × Node 22 / 24 各 363 项、Windows × Node 22 / 24 各 352 项适用回归通过，六组干净安装各 10 项通过，两个 Windows 作业的原生进程检查各 20 轮通过。整轮 CI 仍因上游接收凭证未刷新而失败，不能写成整轮通过。
+
+实际宿主仍安装 `bc68e0c` 候选，运行摘要为 `85a5e037`；该候选的干净安装、隔离升级/回退及 Codex 应用内实际 MCP 重连已确认。它尚未包含随后修复的 CLT 空模拟器清单解析，最终版本的宿主更新仍待完成。生产安装与开发编译摘要的区别见[分发记录](docs/native-distribution.md)。
 
 以下表格保留历史提交 `caf97cc` 的结果：当时[六组 CI](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34231914954) 全部通过，各组编译摘要均为 `90b34d88`，上游锁摘要均为 `bf3cc411`。真实 SDK 和设备记录分别绑定其原始版本；后续各轮结果与失败原因见[完成清单](docs/native-completion.md)。
 

@@ -1,6 +1,6 @@
 # 原生 UI 工作流
 
-这些接口由 `dist/src/cli.js mcp` 提供，核心重构已合入 main；宿主已更新到当前候选安装，Codex 应用内重连已确认，正式版本尚未发布。专用应用的中文输入、录制和 MCP 重启后重放有历史分项真机证据，见[个人签名与设备证据](native-signing.md)。当前 main `bc68e0c` 的 MCP 已对十份既有用户流程完成 `list/read/validate`：原字段、坐标、私密变量声明、全部步骤与最终断言保持，文件 SHA-256 前后不变。原始报告为本机 `20260909-main-saved-flow-read-bc68e0c-1/evidence.json`；这证明现存文件的读取兼容性，不代表这些业务路径已在当前设备上重放。
+这些接口由 `dist/src/cli.js mcp` 提供，核心重构已合入 main；宿主已安装 `bc68e0c` 候选，Codex 应用内重连已确认；最终版本更新仍待完成，正式版本尚未发布。专用应用的中文输入、录制和 MCP 重启后重放有历史分项真机证据，见[个人签名与设备证据](native-signing.md)。`bc68e0c` 快照的 MCP 已对十份既有用户流程完成 `list/read/validate`：原字段、坐标、私密变量声明、全部步骤与最终断言保持，文件 SHA-256 前后不变。原始报告为本机 `20260909-main-saved-flow-read-bc68e0c-1/evidence.json`；这证明现存文件的读取兼容性，不代表这些业务路径已在当前设备上重放。
 
 ## 目标导航
 

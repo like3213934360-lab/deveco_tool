@@ -22,7 +22,7 @@ CLT 的 `version.txt`、SDK/组件清单、入口文件身份以及 JDK `release
 
 工程、SDK 和现有文件的同步规范化使用 `fs.realpathSync.native`，与异步 `fs.promises.realpath` 保持一致。Windows 8.3 短路径、目录 junction 及完整路径必须得到同一个工程身份和资源键；不能仅做字符串 `resolve` 或混用保留短别名的实现。尚不存在的输出路径先规范化已存在的父目录。
 
-2026-09-08 的 CI `34160484334` 在 Windows Node 22/24 均暴露两处短路径断言失败；原始记录保存在 `/private/tmp/deveco-ci-34160484334-win24`。随后统一原生规范化，并增加工程/工具链别名身份回归，同时让模拟 SDK 目录满足真实存在检查。原始失败记录保留；当前 main `bc68e0c` 的 [CI `34304363980`](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34304363980) 中，Windows Node 22/24 各 351 项适用回归已通过。该轮 CI 整体仍因上游接收凭证未刷新而失败，路径回归通过不扩大为 Windows 真实 SDK 验收通过。
+2026-09-08 的 CI `34160484334` 在 Windows Node 22/24 均暴露两处短路径断言失败；原始记录保存在 `/private/tmp/deveco-ci-34160484334-win24`。随后统一原生规范化，并增加工程/工具链别名身份回归，同时让模拟 SDK 目录满足真实存在检查。原始失败记录保留；main `bc68e0c` 快照 的 [CI `34304363980`](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34304363980) 中，Windows Node 22/24 各 351 项适用回归已通过。该轮 CI 整体仍因上游接收凭证未刷新而失败，路径回归通过不扩大为 Windows 真实 SDK 验收通过。
 
 路径对照来源为锁定的官方 deveco-cli `08c2f57ffbe83c817d64a728a17971872dd9ddcf` 的 `src/toolchain/tool-provider.ts`，只有路径和调用协议作为参考，不加载该 CLI 运行代码。验收用 `test/native-toolchain.test.ts` 检查本平台文件布局、JDK 优先级、更新失效、文件类型与参数边界。三平台运行测试通过不等于三平台上的真实 SDK 已验收；目前真实 SDK 证据来自 macOS Studio 26.0.0.821 / SDK 26.0.0.105。
 

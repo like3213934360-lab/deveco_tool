@@ -26,4 +26,4 @@
 - `test/native-toolchain.test.ts`：SDK 更新后的会话身份失效。
 - `/private/tmp/deveco-native-sdk-20260908-6/evidence.json`：真实 Studio 26.0.0.821 / SDK 26.0.0.105 上四种查询、空 Hover、非法位置、ArkTS/C++ 诊断通过。此前 `...-3` 在空结果测试中把合法空数组误判失败，已修正测试；实现未把空数组误判为错误。
 
-跨模块、其他 SDK/平台的实证和最终性能门槛尚需补齐。[LSP 官方规范](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/)是协议语义参考，不能代替 SDK 实测。
+当前 `cc3cdfd1` / `680bf03b` 已完成本机 Studio 多产品/目标/模块的 45 项验收，报告为本机 `acceptance/20260909-main-studio-cc3cdfd1-1/multimodule/evidence.json`，详情见[工具链记录](native-toolchains.md)。其他 SDK/平台的实证及完整性能采样仍需补齐；未经用户认可的 5% 相对 P95 阈值已撤销，不作为发布阻断。[LSP 官方规范](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/)是协议语义参考，不能代替 SDK 实测。

@@ -24,7 +24,7 @@
 
 ## 当前验证与历史记录
 
-当前 main `bc68e0c` 的 [CI `34304363980`](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34304363980) 已通过六组平台适用回归，包括模拟器协议与生命周期测试；整轮 CI 仍受上游接收门禁阻止。后续在相同运行/编译身份下启动了已有的专用验收模拟器，通过实例配置与回环 HDC 地址绑定后，完成 MCP 图片/报告协议 8 项检查。外层驱动在关闭 Runtime 后再次查询清单，触发已关闭数据库错误；该失败原样保留，独立新 Runtime 的只读清单确认专用实例已停止。原始记录位于本机验收目录 `20260909-main-emulator-visual-bc68e0c-1`，其验证范围见[验收证据核对](native-acceptance-review.md)。未执行物理手机操作。
+main `bc68e0c` 快照 的 [CI `34304363980`](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34304363980) 已通过六组平台适用回归，包括模拟器协议与生命周期测试；整轮 CI 仍受上游接收门禁阻止。后续在相同运行/编译身份下启动了已有的专用验收模拟器，通过实例配置与回环 HDC 地址绑定后，完成 MCP 图片/报告协议 8 项检查。外层驱动在关闭 Runtime 后再次查询清单，触发已关闭数据库错误；该失败原样保留，独立新 Runtime 的只读清单确认专用实例已停止。原始记录位于本机验收目录 `20260909-main-emulator-visual-bc68e0c-1`，其验证范围见[验收证据核对](native-acceptance-review.md)。未执行物理手机操作。
 
 `test/native-emulator-protocol.test.ts` 验证参数前置拒绝、精确命令、能力探测、缓存复用、失败回执、协议文件限额/缺失、摘要变化、接受结果不明、重复接受去重和查看时配置字节/mtime 不变。接受写入只在测试夹具内模拟。`test/native-emulator.test.ts` 验证受管启动器与清单共同确认退出。
 
