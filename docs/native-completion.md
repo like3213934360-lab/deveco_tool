@@ -496,3 +496,14 @@ README 已改用当前 16 项凭证与 3 项历史凭证的实际归属，注明
 | CodeGenie | `20260909-main-host-auth-codegenie-bc68e0c-1` | 10 | `44f747b18e77c633690052c701f9eff16778c83ffc2ed70683a3bf4641aa5c52` |
 
 两份报告均 passed/completed/closed/unchanged，运行身份 `85a5e037`、编译身份 `c9fc32c4` 与候选一致。Developer 团队、证书与设备清单只读查询及重启后复查成功；CodeGenie 实际云知识查询成功，1,167,262 字节制品分 36 页完整读取，重启后再次查询及原制品读取的摘要一致。两方均已登录的状态只核对提供方路由，不将其扩大为单方登录隔离的新证据；真实过期 JWT、云端变更中断仍未覆盖。早期 native-3 CodeGenie 状态不兼容的失败记录保留，本次真实重新登录补齐当前云查询证据。正式 Release 尚未发布，迁移仍为 19 verified / 28 pending，未以认证子项关闭其他未完成场景。本轮没有执行真机测试。
+
+
+## main 云端证书配额拒绝与失败任务保留（2026-09-09）
+
+为补齐真实云端变更中断，使用新建隔离状态完成 Developer 浏览器登录，复用原用户选择的个人团队身份，通过当前持久化任务生成专用密钥和 CSR。计划只创建新的专用证书，在真实云端成功响应后、私有完成回执提交前对测试宿主发送 SIGKILL，再用新 Runtime 核对远端证书、恢复原任务并按精确 ID 清理。实际云端以 `SIGN_CLOUD_REJECTED`、提供方代码 `205389872` 拒绝创建，理由为 certificate number exceeds limit。未进入成功响应或 SIGKILL 窗口，原计划验收结果为失败，不能作为中断恢复通过证据。
+
+原始目录为 `20260909-main-cloud-certificate-interruption-bc68e0c-1`；`evidence.json` SHA-256 为 `afc86fe64a2b1551af1ff4b16c0536fc4b7a4c6a4a7b5cc7b3f64bcd34baa45a`，completed/passed 为 false、closed/unchanged 为 true。新证书未创建、原清单保持，测试 Runtime 已关闭，未删除旧证书，也未访问手机或模拟器。驱动、计划、失败任务及服务端拒绝记录均保留在私有目录；没有覆写或重复原创建任务。
+
+独立只读复核 `rejection-review.evidence.json` 的 4 项检查通过：真实云端拒绝原因被持久化，同一 Runtime 和重新启动 Runtime 下重复同一 request_key 均返回原失败 run_id、没有再提交创建请求，认证及完整证书清单保持。报告 passed/completed/closed/unchanged 均为 true，SHA-256 为 `d23f02a14e834e9ffd0b084dd3a67cafbe160c3b231000ae396c9ef3d7ac2057`。运行/编译身份仍为 `85a5e037` / `c9fc32c4`；该补充仅证明云端配额拒绝后的任务和凭据保留，不覆盖真实过期认证或成功变更后的中断恢复。
+
+用户随后指定使用个人账号。实时团队清单确认本次原本即使用 `userType:1` 的个人团队，六张现有证书中包含历史验收创建并仍被后续材料引用的专用证书。腾出名额涉及撤销现有证书，已提出精确测试证书的撤销与重建确认，尚未执行撤销。其他业务证书不在此次测试清理范围内。
