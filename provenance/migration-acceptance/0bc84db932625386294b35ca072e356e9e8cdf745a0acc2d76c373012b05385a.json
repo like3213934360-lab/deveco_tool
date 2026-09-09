@@ -1,0 +1,36 @@
+{
+  "format": 1,
+  "passed": true,
+  "source": "tools:verify_ui",
+  "row_sha256": "d04980991b34aa7b0667d5809a203ea86d1fffe2833db2eaddb7523003d00fe0",
+  "tested": {
+    "runtime_sha256": "85a5e037aced7c71722bacd370dbcd727f990d623d39efff0d07e01c2d97caa7",
+    "compiled_sha256": "c9fc32c404153e7094aa879bbd4d5d67e4517b476824fbac66209cca19dd9a48",
+    "package_lock_sha256": "68641e488a5099852216d3003664f57dd1d05b980f4c7813ee75dd7baf83d0fc",
+    "resource_manifest_sha256": "563bc3f06565e92c59c621c3ef909a37cbc4ac1db958d3d73d6e0bc99bf9ed86",
+    "upstream_lock_sha256": "bf3cc411831bd8ce6652a8085c8247c399d0c48b6d73156a7e649b9ef668164e"
+  },
+  "reviewer": "Codex reviewed current main acceptance",
+  "reason": "Eight current public MCP image/review observations pass on explicitly bound loopback test emulator: separate control assertions and required human review, full JPEG/PNG ImageContent, artifact bytes, Worker and full MCP restart persistence. Device name and loopback endpoint are independently bound. Outer startup wrapper erroneously queried inventory after closing its database and remains failed; independent fresh-runtime native inventory confirms the owned emulator stopped. Closure report SHA-256 0c19678c8f86974ca88fc5341b68946bc818958aca3531527abdb7675a3af24b. No physical-phone or multi-display claim; image capture does not complete visual review.",
+  "completed_scenarios": [
+    "当前版本控件断言、截图和外观要求分离、原生 MCP 图片与重启后制品读取复验"
+  ],
+  "checks": [
+    {
+      "check": "test/native-verification.test.ts",
+      "original_sha256": "5b2c0d901f5cd9c3424a4ef41f4b5b34e624796f8e7948f2d582c6ec229d9b4a"
+    },
+    {
+      "check": "test/native-screenshot.test.ts",
+      "original_sha256": "5b2c0d901f5cd9c3424a4ef41f4b5b34e624796f8e7948f2d582c6ec229d9b4a"
+    },
+    {
+      "check": "test/native-retention.test.ts",
+      "original_sha256": "5b2c0d901f5cd9c3424a4ef41f4b5b34e624796f8e7948f2d582c6ec229d9b4a"
+    },
+    {
+      "check": "scripts/native-visual-review-acceptance.ts",
+      "original_sha256": "fa56c5bcee9151eaf395d5e005c67feafa5dd8f3be840c6cf7bb201b06930dbf"
+    }
+  ]
+}

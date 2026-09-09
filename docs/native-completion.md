@@ -454,3 +454,12 @@ dev28 的真实本机 SDK、Checker、Linter、多产品/模块冷构建和 API 
 
 
 当前双提供方真实回调生命周期 7 项通过，报告为 `20260909-main-browser-callback-bc68e0c-1/evidence.private.json`。驱动字节与已评审 dev27 完全相同，实际五分钟超时耗时 300,750.52 ms，监听器关闭及进程退出已确认；没有修改生产时钟、伪造 HTTP 服务或打开浏览器。结合上述 Developer 9 项及当前映射回归，通过正式接收器刷新 `deveco_login` 凭证。迁移计数仍为 19 verified / 28 pending，其中当前身份 15 行、dev22 3 行、dev27 1 行。CodeGenie 实际云端重验及真实过期凭据仍按原范围保留，不由本轮本地回调结果代替。
+
+
+## main 专用模拟器图片与验收报告协议（2026-09-09）
+
+通过原生清单确认测试实例 `NativeMcpd0d77880` 原先停止，启动后将原生实例身份绑定到回环 HDC 端点 `127.0.0.1:5555`，仅对该端点运行现有 `native-visual-review-acceptance`。8 项检查通过：树非空、外观审阅要求独立保留、原生 JPEG/PNG MCP ImageContent、完整制品字节、Worker 与完整 MCP 重启后读取，以及失败控件断言保留图片与错误。报告绑定当前 `85a5e037` / `c9fc32c4`，位于 `20260909-main-emulator-visual-bc68e0c-1/visual/evidence.json`。
+
+外层专用驱动完成 Runtime 关闭后又调用模拟器清单查询，因数据库已关闭报错；其失败报告原样保留，不能称外层驱动通过。独立新 Runtime 的只读清单复核确认该专用模拟器已停止，复核 Runtime 随后关闭，凭证明确引用 `closure-review.private.json` 摘要区分两者。本轮没有访问物理手机，也没有向模拟器安装或启动应用、注入输入；图片传递检查不代表人工外观审阅已经完成。
+
+结合当前映射回归，正式接收器已刷新 `verify_ui`，共 19 行已接收、28 行 pending；当前身份 16 行，剩余 dev22 的 `apply_changes`、`hot_reload`、`start_app` 三行待真机阶段对应部署和热补丁复验。两份上游凭证仍为 dev27，不能因迁移凭证部分刷新而自动放行。

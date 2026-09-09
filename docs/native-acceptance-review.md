@@ -1,12 +1,12 @@
 # 合入 main 后的验收证据核对
 
-核对日期：2026-09-09；基准提交 `943fb3d`。初次逐项核对只读取迁移矩阵、它引用的 19 份凭证、两份上游接收凭证和历史记录。后续已恢复非真机测试，下载核对 main 六组 CI 原始报告，并刷新 15 项凭证；新增结果见[完成清单](native-completion.md)末尾。下表专项结果仍为历史复核线索，未读取全部私有报告，不据此关闭剩余范围。
+核对日期：2026-09-09；基准提交 `943fb3d`。初次逐项核对只读取迁移矩阵、它引用的 19 份凭证、两份上游接收凭证和历史记录。后续已恢复非真机测试，下载核对 main 六组 CI 原始报告，并刷新 16 项凭证；新增结果见[完成清单](native-completion.md)末尾。下表专项结果仍为历史复核线索，未读取全部私有报告，不据此关闭剩余范围。
 
 ## 清单与凭证身份
 
 [迁移矩阵](../provenance/migration-matrix.json) 共 47 行（40 个旧工具、7 个旧脚本）：28 行 pending、19 行 verified。330 个参数与 95 个动作已有迁移归类；归类与接口存在不等于行为验收通过。
 
-19 行现有凭证中，15 行已刷新到 main `bc68e0c` 的当前运行/编译身份，3 行仍为 dev22、1 行仍为 dev27。下面列出每一行及当前引用的凭证；28 行 pending 不代表缺少 28 项实现。
+19 行现有凭证中，16 行已刷新到 main `bc68e0c` 的当前运行/编译身份，其余 3 行仍为 dev22。下面列出每一行及当前引用的凭证；28 行 pending 不代表缺少 28 项实现。
 
 | 迁移项 | 凭证快照 | 当前凭证 |
 | --- | --- | --- |
@@ -24,7 +24,7 @@
 | `tools:project_sync` | main `bc68e0c` | [凭证](../provenance/migration-acceptance/ff63f7a7b5485bdc45f52c73be549ad5f872bac80e132160af92a41f6edbc00c.json) |
 | `tools:start_app` | dev22 | [凭证](../provenance/migration-acceptance/fee244830b8e1ba1c78ad2649279d882348f88f3e874a3891f92657526901218.json) |
 | `tools:switch_cwd` | main `bc68e0c` | [凭证](../provenance/migration-acceptance/c37a7deb13cbfcf3c3b65b3a7339c35a75a8d2c750c0381e44d5b042d1255a0e.json) |
-| `tools:verify_ui` | dev27 | [凭证](../provenance/migration-acceptance/4742e7ca3862745ac5b052c0fe535301936cce4e631bbab7dd22f215268e46ed.json) |
+| `tools:verify_ui` | main `bc68e0c` | [凭证](../provenance/migration-acceptance/0bc84db932625386294b35ca072e356e9e8cdf745a0acc2d76c373012b05385a.json) |
 | `scripts:copy_template` | main `bc68e0c` | [凭证](../provenance/migration-acceptance/ab93fef0b1986a30ba55dc942678470fb4665b25b4eeb6e804e229ee4da61015.json) |
 | `scripts:detect_sdk` | main `bc68e0c` | [凭证](../provenance/migration-acceptance/23e7749b44918522d3a7599f8992c423b95dac9e98c245755181eadb6451ecb6.json) |
 | `scripts:jscrash_report` | main `bc68e0c` | [凭证](../provenance/migration-acceptance/6e8181654567a6f8f8df097c5501ed6fc23884de50a78c15762e75ac17965689.json) |
@@ -32,9 +32,9 @@
 
 快照身份：
 
-- main `bc68e0c`：运行摘要 `85a5e037aced7c71722bacd370dbcd727f990d623d39efff0d07e01c2d97caa7`，编译摘要 `c9fc32c404153e7094aa879bbd4d5d67e4517b476824fbac66209cca19dd9a48`，共 15 行。
+- main `bc68e0c`：运行摘要 `85a5e037aced7c71722bacd370dbcd727f990d623d39efff0d07e01c2d97caa7`，编译摘要 `c9fc32c404153e7094aa879bbd4d5d67e4517b476824fbac66209cca19dd9a48`，共 16 行。
 - dev22：运行摘要 `0adac632b689bf66af02e807119dcdc70e71dee617cd00df25cb969f9f8372a1`，编译摘要 `5e3a48daa0881876eea7c35a1aabf9858d660d0d1e06028ee6402abce004b69e`，共 3 行。
-- dev27：运行摘要 `b26deea68ae317436aafee4d904b410a415c8719ba1cdede068b627b92fbb24b`，编译摘要 `8ad78c9793841d8379cdbaa44876aeaa129ee54539ea5c5a6d554b6bb79df296`，共 1 行。
+- dev27：运行摘要 `b26deea68ae317436aafee4d904b410a415c8719ba1cdede068b627b92fbb24b`，编译摘要 `8ad78c9793841d8379cdbaa44876aeaa129ee54539ea5c5a6d554b6bb79df296`；仅两份上游凭证仍使用此身份，迁移凭证中已无此快照。
 
 [deveco-code](../provenance/upstream-baselines/deveco-code/accepted.json) 与 [deveco-cli](../provenance/upstream-baselines/deveco-cli/accepted.json) 的现有上游接收凭证也绑定上述 dev27 身份，需在最终冻结后按正式流程刷新。
 
@@ -75,10 +75,10 @@
 
 ## 收敛顺序与接收条件
 
-本轮补充：main `bc68e0c` 的六组 CI 原始报告、本机 SDK 24 项、静态检查 13 项、连续多产品/目标/模块 45 项及真实 SDK/OHPM 中断恢复 5 项均已核对。12 项迁移凭证已通过正式接收器刷新；两项 pending 中已完成的 CI 子项已移除，28 行 pending 数量不变。私有中断驱动和原始报告的摘要已核对并单独保存，未冒充仓库映射入口；其中构建和同步凭证注明了补充报告摘要。此前离线 6 项报告仍绑定其原编译身份。 随后当前 MCP/Worker 完成历史交错 Hilog 原文重放、6 项栈帧对照与 1 项历史命名 faultlog 本地重放、9 份完整知识及 45 项模式检查，刷新两项崩溃解析凭证，累计 14 项。历史采集字节与本轮解析执行分别记录，不声明重新从设备获取日志；手机和模拟器均未访问。双提供方真实回调生命周期 7 项（含 300.75 秒自然超时）及 Developer 实际 MCP 认证/云端只读清单 9 项随后通过，登录凭证刷新后累计 15 项；真实过期认证仍未验证。
+本轮补充：main `bc68e0c` 的六组 CI 原始报告、本机 SDK 24 项、静态检查 13 项、连续多产品/目标/模块 45 项及真实 SDK/OHPM 中断恢复 5 项均已核对。12 项迁移凭证已通过正式接收器刷新；两项 pending 中已完成的 CI 子项已移除，28 行 pending 数量不变。私有中断驱动和原始报告的摘要已核对并单独保存，未冒充仓库映射入口；其中构建和同步凭证注明了补充报告摘要。此前离线 6 项报告仍绑定其原编译身份。 随后当前 MCP/Worker 完成历史交错 Hilog 原文重放、6 项栈帧对照与 1 项历史命名 faultlog 本地重放、9 份完整知识及 45 项模式检查，刷新两项崩溃解析凭证，累计 14 项。历史采集字节与本轮解析执行分别记录，不声明重新从设备获取日志；手机和模拟器均未访问。双提供方真实回调生命周期 7 项（含 300.75 秒自然超时）及 Developer 实际 MCP 认证/云端只读清单 9 项随后通过，登录凭证刷新后累计 15 项；真实过期认证仍未验证。随后专用模拟器的图片/报告协议 8 项通过，`verify_ui` 凭证刷新后累计 16 项；外层驱动关闭后再次查询数据库的失败单独保留，新的只读实例已确认模拟器停止。
 
 1. 冻结候选源码及编译身份，优先处理功能故障、数据正确性、资源泄漏及安装交付。hot status、LSP、flow catalog 的延迟保留为观察项，不再为达到未经用户认可的 1.05 比值而持续修改运行代码。
 2. main `bc68e0c` 的六组基础回归及各 10 项干净安装通过，Windows Node22/24 原生进程检查各 20 轮通过；整轮 CI 仍受上游门禁阻止。需核对候选身份的非真机矩阵并汇报，之后执行真机签名包集合部署、跨模块热补丁、录制与热重载协调、一小时活动及六分钟空闲回收。
 3. 按上表定位私有原始报告，逐项核实实际覆盖、通过状态、映射检查入口及编译/依赖/资源/上游锁身份。更多 SDK/CLT、真实过期认证、云端中断、多设备/多显示器及模拟器异常仍按实际环境验收。
-4. 只有该行全部场景具备最终同版证据时才通过 `migration-accept` 接收；剩余 4 行旧凭证和两份上游凭证也按此原则刷新。原始失败和历史通过报告保留。
+4. 只有该行全部场景具备最终同版证据时才通过 `migration-accept` 接收；剩余 3 行旧凭证和两份上游凭证也按此原则刷新。原始失败和历史通过报告保留。
 5. 完成发布门槛、最终宿主安装与连接核对，再交付正式发布包及 Release。当前合入 main 不解除以上条件。
