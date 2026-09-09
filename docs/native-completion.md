@@ -437,3 +437,20 @@ dev28 的真实本机 SDK、Checker、Linter、多产品/模块冷构建和 API 
 已逐项核对既有完成场景及映射检查，并通过 `migration-accept` 刷新 12 行：`arkts_check`、`build_project`、`check_cpp_files`、`check_ets_files`、`deveco_logout`、`deveco_restart`、`go_to_definition`、`harmony_docs`、`project_sync`、`switch_cwd`、`copy_template`、`detect_sdk`。构建与同步另核对上述真实 SDK 中断报告并在凭证中记录补充摘要。登出项仅接收既有刷新/登出竞争契约，测试使用受控云响应，不宣称真实过期 JWT 或云端拒绝已验证。计划、接收结果和补充报告复核在 `20260909-main-migration-bc68e0c-1`。
 
 47 行仍为 19 verified / 28 pending，但现有凭证中 12 行为当前身份、3 行为 dev22、4 行为 dev27。设备属性与 UI driver 两条明确要求当前六组 CI 的子项已从 remaining 移除，实际多设备、跨平台 SDK/CLT、未知目标录制与热重载协调等范围保留。历史凭证文件和报告没有删除。两份上游接收凭证、剩余专项环境、宿主切换和正式发布仍未完成；真机测试继续放在非真机工作完成并汇报之后。
+
+
+## main 崩溃解析凭证与分发文档收敛（2026-09-09）
+
+本轮使用 main `bc68e0c` 的既有运行/编译身份 `85a5e037` / `c9fc32c4`，不修改运行代码、不访问手机或模拟器。通过当前公开 MCP/Worker 重放历史原始交错 Hilog，核对应用、PID、异常消息、18:15 源位置及请求去重；执行 6 项独立栈帧对照和 1 项完整历史命名 faultlog 的本地解析重放；9 份知识全文与冻结旧版逐字节一致，45 个独立输入核对完整模式结论、建议及出处。自定义异常仍标记为未列出子型，知识建议不伪装成已证实根因。
+
+三份报告共 1/7/54 项检查通过，均 completed、closed、unchanged 为 true，五项运行/编译/依赖/资源/上游锁身份与当前六组 CI 相同。报告目录分别为 `20260909-main-appkit-raw-replay-bc68e0c-1`、`20260909-main-crash-ranking-bc68e0c-1`、`20260909-main-crash-knowledge-bc68e0c-1`。驱动、历史输入来源和摘要单独保存；本轮没有重新采集设备日志，不能据此关闭 HDC 采集及 faultlogger 的剩余行为边界。
+
+两项崩溃解析凭证通过正式 `migration-accept` 接收器刷新，保留原已完成场景并注明三份补充报告摘要。47 行仍为 19 verified / 28 pending；当前身份凭证增至 14 行，3 行 dev22 和 2 行 dev27 凭证等待相应最终场景。分发文档已将旧 `caf97cc` 结果归入历史，正文改用核对过的 `bc68e0c` 六组报告和候选 ZIP 摘要，保留整轮 CI 上游检查失败及未正式发布的边界。
+
+
+当前 Developer 登录复用、云端签名清单只读查询、Worker/MCP 重启后状态及清单复验共 9 项通过，报告为 `20260909-main-auth-developer-bc68e0c-1`。没有创建或删除云端资产，未覆盖真实过期 JWT。一次选用早期 CodeGenie 状态的尝试因 native-3 / native-6 协议不匹配而失败，原报告及原因保留在 `20260909-main-auth-codegenie-bc68e0c-1`，不计通过、不导入旧协议状态。
+
+同版候选的隔离升级/回退 10 项通过，报告为 `20260909-main-upgrade-rollback-bc68e0c-1`；两份新增报告运行前后身份一致且关闭成功。实际 Codex 宿主仍指向 `native-6-rc1-20260908-8`；维护 CLI 已生成 `main-host-upgrade-bc68e0c-1` 私有计划，固定 Node、新旧安装、宿主配置及十份流程的摘要，真实宿主配置字节未变。最终 apply 与应用内 MCP 重连尚未执行，不能把隔离升级成功或计划生成写成实际宿主已升级。
+
+
+当前双提供方真实回调生命周期 7 项通过，报告为 `20260909-main-browser-callback-bc68e0c-1/evidence.private.json`。驱动字节与已评审 dev27 完全相同，实际五分钟超时耗时 300,750.52 ms，监听器关闭及进程退出已确认；没有修改生产时钟、伪造 HTTP 服务或打开浏览器。结合上述 Developer 9 项及当前映射回归，通过正式接收器刷新 `deveco_login` 凭证。迁移计数仍为 19 verified / 28 pending，其中当前身份 15 行、dev22 3 行、dev27 1 行。CodeGenie 实际云端重验及真实过期凭据仍按原范围保留，不由本轮本地回调结果代替。

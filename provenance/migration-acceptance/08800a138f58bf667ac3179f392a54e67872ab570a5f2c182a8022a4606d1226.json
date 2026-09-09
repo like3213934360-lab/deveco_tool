@@ -1,0 +1,32 @@
+{
+  "format": 1,
+  "passed": true,
+  "source": "tools:deveco_login",
+  "row_sha256": "53f18676f4b6b3dc41670e3a1a30982f95c26e91f8e69283d157c1249ab4b08c",
+  "tested": {
+    "runtime_sha256": "85a5e037aced7c71722bacd370dbcd727f990d623d39efff0d07e01c2d97caa7",
+    "compiled_sha256": "c9fc32c404153e7094aa879bbd4d5d67e4517b476824fbac66209cca19dd9a48",
+    "package_lock_sha256": "68641e488a5099852216d3003664f57dd1d05b980f4c7813ee75dd7baf83d0fc",
+    "resource_manifest_sha256": "563bc3f06565e92c59c621c3ef909a37cbc4ac1db958d3d73d6e0bc99bf9ed86",
+    "upstream_lock_sha256": "bf3cc411831bd8ce6652a8085c8247c399d0c48b6d73156a7e649b9ef668164e"
+  },
+  "reviewer": "Codex reviewed current main acceptance",
+  "reason": "Current main actual dual-provider loopback callback lifecycle confirms missing browser launcher with manual URL, ten concurrent logins sharing one listener, cancellation and unchanged production five-minute timeout. Callback report SHA-256 a14ba9a000d31a3ea0aaabbb2b720b0e4e613c9822959e1694e6cd0ec64c6c32. Driver bytes are unchanged from reviewed dev27. Current production MCP authenticated Developer read-only cloud inventories and Worker/server restarts pass. No device access, actual expired JWT, CodeGenie live cloud refresh or cloud mutation claim.",
+  "completed_scenarios": [
+    "回调取消、登录窗口过期、浏览器失败实际验收"
+  ],
+  "checks": [
+    {
+      "check": "test/native-runtime.test.ts",
+      "original_sha256": "5b2c0d901f5cd9c3424a4ef41f4b5b34e624796f8e7948f2d582c6ec229d9b4a"
+    },
+    {
+      "check": "test/native-auth.test.ts",
+      "original_sha256": "5b2c0d901f5cd9c3424a4ef41f4b5b34e624796f8e7948f2d582c6ec229d9b4a"
+    },
+    {
+      "check": "scripts/native-auth-mcp-acceptance.ts",
+      "original_sha256": "50d67f177a8ca90b0211cd82c664a4c839ce51a63e22a1d3e3b56ed81414cea4"
+    }
+  ]
+}

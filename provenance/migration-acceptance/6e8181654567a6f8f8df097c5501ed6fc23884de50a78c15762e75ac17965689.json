@@ -1,0 +1,25 @@
+{
+  "format": 1,
+  "passed": true,
+  "source": "scripts:jscrash_report",
+  "row_sha256": "16dc2fca12b0a7e5d9c6402680b7f32cb1d955a185992e22412f63ba068dece5",
+  "tested": {
+    "runtime_sha256": "85a5e037aced7c71722bacd370dbcd727f990d623d39efff0d07e01c2d97caa7",
+    "compiled_sha256": "c9fc32c404153e7094aa879bbd4d5d67e4517b476824fbac66209cca19dd9a48",
+    "package_lock_sha256": "68641e488a5099852216d3003664f57dd1d05b980f4c7813ee75dd7baf83d0fc",
+    "resource_manifest_sha256": "563bc3f06565e92c59c621c3ef909a37cbc4ac1db958d3d73d6e0bc99bf9ed86",
+    "upstream_lock_sha256": "bf3cc411831bd8ce6652a8085c8247c399d0c48b6d73156a7e649b9ef668164e"
+  },
+  "reviewer": "Codex reviewed acceptance",
+  "reason": "Current main MCP/Worker replay of immutable historical interleaved Hilog confirms application, PID, exception, source coordinates and request deduplication. Six stack-ranking cases, historical complete named-faultlog local replay, nine byte-identical full references and forty-five pattern cases pass. Historical capture is not a current device fetch; root causes remain unverified. Original completed scenarios retained. Independently reviewed supplemental report SHA-256: 742bdf1de42aaabda0e87609356a4766bdda71044642913b832836050e8dd615, d283e1a23e2959dcf716cdd593a8215a6b886b4acd2a5e1045ad112efd2d67e5, 1c4af6ceef93535938ef1c8ededfdc34a1b4b1fe4afc4635987af0ff3a0e717e.",
+  "completed_scenarios": [
+    "应用栈帧位置排序和知识建议完整性对照",
+    "真实崩溃与进程交错日志验收"
+  ],
+  "checks": [
+    {
+      "check": "test/native-logs.test.ts",
+      "original_sha256": "5b2c0d901f5cd9c3424a4ef41f4b5b34e624796f8e7948f2d582c6ec229d9b4a"
+    }
+  ]
+}
