@@ -210,7 +210,7 @@ UI 流程保存在工程的 `.arkpilot/flows/<id>.json`。公开 Ability 可作�
 
 ## 验证结果与当前边界
 
-核心架构重构已合入 `main`（合并提交 `943fb3d`），后续改进在 `main` 推进，正式版尚未发布。当前迁移矩阵共 47 项：28 项 pending，19 项已有凭证中，6 项绑定 `579449e` 的 `cc3cdfd1` / `a3763ec3` 身份，10 项仍绑定相同运行源码、较早测试构建的 `cc3cdfd1` / `680bf03b`，3 项绑定 dev22。凭证只证明各自已核对的范围，逐项状态见[验收证据核对](docs/native-acceptance-review.md)，当前问题见[迁移状态](docs/native-migration-status.md)。
+核心架构重构已合入 `main`（合并提交 `943fb3d`），后续改进在 `main` 推进，正式版尚未发布。当前迁移矩阵共 47 项：28 项 pending，19 项已有凭证中，16 项绑定相同运行/编译身份 `cc3cdfd1` / `a3763ec3`，3 项仍绑定 dev22。凭证只证明各自已核对的范围，逐项状态见[验收证据核对](docs/native-acceptance-review.md)，当前问题见[迁移状态](docs/native-migration-status.md)。
 
 `579449e` 的[六组 CI](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34330094583) 中，macOS / Linux × Node 22 / 24 各 364 项、Windows × Node 22 / 24 各 353 项适用回归通过，六组干净安装各 10 项通过，两个 Windows 作业的原生进程检查各 20 轮通过。整轮 CI 仍因上游接收凭证未刷新而失败，不能写成整轮通过。
 

@@ -4,6 +4,14 @@
 
 当前重构已通过 `943fb3d` 合入 main。当前状态见[迁移状态](native-migration-status.md)，47 项迁移记录的凭证身份与剩余范围见[验收证据核对](native-acceptance-review.md)。以下按时间保留实现及测试记录，其中“当前”“未合并”均指记录当时的状态。
 
+## 2026-09-09 其余十份凭证与隔离升级收敛
+
+其余十份迁移凭证已正式刷新，当前共 16 份绑定 `cc3cdfd1` / `a3763ec3`，3 份 dev22 待真机阶段，28 行 pending 保留。逐项核对旧报告与当前编译清单，只变化 `dist/test/native-runtime.test.js`，生产源码、专项检查入口、资源及依赖锁未变。映射回归使用已完成的 CI 34330094583，多模块使用已完成的 45 项报告；本轮已启动的 SDK 24 项和静态预检 13 项通过并关闭，报告分别为 `20260909-main-studio-a3763ec3-1/sdk/evidence.json`（SHA-256 `5a765f0d150096ae0fb784874a35f5dbc4ac7676f20820da9df2eb478a89e3d3`）和同目录 `checker/evidence.json`（SHA-256 `85cc59d34b4e12a7b5ebf192dc20236e0dfb81a267e2ca44dc07fc37f5af32de`）。没有重跑全量回归或性能采样，适用性核对及接收计划在 `preparation/migration-final-a3763ec3-1`。
+
+当前生产候选 407 个分发文件与 CI 制品一致，本机干净安装 10 项通过。以实际旧完整安装、旧状态的私有副本及新完整安装，通过公开维护 CLI 完成隔离升级/回退 11 项：两方原凭据可读、缺少会话结束声明时拒绝、配置与十份流程保留、重复应用、独立新状态未登录、恢复原配置字节、回退后两方原认证可读、重复回退以及实际宿主/凭据/安装字节未变。通过报告为 `20260909-main-upgrade-7a844f7-1/evidence-continuation.private.json`，SHA-256 `267af18460a384a97c33780cc8c8a4c9660c6a0e13509ca2b76419ba4be7e627`。第一次驱动按嵌套字段读取实际 CLI 顶层错误码失败，当时尚未应用升级；原失败报告保留，后续仅修正读取方式并重新执行断言。
+
+实际宿主升级计划在 `preparation/main-host-upgrade-7a844f7-1/review-plan.md`，尚未应用。已固定新旧完整安装、Node、原宿主配置及十份流程摘要；原 256 MiB 配额保留，2 GiB 方案没有自动进入计划。新状态按当前维护入口仍须重新登录，旧认证保留供回退。只读预检时旧状态无未终结任务/受管进程记录/外部会话，但 10 个旧版 Codex MCP 连接仍存活；计划先交审阅，执行前须重新确认会话收尾。没有切换活动宿主、撤销证书或访问物理手机。
+
 ## 2026-09-09 当前测试构建的非真机证据收敛
 
 `579449e` 新增真实 stdio MCP → Worker 请求失败后的日志和恢复回归，生产运行身份仍为 `cc3cdfd1`，完整编译身份变为 `a3763ec3`。[CI 34330094583](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34330094583) 六组已结束：macOS/Linux × Node22/24 各 364 项、Windows × Node22/24 各 353 项适用回归通过，失败、取消、跳过和 todo 均为零；六组各 10 项干净安装及 Windows 两组各 20 轮进程检查通过。14 份原始报告、六组身份与安装分发清单摘要已核对，记录在 `preparation/ci-34330094583-review-1/review.private.json`，SHA-256 为 `53edc24035c8f694ee3e0dcbde1087c3ec169a32f7bc52ac46d977fec6bad979`。六组均只在上游凭证校验步骤失败，整轮 CI 未通过。

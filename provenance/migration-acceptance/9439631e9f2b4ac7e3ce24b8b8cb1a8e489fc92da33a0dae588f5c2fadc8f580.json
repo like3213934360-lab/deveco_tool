@@ -1,0 +1,28 @@
+{
+  "format": 1,
+  "passed": true,
+  "source": "tools:deveco_logout",
+  "row_sha256": "bdfc5297ccd9cec37658eab9d8f08041fb18695d8c63c45f4ec1c9feec721942",
+  "tested": {
+    "runtime_sha256": "cc3cdfd12b284fc5e85e657dac863a6cde184b18369844d9bf52336b3f903310",
+    "compiled_sha256": "a3763ec3934982b406594372e5e5469b0b7f9e6d22848f3962e2621eccdb364b",
+    "package_lock_sha256": "68641e488a5099852216d3003664f57dd1d05b980f4c7813ee75dd7baf83d0fc",
+    "resource_manifest_sha256": "563bc3f06565e92c59c621c3ef909a37cbc4ac1db958d3d73d6e0bc99bf9ed86",
+    "upstream_lock_sha256": "bf3cc411831bd8ce6652a8085c8247c399d0c48b6d73156a7e649b9ef668164e"
+  },
+  "reviewer": "Codex evidence review",
+  "reason": "Current regression repeats both providers local and peer logout while refresh is in flight, verifies aborted refresh and rejects late responses. These are concurrency regressions, not evidence of a truly expired cloud credential. Reviewed for cc3cdfd1/a3763ec3: production runtime, resource and lock identities unchanged; the compiled delta is the native-runtime regression test. Current CI covers mapped tests; SDK/checker reports and the already completed multimodule report retain their actual identities. No new cross-platform SDK or physical-device scope implied.",
+  "completed_scenarios": [
+    "旧刷新/登出竞争行为回归"
+  ],
+  "checks": [
+    {
+      "check": "test/native-runtime.test.ts",
+      "original_sha256": "d0d81419c3486754059baa5914ae7ab7b5ef1a601c02b5ffd3d82b1b69832164"
+    },
+    {
+      "check": "test/native-auth.test.ts",
+      "original_sha256": "d0d81419c3486754059baa5914ae7ab7b5ef1a601c02b5ffd3d82b1b69832164"
+    }
+  ]
+}

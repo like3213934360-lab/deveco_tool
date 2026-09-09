@@ -1,0 +1,34 @@
+{
+  "format": 1,
+  "passed": true,
+  "source": "tools:deveco_restart",
+  "row_sha256": "b88f982664661efe8595de12c2b0cce0d1a9ab4f48f74adac31dcde0e1d49c1c",
+  "tested": {
+    "runtime_sha256": "cc3cdfd12b284fc5e85e657dac863a6cde184b18369844d9bf52336b3f903310",
+    "compiled_sha256": "a3763ec3934982b406594372e5e5469b0b7f9e6d22848f3962e2621eccdb364b",
+    "package_lock_sha256": "68641e488a5099852216d3003664f57dd1d05b980f4c7813ee75dd7baf83d0fc",
+    "resource_manifest_sha256": "563bc3f06565e92c59c621c3ef909a37cbc4ac1db958d3d73d6e0bc99bf9ed86",
+    "upstream_lock_sha256": "bf3cc411831bd8ce6652a8085c8247c399d0c48b6d73156a7e649b9ef668164e"
+  },
+  "reviewer": "Codex evidence review",
+  "reason": "Current regression repeats joined concurrent restart, real worker exit, continued cleanup after errors, recording and hot-reload lifecycle boundaries. No remaining external scenario is declared by this migration row. Reviewed for cc3cdfd1/a3763ec3: production runtime, resource and lock identities unchanged; the compiled delta is the native-runtime regression test. Current CI covers mapped tests; SDK/checker reports and the already completed multimodule report retain their actual identities. No new cross-platform SDK or physical-device scope implied.",
+  "completed_scenarios": [],
+  "checks": [
+    {
+      "check": "test/native-shutdown.test.ts",
+      "original_sha256": "d0d81419c3486754059baa5914ae7ab7b5ef1a601c02b5ffd3d82b1b69832164"
+    },
+    {
+      "check": "test/native-runtime.test.ts",
+      "original_sha256": "d0d81419c3486754059baa5914ae7ab7b5ef1a601c02b5ffd3d82b1b69832164"
+    },
+    {
+      "check": "test/native-recording.test.ts",
+      "original_sha256": "d0d81419c3486754059baa5914ae7ab7b5ef1a601c02b5ffd3d82b1b69832164"
+    },
+    {
+      "check": "test/native-hotreload.test.ts",
+      "original_sha256": "d0d81419c3486754059baa5914ae7ab7b5ef1a601c02b5ffd3d82b1b69832164"
+    }
+  ]
+}

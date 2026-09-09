@@ -1,0 +1,28 @@
+{
+  "format": 1,
+  "passed": true,
+  "source": "scripts:copy_template",
+  "row_sha256": "cd9c25a21d2738f95cb15a9716e7b6b3b29793d474172f046545eefcb1c8479b",
+  "tested": {
+    "runtime_sha256": "cc3cdfd12b284fc5e85e657dac863a6cde184b18369844d9bf52336b3f903310",
+    "compiled_sha256": "a3763ec3934982b406594372e5e5469b0b7f9e6d22848f3962e2621eccdb364b",
+    "package_lock_sha256": "68641e488a5099852216d3003664f57dd1d05b980f4c7813ee75dd7baf83d0fc",
+    "resource_manifest_sha256": "563bc3f06565e92c59c621c3ef909a37cbc4ac1db958d3d73d6e0bc99bf9ed86",
+    "upstream_lock_sha256": "bf3cc411831bd8ce6652a8085c8247c399d0c48b6d73156a7e649b9ef668164e"
+  },
+  "reviewer": "Codex evidence review",
+  "reason": "Current SDK observations create and build the application and distinct runtime API combinations; current project regressions repeat mapped template parameter and historical error boundaries. Reviewed for cc3cdfd1/a3763ec3: production runtime, resource and lock identities unchanged; the compiled delta is the native-runtime regression test. Current CI covers mapped tests; SDK/checker reports and the already completed multimodule report retain their actual identities. No new cross-platform SDK or physical-device scope implied.",
+  "completed_scenarios": [
+    "所有原参数和历史错误边界逐项对照"
+  ],
+  "checks": [
+    {
+      "check": "scripts/native-sdk-acceptance.ts",
+      "original_sha256": "5a765f0d150096ae0fb784874a35f5dbc4ac7676f20820da9df2eb478a89e3d3"
+    },
+    {
+      "check": "test/native-project.test.ts",
+      "original_sha256": "d0d81419c3486754059baa5914ae7ab7b5ef1a601c02b5ffd3d82b1b69832164"
+    }
+  ]
+}
