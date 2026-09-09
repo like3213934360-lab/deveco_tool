@@ -1,0 +1,26 @@
+{
+  "format": 1,
+  "passed": true,
+  "source": "tools:harmony_docs",
+  "row_sha256": "8f5a6a906eaeeb37c71be6445c22d97422ed94acadcb4ea5fa2bf50aaf9ef18c",
+  "tested": {
+    "runtime_sha256": "d041960db3554b3aa6316210b3b5d79f21ace0e7c7839ff8b832f637ca35f0f0",
+    "compiled_sha256": "285099fc709bfc01ba66948f6b9ae0e2481a250cbaf927edc19fa922600aec8d",
+    "package_lock_sha256": "68641e488a5099852216d3003664f57dd1d05b980f4c7813ee75dd7baf83d0fc",
+    "resource_manifest_sha256": "563bc3f06565e92c59c621c3ef909a37cbc4ac1db958d3d73d6e0bc99bf9ed86",
+    "upstream_lock_sha256": "bf3cc411831bd8ce6652a8085c8247c399d0c48b6d73156a7e649b9ef668164e"
+  },
+  "reviewer": "Codex native auth parity review 2026-09-09",
+  "reason": "当前完整回归重新执行本地知识来源、官方文档检索和报告契约；资源和源锁摘要与冻结清单一致，保留出处与只读查询边界。",
+  "completed_scenarios": [],
+  "checks": [
+    {
+      "check": "test/native-resources.test.ts",
+      "original_sha256": "2525a842379f60c62a8a8f5010512c12813e2ed4e5c6b810c1e3a01a5ffaae87"
+    },
+    {
+      "check": "test/native-reports.test.ts",
+      "original_sha256": "2525a842379f60c62a8a8f5010512c12813e2ed4e5c6b810c1e3a01a5ffaae87"
+    }
+  ]
+}

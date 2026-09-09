@@ -1,0 +1,127 @@
+{
+  "format": 2,
+  "candidate_sha256": "eb82c90b6fed7bf2f41b0c70cc5b9877becc9150675f11798d2857adaeaa7116",
+  "adaptation_sha256": "ca21312dcdd699cdc603c4be9ba758d66994292ea89bef1160d112e59ba336f2",
+  "evidence_sha256": "37950fb50fbcbf319f4abec0fe1b6e5bc5510e88102c26117b79ba3d02b521e0",
+  "before_lock_sha256": "c33ca8c6d4e226383d9cb485b118eb2dad6f1d460df2a7d6ceab61827c3075ea",
+  "accepted_lock_sha256": "c33ca8c6d4e226383d9cb485b118eb2dad6f1d460df2a7d6ceab61827c3075ea",
+  "before_lock": {
+    "format": 1,
+    "sources": [
+      {
+        "id": "deveco-code",
+        "url": "https://gitcode.com/openharmony-sig/deveco-code.git",
+        "ref": "refs/heads/develop",
+        "commit": "325aff05706b9b04a9816a987e9672dda991c630",
+        "tree": "9232f44a15bed9f948662af74f23264b34be457c",
+        "version": "325aff05706b9b04a9816a987e9672dda991c630",
+        "role": "resource_source",
+        "acceptance": "verified"
+      },
+      {
+        "id": "deveco-cli",
+        "url": "https://gitcode.com/openharmony-sig/deveco-cli.git",
+        "ref": "refs/heads/develop",
+        "commit": "08c2f57ffbe83c817d64a728a17971872dd9ddcf",
+        "tree": "36fc532ea8ddb6c4eec3168e6301d0240e61b45d",
+        "version": "1.3.3-Test.1",
+        "role": "protocol_reference",
+        "acceptance": "verified"
+      }
+    ]
+  },
+  "accepted_lock": {
+    "format": 1,
+    "sources": [
+      {
+        "id": "deveco-code",
+        "url": "https://gitcode.com/openharmony-sig/deveco-code.git",
+        "ref": "refs/heads/develop",
+        "commit": "325aff05706b9b04a9816a987e9672dda991c630",
+        "tree": "9232f44a15bed9f948662af74f23264b34be457c",
+        "version": "325aff05706b9b04a9816a987e9672dda991c630",
+        "role": "resource_source",
+        "acceptance": "verified"
+      },
+      {
+        "id": "deveco-cli",
+        "url": "https://gitcode.com/openharmony-sig/deveco-cli.git",
+        "ref": "refs/heads/develop",
+        "commit": "08c2f57ffbe83c817d64a728a17971872dd9ddcf",
+        "tree": "36fc532ea8ddb6c4eec3168e6301d0240e61b45d",
+        "version": "1.3.3-Test.1",
+        "role": "protocol_reference",
+        "acceptance": "verified"
+      }
+    ]
+  },
+  "tested": {
+    "runtime_sha256": "23758f48efc3dc011a5c858a0dee6b666d3483883ae6b5c131906e6962a2ad93",
+    "compiled_sha256": "25b0b62cb294440fe60ee39b1bd88e8abc78cb59a6f7ba8a786c51d1f854b0bb",
+    "package_lock_sha256": "68641e488a5099852216d3003664f57dd1d05b980f4c7813ee75dd7baf83d0fc",
+    "resource_manifest_sha256": "563bc3f06565e92c59c621c3ef909a37cbc4ac1db958d3d73d6e0bc99bf9ed86",
+    "upstream_lock_sha256": "bf3cc411831bd8ce6652a8085c8247c399d0c48b6d73156a7e649b9ef668164e"
+  },
+  "checks": [
+    {
+      "check": "scripts/native-checker-acceptance.ts",
+      "report": "checks/20dd1016970158994dac2dc1f3dbd602789d470a0c587b8b26276bced675e7a2.json",
+      "sha256": "797c84f568a7ea866cd2910e723bb5eb152481d471d66281c263f0323beeaafb",
+      "original_sha256": "19b80ab81b633582458d4db64123a842e44b699a7cea7d43bf25d7eba92d4657"
+    },
+    {
+      "check": "scripts/native-crash-acceptance.ts",
+      "report": "checks/dc7e51bb98dc7518a3292d0df0e7307139445fe2921967a466452f169adc8eac.json",
+      "sha256": "a54e01adbcf1d3cedcb089ec8b94dbe6fc97b4b4cf01250b6f024070463009c6",
+      "original_sha256": "e340e6f64570a024cb7c49c53cbbc45b81c43423de52dbc0aa134d1303296d81"
+    },
+    {
+      "check": "scripts/native-sdk-acceptance.ts",
+      "report": "checks/706fbd9922ad02d0573d8627b108ed300406f61c949da96d97634291d5835fee.json",
+      "sha256": "3ed8748f85a89a5b409cc9505b30b337034e7eb0fceeb236460ca4dbabf4ada1",
+      "original_sha256": "505d928a0b2d2524e2131db8c02b5c8d8edc52be38cac2fa8cf24e7b2b0b58cb"
+    },
+    {
+      "check": "test/native-checker.test.ts",
+      "report": "checks/d3e8f3c9892bc61e32a5fa1e420c71ed06adefa8c8f84121a6e9748bafdb0546.json",
+      "sha256": "00ffb9cb3171fad38022bfeccde522e7522d69a3400eecacda408b0c89b6bf81",
+      "original_sha256": "2865dd9d29dac1487086950afdb48f4dadecf2ac8323ba84a6d0902d50b22faf"
+    },
+    {
+      "check": "test/native-crash.test.ts",
+      "report": "checks/2d1b599ce23056ced1839ae859970fc982f4d893383e9bf218c16d7abaf43bda.json",
+      "sha256": "08617a4ec186aaccf12f6490b6d6344dc8d2d0f6829e3e95c3b769f42c4525e2",
+      "original_sha256": "2865dd9d29dac1487086950afdb48f4dadecf2ac8323ba84a6d0902d50b22faf"
+    },
+    {
+      "check": "test/native-logs.test.ts",
+      "report": "checks/4bb14ecbabba84f86ed57198a37d5be4413526d3567f1530602911e4e54d1db7.json",
+      "sha256": "957d30562f312ed1b2edb6116e08c25fd9d7e5dae79ac5e2f4d133815b81fca4",
+      "original_sha256": "2865dd9d29dac1487086950afdb48f4dadecf2ac8323ba84a6d0902d50b22faf"
+    },
+    {
+      "check": "test/native-project.test.ts",
+      "report": "checks/fa1c8dcf2c54f94869c1010902de8a64e67d2961cf3e183ea47de24f72573aa4.json",
+      "sha256": "480a60764b4b9f34921bf26aee0199b092158ae3671deed57100d5c88c899ab0",
+      "original_sha256": "2865dd9d29dac1487086950afdb48f4dadecf2ac8323ba84a6d0902d50b22faf"
+    },
+    {
+      "check": "test/native-runtime.test.ts",
+      "report": "checks/f7688280871ae9fcf47089eab1e120afa62957d4176255d81e0982b2b205eccc.json",
+      "sha256": "61ab57144c6ed2293c440f57cb7b7137e3f7f614740cf28f44159056796a847d",
+      "original_sha256": "2865dd9d29dac1487086950afdb48f4dadecf2ac8323ba84a6d0902d50b22faf"
+    },
+    {
+      "check": "test/native-upstream.test.ts",
+      "report": "checks/cb23a87e1f563a0b87411bab5eb400e107916a818e154e9e8e628b1cb745e4ab.json",
+      "sha256": "43636678d7517c2d4db9b0480d08913cb881de8dc8ff12e1962b447b563991ae",
+      "original_sha256": "2865dd9d29dac1487086950afdb48f4dadecf2ac8323ba84a6d0902d50b22faf"
+    },
+    {
+      "check": "test/workflows.test.ts",
+      "report": "checks/3912d69e977023170e510887f8daf33659eecafc192ac1af73032debbc5ff868.json",
+      "sha256": "b0da561438e0863dec8c58e7a9338a6b470b4125de9561fbdc58da21bc2e6552",
+      "original_sha256": "2865dd9d29dac1487086950afdb48f4dadecf2ac8323ba84a6d0902d50b22faf"
+    }
+  ]
+}

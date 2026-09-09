@@ -136,18 +136,11 @@ ADDED BY deveco-tool — NOT PART OF THE UPSTREAM NOTICE
 Everything above this line is DevEco Code's NOTICE from commit
 b5911d2ad6daa66d4ca1bd673a9be260da19e1db, reproduced verbatim.
 
-The copied Skill tree contains 10 files with their own Apache-2.0 and
-Huawei copyright headers:
-
-  - skills/arkts-runtime-fix/scripts/collect-hilog.mjs
-  - skills/arkts-runtime-fix/scripts/fetch-faultlog.mjs
-  - skills/arkts-runtime-fix/scripts/jscrash-report.mjs
-  - skills/arkts-runtime-fix/scripts/parse-jscrash-log.mjs
-  - skills/arkts-runtime-fix/scripts/probe-faultlogger.mjs
-  - skills/arkts-runtime-fix/scripts/shared/hdc.mjs
-  - skills/arkts-runtime-fix/scripts/shared/jscrash-faultlogger.mjs
-  - skills/arkts-runtime-fix/scripts/shared/jscrash-parse.mjs
-  - skills/arkts-runtime-fix/scripts/shared/utils.mjs
-  - skills/deveco-create-project/scripts/copy-template.mjs
-
-Those file-level headers are preserved and govern those files.
+The native architecture uses selected reference documents and ArkTS examples as
+on-demand knowledge under resources/knowledge, with exact source paths, commits,
+and byte hashes in provenance/resources.json and resources/knowledge.json.
+Skill definitions and their executable scripts are not shipped or installed.
+Workflows and domain services are maintained as typed native implementations.
+Historical source locks and installation fingerprints preserve provenance and
+allow ownership-checked removal of this project's former Skill installations.
+This note does not change any upstream copyright or license.

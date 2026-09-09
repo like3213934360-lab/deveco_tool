@@ -1,0 +1,11 @@
+import path from "node:path";
+import { packageRoot } from "../src/core/config.js";
+import { invariant } from "../src/core/errors.js";
+import { atomicWrite } from "../src/core/files.js";
+import { readJson } from "./lib/upstream-adaptation.js";
+import { releaseGate } from "./lib/release-gate.js";
+const [input, output] = process.argv.slice(2);
+invariant(input && output, "RELEASE_USAGE", "Provide an evidence manifest and a new gate receipt file");
+const file = path.resolve(input), result = releaseGate(packageRoot, path.dirname(file), readJson(file));
+atomicWrite(path.resolve(output), JSON.stringify(result, null, 2) + "\n", false);
+console.log(JSON.stringify({ passed: true, release: result.release, output: path.resolve(output) }));

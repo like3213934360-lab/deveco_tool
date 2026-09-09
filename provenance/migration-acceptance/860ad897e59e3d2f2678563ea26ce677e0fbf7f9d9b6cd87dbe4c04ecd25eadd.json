@@ -1,0 +1,32 @@
+{
+  "format": 1,
+  "passed": true,
+  "source": "tools:deveco_login",
+  "row_sha256": "53f18676f4b6b3dc41670e3a1a30982f95c26e91f8e69283d157c1249ab4b08c",
+  "tested": {
+    "runtime_sha256": "b26deea68ae317436aafee4d904b410a415c8719ba1cdede068b627b92fbb24b",
+    "compiled_sha256": "8ad78c9793841d8379cdbaa44876aeaa129ee54539ea5c5a6d554b6bb79df296",
+    "package_lock_sha256": "68641e488a5099852216d3003664f57dd1d05b980f4c7813ee75dd7baf83d0fc",
+    "resource_manifest_sha256": "563bc3f06565e92c59c621c3ef909a37cbc4ac1db958d3d73d6e0bc99bf9ed86",
+    "upstream_lock_sha256": "bf3cc411831bd8ce6652a8085c8247c399d0c48b6d73156a7e649b9ef668164e"
+  },
+  "reviewer": "Codex current native runtime evidence review",
+  "reason": "Current regression and authenticated CodeGenie MCP report revalidate the existing login contract. Actual dual-provider callback report SHA256 e1994aad1936bdcbb2e66669d20984f0093ccda2a96a1413a01e2d8344a2d86b verifies missing browser launch with manual URLs, ten concurrent logins sharing one listener, cancellation and the unchanged production 300 second timeout. Actual expired JWT and cloud mutation recovery remain pending.",
+  "completed_scenarios": [
+    "回调取消、登录窗口过期、浏览器失败实际验收"
+  ],
+  "checks": [
+    {
+      "check": "test/native-runtime.test.ts",
+      "original_sha256": "e15d0fba36ae60eae0a0b294f4e1e2f9aaa6d1ac439c435b3311af6673887d98"
+    },
+    {
+      "check": "test/native-auth.test.ts",
+      "original_sha256": "e15d0fba36ae60eae0a0b294f4e1e2f9aaa6d1ac439c435b3311af6673887d98"
+    },
+    {
+      "check": "scripts/native-auth-mcp-acceptance.ts",
+      "original_sha256": "a988fac5bf362857cd4a0e1bbc10d61d2ffaea052c8f5c79b13281f32711b92c"
+    }
+  ]
+}

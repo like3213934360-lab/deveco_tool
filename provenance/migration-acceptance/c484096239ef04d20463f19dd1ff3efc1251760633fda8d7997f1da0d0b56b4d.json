@@ -1,0 +1,28 @@
+{
+  "format": 1,
+  "passed": true,
+  "source": "tools:build_project",
+  "row_sha256": "a7ff6b626219e00bc64d8a74e9e7825d0616fa49a3deb1229ef36b28ebd0912e",
+  "tested": {
+    "runtime_sha256": "ef6aaeffb850969e11bf99f25c743342f94e05de350928b3408d6ee6056f552d",
+    "compiled_sha256": "1ecc3a3261a293b974be0858ad70f4363e84e96713872010843215d26cce7145",
+    "package_lock_sha256": "68641e488a5099852216d3003664f57dd1d05b980f4c7813ee75dd7baf83d0fc",
+    "resource_manifest_sha256": "563bc3f06565e92c59c621c3ef909a37cbc4ac1db958d3d73d6e0bc99bf9ed86",
+    "upstream_lock_sha256": "bf3cc411831bd8ce6652a8085c8247c399d0c48b6d73156a7e649b9ef668164e"
+  },
+  "reviewer": "Codex native behavior review 2026-09-09",
+  "reason": "当前 350 项回归及 49 项真实多产品、多模块专项完成 default/tablet 与 default/preview 四种选择的 HAR/HSP/HAP 构建、默认任务和依赖闭包。实际 SDK 子进程退出后 SIGKILL 宿主的三种边界均通过，有回执恢复一次，缺回执保持需要核对且不重派发。补充私有 SDK 强杀报告 SHA256 24a1aecb09c1efb4327b9d81f85ce93f847660a6f710a9958a28344b0b53d643，范围限本机 macOS 和当前 SDK。",
+  "completed_scenarios": [
+    "最终快照多产品/多模块/HAR/HSP行为复验及真实SDK硬中断恢复验收"
+  ],
+  "checks": [
+    {
+      "check": "test/native-project.test.ts",
+      "original_sha256": "d8cd30be36383570b23d31fe43df3c412be6f12c68ed63f83f14287259ef0cf4"
+    },
+    {
+      "check": "scripts/native-multimodule-acceptance.ts",
+      "original_sha256": "52d6b508c024f4b0dd80c9583b73f248effb08962d0fc3231ca941bcb3ddb429"
+    }
+  ]
+}

@@ -1,0 +1,3089 @@
+{
+  "tools": [
+    {
+      "source": "api_compat_check",
+      "checks": [
+        "test/native-reports.test.ts",
+        "test/native-api-versions.test.ts"
+      ],
+      "remaining": [
+        "更多 SDK/API 版本数据组合与扫描范围验收"
+      ],
+      "acceptance": "pending",
+      "evidence": [],
+      "targets": [
+        "workflow:api_compatibility",
+        "tool:deveco_doctor"
+      ],
+      "adapters": [
+        "src/services/diagnostics.ts"
+      ],
+      "behavior": "扫描保留；版本查询改由能力与工具链数据提供。",
+      "parameters": {
+        "action": {
+          "status": "replaced",
+          "replacement": "scan 合并到 workflow:api_compatibility；versions 由 deveco_doctor.api_compatibility.versions 提供"
+        },
+        "source_version": {
+          "status": "mapped",
+          "replacement": "source_version；只接受已安装 scanner 数据内的版本，按数值顺序验证组合"
+        },
+        "target_version": {
+          "status": "mapped",
+          "replacement": "target_version；只接受已安装 scanner 数据内的版本，按数值顺序验证组合"
+        },
+        "files": {
+          "status": "mapped",
+          "replacement": "files；批量边界按各原生能力验证"
+        },
+        "modules": {
+          "status": "mapped",
+          "replacement": "modules；目标模块"
+        },
+        "format": {
+          "status": "replaced",
+          "replacement": "固定结构化输出与制品"
+        },
+        "output_path": {
+          "status": "replaced",
+          "replacement": "制品引用与 read_artifact"
+        },
+        "limit": {
+          "status": "replaced",
+          "replacement": "结构化摘要和完整报告制品，分页读取由 read_artifact 提供"
+        },
+        "project_path": {
+          "status": "mapped",
+          "replacement": "project_path；请求提交时固定工程"
+        },
+        "timeoutMs": {
+          "status": "replaced",
+          "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
+        }
+      },
+      "actions": [
+        {
+          "field": "action",
+          "value": "scan",
+          "status": "replaced",
+          "replacement": "workflow_run.start api_compatibility；完整结果写入制品"
+        },
+        {
+          "field": "action",
+          "value": "versions",
+          "status": "replaced",
+          "replacement": "deveco_doctor.api_compatibility.versions；空、缺失和非法数据明确失败"
+        }
+      ]
+    },
+    {
+      "source": "app_signature",
+      "checks": [
+        "test/native-reports.test.ts",
+        "test/native-cloud-inventory.test.ts",
+        "scripts/native-auth-mcp-acceptance.ts",
+        "test/native-signature.test.ts",
+        "test/native-signing-config.test.ts",
+        "test/native-cloud-profile.test.ts",
+        "scripts/native-signing-acceptance.ts",
+        "scripts/native-hot-device-acceptance.ts"
+      ],
+      "remaining": [
+        "真实云端变更中断后的外部状态核对、过期认证刷新和更多签名类型",
+        "原 force 与自动签名选择策略对照"
+      ],
+      "acceptance": "pending",
+      "evidence": [
+        "docs/native-authentication.md",
+        "docs/native-signing.md"
+      ],
+      "targets": [
+        "tool:app_signature",
+        "tool:harmony_auth"
+      ],
+      "adapters": [
+        "src/services/signature.ts",
+        "src/services/signing-config.ts",
+        "src/services/signing-material.ts"
+      ],
+      "behavior": "本地签名、私密配置生成与云端证书/Profile 分开调用，使用开发者认证；测试团队显式指定。",
+      "parameters": {
+        "force": {
+          "status": "removed",
+          "replacement": "删除 CLI --force 覆盖选项；configure 必须使用新配置名称及新材料目录，文件发布不覆盖现有输出"
+        },
+        "team_id": {
+          "status": "mapped",
+          "replacement": "app_signature.team_id 必须显式指定；harmony_auth.teams 查询团队，不能自动跨团队选择"
+        },
+        "product": {
+          "status": "mapped",
+          "replacement": "product；固定产品"
+        },
+        "project_path": {
+          "status": "mapped",
+          "replacement": "project_path；请求提交时固定工程"
+        },
+        "timeoutMs": {
+          "status": "replaced",
+          "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
+        }
+      },
+      "actions": []
+    },
+    {
+      "source": "apply_changes",
+      "checks": [
+        "test/native-hotreload.test.ts",
+        "test/native-project.test.ts",
+        "test/native-context.test.ts",
+        "test/native-project-recovery.test.ts",
+        "scripts/native-multimodule-acceptance.ts",
+        "scripts/native-hot-device-acceptance.ts"
+      ],
+      "remaining": [],
+      "acceptance": "verified",
+      "evidence": [
+        "provenance/migration-acceptance/e47982e4c533399eac33188e2194273fe1b2d1f2968a3931708182ef605d3f8a.json"
+      ],
+      "targets": [
+        "tool:hot_reload",
+        "workflow:build_deploy_verify"
+      ],
+      "adapters": [
+        "src/services/hotreload.ts",
+        "src/services/project.ts",
+        "src/services/runtime.ts"
+      ],
+      "behavior": "固定热补丁流程与冷构建部署分别执行。",
+      "parameters": {
+        "files": {
+          "status": "replaced",
+          "replacement": "hot_reload.files 可核对完整变更集合；冷更新使用 build_deploy_verify 按所选产品和 module_targets 执行 Hvigor 增量构建并部署完整包集合，不接收旧 files 清单或运行旧冷补丁写入器"
+        },
+        "hvd": {
+          "status": "mapped",
+          "replacement": "target；设备目标"
+        },
+        "module": {
+          "status": "mapped",
+          "replacement": "build_deploy_verify.modules；app.module 选择启动组件"
+        },
+        "target": {
+          "status": "mapped",
+          "replacement": "module_targets[module]；显式 Hvigor 构建目标，与 HDC target 独立；提交时固定，恢复核对原选择。app_deploy 使用已选定制品，不重新选择构建目标"
+        },
+        "ability": {
+          "status": "mapped",
+          "replacement": "build_deploy_verify.app.ability"
+        },
+        "product": {
+          "status": "mapped",
+          "replacement": "product；固定产品"
+        },
+        "build_mode": {
+          "status": "mapped",
+          "replacement": "mode；debug/release"
+        },
+        "project_path": {
+          "status": "mapped",
+          "replacement": "project_path；请求提交时固定工程"
+        },
+        "timeoutMs": {
+          "status": "replaced",
+          "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
+        }
+      },
+      "actions": []
+    },
+    {
+      "source": "arkts_check",
+      "checks": [
+        "test/native-project.test.ts",
+        "test/native-checker.test.ts",
+        "scripts/native-checker-acceptance.ts"
+      ],
+      "remaining": [],
+      "acceptance": "verified",
+      "evidence": [
+        "provenance/migration-acceptance/df98fe013b434bd34e59f3761e03c97f96349d1de73b6ec0f1f7ab6824378015.json"
+      ],
+      "targets": [
+        "tool:arkts_check"
+      ],
+      "adapters": [
+        "src/services/checker.ts",
+        "src/services/checker-project.ts",
+        "src/services/checker-report.ts",
+        "src/services/diagnostics.ts"
+      ],
+      "behavior": "直接 SDK 静态预检，显式非编译；选定产品/模块源码、路由/资源/模型版本检查，完整诊断制品与有界预览。",
+      "parameters": {
+        "files": {
+          "status": "mapped",
+          "replacement": "files；批量边界按各原生能力验证"
+        },
+        "project_path": {
+          "status": "mapped",
+          "replacement": "project_path；请求提交时固定工程"
+        },
+        "product": {
+          "status": "mapped",
+          "replacement": "product；固定产品"
+        },
+        "timeoutMs": {
+          "status": "replaced",
+          "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
+        }
+      },
+      "actions": []
+    },
+    {
+      "source": "arkts_knowledge_search",
+      "checks": [
+        "test/native-resources.test.ts",
+        "scripts/native-auth-mcp-acceptance.ts"
+      ],
+      "remaining": [
+        "云端过期认证重试与异常响应回归"
+      ],
+      "acceptance": "pending",
+      "evidence": [
+        "docs/native-authentication.md",
+        "docs/native-knowledge.md"
+      ],
+      "targets": [
+        "tool:harmony_knowledge"
+      ],
+      "adapters": [
+        "src/services/knowledge.ts"
+      ],
+      "behavior": "显式选择云端知识；认证与签名隔离。",
+      "parameters": {
+        "question": {
+          "status": "replaced",
+          "replacement": "harmony_knowledge action=search、source=cloud、query；使用独立 codegenie 认证"
+        }
+      },
+      "actions": []
+    },
+    {
+      "source": "build_project",
+      "checks": [
+        "test/native-project.test.ts",
+        "scripts/native-multimodule-acceptance.ts"
+      ],
+      "remaining": [],
+      "acceptance": "verified",
+      "evidence": [
+        "provenance/migration-acceptance/906b6ff7dd0b526d81d4db2a5a8d4ea40cb56b99440c12b3ca480a71cd09c231.json"
+      ],
+      "targets": [
+        "workflow:project_build",
+        "tool:workflow_run"
+      ],
+      "adapters": [
+        "src/services/project.ts"
+      ],
+      "behavior": "构建及异步任务由持久化工作流承担，默认不 clean。",
+      "parameters": {
+        "action": {
+          "status": "replaced",
+          "replacement": "workflow_run 的 start/status/cancel；原同步 run 使用 start 后查询 status"
+        },
+        "job_id": {
+          "status": "mapped",
+          "replacement": "workflow_run.run_id"
+        },
+        "wait_ms": {
+          "status": "mapped",
+          "replacement": "workflow_run.wait_ms；最长 20 秒"
+        },
+        "modules": {
+          "status": "mapped",
+          "replacement": "modules；目标模块"
+        },
+        "module": {
+          "status": "replaced",
+          "replacement": "统一使用 modules 数组；单模块传入一个元素，不保留重复单数参数"
+        },
+        "product": {
+          "status": "mapped",
+          "replacement": "product；固定产品"
+        },
+        "build_mode": {
+          "status": "mapped",
+          "replacement": "mode；debug/release"
+        },
+        "clean": {
+          "status": "mapped",
+          "replacement": "clean；默认 false"
+        },
+        "log_path": {
+          "status": "replaced",
+          "replacement": "制品引用与 read_artifact"
+        },
+        "enable_inspector_source_jump": {
+          "status": "removed",
+          "replacement": "冻结基线 src/deveco-cli.mjs 仅输出 not applied 提示，未启用源跳转；删除这个无效开关，不新增空实现"
+        },
+        "project_path": {
+          "status": "mapped",
+          "replacement": "project_path；请求提交时固定工程"
+        },
+        "timeoutMs": {
+          "status": "replaced",
+          "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
+        }
+      },
+      "actions": [
+        {
+          "field": "action",
+          "value": "start",
+          "status": "replaced",
+          "replacement": "workflow_run.start，workflow=project_build"
+        },
+        {
+          "field": "action",
+          "value": "status",
+          "status": "replaced",
+          "replacement": "workflow_run.status，使用 run_id，最长等待20秒"
+        },
+        {
+          "field": "action",
+          "value": "cancel",
+          "status": "replaced",
+          "replacement": "workflow_run.cancel，取消确认后再标记已取消"
+        },
+        {
+          "field": "action",
+          "value": "run",
+          "status": "replaced",
+          "replacement": "workflow_run.start 后查询 status，统一持久化任务协议"
+        }
+      ]
+    },
+    {
+      "source": "check_cpp_files",
+      "checks": [
+        "test/native-runtime.test.ts",
+        "test/native-lsp.test.ts",
+        "scripts/native-multimodule-acceptance.ts"
+      ],
+      "remaining": [],
+      "acceptance": "verified",
+      "evidence": [
+        "provenance/migration-acceptance/ae22c16cdf1c7a02c985df58d5240ef270a06947b55de864f9b6293a39594aae.json"
+      ],
+      "targets": [
+        "tool:check_cpp_files"
+      ],
+      "adapters": [
+        "src/services/lsp.ts"
+      ],
+      "behavior": "clangd 使用真实编译数据库。",
+      "parameters": {
+        "files": {
+          "status": "mapped",
+          "replacement": "files；批量边界按各原生能力验证"
+        }
+      },
+      "actions": []
+    },
+    {
+      "source": "check_ets_files",
+      "checks": [
+        "test/native-runtime.test.ts",
+        "test/native-checker.test.ts",
+        "test/native-toolchain.test.ts",
+        "scripts/native-checker-acceptance.ts"
+      ],
+      "remaining": [],
+      "acceptance": "verified",
+      "evidence": [
+        "provenance/migration-acceptance/a57be19b76ad0597682de35ff7fc629dca3163c8d8b68f08b3040f25b51f70ef.json"
+      ],
+      "targets": [
+        "tool:arkts_check",
+        "workflow:code_diagnose"
+      ],
+      "adapters": [
+        "src/services/checker.ts",
+        "src/services/diagnostics.ts"
+      ],
+      "behavior": "旧入口实际调用 runArktsCheck；批量静态检查由 arkts_check 和 code_diagnose 保留，语言会话诊断另由 lsp 提供。",
+      "parameters": {
+        "product": {
+          "status": "mapped",
+          "replacement": "product；固定产品"
+        },
+        "files": {
+          "status": "mapped",
+          "replacement": "files；批量边界按各原生能力验证"
+        }
+      },
+      "actions": []
+    },
+    {
+      "source": "code_lint",
+      "checks": [
+        "test/native-lint.test.ts",
+        "test/native-cpu.test.ts",
+        "scripts/native-lint-acceptance.ts"
+      ],
+      "remaining": [
+        "更多 SDK/CLT 实机规则执行范围验收；原生空报告不证明全部配置规则已生效，返回 ruleCoverageVerified:false"
+      ],
+      "acceptance": "pending",
+      "evidence": [],
+      "targets": [
+        "tool:code_lint"
+      ],
+      "adapters": [
+        "src/services/diagnostics.ts",
+        "src/services/lint-input.ts",
+        "src/services/lint-report.ts"
+      ],
+      "behavior": "结构化 Code Linter 报告和显式修复。",
+      "parameters": {
+        "path": {
+          "status": "mapped",
+          "replacement": "path；校验真实路径位于固定工程内，按单文件或目录传给原生 Linter"
+        },
+        "fix": {
+          "status": "mapped",
+          "replacement": "fix；仅显式开启修复，使用工程写租约，真实 SDK 修复后复查"
+        },
+        "incremental": {
+          "status": "mapped",
+          "replacement": "incremental；先验证 Git 工程，再使用原生 --incremental；已跟踪变更文件验证通过"
+        },
+        "config_path": {
+          "status": "mapped",
+          "replacement": "config_path；允许显式外部配置，调用前严格 JSON5/字段校验且最大 1 MiB"
+        },
+        "product": {
+          "status": "mapped",
+          "replacement": "product；固定产品"
+        },
+        "format": {
+          "status": "replaced",
+          "replacement": "固定结构化输出与制品"
+        },
+        "output_path": {
+          "status": "replaced",
+          "replacement": "制品引用与 read_artifact"
+        },
+        "limit": {
+          "status": "mapped",
+          "replacement": "limit；1–200 条预览并限制 24 KiB；全量统计不受预览截断影响，原始报告保留为制品"
+        },
+        "project_path": {
+          "status": "mapped",
+          "replacement": "project_path；请求提交时固定工程"
+        },
+        "timeoutMs": {
+          "status": "replaced",
+          "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
+        }
+      },
+      "actions": []
+    },
+    {
+      "source": "deveco_cli_auth",
+      "checks": [
+        "test/native-auth.test.ts",
+        "scripts/native-auth-mcp-acceptance.ts"
+      ],
+      "remaining": [
+        "实际过期凭据刷新及云端拒绝/登出验收；不同操作系统浏览器支持范围"
+      ],
+      "acceptance": "pending",
+      "evidence": [
+        "docs/native-authentication.md"
+      ],
+      "targets": [
+        "tool:harmony_auth"
+      ],
+      "adapters": [
+        "src/services/auth.ts",
+        "src/services/auth-callback.ts"
+      ],
+      "behavior": "provider=developer 的登录、登出、状态和团队查询。",
+      "parameters": {
+        "action": {
+          "status": "replaced",
+          "replacement": "harmony_auth action=login/status/logout/teams，provider=developer；team_list 改为 teams"
+        },
+        "project_path": {
+          "status": "removed",
+          "replacement": "认证属于 provider 和本地状态目录，不随项目切换；新版不接受 project_path"
+        },
+        "timeoutMs": {
+          "status": "replaced",
+          "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
+        }
+      },
+      "actions": [
+        {
+          "field": "action",
+          "value": "login",
+          "status": "mapped",
+          "replacement": "harmony_auth action=login，provider=developer"
+        },
+        {
+          "field": "action",
+          "value": "logout",
+          "status": "mapped",
+          "replacement": "harmony_auth action=logout，provider=developer"
+        },
+        {
+          "field": "action",
+          "value": "status",
+          "status": "mapped",
+          "replacement": "harmony_auth action=status，provider=developer"
+        },
+        {
+          "field": "action",
+          "value": "team_list",
+          "status": "replaced",
+          "replacement": "harmony_auth action=teams，provider=developer"
+        }
+      ]
+    },
+    {
+      "source": "deveco_doctor",
+      "checks": [
+        "test/native-runtime.test.ts"
+      ],
+      "remaining": [
+        "三操作系统与 CLT 布局验收"
+      ],
+      "acceptance": "pending",
+      "evidence": [],
+      "targets": [
+        "tool:deveco_doctor"
+      ],
+      "adapters": [
+        "src/services/runtime.ts"
+      ],
+      "behavior": "原生组件、配置与能力诊断，不再检查已安装 Skill。",
+      "parameters": {},
+      "actions": []
+    },
+    {
+      "source": "deveco_login",
+      "checks": [
+        "test/native-runtime.test.ts",
+        "test/native-auth.test.ts",
+        "scripts/native-auth-mcp-acceptance.ts"
+      ],
+      "remaining": [],
+      "acceptance": "verified",
+      "evidence": [
+        "provenance/migration-acceptance/860ad897e59e3d2f2678563ea26ce677e0fbf7f9d9b6cd87dbe4c04ecd25eadd.json"
+      ],
+      "targets": [
+        "tool:harmony_auth"
+      ],
+      "adapters": [
+        "src/services/auth.ts"
+      ],
+      "behavior": "provider=codegenie 的浏览器登录和状态。",
+      "parameters": {
+        "action": {
+          "status": "mapped",
+          "replacement": "harmony_auth.action=login/status；provider=codegenie（旧 APP_ID=1008）"
+        },
+        "login_id": {
+          "status": "removed",
+          "replacement": "认证会话由 provider 隔离并持久保存；不再通过旧 CLI login_id 查询"
+        },
+        "wait_ms": {
+          "status": "removed",
+          "replacement": "登录状态使用 harmony_auth.action=status 立即读取；登录不返回工作流 run_id，不能使用 workflow_run.wait_ms 等待。五分钟回调窗口保持不变。"
+        }
+      },
+      "actions": [
+        {
+          "field": "action",
+          "value": "start",
+          "status": "mapped",
+          "replacement": "harmony_auth.action=login，provider=codegenie"
+        },
+        {
+          "field": "action",
+          "value": "status",
+          "status": "mapped",
+          "replacement": "harmony_auth.action=status，provider=codegenie"
+        }
+      ]
+    },
+    {
+      "source": "deveco_logout",
+      "checks": [
+        "test/native-runtime.test.ts",
+        "test/native-auth.test.ts"
+      ],
+      "remaining": [],
+      "acceptance": "verified",
+      "evidence": [
+        "provenance/migration-acceptance/a449ac46d77413dc7809bac2330565c5ba09be4c284025e351e85a9953ef526d.json"
+      ],
+      "targets": [
+        "tool:harmony_auth"
+      ],
+      "adapters": [
+        "src/services/auth.ts"
+      ],
+      "behavior": "provider=codegenie 的登出及待登录取消。",
+      "parameters": {},
+      "actions": []
+    },
+    {
+      "source": "deveco_restart",
+      "checks": [
+        "test/native-shutdown.test.ts",
+        "test/native-runtime.test.ts",
+        "test/native-recording.test.ts",
+        "test/native-hotreload.test.ts"
+      ],
+      "remaining": [],
+      "acceptance": "verified",
+      "evidence": [
+        "provenance/migration-acceptance/e166ef18ef66bb8fc768225b33c24a685c5f123114f3cb9c6dbb58c04b05a4aa.json"
+      ],
+      "targets": [
+        "tool:deveco_restart"
+      ],
+      "adapters": [
+        "src/server.ts",
+        "src/core/worker-client.ts",
+        "src/services/runtime.ts"
+      ],
+      "behavior": "重启原生 Worker 及受管会话，不保留子 MCP 重连分支。",
+      "parameters": {
+        "target": {
+          "status": "removed",
+          "replacement": "统一关闭原生 Worker 和受管会话；官方 CLI/子 MCP 不再是重启对象，旧 target 和重连分支删除"
+        }
+      },
+      "actions": []
+    },
+    {
+      "source": "deveco_script",
+      "checks": [
+        "test/workflows.test.ts"
+      ],
+      "remaining": [
+        "见 scripts 七项验收记录"
+      ],
+      "acceptance": "pending",
+      "evidence": [],
+      "targets": [
+        "tool:workflow_catalog",
+        "tool:workflow_run",
+        "tool:hdc_log"
+      ],
+      "adapters": [
+        "src/services/runtime.ts"
+      ],
+      "behavior": "删除脚本执行和 argv 入口，七个注册脚本逐项迁移。",
+      "parameters": {
+        "script": {
+          "status": "removed",
+          "replacement": "删除脚本执行入口；七种能力分别进入有类型工具及工作流"
+        },
+        "args": {
+          "status": "replaced",
+          "replacement": "迁入各原生工具及工作流的结构化参数，不执行参数化脚本"
+        },
+        "argv": {
+          "status": "removed",
+          "replacement": "删除任意 argv 传递；底层命令由服务按参数数组生成"
+        },
+        "timeoutMs": {
+          "status": "replaced",
+          "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
+        }
+      },
+      "actions": [
+        {
+          "field": "script",
+          "value": "copy_template",
+          "status": "replaced",
+          "replacement": "workflow:project_create；校验 SDK、展开模板并验证工程"
+        },
+        {
+          "field": "script",
+          "value": "detect_sdk",
+          "status": "replaced",
+          "replacement": "tool:deveco_doctor；原生工具链组件探测"
+        },
+        {
+          "field": "script",
+          "value": "collect_hilog",
+          "status": "replaced",
+          "replacement": "tool:hdc_log action=collect"
+        },
+        {
+          "field": "script",
+          "value": "fetch_faultlog",
+          "status": "replaced",
+          "replacement": "tool:hdc_log action=fetch，使用精确 faultlog_name"
+        },
+        {
+          "field": "script",
+          "value": "jscrash_report",
+          "status": "replaced",
+          "replacement": "workflow:crash_diagnose；保留制品、日志证据、规则来源及帧排序"
+        },
+        {
+          "field": "script",
+          "value": "parse_jscrash_log",
+          "status": "replaced",
+          "replacement": "workflow:crash_diagnose；log_file/log_artifact_id/log_text 输入"
+        },
+        {
+          "field": "script",
+          "value": "probe_faultlogger",
+          "status": "replaced",
+          "replacement": "tool:hdc_log action=probe"
+        }
+      ]
+    },
+    {
+      "source": "deveco_script_catalog",
+      "checks": [
+        "test/workflows.test.ts"
+      ],
+      "remaining": [
+        "见 scripts 七项验收记录"
+      ],
+      "acceptance": "pending",
+      "evidence": [],
+      "targets": [
+        "tool:workflow_catalog",
+        "tool:harmony_knowledge"
+      ],
+      "adapters": [
+        "src/services/runtime.ts"
+      ],
+      "behavior": "发现入口替换为工作流目录和按需知识。",
+      "parameters": {
+        "script": {
+          "status": "replaced",
+          "replacement": "通过 workflow_catalog 或 MCP tools/list 读取新接口 Schema；无脚本注册目录"
+        }
+      },
+      "actions": [
+        {
+          "field": "script",
+          "value": "copy_template",
+          "status": "replaced",
+          "replacement": "workflow:project_create；校验 SDK、展开模板并验证工程"
+        },
+        {
+          "field": "script",
+          "value": "detect_sdk",
+          "status": "replaced",
+          "replacement": "tool:deveco_doctor；原生工具链组件探测"
+        },
+        {
+          "field": "script",
+          "value": "collect_hilog",
+          "status": "replaced",
+          "replacement": "tool:hdc_log action=collect"
+        },
+        {
+          "field": "script",
+          "value": "fetch_faultlog",
+          "status": "replaced",
+          "replacement": "tool:hdc_log action=fetch，使用精确 faultlog_name"
+        },
+        {
+          "field": "script",
+          "value": "jscrash_report",
+          "status": "replaced",
+          "replacement": "workflow:crash_diagnose；保留制品、日志证据、规则来源及帧排序"
+        },
+        {
+          "field": "script",
+          "value": "parse_jscrash_log",
+          "status": "replaced",
+          "replacement": "workflow:crash_diagnose；log_file/log_artifact_id/log_text 输入"
+        },
+        {
+          "field": "script",
+          "value": "probe_faultlogger",
+          "status": "replaced",
+          "replacement": "tool:hdc_log action=probe"
+        }
+      ]
+    },
+    {
+      "source": "deveco_status",
+      "checks": [
+        "test/native-runtime.test.ts"
+      ],
+      "remaining": [
+        "真实过期 Token 与离线行为"
+      ],
+      "acceptance": "pending",
+      "evidence": [],
+      "targets": [
+        "tool:harmony_auth"
+      ],
+      "adapters": [
+        "src/services/auth.ts"
+      ],
+      "behavior": "provider=codegenie 的认证状态。",
+      "parameters": {},
+      "actions": []
+    },
+    {
+      "source": "device_info",
+      "checks": [
+        "test/native-device-info.test.ts",
+        "scripts/native-device-readonly.ts"
+      ],
+      "remaining": [
+        "新设备属性与清单契约的 Node 22/24 三平台 CI",
+        "真实多设备及跨平台 HDC/SDK 验收"
+      ],
+      "acceptance": "pending",
+      "evidence": [
+        "docs/native-device-info.md"
+      ],
+      "targets": [
+        "tool:device_info"
+      ],
+      "adapters": [
+        "src/services/device.ts",
+        "src/services/device-info.ts"
+      ],
+      "behavior": "统一 HDC 清单解析与目标捕获；名称、类型、API 版本及属性结构化，缺失/截断显式报告；模拟器推断有来源标记。",
+      "parameters": {
+        "target": {
+          "status": "mapped",
+          "replacement": "精确 HDC 标识；完整清单验证后固定目标，省略时要求唯一可访问设备；名称别名删除"
+        },
+        "format": {
+          "status": "replaced",
+          "replacement": "固定结构化输出与制品"
+        },
+        "project_path": {
+          "status": "removed",
+          "replacement": "设备属性独立于工程；移除旧 CLI 进程工作目录参数"
+        },
+        "timeoutMs": {
+          "status": "replaced",
+          "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
+        }
+      },
+      "actions": []
+    },
+    {
+      "source": "emulator_manage",
+      "checks": [
+        "test/native-emulator.test.ts",
+        "test/native-emulator-protocol.test.ts",
+        "scripts/native-emulator-readonly.ts",
+        "scripts/native-emulator-acceptance.ts"
+      ],
+      "remaining": [
+        "真实镜像下载/卸载、协议接受及组件异常/取消恢复验收",
+        "三平台真实模拟器及与目标设备 UI 共同资源协调验收"
+      ],
+      "acceptance": "pending",
+      "evidence": [
+        "docs/native-emulator.md"
+      ],
+      "targets": [
+        "tool:emulator_manage"
+      ],
+      "adapters": [
+        "src/services/emulator.ts",
+        "src/core/emulator-contracts.ts",
+        "src/services/emulator-license.ts"
+      ],
+      "behavior": "直接驱动模拟器、镜像和许可证组件；查看读取当前 SDK 协议文本，接受要求审阅摘要并核对配置。",
+      "parameters": {
+        "action": {
+          "status": "replaced",
+          "replacement": "新 action；镜像 actions 为 images/image_install/image_uninstall，协议为 license_view/license_accept"
+        },
+        "names": {
+          "status": "replaced",
+          "replacement": "逐个精确 name 提交独立结果；移除旧批量进程 argv 和部分成功的合并文本"
+        },
+        "name": {
+          "status": "mapped",
+          "replacement": "清单中的精确 name；不接受前导选项符或换行"
+        },
+        "device_type": {
+          "status": "mapped",
+          "replacement": "images 可筛选；create/image_install/image_uninstall 必须指定"
+        },
+        "os_version": {
+          "status": "mapped",
+          "replacement": "创建/镜像操作显式指定版本，镜像要求唯一匹配"
+        },
+        "force": {
+          "status": "removed",
+          "replacement": "不保留跳过应用前置校验的 force；删除要求实例停止，原生命令交互由明确动作替代"
+        },
+        "all": {
+          "status": "removed",
+          "replacement": "不隐式操作所有实例/镜像；必须先读取清单并指定目标"
+        },
+        "format": {
+          "status": "replaced",
+          "replacement": "固定结构化输出与制品"
+        },
+        "project_path": {
+          "status": "removed",
+          "replacement": "模拟器与许可证独立于工程；移除旧 CLI 进程工作目录字段"
+        },
+        "timeoutMs": {
+          "status": "replaced",
+          "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
+        }
+      },
+      "actions": [
+        {
+          "field": "action",
+          "value": "list",
+          "status": "mapped",
+          "replacement": "emulator_manage action=list"
+        },
+        {
+          "field": "action",
+          "value": "start",
+          "status": "mapped",
+          "replacement": "emulator_manage action=start"
+        },
+        {
+          "field": "action",
+          "value": "stop",
+          "status": "mapped",
+          "replacement": "emulator_manage action=stop"
+        },
+        {
+          "field": "action",
+          "value": "create",
+          "status": "mapped",
+          "replacement": "emulator_manage action=create"
+        },
+        {
+          "field": "action",
+          "value": "delete",
+          "status": "mapped",
+          "replacement": "emulator_manage action=delete"
+        },
+        {
+          "field": "action",
+          "value": "image_list",
+          "status": "replaced",
+          "replacement": "emulator_manage action=images"
+        },
+        {
+          "field": "action",
+          "value": "image_download",
+          "status": "replaced",
+          "replacement": "emulator_manage action=image_install"
+        },
+        {
+          "field": "action",
+          "value": "image_remove",
+          "status": "replaced",
+          "replacement": "emulator_manage action=image_uninstall"
+        },
+        {
+          "field": "action",
+          "value": "license_view",
+          "status": "mapped",
+          "replacement": "emulator_manage action=license_view"
+        },
+        {
+          "field": "action",
+          "value": "license_accept",
+          "status": "mapped",
+          "replacement": "emulator_manage action=license_accept；需要当前 license_sha256，原生配置确认两项接受，禁止默认接受"
+        }
+      ]
+    },
+    {
+      "source": "emulator_scenario",
+      "checks": [
+        "test/native-emulator-protocol.test.ts",
+        "scripts/native-emulator-acceptance.ts"
+      ],
+      "remaining": [
+        "应用实际感知传感器/场景结果及原生命令取消结果验收",
+        "与目标设备 UI 共同资源协调验收"
+      ],
+      "acceptance": "pending",
+      "evidence": [
+        "docs/native-emulator.md"
+      ],
+      "targets": [
+        "tool:emulator_scenario"
+      ],
+      "adapters": [
+        "src/services/emulator.ts",
+        "src/core/emulator-contracts.ts"
+      ],
+      "behavior": "使用模拟器组件的场景协议。",
+      "parameters": {
+        "action": {
+          "status": "replaced",
+          "replacement": "新 action；旋转 rotation、折叠 folded_state、GPS gps；三种预设场景为单独 action"
+        },
+        "target": {
+          "status": "replaced",
+          "replacement": "name；必须使用模拟器清单中的精确实例名称，旧 HDC 别名解析移除"
+        },
+        "direction": {
+          "status": "replaced",
+          "replacement": "rotation/volume 使用 direction；GPS 方位使用 key=bearing/value"
+        },
+        "state": {
+          "status": "replaced",
+          "replacement": "folded_state 的明确枚举 state，实际产品支持由原生回执核对"
+        },
+        "level": {
+          "status": "replaced",
+          "replacement": "battery action 的整数 value 0–100"
+        },
+        "status": {
+          "status": "replaced",
+          "replacement": "battery_status 的 value=1（charging）/0（discharging）"
+        },
+        "longitude": {
+          "status": "replaced",
+          "replacement": "gps key=longitude/value；±180，最多 8 位小数"
+        },
+        "latitude": {
+          "status": "replaced",
+          "replacement": "gps key=latitude/value；±90，最多 8 位小数"
+        },
+        "altitude": {
+          "status": "replaced",
+          "replacement": "gps key=altitude/value；±10000，最多 2 位小数"
+        },
+        "scene": {
+          "status": "replaced",
+          "replacement": "outdoor_running/outdoor_cycling/driving_navigation action"
+        },
+        "light_intensity": {
+          "status": "replaced",
+          "replacement": "sensor key=light/value；0–100000，最多 1 位小数"
+        },
+        "humidity": {
+          "status": "replaced",
+          "replacement": "sensor key=humidity/value；0–100，最多 1 位小数；组件未声明时能力不可用"
+        },
+        "temperature": {
+          "status": "replaced",
+          "replacement": "sensor key=temperature/value；-273.1–100，最多 1 位小数；组件未声明时能力不可用"
+        },
+        "steps": {
+          "status": "replaced",
+          "replacement": "sensor key=steps/value；现代组件声明的 0–100000 整数范围"
+        },
+        "heartrate": {
+          "status": "replaced",
+          "replacement": "sensor key=heartrate/value；0–255 整数"
+        },
+        "project_path": {
+          "status": "removed",
+          "replacement": "场景通过明确模拟器实例定位，不使用旧 CLI 工程工作目录"
+        },
+        "timeoutMs": {
+          "status": "replaced",
+          "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
+        }
+      },
+      "actions": [
+        {
+          "field": "action",
+          "value": "shake",
+          "status": "mapped",
+          "replacement": "emulator_scenario action=shake；参数前置校验、组件能力声明和正向回执验证"
+        },
+        {
+          "field": "action",
+          "value": "power",
+          "status": "mapped",
+          "replacement": "emulator_scenario action=power；参数前置校验、组件能力声明和正向回执验证"
+        },
+        {
+          "field": "action",
+          "value": "rotate",
+          "status": "replaced",
+          "replacement": "emulator_scenario action=rotation；参数前置校验、组件能力声明和正向回执验证"
+        },
+        {
+          "field": "action",
+          "value": "volume",
+          "status": "mapped",
+          "replacement": "emulator_scenario action=volume；参数前置校验、组件能力声明和正向回执验证"
+        },
+        {
+          "field": "action",
+          "value": "fold",
+          "status": "replaced",
+          "replacement": "emulator_scenario action=folded_state；参数前置校验、组件能力声明和正向回执验证"
+        },
+        {
+          "field": "action",
+          "value": "battery",
+          "status": "replaced",
+          "replacement": "emulator_scenario action=battery/battery_status；参数前置校验、组件能力声明和正向回执验证"
+        },
+        {
+          "field": "action",
+          "value": "geolocation",
+          "status": "replaced",
+          "replacement": "emulator_scenario action=gps；参数前置校验、组件能力声明和正向回执验证"
+        },
+        {
+          "field": "action",
+          "value": "scene",
+          "status": "replaced",
+          "replacement": "emulator_scenario action=outdoor_running/outdoor_cycling/driving_navigation；参数前置校验、组件能力声明和正向回执验证"
+        },
+        {
+          "field": "action",
+          "value": "sensor",
+          "status": "mapped",
+          "replacement": "emulator_scenario action=sensor；参数前置校验、组件能力声明和正向回执验证"
+        }
+      ]
+    },
+    {
+      "source": "find_references",
+      "checks": [
+        "test/native-runtime.test.ts",
+        "test/native-lsp.test.ts",
+        "test/native-toolchain.test.ts"
+      ],
+      "remaining": [
+        "跨平台和最终性能验证；相对路径、未同步文件和去声明回归已通过"
+      ],
+      "acceptance": "pending",
+      "evidence": [],
+      "targets": [
+        "tool:lsp"
+      ],
+      "adapters": [
+        "src/services/lsp.ts"
+      ],
+      "behavior": "合并到 lsp references。",
+      "parameters": {
+        "file": {
+          "status": "mapped",
+          "replacement": "file；工程相对或绝对路径，realpath 去重，同一批读取字节用于摘要与通知"
+        },
+        "line": {
+          "status": "replaced",
+          "replacement": "line；从零开始，按当前文件内容检查范围"
+        },
+        "column": {
+          "status": "replaced",
+          "replacement": "character；从零开始的 UTF-16 偏移，检查 CRLF 和末尾空行"
+        },
+        "includeDeclaration": {
+          "status": "mapped",
+          "replacement": "includeDeclaration；关闭时使用语义定义核对过滤所有声明，保留真实引用"
+        },
+        "timeoutMs": {
+          "status": "replaced",
+          "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
+        }
+      },
+      "actions": []
+    },
+    {
+      "source": "get_app_ui_tree",
+      "checks": [
+        "test/native-ui.test.ts",
+        "test/native-ui-query.test.ts"
+      ],
+      "remaining": [
+        "真实多显示器与多窗口属性完整对照；简化树和父子层级已实现"
+      ],
+      "acceptance": "pending",
+      "evidence": [],
+      "targets": [
+        "tool:ui_snapshot",
+        "tool:ui_inspect"
+      ],
+      "adapters": [
+        "src/services/device.ts",
+        "src/services/ui-inspection.ts"
+      ],
+      "behavior": "删除重复代理，返回快照和制品。",
+      "parameters": {
+        "hvd": {
+          "status": "mapped",
+          "replacement": "target；设备目标"
+        },
+        "mode": {
+          "status": "mapped",
+          "replacement": "ui_snapshot.mode=tree/both；分页检索使用 ui_inspect"
+        },
+        "outputDirectory": {
+          "status": "replaced",
+          "replacement": "制品引用与 read_artifact"
+        }
+      },
+      "actions": []
+    },
+    {
+      "source": "get_hover",
+      "checks": [
+        "test/native-runtime.test.ts",
+        "test/native-lsp.test.ts",
+        "test/native-toolchain.test.ts"
+      ],
+      "remaining": [
+        "跨平台和最终性能验证；合法空结果及位置边界已通过"
+      ],
+      "acceptance": "pending",
+      "evidence": [],
+      "targets": [
+        "tool:lsp"
+      ],
+      "adapters": [
+        "src/services/lsp.ts"
+      ],
+      "behavior": "合并到 lsp hover。",
+      "parameters": {
+        "file": {
+          "status": "mapped",
+          "replacement": "file；工程相对或绝对路径，realpath 去重，同一批读取字节用于摘要与通知"
+        },
+        "line": {
+          "status": "replaced",
+          "replacement": "line；从零开始，按当前文件内容检查范围"
+        },
+        "column": {
+          "status": "replaced",
+          "replacement": "character；从零开始的 UTF-16 偏移，检查 CRLF 和末尾空行"
+        },
+        "timeoutMs": {
+          "status": "replaced",
+          "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
+        }
+      },
+      "actions": []
+    },
+    {
+      "source": "go_to_definition",
+      "checks": [
+        "test/native-runtime.test.ts",
+        "test/native-lsp.test.ts",
+        "test/native-toolchain.test.ts",
+        "scripts/native-sdk-acceptance.ts",
+        "scripts/native-multimodule-acceptance.ts"
+      ],
+      "remaining": [],
+      "acceptance": "verified",
+      "evidence": [
+        "provenance/migration-acceptance/deac1a3b03a95261bb3196411f9dcc4cf4587b3298136a51e08debe3162c0ddc.json"
+      ],
+      "targets": [
+        "tool:lsp"
+      ],
+      "adapters": [
+        "src/services/lsp.ts"
+      ],
+      "behavior": "合并到 lsp definition。",
+      "parameters": {
+        "file": {
+          "status": "mapped",
+          "replacement": "file；工程相对或绝对路径，realpath 去重，同一批读取字节用于摘要与通知"
+        },
+        "line": {
+          "status": "replaced",
+          "replacement": "line；从零开始，按当前文件内容检查范围"
+        },
+        "column": {
+          "status": "replaced",
+          "replacement": "character；从零开始的 UTF-16 偏移，检查 CRLF 和末尾空行"
+        },
+        "timeoutMs": {
+          "status": "replaced",
+          "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
+        }
+      },
+      "actions": []
+    },
+    {
+      "source": "harmony_docs",
+      "checks": [
+        "test/native-resources.test.ts",
+        "test/native-reports.test.ts"
+      ],
+      "remaining": [],
+      "acceptance": "verified",
+      "evidence": [
+        "provenance/migration-acceptance/676cd206ef7da5c1108bda8db751497b4a974aca3f947f50bc49b34d1bcdc6cf.json"
+      ],
+      "targets": [
+        "tool:harmony_knowledge"
+      ],
+      "adapters": [
+        "src/services/knowledge.ts",
+        "src/core/doc-catalog.ts"
+      ],
+      "behavior": "本地文档数据库和压缩资源按需读取；六类目录、限定目录检索和稳定分页。",
+      "parameters": {
+        "action": {
+          "status": "replaced",
+          "replacement": "harmony_knowledge action=catalog/search/read、kind=docs；目录列表与分页文档条目一起返回"
+        },
+        "keywords": {
+          "status": "replaced",
+          "replacement": "query；空白分隔查询，最多 12 个词，文字按字面构造 FTS 表达式，标题命中优先"
+        },
+        "catalog": {
+          "status": "mapped",
+          "replacement": "catalog=all 或六个官方目录名称；只适用于本地文档列表/检索，不会在其他动作中静默忽略"
+        },
+        "document_id": {
+          "status": "replaced",
+          "replacement": "id=docs:<document_id>；ID 指向发布包只读索引中的文档，正文 offset/limit 分页"
+        },
+        "format": {
+          "status": "replaced",
+          "replacement": "固定结构化输出与制品"
+        },
+        "limit": {
+          "status": "mapped",
+          "replacement": "目录/检索最多 100 条，正文最多 65536 个 UTF-16 代码单元；返回完整数量和 next_offset"
+        },
+        "project_path": {
+          "status": "removed",
+          "replacement": "文档资源独立于工程；移除旧 CLI 仅为进程工作目录使用的 project_path"
+        },
+        "timeoutMs": {
+          "status": "replaced",
+          "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
+        }
+      },
+      "actions": [
+        {
+          "field": "action",
+          "value": "catalog",
+          "status": "replaced",
+          "replacement": "harmony_knowledge action=catalog、kind=docs；六类目录、检索与正文分页见 test/native-resources.test.ts"
+        },
+        {
+          "field": "action",
+          "value": "search",
+          "status": "replaced",
+          "replacement": "harmony_knowledge action=search、kind=docs；六类目录、检索与正文分页见 test/native-resources.test.ts"
+        },
+        {
+          "field": "action",
+          "value": "read",
+          "status": "replaced",
+          "replacement": "harmony_knowledge action=read、kind=docs；六类目录、检索与正文分页见 test/native-resources.test.ts"
+        }
+      ]
+    },
+    {
+      "source": "hdc_log",
+      "checks": [
+        "test/native-logs.test.ts"
+      ],
+      "remaining": [
+        "真实设备 Hilog、整行筛选性能、默认 app/core buffer 清空和 faultlog 读取验收"
+      ],
+      "acceptance": "pending",
+      "evidence": [],
+      "targets": [
+        "tool:hdc_log",
+        "tool:device_info",
+        "workflow:crash_diagnose"
+      ],
+      "adapters": [
+        "src/services/logs.ts",
+        "src/services/runtime.ts"
+      ],
+      "behavior": "原生 Hilog 收集、字面量整行过滤、清空、faultlog 探测与命名读取；输出制品及截断证据。",
+      "parameters": {
+        "action": {
+          "status": "mapped",
+          "replacement": "hdc_log.action；设备列表移至 device_info.list"
+        },
+        "device_id": {
+          "status": "mapped",
+          "replacement": "target；设备目标"
+        },
+        "log_prefix": {
+          "status": "replaced",
+          "replacement": "contains；整行字面量匹配，默认不过滤，不隐式使用旧调试标签"
+        },
+        "lines": {
+          "status": "mapped",
+          "replacement": "lines；无过滤取日志尾部，有 contains 时在设备筛选后取最后 N 条"
+        },
+        "timeoutMs": {
+          "status": "replaced",
+          "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
+        }
+      },
+      "actions": [
+        {
+          "field": "action",
+          "value": "collect",
+          "status": "mapped",
+          "replacement": "hdc_log(action=collect)"
+        },
+        {
+          "field": "action",
+          "value": "clear",
+          "status": "mapped",
+          "replacement": "hdc_log(action=clear)"
+        },
+        {
+          "field": "action",
+          "value": "list_devices",
+          "status": "mapped",
+          "replacement": "device_info(list=true)"
+        }
+      ]
+    },
+    {
+      "source": "hot_reload",
+      "checks": [
+        "test/native-hotreload.test.ts",
+        "scripts/native-hot-device-acceptance.ts",
+        "scripts/native-hot-multimodule-acceptance.ts"
+      ],
+      "remaining": [],
+      "acceptance": "verified",
+      "evidence": [
+        "provenance/migration-acceptance/c11fe42aaf1385d5e691cc2c94a6cdc12ca9c210309a4551e7802efee3328cb2.json"
+      ],
+      "targets": [
+        "tool:hot_reload"
+      ],
+      "adapters": [
+        "src/services/hotreload.ts"
+      ],
+      "behavior": "原生持久化 watch 会话、补丁制作及应用。",
+      "parameters": {
+        "action": {
+          "status": "mapped",
+          "replacement": "hot_reload.action=start/apply/status/stop；apply 返回持久化 run_id"
+        },
+        "files": {
+          "status": "mapped",
+          "replacement": "files；批量边界按各原生能力验证"
+        },
+        "hvd": {
+          "status": "mapped",
+          "replacement": "target；设备目标"
+        },
+        "module": {
+          "status": "mapped",
+          "replacement": "hot_reload.modules；模块依赖传播由 hotChanges 解析"
+        },
+        "product": {
+          "status": "mapped",
+          "replacement": "product；固定产品"
+        },
+        "build_mode": {
+          "status": "mapped",
+          "replacement": "mode；debug/release"
+        },
+        "ability": {
+          "status": "mapped",
+          "replacement": "hot_reload.app.ability"
+        },
+        "project_path": {
+          "status": "mapped",
+          "replacement": "project_path；请求提交时固定工程"
+        },
+        "wait_ms": {
+          "status": "mapped",
+          "replacement": "workflow_run.wait_ms；最长 20 秒"
+        },
+        "timeoutMs": {
+          "status": "replaced",
+          "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
+        }
+      },
+      "actions": [
+        {
+          "field": "action",
+          "value": "start",
+          "status": "mapped",
+          "replacement": "hot_reload.action=start；有界会话及原生进程生命周期"
+        },
+        {
+          "field": "action",
+          "value": "apply",
+          "status": "mapped",
+          "replacement": "hot_reload.action=apply；持久化任务，恢复时核对签名 HQF 和设备回执"
+        },
+        {
+          "field": "action",
+          "value": "status",
+          "status": "mapped",
+          "replacement": "hot_reload.action=status；有界会话及原生进程生命周期"
+        },
+        {
+          "field": "action",
+          "value": "stop",
+          "status": "mapped",
+          "replacement": "hot_reload.action=stop；有界会话及原生进程生命周期"
+        }
+      ]
+    },
+    {
+      "source": "lsp",
+      "checks": [
+        "test/native-runtime.test.ts",
+        "test/native-lsp.test.ts",
+        "test/native-toolchain.test.ts"
+      ],
+      "remaining": [
+        "跨平台与更广 SDK 组合的语言会话验收、最终性能门槛"
+      ],
+      "acceptance": "pending",
+      "evidence": [],
+      "targets": [
+        "tool:lsp"
+      ],
+      "adapters": [
+        "src/services/lsp.ts"
+      ],
+      "behavior": "现代原生 LSP 生命周期与工程/SDK 会话缓存。",
+      "parameters": {
+        "operation": {
+          "status": "replaced",
+          "replacement": "action：definition / references / hover / implementation；旧操作名称不建立别名"
+        },
+        "filePath": {
+          "status": "mapped",
+          "replacement": "file；工程相对或绝对路径，realpath 去重，同一批读取字节用于摘要与通知"
+        },
+        "line": {
+          "status": "replaced",
+          "replacement": "line；从零开始，按当前文件内容检查范围"
+        },
+        "character": {
+          "status": "replaced",
+          "replacement": "character；从零开始的 UTF-16 偏移，检查 CRLF 和末尾空行"
+        },
+        "timeoutMs": {
+          "status": "replaced",
+          "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
+        }
+      },
+      "actions": [
+        {
+          "field": "operation",
+          "value": "goToDefinition",
+          "status": "replaced",
+          "replacement": "lsp.action=definition；真实本机 SDK 和原生回归通过"
+        },
+        {
+          "field": "operation",
+          "value": "findReferences",
+          "status": "replaced",
+          "replacement": "lsp.action=references；真实本机 SDK 和原生回归通过"
+        },
+        {
+          "field": "operation",
+          "value": "hover",
+          "status": "replaced",
+          "replacement": "lsp.action=hover；真实本机 SDK 和原生回归通过"
+        },
+        {
+          "field": "operation",
+          "value": "goToImplementation",
+          "status": "replaced",
+          "replacement": "lsp.action=implementation；真实本机 SDK 和原生回归通过"
+        }
+      ]
+    },
+    {
+      "source": "perform_ui_action",
+      "checks": [
+        "test/native-text.test.ts",
+        "test/native-ui-control.test.ts",
+        "test/native-recording.test.ts"
+      ],
+      "remaining": [
+        "真实设备中文输入及多显示器路由验收",
+        "原生滚动采样的实际设备结果验证"
+      ],
+      "acceptance": "pending",
+      "evidence": [],
+      "targets": [
+        "tool:ui_control",
+        "tool:ui_tap",
+        "tool:ui_snapshot"
+      ],
+      "adapters": [
+        "src/services/device.ts",
+        "src/services/ui-control.ts",
+        "src/services/recording.ts"
+      ],
+      "behavior": "动作统一到 HDC/UiTest/Hypium 原生服务。",
+      "parameters": {
+        "actionType": {
+          "status": "replaced",
+          "replacement": "click/inputText/keyEvent 对应 operation.action；directionalFling 改为 dircFling；screenshot 改为 ui_snapshot"
+        },
+        "direction": {
+          "status": "mapped",
+          "replacement": "operation.direction；dircFling 的 0–3 方向"
+        },
+        "displayId": {
+          "status": "mapped",
+          "replacement": "operation.display_id 或 capture.display_id；选择器携带 displayId 时自动传递"
+        },
+        "hvd": {
+          "status": "mapped",
+          "replacement": "target；设备目标"
+        },
+        "key1": {
+          "status": "replaced",
+          "replacement": "operation.keys 数组；一个 Home/Back/Power 或最多三个数字键码，拒绝混用"
+        },
+        "key2": {
+          "status": "replaced",
+          "replacement": "operation.keys 数组；数字组合键保留顺序"
+        },
+        "key3": {
+          "status": "replaced",
+          "replacement": "operation.keys 数组；数字组合键保留顺序"
+        },
+        "localPath": {
+          "status": "replaced",
+          "replacement": "截图使用受管理制品引用和 workflow_run.read_artifact，不保留任意文件覆盖输出"
+        },
+        "savePath": {
+          "status": "replaced",
+          "replacement": "删除设备端永久截图路径；快照临时文件传输后删除"
+        },
+        "stepLength": {
+          "status": "mapped",
+          "replacement": "operation.step_length；fling 为像素步长，dircFling 为原生采样次数"
+        },
+        "text": {
+          "status": "mapped",
+          "replacement": "selector.text 或 operation.text；按动作区分"
+        },
+        "velocity": {
+          "status": "mapped",
+          "replacement": "operation.velocity；仅手势，200–40000"
+        },
+        "x": {
+          "status": "mapped",
+          "replacement": "operation.x；UiTest 正 int32 坐标"
+        },
+        "y": {
+          "status": "mapped",
+          "replacement": "operation.y；UiTest 正 int32 坐标"
+        },
+        "timeoutMs": {
+          "status": "replaced",
+          "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
+        }
+      },
+      "actions": []
+    },
+    {
+      "source": "project_sync",
+      "checks": [
+        "test/native-project.test.ts",
+        "scripts/native-multimodule-acceptance.ts"
+      ],
+      "remaining": [],
+      "acceptance": "verified",
+      "evidence": [
+        "provenance/migration-acceptance/b23a9ee8d6bd09f1252473a81c79901546d73572d7cee1c586933e2b7b6f69b7.json"
+      ],
+      "targets": [
+        "workflow:project_sync"
+      ],
+      "adapters": [
+        "src/services/project.ts"
+      ],
+      "behavior": "固定安装/模型同步/验证顺序。",
+      "parameters": {
+        "product": {
+          "status": "mapped",
+          "replacement": "product；固定产品"
+        },
+        "install_dependencies": {
+          "status": "mapped",
+          "replacement": "workflow project_sync 的 install"
+        },
+        "project_path": {
+          "status": "mapped",
+          "replacement": "project_path；请求提交时固定工程"
+        },
+        "timeoutMs": {
+          "status": "replaced",
+          "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
+        }
+      },
+      "actions": []
+    },
+    {
+      "source": "start_app",
+      "checks": [
+        "test/native-deploy.test.ts",
+        "test/native-project.test.ts",
+        "test/native-context.test.ts",
+        "test/native-project-recovery.test.ts",
+        "scripts/native-multimodule-acceptance.ts"
+      ],
+      "remaining": [],
+      "acceptance": "verified",
+      "evidence": [
+        "provenance/migration-acceptance/fee244830b8e1ba1c78ad2649279d882348f88f3e874a3891f92657526901218.json"
+      ],
+      "targets": [
+        "workflow:build_deploy_verify",
+        "workflow:app_deploy"
+      ],
+      "adapters": [
+        "src/services/runtime.ts",
+        "src/services/project.ts"
+      ],
+      "behavior": "构建、安装、启动及断言分别留存回执。",
+      "parameters": {
+        "hvd": {
+          "status": "mapped",
+          "replacement": "target；设备目标"
+        },
+        "module": {
+          "status": "mapped",
+          "replacement": "ui_flow.navigate.route.module 或 app_deploy.app.module"
+        },
+        "target": {
+          "status": "mapped",
+          "replacement": "module_targets[module]；显式 Hvigor 构建目标，与 HDC target 独立；提交时固定，恢复核对原选择。app_deploy 使用已选定制品，不重新选择构建目标"
+        },
+        "product": {
+          "status": "mapped",
+          "replacement": "product；固定产品"
+        },
+        "ability": {
+          "status": "mapped",
+          "replacement": "ui_flow.navigate.route.ability 或 app_deploy.app.ability"
+        },
+        "project_path": {
+          "status": "mapped",
+          "replacement": "project_path；请求提交时固定工程"
+        },
+        "timeoutMs": {
+          "status": "replaced",
+          "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
+        }
+      },
+      "actions": []
+    },
+    {
+      "source": "switch_cwd",
+      "checks": [
+        "test/native-project.test.ts",
+        "test/native-context.test.ts"
+      ],
+      "remaining": [],
+      "acceptance": "verified",
+      "evidence": [
+        "provenance/migration-acceptance/9cb000300c144e20cff1b53eddfd4340e63bb6f1c757432a4bc4589580ab6662.json"
+      ],
+      "targets": [
+        "tool:switch_cwd"
+      ],
+      "adapters": [
+        "src/services/project.ts",
+        "src/services/runtime.ts"
+      ],
+      "behavior": "切换默认工程，已提交任务使用捕获上下文。",
+      "parameters": {
+        "project_path": {
+          "status": "mapped",
+          "replacement": "project_path；请求提交时固定工程"
+        }
+      },
+      "actions": []
+    },
+    {
+      "source": "ui_control",
+      "checks": [
+        "test/native-text.test.ts",
+        "scripts/native-canary-ui-acceptance.ts"
+      ],
+      "remaining": [
+        "所有手势路径与真实多显示器验收；专用应用中文输入、窗口定位和点击已通过"
+      ],
+      "acceptance": "pending",
+      "evidence": [
+        "docs/native-signing.md"
+      ],
+      "targets": [
+        "tool:ui_control"
+      ],
+      "adapters": [
+        "src/services/device.ts"
+      ],
+      "behavior": "原生操作对象，选择器/窗口条件与动作共享设备租约。",
+      "parameters": {
+        "action": {
+          "status": "mapped",
+          "replacement": "ui_control.operation.action 使用标准动作名"
+        },
+        "x": {
+          "status": "mapped",
+          "replacement": "ui_control.operation.x"
+        },
+        "y": {
+          "status": "mapped",
+          "replacement": "ui_control.operation.y"
+        },
+        "x2": {
+          "status": "mapped",
+          "replacement": "ui_control.operation.x2"
+        },
+        "y2": {
+          "status": "mapped",
+          "replacement": "ui_control.operation.y2"
+        },
+        "direction": {
+          "status": "mapped",
+          "replacement": "ui_control.operation.direction"
+        },
+        "text": {
+          "status": "mapped",
+          "replacement": "selector.text 或 operation.text；按动作区分"
+        },
+        "node_id": {
+          "status": "mapped",
+          "replacement": "ui_control.operation.selector.node_id"
+        },
+        "window": {
+          "status": "mapped",
+          "replacement": "ui_control.operation.window.id 或 window.bundle_name"
+        },
+        "speed": {
+          "status": "mapped",
+          "replacement": "ui_control.operation.velocity，按原生 UiTest 范围校验"
+        },
+        "hvd": {
+          "status": "mapped",
+          "replacement": "target；设备目标"
+        },
+        "project_path": {
+          "status": "mapped",
+          "replacement": "project_path；请求提交时固定工程"
+        },
+        "timeoutMs": {
+          "status": "replaced",
+          "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
+        }
+      },
+      "actions": [
+        {
+          "field": "action",
+          "value": "click",
+          "status": "mapped",
+          "replacement": "ui_control.operation.action=click；节点/窗口/显示器定位及操作后快照失效"
+        },
+        {
+          "field": "action",
+          "value": "doubleclick",
+          "status": "mapped",
+          "replacement": "ui_control.operation.action=doubleClick；节点/窗口/显示器定位及操作后快照失效"
+        },
+        {
+          "field": "action",
+          "value": "longclick",
+          "status": "mapped",
+          "replacement": "ui_control.operation.action=longClick；节点/窗口/显示器定位及操作后快照失效"
+        },
+        {
+          "field": "action",
+          "value": "swipe",
+          "status": "mapped",
+          "replacement": "ui_control.operation.action=swipe；节点/窗口/显示器定位及操作后快照失效"
+        },
+        {
+          "field": "action",
+          "value": "fling",
+          "status": "mapped",
+          "replacement": "ui_control.operation.action=fling；节点/窗口/显示器定位及操作后快照失效"
+        },
+        {
+          "field": "action",
+          "value": "drag",
+          "status": "mapped",
+          "replacement": "ui_control.operation.action=drag；节点/窗口/显示器定位及操作后快照失效"
+        },
+        {
+          "field": "action",
+          "value": "dircfling",
+          "status": "mapped",
+          "replacement": "ui_control.operation.action=dircFling；节点/窗口/显示器定位及操作后快照失效"
+        },
+        {
+          "field": "action",
+          "value": "text",
+          "status": "mapped",
+          "replacement": "ui_control.operation.action=inputText；节点/窗口/显示器定位及操作后快照失效"
+        }
+      ]
+    },
+    {
+      "source": "ui_find",
+      "checks": [
+        "test/native-ui.test.ts",
+        "test/native-ui-query.test.ts",
+        "test/native-ui-import.test.ts",
+        "scripts/native-device-readonly.ts",
+        "scripts/native-ui-mcp-benchmark.ts"
+      ],
+      "remaining": [
+        "真实多显示器、实时获取及其他选择器的完整直接能力性能门槛；固定文件精确 key 查询已在本机 Node 22/24 各三轮通过"
+      ],
+      "acceptance": "pending",
+      "evidence": [
+        "docs/native-ui-import.md",
+        "docs/native-ui-performance.md"
+      ],
+      "targets": [
+        "tool:ui_find"
+      ],
+      "adapters": [
+        "src/services/device.ts",
+        "src/services/ui-import.ts",
+        "src/services/ui-node-schema.ts",
+        "src/services/ui-import-cache.ts"
+      ],
+      "behavior": "实时设备查询复用快照索引；已有文件或本 MCP 节点制品可离线查询，保留输入摘要且不验证当前设备状态。",
+      "parameters": {
+        "text": {
+          "status": "mapped",
+          "replacement": "selector.text 或 operation.text；按动作区分"
+        },
+        "textMode": {
+          "status": "mapped",
+          "replacement": "selector.textMode"
+        },
+        "key": {
+          "status": "mapped",
+          "replacement": "selector.key"
+        },
+        "type": {
+          "status": "mapped",
+          "replacement": "selector.type"
+        },
+        "dumpPath": {
+          "status": "replaced",
+          "replacement": "tree_file 绝对路径；也可用 tree_artifact_id。tree_format 区分原生 uitest JSON 与本 MCP nodes 格式，离线来源与 target/snapshot_id 互斥，无旧名称别名。"
+        },
+        "hvd": {
+          "status": "mapped",
+          "replacement": "target；设备目标"
+        },
+        "limit": {
+          "status": "replaced",
+          "replacement": "selector.limit 只限制返回条数，真实匹配数量完整保留；inspect 使用 offset/limit 分页"
+        },
+        "onScreenOnly": {
+          "status": "mapped",
+          "replacement": "selector.onScreenOnly"
+        },
+        "clickableOnly": {
+          "status": "mapped",
+          "replacement": "selector.clickableOnly"
+        },
+        "displayId": {
+          "status": "replaced",
+          "replacement": "selector.displayId；inspect 使用 display_id。显示器与窗口联合定位"
+        },
+        "timeoutMs": {
+          "status": "replaced",
+          "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
+        },
+        "checked": {
+          "status": "mapped",
+          "replacement": "selector.checked"
+        },
+        "selected": {
+          "status": "mapped",
+          "replacement": "selector.selected"
+        },
+        "enabled": {
+          "status": "mapped",
+          "replacement": "selector.enabled"
+        },
+        "value": {
+          "status": "mapped",
+          "replacement": "selector.value"
+        },
+        "selectors": {
+          "status": "replaced",
+          "replacement": "selectors：[id, selector] 对象列表，最多 32 项、ID 唯一，同一快照批量求值"
+        }
+      },
+      "actions": []
+    },
+    {
+      "source": "ui_flow",
+      "checks": [
+        "test/native-flow.test.ts",
+        "test/native-routes.test.ts",
+        "test/native-recording.test.ts",
+        "test/native-ui-driver.test.ts",
+        "scripts/native-canary-ui-acceptance.ts",
+        "scripts/native-device-readonly.ts"
+      ],
+      "remaining": [
+        "未知目标自动录制的真实设备验收；入口选择、并发去重、重启、最终断言回归及提交 1ecafae 六组跨平台 CI 已通过",
+        "原生 driver 诊断的最终跨平台快照复验；本机 Node26/24 回归和真机只读探测已通过",
+        "既有用户保存流程迁移验收；专用应用录制、MCP 重启和重放已通过",
+        "录制期间热重载等长期会话对 UI 状态的干扰协调"
+      ],
+      "acceptance": "pending",
+      "evidence": [
+        "docs/native-signing.md",
+        "docs/native-ui-workflows.md",
+        "docs/native-ui-driver.md"
+      ],
+      "targets": [
+        "tool:ui_flow",
+        "tool:workflow_run",
+        "tool:deveco_doctor"
+      ],
+      "adapters": [
+        "src/services/flow.ts",
+        "src/services/routes.ts",
+        "src/services/runtime.ts",
+        "src/services/navigation.ts",
+        "src/services/recording.ts",
+        "src/services/ui-driver.ts",
+        "src/services/text-component.ts"
+      ],
+      "behavior": "公开入口优先的目标导航、保存流程与持久化录制；每次动作有回执，只在原断言通过后保存流程或选择器修复。",
+      "parameters": {
+        "action": {
+          "status": "replaced",
+          "replacement": "ui_flow 的导航、路由、录制及流程管理动作；异步状态与取消使用 workflow_run；driver_status 整合为 deveco_doctor(target).ui_driver"
+        },
+        "id": {
+          "status": "mapped",
+          "replacement": "id；保存流程标识"
+        },
+        "name": {
+          "status": "mapped",
+          "replacement": "record_start.name；流程名称"
+        },
+        "goal": {
+          "status": "mapped",
+          "replacement": "navigate.goal；优先匹配公开入口，其次按名称匹配所选产品的保存流程；歧义拒绝执行"
+        },
+        "recording_id": {
+          "status": "mapped",
+          "replacement": "recording_id 等于 ui_record 内部工作流 run_id，SQLite 持久化"
+        },
+        "job_id": {
+          "status": "mapped",
+          "replacement": "workflow_run.run_id"
+        },
+        "project_path": {
+          "status": "mapped",
+          "replacement": "project_path；请求提交时固定工程"
+        },
+        "hvd": {
+          "status": "mapped",
+          "replacement": "target；设备目标"
+        },
+        "bundle_name": {
+          "status": "replaced",
+          "replacement": "根据所选工程 AppScope 与产品解析，不允许 UI 流程跨应用执行"
+        },
+        "module": {
+          "status": "mapped",
+          "replacement": "route.module；与其他约束取交集"
+        },
+        "ability": {
+          "status": "mapped",
+          "replacement": "route.ability；校验已声明且公开的 Ability"
+        },
+        "route_id": {
+          "status": "mapped",
+          "replacement": "route.id；稳定标识"
+        },
+        "route_action": {
+          "status": "mapped",
+          "replacement": "route.action"
+        },
+        "uri": {
+          "status": "mapped",
+          "replacement": "route.uri；匹配真实声明，不编造动态路径"
+        },
+        "want_parameters": {
+          "status": "mapped",
+          "replacement": "parameters；布尔、无符号整数、字符串和空字符串"
+        },
+        "start_policy": {
+          "status": "mapped",
+          "replacement": "record_start.mode 与保存流程 start.mode；restart/attach"
+        },
+        "backend": {
+          "status": "removed",
+          "replacement": "由原生组件能力选择实现，不保留代理后端协议"
+        },
+        "wait_ms": {
+          "status": "mapped",
+          "replacement": "workflow_run.wait_ms；最长 20 秒"
+        },
+        "timeoutMs": {
+          "status": "replaced",
+          "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
+        },
+        "variables": {
+          "status": "mapped",
+          "replacement": "variables；只接受已声明且满足必需条件的变量"
+        },
+        "flow": {
+          "status": "mapped",
+          "replacement": "flow；严格校验已保存流程"
+        },
+        "success_selector": {
+          "status": "mapped",
+          "replacement": "assert.visible 或 assert.hidden 中的 selector"
+        },
+        "success_state": {
+          "status": "mapped",
+          "replacement": "assert.visible / assert.hidden；两者互斥"
+        },
+        "success_timeout_ms": {
+          "status": "mapped",
+          "replacement": "assert.timeoutMs"
+        },
+        "allow_unverified": {
+          "status": "removed",
+          "replacement": "用户计划要求最终断言；删除无验证成功分支"
+        },
+        "selector_healing": {
+          "status": "replaced",
+          "replacement": "原生流程执行固定进行无歧义修复，且只有原最终断言通过后保存；删除开关分支"
+        }
+      },
+      "actions": [
+        {
+          "field": "action",
+          "value": "navigate",
+          "status": "mapped",
+          "replacement": "ui_flow(action=navigate)"
+        },
+        {
+          "field": "action",
+          "value": "routes",
+          "status": "mapped",
+          "replacement": "ui_flow(action=routes)"
+        },
+        {
+          "field": "action",
+          "value": "driver_status",
+          "status": "replaced",
+          "replacement": "deveco_doctor(target).ui_driver 只读检测指定设备架构、UiTest 版本与原生文字组件；默认不探测设备，删除可选代理包和后端配置探测"
+        },
+        {
+          "field": "action",
+          "value": "record_start",
+          "status": "mapped",
+          "replacement": "ui_flow(action=record_start)；内部 LangGraph 任务管理"
+        },
+        {
+          "field": "action",
+          "value": "record_status",
+          "status": "mapped",
+          "replacement": "ui_flow(action=record_status)；内部 LangGraph 任务管理"
+        },
+        {
+          "field": "action",
+          "value": "record_stop",
+          "status": "mapped",
+          "replacement": "ui_flow(action=record_stop)；内部 LangGraph 任务管理"
+        },
+        {
+          "field": "action",
+          "value": "record_cancel",
+          "status": "mapped",
+          "replacement": "ui_flow(action=record_cancel)；内部 LangGraph 任务管理"
+        },
+        {
+          "field": "action",
+          "value": "run",
+          "status": "mapped",
+          "replacement": "ui_flow(action=run)"
+        },
+        {
+          "field": "action",
+          "value": "status",
+          "status": "replaced",
+          "replacement": "workflow_run(action=status, run_id)"
+        },
+        {
+          "field": "action",
+          "value": "cancel",
+          "status": "replaced",
+          "replacement": "workflow_run(action=cancel, run_id)"
+        },
+        {
+          "field": "action",
+          "value": "list",
+          "status": "mapped",
+          "replacement": "ui_flow(action=list)"
+        },
+        {
+          "field": "action",
+          "value": "get",
+          "status": "replaced",
+          "replacement": "ui_flow(action=read)"
+        },
+        {
+          "field": "action",
+          "value": "validate",
+          "status": "mapped",
+          "replacement": "ui_flow(action=validate)"
+        },
+        {
+          "field": "action",
+          "value": "delete",
+          "status": "mapped",
+          "replacement": "ui_flow(action=delete)"
+        }
+      ]
+    },
+    {
+      "source": "ui_inspect",
+      "checks": [
+        "test/native-ui.test.ts",
+        "test/native-ui-query.test.ts"
+      ],
+      "remaining": [
+        "真实多显示器与更复杂窗口/浮层布局验收；单设备层级和批量读取已通过"
+      ],
+      "acceptance": "pending",
+      "evidence": [],
+      "targets": [
+        "tool:ui_inspect"
+      ],
+      "adapters": [
+        "src/services/device.ts",
+        "src/services/ui-inspection.ts"
+      ],
+      "behavior": "快照和结构化元数据、查询与可选截图。",
+      "parameters": {
+        "action": {
+          "status": "replaced",
+          "replacement": "ui_inspect 返回节点分页及窗口元数据；移除 layout/windows 动作分流"
+        },
+        "hvd": {
+          "status": "mapped",
+          "replacement": "target；设备目标"
+        },
+        "id": {
+          "status": "mapped",
+          "replacement": "ui_inspect.selector.node_id"
+        },
+        "window": {
+          "status": "mapped",
+          "replacement": "ui_inspect.window_id"
+        },
+        "all_windows": {
+          "status": "replaced",
+          "replacement": "不指定 window_id 时读取全部窗口并分页输出"
+        },
+        "all": {
+          "status": "replaced",
+          "replacement": "分页 offset/limit 读取完整结果；禁止无界返回 UI 树"
+        },
+        "depth": {
+          "status": "mapped",
+          "replacement": "ui_inspect.max_depth"
+        },
+        "format": {
+          "status": "replaced",
+          "replacement": "固定结构化输出与制品"
+        },
+        "mode": {
+          "status": "replaced",
+          "replacement": "统一结构化输出，完整树使用 ui_snapshot.mode=tree"
+        },
+        "project_path": {
+          "status": "mapped",
+          "replacement": "project_path；请求提交时固定工程"
+        },
+        "timeoutMs": {
+          "status": "replaced",
+          "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
+        }
+      },
+      "actions": [
+        {
+          "field": "action",
+          "value": "layout",
+          "status": "replaced",
+          "replacement": "ui_inspect 返回节点分页"
+        },
+        {
+          "field": "action",
+          "value": "windows",
+          "status": "replaced",
+          "replacement": "ui_inspect 返回窗口元数据"
+        }
+      ]
+    },
+    {
+      "source": "ui_observe",
+      "checks": [
+        "test/native-ui.test.ts",
+        "test/native-ui-query.test.ts",
+        "test/native-screenshot.test.ts"
+      ],
+      "remaining": [
+        "实际多显示器与旋转验收",
+        "图像和树联合获取的固定输入性能门槛"
+      ],
+      "acceptance": "pending",
+      "evidence": [],
+      "targets": [
+        "tool:ui_observe",
+        "tool:ui_snapshot"
+      ],
+      "adapters": [
+        "src/services/device.ts",
+        "src/services/screenshot.ts"
+      ],
+      "behavior": "同一快照批量查询；显式 capture 可在同一设备租约内追加图像证据。",
+      "parameters": {
+        "text": {
+          "status": "mapped",
+          "replacement": "selector.text 或 operation.text；按动作区分"
+        },
+        "textMode": {
+          "status": "mapped",
+          "replacement": "selector.textMode"
+        },
+        "key": {
+          "status": "mapped",
+          "replacement": "selector.key"
+        },
+        "type": {
+          "status": "mapped",
+          "replacement": "selector.type"
+        },
+        "clickableOnly": {
+          "status": "mapped",
+          "replacement": "selector.clickableOnly"
+        },
+        "onScreenOnly": {
+          "status": "mapped",
+          "replacement": "selector.onScreenOnly"
+        },
+        "limit": {
+          "status": "replaced",
+          "replacement": "selector.limit 只限制返回条数，真实匹配数量完整保留；inspect 使用 offset/limit 分页"
+        },
+        "displayId": {
+          "status": "replaced",
+          "replacement": "selector.displayId；inspect 使用 display_id。显示器与窗口联合定位"
+        },
+        "hvd": {
+          "status": "mapped",
+          "replacement": "target；设备目标"
+        },
+        "localPath": {
+          "status": "replaced",
+          "replacement": "只返回摘要和受管理制品引用；workflow_run.read_artifact 分页读取，不写任意输出路径或内联完整图像"
+        },
+        "overwrite": {
+          "status": "replaced",
+          "replacement": "只返回摘要和受管理制品引用；workflow_run.read_artifact 分页读取，不写任意输出路径或内联完整图像"
+        },
+        "width": {
+          "status": "mapped",
+          "replacement": "capture.width；保持宽高比，设备旋转后重新核对"
+        },
+        "inline": {
+          "status": "replaced",
+          "replacement": "只返回摘要和受管理制品引用；workflow_run.read_artifact 分页读取，不写任意输出路径或内联完整图像"
+        },
+        "timeoutMs": {
+          "status": "replaced",
+          "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
+        },
+        "checked": {
+          "status": "mapped",
+          "replacement": "selector.checked"
+        },
+        "selected": {
+          "status": "mapped",
+          "replacement": "selector.selected"
+        },
+        "enabled": {
+          "status": "mapped",
+          "replacement": "selector.enabled"
+        },
+        "value": {
+          "status": "mapped",
+          "replacement": "selector.value"
+        },
+        "selectors": {
+          "status": "replaced",
+          "replacement": "selectors：[id, selector] 对象列表，最多 32 项、ID 唯一，同一快照批量求值"
+        }
+      },
+      "actions": []
+    },
+    {
+      "source": "ui_snapshot",
+      "checks": [
+        "test/native-ui.test.ts",
+        "test/native-screenshot.test.ts",
+        "test/native-ui-query.test.ts"
+      ],
+      "remaining": [
+        "实际多显示器与旋转验收",
+        "图像和树联合获取的固定输入性能门槛"
+      ],
+      "acceptance": "pending",
+      "evidence": [],
+      "targets": [
+        "tool:ui_snapshot"
+      ],
+      "adapters": [
+        "src/services/device.ts",
+        "src/services/screenshot.ts"
+      ],
+      "behavior": "默认只截图；mode=tree/both 明确请求树。尺寸、原生格式、显示器、变化检测与有界制品。",
+      "parameters": {
+        "hvd": {
+          "status": "mapped",
+          "replacement": "target；设备目标"
+        },
+        "localPath": {
+          "status": "replaced",
+          "replacement": "只返回摘要和受管理制品引用；workflow_run.read_artifact 分页读取，不写任意输出路径或内联完整图像"
+        },
+        "overwrite": {
+          "status": "replaced",
+          "replacement": "只返回摘要和受管理制品引用；workflow_run.read_artifact 分页读取，不写任意输出路径或内联完整图像"
+        },
+        "width": {
+          "status": "mapped",
+          "replacement": "capture.width；保持宽高比，设备旋转后重新核对"
+        },
+        "format": {
+          "status": "mapped",
+          "replacement": "capture.format：jpeg/png，原生 snapshot_display 编码"
+        },
+        "displayId": {
+          "status": "mapped",
+          "replacement": "capture.display_id；未指定时由设备选择显示器"
+        },
+        "inline": {
+          "status": "replaced",
+          "replacement": "只返回摘要和受管理制品引用；workflow_run.read_artifact 分页读取，不写任意输出路径或内联完整图像"
+        },
+        "ifChangedFrom": {
+          "status": "mapped",
+          "replacement": "capture.if_changed_from：比较 fresh frame_signature，未变化时不保存重复图像制品"
+        },
+        "timeoutMs": {
+          "status": "replaced",
+          "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
+        }
+      },
+      "actions": []
+    },
+    {
+      "source": "ui_tap",
+      "checks": [
+        "test/native-ui.test.ts",
+        "test/native-ui-control.test.ts",
+        "test/native-recording.test.ts",
+        "scripts/native-canary-ui-acceptance.ts"
+      ],
+      "remaining": [
+        "真实多显示器手势与最终性能门槛；专用应用中文输入、点击、录制和重放已通过"
+      ],
+      "acceptance": "pending",
+      "evidence": [
+        "docs/native-signing.md"
+      ],
+      "targets": [
+        "tool:ui_tap",
+        "tool:ui_control"
+      ],
+      "adapters": [
+        "src/services/device.ts",
+        "src/services/ui-control.ts",
+        "src/services/recording.ts"
+      ],
+      "behavior": "语义点击保留，其他动作统一在 ui_control。",
+      "parameters": {
+        "action": {
+          "status": "replaced",
+          "replacement": "operation.action；click 可直接使用 ui_tap，其余 8 种动作使用 ui_control"
+        },
+        "key": {
+          "status": "mapped",
+          "replacement": "selector.key"
+        },
+        "text": {
+          "status": "mapped",
+          "replacement": "selector.text 或 operation.text；按动作区分"
+        },
+        "textMode": {
+          "status": "mapped",
+          "replacement": "selector.textMode"
+        },
+        "type": {
+          "status": "mapped",
+          "replacement": "selector.type"
+        },
+        "clickableOnly": {
+          "status": "mapped",
+          "replacement": "selector.clickableOnly"
+        },
+        "verify": {
+          "status": "replaced",
+          "replacement": "调用 ui_observe 获取操作后树，或 verify_ui 执行明确断言；旧布尔值只表示观察，不保留为成功条件"
+        },
+        "from_percent": {
+          "status": "replaced",
+          "replacement": "selector + gesture 起点；水平方向 fromXPercent，纵向旧值 p 转为 fromYPercent=100-p；原滑块内缩改由显式端点表达"
+        },
+        "to_percent": {
+          "status": "replaced",
+          "replacement": "selector + gesture 终点；水平方向 toXPercent，纵向旧值 p 转为 toYPercent=100-p；原滑块内缩改由显式端点表达"
+        },
+        "axis": {
+          "status": "replaced",
+          "replacement": "gesture 明确两轴；水平时 Y=50，垂直时 X=50，Y 从上向下增长"
+        },
+        "from_x_percent": {
+          "status": "replaced",
+          "replacement": "window + gesture.fromXPercent；无树控件需明确应用窗口，不猜测屏幕尺寸"
+        },
+        "from_y_percent": {
+          "status": "replaced",
+          "replacement": "window + gesture.fromYPercent；相对已识别窗口"
+        },
+        "to_x_percent": {
+          "status": "replaced",
+          "replacement": "window + gesture.toXPercent；相对已识别窗口"
+        },
+        "to_y_percent": {
+          "status": "replaced",
+          "replacement": "window + gesture.toYPercent；相对已识别窗口"
+        },
+        "x": {
+          "status": "mapped",
+          "replacement": "operation.x；UiTest 正 int32 坐标"
+        },
+        "y": {
+          "status": "mapped",
+          "replacement": "operation.y；UiTest 正 int32 坐标"
+        },
+        "x2": {
+          "status": "mapped",
+          "replacement": "operation.x2；手势结束坐标"
+        },
+        "y2": {
+          "status": "mapped",
+          "replacement": "operation.y2；手势结束坐标"
+        },
+        "direction": {
+          "status": "mapped",
+          "replacement": "operation.direction；dircFling 的 0–3 方向"
+        },
+        "velocity": {
+          "status": "mapped",
+          "replacement": "operation.velocity；仅手势，200–40000"
+        },
+        "stepLength": {
+          "status": "mapped",
+          "replacement": "operation.step_length；fling 为像素步长，dircFling 为原生采样次数"
+        },
+        "key1": {
+          "status": "replaced",
+          "replacement": "operation.keys 数组；一个 Home/Back/Power 或最多三个数字键码，拒绝混用"
+        },
+        "key2": {
+          "status": "replaced",
+          "replacement": "operation.keys 数组；数字组合键保留顺序"
+        },
+        "key3": {
+          "status": "replaced",
+          "replacement": "operation.keys 数组；数字组合键保留顺序"
+        },
+        "hvd": {
+          "status": "mapped",
+          "replacement": "target；设备目标"
+        },
+        "timeoutMs": {
+          "status": "replaced",
+          "replacement": "各服务的有界执行期限；旧逐请求超时字段不保留"
+        },
+        "checked": {
+          "status": "mapped",
+          "replacement": "selector.checked"
+        },
+        "selected": {
+          "status": "mapped",
+          "replacement": "selector.selected"
+        },
+        "enabled": {
+          "status": "mapped",
+          "replacement": "selector.enabled"
+        },
+        "value": {
+          "status": "mapped",
+          "replacement": "selector.value"
+        }
+      },
+      "actions": [
+        {
+          "field": "action",
+          "value": "click",
+          "status": "mapped",
+          "replacement": "ui_control.operation.action=click；编码、歧义和录制回归通过，真实设备动作仍待验收"
+        },
+        {
+          "field": "action",
+          "value": "doubleClick",
+          "status": "mapped",
+          "replacement": "ui_control.operation.action=doubleClick；编码、歧义和录制回归通过，真实设备动作仍待验收"
+        },
+        {
+          "field": "action",
+          "value": "longClick",
+          "status": "mapped",
+          "replacement": "ui_control.operation.action=longClick；编码、歧义和录制回归通过，真实设备动作仍待验收"
+        },
+        {
+          "field": "action",
+          "value": "swipe",
+          "status": "mapped",
+          "replacement": "ui_control.operation.action=swipe；编码、歧义和录制回归通过，真实设备动作仍待验收"
+        },
+        {
+          "field": "action",
+          "value": "fling",
+          "status": "mapped",
+          "replacement": "ui_control.operation.action=fling；编码、歧义和录制回归通过，真实设备动作仍待验收"
+        },
+        {
+          "field": "action",
+          "value": "drag",
+          "status": "mapped",
+          "replacement": "ui_control.operation.action=drag；编码、歧义和录制回归通过，真实设备动作仍待验收"
+        },
+        {
+          "field": "action",
+          "value": "dircFling",
+          "status": "mapped",
+          "replacement": "ui_control.operation.action=dircFling；编码、歧义和录制回归通过，真实设备动作仍待验收"
+        },
+        {
+          "field": "action",
+          "value": "inputText",
+          "status": "mapped",
+          "replacement": "ui_control.operation.action=inputText；编码、歧义和录制回归通过，真实设备动作仍待验收"
+        },
+        {
+          "field": "action",
+          "value": "keyEvent",
+          "status": "mapped",
+          "replacement": "ui_control.operation.action=keyEvent；编码、歧义和录制回归通过，真实设备动作仍待验收"
+        }
+      ]
+    },
+    {
+      "source": "verify_ui",
+      "checks": [
+        "test/native-verification.test.ts",
+        "test/native-screenshot.test.ts",
+        "test/native-retention.test.ts",
+        "scripts/native-visual-review-acceptance.ts"
+      ],
+      "remaining": [],
+      "acceptance": "verified",
+      "evidence": [
+        "provenance/migration-acceptance/4742e7ca3862745ac5b052c0fe535301936cce4e631bbab7dd22f215268e46ed.json"
+      ],
+      "targets": [
+        "tool:verify_ui",
+        "tool:ui_snapshot",
+        "tool:workflow_run"
+      ],
+      "adapters": [
+        "src/services/verification.ts",
+        "src/services/screenshot.ts",
+        "src/services/artifact.ts",
+        "src/server.ts",
+        "src/worker.ts"
+      ],
+      "behavior": "控件断言与宿主外观审阅分离；请求审阅时 verified=false，要求和截图引用持久化，原生 MCP 图片按需读取。",
+      "parameters": {
+        "action": {
+          "status": "replaced",
+          "replacement": "capture 使用 ui_snapshot 或 verify_ui.review；assert 使用 verify_ui.assert；compare 使用 ui_snapshot.capture.if_changed_from"
+        },
+        "hvd": {
+          "status": "mapped",
+          "replacement": "target；设备目标"
+        },
+        "selector": {
+          "status": "replaced",
+          "replacement": "assert.visible 或 assert.hidden；使用结构化 Selector，备选选择器仍受原断言约束"
+        },
+        "success_state": {
+          "status": "replaced",
+          "replacement": "通过 assert.visible / assert.hidden 明确指定，不保留独立状态字段"
+        },
+        "visual_prompt": {
+          "status": "replaced",
+          "replacement": "review.requirement；不注入提示词，作为持久化审阅要求交给宿主"
+        },
+        "baseline_id": {
+          "status": "replaced",
+          "replacement": "调用方保存 frame_signature，并在 ui_snapshot.capture.if_changed_from 传入；无需旧内存基线 Map"
+        },
+        "expect": {
+          "status": "replaced",
+          "replacement": "调用方核对 unchanged 布尔值；画面编码变化不是业务成功或视觉质量证明"
+        },
+        "width": {
+          "status": "replaced",
+          "replacement": "capture.width；64–4096，按设备尺寸保持宽高比"
+        },
+        "inline": {
+          "status": "replaced",
+          "replacement": "workflow_run.read_artifact as=image 显式返回 MCP ImageContent；采集响应默认只给引用"
+        },
+        "timeoutMs": {
+          "status": "replaced",
+          "replacement": "控件轮询使用 assert.timeoutMs；截图使用受管服务期限"
+        }
+      },
+      "actions": [
+        {
+          "field": "action",
+          "value": "capture",
+          "status": "replaced",
+          "replacement": "ui_snapshot，或 verify_ui.review 保存外观要求与图像引用"
+        },
+        {
+          "field": "action",
+          "value": "assert",
+          "status": "replaced",
+          "replacement": "verify_ui.assert.visible/hidden；失败保持错误并保存请求的截图"
+        },
+        {
+          "field": "action",
+          "value": "compare",
+          "status": "replaced",
+          "replacement": "ui_snapshot.capture.if_changed_from；固定捕获设置后核对 unchanged"
+        }
+      ]
+    }
+  ],
+  "scripts": [
+    {
+      "source": "copy_template",
+      "checks": [
+        "scripts/native-sdk-acceptance.ts",
+        "test/native-project.test.ts"
+      ],
+      "remaining": [],
+      "acceptance": "verified",
+      "evidence": [
+        "provenance/migration-acceptance/5f3cc0241f85d0b129a7c1f8616888c5556bf0288f9c28553259d6ee2ab5f730.json"
+      ],
+      "targets": [
+        "workflow:project_create"
+      ],
+      "adapters": [
+        "src/services/project.ts"
+      ],
+      "behavior": "以 project_create 工作流替代脚本入口；project_path 是完整目标目录，不再追加 app_name；bundle_name 显式必填。拒绝任何已存在目录，默认不升级 SDK。",
+      "parameters": {
+        "projectPath": {
+          "status": "mapped",
+          "replacement": "project_create.project_path；完整目标目录，迁移时由调用方追加原 appName 子目录"
+        },
+        "appName": {
+          "status": "mapped",
+          "replacement": "project_create.app_name"
+        },
+        "apiLevel": {
+          "status": "mapped",
+          "replacement": "project_create.target_api / compatible_api；sdk_version 独立选择已安装的编译 SDK"
+        },
+        "bundleName": {
+          "status": "mapped",
+          "replacement": "project_create.bundle_name；显式必填，不再隐式生成 com.example 前缀"
+        }
+      },
+      "actions": []
+    },
+    {
+      "source": "detect_sdk",
+      "checks": [
+        "scripts/native-sdk-acceptance.ts",
+        "test/native-toolchain.test.ts",
+        "test/native-runtime.test.ts",
+        "test/native-project.test.ts"
+      ],
+      "remaining": [],
+      "acceptance": "verified",
+      "evidence": [
+        "provenance/migration-acceptance/6e7e4a3ad558401b34b3ae5fec5addabd75bb5d255dc12d9ce2ff8fb905faf78.json"
+      ],
+      "targets": [
+        "tool:deveco_doctor"
+      ],
+      "adapters": [
+        "src/core/toolchain.ts"
+      ],
+      "behavior": "删除脚本运行入口，保留其领域能力。",
+      "parameters": {},
+      "actions": []
+    },
+    {
+      "source": "collect_hilog",
+      "checks": [
+        "test/native-logs.test.ts"
+      ],
+      "remaining": [
+        "真实设备日志采集及直接能力性能验收"
+      ],
+      "acceptance": "pending",
+      "evidence": [],
+      "targets": [
+        "tool:hdc_log"
+      ],
+      "adapters": [
+        "src/services/logs.ts",
+        "src/services/crash.ts",
+        "src/services/runtime.ts"
+      ],
+      "behavior": "hdc_log.collect 原生日志收集；独立制品替代输出目录。",
+      "parameters": {
+        "deviceId": {
+          "status": "mapped",
+          "replacement": "target；真实设备采集目标"
+        },
+        "outputDir": {
+          "status": "replaced",
+          "replacement": "固定制品目录与 read_artifact；不写入任意调用方输出目录"
+        },
+        "lines": {
+          "status": "mapped",
+          "replacement": "lines；日志行数上限"
+        }
+      },
+      "actions": []
+    },
+    {
+      "source": "fetch_faultlog",
+      "checks": [
+        "test/native-logs.test.ts"
+      ],
+      "remaining": [
+        "真实设备命名 faultlog、时间范围、权限与截断边界验收"
+      ],
+      "acceptance": "pending",
+      "evidence": [],
+      "targets": [
+        "tool:hdc_log"
+      ],
+      "adapters": [
+        "src/services/logs.ts",
+        "src/services/crash.ts",
+        "src/services/runtime.ts"
+      ],
+      "behavior": "hdc_log.fetch 精确读取命名 faultlog，保留截断证据。",
+      "parameters": {
+        "deviceId": {
+          "status": "mapped",
+          "replacement": "target；真实设备采集目标"
+        },
+        "faultlogName": {
+          "status": "mapped",
+          "replacement": "faultlog_name；保留原名，不添加扩展名"
+        },
+        "outputDir": {
+          "status": "replaced",
+          "replacement": "固定制品目录与 read_artifact；不写入任意调用方输出目录"
+        }
+      },
+      "actions": []
+    },
+    {
+      "source": "jscrash_report",
+      "checks": [
+        "test/native-logs.test.ts"
+      ],
+      "remaining": [],
+      "acceptance": "verified",
+      "evidence": [
+        "provenance/migration-acceptance/b7bbe0093a5844dc1af95cb49c029600987e6648e94d8db2690e585b3a8ad41a.json"
+      ],
+      "targets": [
+        "workflow:crash_diagnose"
+      ],
+      "adapters": [
+        "src/services/logs.ts",
+        "src/services/crash.ts",
+        "src/services/runtime.ts"
+      ],
+      "behavior": "crash_diagnose 持久化收集、按进程分离事件、匹配知识；结果保留证据不足状态。",
+      "parameters": {
+        "deviceId": {
+          "status": "mapped",
+          "replacement": "target；真实设备采集目标"
+        },
+        "bundleName": {
+          "status": "mapped",
+          "replacement": "bundle_name；精确应用归属过滤，不回退到其他应用"
+        },
+        "processHint": {
+          "status": "mapped",
+          "replacement": "process_hint；匹配进程名或 PID"
+        },
+        "logFile": {
+          "status": "mapped",
+          "replacement": "log_file；提交时有界读取并保存为任务制品"
+        },
+        "logText": {
+          "status": "mapped",
+          "replacement": "log_text；最多 32 KiB，提交时转为任务制品"
+        },
+        "lines": {
+          "status": "mapped",
+          "replacement": "lines；日志行数上限"
+        },
+        "includeText": {
+          "status": "replaced",
+          "replacement": "始终返回结构化诊断摘要和原始证据制品引用"
+        }
+      },
+      "actions": []
+    },
+    {
+      "source": "parse_jscrash_log",
+      "checks": [
+        "test/native-logs.test.ts"
+      ],
+      "remaining": [],
+      "acceptance": "verified",
+      "evidence": [
+        "provenance/migration-acceptance/1f2ea759bfaa589f6ee68e3fe48dd4c4baf37a0d956b78dd54c00e96622ca246.json"
+      ],
+      "targets": [
+        "workflow:crash_diagnose"
+      ],
+      "adapters": [
+        "src/services/logs.ts",
+        "src/services/crash.ts",
+        "src/services/runtime.ts"
+      ],
+      "behavior": "crash_diagnose 使用本地文件或内联证据；排队和恢复使用提交时制品。",
+      "parameters": {
+        "logFile": {
+          "status": "mapped",
+          "replacement": "log_file；提交时有界读取并保存为任务制品"
+        },
+        "logText": {
+          "status": "mapped",
+          "replacement": "log_text；最多 32 KiB，提交时转为任务制品"
+        },
+        "bundleName": {
+          "status": "mapped",
+          "replacement": "bundle_name；精确应用归属过滤，不回退到其他应用"
+        },
+        "processHint": {
+          "status": "mapped",
+          "replacement": "process_hint；匹配进程名或 PID"
+        },
+        "source": {
+          "status": "replaced",
+          "replacement": "报告记录实际采集文件/制品来源；不采信调用方标签作为来源证明"
+        },
+        "device": {
+          "status": "replaced",
+          "replacement": "本地证据不伪装为已验证设备采集；现场采集使用 target"
+        },
+        "includeText": {
+          "status": "replaced",
+          "replacement": "始终返回结构化诊断摘要和原始证据制品引用"
+        }
+      },
+      "actions": []
+    },
+    {
+      "source": "probe_faultlogger",
+      "checks": [
+        "test/native-logs.test.ts"
+      ],
+      "remaining": [
+        "真实设备命名 faultlog、时间范围、权限与截断边界验收"
+      ],
+      "acceptance": "pending",
+      "evidence": [],
+      "targets": [
+        "tool:hdc_log"
+      ],
+      "adapters": [
+        "src/services/logs.ts",
+        "src/services/crash.ts",
+        "src/services/runtime.ts"
+      ],
+      "behavior": "hdc_log.probe 查询两个 faultlog 来源，使用设备时钟进行精确应用和时间筛选。",
+      "parameters": {
+        "deviceId": {
+          "status": "mapped",
+          "replacement": "target；真实设备采集目标"
+        },
+        "bundleName": {
+          "status": "mapped",
+          "replacement": "bundle_name；精确应用归属过滤，不回退到其他应用"
+        },
+        "maxAgeMinutes": {
+          "status": "mapped",
+          "replacement": "max_age_minutes；使用设备时钟和时区，0 表示不按时间筛选"
+        },
+        "limit": {
+          "status": "mapped",
+          "replacement": "limit；匹配记录的返回上限"
+        }
+      },
+      "actions": []
+    }
+  ],
+  "format": 1,
+  "baseline_commit": "aab1405b51e00e4036bdc8f18ae4229835de77b0",
+  "baseline_inventory_sha256": "f6bebe2a202f6d9a5262a4185f5b8d312fb1515022358a1a9507cbb9449b4f42"
+}

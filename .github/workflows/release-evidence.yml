@@ -1,0 +1,44 @@
+name: Validate supplied release evidence
+on:
+  workflow_dispatch:
+    inputs:
+      evidence_asset_id:
+        description: Asset ID of the reviewed evidence ZIP in this repository
+        required: true
+        type: string
+      evidence_sha256:
+        description: SHA-256 of the locally gated evidence ZIP
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - run: npm ci
+      - run: npm run build
+      - name: Download the exact repository asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVIDENCE_ASSET_ID: ${{ inputs.evidence_asset_id }}
+          EVIDENCE_SHA256: ${{ inputs.evidence_sha256 }}
+        run: |
+          [[ "$EVIDENCE_ASSET_ID" =~ ^[0-9]+$ ]]
+          [[ "$EVIDENCE_SHA256" =~ ^[a-f0-9]{64}$ ]]
+          gh api -H 'Accept: application/octet-stream' "repos/$GITHUB_REPOSITORY/releases/assets/$EVIDENCE_ASSET_ID" > "$RUNNER_TEMP/evidence.zip"
+          node dist/scripts/release-evidence.js extract "$RUNNER_TEMP/evidence.zip" "$RUNNER_TEMP/release-evidence" "$EVIDENCE_SHA256"
+      - name: Validate all evidence against this checkout
+        run: node dist/scripts/release-gate.js "$RUNNER_TEMP/release-evidence/release.json" "$RUNNER_TEMP/gate.json"
+      - name: Publish evidence only after validation
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-evidence
+          path: ${{ runner.temp }}/release-evidence
+          if-no-files-found: error
+          retention-days: 14

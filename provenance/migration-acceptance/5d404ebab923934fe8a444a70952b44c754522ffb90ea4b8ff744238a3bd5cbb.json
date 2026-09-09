@@ -1,0 +1,28 @@
+{
+  "format": 1,
+  "passed": true,
+  "source": "tools:project_sync",
+  "row_sha256": "0d82ccf0d5dd6aeda25a1f358231b47262a176558e6b8a6e2a23061447b36c36",
+  "tested": {
+    "runtime_sha256": "ef6aaeffb850969e11bf99f25c743342f94e05de350928b3408d6ee6056f552d",
+    "compiled_sha256": "1ecc3a3261a293b974be0858ad70f4363e84e96713872010843215d26cce7145",
+    "package_lock_sha256": "68641e488a5099852216d3003664f57dd1d05b980f4c7813ee75dd7baf83d0fc",
+    "resource_manifest_sha256": "563bc3f06565e92c59c621c3ef909a37cbc4ac1db958d3d73d6e0bc99bf9ed86",
+    "upstream_lock_sha256": "bf3cc411831bd8ce6652a8085c8247c399d0c48b6d73156a7e649b9ef668164e"
+  },
+  "reviewer": "Codex native behavior review 2026-09-09",
+  "reason": "当前 350 项回归及 49 项真实多产品、多模块专项覆盖四种产品和目标选择的同步。真实 OHPM 完成后 SIGKILL 宿主：已提交回执仅继续后续 Hvigor 同步，丢失回执保持 needs_input 且不重复执行。补充私有 OHPM 强杀报告 SHA256 cf4686f3e24cf064681fa2bff7635c86dc4463cfa762b9da483f0be793ca24de。首轮工具链元数据在准备期变化的失败保留，串行复验未放宽断言，范围限本机 macOS 和当前 SDK。",
+  "completed_scenarios": [
+    "多产品与 OHPM 中断恢复"
+  ],
+  "checks": [
+    {
+      "check": "test/native-project.test.ts",
+      "original_sha256": "d8cd30be36383570b23d31fe43df3c412be6f12c68ed63f83f14287259ef0cf4"
+    },
+    {
+      "check": "scripts/native-multimodule-acceptance.ts",
+      "original_sha256": "52d6b508c024f4b0dd80c9583b73f248effb08962d0fc3231ca941bcb3ddb429"
+    }
+  ]
+}

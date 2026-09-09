@@ -1,0 +1,15 @@
+{
+  "format": 1,
+  "passed": true,
+  "tested": {
+    "runtime_sha256": "b33f2c9b71c9a5afbde7e9774e3b67488dbb843e0417fb76834d6f4316cfc67e",
+    "compiled_sha256": "348309c9d81d02a2201627a37f1d3e1d0e4a6ca1f9db63bc65b1c0cabb48bfa6",
+    "package_lock_sha256": "68641e488a5099852216d3003664f57dd1d05b980f4c7813ee75dd7baf83d0fc",
+    "resource_manifest_sha256": "563bc3f06565e92c59c621c3ef909a37cbc4ac1db958d3d73d6e0bc99bf9ed86",
+    "upstream_lock_sha256": "bf3cc411831bd8ce6652a8085c8247c399d0c48b6d73156a7e649b9ef668164e"
+  },
+  "executed_tests": [
+    "dist/scripts/native-sdk-acceptance.js"
+  ],
+  "original_sha256": "7588407328cec8dd5d7259f9d2e2ef69eada64747b9d07eafb0f4c23ce0a5ecc"
+}

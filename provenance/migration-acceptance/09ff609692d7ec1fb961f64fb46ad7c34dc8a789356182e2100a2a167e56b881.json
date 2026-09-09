@@ -1,0 +1,34 @@
+{
+  "format": 1,
+  "passed": true,
+  "source": "tools:deveco_restart",
+  "row_sha256": "b88f982664661efe8595de12c2b0cce0d1a9ab4f48f74adac31dcde0e1d49c1c",
+  "tested": {
+    "runtime_sha256": "ef6aaeffb850969e11bf99f25c743342f94e05de350928b3408d6ee6056f552d",
+    "compiled_sha256": "1ecc3a3261a293b974be0858ad70f4363e84e96713872010843215d26cce7145",
+    "package_lock_sha256": "68641e488a5099852216d3003664f57dd1d05b980f4c7813ee75dd7baf83d0fc",
+    "resource_manifest_sha256": "563bc3f06565e92c59c621c3ef909a37cbc4ac1db958d3d73d6e0bc99bf9ed86",
+    "upstream_lock_sha256": "bf3cc411831bd8ce6652a8085c8247c399d0c48b6d73156a7e649b9ef668164e"
+  },
+  "reviewer": "Codex native auth parity review 2026-09-09",
+  "reason": "当前 350 项完整回归重新执行已接收的关闭及重新启动场景，包括 Worker、热重载、录制和持久化状态；个人开发者与 CodeGenie 实际 MCP 只读验收另行证明重启后认证保持。",
+  "completed_scenarios": [],
+  "checks": [
+    {
+      "check": "test/native-shutdown.test.ts",
+      "original_sha256": "d8cd30be36383570b23d31fe43df3c412be6f12c68ed63f83f14287259ef0cf4"
+    },
+    {
+      "check": "test/native-runtime.test.ts",
+      "original_sha256": "d8cd30be36383570b23d31fe43df3c412be6f12c68ed63f83f14287259ef0cf4"
+    },
+    {
+      "check": "test/native-recording.test.ts",
+      "original_sha256": "d8cd30be36383570b23d31fe43df3c412be6f12c68ed63f83f14287259ef0cf4"
+    },
+    {
+      "check": "test/native-hotreload.test.ts",
+      "original_sha256": "d8cd30be36383570b23d31fe43df3c412be6f12c68ed63f83f14287259ef0cf4"
+    }
+  ]
+}

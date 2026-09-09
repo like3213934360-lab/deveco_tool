@@ -1,0 +1,14 @@
+import path from "node:path";
+import { packageRoot } from "../src/core/config.js";
+import { atomicWrite } from "../src/core/files.js";
+import { invariant } from "../src/core/errors.js";
+import { sourceSchema } from "./lib/upstream.js";
+import { readJson } from "./lib/upstream-adaptation.js";
+import { prepareKnowledge } from "./lib/knowledge-import.js";
+const [repository, sourceFile, output] = process.argv.slice(2);
+invariant(repository && sourceFile && output, "KNOWLEDGE_USAGE", "Provide a pinned Git repository, candidate source JSON and a new output bundle");
+const source = sourceSchema.parse(readJson(path.resolve(sourceFile)));
+invariant(source.id === "deveco-code", "KNOWLEDGE_SOURCE_INVALID", "Knowledge resources come from deveco-code");
+const result = await prepareKnowledge(packageRoot, path.resolve(repository), source, path.resolve(output));
+atomicWrite(path.join(path.resolve(output), "knowledge-changes.json"), JSON.stringify(result, null, 2) + "\n", false);
+console.log(JSON.stringify(result, null, 2));

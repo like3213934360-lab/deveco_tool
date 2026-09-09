@@ -1,0 +1,46 @@
+{
+  "format": 1,
+  "passed": true,
+  "source": "tools:apply_changes",
+  "row_sha256": "f79d41460588632096c4263ea74824961eb6a1bdaf95e7a455f68d066f3139c9",
+  "tested": {
+    "runtime_sha256": "ce286ca1518fa1ef98b0be66813660df6a571a9641133132ace340aeecdb0753",
+    "compiled_sha256": "2f1393a46bba5528b98d78bd22733cc1699217e87f88dc181429740589161327",
+    "package_lock_sha256": "68641e488a5099852216d3003664f57dd1d05b980f4c7813ee75dd7baf83d0fc",
+    "resource_manifest_sha256": "563bc3f06565e92c59c621c3ef909a37cbc4ac1db958d3d73d6e0bc99bf9ed86",
+    "upstream_lock_sha256": "bf3cc411831bd8ce6652a8085c8247c399d0c48b6d73156a7e649b9ef668164e"
+  },
+  "reviewer": "Codex native TypeScript integration review",
+  "reason": "Reviewed frozen aab1405 applyChanges and its coldApplyFallbackReason: the old default Entry changed-file path and full-build fallback are replaced by explicit native cold build/deploy and HQF operations. Current 56-observation acceptance adds HAR source, changes HSP and resources, incrementally builds and deploys the signed package set for default/tablet products and default/preview targets, then verifies actual device text. Current 11-observation hot acceptance applies two signed HQFs to preview and preserves PID with final UI assertions. Regression covers frozen target/module context, invalid files, session isolation and command recovery. The new workflow reports durable failure/needs_input instead of the removed CLI fallback and best-effort relaunch; this receipt does not claim all multi-module hot reload or performance acceptance.",
+  "completed_scenarios": [
+    "原冷增量部署行为对照",
+    "实际 HQF 签名和设备应用",
+    "显式构建目标选择：旧 target 不得误映射为 HDC 设备，覆盖同一产品的多个模块目标"
+  ],
+  "checks": [
+    {
+      "check": "test/native-hotreload.test.ts",
+      "original_sha256": "d41aa0048c196250001244a6e1385e68b0db9a6b3a07f0a1a9c1c775f4901489"
+    },
+    {
+      "check": "test/native-project.test.ts",
+      "original_sha256": "d41aa0048c196250001244a6e1385e68b0db9a6b3a07f0a1a9c1c775f4901489"
+    },
+    {
+      "check": "test/native-context.test.ts",
+      "original_sha256": "d41aa0048c196250001244a6e1385e68b0db9a6b3a07f0a1a9c1c775f4901489"
+    },
+    {
+      "check": "test/native-project-recovery.test.ts",
+      "original_sha256": "d41aa0048c196250001244a6e1385e68b0db9a6b3a07f0a1a9c1c775f4901489"
+    },
+    {
+      "check": "scripts/native-multimodule-acceptance.ts",
+      "original_sha256": "6e1a26d0c9dee6ae543dbd966b2e6216ca590bb7ce952d7fae02657791e94110"
+    },
+    {
+      "check": "scripts/native-hot-device-acceptance.ts",
+      "original_sha256": "91c8971097c4e534a0a24d75b4a8f1f2bad07f7c15607e305e6e4eac75b3ae7c"
+    }
+  ]
+}

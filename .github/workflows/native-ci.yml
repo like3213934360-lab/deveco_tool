@@ -1,0 +1,72 @@
+name: Native TypeScript validation
+on:
+  push:
+    branches: [main, "codex/**"]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: native-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  native:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node: ["22", "24"]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Install native dependencies
+        run: npm ci
+      - name: Compile strict TypeScript
+        run: npm run build
+      - name: Run platform regressions with byte identities
+        run: node dist/scripts/native-regression.js "${{ runner.temp }}/native-evidence"
+      - name: Verify attributed resources
+        run: node dist/scripts/resources.js
+      - name: Prepare compiled distribution without development or legacy runtime inputs
+        run: node dist/scripts/native-distribution.js prepare "${{ runner.temp }}/native-distribution"
+      - name: Normalize production-only installation lock
+        working-directory: ${{ runner.temp }}/native-distribution
+        run: npm install --package-lock-only --ignore-scripts
+      - name: Seal compiled archive and file checksums
+        run: node dist/scripts/native-distribution.js seal "${{ runner.temp }}/native-distribution" "${{ runner.temp }}/native-distribution.zip"
+      - name: Extract archive into a fresh installation directory
+        run: node dist/scripts/native-distribution.js extract "${{ runner.temp }}/native-clean-install" "${{ runner.temp }}/native-distribution.zip"
+      - name: Install production dependencies without a TypeScript build
+        working-directory: ${{ runner.temp }}/native-clean-install
+        run: npm ci --omit=dev
+      - name: Verify installed MCP resources and workflow persistence
+        run: node dist/scripts/native-installation-check.js "${{ runner.temp }}/native-clean-install" "${{ runner.temp }}/native-installation-evidence"
+      - name: Repeat Windows process ownership and recovery checks
+        if: always() && runner.os == 'Windows'
+        run: node dist/scripts/native-process-stress.js "${{ runner.temp }}/native-process-evidence" 20
+      - name: Check migration source coverage
+        run: node dist/scripts/native-migration-audit.js
+      - name: Keep framework and official toolchain upgrades separate
+        run: node dist/scripts/upstream-scope.js "${{ github.workspace }}" "${{ github.event.pull_request.base.sha || github.event.before }}" "${{ github.event.repository.default_branch }}"
+      - name: Block unmapped or unreviewed upstream candidates
+        run: node dist/scripts/upstream-gate.js
+      - name: Retain validation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-${{ matrix.os }}-node${{ matrix.node }}
+          path: |
+            ${{ runner.temp }}/native-evidence
+            ${{ runner.temp }}/native-process-evidence
+            ${{ runner.temp }}/native-installation-evidence
+            ${{ runner.temp }}/native-distribution/distribution.json
+            ${{ runner.temp }}/native-distribution/package-lock.json
+            ${{ runner.temp }}/native-distribution.zip.sha256
+            ${{ github.workspace }}/package-lock.json
+          if-no-files-found: warn

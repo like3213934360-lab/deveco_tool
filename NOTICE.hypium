@@ -1,7 +1,7 @@
-The unmodified device libraries in src/native/hypium are distributed in the
+The unmodified device libraries in resources/native/hypium are distributed in the
 official hypium-driver npm package, version 6.1.210:
 https://registry.npmjs.org/hypium-driver/-/hypium-driver-6.1.210.tgz
-Their exact SHA-256 digests and package metadata are in provenance.json.
+Their exact SHA-256 digests and package metadata are in provenance/resources.json.
 
 The upstream package declares the ISC license. It does not include a separate
 LICENSE file or name a copyright holder in its package metadata. No additional

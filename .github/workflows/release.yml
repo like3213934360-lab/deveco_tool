@@ -1,0 +1,76 @@
+name: Publish accepted native release
+on:
+  workflow_dispatch:
+    inputs:
+      evidence_run:
+        description: Workflow run holding release-evidence for this exact commit
+        required: true
+        type: string
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: native-release
+  cancel-in-progress: false
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      tag: ${{ steps.prepare.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Verify evidence workflow identity
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVIDENCE_RUN: ${{ inputs.evidence_run }}
+        run: |
+          node -e 'if (!/^[0-9]+$/.test(process.env.EVIDENCE_RUN)) process.exit(1)'
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$EVIDENCE_RUN" > "$RUNNER_TEMP/evidence-run.json"
+          node -e 'const fs=require("node:fs"),r=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+"/evidence-run.json")); if(r.head_sha!==process.env.GITHUB_SHA || r.conclusion!=="success" || r.event==="pull_request" || r.repository.full_name!==process.env.GITHUB_REPOSITORY) process.exit(1)'
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-evidence
+          run-id: ${{ inputs.evidence_run }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/evidence
+      - run: npm ci
+      - run: npm run build
+      - run: node dist/scripts/upstream-gate.js
+      - name: Verify final evidence and compiled distribution
+        run: node dist/scripts/release-gate.js "$RUNNER_TEMP/evidence/release.json" "$RUNNER_TEMP/release-gate.json"
+      - name: Prepare only the accepted archive and public gate receipt
+        id: prepare
+        run: node dist/scripts/release-publish.js prepare "$RUNNER_TEMP/evidence/release.json" "$RUNNER_TEMP/release-gate.json" "$RUNNER_TEMP/publish"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: accepted-release
+          path: ${{ runner.temp }}/publish
+          if-no-files-found: error
+  publish:
+    needs: gate
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: accepted-release
+          path: ${{ runner.temp }}/publish
+      - name: Publish the accepted immutable version
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.gate.outputs.tag }}
+        run: |
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            echo "Release already exists; never replace published bytes." >&2
+            exit 1
+          fi
+          EXTRA=()
+          if [[ "$RELEASE_TAG" == *-* ]]; then EXTRA+=(--prerelease); fi
+          gh release create "$RELEASE_TAG" "$RUNNER_TEMP/publish/"* --target "$GITHUB_SHA" --title "$RELEASE_TAG" --generate-notes "${EXTRA[@]}"

@@ -24,18 +24,18 @@ SOFTWARE.
 SCOPE AND THIRD-PARTY NOTICES
 ================================================================================
 
-The original adaptation layer in `src/`, `scripts/`, `test/`, `manifest.json`,
-`README.md`, and `PACK.md` is covered by the MIT grant above.
+Original TypeScript runtime, development scripts, tests and repository-authored
+resources and documentation are covered by the MIT grant above.
 
-The 5 official skills under `skills/` are copied from DevEco Code v0.1.11 at
-commit b5911d2ad6daa66d4ca1bd673a9be260da19e1db. DevEco Code is MIT licensed;
-its notice is reproduced in `NOTICE.deveco-code`.
+Third-party knowledge, templates, documents and native components retain their
+own licenses. Exact sources, revisions, transformations and file hashes are
+recorded in provenance/resources.json. DevEco Code attribution is reproduced in
+NOTICE.deveco-code; the native Hypium components are described in NOTICE.hypium.
+DevEco CLI template/document assets carry resources/licenses/deveco-cli-MIT.txt
+and the corresponding upstream third-party notices. The CLI itself is not a
+runtime dependency. Dependency licenses are supplied by their locked packages.
 
-10 files in this repository carry an Apache-2.0 and Huawei copyright header.
-Those headers are preserved and govern the individual files:
-
-  `arkts-runtime-fix`  9
-  `deveco-create-project`  1
-
-No Skill from `HarmonyOS_Skills/harmonyos-agent-skills` is included in the
-current tree.
+Official Skill definitions, upstream JavaScript executables and the former Skill
+installer are not distributed by this architecture. Historical Git records and
+installation fingerprints preserve traceability without executable compatibility
+paths or changes to upstream copyright ownership.

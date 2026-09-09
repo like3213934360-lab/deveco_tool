@@ -1,0 +1,61 @@
+#!/usr/bin/env node
+import fs from "node:fs";
+import { z } from "zod";
+import { errorResult, invariant } from "./core/errors.js";
+import { atomicWrite } from "./core/files.js";
+
+async function main() {
+  const command = process.argv[2] ?? "mcp";
+  if (command === "maintenance") {
+    const { maintenance } = await import("./maintenance/upgrade.js");
+    await maintenance(process.argv.slice(3));
+    return;
+  }
+  if (command === "internal-check") {
+    const { moduleTargetsSchema } = await import("./core/contracts.js");
+    const inputFile = process.argv[3],
+      outputFile = process.argv[4];
+    invariant(
+      inputFile && outputFile,
+      "CHECK_INPUT_REQUIRED",
+      "Checker input/output paths required",
+    );
+    const input = z
+      .strictObject({
+        project_path: z.string(),
+        product: z.string().optional(),
+        module_targets: moduleTargetsSchema.optional(),
+        files: z.array(z.string()).optional(),
+        cache_path: z.string().min(1),
+      })
+      .parse(JSON.parse(fs.readFileSync(inputFile, "utf8")) as unknown);
+    const { staticCheck } = await import("./services/checker.js");
+    atomicWrite(outputFile, JSON.stringify(await staticCheck(input)));
+    return;
+  }
+  if (command === "mcp") {
+    const { serve } = await import("./server.js");
+    await serve();
+    return;
+  }
+  if (command === "doctor") {
+    const { WorkerClient } = await import("./core/worker-client.js");
+    const runtime = new WorkerClient((error) => {
+      process.stderr.write(error.message + "\n");
+      process.exit(1);
+    });
+    try {
+      process.stdout.write(
+        JSON.stringify(await runtime.call("deveco_doctor", {}), null, 2) + "\n",
+      );
+    } finally {
+      await runtime.close();
+    }
+    return;
+  }
+  throw new Error("Usage: deveco-tool [mcp|doctor|maintenance]");
+}
+main().catch((error) => {
+  process.stderr.write(JSON.stringify(errorResult(error)) + "\n");
+  process.exitCode = 1;
+});

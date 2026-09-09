@@ -1,0 +1,2676 @@
+{
+  "baseline_commit": "aab1405b51e00e4036bdc8f18ae4229835de77b0",
+  "baseline_tree": "fb9b6f05e14bd8c4f5bc4e3b7ca6ea92db787b78",
+  "lock_sha256": "e98f6dd4a397d9b069811aba9f38db61d078e3342b534fac33e39e834a67066d",
+  "captured_at": "2026-09-07T15:16:21.717Z",
+  "node": "v26.0.0",
+  "tools": [
+    {
+      "name": "api_compat_check",
+      "description": "Scan source files or modules for HarmonyOS API compatibility, or list supported API versions, through DevEco CLI 1.3.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "scan",
+              "versions"
+            ],
+            "description": "Defaults to scan."
+          },
+          "source_version": {
+            "type": "string",
+            "description": "Current API version; required for scan."
+          },
+          "target_version": {
+            "type": "string",
+            "description": "Target API version; required for scan."
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Files to scan; cannot be combined with modules."
+          },
+          "modules": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Modules to scan; cannot be combined with files."
+          },
+          "format": {
+            "type": "string",
+            "enum": [
+              "default",
+              "csv",
+              "json"
+            ]
+          },
+          "output_path": {
+            "type": "string",
+            "description": "Optional report output path."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "project_path": {
+            "type": "string",
+            "description": "Optional project root; otherwise the active project from switch_cwd."
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "minimum": 1000,
+            "maximum": 3600000
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "app_signature",
+      "description": "Generate or update HarmonyOS project signing configuration using the official CLI account/team/device flow.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "force": {
+            "type": "boolean"
+          },
+          "team_id": {
+            "type": "string"
+          },
+          "product": {
+            "type": "string"
+          },
+          "project_path": {
+            "type": "string"
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "minimum": 1000,
+            "maximum": 3600000
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "apply_changes",
+      "description": "Build and deploy changed project files. Uses cold apply for the supported single-Entry default configuration; otherwise uses a full build to honor module, target, product and build mode. Reports incremental or full-build-fallback with the reason. Exactly one Entry module is selected; pass module when the project has several runnable entries. On failure the tool makes a best-effort relaunch of the previously installed app.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "files": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            },
+            "description": "Changed files inside the selected project."
+          },
+          "hvd": {
+            "type": "string",
+            "description": "Target device; resolved automatically when exactly one is connected."
+          },
+          "module": {
+            "type": "string",
+            "description": "Runnable Entry module. Required when the project has multiple runnable modules."
+          },
+          "target": {
+            "type": "string",
+            "description": "Optional build target, combined as module@target."
+          },
+          "ability": {
+            "type": "string",
+            "description": "Optional ability used only when relaunching after a failed apply."
+          },
+          "product": {
+            "type": "string",
+            "description": "Product name from build-profile.json5."
+          },
+          "build_mode": {
+            "type": "string",
+            "description": "Build mode, such as debug or release."
+          },
+          "project_path": {
+            "type": "string",
+            "description": "Optional project root; otherwise the active project from switch_cwd."
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "minimum": 1000,
+            "maximum": 3600000
+          }
+        },
+        "required": [
+          "files"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "arkts_check",
+      "description": "Run the official DevEco ArkTS static checker against project .ets/.ts sources or explicit files. This is a static precheck, not compilation verification.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "files": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Optional project-relative or absolute .ets/.ts paths; omit to scan the project."
+          },
+          "project_path": {
+            "type": "string",
+            "description": "Optional project root; otherwise use the active project from switch_cwd."
+          },
+          "product": {
+            "type": "string",
+            "minLength": 1,
+            "description": "SDK configuration product; defaults to the named default product or the only product. Required when ambiguous."
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "minimum": 1000,
+            "maximum": 600000
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "arkts_knowledge_search",
+      "description": "Search the official DevEco CodeGenie ArkTS, ArkUI, HarmonyOS, and OpenHarmony knowledge base.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "question": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "question"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "build_project",
+      "description": "Build a HarmonyOS project or specific modules through the bundled DevEco CLI. Builds start asynchronously by default so MCP hosts with a fixed 30-second timeout do not abort them: keep the returned job_id and call this tool with action=status until it finishes. Use action=cancel to terminate the build, or action=run only when the MCP host is known to allow a long synchronous request. Omit modules to build the whole product. Set clean only when a full rebuild is explicitly wanted: it cleans and then builds, which discards incremental caches and makes the build much slower.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "start",
+              "status",
+              "cancel",
+              "run"
+            ],
+            "default": "start",
+            "description": "start (default) returns a job_id immediately; status polls it; cancel stops it; run waits synchronously."
+          },
+          "job_id": {
+            "type": "string",
+            "description": "Job ID returned by start; required for status and cancel."
+          },
+          "wait_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 20000,
+            "description": "For status, wait up to this long for completion before returning; 20000 reduces polling while staying below common 30-second host limits."
+          },
+          "modules": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Modules to build, as `module` or `module@target` (e.g. entry, app_platform@default)."
+          },
+          "module": {
+            "type": "string",
+            "description": "Single module, kept for compatibility; merged into modules."
+          },
+          "product": {
+            "type": "string",
+            "description": "Product name from build-profile.json5; defaults to `default`."
+          },
+          "build_mode": {
+            "type": "string",
+            "description": "Build mode from buildModeSet (e.g. debug, release); defaults to debug."
+          },
+          "clean": {
+            "type": "boolean",
+            "description": "Clean build outputs first, then build."
+          },
+          "log_path": {
+            "type": "string",
+            "description": "Write the full build log here; the reply then keeps only the last 50 lines."
+          },
+          "enable_inspector_source_jump": {
+            "type": "boolean",
+            "description": "Accepted for compatibility only. The DevEco CLI has no equivalent, so this is reported as not applied rather than silently ignored."
+          },
+          "project_path": {
+            "type": "string",
+            "description": "Optional project root; otherwise the active project from switch_cwd."
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "minimum": 1000,
+            "maximum": 3600000
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "check_cpp_files",
+      "description": "对传入的 C/C++ 文件进行静态语法检查并返回 clangd 诊断信息",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "files": {
+            "description": "待检查的 C/C++ 文件路径列表，格式为 [\"file1.cpp\",\"file2.hpp\",...]",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "files"
+        ],
+        "title": "CheckCppFilesRequest"
+      }
+    },
+    {
+      "name": "check_ets_files",
+      "description": "Run the official local DevEco ArkTS checker for the requested .ets or .ts files.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "product": {
+            "type": "string",
+            "minLength": 1,
+            "description": "SDK configuration product; defaults to the named default product or the only product. Required when ambiguous."
+          },
+          "files": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            },
+            "description": "Project-relative or absolute .ets/.ts file paths."
+          }
+        },
+        "required": [
+          "files"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "code_lint",
+      "description": "Run the official project-level DevEco Code Linter, with incremental checking, JSON/report output, and optional automatic fixes.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Optional file or directory to lint, relative to the project."
+          },
+          "fix": {
+            "type": "boolean",
+            "description": "Apply the linter's automatic fixes."
+          },
+          "incremental": {
+            "type": "boolean"
+          },
+          "config_path": {
+            "type": "string"
+          },
+          "product": {
+            "type": "string"
+          },
+          "format": {
+            "type": "string",
+            "enum": [
+              "default",
+              "json"
+            ]
+          },
+          "output_path": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "project_path": {
+            "type": "string"
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "minimum": 1000,
+            "maximum": 3600000
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "deveco_cli_auth",
+      "description": "Manage the official DevEco CLI account session or list available signing teams. This is separate from the CodeGenie knowledge-service login.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "login",
+              "logout",
+              "status",
+              "team_list"
+            ]
+          },
+          "project_path": {
+            "type": "string"
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "minimum": 1000,
+            "maximum": 3600000
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "deveco_doctor",
+      "description": "Inspect local DevEco, HDC, project-context, and extracted Skill availability.",
+      "input_schema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "deveco_login",
+      "description": "Start or poll a China-site Huawei DevEco browser login. Start returns immediately; poll with action=status and login_id. Waiting status includes login_url for manual opening on the MCP machine if browser_status is manual_required. The callback window lasts five minutes. deveco_logout cancels pending authentication.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "start",
+              "status"
+            ],
+            "description": "Defaults to start."
+          },
+          "login_id": {
+            "type": "string",
+            "description": "Required for status."
+          },
+          "wait_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 20000,
+            "description": "Status may wait this long for completion."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "deveco_logout",
+      "description": "Cancel pending CodeGenie login and token refresh, then clear the local session.",
+      "input_schema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "deveco_restart",
+      "description": "Reset a stuck backend without disconnecting MCP. arkts resets the language service; cpp resets CodeGenie; all resets both. Children restart on next use. If failure recurs, diagnose with deveco_doctor before retrying.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "target": {
+            "type": "string",
+            "enum": [
+              "arkts",
+              "cpp",
+              "all"
+            ],
+            "default": "all"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "deveco_script",
+      "description": "Run an allowlisted script. Use args or argv, never both. Get script-specific requirements from deveco_script_catalog; invalid parameters are rejected before execution.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "script": {
+            "type": "string",
+            "enum": [
+              "copy_template",
+              "detect_sdk",
+              "collect_hilog",
+              "fetch_faultlog",
+              "jscrash_report",
+              "parse_jscrash_log",
+              "probe_faultlogger"
+            ]
+          },
+          "args": {
+            "type": "object",
+            "description": "Named parameters from deveco_script_catalog(script). Unknown keys and invalid values are rejected per script.",
+            "additionalProperties": {
+              "type": [
+                "string",
+                "number",
+                "boolean"
+              ]
+            }
+          },
+          "argv": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Alternative --flag/value array; validated against the same script contract."
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "minimum": 1000,
+            "maximum": 600000
+          }
+        },
+        "required": [
+          "script"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "deveco_script_catalog",
+      "description": "List script summaries. Pass script to get its parameter schema and a valid example before execution.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "script": {
+            "type": "string",
+            "enum": [
+              "copy_template",
+              "detect_sdk",
+              "collect_hilog",
+              "fetch_faultlog",
+              "jscrash_report",
+              "parse_jscrash_log",
+              "probe_faultlogger"
+            ]
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "deveco_status",
+      "description": "Return DevEco login state without exposing access or refresh tokens.",
+      "input_schema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "device_info",
+      "description": "Return official detailed device information: name, serial, kind, device type, and OS version when supplied by the target.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "target": {
+            "type": "string"
+          },
+          "format": {
+            "type": "string",
+            "enum": [
+              "table",
+              "json"
+            ]
+          },
+          "project_path": {
+            "type": "string"
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "minimum": 1000,
+            "maximum": 3600000
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "emulator_manage",
+      "description": "Manage official DevEco emulators, system images, and licenses: list/start/stop/create/delete, download/remove images, and view/accept licenses.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "list",
+              "start",
+              "stop",
+              "create",
+              "delete",
+              "image_list",
+              "image_download",
+              "image_remove",
+              "license_view",
+              "license_accept"
+            ]
+          },
+          "names": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "name": {
+            "type": "string"
+          },
+          "device_type": {
+            "type": "string",
+            "enum": [
+              "phone",
+              "foldable",
+              "widefold",
+              "triplefold",
+              "tablet",
+              "2in1",
+              "2in1 foldable",
+              "wearable",
+              "tv"
+            ]
+          },
+          "os_version": {
+            "type": "string"
+          },
+          "force": {
+            "type": "boolean"
+          },
+          "all": {
+            "type": "boolean"
+          },
+          "format": {
+            "type": "string",
+            "enum": [
+              "table",
+              "json"
+            ]
+          },
+          "project_path": {
+            "type": "string"
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "minimum": 1000,
+            "maximum": 3600000
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "emulator_scenario",
+      "description": "Simulate official emulator hardware/environment scenarios: shake, power, rotation, volume, folding, battery, location, sports/navigation, and sensors.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "shake",
+              "power",
+              "rotate",
+              "volume",
+              "fold",
+              "battery",
+              "geolocation",
+              "scene",
+              "sensor"
+            ]
+          },
+          "target": {
+            "type": "string"
+          },
+          "direction": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              }
+            ]
+          },
+          "state": {
+            "type": "string"
+          },
+          "level": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "charging",
+              "discharging"
+            ]
+          },
+          "longitude": {
+            "type": "number",
+            "minimum": -180,
+            "maximum": 180
+          },
+          "latitude": {
+            "type": "number",
+            "minimum": -90,
+            "maximum": 90
+          },
+          "altitude": {
+            "type": "number",
+            "minimum": -10000,
+            "maximum": 10000
+          },
+          "scene": {
+            "type": "string",
+            "enum": [
+              "outdoorRunning",
+              "outdoorCycling",
+              "drivingNavigation"
+            ]
+          },
+          "light_intensity": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100000
+          },
+          "humidity": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "temperature": {
+            "type": "number",
+            "minimum": -273.1,
+            "maximum": 100
+          },
+          "steps": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000
+          },
+          "heartrate": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 255
+          },
+          "project_path": {
+            "type": "string"
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "minimum": 1000,
+            "maximum": 3600000
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "find_references",
+      "description": "Find ArkTS references through the official DevEco ace-server. The project is initialized by `devecocli serve lsp`; unsupported server capabilities fail explicitly instead of returning fabricated empty results.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "file": {
+            "type": "string"
+          },
+          "line": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "column": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "includeDeclaration": {
+            "type": "boolean"
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "minimum": 1000,
+            "maximum": 120000,
+            "description": "Per-call deadline. Official project initialization may continue in the background and return LSP_INITIALIZING for a later retry."
+          }
+        },
+        "required": [
+          "file",
+          "line",
+          "column"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "get_app_ui_tree",
+      "description": "Legacy CodeGenie full-tree compatibility tool. Prefer ui_find for semantic coordinates or ui_observe for one-round-trip screenshot plus tree; both are faster local HDC paths and do not require the CodeGenie child. Use this proxy only when the caller specifically needs CodeGenie's original full-tree response contract.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "hvd": {
+            "description": "目标设备的名称，只有一个设备时无需设定",
+            "nullable": true,
+            "type": "string"
+          },
+          "mode": {
+            "$ref": "#/$defs/UiDumpMode",
+            "description": "dump模式：simple-获取窗口节点信息，full-获取完整UI树"
+          },
+          "outputDirectory": {
+            "description": "保存 JSON 文件的目录绝对路径",
+            "type": "string"
+          }
+        },
+        "required": [
+          "mode",
+          "outputDirectory"
+        ],
+        "$defs": {
+          "UiDumpMode": {
+            "oneOf": [
+              {
+                "const": "simple",
+                "description": "获取窗口节点信息（WindowManagerService element dump）",
+                "type": "string"
+              },
+              {
+                "const": "full",
+                "description": "获取完整UI树",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "title": "UiDumpRequest"
+      }
+    },
+    {
+      "name": "get_hover",
+      "description": "Get ArkTS type information and documentation from the official DevEco ace-server.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "file": {
+            "type": "string"
+          },
+          "line": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "column": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "minimum": 1000,
+            "maximum": 120000
+          }
+        },
+        "required": [
+          "file",
+          "line",
+          "column"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "go_to_definition",
+      "description": "Go to an ArkTS definition through the official DevEco ace-server.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "file": {
+            "type": "string"
+          },
+          "line": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "column": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "minimum": 1000,
+            "maximum": 120000
+          }
+        },
+        "required": [
+          "file",
+          "line",
+          "column"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "harmony_docs",
+      "description": "Use the official local DevEco documentation center: list catalogs, search a catalog, or read a document by ID.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "catalog",
+              "search",
+              "read"
+            ]
+          },
+          "keywords": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            }
+          },
+          "catalog": {
+            "type": "string"
+          },
+          "document_id": {
+            "type": "string"
+          },
+          "format": {
+            "type": "string",
+            "enum": [
+              "default",
+              "json"
+            ]
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "project_path": {
+            "type": "string"
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "minimum": 1000,
+            "maximum": 3600000
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "hdc_log",
+      "description": "List connected HarmonyOS devices, collect filtered hilog lines, or clear the device log buffer. Collect pushes the filter down to hilog itself, so narrowing log_prefix or lines cuts what crosses the wire rather than only what is printed.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "collect",
+              "clear",
+              "list_devices"
+            ]
+          },
+          "device_id": {
+            "type": "string",
+            "description": "Required when more than one device is connected; hdc_log list_devices prints the keys."
+          },
+          "log_prefix": {
+            "type": "string",
+            "description": "Collect only lines containing this prefix; defaults to [VCODER_DEBUG]. Matched literally, and matched on the device."
+          },
+          "lines": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5000
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "minimum": 1000,
+            "maximum": 600000,
+            "description": "Deadline for the collect. On expiry the lines already read are returned with truncated: true rather than discarded."
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "hot_reload",
+      "description": "Manage one real persistent DevEco hot-reload watch session: start, apply changed .ets files without restarting the app, inspect status, or stop. start waits at most 20 seconds per MCP call; if it returns starting=true, poll action=status instead of starting a duplicate session.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "start",
+              "apply",
+              "status",
+              "stop"
+            ]
+          },
+          "files": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            }
+          },
+          "hvd": {
+            "type": "string"
+          },
+          "module": {
+            "type": "string"
+          },
+          "product": {
+            "type": "string"
+          },
+          "build_mode": {
+            "type": "string"
+          },
+          "ability": {
+            "type": "string"
+          },
+          "project_path": {
+            "type": "string"
+          },
+          "wait_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 20000,
+            "description": "For start only, wait this long for readiness before returning starting=true; defaults to 20000."
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "minimum": 1000,
+            "maximum": 3600000
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "lsp",
+      "description": "Official ArkTS LSP entry point backed only by `devecocli serve lsp --arkts` and the DevEco ace-server. Exposes only the four capabilities advertised by the current official server: definition, references, hover, and implementation. Request positions are 1-based; raw LSP response positions remain 0-based.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "operation": {
+            "type": "string",
+            "enum": [
+              "goToDefinition",
+              "findReferences",
+              "hover",
+              "goToImplementation"
+            ]
+          },
+          "filePath": {
+            "type": "string",
+            "description": "Absolute or project-relative .ets file used to select and initialize the official project server."
+          },
+          "line": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Required 1-based line number."
+          },
+          "character": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Required 1-based character offset."
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "minimum": 1000,
+            "maximum": 120000,
+            "description": "One deadline shared by official server startup and the requested operation."
+          }
+        },
+        "required": [
+          "operation",
+          "filePath",
+          "line",
+          "character"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "perform_ui_action",
+      "description": "Compatibility UI action entry point. Prefer ui_flow navigate for multi-step navigation and ui_tap for new single actions. Click, fling, keys, screenshots, and text use the local HDC path. Text requires x/y and uses official UiTest forced paste over a UTF-8 RPC connection. Default screenshots are temporary.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "actionType": {
+            "description": "操作类型:click/directionalFling/inputText/keyEvent/screenshot",
+            "type": "string"
+          },
+          "direction": {
+            "description": "(directionalFling 需要）滑动方向:0=向左,1=向右,2=向上,3=向下.默认值:0.",
+            "format": "int32",
+            "nullable": true,
+            "type": "integer"
+          },
+          "displayId": {
+            "description": "(screenshot 可选)显示ID,用于多屏设备指定截图的屏幕,非多屏设备无需填写。",
+            "format": "int32",
+            "nullable": true,
+            "type": "integer"
+          },
+          "hvd": {
+            "description": "目标设备的名称，只有一个设备时无需设定",
+            "nullable": true,
+            "type": "string"
+          },
+          "key1": {
+            "description": "(keyEvent 需要)实体按键对应ID,取值范围:Back、Home、Power、或KeyCode键码值.",
+            "nullable": true,
+            "type": "string"
+          },
+          "key2": {
+            "description": "(keyEvent 可选)第二个按键ID(组合键）.",
+            "nullable": true,
+            "type": "string"
+          },
+          "key3": {
+            "description": "(keyEvent 可选)第三个按键ID(组合键）.",
+            "nullable": true,
+            "type": "string"
+          },
+          "localPath": {
+            "description": "Optional explicit local destination. Omit it for an OS-temporary image that is deleted after inline delivery.",
+            "nullable": true,
+            "type": "string"
+          },
+          "savePath": {
+            "description": "Accepted for compatibility but never retained: the local fast path always removes its transient device screenshot.",
+            "nullable": true,
+            "type": "string"
+          },
+          "stepLength": {
+            "description": "(directionalFling 可选）滑动步长，单位:px.",
+            "format": "int32",
+            "nullable": true,
+            "type": "integer"
+          },
+          "text": {
+            "description": "(inputText 需要）输入文本内容.",
+            "nullable": true,
+            "type": "string"
+          },
+          "velocity": {
+            "description": "(directionalFling 可选)滑动速度，单位:px/s,取值范围:200-40000.默认值:600.",
+            "format": "int32",
+            "nullable": true,
+            "type": "integer"
+          },
+          "x": {
+            "description": "(click/inputText 需要）点击或输入框的 x 坐标点.",
+            "format": "int32",
+            "nullable": true,
+            "type": "integer"
+          },
+          "y": {
+            "description": "(click/inputText 需要）点击或输入框的 y 坐标点.",
+            "format": "int32",
+            "nullable": true,
+            "type": "integer"
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "minimum": 1000,
+            "maximum": 600000
+          }
+        },
+        "required": [
+          "actionType"
+        ],
+        "title": "UiActionRequest"
+      }
+    },
+    {
+      "name": "project_sync",
+      "description": "Install all ohpm dependencies and synchronize the Hvigor project model using DevEco Studio's bundled toolchain.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "product": {
+            "type": "string",
+            "description": "Product name; defaults to default."
+          },
+          "install_dependencies": {
+            "type": "boolean",
+            "description": "Run ohpm install --all before Hvigor sync; defaults to true."
+          },
+          "project_path": {
+            "type": "string",
+            "description": "Optional project root; otherwise the active project from switch_cwd."
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "minimum": 1000,
+            "maximum": 3600000
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "start_app",
+      "description": "Deploy the already-built app to a connected device and launch it through the bundled DevEco CLI. Does not build. Resolves the device automatically when exactly one is connected.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "hvd": {
+            "type": "string",
+            "description": "Target device name or serial; resolved automatically when omitted."
+          },
+          "module": {
+            "type": "string",
+            "description": "Module to deploy and launch (e.g. entry, phone). Required when the project has multiple runnable modules; dependencies are included automatically."
+          },
+          "target": {
+            "type": "string",
+            "description": "Build target; combined with module as module@target."
+          },
+          "product": {
+            "type": "string",
+            "description": "Product name from build-profile.json5; defaults to default."
+          },
+          "ability": {
+            "type": "string",
+            "description": "Ability to launch; read from module.json5 when omitted."
+          },
+          "project_path": {
+            "type": "string",
+            "description": "Optional project root; otherwise the active project from switch_cwd."
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "minimum": 1000,
+            "maximum": 3600000
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "switch_cwd",
+      "description": "Select the HarmonyOS project for subsequent tools. Use when changing projects; PROJECT_PATH can select the initial project.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "project_path": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "project_path"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "ui_control",
+      "description": "Use the official DevEco UI controller for node-id/window-targeted operations. Text uses UiTest forced paste and requires node_id or x/y; current-caret input without a target is unsupported. Prefer ui_flow action=navigate for multi-step navigation and ui_tap for ordinary semantic clicks, text, keys, and gestures.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "click",
+              "doubleclick",
+              "longclick",
+              "swipe",
+              "fling",
+              "drag",
+              "dircfling",
+              "text"
+            ]
+          },
+          "x": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "y": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "x2": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "y2": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "direction": {
+            "type": "string",
+            "enum": [
+              "up",
+              "down",
+              "left",
+              "right"
+            ]
+          },
+          "text": {
+            "type": "string"
+          },
+          "node_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "window": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9_-]+$"
+          },
+          "speed": {
+            "type": "integer",
+            "minimum": 200,
+            "maximum": 40000
+          },
+          "hvd": {
+            "type": "string"
+          },
+          "project_path": {
+            "type": "string"
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "minimum": 1000,
+            "maximum": 3600000
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "ui_find",
+      "description": "Locate on-screen controls in a uitest layout dump and return tap-ready device coordinates, without capturing a frame. Use ui_observe instead when you also want to see the screen. Exact where reading coordinates off a screenshot is not, and unlike get_app_ui_tree it does not require the debugged app to be in the foreground. Pass dumpPath to re-query a dump you already have instead of spending ~1.4s on another one. A truncated default result does not mean later controls are absent: inspect componentTypes and re-query by type, such as type=Slider.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "Case-insensitive substring of the node's visible text."
+          },
+          "textMode": {
+            "type": "string",
+            "enum": [
+              "exact",
+              "contains"
+            ],
+            "description": "Text matching mode. Defaults to contains; recorded fallback selectors use exact."
+          },
+          "key": {
+            "type": "string",
+            "description": "Exact match on the node's key (what ArkUI .id() sets). Survives copy and locale changes, unlike text."
+          },
+          "type": {
+            "type": "string",
+            "description": "Exact component type, e.g. Text, Button, Image."
+          },
+          "dumpPath": {
+            "type": "string",
+            "description": "Re-query an immutable snapshot without device I/O. Managed dumps expire after 10 minutes or 64 newer snapshots; capture again after changing the UI."
+          },
+          "hvd": {
+            "type": "string",
+            "description": "hdc connect key as printed by hdc_log list_devices; optional when exactly one device is connected."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200,
+            "description": "Maximum matches to return (default 20); matchCount reports the true total."
+          },
+          "onScreenOnly": {
+            "type": "boolean",
+            "description": "Drop nodes outside the screen box or marked invisible (default true). Their centres are in the dump but tapping them does nothing."
+          },
+          "clickableOnly": {
+            "type": "boolean",
+            "description": "Keep only nodes the device reports as clickable. Usable on its own: the node that handles a tap is usually a container with no text of its own, wrapping the label you can see."
+          },
+          "displayId": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Restrict matches to one display. Only for multi-display devices; a foldable or an external screen puts nodes from both displays in one dump."
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "minimum": 1000,
+            "maximum": 600000
+          },
+          "checked": {
+            "type": "boolean",
+            "description": "Require an explicitly reported checked state; missing state never matches false."
+          },
+          "selected": {
+            "type": "boolean"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              }
+            ]
+          },
+          "selectors": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 32,
+            "description": "Query up to 32 selectors from one captured tree. Returns queries in input order; use this for multiple controls on the same screen instead of repeated device dumps.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "checked": {
+                  "type": "boolean",
+                  "description": "Require an explicitly reported checked state; missing state never matches false."
+                },
+                "selected": {
+                  "type": "boolean"
+                },
+                "enabled": {
+                  "type": "boolean"
+                },
+                "value": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "number"
+                    }
+                  ]
+                },
+                "text": {
+                  "type": "string"
+                },
+                "key": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": "string"
+                },
+                "textMode": {
+                  "type": "string",
+                  "enum": [
+                    "exact",
+                    "contains"
+                  ]
+                },
+                "clickableOnly": {
+                  "type": "boolean"
+                },
+                "onScreenOnly": {
+                  "type": "boolean"
+                },
+                "displayId": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "limit": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 200
+                }
+              }
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "ui_flow",
+      "description": "Primary tool for entering a known HarmonyOS page or repeating multi-step UI navigation. action is always required. For a new navigation call action=navigate first: ArkPilot safely prefers an exact manifest-declared Ability/App Link/Want route, otherwise finds and replays a matching saved flow, and if none exists starts exploration recording automatically. Use goal for natural-language intent (not target), and id for a known flow (not flow_id); product is not a ui_flow argument. During exploration use ui_observe then semantic ui_tap; successful actions are learned without another command, then finish with navigate+recording_id+success_selector. Replay uses no screenshots on success, safely heals a changed key only from a unique exact semantic fallback, writes that repair only after the final assertion passes, and returns job_id for long runs. A successfully saved .arkpilot/flows JSON file is a persistent reusable project artifact, not temporary test output: never remove it during cleanup unless the user explicitly requests ui_flow action=delete. Use run only when the exact flow id is already known; use routes to inspect standard module.json5 routes. Never use repeated screenshot guessing for a navigation that this tool can replay.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "navigate",
+              "routes",
+              "driver_status",
+              "record_start",
+              "record_status",
+              "record_stop",
+              "record_cancel",
+              "run",
+              "status",
+              "cancel",
+              "list",
+              "get",
+              "validate",
+              "delete"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9](?:[a-z0-9_-]{0,62}[a-z0-9])?$",
+            "description": "Flow id. Required for record_start, run, get, and delete; validate accepts either id or flow."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Human-readable flow name. Required for record_start."
+          },
+          "goal": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Natural-language navigation goal used to safely match a saved flow. Exact declared route names can also be used."
+          },
+          "recording_id": {
+            "type": "string",
+            "description": "Recording id returned by record_start or navigate. Required for record_status, record_stop, record_cancel, and finishing navigate."
+          },
+          "job_id": {
+            "type": "string",
+            "description": "Execution job id returned by run or navigate. Required for status and cancel."
+          },
+          "project_path": {
+            "type": "string"
+          },
+          "hvd": {
+            "type": "string",
+            "description": "Exact hdc device id; required when several devices are connected."
+          },
+          "bundle_name": {
+            "type": "string"
+          },
+          "module": {
+            "type": "string"
+          },
+          "ability": {
+            "type": "string"
+          },
+          "route_id": {
+            "type": "string",
+            "description": "Exact id returned by action=routes. Preferred over natural-language route guessing."
+          },
+          "route_action": {
+            "type": "string",
+            "description": "Exact action declared by an Ability skill in module.json5."
+          },
+          "uri": {
+            "type": "string",
+            "description": "Concrete URI for an App Link or a manifest route containing pathRegex."
+          },
+          "want_parameters": {
+            "type": "object",
+            "description": "Explicit Want parameters only. ArkPilot never invents app-specific route parameters.",
+            "additionalProperties": {
+              "type": [
+                "string",
+                "integer",
+                "boolean"
+              ]
+            }
+          },
+          "start_policy": {
+            "type": "string",
+            "enum": [
+              "restart",
+              "attach"
+            ]
+          },
+          "backend": {
+            "type": "string",
+            "enum": [
+              "hdc-shell",
+              "hypium"
+            ]
+          },
+          "wait_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 20000
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "minimum": 1000,
+            "maximum": 600000
+          },
+          "variables": {
+            "type": "object",
+            "additionalProperties": {
+              "type": [
+                "string",
+                "number",
+                "boolean"
+              ]
+            }
+          },
+          "flow": {
+            "type": "object",
+            "description": "Inline flow definition for validate; use this or id.",
+            "additionalProperties": true
+          },
+          "success_selector": {
+            "type": "object",
+            "properties": {
+              "key": {
+                "type": "string"
+              },
+              "text": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string"
+              },
+              "clickableOnly": {
+                "type": "boolean"
+              },
+              "textMode": {
+                "type": "string",
+                "enum": [
+                  "exact",
+                  "contains"
+                ]
+              },
+              "checked": {
+                "type": "boolean",
+                "description": "Require an explicitly reported checked state; missing state never matches false."
+              },
+              "selected": {
+                "type": "boolean"
+              },
+              "enabled": {
+                "type": "boolean"
+              },
+              "value": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "number"
+                  }
+                ]
+              }
+            },
+            "additionalProperties": false
+          },
+          "success_state": {
+            "type": "string",
+            "enum": [
+              "visible",
+              "hidden"
+            ]
+          },
+          "success_timeout_ms": {
+            "type": "integer",
+            "minimum": 100,
+            "maximum": 600000
+          },
+          "allow_unverified": {
+            "type": "boolean"
+          },
+          "selector_healing": {
+            "type": "boolean",
+            "description": "Allow unique exact semantic fallbacks and persist promotions only after final success. Defaults to project config."
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "ui_inspect",
+      "description": "Use the official DevEco inspector only when window/display selection, all-window output, or depth filtering is required. For routine semantic targeting use ui_find, or ui_observe when a screenshot is also needed; those local HDC paths avoid starting the DevEco CLI for every observation.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "layout",
+              "windows"
+            ]
+          },
+          "hvd": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "window": {
+            "type": "string",
+            "minLength": 1
+          },
+          "all_windows": {
+            "type": "boolean"
+          },
+          "all": {
+            "type": "boolean"
+          },
+          "depth": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "format": {
+            "type": "string",
+            "enum": [
+              "default",
+              "json"
+            ]
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "full",
+              "simplified"
+            ]
+          },
+          "project_path": {
+            "type": "string"
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "minimum": 1000,
+            "maximum": 3600000
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "ui_observe",
+      "description": "Capture the screen AND the layout tree in one device round trip, and return the frame inline beside tap-ready coordinates. This is the tool to reach for in a UI loop: the capture is overlapped with the dump on the device, which measured 1238ms against 1731ms for calling ui_snapshot and ui_find separately. Takes the same selectors as ui_find. If matches are truncated, componentTypes still shows which later controls exist; re-query dumpPath with ui_find and a type such as Slider. Also returns structureSignature, which is stable while the layout is unchanged, for layout changes only; signature also covers text and reported control states. Use selectors to query multiple controls from the same snapshot.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "Case-insensitive substring of the node's visible text (or its accessibility label)."
+          },
+          "textMode": {
+            "type": "string",
+            "enum": [
+              "exact",
+              "contains"
+            ],
+            "description": "Text matching mode. Defaults to contains."
+          },
+          "key": {
+            "type": "string",
+            "description": "Exact match on the node's key (what ArkUI .id() sets). Survives copy and locale changes, unlike text."
+          },
+          "type": {
+            "type": "string",
+            "description": "Exact component type, e.g. Text, Button, Image."
+          },
+          "clickableOnly": {
+            "type": "boolean",
+            "description": "Keep only nodes the device reports as clickable. Usable on its own."
+          },
+          "onScreenOnly": {
+            "type": "boolean",
+            "description": "Drop nodes outside the screen box or marked invisible (default true)."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200,
+            "description": "Maximum matches to return (default 20); matchCount reports the true total."
+          },
+          "displayId": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Restrict matches to one display, and capture that display. Only for multi-display devices; a foldable or an external screen puts nodes from both displays in one dump."
+          },
+          "hvd": {
+            "type": "string",
+            "description": "hdc connect key as printed by hdc_log list_devices; optional when exactly one device is connected."
+          },
+          "localPath": {
+            "type": "string",
+            "description": "Where to write the frame. Defaults to a timestamped file under the system temp directory."
+          },
+          "overwrite": {
+            "type": "boolean",
+            "description": "Allow replacing an existing localPath. Defaults to false so a typo cannot destroy an unrelated file."
+          },
+          "width": {
+            "type": "integer",
+            "minimum": 64,
+            "maximum": 4096,
+            "description": "Capture width, aspect ratio preserved. Defaults to the display’s own width, capped so the long edge stays within 2576px."
+          },
+          "inline": {
+            "type": "boolean",
+            "description": "Return the frame as a content block (default true)."
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "minimum": 1000,
+            "maximum": 600000
+          },
+          "checked": {
+            "type": "boolean",
+            "description": "Require an explicitly reported checked state; missing state never matches false."
+          },
+          "selected": {
+            "type": "boolean"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              }
+            ]
+          },
+          "selectors": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 32,
+            "description": "Query up to 32 selectors from one captured tree. Returns queries in input order; use this for multiple controls on the same screen instead of repeated device dumps.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "checked": {
+                  "type": "boolean",
+                  "description": "Require an explicitly reported checked state; missing state never matches false."
+                },
+                "selected": {
+                  "type": "boolean"
+                },
+                "enabled": {
+                  "type": "boolean"
+                },
+                "value": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "number"
+                    }
+                  ]
+                },
+                "text": {
+                  "type": "string"
+                },
+                "key": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": "string"
+                },
+                "textMode": {
+                  "type": "string",
+                  "enum": [
+                    "exact",
+                    "contains"
+                  ]
+                },
+                "clickableOnly": {
+                  "type": "boolean"
+                },
+                "onScreenOnly": {
+                  "type": "boolean"
+                },
+                "displayId": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "limit": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 200
+                }
+              }
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "ui_snapshot",
+      "description": "Capture the device screen over hdc and return it inline. Use this when you only need to see the screen; use ui_observe when you also need coordinates, since it gets both in one device round trip. Runs locally, so it still works when the CodeGenie child is unavailable. Captures at the display's own resolution, scaled down only when its long edge exceeds 2576px — the point past which a vision model resizes the image anyway, so a larger capture costs bytes without adding detail. Lower width when a long loop needs cheaper frames: image cost follows pixel area, so halving width quarters it.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "hvd": {
+            "type": "string",
+            "description": "hdc connect key as printed by hdc_log list_devices; optional when exactly one device is connected."
+          },
+          "localPath": {
+            "type": "string",
+            "description": "Where to write the image. Defaults to a timestamped file under the system temp directory."
+          },
+          "overwrite": {
+            "type": "boolean",
+            "description": "Allow replacing an existing localPath. Defaults to false so a typo cannot destroy an unrelated file."
+          },
+          "width": {
+            "type": "integer",
+            "minimum": 64,
+            "maximum": 4096,
+            "description": "Capture width, aspect ratio preserved. Defaults to the display’s own width, capped so the long edge stays within 2576px. Lower it to cut image cost on a long loop; coordinateScale reports the ratio either way."
+          },
+          "format": {
+            "type": "string",
+            "enum": [
+              "jpeg",
+              "png"
+            ],
+            "description": "jpeg (default) is lossy but small; png is lossless and uncapped, for pixel-exact work. Both come from snapshot_display. Format does not change image cost, which follows pixel area only."
+          },
+          "displayId": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Only for multi-display devices. Left unset, the device picks its active display."
+          },
+          "inline": {
+            "type": "boolean",
+            "description": "Return the image as a content block (default true). Set false to get only the JSON report and the path."
+          },
+          "ifChangedFrom": {
+            "type": "string",
+            "description": "A frameSignature from an earlier ui_snapshot or ui_observe. The capture still happens, but when the screen is byte-identical the reply is unchanged:true with no image. This is how to wait for something to happen cheaply: it costs a capture (~0.4s) where a full ui_observe costs a capture plus a layout dump (~1.4s), and spends no image tokens while nothing is moving."
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "minimum": 1000,
+            "maximum": 600000
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "ui_tap",
+      "description": "Low-level single UI action. For a new multi-step page navigation, call ui_flow action=navigate before this tool so the action is automatically learned or an existing flow is replayed. During active exploration, every successful semantic action here is recorded automatically. Prefer key/text/type over x/y: semantic targets survive layout movement and record a safe fallback for key changes. Use verify_ui only for final visual acceptance. Despite the compatibility name this also performs swipe/fling/drag/text/key actions.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "click",
+              "doubleClick",
+              "longClick",
+              "swipe",
+              "fling",
+              "drag",
+              "dircFling",
+              "inputText",
+              "keyEvent"
+            ]
+          },
+          "key": {
+            "type": "string",
+            "description": "Aim a click or inputText at the node with this exact key instead of coordinates. Refuses when no unique target matches."
+          },
+          "text": {
+            "type": "string",
+            "description": "For click/doubleClick/longClick or percentage gestures, select a node whose visible text contains this. For inputText, this is the exact text to paste, including tabs/newlines; provide key/type or x/y as the target. Paste acceptance does not verify the app's final text."
+          },
+          "textMode": {
+            "type": "string",
+            "enum": [
+              "exact",
+              "contains"
+            ],
+            "description": "Selector text matching mode for non-input actions. Defaults to contains."
+          },
+          "type": {
+            "type": "string",
+            "description": "Aim at the node of this exact component type, or narrow a key/text selector."
+          },
+          "clickableOnly": {
+            "type": "boolean",
+            "description": "Narrow a selector to nodes the device reports as clickable. The node that handles a tap is often a container wrapping the label you can see."
+          },
+          "verify": {
+            "type": "boolean",
+            "description": "Observe the UI tree after any action, including coordinates, keys and text; does not verify the intended outcome. Defaults to true for selector-targeted gestures, false otherwise. Returns verifyApplied and observationCompleted."
+          },
+          "from_percent": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "description": "Start position inside a selector-targeted swipe/fling/drag."
+          },
+          "to_percent": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "description": "End position inside a selector-targeted swipe/fling/drag."
+          },
+          "axis": {
+            "type": "string",
+            "enum": [
+              "horizontal",
+              "vertical"
+            ],
+            "description": "Percentage direction. Horizontal is left-to-right; vertical is bottom-to-top. Defaults to horizontal."
+          },
+          "from_x_percent": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "description": "Start x as a percentage of the current device screen when the target is absent from the UI tree. Supply all four screen-percentage fields and omit pixel coordinates/selectors."
+          },
+          "from_y_percent": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "description": "Start y as a percentage from the top of the current device screen."
+          },
+          "to_x_percent": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "description": "Destination x as a percentage of the current device screen."
+          },
+          "to_y_percent": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "description": "Destination y as a percentage from the top of the current device screen."
+          },
+          "x": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Device x for click/doubleClick/longClick/swipe/inputText. Omit when using a selector."
+          },
+          "y": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Device y for click/doubleClick/longClick/swipe/inputText. Omit when using a selector."
+          },
+          "x2": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Destination x for swipe/fling/drag."
+          },
+          "y2": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Destination y for swipe/fling/drag."
+          },
+          "direction": {
+            "type": "integer",
+            "enum": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "description": "dircFling scroll direction: 0 left, 1 right, 2 toward the top, 3 toward the bottom."
+          },
+          "velocity": {
+            "type": "integer",
+            "minimum": 200,
+            "maximum": 40000,
+            "description": "Gesture speed in px/s for swipe/fling/drag and dircFling."
+          },
+          "stepLength": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "dircFling step length in px."
+          },
+          "key1": {
+            "type": "string",
+            "description": "Key name or keycode, e.g. Back, Home, Power."
+          },
+          "key2": {
+            "type": "string",
+            "description": "Second key of a combination."
+          },
+          "key3": {
+            "type": "string",
+            "description": "Third key of a combination."
+          },
+          "hvd": {
+            "type": "string",
+            "description": "hdc connect key as printed by hdc_log list_devices; optional when exactly one device is connected."
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "minimum": 1000,
+            "maximum": 600000
+          },
+          "checked": {
+            "type": "boolean",
+            "description": "Require an explicitly reported checked state; missing state never matches false."
+          },
+          "selected": {
+            "type": "boolean"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              }
+            ]
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "verify_ui",
+      "description": "Optional final UI verification and failure-diagnosis tool. Use after navigation, not for aiming ordinary taps. capture/assert returns one temporary screenshot inline; when a semantic selector is provided it overlaps the screenshot and UI-tree dump. Canvas/XComponent screens can be judged by the host AI from visual_prompt. compare checks a short-lived in-memory frame signature against baseline_id. Screenshots are written only under the OS temp directory, deleted after inline delivery, never stored in the HarmonyOS project, and all baseline metadata expires after ten minutes.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "capture",
+              "assert",
+              "compare"
+            ]
+          },
+          "hvd": {
+            "type": "string",
+            "description": "Exact device id; required when several devices are connected."
+          },
+          "selector": {
+            "type": "object",
+            "description": "Requires a non-empty key, text, or type.",
+            "properties": {
+              "key": {
+                "type": "string"
+              },
+              "text": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string"
+              },
+              "clickableOnly": {
+                "type": "boolean"
+              },
+              "textMode": {
+                "type": "string",
+                "enum": [
+                  "exact",
+                  "contains"
+                ]
+              },
+              "checked": {
+                "type": "boolean",
+                "description": "Require an explicitly reported checked state; missing state never matches false."
+              },
+              "selected": {
+                "type": "boolean"
+              },
+              "enabled": {
+                "type": "boolean"
+              },
+              "value": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "number"
+                  }
+                ]
+              }
+            },
+            "additionalProperties": false
+          },
+          "success_state": {
+            "type": "string",
+            "enum": [
+              "visible",
+              "hidden"
+            ]
+          },
+          "visual_prompt": {
+            "type": "string",
+            "description": "Appearance requirement for the host AI to judge from the returned image."
+          },
+          "baseline_id": {
+            "type": "string",
+            "description": "Snapshot id returned by capture/assert. Required for compare."
+          },
+          "expect": {
+            "type": "string",
+            "enum": [
+              "changed",
+              "unchanged"
+            ]
+          },
+          "width": {
+            "type": "integer",
+            "minimum": 64,
+            "maximum": 4096
+          },
+          "inline": {
+            "type": "boolean"
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "minimum": 1000,
+            "maximum": 600000
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  ],
+  "scripts": [
+    {
+      "id": "copy_template",
+      "response": {
+        "scripts": [
+          {
+            "id": "copy_template",
+            "skill": "deveco-create-project",
+            "file": "skills/deveco-create-project/scripts/copy-template.mjs",
+            "runtime": "node",
+            "description": "Copy the bundled ArkTS project template and resolve its SDK metadata.",
+            "argsSchema": {
+              "type": "object",
+              "properties": {
+                "projectPath": {
+                  "type": "string",
+                  "minLength": 1,
+                  "pattern": "^[^\\u0000]+$",
+                  "description": "copy_template: parent directory for the new app."
+                },
+                "appName": {
+                  "type": "string",
+                  "minLength": 1,
+                  "pattern": "^[A-Za-z][A-Za-z0-9_]{0,127}$",
+                  "description": "copy_template: new app directory name."
+                },
+                "apiLevel": {
+                  "type": "integer",
+                  "minimum": 17,
+                  "description": "copy_template: API level; defaults to the installed SDK."
+                },
+                "bundleName": {
+                  "type": "string",
+                  "minLength": 7,
+                  "maxLength": 128,
+                  "pattern": "^[A-Za-z](?:[A-Za-z0-9_]*[A-Za-z0-9])?(?:\\.[A-Za-z0-9](?:[A-Za-z0-9_]*[A-Za-z0-9])?){2,}$"
+                }
+              },
+              "required": [
+                "projectPath",
+                "appName"
+              ],
+              "additionalProperties": false
+            },
+            "argvFlags": {
+              "projectPath": "--project-path",
+              "appName": "--app-name",
+              "apiLevel": "--api-level",
+              "bundleName": "--bundle-name"
+            },
+            "example": {
+              "script": "copy_template",
+              "args": {
+                "projectPath": ".",
+                "appName": "SampleApp"
+              }
+            },
+            "notes": "Use either args or argv. Paths resolve against the active project, or the pack root when none is selected."
+          }
+        ],
+        "count": 1
+      }
+    },
+    {
+      "id": "detect_sdk",
+      "response": {
+        "scripts": [
+          {
+            "id": "detect_sdk",
+            "skill": "deveco-create-project",
+            "file": "skills/deveco-create-project/scripts/detect-sdk.mjs",
+            "runtime": "node",
+            "description": "Detect the API level and SDK metadata from configured DevEco Studio or Command Line Tools.",
+            "argsSchema": {
+              "type": "object",
+              "properties": {},
+              "required": [],
+              "additionalProperties": false
+            },
+            "argvFlags": {},
+            "example": {
+              "script": "detect_sdk",
+              "args": {}
+            },
+            "notes": "Use either args or argv. Paths resolve against the active project, or the pack root when none is selected."
+          }
+        ],
+        "count": 1
+      }
+    },
+    {
+      "id": "collect_hilog",
+      "response": {
+        "scripts": [
+          {
+            "id": "collect_hilog",
+            "skill": "arkts-runtime-fix",
+            "file": "skills/arkts-runtime-fix/scripts/collect-hilog.mjs",
+            "runtime": "node",
+            "description": "Collect a bounded HILOG snapshot from a connected HarmonyOS device.",
+            "argsSchema": {
+              "type": "object",
+              "properties": {
+                "deviceId": {
+                  "type": "string",
+                  "pattern": "^[^\\u0000]*$",
+                  "description": "Device scripts: HDC ID; omit for a single connected device."
+                },
+                "outputDir": {
+                  "type": "string",
+                  "minLength": 1,
+                  "pattern": "^[^\\u0000]+$",
+                  "description": "collect_hilog/fetch_faultlog: local output directory."
+                },
+                "lines": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 10000,
+                  "description": "Hilog lines, default 4000; jscrash_report minimum 200."
+                }
+              },
+              "required": [
+                "outputDir"
+              ],
+              "additionalProperties": false
+            },
+            "argvFlags": {
+              "deviceId": "--device-id",
+              "outputDir": "--output-dir",
+              "lines": "--lines"
+            },
+            "example": {
+              "script": "collect_hilog",
+              "args": {
+                "outputDir": "./logs",
+                "lines": 4000
+              }
+            },
+            "notes": "Use either args or argv. Paths resolve against the active project, or the pack root when none is selected."
+          }
+        ],
+        "count": 1
+      }
+    },
+    {
+      "id": "fetch_faultlog",
+      "response": {
+        "scripts": [
+          {
+            "id": "fetch_faultlog",
+            "skill": "arkts-runtime-fix",
+            "file": "skills/arkts-runtime-fix/scripts/fetch-faultlog.mjs",
+            "runtime": "node",
+            "description": "Fetch a named faultlogger file from a connected HarmonyOS device.",
+            "argsSchema": {
+              "type": "object",
+              "properties": {
+                "deviceId": {
+                  "type": "string",
+                  "pattern": "^[^\\u0000]*$",
+                  "description": "Device scripts: HDC ID; omit for a single connected device."
+                },
+                "faultlogName": {
+                  "type": "string",
+                  "minLength": 1,
+                  "pattern": "^[A-Za-z0-9._-]+$",
+                  "description": "fetch_faultlog: filename from probe_faultlogger, without a directory."
+                },
+                "outputDir": {
+                  "type": "string",
+                  "minLength": 1,
+                  "pattern": "^[^\\u0000]+$",
+                  "description": "collect_hilog/fetch_faultlog: local output directory."
+                }
+              },
+              "required": [
+                "faultlogName",
+                "outputDir"
+              ],
+              "additionalProperties": false
+            },
+            "argvFlags": {
+              "deviceId": "--device-id",
+              "faultlogName": "--faultlog-name",
+              "outputDir": "--output-dir"
+            },
+            "example": {
+              "script": "fetch_faultlog",
+              "args": {
+                "faultlogName": "jscrash-com.example.app-20010000-1788500000000.log",
+                "outputDir": "./logs"
+              }
+            },
+            "notes": "Use either args or argv. Paths resolve against the active project, or the pack root when none is selected."
+          }
+        ],
+        "count": 1
+      }
+    },
+    {
+      "id": "jscrash_report",
+      "response": {
+        "scripts": [
+          {
+            "id": "jscrash_report",
+            "skill": "arkts-runtime-fix",
+            "file": "skills/arkts-runtime-fix/scripts/jscrash-report.mjs",
+            "runtime": "node",
+            "description": "Collect or analyze a JS crash report and produce structured diagnostics.",
+            "argsSchema": {
+              "type": "object",
+              "properties": {
+                "deviceId": {
+                  "type": "string",
+                  "pattern": "^[^\\u0000]*$",
+                  "description": "Device scripts: HDC ID; omit for a single connected device."
+                },
+                "bundleName": {
+                  "type": "string",
+                  "pattern": "^[^\\u0000]*$",
+                  "description": "App bundle ID; optional crash filter or template identifier."
+                },
+                "processHint": {
+                  "type": "string",
+                  "pattern": "^[^\\u0000]*$",
+                  "description": "Crash parser: process name filter."
+                },
+                "logFile": {
+                  "type": "string",
+                  "minLength": 1,
+                  "pattern": "^[^\\u0000]+$",
+                  "description": "Crash log path, relative to the active project or absolute."
+                },
+                "logText": {
+                  "type": "string",
+                  "minLength": 1,
+                  "pattern": "^[^\\u0000]+$",
+                  "description": "Inline crash log; mutually exclusive with logFile."
+                },
+                "lines": {
+                  "type": "integer",
+                  "minimum": 200,
+                  "maximum": 10000,
+                  "description": "Hilog lines, default 4000; jscrash_report minimum 200."
+                },
+                "includeText": {
+                  "type": "boolean",
+                  "description": "Crash parser: also return a readable report."
+                }
+              },
+              "required": [],
+              "additionalProperties": false,
+              "not": {
+                "required": [
+                  "logFile",
+                  "logText"
+                ]
+              }
+            },
+            "argvFlags": {
+              "deviceId": "--device-id",
+              "bundleName": "--bundle-name",
+              "processHint": "--process-hint",
+              "logFile": "--log-file",
+              "logText": "--log-text",
+              "lines": "--lines",
+              "includeText": "--include-text"
+            },
+            "example": {
+              "script": "jscrash_report",
+              "args": {
+                "logFile": "./logs/crash.log"
+              }
+            },
+            "notes": "Use either args or argv. Paths resolve against the active project, or the pack root when none is selected. Without a log source this script collects device Hilog."
+          }
+        ],
+        "count": 1
+      }
+    },
+    {
+      "id": "parse_jscrash_log",
+      "response": {
+        "scripts": [
+          {
+            "id": "parse_jscrash_log",
+            "skill": "arkts-runtime-fix",
+            "file": "skills/arkts-runtime-fix/scripts/parse-jscrash-log.mjs",
+            "runtime": "node",
+            "description": "Parse a JS crash log from a file or inline text.",
+            "argsSchema": {
+              "type": "object",
+              "properties": {
+                "logFile": {
+                  "type": "string",
+                  "minLength": 1,
+                  "pattern": "^[^\\u0000]+$",
+                  "description": "Crash log path, relative to the active project or absolute."
+                },
+                "logText": {
+                  "type": "string",
+                  "minLength": 1,
+                  "pattern": "^[^\\u0000]+$",
+                  "description": "Inline crash log; mutually exclusive with logFile."
+                },
+                "bundleName": {
+                  "type": "string",
+                  "pattern": "^[^\\u0000]*$",
+                  "description": "App bundle ID; optional crash filter or template identifier."
+                },
+                "processHint": {
+                  "type": "string",
+                  "pattern": "^[^\\u0000]*$",
+                  "description": "Crash parser: process name filter."
+                },
+                "source": {
+                  "type": "string",
+                  "pattern": "^[^\\u0000]*$",
+                  "description": "parse_jscrash_log: source label; defaults to file or text."
+                },
+                "device": {
+                  "type": "string",
+                  "pattern": "^[^\\u0000]*$",
+                  "description": "parse_jscrash_log: device label in the report; does not contact a device."
+                },
+                "includeText": {
+                  "type": "boolean",
+                  "description": "Crash parser: also return a readable report."
+                }
+              },
+              "required": [],
+              "additionalProperties": false,
+              "oneOf": [
+                {
+                  "required": [
+                    "logFile"
+                  ]
+                },
+                {
+                  "required": [
+                    "logText"
+                  ]
+                }
+              ]
+            },
+            "argvFlags": {
+              "logFile": "--log-file",
+              "logText": "--log-text",
+              "bundleName": "--bundle-name",
+              "processHint": "--process-hint",
+              "source": "--source",
+              "device": "--device",
+              "includeText": "--include-text"
+            },
+            "example": {
+              "script": "parse_jscrash_log",
+              "args": {
+                "logText": "Error name: TypeError\nError message: Example crash\nStacktrace:\nat run (pages/Index.ets:12:5)"
+              }
+            },
+            "notes": "Use either args or argv. Paths resolve against the active project, or the pack root when none is selected."
+          }
+        ],
+        "count": 1
+      }
+    },
+    {
+      "id": "probe_faultlogger",
+      "response": {
+        "scripts": [
+          {
+            "id": "probe_faultlogger",
+            "skill": "arkts-runtime-fix",
+            "file": "skills/arkts-runtime-fix/scripts/probe-faultlogger.mjs",
+            "runtime": "node",
+            "description": "Probe recent faultlogger entries on a connected HarmonyOS device.",
+            "argsSchema": {
+              "type": "object",
+              "properties": {
+                "deviceId": {
+                  "type": "string",
+                  "pattern": "^[^\\u0000]*$",
+                  "description": "Device scripts: HDC ID; omit for a single connected device."
+                },
+                "bundleName": {
+                  "type": "string",
+                  "pattern": "^[^\\u0000]*$",
+                  "description": "App bundle ID; optional crash filter or template identifier."
+                },
+                "maxAgeMinutes": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 9007199254740991,
+                  "description": "probe_faultlogger: age limit, default 30; 0 includes all history."
+                },
+                "limit": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 9007199254740991,
+                  "description": "probe_faultlogger: maximum candidates, default 10."
+                }
+              },
+              "required": [],
+              "additionalProperties": false
+            },
+            "argvFlags": {
+              "deviceId": "--device-id",
+              "bundleName": "--bundle-name",
+              "maxAgeMinutes": "--max-age-minutes",
+              "limit": "--limit"
+            },
+            "example": {
+              "script": "probe_faultlogger",
+              "args": {
+                "bundleName": "com.example.app",
+                "maxAgeMinutes": 30
+              }
+            },
+            "notes": "Use either args or argv. Paths resolve against the active project, or the pack root when none is selected."
+          }
+        ],
+        "count": 1
+      }
+    }
+  ],
+  "inventory_sha256": "f6bebe2a202f6d9a5262a4185f5b8d312fb1515022358a1a9507cbb9449b4f42"
+}

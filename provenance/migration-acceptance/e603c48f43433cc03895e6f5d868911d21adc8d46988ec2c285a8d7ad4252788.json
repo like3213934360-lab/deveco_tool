@@ -1,0 +1,42 @@
+{
+  "format": 1,
+  "passed": true,
+  "source": "tools:start_app",
+  "row_sha256": "351eacb37bcfb455eec30da63f2fc3c98ee9ab40ac20796b492ca614f9aeafbb",
+  "tested": {
+    "runtime_sha256": "a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b",
+    "compiled_sha256": "d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c",
+    "package_lock_sha256": "68641e488a5099852216d3003664f57dd1d05b980f4c7813ee75dd7baf83d0fc",
+    "resource_manifest_sha256": "563bc3f06565e92c59c621c3ef909a37cbc4ac1db958d3d73d6e0bc99bf9ed86",
+    "upstream_lock_sha256": "bf3cc411831bd8ce6652a8085c8247c399d0c48b6d73156a7e649b9ef668164e"
+  },
+  "reviewer": "Codex native module target review 2026-09-09",
+  "reason": "Validated explicit product and module_targets selection through current project/context/recovery/deploy regressions and the 49-observation real SDK multimodule collector. Both default and tablet products select default or preview independently of HDC. HAR/HSP/HAP output paths and entry/shared dependency closure are verified. Each of four three-package sets is individually signed with existing personal material, verified by the real SDK, installed once on the dedicated phone, resumed from a completed install receipt after response loss, launched and checked against the final ModuleEvidence text assertion. This accepts the declared start_app replacement scenarios on this macOS SDK and phone; it does not assert all-platform SDK support or every interruption window.",
+  "completed_scenarios": [
+    "签名包真实安装启动",
+    "多模块包选择",
+    "显式构建目标选择：旧 target 不得误映射为 HDC 设备，覆盖同一产品的多个模块目标"
+  ],
+  "checks": [
+    {
+      "check": "test/native-deploy.test.ts",
+      "original_sha256": "bc45aa8276637516b8a1ada178d37a5f22194e33408cd93c10b24a25e94e3ee9"
+    },
+    {
+      "check": "test/native-project.test.ts",
+      "original_sha256": "bc45aa8276637516b8a1ada178d37a5f22194e33408cd93c10b24a25e94e3ee9"
+    },
+    {
+      "check": "test/native-context.test.ts",
+      "original_sha256": "bc45aa8276637516b8a1ada178d37a5f22194e33408cd93c10b24a25e94e3ee9"
+    },
+    {
+      "check": "test/native-project-recovery.test.ts",
+      "original_sha256": "bc45aa8276637516b8a1ada178d37a5f22194e33408cd93c10b24a25e94e3ee9"
+    },
+    {
+      "check": "scripts/native-multimodule-acceptance.ts",
+      "original_sha256": "41a260e97b9bf1b354f9376ce5576705f63726351dfb708b46d6c49407b08b54"
+    }
+  ]
+}

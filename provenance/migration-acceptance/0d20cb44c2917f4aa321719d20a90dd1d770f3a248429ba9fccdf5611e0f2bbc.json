@@ -1,0 +1,36 @@
+{
+  "format": 1,
+  "passed": true,
+  "source": "tools:verify_ui",
+  "row_sha256": "d04980991b34aa7b0667d5809a203ea86d1fffe2833db2eaddb7523003d00fe0",
+  "tested": {
+    "runtime_sha256": "0adac632b689bf66af02e807119dcdc70e71dee617cd00df25cb969f9f8372a1",
+    "compiled_sha256": "5e3a48daa0881876eea7c35a1aabf9858d660d0d1e06028ee6402abce004b69e",
+    "package_lock_sha256": "68641e488a5099852216d3003664f57dd1d05b980f4c7813ee75dd7baf83d0fc",
+    "resource_manifest_sha256": "563bc3f06565e92c59c621c3ef909a37cbc4ac1db958d3d73d6e0bc99bf9ed86",
+    "upstream_lock_sha256": "bf3cc411831bd8ce6652a8085c8247c399d0c48b6d73156a7e649b9ef668164e"
+  },
+  "reviewer": "Codex current native runtime evidence review",
+  "reason": "Current 354-test regression and eight actual stdio MCP observations on the isolated emulator verify control assertions, retained independent visual-review requirements, native JPEG/PNG ImageContent, complete artifact bytes and Worker/full MCP restart persistence. Required visual review is not marked completed by image capture or a passing control assertion. This refreshes the existing protocol contract without claiming multiple physical displays.",
+  "completed_scenarios": [
+    "当前版本控件断言、截图和外观要求分离、原生 MCP 图片与重启后制品读取复验"
+  ],
+  "checks": [
+    {
+      "check": "test/native-verification.test.ts",
+      "original_sha256": "302a2768354cde8402d486ae4ab079eec0a151a1f9f913f59f5898cc8b29e1aa"
+    },
+    {
+      "check": "test/native-screenshot.test.ts",
+      "original_sha256": "302a2768354cde8402d486ae4ab079eec0a151a1f9f913f59f5898cc8b29e1aa"
+    },
+    {
+      "check": "test/native-retention.test.ts",
+      "original_sha256": "302a2768354cde8402d486ae4ab079eec0a151a1f9f913f59f5898cc8b29e1aa"
+    },
+    {
+      "check": "scripts/native-visual-review-acceptance.ts",
+      "original_sha256": "fc2b057bb7e73443ecfee477d67bb463a82b92f7b95739d7effa829142886963"
+    }
+  ]
+}

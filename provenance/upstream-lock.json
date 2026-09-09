@@ -1,0 +1,25 @@
+{
+  "format": 1,
+  "sources": [
+    {
+      "id": "deveco-code",
+      "url": "https://gitcode.com/openharmony-sig/deveco-code.git",
+      "ref": "refs/heads/develop",
+      "commit": "325aff05706b9b04a9816a987e9672dda991c630",
+      "tree": "9232f44a15bed9f948662af74f23264b34be457c",
+      "version": "325aff05706b9b04a9816a987e9672dda991c630",
+      "role": "resource_source",
+      "acceptance": "verified"
+    },
+    {
+      "id": "deveco-cli",
+      "url": "https://gitcode.com/openharmony-sig/deveco-cli.git",
+      "ref": "refs/heads/develop",
+      "commit": "08c2f57ffbe83c817d64a728a17971872dd9ddcf",
+      "tree": "36fc532ea8ddb6c4eec3168e6301d0240e61b45d",
+      "version": "1.3.3-Test.1",
+      "role": "protocol_reference",
+      "acceptance": "verified"
+    }
+  ]
+}

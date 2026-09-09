@@ -1,0 +1,25 @@
+{
+  "format": 1,
+  "passed": true,
+  "source": "scripts:jscrash_report",
+  "row_sha256": "16dc2fca12b0a7e5d9c6402680b7f32cb1d955a185992e22412f63ba068dece5",
+  "tested": {
+    "runtime_sha256": "b26deea68ae317436aafee4d904b410a415c8719ba1cdede068b627b92fbb24b",
+    "compiled_sha256": "8ad78c9793841d8379cdbaa44876aeaa129ee54539ea5c5a6d554b6bb79df296",
+    "package_lock_sha256": "68641e488a5099852216d3003664f57dd1d05b980f4c7813ee75dd7baf83d0fc",
+    "resource_manifest_sha256": "563bc3f06565e92c59c621c3ef909a37cbc4ac1db958d3d73d6e0bc99bf9ed86",
+    "upstream_lock_sha256": "bf3cc411831bd8ce6652a8085c8247c399d0c48b6d73156a7e649b9ef668164e"
+  },
+  "reviewer": "Codex reviewed acceptance",
+  "reason": "Current dev27 regression and actual MCP/Worker revalidation pass after bounded LSP idle-session reclamation. The immutable failed Hilog and independently captured real fault report retain matching application, PID, message and source location; raw-log replay, named-fault workflow, 54 knowledge checks and 7 ranking checks reran against the current compiled identity. Historical capture bytes remain clearly distinguished from current execution. All original completed scenarios and full-reference assertions are retained.",
+  "completed_scenarios": [
+    "应用栈帧位置排序和知识建议完整性对照",
+    "真实崩溃与进程交错日志验收"
+  ],
+  "checks": [
+    {
+      "check": "test/native-logs.test.ts",
+      "original_sha256": "e15d0fba36ae60eae0a0b294f4e1e2f9aaa6d1ac439c435b3311af6673887d98"
+    }
+  ]
+}

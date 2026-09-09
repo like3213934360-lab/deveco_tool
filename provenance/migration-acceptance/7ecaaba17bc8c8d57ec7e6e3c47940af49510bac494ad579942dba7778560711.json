@@ -1,0 +1,25 @@
+{
+  "format": 1,
+  "passed": true,
+  "source": "scripts:parse_jscrash_log",
+  "row_sha256": "a45948c4d28ebfb27873d42f2f500d869f152b05e8d39535dd724d8960788811",
+  "tested": {
+    "runtime_sha256": "ea5cfedd06cdcc81a2e03fe7ea844025a1a39630b8b7ffb979798785863e1a21",
+    "compiled_sha256": "20fd6bfce961fbe22e87e1f3d6257e6624acb72cf8704cf341aed1e1da62ccd4",
+    "package_lock_sha256": "68641e488a5099852216d3003664f57dd1d05b980f4c7813ee75dd7baf83d0fc",
+    "resource_manifest_sha256": "563bc3f06565e92c59c621c3ef909a37cbc4ac1db958d3d73d6e0bc99bf9ed86",
+    "upstream_lock_sha256": "bf3cc411831bd8ce6652a8085c8247c399d0c48b6d73156a7e649b9ef668164e"
+  },
+  "reviewer": "Codex reviewed acceptance",
+  "reason": "Current compiled regression and actual MCP/Worker acceptance pass. An actual isolated application crash produced unmodified multi-process Hilog and an independently named fault report with matching bundle, PID, message and source coordinates. Failed historical Hilog now replays correctly after strict AppKit attribution repair. Six stack cases were compared with the frozen baseline; application locations are preserved and Unicode, dependency-only and invalid-coordinate differences explicitly reviewed. All nine complete knowledge references are byte-identical to the frozen baseline and readable via MCP; 45 independently supplied examples cover all 45 table rows, preserving complete conclusions and suggestions without claiming verified root causes.",
+  "completed_scenarios": [
+    "应用栈帧位置排序和知识建议完整性对照",
+    "真实崩溃与进程交错日志验收"
+  ],
+  "checks": [
+    {
+      "check": "test/native-logs.test.ts",
+      "original_sha256": "9d50681107ef27bcd681142196ad7fc6b97e49ef0cf0f739d275865f90245b7e"
+    }
+  ]
+}

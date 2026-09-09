@@ -1,0 +1,28 @@
+{
+  "format": 1,
+  "passed": true,
+  "source": "tools:project_sync",
+  "row_sha256": "0d82ccf0d5dd6aeda25a1f358231b47262a176558e6b8a6e2a23061447b36c36",
+  "tested": {
+    "runtime_sha256": "b26deea68ae317436aafee4d904b410a415c8719ba1cdede068b627b92fbb24b",
+    "compiled_sha256": "8ad78c9793841d8379cdbaa44876aeaa129ee54539ea5c5a6d554b6bb79df296",
+    "package_lock_sha256": "68641e488a5099852216d3003664f57dd1d05b980f4c7813ee75dd7baf83d0fc",
+    "resource_manifest_sha256": "563bc3f06565e92c59c621c3ef909a37cbc4ac1db958d3d73d6e0bc99bf9ed86",
+    "upstream_lock_sha256": "bf3cc411831bd8ce6652a8085c8247c399d0c48b6d73156a7e649b9ef668164e"
+  },
+  "reviewer": "Codex current native runtime evidence review",
+  "reason": "Current 358-test regression and 45-observation actual SDK multimodule report verify both products and targets. Actual OHPM SIGKILL receipt cases resume completed work once, while a missing receipt remains needs_input without redispatch. Supplemental report SHA256 ef8af003a1e4c66fc2fa6b337904f69aad899140303c4189646d636f0328b9ab.",
+  "completed_scenarios": [
+    "多产品与 OHPM 中断恢复"
+  ],
+  "checks": [
+    {
+      "check": "test/native-project.test.ts",
+      "original_sha256": "e15d0fba36ae60eae0a0b294f4e1e2f9aaa6d1ac439c435b3311af6673887d98"
+    },
+    {
+      "check": "scripts/native-multimodule-acceptance.ts",
+      "original_sha256": "f000902214fd7793ad805ffbccb257ec0c4884ab7b624f4d19b18c2c7da266fb"
+    }
+  ]
+}

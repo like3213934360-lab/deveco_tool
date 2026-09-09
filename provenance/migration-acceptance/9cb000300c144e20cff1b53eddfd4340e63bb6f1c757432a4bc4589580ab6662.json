@@ -1,0 +1,26 @@
+{
+  "format": 1,
+  "passed": true,
+  "source": "tools:switch_cwd",
+  "row_sha256": "109a14e3561f193a2e1fc119dab4a6794d2d8c11c078c318386a51246a27cde1",
+  "tested": {
+    "runtime_sha256": "b26deea68ae317436aafee4d904b410a415c8719ba1cdede068b627b92fbb24b",
+    "compiled_sha256": "8ad78c9793841d8379cdbaa44876aeaa129ee54539ea5c5a6d554b6bb79df296",
+    "package_lock_sha256": "68641e488a5099852216d3003664f57dd1d05b980f4c7813ee75dd7baf83d0fc",
+    "resource_manifest_sha256": "563bc3f06565e92c59c621c3ef909a37cbc4ac1db958d3d73d6e0bc99bf9ed86",
+    "upstream_lock_sha256": "bf3cc411831bd8ce6652a8085c8247c399d0c48b6d73156a7e649b9ef668164e"
+  },
+  "reviewer": "Codex current native runtime evidence review",
+  "reason": "Current 358-test regression reexecutes project selection, ambiguity refusal and frozen operation context. Changing the default project does not change already submitted product/module/target identity; only the existing accepted selection contract is refreshed.",
+  "completed_scenarios": [],
+  "checks": [
+    {
+      "check": "test/native-project.test.ts",
+      "original_sha256": "e15d0fba36ae60eae0a0b294f4e1e2f9aaa6d1ac439c435b3311af6673887d98"
+    },
+    {
+      "check": "test/native-context.test.ts",
+      "original_sha256": "e15d0fba36ae60eae0a0b294f4e1e2f9aaa6d1ac439c435b3311af6673887d98"
+    }
+  ]
+}
