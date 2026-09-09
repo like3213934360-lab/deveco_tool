@@ -10,7 +10,7 @@ node dist/scripts/upstream.js gate deveco-code /absolute/new-candidate/candidate
 node dist/scripts/upstream.js pr deveco-code /absolute/new-candidate/candidate.json --dispatch-validation
 ```
 
-检测固定源锁中的观察引用，下载只供读取的裸 Git 对象，输出 detection.json、candidate.json 和 UPGRADE.md；未变化不建空候选。`gate` 对未映射变化退出 2，对待适配候选退出 1。PR 命令需要 `gh` 认证及 `GH_REPO`，只准备候选草稿，不自动合并。相同报告复用已有 PR，响应丢失时核对远程状态。迁移尚未合并时可用 `--base codex/native-typescript-runtime`。
+检测固定源锁中的观察引用，下载只供读取的裸 Git 对象，输出 detection.json、candidate.json 和 UPGRADE.md；未变化不建空候选。`gate` 对未映射变化退出 2，对待适配候选退出 1。PR 命令需要 `gh` 认证及 `GH_REPO`，只准备候选草稿，不自动合并。相同报告复用已有 PR，响应丢失时核对远程状态。核心迁移已合入 main，原开发分支已删除；后续候选以 main 为基线。
 
 ## 编写并应用适配
 
