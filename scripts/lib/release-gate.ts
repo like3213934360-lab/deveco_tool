@@ -86,5 +86,5 @@ export function releaseGate(root: string, evidenceRoot: string, raw: unknown) {
   sameIdentity(performance.tested, tested);
   const soak = validateSoak(rawReference(evidenceRoot, manifest.soak));
   sameIdentity(soak.tested, tested);
-  return { passed: true, release, protocol: protocolVersion, tested, manifest_sha256: digest(manifest), distribution_sha256: manifest.distribution_sha256, regression, acceptance_cases: cases.size };
+  return { passed: true, release, protocol: protocolVersion, tested, manifest_sha256: digest(manifest), distribution_sha256: manifest.distribution_sha256, regression, acceptance_cases: cases.size, performance_observations: performance.observations };
 }

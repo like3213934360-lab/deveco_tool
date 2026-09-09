@@ -21,13 +21,24 @@ test("performance gate rejects missing capabilities, unequal inputs, invented ph
   const duplicate = performanceFixture(); duplicate.direct[1]!.capability = duplicate.direct[0]!.capability;
   assert.throws(() => validatePerformance(duplicate), { code: "RELEASE_PERFORMANCE_COVERAGE" });
   const inputs = performanceFixture(); inputs.direct[0]!.baseline_input_sha256 = "b".repeat(64);
-  assert.throws(() => validatePerformance(inputs), { code: "RELEASE_DIRECT_REGRESSION" });
+  assert.throws(() => validatePerformance(inputs), { code: "RELEASE_DIRECT_COMPARISON" });
   const cold = performanceFixture(); cold.cold.native.total_ms[0] = 121;
   assert.throws(() => validatePerformance(cold), { code: "RELEASE_COLD_SAMPLES" });
   const rss = performanceFixture(); rss.ui[0]!.native.queries[0]!.rss_bytes[0] = 0;
   assert.throws(() => validatePerformance(rss), { code: "RELEASE_UI_SAMPLE_MISSING" });
-  const slow = performanceFixture(); slow.direct[0]!.native_ms.fill(1.051);
-  assert.throws(() => validatePerformance(slow), { code: "RELEASE_DIRECT_REGRESSION" });
+  const zero = performanceFixture(); zero.direct[0]!.baseline_ms.fill(0);
+  assert.throws(() => validatePerformance(zero), { code: "RELEASE_DIRECT_COMPARISON" });
+});
+
+test("relative latency remains visible without an unapproved release threshold", () => {
+  for (const nativeMs of [0.5, 1.051, 2.5]) {
+    const report = performanceFixture(); report.direct[0]!.native_ms.fill(nativeMs);
+    const observed = validatePerformance({ ...report, observations: [{ ratio: 0 }] }).observations[0]!;
+    assert.equal(observed.native_p95_ms, nativeMs);
+    assert.equal(observed.baseline_p95_ms, 1);
+    assert.equal(observed.delta_ms, nativeMs - 1);
+    assert.equal(observed.ratio, nativeMs);
+  }
 });
 
 const oldSigningTool = {
@@ -49,7 +60,9 @@ test("new-operation sampling requires the exact frozen public contract and canno
   assert.throws(() => validatePerformance({ ...report, direct: report.direct.map((item) => item === fresh ? { ...fresh, native_ms: samples(999) } : item) }));
   assert.throws(() => validatePerformance({ ...report, direct: report.direct.map((item) => item === fresh ? { ...fresh, baseline_ms: samples(1000) } : item) }));
   assert.throws(() => validatePerformance({ ...report, direct: report.direct.map((item) => item.capability === "ui_find" ? { ...fresh, capability: "ui_find" } : item) }));
-  assert.throws(() => validatePerformance({ ...report, direct: report.direct.map((item) => item.capability === "ui_find" ? { ...item, native_ms: samples(1000, 1.051) } : item) }), { code: "RELEASE_DIRECT_REGRESSION" });
+  const observations = validatePerformance({ ...report, direct: report.direct.map((item) => item.capability === "ui_find" ? { ...item, native_ms: samples(1000, 1.051) } : item) }).observations;
+  assert.equal(observations.find((item) => item.capability === "ui_find")!.ratio, 1.051);
+  assert.deepEqual(observations.find((item) => item.capability === "app_signature.inspect"), { capability: "app_signature.inspect", comparison: "new", native_p95_ms: 1 });
 });
 
 test("benchmark plans reject missing baseline steps and arbitrary unpaired capabilities", () => {

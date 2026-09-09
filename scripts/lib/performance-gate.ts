@@ -31,7 +31,7 @@ export function validatePerformance(raw: unknown) {
     if (item.comparison === "new") {
       invariant(item.baseline_absence.commit === report.baseline.commit, "RELEASE_BASELINE_CONTRACT", "Absent-operation evidence belongs to another baseline");
     } else {
-      invariant(item.input_sha256 === item.baseline_input_sha256 && p95(item.baseline_ms) > 0 && p95(item.native_ms) <= p95(item.baseline_ms) * 1.05, "RELEASE_DIRECT_REGRESSION", `Direct capability exceeds 5% P95 budget: ${item.capability}`);
+      invariant(item.input_sha256 === item.baseline_input_sha256 && p95(item.baseline_ms) > 0, "RELEASE_DIRECT_COMPARISON", `Direct comparison requires identical inputs and a positive baseline P95: ${item.capability}`);
     }
   }
   invariant(new Set(report.ui.map((item) => item.size)).size === 3, "RELEASE_UI_PERFORMANCE", "Three distinct UI size classes are required");
@@ -44,5 +44,13 @@ export function validatePerformance(raw: unknown) {
     }
     invariant(digest(row.native.queries.map(({ input, result_count }) => ({ input, result_count }))) === digest(row.baseline.queries.map(({ input, result_count }) => ({ input, result_count }))), "RELEASE_UI_RESULT_CHANGED", "UI comparisons must check identical selectors and result counts");
   }
-  return report;
+  // Relative latency is an observation, not a user-approved release budget.
+  // Derive summaries from the checked samples, ignoring supplied summaries.
+  const observations = report.direct.map((item) => {
+    const native_p95_ms = p95(item.native_ms);
+    if (item.comparison === "new") return { capability: item.capability, comparison: item.comparison, native_p95_ms };
+    const baseline_p95_ms = p95(item.baseline_ms);
+    return { capability: item.capability, comparison: item.comparison, native_p95_ms, baseline_p95_ms, delta_ms: native_p95_ms - baseline_p95_ms, ratio: native_p95_ms / baseline_p95_ms };
+  });
+  return { ...report, observations };
 }
