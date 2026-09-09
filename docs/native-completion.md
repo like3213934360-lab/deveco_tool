@@ -514,3 +514,11 @@ README 已改用当前 16 项凭证与 3 项历史凭证的实际归属，注明
 使用未修改的 `native-ui-benchmark` 与 `native-orchestration-benchmark` 入口，在当前 `85a5e037` / `c9fc32c4`、Node24.14.1 下完成采样，两份原始报告均 `passed:true`。三种 UI 树每版各 30 次解析、四种选择器各 1,000 次查询保留延迟、CPU/RSS；编排、SQLite 检查点往返和持久化图各 1,000 次。子进程结束，临时编排状态关闭并清理，没有执行设备操作。
 
 报告为 `20260909-main-ui-benchmark-bc68e0c-1.json`（SHA-256 `fc25c4dee7cc1eb37d8a17e435acb9ff8925510c941c0998611ec3f34f95879e`）和 `20260909-main-orchestration-benchmark-bc68e0c-1.json`（SHA-256 `7221705e8068de659d89ef0efb105cb6b92adc70496ce1addd6dffedf6ea32a4`）。绝对 P95 和准确的计时/断言范围见 [UI 性能记录](native-ui-performance.md)。不由离线算法采样接收实时设备或完整 MCP 能力，迁移仍为 19 verified / 28 pending。
+
+## main 上游工作流实际权限与直接能力采样复核（2026-09-09）
+
+main `45ef2b1` 的候选工作流 `34311990244` 通过，使用工作流自身 `github.token` 创建两个机器人草稿并显式派发候选验证。PR #3（deveco-cli）与 PR #4（deveco-code）均只新增候选报告和升级说明；远端报告与下载的 Actions 制品逐字段一致，序列化字段顺序不同，因此分别保留原始文件摘要。私有目录 `20260909-main-upstream-workflow-34311990244` 中 `review-4/review.private.json` 的 SHA-256 为 `ec96be02bb687ef78824ad113f4f8c89e3c94839d511c0483fca1cfb554a9bb9`。前几次只读复核的文件数假设、网络 EOF 和字节序列比较失败保留；没有修改候选报告来通过复核。
+
+该结果补齐默认分支实际令牌创建与派发权限；不证明 cron 调度、候选接收或最终发布。两个候选验证分别因原有凭证过期和缺少候选适配文件而失败，实际检测结果与 CI 首个失败点分别记录在 [上游流程](native-upstream-upgrades.md)。原始失败日志已保存，当前活动源锁摘要仍为 `bf3cc411`，迁移凭证及既有基线接收状态未改变。
+
+当前非设备直接能力采样第一轮因 ArkTS SDK 命令超时失败，系统睡眠日志与失败请求的五分钟窗口重叠；原始失败报告保留。第二轮使用新目录和仅限采样进程生命周期的接电防休眠断言继续执行。两轮均显式限定 9/19 能力，未执行设备路径；当前尚无终态通过结论。完整计划、88 项输入核对、驱动变更与限制见 [UI 性能记录](native-ui-performance.md)。

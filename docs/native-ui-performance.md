@@ -57,6 +57,14 @@ node dist/scripts/native-sdk-soak.js /absolute/new-soak-directory 3600 /absolute
 
 原始报告位于 acceptance 目录：`20260909-main-ui-benchmark-bc68e0c-1.json`（SHA-256 `fc25c4dee7cc1eb37d8a17e435acb9ff8925510c941c0998611ec3f34f95879e`）与 `20260909-main-orchestration-benchmark-bc68e0c-1.json`（SHA-256 `7221705e8068de659d89ef0efb105cb6b92adc70496ce1addd6dffedf6ea32a4`）。完整 19 项直接能力及当前版本长稳仍未完成；5% 相对阈值已撤销，历史报告保留其当时判断。
 
+## main 非设备直接能力采样的睡眠中断（2026-09-09）
+
+`20260909-main-desktop-benchmark-bc68e0c-1` 从已校验的 19 项完整计划中显式选择 9 项不操作设备的能力，保留其余 10 项未执行的范围。冷启动及 doctor、LSP 的逐版采样已完成，ArkTS 检查在旧版 100 次、新版 72 次后以 `BENCHMARK_TOOL_FAILED` 结束。私有状态中的实际 SDK 错误为 `PROCESS_TIMEOUT`、SIGTERM，耗时 299,518 ms；原始报告 SHA-256 为 `17b442cda574c39b1d629f4128ff9cb03473563f222671dfba7225d9fd26baa9`，保持失败。
+
+系统电源日志记录本地时间 12:43:20 进入 Maintenance Sleep，12:48:21 唤醒；失败请求为 12:43:21.595 至 12:48:21.124，时间窗口重叠。`sleep-review.private.json` 保存该关联及 88 项输入摘要未变的核对结果；这支持存在系统睡眠干扰，不据此断定检查器本身超时，也不把已取得的部分样本当作完整通过。
+
+第二轮使用新目录 `20260909-main-desktop-benchmark-bc68e0c-2`，仅在采样进程存活且接电时以 `caffeinate -is` 阻止系统及用户空闲睡眠，不改全局电源配置。私有采集副本保留当前生产字节、每版 30 次冷启动、各能力 1,000 次、每 100 次交替和独立连接；每 10 次打印进度，仍按每 100 次保存报告。驱动和计划变更及各自摘要记录在 `driver-provenance.json`。终态尚未核对，不能记为通过；即使本轮选定范围完成，也只有 9/19 覆盖，不替代设备能力与一小时长稳。
+
 ## 2026-09-08 短查询与真机采样
 
 CPU 采样发现工具链发现反复经过 JSON5 词法解析。现对标准 JSON 优先使用原生解析，对 SDK 元数据按实际读取字节的 SHA-256 复用解析结果；缓存最多 128 项、4 MiB 源内容。每次发现仍读取当前文件，同长度、恢复时间戳的修改以及删除、非法内容不会命中旧身份。两项直接诊断样本中，工具链发现的 P95 从 3.483 ms 降到 0.514 ms；这是内部诊断，不代替完整 MCP 计时。

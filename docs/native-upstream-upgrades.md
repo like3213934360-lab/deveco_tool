@@ -85,7 +85,11 @@ node dist/scripts/upstream-gate.js
 
 `.github/workflows/upstream-candidates.yml` 每日或手动检测两项官方来源，根目录 `npm ci` 安装锁定依赖并编译，创建候选草稿。令牌能否在实际仓库创建 PR 由仓库权限决定，工作流失败会保留错误；不能把一次个人认证调用当成定时令牌的权限证明。
 
-仓库 Settings → Actions → General 需要允许 Actions 创建 PR。GitHub 将创建与批准 PR 合并为同一开关；默认工作流权限仍保持只读，候选工作流单独声明所需写权限，代码只创建草稿，不批准或合并。2026-09-08 已通过仓库 API 开启并回读确认，前后原始记录保存在私有验收目录 `20260908-native6-upstream-permissions-1`。这只验证设置；定时工作流仍须进入默认分支后，实际运行并验证工作流令牌创建候选。参见 [GitHub 仓库 Actions 权限说明](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/enabling-features-for-your-repository/managing-github-actions-settings-for-a-repository)。
+仓库 Settings → Actions → General 需要允许 Actions 创建 PR。GitHub 将创建与批准 PR 合并为同一开关；默认工作流权限仍保持只读，候选工作流单独声明所需写权限，代码只创建草稿，不批准或合并。2026-09-08 已通过仓库 API 开启并回读确认，前后原始记录保存在私有验收目录 `20260908-native6-upstream-permissions-1`。当时只验证设置；默认分支实际工作流令牌的创建证据见下段。参见 [GitHub 仓库 Actions 权限说明](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/enabling-features-for-your-repository/managing-github-actions-settings-for-a-repository)。
+
+2026-09-09 从 main `45ef2b1` 手动触发的[候选工作流 34311990244](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34311990244) 两个来源任务均成功，实际使用 `github.token` 创建机器人草稿 [CLI PR #3](https://github.com/like3213934360-lab/deveco_tool/pull/3) 与 [Code PR #4](https://github.com/like3213934360-lab/deveco_tool/pull/4)，随后显式派发对应候选头提交的校验。每个草稿仅新增候选报告与 UPGRADE.md，尚未合并。这证明本仓库当前工作流令牌的创建及派发权限，不证明 cron 事件已触发或候选适配已通过。
+
+两份校验均失败，保留准确的失败层次：CLI 检测报告有 10 项变化、7 项未映射，但[校验 34312031025](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34312031025) 实际先因既有基线凭证 `UPSTREAM_EVIDENCE_STALE` 停止；Code 检测的两项变化均属排除映射，[校验 34312033155](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34312033155) 因尚无候选 adaptation.json 返回 `ENOENT`。两者都不是已接受候选，原有活动源锁未改变。原始 Actions 制品、PR/校验元数据及失败日志保存在私有目录 `20260909-main-upstream-workflow-34311990244`；最终版本的既有基线凭证刷新仍按同版专项证据执行。
 
 `.github/workflows/native-ci.yml` 运行 macOS/Windows/Linux × Node 22/24 基础矩阵和安装检查。`upstream-scope.ts` 将框架版本升级与官方适配分开，初次建立源锁不视为普通升级。
 
