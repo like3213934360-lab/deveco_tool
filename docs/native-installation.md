@@ -18,6 +18,8 @@ ZIP 包含 package-lock.json（npm pack 默认会排除这个文件）。封装�
 
 运行基线为 Node 22.18+ 的 22 系列和 Node 24。每个操作系统、架构和 Node 主版本都在本机安装对应原生依赖，不复制别的机器的 node_modules。实际 SDK/设备支持证据与基础安装验收分别记录。
 
+安装时也须将选定 Node 的目录放在 `PATH` 首位，确认 `node --version` 后再运行 npm。仅用 Node 22/24 的绝对路径启动 `npm-cli.js` 不足以固定安装脚本的 Node：脚本仍可能从 `PATH` 找到系统 Node 26，生成与实际宿主 ABI 不匹配的 SQLite 模块。遇到这种情况，在正确的 `PATH` 下重新执行该独立安装目录的 `npm ci --omit=dev`，再完成 `native-installation-check`。
+
 ## 用户切换步骤
 
 1. 在旧版中结束或取消任务，停止热重载与 LSP 会话。

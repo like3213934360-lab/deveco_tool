@@ -350,3 +350,17 @@ dev25 无签名分支的连续多模块验收在第二个产品/目标的 C++ �
 两行崩溃迁移接收记录刷新到本身份，其余 17 行历史凭证未据此冒充当前完成，28 行 pending 保留。80 条上游映射复核后，13/34 项当前真实检查接收，本地上游门禁通过。提交 `5338861` 的 CI `34290431803` 六组均因过期上游评审而失败，本次修复凭证后需独立核对新一轮 CI；旧失败不覆盖。
 
 私有 `single-schema-prototype-dev26-1` 试验移除父进程普通输入重复校验，但非法签名请求在拒绝前创建了状态，合同测试失败，且三个 P95 仍退化，明确未采用。当前正式性能、最终候选安装、同版一小时长稳及其他平台真实 SDK 场景仍未完成，main 未合并。
+
+## dev27：平台、安装与恢复证据补充（2026-09-09）
+
+提交 `afe3070` 的 [CI 34291804767](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34291804767) 六组全部通过。下载的原始报告中，macOS/Linux × Node22/24 各 358 项，Windows × Node22/24 各 347 项适用回归通过，零失败、跳过；六组安装各 10 项、Windows 两组各 20 轮强杀压力检查通过。六份分发清单摘要均为 `90ddb32e57192bd4a2baf6190b2098d5ef2e164e027f944f9234be33fd716e47`，与当时本机封装候选一致。本次后续文档及凭证更新仍须最终重新封装。
+
+本机 `installation-dev27-1.json`、`node22-installation-dev27-1` 各通过 10 项。Node22 初次安装出现实际 SQLite ABI 不匹配：绝对路径启动 npm 仍让生命周期脚本从 PATH 使用 Node26。原失败保存在 `node22-install-preparation-dev27-1`，固定 PATH 后重新安装通过。相同运行和编译身份的 `node22-sdk-dev27-1`、`node22-multimodule-dev27-1` 分别通过 24、45 项真实 SDK 检查，SDK 子工具保持其自带 Node24。
+
+`upgrade-rollback-dev27-1` 通过隔离维护 CLI 的 10 项升级、活跃会话阻断、重试和完整配置字节回退；`saved-flow-read-dev27-1` 通过实际 MCP 对十份已有流程的列出、读取、校验和完整原字段保留。`skill-cleanup-dev27-1` 验证已归属文件和断链清理、用户修改保留及重试，未删除实际用户 Skill。当前宿主最终配置切换仍待完成。
+
+实际 MCP/Worker 的 `gestures-mcp-dev27-1`、`rotation-mcp-dev27-1`、`recording-mcp-dev27-1`、`selector-repair-mcp-dev27-1`、`visual-review-dev27-1`、`logs-mcp-dev27-1` 分别通过 25、8、17、9、8、14 项。`emulator-effects-dev27-1`、`sensors-light-mcp-dev27-1` 通过 12、5 项，原电量、光照及观察应用恢复；仅在专用模拟器清理日志缓冲。`sdk-kill-dev27-1`、`ohpm-kill-dev27-1` 的五个真实 SDK 中断场景，以及 `browser-manual-callback-dev27-1` 的七项实际回调检查通过，包含未修改时钟的生产五分钟超时，不代表真实过期 JWT 已验证。
+
+`real-disk-full-dev27-1` 在独立 32 MiB HFS+ 卷实际得到 ENOSPC/SQLITE_FULL，未填满宿主磁盘。原子替换、发布及请求插入拒绝写入后原数据不变。原报告保留失败：其“立即删除制品预留”断言不成立，因为该删除本身也无法在满盘提交。单独的 `recovery.private.json` 核对原进程已退出后，新进程回收预留、数据库完整且无部分制品；`after-space.evidence.json` 的恢复发布、请求去重和制品写入三项通过。卷已按绑定信息卸载。该结果不扩展为同一进程中的即时回收，也不替代所有 MCP 工作流中断窗口。
+
+十四行历史迁移凭证已通过正式接收更新，加上两行崩溃记录，合计 16 行绑定 dev27；`apply_changes`、`start_app`、`hot_reload` 三行仍是历史身份，28 行 pending 保留。以上原始目录均带 `20260909-native6-` 前缀。手机一小时长稳尚在执行；正式性能、其他真实平台环境与最终交付门槛仍未通过，main 尚未合并。
