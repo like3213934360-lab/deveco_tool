@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { setImmediate as yieldToRequests } from "node:timers/promises";
 import { StateStore } from "./store.js";
 import { invariant, ToolError } from "./errors.js";
 
@@ -51,41 +52,49 @@ export class NativeDirectory {
           "NATIVE_DIRECTORY_TOO_DEEP",
           "Native output exceeds 16 directory levels",
         );
-        const handle = await fs.promises
-          .opendir(directory)
-          .catch((error: NodeJS.ErrnoException) => {
-            if (depth > 0 && error.code === "ENOENT") return undefined;
-            throw error;
-          });
-        if (!handle) return;
-        for await (const entry of handle) {
-          const file = path.join(directory, entry.name),
-            stat = await fs.promises
-              .lstat(file)
-              .catch((error: NodeJS.ErrnoException) => {
-                if (error.code === "ENOENT") return undefined; // SDK log rotation.
-                throw error;
-              });
-          if (!stat) continue;
-          invariant(
-            ++files <= 4096,
-            "NATIVE_DIRECTORY_TOO_MANY_FILES",
-            "Native output exceeds 4096 entries",
-          );
-          invariant(
-            !stat.isSymbolicLink(),
-            "NATIVE_DIRECTORY_SYMLINK",
-            "Native output must not contain symbolic links",
-          );
-          if (stat.isDirectory()) await visit(file, depth + 1);
-          else {
+        let handle: fs.Dir;
+        try {
+          handle = fs.opendirSync(directory, { bufferSize: 64 });
+        } catch (error) {
+          if (depth > 0 && (error as NodeJS.ErrnoException).code === "ENOENT")
+            return;
+          throw error;
+        }
+        try {
+          for (
+            let entry = handle.readSync();
+            entry;
+            entry = handle.readSync()
+          ) {
+            const file = path.join(directory, entry.name),
+              stat = fs.lstatSync(file, { throwIfNoEntry: false });
+            if (!stat) continue;
             invariant(
-              stat.isFile(),
-              "NATIVE_DIRECTORY_FILE_INVALID",
-              "Native output must contain regular files",
+              ++files <= 4096,
+              "NATIVE_DIRECTORY_TOO_MANY_FILES",
+              "Native output exceeds 4096 entries",
             );
-            bytes += stat.size;
+            invariant(
+              !stat.isSymbolicLink(),
+              "NATIVE_DIRECTORY_SYMLINK",
+              "Native output must not contain symbolic links",
+            );
+            // Stream at most 64 entries between yields. Empty or small SDK log
+            // directories avoid a thread-pool round trip for every filesystem
+            // operation; large trees remain bounded and let cancellation run.
+            if (files % 64 === 0) await yieldToRequests();
+            if (stat.isDirectory()) await visit(file, depth + 1);
+            else {
+              invariant(
+                stat.isFile(),
+                "NATIVE_DIRECTORY_FILE_INVALID",
+                "Native output must contain regular files",
+              );
+              bytes += stat.size;
+            }
           }
+        } finally {
+          handle.closeSync();
         }
       };
       try {

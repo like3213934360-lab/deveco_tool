@@ -9,7 +9,9 @@ import { ProcessService } from "../src/core/process.js";
 import { PersistentProcessObserver } from "../src/core/process-observer.js";
 
 const temporary = () =>
-  fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), "deveco-native-dir-")));
+  fs.realpathSync.native(
+    fs.mkdtempSync(path.join(os.tmpdir(), "deveco-native-dir-")),
+  );
 test("SDK output exceeding reservation cancels its writer and reports a capacity error after exit", async () => {
   const root = temporary(),
     store = new StateStore(root),
@@ -113,6 +115,35 @@ test("native startup and validation failures release their reservations", async 
     assert.deepEqual(
       store.db.prepare("SELECT * FROM native_directories").all(),
       [],
+    );
+  } finally {
+    await directory.close();
+    store.close();
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("native output scans reject directory links without following foreign files", async () => {
+  const root = temporary(),
+    store = new StateStore(path.join(root, "state")),
+    directory = new NativeDirectory(store, 65536),
+    foreign = path.join(root, "foreign");
+  fs.mkdirSync(foreign);
+  fs.writeFileSync(path.join(foreign, "keep"), "unrelated");
+  fs.symlinkSync(
+    foreign,
+    path.join(directory.file, "link"),
+    process.platform === "win32" ? "junction" : "dir",
+  );
+  try {
+    await assert.rejects(directory.check(), {
+      code: "NATIVE_DIRECTORY_SYMLINK",
+    });
+    assert.equal(directory.controller.signal.aborted, true);
+    await directory.close();
+    assert.equal(
+      fs.readFileSync(path.join(foreign, "keep"), "utf8"),
+      "unrelated",
     );
   } finally {
     await directory.close();

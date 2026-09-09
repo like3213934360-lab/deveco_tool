@@ -3,9 +3,6 @@ import path from "node:path";
 import { createHash } from "node:crypto";
 import { pathToFileURL, fileURLToPath } from "node:url";
 import {
-  createMessageConnection,
-  StreamMessageReader,
-  StreamMessageWriter,
   CancellationTokenSource,
   type MessageConnection,
 } from "vscode-jsonrpc/node.js";
@@ -24,6 +21,7 @@ import type { StateStore } from "../core/store.js";
 import type { Project } from "./project.js";
 import { compilationDatabase } from "./compilation-database.js";
 import { withinDeadline } from "../core/deadline.js";
+import { languageConnection } from "../core/language-connection.js";
 
 export interface Diagnostic {
   range: {
@@ -96,12 +94,12 @@ export function languageResult(
 /** Read and hash the same bounded bytes that will be sent to the language server. */
 async function readDocument(file: string, signal: AbortSignal) {
   signal.throwIfAborted();
-  const handle = await fs.promises.open(
+  const handle = fs.openSync(
     file,
     fs.constants.O_RDONLY | fs.constants.O_NONBLOCK,
   );
   try {
-    const before = await handle.stat();
+    const before = fs.fstatSync(handle);
     invariant(
       before.isFile(),
       "LSP_FILE_INVALID",
@@ -116,12 +114,26 @@ async function readDocument(file: string, signal: AbortSignal) {
     let offset = 0;
     while (offset < buffer.length) {
       signal.throwIfAborted();
-      const { bytesRead } = await handle.read(
-        buffer,
-        offset,
-        Math.min(65536, buffer.length - offset),
-        offset,
-      );
+      // Small documents are read in one bounded synchronous operation in the
+      // runtime worker. Larger documents yield between chunks so cancellation
+      // and unrelated requests can progress without caching stale source text.
+      const length = Math.min(65536, buffer.length - offset);
+      const bytesRead =
+        buffer.length <= 65536
+          ? fs.readSync(handle, buffer, offset, length, offset)
+          : await new Promise<number>((resolve, reject) => {
+              fs.read(
+                handle,
+                buffer,
+                offset,
+                length,
+                offset,
+                (error, bytes) => {
+                  if (error) reject(error);
+                  else resolve(bytes);
+                },
+              );
+            });
       invariant(
         bytesRead > 0,
         "LSP_FILE_CHANGED",
@@ -129,7 +141,7 @@ async function readDocument(file: string, signal: AbortSignal) {
       );
       offset += bytesRead;
     }
-    const after = await handle.stat();
+    const after = fs.fstatSync(handle);
     invariant(
       before.size === after.size &&
         before.mtimeMs === after.mtimeMs &&
@@ -143,7 +155,7 @@ async function readDocument(file: string, signal: AbortSignal) {
       hash: createHash("sha256").update(buffer).digest("hex"),
     };
   } finally {
-    await handle.close();
+    fs.closeSync(handle);
   }
 }
 export function languagePosition(text: string, line = 0, character = 0) {
@@ -269,16 +281,21 @@ export async function lspRequest(
     };
     const timer = setTimeout(abort, timeoutMs);
     signal?.addEventListener("abort", abort, { once: true });
-    connection.sendRequest(method, params, cancellation.token).then(
-      (value) => {
-        cleanup();
-        resolve(value);
-      },
-      (error) => {
-        cleanup();
-        reject(error);
-      },
-    );
+    try {
+      connection.sendRequest(method, params, cancellation.token).then(
+        (value) => {
+          cleanup();
+          resolve(value);
+        },
+        (error) => {
+          cleanup();
+          reject(error);
+        },
+      );
+    } catch (error) {
+      cleanup();
+      reject(error);
+    }
     if (signal?.aborted) abort();
   });
 }
@@ -447,10 +464,7 @@ export class LanguageService {
       "Language server pipes unavailable",
     );
     child.stderr?.resume();
-    const connection = createMessageConnection(
-      new StreamMessageReader(child.stdout),
-      new StreamMessageWriter(child.stdin),
-    );
+    const connection = languageConnection(child.stdout, child.stdin);
     const session: Session = {
       connection,
       child,
@@ -592,9 +606,7 @@ export class LanguageService {
     input: LanguageRequest,
     signal: AbortSignal,
   ): Promise<unknown> {
-    const file = await fs.promises.realpath(
-        path.resolve(project.root, input.file),
-      ),
+    const file = fs.realpathSync.native(path.resolve(project.root, input.file)),
       uri = pathToFileURL(file).href,
       database =
         input.language === "cpp" && !this.launch

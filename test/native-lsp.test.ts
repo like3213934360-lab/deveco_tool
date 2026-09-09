@@ -14,6 +14,52 @@ import {
 import { ToolError } from "../src/core/errors.js";
 import type { Project } from "../src/services/project.js";
 import { tools } from "../src/core/contracts.js";
+import { PassThrough, Writable } from "node:stream";
+import { languageConnection } from "../src/core/language-connection.js";
+
+test("LSP broken pipes reject pending requests and notifications without unhandled writes", async () => {
+  for (const [notification, failedWrite] of [
+    [false, 1],
+    [false, 2],
+    [true, 1],
+    [true, 2],
+  ] as const) {
+    const input = new PassThrough();
+    let writes = 0;
+    const output = new Writable({
+      write(_chunk, _encoding, callback) {
+        // Exercise failure before any header and after a header was sent.
+        callback(
+          ++writes === failedWrite
+            ? new Error("broken language-server pipe")
+            : undefined,
+        );
+      },
+    });
+    const connection = languageConnection(input, output);
+    connection.listen();
+    try {
+      if (notification) {
+        await assert.rejects(
+          connection.sendNotification("initialized", {}),
+          /broken language-server pipe/,
+        );
+      } else {
+        const requests = [
+          connection.sendRequest("initialize", {}),
+          connection.sendRequest("initialize", {}),
+        ];
+        const results = await Promise.allSettled(requests);
+        assert.ok(results.every((result) => result.status === "rejected"));
+      }
+      assert.throws(() => connection.sendRequest("initialize", {}), /disposed/);
+    } finally {
+      connection.dispose();
+      input.destroy();
+      output.destroy();
+    }
+  }
+});
 
 const code = (expected: string) => (error: unknown) =>
   error instanceof ToolError && error.code === expected;
@@ -211,7 +257,7 @@ test("LSP refreshes the exact changed bytes and ignores old-version or invalid-U
 test("LSP reads fresh bytes across chunk boundaries and rejects oversized files", async () => {
   await fixture({}, async (service, project) => {
     const file = path.join(project.root, "Model.ets");
-    for (const size of [65536, 65537]) {
+    for (const size of [1024, 65536, 65537]) {
       fs.writeFileSync(file, "fixed!".padEnd(size, " "));
       const before = fs.statSync(file);
       const read = async () =>
@@ -308,7 +354,12 @@ test("LSP capacity preserves four active sessions and rejects a fifth until work
     const settled = Promise.allSettled(pending);
     try {
       const deadline = Date.now() + 10000;
-      while (service.metrics.active_requests < 4) {
+      // Session slots are reserved before the OS emits child `spawn`. Observe
+      // both events before asserting the number of started processes.
+      while (
+        service.metrics.active_requests < 4 ||
+        service.processes.metrics.process_starts < 4
+      ) {
         assert.ok(Date.now() < deadline);
         await new Promise((resolve) => setTimeout(resolve, 5));
       }
