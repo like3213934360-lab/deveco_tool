@@ -50,25 +50,19 @@ export function installedSdkMetadata(toolchain: Pick<Toolchain, "sdk">) {
   };
 }
 const entryDigests = new Map<string, { metadata: string; sha256: string }>();
-const metadataRecords = new Map<string, { identity: string; sha256: string; record: Record<string, unknown>; bytes: number }>();
+const metadataRecords = new Map<string, { identity: string; sha256: string; record: Record<string, unknown>; bytes: number; content: Buffer }>();
 let metadataBytes = 0;
 function fileIdentity(file: string): string {
   const stat = fs.statSync(file, { bigint: true });
   return [stat.dev, stat.ino, stat.size, stat.mtimeNs, stat.ctimeNs, stat.mode].join(":");
 }
-/** Match the executable digest cache: validate inode, size, nanosecond change
- * and modification times, and mode before reusing parsed SDK metadata. */
+/** Filesystem timestamps can alias rapid same-size writes. Compare current
+ * bytes before reusing parsed metadata, retaining bounded content only. */
 function readMetadata(file: string) {
   const identity = fileIdentity(file), previous = metadataRecords.get(file);
-  if (previous?.identity === identity) {
-    metadataRecords.delete(file);
-    metadataRecords.set(file, previous);
-    return previous;
-  }
   const bytes = fs.readFileSync(file);
   invariant(fileIdentity(file) === identity, "TOOLCHAIN_CHANGED", "SDK metadata changed while its content was captured");
-  const sha256 = createHash("sha256").update(bytes).digest("hex");
-  if (previous?.sha256 === sha256) {
+  if (previous?.content.equals(bytes)) {
     previous.identity = identity;
     metadataRecords.delete(file);
     metadataRecords.set(file, previous);
@@ -77,7 +71,8 @@ function readMetadata(file: string) {
   let record: Record<string, unknown>;
   try { record = parseObject(bytes.toString("utf8")); }
   catch { throw new ToolError("SDK_METADATA_INVALID", "SDK metadata is not a valid object"); }
-  const result = { identity, sha256, record, bytes: bytes.length };
+  const sha256 = createHash("sha256").update(bytes).digest("hex");
+  const result = { identity, sha256, record, bytes: bytes.length, content: bytes };
   if (previous) {
     metadataBytes -= previous.bytes;
     metadataRecords.delete(file);

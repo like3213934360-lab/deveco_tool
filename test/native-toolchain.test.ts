@@ -224,6 +224,38 @@ test("SDK package updates and executable replacement change captured toolchain i
   }
 });
 
+test("SDK metadata changes remain visible when filesystem identities alias", (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-metadata-alias-"));
+  const previous = process.env.DEVECO_CONFIG;
+  const config = path.join(root, "config.json"), clt = path.join(root, "clt");
+  const manifest = path.join(clt, "sdk/default/sdk-pkg.json");
+  atomicWrite(config, JSON.stringify({ clt }));
+  atomicWrite(manifest, '{"version":"26.0.0.105"}');
+  process.env.DEVECO_CONFIG = config;
+  const statSync = fs.statSync;
+  const frozen = statSync(manifest), frozenBig = statSync(manifest, { bigint: true });
+  const mock = t.mock.method(fs, "statSync", ((file, options) => {
+    if (file === manifest) return typeof options === "object" && options?.bigint ? frozenBig : frozen;
+    return Reflect.apply(statSync, fs, [file, options]);
+  }) as typeof fs.statSync);
+  try {
+    const initial = discoverToolchain();
+    fs.writeFileSync(manifest, '{"version":"26.0.0.106"}');
+    const changed = discoverToolchain();
+    assert.equal(changed.versions["sdk/default/sdk-pkg.json"], "26.0.0.106");
+    assert.notEqual(changed.fingerprint, initial.fingerprint);
+    fs.writeFileSync(manifest, "!".repeat(frozen.size));
+    assert.throws(discoverToolchain, { code: "SDK_METADATA_INVALID" });
+    fs.writeFileSync(manifest, '{"version":"26.0.0.105"}');
+    assert.equal(discoverToolchain().fingerprint, initial.fingerprint);
+  } finally {
+    mock.mock.restore();
+    if (previous === undefined) delete process.env.DEVECO_CONFIG;
+    else process.env.DEVECO_CONFIG = previous;
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test("a native language request reuses unchanged SDK sessions and replaces the cache identity after a package update", async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-lsp-sdk-"));
   const previous = {
