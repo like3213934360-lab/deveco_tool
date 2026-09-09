@@ -28,6 +28,8 @@ CLT 的 `version.txt`、SDK/组件清单、入口文件身份以及 JDK `release
 
 ## 独立 CLT 的实际平台验收
 
+DevEco Studio 与独立 CLT 是两种可选的工具链环境。已有可用 Studio 的用户不需要为日常使用再安装 CLT；下面的独立下载只用于核实声明支持的 CLT 布局及跨平台兼容性，放在隔离测试目录，不改写现有 Studio 或全局 PATH。下载成功也不等于兼容性验收通过。
+
 2026-09-09 在用户完成[华为官方下载页](https://developer.huawei.com/consumer/cn/download/command-line-tools-for-hmos)个人账号登录后，读取 CLT 26.0.0.821 的三份安装包信息。以下摘要分别由对应平台条目的 SHA-256 复制按钮取得，不用下载文件自身计算的值充当官方预期值。
 
 | 安装包 | 官方 SHA-256 |
@@ -39,3 +41,5 @@ CLT 的 `version.txt`、SDK/组件清单、入口文件身份以及 JDK `release
 手动工作流 `.github/workflows/native-clt-acceptance.yml` 在 Windows/Linux 的 GitHub 托管 runner 上，按固定版本和上述摘要校验独立官方包，配置隔离 `DEVECO_CONFIG` 与 JDK 21，运行当前 `native-sdk-acceptance`、`native-checker-acceptance`、`native-lint-acceptance` 三个入口。MCP 使用 Node24；SDK 子工具使用包内 Node。SDK 入口不传设备目标，仅查询模拟器库存，不启动模拟器或部署应用。
 
 官方签名下载 URL 保存在 `DEVECO_CLT_2600821_WINDOWS_URL`、`DEVECO_CLT_2600821_LINUX_URL` 两个仓库 Actions secret 中，不写入仓库及验收制品；链接失效时从同一官方版本重新取得。工作流只上传包摘要/准备结果及三个原始验收 JSON，不上传 SDK 包、状态数据库、测试密钥或认证资料。此入口独立于基础六组 CI，不改变上游接收或发布条件；准备工作流和下载包本身不证明真实 SDK 验收通过。
+
+首轮 [Actions 34316076813](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34316076813) 绑定提交 `df602089741e77c275e5fd1e1754df86baa00e0f`。Linux 作业 `102352464776` 在官方下载阶段收到 HTTP 503，`clt-source.json` 为 `verified:false`，三个真实 SDK 检查均未执行；依赖安装及编译已通过。失败报告保留在该次 Linux 制品中，不据此判断 SDK 功能或 Linux 兼容性。Windows 作业及后续复验需分别以其终态报告为准。
