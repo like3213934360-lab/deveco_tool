@@ -31,6 +31,11 @@ jobs:
         with:
           distribution: temurin
           java-version: "21"
+      - name: Install the observed Linux emulator runtime dependency
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y libpulse0
       - name: Install locked dependencies
         run: npm ci
       - name: Compile the current acceptance entrypoints
@@ -72,6 +77,13 @@ jobs:
               with zipfile.ZipFile(archive) as bundle:
                   members = bundle.infolist()
                   assert len(members) <= 500000
+                  names = [pathlib.PurePosixPath(item.filename) for item in members]
+                  record['top_level_entries'] = sorted({name.parts[1] for name in names
+                      if len(name.parts) > 1 and name.parts[0] == 'command-line-tools'})
+                  record['language_service_entries'] = [str(name) for name in names
+                      if str(name).endswith('/out/standardIndex/index.js')]
+                  record['api_scanner_entries'] = [str(name) for name in names
+                      if name.name == 'api-change-scan.js']
                   expanded = sum(item.file_size for item in members)
                   assert expanded <= 20 * 1024**3
                   assert shutil.disk_usage(root).free > expanded + 1024**3, 'Insufficient space for isolated CLT'
