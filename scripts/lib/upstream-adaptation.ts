@@ -96,13 +96,25 @@ export function refreshBaseline(root: string, raw: unknown) {
   invariant(digest(plan.source) === digest(fresh.source) && plan.mapping_sha256 === fresh.mapping_sha256 && digest(plan.targets) === digest(fresh.targets) && digest(plan.required_tests) === digest(fresh.required_tests), "UPSTREAM_BASELINE_CHANGED", "Refresh must review the currently locked source and final mapped files");
   invariant(new Set(plan.reviews.map((item) => item.rule)).size === plan.reviews.length && digest(plan.reviews.map((item) => item.rule).sort()) === digest(fresh.rules.map((item) => item.id).sort()), "UPSTREAM_REVIEW_INCOMPLETE", "Refresh requires a complete new mapping review");
   const baseline = path.join(root, "provenance/upstream-baselines", plan.source.id), candidateDir = path.join(root, "provenance/upstream-candidates", plan.source.id);
-  const archive = path.join(root, "provenance/upstream-review-history", plan.source.id, digest(plan)), journalFile = path.join(archive, "refresh.json");
+  const tested = publicIdentitySchema.parse(evidenceIdentity(root));
+  const previous = baselineReviewSchema.parse(readJson(path.join(baseline, "review.json")));
+  const unchangedPlan = digest(previous) === digest(plan);
+  const archiveId = digest({ plan, tested });
+  const archive = path.join(root, "provenance/upstream-review-history", plan.source.id, archiveId), journalFile = path.join(archive, "refresh.json");
   const journalSchema = z.strictObject({ format: z.literal(1), plan_sha256: sha, baseline_sha256: sha, candidate_sha256: sha.nullable() });
   let journal: z.infer<typeof journalSchema>;
-  if (fs.existsSync(journalFile)) journal = journalSchema.parse(readJson(journalFile));
+  if (fs.existsSync(journalFile)) {
+    journal = journalSchema.parse(readJson(journalFile));
+    if (unchangedPlan && fs.existsSync(path.join(baseline, "accepted.json"))) {
+      const current = acceptedSchema.parse(readJson(path.join(baseline, "accepted.json")));
+      invariant(digest(current.tested) !== digest(tested), "UPSTREAM_REVIEW_UNCHANGED", "Use the current accepted baseline until its validation identity changes");
+    }
+  }
   else {
-    const previous = baselineReviewSchema.parse(readJson(path.join(baseline, "review.json")));
-    invariant(digest(previous) !== digest(plan), "UPSTREAM_REVIEW_UNCHANGED", "Use the existing review and acceptance for unchanged input");
+    if (unchangedPlan) {
+      const current = acceptedSchema.parse(readJson(path.join(baseline, "accepted.json")));
+      invariant(digest(current.tested) !== digest(tested), "UPSTREAM_REVIEW_UNCHANGED", "Use the current accepted baseline until its validation identity changes");
+    }
     let candidateHash: string | null = null;
     // A pending baseline can be corrected without discarding its pending
     // candidate. An accepted baseline may only advance past an accepted one.

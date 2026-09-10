@@ -76,6 +76,14 @@ test("new baseline review archives old evidence and resumes after the new review
     assert.equal(fs.existsSync(path.join(f.root, "provenance/upstream-baselines/one/accepted.json")), false);
     assert.deepEqual(refreshBaseline(f.root, plan), refreshed);
     assert.equal(acceptBaseline(f.root, "one", f.evidence("new")).accepted, true);
+
+    atomicWrite(path.join(f.root, "dist/unmapped-release-script.js"), "// Unrelated validated release change\n");
+    const renewal = refreshBaseline(f.root, plan);
+    assert.notEqual(renewal.history, refreshed.history);
+    assert.equal(fs.existsSync(path.join(f.root, "provenance/upstream-baselines/one/accepted.json")), false);
+    assert.deepEqual(refreshBaseline(f.root, plan), renewal);
+    assert.equal(acceptBaseline(f.root, "one", f.evidence("renewed")).accepted, true);
+    assert.throws(() => refreshBaseline(f.root, plan), { code: "UPSTREAM_REVIEW_UNCHANGED" });
   } finally { fs.rmSync(f.root, { recursive: true, force: true }); }
 });
 
