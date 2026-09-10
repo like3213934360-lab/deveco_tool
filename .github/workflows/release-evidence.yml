@@ -19,7 +19,7 @@ jobs:
   import:
     if: ${{ !github.event.repository.fork && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
     # Dedicated ephemeral runner: no SDK/device/credentials, no PR jobs, no checkout.
-    runs-on: [self-hosted, Linux, X64, release-evidence]
+    runs-on: [self-hosted, Linux, "${{ format('release-evidence-{0}-{1}', github.run_id, github.run_attempt) }}"]
     environment: release-evidence-import
     permissions: {}
     timeout-minutes: 10

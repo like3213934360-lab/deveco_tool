@@ -17,6 +17,6 @@ fs.mkdirSync(output, { recursive: true });
 const manifest = z.object({ distribution: z.string() }).parse(raw), archive = path.join(output, `deveco-tool-${release}.zip`);
 const sealed = archiveDistribution(inside(directory, manifest.distribution), archive);
 invariant(sealed.manifest_sha256 === checked.distribution_sha256, "RELEASE_ARCHIVE_CHANGED", "Archive seal must preserve the accepted installation manifest");
-atomicWrite(path.join(output, "acceptance.json"), JSON.stringify({ release, passed: true, runtime_sha256: checked.tested.runtime_sha256, manifest_sha256: digest(raw), distribution_sha256: checked.distribution_sha256, archive_sha256: fileDigest(archive), platforms: checked.regression, acceptance_cases: checked.acceptance_cases }, null, 2) + "\n", false);
+atomicWrite(path.join(output, "acceptance.json"), JSON.stringify({ release, passed: true, limited: checked.limited, runtime_sha256: checked.tested.runtime_sha256, manifest_sha256: digest(raw), distribution_sha256: checked.distribution_sha256, archive_sha256: fileDigest(archive), platforms: checked.regression, acceptance_cases: checked.acceptance_cases }, null, 2) + "\n", false);
 if (process.env.GITHUB_OUTPUT) fs.appendFileSync(process.env.GITHUB_OUTPUT, `tag=v${release}\narchive_sha256=${fileDigest(archive)}\nreceipt_sha256=${fileDigest(path.join(output, "acceptance.json"))}\n`);
 console.log(JSON.stringify({ directory: output, tag: `v${release}`, passed: true }));

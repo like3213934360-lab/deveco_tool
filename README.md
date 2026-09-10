@@ -4,7 +4,7 @@
 
 原生版本使用 **TypeScript + LangGraph + SQLite**：固定流程由代码执行，任务可持久化、查询和恢复；宿主 AI 负责理解需求、查询知识和修改业务代码。使用原生版本无须安装官方 Skill、官方 CLI 或 CodeGenie 子 MCP。
 
-> **当前正式版为 [v0.2.0](https://github.com/like3213934360-lab/deveco_tool/releases/tag/v0.2.0)。** 仓库只保留 TypeScript 源码和 `dist/src/cli.js` 编译入口，根目录安装、`npm run mcp` 和 CI 均使用原生实现；旧 CLI、子 MCP、Skill 安装目录及旧启动文件已删除。当前有 25 个公开工具、8 个公开工作流，执行协议为 `native-6`。这是带明确验收边界的正式发布：六组基础回归、干净安装、当前 SDK 专项、上游接收与现有历史设备证据已核对；28 行迁移行为、10 项直接性能能力及未复验设备场景仍在发布范围声明中保留，不宣称全平台、全设备或全部迁移场景完成。每份证据只对应其实际版本，见[完成清单](docs/native-completion.md)。
+> **本次维护版本为 [v0.2.1](https://github.com/like3213934360-lab/deveco_tool/releases/tag/v0.2.1)。** 仓库只保留 TypeScript 源码和 `dist/src/cli.js` 编译入口，根目录安装、`npm run mcp` 和 CI 均使用原生实现；旧 CLI、子 MCP、Skill 安装目录及旧启动文件已删除。当前有 25 个公开工具、8 个公开工作流，执行协议为 `native-6`。这是带明确验收边界的正式发布：正式发布要求当前六组基础回归、干净安装、SDK 专项和上游接收通过，并保留原范围的历史设备证据；28 行迁移行为、10 项直接性能能力及未复验设备场景仍在发布范围声明中保留，不宣称全平台、全设备或全部迁移场景完成。每份证据只对应其实际版本，见[v0.2.1 发布核对](docs/maintenance-0.2.1.md)。
 
 ## 能解决什么问题
 
@@ -59,7 +59,7 @@ flowchart TD
 从源码安装：
 
 ```sh
-git clone --branch v0.2.0 --single-branch https://github.com/like3213934360-lab/deveco_tool.git deveco_tool
+git clone --branch v0.2.1 --single-branch https://github.com/like3213934360-lab/deveco_tool.git deveco_tool
 cd deveco_tool
 npm ci
 npm run build
@@ -67,7 +67,7 @@ npm run build
 
 根目录使用锁定的原生依赖，无须再生成另一套 package.json 或重写锁文件。SQLite 等原生依赖须允许安装脚本；不要给 `npm ci` 加 `--ignore-scripts`，也不要跨操作系统、架构或 Node 主版本复制 `node_modules`。
 
-维护者发布的编译包安装方式为解压、校验后执行 `npm ci --omit=dev`，无需安装 TypeScript 编译器。[v0.2.0 Release](https://github.com/like3213934360-lab/deveco_tool/releases/tag/v0.2.0) 同时提供编译包和公开验收回执，见[安装与升级](docs/native-installation.md)和[分发说明](docs/native-distribution.md)。
+维护者发布的编译包安装方式为解压、校验后执行 `npm ci --omit=dev`，无需安装 TypeScript 编译器。[v0.2.1 Release](https://github.com/like3213934360-lab/deveco_tool/releases/tag/v0.2.1) 同时提供编译包和公开验收回执，见[安装与升级](docs/native-installation.md)和[分发说明](docs/native-distribution.md)。
 
 ### 2. 配置工具链与 MCP 宿主
 
@@ -240,7 +240,7 @@ SDK、设备和上游适配接收使用的分项报告仍带接收前的原始�
 - 用户取消本轮新增真机测试；发布门禁仅接收原始范围明确的历史设备报告。dev22 曾通过一小时活动与六分钟空闲回收，后续失败原样保留，不宣称 `v0.2.0` 已重新完成真机长稳。
 - Codex 应用内 MCP 已重连当前安装，Developer 与 CodeGenie 重新登录及云端只读复验分别通过；隔离升级/回退和十份既有流程保留已确认。旧完整安装及加密回退记录保留。
 
-`release-gate` 会核对最终运行文件、依赖锁、资源摘要、上游接收、原始报告及精确发布范围；缺失、重复、改写或超出 `v0.2.0` 范围声明的例外会阻止发布。已实现与待验收项目分别记录在[完成清单](docs/native-completion.md)。
+`release-gate` 会核对最终运行文件、依赖锁、资源摘要、上游接收、原始报告及精确发布范围；缺失、重复、改写或超出对应版本范围声明的例外会阻止发布。已实现与待验收项目分别记录在[完成清单](docs/native-completion.md)。
 
 ## 开发、更新与交付
 
@@ -274,14 +274,14 @@ node dist/scripts/resources.js
 
 更新流程为：检测提交 → 下载并核对候选 → 分类差异及影响 → 准备草稿 PR → 人工适配流程 / 协议 → 契约、回归、平台与性能验证 → 评审发布。仓库提供定时 / 手动候选工作流、带摘要校验的适配工具和 Release 工作流；定时权限及完整发布链路仍待统一验收。未映射变化会阻止候选通过；自然语言新增要求不能保证自动正确转换为代码。运行中的 MCP 不动态拉取或执行最新上游代码，框架依赖升级与官方工具链适配分开提交。详见[上游更新机制](docs/native-upstream-upgrades.md)。
 
-升级时先结束任务与会话，在新目录安装完整版本，配置工具链并重新登录，校验保留的 UI 流程后再运行 doctor、构建和设备检查。不同执行协议使用独立状态目录；回退通过切换完整安装目录完成。正式编译包见 [v0.2.0 Release](https://github.com/like3213934360-lab/deveco_tool/releases/tag/v0.2.0)，具体步骤见[安装与升级](docs/native-installation.md)。
+升级时先结束任务与会话，在新目录安装完整版本，配置工具链并重新登录，校验保留的 UI 流程后再运行 doctor、构建和设备检查。不同执行协议使用独立状态目录；回退通过切换完整安装目录完成。正式编译包见 [v0.2.1 Release](https://github.com/like3213934360-lab/deveco_tool/releases/tag/v0.2.1)，具体步骤见[安装与升级](docs/native-installation.md)。
 
 ## 文档与许可证
 
 | 主题       | 文档                                                                                                                                                                                                           |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 迁移与交付 | [迁移执行记录](docs/native-migration-status.md) · [安装与升级](docs/native-installation.md) · [分发](docs/native-distribution.md)                                                                              |
-| 发布维护 | [v0.2.1 候选核对](docs/maintenance-0.2.1.md) · [发布证据传递](docs/release-evidence-transfer.md) |
+| 发布维护 | [v0.2.1 发布核对](docs/maintenance-0.2.1.md) · [发布证据传递](docs/release-evidence-transfer.md) |
 | 工程与诊断 | [工具链](docs/native-toolchains.md) · [工程上下文](docs/native-project-context.md) · [语言服务](docs/native-language-service.md) · [静态预检](docs/native-static-checker.md) · [Linter](docs/native-linter.md) |
 | 设备与应用 | [设备发现](docs/native-device-info.md) · [部署](docs/native-deployment.md) · [签名与热补丁](docs/native-signing.md) · [模拟器](docs/native-emulator.md)                                                        |
 | UI         | [流程](docs/native-ui-workflows.md) · [输入与手势](docs/native-ui-controls.md) · [截图](docs/native-screenshots.md) · [保存树导入](docs/native-ui-import.md) · [性能](docs/native-ui-performance.md)           |

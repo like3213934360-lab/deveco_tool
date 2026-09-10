@@ -20,10 +20,10 @@ flowchart LR
 
 ## 一次性配置
 
-管理员需要配置以下环境；此维护变更不会自动创建 runner、secret、环境或远端运行。
+管理员需要配置以下环境；首次正式发布时配置并验证环境和临时 runner 生命周期。
 
 1. `release-evidence-import`：只允许默认分支，启用环境保护。配置变量 `RELEASE_EVIDENCE_INBOX` 为专用 runner 的绝对目录。
-2. 专用 Linux x64 临时 runner：标签 `release-evidence`，预装 Node 24，运行器至少 2.329.0 并保持受支持更新。限制 runner group 只服务受信任的导入工作流；禁止 PR 作业、共享开发机、SDK、设备连接、云凭据和解密密钥。必须每次作业后销毁整个实例和 inbox，包括取消、失联或强制停止。导入 job 不 checkout、不安装项目依赖，只读取一个经摘要寻址的密文文件，随后调用官方 upload-artifact Action。
+2. 专用 Linux 临时 runner：使用当次运行独占标签 `release-evidence-<run_id>-<run_attempt>`，预装 Node 24，运行器至少 2.329.0 并保持受支持更新。组织仓库限制 runner group 只服务受信任的导入工作流；个人仓库必须核对已批准的默认分支导入 job，才为该 run/attempt 注册一次性 JIT runner。禁止 PR 作业、共享开发机、SDK、设备连接、云凭据和解密密钥。必须每次作业后销毁整个实例和 inbox，包括取消、失联或强制停止。导入 job 不 checkout、不安装项目依赖，只读取一个经摘要寻址的密文文件，随后调用官方 upload-artifact Action。
 3. `release-evidence`：只允许默认分支，启用环境保护，将本地保管的 32 字节密钥以 64 位小写十六进制存为 `RELEASE_EVIDENCE_KEY` secret。该环境用于托管 runner 的验证和正式 gate。
 4. `release`：保留正式发布审批。只有 publish job 有 `contents: write`，该 job 不安装 npm 依赖。
 
