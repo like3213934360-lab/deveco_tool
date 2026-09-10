@@ -1,5 +1,6 @@
 import { currentTrace, withTrace } from "../core/trace.js";
 import { isWindowSurface } from "./ui-tree.js";
+import { progressWindows } from "./ui-progress.js";
 import fs from "node:fs";
 import path from "node:path";
 import { z } from "zod";
@@ -218,11 +219,12 @@ export class FlowService {
           }, signal, !!currentTrace().run_id));
         }
         const receipts: { step_id: string; action: string; elapsed_ms: number; repaired: boolean }[] = [];
-        let changed = false;
+        let changed = false, noProgress = 0;
         for (const step of flow.steps) {
+          invariant(noProgress < 3 || ["waitVisible", "waitHidden", "assertVisible", "assertHidden"].includes(step.action), "FLOW_NO_PROGRESS", "Three actions left the application nodes and frame unchanged. Inspect current evidence and revise the locator or strategy before starting a new captured flow; resume cannot bypass this guard.");
           const result = await scoped(`step:${step.id}`, () => withinDeadline(step.timeoutMs, signal, "FLOW_STEP_TIMEOUT", async (signal) => {
             const assertion = ["waitVisible", "waitHidden", "assertVisible", "assertHidden"].includes(step.action);
-            const resultSchema = z.object({ step_id: z.string(), action: z.string(), elapsed_ms: z.number(), repaired: z.boolean(), selector: meaningfulSelector.optional() });
+            const resultSchema = z.object({ step_id: z.string(), action: z.string(), elapsed_ms: z.number(), repaired: z.boolean(), selector: meaningfulSelector.optional(), unchanged: z.boolean() });
             const execute = async () => {
               const started = performance.now();
               if (assertion) {
@@ -230,7 +232,7 @@ export class FlowService {
                   [step.action.endsWith("Hidden") ? "hidden" : "visible"]: step.selector,
                   timeoutMs: step.timeoutMs, alternates: step.alternates,
                 }, signal, flow.app.bundleName);
-                return { step_id: step.id, action: step.action, elapsed_ms: performance.now() - started, repaired: false };
+                return { step_id: step.id, action: step.action, elapsed_ms: performance.now() - started, repaired: false, unchanged: false };
               }
               const prepared = await this.store.privateMemo("step", { step, variables, bundle: flow.app.bundleName }, async () => {
                 let selector = step.selector, repaired = false;
@@ -316,16 +318,20 @@ export class FlowService {
                   ...(step.action === "key" ? { keys: [step.key] } : {}),
                   ...(step.action === "input" ? { text: variables[step.value!.slice(2, -1)] } : {}),
                 });
-                return { control, repaired, selector };
-              }, (value) => z.object({ control: controlSchema, repaired: z.boolean(), selector: meaningfulSelector.optional() }).parse(value));
+                const image = await this.progressFrame(target, surface.nodes, signal);
+                return { control, repaired, selector, before_signature: digest(surface.nodes), before_frame: image.progress_signature };
+              }, (value) => z.object({ control: controlSchema, repaired: z.boolean(), selector: meaningfulSelector.optional(), before_signature: z.string(), before_frame: z.string() }).parse(value));
               await this.devices.control(target, prepared.control, signal);
-              return { step_id: step.id, action: step.action, elapsed_ms: performance.now() - started, repaired: prepared.repaired, selector: prepared.selector };
+              const after = await this.surface(target, flow.app.bundleName, step.timeoutMs, signal), image = await this.progressFrame(target, after.nodes, signal);
+              const unchanged = prepared.before_signature === digest(after.nodes) && prepared.before_frame === image.progress_signature;
+              return { step_id: step.id, action: step.action, elapsed_ms: performance.now() - started, repaired: prepared.repaired, selector: prepared.selector, unchanged };
             };
             // Completed steps are replayed from receipts. An unfinished action only reads its child receipt.
             return this.store.privateEffect("step-result", { step, variables, bundle: flow.app.bundleName }, execute,
               (value) => resultSchema.parse(value), execute);
           }));
           if (result.repaired && result.selector) { step.selector = result.selector; changed = true; }
+          noProgress = result.unchanged ? noProgress + 1 : 0;
           receipts.push({ step_id: result.step_id, action: result.action, elapsed_ms: result.elapsed_ms, repaired: result.repaired });
         }
         const verification = await this.devices.verify(target, flow.assert!, signal, flow.app.bundleName);
@@ -337,4 +343,10 @@ export class FlowService {
         return { id, target, verified: true, selector_repairs_saved: changed, verification, steps: receipts };
       }, signal), signal));
   }
+  private async progressFrame(target: string, nodes: SnapshotNodes, signal: AbortSignal) {
+    const displays = [...new Set(nodes.filter(node => isWindowSurface(node) && node.visible !== false).map(node => node.displayId))];
+    invariant(displays.length === 1 && (displays[0] === null || /^\d+$/.test(displays[0]!)), "FLOW_DISPLAY_AMBIGUOUS", "Flow progress requires one application display");
+    return this.devices.screenshot(target, { format: "jpeg", ...(displays[0] === null ? {} : { display_id: Number(displays[0]) }) }, signal, progressWindows(nodes));
+  }
 }
+type SnapshotNodes = Awaited<ReturnType<DeviceService["snapshot"]>>["nodes"];

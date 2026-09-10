@@ -22,6 +22,7 @@ import type { Project } from "./project.js";
 import { compilationDatabase } from "./compilation-database.js";
 import { withinDeadline } from "../core/deadline.js";
 import { languageConnection } from "../core/language-connection.js";
+import { assertLanguageBudget, symbolResults } from "./language-symbols.js";
 
 export interface Diagnostic {
   range: {
@@ -55,6 +56,9 @@ const capabilities = z.object({
   definitionProvider: provider,
   implementationProvider: provider,
   referencesProvider: provider,
+  documentSymbolProvider: provider,
+  workspaceSymbolProvider: provider,
+  callHierarchyProvider: provider,
   positionEncoding: z.string().optional(),
 });
 const markedString = z.union([
@@ -76,12 +80,15 @@ export function languageResult(
   action: Exclude<LanguageRequest["action"], "diagnostics">,
   raw: unknown,
 ): unknown {
+  assertLanguageBudget(raw);
   const schema =
     action === "hover"
       ? hoverResult
       : action === "references"
         ? z.array(location).max(10000).nullable()
-        : z.union([location, z.array(definition).max(10000)]).nullable();
+        : action === "definition" || action === "implementation"
+          ? z.union([location, z.array(definition).max(10000)]).nullable()
+          : symbolResults[action];
   const parsed = schema.safeParse(raw);
   if (!parsed.success)
     throw new ToolError(
@@ -226,12 +233,23 @@ interface Session {
 }
 interface LanguageRequest {
   action:
-    "hover" | "definition" | "implementation" | "references" | "diagnostics";
+    | "hover"
+    | "definition"
+    | "implementation"
+    | "references"
+    | "diagnostics"
+    | "documentSymbol"
+    | "workspaceSymbol"
+    | "prepareCallHierarchy"
+    | "incomingCalls"
+    | "outgoingCalls";
   language?: "arkts" | "cpp";
   file: string;
   line?: number;
   character?: number;
   includeDeclaration?: boolean;
+  query?: string;
+  item_index?: number;
   abi?: string;
   mode?: "debug" | "release";
 }
@@ -289,7 +307,18 @@ export async function lspRequest(
         },
         (error) => {
           cleanup();
-          reject(error);
+          reject(
+            error !== null &&
+              typeof error === "object" &&
+              "code" in error &&
+              error.code === -32601
+              ? new ToolError(
+                  "LSP_CAPABILITY_UNAVAILABLE",
+                  `Language server does not implement ${method}`,
+                  { method, rpc_code: -32601 },
+                )
+              : error,
+          );
         },
       );
     } catch (error) {
@@ -531,7 +560,10 @@ export class LanguageService {
             implementation: { linkSupport: true },
             hover: { contentFormat: ["markdown", "plaintext"] },
             references: {},
+            documentSymbol: { hierarchicalDocumentSymbolSupport: true },
+            callHierarchy: { dynamicRegistration: false },
           },
+          workspace: { symbol: {} },
         },
         initializationOptions: {},
       });
@@ -633,18 +665,31 @@ export class LanguageService {
       await waitFor(session.ready, signal);
       signal.throwIfAborted();
       if (input.action !== "diagnostics") {
-        const supported = session.capabilities[`${input.action}Provider`];
+        const capability = [
+          "prepareCallHierarchy",
+          "incomingCalls",
+          "outgoingCalls",
+        ].includes(input.action)
+          ? ("callHierarchyProvider" as const)
+          : (`${input.action}Provider` as Exclude<
+              keyof typeof session.capabilities,
+              "positionEncoding"
+            >);
+        const supported = session.capabilities[capability];
         invariant(
           supported !== undefined && supported !== false,
           "LSP_CAPABILITY_UNAVAILABLE",
-          `Language server does not advertise ${input.action}`,
+          `Language server does not advertise ${capability} required by ${input.action}`,
         );
       }
       const requested = await readDocument(file, signal);
-      const position =
-        input.action === "diagnostics"
-          ? undefined
-          : languagePosition(requested.text, input.line, input.character);
+      const position = [
+        "diagnostics",
+        "documentSymbol",
+        "workspaceSymbol",
+      ].includes(input.action)
+        ? undefined
+        : languagePosition(requested.text, input.line, input.character);
       // Refresh all previously opened files before a query, including dependencies.
       for (const [opened, state] of session.opened) {
         signal.throwIfAborted();
@@ -743,17 +788,56 @@ export class LanguageService {
           signal,
           Math.max(1, deadline - Date.now()),
         );
-      const result = await query(`textDocument/${input.action}`, {
-        textDocument: { uri },
-        position,
-        ...(input.action === "references"
-          ? {
-              context: {
-                includeDeclaration: input.includeDeclaration ?? false,
-              },
-            }
-          : {}),
-      });
+      if (
+        input.action === "incomingCalls" ||
+        input.action === "outgoingCalls"
+      ) {
+        // Prepare on the same synchronized session each time. A host-supplied
+        // item could belong to stale bytes, another workspace or another server.
+        const prepared = languageResult(
+          "prepareCallHierarchy",
+          await query("textDocument/prepareCallHierarchy", {
+            textDocument: { uri },
+            position,
+          }),
+        );
+        const items = symbolResults.prepareCallHierarchy.parse(prepared) ?? [];
+        const index = input.item_index ?? 0;
+        if (!items.length && index === 0) return [];
+        if (!Number.isInteger(index) || index < 0 || index >= items.length)
+          throw new ToolError(
+            "LSP_CALL_ITEM_NOT_FOUND",
+            "Select an item_index returned by prepareCallHierarchy",
+            {
+              item_count: items.length,
+              item_index: index,
+            },
+          );
+        const result = languageResult(
+          input.action,
+          await query(`callHierarchy/${input.action}`, { item: items[index] }),
+        );
+        await session.directory?.check();
+        return result;
+      }
+      const result = await query(
+        input.action === "workspaceSymbol"
+          ? "workspace/symbol"
+          : `textDocument/${input.action}`,
+        input.action === "workspaceSymbol"
+          ? { query: input.query ?? "" }
+          : {
+              textDocument: { uri },
+              ...(position ? { position } : {}),
+              ...(input.action === "references"
+                ? {
+                    context: {
+                      includeDeclaration: input.includeDeclaration ?? false,
+                    },
+                  }
+                : {}),
+            },
+      );
       const validated = languageResult(input.action, result);
       await session.directory?.check();
       return input.action === "references" && !input.includeDeclaration

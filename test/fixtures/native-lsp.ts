@@ -32,6 +32,13 @@ connection.onRequest("initialize", () => ({
     referencesProvider: true,
     hoverProvider: true,
     implementationProvider: process.env.NO_IMPLEMENTATION !== "1",
+    ...(process.env.NO_SYMBOLS === "1"
+      ? {}
+      : {
+          documentSymbolProvider: true,
+          workspaceSymbolProvider: { resolveProvider: false },
+          callHierarchyProvider: { workDoneProgress: false },
+        }),
     positionEncoding: process.env.POSITION_ENCODING ?? "utf-16",
   },
 }));
@@ -131,6 +138,75 @@ connection.onRequest("textDocument/implementation", () => {
     },
   ];
 });
+const item = (name: string, file = "Model.ets") => ({
+  name,
+  kind: 12,
+  uri: uri(file),
+  range: range(0, 0),
+  selectionRange: range(0, 0),
+  data: { symbol: name, source: documents.get(uri("Model.ets"))?.text },
+});
+connection.onRequest("textDocument/documentSymbol", (raw: unknown) => {
+  z.strictObject({ textDocument: z.object({ uri: z.string() }) }).parse(raw);
+  if (process.env.EMPTY_SYMBOLS === "1") return null;
+  if (process.env.INVALID_SYMBOLS === "1") return [{ name: "bad", kind: 12 }];
+  if (process.env.FLAT_SYMBOLS === "1")
+    return [{ name: "flat", kind: 12, location: usage }];
+  return [
+    { ...item("outer"), children: [{ ...item("nested"), children: [] }] },
+  ];
+});
+connection.onRequest("workspace/symbol", (raw: unknown) => {
+  const { query } = z.strictObject({ query: z.string() }).parse(raw);
+  if (process.env.EMPTY_SYMBOLS === "1") return [];
+  return [{ name: query, kind: 12, location: usage, containerName: "跨文件" }];
+});
+connection.onRequest("textDocument/prepareCallHierarchy", () => {
+  if (process.env.EMPTY_SYMBOLS === "1") return null;
+  return [item("root"), item("overload")];
+});
+for (const direction of ["incomingCalls", "outgoingCalls"] as const) {
+  if (direction === "outgoingCalls" && process.env.NO_OUTGOING_METHOD === "1")
+    continue;
+  connection.onRequest(
+    `callHierarchy/${direction}`,
+    async (raw: unknown, token) => {
+      const input = z
+        .object({
+          item: z.object({
+            name: z.string(),
+            data: z.object({ symbol: z.string(), source: z.string() }),
+          }),
+        })
+        .parse(raw).item;
+      if (
+        input.data.symbol !== input.name ||
+        input.data.source !== documents.get(uri("Model.ets"))?.text
+      )
+        throw new Error("Missing or stale opaque server data");
+      if (process.env.CALL_DELAY_MS)
+        await new Promise<void>((resolve) => {
+          const timer = setTimeout(resolve, Number(process.env.CALL_DELAY_MS));
+          token.onCancellationRequested(() => {
+            clearTimeout(timer);
+            resolve();
+          });
+        });
+      if (token.isCancellationRequested) return null;
+      const key = direction === "incomingCalls" ? "from" : "to";
+      return [
+        {
+          [key]: item(`${input.name}-one`, "Consumer.ets"),
+          fromRanges: [range(1, 0), range(2, 0)],
+        },
+        {
+          [key]: item(`${input.name}-two`, "Implementation.ets"),
+          fromRanges: [range(3, 0)],
+        },
+      ];
+    },
+  );
+}
 connection.onRequest("shutdown", () => null);
 connection.onNotification("exit", () => process.exit(0));
 connection.listen();

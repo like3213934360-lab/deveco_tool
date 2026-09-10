@@ -6,6 +6,16 @@ import { atomicWrite } from "./core/files.js";
 
 async function main() {
   const command = process.argv[2] ?? "mcp";
+  if (["--version", "-v", "-V"].includes(command)) {
+    invariant(
+      process.argv.length === 3,
+      "INVALID_ARGUMENT",
+      "Version flags take no arguments",
+    );
+    const { release } = await import("./core/config.js");
+    process.stdout.write(release + "\n");
+    return;
+  }
   if (command === "maintenance") {
     const { maintenance } = await import("./maintenance/upgrade.js");
     await maintenance(process.argv.slice(3));
@@ -53,7 +63,9 @@ async function main() {
     }
     return;
   }
-  throw new Error("Usage: deveco-tool [mcp|doctor|maintenance]");
+  throw new Error(
+    "Usage: deveco-tool [mcp|doctor|maintenance|--version|-v|-V]",
+  );
 }
 main().catch((error) => {
   process.stderr.write(JSON.stringify(errorResult(error)) + "\n");

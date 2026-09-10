@@ -1,0 +1,192 @@
+{
+  "format": 1,
+  "kind": "redacted_behavior_observations",
+  "group": "Final wireless device and package lifecycle acceptance",
+  "tested": {
+    "runtime_sha256": "5e5aa855f7808b5d953364e4545821877d37f300d8641bbce1a4f2f4b53c0097",
+    "compiled_sha256": "4c6668ee61e25fc125733b107455868346a15d7b0a000b773232e8f0c3ba83a0",
+    "package_lock_sha256": "9ebb046bdb6d6094bb2eb3d17555bb21f73d8f4ac83f9c396af6a10f9c9f7f95",
+    "resource_manifest_sha256": "039b6e34e2055939b4ec542fdd39cb3e2e0c66958e24a74fc9f5168f6d95636b",
+    "upstream_lock_sha256": "9ea597235ffa9f97a076791d637acd976f8f4c78bcf85ea77de118570708ed3d"
+  },
+  "sources": [
+    {
+      "original_sha256": "b1e83902979071a856116d0ca3c974057650f59b2ae947d9418a4115835f3a77",
+      "validation_sha256": "25a72bf6d9422a3001cffedd6aa6924cd4c8ba03d1c2fe1396f5e35a35f89b65",
+      "passed": true,
+      "closed": true,
+      "unchanged": true
+    }
+  ],
+  "observations": {
+    "accepted_actions": 6,
+    "no_progress_counts": [
+      1,
+      2,
+      3
+    ],
+    "fourth_action_rejected": true,
+    "finish_before_review_rejected": true,
+    "reviewed_images": 2,
+    "retained_action_count_on_resume": 5,
+    "cancelled_after_restart": true,
+    "log_search_matches": 1,
+    "guided_workflows_completed": [
+      "ui_test",
+      "debug"
+    ],
+    "cancelled_evidence_rejected": true,
+    "recorded_steps": 2,
+    "recorded_default_timeout_ms": 30000,
+    "saved_flow_replayed": true,
+    "build_deploy_verified": true,
+    "large_deploys": 7,
+    "total_deployed_bytes": 2349257638,
+    "final_capacity_bytes": 8407806,
+    "capacity_bytes": [
+      7889499,
+      7987367,
+      8045215,
+      8090751,
+      8140383,
+      8185919,
+      8231455,
+      8281087,
+      8281087,
+      8407806
+    ],
+    "exports": [
+      {
+        "directory": "test-export",
+        "manifest_sha256": "bc5e4ac9a04489e9d393d5c1b61e8f1fe2aebdef52bbab2d336d6e67914417b5",
+        "artifacts": 149,
+        "events": 524,
+        "released_packages": 0
+      },
+      {
+        "directory": "cancel-export",
+        "manifest_sha256": "cc7a82bad6a20824f6fd4bdffe3375ceb52be2ef6e9e976cd32ab27a7f31bbf2",
+        "artifacts": 11,
+        "events": 41,
+        "released_packages": 0
+      },
+      {
+        "directory": "guided-ui-export",
+        "manifest_sha256": "508c057abd204a4aa875e64e6b4f7fe6622250c757c3b6341c2d1b15b1592447",
+        "artifacts": 151,
+        "events": 528,
+        "released_packages": 0
+      },
+      {
+        "directory": "guided-debug-export",
+        "manifest_sha256": "c9239677d89b94efd828eee5ad743b41bbe13c17025ac3d29e38658bb1a17263",
+        "artifacts": 151,
+        "events": 528,
+        "released_packages": 0
+      },
+      {
+        "directory": "record-export",
+        "manifest_sha256": "08c932e42491cb56dac327ea559424e950a8e0c2dcdd5a32abef0644218eda18",
+        "artifacts": 21,
+        "events": 108,
+        "released_packages": 0
+      },
+      {
+        "directory": "replay-export",
+        "manifest_sha256": "cf63d0dbabb91c31671e0b9aaf32dec10a35197a21f8ea32eb6510093e9cd671",
+        "artifacts": 52,
+        "events": 176,
+        "released_packages": 0
+      },
+      {
+        "directory": "build-deploy-export",
+        "manifest_sha256": "af995cd25ac614e3367e91ff1328752b6bdfbde533f35e821b28fd42e06851f2",
+        "artifacts": 14,
+        "events": 71,
+        "released_packages": 1
+      },
+      {
+        "directory": "large-deploy-1-export",
+        "manifest_sha256": "27e2a269e9cf645c7c581e9a06deda1c8fff1fce68bc7c774948db410e129ee5",
+        "artifacts": 7,
+        "events": 45,
+        "released_packages": 1
+      },
+      {
+        "directory": "large-deploy-2-export",
+        "manifest_sha256": "6ed3869ba1a27bc30eed2b867a0722fac0db4ecab69085f51e3cbb42a3ecfb85",
+        "artifacts": 7,
+        "events": 45,
+        "released_packages": 1
+      },
+      {
+        "directory": "large-deploy-3-export",
+        "manifest_sha256": "26ea48aa86d09bf3ef7080f1a1c86f27e2479b016e40b07aa2051ccd1d52c4c3",
+        "artifacts": 7,
+        "events": 45,
+        "released_packages": 1
+      },
+      {
+        "directory": "large-deploy-4-export",
+        "manifest_sha256": "1095d187101b70918576a1c986206c23a93910aa2950cc5ce27c337319e70ed5",
+        "artifacts": 7,
+        "events": 45,
+        "released_packages": 1
+      },
+      {
+        "directory": "large-deploy-5-export",
+        "manifest_sha256": "cf88cf7e321dd0e5c8526e9ac006cd515aaa2020b3d156964b63d611e58e4409",
+        "artifacts": 7,
+        "events": 45,
+        "released_packages": 1
+      },
+      {
+        "directory": "large-deploy-6-export",
+        "manifest_sha256": "45550160b8d715f7d876396975ccef628d8e22f9bb22a41652c02c88afd5adb5",
+        "artifacts": 7,
+        "events": 45,
+        "released_packages": 1
+      },
+      {
+        "directory": "large-deploy-7-export",
+        "manifest_sha256": "f3b3f15d931723b60bbfedb6506529653106885152025059e4a6bdf4b806d8ad",
+        "artifacts": 7,
+        "events": 45,
+        "released_packages": 1
+      },
+      {
+        "directory": "restore-export",
+        "manifest_sha256": "95c2335f893d2eca2b06866612c3d3e369a1822ceea599483e4afd8db73ce1f2",
+        "artifacts": 14,
+        "events": 71,
+        "released_packages": 1
+      },
+      {
+        "directory": "large-build-export",
+        "manifest_sha256": "f0762450246a42db9f3478b5accf5b9dc2e088d8b2ed9473541650d7dcaa10a1",
+        "artifacts": 5,
+        "events": 20,
+        "released_packages": 0
+      }
+    ],
+    "negative_and_harness_results": [
+      {
+        "id": 20,
+        "code": "UI_TEST_REPLAN_REQUIRED"
+      },
+      {
+        "id": 34,
+        "code": "UI_TEST_INCOMPLETE"
+      },
+      {
+        "id": 50,
+        "code": "INVALID_ARGUMENT"
+      },
+      {
+        "id": 57,
+        "code": "SKILL_WORKFLOW_EVIDENCE_INCOMPLETE"
+      }
+    ]
+  },
+  "privacy": "Selected result fields only. Private raw journal, screenshot/log/event exports and byte validation are retained outside the repository and included only in encrypted release evidence. No device address, credentials, state database or host path is published."
+}

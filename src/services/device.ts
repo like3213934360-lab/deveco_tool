@@ -128,6 +128,7 @@ export class DeviceService {
     readonly processes: ProcessService,
     readonly store: StateStore,
     readonly cpu?: CpuPool,
+    readonly assertTaskTarget: (target: string) => void = () => {},
   ) {
     this.screenshots = new ScreenshotService(store, this);
   }
@@ -336,8 +337,8 @@ export class DeviceService {
       }),
     };
   }
-  screenshot(target: string, input: unknown = {}, signal?: AbortSignal) {
-    return this.screenshots.capture(target, input, signal);
+  screenshot(target: string, input: unknown = {}, signal?: AbortSignal, progressScope?: readonly Rect[]) {
+    return this.screenshots.capture(target, input, signal, progressScope);
   }
   async control(
     target: string,
@@ -349,6 +350,7 @@ export class DeviceService {
     return this.store.lease(
       `device:${target}`,
       async () => {
+        this.assertTaskTarget(target);
         const resolved = await this.store.privateMemo("control", { target, input }, async () => {
           let snapshot: Snapshot | undefined;
           if (needsControlSnapshot(input)) {
@@ -361,6 +363,22 @@ export class DeviceService {
         }, (value) => controlSchema.parse(value));
         const args = uiInputArguments(resolved);
         this.invalidate(target);
+        if (resolved.action.startsWith("mouse")) {
+          const { mouseRequest } = await import("./ui-control.js"), { nativeDriverCall } = await import("./text.js");
+          const request = mouseRequest(resolved), decode = (raw: unknown) => z.object({ method: z.string(), commandAccepted: z.boolean(), outcomeVerified: z.boolean() }).parse(raw);
+          return this.store.privateEffect("mouse", { target, input, resolved }, () => nativeDriverCall(this, target, request.api, request.args, signal), decode);
+        }
+        if (resolved.action === "text") {
+          // Some released UiTest versions print valid usage but exit 1 for help.
+          // Only this read-only probe accepts that status; input still requires exit 0.
+          const help = await this.shell(target, ["uitest", "uiInput", "help"], signal, 30000, true);
+          invariant([0, 1].includes(help.exitCode ?? -1) && !help.truncated && !help.stderr.trim() && /^text\s+<text>/m.test(help.stdout), "UI_FOCUSED_TEXT_UNSUPPORTED", "Installed UiTest does not advertise current-focus text input");
+          return this.store.privateEffect("focused-text", { target, input, resolved }, async () => {
+            const receipt = await this.shell(target, ["uitest", "uiInput", ...args], signal, 30000, false, true);
+            invariant(receipt.exitCode === 0 && !receipt.stderr.trim() && ["", "No Error"].includes(receipt.stdout.trim()), "UI_TEXT_UNCONFIRMED", "Native focused text input did not return a successful receipt; inspect the field before retrying");
+            return { method: "uitest-current-focus", commandAccepted: true, outcomeVerified: false };
+          }, raw => z.object({ method: z.string(), commandAccepted: z.boolean(), outcomeVerified: z.boolean() }).parse(raw));
+        }
         if (resolved.action === "inputText") {
           const { pasteText } = await import("./text.js");
           const resultSchema = z.object({ method: z.string(), commandAccepted: z.boolean(), outcomeVerified: z.boolean() });
@@ -551,6 +569,7 @@ export class DeviceService {
       `device:${target}`,
       async () => {
         // Recheck after waiting for the device lease, immediately before dispatch.
+        this.assertTaskTarget(target);
         for (const artifact of artifacts)
           await verifyCapturedFile(artifact, signal);
         const receipt =
@@ -728,6 +747,10 @@ export class DeviceService {
     }
   }
   async stopApplication(target: string, bundle: string, signal?: AbortSignal) {
+    return this.store.lease(`device:${target}`, () => this.stopApplicationLocked(target, bundle, signal), signal);
+  }
+  private async stopApplicationLocked(target: string, bundle: string, signal?: AbortSignal) {
+    this.assertTaskTarget(target);
     const args = ["aa", "force-stop", bundle];
     const accept = (result: DeviceReceipt & { stderr?: string }) => {
       invariant(result.exitCode === 0 && !/error|failed/i.test(result.stdout + (result.stderr ?? "")), "APP_STOP_FAILED", "Device did not confirm application stop");
@@ -776,6 +799,16 @@ export class DeviceService {
     durable: boolean,
     recovery: boolean,
   ) {
+    return this.store.lease(`device:${target}`, () => this.launchLocked(target, raw, signal, durable, recovery), signal);
+  }
+  private async launchLocked(
+    target: string,
+    raw: ApplicationTarget,
+    signal: AbortSignal | undefined,
+    durable: boolean,
+    recovery: boolean,
+  ) {
+    this.assertTaskTarget(target);
     const app = appSchema.parse(raw);
     this.invalidate(target);
     const args = ["aa", "start", "-b", app.bundle_name, "-a", app.ability];

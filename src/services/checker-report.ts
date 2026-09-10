@@ -20,6 +20,10 @@ const metadata = z.object({
     source_bytes: z.number().int().nonnegative(),
   }),
   checks: z.object({
+    project_metadata: z.literal("executed"),
+    permissions: z.enum(["executed", "unavailable"]),
+    app_resources: z.enum(["executed", "unavailable"]),
+    arkui_syntax: z.literal("executed"),
     sdk: z.literal("executed"),
     system_resources: z.enum(["executed", "unavailable"]),
     router_pages: z.literal("executed"),

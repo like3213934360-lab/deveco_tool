@@ -1,0 +1,14 @@
+---
+name: deveco-native-tools
+description: Use native HarmonyOS MCP for device and emulator management, signing, UI inspection/control, natural-language UI tests, evidence recovery and HarmonyOS Skill management.
+---
+
+Inspect `deveco_doctor`, `device_info` and `workflow_catalog` for installed capabilities, explicit target identities and workflow schemas. Prefer a declared public Ability/Want route before UI exploration. Follow [UI testing](references/ui-testing.md) for natural-language test plans and visual requirements. Use `ui_snapshot` with mode=image for capture alone; `verify_ui` requires an assertion or a review requirement. An accepted command is not a verified application outcome.
+
+For deterministic multi-step operations, use the catalog's workflow and keep run_id for status/resume/cancel. Run inputs capture their project, app and device; switching defaults does not retarget existing runs. Never pass recording-only mode to ui_flow run. Inspect ambiguous nodes using bundle/window/key/type; do not choose the first matching label. `Back` is a supported key name. Focus input uses ui_control action=text with a captured app window and exactly one editable focused field. inputText targets a selector or coordinates. Mouse actions require a supported native SDK and explicit app/window scope.
+
+For sign/auth and emulator changes, use the typed `app_signature`, `harmony_auth`, `emulator_manage` and `emulator_scenario` schemas. Read the native inventory before selecting product/module/image/device. Keep existing signing material and user configuration; a signing mismatch is not authorization to uninstall user data. License acceptance is tied to the exact reviewed native agreement. Authentication, capability detection and a command receipt are separate from verified device behavior.
+
+When STATE_CAPACITY occurs, use workflow_run capacity with the anticipated additional_bytes. Select completed runs in cleanup_plan, export evidence to a new directory if needed, then cleanup_apply using the same run_ids and plan_hash. Read the storage receipt and retry through MCP. Active/recoverable tasks and exported evidence are protected. Do not increase the limit or use shell installation as a substitute for validating recovery.
+
+`skill_workflow catalog` lists the workflows shipped inside this MCP. Start the appropriate kind with the project and original objective; each response supplies current-phase instructions, knowledge, native tool routes and completion gates. Save run_id and revision, and use read after a reconnect. `skill_manage catalog/read` retrieves additional bundled Skills and references directly through MCP. Never install or copy them into a client directory. MCP owns the state and native execution; the selected AI client supplies reasoning, scoped file edits and image understanding when the current step requires them.

@@ -1,0 +1,155 @@
+{
+  "format": 1,
+  "kind": "redacted_behavior_observations",
+  "group": "Check and build behavior",
+  "tested": {
+    "runtime_sha256": "7777d47abd664781e146a688859eb4f03bf9bd82b92a1385394697864c2d8177",
+    "compiled_sha256": "077ef53f6b6a8575fa272e517d66ea107833668a18f7aeb58dffaa135d2212b4",
+    "package_lock_sha256": "9ebb046bdb6d6094bb2eb3d17555bb21f73d8f4ac83f9c396af6a10f9c9f7f95",
+    "resource_manifest_sha256": "039b6e34e2055939b4ec542fdd39cb3e2e0c66958e24a74fc9f5168f6d95636b",
+    "upstream_lock_sha256": "9ea597235ffa9f97a076791d637acd976f8f4c78bcf85ea77de118570708ed3d"
+  },
+  "sources": [
+    {
+      "original_sha256": "7a5739da91c5b471b9471d9b6acc1c4f86b6710b354b9a99d6d7a4b856d1a255",
+      "captured_at": "2026-09-10T14:45:10.538Z",
+      "passed": true,
+      "closed": true,
+      "unchanged": true
+    },
+    {
+      "original_sha256": "765a9aea7d807a7550eebf9b4687452feca9b5a6389c0d6dbed516ec179dec7e",
+      "captured_at": "2026-09-10T14:45:10.563Z",
+      "passed": true,
+      "closed": true,
+      "unchanged": true
+    },
+    {
+      "original_sha256": "702e3827eca8c5f619adf4c7a647c8329bd9a4c687ebfc90672e6a76fe29a0b4",
+      "captured_at": "2026-09-10T14:45:59.303Z",
+      "passed": true,
+      "closed": true,
+      "unchanged": true
+    }
+  ],
+  "observations": [
+    {
+      "observation": "checker_reproduces_error",
+      "success": false,
+      "summary": {
+        "errorCount": 1
+      },
+      "checks": {
+        "project_metadata": "executed",
+        "permissions": "executed",
+        "app_resources": "executed",
+        "arkui_syntax": "executed",
+        "sdk": "executed",
+        "system_resources": "executed",
+        "router_pages": "executed",
+        "model_version": "executed"
+      }
+    },
+    {
+      "observation": "default_build_blocked",
+      "status": "failed",
+      "error_code": "BUILD_CHECK_BLOCKED"
+    },
+    {
+      "observation": "checker_after_repair",
+      "success": true,
+      "summary": {
+        "errorCount": 0
+      }
+    },
+    {
+      "observation": "build_after_repair",
+      "status": "succeeded",
+      "success": true,
+      "compilationVerified": true,
+      "artifacts": [
+        {
+          "bytes": 22519,
+          "sha256": "d2b85485c8d8b7a5296fa0a1993c4288ec30ce4f85b0d774dc5d98bffb5e289c"
+        }
+      ]
+    },
+    {
+      "observation": "checker_acceptance",
+      "passed_case_names": [
+        "clean_project_scope",
+        "default_scope_excludes_build_scripts_declarations_and_tests",
+        "typescript_source_and_module_barrel_errors",
+        "explicit_scope_rejects_declarations_and_outside_sources",
+        "hms_kit_is_loaded_before_sdk_initialization",
+        "router_missing_malformed_and_repaired",
+        "resource_ast_ignores_comments_and_strings_but_reports_calls",
+        "sdk_product_changes_keep_real_compatibility_warnings",
+        "concurrent_checks_release_distinct_owned_scratch_directories",
+        "model_version_mismatch_and_repair",
+        "binding_whitelist_retains_unknown_name_errors",
+        "large_diagnostics_are_not_truncated_by_child_pipe_exit",
+        "renamed_unicode_module_and_custom_page",
+        "metadata_permissions_resources_and_router_repair",
+        "arkui_ast_decorators_entry_count_and_event_scopes",
+        "app_resource_ast_reports_only_real_references",
+        "cross_file_observed_v2_alias_and_storage_repair",
+        "cross_file_component_alias_regular_and_local_inputs_repair",
+        "navigation_content_and_attribute_chain_repair",
+        "registered_navigation_checks_each_branch_and_repairs_root",
+        "compiled_runtime_and_inputs_remain_identical"
+      ]
+    },
+    {
+      "observation": "multimodule_acceptance",
+      "passed_case_names": [
+        "create_multimodule_fixture",
+        "default_sync",
+        "default_assembleHar",
+        "default_assembleHsp",
+        "default_assembleHap",
+        "default_package_set_identity",
+        "default_default_task_selection",
+        "default_application_dependency_closure",
+        "default_cross_module_lsp",
+        "default_target_static_precheck",
+        "default_arm64-v8a_cpp_modules",
+        "default_x86_64_cpp_modules",
+        "default_preview_sync",
+        "default_preview_assembleHar",
+        "default_preview_assembleHsp",
+        "default_preview_assembleHap",
+        "default_preview_package_set_identity",
+        "default_preview_default_task_selection",
+        "default_preview_application_dependency_closure",
+        "default_preview_cross_module_lsp",
+        "default_preview_target_static_precheck",
+        "default_preview_arm64-v8a_cpp_modules",
+        "default_preview_x86_64_cpp_modules",
+        "tablet_sync",
+        "tablet_assembleHar",
+        "tablet_assembleHsp",
+        "tablet_assembleHap",
+        "tablet_package_set_identity",
+        "tablet_default_task_selection",
+        "tablet_application_dependency_closure",
+        "tablet_cross_module_lsp",
+        "tablet_target_static_precheck",
+        "tablet_arm64-v8a_cpp_modules",
+        "tablet_x86_64_cpp_modules",
+        "tablet_preview_sync",
+        "tablet_preview_assembleHar",
+        "tablet_preview_assembleHsp",
+        "tablet_preview_assembleHap",
+        "tablet_preview_package_set_identity",
+        "tablet_preview_default_task_selection",
+        "tablet_preview_application_dependency_closure",
+        "tablet_preview_cross_module_lsp",
+        "tablet_preview_target_static_precheck",
+        "tablet_preview_arm64-v8a_cpp_modules",
+        "tablet_preview_x86_64_cpp_modules"
+      ]
+    }
+  ],
+  "privacy": "Only selected non-private result fields are published. Original reports are retained in the private persistent acceptance directory; no state database, credential, absolute host path or device identifier is included."
+}

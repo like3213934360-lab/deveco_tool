@@ -78,6 +78,18 @@ export class RequestLog {
     }
   }
 
+  /** Retry the retained batch after explicit storage recovery. No event is
+   * discarded; non-capacity persistence failures remain fatal. */
+  recoverCapacity(): void {
+    if (!this.failed) return;
+    invariant(this.failure !== null && typeof this.failure === "object" &&
+      "code" in this.failure && this.failure.code === "STATE_CAPACITY",
+      "REQUEST_LOG_FAILED", "Request logger requires restart after a non-capacity persistence failure");
+    this.failed = false;
+    this.failure = undefined;
+    this.flush();
+  }
+
   close(): void {
     if (this.closed) return;
     this.closed = true;

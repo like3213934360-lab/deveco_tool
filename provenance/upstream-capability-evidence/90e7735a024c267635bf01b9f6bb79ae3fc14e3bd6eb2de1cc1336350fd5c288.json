@@ -1,0 +1,22 @@
+{
+  "format": 1,
+  "kind": "lsp-symbols",
+  "passed": true,
+  "tested": {
+    "runtime_sha256": "cd0faac159a1e06db5795b6214161830ada64e7fc5199f84cbcd6912a4978e06",
+    "compiled_sha256": "fa1b92e304ffaeabd9fdb5f7e38998cd026b6aa2862cebdfa45eca4efb077bd2",
+    "package_lock_sha256": "fd0ef7a0fbe5e1400049291bc148e8f8a24c7a11d8569df59c6ea8b9d3402386",
+    "resource_manifest_sha256": "039b6e34e2055939b4ec542fdd39cb3e2e0c66958e24a74fc9f5168f6d95636b",
+    "upstream_lock_sha256": "ba0c89c6cb7b505b3cb4a62e43fef5057b225e11324b862da1530961328928d0",
+    "node": "v24.14.1",
+    "platform": "darwin",
+    "arch": "arm64",
+    "entrypoint": "dist/scripts/native-lsp-symbol-acceptance.js"
+  },
+  "scope": "Real installed SDK acceptance; limitations and unsupported capabilities remain in the original report and per-operation capability matrix.",
+  "original_sha256": "a8f1f43bda10bc2adba425095790dd1de0aad8dd54b8f13320a17da25e5a5be5",
+  "executed_tests": [
+    "dist/scripts/native-lsp-symbol-acceptance.js"
+  ],
+  "observations": []
+}

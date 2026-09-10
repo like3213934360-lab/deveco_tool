@@ -1,6 +1,6 @@
 {
   "name": "deveco-tool",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "private": false,
   "description": "Native HarmonyOS MCP with typed tools, deterministic LangGraph workflows and durable SQLite execution.",
   "type": "module",
@@ -39,6 +39,7 @@
     "adm-zip": "0.6.0",
     "ajv": "8.20.0",
     "better-sqlite3": "12.10.0",
+    "jpeg-js": "0.4.4",
     "json5": "2.2.3",
     "koffi": "3.2.1",
     "vscode-jsonrpc": "8.2.1",

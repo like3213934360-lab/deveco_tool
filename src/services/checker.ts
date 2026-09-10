@@ -13,6 +13,10 @@ import {
   checkerRouterPages,
   checkerSdkEnvironment,
 } from "./checker-project.js";
+import { checkerMetadata } from "./checker-metadata.js";
+import { checkerSyntax, type ArkSyntax } from "./checker-syntax.js";
+import { checkerModel } from "./checker-model.js";
+import { z } from "zod";
 export interface CheckDiagnostic {
   file: string;
   line: number;
@@ -22,6 +26,7 @@ export interface CheckDiagnostic {
   rule: string;
 }
 interface SdkChecker {
+  compilerOptions: ts.CompilerOptions;
   etsStandaloneChecker(
     files: Record<string, string>,
     logger: Record<string, (...args: unknown[]) => void>,
@@ -70,7 +75,11 @@ export async function staticCheck(input: {
   files?: string[];
   cache_path: string;
 }) {
-  const project = inspectProject(input.project_path, input.product, input.module_targets),
+  const project = inspectProject(
+      input.project_path,
+      input.product,
+      input.module_targets,
+    ),
     toolchain = discoverToolchain();
   const loader = path.join(
     toolchain.sdk,
@@ -97,6 +106,12 @@ export async function staticCheck(input: {
     executeArkTSLinter: true,
     standardArkTSLinter: true,
   });
+  const mainConfig = object(main.projectConfig);
+  if (Array.isArray(main.globalModulePaths) && !mainConfig.globalModulePaths)
+    mainConfig.globalModulePaths = main.globalModulePaths;
+  // The installed SDK gates @since warnings on the usage source file. An SDK
+  // root here suppresses real app compatibility warnings (API 12 canary).
+  mainConfig.projectRootPath = project.root;
   const version = project.product.compatibleSdkVersion;
   const parseVersion = (value: string | number): number => {
     if (typeof value === "number") return value;
@@ -140,7 +155,6 @@ export async function staticCheck(input: {
         )
         .filter((file) => fs.existsSync(file)),
       projectPath: project.root,
-      projectRootPath: project.root,
       modulePath: project.root,
       cachePath,
       aceModuleJsonPath: path.join(
@@ -152,6 +166,10 @@ export async function staticCheck(input: {
       packageManagerType: "ohpm",
       packageDir: "oh_modules",
       ...sdkConfiguration,
+      compileSdkVersion: sdkConfiguration.compatibleSdkVersion,
+      minAPIVersion: sdkConfiguration.compatibleSdkVersion,
+      // Keep the original product version string. HarmonyOS SDK comparison
+      // distinguishes "6.1.0(23)" from the bare integer 23.
       sdkInfo: JSON.stringify(sdkConfiguration),
       bundleType: "",
       compilerTypes: [],
@@ -164,7 +182,61 @@ export async function staticCheck(input: {
   );
   const syntax = require(
     require.resolve("typescript", { paths: [loader] }),
-  ) as typeof ts & { ScriptKind: typeof ts.ScriptKind & { ETS: number } };
+  ) as ArkSyntax;
+  invariant(
+    typeof syntax.isStructDeclaration === "function" &&
+      typeof syntax.isEtsComponentExpression === "function",
+    "CHECKER_PROTOCOL_UNSUPPORTED",
+    "SDK syntax parser does not expose ArkTS structs",
+  );
+  const componentMap = z
+    .object({
+      BUILDIN_CONTAINER_COMPONENT: z.set(z.string()),
+      INNER_COMPONENT_NAMES: z.set(z.string()),
+    })
+    .parse(require(path.join(loader, "lib/component_map.js")) as unknown);
+  const components = {
+    containers: componentMap.BUILDIN_CONTAINER_COMPONENT,
+    builtins: componentMap.INNER_COMPONENT_NAMES,
+  };
+  // The SDK's sixth parser argument supplies ArkUI components, builder contexts
+  // and UI callback syntax. Without it Navigation bodies split from attributes.
+  z.object({
+    ets: z.object({
+      components: z.array(z.string()).min(1),
+      render: z.object({
+        method: z.array(z.string()),
+        decorator: z.array(z.string()),
+      }),
+    }),
+  }).parse(checker.compilerOptions);
+  const metadata = checkerMetadata(project, toolchain.sdk);
+  diagnostics.push(...metadata.diagnostics);
+  const parsedSources = new Map<string, ts.SourceFile>();
+  let parsedBytes = 0;
+  const sourceFile = (file: string) => {
+    const existing = parsedSources.get(file);
+    if (existing) return existing;
+    const selected = checkerSources(project, [file]).files[0]!;
+    const canonical = parsedSources.get(selected);
+    if (canonical) return canonical;
+    parsedBytes += fs.statSync(selected).size;
+    invariant(
+      parsedBytes <= 64 * 1024 * 1024,
+      "CHECK_SOURCE_LIMIT",
+      "Selected sources and referenced project declarations exceed 64 MiB; narrow the project scope",
+    );
+    const source = syntax.createSourceFile(
+      selected,
+      fs.readFileSync(selected, "utf8"),
+      syntax.ScriptTarget.Latest,
+      true,
+      selected.endsWith(".ets") ? syntax.ScriptKind.ETS : syntax.ScriptKind.TS,
+      checker.compilerOptions,
+    );
+    parsedSources.set(selected, source);
+    return source;
+  };
   const resourcesFile = path.join(
     toolchain.sdk,
     "default/openharmony/previewer/common/resources/entry/resources.txt",
@@ -182,12 +254,9 @@ export async function staticCheck(input: {
     : null;
   const stateFields = new Map<string, Set<string>>();
   for (const file of files) {
-    const source = syntax.createSourceFile(
-      file,
-      fs.readFileSync(file, "utf8"),
-      syntax.ScriptTarget.Latest,
-      true,
-      file.endsWith(".ets") ? syntax.ScriptKind.ETS : syntax.ScriptKind.TS,
+    const source = sourceFile(file);
+    diagnostics.push(
+      ...checkerSyntax(syntax, source, project.root, components).diagnostics,
     );
     const states = new Set<string>();
     stateFields.set(file, states);
@@ -209,7 +278,6 @@ export async function staticCheck(input: {
           states.add(node.name.text);
       }
       if (
-        resourceNames &&
         syntax.isCallExpression(node) &&
         syntax.isIdentifier(node.expression) &&
         node.expression.text === "$r" &&
@@ -219,7 +287,15 @@ export async function staticCheck(input: {
         const match = /^sys\.(media|symbol)\.(.+)$/.exec(
           node.arguments[0].text,
         );
-        if (match && !resourceNames.has(match[2]!)) {
+        const appMatch = /^app\.([a-z]+)\.([A-Za-z0-9_]+)$/.exec(
+          node.arguments[0].text,
+        );
+        if (
+          (match && resourceNames && !resourceNames.has(match[2]!)) ||
+          (appMatch &&
+            metadata.indexedKinds.has(appMatch[1]!) &&
+            !metadata.resources.has(`${appMatch[1]}.${appMatch[2]}`))
+        ) {
           const at = source.getLineAndCharacterOfPosition(
             node.getStart(source),
           );
@@ -228,8 +304,8 @@ export async function staticCheck(input: {
             line: at.line + 1,
             column: at.character + 1,
             severity: "error",
-            message: `Unknown system resource ${match[2]}`,
-            rule: "resource-name-check",
+            message: `Unknown ${appMatch ? "application" : "system"} resource ${node.arguments[0].text}`,
+            rule: appMatch ? "app-resource-name-check" : "resource-name-check",
           });
         }
       }
@@ -237,7 +313,64 @@ export async function staticCheck(input: {
     };
     visit(source);
   }
-  diagnostics.push(...checkerRouterPages(project));
+  diagnostics.push(
+    ...checkerRouterPages(project, (file) =>
+      checkerSyntax(
+        syntax,
+        sourceFile(file),
+        project.root,
+        components,
+      ).pageEntry(),
+    ),
+  );
+  for (const route of metadata.routes) {
+    if (
+      !checkerSyntax(
+        syntax,
+        sourceFile(route.page),
+        project.root,
+        components,
+      ).hasExportedBuilder(route.builder)
+    )
+      diagnostics.push({
+        file: route.profile,
+        line: 1,
+        column: 1,
+        severity: "error",
+        rule: "route-map-build-function-missing",
+        message: `Route builder '${route.builder}' must be an exported @Builder function in '${path.relative(project.root, route.page)}'.`,
+      });
+  }
+  // Selected callers need declarations in their sibling application files.
+  // Keep diagnostics scoped to those callers and all reads within source limits.
+  for (const file of new Set([
+    ...checkerSources(project, undefined, true).files,
+    ...files,
+  ]))
+    sourceFile(file);
+  const moduleEntries = new Map<string, string>();
+  for (const module of project.modules) {
+    const manifest = path.join(module.root, "oh-package.json5");
+    if (!fs.existsSync(manifest)) continue;
+    const metadata = z
+      .object({ name: z.string().optional(), main: z.string().optional() })
+      .parse(readObject(manifest));
+    if (metadata.name && metadata.main)
+      moduleEntries.set(
+        metadata.name,
+        path.resolve(module.root, metadata.main),
+      );
+  }
+  diagnostics.push(
+    ...checkerModel(
+      syntax,
+      parsedSources,
+      files,
+      project.root,
+      components.builtins,
+      moduleEntries,
+    ),
+  );
   const hvigorFile = path.join(project.root, "hvigor/hvigor-config.json5"),
     packageFile = path.join(project.root, "oh-package.json5");
   if (fs.existsSync(hvigorFile) && fs.existsSync(packageFile)) {
@@ -275,6 +408,8 @@ export async function staticCheck(input: {
       source_bytes: scope.bytes,
     },
     checks: {
+      ...metadata.checks,
+      arkui_syntax: "executed",
       sdk: "executed",
       system_resources: resourceNames ? "executed" : "unavailable",
       router_pages: "executed",

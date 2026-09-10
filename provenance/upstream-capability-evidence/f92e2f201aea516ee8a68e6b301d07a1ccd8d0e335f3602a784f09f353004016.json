@@ -1,0 +1,127 @@
+{
+  "format": 1,
+  "kind": "sdk",
+  "passed": true,
+  "tested": {
+    "runtime_sha256": "dc2fa6d5f0f461ba5b1a3c3d2f5828b4c8c3c65853dc3da9dc602fb574855eee",
+    "compiled_sha256": "212fee4854b0ad714584cfb74f654674fd5b59c4e3f3a07f2df3373514e2609f",
+    "package_lock_sha256": "9ebb046bdb6d6094bb2eb3d17555bb21f73d8f4ac83f9c396af6a10f9c9f7f95",
+    "resource_manifest_sha256": "039b6e34e2055939b4ec542fdd39cb3e2e0c66958e24a74fc9f5168f6d95636b",
+    "upstream_lock_sha256": "ba0c89c6cb7b505b3cb4a62e43fef5057b225e11324b862da1530961328928d0",
+    "node": "v24.14.1",
+    "platform": "darwin",
+    "arch": "arm64",
+    "entrypoint": "dist/scripts/native-sdk-acceptance.js"
+  },
+  "scope": "Real installed SDK acceptance; limitations and unsupported capabilities remain in the original report and per-operation capability matrix.",
+  "original_sha256": "15b1f4d1f7962e7494790314653d0359a53232ea6db4756de70920d138ac7385",
+  "executed_tests": [
+    "dist/scripts/native-sdk-acceptance.js"
+  ],
+  "observations": [
+    {
+      "name": "default_sdk_metadata",
+      "passed": true
+    },
+    {
+      "name": "project_create",
+      "passed": true
+    },
+    {
+      "name": "project_build",
+      "passed": true
+    },
+    {
+      "name": "native_hap_identity",
+      "passed": true
+    },
+    {
+      "name": "static_preflight",
+      "passed": true
+    },
+    {
+      "name": "native_linter",
+      "passed": true
+    },
+    {
+      "name": "lsp_hover",
+      "passed": true
+    },
+    {
+      "name": "lsp_references",
+      "passed": true
+    },
+    {
+      "name": "lsp_definition",
+      "passed": true
+    },
+    {
+      "name": "lsp_sdk_definition",
+      "passed": true
+    },
+    {
+      "name": "lsp_implementation",
+      "passed": true
+    },
+    {
+      "name": "lsp_empty_and_position_boundary",
+      "passed": true
+    },
+    {
+      "name": "lsp_symbols_and_call_hierarchy",
+      "passed": true
+    },
+    {
+      "name": "api_version_catalog",
+      "passed": true
+    },
+    {
+      "name": "invalid_source_diagnostics",
+      "passed": true
+    },
+    {
+      "name": "native_cpp_build",
+      "passed": true
+    },
+    {
+      "name": "clangd_diagnostics",
+      "passed": true
+    },
+    {
+      "name": "clangd_symbols_and_call_hierarchy",
+      "passed": true
+    },
+    {
+      "name": "api_compatibility_findings",
+      "passed": true
+    },
+    {
+      "name": "api_compatibility_clean",
+      "passed": true
+    },
+    {
+      "name": "native_keypair",
+      "passed": true
+    },
+    {
+      "name": "native_csr",
+      "passed": true
+    },
+    {
+      "name": "project_create_distinct_runtime_apis",
+      "passed": true
+    },
+    {
+      "name": "project_build_distinct_runtime_apis",
+      "passed": true
+    },
+    {
+      "name": "native_hap_runtime_api_identity",
+      "passed": true
+    },
+    {
+      "name": "emulator_inventory",
+      "passed": true
+    }
+  ]
+}

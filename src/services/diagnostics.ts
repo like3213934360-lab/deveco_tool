@@ -22,6 +22,7 @@ import type { CpuPool } from "../core/cpu-pool.js";
 import { parseLintReport } from "./lint-report.js";
 import { lintInput } from "./lint-input.js";
 import { parseCheckerReport } from "./checker-report.js";
+import { checkerSources } from "./checker-project.js";
 
 export function apiVersions(scanner: string): string[] {
   const directory = path.join(path.dirname(scanner), "resources/apiChange");
@@ -70,6 +71,9 @@ export class DiagnosticService {
     files?: string[],
     signal?: AbortSignal,
   ): Promise<unknown> {
+    // Reject invalid explicit inputs before dispatching a checker process. The
+    // child repeats validation against the files actually present at execution.
+    if (files !== undefined) checkerSources(project, files);
     const scope = new NativeDirectory(this.store, 16 * 1024 * 1024),
       directory = scope.file;
     return scope.execute(async (signal) => {

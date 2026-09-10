@@ -14,6 +14,8 @@ import {
 import { FlowService } from "../src/services/flow.js";
 import type { Project } from "../src/services/project.js";
 import { flowSchema } from "../src/core/contracts.js";
+import { withTrace } from "../src/core/trace.js";
+import { setTimeout as delay } from "node:timers/promises";
 
 function tree(labels: string[], bundle = "com.example.test") {
   return flattenDump({
@@ -35,6 +37,25 @@ function tree(labels: string[], bundle = "com.example.test") {
   });
 }
 class FixtureDevice extends DeviceService {
+  override async screenshot(target: string) {
+    return {
+      target,
+      display_id: null,
+      format: "jpeg" as const,
+      mime: "image/jpeg" as const,
+      bytes: 4,
+      width: 50,
+      height: 50,
+      native_width: 50,
+      native_height: 50,
+      coordinate_scale: { x: 1, y: 1 },
+      sha256: "fixture",
+      frame_signature: `system-frame-${this.reads}`,
+      progress_signature: this.result ? "done" : "waiting",
+      unchanged: false,
+      artifact: undefined,
+    };
+  }
   actions: unknown[] = [];
   reads = 0;
   result = false;
@@ -115,11 +136,100 @@ function fixture() {
     flows,
     draft,
     close() {
-      store.close();
+      if (store.db.open) store.close();
       fs.rmSync(root, { recursive: true, force: true });
     },
   };
 }
+test("saved flows stop before a fourth unchanged action while still allowing their original final assertion", async () => {
+  const f = fixture();
+  try {
+    const steps = Array.from({ length: 4 }, (_, index) => ({
+      id: `tap-${index}`,
+      action: "tap",
+      selector: { text: "Submit" },
+      timeoutMs: 1000,
+    }));
+    await f.flows.save(f.project, f.draft(steps));
+    await assert.rejects(f.flows.run(f.project, "example", "device", {}), {
+      code: "FLOW_NO_PROGRESS",
+    });
+    assert.equal(f.device.actions.length, 3);
+    await f.flows.save(f.project, f.draft(steps.slice(0, 3)), true);
+    assert.equal(
+      (await f.flows.run(f.project, "example", "device", {})).verified,
+      true,
+    );
+  } finally {
+    f.close();
+  }
+});
+test("default recorded-input replay allows native input plus progress captures and preserves an explicit short deadline", async () => {
+  const f = fixture();
+  try {
+    const screenshot = f.device.screenshot.bind(f.device);
+    f.device.screenshot = async (target: string, _options?: unknown, signal?: AbortSignal) => {
+      await delay(400, undefined, { signal });
+      return screenshot(target);
+    };
+    f.device.control = async (_target: string, raw: unknown, signal?: AbortSignal) => {
+      await delay(4400, undefined, { signal });
+      f.device.actions.push(raw);
+      f.device.result = true;
+      return { commandAccepted: true, outcomeVerified: false };
+    };
+    const draft = flowSchema.parse({
+      ...f.draft([], "Done"),
+      variables: { message: { required: true, secret: true } },
+      steps: [{ id: "input", action: "input", selector: { text: "Submit" }, value: "${message}" }],
+    });
+    await f.flows.save(f.project, draft);
+    assert.equal((await f.flows.run(f.project, draft.id, "device", { message: "中文输入" })).verified, true);
+    assert.equal(f.device.actions.length, 1);
+    f.device.result = false;
+    draft.steps[0]!.timeoutMs = 100;
+    await f.flows.save(f.project, draft, true);
+    await assert.rejects(f.flows.run(f.project, draft.id, "device", { message: "中文输入" }), { code: "FLOW_STEP_TIMEOUT" });
+    assert.equal(f.device.actions.length, 1, "Expired locator/evidence budget must not dispatch input");
+  } finally {
+    f.close();
+  }
+});
+test("saved-flow no-progress receipts survive a closed database and cannot replay controls on resume", async () => {
+  const f = fixture();
+  let resumed: StateStore | undefined;
+  try {
+    const steps = Array.from({ length: 4 }, (_, index) => ({
+      id: `tap-${index}`,
+      action: "tap",
+      selector: { text: "Submit" },
+      timeoutMs: 1000,
+    }));
+    await f.flows.save(f.project, f.draft(steps));
+    const run = f.store.create("ui_flow", {}).run;
+    await assert.rejects(
+      withTrace({ run_id: run.id }, () =>
+        f.flows.run(f.project, "example", "device", {}),
+      ),
+      { code: "FLOW_NO_PROGRESS" },
+    );
+    assert.equal(f.device.actions.length, 3);
+    f.store.close();
+    resumed = new StateStore(path.join(f.root, "state"));
+    const device = new FixtureDevice(new ProcessService(), resumed),
+      service = new FlowService(device, resumed);
+    await assert.rejects(
+      withTrace({ run_id: run.id }, () =>
+        service.run(f.project, "example", "device", {}),
+      ),
+      { code: "FLOW_NO_PROGRESS" },
+    );
+    assert.equal(device.actions.length, 0);
+  } finally {
+    resumed?.close();
+    f.close();
+  }
+});
 test("saved flows wait for visibility without turning a missing first snapshot into a selector repair failure", async () => {
   const f = fixture();
   try {
@@ -294,8 +404,20 @@ test("saved replay scopes primary and repaired indexes to the requested applicat
 test("percentage gestures use the identified application surface and stay inside its last pixel", async (t) => {
   const f = fixture();
   try {
-    t.mock.method(f.device, "control", DeviceService.prototype.control.bind(f.device));
-    const shell = t.mock.method(f.device, "shell", async () => ({ stdout: "No Error", stderr: "", elapsedMs: 1, pid: null, exitCode: 0, signal: null, truncated: false }));
+    t.mock.method(
+      f.device,
+      "control",
+      DeviceService.prototype.control.bind(f.device),
+    );
+    const shell = t.mock.method(f.device, "shell", async () => ({
+      stdout: "No Error",
+      stderr: "",
+      elapsedMs: 1,
+      pid: null,
+      exitCode: 0,
+      signal: null,
+      truncated: false,
+    }));
     await f.flows.save(
       f.project,
       f.draft([
@@ -309,7 +431,10 @@ test("percentage gestures use the identified application surface and stay inside
     );
     await f.flows.run(f.project, "example", "device", {});
     assert.equal(shell.mock.callCount(), 1);
-    assert.deepEqual(shell.mock.calls[0]!.arguments.slice(0, 2), ["device", ["uitest", "uiInput", "click", "149", "249"]]);
+    assert.deepEqual(shell.mock.calls[0]!.arguments.slice(0, 2), [
+      "device",
+      ["uitest", "uiInput", "click", "149", "249"],
+    ]);
   } finally {
     f.close();
   }

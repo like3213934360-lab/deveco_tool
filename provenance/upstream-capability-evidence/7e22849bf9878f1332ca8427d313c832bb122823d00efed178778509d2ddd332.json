@@ -1,0 +1,41 @@
+{
+  "format": 1,
+  "kind": "ui-device-wireless",
+  "passed": true,
+  "tested": {
+    "runtime_sha256": "dc2fa6d5f0f461ba5b1a3c3d2f5828b4c8c3c65853dc3da9dc602fb574855eee",
+    "compiled_sha256": "212fee4854b0ad714584cfb74f654674fd5b59c4e3f3a07f2df3373514e2609f",
+    "package_lock_sha256": "9ebb046bdb6d6094bb2eb3d17555bb21f73d8f4ac83f9c396af6a10f9c9f7f95",
+    "resource_manifest_sha256": "039b6e34e2055939b4ec542fdd39cb3e2e0c66958e24a74fc9f5168f6d95636b",
+    "upstream_lock_sha256": "ba0c89c6cb7b505b3cb4a62e43fef5057b225e11324b862da1530961328928d0"
+  },
+  "scope": "Native MCP on macOS Node 24, one dedicated HarmonyOS API 26 canary over HDC TCP. Three unchanged application captures block a fourth action. A screenshot actually reviewed by the host enables a changed strategy. Focused Chinese input, native mouse confirmation, hard restart without replay, final control assertion and actual image review, initialized-test cancellation surviving restart, PID/epoch-scoped partial log search, and hash-verified evidence exports. This is not other-device coverage or continuous complete logging.",
+  "original_sha256": "46d3988bda28bee2d875f74733222e7384cf1123ce602c79ebe7252415ff1eed",
+  "observed": {
+    "accepted_actions": 6,
+    "no_progress_counts": [
+      1,
+      2,
+      3
+    ],
+    "fourth_action_rejected": true,
+    "reviewed_images": 2,
+    "retained_action_count_on_resume": 5,
+    "cancelled_after_restart": true,
+    "log_search_matches": 1,
+    "exports": [
+      {
+        "directory": "ui-export",
+        "manifest_sha256": "0f5e067caa2215cb676130311d49dfbab7a6ac316673e9a2d49f84b58dca1009",
+        "artifacts": 148,
+        "events": 520
+      },
+      {
+        "directory": "cancel-export",
+        "manifest_sha256": "922bbec5cd4f98170ce9e16f014aba7543e69ad5b90cd83080262fb0b4196609",
+        "artifacts": 11,
+        "events": 41
+      }
+    ]
+  }
+}

@@ -124,10 +124,15 @@
       "source": "deveco-code",
       "path": "packages/opencode/resources/skills/customize-deveco/",
       "prefix": true,
-      "disposition": "exclude",
-      "reason": "Configures DevEco Code's own host; this MCP does not install host skills, agents or plugins.",
-      "targets": [],
-      "tests": []
+      "disposition": "adapt",
+      "reason": "Skills and knowledge are bundled and supplied through MCP-owned guided workflows. Client Skill installation was explicitly removed by the owner; review every operation and boundary.",
+      "targets": [
+        "docs/builtin-skill-workflows.md",
+        "provenance/upstream-capabilities.json"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
     },
     {
       "id": "code-defaults.ts",
@@ -735,11 +740,21 @@
       "targets": [
         "src/services/diagnostics.ts",
         "src/cli.ts",
-        "src/services/checker.ts"
+        "src/services/checker.ts",
+        "src/services/checker-project.ts",
+        "src/services/checker-report.ts",
+        "src/services/checker-metadata.ts",
+        "src/services/checker-syntax.ts",
+        "docs/upstream-cli-checker-review.md",
+        "src/services/checker-model.ts"
       ],
       "tests": [
         "scripts/native-sdk-acceptance.ts",
-        "test/native-checker.test.ts"
+        "test/native-checker.test.ts",
+        "test/native-checker-metadata.test.ts",
+        "test/native-checker-syntax.test.ts",
+        "scripts/native-checker-acceptance.ts",
+        "test/native-checker-model.test.ts"
       ]
     },
     {
@@ -962,10 +977,15 @@
       "source": "deveco-cli",
       "path": "src/skills/",
       "prefix": true,
-      "disposition": "exclude",
-      "reason": "The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths.",
-      "targets": [],
-      "tests": []
+      "disposition": "adapt",
+      "reason": "Skills and knowledge are bundled and supplied through MCP-owned guided workflows. Client Skill installation was explicitly removed by the owner; review every operation and boundary.",
+      "targets": [
+        "docs/builtin-skill-workflows.md",
+        "provenance/upstream-capabilities.json"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
     },
     {
       "id": "cli-retired-src-install-check-",
@@ -992,10 +1012,15 @@
       "source": "deveco-cli",
       "path": "src/commands/skills.ts",
       "prefix": false,
-      "disposition": "exclude",
-      "reason": "The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths.",
-      "targets": [],
-      "tests": []
+      "disposition": "adapt",
+      "reason": "Skills and knowledge are bundled and supplied through MCP-owned guided workflows. Client Skill installation was explicitly removed by the owner; review every operation and boundary.",
+      "targets": [
+        "docs/builtin-skill-workflows.md",
+        "provenance/upstream-capabilities.json"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
     },
     {
       "id": "cli-retired-src-commands-update.ts",
@@ -1117,11 +1142,13 @@
       "path": "src/cli.ts",
       "prefix": false,
       "disposition": "adapt",
-      "reason": "Review release, dependency, dispatch or license changes; the CLI remains a reference, not a runtime dependency.",
+      "reason": "Adapt version short and long flags to the native CLI without loading SDK, configuration or state; remaining upstream command dispatch is mapped to native MCP tools and built-in workflows.",
       "targets": [
-        "provenance/upstream-lock.json"
+        "src/cli.ts",
+        "docs/upstream-cli-checker-review.md"
       ],
       "tests": [
+        "test/native-runtime.test.ts",
         "test/native-upstream.test.ts"
       ]
     },
@@ -1170,6 +1197,1172 @@
         "test/native-emulator-protocol.test.ts",
         "scripts/native-emulator-readonly.ts"
       ]
+    },
+    {
+      "id": "code-tool-apply_patch.ts",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/apply_patch.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-apply_patch.txt",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/apply_patch.txt",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-arkts-check.cjs",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/arkts-check.cjs",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-arkts-check.txt",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/arkts-check.txt",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-arkts_check.ts",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/arkts_check.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-build-project.txt",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/build-project.txt",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-build_project.ts",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/build_project.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-debug-exit.ts",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/debug-exit.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-debug-exit.txt",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/debug-exit.txt",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-document-validation-config.ts",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/document-validation/config.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-document-validation-document-validate-tool.ts",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/document-validation/document-validate-tool.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-document-validation-index.ts",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/document-validation/index.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-document-validation-markdown-parser.ts",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/document-validation/markdown-parser.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-document-validation-models.ts",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/document-validation/models.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-document-validation-section-normalizer.ts",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/document-validation/section-normalizer.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-edit.ts",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/edit.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-edit.txt",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/edit.txt",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-external-directory.ts",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/external-directory.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-glob.ts",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/glob.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-glob.txt",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/glob.txt",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-grep.ts",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/grep.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-grep.txt",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/grep.txt",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-hdc-log.txt",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/hdc-log.txt",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-hdc_log.ts",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/hdc_log.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-invalid.ts",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/invalid.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-json-schema.ts",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/json-schema.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-lib-build-project-output.ts",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/lib/build-project-output.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-lib-deveco-cli.ts",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/lib/deveco-cli.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-lib-env.ts",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/lib/env.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-lib-session-cwd.ts",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/lib/session-cwd.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-lsp.ts",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/lsp.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-lsp.txt",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/lsp.txt",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-mcp-websearch.ts",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/mcp-websearch.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-plan-enter.txt",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/plan-enter.txt",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-plan-exit.txt",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/plan-exit.txt",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-plan-write.txt",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/plan-write.txt",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-plan.ts",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/plan.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-question.ts",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/question.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-question.txt",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/question.txt",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-read.ts",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/read.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-read.txt",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/read.txt",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-registry.ts",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/registry.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-schema.ts",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/schema.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-shell.ts",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/shell.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-shell-id.ts",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/shell/id.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-shell-prompt.ts",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/shell/prompt.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-shell-shell.txt",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/shell/shell.txt",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-skill.ts",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/skill.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-skill.txt",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/skill.txt",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-spec-write.txt",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/spec-write.txt",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-spec.ts",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/spec.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-start_app.ts",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/start_app.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-switch-cwd.ts",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/switch-cwd.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-switch-cwd.txt",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/switch-cwd.txt",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-task.ts",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/task.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-task.txt",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/task.txt",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-todo.ts",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/todo.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-todowrite.txt",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/todowrite.txt",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-tool.ts",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/tool.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-truncate.ts",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/truncate.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-truncation-dir.ts",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/truncation-dir.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-ui-verification-index.ts",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/ui-verification/index.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-ui-verification-ui-verification-tool.ts",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/ui-verification/ui-verification-tool.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-webfetch.ts",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/webfetch.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-webfetch.txt",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/webfetch.txt",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-websearch.ts",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/websearch.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-websearch.txt",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/websearch.txt",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-write.ts",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/write.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-tool-write.txt",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/write.txt",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "id": "code-new-tool",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/tool/",
+      "prefix": true,
+      "disposition": "unmapped",
+      "reason": "A new upstream tool/helper/prompt requires an explicit operation mapping and acceptance.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "id": "code-language-service",
+      "source": "deveco-code",
+      "path": "packages/opencode/src/lsp/",
+      "prefix": true,
+      "disposition": "adapt",
+      "reason": "Language-server selection and protocol changes require native LSP capability and lifecycle review.",
+      "targets": [
+        "src/services/lsp.ts",
+        "src/services/language-symbols.ts",
+        "provenance/upstream-capabilities.json"
+      ],
+      "tests": [
+        "test/native-lsp.test.ts",
+        "scripts/native-lsp-symbol-acceptance.ts"
+      ]
+    },
+    {
+      "id": "code-bun-host-configuration",
+      "source": "deveco-code",
+      "path": "bunfig.toml",
+      "prefix": false,
+      "disposition": "exclude",
+      "reason": "Reviewed Bun dependency-age exclusions and test-root configuration belong to the upstream client build. Native MCP ships no Bun client runtime or upstream package installation policy.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "id": "cli-arkts-adapter",
+      "source": "deveco-cli",
+      "path": "src/arktscheck/",
+      "prefix": true,
+      "disposition": "adapt",
+      "reason": "Adapt source scope, SDK dispatch, diagnostics and all enabled project validators to bounded native AST and metadata checks; MCP built-in workflows guide source repairs.",
+      "targets": [
+        "src/services/checker.ts",
+        "src/services/checker-project.ts",
+        "src/services/checker-report.ts",
+        "src/services/checker-metadata.ts",
+        "src/services/checker-syntax.ts",
+        "src/services/diagnostics.ts",
+        "docs/upstream-cli-checker-review.md",
+        "src/services/checker-model.ts"
+      ],
+      "tests": [
+        "test/native-checker.test.ts",
+        "test/native-checker-metadata.test.ts",
+        "test/native-checker-syntax.test.ts",
+        "scripts/native-checker-acceptance.ts",
+        "test/native-checker-model.test.ts"
+      ]
+    },
+    {
+      "id": "cli-arkts-resource",
+      "source": "deveco-cli",
+      "path": "src/resources/arkts-check.cjs",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Adapt all enabled SDK and project validator groups with the installed SDK parser and binder; preserve import identity and per-branch navigation checks without executing copied upstream JavaScript.",
+      "targets": [
+        "src/services/checker.ts",
+        "src/services/checker-project.ts",
+        "src/services/checker-report.ts",
+        "src/services/checker-metadata.ts",
+        "src/services/checker-syntax.ts",
+        "src/services/diagnostics.ts",
+        "docs/upstream-cli-checker-review.md",
+        "src/services/checker-model.ts"
+      ],
+      "tests": [
+        "test/native-checker.test.ts",
+        "test/native-checker-metadata.test.ts",
+        "test/native-checker-syntax.test.ts",
+        "scripts/native-checker-acceptance.ts",
+        "test/native-checker-model.test.ts"
+      ]
+    },
+    {
+      "id": "cli-readme",
+      "source": "deveco-cli",
+      "path": "README.md",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Review documented commands and parameters against native MCP contracts and the built-in repair workflow; client Skill installation remains removed by the project owner.",
+      "targets": [
+        "docs/builtin-skill-workflows.md",
+        "docs/upstream-cli-checker-review.md",
+        "provenance/SOURCES.md"
+      ],
+      "tests": [
+        "test/native-skills.test.ts",
+        "scripts/native-skill-mcp-acceptance.ts"
+      ]
+    },
+    {
+      "id": "cli-skill-entry",
+      "source": "deveco-cli",
+      "path": "SKILL.md",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Provide checking before build and repair guidance through bundled MCP Skills and persistent workflows; do not install the upstream client Skill or CLI.",
+      "targets": [
+        "resources/skills/deveco-native-tools/SKILL.md",
+        "resources/skills/deveco-arkts-errors/SKILL.md",
+        "docs/upstream-cli-checker-review.md"
+      ],
+      "tests": [
+        "test/native-skills.test.ts",
+        "scripts/native-skill-mcp-acceptance.ts"
+      ]
+    },
+    {
+      "id": "cli-development-eslint",
+      "source": "deveco-cli",
+      "path": "eslint.config.js",
+      "prefix": false,
+      "disposition": "exclude",
+      "reason": "This change only excludes generated dist and upstream resource scripts from the upstream repository development linter. Native shipped lint behavior uses its own SDK service.",
+      "targets": [],
+      "tests": []
     }
   ]
 }

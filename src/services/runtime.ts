@@ -22,6 +22,7 @@ import {
   object,
   text,
   ToolError,
+  SettledEffectError,
 } from "../core/errors.js";
 import { fileDigest, digest, walk, destinationPath } from "../core/files.js";
 import {
@@ -51,6 +52,8 @@ import type {
 import { ProjectService, inspectProject, projectTargets, type Project } from "./project.js";
 import { DeviceService } from "./device.js";
 import { VerificationService } from "./verification.js";
+import { UiReviewService } from "./ui-review.js";
+import { UiTestService } from "./ui-test.js";
 import { DiagnosticService } from "./diagnostics.js";
 import { parseCrash } from "./crash.js";
 import { FlowService } from "./flow.js";
@@ -61,6 +64,10 @@ import { KnowledgeService } from "./knowledge.js";
 import { SignatureService } from "./signature.js";
 import { EmulatorService } from "./emulator.js";
 import { HotReloadService } from "./hotreload.js";
+import { buildPreflight } from "./build-preflight.js";
+import { StorageService } from "./storage.js";
+import { SkillService } from "./skills.js";
+import { SkillWorkflowService } from "./skill-workflow.js";
 import { inspectApplicationPackages } from "./package.js";
 import { discoverAppRoutes, resolveAppRoute } from "./routes.js";
 import {
@@ -88,6 +95,9 @@ const artifactsSchema = z.array(
 
 export class Runtime {
   readonly store = new StateStore();
+  readonly storage = new StorageService(this.store);
+  readonly skills = new SkillService(this.store);
+  readonly skillWorkflows = new SkillWorkflowService(this.store, this.skills);
   readonly processes = new ProcessService(
     new PersistentProcessObserver(this.store),
   );
@@ -98,8 +108,9 @@ export class Runtime {
     }),
   );
   readonly projects = new ProjectService(this.processes, undefined, this.store);
-  readonly devices = new DeviceService(this.processes, this.store, this.cpu);
-  readonly verification = new VerificationService(this.store, this.devices);
+  readonly devices = new DeviceService(this.processes, this.store, this.cpu, target => this.tests.assertTaskTarget(target));
+  readonly reviews = new UiReviewService(this.store);
+  readonly verification = new VerificationService(this.store, this.devices, this.reviews);
   readonly diagnostics = new DiagnosticService(
     this.processes,
     this.store,
@@ -107,6 +118,7 @@ export class Runtime {
   );
   readonly flows = new FlowService(this.devices, this.store);
   readonly recordings = new RecordingService(this.store, this.devices);
+  readonly tests = new UiTestService(this.store, this.devices, this.verification, this.reviews, target => this.recordings.assertTaskTarget(target), this.storage);
   readonly logs = new LogService(this.devices, this.store);
   readonly auth = new AuthService(this.store, this.processes);
   readonly knowledge = new KnowledgeService(this.store, this.auth);
@@ -293,6 +305,7 @@ export class Runtime {
       );
     }
     if (context.target) {
+      this.tests.assertTaskTarget(context.target);
       const recording = recordingTaskSchema.safeParse(context.parameters);
       if (
         ["ui_flow", "ui_record", "app_deploy", "build_deploy_verify", "native_operation"].includes(
@@ -314,7 +327,11 @@ export class Runtime {
         "FLOW_CHANGED",
         "Saved flow changed after submission; start a new run",
       );
-    for (const file of context.deployment ?? []) await verifyCapturedFile(file);
+    // Confirmed installation consumes the temporary copies. Later launch/UI recovery
+    // reuses the durable install receipt and must not require those deleted bytes.
+    const runId = currentTrace().run_id;
+    if (!runId || !this.store.confirmedInstallation(runId))
+      for (const file of context.deployment ?? []) await verifyCapturedFile(file);
   }
   private definitions(): WorkflowDefinition[] {
     const definitions: WorkflowDefinition[] = [];
@@ -604,15 +621,26 @@ export class Runtime {
       call.context.parameters.sync
         ? this.projects.sync(this.project(call.context), true, call.signal)
         : { skipped: true };
-    const buildProject = async (call: StepContext) =>
-      this.projects.build(
-        this.project(call.context),
-        workflowInputs.project_build.parse(call.context.parameters),
-        call.signal,
-      );
+    const preflight = async (call: StepContext, policy: z.infer<typeof workflowInputs.project_build>["preflight"], recovering: boolean) => {
+      try {
+        const project = this.project(call.context);
+        return await buildPreflight(this.store, policy, () => this.diagnostics.arkts(project, undefined, call.signal), () => sourceHash(project), call.signal);
+      } catch (error) {
+        // On the first attempt nothing after this boundary has been dispatched.
+        // During reconciliation an earlier build/hot apply may already have run;
+        // a failed fresh check cannot settle that earlier external operation.
+        if (recovering) throw new ToolError("EFFECT_UNCERTAIN", "Fresh preflight prevents reconciliation of the earlier build or hot apply", { cause: errorResult(error) });
+        throw SettledEffectError.from(error);
+      }
+    };
+    const buildProject = async (call: StepContext, recovering = false) => {
+      const input = workflowInputs.project_build.parse(call.context.parameters);
+      const checked = await preflight(call, input.preflight, recovering);
+      return { ...await this.projects.build(this.project(call.context), input, call.signal), preflight: checked };
+    };
     const build: WorkflowStep[] = [
       effect("sync_project", syncBeforeBuild, syncBeforeBuild),
-      effect("build_project", buildProject, buildProject),
+      effect("build_project", buildProject, call => buildProject(call, true)),
     ];
     const verifyArtifacts = read("verify_artifacts", async (call) => {
       const list = artifactsSchema.parse(
@@ -686,21 +714,23 @@ export class Runtime {
       ),
       read("verify_process", async (call) => this.verifyProcess(call)),
     ]);
-    const buildOrApply = async (call: StepContext) => {
+    const buildOrApply = async (call: StepContext, recovering = false) => {
       const input = workflowInputs.build_deploy_verify.parse(
           call.context.parameters,
         ),
         project = this.project(call.context);
+      const checked = await preflight(call, input.preflight, recovering);
       if (input.hot_reload)
         return {
           hot_reload: true,
+          preflight: checked,
           result: await this.hot.call(
             { action: "apply", target: call.context.target },
             project,
             call.signal,
           ),
         };
-      return this.projects.buildApplication(project, input, call.signal);
+      return { ...await this.projects.buildApplication(project, input, call.signal), preflight: checked };
     };
     const syncBeforeDeploy = async (call: StepContext) =>
       call.context.parameters.hot_reload
@@ -709,7 +739,7 @@ export class Runtime {
     define("build_deploy_verify", [
       effect("sync_project", syncBeforeDeploy, syncBeforeDeploy),
       effect("build_or_hot_apply", buildOrApply, async (call) =>
-        buildOrApply(call),
+        buildOrApply(call, true),
       ),
       read("prepare_installation", async (call) => {
         const input = workflowInputs.build_deploy_verify.parse(
@@ -1018,6 +1048,8 @@ export class Runtime {
     invariant(!this.stopping, "RUNTIME_STOPPING", "Runtime is stopping");
     signal?.throwIfAborted();
     switch (name) {
+      case "skill_manage": return this.skills.call(raw, signal);
+      case "skill_workflow": return this.skillWorkflows.call(raw, signal);
       case "workflow_catalog": {
         const input = tools[name].schema.parse(raw);
         return workflowCatalog(
@@ -1026,6 +1058,11 @@ export class Runtime {
       }
       case "workflow_run": {
         const input = tools[name].schema.parse(raw);
+        if (input.action === "capacity") return this.storage.capacity(input.additional_bytes);
+        if (input.action === "cleanup_plan") return this.storage.plan(input.run_ids!);
+        if (input.action === "cleanup_apply") return this.storage.apply(input.run_ids!, input.plan_hash!);
+        if (input.action === "export") return this.storage.export(input.run_ids!, input.export_directory!, signal);
+        if (input.action === "storage_receipt") return this.storage.receipt(input.receipt_id!);
         if (input.action === "read_artifact" && input.as === "image") {
           const { readImageArtifact } = await import("./artifact.js");
           signal?.throwIfAborted();
@@ -1095,6 +1132,18 @@ export class Runtime {
           }
         }
         const id = text(input.run_id, "run_id");
+        if (this.store.get(id).workflow === "skill_workflow") {
+          invariant(!input.resume_input, "SKILL_WORKFLOW_RESUME_INPUT_INVALID", "Read the persisted builtin workflow; continue with skill_workflow write/transition");
+          const current = this.skillWorkflows.read(id);
+          if (input.action === "cancel") return ["completed", "cancelled"].includes(current.phase)
+            ? { run_id: id, status: current.status, phase: current.phase, revision: current.revision, verified: false }
+            : this.skillWorkflows.call({ action: "transition", run_id: id, expected_revision: current.revision, phase: "cancelled", rationale: "The client requested cancellation of this builtin workflow." }, signal);
+          return current;
+        }
+        if (this.store.get(id).workflow === "ui_test") {
+          invariant(!input.resume_input, "UI_TEST_RESUME_INPUT_INVALID", "UI tests resume captured state; use ui_test replan for strategy changes");
+          return this.tests.call({ action: input.action, test_id: id }, signal);
+        }
         if (input.action === "status") return engine.status(id, input.wait_ms);
         if (input.action === "resume")
           return engine.resume(id, input.resume_input);
@@ -1715,6 +1764,15 @@ export class Runtime {
           signal,
         );
       }
+      case "ui_review": {
+        const input = tools[name].schema.parse(raw);
+        if (input.action === "list") return this.reviews.list(input.offset, input.limit);
+        if (input.action === "status") return this.reviews.status(input.review_id);
+        if (input.action === "cancel") return this.reviews.cancel(input.review_id);
+        return this.reviews.complete(input.review_id, input);
+      }
+      case "ui_test":
+        return this.tests.call(tools[name].schema.parse(raw), signal);
       case "deveco_restart":
         throw new Error("Runtime restart is dispatched by the MCP host");
     }
@@ -1743,6 +1801,8 @@ export class Runtime {
         if (this.engine) await (await this.engine).close();
       },
       () => this.recordings.close(),
+      () => this.tests.close(),
+      () => this.reviews.close(),
       () => this.hot.close(),
       () => this.emulator.close(),
       () => this.diagnostics.lsp.close(),
@@ -1752,6 +1812,7 @@ export class Runtime {
       () => this.cpu.close(),
       () => this.processes.close(),
       () => this.knowledge.close(),
+      () => this.skillWorkflows.close(),
       () => this.store.close(),
     ])
       try {

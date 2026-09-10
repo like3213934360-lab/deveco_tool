@@ -110,9 +110,14 @@ test("LSP refuses deleted sources and refreshes recreated files in the existing 
     await service.request(project, { action: "hover", file: "Model.ets" });
     const file = path.join(project.root, "Model.ets");
     fs.rmSync(file);
-    await assert.rejects(service.request(project, { action: "hover", file: "Model.ets" }));
+    await assert.rejects(
+      service.request(project, { action: "hover", file: "Model.ets" }),
+    );
     fs.writeFileSync(file, "const recreated = '新的内容';\n");
-    const hover = await service.request(project, { action: "hover", file: "Model.ets" });
+    const hover = await service.request(project, {
+      action: "hover",
+      file: "Model.ets",
+    });
     assert.match(JSON.stringify(hover), /recreated/);
     assert.doesNotMatch(JSON.stringify(hover), /const value/);
     assert.equal(service.metrics.connections, 1);
@@ -192,6 +197,217 @@ test("LSP positions validate UTF-16, CRLF, lone CR and final empty lines", async
       character: 5,
     });
     assert.ok(result);
+  });
+});
+
+test("LSP symbols retain hierarchy, cross-file locations and workspace query scope", async () => {
+  await fixture({}, async (service, project) => {
+    const document = z
+      .array(
+        z.object({
+          name: z.string(),
+          children: z.array(z.object({ name: z.string() })),
+        }),
+      )
+      .parse(
+        await service.request(project, {
+          action: "documentSymbol",
+          file: "Model.ets",
+          line: 99999,
+        }),
+      );
+    assert.equal(document[0]!.children[0]!.name, "nested");
+    const workspace = z
+      .array(
+        z.object({ name: z.string(), location: z.object({ uri: z.string() }) }),
+      )
+      .parse(
+        await service.request(project, {
+          action: "workspaceSymbol",
+          file: "Model.ets",
+          query: "中文Query",
+        }),
+      );
+    assert.equal(workspace[0]!.name, "中文Query");
+    assert.match(workspace[0]!.location.uri, /Consumer\.ets$/);
+  });
+  await fixture({ FLAT_SYMBOLS: "1" }, async (service, project) => {
+    assert.match(
+      JSON.stringify(
+        await service.request(project, {
+          action: "documentSymbol",
+          file: "Model.ets",
+        }),
+      ),
+      /flat/,
+    );
+  });
+});
+
+test("LSP call edges preserve opaque data, multiple ranges and selected overload after changes", async () => {
+  await fixture({}, async (service, project) => {
+    const input = { file: "Model.ets", line: 1, character: 1 };
+    const items = z.array(z.object({ name: z.string() })).parse(
+      await service.request(project, {
+        ...input,
+        action: "prepareCallHierarchy",
+      }),
+    );
+    assert.deepEqual(
+      items.map((item) => item.name),
+      ["root", "overload"],
+    );
+    fs.writeFileSync(
+      path.join(project.root, input.file),
+      "const fresh = '新😀';\r\nfresh\n",
+    );
+    for (const action of ["incomingCalls", "outgoingCalls"] as const) {
+      const result = z
+        .array(z.object({ fromRanges: z.array(z.unknown()) }).passthrough())
+        .parse(
+          await service.request(project, { ...input, action, item_index: 1 }),
+        );
+      assert.equal(result.length, 2);
+      assert.equal(result[0]!.fromRanges.length, 2);
+      assert.match(JSON.stringify(result), /overload-one/);
+      assert.match(JSON.stringify(result), /Consumer\.ets/);
+      assert.match(JSON.stringify(result), /fresh/);
+    }
+    await assert.rejects(
+      service.request(project, {
+        ...input,
+        action: "incomingCalls",
+        item_index: 2,
+      }),
+      code("LSP_CALL_ITEM_NOT_FOUND"),
+    );
+  });
+});
+
+test("LSP symbol absence, empty results and malformed responses remain distinct", async () => {
+  const actions = [
+    "documentSymbol",
+    "workspaceSymbol",
+    "prepareCallHierarchy",
+    "incomingCalls",
+    "outgoingCalls",
+  ] as const;
+  await fixture({ NO_SYMBOLS: "1" }, async (service, project) => {
+    for (const action of actions)
+      await assert.rejects(
+        service.request(project, { action, file: "Model.ets" }),
+        code("LSP_CAPABILITY_UNAVAILABLE"),
+      );
+  });
+  await fixture({ EMPTY_SYMBOLS: "1" }, async (service, project) => {
+    for (const action of actions) {
+      const result = await service.request(project, {
+        action,
+        file: "Model.ets",
+      });
+      assert.ok(
+        result === null || (Array.isArray(result) && result.length === 0),
+      );
+    }
+  });
+  await fixture({ INVALID_SYMBOLS: "1" }, async (service, project) => {
+    await assert.rejects(
+      service.request(project, { action: "documentSymbol", file: "Model.ets" }),
+      code("LSP_INVALID_RESPONSE"),
+    );
+  });
+  assert.throws(
+    () =>
+      languageResult("incomingCalls", [
+        { from: { name: "missing location" }, fromRanges: [] },
+      ]),
+    code("LSP_INVALID_RESPONSE"),
+  );
+  assert.throws(
+    () =>
+      languageResult("workspaceSymbol", [
+        { name: "missing range", kind: 12, location: { uri: "file:///a" } },
+      ]),
+    code("LSP_INVALID_RESPONSE"),
+  );
+});
+
+test("LSP symbol validation bounds nesting and output before recursive parsing", () => {
+  let nested: unknown = [];
+  for (let depth = 0; depth < 100; depth++) nested = [{ children: nested }];
+  assert.throws(
+    () => languageResult("documentSymbol", nested),
+    code("LSP_RESULT_LIMIT"),
+  );
+  assert.throws(
+    () =>
+      languageResult("hover", { contents: "x".repeat(4 * 1024 * 1024 + 1) }),
+    code("LSP_RESULT_LIMIT"),
+  );
+  assert.equal(
+    tools.lsp.schema.safeParse({
+      action: "hover",
+      file: "Model.ets",
+      query: "no",
+    }).success,
+    false,
+  );
+  assert.equal(
+    tools.lsp.schema.safeParse({
+      action: "documentSymbol",
+      file: "Model.ets",
+      item_index: 0,
+    }).success,
+    false,
+  );
+});
+
+test("LSP coarse advertised capability does not disguise a missing call method as an internal failure", async () => {
+  await fixture({ NO_OUTGOING_METHOD: "1" }, async (service, project) => {
+    await assert.rejects(
+      service.request(project, { action: "outgoingCalls", file: "Model.ets" }),
+      (error: unknown) =>
+        error instanceof ToolError &&
+        error.code === "LSP_CAPABILITY_UNAVAILABLE" &&
+        /callHierarchy\/outgoingCalls/.test(error.message),
+    );
+    assert.ok(
+      Array.isArray(
+        await service.request(project, {
+          action: "incomingCalls",
+          file: "Model.ets",
+        }),
+      ),
+    );
+  });
+});
+
+test("LSP call cancellation releases the queue and does not poison the next request", async () => {
+  await fixture({ CALL_DELAY_MS: "10000" }, async (service, project) => {
+    await service.request(project, {
+      action: "prepareCallHierarchy",
+      file: "Model.ets",
+    });
+    const controller = new AbortController();
+    const cancelled = service.request(
+      project,
+      { action: "outgoingCalls", file: "Model.ets" },
+      controller.signal,
+    );
+    const timer = setTimeout(
+      () => controller.abort(new Error("cancel call query")),
+      100,
+    );
+    try {
+      await assert.rejects(cancelled, /cancel call query/);
+    } finally {
+      clearTimeout(timer);
+    }
+    const result = await service.request(project, {
+      action: "documentSymbol",
+      file: "Model.ets",
+    });
+    assert.ok(Array.isArray(result));
   });
 });
 test("LSP unsupported capabilities, empty hover, invalid encoding and malformed results remain distinct", async () => {

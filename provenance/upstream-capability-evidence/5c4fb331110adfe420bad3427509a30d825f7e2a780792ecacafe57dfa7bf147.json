@@ -1,0 +1,163 @@
+{
+  "format": 1,
+  "kind": "builtin-mcp",
+  "passed": true,
+  "tested": {
+    "runtime_sha256": "cd0faac159a1e06db5795b6214161830ada64e7fc5199f84cbcd6912a4978e06",
+    "compiled_sha256": "fa1b92e304ffaeabd9fdb5f7e38998cd026b6aa2862cebdfa45eca4efb077bd2",
+    "package_lock_sha256": "fd0ef7a0fbe5e1400049291bc148e8f8a24c7a11d8569df59c6ea8b9d3402386",
+    "resource_manifest_sha256": "039b6e34e2055939b4ec542fdd39cb3e2e0c66958e24a74fc9f5168f6d95636b",
+    "upstream_lock_sha256": "ba0c89c6cb7b505b3cb4a62e43fef5057b225e11324b862da1530961328928d0",
+    "node": "v24.14.1",
+    "platform": "darwin",
+    "arch": "arm64",
+    "entrypoint": "dist/scripts/native-skill-mcp-acceptance.js"
+  },
+  "scope": "Generic stdio MCP/Worker/SDK builtin Skill workflows and bundled knowledge, without any client Skill directory or client-specific executable",
+  "original_sha256": "92d05d6d4636720da54101c8e449b207b70839a5051a06796c6904044db61b6b",
+  "executed_tests": [
+    "dist/scripts/native-skill-mcp-acceptance.js"
+  ],
+  "observations": [
+    {
+      "name": "connect",
+      "passed": true
+    },
+    {
+      "name": "doctor",
+      "passed": true
+    },
+    {
+      "name": "catalog",
+      "passed": true
+    },
+    {
+      "name": "create_workflow_new_destination",
+      "passed": true
+    },
+    {
+      "name": "create_project",
+      "passed": true
+    },
+    {
+      "name": "plan_enter",
+      "passed": true
+    },
+    {
+      "name": "plan_write",
+      "passed": true
+    },
+    {
+      "name": "plan_exit",
+      "passed": true
+    },
+    {
+      "name": "skill_catalog",
+      "passed": true
+    },
+    {
+      "name": "skill_search",
+      "passed": true
+    },
+    {
+      "name": "skill_read:deveco-arkts-standards",
+      "passed": true
+    },
+    {
+      "name": "skill_read:deveco-arkts-errors",
+      "passed": true
+    },
+    {
+      "name": "skill_read:deveco-runtime-debug",
+      "passed": true
+    },
+    {
+      "name": "skill_read:deveco-project-create",
+      "passed": true
+    },
+    {
+      "name": "skill_read:deveco-native-tools",
+      "passed": true
+    },
+    {
+      "name": "skill_read:deveco-customize-host",
+      "passed": true
+    },
+    {
+      "name": "disconnect_reopen",
+      "passed": true
+    },
+    {
+      "name": "workflow_guidance_after_restart",
+      "passed": true
+    },
+    {
+      "name": "installer_removed",
+      "passed": true
+    },
+    {
+      "name": "checker_reproduces_error",
+      "passed": true
+    },
+    {
+      "name": "default_build_blocked",
+      "passed": true
+    },
+    {
+      "name": "checker_after_repair",
+      "passed": true
+    },
+    {
+      "name": "build_after_repair",
+      "passed": true
+    },
+    {
+      "name": "repair_complete",
+      "passed": true
+    },
+    {
+      "name": "spec_write",
+      "passed": true
+    },
+    {
+      "name": "design_write",
+      "passed": true
+    },
+    {
+      "name": "tasks_write",
+      "passed": true
+    },
+    {
+      "name": "spec_fresh_build",
+      "passed": true
+    },
+    {
+      "name": "spec_complete",
+      "passed": true
+    },
+    {
+      "name": "create_workflow_complete",
+      "passed": true
+    },
+    {
+      "name": "referenced_evidence_protected",
+      "passed": true
+    },
+    {
+      "name": "workflow_export_includes_native_receipt",
+      "passed": true
+    },
+    {
+      "name": "publish_plan",
+      "passed": true
+    },
+    {
+      "name": "plan_complete",
+      "passed": true
+    },
+    {
+      "name": "schema_rejection",
+      "passed": true
+    }
+  ]
+}

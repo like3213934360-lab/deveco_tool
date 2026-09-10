@@ -1,0 +1,713 @@
+{
+  "format": 1,
+  "source": {
+    "id": "deveco-code",
+    "url": "https://gitcode.com/openharmony-sig/deveco-code.git",
+    "ref": "refs/heads/develop",
+    "commit": "aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a",
+    "tree": "f88b2d20b4a1adf36d8370eb907a162b215d6f4b",
+    "version": "aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a",
+    "role": "resource_source",
+    "acceptance": "verified"
+  },
+  "mapping_sha256": "e5069b08892982a832ea31247a68e3d1b8e00786b68c00944a02c6700473e793",
+  "reviews": [
+    {
+      "rule": "code-deveco-create-project",
+      "reason": "Native project_create captures a new destination and SDK-matched configuration under a durable workflow. Current stdio creation guidance starts before the directory exists, creates the isolated project and completes only after a fresh successful build reference. All six reviewed Skills and their referenced knowledge are bundled and read over generic MCP. Persistent guidance, document revisions and native completion gates replace client Skill installation. Actual stdio acceptance reads every Skill and restores guidance after reconnect; the host supplies reasoning and source edits. Installation and uninstallation are intentionally rejected under the owner architecture.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-deveco-cli",
+      "reason": "All six reviewed Skills and their referenced knowledge are bundled and read over generic MCP. Persistent guidance, document revisions and native completion gates replace client Skill installation. Actual stdio acceptance reads every Skill and restores guidance after reconnect; the host supplies reasoning and source edits. Installation and uninstallation are intentionally rejected under the owner architecture.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-arkts-error-fixes",
+      "reason": "All six reviewed Skills and their referenced knowledge are bundled and read over generic MCP. Persistent guidance, document revisions and native completion gates replace client Skill installation. Actual stdio acceptance reads every Skill and restores guidance after reconnect; the host supplies reasoning and source edits. Installation and uninstallation are intentionally rejected under the owner architecture.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-arkts-grammar-standards",
+      "reason": "All six reviewed Skills and their referenced knowledge are bundled and read over generic MCP. Persistent guidance, document revisions and native completion gates replace client Skill installation. Actual stdio acceptance reads every Skill and restores guidance after reconnect; the host supplies reasoning and source edits. Installation and uninstallation are intentionally rejected under the owner architecture.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-arkts-runtime-fix",
+      "reason": "All six reviewed Skills and their referenced knowledge are bundled and read over generic MCP. Persistent guidance, document revisions and native completion gates replace client Skill installation. Actual stdio acceptance reads every Skill and restores guidance after reconnect; the host supplies reasoning and source edits. Installation and uninstallation are intentionally rejected under the owner architecture.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-new-skill",
+      "reason": "Keep the future-Skill guard unaccepted for unknown upstream paths. The pinned tree contains no path falling through this guard; each new Skill must receive its own knowledge/workflow mapping before a future source lock can advance.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-host-customization",
+      "reason": "All six reviewed Skills and their referenced knowledge are bundled and read over generic MCP. Persistent guidance, document revisions and native completion gates replace client Skill installation. Actual stdio acceptance reads every Skill and restores guidance after reconnect; the host supplies reasoning and source edits. Installation and uninstallation are intentionally rejected under the owner architecture.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-defaults.ts",
+      "reason": "All six reviewed Skills and their referenced knowledge are bundled and read over generic MCP. Persistent guidance, document revisions and native completion gates replace client Skill installation. Actual stdio acceptance reads every Skill and restores guidance after reconnect; the host supplies reasoning and source edits. Installation and uninstallation are intentionally rejected under the owner architecture.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-discovery.ts",
+      "reason": "All six reviewed Skills and their referenced knowledge are bundled and read over generic MCP. Persistent guidance, document revisions and native completion gates replace client Skill installation. Actual stdio acceptance reads every Skill and restores guidance after reconnect; the host supplies reasoning and source edits. Installation and uninstallation are intentionally rejected under the owner architecture.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-index.ts",
+      "reason": "All six reviewed Skills and their referenced knowledge are bundled and read over generic MCP. Persistent guidance, document revisions and native completion gates replace client Skill installation. Actual stdio acceptance reads every Skill and restores guidance after reconnect; the host supplies reasoning and source edits. Installation and uninstallation are intentionally rejected under the owner architecture.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-host-packages",
+      "reason": "This path is upstream AI-host application, repository tooling or distribution infrastructure, excluded from native runtime delivery. More-specific Skill, tool body, prompt and LSP mappings take precedence and are reviewed individually. The aeb4536 source update changes Bun/PTY/analytics/CI packaging without adding a registered tool or bundled knowledge file.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-host-script",
+      "reason": "This path is upstream AI-host application, repository tooling or distribution infrastructure, excluded from native runtime delivery. More-specific Skill, tool body, prompt and LSP mappings take precedence and are reviewed individually. The aeb4536 source update changes Bun/PTY/analytics/CI packaging without adding a registered tool or bundled knowledge file.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-host-patches",
+      "reason": "This path is upstream AI-host application, repository tooling or distribution infrastructure, excluded from native runtime delivery. More-specific Skill, tool body, prompt and LSP mappings take precedence and are reviewed individually. The aeb4536 source update changes Bun/PTY/analytics/CI packaging without adding a registered tool or bundled knowledge file.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-host-docs",
+      "reason": "This path is upstream AI-host application, repository tooling or distribution infrastructure, excluded from native runtime delivery. More-specific Skill, tool body, prompt and LSP mappings take precedence and are reviewed individually. The aeb4536 source update changes Bun/PTY/analytics/CI packaging without adding a registered tool or bundled knowledge file.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-host-specs",
+      "reason": "This path is upstream AI-host application, repository tooling or distribution infrastructure, excluded from native runtime delivery. More-specific Skill, tool body, prompt and LSP mappings take precedence and are reviewed individually. The aeb4536 source update changes Bun/PTY/analytics/CI packaging without adding a registered tool or bundled knowledge file.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-host-assets",
+      "reason": "This path is upstream AI-host application, repository tooling or distribution infrastructure, excluded from native runtime delivery. More-specific Skill, tool body, prompt and LSP mappings take precedence and are reviewed individually. The aeb4536 source update changes Bun/PTY/analytics/CI packaging without adding a registered tool or bundled knowledge file.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-host-agents",
+      "reason": "This path is upstream AI-host application, repository tooling or distribution infrastructure, excluded from native runtime delivery. More-specific Skill, tool body, prompt and LSP mappings take precedence and are reviewed individually. The aeb4536 source update changes Bun/PTY/analytics/CI packaging without adding a registered tool or bundled knowledge file.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-host-opencode",
+      "reason": "This path is upstream AI-host application, repository tooling or distribution infrastructure, excluded from native runtime delivery. More-specific Skill, tool body, prompt and LSP mappings take precedence and are reviewed individually. The aeb4536 source update changes Bun/PTY/analytics/CI packaging without adding a registered tool or bundled knowledge file.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-host-github",
+      "reason": "This path is upstream AI-host application, repository tooling or distribution infrastructure, excluded from native runtime delivery. More-specific Skill, tool body, prompt and LSP mappings take precedence and are reviewed individually. The aeb4536 source update changes Bun/PTY/analytics/CI packaging without adding a registered tool or bundled knowledge file.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-host-gitcode",
+      "reason": "This path is upstream AI-host application, repository tooling or distribution infrastructure, excluded from native runtime delivery. More-specific Skill, tool body, prompt and LSP mappings take precedence and are reviewed individually. The aeb4536 source update changes Bun/PTY/analytics/CI packaging without adding a registered tool or bundled knowledge file.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-legal-LICENSE",
+      "reason": "Preserve the pinned upstream source and applicable license/notice provenance separately from native dependency metadata. The upstream monorepo dependency lock and host release are not runtime dependencies of this MCP; native distribution and publication have their own gates.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-legal-NOTICE",
+      "reason": "Preserve the pinned upstream source and applicable license/notice provenance separately from native dependency metadata. The upstream monorepo dependency lock and host release are not runtime dependencies of this MCP; native distribution and publication have their own gates.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-legal-OAT.xml",
+      "reason": "Preserve the pinned upstream source and applicable license/notice provenance separately from native dependency metadata. The upstream monorepo dependency lock and host release are not runtime dependencies of this MCP; native distribution and publication have their own gates.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-legal-package.json",
+      "reason": "Preserve the pinned upstream source and applicable license/notice provenance separately from native dependency metadata. The upstream monorepo dependency lock and host release are not runtime dependencies of this MCP; native distribution and publication have their own gates.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-legal-bun.lock",
+      "reason": "Preserve the pinned upstream source and applicable license/notice provenance separately from native dependency metadata. The upstream monorepo dependency lock and host release are not runtime dependencies of this MCP; native distribution and publication have their own gates.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-legal-CHANGELOG.md",
+      "reason": "Preserve the pinned upstream source and applicable license/notice provenance separately from native dependency metadata. The upstream monorepo dependency lock and host release are not runtime dependencies of this MCP; native distribution and publication have their own gates.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-host-install",
+      "reason": "This path is upstream AI-host application, repository tooling or distribution infrastructure, excluded from native runtime delivery. More-specific Skill, tool body, prompt and LSP mappings take precedence and are reviewed individually. The aeb4536 source update changes Bun/PTY/analytics/CI packaging without adding a registered tool or bundled knowledge file.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-host-install-ps1",
+      "reason": "This path is upstream AI-host application, repository tooling or distribution infrastructure, excluded from native runtime delivery. More-specific Skill, tool body, prompt and LSP mappings take precedence and are reviewed individually. The aeb4536 source update changes Bun/PTY/analytics/CI packaging without adding a registered tool or bundled knowledge file.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-host-turbo-json",
+      "reason": "This path is upstream AI-host application, repository tooling or distribution infrastructure, excluded from native runtime delivery. More-specific Skill, tool body, prompt and LSP mappings take precedence and are reviewed individually. The aeb4536 source update changes Bun/PTY/analytics/CI packaging without adding a registered tool or bundled knowledge file.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-apply_patch.ts",
+      "reason": "This upstream facility belongs to the AI client. The native MCP declares that client requirement instead of copying DevEco Code session internals or adding a general shell/editor/web/agent tool. Generic stdio acceptance confirms the tool is absent and direct calls fail TOOL_UNKNOWN. That boundary evidence does not claim the host implementation or upstream-specific behavior was executed.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-apply_patch.txt",
+      "reason": "This upstream facility belongs to the AI client. The native MCP declares that client requirement instead of copying DevEco Code session internals or adding a general shell/editor/web/agent tool. Generic stdio acceptance confirms the tool is absent and direct calls fail TOOL_UNKNOWN. That boundary evidence does not claim the host implementation or upstream-specific behavior was executed.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-arkts-check.cjs",
+      "reason": "The native checker uses selected project/product/module SDK configuration, strict source and report bounds, canonical application ASTs and SDK binder identities. Compiler-normalized Windows source names are compared with normalized selected paths so cross-file findings remain in scope; the Windows regression failure is retained and the repaired CI run must confirm this path. All eighteen enabled CLI validator groups are adapted; original project root and compatible-version strings preserve real API warning behavior. Twenty-one current SDK cases include errors and repairs. Static checking is distinct from build/device completion.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-arkts-check.txt",
+      "reason": "The native checker uses selected project/product/module SDK configuration, strict source and report bounds, canonical application ASTs and SDK binder identities. Compiler-normalized Windows source names are compared with normalized selected paths so cross-file findings remain in scope; the Windows regression failure is retained and the repaired CI run must confirm this path. All eighteen enabled CLI validator groups are adapted; original project root and compatible-version strings preserve real API warning behavior. Twenty-one current SDK cases include errors and repairs. Static checking is distinct from build/device completion.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-arkts_check.ts",
+      "reason": "The native checker uses selected project/product/module SDK configuration, strict source and report bounds, canonical application ASTs and SDK binder identities. Compiler-normalized Windows source names are compared with normalized selected paths so cross-file findings remain in scope; the Windows regression failure is retained and the repaired CI run must confirm this path. All eighteen enabled CLI validator groups are adapted; original project root and compatible-version strings preserve real API warning behavior. Twenty-one current SDK cases include errors and repairs. Static checking is distinct from build/device completion.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-build-project.txt",
+      "reason": "Native project workflows capture product/module target selection, run fresh full-scope preflight, execute owned SDK tools and collect package identity. Current evidence covers blocking an injected error before Hvigor, repair followed by compilation, and four product/target combinations with HAR/HSP/HAP closure and two native ABIs. These results do not prove installation or phone behavior.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-build_project.ts",
+      "reason": "Native project workflows capture product/module target selection, run fresh full-scope preflight, execute owned SDK tools and collect package identity. Current evidence covers blocking an injected error before Hvigor, repair followed by compilation, and four product/target combinations with HAR/HSP/HAP closure and two native ABIs. These results do not prove installation or phone behavior.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-debug-exit.ts",
+      "reason": "Native debug guidance records reproduction, diagnosis and fresh native evidence under the captured project. Completed guidance still reports host assessment rather than changing host mode or declaring the original bug repaired automatically. Current physical reproduction and guided completion acceptance remains pending.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-debug-exit.txt",
+      "reason": "Native debug guidance records reproduction, diagnosis and fresh native evidence under the captured project. Completed guidance still reports host assessment rather than changing host mode or declaring the original bug repaired automatically. Current physical reproduction and guided completion acceptance remains pending.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-document-validation-config.ts",
+      "reason": "Native skill_workflow stores captured objectives, controlled documents, optimistic revisions and guided phase transitions. Spec/design/task sections are validated and completion requires fresh native evidence where applicable. Current stdio acceptance exercises plan entry/write/exit, spec documents, tasks and evidence protection/export. The host assesses meaning and authorization; transitions neither change host system mode nor synthesize approval.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-document-validation-document-validate-tool.ts",
+      "reason": "Native skill_workflow stores captured objectives, controlled documents, optimistic revisions and guided phase transitions. Spec/design/task sections are validated and completion requires fresh native evidence where applicable. Current stdio acceptance exercises plan entry/write/exit, spec documents, tasks and evidence protection/export. The host assesses meaning and authorization; transitions neither change host system mode nor synthesize approval.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-document-validation-index.ts",
+      "reason": "Native skill_workflow stores captured objectives, controlled documents, optimistic revisions and guided phase transitions. Spec/design/task sections are validated and completion requires fresh native evidence where applicable. Current stdio acceptance exercises plan entry/write/exit, spec documents, tasks and evidence protection/export. The host assesses meaning and authorization; transitions neither change host system mode nor synthesize approval.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-document-validation-markdown-parser.ts",
+      "reason": "Native skill_workflow stores captured objectives, controlled documents, optimistic revisions and guided phase transitions. Spec/design/task sections are validated and completion requires fresh native evidence where applicable. Current stdio acceptance exercises plan entry/write/exit, spec documents, tasks and evidence protection/export. The host assesses meaning and authorization; transitions neither change host system mode nor synthesize approval.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-document-validation-models.ts",
+      "reason": "Native skill_workflow stores captured objectives, controlled documents, optimistic revisions and guided phase transitions. Spec/design/task sections are validated and completion requires fresh native evidence where applicable. Current stdio acceptance exercises plan entry/write/exit, spec documents, tasks and evidence protection/export. The host assesses meaning and authorization; transitions neither change host system mode nor synthesize approval.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-document-validation-section-normalizer.ts",
+      "reason": "Native skill_workflow stores captured objectives, controlled documents, optimistic revisions and guided phase transitions. Spec/design/task sections are validated and completion requires fresh native evidence where applicable. Current stdio acceptance exercises plan entry/write/exit, spec documents, tasks and evidence protection/export. The host assesses meaning and authorization; transitions neither change host system mode nor synthesize approval.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-edit.ts",
+      "reason": "This upstream facility belongs to the AI client. The native MCP declares that client requirement instead of copying DevEco Code session internals or adding a general shell/editor/web/agent tool. Generic stdio acceptance confirms the tool is absent and direct calls fail TOOL_UNKNOWN. That boundary evidence does not claim the host implementation or upstream-specific behavior was executed.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-edit.txt",
+      "reason": "This upstream facility belongs to the AI client. The native MCP declares that client requirement instead of copying DevEco Code session internals or adding a general shell/editor/web/agent tool. Generic stdio acceptance confirms the tool is absent and direct calls fail TOOL_UNKNOWN. That boundary evidence does not claim the host implementation or upstream-specific behavior was executed.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-external-directory.ts",
+      "reason": "Native strict schemas, explicit tool catalog, canonical project containment and bounded artifact/result readers replace host validation and output helpers. Current regression checks malformed inputs and bounds; generic stdio rejects unknown tools before worker state creation. Truncation is explicit rather than silently claiming full results.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-glob.ts",
+      "reason": "This upstream facility belongs to the AI client. The native MCP declares that client requirement instead of copying DevEco Code session internals or adding a general shell/editor/web/agent tool. Generic stdio acceptance confirms the tool is absent and direct calls fail TOOL_UNKNOWN. That boundary evidence does not claim the host implementation or upstream-specific behavior was executed.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-glob.txt",
+      "reason": "This upstream facility belongs to the AI client. The native MCP declares that client requirement instead of copying DevEco Code session internals or adding a general shell/editor/web/agent tool. Generic stdio acceptance confirms the tool is absent and direct calls fail TOOL_UNKNOWN. That boundary evidence does not claim the host implementation or upstream-specific behavior was executed.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-grep.ts",
+      "reason": "This upstream facility belongs to the AI client. The native MCP declares that client requirement instead of copying DevEco Code session internals or adding a general shell/editor/web/agent tool. Generic stdio acceptance confirms the tool is absent and direct calls fail TOOL_UNKNOWN. That boundary evidence does not claim the host implementation or upstream-specific behavior was executed.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-grep.txt",
+      "reason": "This upstream facility belongs to the AI client. The native MCP declares that client requirement instead of copying DevEco Code session internals or adding a general shell/editor/web/agent tool. Generic stdio acceptance confirms the tool is absent and direct calls fail TOOL_UNKNOWN. That boundary evidence does not claim the host implementation or upstream-specific behavior was executed.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-hdc-log.txt",
+      "reason": "Native hdc_log retains explicit device selection, bounded filters, PID/device-time association and partial-ring semantics. UI test logs provide bounded read/search and export, replacing unlimited host log buffers. Log clearing is an explicit mutation. Current phone collect/clear/selection acceptance remains pending; historical crash evidence keeps its original execution identity.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-hdc_log.ts",
+      "reason": "Native hdc_log retains explicit device selection, bounded filters, PID/device-time association and partial-ring semantics. UI test logs provide bounded read/search and export, replacing unlimited host log buffers. Log clearing is an explicit mutation. Current phone collect/clear/selection acceptance remains pending; historical crash evidence keeps its original execution identity.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-invalid.ts",
+      "reason": "This upstream facility belongs to the AI client. The native MCP declares that client requirement instead of copying DevEco Code session internals or adding a general shell/editor/web/agent tool. Generic stdio acceptance confirms the tool is absent and direct calls fail TOOL_UNKNOWN. That boundary evidence does not claim the host implementation or upstream-specific behavior was executed.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-json-schema.ts",
+      "reason": "Native strict schemas, explicit tool catalog, canonical project containment and bounded artifact/result readers replace host validation and output helpers. Current regression checks malformed inputs and bounds; generic stdio rejects unknown tools before worker state creation. Truncation is explicit rather than silently claiming full results.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-lib-build-project-output.ts",
+      "reason": "Native project workflows capture product/module target selection, run fresh full-scope preflight, execute owned SDK tools and collect package identity. Current evidence covers blocking an injected error before Hvigor, repair followed by compilation, and four product/target combinations with HAR/HSP/HAP closure and two native ABIs. These results do not prove installation or phone behavior.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-lib-deveco-cli.ts",
+      "reason": "Replace upstream CLI process discovery with native installed SDK discovery and owned argument-array process execution. Generic stdio does not install or launch the official CLI; current SDK/check/build acceptance exercises the native path.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-lib-env.ts",
+      "reason": "Replace upstream CLI process discovery with native installed SDK discovery and owned argument-array process execution. Generic stdio does not install or launch the official CLI; current SDK/check/build acceptance exercises the native path.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-lib-session-cwd.ts",
+      "reason": "Native switch_cwd validates a project and affects future requests in its worker; submitted workflows retain their frozen context. Current generic stdio acceptance selects an isolated project, rejects a nonexistent replacement and successfully checks using the retained default. Canonical selection and concurrent captured context remain covered by current process tests.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-lsp.ts",
+      "reason": "Native ArkTS/clangd sessions use the selected SDK and captured project, synchronize documents and bind zero-based UTF-16 requests to advertised provider capabilities. Current real SDK evidence covers core queries, module scope and five added symbol/call operations. SDK 26 ArkTS lacks the five new providers; clangd supports four and explicitly rejects outgoing calls. No name-search substitute or unsupported success is claimed.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-lsp.txt",
+      "reason": "Native ArkTS/clangd sessions use the selected SDK and captured project, synchronize documents and bind zero-based UTF-16 requests to advertised provider capabilities. Current real SDK evidence covers core queries, module scope and five added symbol/call operations. SDK 26 ArkTS lacks the five new providers; clangd supports four and explicitly rejects outgoing calls. No name-search substitute or unsupported success is claimed.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-mcp-websearch.ts",
+      "reason": "This upstream facility belongs to the AI client. The native MCP declares that client requirement instead of copying DevEco Code session internals or adding a general shell/editor/web/agent tool. Generic stdio acceptance confirms the tool is absent and direct calls fail TOOL_UNKNOWN. That boundary evidence does not claim the host implementation or upstream-specific behavior was executed.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-plan-enter.txt",
+      "reason": "Native skill_workflow stores captured objectives, controlled documents, optimistic revisions and guided phase transitions. Spec/design/task sections are validated and completion requires fresh native evidence where applicable. Current stdio acceptance exercises plan entry/write/exit, spec documents, tasks and evidence protection/export. The host assesses meaning and authorization; transitions neither change host system mode nor synthesize approval.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-plan-exit.txt",
+      "reason": "Native skill_workflow stores captured objectives, controlled documents, optimistic revisions and guided phase transitions. Spec/design/task sections are validated and completion requires fresh native evidence where applicable. Current stdio acceptance exercises plan entry/write/exit, spec documents, tasks and evidence protection/export. The host assesses meaning and authorization; transitions neither change host system mode nor synthesize approval.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-plan-write.txt",
+      "reason": "Native skill_workflow stores captured objectives, controlled documents, optimistic revisions and guided phase transitions. Spec/design/task sections are validated and completion requires fresh native evidence where applicable. Current stdio acceptance exercises plan entry/write/exit, spec documents, tasks and evidence protection/export. The host assesses meaning and authorization; transitions neither change host system mode nor synthesize approval.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-plan.ts",
+      "reason": "Native skill_workflow stores captured objectives, controlled documents, optimistic revisions and guided phase transitions. Spec/design/task sections are validated and completion requires fresh native evidence where applicable. Current stdio acceptance exercises plan entry/write/exit, spec documents, tasks and evidence protection/export. The host assesses meaning and authorization; transitions neither change host system mode nor synthesize approval.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-question.ts",
+      "reason": "This upstream facility belongs to the AI client. The native MCP declares that client requirement instead of copying DevEco Code session internals or adding a general shell/editor/web/agent tool. Generic stdio acceptance confirms the tool is absent and direct calls fail TOOL_UNKNOWN. That boundary evidence does not claim the host implementation or upstream-specific behavior was executed.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-question.txt",
+      "reason": "This upstream facility belongs to the AI client. The native MCP declares that client requirement instead of copying DevEco Code session internals or adding a general shell/editor/web/agent tool. Generic stdio acceptance confirms the tool is absent and direct calls fail TOOL_UNKNOWN. That boundary evidence does not claim the host implementation or upstream-specific behavior was executed.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-read.ts",
+      "reason": "This upstream facility belongs to the AI client. The native MCP declares that client requirement instead of copying DevEco Code session internals or adding a general shell/editor/web/agent tool. Generic stdio acceptance confirms the tool is absent and direct calls fail TOOL_UNKNOWN. That boundary evidence does not claim the host implementation or upstream-specific behavior was executed.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-read.txt",
+      "reason": "This upstream facility belongs to the AI client. The native MCP declares that client requirement instead of copying DevEco Code session internals or adding a general shell/editor/web/agent tool. Generic stdio acceptance confirms the tool is absent and direct calls fail TOOL_UNKNOWN. That boundary evidence does not claim the host implementation or upstream-specific behavior was executed.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-registry.ts",
+      "reason": "Native strict schemas, explicit tool catalog, canonical project containment and bounded artifact/result readers replace host validation and output helpers. Current regression checks malformed inputs and bounds; generic stdio rejects unknown tools before worker state creation. Truncation is explicit rather than silently claiming full results.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-schema.ts",
+      "reason": "Native strict schemas, explicit tool catalog, canonical project containment and bounded artifact/result readers replace host validation and output helpers. Current regression checks malformed inputs and bounds; generic stdio rejects unknown tools before worker state creation. Truncation is explicit rather than silently claiming full results.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-shell.ts",
+      "reason": "This upstream facility belongs to the AI client. The native MCP declares that client requirement instead of copying DevEco Code session internals or adding a general shell/editor/web/agent tool. Generic stdio acceptance confirms the tool is absent and direct calls fail TOOL_UNKNOWN. That boundary evidence does not claim the host implementation or upstream-specific behavior was executed.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-shell-id.ts",
+      "reason": "This upstream facility belongs to the AI client. The native MCP declares that client requirement instead of copying DevEco Code session internals or adding a general shell/editor/web/agent tool. Generic stdio acceptance confirms the tool is absent and direct calls fail TOOL_UNKNOWN. That boundary evidence does not claim the host implementation or upstream-specific behavior was executed.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-shell-prompt.ts",
+      "reason": "This upstream facility belongs to the AI client. The native MCP declares that client requirement instead of copying DevEco Code session internals or adding a general shell/editor/web/agent tool. Generic stdio acceptance confirms the tool is absent and direct calls fail TOOL_UNKNOWN. That boundary evidence does not claim the host implementation or upstream-specific behavior was executed.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-shell-shell.txt",
+      "reason": "This upstream facility belongs to the AI client. The native MCP declares that client requirement instead of copying DevEco Code session internals or adding a general shell/editor/web/agent tool. Generic stdio acceptance confirms the tool is absent and direct calls fail TOOL_UNKNOWN. That boundary evidence does not claim the host implementation or upstream-specific behavior was executed.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-skill.ts",
+      "reason": "All six reviewed Skills and their referenced knowledge are bundled and read over generic MCP. Persistent guidance, document revisions and native completion gates replace client Skill installation. Actual stdio acceptance reads every Skill and restores guidance after reconnect; the host supplies reasoning and source edits. Installation and uninstallation are intentionally rejected under the owner architecture.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-skill.txt",
+      "reason": "All six reviewed Skills and their referenced knowledge are bundled and read over generic MCP. Persistent guidance, document revisions and native completion gates replace client Skill installation. Actual stdio acceptance reads every Skill and restores guidance after reconnect; the host supplies reasoning and source edits. Installation and uninstallation are intentionally rejected under the owner architecture.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-spec-write.txt",
+      "reason": "Native skill_workflow stores captured objectives, controlled documents, optimistic revisions and guided phase transitions. Spec/design/task sections are validated and completion requires fresh native evidence where applicable. Current stdio acceptance exercises plan entry/write/exit, spec documents, tasks and evidence protection/export. The host assesses meaning and authorization; transitions neither change host system mode nor synthesize approval.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-spec.ts",
+      "reason": "Native skill_workflow stores captured objectives, controlled documents, optimistic revisions and guided phase transitions. Spec/design/task sections are validated and completion requires fresh native evidence where applicable. Current stdio acceptance exercises plan entry/write/exit, spec documents, tasks and evidence protection/export. The host assesses meaning and authorization; transitions neither change host system mode nor synthesize approval.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-start_app.ts",
+      "reason": "Native deployment captures the complete selected package set, validates receipts and launches an explicit Ability/Want. Confirmed installation releases only MCP-owned package copies; uncertain installs retain recovery input and later launch failure does not cause reinstall. Current phone execution is pending; lifecycle regressions are current.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-switch-cwd.ts",
+      "reason": "Native switch_cwd validates a project and affects future requests in its worker; submitted workflows retain their frozen context. Current generic stdio acceptance selects an isolated project, rejects a nonexistent replacement and successfully checks using the retained default. Canonical selection and concurrent captured context remain covered by current process tests.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-switch-cwd.txt",
+      "reason": "Native switch_cwd validates a project and affects future requests in its worker; submitted workflows retain their frozen context. Current generic stdio acceptance selects an isolated project, rejects a nonexistent replacement and successfully checks using the retained default. Canonical selection and concurrent captured context remain covered by current process tests.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-task.ts",
+      "reason": "This upstream facility belongs to the AI client. The native MCP declares that client requirement instead of copying DevEco Code session internals or adding a general shell/editor/web/agent tool. Generic stdio acceptance confirms the tool is absent and direct calls fail TOOL_UNKNOWN. That boundary evidence does not claim the host implementation or upstream-specific behavior was executed.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-task.txt",
+      "reason": "This upstream facility belongs to the AI client. The native MCP declares that client requirement instead of copying DevEco Code session internals or adding a general shell/editor/web/agent tool. Generic stdio acceptance confirms the tool is absent and direct calls fail TOOL_UNKNOWN. That boundary evidence does not claim the host implementation or upstream-specific behavior was executed.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-todo.ts",
+      "reason": "Native skill_workflow stores captured objectives, controlled documents, optimistic revisions and guided phase transitions. Spec/design/task sections are validated and completion requires fresh native evidence where applicable. Current stdio acceptance exercises plan entry/write/exit, spec documents, tasks and evidence protection/export. The host assesses meaning and authorization; transitions neither change host system mode nor synthesize approval.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-todowrite.txt",
+      "reason": "Native skill_workflow stores captured objectives, controlled documents, optimistic revisions and guided phase transitions. Spec/design/task sections are validated and completion requires fresh native evidence where applicable. Current stdio acceptance exercises plan entry/write/exit, spec documents, tasks and evidence protection/export. The host assesses meaning and authorization; transitions neither change host system mode nor synthesize approval.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-tool.ts",
+      "reason": "Native strict schemas, explicit tool catalog, canonical project containment and bounded artifact/result readers replace host validation and output helpers. Current regression checks malformed inputs and bounds; generic stdio rejects unknown tools before worker state creation. Truncation is explicit rather than silently claiming full results.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-truncate.ts",
+      "reason": "Native strict schemas, explicit tool catalog, canonical project containment and bounded artifact/result readers replace host validation and output helpers. Current regression checks malformed inputs and bounds; generic stdio rejects unknown tools before worker state creation. Truncation is explicit rather than silently claiming full results.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-truncation-dir.ts",
+      "reason": "Native strict schemas, explicit tool catalog, canonical project containment and bounded artifact/result readers replace host validation and output helpers. Current regression checks malformed inputs and bounds; generic stdio rejects unknown tools before worker state creation. Truncation is explicit rather than silently claiming full results.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-ui-verification-index.ts",
+      "reason": "Native UI tests capture objective, selected application/display and bounded plans/actions. Target-app pixel evidence excludes unrelated system-bar changes; no-progress counts, uncertain effects, replan review, cancellation and export are durable. Actual host image inspection remains separate from native assertions. Current device acceptance is pending and is not replaced by historical wireless or unit-test results.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-ui-verification-ui-verification-tool.ts",
+      "reason": "Native UI tests capture objective, selected application/display and bounded plans/actions. Target-app pixel evidence excludes unrelated system-bar changes; no-progress counts, uncertain effects, replan review, cancellation and export are durable. Actual host image inspection remains separate from native assertions. Current device acceptance is pending and is not replaced by historical wireless or unit-test results.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-webfetch.ts",
+      "reason": "This upstream facility belongs to the AI client. The native MCP declares that client requirement instead of copying DevEco Code session internals or adding a general shell/editor/web/agent tool. Generic stdio acceptance confirms the tool is absent and direct calls fail TOOL_UNKNOWN. That boundary evidence does not claim the host implementation or upstream-specific behavior was executed.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-webfetch.txt",
+      "reason": "This upstream facility belongs to the AI client. The native MCP declares that client requirement instead of copying DevEco Code session internals or adding a general shell/editor/web/agent tool. Generic stdio acceptance confirms the tool is absent and direct calls fail TOOL_UNKNOWN. That boundary evidence does not claim the host implementation or upstream-specific behavior was executed.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-websearch.ts",
+      "reason": "This upstream facility belongs to the AI client. The native MCP declares that client requirement instead of copying DevEco Code session internals or adding a general shell/editor/web/agent tool. Generic stdio acceptance confirms the tool is absent and direct calls fail TOOL_UNKNOWN. That boundary evidence does not claim the host implementation or upstream-specific behavior was executed.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-websearch.txt",
+      "reason": "This upstream facility belongs to the AI client. The native MCP declares that client requirement instead of copying DevEco Code session internals or adding a general shell/editor/web/agent tool. Generic stdio acceptance confirms the tool is absent and direct calls fail TOOL_UNKNOWN. That boundary evidence does not claim the host implementation or upstream-specific behavior was executed.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-write.ts",
+      "reason": "This upstream facility belongs to the AI client. The native MCP declares that client requirement instead of copying DevEco Code session internals or adding a general shell/editor/web/agent tool. Generic stdio acceptance confirms the tool is absent and direct calls fail TOOL_UNKNOWN. That boundary evidence does not claim the host implementation or upstream-specific behavior was executed.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-tool-write.txt",
+      "reason": "This upstream facility belongs to the AI client. The native MCP declares that client requirement instead of copying DevEco Code session internals or adding a general shell/editor/web/agent tool. Generic stdio acceptance confirms the tool is absent and direct calls fail TOOL_UNKNOWN. That boundary evidence does not claim the host implementation or upstream-specific behavior was executed.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-new-tool",
+      "reason": "Keep the future-tool/helper/prompt guard. The pinned registry has twenty-eight explicitly mapped built-ins and fifty operation records; an added unclassified file must fail candidate review instead of inheriting the general host-package exclusion.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-language-service",
+      "reason": "Native ArkTS/clangd sessions use the selected SDK and captured project, synchronize documents and bind zero-based UTF-16 requests to advertised provider capabilities. Current real SDK evidence covers core queries, module scope and five added symbol/call operations. SDK 26 ArkTS lacks the five new providers; clangd supports four and explicitly rejects outgoing calls. No name-search substitute or unsupported success is claimed.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "code-bun-host-configuration",
+      "reason": "Upstream Bun dependency-age exclusions and test-root configuration control its client build. Native MCP uses locked Node production dependencies and Node Test Runner, ships no Bun host runtime and does not inherit the upstream installation-age policy.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    }
+  ],
+  "targets": [
+    {
+      "path": "docs/builtin-skill-workflows.md",
+      "sha256": "bdb2edfd6f71bafa7824cf09ae2a2390cbb34c48d9cad54839b54399f5528f5a"
+    },
+    {
+      "path": "provenance/resources.json",
+      "sha256": "000c3065d5b892d06f72f2c00458982807ab2a8806237012e46127c2ba9e65b2"
+    },
+    {
+      "path": "provenance/upstream-capabilities.json",
+      "sha256": "2d3b932e5d30be236be9993c95165b94de69aaa2b7ea7853938afbb960591242"
+    },
+    {
+      "path": "provenance/upstream-lock.json",
+      "sha256": "f219f524944b8fb4de9bcb4513fb334517fad1331ea35f8141cd64ee569459c3"
+    },
+    {
+      "path": "provenance/upstream-mapping.json",
+      "sha256": "385d65fc1aa868dc61e7d5bb65f0ca50857a41d77078584f06a8b79e6c72fa14"
+    },
+    {
+      "path": "resources/knowledge.json",
+      "sha256": "fdb895f6616fc0c73d35f5d32a53edeb74be4a3cc36c5f24b40df80d19129068"
+    },
+    {
+      "path": "resources/knowledge/arkts-error-fixes",
+      "sha256": "89465b0466d5f324222dde9527bd87d910cf9cf6fa4b6eb83a177c0b5a270532"
+    },
+    {
+      "path": "resources/knowledge/arkts-grammar-standards",
+      "sha256": "9620d9750ecb9b8f0d672ee31ee5e3045a5a51db34caed88cc886cb637278307"
+    },
+    {
+      "path": "resources/knowledge/arkts-runtime-fix",
+      "sha256": "5e9782bba4cd303b249f1d83057a19d8f3a6315843ca0b890229ad7962a37b3f"
+    },
+    {
+      "path": "resources/templates/application",
+      "sha256": "739c5c77fec53bcfd19774b8817c0692fcbefe400d3f1300af741bf0108b347e"
+    },
+    {
+      "path": "scripts/native-checker-acceptance.ts",
+      "sha256": "49aa8dc2b2c720c021458096cf1f25074951bed8710ee0bc29393b18a2ad8f6c"
+    },
+    {
+      "path": "scripts/native-crash-acceptance.ts",
+      "sha256": "77b1e2520c63ae56a14985cbf5cca0e86879d3699cf13e0ffbb9ba422c014605"
+    },
+    {
+      "path": "scripts/native-lsp-symbol-acceptance.ts",
+      "sha256": "605465954922194455dad8541f4c3e7d49034e79d6d6e00f025d4d345cd54f6d"
+    },
+    {
+      "path": "scripts/native-multimodule-acceptance.ts",
+      "sha256": "af66eb26327bc877a9cd77de46e5b2ba6aa818b934fb00dde2ee87e9b0392328"
+    },
+    {
+      "path": "scripts/native-sdk-acceptance.ts",
+      "sha256": "f803096657851f1eb662fe5de2827ac38c5715e73a8a204898409e35ac6d1cb4"
+    },
+    {
+      "path": "src/cli.ts",
+      "sha256": "12cb05accea376eb4d21e4efbef26da4f71ca13bdf14db9ba0c7cf21a381236b"
+    },
+    {
+      "path": "src/core/contracts.ts",
+      "sha256": "7de4b2c04d503565194cf05c3ce0afd8fd951422c642f03ad845a4615de8d603"
+    },
+    {
+      "path": "src/core/workflows.ts",
+      "sha256": "b96b88ba2d63429347bcccb0a0e24fc80293ca24c1f7161951057e658f250e98"
+    },
+    {
+      "path": "src/server.ts",
+      "sha256": "614509185d489c6291ec700e21cdf3733c1fa398f79a519ace77aaf0876d0a71"
+    },
+    {
+      "path": "src/services/checker-project.ts",
+      "sha256": "f50041f043835da2a06c57d95532233f68b969910703ea7eaeb28c9bda35b45f"
+    },
+    {
+      "path": "src/services/checker-report.ts",
+      "sha256": "4d215a211fcc5d4c976aecdc043768af92b8421982de9f4d189facdfdef8f240"
+    },
+    {
+      "path": "src/services/checker.ts",
+      "sha256": "8ea806f23bac5f370fb2fa8d74b4f9de4d7566c245843897f87eb997100b8e0e"
+    },
+    {
+      "path": "src/services/crash-frames.ts",
+      "sha256": "3a2cabf7bb0be8f72c6fe1e704e99be2f423a715063fedf0f5ca95320ce15558"
+    },
+    {
+      "path": "src/services/crash-patterns.ts",
+      "sha256": "f427ec7854205db2422ef9a9e086bd19ed9a0ea7958e103445be44e6158debec"
+    },
+    {
+      "path": "src/services/crash.ts",
+      "sha256": "d7e7b487ce94adab35fea1968016f13153299d6505022646fd967b454e82b9fb"
+    },
+    {
+      "path": "src/services/diagnostics.ts",
+      "sha256": "cf92889feb7628dc57a9bb34619ca72a57d6aa2e1023de30441e7e325655efe7"
+    },
+    {
+      "path": "src/services/knowledge.ts",
+      "sha256": "5f9422aa166519e994e910e0462091757a22c04cdfc509dc9515423faf18d41d"
+    },
+    {
+      "path": "src/services/language-symbols.ts",
+      "sha256": "e644c61dc136157159b2d888441a7c1281577c0f43143d779bb5891e5a84fa36"
+    },
+    {
+      "path": "src/services/logs.ts",
+      "sha256": "be5d46ca8aab73bceb6ecaadbac8d1b7475afca6865eec910e729d2baf533608"
+    },
+    {
+      "path": "src/services/lsp.ts",
+      "sha256": "e55ba0b5243c27feb5ea81833385db052726043fefc8d880a1ec8850e4de8d90"
+    },
+    {
+      "path": "src/services/project.ts",
+      "sha256": "ab0b39e8ca6a82aa1bfbd7848a6929d4e5482e2c6f5ebc70f831b68d1c488da9"
+    },
+    {
+      "path": "src/services/runtime.ts",
+      "sha256": "4df86d107e6896db9b9b53b5c06f45acc2b7a5f7924b0a84e99202267aa31595"
+    },
+    {
+      "path": "test/native-checker.test.ts",
+      "sha256": "342cc01a504392ef01bdd08a2621104e872aa8bd431d411efa37ce73ef3d4e86"
+    },
+    {
+      "path": "test/native-context.test.ts",
+      "sha256": "56ec51b60783c6da6a03d1a67351ff95dac165ce517da01036428ea20e5b6cff"
+    },
+    {
+      "path": "test/native-crash.test.ts",
+      "sha256": "6fa5d92eda8cdf96b06b60fdcdf9f85631a8288f094a355c1fa25a9e9d049d68"
+    },
+    {
+      "path": "test/native-logs.test.ts",
+      "sha256": "f86133c127a1865db4c7c17c8389ed3235c398187de9089ab4622733d66d58df"
+    },
+    {
+      "path": "test/native-lsp.test.ts",
+      "sha256": "638f8120d141f3a25bc439a5577a771da61575cc5a4b1544bd4d0f147f38c948"
+    },
+    {
+      "path": "test/native-project-recovery.test.ts",
+      "sha256": "51e7324dc42a95eca1e134a074dae0b2616ccaffc680aa51a3ac83cb91bd36a3"
+    },
+    {
+      "path": "test/native-project.test.ts",
+      "sha256": "c36a851b890aad9e0df58b351ae1ea6a652bcaa7fa3dd025280a3edab4633a4c"
+    },
+    {
+      "path": "test/native-runtime.test.ts",
+      "sha256": "5376727351c60921b3723bfbc7b24b53a138f3ca7700c5909177670981245c58"
+    },
+    {
+      "path": "test/native-upstream-capabilities.test.ts",
+      "sha256": "2d934d801a19f41cd0736150029eb8075db4f225d9e77754507dac7ca39b0dfc"
+    },
+    {
+      "path": "test/native-upstream.test.ts",
+      "sha256": "4786e44142bb77b2bb0857879fefdbb65c45ddae23cd1126a6483d8103445506"
+    },
+    {
+      "path": "test/workflows.test.ts",
+      "sha256": "016645857a2d3050fafe7f4082f23d188dfc83bbe101ee7b625ccdb131e1d49c"
+    }
+  ],
+  "required_tests": [
+    "scripts/native-checker-acceptance.ts",
+    "scripts/native-crash-acceptance.ts",
+    "scripts/native-lsp-symbol-acceptance.ts",
+    "scripts/native-multimodule-acceptance.ts",
+    "scripts/native-sdk-acceptance.ts",
+    "test/native-checker.test.ts",
+    "test/native-context.test.ts",
+    "test/native-crash.test.ts",
+    "test/native-logs.test.ts",
+    "test/native-lsp.test.ts",
+    "test/native-project-recovery.test.ts",
+    "test/native-project.test.ts",
+    "test/native-runtime.test.ts",
+    "test/native-upstream-capabilities.test.ts",
+    "test/native-upstream.test.ts",
+    "test/workflows.test.ts"
+  ]
+}

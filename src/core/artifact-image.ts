@@ -9,6 +9,7 @@ export const artifactImageSchema = z.strictObject({
   width: z.number().int().positive(),
   height: z.number().int().positive(),
   sha256: z.string().regex(/^[a-f0-9]{64}$/),
+  review_reads: z.array(z.strictObject({ review_id: z.string().uuid(), read_token: z.string().uuid() })).max(256).optional(),
   image: z.strictObject({
     type: z.literal("image"),
     mimeType: z.enum(["image/png", "image/jpeg"]),

@@ -1,0 +1,689 @@
+{
+  "format": 1,
+  "source": {
+    "id": "deveco-cli",
+    "url": "https://gitcode.com/openharmony-sig/deveco-cli.git",
+    "ref": "refs/heads/develop",
+    "commit": "a71f93d73941aaa0dbf581918cbd5828014e6e88",
+    "tree": "6605d243def8bc8cebe0da693ba5729c1a283601",
+    "version": "a71f93d73941aaa0dbf581918cbd5828014e6e88",
+    "role": "protocol_reference",
+    "acceptance": "verified"
+  },
+  "mapping_sha256": "e5069b08892982a832ea31247a68e3d1b8e00786b68c00944a02c6700473e793",
+  "reviews": [
+    {
+      "rule": "cli-core-toolchain",
+      "reason": "Resolve installed DevEco/SDK components natively and launch owned processes with structured arguments and bounded output. No official CLI installation or global process killing is used; current SDK discovery, checker and build acceptance exercise the selected toolchain.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "cli-core-config",
+      "reason": "Native configuration separates user configuration from owned state and selected SDK discovery. Environment and executable paths are validated and frozen per operation; the upstream host configuration and update mechanism are not runtime dependencies.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "cli-core-types",
+      "reason": "Native strict tool schemas and deterministic workflow contracts replace upstream CLI option types. Unknown arguments fail before worker effects; default build preflight, protected evidence and removed Skill actions are covered by current regression and generic stdio acceptance.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "cli-core-utils",
+      "reason": "Native file containment, content hashes, process ownership and bounded readers replace upstream utility helpers. Current regression covers canonical paths, symlinks, atomic writes and bounded child output. Windows replacement now retries EPERM/EACCES/EBUSY at most ten times with 550 ms cumulative waiting, retaining the previous destination until a successful atomic rename. Fault injection proves transient recovery, permanent failure cleanup and unchanged exclusive writes; the original Windows CI failure remains archived; no upstream utility module is executed.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "cli-core-trace",
+      "reason": "Native request outcomes and structured request logs distinguish checker findings from transport/runtime failure. Durable worker/run events retain resumable execution and redacted errors without copying upstream telemetry or logging credentials.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "cli-core-internal",
+      "reason": "Internal native child entrypoints are owned SDK checker/text/process helpers with validated arguments and distinct scratch directories. They do not load the retired official CLI or a child MCP; concurrent checker acceptance verifies scratch ownership and release.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "cli-src-apply-",
+      "reason": "Retain the native hot-reload baseline/patch state machine with frozen multi-package inputs and explicit target selection. Package release occurs only after a durable complete installation receipt; uncertain effects retain recovery data. Current package lifecycle tests apply, while unchanged historical hot-device scripts keep their original tested identity and do not establish current phone acceptance.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "cli-src-auth-",
+      "reason": "Retain native provider-isolated authentication and explicit browser login/logout/status/team actions. No credentials or upstream authentication executable are imported. Current auth regressions validate contracts; historical browser acceptance is carried only where its script identity is unchanged and remains scoped to its original execution.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "cli-src-signature-",
+      "reason": "Native signature operations validate and capture local materials, selected product configuration and owned key/CSR outputs before SDK signing. Current SDK acceptance generates isolated keys and CSR; personal cloud-signing and physical installation evidence remain separately bounded historical checks.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "cli-src-codelinter-",
+      "reason": "Native SDK lint validates scoped source, configuration and incremental Git inputs; preview limits do not hide total findings. Current six-case acceptance covers clean source, findings, explicit repair, invalid configuration and changed tracked files. It does not reuse the upstream development ESLint configuration.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "cli-src-docs-",
+      "reason": "Knowledge and reference files are shipped with provenance and hash-checked bounded catalog/search/read. Local reading requires no client Skill directory, remote executable or login; current generic MCP acceptance reads all bundled Skill entrypoints and current knowledge tests validate resource lookup.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "cli-src-ui-",
+      "reason": "Native UI import validates bounded dump schema, caches by source identity and preserves node hierarchy and selector totals. Actions use canonical application/display scope. Existing dump regression is current; phone action and screenshot acceptance remains pending for this release.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "cli-src-service-",
+      "reason": "Retain native emulator discovery, instance lifecycle, scenario planning and explicit license acceptance using installed SDK tools. Parser and ownership tests are current, and current SDK acceptance reads inventory. Earlier SDK/emulator lifecycle acceptance retains its original scope and does not imply a new emulator launch.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "cli-src-resources-",
+      "reason": "Native project templates and SDK-matched configuration replace executable upstream resources. Current project creation/build and multimodule acceptance validate the native outputs. Upstream scripts are reference material and are not copied into the runtime.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "cli-src-data-",
+      "reason": "Read installed emulator catalogs and agreement metadata using native bounded contracts and scoped scenario planning. Do not ship stale upstream agreement text or write private SDK state directly. Current parser/schema tests and SDK inventory apply; historical lifecycle results remain historical.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "cli-templates-",
+      "reason": "Generate isolated native application/module templates with selected SDK metadata, local dependencies and correct product targets. Current four product/target builds and distinct runtime API builds pass. The upstream project .cache ignore is unnecessary because native checker scratch is owned outside the project and cleaned on completion.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "cli-index-",
+      "reason": "Native knowledge indexes serve bundled resource files with bounded catalog/search/read and verified hashes. The upstream CLI index is not executed; reference content and discoverability are checked through native resource and MCP acceptance.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "cli-command-build.ts",
+      "reason": "Native project workflows capture product/module target selection, run fresh full-scope preflight, execute owned SDK tools and collect package identity. Current evidence covers blocking an injected error before Hvigor, repair followed by compilation, and four product/target combinations with HAR/HSP/HAP closure and two native ABIs. These results do not prove installation or phone behavior.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "cli-command-create.ts",
+      "reason": "Native project_create captures a new destination and SDK-matched configuration under a durable workflow. Current stdio creation guidance starts before the directory exists, creates the isolated project and completes only after a fresh successful build reference.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "cli-command-init.ts",
+      "reason": "Native project inspection and synchronization use captured project/product/module context. Current SDK and multimodule builds validate generated profiles and dependency synchronization; arbitrary upstream initializer code is not imported or run.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "cli-command-run.ts",
+      "reason": "Native deployment captures the complete selected package set, validates receipts and launches an explicit Ability/Want. Confirmed installation releases only MCP-owned package copies; uncertain installs retain recovery input and later launch failure does not cause reinstall. Current phone execution is pending; lifecycle regressions are current.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "cli-command-check.ts",
+      "reason": "The native checker uses selected project/product/module SDK configuration, strict source and report bounds, canonical application ASTs and SDK binder identities. Compiler-normalized Windows source names are compared with normalized selected paths so cross-file findings remain in scope; the Windows regression failure is retained and the repaired CI run must confirm this path. All eighteen enabled CLI validator groups are adapted; original project root and compatible-version strings preserve real API warning behavior. Twenty-one current SDK cases include errors and repairs. Static checking is distinct from build/device completion.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "cli-command-serve-lsp.ts",
+      "reason": "Native ArkTS/clangd sessions use the selected SDK and captured project, synchronize documents and bind zero-based UTF-16 requests to advertised provider capabilities. Current real SDK evidence covers core queries, module scope and five added symbol/call operations. SDK 26 ArkTS lacks the five new providers; clangd supports four and explicitly rejects outgoing calls. No name-search substitute or unsupported success is claimed.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "cli-command-serve-lsp-cpp.ts",
+      "reason": "Native ArkTS/clangd sessions use the selected SDK and captured project, synchronize documents and bind zero-based UTF-16 requests to advertised provider capabilities. Current real SDK evidence covers core queries, module scope and five added symbol/call operations. SDK 26 ArkTS lacks the five new providers; clangd supports four and explicitly rejects outgoing calls. No name-search substitute or unsupported success is claimed.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "cli-command-signature.ts",
+      "reason": "Map signature dispatch to native material/configuration schemas and owned SDK signing processes. Current SDK key/CSR checks pass; earlier full signing acceptance keeps its original identity, and current installation is not inferred from successful signing.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "cli-command-auth.ts",
+      "reason": "Map authentication commands to provider-isolated native browser flows and explicit status/logout actions. Existing regression verifies isolation and recovery; unchanged historical browser acceptance is not recaptured or relabelled as a current login.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "cli-command-doc.ts",
+      "reason": "Map CLI documentation commands to native bundled knowledge catalog/search/read. Hash-checked resources and bounded results are available over generic MCP without a client Skill installer.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "cli-command-log.ts",
+      "reason": "Native hdc_log retains explicit device selection, bounded filters, PID/device-time association and partial-ring semantics. UI test logs provide bounded read/search and export, replacing unlimited host log buffers. Log clearing is an explicit mutation. Current phone collect/clear/selection acceptance remains pending; historical crash evidence keeps its original execution identity.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "cli-command-device.ts",
+      "reason": "Native device_info uses explicit HDC target selection and bounded structured information/file/SQLite operations with canonical ownership. Current device protocol tests pass; no phone has been probed during the user-requested connection wait.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "cli-command-emulator.ts",
+      "reason": "Native emulator actions preserve explicit instance selection, license gates and owned process lifecycle. Current inventory and parsing regression pass; historical real lifecycle scripts remain tied to the earlier execution and do not declare current cross-platform emulator acceptance.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "cli-command-ui.ts",
+      "reason": "Native UI tests capture objective, selected application/display and bounded plans/actions. Target-app pixel evidence excludes unrelated system-bar changes; no-progress counts, uncertain effects, replan review, cancellation and export are durable. Actual host image inspection remains separate from native assertions. Current device acceptance is pending and is not replaced by historical wireless or unit-test results.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "cli-command-ui-input.ts",
+      "reason": "Native UI tests capture objective, selected application/display and bounded plans/actions. Target-app pixel evidence excludes unrelated system-bar changes; no-progress counts, uncertain effects, replan review, cancellation and export are durable. Actual host image inspection remains separate from native assertions. Current device acceptance is pending and is not replaced by historical wireless or unit-test results.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "cli-command-ui-layout.ts",
+      "reason": "Native UI layout import preserves bounded complete snapshot parsing, hierarchy, query counts and pagination with source-keyed cache ownership. Current tests cover malformed and oversized inputs; a parsed layout alone is not a verified phone action.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "cli-command-ui-window.ts",
+      "reason": "Native UI inspection retains actual selected display/application window identities. Progress checks now hash the captured application region rather than the changing full screen; current pixel/geometry tests apply and final phone verification remains pending.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "cli-command-ui-screenshot.ts",
+      "reason": "Native screenshot capture uses explicit display scope, owned temporary paths and SHA-bound image artifacts. UI review requires reading the actual image before recording host judgement; exports preserve originals and manifests. Final physical capture/export evidence remains pending.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "cli-retired-src-compat-",
+      "reason": "This mapped path belongs to the removed official CLI updater, installer, legacy Studio compatibility or child MCP. The native package neither ships nor executes it. Existing native SDK/process services provide the supported operations; restoring this path would violate the approved architecture.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "cli-retired-src-skills-",
+      "reason": "All six reviewed Skills and their referenced knowledge are bundled and read over generic MCP. Persistent guidance, document revisions and native completion gates replace client Skill installation. Actual stdio acceptance reads every Skill and restores guidance after reconnect; the host supplies reasoning and source edits. Installation and uninstallation are intentionally rejected under the owner architecture.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "cli-retired-src-install-check-",
+      "reason": "This mapped path belongs to the removed official CLI updater, installer, legacy Studio compatibility or child MCP. The native package neither ships nor executes it. Existing native SDK/process services provide the supported operations; restoring this path would violate the approved architecture.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "cli-retired-src-update-",
+      "reason": "This mapped path belongs to the removed official CLI updater, installer, legacy Studio compatibility or child MCP. The native package neither ships nor executes it. Existing native SDK/process services provide the supported operations; restoring this path would violate the approved architecture.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "cli-retired-src-commands-skills.ts",
+      "reason": "All six reviewed Skills and their referenced knowledge are bundled and read over generic MCP. Persistent guidance, document revisions and native completion gates replace client Skill installation. Actual stdio acceptance reads every Skill and restores guidance after reconnect; the host supplies reasoning and source edits. Installation and uninstallation are intentionally rejected under the owner architecture.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "cli-retired-src-commands-update.ts",
+      "reason": "This mapped path belongs to the removed official CLI updater, installer, legacy Studio compatibility or child MCP. The native package neither ships nor executes it. Existing native SDK/process services provide the supported operations; restoring this path would violate the approved architecture.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "cli-retired-src-commands-serve.ts",
+      "reason": "This mapped path belongs to the removed official CLI updater, installer, legacy Studio compatibility or child MCP. The native package neither ships nor executes it. Existing native SDK/process services provide the supported operations; restoring this path would violate the approved architecture.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "cli-retired-mcp-",
+      "reason": "This mapped path belongs to the removed official CLI updater, installer, legacy Studio compatibility or child MCP. The native package neither ships nor executes it. Existing native SDK/process services provide the supported operations; restoring this path would violate the approved architecture.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "cli-release-LICENSE",
+      "reason": "Review this upstream legal/release/dependency metadata as provenance for the pinned CLI reference. Native dependencies are separately locked and licensed; no official CLI or copied executable resource is installed. This classification does not certify a publish or installation result.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "cli-release-OAT.xml",
+      "reason": "Review this upstream legal/release/dependency metadata as provenance for the pinned CLI reference. Native dependencies are separately locked and licensed; no official CLI or copied executable resource is installed. This classification does not certify a publish or installation result.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "cli-release-PRIVACY.md",
+      "reason": "Review this upstream legal/release/dependency metadata as provenance for the pinned CLI reference. Native dependencies are separately locked and licensed; no official CLI or copied executable resource is installed. This classification does not certify a publish or installation result.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "cli-release-package.json",
+      "reason": "Review this upstream legal/release/dependency metadata as provenance for the pinned CLI reference. Native dependencies are separately locked and licensed; no official CLI or copied executable resource is installed. This classification does not certify a publish or installation result.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "cli-release-package-lock.json",
+      "reason": "Review this upstream legal/release/dependency metadata as provenance for the pinned CLI reference. Native dependencies are separately locked and licensed; no official CLI or copied executable resource is installed. This classification does not certify a publish or installation result.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "cli-release-CHANGELOG.md",
+      "reason": "Review this upstream legal/release/dependency metadata as provenance for the pinned CLI reference. Native dependencies are separately locked and licensed; no official CLI or copied executable resource is installed. This classification does not certify a publish or installation result.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "cli-release-src/cli.ts",
+      "reason": "Native --version, -v and -V return the release before configuration, SDK and state initialization; extra arguments are rejected. Native MCP dispatch and workflow guidance replace upstream terminal/telemetry/CLI dispatch. Isolated version output was manually observed and core runtime contracts passed.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "cli-emulator-license-protocol",
+      "reason": "Use installed native agreement metadata and explicit acceptance flags; do not import old bundled license text or directly mutate private emulator state. Current contract and parser tests remain required, and historical SDK agreement acceptance is preserved only with its original scope.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "cli-arkts-adapter",
+      "reason": "The native checker uses selected project/product/module SDK configuration, strict source and report bounds, canonical application ASTs and SDK binder identities. Compiler-normalized Windows source names are compared with normalized selected paths so cross-file findings remain in scope; the Windows regression failure is retained and the repaired CI run must confirm this path. All eighteen enabled CLI validator groups are adapted; original project root and compatible-version strings preserve real API warning behavior. Twenty-one current SDK cases include errors and repairs. Static checking is distinct from build/device completion.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "cli-arkts-resource",
+      "reason": "The native checker uses selected project/product/module SDK configuration, strict source and report bounds, canonical application ASTs and SDK binder identities. Compiler-normalized Windows source names are compared with normalized selected paths so cross-file findings remain in scope; the Windows regression failure is retained and the repaired CI run must confirm this path. All eighteen enabled CLI validator groups are adapted; original project root and compatible-version strings preserve real API warning behavior. Twenty-one current SDK cases include errors and repairs. Static checking is distinct from build/device completion.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "cli-readme",
+      "reason": "Map documented checking, repair timing and build behavior to native contracts and bundled workflow instructions. All six reviewed Skills and their referenced knowledge are bundled and read over generic MCP. Persistent guidance, document revisions and native completion gates replace client Skill installation. Actual stdio acceptance reads every Skill and restores guidance after reconnect; the host supplies reasoning and source edits. Installation and uninstallation are intentionally rejected under the owner architecture.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "cli-skill-entry",
+      "reason": "All six reviewed Skills and their referenced knowledge are bundled and read over generic MCP. Persistent guidance, document revisions and native completion gates replace client Skill installation. Actual stdio acceptance reads every Skill and restores guidance after reconnect; the host supplies reasoning and source edits. Installation and uninstallation are intentionally rejected under the owner architecture.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    },
+    {
+      "rule": "cli-development-eslint",
+      "reason": "Exclude upstream repository-only ESLint ignores for generated dist and copied resource scripts. This file is not shipped or consumed by native SDK lint; the native linter has its own current six-case acceptance.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
+    }
+  ],
+  "targets": [
+    {
+      "path": "docs/builtin-skill-workflows.md",
+      "sha256": "bdb2edfd6f71bafa7824cf09ae2a2390cbb34c48d9cad54839b54399f5528f5a"
+    },
+    {
+      "path": "docs/upstream-cli-checker-review.md",
+      "sha256": "4d73a4e32f3e868e1a4d75063bd291f32d9963c3ac5fafe41fad08bb329af4c9"
+    },
+    {
+      "path": "provenance/SOURCES.md",
+      "sha256": "6c111d066900b4616144e7caac9e53c58631b3ea44c867815dd5c76d9aebb763"
+    },
+    {
+      "path": "provenance/upstream-capabilities.json",
+      "sha256": "d10f6ae200b227cc168036186a218bbf20383d39decc586ec23cd6f361eb4873"
+    },
+    {
+      "path": "provenance/upstream-lock.json",
+      "sha256": "f219f524944b8fb4de9bcb4513fb334517fad1331ea35f8141cd64ee569459c3"
+    },
+    {
+      "path": "resources/skills/deveco-arkts-errors/SKILL.md",
+      "sha256": "eba27fca3ebea95f16cf4896c0e9f42ef0dae164c7f7b1b57915f1faadc95e6f"
+    },
+    {
+      "path": "resources/skills/deveco-native-tools/SKILL.md",
+      "sha256": "aba8b75ced14db0e8073d655d34c23b42406e59c9501e7abcff2197d69011a3c"
+    },
+    {
+      "path": "scripts/native-auth-mcp-acceptance.ts",
+      "sha256": "c640ac6baca9a3e502468cb1bd04a6e997015a17be252ec73dcbad749f33b99f"
+    },
+    {
+      "path": "scripts/native-checker-acceptance.ts",
+      "sha256": "49aa8dc2b2c720c021458096cf1f25074951bed8710ee0bc29393b18a2ad8f6c"
+    },
+    {
+      "path": "scripts/native-device-readonly.ts",
+      "sha256": "b8e843a86e8b9440fb2c269d0f32c8c3fb962368cf097f29f35abf407b803c95"
+    },
+    {
+      "path": "scripts/native-emulator-acceptance.ts",
+      "sha256": "241373a98ff4b61280b94e37cfc589e24341a7de857c655044a50482653c9323"
+    },
+    {
+      "path": "scripts/native-emulator-readonly.ts",
+      "sha256": "d07df66bd7c36338705382efa171e6ff58ff15f1802a579f930705b14463db64"
+    },
+    {
+      "path": "scripts/native-hot-device-acceptance.ts",
+      "sha256": "730cfe903d730c4d7c4d3ccbbbe537d2dc314bbbebeea54f7023b095a6008059"
+    },
+    {
+      "path": "scripts/native-hot-target-prepare.ts",
+      "sha256": "434fbb5dfc67a5a6b9006ce6966a87f2d909b568a3315f0d148fd8bc99c20abf"
+    },
+    {
+      "path": "scripts/native-lint-acceptance.ts",
+      "sha256": "11a5b120b25735593d34274d5920e3ed5d597cde6a1d00ea7fcfcebf3ad5b6c3"
+    },
+    {
+      "path": "scripts/native-multimodule-acceptance.ts",
+      "sha256": "af66eb26327bc877a9cd77de46e5b2ba6aa818b934fb00dde2ee87e9b0392328"
+    },
+    {
+      "path": "scripts/native-sdk-acceptance.ts",
+      "sha256": "f803096657851f1eb662fe5de2827ac38c5715e73a8a204898409e35ac6d1cb4"
+    },
+    {
+      "path": "scripts/native-signing-acceptance.ts",
+      "sha256": "e368eee6334dc1bffc784e967a27a64e40f6a7b9190db9a856b448de9c1996e2"
+    },
+    {
+      "path": "scripts/native-skill-mcp-acceptance.ts",
+      "sha256": "c81c44fc0943494e0152ceaf0b378efbafe0b714ff419f3f20d9b121a1f21ec0"
+    },
+    {
+      "path": "scripts/native-ui-mcp-benchmark.ts",
+      "sha256": "11a353c555e6991c7276349642b316e189d134807b3f36401ca5a5fb8bb0eeb2"
+    },
+    {
+      "path": "src/cli.ts",
+      "sha256": "12cb05accea376eb4d21e4efbef26da4f71ca13bdf14db9ba0c7cf21a381236b"
+    },
+    {
+      "path": "src/core/contracts.ts",
+      "sha256": "7de4b2c04d503565194cf05c3ce0afd8fd951422c642f03ad845a4615de8d603"
+    },
+    {
+      "path": "src/core/doc-catalog.ts",
+      "sha256": "1eab48ef1292552245a0c152b43a3ac8122c9c4a14dab52da1c7ff0d50cdc873"
+    },
+    {
+      "path": "src/core/emulator-contracts.ts",
+      "sha256": "91084d264fc008478c56a93410875762ce81238f7f2d3c97a6f7c9f3d88ef8c6"
+    },
+    {
+      "path": "src/core/files.ts",
+      "sha256": "7b3220ec3f1836a75748ec87b1cc91caf4e859dd0c179b057bfb6077a459c315"
+    },
+    {
+      "path": "src/core/process.ts",
+      "sha256": "763a7d74f9c8049ec23d6ec182c6bb5943c1dd86bb559e8fc8c7e0da7c66a1c8"
+    },
+    {
+      "path": "src/core/request-log.ts",
+      "sha256": "dabbe092b6dd4c9ce82668a1d47aa7589b457dfa872827619ea1f7d5dd38af0c"
+    },
+    {
+      "path": "src/core/store.ts",
+      "sha256": "076c4761fb63e64cecf7ccc0af5bb26e2c9ac36fa914da3d31d21e26dc25aacb"
+    },
+    {
+      "path": "src/core/toolchain.ts",
+      "sha256": "8b86f8ef5f4f7309288222565abb5fa5204daac4b27e1ac6ae30755d3c8a3d4d"
+    },
+    {
+      "path": "src/core/workflows.ts",
+      "sha256": "b96b88ba2d63429347bcccb0a0e24fc80293ca24c1f7161951057e658f250e98"
+    },
+    {
+      "path": "src/services/auth.ts",
+      "sha256": "d8534b73126b3ff3c5dd20b28cf9f6f7b4277802be22aa734c8363f9e7b7f85a"
+    },
+    {
+      "path": "src/services/checker-metadata.ts",
+      "sha256": "36f97136c372ab674ea2c1d1b10ed290320f4ec8cbbee162f9e621a3e2b77ebe"
+    },
+    {
+      "path": "src/services/checker-model.ts",
+      "sha256": "47d5a30caa7c93553515155b4af435afaeece1f8fb92c1a0e83d831a8051cd80"
+    },
+    {
+      "path": "src/services/checker-project.ts",
+      "sha256": "f50041f043835da2a06c57d95532233f68b969910703ea7eaeb28c9bda35b45f"
+    },
+    {
+      "path": "src/services/checker-report.ts",
+      "sha256": "4d215a211fcc5d4c976aecdc043768af92b8421982de9f4d189facdfdef8f240"
+    },
+    {
+      "path": "src/services/checker-syntax.ts",
+      "sha256": "404ebb9d3d5fe09f154ccedf35d0ab66df8206951a3778aa81eafd5d54f95a55"
+    },
+    {
+      "path": "src/services/checker.ts",
+      "sha256": "8ea806f23bac5f370fb2fa8d74b4f9de4d7566c245843897f87eb997100b8e0e"
+    },
+    {
+      "path": "src/services/device-info.ts",
+      "sha256": "b819e6f31e281b8b4b45245f44d295134b00e06310a5efbab5950e3a74f7239b"
+    },
+    {
+      "path": "src/services/device.ts",
+      "sha256": "18fafdf3f39b12d5edb3bfceca4205208fd5e3f321f6186ba2c0b4a5cdd45f3d"
+    },
+    {
+      "path": "src/services/diagnostics.ts",
+      "sha256": "cf92889feb7628dc57a9bb34619ca72a57d6aa2e1023de30441e7e325655efe7"
+    },
+    {
+      "path": "src/services/emulator-license.ts",
+      "sha256": "b358191a6699e0c58be0c76ab69bb117fbff958deec8e26918f99fc9dec734bb"
+    },
+    {
+      "path": "src/services/emulator.ts",
+      "sha256": "f453001116853fb0883fbfde2518674b2a8d943025b59c5908e8f769771f5d2e"
+    },
+    {
+      "path": "src/services/hotreload.ts",
+      "sha256": "af824ff058c92617deea57389f8e3f6dca3684d4764e878a15517025c8e27d0b"
+    },
+    {
+      "path": "src/services/knowledge.ts",
+      "sha256": "5f9422aa166519e994e910e0462091757a22c04cdfc509dc9515423faf18d41d"
+    },
+    {
+      "path": "src/services/lint-input.ts",
+      "sha256": "8dfb586c102eb8fdcd05819a9321a47da208325065ea73de7c314588d51618e9"
+    },
+    {
+      "path": "src/services/lint-report.ts",
+      "sha256": "643d36ece86a87412aa28b8812009e7dc0245b1c49f6313969ff372e12f8a6c9"
+    },
+    {
+      "path": "src/services/logs.ts",
+      "sha256": "be5d46ca8aab73bceb6ecaadbac8d1b7475afca6865eec910e729d2baf533608"
+    },
+    {
+      "path": "src/services/lsp.ts",
+      "sha256": "e55ba0b5243c27feb5ea81833385db052726043fefc8d880a1ec8850e4de8d90"
+    },
+    {
+      "path": "src/services/project.ts",
+      "sha256": "ab0b39e8ca6a82aa1bfbd7848a6929d4e5482e2c6f5ebc70f831b68d1c488da9"
+    },
+    {
+      "path": "src/services/runtime.ts",
+      "sha256": "4df86d107e6896db9b9b53b5c06f45acc2b7a5f7924b0a84e99202267aa31595"
+    },
+    {
+      "path": "src/services/signature.ts",
+      "sha256": "5856d127157aafc97675d875580e64fd579601f3bb9a9ec9f225497187b4f251"
+    },
+    {
+      "path": "src/services/signing-config.ts",
+      "sha256": "2304949bf706cc56252bdee27138a45d06c62d73effaaa7761e9fb33bd708f99"
+    },
+    {
+      "path": "src/services/signing-material.ts",
+      "sha256": "ebabfc7a4c67883f3d9e4fbd9725c76c35d5415849eaf1db020be89306d51d27"
+    },
+    {
+      "path": "src/services/ui-import-cache.ts",
+      "sha256": "670172b889a318997e57a81b8b2e96b03f052ab21f38930fec52d5418d276539"
+    },
+    {
+      "path": "src/services/ui-import.ts",
+      "sha256": "1ddd265fd7f402bb5696f2254801c186493831a37df7710ba2f825a85cb0948d"
+    },
+    {
+      "path": "src/services/ui-node-schema.ts",
+      "sha256": "f6e9acd1be447dfb86b7e09be0fcab26f926e66b0c6147ad47cebb103ae07be7"
+    },
+    {
+      "path": "src/services/ui-parse.ts",
+      "sha256": "ef90ad1451dae6a40a61cb858bcfde32afdd9279672489129c29fd4b8d6fba94"
+    },
+    {
+      "path": "src/worker.ts",
+      "sha256": "23c927d064af5341c6ae7ca9d0385576f3cad53657297c12c22e7a95d0408af7"
+    },
+    {
+      "path": "test/native-auth.test.ts",
+      "sha256": "eba6335d47b68e205559dacaebf6c75c9a710274d38e8ad55ac4c538782e395d"
+    },
+    {
+      "path": "test/native-checker-metadata.test.ts",
+      "sha256": "03830f6f903ff10d7629243d04824d609ae7f11bd130af719f9a37dd5284833a"
+    },
+    {
+      "path": "test/native-checker-model.test.ts",
+      "sha256": "bab445e65a094130c6cb437149030eaa63c7d7cb26c1c36c05785fcb3ce8fb55"
+    },
+    {
+      "path": "test/native-checker-syntax.test.ts",
+      "sha256": "81ccbd4a4b78df19873275e0192e8fad03de84b9bf506326c92dc837afebdd0c"
+    },
+    {
+      "path": "test/native-checker.test.ts",
+      "sha256": "342cc01a504392ef01bdd08a2621104e872aa8bd431d411efa37ce73ef3d4e86"
+    },
+    {
+      "path": "test/native-cloud-profile.test.ts",
+      "sha256": "7778ac8a5228642ddcca033dcddc218d12c790a3055cb9f4b21b9b61b2d5688e"
+    },
+    {
+      "path": "test/native-context.test.ts",
+      "sha256": "56ec51b60783c6da6a03d1a67351ff95dac165ce517da01036428ea20e5b6cff"
+    },
+    {
+      "path": "test/native-device-info.test.ts",
+      "sha256": "9a567179548d1f96b0f2effb0bc55561c6a61845f47e0bca5e23b568efafe15e"
+    },
+    {
+      "path": "test/native-emulator-protocol.test.ts",
+      "sha256": "97265b2c2917519f8598d3ba305452a24cc6c9a5ecccd0d4c87b62dcf02d7ac9"
+    },
+    {
+      "path": "test/native-emulator.test.ts",
+      "sha256": "59914d75464290cdb26e750db237247b109e4dfeb6b2379591f5d4c9a1ba1e27"
+    },
+    {
+      "path": "test/native-flow.test.ts",
+      "sha256": "d2524672cacfb5f5ee262df015c43183a9a0a07e5eb98bec73cb3728dd2379ee"
+    },
+    {
+      "path": "test/native-hotreload.test.ts",
+      "sha256": "f96a701f0526c5d05c95112cdda527c43bf1eb985c579b2ed00a99bbeaad2410"
+    },
+    {
+      "path": "test/native-infrastructure.test.ts",
+      "sha256": "03f987f258d3c2822aa3246c1a9dcc0f2c03f8f4d21c5166a94596f285895c21"
+    },
+    {
+      "path": "test/native-lint.test.ts",
+      "sha256": "6be04f5ad685c931e09bff6b3c4edd17cac8d43ca347a427bc830f34b6d467f8"
+    },
+    {
+      "path": "test/native-project-recovery.test.ts",
+      "sha256": "51e7324dc42a95eca1e134a074dae0b2616ccaffc680aa51a3ac83cb91bd36a3"
+    },
+    {
+      "path": "test/native-project.test.ts",
+      "sha256": "c36a851b890aad9e0df58b351ae1ea6a652bcaa7fa3dd025280a3edab4633a4c"
+    },
+    {
+      "path": "test/native-reports.test.ts",
+      "sha256": "98dd60e5e965348d9a16c93d4144e96c894ced9bf3a9da95c4da1815eea61c78"
+    },
+    {
+      "path": "test/native-request-log.test.ts",
+      "sha256": "074f591760ee2ea4bfe8ccbced78e1b721607ddfd29d3cb212dcd4defe71f50b"
+    },
+    {
+      "path": "test/native-resources.test.ts",
+      "sha256": "67b671621a232e166184ae3e2a6193ce47f18c39906ce23bf801e77ce2b5986a"
+    },
+    {
+      "path": "test/native-runtime.test.ts",
+      "sha256": "5376727351c60921b3723bfbc7b24b53a138f3ca7700c5909177670981245c58"
+    },
+    {
+      "path": "test/native-shutdown.test.ts",
+      "sha256": "33d5eca71920d070a98f52ff5b0147a65cf944795c68fc8480efbab1b49a4079"
+    },
+    {
+      "path": "test/native-signature.test.ts",
+      "sha256": "9061d5df5aafebde87ede2138709284630466f1d73cf112563a321fe16c7707d"
+    },
+    {
+      "path": "test/native-signing-config.test.ts",
+      "sha256": "4917d14f19861dd2c9df496b41c2e9d56ce4323d226da0f72b90958d75d1312f"
+    },
+    {
+      "path": "test/native-skills.test.ts",
+      "sha256": "0abf681811a72646d374b417af70fbb17497352aee50d1a074b1c5f22e2bd888"
+    },
+    {
+      "path": "test/native-text.test.ts",
+      "sha256": "764e67b35c3587e3000d7a93bfecca102cd208af6313828b7f62a050d0b52ca1"
+    },
+    {
+      "path": "test/native-toolchain.test.ts",
+      "sha256": "722aa910f4d48a2a750681199ee75b520c439afb2124ab9ae5504d58e28a5e31"
+    },
+    {
+      "path": "test/native-ui-import.test.ts",
+      "sha256": "7f47ebb7dde9a852fc86f235305c9bb6477d3cb8dd388dc1e775dcdd01522136"
+    },
+    {
+      "path": "test/native-upstream-capabilities.test.ts",
+      "sha256": "2d934d801a19f41cd0736150029eb8075db4f225d9e77754507dac7ca39b0dfc"
+    },
+    {
+      "path": "test/native-upstream.test.ts",
+      "sha256": "4786e44142bb77b2bb0857879fefdbb65c45ddae23cd1126a6483d8103445506"
+    }
+  ],
+  "required_tests": [
+    "scripts/native-auth-mcp-acceptance.ts",
+    "scripts/native-checker-acceptance.ts",
+    "scripts/native-device-readonly.ts",
+    "scripts/native-emulator-acceptance.ts",
+    "scripts/native-emulator-readonly.ts",
+    "scripts/native-hot-device-acceptance.ts",
+    "scripts/native-lint-acceptance.ts",
+    "scripts/native-multimodule-acceptance.ts",
+    "scripts/native-sdk-acceptance.ts",
+    "scripts/native-signing-acceptance.ts",
+    "scripts/native-skill-mcp-acceptance.ts",
+    "scripts/native-ui-mcp-benchmark.ts",
+    "test/native-auth.test.ts",
+    "test/native-checker-metadata.test.ts",
+    "test/native-checker-model.test.ts",
+    "test/native-checker-syntax.test.ts",
+    "test/native-checker.test.ts",
+    "test/native-cloud-profile.test.ts",
+    "test/native-context.test.ts",
+    "test/native-device-info.test.ts",
+    "test/native-emulator-protocol.test.ts",
+    "test/native-emulator.test.ts",
+    "test/native-flow.test.ts",
+    "test/native-hotreload.test.ts",
+    "test/native-infrastructure.test.ts",
+    "test/native-lint.test.ts",
+    "test/native-project-recovery.test.ts",
+    "test/native-project.test.ts",
+    "test/native-reports.test.ts",
+    "test/native-request-log.test.ts",
+    "test/native-resources.test.ts",
+    "test/native-runtime.test.ts",
+    "test/native-shutdown.test.ts",
+    "test/native-signature.test.ts",
+    "test/native-signing-config.test.ts",
+    "test/native-skills.test.ts",
+    "test/native-text.test.ts",
+    "test/native-toolchain.test.ts",
+    "test/native-ui-import.test.ts",
+    "test/native-upstream-capabilities.test.ts",
+    "test/native-upstream.test.ts"
+  ]
+}

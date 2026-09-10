@@ -6,8 +6,8 @@
 
 `resources.json` 逐文件记录源路径、源摘要、本地摘要和变换说明。知识索引 `resources/knowledge.json` 另保存适用范围、源提交、摘要及关联条目。
 
-- DevEco Code：`https://gitcode.com/openharmony-sig/deveco-code`，固定提交见 `upstream-lock.json`。五类官方 Skill 的工程过程转为工作流，规则/案例转为本地知识；不分发或注入整份 Skill。
-- DevEco CLI：锁定源码只用于审阅底层协议；模板和本地文档来自资源清单指定的 npm 资产包，许可证保留在 `resources/licenses`。运行服务直接驱动实际 SDK。
+- DevEco Code：`https://gitcode.com/openharmony-sig/deveco-code`，固定提交见 `upstream-lock.json`。6 个内置 Skill 将工程过程和规则组织为 MCP 可读取的知识与持久化引导工作流；所有内容随 MCP 分发，不安装客户端 Skill。连接 MCP 的 AI 客户端负责推理、源码编辑和实际视觉判断。
+- DevEco CLI：锁定源码用于审阅底层协议与原生检查行为，检查规则按本仓库类型、范围和进程边界适配；模板和本地文档来自资源清单指定的 npm 资产包，许可证保留在 `resources/licenses`。运行服务直接驱动实际 SDK。
 - Hypium：原生设备组件来源、版本、摘要见资源清单，许可见 `NOTICE.hypium`。
 - 本仓库：工程规则、资源索引和界面资源的自有部分按 MIT 许可交付。
 

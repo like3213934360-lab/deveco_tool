@@ -85,9 +85,18 @@ export class StateStore {
       CREATE TABLE IF NOT EXISTS leases (resource TEXT PRIMARY KEY, owner TEXT NOT NULL, pid INTEGER NOT NULL, updated INTEGER NOT NULL, token TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS operations (run_id TEXT NOT NULL, node TEXT NOT NULL, input_hash TEXT NOT NULL, status TEXT NOT NULL, result TEXT, PRIMARY KEY(run_id,node));
       CREATE TABLE IF NOT EXISTS ui_recordings (run_id TEXT PRIMARY KEY, target TEXT NOT NULL, state TEXT NOT NULL, payload TEXT NOT NULL, operation_owner TEXT, updated INTEGER NOT NULL);
+      CREATE TABLE IF NOT EXISTS ui_reviews (id TEXT PRIMARY KEY, run_id TEXT NOT NULL, artifact_id TEXT NOT NULL, sha256 TEXT NOT NULL, status TEXT NOT NULL, payload TEXT NOT NULL, read_token TEXT, read_at INTEGER, created INTEGER NOT NULL, updated INTEGER NOT NULL);
+      CREATE TABLE IF NOT EXISTS ui_tests (run_id TEXT PRIMARY KEY, target TEXT NOT NULL, state TEXT NOT NULL, payload TEXT NOT NULL, updated INTEGER NOT NULL);
+      CREATE UNIQUE INDEX IF NOT EXISTS ui_test_target ON ui_tests(target) WHERE state='active';
+      CREATE TABLE IF NOT EXISTS skill_workflows (run_id TEXT PRIMARY KEY, kind TEXT NOT NULL, revision INTEGER NOT NULL, phase TEXT NOT NULL, payload TEXT NOT NULL, updated INTEGER NOT NULL);
       CREATE UNIQUE INDEX IF NOT EXISTS ui_recording_target ON ui_recordings(target) WHERE state IN ('preparing','active','sealed','cancelling');
       CREATE TABLE IF NOT EXISTS artifacts (id TEXT PRIMARY KEY, run_id TEXT NOT NULL, file TEXT NOT NULL, bytes INTEGER NOT NULL, mime TEXT NOT NULL, created INTEGER NOT NULL);
       CREATE TABLE IF NOT EXISTS artifact_gc (file TEXT PRIMARY KEY, bytes INTEGER NOT NULL);
+      CREATE TABLE IF NOT EXISTS released_packages (artifact_id TEXT PRIMARY KEY, run_id TEXT NOT NULL, sha256 TEXT NOT NULL, bytes INTEGER NOT NULL, released_at INTEGER NOT NULL);
+      CREATE TABLE IF NOT EXISTS run_pins (id TEXT NOT NULL, run_id TEXT NOT NULL, owner TEXT NOT NULL, kind TEXT NOT NULL, created INTEGER NOT NULL, PRIMARY KEY(id,run_id));
+      CREATE TABLE IF NOT EXISTS run_dependencies (parent_run_id TEXT NOT NULL, run_id TEXT NOT NULL, PRIMARY KEY(parent_run_id,run_id));
+      CREATE INDEX IF NOT EXISTS run_dependency_target ON run_dependencies(run_id);
+      CREATE TABLE IF NOT EXISTS storage_receipts (id TEXT PRIMARY KEY, kind TEXT NOT NULL, data TEXT NOT NULL, created INTEGER NOT NULL);
       CREATE TABLE IF NOT EXISTS artifact_streams (id TEXT PRIMARY KEY, run_id TEXT NOT NULL, file TEXT NOT NULL, bytes INTEGER NOT NULL, owner TEXT NOT NULL, created INTEGER NOT NULL);
       CREATE TABLE IF NOT EXISTS native_directories (id TEXT PRIMARY KEY, owner TEXT NOT NULL, file TEXT NOT NULL, bytes INTEGER NOT NULL, created INTEGER NOT NULL, closing INTEGER NOT NULL);
       CREATE TABLE IF NOT EXISTS managed_processes (id TEXT PRIMARY KEY, owner TEXT NOT NULL, run_id TEXT, pid INTEGER, resources TEXT NOT NULL, status TEXT NOT NULL, created INTEGER NOT NULL, updated INTEGER NOT NULL, windows_job TEXT);
@@ -534,7 +543,7 @@ export class StateStore {
   claim(id: string): void {
     const result = this.db
       .prepare(
-        "UPDATE runs SET owner=?,status=CASE WHEN status='cancelling' THEN 'cancelling' ELSE 'queued' END,updated=? WHERE id=? AND status IN ('queued','interrupted','needs_input','failed','cancelling') AND (owner IS NULL OR owner=?)",
+        "UPDATE runs SET owner=?,status=CASE WHEN status='cancelling' THEN 'cancelling' ELSE 'queued' END,updated=? WHERE id=? AND status IN ('queued','interrupted','needs_input','failed','cancelling') AND (owner IS NULL OR owner=?) AND NOT EXISTS (SELECT 1 FROM run_pins WHERE run_pins.run_id=runs.id)",
       )
       .run(this.owner, Date.now(), id, this.owner);
     invariant(
@@ -594,6 +603,7 @@ export class StateStore {
     resource: string,
     task: () => Promise<T>,
     signal?: AbortSignal,
+    options: { quotaRecovery?: boolean } = {},
   ): Promise<T> {
     resource = resourceIdentity(resource);
     const inherited = this.held.getStore();
@@ -652,11 +662,15 @@ export class StateStore {
     }
     try {
       signal?.throwIfAborted();
-      this.event(currentTrace().run_id ?? null, "lease_acquired", {
-        ...currentTrace(),
-        resource,
-        queue_ms: performance.now() - started,
-      });
+      try {
+        this.event(currentTrace().run_id ?? null, "lease_acquired", {
+          ...currentTrace(), resource, queue_ms: performance.now() - started,
+        });
+      } catch (error) {
+        // Cancellation must still acquire the real lock when telemetry is full.
+        // No other persistence or resource guard failure is ignored.
+        if (!options.quotaRecovery || !(error instanceof ToolError) || error.code !== "STATE_CAPACITY") throw error;
+      }
       return await this.held.run(
         new Set([...(inherited ?? []), resource]),
         task,
@@ -836,6 +850,46 @@ export class StateStore {
         "UPDATE operations SET status='done',result=? WHERE run_id=? AND node=?",
       )
       .run(JSON.stringify(value ?? null), runId, node);
+    if (node === "install_application") {
+      this.db.transaction(() => this.releaseInstalledPackages(runId)).immediate();
+      this.collectArtifacts();
+    }
+  }
+  /** Only a persisted outer installation receipt permits removal of recovery inputs.
+   * A child bm receipt alone is insufficient: reconciliation still reads the packages. */
+  confirmedInstallation(runId: string) {
+    const row = this.db.prepare(`SELECT operations.result FROM operations JOIN runs ON runs.id=operations.run_id
+      WHERE operations.run_id=? AND operations.node='install_application' AND operations.status='done'
+      AND runs.workflow IN ('app_deploy','build_deploy_verify')`).get(runId) as { result: string | null } | undefined;
+    if (!row?.result) return undefined;
+    let result: unknown = JSON.parse(row.result);
+    const reference = z.object({ result_artifact: z.object({ artifact_id: z.string() }) }).safeParse(result);
+    if (reference.success) result = JSON.parse(this.readBinaryArtifact(reference.data.result_artifact.artifact_id,
+      8 * 1024 * 1024, ["application/json"]).data.toString("utf8"));
+    const receipt = z.object({ installed: z.literal(true), packages: z.array(z.object({
+      artifact_id: z.string().uuid(), sha256: z.string().regex(/^[a-f0-9]{64}$/),
+    })).min(1).max(64) }).safeParse(result);
+    return receipt.success ? receipt.data : undefined;
+  }
+  private releaseInstalledPackages(runId: string): void {
+    if (this.db.prepare(`SELECT 1 FROM run_pins WHERE run_id=?
+      UNION ALL SELECT 1 FROM artifact_streams WHERE run_id=?
+      UNION ALL SELECT 1 FROM managed_processes WHERE run_id=? AND status<>'exited'
+      UNION ALL SELECT 1 FROM external_sessions WHERE run_id=? AND status<>'closed' LIMIT 1`)
+      .get(runId, runId, runId, runId)) return;
+    const receipt = this.confirmedInstallation(runId);
+    if (!receipt) return;
+    for (const item of receipt.packages) {
+      const artifact = this.db.prepare("SELECT file,bytes FROM artifacts WHERE id=? AND run_id=? AND mime='application/vnd.harmony.package'")
+        .get(item.artifact_id, runId) as { file: string; bytes: number } | undefined;
+      if (!artifact) continue;
+      // Keep the installation evidence, but give the temporary binary its own lifecycle.
+      // The receipt and GC intent commit together before any owned file is unlinked.
+      this.db.prepare("INSERT OR IGNORE INTO released_packages VALUES (?,?,?,?,?)")
+        .run(item.artifact_id, runId, item.sha256, artifact.bytes, Date.now());
+      this.db.prepare("INSERT OR IGNORE INTO artifact_gc VALUES (?,?)").run(artifact.file, artifact.bytes);
+      this.db.prepare("DELETE FROM artifacts WHERE id=? AND run_id=?").run(item.artifact_id, runId);
+    }
   }
   artifact(
     runId: string,
@@ -1058,24 +1112,42 @@ export class StateStore {
       .run(runId, kind, value, Date.now());
   }
   capacity(additional = 0): void {
-    const row = this.db
+    const status = this.capacityStatus(additional);
+    if (!status.fits)
+      throw new ToolError("STATE_CAPACITY",
+        "State capacity reached. Use workflow_run capacity, then cleanup_plan with completed run_ids; export before cleanup_apply if evidence must be retained.", status);
+  }
+  capacityStatus(additional = 0) {
+    invariant(Number.isSafeInteger(additional) && additional >= 0,
+      "CAPACITY_ESTIMATE_INVALID", "additional_bytes must be a nonnegative safe integer");
+    const groups = this.db
       .prepare(
-        "SELECT COALESCE(SUM(bytes),0) AS bytes FROM (SELECT bytes FROM artifacts UNION ALL SELECT bytes FROM artifact_streams UNION ALL SELECT bytes FROM artifact_gc UNION ALL SELECT bytes FROM native_directories)",
+        "SELECT 'artifacts' AS kind,COALESCE(SUM(bytes),0) AS bytes FROM artifacts UNION ALL SELECT 'streams',COALESCE(SUM(bytes),0) FROM artifact_streams UNION ALL SELECT 'pending_deletion',COALESCE(SUM(bytes),0) FROM artifact_gc UNION ALL SELECT 'native_directories',COALESCE(SUM(bytes),0) FROM native_directories",
       )
-      .get() as { bytes: number };
+      .all() as { kind: string; bytes: number }[];
     const pageSize = this.db.pragma("page_size", { simple: true }) as number,
       pageCount = this.db.pragma("page_count", { simple: true }) as number,
       free = this.db.pragma("freelist_count", { simple: true }) as number;
     const walFile = path.join(this.root, "state.sqlite-wal"),
       wal = fs.existsSync(walFile) ? fs.statSync(walFile).size : 0;
-    invariant(
-      row.bytes + (pageCount - free) * pageSize + wal + additional <=
-        configuration().max_bytes,
-      "STATE_CAPACITY",
-      "State retention capacity reached; export or remove completed runs",
-    );
+    const breakdown: Record<string, number> = { ...Object.fromEntries(groups.map((row) => [row.kind, row.bytes])), database: (pageCount - free) * pageSize, wal };
+    const used = Object.values(breakdown).reduce((sum, bytes) => sum + bytes, 0),
+      maximum = configuration().max_bytes;
+    return { used_bytes: used, max_bytes: maximum, available_bytes: Math.max(0, maximum - used),
+      additional_bytes: additional, projected_bytes: used + additional, fits: used + additional <= maximum,
+      warning: used + additional > maximum ? "full" : used + additional >= maximum * 0.8 ? "near_capacity" : "none",
+      breakdown,
+      next_actions: ["cleanup_plan", "export", "cleanup_apply"] };
   }
   prune(): void {
+    for (const row of this.db.prepare("SELECT DISTINCT owner FROM run_pins").all() as { owner: string }[])
+      if (!this.alive(Number(row.owner.split(":")[0]))) {
+        for (const pin of this.db.prepare("SELECT DISTINCT id FROM run_pins WHERE owner=? AND kind='export'").all(row.owner) as { id: string }[]) {
+          const receipt = this.db.prepare("SELECT data FROM storage_receipts WHERE id=? AND kind='export'").get(pin.id) as { data: string } | undefined;
+          if (receipt) this.db.prepare("UPDATE storage_receipts SET data=? WHERE id=?").run(JSON.stringify({ ...JSON.parse(receipt.data), status: "interrupted" }), pin.id);
+        }
+        this.db.prepare("DELETE FROM run_pins WHERE owner=?").run(row.owner);
+      }
     this.db.transaction(() => this.pruneOwned()).immediate();
     this.collectArtifacts();
     for (const row of this.db
@@ -1166,6 +1238,10 @@ export class StateStore {
   discardArtifacts(runId: string, ids: readonly string[]): void {
     this.db
       .transaction(() => {
+        invariant(!this.db.prepare("SELECT 1 FROM run_pins WHERE run_id=?").get(runId),
+          "RUN_PINNED", "Retained evidence is currently being exported");
+        invariant(!this.db.prepare("SELECT 1 FROM run_dependencies WHERE run_id=?").get(runId),
+          "RUN_REFERENCED", "A retained workflow requires these evidence artifacts");
         for (const id of ids) {
           this.db
             .prepare(
@@ -1180,13 +1256,17 @@ export class StateStore {
       .immediate();
     this.collectArtifacts();
   }
-  private collectArtifacts(): void {
+  collectArtifacts(): void {
     // Commit removal of all references before unlinking bytes. A crash or failed
     // transaction must never leave a retained run pointing at deleted evidence.
     // Tombstones also keep pending deletions charged against the storage budget.
     for (const row of this.db.prepare("SELECT file FROM artifact_gc").all() as {
       file: string;
     }[]) {
+      invariant(path.dirname(row.file) === path.join(this.root, "artifacts") &&
+        /^[a-f0-9-]{36}(?:\.(?:hap|hsp|hqf))?$/.test(path.basename(row.file)),
+        "ARTIFACT_PATH_INVALID", "Refusing to delete an unowned artifact path");
+      if (this.db.prepare("SELECT 1 FROM artifacts WHERE file=?").get(row.file)) continue;
       try {
         fs.rmSync(row.file, { force: true });
       } catch {
@@ -1196,6 +1276,9 @@ export class StateStore {
     }
   }
   private pruneOwned(): void {
+    for (const row of this.db.prepare(`SELECT DISTINCT artifacts.run_id FROM artifacts JOIN operations ON operations.run_id=artifacts.run_id
+      WHERE artifacts.mime='application/vnd.harmony.package' AND operations.node='install_application' AND operations.status='done'`)
+      .all() as { run_id: string }[]) this.releaseInstalledPackages(row.run_id);
     const config = configuration(),
       cutoff = Date.now() - config.retention_days * 86400000;
     const terminal = this.db
@@ -1205,7 +1288,11 @@ export class StateStore {
          AND NOT EXISTS (SELECT 1 FROM managed_processes WHERE managed_processes.run_id=runs.id AND status<>'exited')
          AND NOT EXISTS (SELECT 1 FROM external_sessions WHERE external_sessions.run_id=runs.id AND status<>'closed')
          AND NOT EXISTS (SELECT 1 FROM artifact_streams WHERE artifact_streams.run_id=runs.id)
+         AND NOT EXISTS (SELECT 1 FROM run_pins WHERE run_pins.run_id=runs.id)
+         AND NOT EXISTS (SELECT 1 FROM run_dependencies WHERE run_dependencies.run_id=runs.id)
          AND NOT EXISTS (SELECT 1 FROM ui_recordings WHERE ui_recordings.run_id=runs.id AND state NOT IN ('finished','cancelled'))
+         AND NOT EXISTS (SELECT 1 FROM ui_tests WHERE ui_tests.run_id=runs.id AND state='active')
+         AND NOT EXISTS (SELECT 1 FROM ui_reviews WHERE ui_reviews.run_id=runs.id AND status='required')
          ORDER BY updated DESC,created DESC,id DESC`,
       )
       .all() as RunRecord[];
@@ -1219,9 +1306,13 @@ export class StateStore {
       this.db.transaction(() => {
         for (const table of [
           "artifacts",
+          "released_packages",
           "events",
           "operations",
           "ui_recordings",
+          "ui_reviews",
+          "ui_tests",
+          "skill_workflows",
         ])
           this.db.prepare(`DELETE FROM ${table} WHERE run_id=?`).run(run.id);
         for (const table of ["checkpoints", "writes"])
@@ -1236,6 +1327,7 @@ export class StateStore {
               .prepare(`DELETE FROM ${table} WHERE thread_id=?`)
               .run(run.id);
         this.db.prepare("DELETE FROM runs WHERE id=?").run(run.id);
+        this.db.prepare("DELETE FROM run_dependencies WHERE parent_run_id=?").run(run.id);
       })();
     }
     this.db
@@ -1266,6 +1358,7 @@ export class StateStore {
         "DELETE FROM artifacts WHERE run_id NOT IN (SELECT id FROM runs) AND created<?",
       )
       .run(cutoff);
+    this.db.prepare("DELETE FROM ui_reviews WHERE artifact_id NOT IN (SELECT id FROM artifacts)").run();
   }
   close(): void {
     clearInterval(this.heartbeat);

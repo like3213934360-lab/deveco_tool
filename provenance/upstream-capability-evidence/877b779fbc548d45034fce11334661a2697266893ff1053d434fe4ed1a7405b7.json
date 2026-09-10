@@ -1,0 +1,133 @@
+{
+  "format": 1,
+  "passed": true,
+  "tested": {
+    "runtime_sha256": "632b316e63eeb75baf38460a49eb4c71b88ed206fa0b04314352855952bf93d2",
+    "compiled_sha256": "4956743ca57df261604579054f34c41d292e935fe8a4695cba166c92d16e27f7",
+    "package_lock_sha256": "9ebb046bdb6d6094bb2eb3d17555bb21f73d8f4ac83f9c396af6a10f9c9f7f95",
+    "resource_manifest_sha256": "039b6e34e2055939b4ec542fdd39cb3e2e0c66958e24a74fc9f5168f6d95636b",
+    "upstream_lock_sha256": "9ea597235ffa9f97a076791d637acd976f8f4c78bcf85ea77de118570708ed3d"
+  },
+  "cases": [
+    {
+      "id": "skill.list",
+      "passed": true,
+      "outcome": "executed",
+      "scope": "Generic stdio returns six bundled Skills with content identities and client_installation_required=false.",
+      "artifacts": [
+        {
+          "file": "provenance/upstream-capability-evidence/e45bc9e533fa2d0fc8be96a4d998e46369189d26853ebcb0433e24f695b2ffcf.json",
+          "sha256": "e45bc9e533fa2d0fc8be96a4d998e46369189d26853ebcb0433e24f695b2ffcf"
+        }
+      ]
+    },
+    {
+      "id": "skill.search",
+      "passed": true,
+      "outcome": "executed",
+      "scope": "Generic stdio catalog query for ArkTS returns a nonempty bounded result from bundled Skill metadata.",
+      "artifacts": [
+        {
+          "file": "provenance/upstream-capability-evidence/e45bc9e533fa2d0fc8be96a4d998e46369189d26853ebcb0433e24f695b2ffcf.json",
+          "sha256": "e45bc9e533fa2d0fc8be96a4d998e46369189d26853ebcb0433e24f695b2ffcf"
+        }
+      ]
+    },
+    {
+      "id": "skill.read",
+      "passed": true,
+      "outcome": "executed",
+      "scope": "All six bundled Skill contents were read through generic stdio and matched the catalog package hashes. Guidance remains available after MCP process reconnect without a client Skill directory.",
+      "artifacts": [
+        {
+          "file": "provenance/upstream-capability-evidence/e45bc9e533fa2d0fc8be96a4d998e46369189d26853ebcb0433e24f695b2ffcf.json",
+          "sha256": "e45bc9e533fa2d0fc8be96a4d998e46369189d26853ebcb0433e24f695b2ffcf"
+        }
+      ]
+    },
+    {
+      "id": "plan_enter.execute",
+      "passed": true,
+      "outcome": "executed",
+      "scope": "Starts a persistent plan workflow in planning phase under the captured project. This records guidance state and does not change host system mode.",
+      "artifacts": [
+        {
+          "file": "provenance/upstream-capability-evidence/e45bc9e533fa2d0fc8be96a4d998e46369189d26853ebcb0433e24f695b2ffcf.json",
+          "sha256": "e45bc9e533fa2d0fc8be96a4d998e46369189d26853ebcb0433e24f695b2ffcf"
+        }
+      ]
+    },
+    {
+      "id": "plan_write.execute",
+      "passed": true,
+      "outcome": "executed",
+      "scope": "Writes and versions plan.md through expected_revision, validates document structure and publishes the captured plan to a new owned file. Host supplies and assesses the text.",
+      "artifacts": [
+        {
+          "file": "provenance/upstream-capability-evidence/e45bc9e533fa2d0fc8be96a4d998e46369189d26853ebcb0433e24f695b2ffcf.json",
+          "sha256": "e45bc9e533fa2d0fc8be96a4d998e46369189d26853ebcb0433e24f695b2ffcf"
+        }
+      ]
+    },
+    {
+      "id": "plan_exit.execute",
+      "passed": true,
+      "outcome": "executed",
+      "scope": "Transitions the recorded plan from planning to implementing with a rationale under existing task authorization. It does not synthesize user approval or change host system mode.",
+      "artifacts": [
+        {
+          "file": "provenance/upstream-capability-evidence/e45bc9e533fa2d0fc8be96a4d998e46369189d26853ebcb0433e24f695b2ffcf.json",
+          "sha256": "e45bc9e533fa2d0fc8be96a4d998e46369189d26853ebcb0433e24f695b2ffcf"
+        }
+      ]
+    },
+    {
+      "id": "spec_write.spec",
+      "passed": true,
+      "outcome": "executed",
+      "scope": "Writes spec.md with required sections; later completion retains these validated bytes and requires fresh native build evidence for the isolated project.",
+      "artifacts": [
+        {
+          "file": "provenance/upstream-capability-evidence/e45bc9e533fa2d0fc8be96a4d998e46369189d26853ebcb0433e24f695b2ffcf.json",
+          "sha256": "e45bc9e533fa2d0fc8be96a4d998e46369189d26853ebcb0433e24f695b2ffcf"
+        }
+      ]
+    },
+    {
+      "id": "spec_write.design",
+      "passed": true,
+      "outcome": "executed",
+      "scope": "Writes controlled plan.md with technical context and project structure; this is the native design document mapping, not an arbitrary path writer.",
+      "artifacts": [
+        {
+          "file": "provenance/upstream-capability-evidence/e45bc9e533fa2d0fc8be96a4d998e46369189d26853ebcb0433e24f695b2ffcf.json",
+          "sha256": "e45bc9e533fa2d0fc8be96a4d998e46369189d26853ebcb0433e24f695b2ffcf"
+        }
+      ]
+    },
+    {
+      "id": "spec_write.tasks",
+      "passed": true,
+      "outcome": "executed",
+      "scope": "Writes tasks.md with completed task records. Completion checks the recorded document and fresh native build evidence; host still judges task meaning.",
+      "artifacts": [
+        {
+          "file": "provenance/upstream-capability-evidence/e45bc9e533fa2d0fc8be96a4d998e46369189d26853ebcb0433e24f695b2ffcf.json",
+          "sha256": "e45bc9e533fa2d0fc8be96a4d998e46369189d26853ebcb0433e24f695b2ffcf"
+        }
+      ]
+    },
+    {
+      "id": "todowrite.execute",
+      "passed": true,
+      "outcome": "executed",
+      "scope": "Task text and completion state are preserved in versioned tasks.md and the guided workflow phases. This is MCP guidance and document persistence, not a clone of the upstream host todo UI or session internals.",
+      "artifacts": [
+        {
+          "file": "provenance/upstream-capability-evidence/e45bc9e533fa2d0fc8be96a4d998e46369189d26853ebcb0433e24f695b2ffcf.json",
+          "sha256": "e45bc9e533fa2d0fc8be96a4d998e46369189d26853ebcb0433e24f695b2ffcf"
+        }
+      ]
+    }
+  ]
+}

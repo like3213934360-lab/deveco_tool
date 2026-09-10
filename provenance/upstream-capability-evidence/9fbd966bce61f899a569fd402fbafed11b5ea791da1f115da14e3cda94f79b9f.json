@@ -1,0 +1,120 @@
+{
+  "format": 1,
+  "kind": "redacted_behavior_observations",
+  "group": "MCP and client boundaries",
+  "tested": {
+    "runtime_sha256": "5e5aa855f7808b5d953364e4545821877d37f300d8641bbce1a4f2f4b53c0097",
+    "compiled_sha256": "4c6668ee61e25fc125733b107455868346a15d7b0a000b773232e8f0c3ba83a0",
+    "package_lock_sha256": "9ebb046bdb6d6094bb2eb3d17555bb21f73d8f4ac83f9c396af6a10f9c9f7f95",
+    "resource_manifest_sha256": "039b6e34e2055939b4ec542fdd39cb3e2e0c66958e24a74fc9f5168f6d95636b",
+    "upstream_lock_sha256": "9ea597235ffa9f97a076791d637acd976f8f4c78bcf85ea77de118570708ed3d"
+  },
+  "sources": [
+    {
+      "original_sha256": "efca39c7f49ac4c47f659c29c9a1361c40457ee19ee20bf040bc1418fd97ffa9",
+      "captured_at": "2026-09-10T15:27:38.609Z",
+      "passed": true,
+      "closed": true,
+      "unchanged": true
+    }
+  ],
+  "observations": [
+    {
+      "case": "invalid.execute",
+      "outcome": "unsupported",
+      "error_code": "TOOL_UNKNOWN",
+      "absent_from_catalog": true
+    },
+    {
+      "case": "shell.execute",
+      "outcome": "unsupported",
+      "error_code": "TOOL_UNKNOWN",
+      "absent_from_catalog": true
+    },
+    {
+      "case": "read.execute",
+      "outcome": "unsupported",
+      "error_code": "TOOL_UNKNOWN",
+      "absent_from_catalog": true
+    },
+    {
+      "case": "glob.execute",
+      "outcome": "unsupported",
+      "error_code": "TOOL_UNKNOWN",
+      "absent_from_catalog": true
+    },
+    {
+      "case": "grep.execute",
+      "outcome": "unsupported",
+      "error_code": "TOOL_UNKNOWN",
+      "absent_from_catalog": true
+    },
+    {
+      "case": "edit.execute",
+      "outcome": "unsupported",
+      "error_code": "TOOL_UNKNOWN",
+      "absent_from_catalog": true
+    },
+    {
+      "case": "write.execute",
+      "outcome": "unsupported",
+      "error_code": "TOOL_UNKNOWN",
+      "absent_from_catalog": true
+    },
+    {
+      "case": "task.execute",
+      "outcome": "unsupported",
+      "error_code": "TOOL_UNKNOWN",
+      "absent_from_catalog": true
+    },
+    {
+      "case": "webfetch.execute",
+      "outcome": "unsupported",
+      "error_code": "TOOL_UNKNOWN",
+      "absent_from_catalog": true
+    },
+    {
+      "case": "websearch.execute",
+      "outcome": "unsupported",
+      "error_code": "TOOL_UNKNOWN",
+      "absent_from_catalog": true
+    },
+    {
+      "case": "apply_patch.execute",
+      "outcome": "unsupported",
+      "error_code": "TOOL_UNKNOWN",
+      "absent_from_catalog": true
+    },
+    {
+      "case": "question.execute",
+      "outcome": "unsupported",
+      "error_code": "TOOL_UNKNOWN",
+      "absent_from_catalog": true
+    },
+    {
+      "case": "skill.install",
+      "outcome": "unsupported",
+      "error_code": "INVALID_ARGUMENT",
+      "absent_from_catalog": null
+    },
+    {
+      "case": "skill.uninstall",
+      "outcome": "unsupported",
+      "error_code": "INVALID_ARGUMENT",
+      "absent_from_catalog": null
+    },
+    {
+      "case": "switch_cwd.execute",
+      "selected_project_matches_requested": true,
+      "invalid_selection_error_code": "INTERNAL_ERROR",
+      "check_without_project_argument": {
+        "success": true,
+        "summary": {
+          "errorCount": 0,
+          "warnCount": 0
+        }
+      }
+    }
+  ],
+  "privacy": "Only selected non-private result fields are published. Original reports are retained in the private persistent acceptance directory; no state database, credential, absolute host path or device identifier is included."
+}

@@ -28,6 +28,13 @@
       "url": "https://github.com/like3213934360-lab/deveco_tool",
       "integrity": "repository-owned resource files",
       "license": "LICENSE"
+    },
+    {
+      "id": "deveco-code-skills",
+      "version": "aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a",
+      "url": "https://gitcode.com/openharmony-sig/deveco-code",
+      "integrity": "git-commit:aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a",
+      "license": "NOTICE.deveco-code"
     }
   ],
   "files": [
@@ -982,6 +989,86 @@
       "source_path": "templates/application/oh-package.json5",
       "source_sha256": "a14b4f025d753c860b4c2599f4d6405dbfefeef6d3e73eb4829c4ba49695f10a",
       "transformation": "unchanged"
+    },
+    {
+      "file": "resources/skills/deveco-arkts-standards/SKILL.md",
+      "sha256": "f06d8e7ec5a44b7cb1ba7f316fe82ed20080c95ffa04b489542954a2c0f3c133",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/skills/arkts-grammar-standards/SKILL.md",
+      "source_sha256": "c02bc036141b7ae1bcb235ec69c40d5ad5ab73f24a88da39d83d1ba18ea2372d",
+      "transformation": "native-skill-adaptation"
+    },
+    {
+      "file": "resources/skills/deveco-arkts-errors/SKILL.md",
+      "sha256": "b704e5482ac16c921e8819dfbc13697fbe0643b4fae553f1789816aa358567b6",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/SKILL.md",
+      "source_sha256": "580a0cb8c5d1ef5c53d998569adb9a72277b3e8db761534d1b7c3666d3220718",
+      "transformation": "native-skill-adaptation"
+    },
+    {
+      "file": "resources/skills/deveco-runtime-debug/SKILL.md",
+      "sha256": "81a6692f793c47a232f4d3899f888350fa87e80c0b33c28ef3003201a5b29c59",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/skills/arkts-runtime-fix/SKILL.md",
+      "source_sha256": "7c8d90017bf6f700a560725f962ebdc52cf329f576ab1d082c13283604905e6d",
+      "transformation": "native-skill-adaptation"
+    },
+    {
+      "file": "resources/skills/deveco-runtime-debug/references/debug-evidence.md",
+      "sha256": "e1dc090a77d75180e962ed30aa7dad87115cef4362802112c00f7112ef66ce54",
+      "source": "deveco-tool",
+      "source_path": "resources/skills/deveco-runtime-debug/references/debug-evidence.md",
+      "source_sha256": "e1dc090a77d75180e962ed30aa7dad87115cef4362802112c00f7112ef66ce54",
+      "transformation": "authored native host reference"
+    },
+    {
+      "file": "resources/skills/deveco-project-create/SKILL.md",
+      "sha256": "2a4acd0b18b2c3cd931ea864b6d682d14f2b5a6e9710426704343ff5f576eeec",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/skills/deveco-create-project/SKILL.md",
+      "source_sha256": "01846dd766bee4b69dfbca280e71a113bb799a47e2ecbee2f95512ebd0cbcf26",
+      "transformation": "native-skill-adaptation"
+    },
+    {
+      "file": "resources/skills/deveco-native-tools/SKILL.md",
+      "sha256": "daaace0ef975ec290dc977a91b31cb05692cbeaaf54002bc4b26b55a56ca933b",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/skills/deveco-cli/SKILL.md",
+      "source_sha256": "5402476093c5238ef466619f3971d21d54edba494ebc424e2e6581cb2b427ac7",
+      "transformation": "native-skill-adaptation"
+    },
+    {
+      "file": "resources/skills/deveco-native-tools/references/ui-testing.md",
+      "sha256": "8b0a276457378683727c1a73cf8eda49d5543ae670aaeae78a077cc340fd77f7",
+      "source": "deveco-tool",
+      "source_path": "resources/skills/deveco-native-tools/references/ui-testing.md",
+      "source_sha256": "8b0a276457378683727c1a73cf8eda49d5543ae670aaeae78a077cc340fd77f7",
+      "transformation": "authored native host reference"
+    },
+    {
+      "file": "resources/skills/deveco-customize-host/SKILL.md",
+      "sha256": "590c583da635850efd83165433ed2215738fd75264aaff1592f27ff0bc6cb6ad",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/skills/customize-deveco/SKILL.md",
+      "source_sha256": "a0cafa6989e3d4ba9b11d177bab576c67e0eefa364266ad328c58d4267fdb25c",
+      "transformation": "native-skill-adaptation"
+    },
+    {
+      "file": "resources/skills/deveco-customize-host/references/customization.md",
+      "sha256": "366666d3e61d4b2b06bca320bd36128ca0d9f7170b2583d2905b08d805906cce",
+      "source": "deveco-tool",
+      "source_path": "resources/skills/deveco-customize-codex/references/customization.md",
+      "source_sha256": "366666d3e61d4b2b06bca320bd36128ca0d9f7170b2583d2905b08d805906cce",
+      "transformation": "authored native host reference"
+    },
+    {
+      "file": "resources/skills.json",
+      "sha256": "650cd9e691f207bba5c3cbd958c544f44843c000553f09da4a72031d7652c08b",
+      "source": "deveco-tool",
+      "source_path": "resources/skills.json",
+      "source_sha256": "650cd9e691f207bba5c3cbd958c544f44843c000553f09da4a72031d7652c08b",
+      "transformation": "authored native skill catalog"
     }
   ]
 }

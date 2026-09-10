@@ -9,7 +9,8 @@ export class ToolError extends Error {
     this.name = "ToolError";
   }
 }
-/** The external command has confirmed completion. Its failure is durable and
+/** The external command has confirmed completion, or failed preparation proves
+ * it was never dispatched. Its failure is durable and
  * must never be replayed automatically, even if the workflow is resumed. */
 export class SettledEffectError extends ToolError {
   static from(error: unknown): SettledEffectError {

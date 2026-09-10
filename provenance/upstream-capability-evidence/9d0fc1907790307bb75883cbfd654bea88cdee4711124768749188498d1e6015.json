@@ -1,0 +1,193 @@
+{
+  "format": 1,
+  "passed": true,
+  "tested": {
+    "runtime_sha256": "632b316e63eeb75baf38460a49eb4c71b88ed206fa0b04314352855952bf93d2",
+    "compiled_sha256": "4956743ca57df261604579054f34c41d292e935fe8a4695cba166c92d16e27f7",
+    "package_lock_sha256": "9ebb046bdb6d6094bb2eb3d17555bb21f73d8f4ac83f9c396af6a10f9c9f7f95",
+    "resource_manifest_sha256": "039b6e34e2055939b4ec542fdd39cb3e2e0c66958e24a74fc9f5168f6d95636b",
+    "upstream_lock_sha256": "9ea597235ffa9f97a076791d637acd976f8f4c78bcf85ea77de118570708ed3d"
+  },
+  "cases": [
+    {
+      "id": "invalid.execute",
+      "passed": true,
+      "outcome": "unsupported",
+      "scope": "Generic stdio MCP catalog does not advertise this host tool and a direct call returns TOOL_UNKNOWN before state creation. This verifies the declared client requirement only; host implementation and upstream host-specific behavior were not executed by this acceptance.",
+      "artifacts": [
+        {
+          "file": "provenance/upstream-capability-evidence/99c08210288930f1de42742bc0b2fd0d4358fcb849036a252fc9c3e14d7c6b3b.json",
+          "sha256": "99c08210288930f1de42742bc0b2fd0d4358fcb849036a252fc9c3e14d7c6b3b"
+        }
+      ]
+    },
+    {
+      "id": "shell.execute",
+      "passed": true,
+      "outcome": "unsupported",
+      "scope": "Generic stdio MCP catalog does not advertise this host tool and a direct call returns TOOL_UNKNOWN before state creation. This verifies the declared client requirement only; host implementation and upstream host-specific behavior were not executed by this acceptance.",
+      "artifacts": [
+        {
+          "file": "provenance/upstream-capability-evidence/99c08210288930f1de42742bc0b2fd0d4358fcb849036a252fc9c3e14d7c6b3b.json",
+          "sha256": "99c08210288930f1de42742bc0b2fd0d4358fcb849036a252fc9c3e14d7c6b3b"
+        }
+      ]
+    },
+    {
+      "id": "read.execute",
+      "passed": true,
+      "outcome": "unsupported",
+      "scope": "Generic stdio MCP catalog does not advertise this host tool and a direct call returns TOOL_UNKNOWN before state creation. This verifies the declared client requirement only; host implementation and upstream host-specific behavior were not executed by this acceptance.",
+      "artifacts": [
+        {
+          "file": "provenance/upstream-capability-evidence/99c08210288930f1de42742bc0b2fd0d4358fcb849036a252fc9c3e14d7c6b3b.json",
+          "sha256": "99c08210288930f1de42742bc0b2fd0d4358fcb849036a252fc9c3e14d7c6b3b"
+        }
+      ]
+    },
+    {
+      "id": "glob.execute",
+      "passed": true,
+      "outcome": "unsupported",
+      "scope": "Generic stdio MCP catalog does not advertise this host tool and a direct call returns TOOL_UNKNOWN before state creation. This verifies the declared client requirement only; host implementation and upstream host-specific behavior were not executed by this acceptance.",
+      "artifacts": [
+        {
+          "file": "provenance/upstream-capability-evidence/99c08210288930f1de42742bc0b2fd0d4358fcb849036a252fc9c3e14d7c6b3b.json",
+          "sha256": "99c08210288930f1de42742bc0b2fd0d4358fcb849036a252fc9c3e14d7c6b3b"
+        }
+      ]
+    },
+    {
+      "id": "grep.execute",
+      "passed": true,
+      "outcome": "unsupported",
+      "scope": "Generic stdio MCP catalog does not advertise this host tool and a direct call returns TOOL_UNKNOWN before state creation. This verifies the declared client requirement only; host implementation and upstream host-specific behavior were not executed by this acceptance.",
+      "artifacts": [
+        {
+          "file": "provenance/upstream-capability-evidence/99c08210288930f1de42742bc0b2fd0d4358fcb849036a252fc9c3e14d7c6b3b.json",
+          "sha256": "99c08210288930f1de42742bc0b2fd0d4358fcb849036a252fc9c3e14d7c6b3b"
+        }
+      ]
+    },
+    {
+      "id": "edit.execute",
+      "passed": true,
+      "outcome": "unsupported",
+      "scope": "Generic stdio MCP catalog does not advertise this host tool and a direct call returns TOOL_UNKNOWN before state creation. This verifies the declared client requirement only; host implementation and upstream host-specific behavior were not executed by this acceptance.",
+      "artifacts": [
+        {
+          "file": "provenance/upstream-capability-evidence/99c08210288930f1de42742bc0b2fd0d4358fcb849036a252fc9c3e14d7c6b3b.json",
+          "sha256": "99c08210288930f1de42742bc0b2fd0d4358fcb849036a252fc9c3e14d7c6b3b"
+        }
+      ]
+    },
+    {
+      "id": "write.execute",
+      "passed": true,
+      "outcome": "unsupported",
+      "scope": "Generic stdio MCP catalog does not advertise this host tool and a direct call returns TOOL_UNKNOWN before state creation. This verifies the declared client requirement only; host implementation and upstream host-specific behavior were not executed by this acceptance.",
+      "artifacts": [
+        {
+          "file": "provenance/upstream-capability-evidence/99c08210288930f1de42742bc0b2fd0d4358fcb849036a252fc9c3e14d7c6b3b.json",
+          "sha256": "99c08210288930f1de42742bc0b2fd0d4358fcb849036a252fc9c3e14d7c6b3b"
+        }
+      ]
+    },
+    {
+      "id": "task.execute",
+      "passed": true,
+      "outcome": "unsupported",
+      "scope": "Generic stdio MCP catalog does not advertise this host tool and a direct call returns TOOL_UNKNOWN before state creation. This verifies the declared client requirement only; host implementation and upstream host-specific behavior were not executed by this acceptance.",
+      "artifacts": [
+        {
+          "file": "provenance/upstream-capability-evidence/99c08210288930f1de42742bc0b2fd0d4358fcb849036a252fc9c3e14d7c6b3b.json",
+          "sha256": "99c08210288930f1de42742bc0b2fd0d4358fcb849036a252fc9c3e14d7c6b3b"
+        }
+      ]
+    },
+    {
+      "id": "webfetch.execute",
+      "passed": true,
+      "outcome": "unsupported",
+      "scope": "Generic stdio MCP catalog does not advertise this host tool and a direct call returns TOOL_UNKNOWN before state creation. This verifies the declared client requirement only; host implementation and upstream host-specific behavior were not executed by this acceptance.",
+      "artifacts": [
+        {
+          "file": "provenance/upstream-capability-evidence/99c08210288930f1de42742bc0b2fd0d4358fcb849036a252fc9c3e14d7c6b3b.json",
+          "sha256": "99c08210288930f1de42742bc0b2fd0d4358fcb849036a252fc9c3e14d7c6b3b"
+        }
+      ]
+    },
+    {
+      "id": "websearch.execute",
+      "passed": true,
+      "outcome": "unsupported",
+      "scope": "Generic stdio MCP catalog does not advertise this host tool and a direct call returns TOOL_UNKNOWN before state creation. This verifies the declared client requirement only; host implementation and upstream host-specific behavior were not executed by this acceptance.",
+      "artifacts": [
+        {
+          "file": "provenance/upstream-capability-evidence/99c08210288930f1de42742bc0b2fd0d4358fcb849036a252fc9c3e14d7c6b3b.json",
+          "sha256": "99c08210288930f1de42742bc0b2fd0d4358fcb849036a252fc9c3e14d7c6b3b"
+        }
+      ]
+    },
+    {
+      "id": "apply_patch.execute",
+      "passed": true,
+      "outcome": "unsupported",
+      "scope": "Generic stdio MCP catalog does not advertise this host tool and a direct call returns TOOL_UNKNOWN before state creation. This verifies the declared client requirement only; host implementation and upstream host-specific behavior were not executed by this acceptance.",
+      "artifacts": [
+        {
+          "file": "provenance/upstream-capability-evidence/99c08210288930f1de42742bc0b2fd0d4358fcb849036a252fc9c3e14d7c6b3b.json",
+          "sha256": "99c08210288930f1de42742bc0b2fd0d4358fcb849036a252fc9c3e14d7c6b3b"
+        }
+      ]
+    },
+    {
+      "id": "question.execute",
+      "passed": true,
+      "outcome": "unsupported",
+      "scope": "Generic stdio MCP catalog does not advertise this host tool and a direct call returns TOOL_UNKNOWN before state creation. This verifies the declared client requirement only; host implementation and upstream host-specific behavior were not executed by this acceptance.",
+      "artifacts": [
+        {
+          "file": "provenance/upstream-capability-evidence/99c08210288930f1de42742bc0b2fd0d4358fcb849036a252fc9c3e14d7c6b3b.json",
+          "sha256": "99c08210288930f1de42742bc0b2fd0d4358fcb849036a252fc9c3e14d7c6b3b"
+        }
+      ]
+    },
+    {
+      "id": "skill.install",
+      "passed": true,
+      "outcome": "unsupported",
+      "scope": "The owner removed client Skill installation. Generic stdio calls reject this action before state creation; all bundled instructions remain available through MCP.",
+      "artifacts": [
+        {
+          "file": "provenance/upstream-capability-evidence/99c08210288930f1de42742bc0b2fd0d4358fcb849036a252fc9c3e14d7c6b3b.json",
+          "sha256": "99c08210288930f1de42742bc0b2fd0d4358fcb849036a252fc9c3e14d7c6b3b"
+        }
+      ]
+    },
+    {
+      "id": "skill.uninstall",
+      "passed": true,
+      "outcome": "unsupported",
+      "scope": "The owner removed client Skill installation. Generic stdio calls reject this action before state creation; all bundled instructions remain available through MCP.",
+      "artifacts": [
+        {
+          "file": "provenance/upstream-capability-evidence/99c08210288930f1de42742bc0b2fd0d4358fcb849036a252fc9c3e14d7c6b3b.json",
+          "sha256": "99c08210288930f1de42742bc0b2fd0d4358fcb849036a252fc9c3e14d7c6b3b"
+        }
+      ]
+    },
+    {
+      "id": "switch_cwd.execute",
+      "passed": true,
+      "outcome": "executed",
+      "scope": "Explicit isolated project selected; rejected nonexistent project does not discard prior selection; subsequent check without project argument succeeds. No physical device used.",
+      "artifacts": [
+        {
+          "file": "provenance/upstream-capability-evidence/99c08210288930f1de42742bc0b2fd0d4358fcb849036a252fc9c3e14d7c6b3b.json",
+          "sha256": "99c08210288930f1de42742bc0b2fd0d4358fcb849036a252fc9c3e14d7c6b3b"
+        }
+      ]
+    }
+  ]
+}

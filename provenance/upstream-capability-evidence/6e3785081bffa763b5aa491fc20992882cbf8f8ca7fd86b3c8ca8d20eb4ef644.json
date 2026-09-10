@@ -1,0 +1,182 @@
+{
+  "format": 1,
+  "kind": "redacted_behavior_observations",
+  "group": "SDK language capability boundaries",
+  "tested": {
+    "runtime_sha256": "5e5aa855f7808b5d953364e4545821877d37f300d8641bbce1a4f2f4b53c0097",
+    "compiled_sha256": "4c6668ee61e25fc125733b107455868346a15d7b0a000b773232e8f0c3ba83a0",
+    "package_lock_sha256": "9ebb046bdb6d6094bb2eb3d17555bb21f73d8f4ac83f9c396af6a10f9c9f7f95",
+    "resource_manifest_sha256": "039b6e34e2055939b4ec542fdd39cb3e2e0c66958e24a74fc9f5168f6d95636b",
+    "upstream_lock_sha256": "9ea597235ffa9f97a076791d637acd976f8f4c78bcf85ea77de118570708ed3d"
+  },
+  "sources": [
+    {
+      "original_sha256": "11c119a3d1205f3e1fc199f75cdc8fbd5b42b6f02fcd390c9564c7ddf15e7b74",
+      "captured_at": "2026-09-10T15:26:44.399Z",
+      "passed": true,
+      "closed": true,
+      "unchanged": true
+    }
+  ],
+  "observations": [
+    {
+      "case": "lsp.hover",
+      "language": "arkts",
+      "result": {
+        "contents": {
+          "kind": "plaintext",
+          "value": "{\"info\":[{\"code\":{\"language\":\"ts\",\"value\":\"(property) Index.message: string\"},\"data\":[{\"document\":\"\",\"tags\":[]}]}]}"
+        },
+        "range": {
+          "start": {
+            "line": 22,
+            "character": 16
+          },
+          "end": {
+            "line": 22,
+            "character": 23
+          }
+        }
+      }
+    },
+    {
+      "case": "lsp.goToDefinition",
+      "language": "arkts",
+      "result": {
+        "count": 1,
+        "ranges": [
+          {
+            "start": {
+              "line": 18,
+              "character": 9
+            },
+            "end": {
+              "line": 18,
+              "character": 16
+            }
+          }
+        ]
+      }
+    },
+    {
+      "case": "lsp.findReferences",
+      "language": "arkts",
+      "result": {
+        "count": 2,
+        "ranges": [
+          {
+            "start": {
+              "line": 22,
+              "character": 16
+            },
+            "end": {
+              "line": 22,
+              "character": 23
+            }
+          },
+          {
+            "start": {
+              "line": 31,
+              "character": 15
+            },
+            "end": {
+              "line": 31,
+              "character": 22
+            }
+          }
+        ]
+      }
+    },
+    {
+      "case": "lsp.goToImplementation",
+      "language": "arkts",
+      "result": {
+        "count": 1,
+        "ranges": [
+          {
+            "start": {
+              "line": 1,
+              "character": 13
+            },
+            "end": {
+              "line": 1,
+              "character": 28
+            }
+          }
+        ]
+      }
+    },
+    {
+      "case": "lsp.documentSymbol",
+      "arkts": {
+        "supported": false,
+        "error_code": "LSP_CAPABILITY_UNAVAILABLE"
+      },
+      "cpp": {
+        "supported": true,
+        "count": 3,
+        "names": [
+          "probe_leaf",
+          "SymbolProbe",
+          "probe_caller"
+        ]
+      }
+    },
+    {
+      "case": "lsp.workspaceSymbol",
+      "arkts": {
+        "supported": false,
+        "error_code": "LSP_CAPABILITY_UNAVAILABLE"
+      },
+      "cpp": {
+        "supported": true,
+        "count": 1,
+        "names": [
+          "probe_leaf"
+        ]
+      }
+    },
+    {
+      "case": "lsp.prepareCallHierarchy",
+      "arkts": {
+        "supported": false,
+        "error_code": "LSP_CAPABILITY_UNAVAILABLE"
+      },
+      "cpp": {
+        "supported": true,
+        "count": 1,
+        "names": [
+          "probe_leaf"
+        ]
+      }
+    },
+    {
+      "case": "lsp.incomingCalls",
+      "arkts": {
+        "supported": false,
+        "error_code": "LSP_CAPABILITY_UNAVAILABLE"
+      },
+      "cpp": {
+        "supported": true,
+        "count": 2,
+        "names": [
+          "compute",
+          "probe_caller"
+        ]
+      }
+    },
+    {
+      "case": "lsp.outgoingCalls",
+      "arkts": {
+        "supported": false,
+        "error_code": "LSP_CAPABILITY_UNAVAILABLE"
+      },
+      "cpp": {
+        "supported": false,
+        "error_code": "LSP_CAPABILITY_UNAVAILABLE",
+        "rpc_code": -32601
+      }
+    }
+  ],
+  "privacy": "Only selected non-private result fields are published. Original reports are retained in the private persistent acceptance directory; no state database, credential, absolute host path or device identifier is included."
+}
