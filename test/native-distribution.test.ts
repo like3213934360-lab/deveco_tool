@@ -8,6 +8,7 @@ import AdmZip from "adm-zip";
 import {
   prepareDistribution,
   sealDistribution,
+  archiveDistribution,
   extractDistribution,
   verifyDistribution,
   validateDistributionLock,
@@ -128,6 +129,17 @@ test("compiled distribution excludes legacy inputs and round-trips its productio
     "export {};\n",
   );
   assert.ok(new AdmZip(f.archive).getEntry("package-lock.json"));
+  const acceptedManifest = fs.readFileSync(
+    path.join(f.output, "distribution.json"),
+  );
+  const republished = path.join(f.root, "republished.zip");
+  const republishedReceipt = archiveDistribution(f.output, republished);
+  assert.equal(republishedReceipt.manifest_sha256, receipt.manifest_sha256);
+  assert.deepEqual(fs.readFileSync(republished), fs.readFileSync(f.archive));
+  assert.deepEqual(
+    fs.readFileSync(path.join(f.output, "distribution.json")),
+    acceptedManifest,
+  );
   const installed = path.join(f.root, "installed"),
     verified = extractDistribution(f.archive, installed);
   assert.equal(verified.manifest_sha256, receipt.manifest_sha256);

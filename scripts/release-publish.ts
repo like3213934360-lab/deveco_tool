@@ -6,7 +6,7 @@ import { invariant } from "../src/core/errors.js";
 import { z } from "zod";
 import { readJson } from "./lib/upstream-adaptation.js";
 import { releaseGate } from "./lib/release-gate.js";
-import { sealDistribution } from "./lib/distribution.js";
+import { archiveDistribution } from "./lib/distribution.js";
 const [action, input, receipt, output] = process.argv.slice(2);
 invariant(action === "prepare" && input && receipt && output, "RELEASE_USAGE", "prepare MANIFEST RECEIPT NEW_DIRECTORY");
 const manifestFile = path.resolve(input), directory = path.dirname(manifestFile), raw = readJson(manifestFile), checked = releaseGate(packageRoot, directory, raw);
@@ -15,7 +15,7 @@ invariant(prior.manifest_sha256 === checked.manifest_sha256 && prior.distributio
 invariant(!fs.existsSync(output), "OUTPUT_EXISTS", "Use a new publish directory");
 fs.mkdirSync(output, { recursive: true });
 const manifest = z.object({ distribution: z.string() }).parse(raw), archive = path.join(output, `deveco-tool-${release}.zip`);
-const sealed = sealDistribution(inside(directory, manifest.distribution), archive, path.join(packageRoot, "package-lock.json"));
+const sealed = archiveDistribution(inside(directory, manifest.distribution), archive);
 invariant(sealed.manifest_sha256 === checked.distribution_sha256, "RELEASE_ARCHIVE_CHANGED", "Archive seal must preserve the accepted installation manifest");
 atomicWrite(path.join(output, "acceptance.json"), JSON.stringify({ release, passed: true, runtime_sha256: checked.tested.runtime_sha256, manifest_sha256: digest(raw), distribution_sha256: checked.distribution_sha256, archive_sha256: fileDigest(archive), platforms: checked.regression, acceptance_cases: checked.acceptance_cases }, null, 2) + "\n", false);
 if (process.env.GITHUB_OUTPUT) fs.appendFileSync(process.env.GITHUB_OUTPUT, `tag=v${release}\n`);

@@ -404,8 +404,17 @@ export function sealDistribution(
   };
   manifestSchema.parse(manifest);
   writeJson(path.join(root, manifestName), manifest);
-  const verified = verifyDistribution(root),
-    zip = new AdmZip();
+  const verified = verifyDistribution(root);
+  return writeDistributionArchive(root, archive, manifest, verified);
+}
+
+function writeDistributionArchive(
+  root: string,
+  archive: string,
+  manifest: Manifest,
+  verified: ReturnType<typeof verifyDistribution>,
+) {
+  const zip = new AdmZip();
   for (const item of [
     ...manifest.files,
     {
@@ -441,6 +450,24 @@ export function sealDistribution(
     archive_bytes: bytes.length,
     archive_sha256: sha256(bytes),
   };
+}
+
+/** Recreate publish bytes from an already sealed, accepted distribution. */
+export function archiveDistribution(root: string, archive: string) {
+  invariant(
+    !fs.existsSync(archive) && !fs.existsSync(`${archive}.sha256`),
+    "DISTRIBUTION_EXISTS",
+    "Archive and checksum must be new paths",
+  );
+  const relative = path.relative(root, archive);
+  invariant(
+    relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative),
+    "DISTRIBUTION_ARCHIVE_PATH",
+    "Archive must be outside the distribution directory",
+  );
+  const manifest = manifestSchema.parse(json(path.join(root, manifestName)));
+  const verified = verifyDistribution(root);
+  return writeDistributionArchive(root, archive, manifest, verified);
 }
 /** Extract only our bounded format into a new directory; validate before any write. */
 export function extractDistribution(archive: string, output: string) {
