@@ -30,8 +30,8 @@
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/3a148460b989930591c5a5930500ee413f2510861ec618e4866fd3895d4c0569.json",
-              "sha256": "3a148460b989930591c5a5930500ee413f2510861ec618e4866fd3895d4c0569",
+              "file": "provenance/upstream-capability-evidence/9d0fc1907790307bb75883cbfd654bea88cdee4711124768749188498d1e6015.json",
+              "sha256": "9d0fc1907790307bb75883cbfd654bea88cdee4711124768749188498d1e6015",
               "case": "invalid.execute"
             }
           ],
@@ -63,8 +63,8 @@
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/3a148460b989930591c5a5930500ee413f2510861ec618e4866fd3895d4c0569.json",
-              "sha256": "3a148460b989930591c5a5930500ee413f2510861ec618e4866fd3895d4c0569",
+              "file": "provenance/upstream-capability-evidence/9d0fc1907790307bb75883cbfd654bea88cdee4711124768749188498d1e6015.json",
+              "sha256": "9d0fc1907790307bb75883cbfd654bea88cdee4711124768749188498d1e6015",
               "case": "shell.execute"
             }
           ],
@@ -95,8 +95,8 @@
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/3a148460b989930591c5a5930500ee413f2510861ec618e4866fd3895d4c0569.json",
-              "sha256": "3a148460b989930591c5a5930500ee413f2510861ec618e4866fd3895d4c0569",
+              "file": "provenance/upstream-capability-evidence/9d0fc1907790307bb75883cbfd654bea88cdee4711124768749188498d1e6015.json",
+              "sha256": "9d0fc1907790307bb75883cbfd654bea88cdee4711124768749188498d1e6015",
               "case": "read.execute"
             }
           ],
@@ -126,8 +126,8 @@
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/3a148460b989930591c5a5930500ee413f2510861ec618e4866fd3895d4c0569.json",
-              "sha256": "3a148460b989930591c5a5930500ee413f2510861ec618e4866fd3895d4c0569",
+              "file": "provenance/upstream-capability-evidence/9d0fc1907790307bb75883cbfd654bea88cdee4711124768749188498d1e6015.json",
+              "sha256": "9d0fc1907790307bb75883cbfd654bea88cdee4711124768749188498d1e6015",
               "case": "glob.execute"
             }
           ],
@@ -158,8 +158,8 @@
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/3a148460b989930591c5a5930500ee413f2510861ec618e4866fd3895d4c0569.json",
-              "sha256": "3a148460b989930591c5a5930500ee413f2510861ec618e4866fd3895d4c0569",
+              "file": "provenance/upstream-capability-evidence/9d0fc1907790307bb75883cbfd654bea88cdee4711124768749188498d1e6015.json",
+              "sha256": "9d0fc1907790307bb75883cbfd654bea88cdee4711124768749188498d1e6015",
               "case": "grep.execute"
             }
           ],
@@ -191,8 +191,8 @@
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/3a148460b989930591c5a5930500ee413f2510861ec618e4866fd3895d4c0569.json",
-              "sha256": "3a148460b989930591c5a5930500ee413f2510861ec618e4866fd3895d4c0569",
+              "file": "provenance/upstream-capability-evidence/9d0fc1907790307bb75883cbfd654bea88cdee4711124768749188498d1e6015.json",
+              "sha256": "9d0fc1907790307bb75883cbfd654bea88cdee4711124768749188498d1e6015",
               "case": "edit.execute"
             }
           ],
@@ -222,8 +222,8 @@
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/3a148460b989930591c5a5930500ee413f2510861ec618e4866fd3895d4c0569.json",
-              "sha256": "3a148460b989930591c5a5930500ee413f2510861ec618e4866fd3895d4c0569",
+              "file": "provenance/upstream-capability-evidence/9d0fc1907790307bb75883cbfd654bea88cdee4711124768749188498d1e6015.json",
+              "sha256": "9d0fc1907790307bb75883cbfd654bea88cdee4711124768749188498d1e6015",
               "case": "write.execute"
             }
           ],
@@ -257,8 +257,8 @@
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/3a148460b989930591c5a5930500ee413f2510861ec618e4866fd3895d4c0569.json",
-              "sha256": "3a148460b989930591c5a5930500ee413f2510861ec618e4866fd3895d4c0569",
+              "file": "provenance/upstream-capability-evidence/9d0fc1907790307bb75883cbfd654bea88cdee4711124768749188498d1e6015.json",
+              "sha256": "9d0fc1907790307bb75883cbfd654bea88cdee4711124768749188498d1e6015",
               "case": "task.execute"
             }
           ],
@@ -289,8 +289,8 @@
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/3a148460b989930591c5a5930500ee413f2510861ec618e4866fd3895d4c0569.json",
-              "sha256": "3a148460b989930591c5a5930500ee413f2510861ec618e4866fd3895d4c0569",
+              "file": "provenance/upstream-capability-evidence/9d0fc1907790307bb75883cbfd654bea88cdee4711124768749188498d1e6015.json",
+              "sha256": "9d0fc1907790307bb75883cbfd654bea88cdee4711124768749188498d1e6015",
               "case": "webfetch.execute"
             }
           ],
@@ -323,8 +323,8 @@
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/e268f730f8640b9b094960c5b41e4aa48163432057dab9e28a23d7c27378d0b3.json",
-              "sha256": "e268f730f8640b9b094960c5b41e4aa48163432057dab9e28a23d7c27378d0b3",
+              "file": "provenance/upstream-capability-evidence/877b779fbc548d45034fce11334661a2697266893ff1053d434fe4ed1a7405b7.json",
+              "sha256": "877b779fbc548d45034fce11334661a2697266893ff1053d434fe4ed1a7405b7",
               "case": "todowrite.execute"
             }
           ],
@@ -357,8 +357,8 @@
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/3a148460b989930591c5a5930500ee413f2510861ec618e4866fd3895d4c0569.json",
-              "sha256": "3a148460b989930591c5a5930500ee413f2510861ec618e4866fd3895d4c0569",
+              "file": "provenance/upstream-capability-evidence/9d0fc1907790307bb75883cbfd654bea88cdee4711124768749188498d1e6015.json",
+              "sha256": "9d0fc1907790307bb75883cbfd654bea88cdee4711124768749188498d1e6015",
               "case": "websearch.execute"
             }
           ],
@@ -391,8 +391,8 @@
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/e268f730f8640b9b094960c5b41e4aa48163432057dab9e28a23d7c27378d0b3.json",
-              "sha256": "e268f730f8640b9b094960c5b41e4aa48163432057dab9e28a23d7c27378d0b3",
+              "file": "provenance/upstream-capability-evidence/877b779fbc548d45034fce11334661a2697266893ff1053d434fe4ed1a7405b7.json",
+              "sha256": "877b779fbc548d45034fce11334661a2697266893ff1053d434fe4ed1a7405b7",
               "case": "skill.list"
             }
           ],
@@ -417,8 +417,8 @@
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/e268f730f8640b9b094960c5b41e4aa48163432057dab9e28a23d7c27378d0b3.json",
-              "sha256": "e268f730f8640b9b094960c5b41e4aa48163432057dab9e28a23d7c27378d0b3",
+              "file": "provenance/upstream-capability-evidence/877b779fbc548d45034fce11334661a2697266893ff1053d434fe4ed1a7405b7.json",
+              "sha256": "877b779fbc548d45034fce11334661a2697266893ff1053d434fe4ed1a7405b7",
               "case": "skill.search"
             }
           ],
@@ -443,8 +443,8 @@
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/e268f730f8640b9b094960c5b41e4aa48163432057dab9e28a23d7c27378d0b3.json",
-              "sha256": "e268f730f8640b9b094960c5b41e4aa48163432057dab9e28a23d7c27378d0b3",
+              "file": "provenance/upstream-capability-evidence/877b779fbc548d45034fce11334661a2697266893ff1053d434fe4ed1a7405b7.json",
+              "sha256": "877b779fbc548d45034fce11334661a2697266893ff1053d434fe4ed1a7405b7",
               "case": "skill.read"
             }
           ],
@@ -469,8 +469,8 @@
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/3a148460b989930591c5a5930500ee413f2510861ec618e4866fd3895d4c0569.json",
-              "sha256": "3a148460b989930591c5a5930500ee413f2510861ec618e4866fd3895d4c0569",
+              "file": "provenance/upstream-capability-evidence/9d0fc1907790307bb75883cbfd654bea88cdee4711124768749188498d1e6015.json",
+              "sha256": "9d0fc1907790307bb75883cbfd654bea88cdee4711124768749188498d1e6015",
               "case": "skill.install"
             }
           ],
@@ -495,8 +495,8 @@
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/3a148460b989930591c5a5930500ee413f2510861ec618e4866fd3895d4c0569.json",
-              "sha256": "3a148460b989930591c5a5930500ee413f2510861ec618e4866fd3895d4c0569",
+              "file": "provenance/upstream-capability-evidence/9d0fc1907790307bb75883cbfd654bea88cdee4711124768749188498d1e6015.json",
+              "sha256": "9d0fc1907790307bb75883cbfd654bea88cdee4711124768749188498d1e6015",
               "case": "skill.uninstall"
             }
           ],
@@ -525,8 +525,8 @@
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/3a148460b989930591c5a5930500ee413f2510861ec618e4866fd3895d4c0569.json",
-              "sha256": "3a148460b989930591c5a5930500ee413f2510861ec618e4866fd3895d4c0569",
+              "file": "provenance/upstream-capability-evidence/9d0fc1907790307bb75883cbfd654bea88cdee4711124768749188498d1e6015.json",
+              "sha256": "9d0fc1907790307bb75883cbfd654bea88cdee4711124768749188498d1e6015",
               "case": "apply_patch.execute"
             }
           ],
@@ -558,8 +558,8 @@
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/3a148460b989930591c5a5930500ee413f2510861ec618e4866fd3895d4c0569.json",
-              "sha256": "3a148460b989930591c5a5930500ee413f2510861ec618e4866fd3895d4c0569",
+              "file": "provenance/upstream-capability-evidence/9d0fc1907790307bb75883cbfd654bea88cdee4711124768749188498d1e6015.json",
+              "sha256": "9d0fc1907790307bb75883cbfd654bea88cdee4711124768749188498d1e6015",
               "case": "question.execute"
             }
           ],
@@ -591,8 +591,8 @@
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/65fcc7566585b361b80096a7ffef183129c96f7b7151b5448f092920b1ad3656.json",
-              "sha256": "65fcc7566585b361b80096a7ffef183129c96f7b7151b5448f092920b1ad3656",
+              "file": "provenance/upstream-capability-evidence/74d3a95c36a8bbb2836bd4058a6f518872e8b22fe2f05e6234b0d350824d2381.json",
+              "sha256": "74d3a95c36a8bbb2836bd4058a6f518872e8b22fe2f05e6234b0d350824d2381",
               "case": "lsp.goToDefinition"
             }
           ],
@@ -616,8 +616,8 @@
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/65fcc7566585b361b80096a7ffef183129c96f7b7151b5448f092920b1ad3656.json",
-              "sha256": "65fcc7566585b361b80096a7ffef183129c96f7b7151b5448f092920b1ad3656",
+              "file": "provenance/upstream-capability-evidence/74d3a95c36a8bbb2836bd4058a6f518872e8b22fe2f05e6234b0d350824d2381.json",
+              "sha256": "74d3a95c36a8bbb2836bd4058a6f518872e8b22fe2f05e6234b0d350824d2381",
               "case": "lsp.findReferences"
             }
           ],
@@ -641,8 +641,8 @@
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/65fcc7566585b361b80096a7ffef183129c96f7b7151b5448f092920b1ad3656.json",
-              "sha256": "65fcc7566585b361b80096a7ffef183129c96f7b7151b5448f092920b1ad3656",
+              "file": "provenance/upstream-capability-evidence/74d3a95c36a8bbb2836bd4058a6f518872e8b22fe2f05e6234b0d350824d2381.json",
+              "sha256": "74d3a95c36a8bbb2836bd4058a6f518872e8b22fe2f05e6234b0d350824d2381",
               "case": "lsp.hover"
             }
           ],
@@ -666,8 +666,8 @@
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/65fcc7566585b361b80096a7ffef183129c96f7b7151b5448f092920b1ad3656.json",
-              "sha256": "65fcc7566585b361b80096a7ffef183129c96f7b7151b5448f092920b1ad3656",
+              "file": "provenance/upstream-capability-evidence/74d3a95c36a8bbb2836bd4058a6f518872e8b22fe2f05e6234b0d350824d2381.json",
+              "sha256": "74d3a95c36a8bbb2836bd4058a6f518872e8b22fe2f05e6234b0d350824d2381",
               "case": "lsp.documentSymbol"
             }
           ],
@@ -692,8 +692,8 @@
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/65fcc7566585b361b80096a7ffef183129c96f7b7151b5448f092920b1ad3656.json",
-              "sha256": "65fcc7566585b361b80096a7ffef183129c96f7b7151b5448f092920b1ad3656",
+              "file": "provenance/upstream-capability-evidence/74d3a95c36a8bbb2836bd4058a6f518872e8b22fe2f05e6234b0d350824d2381.json",
+              "sha256": "74d3a95c36a8bbb2836bd4058a6f518872e8b22fe2f05e6234b0d350824d2381",
               "case": "lsp.workspaceSymbol"
             }
           ],
@@ -717,8 +717,8 @@
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/65fcc7566585b361b80096a7ffef183129c96f7b7151b5448f092920b1ad3656.json",
-              "sha256": "65fcc7566585b361b80096a7ffef183129c96f7b7151b5448f092920b1ad3656",
+              "file": "provenance/upstream-capability-evidence/74d3a95c36a8bbb2836bd4058a6f518872e8b22fe2f05e6234b0d350824d2381.json",
+              "sha256": "74d3a95c36a8bbb2836bd4058a6f518872e8b22fe2f05e6234b0d350824d2381",
               "case": "lsp.goToImplementation"
             }
           ],
@@ -742,8 +742,8 @@
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/65fcc7566585b361b80096a7ffef183129c96f7b7151b5448f092920b1ad3656.json",
-              "sha256": "65fcc7566585b361b80096a7ffef183129c96f7b7151b5448f092920b1ad3656",
+              "file": "provenance/upstream-capability-evidence/74d3a95c36a8bbb2836bd4058a6f518872e8b22fe2f05e6234b0d350824d2381.json",
+              "sha256": "74d3a95c36a8bbb2836bd4058a6f518872e8b22fe2f05e6234b0d350824d2381",
               "case": "lsp.prepareCallHierarchy"
             }
           ],
@@ -767,8 +767,8 @@
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/65fcc7566585b361b80096a7ffef183129c96f7b7151b5448f092920b1ad3656.json",
-              "sha256": "65fcc7566585b361b80096a7ffef183129c96f7b7151b5448f092920b1ad3656",
+              "file": "provenance/upstream-capability-evidence/74d3a95c36a8bbb2836bd4058a6f518872e8b22fe2f05e6234b0d350824d2381.json",
+              "sha256": "74d3a95c36a8bbb2836bd4058a6f518872e8b22fe2f05e6234b0d350824d2381",
               "case": "lsp.incomingCalls"
             }
           ],
@@ -792,8 +792,8 @@
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/65fcc7566585b361b80096a7ffef183129c96f7b7151b5448f092920b1ad3656.json",
-              "sha256": "65fcc7566585b361b80096a7ffef183129c96f7b7151b5448f092920b1ad3656",
+              "file": "provenance/upstream-capability-evidence/74d3a95c36a8bbb2836bd4058a6f518872e8b22fe2f05e6234b0d350824d2381.json",
+              "sha256": "74d3a95c36a8bbb2836bd4058a6f518872e8b22fe2f05e6234b0d350824d2381",
               "case": "lsp.outgoingCalls"
             }
           ],
@@ -822,8 +822,8 @@
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/e268f730f8640b9b094960c5b41e4aa48163432057dab9e28a23d7c27378d0b3.json",
-              "sha256": "e268f730f8640b9b094960c5b41e4aa48163432057dab9e28a23d7c27378d0b3",
+              "file": "provenance/upstream-capability-evidence/877b779fbc548d45034fce11334661a2697266893ff1053d434fe4ed1a7405b7.json",
+              "sha256": "877b779fbc548d45034fce11334661a2697266893ff1053d434fe4ed1a7405b7",
               "case": "plan_exit.execute"
             }
           ],
@@ -854,8 +854,8 @@
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/e268f730f8640b9b094960c5b41e4aa48163432057dab9e28a23d7c27378d0b3.json",
-              "sha256": "e268f730f8640b9b094960c5b41e4aa48163432057dab9e28a23d7c27378d0b3",
+              "file": "provenance/upstream-capability-evidence/877b779fbc548d45034fce11334661a2697266893ff1053d434fe4ed1a7405b7.json",
+              "sha256": "877b779fbc548d45034fce11334661a2697266893ff1053d434fe4ed1a7405b7",
               "case": "plan_write.execute"
             }
           ],
@@ -884,8 +884,8 @@
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/e268f730f8640b9b094960c5b41e4aa48163432057dab9e28a23d7c27378d0b3.json",
-              "sha256": "e268f730f8640b9b094960c5b41e4aa48163432057dab9e28a23d7c27378d0b3",
+              "file": "provenance/upstream-capability-evidence/877b779fbc548d45034fce11334661a2697266893ff1053d434fe4ed1a7405b7.json",
+              "sha256": "877b779fbc548d45034fce11334661a2697266893ff1053d434fe4ed1a7405b7",
               "case": "plan_enter.execute"
             }
           ],
@@ -917,8 +917,8 @@
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/e268f730f8640b9b094960c5b41e4aa48163432057dab9e28a23d7c27378d0b3.json",
-              "sha256": "e268f730f8640b9b094960c5b41e4aa48163432057dab9e28a23d7c27378d0b3",
+              "file": "provenance/upstream-capability-evidence/877b779fbc548d45034fce11334661a2697266893ff1053d434fe4ed1a7405b7.json",
+              "sha256": "877b779fbc548d45034fce11334661a2697266893ff1053d434fe4ed1a7405b7",
               "case": "spec_write.spec"
             }
           ],
@@ -942,8 +942,8 @@
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/e268f730f8640b9b094960c5b41e4aa48163432057dab9e28a23d7c27378d0b3.json",
-              "sha256": "e268f730f8640b9b094960c5b41e4aa48163432057dab9e28a23d7c27378d0b3",
+              "file": "provenance/upstream-capability-evidence/877b779fbc548d45034fce11334661a2697266893ff1053d434fe4ed1a7405b7.json",
+              "sha256": "877b779fbc548d45034fce11334661a2697266893ff1053d434fe4ed1a7405b7",
               "case": "spec_write.design"
             }
           ],
@@ -967,8 +967,8 @@
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/e268f730f8640b9b094960c5b41e4aa48163432057dab9e28a23d7c27378d0b3.json",
-              "sha256": "e268f730f8640b9b094960c5b41e4aa48163432057dab9e28a23d7c27378d0b3",
+              "file": "provenance/upstream-capability-evidence/877b779fbc548d45034fce11334661a2697266893ff1053d434fe4ed1a7405b7.json",
+              "sha256": "877b779fbc548d45034fce11334661a2697266893ff1053d434fe4ed1a7405b7",
               "case": "spec_write.tasks"
             }
           ],
@@ -1062,8 +1062,8 @@
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/3a148460b989930591c5a5930500ee413f2510861ec618e4866fd3895d4c0569.json",
-              "sha256": "3a148460b989930591c5a5930500ee413f2510861ec618e4866fd3895d4c0569",
+              "file": "provenance/upstream-capability-evidence/9d0fc1907790307bb75883cbfd654bea88cdee4711124768749188498d1e6015.json",
+              "sha256": "9d0fc1907790307bb75883cbfd654bea88cdee4711124768749188498d1e6015",
               "case": "switch_cwd.execute"
             }
           ],
@@ -1093,8 +1093,8 @@
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/abf283804ed899c97ee2e4e92854bc5c51013828bc652b44e04747c70257b91d.json",
-              "sha256": "abf283804ed899c97ee2e4e92854bc5c51013828bc652b44e04747c70257b91d",
+              "file": "provenance/upstream-capability-evidence/06da4901892ba2cbe26a19124d1e6252671feff810adb73d3ada99696301042f.json",
+              "sha256": "06da4901892ba2cbe26a19124d1e6252671feff810adb73d3ada99696301042f",
               "case": "arkts_check.execute"
             }
           ],
@@ -1127,8 +1127,8 @@
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/abf283804ed899c97ee2e4e92854bc5c51013828bc652b44e04747c70257b91d.json",
-              "sha256": "abf283804ed899c97ee2e4e92854bc5c51013828bc652b44e04747c70257b91d",
+              "file": "provenance/upstream-capability-evidence/06da4901892ba2cbe26a19124d1e6252671feff810adb73d3ada99696301042f.json",
+              "sha256": "06da4901892ba2cbe26a19124d1e6252671feff810adb73d3ada99696301042f",
               "case": "build_project.execute"
             }
           ],

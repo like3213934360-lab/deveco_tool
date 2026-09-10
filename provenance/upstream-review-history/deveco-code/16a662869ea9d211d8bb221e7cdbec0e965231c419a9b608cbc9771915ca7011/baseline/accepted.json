@@ -1,0 +1,163 @@
+{
+  "format": 2,
+  "candidate_sha256": "f3e681412bf83361c9ab792ca2e0ac14efadf5ade2e71412cf5b5a7a922b471c",
+  "adaptation_sha256": "91f2ee01e5effb6b2e4bd6b54114ad0491e1df74cd3889410d00aa81f504c271",
+  "evidence_sha256": "b0d2ae3ddb1fd8c21d6dba23cb4fabd821d9d11dedc0858e71d520d0f2e5f7ef",
+  "before_lock_sha256": "8780796f0a41cfa6bd87f3c3556841f8bbae990c58a1a6de480363e7a611234e",
+  "accepted_lock_sha256": "8780796f0a41cfa6bd87f3c3556841f8bbae990c58a1a6de480363e7a611234e",
+  "before_lock": {
+    "format": 1,
+    "sources": [
+      {
+        "id": "deveco-code",
+        "url": "https://gitcode.com/openharmony-sig/deveco-code.git",
+        "ref": "refs/heads/develop",
+        "commit": "aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a",
+        "tree": "f88b2d20b4a1adf36d8370eb907a162b215d6f4b",
+        "version": "aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a",
+        "role": "resource_source",
+        "acceptance": "verified"
+      },
+      {
+        "id": "deveco-cli",
+        "url": "https://gitcode.com/openharmony-sig/deveco-cli.git",
+        "ref": "refs/heads/develop",
+        "commit": "a71f93d73941aaa0dbf581918cbd5828014e6e88",
+        "tree": "6605d243def8bc8cebe0da693ba5729c1a283601",
+        "version": "a71f93d73941aaa0dbf581918cbd5828014e6e88",
+        "role": "protocol_reference",
+        "acceptance": "verified"
+      }
+    ]
+  },
+  "accepted_lock": {
+    "format": 1,
+    "sources": [
+      {
+        "id": "deveco-code",
+        "url": "https://gitcode.com/openharmony-sig/deveco-code.git",
+        "ref": "refs/heads/develop",
+        "commit": "aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a",
+        "tree": "f88b2d20b4a1adf36d8370eb907a162b215d6f4b",
+        "version": "aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a",
+        "role": "resource_source",
+        "acceptance": "verified"
+      },
+      {
+        "id": "deveco-cli",
+        "url": "https://gitcode.com/openharmony-sig/deveco-cli.git",
+        "ref": "refs/heads/develop",
+        "commit": "a71f93d73941aaa0dbf581918cbd5828014e6e88",
+        "tree": "6605d243def8bc8cebe0da693ba5729c1a283601",
+        "version": "a71f93d73941aaa0dbf581918cbd5828014e6e88",
+        "role": "protocol_reference",
+        "acceptance": "verified"
+      }
+    ]
+  },
+  "tested": {
+    "runtime_sha256": "7777d47abd664781e146a688859eb4f03bf9bd82b92a1385394697864c2d8177",
+    "compiled_sha256": "077ef53f6b6a8575fa272e517d66ea107833668a18f7aeb58dffaa135d2212b4",
+    "package_lock_sha256": "9ebb046bdb6d6094bb2eb3d17555bb21f73d8f4ac83f9c396af6a10f9c9f7f95",
+    "resource_manifest_sha256": "039b6e34e2055939b4ec542fdd39cb3e2e0c66958e24a74fc9f5168f6d95636b",
+    "upstream_lock_sha256": "9ea597235ffa9f97a076791d637acd976f8f4c78bcf85ea77de118570708ed3d"
+  },
+  "checks": [
+    {
+      "check": "scripts/native-checker-acceptance.ts",
+      "report": "checks/51ff3f8f380058340e8badf192c2ae655841e4deb18da41b9fcf9c827523f999.json",
+      "sha256": "f268e58b6533dab032478aa9020be951421863cfb07f11d5e4d52fe8b8e51654",
+      "original_sha256": "765a9aea7d807a7550eebf9b4687452feca9b5a6389c0d6dbed516ec179dec7e"
+    },
+    {
+      "check": "scripts/native-lsp-symbol-acceptance.ts",
+      "report": "checks/7000c9be032faf60183f66bb5abadd9b813d8cd6453d39c73af269f7b1249061.json",
+      "sha256": "e162c4a76e719c44ef6dd58c2614f5c4d1350cd57262071e1388d82c5bbe1d27",
+      "original_sha256": "b09ec95370098ed6cbc675363bbed56e9e8ede4645b26c2566c164455334df90"
+    },
+    {
+      "check": "scripts/native-multimodule-acceptance.ts",
+      "report": "checks/f255d9d784982620945513bd6325c59a178e398164fb1a84aecd34efffca3fab.json",
+      "sha256": "8b294506248d5d5dd5ead79dc31ebc2d3e5e80ad13ffb745bcf2608c55d2bbbd",
+      "original_sha256": "702e3827eca8c5f619adf4c7a647c8329bd9a4c687ebfc90672e6a76fe29a0b4"
+    },
+    {
+      "check": "scripts/native-sdk-acceptance.ts",
+      "report": "checks/84668d433b926816f14d6b553524752493b68891d9e261a400f2ee5cf838a9c7.json",
+      "sha256": "63e4485f48d8c91658850ee49116f180669f71ed6671f47f4878c5fa3f1e066a",
+      "original_sha256": "03fbf70a2d4753ad3225918fd7f5de1bca1f667f00db10154424eda1db7dc11b"
+    },
+    {
+      "check": "test/native-checker.test.ts",
+      "report": "checks/a52b16954b88be0dc4138f3e61f42e9b69f9921f11a847e9b766a1a036564bd9.json",
+      "sha256": "7bdd98ba224de1e0f0446c663453a6671a7a9fdd43e7cbca096d596857c69fa9",
+      "original_sha256": "a9072d0f66931da04842ab5a65fc7d3cc27bb917a5b35288f97461aed09a8b79"
+    },
+    {
+      "check": "test/native-context.test.ts",
+      "report": "checks/92d4aca0b85eebd8dd8534f9a6b8f46b497c889d51d08b2b7057e50633fc36a3.json",
+      "sha256": "72e6240424d97a962c521f4a00939a3b24837c7829bffe9d0e21b2b4506f8158",
+      "original_sha256": "a9072d0f66931da04842ab5a65fc7d3cc27bb917a5b35288f97461aed09a8b79"
+    },
+    {
+      "check": "test/native-crash.test.ts",
+      "report": "checks/f23c2ccb2e863f74013a86e3e26f68b9ddedc20971de4573918f3d144ea6efa8.json",
+      "sha256": "74741ba85fec0055765467ad28cc7069dc00f179add3c79822a1b803ac54141a",
+      "original_sha256": "a9072d0f66931da04842ab5a65fc7d3cc27bb917a5b35288f97461aed09a8b79"
+    },
+    {
+      "check": "test/native-logs.test.ts",
+      "report": "checks/68aa77b89a6b460da87c667937da30bd57c823ad22407ce07ce2eeec930a8214.json",
+      "sha256": "156aa3bf53316f9d8ec2d240ffecbd59e62fe19f2930cb19bb608a67831fe2f1",
+      "original_sha256": "a9072d0f66931da04842ab5a65fc7d3cc27bb917a5b35288f97461aed09a8b79"
+    },
+    {
+      "check": "test/native-lsp.test.ts",
+      "report": "checks/d5ca14b29e216e7059673c1e4d4391e0c7494009d3f61c5b78ce9fe4d41c620f.json",
+      "sha256": "9858234cd138f3befd8a16eda229224748b750873d9b32d4c9c7adda9cd6b4e0",
+      "original_sha256": "a9072d0f66931da04842ab5a65fc7d3cc27bb917a5b35288f97461aed09a8b79"
+    },
+    {
+      "check": "test/native-project-recovery.test.ts",
+      "report": "checks/3db9f6322315713f7bacf22954951c3efc82f6a7f41c1d94e49b3518e01fa9cc.json",
+      "sha256": "cb9848d34dee2f13d92f88ee1d178906275e06ddc9be62948e9e67ae24cdaf55",
+      "original_sha256": "a9072d0f66931da04842ab5a65fc7d3cc27bb917a5b35288f97461aed09a8b79"
+    },
+    {
+      "check": "test/native-project.test.ts",
+      "report": "checks/ea5ef5f257852f5a11d2a2b361d9477435f29173efeceb362cd368e936cd5d60.json",
+      "sha256": "eabb42cabdde67d5e6771116da7a6c65b4c18570b710205d6f76d37a3d5472d3",
+      "original_sha256": "a9072d0f66931da04842ab5a65fc7d3cc27bb917a5b35288f97461aed09a8b79"
+    },
+    {
+      "check": "test/native-runtime.test.ts",
+      "report": "checks/af57e589e98bb6dc083590ee47bbc8e438cb2dc8bac932208d912f9e6b73a289.json",
+      "sha256": "586fa08cdf7e40d1899e48e445ebe6db16ec2180ff93bbfed64a931975f450a4",
+      "original_sha256": "a9072d0f66931da04842ab5a65fc7d3cc27bb917a5b35288f97461aed09a8b79"
+    },
+    {
+      "check": "test/native-upstream-capabilities.test.ts",
+      "report": "checks/12c52109b3a730c736883de78f965b5f5732ca82a884fccf49072c5eb9fd6c21.json",
+      "sha256": "a94048d231ddf73d150085696f351aecc66754c655b2d021de079510443154c9",
+      "original_sha256": "a9072d0f66931da04842ab5a65fc7d3cc27bb917a5b35288f97461aed09a8b79"
+    },
+    {
+      "check": "test/native-upstream.test.ts",
+      "report": "checks/8e3c5e2801049b332b98f9d224b87695c7f8cad1c7cbc7e7ec52bba31e959286.json",
+      "sha256": "debd0115ac8be689a2d3bdeb5ad3e55fb46a4be4308131a7b9544fb0ae151887",
+      "original_sha256": "a9072d0f66931da04842ab5a65fc7d3cc27bb917a5b35288f97461aed09a8b79"
+    },
+    {
+      "check": "test/workflows.test.ts",
+      "report": "checks/19afecd16125f3b681346b7fc568599a0f81aa75e82298203a69db06328348de.json",
+      "sha256": "e71beadcfc963320f9982d1e85af42d521fb8e2f45dfce954fe139c1ff0d1fd1",
+      "original_sha256": "a9072d0f66931da04842ab5a65fc7d3cc27bb917a5b35288f97461aed09a8b79"
+    },
+    {
+      "check": "scripts/native-crash-acceptance.ts",
+      "report": "checks/c56e3563a225fe9319ce5f29e4cb5c557eefedbdf0514a62344c747242fa0c69.json",
+      "sha256": "bb6ec376b8468c473c7602dda619cc403dd4254f5887a716cbef5405069ef0a9",
+      "original_sha256": "319e24e31cc6a40af5539102cfabbc8ce5931393fe57aa01416e80cd9890d757"
+    }
+  ]
+}

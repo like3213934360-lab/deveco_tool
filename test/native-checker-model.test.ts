@@ -114,3 +114,23 @@ test("an imported route builder reports its failure at the selected registration
   assert.equal(result.length, 1);
   assert.equal(result[0]!.file, "Page.ts");
 });
+test("compiler-normalized source names keep diagnostics inside the selected scope", () => {
+  const root = path.resolve("/project"),
+    name = path.join(root, "Page.ts"),
+    source = ts.createSourceFile(
+      name,
+      "@ComponentV2 class Child { @Local count = 0; } Child({ count: 1 });",
+      ts.ScriptTarget.Latest,
+      true,
+    );
+  const result = checkerModel(
+    syntax,
+    new Map([[name, source]]),
+    // A different spelling of the same selected file must remain in scope.
+    [root + path.sep + "." + path.sep + "Page.ts"],
+    root,
+    new Set(),
+  );
+  assert.deepEqual(result.map((row) => row.rule), ["local-property-init"]);
+  assert.equal(result[0]!.file, "Page.ts");
+});

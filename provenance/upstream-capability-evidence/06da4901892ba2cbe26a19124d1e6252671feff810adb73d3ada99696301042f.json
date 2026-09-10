@@ -1,0 +1,37 @@
+{
+  "format": 1,
+  "passed": true,
+  "tested": {
+    "runtime_sha256": "632b316e63eeb75baf38460a49eb4c71b88ed206fa0b04314352855952bf93d2",
+    "compiled_sha256": "4956743ca57df261604579054f34c41d292e935fe8a4695cba166c92d16e27f7",
+    "package_lock_sha256": "9ebb046bdb6d6094bb2eb3d17555bb21f73d8f4ac83f9c396af6a10f9c9f7f95",
+    "resource_manifest_sha256": "039b6e34e2055939b4ec542fdd39cb3e2e0c66958e24a74fc9f5168f6d95636b",
+    "upstream_lock_sha256": "9ea597235ffa9f97a076791d637acd976f8f4c78bcf85ea77de118570708ed3d"
+  },
+  "cases": [
+    {
+      "id": "arkts_check.execute",
+      "passed": true,
+      "outcome": "executed",
+      "scope": "Real SDK checks report an injected missing member, then succeed after source repair. Twenty-one checker cases cover selected file boundaries and all eighteen enabled upstream validator groups; static checking is not compilation or device proof.",
+      "artifacts": [
+        {
+          "file": "provenance/upstream-capability-evidence/6927952fb614519ed849439b3de5c1ce13e8d0559045586e2872cccdbacaff8b.json",
+          "sha256": "6927952fb614519ed849439b3de5c1ce13e8d0559045586e2872cccdbacaff8b"
+        }
+      ]
+    },
+    {
+      "id": "build_project.execute",
+      "passed": true,
+      "outcome": "executed",
+      "scope": "The default native build fails BUILD_CHECK_BLOCKED before Hvigor when checking fails, then compiles a HAP after source repair. Four product/target selections build HAR/HSP/HAP and verify dependency closure and target precheck. No phone or signing operation is included.",
+      "artifacts": [
+        {
+          "file": "provenance/upstream-capability-evidence/6927952fb614519ed849439b3de5c1ce13e8d0559045586e2872cccdbacaff8b.json",
+          "sha256": "6927952fb614519ed849439b3de5c1ce13e8d0559045586e2872cccdbacaff8b"
+        }
+      ]
+    }
+  ]
+}

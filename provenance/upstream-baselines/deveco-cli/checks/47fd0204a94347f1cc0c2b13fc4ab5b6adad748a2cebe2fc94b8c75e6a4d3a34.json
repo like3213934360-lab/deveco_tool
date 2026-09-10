@@ -1,0 +1,15 @@
+{
+  "format": 1,
+  "passed": true,
+  "tested": {
+    "runtime_sha256": "632b316e63eeb75baf38460a49eb4c71b88ed206fa0b04314352855952bf93d2",
+    "compiled_sha256": "4956743ca57df261604579054f34c41d292e935fe8a4695cba166c92d16e27f7",
+    "package_lock_sha256": "9ebb046bdb6d6094bb2eb3d17555bb21f73d8f4ac83f9c396af6a10f9c9f7f95",
+    "resource_manifest_sha256": "039b6e34e2055939b4ec542fdd39cb3e2e0c66958e24a74fc9f5168f6d95636b",
+    "upstream_lock_sha256": "9ea597235ffa9f97a076791d637acd976f8f4c78bcf85ea77de118570708ed3d"
+  },
+  "executed_tests": [
+    "dist/test/native-text.test.js"
+  ],
+  "original_sha256": "7a4cd122b93c37c027e2ad182ea66f19793818e30dfd911a51cb0dfafea71174"
+}

@@ -19,6 +19,9 @@ export function checkerModel(
   moduleEntries: ReadonlyMap<string, string> = new Map(),
 ) {
   const canonical = (file: string) => path.normalize(file);
+  // The compiler normalizes SourceFile.fileName to forward slashes, including
+  // on Windows. Compare source identities in the same form as selected paths.
+  const selectedFiles = new Set(selected.map(canonical));
   const lookup = (file: string) => sources.get(canonical(file));
   const resolve = (specifier: string, from: string) => {
     const base = specifier.startsWith(".")
@@ -77,7 +80,7 @@ export function checkerModel(
     // A referenced declaration may be outside selected files. Attribute route
     // failures to the selected registration in that case, never widen scope.
     const source = reportAt.getSourceFile();
-    if (!selected.includes(source.fileName)) return;
+    if (!selectedFiles.has(canonical(source.fileName))) return;
     const at = source.getLineAndCharacterOfPosition(reportAt.getStart(source));
     const key = `${source.fileName}:${at.line}:${at.character}:${rule}`;
     if (emitted.has(key)) return;
@@ -289,7 +292,7 @@ export function checkerModel(
                     call,
                     "nav-destination-root-node",
                     `The registered route builds '${call.expression.getText()}' without a NavDestination root. Wrap that branch, or make NavDestination the root of the destination component.`,
-                    selected.includes(call.getSourceFile().fileName)
+                    selectedFiles.has(canonical(call.getSourceFile().fileName))
                       ? call
                       : node,
                   );

@@ -169,17 +169,17 @@
     },
     {
       "rule": "code-tool-arkts-check.cjs",
-      "reason": "The native checker uses selected project/product/module SDK configuration, strict source and report bounds, canonical application ASTs and SDK binder identities. Compiler-normalized Windows source names are compared with normalized selected paths so cross-file findings remain in scope; the Windows regression failure is retained and the repaired CI run must confirm this path. All eighteen enabled CLI validator groups are adapted; original project root and compatible-version strings preserve real API warning behavior. Twenty-one current SDK cases include errors and repairs. Static checking is distinct from build/device completion.",
+      "reason": "The native checker uses selected project/product/module SDK configuration, strict source and report bounds, canonical application ASTs and SDK binder identities. All eighteen enabled CLI validator groups are adapted; original project root and compatible-version strings preserve real API warning behavior. Twenty-one current SDK cases include errors and repairs. Static checking is distinct from build/device completion.",
       "reviewer": "Codex GPT-6 native-7 source and boundary review"
     },
     {
       "rule": "code-tool-arkts-check.txt",
-      "reason": "The native checker uses selected project/product/module SDK configuration, strict source and report bounds, canonical application ASTs and SDK binder identities. Compiler-normalized Windows source names are compared with normalized selected paths so cross-file findings remain in scope; the Windows regression failure is retained and the repaired CI run must confirm this path. All eighteen enabled CLI validator groups are adapted; original project root and compatible-version strings preserve real API warning behavior. Twenty-one current SDK cases include errors and repairs. Static checking is distinct from build/device completion.",
+      "reason": "The native checker uses selected project/product/module SDK configuration, strict source and report bounds, canonical application ASTs and SDK binder identities. All eighteen enabled CLI validator groups are adapted; original project root and compatible-version strings preserve real API warning behavior. Twenty-one current SDK cases include errors and repairs. Static checking is distinct from build/device completion.",
       "reviewer": "Codex GPT-6 native-7 source and boundary review"
     },
     {
       "rule": "code-tool-arkts_check.ts",
-      "reason": "The native checker uses selected project/product/module SDK configuration, strict source and report bounds, canonical application ASTs and SDK binder identities. Compiler-normalized Windows source names are compared with normalized selected paths so cross-file findings remain in scope; the Windows regression failure is retained and the repaired CI run must confirm this path. All eighteen enabled CLI validator groups are adapted; original project root and compatible-version strings preserve real API warning behavior. Twenty-one current SDK cases include errors and repairs. Static checking is distinct from build/device completion.",
+      "reason": "The native checker uses selected project/product/module SDK configuration, strict source and report bounds, canonical application ASTs and SDK binder identities. All eighteen enabled CLI validator groups are adapted; original project root and compatible-version strings preserve real API warning behavior. Twenty-one current SDK cases include errors and repairs. Static checking is distinct from build/device completion.",
       "reviewer": "Codex GPT-6 native-7 source and boundary review"
     },
     {
@@ -529,7 +529,7 @@
     },
     {
       "path": "provenance/upstream-capabilities.json",
-      "sha256": "2d3b932e5d30be236be9993c95165b94de69aaa2b7ea7853938afbb960591242"
+      "sha256": "1701d45a7c86679ab826525c687b3f2ba3fa49908df15649973f240f4c916c68"
     },
     {
       "path": "provenance/upstream-lock.json",

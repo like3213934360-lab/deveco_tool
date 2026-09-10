@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { performance } from "node:perf_hooks";
+import { createHash } from "node:crypto";
 import { z } from "zod";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
@@ -104,12 +105,15 @@ try {
   fs.writeFileSync(path.join(output, "config.json"), "{}\n");
   await check("compiled-entry-mcp-handshake", connect);
   await check(
-    "25-structured-tools-and-eight-workflows-without-worker-state",
+    "29-structured-tools-and-eight-workflows-without-worker-state",
     async () => {
       const catalog = await client!.listTools();
       invariant(
-        catalog.tools.length === 25 &&
-          catalog.tools.every((tool) => tool.outputSchema),
+        catalog.tools.length === 29 &&
+          catalog.tools.every((tool) => tool.outputSchema) &&
+          ["skill_manage", "skill_workflow", "ui_test", "ui_review"].every(
+            (name) => catalog.tools.some((tool) => tool.name === name),
+          ),
         "INSTALLATION_CATALOG",
         "Tool catalog is incomplete",
       );
@@ -126,6 +130,64 @@ try {
   );
   await check("worker-native-sqlite-and-doctor", () =>
     call("deveco_doctor", {}),
+  );
+  await check(
+    "packaged-skills-and-references-without-client-installer",
+    async () => {
+      const catalog = z
+        .object({
+          skills: z
+            .array(
+              z.object({
+                name: z.string(),
+                package_sha256: z.string(),
+                client_installation_required: z.literal(false),
+                files: z
+                  .array(z.object({ path: z.string(), sha256: z.string() }))
+                  .min(1),
+              }),
+            )
+            .length(6),
+        })
+        .parse(await call("skill_manage", { action: "catalog" }));
+      for (const skill of catalog.skills) {
+        for (const file of skill.files) {
+          const read = z
+            .object({
+              content: z.string().min(1),
+              package_sha256: z.literal(skill.package_sha256),
+              client_installation_required: z.literal(false),
+            })
+            .parse(
+              await call("skill_manage", {
+                action: "read",
+                name: skill.name,
+                file: file.path,
+              }),
+            );
+          invariant(
+            createHash("sha256").update(read.content).digest("hex") ===
+              file.sha256,
+            "INSTALLATION_SKILL_CONTENT",
+            "Packaged Skill or reference content differs from its catalog",
+          );
+        }
+      }
+      for (const action of ["install", "uninstall"]) {
+        const response = await client!.callTool({
+          name: "skill_manage",
+          arguments: { action },
+        });
+        invariant(
+          response.isError === true,
+          "INSTALLATION_SKILL_INSTALLER",
+          "Client Skill installation must remain unavailable",
+        );
+        z.object({
+          error: z.object({ code: z.literal("INVALID_ARGUMENT") }),
+        }).parse(response.structuredContent);
+      }
+    },
   );
   await check("packaged-local-document-index-and-archive", async () => {
     const docs = z

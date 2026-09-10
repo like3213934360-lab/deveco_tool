@@ -25,7 +25,7 @@
 
 ## 证据
 
-0.3.0 候选的当前证据为持久化目录 `native-7-sdk-final-lock-20260910-1`、`native-7-symbol-final-lock-20260910-1` 和 `native-7-multimodule-final-lock-20260910-1`：SDK 集成 26 项、多模块 45 项均通过，新增操作逐项记录实际支持与不支持结果。对应运行时 `7777d47a…`、编译摘要 `077ef53f…`。下面列出的旧提交和临时目录仅保留历史上下文；早期临时原始文件现已丢失。
+0.3.0 候选的当前证据为持久化目录 `native-7-sdk-final-lock-20260910-3`、`native-7-symbol-final-lock-20260910-3` 和 `native-7-multimodule-final-lock-20260910-3`：SDK 集成 26 项、多模块 45 项均通过，新增操作逐项记录实际支持与不支持结果。对应运行时 `632b316e…`、编译摘要 `4956743c…`。下面列出的旧提交和临时目录仅保留历史上下文；早期临时原始文件现已丢失。
 
 - `test/native-lsp.test.ts`：四组边界测试，覆盖实现链接、同文件路径、UTF-16/换行/空文件、无结果/无能力/畸形响应、变更后诊断及非法通知。
 - `test/native-runtime.test.ts`：Unicode 文件同步、两种定义格式的声明过滤、LRU、排队取消。
