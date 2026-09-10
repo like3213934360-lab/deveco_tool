@@ -5,6 +5,7 @@ import { fileDigest, inside, walk } from "../../src/core/files.js";
 import { invariant } from "../../src/core/errors.js";
 import { knowledgeEntrySchema } from "../../src/services/knowledge.js";
 import { compileCrashReference } from "../../src/services/crash-patterns.js";
+import { skillCatalogSchema } from "../../src/services/skills.js";
 
 const relative = z
   .string()
@@ -39,6 +40,10 @@ export const resourceManifest = z.strictObject({
   ),
 });
 export function verifyResources(root: string) {
+  const skillFile = path.join(root, "resources/skills.json");
+  const skills = fs.existsSync(skillFile) ? skillCatalogSchema.parse(JSON.parse(fs.readFileSync(skillFile, "utf8"))).skills : [];
+  const skillPaths = new Set(skills.flatMap(skill => skill.files.map(file => `resources/skills/${skill.name}/${file.path}`)));
+  invariant(new Set(skills.map(skill => skill.name)).size === skills.length, "SKILL_CATALOG_INVALID", "Duplicate Skill catalog names");
   const manifest = resourceManifest.parse(
     JSON.parse(
       fs.readFileSync(path.join(root, "provenance/resources.json"), "utf8"),
@@ -85,14 +90,27 @@ export function verifyResources(root: string) {
         `Unmodified resource differs from its origin: ${record.file}`,
       );
     invariant(
-      !/\/(?:SKILL(?:_[A-Z]+)?\.md|[^/]+\.(?:mjs|cjs|js))$/i.test(record.file),
+      !/\/(?:SKILL(?:_[A-Z]+)?\.md|[^/]+\.(?:mjs|cjs|js))$/i.test(record.file) ||
+        (skillPaths.has(record.file) && record.file.endsWith("/SKILL.md") && record.transformation === "native-skill-adaptation" && record.source === "deveco-code-skills"),
       "RESOURCE_EXECUTABLE",
-      "Resources must not ship Skill definitions or upstream JavaScript runtimes",
+      "Only catalogued, reviewed native Skill adaptations may ship; upstream JavaScript runtimes remain excluded",
     );
   }
   const actual = walk(path.join(root, "resources")).map((file) =>
     path.relative(root, file).split(path.sep).join("/"),
   );
+  for (const skill of skills) {
+    invariant(skill.files.some(file => file.path === "SKILL.md") && new Set(skill.files.map(file => file.path)).size === skill.files.length,
+      "SKILL_CATALOG_INVALID", "Skill requires one unique entrypoint and file list");
+    for (const file of skill.files) {
+      const resource = `resources/skills/${skill.name}/${file.path}`, record = manifest.files.find(record => record.file === resource);
+      invariant(record?.sha256 === file.sha256, "SKILL_SOURCE_MISMATCH", `Skill digest differs from the resource manifest: ${resource}`);
+      if (file.path === "SKILL.md") invariant(record.source_path === skill.upstream.path && record.source_sha256 === skill.upstream.sha256 &&
+        sources.get(record.source)?.version === skill.upstream.commit && sources.get(record.source)?.url === skill.upstream.url,
+        "SKILL_SOURCE_MISMATCH", `Skill origin differs from the resource manifest: ${resource}`);
+    }
+  }
+  invariant(actual.filter(file => file.startsWith("resources/skills/")).every(file => skillPaths.has(file)), "SKILL_UNINDEXED", "Every packaged Skill file requires a catalog entry");
   invariant(
     actual.length === files.size && actual.every((file) => files.has(file)),
     "RESOURCE_UNMAPPED",

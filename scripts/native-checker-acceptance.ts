@@ -75,6 +75,10 @@ const resultSchema = z.object({
     source_bytes: z.number(),
   }),
   checks: z.object({
+    project_metadata: z.literal("executed"),
+    permissions: z.enum(["executed", "unavailable"]),
+    app_resources: z.enum(["executed", "unavailable"]),
+    arkui_syntax: z.literal("executed"),
     sdk: z.literal("executed"),
     system_resources: z.enum(["executed", "unavailable"]),
     router_pages: z.literal("executed"),
@@ -172,6 +176,43 @@ try {
       for (const file of files) fs.rmSync(path.join(project_path, file));
     }
   });
+  await observe(
+    "explicit_scope_rejects_declarations_and_outside_sources",
+    async () => {
+      const valid = "entry/src/main/ets/pages/Index.ets",
+        declarations = [
+          "entry/src/main/ets/Invalid.d.ts",
+          "entry/src/main/ets/Invalid.d.ets",
+        ],
+        outside = path.join(root, "Outside.ets"),
+        rejected: string[][] = [];
+      try {
+        for (const file of declarations)
+          write(file, "declare const value: number;\n");
+        atomicWrite(outside, "export const value: number = 1;\n");
+        for (const file of [...declarations, outside, "../Outside.ets"]) {
+          for (const files of [[file], [valid, file]]) {
+            await assert.rejects(
+              runtime.call("arkts_check", { project_path, files }),
+              {
+                code: "CHECK_SOURCE_INVALID",
+              },
+            );
+            rejected.push(files);
+          }
+        }
+        assert.deepEqual(
+          runtime.store.db.prepare("SELECT * FROM native_directories").all(),
+          [],
+        );
+        return { rejected, repaired: clean(await check({ files: [valid] })) };
+      } finally {
+        for (const file of declarations)
+          fs.rmSync(path.join(project_path, file), { force: true });
+        fs.rmSync(outside, { force: true });
+      }
+    },
+  );
   await observe("hms_kit_is_loaded_before_sdk_initialization", async () => {
     assert.ok(
       fs.existsSync(
@@ -450,6 +491,359 @@ try {
       write(profile, original);
     }
   });
+  await observe(
+    "metadata_permissions_resources_and_router_repair",
+    async () => {
+      const manifestFile = "entry/src/main/module.json5",
+        manifestText = fs.readFileSync(
+          path.join(project_path, manifestFile),
+          "utf8",
+        ),
+        moduleConfig = z
+          .object({ module: z.record(z.string(), z.unknown()) })
+          .passthrough()
+          .parse(readObject(path.join(project_path, manifestFile))),
+        resourceFile = "entry/src/main/resources/base/element/canary.json",
+        routeFile = "entry/src/main/resources/base/profile/canary_routes.json",
+        pageFile = "entry/src/main/ets/pages/RouteCanary.ets",
+        invalidResourceDir = "entry/src/main/resources/base/rawfile";
+      const results: unknown[] = [];
+      const expect = async (rule: string) => {
+        const result = await check();
+        assert.equal(result.success, false);
+        assert.ok(
+          result.diagnostics.some((row) => row.rule === rule),
+          JSON.stringify(result),
+        );
+        results.push({ rule, result });
+      };
+      try {
+        moduleConfig.module.requestPermissions = [
+          { name: "ohos.permission.DEVECO_MISSING_CANARY" },
+        ];
+        write(manifestFile, JSON.stringify(moduleConfig));
+        await expect("permission-name-exists");
+        moduleConfig.module.requestPermissions = [
+          {
+            name: "ohos.permission.CAMERA",
+            usedScene: { abilities: ["EntryAbility"], when: "inuse" },
+          },
+        ];
+        write(manifestFile, JSON.stringify(moduleConfig));
+        await expect("permission-reason-required");
+        moduleConfig.module.requestPermissions = [
+          {
+            name: "ohos.permission.CAMERA",
+            reason: "$string:canary_camera",
+            usedScene: { abilities: ["EntryAbility"], when: "inuse" },
+          },
+        ];
+        write(manifestFile, JSON.stringify(moduleConfig));
+        await expect("permission-reason-resource");
+        write(
+          resourceFile,
+          JSON.stringify({
+            string: [
+              { name: "canary_camera", value: "Acceptance camera reason" },
+            ],
+          }),
+        );
+        results.push({ repaired_permissions: clean(await check()) });
+        fs.mkdirSync(path.join(project_path, invalidResourceDir));
+        await expect("resource-dir-name");
+        fs.rmdirSync(path.join(project_path, invalidResourceDir));
+        moduleConfig.module.routerMap = "$profile:canary_routes";
+        write(manifestFile, JSON.stringify(moduleConfig));
+        write(
+          routeFile,
+          JSON.stringify({
+            routerMap: [
+              {
+                name: "detail",
+                pageSource: "src/main/ets/pages/RouteCanary.ets",
+                buildFunction: "routeBuilder",
+              },
+            ],
+          }),
+        );
+        await expect("route-map-schema");
+        write(
+          routeFile,
+          JSON.stringify({
+            routerMap: [
+              {
+                name: "detail",
+                pageSourceFile: "src/main/ets/pages/RouteCanary.ets",
+                buildFunction: "routeBuilder",
+              },
+            ],
+          }),
+        );
+        write(pageFile, "export function routeBuilder(): void {}\n");
+        await expect("route-map-build-function-missing");
+        write(
+          pageFile,
+          "@Builder export function routeBuilder() { NavDestination() { Text('route') } }\n",
+        );
+        results.push({ repaired_route: clean(await check()) });
+        return results;
+      } finally {
+        write(manifestFile, manifestText);
+        for (const file of [resourceFile, routeFile, pageFile])
+          fs.rmSync(path.join(project_path, file), { force: true });
+        if (fs.existsSync(path.join(project_path, invalidResourceDir)))
+          fs.rmdirSync(path.join(project_path, invalidResourceDir));
+      }
+    },
+  );
+  await observe(
+    "arkui_ast_decorators_entry_count_and_event_scopes",
+    async () => {
+      const file = "entry/src/main/ets/RuleCanary.ets",
+        index = "entry/src/main/ets/pages/Index.ets",
+        original = fs.readFileSync(path.join(project_path, index), "utf8");
+      try {
+        write(
+          index,
+          original.replace(/@Entry\b/, "/* @Entry is not a declaration */"),
+        );
+        const entry = await check();
+        assert.ok(
+          entry.diagnostics.some((row) => row.rule === "page-entry-count"),
+          JSON.stringify(entry),
+        );
+        write(index, original);
+        write(
+          file,
+          "@ComponentV2 struct RuleCanary { @State count: number = 0; build() { Column() { Text('rule') } } }\n",
+        );
+        const mismatch = await check({ files: [file] });
+        assert.ok(
+          mismatch.diagnostics.some(
+            (row) => row.rule === "component-decorator-version-mismatch",
+          ),
+          JSON.stringify(mismatch),
+        );
+        write(
+          file,
+          "@ComponentV2 struct RuleCanary { @Local count: number = 0; build() { Column() { Text('rule').onClick(() => { const next: number = 1; this.count = next; }); } } }\n",
+        );
+        const repaired = clean(await check({ files: [file] }));
+        write(
+          file,
+          "@ComponentV2 struct RuleCanary { build() { Column() { ForEach([1], (item: number) => { const doubled: number = item * 2; Text(doubled.toString()).onClick(() => { const valid: number = 1; }); }); } } }\n",
+        );
+        const uiOnly = await check({ files: [file] });
+        assert.equal(
+          uiOnly.diagnostics.filter(
+            (row) => row.rule === "builder-body-ui-only",
+          ).length,
+          1,
+          JSON.stringify(uiOnly),
+        );
+        return { entry, mismatch, repaired, uiOnly };
+      } finally {
+        write(index, original);
+        fs.rmSync(path.join(project_path, file), { force: true });
+      }
+    },
+  );
+  await observe("app_resource_ast_reports_only_real_references", async () => {
+    const file = "entry/src/main/ets/AppResourceCanary.ets";
+    try {
+      write(
+        file,
+        "// $r('app.string.missing_comment')\nexport const text: string = \"$r('app.string.missing_literal')\";\n",
+      );
+      const comments = clean(await check({ files: [file] }));
+      write(
+        file,
+        "export const name: Resource = $r('app.string.deveco_missing_resource');\n",
+      );
+      const missing = await check({ files: [file] });
+      assert.equal(
+        missing.diagnostics.filter(
+          (row) => row.rule === "app-resource-name-check",
+        ).length,
+        1,
+      );
+      write(
+        file,
+        "export const name: Resource = $r('app.string.module_desc');\n",
+      );
+      return {
+        comments,
+        missing,
+        repaired: clean(await check({ files: [file] })),
+      };
+    } finally {
+      fs.rmSync(path.join(project_path, file), { force: true });
+    }
+  });
+  await observe("cross_file_observed_v2_alias_and_storage_repair", async () => {
+    const model = "entry/src/main/ets/ObservedModel.ets",
+      caller = "entry/src/main/ets/ObservedCaller.ets";
+    try {
+      write(
+        model,
+        "@ObservedV2 export class Model { @Trace value: number = 0; }\n",
+      );
+      const source = `import { Model as Alias } from './ObservedModel';
+type ViewModel = Alias;
+@Component struct ObservedCaller {
+  @State model: ViewModel = new Alias();
+  save() { AppStorage.setOrCreate('native-model', this.model); }
+  build() { Column() { Text(this.model.value.toString()) } }
+}
+`;
+      write(caller, source);
+      const invalid = await check({ files: [caller] });
+      for (const rule of [
+        "observed-v2-state-property-type",
+        "appstorage-observedv2-mixing",
+      ])
+        assert.equal(
+          invalid.diagnostics.filter((row) => row.rule === rule).length,
+          1,
+          JSON.stringify(invalid),
+        );
+      assert.ok(
+        invalid.diagnostics.every((row) => row.file === caller),
+        JSON.stringify(invalid),
+      );
+      assert.ok(
+        invalid.diagnostics.every((row) =>
+          [
+            "observed-v2-state-property-type",
+            "appstorage-observedv2-mixing",
+          ].includes(row.rule),
+        ),
+        JSON.stringify(invalid),
+      );
+      write(
+        caller,
+        "import { AppStorageV2 } from '@kit.ArkUI';\n" +
+          source
+            .replace("@Component struct", "@ComponentV2 struct")
+            .replace("@State model", "@Local model")
+            .replace(
+              "AppStorage.setOrCreate('native-model', this.model)",
+              "AppStorageV2.connect(Alias, 'native-model', () => new Alias())",
+            ),
+      );
+      return { invalid, repaired: clean(await check({ files: [caller] })) };
+    } finally {
+      for (const file of [model, caller])
+        fs.rmSync(path.join(project_path, file), { force: true });
+    }
+  });
+  await observe(
+    "cross_file_component_alias_regular_and_local_inputs_repair",
+    async () => {
+      const child = "entry/src/main/ets/InputChild.ets",
+        caller = "entry/src/main/ets/InputCaller.ets";
+      try {
+        const declaration =
+          "@ComponentV2 export struct InputChild { label: string = ''; @Local count: number = 0; build() { Column() { Text(this.label) } } }\n";
+        write(child, declaration);
+        write(
+          caller,
+          "import { InputChild as Alias } from './InputChild';\n@ComponentV2 struct InputCaller { build() { Column() { Alias({ label: 'parent', count: 2 }) } } }\n",
+        );
+        const invalid = await check({ files: [caller] });
+        for (const rule of ["regular-property-init", "local-property-init"])
+          assert.equal(
+            invalid.diagnostics.filter((row) => row.rule === rule).length,
+            1,
+            JSON.stringify(invalid),
+          );
+        write(
+          child,
+          declaration
+            .replace("{ label:", "{ @Param label:")
+            .replace("@Local count", "@Param count"),
+        );
+        return { invalid, repaired: clean(await check({ files: [caller] })) };
+      } finally {
+        for (const file of [child, caller])
+          fs.rmSync(path.join(project_path, file), { force: true });
+      }
+    },
+  );
+  await observe("navigation_content_and_attribute_chain_repair", async () => {
+    const file = "entry/src/main/ets/NavigationContent.ets";
+    try {
+      const source =
+        "@Component struct NavigationContent { build() { Navigation() { Column() { Text('visible home') } }.hideNavBar(true) } }\n";
+      write(file, source);
+      const invalid = await check({ files: [file] });
+      assert.equal(
+        invalid.diagnostics.filter(
+          (row) => row.rule === "hide-nav-bar-hides-content",
+        ).length,
+        1,
+        JSON.stringify(invalid),
+      );
+      write(file, source.replace("hideNavBar", "hideTitleBar"));
+      const repaired = clean(await check({ files: [file] }));
+      write(
+        file,
+        "@Component struct NavigationContent { build() { Navigation() {}.hideNavBar(true) } }\n",
+      );
+      const empty = clean(await check({ files: [file] }));
+      write(file, source.replace("hideNavBar(true)", "hideNavBar(false)"));
+      return {
+        invalid,
+        repaired,
+        empty,
+        visible: clean(await check({ files: [file] })),
+      };
+    } finally {
+      fs.rmSync(path.join(project_path, file), { force: true });
+    }
+  });
+  await observe(
+    "registered_navigation_checks_each_branch_and_repairs_root",
+    async () => {
+      const file = "entry/src/main/ets/NavigationRoute.ets";
+      try {
+        const source =
+          "@Component struct NavigationRoute { stack: NavPathStack = new NavPathStack(); @Builder route(name: string, param: object) { if (name === 'good') { NavDestination() { Text('good') } } else { Column() { Text('bad') } } } build() { Navigation(this.stack) { Text('home') }.navDestination(this.route) } }\n";
+        write(file, source);
+        const invalid = await check({ files: [file] });
+        assert.equal(
+          invalid.diagnostics.filter(
+            (row) => row.rule === "nav-destination-root-node",
+          ).length,
+          1,
+          JSON.stringify(invalid),
+        );
+        write(
+          file,
+          source.replace("else { Column()", "else { NavDestination()"),
+        );
+        const repaired = clean(await check({ files: [file] }));
+        write(
+          file,
+          source.replace(
+            ".navDestination(this.route)",
+            ".navDestination(this.route).width('100%').navDestination(this.route)",
+          ),
+        );
+        const duplicate = await check({ files: [file] });
+        assert.equal(
+          duplicate.diagnostics.filter(
+            (row) => row.rule === "navigation-multiple-navdestination",
+          ).length,
+          1,
+          JSON.stringify(duplicate),
+        );
+        return { invalid, repaired, duplicate };
+      } finally {
+        fs.rmSync(path.join(project_path, file), { force: true });
+      }
+    },
+  );
   await observe("compiled_runtime_and_inputs_remain_identical", async () => {
     const after = evidenceIdentity();
     for (const key of [

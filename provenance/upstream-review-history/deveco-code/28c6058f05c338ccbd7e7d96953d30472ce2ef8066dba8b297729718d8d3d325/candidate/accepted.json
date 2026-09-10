@@ -1,0 +1,73 @@
+{
+  "format": 2,
+  "candidate_sha256": "ab36f28c1f124ac1de0501c12dfd67715a0b1680e536d4051aa78c34d4225ab5",
+  "adaptation_sha256": "5958c23067d23924383e92ecb1c54fbce91515958a55dc9c6cdb9e5fb665119d",
+  "evidence_sha256": "fe79ac0129fe0af06c091322155e5c648851a85fcf4b6a8793861de320548481",
+  "before_lock_sha256": "c33ca8c6d4e226383d9cb485b118eb2dad6f1d460df2a7d6ceab61827c3075ea",
+  "accepted_lock_sha256": "9e8793667adec3903ae414c9dedac5304cd75f07876f8be35ecf2b505201d925",
+  "before_lock": {
+    "format": 1,
+    "sources": [
+      {
+        "id": "deveco-code",
+        "url": "https://gitcode.com/openharmony-sig/deveco-code.git",
+        "ref": "refs/heads/develop",
+        "commit": "325aff05706b9b04a9816a987e9672dda991c630",
+        "tree": "9232f44a15bed9f948662af74f23264b34be457c",
+        "version": "325aff05706b9b04a9816a987e9672dda991c630",
+        "role": "resource_source",
+        "acceptance": "verified"
+      },
+      {
+        "id": "deveco-cli",
+        "url": "https://gitcode.com/openharmony-sig/deveco-cli.git",
+        "ref": "refs/heads/develop",
+        "commit": "08c2f57ffbe83c817d64a728a17971872dd9ddcf",
+        "tree": "36fc532ea8ddb6c4eec3168e6301d0240e61b45d",
+        "version": "1.3.3-Test.1",
+        "role": "protocol_reference",
+        "acceptance": "verified"
+      }
+    ]
+  },
+  "accepted_lock": {
+    "format": 1,
+    "sources": [
+      {
+        "id": "deveco-code",
+        "url": "https://gitcode.com/openharmony-sig/deveco-code.git",
+        "ref": "refs/heads/develop",
+        "commit": "aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a",
+        "tree": "f88b2d20b4a1adf36d8370eb907a162b215d6f4b",
+        "version": "aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a",
+        "role": "resource_source",
+        "acceptance": "verified"
+      },
+      {
+        "id": "deveco-cli",
+        "url": "https://gitcode.com/openharmony-sig/deveco-cli.git",
+        "ref": "refs/heads/develop",
+        "commit": "08c2f57ffbe83c817d64a728a17971872dd9ddcf",
+        "tree": "36fc532ea8ddb6c4eec3168e6301d0240e61b45d",
+        "version": "1.3.3-Test.1",
+        "role": "protocol_reference",
+        "acceptance": "verified"
+      }
+    ]
+  },
+  "tested": {
+    "runtime_sha256": "dbce28a033f405e12231c0545c144e1532895a704fb31714a553dc77b4b7d2b0",
+    "compiled_sha256": "9426918de4ff8d4acd4160ef76d3cdeed1b83707f342b7e7050923055a62d35d",
+    "package_lock_sha256": "fd0ef7a0fbe5e1400049291bc148e8f8a24c7a11d8569df59c6ea8b9d3402386",
+    "resource_manifest_sha256": "039b6e34e2055939b4ec542fdd39cb3e2e0c66958e24a74fc9f5168f6d95636b",
+    "upstream_lock_sha256": "bf3cc411831bd8ce6652a8085c8247c399d0c48b6d73156a7e649b9ef668164e"
+  },
+  "checks": [
+    {
+      "check": "test/native-upstream.test.ts",
+      "report": "checks/8c6a08c419dd34ee4226894f42dcbe537bb21e48822113803ed9e67f69d47e63.json",
+      "sha256": "981690aa794ab7a3bcfd8fd7f274430a75c429d346ea47d56947cb05588093b8",
+      "original_sha256": "ac7f90dbd97259249453e45ac1d46cc4d6a2efd80f62c380a9c9377f20b6903a"
+    }
+  ]
+}

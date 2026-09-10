@@ -45,6 +45,10 @@ export function controlDisplay(node: UiNode): number | undefined {
 /** Resolve once under the device lease; callers can reuse this result for recording and execution. */
 export function resolveControl(input: Control, snapshot?: Snapshot): Control {
   const output = { ...input };
+  if (input.action.startsWith("mouse") || input.action === "text") {
+    invariant(input.window || (input.action !== "text" && input.selector?.bundle_name), "UI_SCOPE_REQUIRED", "Focused text and mouse actions require an explicit application/window scope; never infer the destination from screen coordinates");
+  }
+  if (input.action === "text") invariant(!input.selector && !input.point && !input.gesture && [input.x,input.y,input.x2,input.y2].every(value => value === undefined), "UI_INPUT_CONFLICT", "Focused text uses the current field in the specified window; do not provide coordinates or a selector");
   const relative = !!(input.point || input.gesture),
     endpoints = [input.x, input.y, input.x2, input.y2].some(
       (value) => value !== undefined,
@@ -61,7 +65,7 @@ export function resolveControl(input: Control, snapshot?: Snapshot): Control {
     "UI_WINDOW_REQUIRED",
     "Percentages require a unique selector or an explicit window id or bundle_name",
   );
-  const moving = ["swipe", "fling", "drag"].includes(input.action);
+  const moving = ["swipe", "fling", "drag", "mouseMoveWithTrack", "mouseDrag"].includes(input.action);
   invariant(
     !input.gesture || moving,
     "UI_INPUT_CONFLICT",
@@ -110,6 +114,11 @@ export function resolveControl(input: Control, snapshot?: Snapshot): Control {
       window = windows[0];
       coordinateRect = window.rect!;
       output.display_id = controlDisplay(window) ?? input.display_id;
+    }
+    if (input.action === "text") {
+      const fields = snapshot.nodes.filter(node => node.focused === true && node.enabled !== false && node.visible !== false && /TextInput|TextArea|Search/.test(node.type ?? "") && node.windowId === window?.windowId && node.displayId === window?.displayId && (!input.window?.bundle_name || node.bundleName === input.window.bundle_name));
+      invariant(fields.length === 1, "UI_FOCUS_AMBIGUOUS", `Expected exactly one focused editable field in the selected window, found ${fields.length}. Inspect the window and explicitly focus a field first.`);
+      output.display_id = controlDisplay(fields[0]!) ?? input.display_id;
     }
     if (input.selector) {
       const selector = input.selector;
@@ -207,7 +216,10 @@ export function uiInputArguments(input: Control): string[] {
     "UI_CONTROL_UNRESOLVED",
     "Resolve UI coordinates before constructing a command",
   );
-  const moving = ["swipe", "fling", "drag", "dircFling"].includes(action);
+  const moving = ["swipe", "fling", "drag", "dircFling", "mouseMoveWithTrack", "mouseDrag"].includes(action);
+  const mouse = action.startsWith("mouse");
+  invariant(mouse || [input.button, input.scroll_down, input.ticks, input.mouse_scroll_speed].every(value => value === undefined), "UI_INPUT_CONFLICT", "Mouse fields only apply to mouse actions");
+  if (mouse) { mouseRequest(input); return []; }
   invariant(
     velocity === undefined || moving,
     "UI_INPUT_CONFLICT",
@@ -219,7 +231,7 @@ export function uiInputArguments(input: Control): string[] {
     "Step length only applies to fling",
   );
   invariant(
-    input.text === undefined || action === "inputText",
+    input.text === undefined || ["inputText", "text"].includes(action),
     "UI_INPUT_CONFLICT",
     "Text only applies to inputText",
   );
@@ -236,7 +248,8 @@ export function uiInputArguments(input: Control): string[] {
   const args: string[] = [action];
   if (action === "keyEvent") {
     invariant(input.keys?.length, "UI_KEYS_REQUIRED", "Keys required");
-    const keys = [...input.keys],
+    const aliases: Record<string, string> = { back: "Back", home: "Home", power: "Power" };
+    const keys = input.keys.map(key => aliases[key.toLowerCase()] ?? key),
       named = ["Home", "Back", "Power"].includes(keys[0]!);
     invariant(
       named
@@ -251,6 +264,9 @@ export function uiInputArguments(input: Control): string[] {
     if (!named && targetDisplay !== undefined)
       while (keys.length < 3) keys.push("0");
     args.push(...keys);
+  } else if (action === "text") {
+    invariant(input.text && input.text.isWellFormed() && !/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(input.text) && Buffer.byteLength(input.text) <= 60000, "UI_TEXT_INVALID", "Focused text requires valid Unicode of at most 60000 bytes without unsafe controls");
+    args.push(input.text);
   } else if (action === "dircFling") {
     invariant(
       input.direction !== undefined,
@@ -275,7 +291,7 @@ export function uiInputArguments(input: Control): string[] {
           (n) => Number.isInteger(n) && n > 0 && n <= 2147483647,
         ),
       "UI_COORDINATES_REQUIRED",
-      "UiTest requires positive int32 coordinates",
+      "Use a unique selector or positive x/y coordinates. For the currently focused field use action=text with an explicit window scope.",
     );
     args.push(String(input.x), String(input.y));
     if (moving) {
@@ -328,7 +344,7 @@ export function uiInputArguments(input: Control): string[] {
       args.push(input.text);
     }
   }
-  if (["keyEvent", "dircFling"].includes(action))
+  if (["keyEvent", "dircFling", "text"].includes(action))
     invariant(
       [input.x, input.y, input.x2, input.y2].every(
         (value) => value === undefined,
@@ -338,4 +354,31 @@ export function uiInputArguments(input: Control): string[] {
     );
   if (targetDisplay !== undefined) args.push(String(targetDisplay));
   return args;
+}
+
+
+export function mouseRequest(input: Control) {
+  const actions = ["mouseClick", "mouseDoubleClick", "mouseLongClick", "mouseMoveTo", "mouseScroll", "mouseMoveWithTrack", "mouseDrag"] as const;
+  invariant(actions.some(action => action === input.action), "UI_MOUSE_ACTION_INVALID", "Unknown native mouse action");
+  invariant(!needsControlSnapshot(input), "UI_CONTROL_UNRESOLVED", "Resolve mouse coordinates in its application window first");
+  const point = (x?: number, y?: number) => {
+    invariant(x !== undefined && y !== undefined && [x,y].every(value => Number.isSafeInteger(value) && value > 0 && value <= 2147483647), "UI_COORDINATES_REQUIRED", "Mouse actions require positive int32 coordinates");
+    return { x, y, ...(input.display_id === undefined ? {} : { displayId: input.display_id }) };
+  };
+  invariant(input.text === undefined && input.direction === undefined && input.step_length === undefined, "UI_INPUT_CONFLICT", "Text, directional fling and step length do not apply to mouse actions");
+  const args: unknown[] = [point(input.x, input.y)], moving = ["mouseMoveWithTrack", "mouseDrag"].includes(input.action), click = ["mouseClick", "mouseDoubleClick", "mouseLongClick"].includes(input.action);
+  invariant(moving || input.velocity === undefined, "UI_INPUT_CONFLICT", "Mouse velocity applies only to movement and drag");
+  invariant(click || input.button === undefined, "UI_INPUT_CONFLICT", "Mouse button applies only to click actions");
+  invariant(input.action === "mouseScroll" || [input.scroll_down,input.ticks,input.mouse_scroll_speed].every(value => value === undefined), "UI_INPUT_CONFLICT", "Scroll fields apply only to mouseScroll");
+  invariant(moving || (input.x2 === undefined && input.y2 === undefined), "UI_INPUT_CONFLICT", "Mouse endpoints apply only to movement and drag");
+  invariant(!input.keys || ((click || input.action === "mouseScroll") && input.keys.length <= 2 && input.keys.every(key => /^[1-9]\d*$/.test(key) && Number(key) <= 2147483647)), "UI_KEYS_INVALID", "Mouse modifiers allow up to two positive numeric key codes");
+  if (click) args.push({ left: 0, right: 1, middle: 2 }[input.button ?? "left"], ...(input.keys ?? []).map(Number));
+  else if (input.action === "mouseScroll") {
+    invariant(input.scroll_down !== undefined && input.ticks !== undefined, "UI_SCROLL_REQUIRED", "mouseScroll requires scroll_down and ticks");
+    args.push(input.scroll_down, input.ticks, Number(input.keys?.[0] ?? 0), Number(input.keys?.[1] ?? 0), input.mouse_scroll_speed ?? 20);
+  } else if (moving) {
+    args.push(point(input.x2, input.y2));
+    if (input.velocity !== undefined) args.push(input.velocity);
+  }
+  return { api: `Driver.${input.action}` as `Driver.${typeof actions[number]}`, args };
 }

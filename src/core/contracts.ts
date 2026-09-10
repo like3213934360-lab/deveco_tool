@@ -1,5 +1,9 @@
+import { preflightPolicySchema } from "../services/build-preflight.js";
 import { z } from "zod";
 import { docCatalogNames } from "./doc-catalog.js";
+import { visualAssessmentSchema } from "../services/ui-review.js";
+import { skillManageSchema } from "../services/skills.js";
+import { skillWorkflowSchema } from "../services/skill-workflow.js";
 import {
   emulatorManageSchema,
   emulatorScenarioSchema,
@@ -92,6 +96,8 @@ export const controlSchema = z.strictObject({
     "dircFling",
     "keyEvent",
     "inputText",
+    "text",
+    "mouseClick", "mouseDoubleClick", "mouseLongClick", "mouseMoveTo", "mouseScroll", "mouseMoveWithTrack", "mouseDrag",
   ]),
   x: z.number().int().nonnegative().optional(),
   y: z.number().int().nonnegative().optional(),
@@ -114,6 +120,10 @@ export const controlSchema = z.strictObject({
   point: point.optional(),
   gesture: gesture.optional(),
   text: z.string().min(1).optional(),
+  button: z.enum(["left", "right", "middle"]).optional(),
+  scroll_down: z.boolean().optional(),
+  ticks: z.number().int().min(1).max(1000).optional(),
+  mouse_scroll_speed: z.number().int().min(1).max(500).optional(),
   keys: z
     .array(z.string().regex(/^[A-Za-z0-9_]+$/))
     .min(1)
@@ -155,7 +165,8 @@ export const stepSchema = z.strictObject({
     "assertVisible",
     "assertHidden",
   ]),
-  timeoutMs: z.number().int().min(100).max(600000).default(5000),
+  timeoutMs: z.number().int().min(100).max(600000).default(30000)
+    .describe("Total step deadline including locator sampling, native input and before/after progress evidence; explicit saved deadlines are preserved"),
   selector: meaningfulSelector.optional(),
   alternates: z.array(meaningfulSelector).max(5).optional(),
   point: point.optional(),
@@ -321,6 +332,13 @@ export const appSchema = z.strictObject({
   parameters: wantParametersSchema.optional(),
 });
 export type ApplicationTarget = z.infer<typeof appSchema>;
+export const uiTestStepSchema = z.strictObject({
+  id: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/),
+  goal: z.string().trim().min(1).max(4096),
+  assert: assertionSchema.optional(),
+  review: z.strictObject({ requirement: z.string().trim().min(1).max(4096) }).optional(),
+}).refine(step => !!(step.assert || step.review), "Each step needs a control assertion or a visual requirement");
+export const uiTestPlanSchema = z.array(uiTestStepSchema).min(1).max(100).refine(steps => new Set(steps.map(step => step.id)).size === steps.length, "Step IDs must be unique");
 export const uiTaskSchema = z.discriminatedUnion("kind", [
   z.strictObject({
     kind: z.literal("flow"),
@@ -334,6 +352,7 @@ export const uiTaskSchema = z.discriminatedUnion("kind", [
 ]);
 const buildFields = {
   ...projectFields,
+  preflight: preflightPolicySchema.default({ mode: "check" }).describe("Default: run a fresh full-scope ArkTS preflight and stop on blocking diagnostics before Hvigor. A deliberate manual_override requires its reason and is recorded."),
   modules: z.array(z.string().min(1)).min(1).optional(),
   mode: z.enum(["debug", "release"]).default("debug"),
   clean: z.boolean().default(false),
@@ -510,7 +529,49 @@ const logFields = {
   limit: z.number().int().min(1).max(100).optional(),
 };
 const name = z.string().min(1).max(256);
+const uiFlowFields = {
+  ...projectFields,
+      id: flowIdSchema.optional(),
+      flow: z.unknown().optional(),
+      replace: z.boolean().default(false),
+      target,
+      variables: z.record(z.string(), z.string()).default({}),
+      route: routeRequestSchema.optional(),
+      goal: z.string().trim().min(1).max(512).optional(),
+      name: z.string().trim().min(1).max(256).optional(),
+      recording_id: z.string().uuid().optional(),
+      mode: z.enum(["restart", "attach"]).optional(),
+      parameters: wantParametersSchema.default({}),
+      assert: assertionSchema.optional(),
+      request_key: z.string().min(1).max(256).optional(),
+};
+function uiFlowAction<A extends string>(action: A) {
+  const followup = ["record_status", "record_stop", "record_cancel"].includes(action);
+  const forbidden = (message: string) => z.never({ error: message }).optional();
+  return z.strictObject({
+    ...uiFlowFields,
+    action: z.literal(action),
+    mode: action === "record_start" ? uiFlowFields.mode : forbidden("mode belongs to record_start; run uses the saved flow start mode"),
+    name: action === "record_start" ? z.string().trim().min(1).max(256) : forbidden("name belongs to record_start"),
+    goal: action === "navigate" ? uiFlowFields.goal : forbidden("goal belongs to navigate"),
+    recording_id: followup ? z.string().uuid() : forbidden("recording_id belongs to record_status, record_stop or record_cancel"),
+    id: ["read", "delete", "run", "record_start"].includes(action) ? flowIdSchema : uiFlowFields.id,
+    project_path: followup ? forbidden("Recording follow-ups use the captured project_path") : uiFlowFields.project_path,
+    product: followup ? forbidden("Recording follow-ups use the captured product") : uiFlowFields.product,
+    module_targets: followup ? forbidden("Recording follow-ups use the captured module_targets") : uiFlowFields.module_targets,
+    target: followup ? forbidden("Recording follow-ups use the captured target") : uiFlowFields.target,
+    route: action === "record_start" ? routeRequestSchema : uiFlowFields.route,
+  });
+}
 export const tools = {
+  skill_manage: {
+    description: "Discover/search bundled HarmonyOS Skills and read their full instructions and references over MCP. catalog filters by query; read needs name and optional catalogued file (default SKILL.md). Content includes provenance and digests. All Skills are inside the MCP package; no client directory, installation or activation is required. Use skill_workflow to follow their builtin workflows.",
+    schema: skillManageSchema,
+  },
+  skill_workflow: {
+    description: "Run MCP-owned builtin Skill workflows without any client Skill installation. catalog lists plan/debug/spec/customize/arkts/repair/create/ui_test recipes. start captures kind, absolute project_path and original objective; create accepts a new destination, other kinds require an existing directory. Optional device captures target/bundle_name and is required for ui_test; each state response supplies the current phase's bundled Skills, knowledge, next MCP actions and completion gates. write persists plan.md/spec.md/tasks.md/notes.md with expected_revision. transition follows planning, implementing, verifying, completed or cancelled, recording rationale and applicable evidence_run_ids from native workflows. Completion evidence must match the captured project/device/app and start after the latest implementation phase. Referenced native results stay protected from cleanup and are included in exports. read/list survive restart. Definitions are pinned; changed resources require a fresh run. publish writes a selected document to a new file. Client reasoning, project editing and image understanding are used when the indicated step requires them; no specific AI client is required.",
+    schema: skillWorkflowSchema,
+  },
   workflow_catalog: {
     description:
       "Read deterministic workflow input schemas, required capabilities and completion criteria.",
@@ -521,7 +582,7 @@ export const tools = {
   },
   workflow_run: {
     description:
-      "Persist and start a workflow, inspect it, resume an interrupted run, cancel, or read an artifact. read_artifact defaults to base64 pages; as=image returns a complete PNG/JPEG as MCP image content (at most 8 MiB), without offset/limit. Start requires a catalog workflow and validated input. Status waits at most 20 seconds.",
+      "Persist/start, list, inspect, resume or cancel a workflow and read its artifacts. Storage recovery: capacity forecasts additional_bytes and lists completed cleanup candidates; cleanup_plan previews exact run_ids; export copies their evidence to a new export_directory; cleanup_apply requires the same run_ids and reviewed plan_hash, durably removes them and returns a receipt. Failed/recoverable or active runs are protected. storage_receipt reads a receipt_id. These recovery actions remain available after STATE_CAPACITY. read_artifact defaults to base64 pages; as=image returns PNG/JPEG MCP image content (at most 8 MiB) without pagination. Status waits at most 20 seconds.",
     schema: z
       .strictObject({
         action: z.enum([
@@ -531,6 +592,11 @@ export const tools = {
           "resume",
           "cancel",
           "read_artifact",
+          "capacity",
+          "cleanup_plan",
+          "cleanup_apply",
+          "export",
+          "storage_receipt",
         ]),
         workflow: z.enum(workflowNames).optional(),
         input: z.record(z.string(), z.unknown()).optional(),
@@ -544,6 +610,11 @@ export const tools = {
         as: z.enum(["page", "image"]).default("page"),
         offset: z.number().int().nonnegative().default(0),
         limit: z.number().int().min(1).max(65536).optional(),
+        additional_bytes: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER).optional(),
+        run_ids: z.array(z.string().uuid()).min(1).max(100).optional(),
+        plan_hash: z.string().regex(/^[a-f0-9]{64}$/).optional(),
+        export_directory: z.string().min(1).optional(),
+        receipt_id: z.string().regex(/^(?:[a-f0-9]{64}|[a-f0-9-]{36})$/).optional(),
       })
       .refine(
         (input) =>
@@ -552,7 +623,21 @@ export const tools = {
             input.offset === 0 &&
             input.limit === undefined),
         "as=image requires read_artifact with no pagination",
-      ),
+      ).superRefine((input, ctx) => {
+        const requires = (condition: boolean, field: string, message: string) => {
+          if (!condition) ctx.addIssue({ code: "custom", path: [field], message });
+        };
+        if (["cleanup_plan", "cleanup_apply", "export"].includes(input.action))
+          requires(input.run_ids !== undefined, "run_ids", "Select exact completed run_ids; capacity lists cleanup candidates");
+        if (input.action === "cleanup_apply") requires(input.plan_hash !== undefined, "plan_hash", "Review cleanup_plan and pass its plan_hash");
+        if (input.action === "export") requires(input.export_directory !== undefined, "export_directory", "Select a new export directory outside MCP state");
+        if (input.action === "storage_receipt") requires(input.receipt_id !== undefined, "receipt_id", "Provide the returned receipt_id");
+        for (const [field, actions] of Object.entries({
+          additional_bytes: ["capacity"], run_ids: ["cleanup_plan", "cleanup_apply", "export"],
+          plan_hash: ["cleanup_apply"], export_directory: ["export"], receipt_id: ["storage_receipt"],
+        })) if (input[field as keyof typeof input] !== undefined)
+          requires(actions.includes(input.action), field, `${field} does not apply to ${input.action}`);
+      }),
   },
   harmony_knowledge: {
     description:
@@ -610,21 +695,52 @@ export const tools = {
   },
   lsp: {
     description:
-      "Direct ArkTS language-server hover, definition, implementation, references and diagnostics. Positions are zero based UTF-16 offsets and must lie within the current file. Unsupported server capabilities are reported explicitly.",
-    schema: z.strictObject({
-      ...projectFields,
-      action: z.enum([
-        "hover",
-        "definition",
-        "implementation",
-        "references",
-        "diagnostics",
+      "Native language queries: hover, definition, implementation, references, diagnostics, documentSymbol, workspaceSymbol, prepareCallHierarchy, incomingCalls, outgoingCalls. language defaults to arkts; cpp uses SDK clangd and requires a built CMake translation unit with selected ABI/mode. file selects the synchronized document/server in the chosen project. Positions are zero based UTF-16 offsets; document/workspace symbols do not need positions. workspaceSymbol uses query (empty requests all, bounded results). Call queries re-prepare current source and use item_index (default 0); prepareCallHierarchy lists selectable items. Unsupported capabilities and oversized results are explicit errors, never text-search approximations.",
+    schema: z
+      .strictObject({
+        ...projectFields,
+        action: z.enum([
+          "hover",
+          "definition",
+          "implementation",
+          "references",
+          "diagnostics",
+          "documentSymbol",
+          "workspaceSymbol",
+          "prepareCallHierarchy",
+          "incomingCalls",
+        "outgoingCalls",
       ]),
-      file: z.string().min(1),
-      line: z.number().int().nonnegative().default(0),
-      character: z.number().int().nonnegative().default(0),
-      includeDeclaration: z.boolean().default(false),
-    }),
+      language: z.enum(["arkts", "cpp"]).default("arkts"),
+      abi: z.string().regex(/^[A-Za-z0-9_-]+$/).optional(),
+      mode: z.enum(["debug", "release"]).optional(),
+        file: z.string().min(1),
+        line: z.number().int().nonnegative().default(0),
+        character: z.number().int().nonnegative().default(0),
+        includeDeclaration: z.boolean().default(false),
+        query: z.string().max(4096).optional(),
+        item_index: z.number().int().min(0).max(9999).optional(),
+      })
+      .superRefine((input, ctx) => {
+        if (input.language !== "cpp" && (input.abi !== undefined || input.mode !== undefined))
+          ctx.addIssue({ code: "custom", message: "abi and mode apply only to language=cpp" });
+        if (input.query !== undefined && input.action !== "workspaceSymbol")
+          ctx.addIssue({
+            code: "custom",
+            path: ["query"],
+            message: "query is only used by workspaceSymbol",
+          });
+        if (
+          input.item_index !== undefined &&
+          !["incomingCalls", "outgoingCalls"].includes(input.action)
+        )
+          ctx.addIssue({
+            code: "custom",
+            path: ["item_index"],
+            message:
+              "item_index selects a prepared item for incomingCalls or outgoingCalls",
+          });
+      }),
   },
   arkts_check: {
     description:
@@ -825,40 +941,14 @@ export const tools = {
   ui_flow: {
     description:
       "Inspect declared app routes and saved flows. Run/navigate/record_start persist tasks; use workflow_run for status, resume and cancel. Navigate selects one route, flow ID or goal. Routes require assert; saved flows keep their original assertion. An unmatched goal starts a recording at one exported entry (home, mainElement, then unique ability), returning navigation=recording and recording_id; no replay inputs or assertion are accepted at this point. Ambiguous entries/goals never execute. Record_start needs id, name and ability route. Wait for needs_input, then ui_tap/ui_control records accepted actions. Record_stop needs recording_id and assert; saving follows verification. Input text becomes secret variables; selector repairs require the original assertion to pass.",
-    schema: z.strictObject({
-      ...projectFields,
-      action: z.enum([
-        "list",
-        "read",
-        "validate",
-        "save",
-        "delete",
-        "routes",
-        "run",
-        "navigate",
-        "record_start",
-        "record_status",
-        "record_stop",
-        "record_cancel",
-      ]),
-      id: flowIdSchema.optional(),
-      flow: z.unknown().optional(),
-      replace: z.boolean().default(false),
-      target,
-      variables: z.record(z.string(), z.string()).default({}),
-      route: routeRequestSchema.optional(),
-      goal: z.string().trim().min(1).max(512).optional(),
-      name: z.string().trim().min(1).max(256).optional(),
-      recording_id: z.string().uuid().optional(),
-      mode: z.enum(["restart", "attach"]).optional(),
-      parameters: wantParametersSchema.default({}),
-      assert: assertionSchema.optional(),
-      request_key: z.string().min(1).max(256).optional(),
-    }),
+    schema: z.discriminatedUnion("action", [
+      uiFlowAction("list"), uiFlowAction("read"), uiFlowAction("validate"), uiFlowAction("save"), uiFlowAction("delete"), uiFlowAction("routes"),
+      uiFlowAction("run"), uiFlowAction("navigate"), uiFlowAction("record_start"), uiFlowAction("record_status"), uiFlowAction("record_stop"), uiFlowAction("record_cancel"),
+    ]),
   },
   verify_ui: {
     description:
-      "Poll a final control assertion and/or capture evidence for host visual review. review.requirement is saved with the screenshot; any requested visual review remains required and verified=false. Read its image using workflow_run.read_artifact as=image. Assertion and screenshot are sequential samples under one device lease. A screenshot alone never verifies an outcome.",
+      "Poll a final control assertion and/or capture evidence for host visual review. review.requirement creates a persistent review_id, initially required and verified=false. Read its exact image using workflow_run read_artifact as=image, then submit actual observations using ui_review complete with the returned review read_token and screenshot sha256. A failed control assertion cannot be overridden by visual assessment. Assertion and screenshot are sequential samples under one device lease. A screenshot alone never verifies an outcome.",
     schema: z
       .strictObject({
         target,
@@ -874,6 +964,29 @@ export const tools = {
         (input) => !!(input.assert || input.review),
         "Provide assert or review.requirement",
       ),
+  },
+  ui_review: {
+    description: "Inspect, complete or cancel a persistent visual review. complete requires the exact screenshot artifact_id/sha256, read_token returned when that image was read, and the host's actual observations with passed/failed/insufficient outcome. Completion is immutable and explicitly attributed to host visual assessment, independently of the native control assertion. list uses bounded pagination; no device action is performed.",
+    schema: z.discriminatedUnion("action", [
+      z.strictObject({ action: z.literal("list"), ...pagination }),
+      z.strictObject({ action: z.literal("status"), review_id: z.string().uuid() }),
+      z.strictObject({ action: z.literal("cancel"), review_id: z.string().uuid() }),
+      z.strictObject({ action: z.literal("complete"), review_id: z.string().uuid(), artifact_id: z.string().uuid(), sha256: z.string().regex(/^[a-f0-9]{64}$/), read_token: z.string().uuid(), assessment: visualAssessmentSchema }),
+    ]),
+  },
+  ui_test: {
+    description: "Execute a natural-language UI test as a durable host-guided session. start captures test_plan, app and device and returns test_id/run_id. The host translates the plan into ordered steps with explicit assert/review requirements using plan; resume initializes or inspects the captured app. act executes one scoped native operation with a unique attempt_id and records before/after evidence; it never marks a step passed. check verifies the current step and creates any visual review, completed via ui_review after reading its screenshot. finish succeeds only when all planned requirements pass. Three unchanged captures or action budgets block further actions; replan requires fresh evidence and a changed strategy. Uncertain actions are never replayed by resume. status/cancel survive restart. Use workflow_run artifacts/export for retained evidence.",
+    schema: z.discriminatedUnion("action", [
+      z.strictObject({ action: z.literal("start"), test_plan: z.string().trim().min(1).max(16384), app: appSchema, target, fresh_start: z.boolean().default(false), allowed_bundles: z.array(appSchema.shape.bundle_name).max(16).default([]).describe("Additional explicitly captured application scopes, e.g. a permission dialog; app.bundle_name is always included"), display_id: z.number().int().min(0).max(2147483647).optional(), steps: uiTestPlanSchema.optional(), request_key: z.string().min(1).max(256).optional() }),
+      z.strictObject({ action: z.literal("plan"), test_id: z.string().uuid(), steps: uiTestPlanSchema }),
+      ...["status", "resume", "cancel", "finish"].map(action => z.strictObject({ action: z.literal(action as "status" | "resume" | "cancel" | "finish"), test_id: z.string().uuid() })),
+      z.strictObject({ action: z.literal("check"), test_id: z.string().uuid(), recapture: z.boolean().default(false).describe("Explicitly replace an existing review with fresh evidence after an external or delayed UI change; original requirements remain fixed") }),
+      z.strictObject({ action: z.literal("act"), test_id: z.string().uuid(), step_id: z.string().min(1).max(64), attempt_id: z.string().uuid(), operation: controlSchema }),
+      z.strictObject({ action: z.literal("replan"), test_id: z.string().uuid(), reason: z.string().trim().min(10).max(4096), strategy: z.string().trim().min(10).max(4096), reconcile_uncertain: z.boolean().default(false) }),
+      z.strictObject({ action: z.literal("logs"), test_id: z.string().uuid(), chunk_id: z.number().int().min(0).max(499).optional(), offset: z.number().int().nonnegative().default(0).describe("Offset in matching log lines"), limit: z.number().int().min(1).max(65536).default(16384).describe("Maximum UTF-8 response bytes"), search_keywords: z.array(z.string().min(1).max(256)).max(8).default([]) }),
+      z.strictObject({ action: z.literal("report"), test_id: z.string().uuid() }),
+      z.strictObject({ action: z.literal("export"), test_id: z.string().uuid(), directory: z.string().min(1) }),
+    ]),
   },
   ui_inspect: {
     description:
@@ -894,7 +1007,7 @@ export const tools = {
   },
   ui_control: {
     description:
-      "Send a validated UiTest operation or lossless Unicode input. Use selector or absolute x/y; point/gesture percentages are relative to a unique selector or explicit window id/bundle_name. Display follows the selected node/window; display_id may be explicit. Accepted commands still require verify_ui.",
+      "Send a validated UiTest touch, keyboard, focused-text or mouse operation. text inputs at the currently focused editable field without clicking; it requires an explicit window id/bundle_name and exactly one focused field. Mouse operations require a scoped selector or explicit window and use native Driver RPC. Use selector or absolute x/y; point/gesture percentages are relative to a unique selector or explicit window id/bundle_name. Display follows the selected node/window; display_id may be explicit. Accepted commands still require verify_ui.",
     schema: z.strictObject({ target, operation: controlSchema }),
   },
   emulator_manage: {

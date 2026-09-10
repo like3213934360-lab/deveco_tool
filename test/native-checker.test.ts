@@ -38,6 +38,10 @@ function report(rows = [diagnostic]) {
       source_bytes: 100,
     },
     checks: {
+      project_metadata: "executed",
+      permissions: "unavailable",
+      app_resources: "unavailable",
+      arkui_syntax: "executed",
       sdk: "executed",
       system_resources: "unavailable",
       router_pages: "executed",
@@ -117,12 +121,18 @@ test("explicit static source scope validates every input and deduplicates canoni
   const result = checkerSources(project, [file, "./Explicit.ts"]);
   assert.deepEqual(result.files, [file]);
   assert.equal(result.mode, "files");
+  write("Declared.d.ts");
+  write("Declared.d.ets");
   for (const files of [
     [""],
     [" "],
     ["missing.ets"],
     ["Explicit.js"],
     ["features/手机"],
+    ["Declared.d.ts"],
+    ["Declared.d.ets"],
+    [file, "Declared.d.ts"],
+    ["Declared.d.ets", file],
   ])
     assert.throws(() => checkerSources(project, files), {
       code: "CHECK_SOURCE_INVALID",
@@ -135,10 +145,44 @@ test("explicit static source scope validates every input and deduplicates canoni
     assert.throws(() => checkerSources(project, files), {
       code: "NO_FILES_CHECKED",
     });
+  // An explicit caller outside conventional source roots can still bind its
+  // own declarations; an empty optional sibling index is not an empty check.
+  assert.deepEqual(checkerSources(project, undefined, true).files, []);
+  assert.throws(() => checkerSources(project, [], true), {
+    code: "NO_FILES_CHECKED",
+  });
   write("Oversize.ets", " ".repeat(8 * 1024 * 1024 + 1));
   assert.throws(() => checkerSources(project, ["Oversize.ets"]), {
     code: "CHECK_SOURCE_LIMIT",
   });
+});
+
+test("explicit checker scope rejects sibling paths and directory links outside the project", (t) => {
+  const { project, write } = fixture(t),
+    valid = write("Valid.ets"),
+    sibling = project.root + "-sibling";
+  fs.mkdirSync(sibling);
+  t.after(() => fs.rmSync(sibling, { recursive: true, force: true }));
+  const external = path.join(sibling, "External.ets");
+  atomicWrite(external, "export const value: number = 1;\n");
+  fs.symlinkSync(sibling, path.join(project.root, "linked"), "junction");
+  for (const file of [
+    external,
+    path.relative(project.root, external),
+    "linked/External.ets",
+  ]) {
+    for (const files of [[file], [valid, file]])
+      assert.throws(() => checkerSources(project, files), {
+        code: "CHECK_SOURCE_INVALID",
+      });
+  }
+  // A project opened through an alias still accepts its own canonical sources.
+  const alias = path.join(sibling, "project");
+  fs.symlinkSync(project.root, alias, "junction");
+  assert.deepEqual(
+    checkerSources({ ...project, root: alias }, ["Valid.ets"]).files,
+    [valid],
+  );
 });
 
 test("custom router profiles are checked relative to renamed modules, including TypeScript pages", (t) => {
@@ -339,7 +383,10 @@ test("checker service owns each child's cache, validates exit and report contrac
     service = new DiagnosticService(processes, store, cpu);
   const selected = {
       ...project,
-      modules: project.modules.map((module, index) => ({ ...module, target: index === 0 ? "preview" : "default" })),
+      modules: project.modules.map((module, index) => ({
+        ...module,
+        target: index === 0 ? "preview" : "default",
+      })),
       product: {
         name: "default",
         compatibleSdkVersion: 26,
@@ -357,7 +404,10 @@ test("checker service owns each child's cache, validates exit and report contrac
       module_targets: Record<string, string>;
     };
     assert.equal(input.product, "default");
-    assert.deepEqual(input.module_targets, { "features/手机": "preview", library: "default" });
+    assert.deepEqual(input.module_targets, {
+      "features/手机": "preview",
+      library: "default",
+    });
     assert.ok(
       input.cache_path.startsWith(path.dirname(command.args[2]!) + path.sep),
     );
@@ -376,6 +426,19 @@ test("checker service owns each child's cache, validates exit and report contrac
     };
   });
   try {
+    write("Declaration.d.ets");
+    await assert.rejects(service.arkts(selected, ["Declaration.d.ets"]), {
+      code: "CHECK_SOURCE_INVALID",
+    });
+    assert.equal(
+      caches.size,
+      0,
+      "Invalid explicit scope must not dispatch the checker child",
+    );
+    assert.deepEqual(
+      store.db.prepare("SELECT * FROM native_directories").all(),
+      [],
+    );
     const first = await service.arkts(selected);
     assert.equal((first as { success: boolean }).success, false);
     assert.equal(cpu.metrics.spawned, 0);

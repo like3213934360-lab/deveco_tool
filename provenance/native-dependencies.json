@@ -9,6 +9,7 @@
     "adm-zip",
     "ajv",
     "better-sqlite3",
+    "jpeg-js",
     "json5",
     "koffi",
     "vscode-jsonrpc",

@@ -1,0 +1,203 @@
+{
+  "format": 1,
+  "kind": "multimodule",
+  "passed": true,
+  "tested": {
+    "runtime_sha256": "a512560f81ba2f186e2268fdec7016b7af0405c9b70b73da364a311704d4628f",
+    "compiled_sha256": "a0ac02717921671a087e1fae9b11060c53e9ed3dd51620bc166cfe88d83679b5",
+    "package_lock_sha256": "fd0ef7a0fbe5e1400049291bc148e8f8a24c7a11d8569df59c6ea8b9d3402386",
+    "resource_manifest_sha256": "039b6e34e2055939b4ec542fdd39cb3e2e0c66958e24a74fc9f5168f6d95636b",
+    "upstream_lock_sha256": "ba0c89c6cb7b505b3cb4a62e43fef5057b225e11324b862da1530961328928d0",
+    "node": "v24.14.1",
+    "platform": "darwin",
+    "arch": "arm64",
+    "entrypoint": "dist/scripts/native-multimodule-acceptance.js"
+  },
+  "scope": "Real installed SDK acceptance; limitations and unsupported capabilities remain in the original report and per-operation capability matrix.",
+  "original_sha256": "14fe71b800f52f6908ced3758ce96b93839e9b4ff5d40fed324f11ce4841657a",
+  "executed_tests": [
+    "dist/scripts/native-multimodule-acceptance.js"
+  ],
+  "observations": [
+    {
+      "name": "create_multimodule_fixture",
+      "passed": true
+    },
+    {
+      "name": "default_sync",
+      "passed": true
+    },
+    {
+      "name": "default_assembleHar",
+      "passed": true
+    },
+    {
+      "name": "default_assembleHsp",
+      "passed": true
+    },
+    {
+      "name": "default_assembleHap",
+      "passed": true
+    },
+    {
+      "name": "default_package_set_identity",
+      "passed": true
+    },
+    {
+      "name": "default_default_task_selection",
+      "passed": true
+    },
+    {
+      "name": "default_application_dependency_closure",
+      "passed": true
+    },
+    {
+      "name": "default_cross_module_lsp",
+      "passed": true
+    },
+    {
+      "name": "default_target_static_precheck",
+      "passed": true
+    },
+    {
+      "name": "default_arm64-v8a_cpp_modules",
+      "passed": true
+    },
+    {
+      "name": "default_x86_64_cpp_modules",
+      "passed": true
+    },
+    {
+      "name": "default_preview_sync",
+      "passed": true
+    },
+    {
+      "name": "default_preview_assembleHar",
+      "passed": true
+    },
+    {
+      "name": "default_preview_assembleHsp",
+      "passed": true
+    },
+    {
+      "name": "default_preview_assembleHap",
+      "passed": true
+    },
+    {
+      "name": "default_preview_package_set_identity",
+      "passed": true
+    },
+    {
+      "name": "default_preview_default_task_selection",
+      "passed": true
+    },
+    {
+      "name": "default_preview_application_dependency_closure",
+      "passed": true
+    },
+    {
+      "name": "default_preview_cross_module_lsp",
+      "passed": true
+    },
+    {
+      "name": "default_preview_target_static_precheck",
+      "passed": true
+    },
+    {
+      "name": "default_preview_arm64-v8a_cpp_modules",
+      "passed": true
+    },
+    {
+      "name": "default_preview_x86_64_cpp_modules",
+      "passed": true
+    },
+    {
+      "name": "tablet_sync",
+      "passed": true
+    },
+    {
+      "name": "tablet_assembleHar",
+      "passed": true
+    },
+    {
+      "name": "tablet_assembleHsp",
+      "passed": true
+    },
+    {
+      "name": "tablet_assembleHap",
+      "passed": true
+    },
+    {
+      "name": "tablet_package_set_identity",
+      "passed": true
+    },
+    {
+      "name": "tablet_default_task_selection",
+      "passed": true
+    },
+    {
+      "name": "tablet_application_dependency_closure",
+      "passed": true
+    },
+    {
+      "name": "tablet_cross_module_lsp",
+      "passed": true
+    },
+    {
+      "name": "tablet_target_static_precheck",
+      "passed": true
+    },
+    {
+      "name": "tablet_arm64-v8a_cpp_modules",
+      "passed": true
+    },
+    {
+      "name": "tablet_x86_64_cpp_modules",
+      "passed": true
+    },
+    {
+      "name": "tablet_preview_sync",
+      "passed": true
+    },
+    {
+      "name": "tablet_preview_assembleHar",
+      "passed": true
+    },
+    {
+      "name": "tablet_preview_assembleHsp",
+      "passed": true
+    },
+    {
+      "name": "tablet_preview_assembleHap",
+      "passed": true
+    },
+    {
+      "name": "tablet_preview_package_set_identity",
+      "passed": true
+    },
+    {
+      "name": "tablet_preview_default_task_selection",
+      "passed": true
+    },
+    {
+      "name": "tablet_preview_application_dependency_closure",
+      "passed": true
+    },
+    {
+      "name": "tablet_preview_cross_module_lsp",
+      "passed": true
+    },
+    {
+      "name": "tablet_preview_target_static_precheck",
+      "passed": true
+    },
+    {
+      "name": "tablet_preview_arm64-v8a_cpp_modules",
+      "passed": true
+    },
+    {
+      "name": "tablet_preview_x86_64_cpp_modules",
+      "passed": true
+    }
+  ]
+}

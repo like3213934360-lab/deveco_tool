@@ -152,13 +152,18 @@ async function freePort(): Promise<number> {
   return address.port;
 }
 export async function pasteText(
-  device: DeviceService,
-  target: string,
-  point: { x: number; y: number; displayId?: number },
-  value: string,
-  signal?: AbortSignal,
+  device: DeviceService, target: string, point: { x: number; y: number; displayId?: number }, value: string, signal?: AbortSignal,
 ) {
-  const args = textRequest(point, value);
+  await nativeDriverCall(device, target, "Driver.inputText", textRequest(point, value), signal);
+  return { method: "uitest-forced-paste", commandAccepted: true, outcomeVerified: false };
+}
+
+export async function nativeDriverCall(
+  device: DeviceService, target: string,
+  api: "Driver.inputText" | "Driver.mouseClick" | "Driver.mouseDoubleClick" | "Driver.mouseLongClick" | "Driver.mouseMoveTo" | "Driver.mouseScroll" | "Driver.mouseMoveWithTrack" | "Driver.mouseDrag",
+  args: unknown[], signal?: AbortSignal,
+) {
+  invariant(["Driver.inputText", "Driver.mouseClick", "Driver.mouseDoubleClick", "Driver.mouseLongClick", "Driver.mouseMoveTo", "Driver.mouseScroll", "Driver.mouseMoveWithTrack", "Driver.mouseDrag"].includes(api), "UI_DRIVER_API_INVALID", "Only typed native input APIs are callable");
   const machine = (
     await device.shell(target, ["uname", "-m"], signal)
   ).stdout.trim();
@@ -234,18 +239,18 @@ export async function pasteText(
     );
     const result = await textRpc(
       socket,
-      "Driver.inputText",
+      api,
       driver,
       args,
       signal,
     );
     invariant(
       result === null,
-      "UI_TEXT_UNCONFIRMED",
-      "UiTest did not confirm paste",
+      "UI_ACTION_UNCONFIRMED",
+      `UiTest did not confirm ${api}`,
     );
     return {
-      method: "uitest-forced-paste",
+      method: api,
       commandAccepted: true,
       outcomeVerified: false,
     };

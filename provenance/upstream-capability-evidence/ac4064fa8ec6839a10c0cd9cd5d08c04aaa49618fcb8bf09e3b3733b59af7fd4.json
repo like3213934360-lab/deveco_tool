@@ -1,0 +1,75 @@
+{
+  "format": 1,
+  "kind": "checker",
+  "passed": true,
+  "tested": {
+    "runtime_sha256": "a512560f81ba2f186e2268fdec7016b7af0405c9b70b73da364a311704d4628f",
+    "compiled_sha256": "a0ac02717921671a087e1fae9b11060c53e9ed3dd51620bc166cfe88d83679b5",
+    "package_lock_sha256": "fd0ef7a0fbe5e1400049291bc148e8f8a24c7a11d8569df59c6ea8b9d3402386",
+    "resource_manifest_sha256": "039b6e34e2055939b4ec542fdd39cb3e2e0c66958e24a74fc9f5168f6d95636b",
+    "upstream_lock_sha256": "ba0c89c6cb7b505b3cb4a62e43fef5057b225e11324b862da1530961328928d0",
+    "node": "v24.14.1",
+    "platform": "darwin",
+    "arch": "arm64",
+    "entrypoint": "dist/scripts/native-checker-acceptance.js"
+  },
+  "scope": "Native ArkTS standalone static preflight in an isolated generated project. No compilation, signing, device operation or LSP acceptance.",
+  "original_sha256": "5c0e0ef501c66704a8485ed56ac61b8976d77a97b8d8fff2ceec97a3f8fe8fdc",
+  "executed_tests": [
+    "dist/scripts/native-checker-acceptance.js"
+  ],
+  "observations": [
+    {
+      "name": "clean_project_scope",
+      "passed": true
+    },
+    {
+      "name": "default_scope_excludes_build_scripts_declarations_and_tests",
+      "passed": true
+    },
+    {
+      "name": "typescript_source_and_module_barrel_errors",
+      "passed": true
+    },
+    {
+      "name": "hms_kit_is_loaded_before_sdk_initialization",
+      "passed": true
+    },
+    {
+      "name": "router_missing_malformed_and_repaired",
+      "passed": true
+    },
+    {
+      "name": "resource_ast_ignores_comments_and_strings_but_reports_calls",
+      "passed": true
+    },
+    {
+      "name": "sdk_product_changes_keep_real_compatibility_warnings",
+      "passed": true
+    },
+    {
+      "name": "concurrent_checks_release_distinct_owned_scratch_directories",
+      "passed": true
+    },
+    {
+      "name": "model_version_mismatch_and_repair",
+      "passed": true
+    },
+    {
+      "name": "binding_whitelist_retains_unknown_name_errors",
+      "passed": true
+    },
+    {
+      "name": "large_diagnostics_are_not_truncated_by_child_pipe_exit",
+      "passed": true
+    },
+    {
+      "name": "renamed_unicode_module_and_custom_page",
+      "passed": true
+    },
+    {
+      "name": "compiled_runtime_and_inputs_remain_identical",
+      "passed": true
+    }
+  ]
+}

@@ -333,6 +333,7 @@ export class RecordingService {
         );
         const input = controlSchema.parse(raw),
           controller = new AbortController();
+        invariant(!input.action.startsWith("mouse") && input.action !== "text", "RECORDING_ACTION_UNSUPPORTED", "Saved touch flows cannot represent mouse or focus-preserving text actions. Finish/cancel this recording and use an evidence-tracked UI test; no input was dispatched.");
         const combined = signal
           ? AbortSignal.any([signal, controller.signal])
           : controller.signal;

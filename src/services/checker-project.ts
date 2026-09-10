@@ -10,7 +10,11 @@ type Scope = Pick<Project, "root" | "modules">;
 const sourceExtension = (file: string) => /\.(?:ets|ts)$/.test(file);
 const appSource = (file: string) =>
   sourceExtension(file) && !/\.d\.(?:ets|ts)$/.test(file);
-export function checkerSources(project: Scope, requested?: string[]) {
+export function checkerSources(
+  project: Scope,
+  requested?: string[],
+  allowEmptyDeclarations = false,
+) {
   const roots = project.modules
     .map((module) => path.join(module.root, "src/main/ets"))
     .filter((root) => fs.existsSync(root) && fs.statSync(root).isDirectory());
@@ -34,9 +38,9 @@ export function checkerSources(project: Scope, requested?: string[]) {
         ]
       : requested.map((file) => {
           invariant(
-            file.trim().length > 0 && sourceExtension(file),
+            file.trim().length > 0 && appSource(file),
             "CHECK_SOURCE_INVALID",
-            "Select .ets or .ts source files",
+            "Select .ets or .ts application sources, not .d.ets or .d.ts declarations",
           );
           return path.resolve(project.root, file);
         });
@@ -55,6 +59,15 @@ export function checkerSources(project: Scope, requested?: string[]) {
       `Source is not a readable regular file: ${candidate}`,
     );
     const file = fs.realpathSync.native(candidate);
+    const relative = path.relative(fs.realpathSync.native(project.root), file);
+    invariant(
+      appSource(file) &&
+        !path.isAbsolute(relative) &&
+        relative !== ".." &&
+        !relative.startsWith(`..${path.sep}`),
+      "CHECK_SOURCE_INVALID",
+      "Source files must resolve to application sources inside the selected project",
+    );
     if (seen.has(file)) continue;
     const bytes = fs.statSync(file).size;
     totalBytes += bytes;
@@ -67,7 +80,7 @@ export function checkerSources(project: Scope, requested?: string[]) {
     files.push(file);
   }
   invariant(
-    files.length > 0,
+    files.length > 0 || (allowEmptyDeclarations && requested === undefined),
     "NO_FILES_CHECKED",
     "No source files were selected",
   );
@@ -89,7 +102,10 @@ function profileObject(file: string) {
   return readObject(file);
 }
 /** Invalid or missing declared profiles are project diagnostics, never skipped checks. */
-export function checkerRouterPages(project: Scope): CheckDiagnostic[] {
+export function checkerRouterPages(
+  project: Scope,
+  checkPage?: (file: string) => CheckDiagnostic[],
+): CheckDiagnostic[] {
   const diagnostics: CheckDiagnostic[] = [];
   for (const module of project.modules) {
     const manifest = path.join(module.root, "src/main/module.json5");
@@ -129,13 +145,12 @@ export function checkerRouterPages(project: Scope): CheckDiagnostic[] {
           "Page paths must be relative to the module's ets directory",
         );
         const base = inside(path.join(module.root, "src/main/ets"), page);
-        if (
-          ![".ets", ".ts"].some(
-            (extension) =>
-              fs.existsSync(base + extension) &&
-              fs.statSync(base + extension).isFile(),
-          )
-        )
+        const extension = [".ets", ".ts"].find(
+          (extension) =>
+            fs.existsSync(base + extension) &&
+            fs.statSync(base + extension).isFile(),
+        );
+        if (!extension)
           diagnostics.push({
             file: path.relative(project.root, file),
             line: 1,
@@ -144,6 +159,7 @@ export function checkerRouterPages(project: Scope): CheckDiagnostic[] {
             rule: "page-file-exists",
             message: `Router page not found: ${page}`,
           });
+        else if (checkPage) diagnostics.push(...checkPage(base + extension));
       }
     } catch (error) {
       diagnostics.push({

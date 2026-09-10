@@ -1,3 +1,4 @@
+import { acceptLanguageSymbols, acceptCppSymbols } from "./lib/lsp-symbols.js";
 import { finishAcceptance } from "./lib/acceptance-report.js";
 import fs from "node:fs";
 import path from "node:path";
@@ -261,6 +262,7 @@ try {
       );
       return { empty_hover: true, position_checked: true };
     });
+    await observe("lsp_symbols_and_call_hierarchy", () => acceptLanguageSymbols(runtime, project_path));
     await observe("api_version_catalog", async () => {
       const result = await runtime.call("deveco_doctor", { project_path });
       const api = z
@@ -343,6 +345,7 @@ try {
         );
       }
     });
+    await observe("clangd_symbols_and_call_hierarchy", () => acceptCppSymbols(runtime, project_path));
     const project = runtime.projects.resolve(project_path),
       versionPair = {
         source_version: "HarmonyOS_6.1.1(24)_Release",

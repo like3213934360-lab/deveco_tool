@@ -6,6 +6,8 @@ import { screenshotOptionsSchema } from "../core/contracts.js";
 import { StateStore } from "../core/store.js";
 import { currentTrace } from "../core/trace.js";
 import type { ProcessResult } from "../core/process.js";
+import type { Rect } from "./ui-tree.js";
+import { progressFrameSignature } from "./ui-progress.js";
 
 interface Size {
   width: number;
@@ -148,7 +150,7 @@ export class ScreenshotService {
   close() {
     this.sizes.clear();
   }
-  async capture(target: string, raw: unknown = {}, signal?: AbortSignal) {
+  async capture(target: string, raw: unknown = {}, signal?: AbortSignal, progressScope?: readonly Rect[]) {
     const input = screenshotOptionsSchema.parse(raw);
     return this.store.lease(
       `device:${target}`,
@@ -296,6 +298,11 @@ export class ScreenshotService {
               )
               .digest("hex"),
             unchanged = frame_signature === input.if_changed_from;
+          invariant(!progressScope || input.format === "jpeg", "UI_PROGRESS_IMAGE_INVALID", "Scoped progress captures require JPEG");
+          const progress_signature = progressScope
+            ? progressFrameSignature(await fs.readFile(stream.file), native, output, progressScope)
+            : frame_signature;
+          signal?.throwIfAborted();
           const artifact = unchanged ? undefined : stream.finish();
           if (unchanged) stream.discard();
           return {
@@ -313,6 +320,7 @@ export class ScreenshotService {
             },
             sha256,
             frame_signature,
+            progress_signature,
             unchanged,
             ...(artifact ? { artifact } : {}),
           };

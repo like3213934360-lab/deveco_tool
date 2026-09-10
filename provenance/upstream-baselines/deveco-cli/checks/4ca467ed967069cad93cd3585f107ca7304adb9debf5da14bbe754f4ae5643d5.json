@@ -1,0 +1,15 @@
+{
+  "format": 1,
+  "passed": true,
+  "tested": {
+    "runtime_sha256": "7777d47abd664781e146a688859eb4f03bf9bd82b92a1385394697864c2d8177",
+    "compiled_sha256": "077ef53f6b6a8575fa272e517d66ea107833668a18f7aeb58dffaa135d2212b4",
+    "package_lock_sha256": "9ebb046bdb6d6094bb2eb3d17555bb21f73d8f4ac83f9c396af6a10f9c9f7f95",
+    "resource_manifest_sha256": "039b6e34e2055939b4ec542fdd39cb3e2e0c66958e24a74fc9f5168f6d95636b",
+    "upstream_lock_sha256": "9ea597235ffa9f97a076791d637acd976f8f4c78bcf85ea77de118570708ed3d"
+  },
+  "executed_tests": [
+    "dist/test/native-cloud-profile.test.js"
+  ],
+  "original_sha256": "a9072d0f66931da04842ab5a65fc7d3cc27bb917a5b35288f97461aed09a8b79"
+}

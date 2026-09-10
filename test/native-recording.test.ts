@@ -827,7 +827,7 @@ test("one device has one unfinished recording and status follow-ups cannot retar
             recording_id: id,
             ...override,
           }),
-          { code: "RECORDING_INPUT_INVALID" },
+          { name: "ZodError" },
         );
     await f.runtime.call("ui_flow", {
       action: "record_cancel",

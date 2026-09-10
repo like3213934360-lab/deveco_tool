@@ -1,0 +1,26 @@
+{
+  "format": 1,
+  "kind": "package-lifecycle-device",
+  "passed": true,
+  "tested": {
+    "runtime_sha256": "cd0faac159a1e06db5795b6214161830ada64e7fc5199f84cbcd6912a4978e06",
+    "compiled_sha256": "fa1b92e304ffaeabd9fdb5f7e38998cd026b6aa2862cebdfa45eca4efb077bd2",
+    "package_lock_sha256": "fd0ef7a0fbe5e1400049291bc148e8f8a24c7a11d8569df59c6ea8b9d3402386",
+    "resource_manifest_sha256": "039b6e34e2055939b4ec542fdd39cb3e2e0c66958e24a74fc9f5168f6d95636b",
+    "upstream_lock_sha256": "ba0c89c6cb7b505b3cb4a62e43fef5057b225e11324b862da1530961328928d0"
+  },
+  "scope": "Current native MCP on macOS Node 24 and one isolated HarmonyOS API 26 device: seven consecutive signed 337705223-byte HAP deployments under a fixed 2 GiB budget. No restart, export or manual cleanup between deployments; receipt-confirmed copies automatically released, source HAP unchanged. This does not claim Windows or all device models.",
+  "original_sha256": "c382182243f42995f93409163b89ce1b2c89bcf0cfbf2e89757be283ce848794",
+  "observed": {
+    "deployment_count": 7,
+    "package_bytes": 337705223,
+    "total_deployed_bytes": 2363936561,
+    "budget_bytes": 2147483648,
+    "used_after_seventh": 4741912,
+    "artifact_bytes_after_seventh": 3360,
+    "released_packages": 7,
+    "exported_artifacts": 49,
+    "exported_events": 315,
+    "export_manifest_sha256": "bc73d3f1f195c1124a69f6490c155de9ace55ab4103643d387e971dd22b6bb2c"
+  }
+}

@@ -1,0 +1,119 @@
+{
+  "format": 1,
+  "skills": [
+    {
+      "name": "deveco-arkts-standards",
+      "description": "Write or modify HarmonyOS ArkTS .ets code, port TypeScript, and implement ArkUI components using the selected SDK rules and native checks.",
+      "version": "native-7.2",
+      "upstream": {
+        "url": "https://gitcode.com/openharmony-sig/deveco-code",
+        "commit": "aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a",
+        "path": "packages/opencode/resources/skills/arkts-grammar-standards/SKILL.md",
+        "sha256": "c02bc036141b7ae1bcb235ec69c40d5ad5ab73f24a88da39d83d1ba18ea2372d"
+      },
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "f06d8e7ec5a44b7cb1ba7f316fe82ed20080c95ffa04b489542954a2c0f3c133"
+        }
+      ]
+    },
+    {
+      "name": "deveco-arkts-errors",
+      "description": "Diagnose and repair ArkTS compiler, linter, import/export, component attribute and type errors using native diagnostics and corresponding error cases.",
+      "version": "native-7.2",
+      "upstream": {
+        "url": "https://gitcode.com/openharmony-sig/deveco-code",
+        "commit": "aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a",
+        "path": "packages/opencode/resources/skills/arkts-error-fixes/SKILL.md",
+        "sha256": "580a0cb8c5d1ef5c53d998569adb9a72277b3e8db761534d1b7c3666d3220718"
+      },
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "b704e5482ac16c921e8819dfbc13697fbe0643b4fae553f1789816aa358567b6"
+        }
+      ]
+    },
+    {
+      "name": "deveco-runtime-debug",
+      "description": "Investigate HarmonyOS ArkTS crashes, runtime failures and UI regressions using scoped device logs, retained evidence, hypotheses and verified repairs.",
+      "version": "native-7.2",
+      "upstream": {
+        "url": "https://gitcode.com/openharmony-sig/deveco-code",
+        "commit": "aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a",
+        "path": "packages/opencode/resources/skills/arkts-runtime-fix/SKILL.md",
+        "sha256": "7c8d90017bf6f700a560725f962ebdc52cf329f576ab1d082c13283604905e6d"
+      },
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "81a6692f793c47a232f4d3899f888350fa87e80c0b33c28ef3003201a5b29c59"
+        },
+        {
+          "path": "references/debug-evidence.md",
+          "sha256": "e1dc090a77d75180e962ed30aa7dad87115cef4362802112c00f7112ef66ce54"
+        }
+      ]
+    },
+    {
+      "name": "deveco-project-create",
+      "description": "Create a native HarmonyOS project with SDK-matched templates and implement requested features reachable from its launch page.",
+      "version": "native-7.2",
+      "upstream": {
+        "url": "https://gitcode.com/openharmony-sig/deveco-code",
+        "commit": "aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a",
+        "path": "packages/opencode/resources/skills/deveco-create-project/SKILL.md",
+        "sha256": "01846dd766bee4b69dfbca280e71a113bb799a47e2ecbee2f95512ebd0cbcf26"
+      },
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "2a4acd0b18b2c3cd931ea864b6d682d14f2b5a6e9710426704343ff5f576eeec"
+        }
+      ]
+    },
+    {
+      "name": "deveco-native-tools",
+      "description": "Use native HarmonyOS MCP for device and emulator management, signing, UI inspection/control, natural-language UI tests, evidence recovery and HarmonyOS Skill management.",
+      "version": "native-7.2",
+      "upstream": {
+        "url": "https://gitcode.com/openharmony-sig/deveco-code",
+        "commit": "aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a",
+        "path": "packages/opencode/resources/skills/deveco-cli/SKILL.md",
+        "sha256": "5402476093c5238ef466619f3971d21d54edba494ebc424e2e6581cb2b427ac7"
+      },
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "daaace0ef975ec290dc977a91b31cb05692cbeaaf54002bc4b26b55a56ca933b"
+        },
+        {
+          "path": "references/ui-testing.md",
+          "sha256": "8b0a276457378683727c1a73cf8eda49d5543ae670aaeae78a077cc340fd77f7"
+        }
+      ]
+    },
+    {
+      "name": "deveco-customize-host",
+      "description": "Configure a selected AI client's HarmonyOS MCP connection and project instructions using its supported interfaces and a persistent MCP workflow.",
+      "version": "native-7.2",
+      "upstream": {
+        "url": "https://gitcode.com/openharmony-sig/deveco-code",
+        "commit": "aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a",
+        "path": "packages/opencode/resources/skills/customize-deveco/SKILL.md",
+        "sha256": "a0cafa6989e3d4ba9b11d177bab576c67e0eefa364266ad328c58d4267fdb25c"
+      },
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "590c583da635850efd83165433ed2215738fd75264aaff1592f27ff0bc6cb6ad"
+        },
+        {
+          "path": "references/customization.md",
+          "sha256": "366666d3e61d4b2b06bca320bd36128ca0d9f7170b2583d2905b08d805906cce"
+        }
+      ]
+    }
+  ]
+}

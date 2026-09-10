@@ -198,7 +198,7 @@ test("observation overlaps tree and image reads but retains the device lease unt
     const frame = {
       target: "device", display_id: null, format: "jpeg" as const, mime: "image/jpeg",
       bytes: 100, width: 100, height: 200, native_width: 100, native_height: 200,
-      coordinate_scale: { x: 1, y: 1 }, sha256: "frame", frame_signature: "frame", unchanged: true,
+      coordinate_scale: { x: 1, y: 1 }, sha256: "frame", frame_signature: "frame", progress_signature: "frame", unchanged: true,
     };
     runtime.devices.target = async () => "device";
     runtime.devices.find = async (_target, input, _snapshot, signal) => runtime.store.lease("device:device", async () => {

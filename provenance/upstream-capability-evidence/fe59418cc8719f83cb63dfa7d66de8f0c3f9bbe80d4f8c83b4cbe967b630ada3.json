@@ -1,0 +1,25 @@
+{
+  "format": 1,
+  "kind": "ui-device",
+  "passed": true,
+  "tested": {
+    "runtime_sha256": "cd0faac159a1e06db5795b6214161830ada64e7fc5199f84cbcd6912a4978e06",
+    "compiled_sha256": "fa1b92e304ffaeabd9fdb5f7e38998cd026b6aa2862cebdfa45eca4efb077bd2",
+    "package_lock_sha256": "fd0ef7a0fbe5e1400049291bc148e8f8a24c7a11d8569df59c6ea8b9d3402386",
+    "resource_manifest_sha256": "039b6e34e2055939b4ec542fdd39cb3e2e0c66958e24a74fc9f5168f6d95636b",
+    "upstream_lock_sha256": "ba0c89c6cb7b505b3cb4a62e43fef5057b225e11324b862da1530961328928d0"
+  },
+  "scope": "Current MCP on macOS Node 24 and one isolated HarmonyOS API 26 application. Fixed UI steps, focused Chinese input, native mouse confirmation, owned MCP process killed and resumed without repeated actions, two images actually viewed and assessed by the host, final native assertions, PID-scoped partial logs and a fully hashed export. This does not prove other devices or complete continuous logging.",
+  "original_sha256": "ddcf49c2ed826ce1c9eedd821d5c4e641c3d3957bc0c13ffd5e1e208de5cc805",
+  "observed": {
+    "actions": 3,
+    "reviewed_images": 2,
+    "retained_action_count_on_resume": 2,
+    "exported_artifacts": 103,
+    "exported_events": 359,
+    "log_search_matches": 1,
+    "client_required_unknown_tools": 12,
+    "removed_skill_actions_rejected": 2,
+    "oversized_input_rejected": true
+  }
+}

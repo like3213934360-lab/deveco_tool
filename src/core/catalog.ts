@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { createHash } from "node:crypto";
 import { protocolVersion } from "./config.js";
+import { guidedCatalog } from "../services/skill-guidance.js";
 import {
   tools,
   workflowInputs,
@@ -27,7 +28,7 @@ export const workflowMetadata: Record<
   },
   project_build: {
     description:
-      "Optionally sync, build and validate matching package artifacts.",
+      "Optionally sync, run a fresh ArkTS preflight, stop on blocking diagnostics, then build and validate matching package artifacts.",
     capabilities: ["hvigor"],
     completion:
       "Native compilation succeeds and each reported artifact exists with a digest.",
@@ -41,7 +42,7 @@ export const workflowMetadata: Record<
   },
   build_deploy_verify: {
     description:
-      "Build or hot apply, deploy, execute a saved route and verify an explicit UI assertion.",
+      "Check current ArkTS sources, build or hot apply only after preflight, deploy, execute a saved route and verify an explicit UI assertion.",
     capabilities: ["hvigor", "hdc", "uitest"],
     completion:
       "The specified final UI assertion passes on the captured target.",
@@ -71,6 +72,7 @@ export const workflowMetadata: Record<
 export function workflowCatalog(id?: WorkflowName) {
   return {
     protocol: protocolVersion,
+    skill_workflows: guidedCatalog(),
     workflows: (id ? [id] : workflowNames).map((name) => ({
       id: name,
       ...workflowMetadata[name],

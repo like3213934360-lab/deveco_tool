@@ -1,0 +1,47 @@
+{
+  "format": 1,
+  "kind": "lint",
+  "passed": true,
+  "tested": {
+    "runtime_sha256": "dc2fa6d5f0f461ba5b1a3c3d2f5828b4c8c3c65853dc3da9dc602fb574855eee",
+    "compiled_sha256": "212fee4854b0ad714584cfb74f654674fd5b59c4e3f3a07f2df3373514e2609f",
+    "package_lock_sha256": "9ebb046bdb6d6094bb2eb3d17555bb21f73d8f4ac83f9c396af6a10f9c9f7f95",
+    "resource_manifest_sha256": "039b6e34e2055939b4ec542fdd39cb3e2e0c66958e24a74fc9f5168f6d95636b",
+    "upstream_lock_sha256": "ba0c89c6cb7b505b3cb4a62e43fef5057b225e11324b862da1530961328928d0",
+    "node": "v24.14.1",
+    "platform": "darwin",
+    "arch": "arm64",
+    "entrypoint": "dist/scripts/native-lint-acceptance.js"
+  },
+  "scope": "Native Code Linter on an isolated generated project; explicit fixes modify this canary only. No build, signing or device acceptance.",
+  "original_sha256": "ccfb86577ead01ca851a9c38df8a900cdda703609edb263fe2d3ad6a2dcf163c",
+  "executed_tests": [
+    "dist/scripts/native-lint-acceptance.js"
+  ],
+  "observations": [
+    {
+      "name": "clean_project",
+      "passed": true
+    },
+    {
+      "name": "scoped_findings_and_preview_limit",
+      "passed": true
+    },
+    {
+      "name": "explicit_fix_and_recheck",
+      "passed": true
+    },
+    {
+      "name": "invalid_config_is_execution_failure",
+      "passed": true
+    },
+    {
+      "name": "incremental_requires_git",
+      "passed": true
+    },
+    {
+      "name": "incremental_changed_tracked_file",
+      "passed": true
+    }
+  ]
+}

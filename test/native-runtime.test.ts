@@ -72,7 +72,7 @@ test("MCP catalogs work without SDK discovery, invalid input is rejected, worker
     assert.match(instructions ?? "", /diagnostics first, then project_build/);
     assert.match(instructions ?? "", /explicit successful final assertion/);
     const catalog = await client.listTools();
-    assert.equal(catalog.tools.length, 25);
+    assert.equal(catalog.tools.length, 29);
     assert.ok(catalog.tools.every((tool) => tool.outputSchema));
     const workflows = await client.callTool({
       name: "workflow_catalog",

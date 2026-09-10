@@ -1,0 +1,24 @@
+{
+  "format": 2,
+  "passed": true,
+  "accepted_context": {
+    "runtime_sha256": "7777d47abd664781e146a688859eb4f03bf9bd82b92a1385394697864c2d8177",
+    "compiled_sha256": "077ef53f6b6a8575fa272e517d66ea107833668a18f7aeb58dffaa135d2212b4",
+    "package_lock_sha256": "9ebb046bdb6d6094bb2eb3d17555bb21f73d8f4ac83f9c396af6a10f9c9f7f95",
+    "resource_manifest_sha256": "039b6e34e2055939b4ec542fdd39cb3e2e0c66958e24a74fc9f5168f6d95636b",
+    "upstream_lock_sha256": "9ea597235ffa9f97a076791d637acd976f8f4c78bcf85ea77de118570708ed3d"
+  },
+  "execution_tested": {
+    "runtime_sha256": "ce286ca1518fa1ef98b0be66813660df6a571a9641133132ace340aeecdb0753",
+    "compiled_sha256": "2f1393a46bba5528b98d78bd22733cc1699217e87f88dc181429740589161327",
+    "package_lock_sha256": "68641e488a5099852216d3003664f57dd1d05b980f4c7813ee75dd7baf83d0fc",
+    "resource_manifest_sha256": "563bc3f06565e92c59c621c3ef909a37cbc4ac1db958d3d73d6e0bc99bf9ed86",
+    "upstream_lock_sha256": "bf3cc411831bd8ce6652a8085c8247c399d0c48b6d73156a7e649b9ef668164e"
+  },
+  "executed_tests": [
+    "dist/scripts/native-hot-device-acceptance.js"
+  ],
+  "original_sha256": "91c8971097c4e534a0a24d75b4a8f1f2bad07f7c15607e305e6e4eac75b3ae7c",
+  "check_sha256": "7bc13d6284b3a72bf94f7bae8067d43c8ccfd8d7255a4bdb8c700f9e03361d9a",
+  "prior_attestation_sha256": "f4e8cb0068eed3c465d903a4f57b25fd230adf69ee9682333b87a4897e9bff7b"
+}

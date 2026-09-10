@@ -346,8 +346,10 @@ for (const packageCount of [1, 3])
             count: number;
           }
         ).count,
-        packageCount,
+        0,
       );
+      assert.equal((runtime.store.db.prepare("SELECT COUNT(*) AS count FROM released_packages WHERE run_id=?")
+        .get(run.run_id) as { count: number }).count, packageCount);
       assert.deepEqual(
         runtime.store.db
           .prepare(

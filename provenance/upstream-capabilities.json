@@ -1,0 +1,1391 @@
+{
+  "format": 1,
+  "source": {
+    "url": "https://gitcode.com/openharmony-sig/deveco-code",
+    "commit": "aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a",
+    "registry_file": "packages/opencode/src/tool/registry.ts",
+    "registry_sha256": "b171bf1fa1501d1a1b34a3f74751c0e16c470311326c55d32ed9e6ff7efda110"
+  },
+  "scope": "All registered upstream tools and operations are inventoried. Native SDK/tools and builtin Skill workflows are delivered by MCP; generic client editing/reasoning capabilities are explicit requirements. Per owner decision, client Skill installation is intentionally unsupported because all Skills and knowledge ship within MCP.",
+  "tools": [
+    {
+      "tool": "invalid",
+      "upstream_file": "packages/opencode/src/tool/invalid.ts",
+      "upstream_sha256": "2cc8ba3e9e2422a12eaeec33433ff143fdd27876b98268b9217d0245fed5c0f8",
+      "delivery": "client_required",
+      "operations": [
+        {
+          "id": "execute",
+          "parameters": [
+            "tool",
+            "error"
+          ],
+          "replacement": "MCP schema rejection / structured ToolError",
+          "status": "verified",
+          "targets": [
+            "docs/builtin-skill-workflows.md"
+          ],
+          "tests": [
+            "test/native-upstream-capabilities.test.ts"
+          ],
+          "evidence": [
+            {
+              "file": "provenance/upstream-capability-evidence/3a148460b989930591c5a5930500ee413f2510861ec618e4866fd3895d4c0569.json",
+              "sha256": "3a148460b989930591c5a5930500ee413f2510861ec618e4866fd3895d4c0569",
+              "case": "invalid.execute"
+            }
+          ],
+          "boundary": "Host owns model reasoning and permissions. DevEco Code session internals are not copied. This is a declared client capability requirement, not an MCP-native tool implementation; client-specific behavior requires separate acceptance."
+        }
+      ]
+    },
+    {
+      "tool": "shell",
+      "upstream_file": "packages/opencode/src/tool/shell.ts",
+      "upstream_sha256": "a50b1b15234de6d62f4607103d8d4c5e914a040c75e6a5af2d760b2b5833fb79",
+      "delivery": "client_required",
+      "operations": [
+        {
+          "id": "execute",
+          "parameters": [
+            "command",
+            "timeout",
+            "description",
+            "workdir"
+          ],
+          "replacement": "Client-provided exec_command / write_stdin, scoped workdir",
+          "status": "verified",
+          "targets": [
+            "docs/builtin-skill-workflows.md"
+          ],
+          "tests": [
+            "test/native-upstream-capabilities.test.ts"
+          ],
+          "evidence": [
+            {
+              "file": "provenance/upstream-capability-evidence/3a148460b989930591c5a5930500ee413f2510861ec618e4866fd3895d4c0569.json",
+              "sha256": "3a148460b989930591c5a5930500ee413f2510861ec618e4866fd3895d4c0569",
+              "case": "shell.execute"
+            }
+          ],
+          "boundary": "Host owns model reasoning and permissions. DevEco Code session internals are not copied. This is a declared client capability requirement, not an MCP-native tool implementation; client-specific behavior requires separate acceptance."
+        }
+      ]
+    },
+    {
+      "tool": "read",
+      "upstream_file": "packages/opencode/src/tool/read.ts",
+      "upstream_sha256": "afec8294965cbd9b9e29d3453b682164f0ecdba26574ebc048e9ba21af209c68",
+      "delivery": "client_required",
+      "operations": [
+        {
+          "id": "execute",
+          "parameters": [
+            "filePath",
+            "offset",
+            "limit"
+          ],
+          "replacement": "Client-provided filesystem read / image inspection with bounded content",
+          "status": "verified",
+          "targets": [
+            "docs/builtin-skill-workflows.md"
+          ],
+          "tests": [
+            "test/native-upstream-capabilities.test.ts"
+          ],
+          "evidence": [
+            {
+              "file": "provenance/upstream-capability-evidence/3a148460b989930591c5a5930500ee413f2510861ec618e4866fd3895d4c0569.json",
+              "sha256": "3a148460b989930591c5a5930500ee413f2510861ec618e4866fd3895d4c0569",
+              "case": "read.execute"
+            }
+          ],
+          "boundary": "Host owns model reasoning and permissions. DevEco Code session internals are not copied. This is a declared client capability requirement, not an MCP-native tool implementation; client-specific behavior requires separate acceptance."
+        }
+      ]
+    },
+    {
+      "tool": "glob",
+      "upstream_file": "packages/opencode/src/tool/glob.ts",
+      "upstream_sha256": "a5069377ae916495a72be319d218878136fc13f18551f3e16981d8c692c68a4a",
+      "delivery": "client_required",
+      "operations": [
+        {
+          "id": "execute",
+          "parameters": [
+            "pattern",
+            "path"
+          ],
+          "replacement": "Client-provided rg --files with file glob",
+          "status": "verified",
+          "targets": [
+            "docs/builtin-skill-workflows.md"
+          ],
+          "tests": [
+            "test/native-upstream-capabilities.test.ts"
+          ],
+          "evidence": [
+            {
+              "file": "provenance/upstream-capability-evidence/3a148460b989930591c5a5930500ee413f2510861ec618e4866fd3895d4c0569.json",
+              "sha256": "3a148460b989930591c5a5930500ee413f2510861ec618e4866fd3895d4c0569",
+              "case": "glob.execute"
+            }
+          ],
+          "boundary": "Host owns model reasoning and permissions. DevEco Code session internals are not copied. This is a declared client capability requirement, not an MCP-native tool implementation; client-specific behavior requires separate acceptance."
+        }
+      ]
+    },
+    {
+      "tool": "grep",
+      "upstream_file": "packages/opencode/src/tool/grep.ts",
+      "upstream_sha256": "946dfb2ef25bda7aef5f06308ebccbe0af1777dea6bc8ee54c8803ecab5501d6",
+      "delivery": "client_required",
+      "operations": [
+        {
+          "id": "execute",
+          "parameters": [
+            "pattern",
+            "path",
+            "include"
+          ],
+          "replacement": "Client-provided rg with path and pattern",
+          "status": "verified",
+          "targets": [
+            "docs/builtin-skill-workflows.md"
+          ],
+          "tests": [
+            "test/native-upstream-capabilities.test.ts"
+          ],
+          "evidence": [
+            {
+              "file": "provenance/upstream-capability-evidence/3a148460b989930591c5a5930500ee413f2510861ec618e4866fd3895d4c0569.json",
+              "sha256": "3a148460b989930591c5a5930500ee413f2510861ec618e4866fd3895d4c0569",
+              "case": "grep.execute"
+            }
+          ],
+          "boundary": "Host owns model reasoning and permissions. DevEco Code session internals are not copied. This is a declared client capability requirement, not an MCP-native tool implementation; client-specific behavior requires separate acceptance."
+        }
+      ]
+    },
+    {
+      "tool": "edit",
+      "upstream_file": "packages/opencode/src/tool/edit.ts",
+      "upstream_sha256": "f84d9d242137e1f18ce912188efb7a97b71bf4f255e0a69f16a1fe9d1ff236d4",
+      "delivery": "client_required",
+      "operations": [
+        {
+          "id": "execute",
+          "parameters": [
+            "filePath",
+            "oldString",
+            "newString",
+            "replaceAll"
+          ],
+          "replacement": "Client-provided apply_patch with exact old context",
+          "status": "verified",
+          "targets": [
+            "docs/builtin-skill-workflows.md"
+          ],
+          "tests": [
+            "test/native-upstream-capabilities.test.ts"
+          ],
+          "evidence": [
+            {
+              "file": "provenance/upstream-capability-evidence/3a148460b989930591c5a5930500ee413f2510861ec618e4866fd3895d4c0569.json",
+              "sha256": "3a148460b989930591c5a5930500ee413f2510861ec618e4866fd3895d4c0569",
+              "case": "edit.execute"
+            }
+          ],
+          "boundary": "Host owns model reasoning and permissions. DevEco Code session internals are not copied. This is a declared client capability requirement, not an MCP-native tool implementation; client-specific behavior requires separate acceptance."
+        }
+      ]
+    },
+    {
+      "tool": "write",
+      "upstream_file": "packages/opencode/src/tool/write.ts",
+      "upstream_sha256": "861de91cc67849e138c32a697c8eb1abab8e4912bfd97811ea1866b8e9af4096",
+      "delivery": "client_required",
+      "operations": [
+        {
+          "id": "execute",
+          "parameters": [
+            "filePath",
+            "content"
+          ],
+          "replacement": "Client-provided file creation / apply_patch",
+          "status": "verified",
+          "targets": [
+            "docs/builtin-skill-workflows.md"
+          ],
+          "tests": [
+            "test/native-upstream-capabilities.test.ts"
+          ],
+          "evidence": [
+            {
+              "file": "provenance/upstream-capability-evidence/3a148460b989930591c5a5930500ee413f2510861ec618e4866fd3895d4c0569.json",
+              "sha256": "3a148460b989930591c5a5930500ee413f2510861ec618e4866fd3895d4c0569",
+              "case": "write.execute"
+            }
+          ],
+          "boundary": "Host owns model reasoning and permissions. DevEco Code session internals are not copied. This is a declared client capability requirement, not an MCP-native tool implementation; client-specific behavior requires separate acceptance."
+        }
+      ]
+    },
+    {
+      "tool": "task",
+      "upstream_file": "packages/opencode/src/tool/task.ts",
+      "upstream_sha256": "8d4cd3698590e56b2bb96a2ba02a715325b0b054401b4994cd006c2879d284fe",
+      "delivery": "client_required",
+      "operations": [
+        {
+          "id": "execute",
+          "parameters": [
+            "description",
+            "prompt",
+            "subagent_type",
+            "task_id",
+            "command",
+            "background"
+          ],
+          "replacement": "Client-provided explicitly requested new thread or authorized subagent; no implicit delegation",
+          "status": "verified",
+          "targets": [
+            "docs/builtin-skill-workflows.md"
+          ],
+          "tests": [
+            "test/native-upstream-capabilities.test.ts"
+          ],
+          "evidence": [
+            {
+              "file": "provenance/upstream-capability-evidence/3a148460b989930591c5a5930500ee413f2510861ec618e4866fd3895d4c0569.json",
+              "sha256": "3a148460b989930591c5a5930500ee413f2510861ec618e4866fd3895d4c0569",
+              "case": "task.execute"
+            }
+          ],
+          "boundary": "Host owns model reasoning and permissions. DevEco Code session internals are not copied. This is a declared client capability requirement, not an MCP-native tool implementation; client-specific behavior requires separate acceptance."
+        }
+      ]
+    },
+    {
+      "tool": "webfetch",
+      "upstream_file": "packages/opencode/src/tool/webfetch.ts",
+      "upstream_sha256": "a6bd698ba6b63c255e5868da61d725d770b5333d9f16d09a53bd56e0f8d21e14",
+      "delivery": "client_required",
+      "operations": [
+        {
+          "id": "execute",
+          "parameters": [
+            "url",
+            "format",
+            "timeout"
+          ],
+          "replacement": "Client-provided official web open",
+          "status": "verified",
+          "targets": [
+            "docs/builtin-skill-workflows.md"
+          ],
+          "tests": [
+            "test/native-upstream-capabilities.test.ts"
+          ],
+          "evidence": [
+            {
+              "file": "provenance/upstream-capability-evidence/3a148460b989930591c5a5930500ee413f2510861ec618e4866fd3895d4c0569.json",
+              "sha256": "3a148460b989930591c5a5930500ee413f2510861ec618e4866fd3895d4c0569",
+              "case": "webfetch.execute"
+            }
+          ],
+          "boundary": "Host owns model reasoning and permissions. DevEco Code session internals are not copied. This is a declared client capability requirement, not an MCP-native tool implementation; client-specific behavior requires separate acceptance."
+        }
+      ]
+    },
+    {
+      "tool": "todowrite",
+      "upstream_file": "packages/opencode/src/tool/todo.ts",
+      "upstream_sha256": "cae0288ba0ea707b7b89f9fa366da63da51ea6c0043334e2850b1026e8212dcb",
+      "delivery": "mcp_guided",
+      "operations": [
+        {
+          "id": "execute",
+          "parameters": [
+            "todos[].content",
+            "todos[].status",
+            "todos[].priority"
+          ],
+          "replacement": "skill_workflow documents, phases and retained task records",
+          "status": "verified",
+          "targets": [
+            "docs/builtin-skill-workflows.md",
+            "src/services/skill-guidance.ts",
+            "src/services/skill-workflow.ts"
+          ],
+          "tests": [
+            "test/native-upstream-capabilities.test.ts"
+          ],
+          "evidence": [
+            {
+              "file": "provenance/upstream-capability-evidence/e268f730f8640b9b094960c5b41e4aa48163432057dab9e28a23d7c27378d0b3.json",
+              "sha256": "e268f730f8640b9b094960c5b41e4aa48163432057dab9e28a23d7c27378d0b3",
+              "case": "todowrite.execute"
+            }
+          ],
+          "boundary": "Host owns model reasoning and permissions. DevEco Code session internals are not copied."
+        }
+      ]
+    },
+    {
+      "tool": "websearch",
+      "upstream_file": "packages/opencode/src/tool/websearch.ts",
+      "upstream_sha256": "9f90d653935ee76f6aa79a7f969bc92c772bda2b5ceb8c07e468eedb28e5c7aa",
+      "delivery": "client_required",
+      "operations": [
+        {
+          "id": "execute",
+          "parameters": [
+            "query",
+            "numResults",
+            "livecrawl",
+            "type",
+            "contextMaxCharacters"
+          ],
+          "replacement": "Client-provided web search_query",
+          "status": "verified",
+          "targets": [
+            "docs/builtin-skill-workflows.md"
+          ],
+          "tests": [
+            "test/native-upstream-capabilities.test.ts"
+          ],
+          "evidence": [
+            {
+              "file": "provenance/upstream-capability-evidence/3a148460b989930591c5a5930500ee413f2510861ec618e4866fd3895d4c0569.json",
+              "sha256": "3a148460b989930591c5a5930500ee413f2510861ec618e4866fd3895d4c0569",
+              "case": "websearch.execute"
+            }
+          ],
+          "boundary": "Host owns model reasoning and permissions. DevEco Code session internals are not copied. This is a declared client capability requirement, not an MCP-native tool implementation; client-specific behavior requires separate acceptance."
+        }
+      ]
+    },
+    {
+      "tool": "skill",
+      "upstream_file": "packages/opencode/src/tool/skill.ts",
+      "upstream_sha256": "878fef338770edcde10f6fb15e52feadb78ab1728855da89df59444ecb457bb9",
+      "delivery": "mcp_guided",
+      "operations": [
+        {
+          "id": "list",
+          "parameters": [
+            "name"
+          ],
+          "replacement": "skill_manage catalog/read serves bundled instructions and references over MCP; skill_workflow supplies current-phase guidance, persistent state and native completion gates.",
+          "status": "verified",
+          "targets": [
+            "src/services/skills.ts",
+            "src/services/skill-workflow.ts",
+            "src/services/skill-guidance.ts",
+            "docs/builtin-skill-workflows.md"
+          ],
+          "tests": [
+            "test/native-skills.test.ts",
+            "scripts/native-skill-mcp-acceptance.ts"
+          ],
+          "evidence": [
+            {
+              "file": "provenance/upstream-capability-evidence/e268f730f8640b9b094960c5b41e4aa48163432057dab9e28a23d7c27378d0b3.json",
+              "sha256": "e268f730f8640b9b094960c5b41e4aa48163432057dab9e28a23d7c27378d0b3",
+              "case": "skill.list"
+            }
+          ],
+          "boundary": "No client Skill installation or specific client is required. The client supplies reasoning and any file editing/image understanding required by the step."
+        },
+        {
+          "id": "search",
+          "parameters": [
+            "name"
+          ],
+          "replacement": "skill_manage catalog/read serves bundled instructions and references over MCP; skill_workflow supplies current-phase guidance, persistent state and native completion gates.",
+          "status": "verified",
+          "targets": [
+            "src/services/skills.ts",
+            "src/services/skill-workflow.ts",
+            "src/services/skill-guidance.ts",
+            "docs/builtin-skill-workflows.md"
+          ],
+          "tests": [
+            "test/native-skills.test.ts",
+            "scripts/native-skill-mcp-acceptance.ts"
+          ],
+          "evidence": [
+            {
+              "file": "provenance/upstream-capability-evidence/e268f730f8640b9b094960c5b41e4aa48163432057dab9e28a23d7c27378d0b3.json",
+              "sha256": "e268f730f8640b9b094960c5b41e4aa48163432057dab9e28a23d7c27378d0b3",
+              "case": "skill.search"
+            }
+          ],
+          "boundary": "No client Skill installation or specific client is required. The client supplies reasoning and any file editing/image understanding required by the step."
+        },
+        {
+          "id": "read",
+          "parameters": [
+            "name"
+          ],
+          "replacement": "skill_manage catalog/read serves bundled instructions and references over MCP; skill_workflow supplies current-phase guidance, persistent state and native completion gates.",
+          "status": "verified",
+          "targets": [
+            "src/services/skills.ts",
+            "src/services/skill-workflow.ts",
+            "src/services/skill-guidance.ts",
+            "docs/builtin-skill-workflows.md"
+          ],
+          "tests": [
+            "test/native-skills.test.ts",
+            "scripts/native-skill-mcp-acceptance.ts"
+          ],
+          "evidence": [
+            {
+              "file": "provenance/upstream-capability-evidence/e268f730f8640b9b094960c5b41e4aa48163432057dab9e28a23d7c27378d0b3.json",
+              "sha256": "e268f730f8640b9b094960c5b41e4aa48163432057dab9e28a23d7c27378d0b3",
+              "case": "skill.read"
+            }
+          ],
+          "boundary": "No client Skill installation or specific client is required. The client supplies reasoning and any file editing/image understanding required by the step."
+        },
+        {
+          "id": "install",
+          "parameters": [
+            "name"
+          ],
+          "replacement": "Intentionally unsupported by the new owner-approved architecture. All Skills and knowledge are bundled in MCP, with no client-directory installer or remover.",
+          "status": "verified",
+          "targets": [
+            "src/services/skills.ts",
+            "src/services/skill-workflow.ts",
+            "src/services/skill-guidance.ts",
+            "docs/builtin-skill-workflows.md"
+          ],
+          "tests": [
+            "test/native-skills.test.ts",
+            "scripts/native-skill-mcp-acceptance.ts"
+          ],
+          "evidence": [
+            {
+              "file": "provenance/upstream-capability-evidence/3a148460b989930591c5a5930500ee413f2510861ec618e4866fd3895d4c0569.json",
+              "sha256": "3a148460b989930591c5a5930500ee413f2510861ec618e4866fd3895d4c0569",
+              "case": "skill.install"
+            }
+          ],
+          "boundary": "Explicit user requirement on 2026-09-10 removes optional client Skill installation. Acceptance must prove these actions are absent/rejected and builtin workflows need no client Skill directory."
+        },
+        {
+          "id": "uninstall",
+          "parameters": [
+            "name"
+          ],
+          "replacement": "Intentionally unsupported by the new owner-approved architecture. All Skills and knowledge are bundled in MCP, with no client-directory installer or remover.",
+          "status": "verified",
+          "targets": [
+            "src/services/skills.ts",
+            "src/services/skill-workflow.ts",
+            "src/services/skill-guidance.ts",
+            "docs/builtin-skill-workflows.md"
+          ],
+          "tests": [
+            "test/native-skills.test.ts",
+            "scripts/native-skill-mcp-acceptance.ts"
+          ],
+          "evidence": [
+            {
+              "file": "provenance/upstream-capability-evidence/3a148460b989930591c5a5930500ee413f2510861ec618e4866fd3895d4c0569.json",
+              "sha256": "3a148460b989930591c5a5930500ee413f2510861ec618e4866fd3895d4c0569",
+              "case": "skill.uninstall"
+            }
+          ],
+          "boundary": "Explicit user requirement on 2026-09-10 removes optional client Skill installation. Acceptance must prove these actions are absent/rejected and builtin workflows need no client Skill directory."
+        }
+      ]
+    },
+    {
+      "tool": "apply_patch",
+      "upstream_file": "packages/opencode/src/tool/apply_patch.ts",
+      "upstream_sha256": "fd10da9be5e3f44b1114504020a6630d213089e417e165e36df76f09adce1504",
+      "delivery": "client_required",
+      "operations": [
+        {
+          "id": "execute",
+          "parameters": [
+            "patchText"
+          ],
+          "replacement": "Client-provided apply_patch",
+          "status": "verified",
+          "targets": [
+            "docs/builtin-skill-workflows.md"
+          ],
+          "tests": [
+            "test/native-upstream-capabilities.test.ts"
+          ],
+          "evidence": [
+            {
+              "file": "provenance/upstream-capability-evidence/3a148460b989930591c5a5930500ee413f2510861ec618e4866fd3895d4c0569.json",
+              "sha256": "3a148460b989930591c5a5930500ee413f2510861ec618e4866fd3895d4c0569",
+              "case": "apply_patch.execute"
+            }
+          ],
+          "boundary": "Host owns model reasoning and permissions. DevEco Code session internals are not copied. This is a declared client capability requirement, not an MCP-native tool implementation; client-specific behavior requires separate acceptance."
+        }
+      ]
+    },
+    {
+      "tool": "question",
+      "upstream_file": "packages/opencode/src/tool/question.ts",
+      "upstream_sha256": "15a90d87b9b928d91c1558ba12b229a919c575e79f6af6b6a5809e439f36121e",
+      "delivery": "client_required",
+      "operations": [
+        {
+          "id": "execute",
+          "parameters": [
+            "questions[].question",
+            "questions[].header",
+            "questions[].options",
+            "questions[].multiple"
+          ],
+          "replacement": "Client-provided request_user_input_async or direct concise question",
+          "status": "verified",
+          "targets": [
+            "docs/builtin-skill-workflows.md"
+          ],
+          "tests": [
+            "test/native-upstream-capabilities.test.ts"
+          ],
+          "evidence": [
+            {
+              "file": "provenance/upstream-capability-evidence/3a148460b989930591c5a5930500ee413f2510861ec618e4866fd3895d4c0569.json",
+              "sha256": "3a148460b989930591c5a5930500ee413f2510861ec618e4866fd3895d4c0569",
+              "case": "question.execute"
+            }
+          ],
+          "boundary": "Host owns model reasoning and permissions. DevEco Code session internals are not copied. This is a declared client capability requirement, not an MCP-native tool implementation; client-specific behavior requires separate acceptance."
+        }
+      ]
+    },
+    {
+      "tool": "lsp",
+      "upstream_file": "packages/opencode/src/tool/lsp.ts",
+      "upstream_sha256": "993e1316f12a44cde46eb8af34868a1ea2077a6e4ec749c25ec8b913a2e46da5",
+      "delivery": "native",
+      "operations": [
+        {
+          "id": "goToDefinition",
+          "parameters": [
+            "operation",
+            "filePath",
+            "line (1-based UTF-16)",
+            "character (1-based UTF-16)"
+          ],
+          "replacement": "lsp definition with explicit project_path/file and zero-based UTF-16 line/character; SDK capability checked",
+          "status": "verified",
+          "targets": [
+            "src/services/lsp.ts"
+          ],
+          "tests": [
+            "test/native-lsp.test.ts"
+          ],
+          "evidence": [
+            {
+              "file": "provenance/upstream-capability-evidence/65fcc7566585b361b80096a7ffef183129c96f7b7151b5448f092920b1ad3656.json",
+              "sha256": "65fcc7566585b361b80096a7ffef183129c96f7b7151b5448f092920b1ad3656",
+              "case": "lsp.goToDefinition"
+            }
+          ],
+          "boundary": "Native LSP with explicit zero-based line and UTF-16 character positions; upstream uses one-based input positions. Capabilities are checked per selected SDK; unsupported providers return an explicit error without invented results. Installed SDK 26 ArkTS does not advertise documentSymbol/workspaceSymbol/call hierarchy. SDK clangd supports the first four new operations; outgoingCalls is explicitly unsupported. Verified status records these exact supported and unsupported outcomes."
+        },
+        {
+          "id": "findReferences",
+          "parameters": [
+            "operation",
+            "filePath",
+            "line (1-based UTF-16)",
+            "character (1-based UTF-16)"
+          ],
+          "replacement": "lsp references with explicit project_path/file and zero-based UTF-16 line/character; SDK capability checked",
+          "status": "verified",
+          "targets": [
+            "src/services/lsp.ts"
+          ],
+          "tests": [
+            "test/native-lsp.test.ts"
+          ],
+          "evidence": [
+            {
+              "file": "provenance/upstream-capability-evidence/65fcc7566585b361b80096a7ffef183129c96f7b7151b5448f092920b1ad3656.json",
+              "sha256": "65fcc7566585b361b80096a7ffef183129c96f7b7151b5448f092920b1ad3656",
+              "case": "lsp.findReferences"
+            }
+          ],
+          "boundary": "Native LSP with explicit zero-based line and UTF-16 character positions; upstream uses one-based input positions. Capabilities are checked per selected SDK; unsupported providers return an explicit error without invented results. Installed SDK 26 ArkTS does not advertise documentSymbol/workspaceSymbol/call hierarchy. SDK clangd supports the first four new operations; outgoingCalls is explicitly unsupported. Verified status records these exact supported and unsupported outcomes."
+        },
+        {
+          "id": "hover",
+          "parameters": [
+            "operation",
+            "filePath",
+            "line (1-based UTF-16)",
+            "character (1-based UTF-16)"
+          ],
+          "replacement": "lsp hover with explicit project_path/file and zero-based UTF-16 line/character; SDK capability checked",
+          "status": "verified",
+          "targets": [
+            "src/services/lsp.ts"
+          ],
+          "tests": [
+            "test/native-lsp.test.ts"
+          ],
+          "evidence": [
+            {
+              "file": "provenance/upstream-capability-evidence/65fcc7566585b361b80096a7ffef183129c96f7b7151b5448f092920b1ad3656.json",
+              "sha256": "65fcc7566585b361b80096a7ffef183129c96f7b7151b5448f092920b1ad3656",
+              "case": "lsp.hover"
+            }
+          ],
+          "boundary": "Native LSP with explicit zero-based line and UTF-16 character positions; upstream uses one-based input positions. Capabilities are checked per selected SDK; unsupported providers return an explicit error without invented results. Installed SDK 26 ArkTS does not advertise documentSymbol/workspaceSymbol/call hierarchy. SDK clangd supports the first four new operations; outgoingCalls is explicitly unsupported. Verified status records these exact supported and unsupported outcomes."
+        },
+        {
+          "id": "documentSymbol",
+          "parameters": [
+            "operation",
+            "filePath",
+            "line (1-based UTF-16)",
+            "character (1-based UTF-16)"
+          ],
+          "replacement": "lsp documentSymbol with explicit project_path/file and zero-based UTF-16 line/character; SDK capability checked",
+          "status": "verified",
+          "targets": [
+            "src/services/lsp.ts"
+          ],
+          "tests": [
+            "test/native-lsp.test.ts"
+          ],
+          "evidence": [
+            {
+              "file": "provenance/upstream-capability-evidence/65fcc7566585b361b80096a7ffef183129c96f7b7151b5448f092920b1ad3656.json",
+              "sha256": "65fcc7566585b361b80096a7ffef183129c96f7b7151b5448f092920b1ad3656",
+              "case": "lsp.documentSymbol"
+            }
+          ],
+          "boundary": "Native LSP with explicit zero-based line and UTF-16 character positions; upstream uses one-based input positions. Capabilities are checked per selected SDK; unsupported providers return an explicit error without invented results. Installed SDK 26 ArkTS does not advertise documentSymbol/workspaceSymbol/call hierarchy. SDK clangd supports the first four new operations; outgoingCalls is explicitly unsupported. Verified status records these exact supported and unsupported outcomes."
+        },
+        {
+          "id": "workspaceSymbol",
+          "parameters": [
+            "operation",
+            "filePath",
+            "line (1-based UTF-16)",
+            "character (1-based UTF-16)",
+            "query"
+          ],
+          "replacement": "lsp workspaceSymbol with explicit project_path/file and zero-based UTF-16 line/character; SDK capability checked",
+          "status": "verified",
+          "targets": [
+            "src/services/lsp.ts"
+          ],
+          "tests": [
+            "test/native-lsp.test.ts"
+          ],
+          "evidence": [
+            {
+              "file": "provenance/upstream-capability-evidence/65fcc7566585b361b80096a7ffef183129c96f7b7151b5448f092920b1ad3656.json",
+              "sha256": "65fcc7566585b361b80096a7ffef183129c96f7b7151b5448f092920b1ad3656",
+              "case": "lsp.workspaceSymbol"
+            }
+          ],
+          "boundary": "Native LSP with explicit zero-based line and UTF-16 character positions; upstream uses one-based input positions. Capabilities are checked per selected SDK; unsupported providers return an explicit error without invented results. Installed SDK 26 ArkTS does not advertise documentSymbol/workspaceSymbol/call hierarchy. SDK clangd supports the first four new operations; outgoingCalls is explicitly unsupported. Verified status records these exact supported and unsupported outcomes."
+        },
+        {
+          "id": "goToImplementation",
+          "parameters": [
+            "operation",
+            "filePath",
+            "line (1-based UTF-16)",
+            "character (1-based UTF-16)"
+          ],
+          "replacement": "lsp implementation with explicit project_path/file and zero-based UTF-16 line/character; SDK capability checked",
+          "status": "verified",
+          "targets": [
+            "src/services/lsp.ts"
+          ],
+          "tests": [
+            "test/native-lsp.test.ts"
+          ],
+          "evidence": [
+            {
+              "file": "provenance/upstream-capability-evidence/65fcc7566585b361b80096a7ffef183129c96f7b7151b5448f092920b1ad3656.json",
+              "sha256": "65fcc7566585b361b80096a7ffef183129c96f7b7151b5448f092920b1ad3656",
+              "case": "lsp.goToImplementation"
+            }
+          ],
+          "boundary": "Native LSP with explicit zero-based line and UTF-16 character positions; upstream uses one-based input positions. Capabilities are checked per selected SDK; unsupported providers return an explicit error without invented results. Installed SDK 26 ArkTS does not advertise documentSymbol/workspaceSymbol/call hierarchy. SDK clangd supports the first four new operations; outgoingCalls is explicitly unsupported. Verified status records these exact supported and unsupported outcomes."
+        },
+        {
+          "id": "prepareCallHierarchy",
+          "parameters": [
+            "operation",
+            "filePath",
+            "line (1-based UTF-16)",
+            "character (1-based UTF-16)"
+          ],
+          "replacement": "lsp prepareCallHierarchy with explicit project_path/file and zero-based UTF-16 line/character; SDK capability checked",
+          "status": "verified",
+          "targets": [
+            "src/services/lsp.ts"
+          ],
+          "tests": [
+            "test/native-lsp.test.ts"
+          ],
+          "evidence": [
+            {
+              "file": "provenance/upstream-capability-evidence/65fcc7566585b361b80096a7ffef183129c96f7b7151b5448f092920b1ad3656.json",
+              "sha256": "65fcc7566585b361b80096a7ffef183129c96f7b7151b5448f092920b1ad3656",
+              "case": "lsp.prepareCallHierarchy"
+            }
+          ],
+          "boundary": "Native LSP with explicit zero-based line and UTF-16 character positions; upstream uses one-based input positions. Capabilities are checked per selected SDK; unsupported providers return an explicit error without invented results. Installed SDK 26 ArkTS does not advertise documentSymbol/workspaceSymbol/call hierarchy. SDK clangd supports the first four new operations; outgoingCalls is explicitly unsupported. Verified status records these exact supported and unsupported outcomes."
+        },
+        {
+          "id": "incomingCalls",
+          "parameters": [
+            "operation",
+            "filePath",
+            "line (1-based UTF-16)",
+            "character (1-based UTF-16)"
+          ],
+          "replacement": "lsp incomingCalls with explicit project_path/file and zero-based UTF-16 line/character; SDK capability checked",
+          "status": "verified",
+          "targets": [
+            "src/services/lsp.ts"
+          ],
+          "tests": [
+            "test/native-lsp.test.ts"
+          ],
+          "evidence": [
+            {
+              "file": "provenance/upstream-capability-evidence/65fcc7566585b361b80096a7ffef183129c96f7b7151b5448f092920b1ad3656.json",
+              "sha256": "65fcc7566585b361b80096a7ffef183129c96f7b7151b5448f092920b1ad3656",
+              "case": "lsp.incomingCalls"
+            }
+          ],
+          "boundary": "Native LSP with explicit zero-based line and UTF-16 character positions; upstream uses one-based input positions. Capabilities are checked per selected SDK; unsupported providers return an explicit error without invented results. Installed SDK 26 ArkTS does not advertise documentSymbol/workspaceSymbol/call hierarchy. SDK clangd supports the first four new operations; outgoingCalls is explicitly unsupported. Verified status records these exact supported and unsupported outcomes."
+        },
+        {
+          "id": "outgoingCalls",
+          "parameters": [
+            "operation",
+            "filePath",
+            "line (1-based UTF-16)",
+            "character (1-based UTF-16)"
+          ],
+          "replacement": "lsp outgoingCalls with explicit project_path/file and zero-based UTF-16 line/character; SDK capability checked",
+          "status": "verified",
+          "targets": [
+            "src/services/lsp.ts"
+          ],
+          "tests": [
+            "test/native-lsp.test.ts"
+          ],
+          "evidence": [
+            {
+              "file": "provenance/upstream-capability-evidence/65fcc7566585b361b80096a7ffef183129c96f7b7151b5448f092920b1ad3656.json",
+              "sha256": "65fcc7566585b361b80096a7ffef183129c96f7b7151b5448f092920b1ad3656",
+              "case": "lsp.outgoingCalls"
+            }
+          ],
+          "boundary": "Native LSP with explicit zero-based line and UTF-16 character positions; upstream uses one-based input positions. Capabilities are checked per selected SDK; unsupported providers return an explicit error without invented results. Installed SDK 26 ArkTS does not advertise documentSymbol/workspaceSymbol/call hierarchy. SDK clangd supports the first four new operations; outgoingCalls is explicitly unsupported. Verified status records these exact supported and unsupported outcomes."
+        }
+      ]
+    },
+    {
+      "tool": "plan_exit",
+      "upstream_file": "packages/opencode/src/tool/plan.ts",
+      "upstream_sha256": "09b5e63be9c69fc3b705e2599c7e32ab4253f4e5cb042d7e548eb6e60a2f956d",
+      "delivery": "mcp_guided",
+      "operations": [
+        {
+          "id": "execute",
+          "parameters": [],
+          "replacement": "skill_workflow transition phase=implementing with expected_revision and rationale",
+          "status": "verified",
+          "targets": [
+            "src/services/skill-workflow.ts",
+            "docs/builtin-skill-workflows.md",
+            "src/services/skill-guidance.ts"
+          ],
+          "tests": [
+            "test/native-skill-workflow.test.ts"
+          ],
+          "evidence": [
+            {
+              "file": "provenance/upstream-capability-evidence/e268f730f8640b9b094960c5b41e4aa48163432057dab9e28a23d7c27378d0b3.json",
+              "sha256": "e268f730f8640b9b094960c5b41e4aa48163432057dab9e28a23d7c27378d0b3",
+              "case": "plan_exit.execute"
+            }
+          ],
+          "boundary": "Records a transition under existing user authorization. Does not switch The MCP client system mode or synthesize user approval."
+        }
+      ]
+    },
+    {
+      "tool": "plan_write",
+      "upstream_file": "packages/opencode/src/tool/plan.ts",
+      "upstream_sha256": "09b5e63be9c69fc3b705e2599c7e32ab4253f4e5cb042d7e548eb6e60a2f956d",
+      "delivery": "mcp_guided",
+      "operations": [
+        {
+          "id": "execute",
+          "parameters": [
+            "content"
+          ],
+          "replacement": "skill_workflow write name=plan.md with expected_revision; publish to an explicitly selected new file",
+          "status": "verified",
+          "targets": [
+            "src/services/skill-workflow.ts",
+            "docs/builtin-skill-workflows.md",
+            "src/services/skill-guidance.ts"
+          ],
+          "tests": [
+            "test/native-skill-workflow.test.ts"
+          ],
+          "evidence": [
+            {
+              "file": "provenance/upstream-capability-evidence/e268f730f8640b9b094960c5b41e4aa48163432057dab9e28a23d7c27378d0b3.json",
+              "sha256": "e268f730f8640b9b094960c5b41e4aa48163432057dab9e28a23d7c27378d0b3",
+              "case": "plan_write.execute"
+            }
+          ],
+          "boundary": "Encrypted versioned document with controlled output ownership; the host writes the plan and judges its content."
+        }
+      ]
+    },
+    {
+      "tool": "plan_enter",
+      "upstream_file": "packages/opencode/src/tool/plan.ts",
+      "upstream_sha256": "09b5e63be9c69fc3b705e2599c7e32ab4253f4e5cb042d7e548eb6e60a2f956d",
+      "delivery": "mcp_guided",
+      "operations": [
+        {
+          "id": "execute",
+          "parameters": [],
+          "replacement": "skill_workflow start kind=plan captures objective, project and planning phase",
+          "status": "verified",
+          "targets": [
+            "src/services/skill-workflow.ts",
+            "docs/builtin-skill-workflows.md",
+            "src/services/skill-guidance.ts"
+          ],
+          "tests": [
+            "test/native-skill-workflow.test.ts"
+          ],
+          "evidence": [
+            {
+              "file": "provenance/upstream-capability-evidence/e268f730f8640b9b094960c5b41e4aa48163432057dab9e28a23d7c27378d0b3.json",
+              "sha256": "e268f730f8640b9b094960c5b41e4aa48163432057dab9e28a23d7c27378d0b3",
+              "case": "plan_enter.execute"
+            }
+          ],
+          "boundary": "Tracks an authorized host planning workflow. Does not switch The MCP client system mode or synthesize user approval."
+        }
+      ]
+    },
+    {
+      "tool": "spec_write",
+      "upstream_file": "packages/opencode/src/tool/spec.ts",
+      "upstream_sha256": "4b91a7ede6da5a747ab5256a30a661e9b614646d12d56af464785b2dc6edd8a9",
+      "delivery": "mcp_guided",
+      "operations": [
+        {
+          "id": "spec",
+          "parameters": [
+            "filePath",
+            "content"
+          ],
+          "replacement": "skill_workflow kind=spec write spec.md/plan.md/tasks.md; validate sections, task completion and native evidence",
+          "status": "verified",
+          "targets": [
+            "src/services/skill-workflow.ts",
+            "docs/builtin-skill-workflows.md",
+            "src/services/skill-guidance.ts"
+          ],
+          "tests": [
+            "test/native-skill-workflow.test.ts"
+          ],
+          "evidence": [
+            {
+              "file": "provenance/upstream-capability-evidence/e268f730f8640b9b094960c5b41e4aa48163432057dab9e28a23d7c27378d0b3.json",
+              "sha256": "e268f730f8640b9b094960c5b41e4aa48163432057dab9e28a23d7c27378d0b3",
+              "case": "spec_write.spec"
+            }
+          ],
+          "boundary": "Fixed controlled documents instead of arbitrary output paths; native result references do not alone establish that the host objective is satisfied."
+        },
+        {
+          "id": "design",
+          "parameters": [
+            "filePath",
+            "content"
+          ],
+          "replacement": "skill_workflow kind=spec write spec.md/plan.md/tasks.md; validate sections, task completion and native evidence",
+          "status": "verified",
+          "targets": [
+            "src/services/skill-workflow.ts",
+            "docs/builtin-skill-workflows.md",
+            "src/services/skill-guidance.ts"
+          ],
+          "tests": [
+            "test/native-skill-workflow.test.ts"
+          ],
+          "evidence": [
+            {
+              "file": "provenance/upstream-capability-evidence/e268f730f8640b9b094960c5b41e4aa48163432057dab9e28a23d7c27378d0b3.json",
+              "sha256": "e268f730f8640b9b094960c5b41e4aa48163432057dab9e28a23d7c27378d0b3",
+              "case": "spec_write.design"
+            }
+          ],
+          "boundary": "Fixed controlled documents instead of arbitrary output paths; native result references do not alone establish that the host objective is satisfied."
+        },
+        {
+          "id": "tasks",
+          "parameters": [
+            "filePath",
+            "content"
+          ],
+          "replacement": "skill_workflow kind=spec write spec.md/plan.md/tasks.md; validate sections, task completion and native evidence",
+          "status": "verified",
+          "targets": [
+            "src/services/skill-workflow.ts",
+            "docs/builtin-skill-workflows.md",
+            "src/services/skill-guidance.ts"
+          ],
+          "tests": [
+            "test/native-skill-workflow.test.ts"
+          ],
+          "evidence": [
+            {
+              "file": "provenance/upstream-capability-evidence/e268f730f8640b9b094960c5b41e4aa48163432057dab9e28a23d7c27378d0b3.json",
+              "sha256": "e268f730f8640b9b094960c5b41e4aa48163432057dab9e28a23d7c27378d0b3",
+              "case": "spec_write.tasks"
+            }
+          ],
+          "boundary": "Fixed controlled documents instead of arbitrary output paths; native result references do not alone establish that the host objective is satisfied."
+        }
+      ]
+    },
+    {
+      "tool": "hdc_log",
+      "upstream_file": "packages/opencode/src/tool/hdc_log.ts",
+      "upstream_sha256": "f164fe9a78c751254d17d493f8f9b2762d1b42a2f037469b2a3f928a000a7580",
+      "delivery": "native",
+      "operations": [
+        {
+          "id": "collect",
+          "parameters": [
+            "action",
+            "device_id",
+            "log_prefix",
+            "lines"
+          ],
+          "replacement": "hdc_log action=collect with explicit target/device_id and bounded filter/lines",
+          "status": "pending",
+          "targets": [
+            "src/services/logs.ts"
+          ],
+          "tests": [
+            "test/native-logs.test.ts"
+          ],
+          "evidence": [],
+          "boundary": "Current implementation and final-code acceptance still require review."
+        },
+        {
+          "id": "clear",
+          "parameters": [
+            "action",
+            "device_id",
+            "log_prefix",
+            "lines"
+          ],
+          "replacement": "hdc_log action=clear with explicit target/device_id and bounded filter/lines",
+          "status": "pending",
+          "targets": [
+            "src/services/logs.ts"
+          ],
+          "tests": [
+            "test/native-logs.test.ts"
+          ],
+          "evidence": [],
+          "boundary": "Current implementation and final-code acceptance still require review."
+        },
+        {
+          "id": "list_devices",
+          "parameters": [
+            "action",
+            "device_id",
+            "log_prefix",
+            "lines"
+          ],
+          "replacement": "device_info action=list",
+          "status": "pending",
+          "targets": [
+            "src/services/device.ts"
+          ],
+          "tests": [
+            "test/native-context.test.ts"
+          ],
+          "evidence": [],
+          "boundary": "Current implementation and final-code acceptance still require review."
+        }
+      ]
+    },
+    {
+      "tool": "switch_cwd",
+      "upstream_file": "packages/opencode/src/tool/switch-cwd.ts",
+      "upstream_sha256": "cf66d7995db989a691d0bc31d35792320a4e07759130fc92e0111c9a5d8bb91a",
+      "delivery": "native",
+      "operations": [
+        {
+          "id": "execute",
+          "parameters": [
+            "project_path"
+          ],
+          "replacement": "switch_cwd project_path explicit; project context captured per run",
+          "status": "verified",
+          "targets": [
+            "src/services/project.ts"
+          ],
+          "tests": [
+            "test/native-context.test.ts"
+          ],
+          "evidence": [
+            {
+              "file": "provenance/upstream-capability-evidence/3a148460b989930591c5a5930500ee413f2510861ec618e4866fd3895d4c0569.json",
+              "sha256": "3a148460b989930591c5a5930500ee413f2510861ec618e4866fd3895d4c0569",
+              "case": "switch_cwd.execute"
+            }
+          ],
+          "boundary": "Selection affects future requests in the current MCP worker. Each submitted workflow keeps its own captured project context. Rejected project selection preserves the prior selection; this is not a global shell cwd change."
+        }
+      ]
+    },
+    {
+      "tool": "arkts_check",
+      "upstream_file": "packages/opencode/src/tool/arkts_check.ts",
+      "upstream_sha256": "c29cbac3d3dcdb6853751c785ab2b5b6d2ad130f844f231799f2e78a8ce30800",
+      "delivery": "native",
+      "operations": [
+        {
+          "id": "execute",
+          "parameters": [
+            "files"
+          ],
+          "replacement": "arkts_check project_path/files with summary.errorCount and success; full fresh default build preflight",
+          "status": "verified",
+          "targets": [
+            "src/services/checker.ts",
+            "docs/builtin-skill-workflows.md"
+          ],
+          "tests": [
+            "test/native-checker.test.ts"
+          ],
+          "evidence": [
+            {
+              "file": "provenance/upstream-capability-evidence/abf283804ed899c97ee2e4e92854bc5c51013828bc652b44e04747c70257b91d.json",
+              "sha256": "abf283804ed899c97ee2e4e92854bc5c51013828bc652b44e04747c70257b91d",
+              "case": "arkts_check.execute"
+            }
+          ],
+          "boundary": "Static checking is not a build or device test. Build preflight rejects error results and changed source identities; manual override requires an explicit recorded reason."
+        }
+      ]
+    },
+    {
+      "tool": "build_project",
+      "upstream_file": "packages/opencode/src/tool/build_project.ts",
+      "upstream_sha256": "b50268ee4e60dcf1c21a19a82c018a9b217ff7cbd17b1ce04c87e795a81c278f",
+      "delivery": "native",
+      "operations": [
+        {
+          "id": "execute",
+          "parameters": [
+            "clean",
+            "product",
+            "modules",
+            "build_mode"
+          ],
+          "replacement": "build_project/project_build with product,module_targets,mode,clean; native route capture and fresh full check before build",
+          "status": "verified",
+          "targets": [
+            "src/services/project.ts",
+            "docs/builtin-skill-workflows.md"
+          ],
+          "tests": [
+            "test/native-project.test.ts"
+          ],
+          "evidence": [
+            {
+              "file": "provenance/upstream-capability-evidence/abf283804ed899c97ee2e4e92854bc5c51013828bc652b44e04747c70257b91d.json",
+              "sha256": "abf283804ed899c97ee2e4e92854bc5c51013828bc652b44e04747c70257b91d",
+              "case": "build_project.execute"
+            }
+          ],
+          "boundary": "Module target selection is structured rather than upstream name@target strings. Clean and manual preflight override require explicit input; successful checking alone does not declare a successful build."
+        }
+      ]
+    },
+    {
+      "tool": "start_app",
+      "upstream_file": "packages/opencode/src/tool/start_app.ts",
+      "upstream_sha256": "4c33b7f912a9a1c51edbe45c17808a6976f68149ad63516640a18ea0d5e1f63d",
+      "delivery": "native",
+      "operations": [
+        {
+          "id": "execute",
+          "parameters": [
+            "ability",
+            "hvd",
+            "module",
+            "target"
+          ],
+          "replacement": "project routes -> app_deploy with validated packages -> Ability launch; explicit target selection",
+          "status": "pending",
+          "targets": [
+            "src/services/runtime.ts"
+          ],
+          "tests": [
+            "test/native-context.test.ts"
+          ],
+          "evidence": [],
+          "boundary": "Current implementation and final-code acceptance still require review."
+        }
+      ]
+    },
+    {
+      "tool": "verify_ui",
+      "upstream_file": "packages/opencode/src/tool/ui-verification/ui-verification-tool.ts",
+      "upstream_sha256": "ed2699d8cbe653a41ae51e2a0fa6cf9759da99c8dacb2f34cdaf4acb3e189a53",
+      "delivery": "native",
+      "operations": [
+        {
+          "id": "testPlan",
+          "parameters": [
+            "testPlan",
+            "bundleName",
+            "device",
+            "freshStart"
+          ],
+          "replacement": "ui_test start/plan/resume/act/check/finish/cancel plus ui_review read/complete; fixed requirements and durable native evidence",
+          "status": "pending",
+          "targets": [
+            "src/services/ui-test.ts",
+            "docs/builtin-skill-workflows.md"
+          ],
+          "tests": [
+            "test/native-ui-test.test.ts"
+          ],
+          "evidence": [],
+          "boundary": "The MCP client plans and visually judges the test. Native assertion failure cannot be overridden by a visual pass. Captured applications/display scope, bounded actions and uncertainty survive restart."
+        },
+        {
+          "id": "freshStart",
+          "parameters": [
+            "testPlan",
+            "bundleName",
+            "device",
+            "freshStart"
+          ],
+          "replacement": "ui_test start/plan/resume/act/check/finish/cancel plus ui_review read/complete; fixed requirements and durable native evidence",
+          "status": "pending",
+          "targets": [
+            "src/services/ui-test.ts",
+            "docs/builtin-skill-workflows.md"
+          ],
+          "tests": [
+            "test/native-ui-test.test.ts"
+          ],
+          "evidence": [],
+          "boundary": "The MCP client plans and visually judges the test. Native assertion failure cannot be overridden by a visual pass. Captured applications/display scope, bounded actions and uncertainty survive restart."
+        },
+        {
+          "id": "step_execution",
+          "parameters": [
+            "testPlan",
+            "bundleName",
+            "device",
+            "freshStart"
+          ],
+          "replacement": "ui_test start/plan/resume/act/check/finish/cancel plus ui_review read/complete; fixed requirements and durable native evidence",
+          "status": "pending",
+          "targets": [
+            "src/services/ui-test.ts",
+            "docs/builtin-skill-workflows.md"
+          ],
+          "tests": [
+            "test/native-ui-test.test.ts"
+          ],
+          "evidence": [],
+          "boundary": "The MCP client plans and visually judges the test. Native assertion failure cannot be overridden by a visual pass. Captured applications/display scope, bounded actions and uncertainty survive restart."
+        },
+        {
+          "id": "visual_review",
+          "parameters": [
+            "testPlan",
+            "bundleName",
+            "device",
+            "freshStart"
+          ],
+          "replacement": "ui_test start/plan/resume/act/check/finish/cancel plus ui_review read/complete; fixed requirements and durable native evidence",
+          "status": "pending",
+          "targets": [
+            "src/services/ui-test.ts",
+            "docs/builtin-skill-workflows.md"
+          ],
+          "tests": [
+            "test/native-ui-test.test.ts"
+          ],
+          "evidence": [],
+          "boundary": "The MCP client plans and visually judges the test. Native assertion failure cannot be overridden by a visual pass. Captured applications/display scope, bounded actions and uncertainty survive restart."
+        },
+        {
+          "id": "resume",
+          "parameters": [
+            "testPlan",
+            "bundleName",
+            "device",
+            "freshStart"
+          ],
+          "replacement": "ui_test start/plan/resume/act/check/finish/cancel plus ui_review read/complete; fixed requirements and durable native evidence",
+          "status": "pending",
+          "targets": [
+            "src/services/ui-test.ts",
+            "docs/builtin-skill-workflows.md"
+          ],
+          "tests": [
+            "test/native-ui-test.test.ts"
+          ],
+          "evidence": [],
+          "boundary": "The MCP client plans and visually judges the test. Native assertion failure cannot be overridden by a visual pass. Captured applications/display scope, bounded actions and uncertainty survive restart."
+        },
+        {
+          "id": "cancel",
+          "parameters": [
+            "testPlan",
+            "bundleName",
+            "device",
+            "freshStart"
+          ],
+          "replacement": "ui_test start/plan/resume/act/check/finish/cancel plus ui_review read/complete; fixed requirements and durable native evidence",
+          "status": "pending",
+          "targets": [
+            "src/services/ui-test.ts",
+            "docs/builtin-skill-workflows.md"
+          ],
+          "tests": [
+            "test/native-ui-test.test.ts"
+          ],
+          "evidence": [],
+          "boundary": "The MCP client plans and visually judges the test. Native assertion failure cannot be overridden by a visual pass. Captured applications/display scope, bounded actions and uncertainty survive restart."
+        }
+      ]
+    },
+    {
+      "tool": "get_ui_verification_log",
+      "upstream_file": "packages/opencode/src/tool/ui-verification/ui-verification-tool.ts",
+      "upstream_sha256": "ed2699d8cbe653a41ae51e2a0fa6cf9759da99c8dacb2f34cdaf4acb3e189a53",
+      "delivery": "native",
+      "operations": [
+        {
+          "id": "read",
+          "parameters": [
+            "id",
+            "maxLogSize",
+            "searchKeywords"
+          ],
+          "replacement": "ui_test logs test_id, optional chunk_id/search_keywords/offset/max_bytes; main-app PID/device-time/step association",
+          "status": "pending",
+          "targets": [
+            "src/services/ui-test-log.ts",
+            "docs/builtin-skill-workflows.md"
+          ],
+          "tests": [
+            "test/native-ui-test-log.test.ts"
+          ],
+          "evidence": [],
+          "boundary": "Always bounded partial logs with explicit captured main-app scope. Upstream unlimited maxLogSize=-1 is intentionally replaced by bounded pagination."
+        },
+        {
+          "id": "search",
+          "parameters": [
+            "id",
+            "maxLogSize",
+            "searchKeywords"
+          ],
+          "replacement": "ui_test logs test_id, optional chunk_id/search_keywords/offset/max_bytes; main-app PID/device-time/step association",
+          "status": "pending",
+          "targets": [
+            "src/services/ui-test-log.ts",
+            "docs/builtin-skill-workflows.md"
+          ],
+          "tests": [
+            "test/native-ui-test-log.test.ts"
+          ],
+          "evidence": [],
+          "boundary": "Always bounded partial logs with explicit captured main-app scope. Upstream unlimited maxLogSize=-1 is intentionally replaced by bounded pagination."
+        }
+      ]
+    },
+    {
+      "tool": "save_ui_screenshot",
+      "upstream_file": "packages/opencode/src/tool/ui-verification/ui-verification-tool.ts",
+      "upstream_sha256": "ed2699d8cbe653a41ae51e2a0fa6cf9759da99c8dacb2f34cdaf4acb3e189a53",
+      "delivery": "native",
+      "operations": [
+        {
+          "id": "export_steps",
+          "parameters": [
+            "id",
+            "dirname"
+          ],
+          "replacement": "ui_test export test_id,directory produces owned report, step images, logs and SHA-256 manifest",
+          "status": "pending",
+          "targets": [
+            "src/services/ui-test.ts",
+            "docs/builtin-skill-workflows.md"
+          ],
+          "tests": [
+            "test/native-ui-test.test.ts"
+          ],
+          "evidence": [],
+          "boundary": "New absolute directory only, guarded references and immutable snapshot. Export of a paused test does not imply test completion."
+        }
+      ]
+    },
+    {
+      "tool": "debug_exit",
+      "upstream_file": "packages/opencode/src/tool/debug-exit.ts",
+      "upstream_sha256": "178722853eb4f07c2d07061cdd4666e9c94857f3104d2179eb44f42dc079f39f",
+      "delivery": "mcp_guided",
+      "operations": [
+        {
+          "id": "execute",
+          "parameters": [],
+          "replacement": "skill_workflow kind=debug transition phase=completed after native reproduction evidence and host review",
+          "status": "pending",
+          "targets": [
+            "src/services/skill-workflow.ts",
+            "docs/builtin-skill-workflows.md",
+            "src/services/skill-guidance.ts"
+          ],
+          "tests": [
+            "test/native-skill-workflow.test.ts"
+          ],
+          "evidence": [],
+          "boundary": "Records the debug phase and evidence; verified=false and host_mode_changed=false. Host still assesses whether the original bug was repaired."
+        }
+      ]
+    }
+  ]
+}

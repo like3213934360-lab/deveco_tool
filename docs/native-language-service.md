@@ -1,11 +1,13 @@
 # 原生语言服务契约与验收
 
-`lsp` 提供 `hover / definition / implementation / references / diagnostics`，直接启动选中 SDK 的 ace-server；C++ 通过 `check_cpp_files` 使用真实编译数据库启动 clangd。
+`lsp` 提供 `hover / definition / implementation / references / diagnostics / documentSymbol / workspaceSymbol / prepareCallHierarchy / incomingCalls / outgoingCalls`。默认 `language=arkts` 启动选中 SDK 的 ace-server；`language=cpp` 使用已构建目标的编译数据库启动 SDK clangd，`check_cpp_files` 提供 C++ 诊断入口。
 
 ## 输入和生命周期
 
 - `file` 接受工程相对路径或绝对路径，现有路径经过 realpath 归一化，中文、空格和路径别名不会重复打开同一文件。
 - `line / character` 统一为从零开始的 UTF-16 位置；旧工具的一基位置不保留。字符不能超过该行实际内容，CRLF 只算一次换行，末尾空行允许字符 0。
+- 文档符号与工作区符号不需要位置；`workspaceSymbol` 使用 `query`，空查询请求有界的全部结果。`file` 仍用于选择工程中的文档及服务。
+- 调用层次先使用当前位置准备可选项；`item_index` 默认为 0。入调用/出调用会基于当前源码重新准备项目，避免使用变更前的过期调用项。
 - 每份文档最多 4 MiB，异步分块读取；内容、SHA-256 与文件变更检查基于同一打开句柄，读取期间变化返回 `LSP_FILE_CHANGED`。
 - 每次请求刷新已打开文档，已删除的依赖发送 didClose，修改后发送递增版本 didChange。忽略错误 URI 和过期版本的诊断。
 - 会话按工程、配置、SDK/入口身份复用，最多 4 个服务、每服务 128 个文档；请求串行化，排队取消不让后续请求越过在途请求。空闲服务 5 分钟释放。
@@ -19,7 +21,11 @@
 
 悬停的 `null`、`{ "contents": [] }` 都是合法空结果，不作为执行失败。定义与实现保留 Location/LocationLink，引用支持 `includeDeclaration`，并在要求去除声明时核对语义定义位置。语言诊断标注 `checkKind: language-server`、`compilationVerified: false`。
 
+当前本机 SDK 26 的 ArkTS 服务未声明文档符号、工作区符号和调用层次能力，这五项均明确返回 `LSP_CAPABILITY_UNAVAILABLE`。SDK clangd 实测支持文档符号、工作区符号、准备调用层次和入调用；出调用返回 method-not-found，MCP 同样明确报告不支持。接口覆盖这些操作不代表每个 SDK 服务都能执行它们，也不会用文本搜索或空数组代替不支持结果。
+
 ## 证据
+
+0.3.0 候选的当前证据为持久化目录 `native-7-sdk-final-lock-20260910-1`、`native-7-symbol-final-lock-20260910-1` 和 `native-7-multimodule-final-lock-20260910-1`：SDK 集成 26 项、多模块 45 项均通过，新增操作逐项记录实际支持与不支持结果。对应运行时 `7777d47a…`、编译摘要 `077ef53f…`。下面列出的旧提交和临时目录仅保留历史上下文；早期临时原始文件现已丢失。
 
 - `test/native-lsp.test.ts`：四组边界测试，覆盖实现链接、同文件路径、UTF-16/换行/空文件、无结果/无能力/畸形响应、变更后诊断及非法通知。
 - `test/native-runtime.test.ts`：Unicode 文件同步、两种定义格式的声明过滤、LRU、排队取消。

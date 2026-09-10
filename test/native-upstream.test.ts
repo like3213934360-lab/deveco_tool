@@ -73,7 +73,7 @@ test("every adaptation mapping has existing replacement and validation targets, 
       "deveco-code",
       "packages/opencode/resources/skills/customize-deveco/SKILL.md",
     )?.disposition,
-    "exclude",
+    "adapt",
   );
 });
 

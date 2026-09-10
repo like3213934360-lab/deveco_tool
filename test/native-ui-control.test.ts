@@ -267,6 +267,43 @@ test("direct controls use one capture, route the selected display and distinguis
   }
 });
 
+test("focused input accepts the released UiTest help exit 1 without relaxing mutation receipts", async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-focus-probe-")),
+    store = new StateStore(root), processes = new ProcessService(),
+    device = new DeviceService(processes, store);
+  const tree = snapshot();
+  const field = tree.nodes.find(node => node.type === "Button" && node.displayId === "1")!;
+  field.type = "TextInput"; field.focused = true;
+  t.mock.method(device, "snapshot", async () => tree);
+  let helpExit = 1, helpOutput = "Missing parameter.\nUSAGE :\ntext <text> [displayId] input at current focus\n",
+    inputExit = 0, mutations = 0;
+  t.mock.method(device, "shell", async (...[_target, args, _signal, _timeout, allowFailure]: Parameters<DeviceService["shell"]>) => {
+    const help = args[2] === "help";
+    assert.equal(allowFailure, help);
+    if (!help) { mutations++; assert.deepEqual(args, ["uitest", "uiInput", "text", "中文验收", "1"]); }
+    return { stdout: help ? helpOutput : "No Error", stderr: "", elapsedMs: 1, pid: null,
+      exitCode: help ? helpExit : inputExit, signal: null, truncated: false };
+  });
+  const input = { action: "text", window: { bundle_name: "com.test" }, display_id: 1, text: "中文验收" };
+  try {
+    assert.deepEqual(await device.control("device", input), {
+      method: "uitest-current-focus", commandAccepted: true, outcomeVerified: false,
+    });
+    assert.equal(mutations, 1);
+    helpExit = 2;
+    await assert.rejects(device.control("device", input), { code: "UI_FOCUSED_TEXT_UNSUPPORTED" });
+    helpExit = 1; helpOutput = "Missing parameter.";
+    await assert.rejects(device.control("device", input), { code: "UI_FOCUSED_TEXT_UNSUPPORTED" });
+    assert.equal(mutations, 1);
+    helpOutput = "text <text> [displayId]\n"; inputExit = 1;
+    await assert.rejects(device.control("device", input), { code: "UI_TEXT_UNCONFIRMED" });
+    assert.equal(mutations, 2);
+  } finally {
+    await device.close(); await processes.close(); store.close();
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test("Unicode paste requests retain display identity and validate it before a connection can be made", () => {
   assert.deepEqual(textRequest({ x: 10, y: 20, displayId: 1 }, "中文🙂"), [
     { x: 10, y: 20, displayId: 1 },
@@ -277,4 +314,33 @@ test("Unicode paste requests retain display identity and validate it before a co
     assert.throws(() => textRequest({ x: 10, y: 20, displayId }, "中文"), {
       code: "UI_DISPLAY_INVALID",
     });
+});
+
+test("focused text requires one editable field in an explicitly identified application window and preserves its focus", () => {
+  const tree = snapshot();
+  const field = tree.nodes.find(node => node.type === "Button" && node.displayId === "1")!;
+  field.type = "TextInput"; field.focused = true;
+  const input = controlSchema.parse({ action: "text", window: { bundle_name: "com.test" }, display_id: 1, text: "中文🙂 focus" });
+  const resolved = resolveControl(input, tree);
+  assert.equal(resolved.x, undefined); assert.equal(resolved.y, undefined);
+  assert.deepEqual(uiInputArguments(resolved), ["text", "中文🙂 focus", "1"]);
+  assert.throws(() => resolveControl(controlSchema.parse({ action: "text", text: "hello" }), tree), { code: "UI_SCOPE_REQUIRED" });
+  assert.throws(() => resolveControl(controlSchema.parse({ ...input, x: 20, y: 30 }), tree), { code: "UI_INPUT_CONFLICT" });
+  field.focused = false;
+  assert.throws(() => resolveControl(input, tree), { code: "UI_FOCUS_AMBIGUOUS" });
+  field.focused = true; tree.nodes.push({ ...field, id: "second-focused" });
+  assert.throws(() => resolveControl(input, tree), { code: "UI_FOCUS_AMBIGUOUS" });
+});
+
+test("mouse operations retain the selected display and encode native buttons, wheel ticks and drag endpoints", async () => {
+  const { mouseRequest } = await import("../src/services/ui-control.js");
+  const tree = snapshot(), base = { window: { bundle_name: "com.test" }, display_id: 1 };
+  const click = resolveControl(controlSchema.parse({ ...base, action: "mouseClick", point: { xPercent: 50, yPercent: 50 }, button: "right", keys: ["2072"] }), tree);
+  assert.deepEqual(mouseRequest(click), { api: "Driver.mouseClick", args: [{ x: 300, y: 600, displayId: 1 }, 1, 2072] });
+  const scroll = resolveControl(controlSchema.parse({ ...base, action: "mouseScroll", x: 200, y: 300, scroll_down: true, ticks: 3 }), tree);
+  assert.deepEqual(mouseRequest(scroll).args, [{ x: 200, y: 300, displayId: 1 }, true, 3, 0, 0, 20]);
+  const drag = resolveControl(controlSchema.parse({ ...base, action: "mouseDrag", x: 200, y: 300, x2: 210, y2: 400, velocity: 600 }), tree);
+  assert.deepEqual(mouseRequest(drag).args, [{ x: 200, y: 300, displayId: 1 }, { x: 210, y: 400, displayId: 1 }, 600]);
+  assert.throws(() => resolveControl(controlSchema.parse({ action: "mouseClick", x: 10, y: 20 }), tree), { code: "UI_SCOPE_REQUIRED" });
+  for (const raw of [{ ...scroll, button: "left" }, { ...click, text: "secret" }, { ...click, keys: ["Back"] }, { ...click, x2: 300 }]) assert.throws(() => mouseRequest(controlSchema.parse(raw)));
 });

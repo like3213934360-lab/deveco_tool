@@ -1,9 +1,10 @@
 import type { z } from "zod";
 import { tools } from "../core/contracts.js";
-import { errorResult, ToolError } from "../core/errors.js";
+import { errorResult, invariant, ToolError } from "../core/errors.js";
 import type { StateStore } from "../core/store.js";
 import { currentTrace } from "../core/trace.js";
 import type { DeviceService } from "./device.js";
+import type { UiReviewService } from "./ui-review.js";
 
 type VerificationInput = z.infer<typeof tools.verify_ui.schema>;
 type AssertionResult = Awaited<ReturnType<DeviceService["verify"]>>;
@@ -13,6 +14,7 @@ export class VerificationService {
   constructor(
     readonly store: StateStore,
     readonly devices: DeviceService,
+    readonly reviews: UiReviewService,
   ) {}
 
   async verify(target: string, input: VerificationInput, signal?: AbortSignal) {
@@ -49,6 +51,7 @@ export class VerificationService {
             input.capture,
             signal,
           );
+          invariant(screenshot.artifact, "UI_REVIEW_EVIDENCE_MISSING", "Verification requires a newly retained screenshot");
         } catch (error) {
           signal?.throwIfAborted();
           captureError = errorResult(error);
@@ -73,6 +76,12 @@ export class VerificationService {
           started_at: started,
           assertion_completed_at: input.assert ? assertionCompleted : null,
           completed_at: Date.now(),
+          ...(input.review && screenshot?.artifact ? this.reviews.create({
+            run_id: currentTrace().run_id ?? "ui", target,
+            requirement: input.review.requirement,
+            assertion_status: assertion ? "passed" : input.assert ? "failed" : "not_requested",
+            artifact_id: screenshot.artifact.artifact_id, sha256: screenshot.sha256,
+          }) : {}),
         };
         const report_artifact = this.store.artifact(
           currentTrace().run_id ?? "ui",

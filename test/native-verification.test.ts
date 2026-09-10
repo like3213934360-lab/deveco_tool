@@ -19,6 +19,7 @@ import {
 } from "../src/core/artifact-image.js";
 import { readImageArtifact } from "../src/services/artifact.js";
 import { imageDimensions } from "../src/services/screenshot.js";
+import { UiReviewService } from "../src/services/ui-review.js";
 
 const png = fs.readFileSync(
   new URL(
@@ -76,6 +77,7 @@ async function fixture(
       coordinate_scale: { x: 1, y: 1 },
       sha256,
       frame_signature: sha256,
+      progress_signature: sha256,
       unchanged: false,
       artifact: stream.finish(),
     };
@@ -218,6 +220,60 @@ test("control assertions and visual review have separate outcomes and run sequen
     );
     assert.equal(controlOnly.verified, true);
     assert.equal(controlOnly.review.status, "not_requested");
+  });
+});
+
+test("visual completion requires the exact presented image and survives restart with immutable host observations", async () => {
+  await fixture(async (runtime) => {
+    const report = z.object({ review_id: z.string(), screenshot: z.object({ artifact: z.object({ artifact_id: z.string() }), sha256: z.string() }) }).parse(
+      await runtime.call("verify_ui", { review: { requirement: "Inspect that the Chinese labels fit inside their buttons" } }),
+    );
+    const input = { action: "complete", review_id: report.review_id, artifact_id: report.screenshot.artifact.artifact_id,
+      sha256: report.screenshot.sha256, read_token: "11111111-1111-4111-8111-111111111111",
+      assessment: { outcome: "passed", observations: "Fixture assessment: all labels fit within the visible button boundaries." } };
+    await assert.rejects(runtime.call("ui_review", input), { code: "UI_REVIEW_IMAGE_NOT_READ" });
+    await runtime.call("workflow_run", { action: "read_artifact", artifact_id: input.artifact_id });
+    await assert.rejects(runtime.call("ui_review", input), { code: "UI_REVIEW_IMAGE_NOT_READ" });
+    const image = artifactImageSchema.parse(await runtime.call("workflow_run", { action: "read_artifact", artifact_id: input.artifact_id, as: "image" }));
+    input.read_token = image.review_reads!.find((read) => read.review_id === report.review_id)!.read_token;
+    await assert.rejects(runtime.call("ui_review", { ...input, sha256: "0".repeat(64) }), { code: "UI_REVIEW_IMAGE_NOT_READ" });
+    const root = runtime.store.root;
+    await runtime.close();
+    const store = new StateStore(root), reviews = new UiReviewService(store);
+    try {
+      const status = reviews.complete(report.review_id, { ...input, assessment: { ...input.assessment, outcome: "passed" } });
+      assert.equal(status.verified, true);
+      assert.equal(status.assessment_source, "host_visual_assessment");
+      assert.equal(status.assessment?.observations, input.assessment.observations);
+      assert.deepEqual(reviews.complete(report.review_id, { ...input, assessment: { ...input.assessment, outcome: "passed" } }), status);
+      assert.throws(() => reviews.complete(report.review_id, { ...input, assessment: { outcome: "failed", observations: "A different assessment cannot overwrite the original." } }), { code: "UI_REVIEW_ALREADY_SETTLED" });
+      assert.equal(JSON.stringify(store.db.prepare("SELECT * FROM ui_reviews").all()).includes(input.assessment.observations), false);
+    } finally { reviews.close(); store.close(); }
+  });
+});
+
+test("visual assessment cannot hide a failed assertion, insufficient evidence or a changed screenshot", async () => {
+  await fixture(async (runtime) => {
+    runtime.devices.verify = async () => { throw new ToolError("VERIFICATION_FAILED", "Missing expected control"); };
+    let failure: unknown;
+    try { await runtime.call("verify_ui", { assert: { visible: { text: "Done" } }, review: { requirement: "Check the label's shape" } }); }
+    catch (error) { failure = error; }
+    assert.ok(failure instanceof ToolError);
+    const failed = z.object({ review_id: z.string(), screenshot: z.object({ artifact: z.object({ artifact_id: z.string() }) }) }).parse(failure.details);
+    const image = readImageArtifact(runtime.store, failed.screenshot.artifact.artifact_id);
+    const result = runtime.reviews.complete(failed.review_id, { artifact_id: image.artifact_id, sha256: image.sha256,
+      read_token: image.review_reads![0]!.read_token, assessment: { outcome: "passed", observations: "The visible label shape looks correct in this fixture." } });
+    assert.equal(result.verified, false);
+    assert.equal(result.assertion_status, "failed");
+    const required = runtime.reviews.create({ run_id: "ui", target: "fixture", requirement: "Check clipping", assertion_status: "passed", artifact_id: image.artifact_id, sha256 });
+    const second = readImageArtifact(runtime.store, image.artifact_id), token = second.review_reads!.find((read) => read.review_id === required.review_id)!.read_token;
+    const changed = Buffer.from(png); changed[50] = changed[50]! ^ 1;
+    fs.writeFileSync(path.join(runtime.store.root, "artifacts", image.artifact_id), changed);
+    assert.throws(() => runtime.reviews.complete(required.review_id, { artifact_id: image.artifact_id, sha256, read_token: token,
+      assessment: { outcome: "passed", observations: "Changed evidence must not validate this observation." } }), { code: "UI_REVIEW_EVIDENCE_CHANGED" });
+    fs.writeFileSync(path.join(runtime.store.root, "artifacts", image.artifact_id), png);
+    assert.equal(runtime.reviews.complete(required.review_id, { artifact_id: image.artifact_id, sha256, read_token: token,
+      assessment: { outcome: "insufficient", observations: "The captured area does not include the requested label." } }).verified, false);
   });
 });
 

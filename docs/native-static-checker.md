@@ -1,12 +1,14 @@
 # 原生 ArkTS 静态预检
 
-`arkts_check` 和 `code_diagnose` 的 ArkTS 预检使用同一实现。直接启动所选 SDK 的 Node 和 standalone checker，不经过官方 CLI、子 MCP 或 Skill。结果始终标记 `checkKind:static-precheck`、`compilationVerified:false`；没有错误不等于构建或 UI 验证通过。
+`arkts_check` 和 `code_diagnose` 的 ArkTS 预检使用同一实现，直接启动所选 SDK 的 Node 和 standalone checker。内置 `skill_workflow` 可调用该检查器指导修复，再执行新鲜检查和构建；无需官方 CLI、子 MCP 或客户端 Skill 安装。结果始终标记 `checkKind:static-precheck`、`compilationVerified:false`；没有错误不等于构建或 UI 验证通过。
 
 ## 输入、SDK 与扫描范围
 
-工程、产品和实际模块来自 `build-profile.json5`。默认检查选中模块的 `src/main/ets` 中 `.ets/.ts` 源文件及模块根目录的源码导出文件，排除声明文件、`hvigorfile.ts`、测试目录和依赖/构建输出。不假设模块名为 `entry`。显式 `files` 支持相对工程路径和绝对路径，保留选定工程之外的文件检查，按真实路径去重。空选择、缺失文件、目录和非法扩展名明确失败。
+工程、产品和实际模块来自 `build-profile.json5`。默认检查选中模块的 `src/main/ets` 中 `.ets/.ts` 源文件及模块根目录的源码导出文件，排除声明文件、`hvigorfile.ts`、测试目录和依赖/构建输出。不假设模块名为 `entry`。显式 `files` 支持相对工程路径和绝对路径，但必须位于选定工程内，按真实路径去重。空选择、缺失文件、目录、声明文件、非法扩展名以及通过软链接等方式越出工程的文件，在 SDK 派发前明确拒绝。
 
 最多 100000 个源文件，每文件 8 MiB、合计 64 MiB；SDK 读取的传递依赖不属于这个输入预算。报告声明实际文件数、来源根目录、源文件字节数和执行范围。
+
+项目规则的跨文件符号绑定仅使用经过上述预算检查的应用 AST，不读取额外外部库声明。相对导入、模块包入口与重导出用于识别实际组件和类型；无法解析的外部组件保持未知。SDK 本身的类型检查与这部分项目规则分别保留各自范围。
 
 SDK 的 `compileMode` 与 HMS `externalApiPaths` 必须在加载 SDK 模块前设置，因为模块初始化会读取环境变量。HMS 路径使用平台路径解析，避免 Windows 路径分隔符导致遗漏。配置发生在受管检查子进程内。工具链版本与工程目标版本分别处理，保留旧 API 工程的真实可用性警告。
 
@@ -18,10 +20,15 @@ SDK 的 `compileMode` 与 HMS `externalApiPaths` 必须在加载 SDK 模块前�
 - 系统资源规则检查 AST 中实际的 `$r` 调用，忽略注释和字符串中的示例；缺失资源数据标记 `unavailable`。
 - 路由使用模块声明的自定义 `$profile` 资源。缺失或格式错误的声明报告 `page-profile-invalid`，不存在的页面报告 `page-file-exists`；页面按模块路径定位，接受 `.ets/.ts`，目录不能充当页面。
 - 模型版本不一致单独报告 `model-version-consistency`。
+- 应用资源、权限与动态路由按实际模块配置和当前 SDK 定义校验；ArkUI 装饰器、Entry、UI 构建体、ObservedV2 字段/存储及 Navigation 注册由 SDK AST 和符号绑定检查。调用链使用当前 SDK 的 ArkUI 解析配置，注册 Builder 的每个分支分别校验。完整规则和上游配置差异见[检查器适配记录](upstream-cli-checker-review.md)。
 - 检查子进程退出失败、没有报告、报告格式/计数/成功标志不一致均为执行失败，不返回检查通过。
 - 全部诊断保存在 JSON 制品中；直接响应保留完整错误/警告计数、最多 50 条及 24 KiB 的诊断预览，字段裁剪保持有效 Unicode，`truncated` 明示裁剪。大于 256 Ki 字符的报告交给有界 CPU Worker 池解析，完整检查所有记录后才生成预览。使用 `workflow_run.read_artifact` 分页读取完整报告。
 
-## 复验记录与边界
+## 0.3.0 候选复验与历史边界
+
+当前本机 Node 24 / SDK 26 候选完成 21 项检查器验收，持久化目录为 `native-7-checker-final-lock-20260910-1`，对应运行时 `7777d47a…`、编译摘要 `077ef53f…`。覆盖文件边界、元数据、权限、资源及跨文件/导航规则的错误→修复样例；API 12/23/当前版本警告分别复验。正式发布状态见[下一版本执行记录](next-release-progress.md)。
+
+以下为旧版本历史记录。重启后早期 `/private/tmp` 原始验收文件已丢失，不能仅凭历史摘要作为当前发布证据。
 
 冻结对照：提交 `aab1405b51e00e4036bdc8f18ae4229835de77b0` 的 `arkts-project.mjs`、`upstream/arkts-check.cjs` 及 `code-tools` 回归；新回归见 `test/native-checker.test.ts`，SDK 验收见 `scripts/native-checker-acceptance.ts`。
 
