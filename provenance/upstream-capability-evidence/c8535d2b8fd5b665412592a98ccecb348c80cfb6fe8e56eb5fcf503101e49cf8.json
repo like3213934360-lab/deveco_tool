@@ -1,0 +1,332 @@
+{
+  "format": 1,
+  "kind": "redacted_behavior_observations",
+  "group": "Bundled Skill and planning workflows",
+  "tested": {
+    "runtime_sha256": "5e5aa855f7808b5d953364e4545821877d37f300d8641bbce1a4f2f4b53c0097",
+    "compiled_sha256": "4c6668ee61e25fc125733b107455868346a15d7b0a000b773232e8f0c3ba83a0",
+    "package_lock_sha256": "9ebb046bdb6d6094bb2eb3d17555bb21f73d8f4ac83f9c396af6a10f9c9f7f95",
+    "resource_manifest_sha256": "039b6e34e2055939b4ec542fdd39cb3e2e0c66958e24a74fc9f5168f6d95636b",
+    "upstream_lock_sha256": "9ea597235ffa9f97a076791d637acd976f8f4c78bcf85ea77de118570708ed3d"
+  },
+  "sources": [
+    {
+      "original_sha256": "daa37684aa31ba49f0f04673d33730b324d70be64ec3fbbaa4c9aea851b1bff0",
+      "captured_at": "2026-09-10T15:26:44.387Z",
+      "passed": true,
+      "closed": true,
+      "unchanged": true
+    }
+  ],
+  "observations": [
+    {
+      "observation": "plan_enter",
+      "kind": "plan",
+      "phase": "planning",
+      "revision": 1,
+      "status": "needs_input",
+      "verified": false,
+      "definition_current": true,
+      "guidance": {
+        "delivery": "builtin_mcp",
+        "client_skill_installation": false
+      },
+      "documents": {}
+    },
+    {
+      "observation": "plan_write",
+      "kind": "plan",
+      "phase": "planning",
+      "revision": 2,
+      "status": "needs_input",
+      "verified": false,
+      "definition_current": true,
+      "guidance": {
+        "delivery": "builtin_mcp",
+        "client_skill_installation": false
+      },
+      "documents": {
+        "plan.md": {
+          "content_sha256": "35b803bbf0cc0b85ff1b93a2bdb91b9651fdab1a4b4d071750abd8cfcd2bf49f",
+          "validation": []
+        }
+      }
+    },
+    {
+      "observation": "plan_exit",
+      "kind": "plan",
+      "phase": "implementing",
+      "revision": 3,
+      "status": "needs_input",
+      "verified": false,
+      "definition_current": true,
+      "guidance": {
+        "delivery": "builtin_mcp",
+        "client_skill_installation": false
+      },
+      "documents": {
+        "plan.md": {
+          "content_sha256": "35b803bbf0cc0b85ff1b93a2bdb91b9651fdab1a4b4d071750abd8cfcd2bf49f",
+          "validation": []
+        }
+      }
+    },
+    {
+      "observation": "workflow_guidance_after_restart",
+      "kind": "plan",
+      "phase": "implementing",
+      "revision": 3,
+      "status": "needs_input",
+      "verified": false,
+      "definition_current": true,
+      "guidance": {
+        "delivery": "builtin_mcp",
+        "client_skill_installation": false
+      },
+      "documents": {
+        "plan.md": {
+          "content_sha256": "35b803bbf0cc0b85ff1b93a2bdb91b9651fdab1a4b4d071750abd8cfcd2bf49f",
+          "validation": []
+        }
+      }
+    },
+    {
+      "observation": "spec_write",
+      "kind": "spec",
+      "phase": "planning",
+      "revision": 2,
+      "status": "needs_input",
+      "verified": false,
+      "definition_current": true,
+      "guidance": {
+        "delivery": "builtin_mcp",
+        "client_skill_installation": false
+      },
+      "documents": {
+        "spec.md": {
+          "content_sha256": "8049404a2d47ec99e886616b9787681cf4d723848135ffbb72dba330c2fdc6d4",
+          "validation": []
+        }
+      }
+    },
+    {
+      "observation": "design_write",
+      "kind": "spec",
+      "phase": "planning",
+      "revision": 3,
+      "status": "needs_input",
+      "verified": false,
+      "definition_current": true,
+      "guidance": {
+        "delivery": "builtin_mcp",
+        "client_skill_installation": false
+      },
+      "documents": {
+        "spec.md": {
+          "content_sha256": "8049404a2d47ec99e886616b9787681cf4d723848135ffbb72dba330c2fdc6d4",
+          "validation": []
+        },
+        "plan.md": {
+          "content_sha256": "61c34e36f78f469a4f1b25cd6a38dc861f8082ce76a8856dc90f8652216e5a30",
+          "validation": []
+        }
+      }
+    },
+    {
+      "observation": "tasks_write",
+      "kind": "spec",
+      "phase": "planning",
+      "revision": 4,
+      "status": "needs_input",
+      "verified": false,
+      "definition_current": true,
+      "guidance": {
+        "delivery": "builtin_mcp",
+        "client_skill_installation": false
+      },
+      "documents": {
+        "spec.md": {
+          "content_sha256": "8049404a2d47ec99e886616b9787681cf4d723848135ffbb72dba330c2fdc6d4",
+          "validation": []
+        },
+        "plan.md": {
+          "content_sha256": "61c34e36f78f469a4f1b25cd6a38dc861f8082ce76a8856dc90f8652216e5a30",
+          "validation": []
+        },
+        "tasks.md": {
+          "content_sha256": "4aac9094fcdcb5d6f1a842dcfb4b7c90f633743cd6d7c04fd8dbb9a2646f404c",
+          "validation": []
+        }
+      }
+    },
+    {
+      "observation": "spec_complete",
+      "kind": "spec",
+      "phase": "completed",
+      "revision": 7,
+      "status": "succeeded",
+      "verified": false,
+      "definition_current": true,
+      "guidance": {
+        "delivery": "builtin_mcp",
+        "client_skill_installation": false
+      },
+      "documents": {
+        "spec.md": {
+          "content_sha256": "8049404a2d47ec99e886616b9787681cf4d723848135ffbb72dba330c2fdc6d4",
+          "validation": []
+        },
+        "plan.md": {
+          "content_sha256": "61c34e36f78f469a4f1b25cd6a38dc861f8082ce76a8856dc90f8652216e5a30",
+          "validation": []
+        },
+        "tasks.md": {
+          "content_sha256": "4aac9094fcdcb5d6f1a842dcfb4b7c90f633743cd6d7c04fd8dbb9a2646f404c",
+          "validation": []
+        }
+      }
+    },
+    {
+      "observation": "plan_complete",
+      "kind": "plan",
+      "phase": "completed",
+      "revision": 5,
+      "status": "succeeded",
+      "verified": false,
+      "definition_current": true,
+      "guidance": {
+        "delivery": "builtin_mcp",
+        "client_skill_installation": false
+      },
+      "documents": {
+        "plan.md": {
+          "content_sha256": "35b803bbf0cc0b85ff1b93a2bdb91b9651fdab1a4b4d071750abd8cfcd2bf49f",
+          "validation": []
+        }
+      }
+    },
+    {
+      "observation": "catalog",
+      "tools": [
+        "skill_manage",
+        "skill_workflow",
+        "workflow_catalog",
+        "workflow_run",
+        "harmony_knowledge",
+        "harmony_auth",
+        "switch_cwd",
+        "deveco_doctor",
+        "deveco_restart",
+        "lsp",
+        "arkts_check",
+        "code_lint",
+        "check_cpp_files",
+        "device_info",
+        "hdc_log",
+        "hot_reload",
+        "app_signature",
+        "ui_snapshot",
+        "ui_observe",
+        "ui_find",
+        "ui_tap",
+        "ui_flow",
+        "verify_ui",
+        "ui_review",
+        "ui_test",
+        "ui_inspect",
+        "ui_control",
+        "emulator_manage",
+        "emulator_scenario"
+      ]
+    },
+    {
+      "observation": "skill_catalog",
+      "total": 6,
+      "skills": [
+        {
+          "name": "deveco-arkts-standards",
+          "version": "native-7.2",
+          "package_sha256": "ef5746787c7c17ddb1aee0b2ec5bc62a149b0e21dfd7a036516177739bc54aa1",
+          "delivery": "mcp",
+          "client_installation_required": false
+        },
+        {
+          "name": "deveco-arkts-errors",
+          "version": "native-7.2",
+          "package_sha256": "7676c4a8305a59bf8465f15eecb68c0a0ce8badf3d06767b42e57ef0c284c6fc",
+          "delivery": "mcp",
+          "client_installation_required": false
+        },
+        {
+          "name": "deveco-runtime-debug",
+          "version": "native-7.2",
+          "package_sha256": "f529b16b6465101718a0c904d379ad0b73cfdb786f08633a00801b4e0d4d0bb9",
+          "delivery": "mcp",
+          "client_installation_required": false
+        },
+        {
+          "name": "deveco-project-create",
+          "version": "native-7.2",
+          "package_sha256": "21aed0e1e622f88503278de69a5f35be6d3c02a73fadafc908fffcd65076d27d",
+          "delivery": "mcp",
+          "client_installation_required": false
+        },
+        {
+          "name": "deveco-native-tools",
+          "version": "native-7.2",
+          "package_sha256": "596a1281bbd6828d8a187863efb56bf081b940b59a1937a4299d5359b5e50967",
+          "delivery": "mcp",
+          "client_installation_required": false
+        },
+        {
+          "name": "deveco-customize-host",
+          "version": "native-7.2",
+          "package_sha256": "9aa8f71710286a6fa7ecf609cbbb4a22f68a6d48ad444d7702e99715376c0918",
+          "delivery": "mcp",
+          "client_installation_required": false
+        }
+      ]
+    },
+    {
+      "observation": "skill_search",
+      "total": 3
+    },
+    {
+      "observation": "skill_read:deveco-arkts-standards",
+      "name": "deveco-arkts-standards",
+      "bytes": 1762,
+      "package_sha256": "ef5746787c7c17ddb1aee0b2ec5bc62a149b0e21dfd7a036516177739bc54aa1"
+    },
+    {
+      "observation": "skill_read:deveco-arkts-errors",
+      "name": "deveco-arkts-errors",
+      "bytes": 1224,
+      "package_sha256": "7676c4a8305a59bf8465f15eecb68c0a0ce8badf3d06767b42e57ef0c284c6fc"
+    },
+    {
+      "observation": "skill_read:deveco-runtime-debug",
+      "name": "deveco-runtime-debug",
+      "bytes": 1771,
+      "package_sha256": "f529b16b6465101718a0c904d379ad0b73cfdb786f08633a00801b4e0d4d0bb9"
+    },
+    {
+      "observation": "skill_read:deveco-project-create",
+      "name": "deveco-project-create",
+      "bytes": 1609,
+      "package_sha256": "21aed0e1e622f88503278de69a5f35be6d3c02a73fadafc908fffcd65076d27d"
+    },
+    {
+      "observation": "skill_read:deveco-native-tools",
+      "name": "deveco-native-tools",
+      "bytes": 2863,
+      "package_sha256": "596a1281bbd6828d8a187863efb56bf081b940b59a1937a4299d5359b5e50967"
+    },
+    {
+      "observation": "skill_read:deveco-customize-host",
+      "name": "deveco-customize-host",
+      "bytes": 1401,
+      "package_sha256": "9aa8f71710286a6fa7ecf609cbbb4a22f68a6d48ad444d7702e99715376c0918"
+    }
+  ],
+  "privacy": "Only selected non-private result fields are published. Original reports are retained in the private persistent acceptance directory; no state database, credential, absolute host path or device identifier is included."
+}

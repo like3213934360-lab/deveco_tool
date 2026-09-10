@@ -4,6 +4,28 @@ import crypto from "node:crypto";
 import JSON5 from "json5";
 import { invariant, object } from "./errors.js";
 const hashBuffer = Buffer.allocUnsafe(1024 * 1024);
+const renameWait = new Int32Array(new SharedArrayBuffer(4));
+
+function replaceFile(temporary: string, destination: string): void {
+  for (let retries = 0; ; retries++) {
+    try {
+      fs.renameSync(temporary, destination);
+      return;
+    } catch (error) {
+      // Windows readers/virus scanners can briefly deny replacement. Retry the
+      // same atomic rename for at most 550 ms; never unlink the old destination.
+      if (
+        process.platform !== "win32" ||
+        !["EPERM", "EACCES", "EBUSY"].includes(
+          (error as NodeJS.ErrnoException).code ?? "",
+        ) ||
+        retries === 10
+      )
+        throw error;
+      Atomics.wait(renameWait, 0, 0, (retries + 1) * 10);
+    }
+  }
+}
 
 export function readObject(file: string): Record<string, unknown> {
   return parseObject(fs.readFileSync(file, "utf8"));
@@ -103,7 +125,7 @@ export function atomicWrite(
     } finally {
       fs.closeSync(fd);
     }
-    if (replace) fs.renameSync(temporary, destination);
+    if (replace) replaceFile(temporary, destination);
     else fs.linkSync(temporary, destination);
     if (process.platform !== "win32") {
       const directory = fs.openSync(parent, "r");

@@ -1,0 +1,15 @@
+{
+  "format": 1,
+  "passed": true,
+  "tested": {
+    "runtime_sha256": "5e5aa855f7808b5d953364e4545821877d37f300d8641bbce1a4f2f4b53c0097",
+    "compiled_sha256": "4c6668ee61e25fc125733b107455868346a15d7b0a000b773232e8f0c3ba83a0",
+    "package_lock_sha256": "9ebb046bdb6d6094bb2eb3d17555bb21f73d8f4ac83f9c396af6a10f9c9f7f95",
+    "resource_manifest_sha256": "039b6e34e2055939b4ec542fdd39cb3e2e0c66958e24a74fc9f5168f6d95636b",
+    "upstream_lock_sha256": "9ea597235ffa9f97a076791d637acd976f8f4c78bcf85ea77de118570708ed3d"
+  },
+  "executed_tests": [
+    "dist/test/native-project-recovery.test.js"
+  ],
+  "original_sha256": "088641fb17cc0ec64dbfbf1dd3dc4ad6e7952a956e8bdb4a760153651c5a9ec3"
+}

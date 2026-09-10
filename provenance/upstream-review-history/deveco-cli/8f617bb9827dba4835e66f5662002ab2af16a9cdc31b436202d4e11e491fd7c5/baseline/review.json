@@ -29,7 +29,7 @@
     },
     {
       "rule": "cli-core-utils",
-      "reason": "Native file containment, content hashes, process ownership and bounded readers replace upstream utility helpers. Current regression covers canonical paths, symlinks, atomic writes and bounded child output. Windows replacement now retries EPERM/EACCES/EBUSY at most ten times with 550 ms cumulative waiting, retaining the previous destination until a successful atomic rename. Fault injection proves transient recovery, permanent failure cleanup and unchanged exclusive writes; the original Windows CI failure remains archived; no upstream utility module is executed.",
+      "reason": "Native file containment, content hashes, process ownership and bounded readers replace upstream utility helpers. Current regression covers canonical paths, symlinks, atomic writes and bounded child output; no upstream utility module is executed.",
       "reviewer": "Codex GPT-6 native-7 source and boundary review"
     },
     {
@@ -308,7 +308,7 @@
     },
     {
       "path": "provenance/upstream-capabilities.json",
-      "sha256": "d10f6ae200b227cc168036186a218bbf20383d39decc586ec23cd6f361eb4873"
+      "sha256": "2d3b932e5d30be236be9993c95165b94de69aaa2b7ea7853938afbb960591242"
     },
     {
       "path": "provenance/upstream-lock.json",
@@ -392,7 +392,7 @@
     },
     {
       "path": "src/core/files.ts",
-      "sha256": "7b3220ec3f1836a75748ec87b1cc91caf4e859dd0c179b057bfb6077a459c315"
+      "sha256": "3fba338983b609d47b64fb38f55cded9b50f5c59b300da2c647d8f0ca61e9a85"
     },
     {
       "path": "src/core/process.ts",

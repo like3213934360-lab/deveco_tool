@@ -529,7 +529,7 @@
     },
     {
       "path": "provenance/upstream-capabilities.json",
-      "sha256": "d10f6ae200b227cc168036186a218bbf20383d39decc586ec23cd6f361eb4873"
+      "sha256": "2d3b932e5d30be236be9993c95165b94de69aaa2b7ea7853938afbb960591242"
     },
     {
       "path": "provenance/upstream-lock.json",
