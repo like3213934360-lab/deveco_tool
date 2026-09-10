@@ -15,282 +15,282 @@
     {
       "rule": "cli-core-toolchain",
       "reason": "Resolve installed DevEco/SDK components natively and launch owned processes with structured arguments and bounded output. No official CLI installation or global process killing is used; current SDK discovery, checker and build acceptance exercise the selected toolchain.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
     },
     {
       "rule": "cli-core-config",
       "reason": "Native configuration separates user configuration from owned state and selected SDK discovery. Environment and executable paths are validated and frozen per operation; the upstream host configuration and update mechanism are not runtime dependencies.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
     },
     {
       "rule": "cli-core-types",
       "reason": "Native strict tool schemas and deterministic workflow contracts replace upstream CLI option types. Unknown arguments fail before worker effects; default build preflight, protected evidence and removed Skill actions are covered by current regression and generic stdio acceptance.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
     },
     {
       "rule": "cli-core-utils",
       "reason": "Native file containment, content hashes, process ownership and bounded readers replace upstream utility helpers. Current regression covers canonical paths, symlinks, atomic writes and bounded child output. Windows replacement now retries EPERM/EACCES/EBUSY at most ten times with 550 ms cumulative waiting, retaining the previous destination until a successful atomic rename. Fault injection proves transient recovery, permanent failure cleanup and unchanged exclusive writes; the original Windows CI failure remains archived; no upstream utility module is executed.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
     },
     {
       "rule": "cli-core-trace",
       "reason": "Native request outcomes and structured request logs distinguish checker findings from transport/runtime failure. Durable worker/run events retain resumable execution and redacted errors without copying upstream telemetry or logging credentials.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
     },
     {
       "rule": "cli-core-internal",
       "reason": "Internal native child entrypoints are owned SDK checker/text/process helpers with validated arguments and distinct scratch directories. They do not load the retired official CLI or a child MCP; concurrent checker acceptance verifies scratch ownership and release.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
     },
     {
       "rule": "cli-src-apply-",
       "reason": "Retain the native hot-reload baseline/patch state machine with frozen multi-package inputs and explicit target selection. Package release occurs only after a durable complete installation receipt; uncertain effects retain recovery data. Current package lifecycle tests apply, while unchanged historical hot-device scripts keep their original tested identity and do not establish current phone acceptance.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
     },
     {
       "rule": "cli-src-auth-",
       "reason": "Retain native provider-isolated authentication and explicit browser login/logout/status/team actions. No credentials or upstream authentication executable are imported. Current auth regressions validate contracts; historical browser acceptance is carried only where its script identity is unchanged and remains scoped to its original execution.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
     },
     {
       "rule": "cli-src-signature-",
       "reason": "Native signature operations validate and capture local materials, selected product configuration and owned key/CSR outputs before SDK signing. Current SDK acceptance generates isolated keys and CSR; personal cloud-signing and physical installation evidence remain separately bounded historical checks.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
     },
     {
       "rule": "cli-src-codelinter-",
       "reason": "Native SDK lint validates scoped source, configuration and incremental Git inputs; preview limits do not hide total findings. Current six-case acceptance covers clean source, findings, explicit repair, invalid configuration and changed tracked files. It does not reuse the upstream development ESLint configuration.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
     },
     {
       "rule": "cli-src-docs-",
       "reason": "Knowledge and reference files are shipped with provenance and hash-checked bounded catalog/search/read. Local reading requires no client Skill directory, remote executable or login; current generic MCP acceptance reads all bundled Skill entrypoints and current knowledge tests validate resource lookup.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
     },
     {
       "rule": "cli-src-ui-",
-      "reason": "Native UI import validates bounded dump schema, caches by source identity and preserves node hierarchy and selector totals. Actions use canonical application/display scope. Existing dump regression is current; current dedicated API 26 phone actions and screenshot acceptance pass, including host review and exact byte-hash exports.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "Native UI import validates bounded dump schema, caches by source identity and preserves node hierarchy and selector totals. Actions use canonical application/display scope. Existing dump regression is current; phone action and screenshot acceptance remains pending for this release.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
     },
     {
       "rule": "cli-src-service-",
       "reason": "Retain native emulator discovery, instance lifecycle, scenario planning and explicit license acceptance using installed SDK tools. Parser and ownership tests are current, and current SDK acceptance reads inventory. Earlier SDK/emulator lifecycle acceptance retains its original scope and does not imply a new emulator launch.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
     },
     {
       "rule": "cli-src-resources-",
       "reason": "Native project templates and SDK-matched configuration replace executable upstream resources. Current project creation/build and multimodule acceptance validate the native outputs. Upstream scripts are reference material and are not copied into the runtime.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
     },
     {
       "rule": "cli-src-data-",
       "reason": "Read installed emulator catalogs and agreement metadata using native bounded contracts and scoped scenario planning. Do not ship stale upstream agreement text or write private SDK state directly. Current parser/schema tests and SDK inventory apply; historical lifecycle results remain historical.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
     },
     {
       "rule": "cli-templates-",
       "reason": "Generate isolated native application/module templates with selected SDK metadata, local dependencies and correct product targets. Current four product/target builds and distinct runtime API builds pass. The upstream project .cache ignore is unnecessary because native checker scratch is owned outside the project and cleaned on completion.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
     },
     {
       "rule": "cli-index-",
       "reason": "Native knowledge indexes serve bundled resource files with bounded catalog/search/read and verified hashes. The upstream CLI index is not executed; reference content and discoverability are checked through native resource and MCP acceptance.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
     },
     {
       "rule": "cli-command-build.ts",
       "reason": "Native project workflows capture product/module target selection, run fresh full-scope preflight, execute owned SDK tools and collect package identity. Current evidence covers blocking an injected error before Hvigor, repair followed by compilation, and four product/target combinations with HAR/HSP/HAP closure and two native ABIs. These results do not prove installation or phone behavior.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
     },
     {
       "rule": "cli-command-create.ts",
       "reason": "Native project_create captures a new destination and SDK-matched configuration under a durable workflow. Current stdio creation guidance starts before the directory exists, creates the isolated project and completes only after a fresh successful build reference.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
     },
     {
       "rule": "cli-command-init.ts",
       "reason": "Native project inspection and synchronization use captured project/product/module context. Current SDK and multimodule builds validate generated profiles and dependency synchronization; arbitrary upstream initializer code is not imported or run.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
     },
     {
       "rule": "cli-command-run.ts",
-      "reason": "Native deployment captures the complete selected package set, validates receipts and launches an explicit Ability/Want. Confirmed installation releases only MCP-owned package copies; uncertain installs retain recovery input and later launch failure does not cause reinstall. Current phone acceptance passes seven sequential 335608234-byte installations, automatic package-copy release, retained source SHA, reconnect receipts, fresh build/deploy/final assertion and small-canary restoration; lifecycle regressions are current.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "Native deployment captures the complete selected package set, validates receipts and launches an explicit Ability/Want. Confirmed installation releases only MCP-owned package copies; uncertain installs retain recovery input and later launch failure does not cause reinstall. Current phone execution is pending; lifecycle regressions are current.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
     },
     {
       "rule": "cli-command-check.ts",
-      "reason": "The native checker uses selected project/product/module SDK configuration, strict source and report bounds, canonical application ASTs and SDK binder identities. Compiler-normalized Windows source names are compared with normalized selected paths so cross-file findings remain in scope; the Windows regression failure is retained and the repaired six-platform CI run confirms this path. All eighteen enabled CLI validator groups are adapted; original project root and compatible-version strings preserve real API warning behavior. Twenty-one current SDK cases include errors and repairs. Static checking is distinct from build/device completion.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "The native checker uses selected project/product/module SDK configuration, strict source and report bounds, canonical application ASTs and SDK binder identities. Compiler-normalized Windows source names are compared with normalized selected paths so cross-file findings remain in scope; the Windows regression failure is retained and the repaired CI run must confirm this path. All eighteen enabled CLI validator groups are adapted; original project root and compatible-version strings preserve real API warning behavior. Twenty-one current SDK cases include errors and repairs. Static checking is distinct from build/device completion.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
     },
     {
       "rule": "cli-command-serve-lsp.ts",
       "reason": "Native ArkTS/clangd sessions use the selected SDK and captured project, synchronize documents and bind zero-based UTF-16 requests to advertised provider capabilities. Current real SDK evidence covers core queries, module scope and five added symbol/call operations. SDK 26 ArkTS lacks the five new providers; clangd supports four and explicitly rejects outgoing calls. No name-search substitute or unsupported success is claimed.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
     },
     {
       "rule": "cli-command-serve-lsp-cpp.ts",
       "reason": "Native ArkTS/clangd sessions use the selected SDK and captured project, synchronize documents and bind zero-based UTF-16 requests to advertised provider capabilities. Current real SDK evidence covers core queries, module scope and five added symbol/call operations. SDK 26 ArkTS lacks the five new providers; clangd supports four and explicitly rejects outgoing calls. No name-search substitute or unsupported success is claimed.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
     },
     {
       "rule": "cli-command-signature.ts",
       "reason": "Map signature dispatch to native material/configuration schemas and owned SDK signing processes. Current SDK key/CSR checks pass; earlier full signing acceptance keeps its original identity, and current installation is not inferred from successful signing.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
     },
     {
       "rule": "cli-command-auth.ts",
       "reason": "Map authentication commands to provider-isolated native browser flows and explicit status/logout actions. Existing regression verifies isolation and recovery; unchanged historical browser acceptance is not recaptured or relabelled as a current login.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
     },
     {
       "rule": "cli-command-doc.ts",
       "reason": "Map CLI documentation commands to native bundled knowledge catalog/search/read. Hash-checked resources and bounded results are available over generic MCP without a client Skill installer.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
     },
     {
       "rule": "cli-command-log.ts",
-      "reason": "Native hdc_log retains explicit device selection, bounded filters, PID/device-time association and partial-ring semantics. UI test logs provide bounded read/search and export, replacing unlimited host log buffers. Log clearing is an explicit mutation. Current dedicated phone collect/clear/selection acceptance passes with a real nonempty Chinese marker and explicit default-buffer clear; historical crash evidence keeps its original execution identity.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "Native hdc_log retains explicit device selection, bounded filters, PID/device-time association and partial-ring semantics. UI test logs provide bounded read/search and export, replacing unlimited host log buffers. Log clearing is an explicit mutation. Current phone collect/clear/selection acceptance remains pending; historical crash evidence keeps its original execution identity.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
     },
     {
       "rule": "cli-command-device.ts",
-      "reason": "Native device_info uses explicit HDC target selection and bounded structured information/file/SQLite operations with canonical ownership. Current device protocol tests pass; after renewed wireless authorization, explicit device_info list=true and full API 26 device properties were read from the dedicated phone.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "Native device_info uses explicit HDC target selection and bounded structured information/file/SQLite operations with canonical ownership. Current device protocol tests pass; no phone has been probed during the user-requested connection wait.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
     },
     {
       "rule": "cli-command-emulator.ts",
       "reason": "Native emulator actions preserve explicit instance selection, license gates and owned process lifecycle. Current inventory and parsing regression pass; historical real lifecycle scripts remain tied to the earlier execution and do not declare current cross-platform emulator acceptance.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
     },
     {
       "rule": "cli-command-ui.ts",
-      "reason": "Native UI tests capture objective, selected application/display and bounded plans/actions. Target-app pixel evidence excludes unrelated system-bar changes; no-progress counts, uncertain effects, replan review, cancellation and export are durable. Actual host image inspection remains separate from native assertions. Current dedicated API 26 wireless acceptance passes actions, replan, real image review, Chinese confirmation, hard restart without replay, cancellation, unknown-goal recording and saved replay. Hash-verified exports preserve full raw evidence.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "Native UI tests capture objective, selected application/display and bounded plans/actions. Target-app pixel evidence excludes unrelated system-bar changes; no-progress counts, uncertain effects, replan review, cancellation and export are durable. Actual host image inspection remains separate from native assertions. Current device acceptance is pending and is not replaced by historical wireless or unit-test results.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
     },
     {
       "rule": "cli-command-ui-input.ts",
-      "reason": "Native UI tests capture objective, selected application/display and bounded plans/actions. Target-app pixel evidence excludes unrelated system-bar changes; no-progress counts, uncertain effects, replan review, cancellation and export are durable. Actual host image inspection remains separate from native assertions. Current dedicated API 26 wireless acceptance passes actions, replan, real image review, Chinese confirmation, hard restart without replay, cancellation, unknown-goal recording and saved replay. Hash-verified exports preserve full raw evidence.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "Native UI tests capture objective, selected application/display and bounded plans/actions. Target-app pixel evidence excludes unrelated system-bar changes; no-progress counts, uncertain effects, replan review, cancellation and export are durable. Actual host image inspection remains separate from native assertions. Current device acceptance is pending and is not replaced by historical wireless or unit-test results.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
     },
     {
       "rule": "cli-command-ui-layout.ts",
       "reason": "Native UI layout import preserves bounded complete snapshot parsing, hierarchy, query counts and pagination with source-keyed cache ownership. Current tests cover malformed and oversized inputs; a parsed layout alone is not a verified phone action.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
     },
     {
       "rule": "cli-command-ui-window.ts",
-      "reason": "Native UI inspection retains actual selected display/application window identities. Progress checks now hash the captured application region rather than the changing full screen; current pixel/geometry tests apply and final dedicated phone verification passes three unchanged app captures and blocks the fourth action despite system-bar activity.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "Native UI inspection retains actual selected display/application window identities. Progress checks now hash the captured application region rather than the changing full screen; current pixel/geometry tests apply and final phone verification remains pending.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
     },
     {
       "rule": "cli-command-ui-screenshot.ts",
-      "reason": "Native screenshot capture uses explicit display scope, owned temporary paths and SHA-bound image artifacts. UI review requires reading the actual image before recording host judgement; exports preserve originals and manifests. Final physical capture, actual host image inspection and full screenshot/log/event export hash checks pass.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "Native screenshot capture uses explicit display scope, owned temporary paths and SHA-bound image artifacts. UI review requires reading the actual image before recording host judgement; exports preserve originals and manifests. Final physical capture/export evidence remains pending.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
     },
     {
       "rule": "cli-retired-src-compat-",
       "reason": "This mapped path belongs to the removed official CLI updater, installer, legacy Studio compatibility or child MCP. The native package neither ships nor executes it. Existing native SDK/process services provide the supported operations; restoring this path would violate the approved architecture.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
     },
     {
       "rule": "cli-retired-src-skills-",
       "reason": "All six reviewed Skills and their referenced knowledge are bundled and read over generic MCP. Persistent guidance, document revisions and native completion gates replace client Skill installation. Actual stdio acceptance reads every Skill and restores guidance after reconnect; the host supplies reasoning and source edits. Installation and uninstallation are intentionally rejected under the owner architecture.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
     },
     {
       "rule": "cli-retired-src-install-check-",
       "reason": "This mapped path belongs to the removed official CLI updater, installer, legacy Studio compatibility or child MCP. The native package neither ships nor executes it. Existing native SDK/process services provide the supported operations; restoring this path would violate the approved architecture.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
     },
     {
       "rule": "cli-retired-src-update-",
       "reason": "This mapped path belongs to the removed official CLI updater, installer, legacy Studio compatibility or child MCP. The native package neither ships nor executes it. Existing native SDK/process services provide the supported operations; restoring this path would violate the approved architecture.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
     },
     {
       "rule": "cli-retired-src-commands-skills.ts",
       "reason": "All six reviewed Skills and their referenced knowledge are bundled and read over generic MCP. Persistent guidance, document revisions and native completion gates replace client Skill installation. Actual stdio acceptance reads every Skill and restores guidance after reconnect; the host supplies reasoning and source edits. Installation and uninstallation are intentionally rejected under the owner architecture.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
     },
     {
       "rule": "cli-retired-src-commands-update.ts",
       "reason": "This mapped path belongs to the removed official CLI updater, installer, legacy Studio compatibility or child MCP. The native package neither ships nor executes it. Existing native SDK/process services provide the supported operations; restoring this path would violate the approved architecture.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
     },
     {
       "rule": "cli-retired-src-commands-serve.ts",
       "reason": "This mapped path belongs to the removed official CLI updater, installer, legacy Studio compatibility or child MCP. The native package neither ships nor executes it. Existing native SDK/process services provide the supported operations; restoring this path would violate the approved architecture.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
     },
     {
       "rule": "cli-retired-mcp-",
       "reason": "This mapped path belongs to the removed official CLI updater, installer, legacy Studio compatibility or child MCP. The native package neither ships nor executes it. Existing native SDK/process services provide the supported operations; restoring this path would violate the approved architecture.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
     },
     {
       "rule": "cli-release-LICENSE",
       "reason": "Review this upstream legal/release/dependency metadata as provenance for the pinned CLI reference. Native dependencies are separately locked and licensed; no official CLI or copied executable resource is installed. This classification does not certify a publish or installation result.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
     },
     {
       "rule": "cli-release-OAT.xml",
       "reason": "Review this upstream legal/release/dependency metadata as provenance for the pinned CLI reference. Native dependencies are separately locked and licensed; no official CLI or copied executable resource is installed. This classification does not certify a publish or installation result.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
     },
     {
       "rule": "cli-release-PRIVACY.md",
       "reason": "Review this upstream legal/release/dependency metadata as provenance for the pinned CLI reference. Native dependencies are separately locked and licensed; no official CLI or copied executable resource is installed. This classification does not certify a publish or installation result.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
     },
     {
       "rule": "cli-release-package.json",
       "reason": "Review this upstream legal/release/dependency metadata as provenance for the pinned CLI reference. Native dependencies are separately locked and licensed; no official CLI or copied executable resource is installed. This classification does not certify a publish or installation result.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
     },
     {
       "rule": "cli-release-package-lock.json",
       "reason": "Review this upstream legal/release/dependency metadata as provenance for the pinned CLI reference. Native dependencies are separately locked and licensed; no official CLI or copied executable resource is installed. This classification does not certify a publish or installation result.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
     },
     {
       "rule": "cli-release-CHANGELOG.md",
       "reason": "Review this upstream legal/release/dependency metadata as provenance for the pinned CLI reference. Native dependencies are separately locked and licensed; no official CLI or copied executable resource is installed. This classification does not certify a publish or installation result.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
     },
     {
       "rule": "cli-release-src/cli.ts",
       "reason": "Native --version, -v and -V return the release before configuration, SDK and state initialization; extra arguments are rejected. Native MCP dispatch and workflow guidance replace upstream terminal/telemetry/CLI dispatch. Isolated version output was manually observed and core runtime contracts passed.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
     },
     {
       "rule": "cli-emulator-license-protocol",
       "reason": "Use installed native agreement metadata and explicit acceptance flags; do not import old bundled license text or directly mutate private emulator state. Current contract and parser tests remain required, and historical SDK agreement acceptance is preserved only with its original scope.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
     },
     {
       "rule": "cli-arkts-adapter",
-      "reason": "The native checker uses selected project/product/module SDK configuration, strict source and report bounds, canonical application ASTs and SDK binder identities. Compiler-normalized Windows source names are compared with normalized selected paths so cross-file findings remain in scope; the Windows regression failure is retained and the repaired six-platform CI run confirms this path. All eighteen enabled CLI validator groups are adapted; original project root and compatible-version strings preserve real API warning behavior. Twenty-one current SDK cases include errors and repairs. Static checking is distinct from build/device completion.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "The native checker uses selected project/product/module SDK configuration, strict source and report bounds, canonical application ASTs and SDK binder identities. Compiler-normalized Windows source names are compared with normalized selected paths so cross-file findings remain in scope; the Windows regression failure is retained and the repaired CI run must confirm this path. All eighteen enabled CLI validator groups are adapted; original project root and compatible-version strings preserve real API warning behavior. Twenty-one current SDK cases include errors and repairs. Static checking is distinct from build/device completion.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
     },
     {
       "rule": "cli-arkts-resource",
-      "reason": "The native checker uses selected project/product/module SDK configuration, strict source and report bounds, canonical application ASTs and SDK binder identities. Compiler-normalized Windows source names are compared with normalized selected paths so cross-file findings remain in scope; the Windows regression failure is retained and the repaired six-platform CI run confirms this path. All eighteen enabled CLI validator groups are adapted; original project root and compatible-version strings preserve real API warning behavior. Twenty-one current SDK cases include errors and repairs. Static checking is distinct from build/device completion.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "The native checker uses selected project/product/module SDK configuration, strict source and report bounds, canonical application ASTs and SDK binder identities. Compiler-normalized Windows source names are compared with normalized selected paths so cross-file findings remain in scope; the Windows regression failure is retained and the repaired CI run must confirm this path. All eighteen enabled CLI validator groups are adapted; original project root and compatible-version strings preserve real API warning behavior. Twenty-one current SDK cases include errors and repairs. Static checking is distinct from build/device completion.",
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
     },
     {
       "rule": "cli-readme",
       "reason": "Map documented checking, repair timing and build behavior to native contracts and bundled workflow instructions. All six reviewed Skills and their referenced knowledge are bundled and read over generic MCP. Persistent guidance, document revisions and native completion gates replace client Skill installation. Actual stdio acceptance reads every Skill and restores guidance after reconnect; the host supplies reasoning and source edits. Installation and uninstallation are intentionally rejected under the owner architecture.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
     },
     {
       "rule": "cli-skill-entry",
       "reason": "All six reviewed Skills and their referenced knowledge are bundled and read over generic MCP. Persistent guidance, document revisions and native completion gates replace client Skill installation. Actual stdio acceptance reads every Skill and restores guidance after reconnect; the host supplies reasoning and source edits. Installation and uninstallation are intentionally rejected under the owner architecture.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
     },
     {
       "rule": "cli-development-eslint",
       "reason": "Exclude upstream repository-only ESLint ignores for generated dist and copied resource scripts. This file is not shipped or consumed by native SDK lint; the native linter has its own current six-case acceptance.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reviewer": "Codex GPT-6 native-7 source and boundary review"
     }
   ],
   "targets": [
@@ -308,7 +308,7 @@
     },
     {
       "path": "provenance/upstream-capabilities.json",
-      "sha256": "97f383293265cfd6711bfd88fc21cd1945aa846d092971382914a85499af352f"
+      "sha256": "d10f6ae200b227cc168036186a218bbf20383d39decc586ec23cd6f361eb4873"
     },
     {
       "path": "provenance/upstream-lock.json",

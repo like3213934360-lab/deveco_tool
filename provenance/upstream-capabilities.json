@@ -991,15 +991,21 @@
             "lines"
           ],
           "replacement": "hdc_log action=collect with explicit target/device_id and bounded filter/lines",
-          "status": "pending",
+          "status": "verified",
           "targets": [
             "src/services/logs.ts"
           ],
           "tests": [
             "test/native-logs.test.ts"
           ],
-          "evidence": [],
-          "boundary": "Current implementation and final-code acceptance still require review."
+          "evidence": [
+            {
+              "file": "provenance/upstream-capability-evidence/4d983235801ce8b548e5359459d6b23bc0d264f18a0194ea6bd2b056b1cc40c7.json",
+              "sha256": "4d983235801ce8b548e5359459d6b23bc0d264f18a0194ea6bd2b056b1cc40c7",
+              "case": "hdc_log.collect"
+            }
+          ],
+          "boundary": "Scoped bounded Hilog collect returned the dedicated application Chinese confirmation marker; one device only and not a continuous log."
         },
         {
           "id": "clear",
@@ -1009,16 +1015,22 @@
             "log_prefix",
             "lines"
           ],
-          "replacement": "hdc_log action=clear with explicit target/device_id and bounded filter/lines",
-          "status": "pending",
+          "replacement": "hdc_log action=clear with explicit target; clears default app/core buffers",
+          "status": "verified",
           "targets": [
             "src/services/logs.ts"
           ],
           "tests": [
             "test/native-logs.test.ts"
           ],
-          "evidence": [],
-          "boundary": "Current implementation and final-code acceptance still require review."
+          "evidence": [
+            {
+              "file": "provenance/upstream-capability-evidence/4d983235801ce8b548e5359459d6b23bc0d264f18a0194ea6bd2b056b1cc40c7.json",
+              "sha256": "4d983235801ce8b548e5359459d6b23bc0d264f18a0194ea6bd2b056b1cc40c7",
+              "case": "hdc_log.clear"
+            }
+          ],
+          "boundary": "Explicit default app/core Hilog buffer clear returned cleared=true; concurrent new logs remain possible."
         },
         {
           "id": "list_devices",
@@ -1028,16 +1040,22 @@
             "log_prefix",
             "lines"
           ],
-          "replacement": "device_info action=list",
-          "status": "pending",
+          "replacement": "device_info list=true",
+          "status": "verified",
           "targets": [
             "src/services/device.ts"
           ],
           "tests": [
             "test/native-context.test.ts"
           ],
-          "evidence": [],
-          "boundary": "Current implementation and final-code acceptance still require review."
+          "evidence": [
+            {
+              "file": "provenance/upstream-capability-evidence/4d983235801ce8b548e5359459d6b23bc0d264f18a0194ea6bd2b056b1cc40c7.json",
+              "sha256": "4d983235801ce8b548e5359459d6b23bc0d264f18a0194ea6bd2b056b1cc40c7",
+              "case": "hdc_log.list_devices"
+            }
+          ],
+          "boundary": "device_info list=true returned the wireless device selected for the acceptance; device_info properties separately verified API 26."
         }
       ]
     },
@@ -1151,15 +1169,21 @@
             "target"
           ],
           "replacement": "project routes -> app_deploy with validated packages -> Ability launch; explicit target selection",
-          "status": "pending",
+          "status": "verified",
           "targets": [
             "src/services/runtime.ts"
           ],
           "tests": [
             "test/native-context.test.ts"
           ],
-          "evidence": [],
-          "boundary": "Current implementation and final-code acceptance still require review."
+          "evidence": [
+            {
+              "file": "provenance/upstream-capability-evidence/4d983235801ce8b548e5359459d6b23bc0d264f18a0194ea6bd2b056b1cc40c7.json",
+              "sha256": "4d983235801ce8b548e5359459d6b23bc0d264f18a0194ea6bd2b056b1cc40c7",
+              "case": "start_app.execute"
+            }
+          ],
+          "boundary": "Real native launch returned processVerified=true in app_deploy and build_deploy_verify; the latter also passed the final application control assertion. Process launch alone is not proof of arbitrary UI outcomes."
         }
       ]
     },
@@ -1178,7 +1202,7 @@
             "freshStart"
           ],
           "replacement": "ui_test start/plan/resume/act/check/finish/cancel plus ui_review read/complete; fixed requirements and durable native evidence",
-          "status": "pending",
+          "status": "verified",
           "targets": [
             "src/services/ui-test.ts",
             "docs/builtin-skill-workflows.md"
@@ -1186,8 +1210,14 @@
           "tests": [
             "test/native-ui-test.test.ts"
           ],
-          "evidence": [],
-          "boundary": "The MCP client plans and visually judges the test. Native assertion failure cannot be overridden by a visual pass. Captured applications/display scope, bounded actions and uncertainty survive restart."
+          "evidence": [
+            {
+              "file": "provenance/upstream-capability-evidence/4d983235801ce8b548e5359459d6b23bc0d264f18a0194ea6bd2b056b1cc40c7.json",
+              "sha256": "4d983235801ce8b548e5359459d6b23bc0d264f18a0194ea6bd2b056b1cc40c7",
+              "case": "verify_ui.testPlan"
+            }
+          ],
+          "boundary": "Original Chinese plan and required final control/visual checks persisted through native actions and MCP restart. Host supplied the plan and image judgments."
         },
         {
           "id": "freshStart",
@@ -1198,7 +1228,7 @@
             "freshStart"
           ],
           "replacement": "ui_test start/plan/resume/act/check/finish/cancel plus ui_review read/complete; fixed requirements and durable native evidence",
-          "status": "pending",
+          "status": "verified",
           "targets": [
             "src/services/ui-test.ts",
             "docs/builtin-skill-workflows.md"
@@ -1206,8 +1236,14 @@
           "tests": [
             "test/native-ui-test.test.ts"
           ],
-          "evidence": [],
-          "boundary": "The MCP client plans and visually judges the test. Native assertion failure cannot be overridden by a visual pass. Captured applications/display scope, bounded actions and uncertainty survive restart."
+          "evidence": [
+            {
+              "file": "provenance/upstream-capability-evidence/4d983235801ce8b548e5359459d6b23bc0d264f18a0194ea6bd2b056b1cc40c7.json",
+              "sha256": "4d983235801ce8b548e5359459d6b23bc0d264f18a0194ea6bd2b056b1cc40c7",
+              "case": "verify_ui.freshStart"
+            }
+          ],
+          "boundary": "Fresh test initialization stopped and relaunched the dedicated application; initialized=false became true and sampled application PID changed."
         },
         {
           "id": "step_execution",
@@ -1218,7 +1254,7 @@
             "freshStart"
           ],
           "replacement": "ui_test start/plan/resume/act/check/finish/cancel plus ui_review read/complete; fixed requirements and durable native evidence",
-          "status": "pending",
+          "status": "verified",
           "targets": [
             "src/services/ui-test.ts",
             "docs/builtin-skill-workflows.md"
@@ -1226,8 +1262,14 @@
           "tests": [
             "test/native-ui-test.test.ts"
           ],
-          "evidence": [],
-          "boundary": "The MCP client plans and visually judges the test. Native assertion failure cannot be overridden by a visual pass. Captured applications/display scope, bounded actions and uncertainty survive restart."
+          "evidence": [
+            {
+              "file": "provenance/upstream-capability-evidence/4d983235801ce8b548e5359459d6b23bc0d264f18a0194ea6bd2b056b1cc40c7.json",
+              "sha256": "4d983235801ce8b548e5359459d6b23bc0d264f18a0194ea6bd2b056b1cc40c7",
+              "case": "verify_ui.step_execution"
+            }
+          ],
+          "boundary": "Six scoped native actions; three unchanged application captures counted 1/2/3 and the fourth was rejected until fresh screenshot review and changed strategy. Focused Chinese text input and native mouse confirmation passed the original assertion."
         },
         {
           "id": "visual_review",
@@ -1238,7 +1280,7 @@
             "freshStart"
           ],
           "replacement": "ui_test start/plan/resume/act/check/finish/cancel plus ui_review read/complete; fixed requirements and durable native evidence",
-          "status": "pending",
+          "status": "verified",
           "targets": [
             "src/services/ui-test.ts",
             "docs/builtin-skill-workflows.md"
@@ -1246,8 +1288,14 @@
           "tests": [
             "test/native-ui-test.test.ts"
           ],
-          "evidence": [],
-          "boundary": "The MCP client plans and visually judges the test. Native assertion failure cannot be overridden by a visual pass. Captured applications/display scope, bounded actions and uncertainty survive restart."
+          "evidence": [
+            {
+              "file": "provenance/upstream-capability-evidence/4d983235801ce8b548e5359459d6b23bc0d264f18a0194ea6bd2b056b1cc40c7.json",
+              "sha256": "4d983235801ce8b548e5359459d6b23bc0d264f18a0194ea6bd2b056b1cc40c7",
+              "case": "verify_ui.visual_review"
+            }
+          ],
+          "boundary": "Two fresh screenshots were actually read and visually inspected by the host, then assessed with matching artifact/hash/read tokens. finish rejected pending review despite a passing native assertion."
         },
         {
           "id": "resume",
@@ -1258,7 +1306,7 @@
             "freshStart"
           ],
           "replacement": "ui_test start/plan/resume/act/check/finish/cancel plus ui_review read/complete; fixed requirements and durable native evidence",
-          "status": "pending",
+          "status": "verified",
           "targets": [
             "src/services/ui-test.ts",
             "docs/builtin-skill-workflows.md"
@@ -1266,8 +1314,14 @@
           "tests": [
             "test/native-ui-test.test.ts"
           ],
-          "evidence": [],
-          "boundary": "The MCP client plans and visually judges the test. Native assertion failure cannot be overridden by a visual pass. Captured applications/display scope, bounded actions and uncertainty survive restart."
+          "evidence": [
+            {
+              "file": "provenance/upstream-capability-evidence/4d983235801ce8b548e5359459d6b23bc0d264f18a0194ea6bd2b056b1cc40c7.json",
+              "sha256": "4d983235801ce8b548e5359459d6b23bc0d264f18a0194ea6bd2b056b1cc40c7",
+              "case": "verify_ui.resume"
+            }
+          ],
+          "boundary": "Owned MCP process was killed after five accepted actions. Resume returned the same persisted test state and actions without replay, then the sixth action and final checks completed."
         },
         {
           "id": "cancel",
@@ -1278,7 +1332,7 @@
             "freshStart"
           ],
           "replacement": "ui_test start/plan/resume/act/check/finish/cancel plus ui_review read/complete; fixed requirements and durable native evidence",
-          "status": "pending",
+          "status": "verified",
           "targets": [
             "src/services/ui-test.ts",
             "docs/builtin-skill-workflows.md"
@@ -1286,8 +1340,14 @@
           "tests": [
             "test/native-ui-test.test.ts"
           ],
-          "evidence": [],
-          "boundary": "The MCP client plans and visually judges the test. Native assertion failure cannot be overridden by a visual pass. Captured applications/display scope, bounded actions and uncertainty survive restart."
+          "evidence": [
+            {
+              "file": "provenance/upstream-capability-evidence/4d983235801ce8b548e5359459d6b23bc0d264f18a0194ea6bd2b056b1cc40c7.json",
+              "sha256": "4d983235801ce8b548e5359459d6b23bc0d264f18a0194ea6bd2b056b1cc40c7",
+              "case": "verify_ui.cancel"
+            }
+          ],
+          "boundary": "An initialized test was cancelled, MCP restarted, and status remained cancelled with zero actions and verified=false."
         }
       ]
     },
@@ -1305,7 +1365,7 @@
             "searchKeywords"
           ],
           "replacement": "ui_test logs test_id, optional chunk_id/search_keywords/offset/max_bytes; main-app PID/device-time/step association",
-          "status": "pending",
+          "status": "verified",
           "targets": [
             "src/services/ui-test-log.ts",
             "docs/builtin-skill-workflows.md"
@@ -1313,8 +1373,14 @@
           "tests": [
             "test/native-ui-test-log.test.ts"
           ],
-          "evidence": [],
-          "boundary": "Always bounded partial logs with explicit captured main-app scope. Upstream unlimited maxLogSize=-1 is intentionally replaced by bounded pagination."
+          "evidence": [
+            {
+              "file": "provenance/upstream-capability-evidence/4d983235801ce8b548e5359459d6b23bc0d264f18a0194ea6bd2b056b1cc40c7.json",
+              "sha256": "4d983235801ce8b548e5359459d6b23bc0d264f18a0194ea6bd2b056b1cc40c7",
+              "case": "get_ui_verification_log.read"
+            }
+          ],
+          "boundary": "Eight bounded PID/epoch-scoped log chunks were retained; a nonempty chunk was read through the native log API. complete=false explicitly describes partial ring-buffer evidence."
         },
         {
           "id": "search",
@@ -1324,7 +1390,7 @@
             "searchKeywords"
           ],
           "replacement": "ui_test logs test_id, optional chunk_id/search_keywords/offset/max_bytes; main-app PID/device-time/step association",
-          "status": "pending",
+          "status": "verified",
           "targets": [
             "src/services/ui-test-log.ts",
             "docs/builtin-skill-workflows.md"
@@ -1332,8 +1398,14 @@
           "tests": [
             "test/native-ui-test-log.test.ts"
           ],
-          "evidence": [],
-          "boundary": "Always bounded partial logs with explicit captured main-app scope. Upstream unlimited maxLogSize=-1 is intentionally replaced by bounded pagination."
+          "evidence": [
+            {
+              "file": "provenance/upstream-capability-evidence/4d983235801ce8b548e5359459d6b23bc0d264f18a0194ea6bd2b056b1cc40c7.json",
+              "sha256": "4d983235801ce8b548e5359459d6b23bc0d264f18a0194ea6bd2b056b1cc40c7",
+              "case": "get_ui_verification_log.search"
+            }
+          ],
+          "boundary": "Literal keyword search returned one 136-byte Chinese confirmation line within the 4000-byte request limit. Partial scoped logging is not continuous complete capture."
         }
       ]
     },
@@ -1350,7 +1422,7 @@
             "dirname"
           ],
           "replacement": "ui_test export test_id,directory produces owned report, step images, logs and SHA-256 manifest",
-          "status": "pending",
+          "status": "verified",
           "targets": [
             "src/services/ui-test.ts",
             "docs/builtin-skill-workflows.md"
@@ -1358,8 +1430,14 @@
           "tests": [
             "test/native-ui-test.test.ts"
           ],
-          "evidence": [],
-          "boundary": "New absolute directory only, guarded references and immutable snapshot. Export of a paused test does not imply test completion."
+          "evidence": [
+            {
+              "file": "provenance/upstream-capability-evidence/4d983235801ce8b548e5359459d6b23bc0d264f18a0194ea6bd2b056b1cc40c7.json",
+              "sha256": "4d983235801ce8b548e5359459d6b23bc0d264f18a0194ea6bd2b056b1cc40c7",
+              "case": "save_ui_screenshot.export_steps"
+            }
+          ],
+          "boundary": "Completed and cancelled tests were exported to fresh private directories; all manifest, screenshot, log and event byte counts and SHA-256 hashes were verified. Export success alone does not make a cancelled test pass."
         }
       ]
     },
@@ -1373,7 +1451,7 @@
           "id": "execute",
           "parameters": [],
           "replacement": "skill_workflow kind=debug transition phase=completed after native reproduction evidence and host review",
-          "status": "pending",
+          "status": "verified",
           "targets": [
             "src/services/skill-workflow.ts",
             "docs/builtin-skill-workflows.md",
@@ -1382,8 +1460,14 @@
           "tests": [
             "test/native-skill-workflow.test.ts"
           ],
-          "evidence": [],
-          "boundary": "Records the debug phase and evidence; verified=false and host_mode_changed=false. Host still assesses whether the original bug was repaired."
+          "evidence": [
+            {
+              "file": "provenance/upstream-capability-evidence/4d983235801ce8b548e5359459d6b23bc0d264f18a0194ea6bd2b056b1cc40c7.json",
+              "sha256": "4d983235801ce8b548e5359459d6b23bc0d264f18a0194ea6bd2b056b1cc40c7",
+              "case": "debug_exit.execute"
+            }
+          ],
+          "boundary": "Builtin debug workflow persisted notes and implementing/verifying/completed phases; rejected cancelled evidence and completed only with a fresh succeeded UI test and host assessment. status=succeeded with verified=false; no host system mode is changed."
         }
       ]
     }

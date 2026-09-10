@@ -1,0 +1,181 @@
+{
+  "format": 1,
+  "passed": true,
+  "tested": {
+    "runtime_sha256": "5e5aa855f7808b5d953364e4545821877d37f300d8641bbce1a4f2f4b53c0097",
+    "compiled_sha256": "4c6668ee61e25fc125733b107455868346a15d7b0a000b773232e8f0c3ba83a0",
+    "package_lock_sha256": "9ebb046bdb6d6094bb2eb3d17555bb21f73d8f4ac83f9c396af6a10f9c9f7f95",
+    "resource_manifest_sha256": "039b6e34e2055939b4ec542fdd39cb3e2e0c66958e24a74fc9f5168f6d95636b",
+    "upstream_lock_sha256": "9ea597235ffa9f97a076791d637acd976f8f4c78bcf85ea77de118570708ed3d"
+  },
+  "cases": [
+    {
+      "id": "hdc_log.collect",
+      "passed": true,
+      "outcome": "executed",
+      "scope": "macOS Node 24 / one dedicated API 26 application over HDC TCP. Scoped bounded Hilog collect returned the dedicated application Chinese confirmation marker; one device only and not a continuous log.",
+      "artifacts": [
+        {
+          "file": "provenance/upstream-capability-evidence/1f0171790eeff8e556de2c794d9bdc548e711757cd122dee08740f725fdfcd15.json",
+          "sha256": "1f0171790eeff8e556de2c794d9bdc548e711757cd122dee08740f725fdfcd15"
+        }
+      ]
+    },
+    {
+      "id": "hdc_log.clear",
+      "passed": true,
+      "outcome": "executed",
+      "scope": "macOS Node 24 / one dedicated API 26 application over HDC TCP. Explicit default app/core Hilog buffer clear returned cleared=true; concurrent new logs remain possible.",
+      "artifacts": [
+        {
+          "file": "provenance/upstream-capability-evidence/1f0171790eeff8e556de2c794d9bdc548e711757cd122dee08740f725fdfcd15.json",
+          "sha256": "1f0171790eeff8e556de2c794d9bdc548e711757cd122dee08740f725fdfcd15"
+        }
+      ]
+    },
+    {
+      "id": "hdc_log.list_devices",
+      "passed": true,
+      "outcome": "executed",
+      "scope": "macOS Node 24 / one dedicated API 26 application over HDC TCP. device_info list=true returned the wireless device selected for the acceptance; device_info properties separately verified API 26.",
+      "artifacts": [
+        {
+          "file": "provenance/upstream-capability-evidence/1f0171790eeff8e556de2c794d9bdc548e711757cd122dee08740f725fdfcd15.json",
+          "sha256": "1f0171790eeff8e556de2c794d9bdc548e711757cd122dee08740f725fdfcd15"
+        }
+      ]
+    },
+    {
+      "id": "start_app.execute",
+      "passed": true,
+      "outcome": "executed",
+      "scope": "macOS Node 24 / one dedicated API 26 application over HDC TCP. Real native launch returned processVerified=true in app_deploy and build_deploy_verify; the latter also passed the final application control assertion. Process launch alone is not proof of arbitrary UI outcomes.",
+      "artifacts": [
+        {
+          "file": "provenance/upstream-capability-evidence/1f0171790eeff8e556de2c794d9bdc548e711757cd122dee08740f725fdfcd15.json",
+          "sha256": "1f0171790eeff8e556de2c794d9bdc548e711757cd122dee08740f725fdfcd15"
+        }
+      ]
+    },
+    {
+      "id": "verify_ui.testPlan",
+      "passed": true,
+      "outcome": "executed",
+      "scope": "macOS Node 24 / one dedicated API 26 application over HDC TCP. Original Chinese plan and required final control/visual checks persisted through native actions and MCP restart. Host supplied the plan and image judgments.",
+      "artifacts": [
+        {
+          "file": "provenance/upstream-capability-evidence/1f0171790eeff8e556de2c794d9bdc548e711757cd122dee08740f725fdfcd15.json",
+          "sha256": "1f0171790eeff8e556de2c794d9bdc548e711757cd122dee08740f725fdfcd15"
+        }
+      ]
+    },
+    {
+      "id": "verify_ui.freshStart",
+      "passed": true,
+      "outcome": "executed",
+      "scope": "macOS Node 24 / one dedicated API 26 application over HDC TCP. Fresh test initialization stopped and relaunched the dedicated application; initialized=false became true and sampled application PID changed.",
+      "artifacts": [
+        {
+          "file": "provenance/upstream-capability-evidence/1f0171790eeff8e556de2c794d9bdc548e711757cd122dee08740f725fdfcd15.json",
+          "sha256": "1f0171790eeff8e556de2c794d9bdc548e711757cd122dee08740f725fdfcd15"
+        }
+      ]
+    },
+    {
+      "id": "verify_ui.step_execution",
+      "passed": true,
+      "outcome": "executed",
+      "scope": "macOS Node 24 / one dedicated API 26 application over HDC TCP. Six scoped native actions; three unchanged application captures counted 1/2/3 and the fourth was rejected until fresh screenshot review and changed strategy. Focused Chinese text input and native mouse confirmation passed the original assertion.",
+      "artifacts": [
+        {
+          "file": "provenance/upstream-capability-evidence/1f0171790eeff8e556de2c794d9bdc548e711757cd122dee08740f725fdfcd15.json",
+          "sha256": "1f0171790eeff8e556de2c794d9bdc548e711757cd122dee08740f725fdfcd15"
+        }
+      ]
+    },
+    {
+      "id": "verify_ui.visual_review",
+      "passed": true,
+      "outcome": "executed",
+      "scope": "macOS Node 24 / one dedicated API 26 application over HDC TCP. Two fresh screenshots were actually read and visually inspected by the host, then assessed with matching artifact/hash/read tokens. finish rejected pending review despite a passing native assertion.",
+      "artifacts": [
+        {
+          "file": "provenance/upstream-capability-evidence/1f0171790eeff8e556de2c794d9bdc548e711757cd122dee08740f725fdfcd15.json",
+          "sha256": "1f0171790eeff8e556de2c794d9bdc548e711757cd122dee08740f725fdfcd15"
+        }
+      ]
+    },
+    {
+      "id": "verify_ui.resume",
+      "passed": true,
+      "outcome": "executed",
+      "scope": "macOS Node 24 / one dedicated API 26 application over HDC TCP. Owned MCP process was killed after five accepted actions. Resume returned the same persisted test state and actions without replay, then the sixth action and final checks completed.",
+      "artifacts": [
+        {
+          "file": "provenance/upstream-capability-evidence/1f0171790eeff8e556de2c794d9bdc548e711757cd122dee08740f725fdfcd15.json",
+          "sha256": "1f0171790eeff8e556de2c794d9bdc548e711757cd122dee08740f725fdfcd15"
+        }
+      ]
+    },
+    {
+      "id": "verify_ui.cancel",
+      "passed": true,
+      "outcome": "executed",
+      "scope": "macOS Node 24 / one dedicated API 26 application over HDC TCP. An initialized test was cancelled, MCP restarted, and status remained cancelled with zero actions and verified=false.",
+      "artifacts": [
+        {
+          "file": "provenance/upstream-capability-evidence/1f0171790eeff8e556de2c794d9bdc548e711757cd122dee08740f725fdfcd15.json",
+          "sha256": "1f0171790eeff8e556de2c794d9bdc548e711757cd122dee08740f725fdfcd15"
+        }
+      ]
+    },
+    {
+      "id": "get_ui_verification_log.read",
+      "passed": true,
+      "outcome": "executed",
+      "scope": "macOS Node 24 / one dedicated API 26 application over HDC TCP. Eight bounded PID/epoch-scoped log chunks were retained; a nonempty chunk was read through the native log API. complete=false explicitly describes partial ring-buffer evidence.",
+      "artifacts": [
+        {
+          "file": "provenance/upstream-capability-evidence/1f0171790eeff8e556de2c794d9bdc548e711757cd122dee08740f725fdfcd15.json",
+          "sha256": "1f0171790eeff8e556de2c794d9bdc548e711757cd122dee08740f725fdfcd15"
+        }
+      ]
+    },
+    {
+      "id": "get_ui_verification_log.search",
+      "passed": true,
+      "outcome": "executed",
+      "scope": "macOS Node 24 / one dedicated API 26 application over HDC TCP. Literal keyword search returned one 136-byte Chinese confirmation line within the 4000-byte request limit. Partial scoped logging is not continuous complete capture.",
+      "artifacts": [
+        {
+          "file": "provenance/upstream-capability-evidence/1f0171790eeff8e556de2c794d9bdc548e711757cd122dee08740f725fdfcd15.json",
+          "sha256": "1f0171790eeff8e556de2c794d9bdc548e711757cd122dee08740f725fdfcd15"
+        }
+      ]
+    },
+    {
+      "id": "save_ui_screenshot.export_steps",
+      "passed": true,
+      "outcome": "executed",
+      "scope": "macOS Node 24 / one dedicated API 26 application over HDC TCP. Completed and cancelled tests were exported to fresh private directories; all manifest, screenshot, log and event byte counts and SHA-256 hashes were verified. Export success alone does not make a cancelled test pass.",
+      "artifacts": [
+        {
+          "file": "provenance/upstream-capability-evidence/1f0171790eeff8e556de2c794d9bdc548e711757cd122dee08740f725fdfcd15.json",
+          "sha256": "1f0171790eeff8e556de2c794d9bdc548e711757cd122dee08740f725fdfcd15"
+        }
+      ]
+    },
+    {
+      "id": "debug_exit.execute",
+      "passed": true,
+      "outcome": "executed",
+      "scope": "macOS Node 24 / one dedicated API 26 application over HDC TCP. Builtin debug workflow persisted notes and implementing/verifying/completed phases; rejected cancelled evidence and completed only with a fresh succeeded UI test and host assessment. status=succeeded with verified=false; no host system mode is changed.",
+      "artifacts": [
+        {
+          "file": "provenance/upstream-capability-evidence/1f0171790eeff8e556de2c794d9bdc548e711757cd122dee08740f725fdfcd15.json",
+          "sha256": "1f0171790eeff8e556de2c794d9bdc548e711757cd122dee08740f725fdfcd15"
+        }
+      ]
+    }
+  ]
+}
