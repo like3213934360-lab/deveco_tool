@@ -105,6 +105,20 @@ async function fixture(
     fs.rmSync(root, { recursive: true, force: true });
   }
 }
+test("LSP refuses deleted sources and refreshes recreated files in the existing session", async () => {
+  await fixture({}, async (service, project) => {
+    await service.request(project, { action: "hover", file: "Model.ets" });
+    const file = path.join(project.root, "Model.ets");
+    fs.rmSync(file);
+    await assert.rejects(service.request(project, { action: "hover", file: "Model.ets" }));
+    fs.writeFileSync(file, "const recreated = '新的内容';\n");
+    const hover = await service.request(project, { action: "hover", file: "Model.ets" });
+    assert.match(JSON.stringify(hover), /recreated/);
+    assert.doesNotMatch(JSON.stringify(hover), /const value/);
+    assert.equal(service.metrics.connections, 1);
+  });
+});
+
 test("LSP implementation returns location links and resolves Unicode path aliases once", async () => {
   assert.equal(
     tools.lsp.schema.parse({ action: "implementation", file: "Model.ets" })

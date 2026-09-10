@@ -29,8 +29,8 @@
     },
     {
       "rule": "cli-core-utils",
-      "reason": "Replace CLI shell helpers, build locks and data paths with argv-based owned processes, resource leases and private durable state; uncertain external completion is paused. Post-v0.2.0 maintenance: the locked upstream source and native adapters are unchanged. Reviewed new auth-expiry, cloud-profile interruption and missing CLT scanner fixture assertions. Require the current regression and isolated SDK reports; unchanged device/cloud/emulator checks retain historical execution identity.",
-      "reviewer": "Codex maintenance review"
+      "reason": "Replace CLI shell helpers, build locks and data paths with argv-based owned processes, resource leases and private durable state; uncertain external completion is paused. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
+      "reviewer": "Codex native release review"
     },
     {
       "rule": "cli-core-trace",
@@ -49,13 +49,13 @@
     },
     {
       "rule": "cli-src-auth-",
-      "reason": "Use native browser authentication and encrypted token storage with explicit personal/team identity and refresh; no old CLI credential import during installation migration. Post-v0.2.0 maintenance: the locked upstream source and native adapters are unchanged. Reviewed new auth-expiry, cloud-profile interruption and missing CLT scanner fixture assertions. Require the current regression and isolated SDK reports; unchanged device/cloud/emulator checks retain historical execution identity.",
-      "reviewer": "Codex maintenance review"
+      "reason": "Use native browser authentication and encrypted token storage with explicit personal/team identity and refresh; no old CLI credential import during installation migration. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
+      "reviewer": "Codex native release review"
     },
     {
       "rule": "cli-src-signature-",
-      "reason": "Preserve certificate, CSR, profile and signing protocols with encrypted preparation and digest-checked publication. Post-v0.2.0 maintenance: the locked upstream source and native adapters are unchanged. Reviewed new auth-expiry, cloud-profile interruption and missing CLT scanner fixture assertions. Require the current regression and isolated SDK reports; unchanged device/cloud/emulator checks retain historical execution identity.",
-      "reviewer": "Codex maintenance review"
+      "reason": "Preserve certificate, CSR, profile and signing protocols with encrypted preparation and digest-checked publication. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
+      "reviewer": "Codex native release review"
     },
     {
       "rule": "cli-src-codelinter-",
@@ -139,8 +139,8 @@
     },
     {
       "rule": "cli-command-auth.ts",
-      "reason": "Expose native login, status, logout and team selection while keeping tokens private; expired-auth and reauthentication scenarios remain required. Post-v0.2.0 maintenance: the locked upstream source and native adapters are unchanged. Reviewed new auth-expiry, cloud-profile interruption and missing CLT scanner fixture assertions. Require the current regression and isolated SDK reports; unchanged device/cloud/emulator checks retain historical execution identity.",
-      "reviewer": "Codex maintenance review"
+      "reason": "Expose native login, status, logout and team selection while keeping tokens private; expired-auth and reauthentication scenarios remain required. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
+      "reviewer": "Codex native release review"
     },
     {
       "rule": "cli-command-doc.ts",
@@ -451,7 +451,7 @@
     },
     {
       "path": "test/native-auth.test.ts",
-      "sha256": "eba6335d47b68e205559dacaebf6c75c9a710274d38e8ad55ac4c538782e395d"
+      "sha256": "d43018ce521e3c6963e3f6e5cfb986666bd92f81ed0dd8a3f04976ebc3dfb747"
     },
     {
       "path": "test/native-checker.test.ts",
@@ -459,7 +459,7 @@
     },
     {
       "path": "test/native-cloud-profile.test.ts",
-      "sha256": "7778ac8a5228642ddcca033dcddc218d12c790a3055cb9f4b21b9b61b2d5688e"
+      "sha256": "e52ff5cad56da5512be94239fa737777bd72bbdcb7b1c072fdae91d188cef987"
     },
     {
       "path": "test/native-context.test.ts",
@@ -535,7 +535,7 @@
     },
     {
       "path": "test/native-toolchain.test.ts",
-      "sha256": "722aa910f4d48a2a750681199ee75b520c439afb2124ab9ae5504d58e28a5e31"
+      "sha256": "d1b272cbe6ab6a341a9b7cd297ac94b96ac28840de04e268ca24d2467466d78b"
     },
     {
       "path": "test/native-ui-import.test.ts",

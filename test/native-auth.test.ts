@@ -253,6 +253,44 @@ async function loggedIn(auth: AuthService, provider: Provider = "developer") {
   }
 }
 
+for (const provider of ["developer", "codegenie"] as const)
+  test(`${provider} refreshes aged credentials but rejects expired JWTs without a network request`, async (t) => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-auth-expiry-"));
+    const store = new StateStore(root), processes = new ProcessService();
+    const auth = new AuthService(store, processes);
+    let checks = 0, rejectRefresh = false;
+    t.mock.method(globalThis, "fetch", async (input: string | URL | Request) => {
+      if (String(input).includes("/temptoken/check")) return new Response(sessionToken());
+      checks++;
+      return Response.json(rejectRefresh ? { status: false } : {
+        status: true, userInfo: { accessToken: `fixture-access-${checks}` },
+      });
+    });
+    try {
+      await loggedIn(auth, provider);
+      const start = Date.now();
+      let now = start;
+      t.mock.method(Date, "now", () => now);
+      assert.equal((await auth.credentials(provider)).access, "fixture-access-1");
+      assert.equal(checks, 1);
+      now = start + 31 * 60 * 1000;
+      assert.equal((await auth.credentials(provider)).access, "fixture-access-2");
+      rejectRefresh = true;
+      await assert.rejects(auth.credentials(provider, undefined, true), { code: "AUTH_REQUIRED" });
+      assert.equal((await auth.credentials(provider)).access, "fixture-access-2", "Rejected refresh must not replace the stored credential");
+      assert.equal(checks, 3);
+      now = start + 61 * 60 * 1000;
+      assert.equal(auth.status(provider).logged_in, false);
+      await assert.rejects(auth.credentials(provider), { code: "AUTH_REQUIRED" });
+      assert.equal(checks, 3, "Expired JWT must require explicit login before any cloud call");
+    } finally {
+      await auth.close();
+      await processes.close();
+      store.close();
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
 test("browser callback authenticates one provider, encrypts credentials and survives a runtime restart", async (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-auth-")),
     store = new StateStore(root),
