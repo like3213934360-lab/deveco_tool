@@ -9,6 +9,52 @@ import { ProcessService } from "../src/core/process.js";
 import { AuthService } from "../src/services/auth.js";
 import { SignatureService } from "../src/services/signature.js";
 import { errorResult } from "../src/core/errors.js";
+import { withTrace } from "../src/core/trace.js";
+
+for (const fault of ["connection_lost", "malformed_response", "cancelled"])
+  test(`cloud profile ${fault} preserves uncertain intent across restart without replaying the mutation`, async (t) => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-cloud-interruption-"));
+    const processes = new ProcessService();
+    let store = new StateStore(root), auth = new AuthService(store, processes);
+    const credentials = () => t.mock.method(auth, "credentials", async () => ({
+      jwt: "private-jwt", access: "private-access", saved: Date.now(), userId: "private-user", userName: "Fixture",
+    }));
+    credentials();
+    let calls = 0;
+    t.mock.method(globalThis, "fetch", async (input: string | URL | Request) => {
+      assert.ok(String(input).endsWith("/test/provision/add"));
+      calls++;
+      if (fault === "malformed_response") return new Response("{");
+      if (fault === "cancelled") throw new DOMException("Fixture cancellation", "AbortError");
+      throw new TypeError("Fixture connection lost after dispatch");
+    });
+    const output = path.join(root, "profile.p7b");
+    const input = { action: "profile_create", team_id: "team", output, options: {
+      cert_ids: '["cert"]', device_ids: '["device"]', bundle_name: "com.example.fixture", profile_name: "Fixture",
+    } };
+    const call = () => withTrace({ run_id: "fixture-run", node: "sign-profile" }, () => new SignatureService(processes, store, auth).call(input));
+    try {
+      await assert.rejects(call(), { code: "EFFECT_UNCERTAIN" });
+      assert.equal(calls, 1);
+      assert.equal(fs.existsSync(output), false);
+      const operations = store.db.prepare("SELECT * FROM operations WHERE status='started'").all();
+      assert.equal(operations.length, 1);
+      assert.doesNotMatch(JSON.stringify(operations), /private-jwt|private-access|private-user/);
+      await auth.close();
+      store.close();
+      store = new StateStore(root);
+      auth = new AuthService(store, processes);
+      credentials();
+      await assert.rejects(call(), { code: "EFFECT_UNCERTAIN" });
+      assert.equal(calls, 1, "Recovery must not repeat an unconfirmed cloud mutation");
+      assert.equal(fs.existsSync(output), false);
+    } finally {
+      await auth.close();
+      await processes.close();
+      store.close();
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
 
 test("debug profiles use the modern test route and distinguish request, URL and download failures without leaking credentials", async (t) => {
   const root = fs.realpathSync.native(

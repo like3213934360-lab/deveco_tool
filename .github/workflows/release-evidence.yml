@@ -2,43 +2,103 @@ name: Validate supplied release evidence
 on:
   workflow_dispatch:
     inputs:
-      evidence_asset_id:
-        description: Asset ID of the reviewed evidence ZIP in this repository
+      transfer_sha256:
+        description: SHA-256 of the encrypted evidence staged on the dedicated import runner
         required: true
         type: string
       evidence_sha256:
-        description: SHA-256 of the locally gated evidence ZIP
+        description: SHA-256 of the locally gated plaintext evidence ZIP
         required: true
         type: string
 permissions:
   contents: read
+concurrency:
+  group: release-evidence-${{ github.ref }}
+  cancel-in-progress: false
 jobs:
-  evidence:
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
+  import:
+    if: ${{ !github.event.repository.fork && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+    # Dedicated ephemeral runner: no SDK/device/credentials, no PR jobs, no checkout.
+    runs-on: [self-hosted, Linux, "${{ format('release-evidence-{0}-{1}', github.run_id, github.run_attempt) }}"]
+    environment: release-evidence-import
+    permissions: {}
+    timeout-minutes: 10
+    outputs:
+      artifact_id: ${{ steps.upload.outputs.artifact-id }}
+      artifact_digest: ${{ steps.upload.outputs.artifact-digest }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "24"
-      - run: npm ci
-      - run: npm run build
-      - name: Download the exact repository asset
+      - name: Copy only the explicitly staged ciphertext
         env:
-          GH_TOKEN: ${{ github.token }}
-          EVIDENCE_ASSET_ID: ${{ inputs.evidence_asset_id }}
+          EVIDENCE_INBOX: ${{ vars.RELEASE_EVIDENCE_INBOX }}
+          TRANSFER_SHA256: ${{ inputs.transfer_sha256 }}
           EVIDENCE_SHA256: ${{ inputs.evidence_sha256 }}
         run: |
-          [[ "$EVIDENCE_ASSET_ID" =~ ^[0-9]+$ ]]
-          [[ "$EVIDENCE_SHA256" =~ ^[a-f0-9]{64}$ ]]
-          gh api -H 'Accept: application/octet-stream' "repos/$GITHUB_REPOSITORY/releases/assets/$EVIDENCE_ASSET_ID" > "$RUNNER_TEMP/evidence.zip"
-          node dist/scripts/release-evidence.js extract "$RUNNER_TEMP/evidence.zip" "$RUNNER_TEMP/release-evidence" "$EVIDENCE_SHA256"
-      - name: Validate all evidence against this checkout
-        run: node dist/scripts/release-gate.js "$RUNNER_TEMP/release-evidence/release.json" "$RUNNER_TEMP/gate.json"
-      - name: Publish evidence only after validation
-        uses: actions/upload-artifact@v4
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import path from 'node:path';
+          import crypto from 'node:crypto';
+          const e = process.env;
+          if (!/^[a-f0-9]{64}$/.test(e.TRANSFER_SHA256) || !/^[a-f0-9]{64}$/.test(e.EVIDENCE_SHA256) || !path.isAbsolute(e.EVIDENCE_INBOX)) throw new Error('Invalid evidence selection');
+          const source = path.join(e.EVIDENCE_INBOX, e.GITHUB_SHA, e.TRANSFER_SHA256 + '.enc');
+          if (!fs.lstatSync(source).isFile() || fs.statSync(source).size > 513 * 1024 * 1024) throw new Error('Invalid staged ciphertext');
+          const bytes = fs.readFileSync(source);
+          if (crypto.createHash('sha256').update(bytes).digest('hex') !== e.TRANSFER_SHA256) throw new Error('Staged ciphertext changed');
+          const output = path.join(e.RUNNER_TEMP, 'release-transfer');
+          fs.mkdirSync(output, { mode: 0o700 });
+          fs.writeFileSync(path.join(output, 'evidence.enc'), bytes, { flag: 'wx', mode: 0o600 });
+          NODE
+      - name: Upload immutable encrypted evidence
+        id: upload
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: release-evidence
-          path: ${{ runner.temp }}/release-evidence
+          name: release-input-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/release-transfer/evidence.enc
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 7
+          compression-level: 0
+      - name: Remove runner transfer copy
+        if: always()
+        run: rm -rf -- "$RUNNER_TEMP/release-transfer"
+  evidence:
+    needs: import
+    runs-on: ubuntu-latest
+    environment: release-evidence
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24"
+          package-manager-cache: false
+      - run: npm ci
+      - run: npm run build
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          artifact-ids: ${{ needs.import.outputs.artifact_id }}
+          path: ${{ runner.temp }}/transfer
+      - name: Authenticate, decrypt and validate the complete evidence
+        env:
+          RELEASE_EVIDENCE_KEY: ${{ secrets.RELEASE_EVIDENCE_KEY }}
+          TRANSFER_SHA256: ${{ inputs.transfer_sha256 }}
+          EVIDENCE_SHA256: ${{ inputs.evidence_sha256 }}
+        run: |
+          node dist/scripts/release-evidence.js decrypt "$RUNNER_TEMP/transfer/evidence.enc" "$RUNNER_TEMP/evidence.zip" "$TRANSFER_SHA256" "$EVIDENCE_SHA256"
+          node dist/scripts/release-evidence.js extract "$RUNNER_TEMP/evidence.zip" "$RUNNER_TEMP/release-evidence" "$EVIDENCE_SHA256"
+          node dist/scripts/release-gate.js "$RUNNER_TEMP/release-evidence/release.json" "$RUNNER_TEMP/gate.json"
+      - name: Record exact release inputs only after validation
+        env:
+          ARTIFACT_ID: ${{ needs.import.outputs.artifact_id }}
+          ARTIFACT_DIGEST: ${{ needs.import.outputs.artifact_digest }}
+          TRANSFER_SHA256: ${{ inputs.transfer_sha256 }}
+          EVIDENCE_SHA256: ${{ inputs.evidence_sha256 }}
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const e = process.env;
+          fs.appendFileSync(e.GITHUB_STEP_SUMMARY, 'Release selection (ciphertext retained for 7 days):\n\n```json\n' + JSON.stringify({ evidence_run: e.GITHUB_RUN_ID, evidence_attempt: e.GITHUB_RUN_ATTEMPT, evidence_artifact_id: e.ARTIFACT_ID, evidence_artifact_digest: e.ARTIFACT_DIGEST, transfer_sha256: e.TRANSFER_SHA256, evidence_sha256: e.EVIDENCE_SHA256 }, null, 2) + '\n```\n');
+          NODE
+      - name: Remove plaintext evidence on success, failure or cancellation
+        if: always()
+        run: rm -rf -- "$RUNNER_TEMP/evidence.zip" "$RUNNER_TEMP/release-evidence" "$RUNNER_TEMP/gate.json"

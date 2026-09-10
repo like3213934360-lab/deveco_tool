@@ -1,0 +1,15 @@
+{
+  "format": 1,
+  "passed": true,
+  "tested": {
+    "runtime_sha256": "a6444afa6624313eb8b5d24845d10aa2bfa11e65b516208d347da04e6544fa8d",
+    "compiled_sha256": "47a65ca8c7868bca1be849e6c661de095f13703e28a86c86517a396995f40749",
+    "package_lock_sha256": "5cd700ff2fe6290d97f7b05766eb67728892222ab4e99508d39659b2dae56824",
+    "resource_manifest_sha256": "fd42ad2ef2acb56838b89759ce1a9e6e16f8498aacbccf0565ef67a98dcc6ef1",
+    "upstream_lock_sha256": "bf3cc411831bd8ce6652a8085c8247c399d0c48b6d73156a7e649b9ef668164e"
+  },
+  "executed_tests": [
+    "dist/test/native-signing-config.test.js"
+  ],
+  "original_sha256": "1ca33a04993522d4e53d34b6ea6a18d8a1341948375fb2718ad34e505bba451b"
+}

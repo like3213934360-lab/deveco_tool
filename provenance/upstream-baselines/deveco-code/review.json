@@ -14,148 +14,148 @@
   "reviews": [
     {
       "rule": "code-deveco-create-project",
-      "reason": "Replace template-copy and SDK detection Skill scripts with native ProjectService and attributed application templates; project creation stays a typed durable workflow. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native release review"
+      "reason": "Replace template-copy and SDK detection Skill scripts with native ProjectService and attributed application templates; project creation stays a typed durable workflow. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance. Release 0.2.1 review: all mapped target hashes and locked upstream source remain unchanged from the maintenance review; versioned runtime and release scripts require fresh regression and SDK evidence. Owner-approved historical checks retain their original execution identity under the unchanged limitation set.",
+      "reviewer": "Codex 0.2.1 release review"
     },
     {
       "rule": "code-deveco-cli",
-      "reason": "Translate the CLI guidance into eight fixed native workflows and direct toolchain services; do not retain the CLI dispatch or execute the upstream Skill. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native release review"
+      "reason": "Translate the CLI guidance into eight fixed native workflows and direct toolchain services; do not retain the CLI dispatch or execute the upstream Skill. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance. Release 0.2.1 review: all mapped target hashes and locked upstream source remain unchanged from the maintenance review; versioned runtime and release scripts require fresh regression and SDK evidence. Owner-approved historical checks retain their original execution identity under the unchanged limitation set.",
+      "reviewer": "Codex 0.2.1 release review"
     },
     {
       "rule": "code-arkts-error-fixes",
-      "reason": "Retain attributed ArkTS defect examples as knowledge resources and apply SDK checker diagnostics through native project/report adapters; imported examples are data, not executable Skills. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native release review"
+      "reason": "Retain attributed ArkTS defect examples as knowledge resources and apply SDK checker diagnostics through native project/report adapters; imported examples are data, not executable Skills. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance. Release 0.2.1 review: all mapped target hashes and locked upstream source remain unchanged from the maintenance review; versioned runtime and release scripts require fresh regression and SDK evidence. Owner-approved historical checks retain their original execution identity under the unchanged limitation set.",
+      "reviewer": "Codex 0.2.1 release review"
     },
     {
       "rule": "code-arkts-grammar-standards",
-      "reason": "Reviewed the pinned ArkTS grammar Skill behavior against the native replacement. The MCP now instructs clients to read recipes-core before the first .ets edit, review Top-5 traps before subsequent .ets files, keep entry routing consistent, and run diagnostics, project_build, then explicit verification. Two unreachable SKILL.md links were replaced with packaged recipes-core links; no upstream executable Skill is installed.",
-      "reviewer": "Codex native release review"
+      "reason": "Reviewed the pinned ArkTS grammar Skill behavior against the native replacement. The MCP now instructs clients to read recipes-core before the first .ets edit, review Top-5 traps before subsequent .ets files, keep entry routing consistent, and run diagnostics, project_build, then explicit verification. Two unreachable SKILL.md links were replaced with packaged recipes-core links; no upstream executable Skill is installed. Release 0.2.1 review: all mapped target hashes and locked upstream source remain unchanged from the maintenance review; versioned runtime and release scripts require fresh regression and SDK evidence. Owner-approved historical checks retain their original execution identity under the unchanged limitation set.",
+      "reviewer": "Codex 0.2.1 release review"
     },
     {
       "rule": "code-arkts-runtime-fix",
-      "reason": "Reviewed strict AppKit RuntimeError attribution against real multi-process Hilog and independently named faultlogs, preserving all nine reference documents and 45 complete knowledge suggestions. Reviewed bounded LSP session admission after continuous product and ABI switching exposed idle-capacity exhaustion: reclaim only idle owners, share concurrent reclamation, reserve active requests before yielding, and confirm process exit before admitting a replacement. Four active or unconfirmed owners retain capacity protection. Full current regression and mapped real SDK, device, auth, hot-patch and package checks are required; no upstream code execution or compatibility engine was introduced.",
-      "reviewer": "Codex native release review"
+      "reason": "Reviewed strict AppKit RuntimeError attribution against real multi-process Hilog and independently named faultlogs, preserving all nine reference documents and 45 complete knowledge suggestions. Reviewed bounded LSP session admission after continuous product and ABI switching exposed idle-capacity exhaustion: reclaim only idle owners, share concurrent reclamation, reserve active requests before yielding, and confirm process exit before admitting a replacement. Four active or unconfirmed owners retain capacity protection. Full current regression and mapped real SDK, device, auth, hot-patch and package checks are required; no upstream code execution or compatibility engine was introduced. Release 0.2.1 review: all mapped target hashes and locked upstream source remain unchanged from the maintenance review; versioned runtime and release scripts require fresh regression and SDK evidence. Owner-approved historical checks retain their original execution identity under the unchanged limitation set.",
+      "reviewer": "Codex 0.2.1 release review"
     },
     {
       "rule": "code-new-skill",
-      "reason": "The pinned tree has no files falling into this guard. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native release review"
+      "reason": "The pinned tree has no files falling into this guard. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance. Release 0.2.1 review: all mapped target hashes and locked upstream source remain unchanged from the maintenance review; versioned runtime and release scripts require fresh regression and SDK evidence. Owner-approved historical checks retain their original execution identity under the unchanged limitation set.",
+      "reviewer": "Codex 0.2.1 release review"
     },
     {
       "rule": "code-host-customization",
-      "reason": "Reviewed scope of packages/opencode/resources/skills/customize-deveco/: Configures DevEco Code's own host; this MCP does not install host skills, agents or plugins. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native release review"
+      "reason": "Reviewed scope of packages/opencode/resources/skills/customize-deveco/: Configures DevEco Code's own host; this MCP does not install host skills, agents or plugins. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance. Release 0.2.1 review: all mapped target hashes and locked upstream source remain unchanged from the maintenance review; versioned runtime and release scripts require fresh regression and SDK evidence. Owner-approved historical checks retain their original execution identity under the unchanged limitation set.",
+      "reviewer": "Codex 0.2.1 release review"
     },
     {
       "rule": "code-defaults.ts",
-      "reason": "Replace upstream default Skill discovery with the explicit knowledge inventory and source mapping. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native release review"
+      "reason": "Replace upstream default Skill discovery with the explicit knowledge inventory and source mapping. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance. Release 0.2.1 review: all mapped target hashes and locked upstream source remain unchanged from the maintenance review; versioned runtime and release scripts require fresh regression and SDK evidence. Owner-approved historical checks retain their original execution identity under the unchanged limitation set.",
+      "reviewer": "Codex 0.2.1 release review"
     },
     {
       "rule": "code-discovery.ts",
-      "reason": "Replace filesystem Skill discovery with attributed packaged resources and bounded local lookup; host-specific directory scanning is not installed. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native release review"
+      "reason": "Replace filesystem Skill discovery with attributed packaged resources and bounded local lookup; host-specific directory scanning is not installed. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance. Release 0.2.1 review: all mapped target hashes and locked upstream source remain unchanged from the maintenance review; versioned runtime and release scripts require fresh regression and SDK evidence. Owner-approved historical checks retain their original execution identity under the unchanged limitation set.",
+      "reviewer": "Codex 0.2.1 release review"
     },
     {
       "rule": "code-index.ts",
-      "reason": "Replace host Skill indexing and execution with typed knowledge catalog/search/read and explicit workflow contracts; source mappings retain future-change review. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native release review"
+      "reason": "Replace host Skill indexing and execution with typed knowledge catalog/search/read and explicit workflow contracts; source mappings retain future-change review. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance. Release 0.2.1 review: all mapped target hashes and locked upstream source remain unchanged from the maintenance review; versioned runtime and release scripts require fresh regression and SDK evidence. Owner-approved historical checks retain their original execution identity under the unchanged limitation set.",
+      "reviewer": "Codex 0.2.1 release review"
     },
     {
       "rule": "code-host-packages",
-      "reason": "Reviewed scope of packages/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native release review"
+      "reason": "Reviewed scope of packages/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance. Release 0.2.1 review: all mapped target hashes and locked upstream source remain unchanged from the maintenance review; versioned runtime and release scripts require fresh regression and SDK evidence. Owner-approved historical checks retain their original execution identity under the unchanged limitation set.",
+      "reviewer": "Codex 0.2.1 release review"
     },
     {
       "rule": "code-host-script",
-      "reason": "Reviewed scope of script/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native release review"
+      "reason": "Reviewed scope of script/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance. Release 0.2.1 review: all mapped target hashes and locked upstream source remain unchanged from the maintenance review; versioned runtime and release scripts require fresh regression and SDK evidence. Owner-approved historical checks retain their original execution identity under the unchanged limitation set.",
+      "reviewer": "Codex 0.2.1 release review"
     },
     {
       "rule": "code-host-patches",
-      "reason": "Reviewed scope of patches/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native release review"
+      "reason": "Reviewed scope of patches/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance. Release 0.2.1 review: all mapped target hashes and locked upstream source remain unchanged from the maintenance review; versioned runtime and release scripts require fresh regression and SDK evidence. Owner-approved historical checks retain their original execution identity under the unchanged limitation set.",
+      "reviewer": "Codex 0.2.1 release review"
     },
     {
       "rule": "code-host-docs",
-      "reason": "Reviewed scope of docs/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native release review"
+      "reason": "Reviewed scope of docs/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance. Release 0.2.1 review: all mapped target hashes and locked upstream source remain unchanged from the maintenance review; versioned runtime and release scripts require fresh regression and SDK evidence. Owner-approved historical checks retain their original execution identity under the unchanged limitation set.",
+      "reviewer": "Codex 0.2.1 release review"
     },
     {
       "rule": "code-host-specs",
-      "reason": "Reviewed scope of specs/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native release review"
+      "reason": "Reviewed scope of specs/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance. Release 0.2.1 review: all mapped target hashes and locked upstream source remain unchanged from the maintenance review; versioned runtime and release scripts require fresh regression and SDK evidence. Owner-approved historical checks retain their original execution identity under the unchanged limitation set.",
+      "reviewer": "Codex 0.2.1 release review"
     },
     {
       "rule": "code-host-assets",
-      "reason": "Reviewed scope of assets/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native release review"
+      "reason": "Reviewed scope of assets/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance. Release 0.2.1 review: all mapped target hashes and locked upstream source remain unchanged from the maintenance review; versioned runtime and release scripts require fresh regression and SDK evidence. Owner-approved historical checks retain their original execution identity under the unchanged limitation set.",
+      "reviewer": "Codex 0.2.1 release review"
     },
     {
       "rule": "code-host-agents",
-      "reason": "Reviewed scope of .agents/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native release review"
+      "reason": "Reviewed scope of .agents/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance. Release 0.2.1 review: all mapped target hashes and locked upstream source remain unchanged from the maintenance review; versioned runtime and release scripts require fresh regression and SDK evidence. Owner-approved historical checks retain their original execution identity under the unchanged limitation set.",
+      "reviewer": "Codex 0.2.1 release review"
     },
     {
       "rule": "code-host-opencode",
-      "reason": "Reviewed scope of .opencode/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native release review"
+      "reason": "Reviewed scope of .opencode/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance. Release 0.2.1 review: all mapped target hashes and locked upstream source remain unchanged from the maintenance review; versioned runtime and release scripts require fresh regression and SDK evidence. Owner-approved historical checks retain their original execution identity under the unchanged limitation set.",
+      "reviewer": "Codex 0.2.1 release review"
     },
     {
       "rule": "code-host-github",
-      "reason": "Reviewed scope of .github/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native release review"
+      "reason": "Reviewed scope of .github/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance. Release 0.2.1 review: all mapped target hashes and locked upstream source remain unchanged from the maintenance review; versioned runtime and release scripts require fresh regression and SDK evidence. Owner-approved historical checks retain their original execution identity under the unchanged limitation set.",
+      "reviewer": "Codex 0.2.1 release review"
     },
     {
       "rule": "code-host-gitcode",
-      "reason": "Reviewed scope of .gitcode/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native release review"
+      "reason": "Reviewed scope of .gitcode/: Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance. Release 0.2.1 review: all mapped target hashes and locked upstream source remain unchanged from the maintenance review; versioned runtime and release scripts require fresh regression and SDK evidence. Owner-approved historical checks retain their original execution identity under the unchanged limitation set.",
+      "reviewer": "Codex 0.2.1 release review"
     },
     {
       "rule": "code-legal-LICENSE",
-      "reason": "Review LICENSE as locked source provenance and release/dispatch metadata. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native release review"
+      "reason": "Review LICENSE as locked source provenance and release/dispatch metadata. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance. Release 0.2.1 review: all mapped target hashes and locked upstream source remain unchanged from the maintenance review; versioned runtime and release scripts require fresh regression and SDK evidence. Owner-approved historical checks retain their original execution identity under the unchanged limitation set.",
+      "reviewer": "Codex 0.2.1 release review"
     },
     {
       "rule": "code-legal-NOTICE",
-      "reason": "Review NOTICE as locked source provenance and release/dispatch metadata. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native release review"
+      "reason": "Review NOTICE as locked source provenance and release/dispatch metadata. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance. Release 0.2.1 review: all mapped target hashes and locked upstream source remain unchanged from the maintenance review; versioned runtime and release scripts require fresh regression and SDK evidence. Owner-approved historical checks retain their original execution identity under the unchanged limitation set.",
+      "reviewer": "Codex 0.2.1 release review"
     },
     {
       "rule": "code-legal-OAT.xml",
-      "reason": "Review OAT.xml as locked source provenance and release/dispatch metadata. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native release review"
+      "reason": "Review OAT.xml as locked source provenance and release/dispatch metadata. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance. Release 0.2.1 review: all mapped target hashes and locked upstream source remain unchanged from the maintenance review; versioned runtime and release scripts require fresh regression and SDK evidence. Owner-approved historical checks retain their original execution identity under the unchanged limitation set.",
+      "reviewer": "Codex 0.2.1 release review"
     },
     {
       "rule": "code-legal-package.json",
-      "reason": "Review package.json as locked source provenance and release/dispatch metadata. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native release review"
+      "reason": "Review package.json as locked source provenance and release/dispatch metadata. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance. Release 0.2.1 review: all mapped target hashes and locked upstream source remain unchanged from the maintenance review; versioned runtime and release scripts require fresh regression and SDK evidence. Owner-approved historical checks retain their original execution identity under the unchanged limitation set.",
+      "reviewer": "Codex 0.2.1 release review"
     },
     {
       "rule": "code-legal-bun.lock",
-      "reason": "Review bun.lock as locked source provenance and release/dispatch metadata. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native release review"
+      "reason": "Review bun.lock as locked source provenance and release/dispatch metadata. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance. Release 0.2.1 review: all mapped target hashes and locked upstream source remain unchanged from the maintenance review; versioned runtime and release scripts require fresh regression and SDK evidence. Owner-approved historical checks retain their original execution identity under the unchanged limitation set.",
+      "reviewer": "Codex 0.2.1 release review"
     },
     {
       "rule": "code-legal-CHANGELOG.md",
-      "reason": "Review CHANGELOG.md as locked source provenance and release/dispatch metadata. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native release review"
+      "reason": "Review CHANGELOG.md as locked source provenance and release/dispatch metadata. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance. Release 0.2.1 review: all mapped target hashes and locked upstream source remain unchanged from the maintenance review; versioned runtime and release scripts require fresh regression and SDK evidence. Owner-approved historical checks retain their original execution identity under the unchanged limitation set.",
+      "reviewer": "Codex 0.2.1 release review"
     },
     {
       "rule": "code-host-install",
-      "reason": "Reviewed scope of install: Bash installer and installation telemetry for the upstream DevEco Code host. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native release review"
+      "reason": "Reviewed scope of install: Bash installer and installation telemetry for the upstream DevEco Code host. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance. Release 0.2.1 review: all mapped target hashes and locked upstream source remain unchanged from the maintenance review; versioned runtime and release scripts require fresh regression and SDK evidence. Owner-approved historical checks retain their original execution identity under the unchanged limitation set.",
+      "reviewer": "Codex 0.2.1 release review"
     },
     {
       "rule": "code-host-install-ps1",
-      "reason": "Reviewed scope of install.ps1: PowerShell installer and installation telemetry for the upstream DevEco Code host. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native release review"
+      "reason": "Reviewed scope of install.ps1: PowerShell installer and installation telemetry for the upstream DevEco Code host. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance. Release 0.2.1 review: all mapped target hashes and locked upstream source remain unchanged from the maintenance review; versioned runtime and release scripts require fresh regression and SDK evidence. Owner-approved historical checks retain their original execution identity under the unchanged limitation set.",
+      "reviewer": "Codex 0.2.1 release review"
     },
     {
       "rule": "code-host-turbo-json",
-      "reason": "Reviewed scope of turbo.json: Upstream monorepo build/test scheduling. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native release review"
+      "reason": "Reviewed scope of turbo.json: Upstream monorepo build/test scheduling. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance. Release 0.2.1 review: all mapped target hashes and locked upstream source remain unchanged from the maintenance review; versioned runtime and release scripts require fresh regression and SDK evidence. Owner-approved historical checks retain their original execution identity under the unchanged limitation set.",
+      "reviewer": "Codex 0.2.1 release review"
     }
   ],
   "targets": [

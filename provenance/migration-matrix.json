@@ -242,7 +242,8 @@
       "source": "arkts_knowledge_search",
       "checks": [
         "test/native-resources.test.ts",
-        "scripts/native-auth-mcp-acceptance.ts"
+        "scripts/native-auth-mcp-acceptance.ts",
+        "test/native-cloud-knowledge.test.ts"
       ],
       "remaining": [
         "云端过期认证重试与异常响应回归"

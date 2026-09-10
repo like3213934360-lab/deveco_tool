@@ -77,6 +77,7 @@ test("CLT resolves documented linter layouts and external JDK identity, without 
       hvigor: "hvigor/bin/hvigorw.js",
       hdc: `sdk/default/openharmony/toolchains/${exe("hdc")}`,
       arkts: "arkts-lsp/lib/out/standardIndex/index.js",
+      apiscan: "plugins/harmony/arkanalyzer-apiscan/api-change-scan.js",
       clangd: `sdk/default/openharmony/native/llvm/bin/${exe("clangd")}`,
       emulator: `emulator/${exe("Emulator")}`,
       signer: "sdk/default/openharmony/toolchains/lib/hap-sign-tool.jar",
@@ -119,6 +120,10 @@ test("CLT resolves documented linter layouts and external JDK identity, without 
     }
     const first = discoverToolchain();
     assert.equal(first.components.linter, undefined);
+    fs.rmSync(path.join(clt, paths.apiscan));
+    assert.equal(discoverToolchain().components.apiscan, undefined, "Incomplete CLT installations must not advertise a missing API scanner");
+    atomicWrite(path.join(clt, paths.apiscan), "fixture");
+    assert.deepEqual(discoverToolchain(), first);
     const emulator = first.components.emulator!, initialStat = fs.statSync(emulator);
     fs.utimesSync(emulator, initialStat.atime, new Date(initialStat.mtimeMs + 10000));
     assert.deepEqual(discoverToolchain(), first, "SDK startup touching an unchanged executable preserves its content identity");

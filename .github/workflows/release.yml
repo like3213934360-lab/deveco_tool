@@ -3,7 +3,27 @@ on:
   workflow_dispatch:
     inputs:
       evidence_run:
-        description: Workflow run holding release-evidence for this exact commit
+        description: Successful release-evidence run for this exact commit
+        required: true
+        type: string
+      evidence_attempt:
+        description: Exact successful run attempt from the evidence summary
+        required: true
+        type: string
+      evidence_artifact_id:
+        description: Immutable encrypted artifact ID from the evidence summary
+        required: true
+        type: string
+      evidence_artifact_digest:
+        description: Artifact SHA-256 from the evidence summary
+        required: true
+        type: string
+      transfer_sha256:
+        description: SHA-256 of the encrypted evidence file
+        required: true
+        type: string
+      evidence_sha256:
+        description: SHA-256 of the reviewed plaintext evidence ZIP
         required: true
         type: string
 permissions:
@@ -14,54 +34,95 @@ concurrency:
   cancel-in-progress: false
 jobs:
   gate:
+    if: ${{ !github.event.repository.fork && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
     runs-on: ubuntu-latest
+    environment: release-evidence
     timeout-minutes: 20
     outputs:
       tag: ${{ steps.prepare.outputs.tag }}
+      archive_sha256: ${{ steps.prepare.outputs.archive_sha256 }}
+      receipt_sha256: ${{ steps.prepare.outputs.receipt_sha256 }}
+      artifact_id: ${{ steps.upload.outputs.artifact-id }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: "24"
-      - name: Verify evidence workflow identity
+          package-manager-cache: false
+      - run: npm ci
+      - run: npm run build
+      - name: Verify exact trusted evidence run and immutable artifact
         env:
           GH_TOKEN: ${{ github.token }}
           EVIDENCE_RUN: ${{ inputs.evidence_run }}
+          EVIDENCE_ATTEMPT: ${{ inputs.evidence_attempt }}
+          EVIDENCE_ARTIFACT_ID: ${{ inputs.evidence_artifact_id }}
+          EVIDENCE_ARTIFACT_DIGEST: ${{ inputs.evidence_artifact_digest }}
+          TRUSTED_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
-          node -e 'if (!/^[0-9]+$/.test(process.env.EVIDENCE_RUN)) process.exit(1)'
+          [[ "$EVIDENCE_RUN" =~ ^[1-9][0-9]*$ ]]
+          [[ "$EVIDENCE_ARTIFACT_ID" =~ ^[1-9][0-9]*$ ]]
           gh api "repos/$GITHUB_REPOSITORY/actions/runs/$EVIDENCE_RUN" > "$RUNNER_TEMP/evidence-run.json"
-          node -e 'const fs=require("node:fs"),r=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+"/evidence-run.json")); if(r.head_sha!==process.env.GITHUB_SHA || r.conclusion!=="success" || r.event==="pull_request" || r.repository.full_name!==process.env.GITHUB_REPOSITORY) process.exit(1)'
-      - uses: actions/download-artifact@v4
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$EVIDENCE_ARTIFACT_ID" > "$RUNNER_TEMP/evidence-artifact.json"
+          node dist/scripts/release-artifact.js "$RUNNER_TEMP/evidence-run.json" "$RUNNER_TEMP/evidence-artifact.json"
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          name: release-evidence
+          artifact-ids: ${{ inputs.evidence_artifact_id }}
           run-id: ${{ inputs.evidence_run }}
+          repository: ${{ github.repository }}
           github-token: ${{ github.token }}
-          path: ${{ runner.temp }}/evidence
-      - run: npm ci
-      - run: npm run build
+          path: ${{ runner.temp }}/transfer
+      - name: Authenticate and extract reviewed evidence
+        env:
+          RELEASE_EVIDENCE_KEY: ${{ secrets.RELEASE_EVIDENCE_KEY }}
+          TRANSFER_SHA256: ${{ inputs.transfer_sha256 }}
+          EVIDENCE_SHA256: ${{ inputs.evidence_sha256 }}
+        run: |
+          node dist/scripts/release-evidence.js decrypt "$RUNNER_TEMP/transfer/evidence.enc" "$RUNNER_TEMP/evidence.zip" "$TRANSFER_SHA256" "$EVIDENCE_SHA256"
+          node dist/scripts/release-evidence.js extract "$RUNNER_TEMP/evidence.zip" "$RUNNER_TEMP/evidence" "$EVIDENCE_SHA256"
       - run: node dist/scripts/upstream-gate.js
       - name: Verify final evidence and compiled distribution
         run: node dist/scripts/release-gate.js "$RUNNER_TEMP/evidence/release.json" "$RUNNER_TEMP/release-gate.json"
       - name: Prepare only the accepted archive and public gate receipt
         id: prepare
         run: node dist/scripts/release-publish.js prepare "$RUNNER_TEMP/evidence/release.json" "$RUNNER_TEMP/release-gate.json" "$RUNNER_TEMP/publish"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        id: upload
         with:
-          name: accepted-release
+          name: accepted-release-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/publish
           if-no-files-found: error
+          retention-days: 7
+      - name: Remove plaintext evidence on success, failure or cancellation
+        if: always()
+        run: rm -rf -- "$RUNNER_TEMP/evidence.zip" "$RUNNER_TEMP/evidence" "$RUNNER_TEMP/release-gate.json"
   publish:
     needs: gate
     runs-on: ubuntu-latest
     environment: release
+    timeout-minutes: 10
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          name: accepted-release
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24"
+          package-manager-cache: false
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          artifact-ids: ${{ needs.gate.outputs.artifact_id }}
           path: ${{ runner.temp }}/publish
+      - name: Verify publish bytes against the gate job outputs
+        env:
+          RELEASE_TAG: ${{ needs.gate.outputs.tag }}
+          ARCHIVE_SHA256: ${{ needs.gate.outputs.archive_sha256 }}
+          RECEIPT_SHA256: ${{ needs.gate.outputs.receipt_sha256 }}
+        run: node --experimental-strip-types scripts/verify-publish.ts "$RUNNER_TEMP/publish"
       - name: Publish the accepted immutable version
         env:
           GH_TOKEN: ${{ github.token }}

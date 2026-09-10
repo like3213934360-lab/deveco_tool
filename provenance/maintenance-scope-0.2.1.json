@@ -1,0 +1,175 @@
+{
+  "format": 1,
+  "candidate": "0.2.1",
+  "baseline_release": "0.2.0",
+  "baseline_scope_sha256": "1b669f5060c89825268efba170dbf198db4fbe68baf9400f444b5ae2f1805e78",
+  "purpose": "Additive maintenance coverage; not a release acceptance, replacement scope, or permission to run deferred tests. Original pending rows and owner decisions remain unchanged.",
+  "categories": {
+    "local": [
+      "migration.tools.api_compat_check",
+      "migration.tools.code_lint",
+      "migration.tools.deveco_doctor",
+      "migration.tools.find_references",
+      "migration.tools.get_hover",
+      "migration.tools.lsp",
+      "acceptance.workflow.api_compatibility",
+      "acceptance.diagnostics.linter",
+      "acceptance.diagnostics.api_versions"
+    ],
+    "controlled_cloud": [
+      "migration.tools.app_signature",
+      "migration.tools.arkts_knowledge_search",
+      "migration.tools.deveco_cli_auth",
+      "migration.tools.deveco_status",
+      "acceptance.recovery.cloud_signature",
+      "acceptance.infrastructure.auth_failure",
+      "acceptance.special.expired_auth_refresh"
+    ],
+    "emulator": [
+      "migration.tools.emulator_manage",
+      "migration.tools.emulator_scenario",
+      "acceptance.special.emulator_effect",
+      "performance.emulator_scenario"
+    ],
+    "physical_device": [
+      "migration.tools.deveco_script",
+      "migration.tools.deveco_script_catalog",
+      "migration.tools.device_info",
+      "migration.tools.get_app_ui_tree",
+      "migration.tools.hdc_log",
+      "migration.tools.perform_ui_action",
+      "migration.tools.ui_control",
+      "migration.tools.ui_find",
+      "migration.tools.ui_flow",
+      "migration.tools.ui_inspect",
+      "migration.tools.ui_observe",
+      "migration.tools.ui_snapshot",
+      "migration.tools.ui_tap",
+      "migration.scripts.collect_hilog",
+      "migration.scripts.fetch_faultlog",
+      "migration.scripts.probe_faultlogger",
+      "acceptance.workflow.app_deploy",
+      "acceptance.workflow.build_deploy_verify",
+      "acceptance.recovery.signed_package_set",
+      "acceptance.recovery.ui_steps",
+      "acceptance.recovery.hot_patch",
+      "acceptance.ui.unknown_goal_recording",
+      "acceptance.ui.gestures_displays",
+      "acceptance.ui.chinese_input",
+      "acceptance.special.hot_patch_twice_no_restart",
+      "performance.device_info",
+      "performance.hdc_log",
+      "performance.ui_snapshot",
+      "performance.ui_observe",
+      "performance.ui_find",
+      "performance.ui_tap",
+      "performance.verify_ui",
+      "performance.ui_inspect",
+      "performance.ui_control"
+    ],
+    "historical": [
+      "acceptance.workflow.project_create",
+      "acceptance.workflow.project_sync",
+      "acceptance.workflow.project_build",
+      "acceptance.workflow.code_diagnose",
+      "acceptance.workflow.crash_diagnose",
+      "acceptance.recovery.sdk_kill",
+      "acceptance.recovery.install_preparation",
+      "acceptance.recovery.emulator",
+      "acceptance.infrastructure.deduplicate",
+      "acceptance.infrastructure.cancel",
+      "acceptance.infrastructure.resource_contention",
+      "acceptance.infrastructure.disk_full",
+      "acceptance.infrastructure.output_limit",
+      "acceptance.infrastructure.missing_sdk",
+      "acceptance.project.multi_product",
+      "acceptance.project.multi_module",
+      "acceptance.diagnostics.cpp_abi",
+      "acceptance.diagnostics.lsp_modules",
+      "acceptance.ui.saved_flows",
+      "acceptance.ui.final_assertions",
+      "acceptance.special.personal_cloud_signing",
+      "acceptance.upgrade.configuration",
+      "acceptance.upgrade.reauthentication",
+      "acceptance.upgrade.saved_flows",
+      "acceptance.upgrade.owned_skill_cleanup",
+      "acceptance.upgrade.full_release_rollback",
+      "acceptance.upstream.candidate_adaptation",
+      "performance.deveco_doctor",
+      "performance.lsp",
+      "performance.arkts_check",
+      "performance.code_lint",
+      "performance.check_cpp_files",
+      "performance.hot_reload.status",
+      "performance.app_signature.inspect",
+      "performance.ui_flow.catalog",
+      "performance.emulator_manage.list",
+      "soak"
+    ]
+  },
+  "local_completed": [
+    {
+      "id": "api-input-scope",
+      "check": "test/native-api-versions.test.ts",
+      "covers": [
+        "migration.tools.api_compat_check",
+        "acceptance.diagnostics.api_versions",
+        "acceptance.workflow.api_compatibility"
+      ],
+      "result_scope": "Invalid, reversed, equal API versions and conflicting file/module scopes fail before any SDK process. The installed version catalog is still required; wider SDK combinations remain pending."
+    },
+    {
+      "id": "clt-layout-loss",
+      "check": "test/native-toolchain.test.ts",
+      "covers": [
+        "migration.tools.deveco_doctor"
+      ],
+      "result_scope": "CLT fixtures cover optional API scanner removal/restoration, existing linter entry layouts and external JDK identity. This is not a three-OS real CLT installation result."
+    },
+    {
+      "id": "lsp-source-recreation",
+      "check": "test/native-lsp.test.ts",
+      "covers": [
+        "migration.tools.lsp",
+        "migration.tools.get_hover",
+        "migration.tools.find_references"
+      ],
+      "result_scope": "A deleted source cannot return stale hover data; recreated bytes are synchronized. Real SDK/OS combinations and performance remain pending."
+    },
+    {
+      "id": "auth-expiry",
+      "check": "test/native-auth.test.ts",
+      "covers": [
+        "migration.tools.deveco_cli_auth",
+        "migration.tools.deveco_status",
+        "acceptance.infrastructure.auth_failure",
+        "acceptance.special.expired_auth_refresh"
+      ],
+      "result_scope": "Both providers refresh aged credentials, preserve the last valid credential after rejected refresh, and reject expired JWTs before network dispatch. All credentials and HTTP responses are fixtures."
+    },
+    {
+      "id": "cloud-knowledge-responses",
+      "check": "test/native-cloud-knowledge.test.ts",
+      "covers": [
+        "migration.tools.arkts_knowledge_search"
+      ],
+      "result_scope": "A provider-expiry response triggers exactly one forced refresh; repeated expiry and malformed envelopes stop with failure. Real provider integration remains pending."
+    },
+    {
+      "id": "cloud-profile-interruption",
+      "check": "test/native-cloud-profile.test.ts",
+      "covers": [
+        "migration.tools.app_signature",
+        "acceptance.recovery.cloud_signature"
+      ],
+      "result_scope": "Connection loss, malformed response and cancellation after dispatch preserve uncertain intent across StateStore restart and never replay the mutation. No external profile was created or reconciled."
+    }
+  ],
+  "remaining": {
+    "local": "Installed SDK canaries and fixture checks are bounded to their exact toolchain/runtime. Wider SDK/API combinations, real CLT on three OSes, paired performance and the final six-matrix release evidence must be collected separately.",
+    "controlled_cloud": "No expendable provider credentials, controlled expiry/outage or interrupted cloud transaction are authorized. Mock results do not close provider integration.",
+    "emulator": "No expendable images/components or emulator mutation is authorized. Existing inventory evidence does not prove sensor effects, cancellation or cross-device coordination.",
+    "physical_device": "User continues to defer all physical-device operations. Script/catalog aggregate rows inherit pending collect_hilog/fetch_faultlog/probe_faultlogger cases.",
+    "historical": "Preserve original execution identities and owner dispositions, including prior performance and soak. They are not current execution results."
+  }
+}

@@ -333,7 +333,11 @@ function carryForwardBaselineChecks(root: string, directory: string, sourceId: s
       const before = priorPlan.targets.find((item) => item.path === check), after = plan.targets.find((item) => item.path === check), item = prior.checks.find((candidate) => candidate.check === check);
       if (!before || !after || before.sha256 !== after.sha256 || !item) continue;
       verifyChecks(priorDirectory, prior, priorPlan.required_tests, root);
-      const priorRaw = z.strictObject({ format: z.literal(1), passed: z.literal(true), tested: publicIdentitySchema, executed_tests: z.array(z.string()).length(1), original_sha256: sha }).parse(readJson(path.join(priorDirectory, item.report)));
+      const raw = readJson(path.join(priorDirectory, item.report));
+      // A previous carry-forward is not a new execution. Keep searching for the
+      // original, verified format-1 attestation instead of relabelling its context.
+      if (z.object({ format: z.number() }).parse(raw).format === 2) continue;
+      const priorRaw = z.strictObject({ format: z.literal(1), passed: z.literal(true), tested: publicIdentitySchema, executed_tests: z.array(z.string()).length(1), original_sha256: sha }).parse(raw);
       const content = JSON.stringify({ format: 2, passed: true, accepted_context: publicIdentitySchema.parse(tested), execution_tested: priorRaw.tested, executed_tests: priorRaw.executed_tests, original_sha256: item.original_sha256, check_sha256: fileDigest(inside(root, check)), prior_attestation_sha256: item.sha256 }, null, 2) + "\n";
       const destination = `checks/${digest({ content })}.json`, file = path.join(directory, destination);
       if (fs.existsSync(file)) invariant(fs.readFileSync(file, "utf8") === content, "UPSTREAM_EVIDENCE_CHANGED", "Carried attestation changed");

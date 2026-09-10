@@ -1,12 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
 import { createHash } from "node:crypto";
-import { inflateRawSync, crc32 } from "node:zlib";
 import AdmZip from "adm-zip";
 import { z } from "zod";
 import { invariant } from "../../src/core/errors.js";
 import { release, protocolVersion } from "../../src/core/config.js";
 import { verifyResources } from "./resources.js";
+import { decodeZipEntry, writeArchiveDirectory } from "./archive-safety.js";
 
 const limitBytes = 256 * 1024 * 1024;
 const limitFiles = 10000;
@@ -515,31 +515,13 @@ export function extractDistribution(archive: string, output: string) {
     "DISTRIBUTION_ARCHIVE_INVALID",
     "Archive lacks a sealed inventory",
   );
-  const decode = (entry: AdmZip.IZipEntry, bound = limitBytes) => {
-    invariant(
-      entry.header.size <= bound,
-      "DISTRIBUTION_LIMIT",
-      "Archive entry exceeds its byte budget",
-    );
-    // ZIP headers can understate the inflated size. Enforce the allocation bound
-    // inside zlib, then check both CRC and the inventory's independent SHA-256.
-    const compressed = entry.getCompressedData(),
-      data =
-        entry.header.method === 0
-          ? compressed
-          : inflateRawSync(compressed, {
-              maxOutputLength: Math.max(1, entry.header.size),
-            });
-    invariant(
-      data.length === entry.header.size && crc32(data) === entry.header.crc,
-      "DISTRIBUTION_ARCHIVE_INVALID",
-      "Archive entry size or CRC mismatch",
-    );
-    return data;
-  };
+  for (const name of seen) {
+    const parts = name.split("/");
+    for (let index = 1; index < parts.length; index++) invariant(!seen.has(parts.slice(0, index).join("/")), "DISTRIBUTION_ARCHIVE_INVALID", "An archive file cannot also be a parent directory");
+  }
   const manifest = manifestSchema.parse(
     JSON.parse(
-      decode(zip.getEntry(manifestName)!, 8 * 1024 * 1024).toString("utf8"),
+      decodeZipEntry(zip.getEntry(manifestName)!, 8 * 1024 * 1024).toString("utf8"),
     ) as unknown,
   );
   const expected = new Map(manifest.files.map((item) => [item.file, item]));
@@ -554,10 +536,8 @@ export function extractDistribution(archive: string, output: string) {
     "DISTRIBUTION_ARCHIVE_INVALID",
     "Archive entries do not match the inventory",
   );
-  fs.mkdirSync(output, { recursive: true });
-  for (const entry of entries) {
-    const file = path.join(output, entry.entryName),
-      data = decode(entry),
+  const verified = entries.map((entry) => {
+    const data = decodeZipEntry(entry, limitBytes),
       item = expected.get(entry.entryName);
     invariant(
       entry.entryName === manifestName ||
@@ -565,11 +545,14 @@ export function extractDistribution(archive: string, output: string) {
       "DISTRIBUTION_DIGEST_MISMATCH",
       "Archive file differs from its sealed inventory",
     );
-    fs.mkdirSync(path.dirname(file), { recursive: true });
-    fs.writeFileSync(file, data, {
-      flag: "wx",
-      mode: entry.entryName === "dist/src/cli.js" ? 0o755 : 0o644,
-    });
-  }
-  return verifyDistribution(output);
+    return { name: entry.entryName, data };
+  });
+  return writeArchiveDirectory(output, () => {
+    for (const { name, data } of verified) {
+      const file = path.join(output, name);
+      fs.mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
+      fs.writeFileSync(file, data, { flag: "wx", mode: name === "dist/src/cli.js" ? 0o755 : 0o644 });
+    }
+    return verifyDistribution(output);
+  });
 }

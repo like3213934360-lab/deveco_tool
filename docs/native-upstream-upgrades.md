@@ -93,19 +93,11 @@ node dist/scripts/upstream-gate.js
 
 `.github/workflows/native-ci.yml` 运行 macOS/Windows/Linux × Node 22/24 基础矩阵和安装检查。`upstream-scope.ts` 将框架版本升级与官方适配分开，初次建立源锁不视为普通升级。
 
-`.github/workflows/release.yml` 只接受同一仓库、同一最终提交的成功工作流中的 release-evidence 制品。发布门禁核对六组回归和安装、43 项功能/升级范围、固定直接能力的原始性能样本以及一小时 SDK/LSP/UI/watch 长稳。随后重新封装并核对分发摘要，经 release 环境发布到不可覆盖的版本标签。缺少或版本不匹配的证据明确阻断；不会因为生成候选包就发布正式版。
+`.github/workflows/release.yml` 只接受同一仓库、默认分支、同一最终提交的成功 `release-evidence.yml` 派发及其精确 run/attempt/artifact ID 和摘要。发布门禁核对六组回归和安装、43 项功能/升级范围、固定直接能力的原始性能样本以及一小时 SDK/LSP/UI/watch 长稳。随后重新封装并核对分发摘要，经 release 环境发布到不可覆盖的版本标签。缺少或版本不匹配的证据明确阻断；不会因为生成候选包就发布正式版。
 
 ### 将本地验收交给发布工作流
 
-准备私有证据目录中的 `release.json`，逐项引用已通过且对应最终编译身份的原始报告、验收附件和分发目录。先在本地执行全部门禁，再生成有文件清单和摘要的证据 ZIP：
-
-```sh
-node dist/scripts/release-evidence.js prepare /private/final-evidence/release.json /private/release-evidence.zip
-```
-
-打包器仅收集 manifest 引用的文件，不递归复制测试目录、状态库或凭据。证据中的日志、设备标识和路径仍须在上传前审阅；原始私有报告不能作为公开 Release 附件。可将审阅后的 ZIP 上传为本仓库专用**草稿** Release 的附件，记录 asset ID 和工具返回的 SHA-256。此草稿仅用于认证传输，不作为软件发布，也不替代门禁。
-
-在最终提交上手动运行 `.github/workflows/release-evidence.yml`，提供该 asset ID 和 SHA-256。工作流从同一仓库下载，拒绝摘要变化、路径穿越、链接、重复路径和超限 ZIP，并重新执行全部发布门禁。只有通过后才生成 `release-evidence` Actions 制品；随后把该成功 run ID 交给 `release.yml`。证据制品的读取权限遵循仓库 Actions 设置，公开仓库尤其需要检查内容。发布流程只公开软件包、摘要和字段白名单验收凭证。
+先在本地通过 gate，按白名单打包并认证加密，再由专用临时 runner 上传密文 artifact。托管 runner 解密和验证，发布端绑定六项精确选择值。公开仓库的 artifact 本身不是秘密存储，因此不得上传明文证据或使用草稿/公开 prerelease 中转。环境配置、操作命令、成功/失败/取消状态和 7 天保留规则见[发布证据传递](release-evidence-transfer.md)。
 
 ## 历史候选
 
