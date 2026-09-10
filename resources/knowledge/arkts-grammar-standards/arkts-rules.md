@@ -249,7 +249,7 @@ class Capsule {
 const c: Capsule = { id: '1' };  // ❌ Type '{ id: string; }' is missing the following properties from type 'Capsule': tags, openedAt
 const c: Capsule = { id: '1', tags: [], openedAt: undefined };  // ✅ all fields listed, defaults repeated explicitly
 ```
-For seed/mock data prefer a static factory so adding a field later means one change, not N literal fixes (see SKILL.md § Data model recipes).
+For seed/mock data prefer a static factory so adding a field later means one change, not N literal fixes (see [recipes-core.md § 1](recipes-core.md)).
 
 #### Rule 40: Object literals cannot be type declarations (`arkts-no-obj-literals-as-types`)
 ```ets
@@ -641,7 +641,7 @@ ocrResult.forEach((value: string, key: string) => {
 | `Nested functions are not supported` | Use arrow-function values inside functions, or promote to class methods / top-level functions |
 | `any/unknown is not supported` | Explicit types; when truly undetermined use `Object` or a union type |
 | `Object literal must correspond to ...` | Declare an interface/class/Record type for the literal; if it already has a `Record` type, quote the keys |
-| `... is missing the following properties from type` | Literal assigned to a class type must list every field — class-body defaults don't make fields optional (SKILL.md § Data model recipes) |
+| `... is missing the following properties from type` | Literal assigned to a class type must list every field — class-body defaults don't make fields optional (see [recipes-core.md § 1](recipes-core.md)) |
 | `Import declaration conflicts with local declaration` | Struct/class named after an import — alias the import (`import { X as XData }`) or rename the struct (Rule 4) |
 | `Declaration merging is not supported` | Same interface declared in two files — declare once in a shared model file and import (Rule 103) |
 | `Indexed access is not supported` | Switch to dot access; for dynamic keys declare the type as `Record<K,V>` |

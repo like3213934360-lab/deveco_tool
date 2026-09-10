@@ -1,0 +1,270 @@
+{
+  "format": 1,
+  "release": "0.2.0",
+  "protocol": "native-6",
+  "decided_at": "2026-09-09T00:00:00+08:00",
+  "authorized_by": "repository_owner",
+  "breaking_api": {
+    "accepted": true,
+    "reason": "The repository owner explicitly accepts the intentional old-API incompatibility for the native MCP release."
+  },
+  "device_retest": {
+    "status": "cancelled_by_user",
+    "historical_evidence_accepted": true,
+    "reason": "The repository owner cancelled all new physical-device testing and accepts the bounded historical device evidence."
+  },
+  "verified_migration_receipts": {
+    "identity": "historical",
+    "reason": "Previously accepted rows retain their reviewed receipt hashes; final current regression and installation evidence remain mandatory."
+  },
+  "upstream_historical_checks": [
+    "scripts/native-auth-mcp-acceptance.ts",
+    "scripts/native-crash-acceptance.ts",
+    "scripts/native-device-readonly.ts",
+    "scripts/native-emulator-acceptance.ts",
+    "scripts/native-emulator-readonly.ts",
+    "scripts/native-hot-device-acceptance.ts",
+    "scripts/native-signing-acceptance.ts",
+    "scripts/native-ui-mcp-benchmark.ts"
+  ],
+  "migration_exceptions": [
+    {
+      "source": "tool:api_compat_check",
+      "disposition": "environment_limited",
+      "limitations": ["更多 SDK/API 版本数据组合与扫描范围验收"],
+      "reason": "The available SDK matrix cannot represent every released API-version and scan-scope combination."
+    },
+    {
+      "source": "tool:app_signature",
+      "disposition": "environment_limited",
+      "limitations": ["真实云端变更中断后的外部状态核对、过期认证刷新和更多签名类型", "原 force 与自动签名选择策略对照"],
+      "reason": "Expired cloud credentials, interrupted remote changes, and additional signing types are unavailable in this release environment."
+    },
+    {
+      "source": "tool:arkts_knowledge_search",
+      "disposition": "environment_limited",
+      "limitations": ["云端过期认证重试与异常响应回归"],
+      "reason": "No safely expendable expired cloud credential is available for destructive authentication-failure simulation."
+    },
+    {
+      "source": "tool:code_lint",
+      "disposition": "environment_limited",
+      "limitations": ["更多 SDK/CLT 实机规则执行范围验收；原生空报告不证明全部配置规则已生效，返回 ruleCoverageVerified:false"],
+      "reason": "Only the installed Studio and CLT rule sets are available; empty native reports remain explicitly marked as incomplete coverage."
+    },
+    {
+      "source": "tool:deveco_cli_auth",
+      "disposition": "environment_limited",
+      "limitations": ["实际过期凭据刷新及云端拒绝/登出验收；不同操作系统浏览器支持范围"],
+      "reason": "Credential expiry and browser-driven authentication cannot be reproduced safely across all supported operating systems."
+    },
+    {
+      "source": "tool:deveco_doctor",
+      "disposition": "environment_limited",
+      "limitations": ["三操作系统与 CLT 布局验收"],
+      "reason": "CI covers the operating-system runtime matrix, but does not supply every real Studio and CLT filesystem layout."
+    },
+    {
+      "source": "tool:deveco_script",
+      "disposition": "environment_limited",
+      "limitations": ["见 scripts 七项验收记录"],
+      "reason": "The script facade inherits the individually recorded environment and device limitations of all seven scripts."
+    },
+    {
+      "source": "tool:deveco_script_catalog",
+      "disposition": "environment_limited",
+      "limitations": ["见 scripts 七项验收记录"],
+      "reason": "The catalog exposes the seven scripts whose individual environment and device limitations remain recorded."
+    },
+    {
+      "source": "tool:deveco_status",
+      "disposition": "environment_limited",
+      "limitations": ["真实过期 Token 与离线行为"],
+      "reason": "No safely expendable expired token or controlled provider outage is available for the final environment."
+    },
+    {
+      "source": "tool:device_info",
+      "disposition": "user_cancelled_device_retest",
+      "limitations": ["真实多设备及跨平台 HDC/SDK 验收"],
+      "reason": "The owner cancelled new physical-device work; prior single-device evidence is retained with its original scope."
+    },
+    {
+      "source": "tool:emulator_manage",
+      "disposition": "environment_limited",
+      "limitations": ["真实镜像下载/卸载、协议接受及组件异常/取消恢复验收", "三平台真实模拟器及与目标设备 UI 共同资源协调验收"],
+      "reason": "No additional image download or component mutation is authorized, and physical-device coordination was cancelled."
+    },
+    {
+      "source": "tool:emulator_scenario",
+      "disposition": "environment_limited",
+      "limitations": ["应用实际感知传感器/场景结果及原生命令取消结果验收", "与目标设备 UI 共同资源协调验收"],
+      "reason": "Available emulator sensors are partial and the combined physical-device resource scenario was cancelled."
+    },
+    {
+      "source": "tool:find_references",
+      "disposition": "environment_limited",
+      "limitations": ["跨平台和最终性能验证；相对路径、未同步文件和去声明回归已通过"],
+      "reason": "Current regression covers functional edge cases; broader platform SDK sessions and final comparative performance remain unavailable."
+    },
+    {
+      "source": "tool:get_app_ui_tree",
+      "disposition": "user_cancelled_device_retest",
+      "limitations": ["真实多显示器与多窗口属性完整对照；简化树和父子层级已实现"],
+      "reason": "The owner cancelled new physical-device testing, including multi-display and multi-window UI-tree comparison."
+    },
+    {
+      "source": "tool:get_hover",
+      "disposition": "environment_limited",
+      "limitations": ["跨平台和最终性能验证；合法空结果及位置边界已通过"],
+      "reason": "Current regression covers empty and boundary behavior; broader platform sessions and final performance remain unavailable."
+    },
+    {
+      "source": "tool:hdc_log",
+      "disposition": "user_cancelled_device_retest",
+      "limitations": ["真实设备 Hilog、整行筛选性能、默认 app/core buffer 清空和 faultlog 读取验收"],
+      "reason": "The owner cancelled new physical-device logging, buffer-clearing, faultlog, and filter-performance validation."
+    },
+    {
+      "source": "tool:lsp",
+      "disposition": "environment_limited",
+      "limitations": ["跨平台与更广 SDK 组合的语言会话验收、最终性能门槛"],
+      "reason": "The final environment cannot supply the wider real SDK session matrix; current tests and historical performance are retained."
+    },
+    {
+      "source": "tool:perform_ui_action",
+      "disposition": "user_cancelled_device_retest",
+      "limitations": ["真实设备中文输入及多显示器路由验收", "原生滚动采样的实际设备结果验证"],
+      "reason": "The owner cancelled new physical-device Chinese input, multi-display routing, and scroll validation."
+    },
+    {
+      "source": "tool:ui_control",
+      "disposition": "user_cancelled_device_retest",
+      "limitations": ["所有手势路径与真实多显示器验收；专用应用中文输入、窗口定位和点击已通过"],
+      "reason": "Historical dedicated-app coverage is retained; new physical-device gesture and multi-display testing was cancelled."
+    },
+    {
+      "source": "tool:ui_find",
+      "disposition": "user_cancelled_device_retest",
+      "limitations": ["真实多显示器、实时获取及其他选择器的完整直接能力性能门槛；固定文件精确 key 查询已在本机 Node 22/24 各三轮通过"],
+      "reason": "Historical fixed-input measurements are retained; live physical-device and multi-display expansion was cancelled."
+    },
+    {
+      "source": "tool:ui_flow",
+      "disposition": "user_cancelled_device_retest",
+      "limitations": ["未知目标自动录制的真实设备验收；入口选择、并发去重、重启、最终断言回归及提交 1ecafae 六组跨平台 CI 已通过", "录制期间热重载等长期会话对 UI 状态的干扰协调"],
+      "reason": "Current regression remains mandatory; new device recording and long-session UI coordination were cancelled by the owner."
+    },
+    {
+      "source": "tool:ui_inspect",
+      "disposition": "user_cancelled_device_retest",
+      "limitations": ["真实多显示器与更复杂窗口/浮层布局验收；单设备层级和批量读取已通过"],
+      "reason": "Historical single-device hierarchy evidence is retained; new complex device layout coverage was cancelled."
+    },
+    {
+      "source": "tool:ui_observe",
+      "disposition": "user_cancelled_device_retest",
+      "limitations": ["实际多显示器与旋转验收", "图像和树联合获取的固定输入性能门槛"],
+      "reason": "The owner cancelled new physical-device rotation, multi-display, and combined image/tree performance work."
+    },
+    {
+      "source": "tool:ui_snapshot",
+      "disposition": "user_cancelled_device_retest",
+      "limitations": ["实际多显示器与旋转验收", "图像和树联合获取的固定输入性能门槛"],
+      "reason": "The owner cancelled new physical-device rotation, multi-display, and combined image/tree performance work."
+    },
+    {
+      "source": "tool:ui_tap",
+      "disposition": "user_cancelled_device_retest",
+      "limitations": ["真实多显示器手势与最终性能门槛；专用应用中文输入、点击、录制和重放已通过"],
+      "reason": "Historical dedicated-app evidence is retained; new device gesture, multi-display, and performance work was cancelled."
+    },
+    {
+      "source": "script:collect_hilog",
+      "disposition": "user_cancelled_device_retest",
+      "limitations": ["真实设备日志采集及直接能力性能验收"],
+      "reason": "The owner cancelled new physical-device log collection and associated direct-capability performance testing."
+    },
+    {
+      "source": "script:fetch_faultlog",
+      "disposition": "user_cancelled_device_retest",
+      "limitations": ["真实设备命名 faultlog、时间范围、权限与截断边界验收"],
+      "reason": "The owner cancelled new physical-device faultlog naming, time-range, permission, and truncation checks."
+    },
+    {
+      "source": "script:probe_faultlogger",
+      "disposition": "user_cancelled_device_retest",
+      "limitations": ["真实设备命名 faultlog、时间范围、权限与截断边界验收"],
+      "reason": "The owner cancelled new physical-device faultlogger naming, time-range, permission, and truncation checks."
+    }
+  ],
+  "acceptance_exceptions": [
+    { "id": "workflow.project_create", "disposition": "historical_evidence", "reason": "Accepted historical workflow evidence remains bounded to its recorded runtime and fixture." },
+    { "id": "workflow.project_sync", "disposition": "historical_evidence", "reason": "Accepted historical workflow evidence remains bounded to its recorded runtime and fixture." },
+    { "id": "workflow.project_build", "disposition": "historical_evidence", "reason": "Accepted historical SDK build evidence is retained and current regression remains mandatory." },
+    { "id": "workflow.app_deploy", "disposition": "user_cancelled_device_retest", "reason": "The owner cancelled a new physical-device deployment pass and accepts historical device evidence." },
+    { "id": "workflow.build_deploy_verify", "disposition": "user_cancelled_device_retest", "reason": "The owner cancelled a new physical-device end-to-end pass and accepts historical device evidence." },
+    { "id": "workflow.code_diagnose", "disposition": "historical_evidence", "reason": "Accepted historical diagnostic evidence is retained and current regression remains mandatory." },
+    { "id": "workflow.crash_diagnose", "disposition": "historical_evidence", "reason": "Accepted historical crash-analysis evidence is retained with its original fixture scope." },
+    { "id": "workflow.api_compatibility", "disposition": "environment_limited", "reason": "The installed SDK set cannot represent every supported API-version combination." },
+    { "id": "recovery.sdk_kill", "disposition": "historical_evidence", "reason": "Accepted historical cancellation evidence is retained with current process tests mandatory." },
+    { "id": "recovery.install_preparation", "disposition": "historical_evidence", "reason": "Accepted historical installation recovery evidence remains bounded to the installed SDK." },
+    { "id": "recovery.signed_package_set", "disposition": "user_cancelled_device_retest", "reason": "The owner cancelled the final physical-device signed-package-set deployment." },
+    { "id": "recovery.ui_steps", "disposition": "user_cancelled_device_retest", "reason": "The owner cancelled all new physical-device UI recovery validation." },
+    { "id": "recovery.hot_patch", "disposition": "user_cancelled_device_retest", "reason": "The owner cancelled all new physical-device hot-patch recovery validation." },
+    { "id": "recovery.cloud_signature", "disposition": "environment_limited", "reason": "No expendable interrupted cloud-signing transaction is available in the final environment." },
+    { "id": "recovery.emulator", "disposition": "historical_evidence", "reason": "Accepted emulator cancellation and recovery evidence is retained without new image mutation." },
+    { "id": "infrastructure.deduplicate", "disposition": "historical_evidence", "reason": "Accepted historical concurrency evidence is retained and current regression remains mandatory." },
+    { "id": "infrastructure.cancel", "disposition": "historical_evidence", "reason": "Accepted historical cancellation evidence is retained and current regression remains mandatory." },
+    { "id": "infrastructure.resource_contention", "disposition": "historical_evidence", "reason": "Accepted historical contention evidence is retained with its original bounded resources." },
+    { "id": "infrastructure.disk_full", "disposition": "historical_evidence", "reason": "Accepted historical bounded-storage evidence is retained without mutating the host disk." },
+    { "id": "infrastructure.output_limit", "disposition": "historical_evidence", "reason": "Accepted historical output-bound evidence is retained and current regression remains mandatory." },
+    { "id": "infrastructure.missing_sdk", "disposition": "historical_evidence", "reason": "Accepted historical missing-SDK evidence is retained and current regression remains mandatory." },
+    { "id": "infrastructure.auth_failure", "disposition": "environment_limited", "reason": "A controlled provider outage and expendable expired credential are unavailable." },
+    { "id": "project.multi_product", "disposition": "historical_evidence", "reason": "Accepted historical multi-product evidence is retained with its original project fixture." },
+    { "id": "project.multi_module", "disposition": "historical_evidence", "reason": "Accepted historical multi-module evidence is retained with its original project fixture." },
+    { "id": "diagnostics.cpp_abi", "disposition": "historical_evidence", "reason": "Accepted historical native ABI evidence is retained for the installed SDK toolchain." },
+    { "id": "diagnostics.lsp_modules", "disposition": "historical_evidence", "reason": "Accepted historical multi-module LSP evidence is retained and current regression remains mandatory." },
+    { "id": "diagnostics.linter", "disposition": "environment_limited", "reason": "Only the installed Studio and CLT rule sets can be exercised in this environment." },
+    { "id": "diagnostics.api_versions", "disposition": "environment_limited", "reason": "The installed SDK set cannot represent every supported API-version combination." },
+    { "id": "ui.saved_flows", "disposition": "historical_evidence", "reason": "Saved-flow persistence and upgrade evidence is retained; current read-only checks remain mandatory." },
+    { "id": "ui.unknown_goal_recording", "disposition": "user_cancelled_device_retest", "reason": "The owner cancelled a new physical-device unknown-goal recording pass." },
+    { "id": "ui.gestures_displays", "disposition": "user_cancelled_device_retest", "reason": "The owner cancelled new physical-device gesture and multi-display testing." },
+    { "id": "ui.chinese_input", "disposition": "user_cancelled_device_retest", "reason": "The owner cancelled a new physical-device Chinese-input pass and accepts historical evidence." },
+    { "id": "ui.final_assertions", "disposition": "historical_evidence", "reason": "Accepted historical assertion evidence is retained and current protocol tests remain mandatory." },
+    { "id": "special.hot_patch_twice_no_restart", "disposition": "user_cancelled_device_retest", "reason": "The owner cancelled the final physical-device repeated hot-patch scenario." },
+    { "id": "special.personal_cloud_signing", "disposition": "historical_evidence", "reason": "Accepted historical personal cloud-signing evidence is retained without mutating certificates." },
+    { "id": "special.expired_auth_refresh", "disposition": "environment_limited", "reason": "No safely expendable expired credential is available for the final environment." },
+    { "id": "special.emulator_effect", "disposition": "environment_limited", "reason": "Only the available emulator sensor subset can be verified without new component downloads." },
+    { "id": "upgrade.configuration", "disposition": "historical_evidence", "reason": "The completed 2 GiB host configuration upgrade evidence is retained with exact hashes." },
+    { "id": "upgrade.reauthentication", "disposition": "historical_evidence", "reason": "The completed host reconnect and both-provider authentication evidence is retained privately." },
+    { "id": "upgrade.saved_flows", "disposition": "historical_evidence", "reason": "The completed saved-flow preservation evidence is retained with the upgrade records." },
+    { "id": "upgrade.owned_skill_cleanup", "disposition": "historical_evidence", "reason": "The retired owned Skill cleanup is retained and source absence is checked at release." },
+    { "id": "upgrade.full_release_rollback", "disposition": "historical_evidence", "reason": "The completed isolated rollback evidence is retained without disrupting the active host." },
+    { "id": "upstream.candidate_adaptation", "disposition": "historical_evidence", "reason": "Current upstream mapping acceptance remains mandatory; prior failed reviews remain historical." }
+  ],
+  "performance_exceptions": [
+    { "id": "deveco_doctor", "disposition": "historical_evidence", "reason": "One thousand native samples and paired baseline samples were collected before final documentation changes." },
+    { "id": "lsp", "disposition": "historical_evidence", "reason": "One thousand native samples and paired baseline samples were collected before final documentation changes." },
+    { "id": "arkts_check", "disposition": "historical_evidence", "reason": "One thousand native samples and paired baseline samples were collected before final documentation changes." },
+    { "id": "code_lint", "disposition": "historical_evidence", "reason": "One thousand native samples and paired baseline samples were collected before final documentation changes." },
+    { "id": "check_cpp_files", "disposition": "historical_evidence", "reason": "One thousand native samples and paired baseline samples were collected before final documentation changes." },
+    { "id": "device_info", "disposition": "user_cancelled_device_retest", "reason": "The owner cancelled new physical-device performance sampling." },
+    { "id": "hdc_log", "disposition": "user_cancelled_device_retest", "reason": "The owner cancelled new physical-device log performance sampling." },
+    { "id": "hot_reload.status", "disposition": "historical_evidence", "reason": "One thousand native samples and paired baseline samples were collected before final documentation changes." },
+    { "id": "app_signature.inspect", "disposition": "historical_evidence", "reason": "One thousand native samples and audited baseline-absence evidence were collected before final documentation changes." },
+    { "id": "ui_snapshot", "disposition": "user_cancelled_device_retest", "reason": "The owner cancelled new physical-device snapshot performance sampling." },
+    { "id": "ui_observe", "disposition": "user_cancelled_device_retest", "reason": "The owner cancelled new physical-device observation performance sampling." },
+    { "id": "ui_find", "disposition": "user_cancelled_device_retest", "reason": "The owner cancelled new live physical-device selector performance sampling." },
+    { "id": "ui_tap", "disposition": "user_cancelled_device_retest", "reason": "The owner cancelled new physical-device tap performance sampling." },
+    { "id": "ui_flow.catalog", "disposition": "historical_evidence", "reason": "One thousand native samples and paired baseline samples were collected before final documentation changes." },
+    { "id": "verify_ui", "disposition": "user_cancelled_device_retest", "reason": "The owner cancelled new physical-device verification performance sampling." },
+    { "id": "ui_inspect", "disposition": "user_cancelled_device_retest", "reason": "The owner cancelled new physical-device inspection performance sampling." },
+    { "id": "ui_control", "disposition": "user_cancelled_device_retest", "reason": "The owner cancelled new physical-device control performance sampling." },
+    { "id": "emulator_manage.list", "disposition": "historical_evidence", "reason": "One thousand native samples and paired baseline samples were collected before final documentation changes." },
+    { "id": "emulator_scenario", "disposition": "environment_limited", "reason": "Available emulator components do not cover the full scenario set without new downloads." }
+  ],
+  "soak": {
+    "disposition": "historical_evidence",
+    "reason": "The completed one-hour SDK, LSP, UI, and watch soak plus idle reclamation is accepted without rerunning unchanged long tests."
+  }
+}

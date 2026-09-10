@@ -32,7 +32,7 @@ function regular(root: string, name: string) {
 export function evidenceFiles(directory: string, manifestName: string) {
   const manifest = releaseManifestSchema.parse(readJson(regular(directory, manifestName)));
   const selected = new Set<string>([manifestName]);
-  for (const ref of [...manifest.regression, ...manifest.installation, ...manifest.acceptance, manifest.performance, manifest.soak]) {
+  for (const ref of [...manifest.regression, ...manifest.installation, ...manifest.acceptance, manifest.performance, manifest.soak, ...(manifest.scope ? [manifest.scope] : [])]) {
     invariant(fileDigest(regular(directory, ref.file)) === ref.sha256, "RELEASE_EVIDENCE_CHANGED", "Referenced report changed");
     selected.add(ref.file);
   }

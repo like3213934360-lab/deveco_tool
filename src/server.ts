@@ -12,6 +12,14 @@ import { release } from "./core/config.js";
 import { WorkerClient } from "./core/worker-client.js";
 import { artifactImageSchema } from "./core/artifact-image.js";
 
+export const serverInstructions = [
+  "Use workflow_catalog for fixed multi-step tasks.",
+  "Before writing or modifying the first .ets file in a task, use harmony_knowledge to read arkts-grammar-standards/recipes-core and consult the matching ArkTS or ArkUI references; review the Top-5 ArkTS traps before each additional .ets file.",
+  "Keep project entry-page and routing declarations consistent with the selected module and product.",
+  "After code changes, run applicable diagnostics first, then project_build, then an explicit verification step; only an explicit successful final assertion verifies UI outcomes.",
+  "Large results are referenced artifacts. Local knowledge requires no Skill installation.",
+].join(" ");
+
 export async function serve() {
   const runtime = new WorkerClient((error) => {
     process.stderr.write(`${error.message}\n`);
@@ -21,8 +29,7 @@ export async function serve() {
     { name: "deveco-tool", version: release },
     {
       capabilities: { tools: {} },
-      instructions:
-        "Use workflow_catalog for fixed multi-step tasks. Only an explicit successful final assertion verifies UI outcomes. Large results are referenced artifacts. Local knowledge requires no Skill installation.",
+      instructions: serverInstructions,
     },
   );
   server.setRequestHandler(ListToolsRequestSchema, async () => ({

@@ -10,262 +10,262 @@
     "role": "protocol_reference",
     "acceptance": "verified"
   },
-  "mapping_sha256": "6a2b6c1596635a6ddd7aba7d07f43180d25a7d850f94cd2d965bdd82fb144dd8",
+  "mapping_sha256": "4465448e87e133c49c68cf89801006ae0562c4a1175b1536a081bb93f3b3ae67",
   "reviews": [
     {
       "rule": "cli-core-toolchain",
       "reason": "Resolve Studio/CLT layouts and SDK executable identities directly; native owned process groups and durable records replace CLI subprocess dispatch. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native runtime review"
+      "reviewer": "Codex native release review"
     },
     {
       "rule": "cli-core-config",
       "reason": "Use strict native configuration and explicit toolchain selection; preserve the protocol constants needed by adapters without importing CLI host configuration or credentials. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native runtime review"
+      "reviewer": "Codex native release review"
     },
     {
       "rule": "cli-core-types",
       "reason": "Express HTTP and native adapter inputs through strict TypeScript and schemas; upstream Skill metadata is reference context rather than a native execution dependency. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native runtime review"
+      "reviewer": "Codex native release review"
     },
     {
       "rule": "cli-core-utils",
       "reason": "Replace CLI shell helpers, build locks and data paths with argv-based owned processes, resource leases and private durable state; uncertain external completion is paused. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native runtime review"
+      "reviewer": "Codex native release review"
     },
     {
       "rule": "cli-core-trace",
       "reason": "Use bounded local structured logs and encrypted private operation records. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native runtime review"
+      "reviewer": "Codex native release review"
     },
     {
       "rule": "cli-core-internal",
       "reason": "Use packaged local document resources; upstream background document initialization and telemetry upload workers are not started by the native runtime. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native runtime review"
+      "reviewer": "Codex native release review"
     },
     {
       "rule": "cli-src-apply-",
       "reason": "Preserve SDK HQF build, signing and device quickfix behavior in native hot reload; freeze input hashes and process identity before persistent start/apply mutations. The locked PatchManager increments each module separately; the native multi-module implementation deliberately computes one next version above every selected module to satisfy HQF-set consistency. Real SDK receipts and final device UI exposed missing watch workers on cached builds, incomplete HAP/HSP baselines, missing root ArkTS sources and cumulative-patch loss. The native implementation now starts every worker, installs the inspected full set, retains cumulative changed files including reversions, and rejects competing owners without holding project while waiting on watch. Current tests cover these changes and retain failed device receipts. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native runtime review"
+      "reviewer": "Codex native release review"
     },
     {
       "rule": "cli-src-auth-",
       "reason": "Use native browser authentication and encrypted token storage with explicit personal/team identity and refresh; no old CLI credential import during installation migration. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native runtime review"
+      "reviewer": "Codex native release review"
     },
     {
       "rule": "cli-src-signature-",
       "reason": "Preserve certificate, CSR, profile and signing protocols with encrypted preparation and digest-checked publication. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native runtime review"
+      "reviewer": "Codex native release review"
     },
     {
       "rule": "cli-src-codelinter-",
       "reason": "Call the selected SDK linter directly with bounded project inputs, independent report parsing and cancellation; retain real SDK validation as a required pending check. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native runtime review"
+      "reviewer": "Codex native release review"
     },
     {
       "rule": "cli-src-docs-",
       "reason": "Use attributed packaged document archives and catalog routing, bounded extraction and lookup. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native runtime review"
+      "reviewer": "Codex native release review"
     },
     {
       "rule": "cli-src-ui-",
       "reason": "Use native UI import, bounded parsing and indexed snapshots with display/window scope; actions use frozen coordinates and completion receipts instead of replaying uncertain input. The only device-service change takes a bounded set of baseline packages, captures every file before effects and invokes the existing batch installer before launch. Existing UI, screenshot, input, display/window and parsing paths are unchanged; the full package-set hot baseline and cold-deployment acceptance check the shared install path. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native runtime review"
+      "reviewer": "Codex native release review"
     },
     {
       "rule": "cli-src-service-",
       "reason": "Use SDK emulator management with durable mutations, inventory reconciliation and resource leases. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native runtime review"
+      "reviewer": "Codex native release review"
     },
     {
       "rule": "cli-src-resources-",
       "reason": "The upstream ACL recommendation table is not applied as automatic permission expansion. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native runtime review"
+      "reviewer": "Codex native release review"
     },
     {
       "rule": "cli-src-data-",
       "reason": "Do not use the bundled upstream privacy text as current agreement evidence. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native runtime review"
+      "reviewer": "Codex native release review"
     },
     {
       "rule": "cli-templates-",
       "reason": "Preserve attributed application template bytes and use native project creation with product/module metadata and SDK selection; successful real builds remain pending acceptance. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native runtime review"
+      "reviewer": "Codex native release review"
     },
     {
       "rule": "cli-index-",
       "reason": "Replace upstream index construction scripts with the native packaged document catalog and bounded local search; dictionary resources are reference data, not a background CLI service. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native runtime review"
+      "reviewer": "Codex native release review"
     },
     {
       "rule": "cli-command-build.ts",
       "reason": "Map product, module and build-mode selection to direct OHPM/Hvigor durable stages; preserve output package identity and command completion records. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native runtime review"
+      "reviewer": "Codex native release review"
     },
     {
       "rule": "cli-command-create.ts",
       "reason": "Map app/template creation to native bounded file publication and project metadata; do not install host Skills as part of creation. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native runtime review"
+      "reviewer": "Codex native release review"
     },
     {
       "rule": "cli-command-init.ts",
       "reason": "Retain project initialization through native project workflows and explicit configuration. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native runtime review"
+      "reviewer": "Codex native release review"
     },
     {
       "rule": "cli-command-run.ts",
       "reason": "Separate build, frozen signed-package deployment and Ability/Want launch into durable nodes; uncertain device completion is reconciled from receipts rather than replayed. The only device-service change takes a bounded set of baseline packages, captures every file before effects and invokes the existing batch installer before launch. Existing UI, screenshot, input, display/window and parsing paths are unchanged; the full package-set hot baseline and cold-deployment acceptance check the shared install path. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native runtime review"
+      "reviewer": "Codex native release review"
     },
     {
       "rule": "cli-command-check.ts",
       "reason": "Expose SDK checks and supported API versions as native diagnostics and fixed workflows; outputs are bounded structured artifacts. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native runtime review"
+      "reviewer": "Codex native release review"
     },
     {
       "rule": "cli-command-serve-lsp.ts",
       "reason": "Reviewed strict AppKit RuntimeError attribution against real multi-process Hilog and independently named faultlogs, preserving all nine reference documents and 45 complete knowledge suggestions. Reviewed bounded LSP session admission after continuous product and ABI switching exposed idle-capacity exhaustion: reclaim only idle owners, share concurrent reclamation, reserve active requests before yielding, and confirm process exit before admitting a replacement. Four active or unconfirmed owners retain capacity protection. Full current regression and mapped real SDK, device, auth, hot-patch and package checks are required; no upstream code execution or compatibility engine was introduced.",
-      "reviewer": "Codex current native acceptance review"
+      "reviewer": "Codex native release review"
     },
     {
       "rule": "cli-command-serve-lsp-cpp.ts",
       "reason": "Reviewed strict AppKit RuntimeError attribution against real multi-process Hilog and independently named faultlogs, preserving all nine reference documents and 45 complete knowledge suggestions. Reviewed bounded LSP session admission after continuous product and ABI switching exposed idle-capacity exhaustion: reclaim only idle owners, share concurrent reclamation, reserve active requests before yielding, and confirm process exit before admitting a replacement. Four active or unconfirmed owners retain capacity protection. Full current regression and mapped real SDK, device, auth, hot-patch and package checks are required; no upstream code execution or compatibility engine was introduced.",
-      "reviewer": "Codex current native acceptance review"
+      "reviewer": "Codex native release review"
     },
     {
       "rule": "cli-command-signature.ts",
       "reason": "Expose typed signing operations with explicit identity and durable writes; local material and package publication use encrypted preparation and hash reconciliation. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native runtime review"
+      "reviewer": "Codex native release review"
     },
     {
       "rule": "cli-command-auth.ts",
       "reason": "Expose native login, status, logout and team selection while keeping tokens private; expired-auth and reauthentication scenarios remain required. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native runtime review"
+      "reviewer": "Codex native release review"
     },
     {
       "rule": "cli-command-doc.ts",
       "reason": "Preserve catalog/search/read through attributed local archives with bounded result and content sizes. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native runtime review"
+      "reviewer": "Codex native release review"
     },
     {
       "rule": "cli-command-log.ts",
       "reason": "Preserve bounded log collection, literal filtering, follow sessions and named crash files; retain timestamps, process boundaries and truncation metadata. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native runtime review"
+      "reviewer": "Codex native release review"
     },
     {
       "rule": "cli-command-device.ts",
       "reason": "Preserve explicit target selection and native device information/file/SQLite tools under schema boundaries; aliases share canonical resource ownership. The only device-service change takes a bounded set of baseline packages, captures every file before effects and invokes the existing batch installer before launch. Existing UI, screenshot, input, display/window and parsing paths are unchanged; the full package-set hot baseline and cold-deployment acceptance check the shared install path. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native runtime review"
+      "reviewer": "Codex native release review"
     },
     {
       "rule": "cli-command-emulator.ts",
       "reason": "Map inventory, images, creation, start/stop/delete and license actions to native SDK services; mutations return durable run IDs and unknown outcomes retain leases. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native runtime review"
+      "reviewer": "Codex native release review"
     },
     {
       "rule": "cli-command-ui.ts",
       "reason": "Expose the UI action group through typed native contracts and durable flow execution, with selector ambiguity checks and final assertions. The only device-service change takes a bounded set of baseline packages, captures every file before effects and invokes the existing batch installer before launch. Existing UI, screenshot, input, display/window and parsing paths are unchanged; the full package-set hot baseline and cold-deployment acceptance check the shared install path. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native runtime review"
+      "reviewer": "Codex native release review"
     },
     {
       "rule": "cli-command-ui-input.ts",
       "reason": "Preserve gestures, click variants and text input with display/window scope; coordinate/selector inputs are frozen before uncertain external effects. The only device-service change takes a bounded set of baseline packages, captures every file before effects and invokes the existing batch installer before launch. Existing UI, screenshot, input, display/window and parsing paths are unchanged; the full package-set hot baseline and cold-deployment acceptance check the shared install path. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native runtime review"
+      "reviewer": "Codex native release review"
     },
     {
       "rule": "cli-command-ui-layout.ts",
       "reason": "Parse and query complete native dump snapshots with bounded caches, parent/depth indexes and accurate match totals independent of pagination. The only device-service change takes a bounded set of baseline packages, captures every file before effects and invokes the existing batch installer before launch. Existing UI, screenshot, input, display/window and parsing paths are unchanged; the full package-set hot baseline and cold-deployment acceptance check the shared install path. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native runtime review"
+      "reviewer": "Codex native release review"
     },
     {
       "rule": "cli-command-ui-window.ts",
       "reason": "Preserve device window enumeration and visible/system-window scope through native UI inspection; retain window/process identity in snapshots. The only device-service change takes a bounded set of baseline packages, captures every file before effects and invokes the existing batch installer before launch. Existing UI, screenshot, input, display/window and parsing paths are unchanged; the full package-set hot baseline and cold-deployment acceptance check the shared install path. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native runtime review"
+      "reviewer": "Codex native release review"
     },
     {
       "rule": "cli-command-ui-screenshot.ts",
       "reason": "Capture the selected display using owned temporary files and native HDC transfer, expose image artifacts, and keep visual review separate from structural assertions. The only device-service change takes a bounded set of baseline packages, captures every file before effects and invokes the existing batch installer before launch. Existing UI, screenshot, input, display/window and parsing paths are unchanged; the full package-set hot baseline and cold-deployment acceptance check the shared install path. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native runtime review"
+      "reviewer": "Codex native release review"
     },
     {
       "rule": "cli-retired-src-compat-",
       "reason": "Reviewed scope of src/compat/: The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native runtime review"
+      "reviewer": "Codex native release review"
     },
     {
       "rule": "cli-retired-src-skills-",
       "reason": "Reviewed scope of src/skills/: The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native runtime review"
+      "reviewer": "Codex native release review"
     },
     {
       "rule": "cli-retired-src-install-check-",
       "reason": "Reviewed scope of src/install-check/: The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native runtime review"
+      "reviewer": "Codex native release review"
     },
     {
       "rule": "cli-retired-src-update-",
       "reason": "Reviewed scope of src/update/: The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native runtime review"
+      "reviewer": "Codex native release review"
     },
     {
       "rule": "cli-retired-src-commands-skills.ts",
       "reason": "Reviewed scope of src/commands/skills.ts: The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native runtime review"
+      "reviewer": "Codex native release review"
     },
     {
       "rule": "cli-retired-src-commands-update.ts",
       "reason": "Reviewed scope of src/commands/update.ts: The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native runtime review"
+      "reviewer": "Codex native release review"
     },
     {
       "rule": "cli-retired-src-commands-serve.ts",
       "reason": "Reviewed scope of src/commands/serve.ts: The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native runtime review"
+      "reviewer": "Codex native release review"
     },
     {
       "rule": "cli-retired-mcp-",
       "reason": "Reviewed scope of mcp/: The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native runtime review"
+      "reviewer": "Codex native release review"
     },
     {
       "rule": "cli-release-LICENSE",
       "reason": "Review LICENSE as locked source provenance and release/dispatch metadata. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native runtime review"
+      "reviewer": "Codex native release review"
     },
     {
       "rule": "cli-release-OAT.xml",
       "reason": "Review OAT.xml as locked source provenance and release/dispatch metadata. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native runtime review"
+      "reviewer": "Codex native release review"
     },
     {
       "rule": "cli-release-PRIVACY.md",
       "reason": "Review PRIVACY.md as locked source provenance and release/dispatch metadata. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native runtime review"
+      "reviewer": "Codex native release review"
     },
     {
       "rule": "cli-release-package.json",
       "reason": "Review package.json as locked source provenance and release/dispatch metadata. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native runtime review"
+      "reviewer": "Codex native release review"
     },
     {
       "rule": "cli-release-package-lock.json",
       "reason": "Review package-lock.json as locked source provenance and release/dispatch metadata. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native runtime review"
+      "reviewer": "Codex native release review"
     },
     {
       "rule": "cli-release-CHANGELOG.md",
       "reason": "Review CHANGELOG.md as locked source provenance and release/dispatch metadata. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native runtime review"
+      "reviewer": "Codex native release review"
     },
     {
       "rule": "cli-release-src/cli.ts",
       "reason": "Review src/cli.ts as locked source provenance and release/dispatch metadata. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native runtime review"
+      "reviewer": "Codex native release review"
     },
     {
       "rule": "cli-emulator-license-protocol",
       "reason": "Reviewed HarmonyOS Software Service and SDK agreement keys. The locked source, mapping and every native target digest for this rule are unchanged from the dev16 review. The stated adaptation or exclusion remains applicable; new execution reports must bind the current compiled runtime. Review scope does not imply complete platform, migration or release acceptance.",
-      "reviewer": "Codex native runtime review"
+      "reviewer": "Codex native release review"
     }
   ],
   "targets": [
@@ -351,7 +351,7 @@
     },
     {
       "path": "src/core/toolchain.ts",
-      "sha256": "a4ae14aa14954f89d1df4383b14677a1435c53bc7562c80da845ba2548f32337"
+      "sha256": "8b86f8ef5f4f7309288222565abb5fa5204daac4b27e1ac6ae30755d3c8a3d4d"
     },
     {
       "path": "src/core/workflows.ts",
@@ -383,7 +383,7 @@
     },
     {
       "path": "src/services/emulator.ts",
-      "sha256": "69eb69f0b8b0c9b30a2d41ef3ca268959ddb39eebb4f8638b35310c1f381c3d9"
+      "sha256": "f453001116853fb0883fbfde2518674b2a8d943025b59c5908e8f769771f5d2e"
     },
     {
       "path": "src/services/hotreload.ts",
@@ -407,7 +407,7 @@
     },
     {
       "path": "src/services/lsp.ts",
-      "sha256": "c749897d3b243c764a7b912407f7842f3ef26a2ed6bd1bcf2803cb9f9152b858"
+      "sha256": "d125ed15231f858ceb29dbe43b09d0cff98842311a8e7d2d348052bf909be9a3"
     },
     {
       "path": "src/services/project.ts",
@@ -475,7 +475,7 @@
     },
     {
       "path": "test/native-emulator.test.ts",
-      "sha256": "e9ae272739ac04bca8783383386a9d335a952ccb0e270aa30ef6e73f1102521e"
+      "sha256": "59914d75464290cdb26e750db237247b109e4dfeb6b2379591f5d4c9a1ba1e27"
     },
     {
       "path": "test/native-flow.test.ts",
@@ -515,7 +515,7 @@
     },
     {
       "path": "test/native-runtime.test.ts",
-      "sha256": "2c7bfa41bd002965f987b4826c0ade12980a91c7e34bcf4d0689afce7e17ad9f"
+      "sha256": "03588f9d1c812aa75f6d86f0eaef96f336857e17f6859ba079150fc2c6ef0d61"
     },
     {
       "path": "test/native-shutdown.test.ts",
@@ -535,7 +535,7 @@
     },
     {
       "path": "test/native-toolchain.test.ts",
-      "sha256": "14d9a9aed84c23417082e9bfc70740e4505a0446d319b955fb6541fad5128ed0"
+      "sha256": "d1b272cbe6ab6a341a9b7cd297ac94b96ac28840de04e268ca24d2467466d78b"
     },
     {
       "path": "test/native-ui-import.test.ts",

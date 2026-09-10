@@ -75,6 +75,7 @@
         "resources/knowledge.json",
         "src/services/checker-project.ts",
         "src/services/checker-report.ts",
+        "src/server.ts",
         "resources/knowledge/arkts-grammar-standards",
         "provenance/resources.json"
       ],

@@ -4,7 +4,7 @@
 
 原生版本使用 **TypeScript + LangGraph + SQLite**：固定流程由代码执行，任务可持久化、查询和恢复；宿主 AI 负责理解需求、查询知识和修改业务代码。使用原生版本无须安装官方 Skill、官方 CLI 或 CodeGenie 子 MCP。
 
-> **当前状态：核心重构已合入 main，尚未正式发布。** 仓库只保留 TypeScript 源码和 `dist/src/cli.js` 编译入口，根目录安装、`npm run mcp` 和 CI 均使用原生实现；旧 CLI、子 MCP、Skill 安装目录及旧启动文件已删除。当前有 25 个公开工具、8 个公开工作流，执行协议为 `native-6`。本机宿主已更新到当前 Node24 候选安装，Codex 应用内重连及双提供方登录已确认；回归、SDK、设备和升级已有分项证据，完整性能采样、最终长稳与发布仍有未完成项。每份证据只对应其实际版本，见[完成清单](docs/native-completion.md)。
+> **当前正式版为 [v0.2.0](https://github.com/like3213934360-lab/deveco_tool/releases/tag/v0.2.0)。** 仓库只保留 TypeScript 源码和 `dist/src/cli.js` 编译入口，根目录安装、`npm run mcp` 和 CI 均使用原生实现；旧 CLI、子 MCP、Skill 安装目录及旧启动文件已删除。当前有 25 个公开工具、8 个公开工作流，执行协议为 `native-6`。这是带明确验收边界的正式发布：六组基础回归、干净安装、当前 SDK 专项、上游接收与现有历史设备证据已核对；28 行迁移行为、10 项直接性能能力及未复验设备场景仍在发布范围声明中保留，不宣称全平台、全设备或全部迁移场景完成。每份证据只对应其实际版本，见[完成清单](docs/native-completion.md)。
 
 ## 能解决什么问题
 
@@ -59,7 +59,7 @@ flowchart TD
 从源码安装：
 
 ```sh
-git clone --branch codex/native-typescript-runtime --single-branch https://github.com/like3213934360-lab/deveco_tool.git deveco_tool
+git clone --branch v0.2.0 --single-branch https://github.com/like3213934360-lab/deveco_tool.git deveco_tool
 cd deveco_tool
 npm ci
 npm run build
@@ -67,7 +67,7 @@ npm run build
 
 根目录使用锁定的原生依赖，无须再生成另一套 package.json 或重写锁文件。SQLite 等原生依赖须允许安装脚本；不要给 `npm ci` 加 `--ignore-scripts`，也不要跨操作系统、架构或 Node 主版本复制 `node_modules`。
 
-维护者发布的编译包安装方式为解压、校验后执行 `npm ci --omit=dev`，无需安装 TypeScript 编译器。当前尚无完成全部门槛的重构 Release，见[安装与升级](docs/native-installation.md)和[分发说明](docs/native-distribution.md)。
+维护者发布的编译包安装方式为解压、校验后执行 `npm ci --omit=dev`，无需安装 TypeScript 编译器。[v0.2.0 Release](https://github.com/like3213934360-lab/deveco_tool/releases/tag/v0.2.0) 同时提供编译包和公开验收回执，见[安装与升级](docs/native-installation.md)和[分发说明](docs/native-distribution.md)。
 
 ### 2. 配置工具链与 MCP 宿主
 
@@ -210,11 +210,11 @@ UI 流程保存在工程的 `.arkpilot/flows/<id>.json`。公开 Ability 可作�
 
 ## 验证结果与当前边界
 
-核心架构重构已合入 `main`（合并提交 `943fb3d`），后续改进在 `main` 推进，正式版尚未发布。当前迁移矩阵共 47 项：28 项 pending，19 项已有凭证中，16 项绑定相同运行/编译身份 `cc3cdfd1` / `a3763ec3`，3 项仍绑定 dev22。凭证只证明各自已核对的范围，逐项状态见[验收证据核对](docs/native-acceptance-review.md)，当前问题见[迁移状态](docs/native-migration-status.md)。
+核心架构重构已合入 `main`（合并提交 `943fb3d`），`v0.2.0` 作为首个原生正式版发布。当前迁移矩阵共 47 项：28 项 pending、19 项已有凭证；正式发布没有把 pending 改写为通过，而是由 `provenance/release-scope-0.2.0.json` 逐项固定发布边界。凭证只证明各自已核对的范围，逐项状态见[验收证据核对](docs/native-acceptance-review.md)，当前问题见[迁移状态](docs/native-migration-status.md)。
 
 `579449e` 的[六组 CI](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34330094583) 中，macOS / Linux × Node 22 / 24 各 364 项、Windows × Node 22 / 24 各 353 项适用回归通过，六组干净安装各 10 项通过，两个 Windows 作业的原生进程检查各 20 轮通过。整轮 CI 仍因上游接收凭证未刷新而失败，不能写成整轮通过。
 
-实际宿主仍安装 `bc68e0c` 候选，运行摘要为 `85a5e037`；该候选的干净安装、隔离升级/回退及 Codex 应用内实际 MCP 重连已确认。它尚未包含随后修复的 CLT 空模拟器清单解析，最终版本的宿主更新仍待完成。生产安装与开发编译摘要的区别见[分发记录](docs/native-distribution.md)。
+实际宿主已通过公开维护入口切换到 `native-6-main-7a844f7-1`，运行身份为 `cc3cdfd1`，使用 Node 24 与独立 2 GiB 状态目录。Codex 应用内重连、Developer 与 CodeGenie 新状态登录、云端只读查询及十份既有流程摘要保留均已确认；旧完整安装与加密状态仍保留用于回退。该宿主候选早于 `v0.2.0` 最终提交，因此不能作为正式发布字节的等同证明。生产安装与开发编译摘要的区别见[分发记录](docs/native-distribution.md)。
 
 以下表格保留历史提交 `caf97cc` 的结果：当时[六组 CI](https://github.com/like3213934360-lab/deveco_tool/actions/runs/34231914954) 全部通过，各组编译摘要均为 `90b34d88`，上游锁摘要均为 `bf3cc411`。真实 SDK 和设备记录分别绑定其原始版本；后续各轮结果与失败原因见[完成清单](docs/native-completion.md)。
 
@@ -232,15 +232,15 @@ SDK、设备和上游适配接收使用的分项报告仍带接收前的原始�
 
 同一 `90b34d88` 编译版本对冻结旧网关的离线 `ui_find` 复测完成 18,000 次查询，每次核对实际匹配结果：101 / 1001 / 10001 节点分别进行三轮、新旧各 1000 次，P95 分别下降 30.2%–32.7%、69.2%–72.4%、79.8%–81.2%。这些结果只覆盖保存树的精确查询，不代表首次加载、真实设备或其他能力的速度。完整数字、旧版本测量和复现方法见[UI 性能记录](docs/native-ui-performance.md)。
 
-**尚待完成的验收与交付：**
+**v0.2.0 明确保留的验收边界：**
 
-- 迁移清单仍有 28 项行为验收待接收；3 项 dev22 迁移凭证及两份 dev27 上游接收凭证需要刷新。已刷新的 16 项凭证也需与最终交付身份核对。pending 不等于尚未实现。
+- 迁移清单仍有 28 项行为验收待接收；其中 3 项凭证仍绑定历史 dev22 设备验证。pending 不等于尚未实现，也不因本次正式发布自动转为 verified。
 - 真实过期认证、更多显示器和设备场景，以及最终版本下的专项验收仍待补齐。
-- 最新固定输入查询中，热重载状态、LSP、流程目录的 P95 分别增加约 0.165、1.497、0.156 ms。此前内部设定的 5% 相对耗时阈值没有用户认可或官方依据，已取消其发布阻断；这些数据作为性能观察，不能据此判定实际体验不合格。19 项直接能力的完整采样仍有缺口。
-- dev22 曾通过一小时长稳及六分钟空闲回收，dev27/dev28 后续长稳失败，最终版本仍需复验。Windows 取消后子进程退出问题已由当前 Node 22 / 24 各 20 轮原生进程检查确认，不再列为待复验。
-- Codex 应用内 MCP 已重连当前安装，Developer 与 CodeGenie 重新登录及云端只读复验分别通过 9/10 项；当前候选的隔离升级/回退 10 项已通过，旧完整安装及加密回退记录保留。正式 Release 的证据封装及发布仍待完成。
+- 19 项直接能力中有 9 项完成桌面端每项 1,000 次采样；其余 10 项未补跑。固定输入的热重载状态、LSP、流程目录延迟保留为观察项，不使用没有官方依据的相对阈值扩大结论。
+- 用户取消本轮新增真机测试；发布门禁仅接收原始范围明确的历史设备报告。dev22 曾通过一小时活动与六分钟空闲回收，后续失败原样保留，不宣称 `v0.2.0` 已重新完成真机长稳。
+- Codex 应用内 MCP 已重连当前安装，Developer 与 CodeGenie 重新登录及云端只读复验分别通过；隔离升级/回退和十份既有流程保留已确认。旧完整安装及加密回退记录保留。
 
-`release-gate` 会核对最终运行文件、依赖锁、资源摘要及原始报告；缺失、失败或对应旧代码的证据会阻止发布。已实现与待验收项目分别记录在[完成清单](docs/native-completion.md)。
+`release-gate` 会核对最终运行文件、依赖锁、资源摘要、上游接收、原始报告及精确发布范围；缺失、重复、改写或超出 `v0.2.0` 范围声明的例外会阻止发布。已实现与待验收项目分别记录在[完成清单](docs/native-completion.md)。
 
 ## 开发、更新与交付
 
@@ -274,7 +274,7 @@ node dist/scripts/resources.js
 
 更新流程为：检测提交 → 下载并核对候选 → 分类差异及影响 → 准备草稿 PR → 人工适配流程 / 协议 → 契约、回归、平台与性能验证 → 评审发布。仓库提供定时 / 手动候选工作流、带摘要校验的适配工具和 Release 工作流；定时权限及完整发布链路仍待统一验收。未映射变化会阻止候选通过；自然语言新增要求不能保证自动正确转换为代码。运行中的 MCP 不动态拉取或执行最新上游代码，框架依赖升级与官方工具链适配分开提交。详见[上游更新机制](docs/native-upstream-upgrades.md)。
 
-升级时先结束任务与会话，在新目录安装完整版本，配置工具链并重新登录，校验保留的 UI 流程后再运行 doctor、构建和设备检查。不同执行协议使用独立状态目录；回退通过切换完整安装目录完成。当前尚无本次重构的正式 Release，具体步骤见[安装与升级](docs/native-installation.md)。
+升级时先结束任务与会话，在新目录安装完整版本，配置工具链并重新登录，校验保留的 UI 流程后再运行 doctor、构建和设备检查。不同执行协议使用独立状态目录；回退通过切换完整安装目录完成。正式编译包见 [v0.2.0 Release](https://github.com/like3213934360-lab/deveco_tool/releases/tag/v0.2.0)，具体步骤见[安装与升级](docs/native-installation.md)。
 
 ## 文档与许可证
 

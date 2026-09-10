@@ -892,11 +892,13 @@
     "source": "deveco-code",
     "source_path": "packages/opencode/resources/skills/arkts-grammar-standards/references/arkts-rules.md",
     "commit": "b5911d2ad6daa66d4ca1bd673a9be260da19e1db",
-    "sha256": "fa9cc79aa8691696398292dc9b8c4a43b0208085f32b9c21720b0ccaa493b7b3",
+    "sha256": "2efb5959d8c9f4f739143125e45c63779b4994d5794390f9f1b18be59d79bad4",
     "kind": "rule",
     "summary": "Upstream arkts-grammar-standards reference: ArkTS Syntax Rules Dictionary",
     "applicability": "ArkTS language and API guidance. Compiler and target API version applicability must be checked against the selected SDK; static advice is not compilation proof.",
-    "related_ids": []
+    "related_ids": [
+      "arkts-grammar-standards/recipes-core"
+    ]
   },
   {
     "id": "arkts-grammar-standards/arkui-structure-rules",

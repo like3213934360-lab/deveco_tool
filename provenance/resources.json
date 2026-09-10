@@ -49,10 +49,10 @@
     },
     {
       "file": "resources/knowledge.json",
-      "sha256": "85786d1dc93210aa0758e7586f77c59c1b9cc59fed8daa41dfc06f57c866d13b",
+      "sha256": "5dce2301f93fd259978a639265d33c6b70cae4025b698c455476831d3febc62d",
       "source": "deveco-tool",
       "source_path": "resources/knowledge.json",
-      "source_sha256": "85786d1dc93210aa0758e7586f77c59c1b9cc59fed8daa41dfc06f57c866d13b",
+      "source_sha256": "5dce2301f93fd259978a639265d33c6b70cae4025b698c455476831d3febc62d",
       "transformation": "repository-authored metadata, documentation or SVG resource"
     },
     {
@@ -561,11 +561,11 @@
     },
     {
       "file": "resources/knowledge/arkts-grammar-standards/arkts-rules.md",
-      "sha256": "fa9cc79aa8691696398292dc9b8c4a43b0208085f32b9c21720b0ccaa493b7b3",
+      "sha256": "2efb5959d8c9f4f739143125e45c63779b4994d5794390f9f1b18be59d79bad4",
       "source": "deveco-code",
       "source_path": "packages/opencode/resources/skills/arkts-grammar-standards/references/arkts-rules.md",
       "source_sha256": "fa9cc79aa8691696398292dc9b8c4a43b0208085f32b9c21720b0ccaa493b7b3",
-      "transformation": "unchanged"
+      "transformation": "Replaced two unreachable SKILL.md cross-references with the packaged recipes-core.md section; prose and examples otherwise unchanged."
     },
     {
       "file": "resources/knowledge/arkts-grammar-standards/arkui-structure-rules.md",

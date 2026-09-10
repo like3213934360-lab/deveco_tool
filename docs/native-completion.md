@@ -1,8 +1,26 @@
 # 原生重构完成清单
 
-> 2026-09-09：用户先要求停止测试、直接合入 main 并删除开发分支，随后要求继续完成全部剩余工作，非真机工作完成并汇报后再进行真机测试。合并已完成，非真机测试已恢复；尚未发布正式 Release。下文未合并状态及验收结果为当时历史记录，不改写为当前通过。
+> 2026-09-10：原生重构以带明确验收边界的 `v0.2.0` 正式发布。用户取消本轮新增真机测试，历史设备报告按原始范围保留。下文未合并、待发布及历史失败状态均指记录当时，不改写为当前通过。
 
-当前重构已通过 `943fb3d` 合入 main。当前状态见[迁移状态](native-migration-status.md)，47 项迁移记录的凭证身份与剩余范围见[验收证据核对](native-acceptance-review.md)。以下按时间保留实现及测试记录，其中“当前”“未合并”均指记录当时的状态。
+当前重构已通过 `943fb3d` 合入 main，首个原生正式版为 `v0.2.0`。当前状态见[迁移状态](native-migration-status.md)，47 项迁移记录的凭证身份与剩余范围见[验收证据核对](native-acceptance-review.md)。以下按时间保留实现及测试记录，其中“当前”“未合并”“尚未发布”均指记录当时的状态。
+
+## 2026-09-10 v0.2.0 有限范围正式发布
+
+发布前完成 365 项 Node24/macOS 全量回归、Checker 13 项、SDK 24 项、Linter 6 项及多模块 45 项复验，报告均 completed/passed/closed/unchanged；资源摘要与两份上游基线门禁通过。上游接收允许携带的历史报告仅限发布范围列出的检查，并要求验收脚本源码摘要与已接受归档完全相同；改变的检查必须提供当前报告。
+
+`provenance/release-scope-0.2.0.json` 精确列出 28 行迁移 pending、43 个验收用例、19 项性能能力、破坏性旧 API 接收、用户取消设备复测、历史设备长稳和可携带上游检查。发布门禁拒绝缺失、重复或改写限制。9/19 桌面直接能力每项 1,000 次采样按原范围接收；其余 10 项、真实过期凭据、多显示器、多设备及未复验真机场景继续保留，不宣称全平台或全设备完成。
+
+实际宿主已在此前切换至 `native-6-main-7a844f7-1` 与 2 GiB 新状态。Codex 应用内 doctor、Developer/CodeGenie 登录与云端只读查询均成功，十份既有流程的路径和摘要在升级前后保持；旧完整安装和加密状态保留用于回退。本轮未退出登录、未创建或删除云端资产，也未访问物理手机。宿主候选身份与最终 Release 字节分开记录。
+
+## 2026-09-09 实际宿主切换到 2 GiB 候选
+
+用户在切换时机确认后回复已重启 Codex，按该安排继续执行。宿主较原 `af679fd8` 计划新增项目记录，并更新浏览器工具两个环境字段，所选 `deveco-tool` 配置未变；原计划摘要已失配。通过公开维护入口重生等效计划，保留所有新设置，spec、新旧完整安装身份、Node 和十份流程完全一致，仅宿主前后摘要与计划自身摘要变化。新计划在 `preparation/main-host-upgrade-2gib-restart-7587f91-1/plan.private.json`，SHA-256 `f34eecfbed87fe1b9fa656e5c2f4454e278ccdb1fb041551356b8f87dfdd5aff`。
+
+实际执行前，旧状态未终结 runs、受管进程、外部会话均为零，298 个请求开始均有成功或失败终结记录，两次快照稳定。重新核对五个旧 MCP 的精确入口、UID、启动时间及 Codex app-server 父进程，逐个 SIGTERM 正常收尾；没有停止 app-server 或其他项目进程。公开 maintenance apply 成功，宿主指向 `native-6-main-7a844f7-1`，新状态 `native-6-main-cc3cdfd1-1` 配置为 2 GiB / max_runs100 / retention_days7，旧凭据、密钥、配置、十份流程和其他宿主字段保留。四项实际应用检查通过，`apply-evidence.private.json` SHA-256 `b6d6064b2dfe0a1bdaa4470496516735709d79890d3cce172725735c130bc3a7`。
+
+同目录独立 MCP 四项验证通过：25 工具及 8 工作流、新 Worker doctor 使用实际新状态、两方均未登录且无 pending、正常关闭并确认 PID 退出。`independent-mcp-evidence.private.json` SHA-256 `b97ebf5650ec56af21620899c528119033243faa7402e99cbb9e9d4a2c89f300`，completed/closed/unchanged 均 true。新配置通过安装内 300 MiB 容量检查，报告 `capacity.stdout.private.json` SHA-256 `0ccc13c7d9dad319d931594ba9f0488667465d45302cec5272e0e89426343c5b`；不写入大文件，不代表部署完成。独立 doctor 请求 `27c2dba4-8134-4f1b-bcb6-29e5a8a36113` 不能作为应用内重连证据。
+
+执行及回退说明为同目录 `execution-summary.md`，加密回退记录在 `journal`；回退保留本次新状态，恢复包含用户最新工具/项目设置的原宿主配置。后续应用内重连、Developer 与 CodeGenie 新状态登录均已确认，详见上方终态记录。本轮没有操作手机或云端证书。
 
 ## 2026-09-09 本机 2 GiB 升级计划与模拟器场景复验
 

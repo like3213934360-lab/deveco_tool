@@ -51,14 +51,15 @@ export function acceptMigration(root: string, raw: unknown) {
   return { accepted: true, source: plan.source, receipt: relative, deduplicated, release_ready: false };
 }
 
-export function verifyMigrationEvidence(root: string) {
+export function verifyMigrationEvidence(root: string, requireCurrentIdentity = true, allowPending = false) {
   const matrix = matrixSchema.parse(readJson(path.join(root, "provenance/migration-matrix.json"))), tested = identitySchema.parse(evidenceIdentity(root));
   for (const kind of ["tools", "scripts"] as const) for (const row of matrix[kind]) {
+    if (allowPending && row.acceptance === "pending") continue;
     invariant(row.acceptance === "verified" && !row.remaining.length && row.evidence.length > 0, "MIGRATION_ACCEPTANCE_UNPROVEN", "Migration row still needs behavior acceptance");
     const checks = new Set<string>();
     for (const file of row.evidence) {
       const receipt = receiptSchema.parse(readJson(inside(root, file)));
-      invariant(receipt.source === `${kind}:${row.source}` && receipt.row_sha256 === rowIdentity(row) && digest(receipt.tested) === digest(tested), "MIGRATION_EVIDENCE_STALE", "Historical or unrelated evidence cannot accept this migration row");
+      invariant(receipt.source === `${kind}:${row.source}` && receipt.row_sha256 === rowIdentity(row) && (!requireCurrentIdentity || digest(receipt.tested) === digest(tested)), "MIGRATION_EVIDENCE_STALE", "Historical or unrelated evidence cannot accept this migration row");
       for (const item of receipt.checks) checks.add(item.check);
     }
     invariant(row.checks.every((check) => checks.has(check)), "MIGRATION_CHECK_MISSING", "Migration receipt omits a mapped check");

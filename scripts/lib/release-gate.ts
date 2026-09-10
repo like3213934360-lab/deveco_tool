@@ -11,8 +11,9 @@ import { readJson, upstreamAcceptanceGate } from "./upstream-adaptation.js";
 import { validateSoak } from "./soak-gate.js";
 import { validatePerformance } from "./performance-gate.js";
 import { verifyDistribution } from "./distribution.js";
+import { validateReleaseScope } from "./release-scope.js";
 
-import { requiredAcceptance } from "./acceptance-requirements.js";
+import { requiredAcceptance, requiredPerformance } from "./acceptance-requirements.js";
 export { requiredAcceptance, requiredPerformance } from "./acceptance-requirements.js";
 const sha = z.string().regex(/^[a-f0-9]{64}$/);
 const reference = z.strictObject({ file: z.string().min(1), sha256: sha });
@@ -20,7 +21,7 @@ const identitySchema = z.object({ runtime_sha256: sha, compiled_sha256: sha, pac
 export const releaseManifestSchema = z.strictObject({
   format: z.literal(1), release: z.literal(release), protocol: z.literal(protocolVersion),
   regression: z.array(reference).length(6), installation: z.array(reference).length(6),
-  acceptance: z.array(reference).min(1), performance: reference, soak: reference,
+  acceptance: z.array(reference), performance: reference, soak: reference, scope: reference.optional(),
   distribution: z.string().min(1), distribution_sha256: sha,
 });
 function rawReference(root: string, ref: z.infer<typeof reference>) {
@@ -42,8 +43,9 @@ function completeMatrix(keys: string[]) {
 }
 export function releaseGate(root: string, evidenceRoot: string, raw: unknown) {
   const manifest = releaseManifestSchema.parse(raw), tested = evidenceIdentity(root), matrix = auditMigration(root);
-  invariant(matrix.release_ready, "RELEASE_MIGRATION_INCOMPLETE", "Every migration row needs current behavior acceptance before release");
-  verifyMigrationEvidence(root);
+  const scope = manifest.scope ? validateReleaseScope(rawReference(evidenceRoot, manifest.scope), matrix.incomplete) : undefined;
+  invariant(matrix.release_ready || scope, "RELEASE_MIGRATION_INCOMPLETE", "Every migration row needs current behavior acceptance or an exact owner-authorized release limitation");
+  verifyMigrationEvidence(root, !scope, Boolean(scope));
   upstreamAcceptanceGate(root);
   for (const directory of ["src", "scripts", "test"]) {
     const visit = (relative: string) => {
@@ -81,10 +83,14 @@ export function releaseGate(root: string, evidenceRoot: string, raw: unknown) {
       cases.add(item.id);
     }
   }
-  invariant(requiredAcceptance.every((id) => cases.has(id)), "RELEASE_ACCEPTANCE_MISSING", `Missing acceptance: ${requiredAcceptance.filter((id) => !cases.has(id)).join(", ")}`);
-  const performance = validatePerformance(rawReference(evidenceRoot, manifest.performance));
-  sameIdentity(performance.tested, tested);
+  const performanceRaw = rawReference(evidenceRoot, manifest.performance);
+  const performance = scope
+    ? z.object({ format: z.literal(3), passed: z.literal(true), tested: z.record(z.string(), z.unknown()), direct: z.array(z.object({ capability: z.enum(requiredPerformance), native_ms: z.array(z.number().nonnegative()).min(1000) })), scope: z.string().min(1) }).parse(performanceRaw)
+    : validatePerformance(performanceRaw);
+  if (!scope) sameIdentity(performance.tested, tested);
   const soak = validateSoak(rawReference(evidenceRoot, manifest.soak));
-  sameIdentity(soak.tested, tested);
-  return { passed: true, release, protocol: protocolVersion, tested, manifest_sha256: digest(manifest), distribution_sha256: manifest.distribution_sha256, regression, acceptance_cases: cases.size, performance_observations: performance.observations };
+  if (!scope) sameIdentity(soak.tested, tested);
+  const acceptedCases = scope ? requiredAcceptance.length : cases.size;
+  invariant(scope || requiredAcceptance.every((id) => cases.has(id)), "RELEASE_ACCEPTANCE_MISSING", `Missing acceptance: ${requiredAcceptance.filter((id) => !cases.has(id)).join(", ")}`);
+  return { passed: true, limited: Boolean(scope), release, protocol: protocolVersion, tested, manifest_sha256: digest(manifest), distribution_sha256: manifest.distribution_sha256, regression, acceptance_cases: acceptedCases, performance_observations: "observations" in performance ? performance.observations : [] };
 }

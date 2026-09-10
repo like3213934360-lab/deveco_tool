@@ -5,6 +5,8 @@ import { atomicWrite, digest, fileDigest, inside } from "../../src/core/files.js
 import { invariant } from "../../src/core/errors.js";
 import { candidate, candidateSchema, classify, tree, lockSchema, mappingSchema, sourceSchema, verifyCandidate } from "./upstream.js";
 import { evidenceIdentity } from "./evidence.js";
+import { release } from "../../src/core/config.js";
+import { releaseScopeSchema } from "./release-scope.js";
 
 const sha = z.string().regex(/^[a-f0-9]{64}$/);
 const relative = z.string().min(1).refine((file) => !path.isAbsolute(file) && !file.includes("\\") && file.split("/").every((part) => !!part && part !== "." && part !== "..") && !/[\x00-\x1f]/.test(file));
@@ -213,14 +215,21 @@ function acceptedTransition(receipt: Acceptance, sourceId: string, next: z.infer
   expected.sources[index] = next;
   invariant(digest(receipt.before_lock) === receipt.before_lock_sha256 && digest(receipt.accepted_lock) === receipt.accepted_lock_sha256 && digest(expected) === receipt.accepted_lock_sha256, "UPSTREAM_LOCK_CHANGED", "Acceptance may only apply the reviewed transition to its own source");
 }
-function verifyChecks(directory: string, receipt: Acceptance, required: readonly string[]) {
+function verifyChecks(directory: string, receipt: Acceptance, required: readonly string[], root?: string) {
   invariant(new Set(receipt.checks.map((item) => item.check)).size === receipt.checks.length && required.every((check) => receipt.checks.some((item) => item.check === check)), "UPSTREAM_TEST_MISSING", "Each required check needs one accepted attestation");
-  const attestation = z.strictObject({ format: z.literal(1), passed: z.literal(true), tested: publicIdentitySchema, executed_tests: z.array(z.string()).length(1), original_sha256: sha });
+  const currentAttestation = z.strictObject({ format: z.literal(1), passed: z.literal(true), tested: publicIdentitySchema, executed_tests: z.array(z.string()).length(1), original_sha256: sha });
+  const carriedAttestation = z.strictObject({ format: z.literal(2), passed: z.literal(true), accepted_context: publicIdentitySchema, execution_tested: publicIdentitySchema, executed_tests: z.array(z.string()).length(1), original_sha256: sha, check_sha256: sha, prior_attestation_sha256: sha });
   for (const item of receipt.checks) {
     const file = inside(directory, item.report);
     invariant(fileDigest(file) === item.sha256, "UPSTREAM_EVIDENCE_CHANGED", "Published check attestation changed");
-    const result = attestation.parse(readJson(file));
-    invariant(result.original_sha256 === item.original_sha256 && digest(result.tested) === digest(receipt.tested) && result.executed_tests[0] === `dist/${item.check.replace(/\.ts$/, ".js")}`, "UPSTREAM_EVIDENCE_STALE", "Check attestation differs from the accepted scope or bytes");
+    const raw = readJson(file), carried = z.object({ format: z.number() }).parse(raw).format === 2;
+    if (carried) {
+      const result = carriedAttestation.parse(raw);
+      invariant(root && result.original_sha256 === item.original_sha256 && digest(result.accepted_context) === digest(receipt.tested) && result.executed_tests[0] === `dist/${item.check.replace(/\.ts$/, ".js")}` && fileDigest(inside(root, item.check)) === result.check_sha256, "UPSTREAM_EVIDENCE_STALE", "Carried check must retain its execution identity and unchanged TypeScript source");
+    } else {
+      const result = currentAttestation.parse(raw);
+      invariant(result.original_sha256 === item.original_sha256 && digest(result.tested) === digest(receipt.tested) && result.executed_tests[0] === `dist/${item.check.replace(/\.ts$/, ".js")}`, "UPSTREAM_EVIDENCE_STALE", "Check attestation differs from the accepted scope or bytes");
+    }
   }
   invariant(receipt.evidence_sha256 === digest(receipt.checks.map(({ check, original_sha256 }) => ({ check, sha256: original_sha256 })).sort((a, b) => a.check.localeCompare(b.check))), "UPSTREAM_EVIDENCE_CHANGED", "Accepted evidence set differs from its journal");
 }
@@ -232,7 +241,7 @@ function verifyBaseline(root: string, sourceId: string) {
   invariant(new Set(plan.reviews.map((item) => item.rule)).size === plan.reviews.length && digest(plan.reviews.map((item) => item.rule).sort()) === digest(rules.map((item) => item.id).sort()) && digest(plan.required_tests) === digest([...new Set(rules.flatMap((item) => item.tests))].sort()) && digest(plan.targets.map((item) => item.path)) === digest([...new Set(rules.flatMap((item) => [...item.targets, ...item.tests]))].sort()), "UPSTREAM_REVIEW_INCOMPLETE", "Baseline review must cover all mapped rules, files and checks");
   invariant(receipt.candidate_sha256 === digest(plan.source) && receipt.adaptation_sha256 === digest(plan) && digest(receipt.before_lock.sources.find((item) => item.id === sourceId)) === digest(plan.source), "UPSTREAM_ACCEPTANCE_CHANGED", "Baseline acceptance differs from the reviewed source");
   acceptedTransition(receipt, sourceId, { ...plan.source, acceptance: "verified" });
-  verifyChecks(directory, receipt, plan.required_tests);
+  verifyChecks(directory, receipt, plan.required_tests, root);
   return { plan, receipt };
 }
 
@@ -255,7 +264,7 @@ export function upstreamAcceptanceGate(root: string) {
       invariant(!report.changes.some((item) => item.disposition === "unmapped") && receipt.candidate_sha256 === report.sha256 && saved.plan_sha256 === digest(saved.plan) && receipt.adaptation_sha256 === saved.plan_sha256 && saved.plan.candidate.sha256 === report.sha256, "UPSTREAM_ACCEPTANCE_CHANGED", "Candidate acceptance differs from its reviewed adaptation");
       invariant(previous.commit === baseline.plan.source.commit && previous.tree === baseline.plan.source.tree && previous.url === baseline.plan.source.url, "UPSTREAM_BASELINE_CHANGED", "Candidate must extend the accepted baseline");
       acceptedTransition(receipt, source.id, { ...previous, commit: report.candidate.commit, tree: report.candidate.tree, version: report.candidate.commit, acceptance: "verified" });
-      verifyChecks(directory, receipt, report.required_tests);
+      verifyChecks(directory, receipt, report.required_tests, root);
       finalReceipt = receipt; candidates++;
     } else {
       for (const target of baseline.plan.targets) invariant(targetIdentity(root, target.path) === target.sha256, "UPSTREAM_BASELINE_CHANGED", "Mapped baseline changed after review");
@@ -272,10 +281,11 @@ export function upstreamAcceptanceGate(root: string) {
 
 /** Publish an allowlisted attestation, never the raw report (which can contain host
  * paths, device identities, logs and credentials). Keep the original digest for audit. */
-function recordChecks(directory: string, raw: unknown, required: readonly string[], tested: ReturnType<typeof evidenceIdentity>) {
+function recordChecks(directory: string, raw: unknown, required: readonly string[], tested: ReturnType<typeof evidenceIdentity>, requireAll = true) {
   const evidence = validationSchema.parse(raw);
   invariant(new Set(evidence.checks.map((item) => item.check)).size === evidence.checks.length, "UPSTREAM_TEST_DUPLICATE", "Each mapped check must occur once");
-  for (const check of required) invariant(evidence.checks.some((item) => item.check === check), "UPSTREAM_TEST_MISSING", `Required evidence missing: ${check}`);
+  if (requireAll) for (const check of required) invariant(evidence.checks.some((item) => item.check === check), "UPSTREAM_TEST_MISSING", `Required evidence missing: ${check}`);
+  else for (const item of evidence.checks) invariant(required.includes(item.check), "UPSTREAM_TEST_UNEXPECTED", `Evidence is not mapped for this baseline: ${item.check}`);
   const identity = publicIdentitySchema.parse(tested);
   const pending = evidence.checks.map((item) => {
     invariant(fileDigest(item.report) === item.sha256, "UPSTREAM_EVIDENCE_CHANGED", "Validation report digest differs");
@@ -297,6 +307,31 @@ function recordChecks(directory: string, raw: unknown, required: readonly string
   });
 }
 
+function carryForwardBaselineChecks(root: string, directory: string, sourceId: string, plan: z.infer<typeof baselineReviewSchema>, required: readonly string[], tested: ReturnType<typeof evidenceIdentity>) {
+  if (!required.length) return [];
+  const scope = releaseScopeSchema.parse(readJson(path.join(root, `provenance/release-scope-${release}.json`)));
+  for (const check of required) invariant(scope.upstream_historical_checks.includes(check), "UPSTREAM_TEST_MISSING", `Current evidence missing and release scope does not authorize historical carry-forward: ${check}`);
+  const historyRoot = path.join(root, "provenance/upstream-review-history", sourceId);
+  const histories = fs.readdirSync(historyRoot).sort().reverse();
+  return required.map((check) => {
+    for (const history of histories) {
+      const priorDirectory = path.join(historyRoot, history, "baseline"), reviewFile = path.join(priorDirectory, "review.json"), receiptFile = path.join(priorDirectory, "accepted.json");
+      if (!fs.existsSync(reviewFile) || !fs.existsSync(receiptFile)) continue;
+      const priorPlan = baselineReviewSchema.parse(readJson(reviewFile)), prior = acceptedSchema.parse(readJson(receiptFile));
+      const before = priorPlan.targets.find((item) => item.path === check), after = plan.targets.find((item) => item.path === check), item = prior.checks.find((candidate) => candidate.check === check);
+      if (!before || !after || before.sha256 !== after.sha256 || !item) continue;
+      verifyChecks(priorDirectory, prior, priorPlan.required_tests, root);
+      const priorRaw = z.strictObject({ format: z.literal(1), passed: z.literal(true), tested: publicIdentitySchema, executed_tests: z.array(z.string()).length(1), original_sha256: sha }).parse(readJson(path.join(priorDirectory, item.report)));
+      const content = JSON.stringify({ format: 2, passed: true, accepted_context: publicIdentitySchema.parse(tested), execution_tested: priorRaw.tested, executed_tests: priorRaw.executed_tests, original_sha256: item.original_sha256, check_sha256: fileDigest(inside(root, check)), prior_attestation_sha256: item.sha256 }, null, 2) + "\n";
+      const destination = `checks/${digest({ content })}.json`, file = path.join(directory, destination);
+      if (fs.existsSync(file)) invariant(fs.readFileSync(file, "utf8") === content, "UPSTREAM_EVIDENCE_CHANGED", "Carried attestation changed");
+      else atomicWrite(file, content, false);
+      return { check, report: destination, sha256: fileDigest(file), original_sha256: item.original_sha256 };
+    }
+    invariant(false, "UPSTREAM_HISTORICAL_EVIDENCE_MISSING", `No accepted unchanged historical check exists for ${check}`);
+  });
+}
+
 export function acceptAdaptation(root: string, sourceId: string, raw: unknown) {
   const { lock, mapping } = configuration(root), source = lock.sources.find((item) => item.id === sourceId);
   invariant(source, "UPSTREAM_SOURCE_INVALID", "Unknown source");
@@ -314,7 +349,7 @@ export function acceptAdaptation(root: string, sourceId: string, raw: unknown) {
     invariant(beforeSource, "UPSTREAM_SOURCE_INVALID", "Journal has no original source");
     const report = verifyCandidate(plan.candidate, beforeSource, mapping);
     acceptedTransition(prior, sourceId, { ...beforeSource, commit: report.candidate.commit, tree: report.candidate.tree, version: report.candidate.commit, acceptance: "verified" });
-    verifyChecks(directory, prior, report.required_tests);
+    verifyChecks(directory, prior, report.required_tests, root);
     invariant(identityFields.filter((key) => key !== "upstream_lock_sha256").every((key) => prior.tested[key] === tested[key]), "UPSTREAM_EVIDENCE_STALE", "Accepted runtime changed; fresh validation is required");
     for (const item of evidence.checks) invariant(fileDigest(item.report) === item.sha256, "UPSTREAM_EVIDENCE_CHANGED", "Original validation report changed");
     for (const item of prior.checks) invariant(fileDigest(inside(directory, item.report)) === item.sha256, "UPSTREAM_EVIDENCE_CHANGED", "Published attestation changed");
@@ -340,19 +375,24 @@ export function acceptBaseline(root: string, sourceId: string, raw: unknown) {
   invariant(source && source.commit === plan.source.commit && source.tree === plan.source.tree && source.url === plan.source.url && digest(mapping) === plan.mapping_sha256, "UPSTREAM_BASELINE_CHANGED", "Reviewed baseline no longer matches source or mappings");
   for (const item of plan.targets) invariant(targetIdentity(root, item.path) === item.sha256, "UPSTREAM_BASELINE_CHANGED", "Mapped baseline code changed; review the final implementation");
   const evidence = validationSchema.parse(raw), tested = evidenceIdentity(root), receiptPath = path.join(directory, "accepted.json");
-  const evidenceHash = digest(evidence.checks.map(({ check, sha256 }) => ({ check, sha256 })).sort((a, b) => a.check.localeCompare(b.check)));
   if (fs.existsSync(receiptPath)) {
     const prior = acceptedSchema.parse(readJson(receiptPath));
+    const supplied = new Map(evidence.checks.map((item) => [item.check, item.sha256]));
+    const evidenceHash = digest(prior.checks.map(({ check, original_sha256 }) => ({ check, sha256: supplied.get(check) ?? original_sha256 })).sort((a, b) => a.check.localeCompare(b.check)));
     invariant(prior.adaptation_sha256 === digest(plan) && prior.evidence_sha256 === evidenceHash, "UPSTREAM_ACCEPTANCE_CONFLICT", "Baseline retry differs from recorded acceptance");
     invariant(identityFields.filter((key) => key !== "upstream_lock_sha256").every((key) => tested[key] === prior.tested[key]), "UPSTREAM_EVIDENCE_STALE", "Accepted code or resources changed");
     acceptedTransition(prior, sourceId, { ...plan.source, acceptance: "verified" });
-    verifyChecks(directory, prior, plan.required_tests);
+    verifyChecks(directory, prior, plan.required_tests, root);
     for (const item of evidence.checks) invariant(fileDigest(item.report) === item.sha256, "UPSTREAM_EVIDENCE_CHANGED", "Original report changed");
     for (const item of prior.checks) invariant(fileDigest(inside(directory, item.report)) === item.sha256, "UPSTREAM_EVIDENCE_CHANGED", "Attestation changed");
     resumeLockTransition(root, lock, prior, sourceId);
     return { accepted: true, source: sourceId, deduplicated: true, release_ready: false };
   }
-  const records = recordChecks(directory, evidence, plan.required_tests, tested), before = structuredClone(lock);
+  const records = recordChecks(directory, evidence, plan.required_tests, tested, false);
+  const missing = plan.required_tests.filter((check) => !records.some((item) => item.check === check));
+  records.push(...carryForwardBaselineChecks(root, directory, sourceId, plan, missing, tested));
+  const evidenceHash = digest(records.map(({ check, original_sha256 }) => ({ check, sha256: original_sha256 })).sort((a, b) => a.check.localeCompare(b.check)));
+  const before = structuredClone(lock);
   source.acceptance = "verified";
   const receipt = acceptedSchema.parse({ format: 2, candidate_sha256: digest(plan.source), adaptation_sha256: digest(plan), evidence_sha256: evidenceHash, before_lock_sha256: digest(before), accepted_lock_sha256: digest(lock), before_lock: before, accepted_lock: lock, tested: publicIdentitySchema.parse(tested), checks: records });
   atomicWrite(receiptPath, JSON.stringify(receipt, null, 2) + "\n", false);

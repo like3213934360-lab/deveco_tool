@@ -66,6 +66,11 @@ test("MCP catalogs work without SDK discovery, invalid input is rejected, worker
     });
   try {
     await client.connect(transport);
+    const instructions = client.getInstructions();
+    assert.match(instructions ?? "", /first \.ets file/);
+    assert.match(instructions ?? "", /arkts-grammar-standards\/recipes-core/);
+    assert.match(instructions ?? "", /diagnostics first, then project_build/);
+    assert.match(instructions ?? "", /explicit successful final assertion/);
     const catalog = await client.listTools();
     assert.equal(catalog.tools.length, 25);
     assert.ok(catalog.tools.every((tool) => tool.outputSchema));
