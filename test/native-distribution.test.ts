@@ -220,6 +220,11 @@ test("archive extraction rejects traversal, unlisted files, path collisions and 
   const f = fixture(t);
   for (const [index, names] of [
     ["../outside", "distribution.json"],
+    ["/absolute", "distribution.json"],
+    ["C:/absolute", "distribution.json"],
+    ["C:\\absolute", "distribution.json"],
+    ["..\\outside", "distribution.json"],
+    ["resources/item", "resources/item/child", "distribution.json"],
     ["skills/SKILL.md", "distribution.json"],
     ["resources/CON.js", "distribution.json"],
     ["dist/src/A.js", "dist/src/a.js", "distribution.json"],
@@ -261,4 +266,41 @@ test("archive decompression enforces the declared size before inflated data can 
     () => extractDistribution(forged, path.join(f.root, "forged-output")),
     { code: "ERR_BUFFER_TOO_LARGE" },
   );
+});
+
+test("distribution rejects duplicate paths, special files and excessive declared sizes before writing", (t) => {
+  const f = fixture(t);
+  for (const kind of [0o120777, 0o020600, 0o060600, 0o010600, 0o040700, 0, 1]) {
+    const zip = new AdmZip();
+    zip.addFile("distribution.json", Buffer.from("{}"));
+    const entry = zip.addFile("resources/item", Buffer.from("{}"));
+    if (kind === 0) zip.addFile("resources/other", Buffer.from("{}")).entryName = "resources/item";
+    else if (kind === 1) entry.header.size = 257 * 1024 * 1024;
+    else entry.attr = (kind << 16) >>> 0;
+    zip.writeZip(f.archive);
+    const output = path.join(f.root, `rejected-${kind}`);
+    assert.throws(() => extractDistribution(f.archive, output));
+    assert.equal(fs.existsSync(output), false);
+  }
+});
+test("distribution validates all hashes before writing and removes partial IO failures without touching existing destinations", (t) => {
+  const f = fixture(t);
+  prepareDistribution(f.source, f.output); f.normalized();
+  sealDistribution(f.output, f.archive, path.join(f.source, "package-lock.json"));
+  const zip = new AdmZip(f.archive), originalBytes = fs.readFileSync(f.archive);
+  zip.updateFile("dist/src/worker.js", Buffer.from("tampered")); zip.writeZip(f.archive);
+  const output = path.join(f.root, "new-install");
+  assert.throws(() => extractDistribution(f.archive, output), { code: "DISTRIBUTION_DIGEST_MISMATCH" });
+  assert.equal(fs.existsSync(output), false);
+  fs.writeFileSync(f.archive, originalBytes);
+  const original = fs.writeFileSync; let writes = 0;
+  const mock = t.mock.method(fs, "writeFileSync", (...args: Parameters<typeof fs.writeFileSync>) => {
+    if (++writes === 2) throw Object.assign(new Error("fixture disk full"), { code: "ENOSPC" });
+    return original(...args);
+  });
+  assert.throws(() => extractDistribution(f.archive, output), { code: "ENOSPC" });
+  assert.equal(writes, 2); assert.equal(fs.existsSync(output), false); mock.mock.restore();
+  fs.symlinkSync(f.output, output, "junction");
+  assert.throws(() => extractDistribution(f.archive, output), { code: "DISTRIBUTION_EXISTS" });
+  assert.ok(verifyDistribution(f.output).manifest_sha256);
 });

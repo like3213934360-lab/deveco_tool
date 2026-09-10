@@ -7,6 +7,7 @@ import { atomicWrite, fileDigest, inside } from "../../src/core/files.js";
 import { invariant } from "../../src/core/errors.js";
 import { readJson } from "./upstream-adaptation.js";
 import { releaseGate, releaseManifestSchema } from "./release-gate.js";
+import { decodeZipEntry, writeArchiveDirectory } from "./archive-safety.js";
 
 const maximumBytes = 512 * 1024 * 1024, maximumFiles = 12000;
 const hash = (bytes: Buffer) => crypto.createHash("sha256").update(bytes).digest("hex");
@@ -90,7 +91,7 @@ export function extractEvidence(archive: string, directory: string, expectedSha:
   for (const member of members) {
     relative.parse(member.entryName);
     const kind = (member.attr >>> 16) & 0o170000;
-    invariant(!member.isDirectory && (kind === 0 || kind === 0o100000), "EVIDENCE_FILE_UNSAFE", "Evidence ZIP may contain only regular files");
+    invariant(!member.isDirectory && (kind === 0 || kind === 0o100000) && [0, 8].includes(member.header.method) && !(member.header.flags & 0x41), "EVIDENCE_FILE_UNSAFE", "Evidence ZIP may contain only unencrypted regular files with supported compression");
     invariant(!names.has(member.entryName.toLowerCase()), "EVIDENCE_PATH_COLLISION", "Duplicate or case-aliased ZIP path");
     names.add(member.entryName.toLowerCase()); total += member.header.size;
     invariant(total <= maximumBytes, "EVIDENCE_LIMIT", "Uncompressed evidence exceeds 512 MiB");
@@ -101,17 +102,18 @@ export function extractEvidence(archive: string, directory: string, expectedSha:
   }
   const metadata = zip.getEntry(inventoryName);
   invariant(metadata && metadata.header.size <= 8 * 1024 * 1024, "EVIDENCE_INVENTORY_MISSING", "Expected a bounded bundle inventory");
-  const inventory = inventorySchema.parse(JSON.parse(metadata.getData().toString("utf8")));
+  const inventory = inventorySchema.parse(JSON.parse(decodeZipEntry(metadata, 8 * 1024 * 1024).toString("utf8")));
   invariant(inventory.files.length === members.length - 1 && new Set(inventory.files.map((item) => item.file.toLowerCase())).size === inventory.files.length, "EVIDENCE_INVENTORY_CHANGED", "Inventory must name every entry exactly once");
   invariant(inventory.files.some((item) => item.file === "release.json"), "EVIDENCE_MANIFEST_NAME", "Bundle must include release.json");
   const verified = inventory.files.map((item) => {
     const member = zip.getEntry(item.file);
     invariant(member && item.file !== inventoryName && member.header.size === item.bytes, "EVIDENCE_INVENTORY_CHANGED", "Inventory size or name differs from ZIP");
-    const bytes = member.getData();
+    const bytes = decodeZipEntry(member, maximumBytes);
     invariant(bytes.length === item.bytes && hash(bytes) === item.sha256, "EVIDENCE_INVENTORY_CHANGED", "Extracted evidence bytes differ from inventory");
     return { file: item.file, bytes };
   });
-  fs.mkdirSync(directory, { recursive: false, mode: 0o700 });
-  for (const item of verified) atomicWrite(inside(directory, item.file), item.bytes, false);
-  return { directory, files: inventory.files.length, sha256: expectedSha };
+  return writeArchiveDirectory(directory, () => {
+    for (const item of verified) atomicWrite(inside(directory, item.file), item.bytes, false);
+    return { directory, files: inventory.files.length, sha256: expectedSha };
+  });
 }
