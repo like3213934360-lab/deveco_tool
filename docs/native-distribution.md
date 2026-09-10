@@ -1,5 +1,7 @@
 # 原生编译包验收记录
 
+以下记录保留各次历史提交与安装身份。2026-09-10 的发布后维护、双 Node 安装候选和待完成边界见 [v0.2.1 候选核对](maintenance-0.2.1.md)；下文的“当前”均指对应记录当时，不能用于证明最新分支或宿主状态。
+
 `scripts/native-distribution.ts` 从唯一原生编译入口生成独立 ZIP 安装候选。`provenance/native-dependencies.json` 是验证目录和编译包共用的依赖名单；版本仍来自包声明和 npm 锁。原生模块只打包 dist/src，资源完整性继续由 provenance/resources.json 校验。
 
 ## 当前 main 与已安装候选的区别
