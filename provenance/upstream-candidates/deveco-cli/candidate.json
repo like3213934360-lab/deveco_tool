@@ -1,0 +1,872 @@
+{
+  "format": 1,
+  "source": "deveco-cli",
+  "url": "https://gitcode.com/openharmony-sig/deveco-cli.git",
+  "base": {
+    "commit": "a71f93d73941aaa0dbf581918cbd5828014e6e88",
+    "tree": "6605d243def8bc8cebe0da693ba5729c1a283601"
+  },
+  "candidate": {
+    "commit": "87c360b05848132c06c6ea120e078619b9ef4634",
+    "tree": "18b08f7a58eae694bc2f538cd43f20fd5bdbd1b9"
+  },
+  "mapping_sha256": "e5069b08892982a832ea31247a68e3d1b8e00786b68c00944a02c6700473e793",
+  "changes": [
+    {
+      "path": ".agents/skills/deveco-check-changes/SKILL.md",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": ".agents/skills/deveco-check-changes/SKILL.md",
+        "oid": "f49bc934d7b8a3751ef1eb19a9d6b635f267252e",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": null,
+      "disposition": "unmapped",
+      "reason": "No reviewed mapping covers this upstream path",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": ".agents/skills/deveco-code-review/SKILL.md",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": ".agents/skills/deveco-code-review/SKILL.md",
+        "oid": "b683a472a1596eeaa0396d152dd9404948ca01fe",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": null,
+      "disposition": "unmapped",
+      "reason": "No reviewed mapping covers this upstream path",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": ".agents/skills/deveco-docs-and-prose/SKILL.md",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": ".agents/skills/deveco-docs-and-prose/SKILL.md",
+        "oid": "7eac51af35a6f3f3c814f7159a59252d3312e5ae",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": null,
+      "disposition": "unmapped",
+      "reason": "No reviewed mapping covers this upstream path",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": ".agents/skills/deveco-find-simplifications/SKILL.md",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": ".agents/skills/deveco-find-simplifications/SKILL.md",
+        "oid": "b24b543a34ca53b2adfe75f3e610def3137acc24",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": null,
+      "disposition": "unmapped",
+      "reason": "No reviewed mapping covers this upstream path",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": ".agents/skills/deveco-test-reliability/SKILL.md",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": ".agents/skills/deveco-test-reliability/SKILL.md",
+        "oid": "ec38bb3a479510f18428b049cd5af3935e84e787",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": null,
+      "disposition": "unmapped",
+      "reason": "No reviewed mapping covers this upstream path",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "AGENTS.md",
+      "status": "modified",
+      "before": {
+        "path": "AGENTS.md",
+        "oid": "a0c3451d89d1183305311104a8147e20e82f7497",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "AGENTS.md",
+        "oid": "d0aa1b98e4b84e97844424492ae9bba0d09aa6ad",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": null,
+      "disposition": "unmapped",
+      "reason": "No reviewed mapping covers this upstream path",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "README.md",
+      "status": "modified",
+      "before": {
+        "path": "README.md",
+        "oid": "87daf80bd3bb348743e1cf0d7861c80803e85c1e",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "README.md",
+        "oid": "df1affec84995065877f3dc989ab03a33a8835fd",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "cli-readme",
+      "disposition": "adapt",
+      "reason": "Review documented commands and parameters against native MCP contracts and the built-in repair workflow; client Skill installation remains removed by the project owner.",
+      "targets": [
+        "docs/builtin-skill-workflows.md",
+        "docs/upstream-cli-checker-review.md",
+        "provenance/SOURCES.md"
+      ],
+      "tests": [
+        "test/native-skills.test.ts",
+        "scripts/native-skill-mcp-acceptance.ts"
+      ]
+    },
+    {
+      "path": "SKILL.md",
+      "status": "modified",
+      "before": {
+        "path": "SKILL.md",
+        "oid": "1859d0e45a910ea093552cb94725b8ce711a3b8e",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "SKILL.md",
+        "oid": "9d61be4c8b313cb50cfe377b78a9f74dc69a4ae5",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "cli-skill-entry",
+      "disposition": "adapt",
+      "reason": "Provide checking before build and repair guidance through bundled MCP Skills and persistent workflows; do not install the upstream client Skill or CLI.",
+      "targets": [
+        "resources/skills/deveco-native-tools/SKILL.md",
+        "resources/skills/deveco-arkts-errors/SKILL.md",
+        "docs/upstream-cli-checker-review.md"
+      ],
+      "tests": [
+        "test/native-skills.test.ts",
+        "scripts/native-skill-mcp-acceptance.ts"
+      ]
+    },
+    {
+      "path": "src/apply/apply-manager.ts",
+      "status": "modified",
+      "before": {
+        "path": "src/apply/apply-manager.ts",
+        "oid": "eb3b6b13892f49999068e4236e7ed5fc08e8969c",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "src/apply/apply-manager.ts",
+        "oid": "5d8923f9427b19f028f573b8f1b2a19dac7ade23",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "cli-src-apply-",
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/hotreload.ts",
+        "src/services/project.ts",
+        "src/services/runtime.ts",
+        "scripts/native-hot-target-prepare.ts"
+      ],
+      "tests": [
+        "test/native-hotreload.test.ts",
+        "test/native-context.test.ts",
+        "test/native-project-recovery.test.ts",
+        "scripts/native-hot-device-acceptance.ts"
+      ]
+    },
+    {
+      "path": "src/commands/init.ts",
+      "status": "modified",
+      "before": {
+        "path": "src/commands/init.ts",
+        "oid": "5bc0fcf4ec742b00e0fad9712ce965cabd9ac717",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "src/commands/init.ts",
+        "oid": "6a6dd4a5f71572c9982e241f426e35ad1db66c07",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "cli-command-init.ts",
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/project.ts"
+      ],
+      "tests": [
+        "test/native-project.test.ts"
+      ]
+    },
+    {
+      "path": "src/commands/run.ts",
+      "status": "modified",
+      "before": {
+        "path": "src/commands/run.ts",
+        "oid": "e3f4cf7e878e6fb7f1dc4a3473ff4b8a0189c75e",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "src/commands/run.ts",
+        "oid": "cb985bf0fd85ca2e6c88e906dedae2601d9b12e5",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "cli-command-run.ts",
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/device.ts",
+        "src/services/project.ts",
+        "src/services/runtime.ts"
+      ],
+      "tests": [
+        "test/native-flow.test.ts",
+        "test/native-context.test.ts",
+        "scripts/native-multimodule-acceptance.ts"
+      ]
+    },
+    {
+      "path": "src/commands/ui-screenshot.ts",
+      "status": "modified",
+      "before": {
+        "path": "src/commands/ui-screenshot.ts",
+        "oid": "44540afd15cf9dd0131be60905d9e75403536625",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "src/commands/ui-screenshot.ts",
+        "oid": "0989b9a24bd47d82b8753f422f5f410517859915",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "cli-command-ui-screenshot.ts",
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/device.ts"
+      ],
+      "tests": [
+        "test/native-flow.test.ts",
+        "test/native-text.test.ts"
+      ]
+    },
+    {
+      "path": "src/config/skills.ts",
+      "status": "modified",
+      "before": {
+        "path": "src/config/skills.ts",
+        "oid": "d3f36b278460403760f905f1ed4072ad733d8e52",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "src/config/skills.ts",
+        "oid": "1f1b8352a50b46c2daedcd5edcbb514fbbfdd1a7",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "cli-core-config",
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/core/toolchain.ts",
+        "src/core/process.ts",
+        "src/core/store.ts"
+      ],
+      "tests": [
+        "test/native-infrastructure.test.ts",
+        "test/native-runtime.test.ts"
+      ]
+    },
+    {
+      "path": "src/smoke/index.ts",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "src/smoke/index.ts",
+        "oid": "854308568574c53f0b85c63b6c76ab4b4b68ef1b",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": null,
+      "disposition": "unmapped",
+      "reason": "No reviewed mapping covers this upstream path",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "src/smoke/screen-phash.test.ts",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "src/smoke/screen-phash.test.ts",
+        "oid": "0c8ae5fcde79a0b88d81f9b23659b21fc8296fdd",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": null,
+      "disposition": "unmapped",
+      "reason": "No reviewed mapping covers this upstream path",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "src/smoke/screen-phash.ts",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "src/smoke/screen-phash.ts",
+        "oid": "b1e64b3ea53c9243aa206beedd00a8ab265f105e",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": null,
+      "disposition": "unmapped",
+      "reason": "No reviewed mapping covers this upstream path",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "src/smoke/smoke-artifacts.test.ts",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "src/smoke/smoke-artifacts.test.ts",
+        "oid": "95362a283305cdea949c2500104688610a9eaf3c",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": null,
+      "disposition": "unmapped",
+      "reason": "No reviewed mapping covers this upstream path",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "src/smoke/smoke-artifacts.ts",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "src/smoke/smoke-artifacts.ts",
+        "oid": "43e27b8ec601e8305071b2fffdfe2716309d4d17",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": null,
+      "disposition": "unmapped",
+      "reason": "No reviewed mapping covers this upstream path",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "src/smoke/smoke-formatter.ts",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "src/smoke/smoke-formatter.ts",
+        "oid": "2335ec4f3428219bc7a4812010b0f673141c6d8d",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": null,
+      "disposition": "unmapped",
+      "reason": "No reviewed mapping covers this upstream path",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "src/smoke/smoke-inspector.test.ts",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "src/smoke/smoke-inspector.test.ts",
+        "oid": "d5d45ec7a3c4d4d7434033c53b418d250592130e",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": null,
+      "disposition": "unmapped",
+      "reason": "No reviewed mapping covers this upstream path",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "src/smoke/smoke-inspector.ts",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "src/smoke/smoke-inspector.ts",
+        "oid": "c047f314670d42b3d27104f88b73f356f663da22",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": null,
+      "disposition": "unmapped",
+      "reason": "No reviewed mapping covers this upstream path",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "src/smoke/smoke-judge.test.ts",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "src/smoke/smoke-judge.test.ts",
+        "oid": "564308b46e1197a43ec0a53ed63e0189e012af83",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": null,
+      "disposition": "unmapped",
+      "reason": "No reviewed mapping covers this upstream path",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "src/smoke/smoke-judge.ts",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "src/smoke/smoke-judge.ts",
+        "oid": "1f36193a83f983d5a93416cb481a1d100853f259",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": null,
+      "disposition": "unmapped",
+      "reason": "No reviewed mapping covers this upstream path",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "src/smoke/smoke-run-store.test.ts",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "src/smoke/smoke-run-store.test.ts",
+        "oid": "8569a9a5c1867201c68cff78b7cee5ea62e1bdf1",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": null,
+      "disposition": "unmapped",
+      "reason": "No reviewed mapping covers this upstream path",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "src/smoke/smoke-run-store.ts",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "src/smoke/smoke-run-store.ts",
+        "oid": "96cb18e5c8abcb1e0ddd227e47a5e2bb78cd1841",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": null,
+      "disposition": "unmapped",
+      "reason": "No reviewed mapping covers this upstream path",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "src/smoke/smoke-verifier.ts",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "src/smoke/smoke-verifier.ts",
+        "oid": "4e83a1d7b7b79fa799e330cd51e5b8ab641513fd",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": null,
+      "disposition": "unmapped",
+      "reason": "No reviewed mapping covers this upstream path",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "src/smoke/types.ts",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "src/smoke/types.ts",
+        "oid": "a0aa3e786aedc5d7611554926d21e15c1fa31cc1",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": null,
+      "disposition": "unmapped",
+      "reason": "No reviewed mapping covers this upstream path",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "src/ui/index.ts",
+      "status": "modified",
+      "before": {
+        "path": "src/ui/index.ts",
+        "oid": "fe36c29a591d944fcc9b24572c13bdb62514e45c",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "src/ui/index.ts",
+        "oid": "5df6b07a7d1b372046bc768b28884265127e24a9",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "cli-src-ui-",
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/device.ts",
+        "src/services/ui-import.ts",
+        "src/services/ui-parse.ts",
+        "src/services/ui-node-schema.ts",
+        "src/services/ui-import-cache.ts"
+      ],
+      "tests": [
+        "test/native-flow.test.ts",
+        "test/native-text.test.ts",
+        "test/native-ui-import.test.ts",
+        "scripts/native-device-readonly.ts",
+        "scripts/native-ui-mcp-benchmark.ts"
+      ]
+    },
+    {
+      "path": "src/ui/screenshot/hdc-snapshot.test.ts",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "src/ui/screenshot/hdc-snapshot.test.ts",
+        "oid": "1cca3aaad201a181ff3e2c24d6ba43ac854b82b3",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "cli-src-ui-",
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/device.ts",
+        "src/services/ui-import.ts",
+        "src/services/ui-parse.ts",
+        "src/services/ui-node-schema.ts",
+        "src/services/ui-import-cache.ts"
+      ],
+      "tests": [
+        "test/native-flow.test.ts",
+        "test/native-text.test.ts",
+        "test/native-ui-import.test.ts",
+        "scripts/native-device-readonly.ts",
+        "scripts/native-ui-mcp-benchmark.ts"
+      ]
+    },
+    {
+      "path": "src/ui/screenshot/hdc-snapshot.ts",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "src/ui/screenshot/hdc-snapshot.ts",
+        "oid": "b0d8c435d51b34305d1eb95efb6e4130a8e28308",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "cli-src-ui-",
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/device.ts",
+        "src/services/ui-import.ts",
+        "src/services/ui-parse.ts",
+        "src/services/ui-node-schema.ts",
+        "src/services/ui-import-cache.ts"
+      ],
+      "tests": [
+        "test/native-flow.test.ts",
+        "test/native-text.test.ts",
+        "test/native-ui-import.test.ts",
+        "scripts/native-device-readonly.ts",
+        "scripts/native-ui-mcp-benchmark.ts"
+      ]
+    },
+    {
+      "path": "src/ui/screenshot/screenshot-capturer.ts",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "src/ui/screenshot/screenshot-capturer.ts",
+        "oid": "77afe8c40c01fa16e1205298cd65092b0418dc2b",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "cli-src-ui-",
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/device.ts",
+        "src/services/ui-import.ts",
+        "src/services/ui-parse.ts",
+        "src/services/ui-node-schema.ts",
+        "src/services/ui-import-cache.ts"
+      ],
+      "tests": [
+        "test/native-flow.test.ts",
+        "test/native-text.test.ts",
+        "test/native-ui-import.test.ts",
+        "scripts/native-device-readonly.ts",
+        "scripts/native-ui-mcp-benchmark.ts"
+      ]
+    },
+    {
+      "path": "src/ui/screenshot/types.ts",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "src/ui/screenshot/types.ts",
+        "oid": "75adc2dd192390aa6ef568041a426ad965db907a",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "cli-src-ui-",
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/device.ts",
+        "src/services/ui-import.ts",
+        "src/services/ui-parse.ts",
+        "src/services/ui-node-schema.ts",
+        "src/services/ui-import-cache.ts"
+      ],
+      "tests": [
+        "test/native-flow.test.ts",
+        "test/native-text.test.ts",
+        "test/native-ui-import.test.ts",
+        "scripts/native-device-readonly.ts",
+        "scripts/native-ui-mcp-benchmark.ts"
+      ]
+    },
+    {
+      "path": "src/utils/cmd.ts",
+      "status": "modified",
+      "before": {
+        "path": "src/utils/cmd.ts",
+        "oid": "f7e4f0bbf0c91b3b3914e3226b50cf917ea508d6",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "src/utils/cmd.ts",
+        "oid": "4540d48e3d7ba24ba62510e780a5ec814526ce0b",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "cli-core-utils",
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/core/toolchain.ts",
+        "src/core/process.ts",
+        "src/core/store.ts",
+        "src/core/files.ts"
+      ],
+      "tests": [
+        "test/native-infrastructure.test.ts",
+        "test/native-runtime.test.ts",
+        "test/native-toolchain.test.ts"
+      ]
+    },
+    {
+      "path": "src/utils/hdc-adapter.test.ts",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "src/utils/hdc-adapter.test.ts",
+        "oid": "6bcd8e89be2132135474a020bb16a1c9baf4ec8a",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "cli-core-utils",
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/core/toolchain.ts",
+        "src/core/process.ts",
+        "src/core/store.ts",
+        "src/core/files.ts"
+      ],
+      "tests": [
+        "test/native-infrastructure.test.ts",
+        "test/native-runtime.test.ts",
+        "test/native-toolchain.test.ts"
+      ]
+    },
+    {
+      "path": "src/utils/hdc-adapter.ts",
+      "status": "modified",
+      "before": {
+        "path": "src/utils/hdc-adapter.ts",
+        "oid": "7ef1f1112cd1751df35bf8414c0c28b3f706df02",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "src/utils/hdc-adapter.ts",
+        "oid": "c8ae61004173b8824bd85024b28ee0a3cccf1114",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "cli-core-utils",
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/core/toolchain.ts",
+        "src/core/process.ts",
+        "src/core/store.ts",
+        "src/core/files.ts"
+      ],
+      "tests": [
+        "test/native-infrastructure.test.ts",
+        "test/native-runtime.test.ts",
+        "test/native-toolchain.test.ts"
+      ]
+    },
+    {
+      "path": "src/utils/hdc-param.test.ts",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "src/utils/hdc-param.test.ts",
+        "oid": "269182f24e6457f742b30f19b1ec84b9499d2739",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "cli-core-utils",
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/core/toolchain.ts",
+        "src/core/process.ts",
+        "src/core/store.ts",
+        "src/core/files.ts"
+      ],
+      "tests": [
+        "test/native-infrastructure.test.ts",
+        "test/native-runtime.test.ts",
+        "test/native-toolchain.test.ts"
+      ]
+    },
+    {
+      "path": "src/utils/hdc-param.ts",
+      "status": "modified",
+      "before": {
+        "path": "src/utils/hdc-param.ts",
+        "oid": "f00c24d9c8a1e4adc758a41bbe8de307bbed45cb",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "src/utils/hdc-param.ts",
+        "oid": "8b80d47fc89a28da40600d5d1cbf8f00f0ffd94e",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "cli-core-utils",
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/core/toolchain.ts",
+        "src/core/process.ts",
+        "src/core/store.ts",
+        "src/core/files.ts"
+      ],
+      "tests": [
+        "test/native-infrastructure.test.ts",
+        "test/native-runtime.test.ts",
+        "test/native-toolchain.test.ts"
+      ]
+    },
+    {
+      "path": "src/utils/hilog-adapter.ts",
+      "status": "modified",
+      "before": {
+        "path": "src/utils/hilog-adapter.ts",
+        "oid": "278305c39aee762329bf491945abb19667ee52ac",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "src/utils/hilog-adapter.ts",
+        "oid": "5327fc7f35e57b17b0f532dcd6838a34bb8758d1",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "cli-core-utils",
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/core/toolchain.ts",
+        "src/core/process.ts",
+        "src/core/store.ts",
+        "src/core/files.ts"
+      ],
+      "tests": [
+        "test/native-infrastructure.test.ts",
+        "test/native-runtime.test.ts",
+        "test/native-toolchain.test.ts"
+      ]
+    }
+  ],
+  "gate": "blocked_unmapped",
+  "required_tests": [
+    "scripts/native-device-readonly.ts",
+    "scripts/native-hot-device-acceptance.ts",
+    "scripts/native-multimodule-acceptance.ts",
+    "scripts/native-skill-mcp-acceptance.ts",
+    "scripts/native-ui-mcp-benchmark.ts",
+    "test/native-context.test.ts",
+    "test/native-flow.test.ts",
+    "test/native-hotreload.test.ts",
+    "test/native-infrastructure.test.ts",
+    "test/native-project-recovery.test.ts",
+    "test/native-project.test.ts",
+    "test/native-runtime.test.ts",
+    "test/native-skills.test.ts",
+    "test/native-text.test.ts",
+    "test/native-toolchain.test.ts",
+    "test/native-ui-import.test.ts"
+  ],
+  "note": "Source classification is a review proposal. It does not convert natural language into code, approve protocol semantics, modify the active source lock or authorize release.",
+  "sha256": "bd12c22ba9e5c352d385354c97552f86f60251eebbc0a4a6463b18b4bf93b15c"
+}
