@@ -4,7 +4,7 @@
 
 原生版本使用 **TypeScript + LangGraph + SQLite**：固定流程由代码执行，任务可持久化、查询和恢复；宿主 AI 负责理解需求、查询知识和修改业务代码。使用原生版本无须安装官方 Skill、官方 CLI 或 CodeGenie 子 MCP。
 
-> **下一版本 0.3.0 / native-7 正在验收，尚未正式发布。** 当前代码包含 29 个公开工具、8 个固定工作流，以及自然语言 UI 测试和计划/调试/规格/宿主定制的持久流程。新增 6 个 MCP 内置 Skill 及 8 类引导式工作流、LSP 符号与调用层级、视觉审阅、测试日志与导出、焦点/鼠标控制、容量恢复和默认构建预检。已发布的稳定基线仍为 [v0.2.1](https://github.com/like3213934360-lab/deveco_tool/releases/tag/v0.2.1)。当前验收状态见[执行记录](docs/next-release-progress.md)，使用方法见[内置 Skill 工作流](docs/builtin-skill-workflows.md)。
+> **正式稳定版为 [v0.3.0](https://github.com/like3213934360-lab/deveco_tool/releases/tag/v0.3.0)，本分支的 0.4.0 / native-7 正在验收，尚未发布。** 本轮修复 ArkTS 符号与调用层级适配，新增默认启动检查、完整 UI 动作录制重放、连续测试日志和兼容状态升级。当前完成情况与未完成发布验证见[执行记录](docs/remaining-release-progress.md)；内置知识及使用入口见[Skill 工作流](docs/builtin-skill-workflows.md)。
 
 ## 能解决什么问题
 
@@ -59,7 +59,7 @@ flowchart TD
 从源码安装：
 
 ```sh
-git clone --branch v0.2.1 --single-branch https://github.com/like3213934360-lab/deveco_tool.git deveco_tool
+git clone --branch v0.3.0 --single-branch https://github.com/like3213934360-lab/deveco_tool.git deveco_tool
 cd deveco_tool
 npm ci
 npm run build
@@ -67,7 +67,7 @@ npm run build
 
 根目录使用锁定的原生依赖，无须再生成另一套 package.json 或重写锁文件。SQLite 等原生依赖须允许安装脚本；不要给 `npm ci` 加 `--ignore-scripts`，也不要跨操作系统、架构或 Node 主版本复制 `node_modules`。
 
-维护者发布的编译包安装方式为解压、校验后执行 `npm ci --omit=dev`，无需安装 TypeScript 编译器。[v0.2.1 Release](https://github.com/like3213934360-lab/deveco_tool/releases/tag/v0.2.1) 同时提供编译包和公开验收回执，见[安装与升级](docs/native-installation.md)和[分发说明](docs/native-distribution.md)。
+维护者发布的编译包安装方式为解压、校验后执行 `npm ci --omit=dev`，无需安装 TypeScript 编译器。[v0.3.0 Release](https://github.com/like3213934360-lab/deveco_tool/releases/tag/v0.3.0) 同时提供编译包和公开验收回执，见[安装与升级](docs/native-installation.md)和[分发说明](docs/native-distribution.md)。
 
 ### 2. 配置工具链与 MCP 宿主
 
@@ -210,7 +210,11 @@ UI 流程保存在工程的 `.arkpilot/flows/<id>.json`。公开 Ability 可作�
 
 工具返回摘要和制品引用，日志关联请求、任务、节点和受管进程，用于区分排队、外部执行与内部处理耗时。错误区分工程问题、工具失败、能力不可用和证据不足。制品归属、清理和进程退出确认见[存储说明](docs/native-storage.md)、[制品所有权](docs/native-artifact-ownership.md)及[进程管理](docs/native-process-ownership.md)。
 
-## 验证结果与当前边界
+## 当前验收与历史记录
+
+0.4.0 候选的 ArkTS 五项新增操作、默认启动故障、完整动作录制与密码隐私、连续日志压力及恢复、状态升级回滚、模拟器与热补丁效果已完成分项验证；最终身份复验、当前性能／长稳、跨平台 CI 和正式发布尚未闭合，见[当前工作表](docs/remaining-release-progress.md)。0.4.0 发布策略要求当前迁移凭证、48 项验收、19 项性能和混合长稳，没有继承 0.3.0 的历史豁免。
+
+以下为 0.2.x 的历史执行记录，保留当时的身份、结果与限制，不作为 0.4.0 已通过的证据。
 
 核心架构重构已合入 `main`（合并提交 `943fb3d`），`v0.2.0` 作为首个原生正式版发布。当前迁移矩阵共 47 项：28 项 pending、19 项已有凭证；正式发布没有把 pending 改写为通过，而是由 `provenance/release-scope-0.2.0.json` 逐项固定发布边界。凭证只证明各自已核对的范围，逐项状态见[验收证据核对](docs/native-acceptance-review.md)，当前问题见[迁移状态](docs/native-migration-status.md)。
 
@@ -276,7 +280,7 @@ node dist/scripts/resources.js
 
 更新流程为：检测提交 → 下载并核对候选 → 分类差异及影响 → 准备草稿 PR → 人工适配流程 / 协议 → 契约、回归、平台与性能验证 → 评审发布。仓库提供定时 / 手动候选工作流、带摘要校验的适配工具和 Release 工作流；定时权限及完整发布链路仍待统一验收。未映射变化会阻止候选通过；自然语言新增要求不能保证自动正确转换为代码。运行中的 MCP 不动态拉取或执行最新上游代码，框架依赖升级与官方工具链适配分开提交。详见[上游更新机制](docs/native-upstream-upgrades.md)。
 
-升级时先结束任务与会话，在新目录安装完整版本，配置工具链并重新登录，校验保留的 UI 流程后再运行 doctor、构建和设备检查。不同执行协议使用独立状态目录；回退通过切换完整安装目录完成。正式编译包见 [v0.2.1 Release](https://github.com/like3213934360-lab/deveco_tool/releases/tag/v0.2.1)，具体步骤见[安装与升级](docs/native-installation.md)。
+升级时先结束任务与会话，在新目录安装完整版本。0.4.0 候选维护命令支持已知兼容的 native-7 状态复用，保留有效认证、历史、制品和用户配置；未知 schema 或不同协议使用经检查的独立状态路径。回滚同时恢复完整代码、状态快照与宿主配置。切换后校验既有 UI 流程，再运行 doctor、构建和设备检查。正式编译包见 [v0.3.0 Release](https://github.com/like3213934360-lab/deveco_tool/releases/tag/v0.3.0)，具体步骤见[安装与升级](docs/native-installation.md)。
 
 ## 文档与许可证
 

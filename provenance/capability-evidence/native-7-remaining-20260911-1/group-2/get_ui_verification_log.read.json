@@ -1,0 +1,8 @@
+{
+  "format": 1,
+  "operation": "get_ui_verification_log.read",
+  "checks": [
+    "Public UI log listing paginates retained continuous chunks; reading an actual owned app chunk obeys the requested UTF-8 byte limit and leaves gap metadata explicit."
+  ],
+  "observation_sha256": "5649e95b647d5a010fe2d8b338bf4c40a90ebe82323a518ba54d7a8c28e479da"
+}

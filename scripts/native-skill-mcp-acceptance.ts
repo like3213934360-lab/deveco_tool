@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
@@ -10,6 +11,7 @@ import { ToolError, errorResult, invariant } from "../src/core/errors.js";
 import { release, protocolVersion } from "../src/core/config.js";
 import { evidenceIdentity } from "./lib/evidence.js";
 import { finishAcceptance } from "./lib/acceptance-report.js";
+import { CapabilityReceipts } from "./lib/capability-receipts.js";
 
 /** Real generic stdio MCP, bundled Skill guidance and SDK preflight/build.
  * Uses a new isolated directory. Does not start agents or alter user config. */
@@ -20,6 +22,7 @@ fs.mkdirSync(root, { recursive: true, mode: 0o700 });
 const project = path.join(root, "application"),
   state = path.join(root, "state"),
   tested = evidenceIdentity();
+const receipts = new CapabilityReceipts(root, tested);
 atomicWrite(path.join(root, "config.json"), "{}\n");
 let client: Client | undefined,
   transport: StdioClientTransport | undefined,
@@ -196,9 +199,10 @@ async function transition(
 try {
   await observe("connect", connect);
   const doctor = await observe("doctor", () => call("deveco_doctor", {}));
-  const sdk = z
-    .object({ default_sdk: z.object({ platform_version: z.string() }) })
-    .parse(doctor).default_sdk.platform_version;
+  const sdkMetadata = z
+    .object({ default_sdk: z.object({ platform_version: z.string().min(1), package_version: z.string().min(1) }) })
+    .parse(doctor).default_sdk;
+  const sdk = sdkMetadata.platform_version;
   await observe("catalog", async () => {
     const list = await client!.listTools();
     assert.equal(list.tools.length, 29);
@@ -259,7 +263,11 @@ try {
   const catalog = z
     .object({
       skills: z.array(
-        z.object({ name: z.string(), package_sha256: z.string() }),
+        z.object({
+          name: z.string(),
+          package_sha256: z.string(),
+          files: z.array(z.object({ path: z.string(), sha256: z.string() })),
+        }),
       ),
     })
     .parse(
@@ -289,6 +297,30 @@ try {
         package_sha256: data.package_sha256,
       };
     });
+    for (const file of skill.files.filter((item) => item.path !== "SKILL.md"))
+      await observe(`skill_reference:${skill.name}:${file.path}`, async () => {
+        const read = z
+          .object({
+            content: z.string(),
+            package_sha256: z.literal(skill.package_sha256),
+          })
+          .parse(
+            await call("skill_manage", {
+              action: "read",
+              name: skill.name,
+              file: file.path,
+            }),
+          );
+        assert.equal(
+          createHash("sha256").update(read.content).digest("hex"),
+          file.sha256,
+        );
+        return {
+          file: file.path,
+          sha256: file.sha256,
+          bytes: Buffer.byteLength(read.content),
+        };
+      });
   }
   await observe("disconnect_reopen", async () => {
     await disconnect();
@@ -404,6 +436,42 @@ try {
       "- [x] Generate the isolated project.\n- [x] Recheck the original page with zero errors.\n- [x] Build its HAP using the default preflight.",
     ),
   );
+  await observe("todo_replace_and_restart", async () => {
+    const before = await skillRead(spec.run_id);
+    const content =
+      "- [x] Generate the isolated project.\n- [x] Recheck and build the original page.\n- [ ] Verify task revision persistence after MCP restart.";
+    await write(spec.run_id, "tasks.md", content);
+    const changed = await skillRead(spec.run_id);
+    assert.equal(changed.revision, before.revision + 1);
+    await assert.rejects(
+      call("skill_workflow", {
+        action: "write",
+        run_id: spec.run_id,
+        expected_revision: before.revision,
+        name: "tasks.md",
+        content: "- [x] Stale overwrite must be rejected.",
+      }),
+    );
+    await disconnect();
+    await connect();
+    const recovered = await skillRead(spec.run_id);
+    assert.equal(recovered.revision, changed.revision);
+    const doc = z
+      .object({
+        documents: z.object({ "tasks.md": z.object({ content: z.string() }) }),
+      })
+      .parse(recovered).documents["tasks.md"];
+    assert.equal(doc.content, content);
+    await write(spec.run_id, "tasks.md", content.replace("- [ ]", "- [x]"));
+    return {
+      prior_revision: before.revision,
+      recovered_revision: recovered.revision,
+      stale_write_rejected: true,
+      documents: z
+        .object({ documents: z.unknown() })
+        .parse(await skillRead(spec.run_id)).documents,
+    };
+  });
   await transition(spec.run_id, "implementing");
   await transition(spec.run_id, "verifying");
   const specBuilt = await observe("spec_fresh_build", () =>
@@ -455,6 +523,110 @@ try {
     );
     return { rejected_before_device_action: true };
   });
+  const cases: [string, string[], string[]][] = [
+    [
+      "plan_enter.execute",
+      ["plan_enter", "workflow_guidance_after_restart"],
+      [
+        "Public Skill workflow captures the isolated project, original objective and bundled guidance; guidance remains readable after MCP reconnect.",
+      ],
+    ],
+    [
+      "plan_write.execute",
+      ["plan_write", "publish_plan"],
+      [
+        "Public revision-checked plan write persists Technical Context and Project Structure, then publishes the retained document to an owned file.",
+      ],
+    ],
+    [
+      "plan_exit.execute",
+      ["plan_exit", "plan_complete"],
+      [
+        "Public transition leaves planning for implementing and completes after verification without claiming to alter the host system mode.",
+      ],
+    ],
+    [
+      "skill.list",
+      ["skill_catalog"],
+      [
+        "Public catalog returns all six bundled Skills and their file and package digests without client installation.",
+      ],
+    ],
+    [
+      "skill.search",
+      ["skill_search"],
+      ["Public ArkTS catalog search returns a nonempty set of bundled Skills."],
+    ],
+    [
+      "skill.read",
+      observations
+        .filter(
+          (item) =>
+            item.name.startsWith("skill_read:") ||
+            item.name.startsWith("skill_reference:"),
+        )
+        .map((item) => item.name),
+      [
+        "All six Skill bodies and catalogued references are read over public MCP; reference content hashes match the catalog.",
+      ],
+    ],
+    [
+      "spec_write.spec",
+      ["spec_write", "spec_complete"],
+      [
+        "Public spec.md write retains Requirements, User Scenarios and Success Criteria; its workflow completes with fresh native build evidence.",
+      ],
+    ],
+    [
+      "spec_write.design",
+      ["design_write", "spec_complete"],
+      [
+        "Public plan.md design write retains Technical Context and Project Structure in the specification workflow.",
+      ],
+    ],
+    [
+      "spec_write.tasks",
+      ["tasks_write", "todo_replace_and_restart", "spec_complete"],
+      [
+        "Public tasks.md write and replacement persist checkbox tasks; specification completion follows a current native build.",
+      ],
+    ],
+    [
+      "todowrite.execute",
+      ["todo_replace_and_restart"],
+      [
+        "Public task replacement increments the revision, rejects a stale revision, survives MCP restart and preserves exact task content.",
+      ],
+    ],
+    [
+      "arkts_check.execute",
+      ["checker_reproduces_error", "checker_after_repair"],
+      [
+        "Actual ArkTS checking reports an injected missing-member error, then zero errors after the original source is restored.",
+      ],
+    ],
+    [
+      "build_project.execute",
+      ["default_build_blocked", "build_after_repair", "spec_fresh_build"],
+      [
+        "The native project build is blocked by a real compiler error; restored source passes default preflight and HAP build through public workflow_run.",
+      ],
+    ],
+  ];
+  for (const [operation, names, checks] of cases) {
+    const selected = names.map((name) => {
+      const item = observations.find((value) => value.name === name);
+      assert.ok(item && !item.error);
+      return item;
+    });
+    assert.ok(selected.length > 0);
+    receipts.add(
+      operation,
+      checks,
+      selected,
+      operation === "arkts_check.execute" ? { language: "arkts", sdk: sdkMetadata.package_version } : {},
+    );
+  }
   completed = true;
 } catch (error) {
   console.error(JSON.stringify(errorResult(error)));
@@ -467,5 +639,12 @@ try {
     console.error(JSON.stringify(errorResult(error)));
   }
   save();
-  finishAcceptance(path.join(root, "evidence.json"), tested, completed, closed);
+  receipts.finish(
+    finishAcceptance(
+      path.join(root, "evidence.json"),
+      tested,
+      completed,
+      closed,
+    ),
+  );
 }

@@ -1,11 +1,26 @@
 import type { z } from "zod";
-import { controlSchema, selectorSchema } from "../core/contracts.js";
+import { controlSchema, selectorSchema, type stepSchema } from "../core/contracts.js";
 import { invariant } from "../core/errors.js";
 import type { Snapshot } from "./device.js";
 import type { Rect, UiNode } from "./ui-tree.js";
 import { isWindowSurface } from "./ui-tree.js";
 
 type Control = z.infer<typeof controlSchema>;
+/** Saved flow actions lower to the same validated native contract as direct UI actions. */
+export function flowControl(step: z.infer<typeof stepSchema>, bundle: string, variables: Record<string, string>, selector = step.selector, windowId?: string): Control {
+  const action = step.action === "tap" ? "click" : step.action === "doubleTap" ? "doubleClick" : step.action === "longTap" ? "longClick" : step.action === "input" ? "inputText" : step.action === "focusInput" ? "text" : step.action === "key" ? "keyEvent" : step.action;
+  return controlSchema.parse({
+    action,
+    ...(selector && step.action !== "focusInput" ? { selector: { ...selector, bundle_name: bundle } } : {}),
+    window: { bundle_name: bundle, ...(windowId ? { id: windowId } : {}) },
+    display_id: step.scope?.display_id,
+    point: step.point, gesture: step.gesture,
+    keys: step.keys ?? (step.action === "key" ? [step.key] : undefined),
+    ...(["input", "focusInput"].includes(step.action) ? { text: variables[step.value!.slice(2, -1)] } : {}),
+    direction: step.direction, velocity: step.velocity, step_length: step.step_length,
+    button: step.button, scroll_down: step.scroll_down, ticks: step.ticks, mouse_scroll_speed: step.mouse_scroll_speed,
+  });
+}
 export const needsControlSnapshot = (input: Control) =>
   !!(input.selector || input.window || input.point || input.gesture);
 
@@ -133,6 +148,8 @@ export function resolveControl(input: Control, snapshot?: Snapshot): Control {
         .select(
           selectorSchema.parse({
             ...selector,
+            limit: 2,
+            ...(window?.windowId === null || !window ? {} : { window_id: window.windowId }),
             ...(input.display_id === undefined
               ? {}
               : { displayId: input.display_id }),

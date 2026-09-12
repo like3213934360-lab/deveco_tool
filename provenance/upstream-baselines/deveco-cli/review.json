@@ -10,287 +10,367 @@
     "role": "protocol_reference",
     "acceptance": "verified"
   },
-  "mapping_sha256": "e5069b08892982a832ea31247a68e3d1b8e00786b68c00944a02c6700473e793",
+  "mapping_sha256": "31052fed4b84988e7f58ae3518d5655816e46f64bd362327efc47843266189a6",
   "reviews": [
     {
       "rule": "cli-core-toolchain",
-      "reason": "Resolve installed DevEco/SDK components natively and launch owned processes with structured arguments and bounded output. No official CLI installation or global process killing is used; current SDK discovery, checker and build acceptance exercise the selected toolchain.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "Review the upstream behavior against its native replacement and regression evidence. The native mapped files and required checks are captured at this review; successful current execution receipts are required separately. Startup changes and client distribution differences are detailed in docs/upstream-cli-startup-review.md.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
     },
     {
       "rule": "cli-core-config",
-      "reason": "Native configuration separates user configuration from owned state and selected SDK discovery. Environment and executable paths are validated and frozen per operation; the upstream host configuration and update mechanism are not runtime dependencies.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "Review the upstream behavior against its native replacement and regression evidence. The native mapped files and required checks are captured at this review; successful current execution receipts are required separately. Startup changes and client distribution differences are detailed in docs/upstream-cli-startup-review.md.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
     },
     {
       "rule": "cli-core-types",
-      "reason": "Native strict tool schemas and deterministic workflow contracts replace upstream CLI option types. Unknown arguments fail before worker effects; default build preflight, protected evidence and removed Skill actions are covered by current regression and generic stdio acceptance.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "Review the upstream behavior against its native replacement and regression evidence. The native mapped files and required checks are captured at this review; successful current execution receipts are required separately. Startup changes and client distribution differences are detailed in docs/upstream-cli-startup-review.md.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
     },
     {
       "rule": "cli-core-utils",
-      "reason": "Native file containment, content hashes, process ownership and bounded readers replace upstream utility helpers. Current regression covers canonical paths, symlinks, atomic writes and bounded child output. Windows replacement now retries EPERM/EACCES/EBUSY at most ten times with 550 ms cumulative waiting, retaining the previous destination until a successful atomic rename. Fault injection proves transient recovery, permanent failure cleanup and unchanged exclusive writes; the original Windows CI failure remains archived; no upstream utility module is executed.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "Review the upstream behavior against its native replacement and regression evidence. The native mapped files and required checks are captured at this review; successful current execution receipts are required separately. Startup changes and client distribution differences are detailed in docs/upstream-cli-startup-review.md.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
     },
     {
       "rule": "cli-core-trace",
-      "reason": "Native request outcomes and structured request logs distinguish checker findings from transport/runtime failure. Durable worker/run events retain resumable execution and redacted errors without copying upstream telemetry or logging credentials.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "Review the upstream behavior against its native replacement and regression evidence. The native mapped files and required checks are captured at this review; successful current execution receipts are required separately. Startup changes and client distribution differences are detailed in docs/upstream-cli-startup-review.md.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
     },
     {
       "rule": "cli-core-internal",
-      "reason": "Internal native child entrypoints are owned SDK checker/text/process helpers with validated arguments and distinct scratch directories. They do not load the retired official CLI or a child MCP; concurrent checker acceptance verifies scratch ownership and release.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "Review the upstream behavior against its native replacement and regression evidence. The native mapped files and required checks are captured at this review; successful current execution receipts are required separately. Startup changes and client distribution differences are detailed in docs/upstream-cli-startup-review.md.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
     },
     {
       "rule": "cli-src-apply-",
-      "reason": "Retain the native hot-reload baseline/patch state machine with frozen multi-package inputs and explicit target selection. Package release occurs only after a durable complete installation receipt; uncertain effects retain recovery data. Current package lifecycle tests apply, while unchanged historical hot-device scripts keep their original tested identity and do not establish current phone acceptance.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "Review normal deployment, Apply launch failure and startup-check placement against durable native installation/launch receipts, preparation failures, hot-patch outcome checks and cancellation without duplicate side effects. The native mapped files and required checks are captured at this review; successful current execution receipts are required separately. Startup changes and client distribution differences are detailed in docs/upstream-cli-startup-review.md.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
     },
     {
       "rule": "cli-src-auth-",
-      "reason": "Retain native provider-isolated authentication and explicit browser login/logout/status/team actions. No credentials or upstream authentication executable are imported. Current auth regressions validate contracts; historical browser acceptance is carried only where its script identity is unchanged and remains scoped to its original execution.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "Review the upstream behavior against its native replacement and regression evidence. The native mapped files and required checks are captured at this review; successful current execution receipts are required separately. Startup changes and client distribution differences are detailed in docs/upstream-cli-startup-review.md.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
     },
     {
       "rule": "cli-src-signature-",
-      "reason": "Native signature operations validate and capture local materials, selected product configuration and owned key/CSR outputs before SDK signing. Current SDK acceptance generates isolated keys and CSR; personal cloud-signing and physical installation evidence remain separately bounded historical checks.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "Review the upstream behavior against its native replacement and regression evidence. The native mapped files and required checks are captured at this review; successful current execution receipts are required separately. Startup changes and client distribution differences are detailed in docs/upstream-cli-startup-review.md.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
     },
     {
       "rule": "cli-src-codelinter-",
-      "reason": "Native SDK lint validates scoped source, configuration and incremental Git inputs; preview limits do not hide total findings. Current six-case acceptance covers clean source, findings, explicit repair, invalid configuration and changed tracked files. It does not reuse the upstream development ESLint configuration.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "Review the upstream behavior against its native replacement and regression evidence. The native mapped files and required checks are captured at this review; successful current execution receipts are required separately. Startup changes and client distribution differences are detailed in docs/upstream-cli-startup-review.md.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
     },
     {
       "rule": "cli-src-docs-",
-      "reason": "Knowledge and reference files are shipped with provenance and hash-checked bounded catalog/search/read. Local reading requires no client Skill directory, remote executable or login; current generic MCP acceptance reads all bundled Skill entrypoints and current knowledge tests validate resource lookup.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "Review the upstream behavior against its native replacement and regression evidence. The native mapped files and required checks are captured at this review; successful current execution receipts are required separately. Startup changes and client distribution differences are detailed in docs/upstream-cli-startup-review.md.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
     },
     {
       "rule": "cli-src-ui-",
-      "reason": "Native UI import validates bounded dump schema, caches by source identity and preserves node hierarchy and selector totals. Actions use canonical application/display scope. Existing dump regression is current; current dedicated API 26 phone actions and screenshot acceptance pass, including host review and exact byte-hash exports.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "Review the upstream behavior against its native replacement and regression evidence. The native mapped files and required checks are captured at this review; successful current execution receipts are required separately. Startup changes and client distribution differences are detailed in docs/upstream-cli-startup-review.md.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
     },
     {
       "rule": "cli-src-service-",
-      "reason": "Retain native emulator discovery, instance lifecycle, scenario planning and explicit license acceptance using installed SDK tools. Parser and ownership tests are current, and current SDK acceptance reads inventory. Earlier SDK/emulator lifecycle acceptance retains its original scope and does not imply a new emulator launch.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "Review the upstream behavior against its native replacement and regression evidence. The native mapped files and required checks are captured at this review; successful current execution receipts are required separately. Startup changes and client distribution differences are detailed in docs/upstream-cli-startup-review.md.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
     },
     {
       "rule": "cli-src-resources-",
-      "reason": "Native project templates and SDK-matched configuration replace executable upstream resources. Current project creation/build and multimodule acceptance validate the native outputs. Upstream scripts are reference material and are not copied into the runtime.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "Review the upstream behavior against its native replacement and regression evidence. The native mapped files and required checks are captured at this review; successful current execution receipts are required separately. Startup changes and client distribution differences are detailed in docs/upstream-cli-startup-review.md.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
     },
     {
       "rule": "cli-src-data-",
-      "reason": "Read installed emulator catalogs and agreement metadata using native bounded contracts and scoped scenario planning. Do not ship stale upstream agreement text or write private SDK state directly. Current parser/schema tests and SDK inventory apply; historical lifecycle results remain historical.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "Review the upstream behavior against its native replacement and regression evidence. The native mapped files and required checks are captured at this review; successful current execution receipts are required separately. Startup changes and client distribution differences are detailed in docs/upstream-cli-startup-review.md.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
     },
     {
       "rule": "cli-templates-",
-      "reason": "Generate isolated native application/module templates with selected SDK metadata, local dependencies and correct product targets. Current four product/target builds and distinct runtime API builds pass. The upstream project .cache ignore is unnecessary because native checker scratch is owned outside the project and cleaned on completion.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "Review the upstream behavior against its native replacement and regression evidence. The native mapped files and required checks are captured at this review; successful current execution receipts are required separately. Startup changes and client distribution differences are detailed in docs/upstream-cli-startup-review.md.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
     },
     {
       "rule": "cli-index-",
-      "reason": "Native knowledge indexes serve bundled resource files with bounded catalog/search/read and verified hashes. The upstream CLI index is not executed; reference content and discoverability are checked through native resource and MCP acceptance.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "Review the upstream behavior against its native replacement and regression evidence. The native mapped files and required checks are captured at this review; successful current execution receipts are required separately. Startup changes and client distribution differences are detailed in docs/upstream-cli-startup-review.md.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
     },
     {
       "rule": "cli-command-build.ts",
-      "reason": "Native project workflows capture product/module target selection, run fresh full-scope preflight, execute owned SDK tools and collect package identity. Current evidence covers blocking an injected error before Hvigor, repair followed by compilation, and four product/target combinations with HAR/HSP/HAP closure and two native ABIs. These results do not prove installation or phone behavior.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "Review the upstream behavior against its native replacement and regression evidence. The native mapped files and required checks are captured at this review; successful current execution receipts are required separately. Startup changes and client distribution differences are detailed in docs/upstream-cli-startup-review.md.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
     },
     {
       "rule": "cli-command-create.ts",
-      "reason": "Native project_create captures a new destination and SDK-matched configuration under a durable workflow. Current stdio creation guidance starts before the directory exists, creates the isolated project and completes only after a fresh successful build reference.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "Review the upstream behavior against its native replacement and regression evidence. The native mapped files and required checks are captured at this review; successful current execution receipts are required separately. Startup changes and client distribution differences are detailed in docs/upstream-cli-startup-review.md.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
     },
     {
       "rule": "cli-command-init.ts",
-      "reason": "Native project inspection and synchronization use captured project/product/module context. Current SDK and multimodule builds validate generated profiles and dependency synchronization; arbitrary upstream initializer code is not imported or run.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "The changed dsh/Qoder client installation routes are outside the owner-approved product: knowledge and Skills are supplied by MCP, with no client Skill installation or upstream MCP subprocess. Preserve native host configuration maintenance separately. The native mapped files and required checks are captured at this review; successful current execution receipts are required separately. Startup changes and client distribution differences are detailed in docs/upstream-cli-startup-review.md.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
     },
     {
       "rule": "cli-command-run.ts",
-      "reason": "Native deployment captures the complete selected package set, validates receipts and launches an explicit Ability/Want. Confirmed installation releases only MCP-owned package copies; uncertain installs retain recovery input and later launch failure does not cause reinstall. Current phone acceptance passes seven sequential 335608234-byte installations, automatic package-copy release, retained source SHA, reconnect receipts, fresh build/deploy/final assertion and small-canary restoration; lifecycle regressions are current.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "Review normal deployment, Apply launch failure and startup-check placement against durable native installation/launch receipts, preparation failures, hot-patch outcome checks and cancellation without duplicate side effects. The native mapped files and required checks are captured at this review; successful current execution receipts are required separately. Startup changes and client distribution differences are detailed in docs/upstream-cli-startup-review.md.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
     },
     {
       "rule": "cli-command-check.ts",
-      "reason": "The native checker uses selected project/product/module SDK configuration, strict source and report bounds, canonical application ASTs and SDK binder identities. Compiler-normalized Windows source names are compared with normalized selected paths so cross-file findings remain in scope; the Windows regression failure is retained and the repaired six-platform CI run confirms this path. All eighteen enabled CLI validator groups are adapted; original project root and compatible-version strings preserve real API warning behavior. Twenty-one current SDK cases include errors and repairs. Static checking is distinct from build/device completion.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "Review the upstream behavior against its native replacement and regression evidence. The native mapped files and required checks are captured at this review; successful current execution receipts are required separately. Startup changes and client distribution differences are detailed in docs/upstream-cli-startup-review.md.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
     },
     {
       "rule": "cli-command-serve-lsp.ts",
-      "reason": "Native ArkTS/clangd sessions use the selected SDK and captured project, synchronize documents and bind zero-based UTF-16 requests to advertised provider capabilities. Current real SDK evidence covers core queries, module scope and five added symbol/call operations. SDK 26 ArkTS lacks the five new providers; clangd supports four and explicitly rejects outgoing calls. No name-search substitute or unsupported success is claimed.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "Review the upstream behavior against its native replacement and regression evidence. The native mapped files and required checks are captured at this review; successful current execution receipts are required separately. Startup changes and client distribution differences are detailed in docs/upstream-cli-startup-review.md.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
     },
     {
       "rule": "cli-command-serve-lsp-cpp.ts",
-      "reason": "Native ArkTS/clangd sessions use the selected SDK and captured project, synchronize documents and bind zero-based UTF-16 requests to advertised provider capabilities. Current real SDK evidence covers core queries, module scope and five added symbol/call operations. SDK 26 ArkTS lacks the five new providers; clangd supports four and explicitly rejects outgoing calls. No name-search substitute or unsupported success is claimed.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "Review the upstream behavior against its native replacement and regression evidence. The native mapped files and required checks are captured at this review; successful current execution receipts are required separately. Startup changes and client distribution differences are detailed in docs/upstream-cli-startup-review.md.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
     },
     {
       "rule": "cli-command-signature.ts",
-      "reason": "Map signature dispatch to native material/configuration schemas and owned SDK signing processes. Current SDK key/CSR checks pass; earlier full signing acceptance keeps its original identity, and current installation is not inferred from successful signing.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "Review the upstream behavior against its native replacement and regression evidence. The native mapped files and required checks are captured at this review; successful current execution receipts are required separately. Startup changes and client distribution differences are detailed in docs/upstream-cli-startup-review.md.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
     },
     {
       "rule": "cli-command-auth.ts",
-      "reason": "Map authentication commands to provider-isolated native browser flows and explicit status/logout actions. Existing regression verifies isolation and recovery; unchanged historical browser acceptance is not recaptured or relabelled as a current login.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "Review the upstream behavior against its native replacement and regression evidence. The native mapped files and required checks are captured at this review; successful current execution receipts are required separately. Startup changes and client distribution differences are detailed in docs/upstream-cli-startup-review.md.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
     },
     {
       "rule": "cli-command-doc.ts",
-      "reason": "Map CLI documentation commands to native bundled knowledge catalog/search/read. Hash-checked resources and bounded results are available over generic MCP without a client Skill installer.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "Review the upstream behavior against its native replacement and regression evidence. The native mapped files and required checks are captured at this review; successful current execution receipts are required separately. Startup changes and client distribution differences are detailed in docs/upstream-cli-startup-review.md.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
     },
     {
       "rule": "cli-command-log.ts",
-      "reason": "Native hdc_log retains explicit device selection, bounded filters, PID/device-time association and partial-ring semantics. UI test logs provide bounded read/search and export, replacing unlimited host log buffers. Log clearing is an explicit mutation. Current dedicated phone collect/clear/selection acceptance passes with a real nonempty Chinese marker and explicit default-buffer clear; historical crash evidence keeps its original execution identity.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "Review the upstream behavior against its native replacement and regression evidence. The native mapped files and required checks are captured at this review; successful current execution receipts are required separately. Startup changes and client distribution differences are detailed in docs/upstream-cli-startup-review.md.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
     },
     {
       "rule": "cli-command-device.ts",
-      "reason": "Native device_info uses explicit HDC target selection and bounded structured information/file/SQLite operations with canonical ownership. Current device protocol tests pass; after renewed wireless authorization, explicit device_info list=true and full API 26 device properties were read from the dedicated phone.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "Review the upstream behavior against its native replacement and regression evidence. The native mapped files and required checks are captured at this review; successful current execution receipts are required separately. Startup changes and client distribution differences are detailed in docs/upstream-cli-startup-review.md.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
     },
     {
       "rule": "cli-command-emulator.ts",
-      "reason": "Native emulator actions preserve explicit instance selection, license gates and owned process lifecycle. Current inventory and parsing regression pass; historical real lifecycle scripts remain tied to the earlier execution and do not declare current cross-platform emulator acceptance.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "Review the upstream behavior against its native replacement and regression evidence. The native mapped files and required checks are captured at this review; successful current execution receipts are required separately. Startup changes and client distribution differences are detailed in docs/upstream-cli-startup-review.md.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
     },
     {
       "rule": "cli-command-ui.ts",
-      "reason": "Native UI tests capture objective, selected application/display and bounded plans/actions. Target-app pixel evidence excludes unrelated system-bar changes; no-progress counts, uncertain effects, replan review, cancellation and export are durable. Actual host image inspection remains separate from native assertions. Current dedicated API 26 wireless acceptance passes actions, replan, real image review, Chinese confirmation, hard restart without replay, cancellation, unknown-goal recording and saved replay. Hash-verified exports preserve full raw evidence.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "Review the upstream behavior against its native replacement and regression evidence. The native mapped files and required checks are captured at this review; successful current execution receipts are required separately. Startup changes and client distribution differences are detailed in docs/upstream-cli-startup-review.md.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
     },
     {
       "rule": "cli-command-ui-input.ts",
-      "reason": "Native UI tests capture objective, selected application/display and bounded plans/actions. Target-app pixel evidence excludes unrelated system-bar changes; no-progress counts, uncertain effects, replan review, cancellation and export are durable. Actual host image inspection remains separate from native assertions. Current dedicated API 26 wireless acceptance passes actions, replan, real image review, Chinese confirmation, hard restart without replay, cancellation, unknown-goal recording and saved replay. Hash-verified exports preserve full raw evidence.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "Review the upstream behavior against its native replacement and regression evidence. The native mapped files and required checks are captured at this review; successful current execution receipts are required separately. Startup changes and client distribution differences are detailed in docs/upstream-cli-startup-review.md.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
     },
     {
       "rule": "cli-command-ui-layout.ts",
-      "reason": "Native UI layout import preserves bounded complete snapshot parsing, hierarchy, query counts and pagination with source-keyed cache ownership. Current tests cover malformed and oversized inputs; a parsed layout alone is not a verified phone action.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "Review the upstream behavior against its native replacement and regression evidence. The native mapped files and required checks are captured at this review; successful current execution receipts are required separately. Startup changes and client distribution differences are detailed in docs/upstream-cli-startup-review.md.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
     },
     {
       "rule": "cli-command-ui-window.ts",
-      "reason": "Native UI inspection retains actual selected display/application window identities. Progress checks now hash the captured application region rather than the changing full screen; current pixel/geometry tests apply and final dedicated phone verification passes three unchanged app captures and blocks the fourth action despite system-bar activity.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "Review the upstream behavior against its native replacement and regression evidence. The native mapped files and required checks are captured at this review; successful current execution receipts are required separately. Startup changes and client distribution differences are detailed in docs/upstream-cli-startup-review.md.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
     },
     {
       "rule": "cli-command-ui-screenshot.ts",
-      "reason": "Native screenshot capture uses explicit display scope, owned temporary paths and SHA-bound image artifacts. UI review requires reading the actual image before recording host judgement; exports preserve originals and manifests. Final physical capture, actual host image inspection and full screenshot/log/event export hash checks pass.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "Review shared screenshot capture extraction against native capture, typed display scope, owned temporary cleanup and artifact export; do not import upstream executable code. The native mapped files and required checks are captured at this review; successful current execution receipts are required separately. Startup changes and client distribution differences are detailed in docs/upstream-cli-startup-review.md.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
     },
     {
       "rule": "cli-retired-src-compat-",
-      "reason": "This mapped path belongs to the removed official CLI updater, installer, legacy Studio compatibility or child MCP. The native package neither ships nor executes it. Existing native SDK/process services provide the supported operations; restoring this path would violate the approved architecture.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths. The pinned reference path remains outside the native runtime; new unmatched paths are still blocked.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
     },
     {
       "rule": "cli-retired-src-skills-",
-      "reason": "All six reviewed Skills and their referenced knowledge are bundled and read over generic MCP. Persistent guidance, document revisions and native completion gates replace client Skill installation. Actual stdio acceptance reads every Skill and restores guidance after reconnect; the host supplies reasoning and source edits. Installation and uninstallation are intentionally rejected under the owner architecture.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "Skills and knowledge are bundled and supplied through MCP-owned guided workflows. Client Skill installation was explicitly removed by the owner; review every operation and boundary. The native mapped files and required checks are captured at this review; successful current execution receipts are required separately. Startup changes and client distribution differences are detailed in docs/upstream-cli-startup-review.md.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
     },
     {
       "rule": "cli-retired-src-install-check-",
-      "reason": "This mapped path belongs to the removed official CLI updater, installer, legacy Studio compatibility or child MCP. The native package neither ships nor executes it. Existing native SDK/process services provide the supported operations; restoring this path would violate the approved architecture.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths. The pinned reference path remains outside the native runtime; new unmatched paths are still blocked.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
     },
     {
       "rule": "cli-retired-src-update-",
-      "reason": "This mapped path belongs to the removed official CLI updater, installer, legacy Studio compatibility or child MCP. The native package neither ships nor executes it. Existing native SDK/process services provide the supported operations; restoring this path would violate the approved architecture.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths. The pinned reference path remains outside the native runtime; new unmatched paths are still blocked.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
     },
     {
       "rule": "cli-retired-src-commands-skills.ts",
-      "reason": "All six reviewed Skills and their referenced knowledge are bundled and read over generic MCP. Persistent guidance, document revisions and native completion gates replace client Skill installation. Actual stdio acceptance reads every Skill and restores guidance after reconnect; the host supplies reasoning and source edits. Installation and uninstallation are intentionally rejected under the owner architecture.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "Skills and knowledge are bundled and supplied through MCP-owned guided workflows. Client Skill installation was explicitly removed by the owner; review every operation and boundary. The native mapped files and required checks are captured at this review; successful current execution receipts are required separately. Startup changes and client distribution differences are detailed in docs/upstream-cli-startup-review.md.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
     },
     {
       "rule": "cli-retired-src-commands-update.ts",
-      "reason": "This mapped path belongs to the removed official CLI updater, installer, legacy Studio compatibility or child MCP. The native package neither ships nor executes it. Existing native SDK/process services provide the supported operations; restoring this path would violate the approved architecture.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths. The pinned reference path remains outside the native runtime; new unmatched paths are still blocked.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
     },
     {
       "rule": "cli-retired-src-commands-serve.ts",
-      "reason": "This mapped path belongs to the removed official CLI updater, installer, legacy Studio compatibility or child MCP. The native package neither ships nor executes it. Existing native SDK/process services provide the supported operations; restoring this path would violate the approved architecture.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths. The pinned reference path remains outside the native runtime; new unmatched paths are still blocked.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
     },
     {
       "rule": "cli-retired-mcp-",
-      "reason": "This mapped path belongs to the removed official CLI updater, installer, legacy Studio compatibility or child MCP. The native package neither ships nor executes it. Existing native SDK/process services provide the supported operations; restoring this path would violate the approved architecture.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths. The pinned reference path remains outside the native runtime; new unmatched paths are still blocked.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
     },
     {
       "rule": "cli-release-LICENSE",
-      "reason": "Review this upstream legal/release/dependency metadata as provenance for the pinned CLI reference. Native dependencies are separately locked and licensed; no official CLI or copied executable resource is installed. This classification does not certify a publish or installation result.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "Review release, dependency, dispatch or license changes; the CLI remains a reference, not a runtime dependency. The native mapped files and required checks are captured at this review; successful current execution receipts are required separately. Startup changes and client distribution differences are detailed in docs/upstream-cli-startup-review.md.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
     },
     {
       "rule": "cli-release-OAT.xml",
-      "reason": "Review this upstream legal/release/dependency metadata as provenance for the pinned CLI reference. Native dependencies are separately locked and licensed; no official CLI or copied executable resource is installed. This classification does not certify a publish or installation result.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "Review release, dependency, dispatch or license changes; the CLI remains a reference, not a runtime dependency. The native mapped files and required checks are captured at this review; successful current execution receipts are required separately. Startup changes and client distribution differences are detailed in docs/upstream-cli-startup-review.md.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
     },
     {
       "rule": "cli-release-PRIVACY.md",
-      "reason": "Review this upstream legal/release/dependency metadata as provenance for the pinned CLI reference. Native dependencies are separately locked and licensed; no official CLI or copied executable resource is installed. This classification does not certify a publish or installation result.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "Review release, dependency, dispatch or license changes; the CLI remains a reference, not a runtime dependency. The native mapped files and required checks are captured at this review; successful current execution receipts are required separately. Startup changes and client distribution differences are detailed in docs/upstream-cli-startup-review.md.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
     },
     {
       "rule": "cli-release-package.json",
-      "reason": "Review this upstream legal/release/dependency metadata as provenance for the pinned CLI reference. Native dependencies are separately locked and licensed; no official CLI or copied executable resource is installed. This classification does not certify a publish or installation result.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "Review release, dependency, dispatch or license changes; the CLI remains a reference, not a runtime dependency. The native mapped files and required checks are captured at this review; successful current execution receipts are required separately. Startup changes and client distribution differences are detailed in docs/upstream-cli-startup-review.md.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
     },
     {
       "rule": "cli-release-package-lock.json",
-      "reason": "Review this upstream legal/release/dependency metadata as provenance for the pinned CLI reference. Native dependencies are separately locked and licensed; no official CLI or copied executable resource is installed. This classification does not certify a publish or installation result.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "Review release, dependency, dispatch or license changes; the CLI remains a reference, not a runtime dependency. The native mapped files and required checks are captured at this review; successful current execution receipts are required separately. Startup changes and client distribution differences are detailed in docs/upstream-cli-startup-review.md.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
     },
     {
       "rule": "cli-release-CHANGELOG.md",
-      "reason": "Review this upstream legal/release/dependency metadata as provenance for the pinned CLI reference. Native dependencies are separately locked and licensed; no official CLI or copied executable resource is installed. This classification does not certify a publish or installation result.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "Review release, dependency, dispatch or license changes; the CLI remains a reference, not a runtime dependency. The native mapped files and required checks are captured at this review; successful current execution receipts are required separately. Startup changes and client distribution differences are detailed in docs/upstream-cli-startup-review.md.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
     },
     {
       "rule": "cli-release-src/cli.ts",
-      "reason": "Native --version, -v and -V return the release before configuration, SDK and state initialization; extra arguments are rejected. Native MCP dispatch and workflow guidance replace upstream terminal/telemetry/CLI dispatch. Isolated version output was manually observed and core runtime contracts passed.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "Adapt version short and long flags to the native CLI without loading SDK, configuration or state; remaining upstream command dispatch is mapped to native MCP tools and built-in workflows. The native mapped files and required checks are captured at this review; successful current execution receipts are required separately. Startup changes and client distribution differences are detailed in docs/upstream-cli-startup-review.md.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
     },
     {
       "rule": "cli-emulator-license-protocol",
-      "reason": "Use installed native agreement metadata and explicit acceptance flags; do not import old bundled license text or directly mutate private emulator state. Current contract and parser tests remain required, and historical SDK agreement acceptance is preserved only with its original scope.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "Review native agreement paths, acceptance flags and protocol changes; never import bundled outdated texts or direct config writes. The native mapped files and required checks are captured at this review; successful current execution receipts are required separately. Startup changes and client distribution differences are detailed in docs/upstream-cli-startup-review.md.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
     },
     {
       "rule": "cli-arkts-adapter",
-      "reason": "The native checker uses selected project/product/module SDK configuration, strict source and report bounds, canonical application ASTs and SDK binder identities. Compiler-normalized Windows source names are compared with normalized selected paths so cross-file findings remain in scope; the Windows regression failure is retained and the repaired six-platform CI run confirms this path. All eighteen enabled CLI validator groups are adapted; original project root and compatible-version strings preserve real API warning behavior. Twenty-one current SDK cases include errors and repairs. Static checking is distinct from build/device completion.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "Adapt source scope, SDK dispatch, diagnostics and all enabled project validators to bounded native AST and metadata checks; MCP built-in workflows guide source repairs. The native mapped files and required checks are captured at this review; successful current execution receipts are required separately. Startup changes and client distribution differences are detailed in docs/upstream-cli-startup-review.md.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
     },
     {
       "rule": "cli-arkts-resource",
-      "reason": "The native checker uses selected project/product/module SDK configuration, strict source and report bounds, canonical application ASTs and SDK binder identities. Compiler-normalized Windows source names are compared with normalized selected paths so cross-file findings remain in scope; the Windows regression failure is retained and the repaired six-platform CI run confirms this path. All eighteen enabled CLI validator groups are adapted; original project root and compatible-version strings preserve real API warning behavior. Twenty-one current SDK cases include errors and repairs. Static checking is distinct from build/device completion.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "Adapt all enabled SDK and project validator groups with the installed SDK parser and binder; preserve import identity and per-branch navigation checks without executing copied upstream JavaScript. The native mapped files and required checks are captured at this review; successful current execution receipts are required separately. Startup changes and client distribution differences are detailed in docs/upstream-cli-startup-review.md.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
     },
     {
       "rule": "cli-readme",
-      "reason": "Map documented checking, repair timing and build behavior to native contracts and bundled workflow instructions. All six reviewed Skills and their referenced knowledge are bundled and read over generic MCP. Persistent guidance, document revisions and native completion gates replace client Skill installation. Actual stdio acceptance reads every Skill and restores guidance after reconnect; the host supplies reasoning and source edits. Installation and uninstallation are intentionally rejected under the owner architecture.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "Review documented commands and parameters against native MCP contracts and the built-in repair workflow; client Skill installation remains removed by the project owner. The native mapped files and required checks are captured at this review; successful current execution receipts are required separately. Startup changes and client distribution differences are detailed in docs/upstream-cli-startup-review.md.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
     },
     {
       "rule": "cli-skill-entry",
-      "reason": "All six reviewed Skills and their referenced knowledge are bundled and read over generic MCP. Persistent guidance, document revisions and native completion gates replace client Skill installation. Actual stdio acceptance reads every Skill and restores guidance after reconnect; the host supplies reasoning and source edits. Installation and uninstallation are intentionally rejected under the owner architecture.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "Provide checking before build and repair guidance through bundled MCP Skills and persistent workflows; do not install the upstream client Skill or CLI. The native mapped files and required checks are captured at this review; successful current execution receipts are required separately. Startup changes and client distribution differences are detailed in docs/upstream-cli-startup-review.md.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
     },
     {
       "rule": "cli-development-eslint",
-      "reason": "Exclude upstream repository-only ESLint ignores for generated dist and copied resource scripts. This file is not shipped or consumed by native SDK lint; the native linter has its own current six-case acceptance.",
-      "reviewer": "Codex GPT-6 final device evidence and source boundary review"
+      "reason": "This change only excludes generated dist and upstream resource scripts from the upstream repository development linter. Native shipped lint behavior uses its own SDK service. The pinned reference path remains outside the native runtime; new unmatched paths are still blocked.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
+    },
+    {
+      "rule": "cli-startup-smoke",
+      "reason": "Adapt post-launch liveness and application-window checks with bounded observations, explicit uncertain outcomes, owned evidence retention and cancellation; upstream null screenshots or failed process probes must not become native success. The native mapped files and required checks are captured at this review; successful current execution receipts are required separately. Startup changes and client distribution differences are detailed in docs/upstream-cli-startup-review.md.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
+    },
+    {
+      "rule": "cli-startup-transport-cmd.ts",
+      "reason": "Preserve empty pidof output and full-bundle identity; distinguish confirmed exit, transport failure and unavailable crash evidence. Native process handling and bounded startup reports must retain these distinctions. The native mapped files and required checks are captured at this review; successful current execution receipts are required separately. Startup changes and client distribution differences are detailed in docs/upstream-cli-startup-review.md.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
+    },
+    {
+      "rule": "cli-startup-transport-hdc-adapter.ts",
+      "reason": "Preserve empty pidof output and full-bundle identity; distinguish confirmed exit, transport failure and unavailable crash evidence. Native process handling and bounded startup reports must retain these distinctions. The native mapped files and required checks are captured at this review; successful current execution receipts are required separately. Startup changes and client distribution differences are detailed in docs/upstream-cli-startup-review.md.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
+    },
+    {
+      "rule": "cli-startup-transport-hdc-adapter.test.ts",
+      "reason": "Preserve empty pidof output and full-bundle identity; distinguish confirmed exit, transport failure and unavailable crash evidence. Native process handling and bounded startup reports must retain these distinctions. The native mapped files and required checks are captured at this review; successful current execution receipts are required separately. Startup changes and client distribution differences are detailed in docs/upstream-cli-startup-review.md.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
+    },
+    {
+      "rule": "cli-startup-transport-hdc-param.ts",
+      "reason": "Preserve empty pidof output and full-bundle identity; distinguish confirmed exit, transport failure and unavailable crash evidence. Native process handling and bounded startup reports must retain these distinctions. The native mapped files and required checks are captured at this review; successful current execution receipts are required separately. Startup changes and client distribution differences are detailed in docs/upstream-cli-startup-review.md.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
+    },
+    {
+      "rule": "cli-startup-transport-hdc-param.test.ts",
+      "reason": "Preserve empty pidof output and full-bundle identity; distinguish confirmed exit, transport failure and unavailable crash evidence. Native process handling and bounded startup reports must retain these distinctions. The native mapped files and required checks are captured at this review; successful current execution receipts are required separately. Startup changes and client distribution differences are detailed in docs/upstream-cli-startup-review.md.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
+    },
+    {
+      "rule": "cli-startup-transport-hilog-adapter.ts",
+      "reason": "Preserve empty pidof output and full-bundle identity; distinguish confirmed exit, transport failure and unavailable crash evidence. Native process handling and bounded startup reports must retain these distinctions. The native mapped files and required checks are captured at this review; successful current execution receipts are required separately. Startup changes and client distribution differences are detailed in docs/upstream-cli-startup-review.md.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
+    },
+    {
+      "rule": "cli-shared-screenshot-directory",
+      "reason": "Review shared screenshot capture extraction against native capture, typed display scope, owned temporary cleanup and artifact export; do not import upstream executable code. The native mapped files and required checks are captured at this review; successful current execution receipts are required separately. Startup changes and client distribution differences are detailed in docs/upstream-cli-startup-review.md.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
+    },
+    {
+      "rule": "cli-shared-screenshot-exports",
+      "reason": "Review shared screenshot capture extraction against native capture, typed display scope, owned temporary cleanup and artifact export; do not import upstream executable code. The native mapped files and required checks are captured at this review; successful current execution receipts are required separately. Startup changes and client distribution differences are detailed in docs/upstream-cli-startup-review.md.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
+    },
+    {
+      "rule": "cli-client-skill-config",
+      "reason": "The changed dsh/Qoder client installation routes are outside the owner-approved product: knowledge and Skills are supplied by MCP, with no client Skill installation or upstream MCP subprocess. Preserve native host configuration maintenance separately. The native mapped files and required checks are captured at this review; successful current execution receipts are required separately. Startup changes and client distribution differences are detailed in docs/upstream-cli-startup-review.md.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
+    },
+    {
+      "rule": "cli-maintainer-AGENTS-md",
+      "reason": "Reviewed repository-maintainer instructions and development Skills; upstream AGENTS explicitly separates these from the published root product Skill. They add no shipped user tool. Exclude only this known path, retaining unknown-path guards. The pinned reference path remains outside the native runtime; new unmatched paths are still blocked.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
+    },
+    {
+      "rule": "cli-maintainer--agents-skills-deveco-check-changes-SKILL-md",
+      "reason": "Reviewed repository-maintainer instructions and development Skills; upstream AGENTS explicitly separates these from the published root product Skill. They add no shipped user tool. Exclude only this known path, retaining unknown-path guards. The pinned reference path remains outside the native runtime; new unmatched paths are still blocked.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
+    },
+    {
+      "rule": "cli-maintainer--agents-skills-deveco-code-review-SKILL-md",
+      "reason": "Reviewed repository-maintainer instructions and development Skills; upstream AGENTS explicitly separates these from the published root product Skill. They add no shipped user tool. Exclude only this known path, retaining unknown-path guards. The pinned reference path remains outside the native runtime; new unmatched paths are still blocked.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
+    },
+    {
+      "rule": "cli-maintainer--agents-skills-deveco-docs-and-prose-SKILL-md",
+      "reason": "Reviewed repository-maintainer instructions and development Skills; upstream AGENTS explicitly separates these from the published root product Skill. They add no shipped user tool. Exclude only this known path, retaining unknown-path guards. The pinned reference path remains outside the native runtime; new unmatched paths are still blocked.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
+    },
+    {
+      "rule": "cli-maintainer--agents-skills-deveco-find-simplifications-SKILL-md",
+      "reason": "Reviewed repository-maintainer instructions and development Skills; upstream AGENTS explicitly separates these from the published root product Skill. They add no shipped user tool. Exclude only this known path, retaining unknown-path guards. The pinned reference path remains outside the native runtime; new unmatched paths are still blocked.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
+    },
+    {
+      "rule": "cli-maintainer--agents-skills-deveco-test-reliability-SKILL-md",
+      "reason": "Reviewed repository-maintainer instructions and development Skills; upstream AGENTS explicitly separates these from the published root product Skill. They add no shipped user tool. Exclude only this known path, retaining unknown-path guards. The pinned reference path remains outside the native runtime; new unmatched paths are still blocked.",
+      "reviewer": "Codex GPT-6; native-7 release implementation review 2026-09-11"
     }
   ],
   "targets": [
@@ -299,8 +379,16 @@
       "sha256": "bdb2edfd6f71bafa7824cf09ae2a2390cbb34c48d9cad54839b54399f5528f5a"
     },
     {
+      "path": "docs/native-ui-workflows.md",
+      "sha256": "b00aeb9e02f92f1ae1155a5d92bdfa326a95a6dd1f10bb1b7268fb22253efd00"
+    },
+    {
       "path": "docs/upstream-cli-checker-review.md",
       "sha256": "4d73a4e32f3e868e1a4d75063bd291f32d9963c3ac5fafe41fad08bb329af4c9"
+    },
+    {
+      "path": "docs/upstream-cli-startup-review.md",
+      "sha256": "f3829991db13ac799cef0d55d449a8d02d73171aaaa39696776e7f2beba82feb"
     },
     {
       "path": "provenance/SOURCES.md",
@@ -308,7 +396,7 @@
     },
     {
       "path": "provenance/upstream-capabilities.json",
-      "sha256": "97f383293265cfd6711bfd88fc21cd1945aa846d092971382914a85499af352f"
+      "sha256": "f7c194fcd637e6875c8f994eb6fc193fbe124b0fecf0b6fc8b171f7f90898f89"
     },
     {
       "path": "provenance/upstream-lock.json",
@@ -320,7 +408,7 @@
     },
     {
       "path": "resources/skills/deveco-native-tools/SKILL.md",
-      "sha256": "aba8b75ced14db0e8073d655d34c23b42406e59c9501e7abcff2197d69011a3c"
+      "sha256": "764120fbb645e03cd5432aba366b2e7fb397669f12640c6be011a52d465d7e2e"
     },
     {
       "path": "scripts/native-auth-mcp-acceptance.ts",
@@ -347,6 +435,10 @@
       "sha256": "730cfe903d730c4d7c4d3ccbbbe537d2dc314bbbebeea54f7023b095a6008059"
     },
     {
+      "path": "scripts/native-hot-outcome-mcp-acceptance.ts",
+      "sha256": "b732d13951f08f4d0f4c86199fa1203ef2f2cad9c4e8ee05abd60487e891d019"
+    },
+    {
       "path": "scripts/native-hot-target-prepare.ts",
       "sha256": "434fbb5dfc67a5a6b9006ce6966a87f2d909b568a3315f0d148fd8bc99c20abf"
     },
@@ -368,7 +460,11 @@
     },
     {
       "path": "scripts/native-skill-mcp-acceptance.ts",
-      "sha256": "c81c44fc0943494e0152ceaf0b378efbafe0b714ff419f3f20d9b121a1f21ec0"
+      "sha256": "5d7b2fcded9853b51d5ca7f2dd21b62672be72d9ff3d30c91d1c42d494de00f7"
+    },
+    {
+      "path": "scripts/native-startup-fault-mcp-acceptance.ts",
+      "sha256": "b54fe75cfbbccc5b73d7dc7cf416d2ef4056ec5ddb8f78bae012f72b5fb5651c"
     },
     {
       "path": "scripts/native-ui-mcp-benchmark.ts",
@@ -380,7 +476,7 @@
     },
     {
       "path": "src/core/contracts.ts",
-      "sha256": "7de4b2c04d503565194cf05c3ce0afd8fd951422c642f03ad845a4615de8d603"
+      "sha256": "7ef1f3166f5ff32799b1c939f47cd8cf954ec98fd16f47b4daf6b55cfbd0bfea"
     },
     {
       "path": "src/core/doc-catalog.ts",
@@ -388,7 +484,7 @@
     },
     {
       "path": "src/core/emulator-contracts.ts",
-      "sha256": "91084d264fc008478c56a93410875762ce81238f7f2d3c97a6f7c9f3d88ef8c6"
+      "sha256": "d962551802d92398abd86fa8e744deb30d9718b73e7b1a3de3a3bfcc9b55f2b4"
     },
     {
       "path": "src/core/files.ts",
@@ -404,7 +500,7 @@
     },
     {
       "path": "src/core/store.ts",
-      "sha256": "076c4761fb63e64cecf7ccc0af5bb26e2c9ac36fa914da3d31d21e26dc25aacb"
+      "sha256": "5b6c88d7e8f69b3927e67dd369dc36388d81ff5092744ab9ff7a7df3b003849d"
     },
     {
       "path": "src/core/toolchain.ts",
@@ -412,7 +508,11 @@
     },
     {
       "path": "src/core/workflows.ts",
-      "sha256": "b96b88ba2d63429347bcccb0a0e24fc80293ca24c1f7161951057e658f250e98"
+      "sha256": "4e4894a1cbc5c4b9e3134e4128f70b72271a2a337b11f2cda0c585df93bae2eb"
+    },
+    {
+      "path": "src/maintenance/host-config.ts",
+      "sha256": "7ed58ac9bbfdc28dfa93f2fd9647ce533928c54f7075cf4e56b2d603f991771d"
     },
     {
       "path": "src/services/auth.ts",
@@ -448,7 +548,7 @@
     },
     {
       "path": "src/services/device.ts",
-      "sha256": "18fafdf3f39b12d5edb3bfceca4205208fd5e3f321f6186ba2c0b4a5cdd45f3d"
+      "sha256": "fbc9ee711af2819195fd97059251e7857cdaabfe5c037caeab4e9ad7bc9005c0"
     },
     {
       "path": "src/services/diagnostics.ts",
@@ -464,7 +564,7 @@
     },
     {
       "path": "src/services/hotreload.ts",
-      "sha256": "af824ff058c92617deea57389f8e3f6dca3684d4764e878a15517025c8e27d0b"
+      "sha256": "3790a3f8d965f4ee19041010217dfd52b9418bfddb55fa581a7bc3c028c88644"
     },
     {
       "path": "src/services/knowledge.ts",
@@ -484,7 +584,7 @@
     },
     {
       "path": "src/services/lsp.ts",
-      "sha256": "e55ba0b5243c27feb5ea81833385db052726043fefc8d880a1ec8850e4de8d90"
+      "sha256": "2b7c8dca2923dd34f0f900f96ae4ac27cf2d8e3e72a419538d4f7d2a55241ba4"
     },
     {
       "path": "src/services/project.ts",
@@ -492,7 +592,11 @@
     },
     {
       "path": "src/services/runtime.ts",
-      "sha256": "4df86d107e6896db9b9b53b5c06f45acc2b7a5f7924b0a84e99202267aa31595"
+      "sha256": "7254c8127573914732d56d958ffd3e28b94059f16682dfe6e2e9f95c24e5061a"
+    },
+    {
+      "path": "src/services/screenshot.ts",
+      "sha256": "7d07c30bbbc1b704bae596ccfe9700e154c42e73efdfe36287f8e69d3c705c05"
     },
     {
       "path": "src/services/signature.ts",
@@ -505,6 +609,14 @@
     {
       "path": "src/services/signing-material.ts",
       "sha256": "ebabfc7a4c67883f3d9e4fbd9725c76c35d5415849eaf1db020be89306d51d27"
+    },
+    {
+      "path": "src/services/startup-check.ts",
+      "sha256": "0bd43a0a6e3156391d395999c8fcd78471a487fb21ce3fc5293ba89b241ebc7d"
+    },
+    {
+      "path": "src/services/storage.ts",
+      "sha256": "1232df46f027b6e497c65096e59e345113697e18f05ff2972375b49d2d021f9b"
     },
     {
       "path": "src/services/ui-import-cache.ts",
@@ -524,7 +636,7 @@
     },
     {
       "path": "src/worker.ts",
-      "sha256": "23c927d064af5341c6ae7ca9d0385576f3cad53657297c12c22e7a95d0408af7"
+      "sha256": "7f6dd93002eb2a56ccdae850cb386c597f25509e3b50e7baa5814d3313de570c"
     },
     {
       "path": "test/native-auth.test.ts",
@@ -551,12 +663,20 @@
       "sha256": "7778ac8a5228642ddcca033dcddc218d12c790a3055cb9f4b21b9b61b2d5688e"
     },
     {
+      "path": "test/native-compatible-upgrade.test.ts",
+      "sha256": "aaf6760a51019e48dd73c22a6e4119fbd70e436a87df2afa66af599a5be8d135"
+    },
+    {
       "path": "test/native-context.test.ts",
       "sha256": "56ec51b60783c6da6a03d1a67351ff95dac165ce517da01036428ea20e5b6cff"
     },
     {
       "path": "test/native-device-info.test.ts",
       "sha256": "9a567179548d1f96b0f2effb0bc55561c6a61845f47e0bca5e23b568efafe15e"
+    },
+    {
+      "path": "test/native-device-recovery.test.ts",
+      "sha256": "1b8497952586acc525b208b33eab271faa855e6ac822cd2cebd1e9668a3b5739"
     },
     {
       "path": "test/native-emulator-protocol.test.ts",
@@ -568,7 +688,11 @@
     },
     {
       "path": "test/native-flow.test.ts",
-      "sha256": "d2524672cacfb5f5ee262df015c43183a9a0a07e5eb98bec73cb3728dd2379ee"
+      "sha256": "08a561c5f41c810d32e8adc97fa916f1eb1dc4ffcc91d90339cb37ef10a094b7"
+    },
+    {
+      "path": "test/native-hot-preparation.test.ts",
+      "sha256": "cc39d3e0cb630bee49fe996cfed1bc80d022d7c2be2a6fc9d0f031338e6378fd"
     },
     {
       "path": "test/native-hotreload.test.ts",
@@ -581,6 +705,10 @@
     {
       "path": "test/native-lint.test.ts",
       "sha256": "6be04f5ad685c931e09bff6b3c4edd17cac8d43ca347a427bc830f34b6d467f8"
+    },
+    {
+      "path": "test/native-logs.test.ts",
+      "sha256": "f86133c127a1865db4c7c17c8389ed3235c398187de9089ab4622733d66d58df"
     },
     {
       "path": "test/native-project-recovery.test.ts",
@@ -607,8 +735,12 @@
       "sha256": "5376727351c60921b3723bfbc7b24b53a138f3ca7700c5909177670981245c58"
     },
     {
+      "path": "test/native-screenshot.test.ts",
+      "sha256": "4a171f09cfa9e8042144d8ae7d980ffd6e335deacf8940d7e35d4553666ac127"
+    },
+    {
       "path": "test/native-shutdown.test.ts",
-      "sha256": "33d5eca71920d070a98f52ff5b0147a65cf944795c68fc8480efbab1b49a4079"
+      "sha256": "e15e7c7a79bf8bfec35966ef4e0a46dd6dd81beddcb2cae2a263b970c8333d65"
     },
     {
       "path": "test/native-signature.test.ts",
@@ -621,6 +753,14 @@
     {
       "path": "test/native-skills.test.ts",
       "sha256": "0abf681811a72646d374b417af70fbb17497352aee50d1a074b1c5f22e2bd888"
+    },
+    {
+      "path": "test/native-startup-check.test.ts",
+      "sha256": "78b08b2cc61da968457a9de784133290fd84d1b163f1eed98be21f4efe06918e"
+    },
+    {
+      "path": "test/native-storage.test.ts",
+      "sha256": "91e1d5ff9bf0d4dbba072623402530c04b0f5b47e2f65dcc507b8d6c585bcd01"
     },
     {
       "path": "test/native-text.test.ts",
@@ -636,7 +776,7 @@
     },
     {
       "path": "test/native-upstream-capabilities.test.ts",
-      "sha256": "2d934d801a19f41cd0736150029eb8075db4f225d9e77754507dac7ca39b0dfc"
+      "sha256": "9ad56ec080c611b77f021646d21b27eb5ad5c9a37529b6249e84b7bf1587065f"
     },
     {
       "path": "test/native-upstream.test.ts",
@@ -650,11 +790,13 @@
     "scripts/native-emulator-acceptance.ts",
     "scripts/native-emulator-readonly.ts",
     "scripts/native-hot-device-acceptance.ts",
+    "scripts/native-hot-outcome-mcp-acceptance.ts",
     "scripts/native-lint-acceptance.ts",
     "scripts/native-multimodule-acceptance.ts",
     "scripts/native-sdk-acceptance.ts",
     "scripts/native-signing-acceptance.ts",
     "scripts/native-skill-mcp-acceptance.ts",
+    "scripts/native-startup-fault-mcp-acceptance.ts",
     "scripts/native-ui-mcp-benchmark.ts",
     "test/native-auth.test.ts",
     "test/native-checker-metadata.test.ts",
@@ -662,24 +804,31 @@
     "test/native-checker-syntax.test.ts",
     "test/native-checker.test.ts",
     "test/native-cloud-profile.test.ts",
+    "test/native-compatible-upgrade.test.ts",
     "test/native-context.test.ts",
     "test/native-device-info.test.ts",
+    "test/native-device-recovery.test.ts",
     "test/native-emulator-protocol.test.ts",
     "test/native-emulator.test.ts",
     "test/native-flow.test.ts",
+    "test/native-hot-preparation.test.ts",
     "test/native-hotreload.test.ts",
     "test/native-infrastructure.test.ts",
     "test/native-lint.test.ts",
+    "test/native-logs.test.ts",
     "test/native-project-recovery.test.ts",
     "test/native-project.test.ts",
     "test/native-reports.test.ts",
     "test/native-request-log.test.ts",
     "test/native-resources.test.ts",
     "test/native-runtime.test.ts",
+    "test/native-screenshot.test.ts",
     "test/native-shutdown.test.ts",
     "test/native-signature.test.ts",
     "test/native-signing-config.test.ts",
     "test/native-skills.test.ts",
+    "test/native-startup-check.test.ts",
+    "test/native-storage.test.ts",
     "test/native-text.test.ts",
     "test/native-toolchain.test.ts",
     "test/native-ui-import.test.ts",

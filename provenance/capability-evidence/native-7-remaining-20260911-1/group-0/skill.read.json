@@ -1,0 +1,8 @@
+{
+  "format": 1,
+  "operation": "skill.read",
+  "checks": [
+    "All six Skill bodies and catalogued references are read over public MCP; reference content hashes match the catalog."
+  ],
+  "observation_sha256": "69c72b2a7da6600ddfcc2e88d0cbcbe886f78ef8e338bdae35196319bab1c06b"
+}

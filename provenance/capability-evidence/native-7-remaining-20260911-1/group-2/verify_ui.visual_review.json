@@ -1,0 +1,9 @@
+{
+  "format": 1,
+  "operation": "verify_ui.visual_review",
+  "checks": [
+    "Public finish rejects an incomplete visual review despite the control check; the host reads the exact public MCP image and supplies matching artifact, SHA and read token with actual observations.",
+    "Only a passed host assessment and the original native assertion permit the successful UI test finish."
+  ],
+  "observation_sha256": "9946da1b2fede91ff4fbefd78ed32d689493a2192a29d4d941d1c47ed8a43609"
+}

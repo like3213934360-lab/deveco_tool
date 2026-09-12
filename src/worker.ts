@@ -2,7 +2,7 @@ import { release, protocolVersion } from "./core/config.js";
 import { requestAction, requestOutcome } from "./core/request-outcome.js";
 import { parentPort } from "node:worker_threads";
 import { ipcInput } from "./core/ipc.js";
-import { errorResult, invariant } from "./core/errors.js";
+import { errorResult, invariant, ToolError } from "./core/errors.js";
 import { Runtime } from "./services/runtime.js";
 import { withTrace } from "./core/trace.js";
 import { tools } from "./core/contracts.js";
@@ -32,12 +32,17 @@ let stopping = false;
 port.on("message", (raw: unknown) => {
   const input = ipcInput.parse(raw);
   if (input.type === "cancel") {
-    requests.get(input.id)?.controller.abort();
+    requests.get(input.id)?.controller.abort(
+      new ToolError("CANCELLED", "Runtime request was cancelled"),
+    );
     return;
   }
   if (input.type === "close") {
     stopping = true;
-    for (const request of requests.values()) request.controller.abort();
+    for (const request of requests.values())
+      request.controller.abort(
+        new ToolError("CANCELLED", "Runtime is closing"),
+      );
     void (async () => {
       try {
         await Promise.allSettled(

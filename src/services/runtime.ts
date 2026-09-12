@@ -32,6 +32,8 @@ import {
   type Component,
 } from "../core/toolchain.js";
 import { StateStore } from "../core/store.js";
+import { stateSchemaRevision } from "../core/state-schema.js";
+import { nativeOutcomeSchema } from "../core/ui-assertion.js";
 import {
   captureFiles,
   capturedFileSchema,
@@ -355,6 +357,15 @@ export class Runtime {
       id: string,
       execute: WorkflowStep["execute"],
     ): WorkflowStep => ({ id, kind: "read", execute });
+    const nativeOperation = async (call: StepContext, recovering = false) => {
+        const input = object(call.context.parameters.input), name = call.context.parameters.tool;
+        if (name === "app_signature") return this.signatures.call(input, call.context.project_path ? this.project(call.context) : undefined, call.signal);
+        if (name === "emulator_manage") return this.emulator.manage(input, call.signal);
+        if (name === "emulator_scenario") return this.emulator.scenario(input, call.signal);
+        invariant(name === "hot_reload", "OPERATION_UNKNOWN", "Unknown native operation");
+        return this.hot.call(input, this.project(call.context), call.signal, recovering);
+
+    };
     definitions.push({
       id: "native_operation", description: "A fixed native signing, emulator or hot-patch operation",
       capabilities: [], completion: "The native service returns a verified result or a durable acknowledgement with explicit verification limits",
@@ -365,13 +376,28 @@ export class Runtime {
         ...(context.parameters.tool === "app_signature" && typeof object(context.parameters.input).team_id === "string" ? [`signing:${String(object(context.parameters.input).team_id)}`] : []),
         ...(typeof object(context.parameters.input).output === "string" ? [`file:${String(object(context.parameters.input).output)}`] : []),
       ],
-      steps: [resumable("execute_native_operation", async (call) => {
-        const input = object(call.context.parameters.input), name = call.context.parameters.tool;
-        if (name === "app_signature") return this.signatures.call(input, call.context.project_path ? this.project(call.context) : undefined, call.signal);
-        if (name === "emulator_manage") return this.emulator.manage(input, call.signal);
-        if (name === "emulator_scenario") return this.emulator.scenario(input, call.signal);
-        invariant(name === "hot_reload", "OPERATION_UNKNOWN", "Unknown native operation");
-        return this.hot.call(input, this.project(call.context), call.signal);
+      steps: [effect("execute_native_operation", nativeOperation, call => nativeOperation(call, true)), read("verify_native_outcome", async (call) => {
+        const input = object(call.context.parameters.input);
+        if (call.context.parameters.tool !== "emulator_scenario" || !input.verify)
+          return { status: "not_requested", verified: false };
+        const contract = nativeOutcomeSchema.parse(input.verify);
+        const accepted = this.output(call, "execute_native_operation");
+        invariant(object(accepted).commandAccepted === true, "EMULATOR_SCENARIO_UNCONFIRMED", "Outcome observation requires the completed scenario receipt");
+        const started = Date.now();
+        let observation: unknown, failure: ReturnType<typeof errorResult> | undefined;
+        try {
+          observation = await this.devices.verify(text(call.context.target, "target"), contract.assert, call.signal, contract.bundle_name);
+          call.signal.throwIfAborted();
+          invariant(object(observation).verified === true, "VERIFICATION_FAILED", "Application observation did not satisfy its assertion");
+        } catch (error) { failure = errorResult(error); }
+        const report = { run_id: call.run_id, target: call.context.target,
+          scope: "captured_application_ui_assertion", contract,
+          command_accepted: true, operation_sha256: digest(accepted),
+          verified: !failure, observation: observation ?? null, error: failure ?? null,
+          started_at: started, completed_at: Date.now() };
+        const report_artifact = this.store.artifact(call.run_id, JSON.stringify(report), "application/json");
+        if (failure) throw new ToolError(failure.code, failure.message, { ...report, report_artifact });
+        return { ...report, report_artifact };
       })],
     });
     // Existing saved flows and declared navigation are fixed internal jobs, managed
@@ -728,6 +754,7 @@ export class Runtime {
             { action: "apply", target: call.context.target },
             project,
             call.signal,
+            recovering,
           ),
         };
       return { ...await this.projects.buildApplication(project, input, call.signal), preflight: checked };
@@ -1180,6 +1207,7 @@ export class Runtime {
         return {
           release,
           execution_protocol: protocolVersion,
+          state_schema_revision: stateSchemaRevision,
           node: process.version,
           platform: process.platform,
           arch: process.arch,
@@ -1513,7 +1541,7 @@ export class Runtime {
           choice = {
             kind: "recording",
             draft: flowSchema.parse({
-              version: 1,
+              version: 2,
               id: input.id,
               name: input.name,
               app: {

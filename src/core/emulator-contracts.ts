@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { nativeOutcomeSchema } from "./ui-assertion.js";
 
 // Native positional arguments must not be interpreted as another option.
 const nativeName = z
@@ -74,6 +75,7 @@ const ranges = {
 } as const;
 export const emulatorScenarioSchema = z
   .strictObject({
+    verify: nativeOutcomeSchema.optional(),
     request_key: z.string().min(1).max(200).optional(),
     target: z.string().min(1),
     name: nativeName,
@@ -125,7 +127,7 @@ export const emulatorScenarioSchema = z
       .optional(),
   })
   .superRefine((input, ctx) => {
-    const used: string[] = ["name", "action", "request_key", "target"];
+    const used: string[] = ["name", "action", "request_key", "target", "verify"];
     const issue = (field: string, message: string) =>
       ctx.addIssue({ code: "custom", path: [field], message });
     if (input.action === "rotation" || input.action === "volume") {

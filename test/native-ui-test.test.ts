@@ -13,7 +13,8 @@ import { parseUiDump } from "../src/services/ui-parse.js";
 import { imageDimensions } from "../src/services/screenshot.js";
 import { currentTrace } from "../src/core/trace.js";
 import { ToolError } from "../src/core/errors.js";
-import { assertionSchema, tools } from "../src/core/contracts.js";
+import { assertionSchema, tools, startupCheckSchema } from "../src/core/contracts.js";
+import { checkStartup } from "../src/services/startup-check.js";
 import { readImageArtifact } from "../src/services/artifact.js";
 
 const png = fs.readFileSync(
@@ -189,8 +190,16 @@ async function fixture(
     };
     runtime.devices.launch = async () => {
       calls.push("launch");
+      let clock = 0;
+      const startup = await checkStartup({
+        now: () => clock, wait: async (ms) => { clock += ms; },
+        pids: async () => ["123"], frame: async () => { throw new Error("Headless fixture"); },
+      }, startupCheckSchema.parse({ mode: "process_only" }), new AbortController().signal);
       return {
         started: true,
+        commandAccepted: true,
+        startupVerified: true,
+        startup_check: { ...startup, evidence: runtime.store.artifact(currentTrace().run_id ?? "fixture", JSON.stringify(startup), "application/json") },
         bundle_name: app.bundle_name,
         processVerified: true,
         outcomeVerified: false,
@@ -825,6 +834,43 @@ test("uncertain native action survives restart without replay and cancellation j
       h.runtime.store.db.prepare("SELECT * FROM leases").all(),
       [],
     );
+  });
+});
+
+test("continuous log receipt follows the pending plan step through check, resume and runtime restart", async () => {
+  await fixture(async (h) => {
+    const contexts: { step: string; stage: string }[] = [];
+    const observe = () => {
+      h.runtime.tests.continuousLogs.ensure = async (_id, _target, _bundle, step, stage) => {
+        contexts.push({ step, stage });
+      };
+    };
+    observe();
+    const initial = await start(h.runtime, { steps: [
+      { id: "first", goal: "Initial state", assert: { visible: { text: "Waiting" } } },
+      { id: "second", goal: "Result state", assert: { visible: { text: "Done" } } },
+    ] });
+    const id = initial.test_id;
+    await h.runtime.call("ui_test", { action: "resume", test_id: id });
+    const checked = summarySchema.parse(await h.runtime.call("ui_test", { action: "check", test_id: id }));
+    assert.equal(checked.steps[0]!.status, "passed");
+    assert.equal(checked.steps[1]!.status, "pending");
+    await h.runtime.call("ui_test", { action: "resume", test_id: id });
+    const launches = h.calls.filter((call) => call === "launch").length;
+    await h.reopen();
+    observe();
+    await h.runtime.call("ui_test", { action: "resume", test_id: id });
+    assert.equal(h.calls.filter((call) => call === "launch").length, launches);
+    h.setText("Done");
+    await h.runtime.call("ui_test", { action: "check", test_id: id });
+    assert.deepEqual(contexts, [
+      { step: "first", stage: "resume" },
+      { step: "first", stage: "check" },
+      { step: "second", stage: "resume" },
+      { step: "second", stage: "resume" },
+      { step: "second", stage: "check" },
+    ]);
+    await h.runtime.call("ui_test", { action: "cancel", test_id: id });
   });
 });
 

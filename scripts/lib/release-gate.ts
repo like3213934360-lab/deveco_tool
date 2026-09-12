@@ -9,14 +9,18 @@ import { auditMigration } from "./migration.js";
 import { verifyMigrationEvidence } from "./migration-acceptance.js";
 import { evidenceIdentity } from "./evidence.js";
 import { readJson, upstreamAcceptanceGate } from "./upstream-adaptation.js";
-import { validateSoak } from "./soak-gate.js";
-import { validatePerformance } from "./performance-gate.js";
+import {
+  releaseIdentitySchema as identitySchema,
+  sameReleaseIdentity as sameIdentity,
+  validateReleaseMeasurements,
+} from "./release-measurements.js";
 import { verifyDistribution } from "./distribution.js";
-import { validateReleaseScope } from "./release-scope.js";
+import { migrationEvidencePolicy, validateReleaseScope } from "./release-scope.js";
 
 import {
   requiredAcceptance,
   requiredPerformance,
+  currentAcceptance,
 } from "./acceptance-requirements.js";
 export {
   requiredAcceptance,
@@ -24,13 +28,6 @@ export {
 } from "./acceptance-requirements.js";
 const sha = z.string().regex(/^[a-f0-9]{64}$/);
 const reference = z.strictObject({ file: z.string().min(1), sha256: sha });
-const identitySchema = z.object({
-  runtime_sha256: sha,
-  compiled_sha256: sha,
-  package_lock_sha256: sha,
-  resource_manifest_sha256: sha,
-  upstream_lock_sha256: sha,
-});
 export const releaseManifestSchema = z.strictObject({
   format: z.literal(1),
   release: z.literal(release),
@@ -52,19 +49,6 @@ function rawReference(root: string, ref: z.infer<typeof reference>) {
     `Evidence digest differs: ${ref.file}`,
   );
   return readJson(file);
-}
-function sameIdentity(
-  raw: unknown,
-  expected: ReturnType<typeof evidenceIdentity>,
-) {
-  const actual = identitySchema.parse(raw);
-  invariant(
-    Object.entries(actual).every(
-      ([key, value]) => value === expected[key as keyof typeof expected],
-    ),
-    "RELEASE_EVIDENCE_STALE",
-    "Evidence must cover the final compiled runtime, tests, lock and resources",
-  );
 }
 function matrixKey(platform: string, node: string) {
   const version = /^v?(22|24)\.(\d+)\.(\d+)$/.exec(node),
@@ -100,7 +84,8 @@ export function releaseGate(root: string, evidenceRoot: string, raw: unknown) {
     "RELEASE_MIGRATION_INCOMPLETE",
     "Every migration row needs current behavior acceptance or an exact owner-authorized release limitation",
   );
-  verifyMigrationEvidence(root, !scope, Boolean(scope));
+  const migrationPolicy = migrationEvidencePolicy(scope);
+  verifyMigrationEvidence(root, migrationPolicy.requireCurrentIdentity, migrationPolicy.allowPending);
   upstreamAcceptanceGate(root);
   upstreamCapabilityGate(root);
   for (const directory of ["src", "scripts", "test"]) {
@@ -216,7 +201,7 @@ export function releaseGate(root: string, evidenceRoot: string, raw: unknown) {
         cases: z
           .array(
             z.object({
-              id: z.enum(requiredAcceptance),
+              id: z.enum(currentAcceptance),
               passed: z.literal(true),
               artifacts: z.array(reference).min(1),
             }),
@@ -235,27 +220,13 @@ export function releaseGate(root: string, evidenceRoot: string, raw: unknown) {
       cases.add(item.id);
     }
   }
-  const performanceRaw = rawReference(evidenceRoot, manifest.performance);
-  const performance = scope
-    ? z
-        .object({
-          format: z.literal(3),
-          passed: z.literal(true),
-          tested: z.record(z.string(), z.unknown()),
-          direct: z.array(
-            z.object({
-              capability: z.enum(requiredPerformance),
-              native_ms: z.array(z.number().nonnegative()).min(1000),
-            }),
-          ),
-          scope: z.string().min(1),
-        })
-        .parse(performanceRaw)
-    : validatePerformance(performanceRaw);
-  if (!scope) sameIdentity(performance.tested, tested);
-  const soak = validateSoak(rawReference(evidenceRoot, manifest.soak));
-  if (!scope) sameIdentity(soak.tested, tested);
-  const requiredCases = scope ? scope.acceptance_required : requiredAcceptance;
+  const { performance } = validateReleaseMeasurements(
+    rawReference(evidenceRoot, manifest.performance),
+    rawReference(evidenceRoot, manifest.soak),
+    tested,
+    scope,
+  );
+  const requiredCases = scope ? scope.acceptance_required : currentAcceptance;
   invariant(
     requiredCases.every((id) => cases.has(id)),
     "RELEASE_ACCEPTANCE_MISSING",

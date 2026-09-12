@@ -27,6 +27,7 @@ import {
   uiLogChunkSchema,
 } from "./ui-test-log.js";
 import type { StorageService } from "./storage.js";
+import { UiTestContinuousLogService } from "./ui-test-continuous-log.js";
 
 const sampleSchema = z.strictObject({
   snapshot_id: z.string(),
@@ -115,6 +116,7 @@ export class UiTestService {
     { controller: AbortController; promise: Promise<unknown> }
   >();
   private readonly logs: UiTestLogService;
+  readonly continuousLogs: UiTestContinuousLogService;
   constructor(
     readonly store: StateStore,
     readonly devices: DeviceService,
@@ -125,6 +127,7 @@ export class UiTestService {
   ) {
     this.cipher = new PayloadCipher(path.join(store.root, "ui-test.key"));
     this.logs = new UiTestLogService(store, devices);
+    this.continuousLogs = UiTestContinuousLogService.forDevice(store, devices);
   }
   private row(id: string) {
     const row = this.store.db
@@ -233,8 +236,9 @@ export class UiTestService {
       replan_count: payload.replans.length,
       replan_review_id: payload.replans.at(-1)?.review_id ?? null,
       log_chunk_count: payload.log_chunks.length,
+      continuous_logs: this.continuousLogs.status(id),
       log_scope:
-        "Device epoch interval and application PIDs sampled at interval boundaries; bounded Hilog ring-buffer reads are partial evidence, not a complete continuous log.",
+        "Continuous capture and legacy interval samples are separate sources. Continuous chunks verify PID generations and time bounds; gaps and unknown system delivery remain explicit. Step labels describe receipt context, not causality.",
       report_artifact: payload.last_report ?? null,
     };
   }
@@ -275,6 +279,7 @@ export class UiTestService {
       }),
       replans: payload.replans,
       log_chunks: payload.log_chunks,
+      continuous_chunks: this.continuousLogs.chunks(id, 0, 8192),
       scope:
         "Point-in-time test evidence. Native action inputs and launch parameters are omitted; requirements, screenshots, observations and app logs may include application data.",
     };
@@ -501,6 +506,7 @@ export class UiTestService {
       step,
       stage,
       signal,
+      this.logSecrets(payload),
     );
     if (result.anchor) payload.log_anchor = result.anchor;
     payload.log_chunks.push(result.chunk);
@@ -508,16 +514,28 @@ export class UiTestService {
   private readLogs(input: Extract<Input, { action: "logs" }>) {
     const row = this.row(input.test_id),
       payload = this.payload(row);
-    if (input.chunk_id === undefined)
+    if (input.chunk_id === undefined) {
+      const continuous = this.continuousLogs.status(input.test_id),
+        legacyCount = payload.log_chunks.length,
+        offset = input.chunk_offset,
+        legacy = payload.log_chunks.slice(offset, offset + input.chunk_limit),
+        current = this.continuousLogs.chunks(input.test_id, Math.max(0, offset - legacyCount), input.chunk_limit - legacy.length),
+        count = legacyCount + continuous.chunk_count,
+        next = offset + legacy.length + current.length;
       return {
         test_id: input.test_id,
         run_id: input.test_id,
         target: row.target,
         bundle_name: payload.app.bundle_name,
         complete: false,
-        chunks: payload.log_chunks,
+        continuous,
+        chunks: [...legacy, ...current],
+        chunk_count: count,
+        chunk_offset: offset,
+        next_chunk_offset: next < count ? next : null,
       };
-    const chunk = payload.log_chunks.find(
+    }
+    const chunk = input.chunk_id >= 500 ? this.continuousLogs.chunk(input.test_id, input.chunk_id) : payload.log_chunks.find(
       (chunk) => chunk.id === input.chunk_id,
     );
     invariant(
@@ -528,7 +546,7 @@ export class UiTestService {
     invariant(
       chunk.status === "captured" && chunk.artifact_id,
       "UI_TEST_LOG_UNAVAILABLE",
-      `This interval has no attributable log artifact: ${chunk.code ?? "unknown"}`,
+      `This interval has no attributable log artifact: ${"code" in chunk ? chunk.code : "unknown"}`,
     );
     const content = chunk.bytes
       ? this.store
@@ -574,6 +592,10 @@ export class UiTestService {
       matching: "literal_any_keyword",
       complete: false,
     };
+  }
+  private logSecrets(payload: Payload, extra?: z.infer<typeof controlSchema>) {
+    return [...payload.actions.map((action) => action.operation), ...(extra ? [extra] : [])]
+      .flatMap((operation) => operation.text ? [operation.text] : []);
   }
   private acceptReviewedReplan(id: string, payload: Payload) {
     const replan = payload.replans.at(-1);
@@ -909,6 +931,7 @@ export class UiTestService {
                 "UI_TEST_INCOMPLETE",
                 "Every original step needs passing control/visual evidence, and uncertain actions must be reconciled",
               );
+              await this.continuousLogs.stop(id, "test_finished");
               const report = this.report(id, payload, true);
               this.store.db
                 .transaction(() => {
@@ -931,6 +954,13 @@ export class UiTestService {
                 `device:${row.target}`,
                 async () => {
                   this.checkRecording(row.target);
+                  // Resume/check have no caller-supplied step_id. Attribute
+                  // receipt to the pending plan step, including after restart;
+                  // an invalid act step must not relabel the live collector.
+                  const logStep = payload.steps.find((step) => !this.passed(payload, step))?.id ?? "test";
+                  await this.continuousLogs.ensure(id, row.target, payload.app.bundle_name,
+                    logStep, input.action,
+                    this.logSecrets(payload, input.action === "act" ? input.operation : undefined));
                   if (input.action === "resume") {
                     await this.initialize(row, payload, signal);
                     return this.status(id);
@@ -1007,6 +1037,7 @@ export class UiTestService {
             this.store.update(id, "needs_input", { test_id: id });
             return { ...(result as object), status: "needs_input" };
           } catch (error) {
+            await this.continuousLogs.stop(id, signal.aborted ? "operation_cancelled" : "operation_failed");
             this.store.update(
               id,
               "needs_input",
@@ -1078,6 +1109,8 @@ export class UiTestService {
                   run_id: input.test_id,
                   report_artifact: report,
                 };
+              await this.continuousLogs.stop(input.test_id, "evidence_export");
+              const exportReport = this.report(input.test_id, payload);
               const exported = await this.storage.export(
                 [input.test_id],
                 input.directory,
@@ -1086,7 +1119,7 @@ export class UiTestService {
               return {
                 ...exported,
                 test_id: input.test_id,
-                report_artifact: report,
+                report_artifact: exportReport,
               };
             },
             combined,
@@ -1116,6 +1149,7 @@ export class UiTestService {
           verified: this.store.get(id).status === "succeeded",
         });
         if (row.state !== "active") return result();
+        await this.continuousLogs.stop(id, "test_cancelled");
         this.store.claim(id);
         this.store.db
           .transaction(() => {
@@ -1148,6 +1182,7 @@ export class UiTestService {
     await Promise.allSettled(
       [...this.active.values()].map((active) => active.promise),
     );
+    await this.continuousLogs.close();
     this.cipher.close();
   }
 }

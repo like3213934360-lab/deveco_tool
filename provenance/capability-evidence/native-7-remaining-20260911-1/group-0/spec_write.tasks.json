@@ -1,0 +1,8 @@
+{
+  "format": 1,
+  "operation": "spec_write.tasks",
+  "checks": [
+    "Public tasks.md write and replacement persist checkbox tasks; specification completion follows a current native build."
+  ],
+  "observation_sha256": "32f31ba420e12117b9c90a270f533b58157d2cdfa0833192d6e11b668893d33c"
+}

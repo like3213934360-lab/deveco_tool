@@ -1,0 +1,9 @@
+{
+  "format": 1,
+  "operation": "skill.uninstall",
+  "checks": [
+    "The owner requires Skills and references to remain built into MCP, without client Skill installation or uninstall flows.",
+    "All six current catalog entries declare MCP delivery and no client installation; the excluded installer action is rejected and is not counted as a functional success."
+  ],
+  "observation_sha256": "ce4e5c289e5bd7b4b69112d8b07d768fe817281bd16bfc9e3906b697e7751f0b"
+}

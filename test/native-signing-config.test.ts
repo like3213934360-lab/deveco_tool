@@ -13,7 +13,13 @@ import {
   fileDigest,
   walk,
 } from "../src/core/files.js";
-import { object } from "../src/core/errors.js";
+import { object, ToolError } from "../src/core/errors.js";
+import { StateStore } from "../src/core/store.js";
+import { ProcessService } from "../src/core/process.js";
+import { WorkflowEngine, type WorkflowDefinition } from "../src/core/workflows.js";
+import { SignatureService } from "../src/services/signature.js";
+import { AuthService } from "../src/services/auth.js";
+import { Runtime } from "../src/services/runtime.js";
 
 function fixture() {
   const root = fs.realpathSync.native(
@@ -226,6 +232,67 @@ test("signing configuration stops before mutation for stale projects, active wat
     assert.equal(fs.existsSync(f.output), false);
     assert.equal(fileDigest(f.file), before);
   } finally {
+    fs.rmSync(f.root, { recursive: true, force: true });
+  }
+});
+
+test("public signing workflow settles an existing configuration before publication and recovers a lost publication receipt", async (t) => {
+  const f = fixture(), store = new StateStore(path.join(f.root, "state")),
+    processes = new ProcessService(), auth = new AuthService(store, processes),
+    signatures = new SignatureService(processes, store, auth);
+  const runtime = Object.assign(Object.create(Runtime.prototype) as Runtime, {
+    store, signatures, project: () => inspectProject(f.project),
+  });
+  const definitions = (Reflect.get(runtime, "definitions") as () => WorkflowDefinition[]).call(runtime),
+    engine = new WorkflowEngine(store, definitions, async () => {}),
+    node = "execute_native_operation", child = `${node}:private:native-signature`,
+    before = fileDigest(f.file);
+  const start = (name: string) => engine.start("native_operation", {
+    project_path: f.project,
+    parameters: { tool: "app_signature", input: { action: "configure", file: f.descriptor, output: f.output, options: { name } } },
+  }).run_id;
+  const finish = async (id: string) => {
+    for (let i = 0; i < 100; i++) {
+      const result = await engine.status(id, 100);
+      if (["failed", "needs_input", "succeeded"].includes(result.status)) return result;
+    }
+    throw new Error("Signing workflow did not settle");
+  };
+  try {
+    const rejected = start("Existing"), failed = await finish(rejected);
+    assert.equal(failed.status, "failed");
+    assert.equal(object(failed.error).code, "SIGN_CONFIG_EXISTS");
+    for (const operation of [node, child]) assert.equal(store.operationState(rejected, operation), "failed");
+    assert.equal(fileDigest(f.file), before);
+    assert.equal(fs.existsSync(f.output), false);
+    await engine.resume(rejected);
+    assert.equal((await finish(rejected)).status, "failed");
+    assert.equal(fs.existsSync(f.output), false);
+
+    // Lose only the encrypted child completion receipt after real publication.
+    // The prepared commit remains durable and must be reconciled, not re-run.
+    let lost = false;
+    const journal = store as unknown as { receipt(runId: string, node: string, result: unknown): void },
+      receipt = journal.receipt.bind(store);
+    t.mock.method(journal, "receipt", (runId: string, operation: string, result: unknown) => {
+      if (!lost && operation === child) { lost = true; throw new ToolError("RECEIPT_INTERRUPTED", "Injected receipt interruption"); }
+      return receipt(runId, operation, result);
+    });
+    const interrupted = start("Current"), uncertain = await finish(interrupted);
+    assert.equal(uncertain.status, "needs_input");
+    assert.equal(lost, true);
+    assert.equal(fs.existsSync(f.output), true);
+    const published = fileDigest(f.file), material = walk(f.output).map(file => [file, fileDigest(file)]);
+    assert.notEqual(published, before);
+    for (const operation of [node, child]) assert.equal(store.operationState(interrupted, operation), "started");
+    await engine.resume(interrupted, { action: "recheck" });
+    assert.equal((await finish(interrupted)).status, "succeeded");
+    assert.equal(fileDigest(f.file), published);
+    assert.deepEqual(walk(f.output).map(file => [file, fileDigest(file)]), material);
+    assert.equal((object(readObject(f.file).app).signingConfigs as unknown[]).length, 2);
+    for (const operation of [node, child]) assert.equal(store.operationState(interrupted, operation), "done");
+  } finally {
+    await engine.close(); await processes.close(); store.close();
     fs.rmSync(f.root, { recursive: true, force: true });
   }
 });

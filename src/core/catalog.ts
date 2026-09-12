@@ -35,10 +35,10 @@ export const workflowMetadata: Record<
   },
   app_deploy: {
     description:
-      "Validate a package, install, launch and inspect application state.",
+      "Validate a package, install, launch and check delayed process stability and the application frame.",
     capabilities: ["hdc"],
     completion:
-      "Installation is acknowledged and the requested application process runs.",
+      "Installation and launch are acknowledged and the bounded startup check passes. UI startup checks are default; a declared headless contract checks only process stability. Business behavior still needs a separate assertion.",
   },
   build_deploy_verify: {
     description:

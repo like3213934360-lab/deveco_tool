@@ -1,0 +1,8 @@
+{
+  "format": 1,
+  "operation": "hdc_log.collect",
+  "checks": [
+    "Public bounded Hilog collection for the owned app PID returns its actual MCPCAP heartbeat; literal filtering is requested and retained truncation metadata remains available."
+  ],
+  "observation_sha256": "d146ea6008f7b6c7ec8cfa927bacde223236623e87d15eee9040516e90636ba6"
+}

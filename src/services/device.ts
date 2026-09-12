@@ -7,6 +7,7 @@ import {
   controlSchema,
   type Selector,
   appSchema,
+  startupCheckSchema,
   type ApplicationTarget,
 } from "../core/contracts.js";
 export {
@@ -15,7 +16,7 @@ export {
   type Selector,
 } from "../core/contracts.js";
 import { setTimeout as delay } from "node:timers/promises";
-import { invariant, SettledEffectError, ToolError } from "../core/errors.js";
+import { invariant, SettledEffectError, ToolError, errorResult } from "../core/errors.js";
 import { ProcessService, type ProcessResult } from "../core/process.js";
 import { discoverToolchain, toolCommand } from "../core/toolchain.js";
 import { StateStore } from "../core/store.js";
@@ -40,6 +41,8 @@ import {
   resolveControl,
   uiInputArguments,
 } from "./ui-control.js";
+import { checkStartup, inspectStartupFrame, type StartupReport } from "./startup-check.js";
+import { UiTestLogService, type UiLogAnchor } from "./ui-test-log.js";
 export {
   UiIndex,
   flattenDump,
@@ -833,6 +836,8 @@ export class DeviceService {
         );
     }
     const accept = (receipt: DeviceReceipt) => {
+      if (/Error Code:\s*10106102\b/.test(receipt.stdout))
+        throw new ToolError("APP_DEVICE_LOCKED", "Unlock the selected device before launching the application");
       invariant(
         receipt.exitCode === 0 &&
           /start ability successfully/i.test(receipt.stdout),
@@ -874,31 +879,116 @@ export class DeviceService {
         error instanceof SettledEffectError ? SettledEffectError : ToolError;
       throw new Failure(
         error instanceof ToolError ? error.code : "LAUNCH_FAILED",
-        "Application launch failed; Want arguments and raw output are withheld",
+        error instanceof ToolError && error.code === "APP_DEVICE_LOCKED"
+          ? "Unlock the selected device before launching the application"
+          : "Application launch failed; Want arguments and raw output are withheld",
       );
     }
-    const deadline = Date.now() + 10000;
-    while (Date.now() < deadline) {
-      const state = await this.shell(
-        target,
-        ["pidof", app.bundle_name],
-        signal,
-        10000,
-        true,
-      );
-      if (/^\d+(?:\s+\d+)*\s*$/.test(state.stdout.trim()))
-        return {
-          started: true,
-          processVerified: true,
-          outcomeVerified: false,
-          bundle_name: app.bundle_name,
-          target,
+    const startup_check = await this.checkStartup(target, app, signal);
+    return {
+      started: true,
+      commandAccepted: true,
+      processVerified: true,
+      startupVerified: true,
+      outcomeVerified: false,
+      startup_check,
+      bundle_name: app.bundle_name,
+      target,
+    };
+  }
+
+  async checkStartup(target: string, app: ApplicationTarget, signal?: AbortSignal, expectedPids?: readonly string[]) {
+    const policy = startupCheckSchema.parse(app.startup_check ?? {});
+    let entered = false;
+    const observe = async () => {
+      entered = true;
+      const began = performance.now(), started_at = new Date().toISOString();
+      let report: StartupReport | undefined;
+      let anchor: UiLogAnchor | undefined;
+      const logs = new UiTestLogService(this.store, this);
+      const run = currentTrace().run_id ?? "startup";
+      let evidence: { artifact_id: string; bytes: number; mime: string } | undefined;
+      let failure: unknown;
+      try {
+        await withinDeadline(policy.timeout_ms, signal, "STARTUP_TIMEOUT", async (bounded) => {
+          // A log anchor failure never prevents process observation. The final
+          // report states that diagnostic logs are unavailable in that case.
+          anchor = await withinDeadline(Math.min(1000, policy.timeout_ms / 4), bounded, "STARTUP_LOG_ANCHOR_TIMEOUT",
+            scope => logs.anchor(target, app.bundle_name, scope)).catch(() => undefined);
+          bounded.throwIfAborted();
+          report = await checkStartup({
+            pids: async (scope) => {
+              const result = await this.shell(target, ["pidof", app.bundle_name], scope, 3000, true, true);
+              invariant(!result.truncated && !result.stderr.trim() && [0, 1].includes(result.exitCode) &&
+                (!result.stdout.trim() || /^\d+(?:\s+\d+)*$/.test(result.stdout.trim())),
+              "STARTUP_PID_UNAVAILABLE", "Device did not return a reliable process observation");
+              return result.stdout.trim() ? result.stdout.trim().split(/\s+/) : [];
+            },
+            frame: async (scope) => {
+              const snapshot = await this.snapshot(target, scope);
+              const windows = snapshot.nodes.filter(node => node.bundleName === app.bundle_name && isWindowSurface(node) && node.visible !== false && node.rect);
+              const displays = new Set(windows.map(node => node.displayId));
+              const display = policy.display_id ?? (displays.size === 1 && /^\d+$/.test(windows[0]?.displayId ?? "") ? Number(windows[0]!.displayId) : undefined);
+              invariant(display !== undefined, "STARTUP_SCREEN_SCOPE_UNAVAILABLE", "Select an observed application display before startup image inspection");
+              const scoped = windows.filter(node => node.displayId === String(display));
+              invariant(scoped.length > 0 && scoped.length <= 32, "STARTUP_SCREEN_SCOPE_UNAVAILABLE", "No bounded visible application window on this display");
+              const frame = await this.screenshot(target, { format: "jpeg", width: 720, display_id: display }, scope);
+              invariant(frame.artifact, "STARTUP_FRAME_UNAVAILABLE", "Startup screenshot requires a retained artifact");
+              const pixels = this.store.readBinaryArtifact(frame.artifact.artifact_id, 4 * 1024 * 1024, ["image/jpeg"]);
+              return {
+                artifact_id: frame.artifact.artifact_id, sha256: frame.sha256,
+                ...inspectStartupFrame(pixels.data, { width: frame.native_width, height: frame.native_height }, scoped.map(node => node.rect!)),
+              };
+            },
+          }, policy, bounded, expectedPids);
+        });
+      } catch (error) {
+        failure = error;
+        // Cancellation can happen before the first PID sample, including while
+        // obtaining diagnostic metadata. Even then retain a truthful report.
+        report ??= {
+          format: 1, status: "inconclusive", reason: "Startup observation did not begin",
+          started_at, finished_at: new Date().toISOString(), elapsed_ms: Math.max(0, performance.now() - began),
+          policy, process: "unverified", screen: policy.mode === "process_only" ? "not_applicable" : "unavailable",
+          business_outcome_verified: false, process_samples: [], frames: [],
         };
-      await delay(200, undefined, { signal });
+        report = { ...report, status: signal?.aborted ? "cancelled" : "inconclusive",
+          reason: signal?.aborted ? "Startup observation was interrupted; the accepted launch must not be replayed blindly"
+            : `Startup observation did not complete (${errorResult(error).code})` };
+      } finally {
+        if (report) {
+          // Bounded logs are diagnostics, not a claim of continuous capture.
+          // A separate short cleanup deadline cannot keep a cancelled launch alive.
+          let log: unknown = { complete: false, status: "unavailable", reason: "No reliable log anchor" };
+          if (anchor) try {
+            log = await withinDeadline(3000, signal, "STARTUP_LOG_TIMEOUT", scope => logs.capture(target, app.bundle_name, anchor, 0, "startup", "post-launch", scope));
+          } catch { log = { complete: false, status: "unavailable", reason: "Diagnostic capture interrupted or unavailable" }; }
+          evidence = this.store.artifact(run, JSON.stringify({ target, bundle_name: app.bundle_name, ...report, diagnostic_log: log }), "application/json");
+        }
+      }
+      if (failure) {
+        const reason = errorResult(failure);
+        throw new SettledEffectError(reason.code, report!.reason, {
+          commandAccepted: true, startupVerified: false, outcomeVerified: false,
+          report, evidence,
+        });
+      }
+      invariant(report && evidence, "STARTUP_UNVERIFIED", "Startup observation did not produce a final report");
+      if (report.status !== "passed") throw new SettledEffectError(
+        report.status === "failed" ? "STARTUP_PROCESS_FAILED" : "STARTUP_UNVERIFIED",
+        report.reason, { commandAccepted: true, startupVerified: false, outcomeVerified: false, report, evidence },
+      );
+      return { ...report, evidence };
+    };
+    try {
+      return await this.store.lease(`device:${target}`, observe, signal);
+    } catch (error) {
+      // A confirmed launch can be cancelled while its remote receipt is being
+      // cleaned up, before this nested lease begins. An already-aborted
+      // observation performs no device IO: it only persists the settled,
+      // unverified startup report so the outer effect is not left uncertain.
+      if (!entered && signal?.aborted) return observe();
+      throw error;
     }
-    throw new SettledEffectError(
-      "LAUNCH_NOT_RUNNING",
-      "Application launch was accepted but its process was not found",
-    );
   }
 }

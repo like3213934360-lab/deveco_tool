@@ -53,7 +53,24 @@ export function assertQuiescent(installations: readonly string[], stateDirectori
       const tables = new Set((db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all() as { name: string }[]).map((row) => row.name));
       invariant(tables.has("managed_processes") && tables.has("external_sessions") && tables.has("runs"), "UPGRADE_STATE_UNSUPPORTED", "Cannot prove quiescence from an unknown state schema; resolve legacy sessions before switching");
       invariant(!db.prepare("SELECT id FROM managed_processes WHERE status<>'exited' LIMIT 1").get() && !db.prepare("SELECT id FROM external_sessions WHERE status<>'closed' LIMIT 1").get() && !db.prepare("SELECT id FROM runs WHERE status NOT IN ('succeeded','failed','cancelled') LIMIT 1").get(), "UPGRADE_SESSIONS_ACTIVE", "Durable state still records active or unresolved tasks/sessions");
+      if (tables.has("runtime_instances")) {
+        const instances = db.prepare("SELECT pid FROM runtime_instances").all() as { pid: number }[];
+        invariant(instances.length <= 1024 && instances.every(row => Number.isSafeInteger(row.pid) && row.pid > 0 && !processIsAlive(row.pid)), "UPGRADE_SESSIONS_ACTIVE", "A registered MCP instance still holds this state directory");
+      }
+      if (tables.has("leases")) {
+        const leases = db.prepare("SELECT pid FROM leases LIMIT 1025").all() as { pid: number }[];
+        invariant(leases.length <= 1024 && leases.every(row => Number.isSafeInteger(row.pid) && row.pid > 0 && !processIsAlive(row.pid)), "UPGRADE_SESSIONS_ACTIVE", "A live resource lease still owns this state");
+      }
+      if (tables.has("ui_log_sessions")) invariant(!db.prepare("SELECT run_id FROM ui_log_sessions WHERE state='running' LIMIT 1").get(), "UPGRADE_SESSIONS_ACTIVE", "Stop or resume and close continuous UI log sessions before maintenance");
+      if (tables.has("artifact_streams")) invariant(!db.prepare("SELECT id FROM artifact_streams LIMIT 1").get(), "UPGRADE_SESSIONS_ACTIVE", "Artifact writers must be drained before maintenance");
+      if (tables.has("operations")) invariant(!db.prepare("SELECT run_id FROM operations WHERE status='started' LIMIT 1").get(), "UPGRADE_SESSIONS_ACTIVE", "Resolve external effects without completion receipts before maintenance");
+      if (tables.has("native_directories")) invariant(!db.prepare("SELECT id FROM native_directories LIMIT 1").get(), "UPGRADE_SESSIONS_ACTIVE", "Close or recover native temporary directories before maintenance");
     } finally { db.close(); }
   }
   return { process_scan: "quiescent", checked_state_directories: stateDirectories.length, scope: "No live process references to selected installations/state and no unresolved supported durable sessions. Legacy detached SDK effects without durable identity cannot be reconstructed." };
+}
+
+export function processIsAlive(pid: number): boolean {
+  try { process.kill(pid, 0); return true; }
+  catch (error) { return (error as NodeJS.ErrnoException).code !== "ESRCH"; }
 }

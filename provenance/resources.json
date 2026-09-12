@@ -1032,7 +1032,7 @@
     },
     {
       "file": "resources/skills/deveco-native-tools/SKILL.md",
-      "sha256": "daaace0ef975ec290dc977a91b31cb05692cbeaaf54002bc4b26b55a56ca933b",
+      "sha256": "3085e67515c532bb592cfbb5dda44f0e316eee8056027618a32b7823c5f231d9",
       "source": "deveco-code-skills",
       "source_path": "packages/opencode/resources/skills/deveco-cli/SKILL.md",
       "source_sha256": "5402476093c5238ef466619f3971d21d54edba494ebc424e2e6581cb2b427ac7",
@@ -1040,10 +1040,10 @@
     },
     {
       "file": "resources/skills/deveco-native-tools/references/ui-testing.md",
-      "sha256": "8b0a276457378683727c1a73cf8eda49d5543ae670aaeae78a077cc340fd77f7",
+      "sha256": "4b8126d21ea194aab0a4fa25b49adb77f4308396965862400fae7e04e1ed9a77",
       "source": "deveco-tool",
       "source_path": "resources/skills/deveco-native-tools/references/ui-testing.md",
-      "source_sha256": "8b0a276457378683727c1a73cf8eda49d5543ae670aaeae78a077cc340fd77f7",
+      "source_sha256": "4b8126d21ea194aab0a4fa25b49adb77f4308396965862400fae7e04e1ed9a77",
       "transformation": "authored native host reference"
     },
     {
@@ -1064,10 +1064,10 @@
     },
     {
       "file": "resources/skills.json",
-      "sha256": "650cd9e691f207bba5c3cbd958c544f44843c000553f09da4a72031d7652c08b",
+      "sha256": "359426f834e3b6ba7087f4cb572d11fe22c9a4d77798217719a0a9da8d7d3f47",
       "source": "deveco-tool",
       "source_path": "resources/skills.json",
-      "source_sha256": "650cd9e691f207bba5c3cbd958c544f44843c000553f09da4a72031d7652c08b",
+      "source_sha256": "359426f834e3b6ba7087f4cb572d11fe22c9a4d77798217719a0a9da8d7d3f47",
       "transformation": "authored native skill catalog"
     }
   ]

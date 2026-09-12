@@ -1,0 +1,8 @@
+{
+  "format": 1,
+  "operation": "verify_ui.step_execution",
+  "checks": [
+    "Five real scoped UI actions click, select all, insert Chinese and emoji, hide the keyboard, and confirm; only the final control and host visual checks allow completion."
+  ],
+  "observation_sha256": "405109f7f95ebafaf004cdbbb73d7a319dafe527fe8e0fb0c033b824f72241cd"
+}

@@ -1,9 +1,11 @@
 ---
 name: deveco-native-tools
-description: Use native HarmonyOS MCP for device and emulator management, signing, UI inspection/control, natural-language UI tests, evidence recovery and HarmonyOS Skill management.
+description: Use native HarmonyOS MCP for device and emulator management, signing, UI tests, recording/replay, evidence recovery and built-in HarmonyOS knowledge.
 ---
 
 Inspect `deveco_doctor`, `device_info` and `workflow_catalog` for installed capabilities, explicit target identities and workflow schemas. Prefer a declared public Ability/Want route before UI exploration. Follow [UI testing](references/ui-testing.md) for natural-language test plans and visual requirements. Use `ui_snapshot` with mode=image for capture alone; `verify_ui` requires an assertion or a review requirement. An accepted command is not a verified application outcome.
+
+Launch and successful hot-patch paths perform a bounded startup check by default. Read commandAccepted, processVerified, startupVerified and outcomeVerified separately. A persistent solid screen or unavailable observation is inconclusive; allow_uniform and process_only require a matching app contract. A passed startup check still needs the user's business assertion or visual review. After an accepted launch or patch fails verification, inspect the saved run before resuming; do not start another deployment to hide the failure.
 
 For deterministic multi-step operations, use the catalog's workflow and keep run_id for status/resume/cancel. Run inputs capture their project, app and device; switching defaults does not retarget existing runs. Never pass recording-only mode to ui_flow run. Inspect ambiguous nodes using bundle/window/key/type; do not choose the first matching label. `Back` is a supported key name. Focus input uses ui_control action=text with a captured app window and exactly one editable focused field. inputText targets a selector or coordinates. Mouse actions require a supported native SDK and explicit app/window scope.
 

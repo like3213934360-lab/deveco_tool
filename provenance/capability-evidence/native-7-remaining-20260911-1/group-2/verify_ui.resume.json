@@ -1,0 +1,9 @@
+{
+  "format": 1,
+  "operation": "verify_ui.resume",
+  "checks": [
+    "After three accepted native actions, full MCP reconnect and public resume preserve the exact plan and action receipts without replay.",
+    "Resubmitting the same accepted attempt ID and operation returns the same three receipts; it does not inject the input again."
+  ],
+  "observation_sha256": "ae7768fbc882ff192b642a045edd5e9ec76fb78633e7542c09059dcfb64f742c"
+}

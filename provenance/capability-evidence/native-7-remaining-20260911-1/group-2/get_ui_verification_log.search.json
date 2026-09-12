@@ -1,0 +1,8 @@
+{
+  "format": 1,
+  "operation": "get_ui_verification_log.search",
+  "checks": [
+    "Public literal-keyword search paginates actual Chinese/emoji heartbeat lines with a 512-byte limit; this does not claim capture outside recorded bounded intervals."
+  ],
+  "observation_sha256": "f12203f5b23391e919a179c027d72d3fe2d3117bf14a78d1fc11dfd9040c9c7a"
+}

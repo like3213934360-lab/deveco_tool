@@ -1,0 +1,8 @@
+{
+  "format": 1,
+  "operation": "skill.search",
+  "checks": [
+    "Public ArkTS catalog search returns a nonempty set of bundled Skills."
+  ],
+  "observation_sha256": "61f409180796d3b27dafcd3b970febe4a7c8d96c665e346717e4181a6bbbc8f4"
+}

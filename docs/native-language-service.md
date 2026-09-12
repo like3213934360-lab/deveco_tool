@@ -17,15 +17,23 @@
 
 ## 输出边界
 
-输入和第三方响应都经过 Zod 校验。初始化声明不支持操作时返回 `LSP_CAPABILITY_UNAVAILABLE`；服务器选择非 UTF-16 编码返回 `LSP_POSITION_ENCODING_UNSUPPORTED`；畸形响应返回 `LSP_INVALID_RESPONSE`。请求超出文件范围返回 `LSP_INVALID_POSITION`。
+输入和第三方响应都经过 Zod 校验。一般语言按初始化能力声明检查；ArkTS 的五项符号/调用查询使用有界的实际请求兼容探测，因为当前 SDK 的声明与处理器不一致。`LSP_CAPABILITY_UNAVAILABLE.details` 区分本地能力声明拒绝与实际 JSON-RPC `-32601` 响应，前者不能证明服务没有该功能。服务器选择非 UTF-16 编码返回 `LSP_POSITION_ENCODING_UNSUPPORTED`；畸形响应返回 `LSP_INVALID_RESPONSE`。请求超出文件范围返回 `LSP_INVALID_POSITION`。
 
 悬停的 `null`、`{ "contents": [] }` 都是合法空结果，不作为执行失败。定义与实现保留 Location/LocationLink，引用支持 `includeDeclaration`，并在要求去除声明时核对语义定义位置。语言诊断标注 `checkKind: language-server`、`compilationVerified: false`。
 
-当前本机 SDK 26 的 ArkTS 服务未声明文档符号、工作区符号和调用层次能力，这五项均明确返回 `LSP_CAPABILITY_UNAVAILABLE`。SDK clangd 实测支持文档符号、工作区符号、准备调用层次和入调用；出调用返回 method-not-found，MCP 同样明确报告不支持。接口覆盖这些操作不代表每个 SDK 服务都能执行它们，也不会用文本搜索或空数组代替不支持结果。
+诊断按服务声明选择拉取或推送：声明 `diagnosticProvider` 时，在同步已打开文件后发送 `textDocument/diagnostic`，要求完整报告；未声明时等待 `publishDiagnostics`。结果包含 `diagnostic_transport: pull | push`。拉取请求每次要求新报告，不复用依赖变更前的 resultId；错误、超时、无依据的 unchanged 或 null 报告不会转换为空诊断。当前 SDK 26 在受控探测中不发送诊断通知，却能拉取到类型错误及修复后的空报告；旧实现仅等待推送，存在 `DIAGNOSTICS_TIMEOUT` 缺陷。协议参考为 [Microsoft 的诊断客户端实现](https://github.com/microsoft/vscode-languageserver-node/blob/main/client/src/common/diagnostic.ts)，具体可用性以本机原始请求及公共 MCP 验收为准。
+
+0.3.0 将 SDK 26 的 ArkTS 能力声明当成最终支持结论，提前拒绝了上述五项查询。2026-09-11 原始协议审计已证明五项处理器实际存在；下一版本候选通过公共 MCP 对真实 ArkTS 服务验证了非空结果、LF/CRLF、UTF-16、多次跨文件调用和重启，扩展用例及最终发布身份状态见[剩余能力进度](remaining-release-progress.md)。SDK clangd 的出调用仍需单独记录实际 `method-not-found`，不能用 C++ 的支持情况替代 ArkTS 验收。
+
+ArkTS 边界先规范化已知协议字段中的绝对路径为文件 URI，再校验结构；不改写 `item.data`。SDK 将跨文件出调用的调用点偏移按被调用文件映射，候选通过同一服务的反向入调用，以调用者 URI、选择范围及调用数一致性校正。无法取得一致语义关系时返回 `LSP_CALL_RANGE_UNVERIFIED`，并保留原始范围，不能猜测行号或按名称搜索来制造调用关系。
+
+SDK 的类方法出调用还会重复列出同一个属性访问表达式。候选对跨文件或有重复坐标的关系查询反向入调用，要求调用者身份一致、调用点数量与原始总数或原始不同坐标数一致，才采用反向报告的精确方法名范围。原始四条重复范围会保留在证据中，不能仅删除重复项便声称坐标已正确。
+
+扩展审计还发现，命名箭头函数的 SDK `range` 只覆盖表达式，`selectionRange` 指向表达式前面的变量名。候选只在同一文档的符号查询确认完全相同的变量名选择范围、各坐标均在当前文档边界内时，合并变量名和函数表达式的包围范围；保留 `extentEvidence.originalRange`，不移动名称或调用点坐标。无法确认时返回 `LSP_CALL_EXTENT_UNVERIFIED`。其他畸形范围和 C++ 的严格结构校验保持不变。上述扩展、拉取诊断、取消和重启已由 `native-7-remaining-lsp-mcp-20260911-7` 真实公共 MCP 验证；最终发布包须另行核验。
 
 ## 证据
 
-0.3.0 候选的当前证据为持久化目录 `native-7-sdk-final-lock-20260910-4`、`native-7-symbol-final-lock-20260910-4` 和 `native-7-multimodule-final-lock-20260910-4`：SDK 集成 26 项、多模块 45 项均通过，新增操作逐项记录实际支持与不支持结果。对应运行时 `5e5aa855…`、编译摘要 `4c6668ee…`。下面列出的旧提交和临时目录仅保留历史上下文；早期临时原始文件现已丢失。
+0.3.0 的历史证据位于持久化目录 `native-7-sdk-final-lock-20260910-4`、`native-7-symbol-final-lock-20260910-4` 和 `native-7-multimodule-final-lock-20260910-4`。其中 SDK 集成 26 项、多模块 45 项的通过结果不代表 ArkTS 五项新增操作已执行：旧符号验收把部分本地拒绝记成不支持，相关证据分类已列为待修复缺陷。历史运行时为 `5e5aa855…`、编译摘要 `4c6668ee…`；不能用它们证明候选改动已通过。下面旧提交和临时目录也仅保留历史上下文；早期临时原始文件现已丢失。
 
 - `test/native-lsp.test.ts`：四组边界测试，覆盖实现链接、同文件路径、UTF-16/换行/空文件、无结果/无能力/畸形响应、变更后诊断及非法通知。
 - `test/native-runtime.test.ts`：Unicode 文件同步、两种定义格式的声明过滤、LRU、排队取消。

@@ -107,11 +107,10 @@ test("migration acceptance requires all scenarios and current executed checks, i
 });
 
 
-test("repeated maintenance keeps the original historical execution instead of a carried context", () => {
+test("repeated maintenance requires current execution and preserves the original historical receipt", () => {
   const f = fixture("scripts/fixture.ts");
   try {
     const scope = JSON.parse(fs.readFileSync(path.join(packageRoot, `provenance/release-scope-${release}.json`), "utf8"));
-    scope.upstream_historical_checks = ["scripts/fixture.ts"];
     f.write(`provenance/release-scope-${release}.json`, scope);
     const first = f.evidence("original");
     acceptBaseline(f.root, "one", first);
@@ -121,19 +120,31 @@ test("repeated maintenance keeps the original historical execution instead of a 
     plan.source.acceptance = "verified";
     atomicWrite(path.join(f.root, "dist/src/fixture.js"), "// first maintenance runtime\n");
     const firstRefresh = refreshBaseline(f.root, plan);
-    // Force the newer carried receipt to sort before the original in the next pass.
-    fs.renameSync(path.join(f.root, firstRefresh.history), path.join(f.root, "provenance/upstream-review-history/one/000-original"));
-    acceptBaseline(f.root, "one", { checks: f.evidence(`maintenance-${fileDigest(path.join(f.root, "dist/src/fixture.js"))}`).checks.filter((item) => item.check === "test/current.test.ts") });
+    const archivedReceipt = path.join(f.root, firstRefresh.history, "baseline/accepted.json");
+    const archivedBytes = fs.readFileSync(archivedReceipt, "utf8");
+    const incomplete = { checks: f.evidence("incomplete").checks.filter((item) => item.check === "test/current.test.ts") };
+    assert.throws(() => acceptBaseline(f.root, "one", incomplete), { code: "UPSTREAM_TEST_MISSING" });
+    assert.equal(fs.existsSync(path.join(directory, "accepted.json")), false);
+    // Copying an old authorization into the current policy filename cannot
+    // authorize a new release to carry the old execution forward.
+    const historical = JSON.parse(fs.readFileSync(path.join(packageRoot, "provenance/release-scope-0.3.0.json"), "utf8"));
+    historical.upstream_historical_checks = ["scripts/fixture.ts"];
+    f.write(`provenance/release-scope-${release}.json`, historical);
+    assert.throws(() => acceptBaseline(f.root, "one", incomplete), { code: "RELEASE_SCOPE_STALE" });
+    f.write(`provenance/release-scope-${release}.json`, scope);
+    acceptBaseline(f.root, "one", f.evidence("first-maintenance"));
     atomicWrite(path.join(f.root, "dist/src/fixture.js"), "// second maintenance runtime\n");
     refreshBaseline(f.root, plan);
-    acceptBaseline(f.root, "one", { checks: f.evidence(`maintenance-${fileDigest(path.join(f.root, "dist/src/fixture.js"))}`).checks.filter((item) => item.check === "test/current.test.ts") });
+    const current = f.evidence("second-maintenance");
+    assert.throws(() => acceptBaseline(f.root, "one", { checks: current.checks.filter((item) => item.check === "test/current.test.ts") }), { code: "UPSTREAM_TEST_MISSING" });
+    acceptBaseline(f.root, "one", current);
     const accepted = JSON.parse(fs.readFileSync(path.join(directory, "accepted.json"), "utf8"));
-    const carried = accepted.checks.find((item: { check: string }) => item.check === "scripts/fixture.ts");
-    const attestation = JSON.parse(fs.readFileSync(path.join(directory, carried.report), "utf8"));
-    assert.equal(attestation.format, 2);
-    assert.deepEqual(attestation.execution_tested, original.tested);
-    assert.notDeepEqual(attestation.accepted_context, original.tested);
-    assert.equal(attestation.original_sha256, first.checks[0]!.sha256);
-    assert.equal(attestation.prior_attestation_sha256, original.checks.find((item: { check: string }) => item.check === "scripts/fixture.ts").sha256);
+    const executed = accepted.checks.find((item: { check: string }) => item.check === "scripts/fixture.ts");
+    const attestation = JSON.parse(fs.readFileSync(path.join(directory, executed.report), "utf8"));
+    assert.equal(attestation.format, 1);
+    assert.deepEqual(attestation.tested, accepted.tested);
+    assert.notDeepEqual(attestation.tested, original.tested);
+    assert.equal(attestation.original_sha256, current.checks[0]!.sha256);
+    assert.equal(fs.readFileSync(archivedReceipt, "utf8"), archivedBytes);
   } finally { fs.rmSync(f.root, { recursive: true, force: true }); }
 });

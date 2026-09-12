@@ -29,6 +29,7 @@ export {
 } from "../core/contracts.js";
 import type { Project } from "./project.js";
 import { withinDeadline } from "../core/deadline.js";
+import { flowControl, resolveControl, uiInputArguments } from "./ui-control.js";
 
 export class FlowService {
   constructor(
@@ -197,7 +198,7 @@ export class FlowService {
         `Missing flow variable: ${name}`,
       );
     for (const step of flow.steps)
-      if (step.action === "input")
+      if (step.action === "input" || step.action === "focusInput")
         invariant(
           Object.hasOwn(variables, step.value!.slice(2, -1)),
           "FLOW_VARIABLE_REQUIRED",
@@ -236,7 +237,13 @@ export class FlowService {
               }
               const prepared = await this.store.privateMemo("step", { step, variables, bundle: flow.app.bundleName }, async () => {
                 let selector = step.selector, repaired = false;
-                const surface = await this.surface(target, flow.app.bundleName, step.timeoutMs, signal), application = surface.nodes;
+                const surface = await this.surface(target, flow.app.bundleName, step.timeoutMs, signal);
+                const windows = step.scope ? surface.nodes.filter(node => isWindowSurface(node) && node.rect && node.visible !== false && node.focused !== false &&
+                  node.type === step.scope!.window_type && (step.scope!.display_id === undefined || node.displayId === String(step.scope!.display_id)) &&
+                  (!step.scope!.ability_name || node.abilityName === step.scope!.ability_name)) : [];
+                invariant(!step.scope || windows.length === 1, "FLOW_WINDOW_AMBIGUOUS", "Recorded window scope must resolve to exactly one focused application window");
+                const window = windows[0];
+                const application = window ? surface.nodes.filter(node => node.windowId === window.windowId && node.displayId === window.displayId) : surface.nodes;
                     if (
                       selector &&
                       ![
@@ -246,7 +253,7 @@ export class FlowService {
                         "assertHidden",
                       ].includes(step.action)
                     ) {
-                      const snapshot = { ...surface, nodes: application },
+                      const snapshot = { ...surface, nodes: application, query: new UiIndex(application) },
                         primary = snapshot.query.select({
                           ...selector,
                           limit: 2,
@@ -309,15 +316,24 @@ export class FlowService {
                         );
                     }
 
-                const action = step.action === "tap" ? "click" : step.action === "doubleTap" ? "doubleClick" : step.action === "longTap" ? "longClick" : step.action === "input" ? "inputText" : step.action === "key" ? "keyEvent" : step.action;
-                const control = controlSchema.parse({ action,
-                  ...(selector ? { selector: { ...selector, bundle_name: flow.app.bundleName } } : {}),
-                  window: { bundle_name: flow.app.bundleName },
-                  ...(step.point ? { point: step.point } : {}),
-                  ...(step.gesture ? { gesture: step.gesture } : {}),
-                  ...(step.action === "key" ? { keys: [step.key] } : {}),
-                  ...(step.action === "input" ? { text: variables[step.value!.slice(2, -1)] } : {}),
-                });
+                const control = flowControl(step, flow.app.bundleName, variables, selector, window?.windowId ?? undefined);
+                if (step.action === "focusInput") {
+                  invariant(window && selector, "FLOW_FOCUS_REQUIRED", "Focused input needs a captured field and window");
+                  const fields = new UiIndex(application).select({ ...selector, limit: 2 });
+                  invariant(fields.length === 1 && fields[0]?.enabled !== false && /TextInput|TextArea|Search/.test(fields[0]!.type), "FLOW_FOCUS_AMBIGUOUS", "Recorded input selector must identify one enabled editable field");
+                  if (fields[0]!.focused !== true) {
+                    await withTrace({ node: `${currentTrace().node}:restore-focus` }, () => this.devices.control(target, {
+                      action: "click", selector: { ...selector, bundle_name: flow.app.bundleName }, window: control.window, display_id: control.display_id,
+                    }, signal));
+                  }
+                  this.devices.invalidate(target);
+                  const focused = await this.devices.snapshot(target, signal);
+                  const observed = focused.query.select({ ...selector, bundle_name: flow.app.bundleName,
+                    ...(window.windowId === null ? {} : { window_id: window.windowId }),
+                    ...(window.displayId === null ? {} : { displayId: window.displayId }), limit: 2 });
+                  invariant(observed.length === 1 && observed[0]?.focused === true, "FLOW_FOCUS_NOT_RESTORED", "Recorded field did not acquire focus; no text was sent");
+                  uiInputArguments(resolveControl(control, focused));
+                }
                 const image = await this.progressFrame(target, surface.nodes, signal);
                 return { control, repaired, selector, before_signature: digest(surface.nodes), before_frame: image.progress_signature };
               }, (value) => z.object({ control: controlSchema, repaired: z.boolean(), selector: meaningfulSelector.optional(), before_signature: z.string(), before_frame: z.string() }).parse(value));

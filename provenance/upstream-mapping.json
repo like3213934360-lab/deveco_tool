@@ -480,18 +480,27 @@
       "path": "src/apply/",
       "prefix": true,
       "disposition": "adapt",
-      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "reason": "Review normal deployment, Apply launch failure and startup-check placement against durable native installation/launch receipts, preparation failures, hot-patch outcome checks and cancellation without duplicate side effects.",
       "targets": [
         "src/services/hotreload.ts",
         "src/services/project.ts",
         "src/services/runtime.ts",
-        "scripts/native-hot-target-prepare.ts"
+        "scripts/native-hot-target-prepare.ts",
+        "src/services/startup-check.ts",
+        "src/services/device.ts",
+        "src/core/contracts.ts",
+        "docs/upstream-cli-startup-review.md"
       ],
       "tests": [
         "test/native-hotreload.test.ts",
         "test/native-context.test.ts",
         "test/native-project-recovery.test.ts",
-        "scripts/native-hot-device-acceptance.ts"
+        "scripts/native-hot-device-acceptance.ts",
+        "test/native-startup-check.test.ts",
+        "test/native-device-recovery.test.ts",
+        "test/native-hot-preparation.test.ts",
+        "scripts/native-startup-fault-mcp-acceptance.ts",
+        "scripts/native-hot-outcome-mcp-acceptance.ts"
       ]
     },
     {
@@ -704,12 +713,15 @@
       "path": "src/commands/init.ts",
       "prefix": false,
       "disposition": "adapt",
-      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "reason": "The changed dsh/Qoder client installation routes are outside the owner-approved product: knowledge and Skills are supplied by MCP, with no client Skill installation or upstream MCP subprocess. Preserve native host configuration maintenance separately.",
       "targets": [
-        "src/services/project.ts"
+        "docs/builtin-skill-workflows.md",
+        "src/maintenance/host-config.ts",
+        "docs/upstream-cli-startup-review.md"
       ],
       "tests": [
-        "test/native-project.test.ts"
+        "test/native-skills.test.ts",
+        "test/native-compatible-upgrade.test.ts"
       ]
     },
     {
@@ -718,16 +730,25 @@
       "path": "src/commands/run.ts",
       "prefix": false,
       "disposition": "adapt",
-      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "reason": "Review normal deployment, Apply launch failure and startup-check placement against durable native installation/launch receipts, preparation failures, hot-patch outcome checks and cancellation without duplicate side effects.",
       "targets": [
         "src/services/device.ts",
         "src/services/project.ts",
-        "src/services/runtime.ts"
+        "src/services/runtime.ts",
+        "src/services/startup-check.ts",
+        "src/services/hotreload.ts",
+        "src/core/contracts.ts",
+        "docs/upstream-cli-startup-review.md"
       ],
       "tests": [
         "test/native-flow.test.ts",
         "test/native-context.test.ts",
-        "scripts/native-multimodule-acceptance.ts"
+        "scripts/native-multimodule-acceptance.ts",
+        "test/native-startup-check.test.ts",
+        "test/native-device-recovery.test.ts",
+        "test/native-hot-preparation.test.ts",
+        "scripts/native-startup-fault-mcp-acceptance.ts",
+        "scripts/native-hot-outcome-mcp-acceptance.ts"
       ]
     },
     {
@@ -953,13 +974,17 @@
       "path": "src/commands/ui-screenshot.ts",
       "prefix": false,
       "disposition": "adapt",
-      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "reason": "Review shared screenshot capture extraction against native capture, typed display scope, owned temporary cleanup and artifact export; do not import upstream executable code.",
       "targets": [
-        "src/services/device.ts"
+        "src/services/device.ts",
+        "src/services/screenshot.ts",
+        "src/services/storage.ts",
+        "docs/upstream-cli-startup-review.md"
       ],
       "tests": [
-        "test/native-flow.test.ts",
-        "test/native-text.test.ts"
+        "test/native-screenshot.test.ts",
+        "test/native-storage.test.ts",
+        "scripts/native-startup-fault-mcp-acceptance.ts"
       ]
     },
     {
@@ -2330,7 +2355,9 @@
       "targets": [
         "docs/builtin-skill-workflows.md",
         "docs/upstream-cli-checker-review.md",
-        "provenance/SOURCES.md"
+        "provenance/SOURCES.md",
+        "docs/upstream-cli-startup-review.md",
+        "docs/native-ui-workflows.md"
       ],
       "tests": [
         "test/native-skills.test.ts",
@@ -2347,7 +2374,9 @@
       "targets": [
         "resources/skills/deveco-native-tools/SKILL.md",
         "resources/skills/deveco-arkts-errors/SKILL.md",
-        "docs/upstream-cli-checker-review.md"
+        "docs/upstream-cli-checker-review.md",
+        "docs/upstream-cli-startup-review.md",
+        "docs/native-ui-workflows.md"
       ],
       "tests": [
         "test/native-skills.test.ts",
@@ -2361,6 +2390,276 @@
       "prefix": false,
       "disposition": "exclude",
       "reason": "This change only excludes generated dist and upstream resource scripts from the upstream repository development linter. Native shipped lint behavior uses its own SDK service.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "id": "cli-startup-smoke",
+      "source": "deveco-cli",
+      "path": "src/smoke/",
+      "prefix": true,
+      "disposition": "adapt",
+      "reason": "Adapt post-launch liveness and application-window checks with bounded observations, explicit uncertain outcomes, owned evidence retention and cancellation; upstream null screenshots or failed process probes must not become native success.",
+      "targets": [
+        "src/services/startup-check.ts",
+        "src/services/device.ts",
+        "src/services/hotreload.ts",
+        "src/services/runtime.ts",
+        "src/core/contracts.ts",
+        "docs/upstream-cli-startup-review.md"
+      ],
+      "tests": [
+        "test/native-startup-check.test.ts",
+        "test/native-device-recovery.test.ts",
+        "test/native-hot-preparation.test.ts",
+        "scripts/native-startup-fault-mcp-acceptance.ts",
+        "scripts/native-hot-outcome-mcp-acceptance.ts"
+      ]
+    },
+    {
+      "id": "cli-startup-transport-cmd.ts",
+      "source": "deveco-cli",
+      "path": "src/utils/cmd.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Preserve empty pidof output and full-bundle identity; distinguish confirmed exit, transport failure and unavailable crash evidence. Native process handling and bounded startup reports must retain these distinctions.",
+      "targets": [
+        "src/core/process.ts",
+        "src/services/device.ts",
+        "src/services/startup-check.ts",
+        "src/services/logs.ts",
+        "docs/upstream-cli-startup-review.md"
+      ],
+      "tests": [
+        "test/native-infrastructure.test.ts",
+        "test/native-device-recovery.test.ts",
+        "test/native-startup-check.test.ts",
+        "test/native-logs.test.ts",
+        "scripts/native-startup-fault-mcp-acceptance.ts"
+      ]
+    },
+    {
+      "id": "cli-startup-transport-hdc-adapter.ts",
+      "source": "deveco-cli",
+      "path": "src/utils/hdc-adapter.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Preserve empty pidof output and full-bundle identity; distinguish confirmed exit, transport failure and unavailable crash evidence. Native process handling and bounded startup reports must retain these distinctions.",
+      "targets": [
+        "src/core/process.ts",
+        "src/services/device.ts",
+        "src/services/startup-check.ts",
+        "src/services/logs.ts",
+        "docs/upstream-cli-startup-review.md"
+      ],
+      "tests": [
+        "test/native-infrastructure.test.ts",
+        "test/native-device-recovery.test.ts",
+        "test/native-startup-check.test.ts",
+        "test/native-logs.test.ts",
+        "scripts/native-startup-fault-mcp-acceptance.ts"
+      ]
+    },
+    {
+      "id": "cli-startup-transport-hdc-adapter.test.ts",
+      "source": "deveco-cli",
+      "path": "src/utils/hdc-adapter.test.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Preserve empty pidof output and full-bundle identity; distinguish confirmed exit, transport failure and unavailable crash evidence. Native process handling and bounded startup reports must retain these distinctions.",
+      "targets": [
+        "src/core/process.ts",
+        "src/services/device.ts",
+        "src/services/startup-check.ts",
+        "src/services/logs.ts",
+        "docs/upstream-cli-startup-review.md"
+      ],
+      "tests": [
+        "test/native-infrastructure.test.ts",
+        "test/native-device-recovery.test.ts",
+        "test/native-startup-check.test.ts",
+        "test/native-logs.test.ts",
+        "scripts/native-startup-fault-mcp-acceptance.ts"
+      ]
+    },
+    {
+      "id": "cli-startup-transport-hdc-param.ts",
+      "source": "deveco-cli",
+      "path": "src/utils/hdc-param.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Preserve empty pidof output and full-bundle identity; distinguish confirmed exit, transport failure and unavailable crash evidence. Native process handling and bounded startup reports must retain these distinctions.",
+      "targets": [
+        "src/core/process.ts",
+        "src/services/device.ts",
+        "src/services/startup-check.ts",
+        "src/services/logs.ts",
+        "docs/upstream-cli-startup-review.md"
+      ],
+      "tests": [
+        "test/native-infrastructure.test.ts",
+        "test/native-device-recovery.test.ts",
+        "test/native-startup-check.test.ts",
+        "test/native-logs.test.ts",
+        "scripts/native-startup-fault-mcp-acceptance.ts"
+      ]
+    },
+    {
+      "id": "cli-startup-transport-hdc-param.test.ts",
+      "source": "deveco-cli",
+      "path": "src/utils/hdc-param.test.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Preserve empty pidof output and full-bundle identity; distinguish confirmed exit, transport failure and unavailable crash evidence. Native process handling and bounded startup reports must retain these distinctions.",
+      "targets": [
+        "src/core/process.ts",
+        "src/services/device.ts",
+        "src/services/startup-check.ts",
+        "src/services/logs.ts",
+        "docs/upstream-cli-startup-review.md"
+      ],
+      "tests": [
+        "test/native-infrastructure.test.ts",
+        "test/native-device-recovery.test.ts",
+        "test/native-startup-check.test.ts",
+        "test/native-logs.test.ts",
+        "scripts/native-startup-fault-mcp-acceptance.ts"
+      ]
+    },
+    {
+      "id": "cli-startup-transport-hilog-adapter.ts",
+      "source": "deveco-cli",
+      "path": "src/utils/hilog-adapter.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Preserve empty pidof output and full-bundle identity; distinguish confirmed exit, transport failure and unavailable crash evidence. Native process handling and bounded startup reports must retain these distinctions.",
+      "targets": [
+        "src/core/process.ts",
+        "src/services/device.ts",
+        "src/services/startup-check.ts",
+        "src/services/logs.ts",
+        "docs/upstream-cli-startup-review.md"
+      ],
+      "tests": [
+        "test/native-infrastructure.test.ts",
+        "test/native-device-recovery.test.ts",
+        "test/native-startup-check.test.ts",
+        "test/native-logs.test.ts",
+        "scripts/native-startup-fault-mcp-acceptance.ts"
+      ]
+    },
+    {
+      "id": "cli-shared-screenshot-directory",
+      "source": "deveco-cli",
+      "path": "src/ui/screenshot/",
+      "prefix": true,
+      "disposition": "adapt",
+      "reason": "Review shared screenshot capture extraction against native capture, typed display scope, owned temporary cleanup and artifact export; do not import upstream executable code.",
+      "targets": [
+        "src/services/device.ts",
+        "src/services/screenshot.ts",
+        "src/services/storage.ts",
+        "docs/upstream-cli-startup-review.md"
+      ],
+      "tests": [
+        "test/native-screenshot.test.ts",
+        "test/native-storage.test.ts",
+        "scripts/native-startup-fault-mcp-acceptance.ts"
+      ]
+    },
+    {
+      "id": "cli-shared-screenshot-exports",
+      "source": "deveco-cli",
+      "path": "src/ui/index.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "Review shared screenshot capture extraction against native capture, typed display scope, owned temporary cleanup and artifact export; do not import upstream executable code.",
+      "targets": [
+        "src/services/device.ts",
+        "src/services/screenshot.ts",
+        "src/services/storage.ts",
+        "docs/upstream-cli-startup-review.md"
+      ],
+      "tests": [
+        "test/native-screenshot.test.ts",
+        "test/native-storage.test.ts",
+        "scripts/native-startup-fault-mcp-acceptance.ts"
+      ]
+    },
+    {
+      "id": "cli-client-skill-config",
+      "source": "deveco-cli",
+      "path": "src/config/skills.ts",
+      "prefix": false,
+      "disposition": "adapt",
+      "reason": "The changed dsh/Qoder client installation routes are outside the owner-approved product: knowledge and Skills are supplied by MCP, with no client Skill installation or upstream MCP subprocess. Preserve native host configuration maintenance separately.",
+      "targets": [
+        "docs/builtin-skill-workflows.md",
+        "src/maintenance/host-config.ts",
+        "docs/upstream-cli-startup-review.md"
+      ],
+      "tests": [
+        "test/native-skills.test.ts",
+        "test/native-compatible-upgrade.test.ts"
+      ]
+    },
+    {
+      "id": "cli-maintainer-AGENTS-md",
+      "source": "deveco-cli",
+      "path": "AGENTS.md",
+      "prefix": false,
+      "disposition": "exclude",
+      "reason": "Reviewed repository-maintainer instructions and development Skills; upstream AGENTS explicitly separates these from the published root product Skill. They add no shipped user tool. Exclude only this known path, retaining unknown-path guards.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "id": "cli-maintainer--agents-skills-deveco-check-changes-SKILL-md",
+      "source": "deveco-cli",
+      "path": ".agents/skills/deveco-check-changes/SKILL.md",
+      "prefix": false,
+      "disposition": "exclude",
+      "reason": "Reviewed repository-maintainer instructions and development Skills; upstream AGENTS explicitly separates these from the published root product Skill. They add no shipped user tool. Exclude only this known path, retaining unknown-path guards.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "id": "cli-maintainer--agents-skills-deveco-code-review-SKILL-md",
+      "source": "deveco-cli",
+      "path": ".agents/skills/deveco-code-review/SKILL.md",
+      "prefix": false,
+      "disposition": "exclude",
+      "reason": "Reviewed repository-maintainer instructions and development Skills; upstream AGENTS explicitly separates these from the published root product Skill. They add no shipped user tool. Exclude only this known path, retaining unknown-path guards.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "id": "cli-maintainer--agents-skills-deveco-docs-and-prose-SKILL-md",
+      "source": "deveco-cli",
+      "path": ".agents/skills/deveco-docs-and-prose/SKILL.md",
+      "prefix": false,
+      "disposition": "exclude",
+      "reason": "Reviewed repository-maintainer instructions and development Skills; upstream AGENTS explicitly separates these from the published root product Skill. They add no shipped user tool. Exclude only this known path, retaining unknown-path guards.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "id": "cli-maintainer--agents-skills-deveco-find-simplifications-SKILL-md",
+      "source": "deveco-cli",
+      "path": ".agents/skills/deveco-find-simplifications/SKILL.md",
+      "prefix": false,
+      "disposition": "exclude",
+      "reason": "Reviewed repository-maintainer instructions and development Skills; upstream AGENTS explicitly separates these from the published root product Skill. They add no shipped user tool. Exclude only this known path, retaining unknown-path guards.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "id": "cli-maintainer--agents-skills-deveco-test-reliability-SKILL-md",
+      "source": "deveco-cli",
+      "path": ".agents/skills/deveco-test-reliability/SKILL.md",
+      "prefix": false,
+      "disposition": "exclude",
+      "reason": "Reviewed repository-maintainer instructions and development Skills; upstream AGENTS explicitly separates these from the published root product Skill. They add no shipped user tool. Exclude only this known path, retaining unknown-path guards.",
       "targets": [],
       "tests": []
     }

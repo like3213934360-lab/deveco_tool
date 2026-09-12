@@ -1,0 +1,9 @@
+{
+  "format": 1,
+  "operation": "debug_exit.execute",
+  "checks": [
+    "The builtin debug workflow rejects cancelled evidence and completes only with a fresh successful UI test matching its captured app and target.",
+    "The retained client assessment and native UI evidence stay distinct; debug workflow completion does not claim arbitrary prose verification or alter host system mode."
+  ],
+  "observation_sha256": "a66009a6e7e8d8b009a8e145b7a4129f1f51292597019c1e37efe79caf03d220"
+}

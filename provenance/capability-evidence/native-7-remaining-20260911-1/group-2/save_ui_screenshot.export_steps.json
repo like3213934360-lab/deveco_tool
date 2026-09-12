@@ -1,0 +1,8 @@
+{
+  "format": 1,
+  "operation": "save_ui_screenshot.export_steps",
+  "checks": [
+    "Public completed-test export contains multiple real screenshots; manifest, events and every artifact byte count and SHA are independently verified from the exported files."
+  ],
+  "observation_sha256": "8fa892d7b5200f16ebcbb36828363b9a683ab728d0df264391fd580b014e3d66"
+}

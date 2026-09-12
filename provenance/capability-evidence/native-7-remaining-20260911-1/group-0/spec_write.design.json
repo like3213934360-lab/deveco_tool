@@ -1,0 +1,8 @@
+{
+  "format": 1,
+  "operation": "spec_write.design",
+  "checks": [
+    "Public plan.md design write retains Technical Context and Project Structure in the specification workflow."
+  ],
+  "observation_sha256": "edcb26dea5ea6076bc703ab47ea837dc26afc95abcb25271501ab976eb3124c5"
+}

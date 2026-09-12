@@ -1,12 +1,12 @@
 {
-  "format": 1,
+  "format": 2,
   "source": {
     "url": "https://gitcode.com/openharmony-sig/deveco-code",
     "commit": "aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a",
     "registry_file": "packages/opencode/src/tool/registry.ts",
     "registry_sha256": "b171bf1fa1501d1a1b34a3f74751c0e16c470311326c55d32ed9e6ff7efda110"
   },
-  "scope": "All registered upstream tools and operations are inventoried. Native SDK/tools and builtin Skill workflows are delivered by MCP; generic client editing/reasoning capabilities are explicit requirements. Per owner decision, client Skill installation is intentionally unsupported because all Skills and knowledge ship within MCP.",
+  "scope": "Inventory of the reviewed upstream registry. Required native and MCP-guided operations need current successful public MCP execution in every required scope; host delivery contracts and the owner decision to keep Skills inside MCP are separate boundaries. Historical format-1 evidence remains immutable and cannot qualify the next release.",
   "tools": [
     {
       "tool": "invalid",
@@ -21,21 +21,26 @@
             "error"
           ],
           "replacement": "MCP schema rejection / structured ToolError",
-          "status": "verified",
+          "disposition": "client_required",
+          "policy": "host-general-tools",
+          "implementation": "not_applicable",
+          "acceptance": "boundary_verified",
+          "required_scopes": [],
           "targets": [
             "docs/builtin-skill-workflows.md"
           ],
           "tests": [
-            "test/native-upstream-capabilities.test.ts"
+            "test/native-upstream-capabilities.test.ts",
+            "scripts/native-capability-ui-mcp-acceptance.ts"
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/dce086fcec9169f729989038fdefe9245d814fbd2dc5e8b436b86198dcf07f45.json",
-              "sha256": "dce086fcec9169f729989038fdefe9245d814fbd2dc5e8b436b86198dcf07f45",
+              "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-2/report.json",
+              "sha256": "dacf0eef3b8a1837d75f6208a67c6365a5112dc563e7b5128a930eb43c94be62",
               "case": "invalid.execute"
             }
           ],
-          "boundary": "Host owns model reasoning and permissions. DevEco Code session internals are not copied. This is a declared client capability requirement, not an MCP-native tool implementation; client-specific behavior requires separate acceptance."
+          "boundary": "The reviewed product contract assigns generic reasoning, file editing, search, questions and delegation to the connected host client. The actual MCP catalog exposes domain tools and guided completion gates; this boundary observation does not claim native implementation or successful execution by every AI client."
         }
       ]
     },
@@ -54,21 +59,26 @@
             "workdir"
           ],
           "replacement": "Client-provided exec_command / write_stdin, scoped workdir",
-          "status": "verified",
+          "disposition": "client_required",
+          "policy": "host-general-tools",
+          "implementation": "not_applicable",
+          "acceptance": "boundary_verified",
+          "required_scopes": [],
           "targets": [
             "docs/builtin-skill-workflows.md"
           ],
           "tests": [
-            "test/native-upstream-capabilities.test.ts"
+            "test/native-upstream-capabilities.test.ts",
+            "scripts/native-capability-ui-mcp-acceptance.ts"
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/dce086fcec9169f729989038fdefe9245d814fbd2dc5e8b436b86198dcf07f45.json",
-              "sha256": "dce086fcec9169f729989038fdefe9245d814fbd2dc5e8b436b86198dcf07f45",
+              "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-2/report.json",
+              "sha256": "dacf0eef3b8a1837d75f6208a67c6365a5112dc563e7b5128a930eb43c94be62",
               "case": "shell.execute"
             }
           ],
-          "boundary": "Host owns model reasoning and permissions. DevEco Code session internals are not copied. This is a declared client capability requirement, not an MCP-native tool implementation; client-specific behavior requires separate acceptance."
+          "boundary": "The reviewed product contract assigns generic reasoning, file editing, search, questions and delegation to the connected host client. The actual MCP catalog exposes domain tools and guided completion gates; this boundary observation does not claim native implementation or successful execution by every AI client."
         }
       ]
     },
@@ -86,21 +96,26 @@
             "limit"
           ],
           "replacement": "Client-provided filesystem read / image inspection with bounded content",
-          "status": "verified",
+          "disposition": "client_required",
+          "policy": "host-general-tools",
+          "implementation": "not_applicable",
+          "acceptance": "boundary_verified",
+          "required_scopes": [],
           "targets": [
             "docs/builtin-skill-workflows.md"
           ],
           "tests": [
-            "test/native-upstream-capabilities.test.ts"
+            "test/native-upstream-capabilities.test.ts",
+            "scripts/native-capability-ui-mcp-acceptance.ts"
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/dce086fcec9169f729989038fdefe9245d814fbd2dc5e8b436b86198dcf07f45.json",
-              "sha256": "dce086fcec9169f729989038fdefe9245d814fbd2dc5e8b436b86198dcf07f45",
+              "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-2/report.json",
+              "sha256": "dacf0eef3b8a1837d75f6208a67c6365a5112dc563e7b5128a930eb43c94be62",
               "case": "read.execute"
             }
           ],
-          "boundary": "Host owns model reasoning and permissions. DevEco Code session internals are not copied. This is a declared client capability requirement, not an MCP-native tool implementation; client-specific behavior requires separate acceptance."
+          "boundary": "The reviewed product contract assigns generic reasoning, file editing, search, questions and delegation to the connected host client. The actual MCP catalog exposes domain tools and guided completion gates; this boundary observation does not claim native implementation or successful execution by every AI client."
         }
       ]
     },
@@ -117,21 +132,26 @@
             "path"
           ],
           "replacement": "Client-provided rg --files with file glob",
-          "status": "verified",
+          "disposition": "client_required",
+          "policy": "host-general-tools",
+          "implementation": "not_applicable",
+          "acceptance": "boundary_verified",
+          "required_scopes": [],
           "targets": [
             "docs/builtin-skill-workflows.md"
           ],
           "tests": [
-            "test/native-upstream-capabilities.test.ts"
+            "test/native-upstream-capabilities.test.ts",
+            "scripts/native-capability-ui-mcp-acceptance.ts"
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/dce086fcec9169f729989038fdefe9245d814fbd2dc5e8b436b86198dcf07f45.json",
-              "sha256": "dce086fcec9169f729989038fdefe9245d814fbd2dc5e8b436b86198dcf07f45",
+              "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-2/report.json",
+              "sha256": "dacf0eef3b8a1837d75f6208a67c6365a5112dc563e7b5128a930eb43c94be62",
               "case": "glob.execute"
             }
           ],
-          "boundary": "Host owns model reasoning and permissions. DevEco Code session internals are not copied. This is a declared client capability requirement, not an MCP-native tool implementation; client-specific behavior requires separate acceptance."
+          "boundary": "The reviewed product contract assigns generic reasoning, file editing, search, questions and delegation to the connected host client. The actual MCP catalog exposes domain tools and guided completion gates; this boundary observation does not claim native implementation or successful execution by every AI client."
         }
       ]
     },
@@ -149,21 +169,26 @@
             "include"
           ],
           "replacement": "Client-provided rg with path and pattern",
-          "status": "verified",
+          "disposition": "client_required",
+          "policy": "host-general-tools",
+          "implementation": "not_applicable",
+          "acceptance": "boundary_verified",
+          "required_scopes": [],
           "targets": [
             "docs/builtin-skill-workflows.md"
           ],
           "tests": [
-            "test/native-upstream-capabilities.test.ts"
+            "test/native-upstream-capabilities.test.ts",
+            "scripts/native-capability-ui-mcp-acceptance.ts"
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/dce086fcec9169f729989038fdefe9245d814fbd2dc5e8b436b86198dcf07f45.json",
-              "sha256": "dce086fcec9169f729989038fdefe9245d814fbd2dc5e8b436b86198dcf07f45",
+              "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-2/report.json",
+              "sha256": "dacf0eef3b8a1837d75f6208a67c6365a5112dc563e7b5128a930eb43c94be62",
               "case": "grep.execute"
             }
           ],
-          "boundary": "Host owns model reasoning and permissions. DevEco Code session internals are not copied. This is a declared client capability requirement, not an MCP-native tool implementation; client-specific behavior requires separate acceptance."
+          "boundary": "The reviewed product contract assigns generic reasoning, file editing, search, questions and delegation to the connected host client. The actual MCP catalog exposes domain tools and guided completion gates; this boundary observation does not claim native implementation or successful execution by every AI client."
         }
       ]
     },
@@ -182,21 +207,26 @@
             "replaceAll"
           ],
           "replacement": "Client-provided apply_patch with exact old context",
-          "status": "verified",
+          "disposition": "client_required",
+          "policy": "host-general-tools",
+          "implementation": "not_applicable",
+          "acceptance": "boundary_verified",
+          "required_scopes": [],
           "targets": [
             "docs/builtin-skill-workflows.md"
           ],
           "tests": [
-            "test/native-upstream-capabilities.test.ts"
+            "test/native-upstream-capabilities.test.ts",
+            "scripts/native-capability-ui-mcp-acceptance.ts"
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/dce086fcec9169f729989038fdefe9245d814fbd2dc5e8b436b86198dcf07f45.json",
-              "sha256": "dce086fcec9169f729989038fdefe9245d814fbd2dc5e8b436b86198dcf07f45",
+              "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-2/report.json",
+              "sha256": "dacf0eef3b8a1837d75f6208a67c6365a5112dc563e7b5128a930eb43c94be62",
               "case": "edit.execute"
             }
           ],
-          "boundary": "Host owns model reasoning and permissions. DevEco Code session internals are not copied. This is a declared client capability requirement, not an MCP-native tool implementation; client-specific behavior requires separate acceptance."
+          "boundary": "The reviewed product contract assigns generic reasoning, file editing, search, questions and delegation to the connected host client. The actual MCP catalog exposes domain tools and guided completion gates; this boundary observation does not claim native implementation or successful execution by every AI client."
         }
       ]
     },
@@ -213,21 +243,26 @@
             "content"
           ],
           "replacement": "Client-provided file creation / apply_patch",
-          "status": "verified",
+          "disposition": "client_required",
+          "policy": "host-general-tools",
+          "implementation": "not_applicable",
+          "acceptance": "boundary_verified",
+          "required_scopes": [],
           "targets": [
             "docs/builtin-skill-workflows.md"
           ],
           "tests": [
-            "test/native-upstream-capabilities.test.ts"
+            "test/native-upstream-capabilities.test.ts",
+            "scripts/native-capability-ui-mcp-acceptance.ts"
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/dce086fcec9169f729989038fdefe9245d814fbd2dc5e8b436b86198dcf07f45.json",
-              "sha256": "dce086fcec9169f729989038fdefe9245d814fbd2dc5e8b436b86198dcf07f45",
+              "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-2/report.json",
+              "sha256": "dacf0eef3b8a1837d75f6208a67c6365a5112dc563e7b5128a930eb43c94be62",
               "case": "write.execute"
             }
           ],
-          "boundary": "Host owns model reasoning and permissions. DevEco Code session internals are not copied. This is a declared client capability requirement, not an MCP-native tool implementation; client-specific behavior requires separate acceptance."
+          "boundary": "The reviewed product contract assigns generic reasoning, file editing, search, questions and delegation to the connected host client. The actual MCP catalog exposes domain tools and guided completion gates; this boundary observation does not claim native implementation or successful execution by every AI client."
         }
       ]
     },
@@ -248,21 +283,26 @@
             "background"
           ],
           "replacement": "Client-provided explicitly requested new thread or authorized subagent; no implicit delegation",
-          "status": "verified",
+          "disposition": "client_required",
+          "policy": "host-general-tools",
+          "implementation": "not_applicable",
+          "acceptance": "boundary_verified",
+          "required_scopes": [],
           "targets": [
             "docs/builtin-skill-workflows.md"
           ],
           "tests": [
-            "test/native-upstream-capabilities.test.ts"
+            "test/native-upstream-capabilities.test.ts",
+            "scripts/native-capability-ui-mcp-acceptance.ts"
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/dce086fcec9169f729989038fdefe9245d814fbd2dc5e8b436b86198dcf07f45.json",
-              "sha256": "dce086fcec9169f729989038fdefe9245d814fbd2dc5e8b436b86198dcf07f45",
+              "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-2/report.json",
+              "sha256": "dacf0eef3b8a1837d75f6208a67c6365a5112dc563e7b5128a930eb43c94be62",
               "case": "task.execute"
             }
           ],
-          "boundary": "Host owns model reasoning and permissions. DevEco Code session internals are not copied. This is a declared client capability requirement, not an MCP-native tool implementation; client-specific behavior requires separate acceptance."
+          "boundary": "The reviewed product contract assigns generic reasoning, file editing, search, questions and delegation to the connected host client. The actual MCP catalog exposes domain tools and guided completion gates; this boundary observation does not claim native implementation or successful execution by every AI client."
         }
       ]
     },
@@ -280,21 +320,26 @@
             "timeout"
           ],
           "replacement": "Client-provided official web open",
-          "status": "verified",
+          "disposition": "client_required",
+          "policy": "host-general-tools",
+          "implementation": "not_applicable",
+          "acceptance": "boundary_verified",
+          "required_scopes": [],
           "targets": [
             "docs/builtin-skill-workflows.md"
           ],
           "tests": [
-            "test/native-upstream-capabilities.test.ts"
+            "test/native-upstream-capabilities.test.ts",
+            "scripts/native-capability-ui-mcp-acceptance.ts"
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/dce086fcec9169f729989038fdefe9245d814fbd2dc5e8b436b86198dcf07f45.json",
-              "sha256": "dce086fcec9169f729989038fdefe9245d814fbd2dc5e8b436b86198dcf07f45",
+              "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-2/report.json",
+              "sha256": "dacf0eef3b8a1837d75f6208a67c6365a5112dc563e7b5128a930eb43c94be62",
               "case": "webfetch.execute"
             }
           ],
-          "boundary": "Host owns model reasoning and permissions. DevEco Code session internals are not copied. This is a declared client capability requirement, not an MCP-native tool implementation; client-specific behavior requires separate acceptance."
+          "boundary": "The reviewed product contract assigns generic reasoning, file editing, search, questions and delegation to the connected host client. The actual MCP catalog exposes domain tools and guided completion gates; this boundary observation does not claim native implementation or successful execution by every AI client."
         }
       ]
     },
@@ -312,23 +357,34 @@
             "todos[].priority"
           ],
           "replacement": "skill_workflow documents, phases and retained task records",
-          "status": "verified",
+          "disposition": "required",
+          "policy": null,
+          "implementation": "implemented",
+          "acceptance": "verified",
+          "required_scopes": [
+            {
+              "language": "none",
+              "platform": "any",
+              "sdk": null
+            }
+          ],
           "targets": [
             "docs/builtin-skill-workflows.md",
             "src/services/skill-guidance.ts",
             "src/services/skill-workflow.ts"
           ],
           "tests": [
-            "test/native-upstream-capabilities.test.ts"
+            "test/native-upstream-capabilities.test.ts",
+            "scripts/native-skill-mcp-acceptance.ts"
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/2f33852595451d3aec7ba89882d7b5ef54801c72953dafe6df86be775396dadc.json",
-              "sha256": "2f33852595451d3aec7ba89882d7b5ef54801c72953dafe6df86be775396dadc",
+              "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-0/report.json",
+              "sha256": "a109f48571d3249d90e348b47dbb51446184950e0ee891ef567d77ada5114aca",
               "case": "todowrite.execute"
             }
           ],
-          "boundary": "Host owns model reasoning and permissions. DevEco Code session internals are not copied."
+          "boundary": "Public task replacement increments the revision, rejects a stale revision, survives MCP restart and preserves exact task content."
         }
       ]
     },
@@ -348,21 +404,26 @@
             "contextMaxCharacters"
           ],
           "replacement": "Client-provided web search_query",
-          "status": "verified",
+          "disposition": "client_required",
+          "policy": "host-general-tools",
+          "implementation": "not_applicable",
+          "acceptance": "boundary_verified",
+          "required_scopes": [],
           "targets": [
             "docs/builtin-skill-workflows.md"
           ],
           "tests": [
-            "test/native-upstream-capabilities.test.ts"
+            "test/native-upstream-capabilities.test.ts",
+            "scripts/native-capability-ui-mcp-acceptance.ts"
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/dce086fcec9169f729989038fdefe9245d814fbd2dc5e8b436b86198dcf07f45.json",
-              "sha256": "dce086fcec9169f729989038fdefe9245d814fbd2dc5e8b436b86198dcf07f45",
+              "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-2/report.json",
+              "sha256": "dacf0eef3b8a1837d75f6208a67c6365a5112dc563e7b5128a930eb43c94be62",
               "case": "websearch.execute"
             }
           ],
-          "boundary": "Host owns model reasoning and permissions. DevEco Code session internals are not copied. This is a declared client capability requirement, not an MCP-native tool implementation; client-specific behavior requires separate acceptance."
+          "boundary": "The reviewed product contract assigns generic reasoning, file editing, search, questions and delegation to the connected host client. The actual MCP catalog exposes domain tools and guided completion gates; this boundary observation does not claim native implementation or successful execution by every AI client."
         }
       ]
     },
@@ -378,7 +439,17 @@
             "name"
           ],
           "replacement": "skill_manage catalog/read serves bundled instructions and references over MCP; skill_workflow supplies current-phase guidance, persistent state and native completion gates.",
-          "status": "verified",
+          "disposition": "required",
+          "policy": null,
+          "implementation": "implemented",
+          "acceptance": "verified",
+          "required_scopes": [
+            {
+              "language": "none",
+              "platform": "any",
+              "sdk": null
+            }
+          ],
           "targets": [
             "src/services/skills.ts",
             "src/services/skill-workflow.ts",
@@ -391,12 +462,12 @@
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/2f33852595451d3aec7ba89882d7b5ef54801c72953dafe6df86be775396dadc.json",
-              "sha256": "2f33852595451d3aec7ba89882d7b5ef54801c72953dafe6df86be775396dadc",
+              "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-0/report.json",
+              "sha256": "a109f48571d3249d90e348b47dbb51446184950e0ee891ef567d77ada5114aca",
               "case": "skill.list"
             }
           ],
-          "boundary": "No client Skill installation or specific client is required. The client supplies reasoning and any file editing/image understanding required by the step."
+          "boundary": "Public catalog returns all six bundled Skills and their file and package digests without client installation."
         },
         {
           "id": "search",
@@ -404,7 +475,17 @@
             "name"
           ],
           "replacement": "skill_manage catalog/read serves bundled instructions and references over MCP; skill_workflow supplies current-phase guidance, persistent state and native completion gates.",
-          "status": "verified",
+          "disposition": "required",
+          "policy": null,
+          "implementation": "implemented",
+          "acceptance": "verified",
+          "required_scopes": [
+            {
+              "language": "none",
+              "platform": "any",
+              "sdk": null
+            }
+          ],
           "targets": [
             "src/services/skills.ts",
             "src/services/skill-workflow.ts",
@@ -417,12 +498,12 @@
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/2f33852595451d3aec7ba89882d7b5ef54801c72953dafe6df86be775396dadc.json",
-              "sha256": "2f33852595451d3aec7ba89882d7b5ef54801c72953dafe6df86be775396dadc",
+              "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-0/report.json",
+              "sha256": "a109f48571d3249d90e348b47dbb51446184950e0ee891ef567d77ada5114aca",
               "case": "skill.search"
             }
           ],
-          "boundary": "No client Skill installation or specific client is required. The client supplies reasoning and any file editing/image understanding required by the step."
+          "boundary": "Public ArkTS catalog search returns a nonempty set of bundled Skills."
         },
         {
           "id": "read",
@@ -430,7 +511,17 @@
             "name"
           ],
           "replacement": "skill_manage catalog/read serves bundled instructions and references over MCP; skill_workflow supplies current-phase guidance, persistent state and native completion gates.",
-          "status": "verified",
+          "disposition": "required",
+          "policy": null,
+          "implementation": "implemented",
+          "acceptance": "verified",
+          "required_scopes": [
+            {
+              "language": "none",
+              "platform": "any",
+              "sdk": null
+            }
+          ],
           "targets": [
             "src/services/skills.ts",
             "src/services/skill-workflow.ts",
@@ -443,12 +534,12 @@
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/2f33852595451d3aec7ba89882d7b5ef54801c72953dafe6df86be775396dadc.json",
-              "sha256": "2f33852595451d3aec7ba89882d7b5ef54801c72953dafe6df86be775396dadc",
+              "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-0/report.json",
+              "sha256": "a109f48571d3249d90e348b47dbb51446184950e0ee891ef567d77ada5114aca",
               "case": "skill.read"
             }
           ],
-          "boundary": "No client Skill installation or specific client is required. The client supplies reasoning and any file editing/image understanding required by the step."
+          "boundary": "All six Skill bodies and catalogued references are read over public MCP; reference content hashes match the catalog."
         },
         {
           "id": "install",
@@ -456,7 +547,11 @@
             "name"
           ],
           "replacement": "Intentionally unsupported by the new owner-approved architecture. All Skills and knowledge are bundled in MCP, with no client-directory installer or remover.",
-          "status": "verified",
+          "disposition": "explicitly_excluded",
+          "policy": "builtin-mcp-skills-only",
+          "implementation": "not_applicable",
+          "acceptance": "boundary_verified",
+          "required_scopes": [],
           "targets": [
             "src/services/skills.ts",
             "src/services/skill-workflow.ts",
@@ -465,16 +560,17 @@
           ],
           "tests": [
             "test/native-skills.test.ts",
-            "scripts/native-skill-mcp-acceptance.ts"
+            "scripts/native-skill-mcp-acceptance.ts",
+            "scripts/native-capability-ui-mcp-acceptance.ts"
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/dce086fcec9169f729989038fdefe9245d814fbd2dc5e8b436b86198dcf07f45.json",
-              "sha256": "dce086fcec9169f729989038fdefe9245d814fbd2dc5e8b436b86198dcf07f45",
+              "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-2/report.json",
+              "sha256": "dacf0eef3b8a1837d75f6208a67c6365a5112dc563e7b5128a930eb43c94be62",
               "case": "skill.install"
             }
           ],
-          "boundary": "Explicit user requirement on 2026-09-10 removes optional client Skill installation. Acceptance must prove these actions are absent/rejected and builtin workflows need no client Skill directory."
+          "boundary": "The owner requires Skills and references to remain built into MCP, without client Skill installation or uninstall flows. All six current catalog entries declare MCP delivery and no client installation; the excluded installer action is rejected and is not counted as a functional success."
         },
         {
           "id": "uninstall",
@@ -482,7 +578,11 @@
             "name"
           ],
           "replacement": "Intentionally unsupported by the new owner-approved architecture. All Skills and knowledge are bundled in MCP, with no client-directory installer or remover.",
-          "status": "verified",
+          "disposition": "explicitly_excluded",
+          "policy": "builtin-mcp-skills-only",
+          "implementation": "not_applicable",
+          "acceptance": "boundary_verified",
+          "required_scopes": [],
           "targets": [
             "src/services/skills.ts",
             "src/services/skill-workflow.ts",
@@ -491,16 +591,17 @@
           ],
           "tests": [
             "test/native-skills.test.ts",
-            "scripts/native-skill-mcp-acceptance.ts"
+            "scripts/native-skill-mcp-acceptance.ts",
+            "scripts/native-capability-ui-mcp-acceptance.ts"
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/dce086fcec9169f729989038fdefe9245d814fbd2dc5e8b436b86198dcf07f45.json",
-              "sha256": "dce086fcec9169f729989038fdefe9245d814fbd2dc5e8b436b86198dcf07f45",
+              "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-2/report.json",
+              "sha256": "dacf0eef3b8a1837d75f6208a67c6365a5112dc563e7b5128a930eb43c94be62",
               "case": "skill.uninstall"
             }
           ],
-          "boundary": "Explicit user requirement on 2026-09-10 removes optional client Skill installation. Acceptance must prove these actions are absent/rejected and builtin workflows need no client Skill directory."
+          "boundary": "The owner requires Skills and references to remain built into MCP, without client Skill installation or uninstall flows. All six current catalog entries declare MCP delivery and no client installation; the excluded installer action is rejected and is not counted as a functional success."
         }
       ]
     },
@@ -516,21 +617,26 @@
             "patchText"
           ],
           "replacement": "Client-provided apply_patch",
-          "status": "verified",
+          "disposition": "client_required",
+          "policy": "host-general-tools",
+          "implementation": "not_applicable",
+          "acceptance": "boundary_verified",
+          "required_scopes": [],
           "targets": [
             "docs/builtin-skill-workflows.md"
           ],
           "tests": [
-            "test/native-upstream-capabilities.test.ts"
+            "test/native-upstream-capabilities.test.ts",
+            "scripts/native-capability-ui-mcp-acceptance.ts"
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/dce086fcec9169f729989038fdefe9245d814fbd2dc5e8b436b86198dcf07f45.json",
-              "sha256": "dce086fcec9169f729989038fdefe9245d814fbd2dc5e8b436b86198dcf07f45",
+              "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-2/report.json",
+              "sha256": "dacf0eef3b8a1837d75f6208a67c6365a5112dc563e7b5128a930eb43c94be62",
               "case": "apply_patch.execute"
             }
           ],
-          "boundary": "Host owns model reasoning and permissions. DevEco Code session internals are not copied. This is a declared client capability requirement, not an MCP-native tool implementation; client-specific behavior requires separate acceptance."
+          "boundary": "The reviewed product contract assigns generic reasoning, file editing, search, questions and delegation to the connected host client. The actual MCP catalog exposes domain tools and guided completion gates; this boundary observation does not claim native implementation or successful execution by every AI client."
         }
       ]
     },
@@ -549,21 +655,26 @@
             "questions[].multiple"
           ],
           "replacement": "Client-provided request_user_input_async or direct concise question",
-          "status": "verified",
+          "disposition": "client_required",
+          "policy": "host-general-tools",
+          "implementation": "not_applicable",
+          "acceptance": "boundary_verified",
+          "required_scopes": [],
           "targets": [
             "docs/builtin-skill-workflows.md"
           ],
           "tests": [
-            "test/native-upstream-capabilities.test.ts"
+            "test/native-upstream-capabilities.test.ts",
+            "scripts/native-capability-ui-mcp-acceptance.ts"
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/dce086fcec9169f729989038fdefe9245d814fbd2dc5e8b436b86198dcf07f45.json",
-              "sha256": "dce086fcec9169f729989038fdefe9245d814fbd2dc5e8b436b86198dcf07f45",
+              "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-2/report.json",
+              "sha256": "dacf0eef3b8a1837d75f6208a67c6365a5112dc563e7b5128a930eb43c94be62",
               "case": "question.execute"
             }
           ],
-          "boundary": "Host owns model reasoning and permissions. DevEco Code session internals are not copied. This is a declared client capability requirement, not an MCP-native tool implementation; client-specific behavior requires separate acceptance."
+          "boundary": "The reviewed product contract assigns generic reasoning, file editing, search, questions and delegation to the connected host client. The actual MCP catalog exposes domain tools and guided completion gates; this boundary observation does not claim native implementation or successful execution by every AI client."
         }
       ]
     },
@@ -581,22 +692,33 @@
             "line (1-based UTF-16)",
             "character (1-based UTF-16)"
           ],
-          "replacement": "lsp definition with explicit project_path/file and zero-based UTF-16 line/character; SDK capability checked",
-          "status": "verified",
+          "replacement": "lsp definition with explicit project_path/file and zero-based UTF-16 line/character; bounded actual ArkTS request compatibility, normalized file URIs and source-verified UTF-16 call ranges; local refusal cannot prove SDK unavailability",
+          "disposition": "required",
+          "policy": null,
+          "implementation": "implemented",
+          "acceptance": "verified",
+          "required_scopes": [
+            {
+              "language": "arkts",
+              "platform": "darwin",
+              "sdk": "26.0.0.105"
+            }
+          ],
           "targets": [
             "src/services/lsp.ts"
           ],
           "tests": [
-            "test/native-lsp.test.ts"
+            "test/native-lsp.test.ts",
+            "scripts/native-lsp-mcp-acceptance.ts"
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/9b4bbcf31ce801f010a86cd6c20ec6965b7cb184921482858f72d812dc7e5f2c.json",
-              "sha256": "9b4bbcf31ce801f010a86cd6c20ec6965b7cb184921482858f72d812dc7e5f2c",
+              "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-1/report.json",
+              "sha256": "7edcb49c1d3ea793e6e89b6f326617511d193670eede7af30610a085befd50f3",
               "case": "lsp.goToDefinition"
             }
           ],
-          "boundary": "Native LSP with explicit zero-based line and UTF-16 character positions; upstream uses one-based input positions. Capabilities are checked per selected SDK; unsupported providers return an explicit error without invented results. Installed SDK 26 ArkTS does not advertise documentSymbol/workspaceSymbol/call hierarchy. SDK clangd supports the first four new operations; outgoingCalls is explicitly unsupported. Verified status records these exact supported and unsupported outcomes."
+          "boundary": "Actual ArkTS goToDefinition executes through public stdio MCP in both LF and CRLF UTF-16 fixtures, before and after MCP restart. Required symbol and legacy queries return nonempty results; call direction, cross-file ownership and repeated/class/nested call ranges are asserted against the source; legitimate empty queries remain empty. Native pull diagnostics detect and clear a real type error. C++ observations are kept separately and cannot qualify the ArkTS requirement."
         },
         {
           "id": "findReferences",
@@ -606,22 +728,33 @@
             "line (1-based UTF-16)",
             "character (1-based UTF-16)"
           ],
-          "replacement": "lsp references with explicit project_path/file and zero-based UTF-16 line/character; SDK capability checked",
-          "status": "verified",
+          "replacement": "lsp references with explicit project_path/file and zero-based UTF-16 line/character; bounded actual ArkTS request compatibility, normalized file URIs and source-verified UTF-16 call ranges; local refusal cannot prove SDK unavailability",
+          "disposition": "required",
+          "policy": null,
+          "implementation": "implemented",
+          "acceptance": "verified",
+          "required_scopes": [
+            {
+              "language": "arkts",
+              "platform": "darwin",
+              "sdk": "26.0.0.105"
+            }
+          ],
           "targets": [
             "src/services/lsp.ts"
           ],
           "tests": [
-            "test/native-lsp.test.ts"
+            "test/native-lsp.test.ts",
+            "scripts/native-lsp-mcp-acceptance.ts"
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/9b4bbcf31ce801f010a86cd6c20ec6965b7cb184921482858f72d812dc7e5f2c.json",
-              "sha256": "9b4bbcf31ce801f010a86cd6c20ec6965b7cb184921482858f72d812dc7e5f2c",
+              "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-1/report.json",
+              "sha256": "7edcb49c1d3ea793e6e89b6f326617511d193670eede7af30610a085befd50f3",
               "case": "lsp.findReferences"
             }
           ],
-          "boundary": "Native LSP with explicit zero-based line and UTF-16 character positions; upstream uses one-based input positions. Capabilities are checked per selected SDK; unsupported providers return an explicit error without invented results. Installed SDK 26 ArkTS does not advertise documentSymbol/workspaceSymbol/call hierarchy. SDK clangd supports the first four new operations; outgoingCalls is explicitly unsupported. Verified status records these exact supported and unsupported outcomes."
+          "boundary": "Actual ArkTS findReferences executes through public stdio MCP in both LF and CRLF UTF-16 fixtures, before and after MCP restart. Required symbol and legacy queries return nonempty results; call direction, cross-file ownership and repeated/class/nested call ranges are asserted against the source; legitimate empty queries remain empty. Native pull diagnostics detect and clear a real type error. C++ observations are kept separately and cannot qualify the ArkTS requirement."
         },
         {
           "id": "hover",
@@ -631,22 +764,33 @@
             "line (1-based UTF-16)",
             "character (1-based UTF-16)"
           ],
-          "replacement": "lsp hover with explicit project_path/file and zero-based UTF-16 line/character; SDK capability checked",
-          "status": "verified",
+          "replacement": "lsp hover with explicit project_path/file and zero-based UTF-16 line/character; bounded actual ArkTS request compatibility, normalized file URIs and source-verified UTF-16 call ranges; local refusal cannot prove SDK unavailability",
+          "disposition": "required",
+          "policy": null,
+          "implementation": "implemented",
+          "acceptance": "verified",
+          "required_scopes": [
+            {
+              "language": "arkts",
+              "platform": "darwin",
+              "sdk": "26.0.0.105"
+            }
+          ],
           "targets": [
             "src/services/lsp.ts"
           ],
           "tests": [
-            "test/native-lsp.test.ts"
+            "test/native-lsp.test.ts",
+            "scripts/native-lsp-mcp-acceptance.ts"
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/9b4bbcf31ce801f010a86cd6c20ec6965b7cb184921482858f72d812dc7e5f2c.json",
-              "sha256": "9b4bbcf31ce801f010a86cd6c20ec6965b7cb184921482858f72d812dc7e5f2c",
+              "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-1/report.json",
+              "sha256": "7edcb49c1d3ea793e6e89b6f326617511d193670eede7af30610a085befd50f3",
               "case": "lsp.hover"
             }
           ],
-          "boundary": "Native LSP with explicit zero-based line and UTF-16 character positions; upstream uses one-based input positions. Capabilities are checked per selected SDK; unsupported providers return an explicit error without invented results. Installed SDK 26 ArkTS does not advertise documentSymbol/workspaceSymbol/call hierarchy. SDK clangd supports the first four new operations; outgoingCalls is explicitly unsupported. Verified status records these exact supported and unsupported outcomes."
+          "boundary": "Actual ArkTS hover executes through public stdio MCP in both LF and CRLF UTF-16 fixtures, before and after MCP restart. Required symbol and legacy queries return nonempty results; call direction, cross-file ownership and repeated/class/nested call ranges are asserted against the source; legitimate empty queries remain empty. Native pull diagnostics detect and clear a real type error. C++ observations are kept separately and cannot qualify the ArkTS requirement."
         },
         {
           "id": "documentSymbol",
@@ -656,22 +800,33 @@
             "line (1-based UTF-16)",
             "character (1-based UTF-16)"
           ],
-          "replacement": "lsp documentSymbol with explicit project_path/file and zero-based UTF-16 line/character; SDK capability checked",
-          "status": "verified",
+          "replacement": "lsp documentSymbol with explicit project_path/file and zero-based UTF-16 line/character; bounded actual ArkTS request compatibility, normalized file URIs and source-verified UTF-16 call ranges; local refusal cannot prove SDK unavailability",
+          "disposition": "required",
+          "policy": null,
+          "implementation": "implemented",
+          "acceptance": "verified",
+          "required_scopes": [
+            {
+              "language": "arkts",
+              "platform": "darwin",
+              "sdk": "26.0.0.105"
+            }
+          ],
           "targets": [
             "src/services/lsp.ts"
           ],
           "tests": [
-            "test/native-lsp.test.ts"
+            "test/native-lsp.test.ts",
+            "scripts/native-lsp-mcp-acceptance.ts"
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/9b4bbcf31ce801f010a86cd6c20ec6965b7cb184921482858f72d812dc7e5f2c.json",
-              "sha256": "9b4bbcf31ce801f010a86cd6c20ec6965b7cb184921482858f72d812dc7e5f2c",
+              "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-1/report.json",
+              "sha256": "7edcb49c1d3ea793e6e89b6f326617511d193670eede7af30610a085befd50f3",
               "case": "lsp.documentSymbol"
             }
           ],
-          "boundary": "Native LSP with explicit zero-based line and UTF-16 character positions; upstream uses one-based input positions. Capabilities are checked per selected SDK; unsupported providers return an explicit error without invented results. Installed SDK 26 ArkTS does not advertise documentSymbol/workspaceSymbol/call hierarchy. SDK clangd supports the first four new operations; outgoingCalls is explicitly unsupported. Verified status records these exact supported and unsupported outcomes."
+          "boundary": "Actual ArkTS documentSymbol executes through public stdio MCP in both LF and CRLF UTF-16 fixtures, before and after MCP restart. Required symbol and legacy queries return nonempty results; call direction, cross-file ownership and repeated/class/nested call ranges are asserted against the source; legitimate empty queries remain empty. Native pull diagnostics detect and clear a real type error. C++ observations are kept separately and cannot qualify the ArkTS requirement."
         },
         {
           "id": "workspaceSymbol",
@@ -682,22 +837,33 @@
             "character (1-based UTF-16)",
             "query"
           ],
-          "replacement": "lsp workspaceSymbol with explicit project_path/file and zero-based UTF-16 line/character; SDK capability checked",
-          "status": "verified",
+          "replacement": "lsp workspaceSymbol with explicit project_path/file and zero-based UTF-16 line/character; bounded actual ArkTS request compatibility, normalized file URIs and source-verified UTF-16 call ranges; local refusal cannot prove SDK unavailability",
+          "disposition": "required",
+          "policy": null,
+          "implementation": "implemented",
+          "acceptance": "verified",
+          "required_scopes": [
+            {
+              "language": "arkts",
+              "platform": "darwin",
+              "sdk": "26.0.0.105"
+            }
+          ],
           "targets": [
             "src/services/lsp.ts"
           ],
           "tests": [
-            "test/native-lsp.test.ts"
+            "test/native-lsp.test.ts",
+            "scripts/native-lsp-mcp-acceptance.ts"
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/9b4bbcf31ce801f010a86cd6c20ec6965b7cb184921482858f72d812dc7e5f2c.json",
-              "sha256": "9b4bbcf31ce801f010a86cd6c20ec6965b7cb184921482858f72d812dc7e5f2c",
+              "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-1/report.json",
+              "sha256": "7edcb49c1d3ea793e6e89b6f326617511d193670eede7af30610a085befd50f3",
               "case": "lsp.workspaceSymbol"
             }
           ],
-          "boundary": "Native LSP with explicit zero-based line and UTF-16 character positions; upstream uses one-based input positions. Capabilities are checked per selected SDK; unsupported providers return an explicit error without invented results. Installed SDK 26 ArkTS does not advertise documentSymbol/workspaceSymbol/call hierarchy. SDK clangd supports the first four new operations; outgoingCalls is explicitly unsupported. Verified status records these exact supported and unsupported outcomes."
+          "boundary": "Actual ArkTS workspaceSymbol executes through public stdio MCP in both LF and CRLF UTF-16 fixtures, before and after MCP restart. Required symbol and legacy queries return nonempty results; call direction, cross-file ownership and repeated/class/nested call ranges are asserted against the source; legitimate empty queries remain empty. Native pull diagnostics detect and clear a real type error. C++ observations are kept separately and cannot qualify the ArkTS requirement."
         },
         {
           "id": "goToImplementation",
@@ -707,22 +873,33 @@
             "line (1-based UTF-16)",
             "character (1-based UTF-16)"
           ],
-          "replacement": "lsp implementation with explicit project_path/file and zero-based UTF-16 line/character; SDK capability checked",
-          "status": "verified",
+          "replacement": "lsp implementation with explicit project_path/file and zero-based UTF-16 line/character; bounded actual ArkTS request compatibility, normalized file URIs and source-verified UTF-16 call ranges; local refusal cannot prove SDK unavailability",
+          "disposition": "required",
+          "policy": null,
+          "implementation": "implemented",
+          "acceptance": "verified",
+          "required_scopes": [
+            {
+              "language": "arkts",
+              "platform": "darwin",
+              "sdk": "26.0.0.105"
+            }
+          ],
           "targets": [
             "src/services/lsp.ts"
           ],
           "tests": [
-            "test/native-lsp.test.ts"
+            "test/native-lsp.test.ts",
+            "scripts/native-lsp-mcp-acceptance.ts"
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/9b4bbcf31ce801f010a86cd6c20ec6965b7cb184921482858f72d812dc7e5f2c.json",
-              "sha256": "9b4bbcf31ce801f010a86cd6c20ec6965b7cb184921482858f72d812dc7e5f2c",
+              "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-1/report.json",
+              "sha256": "7edcb49c1d3ea793e6e89b6f326617511d193670eede7af30610a085befd50f3",
               "case": "lsp.goToImplementation"
             }
           ],
-          "boundary": "Native LSP with explicit zero-based line and UTF-16 character positions; upstream uses one-based input positions. Capabilities are checked per selected SDK; unsupported providers return an explicit error without invented results. Installed SDK 26 ArkTS does not advertise documentSymbol/workspaceSymbol/call hierarchy. SDK clangd supports the first four new operations; outgoingCalls is explicitly unsupported. Verified status records these exact supported and unsupported outcomes."
+          "boundary": "Actual ArkTS goToImplementation executes through public stdio MCP in both LF and CRLF UTF-16 fixtures, before and after MCP restart. Required symbol and legacy queries return nonempty results; call direction, cross-file ownership and repeated/class/nested call ranges are asserted against the source; legitimate empty queries remain empty. Native pull diagnostics detect and clear a real type error. C++ observations are kept separately and cannot qualify the ArkTS requirement."
         },
         {
           "id": "prepareCallHierarchy",
@@ -732,22 +909,33 @@
             "line (1-based UTF-16)",
             "character (1-based UTF-16)"
           ],
-          "replacement": "lsp prepareCallHierarchy with explicit project_path/file and zero-based UTF-16 line/character; SDK capability checked",
-          "status": "verified",
+          "replacement": "lsp prepareCallHierarchy with explicit project_path/file and zero-based UTF-16 line/character; bounded actual ArkTS request compatibility, normalized file URIs and source-verified UTF-16 call ranges; local refusal cannot prove SDK unavailability",
+          "disposition": "required",
+          "policy": null,
+          "implementation": "implemented",
+          "acceptance": "verified",
+          "required_scopes": [
+            {
+              "language": "arkts",
+              "platform": "darwin",
+              "sdk": "26.0.0.105"
+            }
+          ],
           "targets": [
             "src/services/lsp.ts"
           ],
           "tests": [
-            "test/native-lsp.test.ts"
+            "test/native-lsp.test.ts",
+            "scripts/native-lsp-mcp-acceptance.ts"
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/9b4bbcf31ce801f010a86cd6c20ec6965b7cb184921482858f72d812dc7e5f2c.json",
-              "sha256": "9b4bbcf31ce801f010a86cd6c20ec6965b7cb184921482858f72d812dc7e5f2c",
+              "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-1/report.json",
+              "sha256": "7edcb49c1d3ea793e6e89b6f326617511d193670eede7af30610a085befd50f3",
               "case": "lsp.prepareCallHierarchy"
             }
           ],
-          "boundary": "Native LSP with explicit zero-based line and UTF-16 character positions; upstream uses one-based input positions. Capabilities are checked per selected SDK; unsupported providers return an explicit error without invented results. Installed SDK 26 ArkTS does not advertise documentSymbol/workspaceSymbol/call hierarchy. SDK clangd supports the first four new operations; outgoingCalls is explicitly unsupported. Verified status records these exact supported and unsupported outcomes."
+          "boundary": "Actual ArkTS prepareCallHierarchy executes through public stdio MCP in both LF and CRLF UTF-16 fixtures, before and after MCP restart. Required symbol and legacy queries return nonempty results; call direction, cross-file ownership and repeated/class/nested call ranges are asserted against the source; legitimate empty queries remain empty. Native pull diagnostics detect and clear a real type error. C++ observations are kept separately and cannot qualify the ArkTS requirement."
         },
         {
           "id": "incomingCalls",
@@ -757,22 +945,33 @@
             "line (1-based UTF-16)",
             "character (1-based UTF-16)"
           ],
-          "replacement": "lsp incomingCalls with explicit project_path/file and zero-based UTF-16 line/character; SDK capability checked",
-          "status": "verified",
+          "replacement": "lsp incomingCalls with explicit project_path/file and zero-based UTF-16 line/character; bounded actual ArkTS request compatibility, normalized file URIs and source-verified UTF-16 call ranges; local refusal cannot prove SDK unavailability",
+          "disposition": "required",
+          "policy": null,
+          "implementation": "implemented",
+          "acceptance": "verified",
+          "required_scopes": [
+            {
+              "language": "arkts",
+              "platform": "darwin",
+              "sdk": "26.0.0.105"
+            }
+          ],
           "targets": [
             "src/services/lsp.ts"
           ],
           "tests": [
-            "test/native-lsp.test.ts"
+            "test/native-lsp.test.ts",
+            "scripts/native-lsp-mcp-acceptance.ts"
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/9b4bbcf31ce801f010a86cd6c20ec6965b7cb184921482858f72d812dc7e5f2c.json",
-              "sha256": "9b4bbcf31ce801f010a86cd6c20ec6965b7cb184921482858f72d812dc7e5f2c",
+              "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-1/report.json",
+              "sha256": "7edcb49c1d3ea793e6e89b6f326617511d193670eede7af30610a085befd50f3",
               "case": "lsp.incomingCalls"
             }
           ],
-          "boundary": "Native LSP with explicit zero-based line and UTF-16 character positions; upstream uses one-based input positions. Capabilities are checked per selected SDK; unsupported providers return an explicit error without invented results. Installed SDK 26 ArkTS does not advertise documentSymbol/workspaceSymbol/call hierarchy. SDK clangd supports the first four new operations; outgoingCalls is explicitly unsupported. Verified status records these exact supported and unsupported outcomes."
+          "boundary": "Actual ArkTS incomingCalls executes through public stdio MCP in both LF and CRLF UTF-16 fixtures, before and after MCP restart. Required symbol and legacy queries return nonempty results; call direction, cross-file ownership and repeated/class/nested call ranges are asserted against the source; legitimate empty queries remain empty. Native pull diagnostics detect and clear a real type error. C++ observations are kept separately and cannot qualify the ArkTS requirement."
         },
         {
           "id": "outgoingCalls",
@@ -782,22 +981,33 @@
             "line (1-based UTF-16)",
             "character (1-based UTF-16)"
           ],
-          "replacement": "lsp outgoingCalls with explicit project_path/file and zero-based UTF-16 line/character; SDK capability checked",
-          "status": "verified",
+          "replacement": "lsp outgoingCalls with explicit project_path/file and zero-based UTF-16 line/character; bounded actual ArkTS request compatibility, normalized file URIs and source-verified UTF-16 call ranges; local refusal cannot prove SDK unavailability",
+          "disposition": "required",
+          "policy": null,
+          "implementation": "implemented",
+          "acceptance": "verified",
+          "required_scopes": [
+            {
+              "language": "arkts",
+              "platform": "darwin",
+              "sdk": "26.0.0.105"
+            }
+          ],
           "targets": [
             "src/services/lsp.ts"
           ],
           "tests": [
-            "test/native-lsp.test.ts"
+            "test/native-lsp.test.ts",
+            "scripts/native-lsp-mcp-acceptance.ts"
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/9b4bbcf31ce801f010a86cd6c20ec6965b7cb184921482858f72d812dc7e5f2c.json",
-              "sha256": "9b4bbcf31ce801f010a86cd6c20ec6965b7cb184921482858f72d812dc7e5f2c",
+              "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-1/report.json",
+              "sha256": "7edcb49c1d3ea793e6e89b6f326617511d193670eede7af30610a085befd50f3",
               "case": "lsp.outgoingCalls"
             }
           ],
-          "boundary": "Native LSP with explicit zero-based line and UTF-16 character positions; upstream uses one-based input positions. Capabilities are checked per selected SDK; unsupported providers return an explicit error without invented results. Installed SDK 26 ArkTS does not advertise documentSymbol/workspaceSymbol/call hierarchy. SDK clangd supports the first four new operations; outgoingCalls is explicitly unsupported. Verified status records these exact supported and unsupported outcomes."
+          "boundary": "Actual ArkTS outgoingCalls executes through public stdio MCP in both LF and CRLF UTF-16 fixtures, before and after MCP restart. Required symbol and legacy queries return nonempty results; call direction, cross-file ownership and repeated/class/nested call ranges are asserted against the source; legitimate empty queries remain empty. Native pull diagnostics detect and clear a real type error. C++ observations are kept separately and cannot qualify the ArkTS requirement."
         }
       ]
     },
@@ -811,23 +1021,34 @@
           "id": "execute",
           "parameters": [],
           "replacement": "skill_workflow transition phase=implementing with expected_revision and rationale",
-          "status": "verified",
+          "disposition": "required",
+          "policy": null,
+          "implementation": "implemented",
+          "acceptance": "verified",
+          "required_scopes": [
+            {
+              "language": "none",
+              "platform": "any",
+              "sdk": null
+            }
+          ],
           "targets": [
             "src/services/skill-workflow.ts",
             "docs/builtin-skill-workflows.md",
             "src/services/skill-guidance.ts"
           ],
           "tests": [
-            "test/native-skill-workflow.test.ts"
+            "test/native-skill-workflow.test.ts",
+            "scripts/native-skill-mcp-acceptance.ts"
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/2f33852595451d3aec7ba89882d7b5ef54801c72953dafe6df86be775396dadc.json",
-              "sha256": "2f33852595451d3aec7ba89882d7b5ef54801c72953dafe6df86be775396dadc",
+              "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-0/report.json",
+              "sha256": "a109f48571d3249d90e348b47dbb51446184950e0ee891ef567d77ada5114aca",
               "case": "plan_exit.execute"
             }
           ],
-          "boundary": "Records a transition under existing user authorization. Does not switch The MCP client system mode or synthesize user approval."
+          "boundary": "Public transition leaves planning for implementing and completes after verification without claiming to alter the host system mode."
         }
       ]
     },
@@ -843,23 +1064,34 @@
             "content"
           ],
           "replacement": "skill_workflow write name=plan.md with expected_revision; publish to an explicitly selected new file",
-          "status": "verified",
+          "disposition": "required",
+          "policy": null,
+          "implementation": "implemented",
+          "acceptance": "verified",
+          "required_scopes": [
+            {
+              "language": "none",
+              "platform": "any",
+              "sdk": null
+            }
+          ],
           "targets": [
             "src/services/skill-workflow.ts",
             "docs/builtin-skill-workflows.md",
             "src/services/skill-guidance.ts"
           ],
           "tests": [
-            "test/native-skill-workflow.test.ts"
+            "test/native-skill-workflow.test.ts",
+            "scripts/native-skill-mcp-acceptance.ts"
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/2f33852595451d3aec7ba89882d7b5ef54801c72953dafe6df86be775396dadc.json",
-              "sha256": "2f33852595451d3aec7ba89882d7b5ef54801c72953dafe6df86be775396dadc",
+              "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-0/report.json",
+              "sha256": "a109f48571d3249d90e348b47dbb51446184950e0ee891ef567d77ada5114aca",
               "case": "plan_write.execute"
             }
           ],
-          "boundary": "Encrypted versioned document with controlled output ownership; the host writes the plan and judges its content."
+          "boundary": "Public revision-checked plan write persists Technical Context and Project Structure, then publishes the retained document to an owned file."
         }
       ]
     },
@@ -873,23 +1105,34 @@
           "id": "execute",
           "parameters": [],
           "replacement": "skill_workflow start kind=plan captures objective, project and planning phase",
-          "status": "verified",
+          "disposition": "required",
+          "policy": null,
+          "implementation": "implemented",
+          "acceptance": "verified",
+          "required_scopes": [
+            {
+              "language": "none",
+              "platform": "any",
+              "sdk": null
+            }
+          ],
           "targets": [
             "src/services/skill-workflow.ts",
             "docs/builtin-skill-workflows.md",
             "src/services/skill-guidance.ts"
           ],
           "tests": [
-            "test/native-skill-workflow.test.ts"
+            "test/native-skill-workflow.test.ts",
+            "scripts/native-skill-mcp-acceptance.ts"
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/2f33852595451d3aec7ba89882d7b5ef54801c72953dafe6df86be775396dadc.json",
-              "sha256": "2f33852595451d3aec7ba89882d7b5ef54801c72953dafe6df86be775396dadc",
+              "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-0/report.json",
+              "sha256": "a109f48571d3249d90e348b47dbb51446184950e0ee891ef567d77ada5114aca",
               "case": "plan_enter.execute"
             }
           ],
-          "boundary": "Tracks an authorized host planning workflow. Does not switch The MCP client system mode or synthesize user approval."
+          "boundary": "Public Skill workflow captures the isolated project, original objective and bundled guidance; guidance remains readable after MCP reconnect."
         }
       ]
     },
@@ -906,23 +1149,34 @@
             "content"
           ],
           "replacement": "skill_workflow kind=spec write spec.md/plan.md/tasks.md; validate sections, task completion and native evidence",
-          "status": "verified",
+          "disposition": "required",
+          "policy": null,
+          "implementation": "implemented",
+          "acceptance": "verified",
+          "required_scopes": [
+            {
+              "language": "none",
+              "platform": "any",
+              "sdk": null
+            }
+          ],
           "targets": [
             "src/services/skill-workflow.ts",
             "docs/builtin-skill-workflows.md",
             "src/services/skill-guidance.ts"
           ],
           "tests": [
-            "test/native-skill-workflow.test.ts"
+            "test/native-skill-workflow.test.ts",
+            "scripts/native-skill-mcp-acceptance.ts"
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/2f33852595451d3aec7ba89882d7b5ef54801c72953dafe6df86be775396dadc.json",
-              "sha256": "2f33852595451d3aec7ba89882d7b5ef54801c72953dafe6df86be775396dadc",
+              "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-0/report.json",
+              "sha256": "a109f48571d3249d90e348b47dbb51446184950e0ee891ef567d77ada5114aca",
               "case": "spec_write.spec"
             }
           ],
-          "boundary": "Fixed controlled documents instead of arbitrary output paths; native result references do not alone establish that the host objective is satisfied."
+          "boundary": "Public spec.md write retains Requirements, User Scenarios and Success Criteria; its workflow completes with fresh native build evidence."
         },
         {
           "id": "design",
@@ -931,23 +1185,34 @@
             "content"
           ],
           "replacement": "skill_workflow kind=spec write spec.md/plan.md/tasks.md; validate sections, task completion and native evidence",
-          "status": "verified",
+          "disposition": "required",
+          "policy": null,
+          "implementation": "implemented",
+          "acceptance": "verified",
+          "required_scopes": [
+            {
+              "language": "none",
+              "platform": "any",
+              "sdk": null
+            }
+          ],
           "targets": [
             "src/services/skill-workflow.ts",
             "docs/builtin-skill-workflows.md",
             "src/services/skill-guidance.ts"
           ],
           "tests": [
-            "test/native-skill-workflow.test.ts"
+            "test/native-skill-workflow.test.ts",
+            "scripts/native-skill-mcp-acceptance.ts"
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/2f33852595451d3aec7ba89882d7b5ef54801c72953dafe6df86be775396dadc.json",
-              "sha256": "2f33852595451d3aec7ba89882d7b5ef54801c72953dafe6df86be775396dadc",
+              "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-0/report.json",
+              "sha256": "a109f48571d3249d90e348b47dbb51446184950e0ee891ef567d77ada5114aca",
               "case": "spec_write.design"
             }
           ],
-          "boundary": "Fixed controlled documents instead of arbitrary output paths; native result references do not alone establish that the host objective is satisfied."
+          "boundary": "Public plan.md design write retains Technical Context and Project Structure in the specification workflow."
         },
         {
           "id": "tasks",
@@ -956,23 +1221,34 @@
             "content"
           ],
           "replacement": "skill_workflow kind=spec write spec.md/plan.md/tasks.md; validate sections, task completion and native evidence",
-          "status": "verified",
+          "disposition": "required",
+          "policy": null,
+          "implementation": "implemented",
+          "acceptance": "verified",
+          "required_scopes": [
+            {
+              "language": "none",
+              "platform": "any",
+              "sdk": null
+            }
+          ],
           "targets": [
             "src/services/skill-workflow.ts",
             "docs/builtin-skill-workflows.md",
             "src/services/skill-guidance.ts"
           ],
           "tests": [
-            "test/native-skill-workflow.test.ts"
+            "test/native-skill-workflow.test.ts",
+            "scripts/native-skill-mcp-acceptance.ts"
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/2f33852595451d3aec7ba89882d7b5ef54801c72953dafe6df86be775396dadc.json",
-              "sha256": "2f33852595451d3aec7ba89882d7b5ef54801c72953dafe6df86be775396dadc",
+              "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-0/report.json",
+              "sha256": "a109f48571d3249d90e348b47dbb51446184950e0ee891ef567d77ada5114aca",
               "case": "spec_write.tasks"
             }
           ],
-          "boundary": "Fixed controlled documents instead of arbitrary output paths; native result references do not alone establish that the host objective is satisfied."
+          "boundary": "Public tasks.md write and replacement persist checkbox tasks; specification completion follows a current native build."
         }
       ]
     },
@@ -991,21 +1267,32 @@
             "lines"
           ],
           "replacement": "hdc_log action=collect with explicit target/device_id and bounded filter/lines",
-          "status": "verified",
+          "disposition": "required",
+          "policy": null,
+          "implementation": "implemented",
+          "acceptance": "verified",
+          "required_scopes": [
+            {
+              "language": "none",
+              "platform": "any",
+              "sdk": null
+            }
+          ],
           "targets": [
             "src/services/logs.ts"
           ],
           "tests": [
-            "test/native-logs.test.ts"
+            "test/native-logs.test.ts",
+            "scripts/native-capability-ui-mcp-acceptance.ts"
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/4d983235801ce8b548e5359459d6b23bc0d264f18a0194ea6bd2b056b1cc40c7.json",
-              "sha256": "4d983235801ce8b548e5359459d6b23bc0d264f18a0194ea6bd2b056b1cc40c7",
+              "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-2/report.json",
+              "sha256": "dacf0eef3b8a1837d75f6208a67c6365a5112dc563e7b5128a930eb43c94be62",
               "case": "hdc_log.collect"
             }
           ],
-          "boundary": "Scoped bounded Hilog collect returned the dedicated application Chinese confirmation marker; one device only and not a continuous log."
+          "boundary": "Public bounded Hilog collection for the owned app PID returns its actual MCPCAP heartbeat; literal filtering is requested and retained truncation metadata remains available."
         },
         {
           "id": "clear",
@@ -1016,21 +1303,32 @@
             "lines"
           ],
           "replacement": "hdc_log action=clear with explicit target; clears default app/core buffers",
-          "status": "verified",
+          "disposition": "required",
+          "policy": null,
+          "implementation": "implemented",
+          "acceptance": "verified",
+          "required_scopes": [
+            {
+              "language": "none",
+              "platform": "any",
+              "sdk": null
+            }
+          ],
           "targets": [
             "src/services/logs.ts"
           ],
           "tests": [
-            "test/native-logs.test.ts"
+            "test/native-logs.test.ts",
+            "scripts/native-capability-ui-mcp-acceptance.ts"
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/4d983235801ce8b548e5359459d6b23bc0d264f18a0194ea6bd2b056b1cc40c7.json",
-              "sha256": "4d983235801ce8b548e5359459d6b23bc0d264f18a0194ea6bd2b056b1cc40c7",
+              "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-2/report.json",
+              "sha256": "dacf0eef3b8a1837d75f6208a67c6365a5112dc563e7b5128a930eb43c94be62",
               "case": "hdc_log.clear"
             }
           ],
-          "boundary": "Explicit default app/core Hilog buffer clear returned cleared=true; concurrent new logs remain possible."
+          "boundary": "Public clear receives native acknowledgement on the owned emulator only; its scope is device app/core buffers and concurrent new logs remain possible."
         },
         {
           "id": "list_devices",
@@ -1041,21 +1339,32 @@
             "lines"
           ],
           "replacement": "device_info list=true",
-          "status": "verified",
+          "disposition": "required",
+          "policy": null,
+          "implementation": "implemented",
+          "acceptance": "verified",
+          "required_scopes": [
+            {
+              "language": "none",
+              "platform": "any",
+              "sdk": null
+            }
+          ],
           "targets": [
             "src/services/device.ts"
           ],
           "tests": [
-            "test/native-context.test.ts"
+            "test/native-context.test.ts",
+            "scripts/native-capability-ui-mcp-acceptance.ts"
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/4d983235801ce8b548e5359459d6b23bc0d264f18a0194ea6bd2b056b1cc40c7.json",
-              "sha256": "4d983235801ce8b548e5359459d6b23bc0d264f18a0194ea6bd2b056b1cc40c7",
+              "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-2/report.json",
+              "sha256": "dacf0eef3b8a1837d75f6208a67c6365a5112dc563e7b5128a930eb43c94be62",
               "case": "hdc_log.list_devices"
             }
           ],
-          "boundary": "device_info list=true returned the wireless device selected for the acceptance; device_info properties separately verified API 26."
+          "boundary": "Public device_info inventory contains the exact endpoint independently bound to the owned emulator before log operations."
         }
       ]
     },
@@ -1071,21 +1380,32 @@
             "project_path"
           ],
           "replacement": "switch_cwd project_path explicit; project context captured per run",
-          "status": "verified",
+          "disposition": "required",
+          "policy": null,
+          "implementation": "implemented",
+          "acceptance": "verified",
+          "required_scopes": [
+            {
+              "language": "none",
+              "platform": "any",
+              "sdk": null
+            }
+          ],
           "targets": [
             "src/services/project.ts"
           ],
           "tests": [
-            "test/native-context.test.ts"
+            "test/native-context.test.ts",
+            "scripts/native-capability-ui-mcp-acceptance.ts"
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/dce086fcec9169f729989038fdefe9245d814fbd2dc5e8b436b86198dcf07f45.json",
-              "sha256": "dce086fcec9169f729989038fdefe9245d814fbd2dc5e8b436b86198dcf07f45",
+              "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-2/report.json",
+              "sha256": "dacf0eef3b8a1837d75f6208a67c6365a5112dc563e7b5128a930eb43c94be62",
               "case": "switch_cwd.execute"
             }
           ],
-          "boundary": "Selection affects future requests in the current MCP worker. Each submitted workflow keeps its own captured project context. Rejected project selection preserves the prior selection; this is not a global shell cwd change."
+          "boundary": "Public switch_cwd selects the isolated project; a subsequent routes request without project_path resolves its actual launch ability."
         }
       ]
     },
@@ -1101,22 +1421,33 @@
             "files"
           ],
           "replacement": "arkts_check project_path/files with summary.errorCount and success; full fresh default build preflight",
-          "status": "verified",
+          "disposition": "required",
+          "policy": null,
+          "implementation": "implemented",
+          "acceptance": "verified",
+          "required_scopes": [
+            {
+              "language": "arkts",
+              "platform": "darwin",
+              "sdk": "26.0.0.105"
+            }
+          ],
           "targets": [
             "src/services/checker.ts",
             "docs/builtin-skill-workflows.md"
           ],
           "tests": [
-            "test/native-checker.test.ts"
+            "test/native-checker.test.ts",
+            "scripts/native-skill-mcp-acceptance.ts"
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/db53b0329690f566e946885276f83746b01ddfa18f0da054cd4e759da081fe6d.json",
-              "sha256": "db53b0329690f566e946885276f83746b01ddfa18f0da054cd4e759da081fe6d",
+              "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-0/report.json",
+              "sha256": "a109f48571d3249d90e348b47dbb51446184950e0ee891ef567d77ada5114aca",
               "case": "arkts_check.execute"
             }
           ],
-          "boundary": "Static checking is not a build or device test. Build preflight rejects error results and changed source identities; manual override requires an explicit recorded reason."
+          "boundary": "Actual ArkTS checking reports an injected missing-member error, then zero errors after the original source is restored."
         }
       ]
     },
@@ -1135,22 +1466,33 @@
             "build_mode"
           ],
           "replacement": "build_project/project_build with product,module_targets,mode,clean; native route capture and fresh full check before build",
-          "status": "verified",
+          "disposition": "required",
+          "policy": null,
+          "implementation": "implemented",
+          "acceptance": "verified",
+          "required_scopes": [
+            {
+              "language": "none",
+              "platform": "any",
+              "sdk": null
+            }
+          ],
           "targets": [
             "src/services/project.ts",
             "docs/builtin-skill-workflows.md"
           ],
           "tests": [
-            "test/native-project.test.ts"
+            "test/native-project.test.ts",
+            "scripts/native-skill-mcp-acceptance.ts"
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/db53b0329690f566e946885276f83746b01ddfa18f0da054cd4e759da081fe6d.json",
-              "sha256": "db53b0329690f566e946885276f83746b01ddfa18f0da054cd4e759da081fe6d",
+              "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-0/report.json",
+              "sha256": "a109f48571d3249d90e348b47dbb51446184950e0ee891ef567d77ada5114aca",
               "case": "build_project.execute"
             }
           ],
-          "boundary": "Module target selection is structured rather than upstream name@target strings. Clean and manual preflight override require explicit input; successful checking alone does not declare a successful build."
+          "boundary": "The native project build is blocked by a real compiler error; restored source passes default preflight and HAP build through public workflow_run."
         }
       ]
     },
@@ -1169,21 +1511,32 @@
             "target"
           ],
           "replacement": "project routes -> app_deploy with validated packages -> Ability launch; explicit target selection",
-          "status": "verified",
+          "disposition": "required",
+          "policy": null,
+          "implementation": "implemented",
+          "acceptance": "verified",
+          "required_scopes": [
+            {
+              "language": "none",
+              "platform": "any",
+              "sdk": null
+            }
+          ],
           "targets": [
             "src/services/runtime.ts"
           ],
           "tests": [
-            "test/native-context.test.ts"
+            "test/native-context.test.ts",
+            "scripts/native-capability-ui-mcp-acceptance.ts"
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/4d983235801ce8b548e5359459d6b23bc0d264f18a0194ea6bd2b056b1cc40c7.json",
-              "sha256": "4d983235801ce8b548e5359459d6b23bc0d264f18a0194ea6bd2b056b1cc40c7",
+              "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-2/report.json",
+              "sha256": "dacf0eef3b8a1837d75f6208a67c6365a5112dc563e7b5128a930eb43c94be62",
               "case": "start_app.execute"
             }
           ],
-          "boundary": "Real native launch returned processVerified=true in app_deploy and build_deploy_verify; the latter also passed the final application control assertion. Process launch alone is not proof of arbitrary UI outcomes."
+          "boundary": "Public app_deploy installs the freshly built signed canary and launches its captured module/Ability on the owned endpoint. Launch verifies delayed process stability and basic screen startup while outcomeVerified remains false until a separate application assertion."
         }
       ]
     },
@@ -1202,22 +1555,33 @@
             "freshStart"
           ],
           "replacement": "ui_test start/plan/resume/act/check/finish/cancel plus ui_review read/complete; fixed requirements and durable native evidence",
-          "status": "verified",
+          "disposition": "required",
+          "policy": null,
+          "implementation": "implemented",
+          "acceptance": "verified",
+          "required_scopes": [
+            {
+              "language": "none",
+              "platform": "any",
+              "sdk": null
+            }
+          ],
           "targets": [
             "src/services/ui-test.ts",
             "docs/builtin-skill-workflows.md"
           ],
           "tests": [
-            "test/native-ui-test.test.ts"
+            "test/native-ui-test.test.ts",
+            "scripts/native-capability-ui-mcp-acceptance.ts"
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/4d983235801ce8b548e5359459d6b23bc0d264f18a0194ea6bd2b056b1cc40c7.json",
-              "sha256": "4d983235801ce8b548e5359459d6b23bc0d264f18a0194ea6bd2b056b1cc40c7",
+              "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-2/report.json",
+              "sha256": "dacf0eef3b8a1837d75f6208a67c6365a5112dc563e7b5128a930eb43c94be62",
               "case": "verify_ui.testPlan"
             }
           ],
-          "boundary": "Original Chinese plan and required final control/visual checks persisted through native actions and MCP restart. Host supplied the plan and image judgments."
+          "boundary": "The original Chinese test plan is captured verbatim; public plan assigns an ordered step with a fixed exact-text assertion and an independent visual requirement."
         },
         {
           "id": "freshStart",
@@ -1228,22 +1592,33 @@
             "freshStart"
           ],
           "replacement": "ui_test start/plan/resume/act/check/finish/cancel plus ui_review read/complete; fixed requirements and durable native evidence",
-          "status": "verified",
+          "disposition": "required",
+          "policy": null,
+          "implementation": "implemented",
+          "acceptance": "verified",
+          "required_scopes": [
+            {
+              "language": "none",
+              "platform": "any",
+              "sdk": null
+            }
+          ],
           "targets": [
             "src/services/ui-test.ts",
             "docs/builtin-skill-workflows.md"
           ],
           "tests": [
-            "test/native-ui-test.test.ts"
+            "test/native-ui-test.test.ts",
+            "scripts/native-capability-ui-mcp-acceptance.ts"
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/4d983235801ce8b548e5359459d6b23bc0d264f18a0194ea6bd2b056b1cc40c7.json",
-              "sha256": "4d983235801ce8b548e5359459d6b23bc0d264f18a0194ea6bd2b056b1cc40c7",
+              "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-2/report.json",
+              "sha256": "dacf0eef3b8a1837d75f6208a67c6365a5112dc563e7b5128a930eb43c94be62",
               "case": "verify_ui.freshStart"
             }
           ],
-          "boundary": "Fresh test initialization stopped and relaunched the dedicated application; initialized=false became true and sampled application PID changed."
+          "boundary": "Public fresh-start initialization stops and relaunches the owned app; initialized changes from false to true and the actual sampled PID changes."
         },
         {
           "id": "step_execution",
@@ -1254,22 +1629,33 @@
             "freshStart"
           ],
           "replacement": "ui_test start/plan/resume/act/check/finish/cancel plus ui_review read/complete; fixed requirements and durable native evidence",
-          "status": "verified",
+          "disposition": "required",
+          "policy": null,
+          "implementation": "implemented",
+          "acceptance": "verified",
+          "required_scopes": [
+            {
+              "language": "none",
+              "platform": "any",
+              "sdk": null
+            }
+          ],
           "targets": [
             "src/services/ui-test.ts",
             "docs/builtin-skill-workflows.md"
           ],
           "tests": [
-            "test/native-ui-test.test.ts"
+            "test/native-ui-test.test.ts",
+            "scripts/native-capability-ui-mcp-acceptance.ts"
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/4d983235801ce8b548e5359459d6b23bc0d264f18a0194ea6bd2b056b1cc40c7.json",
-              "sha256": "4d983235801ce8b548e5359459d6b23bc0d264f18a0194ea6bd2b056b1cc40c7",
+              "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-2/report.json",
+              "sha256": "dacf0eef3b8a1837d75f6208a67c6365a5112dc563e7b5128a930eb43c94be62",
               "case": "verify_ui.step_execution"
             }
           ],
-          "boundary": "Six scoped native actions; three unchanged application captures counted 1/2/3 and the fourth was rejected until fresh screenshot review and changed strategy. Focused Chinese text input and native mouse confirmation passed the original assertion."
+          "boundary": "Five real scoped UI actions click, select all, insert Chinese and emoji, hide the keyboard, and confirm; only the final control and host visual checks allow completion."
         },
         {
           "id": "visual_review",
@@ -1280,22 +1666,33 @@
             "freshStart"
           ],
           "replacement": "ui_test start/plan/resume/act/check/finish/cancel plus ui_review read/complete; fixed requirements and durable native evidence",
-          "status": "verified",
+          "disposition": "required",
+          "policy": null,
+          "implementation": "implemented",
+          "acceptance": "verified",
+          "required_scopes": [
+            {
+              "language": "none",
+              "platform": "any",
+              "sdk": null
+            }
+          ],
           "targets": [
             "src/services/ui-test.ts",
             "docs/builtin-skill-workflows.md"
           ],
           "tests": [
-            "test/native-ui-test.test.ts"
+            "test/native-ui-test.test.ts",
+            "scripts/native-capability-ui-mcp-acceptance.ts"
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/4d983235801ce8b548e5359459d6b23bc0d264f18a0194ea6bd2b056b1cc40c7.json",
-              "sha256": "4d983235801ce8b548e5359459d6b23bc0d264f18a0194ea6bd2b056b1cc40c7",
+              "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-2/report.json",
+              "sha256": "dacf0eef3b8a1837d75f6208a67c6365a5112dc563e7b5128a930eb43c94be62",
               "case": "verify_ui.visual_review"
             }
           ],
-          "boundary": "Two fresh screenshots were actually read and visually inspected by the host, then assessed with matching artifact/hash/read tokens. finish rejected pending review despite a passing native assertion."
+          "boundary": "Public finish rejects an incomplete visual review despite the control check; the host reads the exact public MCP image and supplies matching artifact, SHA and read token with actual observations. Only a passed host assessment and the original native assertion permit the successful UI test finish."
         },
         {
           "id": "resume",
@@ -1306,22 +1703,33 @@
             "freshStart"
           ],
           "replacement": "ui_test start/plan/resume/act/check/finish/cancel plus ui_review read/complete; fixed requirements and durable native evidence",
-          "status": "verified",
+          "disposition": "required",
+          "policy": null,
+          "implementation": "implemented",
+          "acceptance": "verified",
+          "required_scopes": [
+            {
+              "language": "none",
+              "platform": "any",
+              "sdk": null
+            }
+          ],
           "targets": [
             "src/services/ui-test.ts",
             "docs/builtin-skill-workflows.md"
           ],
           "tests": [
-            "test/native-ui-test.test.ts"
+            "test/native-ui-test.test.ts",
+            "scripts/native-capability-ui-mcp-acceptance.ts"
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/4d983235801ce8b548e5359459d6b23bc0d264f18a0194ea6bd2b056b1cc40c7.json",
-              "sha256": "4d983235801ce8b548e5359459d6b23bc0d264f18a0194ea6bd2b056b1cc40c7",
+              "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-2/report.json",
+              "sha256": "dacf0eef3b8a1837d75f6208a67c6365a5112dc563e7b5128a930eb43c94be62",
               "case": "verify_ui.resume"
             }
           ],
-          "boundary": "Owned MCP process was killed after five accepted actions. Resume returned the same persisted test state and actions without replay, then the sixth action and final checks completed."
+          "boundary": "After three accepted native actions, full MCP reconnect and public resume preserve the exact plan and action receipts without replay. Resubmitting the same accepted attempt ID and operation returns the same three receipts; it does not inject the input again."
         },
         {
           "id": "cancel",
@@ -1332,22 +1740,33 @@
             "freshStart"
           ],
           "replacement": "ui_test start/plan/resume/act/check/finish/cancel plus ui_review read/complete; fixed requirements and durable native evidence",
-          "status": "verified",
+          "disposition": "required",
+          "policy": null,
+          "implementation": "implemented",
+          "acceptance": "verified",
+          "required_scopes": [
+            {
+              "language": "none",
+              "platform": "any",
+              "sdk": null
+            }
+          ],
           "targets": [
             "src/services/ui-test.ts",
             "docs/builtin-skill-workflows.md"
           ],
           "tests": [
-            "test/native-ui-test.test.ts"
+            "test/native-ui-test.test.ts",
+            "scripts/native-capability-ui-mcp-acceptance.ts"
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/4d983235801ce8b548e5359459d6b23bc0d264f18a0194ea6bd2b056b1cc40c7.json",
-              "sha256": "4d983235801ce8b548e5359459d6b23bc0d264f18a0194ea6bd2b056b1cc40c7",
+              "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-2/report.json",
+              "sha256": "dacf0eef3b8a1837d75f6208a67c6365a5112dc563e7b5128a930eb43c94be62",
               "case": "verify_ui.cancel"
             }
           ],
-          "boundary": "An initialized test was cancelled, MCP restarted, and status remained cancelled with zero actions and verified=false."
+          "boundary": "An initialized public UI test is cancelled, survives a full MCP reconnect as cancelled with zero actions, and never claims verification."
         }
       ]
     },
@@ -1364,23 +1783,34 @@
             "maxLogSize",
             "searchKeywords"
           ],
-          "replacement": "ui_test logs test_id, optional chunk_id/search_keywords/offset/max_bytes; main-app PID/device-time/step association",
-          "status": "verified",
+          "replacement": "ui_test logs test_id with chunk_offset/chunk_limit listing and chunk_id/search_keywords/offset/limit reads; continuous verified PID-generation chunks plus explicit gaps and retained legacy interval samples",
+          "disposition": "required",
+          "policy": null,
+          "implementation": "implemented",
+          "acceptance": "verified",
+          "required_scopes": [
+            {
+              "language": "none",
+              "platform": "any",
+              "sdk": null
+            }
+          ],
           "targets": [
             "src/services/ui-test-log.ts",
             "docs/builtin-skill-workflows.md"
           ],
           "tests": [
-            "test/native-ui-test-log.test.ts"
+            "test/native-ui-test-log.test.ts",
+            "scripts/native-capability-ui-mcp-acceptance.ts"
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/4d983235801ce8b548e5359459d6b23bc0d264f18a0194ea6bd2b056b1cc40c7.json",
-              "sha256": "4d983235801ce8b548e5359459d6b23bc0d264f18a0194ea6bd2b056b1cc40c7",
+              "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-2/report.json",
+              "sha256": "dacf0eef3b8a1837d75f6208a67c6365a5112dc563e7b5128a930eb43c94be62",
               "case": "get_ui_verification_log.read"
             }
           ],
-          "boundary": "Eight bounded PID/epoch-scoped log chunks were retained; a nonempty chunk was read through the native log API. complete=false explicitly describes partial ring-buffer evidence."
+          "boundary": "Public UI log listing paginates retained continuous chunks; reading an actual owned app chunk obeys the requested UTF-8 byte limit and leaves gap metadata explicit."
         },
         {
           "id": "search",
@@ -1389,23 +1819,34 @@
             "maxLogSize",
             "searchKeywords"
           ],
-          "replacement": "ui_test logs test_id, optional chunk_id/search_keywords/offset/max_bytes; main-app PID/device-time/step association",
-          "status": "verified",
+          "replacement": "ui_test logs test_id with chunk_offset/chunk_limit listing and chunk_id/search_keywords/offset/limit reads; continuous verified PID-generation chunks plus explicit gaps and retained legacy interval samples",
+          "disposition": "required",
+          "policy": null,
+          "implementation": "implemented",
+          "acceptance": "verified",
+          "required_scopes": [
+            {
+              "language": "none",
+              "platform": "any",
+              "sdk": null
+            }
+          ],
           "targets": [
             "src/services/ui-test-log.ts",
             "docs/builtin-skill-workflows.md"
           ],
           "tests": [
-            "test/native-ui-test-log.test.ts"
+            "test/native-ui-test-log.test.ts",
+            "scripts/native-capability-ui-mcp-acceptance.ts"
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/4d983235801ce8b548e5359459d6b23bc0d264f18a0194ea6bd2b056b1cc40c7.json",
-              "sha256": "4d983235801ce8b548e5359459d6b23bc0d264f18a0194ea6bd2b056b1cc40c7",
+              "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-2/report.json",
+              "sha256": "dacf0eef3b8a1837d75f6208a67c6365a5112dc563e7b5128a930eb43c94be62",
               "case": "get_ui_verification_log.search"
             }
           ],
-          "boundary": "Literal keyword search returned one 136-byte Chinese confirmation line within the 4000-byte request limit. Partial scoped logging is not continuous complete capture."
+          "boundary": "Public literal-keyword search paginates actual Chinese/emoji heartbeat lines with a 512-byte limit; this does not claim capture outside recorded bounded intervals."
         }
       ]
     },
@@ -1422,22 +1863,33 @@
             "dirname"
           ],
           "replacement": "ui_test export test_id,directory produces owned report, step images, logs and SHA-256 manifest",
-          "status": "verified",
+          "disposition": "required",
+          "policy": null,
+          "implementation": "implemented",
+          "acceptance": "verified",
+          "required_scopes": [
+            {
+              "language": "none",
+              "platform": "any",
+              "sdk": null
+            }
+          ],
           "targets": [
             "src/services/ui-test.ts",
             "docs/builtin-skill-workflows.md"
           ],
           "tests": [
-            "test/native-ui-test.test.ts"
+            "test/native-ui-test.test.ts",
+            "scripts/native-capability-ui-mcp-acceptance.ts"
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/4d983235801ce8b548e5359459d6b23bc0d264f18a0194ea6bd2b056b1cc40c7.json",
-              "sha256": "4d983235801ce8b548e5359459d6b23bc0d264f18a0194ea6bd2b056b1cc40c7",
+              "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-2/report.json",
+              "sha256": "dacf0eef3b8a1837d75f6208a67c6365a5112dc563e7b5128a930eb43c94be62",
               "case": "save_ui_screenshot.export_steps"
             }
           ],
-          "boundary": "Completed and cancelled tests were exported to fresh private directories; all manifest, screenshot, log and event byte counts and SHA-256 hashes were verified. Export success alone does not make a cancelled test pass."
+          "boundary": "Public completed-test export contains multiple real screenshots; manifest, events and every artifact byte count and SHA are independently verified from the exported files."
         }
       ]
     },
@@ -1451,23 +1903,34 @@
           "id": "execute",
           "parameters": [],
           "replacement": "skill_workflow kind=debug transition phase=completed after native reproduction evidence and host review",
-          "status": "verified",
+          "disposition": "required",
+          "policy": null,
+          "implementation": "implemented",
+          "acceptance": "verified",
+          "required_scopes": [
+            {
+              "language": "none",
+              "platform": "any",
+              "sdk": null
+            }
+          ],
           "targets": [
             "src/services/skill-workflow.ts",
             "docs/builtin-skill-workflows.md",
             "src/services/skill-guidance.ts"
           ],
           "tests": [
-            "test/native-skill-workflow.test.ts"
+            "test/native-skill-workflow.test.ts",
+            "scripts/native-capability-ui-mcp-acceptance.ts"
           ],
           "evidence": [
             {
-              "file": "provenance/upstream-capability-evidence/4d983235801ce8b548e5359459d6b23bc0d264f18a0194ea6bd2b056b1cc40c7.json",
-              "sha256": "4d983235801ce8b548e5359459d6b23bc0d264f18a0194ea6bd2b056b1cc40c7",
+              "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-2/report.json",
+              "sha256": "dacf0eef3b8a1837d75f6208a67c6365a5112dc563e7b5128a930eb43c94be62",
               "case": "debug_exit.execute"
             }
           ],
-          "boundary": "Builtin debug workflow persisted notes and implementing/verifying/completed phases; rejected cancelled evidence and completed only with a fresh succeeded UI test and host assessment. status=succeeded with verified=false; no host system mode is changed."
+          "boundary": "The builtin debug workflow rejects cancelled evidence and completes only with a fresh successful UI test matching its captured app and target. The retained client assessment and native UI evidence stay distinct; debug workflow completion does not claim arbitrary prose verification or alter host system mode."
         }
       ]
     }

@@ -12,6 +12,63 @@ import { ToolError } from "../src/core/errors.js";
 import Database from "better-sqlite3";
 import { setTimeout as delay } from "node:timers/promises";
 
+test("worker request cancellation and close preserve CANCELLED and durable failure telemetry", { timeout: 20000 }, async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-worker-cancel-"));
+  const startedFile = path.join(root, "started"), failures: Error[] = [];
+  const client = new WorkerClient((error) => failures.push(error), () =>
+    new Worker(new URL("fixtures/cancellable-worker.js", import.meta.url), {
+      stdout: true, stderr: true,
+      env: { ...process.env, DEVECO_STATE_DIR: root },
+      workerData: { startedFile },
+    }),
+  );
+  try {
+    for (const cause of ["request", "close"] as const) {
+      fs.rmSync(startedFile, { force: true });
+      const controller = new AbortController();
+      const pending = assert.rejects(
+        client.call("lsp", { action: "documentSymbol", file: "owned.ets" }, controller.signal),
+        (error) => {
+          assert.ok(error instanceof ToolError);
+          assert.equal(error.code, "CANCELLED");
+          assert.equal(error.message, cause === "request" ? "Runtime request was cancelled" : "Runtime is closing");
+          return true;
+        },
+      );
+      const deadline = Date.now() + 5000;
+      while (!fs.existsSync(startedFile)) {
+        assert.ok(Date.now() < deadline, "Worker did not enter the cancellable operation");
+        await delay(10);
+      }
+      if (cause === "request") {
+        // Private client reasons must not be reflected through the worker.
+        controller.abort(new Error("private-client-reason"));
+        await pending;
+        assert.ok(await client.call("workflow_run", { action: "list" }));
+      } else {
+        await Promise.all([pending, client.close()]);
+      }
+    }
+    assert.deepEqual(failures, []);
+    const db = new Database(path.join(root, "state.sqlite"), { readonly: true });
+    try {
+      const rows = db.prepare("SELECT data FROM events WHERE kind='request_failed'").all() as { data: string }[];
+      assert.equal(rows.length, 2);
+      for (const row of rows) {
+        const event = JSON.parse(row.data) as { code: string; tool: string; stage: string };
+        assert.equal(event.code, "CANCELLED");
+        assert.equal(event.tool, "lsp");
+        assert.equal(event.stage, "worker");
+        assert.doesNotMatch(row.data, /private-client-reason/);
+      }
+      assert.deepEqual(db.prepare("SELECT * FROM leases").all(), []);
+    } finally { db.close(); }
+  } finally {
+    await client.close();
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test("a real worker closes its runtime and releases log reservations after request telemetry persistence fails", { timeout: 20000 }, async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-worker-log-failure-"));
   const workers: Worker[] = [], failures: Error[] = [];

@@ -1,0 +1,8 @@
+{
+  "format": 1,
+  "operation": "plan_write.execute",
+  "checks": [
+    "Public revision-checked plan write persists Technical Context and Project Structure, then publishes the retained document to an owned file."
+  ],
+  "observation_sha256": "d151d39350d8ebffecfe21bf01da7b6ce139e174e29868563d8e35a6b4bcbe1b"
+}

@@ -1,0 +1,8 @@
+{
+  "format": 1,
+  "operation": "plan_exit.execute",
+  "checks": [
+    "Public transition leaves planning for implementing and completes after verification without claiming to alter the host system mode."
+  ],
+  "observation_sha256": "8e80dcac663f5645874f133b348cc885e9419922099aed2f7d081663d854a485"
+}

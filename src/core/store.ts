@@ -17,6 +17,7 @@ import { PayloadCipher } from "./crypto.js";
 import { currentTrace } from "./trace.js";
 import { windowsJobAlive } from "./windows-job.js";
 import { resourceIdentity } from "./resource-identity.js";
+import { initializeStateSchema, inspectStateSchema, assertStateMaintenanceAvailable } from "./state-schema.js";
 
 export type RunStatus =
   | "queued"
@@ -67,6 +68,13 @@ export class StateStore {
   private lastPrune = Date.now();
   constructor(root = stateDirectory()) {
     this.root = root;
+    assertStateMaintenanceAvailable(root);
+    const existing = fs.lstatSync(path.join(root, "state.sqlite"), { throwIfNoEntry: false });
+    if (existing) {
+      invariant(existing.isFile() && !existing.isSymbolicLink(), "STATE_SCHEMA_UNSUPPORTED", "State database must be a regular file");
+      const prior = new Database(path.join(root, "state.sqlite"), { readonly: true, fileMustExist: true });
+      try { inspectStateSchema(prior, true); } finally { prior.close(); }
+    }
     privateDirectory(root);
     privateDirectory(path.join(root, "artifacts"));
     this.cipher = new PayloadCipher(path.join(root, "workflow.key"));
@@ -79,42 +87,15 @@ export class StateStore {
       // flushes one schema transaction instead of every individual DDL statement.
       this.db
         .transaction(() => {
-          this.db
-            .exec(`CREATE TABLE IF NOT EXISTS runtime_meta (version TEXT PRIMARY KEY);
-      CREATE TABLE IF NOT EXISTS runs (id TEXT PRIMARY KEY, workflow TEXT NOT NULL, input TEXT NOT NULL, input_hash TEXT NOT NULL, request_key TEXT UNIQUE, protocol TEXT NOT NULL, status TEXT NOT NULL, owner TEXT, updated INTEGER NOT NULL, created INTEGER NOT NULL, result TEXT, error TEXT);
-      CREATE TABLE IF NOT EXISTS leases (resource TEXT PRIMARY KEY, owner TEXT NOT NULL, pid INTEGER NOT NULL, updated INTEGER NOT NULL, token TEXT NOT NULL);
-      CREATE TABLE IF NOT EXISTS operations (run_id TEXT NOT NULL, node TEXT NOT NULL, input_hash TEXT NOT NULL, status TEXT NOT NULL, result TEXT, PRIMARY KEY(run_id,node));
-      CREATE TABLE IF NOT EXISTS ui_recordings (run_id TEXT PRIMARY KEY, target TEXT NOT NULL, state TEXT NOT NULL, payload TEXT NOT NULL, operation_owner TEXT, updated INTEGER NOT NULL);
-      CREATE TABLE IF NOT EXISTS ui_reviews (id TEXT PRIMARY KEY, run_id TEXT NOT NULL, artifact_id TEXT NOT NULL, sha256 TEXT NOT NULL, status TEXT NOT NULL, payload TEXT NOT NULL, read_token TEXT, read_at INTEGER, created INTEGER NOT NULL, updated INTEGER NOT NULL);
-      CREATE TABLE IF NOT EXISTS ui_tests (run_id TEXT PRIMARY KEY, target TEXT NOT NULL, state TEXT NOT NULL, payload TEXT NOT NULL, updated INTEGER NOT NULL);
-      CREATE UNIQUE INDEX IF NOT EXISTS ui_test_target ON ui_tests(target) WHERE state='active';
-      CREATE TABLE IF NOT EXISTS skill_workflows (run_id TEXT PRIMARY KEY, kind TEXT NOT NULL, revision INTEGER NOT NULL, phase TEXT NOT NULL, payload TEXT NOT NULL, updated INTEGER NOT NULL);
-      CREATE UNIQUE INDEX IF NOT EXISTS ui_recording_target ON ui_recordings(target) WHERE state IN ('preparing','active','sealed','cancelling');
-      CREATE TABLE IF NOT EXISTS artifacts (id TEXT PRIMARY KEY, run_id TEXT NOT NULL, file TEXT NOT NULL, bytes INTEGER NOT NULL, mime TEXT NOT NULL, created INTEGER NOT NULL);
-      CREATE TABLE IF NOT EXISTS artifact_gc (file TEXT PRIMARY KEY, bytes INTEGER NOT NULL);
-      CREATE TABLE IF NOT EXISTS released_packages (artifact_id TEXT PRIMARY KEY, run_id TEXT NOT NULL, sha256 TEXT NOT NULL, bytes INTEGER NOT NULL, released_at INTEGER NOT NULL);
-      CREATE TABLE IF NOT EXISTS run_pins (id TEXT NOT NULL, run_id TEXT NOT NULL, owner TEXT NOT NULL, kind TEXT NOT NULL, created INTEGER NOT NULL, PRIMARY KEY(id,run_id));
-      CREATE TABLE IF NOT EXISTS run_dependencies (parent_run_id TEXT NOT NULL, run_id TEXT NOT NULL, PRIMARY KEY(parent_run_id,run_id));
-      CREATE INDEX IF NOT EXISTS run_dependency_target ON run_dependencies(run_id);
-      CREATE TABLE IF NOT EXISTS storage_receipts (id TEXT PRIMARY KEY, kind TEXT NOT NULL, data TEXT NOT NULL, created INTEGER NOT NULL);
-      CREATE TABLE IF NOT EXISTS artifact_streams (id TEXT PRIMARY KEY, run_id TEXT NOT NULL, file TEXT NOT NULL, bytes INTEGER NOT NULL, owner TEXT NOT NULL, created INTEGER NOT NULL);
-      CREATE TABLE IF NOT EXISTS native_directories (id TEXT PRIMARY KEY, owner TEXT NOT NULL, file TEXT NOT NULL, bytes INTEGER NOT NULL, created INTEGER NOT NULL, closing INTEGER NOT NULL);
-      CREATE TABLE IF NOT EXISTS managed_processes (id TEXT PRIMARY KEY, owner TEXT NOT NULL, run_id TEXT, pid INTEGER, resources TEXT NOT NULL, status TEXT NOT NULL, created INTEGER NOT NULL, updated INTEGER NOT NULL, windows_job TEXT);
-      CREATE TABLE IF NOT EXISTS external_sessions (id TEXT PRIMARY KEY, owner TEXT NOT NULL, run_id TEXT, kind TEXT NOT NULL, resources TEXT NOT NULL, metadata TEXT NOT NULL, status TEXT NOT NULL, updated INTEGER NOT NULL);
-      CREATE TABLE IF NOT EXISTS events (id INTEGER PRIMARY KEY AUTOINCREMENT, run_id TEXT, kind TEXT NOT NULL, data TEXT NOT NULL, created INTEGER NOT NULL);`);
-          const versions = this.db
-            .prepare("SELECT version FROM runtime_meta")
-            .all() as { version: string }[];
-          invariant(
-            versions.length === 0 ||
-              (versions.length === 1 &&
-                versions[0]?.version === protocolVersion),
-            "STATE_VERSION_MISMATCH",
-            "Export historical reports and select a fresh state directory for this execution protocol",
-          );
-          this.db
-            .prepare("INSERT OR IGNORE INTO runtime_meta VALUES (?)")
-            .run(protocolVersion);
+          assertStateMaintenanceAvailable(root);
+          initializeStateSchema(this.db);
+          const instances = this.db.prepare("SELECT owner,pid FROM runtime_instances LIMIT 1025").all() as { owner: string; pid: number }[];
+          invariant(instances.length <= 1024, "STATE_INSTANCE_CAPACITY", "Too many unresolved runtime registrations");
+          for (const instance of instances) {
+            invariant(Number.isSafeInteger(instance.pid) && instance.pid > 0, "STATE_INSTANCE_INVALID", "Invalid runtime registration");
+            if (!this.alive(instance.pid)) this.db.prepare("DELETE FROM runtime_instances WHERE owner=?").run(instance.owner);
+          }
+          this.db.prepare("INSERT INTO runtime_instances VALUES (?,?)").run(this.owner, process.pid);
         })
         .immediate();
       this.reconcile();
@@ -138,6 +119,7 @@ export class StateStore {
     } catch (error) {
       // Construction can fail during WAL recovery, schema validation or quota
       // checks. No caller has a StateStore to close in that case.
+      try { this.db.prepare("DELETE FROM runtime_instances WHERE owner=?").run(this.owner); } catch { /* Schema validation may have failed before registration. */ }
       this.db.close();
       this.cipher.close();
       throw error;
@@ -603,10 +585,12 @@ export class StateStore {
     resource: string,
     task: () => Promise<T>,
     signal?: AbortSignal,
-    options: { quotaRecovery?: boolean } = {},
+    options: { quotaRecovery?: boolean; independent?: boolean } = {},
   ): Promise<T> {
     resource = resourceIdentity(resource);
-    const inherited = this.held.getStore();
+    // A separately joined background session must not inherit a short-lived
+    // caller's device/project lease in its process recovery guards.
+    const inherited = options.independent ? undefined : this.held.getStore();
     if (inherited?.has(resource)) {
       signal?.throwIfAborted();
       return task();
@@ -1312,6 +1296,8 @@ export class StateStore {
           "ui_recordings",
           "ui_reviews",
           "ui_tests",
+          "ui_log_chunks",
+          "ui_log_sessions",
           "skill_workflows",
         ])
           this.db.prepare(`DELETE FROM ${table} WHERE run_id=?`).run(run.id);
@@ -1373,6 +1359,7 @@ export class StateStore {
       )
       .run(Date.now(), this.owner);
     this.db.prepare("DELETE FROM leases WHERE owner=?").run(this.owner);
+    this.db.prepare("DELETE FROM runtime_instances WHERE owner=?").run(this.owner);
     this.db.close();
     this.cipher.close();
   }

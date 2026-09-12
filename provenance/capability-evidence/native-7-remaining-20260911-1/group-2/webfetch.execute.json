@@ -1,0 +1,9 @@
+{
+  "format": 1,
+  "operation": "webfetch.execute",
+  "checks": [
+    "The reviewed product contract assigns generic reasoning, file editing, search, questions and delegation to the connected host client.",
+    "The actual MCP catalog exposes domain tools and guided completion gates; this boundary observation does not claim native implementation or successful execution by every AI client."
+  ],
+  "observation_sha256": "a986804cae9d46aa7f8fadecb4d4c1a6508df71f947fb3cfcdf9dc10f7d41402"
+}

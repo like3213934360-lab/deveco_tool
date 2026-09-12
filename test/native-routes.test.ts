@@ -541,6 +541,7 @@ test("native aa launch encodes typed Want arguments and rejects unsupported valu
       entities: ["entity"],
       uri: "sample://app/items/42",
       parameters: { z: "中文 ' quoted", empty: "", enabled: false, count: 7 },
+      startup_check: { mode: "process_only", stable_ms: 500, timeout_ms: 2000 },
     });
     const result = await f.runtime.devices.launch("device", app);
     assert.equal(result.processVerified, true);
@@ -571,12 +572,15 @@ test("native aa launch encodes typed Want arguments and rejects unsupported valu
       "z",
       "中文 ' quoted",
     ]);
+    const afterSuccessfulLaunch = calls.length;
+    assert.equal(calls.filter(args => args[0] === "aa").length, 1);
+    assert.ok(calls.filter(args => args[0] === "pidof").length >= 2);
     for (const value of [-1, 1.5, 4294967296, "-option", "a\0b"]) {
       await assert.rejects(
         f.runtime.devices.launch("device", { ...app, parameters: { value } }),
       );
     }
-    assert.equal(calls.length, 2);
+    assert.equal(calls.length, afterSuccessfulLaunch);
   } finally {
     await f.close();
   }

@@ -1,0 +1,8 @@
+{
+  "format": 1,
+  "operation": "verify_ui.cancel",
+  "checks": [
+    "An initialized public UI test is cancelled, survives a full MCP reconnect as cancelled with zero actions, and never claims verification."
+  ],
+  "observation_sha256": "34963d1b73c1f7be4dc036a05c650563d843061a2f2902f7a369b6ffee543aab"
+}

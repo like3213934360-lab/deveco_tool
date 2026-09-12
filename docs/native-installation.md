@@ -24,9 +24,9 @@ ZIP 包含 package-lock.json（npm pack 默认会排除这个文件）。封装�
 
 1. 在旧版中结束或取消任务，停止热重载与 LSP 会话。
 2. 保留前一个完整安装目录和本次安装的版本、ZIP SHA-256、Node 版本及启动配置记录。将新版解压到另一个目录，校验后执行 `npm ci --omit=dev`。
-3. 使用新版配置 JSON 设置非默认工具链位置，通过 `DEVECO_CONFIG` 指向该文件；状态目录可使用 `DEVECO_STATE_DIR`。清除旧环境变量配置。
+3. 使用配置 JSON 设置非默认工具链位置，通过 `DEVECO_CONFIG` 指向该文件；状态目录可使用 `DEVECO_STATE_DIR`。维护命令只更新这两个本工具管理的环境键，保留用户其他环境变量和 MCP 设置。
 4. 将宿主 command 设为该机器的 Node 绝对路径，args 设为新版 `/absolute/installation/dist/src/cli.js`。没有旧路径转发。
-5. 新版认证需重新登录，不导入旧凭据格式。保留用户 UI 流程文件并通过新版校验；不加载旧任务引擎或旧内存任务。
+5. 兼容 native 状态可使用下面的 `reuse` 路径保留认证、历史和制品；凭据原有过期与刷新规则继续生效。未知 schema 或不同执行协议须先使用旧运行时导出历史，再明确选择独立的新状态目录。用户 UI 流程文件原位保留并通过新版校验。
 6. 运行 `node dist/src/cli.js doctor`，再执行创建、构建、设备及既有 UI 流程验收。安装检查只证明基础运行、资源和持久化可用，不代替这些专项验证。
 7. 依据可核对的本项目安装记录清理其安装的官方 Skill；用户自行维护的 Skill 不属于自动删除范围。
 
@@ -43,9 +43,17 @@ ZIP 包含 package-lock.json（npm pack 默认会排除这个文件）。封装�
 /absolute/node24 /absolute/new-install/dist/src/cli.js maintenance rollback /private/new-upgrade-journal --sessions-ended
 ```
 
-spec 包含 `host_config`、`host_format`（`codex-toml` 或 `mcp-json`）、`server`、`installation`、`node`、新的 `state_dir`、`configuration`、`flow_files` 和旧状态目录 `previous_state_dirs`。两个完整安装目录必须互不包含。`--sessions-ended` 是操作者已经结束会话的声明；命令仍只读检查进程和指定状态库，发现未终结任务或未关闭外部会话会拒绝。不会替用户强杀不明进程。
+spec 包含 `host_config`、`host_format`（`codex-toml` 或 `mcp-json`）、`server`、`installation`、`node`、`state_dir`、可选 `configuration`、`flow_files` 和旧状态目录 `previous_state_dirs`。两个完整安装目录必须互不包含，journal 必须在状态目录之外。`--sessions-ended` 是操作者已经结束会话的声明；命令仍检查进程、实例登记、租约、任务、连续日志、制品写入和未确认效果，尚未排空时拒绝。先在旧 MCP 正常停止或恢复并关闭有关操作；维护不会替用户强杀进程或假装结束任务。
 
-Codex TOML 保留所选 MCP 的超时、启用和工具权限字段，也保留其他 MCP 配置，仅替换启动字段及环境；不支持无损处理的启动字段语法明确拒绝。[Codex MCP 配置字段](https://learn.chatgpt.com/docs/extend/mcp?surface=cli)定义了这些启动和权限设置。全配置回退记录加密存储在私有 journal，不复制到仓库。当前维护实现即使从 native-6 升到 native-6，也无条件要求新的状态目录，既有目录返回 `UPGRADE_STATE_EXISTS`；没有保留状态或导入凭据选项。因此两方认证须重新登录，旧状态保留用于回退。这是维护入口现有限制，不代表每次升级都改变执行协议。计划中的用户流程文件逐个核对并原位保留。
+`state_strategy` 默认为 `auto`。将 `state_dir` 指向所选 MCP 当前的原状态目录，可在已知协议和 SQL schema 均兼容时复用；也可显式设为 `reuse`。若旧路径通过宿主继承而不能从配置识别，使用 `source_state_dir` 明确声明，不能与宿主中已声明的路径冲突。复用时未提供 `configuration` 就保留旧配置值。若已有历史却选择了另一个新目录，必须显式设 `state_strategy: "fresh"`，不能无声丢弃登录和历史。`fresh` 路径保留原状态，但新状态需要登录；它不提供跨协议任务恢复。
+
+原目录复用保持历史制品的绝对路径、加密凭据和本地密钥不变。维护验证 SQL 表、列、索引和 revision，拒绝未知触发器、未知 schema 与不同协议。当前支持已知 native-7 原始 schema 到 revision 2 的增量迁移。未结束或不兼容的任务不能因协议名称相同而继续执行；历史流程按当前公开契约校验后才可新建运行。
+
+复用前用 SQLite 的一致快照读取包含已提交 WAL 页的数据库，并将数据库、密钥、配置和制品按块加密到私有 journal，逐块鉴别且核对完整哈希。备份限制为数据库 256 MiB、状态总量 1 GiB、20000 个条目、32 层目录；超限必须先按正常存储流程导出和清理，不能跳过备份。符号链接和特殊文件会被拒绝。升级 fence 位于状态目录的同级，跨崩溃保留；中断后用原计划和原 journal 重试 `apply` 或 `rollback`，不要手工删除 fence、journal 或其密钥。旧版不识别新版 fence，切换期间也必须保持旧宿主关闭。
+
+回滚除切回原完整安装外，还恢复迁移前的 schema、数据库、密钥和状态文件；升级后产生的完整状态另存于同级 `.状态目录名.after-upgrade-摘要`，不会被覆盖。该副本用于恢复和核查；其历史绝对制品路径仍指向原目录，不能直接当作另一个可运行状态目录。回滚不会撤销设备安装、工程修改或云端效果。回滚完成后重复命令不再倒灌旧快照；再次升级需新计划和 journal。凭据若在外部过期或失效，恢复快照不会使它重新有效。
+
+Codex TOML 和 MCP JSON 均保留所选 MCP 的超时、启用、工具权限、cwd、env_vars、用户环境变量及其他 MCP 的设置语义，仅更新 command、args、DEVECO_CONFIG 和 DEVECO_STATE_DIR。TOML 序列化可能调整格式和注释，所有值须通过重新解析的等值检查。全宿主配置与状态备份在私有 journal 中加密存储，不复制到仓库。计划中的外部用户流程文件逐个核对哈希并原位保留。format 1 的旧维护 journal 仍使用生成它的原版本维护命令；本版新计划为 format 2。
 
 ### 当前旧入口缺失的修复
 

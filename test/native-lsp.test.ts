@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { z } from "zod";
 import { ProcessService } from "../src/core/process.js";
 import {
@@ -16,6 +16,11 @@ import type { Project } from "../src/services/project.js";
 import { tools } from "../src/core/contracts.js";
 import { PassThrough, Writable } from "node:stream";
 import { languageConnection } from "../src/core/language-connection.js";
+import {
+  arktsSymbolResult,
+  reconcileArktsOutgoing,
+  reconcileArktsCallableExtents,
+} from "../src/services/arkts-language.js";
 
 test("LSP broken pipes reject pending requests and notifications without unhandled writes", async () => {
   for (const [notification, failedWrite] of [
@@ -94,6 +99,11 @@ async function fixture(
     path.join(root, "Model.ets"),
     "const value = '中文😀';\r\nvalue\r\n",
   );
+  for (const name of ["Consumer.ets", "Implementation.ets"])
+    fs.writeFileSync(
+      path.join(root, name),
+      "export function leaf(): number { return 1; }\n",
+    );
   try {
     await check(service, project);
   } finally {
@@ -293,11 +303,21 @@ test("LSP symbol absence, empty results and malformed responses remain distinct"
     "outgoingCalls",
   ] as const;
   await fixture({ NO_SYMBOLS: "1" }, async (service, project) => {
-    for (const action of actions)
+    for (const action of actions) {
+      assert.ok(
+        Array.isArray(
+          await service.request(project, { action, file: "Model.ets" }),
+        ),
+      );
       await assert.rejects(
-        service.request(project, { action, file: "Model.ets" }),
+        service.request(project, {
+          action,
+          file: "Model.ets",
+          language: "cpp",
+        }),
         code("LSP_CAPABILITY_UNAVAILABLE"),
       );
+    }
   });
   await fixture({ EMPTY_SYMBOLS: "1" }, async (service, project) => {
     for (const action of actions) {
@@ -330,6 +350,264 @@ test("LSP symbol absence, empty results and malformed responses remain distinct"
       ]),
     code("LSP_INVALID_RESPONSE"),
   );
+});
+
+test("ArkTS symbol normalization preserves opaque data and rejects relative paths", () => {
+  for (const file of [
+    "/tmp/中文 #%.ets",
+    "C:\\工程\\文件 #.ets",
+    "\\\\server\\share\\文件.ets",
+    "file:///tmp/中文 空格.ets",
+    "file:///tmp/encoded%20space.ets",
+  ]) {
+    const data = { uri: "opaque:unchanged", path: file };
+    const value = [
+      {
+        name: "leaf",
+        kind: 12,
+        location: {
+          uri: file,
+          range: {
+            start: { line: 0, character: 0 },
+            end: { line: 0, character: 1 },
+          },
+        },
+        data,
+      },
+    ];
+    const normalized = arktsSymbolResult(
+      "workspaceSymbol",
+      value,
+    ) as typeof value;
+    assert.match(normalized[0]!.location.uri, /^file:\/\//);
+    assert.equal(normalized[0]!.location.uri.includes(" "), false);
+    assert.equal(normalized[0]!.data, data);
+    assert.deepEqual(
+      arktsSymbolResult("workspaceSymbol", normalized),
+      normalized,
+    );
+    assert.ok(languageResult("workspaceSymbol", normalized));
+  }
+  for (const uri of ["relative.ets", "C:relative.ets", "bad\0path"]) {
+    assert.throws(
+      () =>
+        languageResult(
+          "prepareCallHierarchy",
+          arktsSymbolResult("prepareCallHierarchy", [
+            {
+              uri,
+              name: "leaf",
+              kind: 12,
+              range: {
+                start: { line: 0, character: 0 },
+                end: { line: 0, character: 1 },
+              },
+              selectionRange: {
+                start: { line: 0, character: 0 },
+                end: { line: 0, character: 1 },
+              },
+            },
+          ]),
+        ),
+      code("LSP_INVALID_RESPONSE"),
+    );
+  }
+});
+
+test("ArkTS named-arrow extents require the exact semantic variable declaration and keep original coordinates", async () => {
+  const item = {
+    name: "nested",
+    kind: 12,
+    uri: "file:///owned/Caller.ets",
+    range: {
+      start: { line: 8, character: 31 },
+      end: { line: 8, character: 84 },
+    },
+    selectionRange: {
+      start: { line: 8, character: 8 },
+      end: { line: 8, character: 14 },
+    },
+    data: { opaque: "server-owned" },
+  };
+  const fromRanges = [
+    { start: { line: 8, character: 54 }, end: { line: 8, character: 63 } },
+  ];
+  for (const action of [
+    "prepareCallHierarchy",
+    "incomingCalls",
+    "outgoingCalls",
+  ] as const) {
+    const field =
+      action === "incomingCalls"
+        ? "from"
+        : action === "outgoingCalls"
+          ? "to"
+          : undefined;
+    const response = field ? [{ [field]: item, fromRanges }] : [item];
+    let checks = 0;
+    const reconciled = await reconcileArktsCallableExtents(
+      action,
+      response,
+      async (candidate) => {
+        checks++;
+        assert.deepEqual(candidate, item);
+        return true;
+      },
+    );
+    assert.equal(checks, 1);
+    const validated = languageResult(action, reconciled) as Record<
+      string,
+      unknown
+    >[];
+    const resolved = (
+      field ? validated[0]![field] : validated[0]
+    ) as typeof item & { extentEvidence: unknown };
+    assert.deepEqual(resolved.range, {
+      start: item.selectionRange.start,
+      end: item.range.end,
+    });
+    assert.deepEqual(resolved.selectionRange, item.selectionRange);
+    assert.deepEqual(resolved.data, item.data);
+    assert.deepEqual(resolved.extentEvidence, {
+      method: "textDocument/documentSymbol",
+      originalRange: item.range,
+      declarationRange: item.selectionRange,
+    });
+    if (field) assert.deepEqual(validated[0]!.fromRanges, fromRanges);
+    await assert.rejects(
+      reconcileArktsCallableExtents(action, response, async () => false),
+      code("LSP_CALL_EXTENT_UNVERIFIED"),
+    );
+  }
+  for (const altered of [
+    { ...item, kind: 5 },
+    {
+      ...item,
+      selectionRange: {
+        start: { line: 8, character: 80 },
+        end: { line: 8, character: 90 },
+      },
+    },
+    {
+      ...item,
+      range: {
+        start: { line: 8, character: 84 },
+        end: { line: 8, character: 31 },
+      },
+    },
+  ]) {
+    const response = await reconcileArktsCallableExtents(
+      "prepareCallHierarchy",
+      [altered],
+      async () => {
+        assert.fail("Invalid shapes must not trigger declaration queries");
+      },
+    );
+    assert.throws(
+      () => languageResult("prepareCallHierarchy", response),
+      code("LSP_INVALID_RESPONSE"),
+    );
+  }
+  // Language-neutral validation remains strict; only the evidenced ArkTS path adapts.
+  assert.throws(
+    () => languageResult("prepareCallHierarchy", [item]),
+    code("LSP_INVALID_RESPONSE"),
+  );
+});
+
+test("ArkTS duplicated property-call spans reconcile against the same precise incoming relation", async () => {
+  const point = (character: number) => ({ line: 1, character });
+  const range = (start: number, end: number) => ({
+    start: point(start),
+    end: point(end),
+  });
+  const caller = {
+    name: "relay",
+    kind: 12,
+    uri: "file:///owned/Caller.ets",
+    range: range(0, 100),
+    selectionRange: range(0, 5),
+  };
+  for (const uri of [caller.uri, "file:///owned/Callee.ets"]) {
+    const callee = {
+      ...caller,
+      uri,
+      name: "compute",
+      selectionRange: range(5, 12),
+    };
+    const original = [
+      range(20, 32),
+      range(20, 32),
+      range(40, 52),
+      range(40, 52),
+    ];
+    const expected = [range(25, 32), range(45, 52)];
+    const resolved = await reconcileArktsOutgoing(
+      caller,
+      [{ to: callee, fromRanges: original }],
+      async () => [{ from: caller, fromRanges: expected }],
+    );
+    assert.deepEqual(resolved?.[0]?.fromRanges, expected);
+    assert.deepEqual(
+      z
+        .object({
+          rangeEvidence: z.object({ originalFromRanges: z.unknown() }),
+        })
+        .parse(resolved?.[0]).rangeEvidence.originalFromRanges,
+      original,
+    );
+    await assert.rejects(
+      reconcileArktsOutgoing(
+        caller,
+        [{ to: callee, fromRanges: original }],
+        async () => [{ from: caller, fromRanges: [expected[0]!] }],
+      ),
+      code("LSP_CALL_RANGE_UNVERIFIED"),
+    );
+  }
+});
+
+test("ArkTS cross-file calls use reciprocal semantic ranges and refuse incomplete relations", async () => {
+  const range = (line: number, character: number) => ({
+    start: { line, character },
+    end: { line, character: character + 3 },
+  });
+  const caller = {
+    name: "caller",
+    kind: 12,
+    uri: pathToFileURL("/tmp/caller.ets").href,
+    range: range(4, 0),
+    selectionRange: range(4, 0),
+  };
+  const callee = {
+    ...caller,
+    name: "leaf",
+    uri: pathToFileURL("/tmp/leaf.ets").href,
+  };
+  const original = [{ to: callee, fromRanges: [range(1, 0), range(1, 8)] }];
+  const correct = [range(9, 12), range(10, 6)];
+  const result = await reconcileArktsOutgoing(caller, original, async () => [
+    { from: caller, fromRanges: correct },
+  ]);
+  assert.deepEqual(result![0]!.fromRanges, correct);
+  assert.deepEqual(result![0], {
+    to: callee,
+    fromRanges: correct,
+    rangeEvidence: {
+      method: "callHierarchy/incomingCalls",
+      originalFromRanges: original[0]!.fromRanges,
+    },
+  });
+  for (const response of [
+    null,
+    [],
+    [{ from: { ...caller, uri: callee.uri }, fromRanges: correct }],
+    [{ from: caller, fromRanges: correct.slice(0, 1) }],
+  ])
+    await assert.rejects(
+      reconcileArktsOutgoing(caller, original, async () => response),
+      code("LSP_CALL_RANGE_UNVERIFIED"),
+    );
 });
 
 test("LSP symbol validation bounds nesting and output before recursive parsing", () => {
@@ -445,6 +723,96 @@ test("LSP unsupported capabilities, empty hover, invalid encoding and malformed 
   assert.equal(languageResult("definition", null), null);
   assert.deepEqual(languageResult("hover", { contents: [] }), { contents: [] });
   assert.deepEqual(languageResult("implementation", []), []);
+});
+test("LSP pull diagnostics return fresh full reports without waiting for push notifications", async () => {
+  await fixture({ PULL_DIAGNOSTICS: "1" }, async (service, project) => {
+    const read = async () =>
+      z
+        .object({
+          diagnostic_transport: z.literal("pull"),
+          diagnostics: z.array(
+            z.object({ message: z.string(), severity: z.number().optional() }),
+          ),
+        })
+        .parse(
+          await service.request(project, {
+            action: "diagnostics",
+            file: "Model.ets",
+          }),
+        );
+    assert.deepEqual((await read()).diagnostics, []);
+    fs.writeFileSync(path.join(project.root, "Model.ets"), "BROKEN\n");
+    assert.deepEqual((await read()).diagnostics, [
+      { message: "current pull diagnostic", severity: 1 },
+    ]);
+    fs.writeFileSync(
+      path.join(project.root, "Model.ets"),
+      "const repaired = 1;\n",
+    );
+    assert.deepEqual((await read()).diagnostics, []);
+    assert.equal(service.metrics.connections, 1);
+  });
+});
+test("LSP pull diagnostic errors, invalid unchanged reports and cancellation never become empty success", async () => {
+  for (const invalid of ["1", "null", "unchanged"])
+    await fixture(
+      { PULL_DIAGNOSTICS: "1", INVALID_DIAGNOSTICS: invalid },
+      async (service, project) => {
+        await assert.rejects(
+          service.request(project, {
+            action: "diagnostics",
+            file: "Model.ets",
+          }),
+          code("LSP_INVALID_RESPONSE"),
+        );
+      },
+    );
+  await fixture(
+    { PULL_DIAGNOSTICS: "1", NO_DIAGNOSTIC_METHOD: "1" },
+    async (service, project) => {
+      await assert.rejects(
+        service.request(project, { action: "diagnostics", file: "Model.ets" }),
+        (error) => {
+          assert.ok(
+            error instanceof ToolError &&
+              error.code === "LSP_CAPABILITY_UNAVAILABLE",
+          );
+          assert.deepEqual(error.details, {
+            method: "textDocument/diagnostic",
+            rpc_code: -32601,
+            source: "jsonrpc_response",
+            request_dispatched: true,
+          });
+          return true;
+        },
+      );
+    },
+  );
+  await fixture(
+    { PULL_DIAGNOSTICS: "1", DIAGNOSTIC_DELAY_MS: "10000" },
+    async (service, project) => {
+      await service.request(project, { action: "hover", file: "Model.ets" });
+      const controller = new AbortController(),
+        reason = new ToolError("CANCELLED", "Cancel diagnostic pull");
+      const timer = setTimeout(() => controller.abort(reason), 100);
+      try {
+        await assert.rejects(
+          service.request(
+            project,
+            { action: "diagnostics", file: "Model.ets" },
+            controller.signal,
+          ),
+          code("CANCELLED"),
+        );
+      } finally {
+        clearTimeout(timer);
+      }
+      assert.ok(
+        await service.request(project, { action: "hover", file: "Model.ets" }),
+      );
+      assert.equal(service.metrics.connections, 1);
+    },
+  );
 });
 test("LSP refreshes the exact changed bytes and ignores old-version or invalid-URI diagnostics", async () => {
   await fixture({}, async (service, project) => {

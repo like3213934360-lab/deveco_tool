@@ -23,6 +23,11 @@ import { compilationDatabase } from "./compilation-database.js";
 import { withinDeadline } from "../core/deadline.js";
 import { languageConnection } from "../core/language-connection.js";
 import { assertLanguageBudget, symbolResults } from "./language-symbols.js";
+import {
+  arktsSymbolResult,
+  reconcileArktsOutgoing,
+  reconcileArktsCallableExtents,
+} from "./arkts-language.js";
 
 export interface Diagnostic {
   range: {
@@ -59,6 +64,13 @@ const capabilities = z.object({
   documentSymbolProvider: provider,
   workspaceSymbolProvider: provider,
   callHierarchyProvider: provider,
+  diagnosticProvider: z
+    .object({
+      identifier: z.string().optional(),
+      interFileDependencies: z.boolean(),
+      workspaceDiagnostics: z.boolean(),
+    })
+    .optional(),
   positionEncoding: z.string().optional(),
 });
 const markedString = z.union([
@@ -315,7 +327,12 @@ export async function lspRequest(
               ? new ToolError(
                   "LSP_CAPABILITY_UNAVAILABLE",
                   `Language server does not implement ${method}`,
-                  { method, rpc_code: -32601 },
+                  {
+                    method,
+                    rpc_code: -32601,
+                    source: "jsonrpc_response",
+                    request_dispatched: true,
+                  },
                 )
               : error,
           );
@@ -556,6 +573,10 @@ export class LanguageService {
           general: { positionEncodings: ["utf-16"] },
           textDocument: {
             publishDiagnostics: { relatedInformation: true },
+            diagnostic: {
+              dynamicRegistration: false,
+              relatedDocumentSupport: false,
+            },
             definition: { linkSupport: true },
             implementation: { linkSupport: true },
             hover: { contentFormat: ["markdown", "plaintext"] },
@@ -563,7 +584,7 @@ export class LanguageService {
             documentSymbol: { hierarchicalDocumentSymbolSupport: true },
             callHierarchy: { dynamicRegistration: false },
           },
-          workspace: { symbol: {} },
+          workspace: { symbol: {}, diagnostics: { refreshSupport: false } },
         },
         initializationOptions: {},
       });
@@ -621,6 +642,44 @@ export class LanguageService {
       `--sdkPath=${toolchain.sdk}`,
     ];
   }
+  private async openDocument(
+    session: Session,
+    uri: string,
+    document: { text: string; hash: string },
+    language: "arkts" | "cpp",
+    protectedUri?: string,
+  ) {
+    const opened = session.opened.get(uri);
+    if (opened) {
+      session.opened.delete(uri);
+      session.opened.set(uri, opened);
+      return;
+    }
+    while (session.opened.size >= this.limits.opened_files) {
+      const oldest = [...session.opened.keys()].find(
+        (key) => key !== protectedUri,
+      );
+      invariant(
+        oldest,
+        "LSP_RESULT_LIMIT",
+        "Call verification requires room for both caller and callee documents",
+      );
+      await session.connection.sendNotification("textDocument/didClose", {
+        textDocument: { uri: oldest },
+      });
+      session.opened.delete(oldest);
+      session.diagnostics.delete(oldest);
+    }
+    await session.connection.sendNotification("textDocument/didOpen", {
+      textDocument: {
+        uri,
+        languageId: language,
+        version: 1,
+        text: document.text,
+      },
+    });
+    session.opened.set(uri, { hash: document.hash, version: 1 });
+  }
   async request(
     project: Project,
     input: LanguageRequest,
@@ -676,11 +735,24 @@ export class LanguageService {
               "positionEncoding"
             >);
         const supported = session.capabilities[capability];
-        invariant(
-          supported !== undefined && supported !== false,
-          "LSP_CAPABILITY_UNAVAILABLE",
-          `Language server does not advertise ${capability} required by ${input.action}`,
-        );
+        // ArkTS SDK handlers exist despite missing/false symbol capability
+        // declarations. Probe these bounded read requests; only an actual
+        // JSON-RPC MethodNotFound proves that a handler is unavailable.
+        const probeArktsSymbol =
+          input.language !== "cpp" && input.action in symbolResults;
+        if (!(
+          (supported !== undefined && supported !== false) ||
+          probeArktsSymbol
+        ))
+          throw new ToolError(
+            "LSP_CAPABILITY_UNAVAILABLE",
+            `Language server does not advertise ${capability} required by ${input.action}`,
+            {
+              source: "capability_declaration",
+              capability,
+              request_dispatched: false,
+            },
+          );
       }
       const requested = await readDocument(file, signal);
       const position = [
@@ -722,49 +794,65 @@ export class LanguageService {
           state.hash = document.hash;
         }
       }
-      if (!session.opened.has(uri)) {
-        while (session.opened.size >= this.limits.opened_files) {
-          const oldest = session.opened.keys().next().value;
-          invariant(
-            oldest,
-            "LSP_STATE_INVALID",
-            "Cannot select an idle document",
-          );
-          await session.connection.sendNotification("textDocument/didClose", {
-            textDocument: { uri: oldest },
-          });
-          session.opened.delete(oldest);
-          session.diagnostics.delete(oldest);
-        }
-        session.opened.set(uri, { hash: requested.hash, version: 1 });
-        await session.connection.sendNotification("textDocument/didOpen", {
-          textDocument: {
-            uri,
-            languageId: input.language === "cpp" ? "cpp" : "arkts",
-            version: 1,
-            text: requested.text,
-          },
-        });
-      } else {
-        const state = session.opened.get(uri)!;
-        session.opened.delete(uri);
-        session.opened.set(uri, state);
-      }
+      await this.openDocument(
+        session,
+        uri,
+        requested,
+        input.language ?? "arkts",
+      );
       if (input.action === "diagnostics") {
-        const deadline = Date.now() + 15000;
-        while (!session.diagnostics.has(uri) && Date.now() < deadline) {
-          signal?.throwIfAborted();
-          await new Promise((resolve) => setTimeout(resolve, 50));
+        const provider = session.capabilities.diagnosticProvider;
+        let diagnostics: Diagnostic[];
+        if (provider) {
+          // A pull provider need not publish notifications. Request a fresh
+          // full report after synchronizing every opened document; never reuse
+          // a previous resultId across dependency changes or synthesize empty
+          // diagnostics when the server fails or returns an invalid report.
+          const raw = await lspRequest(
+            session.connection,
+            "textDocument/diagnostic",
+            {
+              textDocument: { uri },
+              ...(provider.identifier === undefined
+                ? {}
+                : { identifier: provider.identifier }),
+            },
+            signal,
+            15000,
+          );
+          assertLanguageBudget(raw);
+          const report = z
+            .object({
+              kind: z.literal("full"),
+              resultId: z.string().optional(),
+              items: z.array(diagnosticSchema).max(10000),
+            })
+            .safeParse(raw);
+          if (!report.success)
+            throw new ToolError(
+              "LSP_INVALID_RESPONSE",
+              "Expected a full diagnostic report for a request without previousResultId",
+              report.error.issues,
+            );
+          diagnostics = report.data.items;
+        } else {
+          const deadline = Date.now() + 15000;
+          while (!session.diagnostics.has(uri) && Date.now() < deadline) {
+            signal.throwIfAborted();
+            await new Promise((resolve) => setTimeout(resolve, 50));
+          }
+          invariant(
+            session.diagnostics.has(uri),
+            "DIAGNOSTICS_TIMEOUT",
+            "Language server did not publish diagnostics",
+          );
+          diagnostics = session.diagnostics.get(uri)!;
         }
-        invariant(
-          session.diagnostics.has(uri),
-          "DIAGNOSTICS_TIMEOUT",
-          "Language server did not publish diagnostics",
-        );
         await session.directory?.check();
         return {
           file,
-          diagnostics: session.diagnostics.get(uri),
+          diagnostics,
+          diagnostic_transport: provider ? "pull" : "push",
           compilationVerified: false,
           checkKind: "language-server",
           ...(database
@@ -788,13 +876,85 @@ export class LanguageService {
           signal,
           Math.max(1, deadline - Date.now()),
         );
+      const openRelated = async (related: string, protectedUri = uri) => {
+        const document =
+          related === uri
+            ? requested
+            : await readDocument(fileURLToPath(related), signal);
+        await this.openDocument(
+          session,
+          related,
+          document,
+          input.language ?? "arkts",
+          protectedUri,
+        );
+        return document;
+      };
+      const declarationCache = new Map<
+        string,
+        z.infer<typeof symbolResults.documentSymbol>
+      >();
+      const validate = async (
+        action: Exclude<LanguageRequest["action"], "diagnostics">,
+        raw: unknown,
+      ) => {
+        if (input.language === "cpp" || !(action in symbolResults))
+          return languageResult(action, raw);
+        const operation = action as keyof typeof symbolResults;
+        const normalized = await reconcileArktsCallableExtents(
+          operation,
+          arktsSymbolResult(operation, raw),
+          async (item) => {
+            const document = await openRelated(item.uri);
+            for (const point of [
+              item.range.start,
+              item.range.end,
+              item.selectionRange.start,
+              item.selectionRange.end,
+            ])
+              languagePosition(document.text, point.line, point.character);
+            if (!declarationCache.has(item.uri)) {
+              invariant(
+                declarationCache.size < 128,
+                "LSP_RESULT_LIMIT",
+                "Callable declaration verification is limited to 128 documents",
+              );
+              declarationCache.set(
+                item.uri,
+                symbolResults.documentSymbol.parse(
+                  arktsSymbolResult(
+                    "documentSymbol",
+                    await query("textDocument/documentSymbol", {
+                      textDocument: { uri: item.uri },
+                    }),
+                  ),
+                ),
+              );
+            }
+            // Studio's flat symbol table identifies the binding separately from
+            // the arrow expression's callable extent. Use its exact source range;
+            // a same-name symbol elsewhere in this or another document is insufficient.
+            const matches = (declarationCache.get(item.uri) ?? []).filter(
+              (symbol) =>
+                "location" in symbol &&
+                symbol.kind === 13 &&
+                symbol.name === item.name &&
+                symbol.location.uri === item.uri &&
+                JSON.stringify(symbol.location.range) ===
+                  JSON.stringify(item.selectionRange),
+            );
+            return matches.length === 1;
+          },
+        );
+        return languageResult(action, normalized);
+      };
       if (
         input.action === "incomingCalls" ||
         input.action === "outgoingCalls"
       ) {
         // Prepare on the same synchronized session each time. A host-supplied
         // item could belong to stale bytes, another workspace or another server.
-        const prepared = languageResult(
+        const prepared = await validate(
           "prepareCallHierarchy",
           await query("textDocument/prepareCallHierarchy", {
             textDocument: { uri },
@@ -813,10 +973,42 @@ export class LanguageService {
               item_index: index,
             },
           );
-        const result = languageResult(
+        const selected = items[index]!;
+        const caller =
+          input.language !== "cpp"
+            ? await openRelated(selected.uri)
+            : undefined;
+        let result = await validate(
           input.action,
-          await query(`callHierarchy/${input.action}`, { item: items[index] }),
+          await query(`callHierarchy/${input.action}`, { item: selected }),
         );
+        if (input.action === "outgoingCalls" && caller) {
+          result = await reconcileArktsOutgoing(
+            selected,
+            result,
+            async (callee) => {
+              signal.throwIfAborted();
+              await openRelated(callee.uri, selected.uri);
+              return validate(
+                "incomingCalls",
+                await query("callHierarchy/incomingCalls", { item: callee }),
+              );
+            },
+          );
+          for (const entry of symbolResults.outgoingCalls.parse(result) ?? [])
+            for (const range of entry.fromRanges) {
+              languagePosition(
+                caller.text,
+                range.start.line,
+                range.start.character,
+              );
+              languagePosition(
+                caller.text,
+                range.end.line,
+                range.end.character,
+              );
+            }
+        }
         await session.directory?.check();
         return result;
       }
@@ -838,7 +1030,7 @@ export class LanguageService {
                 : {}),
             },
       );
-      const validated = languageResult(input.action, result);
+      const validated = await validate(input.action, result);
       await session.directory?.check();
       return input.action === "references" && !input.includeDeclaration
         ? await filterDeclarations(validated, (uri, position) =>

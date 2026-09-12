@@ -1,0 +1,241 @@
+{
+  "format": 2,
+  "passed": true,
+  "started_at": "2026-09-11T10:11:02.601Z",
+  "finished_at": "2026-09-11T10:11:11.734Z",
+  "tested": {
+    "source_sha256": "a6a77483901f9ea7b2e13f30e12b9eceee8b582db2fdff97beb860dbec8d9f3b",
+    "runtime_sha256": "a30879c6106302689404634237c4e21e88242b757199aeeef3dc4fa29acbeffb",
+    "compiled_sha256": "c8392d14ff668e9724bca6ef148796cfc021a3652dbfb10982a81cf745bc783f",
+    "package_lock_sha256": "7f60a1f262f8d5c275c6c0983a1307ee37c91bd62144b39919296f4434666f17",
+    "resource_manifest_sha256": "42c8111e0f1301ac89fcac2b4af5f2d5918e97ed0dba04c72b11ea123ecf3a3b",
+    "upstream_lock_sha256": "9ea597235ffa9f97a076791d637acd976f8f4c78bcf85ea77de118570708ed3d"
+  },
+  "cases": [
+    {
+      "id": "lsp.goToDefinition",
+      "operation": "lsp.goToDefinition",
+      "passed": true,
+      "service_support": "available",
+      "outcome": "executed",
+      "environment": {
+        "language": "arkts",
+        "platform": "darwin",
+        "sdk": "26.0.0.105",
+        "node": "v24.14.1",
+        "server": "native-mcp/0.4.0",
+        "client": "generic-stdio-mcp-sdk/1.30.0; Codex GPT-6 visual assessment when required"
+      },
+      "source": "public_mcp",
+      "policy": null,
+      "scope": "Actual ArkTS goToDefinition executes through public stdio MCP in both LF and CRLF UTF-16 fixtures, before and after MCP restart. Required symbol and legacy queries return nonempty results; call direction, cross-file ownership and repeated/class/nested call ranges are asserted against the source; legitimate empty queries remain empty. Native pull diagnostics detect and clear a real type error. C++ observations are kept separately and cannot qualify the ArkTS requirement.",
+      "valid_until": null,
+      "artifacts": [
+        {
+          "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-1/lsp.goToDefinition.json",
+          "sha256": "741d0388a3e9bd90ea0c294f017441373109898b783a4ead149cd579acf3391b"
+        }
+      ]
+    },
+    {
+      "id": "lsp.findReferences",
+      "operation": "lsp.findReferences",
+      "passed": true,
+      "service_support": "available",
+      "outcome": "executed",
+      "environment": {
+        "language": "arkts",
+        "platform": "darwin",
+        "sdk": "26.0.0.105",
+        "node": "v24.14.1",
+        "server": "native-mcp/0.4.0",
+        "client": "generic-stdio-mcp-sdk/1.30.0; Codex GPT-6 visual assessment when required"
+      },
+      "source": "public_mcp",
+      "policy": null,
+      "scope": "Actual ArkTS findReferences executes through public stdio MCP in both LF and CRLF UTF-16 fixtures, before and after MCP restart. Required symbol and legacy queries return nonempty results; call direction, cross-file ownership and repeated/class/nested call ranges are asserted against the source; legitimate empty queries remain empty. Native pull diagnostics detect and clear a real type error. C++ observations are kept separately and cannot qualify the ArkTS requirement.",
+      "valid_until": null,
+      "artifacts": [
+        {
+          "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-1/lsp.findReferences.json",
+          "sha256": "f0ec4b5c2702f6a68c60912e639f16e093db50fca1990eb44b208a998e76641f"
+        }
+      ]
+    },
+    {
+      "id": "lsp.hover",
+      "operation": "lsp.hover",
+      "passed": true,
+      "service_support": "available",
+      "outcome": "executed",
+      "environment": {
+        "language": "arkts",
+        "platform": "darwin",
+        "sdk": "26.0.0.105",
+        "node": "v24.14.1",
+        "server": "native-mcp/0.4.0",
+        "client": "generic-stdio-mcp-sdk/1.30.0; Codex GPT-6 visual assessment when required"
+      },
+      "source": "public_mcp",
+      "policy": null,
+      "scope": "Actual ArkTS hover executes through public stdio MCP in both LF and CRLF UTF-16 fixtures, before and after MCP restart. Required symbol and legacy queries return nonempty results; call direction, cross-file ownership and repeated/class/nested call ranges are asserted against the source; legitimate empty queries remain empty. Native pull diagnostics detect and clear a real type error. C++ observations are kept separately and cannot qualify the ArkTS requirement.",
+      "valid_until": null,
+      "artifacts": [
+        {
+          "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-1/lsp.hover.json",
+          "sha256": "621cb4e310a857209fa45db7d4cd1a164a2f4a66484f81f83f5c3e7be3b8ce44"
+        }
+      ]
+    },
+    {
+      "id": "lsp.documentSymbol",
+      "operation": "lsp.documentSymbol",
+      "passed": true,
+      "service_support": "available",
+      "outcome": "executed",
+      "environment": {
+        "language": "arkts",
+        "platform": "darwin",
+        "sdk": "26.0.0.105",
+        "node": "v24.14.1",
+        "server": "native-mcp/0.4.0",
+        "client": "generic-stdio-mcp-sdk/1.30.0; Codex GPT-6 visual assessment when required"
+      },
+      "source": "public_mcp",
+      "policy": null,
+      "scope": "Actual ArkTS documentSymbol executes through public stdio MCP in both LF and CRLF UTF-16 fixtures, before and after MCP restart. Required symbol and legacy queries return nonempty results; call direction, cross-file ownership and repeated/class/nested call ranges are asserted against the source; legitimate empty queries remain empty. Native pull diagnostics detect and clear a real type error. C++ observations are kept separately and cannot qualify the ArkTS requirement.",
+      "valid_until": null,
+      "artifacts": [
+        {
+          "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-1/lsp.documentSymbol.json",
+          "sha256": "ca33b5f7c9bcc58f4bd20a8dd03860d0ddb693c3a9afd8a9e1e9452f6b3d5bd1"
+        }
+      ]
+    },
+    {
+      "id": "lsp.workspaceSymbol",
+      "operation": "lsp.workspaceSymbol",
+      "passed": true,
+      "service_support": "available",
+      "outcome": "executed",
+      "environment": {
+        "language": "arkts",
+        "platform": "darwin",
+        "sdk": "26.0.0.105",
+        "node": "v24.14.1",
+        "server": "native-mcp/0.4.0",
+        "client": "generic-stdio-mcp-sdk/1.30.0; Codex GPT-6 visual assessment when required"
+      },
+      "source": "public_mcp",
+      "policy": null,
+      "scope": "Actual ArkTS workspaceSymbol executes through public stdio MCP in both LF and CRLF UTF-16 fixtures, before and after MCP restart. Required symbol and legacy queries return nonempty results; call direction, cross-file ownership and repeated/class/nested call ranges are asserted against the source; legitimate empty queries remain empty. Native pull diagnostics detect and clear a real type error. C++ observations are kept separately and cannot qualify the ArkTS requirement.",
+      "valid_until": null,
+      "artifacts": [
+        {
+          "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-1/lsp.workspaceSymbol.json",
+          "sha256": "060fc73455c943631598e71c0f101189531194fb21b5c2a9cd22bda772c1f796"
+        }
+      ]
+    },
+    {
+      "id": "lsp.goToImplementation",
+      "operation": "lsp.goToImplementation",
+      "passed": true,
+      "service_support": "available",
+      "outcome": "executed",
+      "environment": {
+        "language": "arkts",
+        "platform": "darwin",
+        "sdk": "26.0.0.105",
+        "node": "v24.14.1",
+        "server": "native-mcp/0.4.0",
+        "client": "generic-stdio-mcp-sdk/1.30.0; Codex GPT-6 visual assessment when required"
+      },
+      "source": "public_mcp",
+      "policy": null,
+      "scope": "Actual ArkTS goToImplementation executes through public stdio MCP in both LF and CRLF UTF-16 fixtures, before and after MCP restart. Required symbol and legacy queries return nonempty results; call direction, cross-file ownership and repeated/class/nested call ranges are asserted against the source; legitimate empty queries remain empty. Native pull diagnostics detect and clear a real type error. C++ observations are kept separately and cannot qualify the ArkTS requirement.",
+      "valid_until": null,
+      "artifacts": [
+        {
+          "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-1/lsp.goToImplementation.json",
+          "sha256": "403713be8f21ac6f80cd6fa9e667582d76b907af3f53a2bc7bc71128c7275c96"
+        }
+      ]
+    },
+    {
+      "id": "lsp.prepareCallHierarchy",
+      "operation": "lsp.prepareCallHierarchy",
+      "passed": true,
+      "service_support": "available",
+      "outcome": "executed",
+      "environment": {
+        "language": "arkts",
+        "platform": "darwin",
+        "sdk": "26.0.0.105",
+        "node": "v24.14.1",
+        "server": "native-mcp/0.4.0",
+        "client": "generic-stdio-mcp-sdk/1.30.0; Codex GPT-6 visual assessment when required"
+      },
+      "source": "public_mcp",
+      "policy": null,
+      "scope": "Actual ArkTS prepareCallHierarchy executes through public stdio MCP in both LF and CRLF UTF-16 fixtures, before and after MCP restart. Required symbol and legacy queries return nonempty results; call direction, cross-file ownership and repeated/class/nested call ranges are asserted against the source; legitimate empty queries remain empty. Native pull diagnostics detect and clear a real type error. C++ observations are kept separately and cannot qualify the ArkTS requirement.",
+      "valid_until": null,
+      "artifacts": [
+        {
+          "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-1/lsp.prepareCallHierarchy.json",
+          "sha256": "5e1af61b7b831fbb49d368d7cb9e293554b66c1df6ea4d0c7079bf7d94b716cf"
+        }
+      ]
+    },
+    {
+      "id": "lsp.incomingCalls",
+      "operation": "lsp.incomingCalls",
+      "passed": true,
+      "service_support": "available",
+      "outcome": "executed",
+      "environment": {
+        "language": "arkts",
+        "platform": "darwin",
+        "sdk": "26.0.0.105",
+        "node": "v24.14.1",
+        "server": "native-mcp/0.4.0",
+        "client": "generic-stdio-mcp-sdk/1.30.0; Codex GPT-6 visual assessment when required"
+      },
+      "source": "public_mcp",
+      "policy": null,
+      "scope": "Actual ArkTS incomingCalls executes through public stdio MCP in both LF and CRLF UTF-16 fixtures, before and after MCP restart. Required symbol and legacy queries return nonempty results; call direction, cross-file ownership and repeated/class/nested call ranges are asserted against the source; legitimate empty queries remain empty. Native pull diagnostics detect and clear a real type error. C++ observations are kept separately and cannot qualify the ArkTS requirement.",
+      "valid_until": null,
+      "artifacts": [
+        {
+          "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-1/lsp.incomingCalls.json",
+          "sha256": "384e9d13b864e9d5f4fd4852e8d6f1d4150b29c8bf3dbc1c4309a6d21c047adb"
+        }
+      ]
+    },
+    {
+      "id": "lsp.outgoingCalls",
+      "operation": "lsp.outgoingCalls",
+      "passed": true,
+      "service_support": "available",
+      "outcome": "executed",
+      "environment": {
+        "language": "arkts",
+        "platform": "darwin",
+        "sdk": "26.0.0.105",
+        "node": "v24.14.1",
+        "server": "native-mcp/0.4.0",
+        "client": "generic-stdio-mcp-sdk/1.30.0; Codex GPT-6 visual assessment when required"
+      },
+      "source": "public_mcp",
+      "policy": null,
+      "scope": "Actual ArkTS outgoingCalls executes through public stdio MCP in both LF and CRLF UTF-16 fixtures, before and after MCP restart. Required symbol and legacy queries return nonempty results; call direction, cross-file ownership and repeated/class/nested call ranges are asserted against the source; legitimate empty queries remain empty. Native pull diagnostics detect and clear a real type error. C++ observations are kept separately and cannot qualify the ArkTS requirement.",
+      "valid_until": null,
+      "artifacts": [
+        {
+          "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-1/lsp.outgoingCalls.json",
+          "sha256": "4cf3e940bb77c607a8d37a32150833b68a6789b99ee302d3f43e4ba6c835be9d"
+        }
+      ]
+    }
+  ]
+}

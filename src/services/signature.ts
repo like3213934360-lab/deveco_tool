@@ -170,19 +170,31 @@ export class SignatureService {
       const options = signingConfigurationOptionsSchema.parse(input.options);
       return this.store.lease(
         `project:${project.root}`,
-        () =>
-          configureSigning(
+        async () => {
+          let publicationPrepared = false;
+          try {
+            return await configureSigning(
             project,
             input.file!,
             input.output!,
             options.name,
             signal,
-            (result, plan) => this.store.privateMemo("sign-config-commit", identity, async () => {
+            (result, plan) => {
+              // Before this callback only owned staging files can exist. Once
+              // preparation starts, retain the existing hash-based recovery.
+              publicationPrepared = true;
+              return this.store.privateMemo("sign-config-commit", identity, async () => {
               const files: z.infer<typeof publicationSchema>[] = [];
               for (const file of plan.files) files.push(await preparePublication(this.store, file.source, file.path, true, signal));
               return { result, before: plan.before, content: plan.content, files };
-            }, (raw) => configurationCommit.parse(raw)),
-          ),
+              }, (raw) => configurationCommit.parse(raw));
+            },
+            );
+          } catch (error) {
+            if (!publicationPrepared) throw SettledEffectError.from(error);
+            throw error;
+          }
+        },
         signal,
       );
     }

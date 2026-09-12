@@ -3,11 +3,12 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
 import { StateStore } from "../src/core/store.js";
 import { ProcessService, type ProcessResult } from "../src/core/process.js";
 import { withTrace } from "../src/core/trace.js";
 import { digest } from "../src/core/files.js";
-import { SettledEffectError } from "../src/core/errors.js";
+import { SettledEffectError, ToolError } from "../src/core/errors.js";
 import {
   WorkflowEngine,
   type WorkflowDefinition,
@@ -36,6 +37,113 @@ const result = (
 const identity = digest("fixture");
 const receipt = (body = "start ability successfully") =>
   `DEVECO_DEVICE_RECEIPT_V1\n${identity}\n0\n${body}`;
+
+test("a locked device has an actionable launch error without exposing Want data or starting observation", async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-locked-launch-"));
+  const store = new StateStore(root), devices = new DeviceService(new ProcessService(), store);
+  t.mock.method(devices, "shell", async () => result("Error Code: 10106102\nprivate Want fixture-secret"));
+  t.mock.method(devices, "checkStartup", async () => { throw new Error("must not observe a rejected launch"); });
+  try {
+    await assert.rejects(devices.launch("fixture", { bundle_name: "com.example.fixture", ability: "EntryAbility", parameters: { secret: "fixture-secret" } }), (error: unknown) => {
+      assert.equal((error as { code: string }).code, "APP_DEVICE_LOCKED");
+      assert.match((error as Error).message, /Unlock/);
+      assert.equal(JSON.stringify(error).includes("fixture-secret"), false);
+      return true;
+    });
+    assert.equal(store.db.prepare("SELECT 1 FROM leases LIMIT 1").get(), undefined);
+  } finally { devices.close(); store.close(); fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test("slow diagnostic metadata cannot consume the process observation budget", async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-startup-anchor-"));
+  const store = new StateStore(root), devices = new DeviceService(new ProcessService(), store);
+  let dates = 0, pids = 0;
+  t.mock.method(devices, "shell", async (_target: string, args: string[], signal?: AbortSignal) => {
+    if (args[0] === "date") { dates++; await delay(30000, undefined, { signal }); throw new Error("unreachable"); }
+    assert.equal(args[0], "pidof"); pids++; return result("1234\n");
+  });
+  try {
+    const report = await devices.checkStartup("fixture", { bundle_name: "com.example.fixture", ability: "EntryAbility", startup_check: { mode: "process_only", stable_ms: 500, timeout_ms: 2000, allow_uniform: false } });
+    assert.equal(report.status, "passed"); assert.equal(report.process, "stable");
+    assert.equal(report.business_outcome_verified, false); assert.equal(dates, 1); assert.ok(pids >= 3);
+    const saved = JSON.parse(store.readBinaryArtifact(report.evidence.artifact_id, 65536, ["application/json"]).data.toString());
+    assert.equal(saved.diagnostic_log.status, "unavailable");
+    assert.equal(store.db.prepare("SELECT 1 FROM leases LIMIT 1").get(), undefined);
+  } finally { devices.close(); store.close(); fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+for (const when of ["anchor", "process"] as const) test(`startup cancellation during ${when} retains an honest report and releases ownership`, async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-startup-cancel-"));
+  const store = new StateStore(root), devices = new DeviceService(new ProcessService(), store), controller = new AbortController();
+  let pids = 0;
+  t.mock.method(devices, "shell", async (_target: string, args: string[], signal?: AbortSignal) => {
+    if (args[0] === "date" && when === "process") throw new Error("private diagnostic fixture");
+    if (args[0] === "pidof") pids++;
+    controller.abort(new Error("private cancellation fixture"));
+    await delay(30000, undefined, { signal }); throw new Error("unreachable");
+  });
+  try {
+    await assert.rejects(devices.checkStartup("fixture", { bundle_name: "com.example.fixture", ability: "EntryAbility" }, controller.signal), (error: unknown) => {
+      assert.ok(error instanceof SettledEffectError);
+      const details = error.details as { report: { status: string; process: string; process_samples: unknown[] }; evidence: { artifact_id: string }; commandAccepted: boolean; startupVerified: boolean };
+      assert.equal(details.commandAccepted, true); assert.equal(details.startupVerified, false);
+      assert.equal(details.report.status, "cancelled"); assert.equal(details.report.process, "unverified");
+      assert.equal(details.report.process_samples.length, 0); assert.equal(pids, when === "anchor" ? 0 : 1);
+      const saved = store.readBinaryArtifact(details.evidence.artifact_id, 65536, ["application/json"]).data.toString();
+      assert.equal(JSON.parse(saved).status, "cancelled"); assert.equal(saved.includes("private"), false);
+      assert.equal(JSON.stringify(error).includes("private"), false); return true;
+    });
+    assert.equal(store.db.prepare("SELECT 1 FROM leases LIMIT 1").get(), undefined);
+  } finally { devices.close(); store.close(); fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test("cancellation after the durable launch receipt but before startup observation settles without replay", async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-startup-receipt-cancel-"));
+  let store = new StateStore(root);
+  const processes = new ProcessService(), devices = new DeviceService(processes, store), controller = new AbortController();
+  let dispatches = 0, publications = 0, observations = 0;
+  const app = { bundle_name: "com.example.fixture", ability: "EntryAbility" };
+  t.mock.method(devices, "shell", async (_target: string, args: string[]) => {
+    const script = args[2] ?? "";
+    if (script.includes("mkdir -m 700")) {
+      dispatches++;
+      const id = /'DEVECO_DEVICE_STREAM_V1' '([a-f0-9]{64})'/.exec(script)![1]!;
+      return result(`DEVECO_DEVICE_STREAM_V1\n${id}\nstart ability successfully.\n\nDEVECO_DEVICE_STREAM_END_V1\n${id}\n0\nDEVECO_DEVICE_RECEIPT_PENDING\n`);
+    }
+    if (script.includes("base64 -d")) {
+      publications++;
+      return result(Buffer.from(/printf '%s' '([A-Za-z0-9+/=]+)' \| base64 -d/.exec(script)![1]!, "base64").toString());
+    }
+    if (args[0] === "rm") {
+      assert.deepEqual(store.db.prepare("SELECT status FROM operations WHERE run_id='run' AND node='launch_application:device:launch'").get(), { status: "done" });
+      controller.abort(new ToolError("CANCELLED", "private cancellation fixture"));
+      return result("");
+    }
+    observations++;
+    throw new Error("No device query is permitted after cancellation");
+  });
+  try {
+    let evidenceId = "";
+    await assert.rejects(withTrace({ run_id: "run", node: "launch_application" }, () => store.effect("run", "launch_application", app, () => devices.launch("fixture", app, controller.signal, true))), (error: unknown) => {
+      assert.ok(error instanceof SettledEffectError);
+      assert.equal(error.code, "CANCELLED");
+      const details = error.details as { commandAccepted: boolean; startupVerified: boolean; report: { status: string; process_samples: unknown[] }; evidence: { artifact_id: string } };
+      assert.equal(details.commandAccepted, true); assert.equal(details.startupVerified, false);
+      assert.equal(details.report.status, "cancelled"); assert.deepEqual(details.report.process_samples, []);
+      assert.equal(JSON.stringify(error).includes("private"), false);
+      evidenceId = details.evidence.artifact_id;
+      return true;
+    });
+    assert.equal(dispatches, 1); assert.equal(publications, 1); assert.equal(observations, 0);
+    store.assertStopped("run");
+    assert.deepEqual(store.uncertainOperations("run"), []);
+    assert.equal(store.db.prepare("SELECT 1 FROM leases LIMIT 1").get(), undefined);
+    devices.close(); store.close(); store = new StateStore(root);
+    assert.equal(JSON.parse(store.readBinaryArtifact(evidenceId, 65536, ["application/json"]).data.toString()).status, "cancelled");
+    await assert.rejects(store.recoverEffect("run", "launch_application", app, async () => { throw new Error("A settled cancelled launch must not be replayed"); }), { code: "CANCELLED" });
+    store.assertStopped("run");
+  } finally { devices.close(); await processes.close(); store.close(); fs.rmSync(root, { recursive: true, force: true }); }
+});
 
 test("streamed acknowledgement requires complete bounded matching frames", () => {
   const stream = `DEVECO_DEVICE_STREAM_V1\n${identity}\nstart ability successfully.\n\nDEVECO_DEVICE_STREAM_END_V1\n${identity}\n0\nDEVECO_DEVICE_RECEIPT_PENDING\n`;
@@ -284,6 +392,7 @@ if (process.platform !== "win32") {
         ability: "DetailAbility",
         uri: "fixture://detail/123",
         parameters: { route: "中文详情", enabled: true, count: 2 },
+        startup_check: { mode: "process_only" as const, stable_ms: 500, timeout_ms: 2000, allow_uniform: false },
       };
       const definition: WorkflowDefinition = {
         id: "launch",

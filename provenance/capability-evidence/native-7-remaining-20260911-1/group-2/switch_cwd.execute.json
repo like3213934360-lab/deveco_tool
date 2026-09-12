@@ -1,0 +1,8 @@
+{
+  "format": 1,
+  "operation": "switch_cwd.execute",
+  "checks": [
+    "Public switch_cwd selects the isolated project; a subsequent routes request without project_path resolves its actual launch ability."
+  ],
+  "observation_sha256": "4760a61c1d88739b1a88f477bf2fdceb25ca76f72db98da5aa0c28656a8908e1"
+}

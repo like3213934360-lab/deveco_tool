@@ -1,0 +1,8 @@
+{
+  "format": 1,
+  "operation": "spec_write.spec",
+  "checks": [
+    "Public spec.md write retains Requirements, User Scenarios and Success Criteria; its workflow completes with fresh native build evidence."
+  ],
+  "observation_sha256": "ee7ad647403c0ba44748e96db1dc8e18d815075c1bdf7542ba4073702952702c"
+}

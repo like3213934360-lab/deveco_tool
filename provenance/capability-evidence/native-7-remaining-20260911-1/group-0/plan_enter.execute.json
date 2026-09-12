@@ -1,0 +1,8 @@
+{
+  "format": 1,
+  "operation": "plan_enter.execute",
+  "checks": [
+    "Public Skill workflow captures the isolated project, original objective and bundled guidance; guidance remains readable after MCP reconnect."
+  ],
+  "observation_sha256": "04376bd7d03ce4a1d78d409125972574cfc56bd97b4a27cdf524c54c74d5ca4e"
+}

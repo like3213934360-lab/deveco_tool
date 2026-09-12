@@ -1,0 +1,741 @@
+{
+  "format": 2,
+  "passed": true,
+  "started_at": "2026-09-11T10:11:52.249Z",
+  "finished_at": "2026-09-11T10:17:57.019Z",
+  "tested": {
+    "source_sha256": "a6a77483901f9ea7b2e13f30e12b9eceee8b582db2fdff97beb860dbec8d9f3b",
+    "runtime_sha256": "a30879c6106302689404634237c4e21e88242b757199aeeef3dc4fa29acbeffb",
+    "compiled_sha256": "c8392d14ff668e9724bca6ef148796cfc021a3652dbfb10982a81cf745bc783f",
+    "package_lock_sha256": "7f60a1f262f8d5c275c6c0983a1307ee37c91bd62144b39919296f4434666f17",
+    "resource_manifest_sha256": "42c8111e0f1301ac89fcac2b4af5f2d5918e97ed0dba04c72b11ea123ecf3a3b",
+    "upstream_lock_sha256": "9ea597235ffa9f97a076791d637acd976f8f4c78bcf85ea77de118570708ed3d"
+  },
+  "cases": [
+    {
+      "id": "invalid.execute",
+      "operation": "invalid.execute",
+      "passed": true,
+      "service_support": "not_applicable",
+      "outcome": "client_required",
+      "environment": {
+        "language": "none",
+        "platform": "darwin",
+        "sdk": null,
+        "node": "v24.14.1",
+        "server": null,
+        "client": "generic-stdio-mcp-sdk/1.30.0; Codex GPT-6 visual assessment when required"
+      },
+      "source": "client_contract",
+      "policy": "host-general-tools",
+      "scope": "The reviewed product contract assigns generic reasoning, file editing, search, questions and delegation to the connected host client. The actual MCP catalog exposes domain tools and guided completion gates; this boundary observation does not claim native implementation or successful execution by every AI client.",
+      "valid_until": null,
+      "artifacts": [
+        {
+          "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-2/invalid.execute.json",
+          "sha256": "aad88997be39cc670728cfb9e7f800765df52c93185d39b14efe431aec4b9397"
+        }
+      ]
+    },
+    {
+      "id": "shell.execute",
+      "operation": "shell.execute",
+      "passed": true,
+      "service_support": "not_applicable",
+      "outcome": "client_required",
+      "environment": {
+        "language": "none",
+        "platform": "darwin",
+        "sdk": null,
+        "node": "v24.14.1",
+        "server": null,
+        "client": "generic-stdio-mcp-sdk/1.30.0; Codex GPT-6 visual assessment when required"
+      },
+      "source": "client_contract",
+      "policy": "host-general-tools",
+      "scope": "The reviewed product contract assigns generic reasoning, file editing, search, questions and delegation to the connected host client. The actual MCP catalog exposes domain tools and guided completion gates; this boundary observation does not claim native implementation or successful execution by every AI client.",
+      "valid_until": null,
+      "artifacts": [
+        {
+          "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-2/shell.execute.json",
+          "sha256": "19015c7fb7d6d870a04d73d6df6d2b3a2243cd1def380a8dbf6bd01a4920e1d8"
+        }
+      ]
+    },
+    {
+      "id": "read.execute",
+      "operation": "read.execute",
+      "passed": true,
+      "service_support": "not_applicable",
+      "outcome": "client_required",
+      "environment": {
+        "language": "none",
+        "platform": "darwin",
+        "sdk": null,
+        "node": "v24.14.1",
+        "server": null,
+        "client": "generic-stdio-mcp-sdk/1.30.0; Codex GPT-6 visual assessment when required"
+      },
+      "source": "client_contract",
+      "policy": "host-general-tools",
+      "scope": "The reviewed product contract assigns generic reasoning, file editing, search, questions and delegation to the connected host client. The actual MCP catalog exposes domain tools and guided completion gates; this boundary observation does not claim native implementation or successful execution by every AI client.",
+      "valid_until": null,
+      "artifacts": [
+        {
+          "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-2/read.execute.json",
+          "sha256": "97025acd4d2aef184eef7e17cbbeef1491050a754439247e78d3462b2c50254e"
+        }
+      ]
+    },
+    {
+      "id": "glob.execute",
+      "operation": "glob.execute",
+      "passed": true,
+      "service_support": "not_applicable",
+      "outcome": "client_required",
+      "environment": {
+        "language": "none",
+        "platform": "darwin",
+        "sdk": null,
+        "node": "v24.14.1",
+        "server": null,
+        "client": "generic-stdio-mcp-sdk/1.30.0; Codex GPT-6 visual assessment when required"
+      },
+      "source": "client_contract",
+      "policy": "host-general-tools",
+      "scope": "The reviewed product contract assigns generic reasoning, file editing, search, questions and delegation to the connected host client. The actual MCP catalog exposes domain tools and guided completion gates; this boundary observation does not claim native implementation or successful execution by every AI client.",
+      "valid_until": null,
+      "artifacts": [
+        {
+          "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-2/glob.execute.json",
+          "sha256": "1bd97271fc241b3987c515ce45c341ad78c4973fbee02a01e041d87d86e092a5"
+        }
+      ]
+    },
+    {
+      "id": "grep.execute",
+      "operation": "grep.execute",
+      "passed": true,
+      "service_support": "not_applicable",
+      "outcome": "client_required",
+      "environment": {
+        "language": "none",
+        "platform": "darwin",
+        "sdk": null,
+        "node": "v24.14.1",
+        "server": null,
+        "client": "generic-stdio-mcp-sdk/1.30.0; Codex GPT-6 visual assessment when required"
+      },
+      "source": "client_contract",
+      "policy": "host-general-tools",
+      "scope": "The reviewed product contract assigns generic reasoning, file editing, search, questions and delegation to the connected host client. The actual MCP catalog exposes domain tools and guided completion gates; this boundary observation does not claim native implementation or successful execution by every AI client.",
+      "valid_until": null,
+      "artifacts": [
+        {
+          "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-2/grep.execute.json",
+          "sha256": "accd7198e08fe7094ecbd31f3abd7fc08acfd2fb1f4dc90a539bfbf571ddf798"
+        }
+      ]
+    },
+    {
+      "id": "edit.execute",
+      "operation": "edit.execute",
+      "passed": true,
+      "service_support": "not_applicable",
+      "outcome": "client_required",
+      "environment": {
+        "language": "none",
+        "platform": "darwin",
+        "sdk": null,
+        "node": "v24.14.1",
+        "server": null,
+        "client": "generic-stdio-mcp-sdk/1.30.0; Codex GPT-6 visual assessment when required"
+      },
+      "source": "client_contract",
+      "policy": "host-general-tools",
+      "scope": "The reviewed product contract assigns generic reasoning, file editing, search, questions and delegation to the connected host client. The actual MCP catalog exposes domain tools and guided completion gates; this boundary observation does not claim native implementation or successful execution by every AI client.",
+      "valid_until": null,
+      "artifacts": [
+        {
+          "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-2/edit.execute.json",
+          "sha256": "9fb4854340d91444e49d4d46cbb29d2542fcb7e33a6f0f1fe0c6b6fee24d9b79"
+        }
+      ]
+    },
+    {
+      "id": "write.execute",
+      "operation": "write.execute",
+      "passed": true,
+      "service_support": "not_applicable",
+      "outcome": "client_required",
+      "environment": {
+        "language": "none",
+        "platform": "darwin",
+        "sdk": null,
+        "node": "v24.14.1",
+        "server": null,
+        "client": "generic-stdio-mcp-sdk/1.30.0; Codex GPT-6 visual assessment when required"
+      },
+      "source": "client_contract",
+      "policy": "host-general-tools",
+      "scope": "The reviewed product contract assigns generic reasoning, file editing, search, questions and delegation to the connected host client. The actual MCP catalog exposes domain tools and guided completion gates; this boundary observation does not claim native implementation or successful execution by every AI client.",
+      "valid_until": null,
+      "artifacts": [
+        {
+          "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-2/write.execute.json",
+          "sha256": "a0439ad4b498c1cdca8a315838f151d3fe24bbd7a0ed77e8c9ebe915c32634de"
+        }
+      ]
+    },
+    {
+      "id": "task.execute",
+      "operation": "task.execute",
+      "passed": true,
+      "service_support": "not_applicable",
+      "outcome": "client_required",
+      "environment": {
+        "language": "none",
+        "platform": "darwin",
+        "sdk": null,
+        "node": "v24.14.1",
+        "server": null,
+        "client": "generic-stdio-mcp-sdk/1.30.0; Codex GPT-6 visual assessment when required"
+      },
+      "source": "client_contract",
+      "policy": "host-general-tools",
+      "scope": "The reviewed product contract assigns generic reasoning, file editing, search, questions and delegation to the connected host client. The actual MCP catalog exposes domain tools and guided completion gates; this boundary observation does not claim native implementation or successful execution by every AI client.",
+      "valid_until": null,
+      "artifacts": [
+        {
+          "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-2/task.execute.json",
+          "sha256": "e2871095d74433ebed1b50186c7139493e540a8fc34ceb5d9f47b193805224a2"
+        }
+      ]
+    },
+    {
+      "id": "webfetch.execute",
+      "operation": "webfetch.execute",
+      "passed": true,
+      "service_support": "not_applicable",
+      "outcome": "client_required",
+      "environment": {
+        "language": "none",
+        "platform": "darwin",
+        "sdk": null,
+        "node": "v24.14.1",
+        "server": null,
+        "client": "generic-stdio-mcp-sdk/1.30.0; Codex GPT-6 visual assessment when required"
+      },
+      "source": "client_contract",
+      "policy": "host-general-tools",
+      "scope": "The reviewed product contract assigns generic reasoning, file editing, search, questions and delegation to the connected host client. The actual MCP catalog exposes domain tools and guided completion gates; this boundary observation does not claim native implementation or successful execution by every AI client.",
+      "valid_until": null,
+      "artifacts": [
+        {
+          "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-2/webfetch.execute.json",
+          "sha256": "163848f32e3f7032b54902b6e39c07d10c6bf8e9b7ddb8c135ae434ad08c3031"
+        }
+      ]
+    },
+    {
+      "id": "websearch.execute",
+      "operation": "websearch.execute",
+      "passed": true,
+      "service_support": "not_applicable",
+      "outcome": "client_required",
+      "environment": {
+        "language": "none",
+        "platform": "darwin",
+        "sdk": null,
+        "node": "v24.14.1",
+        "server": null,
+        "client": "generic-stdio-mcp-sdk/1.30.0; Codex GPT-6 visual assessment when required"
+      },
+      "source": "client_contract",
+      "policy": "host-general-tools",
+      "scope": "The reviewed product contract assigns generic reasoning, file editing, search, questions and delegation to the connected host client. The actual MCP catalog exposes domain tools and guided completion gates; this boundary observation does not claim native implementation or successful execution by every AI client.",
+      "valid_until": null,
+      "artifacts": [
+        {
+          "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-2/websearch.execute.json",
+          "sha256": "191865a8ba1cbeab97ae0d2edd6ea10bf9aab41f8c3ceb0344eed8f1efcb89ad"
+        }
+      ]
+    },
+    {
+      "id": "apply_patch.execute",
+      "operation": "apply_patch.execute",
+      "passed": true,
+      "service_support": "not_applicable",
+      "outcome": "client_required",
+      "environment": {
+        "language": "none",
+        "platform": "darwin",
+        "sdk": null,
+        "node": "v24.14.1",
+        "server": null,
+        "client": "generic-stdio-mcp-sdk/1.30.0; Codex GPT-6 visual assessment when required"
+      },
+      "source": "client_contract",
+      "policy": "host-general-tools",
+      "scope": "The reviewed product contract assigns generic reasoning, file editing, search, questions and delegation to the connected host client. The actual MCP catalog exposes domain tools and guided completion gates; this boundary observation does not claim native implementation or successful execution by every AI client.",
+      "valid_until": null,
+      "artifacts": [
+        {
+          "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-2/apply_patch.execute.json",
+          "sha256": "07f008c520cc00e84ece9b275d0efda280c60c612cc634a04012ee3ed8b39249"
+        }
+      ]
+    },
+    {
+      "id": "question.execute",
+      "operation": "question.execute",
+      "passed": true,
+      "service_support": "not_applicable",
+      "outcome": "client_required",
+      "environment": {
+        "language": "none",
+        "platform": "darwin",
+        "sdk": null,
+        "node": "v24.14.1",
+        "server": null,
+        "client": "generic-stdio-mcp-sdk/1.30.0; Codex GPT-6 visual assessment when required"
+      },
+      "source": "client_contract",
+      "policy": "host-general-tools",
+      "scope": "The reviewed product contract assigns generic reasoning, file editing, search, questions and delegation to the connected host client. The actual MCP catalog exposes domain tools and guided completion gates; this boundary observation does not claim native implementation or successful execution by every AI client.",
+      "valid_until": null,
+      "artifacts": [
+        {
+          "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-2/question.execute.json",
+          "sha256": "ce5f0a26f8c0aa3cdcfcebe6629d076bd673b8318c38a9287f6c8b1f8248c388"
+        }
+      ]
+    },
+    {
+      "id": "skill.install",
+      "operation": "skill.install",
+      "passed": true,
+      "service_support": "not_applicable",
+      "outcome": "explicitly_excluded",
+      "environment": {
+        "language": "none",
+        "platform": "darwin",
+        "sdk": null,
+        "node": "v24.14.1",
+        "server": null,
+        "client": "generic-stdio-mcp-sdk/1.30.0; Codex GPT-6 visual assessment when required"
+      },
+      "source": "product_decision",
+      "policy": "builtin-mcp-skills-only",
+      "scope": "The owner requires Skills and references to remain built into MCP, without client Skill installation or uninstall flows. All six current catalog entries declare MCP delivery and no client installation; the excluded installer action is rejected and is not counted as a functional success.",
+      "valid_until": null,
+      "artifacts": [
+        {
+          "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-2/skill.install.json",
+          "sha256": "c7ebccfbba57546eb1cf8f5df3aaa76be4d06631e18481f1bec2626c0f6f9177"
+        }
+      ]
+    },
+    {
+      "id": "skill.uninstall",
+      "operation": "skill.uninstall",
+      "passed": true,
+      "service_support": "not_applicable",
+      "outcome": "explicitly_excluded",
+      "environment": {
+        "language": "none",
+        "platform": "darwin",
+        "sdk": null,
+        "node": "v24.14.1",
+        "server": null,
+        "client": "generic-stdio-mcp-sdk/1.30.0; Codex GPT-6 visual assessment when required"
+      },
+      "source": "product_decision",
+      "policy": "builtin-mcp-skills-only",
+      "scope": "The owner requires Skills and references to remain built into MCP, without client Skill installation or uninstall flows. All six current catalog entries declare MCP delivery and no client installation; the excluded installer action is rejected and is not counted as a functional success.",
+      "valid_until": null,
+      "artifacts": [
+        {
+          "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-2/skill.uninstall.json",
+          "sha256": "4a2dfc068db92172cd58b28f98f30beac0b2f2f4c0f5d56d81c8b6880997d77a"
+        }
+      ]
+    },
+    {
+      "id": "switch_cwd.execute",
+      "operation": "switch_cwd.execute",
+      "passed": true,
+      "service_support": "available",
+      "outcome": "executed",
+      "environment": {
+        "language": "none",
+        "platform": "darwin",
+        "sdk": null,
+        "node": "v24.14.1",
+        "server": "native-mcp/0.4.0",
+        "client": "generic-stdio-mcp-sdk/1.30.0; Codex GPT-6 visual assessment when required"
+      },
+      "source": "public_mcp",
+      "policy": null,
+      "scope": "Public switch_cwd selects the isolated project; a subsequent routes request without project_path resolves its actual launch ability.",
+      "valid_until": null,
+      "artifacts": [
+        {
+          "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-2/switch_cwd.execute.json",
+          "sha256": "b2b35094d50a3832625b8e8ba4da306dab037fb90685cf52d7724b4c585269d5"
+        }
+      ]
+    },
+    {
+      "id": "hdc_log.list_devices",
+      "operation": "hdc_log.list_devices",
+      "passed": true,
+      "service_support": "available",
+      "outcome": "executed",
+      "environment": {
+        "language": "none",
+        "platform": "darwin",
+        "sdk": null,
+        "node": "v24.14.1",
+        "server": "native-mcp/0.4.0",
+        "client": "generic-stdio-mcp-sdk/1.30.0; Codex GPT-6 visual assessment when required"
+      },
+      "source": "public_mcp",
+      "policy": null,
+      "scope": "Public device_info inventory contains the exact endpoint independently bound to the owned emulator before log operations.",
+      "valid_until": null,
+      "artifacts": [
+        {
+          "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-2/hdc_log.list_devices.json",
+          "sha256": "64e0bbb12274b3e35e24d0a26d38b262da25eb7f0ebe0faae426de33172d1a5e"
+        }
+      ]
+    },
+    {
+      "id": "hdc_log.clear",
+      "operation": "hdc_log.clear",
+      "passed": true,
+      "service_support": "available",
+      "outcome": "executed",
+      "environment": {
+        "language": "none",
+        "platform": "darwin",
+        "sdk": null,
+        "node": "v24.14.1",
+        "server": "native-mcp/0.4.0",
+        "client": "generic-stdio-mcp-sdk/1.30.0; Codex GPT-6 visual assessment when required"
+      },
+      "source": "public_mcp",
+      "policy": null,
+      "scope": "Public clear receives native acknowledgement on the owned emulator only; its scope is device app/core buffers and concurrent new logs remain possible.",
+      "valid_until": null,
+      "artifacts": [
+        {
+          "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-2/hdc_log.clear.json",
+          "sha256": "ce07748421fc32228bbb3b5f48f4e5020448dd473e32417b42c7f9bd150fe78d"
+        }
+      ]
+    },
+    {
+      "id": "start_app.execute",
+      "operation": "start_app.execute",
+      "passed": true,
+      "service_support": "available",
+      "outcome": "executed",
+      "environment": {
+        "language": "none",
+        "platform": "darwin",
+        "sdk": null,
+        "node": "v24.14.1",
+        "server": "native-mcp/0.4.0",
+        "client": "generic-stdio-mcp-sdk/1.30.0; Codex GPT-6 visual assessment when required"
+      },
+      "source": "public_mcp",
+      "policy": null,
+      "scope": "Public app_deploy installs the freshly built signed canary and launches its captured module/Ability on the owned endpoint. Launch verifies delayed process stability and basic screen startup while outcomeVerified remains false until a separate application assertion.",
+      "valid_until": null,
+      "artifacts": [
+        {
+          "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-2/start_app.execute.json",
+          "sha256": "fc22ebda1dceffa130955e098c4d355c0390065ec26be033accbf12949837973"
+        }
+      ]
+    },
+    {
+      "id": "hdc_log.collect",
+      "operation": "hdc_log.collect",
+      "passed": true,
+      "service_support": "available",
+      "outcome": "executed",
+      "environment": {
+        "language": "none",
+        "platform": "darwin",
+        "sdk": null,
+        "node": "v24.14.1",
+        "server": "native-mcp/0.4.0",
+        "client": "generic-stdio-mcp-sdk/1.30.0; Codex GPT-6 visual assessment when required"
+      },
+      "source": "public_mcp",
+      "policy": null,
+      "scope": "Public bounded Hilog collection for the owned app PID returns its actual MCPCAP heartbeat; literal filtering is requested and retained truncation metadata remains available.",
+      "valid_until": null,
+      "artifacts": [
+        {
+          "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-2/hdc_log.collect.json",
+          "sha256": "8a9051c1f853b46552302c3553c90ef11b06222b81f3e11d17233fbc9486f98d"
+        }
+      ]
+    },
+    {
+      "id": "verify_ui.cancel",
+      "operation": "verify_ui.cancel",
+      "passed": true,
+      "service_support": "available",
+      "outcome": "executed",
+      "environment": {
+        "language": "none",
+        "platform": "darwin",
+        "sdk": null,
+        "node": "v24.14.1",
+        "server": "native-mcp/0.4.0",
+        "client": "generic-stdio-mcp-sdk/1.30.0; Codex GPT-6 visual assessment when required"
+      },
+      "source": "public_mcp",
+      "policy": null,
+      "scope": "An initialized public UI test is cancelled, survives a full MCP reconnect as cancelled with zero actions, and never claims verification.",
+      "valid_until": null,
+      "artifacts": [
+        {
+          "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-2/verify_ui.cancel.json",
+          "sha256": "f3b1e401e863a31cdeeb724cf041754ea57419daecd0ff1db3fa16af0f76eb9b"
+        }
+      ]
+    },
+    {
+      "id": "verify_ui.testPlan",
+      "operation": "verify_ui.testPlan",
+      "passed": true,
+      "service_support": "available",
+      "outcome": "executed",
+      "environment": {
+        "language": "none",
+        "platform": "darwin",
+        "sdk": null,
+        "node": "v24.14.1",
+        "server": "native-mcp/0.4.0",
+        "client": "generic-stdio-mcp-sdk/1.30.0; Codex GPT-6 visual assessment when required"
+      },
+      "source": "public_mcp",
+      "policy": null,
+      "scope": "The original Chinese test plan is captured verbatim; public plan assigns an ordered step with a fixed exact-text assertion and an independent visual requirement.",
+      "valid_until": null,
+      "artifacts": [
+        {
+          "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-2/verify_ui.testPlan.json",
+          "sha256": "91e88f75bd776b3488b9cf2de7fc95381a1a2ce55bac36d834f83f35437e5581"
+        }
+      ]
+    },
+    {
+      "id": "verify_ui.freshStart",
+      "operation": "verify_ui.freshStart",
+      "passed": true,
+      "service_support": "available",
+      "outcome": "executed",
+      "environment": {
+        "language": "none",
+        "platform": "darwin",
+        "sdk": null,
+        "node": "v24.14.1",
+        "server": "native-mcp/0.4.0",
+        "client": "generic-stdio-mcp-sdk/1.30.0; Codex GPT-6 visual assessment when required"
+      },
+      "source": "public_mcp",
+      "policy": null,
+      "scope": "Public fresh-start initialization stops and relaunches the owned app; initialized changes from false to true and the actual sampled PID changes.",
+      "valid_until": null,
+      "artifacts": [
+        {
+          "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-2/verify_ui.freshStart.json",
+          "sha256": "0aa05cd5641f9544e0b7ed8d9e9c2d74150e32313c1af5748426d196f2425b57"
+        }
+      ]
+    },
+    {
+      "id": "verify_ui.resume",
+      "operation": "verify_ui.resume",
+      "passed": true,
+      "service_support": "available",
+      "outcome": "executed",
+      "environment": {
+        "language": "none",
+        "platform": "darwin",
+        "sdk": null,
+        "node": "v24.14.1",
+        "server": "native-mcp/0.4.0",
+        "client": "generic-stdio-mcp-sdk/1.30.0; Codex GPT-6 visual assessment when required"
+      },
+      "source": "public_mcp",
+      "policy": null,
+      "scope": "After three accepted native actions, full MCP reconnect and public resume preserve the exact plan and action receipts without replay. Resubmitting the same accepted attempt ID and operation returns the same three receipts; it does not inject the input again.",
+      "valid_until": null,
+      "artifacts": [
+        {
+          "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-2/verify_ui.resume.json",
+          "sha256": "08f11cddfe8c0a9a3cccdaeeafc514e9bcc5580ff9021fb6dd8a13ccf97b13a5"
+        }
+      ]
+    },
+    {
+      "id": "verify_ui.step_execution",
+      "operation": "verify_ui.step_execution",
+      "passed": true,
+      "service_support": "available",
+      "outcome": "executed",
+      "environment": {
+        "language": "none",
+        "platform": "darwin",
+        "sdk": null,
+        "node": "v24.14.1",
+        "server": "native-mcp/0.4.0",
+        "client": "generic-stdio-mcp-sdk/1.30.0; Codex GPT-6 visual assessment when required"
+      },
+      "source": "public_mcp",
+      "policy": null,
+      "scope": "Five real scoped UI actions click, select all, insert Chinese and emoji, hide the keyboard, and confirm; only the final control and host visual checks allow completion.",
+      "valid_until": null,
+      "artifacts": [
+        {
+          "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-2/verify_ui.step_execution.json",
+          "sha256": "acc43fd065917a92406dac6b4de4072df7f0fdb1a18f4b1d0acf347ebfb83f3e"
+        }
+      ]
+    },
+    {
+      "id": "verify_ui.visual_review",
+      "operation": "verify_ui.visual_review",
+      "passed": true,
+      "service_support": "available",
+      "outcome": "executed",
+      "environment": {
+        "language": "none",
+        "platform": "darwin",
+        "sdk": null,
+        "node": "v24.14.1",
+        "server": "native-mcp/0.4.0",
+        "client": "generic-stdio-mcp-sdk/1.30.0; Codex GPT-6 visual assessment when required"
+      },
+      "source": "public_mcp",
+      "policy": null,
+      "scope": "Public finish rejects an incomplete visual review despite the control check; the host reads the exact public MCP image and supplies matching artifact, SHA and read token with actual observations. Only a passed host assessment and the original native assertion permit the successful UI test finish.",
+      "valid_until": null,
+      "artifacts": [
+        {
+          "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-2/verify_ui.visual_review.json",
+          "sha256": "92bff74c2281834c704e8e051795f8efe6b3acf25c181d59ca57e47a62ea5304"
+        }
+      ]
+    },
+    {
+      "id": "get_ui_verification_log.read",
+      "operation": "get_ui_verification_log.read",
+      "passed": true,
+      "service_support": "available",
+      "outcome": "executed",
+      "environment": {
+        "language": "none",
+        "platform": "darwin",
+        "sdk": null,
+        "node": "v24.14.1",
+        "server": "native-mcp/0.4.0",
+        "client": "generic-stdio-mcp-sdk/1.30.0; Codex GPT-6 visual assessment when required"
+      },
+      "source": "public_mcp",
+      "policy": null,
+      "scope": "Public UI log listing paginates retained continuous chunks; reading an actual owned app chunk obeys the requested UTF-8 byte limit and leaves gap metadata explicit.",
+      "valid_until": null,
+      "artifacts": [
+        {
+          "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-2/get_ui_verification_log.read.json",
+          "sha256": "c7dc73ceefede32f8ad63566c0eff0eca9a7e8ef53322ad2cde393618e9a1d70"
+        }
+      ]
+    },
+    {
+      "id": "get_ui_verification_log.search",
+      "operation": "get_ui_verification_log.search",
+      "passed": true,
+      "service_support": "available",
+      "outcome": "executed",
+      "environment": {
+        "language": "none",
+        "platform": "darwin",
+        "sdk": null,
+        "node": "v24.14.1",
+        "server": "native-mcp/0.4.0",
+        "client": "generic-stdio-mcp-sdk/1.30.0; Codex GPT-6 visual assessment when required"
+      },
+      "source": "public_mcp",
+      "policy": null,
+      "scope": "Public literal-keyword search paginates actual Chinese/emoji heartbeat lines with a 512-byte limit; this does not claim capture outside recorded bounded intervals.",
+      "valid_until": null,
+      "artifacts": [
+        {
+          "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-2/get_ui_verification_log.search.json",
+          "sha256": "d4fb1389b6acb74f0d381f6ca3957655403dc5e73011820269768bd6292d251e"
+        }
+      ]
+    },
+    {
+      "id": "save_ui_screenshot.export_steps",
+      "operation": "save_ui_screenshot.export_steps",
+      "passed": true,
+      "service_support": "available",
+      "outcome": "executed",
+      "environment": {
+        "language": "none",
+        "platform": "darwin",
+        "sdk": null,
+        "node": "v24.14.1",
+        "server": "native-mcp/0.4.0",
+        "client": "generic-stdio-mcp-sdk/1.30.0; Codex GPT-6 visual assessment when required"
+      },
+      "source": "public_mcp",
+      "policy": null,
+      "scope": "Public completed-test export contains multiple real screenshots; manifest, events and every artifact byte count and SHA are independently verified from the exported files.",
+      "valid_until": null,
+      "artifacts": [
+        {
+          "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-2/save_ui_screenshot.export_steps.json",
+          "sha256": "39965ad556857154a8971bd17cbc912bd95f82965db8db4bcfba01c0abb13cbd"
+        }
+      ]
+    },
+    {
+      "id": "debug_exit.execute",
+      "operation": "debug_exit.execute",
+      "passed": true,
+      "service_support": "available",
+      "outcome": "executed",
+      "environment": {
+        "language": "none",
+        "platform": "darwin",
+        "sdk": null,
+        "node": "v24.14.1",
+        "server": "native-mcp/0.4.0",
+        "client": "generic-stdio-mcp-sdk/1.30.0; Codex GPT-6 visual assessment when required"
+      },
+      "source": "public_mcp",
+      "policy": null,
+      "scope": "The builtin debug workflow rejects cancelled evidence and completes only with a fresh successful UI test matching its captured app and target. The retained client assessment and native UI evidence stay distinct; debug workflow completion does not claim arbitrary prose verification or alter host system mode.",
+      "valid_until": null,
+      "artifacts": [
+        {
+          "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-2/debug_exit.execute.json",
+          "sha256": "959cee839144acc8b885a6e02941f30ec303d339d25de01305b63c45d88690c9"
+        }
+      ]
+    }
+  ]
+}

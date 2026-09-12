@@ -1,0 +1,8 @@
+{
+  "format": 1,
+  "operation": "arkts_check.execute",
+  "checks": [
+    "Actual ArkTS checking reports an injected missing-member error, then zero errors after the original source is restored."
+  ],
+  "observation_sha256": "0459962579690131b542a152f184db98f7f975d6564f3544bef242ecd0ddda8c"
+}

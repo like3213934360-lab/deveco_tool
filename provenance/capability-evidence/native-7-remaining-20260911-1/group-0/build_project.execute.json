@@ -1,0 +1,8 @@
+{
+  "format": 1,
+  "operation": "build_project.execute",
+  "checks": [
+    "The native project build is blocked by a real compiler error; restored source passes default preflight and HAP build through public workflow_run."
+  ],
+  "observation_sha256": "823c5a94cd0b0dfc3cb763f9541382c8114cb45d26379984f9a5e011a413678a"
+}

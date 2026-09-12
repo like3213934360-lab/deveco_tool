@@ -52,17 +52,26 @@ const documentSymbol: z.ZodType<DocumentSymbol> = z.lazy(() =>
     .refine(contained, "Selection must lie within its symbol range"),
 );
 
-export const callItem = z
-  .object({
-    ...symbol,
-    ...extent,
-    uri: z.url(),
-    detail: z.string().optional(),
-    // Opaque server data is required for the follow-up request. The JSON budget
-    // is checked before parsing; do not strip this field or accept host-made items.
-    data: z.unknown().optional(),
-  })
-  .refine(contained, "Selection must lie within its symbol range");
+export const callItemCoordinates = z.object({
+  ...symbol,
+  ...extent,
+  uri: z.url(),
+  detail: z.string().optional(),
+  // Opaque server data is required for the follow-up request. The JSON budget
+  // is checked before parsing; do not strip this field or accept host-made items.
+  data: z.unknown().optional(),
+  extentEvidence: z
+    .object({
+      method: z.literal("textDocument/documentSymbol"),
+      originalRange: range,
+      declarationRange: range,
+    })
+    .optional(),
+});
+export const callItem = callItemCoordinates.refine(
+  contained,
+  "Selection must lie within its symbol range",
+);
 
 export const symbolResults = {
   documentSymbol: z

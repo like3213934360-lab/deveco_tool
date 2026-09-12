@@ -1,0 +1,10 @@
+{
+  "format": 1,
+  "operation": "lsp.documentSymbol",
+  "checks": [
+    "Actual ArkTS documentSymbol executes through public stdio MCP in both LF and CRLF UTF-16 fixtures, before and after MCP restart.",
+    "Required symbol and legacy queries return nonempty results; call direction, cross-file ownership and repeated/class/nested call ranges are asserted against the source; legitimate empty queries remain empty.",
+    "Native pull diagnostics detect and clear a real type error. C++ observations are kept separately and cannot qualify the ArkTS requirement."
+  ],
+  "observation_sha256": "a164f2ac86f7b41c10b713ffedf865669add82fe14b4004fdae952a38dacb681"
+}

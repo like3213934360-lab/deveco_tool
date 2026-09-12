@@ -129,6 +129,7 @@ export class UiTestLogService {
     step: string,
     stage: string,
     signal: AbortSignal,
+    secrets: string[] = [],
   ): Promise<{ chunk: UiLogChunk; anchor?: UiLogAnchor }> {
     let end: UiLogAnchor | undefined;
     try {
@@ -181,6 +182,8 @@ export class UiTestLogService {
         "Device rejected the bounded epoch/PID Hilog query",
       );
       const selected = selectTestLog(result.stdout, start, end);
+      for (const secret of [...new Set(secrets.flatMap((value) => [value, ...value.split(/\r?\n/)]).filter(Boolean))].sort((a, b) => b.length - a.length))
+        selected.content = selected.content.replaceAll(secret, "[redacted]");
       invariant(
         Buffer.byteLength(selected.content) <= 1024 * 1024,
         "UI_TEST_LOG_BUDGET",

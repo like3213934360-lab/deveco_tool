@@ -1,0 +1,8 @@
+{
+  "format": 1,
+  "operation": "hdc_log.clear",
+  "checks": [
+    "Public clear receives native acknowledgement on the owned emulator only; its scope is device app/core buffers and concurrent new logs remain possible."
+  ],
+  "observation_sha256": "517d8dbff3992eeded600e0106e813161598a50aff2ff0d205d2a0cf2db349f5"
+}

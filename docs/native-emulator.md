@@ -8,6 +8,29 @@
 
 场景执行要求组件版本至少 7，并在 `-help` 中找到具体命令及传感器选项。本机 26.0.0.400 未声明湿度和温度选项，明确返回 `EMULATOR_CAPABILITY_UNAVAILABLE`。有限的单条协议缓存以可执行文件身份和捕获命令为键，避免每次重复启动版本/帮助探测。原生命令必须返回 `Scenario simulation success.`，混有失败信息或没有正向回执时不计成功。`commandAccepted:true` 仅表示组件接受命令，`stateVerified:false` 明确保留应用实际感知验收边界。
 
+## 应用效果断言（下一版本候选）
+
+场景参数可附带 `verify`，将组件命令与指定应用的 UI 断言组合为同一持久化任务。例如：
+
+```json
+{
+  "name":"owned-instance",
+  "target":"127.0.0.1:5555",
+  "action":"sensor",
+  "key":"light",
+  "value":1234.3,
+  "verify":{
+    "bundle_name":"com.example.sensor",
+    "assert":{"visible":{"key":"LightValue","text":"Light: 1234.30","textMode":"exact"},"timeoutMs":15000}
+  },
+  "request_key":"owned-light-observation-001"
+}
+```
+
+`workflow_run.status` 的结果分别保存 `execute_native_operation` 和 `verify_native_outcome`。后者关联命令结果摘要、断言、目标、开始/结束时间及报告制品，观察范围明确为 `captured_application_ui_assertion`。所有选择器及备选项必须属于指定 bundle；即使断言控件不存在，也要求应用窗口处于可观察状态。命令接受但断言失败时整个任务失败；恢复只重新检查断言，不重复已经接受的场景命令。不提供 `verify` 时观察步骤明确返回 `not_requested`，原有命令回执继续保留 `stateVerified:false`。
+
+2026-09-11 在拥有的全新 phone 模拟器、HarmonyOS 7.0.0(26.0.0) / 7.0.0.106 镜像中，`native-7-remaining-emulator-outcome-mcp-20260911-3/evidence.json` 候选公共 MCP 验收通过：两次光照回调、两次电量 UI 断言、错误预期失败、最终树与截图、停止并删除临时实例。第二轮出现过断言结束后 UI 查询超时，失败原件保留，尚未确认根因；第三轮没有通过移除最终查询来回避它。相同组件实际拒绝 `humidity`/`temperature`，报告当前支持 `light, steps`；这是此组件/镜像的实际探测结果，不推广为其他 SDK 永不支持。
+
 ## 许可证
 
 `license_view` 只读当前组件目录中的 `agreement/HarmonyOS_Software_Service_Agreement.txt` 与 `agreement/HarmonyOS_SDK_Agreement.txt`。每份文件最多 1 MiB，返回 SHA-256、字节数、制品引用和接受状态；全文通过制品分页读取。组合 `license_sha256` 固定所审阅的两份文本。缺失文件明确不可用，不使用捆绑的旧协议替代。

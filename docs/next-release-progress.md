@@ -1,8 +1,10 @@
-# 下一正式版本执行记录
+# 0.3.0 发布过程历史记录
+
+本文件下文保留 0.3.0 发布前各轮执行记录。其“当前／尚未完成”和旧 LSP 支持结论属于当时截点；后续审计确认 ArkTS 五项操作可用，适配缺陷与 0.4.0 的状态见[本轮执行记录](remaining-release-progress.md)。
 
 目标：补齐 deveco-code 工具与 Skill 对应能力，修复 2026-09-10 使用审计问题，完成下一正式版本合入、发布及安装验收。PR、候选包或局部测试通过均不代表发布完成。
 
-基线 v0.2.1 / `9ead52566208fece33c178b83b0e0e86a47bb21c`；分支 `codex/upstream-tool-parity`；本次版本 **0.3.0 / native-7**。[PR #9](https://github.com/like3213934360-lab/deveco_tool/pull/9) 保持草稿，正式 Release 尚未创建。
+基线 v0.2.1 / `9ead52566208fece33c178b83b0e0e86a47bb21c`；分支 `codex/upstream-tool-parity`；本次版本 **0.3.0 / native-7**。[PR #9](https://github.com/like3213934360-lab/deveco_tool/pull/9) 已合并，正式 [v0.3.0](https://github.com/like3213934360-lab/deveco_tool/releases/tag/v0.3.0) 已于 2026-09-10 16:50 UTC 发布，对应 `39e3c5664557071231650aca7dce9adbfc1c6d29`。
 
 ## 已确定架构
 

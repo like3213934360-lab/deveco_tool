@@ -1,0 +1,8 @@
+{
+  "format": 1,
+  "operation": "hdc_log.list_devices",
+  "checks": [
+    "Public device_info inventory contains the exact endpoint independently bound to the owned emulator before log operations."
+  ],
+  "observation_sha256": "99c29adbce939c0a8cc546b64e8881b718ac86d3fbe17144f51bac057beba0ce"
+}

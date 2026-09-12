@@ -1,0 +1,9 @@
+{
+  "format": 1,
+  "operation": "write.execute",
+  "checks": [
+    "The reviewed product contract assigns generic reasoning, file editing, search, questions and delegation to the connected host client.",
+    "The actual MCP catalog exposes domain tools and guided completion gates; this boundary observation does not claim native implementation or successful execution by every AI client."
+  ],
+  "observation_sha256": "d5763e49056f0f496c01f77fda5c7b982e8fbb8061bb1af534b6335894df655b"
+}

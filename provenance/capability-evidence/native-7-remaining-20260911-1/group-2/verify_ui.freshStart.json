@@ -1,0 +1,8 @@
+{
+  "format": 1,
+  "operation": "verify_ui.freshStart",
+  "checks": [
+    "Public fresh-start initialization stops and relaunches the owned app; initialized changes from false to true and the actual sampled PID changes."
+  ],
+  "observation_sha256": "645f705c44ed6c6666a9099b3bc1f5506ef726fe27871447fc2d8e16f6fd66fa"
+}

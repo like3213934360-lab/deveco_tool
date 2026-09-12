@@ -322,6 +322,7 @@ function recordChecks(directory: string, raw: unknown, required: readonly string
 function carryForwardBaselineChecks(root: string, directory: string, sourceId: string, plan: z.infer<typeof baselineReviewSchema>, required: readonly string[], tested: ReturnType<typeof evidenceIdentity>) {
   if (!required.length) return [];
   const scope = releaseScopeSchema.parse(readJson(path.join(root, `provenance/release-scope-${release}.json`)));
+  invariant(String(scope.release) === release, "RELEASE_SCOPE_STALE", "Historical source checks were authorized only for their original release");
   for (const check of required) invariant(scope.upstream_historical_checks.includes(check), "UPSTREAM_TEST_MISSING", `Current evidence missing and release scope does not authorize historical carry-forward: ${check}`);
   const historyRoot = path.join(root, "provenance/upstream-review-history", sourceId);
   const histories = fs.readdirSync(historyRoot).sort().reverse();

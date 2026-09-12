@@ -56,6 +56,7 @@ const eligible = `status IN ('succeeded','cancelled') AND owner IS NULL
   AND NOT EXISTS (SELECT 1 FROM ui_reviews WHERE ui_reviews.run_id=runs.id AND status='required')`;
 const exportEligible = `status IN ('succeeded','cancelled','failed','interrupted','needs_input') AND owner IS NULL
   AND NOT EXISTS (SELECT 1 FROM artifact_streams WHERE artifact_streams.run_id=runs.id)
+  AND NOT EXISTS (SELECT 1 FROM ui_log_sessions WHERE ui_log_sessions.run_id=runs.id AND state='running')
   AND NOT EXISTS (SELECT 1 FROM run_pins WHERE run_pins.run_id=runs.id)`;
 
 /** Explicit storage lifecycle: select exact completed runs, review a digest-bound
@@ -132,14 +133,14 @@ export class StorageService {
       runs.push(run);
       const rows = this.store.db
         .prepare(
-          "SELECT * FROM artifacts WHERE run_id=? ORDER BY id LIMIT 4097",
+          "SELECT * FROM artifacts WHERE run_id=? ORDER BY id LIMIT 16385",
         )
         .all(id) as Artifact[];
       artifacts.push(...rows);
       invariant(
-        artifacts.length <= 4096,
+        artifacts.length <= 16384,
         "STORAGE_SELECTION_TOO_LARGE",
-        "Select fewer runs; at most 4096 artifacts per operation",
+        "Select fewer runs; at most 16384 artifacts per operation, including continuous log chunks",
       );
     }
     const dependencies = [...ids]
@@ -238,6 +239,8 @@ export class StorageService {
             "ui_recordings",
             "ui_reviews",
             "ui_tests",
+            "ui_log_chunks",
+            "ui_log_sessions",
             "skill_workflows",
             "managed_processes",
             "external_sessions",

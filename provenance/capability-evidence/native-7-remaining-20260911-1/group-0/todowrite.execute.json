@@ -1,0 +1,8 @@
+{
+  "format": 1,
+  "operation": "todowrite.execute",
+  "checks": [
+    "Public task replacement increments the revision, rejects a stale revision, survives MCP restart and preserves exact task content."
+  ],
+  "observation_sha256": "f17b15fa56a7e477febede6723e99d2b255b77782c180aef04cc38e84bd8c7ff"
+}

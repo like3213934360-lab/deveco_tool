@@ -27,6 +27,7 @@
 ## 原生参数
 
 - `velocity` 只用于手势，范围 200–40000。`step_length` 只用于 fling；端点式 fling 表示像素步长，方向式 dircFling 的原生位置参数实际表示采样次数。指定显示器时补齐中间的缺省位置参数，避免把显示器当速度或按键。
+- `dircFling.direction` 保留原生 CLI 的滚动方向：0/1/2/3 为向左/右/上/下。它不是手指移动向量：原生 `CreateFlingPoint` 的 2 从屏幕上部向中心划动，3 从下部向中心划动；已经在文档顶部时，2 可以没有可观察滚动。需要精确手指轨迹时使用带两个端点的 `fling`。依据 [原生方向与起止点实现](https://github.com/openharmony/testfwk_arkxtest/blob/b04e30c40cf266c9abfbd52933e43a0456eb99a2/uitest/input/ui_input.cpp)。
 - `keys` 接受一个 `Home`、`Back`、`Power`，或最多三个数字键码。数字组合键指定显示器时补齐原生空键位；命名键不与其他键混用。
 - UiTest 坐标必须为正 int32。手势距离限制为 1–32767 像素，避免原生整数距离运算溢出；步长不能大于手势距离。
 - 中文、换行和 Unicode 文字通过 Hypium 的粘贴调用输入，目标点保留 `displayId`。文本不会拼进 shell。

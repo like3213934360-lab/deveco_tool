@@ -1,0 +1,8 @@
+{
+  "format": 1,
+  "operation": "skill.list",
+  "checks": [
+    "Public catalog returns all six bundled Skills and their file and package digests without client installation."
+  ],
+  "observation_sha256": "bed5563dd458ed89227f117bf68a2aff1a0ca37cb8186df4be8af6a614c1ed56"
+}

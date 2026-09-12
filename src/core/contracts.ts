@@ -1,3 +1,5 @@
+import { selectorSchema, meaningfulSelector, assertionSchema, type Selector } from "./ui-assertion.js";
+export { selectorSchema, meaningfulSelector, assertionSchema, type Selector } from "./ui-assertion.js";
 import { preflightPolicySchema } from "../services/build-preflight.js";
 import { z } from "zod";
 import { docCatalogNames } from "./doc-catalog.js";
@@ -23,24 +25,6 @@ export const screenshotOptionsSchema = z.strictObject({
     .optional(),
 });
 
-export const selectorSchema = z.strictObject({
-  text: z.string().optional(),
-  textMode: z.enum(["contains", "exact"]).default("contains"),
-  key: z.string().optional(),
-  type: z.string().optional(),
-  node_id: z.string().optional(),
-  window_id: z.string().optional(),
-  bundle_name: z.string().min(1).optional(),
-  displayId: z.union([z.string(), z.number()]).optional(),
-  checked: z.boolean().optional(),
-  selected: z.boolean().optional(),
-  enabled: z.boolean().optional(),
-  value: z.union([z.string(), z.number()]).optional(),
-  clickableOnly: z.boolean().default(false),
-  onScreenOnly: z.boolean().default(true),
-  limit: z.number().int().min(1).max(200).default(20),
-});
-export type Selector = z.infer<typeof selectorSchema>;
 const queryFields = {
   selector: selectorSchema.optional(),
   selectors: z
@@ -134,21 +118,6 @@ export const controlSchema = z.strictObject({
 export const flowIdSchema = z
   .string()
   .regex(/^[a-z0-9](?:[a-z0-9_-]{0,62}[a-z0-9])?$/);
-export const meaningfulSelector = selectorSchema.refine(
-  (s) => !!(s.key || s.text || s.type || s.node_id),
-  "Selector needs key, text, type or node_id",
-);
-export const assertionSchema = z
-  .strictObject({
-    visible: meaningfulSelector.optional(),
-    hidden: meaningfulSelector.optional(),
-    timeoutMs: z.number().int().min(100).max(600000).default(5000),
-    alternates: z.array(meaningfulSelector).max(5).optional(),
-  })
-  .refine(
-    (input) => (input.visible !== undefined) !== (input.hidden !== undefined),
-    "Provide exactly one visible or hidden assertion",
-  );
 export const stepSchema = z.strictObject({
   id: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/),
   action: z.enum([
@@ -164,6 +133,8 @@ export const stepSchema = z.strictObject({
     "waitHidden",
     "assertVisible",
     "assertHidden",
+    "focusInput", "dircFling",
+    "mouseClick", "mouseDoubleClick", "mouseLongClick", "mouseMoveTo", "mouseScroll", "mouseMoveWithTrack", "mouseDrag",
   ]),
   timeoutMs: z.number().int().min(100).max(600000).default(30000)
     .describe("Total step deadline including locator sampling, native input and before/after progress evidence; explicit saved deadlines are preserved"),
@@ -180,10 +151,23 @@ export const stepSchema = z.strictObject({
     .regex(/^[A-Za-z0-9_]+$/)
     .optional(),
   gesture: gesture.optional(),
+  keys: controlSchema.shape.keys,
+  direction: controlSchema.shape.direction,
+  velocity: controlSchema.shape.velocity,
+  step_length: controlSchema.shape.step_length,
+  button: controlSchema.shape.button,
+  scroll_down: controlSchema.shape.scroll_down,
+  ticks: controlSchema.shape.ticks,
+  mouse_scroll_speed: controlSchema.shape.mouse_scroll_speed,
+  scope: z.strictObject({
+    display_id: controlSchema.shape.display_id,
+    window_type: z.string().min(1),
+    ability_name: z.string().min(1).optional(),
+  }).optional().describe("v2 records window identity without persisting an ephemeral window ID; replay requires one matching focused app window"),
 });
 export const flowSchema = z
   .strictObject({
-    version: z.literal(1),
+    version: z.union([z.literal(1), z.literal(2)]),
     id: flowIdSchema,
     name: z.string().min(1),
     app: z.strictObject({
@@ -211,6 +195,11 @@ export const flowSchema = z
     if (new Set(ids).size !== ids.length)
       context.addIssue({ code: "custom", message: "Step IDs must be unique" });
     for (const step of flow.steps) {
+      const extended = ["focusInput", "dircFling", "mouseClick", "mouseDoubleClick", "mouseLongClick", "mouseMoveTo", "mouseScroll", "mouseMoveWithTrack", "mouseDrag"].includes(step.action);
+      if (flow.version === 1 && (extended || [step.keys, step.scope, step.direction, step.velocity, step.step_length, step.button, step.scroll_down, step.ticks, step.mouse_scroll_speed].some(v => v !== undefined)))
+        context.addIssue({ code: "custom", message: `${step.id}: extended actions and fields require flow version 2` });
+      if (extended && !step.scope)
+        context.addIssue({ code: "custom", message: `${step.id}: extended actions require a recorded window scope` });
       if (
         [
           "tap",
@@ -230,23 +219,31 @@ export const flowSchema = z
           message: `${step.id}: selector or point required`,
         });
       if (
-        step.action === "input" &&
+        ["input", "focusInput"].includes(step.action) &&
         (!step.value || !Object.hasOwn(flow.variables, step.value.slice(2, -1)))
       )
         context.addIssue({
           code: "custom",
           message: `${step.id}: declared input variable required`,
         });
-      if (step.action === "key" && !step.key)
+      if (step.action === "key" && ((!step.key && !step.keys) || (step.key && step.keys)))
         context.addIssue({
           code: "custom",
-          message: `${step.id}: key required`,
+          message: `${step.id}: exactly one key or keys contract required`,
         });
-      if (["swipe", "fling", "drag"].includes(step.action) && !step.gesture)
+      if (["swipe", "fling", "drag", "mouseMoveWithTrack", "mouseDrag"].includes(step.action) && !step.gesture)
         context.addIssue({
           code: "custom",
           message: `${step.id}: gesture required`,
         });
+      if (step.action === "focusInput" && (!step.selector || step.point || step.alternates?.some(selector => selector.text !== undefined || selector.value !== undefined) || step.selector.text !== undefined || step.selector.value !== undefined))
+        context.addIssue({ code: "custom", message: `${step.id}: focused text requires a stable selector without captured input values` });
+      if (["mouseClick", "mouseDoubleClick", "mouseLongClick", "mouseMoveTo", "mouseScroll"].includes(step.action) && !step.selector && !step.point)
+        context.addIssue({ code: "custom", message: `${step.id}: mouse action requires selector or point` });
+      if (step.action === "dircFling" && step.direction === undefined)
+        context.addIssue({ code: "custom", message: `${step.id}: direction required` });
+      if (step.action === "mouseScroll" && (step.scroll_down === undefined || step.ticks === undefined))
+        context.addIssue({ code: "custom", message: `${step.id}: scroll direction and ticks required` });
     }
   });
 export type Flow = z.infer<typeof flowSchema>;
@@ -321,6 +318,15 @@ export const routeRequestSchema = z
       ),
     "Select a declared route by id, ability, action, URI or MIME type",
   );
+export const startupCheckSchema = z.strictObject({
+  mode: z.enum(["ui", "process_only"]).default("ui")
+    .describe("UI checks are default. Use process_only for a deliberately headless ability; it verifies process stability only"),
+  stable_ms: z.number().int().min(500).max(5000).default(1500),
+  timeout_ms: z.number().int().min(2000).max(30000).default(10000),
+  allow_uniform: z.boolean().default(false)
+    .describe("An explicit contract that a solid-color screen is valid at startup. It is never a business UI assertion"),
+  display_id: z.number().int().min(0).max(2147483647).optional(),
+}).refine(value => value.timeout_ms >= value.stable_ms + 1000, "Startup timeout must include the stability window and a query margin");
 export const appSchema = z.strictObject({
   bundle_name: z.string().regex(/^[A-Za-z][A-Za-z0-9_.]*$/),
   module: aaArgument.optional(),
@@ -330,6 +336,7 @@ export const appSchema = z.strictObject({
   mime_type: aaArgument.optional(),
   entities: z.array(aaArgument).max(32).optional(),
   parameters: wantParametersSchema.optional(),
+  startup_check: startupCheckSchema.optional(),
 });
 export type ApplicationTarget = z.infer<typeof appSchema>;
 export const uiTestStepSchema = z.strictObject({
@@ -983,7 +990,7 @@ export const tools = {
       z.strictObject({ action: z.literal("check"), test_id: z.string().uuid(), recapture: z.boolean().default(false).describe("Explicitly replace an existing review with fresh evidence after an external or delayed UI change; original requirements remain fixed") }),
       z.strictObject({ action: z.literal("act"), test_id: z.string().uuid(), step_id: z.string().min(1).max(64), attempt_id: z.string().uuid(), operation: controlSchema }),
       z.strictObject({ action: z.literal("replan"), test_id: z.string().uuid(), reason: z.string().trim().min(10).max(4096), strategy: z.string().trim().min(10).max(4096), reconcile_uncertain: z.boolean().default(false) }),
-      z.strictObject({ action: z.literal("logs"), test_id: z.string().uuid(), chunk_id: z.number().int().min(0).max(499).optional(), offset: z.number().int().nonnegative().default(0).describe("Offset in matching log lines"), limit: z.number().int().min(1).max(65536).default(16384).describe("Maximum UTF-8 response bytes"), search_keywords: z.array(z.string().min(1).max(256)).max(8).default([]) }),
+      z.strictObject({ action: z.literal("logs"), test_id: z.string().uuid(), chunk_id: z.number().int().min(0).max(8691).optional(), chunk_offset: z.number().int().nonnegative().default(0).describe("Offset in the combined legacy and continuous chunk listing"), chunk_limit: z.number().int().min(1).max(100).default(100), offset: z.number().int().nonnegative().default(0).describe("Offset in matching log lines"), limit: z.number().int().min(1).max(65536).default(16384).describe("Maximum UTF-8 response bytes"), search_keywords: z.array(z.string().min(1).max(256)).max(8).default([]) }),
       z.strictObject({ action: z.literal("report"), test_id: z.string().uuid() }),
       z.strictObject({ action: z.literal("export"), test_id: z.string().uuid(), directory: z.string().min(1) }),
     ]),
@@ -1017,7 +1024,7 @@ export const tools = {
   },
   emulator_scenario: {
     description:
-      "Control a running modern emulator as a persistent job returning run_id; use workflow_run for status/resume/cancel. Range and operation fields are checked before SDK calls; native help must declare the selected capability. Command acceptance does not prove application sensor state.",
+      "Control a running modern emulator as a persistent job returning run_id; use workflow_run for status/resume/cancel. Range and operation fields are checked before SDK calls; native help must declare the selected capability. Optional verify captures a bundle_name and UI assertion, checked after the accepted command under the same device lease. Its separate verify_native_outcome result/report proves the captured application assertion, not every physical sensor property. On assertion failure, resume rechecks the assertion without repeating the accepted scenario. Without verify, command acceptance leaves application state unverified.",
     schema: emulatorScenarioSchema,
   },
 };

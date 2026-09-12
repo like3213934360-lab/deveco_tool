@@ -9,7 +9,7 @@ import { HvigorSession } from "./hvigor/session.js";
 import { HotConfiguration, hotPaths, assertNoHotWatch } from "./hvigor/hot-config.js";
 import type { BuildOptions } from "./hvigor/protocol.js";
 import { appSchema, tools } from "../core/contracts.js";
-import { invariant, object, ToolError } from "../core/errors.js";
+import { invariant, object, ToolError, SettledEffectError, errorResult } from "../core/errors.js";
 import {
   atomicWrite,
   digest,
@@ -273,6 +273,7 @@ export class HotReloadService {
     raw: unknown,
     project: Project,
     signal?: AbortSignal,
+    recovering = false,
   ): Promise<unknown> {
     const input = tools.hot_reload.schema.parse(raw),
       key = this.key(project);
@@ -512,7 +513,7 @@ export class HotReloadService {
             `device:${session.target}`,
             () => {
               this.assertDeviceIdle(session.target);
-              return this.apply(session, input.files, signal);
+              return this.apply(session, input.files, signal, recovering);
             },
             signal,
           );
@@ -551,11 +552,8 @@ export class HotReloadService {
       env: { DEVECO_SDK_HOME: sdk },
     };
   }
-  private async apply(
-    session: WatchSession,
-    requested: string[] | undefined,
-    signal?: AbortSignal,
-  ) {
+  /** Read-only checks precede every generated file, SDK request and device patch. */
+  private prepareApply(session: WatchSession, requested: string[] | undefined) {
     invariant(
       digest(discoverToolchain()) === digest(session.toolchain),
       "HOT_TOOLCHAIN_CHANGED",
@@ -611,6 +609,24 @@ export class HotReloadService {
       "Watch application does not match the project",
     );
     const version = nextHotPatchVersion(session.modules, appInfo);
+    return { project, target, app, current, changed, patchedFiles, changes, modules, appInfo, version };
+  }
+  private async apply(
+    session: WatchSession,
+    requested: string[] | undefined,
+    signal?: AbortSignal,
+    recovering = false,
+  ) {
+    let plan: ReturnType<HotReloadService["prepareApply"]>;
+    try {
+      plan = this.prepareApply(session, requested);
+    } catch (error) {
+      // A fresh rejection proves nothing was dispatched by this attempt. On
+      // recovery it cannot settle a prior SDK request whose receipt was lost.
+      if (recovering) throw new ToolError("EFFECT_UNCERTAIN", "Fresh hot-patch preparation cannot settle the earlier operation", { cause: errorResult(error) });
+      throw SettledEffectError.from(error);
+    }
+    const { project, target, app, current, changed, patchedFiles, changes, modules, appInfo, version } = plan;
     const patchVersions: Record<string, number> = {};
     for (const module of modules) {
       const entries = changes.get(module.name)!,
@@ -776,15 +792,26 @@ export class HotReloadService {
       const receipt = durable ? await new DeviceEffectJournal(this.store, this.devices).run(target, "quickfix", args, accept, signal, false, 180000)
         : accept(await this.devices.shell(target, args, signal, 180000));
       invariant(receipt, "HOT_APPLY_UNCONFIRMED", "Quickfix has no matching completion receipt");
-      // Never remove an uncertain operation's files. The device journal commits before this cleanup.
-      await this.devices.shell(target, ["rm", "-rf", remote], undefined, 10000).catch(() => {});
-      const after = (await this.devices.shell(target, ["pidof", app.bundle_name], signal)).stdout.trim();
-      invariant(after === prepared.before_pid, "HOT_APP_RESTARTED", "Application process changed during hot reload");
-      this.devices.invalidate(target);
+      // Compilation/application already succeeded. Commit that baseline even if
+      // the following observations fail; a failed screen check cannot undo a patch.
       const session = this.sessions.get(this.key(project));
       if (session) { session.files = new Map(prepared.sources); session.patchedFiles = new Set(prepared.patched_files); session.lastUsed = Date.now(); }
-      return { applied: true, processPreserved: true, outcomeVerified: false, patch_versions: prepared.patch_versions,
+      const applied = { applied: true, outcomeVerified: false, patch_versions: prepared.patch_versions,
         files: prepared.changed_files, receipt: this.store.artifact(trace.run_id ?? "hot_reload", receipt.stdout), compile_log: prepared.compile_log };
+      // Never remove an uncertain operation's files. The device journal commits before this cleanup.
+      await this.devices.shell(target, ["rm", "-rf", remote], undefined, 10000).catch(() => {});
+      try {
+        const after = (await this.devices.shell(target, ["pidof", app.bundle_name], signal)).stdout.trim();
+        invariant(after === prepared.before_pid, "HOT_APP_RESTARTED", "Application process changed during hot reload");
+        this.devices.invalidate(target);
+        const startup_check = await this.devices.checkStartup(target, app, signal, prepared.before_pid.split(/\s+/));
+        return { ...applied, processPreserved: true, startupVerified: true, startup_check };
+      } catch (error) {
+        const reason = errorResult(error);
+        throw new SettledEffectError(reason.code, reason.message, {
+          ...applied, startupVerified: false, observation_error: reason,
+        });
+      }
     }, signal);
   }
 

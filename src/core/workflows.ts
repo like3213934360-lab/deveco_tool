@@ -329,7 +329,10 @@ export class WorkflowEngine {
           config = {
             configurable: { thread_id: id },
             durability: "sync" as const,
-            signal: execution.controller.signal,
+            // Every native node observes our signal and joins its cleanup.
+            // LangGraph's own abort race can reject invoke before that node
+            // settles, releasing leases and checking process exit too early.
+            // Keep invoke joined; node boundaries still prevent later work.
           };
         const state = resume ? await graph.getState(config) : undefined;
         const hasInterrupt = state?.tasks.some(

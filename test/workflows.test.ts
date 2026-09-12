@@ -9,7 +9,7 @@ import {
   WorkflowEngine,
   type WorkflowDefinition,
 } from "../src/core/workflows.js";
-import { ToolError } from "../src/core/errors.js";
+import { SettledEffectError, ToolError } from "../src/core/errors.js";
 
 function fixture(definition: WorkflowDefinition) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-workflows-")),
@@ -170,6 +170,102 @@ test("cancel waits for the managed operation to stop before final cancelled stat
     await f.close();
   }
 });
+for (const stopping of ["cancel", "shutdown"] as const)
+  test(`${stopping} joins delayed native cleanup and its settled receipt before releasing the workflow lease`, async () => {
+    const entered = Promise.withResolvers<void>(),
+      cleaning = Promise.withResolvers<void>(),
+      release = Promise.withResolvers<void>();
+    let next = 0;
+    const f = fixture({
+      id: "test",
+      description: "test",
+      capabilities: [],
+      completion: "done",
+      resources: () => ["device:fixture"],
+      steps: [
+        {
+          id: "launch",
+          kind: "effect",
+          async execute({ signal }) {
+            const guard = f.store.trackProcess();
+            guard.spawned(process.pid);
+            entered.resolve();
+            try {
+              await delay(30000, undefined, { signal });
+            } finally {
+              cleaning.resolve();
+              await release.promise;
+              guard.closed(true);
+            }
+            return { accepted: true };
+          },
+        },
+        {
+          id: "next",
+          kind: "read",
+          async execute() {
+            next++;
+            return {};
+          },
+        },
+      ],
+    });
+    // The external command has a receipt; only its observation/cleanup is
+    // interrupted. Preserve that distinction from the uncertainty case below.
+    const definition = f.engine.definition("test"),
+      original = definition.steps[0]!.execute;
+    definition.steps[0]!.execute = async (call) => {
+      try {
+        return await original(call);
+      } catch {
+        throw new SettledEffectError(
+          "CANCELLED",
+          "Accepted launch observation cancelled",
+          { commandAccepted: true, startupVerified: false },
+        );
+      }
+    };
+    let close: Promise<void> | undefined;
+    try {
+      const run = f.engine.start("test", { parameters: {} });
+      await entered.promise;
+      if (stopping === "cancel") await f.engine.cancel(run.run_id);
+      else close = f.engine.close();
+      await cleaning.promise;
+      await delay(50);
+      const pending = await f.engine.status(run.run_id);
+      assert.equal(
+        pending.status,
+        stopping === "cancel" ? "cancelling" : "running",
+      );
+      assert.equal(f.engine.activeCount, 1);
+      assert.ok(
+        f.store.db
+          .prepare("SELECT 1 FROM leases WHERE resource=?")
+          .get("device:fixture"),
+      );
+      release.resolve();
+      const final = await finish(f.engine, run.run_id);
+      assert.equal(
+        final.status,
+        stopping === "cancel" ? "cancelled" : "interrupted",
+      );
+      assert.equal((final.error as { code: string }).code, "CANCELLED");
+      assert.equal(next, 0);
+      f.store.assertStopped(run.run_id);
+      assert.deepEqual(f.store.uncertainOperations(run.run_id), []);
+      assert.equal(
+        f.store.db.prepare("SELECT 1 FROM leases LIMIT 1").get(),
+        undefined,
+      );
+      await close;
+    } finally {
+      release.resolve();
+      await close;
+      await f.close();
+    }
+  });
+
 test("cancelling an external mutation preserves its uncertain receipt until reconciliation", async () => {
   let entered = false,
     mutations = 0,

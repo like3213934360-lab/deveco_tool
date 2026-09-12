@@ -6,7 +6,9 @@ import { digest, fileDigest } from "../../src/core/files.js";
 import { verifyResources } from "./resources.js";
 
 /** Capture the tested bytes before running, including uncommitted compiled code. */
-export function evidenceIdentity(root = fileURLToPath(new URL("../../../", import.meta.url))) {
+export function evidenceIdentity(
+  root = fileURLToPath(new URL("../../../", import.meta.url)),
+) {
   const compiled: { file: string; sha256: string }[] = [];
   const visit = (directory: string) => {
     for (const item of fs.readdirSync(directory, { withFileTypes: true })) {
@@ -21,6 +23,25 @@ export function evidenceIdentity(root = fileURLToPath(new URL("../../../", impor
   };
   visit(path.join(root, "dist"));
   compiled.sort((a, b) => a.file.localeCompare(b.file));
+  const source: { file: string; sha256: string }[] = [];
+  const visitSource = (directory: string) => {
+    for (const item of fs.readdirSync(path.join(root, directory), {
+      withFileTypes: true,
+    })) {
+      const file = `${directory}/${item.name}`;
+      if (item.isDirectory()) visitSource(file);
+      else if (item.isFile() && item.name.endsWith(".ts"))
+        source.push({ file, sha256: fileDigest(path.join(root, file)) });
+    }
+  };
+  // Installed distributions intentionally contain no source tree. Do not claim
+  // a source identity for them; their compiled/distribution hashes are primary.
+  const hasSource = ["src", "scripts", "test"].every((name) =>
+    fs.existsSync(path.join(root, name)),
+  );
+  if (hasSource)
+    for (const directory of ["src", "scripts", "test"]) visitSource(directory);
+  source.sort((a, b) => a.file.localeCompare(b.file));
   // Validation hashes the actual resource files, not just the manifest claims.
   const resources = verifyResources(root);
   let baseCommit: string | null = null;
@@ -36,8 +57,11 @@ export function evidenceIdentity(root = fileURLToPath(new URL("../../../", impor
   }
   return {
     captured_at: new Date().toISOString(),
-    entrypoint: process.argv[1] ? path.relative(root, process.argv[1]).split(path.sep).join("/") : null,
+    entrypoint: process.argv[1]
+      ? path.relative(root, process.argv[1]).split(path.sep).join("/")
+      : null,
     base_commit: baseCommit,
+    source_sha256: hasSource ? digest(source) : null,
     runtime_sha256: digest(
       compiled.filter((item) => item.file.startsWith("dist/src/")),
     ),

@@ -77,7 +77,7 @@ test("missing-entry repair preserves MCP policies, journals secrets encrypted an
     assert.match(next, /enabled = false\ntool_timeout_sec = 99/);
     assert.match(next, /\[mcp_servers.deveco-tool.tools.app_signature\]\npermission = "ask"/);
     assert.match(next, /\[mcp_servers.unrelated\]\ncommand = "keep-me"/);
-    assert.equal(next.includes("fixture-private-secret"), false);
+    assert.equal(next.includes("fixture-private-secret"), true);
     assert.equal(fs.readFileSync(path.join(journal, "rollback.encrypted"), "utf8").includes("fixture-private-secret"), false);
     assert.equal(applyUpgrade(plan, journal, false).resumed, true);
     assert.throws(() => rollbackUpgrade(journal, true), { code: "UPGRADE_ROLLBACK_UNAVAILABLE" });

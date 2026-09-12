@@ -1,0 +1,316 @@
+{
+  "format": 2,
+  "passed": true,
+  "started_at": "2026-09-11T10:09:02.651Z",
+  "finished_at": "2026-09-11T10:09:19.297Z",
+  "tested": {
+    "source_sha256": "a6a77483901f9ea7b2e13f30e12b9eceee8b582db2fdff97beb860dbec8d9f3b",
+    "runtime_sha256": "a30879c6106302689404634237c4e21e88242b757199aeeef3dc4fa29acbeffb",
+    "compiled_sha256": "c8392d14ff668e9724bca6ef148796cfc021a3652dbfb10982a81cf745bc783f",
+    "package_lock_sha256": "7f60a1f262f8d5c275c6c0983a1307ee37c91bd62144b39919296f4434666f17",
+    "resource_manifest_sha256": "42c8111e0f1301ac89fcac2b4af5f2d5918e97ed0dba04c72b11ea123ecf3a3b",
+    "upstream_lock_sha256": "9ea597235ffa9f97a076791d637acd976f8f4c78bcf85ea77de118570708ed3d"
+  },
+  "cases": [
+    {
+      "id": "plan_enter.execute",
+      "operation": "plan_enter.execute",
+      "passed": true,
+      "service_support": "available",
+      "outcome": "executed",
+      "environment": {
+        "language": "none",
+        "platform": "darwin",
+        "sdk": null,
+        "node": "v24.14.1",
+        "server": "native-mcp/0.4.0",
+        "client": "generic-stdio-mcp-sdk/1.30.0; Codex GPT-6 visual assessment when required"
+      },
+      "source": "public_mcp",
+      "policy": null,
+      "scope": "Public Skill workflow captures the isolated project, original objective and bundled guidance; guidance remains readable after MCP reconnect.",
+      "valid_until": null,
+      "artifacts": [
+        {
+          "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-0/plan_enter.execute.json",
+          "sha256": "94db5d2d202fd59558bd87803707f5ef210955b3f7453e4fe080fa7cfa6399b7"
+        }
+      ]
+    },
+    {
+      "id": "plan_write.execute",
+      "operation": "plan_write.execute",
+      "passed": true,
+      "service_support": "available",
+      "outcome": "executed",
+      "environment": {
+        "language": "none",
+        "platform": "darwin",
+        "sdk": null,
+        "node": "v24.14.1",
+        "server": "native-mcp/0.4.0",
+        "client": "generic-stdio-mcp-sdk/1.30.0; Codex GPT-6 visual assessment when required"
+      },
+      "source": "public_mcp",
+      "policy": null,
+      "scope": "Public revision-checked plan write persists Technical Context and Project Structure, then publishes the retained document to an owned file.",
+      "valid_until": null,
+      "artifacts": [
+        {
+          "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-0/plan_write.execute.json",
+          "sha256": "25bf7313760a0f5d7b225c0f3ffa38fd6aeb413213abade83324e9c57bf48c08"
+        }
+      ]
+    },
+    {
+      "id": "plan_exit.execute",
+      "operation": "plan_exit.execute",
+      "passed": true,
+      "service_support": "available",
+      "outcome": "executed",
+      "environment": {
+        "language": "none",
+        "platform": "darwin",
+        "sdk": null,
+        "node": "v24.14.1",
+        "server": "native-mcp/0.4.0",
+        "client": "generic-stdio-mcp-sdk/1.30.0; Codex GPT-6 visual assessment when required"
+      },
+      "source": "public_mcp",
+      "policy": null,
+      "scope": "Public transition leaves planning for implementing and completes after verification without claiming to alter the host system mode.",
+      "valid_until": null,
+      "artifacts": [
+        {
+          "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-0/plan_exit.execute.json",
+          "sha256": "453253cd7786ac3118ab3b789a3412272e4b56f22308f0799987ef93e313bcb9"
+        }
+      ]
+    },
+    {
+      "id": "skill.list",
+      "operation": "skill.list",
+      "passed": true,
+      "service_support": "available",
+      "outcome": "executed",
+      "environment": {
+        "language": "none",
+        "platform": "darwin",
+        "sdk": null,
+        "node": "v24.14.1",
+        "server": "native-mcp/0.4.0",
+        "client": "generic-stdio-mcp-sdk/1.30.0; Codex GPT-6 visual assessment when required"
+      },
+      "source": "public_mcp",
+      "policy": null,
+      "scope": "Public catalog returns all six bundled Skills and their file and package digests without client installation.",
+      "valid_until": null,
+      "artifacts": [
+        {
+          "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-0/skill.list.json",
+          "sha256": "bccd3a63082f1c9418842555047b49ac64f75fe4f972721f14e4501b7e843051"
+        }
+      ]
+    },
+    {
+      "id": "skill.search",
+      "operation": "skill.search",
+      "passed": true,
+      "service_support": "available",
+      "outcome": "executed",
+      "environment": {
+        "language": "none",
+        "platform": "darwin",
+        "sdk": null,
+        "node": "v24.14.1",
+        "server": "native-mcp/0.4.0",
+        "client": "generic-stdio-mcp-sdk/1.30.0; Codex GPT-6 visual assessment when required"
+      },
+      "source": "public_mcp",
+      "policy": null,
+      "scope": "Public ArkTS catalog search returns a nonempty set of bundled Skills.",
+      "valid_until": null,
+      "artifacts": [
+        {
+          "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-0/skill.search.json",
+          "sha256": "9a23ba75e3c25ece5bf09b678b9b9c74231a34181391916f1d57612aed5233b5"
+        }
+      ]
+    },
+    {
+      "id": "skill.read",
+      "operation": "skill.read",
+      "passed": true,
+      "service_support": "available",
+      "outcome": "executed",
+      "environment": {
+        "language": "none",
+        "platform": "darwin",
+        "sdk": null,
+        "node": "v24.14.1",
+        "server": "native-mcp/0.4.0",
+        "client": "generic-stdio-mcp-sdk/1.30.0; Codex GPT-6 visual assessment when required"
+      },
+      "source": "public_mcp",
+      "policy": null,
+      "scope": "All six Skill bodies and catalogued references are read over public MCP; reference content hashes match the catalog.",
+      "valid_until": null,
+      "artifacts": [
+        {
+          "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-0/skill.read.json",
+          "sha256": "6bdc78569ba1e9984ed707e179510914c4c378f2e77735af3080ef504f708329"
+        }
+      ]
+    },
+    {
+      "id": "spec_write.spec",
+      "operation": "spec_write.spec",
+      "passed": true,
+      "service_support": "available",
+      "outcome": "executed",
+      "environment": {
+        "language": "none",
+        "platform": "darwin",
+        "sdk": null,
+        "node": "v24.14.1",
+        "server": "native-mcp/0.4.0",
+        "client": "generic-stdio-mcp-sdk/1.30.0; Codex GPT-6 visual assessment when required"
+      },
+      "source": "public_mcp",
+      "policy": null,
+      "scope": "Public spec.md write retains Requirements, User Scenarios and Success Criteria; its workflow completes with fresh native build evidence.",
+      "valid_until": null,
+      "artifacts": [
+        {
+          "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-0/spec_write.spec.json",
+          "sha256": "438dad20cff69c51a1ba248d6e7bd6ba18906a9a8a6280dd0ad13d87a7179920"
+        }
+      ]
+    },
+    {
+      "id": "spec_write.design",
+      "operation": "spec_write.design",
+      "passed": true,
+      "service_support": "available",
+      "outcome": "executed",
+      "environment": {
+        "language": "none",
+        "platform": "darwin",
+        "sdk": null,
+        "node": "v24.14.1",
+        "server": "native-mcp/0.4.0",
+        "client": "generic-stdio-mcp-sdk/1.30.0; Codex GPT-6 visual assessment when required"
+      },
+      "source": "public_mcp",
+      "policy": null,
+      "scope": "Public plan.md design write retains Technical Context and Project Structure in the specification workflow.",
+      "valid_until": null,
+      "artifacts": [
+        {
+          "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-0/spec_write.design.json",
+          "sha256": "10ee4c9a7cd0c6c5490f7c4e25a02db8c3dc93890d87a4bf958735b3242f911e"
+        }
+      ]
+    },
+    {
+      "id": "spec_write.tasks",
+      "operation": "spec_write.tasks",
+      "passed": true,
+      "service_support": "available",
+      "outcome": "executed",
+      "environment": {
+        "language": "none",
+        "platform": "darwin",
+        "sdk": null,
+        "node": "v24.14.1",
+        "server": "native-mcp/0.4.0",
+        "client": "generic-stdio-mcp-sdk/1.30.0; Codex GPT-6 visual assessment when required"
+      },
+      "source": "public_mcp",
+      "policy": null,
+      "scope": "Public tasks.md write and replacement persist checkbox tasks; specification completion follows a current native build.",
+      "valid_until": null,
+      "artifacts": [
+        {
+          "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-0/spec_write.tasks.json",
+          "sha256": "513649e139d1ccfd03510858cdfbe52e78f6ed3230f52b9c3c3d8cd5c37ac259"
+        }
+      ]
+    },
+    {
+      "id": "todowrite.execute",
+      "operation": "todowrite.execute",
+      "passed": true,
+      "service_support": "available",
+      "outcome": "executed",
+      "environment": {
+        "language": "none",
+        "platform": "darwin",
+        "sdk": null,
+        "node": "v24.14.1",
+        "server": "native-mcp/0.4.0",
+        "client": "generic-stdio-mcp-sdk/1.30.0; Codex GPT-6 visual assessment when required"
+      },
+      "source": "public_mcp",
+      "policy": null,
+      "scope": "Public task replacement increments the revision, rejects a stale revision, survives MCP restart and preserves exact task content.",
+      "valid_until": null,
+      "artifacts": [
+        {
+          "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-0/todowrite.execute.json",
+          "sha256": "b5b354550bac99f357b51a2d36f586912dad871171128f54522902ec9e662285"
+        }
+      ]
+    },
+    {
+      "id": "arkts_check.execute",
+      "operation": "arkts_check.execute",
+      "passed": true,
+      "service_support": "available",
+      "outcome": "executed",
+      "environment": {
+        "language": "arkts",
+        "platform": "darwin",
+        "sdk": "26.0.0.105",
+        "node": "v24.14.1",
+        "server": "native-mcp/0.4.0",
+        "client": "generic-stdio-mcp-sdk/1.30.0; Codex GPT-6 visual assessment when required"
+      },
+      "source": "public_mcp",
+      "policy": null,
+      "scope": "Actual ArkTS checking reports an injected missing-member error, then zero errors after the original source is restored.",
+      "valid_until": null,
+      "artifacts": [
+        {
+          "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-0/arkts_check.execute.json",
+          "sha256": "80cdae5fe0a7479fbb476ee5a5aa8d2ee9504634fa017ab7cba7484f36e5320f"
+        }
+      ]
+    },
+    {
+      "id": "build_project.execute",
+      "operation": "build_project.execute",
+      "passed": true,
+      "service_support": "available",
+      "outcome": "executed",
+      "environment": {
+        "language": "none",
+        "platform": "darwin",
+        "sdk": null,
+        "node": "v24.14.1",
+        "server": "native-mcp/0.4.0",
+        "client": "generic-stdio-mcp-sdk/1.30.0; Codex GPT-6 visual assessment when required"
+      },
+      "source": "public_mcp",
+      "policy": null,
+      "scope": "The native project build is blocked by a real compiler error; restored source passes default preflight and HAP build through public workflow_run.",
+      "valid_until": null,
+      "artifacts": [
+        {
+          "file": "provenance/capability-evidence/native-7-remaining-20260911-1/group-0/build_project.execute.json",
+          "sha256": "ff243c335d43057041184c18639eefd9feaa5c87b734668f3c57db53a1623fc2"
+        }
+      ]
+    }
+  ]
+}

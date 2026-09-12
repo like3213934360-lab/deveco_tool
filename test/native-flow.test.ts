@@ -16,6 +16,44 @@ import type { Project } from "../src/services/project.js";
 import { flowSchema } from "../src/core/contracts.js";
 import { withTrace } from "../src/core/trace.js";
 import { setTimeout as delay } from "node:timers/promises";
+import { controlSchema } from "../src/core/contracts.js";
+import { resolveControl, uiInputArguments } from "../src/services/ui-control.js";
+
+test("v2 restores the recorded field after a window ID change and refuses text when focus restoration fails", async () => {
+  for (const canFocus of [true, false]) {
+    const f = fixture();
+    let focused = false;
+    try {
+      const snapshot = f.device.snapshot.bind(f.device);
+      f.device.snapshot = async (target, signal) => {
+        const result = await snapshot(target, signal);
+        for (const node of result.nodes) { node.windowId = "new-window-after-restart"; node.displayId = "0"; }
+        result.nodes[1]!.type = "TextInput"; result.nodes[1]!.key = "stable-field"; result.nodes[1]!.focused = focused;
+        return { ...result, query: new UiIndex(result.nodes) };
+      };
+      f.device.control = async (target, raw, signal) => {
+        const input = controlSchema.parse(raw), snapshot = await f.device.snapshot(target, signal);
+        const resolved = resolveControl(input, snapshot); uiInputArguments(resolved);
+        f.device.actions.push(input);
+        if (input.action === "click") focused = canFocus;
+        return { commandAccepted: true, outcomeVerified: false };
+      };
+      const flow = flowSchema.parse({ ...f.draft([]), version: 2, variables: { secret: {} }, steps: [{ id: "focused", action: "focusInput", selector: { key: "stable-field" }, value: "${secret}", scope: { window_type: "WindowScene", display_id: 0 } }] });
+      await f.flows.save(f.project, flow);
+      if (canFocus) {
+        assert.equal((await f.flows.run(f.project, flow.id, "device", { secret: "private-content" })).verified, true);
+        const inputs = f.device.actions.map(value => controlSchema.parse(value));
+        assert.deepEqual(inputs.map(input => input.action), ["click", "text"]);
+        assert.equal(inputs[1]!.window!.id, "new-window-after-restart");
+        assert.equal(inputs[1]!.text, "private-content");
+      } else {
+        await assert.rejects(f.flows.run(f.project, flow.id, "device", { secret: "private-content" }), { code: "FLOW_FOCUS_NOT_RESTORED" });
+        assert.equal(f.device.actions.length, 1);
+      }
+      assert.equal(fs.readFileSync(path.join(f.project.root, ".arkpilot/flows/example.json"), "utf8").includes("private-content"), false);
+    } finally { f.close(); }
+  }
+});
 
 function tree(labels: string[], bundle = "com.example.test") {
   return flattenDump({

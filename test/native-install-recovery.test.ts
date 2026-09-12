@@ -19,6 +19,7 @@ const app = {
   bundle_name: "com.deveco.fixture",
   module: "entry",
   ability: "EntryAbility",
+  startup_check: { mode: "process_only" as const, stable_ms: 500, timeout_ms: 2000, allow_uniform: false },
 };
 const receipt = (stdout: string): ProcessResult => ({
   stdout,

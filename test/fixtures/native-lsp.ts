@@ -40,11 +40,21 @@ connection.onRequest("initialize", () => ({
           callHierarchyProvider: { workDoneProgress: false },
         }),
     positionEncoding: process.env.POSITION_ENCODING ?? "utf-16",
+    ...(process.env.PULL_DIAGNOSTICS === "1"
+      ? {
+          diagnosticProvider: {
+            identifier: "owned-fixture",
+            interFileDependencies: true,
+            workspaceDiagnostics: false,
+          },
+        }
+      : {}),
   },
 }));
 connection.onNotification("textDocument/didOpen", (raw: unknown) => {
   const input = z.object({ textDocument: document }).parse(raw).textDocument;
   documents.set(input.uri, input);
+  if (process.env.PULL_DIAGNOSTICS === "1") return;
   void connection.sendNotification("textDocument/publishDiagnostics", {
     uri: input.uri,
     version: input.version,
@@ -62,6 +72,7 @@ connection.onNotification("textDocument/didChange", (raw: unknown) => {
     ...input.textDocument,
     text: input.contentChanges[0]!.text,
   });
+  if (process.env.PULL_DIAGNOSTICS === "1") return;
   void connection.sendNotification("textDocument/publishDiagnostics", {
     uri: input.textDocument.uri,
     version: input.textDocument.version - 1,
@@ -104,6 +115,48 @@ connection.onRequest("textDocument/hover", async () => {
     active--;
   }
 });
+if (process.env.NO_DIAGNOSTIC_METHOD !== "1")
+  connection.onRequest(
+    "textDocument/diagnostic",
+    async (raw: unknown, token) => {
+      const input = z
+        .strictObject({
+          textDocument: z.object({ uri: z.string() }),
+          identifier: z.literal("owned-fixture"),
+        })
+        .parse(raw);
+      if (process.env.DIAGNOSTIC_DELAY_MS)
+        await new Promise<void>((resolve) => {
+          const timer = setTimeout(
+            resolve,
+            Number(process.env.DIAGNOSTIC_DELAY_MS),
+          );
+          token.onCancellationRequested(() => {
+            clearTimeout(timer);
+            resolve();
+          });
+        });
+      if (process.env.INVALID_DIAGNOSTICS === "1")
+        return { kind: "full", items: [{ message: "missing range" }] };
+      if (process.env.INVALID_DIAGNOSTICS === "null") return null;
+      if (process.env.INVALID_DIAGNOSTICS === "unchanged")
+        return { kind: "unchanged", resultId: "unrequested" };
+      const text = documents.get(input.textDocument.uri)!.text;
+      return {
+        kind: "full",
+        resultId: String(documents.get(input.textDocument.uri)!.version),
+        items: text.includes("BROKEN")
+          ? [
+              {
+                range: range(0, 0),
+                severity: 1,
+                message: "current pull diagnostic",
+              },
+            ]
+          : [],
+      };
+    },
+  );
 connection.onRequest("textDocument/references", () => [
   declaration,
   implementation,
@@ -193,6 +246,17 @@ for (const direction of ["incomingCalls", "outgoingCalls"] as const) {
           });
         });
       if (token.isCancellationRequested) return null;
+      if (direction === "incomingCalls" && /-(one|two)$/.test(input.name)) {
+        const root = input.name.replace(/-(one|two)$/, "");
+        return [
+          {
+            from: item(root),
+            fromRanges: input.name.endsWith("-one")
+              ? [range(0, 0), range(0, 6)]
+              : [range(1, 0)],
+          },
+        ];
+      }
       const key = direction === "incomingCalls" ? "from" : "to";
       return [
         {

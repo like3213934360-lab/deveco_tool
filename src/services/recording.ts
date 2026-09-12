@@ -18,7 +18,7 @@ import { withTrace } from "../core/trace.js";
 import { DeviceService, type Snapshot, type UiNode } from "./device.js";
 import { isWindowSurface } from "./ui-tree.js";
 
-import { resolveControl, uiInputArguments } from "./ui-control.js";
+import { resolveControl, uiInputArguments, controlDisplay } from "./ui-control.js";
 
 const payloadSchema = z.strictObject({
   flow: flowSchema,
@@ -333,7 +333,6 @@ export class RecordingService {
         );
         const input = controlSchema.parse(raw),
           controller = new AbortController();
-        invariant(!input.action.startsWith("mouse") && input.action !== "text", "RECORDING_ACTION_UNSUPPORTED", "Saved touch flows cannot represent mouse or focus-preserving text actions. Finish/cancel this recording and use an evidence-tracked UI test; no input was dispatched.");
         const combined = signal
           ? AbortSignal.any([signal, controller.signal])
           : controller.signal;
@@ -349,6 +348,7 @@ export class RecordingService {
             uiInputArguments(resolved);
             const step = recordedStep(snapshot, value.flow, {
               ...resolved,
+              window: input.window,
               ...(input.selector && !input.point && !input.gesture
                 ? {
                     selector: selectorSchema.parse({
@@ -363,7 +363,7 @@ export class RecordingService {
                   }
                 : {}),
             });
-            if (step.action === "input")
+            if (step.action === "input" || step.action === "focusInput")
               value.flow.variables[step.value!.slice(2, -1)] = {
                 required: true,
                 secret: true,
@@ -405,7 +405,9 @@ export class RecordingService {
             try {
               const result = await this.devices.control(
                 target,
-                resolved,
+                // Mouse/focused text keep their explicit scope so the common
+                // dispatcher can validate it against this same captured tree.
+                input.action.startsWith("mouse") || input.action === "text" ? input : resolved,
                 combined,
                 snapshot,
               );
@@ -467,6 +469,9 @@ export function recordedStep(
   flow: Flow,
   input: z.infer<typeof controlSchema>,
 ): z.infer<typeof stepSchema> {
+  invariant((!input.window?.bundle_name || input.window.bundle_name === flow.app.bundleName) &&
+    (!input.selector?.bundle_name || input.selector.bundle_name === flow.app.bundleName),
+    "RECORDING_SCOPE_MISMATCH", "Recorded actions must target the captured application");
   const nodes = snapshot.nodes.filter(
       (node) =>
         node.bundleName === flow.app.bundleName &&
@@ -478,14 +483,15 @@ export function recordedStep(
         isWindowSurface(node) &&
         node.rect &&
         node.focused !== false &&
-        node.visible !== false,
+        node.visible !== false &&
+        (!input.window?.id || node.windowId === input.window.id),
     );
   invariant(
     windows.length === 1 && windows[0]?.rect,
     "RECORDING_WINDOW_UNKNOWN",
     "Recording requires exactly one focused application window",
   );
-  const rect = windows[0].rect;
+  const window = windows[0], rect = window.rect!;
   const point = (x: number | undefined, y: number | undefined) => {
     invariant(
       x !== undefined &&
@@ -505,21 +511,24 @@ export function recordedStep(
   const step: z.input<typeof stepSchema> = {
     id: `step-${randomUUID()}`,
     action: "tap",
+    ...(flow.version === 2 ? { scope: {
+      display_id: controlDisplay(window),
+      window_type: window.type,
+      ...(window.abilityName ? { ability_name: window.abilityName } : {}),
+    } } : {}),
   };
+  const extended = input.action.startsWith("mouse") || ["text", "dircFling"].includes(input.action);
+  invariant(!extended || flow.version === 2, input.action === "dircFling" ? "RECORDING_GESTURE_UNSUPPORTED" : "RECORDING_ACTION_UNSUPPORTED", "This recording predates flow v2; start a new recording to capture extended native actions");
   if (input.action === "keyEvent") {
     invariant(
-      input.keys?.length === 1,
+      input.keys?.length && (flow.version === 2 || input.keys.length === 1),
       "RECORDING_KEYS_UNSUPPORTED",
       "A saved flow supports one key per step; no key chord is silently truncated",
     );
-    return stepSchema.parse({ ...step, action: "key", key: input.keys[0] });
+    return stepSchema.parse({ ...step, action: "key", ...(input.keys.length === 1 ? { key: input.keys[0] } : { keys: input.keys }) });
   }
-  invariant(
-    input.action !== "dircFling",
-    "RECORDING_GESTURE_UNSUPPORTED",
-    "Record a swipe or fling with explicit endpoints",
-  );
-  if (["swipe", "fling", "drag"].includes(input.action)) {
+  if (input.action === "dircFling") return stepSchema.parse({ ...step, action: "dircFling", direction: input.direction, velocity: input.velocity, step_length: input.step_length });
+  if (["swipe", "fling", "drag", "mouseMoveWithTrack", "mouseDrag"].includes(input.action)) {
     invariant(
       !input.selector,
       "RECORDING_GESTURE_UNSUPPORTED",
@@ -544,8 +553,14 @@ export function recordedStep(
     });
   }
   let node: UiNode | undefined;
-  if (input.selector) {
-    const found = snapshot.query.select({ ...input.selector, limit: 2 });
+  if (input.action === "text") {
+    const focused = nodes.filter(node => node.focused === true && node.enabled !== false && node.visible !== false && /TextInput|TextArea|Search/.test(node.type) && node.windowId === window.windowId && node.displayId === window.displayId);
+    invariant(focused.length === 1 && focused[0]?.rect, "RECORDING_FOCUS_AMBIGUOUS", "Focused text must identify one editable field in the captured application window");
+    node = focused[0];
+  } else if (input.selector) {
+    const found = snapshot.query.select({ ...input.selector, bundle_name: flow.app.bundleName,
+      ...(window.windowId === null ? {} : { window_id: window.windowId }),
+      ...(window.displayId === null ? {} : { displayId: window.displayId }), limit: 2 });
     invariant(
       found.length === 1 &&
         found[0]?.bundleName === flow.app.bundleName &&
@@ -560,7 +575,7 @@ export function recordedStep(
     // Input fields may contain passwords or user text. Never capture their text/value as selector fallback.
     const candidates = [
       ...(node.key ? [{ key: node.key }] : []),
-      ...(input.action !== "inputText" && node.text
+      ...(!["inputText", "text"].includes(input.action) && !/TextInput|TextArea|Search/.test(node.type) && node.text
         ? [
             {
               text: node.text,
@@ -574,10 +589,12 @@ export function recordedStep(
       meaningfulSelector.parse({
         ...candidate,
         bundle_name: flow.app.bundleName,
+        ...(flow.version === 2 && window.displayId !== null ? { displayId: window.displayId } : {}),
       }),
     );
     const unique = candidates.filter((candidate) => {
-      const found = snapshot.query.select(candidate);
+      const found = snapshot.query.select({ ...candidate,
+        ...(window.windowId === null ? {} : { window_id: window.windowId }), limit: 2 });
       return found.length === 1 && found[0] === node;
     });
     invariant(
@@ -591,15 +608,19 @@ export function recordedStep(
     step.point = point(input.x, input.y);
     step.fragile = true;
   }
-  step.action =
-    input.action === "inputText"
+  step.action = input.action.startsWith("mouse") ? stepSchema.shape.action.parse(input.action) :
+    input.action === "text" ? "focusInput" : input.action === "inputText"
       ? "input"
       : input.action === "doubleClick"
         ? "doubleTap"
         : input.action === "longClick"
           ? "longTap"
           : "tap";
-  if (step.action === "input") {
+  if (input.action.startsWith("mouse")) Object.assign(step, {
+    button: input.button, keys: input.keys, scroll_down: input.scroll_down,
+    ticks: input.ticks, mouse_scroll_speed: input.mouse_scroll_speed,
+  });
+  if (step.action === "input" || step.action === "focusInput") {
     invariant(input.text, "UI_INPUT_REQUIRED", "Input text required");
     step.value = `\${input${Object.keys(flow.variables).length + 1}}`;
   }

@@ -1,0 +1,9 @@
+{
+  "format": 1,
+  "operation": "start_app.execute",
+  "checks": [
+    "Public app_deploy installs the freshly built signed canary and launches its captured module/Ability on the owned endpoint.",
+    "Launch verifies delayed process stability and basic screen startup while outcomeVerified remains false until a separate application assertion."
+  ],
+  "observation_sha256": "4f59c0f8edf1702b231be4f6d580da5c0bcded481f55e28a74aa1ce569a451d7"
+}

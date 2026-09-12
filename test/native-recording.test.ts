@@ -27,6 +27,7 @@ import { ProcessService } from "../src/core/process.js";
 import { StateStore } from "../src/core/store.js";
 import { HvigorSession } from "../src/services/hvigor/session.js";
 import { assertNoHotWatch } from "../src/services/hvigor/hot-config.js";
+import { flowControl, mouseRequest, resolveControl, uiInputArguments } from "../src/services/ui-control.js";
 
 const bundle = "com.example.recording";
 function snapshot(): Snapshot {
@@ -77,6 +78,54 @@ const draft = () =>
     start: { mode: "attach" },
     steps: [],
   });
+
+test("flow v2 preserves every direct UI action's native parameters across recording and JSON reload", () => {
+  const tree = snapshot(), flow = { ...draft(), version: 2 as const };
+  for (const node of tree.nodes) { node.displayId = "1"; node.windowId = "current-window"; }
+  tree.nodes[1]!.focused = true;
+  const scope = { window: { bundle_name: bundle }, display_id: 1 };
+  const actions = [
+    ...["click", "doubleClick", "longClick"].map(action => ({ action, x: 200, y: 300 })),
+    ...["swipe", "fling", "drag"].map(action => ({ action, x: 200, y: 400, x2: 400, y2: 800, velocity: 1200, ...(action === "fling" ? { step_length: 10 } : {}) })),
+    { action: "inputText", selector: { key: "password" }, text: "new-private-value" },
+    { action: "text", text: "new-private-value" },
+    { action: "keyEvent", keys: ["2072", "2017", "2019"] },
+    { action: "dircFling", direction: 3, velocity: 1000, step_length: 80 },
+    ...["mouseClick", "mouseDoubleClick", "mouseLongClick"].map(action => ({ action, x: 200, y: 400, button: "right", keys: ["2072", "2073"] })),
+    { action: "mouseMoveTo", x: 200, y: 400 },
+    { action: "mouseScroll", x: 200, y: 400, scroll_down: false, ticks: 9, mouse_scroll_speed: 40, keys: ["2072"] },
+    ...["mouseMoveWithTrack", "mouseDrag"].map(action => ({ action, x: 200, y: 400, x2: 400, y2: 800, velocity: 1200 })),
+  ];
+  assert.equal(actions.length, 17);
+  for (const raw of actions) {
+    const input = controlSchema.parse({ ...scope, ...raw });
+    const direct = resolveControl(input, tree);
+    uiInputArguments(direct);
+    const step = recordedStep(tree, flow, { ...direct, window: input.window, selector: input.selector });
+    const saved = flowSchema.parse(JSON.parse(JSON.stringify({ ...flow, variables: step.value ? { input1: { required: true, secret: true } } : {}, steps: [step] })));
+    assert.equal(JSON.stringify(saved).includes("private-value"), false);
+    assert.equal(JSON.stringify(saved).includes("current-window"), false);
+    const reloaded = saved.steps[0]!;
+    const replay = resolveControl(flowControl(reloaded, bundle, { input1: "new-private-value" }), tree);
+    assert.deepEqual(uiInputArguments(replay), uiInputArguments(direct), input.action);
+    if (input.action.startsWith("mouse")) assert.deepEqual(mouseRequest(replay), mouseRequest(direct), input.action);
+    assert.equal(saved.version, 2);
+  }
+});
+test("v2 focused text uses a unique stable field and rejects another app or ambiguous focus without retaining values", () => {
+  const tree = snapshot(), flow = { ...draft(), version: 2 as const };
+  tree.nodes[1]!.focused = true;
+  const input = controlSchema.parse({ action: "text", window: { bundle_name: bundle }, text: "private-password" });
+  const saved = recordedStep(tree, flow, input);
+  assert.equal(saved.action, "focusInput");
+  assert.equal(saved.selector?.key, "password");
+  assert.equal(saved.value, "${input1}");
+  assert.ok(!JSON.stringify(saved).includes("private"));
+  assert.throws(() => recordedStep(tree, flow, { ...input, window: { bundle_name: "another.app" } }), { code: "RECORDING_SCOPE_MISMATCH" });
+  tree.nodes.push({ ...tree.nodes[1]!, key: "second", id: "second" });
+  assert.throws(() => recordedStep(tree, flow, input), { code: "RECORDING_FOCUS_AMBIGUOUS" });
+  assert.equal(flowSchema.safeParse({ ...flow, version: 1, steps: [saved], variables: { input1: {} } }).success, false);
+});
 async function fixture(t: TestContext) {
   const root = fs.realpathSync.native(
       fs.mkdtempSync(path.join(os.tmpdir(), "deveco-recording-")),

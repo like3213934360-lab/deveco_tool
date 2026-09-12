@@ -1,0 +1,8 @@
+{
+  "format": 1,
+  "operation": "verify_ui.testPlan",
+  "checks": [
+    "The original Chinese test plan is captured verbatim; public plan assigns an ordered step with a fixed exact-text assertion and an independent visual requirement."
+  ],
+  "observation_sha256": "fa8f45e183242b652d0772962efd9d39678aa24de14a19edce9fd5ff4f16b252"
+}

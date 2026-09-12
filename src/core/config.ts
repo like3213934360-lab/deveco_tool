@@ -20,7 +20,7 @@ export const configSchema = z.strictObject({
     .default(256 * 1024 * 1024),
 });
 export type Configuration = z.infer<typeof configSchema>;
-export const release = "0.3.0";
+export const release = "0.4.0";
 export const protocolVersion = "native-7";
 export const packageRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
