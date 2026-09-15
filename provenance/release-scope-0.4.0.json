@@ -93,7 +93,7 @@
   ],
   "performance_exceptions": [],
   "soak": {
-    "disposition": "required_current",
-    "reason": "Require at least one hour of current SDK, LSP, UI, watch, recording, continuous log and recovery activity plus six minutes of idle reclamation."
+    "disposition": "cancelled_by_user",
+    "reason": "On 2026-09-15 the repository owner explicitly cancelled the one-hour stability evidence release requirement, citing existing runtime logging. Runtime telemetry and optional soak tools remain available; this cancellation does not claim a passed stability test."
   }
 }

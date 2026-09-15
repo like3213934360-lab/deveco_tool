@@ -6,7 +6,31 @@ import path from "node:path";
 import crypto from "node:crypto";
 import AdmZip from "adm-zip";
 import { fileDigest } from "../src/core/files.js";
-import { extractEvidence } from "../scripts/lib/release-evidence.js";
+import { evidenceFiles, extractEvidence } from "../scripts/lib/release-evidence.js";
+import { release, protocolVersion } from "../src/core/config.js";
+
+test("release evidence inventory permits an omitted soak and still verifies supplied evidence", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "native-release-inventory-"));
+  try {
+    const save = (name: string, raw: unknown) => {
+      const file = path.join(root, name);
+      fs.mkdirSync(path.dirname(file), { recursive: true });
+      fs.writeFileSync(file, JSON.stringify(raw));
+      return { file: name, sha256: fileDigest(file) };
+    };
+    const report = save("report.json", { fixture: "inventory only; not accepted release evidence" });
+    const distribution = save("package/distribution.json", { files: [{ ...report, bytes: fs.statSync(path.join(root, report.file)).size }] });
+    fs.copyFileSync(path.join(root, report.file), path.join(root, "package/report.json"));
+    const manifest = { format: 1, release, protocol: protocolVersion, regression: Array(6).fill(report), installation: Array(6).fill(report), acceptance: [], performance: report, distribution: "package", distribution_sha256: distribution.sha256 };
+    save("release.json", manifest);
+    assert.deepEqual(evidenceFiles(root, "release.json").files.map(item => item.file), ["package/distribution.json", "package/report.json", "release.json", "report.json"]);
+    const soak = save("soak.json", { fixture: "optional inventory member" });
+    save("release.json", { ...manifest, soak });
+    assert.ok(evidenceFiles(root, "release.json").files.some(item => item.file === "soak.json"));
+    fs.writeFileSync(path.join(root, "soak.json"), "changed");
+    assert.throws(() => evidenceFiles(root, "release.json"), { code: "RELEASE_EVIDENCE_CHANGED" });
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
 
 test("release evidence restores only authenticated members and refuses tampering before writing", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "native-release-evidence-"));

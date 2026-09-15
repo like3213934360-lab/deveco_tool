@@ -52,7 +52,7 @@ test("current release scope does not waive pending migration rows or omit accept
   });
 });
 
-test("current release scope requires fresh performance, soak and changed contracts; old scope cannot be relabelled", () => {
+test("current release scope requires fresh performance and changed contracts; soak cancellation is explicit", () => {
   const current = {
     ...readScope(),
     format: 2,
@@ -70,6 +70,7 @@ test("current release scope requires fresh performance, soak and changed contrac
   assert.doesNotThrow(() =>
     validateReleaseScope(current, []),
   );
+  assert.equal(validateReleaseScope(readScope(), []).soak.disposition, "cancelled_by_user");
   for (const id of mandatoryCurrentAcceptance) {
     assert.throws(
       () =>

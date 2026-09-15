@@ -30,7 +30,7 @@ export function sameReleaseIdentity(
 }
 
 /** Only the already-published 0.3.0 policy permits historical measurements.
- * Current bounded environment limitations never waive performance or soak. */
+ * Only an explicit owner decision can omit soak; performance remains required. */
 export function validateReleaseMeasurements(
   performanceRaw: unknown,
   soakRaw: unknown,
@@ -57,6 +57,14 @@ export function validateReleaseMeasurements(
         .parse(performanceRaw)
     : validatePerformance(performanceRaw);
   if (!historical) sameReleaseIdentity(performance.tested, tested);
+  if (soakRaw === undefined) {
+    invariant(
+      scope?.format === 2 && scope.soak.disposition === "cancelled_by_user",
+      "RELEASE_SOAK_REQUIRED",
+      "Omitting soak evidence requires an explicit owner cancellation in the current release scope",
+    );
+    return { performance, soak: null };
+  }
   const soak = validateSoak(soakRaw, { requireMixed: !historical });
   if (!historical) sameReleaseIdentity(soak.tested, tested);
   return { performance, soak };

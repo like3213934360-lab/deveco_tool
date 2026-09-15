@@ -434,7 +434,15 @@ test("current scoped release rejects stale measurements, empty direct reports an
   });
   const performance = { ...performanceFixture(), tested },
     soak = { ...mixedSoakFixture(), tested };
+  const cancelled = releaseScopeSchema.parse({
+    ...scope,
+    soak: { disposition: "cancelled_by_user", reason },
+  });
+  assert.equal(validateReleaseMeasurements(performance, undefined, tested, cancelled).soak, null);
+  assert.throws(() => validateReleaseMeasurements({ ...performance, direct: [] }, undefined, tested, cancelled));
+  assert.throws(() => validateReleaseMeasurements(performance, { ...soak, elapsed_ms: 1 }, tested, cancelled));
   for (const policy of [undefined, scope]) {
+    assert.throws(() => validateReleaseMeasurements(performance, undefined, tested, policy), { code: "RELEASE_SOAK_REQUIRED" });
     assert.doesNotThrow(() =>
       validateReleaseMeasurements(performance, soak, tested, policy),
     );

@@ -36,7 +36,7 @@ export const releaseManifestSchema = z.strictObject({
   installation: z.array(reference).length(6),
   acceptance: z.array(reference),
   performance: reference,
-  soak: reference,
+  soak: reference.optional(),
   scope: reference.optional(),
   distribution: z.string().min(1),
   distribution_sha256: sha,
@@ -220,9 +220,9 @@ export function releaseGate(root: string, evidenceRoot: string, raw: unknown) {
       cases.add(item.id);
     }
   }
-  const { performance } = validateReleaseMeasurements(
+  const { performance, soak } = validateReleaseMeasurements(
     rawReference(evidenceRoot, manifest.performance),
-    rawReference(evidenceRoot, manifest.soak),
+    manifest.soak ? rawReference(evidenceRoot, manifest.soak) : undefined,
     tested,
     scope,
   );
@@ -243,6 +243,7 @@ export function releaseGate(root: string, evidenceRoot: string, raw: unknown) {
     regression,
     acceptance_cases: cases.size,
     acceptance_dispositions: scope?.acceptance_exceptions.length ?? 0,
+    soak: soak ? "verified" : "cancelled_by_user",
     performance_observations:
       "observations" in performance ? performance.observations : [],
   };

@@ -95,7 +95,10 @@ const currentScope = commonScope.extend({
   performance_exceptions: z
     .array(exception.extend({ id: z.enum(requiredPerformance) }))
     .length(0),
-  soak: z.strictObject({ disposition: z.literal("required_current"), reason }),
+  soak: z.strictObject({
+    disposition: z.enum(["required_current", "cancelled_by_user"]),
+    reason,
+  }),
 });
 
 export const releaseScopeSchema = z.discriminatedUnion("format", [

@@ -21,6 +21,7 @@ for (const workflow of ["native_operation", "build_deploy_verify"])
     const root = fs.realpathSync.native(
         fs.mkdtempSync(path.join(os.tmpdir(), "deveco-hot-preparation-")),
       ),
+      previousConfig = process.env.DEVECO_CONFIG,
       store = new StateStore(path.join(root, "state")),
       model: Project = {
         root: path.join(root, "project"),
@@ -45,6 +46,12 @@ for (const workflow of ["native_operation", "build_deploy_verify"])
         module: "entry",
         ability: "MainAbility",
       };
+    // Exercise real toolchain identity checks against isolated metadata, without
+    // requiring or reading a developer's installed SDK on any CI platform.
+    const config = path.join(root, "config.json"), studio = path.join(root, "studio");
+    atomicWrite(path.join(studio, "product-info.json"), JSON.stringify({ version: "hot-preparation-fixture" }));
+    atomicWrite(config, JSON.stringify({ studio }));
+    process.env.DEVECO_CONFIG = config;
     atomicWrite(file, "export const value = 1;\n");
     atomicWrite(
       path.join(model.modules[0]!.root, "src/main/module.json5"),
@@ -175,6 +182,8 @@ for (const workflow of ["native_operation", "build_deploy_verify"])
     } finally {
       await engine.close();
       store.close();
+      if (previousConfig === undefined) delete process.env.DEVECO_CONFIG;
+      else process.env.DEVECO_CONFIG = previousConfig;
       fs.rmSync(root, { recursive: true, force: true });
     }
   });
