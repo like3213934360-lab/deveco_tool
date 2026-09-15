@@ -55,6 +55,9 @@ test("captured directories cannot redirect publication through a replaced root",
         fs.readFileSync(path.join(root, "target/file"), "utf8"),
         "owned",
       );
+      publisher.close();
+      fs.renameSync(path.join(root, "target"), path.join(root, "moved"));
+      assert.equal(fs.readFileSync(path.join(root, "moved/file"), "utf8"), "owned");
     } else {
       fs.renameSync(path.join(root, "target"), path.join(root, "moved"));
       fs.symlinkSync(

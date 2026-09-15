@@ -4,7 +4,7 @@
 
 原生版本使用 **TypeScript + LangGraph + SQLite**：固定流程由代码执行，任务可持久化、查询和恢复；宿主 AI 负责理解需求、查询知识和修改业务代码。使用原生版本无须安装官方 Skill、官方 CLI 或 CodeGenie 子 MCP。
 
-> **本工作区是 0.4.0 候选实现，尚未对外发布；安装版本与本轮源码验收分别记录。** 本轮以归档源码为基线重构领域接口，并保留原生执行与恢复机制。归档报告和旧审计不能证明本次最终源码已验收；工具迁移见[领域协议迁移](docs/domain-protocol-migration.md)，按需方法见[领域配方与知识](docs/builtin-skill-workflows.md)。
+> **v0.4.0 按已验证的源码、运行与安装范围发布，协议为 native-7。** 正式包、最终验证结果及摘要见 [v0.4.0 Release](https://github.com/like3213934360-lab/deveco_tool/releases/tag/v0.4.0)。完整迁移、设备、云端及性能矩阵仍有待验收项，公开回执明确 `full_acceptance: false`，详见[版本说明](docs/release-0.4.0.md)和[待验收清单](docs/release-0.4.0-readiness.md)。工具迁移见[领域协议迁移](docs/domain-protocol-migration.md)，按需方法见[领域配方与知识](docs/builtin-skill-workflows.md)。
 
 ## 能解决什么问题
 
@@ -59,7 +59,7 @@ flowchart TD
 从源码安装：
 
 ```sh
-git clone --branch v0.3.0 --single-branch https://github.com/like3213934360-lab/deveco_tool.git deveco_tool
+git clone --branch v0.4.0 --single-branch https://github.com/like3213934360-lab/deveco_tool.git deveco_tool
 cd deveco_tool
 npm ci
 npm run build
@@ -67,7 +67,7 @@ npm run build
 
 根目录使用锁定的原生依赖，无须再生成另一套 package.json 或重写锁文件。SQLite 等原生依赖须允许安装脚本；不要给 `npm ci` 加 `--ignore-scripts`，也不要跨操作系统、架构或 Node 主版本复制 `node_modules`。
 
-维护者发布的编译包安装方式为解压、校验后执行 `npm ci --omit=dev`，无需安装 TypeScript 编译器。[v0.3.0 Release](https://github.com/like3213934360-lab/deveco_tool/releases/tag/v0.3.0) 同时提供编译包和公开验收回执，见[安装与升级](docs/native-installation.md)和[分发说明](docs/native-distribution.md)。
+维护者发布的编译包安装方式为解压、校验后执行 `npm ci --omit=dev`，无需安装 TypeScript 编译器。[v0.4.0 Release](https://github.com/like3213934360-lab/deveco_tool/releases/tag/v0.4.0) 同时提供编译包和公开验收回执，见[安装与升级](docs/native-installation.md)和[分发说明](docs/native-distribution.md)。
 
 ### 2. 配置工具链与 MCP 宿主
 
@@ -290,7 +290,7 @@ node dist/scripts/resources.js
 
 更新流程为：检测提交 → 下载并核对候选 → 分类差异及影响 → 准备草稿 PR → 人工适配流程 / 协议 → 契约、回归、平台与性能验证 → 评审发布。仓库提供定时 / 手动候选工作流、带摘要校验的适配工具和 Release 工作流；定时权限及完整发布链路仍待统一验收。未映射变化会阻止候选通过；自然语言新增要求不能保证自动正确转换为代码。运行中的 MCP 不动态拉取或执行最新上游代码，框架依赖升级与官方工具链适配分开提交。详见[上游更新机制](docs/native-upstream-upgrades.md)。
 
-升级时先结束任务与会话，在新目录安装完整版本。0.4.0 候选维护命令支持已知兼容的 native-7 状态复用，保留有效认证、历史、制品和用户配置；未知 schema 或不同协议使用经检查的独立状态路径。回滚同时恢复完整代码、状态快照与宿主配置。切换后校验既有 UI 流程，再运行 doctor、构建和设备检查。正式编译包见 [v0.3.0 Release](https://github.com/like3213934360-lab/deveco_tool/releases/tag/v0.3.0)，具体步骤见[安装与升级](docs/native-installation.md)。
+升级时先结束任务与会话，在新目录安装完整版本。0.4.0 维护命令支持已知兼容的 native-7 状态复用，保留有效认证、历史、制品和用户配置；未知 schema 或不同协议使用经检查的独立状态路径。回滚同时恢复完整代码、状态快照与宿主配置。切换后校验既有 UI 流程，再运行 doctor、构建和设备检查。正式编译包见 [v0.4.0 Release](https://github.com/like3213934360-lab/deveco_tool/releases/tag/v0.4.0)，具体步骤见[安装与升级](docs/native-installation.md)。
 
 ## 文档与许可证
 

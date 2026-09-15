@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "release": "0.4.0",
+  "protocol": "native-7",
+  "publication_scope": "verified_source_and_installation",
+  "full_acceptance": false,
+  "decided_at": "2026-09-15",
+  "authorized_by": "repository_owner",
+  "decision": "Continue to the official release within the verified scope, following disclosure of the incomplete full-release conditions. Keep device, cloud, migration, upstream acceptance and performance gaps as published limitations; do not convert them into passed evidence.",
+  "required_current_checks": [
+    "strict_typescript_build",
+    "resource_integrity",
+    "regression_linux_node22",
+    "regression_linux_node24",
+    "regression_macos_node22",
+    "regression_macos_node24",
+    "regression_windows_node22",
+    "regression_windows_node24",
+    "clean_install_all_six_platform_node_combinations",
+    "windows_process_stress_both_node_versions",
+    "local_real_studio_sdk_without_device",
+    "identical_distribution_manifests",
+    "published_archive_sha256"
+  ],
+  "soak": "cancelled_by_user",
+  "limitations": {
+    "full_release_gate": "not_satisfied",
+    "upstream_acceptance": "deveco-code baseline mapping changed; deveco-cli baseline receipt absent. Archived candidate proposals are not accepted upgrades.",
+    "migration": "28 migration rows remain pending; historical receipts do not establish acceptance of the current bytes.",
+    "specialized_acceptance": "The 48-case complete acceptance matrix is not fully established for this release.",
+    "performance": "The complete current 19-capability performance matrix is not established; controlled adapter measurements do not prove real-device performance.",
+    "device_and_cloud": "Broader real-device, multi-display, SDK/platform combinations, cloud signing and expired authentication scenarios remain unverified.",
+    "evidence_transport": "Full release-evidence/release workflow has no registered dedicated self-hosted import runner. This publication records its scoped validation separately and does not claim that workflow passed."
+  },
+  "full_acceptance_policy": "provenance/release-scope-0.4.0.json",
+  "detailed_limitations": "docs/release-0.4.0-readiness.md",
+  "public_receipt": "acceptance.json attached to v0.4.0; passed applies only to publication_scope"
+}

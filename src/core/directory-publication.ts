@@ -102,11 +102,13 @@ export class DirectoryPublication {
     }
   }
   private holdWindows(directory: string) {
-    // FILE_READ_ATTRIBUTES, shared read/write but not DELETE, OPEN_EXISTING,
-    // FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT.
+    // FILE_LIST_DIRECTORY | FILE_READ_ATTRIBUTES, shared read/write but not
+    // DELETE, OPEN_EXISTING, BACKUP_SEMANTICS | OPEN_REPARSE_POINT.
+    // Attribute-only access does not participate in Windows share checks and
+    // therefore cannot prevent the held directory from being renamed.
     const handle: unknown = windows!.open(
       directory,
-      0x80,
+      0x81,
       3,
       null,
       3,

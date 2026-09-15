@@ -1,10 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { normalizeDiagnostics } from "../src/services/diagnostic-report.js";
 import { tools } from "../src/core/contracts.js";
 
+const projectRoot = path.resolve("diagnostic-fixture-app");
 const issue = {
-  file: "/app/entry/Index.ets",
+  file: path.join(projectRoot, "entry/Index.ets"),
   line: 12,
   column: 3,
   severity: "error",
@@ -29,10 +32,10 @@ test("normalization removes exact checker/linter/LSP duplicates with one-based c
         report: [{ ...issue, file: "entry/Index.ets" }],
         summary: { issues: 1 },
       },
-      lsp: [{ file: "file:///app/entry/Index.ets", diagnostics: [lsp] }],
+      lsp: [{ file: pathToFileURL(issue.file).href, diagnostics: [lsp] }],
     },
     before = JSON.stringify(reports),
-    result = normalizeDiagnostics("/app", reports);
+    result = normalizeDiagnostics(projectRoot, reports);
   assert.equal(result.received, 3);
   assert.equal(result.unique_in_processed, 1);
   assert.equal(result.duplicates_removed, 2);
@@ -62,7 +65,7 @@ test("different codes, messages, severity, positions and language stay separate;
     { ...issue, line: 0 },
     { ...issue, line: 0 },
   ];
-  const result = normalizeDiagnostics("/app", {
+  const result = normalizeDiagnostics(projectRoot, {
     arkts: { diagnostics: variants },
     cpp: [{ file: issue.file, diagnostics: [lsp] }],
   });
@@ -72,7 +75,7 @@ test("different codes, messages, severity, positions and language stay separate;
   assert.equal(result.truncated, true);
 });
 test("partial reports and bounded output never advertise whole-project unique counts; malformed rows remain in raw reports", () => {
-  const result = normalizeDiagnostics("/app", {
+  const result = normalizeDiagnostics(projectRoot, {
     arkts: {
       diagnostics: [
         { malformed: true },

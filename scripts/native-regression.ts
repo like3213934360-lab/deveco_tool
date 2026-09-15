@@ -24,10 +24,11 @@ const root = fileURLToPath(new URL("../../", import.meta.url)),
     .sort()
     .map((name) => path.join(root, "dist/test", name));
 // Windows process-ownership checks invoke real native enumeration. Bound their
-// parallel pressure and give the complete suite its own deadline; individual
-// process/recovery deadlines and performance acceptance remain unchanged.
+// parallel pressure and give the complete suite its own deadline. The expanded
+// suite exceeds two minutes on shared macOS runners even with passing cases;
+// individual process/recovery deadlines and performance acceptance are unchanged.
 const execution = {
-  timeout_ms: process.platform === "win32" ? 600000 : 120000,
+  timeout_ms: process.platform === "win32" ? 600000 : 300000,
   concurrency: process.platform === "win32" ? 2 : "node-default",
 };
 const started = performance.now();
