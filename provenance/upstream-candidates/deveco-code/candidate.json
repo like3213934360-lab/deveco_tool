@@ -1,0 +1,2818 @@
+{
+  "format": 1,
+  "source": "deveco-code",
+  "url": "https://gitcode.com/openharmony-sig/deveco-code.git",
+  "base": {
+    "commit": "aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a",
+    "tree": "f88b2d20b4a1adf36d8370eb907a162b215d6f4b"
+  },
+  "candidate": {
+    "commit": "b24c309528c46f263c8dbcb8164e866c11838091",
+    "tree": "15456a291dc19762731d80c52be3f16348f3793c"
+  },
+  "mapping_sha256": "31052fed4b84988e7f58ae3518d5655816e46f64bd362327efc47843266189a6",
+  "changes": [
+    {
+      "path": ".gitcode/workflows/publish-daily.yml",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": ".gitcode/workflows/publish-daily.yml",
+        "oid": "3f81ad5c32f6be5f683a26bb786f333a574b8aea",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-gitcode",
+      "disposition": "unmapped",
+      "reason": "Product source asset requires an explicit behavior/source review; a broad host exclusion cannot accept it",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "bun.lock",
+      "status": "modified",
+      "before": {
+        "path": "bun.lock",
+        "oid": "fd0d9fa1bd7ae89a18d62dc2c2a59588dc80faa1",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "bun.lock",
+        "oid": "eb90fdeb7bd9d6833c0915db63324a0716489c4a",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-legal-bun.lock",
+      "disposition": "adapt",
+      "reason": "Review license, version or upstream release changes before updating resource provenance.",
+      "targets": [
+        "provenance/upstream-lock.json"
+      ],
+      "tests": [
+        "test/native-upstream.test.ts"
+      ]
+    },
+    {
+      "path": "docs/deveco-cli-proxy-architecture.md",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "docs/deveco-cli-proxy-architecture.md",
+        "oid": "cb6d12e54b6b699cf15d53ad74228892e2378b96",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-docs",
+      "disposition": "unmapped",
+      "reason": "Product source asset requires an explicit behavior/source review; a broad host exclusion cannot accept it",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "docs/deveco-code-docs.html",
+      "status": "modified",
+      "before": {
+        "path": "docs/deveco-code-docs.html",
+        "oid": "0e0c6615a9f694bfa0e56dadbffd655e9ae90798",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "docs/deveco-code-docs.html",
+        "oid": "e43b5175f012053a1583387d47c870db9f02ad8a",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-docs",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/core/src/flag/flag.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/core/src/flag/flag.ts",
+        "oid": "fb8f7528b70e10b158bd4c17bd2513c07785509c",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/core/src/flag/flag.ts",
+        "oid": "16b2622dd36a438eab2bf38205a5113d54597e01",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "unmapped",
+      "reason": "Product source asset requires an explicit behavior/source review; a broad host exclusion cannot accept it",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/package.json",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/package.json",
+        "oid": "ae6fc751bf512ab65db75142df9444088bd075b0",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/package.json",
+        "oid": "2cb8fa24b4df839bfc122275aa4c68a41f5924d1",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/resources/skills/arkts-runtime-fix/SKILL.md",
+      "status": "deleted",
+      "before": {
+        "path": "packages/opencode/resources/skills/arkts-runtime-fix/SKILL.md",
+        "oid": "3f5ffde06e20911d5eade5d10f29d54cd89a7208",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": null,
+      "mapping": "code-arkts-runtime-fix",
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/crash.ts",
+        "src/services/crash-frames.ts",
+        "src/services/crash-patterns.ts",
+        "src/services/knowledge.ts",
+        "src/services/logs.ts",
+        "resources/knowledge.json",
+        "resources/knowledge/arkts-runtime-fix",
+        "provenance/resources.json"
+      ],
+      "tests": [
+        "test/native-logs.test.ts",
+        "test/native-crash.test.ts",
+        "scripts/native-crash-acceptance.ts"
+      ]
+    },
+    {
+      "path": "packages/opencode/resources/skills/arkts-runtime-fix/SKILL_CN.md",
+      "status": "deleted",
+      "before": {
+        "path": "packages/opencode/resources/skills/arkts-runtime-fix/SKILL_CN.md",
+        "oid": "7c70b1b970c8e7922ac582465d15d8675d2222cd",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": null,
+      "mapping": "code-arkts-runtime-fix",
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/crash.ts",
+        "src/services/crash-frames.ts",
+        "src/services/crash-patterns.ts",
+        "src/services/knowledge.ts",
+        "src/services/logs.ts",
+        "resources/knowledge.json",
+        "resources/knowledge/arkts-runtime-fix",
+        "provenance/resources.json"
+      ],
+      "tests": [
+        "test/native-logs.test.ts",
+        "test/native-crash.test.ts",
+        "scripts/native-crash-acceptance.ts"
+      ]
+    },
+    {
+      "path": "packages/opencode/resources/skills/arkts-runtime-fix/evals/evals.json",
+      "status": "deleted",
+      "before": {
+        "path": "packages/opencode/resources/skills/arkts-runtime-fix/evals/evals.json",
+        "oid": "c2a390b13ed512311b8768f339fd4140d8ee5d5e",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": null,
+      "mapping": "code-arkts-runtime-fix",
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/crash.ts",
+        "src/services/crash-frames.ts",
+        "src/services/crash-patterns.ts",
+        "src/services/knowledge.ts",
+        "src/services/logs.ts",
+        "resources/knowledge.json",
+        "resources/knowledge/arkts-runtime-fix",
+        "provenance/resources.json"
+      ],
+      "tests": [
+        "test/native-logs.test.ts",
+        "test/native-crash.test.ts",
+        "scripts/native-crash-acceptance.ts"
+      ]
+    },
+    {
+      "path": "packages/opencode/resources/skills/arkts-runtime-fix/reference/businesserror_patterns.md",
+      "status": "deleted",
+      "before": {
+        "path": "packages/opencode/resources/skills/arkts-runtime-fix/reference/businesserror_patterns.md",
+        "oid": "19972078c50e4d1a97923b844570ae69ba60f2b9",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": null,
+      "mapping": "code-arkts-runtime-fix",
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/crash.ts",
+        "src/services/crash-frames.ts",
+        "src/services/crash-patterns.ts",
+        "src/services/knowledge.ts",
+        "src/services/logs.ts",
+        "resources/knowledge.json",
+        "resources/knowledge/arkts-runtime-fix",
+        "provenance/resources.json"
+      ],
+      "tests": [
+        "test/native-logs.test.ts",
+        "test/native-crash.test.ts",
+        "scripts/native-crash-acceptance.ts"
+      ]
+    },
+    {
+      "path": "packages/opencode/resources/skills/arkts-runtime-fix/reference/error_patterns.md",
+      "status": "deleted",
+      "before": {
+        "path": "packages/opencode/resources/skills/arkts-runtime-fix/reference/error_patterns.md",
+        "oid": "096f876fb5c970f8a1bd6240af06b33ff686f46a",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": null,
+      "mapping": "code-arkts-runtime-fix",
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/crash.ts",
+        "src/services/crash-frames.ts",
+        "src/services/crash-patterns.ts",
+        "src/services/knowledge.ts",
+        "src/services/logs.ts",
+        "resources/knowledge.json",
+        "resources/knowledge/arkts-runtime-fix",
+        "provenance/resources.json"
+      ],
+      "tests": [
+        "test/native-logs.test.ts",
+        "test/native-crash.test.ts",
+        "scripts/native-crash-acceptance.ts"
+      ]
+    },
+    {
+      "path": "packages/opencode/resources/skills/arkts-runtime-fix/reference/fault-mode-library.md",
+      "status": "deleted",
+      "before": {
+        "path": "packages/opencode/resources/skills/arkts-runtime-fix/reference/fault-mode-library.md",
+        "oid": "bf65ee2c0933d2df9a4999efae6085ac99fd4f6a",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": null,
+      "mapping": "code-arkts-runtime-fix",
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/crash.ts",
+        "src/services/crash-frames.ts",
+        "src/services/crash-patterns.ts",
+        "src/services/knowledge.ts",
+        "src/services/logs.ts",
+        "resources/knowledge.json",
+        "resources/knowledge/arkts-runtime-fix",
+        "provenance/resources.json"
+      ],
+      "tests": [
+        "test/native-logs.test.ts",
+        "test/native-crash.test.ts",
+        "scripts/native-crash-acceptance.ts"
+      ]
+    },
+    {
+      "path": "packages/opencode/resources/skills/arkts-runtime-fix/reference/outofmemoryerror_patterns.md",
+      "status": "deleted",
+      "before": {
+        "path": "packages/opencode/resources/skills/arkts-runtime-fix/reference/outofmemoryerror_patterns.md",
+        "oid": "aead60296ad79a8f924a17efd57ac26bfb2292bf",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": null,
+      "mapping": "code-arkts-runtime-fix",
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/crash.ts",
+        "src/services/crash-frames.ts",
+        "src/services/crash-patterns.ts",
+        "src/services/knowledge.ts",
+        "src/services/logs.ts",
+        "resources/knowledge.json",
+        "resources/knowledge/arkts-runtime-fix",
+        "provenance/resources.json"
+      ],
+      "tests": [
+        "test/native-logs.test.ts",
+        "test/native-crash.test.ts",
+        "scripts/native-crash-acceptance.ts"
+      ]
+    },
+    {
+      "path": "packages/opencode/resources/skills/arkts-runtime-fix/reference/rangeerror_patterns.md",
+      "status": "deleted",
+      "before": {
+        "path": "packages/opencode/resources/skills/arkts-runtime-fix/reference/rangeerror_patterns.md",
+        "oid": "eaae202c4dc28ca96a353d35b2271f28b27857bd",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": null,
+      "mapping": "code-arkts-runtime-fix",
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/crash.ts",
+        "src/services/crash-frames.ts",
+        "src/services/crash-patterns.ts",
+        "src/services/knowledge.ts",
+        "src/services/logs.ts",
+        "resources/knowledge.json",
+        "resources/knowledge/arkts-runtime-fix",
+        "provenance/resources.json"
+      ],
+      "tests": [
+        "test/native-logs.test.ts",
+        "test/native-crash.test.ts",
+        "scripts/native-crash-acceptance.ts"
+      ]
+    },
+    {
+      "path": "packages/opencode/resources/skills/arkts-runtime-fix/reference/referenceerror_patterns.md",
+      "status": "deleted",
+      "before": {
+        "path": "packages/opencode/resources/skills/arkts-runtime-fix/reference/referenceerror_patterns.md",
+        "oid": "b34d83fb6fcd50e1ba8f9f6e606471f1b94128d7",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": null,
+      "mapping": "code-arkts-runtime-fix",
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/crash.ts",
+        "src/services/crash-frames.ts",
+        "src/services/crash-patterns.ts",
+        "src/services/knowledge.ts",
+        "src/services/logs.ts",
+        "resources/knowledge.json",
+        "resources/knowledge/arkts-runtime-fix",
+        "provenance/resources.json"
+      ],
+      "tests": [
+        "test/native-logs.test.ts",
+        "test/native-crash.test.ts",
+        "scripts/native-crash-acceptance.ts"
+      ]
+    },
+    {
+      "path": "packages/opencode/resources/skills/arkts-runtime-fix/reference/syntaxerror_patterns.md",
+      "status": "deleted",
+      "before": {
+        "path": "packages/opencode/resources/skills/arkts-runtime-fix/reference/syntaxerror_patterns.md",
+        "oid": "9574feee1892b3c47ca50f54b11a98f8cd10ae08",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": null,
+      "mapping": "code-arkts-runtime-fix",
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/crash.ts",
+        "src/services/crash-frames.ts",
+        "src/services/crash-patterns.ts",
+        "src/services/knowledge.ts",
+        "src/services/logs.ts",
+        "resources/knowledge.json",
+        "resources/knowledge/arkts-runtime-fix",
+        "provenance/resources.json"
+      ],
+      "tests": [
+        "test/native-logs.test.ts",
+        "test/native-crash.test.ts",
+        "scripts/native-crash-acceptance.ts"
+      ]
+    },
+    {
+      "path": "packages/opencode/resources/skills/arkts-runtime-fix/reference/typeerror_patterns.md",
+      "status": "deleted",
+      "before": {
+        "path": "packages/opencode/resources/skills/arkts-runtime-fix/reference/typeerror_patterns.md",
+        "oid": "32e6e7024792960447e2399660bc0f61be052a6d",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": null,
+      "mapping": "code-arkts-runtime-fix",
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/crash.ts",
+        "src/services/crash-frames.ts",
+        "src/services/crash-patterns.ts",
+        "src/services/knowledge.ts",
+        "src/services/logs.ts",
+        "resources/knowledge.json",
+        "resources/knowledge/arkts-runtime-fix",
+        "provenance/resources.json"
+      ],
+      "tests": [
+        "test/native-logs.test.ts",
+        "test/native-crash.test.ts",
+        "scripts/native-crash-acceptance.ts"
+      ]
+    },
+    {
+      "path": "packages/opencode/resources/skills/arkts-runtime-fix/reference/urierror_patterns.md",
+      "status": "deleted",
+      "before": {
+        "path": "packages/opencode/resources/skills/arkts-runtime-fix/reference/urierror_patterns.md",
+        "oid": "921a210593294afb5f2ccff7f57cf0cf21cf916a",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": null,
+      "mapping": "code-arkts-runtime-fix",
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/crash.ts",
+        "src/services/crash-frames.ts",
+        "src/services/crash-patterns.ts",
+        "src/services/knowledge.ts",
+        "src/services/logs.ts",
+        "resources/knowledge.json",
+        "resources/knowledge/arkts-runtime-fix",
+        "provenance/resources.json"
+      ],
+      "tests": [
+        "test/native-logs.test.ts",
+        "test/native-crash.test.ts",
+        "scripts/native-crash-acceptance.ts"
+      ]
+    },
+    {
+      "path": "packages/opencode/resources/skills/arkts-runtime-fix/scripts/collect-hilog.mjs",
+      "status": "deleted",
+      "before": {
+        "path": "packages/opencode/resources/skills/arkts-runtime-fix/scripts/collect-hilog.mjs",
+        "oid": "6f1bd4f2f4c1b9024d94b30d51bfcaa7108a7ebe",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": null,
+      "mapping": "code-arkts-runtime-fix",
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/crash.ts",
+        "src/services/crash-frames.ts",
+        "src/services/crash-patterns.ts",
+        "src/services/knowledge.ts",
+        "src/services/logs.ts",
+        "resources/knowledge.json",
+        "resources/knowledge/arkts-runtime-fix",
+        "provenance/resources.json"
+      ],
+      "tests": [
+        "test/native-logs.test.ts",
+        "test/native-crash.test.ts",
+        "scripts/native-crash-acceptance.ts"
+      ]
+    },
+    {
+      "path": "packages/opencode/resources/skills/arkts-runtime-fix/scripts/fetch-faultlog.mjs",
+      "status": "deleted",
+      "before": {
+        "path": "packages/opencode/resources/skills/arkts-runtime-fix/scripts/fetch-faultlog.mjs",
+        "oid": "5be5419e64711860097c109f4c263f18db6630fe",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": null,
+      "mapping": "code-arkts-runtime-fix",
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/crash.ts",
+        "src/services/crash-frames.ts",
+        "src/services/crash-patterns.ts",
+        "src/services/knowledge.ts",
+        "src/services/logs.ts",
+        "resources/knowledge.json",
+        "resources/knowledge/arkts-runtime-fix",
+        "provenance/resources.json"
+      ],
+      "tests": [
+        "test/native-logs.test.ts",
+        "test/native-crash.test.ts",
+        "scripts/native-crash-acceptance.ts"
+      ]
+    },
+    {
+      "path": "packages/opencode/resources/skills/arkts-runtime-fix/scripts/jscrash-report.mjs",
+      "status": "deleted",
+      "before": {
+        "path": "packages/opencode/resources/skills/arkts-runtime-fix/scripts/jscrash-report.mjs",
+        "oid": "4ffd108e4f628daf8814b117bdd657a5201f0936",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": null,
+      "mapping": "code-arkts-runtime-fix",
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/crash.ts",
+        "src/services/crash-frames.ts",
+        "src/services/crash-patterns.ts",
+        "src/services/knowledge.ts",
+        "src/services/logs.ts",
+        "resources/knowledge.json",
+        "resources/knowledge/arkts-runtime-fix",
+        "provenance/resources.json"
+      ],
+      "tests": [
+        "test/native-logs.test.ts",
+        "test/native-crash.test.ts",
+        "scripts/native-crash-acceptance.ts"
+      ]
+    },
+    {
+      "path": "packages/opencode/resources/skills/arkts-runtime-fix/scripts/parse-jscrash-log.mjs",
+      "status": "deleted",
+      "before": {
+        "path": "packages/opencode/resources/skills/arkts-runtime-fix/scripts/parse-jscrash-log.mjs",
+        "oid": "b4aeea0a690567e509a9f6b84e09e984b80c7383",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": null,
+      "mapping": "code-arkts-runtime-fix",
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/crash.ts",
+        "src/services/crash-frames.ts",
+        "src/services/crash-patterns.ts",
+        "src/services/knowledge.ts",
+        "src/services/logs.ts",
+        "resources/knowledge.json",
+        "resources/knowledge/arkts-runtime-fix",
+        "provenance/resources.json"
+      ],
+      "tests": [
+        "test/native-logs.test.ts",
+        "test/native-crash.test.ts",
+        "scripts/native-crash-acceptance.ts"
+      ]
+    },
+    {
+      "path": "packages/opencode/resources/skills/arkts-runtime-fix/scripts/probe-faultlogger.mjs",
+      "status": "deleted",
+      "before": {
+        "path": "packages/opencode/resources/skills/arkts-runtime-fix/scripts/probe-faultlogger.mjs",
+        "oid": "782b9a7d2dc91bfb40e539b3722ea85ae670ecc1",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": null,
+      "mapping": "code-arkts-runtime-fix",
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/crash.ts",
+        "src/services/crash-frames.ts",
+        "src/services/crash-patterns.ts",
+        "src/services/knowledge.ts",
+        "src/services/logs.ts",
+        "resources/knowledge.json",
+        "resources/knowledge/arkts-runtime-fix",
+        "provenance/resources.json"
+      ],
+      "tests": [
+        "test/native-logs.test.ts",
+        "test/native-crash.test.ts",
+        "scripts/native-crash-acceptance.ts"
+      ]
+    },
+    {
+      "path": "packages/opencode/resources/skills/arkts-runtime-fix/scripts/shared/hdc.mjs",
+      "status": "deleted",
+      "before": {
+        "path": "packages/opencode/resources/skills/arkts-runtime-fix/scripts/shared/hdc.mjs",
+        "oid": "b3313ebd0b884b7d97f50645f8ff1a9ac6295503",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": null,
+      "mapping": "code-arkts-runtime-fix",
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/crash.ts",
+        "src/services/crash-frames.ts",
+        "src/services/crash-patterns.ts",
+        "src/services/knowledge.ts",
+        "src/services/logs.ts",
+        "resources/knowledge.json",
+        "resources/knowledge/arkts-runtime-fix",
+        "provenance/resources.json"
+      ],
+      "tests": [
+        "test/native-logs.test.ts",
+        "test/native-crash.test.ts",
+        "scripts/native-crash-acceptance.ts"
+      ]
+    },
+    {
+      "path": "packages/opencode/resources/skills/arkts-runtime-fix/scripts/shared/jscrash-faultlogger.mjs",
+      "status": "deleted",
+      "before": {
+        "path": "packages/opencode/resources/skills/arkts-runtime-fix/scripts/shared/jscrash-faultlogger.mjs",
+        "oid": "de6e17fefcf47b07d7e5a1b22f492d926d7393a2",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": null,
+      "mapping": "code-arkts-runtime-fix",
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/crash.ts",
+        "src/services/crash-frames.ts",
+        "src/services/crash-patterns.ts",
+        "src/services/knowledge.ts",
+        "src/services/logs.ts",
+        "resources/knowledge.json",
+        "resources/knowledge/arkts-runtime-fix",
+        "provenance/resources.json"
+      ],
+      "tests": [
+        "test/native-logs.test.ts",
+        "test/native-crash.test.ts",
+        "scripts/native-crash-acceptance.ts"
+      ]
+    },
+    {
+      "path": "packages/opencode/resources/skills/arkts-runtime-fix/scripts/shared/jscrash-parse.mjs",
+      "status": "deleted",
+      "before": {
+        "path": "packages/opencode/resources/skills/arkts-runtime-fix/scripts/shared/jscrash-parse.mjs",
+        "oid": "349e7a7b7b8fc4cf36f517d9e2eeb09d977e9f75",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": null,
+      "mapping": "code-arkts-runtime-fix",
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/crash.ts",
+        "src/services/crash-frames.ts",
+        "src/services/crash-patterns.ts",
+        "src/services/knowledge.ts",
+        "src/services/logs.ts",
+        "resources/knowledge.json",
+        "resources/knowledge/arkts-runtime-fix",
+        "provenance/resources.json"
+      ],
+      "tests": [
+        "test/native-logs.test.ts",
+        "test/native-crash.test.ts",
+        "scripts/native-crash-acceptance.ts"
+      ]
+    },
+    {
+      "path": "packages/opencode/resources/skills/arkts-runtime-fix/scripts/shared/utils.mjs",
+      "status": "deleted",
+      "before": {
+        "path": "packages/opencode/resources/skills/arkts-runtime-fix/scripts/shared/utils.mjs",
+        "oid": "d476cba82271477aa9706a038f5acac9d5c80ea5",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": null,
+      "mapping": "code-arkts-runtime-fix",
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/crash.ts",
+        "src/services/crash-frames.ts",
+        "src/services/crash-patterns.ts",
+        "src/services/knowledge.ts",
+        "src/services/logs.ts",
+        "resources/knowledge.json",
+        "resources/knowledge/arkts-runtime-fix",
+        "provenance/resources.json"
+      ],
+      "tests": [
+        "test/native-logs.test.ts",
+        "test/native-crash.test.ts",
+        "scripts/native-crash-acceptance.ts"
+      ]
+    },
+    {
+      "path": "packages/opencode/resources/skills/customize-deveco/SKILL.md",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/resources/skills/customize-deveco/SKILL.md",
+        "oid": "f9c4de3100d793a60a6068fc7b40a7745bbf28c3",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/resources/skills/customize-deveco/SKILL.md",
+        "oid": "120c88b7fb862e4774af307510ca054f7a70d0c0",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-customization",
+      "disposition": "adapt",
+      "reason": "Skills and knowledge are bundled and supplied through MCP-owned guided workflows. Client Skill installation was explicitly removed by the owner; review every operation and boundary.",
+      "targets": [
+        "docs/builtin-skill-workflows.md",
+        "provenance/upstream-capabilities.json"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "path": "packages/opencode/resources/skills/deveco-cli/SKILL.md",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/resources/skills/deveco-cli/SKILL.md",
+        "oid": "1ac4302b9a97a178e5e8868dec17bd89562abf2d",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/resources/skills/deveco-cli/SKILL.md",
+        "oid": "5548bd4ed71d6b77f0287871f3bb46f712778611",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-deveco-cli",
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/runtime.ts",
+        "src/services/project.ts",
+        "src/core/contracts.ts",
+        "src/core/workflows.ts"
+      ],
+      "tests": [
+        "test/workflows.test.ts",
+        "scripts/native-sdk-acceptance.ts",
+        "test/native-context.test.ts",
+        "test/native-project-recovery.test.ts",
+        "scripts/native-multimodule-acceptance.ts"
+      ]
+    },
+    {
+      "path": "packages/opencode/resources/skills/deveco-create-project/FILES.md",
+      "status": "deleted",
+      "before": {
+        "path": "packages/opencode/resources/skills/deveco-create-project/FILES.md",
+        "oid": "949aab18acd14332f460adb234d03ab8150b5c7a",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": null,
+      "mapping": "code-deveco-create-project",
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/project.ts",
+        "resources/templates/application",
+        "provenance/resources.json"
+      ],
+      "tests": [
+        "test/native-project.test.ts",
+        "scripts/native-sdk-acceptance.ts"
+      ]
+    },
+    {
+      "path": "packages/opencode/resources/skills/deveco-create-project/SKILL.md",
+      "status": "deleted",
+      "before": {
+        "path": "packages/opencode/resources/skills/deveco-create-project/SKILL.md",
+        "oid": "efa46dee25f9c64ab32e52c438ded3aca219270d",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": null,
+      "mapping": "code-deveco-create-project",
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/project.ts",
+        "resources/templates/application",
+        "provenance/resources.json"
+      ],
+      "tests": [
+        "test/native-project.test.ts",
+        "scripts/native-sdk-acceptance.ts"
+      ]
+    },
+    {
+      "path": "packages/opencode/resources/skills/deveco-create-project/scripts/copy-template.mjs",
+      "status": "deleted",
+      "before": {
+        "path": "packages/opencode/resources/skills/deveco-create-project/scripts/copy-template.mjs",
+        "oid": "cc50fcce355465f3bde3b6a7d31d80992ce7f6dd",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": null,
+      "mapping": "code-deveco-create-project",
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/project.ts",
+        "resources/templates/application",
+        "provenance/resources.json"
+      ],
+      "tests": [
+        "test/native-project.test.ts",
+        "scripts/native-sdk-acceptance.ts"
+      ]
+    },
+    {
+      "path": "packages/opencode/resources/skills/deveco-create-project/scripts/detect-sdk.mjs",
+      "status": "deleted",
+      "before": {
+        "path": "packages/opencode/resources/skills/deveco-create-project/scripts/detect-sdk.mjs",
+        "oid": "b3fa691be518fca53f612d71cc19d9cd53981a3f",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": null,
+      "mapping": "code-deveco-create-project",
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/project.ts",
+        "resources/templates/application",
+        "provenance/resources.json"
+      ],
+      "tests": [
+        "test/native-project.test.ts",
+        "scripts/native-sdk-acceptance.ts"
+      ]
+    },
+    {
+      "path": "packages/opencode/resources/skills/hmos-runtime-fix-skill/SKILL.md",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "packages/opencode/resources/skills/hmos-runtime-fix-skill/SKILL.md",
+        "oid": "aeb1f249c6511100b36829dcbc0f80a145df3fb0",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-new-skill",
+      "disposition": "unmapped",
+      "reason": "New upstream skills require an explicit workflow, rule or exclusion mapping.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/resources/skills/hmos-runtime-fix-skill/SKILL_CN.md",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "packages/opencode/resources/skills/hmos-runtime-fix-skill/SKILL_CN.md",
+        "oid": "47c2dc6631e97963f998b704a967cfedcc424fc4",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-new-skill",
+      "disposition": "unmapped",
+      "reason": "New upstream skills require an explicit workflow, rule or exclusion mapping.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/resources/skills/hmos-runtime-fix-skill/evals/evals.json",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "packages/opencode/resources/skills/hmos-runtime-fix-skill/evals/evals.json",
+        "oid": "ce4578285b3d992f3f25ab9ca1b01dbe3be97cba",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-new-skill",
+      "disposition": "unmapped",
+      "reason": "New upstream skills require an explicit workflow, rule or exclusion mapping.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/resources/skills/hmos-runtime-fix-skill/reference/businesserror_patterns.md",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "packages/opencode/resources/skills/hmos-runtime-fix-skill/reference/businesserror_patterns.md",
+        "oid": "19972078c50e4d1a97923b844570ae69ba60f2b9",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-new-skill",
+      "disposition": "unmapped",
+      "reason": "New upstream skills require an explicit workflow, rule or exclusion mapping.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/resources/skills/hmos-runtime-fix-skill/reference/error_patterns.md",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "packages/opencode/resources/skills/hmos-runtime-fix-skill/reference/error_patterns.md",
+        "oid": "096f876fb5c970f8a1bd6240af06b33ff686f46a",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-new-skill",
+      "disposition": "unmapped",
+      "reason": "New upstream skills require an explicit workflow, rule or exclusion mapping.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/resources/skills/hmos-runtime-fix-skill/reference/fault-mode-library.md",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "packages/opencode/resources/skills/hmos-runtime-fix-skill/reference/fault-mode-library.md",
+        "oid": "bf65ee2c0933d2df9a4999efae6085ac99fd4f6a",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-new-skill",
+      "disposition": "unmapped",
+      "reason": "New upstream skills require an explicit workflow, rule or exclusion mapping.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/resources/skills/hmos-runtime-fix-skill/reference/outofmemoryerror_patterns.md",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "packages/opencode/resources/skills/hmos-runtime-fix-skill/reference/outofmemoryerror_patterns.md",
+        "oid": "aead60296ad79a8f924a17efd57ac26bfb2292bf",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-new-skill",
+      "disposition": "unmapped",
+      "reason": "New upstream skills require an explicit workflow, rule or exclusion mapping.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/resources/skills/hmos-runtime-fix-skill/reference/rangeerror_patterns.md",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "packages/opencode/resources/skills/hmos-runtime-fix-skill/reference/rangeerror_patterns.md",
+        "oid": "eaae202c4dc28ca96a353d35b2271f28b27857bd",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-new-skill",
+      "disposition": "unmapped",
+      "reason": "New upstream skills require an explicit workflow, rule or exclusion mapping.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/resources/skills/hmos-runtime-fix-skill/reference/referenceerror_patterns.md",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "packages/opencode/resources/skills/hmos-runtime-fix-skill/reference/referenceerror_patterns.md",
+        "oid": "b34d83fb6fcd50e1ba8f9f6e606471f1b94128d7",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-new-skill",
+      "disposition": "unmapped",
+      "reason": "New upstream skills require an explicit workflow, rule or exclusion mapping.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/resources/skills/hmos-runtime-fix-skill/reference/syntaxerror_patterns.md",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "packages/opencode/resources/skills/hmos-runtime-fix-skill/reference/syntaxerror_patterns.md",
+        "oid": "9574feee1892b3c47ca50f54b11a98f8cd10ae08",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-new-skill",
+      "disposition": "unmapped",
+      "reason": "New upstream skills require an explicit workflow, rule or exclusion mapping.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/resources/skills/hmos-runtime-fix-skill/reference/typeerror_patterns.md",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "packages/opencode/resources/skills/hmos-runtime-fix-skill/reference/typeerror_patterns.md",
+        "oid": "32e6e7024792960447e2399660bc0f61be052a6d",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-new-skill",
+      "disposition": "unmapped",
+      "reason": "New upstream skills require an explicit workflow, rule or exclusion mapping.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/resources/skills/hmos-runtime-fix-skill/reference/urierror_patterns.md",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "packages/opencode/resources/skills/hmos-runtime-fix-skill/reference/urierror_patterns.md",
+        "oid": "921a210593294afb5f2ccff7f57cf0cf21cf916a",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-new-skill",
+      "disposition": "unmapped",
+      "reason": "New upstream skills require an explicit workflow, rule or exclusion mapping.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/resources/skills/hmos-runtime-fix-skill/scripts/collect-hilog.mjs",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "packages/opencode/resources/skills/hmos-runtime-fix-skill/scripts/collect-hilog.mjs",
+        "oid": "b6880e3595242699703143ec49493bbc8c5b4608",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-new-skill",
+      "disposition": "unmapped",
+      "reason": "New upstream skills require an explicit workflow, rule or exclusion mapping.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/resources/skills/hmos-runtime-fix-skill/scripts/jscrash-report.mjs",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "packages/opencode/resources/skills/hmos-runtime-fix-skill/scripts/jscrash-report.mjs",
+        "oid": "a07749487872d5b069f9486a985086d01f9dcad4",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-new-skill",
+      "disposition": "unmapped",
+      "reason": "New upstream skills require an explicit workflow, rule or exclusion mapping.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/resources/skills/hmos-runtime-fix-skill/scripts/parse-jscrash-log.mjs",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "packages/opencode/resources/skills/hmos-runtime-fix-skill/scripts/parse-jscrash-log.mjs",
+        "oid": "b4aeea0a690567e509a9f6b84e09e984b80c7383",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-new-skill",
+      "disposition": "unmapped",
+      "reason": "New upstream skills require an explicit workflow, rule or exclusion mapping.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/resources/skills/hmos-runtime-fix-skill/scripts/shared/deveco-cli.mjs",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "packages/opencode/resources/skills/hmos-runtime-fix-skill/scripts/shared/deveco-cli.mjs",
+        "oid": "5917d3a02f71cde8ff857d46245c833fe60110ef",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-new-skill",
+      "disposition": "unmapped",
+      "reason": "New upstream skills require an explicit workflow, rule or exclusion mapping.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/resources/skills/hmos-runtime-fix-skill/scripts/shared/jscrash-parse.mjs",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "packages/opencode/resources/skills/hmos-runtime-fix-skill/scripts/shared/jscrash-parse.mjs",
+        "oid": "349e7a7b7b8fc4cf36f517d9e2eeb09d977e9f75",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-new-skill",
+      "disposition": "unmapped",
+      "reason": "New upstream skills require an explicit workflow, rule or exclusion mapping.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/resources/skills/hmos-runtime-fix-skill/scripts/shared/utils.mjs",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "packages/opencode/resources/skills/hmos-runtime-fix-skill/scripts/shared/utils.mjs",
+        "oid": "d476cba82271477aa9706a038f5acac9d5c80ea5",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-new-skill",
+      "disposition": "unmapped",
+      "reason": "New upstream skills require an explicit workflow, rule or exclusion mapping.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/resources/spec/commands/spec-implement.md",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/resources/spec/commands/spec-implement.md",
+        "oid": "73fb13ec0aea5b3ebe263a104156f2617d7a34ba",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/resources/spec/commands/spec-implement.md",
+        "oid": "4a0fe032e470bf3a8bcf95a227d5450e6754a2fe",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "unmapped",
+      "reason": "Product source asset requires an explicit behavior/source review; a broad host exclusion cannot accept it",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/resources/spec/commands/spec-plan.md",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/resources/spec/commands/spec-plan.md",
+        "oid": "b042224337d3b0c6dbdb87374f660d07545197a5",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/resources/spec/commands/spec-plan.md",
+        "oid": "3c6c68c153c800d77a4e351000c5faedbba5007a",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "unmapped",
+      "reason": "Product source asset requires an explicit behavior/source review; a broad host exclusion cannot accept it",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/resources/spec/commands/spec-specify.md",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/resources/spec/commands/spec-specify.md",
+        "oid": "df15cdb68162974e2ac27a2e2fa64a3b2b9367c8",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/resources/spec/commands/spec-specify.md",
+        "oid": "526a7821a0dc7254f8a5c7486e5091cca77ceab1",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "unmapped",
+      "reason": "Product source asset requires an explicit behavior/source review; a broad host exclusion cannot accept it",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/resources/spec/commands/spec-tasks.md",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/resources/spec/commands/spec-tasks.md",
+        "oid": "5d395324499bb648b841557ebd8e1b9f0db7b4c8",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/resources/spec/commands/spec-tasks.md",
+        "oid": "2503e95133de12ae4fc4a13d322e6fea849c4565",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "unmapped",
+      "reason": "Product source asset requires an explicit behavior/source review; a broad host exclusion cannot accept it",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/resources/spec/commands/spec-verify.md",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/resources/spec/commands/spec-verify.md",
+        "oid": "2f8bc96133607d6612a9a0b208a90aa054e92d9d",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/resources/spec/commands/spec-verify.md",
+        "oid": "5db76f048b6ef371752cb6b7bc1aa6acac7bffbf",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "unmapped",
+      "reason": "Product source asset requires an explicit behavior/source review; a broad host exclusion cannot accept it",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/resources/spec/templates/tasks-template.md",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/resources/spec/templates/tasks-template.md",
+        "oid": "15095703b71dc4c47c204d704a51961ba3451b59",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/resources/spec/templates/tasks-template.md",
+        "oid": "16d1da1a62b7ed30f1ee43834164c401cded5ea9",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "unmapped",
+      "reason": "Product source asset requires an explicit behavior/source review; a broad host exclusion cannot accept it",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/src/agent/agent.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/src/agent/agent.ts",
+        "oid": "6e8ec9f3e668b614d806e764da19c9d43da897a9",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/src/agent/agent.ts",
+        "oid": "509540a8c7c08d9a38ccb0944422ae64725a0637",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "unmapped",
+      "reason": "Product source asset requires an explicit behavior/source review; a broad host exclusion cannot accept it",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/src/agent/prompt/build.txt",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/src/agent/prompt/build.txt",
+        "oid": "1b1f48087f17c1f8beafea4952963001c08a56e0",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/src/agent/prompt/build.txt",
+        "oid": "9d64951b19d95cb4800a7a9987dc179035fe9ad8",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "unmapped",
+      "reason": "Product source asset requires an explicit behavior/source review; a broad host exclusion cannot accept it",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/src/agent/prompt/debug.txt",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/src/agent/prompt/debug.txt",
+        "oid": "e0ea2abf2e54fff6409c30359eb42e9ad51ca795",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/src/agent/prompt/debug.txt",
+        "oid": "2ff07d130b23c73e0011b948630090ef2329f63c",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "unmapped",
+      "reason": "Product source asset requires an explicit behavior/source review; a broad host exclusion cannot accept it",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/src/agent/prompt/goal.txt",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/src/agent/prompt/goal.txt",
+        "oid": "bfa9925c92d61349b7f4dea075e88527bd0983eb",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/src/agent/prompt/goal.txt",
+        "oid": "575c80b794201aa51a52aff9abcca9c41425be2b",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "unmapped",
+      "reason": "Product source asset requires an explicit behavior/source review; a broad host exclusion cannot accept it",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/src/agent/prompt/spec-verify.txt",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/src/agent/prompt/spec-verify.txt",
+        "oid": "e952b2becc2c8e4d69816a0c25431b5a4bd6b57d",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/src/agent/prompt/spec-verify.txt",
+        "oid": "8c67bf1f7d6625791fde706aae85f0d92d7cf35a",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "unmapped",
+      "reason": "Product source asset requires an explicit behavior/source review; a broad host exclusion cannot accept it",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/src/agent/rules.ts",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "packages/opencode/src/agent/rules.ts",
+        "oid": "6a4786a2363b319b0019489370d8199a5e0d3953",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "unmapped",
+      "reason": "Product source asset requires an explicit behavior/source review; a broad host exclusion cannot accept it",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/src/agent/rules/common.txt",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "packages/opencode/src/agent/rules/common.txt",
+        "oid": "851343e179e37adbff45bf48eb7390078eafd5f4",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "unmapped",
+      "reason": "Product source asset requires an explicit behavior/source review; a broad host exclusion cannot accept it",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/src/deveco-cli/router.ts",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "packages/opencode/src/deveco-cli/router.ts",
+        "oid": "61f329de842e449c4d9c0ae96d5169004f972b2c",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "unmapped",
+      "reason": "Product source asset requires an explicit behavior/source review; a broad host exclusion cannot accept it",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/src/effect/runtime-flags.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/src/effect/runtime-flags.ts",
+        "oid": "d45ea7bdc2149ecbe5d8e33794450d46f898e405",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/src/effect/runtime-flags.ts",
+        "oid": "e6a21e5f79bfbf057b5c7814d20418dd5a130e17",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "unmapped",
+      "reason": "Product source asset requires an explicit behavior/source review; a broad host exclusion cannot accept it",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/src/index.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/src/index.ts",
+        "oid": "ec3e89b8491d2140b0f5472393560ee17c041ba7",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/src/index.ts",
+        "oid": "dc379556ef263459681f953659fc36d562a1a7bd",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/src/plugin/analytics/analytics-plugin.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/src/plugin/analytics/analytics-plugin.ts",
+        "oid": "d05830679b34094872e330f0de8965f62691ad59",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/src/plugin/analytics/analytics-plugin.ts",
+        "oid": "80757d618cb4a85ea243d6f9c0618a1b1dcaa1fc",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "unmapped",
+      "reason": "Product source asset requires an explicit behavior/source review; a broad host exclusion cannot accept it",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/src/plugin/analytics/collector.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/src/plugin/analytics/collector.ts",
+        "oid": "510027ba4e7fe5f4a7c75e26957b215faeb06e1e",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/src/plugin/analytics/collector.ts",
+        "oid": "b7d1f5a868f4aec1fad23b49bafcdbbaee700448",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "unmapped",
+      "reason": "Product source asset requires an explicit behavior/source review; a broad host exclusion cannot accept it",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/src/plugin/analytics/types.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/src/plugin/analytics/types.ts",
+        "oid": "56c95bb7375fa03fb881013d461a9880bf7d2fee",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/src/plugin/analytics/types.ts",
+        "oid": "1f06471e13b71a5948734aef6c60566f1d3d9bfe",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "unmapped",
+      "reason": "Product source asset requires an explicit behavior/source review; a broad host exclusion cannot accept it",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/src/server/routes/instance/httpapi/middleware/sync-guard.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/src/server/routes/instance/httpapi/middleware/sync-guard.ts",
+        "oid": "d9e2a3f2dfa50eb2969f45955032b23e1f4918e2",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/src/server/routes/instance/httpapi/middleware/sync-guard.ts",
+        "oid": "42b799ddad958a7b4c3fcf7d2fa794b64524731a",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "unmapped",
+      "reason": "Product source asset requires an explicit behavior/source review; a broad host exclusion cannot accept it",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/src/session/llm/request.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/src/session/llm/request.ts",
+        "oid": "282f5648d1083823394bc2eb77bc0961b2f0f293",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/src/session/llm/request.ts",
+        "oid": "6104e742f3cd27451e379be088aa42c55333c455",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "unmapped",
+      "reason": "Product source asset requires an explicit behavior/source review; a broad host exclusion cannot accept it",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/src/tool/arkts-check.cjs",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/src/tool/arkts-check.cjs",
+        "oid": "51af8ae43e3a2cf87d6e7301b0a22a41a2613706",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/src/tool/arkts-check.cjs",
+        "oid": "8ac538418edad76a637fdfe457bea5ea18ece59b",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-tool-arkts-check.cjs",
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "path": "packages/opencode/src/tool/arkts-check.txt",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/src/tool/arkts-check.txt",
+        "oid": "b4247c4743f4bbd8d69048701174f98c971863e5",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/src/tool/arkts-check.txt",
+        "oid": "e886d26d9757689f01b641128083d50bb0877452",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-tool-arkts-check.txt",
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "path": "packages/opencode/src/tool/build-project.txt",
+      "status": "deleted",
+      "before": {
+        "path": "packages/opencode/src/tool/build-project.txt",
+        "oid": "1497238b9c1479b963733cb47ebdb126d4dcf004",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": null,
+      "mapping": "code-tool-build-project.txt",
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "path": "packages/opencode/src/tool/build_project.ts",
+      "status": "deleted",
+      "before": {
+        "path": "packages/opencode/src/tool/build_project.ts",
+        "oid": "cba73911f083843126ac17cefc886d9f96c796ee",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": null,
+      "mapping": "code-tool-build_project.ts",
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "path": "packages/opencode/src/tool/hdc-log.txt",
+      "status": "deleted",
+      "before": {
+        "path": "packages/opencode/src/tool/hdc-log.txt",
+        "oid": "9637ba6acf5e4d2e98a430b583c33d9b56c7e23e",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": null,
+      "mapping": "code-tool-hdc-log.txt",
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "path": "packages/opencode/src/tool/hdc_log.ts",
+      "status": "deleted",
+      "before": {
+        "path": "packages/opencode/src/tool/hdc_log.ts",
+        "oid": "50cb3e3f15a87f54e49bb4a1513b9c126f360cbd",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": null,
+      "mapping": "code-tool-hdc_log.ts",
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "path": "packages/opencode/src/tool/lib/build-project-output.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/src/tool/lib/build-project-output.ts",
+        "oid": "c45b1eef75731b56be863c049f514923b4db4b0b",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/src/tool/lib/build-project-output.ts",
+        "oid": "5ebff5961b9235702bbbdc66940a616ef7e9fac5",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-tool-lib-build-project-output.ts",
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "path": "packages/opencode/src/tool/lib/deveco-cli.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/src/tool/lib/deveco-cli.ts",
+        "oid": "8925e320c1ea4d351dbef511b2731001225dcc25",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/src/tool/lib/deveco-cli.ts",
+        "oid": "c9e462082f809218f234770559d95a0cde911d00",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-tool-lib-deveco-cli.ts",
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "path": "packages/opencode/src/tool/registry.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/src/tool/registry.ts",
+        "oid": "c83cf2cf6079b9fbd964b9d4de2d05618ee6f884",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/src/tool/registry.ts",
+        "oid": "ea23e3215f826afd7825ef94d02d2bfe6edbcb44",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-tool-registry.ts",
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "path": "packages/opencode/src/tool/shell.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/src/tool/shell.ts",
+        "oid": "422e562e40143dcc9038847d13159b35b5746649",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/src/tool/shell.ts",
+        "oid": "0b8cf422d615892431ca58700cba1196e0640e7b",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-tool-shell.ts",
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "path": "packages/opencode/src/tool/skill.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/src/tool/skill.ts",
+        "oid": "8ef03bc82f3f524769d9231f9914ef9915fb3cbc",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/src/tool/skill.ts",
+        "oid": "9c8acb0128eb89351d129c11b4a057733553a39a",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-tool-skill.ts",
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "path": "packages/opencode/src/tool/start_app.ts",
+      "status": "deleted",
+      "before": {
+        "path": "packages/opencode/src/tool/start_app.ts",
+        "oid": "8b220c0ba56f383c4483fd495231559def8c5fbc",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": null,
+      "mapping": "code-tool-start_app.ts",
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "path": "packages/opencode/src/tool/switch-cwd.txt",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/src/tool/switch-cwd.txt",
+        "oid": "857d08f052a96dcca3fd6cf6e72ba531306d21f1",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/src/tool/switch-cwd.txt",
+        "oid": "c69a564bbb6fae136c1cb0bc8692a27bc9c6597c",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-tool-switch-cwd.txt",
+      "disposition": "adapt",
+      "reason": "Tool implementation, prompt, registration or validation changes require operation-level parity review; cannot fall through to excluded host packages.",
+      "targets": [
+        "provenance/upstream-capabilities.json",
+        "src/core/contracts.ts"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
+      ]
+    },
+    {
+      "path": "packages/opencode/test/agent/agent.test.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/test/agent/agent.test.ts",
+        "oid": "bf8bd76975b7da0a872ebfda41eedd3836dc6995",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/test/agent/agent.test.ts",
+        "oid": "2e82976b748dd3d3226b071ae78916ba4cbb23ac",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/agent/rules.test.ts",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "packages/opencode/test/agent/rules.test.ts",
+        "oid": "561c88914eb4b9cf6bc5169259e52bbd6e608ab4",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "unmapped",
+      "reason": "Product source asset requires an explicit behavior/source review; a broad host exclusion cannot accept it",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/detect-sdk.test.ts",
+      "status": "deleted",
+      "before": {
+        "path": "packages/opencode/test/detect-sdk.test.ts",
+        "oid": "6192678b0629f115afb3beb33b23b5b7e0e134cf",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": null,
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/deveco-cli/router.test.ts",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "packages/opencode/test/deveco-cli/router.test.ts",
+        "oid": "0c906d29e23da300217b0813212adbf9c7285ef1",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "unmapped",
+      "reason": "Product source asset requires an explicit behavior/source review; a broad host exclusion cannot accept it",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/effect/runtime-flags.test.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/test/effect/runtime-flags.test.ts",
+        "oid": "1c217328b53a8bbc35edaf9a2328ed0effae7334",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/test/effect/runtime-flags.test.ts",
+        "oid": "433d7696b6aa8bfdf680a468f82ebe6141ea181b",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/jscrash-faultlogger.test.ts",
+      "status": "deleted",
+      "before": {
+        "path": "packages/opencode/test/jscrash-faultlogger.test.ts",
+        "oid": "e9eec7beafefcfe943230901d96f6fc6b02dedbc",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": null,
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/jscrash-hdc.test.ts",
+      "status": "deleted",
+      "before": {
+        "path": "packages/opencode/test/jscrash-hdc.test.ts",
+        "oid": "91bcf9d784eabef9b7ab3f2a44ac194d6478a6ed",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": null,
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/jscrash-parse.test.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/test/jscrash-parse.test.ts",
+        "oid": "952345fabc0db85d6a3e013e14493eb2531a1c8f",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/test/jscrash-parse.test.ts",
+        "oid": "3044a4b9ecd5c6627a78ddcce41fae99c6ca1709",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/jscrash-utils.test.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/test/jscrash-utils.test.ts",
+        "oid": "40ee4b216dbb0cbc02ca353a284b9d8a13fecb1e",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/test/jscrash-utils.test.ts",
+        "oid": "6a40c52fbba96560d5fb37effd8fa56ea3367f4f",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/live-e2e/TEST_CASES.md",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/test/live-e2e/TEST_CASES.md",
+        "oid": "e00d79a2fc137efc33c7e4e471312fc6c1a8118a",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/test/live-e2e/TEST_CASES.md",
+        "oid": "3e9d5bcc3eec9c8e490ed86bca74981c71fc14ef",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/live-e2e/cases/build-failure-check.case.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/test/live-e2e/cases/build-failure-check.case.ts",
+        "oid": "71b30ef38959ce2b11d706a1118d2e36c48f69bc",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/test/live-e2e/cases/build-failure-check.case.ts",
+        "oid": "dd42846261b3761b67f98d6aa3ea89da75dce04a",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/live-e2e/cases/build-mode-builtin-tools.case.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/test/live-e2e/cases/build-mode-builtin-tools.case.ts",
+        "oid": "daa0fdda9a0ae93d499e0d26a2584472b403512b",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/test/live-e2e/cases/build-mode-builtin-tools.case.ts",
+        "oid": "546bb9e5ce3c265c0f0102d07ce7670f7b0c55c5",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/live-e2e/cases/build-project.case.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/test/live-e2e/cases/build-project.case.ts",
+        "oid": "b8a32c5a03c061a1091702376af05772be4a571b",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/test/live-e2e/cases/build-project.case.ts",
+        "oid": "3ab1aaff2744b541fc150bbdfa7061bca73f3e3e",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/live-e2e/cases/hdc-log-list-devices.case.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/test/live-e2e/cases/hdc-log-list-devices.case.ts",
+        "oid": "31eb1d6293b8959d6ee88adaf4f1d0399f1a81df",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/test/live-e2e/cases/hdc-log-list-devices.case.ts",
+        "oid": "fc349bd57ff5d8d5ce2e494985cb7592eaec5b60",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/live-e2e/cases/incremental-dev-build-project.case.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/test/live-e2e/cases/incremental-dev-build-project.case.ts",
+        "oid": "1a294ffdd2f396542e327df9af32186fbcc02eea",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/test/live-e2e/cases/incremental-dev-build-project.case.ts",
+        "oid": "3a6e523219bb8d580b80d4a7f41ad52004ae30bb",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/live-e2e/cases/plan-to-build.case.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/test/live-e2e/cases/plan-to-build.case.ts",
+        "oid": "ba7ea13397eeb3e5ac20fd5862d0cead7a07744e",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/test/live-e2e/cases/plan-to-build.case.ts",
+        "oid": "e7d796082f9ac7fe03e69fe129909a22e2d2c513",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/live-e2e/cases/project-create-default-api.case.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/test/live-e2e/cases/project-create-default-api.case.ts",
+        "oid": "b93703d76f10cce6c9c519db2c29993131896f1a",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/test/live-e2e/cases/project-create-default-api.case.ts",
+        "oid": "1484f4da5f81912edee72b0bdb7e045d113ea3f7",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/live-e2e/cases/skill-arkui-vertical-list.case.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/test/live-e2e/cases/skill-arkui-vertical-list.case.ts",
+        "oid": "f7b93c1c6710f879d97a95c4596d74a23ecf9a61",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/test/live-e2e/cases/skill-arkui-vertical-list.case.ts",
+        "oid": "0e784ac49b504c96f92536623d37347ba33e97af",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/live-e2e/cases/skill-deveco-api17-fallback.case.ts",
+      "status": "deleted",
+      "before": {
+        "path": "packages/opencode/test/live-e2e/cases/skill-deveco-api17-fallback.case.ts",
+        "oid": "e7ebcd51c13d93c8332530022ea4737820be2ee6",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": null,
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/live-e2e/cases/skill-deveco-create-hello-world.case.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/test/live-e2e/cases/skill-deveco-create-hello-world.case.ts",
+        "oid": "f2ee9c13962588defab70ccd493cdf5b39547b7a",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/test/live-e2e/cases/skill-deveco-create-hello-world.case.ts",
+        "oid": "9b292d009a880169d313c6ed88d9b41ae7ff84e6",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/live-e2e/cases/start-app-deploy.case.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/test/live-e2e/cases/start-app-deploy.case.ts",
+        "oid": "3890684f42395a47fcee45aed69d701bf8d374ac",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/test/live-e2e/cases/start-app-deploy.case.ts",
+        "oid": "939ba43a71e48dc359de02a4da3b6284efac8a4e",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/live-e2e/cases/switch-cwd-build.case.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/test/live-e2e/cases/switch-cwd-build.case.ts",
+        "oid": "fc56ba6ae068b1b0fe6000edcbdf6094a1aa9bb8",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/test/live-e2e/cases/switch-cwd-build.case.ts",
+        "oid": "e5dd39dd15513722f50b56e087595e0a94d88607",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/live-e2e/cases/switch-cwd-project-build.case.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/test/live-e2e/cases/switch-cwd-project-build.case.ts",
+        "oid": "942189640dc0068612b0dac87fa710c66922f5fa",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/test/live-e2e/cases/switch-cwd-project-build.case.ts",
+        "oid": "9d75189745812de84913881c1dbba447cfb23497",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/live-e2e/deveco-cli-events.ts",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "packages/opencode/test/live-e2e/deveco-cli-events.ts",
+        "oid": "580c78779a29c97fee1756d0a51b140f38d08270",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "unmapped",
+      "reason": "Product source asset requires an explicit behavior/source review; a broad host exclusion cannot accept it",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/live-e2e/env.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/test/live-e2e/env.ts",
+        "oid": "1f267537e82e430179f24df5d5becb2decfd4e1d",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/test/live-e2e/env.ts",
+        "oid": "1cbfcb99761fa8255c7685271e79e816692ab7ed",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/live-e2e/registry.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/test/live-e2e/registry.ts",
+        "oid": "dd2bb3f1ae063eb52bcfd47edb32fd62eb0afaaf",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/test/live-e2e/registry.ts",
+        "oid": "06a667d2e9228cdc52dd923f5c137fe8edc5ae4e",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/live-e2e/runner.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/test/live-e2e/runner.ts",
+        "oid": "f5274d708f4565060ea7eb8e31a8a55005a8e168",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/test/live-e2e/runner.ts",
+        "oid": "acf38d661ccd47b7ceb947605b14bfb3053574c6",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/plugin/analytics/analytics-plugin.test.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/test/plugin/analytics/analytics-plugin.test.ts",
+        "oid": "a701d0ba0186ab2b34327e9d352880a49a9230f3",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/test/plugin/analytics/analytics-plugin.test.ts",
+        "oid": "08b02fd6ec6d417105e77b530f4adc6785c5a063",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/plugin/analytics/collector.test.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/test/plugin/analytics/collector.test.ts",
+        "oid": "e50ddba3c8f4e02fcc418d504cdb0b321b419a3a",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/test/plugin/analytics/collector.test.ts",
+        "oid": "685e31ea0a7cc4ebc40da615f31823e191a74316",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/server/httpapi-exercise/index.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/test/server/httpapi-exercise/index.ts",
+        "oid": "4cb3e628d32aeb375ba0f4d8f6acc655a24ec4c8",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/test/server/httpapi-exercise/index.ts",
+        "oid": "9a1b563463453301843e0ea9db933463d05c1e05",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/skill/defaults.test.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/test/skill/defaults.test.ts",
+        "oid": "4d77e06eb29d46970c3e1f7605df56c41dd91b86",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/test/skill/defaults.test.ts",
+        "oid": "d198d7a8e902a40de8b2d5184b7885ff7d025cf1",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/skill/hdc.test.ts",
+      "status": "deleted",
+      "before": {
+        "path": "packages/opencode/test/skill/hdc.test.ts",
+        "oid": "d41f3dd0a9566aa0bafcd6c67a1e59d53feac923",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": null,
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/tool/arkts-error-fixes.test.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/test/tool/arkts-error-fixes.test.ts",
+        "oid": "4ca1943a29b9071d0e01fe466131209360fd5c67",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/test/tool/arkts-error-fixes.test.ts",
+        "oid": "c3cfd41bd9bde96e7f143fe951c10d947ed94e4e",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/tool/build_project.test.ts",
+      "status": "deleted",
+      "before": {
+        "path": "packages/opencode/test/tool/build_project.test.ts",
+        "oid": "572200c123c8053dab92e771f66c51b36ef5e87d",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": null,
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/tool/deveco-builtin-tools.test.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/test/tool/deveco-builtin-tools.test.ts",
+        "oid": "0b7514578d945060b72e01456ea9a47912a39e41",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/test/tool/deveco-builtin-tools.test.ts",
+        "oid": "e7f4a3ee7f9e2e4c2af3835afb4424d724092477",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/tool/hdc_log.test.ts",
+      "status": "deleted",
+      "before": {
+        "path": "packages/opencode/test/tool/hdc_log.test.ts",
+        "oid": "3aa42d07cbaf3309f1cbd14318b90fe61ed1c07d",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": null,
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/tool/lib/deveco-cli.test.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/test/tool/lib/deveco-cli.test.ts",
+        "oid": "71be66f0ca854d05f46dd09019123c5e6a239884",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/test/tool/lib/deveco-cli.test.ts",
+        "oid": "231d49c19be9237b3ce517d336673e4e58d692f9",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/tool/shell.test.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/test/tool/shell.test.ts",
+        "oid": "363f0f8dc35ae34262709ba98803418671a934b6",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/test/tool/shell.test.ts",
+        "oid": "0dcc48b83f2574923c1e15aaa5d88d23af94ceea",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/tool/start-app.test.ts",
+      "status": "deleted",
+      "before": {
+        "path": "packages/opencode/test/tool/start-app.test.ts",
+        "oid": "abc8570c2c42f73131042139c10a9710de352edf",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": null,
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/tui/src/component/prompt/index.tsx",
+      "status": "modified",
+      "before": {
+        "path": "packages/tui/src/component/prompt/index.tsx",
+        "oid": "52c88ec6348b17e99c242ac839a9848f16846e46",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/tui/src/component/prompt/index.tsx",
+        "oid": "8c64a2193147925b99d0e330be9f036c1528eda0",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/tui/src/component/prompt/interrupt.ts",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "packages/tui/src/component/prompt/interrupt.ts",
+        "oid": "834cc8841605a22a133b7c07462e41d4293a6cc7",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "unmapped",
+      "reason": "Product source asset requires an explicit behavior/source review; a broad host exclusion cannot accept it",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/tui/src/i18n/en.json",
+      "status": "modified",
+      "before": {
+        "path": "packages/tui/src/i18n/en.json",
+        "oid": "e186cee1107866469a4890a79c1c0a948ae35650",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/tui/src/i18n/en.json",
+        "oid": "cf85527ef534333667788f2d9305484d650f354d",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/tui/src/i18n/zh.json",
+      "status": "modified",
+      "before": {
+        "path": "packages/tui/src/i18n/zh.json",
+        "oid": "feae69b03f28668fa048d526d8ee7297a5c237e2",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/tui/src/i18n/zh.json",
+        "oid": "547e8065fa1f771f232407b6d927991a6f6fcec5",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/tui/src/routes/session/index.tsx",
+      "status": "modified",
+      "before": {
+        "path": "packages/tui/src/routes/session/index.tsx",
+        "oid": "73bda3dea702fee2259872e8c6777901868ec2f5",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/tui/src/routes/session/index.tsx",
+        "oid": "e30ddca8b1c03fe2664776a46b11e02f8e775d47",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/tui/test/prompt/interrupt.test.ts",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "packages/tui/test/prompt/interrupt.test.ts",
+        "oid": "543ab852e6dd038661023432b8965dbfebc867a3",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "unmapped",
+      "reason": "Product source asset requires an explicit behavior/source review; a broad host exclusion cannot accept it",
+      "targets": [],
+      "tests": []
+    }
+  ],
+  "gate": "blocked_unmapped",
+  "required_tests": [
+    "scripts/native-crash-acceptance.ts",
+    "scripts/native-multimodule-acceptance.ts",
+    "scripts/native-sdk-acceptance.ts",
+    "test/native-context.test.ts",
+    "test/native-crash.test.ts",
+    "test/native-logs.test.ts",
+    "test/native-project-recovery.test.ts",
+    "test/native-project.test.ts",
+    "test/native-upstream-capabilities.test.ts",
+    "test/native-upstream.test.ts",
+    "test/workflows.test.ts"
+  ],
+  "note": "Source classification is a review proposal. It does not convert natural language into code, approve protocol semantics, modify the active source lock or authorize release.",
+  "sha256": "2f9e492182451819137b9b2ab3b645580c0bd357109eb4abd85d995944154690"
+}
