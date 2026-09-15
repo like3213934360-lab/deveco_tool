@@ -18,7 +18,7 @@ if (process.argv[2] === "--peer") {
   let result: Record<string, unknown> = {};
   try {
     const task = z.object({ run_id: z.string() }).parse(await runtime.call("hot_reload", JSON.parse(process.argv[4]!) as unknown));
-    result = z.record(z.string(), z.unknown()).parse(await runtime.call("workflow_run", { action: "status", run_id: task.run_id, wait_ms: 20000 }));
+    result = z.record(z.string(), z.unknown()).parse(await runtime.call("workflow_run", { action: "status", detail: "full", run_id: task.run_id, wait_ms: 20000 }));
     result.sdk_processes = runtime.processes.size;
   } finally {
     const closed = await runtime.close();

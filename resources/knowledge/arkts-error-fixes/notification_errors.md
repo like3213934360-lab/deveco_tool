@@ -106,5 +106,5 @@ if (err.code === 1600001) {
 5. **Test permissions**: Verify notification permissions are granted
 
 ### Related Files
-- [Code Example](../assets/NotificationError.ets)
+- [Code Example](deveco://knowledge/arkts-error-fixes/examples/NotificationError)
 - [Notification Kit Documentation](https://developer.huawei.com/consumer/cn/doc/harmonyos-references-V5/ts-api-notificationmanager-V5)

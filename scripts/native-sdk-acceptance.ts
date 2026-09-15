@@ -83,7 +83,7 @@ async function workflow(
       .object({ status: z.string(), result: z.unknown(), error: z.unknown() })
       .parse(
         await runtime.call("workflow_run", {
-          action: "status",
+          action: "status", detail: "full",
           run_id: started.run_id,
           wait_ms: 1000,
         }),

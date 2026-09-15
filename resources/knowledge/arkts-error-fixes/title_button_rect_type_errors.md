@@ -116,9 +116,9 @@ struct TitleButtonRectExample {
 
 ## 详细代码示例
 
-- [TitleButtonRectTypeError.ets](../assets/TitleButtonRectTypeError.ets) - TitleButtonRect 类型错误的完整示例，包含错误和正确的解决方案
-- [StandaloneFunctionContext.ets](../assets/StandaloneFunctionContext.ets#L34-L47) - 完整的 TitleButtonRect 类型使用示例，包含错误处理
-- [StandaloneFunctionError.ets](../assets/StandaloneFunctionError.ets#L34-L47) - 独立函数中的 TitleButtonRect 类型使用示例
+- [TitleButtonRectTypeError.ets](deveco://knowledge/arkts-error-fixes/examples/TitleButtonRectTypeError) - TitleButtonRect 类型错误的完整示例，包含错误和正确的解决方案
+- [StandaloneFunctionContext.ets](deveco://knowledge/arkts-error-fixes/examples/StandaloneFunctionContext) - 完整的 TitleButtonRect 类型使用示例，包含错误处理
+- [StandaloneFunctionError.ets](deveco://knowledge/arkts-error-fixes/examples/StandaloneFunctionError) - 独立函数中的 TitleButtonRect 类型使用示例
 
 ## 相关类型
 

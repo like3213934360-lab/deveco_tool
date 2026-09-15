@@ -282,13 +282,16 @@ export class LogStreamCollector {
     readonly pollMs = 1000,
   ) {}
   redact(values: string[]) {
-    this.secrets = [
+    const secrets = [
       ...new Set(
-        values
+        [...this.secrets, ...values]
           .flatMap((value) => [value, ...value.split(/\r?\n/)])
           .filter(Boolean),
       ),
     ].sort((a, b) => b.length - a.length);
+    invariant(secrets.length <= 4096 && secrets.reduce((bytes, value) => bytes + Buffer.byteLength(value), 0) <= 8 * 1024 * 1024,
+      "UI_LOG_REDACTION_BUDGET", "Continuous log redaction exceeded its bounded input budget");
+    this.secrets = secrets;
   }
   async checkpoint() {
     // A bounded observation fence, not a claim that the OS emitted every log.
@@ -416,6 +419,7 @@ export class LogStreamCollector {
       let identity: LogIdentity | undefined,
         stop: AbortController | undefined,
         stream: Promise<void> | undefined;
+      let discardedReported = false;
       try {
         identity = await this.transport.identify(signal);
         if (!Object.keys(identity.processes).length) {
@@ -503,6 +507,7 @@ export class LogStreamCollector {
             discarded_bytes: this.bytes + Buffer.byteLength(this.fragment),
             ...(identity ? { from_ns: identity.epoch_ns } : {}),
           });
+          discardedReported = true;
           if (
             [
               "UI_LOG_MEMORY_BUDGET",
@@ -522,7 +527,7 @@ export class LogStreamCollector {
         await stream;
         if (this.bytes || this.fragment)
           this.hooks.gap("unverified_tail_discarded", {
-            discarded_bytes: this.bytes + Buffer.byteLength(this.fragment),
+            discarded_bytes: discardedReported ? 0 : this.bytes + Buffer.byteLength(this.fragment),
           });
         this.clear();
         this.controls = undefined;

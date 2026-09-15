@@ -2,11 +2,11 @@
   "format": 2,
   "release": "0.4.0",
   "protocol": "native-7",
-  "decided_at": "2026-09-11T09:15:31.901954+00:00",
+  "decided_at": "2026-09-12T06:08:18.467605+00:00",
   "authorized_by": "repository_owner",
   "breaking_api": {
-    "change": "compatible",
-    "reason": "Additive public options and flow version 2 retain flow version 1 and native-7; known schema revision 2 supports controlled compatible upgrade and snapshot rollback."
+    "change": "breaking",
+    "reason": "Explicit project scope replaces shared defaults; general guidance mutations are retired; optional administration groups require connection opt-in. Native-7 durable state remains readable with documented recovery, export and archive migration."
   },
   "device_retest": {
     "status": "isolated_retest",

@@ -640,6 +640,36 @@ test("LSP symbol validation bounds nesting and output before recursive parsing",
   );
 });
 
+test("LSP discovery separates declared support, validated observations and independent language sessions", async () => {
+  await fixture({ NO_SYMBOLS: "1" }, async (service, project) => {
+    assert.deepEqual(service.capabilityReport().sessions, []);
+    assert.equal(service.capabilityReport().acceptance_verified, false);
+    await service.request(project, { action: "documentSymbol", file: "Model.ets" });
+    await service.request(project, { action: "diagnostics", file: "Model.ets" });
+    await assert.rejects(service.request(project, { action: "documentSymbol", file: "Model.ets", language: "cpp" }), code("LSP_CAPABILITY_UNAVAILABLE"));
+    const sessions = service.capabilityReport().sessions;
+    const arkts = sessions.find(session => session.language === "arkts")!, cpp = sessions.find(session => session.language === "cpp")!;
+    assert.equal(arkts.project_fingerprint, project.fingerprint);
+    const symbols = arkts.operations.find(operation => operation.operation === "documentSymbol")!;
+    assert.equal(symbols.declaration, "absent");
+    assert.equal(symbols.adapter, "arkts_symbol_probe");
+    assert.equal(symbols.observation.outcome, "executed");
+    assert.equal(arkts.operations.find(operation => operation.operation === "outgoingCalls")!.observation.outcome, "not_observed");
+    const diagnostics = arkts.operations.find(operation => operation.operation === "diagnostics")!.observation;
+    assert.ok("request_dispatched" in diagnostics);
+    assert.equal(diagnostics.request_dispatched, false);
+    assert.equal(cpp.operations.find(operation => operation.operation === "documentSymbol")!.observation.outcome, "unsupported");
+    await service.close();
+    assert.deepEqual(service.capabilityReport().sessions, []);
+  });
+  await fixture({ EMPTY_SYMBOLS: "1" }, async (service, project) => {
+    assert.deepEqual(await service.request(project, { action: "outgoingCalls", file: "Model.ets" }), []);
+    const operations = service.capabilityReport().sessions[0]!.operations;
+    assert.equal(operations.find(operation => operation.operation === "prepareCallHierarchy")!.observation.outcome, "executed");
+    assert.equal(operations.find(operation => operation.operation === "outgoingCalls")!.observation.outcome, "not_observed");
+  });
+});
+
 test("LSP coarse advertised capability does not disguise a missing call method as an internal failure", async () => {
   await fixture({ NO_OUTGOING_METHOD: "1" }, async (service, project) => {
     await assert.rejects(

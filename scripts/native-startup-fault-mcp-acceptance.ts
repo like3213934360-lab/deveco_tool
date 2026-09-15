@@ -11,8 +11,8 @@ import { errorResult } from "../src/core/errors.js";
 import { evidenceIdentity } from "./lib/evidence.js";
 import { finishAcceptance } from "./lib/acceptance-report.js";
 
-const [root, preparedFile] = z
-  .tuple([z.string().min(1), z.string().min(1)])
+const [root, preparedFile, osVersion] = z
+  .tuple([z.string().min(1), z.string().min(1), z.string().min(1).optional()])
   .parse(process.argv.slice(2));
 assert.ok(path.isAbsolute(root) && path.isAbsolute(preparedFile));
 assert.equal(
@@ -55,7 +55,7 @@ const mcp = new AcceptanceMcp(root, "native-startup-fault-acceptance");
 const ownerRoot = path.join(root, "emulator-owner");
 fs.mkdirSync(ownerRoot, { mode: 0o700 });
 atomicWrite(path.join(ownerRoot, "config.json"), "{}\n");
-const ownerMcp = new AcceptanceMcp(ownerRoot, "native-startup-emulator-owner");
+const ownerMcp = new AcceptanceMcp(ownerRoot, "native-startup-emulator-owner", { tool_groups: ["core", "emulator-admin"] });
 const owned = new OwnedEmulatorAcceptance(mcp, record, ownerMcp);
 let completed = false,
   closed = false;
@@ -181,7 +181,7 @@ struct Index {
     originals,
     sources: [entry, page].map((file) => ({ file, sha256: fileDigest(file) })),
   });
-  const target = await owned.start();
+  const target = await owned.start(osVersion);
   record("doctor", await mcp.call("deveco_doctor", {}));
   await owned.workflow("sync", "project_sync", { project_path: project });
   const built = await owned.workflow("build", "project_build", {
@@ -383,7 +383,7 @@ struct Index {
       })
       .parse(
         await mcp.call("workflow_run", {
-          action: "status",
+          action: "status", detail: "full",
           run_id: state.run_id,
         }),
       );

@@ -1,0 +1,1750 @@
+{
+  "format": 1,
+  "source": {
+    "id": "deveco-code",
+    "url": "https://gitcode.com/openharmony-sig/deveco-code",
+    "commit": "aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a",
+    "tree": "f88b2d20b4a1adf36d8370eb907a162b215d6f4b"
+  },
+  "historical_note": "Audit recorded 100 product Skill files: 85 mapped (78 verbatim, 6 rewritten entrypoints, 1 reference adaptation), 15 not originally bundled. Current stable-link and recipe changes alter the verbatim count; no historical acceptance is reused.",
+  "product_skills": [
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/assets/AnyTypeError.ets",
+      "source_sha256": "e7e11f7245fe4fe7c7be05f8ffdc2f71ff5600536f10a3e4f883709546005e62",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-error-fixes/examples/AnyTypeError.ets",
+      "current_adapted_sha256": "e7e11f7245fe4fe7c7be05f8ffdc2f71ff5600536f10a3e4f883709546005e62",
+      "source_uri": "deveco://source/10a8b8244c236454b1751831",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-error-fixes/examples/AnyTypeError.ets"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/assets/AppStorageError.ets",
+      "source_sha256": "2984caa5096c24e0aa84f298f110062c5a3460063bf29a84f9bf950acf1f1c30",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-error-fixes/examples/AppStorageError.ets",
+      "current_adapted_sha256": "2984caa5096c24e0aa84f298f110062c5a3460063bf29a84f9bf950acf1f1c30",
+      "source_uri": "deveco://source/699f7aae21b7f74f6c399f49",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-error-fixes/examples/AppStorageError.ets"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/assets/ArrowFunctionConversionError.ets",
+      "source_sha256": "02e919c96aade14d1fd15cc978a48fc7680fde9ff1a3da0c46e877aecf64b2a2",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-error-fixes/examples/ArrowFunctionConversionError.ets",
+      "current_adapted_sha256": "02e919c96aade14d1fd15cc978a48fc7680fde9ff1a3da0c46e877aecf64b2a2",
+      "source_uri": "deveco://source/5b703e2aa4f39da678ef5772",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-error-fixes/examples/ArrowFunctionConversionError.ets"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/assets/AvoidAreaTypeError.ets",
+      "source_sha256": "1541083328bede80fce9caa9832277de5c074384bcaaceb47b837c33adb09f13",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-error-fixes/examples/AvoidAreaTypeError.ets",
+      "current_adapted_sha256": "1541083328bede80fce9caa9832277de5c074384bcaaceb47b837c33adb09f13",
+      "source_uri": "deveco://source/11eb86c16aaf4d0c6bc02af3",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-error-fixes/examples/AvoidAreaTypeError.ets"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/assets/BreakpointTypeError.ets",
+      "source_sha256": "c257f8b623706f8072059901d6f9a03572fe3498f0bee56a6314bd2bdc8b4ec6",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-error-fixes/examples/BreakpointTypeError.ets",
+      "current_adapted_sha256": "c257f8b623706f8072059901d6f9a03572fe3498f0bee56a6314bd2bdc8b4ec6",
+      "source_uri": "deveco://source/8ea4ff5b3eca1ad7dc03c76f",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-error-fixes/examples/BreakpointTypeError.ets"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/assets/CatchClauseTypeError.ets",
+      "source_sha256": "e084e27f2d07ad402e8b391ae92afed3943452965c9e7f874ef5c3fb596c8ef6",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-error-fixes/examples/CatchClauseTypeError.ets",
+      "current_adapted_sha256": "e084e27f2d07ad402e8b391ae92afed3943452965c9e7f874ef5c3fb596c8ef6",
+      "source_uri": "deveco://source/ce6f7f4876b22ed8c387299d",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-error-fixes/examples/CatchClauseTypeError.ets"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/assets/ColorConsistencyError.ets",
+      "source_sha256": "4965a04a46b5f27bec4f11fee294226f4a65dd721f9c63f17c268f3f67c2071e",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-error-fixes/examples/ColorConsistencyError.ets",
+      "current_adapted_sha256": "4965a04a46b5f27bec4f11fee294226f4a65dd721f9c63f17c268f3f67c2071e",
+      "source_uri": "deveco://source/8981bbed94cc474669435f4e",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-error-fixes/examples/ColorConsistencyError.ets"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/assets/ColorPropertyError.ets",
+      "source_sha256": "425930364d23e17942e0fb4c76f1208f26519f6e77c4b2c49ad92f28d541f1fe",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-error-fixes/examples/ColorPropertyError.ets",
+      "current_adapted_sha256": "425930364d23e17942e0fb4c76f1208f26519f6e77c4b2c49ad92f28d541f1fe",
+      "source_uri": "deveco://source/2458efcabd9ed40aba1deeb1",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-error-fixes/examples/ColorPropertyError.ets"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/assets/ContextTypeError.ets",
+      "source_sha256": "00a5f87edf367b54840464a0d7dce3a68f2395e1316d94171a687c4f1443407b",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-error-fixes/examples/ContextTypeError.ets",
+      "current_adapted_sha256": "00a5f87edf367b54840464a0d7dce3a68f2395e1316d94171a687c4f1443407b",
+      "source_uri": "deveco://source/869aee232ea951c87ccf3979",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-error-fixes/examples/ContextTypeError.ets"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/assets/DecoratorStateError.ets",
+      "source_sha256": "7b83d83621bc8c1453c1a8a491958c157caed9c98aa02ca84b0ed2571549e4a8",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-error-fixes/examples/DecoratorStateError.ets",
+      "current_adapted_sha256": "7b83d83621bc8c1453c1a8a491958c157caed9c98aa02ca84b0ed2571549e4a8",
+      "source_uri": "deveco://source/74412dfd99b02bf61cae1237",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-error-fixes/examples/DecoratorStateError.ets"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/assets/DisplayListenerTypeError.ets",
+      "source_sha256": "86f9fd7063fbc430b09485edb459ce0f1b2c3c8faaac5f446983928341bcbcbd",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-error-fixes/examples/DisplayListenerTypeError.ets",
+      "current_adapted_sha256": "86f9fd7063fbc430b09485edb459ce0f1b2c3c8faaac5f446983928341bcbcbd",
+      "source_uri": "deveco://source/443dff9300ff595f087060f5",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-error-fixes/examples/DisplayListenerTypeError.ets"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/assets/DuplicateEntryError.ets",
+      "source_sha256": "2c1b691928904fcb0288b927393163ba54f8cfc15020db8caebb2a52b178ce3b",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-error-fixes/examples/DuplicateEntryError.ets",
+      "current_adapted_sha256": "2c1b691928904fcb0288b927393163ba54f8cfc15020db8caebb2a52b178ce3b",
+      "source_uri": "deveco://source/400fd544785778dcdc7ee4a4",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-error-fixes/examples/DuplicateEntryError.ets"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/assets/ESObjectTypeError.ets",
+      "source_sha256": "1514fbde7418a405495de1ff74cddf19170c228ef4c741e4390cecaa4ed086d7",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-error-fixes/examples/ESObjectTypeError.ets",
+      "current_adapted_sha256": "1514fbde7418a405495de1ff74cddf19170c228ef4c741e4390cecaa4ed086d7",
+      "source_uri": "deveco://source/0b5de4198e4214c7a6773a2a",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-error-fixes/examples/ESObjectTypeError.ets"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/assets/FontColorPropertyError.ets",
+      "source_sha256": "69e616c2391242282254f56c2e2ed3e682049b541e97ae2aa29ae30aaf69c595",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-error-fixes/examples/FontColorPropertyError.ets",
+      "current_adapted_sha256": "69e616c2391242282254f56c2e2ed3e682049b541e97ae2aa29ae30aaf69c595",
+      "source_uri": "deveco://source/d602c15db0fb08697d995c61",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-error-fixes/examples/FontColorPropertyError.ets"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/assets/FunctionReturnTypeError.ets",
+      "source_sha256": "3f0cefbb53735038f60fa912238fd440eef3548adc3a5fc314fed7bd8a967d2e",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-error-fixes/examples/FunctionReturnTypeError.ets",
+      "current_adapted_sha256": "3f0cefbb53735038f60fa912238fd440eef3548adc3a5fc314fed7bd8a967d2e",
+      "source_uri": "deveco://source/cb6b4daab335522f5d55be01",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-error-fixes/examples/FunctionReturnTypeError.ets"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/assets/IDataSourceError.ets",
+      "source_sha256": "102e63da47a2a352a6fe0cfee467e1fe623e1783491dbd43c912b827b932c7e2",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-error-fixes/examples/IDataSourceError.ets",
+      "current_adapted_sha256": "102e63da47a2a352a6fe0cfee467e1fe623e1783491dbd43c912b827b932c7e2",
+      "source_uri": "deveco://source/56fd771df15d28aabbe71913",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-error-fixes/examples/IDataSourceError.ets"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/assets/ImplementationNotAllowedError.ets",
+      "source_sha256": "d003a335807c0cefbc8614953f2a34ddc03994d2202cf809de4d8f41b8d3186e",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-error-fixes/examples/ImplementationNotAllowedError.ets",
+      "current_adapted_sha256": "d003a335807c0cefbc8614953f2a34ddc03994d2202cf809de4d8f41b8d3186e",
+      "source_uri": "deveco://source/3f57b927d394795a53422654",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-error-fixes/examples/ImplementationNotAllowedError.ets"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/assets/InterfaceMethodSignatureError.ets",
+      "source_sha256": "040063f3942b3086f83478c267086dca450e7e085facf636b1ed27737bd1e115",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-error-fixes/examples/InterfaceMethodSignatureError.ets",
+      "current_adapted_sha256": "040063f3942b3086f83478c267086dca450e7e085facf636b1ed27737bd1e115",
+      "source_uri": "deveco://source/7680f80ab9d2837302a58310",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-error-fixes/examples/InterfaceMethodSignatureError.ets"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/assets/NotificationError.ets",
+      "source_sha256": "a061f54be935220cca48de64a1d1fdbdd8cbd04d10d71ed1381d37c331c4b3c5",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-error-fixes/examples/NotificationError.ets",
+      "current_adapted_sha256": "a061f54be935220cca48de64a1d1fdbdd8cbd04d10d71ed1381d37c331c4b3c5",
+      "source_uri": "deveco://source/e110eb323521bc2c87b6c7b0",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-error-fixes/examples/NotificationError.ets"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/assets/ObjectLiteralInterfaceError.ets",
+      "source_sha256": "f0c803daad0ed19ab4007f26b3b416da91a2b1a441a552e7d63bf7f9c5d55295",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-error-fixes/examples/ObjectLiteralInterfaceError.ets",
+      "current_adapted_sha256": "f0c803daad0ed19ab4007f26b3b416da91a2b1a441a552e7d63bf7f9c5d55295",
+      "source_uri": "deveco://source/85f9ee12d77f9274a130eeea",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-error-fixes/examples/ObjectLiteralInterfaceError.ets"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/assets/ObjectLiteralTypeError.ets",
+      "source_sha256": "806772cf746ed749d1054b43e693a45dcea0c62628ff53f1fac1f069bd03470b",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-error-fixes/examples/ObjectLiteralTypeError.ets",
+      "current_adapted_sha256": "806772cf746ed749d1054b43e693a45dcea0c62628ff53f1fac1f069bd03470b",
+      "source_uri": "deveco://source/532ef26e58572a563c77e609",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-error-fixes/examples/ObjectLiteralTypeError.ets"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/assets/ObjectSpreadError.ets",
+      "source_sha256": "024e69dd57fce32af3b5c04dbe9ca8e150a91a4dd8472c569ad63daf1aad3477",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-error-fixes/examples/ObjectSpreadError.ets",
+      "current_adapted_sha256": "024e69dd57fce32af3b5c04dbe9ca8e150a91a4dd8472c569ad63daf1aad3477",
+      "source_uri": "deveco://source/ed2be2d24346c69ae2a838af",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-error-fixes/examples/ObjectSpreadError.ets"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/assets/PossiblyNullError.ets",
+      "source_sha256": "2badc43120e2b78d0836083f1ed98fe63f86e5e72d816930100c2f86ea34af09",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-error-fixes/examples/PossiblyNullError.ets",
+      "current_adapted_sha256": "2badc43120e2b78d0836083f1ed98fe63f86e5e72d816930100c2f86ea34af09",
+      "source_uri": "deveco://source/e7d49838a3c1a8571ebf94a4",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-error-fixes/examples/PossiblyNullError.ets"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/assets/ResourceConversionError.ets",
+      "source_sha256": "163975bc288cf4fd00e4f460393b801331583e4daa6d608665e65101bc509074",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-error-fixes/examples/ResourceConversionError.ets",
+      "current_adapted_sha256": "163975bc288cf4fd00e4f460393b801331583e4daa6d608665e65101bc509074",
+      "source_uri": "deveco://source/11edae570c1cd6446dca454a",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-error-fixes/examples/ResourceConversionError.ets"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/assets/StandaloneFunctionContext.ets",
+      "source_sha256": "9cf4555e76ef14f4c1b44d2d44d129d423b676a131740ba55a0484841188bfa9",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-error-fixes/examples/StandaloneFunctionContext.ets",
+      "current_adapted_sha256": "9cf4555e76ef14f4c1b44d2d44d129d423b676a131740ba55a0484841188bfa9",
+      "source_uri": "deveco://source/932400198673745f4324cbdc",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-error-fixes/examples/StandaloneFunctionContext.ets"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/assets/StandaloneFunctionError.ets",
+      "source_sha256": "2c76b1dfdc3b50ac6af5d2380316cbe4d91d29f63e7909ba027caa7b6e2d8685",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-error-fixes/examples/StandaloneFunctionError.ets",
+      "current_adapted_sha256": "2c76b1dfdc3b50ac6af5d2380316cbe4d91d29f63e7909ba027caa7b6e2d8685",
+      "source_uri": "deveco://source/f43727e75a67da83be6a8207",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-error-fixes/examples/StandaloneFunctionError.ets"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/assets/StorageLinkDefaultError.ets",
+      "source_sha256": "286b44baa5f46c0029d73fad6fc58556faf6e8eeeb723dcc8fbf50db9959a02c",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-error-fixes/examples/StorageLinkDefaultError.ets",
+      "current_adapted_sha256": "286b44baa5f46c0029d73fad6fc58556faf6e8eeeb723dcc8fbf50db9959a02c",
+      "source_uri": "deveco://source/67e975ad531868d139f63997",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-error-fixes/examples/StorageLinkDefaultError.ets"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/assets/TitleButtonRectTypeError.ets",
+      "source_sha256": "80424784263ebd7ba037f413045c8dd25c62fd28f78c85e1cf37cb96f5aec018",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-error-fixes/examples/TitleButtonRectTypeError.ets",
+      "current_adapted_sha256": "80424784263ebd7ba037f413045c8dd25c62fd28f78c85e1cf37cb96f5aec018",
+      "source_uri": "deveco://source/3d1aceceeea926ffecf3c070",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-error-fixes/examples/TitleButtonRectTypeError.ets"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/assets/UnusedVariableWarning.ets",
+      "source_sha256": "77e8e70b30d601815bddad2d0e471765111cc7e0c606160ac1bb2756ec30695c",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-error-fixes/examples/UnusedVariableWarning.ets",
+      "current_adapted_sha256": "77e8e70b30d601815bddad2d0e471765111cc7e0c606160ac1bb2756ec30695c",
+      "source_uri": "deveco://source/54b7718bf4af809edbc66f46",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-error-fixes/examples/UnusedVariableWarning.ets"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/assets/UtilityTypeError.ets",
+      "source_sha256": "f7da664702d1337c40839eab3d8e463c45d08d85b665260f22e2c45260f3d6b3",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-error-fixes/examples/UtilityTypeError.ets",
+      "current_adapted_sha256": "f7da664702d1337c40839eab3d8e463c45d08d85b665260f22e2c45260f3d6b3",
+      "source_uri": "deveco://source/2e445064596e0bd8fec6a4c8",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-error-fixes/examples/UtilityTypeError.ets"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/assets/WindowRectSizeError.ets",
+      "source_sha256": "4bc90c91e6396a4304c4a4e237ce3f466e22e3ca01e748c20c3e0a048fa736f1",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-error-fixes/examples/WindowRectSizeError.ets",
+      "current_adapted_sha256": "4bc90c91e6396a4304c4a4e237ce3f466e22e3ca01e748c20c3e0a048fa736f1",
+      "source_uri": "deveco://source/98f9d4d85e43118879ef3c30",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-error-fixes/examples/WindowRectSizeError.ets"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/assets/WindowTypeError.ets",
+      "source_sha256": "59cd0862b8fc76db762d3363e6b608a8d79afcca252afb68f3d7892aefcc82a7",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-error-fixes/examples/WindowTypeError.ets",
+      "current_adapted_sha256": "59cd0862b8fc76db762d3363e6b608a8d79afcca252afb68f3d7892aefcc82a7",
+      "source_uri": "deveco://source/18fb802ce2286c342ad2f419",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-error-fixes/examples/WindowTypeError.ets"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/README.md",
+      "source_sha256": "5e674d88ab143e1868b37f82dabe31a5363979cc28c4403e8921fbe0dced99d9",
+      "historical_direct_mapping": false,
+      "adapted_file": null,
+      "current_adapted_sha256": null,
+      "source_uri": "deveco://source/b3fb04d48a23510cdcc6f17d",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "src/services/domain-recipes.ts"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/any_type_errors.md",
+      "source_sha256": "5bfbfdc685f076c54e7f186e64cce852884f459490698c1e92beefb476395bef",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-error-fixes/any_type_errors.md",
+      "current_adapted_sha256": "eac802d4c27c1fb4dc174491e1f97560467b0d29b631e21c68229e123c04f7d6",
+      "source_uri": "deveco://source/da5a85468f06d836cdeaa428",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-error-fixes/any_type_errors.md"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/appstorage_errors.md",
+      "source_sha256": "40bce616251feebc3211760dc77bfdfee6349a57b10125573e43201a5d1b38fc",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-error-fixes/appstorage_errors.md",
+      "current_adapted_sha256": "4a3825b68d028d16d1bcf97a75631ab5cbe5820227ddddfa10171c58e727d131",
+      "source_uri": "deveco://source/8e10f506892012af13cbffab",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-error-fixes/appstorage_errors.md"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/arrow_function_conversion_errors.md",
+      "source_sha256": "8e80f29d564fb803e362f0ff8def5c80f9541b4590780f9667cdc17dd5ffed0e",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-error-fixes/arrow_function_conversion_errors.md",
+      "current_adapted_sha256": "fc50eea3f34ae794aad4596ad20fd7d0ec97fdf607940596ea734cdadac86146",
+      "source_uri": "deveco://source/577002daccc0bfffff5a887b",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-error-fixes/arrow_function_conversion_errors.md"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/avoid_area_type_errors.md",
+      "source_sha256": "1cf8184731916fee2c98a1fbe838f116663b8687af1a7c3970393650657c3b54",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-error-fixes/avoid_area_type_errors.md",
+      "current_adapted_sha256": "1b0c071aab7b6aba315858fe09081c301405355db5f157e747bb8850aa91a1bc",
+      "source_uri": "deveco://source/30507600d4d5d2be2b46f1fe",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-error-fixes/avoid_area_type_errors.md"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/breakpoint_type_errors.md",
+      "source_sha256": "b9bbc32dc1776ff6356671a39b0722c0058259b31238f8e15ed7961183ec952b",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-error-fixes/breakpoint_type_errors.md",
+      "current_adapted_sha256": "27fd1358f3a320e22f1ada2731e166abb63575cbb643f9d50cb06ee13c4b5848",
+      "source_uri": "deveco://source/b5b546eebeb9d38344db99b3",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-error-fixes/breakpoint_type_errors.md"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/catch_clause_type_errors.md",
+      "source_sha256": "3600c3effc4b77be8d6945cefd21eca91441245153bb97f20da53d12f273a897",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-error-fixes/catch_clause_type_errors.md",
+      "current_adapted_sha256": "eeee747d0f9d3df1218fe032c536473b961ccee795f5c9e7d6a645bbaefcd89d",
+      "source_uri": "deveco://source/c478e534613bd79b57c84912",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-error-fixes/catch_clause_type_errors.md"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/color_consistency_errors.md",
+      "source_sha256": "4a31348e7215271e58d78e4d7f1fb4a9f83555e49525843177dbbfdb4800afe9",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-error-fixes/color_consistency_errors.md",
+      "current_adapted_sha256": "2e2bc622e0bb30d45b695cbc1d8f6d75af8e58d722338fa353a6c372c44168aa",
+      "source_uri": "deveco://source/c66c481ba97692f2ba895a6a",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-error-fixes/color_consistency_errors.md"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/color_property_errors.md",
+      "source_sha256": "4fd9962d5a9aa0ddcf15df0cbdb1cb24794233039091a8d94d2e571f1d606085",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-error-fixes/color_property_errors.md",
+      "current_adapted_sha256": "6849d0acd3860bfdde578dbc0aa7b38d5df10ad76cf0e56c6eef5da287fb25fd",
+      "source_uri": "deveco://source/db560c5ca913602daff55a1b",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-error-fixes/color_property_errors.md"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/context_type_errors.md",
+      "source_sha256": "77b965502ebc2647eb887b91683accfc5d3796100d1cd9fcb33165b780e00181",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-error-fixes/context_type_errors.md",
+      "current_adapted_sha256": "90be878fd6115a5c535b02a0a4429305648d4a97e714db3f45fcfe39a5c43584",
+      "source_uri": "deveco://source/ceefd85bff11978e9095a686",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-error-fixes/context_type_errors.md"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/decorator_state_errors.md",
+      "source_sha256": "09748e8a82b35f4e9a942f6244b8bbdd63b2c3f09b266f40a635100193ffba58",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-error-fixes/decorator_state_errors.md",
+      "current_adapted_sha256": "de7c2983c6e9a0b6a2bc02c5e757cb30c6cb84f647a268f2315001866f08b3d2",
+      "source_uri": "deveco://source/659e7a7c6885d55ead53bd5d",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-error-fixes/decorator_state_errors.md"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/display_listener_type_errors.md",
+      "source_sha256": "142579cbc2183e05295c3d3c32bdd7b55eba9788513da1da5c20a76061d5c945",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-error-fixes/display_listener_type_errors.md",
+      "current_adapted_sha256": "08ac74575f037ef58f9e695d3f80573e6c394d7e2a206cc3508cfbb751f567d4",
+      "source_uri": "deveco://source/93d9a658483e068d7129cfe2",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-error-fixes/display_listener_type_errors.md"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/duplicate_entry_errors.md",
+      "source_sha256": "e7c2a1df9baf8230e6a753c360921fce88ce44b9258acee72ab2991c79095f49",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-error-fixes/duplicate_entry_errors.md",
+      "current_adapted_sha256": "7146f4ed0f88706dbd2671f3f44a8b8de4e5ab82782b9a31c887bcadc797bfc5",
+      "source_uri": "deveco://source/b1d11d0c43ca62ed66988bfd",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-error-fixes/duplicate_entry_errors.md"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/esobject_type_errors.md",
+      "source_sha256": "1cfb1e5b2198df38e4ab9c1037449a8d111c8efed91a4763b2f9067f410af63a",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-error-fixes/esobject_type_errors.md",
+      "current_adapted_sha256": "56cb5237e400bac5117af76613498c07798d18cd98a417f24f5de9762fd0f482",
+      "source_uri": "deveco://source/6b73c0d8391d0ff101d29481",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-error-fixes/esobject_type_errors.md"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/fontcolor_property_errors.md",
+      "source_sha256": "dd5b75e30a2a9ed4a4a3eab0a3f2b94b3f411a2d7f100fc70126ced49a8095a9",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-error-fixes/fontcolor_property_errors.md",
+      "current_adapted_sha256": "1449d1c79e2587d1a5a23a140c8cddfa396b9ec989b57af14cf7a1ad4628221c",
+      "source_uri": "deveco://source/6f908d6e0c7f7436eab5b0e6",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-error-fixes/fontcolor_property_errors.md"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/function_return_type_errors.md",
+      "source_sha256": "bbf46d738bd81ba20617d1b3d25c1cbc259f90e74c5f0813a1b047784f767fe1",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-error-fixes/function_return_type_errors.md",
+      "current_adapted_sha256": "6110c0fe5e9fd126310998178d6932ee0f0172534a6932cbfa63cdf585eb8418",
+      "source_uri": "deveco://source/a0d30044d12c48576a864514",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-error-fixes/function_return_type_errors.md"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/idata_source_errors.md",
+      "source_sha256": "7ed0bdf53255ffe39c4fcd7704da7b182821c21331cff09776adf472498ea575",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-error-fixes/idata_source_errors.md",
+      "current_adapted_sha256": "481d8e2cf9e9b4c4ff090bb5f95e41240e9cc763c46d9d143ad0159a33af83dd",
+      "source_uri": "deveco://source/38c8784807ed667b3a92fe66",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-error-fixes/idata_source_errors.md"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/implementation_not_allowed_errors.md",
+      "source_sha256": "432ad45eb8f6a1aeebbc604cdaed951a3326e22468e333c4ac6e0ded6e017fd4",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-error-fixes/implementation_not_allowed_errors.md",
+      "current_adapted_sha256": "ecd3c195b1cc76c1afaeaed8db59b77f13be56ddf33997579027e14d2db77739",
+      "source_uri": "deveco://source/a4d0f621a4f32d979b59ad18",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-error-fixes/implementation_not_allowed_errors.md"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/interface_method_signature_errors.md",
+      "source_sha256": "a52e80a42889e7dbaef5721ecb2ed48136eb828cda56485e25b24985c0ca8627",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-error-fixes/interface_method_signature_errors.md",
+      "current_adapted_sha256": "4f0090d49e71957e8d0b414a7719b4517cc11afa3d4323517bbdfd0f8ff5e1db",
+      "source_uri": "deveco://source/054c75f69ad9003092c07020",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-error-fixes/interface_method_signature_errors.md"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/notification_errors.md",
+      "source_sha256": "b2c4e031241386e5916a7ea154f435c24cf072f15d67efb644dbdb6cf8e688ba",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-error-fixes/notification_errors.md",
+      "current_adapted_sha256": "de2685398f8c827ef89b75ccf20065092a161571bf8170614e9fa32899fb51c5",
+      "source_uri": "deveco://source/007559beb0ec725dd086b287",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-error-fixes/notification_errors.md"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/object_literal_interface_errors.md",
+      "source_sha256": "c7026886d07af6081a59700dd61c3872e9c7fc60e50593329e5b868c4f17ec7f",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-error-fixes/object_literal_interface_errors.md",
+      "current_adapted_sha256": "2924802a620d102af5eec281d05428c26dd08b7d9f6c29f3a623c2993fc244f1",
+      "source_uri": "deveco://source/85ac5d650919b99cc21ea0f2",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-error-fixes/object_literal_interface_errors.md"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/object_literal_type_errors.md",
+      "source_sha256": "828ff2011d7752e580d8d48c15667173a189e31b1e5b7c4e929ebe3f1685b6dc",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-error-fixes/object_literal_type_errors.md",
+      "current_adapted_sha256": "107e1d22a9addf821f7a27d2dcd735bdf519b07c7d568703c5130d10001f401a",
+      "source_uri": "deveco://source/aae22e8c6af6d77ccc92b51b",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-error-fixes/object_literal_type_errors.md"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/object_spread_errors.md",
+      "source_sha256": "4ef8dd75018b00f2832b97a14845ffec5e19f595e2f02ca7d2b4cbbcc2b48933",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-error-fixes/object_spread_errors.md",
+      "current_adapted_sha256": "850a9c5fd98ef2709bbc1b26d38037e5b43fa0f4fde3ffb4a5e42f7662c1c075",
+      "source_uri": "deveco://source/bf8ebe12cbae9507d92bc343",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-error-fixes/object_spread_errors.md"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/possibly_null_errors.md",
+      "source_sha256": "1835a7a3a33f18a4e0ba331ac9f0ddce020cbe170ccf9a1f80c8ddea1940424b",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-error-fixes/possibly_null_errors.md",
+      "current_adapted_sha256": "b4e0b59e54e5ceea7ccaa4ac9c16055778a21825718b687dd8468090d03e6325",
+      "source_uri": "deveco://source/66bf7a4b82f3b3af27654ba5",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-error-fixes/possibly_null_errors.md"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/resource_conversion_errors.md",
+      "source_sha256": "3f6a2b66443dbd512c1ff5328d5b0560afe699f37dc6a1e7108b2b36a210e145",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-error-fixes/resource_conversion_errors.md",
+      "current_adapted_sha256": "a48071dd5020ac60dfec1bf085a207f11661650702c7c430915b634135ddabfb",
+      "source_uri": "deveco://source/2bee76881b746acfacbd9a51",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-error-fixes/resource_conversion_errors.md"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/standalone_function_errors.md",
+      "source_sha256": "0c36db72f8b94154e7d101db45e8187752743b23cfb83f7221da782542764550",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-error-fixes/standalone_function_errors.md",
+      "current_adapted_sha256": "1e710dfe9db4b434fa1d070881627596be4cb9ebd8ef2d71447e100de46a53ce",
+      "source_uri": "deveco://source/cc92ac8d1d2e46587c57281d",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-error-fixes/standalone_function_errors.md"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/storage_link_default_errors.md",
+      "source_sha256": "04240664bb5d2050f5db295a2e6c539b826f204163836a992297e18a451be9c4",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-error-fixes/storage_link_default_errors.md",
+      "current_adapted_sha256": "b8ba755d8e06c7af5e2c0fbdd2a36b6a41a511e6a12cec69672be653acce293a",
+      "source_uri": "deveco://source/6666055cf1b9a79cd0e237a7",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-error-fixes/storage_link_default_errors.md"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/title_button_rect_type_errors.md",
+      "source_sha256": "8eab82e1eb6f5c4aec8f18dee7e594bc6fd012154ba5c5f0bc45ea7e7ed0ed1c",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-error-fixes/title_button_rect_type_errors.md",
+      "current_adapted_sha256": "c6780cd2ab33b1d0a477f751a571b84fccf70a135ff7256fce18330c79c5825d",
+      "source_uri": "deveco://source/2d86ab4b4498f98a8c4659ec",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-error-fixes/title_button_rect_type_errors.md"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/unused_variable_warnings.md",
+      "source_sha256": "2fda8af360153d9ac1a28820e79440094d96dd721d69d277fbf9faa18205af49",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-error-fixes/unused_variable_warnings.md",
+      "current_adapted_sha256": "33c60f27331fdfb259be681b9cb8e15254a4b5860daf724ce150324edd9f9118",
+      "source_uri": "deveco://source/fb874209de3421cb50aefea8",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-error-fixes/unused_variable_warnings.md"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/utility_type_errors.md",
+      "source_sha256": "6ec3d8dc6d91a164af2042be0dedb614c0da44751a9b58b442d854c19650495b",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-error-fixes/utility_type_errors.md",
+      "current_adapted_sha256": "75c4d2572825d2e59659c012ca2e8eeb0c8633d67d44aead1241bb17b4a042c4",
+      "source_uri": "deveco://source/26796be4584aba17a5b45f23",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-error-fixes/utility_type_errors.md"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/window_rect_size_errors.md",
+      "source_sha256": "90354682b15dcade293c942d6f65f4b44de08e4210b22eef35175e9ba45d9303",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-error-fixes/window_rect_size_errors.md",
+      "current_adapted_sha256": "5656f8d6e509fbee49902b7e76f6ee0f445dfbc471127db1bbc19ea2962f49cb",
+      "source_uri": "deveco://source/4ab79b408ae4dad98f21b7c1",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-error-fixes/window_rect_size_errors.md"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/window_type_errors.md",
+      "source_sha256": "33e7068e89a062a10c428626094a80e5cea04d8816a6edd11afee0fcf853aaca",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-error-fixes/window_type_errors.md",
+      "current_adapted_sha256": "cf030096abf40905a7fc77d7c0622efd86601bd1b0cdd9862eb5208d09bf5ce1",
+      "source_uri": "deveco://source/3983241bd65499a7184dd888",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-error-fixes/window_type_errors.md"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/SKILL.md",
+      "source_sha256": "580a0cb8c5d1ef5c53d998569adb9a72277b3e8db761534d1b7c3666d3220718",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/skills/deveco-arkts-errors/SKILL.md",
+      "current_adapted_sha256": "b704e5482ac16c921e8819dfbc13697fbe0643b4fae553f1789816aa358567b6",
+      "source_uri": "deveco://source/967c9e4cbc2074ddc55546e4",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/skills/deveco-arkts-errors/SKILL.md"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-grammar-standards/references/arkts-rules.md",
+      "source_sha256": "fa9cc79aa8691696398292dc9b8c4a43b0208085f32b9c21720b0ccaa493b7b3",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-grammar-standards/arkts-rules.md",
+      "current_adapted_sha256": "fe263976048fed571e1328a549491ae509407632919cdc7d293261d3bad585b1",
+      "source_uri": "deveco://source/3bc2a2274520a405c9838e04",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-grammar-standards/arkts-rules.md"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-grammar-standards/references/arkui-structure-rules.md",
+      "source_sha256": "5f5b6ffdd2cd685711fbdc4453f7a6b581f857adf63f6c12159cc2239d185610",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-grammar-standards/arkui-structure-rules.md",
+      "current_adapted_sha256": "5f5b6ffdd2cd685711fbdc4453f7a6b581f857adf63f6c12159cc2239d185610",
+      "source_uri": "deveco://source/b11b7e14677abef1d19fc9b4",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-grammar-standards/arkui-structure-rules.md"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-grammar-standards/references/kit-api-quick-ref.md",
+      "source_sha256": "f6fa5e62c356c24e5ed49203e4ea461e3bb7667b3ca69015fe746e03e2ea4ead",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-grammar-standards/kit-api-quick-ref.md",
+      "current_adapted_sha256": "f6fa5e62c356c24e5ed49203e4ea461e3bb7667b3ca69015fe746e03e2ea4ead",
+      "source_uri": "deveco://source/66dd455de207db7fc26681bf",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-grammar-standards/kit-api-quick-ref.md"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-grammar-standards/references/recipes-core.md",
+      "source_sha256": "58cf731b2678ed337e51ebd33108f749462f327342f2aca7655a75d3f86eb984",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-grammar-standards/recipes-core.md",
+      "current_adapted_sha256": "58cf731b2678ed337e51ebd33108f749462f327342f2aca7655a75d3f86eb984",
+      "source_uri": "deveco://source/41a2e9c2ed19f6714541889b",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-grammar-standards/recipes-core.md"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-grammar-standards/references/recipes-forms.md",
+      "source_sha256": "da3983289f00b40badbe1184d04f21a5ff52de6749377e51624a03b1b9d37331",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-grammar-standards/recipes-forms.md",
+      "current_adapted_sha256": "da3983289f00b40badbe1184d04f21a5ff52de6749377e51624a03b1b9d37331",
+      "source_uri": "deveco://source/e11cdbf7db2434cfac80db7e",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-grammar-standards/recipes-forms.md"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-grammar-standards/references/ts-to-arkts-rewrites.md",
+      "source_sha256": "dbc381287fb63cfde8f6f167e8f5d53b3787f0ddff454c09a36743bd3513f694",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-grammar-standards/ts-to-arkts-rewrites.md",
+      "current_adapted_sha256": "c2409f8723955050dbfd912f9f1f4e5953bea3753ca5776387c36b353b080cd3",
+      "source_uri": "deveco://source/e09680b8d2e81f85b8ea4e00",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-grammar-standards/ts-to-arkts-rewrites.md"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-grammar-standards/references/ui-quality-checklist.md",
+      "source_sha256": "8915c64df6b846e92adb9bf1f531cbfdcdf8be00de76691a11b5372075bfc118",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-grammar-standards/ui-quality-checklist.md",
+      "current_adapted_sha256": "8915c64df6b846e92adb9bf1f531cbfdcdf8be00de76691a11b5372075bfc118",
+      "source_uri": "deveco://source/a29cfd115389502687492b3f",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-grammar-standards/ui-quality-checklist.md"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-grammar-standards/SKILL.md",
+      "source_sha256": "c02bc036141b7ae1bcb235ec69c40d5ad5ab73f24a88da39d83d1ba18ea2372d",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/skills/deveco-arkts-standards/SKILL.md",
+      "current_adapted_sha256": "f06d8e7ec5a44b7cb1ba7f316fe82ed20080c95ffa04b489542954a2c0f3c133",
+      "source_uri": "deveco://source/428c3843cb4f51842baebf34",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/skills/deveco-arkts-standards/SKILL.md"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-runtime-fix/evals/evals.json",
+      "source_sha256": "dd9cb7444f08504595c42eec8047b7b86cd135fb82201f24568df724cc1abe13",
+      "historical_direct_mapping": false,
+      "adapted_file": null,
+      "current_adapted_sha256": null,
+      "source_uri": "deveco://source/ef173fce5126e259793425e5",
+      "classification": "intentional-boundary",
+      "implementation": "not_applicable",
+      "evidence": "source_contract_only",
+      "behavior": "Upstream evaluation fixture is retained for review; it is not a shipped callable feature.",
+      "targets": []
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-runtime-fix/reference/businesserror_patterns.md",
+      "source_sha256": "0b523ca5d4cc585bccddb72bb23fcdb7e162b0f6efe82308b480cea84e6683ae",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-runtime-fix/businesserror_patterns.md",
+      "current_adapted_sha256": "0b523ca5d4cc585bccddb72bb23fcdb7e162b0f6efe82308b480cea84e6683ae",
+      "source_uri": "deveco://source/7dd6104d80f86d596f30f50a",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-runtime-fix/businesserror_patterns.md"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-runtime-fix/reference/error_patterns.md",
+      "source_sha256": "8a6ff8e995d5ad53a21b138ea60431cb7e21575e8d9f3e9e04261e4a8ff55027",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-runtime-fix/error_patterns.md",
+      "current_adapted_sha256": "da1e0d34729ef727fe4723f3154c61aeb00a91d02134162bdd721802790a8a2f",
+      "source_uri": "deveco://source/2582152913a743314818d445",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-runtime-fix/error_patterns.md"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-runtime-fix/reference/fault-mode-library.md",
+      "source_sha256": "453ce1c924db7547a1919eca3a29068fa921cd4510bc77fa11270ba9bef4738b",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-runtime-fix/fault-mode-library.md",
+      "current_adapted_sha256": "453ce1c924db7547a1919eca3a29068fa921cd4510bc77fa11270ba9bef4738b",
+      "source_uri": "deveco://source/71d94180fda5c80c5c6a190b",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-runtime-fix/fault-mode-library.md"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-runtime-fix/reference/outofmemoryerror_patterns.md",
+      "source_sha256": "8c2ab8a318e33f8c202bd6f91e342b08f4d2dcf4b51ca542923b797fa71caa65",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-runtime-fix/outofmemoryerror_patterns.md",
+      "current_adapted_sha256": "d41613894e9d8119af98c9f773a449ef971f9d1d73862dd2071a5c4d837963b7",
+      "source_uri": "deveco://source/93d997550b3d89a7a70b1f99",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-runtime-fix/outofmemoryerror_patterns.md"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-runtime-fix/reference/rangeerror_patterns.md",
+      "source_sha256": "af8ba134ca52ab105f46f2f97adf81c92e14fee210ea1dfb15f7b27d48d04cb4",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-runtime-fix/rangeerror_patterns.md",
+      "current_adapted_sha256": "af8ba134ca52ab105f46f2f97adf81c92e14fee210ea1dfb15f7b27d48d04cb4",
+      "source_uri": "deveco://source/dd227044c2f074e4b1483e28",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-runtime-fix/rangeerror_patterns.md"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-runtime-fix/reference/referenceerror_patterns.md",
+      "source_sha256": "44af4b86889d359968ee66a8b81b35aa9ea3bfbcaefe40cb99b4811866ad7600",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-runtime-fix/referenceerror_patterns.md",
+      "current_adapted_sha256": "068a786abfd38eb8446018c916064377945a3a03e957cdc828f2aae78e3a0700",
+      "source_uri": "deveco://source/4ea7eff45414640f4896aadc",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-runtime-fix/referenceerror_patterns.md"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-runtime-fix/reference/syntaxerror_patterns.md",
+      "source_sha256": "7b5a79dd68afe3995de25d56e1f68c43453a0393ddae0ef3aa373148e61ef806",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-runtime-fix/syntaxerror_patterns.md",
+      "current_adapted_sha256": "7b5a79dd68afe3995de25d56e1f68c43453a0393ddae0ef3aa373148e61ef806",
+      "source_uri": "deveco://source/96bd37f032a2fe79f178b448",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-runtime-fix/syntaxerror_patterns.md"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-runtime-fix/reference/typeerror_patterns.md",
+      "source_sha256": "5dc7350e08f78a5b69b7fa65da93b57051e32e721376e54ccd6773362a1a92a5",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-runtime-fix/typeerror_patterns.md",
+      "current_adapted_sha256": "5dc7350e08f78a5b69b7fa65da93b57051e32e721376e54ccd6773362a1a92a5",
+      "source_uri": "deveco://source/319395c651c0a67669b8fb6c",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-runtime-fix/typeerror_patterns.md"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-runtime-fix/reference/urierror_patterns.md",
+      "source_sha256": "a16cbe0684043919d8480f55327ce3a2f5105df02050793bc1d564d266394d8f",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/knowledge/arkts-runtime-fix/urierror_patterns.md",
+      "current_adapted_sha256": "9a7c1df2d006ab67b7c0717b987ebbc5c087f5fd0fb65cff4aaf920a1f3ba298",
+      "source_uri": "deveco://source/55914e395430cf49f601becb",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/knowledge/arkts-runtime-fix/urierror_patterns.md"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-runtime-fix/scripts/collect-hilog.mjs",
+      "source_sha256": "338691c974266725f74b55cac5030494b6812332acef60865a685d10c219d1be",
+      "historical_direct_mapping": false,
+      "adapted_file": null,
+      "current_adapted_sha256": null,
+      "source_uri": "deveco://source/8db06ef8b43cbdf1dcff669c",
+      "classification": "required-native",
+      "implementation": "implemented",
+      "evidence": "pending_final_validation",
+      "behavior": "Bounded scoped Hilog collection, device selection and truncation metadata. Continuous capture has separate gap and quota reporting.",
+      "targets": [
+        "src/services/logs.ts",
+        "src/services/ui-log-stream.ts"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-runtime-fix/scripts/fetch-faultlog.mjs",
+      "source_sha256": "5ba4b68c40efb408835e9070c3ffad0807563d41e424ff08fc2e093bcc0864f5",
+      "historical_direct_mapping": false,
+      "adapted_file": null,
+      "current_adapted_sha256": null,
+      "source_uri": "deveco://source/8796834f65131ef9c7268fea",
+      "classification": "required-native",
+      "implementation": "implemented",
+      "evidence": "pending_final_validation",
+      "behavior": "Fetch an explicit validated faultlog filename after inventory selection; retain original bytes and selection/truncation status.",
+      "targets": [
+        "src/services/logs.ts",
+        "src/services/faultlog-format.ts"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-runtime-fix/scripts/jscrash-report.mjs",
+      "source_sha256": "9d3b07b99008598461a3d206b4a7f1e66c3ab3c54129b40bcbfa3d0965c63a8e",
+      "historical_direct_mapping": false,
+      "adapted_file": null,
+      "current_adapted_sha256": null,
+      "source_uri": "deveco://source/72d99fdf55f79143b702b1e1",
+      "classification": "required-native",
+      "implementation": "implemented",
+      "evidence": "pending_final_validation",
+      "behavior": "Combine scoped logs, attributed crash parsing, knowledge cases and next observations; hypotheses and repairs belong to host reasoning.",
+      "targets": [
+        "src/services/crash.ts",
+        "src/services/knowledge.ts",
+        "src/services/domain-recipes.ts"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-runtime-fix/scripts/parse-jscrash-log.mjs",
+      "source_sha256": "f73c753f0b125e913728433bbc8d5ef0a7983434f257b0b45c7132c7352af413",
+      "historical_direct_mapping": false,
+      "adapted_file": null,
+      "current_adapted_sha256": null,
+      "source_uri": "deveco://source/ba8534f0536a01e91ea46ca8",
+      "classification": "required-native",
+      "implementation": "implemented",
+      "evidence": "pending_final_validation",
+      "behavior": "Parse attributed crash kind/message/stack and rank user frames; preserve uncertain signatures and source-map limits.",
+      "targets": [
+        "src/services/crash.ts",
+        "src/services/crash-frames.ts"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-runtime-fix/scripts/probe-faultlogger.mjs",
+      "source_sha256": "fedb7035ed4930b51d7b50bf0bd0239e2033c9a8f9e2e3181c838fe0ddd48df5",
+      "historical_direct_mapping": false,
+      "adapted_file": null,
+      "current_adapted_sha256": null,
+      "source_uri": "deveco://source/cafaa6fed054780595c8c461",
+      "classification": "required-native",
+      "implementation": "implemented",
+      "evidence": "pending_final_validation",
+      "behavior": "Inventory faultlogs with device/app/time scope and distinguish empty inventory, unsupported listing and incomplete evidence.",
+      "targets": [
+        "src/services/logs.ts"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-runtime-fix/scripts/shared/hdc.mjs",
+      "source_sha256": "d82cb5db0b33effdbab477dc097a3accceb0d231a2c36435e951dde5c2b58989",
+      "historical_direct_mapping": false,
+      "adapted_file": null,
+      "current_adapted_sha256": null,
+      "source_uri": "deveco://source/0f739e395d97fd8bcbe729f0",
+      "classification": "required-native",
+      "implementation": "implemented",
+      "evidence": "pending_final_validation",
+      "behavior": "Resolve the configured SDK HDC tool and explicit target; typed native invocation replaces upstream script shell execution.",
+      "targets": [
+        "src/services/device.ts"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-runtime-fix/scripts/shared/jscrash-faultlogger.mjs",
+      "source_sha256": "ed36845e9c2fb4f5c12d34f34448a2afa0ee5b905f17af06a03ac669fafba27c",
+      "historical_direct_mapping": false,
+      "adapted_file": null,
+      "current_adapted_sha256": null,
+      "source_uri": "deveco://source/1bb2253166bf49e43040a90d",
+      "classification": "required-native",
+      "implementation": "implemented",
+      "evidence": "pending_final_validation",
+      "behavior": "Faultlog inventory, app identity matching and bounded original-file reads are implemented by the native log service.",
+      "targets": [
+        "src/services/logs.ts",
+        "src/services/faultlog-format.ts"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-runtime-fix/scripts/shared/jscrash-parse.mjs",
+      "source_sha256": "efa21ae4801fa2728658ba589ae65e8ff7871a57c51a5e3ca3df0a7cb756a548",
+      "historical_direct_mapping": false,
+      "adapted_file": null,
+      "current_adapted_sha256": null,
+      "source_uri": "deveco://source/11a380622f2e979de4648479",
+      "classification": "required-native",
+      "implementation": "implemented",
+      "evidence": "pending_final_validation",
+      "behavior": "Structured crash extraction and frame attribution with explicit insufficient-evidence outcomes, rather than treating any log mention as a crash.",
+      "targets": [
+        "src/services/crash.ts",
+        "src/services/crash-frames.ts"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-runtime-fix/scripts/shared/utils.mjs",
+      "source_sha256": "e677641de2fc655d3ad585e175cbc90e6e35f853d5b545924e362164ac58b7b2",
+      "historical_direct_mapping": false,
+      "adapted_file": null,
+      "current_adapted_sha256": null,
+      "source_uri": "deveco://source/17bbee15549ff0b7f13efd2b",
+      "classification": "required-native",
+      "implementation": "implemented",
+      "evidence": "pending_final_validation",
+      "behavior": "Bounded structured errors/artifacts replace console formatting and script helpers; generic formatting does not create a separate runtime tool.",
+      "targets": [
+        "src/core/errors.ts",
+        "src/core/files.ts"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-runtime-fix/SKILL_CN.md",
+      "source_sha256": "d5f56f8264b10c39097a4a45e00462dd590257ef73d58fa0b283e02b9d42236d",
+      "historical_direct_mapping": false,
+      "adapted_file": null,
+      "current_adapted_sha256": null,
+      "source_uri": "deveco://source/800634968a4546747594ca09",
+      "classification": "host-delegated",
+      "implementation": "adapted",
+      "evidence": "source_contract_only",
+      "behavior": "Chinese original preserves the same debug method; the locale variant is not an independent lifecycle.",
+      "targets": [
+        "resources/skills/deveco-runtime-debug/SKILL.md"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/arkts-runtime-fix/SKILL.md",
+      "source_sha256": "7c8d90017bf6f700a560725f962ebdc52cf329f576ab1d082c13283604905e6d",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/skills/deveco-runtime-debug/SKILL.md",
+      "current_adapted_sha256": "2ffd65d82edc58cf9a93d01fdd61c0356c69ab09d782ddf689cbc8315fe7e024",
+      "source_uri": "deveco://source/1dc66fbb088db22badd95caa",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/skills/deveco-runtime-debug/SKILL.md"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/customize-deveco/SKILL.md",
+      "source_sha256": "a0cafa6989e3d4ba9b11d177bab576c67e0eefa364266ad328c58d4267fdb25c",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/skills/deveco-customize-host/SKILL.md",
+      "current_adapted_sha256": "16466dbcac8a64b90f58be1cb76034a66086ff1a13274fa889dba9ec84fc0c8f",
+      "source_uri": "deveco://source/0ad3390842be13e7cbfa995a",
+      "classification": "host-delegated",
+      "implementation": "adapted",
+      "evidence": "source_contract_only",
+      "behavior": "Keep MCP connection and HarmonyOS guidance; models/providers/agents/commands/plugins/permissions belong to the selected host.",
+      "targets": [
+        "src/services/domain-recipes.ts",
+        "resources/skills/deveco-customize-host/SKILL.md"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/deveco-cli/SKILL.md",
+      "source_sha256": "5402476093c5238ef466619f3971d21d54edba494ebc424e2e6581cb2b427ac7",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/skills/deveco-native-tools/SKILL.md",
+      "current_adapted_sha256": "21226c183727fbe038620b7acd7f87fd6550b5abc1e50935ae909a853de5056b",
+      "source_uri": "deveco://source/dc2402888b338bbb4593d2a3",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/skills/deveco-native-tools/SKILL.md"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/deveco-create-project/FILES.md",
+      "source_sha256": "330fdb0f4665b3efef61aedd8269eb256946a1a0e64cabc5a2afaa33ccbeabb8",
+      "historical_direct_mapping": false,
+      "adapted_file": null,
+      "current_adapted_sha256": null,
+      "source_uri": "deveco://source/c7ed75d26d1cfd04be378f37",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "src/services/domain-recipes.ts"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/deveco-create-project/scripts/copy-template.mjs",
+      "source_sha256": "1e84f7fa832bf46ac9a8f83169b8f3e0a1951f035fd89a082dced8ddcee759f0",
+      "historical_direct_mapping": false,
+      "adapted_file": null,
+      "current_adapted_sha256": null,
+      "source_uri": "deveco://source/e16bcb7bf092538584e038e6",
+      "classification": "required-native",
+      "implementation": "implemented",
+      "evidence": "pending_final_validation",
+      "behavior": "SDK-matched project template creation and destination conflict handling are fixed native project_create behavior.",
+      "targets": [
+        "src/services/project.ts"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/deveco-create-project/scripts/detect-sdk.mjs",
+      "source_sha256": "e08c6593aec307857487157c2806a7e3ca09cbc182106c6ca76d865da0e73dc4",
+      "historical_direct_mapping": false,
+      "adapted_file": null,
+      "current_adapted_sha256": null,
+      "source_uri": "deveco://source/eeb131efaf6fe6b8121e60da",
+      "classification": "required-native",
+      "implementation": "implemented",
+      "evidence": "pending_final_validation",
+      "behavior": "Discover and select the installed SDK and project model; never infer SDK validity from an arbitrary directory name.",
+      "targets": [
+        "src/core/toolchain.ts",
+        "src/services/project.ts"
+      ]
+    },
+    {
+      "source_path": "packages/opencode/resources/skills/deveco-create-project/SKILL.md",
+      "source_sha256": "01846dd766bee4b69dfbca280e71a113bb799a47e2ecbee2f95512ebd0cbcf26",
+      "historical_direct_mapping": true,
+      "adapted_file": "resources/skills/deveco-project-create/SKILL.md",
+      "current_adapted_sha256": "b2d7d46f7add330ef3ff629fb46d5162187dfc2316171af0677e8ba70758ca49",
+      "source_uri": "deveco://source/31ff305d8d4dfb7ff696048e",
+      "classification": "required-native",
+      "implementation": "adapted",
+      "evidence": "pending_final_validation",
+      "behavior": "Retain domain method/content and source references; host performs editing/reasoning while fixed native workflows provide execution and evidence.",
+      "targets": [
+        "resources/skills/deveco-project-create/SKILL.md"
+      ]
+    }
+  ],
+  "agents": [
+    {
+      "id": "build",
+      "file": "packages/opencode/src/agent/agent.ts",
+      "sha256": "895d60b73e19db8f53cdcadfe429029993ed429de0972ab35fa098834085fb39",
+      "definition": "{\n            name: \"build\",\n            description: \"The default agent. Executes tools based on configured permissions.\",\n            options: {},\n            permission: Permission.merge(\n              defaults,\n              Permission.fromConfig({\n                question: \"allow\",\n                plan_enter: \"ask\",\n                plan_write: \"deny\",\n                verify_ui: \"ask\",\n                save_ui_screenshot: \"ask\",\n                get_ui_verification_log: \"ask\",\n              }),\n              user,\n            ),\n            mode: \"primary\",\n            native: true,\n            prompt: PROMPT_BUILD,\n          }",
+      "classification": "host-delegated",
+      "implementation": "adapted",
+      "evidence": "source_contract_only",
+      "method_recipe": "plan"
+    },
+    {
+      "id": "compaction",
+      "file": "packages/opencode/src/agent/agent.ts",
+      "sha256": "08a647b8bc0e8eb592233303406af03f5ff5ac0d12f0154851be5477bfe3bcf8",
+      "definition": "{\n            name: \"compaction\",\n            mode: \"primary\",\n            native: true,\n            hidden: true,\n            prompt: PROMPT_COMPACTION,\n            permission: Permission.merge(\n              defaults,\n              Permission.fromConfig({\n                \"*\": \"deny\",\n              }),\n              user,\n            ),\n            options: {},\n          }",
+      "classification": "host-delegated",
+      "implementation": "not_applicable",
+      "evidence": "source_contract_only",
+      "method_recipe": null
+    },
+    {
+      "id": "debug",
+      "file": "packages/opencode/src/agent/agent.ts",
+      "sha256": "70f637e2369bca0d520c442b2642668299d79074c7d029b6a775a8f882b37abc",
+      "definition": "{\n            name: \"debug\",\n            description: \"Sticky ArkTS debugging mode triggered by /debug\",\n            options: {},\n            permission: Permission.merge(\n              defaults,\n              Permission.fromConfig({\n                question: \"allow\",\n                todowrite: \"allow\",\n                build_project: \"allow\",\n                start_app: \"allow\",\n                hdc_log: \"allow\",\n                debug_exit: \"allow\",\n              }),\n              user,\n            ),\n            mode: \"primary\",\n            native: true,\n            hidden: true,\n            prompt: PROMPT_DEBUG,\n          }",
+      "classification": "host-delegated",
+      "implementation": "adapted",
+      "evidence": "source_contract_only",
+      "method_recipe": "debug"
+    },
+    {
+      "id": "explore",
+      "file": "packages/opencode/src/agent/agent.ts",
+      "sha256": "b6a5a82ab092632a5026e7ae2f16e60df96081bbc8af1d37a0d91360865705b5",
+      "definition": "{\n            name: \"explore\",\n            permission: Permission.merge(\n              defaults,\n              Permission.fromConfig({\n                \"*\": \"deny\",\n                grep: \"allow\",\n                glob: \"allow\",\n                list: \"allow\",\n                bash: \"allow\",\n                webfetch: \"allow\",\n                websearch: \"allow\",\n                read: \"allow\",\n                external_directory: readonlyExternalDirectory,\n              }),\n              user,\n            ),\n            description: `Fast agent specialized for exploring codebases. Use this when you need to quickly find files by patterns (eg. \"src/components/**/*.tsx\"), search code for keywords (eg. \"API endpoints\"), or answer questions about the codebase (eg. \"how do API endpoints work?\"). When calling this agent, specify the desired thoroughness level: \"quick\" for basic searches, \"medium\" for moderate exploration, or \"very thorough\" for comprehensive analysis across multiple locations and naming conventions.`,\n            prompt: PROMPT_EXPLORE,\n            options: {},\n            mode: \"subagent\",\n            native: true,\n          }",
+      "classification": "host-delegated",
+      "implementation": "not_applicable",
+      "evidence": "source_contract_only",
+      "method_recipe": null
+    },
+    {
+      "id": "general",
+      "file": "packages/opencode/src/agent/agent.ts",
+      "sha256": "417e0c3582fde0079e567c907d58140ed9d0aa41c62198310d90ea4842913ede",
+      "definition": "{\n            name: \"general\",\n            description: `General-purpose agent for researching complex questions and executing multi-step tasks. Use this agent to execute multiple units of work in parallel.`,\n            permission: Permission.merge(\n              defaults,\n              Permission.fromConfig({\n                todowrite: \"deny\",\n              }),\n              user,\n            ),\n            options: {},\n            mode: \"subagent\",\n            native: true,\n          }",
+      "classification": "host-delegated",
+      "implementation": "not_applicable",
+      "evidence": "source_contract_only",
+      "method_recipe": null
+    },
+    {
+      "id": "goal",
+      "file": "packages/opencode/src/agent/agent.ts",
+      "sha256": "e17e7fdab774439d25c093213b55cb6e39d4bff3c7ad508338f4a6ac2a36a6c8",
+      "definition": "{\n            name: \"goal\",\n            description: \"Multi-turn goal-driven agent with verifiable termination\",\n            options: {},\n            permission: Permission.merge(\n              defaults,\n              Permission.fromConfig({\n                question: \"allow\",\n                plan_enter: \"allow\",\n                webfetch: \"allow\",\n                websearch: \"allow\",\n                todowrite: \"allow\",\n                spec_write: \"allow\",\n                task: \"allow\",\n              }),\n              user,\n            ),\n            mode: \"primary\",\n            native: true,\n            prompt: PROMPT_GOAL,\n            color: \"info\",\n          }",
+      "classification": "host-delegated",
+      "implementation": "adapted",
+      "evidence": "source_contract_only",
+      "method_recipe": "plan"
+    },
+    {
+      "id": "plan",
+      "file": "packages/opencode/src/agent/agent.ts",
+      "sha256": "f4fd3d48b16e931778e9562977ab31cf8fa458c1582fad4188c876ad7249c676",
+      "definition": "{\n            name: \"plan\",\n            description: \"Plan mode. Disallows all edit tools.\",\n            options: {},\n            permission: Permission.merge(\n              defaults,\n              Permission.fromConfig({\n                question: \"allow\",\n                plan_exit: \"allow\",\n                plan_write: \"allow\",\n                task: {\n                  general: \"deny\",\n                },\n                bash: \"deny\",\n                build_project: \"deny\",\n                start_app: \"deny\",\n                hdc_log: \"deny\",\n                switch_cwd: \"deny\",\n                external_directory: {\n                  [path.join(Global.Path.data, \"plans\", \"*\")]: \"allow\",\n                },\n                edit: \"deny\",\n              }),\n              user,\n            ),\n            mode: \"primary\",\n            native: true,\n            prompt: PROMPT_PLAN,\n          }",
+      "classification": "host-delegated",
+      "implementation": "adapted",
+      "evidence": "source_contract_only",
+      "method_recipe": "plan"
+    },
+    {
+      "id": "spec-implementation",
+      "file": "packages/opencode/src/agent/agent.ts",
+      "sha256": "6fe7755bd77f12f06efe7bfd0bb9004713f657d6267394d53f97e63bd98afab8",
+      "definition": "{\n            name: \"spec-implementation\",\n            description: \"Execute implementation tasks from an approved spec\",\n            options: {},\n            permission: Permission.merge(\n              defaults,\n              Permission.fromConfig({\n                question: \"allow\",\n                build_project: \"deny\",\n                start_app: \"deny\",\n              }),\n              user,\n            ),\n            mode: \"subagent\",\n            native: true,\n            hidden: true,\n            prompt: PROMPT_SPEC_IMPLEMENTATION,\n          }",
+      "classification": "host-delegated",
+      "implementation": "adapted",
+      "evidence": "source_contract_only",
+      "method_recipe": "spec"
+    },
+    {
+      "id": "spec-verify",
+      "file": "packages/opencode/src/agent/agent.ts",
+      "sha256": "cb32a832a0dd19832fca9f98312696b64822b4ed789206c35c9289ab81b93e7a",
+      "definition": "{\n            name: \"spec-verify\",\n            description: \"Build, deploy, and UI-verify Harmony features against spec\",\n            options: {},\n            permission: Permission.merge(\n              defaults,\n              Permission.fromConfig({\n                question: \"allow\",\n                verify_ui: \"allow\",\n                save_ui_screenshot: \"allow\",\n                get_ui_verification_log: \"allow\",\n              }),\n              user,\n            ),\n            mode: \"subagent\",\n            native: true,\n            hidden: true,\n            temperature: 0.2,\n            prompt: PROMPT_SPEC_VERIFY,\n          }",
+      "classification": "host-delegated",
+      "implementation": "adapted",
+      "evidence": "source_contract_only",
+      "method_recipe": "spec"
+    },
+    {
+      "id": "summary",
+      "file": "packages/opencode/src/agent/agent.ts",
+      "sha256": "87077a3c0244d8caa1116239c959445ffcd5c2290be78289fb1507824b07a0d7",
+      "definition": "{\n            name: \"summary\",\n            mode: \"primary\",\n            options: {},\n            native: true,\n            hidden: true,\n            permission: Permission.merge(\n              defaults,\n              Permission.fromConfig({\n                \"*\": \"deny\",\n              }),\n              user,\n            ),\n            prompt: PROMPT_SUMMARY,\n          }",
+      "classification": "host-delegated",
+      "implementation": "not_applicable",
+      "evidence": "source_contract_only",
+      "method_recipe": null
+    },
+    {
+      "id": "title",
+      "file": "packages/opencode/src/agent/agent.ts",
+      "sha256": "a6a8359b563c3e535081549f7c8d34af20b530b28b56e0e818486eccb9447489",
+      "definition": "{\n            name: \"title\",\n            mode: \"primary\",\n            options: {},\n            native: true,\n            hidden: true,\n            temperature: 0.5,\n            permission: Permission.merge(\n              defaults,\n              Permission.fromConfig({\n                \"*\": \"deny\",\n              }),\n              user,\n            ),\n            prompt: PROMPT_TITLE,\n          }",
+      "classification": "host-delegated",
+      "implementation": "not_applicable",
+      "evidence": "source_contract_only",
+      "method_recipe": null
+    }
+  ],
+  "sdd": [
+    {
+      "source_path": "packages/opencode/resources/spec/commands/spec-implement.md",
+      "sha256": "cfd489919cced80620c229b3803f424ec707414ce3c5ac91ceec3407b89edede",
+      "uri": "deveco://source/28233cd66ed6f60ac01b6961",
+      "classification": "host-delegated",
+      "recipe": "spec",
+      "evidence": "source_contract_only"
+    },
+    {
+      "source_path": "packages/opencode/resources/spec/commands/spec-plan.md",
+      "sha256": "cdff56b3bbe4fe5bd5e9e9b0ed9f8bc4995d447c94149964ede738b5f6022168",
+      "uri": "deveco://source/18091cbbc5202d079953fe94",
+      "classification": "host-delegated",
+      "recipe": "spec",
+      "evidence": "source_contract_only"
+    },
+    {
+      "source_path": "packages/opencode/resources/spec/commands/spec-specify.md",
+      "sha256": "dd506dbcecae6de67ca790b7cf746578886b4439e7aa7ce09cd7e43b00ce2029",
+      "uri": "deveco://source/c9997645624f1c9a937504f0",
+      "classification": "host-delegated",
+      "recipe": "spec",
+      "evidence": "source_contract_only"
+    },
+    {
+      "source_path": "packages/opencode/resources/spec/commands/spec-tasks.md",
+      "sha256": "cff57288167a342245475cbd435c83f88a2640d0784376145d58d7879ff1bfae",
+      "uri": "deveco://source/09b35b1a23de888fad2eca16",
+      "classification": "host-delegated",
+      "recipe": "spec",
+      "evidence": "source_contract_only"
+    },
+    {
+      "source_path": "packages/opencode/resources/spec/commands/spec-verify.md",
+      "sha256": "39379661d7ced53996aa59d9be8ca9207e15de26ccd4c5061a3b565e11f18b3c",
+      "uri": "deveco://source/6501fddc6e1cd77ef5e10607",
+      "classification": "host-delegated",
+      "recipe": "spec",
+      "evidence": "source_contract_only"
+    },
+    {
+      "source_path": "packages/opencode/resources/spec/templates/plan-template.md",
+      "sha256": "ef44f6541ab30a64cfe4b0e7a5ab66e9f8c15e07a939e2642fc244b0605d7f6a",
+      "uri": "deveco://source/de49ad3cefea2a67bfc708be",
+      "classification": "host-delegated",
+      "recipe": "spec",
+      "evidence": "source_contract_only"
+    },
+    {
+      "source_path": "packages/opencode/resources/spec/templates/spec-template.md",
+      "sha256": "a66b176d7e9a92dc70e4459e793f9d8018161c84769b51f77a1897cdf9f7ca5a",
+      "uri": "deveco://source/46707df1ba9f40bd72413e1d",
+      "classification": "host-delegated",
+      "recipe": "spec",
+      "evidence": "source_contract_only"
+    },
+    {
+      "source_path": "packages/opencode/resources/spec/templates/tasks-template.md",
+      "sha256": "a8e5d9613dfe1b1f050441fe3045cf51c157968c9893f2dfe75ac66a88302c55",
+      "uri": "deveco://source/46b78af0cfc8023a78eae9bd",
+      "classification": "host-delegated",
+      "recipe": "spec",
+      "evidence": "source_contract_only"
+    }
+  ],
+  "builtin_commands": [
+    {
+      "source_path": "packages/opencode/src/command/template/debug.txt",
+      "sha256": "fdbecc805a3ec359f7ce627414f4eadf7a015d15f4c2d7ef4cee4c9e2f084bfe",
+      "uri": "deveco://source/6e4033382392468c39a9bd5c",
+      "classification": "host-delegated",
+      "recipe": "debug",
+      "evidence": "source_contract_only"
+    },
+    {
+      "source_path": "packages/opencode/src/command/template/initialize.txt",
+      "sha256": "1e5f1b41d7d522861e629fbb8a21ba225201efa4cf09802ac57052075df9b9c4",
+      "uri": "deveco://source/17f834ddfeb591b12f8b71dd",
+      "classification": "host-delegated",
+      "recipe": "spec",
+      "evidence": "source_contract_only"
+    },
+    {
+      "source_path": "packages/opencode/src/command/template/review.txt",
+      "sha256": "fda5b502c8ab3433ac674f2e865c5ae2cae30b9e6af68af992fa45b1fa3bef73",
+      "uri": "deveco://source/f2534064651e09f3e2de6f5a",
+      "classification": "host-delegated",
+      "recipe": "spec",
+      "evidence": "source_contract_only"
+    }
+  ],
+  "non_product_skills": [
+    {
+      "source_path": ".agents/skills/gitcode-pr/SKILL.md",
+      "sha256": "e4e5a65faec418afa30e711ec133148b75ebfe853d19a892fb0e9a0e79a8307d",
+      "classification": "repository-development",
+      "uri": "deveco://source/697789c8fc6054442d65a0b4"
+    },
+    {
+      "source_path": ".opencode/skills/effect/SKILL.md",
+      "sha256": "0d27f8d40455cd4d509c0c81f3d2b6edb8319cd8ebd12a2e9f21626fc80495d5",
+      "classification": "repository-development",
+      "uri": "deveco://source/bf5bbe0bbddc1e96d59775e4"
+    },
+    {
+      "source_path": "packages/opencode/test/fixture/skills/agents-sdk/SKILL.md",
+      "sha256": "6769c6520383ed5501ea88dc4f9291517a8642167d859486181585063e8b7d2f",
+      "classification": "test-fixture",
+      "uri": "deveco://source/c07ded8846b0e23cb423732d"
+    },
+    {
+      "source_path": "packages/opencode/test/fixture/skills/cloudflare/SKILL.md",
+      "sha256": "2a8a4bdd991c34dff4cf014c7e8f84bb1aa971642a067c4d387cf3746b77b603",
+      "classification": "test-fixture",
+      "uri": "deveco://source/76f3b71be74d7624e45afdf6"
+    }
+  ]
+}

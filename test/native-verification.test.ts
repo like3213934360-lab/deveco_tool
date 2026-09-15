@@ -172,7 +172,7 @@ test("visual review alone does not query the UI tree and its requirement and ima
           "base64",
         ).toString(),
       );
-      const { report_artifact: _reference, ...expected } = report;
+      const { report_artifact: _reference, inline_review: _delivery, ...expected } = report;
       assert.deepEqual(stored, expected);
       assert.equal(
         readImageArtifact(reopened, report.screenshot!.artifact.artifact_id)

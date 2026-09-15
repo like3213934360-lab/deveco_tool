@@ -1,0 +1,272 @@
+{
+  "format": 1,
+  "source": "deveco-cli",
+  "url": "https://gitcode.com/openharmony-sig/deveco-cli.git",
+  "base": {
+    "commit": "08c2f57ffbe83c817d64a728a17971872dd9ddcf",
+    "tree": "36fc532ea8ddb6c4eec3168e6301d0240e61b45d"
+  },
+  "candidate": {
+    "commit": "a71f93d73941aaa0dbf581918cbd5828014e6e88",
+    "tree": "6605d243def8bc8cebe0da693ba5729c1a283601"
+  },
+  "mapping_sha256": "4465448e87e133c49c68cf89801006ae0562c4a1175b1536a081bb93f3b3ae67",
+  "changes": [
+    {
+      "path": "README.md",
+      "status": "modified",
+      "before": {
+        "path": "README.md",
+        "oid": "f054671a17d46e3b35fceb9e15cecdb31f8c1702",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "README.md",
+        "oid": "87daf80bd3bb348743e1cf0d7861c80803e85c1e",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": null,
+      "disposition": "unmapped",
+      "reason": "No reviewed mapping covers this upstream path",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "SKILL.md",
+      "status": "modified",
+      "before": {
+        "path": "SKILL.md",
+        "oid": "0b5c4c244030bc780f8429fe3e87baaf0355cb81",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "SKILL.md",
+        "oid": "1859d0e45a910ea093552cb94725b8ce711a3b8e",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": null,
+      "disposition": "unmapped",
+      "reason": "No reviewed mapping covers this upstream path",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "eslint.config.js",
+      "status": "modified",
+      "before": {
+        "path": "eslint.config.js",
+        "oid": "a8155d1f116d46c868eecf78f173fb6b4413db81",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "eslint.config.js",
+        "oid": "f9fd1e9498b0fb5a2c52eedf1d53fa5ec6307d41",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": null,
+      "disposition": "unmapped",
+      "reason": "No reviewed mapping covers this upstream path",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "mcp/src-server/lsp/core/ClientMessageHandle.ts",
+      "status": "modified",
+      "before": {
+        "path": "mcp/src-server/lsp/core/ClientMessageHandle.ts",
+        "oid": "b4d808d75cf99846c062c0965411d82cbfe5f3c4",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "mcp/src-server/lsp/core/ClientMessageHandle.ts",
+        "oid": "3f3b8c8112fd1344f1877d9fba2a5b0de5bb0b39",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "cli-retired-mcp-",
+      "disposition": "exclude",
+      "reason": "The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "src/arktscheck/arkts-check-adapter.ts",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "src/arktscheck/arkts-check-adapter.ts",
+        "oid": "1204116a420c192c6d68bf0c4662ea99ee5b0600",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": null,
+      "disposition": "unmapped",
+      "reason": "No reviewed mapping covers this upstream path",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "src/arktscheck/arkts-check-command.ts",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "src/arktscheck/arkts-check-command.ts",
+        "oid": "dfc4cb769dbd85cffebe8bfe364f5632cf323284",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": null,
+      "disposition": "unmapped",
+      "reason": "No reviewed mapping covers this upstream path",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "src/arktscheck/index.ts",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "src/arktscheck/index.ts",
+        "oid": "175bd634094e926e8efe381c249771a9804718b0",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": null,
+      "disposition": "unmapped",
+      "reason": "No reviewed mapping covers this upstream path",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "src/arktscheck/types.ts",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "src/arktscheck/types.ts",
+        "oid": "d0b5a830ba17d096ff58a5abc8cde3df8576c968",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": null,
+      "disposition": "unmapped",
+      "reason": "No reviewed mapping covers this upstream path",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "src/cli.ts",
+      "status": "modified",
+      "before": {
+        "path": "src/cli.ts",
+        "oid": "461ca62197d2c63ffd6704e0fffab6162a549adc",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "src/cli.ts",
+        "oid": "9318ba18da222f0de0ccdcd981f8bc284615b0cc",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "cli-release-src/cli.ts",
+      "disposition": "adapt",
+      "reason": "Review release, dependency, dispatch or license changes; the CLI remains a reference, not a runtime dependency.",
+      "targets": [
+        "provenance/upstream-lock.json"
+      ],
+      "tests": [
+        "test/native-upstream.test.ts"
+      ]
+    },
+    {
+      "path": "src/commands/check.ts",
+      "status": "modified",
+      "before": {
+        "path": "src/commands/check.ts",
+        "oid": "43d465277adf4e91f1c0788095deea9bedfd04fb",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "src/commands/check.ts",
+        "oid": "fe2651cf0d4c5aa2bb5e16b5c32cdecbbcf64b35",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "cli-command-check.ts",
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/diagnostics.ts",
+        "src/cli.ts",
+        "src/services/checker.ts"
+      ],
+      "tests": [
+        "scripts/native-sdk-acceptance.ts",
+        "test/native-checker.test.ts"
+      ]
+    },
+    {
+      "path": "src/resources/arkts-check.cjs",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "src/resources/arkts-check.cjs",
+        "oid": "7a6638336ea0676c6657348d4ffa88336b16377b",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "cli-src-resources-",
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/project.ts"
+      ],
+      "tests": [
+        "test/native-project.test.ts"
+      ]
+    },
+    {
+      "path": "templates/application/gitignore.txt",
+      "status": "modified",
+      "before": {
+        "path": "templates/application/gitignore.txt",
+        "oid": "d2ff20141ceed86d87c0ea5d99481973005bab2b",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "templates/application/gitignore.txt",
+        "oid": "9fe67eccb8a0b21ce86c63a974b944ffec35309f",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "cli-templates-",
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/project.ts"
+      ],
+      "tests": [
+        "test/native-project.test.ts",
+        "scripts/native-sdk-acceptance.ts"
+      ]
+    }
+  ],
+  "gate": "blocked_unmapped",
+  "required_tests": [
+    "scripts/native-sdk-acceptance.ts",
+    "test/native-checker.test.ts",
+    "test/native-project.test.ts",
+    "test/native-upstream.test.ts"
+  ],
+  "note": "Source classification is a review proposal. It does not convert natural language into code, approve protocol semantics, modify the active source lock or authorize release.",
+  "sha256": "7f2befb4c52e5334c3b284c339d218ec2a109b02875c24b45a36994f61ba62a3"
+}

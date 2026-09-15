@@ -97,7 +97,7 @@ struct NullCheckExample {
 
 ## 详细代码示例
 
-- [PossiblyNullError.ets](../assets/PossiblyNullError.ets) - 完整的 null 检查错误修复示例
+- [PossiblyNullError.ets](deveco://knowledge/arkts-error-fixes/examples/PossiblyNullError) - 完整的 null 检查错误修复示例
 
 ## 最佳实践
 

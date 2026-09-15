@@ -179,6 +179,17 @@ function fixture() {
     },
   };
 }
+test("a saved final assertion is discoverable without claiming the flow was verified", async () => {
+  const f = fixture();
+  try {
+    await f.flows.save(f.project, f.draft([]));
+    const saved = f.flows.list(f.project)[0]!;
+    assert.equal(saved.has_final_assertion, true);
+    assert.equal(saved.verified, false);
+    assert.equal(saved.action_schema_version, 1);
+  } finally { f.close(); }
+});
+
 test("saved flows stop before a fourth unchanged action while still allowing their original final assertion", async () => {
   const f = fixture();
   try {

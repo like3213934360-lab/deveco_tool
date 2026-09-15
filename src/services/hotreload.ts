@@ -8,7 +8,7 @@ import { z } from "zod";
 import { HvigorSession } from "./hvigor/session.js";
 import { HotConfiguration, hotPaths, assertNoHotWatch } from "./hvigor/hot-config.js";
 import type { BuildOptions } from "./hvigor/protocol.js";
-import { appSchema, tools } from "../core/contracts.js";
+import { appSchema, startupCheckSchema, tools } from "../core/contracts.js";
 import { invariant, object, ToolError, SettledEffectError, errorResult } from "../core/errors.js";
 import {
   atomicWrite,
@@ -33,6 +33,16 @@ import { SignatureService } from "./signature.js";
 import { inspectApplicationPackages, readPackageMetadata } from "./package.js";
 
 type App = z.infer<typeof appSchema>;
+
+/** pidof ordering and whitespace are not process changes. This is explicitly
+ * PID-set evidence, not proof of /proc generation identity or business UI. */
+export function hotApplicationPidSet(receipt: { stdout: string; exitCode: number; stderr?: string; truncated?: boolean }): string {
+  invariant(receipt.exitCode === 0 && !receipt.truncated && !receipt.stderr?.trim() && /^\d+(?:\s+\d+)*$/.test(receipt.stdout.trim()),
+    "HOT_APP_NOT_RUNNING", "Device did not return a complete running application PID set");
+  const pids = [...new Set(receipt.stdout.trim().split(/\s+/))].sort();
+  invariant(pids.length <= 32, "HOT_PID_BUDGET", "Hot reload supports at most 32 observed application processes");
+  return pids.join(" ");
+}
 
 function hotModuleType(module: Project["modules"][number]): string {
   return z.object({ module: z.object({ type: z.string() }) })
@@ -66,12 +76,12 @@ export async function hotBaselinePackages(projects: ProjectService, project: Pro
     packages.push(artifact);
     metadata.push(identity);
   }
-  await inspectApplicationPackages(packages.map((artifact) => artifact.path), app, signal);
   for (const item of metadata) for (const dependency of item.module.dependencies) {
     invariant((!dependency.bundleName || dependency.bundleName === app.bundle_name) &&
       metadata.some((other) => other.module.type === "shared" && other.module.name === dependency.moduleName),
       "HOT_BASE_DEPENDENCY_MISSING", "Include every application HSP dependency in the watch module selection");
   }
+  await inspectApplicationPackages(packages.map((artifact) => artifact.path), app, signal);
   return packages;
 }
 
@@ -248,6 +258,10 @@ export class HotReloadService {
     } finally { this.sweeping = false; }
   }
   activeTarget(project: Project): string | undefined { return this.sessions.get(this.key(project))?.target; }
+  activeApplication(project: Project): App | undefined {
+    const app = this.sessions.get(this.key(project))?.app;
+    return app ? structuredClone(app) : undefined;
+  }
   private key(project: ProjectSelection) {
     return digest([project.root, project.product.name, projectTargets(project)]);
   }
@@ -492,21 +506,25 @@ export class HotReloadService {
           }
         }
         const prepared = await this.store.readPrivateMemo("hot-ready", { project: project.root, product: project.product.name, module_targets: projectTargets(project) }, (value) => readyPatchSchema.parse(value));
-        if (prepared) return this.finishApply(project, prepared, signal);
+        const assertScope = (captured: { target: string; app: App }) => {
+          invariant(!input.target || input.target === captured.target, "HOT_TARGET_CHANGED", "Watch target cannot change");
+          if (input.app) {
+            const normalize = (app: App) => ({ ...app, startup_check: startupCheckSchema.parse(app.startup_check ?? {}) });
+            invariant(digest(normalize(input.app)) === digest(normalize(captured.app)),
+              "HOT_APP_CHANGED", "Hot apply preserves the captured application and startup policy; restart watch to change them");
+          }
+        };
+        if (prepared) { assertScope(prepared); return this.finishApply(project, prepared, signal); }
         invariant(
           session,
           "HOT_SESSION_REQUIRED",
           "Start a native watch session before applying",
         );
+        assertScope(session);
         invariant(
           session.project.fingerprint === project.fingerprint,
           "HOT_PROJECT_CHANGED",
           "Project configuration changed; restart the watch",
-        );
-        invariant(
-          !input.target || input.target === session.target,
-          "HOT_TARGET_CHANGED",
-          "Watch target cannot change",
         );
         try {
           return await this.store.lease(
@@ -737,14 +755,7 @@ export class HotReloadService {
         ));
         patches.push(signed);
       }
-      const before = (
-        await this.devices.shell(target, ["pidof", app.bundle_name], signal)
-      ).stdout.trim();
-      invariant(
-        /^\d+(?:\s+\d+)*$/.test(before),
-        "HOT_APP_NOT_RUNNING",
-        "Application must already be running",
-      );
+      const before = hotApplicationPidSet(await this.devices.shell(target, ["pidof", app.bundle_name], signal));
       assertHotSourcesUnchanged(project, current);
       const retained: ReadyPatch["patches"] = [];
       for (const file of patches) retained.push(await captureFile(this.store, currentTrace().run_id ?? "hot_reload", file, undefined, signal));
@@ -770,8 +781,8 @@ export class HotReloadService {
       const durable = !!trace.run_id && !!trace.node;
       const dispatched = durable && this.store.operationState(trace.run_id!, `${trace.node}:device:quickfix`) !== undefined;
       if (!dispatched) {
-        const pid = (await this.devices.shell(target, ["pidof", app.bundle_name], signal)).stdout.trim();
-        invariant(pid === prepared.before_pid, "HOT_APP_RESTARTED", "Prepared patch requires the original application process");
+        const pid = hotApplicationPidSet(await this.devices.shell(target, ["pidof", app.bundle_name], signal));
+        invariant(pid === hotApplicationPidSet({ stdout: prepared.before_pid, exitCode: 0 }), "HOT_APP_RESTARTED", "Prepared patch requires the original application process set");
         await this.devices.shell(target, ["sh", "-c", `test ! -L '${remote}' && { test -d '${remote}' || mkdir -m 700 '${remote}'; }`], signal);
         for (const [index, file] of prepared.patches.entries()) {
           await this.devices.command(["-t", target, "file", "send", file.path, remoteFiles[index]!], signal);
@@ -797,15 +808,16 @@ export class HotReloadService {
       const session = this.sessions.get(this.key(project));
       if (session) { session.files = new Map(prepared.sources); session.patchedFiles = new Set(prepared.patched_files); session.lastUsed = Date.now(); }
       const applied = { applied: true, outcomeVerified: false, patch_versions: prepared.patch_versions,
-        files: prepared.changed_files, receipt: this.store.artifact(trace.run_id ?? "hot_reload", receipt.stdout), compile_log: prepared.compile_log };
+        files: prepared.changed_files, artifacts: prepared.patches,
+        receipt: this.store.artifact(trace.run_id ?? "hot_reload", receipt.stdout), compile_log: prepared.compile_log };
       // Never remove an uncertain operation's files. The device journal commits before this cleanup.
       await this.devices.shell(target, ["rm", "-rf", remote], undefined, 10000).catch(() => {});
       try {
-        const after = (await this.devices.shell(target, ["pidof", app.bundle_name], signal)).stdout.trim();
-        invariant(after === prepared.before_pid, "HOT_APP_RESTARTED", "Application process changed during hot reload");
+        const after = hotApplicationPidSet(await this.devices.shell(target, ["pidof", app.bundle_name], signal));
+        invariant(after === hotApplicationPidSet({ stdout: prepared.before_pid, exitCode: 0 }), "HOT_APP_RESTARTED", "Application process set changed during hot reload");
         this.devices.invalidate(target);
         const startup_check = await this.devices.checkStartup(target, app, signal, prepared.before_pid.split(/\s+/));
-        return { ...applied, processPreserved: true, startupVerified: true, startup_check };
+        return { ...applied, processPreserved: true, process_identity: "observed_pid_set", startupVerified: true, startup_check };
       } catch (error) {
         const reason = errorResult(error);
         throw new SettledEffectError(reason.code, reason.message, {

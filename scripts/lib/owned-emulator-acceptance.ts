@@ -47,7 +47,7 @@ export class OwnedEmulatorAcceptance {
     while (Date.now() < deadline) {
       const value = state.parse(
         await client.call("workflow_run", {
-          action: "status",
+          action: "status", detail: "full",
           run_id,
           wait_ms: 1000,
         }),
@@ -172,7 +172,7 @@ export class OwnedEmulatorAcceptance {
       this.record("binding", matched[0].value);
     }
   }
-  async start() {
+  async start(osVersion?: string) {
     this.initial = await this.inventory();
     this.record("initial_inventory", this.initial);
     assert.equal(
@@ -187,18 +187,20 @@ export class OwnedEmulatorAcceptance {
         ),
       })
       .parse(
-        await this.lifecycle.call("emulator_manage", {
+        await this.lifecycle.call("emulator_admin", {
           action: "images",
           downloaded: true,
           device_type: "phone",
         }),
       );
-    const image = images.images[0];
-    assert.ok(image);
+    const image = osVersion
+      ? images.images.find((candidate) => candidate.osVersion === osVersion)
+      : images.images[0];
+    assert.ok(image, `Requested downloaded phone image unavailable: ${osVersion ?? "any"}; available: ${images.images.map((candidate) => candidate.osVersion).join(", ")}`);
     this.record("image", image);
     await this.operation(
       "create",
-      "emulator_manage",
+      "emulator_admin",
       {
         action: "create",
         name: this.name,
@@ -259,7 +261,7 @@ export class OwnedEmulatorAcceptance {
       if (owned)
         await this.operation(
           "delete",
-          "emulator_manage",
+          "emulator_admin",
           {
             action: "delete",
             name: this.name,

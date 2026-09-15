@@ -55,10 +55,11 @@ test("worker request cancellation and close preserve CANCELLED and durable failu
       const rows = db.prepare("SELECT data FROM events WHERE kind='request_failed'").all() as { data: string }[];
       assert.equal(rows.length, 2);
       for (const row of rows) {
-        const event = JSON.parse(row.data) as { code: string; tool: string; stage: string };
+        const event = JSON.parse(row.data) as { code: string; tool: string; stage: string; elapsed_ms: number };
         assert.equal(event.code, "CANCELLED");
         assert.equal(event.tool, "lsp");
         assert.equal(event.stage, "worker");
+        assert.ok(Number.isFinite(event.elapsed_ms) && event.elapsed_ms >= 0);
         assert.doesNotMatch(row.data, /private-client-reason/);
       }
       assert.deepEqual(db.prepare("SELECT * FROM leases").all(), []);

@@ -151,4 +151,4 @@ struct ResourceUsageExample {
 
 ## 详细代码示例
 
-> [ResourceConversionError.ets](../assets/ResourceConversionError.ets) - 完整的 Resource 类型转换错误示例和修复方案
+> [ResourceConversionError.ets](deveco://knowledge/arkts-error-fixes/examples/ResourceConversionError) - 完整的 Resource 类型转换错误示例和修复方案

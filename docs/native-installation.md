@@ -22,6 +22,10 @@ ZIP 包含 package-lock.json（npm pack 默认会排除这个文件）。封装�
 
 ## 用户切换步骤
 
+0.4 的协议迁移同时改变日常入口：项目调用必须显式传入绝对 `project_path`；`project_context resolve` 只返回不可变描述，旧 `switch_cwd` 不再设置默认项目。新规划、规格和修复方法通过 `domain_recipe` 按需读取；旧指导任务仍能 read/export/archive，但 start/write/publish 等推进操作返回 `GUIDANCE_LIFECYCLE_RETIRED`。旧原生工作流与 UI 测试的持久化恢复继续保留。
+
+默认连接只广告 core 工具。需要云端签名管理或模拟器镜像管理时，在宿主环境配置 `DEVECO_TOOL_GROUPS=core,signing-admin,emulator-admin` 并重连；工具集合在一次连接中固定。`compatibility` 可额外广告旧别名，隐藏别名在 0.4 迁移期仍可调用。日常项目、设备、签名校验及模拟器启停不需要开启管理组。旧配置中的 `default_project` 不再提供执行默认目录。
+
 1. 在旧版中结束或取消任务，停止热重载与 LSP 会话。
 2. 保留前一个完整安装目录和本次安装的版本、ZIP SHA-256、Node 版本及启动配置记录。将新版解压到另一个目录，校验后执行 `npm ci --omit=dev`。
 3. 使用配置 JSON 设置非默认工具链位置，通过 `DEVECO_CONFIG` 指向该文件；状态目录可使用 `DEVECO_STATE_DIR`。维护命令只更新这两个本工具管理的环境键，保留用户其他环境变量和 MCP 设置。

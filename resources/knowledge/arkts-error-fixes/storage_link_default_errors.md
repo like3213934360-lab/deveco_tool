@@ -93,9 +93,9 @@ struct MyComponent {
 
 ### Detailed Examples
 For more detailed code examples, see:
-- [Optional Type Pattern](../assets/StorageLinkDefaultError.ets#L8-L31)
-- [Initialization Pattern](../assets/StorageLinkDefaultError.ets#L11-L23)
-- [Usage Pattern](../assets/StorageLinkDefaultError.ets#L25-L39)
+- [Optional Type Pattern](deveco://knowledge/arkts-error-fixes/examples/StorageLinkDefaultError)
+- [Initialization Pattern](deveco://knowledge/arkts-error-fixes/examples/StorageLinkDefaultError)
+- [Usage Pattern](deveco://knowledge/arkts-error-fixes/examples/StorageLinkDefaultError)
 
 ### Best Practices
 1. **Always provide default value**: Never leave `@StorageLink` without a default
@@ -120,5 +120,5 @@ For more detailed code examples, see:
 ```
 
 ### Related Files
-- [Code Example](../assets/StorageLinkDefaultError.ets)
-- [AppStorage Type Errors](./appstorage_errors.md)
+- [Code Example](deveco://knowledge/arkts-error-fixes/examples/StorageLinkDefaultError)
+- [AppStorage Type Errors](deveco://knowledge/arkts-error-fixes/appstorage_errors)

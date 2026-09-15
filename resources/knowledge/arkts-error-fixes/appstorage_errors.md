@@ -92,4 +92,4 @@ AppStorage.has(key: string): boolean
 ```
 
 ### Related Files
-- [Code Example](../assets/AppStorageError.ets)
+- [Code Example](deveco://knowledge/arkts-error-fixes/examples/AppStorageError)

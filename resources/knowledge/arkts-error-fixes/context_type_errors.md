@@ -115,7 +115,7 @@ struct ContextTypeExample {
 }
 ```
 
-> [查看完整示例](../assets/ContextTypeError.ets)
+> [查看完整示例](deveco://knowledge/arkts-error-fixes/examples/ContextTypeError)
 
 ## 使用场景
 

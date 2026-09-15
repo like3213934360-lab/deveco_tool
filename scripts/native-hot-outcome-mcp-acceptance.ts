@@ -4,14 +4,15 @@ import assert from "node:assert/strict";
 import { z } from "zod";
 import { atomicWrite, fileDigest } from "../src/core/files.js";
 import { errorResult } from "../src/core/errors.js";
+import { capturedFileSchema } from "../src/core/captured-file.js";
 import { discoverToolchain, toolCommand } from "../src/core/toolchain.js";
 import { evidenceIdentity } from "./lib/evidence.js";
 import { finishAcceptance } from "./lib/acceptance-report.js";
 import { AcceptanceMcp } from "./lib/mcp-acceptance-client.js";
 import { OwnedEmulatorAcceptance } from "./lib/owned-emulator-acceptance.js";
 
-const [root, preparedFile] = z
-  .tuple([z.string().min(1), z.string().min(1)])
+const [root, preparedFile, osVersion] = z
+  .tuple([z.string().min(1), z.string().min(1), z.string().min(1).optional()])
   .parse(process.argv.slice(2));
 assert.ok(path.isAbsolute(root) && path.isAbsolute(preparedFile));
 assert.equal(
@@ -35,7 +36,7 @@ atomicWrite(path.join(ownerRoot, "config.json"), "{}\n");
 const tested = evidenceIdentity(),
   results: Record<string, unknown> = {},
   mcp = new AcceptanceMcp(root, "native-hot-outcome-acceptance"),
-  owner = new AcceptanceMcp(ownerRoot, "native-hot-emulator-owner");
+  owner = new AcceptanceMcp(ownerRoot, "native-hot-emulator-owner", { tool_groups: ["core", "emulator-admin"] });
 const file = path.join(root, "evidence.json"),
   save = () =>
     atomicWrite(
@@ -114,7 +115,7 @@ try {
       path.join(project, "build-profile.json5"),
     ),
   });
-  const target = await owned.start();
+  const target = await owned.start(osVersion);
   async function pid(key: string) {
     const result = await owned.processes.run(
       toolCommand(discoverToolchain(), "hdc", [
@@ -184,6 +185,8 @@ try {
           .object({
             applied: z.literal(true),
             processPreserved: z.literal(true),
+            process_identity: z.literal("observed_pid_set"),
+            artifacts: z.array(capturedFileSchema).min(1),
             startupVerified: z.literal(true),
             outcomeVerified: z.literal(false),
             startup_check: z
@@ -197,6 +200,10 @@ try {
       })
       .parse(await owned.output(value.result, "build_or_hot_apply"));
     record(`${key}_hot_receipt`, hot);
+    for (const artifact of hot.result.artifacts) {
+      assert.equal(fileDigest(artifact.path), artifact.sha256);
+      assert.equal(fs.statSync(artifact.path).size, artifact.bytes);
+    }
     assert.equal(await pid(`${key}_pid`), baselinePid);
     await verify(`${key}_ui`, text);
     for (const node of [

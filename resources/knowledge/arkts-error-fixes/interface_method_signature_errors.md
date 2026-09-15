@@ -90,9 +90,9 @@ const obj: OptionalInterface = {
 
 ### Detailed Examples
 For more detailed code examples, see:
-- [Interface Definition](../assets/InterfaceMethodSignatureError.ets#L1-L6)
-- [Object Literal Implementation](../assets/InterfaceMethodSignatureError.ets#L8-L24)
-- [Usage Pattern](../assets/InterfaceMethodSignatureError.ets#L26-L42)
+- [Interface Definition](deveco://knowledge/arkts-error-fixes/examples/InterfaceMethodSignatureError)
+- [Object Literal Implementation](deveco://knowledge/arkts-error-fixes/examples/InterfaceMethodSignatureError)
+- [Usage Pattern](deveco://knowledge/arkts-error-fixes/examples/InterfaceMethodSignatureError)
 
 ### Best Practices
 1. **Use property syntax**: Always use `method: () => {}` syntax for object literals
@@ -138,6 +138,6 @@ const obj: MyInterface = {
 ```
 
 ### Related Files
-- [Code Example](../assets/InterfaceMethodSignatureError.ets)
-- [Object Literal Interface Errors](./object_literal_interface_errors.md)
+- [Code Example](deveco://knowledge/arkts-error-fixes/examples/InterfaceMethodSignatureError)
+- [Object Literal Interface Errors](deveco://knowledge/arkts-error-fixes/object_literal_interface_errors)
 - [ArkTS Language Guide](https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/arkts-get-started)

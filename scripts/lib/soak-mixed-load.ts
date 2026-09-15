@@ -81,6 +81,7 @@ export class SoakMixedLoad {
       const value = state.parse(
         await this.call("workflow_run", {
           action: "status",
+          detail: "full",
           run_id: id,
           wait_ms: 1000,
         }),

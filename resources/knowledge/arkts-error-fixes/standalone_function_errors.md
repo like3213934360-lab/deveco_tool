@@ -65,4 +65,4 @@ struct Example {
 
 ## 详细代码示例
 
-- [StandaloneFunctionError.ets](../assets/StandaloneFunctionError.ets) - 完整的独立函数上下文传递示例，包含多个独立函数的使用
+- [StandaloneFunctionError.ets](deveco://knowledge/arkts-error-fixes/examples/StandaloneFunctionError) - 完整的独立函数上下文传递示例，包含多个独立函数的使用

@@ -61,7 +61,7 @@ win.on('windowSizeChange', (size: window.Size) => {
 
 ## 详细代码示例
 
-请参考 [WindowRectSizeError.ets](../assets/WindowRectSizeError.ets)
+请参考 [WindowRectSizeError.ets](deveco://knowledge/arkts-error-fixes/examples/WindowRectSizeError)
 
 ## 相关 API
 

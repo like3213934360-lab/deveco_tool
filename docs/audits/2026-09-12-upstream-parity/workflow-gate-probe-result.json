@@ -1,0 +1,39 @@
+{
+  "installation": "/Users/dreamlike/Library/Application Support/DevEcoMCP/installations/native-7-release-0.3.0-20260911-1",
+  "node": "v24.14.1",
+  "scope": "isolated temporary SQLite only; no production state or device calls",
+  "temporary_state_root": "/var/folders/dm/cg7mvtkd3px6hy3cm0lgpvwc0000gn/T/deveco-workflow-audit-rT6fgv",
+  "records": [
+    {
+      "scenario": "plan_single_character_notes",
+      "phase": "completed",
+      "status": "succeeded",
+      "verified": false,
+      "evidence": [],
+      "document": "x"
+    },
+    {
+      "scenario": "customize_single_character_notes",
+      "phase": "completed",
+      "status": "succeeded",
+      "verified": false,
+      "evidence": [],
+      "document": "x"
+    },
+    {
+      "scenario": "spec_build_only_without_story_links_and_after_source_change",
+      "phase": "completed",
+      "status": "succeeded",
+      "verified": false,
+      "noEvidenceError": "SKILL_WORKFLOW_EVIDENCE_REQUIRED",
+      "evidence": [
+        {
+          "run_id": "a210c744-6863-4bae-aa13-6c6ba807e4a2",
+          "workflow": "project_build",
+          "result_sha256": "f61880c7409a1f53006df2b319b76bfa38fb76ed303032086c8f2f7d452eb68e"
+        }
+      ],
+      "fixture_notice": "Receipt is synthetic. This probes the service gate, not compiler/device correctness."
+    }
+  ]
+}

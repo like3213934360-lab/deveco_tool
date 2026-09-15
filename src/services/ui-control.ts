@@ -1,6 +1,7 @@
 import type { z } from "zod";
 import { controlSchema, selectorSchema, type stepSchema } from "../core/contracts.js";
 import { invariant } from "../core/errors.js";
+import { UI_FLOW_TO_CONTROL } from "../core/ui-action-contract.js";
 import type { Snapshot } from "./device.js";
 import type { Rect, UiNode } from "./ui-tree.js";
 import { isWindowSurface } from "./ui-tree.js";
@@ -8,7 +9,8 @@ import { isWindowSurface } from "./ui-tree.js";
 type Control = z.infer<typeof controlSchema>;
 /** Saved flow actions lower to the same validated native contract as direct UI actions. */
 export function flowControl(step: z.infer<typeof stepSchema>, bundle: string, variables: Record<string, string>, selector = step.selector, windowId?: string): Control {
-  const action = step.action === "tap" ? "click" : step.action === "doubleTap" ? "doubleClick" : step.action === "longTap" ? "longClick" : step.action === "input" ? "inputText" : step.action === "focusInput" ? "text" : step.action === "key" ? "keyEvent" : step.action;
+  invariant(Object.hasOwn(UI_FLOW_TO_CONTROL, step.action), "UI_ACTION_INVALID", "Assertions use the observation protocol and cannot be lowered to native input");
+  const action = UI_FLOW_TO_CONTROL[step.action as keyof typeof UI_FLOW_TO_CONTROL];
   return controlSchema.parse({
     action,
     ...(selector && step.action !== "focusInput" ? { selector: { ...selector, bundle_name: bundle } } : {}),
@@ -129,6 +131,8 @@ export function resolveControl(input: Control, snapshot?: Snapshot): Control {
       window = windows[0];
       coordinateRect = window.rect!;
       output.display_id = controlDisplay(window) ?? input.display_id;
+      invariant(!["text", "keyEvent", "dircFling"].includes(input.action) || window.focused === true,
+        "UI_WINDOW_NOT_FOCUSED", "Focused text, keys and directional gestures require the explicitly selected window to be focused");
     }
     if (input.action === "text") {
       const fields = snapshot.nodes.filter(node => node.focused === true && node.enabled !== false && node.visible !== false && /TextInput|TextArea|Search/.test(node.type ?? "") && node.windowId === window?.windowId && node.displayId === window?.displayId && (!input.window?.bundle_name || node.bundleName === input.window.bundle_name));
@@ -137,6 +141,10 @@ export function resolveControl(input: Control, snapshot?: Snapshot): Control {
     }
     if (input.selector) {
       const selector = input.selector;
+      invariant(!window || ((!selector.window_id || selector.window_id === window.windowId) &&
+        (!selector.bundle_name || selector.bundle_name === window.bundleName) &&
+        (selector.displayId === undefined || String(selector.displayId) === window.displayId)),
+        "UI_SCOPE_CONFLICT", "Selector and window must identify the same application, window and display");
       invariant(
         input.display_id === undefined ||
           selector.displayId === undefined ||

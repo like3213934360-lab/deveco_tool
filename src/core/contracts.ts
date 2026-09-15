@@ -1,11 +1,15 @@
 import { selectorSchema, meaningfulSelector, assertionSchema, type Selector } from "./ui-assertion.js";
 export { selectorSchema, meaningfulSelector, assertionSchema, type Selector } from "./ui-assertion.js";
+import { UI_CONTROL_ACTIONS, UI_FLOW_ACTIONS, UI_FLOW_TO_CONTROL, UI_V2_ACTIONS, UI_ASSERTION_ACTIONS, uiControlIssues } from "./ui-action-contract.js";
 import { preflightPolicySchema } from "../services/build-preflight.js";
 import { z } from "zod";
+import { workflowStartContract, workflowObservationContract, storageContract, storageContracts } from "./workflow-run-contract.js";
 import { docCatalogNames } from "./doc-catalog.js";
 import { visualAssessmentSchema } from "../services/ui-review.js";
 import { skillManageSchema } from "../services/skills.js";
 import { skillWorkflowSchema } from "../services/skill-workflow.js";
+import { domainRecipeSchema } from "../services/domain-recipes.js";
+import { domainAcceptanceSchema, requirementBindingsSchema, requirementBindingSchema } from "./acceptance-contracts.js";
 import {
   emulatorManageSchema,
   emulatorScenarioSchema,
@@ -70,19 +74,7 @@ const gesture = z.strictObject({
   stepLength: z.number().int().min(1).max(65535).optional(),
 });
 export const controlSchema = z.strictObject({
-  action: z.enum([
-    "click",
-    "doubleClick",
-    "longClick",
-    "swipe",
-    "fling",
-    "drag",
-    "dircFling",
-    "keyEvent",
-    "inputText",
-    "text",
-    "mouseClick", "mouseDoubleClick", "mouseLongClick", "mouseMoveTo", "mouseScroll", "mouseMoveWithTrack", "mouseDrag",
-  ]),
+  action: z.enum(UI_CONTROL_ACTIONS),
   x: z.number().int().nonnegative().optional(),
   y: z.number().int().nonnegative().optional(),
   x2: z.number().int().nonnegative().optional(),
@@ -114,28 +106,15 @@ export const controlSchema = z.strictObject({
     .max(3)
     .optional(),
   selector: selectorSchema.optional(),
+}).superRefine((input, ctx) => {
+  for (const issue of uiControlIssues(input)) ctx.addIssue({ code: "custom", ...issue });
 });
 export const flowIdSchema = z
   .string()
   .regex(/^[a-z0-9](?:[a-z0-9_-]{0,62}[a-z0-9])?$/);
 export const stepSchema = z.strictObject({
   id: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/),
-  action: z.enum([
-    "tap",
-    "doubleTap",
-    "longTap",
-    "input",
-    "key",
-    "swipe",
-    "fling",
-    "drag",
-    "waitVisible",
-    "waitHidden",
-    "assertVisible",
-    "assertHidden",
-    "focusInput", "dircFling",
-    "mouseClick", "mouseDoubleClick", "mouseLongClick", "mouseMoveTo", "mouseScroll", "mouseMoveWithTrack", "mouseDrag",
-  ]),
+  action: z.enum(UI_FLOW_ACTIONS),
   timeoutMs: z.number().int().min(100).max(600000).default(30000)
     .describe("Total step deadline including locator sampling, native input and before/after progress evidence; explicit saved deadlines are preserved"),
   selector: meaningfulSelector.optional(),
@@ -195,7 +174,8 @@ export const flowSchema = z
     if (new Set(ids).size !== ids.length)
       context.addIssue({ code: "custom", message: "Step IDs must be unique" });
     for (const step of flow.steps) {
-      const extended = ["focusInput", "dircFling", "mouseClick", "mouseDoubleClick", "mouseLongClick", "mouseMoveTo", "mouseScroll", "mouseMoveWithTrack", "mouseDrag"].includes(step.action);
+      const nativeAction = UI_FLOW_TO_CONTROL[step.action as keyof typeof UI_FLOW_TO_CONTROL];
+      const extended = nativeAction !== undefined && UI_V2_ACTIONS.includes(nativeAction);
       if (flow.version === 1 && (extended || [step.keys, step.scope, step.direction, step.velocity, step.step_length, step.button, step.scroll_down, step.ticks, step.mouse_scroll_speed].some(v => v !== undefined)))
         context.addIssue({ code: "custom", message: `${step.id}: extended actions and fields require flow version 2` });
       if (extended && !step.scope)
@@ -244,6 +224,21 @@ export const flowSchema = z
         context.addIssue({ code: "custom", message: `${step.id}: direction required` });
       if (step.action === "mouseScroll" && (step.scroll_down === undefined || step.ticks === undefined))
         context.addIssue({ code: "custom", message: `${step.id}: scroll direction and ticks required` });
+      if (nativeAction) {
+        const { id: _id, action: _action, timeoutMs: _timeout, fragile: _fragile, scope: _scope, alternates, value, key, ...fields } = step;
+        // Saved-step spelling is translated into the same native action contract;
+        // unused parameters are rejected at save time rather than silently lost.
+        if (nativeAction === "text") delete fields.selector;
+        const operation = { ...fields, action: nativeAction, ...(value !== undefined ? { text: value } : {}), ...(key !== undefined ? { keys: [key] } : {}) };
+        for (const issue of uiControlIssues(operation)) context.addIssue({ code: "custom", path: ["steps", flow.steps.indexOf(step), ...issue.path], message: `${step.id}: ${issue.message}` });
+        if (alternates && ["keyEvent", "dircFling"].includes(nativeAction)) context.addIssue({ code: "custom", message: `${step.id}: alternates do not apply to ${step.action}` });
+      }
+      if (UI_ASSERTION_ACTIONS.includes(step.action)) {
+        if (!step.selector) context.addIssue({ code: "custom", message: `${step.id}: assertion/wait steps require a selector` });
+        for (const field of ["point", "gesture", "value", "key", "keys", "direction", "velocity", "step_length", "button", "scroll_down", "ticks", "mouse_scroll_speed"] as const)
+          if (step[field] !== undefined) context.addIssue({ code: "custom", message: `${step.id}: ${field} does not apply to ${step.action}` });
+      }
+
     }
   });
 export type Flow = z.infer<typeof flowSchema>;
@@ -340,11 +335,17 @@ export const appSchema = z.strictObject({
 });
 export type ApplicationTarget = z.infer<typeof appSchema>;
 export const uiTestStepSchema = z.strictObject({
+  requirement_ids: z.array(requirementBindingSchema.shape.id).min(1).max(100).refine(ids => new Set(ids).size === ids.length, "Requirement references must be unique").optional(),
+  task_ids: z.array(requirementBindingSchema.shape.id).min(1).max(100).refine(ids => new Set(ids).size === ids.length, "Task references must be unique").optional(),
   id: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/),
   goal: z.string().trim().min(1).max(4096),
   assert: assertionSchema.optional(),
   review: z.strictObject({ requirement: z.string().trim().min(1).max(4096) }).optional(),
 }).refine(step => !!(step.assert || step.review), "Each step needs a control assertion or a visual requirement");
+export const uiTestCheckAfterSchema = z.strictObject({
+  stable_ms: z.number().int().min(100).max(1000).default(250),
+  timeout_ms: z.number().int().min(250).max(5000).default(1500),
+}).refine(value => value.timeout_ms > value.stable_ms, "timeout_ms must exceed stable_ms");
 export const uiTestPlanSchema = z.array(uiTestStepSchema).min(1).max(100).refine(steps => new Set(steps.map(step => step.id)).size === steps.length, "Step IDs must be unique");
 export const uiTaskSchema = z.discriminatedUnion("kind", [
   z.strictObject({
@@ -363,7 +364,20 @@ const buildFields = {
   modules: z.array(z.string().min(1)).min(1).optional(),
   mode: z.enum(["debug", "release"]).default("debug"),
   clean: z.boolean().default(false),
-  sync: z.boolean().default(true),
+  sync: z.union([z.enum(["auto", "force", "skip"]), z.boolean()]).default("auto")
+    .describe("auto reuses a retained sync only when installed dependencies, configuration, toolchain and model still match; force always syncs, skip explicitly omits sync. Legacy true=force and false=skip."),
+};
+const applicationFields = { target, app: appSchema.optional() };
+const buildReferenceFields = {
+  ...projectFields,
+  ...applicationFields,
+  build_run_id: z.string().uuid().describe("Reuse a succeeded build with unchanged inputs and packages; no synchronization or compilation is repeated."),
+};
+const applicationBuildFields = { ...buildFields, ...applicationFields, hot_reload: z.boolean().default(false) };
+const verifyApplicationFields = {
+  assert: assertionSchema,
+  flow_id: flowIdSchema.optional(),
+  variables: z.record(z.string(), z.string()).default({}),
 };
 export const faultlogNameSchema = z
   .string()
@@ -391,7 +405,8 @@ export const workflowInputs = {
     project_path: z.string().min(1),
     app_name: projectAppNameSchema,
     bundle_name: projectBundleNameSchema,
-    sdk_version: z.union([z.string(), z.number().int().positive()]),
+    sdk_version: z.union([z.string(), z.number().int().positive()]).optional().describe("Omit to use the configured toolchain's installed default SDK. Explicit versions must match it; no SDK download or toolchain switch occurs."),
+    merge: z.boolean().optional().describe("Allow non-overwriting creation into a nonempty directory. Conflicting files/directories/symlinks are rejected before publication."),
     compatible_api: projectCompatibleApiSchema.optional().describe("Minimum device API; defaults to target_api. Must not exceed the target API."),
     target_api: projectTargetApiSchema.optional().describe("Target runtime behavior API; defaults to the selected SDK API. Must not exceed the installed compile SDK API."),
   }),
@@ -408,7 +423,7 @@ export const workflowInputs = {
     message: "assembleApp packages the product's configured targets; use assembleHap/Har/Hsp for explicit module or target selection",
     path: ["task"],
   }),
-  app_deploy: z.strictObject({
+  app_deploy: z.union([z.strictObject({
     packages: z
       .array(
         z.strictObject({
@@ -421,18 +436,13 @@ export const workflowInputs = {
       )
       .min(1)
       .max(64),
-    target,
-    app: appSchema,
-  }),
-  build_deploy_verify: z.strictObject({
-    ...buildFields,
-    target,
-    app: appSchema,
-    assert: assertionSchema,
-    flow_id: flowIdSchema.optional(),
-    variables: z.record(z.string(), z.string()).default({}),
-    hot_reload: z.boolean().default(false),
-  }),
+    ...applicationFields,
+  }), z.strictObject(buildReferenceFields)]),
+  build_run: z.union([z.strictObject(applicationBuildFields), z.strictObject(buildReferenceFields)]),
+  build_deploy_verify: z.union([
+    z.strictObject({ ...applicationBuildFields, ...verifyApplicationFields }),
+    z.strictObject({ ...buildReferenceFields, ...verifyApplicationFields }),
+  ]),
   code_diagnose: z.strictObject({
     ...projectFields,
     files: z.array(z.string()).min(1).optional(),
@@ -443,6 +453,8 @@ export const workflowInputs = {
   }),
   crash_diagnose: z
     .strictObject({
+      source_run_id: z.string().uuid().optional().describe("Read retained deployment/UI-task logs in their captured scope."),
+      collect_missing: z.boolean().optional().describe("With source_run_id, explicitly supplement missing evidence using faultlogs inside the captured device-time window."),
       target,
       log_file: z.string().min(1).optional(),
       log_artifact_id: z.string().uuid().optional(),
@@ -456,6 +468,7 @@ export const workflowInputs = {
     })
     .superRefine((input, ctx) => {
       const sources = [
+        input.source_run_id,
         input.log_file,
         input.log_artifact_id,
         input.log_text,
@@ -466,6 +479,10 @@ export const workflowInputs = {
           code: "custom",
           message: "Provide at most one evidence source",
         });
+      if (input.source_run_id && [input.target, input.kind, input.lines, input.max_age_minutes, input.bundle_name, input.process_hint].some(value => value !== undefined))
+        ctx.addIssue({ code: "custom", message: "A source task fixes the application, device and historical window; do not override its scope" });
+      if (input.collect_missing !== undefined && !input.source_run_id)
+        ctx.addIssue({ code: "custom", message: "collect_missing requires source_run_id" });
       const local =
         input.log_file !== undefined ||
         input.log_artifact_id !== undefined ||
@@ -502,7 +519,11 @@ export const workflowInputs = {
           message:
             "Inline evidence is limited to 32 KiB; use log_file for larger evidence",
         });
-    }),
+    }).meta({ allOf: [
+      { if: { required: ["source_run_id"] }, then: { not: { anyOf:
+        ["log_file", "log_artifact_id", "log_text", "faultlog_name", "target", "kind", "lines", "max_age_minutes", "bundle_name", "process_hint"].map(name => ({ required: [name] })) } } },
+      { if: { required: ["collect_missing"] }, then: { required: ["source_run_id"] } },
+    ] }),
   api_compatibility: z.strictObject({
     ...projectFields,
     source_version: z.string().min(1),
@@ -570,85 +591,45 @@ function uiFlowAction<A extends string>(action: A) {
     route: action === "record_start" ? routeRequestSchema : uiFlowFields.route,
   });
 }
-export const tools = {
+// All workflow input contracts remain discoverable and validated, including start.
+export const publicWorkflowRunSchema = z.union([
+  z.discriminatedUnion("workflow", [
+    workflowStartContract("project_create", workflowInputs.project_create),
+    workflowStartContract("project_sync", workflowInputs.project_sync),
+    workflowStartContract("project_build", workflowInputs.project_build),
+    workflowStartContract("app_deploy", workflowInputs.app_deploy),
+    workflowStartContract("build_run", workflowInputs.build_run),
+    workflowStartContract("build_deploy_verify", workflowInputs.build_deploy_verify),
+    workflowStartContract("code_diagnose", workflowInputs.code_diagnose),
+    workflowStartContract("crash_diagnose", workflowInputs.crash_diagnose),
+    workflowStartContract("api_compatibility", workflowInputs.api_compatibility),
+  ]),
+  workflowObservationContract,
+]);
+const nativeTools = {
   skill_manage: {
-    description: "Discover/search bundled HarmonyOS Skills and read their full instructions and references over MCP. catalog filters by query; read needs name and optional catalogued file (default SKILL.md). Content includes provenance and digests. All Skills are inside the MCP package; no client directory, installation or activation is required. Use skill_workflow to follow their builtin workflows.",
+    description: "Catalog/search bundled HarmonyOS Skills or read a catalogued file with source and digest. No host installation is required. Use domain_recipe for task methods.",
     schema: skillManageSchema,
   },
   skill_workflow: {
-    description: "Run MCP-owned builtin Skill workflows without any client Skill installation. catalog lists plan/debug/spec/customize/arkts/repair/create/ui_test recipes. start captures kind, absolute project_path and original objective; create accepts a new destination, other kinds require an existing directory. Optional device captures target/bundle_name and is required for ui_test; each state response supplies the current phase's bundled Skills, knowledge, next MCP actions and completion gates. write persists plan.md/spec.md/tasks.md/notes.md with expected_revision. transition follows planning, implementing, verifying, completed or cancelled, recording rationale and applicable evidence_run_ids from native workflows. Completion evidence must match the captured project/device/app and start after the latest implementation phase. Referenced native results stay protected from cleanup and are included in exports. read/list survive restart. Definitions are pinned; changed resources require a fresh run. publish writes a selected document to a new file. Client reasoning, project editing and image understanding are used when the indicated step requires them; no specific AI client is required.",
+    description: "Compatibility access to persisted guidance tasks: list/read/export/archive. New guidance uses domain_recipe; native work uses workflow_run. Legacy mutations return migration guidance and never create a new planning lifecycle.",
     schema: skillWorkflowSchema,
   },
   workflow_catalog: {
     description:
-      "Read deterministic workflow input schemas, required capabilities and completion criteria.",
+      "List fixed native workflows compactly; get reads one input schema/capabilities/completion contract; ui_actions reads the shared versioned direct/recorded action contract.",
     schema: z.strictObject({
-      action: z.enum(["list", "get"]).default("list"),
+      action: z.enum(["list", "get", "ui_actions"]).default("list"),
       workflow: z.enum(workflowNames).optional(),
-    }),
+    }).refine(input => input.action === "get" ? input.workflow !== undefined : input.workflow === undefined, "Specify workflow only for get"),
   },
   workflow_run: {
-    description:
-      "Persist/start, list, inspect, resume or cancel a workflow and read its artifacts. Storage recovery: capacity forecasts additional_bytes and lists completed cleanup candidates; cleanup_plan previews exact run_ids; export copies their evidence to a new export_directory; cleanup_apply requires the same run_ids and reviewed plan_hash, durably removes them and returns a receipt. Failed/recoverable or active runs are protected. storage_receipt reads a receipt_id. These recovery actions remain available after STATE_CAPACITY. read_artifact defaults to base64 pages; as=image returns PNG/JPEG MCP image content (at most 8 MiB) without pagination. Status waits at most 20 seconds.",
-    schema: z
-      .strictObject({
-        action: z.enum([
-          "start",
-          "list",
-          "status",
-          "resume",
-          "cancel",
-          "read_artifact",
-          "capacity",
-          "cleanup_plan",
-          "cleanup_apply",
-          "export",
-          "storage_receipt",
-        ]),
-        workflow: z.enum(workflowNames).optional(),
-        input: z.record(z.string(), z.unknown()).optional(),
-        request_key: z.string().min(1).max(256).optional(),
-        run_id: z.string().uuid().optional(),
-        wait_ms: z.number().int().min(0).max(20000).default(0),
-        resume_input: z
-          .strictObject({ action: z.literal("recheck") })
-          .optional(),
-        artifact_id: z.string().uuid().optional(),
-        as: z.enum(["page", "image"]).default("page"),
-        offset: z.number().int().nonnegative().default(0),
-        limit: z.number().int().min(1).max(65536).optional(),
-        additional_bytes: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER).optional(),
-        run_ids: z.array(z.string().uuid()).min(1).max(100).optional(),
-        plan_hash: z.string().regex(/^[a-f0-9]{64}$/).optional(),
-        export_directory: z.string().min(1).optional(),
-        receipt_id: z.string().regex(/^(?:[a-f0-9]{64}|[a-f0-9-]{36})$/).optional(),
-      })
-      .refine(
-        (input) =>
-          input.as !== "image" ||
-          (input.action === "read_artifact" &&
-            input.offset === 0 &&
-            input.limit === undefined),
-        "as=image requires read_artifact with no pagination",
-      ).superRefine((input, ctx) => {
-        const requires = (condition: boolean, field: string, message: string) => {
-          if (!condition) ctx.addIssue({ code: "custom", path: [field], message });
-        };
-        if (["cleanup_plan", "cleanup_apply", "export"].includes(input.action))
-          requires(input.run_ids !== undefined, "run_ids", "Select exact completed run_ids; capacity lists cleanup candidates");
-        if (input.action === "cleanup_apply") requires(input.plan_hash !== undefined, "plan_hash", "Review cleanup_plan and pass its plan_hash");
-        if (input.action === "export") requires(input.export_directory !== undefined, "export_directory", "Select a new export directory outside MCP state");
-        if (input.action === "storage_receipt") requires(input.receipt_id !== undefined, "receipt_id", "Provide the returned receipt_id");
-        for (const [field, actions] of Object.entries({
-          additional_bytes: ["capacity"], run_ids: ["cleanup_plan", "cleanup_apply", "export"],
-          plan_hash: ["cleanup_apply"], export_directory: ["export"], receipt_id: ["storage_receipt"],
-        })) if (input[field as keyof typeof input] !== undefined)
-          requires(actions.includes(input.action), field, `${field} does not apply to ${input.action}`);
-      }),
+    description: "Start, observe, reconcile or cancel native tasks. Each workflow has a typed input. Start/status/resume return bounded summaries after wait_ms. Read complete results by byte page, events by ID cursor, artifacts by page or image. Storage actions use maintenance.",
+    schema: z.union([publicWorkflowRunSchema, storageContract]),
   },
   harmony_knowledge: {
     description:
-      "Search local HarmonyOS documentation and rule/case resources. kind=docs catalog returns the six catalog names and paged documents; catalog filters local docs catalog/search. Read pages UTF-16 characters (default 16384); catalog/search pages at most 100 entries. Cloud search requires source=cloud and a CodeGenie login.",
+      "Search errors, rules, cases or full HarmonyOS documentation (kind=docs); follow result read parameters. catalog discovers unknown IDs and document categories. Read pages use UTF-16 characters (default 16384); catalog/search returns at most 100 entries. Cloud search requires source=cloud and CodeGenie login.",
     schema: z
       .strictObject({
         action: z.enum(["catalog", "search", "read"]),
@@ -686,8 +667,7 @@ export const tools = {
     }),
   },
   switch_cwd: {
-    description:
-      "Select the default project for future requests. Submitted workflows keep their captured context.",
+    description: "Deprecated alias for immutable project_context resolve. Returns the selected project descriptor without changing any shared default; pass project_path on later project calls.",
     schema: z.strictObject({ project_path: z.string().min(1) }),
   },
   deveco_doctor: {
@@ -701,8 +681,7 @@ export const tools = {
     schema: z.strictObject({}),
   },
   lsp: {
-    description:
-      "Native language queries: hover, definition, implementation, references, diagnostics, documentSymbol, workspaceSymbol, prepareCallHierarchy, incomingCalls, outgoingCalls. language defaults to arkts; cpp uses SDK clangd and requires a built CMake translation unit with selected ABI/mode. file selects the synchronized document/server in the chosen project. Positions are zero based UTF-16 offsets; document/workspace symbols do not need positions. workspaceSymbol uses query (empty requests all, bounded results). Call queries re-prepare current source and use item_index (default 0); prepareCallHierarchy lists selectable items. Unsupported capabilities and oversized results are explicit errors, never text-search approximations.",
+    description: "Native ArkTS/C++ language queries. Positions use zero-based UTF-16 offsets. C++ needs a built CMake translation unit with selected ABI/mode. Symbols use query; call hierarchy uses current source and item_index. Unsupported capabilities and oversized results return explicit errors.",
     schema: z
       .strictObject({
         ...projectFields,
@@ -946,16 +925,14 @@ export const tools = {
     schema: z.strictObject({ target, selector: meaningfulSelector }),
   },
   ui_flow: {
-    description:
-      "Inspect declared app routes and saved flows. Run/navigate/record_start persist tasks; use workflow_run for status, resume and cancel. Navigate selects one route, flow ID or goal. Routes require assert; saved flows keep their original assertion. An unmatched goal starts a recording at one exported entry (home, mainElement, then unique ability), returning navigation=recording and recording_id; no replay inputs or assertion are accepted at this point. Ambiguous entries/goals never execute. Record_start needs id, name and ability route. Wait for needs_input, then ui_tap/ui_control records accepted actions. Record_stop needs recording_id and assert; saving follows verification. Input text becomes secret variables; selector repairs require the original assertion to pass.",
+    description: "Reuse or record navigation when useful: list/routes, read/validate, then run. Saved flows retain their assertion; routes require assert. Mutations return durable run IDs. Recording setup and action contracts: domain_recipe ui_test and workflow_catalog ui_actions. Never replay uncertain effects or bypass active ui_test act/check.",
     schema: z.discriminatedUnion("action", [
       uiFlowAction("list"), uiFlowAction("read"), uiFlowAction("validate"), uiFlowAction("save"), uiFlowAction("delete"), uiFlowAction("routes"),
       uiFlowAction("run"), uiFlowAction("navigate"), uiFlowAction("record_start"), uiFlowAction("record_status"), uiFlowAction("record_stop"), uiFlowAction("record_cancel"),
     ]),
   },
   verify_ui: {
-    description:
-      "Poll a final control assertion and/or capture evidence for host visual review. review.requirement creates a persistent review_id, initially required and verified=false. Read its exact image using workflow_run read_artifact as=image, then submit actual observations using ui_review complete with the returned review read_token and screenshot sha256. A failed control assertion cannot be overridden by visual assessment. Assertion and screenshot are sequential samples under one device lease. A screenshot alone never verifies an outcome.",
+    description: "Evaluate a control assertion and/or capture a host visual review. Pending reviews include the image and completion parameters, with artifact-read fallback. Image delivery alone is not verification; host assessment cannot override a failed assertion. Samples share a device lease.",
     schema: z
       .strictObject({
         target,
@@ -973,7 +950,7 @@ export const tools = {
       ),
   },
   ui_review: {
-    description: "Inspect, complete or cancel a persistent visual review. complete requires the exact screenshot artifact_id/sha256, read_token returned when that image was read, and the host's actual observations with passed/failed/insufficient outcome. Completion is immutable and explicitly attributed to host visual assessment, independently of the native control assertion. list uses bounded pagination; no device action is performed.",
+    description: "Read or complete a visual review. Submit the exact screenshot artifact_id, sha256, delivered read_token and actual host assessment. Completion is immutable; visual assessment cannot override a failed control assertion.",
     schema: z.discriminatedUnion("action", [
       z.strictObject({ action: z.literal("list"), ...pagination }),
       z.strictObject({ action: z.literal("status"), review_id: z.string().uuid() }),
@@ -982,13 +959,13 @@ export const tools = {
     ]),
   },
   ui_test: {
-    description: "Execute a natural-language UI test as a durable host-guided session. start captures test_plan, app and device and returns test_id/run_id. The host translates the plan into ordered steps with explicit assert/review requirements using plan; resume initializes or inspects the captured app. act executes one scoped native operation with a unique attempt_id and records before/after evidence; it never marks a step passed. check verifies the current step and creates any visual review, completed via ui_review after reading its screenshot. finish succeeds only when all planned requirements pass. Three unchanged captures or action budgets block further actions; replan requires fresh evidence and a changed strategy. Uncertain actions are never replayed by resume. status/cancel survive restart. Use workflow_run artifacts/export for retained evidence.",
+    description: "Durable UI test with captured app/device and original steps. Complete plans initialize by default; fresh_start=false preserves app state. act uses attempt_id and optional check_after; identical retries do not replay. Follow next calls and inline review images. finish requires all steps and no uncertain action. Methods: domain_recipe ui_test.",
     schema: z.discriminatedUnion("action", [
-      z.strictObject({ action: z.literal("start"), test_plan: z.string().trim().min(1).max(16384), app: appSchema, target, fresh_start: z.boolean().default(false), allowed_bundles: z.array(appSchema.shape.bundle_name).max(16).default([]).describe("Additional explicitly captured application scopes, e.g. a permission dialog; app.bundle_name is always included"), display_id: z.number().int().min(0).max(2147483647).optional(), steps: uiTestPlanSchema.optional(), request_key: z.string().min(1).max(256).optional() }),
+      z.strictObject({ action: z.literal("start"), ...projectFields, requirements: requirementBindingsSchema.optional(), deployment_run_id: z.string().uuid().optional().describe("Link a succeeded deployment receipt before testing; required for project-bound domain acceptance"), test_plan: z.string().trim().min(1).max(16384), app: appSchema.optional(), target, fresh_start: z.boolean().default(false), allowed_bundles: z.array(appSchema.shape.bundle_name).max(16).default([]).describe("Additional explicitly captured application scopes, e.g. a permission dialog; app.bundle_name is always included"), display_id: z.number().int().min(0).max(2147483647).optional(), steps: uiTestPlanSchema.optional(), initialize: z.boolean().optional().describe("Full steps initialize in start by default; false retains separate resume. fresh_start=false preserves the current app state"), request_key: z.string().min(1).max(256).optional() }).refine(input => !!(input.app || input.deployment_run_id), "Provide app or a succeeded deployment_run_id").meta({ anyOf: [{ required: ["app"] }, { required: ["deployment_run_id"] }] }),
       z.strictObject({ action: z.literal("plan"), test_id: z.string().uuid(), steps: uiTestPlanSchema }),
       ...["status", "resume", "cancel", "finish"].map(action => z.strictObject({ action: z.literal(action as "status" | "resume" | "cancel" | "finish"), test_id: z.string().uuid() })),
       z.strictObject({ action: z.literal("check"), test_id: z.string().uuid(), recapture: z.boolean().default(false).describe("Explicitly replace an existing review with fresh evidence after an external or delayed UI change; original requirements remain fixed") }),
-      z.strictObject({ action: z.literal("act"), test_id: z.string().uuid(), step_id: z.string().min(1).max(64), attempt_id: z.string().uuid(), operation: controlSchema }),
+      z.strictObject({ action: z.literal("act"), test_id: z.string().uuid(), step_id: z.string().min(1).max(64), attempt_id: z.string().uuid(), operation: controlSchema, check_after: uiTestCheckAfterSchema.optional().describe("After an accepted action, observe bounded stability and check that same step; timeout leaves it pending. Retry the same attempt/input without replaying the action") }),
       z.strictObject({ action: z.literal("replan"), test_id: z.string().uuid(), reason: z.string().trim().min(10).max(4096), strategy: z.string().trim().min(10).max(4096), reconcile_uncertain: z.boolean().default(false) }),
       z.strictObject({ action: z.literal("logs"), test_id: z.string().uuid(), chunk_id: z.number().int().min(0).max(8691).optional(), chunk_offset: z.number().int().nonnegative().default(0).describe("Offset in the combined legacy and continuous chunk listing"), chunk_limit: z.number().int().min(1).max(100).default(100), offset: z.number().int().nonnegative().default(0).describe("Offset in matching log lines"), limit: z.number().int().min(1).max(65536).default(16384).describe("Maximum UTF-8 response bytes"), search_keywords: z.array(z.string().min(1).max(256)).max(8).default([]) }),
       z.strictObject({ action: z.literal("report"), test_id: z.string().uuid() }),
@@ -1014,7 +991,7 @@ export const tools = {
   },
   ui_control: {
     description:
-      "Send a validated UiTest touch, keyboard, focused-text or mouse operation. text inputs at the currently focused editable field without clicking; it requires an explicit window id/bundle_name and exactly one focused field. Mouse operations require a scoped selector or explicit window and use native Driver RPC. Use selector or absolute x/y; point/gesture percentages are relative to a unique selector or explicit window id/bundle_name. Display follows the selected node/window; display_id may be explicit. Accepted commands still require verify_ui.",
+      "Send a validated UiTest touch, keyboard, focused-text or mouse operation. One-off navigation can use direct scoped actions. Use ui_flow list/routes when reusing a saved path helps; record only navigation intended for reuse. Active ui_test steps use ui_test act. text inputs at the currently focused editable field without clicking; it requires an explicit window id/bundle_name and exactly one focused field. Mouse operations require a scoped selector or explicit window and use native Driver RPC. Use selector or absolute x/y; point/gesture percentages are relative to a unique selector or explicit window id/bundle_name. Display follows the selected node/window; display_id may be explicit. Resolve ambiguous targets from fresh bundle/window/key/type evidence. Accepted commands still require verify_ui.",
     schema: z.strictObject({ target, operation: controlSchema }),
   },
   emulator_manage: {
@@ -1026,6 +1003,79 @@ export const tools = {
     description:
       "Control a running modern emulator as a persistent job returning run_id; use workflow_run for status/resume/cancel. Range and operation fields are checked before SDK calls; native help must declare the selected capability. Optional verify captures a bundle_name and UI assertion, checked after the accepted command under the same device lease. Its separate verify_native_outcome result/report proves the captured application assertion, not every physical sensor property. On assertion failure, resume rechecks the assertion without repeating the accepted scenario. Without verify, command acceptance leaves application state unverified.",
     schema: emulatorScenarioSchema,
+  },
+};
+export const signatureAdminActions = ["certificates", "certificate_create", "certificate_delete", "profile_create", "profile_delete", "devices", "device_register"] as const;
+export const signatureDailyActions = ["inspect", "configure", "keypair", "csr", "sign", "verify"] as const;
+export const emulatorAdminActions = ["create", "delete", "images", "image_install", "image_uninstall", "license_view", "license_accept"] as const;
+export const emulatorDailyActions = ["list", "start", "stop"] as const;
+// Advertise only daily fields, then run the complete existing native validator.
+// Administrative aliases still use the original schema behind the group gate.
+export const dailySignatureSchema = z.strictObject({
+  ...projectFields,
+  request_key: nativeTools.app_signature.schema.shape.request_key,
+  action: z.enum(signatureDailyActions),
+  file: nativeTools.app_signature.schema.shape.file,
+  output: nativeTools.app_signature.schema.shape.output,
+  options: nativeTools.app_signature.schema.shape.options,
+}).superRefine((input, ctx) => {
+  const parsed = nativeTools.app_signature.schema.safeParse(input);
+  if (!parsed.success) for (const issue of parsed.error.issues) ctx.addIssue({ ...issue });
+});
+export const dailyEmulatorSchema = z.strictObject({
+  request_key: emulatorManageSchema.shape.request_key,
+  target: emulatorManageSchema.shape.target,
+  action: z.enum(emulatorDailyActions),
+  name: emulatorManageSchema.shape.name,
+}).superRefine((input, ctx) => {
+  const parsed = emulatorManageSchema.safeParse(input);
+  if (!parsed.success) for (const issue of parsed.error.issues) ctx.addIssue({ ...issue });
+});
+
+export const tools = {
+  ...nativeTools,
+  domain_content: {
+    description: "Read a known deveco URI with source/digest; catalog discovers Skill, knowledge, recipe and source IDs. Tool fallback for MCP Resources. Questions: harmony_knowledge search. Task methods: domain_recipe.",
+    schema: z.discriminatedUnion("action", [
+      z.strictObject({ action: z.literal("catalog"), kind: z.enum(["skill", "knowledge", "recipe", "source"]).optional(), query: z.string().trim().max(256).default(""), offset: z.number().int().nonnegative().default(0), limit: z.number().int().min(1).max(100).default(30) }),
+      z.strictObject({ action: z.literal("read"), uri: z.string().min(1).max(2048) }),
+    ]),
+  },
+  domain_recipe: {
+    description: "Read task methods and optional specification or host-setup guidance with direct source references. catalog lists available methods; read creates no run.",
+    schema: domainRecipeSchema,
+  },
+  domain_acceptance: {
+    description: "Assess requirement/task/assertion/review/evidence links against current native results and source identity. This is an on-demand assessment, not a planning or project-management lifecycle.",
+    schema: domainAcceptanceSchema,
+  },
+  project_context: {
+    description: "Resolve an immutable project/product/module descriptor. Pass its explicit scope to later project calls; started runs retain that scope.",
+    schema: z.strictObject({ action: z.literal("resolve").default("resolve"), project_path: z.string().min(1), product: projectFields.product, module_targets: projectFields.module_targets }),
+  },
+  ui_query: {
+    description: "Observe/query UI: snapshot captures artifacts; observe samples named selectors; find queries live or saved trees; inspect pages nodes/windows/displays. Saved trees do not establish live state. Use ui_control for input, verify_ui or ui_test for outcome checks.",
+    schema: z.discriminatedUnion("action", [
+      z.strictObject({ action: z.literal("snapshot"), query: nativeTools.ui_snapshot.schema }),
+      z.strictObject({ action: z.literal("observe"), query: nativeTools.ui_observe.schema }),
+      z.strictObject({ action: z.literal("find"), query: nativeTools.ui_find.schema }),
+      z.strictObject({ action: z.literal("inspect"), query: nativeTools.ui_inspect.schema }),
+    ]),
+  },
+  maintenance: {
+    description: "Recover workers or storage. restart interrupts owned sessions; capacity previews usage; cleanup_apply requires reviewed run_ids and plan_hash. export writes retained evidence to a new directory; storage_receipt reads the durable receipt.",
+    schema: z.discriminatedUnion("action", [
+      z.strictObject({ action: z.literal("restart") }),
+      ...storageContracts,
+    ]),
+  },
+  signature_admin: {
+    description: "Optional signing-admin group: manage cloud certificates/profiles and registered devices for an explicit developer team. Uses the native signing service; credentials stay isolated from knowledge authentication. Enable the group when opening the MCP connection.",
+    schema: nativeTools.app_signature.schema.safeExtend({ action: z.enum(signatureAdminActions) }),
+  },
+  emulator_admin: {
+    description: "Optional emulator-admin group: create/delete instances, inspect/install/uninstall images and review/accept exact license digests. Native mutations retain their run IDs and reconciliation guarantees. Enable the group when opening the MCP connection.",
+    schema: nativeTools.emulator_manage.schema.safeExtend({ action: z.enum(emulatorAdminActions) }),
   },
 };
 export type ToolName = keyof typeof tools;

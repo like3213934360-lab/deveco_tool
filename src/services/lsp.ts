@@ -12,9 +12,10 @@ import { ProcessService, type Command } from "../core/process.js";
 import {
   component,
   discoverToolchain,
+  installedSdkMetadata,
   type Toolchain,
 } from "../core/toolchain.js";
-import { invariant, ToolError } from "../core/errors.js";
+import { invariant, ToolError, errorResult } from "../core/errors.js";
 import { digest } from "../core/files.js";
 import { NativeDirectory } from "../core/native-directory.js";
 import type { StateStore } from "../core/store.js";
@@ -240,6 +241,20 @@ interface Session {
   queued: Promise<void>;
   active: number;
   capabilities: z.infer<typeof capabilities>;
+  identity: {
+    project_path: string;
+    project_fingerprint: string;
+    language: "arkts" | "cpp";
+    server_configuration_sha256: string;
+    toolchain_fingerprint?: string;
+    sdk?: { path: string; api_level?: number; platform_version?: string; package_version?: string; metadata_status: "available" | "unavailable" };
+  };
+  observed: Partial<Record<LanguageRequest["action"], {
+    outcome: "executed" | "unsupported" | "failed";
+    observed_at: number;
+    code?: string;
+    request_dispatched?: boolean;
+  }>>;
   closing?: Promise<void>;
   directory?: NativeDirectory;
 }
@@ -399,6 +414,31 @@ export class LanguageService {
       sweep_ms: 30000,
     };
   }
+  /** Read only: never start a language server to inflate capability coverage.
+   * Initialization claims and observed validated results are separate facts.
+   * A closed/replaced SDK session cannot donate support to a new one. */
+  capabilityReport() {
+    const actions: LanguageRequest["action"][] = ["hover", "definition", "implementation", "references", "diagnostics", "documentSymbol", "workspaceSymbol", "prepareCallHierarchy", "incomingCalls", "outgoingCalls"];
+    return {
+      scope: "live_language_sdk_sessions",
+      acceptance_verified: false,
+      sessions: [...this.sessions.values()].map(session => ({
+        ...session.identity,
+        closing: !!session.closing,
+        operations: actions.map(action => {
+          const capability = ["prepareCallHierarchy", "incomingCalls", "outgoingCalls"].includes(action)
+            ? "callHierarchyProvider" : action === "diagnostics" ? "diagnosticProvider" : `${action}Provider`;
+          const declared = session.capabilities[capability as keyof typeof session.capabilities];
+          return {
+            operation: action,
+            declaration: declared === undefined ? "absent" : declared === false ? "false" : "advertised",
+            adapter: session.identity.language === "arkts" && action in symbolResults ? "arkts_symbol_probe" : action === "diagnostics" && !declared ? "push_notifications" : "standard_lsp",
+            observation: session.observed[action] ?? { outcome: "not_observed" },
+          };
+        }),
+      })),
+    };
+  }
   private readonly sweeper: NodeJS.Timeout;
   constructor(
     readonly processes: ProcessService,
@@ -431,11 +471,18 @@ export class LanguageService {
     compileDirectory?: string,
   ): Promise<Session> {
     let toolchainFingerprint: string | undefined;
+    let sdk: Session["identity"]["sdk"];
     const command =
       this.launch?.(project, language) ??
       (() => {
         const toolchain = discoverToolchain();
         toolchainFingerprint = toolchain.fingerprint;
+        sdk = { path: toolchain.sdk, metadata_status: "unavailable" };
+        try {
+          const metadata = installedSdkMetadata(toolchain);
+          sdk = { path: toolchain.sdk, metadata_status: "available", api_level: metadata.api_level,
+            platform_version: metadata.platform_version, ...(metadata.package_version ? { package_version: metadata.package_version } : {}) };
+        } catch { /* Metadata is reported separately; server execution remains authoritative. */ }
         return {
           executable:
             language === "cpp"
@@ -521,6 +568,10 @@ export class LanguageService {
       queued: Promise.resolve(),
       active: 1,
       capabilities: {},
+      identity: { project_path: project.root, project_fingerprint: project.fingerprint,
+        language, server_configuration_sha256: digest({ executable: command.executable, args: command.args, toolchainFingerprint }),
+        ...(toolchainFingerprint ? { toolchain_fingerprint: toolchainFingerprint } : {}), ...(sdk ? { sdk } : {}) },
+      observed: {},
       directory,
     };
     directory?.controller.signal.addEventListener(
@@ -719,6 +770,10 @@ export class LanguageService {
       finished = Promise.withResolvers<void>();
     session.queued = previous.then(() => finished.promise);
     signal = session.directory?.signal(signal) ?? signal;
+    const observed = <T>(value: T, requestDispatched = true): T => {
+      session.observed[input.action] = { outcome: "executed", observed_at: Date.now(), request_dispatched: requestDispatched };
+      return value;
+    };
     try {
       await waitFor(previous, signal);
       await waitFor(session.ready, signal);
@@ -849,7 +904,7 @@ export class LanguageService {
           diagnostics = session.diagnostics.get(uri)!;
         }
         await session.directory?.check();
-        return {
+        return observed({
           file,
           diagnostics,
           diagnostic_transport: provider ? "pull" : "push",
@@ -865,7 +920,7 @@ export class LanguageService {
                 },
               }
             : {}),
-        };
+        }, !!provider);
       }
       const deadline = Date.now() + 20000;
       const query = (method: string, params: unknown) =>
@@ -962,6 +1017,7 @@ export class LanguageService {
           }),
         );
         const items = symbolResults.prepareCallHierarchy.parse(prepared) ?? [];
+        session.observed.prepareCallHierarchy = { outcome: "executed", observed_at: Date.now(), request_dispatched: true };
         const index = input.item_index ?? 0;
         if (!items.length && index === 0) return [];
         if (!Number.isInteger(index) || index < 0 || index >= items.length)
@@ -1010,7 +1066,7 @@ export class LanguageService {
             }
         }
         await session.directory?.check();
-        return result;
+        return observed(result);
       }
       const result = await query(
         input.action === "workspaceSymbol"
@@ -1032,15 +1088,24 @@ export class LanguageService {
       );
       const validated = await validate(input.action, result);
       await session.directory?.check();
-      return input.action === "references" && !input.includeDeclaration
+      return observed(input.action === "references" && !input.includeDeclaration
         ? await filterDeclarations(validated, (uri, position) =>
             query("textDocument/definition", {
               textDocument: { uri },
               position,
             }),
           )
-        : validated;
+        : validated);
     } catch (error) {
+      const failure = errorResult(error), details = error instanceof ToolError && error.details && typeof error.details === "object"
+        ? error.details as Record<string, unknown> : undefined;
+      const requestedMethod = input.action === "workspaceSymbol" ? "workspace/symbol"
+        : ["incomingCalls", "outgoingCalls"].includes(input.action) ? `callHierarchy/${input.action}` : `textDocument/${input.action}`;
+      session.observed[input.action] = {
+        outcome: failure.code === "LSP_CAPABILITY_UNAVAILABLE" && (!details?.method || details.method === requestedMethod) ? "unsupported" : "failed",
+        code: failure.code, observed_at: Date.now(),
+        ...(typeof details?.request_dispatched === "boolean" ? { request_dispatched: details.request_dispatched } : {}),
+      };
       if (session.directory?.controller.signal.aborted)
         throw session.directory.controller.signal.reason;
       throw error;

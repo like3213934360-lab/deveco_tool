@@ -27,7 +27,7 @@ export async function nativeOperation(runtime: Pick<Runtime, "call">, tool: "app
   }
   const deadline = performance.now() + timeoutMs;
   while (performance.now() < deadline) {
-    const status = z.object({ run_id: z.string(), status: z.string(), result: z.unknown(), error: z.unknown().optional() }).parse(await runtime.call("workflow_run", { action: "status", run_id: receipt.run_id, wait_ms: Math.min(20000, Math.max(1, Math.floor(deadline - performance.now()))) }));
+    const status = z.object({ run_id: z.string(), status: z.string(), result: z.unknown(), error: z.unknown().optional() }).parse(await runtime.call("workflow_run", { action: "status", detail: "full", run_id: receipt.run_id, wait_ms: Math.min(20000, Math.max(1, Math.floor(deadline - performance.now()))) }));
     invariant(status.run_id === receipt.run_id, "ACCEPTANCE_RUN_MISMATCH", "Status belongs to another operation");
     receipt.status = status.status; save();
     if (status.status === "succeeded") {

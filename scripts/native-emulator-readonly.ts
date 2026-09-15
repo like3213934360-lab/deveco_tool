@@ -138,7 +138,7 @@ try {
     const deadline = performance.now() + 30000;
     for (;;) {
       const state = z.object({ status: z.string(), error: z.unknown().optional(), result: z.unknown().optional() }).parse(
-        await runtime.call("workflow_run", { action: "status", run_id: submitted.run_id, wait_ms: 1000 }),
+        await runtime.call("workflow_run", { action: "status", detail: "full", run_id: submitted.run_id, wait_ms: 1000 }),
       );
       if (["queued", "running"].includes(state.status)) { assert.ok(performance.now() < deadline); continue; }
       assert.ok(["failed", "needs_input"].includes(state.status));

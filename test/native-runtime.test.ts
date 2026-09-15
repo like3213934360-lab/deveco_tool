@@ -24,6 +24,8 @@ import {
 import type { Project } from "../src/services/project.js";
 import { hotChanges } from "../src/services/hotreload.js";
 import { ToolError, errorResult } from "../src/core/errors.js";
+import { createToolCatalog } from "../src/core/catalog.js";
+import { restartDefinition } from "./fixtures/native-restart-definition.js";
 
 const temporary = () =>
   fs.realpathSync.native(
@@ -62,17 +64,21 @@ test("MCP catalogs work without SDK discovery, invalid input is rejected, worker
           ),
         ),
         DEVECO_STATE_DIR: root,
+        DEVECO_TOOL_GROUPS: "core",
       },
     });
   try {
     await client.connect(transport);
     const instructions = client.getInstructions();
-    assert.match(instructions ?? "", /first \.ets file/);
-    assert.match(instructions ?? "", /arkts-grammar-standards\/recipes-core/);
-    assert.match(instructions ?? "", /diagnostics first, then project_build/);
-    assert.match(instructions ?? "", /explicit successful final assertion/);
+    assert.ok(instructions && instructions.length < 1000);
+    assert.match(instructions, /workflow_catalog/);
+    assert.match(instructions, /domain_recipe/);
+    assert.match(instructions, /ui_flow list\/routes/);
+    assert.match(instructions, /One-off UI tests can observe and act directly/);
+    assert.match(instructions, /record only reusable authorized setup/);
+    assert.match(instructions, /project_path and target scopes explicitly/);
     const catalog = await client.listTools();
-    assert.equal(catalog.tools.length, 29);
+    assert.deepEqual(catalog.tools.map(tool => tool.name), createToolCatalog().map(tool => tool.name));
     assert.ok(catalog.tools.every((tool) => tool.outputSchema));
     const workflows = await client.callTool({
       name: "workflow_catalog",
@@ -145,7 +151,8 @@ test("MCP worker failures retain matching request telemetry after a successful n
     try {
       return z.array(z.object({ id: z.number(), kind: z.string(), data: z.string(), created: z.number() }))
         .parse(db.prepare("SELECT id,kind,data,created FROM events WHERE kind IN ('request_start','request_finish','request_failed') ORDER BY id").all())
-        .map(row => ({ ...row, data: z.object({ request_id: z.string(), tool: z.string(), code: z.string().optional() }).parse(JSON.parse(row.data)) }));
+        .map(row => ({ ...row, data: z.object({ request_id: z.string(), tool: z.string(), code: z.string().optional(),
+          elapsed_ms: z.number().finite().nonnegative().optional(), instance_id: z.string() }).parse(JSON.parse(row.data)) }));
     } finally { db.close(); }
   };
   try {
@@ -168,12 +175,23 @@ test("MCP worker failures retain matching request telemetry after a successful n
       ["request_start", succeeded.request_id, "workflow_run", undefined],
       ["request_finish", succeeded.request_id, "workflow_run", undefined],
     ]);
+    assert.ok(live.filter(row => row.kind !== "request_start").every(row => typeof row.data.elapsed_ms === "number"));
+    assert.equal(new Set(live.map(row => row.data.instance_id)).size, 1);
     await client.close();
     await until(() => {
       try { process.kill(pid, 0); return false; }
       catch (error) { if ((error as NodeJS.ErrnoException).code === "ESRCH") return true; throw error; }
     });
     assert.deepEqual(readEvents(), live, "The exact request events must survive process exit");
+    const db = new Database(path.join(state, "state.sqlite"), { readonly: true });
+    try {
+      const samples = (db.prepare("SELECT data FROM events WHERE kind='runtime_sample' ORDER BY id").all() as { data: string }[])
+        .map(row => JSON.parse(row.data));
+      assert.deepEqual(samples.map(sample => sample.reason), ["startup", "shutdown"]);
+      assert.ok(samples.every(sample => sample.instance_id === live[0]!.data.instance_id && sample.pid === pid && sample.rss_bytes > 0));
+      assert.equal(samples.at(-1)!.active_requests, 0);
+      assert.deepEqual(db.prepare("SELECT * FROM runtime_instances").all(), []);
+    } finally { db.close(); }
   } finally {
     await transport.close();
     fs.rmSync(root, { recursive: true, force: true });
@@ -566,29 +584,7 @@ test("hard interruption resumes from SQLite without repeating a completed effect
     trace("read-run");
     const id = fs.readFileSync(path.join(root, "run"), "utf8");
     assert.equal(store.get(id).status, "interrupted");
-    const definition: WorkflowDefinition = {
-      id: "restart",
-      description: "restart",
-      capabilities: [],
-      completion: "done",
-      resources: () => [],
-      steps: [
-        {
-          id: "effect",
-          kind: "effect",
-          async execute() {
-            throw new Error("Completed effect must never repeat");
-          },
-        },
-        {
-          id: "pause",
-          kind: "read",
-          async execute() {
-            return { resumed: true };
-          },
-        },
-      ],
-    };
+    const definition = restartDefinition(root, true);
     engine = new WorkflowEngine(store, [definition], async () => {});
     trace("resume");
     await engine.resume(id);

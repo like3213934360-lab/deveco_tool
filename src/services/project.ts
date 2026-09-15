@@ -1,10 +1,11 @@
 import { assertNoHotWatch } from "./hvigor/hot-config.js";
+import { publishProject, resumeProjectPublication } from "./project-create.js";
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import { z } from "zod";
 import { configuration, resourceRoot } from "../core/config.js";
-import { invariant, ToolError } from "../core/errors.js";
+import { invariant, ToolError, SettledEffectError } from "../core/errors.js";
 import {
   atomicWrite,
   digest,
@@ -17,6 +18,7 @@ import {
 } from "../core/files.js";
 import {
   discoverToolchain,
+  installedSdkMetadata,
   toolCommand,
   type Toolchain,
 } from "../core/toolchain.js";
@@ -197,14 +199,14 @@ function inspectSelection(
   for (const name of Object.keys(requested)) invariant(profile.modules.some((module) => module.name === name), "MODULE_INVALID", `Unknown module in module_targets: ${name}`);
   const selected = productName
     ? profile.app.products.find((item) => item.name === productName)
-    : (profile.app.products.find((item) => item.name === "default") ??
-      (profile.app.products.length === 1
+    : (profile.app.products.length === 1
         ? profile.app.products[0]
-        : undefined));
+        : undefined);
   invariant(
     selected,
     "PRODUCT_AMBIGUOUS",
     "Specify exactly one existing product",
+    { candidates: profile.app.products.map(item => item.name) },
   );
   const product = productSchema.parse({
     ...selected,
@@ -231,6 +233,7 @@ function inspectSelection(
         target,
         "TARGET_AMBIGUOUS",
         `Module ${item.name} has ambiguous targets for product ${product.name}; provide module_targets`,
+        { module: item.name, product: product.name, candidates: targets.map(item => item.name) },
       );
       const moduleRoot = fs.realpathSync.native(inside(root, item.srcPath));
       inside(root, moduleRoot);
@@ -270,7 +273,6 @@ export function inspectProject(candidate: string, productName?: string, moduleTa
   };
 }
 export class ProjectService {
-  private selected: string | undefined = configuration().default_project;
   constructor(
     readonly processes: ProcessService,
     private readonly toolchain: () => Toolchain = discoverToolchain,
@@ -304,34 +306,24 @@ export class ProjectService {
         : error;
     }
   }
+  /** Compatibility alias: return an explicit scope without changing later calls. */
   select(root: string) {
-    // Selecting a project does not pick a product. A later operation must name
-    // one when the project has several products and no unambiguous default.
+    invariant(path.isAbsolute(root), "PROJECT_PATH_ABSOLUTE_REQUIRED", "Use an absolute project_path");
     const project = readProjectProfile(root);
-    this.selected = project.root;
-    return { project_path: project.root };
+    return { project_path: project.root, immutable: true,
+      migration: "Pass project_path (and product/module_targets when needed) on every call. switch_cwd no longer changes a shared default." };
   }
   resolve(root?: string, product?: string, moduleTargets?: ModuleTargets): Project {
-    invariant(
-      root || this.selected,
-      "PROJECT_REQUIRED",
-      "Specify project_path or switch_cwd",
-    );
-    return inspectProject(root || this.selected!, product, moduleTargets);
+    invariant(root, "PROJECT_REQUIRED", "Specify an explicit project_path; shared default projects are no longer used");
+    invariant(path.isAbsolute(root), "PROJECT_PATH_ABSOLUTE_REQUIRED", "Use an absolute project_path");
+    return inspectProject(root, product, moduleTargets);
   }
-  /** Read-only catalogs/session lookups need a current, validated selection,
-   * but never consume build inputs. Tasks and language sessions use resolve()
-   * to capture the full content fingerprint before they are submitted. */
   resolveSelection(root?: string, product?: string, moduleTargets?: ModuleTargets): ProjectSelection {
-    invariant(root || this.selected, "PROJECT_REQUIRED", "Specify project_path or switch_cwd");
-    return inspectSelection(root || this.selected!, product, moduleTargets).selection;
+    invariant(root, "PROJECT_REQUIRED", "Specify an explicit project_path; shared default projects are no longer used");
+    invariant(path.isAbsolute(root), "PROJECT_PATH_ABSOLUTE_REQUIRED", "Use an absolute project_path");
+    return inspectSelection(root, product, moduleTargets).selection;
   }
-  async create(
-    input: ProjectCreateInput,
-    signal?: AbortSignal,
-    operationId: string = crypto.randomUUID(),
-  ) {
-    signal?.throwIfAborted();
+  prepareCreate(input: ProjectCreateInput) {
     const toolchain = this.toolchain();
     invariant(
       projectAppNameSchema.safeParse(input.app_name).success,
@@ -343,145 +335,142 @@ export class ProjectService {
       "BUNDLE_INVALID",
       "Bundle name must contain 7–128 ASCII characters in at least three dot-separated segments, with no empty segments or edge underscores",
     );
-    const root = destinationPath(input.project_path);
-    const metadata = z
-      .object({
-        apiVersion: z.string(),
-        platformVersion: z.string(),
-        version: z.string(),
-      })
-      .parse(readObject(path.join(toolchain.sdk, "default/sdk-pkg.json")).data);
+    const destination = destinationPath(input.project_path);
+    const selected = installedSdkMetadata(toolchain);
+    const metadata = { apiVersion: String(selected.api_level), platformVersion: selected.platform_version };
     const available = [
       metadata.apiVersion,
       metadata.platformVersion,
       `${metadata.platformVersion}(${metadata.apiVersion})`,
     ];
-    invariant(
-      available.includes(String(input.sdk_version)),
-      "SDK_VERSION_UNAVAILABLE",
-      `Requested SDK version is unavailable; installed API is ${metadata.apiVersion}`,
-    );
+    if (input.sdk_version !== undefined && !available.includes(String(input.sdk_version)))
+      throw new ToolError("SDK_VERSION_UNAVAILABLE", `Requested SDK version is unavailable in the configured toolchain; installed API is ${metadata.apiVersion}`,
+        { requested: input.sdk_version, configured_sdk: selected, accepted_versions: available });
     const compileApi = Number(metadata.apiVersion);
     invariant(Number.isSafeInteger(compileApi) && compileApi >= 8, "SDK_METADATA_INVALID", "Installed SDK metadata must declare a valid compile API");
     const targetApi = input.target_api ?? compileApi;
     const compatibleApi = input.compatible_api ?? targetApi;
-    invariant(
-      projectCompatibleApiSchema.safeParse(compatibleApi).success &&
+    if (!(projectCompatibleApiSchema.safeParse(compatibleApi).success &&
         projectTargetApiSchema.safeParse(targetApi).success &&
-        compatibleApi <= targetApi && targetApi <= compileApi,
-      "SDK_API_RANGE_INVALID",
-      `API levels must satisfy minimum compatible <= target <= installed compile API ${compileApi}`,
-    );
+        compatibleApi <= targetApi && targetApi <= compileApi))
+      throw new ToolError("SDK_API_RANGE_INVALID", `API levels must satisfy minimum compatible <= target <= installed compile API ${compileApi}`,
+        { configured_sdk: selected, compatible_api: compatibleApi, target_api: targetApi });
     const targetVersion = runtimeSdkVersion(toolchain, targetApi, compileApi, metadata.platformVersion);
     const compatibleVersion = compatibleApi === targetApi ? targetVersion : runtimeSdkVersion(toolchain, compatibleApi, compileApi, metadata.platformVersion);
-    fs.mkdirSync(path.dirname(root), { recursive: true });
+    return { destination, metadata, targetVersion, compatibleVersion, sdk: selected };
+  }
+  async create(
+    input: ProjectCreateInput,
+    signal?: AbortSignal,
+    operationId: string = crypto.randomUUID(),
+  ) {
+    signal?.throwIfAborted();
+    const { destination, metadata, targetVersion, compatibleVersion } = this.prepareCreate(input);
+    fs.mkdirSync(path.dirname(destination), { recursive: true });
+    const root = fs.mkdtempSync(path.join(path.dirname(destination), ".deveco-create-"));
+    const stagingIdentity = fs.lstatSync(root);
     try {
-      // The successful mkdir is the exclusive claim. An existence pre-check
-      // followed by cp would merge with a directory created by another writer.
-      fs.mkdirSync(root, { mode: 0o700 });
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === "EEXIST")
-        throw new ToolError(
-          "PROJECT_EXISTS",
-          "Project directory already exists; no files were changed",
+      const templateRoot = path.join(resourceRoot, "templates/application");
+      // Generate all bytes in a private sibling staging directory first.
+      for (const entry of await fs.promises.readdir(templateRoot))
+        await fs.promises.cp(
+          path.join(templateRoot, entry),
+          path.join(root, entry),
+          {
+            recursive: true,
+            errorOnExist: true,
+            force: false,
+            filter: () => {
+              signal?.throwIfAborted();
+              return true;
+            },
+          },
         );
-      throw error;
-    }
-    const receiptFile = path.join(root, ".deveco-mcp/create.json");
-    const receipt = {
-      operation_id: operationId,
-      input_hash: digest({ ...input, project_path: root }),
-    };
-    atomicWrite(
-      receiptFile,
-      JSON.stringify({ ...receipt, status: "started" }),
-      false,
-    );
-    const templateRoot = path.join(resourceRoot, "templates/application");
-    // Copy children into the exclusively claimed root. Copying the template
-    // directory itself would conflict with that root under errorOnExist.
-    for (const entry of await fs.promises.readdir(templateRoot))
-      await fs.promises.cp(
-        path.join(templateRoot, entry),
-        path.join(root, entry),
+      signal?.throwIfAborted();
+      for (const file of walk(root)) {
+        if (path.basename(file) === "gitignore.txt")
+          fs.renameSync(file, path.join(path.dirname(file), ".gitignore"));
+      }
+      const identity = readObject(path.join(root, "AppScope/app.json5"));
+      identity.app = {
+        ...z.record(z.string(), z.unknown()).parse(identity.app),
+        bundleName: input.bundle_name,
+      };
+      atomicWrite(
+        path.join(root, "AppScope/app.json5"),
+        JSON.stringify(identity, null, 2),
+      );
+      atomicWrite(
+        path.join(root, "AppScope/resources/base/element/string.json"),
+        JSON.stringify(
+          { string: [{ name: "app_name", value: input.app_name }] },
+          null,
+          2,
+        ),
+      );
+      const profile = readObject(path.join(root, "build-profile.json5"));
+      const app = z.record(z.string(), z.unknown()).parse(profile.app);
+      app.products = [
         {
-          recursive: true,
-          errorOnExist: true,
-          force: false,
-          filter: () => {
-            signal?.throwIfAborted();
-            return true;
+          name: "default",
+          compileSdkVersion: metadata.platformVersion,
+          compatibleSdkVersion: compatibleVersion,
+          targetSdkVersion: targetVersion,
+          runtimeOS: "HarmonyOS",
+          buildOption: {
+            strictMode: { caseSensitiveCheck: true, useNormalizedOHMUrl: true },
           },
         },
+      ];
+      profile.app = app;
+      atomicWrite(
+        path.join(root, "build-profile.json5"),
+        JSON.stringify(profile, null, 2),
       );
-    signal?.throwIfAborted();
-    for (const file of walk(root)) {
-      if (path.basename(file) === "gitignore.txt")
-        fs.renameSync(file, path.join(path.dirname(file), ".gitignore"));
+      for (const relative of ["oh-package.json5", "hvigor/hvigor-config.json5"]) {
+        const file = path.join(root, relative),
+          config = readObject(file);
+        config.modelVersion = metadata.platformVersion;
+        atomicWrite(file, JSON.stringify(config, null, 2));
+      }
+      signal?.throwIfAborted();
+      inspectProject(root);
+      publishProject(root, destination, { ...input, project_path: destination }, operationId, input.merge ?? false, signal);
+      return this.createdDescriptor(destination, input);
+    } catch (error) {
+      const journal = path.join(destination, ".deveco-mcp/create-start.json");
+      let ownsJournal = false;
+      try { ownsJournal = fs.existsSync(journal) && readObject(journal).stage === root; }
+      catch { ownsJournal = true; } // An unreadable receipt cannot authorize cleanup or replay.
+      if (!ownsJournal) {
+        // No publication receipt exists: only the private staging directory was
+        // ours. No destination file is rolled back or overwritten.
+        const current = fs.lstatSync(root, { throwIfNoEntry: false });
+        if (current?.isDirectory() && !current.isSymbolicLink() && current.dev === stagingIdentity.dev && current.ino === stagingIdentity.ino)
+          fs.rmSync(root, { recursive: true, force: true });
+        if (signal?.aborted) throw new SettledEffectError("CANCELLED", "Creation was cancelled before project publication");
+        throw SettledEffectError.from(error);
+      }
+      throw error; // Preserve staged bytes and journal for the original run.
     }
-    const identity = readObject(path.join(root, "AppScope/app.json5"));
-    identity.app = {
-      ...z.record(z.string(), z.unknown()).parse(identity.app),
-      bundleName: input.bundle_name,
-    };
-    atomicWrite(
-      path.join(root, "AppScope/app.json5"),
-      JSON.stringify(identity, null, 2),
-    );
-    atomicWrite(
-      path.join(root, "AppScope/resources/base/element/string.json"),
-      JSON.stringify(
-        { string: [{ name: "app_name", value: input.app_name }] },
-        null,
-        2,
-      ),
-    );
-    const profile = readObject(path.join(root, "build-profile.json5"));
-    const app = z.record(z.string(), z.unknown()).parse(profile.app);
-    app.products = [
-      {
-        name: "default",
-        compileSdkVersion: metadata.platformVersion,
-        compatibleSdkVersion: compatibleVersion,
-        targetSdkVersion: targetVersion,
-        runtimeOS: "HarmonyOS",
-        buildOption: {
-          strictMode: { caseSensitiveCheck: true, useNormalizedOHMUrl: true },
-        },
-      },
-    ];
-    profile.app = app;
-    atomicWrite(
-      path.join(root, "build-profile.json5"),
-      JSON.stringify(profile, null, 2),
-    );
-    for (const relative of ["oh-package.json5", "hvigor/hvigor-config.json5"]) {
-      const file = path.join(root, relative),
-        config = readObject(file);
-      config.modelVersion = metadata.platformVersion;
-      atomicWrite(file, JSON.stringify(config, null, 2));
-    }
-    signal?.throwIfAborted();
-    const project = inspectProject(root);
-    const files = walk(root)
-      .filter((file) => file !== receiptFile)
-      .map((file) => ({
-        file: path.relative(root, file).replaceAll("\\", "/"),
-        sha256: fileDigest(file),
-      }));
-    atomicWrite(
-      receiptFile,
-      JSON.stringify({ ...receipt, status: "completed", files }),
-    );
-    return project;
+  }
+  private createdDescriptor(root: string, input: ProjectCreateInput) {
+    const project = inspectProject(root), app = z.object({ bundleName: z.string().min(1) }).parse(readObject(path.join(root, "AppScope/app.json5")).app);
+    const module = project.modules[0]!, manifest = z.object({ name: z.string().min(1), mainElement: z.string().min(1) }).parse(readObject(path.join(module.root, "src/main/module.json5")).module);
+    const installed = installedSdkMetadata(this.toolchain());
+    return { ...project, project_path: project.root, app: { bundle_name: app.bundleName, module: manifest.name, ability: manifest.mainElement },
+      sdk: { compile: project.product.compileSdkVersion, target: project.product.targetSdkVersion, compatible: project.product.compatibleSdkVersion,
+        compile_api: installed.api_level, target_api: input.target_api ?? installed.api_level, compatible_api: input.compatible_api ?? input.target_api ?? installed.api_level,
+        selection: input.sdk_version === undefined ? "configured_default" : "explicit_configured_sdk" },
+      next: { tool: "workflow_run", action: "start", workflow: "project_build", input: { project_path: project.root, product: project.product.name, module_targets: projectTargets(project) } } };
   }
   reconcileCreate(
     input: ProjectCreateInput,
     operationId: string,
-  ): Project | undefined {
+  ): ReturnType<ProjectService["createdDescriptor"]> | undefined {
     const root = destinationPath(input.project_path),
       receiptFile = path.join(root, ".deveco-mcp/create.json");
-    if (!fs.existsSync(receiptFile)) return undefined;
+    if (!fs.existsSync(receiptFile) && !resumeProjectPublication(root, { ...input, project_path: root }, operationId)) return undefined;
     const parsed = z
       .object({
         operation_id: z.string(),
@@ -510,7 +499,7 @@ export class ProjectService {
         return undefined;
       inside(root, fs.realpathSync.native(file));
     }
-    return inspectProject(root);
+    return this.createdDescriptor(root, input);
   }
   async sync(project: Project, install = true, signal?: AbortSignal) {
     assertNoHotWatch(project);

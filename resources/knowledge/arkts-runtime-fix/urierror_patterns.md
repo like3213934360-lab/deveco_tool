@@ -14,4 +14,4 @@
 
 ## Related Files
 
-- [Fault mode library](./fault-mode-library.md) — covers `DecodeURI: invalid character: <string>`
+- [Fault mode library](deveco://knowledge/arkts-runtime-fix/fault-mode-library) — covers `DecodeURI: invalid character: <string>`

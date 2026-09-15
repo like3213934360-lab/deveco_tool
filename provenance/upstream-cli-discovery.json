@@ -1,0 +1,2124 @@
+{
+  "format": 1,
+  "source": {
+    "id": "deveco-cli",
+    "url": "https://gitcode.com/openharmony-sig/deveco-cli",
+    "commit": "87c360b05848132c06c6ea120e078619b9ef4634",
+    "tree": "18b08f7a58eae694bc2f538cd43f20fd5bdbd1b9"
+  },
+  "files": [
+    {
+      "path": "SKILL.md",
+      "sha256": "253f5f16a44586929a77b120b1434a57d6c885f7bfb76b0d0dc32ffef1f0b609",
+      "contracts": []
+    },
+    {
+      "path": "package.json",
+      "sha256": "381f77e42b8630ea007a639822e224671e8490e4bf1bc42a61d0bcdc3f00427b",
+      "contracts": []
+    },
+    {
+      "path": "scripts/postinstall.mjs",
+      "sha256": "935def0104e6ea9d5cd3ba9b83411b7745a60205b28e5f73f22a22e390ba03ff",
+      "contracts": []
+    },
+    {
+      "path": "src/apply/apply-manager.ts",
+      "sha256": "745c9c6f9f4689491b7694c0b8fca8fbc3b56bba37ccb12d68e347fb9893f8ac",
+      "contracts": []
+    },
+    {
+      "path": "src/apply/build-config.ts",
+      "sha256": "8eb5c9cdfbfe04d63e5a8b2ebcafd3fa10236018daa98b5d6d8acae96c881224",
+      "contracts": []
+    },
+    {
+      "path": "src/apply/changed-file-list-writer.ts",
+      "sha256": "bdb5b91909db7c78d9656c0a2d89fbdb2f054eddd82de744318f37e2a1990e04",
+      "contracts": []
+    },
+    {
+      "path": "src/apply/changefile-parser.ts",
+      "sha256": "5cafb0163a5a0a2fb57ba7554ebe94780cfe092c3e08b403a814799c2736c89f",
+      "contracts": []
+    },
+    {
+      "path": "src/apply/hotreload/build-config-hotreload.ts",
+      "sha256": "55d174db6ac47bb21e87ab326f532d0f73b6f037d36aaf6134b4e6865ba079dc",
+      "contracts": []
+    },
+    {
+      "path": "src/apply/hotreload/cleanup.ts",
+      "sha256": "9dcd134dffa566c2fd135b98f8c221eea45b857e859a08264e29bf8758293e36",
+      "contracts": []
+    },
+    {
+      "path": "src/apply/hotreload/gen-sign-hqf.ts",
+      "sha256": "b2706a0e20490b574b5c671c152a4208cd0a0cd311e31e059be0720a375d9e8e",
+      "contracts": []
+    },
+    {
+      "path": "src/apply/hotreload/hotreload-manager.ts",
+      "sha256": "be05d0c5bc53c316103d39c998a9f7ff93dafded443c1e3d94caccd09c1e5e07",
+      "contracts": []
+    },
+    {
+      "path": "src/apply/hotreload/hvigor-daemon-client.ts",
+      "sha256": "77683b3870387b4b899a2ba589b9ecb376635c9283a7b2e3e0506229a43774cf",
+      "contracts": []
+    },
+    {
+      "path": "src/apply/hotreload/patch-manager.ts",
+      "sha256": "6c6f7df5d1d0c797f75ff3389d2a0d3305694b02a0db70725e4aa1d7175d7597",
+      "contracts": []
+    },
+    {
+      "path": "src/apply/hqf-build.ts",
+      "sha256": "12436ead3321eeb8c98be0af7e84cdf135c544a7ce2298c04132c3f02c348cb7",
+      "contracts": []
+    },
+    {
+      "path": "src/apply/install-hqf.ts",
+      "sha256": "00c918a5e74999945ff4487a33014d7a961deb24625d9235f667c74899d8792d",
+      "contracts": []
+    },
+    {
+      "path": "src/apply/module-path.ts",
+      "sha256": "f4cb0968fdaadb79b24d3d1d67bb2929d143dcacccf6c9a5841454318142b3ea",
+      "contracts": []
+    },
+    {
+      "path": "src/arktscheck/arkts-check-adapter.ts",
+      "sha256": "84a9c0cc07bfecab0ea68f875f0a46ebcaf50a6067371dee1eb5cde79b3d5704",
+      "contracts": []
+    },
+    {
+      "path": "src/arktscheck/arkts-check-command.ts",
+      "sha256": "9622c96363e263a941a7393c33d2667dbd58898b23a9dae33934802508b25c4d",
+      "contracts": [
+        {
+          "kind": "option",
+          "value": "--project <path>",
+          "schema": "new Command('arkts')\n    .description('Run ArkTS static checks on .ets source files')\n    .arguments('[files...]')\n    .option('--fix', 'Auto-fix high-confidence errors before reporting')\n    .option(\n      '--project <path>',\n      'Project root directory (default: auto-detected from cwd)'\n    )"
+        },
+        {
+          "kind": "option",
+          "value": "--fix",
+          "schema": "new Command('arkts')\n    .description('Run ArkTS static checks on .ets source files')\n    .arguments('[files...]')\n    .option('--fix', 'Auto-fix high-confidence errors before reporting')"
+        }
+      ]
+    },
+    {
+      "path": "src/arktscheck/index.ts",
+      "sha256": "31be1b76f5e6d218c05de42970ea83a6172eeea4dd659240dd65416d55b2c623",
+      "contracts": []
+    },
+    {
+      "path": "src/arktscheck/types.ts",
+      "sha256": "2de75bef0411338f0964d37ca6690e93076e891b1f71b6f5caebd0f26ff144bd",
+      "contracts": []
+    },
+    {
+      "path": "src/auth/auth-config.ts",
+      "sha256": "0e6d66f863f33239d4a08579fe133cd413c0a08c962e04acebb1ce0e9cd74dd7",
+      "contracts": []
+    },
+    {
+      "path": "src/auth/index.ts",
+      "sha256": "faabaa50c176769efc506d25b17044ffa5e67f58f3b573ce78b11a794b3423a9",
+      "contracts": []
+    },
+    {
+      "path": "src/auth/login/agreement-sign.ts",
+      "sha256": "d4ded1acda6370a273dafaf3e3a68ee85a7b96b42147c54c4f06a77f00ae6fa7",
+      "contracts": []
+    },
+    {
+      "path": "src/auth/login/browser.ts",
+      "sha256": "fe0aaaa1e85cf23a453335d35f787f422bfdf5736d1efa29abab29adb984bbf2",
+      "contracts": []
+    },
+    {
+      "path": "src/auth/login/local-auth-server.ts",
+      "sha256": "27b6a1ebf049d528cffbfe19732df8ea55e519a809591027c68368974b7c15f5",
+      "contracts": []
+    },
+    {
+      "path": "src/auth/login/login-service.ts",
+      "sha256": "c0ebc4f0a038b4ac5edfbbb2b5efe252164b0763b6fa55cb7281dd8bfb432ffa",
+      "contracts": []
+    },
+    {
+      "path": "src/auth/login/user-info-fetcher.ts",
+      "sha256": "5a70f394eb7cffeb533edd0ef0103866dc1d4f6131ebc44d6ff369a47bd50005",
+      "contracts": []
+    },
+    {
+      "path": "src/auth/team/team-service.ts",
+      "sha256": "f753fa07fd1067ffe58c6dfcd246eeaad3ab00c7c217e0d08b812309e4699dba",
+      "contracts": []
+    },
+    {
+      "path": "src/auth/types/auth-types.ts",
+      "sha256": "45fa2408db80cac762ae79e3104ec38ace5f0ffd355abf30b59b20e8109c6401",
+      "contracts": []
+    },
+    {
+      "path": "src/auth/utils/errors.ts",
+      "sha256": "071d30c56e90dfeb6bf68061d0a1e7296f94f93510dd638217d00b23ca4cae99",
+      "contracts": []
+    },
+    {
+      "path": "src/auth/utils/jwt.ts",
+      "sha256": "fb4d52a94c294018ff3bdac762a25be3b6cc45c837b491890ce7c7083698da1d",
+      "contracts": []
+    },
+    {
+      "path": "src/auth/utils/local-crypto.ts",
+      "sha256": "2a919b11f8272c2dfe35e062eeafa65705b9d8d3f360141230ad2a12780d1e3d",
+      "contracts": []
+    },
+    {
+      "path": "src/auth/utils/region.ts",
+      "sha256": "c5a5ad15eda6712752b238b83a398d61e1fa2d5dffebaa21ad1c6dcb0ae5573b",
+      "contracts": []
+    },
+    {
+      "path": "src/auth/utils/token-checker.ts",
+      "sha256": "b438ae1ff991586a8d804e911de520fe2b301e75e02f3d32723e76cee45861ce",
+      "contracts": []
+    },
+    {
+      "path": "src/auth/utils/token-storage.ts",
+      "sha256": "254545a0c7aeed7c461ba6c4ba0f802796789bc42c348670dcbf716d8ed0e05b",
+      "contracts": []
+    },
+    {
+      "path": "src/cli.ts",
+      "sha256": "d361700b8899d7e6b261ab3643809776de54fafe09604cb5b2cfa979ed26760d",
+      "contracts": []
+    },
+    {
+      "path": "src/codelinter/codelinter-adapter.ts",
+      "sha256": "0be98b8f2a6c1bfd15c5765a72aca1f3b8ef0f46f426cce5e98bc62cfa02cf9b",
+      "contracts": []
+    },
+    {
+      "path": "src/codelinter/index.ts",
+      "sha256": "bcd565cf3f1002e104bcf85bf80a737e6a7b1532ec2fa03eb2bfbb129b5a8850",
+      "contracts": []
+    },
+    {
+      "path": "src/codelinter/lint-command.ts",
+      "sha256": "afae6e473e3bd3d495d287cfaf83217a5ba36c2719e88c19149b55d52235c707",
+      "contracts": [
+        {
+          "kind": "option",
+          "value": "--limit <number>",
+          "schema": "new Command('lint')\n    .description('Run DevEco Code Linter checks for TS/ArkTS code')\n    .helpOption('-h, --help', 'display help for command')\n    .addArgument(\n      new Argument('[path]', 'File or directory to lint').argParser(\n        parseLintPath\n      )\n    )\n    .option('--fix', 'Auto-fix fixable code issues')\n    .option('--incremental', 'Only check uncommitted files')\n    .option(\n      '--config-path <path>',\n      'Path to lint configuration file',\n      parseConfigPath\n    )\n    .option(\n      '--product <product>',\n      'Product name defined in build-profile.json5',\n      parseProduct,\n      'default'\n    )\n    .option(\n      '--format <format>',\n      'Report format (choices: default, json)',\n      parseLintFormat,\n      'default'\n    )\n    .option(\n      '--output-path <path>',\n      'Complete report file or directory',\n      parseOutputPath\n    )\n    .option(\n      '--limit <number>',\n      'Maximum terminal issues to display when --output-path is omitted',\n      parseLimit\n    )"
+        },
+        {
+          "kind": "option",
+          "value": "--output-path <path>",
+          "schema": "new Command('lint')\n    .description('Run DevEco Code Linter checks for TS/ArkTS code')\n    .helpOption('-h, --help', 'display help for command')\n    .addArgument(\n      new Argument('[path]', 'File or directory to lint').argParser(\n        parseLintPath\n      )\n    )\n    .option('--fix', 'Auto-fix fixable code issues')\n    .option('--incremental', 'Only check uncommitted files')\n    .option(\n      '--config-path <path>',\n      'Path to lint configuration file',\n      parseConfigPath\n    )\n    .option(\n      '--product <product>',\n      'Product name defined in build-profile.json5',\n      parseProduct,\n      'default'\n    )\n    .option(\n      '--format <format>',\n      'Report format (choices: default, json)',\n      parseLintFormat,\n      'default'\n    )\n    .option(\n      '--output-path <path>',\n      'Complete report file or directory',\n      parseOutputPath\n    )"
+        },
+        {
+          "kind": "option",
+          "value": "--format <format>",
+          "schema": "new Command('lint')\n    .description('Run DevEco Code Linter checks for TS/ArkTS code')\n    .helpOption('-h, --help', 'display help for command')\n    .addArgument(\n      new Argument('[path]', 'File or directory to lint').argParser(\n        parseLintPath\n      )\n    )\n    .option('--fix', 'Auto-fix fixable code issues')\n    .option('--incremental', 'Only check uncommitted files')\n    .option(\n      '--config-path <path>',\n      'Path to lint configuration file',\n      parseConfigPath\n    )\n    .option(\n      '--product <product>',\n      'Product name defined in build-profile.json5',\n      parseProduct,\n      'default'\n    )\n    .option(\n      '--format <format>',\n      'Report format (choices: default, json)',\n      parseLintFormat,\n      'default'\n    )"
+        },
+        {
+          "kind": "option",
+          "value": "--product <product>",
+          "schema": "new Command('lint')\n    .description('Run DevEco Code Linter checks for TS/ArkTS code')\n    .helpOption('-h, --help', 'display help for command')\n    .addArgument(\n      new Argument('[path]', 'File or directory to lint').argParser(\n        parseLintPath\n      )\n    )\n    .option('--fix', 'Auto-fix fixable code issues')\n    .option('--incremental', 'Only check uncommitted files')\n    .option(\n      '--config-path <path>',\n      'Path to lint configuration file',\n      parseConfigPath\n    )\n    .option(\n      '--product <product>',\n      'Product name defined in build-profile.json5',\n      parseProduct,\n      'default'\n    )"
+        },
+        {
+          "kind": "option",
+          "value": "--config-path <path>",
+          "schema": "new Command('lint')\n    .description('Run DevEco Code Linter checks for TS/ArkTS code')\n    .helpOption('-h, --help', 'display help for command')\n    .addArgument(\n      new Argument('[path]', 'File or directory to lint').argParser(\n        parseLintPath\n      )\n    )\n    .option('--fix', 'Auto-fix fixable code issues')\n    .option('--incremental', 'Only check uncommitted files')\n    .option(\n      '--config-path <path>',\n      'Path to lint configuration file',\n      parseConfigPath\n    )"
+        },
+        {
+          "kind": "option",
+          "value": "--incremental",
+          "schema": "new Command('lint')\n    .description('Run DevEco Code Linter checks for TS/ArkTS code')\n    .helpOption('-h, --help', 'display help for command')\n    .addArgument(\n      new Argument('[path]', 'File or directory to lint').argParser(\n        parseLintPath\n      )\n    )\n    .option('--fix', 'Auto-fix fixable code issues')\n    .option('--incremental', 'Only check uncommitted files')"
+        },
+        {
+          "kind": "option",
+          "value": "--fix",
+          "schema": "new Command('lint')\n    .description('Run DevEco Code Linter checks for TS/ArkTS code')\n    .helpOption('-h, --help', 'display help for command')\n    .addArgument(\n      new Argument('[path]', 'File or directory to lint').argParser(\n        parseLintPath\n      )\n    )\n    .option('--fix', 'Auto-fix fixable code issues')"
+        }
+      ]
+    },
+    {
+      "path": "src/codelinter/report-parser.ts",
+      "sha256": "c82a8df4ecc37c0b26b8905ce5f7a96caf7b1ae8da328a615c97211a28917292",
+      "contracts": []
+    },
+    {
+      "path": "src/codelinter/report-renderer.ts",
+      "sha256": "8219b6ffd576c6c92a922fc3d0a74ecc38037c6413022b857064c7889fb3118c",
+      "contracts": []
+    },
+    {
+      "path": "src/codelinter/types.ts",
+      "sha256": "d3512bcde8f07499c76469c07eb7e9a8646a338d8a1c831c5addb07a16001c91",
+      "contracts": []
+    },
+    {
+      "path": "src/commands/auth.ts",
+      "sha256": "8da6b24e25755fa0759c45142708bd7c7a88758e362d60e60d9c5fa691573ecb",
+      "contracts": [
+        {
+          "kind": "command",
+          "value": "login",
+          "schema": "authCommand\n  .command('login')"
+        },
+        {
+          "kind": "command",
+          "value": "logout",
+          "schema": "authCommand\n  .command('logout')"
+        },
+        {
+          "kind": "command",
+          "value": "status",
+          "schema": "authCommand\n  .command('status')"
+        },
+        {
+          "kind": "command",
+          "value": "team",
+          "schema": "authCommand\n  .command('team')"
+        },
+        {
+          "kind": "command",
+          "value": "list",
+          "schema": "teamCommand\n  .command('list')"
+        }
+      ]
+    },
+    {
+      "path": "src/commands/build.ts",
+      "sha256": "8213cc694920e7b7fee1f763faeac4a676af4581ee9f90db588c8ffd568f3f41",
+      "contracts": [
+        {
+          "kind": "option",
+          "value": "--build-mode <mode>",
+          "schema": "new Command('build')\n  .description('Build HarmonyOS project')\n  .option(\n    '--product <product>',\n    'Product name defined in build-profile.json5 (default: default)'\n  )\n  .option(\n    '--modules <modules...>',\n    'Modules to build (format: module or module@target)'\n  )\n  .option(\n    '--build-mode <mode>',\n    'Build mode (buildModeSet in build-profile.json5; e.g. debug, release; default: debug)'\n  )"
+        },
+        {
+          "kind": "option",
+          "value": "--modules <modules...>",
+          "schema": "new Command('build')\n  .description('Build HarmonyOS project')\n  .option(\n    '--product <product>',\n    'Product name defined in build-profile.json5 (default: default)'\n  )\n  .option(\n    '--modules <modules...>',\n    'Modules to build (format: module or module@target)'\n  )"
+        },
+        {
+          "kind": "option",
+          "value": "--product <product>",
+          "schema": "new Command('build')\n  .description('Build HarmonyOS project')\n  .option(\n    '--product <product>',\n    'Product name defined in build-profile.json5 (default: default)'\n  )"
+        },
+        {
+          "kind": "command",
+          "value": "clean",
+          "schema": "buildCommand\n  .command('clean')"
+        }
+      ]
+    },
+    {
+      "path": "src/commands/check.ts",
+      "sha256": "653877d082a5b036080090cfbcccda32a64ca97e8d00ca8d44617d8f56d9d790",
+      "contracts": [
+        {
+          "kind": "option",
+          "value": "--limit <num>",
+          "schema": "compatCommand\n  .description(\n    'Check source code compatibility against a target SDK version. ' +\n      'By default, performs a project-level scan; pass positional `files...` for file-level scanning; pass `--modules` for module-level scanning.'\n  )\n  .arguments('[files...]')\n  .option(\n    '--source-version <version>',\n    'Current project SDK version (required; use `compat versions` to list available versions). ' +\n      'On zsh, quote the value because version strings contain parentheses; run `compat versions` first to copy a real example.'\n  )\n  .option(\n    '--target-version <version>',\n    'Target SDK version (required; use `compat versions` to list available versions). ' +\n      'On zsh, quote the value because version strings contain parentheses; run `compat versions` first to copy a real example.'\n  )\n  .option(\n    '--modules <modules...>',\n    'Modules to check (default: all modules in the project). Mutually exclusive with positional file arguments.'\n  )\n  .option(\n    '--format <format>',\n    'Output format: \"json\" or \"default\" (text) for console; \"csv\", \"json\", or \"default\" for file output (--output-path). \"csv\" requires --output-path.',\n    'default'\n  )\n  .option(\n    '--output-path <path>',\n    'Directory to write the detailed report CSV to (default: ./compat-output)'\n  )\n  .option(\n    '--limit <num>',\n    'Maximum number of change records to display (default: 100)',\n    parseLimit,\n    100\n  )"
+        },
+        {
+          "kind": "option",
+          "value": "--output-path <path>",
+          "schema": "compatCommand\n  .description(\n    'Check source code compatibility against a target SDK version. ' +\n      'By default, performs a project-level scan; pass positional `files...` for file-level scanning; pass `--modules` for module-level scanning.'\n  )\n  .arguments('[files...]')\n  .option(\n    '--source-version <version>',\n    'Current project SDK version (required; use `compat versions` to list available versions). ' +\n      'On zsh, quote the value because version strings contain parentheses; run `compat versions` first to copy a real example.'\n  )\n  .option(\n    '--target-version <version>',\n    'Target SDK version (required; use `compat versions` to list available versions). ' +\n      'On zsh, quote the value because version strings contain parentheses; run `compat versions` first to copy a real example.'\n  )\n  .option(\n    '--modules <modules...>',\n    'Modules to check (default: all modules in the project). Mutually exclusive with positional file arguments.'\n  )\n  .option(\n    '--format <format>',\n    'Output format: \"json\" or \"default\" (text) for console; \"csv\", \"json\", or \"default\" for file output (--output-path). \"csv\" requires --output-path.',\n    'default'\n  )\n  .option(\n    '--output-path <path>',\n    'Directory to write the detailed report CSV to (default: ./compat-output)'\n  )"
+        },
+        {
+          "kind": "option",
+          "value": "--format <format>",
+          "schema": "compatCommand\n  .description(\n    'Check source code compatibility against a target SDK version. ' +\n      'By default, performs a project-level scan; pass positional `files...` for file-level scanning; pass `--modules` for module-level scanning.'\n  )\n  .arguments('[files...]')\n  .option(\n    '--source-version <version>',\n    'Current project SDK version (required; use `compat versions` to list available versions). ' +\n      'On zsh, quote the value because version strings contain parentheses; run `compat versions` first to copy a real example.'\n  )\n  .option(\n    '--target-version <version>',\n    'Target SDK version (required; use `compat versions` to list available versions). ' +\n      'On zsh, quote the value because version strings contain parentheses; run `compat versions` first to copy a real example.'\n  )\n  .option(\n    '--modules <modules...>',\n    'Modules to check (default: all modules in the project). Mutually exclusive with positional file arguments.'\n  )\n  .option(\n    '--format <format>',\n    'Output format: \"json\" or \"default\" (text) for console; \"csv\", \"json\", or \"default\" for file output (--output-path). \"csv\" requires --output-path.',\n    'default'\n  )"
+        },
+        {
+          "kind": "option",
+          "value": "--modules <modules...>",
+          "schema": "compatCommand\n  .description(\n    'Check source code compatibility against a target SDK version. ' +\n      'By default, performs a project-level scan; pass positional `files...` for file-level scanning; pass `--modules` for module-level scanning.'\n  )\n  .arguments('[files...]')\n  .option(\n    '--source-version <version>',\n    'Current project SDK version (required; use `compat versions` to list available versions). ' +\n      'On zsh, quote the value because version strings contain parentheses; run `compat versions` first to copy a real example.'\n  )\n  .option(\n    '--target-version <version>',\n    'Target SDK version (required; use `compat versions` to list available versions). ' +\n      'On zsh, quote the value because version strings contain parentheses; run `compat versions` first to copy a real example.'\n  )\n  .option(\n    '--modules <modules...>',\n    'Modules to check (default: all modules in the project). Mutually exclusive with positional file arguments.'\n  )"
+        },
+        {
+          "kind": "option",
+          "value": "--target-version <version>",
+          "schema": "compatCommand\n  .description(\n    'Check source code compatibility against a target SDK version. ' +\n      'By default, performs a project-level scan; pass positional `files...` for file-level scanning; pass `--modules` for module-level scanning.'\n  )\n  .arguments('[files...]')\n  .option(\n    '--source-version <version>',\n    'Current project SDK version (required; use `compat versions` to list available versions). ' +\n      'On zsh, quote the value because version strings contain parentheses; run `compat versions` first to copy a real example.'\n  )\n  .option(\n    '--target-version <version>',\n    'Target SDK version (required; use `compat versions` to list available versions). ' +\n      'On zsh, quote the value because version strings contain parentheses; run `compat versions` first to copy a real example.'\n  )"
+        },
+        {
+          "kind": "option",
+          "value": "--source-version <version>",
+          "schema": "compatCommand\n  .description(\n    'Check source code compatibility against a target SDK version. ' +\n      'By default, performs a project-level scan; pass positional `files...` for file-level scanning; pass `--modules` for module-level scanning.'\n  )\n  .arguments('[files...]')\n  .option(\n    '--source-version <version>',\n    'Current project SDK version (required; use `compat versions` to list available versions). ' +\n      'On zsh, quote the value because version strings contain parentheses; run `compat versions` first to copy a real example.'\n  )"
+        },
+        {
+          "kind": "option",
+          "value": "--format <format>",
+          "schema": "compatCommand\n  .command('versions')\n  .description(\n    'List all available target SDK versions for compatibility checking'\n  )\n  .option('--format <format>', 'Output format: default or json')"
+        },
+        {
+          "kind": "command",
+          "value": "versions",
+          "schema": "compatCommand\n  .command('versions')"
+        }
+      ]
+    },
+    {
+      "path": "src/commands/create.ts",
+      "sha256": "96e14e88621895bcc076b3dee188969d46bbbacc2f469735ae9adfc3165ed307",
+      "contracts": [
+        {
+          "kind": "option",
+          "value": "--api-level <level>",
+          "schema": "new Command('create')\n  .description('Scaffold a new HarmonyOS application project')\n  .option(\n    '--project-path <path>',\n    'Project directory path (default: ./<app-name>)'\n  )\n  .option('--app-name <name>', 'Application name')\n  .option(\n    '--bundle-name <bundle>',\n    'Bundle name (auto-derived as com.example.<app-name> if omitted)'\n  )\n  .option(\n    '--api-level <level>',\n    'API level (auto-detected from SDK if omitted; minimum: 17)'\n  )"
+        },
+        {
+          "kind": "option",
+          "value": "--bundle-name <bundle>",
+          "schema": "new Command('create')\n  .description('Scaffold a new HarmonyOS application project')\n  .option(\n    '--project-path <path>',\n    'Project directory path (default: ./<app-name>)'\n  )\n  .option('--app-name <name>', 'Application name')\n  .option(\n    '--bundle-name <bundle>',\n    'Bundle name (auto-derived as com.example.<app-name> if omitted)'\n  )"
+        },
+        {
+          "kind": "option",
+          "value": "--app-name <name>",
+          "schema": "new Command('create')\n  .description('Scaffold a new HarmonyOS application project')\n  .option(\n    '--project-path <path>',\n    'Project directory path (default: ./<app-name>)'\n  )\n  .option('--app-name <name>', 'Application name')"
+        },
+        {
+          "kind": "option",
+          "value": "--project-path <path>",
+          "schema": "new Command('create')\n  .description('Scaffold a new HarmonyOS application project')\n  .option(\n    '--project-path <path>',\n    'Project directory path (default: ./<app-name>)'\n  )"
+        }
+      ]
+    },
+    {
+      "path": "src/commands/device.ts",
+      "sha256": "288c55a1425c7d8fa1cb6da3c6a28b662acf353e763aa736d0607e3ae39c5917",
+      "contracts": [
+        {
+          "kind": "command",
+          "value": "list",
+          "schema": "deviceCommand\n  .command('list')"
+        },
+        {
+          "kind": "option",
+          "value": "-t, --target <serialOrName>",
+          "schema": "deviceCommand\n  .command('view')\n  .description('Show detailed device information')\n  .option('-t, --target <serialOrName>', 'Target device serial or device name')"
+        },
+        {
+          "kind": "command",
+          "value": "view",
+          "schema": "deviceCommand\n  .command('view')"
+        },
+        {
+          "kind": "command",
+          "value": "file",
+          "schema": "deviceCommand\n  .command('file')"
+        },
+        {
+          "kind": "argument",
+          "value": "<dst>",
+          "schema": "fileCommand\n  .command('send')\n  .description('Send a local file to a device')\n  .option('--device <name|serial>', 'Target device (name or serial)')\n  .argument('<src>', 'Local file path to upload')\n  .argument('<dst>', 'Remote path on the device')"
+        },
+        {
+          "kind": "argument",
+          "value": "<src>",
+          "schema": "fileCommand\n  .command('send')\n  .description('Send a local file to a device')\n  .option('--device <name|serial>', 'Target device (name or serial)')\n  .argument('<src>', 'Local file path to upload')"
+        },
+        {
+          "kind": "option",
+          "value": "--device <name|serial>",
+          "schema": "fileCommand\n  .command('send')\n  .description('Send a local file to a device')\n  .option('--device <name|serial>', 'Target device (name or serial)')"
+        },
+        {
+          "kind": "command",
+          "value": "send",
+          "schema": "fileCommand\n  .command('send')"
+        },
+        {
+          "kind": "argument",
+          "value": "<dst>",
+          "schema": "fileCommand\n  .command('recv')\n  .description('Receive a file from a device to the host')\n  .option('--device <name|serial>', 'Target device (name or serial)')\n  .argument('<src>', 'Remote path on the device')\n  .argument('<dst>', 'Local file path to save')"
+        },
+        {
+          "kind": "argument",
+          "value": "<src>",
+          "schema": "fileCommand\n  .command('recv')\n  .description('Receive a file from a device to the host')\n  .option('--device <name|serial>', 'Target device (name or serial)')\n  .argument('<src>', 'Remote path on the device')"
+        },
+        {
+          "kind": "option",
+          "value": "--device <name|serial>",
+          "schema": "fileCommand\n  .command('recv')\n  .description('Receive a file from a device to the host')\n  .option('--device <name|serial>', 'Target device (name or serial)')"
+        },
+        {
+          "kind": "command",
+          "value": "recv",
+          "schema": "fileCommand\n  .command('recv')"
+        },
+        {
+          "kind": "argument",
+          "value": "[args...]",
+          "schema": "deviceCommand\n  .command('sqlite3')\n  .description('Run sqlite3 on a connected device')\n  .allowUnknownOption()\n  .option('--device <name|serial>', 'Target device (name or serial)')\n  .argument('<db-path>', 'SQLite database path on the device')\n  .argument('[args...]', 'Arguments forwarded to sqlite3 as-is')"
+        },
+        {
+          "kind": "argument",
+          "value": "<db-path>",
+          "schema": "deviceCommand\n  .command('sqlite3')\n  .description('Run sqlite3 on a connected device')\n  .allowUnknownOption()\n  .option('--device <name|serial>', 'Target device (name or serial)')\n  .argument('<db-path>', 'SQLite database path on the device')"
+        },
+        {
+          "kind": "option",
+          "value": "--device <name|serial>",
+          "schema": "deviceCommand\n  .command('sqlite3')\n  .description('Run sqlite3 on a connected device')\n  .allowUnknownOption()\n  .option('--device <name|serial>', 'Target device (name or serial)')"
+        },
+        {
+          "kind": "command",
+          "value": "sqlite3",
+          "schema": "deviceCommand\n  .command('sqlite3')"
+        }
+      ]
+    },
+    {
+      "path": "src/commands/doc.ts",
+      "sha256": "7a869788bcf5be8fb537186dfa5b77d4377c5b9cc8a028eb798e2760303fcc91",
+      "contracts": [
+        {
+          "kind": "option",
+          "value": "--limit <n>",
+          "schema": "docCommand\n  .command('search <keywords...>')\n  .description('Search documentation by keywords')\n  .option(\n    '--catalog <name>',\n    'Catalog name (all for all catalogs)',\n    validateCatalogOrAll,\n    'all'\n  )\n  .option(\n    '--format <fmt>',\n    'Output format (default, json)',\n    validateSearchFormat,\n    'default'\n  )\n  .option('--limit <n>', 'Max number of results', validatePositiveInt, 10)"
+        },
+        {
+          "kind": "option",
+          "value": "--format <fmt>",
+          "schema": "docCommand\n  .command('search <keywords...>')\n  .description('Search documentation by keywords')\n  .option(\n    '--catalog <name>',\n    'Catalog name (all for all catalogs)',\n    validateCatalogOrAll,\n    'all'\n  )\n  .option(\n    '--format <fmt>',\n    'Output format (default, json)',\n    validateSearchFormat,\n    'default'\n  )"
+        },
+        {
+          "kind": "option",
+          "value": "--catalog <name>",
+          "schema": "docCommand\n  .command('search <keywords...>')\n  .description('Search documentation by keywords')\n  .option(\n    '--catalog <name>',\n    'Catalog name (all for all catalogs)',\n    validateCatalogOrAll,\n    'all'\n  )"
+        },
+        {
+          "kind": "command",
+          "value": "search <keywords...>",
+          "schema": "docCommand\n  .command('search <keywords...>')"
+        },
+        {
+          "kind": "command",
+          "value": "read <documentId>",
+          "schema": "docCommand\n  .command('read <documentId>')"
+        },
+        {
+          "kind": "option",
+          "value": "--format <fmt>",
+          "schema": "docCommand\n  .command('catalog')\n  .description('List all available catalogs')\n  .option(\n    '--format <fmt>',\n    'Output format (default, json)',\n    validateCatalogFormat,\n    'default'\n  )"
+        },
+        {
+          "kind": "command",
+          "value": "catalog",
+          "schema": "docCommand\n  .command('catalog')"
+        }
+      ]
+    },
+    {
+      "path": "src/commands/emulator.ts",
+      "sha256": "a4f60e1a89a4759c2beda4c20a32f90bb08f037b701fea389e8c4fa2e7532687",
+      "contracts": [
+        {
+          "kind": "option",
+          "value": "--force",
+          "schema": "imageCommand\n  .command('download')\n  .description('Download system image')\n  .addOption(deviceTypeOption(false))\n  .option(\n    '--os-version <version>',\n    'Example: HarmonyOS 5.1.1(19) or HarmonyOS 6.0.1(21) (required)'\n  )\n  .option('--force', 'Overwrite an existing image')"
+        },
+        {
+          "kind": "option",
+          "value": "--os-version <version>",
+          "schema": "imageCommand\n  .command('download')\n  .description('Download system image')\n  .addOption(deviceTypeOption(false))\n  .option(\n    '--os-version <version>',\n    'Example: HarmonyOS 5.1.1(19) or HarmonyOS 6.0.1(21) (required)'\n  )"
+        },
+        {
+          "kind": "command",
+          "value": "download",
+          "schema": "imageCommand\n  .command('download')"
+        },
+        {
+          "kind": "requiredOption",
+          "value": "--os-version <version>",
+          "schema": "imageCommand\n  .command('remove')\n  .description('Remove a downloaded system image')\n  .addOption(deviceTypeOption(true))\n  .requiredOption(\n    '--os-version <version>',\n    'Supports both image label (HarmonyOS x.y.z(n)) and softwareVersion'\n  )"
+        },
+        {
+          "kind": "command",
+          "value": "remove",
+          "schema": "imageCommand\n  .command('remove')"
+        },
+        {
+          "kind": "option",
+          "value": "--all",
+          "schema": "imageCommand\n  .command('list')\n  .description('List system images')\n  .addOption(deviceTypeOption(false))\n  .option('--all', 'List all images (local and remote)')"
+        },
+        {
+          "kind": "command",
+          "value": "list",
+          "schema": "imageCommand\n  .command('list')"
+        },
+        {
+          "kind": "command",
+          "value": "view",
+          "schema": "licenseCommand\n  .command('view')"
+        },
+        {
+          "kind": "command",
+          "value": "accept",
+          "schema": "licenseCommand\n  .command('accept')"
+        },
+        {
+          "kind": "requiredOption",
+          "value": "--target <nameOrSerial>",
+          "schema": "emulatorCommand\n  .command('shake')\n  .description('Trigger shake event')\n  .requiredOption('--target <nameOrSerial>', 'Target emulator name or serial')"
+        },
+        {
+          "kind": "command",
+          "value": "shake",
+          "schema": "emulatorCommand\n  .command('shake')"
+        },
+        {
+          "kind": "requiredOption",
+          "value": "--target <nameOrSerial>",
+          "schema": "emulatorCommand\n  .command('power')\n  .description('Press power button (toggle screen on/off)')\n  .requiredOption('--target <nameOrSerial>', 'Target emulator name or serial')"
+        },
+        {
+          "kind": "command",
+          "value": "power",
+          "schema": "emulatorCommand\n  .command('power')"
+        },
+        {
+          "kind": "command",
+          "value": "rotate",
+          "schema": "emulatorCommand\n  .command('rotate')"
+        },
+        {
+          "kind": "command",
+          "value": "volume",
+          "schema": "emulatorCommand\n  .command('volume')"
+        },
+        {
+          "kind": "requiredOption",
+          "value": "--target <nameOrSerial>",
+          "schema": "emulatorCommand\n  .command('fold <state>')\n  .description('Set foldable display state')\n  .requiredOption('--target <nameOrSerial>', 'Target emulator name or serial')"
+        },
+        {
+          "kind": "command",
+          "value": "fold <state>",
+          "schema": "emulatorCommand\n  .command('fold <state>')"
+        },
+        {
+          "kind": "option",
+          "value": "--level <0-100>",
+          "schema": "emulatorCommand\n  .command('battery')\n  .description('Set battery level or charging status')\n  .requiredOption('--target <nameOrSerial>', 'Target emulator name or serial')\n  .option(\n    '--level <0-100>',\n    'Battery level, SOC (charging: 0-100; not charging: 1-100)'\n  )"
+        },
+        {
+          "kind": "requiredOption",
+          "value": "--target <nameOrSerial>",
+          "schema": "emulatorCommand\n  .command('battery')\n  .description('Set battery level or charging status')\n  .requiredOption('--target <nameOrSerial>', 'Target emulator name or serial')"
+        },
+        {
+          "kind": "command",
+          "value": "battery",
+          "schema": "emulatorCommand\n  .command('battery')"
+        },
+        {
+          "kind": "option",
+          "value": "--direction <value>",
+          "schema": "emulatorCommand\n  .command('geolocation')\n  .description('Inject geographic coordinates and direction')\n  .requiredOption('--target <nameOrSerial>', 'Target emulator name or serial')\n  .option('--longitude <value>', 'Longitude (-180.0 to 180.0)')\n  .option('--latitude <value>', 'Latitude (-90.0 to 90.0)')\n  .option('--altitude <value>', 'Altitude (-10000.0 to 10000.0)')\n  .option('--direction <value>', 'Heading direction in degrees (0.00 to 359.99)')"
+        },
+        {
+          "kind": "option",
+          "value": "--altitude <value>",
+          "schema": "emulatorCommand\n  .command('geolocation')\n  .description('Inject geographic coordinates and direction')\n  .requiredOption('--target <nameOrSerial>', 'Target emulator name or serial')\n  .option('--longitude <value>', 'Longitude (-180.0 to 180.0)')\n  .option('--latitude <value>', 'Latitude (-90.0 to 90.0)')\n  .option('--altitude <value>', 'Altitude (-10000.0 to 10000.0)')"
+        },
+        {
+          "kind": "option",
+          "value": "--latitude <value>",
+          "schema": "emulatorCommand\n  .command('geolocation')\n  .description('Inject geographic coordinates and direction')\n  .requiredOption('--target <nameOrSerial>', 'Target emulator name or serial')\n  .option('--longitude <value>', 'Longitude (-180.0 to 180.0)')\n  .option('--latitude <value>', 'Latitude (-90.0 to 90.0)')"
+        },
+        {
+          "kind": "option",
+          "value": "--longitude <value>",
+          "schema": "emulatorCommand\n  .command('geolocation')\n  .description('Inject geographic coordinates and direction')\n  .requiredOption('--target <nameOrSerial>', 'Target emulator name or serial')\n  .option('--longitude <value>', 'Longitude (-180.0 to 180.0)')"
+        },
+        {
+          "kind": "requiredOption",
+          "value": "--target <nameOrSerial>",
+          "schema": "emulatorCommand\n  .command('geolocation')\n  .description('Inject geographic coordinates and direction')\n  .requiredOption('--target <nameOrSerial>', 'Target emulator name or serial')"
+        },
+        {
+          "kind": "command",
+          "value": "geolocation",
+          "schema": "emulatorCommand\n  .command('geolocation')"
+        },
+        {
+          "kind": "requiredOption",
+          "value": "--target <nameOrSerial>",
+          "schema": "emulatorCommand\n  .command('scene')\n  .description('Start motion simulation scene')\n  .requiredOption('--target <nameOrSerial>', 'Target emulator name or serial')"
+        },
+        {
+          "kind": "command",
+          "value": "scene",
+          "schema": "emulatorCommand\n  .command('scene')"
+        },
+        {
+          "kind": "option",
+          "value": "--heartrate <value>",
+          "schema": "emulatorCommand\n  .command('sensor')\n  .description('Inject sensor data')\n  .requiredOption('--target <nameOrSerial>', 'Target emulator name or serial')\n  .option('--light-intensity <value>', 'Light sensor (0 to 100000)')\n  .option('--humidity <value>', 'Humidity sensor (0 to 100)')\n  .option('--temperature <value>', 'Temperature sensor (-273.1 to 100)')\n  .option('--steps <value>', 'Steps sensor (integer 0 to 10000)')\n  .option('--heartrate <value>', 'Heart rate sensor (integer 0 to 255)')"
+        },
+        {
+          "kind": "option",
+          "value": "--steps <value>",
+          "schema": "emulatorCommand\n  .command('sensor')\n  .description('Inject sensor data')\n  .requiredOption('--target <nameOrSerial>', 'Target emulator name or serial')\n  .option('--light-intensity <value>', 'Light sensor (0 to 100000)')\n  .option('--humidity <value>', 'Humidity sensor (0 to 100)')\n  .option('--temperature <value>', 'Temperature sensor (-273.1 to 100)')\n  .option('--steps <value>', 'Steps sensor (integer 0 to 10000)')"
+        },
+        {
+          "kind": "option",
+          "value": "--temperature <value>",
+          "schema": "emulatorCommand\n  .command('sensor')\n  .description('Inject sensor data')\n  .requiredOption('--target <nameOrSerial>', 'Target emulator name or serial')\n  .option('--light-intensity <value>', 'Light sensor (0 to 100000)')\n  .option('--humidity <value>', 'Humidity sensor (0 to 100)')\n  .option('--temperature <value>', 'Temperature sensor (-273.1 to 100)')"
+        },
+        {
+          "kind": "option",
+          "value": "--humidity <value>",
+          "schema": "emulatorCommand\n  .command('sensor')\n  .description('Inject sensor data')\n  .requiredOption('--target <nameOrSerial>', 'Target emulator name or serial')\n  .option('--light-intensity <value>', 'Light sensor (0 to 100000)')\n  .option('--humidity <value>', 'Humidity sensor (0 to 100)')"
+        },
+        {
+          "kind": "option",
+          "value": "--light-intensity <value>",
+          "schema": "emulatorCommand\n  .command('sensor')\n  .description('Inject sensor data')\n  .requiredOption('--target <nameOrSerial>', 'Target emulator name or serial')\n  .option('--light-intensity <value>', 'Light sensor (0 to 100000)')"
+        },
+        {
+          "kind": "requiredOption",
+          "value": "--target <nameOrSerial>",
+          "schema": "emulatorCommand\n  .command('sensor')\n  .description('Inject sensor data')\n  .requiredOption('--target <nameOrSerial>', 'Target emulator name or serial')"
+        },
+        {
+          "kind": "command",
+          "value": "sensor",
+          "schema": "emulatorCommand\n  .command('sensor')"
+        },
+        {
+          "kind": "command",
+          "value": "list",
+          "schema": "emulatorCommand\n  .command('list')"
+        },
+        {
+          "kind": "command",
+          "value": "start [names...]",
+          "schema": "emulatorCommand\n  .command('start [names...]')"
+        },
+        {
+          "kind": "command",
+          "value": "stop <names...>",
+          "schema": "emulatorCommand\n  .command('stop <names...>')"
+        },
+        {
+          "kind": "option",
+          "value": "--force",
+          "schema": "emulatorCommand\n  .command('create <name>')\n  .description(\n    'Create a local emulator instance.'\n  )\n  .addOption(deviceTypeOption(true))\n  .requiredOption(\n    '--os-version <version>',\n    'Downloaded image label. which will be quoted in PowerShell (e.g. \"HarmonyOS 6.0.1(21)\") or be used in the format --os-version=\"…\";For details, run`devecocli emulator image list`'\n  )\n  .option('--force', 'Overwrite if supported')"
+        },
+        {
+          "kind": "requiredOption",
+          "value": "--os-version <version>",
+          "schema": "emulatorCommand\n  .command('create <name>')\n  .description(\n    'Create a local emulator instance.'\n  )\n  .addOption(deviceTypeOption(true))\n  .requiredOption(\n    '--os-version <version>',\n    'Downloaded image label. which will be quoted in PowerShell (e.g. \"HarmonyOS 6.0.1(21)\") or be used in the format --os-version=\"…\";For details, run`devecocli emulator image list`'\n  )"
+        },
+        {
+          "kind": "command",
+          "value": "create <name>",
+          "schema": "emulatorCommand\n  .command('create <name>')"
+        },
+        {
+          "kind": "command",
+          "value": "delete <name>",
+          "schema": "emulatorCommand\n  .command('delete <name>')"
+        }
+      ]
+    },
+    {
+      "path": "src/commands/init.ts",
+      "sha256": "5b4aadd14db8f58accaf59558e799c2e7b8f02d9ec78b13ff89fb643d6a2055a",
+      "contracts": [
+        {
+          "kind": "option",
+          "value": "-f, --force",
+          "schema": "new Command('init')\n  .description('Install the deveco-cli skill or configure the deveco-mcp server into AI agents')\n  .option(\n    '--agent <agents>',\n    'Target agents, comma-separated; installs to all available agents if omitted'\n  )\n  .option(\n    '--project <path>',\n    'Project root directory for skill or MCP configuration'\n  )\n  .option(\n    '--path <path>',\n    'Path to install the skill directly (cannot be used with --project or --agent)'\n  )\n  .option(\n    '--skill',\n    'Install the deveco-cli skill only (same as default behavior; explicit for symmetry with --mcp)'\n  )\n  .option(\n    '--mcp',\n    'Configure the deveco-mcp server (syntax checking for .ets and C/C++) only; no skill installation'\n  )\n  .option('-f, --force', 'Overwrite existing skill/MCP configuration')"
+        },
+        {
+          "kind": "option",
+          "value": "--mcp",
+          "schema": "new Command('init')\n  .description('Install the deveco-cli skill or configure the deveco-mcp server into AI agents')\n  .option(\n    '--agent <agents>',\n    'Target agents, comma-separated; installs to all available agents if omitted'\n  )\n  .option(\n    '--project <path>',\n    'Project root directory for skill or MCP configuration'\n  )\n  .option(\n    '--path <path>',\n    'Path to install the skill directly (cannot be used with --project or --agent)'\n  )\n  .option(\n    '--skill',\n    'Install the deveco-cli skill only (same as default behavior; explicit for symmetry with --mcp)'\n  )\n  .option(\n    '--mcp',\n    'Configure the deveco-mcp server (syntax checking for .ets and C/C++) only; no skill installation'\n  )"
+        },
+        {
+          "kind": "option",
+          "value": "--skill",
+          "schema": "new Command('init')\n  .description('Install the deveco-cli skill or configure the deveco-mcp server into AI agents')\n  .option(\n    '--agent <agents>',\n    'Target agents, comma-separated; installs to all available agents if omitted'\n  )\n  .option(\n    '--project <path>',\n    'Project root directory for skill or MCP configuration'\n  )\n  .option(\n    '--path <path>',\n    'Path to install the skill directly (cannot be used with --project or --agent)'\n  )\n  .option(\n    '--skill',\n    'Install the deveco-cli skill only (same as default behavior; explicit for symmetry with --mcp)'\n  )"
+        },
+        {
+          "kind": "option",
+          "value": "--path <path>",
+          "schema": "new Command('init')\n  .description('Install the deveco-cli skill or configure the deveco-mcp server into AI agents')\n  .option(\n    '--agent <agents>',\n    'Target agents, comma-separated; installs to all available agents if omitted'\n  )\n  .option(\n    '--project <path>',\n    'Project root directory for skill or MCP configuration'\n  )\n  .option(\n    '--path <path>',\n    'Path to install the skill directly (cannot be used with --project or --agent)'\n  )"
+        },
+        {
+          "kind": "option",
+          "value": "--project <path>",
+          "schema": "new Command('init')\n  .description('Install the deveco-cli skill or configure the deveco-mcp server into AI agents')\n  .option(\n    '--agent <agents>',\n    'Target agents, comma-separated; installs to all available agents if omitted'\n  )\n  .option(\n    '--project <path>',\n    'Project root directory for skill or MCP configuration'\n  )"
+        },
+        {
+          "kind": "option",
+          "value": "--agent <agents>",
+          "schema": "new Command('init')\n  .description('Install the deveco-cli skill or configure the deveco-mcp server into AI agents')\n  .option(\n    '--agent <agents>',\n    'Target agents, comma-separated; installs to all available agents if omitted'\n  )"
+        }
+      ]
+    },
+    {
+      "path": "src/commands/log.ts",
+      "sha256": "90b4525134720448854a211ec9e1b9eef83b1e8454eafc0094823615e6c96777",
+      "contracts": [
+        {
+          "kind": "option",
+          "value": "--follow",
+          "schema": "new Command('log')\n  .description('Obtain device application logs')\n  .configureOutput({\n    outputError: (str, write) => write(red(str)),\n  })\n  .option('--device <device>', 'Target device (name or serial)')\n  .option('--crash', 'Only obtain crash logs')\n  .option('--level <level>', 'Log level filter: D, I, W, E, F', parseHilogLevel)\n  .option(\n    '--bundle-name <bundle-name>',\n    'Filter by application bundle name',\n    parseBundleName\n  )\n  .option('--keyword <keyword>', 'Keyword filter')\n  .option('--tail <num>', 'Show only the latest N log lines', parsePositiveInt)\n  .option(\n    '--from <start>',\n    'Start offset from now, e.g. 30s, 5m, 2.5m, or 120',\n    (value: string) => parseDuration(value, 'from')\n  )\n  .option(\n    '--to <end>',\n    'End offset from now, e.g. 30s, 5m, 2.5m, or 120',\n    (value: string) => parseDuration(value, 'to')\n  )\n  .option('--follow', 'Follow the log stream in real-time.')"
+        },
+        {
+          "kind": "option",
+          "value": "--to <end>",
+          "schema": "new Command('log')\n  .description('Obtain device application logs')\n  .configureOutput({\n    outputError: (str, write) => write(red(str)),\n  })\n  .option('--device <device>', 'Target device (name or serial)')\n  .option('--crash', 'Only obtain crash logs')\n  .option('--level <level>', 'Log level filter: D, I, W, E, F', parseHilogLevel)\n  .option(\n    '--bundle-name <bundle-name>',\n    'Filter by application bundle name',\n    parseBundleName\n  )\n  .option('--keyword <keyword>', 'Keyword filter')\n  .option('--tail <num>', 'Show only the latest N log lines', parsePositiveInt)\n  .option(\n    '--from <start>',\n    'Start offset from now, e.g. 30s, 5m, 2.5m, or 120',\n    (value: string) => parseDuration(value, 'from')\n  )\n  .option(\n    '--to <end>',\n    'End offset from now, e.g. 30s, 5m, 2.5m, or 120',\n    (value: string) => parseDuration(value, 'to')\n  )"
+        },
+        {
+          "kind": "option",
+          "value": "--from <start>",
+          "schema": "new Command('log')\n  .description('Obtain device application logs')\n  .configureOutput({\n    outputError: (str, write) => write(red(str)),\n  })\n  .option('--device <device>', 'Target device (name or serial)')\n  .option('--crash', 'Only obtain crash logs')\n  .option('--level <level>', 'Log level filter: D, I, W, E, F', parseHilogLevel)\n  .option(\n    '--bundle-name <bundle-name>',\n    'Filter by application bundle name',\n    parseBundleName\n  )\n  .option('--keyword <keyword>', 'Keyword filter')\n  .option('--tail <num>', 'Show only the latest N log lines', parsePositiveInt)\n  .option(\n    '--from <start>',\n    'Start offset from now, e.g. 30s, 5m, 2.5m, or 120',\n    (value: string) => parseDuration(value, 'from')\n  )"
+        },
+        {
+          "kind": "option",
+          "value": "--tail <num>",
+          "schema": "new Command('log')\n  .description('Obtain device application logs')\n  .configureOutput({\n    outputError: (str, write) => write(red(str)),\n  })\n  .option('--device <device>', 'Target device (name or serial)')\n  .option('--crash', 'Only obtain crash logs')\n  .option('--level <level>', 'Log level filter: D, I, W, E, F', parseHilogLevel)\n  .option(\n    '--bundle-name <bundle-name>',\n    'Filter by application bundle name',\n    parseBundleName\n  )\n  .option('--keyword <keyword>', 'Keyword filter')\n  .option('--tail <num>', 'Show only the latest N log lines', parsePositiveInt)"
+        },
+        {
+          "kind": "option",
+          "value": "--keyword <keyword>",
+          "schema": "new Command('log')\n  .description('Obtain device application logs')\n  .configureOutput({\n    outputError: (str, write) => write(red(str)),\n  })\n  .option('--device <device>', 'Target device (name or serial)')\n  .option('--crash', 'Only obtain crash logs')\n  .option('--level <level>', 'Log level filter: D, I, W, E, F', parseHilogLevel)\n  .option(\n    '--bundle-name <bundle-name>',\n    'Filter by application bundle name',\n    parseBundleName\n  )\n  .option('--keyword <keyword>', 'Keyword filter')"
+        },
+        {
+          "kind": "option",
+          "value": "--bundle-name <bundle-name>",
+          "schema": "new Command('log')\n  .description('Obtain device application logs')\n  .configureOutput({\n    outputError: (str, write) => write(red(str)),\n  })\n  .option('--device <device>', 'Target device (name or serial)')\n  .option('--crash', 'Only obtain crash logs')\n  .option('--level <level>', 'Log level filter: D, I, W, E, F', parseHilogLevel)\n  .option(\n    '--bundle-name <bundle-name>',\n    'Filter by application bundle name',\n    parseBundleName\n  )"
+        },
+        {
+          "kind": "option",
+          "value": "--level <level>",
+          "schema": "new Command('log')\n  .description('Obtain device application logs')\n  .configureOutput({\n    outputError: (str, write) => write(red(str)),\n  })\n  .option('--device <device>', 'Target device (name or serial)')\n  .option('--crash', 'Only obtain crash logs')\n  .option('--level <level>', 'Log level filter: D, I, W, E, F', parseHilogLevel)"
+        },
+        {
+          "kind": "option",
+          "value": "--crash",
+          "schema": "new Command('log')\n  .description('Obtain device application logs')\n  .configureOutput({\n    outputError: (str, write) => write(red(str)),\n  })\n  .option('--device <device>', 'Target device (name or serial)')\n  .option('--crash', 'Only obtain crash logs')"
+        },
+        {
+          "kind": "option",
+          "value": "--device <device>",
+          "schema": "new Command('log')\n  .description('Obtain device application logs')\n  .configureOutput({\n    outputError: (str, write) => write(red(str)),\n  })\n  .option('--device <device>', 'Target device (name or serial)')"
+        }
+      ]
+    },
+    {
+      "path": "src/commands/run.ts",
+      "sha256": "2f8e81372333deb40b9e9ee63a64f984323c860ac29064f293af833e368723d3",
+      "contracts": [
+        {
+          "kind": "option",
+          "value": "--hotreload-apply <fileName>",
+          "schema": "new Command('run')\n  .description('Build and run the project on a connected device')\n  .option(\n    '--module <modules...>',\n    'Module(s) to run (format: module or module@target)'\n  )\n  .option('--device <device>', 'Target device name or serial')\n  .option('--product <product>', 'Product name (default: default)')\n  .option('--build-mode <mode>', 'Build mode (options: debug, release; default: debug)')\n  .option('--ability <ability>', 'Ability name to launch')\n  .option('--uninstall', 'Uninstall existing app before installation')\n  .option('--skip-build', 'Skip build step and deploy existing artifacts')\n  .option('--apply <fileName>', 'Quick-apply changed files via quickfix (incremental hqf) and restart. <fileName> under project .hvigor/')\n  .option('--hotreload [action]', 'Start hot-reload mode (build+deploy with daemon, then exit). Use \"stop\" to shut down the hvigor daemon.')\n  .option('--hotreload-apply <fileName>', 'Hot-reload changed files (.hvigor/<fileName> list) via daemon hot compile + signed hqf + quickfix, without restarting the app.')"
+        },
+        {
+          "kind": "option",
+          "value": "--hotreload [action]",
+          "schema": "new Command('run')\n  .description('Build and run the project on a connected device')\n  .option(\n    '--module <modules...>',\n    'Module(s) to run (format: module or module@target)'\n  )\n  .option('--device <device>', 'Target device name or serial')\n  .option('--product <product>', 'Product name (default: default)')\n  .option('--build-mode <mode>', 'Build mode (options: debug, release; default: debug)')\n  .option('--ability <ability>', 'Ability name to launch')\n  .option('--uninstall', 'Uninstall existing app before installation')\n  .option('--skip-build', 'Skip build step and deploy existing artifacts')\n  .option('--apply <fileName>', 'Quick-apply changed files via quickfix (incremental hqf) and restart. <fileName> under project .hvigor/')\n  .option('--hotreload [action]', 'Start hot-reload mode (build+deploy with daemon, then exit). Use \"stop\" to shut down the hvigor daemon.')"
+        },
+        {
+          "kind": "option",
+          "value": "--apply <fileName>",
+          "schema": "new Command('run')\n  .description('Build and run the project on a connected device')\n  .option(\n    '--module <modules...>',\n    'Module(s) to run (format: module or module@target)'\n  )\n  .option('--device <device>', 'Target device name or serial')\n  .option('--product <product>', 'Product name (default: default)')\n  .option('--build-mode <mode>', 'Build mode (options: debug, release; default: debug)')\n  .option('--ability <ability>', 'Ability name to launch')\n  .option('--uninstall', 'Uninstall existing app before installation')\n  .option('--skip-build', 'Skip build step and deploy existing artifacts')\n  .option('--apply <fileName>', 'Quick-apply changed files via quickfix (incremental hqf) and restart. <fileName> under project .hvigor/')"
+        },
+        {
+          "kind": "option",
+          "value": "--skip-build",
+          "schema": "new Command('run')\n  .description('Build and run the project on a connected device')\n  .option(\n    '--module <modules...>',\n    'Module(s) to run (format: module or module@target)'\n  )\n  .option('--device <device>', 'Target device name or serial')\n  .option('--product <product>', 'Product name (default: default)')\n  .option('--build-mode <mode>', 'Build mode (options: debug, release; default: debug)')\n  .option('--ability <ability>', 'Ability name to launch')\n  .option('--uninstall', 'Uninstall existing app before installation')\n  .option('--skip-build', 'Skip build step and deploy existing artifacts')"
+        },
+        {
+          "kind": "option",
+          "value": "--uninstall",
+          "schema": "new Command('run')\n  .description('Build and run the project on a connected device')\n  .option(\n    '--module <modules...>',\n    'Module(s) to run (format: module or module@target)'\n  )\n  .option('--device <device>', 'Target device name or serial')\n  .option('--product <product>', 'Product name (default: default)')\n  .option('--build-mode <mode>', 'Build mode (options: debug, release; default: debug)')\n  .option('--ability <ability>', 'Ability name to launch')\n  .option('--uninstall', 'Uninstall existing app before installation')"
+        },
+        {
+          "kind": "option",
+          "value": "--ability <ability>",
+          "schema": "new Command('run')\n  .description('Build and run the project on a connected device')\n  .option(\n    '--module <modules...>',\n    'Module(s) to run (format: module or module@target)'\n  )\n  .option('--device <device>', 'Target device name or serial')\n  .option('--product <product>', 'Product name (default: default)')\n  .option('--build-mode <mode>', 'Build mode (options: debug, release; default: debug)')\n  .option('--ability <ability>', 'Ability name to launch')"
+        },
+        {
+          "kind": "option",
+          "value": "--build-mode <mode>",
+          "schema": "new Command('run')\n  .description('Build and run the project on a connected device')\n  .option(\n    '--module <modules...>',\n    'Module(s) to run (format: module or module@target)'\n  )\n  .option('--device <device>', 'Target device name or serial')\n  .option('--product <product>', 'Product name (default: default)')\n  .option('--build-mode <mode>', 'Build mode (options: debug, release; default: debug)')"
+        },
+        {
+          "kind": "option",
+          "value": "--product <product>",
+          "schema": "new Command('run')\n  .description('Build and run the project on a connected device')\n  .option(\n    '--module <modules...>',\n    'Module(s) to run (format: module or module@target)'\n  )\n  .option('--device <device>', 'Target device name or serial')\n  .option('--product <product>', 'Product name (default: default)')"
+        },
+        {
+          "kind": "option",
+          "value": "--device <device>",
+          "schema": "new Command('run')\n  .description('Build and run the project on a connected device')\n  .option(\n    '--module <modules...>',\n    'Module(s) to run (format: module or module@target)'\n  )\n  .option('--device <device>', 'Target device name or serial')"
+        },
+        {
+          "kind": "option",
+          "value": "--module <modules...>",
+          "schema": "new Command('run')\n  .description('Build and run the project on a connected device')\n  .option(\n    '--module <modules...>',\n    'Module(s) to run (format: module or module@target)'\n  )"
+        }
+      ]
+    },
+    {
+      "path": "src/commands/serve-lsp-cpp.ts",
+      "sha256": "9c13bc23760a5a7055b7bc7112bb26d5244f6e9ece2e8217383d82961bd95797",
+      "contracts": []
+    },
+    {
+      "path": "src/commands/serve-lsp.ts",
+      "sha256": "d190859841da94f37d25281878d23616d2464a0c589616ef665fc9459f7f288d",
+      "contracts": []
+    },
+    {
+      "path": "src/commands/serve.ts",
+      "sha256": "cb04d26fde3bc3dbd888c9e24bd5a0f1d54f347b684475c9b0d46ef2fca1fc6b",
+      "contracts": [
+        {
+          "kind": "command",
+          "value": "mcp",
+          "schema": "serveCommand\n  .command('mcp')"
+        },
+        {
+          "kind": "option",
+          "value": "--auto-detect",
+          "schema": "serveCommand\n  .command('lsp')\n  .description('Start a bundled LSP language server')\n  .option('--arkts', 'Start the ArkTS language server (ace-server)')\n  .option('--cpp', 'Start the C/C++ language server (clangd)')\n  .option('--project-path <path>', 'project root path (used as-is, no search)')\n  .option('--auto-detect', 'When --project-path is not specified, search the current directory and its subdirectories for the project root (no upward search)')"
+        },
+        {
+          "kind": "option",
+          "value": "--project-path <path>",
+          "schema": "serveCommand\n  .command('lsp')\n  .description('Start a bundled LSP language server')\n  .option('--arkts', 'Start the ArkTS language server (ace-server)')\n  .option('--cpp', 'Start the C/C++ language server (clangd)')\n  .option('--project-path <path>', 'project root path (used as-is, no search)')"
+        },
+        {
+          "kind": "option",
+          "value": "--cpp",
+          "schema": "serveCommand\n  .command('lsp')\n  .description('Start a bundled LSP language server')\n  .option('--arkts', 'Start the ArkTS language server (ace-server)')\n  .option('--cpp', 'Start the C/C++ language server (clangd)')"
+        },
+        {
+          "kind": "option",
+          "value": "--arkts",
+          "schema": "serveCommand\n  .command('lsp')\n  .description('Start a bundled LSP language server')\n  .option('--arkts', 'Start the ArkTS language server (ace-server)')"
+        },
+        {
+          "kind": "command",
+          "value": "lsp",
+          "schema": "serveCommand\n  .command('lsp')"
+        }
+      ]
+    },
+    {
+      "path": "src/commands/signature.ts",
+      "sha256": "a5bb9c4514618078dd547c29334f1b2f94825c4f3de259aff2172d0b0b0bc12e",
+      "contracts": [
+        {
+          "kind": "option",
+          "value": "--product <product>",
+          "schema": "signatureCommand\n  .command('generate')\n  .description(\n    'Automatically generate signing materials and write them to the project configuration.'\n  )\n  .option('--force', 'Force overwrite existing local signing materials.')\n  .option('--team-id <team-id>', 'Specify the team ID to use.')\n  .option(\n    '--product <product>',\n    'Specify the product. The default value is default.'\n  )"
+        },
+        {
+          "kind": "option",
+          "value": "--team-id <team-id>",
+          "schema": "signatureCommand\n  .command('generate')\n  .description(\n    'Automatically generate signing materials and write them to the project configuration.'\n  )\n  .option('--force', 'Force overwrite existing local signing materials.')\n  .option('--team-id <team-id>', 'Specify the team ID to use.')"
+        },
+        {
+          "kind": "option",
+          "value": "--force",
+          "schema": "signatureCommand\n  .command('generate')\n  .description(\n    'Automatically generate signing materials and write them to the project configuration.'\n  )\n  .option('--force', 'Force overwrite existing local signing materials.')"
+        },
+        {
+          "kind": "command",
+          "value": "generate",
+          "schema": "signatureCommand\n  .command('generate')"
+        }
+      ]
+    },
+    {
+      "path": "src/commands/skills.ts",
+      "sha256": "c0d6413163192f276a2df241ebb6357f9d3b404c25f53c2459e7cd1f2014d0ac",
+      "contracts": [
+        {
+          "kind": "option",
+          "value": "-l, --long",
+          "schema": "skillsCommand\n  .command('list')\n  .description('List all available HarmonyOS skills')\n  .option(\n    '-l, --long',\n    'Show detailed information including description and installation status'\n  )"
+        },
+        {
+          "kind": "command",
+          "value": "list",
+          "schema": "skillsCommand\n  .command('list')"
+        },
+        {
+          "kind": "command",
+          "value": "find <keyword>",
+          "schema": "skillsCommand\n  .command('find <keyword>')"
+        },
+        {
+          "kind": "option",
+          "value": "--path <path>",
+          "schema": "skillsCommand\n  .command('add')\n  .description('Install skills to AI agents')\n  .option('--all', 'Install all available skills')\n  .option(\n    '--agent <agents>',\n    'Target agents, comma-separated; Omit to install to all available agents'\n  )\n  .option('--skill <skill-name>', 'Name of the skill to install')\n  .option('-f, --force', 'Overwrite an existing skill installation')\n  .option(\n    '--project <path>',\n    'Project root directory for skill installation'\n  )\n  .option(\n    '--path <path>',\n    'Path to install the skill directly (cannot be used with --project or --agent)'\n  )"
+        },
+        {
+          "kind": "option",
+          "value": "--project <path>",
+          "schema": "skillsCommand\n  .command('add')\n  .description('Install skills to AI agents')\n  .option('--all', 'Install all available skills')\n  .option(\n    '--agent <agents>',\n    'Target agents, comma-separated; Omit to install to all available agents'\n  )\n  .option('--skill <skill-name>', 'Name of the skill to install')\n  .option('-f, --force', 'Overwrite an existing skill installation')\n  .option(\n    '--project <path>',\n    'Project root directory for skill installation'\n  )"
+        },
+        {
+          "kind": "option",
+          "value": "-f, --force",
+          "schema": "skillsCommand\n  .command('add')\n  .description('Install skills to AI agents')\n  .option('--all', 'Install all available skills')\n  .option(\n    '--agent <agents>',\n    'Target agents, comma-separated; Omit to install to all available agents'\n  )\n  .option('--skill <skill-name>', 'Name of the skill to install')\n  .option('-f, --force', 'Overwrite an existing skill installation')"
+        },
+        {
+          "kind": "option",
+          "value": "--skill <skill-name>",
+          "schema": "skillsCommand\n  .command('add')\n  .description('Install skills to AI agents')\n  .option('--all', 'Install all available skills')\n  .option(\n    '--agent <agents>',\n    'Target agents, comma-separated; Omit to install to all available agents'\n  )\n  .option('--skill <skill-name>', 'Name of the skill to install')"
+        },
+        {
+          "kind": "option",
+          "value": "--agent <agents>",
+          "schema": "skillsCommand\n  .command('add')\n  .description('Install skills to AI agents')\n  .option('--all', 'Install all available skills')\n  .option(\n    '--agent <agents>',\n    'Target agents, comma-separated; Omit to install to all available agents'\n  )"
+        },
+        {
+          "kind": "option",
+          "value": "--all",
+          "schema": "skillsCommand\n  .command('add')\n  .description('Install skills to AI agents')\n  .option('--all', 'Install all available skills')"
+        },
+        {
+          "kind": "command",
+          "value": "add",
+          "schema": "skillsCommand\n  .command('add')"
+        },
+        {
+          "kind": "option",
+          "value": "--path <path>",
+          "schema": "skillsCommand\n  .command('remove')\n  .description('Remove an installed skill from AI agents')\n  .requiredOption('--skill <skill-name>', 'Name of the skill to remove')\n  .option(\n    '--agent <agents>',\n    'Target agents, comma-separated.Omit to remove from all available agents'\n  )\n  .option('--project <path>', 'Project root directory for skill removal')\n  .option('--path <path>', 'Path for skill removal')"
+        },
+        {
+          "kind": "option",
+          "value": "--project <path>",
+          "schema": "skillsCommand\n  .command('remove')\n  .description('Remove an installed skill from AI agents')\n  .requiredOption('--skill <skill-name>', 'Name of the skill to remove')\n  .option(\n    '--agent <agents>',\n    'Target agents, comma-separated.Omit to remove from all available agents'\n  )\n  .option('--project <path>', 'Project root directory for skill removal')"
+        },
+        {
+          "kind": "option",
+          "value": "--agent <agents>",
+          "schema": "skillsCommand\n  .command('remove')\n  .description('Remove an installed skill from AI agents')\n  .requiredOption('--skill <skill-name>', 'Name of the skill to remove')\n  .option(\n    '--agent <agents>',\n    'Target agents, comma-separated.Omit to remove from all available agents'\n  )"
+        },
+        {
+          "kind": "requiredOption",
+          "value": "--skill <skill-name>",
+          "schema": "skillsCommand\n  .command('remove')\n  .description('Remove an installed skill from AI agents')\n  .requiredOption('--skill <skill-name>', 'Name of the skill to remove')"
+        },
+        {
+          "kind": "command",
+          "value": "remove",
+          "schema": "skillsCommand\n  .command('remove')"
+        }
+      ]
+    },
+    {
+      "path": "src/commands/ui-input.ts",
+      "sha256": "906a3a9a5b826b6033e657d4afbf89adce2d90917877aca825e9b4da7efac82d",
+      "contracts": [
+        {
+          "kind": "option",
+          "value": "--window <windowId>",
+          "schema": "new Command('click')\n  .argument('[x]', 'X coordinate')\n  .argument('[y]', 'Y coordinate')\n  .description('Tap at the specified coordinates')\n  .option('--device <name|serial>', 'Target device (name or serial)')\n  .option('--id <id>', 'Node id (auto-resolves to center coordinates)')\n  .option('--window <windowId>', 'Target window id (used with --id)')"
+        },
+        {
+          "kind": "option",
+          "value": "--id <id>",
+          "schema": "new Command('click')\n  .argument('[x]', 'X coordinate')\n  .argument('[y]', 'Y coordinate')\n  .description('Tap at the specified coordinates')\n  .option('--device <name|serial>', 'Target device (name or serial)')\n  .option('--id <id>', 'Node id (auto-resolves to center coordinates)')"
+        },
+        {
+          "kind": "option",
+          "value": "--device <name|serial>",
+          "schema": "new Command('click')\n  .argument('[x]', 'X coordinate')\n  .argument('[y]', 'Y coordinate')\n  .description('Tap at the specified coordinates')\n  .option('--device <name|serial>', 'Target device (name or serial)')"
+        },
+        {
+          "kind": "argument",
+          "value": "[y]",
+          "schema": "new Command('click')\n  .argument('[x]', 'X coordinate')\n  .argument('[y]', 'Y coordinate')"
+        },
+        {
+          "kind": "argument",
+          "value": "[x]",
+          "schema": "new Command('click')\n  .argument('[x]', 'X coordinate')"
+        },
+        {
+          "kind": "option",
+          "value": "--window <windowId>",
+          "schema": "new Command('doubleclick')\n  .argument('[x]', 'X coordinate')\n  .argument('[y]', 'Y coordinate')\n  .description('Double-tap at the specified coordinates')\n  .option('--device <name|serial>', 'Target device (name or serial)')\n  .option('--id <id>', 'Node id (auto-resolves to center coordinates)')\n  .option('--window <windowId>', 'Target window id (used with --id)')"
+        },
+        {
+          "kind": "option",
+          "value": "--id <id>",
+          "schema": "new Command('doubleclick')\n  .argument('[x]', 'X coordinate')\n  .argument('[y]', 'Y coordinate')\n  .description('Double-tap at the specified coordinates')\n  .option('--device <name|serial>', 'Target device (name or serial)')\n  .option('--id <id>', 'Node id (auto-resolves to center coordinates)')"
+        },
+        {
+          "kind": "option",
+          "value": "--device <name|serial>",
+          "schema": "new Command('doubleclick')\n  .argument('[x]', 'X coordinate')\n  .argument('[y]', 'Y coordinate')\n  .description('Double-tap at the specified coordinates')\n  .option('--device <name|serial>', 'Target device (name or serial)')"
+        },
+        {
+          "kind": "argument",
+          "value": "[y]",
+          "schema": "new Command('doubleclick')\n  .argument('[x]', 'X coordinate')\n  .argument('[y]', 'Y coordinate')"
+        },
+        {
+          "kind": "argument",
+          "value": "[x]",
+          "schema": "new Command('doubleclick')\n  .argument('[x]', 'X coordinate')"
+        },
+        {
+          "kind": "option",
+          "value": "--window <windowId>",
+          "schema": "new Command('longclick')\n  .argument('[x]', 'X coordinate')\n  .argument('[y]', 'Y coordinate')\n  .description('Long-press at the specified coordinates')\n  .option('--device <name|serial>', 'Target device (name or serial)')\n  .option('--id <id>', 'Node id (auto-resolves to center coordinates)')\n  .option('--window <windowId>', 'Target window id (used with --id)')"
+        },
+        {
+          "kind": "option",
+          "value": "--id <id>",
+          "schema": "new Command('longclick')\n  .argument('[x]', 'X coordinate')\n  .argument('[y]', 'Y coordinate')\n  .description('Long-press at the specified coordinates')\n  .option('--device <name|serial>', 'Target device (name or serial)')\n  .option('--id <id>', 'Node id (auto-resolves to center coordinates)')"
+        },
+        {
+          "kind": "option",
+          "value": "--device <name|serial>",
+          "schema": "new Command('longclick')\n  .argument('[x]', 'X coordinate')\n  .argument('[y]', 'Y coordinate')\n  .description('Long-press at the specified coordinates')\n  .option('--device <name|serial>', 'Target device (name or serial)')"
+        },
+        {
+          "kind": "argument",
+          "value": "[y]",
+          "schema": "new Command('longclick')\n  .argument('[x]', 'X coordinate')\n  .argument('[y]', 'Y coordinate')"
+        },
+        {
+          "kind": "argument",
+          "value": "[x]",
+          "schema": "new Command('longclick')\n  .argument('[x]', 'X coordinate')"
+        },
+        {
+          "kind": "option",
+          "value": "--speed <n>",
+          "schema": "new Command('swipe')\n  .argument('<x1>', 'Start X coordinate')\n  .argument('<y1>', 'Start Y coordinate')\n  .argument('<x2>', 'End X coordinate')\n  .argument('<y2>', 'End Y coordinate')\n  .description('Swipe from one point to another')\n  .option('--device <name|serial>', 'Target device (name or serial)')\n  .option('--speed <n>', 'Swipe speed (pixels per second)')"
+        },
+        {
+          "kind": "option",
+          "value": "--device <name|serial>",
+          "schema": "new Command('swipe')\n  .argument('<x1>', 'Start X coordinate')\n  .argument('<y1>', 'Start Y coordinate')\n  .argument('<x2>', 'End X coordinate')\n  .argument('<y2>', 'End Y coordinate')\n  .description('Swipe from one point to another')\n  .option('--device <name|serial>', 'Target device (name or serial)')"
+        },
+        {
+          "kind": "argument",
+          "value": "<y2>",
+          "schema": "new Command('swipe')\n  .argument('<x1>', 'Start X coordinate')\n  .argument('<y1>', 'Start Y coordinate')\n  .argument('<x2>', 'End X coordinate')\n  .argument('<y2>', 'End Y coordinate')"
+        },
+        {
+          "kind": "argument",
+          "value": "<x2>",
+          "schema": "new Command('swipe')\n  .argument('<x1>', 'Start X coordinate')\n  .argument('<y1>', 'Start Y coordinate')\n  .argument('<x2>', 'End X coordinate')"
+        },
+        {
+          "kind": "argument",
+          "value": "<y1>",
+          "schema": "new Command('swipe')\n  .argument('<x1>', 'Start X coordinate')\n  .argument('<y1>', 'Start Y coordinate')"
+        },
+        {
+          "kind": "argument",
+          "value": "<x1>",
+          "schema": "new Command('swipe')\n  .argument('<x1>', 'Start X coordinate')"
+        },
+        {
+          "kind": "option",
+          "value": "--speed <n>",
+          "schema": "new Command('fling')\n  .argument('<x1>', 'Start X coordinate')\n  .argument('<y1>', 'Start Y coordinate')\n  .argument('<x2>', 'End X coordinate')\n  .argument('<y2>', 'End Y coordinate')\n  .description('Fling from one point to another')\n  .option('--device <name|serial>', 'Target device (name or serial)')\n  .option('--speed <n>', 'Swipe speed (pixels per second)')"
+        },
+        {
+          "kind": "option",
+          "value": "--device <name|serial>",
+          "schema": "new Command('fling')\n  .argument('<x1>', 'Start X coordinate')\n  .argument('<y1>', 'Start Y coordinate')\n  .argument('<x2>', 'End X coordinate')\n  .argument('<y2>', 'End Y coordinate')\n  .description('Fling from one point to another')\n  .option('--device <name|serial>', 'Target device (name or serial)')"
+        },
+        {
+          "kind": "argument",
+          "value": "<y2>",
+          "schema": "new Command('fling')\n  .argument('<x1>', 'Start X coordinate')\n  .argument('<y1>', 'Start Y coordinate')\n  .argument('<x2>', 'End X coordinate')\n  .argument('<y2>', 'End Y coordinate')"
+        },
+        {
+          "kind": "argument",
+          "value": "<x2>",
+          "schema": "new Command('fling')\n  .argument('<x1>', 'Start X coordinate')\n  .argument('<y1>', 'Start Y coordinate')\n  .argument('<x2>', 'End X coordinate')"
+        },
+        {
+          "kind": "argument",
+          "value": "<y1>",
+          "schema": "new Command('fling')\n  .argument('<x1>', 'Start X coordinate')\n  .argument('<y1>', 'Start Y coordinate')"
+        },
+        {
+          "kind": "argument",
+          "value": "<x1>",
+          "schema": "new Command('fling')\n  .argument('<x1>', 'Start X coordinate')"
+        },
+        {
+          "kind": "option",
+          "value": "--speed <n>",
+          "schema": "new Command('drag')\n  .argument('<x1>', 'Start X coordinate')\n  .argument('<y1>', 'Start Y coordinate')\n  .argument('<x2>', 'End X coordinate')\n  .argument('<y2>', 'End Y coordinate')\n  .description('Drag from one point to another')\n  .option('--device <name|serial>', 'Target device (name or serial)')\n  .option('--speed <n>', 'Swipe speed (pixels per second)')"
+        },
+        {
+          "kind": "option",
+          "value": "--device <name|serial>",
+          "schema": "new Command('drag')\n  .argument('<x1>', 'Start X coordinate')\n  .argument('<y1>', 'Start Y coordinate')\n  .argument('<x2>', 'End X coordinate')\n  .argument('<y2>', 'End Y coordinate')\n  .description('Drag from one point to another')\n  .option('--device <name|serial>', 'Target device (name or serial)')"
+        },
+        {
+          "kind": "argument",
+          "value": "<y2>",
+          "schema": "new Command('drag')\n  .argument('<x1>', 'Start X coordinate')\n  .argument('<y1>', 'Start Y coordinate')\n  .argument('<x2>', 'End X coordinate')\n  .argument('<y2>', 'End Y coordinate')"
+        },
+        {
+          "kind": "argument",
+          "value": "<x2>",
+          "schema": "new Command('drag')\n  .argument('<x1>', 'Start X coordinate')\n  .argument('<y1>', 'Start Y coordinate')\n  .argument('<x2>', 'End X coordinate')"
+        },
+        {
+          "kind": "argument",
+          "value": "<y1>",
+          "schema": "new Command('drag')\n  .argument('<x1>', 'Start X coordinate')\n  .argument('<y1>', 'Start Y coordinate')"
+        },
+        {
+          "kind": "argument",
+          "value": "<x1>",
+          "schema": "new Command('drag')\n  .argument('<x1>', 'Start X coordinate')"
+        },
+        {
+          "kind": "option",
+          "value": "--device <name|serial>",
+          "schema": "new Command('dircfling')\n  .argument('<direction>', 'Direction: up, down, left, right')\n  .description('Fling in a specified direction')\n  .option('--device <name|serial>', 'Target device (name or serial)')"
+        },
+        {
+          "kind": "argument",
+          "value": "<direction>",
+          "schema": "new Command('dircfling')\n  .argument('<direction>', 'Direction: up, down, left, right')"
+        },
+        {
+          "kind": "option",
+          "value": "--window <windowId>",
+          "schema": "new Command('text')\n  .argument('<text>', 'Text to input')\n  .argument('[x]', 'Optional X coordinate')\n  .argument('[y]', 'Optional Y coordinate')\n  .description('Input text at a target location or the currently focused field')\n  .option('--device <name|serial>', 'Target device (name or serial)')\n  .option('--id <id>', 'Node id to target before input (auto-resolves to center)')\n  .option('--window <windowId>', 'Target window id (used with --id)')"
+        },
+        {
+          "kind": "option",
+          "value": "--id <id>",
+          "schema": "new Command('text')\n  .argument('<text>', 'Text to input')\n  .argument('[x]', 'Optional X coordinate')\n  .argument('[y]', 'Optional Y coordinate')\n  .description('Input text at a target location or the currently focused field')\n  .option('--device <name|serial>', 'Target device (name or serial)')\n  .option('--id <id>', 'Node id to target before input (auto-resolves to center)')"
+        },
+        {
+          "kind": "option",
+          "value": "--device <name|serial>",
+          "schema": "new Command('text')\n  .argument('<text>', 'Text to input')\n  .argument('[x]', 'Optional X coordinate')\n  .argument('[y]', 'Optional Y coordinate')\n  .description('Input text at a target location or the currently focused field')\n  .option('--device <name|serial>', 'Target device (name or serial)')"
+        },
+        {
+          "kind": "argument",
+          "value": "[y]",
+          "schema": "new Command('text')\n  .argument('<text>', 'Text to input')\n  .argument('[x]', 'Optional X coordinate')\n  .argument('[y]', 'Optional Y coordinate')"
+        },
+        {
+          "kind": "argument",
+          "value": "[x]",
+          "schema": "new Command('text')\n  .argument('<text>', 'Text to input')\n  .argument('[x]', 'Optional X coordinate')"
+        },
+        {
+          "kind": "argument",
+          "value": "<text>",
+          "schema": "new Command('text')\n  .argument('<text>', 'Text to input')"
+        }
+      ]
+    },
+    {
+      "path": "src/commands/ui-layout.ts",
+      "sha256": "52536589f64c13b103730e75b012c3f7eec057eed04389973c37dc4ed866bfed",
+      "contracts": [
+        {
+          "kind": "option",
+          "value": "--all-windows",
+          "schema": "new Command('layout')\n  .description('Inspect on-screen node(s) for UI testing')\n  .option('--device <name|serial>', 'Target device (name or serial)')\n  .option('--id <id>', 'Layout node id')\n  .option('--window <windowId>', 'Target window id')\n  .option(\n    '--all-windows',\n    'Include all windows (mutually exclusive with --window)'\n  )"
+        },
+        {
+          "kind": "option",
+          "value": "--window <windowId>",
+          "schema": "new Command('layout')\n  .description('Inspect on-screen node(s) for UI testing')\n  .option('--device <name|serial>', 'Target device (name or serial)')\n  .option('--id <id>', 'Layout node id')\n  .option('--window <windowId>', 'Target window id')"
+        },
+        {
+          "kind": "option",
+          "value": "--id <id>",
+          "schema": "new Command('layout')\n  .description('Inspect on-screen node(s) for UI testing')\n  .option('--device <name|serial>', 'Target device (name or serial)')\n  .option('--id <id>', 'Layout node id')"
+        },
+        {
+          "kind": "option",
+          "value": "--device <name|serial>",
+          "schema": "new Command('layout')\n  .description('Inspect on-screen node(s) for UI testing')\n  .option('--device <name|serial>', 'Target device (name or serial)')"
+        }
+      ]
+    },
+    {
+      "path": "src/commands/ui-screenshot.ts",
+      "sha256": "cdea459dfd3627e00c6e4843ed7d720fa6f6745bea07bfe44131f6080cb04f4e",
+      "contracts": [
+        {
+          "kind": "option",
+          "value": "--path <path>",
+          "schema": "new Command('screenshot')\n  .description('Capture a screenshot of the device screen')\n  .option(\n    '--device <name|serial>',\n    'Target device name or serial; required when multiple devices are connected'\n  )\n  .option('--display <displayId>', 'Target display id; omit for default screen')\n  .option(\n    '--path <path>',\n    'Required directory or PNG file path; destination must be writable'\n  )"
+        },
+        {
+          "kind": "option",
+          "value": "--display <displayId>",
+          "schema": "new Command('screenshot')\n  .description('Capture a screenshot of the device screen')\n  .option(\n    '--device <name|serial>',\n    'Target device name or serial; required when multiple devices are connected'\n  )\n  .option('--display <displayId>', 'Target display id; omit for default screen')"
+        },
+        {
+          "kind": "option",
+          "value": "--device <name|serial>",
+          "schema": "new Command('screenshot')\n  .description('Capture a screenshot of the device screen')\n  .option(\n    '--device <name|serial>',\n    'Target device name or serial; required when multiple devices are connected'\n  )"
+        }
+      ]
+    },
+    {
+      "path": "src/commands/ui-window.ts",
+      "sha256": "3f67d63c0cf4cf45f83d9aaa1f40233f903c33fef0bdd79dabae3418b860f7ac",
+      "contracts": [
+        {
+          "kind": "option",
+          "value": "--all",
+          "schema": "windowCommand\n  .command('list')\n  .description('List windows on the device')\n  .option('--device <name|serial>', 'Target device (name or serial)')\n  .addOption(\n    new Option('--format <format>', 'Output format')\n      .choices(['default', 'json'])\n      .default('default')\n  )\n  .option('--all', 'Show all windows including system windows')"
+        },
+        {
+          "kind": "option",
+          "value": "--device <name|serial>",
+          "schema": "windowCommand\n  .command('list')\n  .description('List windows on the device')\n  .option('--device <name|serial>', 'Target device (name or serial)')"
+        },
+        {
+          "kind": "command",
+          "value": "list",
+          "schema": "windowCommand\n  .command('list')"
+        }
+      ]
+    },
+    {
+      "path": "src/commands/ui.ts",
+      "sha256": "d951176e83991d8aa64ad78f09dfe6468c29763421d3f7a76eb49be39dfdf2ab",
+      "contracts": []
+    },
+    {
+      "path": "src/commands/update.ts",
+      "sha256": "111e314021cd0a7622255995917e6047ffb9ee5290690681c76ba29676500233",
+      "contracts": [
+        {
+          "kind": "command",
+          "value": "_check",
+          "schema": "updateCommand.command('_check', { hidden: true })"
+        }
+      ]
+    },
+    {
+      "path": "src/compat/compat.ts",
+      "sha256": "95370aac4b9e57487692de639c4d84986c88fcd4abc24a8703359a3291223fc7",
+      "contracts": []
+    },
+    {
+      "path": "src/config/constants.ts",
+      "sha256": "05fe8f916cf66be0fbfaab9387bac2eeca802a285cf9584d05ad0fa57d501dd8",
+      "contracts": []
+    },
+    {
+      "path": "src/config/endpoints.json",
+      "sha256": "1c5824afabfc67739c587f90162e7026a23f28c30fcea498e35ffd416577733e",
+      "contracts": []
+    },
+    {
+      "path": "src/config/mcp.ts",
+      "sha256": "4f119f9cf3434003183e0cecbf000f702aa1a5ecb3fd1d5723c042706ce7efb5",
+      "contracts": []
+    },
+    {
+      "path": "src/config/network.ts",
+      "sha256": "df78dfe88023aa815bc3883d6bf64e0d7fa3a26cabea33e3c4226b184a685f07",
+      "contracts": []
+    },
+    {
+      "path": "src/config/project.ts",
+      "sha256": "c5ca61a265137fc39128aaf85c3758d80e03e7b37060eeb6b75f3cb9949ba9c2",
+      "contracts": []
+    },
+    {
+      "path": "src/config/signature.ts",
+      "sha256": "8764cb0dbde4f4a8e9a173598feb8c643a9e497c67e6115540a4dffdca3325e0",
+      "contracts": []
+    },
+    {
+      "path": "src/config/skills.ts",
+      "sha256": "f1ddbaa7ffb9fcc97e5eecfb3645f88e63e3bb6d4a16d5a63c3c5c6cc2c0a5d3",
+      "contracts": []
+    },
+    {
+      "path": "src/data/emulator-privacy-bundled.ts",
+      "sha256": "13b1e8adfed1689d8c99fc669ca73806974bf7f212be61d9e5a62ab51e0bf4c7",
+      "contracts": []
+    },
+    {
+      "path": "src/docs/doc-index/api-identifiers.ts",
+      "sha256": "f9467c4d1af3894157d7ac6b40760849a294347928dd87930651c09cce26f44c",
+      "contracts": []
+    },
+    {
+      "path": "src/docs/doc-index/api-suffixes.ts",
+      "sha256": "852e73dcd705ac900a39c6744d51fa8a2a0d1ef4eba379d92f0b54f3d3ffd319",
+      "contracts": []
+    },
+    {
+      "path": "src/docs/doc-index/catalog-routing.ts",
+      "sha256": "6c3278fe00a31af8d6b431f01c6ce9eb69d925d13288163bdaa5bc535289d22c",
+      "contracts": []
+    },
+    {
+      "path": "src/docs/doc-index/constants.ts",
+      "sha256": "494c0a1c62d7d90162011d25d086cdc2a192388bc563374594b2153050def029",
+      "contracts": []
+    },
+    {
+      "path": "src/docs/doc-index/doc-paths.ts",
+      "sha256": "6f2ef1d1469e67e39fc149e55983d52e8263c6df7b3bef4e7195aa4477a0e8a8",
+      "contracts": []
+    },
+    {
+      "path": "src/docs/doc-index/docs-zip-reader.ts",
+      "sha256": "557adc3237f2175f69fe6aae38f8e4fdedcb9968dc6136d8155efc96d9f6ed9e",
+      "contracts": []
+    },
+    {
+      "path": "src/docs/doc-index/hash-utils.ts",
+      "sha256": "e80ec92eae25f324580c606b027d9efad1edae04b9d7a011c84322daca24c787",
+      "contracts": []
+    },
+    {
+      "path": "src/docs/doc-index/heading-normalize.ts",
+      "sha256": "d3343b1c773452c672cca929289432e86ec6f903f99083ed4272439bfced6118",
+      "contracts": []
+    },
+    {
+      "path": "src/docs/doc-index/index-builder.ts",
+      "sha256": "99a82a948bbc6e2c963d48fed44cf057d5c67cecbfe18d5e68825cbf551ba403",
+      "contracts": []
+    },
+    {
+      "path": "src/docs/doc-index/index-bundle.ts",
+      "sha256": "224e2f4c74a434e80f16ad01934a061f3aa8dfd951162de35ef3721cc52cb32e",
+      "contracts": []
+    },
+    {
+      "path": "src/docs/doc-index/index-state.ts",
+      "sha256": "c0ebb226d0c62228df70b9b8ea2075f8be4e3c5d513881fa06e16ef9c3e1d566",
+      "contracts": []
+    },
+    {
+      "path": "src/docs/doc-index/lexicon.ts",
+      "sha256": "d93a98f2e6dbecafe1c0ab1ff612950deace5d17d186f5211a8441c6bc904243",
+      "contracts": []
+    },
+    {
+      "path": "src/docs/doc-index/markdown-splitter.ts",
+      "sha256": "6bfb2f87df242c86e7353060939a8adec4715242dcda91d91ffb8360240d305e",
+      "contracts": []
+    },
+    {
+      "path": "src/docs/doc-index/path-safety.ts",
+      "sha256": "e8ffbd6dc708e26675d69330540cb5124b1f6917c2bd973e40e1b0d7a90af33e",
+      "contracts": []
+    },
+    {
+      "path": "src/docs/doc-index/query-named-rules.ts",
+      "sha256": "fd96541845c80cce1ab766b6cf39b84daae08a1c53cd792e404bb540d4089482",
+      "contracts": []
+    },
+    {
+      "path": "src/docs/doc-index/query-normalizer.ts",
+      "sha256": "0058c39f8ba4d901e340eb07a536e98aa08f27acc7fde124f729836e06144f1c",
+      "contracts": []
+    },
+    {
+      "path": "src/docs/doc-index/query-rewriter.ts",
+      "sha256": "8af2e5f6bde7a05caa66c4bd58b7be7673bd0e2abec90f3444475268500059c7",
+      "contracts": []
+    },
+    {
+      "path": "src/docs/doc-index/segment-types.ts",
+      "sha256": "1debc6797cbf6470ecfff21af04d33d065f2b6ecbef1a3eb5d9bf9f65c8e6be4",
+      "contracts": []
+    },
+    {
+      "path": "src/docs/doc-index/sqlite-backend-cache.ts",
+      "sha256": "7bbb605ae8d1936c28dc096cb44cd0b199e8144df31a008bf73efbc9405c6ba8",
+      "contracts": []
+    },
+    {
+      "path": "src/docs/doc-index/sqlite-backend.ts",
+      "sha256": "f7738e4d7cb52790351662f1b6a3785a777d39f348a877c365b9664ca8be3d41",
+      "contracts": []
+    },
+    {
+      "path": "src/docs/doc-index/sqlite-fts-search.ts",
+      "sha256": "f106f3c29dc7786c53fd92735f0cad457e6457b0d5a58de1a336400c0bc56dab",
+      "contracts": []
+    },
+    {
+      "path": "src/docs/doc-index/sqlite-index.ts",
+      "sha256": "b349a489d505ced6205811127e42734d01bc74e87b72b133a8e7fd08501afddf",
+      "contracts": []
+    },
+    {
+      "path": "src/docs/doc-index/sqlite-schema.ts",
+      "sha256": "42758d09b7b85e2bdd850887bd4714cc05198005d78c2d13f183fe3a48cf5fac",
+      "contracts": []
+    },
+    {
+      "path": "src/docs/doc-index/sqlite-snippet.ts",
+      "sha256": "9bbd2c6f3efaea1aed78813650313df5b4a3c5e5c93a23953b1d84e9dd364b36",
+      "contracts": []
+    },
+    {
+      "path": "src/docs/doc-index/sqlite-types.ts",
+      "sha256": "8f081e18523c6a4410eacec5cd31a3e385683ce9b4324989b6762a1ce1cb200e",
+      "contracts": []
+    },
+    {
+      "path": "src/docs/doc-index/tokenizer.ts",
+      "sha256": "6698cc516d7ecbfac557406331a408cf10c8f20efb621b9b988d267444a13b89",
+      "contracts": []
+    },
+    {
+      "path": "src/docs/index.ts",
+      "sha256": "a6cbed66860b69dcff7538bacb95a8ab12a7d302bd708170e81fac51833e2e8b",
+      "contracts": []
+    },
+    {
+      "path": "src/docs/init/doc-initializer.ts",
+      "sha256": "8e8850031ceb623d7b0e02472d9b5801fd9483d0c9089968265e2f713637af86",
+      "contracts": []
+    },
+    {
+      "path": "src/docs/portal/catalog.ts",
+      "sha256": "f66165e26cca435d7094002eef43ed0fe201ba03103c0aa8bf4000bdf844dbb6",
+      "contracts": []
+    },
+    {
+      "path": "src/docs/service/local-doc-service.ts",
+      "sha256": "f421800f5c8267d3bf9651e1822ab99f9f53227bc808614707e13d833514af9c",
+      "contracts": []
+    },
+    {
+      "path": "src/install-check/index.ts",
+      "sha256": "54170f0e63deb7376933dbff3e5476179276cd68509ca973f1fa7e25f3f013fc",
+      "contracts": []
+    },
+    {
+      "path": "src/install-check/install-source-resolver.ts",
+      "sha256": "9ca85082e1facfb0091367cbda5d28e20ff28d9d5971f7ad3c6a86f7ffa7b64a",
+      "contracts": []
+    },
+    {
+      "path": "src/internal/doc-init-background.ts",
+      "sha256": "56d983dcad0fb62d1597b9af4c3af089a34684043fbaecd8a4b71e9be545f5a2",
+      "contracts": []
+    },
+    {
+      "path": "src/internal/telemetry-upload-background.ts",
+      "sha256": "69459d0c451cce3bdb6bcd3d2d9023a9ad2477d6d3a7c2df8105bc0d72662198",
+      "contracts": []
+    },
+    {
+      "path": "src/resources/aclPermission/aclPermissionsInfo.json",
+      "sha256": "4a31dafb7cf1a42ea08f09b0dab690e6e76411069cafb51e7aa3878eb97b2e64",
+      "contracts": []
+    },
+    {
+      "path": "src/resources/arkts-check.cjs",
+      "sha256": "9ca4518c5f0db2322b70bfd48f2858b8b7d4ac030d5c196422a5f197f66116fb",
+      "contracts": []
+    },
+    {
+      "path": "src/service/device-manager.ts",
+      "sha256": "8455d95bb68daae4d57e336661ac4c9e3b54c421a58d8de3c3f8d2309cede084",
+      "contracts": []
+    },
+    {
+      "path": "src/service/emulator-list-parse.ts",
+      "sha256": "1345790112f6b8ed5bdcae0db04d0d584d5e1f517c9b6bc75eb72472954ef152",
+      "contracts": []
+    },
+    {
+      "path": "src/service/emulator-manager.ts",
+      "sha256": "9e1fd91fb50ad69beb27686ad891cfc91e9d860eeb963493c9a1ad8adf7c6ed5",
+      "contracts": []
+    },
+    {
+      "path": "src/service/emulator-start-strategies.ts",
+      "sha256": "e8003dc204335739f6d3f8bd7ed849636bc31c5f2978407a2cde5896418c0844",
+      "contracts": []
+    },
+    {
+      "path": "src/service/emulator-types.ts",
+      "sha256": "8d62954543f71e819942076b654e1da23f8fae2dd8bfd8e09ca6ffb477b0d2cc",
+      "contracts": []
+    },
+    {
+      "path": "src/signature/acl-permission-config.ts",
+      "sha256": "1a33c48b4262f0733c241cb8044d3914223155818b3cb16a068fafc2bc8b78cd",
+      "contracts": []
+    },
+    {
+      "path": "src/signature/acl-permission-manager.ts",
+      "sha256": "8cd68f64e7e389c0b299d28977815d8c2af148069d8919edc4d4015086d3bf46",
+      "contracts": []
+    },
+    {
+      "path": "src/signature/acl-permission-message.ts",
+      "sha256": "48b24918500b1883ff04dd0783b83158cb79290915c95f415f395a0bff363d57",
+      "contracts": []
+    },
+    {
+      "path": "src/signature/acl-permission-warn.ts",
+      "sha256": "a00e86a8a0aee48a676a6fde813ee607d9007d9ef9d5b8bcf64dca6236b33672",
+      "contracts": []
+    },
+    {
+      "path": "src/signature/cert-api.ts",
+      "sha256": "1ae209e879d2b05076f182af7fa899672ab23e7b38d56592c639254140fa4721",
+      "contracts": []
+    },
+    {
+      "path": "src/signature/device-manager.ts",
+      "sha256": "7ace8c021db911e67da593f7f31e01e9a10fb49109fe109b1a0dce8a99a9d7c0",
+      "contracts": []
+    },
+    {
+      "path": "src/signature/download.ts",
+      "sha256": "dff984e10a700a3aa73d38215e85b56cdceb2203e5d74e2b18b946b162dee224",
+      "contracts": []
+    },
+    {
+      "path": "src/signature/env-check/auth-checker.ts",
+      "sha256": "4060c783cbcfc65573df73119f5de5bb376b636002a07bb766fe3eddb67555db",
+      "contracts": []
+    },
+    {
+      "path": "src/signature/env-check/device-checker.ts",
+      "sha256": "24bfce0beb0ec0dfbc89dffefeb121b7eb9a5a0e459d0dc97f3fe3c33a31654b",
+      "contracts": []
+    },
+    {
+      "path": "src/signature/env-check/project-checker.ts",
+      "sha256": "128e25914a1fabf4a000c0687d77dba21f0b747c3f0753ee2b910135f947a403",
+      "contracts": []
+    },
+    {
+      "path": "src/signature/env-check/toolchain-checker.ts",
+      "sha256": "6594b5bcb446dfaea1a4f3c275a053ebea727145aa0e7c278050c6aef7d191de",
+      "contracts": []
+    },
+    {
+      "path": "src/signature/env-check/types.ts",
+      "sha256": "97263027b53b94638ea0891d53f8da40858a2555a723296b322f2d655734bd22",
+      "contracts": []
+    },
+    {
+      "path": "src/signature/env-checker.ts",
+      "sha256": "f9462d5482d94b58e6a02532da0f9e7858a4499c13419949e6a0b00ce461dd42",
+      "contracts": []
+    },
+    {
+      "path": "src/signature/generate-certificate.ts",
+      "sha256": "09fc0703b044a36bbf437833b20b5945f0cdd74790654dff0f8821f46c0abca5",
+      "contracts": []
+    },
+    {
+      "path": "src/signature/generate-profile.ts",
+      "sha256": "a07e646098fc76dd77d57b928ff066d547e2e8bfc19d4b0fe869230ceb95f4c4",
+      "contracts": []
+    },
+    {
+      "path": "src/signature/index.ts",
+      "sha256": "c1934a9c6a37dee6d0169af4be4aa8556bcf08047843a07b5081fcf61df543d8",
+      "contracts": []
+    },
+    {
+      "path": "src/signature/key-manager.ts",
+      "sha256": "5552f72cacda48c3204eea9bf810bba4afc33bf45b1226a4f626ba5ecfd2eedc",
+      "contracts": []
+    },
+    {
+      "path": "src/signature/local-material.ts",
+      "sha256": "70be5a9ef6b127f76b11113056376b1e722ab0fee4b4dec74f6697130988a4de",
+      "contracts": []
+    },
+    {
+      "path": "src/signature/re-generate-sign.ts",
+      "sha256": "9be628010fcc606caf0ca92a405ca47476fe8a3b0d839cd150a74e6d5c23493b",
+      "contracts": []
+    },
+    {
+      "path": "src/signature/sdk-config.ts",
+      "sha256": "e98209a104ac2e2f40e60848db56dfadd51515d259488b2a12503e815914b88b",
+      "contracts": []
+    },
+    {
+      "path": "src/signature/signature-tool.ts",
+      "sha256": "4b2a974f044fb342ce0deebd831a73cedc39263bef8e70e6032eb263f4e0a38e",
+      "contracts": []
+    },
+    {
+      "path": "src/signature/types.ts",
+      "sha256": "a6fa3ed36684297716845f917c7e2d05615ada390d8f2015a5cf2d73cf0c5bd8",
+      "contracts": []
+    },
+    {
+      "path": "src/skills/agents.ts",
+      "sha256": "1630f3ddea3f6e48724ca265755221aa463b4a43787c0281cd25ccc964208ff0",
+      "contracts": []
+    },
+    {
+      "path": "src/skills/api.ts",
+      "sha256": "100d03e37cdf64143687cb3b0633696ea29376038b9ffb86bad72052316d7469",
+      "contracts": []
+    },
+    {
+      "path": "src/skills/installer.ts",
+      "sha256": "738c5b81ac11560e3bafe27d16ab05c0e15eab6b453f012cf178c250e22bded4",
+      "contracts": []
+    },
+    {
+      "path": "src/skills/mcp-installer.ts",
+      "sha256": "7d384ac203dbc8226a453900cfb3701722c33035595ad697d49864d55a9e297d",
+      "contracts": []
+    },
+    {
+      "path": "src/skills/validation.ts",
+      "sha256": "ab1bb23952f9b2e9ac155150ada41c2589a67f642a04fadc74e5a0240cbe50c5",
+      "contracts": []
+    },
+    {
+      "path": "src/smoke/index.ts",
+      "sha256": "182e9a425dc0222711fd3073f1c32ea3b34d12a19456364b74bbd7d5dac98397",
+      "contracts": []
+    },
+    {
+      "path": "src/smoke/screen-phash.test.ts",
+      "sha256": "e4161a795ceb7199a2e8349fda55c17c5fdeabc4ce05b07ad0849f86ec38e486",
+      "contracts": []
+    },
+    {
+      "path": "src/smoke/screen-phash.ts",
+      "sha256": "7a9895406af6441ec215a9ad600f3a1b50858afd7310f2e3072496dbc168cb34",
+      "contracts": []
+    },
+    {
+      "path": "src/smoke/smoke-artifacts.test.ts",
+      "sha256": "5c227014367a459dfc6c6519da77f439b57a1cc4547da58ca6a1b2c984bc1af0",
+      "contracts": []
+    },
+    {
+      "path": "src/smoke/smoke-artifacts.ts",
+      "sha256": "05c8f0bd877aa43f2f5a7f4351eefcb1af7853c596a1555ae66e0ec233b39fc2",
+      "contracts": []
+    },
+    {
+      "path": "src/smoke/smoke-formatter.ts",
+      "sha256": "51ee88f01f7ea29ee7f7c20489f82daa656bb29e36d84c9ee33f1709ad3e8be2",
+      "contracts": []
+    },
+    {
+      "path": "src/smoke/smoke-inspector.test.ts",
+      "sha256": "0b5546101c20ed38065726986bcd7793b2b39541ad6b9e2af92615760816f310",
+      "contracts": []
+    },
+    {
+      "path": "src/smoke/smoke-inspector.ts",
+      "sha256": "cf6de2191e36b2d91f0b20e105653f19d26f8c78483e3be9805efcf6cb784ca3",
+      "contracts": []
+    },
+    {
+      "path": "src/smoke/smoke-judge.test.ts",
+      "sha256": "70d328184f835b3df24bb3eaafe7e578a5f68a6508692f5d917425e399eb5618",
+      "contracts": []
+    },
+    {
+      "path": "src/smoke/smoke-judge.ts",
+      "sha256": "50b0fdaa1c3bf1c6abe0ced9327ab0ad0ded92bcd249d05fad9b02f814be50e2",
+      "contracts": []
+    },
+    {
+      "path": "src/smoke/smoke-run-store.test.ts",
+      "sha256": "bc2858fb7494f43ff226dae5abc29982046a8b46f110cb898bed40b6dd9ae337",
+      "contracts": []
+    },
+    {
+      "path": "src/smoke/smoke-run-store.ts",
+      "sha256": "5f9f2293c3aba5574439438e7ef3df87b4bd0dd01e794fb0670bb6b79f2ed4fe",
+      "contracts": []
+    },
+    {
+      "path": "src/smoke/smoke-verifier.ts",
+      "sha256": "88b397e0eed563880b84ce0bda2db763998a4f4029dc410be8a1119387920bbb",
+      "contracts": []
+    },
+    {
+      "path": "src/smoke/types.ts",
+      "sha256": "aa5050c5dd9479111452fdbef0778b902e9397356ea9309e8080d556affdc331",
+      "contracts": []
+    },
+    {
+      "path": "src/toolchain/environment-path.ts",
+      "sha256": "b0b8bc71d0758e9925be17b8e0ce9e21f78b6f5b8588a754b042eacdc655b497",
+      "contracts": []
+    },
+    {
+      "path": "src/toolchain/index.ts",
+      "sha256": "1e32bd3776a511eb1022a9de7b13cbb5be3a7444da157f0d05d174db7d4a8d81",
+      "contracts": []
+    },
+    {
+      "path": "src/toolchain/studio-discovery.ts",
+      "sha256": "d549a402292b3cb157e99afb408505ac516dd925613a20f1a373840276e362a1",
+      "contracts": []
+    },
+    {
+      "path": "src/toolchain/studio-version.ts",
+      "sha256": "6142d473e9eb7d2d1fe9d6bb31d2d449030fb7b5f1dd99eb264a982cbef7f24e",
+      "contracts": []
+    },
+    {
+      "path": "src/toolchain/tool-provider.ts",
+      "sha256": "77cba044bb682e6599c171a82b557ceb364a7931f1bd0fd5c553ca8d6088a855",
+      "contracts": []
+    },
+    {
+      "path": "src/trace/events.ts",
+      "sha256": "bbbf1ccbb91992cb05d7b189dd7983206793dc3862f4ac49e14eedf22eedeb9d",
+      "contracts": []
+    },
+    {
+      "path": "src/trace/file-crypto.ts",
+      "sha256": "407c7628ef1b82e82247e16c55c0b660c2f79046c220462297cb7f96ce7853de",
+      "contracts": []
+    },
+    {
+      "path": "src/trace/index.ts",
+      "sha256": "322615f9ae37ddf802ebc41f94f3d7ad589b3cfd5e58ca7cbfb8440a3f5f60e2",
+      "contracts": []
+    },
+    {
+      "path": "src/trace/install-id.ts",
+      "sha256": "6ebecea2498ea6c93253dccff5e1441a60d902ec1886f8b24a35b68f69cd9a06",
+      "contracts": []
+    },
+    {
+      "path": "src/trace/json-serializer.ts",
+      "sha256": "2dabd4931e7d3fb0a9ea46f0b45d96d3cfd171ebb67d94d43d85d09bc0db67fb",
+      "contracts": []
+    },
+    {
+      "path": "src/trace/telemetry-instance.ts",
+      "sha256": "ae0521f19e2e28f646674b9a936d68dadc2c69716d3150ed57907217bd8cc635",
+      "contracts": []
+    },
+    {
+      "path": "src/trace/telemetry-upload-spawner.ts",
+      "sha256": "4f6cc17ad688ccff9ddeec1609a569b151390f5b32e883f6db8e85e57398342d",
+      "contracts": []
+    },
+    {
+      "path": "src/trace/telemetry.ts",
+      "sha256": "d6fb99f160585c8090efef4fa20ec0c6fc290546eb992b7e9f72adf6ed293c93",
+      "contracts": []
+    },
+    {
+      "path": "src/trace/trace-error.ts",
+      "sha256": "849f96703c21a216433e76834508d561a7d304e834133e296f941e6957db4549",
+      "contracts": []
+    },
+    {
+      "path": "src/trace/trace-uploader.ts",
+      "sha256": "fe7947c8cdb8067ad4a42c345afc4093c3eac2c9e3c4f9e0a4bf1262909af936",
+      "contracts": []
+    },
+    {
+      "path": "src/trace/upload-state.ts",
+      "sha256": "1c2386fbaa3149800910a11178d86a795139ab63e5b25518f3c66b8ed4570192",
+      "contracts": []
+    },
+    {
+      "path": "src/types/http.ts",
+      "sha256": "f231a545ad9e01fcd23b7331beb32355e76fa7bc2d502b4b1b68088dee0d1da2",
+      "contracts": []
+    },
+    {
+      "path": "src/types/proxy-from-env.d.ts",
+      "sha256": "5b975eb9ae2081a41c3a76c6bb6b9319911c6441f601f569d3299f469f9891b7",
+      "contracts": []
+    },
+    {
+      "path": "src/types/skills.ts",
+      "sha256": "dedcaa93e3d757ca2c80d86042a708d8d67db00d4d3294cf9dc21541589ab0e3",
+      "contracts": []
+    },
+    {
+      "path": "src/ui/index.ts",
+      "sha256": "f444696c855b736fd7249ec885720030da1ddcb6df36a8020e029210c3944108",
+      "contracts": []
+    },
+    {
+      "path": "src/ui/input/adapter.ts",
+      "sha256": "2daba92377f5d8499e32ea26331ffc7989814038673610579148853b94941603",
+      "contracts": []
+    },
+    {
+      "path": "src/ui/input/index.ts",
+      "sha256": "41ebe23758f161dc42fb7ac2099075ffba6acbd1ebc55c94aaf96e94cc23c413",
+      "contracts": []
+    },
+    {
+      "path": "src/ui/input/types.ts",
+      "sha256": "e30fb77994b92a46059ec4e16fa502f41e515eefc32c4a51f793ef21afe91571",
+      "contracts": []
+    },
+    {
+      "path": "src/ui/layout/collapse.test.ts",
+      "sha256": "fd277ba70301a3aed7b61fde3cb4aa1c13a814c47c19a49dd1732f29d65d4ea8",
+      "contracts": []
+    },
+    {
+      "path": "src/ui/layout/collapse.ts",
+      "sha256": "01d235ce328287fb9d7567b8fb8db6db9888b1fb726694ee54dc04254d6f23e1",
+      "contracts": []
+    },
+    {
+      "path": "src/ui/layout/dump-adapter.ts",
+      "sha256": "b90d29472fc5c27f735c5d64088901cabf5a652f1c0d46b94842790b8495c71b",
+      "contracts": []
+    },
+    {
+      "path": "src/ui/layout/parsers.test.ts",
+      "sha256": "28dbaec6eb6d92ee98687fbea586a9d9d4cf9055fc96ddb6b43c0ab504a8d32b",
+      "contracts": []
+    },
+    {
+      "path": "src/ui/layout/parsers.ts",
+      "sha256": "ecdbf16397bf072cb2cea122f0dae87b1b41322230d4e88a1e107d482f8de5f2",
+      "contracts": []
+    },
+    {
+      "path": "src/ui/layout/types.ts",
+      "sha256": "c58f4080e90bd764b1964dbb847eca75ff475b08ec6b731ff2afccc6f75104c6",
+      "contracts": []
+    },
+    {
+      "path": "src/ui/screenshot/hdc-snapshot.test.ts",
+      "sha256": "06c2d0b31eaf4af38246dc671028359385a41ef0d77a78e4927dae20c70fabba",
+      "contracts": []
+    },
+    {
+      "path": "src/ui/screenshot/hdc-snapshot.ts",
+      "sha256": "77970ba519b4ca9ed853b028077a8d7611c2c7c23c249132ecbd96fee5f27f1d",
+      "contracts": []
+    },
+    {
+      "path": "src/ui/screenshot/screenshot-capturer.ts",
+      "sha256": "2272abd883cfb1d426b93f0a0e95fb82ec0277f13f100f511956933e5f35febb",
+      "contracts": []
+    },
+    {
+      "path": "src/ui/screenshot/types.ts",
+      "sha256": "b72da156bd4c67952dfbbaa5da107c9f769ed30529c7cb2333eee58485a5c161",
+      "contracts": []
+    },
+    {
+      "path": "src/ui/window/fetcher.ts",
+      "sha256": "24b5d75dc8cc601d5d71030bfe58bcedbc7c1557fd3bd5d5d369b5bd5a3b218e",
+      "contracts": []
+    },
+    {
+      "path": "src/ui/window/types.ts",
+      "sha256": "83ef15315b6803e2bd7f559f2643e0e49b2b1711be3df6354a94c87768d2f968",
+      "contracts": []
+    },
+    {
+      "path": "src/update/constants.ts",
+      "sha256": "9781e3151917337e02cff02b4d544fff756a3768a70d45c667bba57a91945e58",
+      "contracts": []
+    },
+    {
+      "path": "src/update/index.ts",
+      "sha256": "56a90c4acb4b206c5cb22bc9dbd87797c4b4eb75ed31ecb8e7b7daf546aeb912",
+      "contracts": []
+    },
+    {
+      "path": "src/update/update-notifier.ts",
+      "sha256": "1fc574fcd29a131e600b333ad16cdb1b5ed2ad84ce1eaa6dea919dd8e4e8d89e",
+      "contracts": []
+    },
+    {
+      "path": "src/update/version-cache.ts",
+      "sha256": "4584ba2bb5b63e24f6def50d3e750a6a3fa1f420c3c7c9bf844ea8b8394fa7c7",
+      "contracts": []
+    },
+    {
+      "path": "src/utils/build-lock.ts",
+      "sha256": "7ebae353a334157240b914dcf77c995da72db1962fdd7abb71f5936a5e6c2898",
+      "contracts": []
+    },
+    {
+      "path": "src/utils/cli-data-dir.ts",
+      "sha256": "074b1b6466d4943f8104dcea520d0f5f78d2a4fe474f7723df745d3762b95a7c",
+      "contracts": []
+    },
+    {
+      "path": "src/utils/cmd.ts",
+      "sha256": "966ce57911eefbc4cf6ac3dac4a0db46915186c481782da6c5254b1643ae1cd3",
+      "contracts": []
+    },
+    {
+      "path": "src/utils/common-utils.ts",
+      "sha256": "d153375a2af0e5344b215a8cd03b461808b72c4ee387face8614cb0e6a759b94",
+      "contracts": []
+    },
+    {
+      "path": "src/utils/config.ts",
+      "sha256": "aa61e9402e8cfbf328641be2a6bd5254a2ea8edb77bfa6392c49ee15ad65b38b",
+      "contracts": []
+    },
+    {
+      "path": "src/utils/device-selector.ts",
+      "sha256": "c27788df5352cd8b772c5f6f27628ecc9bfeb594cd7cf51d29488431a1065ba1",
+      "contracts": []
+    },
+    {
+      "path": "src/utils/emulator-hdc-targets.ts",
+      "sha256": "fc87ffbd18983a63ebe5195af3eb0276eb7682ab2623fac59115f5f9ec1f732e",
+      "contracts": []
+    },
+    {
+      "path": "src/utils/emulator-image-list-parse.ts",
+      "sha256": "198a3d955976b60a070f61cfab9a65f0333b02d279387394bb5687590eeb4120",
+      "contracts": []
+    },
+    {
+      "path": "src/utils/emulator-license.ts",
+      "sha256": "b83131ae821d6faf1bbe732e28c83bd2ad4efdf42b324f21ecf3546c29025ee9",
+      "contracts": []
+    },
+    {
+      "path": "src/utils/emulator-spawn.ts",
+      "sha256": "d2a23508f0286c71a591bee51b3bb1e33fc9a377e0c37296ced8e8b0d0812e09",
+      "contracts": []
+    },
+    {
+      "path": "src/utils/hdc-adapter.test.ts",
+      "sha256": "72d5336ae826cebf7d49877271fa70dd267c60e8c9417c90ac84d5b40c89f958",
+      "contracts": []
+    },
+    {
+      "path": "src/utils/hdc-adapter.ts",
+      "sha256": "8359f698326167d0917ba72b89124a205b8c52c4fc21976a7c77e8212fb506b2",
+      "contracts": []
+    },
+    {
+      "path": "src/utils/hdc-param.test.ts",
+      "sha256": "09b70df9685c6b6aa7a3bf39807ae14676990f3827579a80c7ce22c69f9dd954",
+      "contracts": []
+    },
+    {
+      "path": "src/utils/hdc-param.ts",
+      "sha256": "d4208d0f95a288ff5dab933bfc2b5860cbec24bddeea7bb542c824ea1e6703bb",
+      "contracts": []
+    },
+    {
+      "path": "src/utils/hilog-adapter.ts",
+      "sha256": "a5cf5e268bf7677b1bdfb80c86b5a68d90dbed0c30fdd78a7f89c5fd6cae39c8",
+      "contracts": []
+    },
+    {
+      "path": "src/utils/http-client.ts",
+      "sha256": "81856389875ce0740cd9daf4895316353275ccd5b13236c2fb7f16d0dcb57cab",
+      "contracts": []
+    },
+    {
+      "path": "src/utils/hvigor-adapter.ts",
+      "sha256": "bbdac1562e71b0fb0d38e53764049ccac3c5c9ad695c6b04f4cf99e6232cd65e",
+      "contracts": []
+    },
+    {
+      "path": "src/utils/logger.ts",
+      "sha256": "ea5dc6c816450a73e1ab2da1b7e0de20f1df9cb318775129e5f5a74e8787f50e",
+      "contracts": []
+    },
+    {
+      "path": "src/utils/ohpm-adapter.ts",
+      "sha256": "d4cc9649f87fb9d5962cc8bb0c8b78f4bf8c1d1221dbe70edc56f55734a00a62",
+      "contracts": []
+    },
+    {
+      "path": "src/utils/ora-fail.ts",
+      "sha256": "313e408b29b182928d0ffc4443eb623dce5d77ed099c66b74647dd2a72fd11cc",
+      "contracts": []
+    },
+    {
+      "path": "src/utils/path-containment.ts",
+      "sha256": "46fab87907224ad3688120d98ac06df6e7f4aa253bb59b9147676e998264b8f4",
+      "contracts": []
+    },
+    {
+      "path": "src/utils/process-rss.ts",
+      "sha256": "d1ba9b34c9d1157ae4e77945f73f5537eeef7da9f96d40aa2f584d2bcb65a630",
+      "contracts": []
+    },
+    {
+      "path": "src/utils/project-check.ts",
+      "sha256": "62ba4491ed3284b9795ddfe9aa18386eaa9bf2667640da60464517d41519fd04",
+      "contracts": []
+    },
+    {
+      "path": "src/utils/project.ts",
+      "sha256": "3f149f47b283acd2cae773b8c0be8634dc3623b9ac1b740a64b951012aad5dbf",
+      "contracts": []
+    },
+    {
+      "path": "src/utils/semver.ts",
+      "sha256": "ae78ee6ae10192f71f235e29687c4696d1b45b8676d11e0efa5ea43a375e81c0",
+      "contracts": []
+    },
+    {
+      "path": "src/utils/spinner-helper.ts",
+      "sha256": "1d4cac80bb35a11b546cbb3cfaa535695d718cba7d1cbf14fec2d69a76e32d55",
+      "contracts": []
+    },
+    {
+      "path": "src/utils/template-provider.ts",
+      "sha256": "9ecce25bba9545e736ea90479dbcea3c950c00ec412d779d8a2a6281fe10239e",
+      "contracts": []
+    },
+    {
+      "path": "src/utils/text-table.ts",
+      "sha256": "5825f55fbed0a6b6650bebf62aa6c29c77405a2b7fb3b3002da5cee3a27ef6f4",
+      "contracts": []
+    }
+  ],
+  "acceptance": "pending_final_validation",
+  "note": "Static commands/options are source contracts; CLI runtime and SDK behavior require separate acceptance.",
+  "sha256": "d609ae259004eb2eec3596569c0a0b6575788cb2b1751420686f8103961d4702"
+}

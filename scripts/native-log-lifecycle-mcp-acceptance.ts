@@ -12,8 +12,8 @@ import { finishAcceptance } from "./lib/acceptance-report.js";
 import { AcceptanceMcp } from "./lib/mcp-acceptance-client.js";
 import { OwnedEmulatorAcceptance } from "./lib/owned-emulator-acceptance.js";
 
-const [root, preparedFile] = z
-  .tuple([z.string().min(1), z.string().min(1)])
+const [root, preparedFile, osVersion] = z
+  .tuple([z.string().min(1), z.string().min(1), z.string().min(1).optional()])
   .parse(process.argv.slice(2));
 assert.ok(path.isAbsolute(root) && path.isAbsolute(preparedFile));
 assert.equal(
@@ -37,7 +37,7 @@ atomicWrite(path.join(ownerRoot, "config.json"), "{}\n");
 const tested = evidenceIdentity(),
   results: Record<string, unknown> = {},
   mcp = new AcceptanceMcp(root, "log-lifecycle-subject"),
-  owner = new AcceptanceMcp(ownerRoot, "log-lifecycle-emulator-owner"),
+  owner = new AcceptanceMcp(ownerRoot, "log-lifecycle-emulator-owner", { tool_groups: ["core", "emulator-admin"] }),
   file = path.join(root, "evidence.json");
 const save = () =>
   atomicWrite(
@@ -291,7 +291,7 @@ struct Index {
     original_sha256: originalHash,
     source_sha256: fileDigest(path.join(project, relative)),
   });
-  target = await owned.start();
+  target = await owned.start(osVersion);
   await owned.workflow("deploy", "build_deploy_verify", {
     project_path: project,
     modules: [prepared.module],

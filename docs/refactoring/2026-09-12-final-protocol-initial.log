@@ -1,0 +1,48 @@
+✔ MCP catalogs work without SDK discovery, invalid input is rejected, worker restarts cleanly (686.176625ms)
+✔ MCP worker failures retain matching request telemetry after a successful next call and process exit (398.138333ms)
+✔ MCP diagnostic calls reject a missing configured SDK without falling back to the machine installation (317.07625ms)
+✔ MCP doctor exposes default SDK API metadata and reports missing or invalid fields independently of component detection (302.439333ms)
+✔ managed processes bound output, handle spawn failures and confirm cancellation (132.16275ms)
+✔ LSP refreshes Unicode paths and filters every semantic declaration (links=0) (65.389708ms)
+✔ LSP refreshes Unicode paths and filters every semantic declaration (links=1) (76.57025ms)
+✔ UI state participates in selectors and ambiguous matches are retained (0.678625ms)
+✔ LSP documents stay bounded and least recently used files are closed (53.738417ms)
+✔ cancelling a queued LSP request does not let later requests bypass the active request (353.874584ms)
+✔ workflow input is encrypted and lease ownership crosses processes (352.049125ms)
+✖ hard interruption resumes from SQLite without repeating a completed effect (10217.1745ms)
+ℹ {"stage":"resume","peer":{"pid":58969,"exitCode":null,"signalCode":"SIGTERM"},"stderr":"{\"stage\":\"open-store\",\"uptime\":0.144302833}\n{\"stage\":\"store-ready\",\"uptime\":0.156396417}\n{\"stage\":\"create-engine\",\"uptime\":0.156429125}\n{\"stage\":\"run-submitted\",\"state\":{\"run_id\":\"0a66ef74-41fb-42ae-9cb5-a0c06ec1d01d\",\"status\":\"queued\",\"deduplicated\":false},\"uptime\":0.162031667}\n{\"stage\":\"effect-enter\",\"uptime\":0.176474625}\n{\"stage\":\"pause-enter\",\"uptime\":0.178635083}\n","error":{"code":"INTERNAL_ERROR","message":"Timed out waiting for state","retryable":false},"files":["artifacts","effects","ready","run","state.sqlite","state.sqlite-shm","state.sqlite-wal","workflow.key"]}
+✔ HAR source changes propagate to consumers and native changes require cold deploy (2.750666ms)
+✔ all retired guidance mutations reject new execution, synthetic completion and project publication (45.836292ms)
+✔ legacy read and export preserve encrypted objectives, documents, revisions and provenance across restart (34.929709ms)
+✔ archive requires the current revision and an unowned unpinned run; cancellation never claims native success (34.995917ms)
+✔ historical completed guidance remains readable but is never promoted to current verification (78.375ms)
+✔ legacy native evidence survives archive, stale cleanup, retention and restart and is included in export (81.823583ms)
+✔ all bundled Skills and their references are served through MCP without a client directory or installer (22.661ms)
+✔ bundled Skill reads reject traversal, unlisted references, changed bytes and symbolic links (24.648208ms)
+✔ domain recipes expose source-linked methods on demand without creating guidance runs or host files (198.886ms)
+✔ retired guidance creation never creates a destination, run, document or host configuration (14.174333ms)
+ℹ tests 22
+ℹ suites 0
+ℹ pass 21
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 13386.884584
+
+✖ failing tests:
+
+test at dist/test/native-runtime.test.js:444:1
+✖ hard interruption resumes from SQLite without repeating a completed effect (10217.1745ms)
+  AssertionError [ERR_ASSERTION]: Timed out waiting for state
+      at until (file:///Users/dreamlike/DreamLike/deveco_tool/dist/test/native-runtime.test.js:24:16)
+      at async TestContext.<anonymous> (file:///Users/dreamlike/DreamLike/deveco_tool/dist/test/native-runtime.test.js:521:9)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }

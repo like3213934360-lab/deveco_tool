@@ -56,4 +56,4 @@ struct SimpleExample {
 
 ## 详细代码示例
 
-- [AvoidAreaTypeError.ets](../assets/AvoidAreaTypeError.ets) - 完整的 AvoidArea 类型使用示例，包含窗口获取和避让区域监听
+- [AvoidAreaTypeError.ets](deveco://knowledge/arkts-error-fixes/examples/AvoidAreaTypeError) - 完整的 AvoidArea 类型使用示例，包含窗口获取和避让区域监听

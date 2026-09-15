@@ -389,3 +389,13 @@ test("queue telemetry belongs to its workflow and expires with the run", async (
     await f.close();
   }
 });
+
+test("new workflow runtime identity blocks changed-byte resume before another external effect",async()=>{
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),"deveco-runtime-binding-")),store=new StateStore(root);let identity="runtime-A",effects=0;
+  const definition:WorkflowDefinition={id:"bound",description:"runtime binding",capabilities:[],completion:"done",resources:()=>[],steps:[{id:"native",kind:"effect",async execute(){effects++;throw new Error("response lost after native effect");},async reconcile(){effects++;return {done:true};}}]};
+  const engine=new WorkflowEngine(store,[definition],async()=>{},undefined,()=>identity);
+  try {
+    const run=engine.start("bound",{parameters:{}});assert.equal((await finish(engine,run.run_id)).status,"needs_input");identity="runtime-B";
+    await engine.resume(run.run_id,{action:"recheck"});const state=await finish(engine,run.run_id);assert.notEqual(state.status,"succeeded");assert.equal(effects,1);assert.match(JSON.stringify(state),/WORKFLOW_RUNTIME_CHANGED/);
+  } finally {await engine.close();store.close();fs.rmSync(root,{recursive:true,force:true});}
+});

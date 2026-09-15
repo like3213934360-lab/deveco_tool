@@ -1,6 +1,28 @@
 # 原生 UI 工作流
 
-这些接口由 `dist/src/cli.js mcp` 提供。0.3.0 已正式发布；本文新增的 flow v2 和默认启动检查属于下一版本候选，发布与当前验收状态见[剩余能力进度](remaining-release-progress.md)。专用应用的中文输入、录制和 MCP 重启后重放有分项真机证据，见[个人签名与设备证据](native-signing.md)。历史 `bc68e0c` 快照的 MCP 对十份既有用户流程完成过 `list/read/validate`：原字段、坐标、私密变量声明、全部步骤与最终断言保持，文件 SHA-256 前后不变。原始报告为本机 `20260909-main-saved-flow-read-bc68e0c-1/evidence.json`；这证明该快照对既存文件的读取兼容性，不代表这些业务路径已在当前设备上重放。
+这些接口由 `dist/src/cli.js mcp` 提供。0.3.0 已正式发布；本文描述当前 0.4.0 候选，当前实现与验证见[优化记录](refactoring/2026-09-15-workflow-optimization-progress.md)。专用应用的中文输入、录制和 MCP 重启后重放有分项真机证据，见[个人签名与设备证据](native-signing.md)。历史 `bc68e0c` 快照的 MCP 对十份既有用户流程完成过 `list/read/validate`：原字段、坐标、私密变量声明、全部步骤与最终断言保持，文件 SHA-256 前后不变。原始报告为本机 `20260909-main-saved-flow-read-bc68e0c-1/evidence.json`；这证明该快照对既存文件的读取兼容性，不代表这些业务路径已在当前设备上重放。
+
+文中 UUID 为格式示例，执行时替换为实际返回的任务 ID；动作 attempt_id 使用新的 UUID。
+
+## 一次性 UI 测试的最短路径
+
+无需先创建录制。`ui_test start` 提交完整 `steps` 后默认初始化并返回当前步骤；`initialize:false` 保留单独 `resume` 的方式。没有步骤时先提交 `plan` 再 `resume`。`fresh_start:false`（默认）保留当前应用页面，`true` 才停止并重新启动；初始化失败仍返回原 test_id 和错误，可查询或恢复。
+
+```json
+{"action":"start","test_plan":"提交后显示完成结果","app":{"bundle_name":"com.example.app","ability":"EntryAbility"},"target":"所选设备","steps":[{"id":"result","goal":"显示完成结果","assert":{"visible":{"text":"完成"}}}],"request_key":"ui-result-001"}
+```
+
+依据新鲜控件信息执行一个操作，可在同一调用中等待稳定并检查原步骤：
+
+```json
+{"action":"act","test_id":"00000000-0000-4000-8000-000000000001","step_id":"result","attempt_id":"00000000-0000-4000-8000-000000000002","operation":{"action":"click","selector":{"key":"submit"}},"check_after":{"stable_ms":250,"timeout_ms":1500}}
+```
+
+稳定窗口为 100–1000 ms，总预算为 250–5000 ms 且必须大于稳定窗口；只观察固定应用窗口内的控件和画面。超时保持待检查，不宣称页面已稳定。动作回执、稳定观察与断言结果分别保留；同一 attempt 与相同输入重试不重复点击，也不会检查后来推进到的步骤。断言失败或延迟变化可以单独 `check`，已有视觉报告需要更新时显式 `recapture:true`。
+
+每次结果的 `next.state/calls` 给出当前步骤、缺少参数和后续入口。需要视觉判断时，MCP 响应携带一张对应的 image 内容，`inline_review.complete.arguments` 绑定同一 artifact、SHA-256 和 read_token；宿主仍需补充真实 `assessment`。超过 8 MiB、不可读或校验失败时返回 artifact 读取入口，不返回未交付图片的 token。宿主无法展示图片时使用该回退入口。只有控件断言的步骤无需提交视觉评价；视觉通过不能覆盖控件断言失败。所有原步骤通过且无不确定动作后，再 `finish` 核对当前证据身份。
+
+已有合适流程或需要反复导航时，可按需 `ui_flow list/routes`，验证并复用保存流程；只为将来会复用的路径录制。独立准备流程先结束，再以 `fresh_start:false` 开始测试。准备动作不证明测试步骤通过；测试开始后继续使用 `ui_test act/check`，保留其范围和预算。
 
 ## 默认启动检查
 
@@ -68,23 +90,23 @@ UI 检查根据当前应用的可见窗口确定显示器；无法唯一确定�
 2. 返回的 `recording_id` 等于 `run_id`。先通过 `workflow_run.status` 等待状态变为 `needs_input`；此时初始化已完成，设备租约已释放。`ui_flow.record_status` 同时提供录制步骤数、变量定义和不确定操作信息。
 
 ```json
-{"action":"status","run_id":"返回的 run_id","wait_ms":1000}
+{"action":"status","run_id":"00000000-0000-4000-8000-000000000001","wait_ms":1000}
 ```
 
-3. 使用 `ui_observe`/`ui_find` 观察，再使用 `ui_tap` 或 `ui_control` 操作。成功操作自动记入该设备的录制。选择器必须唯一，`limit:1` 不能绕过歧义校验。录制与重放复用操作前已获取的 UI 快照；执行操作后快照失效。
+3. 使用 `ui_query observe/find` 观察，再使用 `ui_control` 操作。成功操作自动记入该设备的录制。选择器必须唯一，`limit:1` 不能绕过歧义校验。录制与重放复用操作前已获取的 UI 快照；执行操作后快照失效。
 
 ```json
-{"selector":{"key":"settings-button"}}
+{"operation":{"action":"click","selector":{"key":"settings-button"}}}
 ```
 
-上例为 `ui_tap` 输入。`ui_control.inputText` 和焦点 `text` 的实际文字不会写入流程或录制草稿；它生成 `input1` 等必需的私密变量，步骤只保存 `${input1}`。输入框的当前文本和值也不作为选择器备选项。焦点输入记录为 v2 的 `focusInput`：保存唯一可编辑控件的稳定选择器，重放时重新取得应用窗口、恢复焦点、再次确认焦点后再输入。
+上例为 `ui_control` 输入。`ui_control.inputText` 和焦点 `text` 的实际文字不会写入流程或录制草稿；它生成 `input1` 等必需的私密变量，步骤只保存 `${input1}`。输入框的当前文本和值也不作为选择器备选项。焦点输入记录为 v2 的 `focusInput`：保存唯一可编辑控件的稳定选择器，重放时重新取得应用窗口、恢复焦点、再次确认焦点后再输入。
 
 百分比手势可相对于控件或明确的窗口，显示器编号随解析结果传给原生输入；录制保存实际执行位置和 fling 步长。参数、示例和多窗口限制见 [原生 UI 操作](native-ui-controls.md)。
 
 4. 调用 `ui_flow.record_stop` 提交最终断言。提交后断言固定，任务重新进入 LangGraph，验证成功才保存 `.arkpilot/flows/<id>.json`。已有同名文件不会被覆盖。
 
 ```json
-{"action":"record_stop","recording_id":"返回的 recording_id","assert":{"visible":{"key":"settings-title"},"timeoutMs":5000}}
+{"action":"record_stop","recording_id":"00000000-0000-4000-8000-000000000001","assert":{"visible":{"key":"settings-title"},"timeoutMs":5000}}
 ```
 
 断言未通过时保留录制数据，可在排查后重新检查原断言；不能降低断言来保存流程。截图本身不代表验证通过。录制结束、失败或重启后，用 `record_status`/`workflow_run.status` 查看结果。
@@ -92,7 +114,7 @@ UI 检查根据当前应用的可见窗口确定显示器；无法唯一确定�
 5. 放弃录制使用 `ui_flow.record_cancel` 或 `workflow_run.cancel`。取消会传给正在执行的 UI 操作，确认停止后才释放录制状态；它不会撤销设备上已经完成的操作。
 
 ```json
-{"action":"record_cancel","recording_id":"返回的 recording_id"}
+{"action":"record_cancel","recording_id":"00000000-0000-4000-8000-000000000001"}
 ```
 
 ## 恢复、限制与证据边界

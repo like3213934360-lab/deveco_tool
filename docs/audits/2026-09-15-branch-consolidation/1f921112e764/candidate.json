@@ -1,0 +1,105 @@
+{
+  "format": 1,
+  "source": "deveco-code",
+  "url": "https://gitcode.com/openharmony-sig/deveco-code.git",
+  "base": {
+    "commit": "aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a",
+    "tree": "f88b2d20b4a1adf36d8370eb907a162b215d6f4b"
+  },
+  "candidate": {
+    "commit": "fc6488e277105f37ca9357028fba74521d6e514f",
+    "tree": "b21cbb3c4b2b2d370c65b85ff059099b0b5a470c"
+  },
+  "mapping_sha256": "e5069b08892982a832ea31247a68e3d1b8e00786b68c00944a02c6700473e793",
+  "changes": [
+    {
+      "path": ".gitcode/workflows/publish-daily.yml",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": ".gitcode/workflows/publish-daily.yml",
+        "oid": "3f81ad5c32f6be5f683a26bb786f333a574b8aea",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-gitcode",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/src/agent/rules.ts",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "packages/opencode/src/agent/rules.ts",
+        "oid": "6a4786a2363b319b0019489370d8199a5e0d3953",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/src/agent/rules/common.txt",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "packages/opencode/src/agent/rules/common.txt",
+        "oid": "851343e179e37adbff45bf48eb7390078eafd5f4",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/src/session/llm/request.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/src/session/llm/request.ts",
+        "oid": "282f5648d1083823394bc2eb77bc0961b2f0f293",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/src/session/llm/request.ts",
+        "oid": "6104e742f3cd27451e379be088aa42c55333c455",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/agent/rules.test.ts",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "packages/opencode/test/agent/rules.test.ts",
+        "oid": "561c88914eb4b9cf6bc5169259e52bbd6e608ab4",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    }
+  ],
+  "gate": "requires_release_validation",
+  "required_tests": [],
+  "note": "Source classification is a review proposal. It does not convert natural language into code, approve protocol semantics, modify the active source lock or authorize release.",
+  "sha256": "adecd1df951bd7059c88fd27b6c54d55ece1acc3d669ce865a3f7989d07a3028"
+}

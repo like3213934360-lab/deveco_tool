@@ -11,8 +11,8 @@ import { finishAcceptance } from "./lib/acceptance-report.js";
 import { AcceptanceMcp } from "./lib/mcp-acceptance-client.js";
 import { OwnedEmulatorAcceptance } from "./lib/owned-emulator-acceptance.js";
 
-const [root, preparedFile] = z
-  .tuple([z.string().min(1), z.string().min(1)])
+const [root, preparedFile, osVersion] = z
+  .tuple([z.string().min(1), z.string().min(1), z.string().min(1).optional()])
   .parse(process.argv.slice(2));
 assert.ok(path.isAbsolute(root) && path.isAbsolute(preparedFile));
 assert.equal(
@@ -74,7 +74,7 @@ function record(key: string, value: unknown) {
   save();
 }
 const mcp = new AcceptanceMcp(root, "recording-privacy-subject"),
-  owner = new AcceptanceMcp(ownerRoot, "recording-privacy-owner");
+  owner = new AcceptanceMcp(ownerRoot, "recording-privacy-owner", { tool_groups: ["core", "emulator-admin"] });
 const owned = new OwnedEmulatorAcceptance(mcp, record, owner);
 const project = path.join(root, "application"),
   relative = path.join(prepared.module, "src/main/ets/pages/Index.ets"),
@@ -270,7 +270,7 @@ struct Index {
     original_sha256: originalHash,
     source_sha256: fileDigest(path.join(project, relative)),
   });
-  target = await owned.start();
+  target = await owned.start(osVersion);
   await owned.workflow("deploy", "build_deploy_verify", {
     project_path: project,
     modules: [prepared.module],

@@ -67,7 +67,7 @@ async function workflow(name: string, input: unknown) {
       })
       .parse(
         await call("workflow_run", {
-          action: "status",
+          action: "status", detail: "full",
           run_id: run.run_id,
           wait_ms: 1000,
         }),

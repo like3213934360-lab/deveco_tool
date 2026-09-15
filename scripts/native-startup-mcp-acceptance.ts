@@ -58,7 +58,7 @@ async function navigate(key: string) {
   results[key] = submitted; save();
   const deadline = performance.now() + 90000;
   while (performance.now() < deadline) {
-    const state = z.object({ status: z.string(), result: z.unknown(), error: z.unknown().optional() }).parse(await call("workflow_run", { action: "status", run_id: submitted.run_id, wait_ms: 1000 }));
+    const state = z.object({ status: z.string(), result: z.unknown(), error: z.unknown().optional() }).parse(await call("workflow_run", { action: "status", detail: "full", run_id: submitted.run_id, wait_ms: 1000 }));
     results[key] = { ...submitted, ...state }; save();
     if (["queued", "running", "cancelling"].includes(state.status)) continue;
     assert.equal(state.status, "succeeded", JSON.stringify(state.error));
@@ -78,7 +78,7 @@ try {
   results.doctor = await call("deveco_doctor", {}); save();
   const run = await navigate("initial");
   await disconnect(); await connect();
-  results.preserved = await call("workflow_run", { action: "status", run_id: run });
+  results.preserved = await call("workflow_run", { action: "status", detail: "full", run_id: run });
   await navigate("after_restart");
   completed = true;
 } catch (error) { results.error = errorResult(error); console.error(error); }

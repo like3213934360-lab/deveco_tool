@@ -1,0 +1,479 @@
+[
+  {
+    "file": "resources/knowledge/arkts-error-fixes/any_type_errors.md",
+    "link": "../assets/AnyTypeError.ets",
+    "line": 432,
+    "upstream_exists": true,
+    "related_ids": [
+      "arkts-error-fixes/examples/AnyTypeError"
+    ]
+  },
+  {
+    "file": "resources/knowledge/arkts-error-fixes/appstorage_errors.md",
+    "link": "../assets/AppStorageError.ets",
+    "line": 95,
+    "upstream_exists": true,
+    "related_ids": [
+      "arkts-error-fixes/examples/AppStorageError"
+    ]
+  },
+  {
+    "file": "resources/knowledge/arkts-error-fixes/arrow_function_conversion_errors.md",
+    "link": "../assets/ArrowFunctionConversionError.ets",
+    "line": 136,
+    "upstream_exists": true,
+    "related_ids": [
+      "arkts-error-fixes/examples/ArrowFunctionConversionError"
+    ]
+  },
+  {
+    "file": "resources/knowledge/arkts-error-fixes/avoid_area_type_errors.md",
+    "link": "../assets/AvoidAreaTypeError.ets",
+    "line": 59,
+    "upstream_exists": true,
+    "related_ids": [
+      "arkts-error-fixes/examples/AvoidAreaTypeError"
+    ]
+  },
+  {
+    "file": "resources/knowledge/arkts-error-fixes/breakpoint_type_errors.md",
+    "link": "../assets/BreakpointTypeError.ets",
+    "line": 122,
+    "upstream_exists": true,
+    "related_ids": [
+      "arkts-error-fixes/examples/BreakpointTypeError"
+    ]
+  },
+  {
+    "file": "resources/knowledge/arkts-error-fixes/catch_clause_type_errors.md",
+    "link": "../assets/CatchClauseTypeError.ets",
+    "line": 89,
+    "upstream_exists": true,
+    "related_ids": [
+      "arkts-error-fixes/examples/CatchClauseTypeError"
+    ]
+  },
+  {
+    "file": "resources/knowledge/arkts-error-fixes/color_consistency_errors.md",
+    "link": "../assets/ColorConsistencyError.ets",
+    "line": 120,
+    "upstream_exists": true,
+    "related_ids": [
+      "arkts-error-fixes/examples/ColorConsistencyError"
+    ]
+  },
+  {
+    "file": "resources/knowledge/arkts-error-fixes/color_property_errors.md",
+    "link": "../assets/ColorPropertyError.ets",
+    "line": 103,
+    "upstream_exists": true,
+    "related_ids": [
+      "arkts-error-fixes/examples/ColorPropertyError"
+    ]
+  },
+  {
+    "file": "resources/knowledge/arkts-error-fixes/color_property_errors.md",
+    "link": "../assets/ColorPropertyError.ets",
+    "line": 104,
+    "upstream_exists": true,
+    "related_ids": [
+      "arkts-error-fixes/examples/ColorPropertyError"
+    ]
+  },
+  {
+    "file": "resources/knowledge/arkts-error-fixes/color_property_errors.md",
+    "link": "../assets/ColorPropertyError.ets",
+    "line": 105,
+    "upstream_exists": true,
+    "related_ids": [
+      "arkts-error-fixes/examples/ColorPropertyError"
+    ]
+  },
+  {
+    "file": "resources/knowledge/arkts-error-fixes/color_property_errors.md",
+    "link": "../assets/ColorPropertyError.ets",
+    "line": 106,
+    "upstream_exists": true,
+    "related_ids": [
+      "arkts-error-fixes/examples/ColorPropertyError"
+    ]
+  },
+  {
+    "file": "resources/knowledge/arkts-error-fixes/color_property_errors.md",
+    "link": "../assets/ColorPropertyError.ets",
+    "line": 135,
+    "upstream_exists": true,
+    "related_ids": [
+      "arkts-error-fixes/examples/ColorPropertyError"
+    ]
+  },
+  {
+    "file": "resources/knowledge/arkts-error-fixes/context_type_errors.md",
+    "link": "../assets/ContextTypeError.ets",
+    "line": 118,
+    "upstream_exists": true,
+    "related_ids": [
+      "arkts-error-fixes/examples/ContextTypeError"
+    ]
+  },
+  {
+    "file": "resources/knowledge/arkts-error-fixes/decorator_state_errors.md",
+    "link": "../assets/DecoratorStateError.ets",
+    "line": 104,
+    "upstream_exists": true,
+    "related_ids": [
+      "arkts-error-fixes/examples/DecoratorStateError"
+    ]
+  },
+  {
+    "file": "resources/knowledge/arkts-error-fixes/decorator_state_errors.md",
+    "link": "./state_migration.md",
+    "line": 108,
+    "upstream_exists": false,
+    "related_ids": [
+      "arkts-error-fixes/examples/DecoratorStateError"
+    ]
+  },
+  {
+    "file": "resources/knowledge/arkts-error-fixes/display_listener_type_errors.md",
+    "link": "../assets/DisplayListenerTypeError.ets",
+    "line": 148,
+    "upstream_exists": true,
+    "related_ids": [
+      "arkts-error-fixes/examples/DisplayListenerTypeError"
+    ]
+  },
+  {
+    "file": "resources/knowledge/arkts-error-fixes/duplicate_entry_errors.md",
+    "link": "../assets/DuplicateEntryError.ets",
+    "line": 186,
+    "upstream_exists": true,
+    "related_ids": [
+      "arkts-error-fixes/examples/DuplicateEntryError"
+    ]
+  },
+  {
+    "file": "resources/knowledge/arkts-error-fixes/esobject_type_errors.md",
+    "link": "../assets/ESObjectTypeError.ets",
+    "line": 110,
+    "upstream_exists": true,
+    "related_ids": [
+      "arkts-error-fixes/examples/ESObjectTypeError"
+    ]
+  },
+  {
+    "file": "resources/knowledge/arkts-error-fixes/fontcolor_property_errors.md",
+    "link": "../assets/FontColorPropertyError.ets",
+    "line": 71,
+    "upstream_exists": true,
+    "related_ids": [
+      "arkts-error-fixes/examples/FontColorPropertyError"
+    ]
+  },
+  {
+    "file": "resources/knowledge/arkts-error-fixes/function_return_type_errors.md",
+    "link": "../assets/FunctionReturnTypeError.ets",
+    "line": 69,
+    "upstream_exists": true,
+    "related_ids": [
+      "arkts-error-fixes/examples/FunctionReturnTypeError"
+    ]
+  },
+  {
+    "file": "resources/knowledge/arkts-error-fixes/function_return_type_errors.md",
+    "link": "../assets/FunctionReturnTypeError.ets",
+    "line": 153,
+    "upstream_exists": true,
+    "related_ids": [
+      "arkts-error-fixes/examples/FunctionReturnTypeError"
+    ]
+  },
+  {
+    "file": "resources/knowledge/arkts-error-fixes/function_return_type_errors.md",
+    "link": "../assets/FunctionReturnTypeError.ets",
+    "line": 154,
+    "upstream_exists": true,
+    "related_ids": [
+      "arkts-error-fixes/examples/FunctionReturnTypeError"
+    ]
+  },
+  {
+    "file": "resources/knowledge/arkts-error-fixes/function_return_type_errors.md",
+    "link": "../assets/FunctionReturnTypeError.ets",
+    "line": 155,
+    "upstream_exists": true,
+    "related_ids": [
+      "arkts-error-fixes/examples/FunctionReturnTypeError"
+    ]
+  },
+  {
+    "file": "resources/knowledge/arkts-error-fixes/function_return_type_errors.md",
+    "link": "../assets/FunctionReturnTypeError.ets",
+    "line": 193,
+    "upstream_exists": true,
+    "related_ids": [
+      "arkts-error-fixes/examples/FunctionReturnTypeError"
+    ]
+  },
+  {
+    "file": "resources/knowledge/arkts-error-fixes/idata_source_errors.md",
+    "link": "../assets/IDataSourceError.ets",
+    "line": 71,
+    "upstream_exists": true,
+    "related_ids": [
+      "arkts-error-fixes/examples/IDataSourceError"
+    ]
+  },
+  {
+    "file": "resources/knowledge/arkts-error-fixes/implementation_not_allowed_errors.md",
+    "link": "../assets/ImplementationNotAllowedError.ets",
+    "line": 80,
+    "upstream_exists": true,
+    "related_ids": [
+      "arkts-error-fixes/examples/ImplementationNotAllowedError"
+    ]
+  },
+  {
+    "file": "resources/knowledge/arkts-error-fixes/interface_method_signature_errors.md",
+    "link": "../assets/InterfaceMethodSignatureError.ets",
+    "line": 93,
+    "upstream_exists": true,
+    "related_ids": [
+      "arkts-error-fixes/examples/InterfaceMethodSignatureError",
+      "arkts-error-fixes/object_literal_interface_errors"
+    ]
+  },
+  {
+    "file": "resources/knowledge/arkts-error-fixes/interface_method_signature_errors.md",
+    "link": "../assets/InterfaceMethodSignatureError.ets",
+    "line": 94,
+    "upstream_exists": true,
+    "related_ids": [
+      "arkts-error-fixes/examples/InterfaceMethodSignatureError",
+      "arkts-error-fixes/object_literal_interface_errors"
+    ]
+  },
+  {
+    "file": "resources/knowledge/arkts-error-fixes/interface_method_signature_errors.md",
+    "link": "../assets/InterfaceMethodSignatureError.ets",
+    "line": 95,
+    "upstream_exists": true,
+    "related_ids": [
+      "arkts-error-fixes/examples/InterfaceMethodSignatureError",
+      "arkts-error-fixes/object_literal_interface_errors"
+    ]
+  },
+  {
+    "file": "resources/knowledge/arkts-error-fixes/interface_method_signature_errors.md",
+    "link": "../assets/InterfaceMethodSignatureError.ets",
+    "line": 141,
+    "upstream_exists": true,
+    "related_ids": [
+      "arkts-error-fixes/examples/InterfaceMethodSignatureError",
+      "arkts-error-fixes/object_literal_interface_errors"
+    ]
+  },
+  {
+    "file": "resources/knowledge/arkts-error-fixes/notification_errors.md",
+    "link": "../assets/NotificationError.ets",
+    "line": 109,
+    "upstream_exists": true,
+    "related_ids": [
+      "arkts-error-fixes/examples/NotificationError"
+    ]
+  },
+  {
+    "file": "resources/knowledge/arkts-error-fixes/object_literal_interface_errors.md",
+    "link": "../assets/ObjectLiteralInterfaceError.ets",
+    "line": 118,
+    "upstream_exists": true,
+    "related_ids": [
+      "arkts-error-fixes/examples/ObjectLiteralInterfaceError",
+      "arkts-error-fixes/object_spread_errors"
+    ]
+  },
+  {
+    "file": "resources/knowledge/arkts-error-fixes/object_literal_interface_errors.md",
+    "link": "../assets/ObjectLiteralInterfaceError.ets",
+    "line": 119,
+    "upstream_exists": true,
+    "related_ids": [
+      "arkts-error-fixes/examples/ObjectLiteralInterfaceError",
+      "arkts-error-fixes/object_spread_errors"
+    ]
+  },
+  {
+    "file": "resources/knowledge/arkts-error-fixes/object_literal_interface_errors.md",
+    "link": "../assets/ObjectLiteralInterfaceError.ets",
+    "line": 120,
+    "upstream_exists": true,
+    "related_ids": [
+      "arkts-error-fixes/examples/ObjectLiteralInterfaceError",
+      "arkts-error-fixes/object_spread_errors"
+    ]
+  },
+  {
+    "file": "resources/knowledge/arkts-error-fixes/object_literal_interface_errors.md",
+    "link": "../assets/ObjectLiteralInterfaceError.ets",
+    "line": 154,
+    "upstream_exists": true,
+    "related_ids": [
+      "arkts-error-fixes/examples/ObjectLiteralInterfaceError",
+      "arkts-error-fixes/object_spread_errors"
+    ]
+  },
+  {
+    "file": "resources/knowledge/arkts-error-fixes/object_literal_type_errors.md",
+    "link": "../assets/ObjectLiteralTypeError.ets",
+    "line": 110,
+    "upstream_exists": true,
+    "related_ids": [
+      "arkts-error-fixes/examples/ObjectLiteralTypeError"
+    ]
+  },
+  {
+    "file": "resources/knowledge/arkts-error-fixes/object_spread_errors.md",
+    "link": "../assets/ObjectSpreadError.ets",
+    "line": 104,
+    "upstream_exists": true,
+    "related_ids": [
+      "arkts-error-fixes/examples/ObjectSpreadError"
+    ]
+  },
+  {
+    "file": "resources/knowledge/arkts-error-fixes/possibly_null_errors.md",
+    "link": "../assets/PossiblyNullError.ets",
+    "line": 100,
+    "upstream_exists": true,
+    "related_ids": [
+      "arkts-error-fixes/examples/PossiblyNullError"
+    ]
+  },
+  {
+    "file": "resources/knowledge/arkts-error-fixes/resource_conversion_errors.md",
+    "link": "../assets/ResourceConversionError.ets",
+    "line": 154,
+    "upstream_exists": true,
+    "related_ids": [
+      "arkts-error-fixes/examples/ResourceConversionError"
+    ]
+  },
+  {
+    "file": "resources/knowledge/arkts-error-fixes/standalone_function_errors.md",
+    "link": "../assets/StandaloneFunctionError.ets",
+    "line": 68,
+    "upstream_exists": true,
+    "related_ids": [
+      "arkts-error-fixes/examples/StandaloneFunctionError"
+    ]
+  },
+  {
+    "file": "resources/knowledge/arkts-error-fixes/storage_link_default_errors.md",
+    "link": "../assets/StorageLinkDefaultError.ets",
+    "line": 96,
+    "upstream_exists": true,
+    "related_ids": [
+      "arkts-error-fixes/examples/StorageLinkDefaultError",
+      "arkts-error-fixes/appstorage_errors"
+    ]
+  },
+  {
+    "file": "resources/knowledge/arkts-error-fixes/storage_link_default_errors.md",
+    "link": "../assets/StorageLinkDefaultError.ets",
+    "line": 97,
+    "upstream_exists": true,
+    "related_ids": [
+      "arkts-error-fixes/examples/StorageLinkDefaultError",
+      "arkts-error-fixes/appstorage_errors"
+    ]
+  },
+  {
+    "file": "resources/knowledge/arkts-error-fixes/storage_link_default_errors.md",
+    "link": "../assets/StorageLinkDefaultError.ets",
+    "line": 98,
+    "upstream_exists": true,
+    "related_ids": [
+      "arkts-error-fixes/examples/StorageLinkDefaultError",
+      "arkts-error-fixes/appstorage_errors"
+    ]
+  },
+  {
+    "file": "resources/knowledge/arkts-error-fixes/storage_link_default_errors.md",
+    "link": "../assets/StorageLinkDefaultError.ets",
+    "line": 123,
+    "upstream_exists": true,
+    "related_ids": [
+      "arkts-error-fixes/examples/StorageLinkDefaultError",
+      "arkts-error-fixes/appstorage_errors"
+    ]
+  },
+  {
+    "file": "resources/knowledge/arkts-error-fixes/title_button_rect_type_errors.md",
+    "link": "../assets/TitleButtonRectTypeError.ets",
+    "line": 119,
+    "upstream_exists": true,
+    "related_ids": [
+      "arkts-error-fixes/examples/TitleButtonRectTypeError",
+      "arkts-error-fixes/examples/StandaloneFunctionContext",
+      "arkts-error-fixes/examples/StandaloneFunctionError"
+    ]
+  },
+  {
+    "file": "resources/knowledge/arkts-error-fixes/title_button_rect_type_errors.md",
+    "link": "../assets/StandaloneFunctionContext.ets",
+    "line": 120,
+    "upstream_exists": true,
+    "related_ids": [
+      "arkts-error-fixes/examples/TitleButtonRectTypeError",
+      "arkts-error-fixes/examples/StandaloneFunctionContext",
+      "arkts-error-fixes/examples/StandaloneFunctionError"
+    ]
+  },
+  {
+    "file": "resources/knowledge/arkts-error-fixes/title_button_rect_type_errors.md",
+    "link": "../assets/StandaloneFunctionError.ets",
+    "line": 121,
+    "upstream_exists": true,
+    "related_ids": [
+      "arkts-error-fixes/examples/TitleButtonRectTypeError",
+      "arkts-error-fixes/examples/StandaloneFunctionContext",
+      "arkts-error-fixes/examples/StandaloneFunctionError"
+    ]
+  },
+  {
+    "file": "resources/knowledge/arkts-error-fixes/unused_variable_warnings.md",
+    "link": "../assets/UnusedVariableWarning.ets",
+    "line": 159,
+    "upstream_exists": true,
+    "related_ids": [
+      "arkts-error-fixes/examples/UnusedVariableWarning"
+    ]
+  },
+  {
+    "file": "resources/knowledge/arkts-error-fixes/utility_type_errors.md",
+    "link": "../assets/UtilityTypeError.ets",
+    "line": 289,
+    "upstream_exists": true,
+    "related_ids": [
+      "arkts-error-fixes/examples/UtilityTypeError"
+    ]
+  },
+  {
+    "file": "resources/knowledge/arkts-error-fixes/window_rect_size_errors.md",
+    "link": "../assets/WindowRectSizeError.ets",
+    "line": 64,
+    "upstream_exists": true,
+    "related_ids": [
+      "arkts-error-fixes/examples/WindowRectSizeError"
+    ]
+  },
+  {
+    "file": "resources/knowledge/arkts-error-fixes/window_type_errors.md",
+    "link": "../assets/WindowTypeError.ets",
+    "line": 95,
+    "upstream_exists": true,
+    "related_ids": [
+      "arkts-error-fixes/examples/WindowTypeError"
+    ]
+  }
+]

@@ -16,4 +16,4 @@
 
 ## Related Files
 
-- [Fault mode library](./fault-mode-library.md) — OOM template with heap type breakdown
+- [Fault mode library](deveco://knowledge/arkts-runtime-fix/fault-mode-library) — OOM template with heap type breakdown

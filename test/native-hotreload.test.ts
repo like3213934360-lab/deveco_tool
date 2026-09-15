@@ -24,7 +24,20 @@ import {
   hotBaselinePackages,
   hotChanges,
   nextHotPatchVersion,
+  hotApplicationPidSet,
 } from "../src/services/hotreload.js";
+
+test("hot process evidence normalizes complete PID sets and rejects incomplete receipts", () => {
+  assert.equal(hotApplicationPidSet({ stdout: "22 11\n22  ", exitCode: 0 }), "11 22");
+  assert.equal(hotApplicationPidSet({ stdout: "11\t22", exitCode: 0 }), "11 22");
+  for (const receipt of [
+    { stdout: "", exitCode: 0 }, { stdout: "11", exitCode: 1 },
+    { stdout: "11", exitCode: 0, truncated: true },
+    { stdout: "11", exitCode: 0, stderr: "device disconnected" },
+    { stdout: "11 partial", exitCode: 0 },
+  ]) assert.throws(() => hotApplicationPidSet(receipt), { code: "HOT_APP_NOT_RUNNING" });
+  assert.throws(() => hotApplicationPidSet({ stdout: Array.from({ length: 33 }, (_, index) => String(index + 1)).join(" "), exitCode: 0 }), { code: "HOT_PID_BUDGET" });
+});
 
 test("watch baseline carries entry, feature and required HSP together and rejects incomplete or mismatched outputs", async () => {
   const root = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), "deveco-hot-packages-"))),

@@ -13,14 +13,14 @@ import { ProcessService } from "../src/core/process.js";
 import { discoverToolchain, toolCommand } from "../src/core/toolchain.js";
 import { emulatorBinding } from "../src/services/emulator-identity.js";
 
-const [root, preparedProject] = z.tuple([z.string().min(1), z.string().min(1)]).parse(process.argv.slice(2));
+const [root, preparedProject, osVersion] = z.tuple([z.string().min(1), z.string().min(1), z.string().min(1).optional()]).parse(process.argv.slice(2));
 assert.equal(fs.existsSync(root), false, "Use a new isolated evidence directory");
 assert.ok(path.isAbsolute(root) && path.isAbsolute(preparedProject));
 fs.mkdirSync(root, { recursive: true, mode: 0o700 });
 atomicWrite(path.join(root, "config.json"), "{}\n");
 const name = `NativeMcp${crypto.randomBytes(4).toString("hex")}`, project = path.join(root, "application");
 const tested = evidenceIdentity(), results: Record<string, unknown> = {}, file = path.join(root, "evidence.json");
-const client = new AcceptanceMcp(root, "emulator-outcome-acceptance"), processes = new ProcessService();
+const client = new AcceptanceMcp(root, "emulator-outcome-acceptance", { tool_groups: ["core", "emulator-admin"] }), processes = new ProcessService();
 const app = { bundle_name: "com.deveco.mcpacceptance.sensorsdev22", module: "entry", ability: "EntryAbility" };
 let target: string | undefined, created = false, running = false, completed = false, closed = false;
 const save = () => atomicWrite(file, JSON.stringify({ instance: name, target, results,
@@ -30,7 +30,7 @@ async function inventory() { return z.object({ instances: z.array(instanceSchema
 async function settle(key: string, run: string, expected = "succeeded") {
   const deadline = Date.now() + 300000;
   while (Date.now() < deadline) {
-    const status = z.object({ status: z.string(), result: z.unknown(), error: z.unknown().optional() }).parse(await client.call("workflow_run", { action: "status", run_id: run, wait_ms: 1000 }));
+    const status = z.object({ status: z.string(), result: z.unknown(), error: z.unknown().optional() }).parse(await client.call("workflow_run", { action: "status", detail: "full", run_id: run, wait_ms: 1000 }));
     results[key] = { run_id: run, ...status }; save();
     if (["queued", "running", "cancelling"].includes(status.status)) continue;
     assert.equal(status.status, expected, JSON.stringify(status.error)); console.log(`${key}: ${expected}`); return status;
@@ -92,10 +92,10 @@ struct Index {
 `);
   results.fixture = { project, source_sha256: fileDigest(source), original_source_sha256: originalHash };
   await client.connect(); initial = await inventory(); results.initial_inventory = initial;
-  const images = z.object({ images: z.array(z.object({ deviceType: z.string(), osVersion: z.string() })) }).parse(await client.call("emulator_manage", { action: "images", downloaded: true, device_type: "phone" }));
-  const image = images.images[0]; assert.ok(image);
+  const images = z.object({ images: z.array(z.object({ deviceType: z.string(), osVersion: z.string() })) }).parse(await client.call("emulator_admin", { action: "images", downloaded: true, device_type: "phone" }));
+  const image = osVersion ? images.images.find(candidate => candidate.osVersion === osVersion) : images.images[0]; assert.ok(image);
   results.image = image; results.doctor = await client.call("deveco_doctor", {}); save();
-  await operation("create", "emulator_manage", { action: "create", name, device_type: image.deviceType, os_version: image.osVersion }); created = true;
+  await operation("create", "emulator_admin", { action: "create", name, device_type: image.deviceType, os_version: image.osVersion }); created = true;
   await operation("start", "emulator_manage", { action: "start", name }); running = true;
   const deadline = Date.now() + 120000;
   while (!target && Date.now() < deadline) {
@@ -151,7 +151,7 @@ finally {
     await client.connect();
     if (created) {
       const instance = (await inventory()).find(item => item.name === name); assert.ok(instance && !instance.isRunning);
-      await operation("delete", "emulator_manage", { action: "delete", name }); created = false;
+      await operation("delete", "emulator_admin", { action: "delete", name }); created = false;
     }
     results.final_inventory = await inventory(); assert.deepEqual(results.final_inventory, initial);
     await client.close(); assert.equal(processes.size, 0); closed = true;

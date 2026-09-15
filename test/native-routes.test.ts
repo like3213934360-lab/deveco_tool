@@ -100,7 +100,7 @@ function fixture() {
 test("navigation goals preserve route priority, ambiguity, URI case and product-scoped saved flows", () => {
   const f = fixture();
   try {
-    const catalog = discoverAppRoutes(inspectProject(f.project));
+    const catalog = discoverAppRoutes(inspectProject(f.project, "default"));
     const flow = (
       id: string,
       name: string,
@@ -275,7 +275,7 @@ test("automatic recording selects declared home then mainElement and refuses amb
 test("automatic recording keeps the complete goal and uses a stable ID scoped to product and entry", () => {
   const f = fixture();
   try {
-    const catalog = discoverAppRoutes(inspectProject(f.project));
+    const catalog = discoverAppRoutes(inspectProject(f.project, "default"));
     const goal = "新".repeat(512);
     const choice = resolveNavigationGoal(catalog, [], goal);
     assert.equal(choice.kind, "recording");
@@ -306,7 +306,7 @@ test("automatic recording keeps the complete goal and uses a stable ID scoped to
 test("native routes honor product/module declarations, explicit field intersections and aa export visibility", () => {
   const f = fixture();
   try {
-    const project = inspectProject(f.project),
+    const project = inspectProject(f.project, "default"),
       catalog = discoverAppRoutes(project);
     assert.ok(catalog.routes.some((route) => route.app.module === "feature"));
     assert.ok(!catalog.routes.some((route) => route.app.module === "excluded"));
@@ -339,7 +339,7 @@ test("native routes honor product/module declarations, explicit field intersecti
       path.join(f.project, "AppScope/app.json5"),
       JSON.stringify({ app: { bundleName: "com.example.changed" } }),
     );
-    assert.notEqual(inspectProject(f.project).fingerprint, before);
+    assert.notEqual(inspectProject(f.project, "default").fingerprint, before);
   } finally {
     f.close();
   }
@@ -347,7 +347,7 @@ test("native routes honor product/module declarations, explicit field intersecti
 test("native URI selection distinguishes ports and matches manifest regex paths without a leading slash", () => {
   const f = fixture();
   try {
-    const catalog = discoverAppRoutes(inspectProject(f.project));
+    const catalog = discoverAppRoutes(inspectProject(f.project, "default"));
     const standard = resolveAppRoute(catalog, {
       uri: "https://example.com/exact?item=2",
     });
@@ -399,7 +399,7 @@ test("native URI selection distinguishes ports and matches manifest regex paths 
         ],
       },
     ]);
-    const hostile = discoverAppRoutes(inspectProject(f.project));
+    const hostile = discoverAppRoutes(inspectProject(f.project, "default"));
     const start = performance.now();
     assert.throws(
       () =>
@@ -426,7 +426,7 @@ test("MIME-only manifest filters remain discoverable and wildcard filters requir
         ],
       },
     ]);
-    const catalog = discoverAppRoutes(inspectProject(f.project));
+    const catalog = discoverAppRoutes(inspectProject(f.project, "default"));
     const image = catalog.routes.find(
       (route) => route.uri_pattern?.type === "image/*",
     );
@@ -475,7 +475,6 @@ async function runtimeFixture() {
     config,
     JSON.stringify({
       clt: path.join(f.root, "clt"),
-      default_project: f.project,
     }),
   );
   process.env.DEVECO_CONFIG = config;
@@ -639,7 +638,7 @@ test("goal navigation captures a saved flow and rejects ignored overrides before
       steps: [],
       assert: { visible: { text: "Settings" } },
     });
-    await f.runtime.flows.save(inspectProject(f.project), flow);
+    await f.runtime.flows.save(inspectProject(f.project, "default"), flow);
     for (const input of [
       { goal: "MainAbility", assert: { visible: { text: "Done" } } },
       { goal: "example.action" },
@@ -658,12 +657,13 @@ test("goal navigation captures a saved flow and rejects ignored overrides before
       { goal: "unknown", flow },
     ])
       await assert.rejects(
-        f.runtime.call("ui_flow", { action: "navigate", ...input }),
+        f.runtime.call("ui_flow", { action: "navigate", project_path: f.project, product: "default", ...input }),
       );
     assert.equal(targets, 0);
     assert.equal(f.runtime.store.runCount(), 0);
     const input = {
       action: "navigate",
+      project_path: f.project, product: "default",
       goal: "设置",
       request_key: "goal-settings",
     };
@@ -676,7 +676,7 @@ test("goal navigation captures a saved flow and rejects ignored overrides before
     // A replay request retains its resolved flow even when the saved name changes.
     const targetsBeforeDuplicate = targets;
     await f.runtime.flows.save(
-      inspectProject(f.project),
+      inspectProject(f.project, "default"),
       { ...flow, name: "Renamed" },
       true,
     );
@@ -690,6 +690,7 @@ test("goal navigation captures a saved flow and rejects ignored overrides before
     const routeRun = z.object({ run_id: z.string() }).parse(
       await f.runtime.call("ui_flow", {
         action: "navigate",
+        project_path: f.project, product: "default",
         goal: "example.action",
         assert: { visible: { text: "Done" } },
       }),
@@ -735,6 +736,7 @@ test("navigation persists before launch, deduplicates and rechecks only the fina
     );
     const input = {
       action: "navigate",
+      project_path: f.project, product: "default",
       route: { module: "entry", ability: "MainAbility" },
       assert: { visible: { text: "Done" } },
       request_key: "navigation-once",
@@ -802,6 +804,7 @@ test("a lost navigation receipt remains uncertain on resume and does not blindly
     const run = z.object({ run_id: z.string() }).parse(
       await f.runtime.call("ui_flow", {
         action: "navigate",
+        project_path: f.project, product: "default",
         route: { module: "entry", ability: "MainAbility" },
         assert: { visible: { text: "Done" } },
       }),
@@ -822,7 +825,7 @@ test("saved UI jobs capture flow contents, reject concurrent edits and propagate
   const f = await runtimeFixture();
   try {
     t.mock.method(f.runtime.devices, "target", async () => "device");
-    const project = inspectProject(f.project),
+    const project = inspectProject(f.project, "default"),
       flow = flowSchema.parse({
         version: 1,
         id: "saved",
@@ -865,7 +868,7 @@ test("saved UI jobs capture flow contents, reject concurrent edits and propagate
     );
     const changed = z
       .object({ run_id: z.string() })
-      .parse(await f.runtime.call("ui_flow", { action: "run", id: "saved" }));
+      .parse(await f.runtime.call("ui_flow", { action: "run", project_path: f.project, product: "default", id: "saved" }));
     atomicWrite(
       path.join(f.project, ".arkpilot/flows/saved.json"),
       JSON.stringify({ ...flow, name: "Externally modified" }),
@@ -877,7 +880,7 @@ test("saved UI jobs capture flow contents, reject concurrent edits and propagate
     await f.runtime.flows.save(project, flow, true);
     const running = z
       .object({ run_id: z.string() })
-      .parse(await f.runtime.call("ui_flow", { action: "run", id: "saved" }));
+      .parse(await f.runtime.call("ui_flow", { action: "run", project_path: f.project, product: "default", id: "saved" }));
     for (let n = 0; n < 100 && executions === 0; n++) await delay(10);
     assert.equal(executions, 1);
     await f.runtime.call("workflow_run", {

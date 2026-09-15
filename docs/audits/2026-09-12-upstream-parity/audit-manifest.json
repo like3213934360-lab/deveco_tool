@@ -1,0 +1,78 @@
+{
+  "format": 1,
+  "audited_at": "2026-09-12",
+  "scope": "Read-only runtime and upstream comparison; isolated service probes; no device acceptance rerun",
+  "sources": {
+    "code_head": "7b9b68c2f65e25d6a91f13d47d5b75622aacfe20",
+    "installed_code_lock": "aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a",
+    "source_commit": "713734c8eaf40d52013ff88982306aef0d0c563f",
+    "cli_head": "87c360b05848132c06c6ea120e078619b9ef4634"
+  },
+  "files": [
+    {
+      "file": "README.md",
+      "bytes": 21275,
+      "sha256": "fcba9d6255cb29e9f21410fc722624ff53782118dc3984e3d7319827ba3de896"
+    },
+    {
+      "file": "installation-integrity.json",
+      "bytes": 181,
+      "sha256": "504e60943233af749900614c6086925695441ba93ccbfdd66f2c6fc3ef6d7bf1"
+    },
+    {
+      "file": "installed-tool-schemas.json",
+      "bytes": 358671,
+      "sha256": "012c275b1482304cc9e87f02c172ffcbc9f3ae2dae5355b48fb9bfb9859b6f19"
+    },
+    {
+      "file": "knowledge-broken-links.json",
+      "bytes": 14875,
+      "sha256": "0f358dff0105960c714e7eed82f6e6392ccceb7f9f443eb19080dcb85db70b06"
+    },
+    {
+      "file": "local-capabilities.md",
+      "bytes": 29386,
+      "sha256": "5a674299e14f2e35fcf15de6cc309571ae842c1b8a14f326c684dd32dada83fd"
+    },
+    {
+      "file": "release-scope-0.3.0.json",
+      "bytes": 24974,
+      "sha256": "63faeb0bd6b504e34542d40f17e3c3e720938b7145cc36637b44bae19937a2b5"
+    },
+    {
+      "file": "runtime-snapshot.json",
+      "bytes": 168289,
+      "sha256": "c6137f1eded9af7ebd2b9e34f6de01d7d0df51248632a1dce47d7587764450d7"
+    },
+    {
+      "file": "skill-read-verification.json",
+      "bytes": 32796,
+      "sha256": "d2a187077b5e85243203e36bf8dc36329e9a4604bad91e64c3004acc89e15b70"
+    },
+    {
+      "file": "upstream-capabilities-0.3.0.json",
+      "bytes": 63816,
+      "sha256": "213eee35a91137496f789dd121cca09353cbcdd021917ce5b8dcae95d8d61004"
+    },
+    {
+      "file": "upstream-findings.md",
+      "bytes": 18197,
+      "sha256": "137f0ec381dedaba6d6ddaa12018acc6c0b1426bc8a4b4200362e9875938b2ef"
+    },
+    {
+      "file": "workflow-findings.md",
+      "bytes": 18994,
+      "sha256": "47346f69ea30d8dfeab2f66a8379ccf420db0398df4b16c035bf56bf18f31de5"
+    },
+    {
+      "file": "workflow-gate-probe-result.json",
+      "bytes": 1328,
+      "sha256": "cfedbcabe4588fc9a931f71e176d0cb23bef454a9b73ecde76b884d9b15433bd"
+    },
+    {
+      "file": "workflow-gate-probe.mjs",
+      "bytes": 3583,
+      "sha256": "1281f8c8802aa0ad59e2a0647b72ea4c36663f1d6095a320176b4680c1720b01"
+    }
+  ]
+}

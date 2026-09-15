@@ -14,9 +14,10 @@ import { OwnedEmulatorAcceptance } from "./lib/owned-emulator-acceptance.js";
 import { validateSoak } from "./lib/soak-gate.js";
 import { SoakMixedLoad } from "./lib/soak-mixed-load.js";
 
-const [root, preparedFile, preflight] = z
-  .tuple([z.string(), z.string(), z.literal("--preflight").optional()])
+const [root, preparedFile, mode, osVersion] = z
+  .tuple([z.string(), z.string(), z.enum(["--preflight", "--full"]).optional(), z.string().min(1).optional()])
   .parse(process.argv.slice(2));
+const preflight = mode === "--preflight";
 assert.ok(path.isAbsolute(root) && path.isAbsolute(preparedFile));
 assert.equal(
   fs.existsSync(root),
@@ -38,7 +39,7 @@ const ownerRoot = path.join(root, "emulator-owner");
 fs.mkdirSync(ownerRoot, { mode: 0o700 });
 atomicWrite(path.join(ownerRoot, "config.json"), "{}\n");
 const mcp = new AcceptanceMcp(root, "mixed-soak-preparation"),
-  owner = new AcceptanceMcp(ownerRoot, "mixed-soak-emulator-owner");
+  owner = new AcceptanceMcp(ownerRoot, "mixed-soak-emulator-owner", { tool_groups: ["core", "emulator-admin"] });
 const tested = evidenceIdentity(),
   results: Record<string, unknown> = {},
   file = path.join(root, "evidence.json");
@@ -110,7 +111,7 @@ try {
 `,
     );
   atomicWrite(path.join(project, relative), source);
-  const target = await owned.start();
+  const target = await owned.start(osVersion);
   const preparation = {
     target,
     project_path: project,

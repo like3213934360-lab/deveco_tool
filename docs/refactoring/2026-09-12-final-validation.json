@@ -1,0 +1,1416 @@
+{
+  "format": "universal-domain-review/1",
+  "generated_at": "2026-09-12T12:28:12.728870+00:00",
+  "phase": "single_agent_verification_in_progress",
+  "is_release_manifest": false,
+  "tested": {
+    "source_sha256": "004b727d4b9838a6d73a83baf8016eb5ef4f0e1ce20ca648b78dc093e948f0fc",
+    "runtime_sha256": "ea54844031a63fe158a2e20f29256e35c6d43eec26c84cb7ddeba3faad703500",
+    "compiled_sha256": "8f8f6c032596f9df738efcfe4a2a9725e85e4f53ac6bd3bebc75845d0bd6a06d",
+    "package_lock_sha256": "7f60a1f262f8d5c275c6c0983a1307ee37c91bd62144b39919296f4434666f17",
+    "resource_manifest_sha256": "bb7dfc6dd3ecfc598203c5db9b6f6d174b116f235151507e3fb3fbb57e586284",
+    "upstream_lock_sha256": "9ea597235ffa9f97a076791d637acd976f8f4c78bcf85ea77de118570708ed3d",
+    "base_commit": "6ad95551a0edac9fb8f4a5a7fbe7d45d342a6519",
+    "node": "v24.14.1",
+    "platform": "darwin",
+    "arch": "arm64"
+  },
+  "evidence_root": "/Users/dreamlike/Library/Application Support/DevEcoMCP/acceptance/universal-domain-20260912-final",
+  "distribution": {
+    "manifest_sha256": "96d166e69c03f55c17b66d9dd3ee58d8bdf6c886c6284d6228736103ce62818f",
+    "zip_sha256": "3a949874c9951ee0db6130d41d9de77a2ef796aa14477a715c0237eb9e350e31",
+    "scope": "isolated clean install only; not a public release"
+  },
+  "reports": {
+    "regression24": {
+      "path": "/Users/dreamlike/Library/Application Support/DevEcoMCP/acceptance/universal-domain-20260912-final/regression-4/evidence.json",
+      "sha256": "148a5cfa05b90b5a4e3b43ca358a872321b15b70938055f3f171611a37fe01cc",
+      "state": "passed",
+      "passed": true,
+      "completed": null,
+      "closed": null,
+      "unchanged": null,
+      "identity_match": {
+        "source_sha256": true,
+        "runtime_sha256": true,
+        "compiled_sha256": true,
+        "package_lock_sha256": true,
+        "resource_manifest_sha256": true,
+        "upstream_lock_sha256": true
+      },
+      "identity_kind": "candidate4",
+      "node": "v24.14.1",
+      "scope": "Native compiled regressions on this Node version and operating system; mocked SDK/device cases are not real-device acceptance",
+      "observation_count": 0,
+      "case_count": null,
+      "counts": null,
+      "regression": {
+        "tests": 581,
+        "pass": 581,
+        "fail": 0,
+        "skipped": 0,
+        "cancelled": 0,
+        "todo": 0
+      }
+    },
+    "regression22": {
+      "path": "/Users/dreamlike/Library/Application Support/DevEcoMCP/acceptance/universal-domain-20260912-final/regression-node22-final-2/evidence.json",
+      "sha256": "90aa5a75ecbdfe19e3fc196daf90ddcc9bbc63c76487f1535a6ee670d0f8a495",
+      "state": "passed",
+      "passed": true,
+      "completed": null,
+      "closed": null,
+      "unchanged": null,
+      "identity_match": {
+        "source_sha256": true,
+        "runtime_sha256": true,
+        "compiled_sha256": true,
+        "package_lock_sha256": true,
+        "resource_manifest_sha256": true,
+        "upstream_lock_sha256": true
+      },
+      "identity_kind": "candidate4",
+      "node": "v22.18.0",
+      "scope": "Native compiled regressions on this Node version and operating system; mocked SDK/device cases are not real-device acceptance",
+      "observation_count": 0,
+      "case_count": null,
+      "counts": null,
+      "regression": {
+        "tests": 581,
+        "pass": 581,
+        "fail": 0,
+        "skipped": 0,
+        "cancelled": 0,
+        "todo": 0
+      }
+    },
+    "sdk": {
+      "path": "/Users/dreamlike/Library/Application Support/DevEcoMCP/acceptance/universal-domain-20260912-final/sdk-studio-final-2/evidence.json",
+      "sha256": "3ead49ae7c4d0918953b32e37db67e1611f44a0a8bc217ed3b77ca8aafb3be71",
+      "state": "passed",
+      "passed": true,
+      "completed": true,
+      "closed": true,
+      "unchanged": true,
+      "identity_match": {
+        "source_sha256": true,
+        "runtime_sha256": true,
+        "compiled_sha256": true,
+        "package_lock_sha256": true,
+        "resource_manifest_sha256": true,
+        "upstream_lock_sha256": true
+      },
+      "identity_kind": "candidate4",
+      "node": "v24.14.1",
+      "scope": null,
+      "observation_count": 26,
+      "case_count": null,
+      "counts": null,
+      "regression": {}
+    },
+    "domain": {
+      "path": "/Users/dreamlike/Library/Application Support/DevEcoMCP/acceptance/universal-domain-20260912-final/domain-sdk-final-2/evidence.json",
+      "sha256": "c62241dc219d5c1f5cdbfe2e4d10ab0b2cea9d8d23361957aaf030b5fc7b8254",
+      "state": "passed",
+      "passed": true,
+      "completed": true,
+      "closed": true,
+      "unchanged": true,
+      "identity_match": {
+        "source_sha256": true,
+        "runtime_sha256": true,
+        "compiled_sha256": true,
+        "package_lock_sha256": true,
+        "resource_manifest_sha256": true,
+        "upstream_lock_sha256": true
+      },
+      "identity_kind": "candidate4",
+      "node": "v24.14.1",
+      "scope": "Generic stdio MCP/Worker/SDK stateless domain recipes, shared Resources/Prompts, bundled knowledge and requirement-bound native build acceptance, without a client Skill directory",
+      "observation_count": 39,
+      "case_count": null,
+      "counts": null,
+      "regression": {}
+    },
+    "multimodule": {
+      "path": "/Users/dreamlike/Library/Application Support/DevEcoMCP/acceptance/universal-domain-20260912-final/multimodule-final-2/evidence.json",
+      "sha256": "98cc61fd21d261bd740ab2bfbd51ec9495071527b410718d562d2fa03d5f509d",
+      "state": "passed",
+      "passed": true,
+      "completed": true,
+      "closed": true,
+      "unchanged": true,
+      "identity_match": {
+        "source_sha256": true,
+        "runtime_sha256": true,
+        "compiled_sha256": true,
+        "package_lock_sha256": true,
+        "resource_manifest_sha256": true,
+        "upstream_lock_sha256": true
+      },
+      "identity_kind": "candidate4",
+      "node": "v24.14.1",
+      "scope": null,
+      "observation_count": 45,
+      "case_count": null,
+      "counts": null,
+      "regression": {}
+    },
+    "checker": {
+      "path": "/Users/dreamlike/Library/Application Support/DevEcoMCP/acceptance/universal-domain-20260912-final/checker-final-2/evidence.json",
+      "sha256": "fe274873d2d70b4ded683288796aeb97fac985c58f8dc555b1c2eaf997f73aa7",
+      "state": "passed",
+      "passed": true,
+      "completed": null,
+      "closed": true,
+      "unchanged": null,
+      "identity_match": {
+        "source_sha256": true,
+        "runtime_sha256": true,
+        "compiled_sha256": true,
+        "package_lock_sha256": true,
+        "resource_manifest_sha256": true,
+        "upstream_lock_sha256": true
+      },
+      "identity_kind": "candidate4",
+      "node": "v24.14.1",
+      "scope": "Native ArkTS standalone static preflight in an isolated generated project. No compilation, signing, device operation or LSP acceptance.",
+      "observation_count": 21,
+      "case_count": null,
+      "counts": null,
+      "regression": {}
+    },
+    "lint": {
+      "path": "/Users/dreamlike/Library/Application Support/DevEcoMCP/acceptance/universal-domain-20260912-final/lint-final-1/evidence.json",
+      "sha256": "f14f97ee841973ce4fb51bdbf7a199ae9d8ef3d5a0062ab6f92f77677ecc7b3c",
+      "state": "passed",
+      "passed": true,
+      "completed": true,
+      "closed": true,
+      "unchanged": true,
+      "identity_match": {
+        "source_sha256": true,
+        "runtime_sha256": true,
+        "compiled_sha256": true,
+        "package_lock_sha256": true,
+        "resource_manifest_sha256": true,
+        "upstream_lock_sha256": true
+      },
+      "identity_kind": "candidate4",
+      "node": "v24.14.1",
+      "scope": "Native Code Linter on an isolated generated project; explicit fixes modify this canary only. No build, signing or device acceptance.",
+      "observation_count": 6,
+      "case_count": null,
+      "counts": null,
+      "regression": {}
+    },
+    "hvigor": {
+      "path": "/Users/dreamlike/Library/Application Support/DevEcoMCP/acceptance/universal-domain-20260912-final/hvigor-final-2/evidence.json",
+      "sha256": "31e67167c9d5cf93d88204f73b24f3a49083f4085a7740620260be21a12379cc",
+      "state": "passed",
+      "passed": true,
+      "completed": true,
+      "closed": true,
+      "unchanged": true,
+      "identity_match": {
+        "source_sha256": true,
+        "runtime_sha256": true,
+        "compiled_sha256": true,
+        "package_lock_sha256": true,
+        "resource_manifest_sha256": true,
+        "upstream_lock_sha256": true
+      },
+      "identity_kind": "candidate4",
+      "node": "v24.14.1",
+      "scope": "Native SDK watch baseline, changed-source ABC compilation, owned process-group stop and preservation of observed shared daemons. No signing, installation or device hot-patch verification.",
+      "observation_count": 7,
+      "case_count": null,
+      "counts": null,
+      "regression": {}
+    },
+    "lsp_studio": {
+      "path": "/Users/dreamlike/Library/Application Support/DevEcoMCP/acceptance/universal-domain-20260912-final/native-lsp-studio-final-2/evidence.json",
+      "sha256": "9d6feaafdd3f1799b0a9891548c144e6026ddb9f4de4ecc719f8e993ae3283fa",
+      "state": "passed",
+      "passed": true,
+      "completed": true,
+      "closed": true,
+      "unchanged": true,
+      "identity_match": {
+        "source_sha256": true,
+        "runtime_sha256": true,
+        "compiled_sha256": true,
+        "package_lock_sha256": true,
+        "resource_manifest_sha256": true,
+        "upstream_lock_sha256": true
+      },
+      "identity_kind": "candidate4",
+      "node": "v24.14.1",
+      "scope": "Public stdio MCP -> worker -> real ArkTS SDK and clangd; LF/CRLF UTF-16 cross-file, same-file, class and nested call ranges; legacy queries, public cancellation, empty results and restart",
+      "observation_count": 8,
+      "case_count": null,
+      "counts": null,
+      "regression": {}
+    },
+    "lsp_clt": {
+      "path": "/Users/dreamlike/Library/Application Support/DevEcoMCP/acceptance/universal-domain-20260912-final/native-lsp-clt-cpp-final-2/evidence.json",
+      "sha256": "aa7e43b32a8d274dbaf10580d63fb63516caf3bcfa5dc6c5bf545f009edc3816",
+      "state": "passed",
+      "passed": true,
+      "completed": true,
+      "closed": true,
+      "unchanged": true,
+      "identity_match": {
+        "source_sha256": true,
+        "runtime_sha256": true,
+        "compiled_sha256": true,
+        "package_lock_sha256": true,
+        "resource_manifest_sha256": true,
+        "upstream_lock_sha256": true
+      },
+      "identity_kind": "candidate4",
+      "node": "v24.14.1",
+      "scope": "CLT public MCP clangd operation matrix; ArkTS server absent is an explicit unavailable boundary, not an ArkTS pass.",
+      "observation_count": 4,
+      "case_count": null,
+      "counts": null,
+      "regression": {}
+    },
+    "hot": {
+      "path": "/Users/dreamlike/Library/Application Support/DevEcoMCP/acceptance/universal-domain-20260912-final/native-hot-outcome-api26-final-2/evidence.json",
+      "sha256": "4a95383681e035112b48036c838c671f1e5b84278a4b3173d58f54048c7c0472",
+      "state": "passed",
+      "passed": true,
+      "completed": true,
+      "closed": true,
+      "unchanged": true,
+      "identity_match": {
+        "source_sha256": true,
+        "runtime_sha256": true,
+        "compiled_sha256": true,
+        "package_lock_sha256": true,
+        "resource_manifest_sha256": true,
+        "upstream_lock_sha256": true
+      },
+      "identity_kind": "candidate4",
+      "node": "v24.14.1",
+      "scope": "Owned signed application copy on an owned emulator via public MCP: consecutive HQF patches with application PID and UI assertions, failed source preflight, recovery patch, rejected hot file addition and explicit cold-deploy fallback. No user business application or physical-device claim.",
+      "observation_count": 39,
+      "case_count": null,
+      "counts": null,
+      "regression": {}
+    },
+    "startup": {
+      "path": "/Users/dreamlike/Library/Application Support/DevEcoMCP/acceptance/universal-domain-20260912-final/native-startup-fault-api26-final-1/evidence.json",
+      "sha256": "a5e29db3aa81a82848514eb3007417ee2425f249ff741bb82b7d57f7f4cac2d1",
+      "state": "passed",
+      "passed": true,
+      "completed": true,
+      "closed": true,
+      "unchanged": true,
+      "identity_match": {
+        "source_sha256": true,
+        "runtime_sha256": true,
+        "compiled_sha256": true,
+        "package_lock_sha256": true,
+        "resource_manifest_sha256": true,
+        "upstream_lock_sha256": true
+      },
+      "identity_kind": "candidate4",
+      "node": "v24.14.1",
+      "scope": "Actual public MCP workflows on a fresh owned phone emulator and a signed owned fixture copy. Startup contracts are separate from business assertions. No physical-phone or release-package claim.",
+      "observation_count": 47,
+      "case_count": null,
+      "counts": null,
+      "regression": {}
+    },
+    "privacy": {
+      "path": "/Users/dreamlike/Library/Application Support/DevEcoMCP/acceptance/universal-domain-20260912-final/native-recording-privacy-api26-final-1/evidence.json",
+      "sha256": "eea89fd9e5d8fcbff592b21229f3865a2b4666018c8fb829d05a242a9c441917",
+      "state": "passed",
+      "passed": true,
+      "completed": true,
+      "closed": true,
+      "unchanged": true,
+      "identity_match": {
+        "source_sha256": true,
+        "runtime_sha256": true,
+        "compiled_sha256": true,
+        "package_lock_sha256": true,
+        "resource_manifest_sha256": true,
+        "upstream_lock_sha256": true
+      },
+      "identity_kind": "candidate4",
+      "node": "v24.14.1",
+      "scope": "Public MCP password-field recording, masked UI, missing focus and ambiguous selectors, save/restart/replay and failed final assertion. Canary byte scans cover SQLite/WAL, artifacts, flow files and MCP stderr; screenshots require separate human/model visual review, and byte scans are not OCR. Uses an owned signed app copy and emulator; no user passwords or physical-device coverage.",
+      "observation_count": 46,
+      "case_count": null,
+      "counts": null,
+      "regression": {}
+    },
+    "logs": {
+      "path": "/Users/dreamlike/Library/Application Support/DevEcoMCP/acceptance/universal-domain-20260912-final/native-log-lifecycle-api26-final-1/evidence.json",
+      "sha256": "c0ce946211612b06f3b9506a77c2ce5b66fd0f5786ce0a34c0e40673fbd73b84",
+      "state": "passed",
+      "passed": true,
+      "completed": true,
+      "closed": true,
+      "unchanged": true,
+      "identity_match": {
+        "source_sha256": true,
+        "runtime_sha256": true,
+        "compiled_sha256": true,
+        "package_lock_sha256": true,
+        "resource_manifest_sha256": true,
+        "upstream_lock_sha256": true
+      },
+      "identity_kind": "candidate4",
+      "node": "v24.14.1",
+      "scope": "Public MCP continuous logs on an owned emulator and signed app copy. Target-bound HDC force-stop/start and reboot are explicit external fault stimuli, not product workflow capabilities. Verify PID generations, observed offline gap, recovery, step attribution, MCP restart, cancellation, hashes and cleanup. Short-lived child/PID reuse/clock/budget fault cases have separate deterministic tests; no physical-device or system-wide lossless claim.",
+      "observation_count": 56,
+      "case_count": null,
+      "counts": null,
+      "regression": {}
+    },
+    "mouse": {
+      "path": "/Users/dreamlike/Library/Application Support/DevEcoMCP/acceptance/universal-domain-20260912-final/native-recording-mouse-api26-final-1/evidence.json",
+      "sha256": "091ecc174541222707bf01c48f33a8930306689880f9e43a7d9973621e0bebaa",
+      "state": "passed",
+      "passed": true,
+      "completed": true,
+      "closed": true,
+      "unchanged": true,
+      "identity_match": {
+        "source_sha256": true,
+        "runtime_sha256": true,
+        "compiled_sha256": true,
+        "package_lock_sha256": true,
+        "resource_manifest_sha256": true,
+        "upstream_lock_sha256": true
+      },
+      "identity_kind": "candidate4",
+      "node": "v24.14.1",
+      "scope": "Actual public MCP on an owned phone emulator: seven native mouse operations and directional fling, application event/scroll assertions, save, MCP restart and replay. This is not physical mouse hardware coverage.",
+      "observation_count": 45,
+      "case_count": null,
+      "counts": null,
+      "regression": {}
+    },
+    "emulator": {
+      "path": "/Users/dreamlike/Library/Application Support/DevEcoMCP/acceptance/universal-domain-20260912-final/native-emulator-outcome-api26-final-1/evidence.json",
+      "sha256": "96f71ab7e94b0ee415840a957f83ff86ca08cc4984b52660def10535ba02298d",
+      "state": "passed",
+      "passed": true,
+      "completed": true,
+      "closed": true,
+      "unchanged": true,
+      "identity_match": {
+        "source_sha256": true,
+        "runtime_sha256": true,
+        "compiled_sha256": true,
+        "package_lock_sha256": true,
+        "resource_manifest_sha256": true,
+        "upstream_lock_sha256": true
+      },
+      "identity_kind": "candidate4",
+      "node": "v24.14.1",
+      "scope": "Candidate public MCP controls an owned fresh phone emulator and copied sensor app. SensorServiceKit light callbacks and batteryInfo values are asserted in the app; accepted scene receipts remain distinct from UI evidence. Native humidity/temperature probing is explicitly separate from MCP execution. No user devices or business apps are modified.",
+      "observation_count": 26,
+      "case_count": null,
+      "counts": null,
+      "regression": {}
+    },
+    "upgrade": {
+      "path": "/Users/dreamlike/Library/Application Support/DevEcoMCP/acceptance/universal-domain-20260912-final/upgrade-final-2/evidence.json",
+      "sha256": "74f5a3c96cc26197a467d37baa83eea0b1790835005fed806561dd1697f51d6f",
+      "state": "passed",
+      "passed": true,
+      "completed": true,
+      "closed": true,
+      "unchanged": true,
+      "identity_match": {
+        "source_sha256": true,
+        "runtime_sha256": true,
+        "compiled_sha256": true,
+        "package_lock_sha256": true,
+        "resource_manifest_sha256": true,
+        "upstream_lock_sha256": true
+      },
+      "identity_kind": "candidate4",
+      "node": "v24.14.1",
+      "scope": "Owned isolated copies of the real previous installation and compiled candidate. Public MCP creates a crash-diagnosis workflow and reads history/artifacts before upgrade, after upgrade/restart, and after rollback. Authentication uses synthetic encrypted valid/expired fixtures; no user credentials or real cloud login are asserted. Not final release-package acceptance.",
+      "observation_count": 17,
+      "case_count": null,
+      "counts": null,
+      "regression": {}
+    },
+    "install24": {
+      "path": "/Users/dreamlike/Library/Application Support/DevEcoMCP/acceptance/universal-domain-20260912-final/installation-final-1/evidence.json",
+      "sha256": "d792a096d2cb2f82173a21a11a46311735e0fe24ef8f996d2590903ee622a919",
+      "state": "passed",
+      "passed": true,
+      "completed": null,
+      "closed": true,
+      "unchanged": null,
+      "identity_match": null,
+      "identity_kind": "distribution_seal",
+      "node": "v24.14.1",
+      "scope": "Clean compiled distribution installation, MCP, local resource lookup and completed-workflow persistence; no SDK/device or release acceptance implied",
+      "observation_count": 12,
+      "case_count": null,
+      "counts": null,
+      "regression": {}
+    },
+    "install22": {
+      "path": "/Users/dreamlike/Library/Application Support/DevEcoMCP/acceptance/universal-domain-20260912-final/installation-node22-final-1/evidence.json",
+      "sha256": "fda5fd06780a13583283e9ae78d03007b06c9f0f7946fe62426f4e6b0f49a727",
+      "state": "passed",
+      "passed": true,
+      "completed": null,
+      "closed": true,
+      "unchanged": null,
+      "identity_match": null,
+      "identity_kind": "distribution_seal",
+      "node": "v22.18.0",
+      "scope": "Clean compiled distribution installation, MCP, local resource lookup and completed-workflow persistence; no SDK/device or release acceptance implied",
+      "observation_count": 12,
+      "case_count": null,
+      "counts": null,
+      "regression": {}
+    },
+    "sdk_workflows": {
+      "path": "/Users/dreamlike/Library/Application Support/DevEcoMCP/acceptance/universal-domain-20260912-final/sdk-workflow-final-1/evidence.json",
+      "sha256": "90c5bae8c27d0d98810c702562573f366d1f81d1f7961c97b8aa006dca7594ab",
+      "state": "passed",
+      "passed": true,
+      "completed": true,
+      "closed": true,
+      "unchanged": true,
+      "identity_match": {
+        "source_sha256": true,
+        "runtime_sha256": true,
+        "compiled_sha256": true,
+        "package_lock_sha256": true,
+        "resource_manifest_sha256": true,
+        "upstream_lock_sha256": true
+      },
+      "identity_kind": "candidate4",
+      "node": "v24.14.1",
+      "scope": "Public MCP isolated SDK workflows, same-request deduplication, explicit concurrent project contexts, and owned idle ArkTS server kill/recreation. No device or cloud effects; does not prove in-flight build crash recovery.",
+      "observation_count": 11,
+      "case_count": null,
+      "counts": null,
+      "regression": {}
+    },
+    "project_ui": {
+      "path": "/Users/dreamlike/Library/Application Support/DevEcoMCP/acceptance/universal-domain-20260912-final/project-ui-final-2/evidence.json",
+      "sha256": "cb92fb5efd747b21fe6b2047a14bc93705cca7775a943f40d72d6ba83aa8aa13",
+      "state": "passed",
+      "passed": true,
+      "completed": true,
+      "closed": true,
+      "unchanged": true,
+      "identity_match": {
+        "source_sha256": true,
+        "runtime_sha256": true,
+        "compiled_sha256": true,
+        "package_lock_sha256": true,
+        "resource_manifest_sha256": true,
+        "upstream_lock_sha256": true
+      },
+      "identity_kind": "candidate4",
+      "node": "v24.14.1",
+      "scope": "One owned API26 canary, bound current source and requirement revision, real native button/selector assertion plus separate actual host visual assessment, restart/dedup/cancel, retained bounded logs, stale-source/revised-requirement rejection, transitive evidence export. No arbitrary business-correctness or physical-device claim.",
+      "observation_count": 43,
+      "case_count": null,
+      "counts": null,
+      "regression": {}
+    },
+    "device_receipt": {
+      "path": "/Users/dreamlike/Library/Application Support/DevEcoMCP/acceptance/universal-domain-20260912-final/device-receipt-final-1/evidence.json",
+      "sha256": "adba1eda65e91d048b16fc8b82f800758c2791666b4807b528feeec621fd4ea6",
+      "state": "passed",
+      "passed": true,
+      "completed": null,
+      "closed": null,
+      "unchanged": null,
+      "identity_match": {
+        "source_sha256": true,
+        "runtime_sha256": true,
+        "compiled_sha256": true,
+        "package_lock_sha256": true,
+        "resource_manifest_sha256": true,
+        "upstream_lock_sha256": true
+      },
+      "identity_kind": "candidate4",
+      "node": "v24.14.1",
+      "scope": "Real HarmonyOS shell receipt protocol; success and rejection with lost HDC responses and reopened host SQLite. Fixed printf fixtures only; no application installation or launch.",
+      "observation_count": 0,
+      "case_count": 2,
+      "counts": null,
+      "regression": {}
+    },
+    "orchestration": {
+      "path": "/Users/dreamlike/Library/Application Support/DevEcoMCP/acceptance/universal-domain-20260912-final/orchestration-final-2.json",
+      "sha256": "1a842808d5e0637c849ea5b4f3f5614ce5c8f4ee10a807218e6d97572eafb41e",
+      "state": "passed",
+      "passed": true,
+      "completed": null,
+      "closed": null,
+      "unchanged": null,
+      "identity_match": {
+        "source_sha256": true,
+        "runtime_sha256": true,
+        "compiled_sha256": true,
+        "package_lock_sha256": true,
+        "resource_manifest_sha256": true,
+        "upstream_lock_sha256": true
+      },
+      "identity_kind": "candidate4",
+      "node": "v24.14.1",
+      "scope": "One-node official LangGraph without persistence, bounded SQLite checkpoint put/pending-write/read round trip, and the same graph with production checkpointer. No SDK or simulated workflow latency is included.",
+      "observation_count": 0,
+      "case_count": null,
+      "counts": null,
+      "regression": {}
+    },
+    "routing": {
+      "path": "/Users/dreamlike/Library/Application Support/DevEcoMCP/acceptance/universal-domain-20260912-final/tool-routing-pilot/evidence.json",
+      "sha256": "425112cbc25e2847169d79e60c44b91f16a4ea8d8699d64dfdcd71e978a94cd6",
+      "state": "passed",
+      "passed": true,
+      "completed": null,
+      "closed": null,
+      "unchanged": null,
+      "identity_match": {
+        "source_sha256": true,
+        "runtime_sha256": true,
+        "compiled_sha256": true,
+        "package_lock_sha256": true,
+        "resource_manifest_sha256": true,
+        "upstream_lock_sha256": true
+      },
+      "identity_kind": "candidate4",
+      "node": "v24.14.1",
+      "scope": null,
+      "observation_count": 0,
+      "case_count": null,
+      "counts": {
+        "cases": 18,
+        "selected_calls": 15,
+        "valid_current_schema": 15,
+        "appropriate_abstentions": 3,
+        "preregistered_exact_matches": 16,
+        "valid_equivalent_routes": 2,
+        "observed_semantic_misselections": 0
+      },
+      "regression": {}
+    },
+    "crash": {
+      "path": "/Users/dreamlike/Library/Application Support/DevEcoMCP/acceptance/universal-domain-20260912-final/crash-recovery-final-1/evidence.json",
+      "sha256": "315898508d3c06ec88a1cd9a5a5d2e59682795e142364fb3c9634d17aa45277d",
+      "state": "passed",
+      "passed": true,
+      "completed": true,
+      "closed": true,
+      "unchanged": true,
+      "identity_match": {
+        "source_sha256": true,
+        "runtime_sha256": true,
+        "compiled_sha256": true,
+        "package_lock_sha256": true,
+        "resource_manifest_sha256": true,
+        "upstream_lock_sha256": true
+      },
+      "identity_kind": "candidate4",
+      "node": "v24.14.1",
+      "scope": "One third owned API26 instance nested inside existing benchmark and soak instances. Real ArkTS uncaught Error, actual process exit and device faultlog, public crash_diagnose, isolated source repair and rebuild/deploy with visible UI and a bounded ten-second no-new-canary-faultlog window. No fabricated log, physical-device or general root-cause proof.",
+      "observation_count": 20,
+      "case_count": null,
+      "counts": null,
+      "regression": {}
+    },
+    "soak_attempt1": {
+      "path": "/Users/dreamlike/Library/Application Support/DevEcoMCP/acceptance/universal-domain-20260912-final/native-mixed-soak-api26-final-1/evidence.json",
+      "sha256": "7fb2f71d94e1a3b333edb6a081632d5e355203c73efe1f4079d3f4104d161984",
+      "state": "pending_or_failed",
+      "passed": false,
+      "completed": false,
+      "closed": true,
+      "unchanged": true,
+      "identity_match": {
+        "source_sha256": true,
+        "runtime_sha256": true,
+        "compiled_sha256": true,
+        "package_lock_sha256": true,
+        "resource_manifest_sha256": true,
+        "upstream_lock_sha256": true
+      },
+      "identity_kind": "candidate4",
+      "node": "v24.14.1",
+      "scope": "One-hour mixed public MCP SDK/LSP/UI/watch/recording/log/recovery workload, then six-minute idle reclamation, on a copied signed canary and independently owned emulator. Original fixture is never edited. This wrapper records ownership and cleanup; soak/evidence.json contains the measured runtime report.",
+      "observation_count": 14,
+      "case_count": null,
+      "counts": null,
+      "regression": {}
+    },
+    "soak_retry": {
+      "path": "/Users/dreamlike/Library/Application Support/DevEcoMCP/acceptance/universal-domain-20260912-final/native-mixed-soak-api26-final-2/evidence.json",
+      "sha256": "0053aeee96310fea04a30aa6284c76138d63239c658ed72b7ccdba72c4e11ad1",
+      "state": "passed",
+      "passed": true,
+      "completed": true,
+      "closed": true,
+      "unchanged": true,
+      "identity_match": {
+        "source_sha256": true,
+        "runtime_sha256": true,
+        "compiled_sha256": true,
+        "package_lock_sha256": true,
+        "resource_manifest_sha256": true,
+        "upstream_lock_sha256": true
+      },
+      "identity_kind": "candidate4",
+      "node": "v24.14.1",
+      "scope": "One-hour mixed public MCP SDK/LSP/UI/watch/recording/log/recovery workload, then six-minute idle reclamation, on a copied signed canary and independently owned emulator. Original fixture is never edited. This wrapper records ownership and cleanup; soak/evidence.json contains the measured runtime report.",
+      "observation_count": 14,
+      "case_count": null,
+      "counts": null,
+      "regression": {}
+    }
+  },
+  "supplementary": {
+    "source_review": {
+      "path": "/Users/dreamlike/Library/Application Support/DevEcoMCP/acceptance/universal-domain-20260912-final/upstream-source-review-final-1/receipt.json",
+      "sha256": "7dae1ffc3ce3e17b1fc409cf699a3e468a64b09c7f51859e70f0da5d4b4208d7",
+      "scope": "Current fixed official Code/CLI source identity, mapping declarations and target hashes; the independent 775 asset/79 knowledge/14683 document measurements and unknown-change regression evidence. Agent review is explicitly external and does not execute upstream code, mutate formal provenance or replace acceptance receipts.",
+      "claims": {
+        "candidate_bound_static_product_source_inventory_reviewed": true,
+        "mapped_target_and_check_inventory_verified": true,
+        "fixed_source_guards_have_no_actual_unmapped_files": true,
+        "external_known_path_supplements_recorded": true,
+        "formal_upstream_gate_passed": false,
+        "all_upstream_repository_paths_formally_mapped": false,
+        "all_required_mapped_checks_registered_for_current_candidate": false,
+        "complete_behavioral_parity_verified": false,
+        "human_owner_approval_claimed": false
+      },
+      "summary": null,
+      "formal_gaps": [
+        "Code formal review uses an older global mapping digest; 23 of its 43 target identities changed. Its accepted runtime, compiled code, package lock and resource manifest are historical.",
+        "CLI has 25 changed target identities among 102; the current baseline and candidate have no accepted.json.",
+        "All 173 mapping declarations have an external current review, but 33 known fixed repository paths still have no formal rule; their external supplemental classifications do not alter product registration.",
+        "Three legacy mapping reasons mention guided workflows; the external interpretation explicitly uses stateless recipes. Formal wording remains unchanged.",
+        "Formal gate also requires current required-check attestations, accepted source transition journals and identity consistency. Current external capabilities receipts and source measurements do not automatically satisfy that registration chain."
+      ]
+    },
+    "capability_coverage": {
+      "path": "/Users/dreamlike/Library/Application Support/DevEcoMCP/acceptance/universal-domain-20260912-final/upstream-capability-current-coverage.json",
+      "sha256": "29d1260da479ab71a225c26c97273ced86476d4f74f5ce15162b5c517fe22a21",
+      "scope": "Read-only candidate4 capabilities-v2 mapping with exact fact/private-observation hashes. No provenance receipt changed or registered. No current capabilities-v2 receipt does not imply no current execution in other formats; benchmark, upgrade and regressions remain separately scoped observations.",
+      "claims": null,
+      "summary": {
+        "operations": 50,
+        "current_reports": 5,
+        "current_cases": 50,
+        "scope_requirements_satisfied": 50,
+        "partial_current_observations": 0,
+        "no_current_capabilities_v2_receipt": 0,
+        "current_executed_operations": 28,
+        "current_host_boundary_operations": 20,
+        "official_registered": 0
+      },
+      "formal_gaps": null
+    },
+    "registration_dry_run": {
+      "path": "/Users/dreamlike/Library/Application Support/DevEcoMCP/acceptance/universal-domain-20260912-final/capability-registration-dry-run-1/evidence.json",
+      "sha256": "d663efe8013488e5902e6c880c3c7487ecb452916bb4e1195d070c579f8a222d",
+      "scope": "Isolated registration dry run only; real repository provenance remains unchanged and pending",
+      "claims": null,
+      "summary": null,
+      "formal_gaps": null
+    }
+  },
+  "acceptance": [
+    {
+      "id": "workflow.project_create",
+      "implementation": "implemented",
+      "evidence_status": "passed_scoped",
+      "evidence_tier": "real_sdk_or_emulator",
+      "reports": [
+        "sdk",
+        "domain",
+        "sdk_workflows"
+      ],
+      "scope": "公开 MCP 与真实 SDK 创建隔离工程；创建后的源码、模块和 SDK 元数据核对。",
+      "remaining": "",
+      "unfinished_reports": []
+    },
+    {
+      "id": "workflow.project_sync",
+      "implementation": "implemented",
+      "evidence_status": "passed_scoped",
+      "evidence_tier": "real_sdk_or_emulator",
+      "reports": [
+        "multimodule",
+        "hvigor",
+        "startup"
+      ],
+      "scope": "真实 SDK sync、四 product/target 组合及启动专用工程的公开持久化 sync。",
+      "remaining": "",
+      "unfinished_reports": []
+    },
+    {
+      "id": "workflow.project_build",
+      "implementation": "implemented",
+      "evidence_status": "passed_scoped",
+      "evidence_tier": "real_sdk_or_emulator",
+      "reports": [
+        "sdk",
+        "domain",
+        "multimodule"
+      ],
+      "scope": "真实 HAP/HSP/HAR、源码错误阻断、修复重建和制品 SHA；含多模块和 C++ ABI。",
+      "remaining": "",
+      "unfinished_reports": []
+    },
+    {
+      "id": "workflow.app_deploy",
+      "implementation": "implemented",
+      "evidence_status": "passed_scoped",
+      "evidence_tier": "real_sdk_or_emulator",
+      "reports": [
+        "startup",
+        "privacy",
+        "logs"
+      ],
+      "scope": "专用 API26 实例上安装和启动、持久化回执；不接管用户已有实例。",
+      "remaining": "尚未取得当前个人签名物理设备组合。",
+      "unfinished_reports": []
+    },
+    {
+      "id": "workflow.build_deploy_verify",
+      "implementation": "implemented",
+      "evidence_status": "passed_scoped",
+      "evidence_tier": "real_sdk_or_emulator",
+      "reports": [
+        "hot",
+        "project_ui"
+      ],
+      "scope": "真实构建部署并执行明确 UI 断言；project_ui 将部署、需求和 UI 结果串联。",
+      "remaining": "通过范围仅所列 API26 专用实例。",
+      "unfinished_reports": []
+    },
+    {
+      "id": "workflow.code_diagnose",
+      "implementation": "implemented",
+      "evidence_status": "passed_scoped",
+      "evidence_tier": "real_sdk_or_emulator",
+      "reports": [
+        "sdk_workflows"
+      ],
+      "scope": "公开工作流实际运行 ArkTS/linter/LSP，缺失成员错误、修复和历史报告保留。",
+      "remaining": "",
+      "unfinished_reports": []
+    },
+    {
+      "id": "workflow.crash_diagnose",
+      "implementation": "implemented",
+      "evidence_status": "passed_scoped",
+      "evidence_tier": "real_sdk_or_emulator",
+      "reports": [
+        "crash"
+      ],
+      "scope": "专用API26应用真实抛出唯一Error，进程退出、设备jscrash原文/PID/bundle/Index.ets帧归因、公开诊断与原文制品一致；修复后重建部署、UI恢复和导出摘要验证。",
+      "remaining": "修复后无新增同应用faultlog的观察窗口为10.286秒；不代表所有崩溃种类。",
+      "unfinished_reports": []
+    },
+    {
+      "id": "workflow.api_compatibility",
+      "implementation": "implemented",
+      "evidence_status": "passed_scoped",
+      "evidence_tier": "real_sdk_or_emulator",
+      "reports": [
+        "sdk",
+        "sdk_workflows"
+      ],
+      "scope": "SDK API24→API26 扫描数据的有问题/无问题正例，以及公开持久化工作流。",
+      "remaining": "扫描版本覆盖不证明在全部对应 SDK 上真实编译。",
+      "unfinished_reports": []
+    },
+    {
+      "id": "recovery.sdk_kill",
+      "implementation": "implemented",
+      "evidence_status": "partial",
+      "evidence_tier": "real_sdk_or_emulator",
+      "reports": [
+        "sdk_workflows",
+        "regression24"
+      ],
+      "scope": "对 doctor 报告属本实例的空闲 ArkTS 服务执行 SIGKILL，后续实际请求重建；回归覆盖中断恢复。",
+      "remaining": "未覆盖每个 SDK/构建阶段的真实在途 kill。",
+      "unfinished_reports": []
+    },
+    {
+      "id": "recovery.install_preparation",
+      "implementation": "implemented",
+      "evidence_status": "partial",
+      "evidence_tier": "real_sdk_or_emulator",
+      "reports": [
+        "device_receipt",
+        "regression24"
+      ],
+      "scope": "真实 shell 成功/拒绝回执遇 HDC 响应丢失后重开 SQLite，恢复两次仍仅派发一次；安装准备恢复有回归。",
+      "remaining": "固定 shell 回执不能代替真实安装准备每阶段失联。",
+      "unfinished_reports": []
+    },
+    {
+      "id": "recovery.signed_package_set",
+      "implementation": "implemented",
+      "evidence_status": "unavailable",
+      "evidence_tier": "regression_and_unsigned_sdk",
+      "reports": [
+        "multimodule",
+        "regression24"
+      ],
+      "scope": "当前多模块包闭包与临时包回执/释放/tamper 回归。",
+      "remaining": "完整个人签名多包安装响应丢失恢复要求原已签名物理设备、UDID 及材料；本次未具备。",
+      "unfinished_reports": []
+    },
+    {
+      "id": "recovery.ui_steps",
+      "implementation": "implemented",
+      "evidence_status": "partial",
+      "evidence_tier": "real_sdk_or_emulator",
+      "reports": [
+        "privacy",
+        "logs",
+        "project_ui"
+      ],
+      "scope": "实际 MCP 重启后读取/恢复录制、持续日志和 UI 测试；未知副作用不重放的结构回归。",
+      "remaining": "不将成功重连等同于全部动作在所有失联边界恢复。",
+      "unfinished_reports": []
+    },
+    {
+      "id": "recovery.hot_patch",
+      "implementation": "implemented",
+      "evidence_status": "passed_scoped",
+      "evidence_tier": "real_sdk_or_emulator",
+      "reports": [
+        "hot"
+      ],
+      "scope": "坏源码阻断后恢复真实 HQF；新增文件要求冷构建，拒绝后执行 cold fallback 并检查 UI。",
+      "remaining": "PID 是前后实际观察值，不是操作系统进程身份强证明。",
+      "unfinished_reports": []
+    },
+    {
+      "id": "recovery.cloud_signature",
+      "implementation": "implemented",
+      "evidence_status": "unavailable",
+      "evidence_tier": "regression",
+      "reports": [
+        "regression24"
+      ],
+      "scope": "事务和未知云副作用恢复有隔离回归。",
+      "remaining": "未提供本次可用真实云账号/团队/证书授权材料，未执行云签名恢复。",
+      "unfinished_reports": []
+    },
+    {
+      "id": "recovery.emulator",
+      "implementation": "implemented",
+      "evidence_status": "passed_scoped",
+      "evidence_tier": "real_sdk_or_emulator",
+      "reports": [
+        "logs",
+        "emulator"
+      ],
+      "scope": "专用实例 reboot 离线/重连，同实例绑定与操作结果重核，最终 stop/delete 库存恢复。",
+      "remaining": "不包括所有镜像安装中断或物理传感器。",
+      "unfinished_reports": []
+    },
+    {
+      "id": "infrastructure.deduplicate",
+      "implementation": "implemented",
+      "evidence_status": "passed_scoped",
+      "evidence_tier": "real_sdk_or_emulator",
+      "reports": [
+        "sdk_workflows",
+        "regression24"
+      ],
+      "scope": "公开真实 SDK 同请求键返回同 run，输入冲突拒绝；MCP 重启后去重保留。",
+      "remaining": "",
+      "unfinished_reports": []
+    },
+    {
+      "id": "infrastructure.cancel",
+      "implementation": "implemented",
+      "evidence_status": "passed_scoped",
+      "evidence_tier": "real_sdk_or_emulator",
+      "reports": [
+        "startup",
+        "privacy",
+        "logs",
+        "project_ui",
+        "regression24"
+      ],
+      "scope": "真实 launch 回执后的取消、录制/日志/UI 取消，等待原生工作停止并核对剩余租约/进程。",
+      "remaining": "",
+      "unfinished_reports": []
+    },
+    {
+      "id": "infrastructure.resource_contention",
+      "implementation": "implemented",
+      "evidence_status": "partial",
+      "evidence_tier": "real_sdk_or_emulator",
+      "reports": [
+        "sdk_workflows",
+        "checker",
+        "regression24"
+      ],
+      "scope": "两个显式工程并行、并发 checker scratch 隔离；真实进程与租约互斥回归。",
+      "remaining": "没有将两工程并行当作所有跨客户端争用场景均实机通过。",
+      "unfinished_reports": []
+    },
+    {
+      "id": "infrastructure.disk_full",
+      "implementation": "implemented",
+      "evidence_status": "partial",
+      "evidence_tier": "fault_injection_regression",
+      "reports": [
+        "regression24"
+      ],
+      "scope": "隔离容量/配额、预留与写失败注入回归；满额仍可取消与维护导出。",
+      "remaining": "未耗尽宿主真实磁盘；记账预算不是 OS 硬配额。",
+      "unfinished_reports": []
+    },
+    {
+      "id": "infrastructure.output_limit",
+      "implementation": "implemented",
+      "evidence_status": "passed_scoped",
+      "evidence_tier": "real_sdk_or_emulator",
+      "reports": [
+        "checker",
+        "regression24"
+      ],
+      "scope": "真实大量 ArkTS 诊断及有界结果分页/超限错误/制品摘要回归；不静默截断为完整结果。",
+      "remaining": "",
+      "unfinished_reports": []
+    },
+    {
+      "id": "infrastructure.missing_sdk",
+      "implementation": "implemented",
+      "evidence_status": "passed_scoped",
+      "evidence_tier": "real_sdk_or_emulator",
+      "reports": [
+        "lsp_clt",
+        "regression24"
+      ],
+      "scope": "真实 CLT 缺少 ArkTS 服务入口明确 CAPABILITY_UNAVAILABLE、request_dispatched=false；缺组件回归。",
+      "remaining": "这是负例通过，不是 CLT ArkTS 能力通过。",
+      "unfinished_reports": []
+    },
+    {
+      "id": "infrastructure.auth_failure",
+      "implementation": "implemented",
+      "evidence_status": "partial",
+      "evidence_tier": "fixture_and_regression",
+      "reports": [
+        "upgrade",
+        "regression24"
+      ],
+      "scope": "隔离有效/过期加密凭据保留与认证失败边界回归。",
+      "remaining": "不是实际云账号拒绝/刷新返回值验证。",
+      "unfinished_reports": []
+    },
+    {
+      "id": "project.multi_product",
+      "implementation": "implemented",
+      "evidence_status": "passed_scoped",
+      "evidence_tier": "real_sdk_or_emulator",
+      "reports": [
+        "multimodule"
+      ],
+      "scope": "default/tablet × default/preview 四组合、依赖闭包和制品目标身份。",
+      "remaining": "",
+      "unfinished_reports": []
+    },
+    {
+      "id": "project.multi_module",
+      "implementation": "implemented",
+      "evidence_status": "passed_scoped",
+      "evidence_tier": "real_sdk_or_emulator",
+      "reports": [
+        "multimodule"
+      ],
+      "scope": "entry/feature/library/shared；HAR/HSP/HAP 构建与依赖闭包、跨模块定位。",
+      "remaining": "",
+      "unfinished_reports": []
+    },
+    {
+      "id": "diagnostics.cpp_abi",
+      "implementation": "implemented",
+      "evidence_status": "passed_scoped",
+      "evidence_tier": "real_sdk_or_emulator",
+      "reports": [
+        "multimodule",
+        "sdk",
+        "lsp_clt"
+      ],
+      "scope": "arm64-v8a/x86_64 两 ABI、两个 native 模块的真实 SDK clangd 正负例。",
+      "remaining": "clangd outgoingCalls -32601 保持 unsupported。",
+      "unfinished_reports": []
+    },
+    {
+      "id": "diagnostics.lsp_modules",
+      "implementation": "implemented",
+      "evidence_status": "passed_scoped",
+      "evidence_tier": "real_sdk_or_emulator",
+      "reports": [
+        "multimodule",
+        "lsp_studio"
+      ],
+      "scope": "真实 ArkTS 跨模块定位/引用、明确目标、源码范围；全新符号和调用层级矩阵。",
+      "remaining": "",
+      "unfinished_reports": []
+    },
+    {
+      "id": "diagnostics.linter",
+      "implementation": "implemented",
+      "evidence_status": "passed_scoped",
+      "evidence_tier": "real_sdk_or_emulator",
+      "reports": [
+        "lint",
+        "sdk_workflows"
+      ],
+      "scope": "真实 linter 干净/有问题、明确 fix 后重查、坏配置、git 增量、无 git 拒绝。",
+      "remaining": "",
+      "unfinished_reports": []
+    },
+    {
+      "id": "diagnostics.api_versions",
+      "implementation": "implemented",
+      "evidence_status": "partial",
+      "evidence_tier": "real_sdk_or_emulator",
+      "reports": [
+        "sdk"
+      ],
+      "scope": "真实 SDK26 创建/构建不同 compatible/target API 配置和 API24→26 扫描数据。",
+      "remaining": "API24 本地旧镜像版本与当前 CLI manifest 不一致，不能作为当前 SDK24 编译验收。",
+      "unfinished_reports": []
+    },
+    {
+      "id": "ui.saved_flows",
+      "implementation": "implemented",
+      "evidence_status": "passed_scoped",
+      "evidence_tier": "real_sdk_or_emulator",
+      "reports": [
+        "privacy",
+        "mouse"
+      ],
+      "scope": "实际录制保存、MCP 重启、载入及回放；最终断言才可成功保存。",
+      "remaining": "",
+      "unfinished_reports": []
+    },
+    {
+      "id": "ui.unknown_goal_recording",
+      "implementation": "implemented",
+      "evidence_status": "partial",
+      "evidence_tier": "real_sdk_or_emulator",
+      "reports": [
+        "privacy",
+        "regression24"
+      ],
+      "scope": "录制设备正例；未知 goal→唯一入口、歧义拒绝和原断言保持由当前回归覆盖。",
+      "remaining": "未把每个未知自然语言目标均跑成真实设备正例。",
+      "unfinished_reports": []
+    },
+    {
+      "id": "ui.gestures_displays",
+      "implementation": "implemented",
+      "evidence_status": "partial",
+      "evidence_tier": "real_sdk_or_emulator",
+      "reports": [
+        "mouse",
+        "privacy",
+        "regression24"
+      ],
+      "scope": "真实鼠标组合/拖动/fling/触摸流程与失效 window/display 负例；统一 v2 schema。",
+      "remaining": "未具备多显示器、物理设备全部动作/录制组合。",
+      "unfinished_reports": []
+    },
+    {
+      "id": "ui.chinese_input",
+      "implementation": "implemented",
+      "evidence_status": "passed_scoped",
+      "evidence_tier": "real_sdk_or_emulator",
+      "reports": [
+        "soak_retry"
+      ],
+      "scope": "混合长稳在专用API26应用中反复输入中文和emoji，录制保存为secret变量、清除后回放并核对最终文本。",
+      "remaining": "仅该应用和专用输入夹具；不代表所有系统输入法或设备。",
+      "unfinished_reports": []
+    },
+    {
+      "id": "ui.final_assertions",
+      "implementation": "implemented",
+      "evidence_status": "passed_scoped",
+      "evidence_tier": "real_sdk_or_emulator",
+      "reports": [
+        "hot",
+        "startup",
+        "privacy",
+        "project_ui"
+      ],
+      "scope": "真实控件断言/失败断言；项目 UI→host 图像审阅→domain_acceptance 已实际查看准确 SHA 对应图像。",
+      "remaining": "图像读取回执不证明宿主视觉判断客观正确或自然语言需求无遗漏。",
+      "unfinished_reports": []
+    },
+    {
+      "id": "special.hot_patch_twice_no_restart",
+      "implementation": "implemented",
+      "evidence_status": "passed_scoped",
+      "evidence_tier": "real_sdk_or_emulator",
+      "reports": [
+        "hot"
+      ],
+      "scope": "连续两个真实 HQF，补丁 SHA/size、界面变化与 PID 前后观察；原 PID 保持。",
+      "remaining": "",
+      "unfinished_reports": []
+    },
+    {
+      "id": "special.personal_cloud_signing",
+      "implementation": "implemented",
+      "evidence_status": "unavailable",
+      "evidence_tier": "no_live_cloud",
+      "reports": [],
+      "scope": "没有当前真实个人云签名成功证据。",
+      "remaining": "现有签名应用副本可用于隔离 SDK/模拟器验收，不等于新建/刷新云证书 profile。",
+      "unfinished_reports": []
+    },
+    {
+      "id": "special.expired_auth_refresh",
+      "implementation": "implemented",
+      "evidence_status": "unavailable",
+      "evidence_tier": "fixture_and_regression",
+      "reports": [
+        "upgrade",
+        "regression24"
+      ],
+      "scope": "加密过期凭据迁移保持原状态；刷新逻辑回归。",
+      "remaining": "缺少本次真实过期令牌与外部服务刷新正例。",
+      "unfinished_reports": []
+    },
+    {
+      "id": "special.emulator_effect",
+      "implementation": "implemented",
+      "evidence_status": "passed_scoped",
+      "evidence_tier": "real_sdk_or_emulator",
+      "reports": [
+        "emulator"
+      ],
+      "scope": "专用 API26 模拟器的场景命令及应用实际传感器/电量 UI 观察。",
+      "remaining": "仅关闭驱动所列模拟器场景，未验收所有真实物理传感器。",
+      "unfinished_reports": []
+    },
+    {
+      "id": "upgrade.configuration",
+      "implementation": "implemented",
+      "evidence_status": "passed_scoped",
+      "evidence_tier": "real_sdk_or_emulator",
+      "reports": [
+        "upgrade"
+      ],
+      "scope": "原 0.3 完整安装复制后升级宿主配置、加密状态与候选 0.4；原安装摘要不变。",
+      "remaining": "只修改隔离宿主配置。",
+      "unfinished_reports": []
+    },
+    {
+      "id": "upgrade.reauthentication",
+      "implementation": "implemented",
+      "evidence_status": "partial",
+      "evidence_tier": "fixture_and_real_installation_copy",
+      "reports": [
+        "upgrade"
+      ],
+      "scope": "隔离 synthetic valid/expired 凭据跨升级/重启/rollback 状态保持。",
+      "remaining": "未在用户真实客户端重新登录 Developer/CodeGenie。",
+      "unfinished_reports": []
+    },
+    {
+      "id": "upgrade.saved_flows",
+      "implementation": "implemented",
+      "evidence_status": "passed_scoped",
+      "evidence_tier": "real_sdk_or_emulator",
+      "reports": [
+        "upgrade",
+        "privacy",
+        "mouse"
+      ],
+      "scope": "升级隔离保存流程的原始字节/状态保留；当前 v2 流程重启回放。",
+      "remaining": "不声明遍历了用户全部生产历史流程。",
+      "unfinished_reports": []
+    },
+    {
+      "id": "upgrade.owned_skill_cleanup",
+      "implementation": "implemented",
+      "evidence_status": "partial",
+      "evidence_tier": "regression",
+      "reports": [
+        "regression24"
+      ],
+      "scope": "旧受管 Skill 清理遵循所有权/摘要保护；产品运行侧安装入口移除。",
+      "remaining": "本次不修改用户真实宿主 Skill 目录。",
+      "unfinished_reports": []
+    },
+    {
+      "id": "upgrade.full_release_rollback",
+      "implementation": "implemented",
+      "evidence_status": "passed_scoped",
+      "evidence_tier": "real_sdk_or_emulator",
+      "reports": [
+        "upgrade"
+      ],
+      "scope": "完整安装副本和宿主配置升级/回退，state schema 1→2→1，历史结果与制品摘要保留。",
+      "remaining": "为隔离完整安装副本回退，不是正式发布或生产切换。",
+      "unfinished_reports": []
+    },
+    {
+      "id": "upstream.candidate_adaptation",
+      "implementation": "implemented",
+      "evidence_status": "partial",
+      "evidence_tier": "source_and_regression",
+      "reports": [],
+      "scope": "固定提交 AST/资源/Skill/SDD/agent/CLI 独立库存、变更负例、引用图。",
+      "remaining": "UPSTREAM_BASELINE_CHANGED 和 CAPABILITY_ACCEPTANCE_PENDING 仍未正式关闭。",
+      "unfinished_reports": []
+    },
+    {
+      "id": "diagnostics.arkts_native_operations",
+      "implementation": "implemented",
+      "evidence_status": "passed_scoped",
+      "evidence_tier": "real_sdk_or_emulator",
+      "reports": [
+        "lsp_studio",
+        "lsp_clt"
+      ],
+      "scope": "Studio ArkTS 5项新操作+旧操作、精确范围/跨文件/取消/重启；CLT缺组件明确区分。",
+      "remaining": "不把 CLT clangd 正例替代 ArkTS，clangd outgoing 保留真实 -32601。",
+      "unfinished_reports": []
+    },
+    {
+      "id": "special.startup_check",
+      "implementation": "implemented",
+      "evidence_status": "passed_scoped",
+      "evidence_tier": "real_sdk_or_emulator",
+      "reports": [
+        "startup"
+      ],
+      "scope": "正常/真实慢首帧、白黑页默认 inconclusive 与显式允许、延迟退出失败、错误 display、取消与重启历史保留。",
+      "remaining": "",
+      "unfinished_reports": []
+    },
+    {
+      "id": "ui.recording_v2_privacy",
+      "implementation": "implemented",
+      "evidence_status": "passed_scoped",
+      "evidence_tier": "real_sdk_or_emulator",
+      "reports": [
+        "privacy",
+        "mouse"
+      ],
+      "scope": "真实密码焦点/变量引用/新 secret 回放、masked UI/length、失败断言和公开/持久化泄漏扫描。",
+      "remaining": "敏感原文只在隔离私密测试输入，公开报告不复制这些内容。",
+      "unfinished_reports": []
+    },
+    {
+      "id": "ui.continuous_logs",
+      "implementation": "implemented",
+      "evidence_status": "passed_scoped",
+      "evidence_tier": "real_sdk_or_emulator",
+      "reports": [
+        "logs"
+      ],
+      "scope": "真实应用 PID 变化、实例 reboot 断连 gap、MCP 重启前后历史块前缀、取消清理和导出文件哈希。",
+      "remaining": "有界采集声明 complete=false；无法恢复的窗口保持 gaps，不能说所有历史日志完整。",
+      "unfinished_reports": []
+    },
+    {
+      "id": "upgrade.compatible_state",
+      "implementation": "implemented",
+      "evidence_status": "passed_scoped",
+      "evidence_tier": "real_sdk_or_emulator",
+      "reports": [
+        "upgrade"
+      ],
+      "scope": "native-7 旧 SQLite schema1、当前schema2、保留加密数据和历史工作流、worker及MCP重启、回退schema1。",
+      "remaining": "",
+      "unfinished_reports": []
+    }
+  ],
+  "acceptance_counts": {
+    "passed_scoped": 32,
+    "partial": 12,
+    "unavailable": 4
+  },
+  "upstream_coverage": {
+    "operations": 50,
+    "current_reports": 5,
+    "current_cases": 50,
+    "scope_requirements_satisfied": 50,
+    "partial_current_observations": 0,
+    "no_current_capabilities_v2_receipt": 0,
+    "current_executed_operations": 28,
+    "current_host_boundary_operations": 20,
+    "official_registered": 0
+  },
+  "performance": {
+    "required": [
+      "deveco_doctor",
+      "lsp",
+      "arkts_check",
+      "code_lint",
+      "check_cpp_files",
+      "device_info",
+      "hdc_log",
+      "hot_reload.status",
+      "app_signature.inspect",
+      "ui_snapshot",
+      "ui_observe",
+      "ui_find",
+      "ui_tap",
+      "ui_flow.catalog",
+      "verify_ui",
+      "ui_inspect",
+      "ui_control",
+      "emulator_manage.list",
+      "emulator_scenario"
+    ],
+    "status": "cancelled_by_user",
+    "pipeline_evidence": "/Users/dreamlike/Library/Application Support/DevEcoMCP/acceptance/universal-domain-20260912-final/upstream-benchmark-4-power/execution.json",
+    "prior_run_status": "interrupted_baseline_arkts_failure",
+    "samples_required_per_capability": 1000,
+    "exception_count": 0,
+    "disposition_evidence": "/Users/dreamlike/Library/Application Support/DevEcoMCP/acceptance/universal-domain-20260912-final/benchmark-cancellation-20260914.json",
+    "replacement": "user-triggered runtime log review; no full benchmark pass or comparative performance claim"
+  },
+  "soak": {
+    "status": "passed",
+    "activity_minutes_required": 60,
+    "idle_minutes_required": 6,
+    "retry_required": false,
+    "analysis_path": "/Users/dreamlike/Library/Application Support/DevEcoMCP/acceptance/universal-domain-20260912-final/soak-failure-analysis.json"
+  },
+  "release_gate": {
+    "passed": false,
+    "full_gate_invoked_with_complete_manifest": false,
+    "reason": [
+      "current source baseline mapping not formally accepted",
+      "current 50-operation capability matrix not fully accepted",
+      "Linux/Windows x Node22/24 current regression and installation unavailable",
+      "48-case scope not fully accepted",
+      "full performance rerun cancelled by user on 2026-09-14; prior failures and partial samples retained; full soak retry passed"
+    ],
+    "exceptions_added": false
+  },
+  "updated_at": "2026-09-14"
+}

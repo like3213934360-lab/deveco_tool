@@ -56,115 +56,115 @@
     },
     {
       "file": "resources/knowledge.json",
-      "sha256": "5dce2301f93fd259978a639265d33c6b70cae4025b698c455476831d3febc62d",
+      "sha256": "43466e87005b2a6281777d493a153cfb1033ebcb1cc8263c1df9e0c9cca5cd31",
       "source": "deveco-tool",
       "source_path": "resources/knowledge.json",
-      "source_sha256": "5dce2301f93fd259978a639265d33c6b70cae4025b698c455476831d3febc62d",
-      "transformation": "repository-authored metadata, documentation or SVG resource"
+      "source_sha256": "43466e87005b2a6281777d493a153cfb1033ebcb1cc8263c1df9e0c9cca5cd31",
+      "transformation": "Native adaptation: stable MCP knowledge URIs, explicit missing-source explanation, and stateless domain recipe guidance. Original source digest is retained separately."
     },
     {
       "file": "resources/knowledge/arkts-error-fixes/any_type_errors.md",
-      "sha256": "5bfbfdc685f076c54e7f186e64cce852884f459490698c1e92beefb476395bef",
+      "sha256": "eac802d4c27c1fb4dc174491e1f97560467b0d29b631e21c68229e123c04f7d6",
       "source": "deveco-code",
       "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/any_type_errors.md",
       "source_sha256": "5bfbfdc685f076c54e7f186e64cce852884f459490698c1e92beefb476395bef",
-      "transformation": "unchanged"
+      "transformation": "Native adaptation: stable MCP knowledge URIs, explicit missing-source explanation, and stateless domain recipe guidance. Original source digest is retained separately."
     },
     {
       "file": "resources/knowledge/arkts-error-fixes/appstorage_errors.md",
-      "sha256": "40bce616251feebc3211760dc77bfdfee6349a57b10125573e43201a5d1b38fc",
+      "sha256": "4a3825b68d028d16d1bcf97a75631ab5cbe5820227ddddfa10171c58e727d131",
       "source": "deveco-code",
       "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/appstorage_errors.md",
       "source_sha256": "40bce616251feebc3211760dc77bfdfee6349a57b10125573e43201a5d1b38fc",
-      "transformation": "unchanged"
+      "transformation": "Native adaptation: stable MCP knowledge URIs, explicit missing-source explanation, and stateless domain recipe guidance. Original source digest is retained separately."
     },
     {
       "file": "resources/knowledge/arkts-error-fixes/arrow_function_conversion_errors.md",
-      "sha256": "8e80f29d564fb803e362f0ff8def5c80f9541b4590780f9667cdc17dd5ffed0e",
+      "sha256": "fc50eea3f34ae794aad4596ad20fd7d0ec97fdf607940596ea734cdadac86146",
       "source": "deveco-code",
       "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/arrow_function_conversion_errors.md",
       "source_sha256": "8e80f29d564fb803e362f0ff8def5c80f9541b4590780f9667cdc17dd5ffed0e",
-      "transformation": "unchanged"
+      "transformation": "Native adaptation: stable MCP knowledge URIs, explicit missing-source explanation, and stateless domain recipe guidance. Original source digest is retained separately."
     },
     {
       "file": "resources/knowledge/arkts-error-fixes/avoid_area_type_errors.md",
-      "sha256": "1cf8184731916fee2c98a1fbe838f116663b8687af1a7c3970393650657c3b54",
+      "sha256": "1b0c071aab7b6aba315858fe09081c301405355db5f157e747bb8850aa91a1bc",
       "source": "deveco-code",
       "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/avoid_area_type_errors.md",
       "source_sha256": "1cf8184731916fee2c98a1fbe838f116663b8687af1a7c3970393650657c3b54",
-      "transformation": "unchanged"
+      "transformation": "Native adaptation: stable MCP knowledge URIs, explicit missing-source explanation, and stateless domain recipe guidance. Original source digest is retained separately."
     },
     {
       "file": "resources/knowledge/arkts-error-fixes/breakpoint_type_errors.md",
-      "sha256": "b9bbc32dc1776ff6356671a39b0722c0058259b31238f8e15ed7961183ec952b",
+      "sha256": "27fd1358f3a320e22f1ada2731e166abb63575cbb643f9d50cb06ee13c4b5848",
       "source": "deveco-code",
       "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/breakpoint_type_errors.md",
       "source_sha256": "b9bbc32dc1776ff6356671a39b0722c0058259b31238f8e15ed7961183ec952b",
-      "transformation": "unchanged"
+      "transformation": "Native adaptation: stable MCP knowledge URIs, explicit missing-source explanation, and stateless domain recipe guidance. Original source digest is retained separately."
     },
     {
       "file": "resources/knowledge/arkts-error-fixes/catch_clause_type_errors.md",
-      "sha256": "3600c3effc4b77be8d6945cefd21eca91441245153bb97f20da53d12f273a897",
+      "sha256": "eeee747d0f9d3df1218fe032c536473b961ccee795f5c9e7d6a645bbaefcd89d",
       "source": "deveco-code",
       "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/catch_clause_type_errors.md",
       "source_sha256": "3600c3effc4b77be8d6945cefd21eca91441245153bb97f20da53d12f273a897",
-      "transformation": "unchanged"
+      "transformation": "Native adaptation: stable MCP knowledge URIs, explicit missing-source explanation, and stateless domain recipe guidance. Original source digest is retained separately."
     },
     {
       "file": "resources/knowledge/arkts-error-fixes/color_consistency_errors.md",
-      "sha256": "4a31348e7215271e58d78e4d7f1fb4a9f83555e49525843177dbbfdb4800afe9",
+      "sha256": "2e2bc622e0bb30d45b695cbc1d8f6d75af8e58d722338fa353a6c372c44168aa",
       "source": "deveco-code",
       "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/color_consistency_errors.md",
       "source_sha256": "4a31348e7215271e58d78e4d7f1fb4a9f83555e49525843177dbbfdb4800afe9",
-      "transformation": "unchanged"
+      "transformation": "Native adaptation: stable MCP knowledge URIs, explicit missing-source explanation, and stateless domain recipe guidance. Original source digest is retained separately."
     },
     {
       "file": "resources/knowledge/arkts-error-fixes/color_property_errors.md",
-      "sha256": "4fd9962d5a9aa0ddcf15df0cbdb1cb24794233039091a8d94d2e571f1d606085",
+      "sha256": "6849d0acd3860bfdde578dbc0aa7b38d5df10ad76cf0e56c6eef5da287fb25fd",
       "source": "deveco-code",
       "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/color_property_errors.md",
       "source_sha256": "4fd9962d5a9aa0ddcf15df0cbdb1cb24794233039091a8d94d2e571f1d606085",
-      "transformation": "unchanged"
+      "transformation": "Native adaptation: stable MCP knowledge URIs, explicit missing-source explanation, and stateless domain recipe guidance. Original source digest is retained separately."
     },
     {
       "file": "resources/knowledge/arkts-error-fixes/context_type_errors.md",
-      "sha256": "77b965502ebc2647eb887b91683accfc5d3796100d1cd9fcb33165b780e00181",
+      "sha256": "90be878fd6115a5c535b02a0a4429305648d4a97e714db3f45fcfe39a5c43584",
       "source": "deveco-code",
       "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/context_type_errors.md",
       "source_sha256": "77b965502ebc2647eb887b91683accfc5d3796100d1cd9fcb33165b780e00181",
-      "transformation": "unchanged"
+      "transformation": "Native adaptation: stable MCP knowledge URIs, explicit missing-source explanation, and stateless domain recipe guidance. Original source digest is retained separately."
     },
     {
       "file": "resources/knowledge/arkts-error-fixes/decorator_state_errors.md",
-      "sha256": "09748e8a82b35f4e9a942f6244b8bbdd63b2c3f09b266f40a635100193ffba58",
+      "sha256": "de7c2983c6e9a0b6a2bc02c5e757cb30c6cb84f647a268f2315001866f08b3d2",
       "source": "deveco-code",
       "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/decorator_state_errors.md",
       "source_sha256": "09748e8a82b35f4e9a942f6244b8bbdd63b2c3f09b266f40a635100193ffba58",
-      "transformation": "unchanged"
+      "transformation": "Native adaptation: stable MCP knowledge URIs, explicit missing-source explanation, and stateless domain recipe guidance. Original source digest is retained separately."
     },
     {
       "file": "resources/knowledge/arkts-error-fixes/display_listener_type_errors.md",
-      "sha256": "142579cbc2183e05295c3d3c32bdd7b55eba9788513da1da5c20a76061d5c945",
+      "sha256": "08ac74575f037ef58f9e695d3f80573e6c394d7e2a206cc3508cfbb751f567d4",
       "source": "deveco-code",
       "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/display_listener_type_errors.md",
       "source_sha256": "142579cbc2183e05295c3d3c32bdd7b55eba9788513da1da5c20a76061d5c945",
-      "transformation": "unchanged"
+      "transformation": "Native adaptation: stable MCP knowledge URIs, explicit missing-source explanation, and stateless domain recipe guidance. Original source digest is retained separately."
     },
     {
       "file": "resources/knowledge/arkts-error-fixes/duplicate_entry_errors.md",
-      "sha256": "e7c2a1df9baf8230e6a753c360921fce88ce44b9258acee72ab2991c79095f49",
+      "sha256": "7146f4ed0f88706dbd2671f3f44a8b8de4e5ab82782b9a31c887bcadc797bfc5",
       "source": "deveco-code",
       "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/duplicate_entry_errors.md",
       "source_sha256": "e7c2a1df9baf8230e6a753c360921fce88ce44b9258acee72ab2991c79095f49",
-      "transformation": "unchanged"
+      "transformation": "Native adaptation: stable MCP knowledge URIs, explicit missing-source explanation, and stateless domain recipe guidance. Original source digest is retained separately."
     },
     {
       "file": "resources/knowledge/arkts-error-fixes/esobject_type_errors.md",
-      "sha256": "1cfb1e5b2198df38e4ab9c1037449a8d111c8efed91a4763b2f9067f410af63a",
+      "sha256": "56cb5237e400bac5117af76613498c07798d18cd98a417f24f5de9762fd0f482",
       "source": "deveco-code",
       "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/esobject_type_errors.md",
       "source_sha256": "1cfb1e5b2198df38e4ab9c1037449a8d111c8efed91a4763b2f9067f410af63a",
-      "transformation": "unchanged"
+      "transformation": "Native adaptation: stable MCP knowledge URIs, explicit missing-source explanation, and stateless domain recipe guidance. Original source digest is retained separately."
     },
     {
       "file": "resources/knowledge/arkts-error-fixes/examples/AnyTypeError.ets",
@@ -424,155 +424,155 @@
     },
     {
       "file": "resources/knowledge/arkts-error-fixes/fontcolor_property_errors.md",
-      "sha256": "dd5b75e30a2a9ed4a4a3eab0a3f2b94b3f411a2d7f100fc70126ced49a8095a9",
+      "sha256": "1449d1c79e2587d1a5a23a140c8cddfa396b9ec989b57af14cf7a1ad4628221c",
       "source": "deveco-code",
       "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/fontcolor_property_errors.md",
       "source_sha256": "dd5b75e30a2a9ed4a4a3eab0a3f2b94b3f411a2d7f100fc70126ced49a8095a9",
-      "transformation": "unchanged"
+      "transformation": "Native adaptation: stable MCP knowledge URIs, explicit missing-source explanation, and stateless domain recipe guidance. Original source digest is retained separately."
     },
     {
       "file": "resources/knowledge/arkts-error-fixes/function_return_type_errors.md",
-      "sha256": "bbf46d738bd81ba20617d1b3d25c1cbc259f90e74c5f0813a1b047784f767fe1",
+      "sha256": "6110c0fe5e9fd126310998178d6932ee0f0172534a6932cbfa63cdf585eb8418",
       "source": "deveco-code",
       "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/function_return_type_errors.md",
       "source_sha256": "bbf46d738bd81ba20617d1b3d25c1cbc259f90e74c5f0813a1b047784f767fe1",
-      "transformation": "unchanged"
+      "transformation": "Native adaptation: stable MCP knowledge URIs, explicit missing-source explanation, and stateless domain recipe guidance. Original source digest is retained separately."
     },
     {
       "file": "resources/knowledge/arkts-error-fixes/idata_source_errors.md",
-      "sha256": "7ed0bdf53255ffe39c4fcd7704da7b182821c21331cff09776adf472498ea575",
+      "sha256": "481d8e2cf9e9b4c4ff090bb5f95e41240e9cc763c46d9d143ad0159a33af83dd",
       "source": "deveco-code",
       "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/idata_source_errors.md",
       "source_sha256": "7ed0bdf53255ffe39c4fcd7704da7b182821c21331cff09776adf472498ea575",
-      "transformation": "unchanged"
+      "transformation": "Native adaptation: stable MCP knowledge URIs, explicit missing-source explanation, and stateless domain recipe guidance. Original source digest is retained separately."
     },
     {
       "file": "resources/knowledge/arkts-error-fixes/implementation_not_allowed_errors.md",
-      "sha256": "432ad45eb8f6a1aeebbc604cdaed951a3326e22468e333c4ac6e0ded6e017fd4",
+      "sha256": "ecd3c195b1cc76c1afaeaed8db59b77f13be56ddf33997579027e14d2db77739",
       "source": "deveco-code",
       "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/implementation_not_allowed_errors.md",
       "source_sha256": "432ad45eb8f6a1aeebbc604cdaed951a3326e22468e333c4ac6e0ded6e017fd4",
-      "transformation": "unchanged"
+      "transformation": "Native adaptation: stable MCP knowledge URIs, explicit missing-source explanation, and stateless domain recipe guidance. Original source digest is retained separately."
     },
     {
       "file": "resources/knowledge/arkts-error-fixes/interface_method_signature_errors.md",
-      "sha256": "a52e80a42889e7dbaef5721ecb2ed48136eb828cda56485e25b24985c0ca8627",
+      "sha256": "4f0090d49e71957e8d0b414a7719b4517cc11afa3d4323517bbdfd0f8ff5e1db",
       "source": "deveco-code",
       "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/interface_method_signature_errors.md",
       "source_sha256": "a52e80a42889e7dbaef5721ecb2ed48136eb828cda56485e25b24985c0ca8627",
-      "transformation": "unchanged"
+      "transformation": "Native adaptation: stable MCP knowledge URIs, explicit missing-source explanation, and stateless domain recipe guidance. Original source digest is retained separately."
     },
     {
       "file": "resources/knowledge/arkts-error-fixes/notification_errors.md",
-      "sha256": "b2c4e031241386e5916a7ea154f435c24cf072f15d67efb644dbdb6cf8e688ba",
+      "sha256": "de2685398f8c827ef89b75ccf20065092a161571bf8170614e9fa32899fb51c5",
       "source": "deveco-code",
       "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/notification_errors.md",
       "source_sha256": "b2c4e031241386e5916a7ea154f435c24cf072f15d67efb644dbdb6cf8e688ba",
-      "transformation": "unchanged"
+      "transformation": "Native adaptation: stable MCP knowledge URIs, explicit missing-source explanation, and stateless domain recipe guidance. Original source digest is retained separately."
     },
     {
       "file": "resources/knowledge/arkts-error-fixes/object_literal_interface_errors.md",
-      "sha256": "c7026886d07af6081a59700dd61c3872e9c7fc60e50593329e5b868c4f17ec7f",
+      "sha256": "2924802a620d102af5eec281d05428c26dd08b7d9f6c29f3a623c2993fc244f1",
       "source": "deveco-code",
       "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/object_literal_interface_errors.md",
       "source_sha256": "c7026886d07af6081a59700dd61c3872e9c7fc60e50593329e5b868c4f17ec7f",
-      "transformation": "unchanged"
+      "transformation": "Native adaptation: stable MCP knowledge URIs, explicit missing-source explanation, and stateless domain recipe guidance. Original source digest is retained separately."
     },
     {
       "file": "resources/knowledge/arkts-error-fixes/object_literal_type_errors.md",
-      "sha256": "828ff2011d7752e580d8d48c15667173a189e31b1e5b7c4e929ebe3f1685b6dc",
+      "sha256": "107e1d22a9addf821f7a27d2dcd735bdf519b07c7d568703c5130d10001f401a",
       "source": "deveco-code",
       "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/object_literal_type_errors.md",
       "source_sha256": "828ff2011d7752e580d8d48c15667173a189e31b1e5b7c4e929ebe3f1685b6dc",
-      "transformation": "unchanged"
+      "transformation": "Native adaptation: stable MCP knowledge URIs, explicit missing-source explanation, and stateless domain recipe guidance. Original source digest is retained separately."
     },
     {
       "file": "resources/knowledge/arkts-error-fixes/object_spread_errors.md",
-      "sha256": "4ef8dd75018b00f2832b97a14845ffec5e19f595e2f02ca7d2b4cbbcc2b48933",
+      "sha256": "850a9c5fd98ef2709bbc1b26d38037e5b43fa0f4fde3ffb4a5e42f7662c1c075",
       "source": "deveco-code",
       "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/object_spread_errors.md",
       "source_sha256": "4ef8dd75018b00f2832b97a14845ffec5e19f595e2f02ca7d2b4cbbcc2b48933",
-      "transformation": "unchanged"
+      "transformation": "Native adaptation: stable MCP knowledge URIs, explicit missing-source explanation, and stateless domain recipe guidance. Original source digest is retained separately."
     },
     {
       "file": "resources/knowledge/arkts-error-fixes/possibly_null_errors.md",
-      "sha256": "1835a7a3a33f18a4e0ba331ac9f0ddce020cbe170ccf9a1f80c8ddea1940424b",
+      "sha256": "b4e0b59e54e5ceea7ccaa4ac9c16055778a21825718b687dd8468090d03e6325",
       "source": "deveco-code",
       "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/possibly_null_errors.md",
       "source_sha256": "1835a7a3a33f18a4e0ba331ac9f0ddce020cbe170ccf9a1f80c8ddea1940424b",
-      "transformation": "unchanged"
+      "transformation": "Native adaptation: stable MCP knowledge URIs, explicit missing-source explanation, and stateless domain recipe guidance. Original source digest is retained separately."
     },
     {
       "file": "resources/knowledge/arkts-error-fixes/resource_conversion_errors.md",
-      "sha256": "3f6a2b66443dbd512c1ff5328d5b0560afe699f37dc6a1e7108b2b36a210e145",
+      "sha256": "a48071dd5020ac60dfec1bf085a207f11661650702c7c430915b634135ddabfb",
       "source": "deveco-code",
       "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/resource_conversion_errors.md",
       "source_sha256": "3f6a2b66443dbd512c1ff5328d5b0560afe699f37dc6a1e7108b2b36a210e145",
-      "transformation": "unchanged"
+      "transformation": "Native adaptation: stable MCP knowledge URIs, explicit missing-source explanation, and stateless domain recipe guidance. Original source digest is retained separately."
     },
     {
       "file": "resources/knowledge/arkts-error-fixes/standalone_function_errors.md",
-      "sha256": "0c36db72f8b94154e7d101db45e8187752743b23cfb83f7221da782542764550",
+      "sha256": "1e710dfe9db4b434fa1d070881627596be4cb9ebd8ef2d71447e100de46a53ce",
       "source": "deveco-code",
       "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/standalone_function_errors.md",
       "source_sha256": "0c36db72f8b94154e7d101db45e8187752743b23cfb83f7221da782542764550",
-      "transformation": "unchanged"
+      "transformation": "Native adaptation: stable MCP knowledge URIs, explicit missing-source explanation, and stateless domain recipe guidance. Original source digest is retained separately."
     },
     {
       "file": "resources/knowledge/arkts-error-fixes/storage_link_default_errors.md",
-      "sha256": "04240664bb5d2050f5db295a2e6c539b826f204163836a992297e18a451be9c4",
+      "sha256": "b8ba755d8e06c7af5e2c0fbdd2a36b6a41a511e6a12cec69672be653acce293a",
       "source": "deveco-code",
       "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/storage_link_default_errors.md",
       "source_sha256": "04240664bb5d2050f5db295a2e6c539b826f204163836a992297e18a451be9c4",
-      "transformation": "unchanged"
+      "transformation": "Native adaptation: stable MCP knowledge URIs, explicit missing-source explanation, and stateless domain recipe guidance. Original source digest is retained separately."
     },
     {
       "file": "resources/knowledge/arkts-error-fixes/title_button_rect_type_errors.md",
-      "sha256": "8eab82e1eb6f5c4aec8f18dee7e594bc6fd012154ba5c5f0bc45ea7e7ed0ed1c",
+      "sha256": "c6780cd2ab33b1d0a477f751a571b84fccf70a135ff7256fce18330c79c5825d",
       "source": "deveco-code",
       "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/title_button_rect_type_errors.md",
       "source_sha256": "8eab82e1eb6f5c4aec8f18dee7e594bc6fd012154ba5c5f0bc45ea7e7ed0ed1c",
-      "transformation": "unchanged"
+      "transformation": "Native adaptation: stable MCP knowledge URIs, explicit missing-source explanation, and stateless domain recipe guidance. Original source digest is retained separately."
     },
     {
       "file": "resources/knowledge/arkts-error-fixes/unused_variable_warnings.md",
-      "sha256": "2fda8af360153d9ac1a28820e79440094d96dd721d69d277fbf9faa18205af49",
+      "sha256": "33c60f27331fdfb259be681b9cb8e15254a4b5860daf724ce150324edd9f9118",
       "source": "deveco-code",
       "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/unused_variable_warnings.md",
       "source_sha256": "2fda8af360153d9ac1a28820e79440094d96dd721d69d277fbf9faa18205af49",
-      "transformation": "unchanged"
+      "transformation": "Native adaptation: stable MCP knowledge URIs, explicit missing-source explanation, and stateless domain recipe guidance. Original source digest is retained separately."
     },
     {
       "file": "resources/knowledge/arkts-error-fixes/utility_type_errors.md",
-      "sha256": "6ec3d8dc6d91a164af2042be0dedb614c0da44751a9b58b442d854c19650495b",
+      "sha256": "75c4d2572825d2e59659c012ca2e8eeb0c8633d67d44aead1241bb17b4a042c4",
       "source": "deveco-code",
       "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/utility_type_errors.md",
       "source_sha256": "6ec3d8dc6d91a164af2042be0dedb614c0da44751a9b58b442d854c19650495b",
-      "transformation": "unchanged"
+      "transformation": "Native adaptation: stable MCP knowledge URIs, explicit missing-source explanation, and stateless domain recipe guidance. Original source digest is retained separately."
     },
     {
       "file": "resources/knowledge/arkts-error-fixes/window_rect_size_errors.md",
-      "sha256": "90354682b15dcade293c942d6f65f4b44de08e4210b22eef35175e9ba45d9303",
+      "sha256": "5656f8d6e509fbee49902b7e76f6ee0f445dfbc471127db1bbc19ea2962f49cb",
       "source": "deveco-code",
       "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/window_rect_size_errors.md",
       "source_sha256": "90354682b15dcade293c942d6f65f4b44de08e4210b22eef35175e9ba45d9303",
-      "transformation": "unchanged"
+      "transformation": "Native adaptation: stable MCP knowledge URIs, explicit missing-source explanation, and stateless domain recipe guidance. Original source digest is retained separately."
     },
     {
       "file": "resources/knowledge/arkts-error-fixes/window_type_errors.md",
-      "sha256": "33e7068e89a062a10c428626094a80e5cea04d8816a6edd11afee0fcf853aaca",
+      "sha256": "cf030096abf40905a7fc77d7c0622efd86601bd1b0cdd9862eb5208d09bf5ce1",
       "source": "deveco-code",
       "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/window_type_errors.md",
       "source_sha256": "33e7068e89a062a10c428626094a80e5cea04d8816a6edd11afee0fcf853aaca",
-      "transformation": "unchanged"
+      "transformation": "Native adaptation: stable MCP knowledge URIs, explicit missing-source explanation, and stateless domain recipe guidance. Original source digest is retained separately."
     },
     {
       "file": "resources/knowledge/arkts-grammar-standards/arkts-rules.md",
-      "sha256": "2efb5959d8c9f4f739143125e45c63779b4994d5794390f9f1b18be59d79bad4",
+      "sha256": "fe263976048fed571e1328a549491ae509407632919cdc7d293261d3bad585b1",
       "source": "deveco-code",
       "source_path": "packages/opencode/resources/skills/arkts-grammar-standards/references/arkts-rules.md",
       "source_sha256": "fa9cc79aa8691696398292dc9b8c4a43b0208085f32b9c21720b0ccaa493b7b3",
-      "transformation": "Replaced two unreachable SKILL.md cross-references with the packaged recipes-core.md section; prose and examples otherwise unchanged."
+      "transformation": "Native adaptation: stable MCP knowledge URIs, explicit missing-source explanation, and stateless domain recipe guidance. Original source digest is retained separately."
     },
     {
       "file": "resources/knowledge/arkts-grammar-standards/arkui-structure-rules.md",
@@ -608,11 +608,11 @@
     },
     {
       "file": "resources/knowledge/arkts-grammar-standards/ts-to-arkts-rewrites.md",
-      "sha256": "dbc381287fb63cfde8f6f167e8f5d53b3787f0ddff454c09a36743bd3513f694",
+      "sha256": "c2409f8723955050dbfd912f9f1f4e5953bea3753ca5776387c36b353b080cd3",
       "source": "deveco-code",
       "source_path": "packages/opencode/resources/skills/arkts-grammar-standards/references/ts-to-arkts-rewrites.md",
       "source_sha256": "dbc381287fb63cfde8f6f167e8f5d53b3787f0ddff454c09a36743bd3513f694",
-      "transformation": "unchanged"
+      "transformation": "Native adaptation: stable MCP knowledge URIs, explicit missing-source explanation, and stateless domain recipe guidance. Original source digest is retained separately."
     },
     {
       "file": "resources/knowledge/arkts-grammar-standards/ui-quality-checklist.md",
@@ -632,11 +632,11 @@
     },
     {
       "file": "resources/knowledge/arkts-runtime-fix/error_patterns.md",
-      "sha256": "8a6ff8e995d5ad53a21b138ea60431cb7e21575e8d9f3e9e04261e4a8ff55027",
+      "sha256": "da1e0d34729ef727fe4723f3154c61aeb00a91d02134162bdd721802790a8a2f",
       "source": "deveco-code",
       "source_path": "packages/opencode/resources/skills/arkts-runtime-fix/reference/error_patterns.md",
       "source_sha256": "8a6ff8e995d5ad53a21b138ea60431cb7e21575e8d9f3e9e04261e4a8ff55027",
-      "transformation": "unchanged"
+      "transformation": "Native adaptation: stable MCP knowledge URIs, explicit missing-source explanation, and stateless domain recipe guidance. Original source digest is retained separately."
     },
     {
       "file": "resources/knowledge/arkts-runtime-fix/fault-mode-library.md",
@@ -648,11 +648,11 @@
     },
     {
       "file": "resources/knowledge/arkts-runtime-fix/outofmemoryerror_patterns.md",
-      "sha256": "8c2ab8a318e33f8c202bd6f91e342b08f4d2dcf4b51ca542923b797fa71caa65",
+      "sha256": "d41613894e9d8119af98c9f773a449ef971f9d1d73862dd2071a5c4d837963b7",
       "source": "deveco-code",
       "source_path": "packages/opencode/resources/skills/arkts-runtime-fix/reference/outofmemoryerror_patterns.md",
       "source_sha256": "8c2ab8a318e33f8c202bd6f91e342b08f4d2dcf4b51ca542923b797fa71caa65",
-      "transformation": "unchanged"
+      "transformation": "Native adaptation: stable MCP knowledge URIs, explicit missing-source explanation, and stateless domain recipe guidance. Original source digest is retained separately."
     },
     {
       "file": "resources/knowledge/arkts-runtime-fix/rangeerror_patterns.md",
@@ -664,11 +664,11 @@
     },
     {
       "file": "resources/knowledge/arkts-runtime-fix/referenceerror_patterns.md",
-      "sha256": "44af4b86889d359968ee66a8b81b35aa9ea3bfbcaefe40cb99b4811866ad7600",
+      "sha256": "068a786abfd38eb8446018c916064377945a3a03e957cdc828f2aae78e3a0700",
       "source": "deveco-code",
       "source_path": "packages/opencode/resources/skills/arkts-runtime-fix/reference/referenceerror_patterns.md",
       "source_sha256": "44af4b86889d359968ee66a8b81b35aa9ea3bfbcaefe40cb99b4811866ad7600",
-      "transformation": "unchanged"
+      "transformation": "Native adaptation: stable MCP knowledge URIs, explicit missing-source explanation, and stateless domain recipe guidance. Original source digest is retained separately."
     },
     {
       "file": "resources/knowledge/arkts-runtime-fix/syntaxerror_patterns.md",
@@ -688,11 +688,11 @@
     },
     {
       "file": "resources/knowledge/arkts-runtime-fix/urierror_patterns.md",
-      "sha256": "a16cbe0684043919d8480f55327ce3a2f5105df02050793bc1d564d266394d8f",
+      "sha256": "9a7c1df2d006ab67b7c0717b987ebbc5c087f5fd0fb65cff4aaf920a1f3ba298",
       "source": "deveco-code",
       "source_path": "packages/opencode/resources/skills/arkts-runtime-fix/reference/urierror_patterns.md",
       "source_sha256": "a16cbe0684043919d8480f55327ce3a2f5105df02050793bc1d564d266394d8f",
-      "transformation": "unchanged"
+      "transformation": "Native adaptation: stable MCP knowledge URIs, explicit missing-source explanation, and stateless domain recipe guidance. Original source digest is retained separately."
     },
     {
       "file": "resources/licenses/deveco-cli-MIT.txt",
@@ -992,7 +992,7 @@
     },
     {
       "file": "resources/skills/deveco-arkts-standards/SKILL.md",
-      "sha256": "f06d8e7ec5a44b7cb1ba7f316fe82ed20080c95ffa04b489542954a2c0f3c133",
+      "sha256": "ff966c0f786912f6779696fa26755a759d85968cfe3df1ec9af7132edcce46d0",
       "source": "deveco-code-skills",
       "source_path": "packages/opencode/resources/skills/arkts-grammar-standards/SKILL.md",
       "source_sha256": "c02bc036141b7ae1bcb235ec69c40d5ad5ab73f24a88da39d83d1ba18ea2372d",
@@ -1000,7 +1000,7 @@
     },
     {
       "file": "resources/skills/deveco-arkts-errors/SKILL.md",
-      "sha256": "b704e5482ac16c921e8819dfbc13697fbe0643b4fae553f1789816aa358567b6",
+      "sha256": "dd347eb4a6db9200044f9c0391c26b5bb8adbcee568d9ad3112fe985504f4f4b",
       "source": "deveco-code-skills",
       "source_path": "packages/opencode/resources/skills/arkts-error-fixes/SKILL.md",
       "source_sha256": "580a0cb8c5d1ef5c53d998569adb9a72277b3e8db761534d1b7c3666d3220718",
@@ -1008,7 +1008,7 @@
     },
     {
       "file": "resources/skills/deveco-runtime-debug/SKILL.md",
-      "sha256": "81a6692f793c47a232f4d3899f888350fa87e80c0b33c28ef3003201a5b29c59",
+      "sha256": "0920460c1060bfa56bd142ffded64baf60554162a623a0f0025eab98a9a14f2a",
       "source": "deveco-code-skills",
       "source_path": "packages/opencode/resources/skills/arkts-runtime-fix/SKILL.md",
       "source_sha256": "7c8d90017bf6f700a560725f962ebdc52cf329f576ab1d082c13283604905e6d",
@@ -1024,7 +1024,7 @@
     },
     {
       "file": "resources/skills/deveco-project-create/SKILL.md",
-      "sha256": "2a4acd0b18b2c3cd931ea864b6d682d14f2b5a6e9710426704343ff5f576eeec",
+      "sha256": "b2d7d46f7add330ef3ff629fb46d5162187dfc2316171af0677e8ba70758ca49",
       "source": "deveco-code-skills",
       "source_path": "packages/opencode/resources/skills/deveco-create-project/SKILL.md",
       "source_sha256": "01846dd766bee4b69dfbca280e71a113bb799a47e2ecbee2f95512ebd0cbcf26",
@@ -1032,7 +1032,7 @@
     },
     {
       "file": "resources/skills/deveco-native-tools/SKILL.md",
-      "sha256": "3085e67515c532bb592cfbb5dda44f0e316eee8056027618a32b7823c5f231d9",
+      "sha256": "9944cb0450a6397d365c9f467c920e026f19e1fdf7f9cd85d66c96f783f0e33f",
       "source": "deveco-code-skills",
       "source_path": "packages/opencode/resources/skills/deveco-cli/SKILL.md",
       "source_sha256": "5402476093c5238ef466619f3971d21d54edba494ebc424e2e6581cb2b427ac7",
@@ -1040,15 +1040,15 @@
     },
     {
       "file": "resources/skills/deveco-native-tools/references/ui-testing.md",
-      "sha256": "4b8126d21ea194aab0a4fa25b49adb77f4308396965862400fae7e04e1ed9a77",
+      "sha256": "27a41c8d0f5b510f32710f4b83666e75c3dc12e780a3cdfc23adc883302eb272",
       "source": "deveco-tool",
       "source_path": "resources/skills/deveco-native-tools/references/ui-testing.md",
-      "source_sha256": "4b8126d21ea194aab0a4fa25b49adb77f4308396965862400fae7e04e1ed9a77",
+      "source_sha256": "27a41c8d0f5b510f32710f4b83666e75c3dc12e780a3cdfc23adc883302eb272",
       "transformation": "authored native host reference"
     },
     {
       "file": "resources/skills/deveco-customize-host/SKILL.md",
-      "sha256": "590c583da635850efd83165433ed2215738fd75264aaff1592f27ff0bc6cb6ad",
+      "sha256": "16466dbcac8a64b90f58be1cb76034a66086ff1a13274fa889dba9ec84fc0c8f",
       "source": "deveco-code-skills",
       "source_path": "packages/opencode/resources/skills/customize-deveco/SKILL.md",
       "source_sha256": "a0cafa6989e3d4ba9b11d177bab576c67e0eefa364266ad328c58d4267fdb25c",
@@ -1056,19 +1056,699 @@
     },
     {
       "file": "resources/skills/deveco-customize-host/references/customization.md",
-      "sha256": "366666d3e61d4b2b06bca320bd36128ca0d9f7170b2583d2905b08d805906cce",
+      "sha256": "29c9c87f4a567e4ad8c06dc26c74854e2ebd2070b5b907cf4e77feb250481d54",
       "source": "deveco-tool",
       "source_path": "resources/skills/deveco-customize-codex/references/customization.md",
-      "source_sha256": "366666d3e61d4b2b06bca320bd36128ca0d9f7170b2583d2905b08d805906cce",
-      "transformation": "authored native host reference"
+      "source_sha256": "29c9c87f4a567e4ad8c06dc26c74854e2ebd2070b5b907cf4e77feb250481d54",
+      "transformation": "Native adaptation: stable content URIs, source mapping and stateless domain recipes; original upstream digest retained."
     },
     {
       "file": "resources/skills.json",
-      "sha256": "359426f834e3b6ba7087f4cb572d11fe22c9a4d77798217719a0a9da8d7d3f47",
+      "sha256": "930de7b64170f2a96b410a2dcb9ba89c289c74e4c4901faae3676900ec13bc1d",
       "source": "deveco-tool",
       "source_path": "resources/skills.json",
-      "source_sha256": "359426f834e3b6ba7087f4cb572d11fe22c9a4d77798217719a0a9da8d7d3f47",
-      "transformation": "authored native skill catalog"
+      "source_sha256": "930de7b64170f2a96b410a2dcb9ba89c289c74e4c4901faae3676900ec13bc1d",
+      "transformation": "Native adaptation: stable content URIs, source mapping and stateless domain recipes; original upstream digest retained."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/.agents/skills/gitcode-pr/SKILL.md.source.txt",
+      "sha256": "e4e5a65faec418afa30e711ec133148b75ebfe853d19a892fb0e9a0e79a8307d",
+      "source": "deveco-code-skills",
+      "source_path": ".agents/skills/gitcode-pr/SKILL.md",
+      "source_sha256": "e4e5a65faec418afa30e711ec133148b75ebfe853d19a892fb0e9a0e79a8307d",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/.opencode/skills/effect/SKILL.md.source.txt",
+      "sha256": "0d27f8d40455cd4d509c0c81f3d2b6edb8319cd8ebd12a2e9f21626fc80495d5",
+      "source": "deveco-code-skills",
+      "source_path": ".opencode/skills/effect/SKILL.md",
+      "source_sha256": "0d27f8d40455cd4d509c0c81f3d2b6edb8319cd8ebd12a2e9f21626fc80495d5",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/skills/arkts-error-fixes/README.md.source.txt",
+      "sha256": "5e674d88ab143e1868b37f82dabe31a5363979cc28c4403e8921fbe0dced99d9",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/README.md",
+      "source_sha256": "5e674d88ab143e1868b37f82dabe31a5363979cc28c4403e8921fbe0dced99d9",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/skills/arkts-error-fixes/reference/any_type_errors.md.source.txt",
+      "sha256": "5bfbfdc685f076c54e7f186e64cce852884f459490698c1e92beefb476395bef",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/any_type_errors.md",
+      "source_sha256": "5bfbfdc685f076c54e7f186e64cce852884f459490698c1e92beefb476395bef",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/skills/arkts-error-fixes/reference/appstorage_errors.md.source.txt",
+      "sha256": "40bce616251feebc3211760dc77bfdfee6349a57b10125573e43201a5d1b38fc",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/appstorage_errors.md",
+      "source_sha256": "40bce616251feebc3211760dc77bfdfee6349a57b10125573e43201a5d1b38fc",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/skills/arkts-error-fixes/reference/arrow_function_conversion_errors.md.source.txt",
+      "sha256": "8e80f29d564fb803e362f0ff8def5c80f9541b4590780f9667cdc17dd5ffed0e",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/arrow_function_conversion_errors.md",
+      "source_sha256": "8e80f29d564fb803e362f0ff8def5c80f9541b4590780f9667cdc17dd5ffed0e",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/skills/arkts-error-fixes/reference/avoid_area_type_errors.md.source.txt",
+      "sha256": "1cf8184731916fee2c98a1fbe838f116663b8687af1a7c3970393650657c3b54",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/avoid_area_type_errors.md",
+      "source_sha256": "1cf8184731916fee2c98a1fbe838f116663b8687af1a7c3970393650657c3b54",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/skills/arkts-error-fixes/reference/breakpoint_type_errors.md.source.txt",
+      "sha256": "b9bbc32dc1776ff6356671a39b0722c0058259b31238f8e15ed7961183ec952b",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/breakpoint_type_errors.md",
+      "source_sha256": "b9bbc32dc1776ff6356671a39b0722c0058259b31238f8e15ed7961183ec952b",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/skills/arkts-error-fixes/reference/catch_clause_type_errors.md.source.txt",
+      "sha256": "3600c3effc4b77be8d6945cefd21eca91441245153bb97f20da53d12f273a897",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/catch_clause_type_errors.md",
+      "source_sha256": "3600c3effc4b77be8d6945cefd21eca91441245153bb97f20da53d12f273a897",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/skills/arkts-error-fixes/reference/color_consistency_errors.md.source.txt",
+      "sha256": "4a31348e7215271e58d78e4d7f1fb4a9f83555e49525843177dbbfdb4800afe9",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/color_consistency_errors.md",
+      "source_sha256": "4a31348e7215271e58d78e4d7f1fb4a9f83555e49525843177dbbfdb4800afe9",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/skills/arkts-error-fixes/reference/color_property_errors.md.source.txt",
+      "sha256": "4fd9962d5a9aa0ddcf15df0cbdb1cb24794233039091a8d94d2e571f1d606085",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/color_property_errors.md",
+      "source_sha256": "4fd9962d5a9aa0ddcf15df0cbdb1cb24794233039091a8d94d2e571f1d606085",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/skills/arkts-error-fixes/reference/context_type_errors.md.source.txt",
+      "sha256": "77b965502ebc2647eb887b91683accfc5d3796100d1cd9fcb33165b780e00181",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/context_type_errors.md",
+      "source_sha256": "77b965502ebc2647eb887b91683accfc5d3796100d1cd9fcb33165b780e00181",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/skills/arkts-error-fixes/reference/decorator_state_errors.md.source.txt",
+      "sha256": "09748e8a82b35f4e9a942f6244b8bbdd63b2c3f09b266f40a635100193ffba58",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/decorator_state_errors.md",
+      "source_sha256": "09748e8a82b35f4e9a942f6244b8bbdd63b2c3f09b266f40a635100193ffba58",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/skills/arkts-error-fixes/reference/display_listener_type_errors.md.source.txt",
+      "sha256": "142579cbc2183e05295c3d3c32bdd7b55eba9788513da1da5c20a76061d5c945",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/display_listener_type_errors.md",
+      "source_sha256": "142579cbc2183e05295c3d3c32bdd7b55eba9788513da1da5c20a76061d5c945",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/skills/arkts-error-fixes/reference/duplicate_entry_errors.md.source.txt",
+      "sha256": "e7c2a1df9baf8230e6a753c360921fce88ce44b9258acee72ab2991c79095f49",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/duplicate_entry_errors.md",
+      "source_sha256": "e7c2a1df9baf8230e6a753c360921fce88ce44b9258acee72ab2991c79095f49",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/skills/arkts-error-fixes/reference/esobject_type_errors.md.source.txt",
+      "sha256": "1cfb1e5b2198df38e4ab9c1037449a8d111c8efed91a4763b2f9067f410af63a",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/esobject_type_errors.md",
+      "source_sha256": "1cfb1e5b2198df38e4ab9c1037449a8d111c8efed91a4763b2f9067f410af63a",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/skills/arkts-error-fixes/reference/fontcolor_property_errors.md.source.txt",
+      "sha256": "dd5b75e30a2a9ed4a4a3eab0a3f2b94b3f411a2d7f100fc70126ced49a8095a9",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/fontcolor_property_errors.md",
+      "source_sha256": "dd5b75e30a2a9ed4a4a3eab0a3f2b94b3f411a2d7f100fc70126ced49a8095a9",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/skills/arkts-error-fixes/reference/function_return_type_errors.md.source.txt",
+      "sha256": "bbf46d738bd81ba20617d1b3d25c1cbc259f90e74c5f0813a1b047784f767fe1",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/function_return_type_errors.md",
+      "source_sha256": "bbf46d738bd81ba20617d1b3d25c1cbc259f90e74c5f0813a1b047784f767fe1",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/skills/arkts-error-fixes/reference/idata_source_errors.md.source.txt",
+      "sha256": "7ed0bdf53255ffe39c4fcd7704da7b182821c21331cff09776adf472498ea575",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/idata_source_errors.md",
+      "source_sha256": "7ed0bdf53255ffe39c4fcd7704da7b182821c21331cff09776adf472498ea575",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/skills/arkts-error-fixes/reference/implementation_not_allowed_errors.md.source.txt",
+      "sha256": "432ad45eb8f6a1aeebbc604cdaed951a3326e22468e333c4ac6e0ded6e017fd4",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/implementation_not_allowed_errors.md",
+      "source_sha256": "432ad45eb8f6a1aeebbc604cdaed951a3326e22468e333c4ac6e0ded6e017fd4",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/skills/arkts-error-fixes/reference/interface_method_signature_errors.md.source.txt",
+      "sha256": "a52e80a42889e7dbaef5721ecb2ed48136eb828cda56485e25b24985c0ca8627",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/interface_method_signature_errors.md",
+      "source_sha256": "a52e80a42889e7dbaef5721ecb2ed48136eb828cda56485e25b24985c0ca8627",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/skills/arkts-error-fixes/reference/notification_errors.md.source.txt",
+      "sha256": "b2c4e031241386e5916a7ea154f435c24cf072f15d67efb644dbdb6cf8e688ba",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/notification_errors.md",
+      "source_sha256": "b2c4e031241386e5916a7ea154f435c24cf072f15d67efb644dbdb6cf8e688ba",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/skills/arkts-error-fixes/reference/object_literal_interface_errors.md.source.txt",
+      "sha256": "c7026886d07af6081a59700dd61c3872e9c7fc60e50593329e5b868c4f17ec7f",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/object_literal_interface_errors.md",
+      "source_sha256": "c7026886d07af6081a59700dd61c3872e9c7fc60e50593329e5b868c4f17ec7f",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/skills/arkts-error-fixes/reference/object_literal_type_errors.md.source.txt",
+      "sha256": "828ff2011d7752e580d8d48c15667173a189e31b1e5b7c4e929ebe3f1685b6dc",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/object_literal_type_errors.md",
+      "source_sha256": "828ff2011d7752e580d8d48c15667173a189e31b1e5b7c4e929ebe3f1685b6dc",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/skills/arkts-error-fixes/reference/object_spread_errors.md.source.txt",
+      "sha256": "4ef8dd75018b00f2832b97a14845ffec5e19f595e2f02ca7d2b4cbbcc2b48933",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/object_spread_errors.md",
+      "source_sha256": "4ef8dd75018b00f2832b97a14845ffec5e19f595e2f02ca7d2b4cbbcc2b48933",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/skills/arkts-error-fixes/reference/possibly_null_errors.md.source.txt",
+      "sha256": "1835a7a3a33f18a4e0ba331ac9f0ddce020cbe170ccf9a1f80c8ddea1940424b",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/possibly_null_errors.md",
+      "source_sha256": "1835a7a3a33f18a4e0ba331ac9f0ddce020cbe170ccf9a1f80c8ddea1940424b",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/skills/arkts-error-fixes/reference/resource_conversion_errors.md.source.txt",
+      "sha256": "3f6a2b66443dbd512c1ff5328d5b0560afe699f37dc6a1e7108b2b36a210e145",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/resource_conversion_errors.md",
+      "source_sha256": "3f6a2b66443dbd512c1ff5328d5b0560afe699f37dc6a1e7108b2b36a210e145",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/skills/arkts-error-fixes/reference/standalone_function_errors.md.source.txt",
+      "sha256": "0c36db72f8b94154e7d101db45e8187752743b23cfb83f7221da782542764550",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/standalone_function_errors.md",
+      "source_sha256": "0c36db72f8b94154e7d101db45e8187752743b23cfb83f7221da782542764550",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/skills/arkts-error-fixes/reference/storage_link_default_errors.md.source.txt",
+      "sha256": "04240664bb5d2050f5db295a2e6c539b826f204163836a992297e18a451be9c4",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/storage_link_default_errors.md",
+      "source_sha256": "04240664bb5d2050f5db295a2e6c539b826f204163836a992297e18a451be9c4",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/skills/arkts-error-fixes/reference/title_button_rect_type_errors.md.source.txt",
+      "sha256": "8eab82e1eb6f5c4aec8f18dee7e594bc6fd012154ba5c5f0bc45ea7e7ed0ed1c",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/title_button_rect_type_errors.md",
+      "source_sha256": "8eab82e1eb6f5c4aec8f18dee7e594bc6fd012154ba5c5f0bc45ea7e7ed0ed1c",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/skills/arkts-error-fixes/reference/unused_variable_warnings.md.source.txt",
+      "sha256": "2fda8af360153d9ac1a28820e79440094d96dd721d69d277fbf9faa18205af49",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/unused_variable_warnings.md",
+      "source_sha256": "2fda8af360153d9ac1a28820e79440094d96dd721d69d277fbf9faa18205af49",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/skills/arkts-error-fixes/reference/utility_type_errors.md.source.txt",
+      "sha256": "6ec3d8dc6d91a164af2042be0dedb614c0da44751a9b58b442d854c19650495b",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/utility_type_errors.md",
+      "source_sha256": "6ec3d8dc6d91a164af2042be0dedb614c0da44751a9b58b442d854c19650495b",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/skills/arkts-error-fixes/reference/window_rect_size_errors.md.source.txt",
+      "sha256": "90354682b15dcade293c942d6f65f4b44de08e4210b22eef35175e9ba45d9303",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/window_rect_size_errors.md",
+      "source_sha256": "90354682b15dcade293c942d6f65f4b44de08e4210b22eef35175e9ba45d9303",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/skills/arkts-error-fixes/reference/window_type_errors.md.source.txt",
+      "sha256": "33e7068e89a062a10c428626094a80e5cea04d8816a6edd11afee0fcf853aaca",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/reference/window_type_errors.md",
+      "source_sha256": "33e7068e89a062a10c428626094a80e5cea04d8816a6edd11afee0fcf853aaca",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/skills/arkts-error-fixes/SKILL.md.source.txt",
+      "sha256": "580a0cb8c5d1ef5c53d998569adb9a72277b3e8db761534d1b7c3666d3220718",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/skills/arkts-error-fixes/SKILL.md",
+      "source_sha256": "580a0cb8c5d1ef5c53d998569adb9a72277b3e8db761534d1b7c3666d3220718",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/skills/arkts-grammar-standards/references/arkts-rules.md.source.txt",
+      "sha256": "fa9cc79aa8691696398292dc9b8c4a43b0208085f32b9c21720b0ccaa493b7b3",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/skills/arkts-grammar-standards/references/arkts-rules.md",
+      "source_sha256": "fa9cc79aa8691696398292dc9b8c4a43b0208085f32b9c21720b0ccaa493b7b3",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/skills/arkts-grammar-standards/references/ts-to-arkts-rewrites.md.source.txt",
+      "sha256": "dbc381287fb63cfde8f6f167e8f5d53b3787f0ddff454c09a36743bd3513f694",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/skills/arkts-grammar-standards/references/ts-to-arkts-rewrites.md",
+      "source_sha256": "dbc381287fb63cfde8f6f167e8f5d53b3787f0ddff454c09a36743bd3513f694",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/skills/arkts-grammar-standards/SKILL.md.source.txt",
+      "sha256": "c02bc036141b7ae1bcb235ec69c40d5ad5ab73f24a88da39d83d1ba18ea2372d",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/skills/arkts-grammar-standards/SKILL.md",
+      "source_sha256": "c02bc036141b7ae1bcb235ec69c40d5ad5ab73f24a88da39d83d1ba18ea2372d",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/skills/arkts-runtime-fix/evals/evals.json.source.txt",
+      "sha256": "dd9cb7444f08504595c42eec8047b7b86cd135fb82201f24568df724cc1abe13",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/skills/arkts-runtime-fix/evals/evals.json",
+      "source_sha256": "dd9cb7444f08504595c42eec8047b7b86cd135fb82201f24568df724cc1abe13",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/skills/arkts-runtime-fix/reference/error_patterns.md.source.txt",
+      "sha256": "8a6ff8e995d5ad53a21b138ea60431cb7e21575e8d9f3e9e04261e4a8ff55027",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/skills/arkts-runtime-fix/reference/error_patterns.md",
+      "source_sha256": "8a6ff8e995d5ad53a21b138ea60431cb7e21575e8d9f3e9e04261e4a8ff55027",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/skills/arkts-runtime-fix/reference/outofmemoryerror_patterns.md.source.txt",
+      "sha256": "8c2ab8a318e33f8c202bd6f91e342b08f4d2dcf4b51ca542923b797fa71caa65",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/skills/arkts-runtime-fix/reference/outofmemoryerror_patterns.md",
+      "source_sha256": "8c2ab8a318e33f8c202bd6f91e342b08f4d2dcf4b51ca542923b797fa71caa65",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/skills/arkts-runtime-fix/reference/referenceerror_patterns.md.source.txt",
+      "sha256": "44af4b86889d359968ee66a8b81b35aa9ea3bfbcaefe40cb99b4811866ad7600",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/skills/arkts-runtime-fix/reference/referenceerror_patterns.md",
+      "source_sha256": "44af4b86889d359968ee66a8b81b35aa9ea3bfbcaefe40cb99b4811866ad7600",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/skills/arkts-runtime-fix/reference/urierror_patterns.md.source.txt",
+      "sha256": "a16cbe0684043919d8480f55327ce3a2f5105df02050793bc1d564d266394d8f",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/skills/arkts-runtime-fix/reference/urierror_patterns.md",
+      "source_sha256": "a16cbe0684043919d8480f55327ce3a2f5105df02050793bc1d564d266394d8f",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/skills/arkts-runtime-fix/scripts/collect-hilog.mjs.source.txt",
+      "sha256": "338691c974266725f74b55cac5030494b6812332acef60865a685d10c219d1be",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/skills/arkts-runtime-fix/scripts/collect-hilog.mjs",
+      "source_sha256": "338691c974266725f74b55cac5030494b6812332acef60865a685d10c219d1be",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/skills/arkts-runtime-fix/scripts/fetch-faultlog.mjs.source.txt",
+      "sha256": "5ba4b68c40efb408835e9070c3ffad0807563d41e424ff08fc2e093bcc0864f5",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/skills/arkts-runtime-fix/scripts/fetch-faultlog.mjs",
+      "source_sha256": "5ba4b68c40efb408835e9070c3ffad0807563d41e424ff08fc2e093bcc0864f5",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/skills/arkts-runtime-fix/scripts/jscrash-report.mjs.source.txt",
+      "sha256": "9d3b07b99008598461a3d206b4a7f1e66c3ab3c54129b40bcbfa3d0965c63a8e",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/skills/arkts-runtime-fix/scripts/jscrash-report.mjs",
+      "source_sha256": "9d3b07b99008598461a3d206b4a7f1e66c3ab3c54129b40bcbfa3d0965c63a8e",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/skills/arkts-runtime-fix/scripts/parse-jscrash-log.mjs.source.txt",
+      "sha256": "f73c753f0b125e913728433bbc8d5ef0a7983434f257b0b45c7132c7352af413",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/skills/arkts-runtime-fix/scripts/parse-jscrash-log.mjs",
+      "source_sha256": "f73c753f0b125e913728433bbc8d5ef0a7983434f257b0b45c7132c7352af413",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/skills/arkts-runtime-fix/scripts/probe-faultlogger.mjs.source.txt",
+      "sha256": "fedb7035ed4930b51d7b50bf0bd0239e2033c9a8f9e2e3181c838fe0ddd48df5",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/skills/arkts-runtime-fix/scripts/probe-faultlogger.mjs",
+      "source_sha256": "fedb7035ed4930b51d7b50bf0bd0239e2033c9a8f9e2e3181c838fe0ddd48df5",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/skills/arkts-runtime-fix/scripts/shared/hdc.mjs.source.txt",
+      "sha256": "d82cb5db0b33effdbab477dc097a3accceb0d231a2c36435e951dde5c2b58989",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/skills/arkts-runtime-fix/scripts/shared/hdc.mjs",
+      "source_sha256": "d82cb5db0b33effdbab477dc097a3accceb0d231a2c36435e951dde5c2b58989",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/skills/arkts-runtime-fix/scripts/shared/jscrash-faultlogger.mjs.source.txt",
+      "sha256": "ed36845e9c2fb4f5c12d34f34448a2afa0ee5b905f17af06a03ac669fafba27c",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/skills/arkts-runtime-fix/scripts/shared/jscrash-faultlogger.mjs",
+      "source_sha256": "ed36845e9c2fb4f5c12d34f34448a2afa0ee5b905f17af06a03ac669fafba27c",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/skills/arkts-runtime-fix/scripts/shared/jscrash-parse.mjs.source.txt",
+      "sha256": "efa21ae4801fa2728658ba589ae65e8ff7871a57c51a5e3ca3df0a7cb756a548",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/skills/arkts-runtime-fix/scripts/shared/jscrash-parse.mjs",
+      "source_sha256": "efa21ae4801fa2728658ba589ae65e8ff7871a57c51a5e3ca3df0a7cb756a548",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/skills/arkts-runtime-fix/scripts/shared/utils.mjs.source.txt",
+      "sha256": "e677641de2fc655d3ad585e175cbc90e6e35f853d5b545924e362164ac58b7b2",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/skills/arkts-runtime-fix/scripts/shared/utils.mjs",
+      "source_sha256": "e677641de2fc655d3ad585e175cbc90e6e35f853d5b545924e362164ac58b7b2",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/skills/arkts-runtime-fix/SKILL_CN.md.source.txt",
+      "sha256": "d5f56f8264b10c39097a4a45e00462dd590257ef73d58fa0b283e02b9d42236d",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/skills/arkts-runtime-fix/SKILL_CN.md",
+      "source_sha256": "d5f56f8264b10c39097a4a45e00462dd590257ef73d58fa0b283e02b9d42236d",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/skills/arkts-runtime-fix/SKILL.md.source.txt",
+      "sha256": "7c8d90017bf6f700a560725f962ebdc52cf329f576ab1d082c13283604905e6d",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/skills/arkts-runtime-fix/SKILL.md",
+      "source_sha256": "7c8d90017bf6f700a560725f962ebdc52cf329f576ab1d082c13283604905e6d",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/skills/customize-deveco/SKILL.md.source.txt",
+      "sha256": "a0cafa6989e3d4ba9b11d177bab576c67e0eefa364266ad328c58d4267fdb25c",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/skills/customize-deveco/SKILL.md",
+      "source_sha256": "a0cafa6989e3d4ba9b11d177bab576c67e0eefa364266ad328c58d4267fdb25c",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/skills/deveco-cli/SKILL.md.source.txt",
+      "sha256": "5402476093c5238ef466619f3971d21d54edba494ebc424e2e6581cb2b427ac7",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/skills/deveco-cli/SKILL.md",
+      "source_sha256": "5402476093c5238ef466619f3971d21d54edba494ebc424e2e6581cb2b427ac7",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/skills/deveco-create-project/FILES.md.source.txt",
+      "sha256": "330fdb0f4665b3efef61aedd8269eb256946a1a0e64cabc5a2afaa33ccbeabb8",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/skills/deveco-create-project/FILES.md",
+      "source_sha256": "330fdb0f4665b3efef61aedd8269eb256946a1a0e64cabc5a2afaa33ccbeabb8",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/skills/deveco-create-project/scripts/copy-template.mjs.source.txt",
+      "sha256": "1e84f7fa832bf46ac9a8f83169b8f3e0a1951f035fd89a082dced8ddcee759f0",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/skills/deveco-create-project/scripts/copy-template.mjs",
+      "source_sha256": "1e84f7fa832bf46ac9a8f83169b8f3e0a1951f035fd89a082dced8ddcee759f0",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/skills/deveco-create-project/scripts/detect-sdk.mjs.source.txt",
+      "sha256": "e08c6593aec307857487157c2806a7e3ca09cbc182106c6ca76d865da0e73dc4",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/skills/deveco-create-project/scripts/detect-sdk.mjs",
+      "source_sha256": "e08c6593aec307857487157c2806a7e3ca09cbc182106c6ca76d865da0e73dc4",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/skills/deveco-create-project/SKILL.md.source.txt",
+      "sha256": "01846dd766bee4b69dfbca280e71a113bb799a47e2ecbee2f95512ebd0cbcf26",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/skills/deveco-create-project/SKILL.md",
+      "source_sha256": "01846dd766bee4b69dfbca280e71a113bb799a47e2ecbee2f95512ebd0cbcf26",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/spec/commands/spec-implement.md.source.txt",
+      "sha256": "cfd489919cced80620c229b3803f424ec707414ce3c5ac91ceec3407b89edede",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/spec/commands/spec-implement.md",
+      "source_sha256": "cfd489919cced80620c229b3803f424ec707414ce3c5ac91ceec3407b89edede",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/spec/commands/spec-plan.md.source.txt",
+      "sha256": "cdff56b3bbe4fe5bd5e9e9b0ed9f8bc4995d447c94149964ede738b5f6022168",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/spec/commands/spec-plan.md",
+      "source_sha256": "cdff56b3bbe4fe5bd5e9e9b0ed9f8bc4995d447c94149964ede738b5f6022168",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/spec/commands/spec-specify.md.source.txt",
+      "sha256": "dd506dbcecae6de67ca790b7cf746578886b4439e7aa7ce09cd7e43b00ce2029",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/spec/commands/spec-specify.md",
+      "source_sha256": "dd506dbcecae6de67ca790b7cf746578886b4439e7aa7ce09cd7e43b00ce2029",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/spec/commands/spec-tasks.md.source.txt",
+      "sha256": "cff57288167a342245475cbd435c83f88a2640d0784376145d58d7879ff1bfae",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/spec/commands/spec-tasks.md",
+      "source_sha256": "cff57288167a342245475cbd435c83f88a2640d0784376145d58d7879ff1bfae",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/spec/commands/spec-verify.md.source.txt",
+      "sha256": "39379661d7ced53996aa59d9be8ca9207e15de26ccd4c5061a3b565e11f18b3c",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/spec/commands/spec-verify.md",
+      "source_sha256": "39379661d7ced53996aa59d9be8ca9207e15de26ccd4c5061a3b565e11f18b3c",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/spec/templates/plan-template.md.source.txt",
+      "sha256": "ef44f6541ab30a64cfe4b0e7a5ab66e9f8c15e07a939e2642fc244b0605d7f6a",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/spec/templates/plan-template.md",
+      "source_sha256": "ef44f6541ab30a64cfe4b0e7a5ab66e9f8c15e07a939e2642fc244b0605d7f6a",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/spec/templates/spec-template.md.source.txt",
+      "sha256": "a66b176d7e9a92dc70e4459e793f9d8018161c84769b51f77a1897cdf9f7ca5a",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/spec/templates/spec-template.md",
+      "source_sha256": "a66b176d7e9a92dc70e4459e793f9d8018161c84769b51f77a1897cdf9f7ca5a",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/resources/spec/templates/tasks-template.md.source.txt",
+      "sha256": "a8e5d9613dfe1b1f050441fe3045cf51c157968c9893f2dfe75ac66a88302c55",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/resources/spec/templates/tasks-template.md",
+      "source_sha256": "a8e5d9613dfe1b1f050441fe3045cf51c157968c9893f2dfe75ac66a88302c55",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/src/agent/generate.txt.source.txt",
+      "sha256": "52e34e03857e80356f8e1c282a22d83223fa259f50cbb6c0746901afec50e328",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/src/agent/generate.txt",
+      "source_sha256": "52e34e03857e80356f8e1c282a22d83223fa259f50cbb6c0746901afec50e328",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/src/agent/prompt/build.txt.source.txt",
+      "sha256": "fa8159d610ac03e05250909148d7d28f0275a90c3ee98ff5fee5d3da4f94465d",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/src/agent/prompt/build.txt",
+      "source_sha256": "fa8159d610ac03e05250909148d7d28f0275a90c3ee98ff5fee5d3da4f94465d",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/src/agent/prompt/compaction.txt.source.txt",
+      "sha256": "0b2ab9522c33a70412b2049916a9496a116030c84dbfb09d6e835ba6ac77a6e6",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/src/agent/prompt/compaction.txt",
+      "source_sha256": "0b2ab9522c33a70412b2049916a9496a116030c84dbfb09d6e835ba6ac77a6e6",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/src/agent/prompt/debug.txt.source.txt",
+      "sha256": "c3c42327dac8cd09783f4b69ed765e76d4117c8c33a6253afce622f63058cd3a",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/src/agent/prompt/debug.txt",
+      "source_sha256": "c3c42327dac8cd09783f4b69ed765e76d4117c8c33a6253afce622f63058cd3a",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/src/agent/prompt/explore.txt.source.txt",
+      "sha256": "a164b0ee17c41f32c2dee87ef1d69cc74e4fbb4616c95bcf6904ff2c4d656699",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/src/agent/prompt/explore.txt",
+      "source_sha256": "a164b0ee17c41f32c2dee87ef1d69cc74e4fbb4616c95bcf6904ff2c4d656699",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/src/agent/prompt/goal.txt.source.txt",
+      "sha256": "9812af30dfaeeee2e5f6d09d96887678ad967643b7dcac25f2e965ac4841e7cd",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/src/agent/prompt/goal.txt",
+      "source_sha256": "9812af30dfaeeee2e5f6d09d96887678ad967643b7dcac25f2e965ac4841e7cd",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/src/agent/prompt/plan.txt.source.txt",
+      "sha256": "2afd6e0291536f80555b1827dc1f636e9d13b80ce2259f4688924f94dfdaf605",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/src/agent/prompt/plan.txt",
+      "source_sha256": "2afd6e0291536f80555b1827dc1f636e9d13b80ce2259f4688924f94dfdaf605",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/src/agent/prompt/spec-implementation.txt.source.txt",
+      "sha256": "bbc49ca3b8d17aeb2f9f243d50e6b5dbbd6909a2541dbb7bee8c5a506e0fd250",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/src/agent/prompt/spec-implementation.txt",
+      "source_sha256": "bbc49ca3b8d17aeb2f9f243d50e6b5dbbd6909a2541dbb7bee8c5a506e0fd250",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/src/agent/prompt/spec-verify.txt.source.txt",
+      "sha256": "3014dff8ef6b2d1e370066968d5f25a1a17ca9a66daa98450cbf4b8b570bbd68",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/src/agent/prompt/spec-verify.txt",
+      "source_sha256": "3014dff8ef6b2d1e370066968d5f25a1a17ca9a66daa98450cbf4b8b570bbd68",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/src/agent/prompt/summary.txt.source.txt",
+      "sha256": "307314eb41cc38a90881ae9f26e0402ceeed04e71046014486a9908ad4520233",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/src/agent/prompt/summary.txt",
+      "source_sha256": "307314eb41cc38a90881ae9f26e0402ceeed04e71046014486a9908ad4520233",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/src/agent/prompt/title.txt.source.txt",
+      "sha256": "e7a6848eba328f28c7e870874cf0591e4edbaf90d7602ad8fdfe90601c6e656f",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/src/agent/prompt/title.txt",
+      "source_sha256": "e7a6848eba328f28c7e870874cf0591e4edbaf90d7602ad8fdfe90601c6e656f",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/src/command/template/debug.txt.source.txt",
+      "sha256": "fdbecc805a3ec359f7ce627414f4eadf7a015d15f4c2d7ef4cee4c9e2f084bfe",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/src/command/template/debug.txt",
+      "source_sha256": "fdbecc805a3ec359f7ce627414f4eadf7a015d15f4c2d7ef4cee4c9e2f084bfe",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/src/command/template/initialize.txt.source.txt",
+      "sha256": "1e5f1b41d7d522861e629fbb8a21ba225201efa4cf09802ac57052075df9b9c4",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/src/command/template/initialize.txt",
+      "source_sha256": "1e5f1b41d7d522861e629fbb8a21ba225201efa4cf09802ac57052075df9b9c4",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/src/command/template/review.txt.source.txt",
+      "sha256": "fda5b502c8ab3433ac674f2e865c5ae2cae30b9e6af68af992fa45b1fa3bef73",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/src/command/template/review.txt",
+      "source_sha256": "fda5b502c8ab3433ac674f2e865c5ae2cae30b9e6af68af992fa45b1fa3bef73",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/test/fixture/skills/agents-sdk/SKILL.md.source.txt",
+      "sha256": "6769c6520383ed5501ea88dc4f9291517a8642167d859486181585063e8b7d2f",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/test/fixture/skills/agents-sdk/SKILL.md",
+      "source_sha256": "6769c6520383ed5501ea88dc4f9291517a8642167d859486181585063e8b7d2f",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/upstream/deveco-code/aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a/packages/opencode/test/fixture/skills/cloudflare/SKILL.md.source.txt",
+      "sha256": "2a8a4bdd991c34dff4cf014c7e8f84bb1aa971642a067c4d387cf3746b77b603",
+      "source": "deveco-code-skills",
+      "source_path": "packages/opencode/test/fixture/skills/cloudflare/SKILL.md",
+      "source_sha256": "2a8a4bdd991c34dff4cf014c7e8f84bb1aa971642a067c4d387cf3746b77b603",
+      "transformation": "Unchanged fixed upstream original, stored separately from native adaptation; never executed by the MCP."
+    },
+    {
+      "file": "resources/domain-sources.json",
+      "sha256": "cc7433bd857e80089fd9a2e9b69eb102327e8fd6ca229463732aff647ec4a1e2",
+      "source": "deveco-tool",
+      "source_path": "resources/domain-sources.json",
+      "source_sha256": "99ba27535ab2017c96e5c2b3838bb3ef5252a164ac57b9b5f251ef09fdf87a22",
+      "transformation": "Native adaptation: stable content URIs, source mapping and stateless domain recipes; original upstream digest retained."
     }
   ]
 }

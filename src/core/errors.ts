@@ -26,8 +26,9 @@ export function invariant(
   condition: unknown,
   code: string,
   message: string,
+  details?: unknown,
 ): asserts condition {
-  if (!condition) throw new ToolError(code, message);
+  if (!condition) throw new ToolError(code, message, details);
 }
 export function errorResult(error: unknown) {
   return error instanceof ZodError

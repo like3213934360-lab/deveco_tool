@@ -156,7 +156,7 @@ struct ScrollExample {
 }
 ```
 
-> [查看完整示例](../assets/UnusedVariableWarning.ets)
+> [查看完整示例](deveco://knowledge/arkts-error-fixes/examples/UnusedVariableWarning)
 
 ## 使用场景
 

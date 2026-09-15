@@ -1,0 +1,351 @@
+{
+  "format": 1,
+  "source": "deveco-code",
+  "url": "https://gitcode.com/openharmony-sig/deveco-code.git",
+  "base": {
+    "commit": "325aff05706b9b04a9816a987e9672dda991c630",
+    "tree": "9232f44a15bed9f948662af74f23264b34be457c"
+  },
+  "candidate": {
+    "commit": "aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a",
+    "tree": "f88b2d20b4a1adf36d8370eb907a162b215d6f4b"
+  },
+  "mapping_sha256": "6a2b6c1596635a6ddd7aba7d07f43180d25a7d850f94cd2d965bdd82fb144dd8",
+  "changes": [
+    {
+      "path": ".gitcode/workflows/build.yml",
+      "status": "modified",
+      "before": {
+        "path": ".gitcode/workflows/build.yml",
+        "oid": "0d46c285ed36eabd36fe9c62984051940c551eb4",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": ".gitcode/workflows/build.yml",
+        "oid": "7d6bf576bedfa83e657f2fe82477ab89f1b224b4",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-gitcode",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": ".gitcode/workflows/publish-tag.yml",
+      "status": "modified",
+      "before": {
+        "path": ".gitcode/workflows/publish-tag.yml",
+        "oid": "5bce631a511d18d987b01da29cedf15fcd7abc61",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": ".gitcode/workflows/publish-tag.yml",
+        "oid": "1d3a3d7727d5b3e12408f92bdec9f2be35608e5a",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-gitcode",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": ".gitcode/workflows/publish.yml",
+      "status": "modified",
+      "before": {
+        "path": ".gitcode/workflows/publish.yml",
+        "oid": "9d3e5d589b9d08dc9717595051a794835855aeb7",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": ".gitcode/workflows/publish.yml",
+        "oid": "ab502225dfa2121f16acd0d40261b253c4b820ab",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-gitcode",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": ".gitcode/workflows/test.yml",
+      "status": "modified",
+      "before": {
+        "path": ".gitcode/workflows/test.yml",
+        "oid": "56f275af3664b8689a3e5341f4c8151c6e123cc8",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": ".gitcode/workflows/test.yml",
+        "oid": "af5e6f71f9fe6a8aa9a1d7761058da1646f3201e",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-gitcode",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": ".gitcode/workflows/typecheck.yml",
+      "status": "modified",
+      "before": {
+        "path": ".gitcode/workflows/typecheck.yml",
+        "oid": "1db3b21b179a90bf5d7785378b35e28ebf086d99",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": ".gitcode/workflows/typecheck.yml",
+        "oid": "3643d2f2646268fe4244c29e0e60f94878342c93",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-gitcode",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "bun.lock",
+      "status": "modified",
+      "before": {
+        "path": "bun.lock",
+        "oid": "91c63f4224dbc9bf8402c6dda836ec2b5cb26e1a",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "bun.lock",
+        "oid": "fd0d9fa1bd7ae89a18d62dc2c2a59588dc80faa1",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-legal-bun.lock",
+      "disposition": "adapt",
+      "reason": "Review license, version or upstream release changes before updating resource provenance.",
+      "targets": [
+        "provenance/upstream-lock.json"
+      ],
+      "tests": [
+        "test/native-upstream.test.ts"
+      ]
+    },
+    {
+      "path": "bunfig.toml",
+      "status": "modified",
+      "before": {
+        "path": "bunfig.toml",
+        "oid": "19f6d42d4a00b33ae79ec0baee5161cf5556ba99",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "bunfig.toml",
+        "oid": "9c6586c4824da0277ece677963a864fdb9ff22ed",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": null,
+      "disposition": "unmapped",
+      "reason": "No reviewed mapping covers this upstream path",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "package.json",
+      "status": "modified",
+      "before": {
+        "path": "package.json",
+        "oid": "6de104901525484a7dbafe037fbf400e2146dd6a",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "package.json",
+        "oid": "cc538e9ef9a9b23dfcc9e082cc6c348172c7b58f",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-legal-package.json",
+      "disposition": "adapt",
+      "reason": "Review license, version or upstream release changes before updating resource provenance.",
+      "targets": [
+        "provenance/upstream-lock.json"
+      ],
+      "tests": [
+        "test/native-upstream.test.ts"
+      ]
+    },
+    {
+      "path": "packages/core/src/aisdk.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/core/src/aisdk.ts",
+        "oid": "9965ff930dd44002a901108c098bc8257839f55d",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/core/src/aisdk.ts",
+        "oid": "6220db4eb07f0b50ec31b53b52ad3762c4774ff7",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/src/plugin/analytics/uploader.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/src/plugin/analytics/uploader.ts",
+        "oid": "7fd3db32d5f8fccd48913b7a6fc9c4bab70fd429",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/src/plugin/analytics/uploader.ts",
+        "oid": "4d94db219bdf132b4a1d4a058698084e83cffbef",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/src/provider/provider.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/src/provider/provider.ts",
+        "oid": "f159e52d737bcde5f559c94beb31d97d78fe9ffb",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/src/provider/provider.ts",
+        "oid": "c8536838dd0575073af5dcbd28f3205c84699704",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/plugin/analytics/uploader.test.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/test/plugin/analytics/uploader.test.ts",
+        "oid": "345f697ea79ffeb1de5469819778cd21c7fc3469",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/test/plugin/analytics/uploader.test.ts",
+        "oid": "d23addea979a9b9e99ca54691bdf7f925ab96b73",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "packages/opencode/test/server/httpapi-v2-pty.test.ts",
+      "status": "modified",
+      "before": {
+        "path": "packages/opencode/test/server/httpapi-v2-pty.test.ts",
+        "oid": "6a6726923fb4eac526c1a0d7cd00e0dcb5c3d10f",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "packages/opencode/test/server/httpapi-v2-pty.test.ts",
+        "oid": "3174833a6ef56b038f395e35c10198a03f4cbef0",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-packages",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "patches/@ff-labs%2Ffff-bun@0.9.3.patch",
+      "status": "deleted",
+      "before": {
+        "path": "patches/@ff-labs%2Ffff-bun@0.9.3.patch",
+        "oid": "23a7dd54fb153029efa04fbe390a0758dc2d6629",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": null,
+      "mapping": "code-host-patches",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "patches/@ff-labs%2Ffff-bun@0.9.4.patch",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "patches/@ff-labs%2Ffff-bun@0.9.4.patch",
+        "oid": "a94b75163061b82036aba348089a9f26a81d95e6",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-patches",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "patches/bun-pty@0.4.8.patch",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "patches/bun-pty@0.4.8.patch",
+        "oid": "96bb30742dda4dd016bbaa4217ebfc34681156f3",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-patches",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    }
+  ],
+  "gate": "blocked_unmapped",
+  "required_tests": [
+    "test/native-upstream.test.ts"
+  ],
+  "note": "Source classification is a review proposal. It does not convert natural language into code, approve protocol semantics, modify the active source lock or authorize release.",
+  "sha256": "a3736c50185c652b5f481cb31af9164d4a260be79b496279ad63966600de6694"
+}

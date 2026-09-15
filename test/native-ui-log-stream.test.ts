@@ -40,6 +40,7 @@ async function scenario(options: {
   const controller = new AbortController(),
     batches: LogBatch[] = [],
     gaps: string[] = [];
+  const gapDetails: { code: string; discarded_bytes?: number }[] = [];
   let samples = 0,
     pauses = 0,
     resumes = 0,
@@ -91,8 +92,9 @@ async function scenario(options: {
         options.batch?.(batch);
         batches.push(batch);
       },
-      gap: (code) => {
+      gap: (code, details) => {
         gaps.push(code);
+        gapDetails.push({ code, discarded_bytes: details?.discarded_bytes });
       },
       ready: () => {
         ready++;
@@ -105,6 +107,7 @@ async function scenario(options: {
   return {
     batches,
     gaps,
+    gapDetails,
     collector,
     stats: () => ({ pauses, resumes, settled, streams, ready }),
     close: async () => {
@@ -310,6 +313,26 @@ test("redaction precedes persistence and duplicate content in one stream remains
   } finally {
     await h.close();
   }
+});
+
+test("later secret lists never reveal earlier inputs and a rejected budget update preserves redaction", async () => {
+  const h = await scenario({ buffers: [Buffer.from(line(1, "old-secret new-secret"))], secrets: ["old-secret"] });
+  h.collector.redact(["new-secret"]);
+  assert.throws(() => h.collector.redact(Array.from({ length: 4097 }, (_, index) => `overflow-${index}`)), { code: "UI_LOG_REDACTION_BUDGET" });
+  try {
+    await until(() => h.batches.length === 1);
+    assert.doesNotMatch(h.batches[0]!.content, /old-secret|new-secret/);
+    assert.equal(h.batches[0]!.content.match(/\[redacted\]/g)?.length, 2);
+  } finally { await h.close(); }
+});
+
+test("a rejected buffered line counts its discarded bytes once across failure and cleanup gaps", async () => {
+  const bytes = Buffer.from(line(1));
+  const h = await scenario({ buffers: [bytes], batch: () => { throw Object.assign(new Error("disk full"), { code: "ENOSPC" }); } });
+  await h.done;
+  assert.ok(h.gapDetails.some(gap => gap.code === "ENOSPC"));
+  assert.equal(h.gapDetails.reduce((sum, gap) => sum + (gap.discarded_bytes ?? 0), 0), bytes.length);
+  assert.equal(h.stats().settled, h.stats().streams);
 });
 
 test("Linux process names with parentheses cannot shift the start-time field", () => {

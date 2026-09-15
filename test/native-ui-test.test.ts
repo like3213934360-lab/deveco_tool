@@ -1,3 +1,6 @@
+import { PayloadCipher } from "../src/core/crypto.js";
+import { digest } from "../src/core/files.js";
+import { captureEvidenceIdentity } from "../src/services/evidence-identity.js";
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -86,6 +89,7 @@ async function fixture(
     clockNanos = BigInt(Date.now()) * 1_000_000n;
   const calls: string[] = [];
   const configure = () => {
+    runtime.tests.captureIdentity = (scope, requirements) => captureEvidenceIdentity(scope, requirements, false);
     runtime.devices.target = async () => "fixture";
     runtime.devices.shell = async (_target, args) => {
       if (args[0] === "date") clockNanos += 1_000_000n;
@@ -111,6 +115,7 @@ async function fixture(
           attributes: {
             type: "WindowScene",
             id: "window",
+            focused: true,
             bundleName: app.bundle_name,
             displayId: 0,
             bounds: "[0,0][500,1000]",
@@ -253,21 +258,13 @@ test("a worker restarted above quota can cancel a paused test and release its de
   await fixture(async (h) => {
     const initial = await start(h.runtime),
       id = initial.test_id;
-    const host = z.object({ run_id: z.string(), revision: z.number() }).parse(
-      h.runtime.skillWorkflows.call({
-        action: "start",
-        kind: "debug",
-        project_path: h.runtime.store.root,
-        objective: "Cancel safely when storage is full",
-      }),
-    );
-    h.runtime.skillWorkflows.call({
-      action: "write",
-      run_id: host.run_id,
-      expected_revision: host.revision,
-      name: "notes.md",
-      content: "验证".repeat(20000),
-    });
+    // Retained native-7 state is seeded directly; retired lifecycle start cannot create it.
+    const original=h.runtime.store.create("skill_workflow",{kind:"debug",objective:"Cancel safely when storage is full"}).run,
+      host={run_id:original.id,revision:2},content="验证".repeat(20000),artifact=h.runtime.store.artifact(original.id,content,"text/markdown"),
+      legacy={kind:"debug",objective:"Cancel safely when storage is full",project_path:h.runtime.store.root,revision:2,phase:"planning",definition_sha256:"a".repeat(64),documents:{"notes.md":{content,content_sha256:digest(content),artifact_id:artifact.artifact_id,validation:[]}},transitions:[]},
+      cipher=new PayloadCipher(path.join(h.runtime.store.root,"skill-workflow.key"));
+    try {h.runtime.store.db.prepare("INSERT INTO skill_workflows(run_id,revision,phase,kind,payload,updated) VALUES(?,?,?,?,?,?)").run(original.id,2,"planning","debug",cipher.seal(original.id,JSON.stringify(legacy)),Date.now());} finally {cipher.close();}
+    h.runtime.store.update(original.id,"needs_input");
     await h.runtime.call("ui_test", { action: "resume", test_id: id });
     h.runtime.store.artifact(id, Buffer.alloc(8 * 1024 * 1024, 3));
     const config = path.join(h.runtime.store.root, "quota-fixture.json");
@@ -320,6 +317,9 @@ test("a worker restarted above quota can cancel a paused test and release its de
           .content.length,
         40000,
       );
+      const archived=await client.call("skill_workflow",{action:"archive",run_id:host.run_id,expected_revision:3});
+      assert.equal(z.object({status:z.string()}).parse(archived).status,"cancelled");
+      assert.ok(Buffer.byteLength(JSON.stringify(archived))<2048,"Archiving full retained notes must not require a new result artifact above quota");
       assert.equal(
         z.object({ status: z.string() }).parse(
           await client.call("workflow_run", {
@@ -435,6 +435,15 @@ test("natural-language test persists its ordered requirements and only finishes 
       );
     assert.match(log.content, /完成测试/);
     assert.doesNotMatch(log.content, /Other app/);
+    const originalCalls = h.calls.length;
+    const diagnosis = z.object({ run_id: z.string(), status: z.literal("succeeded"), result: z.object({ parse_crash: z.object({
+      source_run_id: z.literal(id), bundle_name: z.literal(app.bundle_name), historical: z.literal(true),
+      status: z.literal("insufficient_evidence"),
+    }) }) }).parse(await h.runtime.call("workflow_run", {
+      ...h.runtime.tests.status(id).optional_crash_diagnosis.arguments, wait_ms: 2000, detail: "full",
+    }));
+    assert.equal(diagnosis.result.parse_crash.source_run_id, id);
+    assert.equal(h.calls.length, originalCalls, "Historical diagnosis never replays UI actions or initialization");
     assert.equal(
       summarySchema.parse(
         await h.runtime.call("workflow_run", { action: "resume", run_id: id }),
@@ -464,6 +473,9 @@ test("natural-language test persists its ordered requirements and only finishes 
       "inspect report or export retained evidence",
     );
     assert.equal(finished.steps[0]!.status, "passed");
+    assert.throws(() => h.runtime.storage.plan([id]), { code: "RUN_PROTECTED" });
+    const diagnosisCleanup = h.runtime.storage.plan([diagnosis.run_id]);
+    h.runtime.storage.apply([diagnosis.run_id], diagnosisCleanup.plan_hash);
     assert.equal(h.runtime.storage.plan([id]).run_ids[0], id);
     const report = h.runtime.tests.status(id).report_artifact!;
     const saved = JSON.parse(
@@ -846,7 +858,7 @@ test("continuous log receipt follows the pending plan step through check, resume
       };
     };
     observe();
-    const initial = await start(h.runtime, { steps: [
+    const initial = await start(h.runtime, { initialize: false, steps: [
       { id: "first", goal: "Initial state", assert: { visible: { text: "Waiting" } } },
       { id: "second", goal: "Result state", assert: { visible: { text: "Done" } } },
     ] });
@@ -888,4 +900,160 @@ test("UI test schemas expose separate actions and require a bounded plan with ve
   ])
     assert.equal(tools.ui_test.schema.safeParse(input).success, false);
   assert.doesNotThrow(() => z.toJSONSchema(tools.ui_test.schema));
+});
+
+test("UI completion rejects source edits made after capture and keeps the original requirement bindings",async()=>{
+  await fixture(async h=>{
+    const project=path.join(h.runtime.store.root,"application");
+    fs.cpSync(new URL("../../test/fixtures/harmony-app/",import.meta.url),project,{recursive:true});
+    const input=await start(h.runtime,{project_path:project,requirements:[{id:"R1",revision:3,text:"The current result is displayed"}],steps:[{id:"result",goal:"Result is done",assert:{visible:{text:"Done"}}}]});
+    await h.runtime.call("ui_test",{action:"resume",test_id:input.test_id});h.setText("Done");
+    await h.runtime.call("ui_test",{action:"check",test_id:input.test_id});
+    fs.appendFileSync(path.join(project,"entry/src/main/ets/pages/Index.ets"),"\n// changed after observing the result\n");
+    await assert.rejects(h.runtime.call("ui_test",{action:"finish",test_id:input.test_id}),{code:"UI_EVIDENCE_STALE"});
+    const state=h.runtime.tests.status(input.test_id);assert.equal(state.verified,false);assert.deepEqual(state.requirements,[{id:"R1",revision:3,text:"The current result is displayed"}]);
+    await h.runtime.call("ui_test",{action:"cancel",test_id:input.test_id});
+  });
+});
+
+test("multiple UI requirements need explicit coverage and completed status never silently rechecks current evidence",async()=>{
+  await fixture(async h=>{
+    const requirements=[{id:"R1",revision:1,text:"Show result"},{id:"R2",revision:1,text:"Result control exists"}];
+    await assert.rejects(start(h.runtime,{requirements,steps:[{id:"result",goal:"Show result",assert:{visible:{text:"Done"}}}]}),{code:"UI_REQUIREMENT_REFERENCE_INVALID"});
+    const input=await start(h.runtime,{requirements,steps:[{id:"result",goal:"Both observations",requirement_ids:["R1","R2"],task_ids:["T1"],assert:{visible:{text:"Done"}}}]});
+    await h.runtime.call("ui_test",{action:"resume",test_id:input.test_id});h.setText("Done");await h.runtime.call("ui_test",{action:"check",test_id:input.test_id});
+    const finished=z.object({verified:z.literal(true),current_verified:z.literal(true)}).parse(await h.runtime.call("ui_test",{action:"finish",test_id:input.test_id}));assert.equal(finished.verified,true);
+    const status=h.runtime.tests.status(input.test_id);assert.equal(status.verified,true);assert.equal(status.current_verified,null);assert.equal(status.evidence_freshness.status,"not_rechecked");
+  });
+});
+
+test("project UI acceptance retains the deployed package association and rejects later artifact replacement",async()=>{
+  await fixture(async h=>{
+    const project=fs.realpathSync.native(h.runtime.store.root)+path.sep+"application";fs.cpSync(new URL("../../test/fixtures/harmony-app/",import.meta.url),project,{recursive:true});
+    const requirements=[{id:"R1",revision:1,text:"The deployed application displays Done"}],scope={project_path:project,target:"fixture",app},artifact=path.join(project,"build","canary.hap");
+    fs.mkdirSync(path.dirname(artifact),{recursive:true});fs.writeFileSync(artifact,"mocked signed package");
+    const deployment=h.runtime.store.create("build_deploy_verify",{requirements}).run;
+    h.runtime.store.update(deployment.id,"succeeded",{_evidence:{identity:captureEvidenceIdentity(scope,requirements,false),scope,requirements,artifacts:[{path:artifact,sha256:createHash("sha256").update(fs.readFileSync(artifact)).digest("hex")}]}});
+    const requestKey = "deployment-scope-handoff";
+    const uiInput = {action:"start",test_plan:"Check the deployed application",request_key:requestKey,deployment_run_id:deployment.id,steps:[{id:"result",goal:"Deployed result",requirement_ids:["R1"],task_ids:["T1"],assert:{visible:{text:"Done"}}}]};
+    await assert.rejects(h.runtime.call("ui_test",{...uiInput,app:{...app,bundle_name:"com.wrong.app"}}),{code:"UI_DEPLOYMENT_SCOPE_MISMATCH"});
+    const initial=summarySchema.parse(await h.runtime.call("ui_test",uiInput));
+    assert.deepEqual(initial.requirements,requirements);
+    await h.runtime.call("ui_test",{action:"resume",test_id:initial.test_id});h.setText("Done");await h.runtime.call("ui_test",{action:"check",test_id:initial.test_id});
+    const finished=summarySchema.parse(await h.runtime.call("ui_test",{action:"finish",test_id:initial.test_id}));
+    assert.equal(finished.verified,true);
+    const handoff=z.object({arguments:z.object({action:z.literal("assess"),evidence_run_ids:z.array(z.string())})}).parse(finished.optional_acceptance);
+    const request={...handoff.arguments,project_path:project,requirements:[{...requirements[0],original_text:requirements[0]!.text,task_ids:["T1"],mode:"ui"}]};
+    assert.equal(h.runtime.acceptance.assess(request).contract_satisfied,true);
+    const beforeCalls=h.calls.length;
+    assert.equal(summarySchema.parse(await h.runtime.call("ui_test",uiInput)).test_id,initial.test_id);
+    assert.equal(h.calls.length,beforeCalls,"Repeated start only reads the captured test");
+    fs.writeFileSync(artifact,"replaced signed package");const stale=h.runtime.acceptance.assess(request);assert.equal(stale.contract_satisfied,false);assert.match(JSON.stringify(stale),/EVIDENCE_ARTIFACT_CHANGED/);
+    assert.equal(summarySchema.parse(await h.runtime.call("ui_test",uiInput)).test_id,initial.test_id,"Reading an old request does not create a new scope");
+    await assert.rejects(h.runtime.call("ui_test",{...uiInput,request_key:"new-stale-deployment-test"}),{code:"EVIDENCE_ARTIFACT_CHANGED"});
+  });
+});
+
+test("full plans initialize once, preserve prepared app state and retain recoverable initialization failures", async () => {
+  await fixture(async h => {
+    const input = { request_key: "u-full-plan" };
+    const first = await start(h.runtime, input);
+    assert.equal(first.initialized, true);
+    assert.equal(h.calls.filter(call => call === "launch" || call === "stop").length, 0);
+    const captures = h.calls.filter(call => call === "capture").length;
+    assert.equal((await start(h.runtime, input)).test_id, first.test_id);
+    assert.equal(h.calls.filter(call => call === "capture").length, captures);
+    await h.runtime.call("ui_test", { action: "cancel", test_id: first.test_id });
+
+    const deferred = await start(h.runtime, { initialize: false });
+    assert.equal(deferred.initialized, false);
+    await h.runtime.call("ui_test", { action: "cancel", test_id: deferred.test_id });
+    const screenshot = h.runtime.devices.screenshot;
+    h.runtime.devices.screenshot = async () => { throw new ToolError("FIXTURE_SCREEN_UNAVAILABLE", "No screen yet"); };
+    const failed = await start(h.runtime, { fresh_start: true, request_key: "u-init-recovery" });
+    assert.equal(failed.initialized, false);
+    assert.equal(z.object({ code: z.string() }).parse(failed.initialization_error).code, "FIXTURE_SCREEN_UNAVAILABLE");
+    assert.equal(failed.initialization_stage, "sample");
+    h.runtime.devices.screenshot = screenshot;
+    await h.reopen();
+    const recovered = await start(h.runtime, { fresh_start: true, request_key: "u-init-recovery" });
+    assert.equal(recovered.test_id, failed.test_id);
+    assert.equal(recovered.initialized, true);
+    assert.equal(h.calls.filter(call => call === "stop").length, 1);
+    assert.equal(h.calls.filter(call => call === "launch").length, 1);
+  });
+});
+
+test("act check_after binds its settled check to one attempt across retries and restart", async () => {
+  await fixture(async h => {
+    const initial = await start(h.runtime, { steps: [
+      { id: "first", goal: "See Waiting", assert: { visible: { text: "Waiting" } } },
+      { id: "second", goal: "See Done", assert: { visible: { text: "Done" } } },
+    ] });
+    const input = { action: "act", test_id: initial.test_id, step_id: "first", attempt_id: randomUUID(), operation,
+      check_after: { stable_ms: 100, timeout_ms: 500 } };
+    const result = summarySchema.parse(await h.runtime.call("ui_test", input));
+    assert.equal(result.steps[0]!.status, "passed");
+    assert.equal(result.steps[1]!.check, null);
+    const receipt = z.object({ attempt_id: z.string(), settling: z.object({ state: z.string() }), check: z.object({ step_id: z.string() }) }).parse(result.action_check);
+    assert.equal(receipt.settling.state, "stable");
+    assert.equal(receipt.check.step_id, "first");
+    assert.equal(h.calls.filter(call => call === "control").length, 1);
+    assert.equal(h.calls.filter(call => call === "verify").length, 1);
+    await h.reopen();
+    const retry = summarySchema.parse(await h.runtime.call("ui_test", input));
+    assert.deepEqual(retry.action_check, result.action_check);
+    assert.equal(retry.steps[1]!.check, null);
+    assert.equal(h.calls.filter(call => call === "control").length, 1);
+    assert.equal(h.calls.filter(call => call === "verify").length, 1);
+    await assert.rejects(h.runtime.call("ui_test", { ...input, check_after: { stable_ms: 200, timeout_ms: 500 } }), /different action input/);
+  });
+});
+
+test("act check_after keeps failed assertions recheckable and settles timeouts without replay", async () => {
+  await fixture(async h => {
+    const initial = await start(h.runtime, { steps: [{ id: "result", goal: "See Done", assert: { visible: { text: "Done" } } }] });
+    const input = { action: "act", test_id: initial.test_id, step_id: "result", attempt_id: randomUUID(), operation, check_after: { stable_ms: 100, timeout_ms: 500 } };
+    const result = summarySchema.parse(await h.runtime.call("ui_test", input));
+    assert.equal(result.steps[0]!.check!.assertion_passed, false);
+    assert.equal(z.object({ state: z.string() }).parse(result.next).state, "assertion_failed");
+    h.setText("Done");
+    const checked = summarySchema.parse(await h.runtime.call("ui_test", { action: "check", test_id: initial.test_id }));
+    assert.equal(z.object({ state: z.string() }).parse(checked.next).state, "ready_to_finish");
+    assert.equal(h.calls.filter(call => call === "control").length, 1);
+    await h.runtime.call("ui_test", { action: "finish", test_id: initial.test_id });
+
+    const second = await start(h.runtime, { steps: [{ id: "result", goal: "See Done", assert: { visible: { text: "Done" } } }] });
+    const screenshot = h.runtime.devices.screenshot;
+    h.runtime.devices.screenshot = async (...args) => ({ ...await screenshot(...args), progress_signature: randomUUID() });
+    const unstableInput = { ...input, test_id: second.test_id, attempt_id: randomUUID(), check_after: { stable_ms: 100, timeout_ms: 300 } };
+    const unstable = summarySchema.parse(await h.runtime.call("ui_test", unstableInput));
+    assert.equal(z.object({ settling: z.object({ state: z.string() }) }).parse(unstable.action_check).settling.state, "timeout");
+    assert.equal(unstable.steps[0]!.check, null);
+    const calls = h.calls.length;
+    await h.runtime.call("ui_test", unstableInput);
+    assert.equal(h.calls.length, calls);
+    h.runtime.devices.screenshot = screenshot;
+    await h.runtime.call("ui_test", { action: "check", test_id: second.test_id });
+    assert.equal(h.calls.filter(call => call === "control").length, 2);
+  });
+});
+
+test("pending visual tests deliver their exact image and receipt while native assertions retain authority", async () => {
+  await fixture(async h => {
+    const initial = await start(h.runtime);
+    h.setText("Done");
+    const checked = summarySchema.parse(await h.runtime.call("ui_test", { action: "check", test_id: initial.test_id }));
+    const { toolImageResponse } = await import("../src/core/tool-image-response.js");
+    const envelope = toolImageResponse("ui_test", {}, checked);
+    assert.equal(envelope.image?.data, png.toString("base64"));
+    assert.equal(z.object({ state: z.string() }).parse(checked.next).state, "visual_review_required");
+    const delivered = z.object({ inline_review: z.object({ review_id: z.string(), artifact_id: z.string(), sha256: z.string(), complete: z.object({ arguments: z.record(z.string(), z.unknown()) }) }) }).parse(envelope.data).inline_review;
+    assert.equal(delivered.sha256, sha256);
+    assert.equal("image" in delivered, false);
+    assert.equal(h.runtime.reviews.status(delivered.review_id).verified, false);
+    await h.runtime.call("ui_review", { ...delivered.complete.arguments, assessment: { outcome: "passed", observations: "Fixture inspection: the label fits visibly inside the intended button." } });
+    assert.equal(h.runtime.tests.status(initial.test_id).next.state, "ready_to_finish");
+    assert.deepEqual(toolImageResponse("ui_review", { action: "list" }, []).data, []);
+  });
 });

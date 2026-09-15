@@ -11,6 +11,7 @@ import { captureFile, type CapturedFile } from "../src/core/captured-file.js";
 import { fileDigest } from "../src/core/files.js";
 import { Runtime } from "../src/services/runtime.js";
 import { StorageService } from "../src/services/storage.js";
+import { evidenceSealSchema, verifyEvidenceArtifacts } from "../src/services/evidence-result.js";
 
 const app = { bundle_name: "com.deveco.fixture", module: "entry", ability: "EntryAbility" };
 const receipt = (files: CapturedFile[]) => ({ installed: true as const, packages: files.map(file => ({
@@ -111,7 +112,7 @@ test("deployment resumes a failed launch after package release without a second 
     const runId = z.object({ run_id: z.string() }).parse(await runtime!.call("workflow_run", request)).run_id;
     const settle = async () => {
       for (let i = 0; i < 100; i++) {
-        const status = z.object({ status: z.string() }).passthrough().parse(await runtime!.call("workflow_run", { action: "status", run_id: runId, wait_ms: 100 }));
+        const status = z.object({ status: z.string() }).passthrough().parse(await runtime!.call("workflow_run", { action: "status", run_id: runId, wait_ms: 100, detail: "full" }));
         if (!["queued", "running"].includes(status.status)) return status;
       }
       throw new Error("workflow did not settle");
@@ -120,10 +121,16 @@ test("deployment resumes a failed launch after package release without a second 
     assert.equal(installs, 1);
     assert.deepEqual(retained(runtime!.store), []);
     await runtime!.close(); t.mock.restoreAll(); setup();
-    t.mock.method(runtime!.devices, "reconcileLaunch", async () => ({ started: true }));
+    t.mock.method(runtime!.devices, "reconcileLaunch", async () => ({ started: true, startup_check: { process: "stable" } }));
     await runtime!.call("workflow_run", { action: "resume", run_id: runId, resume_input: { action: "recheck" } });
     const final = await settle();
     assert.equal(final.status, "succeeded", JSON.stringify(final));
+    const seal=evidenceSealSchema.parse((final.result as { _evidence:unknown })._evidence);
+    assert.equal(seal.artifacts.length,1);
+    assert.equal(seal.artifacts[0]!.released_package?.run_id,runId);
+    verifyEvidenceArtifacts(seal.artifacts,runtime!.store);
+    runtime!.store.db.prepare("UPDATE released_packages SET sha256=? WHERE run_id=?").run("0".repeat(64),runId);
+    assert.throws(()=>verifyEvidenceArtifacts(seal.artifacts,runtime!.store),{code:"EVIDENCE_ARTIFACT_CHANGED"});
     assert.equal(installs, 1);
     assert.equal(z.object({ deduplicated: z.boolean() }).parse(await runtime!.call("workflow_run", request)).deduplicated, true);
     assert.deepEqual(retained(runtime!.store), []);

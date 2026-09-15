@@ -20,7 +20,7 @@ test("local document lookup opens release resources without extracting a per-ver
   try {
     const before = fs.readdirSync(root);
     const docs = knowledge.catalog(0, 2, "docs");
-    assert.ok(docs.total > 2);
+    assert.equal(docs.total, 14683);
     assert.equal(docs.entries.length, 2);
     const content = knowledge.read(docs.entries[0]!.id, 0, 200);
     assert.ok(content.content.length > 0 && content.content.length <= 200);
@@ -133,7 +133,8 @@ test("documentation filters cannot be silently ignored for cloud, rules, reads o
 });
 test("packaged resources have exact origins, licenses and a closed knowledge index", () => {
   const result = verifyResources(packageRoot);
-  assert.ok(result.knowledge > 0 && result.resources > result.knowledge);
+  assert.equal(result.knowledge, 79);
+  assert.ok(result.resources > result.knowledge);
 });
 test("unreviewed resource bytes fail integrity validation", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-resource-check-"));

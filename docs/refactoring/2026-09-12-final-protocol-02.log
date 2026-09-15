@@ -1,0 +1,53 @@
+✔ discovery is compact with static optional groups and callable migration aliases (33.487708ms)
+✔ typed actions reject crossed UI/maintenance/content fields and requirement updates outside start (6.974459ms)
+✔ success and error output envelopes are mutually exclusive and reject ignored fields (1.302791ms)
+✖ MCP Resources, Prompts and tool reads share byte identity; project contexts and aliases have no global effect (1582.088625ms)
+✔ MCP catalogs work without SDK discovery, invalid input is rejected, worker restarts cleanly (1685.238917ms)
+✔ MCP worker failures retain matching request telemetry after a successful next call and process exit (989.118959ms)
+✔ MCP diagnostic calls reject a missing configured SDK without falling back to the machine installation (872.841708ms)
+✔ MCP doctor exposes default SDK API metadata and reports missing or invalid fields independently of component detection (661.9195ms)
+✔ managed processes bound output, handle spawn failures and confirm cancellation (174.038125ms)
+✔ LSP refreshes Unicode paths and filters every semantic declaration (links=0) (137.780167ms)
+✔ LSP refreshes Unicode paths and filters every semantic declaration (links=1) (133.871417ms)
+✔ UI state participates in selectors and ambiguous matches are retained (1.483ms)
+✔ LSP documents stay bounded and least recently used files are closed (97.418625ms)
+✔ cancelling a queued LSP request does not let later requests bypass the active request (396.588083ms)
+✔ workflow input is encrypted and lease ownership crosses processes (595.247417ms)
+✔ hard interruption resumes from SQLite without repeating a completed effect (455.53125ms)
+✔ HAR source changes propagate to consumers and native changes require cold deploy (15.117125ms)
+✔ all retired guidance mutations reject new execution, synthetic completion and project publication (126.492667ms)
+✔ legacy read and export preserve encrypted objectives, documents, revisions and provenance across restart (204.446958ms)
+✔ archive requires the current revision and an unowned unpinned run; cancellation never claims native success (215.141084ms)
+✔ historical completed guidance remains readable but is never promoted to current verification (516.756208ms)
+✔ legacy native evidence survives archive, stale cleanup, retention and restart and is included in export (590.126416ms)
+✔ all bundled Skills and their references are served through MCP without a client directory or installer (114.061541ms)
+✔ bundled Skill reads reject traversal, unlisted references, changed bytes and symbolic links (124.795583ms)
+✔ domain recipes expose source-linked methods on demand without creating guidance runs or host files (324.441958ms)
+✔ retired guidance creation never creates a destination, run, document or host configuration (148.812875ms)
+✔ UI flow action schemas reject recording/replay confusion and publish distinct discovery branches (12.261458ms)
+ℹ tests 27
+ℹ suites 0
+ℹ pass 26
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 6782.825792
+
+✖ failing tests:
+
+test at dist/test/native-protocol.test.js:113:1
+✖ MCP Resources, Prompts and tool reads share byte identity; project contexts and aliases have no global effect (1582.088625ms)
+  AssertionError [ERR_ASSERTION]: {"ok":false,"request_id":"c748bec8-b702-4a44-bdda-0e5d24cbcaac","error":{"code":"INVALID_ARGUMENT","message":"Input did not match the declared schema","details":[{"path":["query","selector"],"message":"Unrecognized key: \"id\"","code":"unrecognized_keys"}],"retryable":false}}
+      at call (file:///Users/dreamlike/DreamLike/deveco_tool/dist/test/native-protocol.test.js:108:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async TestContext.<anonymous> (file:///Users/dreamlike/DreamLike/deveco_tool/dist/test/native-protocol.test.js:172:26)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: true,
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }

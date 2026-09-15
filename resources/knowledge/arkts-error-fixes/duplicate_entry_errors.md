@@ -183,7 +183,7 @@ struct ContentSection {
 
 ## 详细代码示例
 
-- [DuplicateEntryError.ets](../assets/DuplicateEntryError.ets) - 完整的多个 @Entry 错误修复示例
+- [DuplicateEntryError.ets](deveco://knowledge/arkts-error-fixes/examples/DuplicateEntryError) - 完整的多个 @Entry 错误修复示例
 
 ## 最佳实践
 

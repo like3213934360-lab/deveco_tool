@@ -6,7 +6,7 @@ import Database from "better-sqlite3";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
-import { packageRoot } from "../src/core/config.js";
+import { packageRoot, configSchema } from "../src/core/config.js";
 import { atomicWrite } from "../src/core/files.js";
 import { errorResult, ToolError } from "../src/core/errors.js";
 import { acceptLanguageSymbols, acceptCppSymbols } from "./lib/lsp-symbols.js";
@@ -16,10 +16,17 @@ import { CapabilityReceipts } from "./lib/capability-receipts.js";
 import type { Runtime } from "../src/services/runtime.js";
 
 const root = path.resolve(z.string().min(1).parse(process.argv[2]));
-const project = path.resolve(z.string().min(1).parse(process.argv[3]));
+const seed = path.resolve(z.string().min(1).parse(process.argv[3]));
+const configurationFile = process.argv[4];
+const configuration = configSchema.parse(configurationFile ? JSON.parse(fs.readFileSync(path.resolve(configurationFile), "utf8")) : {});
+assert.equal(fs.readFileSync(path.join(seed, "entry/src/main/cpp/native_canary.cpp"), "utf8"), "int native_value() { return 7; }\n", "Use an owned CMake acceptance seed");
 assert.equal(fs.existsSync(root), false, "Use a new evidence directory");
 fs.mkdirSync(root, { recursive: true, mode: 0o700 });
-atomicWrite(path.join(root, "config.json"), "{}\n");
+atomicWrite(path.join(root, "config.json"), JSON.stringify(configuration));
+// Compilation commands embed absolute paths. Copy only inputs and let the
+// selected SDK rebuild a database for this owned project before clangd queries.
+const project = path.join(root, "application");
+fs.cpSync(seed, project, { recursive: true, filter: file => !["build", ".cxx", ".hvigor", ".git", ".idea", ".arkpilot", ".deveco-mcp", "node_modules", "oh_modules"].includes(path.basename(file)) });
 const tested = evidenceIdentity();
 const receipts = new CapabilityReceipts(root, tested);
 const results: Record<string, unknown> = {};
@@ -96,6 +103,15 @@ async function disconnect() {
 try {
   await connect();
   results.doctor = await call("deveco_doctor", {});
+  const preparation = z.object({ run_id: z.string() }).parse(await call("workflow_run", { action: "start", workflow: "project_build", input: { project_path: project }, request_key: "lsp-fixture-build" }));
+  const preparationDeadline = Date.now() + 300000;
+  for (;;) {
+    const state = z.object({ status: z.string(), result: z.unknown().optional(), error: z.unknown().optional() }).parse(await call("workflow_run", { action: "status", run_id: preparation.run_id, wait_ms: 1000 }));
+    results.fixture_build = { ...state, run_id: preparation.run_id, seed, project };
+    if (state.status === "succeeded") break;
+    assert.ok(["queued", "running"].includes(state.status), JSON.stringify(state));
+    assert.ok(Date.now() < preparationDeadline, "Owned CMake fixture build timed out; retain its run before any retry");
+  }
   const cancelled = new AbortController(),
     cancellation = new McpError(
       ErrorCode.InvalidRequest,

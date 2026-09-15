@@ -107,4 +107,4 @@ struct DynamicImportExample {
 
 ## 详细代码示例
 
-> [ESObjectTypeError.ets](../assets/ESObjectTypeError.ets) - 完整的ESObject类型错误示例和修复方案
+> [ESObjectTypeError.ets](deveco://knowledge/arkts-error-fixes/examples/ESObjectTypeError) - 完整的ESObject类型错误示例和修复方案

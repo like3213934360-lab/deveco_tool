@@ -188,16 +188,21 @@ export class UiTestContinuousLogService {
       complete: false,
       received_range_verified: true,
     };
+    const next = { ...session,
+      chunk_count: session.chunk_count + 1,
+      bytes: session.bytes + artifact.bytes,
+      lines: session.lines + batch.lines,
+      last_received_ns: batch.end_ns,
+    };
     this.store.db.transaction(() => {
       this.store.db
         .prepare("INSERT INTO ui_log_chunks VALUES (?,?,?)")
         .run(id, chunk.sequence, JSON.stringify(chunkSchema.parse(chunk)));
-      session.chunk_count++;
-      session.bytes += artifact.bytes;
-      session.lines += batch.lines;
-      session.last_received_ns = batch.end_ns;
-      this.save(id, session);
+      this.save(id, next);
     })();
+    // Do not advance the in-memory sequence when SQLite rolls back. A failed
+    // metadata commit must not fabricate retained chunks or skip their IDs.
+    Object.assign(session, next);
   }
   private touch(id: string, active: Active) {
     clearTimeout(active.idle);
@@ -223,6 +228,8 @@ export class UiTestContinuousLogService {
     );
     const existing = this.active.get(id);
     if (existing) {
+      invariant(existing.session.target === target && existing.session.bundle_name === bundle,
+        "UI_LOG_SCOPE_CHANGED", "A saved test log cannot change application or device");
       existing.collector.redact(secrets);
       // A boundary is a host observation, not a device-clock fence. Record it
       // separately so a line delivered late isn't claimed as action causality.
@@ -240,6 +247,11 @@ export class UiTestContinuousLogService {
       return;
     }
     const old = this.row(id);
+    if (old) {
+      const previous = sessionSchema.parse(JSON.parse(old.payload));
+      invariant(previous.target === target && previous.bundle_name === bundle,
+        "UI_LOG_SCOPE_CHANGED", "A saved test log cannot change application or device");
+    }
     if (old?.state === "exhausted") return;
     // Do not wait indefinitely on another runtime's live reader. Its identity
     // and lease remain authoritative; this runtime can only resume after release.
@@ -410,12 +422,10 @@ export class UiTestContinuousLogService {
   async stop(id: string, reason: string) {
     const active = this.active.get(id);
     if (!active) return;
-    if (
-      ["test_finished", "evidence_export", "runtime_shutdown"].includes(reason)
-    )
-      await active.collector.checkpoint();
     active.session.stop_reason = reason;
     try {
+      if (["test_finished", "evidence_export", "runtime_shutdown"].includes(reason))
+        await active.collector.checkpoint();
       this.gap(id, active.session, reason);
     } finally {
       active.controller.abort(

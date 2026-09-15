@@ -114,7 +114,9 @@ export class FlowService {
             name: flow.name,
             app: flow.app,
             steps: flow.steps.length,
-            verified: !!flow.assert,
+            has_final_assertion: !!flow.assert,
+            verified: false,
+            action_schema_version: flow.version,
           };
         } catch (error) {
           return {

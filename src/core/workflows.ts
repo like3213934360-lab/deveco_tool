@@ -25,10 +25,15 @@ export interface WorkflowContext {
   toolchain_hash?: string;
   project_hash?: string;
   source_hash?: string;
+  definition_sha256?: string;
+  runtime_sha256?: string;
+  requirements?: { id: string; revision: number; text: string }[];
   flow?: Flow;
   input_artifacts?: string[];
   deployment?: CapturedFile[];
   input_files?: { path: string; sha256: string }[];
+  build?: import("../services/application-input.js").BuildReference;
+  crash?: import("../services/crash-reference.js").CrashReference;
 }
 export interface StepContext {
   run_id: string;
@@ -78,6 +83,8 @@ export class WorkflowEngine {
       context: WorkflowContext,
       workflow: string,
     ) => Promise<void>,
+    readonly seal?: (context: WorkflowContext, workflow: string, outputs: Record<string, unknown>) => Promise<unknown>,
+    readonly runtimeIdentity?: () => string,
   ) {
     this.checkpointer = new BoundedSqliteSaver(store);
     for (const definition of definitions) {
@@ -112,7 +119,8 @@ export class WorkflowEngine {
     requestKey?: string,
     identity: unknown = context.parameters,
   ) {
-    this.definition(workflow);
+    const definition = this.definition(workflow);
+    context = { ...context, definition_sha256: this.definitionHash(definition), ...(this.runtimeIdentity ? {runtime_sha256:this.runtimeIdentity()} : {}) };
     invariant(
       Buffer.byteLength(JSON.stringify(context)) <= 65536,
       "WORKFLOW_INPUT_TOO_LARGE",
@@ -130,9 +138,13 @@ export class WorkflowEngine {
       requestKey,
       identity,
       context.input_artifacts,
+      [...(context.build ? [context.build.run_id] : []), ...(context.crash ? [context.crash.run_id] : [])],
     );
     if (created) this.dispatch(run.id, false);
     return { run_id: run.id, status: run.status, deduplicated: !created };
+  }
+  private definitionHash(definition: WorkflowDefinition) {
+    return digest({ id: definition.id, completion: definition.completion, steps: definition.steps.map(step => ({ id: step.id, kind: step.kind, execute: step.execute.toString(), reconcile: step.reconcile?.toString() ?? null })) });
   }
   private graph(definition: WorkflowDefinition) {
     const graph = new StateGraph(GraphState);
@@ -323,6 +335,8 @@ export class WorkflowEngine {
           return;
         }
         this.store.activate(id);
+        invariant(!context.runtime_sha256 || !this.runtimeIdentity || context.runtime_sha256 === this.runtimeIdentity(), "WORKFLOW_RUNTIME_CHANGED", "This run belongs to different runtime bytes; use its original installation to reconcile/export pending effects before starting current work");
+        invariant(!context.definition_sha256 || context.definition_sha256 === this.definitionHash(definition), "WORKFLOW_DEFINITION_CHANGED", "The fixed workflow implementation changed; reconcile pending effects and export the prior run before starting current work");
         await this.validate(context, record.workflow);
         execution.controller.signal.throwIfAborted();
         const graph = this.graph(definition),
@@ -349,6 +363,7 @@ export class WorkflowEngine {
         execution.controller.signal.throwIfAborted();
         const after = await graph.getState(config),
           waiting = after.tasks.some((task) => task.interrupts?.length);
+        const evidence = !waiting && this.seal ? await this.seal(context, record.workflow, result.outputs) : undefined;
         this.store.update(
           id,
           waiting ? "needs_input" : "succeeded",
@@ -358,7 +373,7 @@ export class WorkflowEngine {
                   (task) => task.interrupts ?? [],
                 ),
               }
-            : result.outputs,
+            : { ...result.outputs, ...(evidence ? { _evidence: evidence } : {}) },
         );
       };
       await enter(0);
@@ -417,11 +432,12 @@ export class WorkflowEngine {
     this.dispatch(id, true);
     return { run_id: id, status: "queued" };
   }
-  async status(id: string, waitMs = 0) {
-    const initial = this.store.get(id),
-      deadline = Date.now() + waitMs;
+  async status(id: string, waitMs = 0, signal?: AbortSignal) {
+    this.store.get(id);
+    signal?.throwIfAborted();
+    const deadline = performance.now() + waitMs;
     while (
-      Date.now() < deadline &&
+      performance.now() < deadline &&
       ![
         "needs_input",
         "interrupted",
@@ -430,8 +446,13 @@ export class WorkflowEngine {
         "cancelled",
       ].includes(this.store.get(id).status)
     ) {
-      await delay(Math.min(100, Math.max(1, deadline - Date.now())));
-      if (this.store.get(id).status !== initial.status) break;
+      // Cancelling this observation does not cancel the durable execution.
+      try {
+        await delay(Math.min(50, Math.max(1, deadline - performance.now())), undefined, { signal });
+      } catch (error) {
+        if (signal?.aborted) throw signal.reason;
+        throw error;
+      }
     }
     return this.present(this.store.get(id));
   }

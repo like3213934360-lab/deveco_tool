@@ -133,7 +133,7 @@ struct ArrowFunctionExample {
 
 ## 详细代码示例
 
-- [ArrowFunctionConversionError.ets](../assets/ArrowFunctionConversionError.ets) - 完整的 Function.bind 错误修复示例，包含媒体查询监听和箭头函数使用
+- [ArrowFunctionConversionError.ets](deveco://knowledge/arkts-error-fixes/examples/ArrowFunctionConversionError) - 完整的 Function.bind 错误修复示例，包含媒体查询监听和箭头函数使用
 
 ## 最佳实践
 

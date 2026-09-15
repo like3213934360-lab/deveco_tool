@@ -1,0 +1,155 @@
+[
+  {
+    "branch": "codex/upstream-deveco-cli-0440290e7714-78a8a3344a26-e4a9e4d8",
+    "commit": "9d48213874176ca3b88383315705fffea088c2c2",
+    "disposition": "Archived proposal only; not accepted upstream implementation or source-lock advancement.",
+    "files": [
+      {
+        "source": "provenance/upstream-candidates/deveco-cli/UPGRADE.md",
+        "file": "9d4821387417/UPGRADE.md",
+        "sha256": "b8ca491c2fb977819d5e7f790e3c46d56ce61569944b8da21b46cb0664fbb156"
+      },
+      {
+        "source": "provenance/upstream-candidates/deveco-cli/candidate.json",
+        "file": "9d4821387417/candidate.json",
+        "sha256": "641b29ea30eff6559236538934cb666bdf702c2b1906250fafd5afb3b7d53fce"
+      }
+    ]
+  },
+  {
+    "branch": "codex/upstream-deveco-cli-87c360b05848-bd12c22ba9e5-e4a9e4d8",
+    "commit": "b68a494d99501ea93eb29509d963bbd9c2a2df5e",
+    "disposition": "Archived proposal only; not accepted upstream implementation or source-lock advancement.",
+    "files": [
+      {
+        "source": "provenance/upstream-candidates/deveco-cli/UPGRADE.md",
+        "file": "b68a494d9950/UPGRADE.md",
+        "sha256": "6dbaca77c8e5f2e42c911a57e02831b9396d1ac9172da7f342efc29d926f2b16"
+      },
+      {
+        "source": "provenance/upstream-candidates/deveco-cli/candidate.json",
+        "file": "b68a494d9950/candidate.json",
+        "sha256": "6a98ec0ba33dbba8634806a5d477e03ad1dca0c74f81aa8bdc6fe16b7f2f9a5b"
+      }
+    ]
+  },
+  {
+    "branch": "codex/upstream-deveco-cli-a71f93d73941-7f2befb4c52e-e4a9e4d8",
+    "commit": "53a8b2918b860166a398a20df5d191d574297f2b",
+    "disposition": "Archived proposal only; not accepted upstream implementation or source-lock advancement.",
+    "files": [
+      {
+        "source": "provenance/upstream-candidates/deveco-cli/UPGRADE.md",
+        "file": "53a8b2918b86/UPGRADE.md",
+        "sha256": "281a4d4dba6e1f62a912cc32285f36c904645ab4e449bbc3b4e78d8f79b40d64"
+      },
+      {
+        "source": "provenance/upstream-candidates/deveco-cli/candidate.json",
+        "file": "53a8b2918b86/candidate.json",
+        "sha256": "7dd030dc502a98404760b917505762cadc0af0f2fc56b10b91e9a5fbabaaccda"
+      }
+    ]
+  },
+  {
+    "branch": "codex/upstream-deveco-cli-bd4c15f75ace-906da7f1eb97-e4a9e4d8",
+    "commit": "91274a4c6deca6065d403f43858b7247527a7ceb",
+    "disposition": "Archived proposal only; not accepted upstream implementation or source-lock advancement.",
+    "files": [
+      {
+        "source": "provenance/upstream-candidates/deveco-cli/UPGRADE.md",
+        "file": "91274a4c6dec/UPGRADE.md",
+        "sha256": "00576164faf08c0a45c5b4ebc3779534ee6b598138347671b0caf279d36bb229"
+      },
+      {
+        "source": "provenance/upstream-candidates/deveco-cli/candidate.json",
+        "file": "91274a4c6dec/candidate.json",
+        "sha256": "da2d6463f842c3f7e55a661989b0f5ce2ec7e1a013e5dc5ffa73703866a3625c"
+      }
+    ]
+  },
+  {
+    "branch": "codex/upstream-deveco-code-7b9b68c2f65e-a18dbd6062f6-e4a9e4d8",
+    "commit": "0618441e7ae8dddc37298b2537acff7ac3867279",
+    "disposition": "Archived proposal only; not accepted upstream implementation or source-lock advancement.",
+    "files": [
+      {
+        "source": "provenance/upstream-candidates/deveco-code/UPGRADE.md",
+        "file": "0618441e7ae8/UPGRADE.md",
+        "sha256": "5aa2215c85b7e0e269edc82a25db500a2abc8e450c882092a34153b94a15f3a0"
+      },
+      {
+        "source": "provenance/upstream-candidates/deveco-code/candidate.json",
+        "file": "0618441e7ae8/candidate.json",
+        "sha256": "1b18de815c297a34cfaea8de3f534358ae92e644ccff1831030db5d3071145fb"
+      }
+    ]
+  },
+  {
+    "branch": "codex/upstream-deveco-code-aeb4536e56d1-a1db5764fb31-e4a9e4d8",
+    "commit": "e41bc60c3f3a717e9dbdc97cd7ae0ade5d01ab1c",
+    "disposition": "Archived proposal only; not accepted upstream implementation or source-lock advancement.",
+    "files": [
+      {
+        "source": "provenance/upstream-candidates/deveco-code/UPGRADE.md",
+        "file": "e41bc60c3f3a/UPGRADE.md",
+        "sha256": "196afd16a69afd431dc81d0901594fe623dff6d913cebff58668427611f8a104"
+      },
+      {
+        "source": "provenance/upstream-candidates/deveco-code/candidate.json",
+        "file": "e41bc60c3f3a/candidate.json",
+        "sha256": "5f094de57bee54fbb984742de1acad5ba0cbdfff1916afc97a65f05ce3248d73"
+      }
+    ]
+  },
+  {
+    "branch": "codex/upstream-deveco-code-aeb4536e56d1-a3736c50185c-e4a9e4d8",
+    "commit": "6bce2820b625a26c04bd3b7f4814acad3ee0a958",
+    "disposition": "Archived proposal only; not accepted upstream implementation or source-lock advancement.",
+    "files": [
+      {
+        "source": "provenance/upstream-candidates/deveco-code/UPGRADE.md",
+        "file": "6bce2820b625/UPGRADE.md",
+        "sha256": "359984a70689ec825dcbd90bae4d7b68eea1f33d5c6f0265c3a487258121c88d"
+      },
+      {
+        "source": "provenance/upstream-candidates/deveco-code/candidate.json",
+        "file": "6bce2820b625/candidate.json",
+        "sha256": "b92efedf68cb71aaeec43153b2038abcefd10e47aa574682ce864a72703936ee"
+      }
+    ]
+  },
+  {
+    "branch": "codex/upstream-deveco-code-e5bc1fa4b55d-716064070bb2-e4a9e4d8",
+    "commit": "579f460b622b2c5c7d4d64bec4a5f89c8ade6fa2",
+    "disposition": "Archived proposal only; not accepted upstream implementation or source-lock advancement.",
+    "files": [
+      {
+        "source": "provenance/upstream-candidates/deveco-code/UPGRADE.md",
+        "file": "579f460b622b/UPGRADE.md",
+        "sha256": "c84ea597cc20b812ddc00a6a6ac7e2e5f1d3588b66e706fd81ca040365b9f0a2"
+      },
+      {
+        "source": "provenance/upstream-candidates/deveco-code/candidate.json",
+        "file": "579f460b622b/candidate.json",
+        "sha256": "912fb6457f61f40c857e93dbfaf9124878118faa765e06dcd21e080231fce1b3"
+      }
+    ]
+  },
+  {
+    "branch": "codex/upstream-deveco-code-fc6488e27710-adecd1df951b-e4a9e4d8",
+    "commit": "1f921112e764e050e3274420a2e7460b5ade5b71",
+    "disposition": "Archived proposal only; not accepted upstream implementation or source-lock advancement.",
+    "files": [
+      {
+        "source": "provenance/upstream-candidates/deveco-code/UPGRADE.md",
+        "file": "1f921112e764/UPGRADE.md",
+        "sha256": "d6930633b78c02aeb9869557e05750ed7a3cb9725b7480fb42447e98a52b0a72"
+      },
+      {
+        "source": "provenance/upstream-candidates/deveco-code/candidate.json",
+        "file": "1f921112e764/candidate.json",
+        "sha256": "fec2f5d6bfb94900fa395f7f63d00c8485e1f50b181a1b42440a01a0ca362c4c"
+      }
+    ]
+  }
+]

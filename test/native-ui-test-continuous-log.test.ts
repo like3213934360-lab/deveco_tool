@@ -8,7 +8,7 @@ import { setTimeout as delay } from "node:timers/promises";
 import { StateStore } from "../src/core/store.js";
 import { StorageService } from "../src/services/storage.js";
 import { UiTestContinuousLogService } from "../src/services/ui-test-continuous-log.js";
-import type { LogTransport } from "../src/services/ui-log-stream.js";
+import { LogStreamCollector, type LogTransport } from "../src/services/ui-log-stream.js";
 
 async function until(predicate: () => boolean) {
   const deadline = Date.now() + 6000;
@@ -80,6 +80,8 @@ test("continuous artifacts and hashes survive restart; resumed collection doesn'
       "secret中文",
     ]);
     await until(fixture.ready);
+    await assert.rejects(logs.ensure(id, "other-target", "com.test.owned", "one", "act"), { code: "UI_LOG_SCOPE_CHANGED" });
+    await assert.rejects(logs.ensure(id, "owned", "com.test.other", "one", "act"), { code: "UI_LOG_SCOPE_CHANGED" });
     await delay(2);
     fixture.emit(3000, "secret中文");
     await until(() => logs.status(id).chunk_count > 0);
@@ -258,6 +260,7 @@ for (const budget of ["bytes", "chunks"] as const)
       store = new StateStore(root);
       logs = new UiTestContinuousLogService(store, () => fixture.transport);
       await logs.ensure(id, "owned", "com.test.owned", "third", "resume");
+      await assert.rejects(logs.ensure(id, "other-target", "com.test.owned", "third", "resume"), { code: "UI_LOG_SCOPE_CHANGED" });
       assert.equal(logs.status(id).state, "exhausted");
       assert.equal(fixture.stats().streams, streams);
       assert.deepEqual(logs.chunk(id, 500), first);
@@ -273,6 +276,45 @@ for (const budget of ["bytes", "chunks"] as const)
       fs.rmSync(root, { recursive: true, force: true });
     }
   });
+
+test("chunk transaction rollback preserves the last committed sequence and totals", async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-log-rollback-")), store = new StateStore(root), fixture = source();
+  const logs = new UiTestContinuousLogService(store, () => fixture.transport), id = store.create("ui_test", {}).run.id;
+  store.update(id, "needs_input");
+  try {
+    await logs.ensure(id, "owned", "com.test.owned", "one", "resume");
+    await until(fixture.ready); await delay(2); fixture.emit(2);
+    await until(() => logs.status(id).chunk_count === 1);
+    const before = logs.status(id), first = logs.chunk(id, 500);
+    store.db.exec("CREATE TRIGGER fail_chunk_commit BEFORE INSERT ON ui_log_chunks BEGIN SELECT RAISE(ABORT,'controlled metadata rollback'); END");
+    fixture.emit(3);
+    await until(() => fixture.stats().closed > 0);
+    await logs.stop(id, "test_cancelled");
+    const after = logs.status(id);
+    assert.ok("bytes" in before && "bytes" in after && "lines" in before && "lines" in after);
+    assert.equal(after.chunk_count, before.chunk_count);
+    assert.equal(after.bytes, before.bytes);
+    assert.equal(after.lines, before.lines);
+    assert.deepEqual(logs.chunk(id, 500), first);
+    assert.equal(logs.chunks(id).length, 1);
+    assert.equal(fixture.stats().streams, fixture.stats().closed);
+  } finally { await logs.close(); store.close(); fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test("checkpoint failure still aborts and joins the log transport and releases its lease", async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-log-checkpoint-")), store = new StateStore(root), fixture = source();
+  const logs = new UiTestContinuousLogService(store, () => fixture.transport), id = store.create("ui_test", {}).run.id;
+  store.update(id, "needs_input");
+  try {
+    await logs.ensure(id, "owned", "com.test.owned", "one", "resume");
+    await until(fixture.ready);
+    const failure = t.mock.method(LogStreamCollector.prototype, "checkpoint", async () => { throw new Error("controlled checkpoint failure"); });
+    await assert.rejects(logs.stop(id, "test_finished"), /controlled checkpoint failure/);
+    failure.mock.restore();
+    assert.equal(fixture.stats().streams, fixture.stats().closed);
+    assert.equal(store.db.prepare("SELECT resource FROM leases WHERE resource=?").all(`ui-log:${id}`).length, 0);
+  } finally { await logs.close(); store.close(); fs.rmSync(root, { recursive: true, force: true }); }
+});
 
 test("artifact ENOSPC stops and joins the collector without replacing readable history", async (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-log-disk-"));

@@ -7,6 +7,7 @@ import { resourceRoot } from "../core/config.js";
 import { fileDigest, inside } from "../core/files.js";
 import { invariant } from "../core/errors.js";
 import { StateStore } from "../core/store.js";
+import { readContentFile } from "./content-file.js";
 import { currentTrace } from "../core/trace.js";
 import { AuthService, httpRequest } from "./auth.js";
 import {
@@ -39,6 +40,10 @@ const docSchema = z.object({
   catalog_id: z.number().int().nonnegative(),
 });
 type Doc = z.infer<typeof docSchema>;
+function knowledgeReference(id: string) {
+  return { uri: id.startsWith("docs:") ? null : `deveco://knowledge/${id}`,
+    read: { tool: "harmony_knowledge", action: "read", id } };
+}
 function docMetadata(doc: Doc) {
   const catalog = docCatalogNames[doc.catalog_id];
   invariant(
@@ -48,6 +53,7 @@ function docMetadata(doc: Doc) {
   );
   return {
     id: `docs:${doc.document_id}`,
+    ...knowledgeReference(`docs:${doc.document_id}`),
     title: doc.doc_title,
     catalog,
     source: "deveco-cli/docs.zip",
@@ -97,7 +103,7 @@ export class KnowledgeService {
         next_offset: Math.min(this.entries.length, offset + limit),
         entries: this.entries
           .slice(offset, offset + limit)
-          .map(({ file: _file, ...entry }) => entry),
+          .map(({ file: _file, ...entry }) => ({ ...entry, ...knowledgeReference(entry.id) })),
       };
     const database = this.documents();
     const id = catalogId(catalog);
@@ -177,6 +183,9 @@ export class KnowledgeService {
         const at = Math.max(0, lower.indexOf(terms[0]!));
         return {
           id: entry.id,
+          ...knowledgeReference(entry.id),
+          sha256: entry.sha256,
+          kind: entry.kind,
           title: entry.title,
           score,
           excerpt: content.slice(Math.max(0, at - 100), at + 500),
@@ -301,11 +310,12 @@ export class KnowledgeService {
       // Only metadata is returned; complete references remain available through harmony_knowledge.read.
       references: this.entries
         .filter((entry) => ids.has(entry.id))
-        .map(({ file: _file, ...entry }) => entry),
+        .map(({ file: _file, ...entry }) => ({ ...entry, ...knowledgeReference(entry.id) })),
       root_cause_verified: false,
     };
   }
   read(id: string, offset = 0, limit = 16384) {
+    if (id.startsWith("deveco://knowledge/")) id = decodeURIComponent(id.slice("deveco://knowledge/".length));
     let content: string, source: unknown;
     if (id.startsWith("docs:")) {
       const document = docSchema
@@ -339,16 +349,18 @@ export class KnowledgeService {
         "KNOWLEDGE_DIGEST_MISMATCH",
         "Bundled knowledge failed integrity verification",
       );
-      content = fs.readFileSync(file, "utf8");
+      content = readContentFile(resourceRoot, entry.file, entry.sha256, 1024 * 1024).text;
       const { file: _file, ...metadata } = entry;
       source = metadata;
     }
     return {
       source,
+      uri: id.startsWith("docs:") ? null : `deveco://knowledge/${id}`,
       content: content.slice(offset, offset + limit),
       offset,
       next_offset: Math.min(content.length, offset + limit),
       total_characters: content.length,
+      next: offset + limit < content.length ? { tool: "harmony_knowledge", action: "read", id, offset: offset + limit, limit } : null,
     };
   }
   async cloud(query: string, signal?: AbortSignal) {

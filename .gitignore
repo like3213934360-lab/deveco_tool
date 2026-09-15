@@ -6,3 +6,5 @@ yarn-debug.log*
 yarn-error.log*
 
 .native-build-*/
+__pycache__/
+*.py[cod]

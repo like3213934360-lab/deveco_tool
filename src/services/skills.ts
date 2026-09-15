@@ -1,4 +1,3 @@
-import fs from "node:fs";
 import path from "node:path";
 import { createHash } from "node:crypto";
 import { z } from "zod";
@@ -6,6 +5,7 @@ import { resourceRoot } from "../core/config.js";
 import { digest, inside } from "../core/files.js";
 import { invariant } from "../core/errors.js";
 import type { StateStore } from "../core/store.js";
+import { readContentFile } from "./content-file.js";
 
 const name = z
   .string()
@@ -87,48 +87,11 @@ export class SkillService {
     }
   }
   private readFile(file: string) {
-    invariant(
-      !fs.lstatSync(file).isSymbolicLink(),
-      "SKILL_FILE_INVALID",
-      "Linked skill files cannot be managed",
-    );
-    const fd = fs.openSync(
-      file,
-      fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW | fs.constants.O_NONBLOCK,
-    );
     try {
-      const stat = fs.fstatSync(fd);
-      invariant(
-        stat.isFile() && stat.size <= 256 * 1024,
-        "SKILL_FILE_INVALID",
-        "Skill content must be a regular file at most 256 KiB",
-      );
-      const buffer = Buffer.alloc(stat.size + 1);
-      let offset = 0;
-      while (offset < buffer.length) {
-        const read = fs.readSync(
-          fd,
-          buffer,
-          offset,
-          buffer.length - offset,
-          null,
-        );
-        if (!read) break;
-        offset += read;
-      }
-      const bytes = buffer.subarray(0, offset),
-        after = fs.fstatSync(fd);
-      invariant(
-        after.size === stat.size &&
-          after.mtimeMs === stat.mtimeMs &&
-          after.ctimeMs === stat.ctimeMs &&
-          bytes.length === stat.size,
-        "SKILL_FILE_CHANGED",
-        "Skill file changed during read",
-      );
-      return bytes;
-    } finally {
-      fs.closeSync(fd);
+      return Buffer.from(readContentFile(this.resources, path.relative(this.resources, file)).text, "utf8");
+    } catch (error) {
+      const code = error && typeof error === "object" && "code" in error ? error.code : undefined;
+      invariant(false, code === "CONTENT_CHANGED" ? "SKILL_FILE_CHANGED" : "SKILL_FILE_INVALID", "Skill content must be unchanged, bounded and free of symbolic links");
     }
   }
   private entry(id: string) {
@@ -143,6 +106,9 @@ export class SkillService {
   private metadata(entry: (typeof this.entries)[number]) {
     return {
       ...entry,
+      read: { tool: "skill_manage", action: "read", name: entry.name },
+      files: entry.files.map(file => ({ ...file, uri: `deveco://skill/${entry.name}/${file.path}`,
+        read: { tool: "skill_manage", action: "read", name: entry.name, file: file.path } })),
       source: "reviewed_native_adaptation",
       delivery: "mcp",
       client_installation_required: false,
@@ -167,12 +133,14 @@ export class SkillService {
     );
     return {
       ...this.metadata(entry),
+      uri: `deveco://skill/${entry.name}/${fileName}`,
       file: fileName,
       content: content.toString("utf8"),
       reference_read: {
         tool: "skill_manage",
         action: "read",
         name: entry.name,
+        file: fileName,
       },
     };
   }

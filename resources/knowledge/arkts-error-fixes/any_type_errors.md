@@ -429,5 +429,5 @@ struct ProcessorExample {
 6. **Avoid any**: Never use `any` or `unknown` types
 
 ### Related Files
-- [Code Example](../assets/AnyTypeError.ets)
+- [Code Example](deveco://knowledge/arkts-error-fixes/examples/AnyTypeError)
 - [ArkTS Type System](https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/arkts-type-system)

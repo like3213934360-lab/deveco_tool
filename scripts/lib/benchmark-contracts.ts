@@ -74,7 +74,7 @@ export async function executeBenchmarkSteps(client: Client, steps: z.infer<typeo
       for (;;) {
         signal?.throwIfAborted();
         invariant(performance.now() < deadline, "BENCHMARK_WORKFLOW_TIMEOUT", "Task did not complete; the benchmark will not repeat its effects");
-        data = await call("workflow_run", { action: "status", run_id, wait_ms: Math.min(20000, Math.max(1, Math.floor(deadline - performance.now()))) });
+        data = await call("workflow_run", { action: "status", detail: "full", run_id, wait_ms: Math.min(20000, Math.max(1, Math.floor(deadline - performance.now()))) });
         const state = z.object({ ok: z.literal(true), data: z.object({ run_id: z.string(), status: z.string() }) }).parse(data).data;
         invariant(state.run_id === run_id, "BENCHMARK_RUN_MISMATCH", "Workflow status belongs to another task");
         if (state.status === "succeeded") break;

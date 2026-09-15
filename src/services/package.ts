@@ -13,6 +13,7 @@ const identity = z.object({
   module: z.object({
     name: z.string(),
     type: z.string(),
+    mainElement: z.string().optional(),
     abilities: z.array(z.object({ name: z.string() })).default([]),
     dependencies: z
       .array(
@@ -98,6 +99,14 @@ export async function inspectApplicationPackages(
     "Select the module containing the requested launch ability",
   );
   const metadata = launch[0]!;
+  for (const item of packages) for (const dependency of item.module.dependencies) {
+    if (!dependency.bundleName || dependency.bundleName === item.app.bundleName)
+      invariant(packages.some(candidate => candidate.module.name === dependency.moduleName),
+        "PACKAGE_DEPENDENCY_MISSING", "The installation set is missing a declared application module", {
+          module: item.module.name, dependency: dependency.moduleName,
+          available: packages.map(candidate => candidate.module.name),
+        });
+  }
   return {
     bundle_name: metadata.app.bundleName,
     module: metadata.module.name,

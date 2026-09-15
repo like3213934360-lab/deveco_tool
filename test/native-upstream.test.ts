@@ -209,3 +209,22 @@ test("Git candidates lock their base tree and origin, preserve Unicode paths and
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
+
+test("host prompts, new SDD assets and discovered dependencies override historical package exclusions", () => {
+  const { lock } = configuration(), source = lock.sources.find((item) => item.id === "deveco-code")!;
+  const broadExclusion: Mapping = { format: 1, rules: [{ id: "old-host-exclusion", source: source.id, path: "packages/", prefix: true, disposition: "exclude", reason: "Historical broad host exclusion", targets: [], tests: [] }] };
+  const discovered = JSON.parse(fs.readFileSync(path.join(packageRoot, "provenance/upstream-discovery.json"), "utf8"));
+  const dependency = discovered.assets.find((item: { kind: string; path: string }) => item.kind === "transitive-dependency" && item.path.startsWith("packages/")).path;
+  for (const file of [
+    "packages/opencode/resources/spec/commands/new-command.md",
+    "packages/opencode/resources/new-method/new-format.json",
+    "packages/unseen-host-package/new-method.ts",
+    "packages/opencode/src/agent/prompt/new-agent.txt",
+    "packages/opencode/src/command/template/new-command.txt",
+    "packages/opencode/src/tool/new-tool.ts",
+    dependency,
+  ]) {
+    const report = changes(source, [], [{ path: file, oid: "a".repeat(40), mode: "100644", type: "blob" }], broadExclusion, packageRoot);
+    assert.equal(report[0]!.disposition, "unmapped", file);
+  }
+});

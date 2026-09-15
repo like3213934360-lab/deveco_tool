@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { createHash } from "node:crypto";
 import { errorResult, invariant } from "../core/errors.js";
 import type { StateStore } from "../core/store.js";
 import { currentTrace } from "../core/trace.js";
@@ -18,6 +19,7 @@ export const uiLogChunkSchema = z.strictObject({
   start: uiLogAnchorSchema.optional(),
   end: uiLogAnchorSchema.optional(),
   artifact_id: z.string().uuid().optional(),
+  sha256: z.string().regex(/^[a-f0-9]{64}$/).optional(),
   bytes: z.number().optional(),
   line_count: z.number().optional(),
   skipped_lines: z.number().optional(),
@@ -204,6 +206,7 @@ export class UiTestLogService {
           start,
           end,
           artifact_id: artifact.artifact_id,
+          sha256: createHash("sha256").update(selected.content).digest("hex"),
           bytes: artifact.bytes,
           line_count: selected.line_count,
           skipped_lines: selected.skipped_lines,

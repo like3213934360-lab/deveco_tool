@@ -153,6 +153,10 @@ export function changes(
 ) {
   const old = new Map(before.map((item) => [item.path, item])),
     next = new Map(after.map((item) => [item.path, item]));
+  const discoveryFile = path.join(workspace, "provenance/upstream-discovery.json");
+  const discoveredPaths = new Set<string>(source.id === "deveco-code" && fs.existsSync(discoveryFile)
+    ? (JSON.parse(fs.readFileSync(discoveryFile, "utf8")) as { assets: { path: string }[] }).assets.map((asset) => asset.path)
+    : []);
   return [...new Set([...old.keys(), ...next.keys()])]
     .sort()
     .flatMap((file) => {
@@ -160,6 +164,12 @@ export function changes(
         b = next.get(file);
       if (a?.oid === b?.oid && a?.mode === b?.mode) return [];
       const rule = classify(mapping, source.id, file);
+      const protectedProductAsset = source.id === "deveco-code" && (
+        discoveredPaths.has(file) || /^packages\/opencode\/(?:resources\/|src\/(?:tool|agent|command)\/)/.test(file)
+      );
+      // A broad historical host-package exclude cannot absorb product methods,
+      // templates, schemas or newly introduced registry implementations.
+      const hiddenProductAsset = rule?.disposition === "exclude" && (protectedProductAsset || (!a && rule.prefix));
       const unsafe = [a, b].some(
         (item) =>
           item &&
@@ -180,10 +190,12 @@ export function changes(
           after: b ?? null,
           mapping: rule?.id ?? null,
           disposition:
-            unsafe || missing.length
+            unsafe || missing.length || hiddenProductAsset
               ? ("unmapped" as const)
               : (rule?.disposition ?? ("unmapped" as const)),
-          reason: unsafe
+          reason: hiddenProductAsset
+            ? "Product source asset requires an explicit behavior/source review; a broad host exclusion cannot accept it"
+            : unsafe
             ? "Symlink or submodule changes require explicit source handling"
             : missing.length
               ? `Mapped targets/tests do not exist: ${missing.join(", ")}`

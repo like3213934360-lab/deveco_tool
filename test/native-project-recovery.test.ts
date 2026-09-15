@@ -9,7 +9,7 @@ import { ProcessService } from "../src/core/process.js";
 import { PersistentProcessObserver } from "../src/core/process-observer.js";
 import { WorkflowEngine, type StepContext } from "../src/core/workflows.js";
 import { atomicWrite, readObject } from "../src/core/files.js";
-import { ProjectService } from "../src/services/project.js";
+import { ProjectService, type Project } from "../src/services/project.js";
 import type { Toolchain } from "../src/core/toolchain.js";
 
 for (const phase of ["ohpm", "sync", "build", "rejected-build", "build-preview"]) {
@@ -45,7 +45,7 @@ for (const phase of ["ohpm", "sync", "build", "rejected-build", "build-preview"]
       projects = new ProjectService(processes, () => toolchain, store),
       engine: WorkflowEngine | undefined;
     try {
-      let project = await projects.create({
+      let project: Project = await projects.create({
         project_path: path.join(root, "application"),
         app_name: "Recovery",
         bundle_name: "com.deveco.recovery",

@@ -131,13 +131,11 @@ export class DiagnosticService {
           ? await this.cpu!.run({ kind: "checker", content }, signal)
           : parseCheckerReport(content);
       signal.throwIfAborted();
+      const artifact = this.store.artifact(currentTrace().run_id ?? "diagnostics", content, "application/json");
       return {
         ...parsed,
-        artifact: this.store.artifact(
-          currentTrace().run_id ?? "diagnostics",
-          content,
-          "application/json",
-        ),
+        artifact,
+        report_read: { tool: "workflow_run", action: "read_artifact", artifact_id: artifact.artifact_id },
       };
     }, signal);
   }
@@ -346,6 +344,7 @@ export class DiagnosticService {
         exitCode: result.exitCode,
         ...parsed,
         artifact,
+        report_read: { tool: "workflow_run", action: "read_artifact", artifact_id: artifact.artifact_id },
         native_logs,
       };
     }, signal);
@@ -507,12 +506,15 @@ export class DiagnosticService {
         target_version: input.target_version,
         affected_locations: findings.length,
         findings: findings.slice(0, 100),
+        truncated: findings.length > 100,
+        scope: "SDK/API upgrade impact; each finding retains its native code location, change description and source document",
         normalized_report: this.store.artifact(
           currentTrace().run_id ?? "compatibility",
           JSON.stringify(findings),
           "application/json",
         ),
         reports: parsed.map((report) => report.artifact),
+        report_reads: parsed.map(report => ({ tool: "workflow_run", action: "read_artifact", artifact_id: report.artifact.artifact_id })),
         log: result.log,
       };
     }, signal);

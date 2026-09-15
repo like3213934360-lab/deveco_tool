@@ -10,8 +10,8 @@ import { finishAcceptance } from "./lib/acceptance-report.js";
 import { AcceptanceMcp } from "./lib/mcp-acceptance-client.js";
 import { OwnedEmulatorAcceptance } from "./lib/owned-emulator-acceptance.js";
 
-const [root, preparedFile] = z
-  .tuple([z.string().min(1), z.string().min(1)])
+const [root, preparedFile, osVersion] = z
+  .tuple([z.string().min(1), z.string().min(1), z.string().min(1).optional()])
   .parse(process.argv.slice(2));
 assert.ok(path.isAbsolute(root) && path.isAbsolute(preparedFile));
 assert.equal(
@@ -33,7 +33,7 @@ const ownerRoot = path.join(root, "emulator-owner");
 fs.mkdirSync(ownerRoot, { mode: 0o700 });
 atomicWrite(path.join(ownerRoot, "config.json"), "{}\n");
 const mcp = new AcceptanceMcp(root, "native-recording-mouse-acceptance"),
-  owner = new AcceptanceMcp(ownerRoot, "native-recording-emulator-owner");
+  owner = new AcceptanceMcp(ownerRoot, "native-recording-emulator-owner", { tool_groups: ["core", "emulator-admin"] });
 const tested = evidenceIdentity(),
   results: Record<string, unknown> = {};
 const file = path.join(root, "evidence.json"),
@@ -172,7 +172,7 @@ struct Index {
     original_sha256: originalHash,
     page_sha256: fileDigest(page),
   });
-  const target = await owned.start();
+  const target = await owned.start(osVersion);
   await owned.workflow("sync", "project_sync", { project_path: project });
   const built = await owned.workflow("build", "project_build", {
     project_path: project,

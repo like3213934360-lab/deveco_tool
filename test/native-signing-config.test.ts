@@ -89,7 +89,7 @@ test("project signing creates private Hvigor material and preserves other produc
   const f = fixture();
   try {
     const result = await configureSigning(
-      inspectProject(f.project),
+      inspectProject(f.project, "default"),
       f.descriptor,
       f.output,
       "Personal",
@@ -128,7 +128,7 @@ test("project signing creates private Hvigor material and preserves other produc
       original = fileDigest(String(material.storeFile));
     await assert.rejects(
       configureSigning(
-        inspectProject(f.project),
+        inspectProject(f.project, "default"),
         f.descriptor,
         f.output,
         "Next",
@@ -137,7 +137,7 @@ test("project signing creates private Hvigor material and preserves other produc
     );
     await assert.rejects(
       configureSigning(
-        inspectProject(f.project),
+        inspectProject(f.project, "default"),
         f.descriptor,
         f.output + "-next",
         "Personal",
@@ -184,13 +184,13 @@ test("signing configuration revalidates the captured module targets without fall
 test("signing configuration stops before mutation for stale projects, active watch, missing inputs and cancellation", async () => {
   const f = fixture();
   try {
-    const project = inspectProject(f.project);
+    const project = inspectProject(f.project, "default");
     fs.appendFileSync(f.file, "\n");
     await assert.rejects(
       configureSigning(project, f.descriptor, f.output, "Personal"),
       { code: "SIGN_PROJECT_CHANGED" },
     );
-    const current = inspectProject(f.project),
+    const current = inspectProject(f.project, "default"),
       before = fileDigest(f.file);
     await assert.rejects(
       configureSigning(
@@ -241,14 +241,14 @@ test("public signing workflow settles an existing configuration before publicati
     processes = new ProcessService(), auth = new AuthService(store, processes),
     signatures = new SignatureService(processes, store, auth);
   const runtime = Object.assign(Object.create(Runtime.prototype) as Runtime, {
-    store, signatures, project: () => inspectProject(f.project),
+    store, signatures, project: () => inspectProject(f.project, "default"),
   });
   const definitions = (Reflect.get(runtime, "definitions") as () => WorkflowDefinition[]).call(runtime),
     engine = new WorkflowEngine(store, definitions, async () => {}),
     node = "execute_native_operation", child = `${node}:private:native-signature`,
     before = fileDigest(f.file);
   const start = (name: string) => engine.start("native_operation", {
-    project_path: f.project,
+    project_path: f.project, product: "default",
     parameters: { tool: "app_signature", input: { action: "configure", file: f.descriptor, output: f.output, options: { name } } },
   }).run_id;
   const finish = async (id: string) => {

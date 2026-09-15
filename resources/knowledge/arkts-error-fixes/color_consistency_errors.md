@@ -117,7 +117,7 @@ struct ColorConsistencyExample {
 }
 ```
 
-> [查看完整示例](../assets/ColorConsistencyError.ets)
+> [查看完整示例](deveco://knowledge/arkts-error-fixes/examples/ColorConsistencyError)
 
 ## 自定义颜色资源
 

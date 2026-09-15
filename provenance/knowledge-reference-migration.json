@@ -1,0 +1,374 @@
+{
+  "format": 1,
+  "source_commit": "aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a",
+  "implementation": "implemented",
+  "acceptance": "pending_final_validation",
+  "entries": [
+    {
+      "file": "resources/knowledge/arkts-error-fixes/any_type_errors.md",
+      "previous": "../assets/AnyTypeError.ets",
+      "uri": "deveco://knowledge/arkts-error-fixes/examples/AnyTypeError",
+      "target_id": "arkts-error-fixes/examples/AnyTypeError"
+    },
+    {
+      "file": "resources/knowledge/arkts-error-fixes/appstorage_errors.md",
+      "previous": "../assets/AppStorageError.ets",
+      "uri": "deveco://knowledge/arkts-error-fixes/examples/AppStorageError",
+      "target_id": "arkts-error-fixes/examples/AppStorageError"
+    },
+    {
+      "file": "resources/knowledge/arkts-error-fixes/arrow_function_conversion_errors.md",
+      "previous": "../assets/ArrowFunctionConversionError.ets",
+      "uri": "deveco://knowledge/arkts-error-fixes/examples/ArrowFunctionConversionError",
+      "target_id": "arkts-error-fixes/examples/ArrowFunctionConversionError"
+    },
+    {
+      "file": "resources/knowledge/arkts-error-fixes/avoid_area_type_errors.md",
+      "previous": "../assets/AvoidAreaTypeError.ets",
+      "uri": "deveco://knowledge/arkts-error-fixes/examples/AvoidAreaTypeError",
+      "target_id": "arkts-error-fixes/examples/AvoidAreaTypeError"
+    },
+    {
+      "file": "resources/knowledge/arkts-error-fixes/breakpoint_type_errors.md",
+      "previous": "../assets/BreakpointTypeError.ets",
+      "uri": "deveco://knowledge/arkts-error-fixes/examples/BreakpointTypeError",
+      "target_id": "arkts-error-fixes/examples/BreakpointTypeError"
+    },
+    {
+      "file": "resources/knowledge/arkts-error-fixes/catch_clause_type_errors.md",
+      "previous": "../assets/CatchClauseTypeError.ets",
+      "uri": "deveco://knowledge/arkts-error-fixes/examples/CatchClauseTypeError",
+      "target_id": "arkts-error-fixes/examples/CatchClauseTypeError"
+    },
+    {
+      "file": "resources/knowledge/arkts-error-fixes/color_consistency_errors.md",
+      "previous": "../assets/ColorConsistencyError.ets",
+      "uri": "deveco://knowledge/arkts-error-fixes/examples/ColorConsistencyError",
+      "target_id": "arkts-error-fixes/examples/ColorConsistencyError"
+    },
+    {
+      "file": "resources/knowledge/arkts-error-fixes/color_property_errors.md",
+      "previous": "../assets/ColorPropertyError.ets",
+      "uri": "deveco://knowledge/arkts-error-fixes/examples/ColorPropertyError",
+      "target_id": "arkts-error-fixes/examples/ColorPropertyError"
+    },
+    {
+      "file": "resources/knowledge/arkts-error-fixes/color_property_errors.md",
+      "previous": "../assets/ColorPropertyError.ets",
+      "uri": "deveco://knowledge/arkts-error-fixes/examples/ColorPropertyError",
+      "target_id": "arkts-error-fixes/examples/ColorPropertyError"
+    },
+    {
+      "file": "resources/knowledge/arkts-error-fixes/color_property_errors.md",
+      "previous": "../assets/ColorPropertyError.ets",
+      "uri": "deveco://knowledge/arkts-error-fixes/examples/ColorPropertyError",
+      "target_id": "arkts-error-fixes/examples/ColorPropertyError"
+    },
+    {
+      "file": "resources/knowledge/arkts-error-fixes/color_property_errors.md",
+      "previous": "../assets/ColorPropertyError.ets",
+      "uri": "deveco://knowledge/arkts-error-fixes/examples/ColorPropertyError",
+      "target_id": "arkts-error-fixes/examples/ColorPropertyError"
+    },
+    {
+      "file": "resources/knowledge/arkts-error-fixes/color_property_errors.md",
+      "previous": "../assets/ColorPropertyError.ets",
+      "uri": "deveco://knowledge/arkts-error-fixes/examples/ColorPropertyError",
+      "target_id": "arkts-error-fixes/examples/ColorPropertyError"
+    },
+    {
+      "file": "resources/knowledge/arkts-error-fixes/context_type_errors.md",
+      "previous": "../assets/ContextTypeError.ets",
+      "uri": "deveco://knowledge/arkts-error-fixes/examples/ContextTypeError",
+      "target_id": "arkts-error-fixes/examples/ContextTypeError"
+    },
+    {
+      "file": "resources/knowledge/arkts-error-fixes/decorator_state_errors.md",
+      "previous": "../assets/DecoratorStateError.ets",
+      "uri": "deveco://knowledge/arkts-error-fixes/examples/DecoratorStateError",
+      "target_id": "arkts-error-fixes/examples/DecoratorStateError"
+    },
+    {
+      "file": "resources/knowledge/arkts-error-fixes/decorator_state_errors.md",
+      "previous": "./state_migration.md",
+      "status": "upstream_missing",
+      "alternative": "arkts-grammar-standards/arkts-rules"
+    },
+    {
+      "file": "resources/knowledge/arkts-error-fixes/display_listener_type_errors.md",
+      "previous": "../assets/DisplayListenerTypeError.ets",
+      "uri": "deveco://knowledge/arkts-error-fixes/examples/DisplayListenerTypeError",
+      "target_id": "arkts-error-fixes/examples/DisplayListenerTypeError"
+    },
+    {
+      "file": "resources/knowledge/arkts-error-fixes/duplicate_entry_errors.md",
+      "previous": "../assets/DuplicateEntryError.ets",
+      "uri": "deveco://knowledge/arkts-error-fixes/examples/DuplicateEntryError",
+      "target_id": "arkts-error-fixes/examples/DuplicateEntryError"
+    },
+    {
+      "file": "resources/knowledge/arkts-error-fixes/esobject_type_errors.md",
+      "previous": "../assets/ESObjectTypeError.ets",
+      "uri": "deveco://knowledge/arkts-error-fixes/examples/ESObjectTypeError",
+      "target_id": "arkts-error-fixes/examples/ESObjectTypeError"
+    },
+    {
+      "file": "resources/knowledge/arkts-error-fixes/fontcolor_property_errors.md",
+      "previous": "../assets/FontColorPropertyError.ets",
+      "uri": "deveco://knowledge/arkts-error-fixes/examples/FontColorPropertyError",
+      "target_id": "arkts-error-fixes/examples/FontColorPropertyError"
+    },
+    {
+      "file": "resources/knowledge/arkts-error-fixes/function_return_type_errors.md",
+      "previous": "../assets/FunctionReturnTypeError.ets",
+      "uri": "deveco://knowledge/arkts-error-fixes/examples/FunctionReturnTypeError",
+      "target_id": "arkts-error-fixes/examples/FunctionReturnTypeError"
+    },
+    {
+      "file": "resources/knowledge/arkts-error-fixes/function_return_type_errors.md",
+      "previous": "../assets/FunctionReturnTypeError.ets",
+      "uri": "deveco://knowledge/arkts-error-fixes/examples/FunctionReturnTypeError",
+      "target_id": "arkts-error-fixes/examples/FunctionReturnTypeError"
+    },
+    {
+      "file": "resources/knowledge/arkts-error-fixes/function_return_type_errors.md",
+      "previous": "../assets/FunctionReturnTypeError.ets",
+      "uri": "deveco://knowledge/arkts-error-fixes/examples/FunctionReturnTypeError",
+      "target_id": "arkts-error-fixes/examples/FunctionReturnTypeError"
+    },
+    {
+      "file": "resources/knowledge/arkts-error-fixes/function_return_type_errors.md",
+      "previous": "../assets/FunctionReturnTypeError.ets",
+      "uri": "deveco://knowledge/arkts-error-fixes/examples/FunctionReturnTypeError",
+      "target_id": "arkts-error-fixes/examples/FunctionReturnTypeError"
+    },
+    {
+      "file": "resources/knowledge/arkts-error-fixes/function_return_type_errors.md",
+      "previous": "../assets/FunctionReturnTypeError.ets",
+      "uri": "deveco://knowledge/arkts-error-fixes/examples/FunctionReturnTypeError",
+      "target_id": "arkts-error-fixes/examples/FunctionReturnTypeError"
+    },
+    {
+      "file": "resources/knowledge/arkts-error-fixes/idata_source_errors.md",
+      "previous": "../assets/IDataSourceError.ets",
+      "uri": "deveco://knowledge/arkts-error-fixes/examples/IDataSourceError",
+      "target_id": "arkts-error-fixes/examples/IDataSourceError"
+    },
+    {
+      "file": "resources/knowledge/arkts-error-fixes/implementation_not_allowed_errors.md",
+      "previous": "../assets/ImplementationNotAllowedError.ets",
+      "uri": "deveco://knowledge/arkts-error-fixes/examples/ImplementationNotAllowedError",
+      "target_id": "arkts-error-fixes/examples/ImplementationNotAllowedError"
+    },
+    {
+      "file": "resources/knowledge/arkts-error-fixes/interface_method_signature_errors.md",
+      "previous": "../assets/InterfaceMethodSignatureError.ets",
+      "uri": "deveco://knowledge/arkts-error-fixes/examples/InterfaceMethodSignatureError",
+      "target_id": "arkts-error-fixes/examples/InterfaceMethodSignatureError"
+    },
+    {
+      "file": "resources/knowledge/arkts-error-fixes/interface_method_signature_errors.md",
+      "previous": "../assets/InterfaceMethodSignatureError.ets",
+      "uri": "deveco://knowledge/arkts-error-fixes/examples/InterfaceMethodSignatureError",
+      "target_id": "arkts-error-fixes/examples/InterfaceMethodSignatureError"
+    },
+    {
+      "file": "resources/knowledge/arkts-error-fixes/interface_method_signature_errors.md",
+      "previous": "../assets/InterfaceMethodSignatureError.ets",
+      "uri": "deveco://knowledge/arkts-error-fixes/examples/InterfaceMethodSignatureError",
+      "target_id": "arkts-error-fixes/examples/InterfaceMethodSignatureError"
+    },
+    {
+      "file": "resources/knowledge/arkts-error-fixes/interface_method_signature_errors.md",
+      "previous": "../assets/InterfaceMethodSignatureError.ets",
+      "uri": "deveco://knowledge/arkts-error-fixes/examples/InterfaceMethodSignatureError",
+      "target_id": "arkts-error-fixes/examples/InterfaceMethodSignatureError"
+    },
+    {
+      "file": "resources/knowledge/arkts-error-fixes/interface_method_signature_errors.md",
+      "previous": "./object_literal_interface_errors.md",
+      "uri": "deveco://knowledge/arkts-error-fixes/object_literal_interface_errors",
+      "target_id": "arkts-error-fixes/object_literal_interface_errors"
+    },
+    {
+      "file": "resources/knowledge/arkts-error-fixes/notification_errors.md",
+      "previous": "../assets/NotificationError.ets",
+      "uri": "deveco://knowledge/arkts-error-fixes/examples/NotificationError",
+      "target_id": "arkts-error-fixes/examples/NotificationError"
+    },
+    {
+      "file": "resources/knowledge/arkts-error-fixes/object_literal_interface_errors.md",
+      "previous": "../assets/ObjectLiteralInterfaceError.ets",
+      "uri": "deveco://knowledge/arkts-error-fixes/examples/ObjectLiteralInterfaceError",
+      "target_id": "arkts-error-fixes/examples/ObjectLiteralInterfaceError"
+    },
+    {
+      "file": "resources/knowledge/arkts-error-fixes/object_literal_interface_errors.md",
+      "previous": "../assets/ObjectLiteralInterfaceError.ets",
+      "uri": "deveco://knowledge/arkts-error-fixes/examples/ObjectLiteralInterfaceError",
+      "target_id": "arkts-error-fixes/examples/ObjectLiteralInterfaceError"
+    },
+    {
+      "file": "resources/knowledge/arkts-error-fixes/object_literal_interface_errors.md",
+      "previous": "../assets/ObjectLiteralInterfaceError.ets",
+      "uri": "deveco://knowledge/arkts-error-fixes/examples/ObjectLiteralInterfaceError",
+      "target_id": "arkts-error-fixes/examples/ObjectLiteralInterfaceError"
+    },
+    {
+      "file": "resources/knowledge/arkts-error-fixes/object_literal_interface_errors.md",
+      "previous": "../assets/ObjectLiteralInterfaceError.ets",
+      "uri": "deveco://knowledge/arkts-error-fixes/examples/ObjectLiteralInterfaceError",
+      "target_id": "arkts-error-fixes/examples/ObjectLiteralInterfaceError"
+    },
+    {
+      "file": "resources/knowledge/arkts-error-fixes/object_literal_interface_errors.md",
+      "previous": "./object_spread_errors.md",
+      "uri": "deveco://knowledge/arkts-error-fixes/object_spread_errors",
+      "target_id": "arkts-error-fixes/object_spread_errors"
+    },
+    {
+      "file": "resources/knowledge/arkts-error-fixes/object_literal_type_errors.md",
+      "previous": "../assets/ObjectLiteralTypeError.ets",
+      "uri": "deveco://knowledge/arkts-error-fixes/examples/ObjectLiteralTypeError",
+      "target_id": "arkts-error-fixes/examples/ObjectLiteralTypeError"
+    },
+    {
+      "file": "resources/knowledge/arkts-error-fixes/object_spread_errors.md",
+      "previous": "../assets/ObjectSpreadError.ets",
+      "uri": "deveco://knowledge/arkts-error-fixes/examples/ObjectSpreadError",
+      "target_id": "arkts-error-fixes/examples/ObjectSpreadError"
+    },
+    {
+      "file": "resources/knowledge/arkts-error-fixes/possibly_null_errors.md",
+      "previous": "../assets/PossiblyNullError.ets",
+      "uri": "deveco://knowledge/arkts-error-fixes/examples/PossiblyNullError",
+      "target_id": "arkts-error-fixes/examples/PossiblyNullError"
+    },
+    {
+      "file": "resources/knowledge/arkts-error-fixes/resource_conversion_errors.md",
+      "previous": "../assets/ResourceConversionError.ets",
+      "uri": "deveco://knowledge/arkts-error-fixes/examples/ResourceConversionError",
+      "target_id": "arkts-error-fixes/examples/ResourceConversionError"
+    },
+    {
+      "file": "resources/knowledge/arkts-error-fixes/standalone_function_errors.md",
+      "previous": "../assets/StandaloneFunctionError.ets",
+      "uri": "deveco://knowledge/arkts-error-fixes/examples/StandaloneFunctionError",
+      "target_id": "arkts-error-fixes/examples/StandaloneFunctionError"
+    },
+    {
+      "file": "resources/knowledge/arkts-error-fixes/storage_link_default_errors.md",
+      "previous": "../assets/StorageLinkDefaultError.ets",
+      "uri": "deveco://knowledge/arkts-error-fixes/examples/StorageLinkDefaultError",
+      "target_id": "arkts-error-fixes/examples/StorageLinkDefaultError"
+    },
+    {
+      "file": "resources/knowledge/arkts-error-fixes/storage_link_default_errors.md",
+      "previous": "../assets/StorageLinkDefaultError.ets",
+      "uri": "deveco://knowledge/arkts-error-fixes/examples/StorageLinkDefaultError",
+      "target_id": "arkts-error-fixes/examples/StorageLinkDefaultError"
+    },
+    {
+      "file": "resources/knowledge/arkts-error-fixes/storage_link_default_errors.md",
+      "previous": "../assets/StorageLinkDefaultError.ets",
+      "uri": "deveco://knowledge/arkts-error-fixes/examples/StorageLinkDefaultError",
+      "target_id": "arkts-error-fixes/examples/StorageLinkDefaultError"
+    },
+    {
+      "file": "resources/knowledge/arkts-error-fixes/storage_link_default_errors.md",
+      "previous": "../assets/StorageLinkDefaultError.ets",
+      "uri": "deveco://knowledge/arkts-error-fixes/examples/StorageLinkDefaultError",
+      "target_id": "arkts-error-fixes/examples/StorageLinkDefaultError"
+    },
+    {
+      "file": "resources/knowledge/arkts-error-fixes/storage_link_default_errors.md",
+      "previous": "./appstorage_errors.md",
+      "uri": "deveco://knowledge/arkts-error-fixes/appstorage_errors",
+      "target_id": "arkts-error-fixes/appstorage_errors"
+    },
+    {
+      "file": "resources/knowledge/arkts-error-fixes/title_button_rect_type_errors.md",
+      "previous": "../assets/TitleButtonRectTypeError.ets",
+      "uri": "deveco://knowledge/arkts-error-fixes/examples/TitleButtonRectTypeError",
+      "target_id": "arkts-error-fixes/examples/TitleButtonRectTypeError"
+    },
+    {
+      "file": "resources/knowledge/arkts-error-fixes/title_button_rect_type_errors.md",
+      "previous": "../assets/StandaloneFunctionContext.ets",
+      "uri": "deveco://knowledge/arkts-error-fixes/examples/StandaloneFunctionContext",
+      "target_id": "arkts-error-fixes/examples/StandaloneFunctionContext"
+    },
+    {
+      "file": "resources/knowledge/arkts-error-fixes/title_button_rect_type_errors.md",
+      "previous": "../assets/StandaloneFunctionError.ets",
+      "uri": "deveco://knowledge/arkts-error-fixes/examples/StandaloneFunctionError",
+      "target_id": "arkts-error-fixes/examples/StandaloneFunctionError"
+    },
+    {
+      "file": "resources/knowledge/arkts-error-fixes/unused_variable_warnings.md",
+      "previous": "../assets/UnusedVariableWarning.ets",
+      "uri": "deveco://knowledge/arkts-error-fixes/examples/UnusedVariableWarning",
+      "target_id": "arkts-error-fixes/examples/UnusedVariableWarning"
+    },
+    {
+      "file": "resources/knowledge/arkts-error-fixes/utility_type_errors.md",
+      "previous": "../assets/UtilityTypeError.ets",
+      "uri": "deveco://knowledge/arkts-error-fixes/examples/UtilityTypeError",
+      "target_id": "arkts-error-fixes/examples/UtilityTypeError"
+    },
+    {
+      "file": "resources/knowledge/arkts-error-fixes/window_rect_size_errors.md",
+      "previous": "../assets/WindowRectSizeError.ets",
+      "uri": "deveco://knowledge/arkts-error-fixes/examples/WindowRectSizeError",
+      "target_id": "arkts-error-fixes/examples/WindowRectSizeError"
+    },
+    {
+      "file": "resources/knowledge/arkts-error-fixes/window_type_errors.md",
+      "previous": "../assets/WindowTypeError.ets",
+      "uri": "deveco://knowledge/arkts-error-fixes/examples/WindowTypeError",
+      "target_id": "arkts-error-fixes/examples/WindowTypeError"
+    },
+    {
+      "file": "resources/knowledge/arkts-grammar-standards/arkts-rules.md",
+      "previous": "recipes-core.md",
+      "uri": "deveco://knowledge/arkts-grammar-standards/recipes-core",
+      "target_id": "arkts-grammar-standards/recipes-core"
+    },
+    {
+      "file": "resources/knowledge/arkts-grammar-standards/arkts-rules.md",
+      "previous": "recipes-core.md",
+      "uri": "deveco://knowledge/arkts-grammar-standards/recipes-core",
+      "target_id": "arkts-grammar-standards/recipes-core"
+    },
+    {
+      "file": "resources/knowledge/arkts-grammar-standards/ts-to-arkts-rewrites.md",
+      "previous": "arkts-rules.md",
+      "uri": "deveco://knowledge/arkts-grammar-standards/arkts-rules",
+      "target_id": "arkts-grammar-standards/arkts-rules"
+    },
+    {
+      "file": "resources/knowledge/arkts-runtime-fix/error_patterns.md",
+      "previous": "./fault-mode-library.md",
+      "uri": "deveco://knowledge/arkts-runtime-fix/fault-mode-library",
+      "target_id": "arkts-runtime-fix/fault-mode-library"
+    },
+    {
+      "file": "resources/knowledge/arkts-runtime-fix/outofmemoryerror_patterns.md",
+      "previous": "./fault-mode-library.md",
+      "uri": "deveco://knowledge/arkts-runtime-fix/fault-mode-library",
+      "target_id": "arkts-runtime-fix/fault-mode-library"
+    },
+    {
+      "file": "resources/knowledge/arkts-runtime-fix/referenceerror_patterns.md",
+      "previous": "./fault-mode-library.md",
+      "uri": "deveco://knowledge/arkts-runtime-fix/fault-mode-library",
+      "target_id": "arkts-runtime-fix/fault-mode-library"
+    },
+    {
+      "file": "resources/knowledge/arkts-runtime-fix/urierror_patterns.md",
+      "previous": "./fault-mode-library.md",
+      "uri": "deveco://knowledge/arkts-runtime-fix/fault-mode-library",
+      "target_id": "arkts-runtime-fix/fault-mode-library"
+    }
+  ]
+}

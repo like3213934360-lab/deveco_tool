@@ -20,4 +20,4 @@
 
 ## Related Files
 
-- [Fault mode library](./fault-mode-library.md) — covers `super()` before `this`, `<name> is not defined`
+- [Fault mode library](deveco://knowledge/arkts-runtime-fix/fault-mode-library) — covers `super()` before `this`, `<name> is not defined`

@@ -1,0 +1,453 @@
+{
+  "format": 1,
+  "status": "implementation_inventory_not_runtime_acceptance",
+  "code": {
+    "url": "https://gitcode.com/openharmony-sig/deveco-code",
+    "resource_lock": "aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a",
+    "reviewed_candidate": "7b9b68c2f65e25d6a91f13d47d5b75622aacfe20",
+    "code_cli_dependency": "1.3.2",
+    "discovery": "provenance/upstream-discovery.json",
+    "candidate_changes": [
+      {
+        "path": ".gitcode/workflows/publish-daily.yml",
+        "before_sha256": null,
+        "after_sha256": "22a587e913b78bcb37d61aa5e8107812932c17ca2bca82c31bfefa65f2af22a8",
+        "review": "daily_release_pipeline_only"
+      }
+    ],
+    "candidate_domain_change": false
+  },
+  "cli": {
+    "url": "https://gitcode.com/openharmony-sig/deveco-cli",
+    "protocol_lock": "a71f93d73941aaa0dbf581918cbd5828014e6e88",
+    "reviewed_candidate": "87c360b05848132c06c6ea120e078619b9ef4634",
+    "discovery": "provenance/upstream-cli-discovery.json",
+    "candidate_changes": [
+      {
+        "path": ".agents/skills/deveco-check-changes/SKILL.md",
+        "before_sha256": null,
+        "after_sha256": "67973740843206fd5be99e0320a5678d0e1b88637703f422e408bb7b9517b233",
+        "review": "source_mapped_runtime_pending"
+      },
+      {
+        "path": ".agents/skills/deveco-code-review/SKILL.md",
+        "before_sha256": null,
+        "after_sha256": "36b28b14efd27b7921383ad5c57419f221d11a737bbc7437bead7d2655833ff9",
+        "review": "source_mapped_runtime_pending"
+      },
+      {
+        "path": ".agents/skills/deveco-docs-and-prose/SKILL.md",
+        "before_sha256": null,
+        "after_sha256": "6c460d98f6dfb7571c8d63f204ed1c68dda3d89688be168f133cce6cb4b55dd1",
+        "review": "source_mapped_runtime_pending"
+      },
+      {
+        "path": ".agents/skills/deveco-find-simplifications/SKILL.md",
+        "before_sha256": null,
+        "after_sha256": "4d3c7602145f13477f6719273f62b879be83e98c5c41f264d229b0e039b136cb",
+        "review": "source_mapped_runtime_pending"
+      },
+      {
+        "path": ".agents/skills/deveco-test-reliability/SKILL.md",
+        "before_sha256": null,
+        "after_sha256": "958b4996eea68d1a2dd614171a90a8763e1403dbba33a074ed5257900f58fa2b",
+        "review": "source_mapped_runtime_pending"
+      },
+      {
+        "path": "AGENTS.md",
+        "before_sha256": "e61de76a427c116ad609569ae34b14f4d8573165faa172e831b1ebe3d4914a26",
+        "after_sha256": "a77e7fb8e6bb3565ff4fbcdf618d48ad5b61fa3973d02fc8eed41793e6623fd1",
+        "review": "source_mapped_runtime_pending"
+      },
+      {
+        "path": "README.md",
+        "before_sha256": "f2b26e1962257317a8892cff475ae61c189262ca77a7b89bc209cb361319b313",
+        "after_sha256": "656cc9010f9ede3bc89215402ac54c5461a7ebc33f9d917d912f1b9fb6969823",
+        "review": "source_mapped_runtime_pending"
+      },
+      {
+        "path": "SKILL.md",
+        "before_sha256": "5ea44350b605e666161c66843b67c7f67ae5572f70af9c56919c8faa3d09456b",
+        "after_sha256": "253f5f16a44586929a77b120b1434a57d6c885f7bfb76b0d0dc32ffef1f0b609",
+        "review": "source_mapped_runtime_pending"
+      },
+      {
+        "path": "src/apply/apply-manager.ts",
+        "before_sha256": "6905f0e1450b43b53b1cedfe198896fac242ab0e2346e122f962f60e0b9dd59f",
+        "after_sha256": "745c9c6f9f4689491b7694c0b8fca8fbc3b56bba37ccb12d68e347fb9893f8ac",
+        "review": "source_mapped_runtime_pending"
+      },
+      {
+        "path": "src/commands/init.ts",
+        "before_sha256": "d0abf7740c273a66c9fd5cd92164d9224ab5ce1283fe9188c72ea1d44df95850",
+        "after_sha256": "5b4aadd14db8f58accaf59558e799c2e7b8f02d9ec78b13ff89fb643d6a2055a",
+        "review": "source_mapped_runtime_pending"
+      },
+      {
+        "path": "src/commands/run.ts",
+        "before_sha256": "41f1a13e20ccbd2de6b9d41a7c5fe1c8c138a6264999eb0ff4157b8c2d43a210",
+        "after_sha256": "2f8e81372333deb40b9e9ee63a64f984323c860ac29064f293af833e368723d3",
+        "review": "source_mapped_runtime_pending"
+      },
+      {
+        "path": "src/commands/ui-screenshot.ts",
+        "before_sha256": "31c6a1af5376a228c5d3ec64c45748aac6f30ff6b8915c4fa73a2f78061ecad3",
+        "after_sha256": "cdea459dfd3627e00c6e4843ed7d720fa6f6745bea07bfe44131f6080cb04f4e",
+        "review": "source_mapped_runtime_pending"
+      },
+      {
+        "path": "src/config/skills.ts",
+        "before_sha256": "d0da5204d99814beb3f488a4b18b511459ee59d139ce46ff1d5c8081e7294cb5",
+        "after_sha256": "f1ddbaa7ffb9fcc97e5eecfb3645f88e63e3bb6d4a16d5a63c3c5c6cc2c0a5d3",
+        "review": "source_mapped_runtime_pending"
+      },
+      {
+        "path": "src/smoke/index.ts",
+        "before_sha256": null,
+        "after_sha256": "182e9a425dc0222711fd3073f1c32ea3b34d12a19456364b74bbd7d5dac98397",
+        "review": "source_mapped_runtime_pending"
+      },
+      {
+        "path": "src/smoke/screen-phash.test.ts",
+        "before_sha256": null,
+        "after_sha256": "e4161a795ceb7199a2e8349fda55c17c5fdeabc4ce05b07ad0849f86ec38e486",
+        "review": "source_mapped_runtime_pending"
+      },
+      {
+        "path": "src/smoke/screen-phash.ts",
+        "before_sha256": null,
+        "after_sha256": "7a9895406af6441ec215a9ad600f3a1b50858afd7310f2e3072496dbc168cb34",
+        "review": "source_mapped_runtime_pending"
+      },
+      {
+        "path": "src/smoke/smoke-artifacts.test.ts",
+        "before_sha256": null,
+        "after_sha256": "5c227014367a459dfc6c6519da77f439b57a1cc4547da58ca6a1b2c984bc1af0",
+        "review": "source_mapped_runtime_pending"
+      },
+      {
+        "path": "src/smoke/smoke-artifacts.ts",
+        "before_sha256": null,
+        "after_sha256": "05c8f0bd877aa43f2f5a7f4351eefcb1af7853c596a1555ae66e0ec233b39fc2",
+        "review": "source_mapped_runtime_pending"
+      },
+      {
+        "path": "src/smoke/smoke-formatter.ts",
+        "before_sha256": null,
+        "after_sha256": "51ee88f01f7ea29ee7f7c20489f82daa656bb29e36d84c9ee33f1709ad3e8be2",
+        "review": "source_mapped_runtime_pending"
+      },
+      {
+        "path": "src/smoke/smoke-inspector.test.ts",
+        "before_sha256": null,
+        "after_sha256": "0b5546101c20ed38065726986bcd7793b2b39541ad6b9e2af92615760816f310",
+        "review": "source_mapped_runtime_pending"
+      },
+      {
+        "path": "src/smoke/smoke-inspector.ts",
+        "before_sha256": null,
+        "after_sha256": "cf6de2191e36b2d91f0b20e105653f19d26f8c78483e3be9805efcf6cb784ca3",
+        "review": "source_mapped_runtime_pending"
+      },
+      {
+        "path": "src/smoke/smoke-judge.test.ts",
+        "before_sha256": null,
+        "after_sha256": "70d328184f835b3df24bb3eaafe7e578a5f68a6508692f5d917425e399eb5618",
+        "review": "source_mapped_runtime_pending"
+      },
+      {
+        "path": "src/smoke/smoke-judge.ts",
+        "before_sha256": null,
+        "after_sha256": "50b0fdaa1c3bf1c6abe0ced9327ab0ad0ded92bcd249d05fad9b02f814be50e2",
+        "review": "source_mapped_runtime_pending"
+      },
+      {
+        "path": "src/smoke/smoke-run-store.test.ts",
+        "before_sha256": null,
+        "after_sha256": "bc2858fb7494f43ff226dae5abc29982046a8b46f110cb898bed40b6dd9ae337",
+        "review": "source_mapped_runtime_pending"
+      },
+      {
+        "path": "src/smoke/smoke-run-store.ts",
+        "before_sha256": null,
+        "after_sha256": "5f9f2293c3aba5574439438e7ef3df87b4bd0dd01e794fb0670bb6b79f2ed4fe",
+        "review": "source_mapped_runtime_pending"
+      },
+      {
+        "path": "src/smoke/smoke-verifier.ts",
+        "before_sha256": null,
+        "after_sha256": "88b397e0eed563880b84ce0bda2db763998a4f4029dc410be8a1119387920bbb",
+        "review": "source_mapped_runtime_pending"
+      },
+      {
+        "path": "src/smoke/types.ts",
+        "before_sha256": null,
+        "after_sha256": "aa5050c5dd9479111452fdbef0778b902e9397356ea9309e8080d556affdc331",
+        "review": "source_mapped_runtime_pending"
+      },
+      {
+        "path": "src/ui/index.ts",
+        "before_sha256": "1e9febc879dd4c20a8e278c4bedd9c04efb16c6068fcb451c9746f2cb994fd75",
+        "after_sha256": "f444696c855b736fd7249ec885720030da1ddcb6df36a8020e029210c3944108",
+        "review": "source_mapped_runtime_pending"
+      },
+      {
+        "path": "src/ui/screenshot/hdc-snapshot.test.ts",
+        "before_sha256": null,
+        "after_sha256": "06c2d0b31eaf4af38246dc671028359385a41ef0d77a78e4927dae20c70fabba",
+        "review": "source_mapped_runtime_pending"
+      },
+      {
+        "path": "src/ui/screenshot/hdc-snapshot.ts",
+        "before_sha256": null,
+        "after_sha256": "77970ba519b4ca9ed853b028077a8d7611c2c7c23c249132ecbd96fee5f27f1d",
+        "review": "source_mapped_runtime_pending"
+      },
+      {
+        "path": "src/ui/screenshot/screenshot-capturer.ts",
+        "before_sha256": null,
+        "after_sha256": "2272abd883cfb1d426b93f0a0e95fb82ec0277f13f100f511956933e5f35febb",
+        "review": "source_mapped_runtime_pending"
+      },
+      {
+        "path": "src/ui/screenshot/types.ts",
+        "before_sha256": null,
+        "after_sha256": "b72da156bd4c67952dfbbaa5da107c9f769ed30529c7cb2333eee58485a5c161",
+        "review": "source_mapped_runtime_pending"
+      },
+      {
+        "path": "src/utils/cmd.ts",
+        "before_sha256": "e50681f84de96b1850fc5e32a005d1bc85794c6f4ea83adab2810d33dc145f5e",
+        "after_sha256": "966ce57911eefbc4cf6ac3dac4a0db46915186c481782da6c5254b1643ae1cd3",
+        "review": "source_mapped_runtime_pending"
+      },
+      {
+        "path": "src/utils/hdc-adapter.test.ts",
+        "before_sha256": null,
+        "after_sha256": "72d5336ae826cebf7d49877271fa70dd267c60e8c9417c90ac84d5b40c89f958",
+        "review": "source_mapped_runtime_pending"
+      },
+      {
+        "path": "src/utils/hdc-adapter.ts",
+        "before_sha256": "ffb954ae8259330e667adc88ce2d6ce55dffe0e4f66a48b656cd9e395c3de9dc",
+        "after_sha256": "8359f698326167d0917ba72b89124a205b8c52c4fc21976a7c77e8212fb506b2",
+        "review": "source_mapped_runtime_pending"
+      },
+      {
+        "path": "src/utils/hdc-param.test.ts",
+        "before_sha256": null,
+        "after_sha256": "09b70df9685c6b6aa7a3bf39807ae14676990f3827579a80c7ce22c69f9dd954",
+        "review": "source_mapped_runtime_pending"
+      },
+      {
+        "path": "src/utils/hdc-param.ts",
+        "before_sha256": "233db5b8810e8fd4bc9f38029fecb6576655ac9cf330987f62be2969f95ae521",
+        "after_sha256": "d4208d0f95a288ff5dab933bfc2b5860cbec24bddeea7bb542c824ea1e6703bb",
+        "review": "source_mapped_runtime_pending"
+      },
+      {
+        "path": "src/utils/hilog-adapter.ts",
+        "before_sha256": "04b109d3d331d2cdfe7bfc6a8b7758ede32c704a7d785116159dae80e5ee5cc0",
+        "after_sha256": "a5cf5e268bf7677b1bdfb80c86b5a68d90dbed0c30fdd78a7f89c5fd6cae39c8",
+        "review": "source_mapped_runtime_pending"
+      }
+    ],
+    "adaptation": "Native startup/crash/uniform-frame inspection retained from archived implementation and integrated with current hot reload; final runtime acceptance pending."
+  },
+  "assets": {
+    "id": "deveco-cli-assets",
+    "version": "1.3.1",
+    "url": "https://registry.npmjs.org/@deveco/deveco-cli/-/deveco-cli-1.3.1.tgz",
+    "integrity": "sha512-VnOGCEx7fzsRBAqVFusWTv18g9qx52iuhq4LbOyiWN0mbgKM+vwzfIjV+pYveUZJh0JU6Yc9TstkQX9fUkDk5w==",
+    "license": "resources/licenses/deveco-cli-MIT.txt",
+    "knowledge_count": 79,
+    "document_count": 14683,
+    "count_basis": "Existing pinned resource inventory; final verification is separate.",
+    "files": [
+      {
+        "file": "resources/docs.zip",
+        "sha256": "22a87f7b9e6502e5b7c29253252cabe446820d68702b67c39b41fcda5b8e304f",
+        "source_path": "docs.zip",
+        "source_sha256": "22a87f7b9e6502e5b7c29253252cabe446820d68702b67c39b41fcda5b8e304f"
+      },
+      {
+        "file": "resources/docs/search.db",
+        "sha256": "b7eef37effcef437d3a00280c3b1ed6c663558416c6c1cb24d5746d0e946984f",
+        "source_path": "index.zip",
+        "source_sha256": "b7e1825cef98390fd3cce6a705b57324104e212695951cd676432c942c7618c7"
+      },
+      {
+        "file": "resources/licenses/deveco-cli-MIT.txt",
+        "sha256": "4c99401b4c5bf4f8de4cf16eef3191852ba607d67d27609cdd91b3aee3f62ed3",
+        "source_path": "LICENSE",
+        "source_sha256": "4c99401b4c5bf4f8de4cf16eef3191852ba607d67d27609cdd91b3aee3f62ed3"
+      },
+      {
+        "file": "resources/licenses/deveco-cli-THIRD-PARTY-LICENSES.txt",
+        "sha256": "6388dcaba3bf85d36b49047b946892707795fad50da20e1c744358c69ee96393",
+        "source_path": "THIRD-PARTY-LICENSES",
+        "source_sha256": "6388dcaba3bf85d36b49047b946892707795fad50da20e1c744358c69ee96393"
+      },
+      {
+        "file": "resources/templates/LICENSE",
+        "sha256": "4c99401b4c5bf4f8de4cf16eef3191852ba607d67d27609cdd91b3aee3f62ed3",
+        "source_path": "LICENSE",
+        "source_sha256": "4c99401b4c5bf4f8de4cf16eef3191852ba607d67d27609cdd91b3aee3f62ed3"
+      },
+      {
+        "file": "resources/templates/application/AppScope/app.json5",
+        "sha256": "7a4c57ff98d2f9e6b4acb25ad975ac2a6570e458fc8126ec3d424c18840ee2c3",
+        "source_path": "templates/application/AppScope/app.json5",
+        "source_sha256": "7a4c57ff98d2f9e6b4acb25ad975ac2a6570e458fc8126ec3d424c18840ee2c3"
+      },
+      {
+        "file": "resources/templates/application/AppScope/resources/base/element/string.json",
+        "sha256": "73c2a4f23d6cc0c87bd84c3dff385bfb7217f21c9c4efeb2cc333ca0c801cf15",
+        "source_path": "templates/application/AppScope/resources/base/element/string.json",
+        "source_sha256": "73c2a4f23d6cc0c87bd84c3dff385bfb7217f21c9c4efeb2cc333ca0c801cf15"
+      },
+      {
+        "file": "resources/templates/application/AppScope/resources/base/media/layered_image.json",
+        "sha256": "3d18dcd7ed9e7d3d2c54c20cb80a44eb4877c661131c68a46e20b6e19d0bb476",
+        "source_path": "templates/application/AppScope/resources/base/media/layered_image.json",
+        "source_sha256": "3d18dcd7ed9e7d3d2c54c20cb80a44eb4877c661131c68a46e20b6e19d0bb476"
+      },
+      {
+        "file": "resources/templates/application/build-profile.json5",
+        "sha256": "ca2cc91a138969a6005438d2ba484a70eb9bb1ac7234dcc1b1f191cddbe8bcc6",
+        "source_path": "templates/application/build-profile.json5",
+        "source_sha256": "ca2cc91a138969a6005438d2ba484a70eb9bb1ac7234dcc1b1f191cddbe8bcc6"
+      },
+      {
+        "file": "resources/templates/application/code-linter.json5",
+        "sha256": "f557c3bcdb40c64c986bffed9628310cc7a79fb7d2642c1c8b8d265fd92e25ad",
+        "source_path": "templates/application/code-linter.json5",
+        "source_sha256": "f557c3bcdb40c64c986bffed9628310cc7a79fb7d2642c1c8b8d265fd92e25ad"
+      },
+      {
+        "file": "resources/templates/application/entry/build-profile.json5",
+        "sha256": "7727b3a9bf7e522930cb1ec259c0bd26c948d09d37d0d724aab23f5f499a4004",
+        "source_path": "templates/application/entry/build-profile.json5",
+        "source_sha256": "7727b3a9bf7e522930cb1ec259c0bd26c948d09d37d0d724aab23f5f499a4004"
+      },
+      {
+        "file": "resources/templates/application/entry/gitignore.txt",
+        "sha256": "c4868dbab8112ec2283b23448ad795702a967bb55229333ab317cbeb8c3ad690",
+        "source_path": "templates/application/entry/gitignore.txt",
+        "source_sha256": "c4868dbab8112ec2283b23448ad795702a967bb55229333ab317cbeb8c3ad690"
+      },
+      {
+        "file": "resources/templates/application/entry/hvigorfile.ts",
+        "sha256": "1ef08cf4d5a2995964b0213834dd91de3afb8845aae53178016e1c56df0844b6",
+        "source_path": "templates/application/entry/hvigorfile.ts",
+        "source_sha256": "1ef08cf4d5a2995964b0213834dd91de3afb8845aae53178016e1c56df0844b6"
+      },
+      {
+        "file": "resources/templates/application/entry/obfuscation-rules.txt",
+        "sha256": "42c563d696cdf0a0367c39f564e752d82ec15e394549f826848228680674a4ef",
+        "source_path": "templates/application/entry/obfuscation-rules.txt",
+        "source_sha256": "42c563d696cdf0a0367c39f564e752d82ec15e394549f826848228680674a4ef"
+      },
+      {
+        "file": "resources/templates/application/entry/oh-package.json5",
+        "sha256": "c3ab4a8122311d19a890ceb7d6717fd06e1e2f6ab496aa1fc61e98a95a50a7cc",
+        "source_path": "templates/application/entry/oh-package.json5",
+        "source_sha256": "c3ab4a8122311d19a890ceb7d6717fd06e1e2f6ab496aa1fc61e98a95a50a7cc"
+      },
+      {
+        "file": "resources/templates/application/entry/src/main/ets/entryability/EntryAbility.ets",
+        "sha256": "555bb41df07c1d76efb9656111d8d44695b017a180603b4204a2b5eec6c9d473",
+        "source_path": "templates/application/entry/src/main/ets/entryability/EntryAbility.ets",
+        "source_sha256": "555bb41df07c1d76efb9656111d8d44695b017a180603b4204a2b5eec6c9d473"
+      },
+      {
+        "file": "resources/templates/application/entry/src/main/ets/entrybackupability/EntryBackupAbility.ets",
+        "sha256": "d3636f4c9e2af79ab59105a1846427d6967dcd31ca93ec4b0a3190b85e63ce7a",
+        "source_path": "templates/application/entry/src/main/ets/entrybackupability/EntryBackupAbility.ets",
+        "source_sha256": "d3636f4c9e2af79ab59105a1846427d6967dcd31ca93ec4b0a3190b85e63ce7a"
+      },
+      {
+        "file": "resources/templates/application/entry/src/main/ets/pages/Index.ets",
+        "sha256": "b3cce7ae9ce3cf543fa02f0749b539592a414e59ccb6acc09d7e993e0226c5e6",
+        "source_path": "templates/application/entry/src/main/ets/pages/Index.ets",
+        "source_sha256": "b3cce7ae9ce3cf543fa02f0749b539592a414e59ccb6acc09d7e993e0226c5e6"
+      },
+      {
+        "file": "resources/templates/application/entry/src/main/module.json5",
+        "sha256": "95045053098ced28f3f807767014815b5a26b0203f16de619b0c66eca93c42dc",
+        "source_path": "templates/application/entry/src/main/module.json5",
+        "source_sha256": "95045053098ced28f3f807767014815b5a26b0203f16de619b0c66eca93c42dc"
+      },
+      {
+        "file": "resources/templates/application/entry/src/main/resources/base/element/color.json",
+        "sha256": "4e028f6e8a847f8a98cfee6d37309def0e7e2e7290041d89e22ba3ac38a802b8",
+        "source_path": "templates/application/entry/src/main/resources/base/element/color.json",
+        "source_sha256": "4e028f6e8a847f8a98cfee6d37309def0e7e2e7290041d89e22ba3ac38a802b8"
+      },
+      {
+        "file": "resources/templates/application/entry/src/main/resources/base/element/float.json",
+        "sha256": "8db02f7a08f7b7b73d6eb95b09a6643463d10258b757901e70f255de0a2c83ef",
+        "source_path": "templates/application/entry/src/main/resources/base/element/float.json",
+        "source_sha256": "8db02f7a08f7b7b73d6eb95b09a6643463d10258b757901e70f255de0a2c83ef"
+      },
+      {
+        "file": "resources/templates/application/entry/src/main/resources/base/element/string.json",
+        "sha256": "81bbf40885bba06ac0693ce6de7a48cff51c0a01ff6c00cdb32ecda53709e3f3",
+        "source_path": "templates/application/entry/src/main/resources/base/element/string.json",
+        "source_sha256": "81bbf40885bba06ac0693ce6de7a48cff51c0a01ff6c00cdb32ecda53709e3f3"
+      },
+      {
+        "file": "resources/templates/application/entry/src/main/resources/base/media/layered_image.json",
+        "sha256": "3d18dcd7ed9e7d3d2c54c20cb80a44eb4877c661131c68a46e20b6e19d0bb476",
+        "source_path": "templates/application/entry/src/main/resources/base/media/layered_image.json",
+        "source_sha256": "3d18dcd7ed9e7d3d2c54c20cb80a44eb4877c661131c68a46e20b6e19d0bb476"
+      },
+      {
+        "file": "resources/templates/application/entry/src/main/resources/base/profile/backup_config.json",
+        "sha256": "467a97321341fba6872a6c79a25d89b16eded554c94dae3d4a2faa0d99e59358",
+        "source_path": "templates/application/entry/src/main/resources/base/profile/backup_config.json",
+        "source_sha256": "467a97321341fba6872a6c79a25d89b16eded554c94dae3d4a2faa0d99e59358"
+      },
+      {
+        "file": "resources/templates/application/entry/src/main/resources/base/profile/main_pages.json",
+        "sha256": "f21984fb1d5096f0db41314da0bb94c573e7ad018e5afae3044f8d5ff71b0bfc",
+        "source_path": "templates/application/entry/src/main/resources/base/profile/main_pages.json",
+        "source_sha256": "f21984fb1d5096f0db41314da0bb94c573e7ad018e5afae3044f8d5ff71b0bfc"
+      },
+      {
+        "file": "resources/templates/application/entry/src/main/resources/dark/element/color.json",
+        "sha256": "f26f3f1e47165ae79ebe6f295a3e12593f01e90079d03fc7ff61e47ce0b366a6",
+        "source_path": "templates/application/entry/src/main/resources/dark/element/color.json",
+        "source_sha256": "f26f3f1e47165ae79ebe6f295a3e12593f01e90079d03fc7ff61e47ce0b366a6"
+      },
+      {
+        "file": "resources/templates/application/gitignore.txt",
+        "sha256": "06525ad3d70bbef50da766f10905548f147490e8b51f8e1da00019191cb2f70c",
+        "source_path": "templates/application/gitignore.txt",
+        "source_sha256": "06525ad3d70bbef50da766f10905548f147490e8b51f8e1da00019191cb2f70c"
+      },
+      {
+        "file": "resources/templates/application/hvigor/hvigor-config.json5",
+        "sha256": "5ecc9b34b3c1c6194c32c6808a154f342c347ba3aaf9fa8fb95b4fa946d6db04",
+        "source_path": "templates/application/hvigor/hvigor-config.json5",
+        "source_sha256": "5ecc9b34b3c1c6194c32c6808a154f342c347ba3aaf9fa8fb95b4fa946d6db04"
+      },
+      {
+        "file": "resources/templates/application/hvigorfile.ts",
+        "sha256": "b8882fb4b6da475eeeeb64875e8f80a1bdfe4ea4b9d943396e91be45478a4758",
+        "source_path": "templates/application/hvigorfile.ts",
+        "source_sha256": "b8882fb4b6da475eeeeb64875e8f80a1bdfe4ea4b9d943396e91be45478a4758"
+      },
+      {
+        "file": "resources/templates/application/oh-package.json5",
+        "sha256": "a14b4f025d753c860b4c2599f4d6405dbfefeef6d3e73eb4829c4ba49695f10a",
+        "source_path": "templates/application/oh-package.json5",
+        "source_sha256": "a14b4f025d753c860b4c2599f4d6405dbfefeef6d3e73eb4829c4ba49695f10a"
+      }
+    ]
+  },
+  "sdk": {
+    "identity": "Captured per native workflow/toolchain; no universal SDK capability inference from clangd or source adapter declarations.",
+    "acceptance": "see final environment matrix"
+  }
+}

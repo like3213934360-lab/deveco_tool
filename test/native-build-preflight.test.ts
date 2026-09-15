@@ -8,6 +8,7 @@ import { buildPreflight } from "../src/services/build-preflight.js";
 import { workflowInputs } from "../src/core/contracts.js";
 import { withTrace } from "../src/core/trace.js";
 import { Runtime } from "../src/services/runtime.js";
+import { inspectProject } from "../src/services/project.js";
 import {
   WorkflowEngine,
   type WorkflowDefinition,
@@ -61,12 +62,9 @@ test("production build workflow settles first-attempt preflight rejection, but p
       checks = 0,
       builds = 0,
       loseReceipt = false;
-    const project = {
-      root: store.root,
-      product: { name: "default" },
-      modules: [],
-      fingerprint: "fixture",
-    };
+    const projectRoot=path.join(store.root,"application");
+    fs.cpSync(new URL("../../test/fixtures/harmony-app/",import.meta.url),projectRoot,{recursive:true});
+    const project = inspectProject(projectRoot);
     // Exercise the real runtime definitions and durable workflow engine while
     // replacing only the external checker/build boundary.
     const runtime = Object.assign(Object.create(Runtime.prototype) as Runtime, {

@@ -13,8 +13,8 @@ import { ProcessService } from "../src/core/process.js";
 import { discoverToolchain, toolCommand } from "../src/core/toolchain.js";
 import { emulatorBinding } from "../src/services/emulator-identity.js";
 
-const [root, preparedFile] = z
-  .tuple([z.string().min(1), z.string().min(1)])
+const [root, preparedFile, osVersion] = z
+  .tuple([z.string().min(1), z.string().min(1), z.string().min(1).optional()])
   .parse(process.argv.slice(2));
 assert.equal(
   fs.existsSync(root),
@@ -28,7 +28,7 @@ const name = `NativeMcp${crypto.randomBytes(4).toString("hex")}`,
   tested = evidenceIdentity();
 const results: Record<string, unknown> = {},
   file = path.join(root, "evidence.json");
-const client = new AcceptanceMcp(root, "emulator-continuous-log-acceptance"),
+const client = new AcceptanceMcp(root, "emulator-continuous-log-acceptance", { tool_groups: ["core", "emulator-admin"] }),
   processes = new ProcessService();
 let target: string | undefined,
   created = false,
@@ -66,7 +66,7 @@ async function operation(key: string, input: Record<string, unknown>) {
   save();
   const run = z
     .object({ run_id: z.string() })
-    .parse(await client.call("emulator_manage", { ...input, request_key }));
+    .parse(await client.call(["create", "delete"].includes(String(input.action)) ? "emulator_admin" : "emulator_manage", { ...input, request_key }));
   results[key] = run;
   save();
   const deadline = Date.now() + 180000;
@@ -80,6 +80,7 @@ async function operation(key: string, input: Record<string, unknown>) {
       .parse(
         await client.call("workflow_run", {
           action: "status",
+          detail: "full",
           run_id: run.run_id,
           wait_ms: 1000,
         }),
@@ -121,13 +122,13 @@ try {
       ),
     })
     .parse(
-      await client.call("emulator_manage", {
+      await client.call("emulator_admin", {
         action: "images",
         downloaded: true,
         device_type: "phone",
       }),
     );
-  const image = images.images[0];
+  const image = osVersion ? images.images.find(candidate => candidate.osVersion === osVersion) : images.images[0];
   assert.ok(image);
   results.image = image;
   results.doctor = await client.call("deveco_doctor", {});

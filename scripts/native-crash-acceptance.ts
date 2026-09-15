@@ -161,7 +161,7 @@ async function wait(runId: string) {
   while (performance.now() < deadline) {
     const result = statusSchema.parse(
       await call("workflow_run", {
-        action: "status",
+        action: "status", detail: "full",
         run_id: runId,
         wait_ms: 1000,
       }),
@@ -323,7 +323,7 @@ try {
   await connect();
   await observe("persisted_result_and_artifact_after_reconnect", async () => {
     const reopened = statusSchema.parse(
-      await call("workflow_run", { action: "status", run_id }),
+      await call("workflow_run", { action: "status", detail: "full", run_id }),
     );
     assert.deepEqual(reopened, completed.status);
     assert.deepEqual(await readArtifact(fetched.artifact.artifact_id), bytes);

@@ -12,6 +12,7 @@
     "jpeg-js",
     "json5",
     "koffi",
+    "smol-toml",
     "vscode-jsonrpc",
     "vscode-uri",
     "yauzl",

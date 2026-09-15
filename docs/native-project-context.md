@@ -1,4 +1,12 @@
-# 默认工程与任务上下文
+# 显式工程与任务上下文
+
+当前候选的工程操作要求显式 `project_path`，并按需指定 `product` 与 `module_targets`。`project_context resolve` 返回规范化真实路径、所选产品/模块目标与不可变 scope 摘要；它不保存共享默认目录。`switch_cwd` 是迁移兼容入口，也只返回描述符。旧配置的 `default_project` 不再为后续请求选择工程。
+
+`deveco_doctor` 未传 `project_path` 时不继承其它请求的工程选择。不同任务互不改变项目；原生工作流启动时捕获项目、产品、模块、源码/配置和工具链，恢复及最终验收核对捕获身份。目录或来源改变时按具体冲突报错，不悄悄选择另一个工程。
+
+当前接口见[领域协议迁移](domain-protocol-migration.md)，本轮实现与验证见[优化记录](refactoring/2026-09-15-workflow-optimization-progress.md)和[待办清单](refactoring/2026-09-15-workflow-optimization-todo.md)。2026-09-12 的实现矩阵与验收报告只记录此前候选版本。以下保留旧版本可变默认工程机制及其历史测试原文，不能作为当前接口说明或本次通过证据。
+
+## 历史默认工程实现与验收
 
 `switch_cwd` 校验工程配置并保存规范化后的真实目录，仅选择当前运行服务的默认工程。它不改变宿主进程的工作目录，也不为多产品工程猜选产品。多个产品都没有 `default` 时，切换仍然成功，后续构建/诊断等请求需要显式给出 `product`。
 

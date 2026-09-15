@@ -15,6 +15,7 @@ import { retainedSchema, writeSoakReport } from "./lib/soak-gate.js";
 import { nativeOperation } from "./lib/native-operation.js";
 import { evidenceIdentity } from "./lib/evidence.js";
 import { SoakMixedLoad } from "./lib/soak-mixed-load.js";
+import { acceptanceResult } from "./lib/acceptance-result.js";
 
 // Use a dedicated personally signed canary, prepared by native-hot-target-prepare.
 // The driver never imports Runtime: every capability runs through shipped stdio MCP.
@@ -191,9 +192,10 @@ async function call(name: ToolName, input: unknown): Promise<unknown> {
       .parse(result.structuredContent).error;
     throw new ToolError(error.code, error.message);
   }
-  return z
+  const data = z
     .object({ ok: z.literal(true), data: z.unknown() })
     .parse(result.structuredContent).data;
+  return acceptanceResult(data, input => call("workflow_run", input));
 }
 async function doctor() {
   const value = z

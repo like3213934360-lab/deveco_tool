@@ -67,6 +67,8 @@ export interface FaultlogQuery {
   bundle_name?: string;
   max_age_minutes?: number;
   limit?: number;
+  /** Internal historical-task selection, using captured device epoch anchors. */
+  time_window?: { start_ms: number; end_ms: number };
 }
 export class LogService {
   constructor(
@@ -158,6 +160,7 @@ export class LogService {
       .filter(
         (file) =>
           (!input.bundle_name || file.bundle_name === input.bundle_name) &&
+          (!input.time_window || (file.timestamp !== null && file.timestamp >= input.time_window.start_ms && file.timestamp <= input.time_window.end_ms)) &&
           (age === 0 ||
             (file.timestamp !== null &&
               file.timestamp <= now &&

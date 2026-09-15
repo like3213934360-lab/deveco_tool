@@ -100,10 +100,10 @@ Color.Silver     -> '#C0C0C0'
 
 ### Detailed Examples
 For more detailed code examples, see:
-- [Basic Color Usage](../assets/ColorPropertyError.ets#L8-L12)
-- [Text Color Pattern](../assets/ColorPropertyError.ets#L14-L18)
-- [Background Color Pattern](../assets/ColorPropertyError.ets#L20-L24)
-- [Theme Switching](../assets/ColorPropertyError.ets#L26-L36)
+- [Basic Color Usage](deveco://knowledge/arkts-error-fixes/examples/ColorPropertyError)
+- [Text Color Pattern](deveco://knowledge/arkts-error-fixes/examples/ColorPropertyError)
+- [Background Color Pattern](deveco://knowledge/arkts-error-fixes/examples/ColorPropertyError)
+- [Theme Switching](deveco://knowledge/arkts-error-fixes/examples/ColorPropertyError)
 
 ### Best Practices
 1. **Use hex values**: Always use hex color values instead of non-existent Color properties
@@ -132,5 +132,5 @@ Text('Hello')
 ```
 
 ### Related Files
-- [Code Example](../assets/ColorPropertyError.ets)
+- [Code Example](deveco://knowledge/arkts-error-fixes/examples/ColorPropertyError)
 - [ArkTS UI Components](https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/arkts-uicomponent)

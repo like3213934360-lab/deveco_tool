@@ -1,0 +1,6 @@
+Debug the following ArkTS issue using the dedicated debug workflow.
+
+If the user request is empty or too generic, ask a `question` to collect the concrete symptom before doing any diagnosis. Do not end the current turn with a normal text response while required issue details are missing.
+
+User request:
+$ARGUMENTS

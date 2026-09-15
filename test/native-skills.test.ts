@@ -6,6 +6,8 @@ import path from "node:path";
 import { StateStore } from "../src/core/store.js";
 import { SkillService, skillManageSchema } from "../src/services/skills.js";
 import { SkillWorkflowService } from "../src/services/skill-workflow.js";
+import { domainRecipeCall, domainRecipeCatalog, hostCapabilityNames } from "../src/services/domain-recipes.js";
+import { DomainContentService } from "../src/services/domain-content.js";
 import { guidedKinds } from "../src/services/skill-guidance.js";
 import { resourceRoot } from "../src/core/config.js";
 import { z } from "zod";
@@ -46,6 +48,8 @@ test("all bundled Skills and their references are served through MCP without a c
         assert.equal(result.client_installation_required, false);
         assert.ok(result.content.length);
         assert.equal(result.reference_read.tool, "skill_manage");
+        assert.equal(result.reference_read.file, file.path);
+        assert.equal(result.files.find(item => item.path === file.path)!.read.file, file.path);
       }
     assert.ok(
       z
@@ -108,143 +112,71 @@ test("bundled Skill reads reject traversal, unlisted references, changed bytes a
     f.close();
   }
 });
-test("builtin workflows supply full Skill content and knowledge, pin their definitions and recover after database reopen without a client loader", () => {
-  const f = fixture();
-  let service = new SkillWorkflowService(f.store);
-  const saved: { id: string; digest: string; names: string[] }[] = [];
+test("domain recipes expose source-linked methods on demand without creating guidance runs or host files", () => {
+  const f = fixture(), content = new DomainContentService();
+  const recipeSchema = z.object({
+    id: z.enum(guidedKinds), creates_run: z.literal(false), completion_claim: z.literal("guidance_only"),
+    content_sha256: z.string().regex(/^[a-f0-9]{64}$/),
+    references: z.object({ skills: z.array(z.object({ name: z.string(), uri: z.string(), files: z.array(z.object({ path: z.string(), sha256: z.string() })) })),
+      knowledge: z.array(z.object({ id: z.string(), uri: z.string(), sha256: z.string() })),
+      source_assets: z.array(z.object({ path: z.string(), uri: z.string(), sha256: z.string() })) }),
+    host_boundary: z.object({ capability_status: z.string(), missing: z.array(z.string()), alternative: z.string().nullable() }),
+  });
   try {
-    for (const kind of guidedKinds) {
-      const state = service.call({
-        action: "start",
-        kind,
-        project_path: f.root,
-        objective: `Execute ${kind} using builtin MCP instructions`,
-        ...(kind === "ui_test"
-          ? {
-              device: {
-                target: "test-device",
-                bundle_name: "com.example.test",
-              },
-            }
-          : {}),
-      }) as ReturnType<SkillWorkflowService["read"]>;
-      assert.equal(state.definition_current, true);
-      assert.equal(state.guidance.delivery, "builtin_mcp");
-      assert.equal(state.guidance.client_skill_installation, false);
-      assert.ok(
-        state.guidance.skills?.every((skill) =>
-          skill.content.startsWith("---\nname:"),
-        ),
-      );
-      saved.push({
-        id: state.run_id,
-        digest: state.definition_sha256,
-        names: state.guidance.skills!.map((skill) => skill.name),
-      });
-      if (["arkts", "repair", "create", "spec"].includes(kind)) {
-        assert.equal(
-          state.guidance.knowledge?.[0]?.id,
-          "arkts-grammar-standards/recipes-core",
-        );
-        assert.ok(state.guidance.knowledge![0]!.content.length);
+    const catalog = domainRecipeCatalog();
+    assert.deepEqual(catalog.recipes.map(recipe => recipe.id), guidedKinds);
+    assert.equal(catalog.creates_run, false);
+    const names = new Set<string>();
+    for (const id of guidedKinds) {
+      const recipe = recipeSchema.parse(domainRecipeCall({ action: "read", id }));
+      assert.equal(recipe.host_boundary.capability_status, "not_declared");
+      assert.deepEqual(domainRecipeCall({ action: "read", id }), domainRecipeCall({ action: "read", id }));
+      for (const skill of recipe.references.skills) {
+        names.add(skill.name);
+        for (const file of skill.files) {
+          const read = content.read(`deveco://skill/${skill.name}/${file.path}`);
+          assert.equal(read.sha256, file.sha256);
+          assert.ok(read.text.length);
+        }
       }
-    }
-    assert.equal(new Set(saved.flatMap((item) => item.names)).size, 6);
-    service.close();
-    f.store.close();
-    const reopened = new StateStore(path.join(f.root, "state"));
-    service = new SkillWorkflowService(reopened);
-    try {
-      for (const item of saved) {
-        const state = service.read(item.id);
-        assert.equal(state.definition_sha256, item.digest);
-        assert.deepEqual(
-          state.guidance.skills?.map((skill) => skill.name),
-          item.names,
-        );
+      for (const knowledge of recipe.references.knowledge) {
+        const read = content.read(knowledge.uri);
+        assert.equal(read.sha256, knowledge.sha256);
+        assert.ok(read.text.length);
       }
-    } finally {
-      service.close();
-      reopened.close();
+      for (const source of recipe.references.source_assets)
+        assert.equal(content.read(source.uri).sha256, source.sha256);
+      if (id === "spec") {
+        assert.equal(recipe.references.source_assets.filter(source => source.path.includes("/spec/commands/")).length, 5);
+        assert.equal(recipe.references.source_assets.filter(source => source.path.includes("/spec/templates/")).length, 3);
+      }
+      if (["arkts", "repair", "create", "spec"].includes(id))
+        assert.equal(recipe.references.knowledge[0]?.id, "arkts-grammar-standards/recipes-core");
+      const missing = recipeSchema.parse(domainRecipeCall({ action: "read", id, host_capabilities: [] }));
+      assert.equal(missing.host_boundary.capability_status, "missing");
+      assert.ok(missing.host_boundary.missing.length);
+      assert.match(missing.host_boundary.alternative!, /host or human/);
+      const available = recipeSchema.parse(domainRecipeCall({ action: "read", id, host_capabilities: hostCapabilityNames }));
+      assert.equal(available.host_boundary.capability_status, "declared");
+      assert.deepEqual(available.host_boundary.missing, []);
     }
+    assert.equal(names.size, 6);
+    assert.equal(f.store.runCount(), 0);
     assert.deepEqual(fs.readdirSync(f.root), ["state"]);
-  } finally {
-    if (f.store.db.open) {
-      service.close();
-      f.store.close();
-    }
-    fs.rmSync(f.root, { recursive: true, force: true });
-  }
+    const customize = z.object({ upstream_adaptation: z.object({ equivalent_to_full_DevEco_Code_customization: z.literal(false), host_responsibilities: z.array(z.string()) }) }).parse(domainRecipeCall({ action: "read", id: "customize" }));
+    assert.ok(customize.upstream_adaptation.host_responsibilities.includes("models"));
+  } finally { f.close(); }
 });
 
-test("project creation accepts a new destination and a changed bundled definition blocks continuation but allows cancellation", () => {
-  const f = fixture(),
-    resources = path.join(f.root, "resources");
-  fs.mkdirSync(resources);
-  fs.copyFileSync(
-    path.join(resourceRoot, "skills.json"),
-    path.join(resources, "skills.json"),
-  );
-  fs.cpSync(path.join(resourceRoot, "skills"), path.join(resources, "skills"), {
-    recursive: true,
-  });
-  let service = new SkillWorkflowService(f.store);
+test("retired guidance creation never creates a destination, run, document or host configuration", () => {
+  const f = fixture(), service = new SkillWorkflowService(f.store);
   try {
     const destination = path.join(f.root, "new-project");
-    const created = service.call({
-      action: "start",
-      kind: "create",
-      project_path: destination,
-      objective: "Create an SDK project at the captured new destination",
-    }) as ReturnType<SkillWorkflowService["read"]>;
-    assert.equal(
-      created.project_path,
-      path.join(fs.realpathSync.native(f.root), "new-project"),
-    );
+    for (const kind of guidedKinds)
+      assert.throws(() => service.call({ action: "start", kind, project_path: destination, objective: "Keep the original requested change" }), { code: "GUIDANCE_LIFECYCLE_RETIRED" });
     assert.equal(fs.existsSync(destination), false);
-    const planned = service.call({
-      action: "start",
-      kind: "plan",
-      project_path: f.root,
-      objective: "Recover with the exact bundled workflow definition",
-    }) as ReturnType<SkillWorkflowService["read"]>;
-    service.close();
-    const catalogFile = path.join(resources, "skills.json"),
-      catalog = JSON.parse(fs.readFileSync(catalogFile, "utf8"));
-    catalog.skills.find(
-      (item: { name: string }) => item.name === "deveco-native-tools",
-    ).version = "changed-release";
-    fs.writeFileSync(catalogFile, JSON.stringify(catalog));
-    service = new SkillWorkflowService(
-      f.store,
-      new SkillService(f.store, resources),
-    );
-    const changed = service.read(planned.run_id);
-    assert.equal(changed.definition_current, false);
-    assert.equal(changed.guidance.blocked, "SKILL_WORKFLOW_DEFINITION_CHANGED");
-    assert.deepEqual(changed.guidance.skills, []);
-    assert.throws(
-      () =>
-        service.call({
-          action: "write",
-          run_id: planned.run_id,
-          expected_revision: 1,
-          name: "notes.md",
-          content: "Continue with different packaged instructions",
-        }),
-      { code: "SKILL_WORKFLOW_DEFINITION_CHANGED" },
-    );
-    service.call({
-      action: "transition",
-      run_id: planned.run_id,
-      expected_revision: 1,
-      phase: "cancelled",
-      rationale:
-        "Start a fresh workflow after the packaged definition changed.",
-    });
-    assert.equal(f.store.get(planned.run_id).status, "cancelled");
-  } finally {
-    service.close();
-    f.close();
-  }
+    assert.equal(f.store.runCount(), 0);
+    assert.deepEqual(service.call({ action: "list" }), []);
+    assert.deepEqual(fs.readdirSync(f.root), ["state"]);
+  } finally { service.close(); f.close(); }
 });

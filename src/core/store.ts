@@ -438,6 +438,7 @@ export class StateStore {
     requestKey?: string,
     identity: unknown = input,
     inputArtifacts: readonly string[] = [],
+    dependencies: readonly string[] = [],
   ): { run: RunRecord; created: boolean } {
     return this.db.transaction(() => {
       if (requestKey) {
@@ -473,6 +474,11 @@ export class StateStore {
           null,
           null,
         );
+      for (const dependency of new Set(dependencies)) {
+        invariant(this.db.prepare("SELECT 1 FROM runs WHERE id=?").get(dependency),
+          "WORKFLOW_EVIDENCE_MISSING", "Referenced native evidence is no longer retained");
+        this.db.prepare("INSERT INTO run_dependencies(parent_run_id,run_id) VALUES(?,?)").run(id, dependency);
+      }
       for (const artifact of inputArtifacts) {
         const attached = this.db
           .prepare(

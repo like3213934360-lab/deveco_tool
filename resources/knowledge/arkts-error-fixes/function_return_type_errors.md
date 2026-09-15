@@ -66,7 +66,7 @@ struct WindowInfoExample {
 ```
 
 ### Detailed Code Examples
-- [FunctionReturnTypeError.ets](../assets/FunctionReturnTypeError.ets) - 完整的函数返回类型示例，包含接口定义和使用
+- [FunctionReturnTypeError.ets](deveco://knowledge/arkts-error-fixes/examples/FunctionReturnTypeError) - 完整的函数返回类型示例，包含接口定义和使用
 
 ---
 
@@ -150,9 +150,9 @@ private async fetchData(): Promise<Data> {
 
 ### Detailed Examples
 For more detailed code examples, see:
-- [Object Return Type](../assets/FunctionReturnTypeError.ets#L14-L19)
-- [Void Return Type](../assets/FunctionReturnTypeError.ets#L21-L26)
-- [Usage Pattern](../assets/FunctionReturnTypeError.ets#L28-L35)
+- [Object Return Type](deveco://knowledge/arkts-error-fixes/examples/FunctionReturnTypeError)
+- [Void Return Type](deveco://knowledge/arkts-error-fixes/examples/FunctionReturnTypeError)
+- [Usage Pattern](deveco://knowledge/arkts-error-fixes/examples/FunctionReturnTypeError)
 
 ### Best Practices
 1. **Add explicit types**: Always add return type annotations for complex functions
@@ -190,5 +190,5 @@ private getConfig(): Config {
 ```
 
 ### Related Files
-- [Code Example](../assets/FunctionReturnTypeError.ets)
+- [Code Example](deveco://knowledge/arkts-error-fixes/examples/FunctionReturnTypeError)
 - [ArkTS Language Guide](https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/arkts-get-started)

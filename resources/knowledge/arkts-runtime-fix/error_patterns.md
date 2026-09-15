@@ -28,4 +28,4 @@
 
 ## Related Files
 
-- [Fault mode library](./fault-mode-library.md) — covers `ArrayBuffer detached`, `Map constructor`
+- [Fault mode library](deveco://knowledge/arkts-runtime-fix/fault-mode-library) — covers `ArrayBuffer detached`, `Map constructor`

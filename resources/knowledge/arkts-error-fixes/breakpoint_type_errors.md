@@ -119,4 +119,4 @@ struct BreakpointExample {
 
 ## 详细代码示例
 
-- [BreakpointTypeError.ets](../assets/BreakpointTypeError.ets) - 完整的断点类型错误修复示例，包含媒体查询监听和断点判断逻辑
+- [BreakpointTypeError.ets](deveco://knowledge/arkts-error-fixes/examples/BreakpointTypeError) - 完整的断点类型错误修复示例，包含媒体查询监听和断点判断逻辑

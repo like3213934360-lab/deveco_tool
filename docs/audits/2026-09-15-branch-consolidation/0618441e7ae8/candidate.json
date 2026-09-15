@@ -1,0 +1,36 @@
+{
+  "format": 1,
+  "source": "deveco-code",
+  "url": "https://gitcode.com/openharmony-sig/deveco-code.git",
+  "base": {
+    "commit": "aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a",
+    "tree": "f88b2d20b4a1adf36d8370eb907a162b215d6f4b"
+  },
+  "candidate": {
+    "commit": "7b9b68c2f65e25d6a91f13d47d5b75622aacfe20",
+    "tree": "5ad5a8d2ca2313ef9c0d698675cf8dca83e552fb"
+  },
+  "mapping_sha256": "e5069b08892982a832ea31247a68e3d1b8e00786b68c00944a02c6700473e793",
+  "changes": [
+    {
+      "path": ".gitcode/workflows/publish-daily.yml",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": ".gitcode/workflows/publish-daily.yml",
+        "oid": "3f81ad5c32f6be5f683a26bb786f333a574b8aea",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "code-host-gitcode",
+      "disposition": "exclude",
+      "reason": "Upstream host implementation, repository development or packaging; not installed or executed by the native MCP. More specific resource mappings take precedence.",
+      "targets": [],
+      "tests": []
+    }
+  ],
+  "gate": "requires_release_validation",
+  "required_tests": [],
+  "note": "Source classification is a review proposal. It does not convert natural language into code, approve protocol semantics, modify the active source lock or authorize release.",
+  "sha256": "a18dbd6062f64d357e3b9e0b6d1bd05e8eb75b0171dde5e9b9ed5908fac851db"
+}

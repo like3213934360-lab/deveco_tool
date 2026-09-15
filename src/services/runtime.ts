@@ -1,4 +1,18 @@
+import { attachReviewImage } from "./ui-review-response.js";
+import { captureCrashReference, readCrashSnapshot, supplementCrashSnapshot, diagnoseCrashSnapshot } from "./crash-reference.js";
+import { evidenceArtifactSchema, verifyEvidenceArtifacts } from "./evidence-result.js";
+import { WorkflowResponses } from "./workflow-response.js";
+import { enrichBuildFailure, diagnosticTerms } from "./build-failure.js";
+import { normalizeDiagnostics } from "./diagnostic-report.js";
+import { captureSyncReceipt, synchronizeProject, type SyncPolicy } from "./project-sync.js";
+import { resolveBuildReference, resolvePackageApplication, resolveProjectApplication } from "./application-input.js";
 import fs from "node:fs";
+import { createHash } from "node:crypto";
+import { domainRecipeCall } from "./domain-recipes.js";
+import { DomainContentService } from "./domain-content.js";
+import { DomainAcceptanceService } from "./domain-acceptance.js";
+import { uiActionCapabilities } from "../core/ui-action-contract.js";
+import { sourceHash, captureEvidenceIdentity, projectEvidenceIdentity, runtimeEvidenceIdentity } from "./evidence-identity.js";
 import { inspectSnapshot } from "./ui-inspection.js";
 import { findInSavedTree } from "./ui-import.js";
 import { SavedUiTreeCache } from "./ui-import-cache.js";
@@ -11,6 +25,7 @@ import {
   uiTaskSchema,
   recordingTaskSchema,
   moduleTargetsSchema,
+  appSchema,
   type ToolName,
   type WorkflowName,
 } from "../core/contracts.js";
@@ -78,19 +93,6 @@ import {
   type NavigationChoice,
 } from "./navigation.js";
 
-function sourceHash(project: Project) {
-  return digest(
-    walk(project.root)
-      .filter(
-        (file) =>
-          !file.includes(`${path.sep}.arkpilot${path.sep}`) &&
-          !["patch.json", "oh-package-lock.json5"].includes(
-            path.basename(file),
-          ),
-      )
-      .map((file) => [path.relative(project.root, file), fileDigest(file)]),
-  );
-}
 const artifactsSchema = z.array(
   z.object({ path: z.string(), sha256: z.string(), bytes: z.number() }),
 );
@@ -121,6 +123,7 @@ export class Runtime {
   readonly flows = new FlowService(this.devices, this.store);
   readonly recordings = new RecordingService(this.store, this.devices);
   readonly tests = new UiTestService(this.store, this.devices, this.verification, this.reviews, target => this.recordings.assertTaskTarget(target), this.storage);
+  readonly acceptance = new DomainAcceptanceService(this.store, id => this.tests.status(id));
   readonly logs = new LogService(this.devices, this.store);
   readonly auth = new AuthService(this.store, this.processes);
   readonly knowledge = new KnowledgeService(this.store, this.auth);
@@ -150,6 +153,8 @@ export class Runtime {
         this.store,
         this.definitions(),
         (context, workflow) => this.validate(context, workflow),
+        (context, workflow, outputs) => this.sealEvidence(context, workflow, outputs),
+        () => digest(runtimeEvidenceIdentity()),
       );
     })());
   }
@@ -199,90 +204,149 @@ export class Runtime {
     const parameters = workflowInputs[name].parse(raw),
       record = object(parameters),
       context: WorkflowContext = { parameters: record };
-    const projectName =
-        typeof record.project_path === "string"
-          ? record.project_path
-          : undefined,
-      product = typeof record.product === "string" ? record.product : undefined;
-    if (name === "project_create") {
-      context.project_path = destinationPath(
-        text(record.project_path, "project_path"),
-      );
-    } else if (name !== "app_deploy" && name !== "crash_diagnose") {
-      const project = this.projects.resolve(projectName, product, moduleTargetsSchema.optional().parse(record.module_targets));
-      context.project_path = project.root;
-      context.product = project.product.name;
-      context.module_targets = projectTargets(project);
-      context.project_hash = project.fingerprint;
-      context.source_hash = sourceHash(project);
+    try {
+      const projectName =
+          typeof record.project_path === "string"
+            ? record.project_path
+            : undefined,
+        product = typeof record.product === "string" ? record.product : undefined;
+      const buildReference = typeof record.build_run_id === "string"
+        ? resolveBuildReference(this.store, record.build_run_id, { project_path: projectName, product,
+            module_targets: moduleTargetsSchema.optional().parse(record.module_targets) }) : undefined;
+      if (name === "project_create") {
+        this.projects.prepareCreate(workflowInputs.project_create.parse(parameters));
+        context.project_path = destinationPath(
+          text(record.project_path, "project_path"),
+        );
+      } else if (buildReference || (name !== "app_deploy" && name !== "crash_diagnose")) {
+        const project = buildReference?.project ?? this.projects.resolve(projectName, product, moduleTargetsSchema.optional().parse(record.module_targets));
+        context.project_path = project.root;
+        context.product = project.product.name;
+        context.module_targets = projectTargets(project);
+        context.project_hash = project.fingerprint;
+        context.source_hash = sourceHash(project);
+        if (buildReference) {
+          context.build = buildReference.reference;
+          context.requirements = buildReference.reference.requirements;
+        }
+        if (!buildReference && ["build_run", "build_deploy_verify"].includes(name))
+          record.app = resolveProjectApplication(project, appSchema.optional().parse(record.app) ??
+            (record.hot_reload ? this.hot.activeApplication(project) : undefined), z.array(z.string()).optional().parse(record.modules));
+      }
+      if (
+        name === "app_deploy" ||
+        name === "build_deploy_verify" ||
+        name === "build_run" ||
+        (name === "crash_diagnose" &&
+          !record.source_run_id &&
+          !record.log_file &&
+          !record.log_artifact_id &&
+          record.log_text === undefined)
+      )
+        context.target = await this.devices.target(
+          typeof record.target === "string" ? record.target :
+            record.hot_reload && context.project_path ? this.hot.activeTarget(this.project(context)) : undefined,
+          signal,
+        );
+      if (name !== "crash_diagnose" || context.target)
+        context.toolchain_hash = digest(discoverToolchain());
+      if (name === "crash_diagnose" && typeof record.source_run_id === "string") {
+        context.crash = captureCrashReference(this.store, record.source_run_id, id => this.tests.diagnosticLogs(id));
+        context.input_artifacts = [context.crash.artifact_id];
+      } else if (name === "crash_diagnose" && !context.target) {
+        const input = workflowInputs.crash_diagnose.parse(record),
+          content = input.log_file
+            ? await readLogFile(input.log_file)
+            : input.log_text !== undefined
+              ? Buffer.from(input.log_text)
+              : Buffer.from(
+                  this.artifactText(
+                    text(input.log_artifact_id, "log_artifact_id"),
+                  ),
+                );
+        invariant(
+          content.toString("utf8").trim(),
+          "CRASH_EVIDENCE_MISSING",
+          "Crash log is empty",
+        );
+        signal?.throwIfAborted();
+        const artifact = this.store.artifact("workflow-input", content);
+        context.input_artifacts = [artifact.artifact_id];
+        delete record.log_file;
+        delete record.log_text;
+        record.log_artifact_id = artifact.artifact_id;
+      }
+      if (name === "app_deploy" || buildReference) {
+        const input = name === "app_deploy" ? workflowInputs.app_deploy.parse(record) : undefined;
+        const captured = await captureFiles(
+          this.store,
+          "workflow-input",
+          buildReference?.reference.artifacts ?? (input && "packages" in input ? input.packages : []),
+          signal,
+        );
+        context.deployment = captured;
+        context.input_artifacts = captured.map((file) => file.artifact_id);
+        record.app = await resolvePackageApplication(captured.map(file => file.path), appSchema.optional().parse(record.app), signal);
+        if (!buildReference) record.packages = captured.map(file => ({ path: file.path, sha256: file.sha256 }));
+      }
+      if (name === "build_deploy_verify" && record.flow_id) {
+        const input = workflowInputs.build_deploy_verify.parse(record);
+        context.flow = this.flows.validateInputs(
+          this.flows.read(this.project(context), input.flow_id!),
+          input.variables,
+        );
+        invariant(
+          context.flow.app.bundleName === appSchema.parse(record.app).bundle_name &&
+            context.flow.app.module === appSchema.parse(record.app).module &&
+            context.flow.app.ability === appSchema.parse(record.app).ability,
+          "FLOW_APP_MISMATCH",
+          "Saved flow targets a different application component",
+        );
+      }
+      return context;
+    } catch (error) {
+      if (context.input_artifacts?.length) this.store.discardArtifacts("workflow-input", context.input_artifacts);
+      throw error;
     }
-    if (
-      name === "app_deploy" ||
-      name === "build_deploy_verify" ||
-      (name === "crash_diagnose" &&
-        !record.log_file &&
-        !record.log_artifact_id &&
-        record.log_text === undefined)
-    )
-      context.target = await this.devices.target(
-        typeof record.target === "string" ? record.target : undefined,
-        signal,
-      );
-    if (name !== "crash_diagnose" || context.target)
-      context.toolchain_hash = digest(discoverToolchain());
-    if (name === "crash_diagnose" && !context.target) {
-      const input = workflowInputs.crash_diagnose.parse(record),
-        content = input.log_file
-          ? await readLogFile(input.log_file)
-          : input.log_text !== undefined
-            ? Buffer.from(input.log_text)
-            : Buffer.from(
-                this.artifactText(
-                  text(input.log_artifact_id, "log_artifact_id"),
-                ),
-              );
-      invariant(
-        content.toString("utf8").trim(),
-        "CRASH_EVIDENCE_MISSING",
-        "Crash log is empty",
-      );
-      signal?.throwIfAborted();
-      const artifact = this.store.artifact("workflow-input", content);
-      context.input_artifacts = [artifact.artifact_id];
-      delete record.log_file;
-      delete record.log_text;
-      record.log_artifact_id = artifact.artifact_id;
+  }
+  private async sealEvidence(context: WorkflowContext, workflow: string, outputs: Record<string, unknown>) {
+    const scope = { project_path: context.project_path, product: context.product, module_targets: context.module_targets,
+      target: context.target, app: context.parameters.app, display_id: context.parameters.display_id as number | undefined };
+    const identity = captureEvidenceIdentity(scope, context.requirements, !!context.toolchain_hash);
+    if(context.runtime_sha256) invariant(context.runtime_sha256===digest(runtimeEvidenceIdentity()),"RUNTIME_CHANGED","Runtime or resource bytes changed during native execution");
+    const artifacts: ReturnType<typeof evidenceArtifactSchema.parse>[] = [];
+    for (const key of ["verify_artifacts","build_or_hot_apply","validate_artifact","prepare_installation"]) {
+      if (!outputs[key]) continue;
+      const value = this.output({run_id:currentTrace().run_id!,context,outputs,signal:new AbortController().signal},key);
+      const record = Array.isArray(value) ? {} : object(value);
+      const candidates = Array.isArray(value) ? value : record.artifacts ?? record.packages ?? object(record.result ?? {}).artifacts ?? [];
+      for (const item of z.array(evidenceArtifactSchema).max(256).parse(candidates)) if(!artifacts.some(old=>old.path===item.path && old.sha256===item.sha256)) {
+        // Temporary install copies have a deliberately shorter lifetime than
+        // their native receipt. Never retain them again merely for acceptance.
+        if(item.artifact_id && this.store.db.prepare("SELECT 1 FROM released_packages WHERE artifact_id=? AND run_id=?").get(item.artifact_id,currentTrace().run_id!))
+          item.released_package={run_id:currentTrace().run_id!,artifact_id:item.artifact_id};
+        artifacts.push(item);
+      }
     }
-    if (name === "app_deploy") {
-      const input = workflowInputs.app_deploy.parse(record);
-      const captured = await captureFiles(
-        this.store,
-        "workflow-input",
-        input.packages,
-        signal,
-      );
-      context.deployment = captured;
-      context.input_artifacts = captured.map((file) => file.artifact_id);
-      record.packages = captured.map((file) => ({
-        path: file.path,
-        sha256: file.sha256,
-      }));
+    verifyEvidenceArtifacts(artifacts,this.store);
+    if (context.source_hash && !["project_create", "project_sync", "native_operation"].includes(workflow))
+      invariant(identity.source_sha256 === context.source_hash, "EVIDENCE_STALE", "Project sources changed during execution; native receipts are retained but this result is not current acceptance");
+    if (context.toolchain_hash) invariant(identity.toolchain_sha256 === context.toolchain_hash, "TOOLCHAIN_CHANGED", "Toolchain changed during execution");
+    const buildKey = workflow === "project_build" ? "build_project" : "build_or_hot_apply";
+    if (outputs[buildKey]) {
+      const result = object(this.output({ run_id: currentTrace().run_id!, context, outputs, signal: new AbortController().signal }, buildKey));
+      if (result.input_identity) {
+        const before = object(result.input_identity), current = context.project_path ? projectEvidenceIdentity(this.project(context)) : {};
+        invariant(digest(before) === digest(current), "EVIDENCE_STALE", "Build inputs changed during or after the native command; rerun against current inputs");
+      }
     }
-    if (name === "build_deploy_verify" && record.flow_id) {
-      const input = workflowInputs.build_deploy_verify.parse(record);
-      context.flow = this.flows.validateInputs(
-        this.flows.read(this.project(context), input.flow_id!),
-        input.variables,
-      );
-      invariant(
-        context.flow.app.bundleName === input.app.bundle_name &&
-          (!input.app.module || context.flow.app.module === input.app.module) &&
-          context.flow.app.ability === input.app.ability,
-        "FLOW_APP_MISMATCH",
-        "Saved flow targets a different application component",
-      );
-    }
-    return context;
+    return { format: 1, identity, scope, artifacts, requirements: context.requirements, recorded_at: Date.now(), workflow,
+      ...(context.build ? { build: { run_id: context.build.run_id, result_sha256: context.build.result_sha256, requirements: context.build.requirements } } : {}),
+      definition_sha256: context.definition_sha256 ?? null,
+      native_command_completed: true, business_verified: false,
+      ...(context.crash ? { historical_source: context.crash, current_source_verified: false } : {}),
+      meaning: context.crash ? "Historical retained-log analysis; neither current project/device state nor the failure's root cause is verified."
+        : "Native completion for captured inputs. Use domain_acceptance or ui_test for requirement-specific evaluation." };
   }
   private async validate(context: WorkflowContext, workflow: string) {
     if (workflow === "native_operation" && String(context.parameters.tool).startsWith("emulator_")) await this.emulator.reconcileSessions();
@@ -310,7 +374,7 @@ export class Runtime {
       this.tests.assertTaskTarget(context.target);
       const recording = recordingTaskSchema.safeParse(context.parameters);
       if (
-        ["ui_flow", "ui_record", "app_deploy", "build_deploy_verify", "native_operation"].includes(
+        ["ui_flow", "ui_record", "app_deploy", "build_run", "build_deploy_verify", "native_operation"].includes(
           workflow,
         )
       )
@@ -601,10 +665,10 @@ export class Runtime {
       ],
     });
     define("project_create", [
-      read("validate_sdk", async () => {
+      read("validate_sdk", async (call) => {
         const toolchain = discoverToolchain();
         component(toolchain, "hvigor");
-        return { sdk: toolchain.sdk, version: toolchain.version };
+        return this.projects.prepareCreate(workflowInputs.project_create.parse(call.context.parameters)).sdk;
       }),
       effect(
         "create_project",
@@ -627,14 +691,16 @@ export class Runtime {
         ),
       })),
     ]);
-    const synchronize = async (call: StepContext) =>
-      this.projects.sync(
-        this.project(call.context),
-        workflowInputs.project_sync.parse(call.context.parameters).install,
-        call.signal,
-      );
+    const sync = async (call: StepContext, policy: SyncPolicy, recovering = false, install = true) => {
+      const project = this.project(call.context);
+      return synchronizeProject({ store: this.store, run_id: call.run_id, project, policy, recovering, install,
+        capture: () => captureSyncReceipt(project, discoverToolchain, () => this.projects.model(project)),
+        synchronize: () => this.projects.sync(project, install, call.signal) });
+    };
+    const synchronize = async (call: StepContext, recovering = false) =>
+      sync(call, "force", recovering, workflowInputs.project_sync.parse(call.context.parameters).install);
     define("project_sync", [
-      effect("sync_project", synchronize, synchronize),
+      effect("sync_project", synchronize, call => synchronize(call, true)),
       read("verify_model", async (call) => ({
         model: inspectProject(
           text(call.context.project_path, "project_path"),
@@ -643,29 +709,31 @@ export class Runtime {
         ),
       })),
     ]);
-    const syncBeforeBuild = async (call: StepContext) =>
-      call.context.parameters.sync
-        ? this.projects.sync(this.project(call.context), true, call.signal)
-        : { skipped: true };
+    const syncBeforeBuild = async (call: StepContext, recovering = false) =>
+      sync(call, workflowInputs.project_build.parse(call.context.parameters).sync, recovering);
     const preflight = async (call: StepContext, policy: z.infer<typeof workflowInputs.project_build>["preflight"], recovering: boolean) => {
       try {
         const project = this.project(call.context);
         return await buildPreflight(this.store, policy, () => this.diagnostics.arkts(project, undefined, call.signal), () => sourceHash(project), call.signal);
       } catch (error) {
+        const failure = enrichBuildFailure(error, this.store, this.knowledge);
         // On the first attempt nothing after this boundary has been dispatched.
         // During reconciliation an earlier build/hot apply may already have run;
         // a failed fresh check cannot settle that earlier external operation.
-        if (recovering) throw new ToolError("EFFECT_UNCERTAIN", "Fresh preflight prevents reconciliation of the earlier build or hot apply", { cause: errorResult(error) });
-        throw SettledEffectError.from(error);
+        if (recovering) throw new ToolError("EFFECT_UNCERTAIN", "Fresh preflight prevents reconciliation of the earlier build or hot apply", { cause: errorResult(failure) });
+        throw SettledEffectError.from(failure);
       }
     };
     const buildProject = async (call: StepContext, recovering = false) => {
       const input = workflowInputs.project_build.parse(call.context.parameters);
       const checked = await preflight(call, input.preflight, recovering);
-      return { ...await this.projects.build(this.project(call.context), input, call.signal), preflight: checked };
+      const project = this.project(call.context), input_identity = projectEvidenceIdentity(project);
+      invariant(checked.status === "overridden" || ("source_identity" in checked && checked.source_identity === input_identity.source_sha256), "CHECK_EVIDENCE_STALE", "Inputs changed between ArkTS preflight and build");
+      try { return { ...await this.projects.build(project, input, call.signal), preflight: checked, input_identity }; }
+      catch (error) { throw enrichBuildFailure(error, this.store, this.knowledge); }
     };
     const build: WorkflowStep[] = [
-      effect("sync_project", syncBeforeBuild, syncBeforeBuild),
+      effect("sync_project", syncBeforeBuild, call => syncBeforeBuild(call, true)),
       effect("build_project", buildProject, call => buildProject(call, true)),
     ];
     const verifyArtifacts = read("verify_artifacts", async (call) => {
@@ -681,202 +749,76 @@ export class Runtime {
       return { artifacts: list };
     });
     define("project_build", [...build, verifyArtifacts]);
-    define("app_deploy", [
-      read("validate_artifact", async (call) => {
-        const input = workflowInputs.app_deploy.parse(call.context.parameters);
-        return {
-          packages: capturedFileSchema.array().parse(call.context.deployment),
-          identity: await inspectApplicationPackages(
-            capturedFileSchema
-              .array()
-              .parse(call.context.deployment)
-              .map((file) => file.path),
-            input.app,
-            call.signal,
-          ),
-        };
+    const application = (call: StepContext) => appSchema.parse(call.context.parameters.app);
+    const packages = (call: StepContext) => capturedFileSchema.array().parse(
+      call.context.deployment ?? this.output(call, "prepare_installation"));
+    const hot = (call: StepContext) => call.context.parameters.hot_reload === true;
+    const skipHot = { skipped: true, reason: "hot patch preserves the running application" };
+    const deploymentSteps: WorkflowStep[] = [
+      read("validate_artifact", async call => hot(call) ? skipHot : {
+        packages: packages(call),
+        identity: await inspectApplicationPackages(packages(call).map(file => file.path), application(call), call.signal),
       }),
-      effect(
-        "install_application",
-        async (call) => {
-          const input = workflowInputs.app_deploy.parse(
-            call.context.parameters,
-          );
-          return this.devices.install(
-            text(call.context.target, "target"),
-            capturedFileSchema.array().parse(call.context.deployment),
-            input.app,
-            call.signal,
-            true,
-          );
-        },
-        async (call) =>
-          this.devices.reconcileInstall(
-            text(call.context.target, "target"),
-            capturedFileSchema.array().parse(call.context.deployment),
-            workflowInputs.app_deploy.parse(call.context.parameters).app,
-            call.signal,
-          ),
-      ),
-      effect(
-        "launch_application",
-        async (call) => {
-          const input = workflowInputs.app_deploy.parse(
-            call.context.parameters,
-          );
-          return this.devices.launch(
-            text(call.context.target, "target"),
-            input.app,
-            call.signal,
-            true,
-          );
-        },
-        async (call) =>
-          this.devices.reconcileLaunch(
-            text(call.context.target, "target"),
-            workflowInputs.app_deploy.parse(call.context.parameters).app,
-            call.signal,
-          ),
-      ),
-      read("verify_process", async (call) => this.verifyProcess(call)),
-    ]);
+      effect("install_application", async call => hot(call) ? skipHot :
+        this.devices.install(text(call.context.target, "target"), packages(call), application(call), call.signal, true),
+        async call => hot(call) ? skipHot :
+          this.devices.reconcileInstall(text(call.context.target, "target"), packages(call), application(call), call.signal)),
+      effect("launch_application", async call => hot(call) ? skipHot :
+        this.devices.launch(text(call.context.target, "target"), application(call), call.signal, true),
+        async call => hot(call) ? skipHot :
+          this.devices.reconcileLaunch(text(call.context.target, "target"), application(call), call.signal)),
+      // Full launch and hot apply already perform the bounded startup check in
+      // their durable service. Reuse that receipt; do not launch/check twice.
+      read("verify_process", async call => this.verifyProcess(call)),
+    ];
+    define("app_deploy", deploymentSteps);
     const buildOrApply = async (call: StepContext, recovering = false) => {
-      const input = workflowInputs.build_deploy_verify.parse(
-          call.context.parameters,
-        ),
-        project = this.project(call.context);
+      if (call.context.build) return {
+        reused: true, build_run_id: call.context.build.run_id,
+        artifacts: call.context.build.artifacts, input_identity: call.context.build.input_identity,
+      };
+      const record = call.context.parameters;
+      const input = workflowInputs.project_build.parse({
+        project_path: record.project_path, product: record.product, module_targets: record.module_targets,
+        modules: record.modules, mode: record.mode, clean: record.clean, sync: record.sync, preflight: record.preflight,
+      }), project = this.project(call.context);
       const checked = await preflight(call, input.preflight, recovering);
-      if (input.hot_reload)
-        return {
-          hot_reload: true,
-          preflight: checked,
-          result: await this.hot.call(
-            { action: "apply", target: call.context.target },
-            project,
-            call.signal,
-            recovering,
-          ),
-        };
-      return { ...await this.projects.buildApplication(project, input, call.signal), preflight: checked };
+      const input_identity = projectEvidenceIdentity(project);
+      invariant(checked.status === "overridden" || ("source_identity" in checked && checked.source_identity === input_identity.source_sha256), "CHECK_EVIDENCE_STALE", "Inputs changed between ArkTS preflight and build/apply");
+      try { if (hot(call)) return {
+        hot_reload: true, input_identity, preflight: checked,
+        result: await this.hot.call({ action: "apply", target: call.context.target, app: application(call) }, project, call.signal, recovering),
+      };
+      return { ...await this.projects.buildApplication(project, input, call.signal), preflight: checked, input_identity };
+      } catch (error) { throw enrichBuildFailure(error, this.store, this.knowledge); }
     };
-    const syncBeforeDeploy = async (call: StepContext) =>
-      call.context.parameters.hot_reload
-        ? { skipped: true }
-        : syncBeforeBuild(call);
-    define("build_deploy_verify", [
-      effect("sync_project", syncBeforeDeploy, syncBeforeDeploy),
-      effect("build_or_hot_apply", buildOrApply, async (call) =>
-        buildOrApply(call, true),
-      ),
-      read("prepare_installation", async (call) => {
-        const input = workflowInputs.build_deploy_verify.parse(
-          call.context.parameters,
-        );
-        if (input.hot_reload)
-          return { skipped: true, reason: "hot patch already applied" };
-        const artifacts = artifactsSchema
-          .parse(object(this.output(call, "build_or_hot_apply")).artifacts)
-          .filter((a) => /-signed\.(hap|hsp)$/.test(a.path));
-        invariant(
-          artifacts.length > 0,
-          "DEPLOY_ARTIFACT_MISSING",
-          "Build did not produce signed application packages",
-        );
+    const syncBeforeDeploy = async (call: StepContext, recovering = false) => hot(call) || call.context.build
+      ? { skipped: true, reason: hot(call) ? "hot patch" : "reusing a verified build" }
+      : sync(call, call.context.parameters.sync as SyncPolicy ?? "auto", recovering);
+    const buildAndDeploy: WorkflowStep[] = [
+      effect("sync_project", syncBeforeDeploy, call => syncBeforeDeploy(call, true)),
+      effect("build_or_hot_apply", buildOrApply, call => buildOrApply(call, true)),
+      read("prepare_installation", async call => {
+        if (hot(call)) return skipHot;
+        if (call.context.deployment) return call.context.deployment;
+        const artifacts = artifactsSchema.parse(object(this.output(call, "build_or_hot_apply")).artifacts)
+          .filter(item => /-signed\.(hap|hsp)$/.test(item.path));
+        invariant(artifacts.some(item => item.path.endsWith(".hap")), "DEPLOY_ARTIFACT_MISSING", "Build did not produce signed HAP packages");
         return captureFiles(this.store, call.run_id, artifacts, call.signal);
       }),
-      effect(
-        "install_application",
-        async (call) => {
-          const input = workflowInputs.build_deploy_verify.parse(
-            call.context.parameters,
-          );
-          if (input.hot_reload)
-            return { skipped: true, reason: "hot patch already applied" };
-          return this.devices.install(
-            text(call.context.target, "target"),
-            capturedFileSchema
-              .array()
-              .parse(this.output(call, "prepare_installation")),
-            input.app,
-            call.signal,
-            true,
-          );
-        },
-        async (call) => {
-          const input = workflowInputs.build_deploy_verify.parse(
-            call.context.parameters,
-          );
-          return input.hot_reload
-            ? { skipped: true, reason: "hot patch already applied" }
-            : this.devices.reconcileInstall(
-                text(call.context.target, "target"),
-                capturedFileSchema
-                  .array()
-                  .parse(this.output(call, "prepare_installation")),
-                input.app,
-                call.signal,
-              );
-        },
-      ),
-      effect(
-        "launch_application",
-        async (call) => {
-          const input = workflowInputs.build_deploy_verify.parse(
-            call.context.parameters,
-          );
-          if (input.hot_reload)
-            return {
-              skipped: true,
-              reason: "hot patch preserves the running process",
-            };
-          return this.devices.launch(
-            text(call.context.target, "target"),
-            input.app,
-            call.signal,
-            true,
-          );
-        },
-        async (call) => {
-          const input = workflowInputs.build_deploy_verify.parse(
-            call.context.parameters,
-          );
-          return input.hot_reload
-            ? {
-                skipped: true,
-                reason: "hot patch preserves the running process",
-              }
-            : this.devices.reconcileLaunch(
-                text(call.context.target, "target"),
-                input.app,
-                call.signal,
-              );
-        },
-      ),
-      resumable("execute_ui_path", async (call) => {
-        const input = workflowInputs.build_deploy_verify.parse(
-          call.context.parameters,
-        );
-        return input.flow_id
-          ? this.flows.run(
-              this.project(call.context),
-              input.flow_id,
-              text(call.context.target, "target"),
-              input.variables,
-              call.signal,
-              call.context.flow,
-            )
-          : { skipped: true };
+      ...deploymentSteps,
+    ];
+    define("build_run", buildAndDeploy);
+    define("build_deploy_verify", [
+      ...buildAndDeploy,
+      resumable("execute_ui_path", async call => {
+        const input = workflowInputs.build_deploy_verify.parse(call.context.parameters);
+        return input.flow_id ? this.flows.run(this.project(call.context), input.flow_id,
+          text(call.context.target, "target"), input.variables, call.signal, call.context.flow) : { skipped: true };
       }),
-      read("final_assertion", async (call) =>
-        this.devices.verify(
-          text(call.context.target, "target"),
-          workflowInputs.build_deploy_verify.parse(call.context.parameters)
-            .assert,
-          call.signal,
-          workflowInputs.build_deploy_verify.parse(call.context.parameters).app
-            .bundle_name,
-        ),
-      ),
+      read("final_assertion", async call => this.devices.verify(text(call.context.target, "target"),
+        workflowInputs.build_deploy_verify.parse(call.context.parameters).assert,
+        call.signal, application(call).bundle_name)),
     ]);
     define("code_diagnose", [
       read("collect_diagnostics", async (call) => {
@@ -932,8 +874,9 @@ export class Runtime {
         const evidence = this.output(call, "collect_diagnostics");
         return {
           reports: evidence,
+          normalized: normalizeDiagnostics(this.project(call.context).root, evidence),
           compilationVerified: false,
-          knowledge: this.knowledge.search(this.diagnosticTerms(evidence), 10),
+          knowledge: this.knowledge.search(diagnosticTerms(evidence), 10),
         };
       }),
     ]);
@@ -942,6 +885,13 @@ export class Runtime {
         const input = workflowInputs.crash_diagnose.parse(
           call.context.parameters,
         );
+        if (call.context.crash) {
+          const captured = readCrashSnapshot(this.store, call.run_id, call.context.crash);
+          const snapshot = await supplementCrashSnapshot(this.store, this.logs, call.run_id, captured, input.collect_missing === true, call.signal);
+          const content = JSON.stringify(snapshot);
+          return { source_snapshot: this.store.artifact(call.run_id, content, "application/json"), snapshot_sha256: createHash("sha256").update(content).digest("hex"),
+            source_run_id: call.context.crash.run_id, historical: true };
+        }
         if (input.log_artifact_id)
           return { artifact: { artifact_id: input.log_artifact_id } };
         if (input.faultlog_name)
@@ -962,6 +912,11 @@ export class Runtime {
         );
       }),
       read("parse_crash", async (call) => {
+        if (call.context.crash) {
+          const collected = z.object({ source_snapshot: z.object({ artifact_id: z.string().uuid() }), snapshot_sha256: z.string() }).parse(this.output(call, "collect_evidence"));
+          return diagnoseCrashSnapshot(readCrashSnapshot(this.store, call.run_id, { run_id: call.context.crash.run_id,
+            artifact_id: collected.source_snapshot.artifact_id, sha256: collected.snapshot_sha256 }));
+        }
         const evidence = z
             .object({
               artifact: z.object({ artifact_id: z.string() }),
@@ -986,7 +941,8 @@ export class Runtime {
         const parsed = this.output(call, "parse_crash");
         return {
           diagnosis: parsed,
-          knowledge: this.knowledge.crashCases(parsed),
+          knowledge: call.context.crash ? z.object({ findings: z.array(z.object({ artifact_id: z.string(), diagnosis: z.unknown() })) })
+            .parse(parsed).findings.map(finding => ({ artifact_id: finding.artifact_id, ...this.knowledge.crashCases(finding.diagnosis) })) : this.knowledge.crashCases(parsed),
         };
       }),
     ]);
@@ -1004,34 +960,23 @@ export class Runtime {
     ]);
     return definitions;
   }
-  private diagnosticTerms(value: unknown) {
-    const json = JSON.stringify(value);
-    return (
-      [
-        ...new Set(
-          json.match(/(?:arkts-[a-z-]+|[A-Za-z]+Error|TS\d{3,5})/g) ?? [],
-        ),
-      ]
-        .slice(0, 6)
-        .join(" ") || "ArkTS diagnostics"
-    );
-  }
   private async verifyProcess(call: StepContext) {
-    const input = workflowInputs.app_deploy.parse(call.context.parameters),
-      result = await this.devices.shell(
-        text(call.context.target, "target"),
-        ["pidof", input.app.bundle_name],
-        call.signal,
-      );
-    invariant(
-      /^\d+(?:\s+\d+)*$/.test(result.stdout.trim()),
-      "APP_NOT_RUNNING",
-      "Application process was not found",
-    );
+    const launch = object(this.output(call, "launch_application") ?? {});
+    const built = object(this.output(call, "build_or_hot_apply") ?? {});
+    const startup = launch.startup_check ?? object(built.result ?? {}).startup_check;
+    if (startup) {
+      invariant(object(startup).process === "stable", "STARTUP_UNVERIFIED", "The durable startup check did not confirm process stability");
+      return { processVerified: true, startup_check: startup, target: call.context.target,
+        bundle_name: appSchema.parse(call.context.parameters.app).bundle_name, business_verified: false };
+    }
+    const app = appSchema.parse(call.context.parameters.app);
+    const checked = await this.devices.checkStartup(text(call.context.target, "target"), app, call.signal);
     return {
       processVerified: true,
+      startup_check: checked,
       target: call.context.target,
-      bundle_name: input.app.bundle_name,
+      bundle_name: app.bundle_name,
+      business_verified: false,
     };
   }
   private async startOperation(name: "app_signature" | "hot_reload" | "emulator_manage" | "emulator_scenario", raw: unknown, project?: Project, signal?: AbortSignal) {
@@ -1075,16 +1020,52 @@ export class Runtime {
     invariant(!this.stopping, "RUNTIME_STOPPING", "Runtime is stopping");
     signal?.throwIfAborted();
     switch (name) {
+      case "domain_recipe": return domainRecipeCall(raw);
+      case "domain_content": {
+        const input = tools.domain_content.schema.parse(raw), content = new DomainContentService();
+        return input.action === "read" ? content.read(input.uri) : content.catalog(input);
+      }
+      case "domain_acceptance": return this.acceptance.assess(raw);
+      case "project_context": {
+        const input = tools.project_context.schema.parse(raw), project = this.projects.resolve(input.project_path,input.product,input.module_targets);
+        return { project_path: project.root, product: project.product.name, module_targets: projectTargets(project), immutable: true,
+          scope_sha256: digest({project_path:project.root,product:project.product.name,module_targets:projectTargets(project)}),
+          next_action: "Pass this explicit project_path/product/module_targets to each operation; resolving never mutates other calls." };
+      }
+      case "ui_query": {
+        const input = tools.ui_query.schema.parse(raw);
+        return this.call(({snapshot:"ui_snapshot",observe:"ui_observe",find:"ui_find",inspect:"ui_inspect"} as const)[input.action],input.query,signal);
+      }
+      case "maintenance": {
+        const input = tools.maintenance.schema.parse(raw);
+        invariant(input.action !== "restart", "HOST_RESTART_REQUIRED", "Restart is handled by the MCP transport");
+        return this.call("workflow_run",input,signal);
+      }
+      case "signature_admin": return this.call("app_signature",raw,signal);
+      case "emulator_admin": return this.call("emulator_manage",raw,signal);
       case "skill_manage": return this.skills.call(raw, signal);
-      case "skill_workflow": return this.skillWorkflows.call(raw, signal);
+      case "skill_workflow": {
+        const input=tools[name].schema.parse(raw), result=this.skillWorkflows.call(input,signal);
+        if(input.action==="archive" || (input.action==="transition" && input.phase==="cancelled")) {
+          const value=object(result);
+          return {run_id:value.run_id,status:value.status,phase:value.phase,revision:value.revision,verified:false,
+            next_action:"Use skill_workflow read or maintenance export for retained documents and evidence"};
+        }
+        return result;
+      }
       case "workflow_catalog": {
         const input = tools[name].schema.parse(raw);
-        return workflowCatalog(
+        return input.action === "ui_actions" ? uiActionCapabilities() : workflowCatalog(
           input.action === "get" ? input.workflow : undefined,
         );
       }
       case "workflow_run": {
         const input = tools[name].schema.parse(raw);
+        const responses = new WorkflowResponses(this.store, workflow =>
+          workflow in workflowMetadata ? workflowMetadata[workflow as WorkflowName].completion : "Read the retained task contract for its completion scope.");
+        const present = (id: string) => responses.present(this.store.get(id), "detail" in input ? input.detail : "summary");
+        if (input.action === "read_result") return responses.read(text(input.run_id, "run_id"), input.section ?? "result", input.offset, input.limit, input.expected_sha256);
+        if (input.action === "read_events") return responses.events(text(input.run_id, "run_id"), input.offset, input.limit);
         if (input.action === "capacity") return this.storage.capacity(input.additional_bytes);
         if (input.action === "cleanup_plan") return this.storage.plan(input.run_ids!);
         if (input.action === "cleanup_apply") return this.storage.apply(input.run_ids!, input.plan_hash!);
@@ -1106,7 +1087,11 @@ export class Runtime {
           );
         const engine = await this.workflows();
         if (input.action === "list") {
-          const runs = engine.list(input.offset, input.limit ?? 100),
+          const runs = this.store.list(input.offset, input.limit ?? 20).map(run => input.detail === "full" ? responses.present(run, "full") : {
+            run_id: run.id, workflow: run.workflow, status: run.status,
+            created_at: new Date(run.created).toISOString(), updated_at: new Date(run.updated).toISOString(),
+            read: { tool: "workflow_run", action: "status", run_id: run.id, wait_ms: 0 },
+          }),
             total = this.store.runCount(),
             next = input.offset + runs.length;
           return {
@@ -1122,7 +1107,8 @@ export class Runtime {
             "WORKFLOW_INPUT_REQUIRED",
             "workflow and input are required",
           );
-          const identity = workflowInputs[input.workflow].parse(input.input);
+          const parameters = workflowInputs[input.workflow].parse(input.input);
+          const identity = input.requirements ? { parameters, requirements: input.requirements } : parameters;
           const previous = input.request_key
             ? this.store.byRequest(input.request_key)
             : undefined;
@@ -1133,15 +1119,18 @@ export class Runtime {
               "REQUEST_KEY_CONFLICT",
               "Request key already has different input",
             );
-            return {
-              run_id: previous.id,
-              status: previous.status,
-              deduplicated: true,
-            };
+            await engine.status(previous.id, input.wait_ms, signal);
+            return { ...present(previous.id), deduplicated: true };
           }
-          const captured = await this.capture(input.workflow, identity, signal);
+          const captured = await this.capture(input.workflow, parameters, signal);
+          let submitted;
           try {
-            return engine.start(
+            if (input.requirements) {
+              invariant(!captured.build || digest(input.requirements) === digest(captured.build.requirements ?? null),
+                "BUILD_REQUIREMENTS_MISMATCH", "A reused build retains its original requirement bindings; create a fresh bound build for new requirements");
+              captured.requirements = input.requirements;
+            }
+            submitted = engine.start(
               input.workflow,
               captured,
               input.request_key,
@@ -1157,26 +1146,37 @@ export class Runtime {
                 captured.input_artifacts,
               );
           }
+          await engine.status(submitted.run_id, input.wait_ms, signal);
+          return { ...present(submitted.run_id), deduplicated: submitted.deduplicated };
         }
         const id = text(input.run_id, "run_id");
         if (this.store.get(id).workflow === "skill_workflow") {
-          invariant(!input.resume_input, "SKILL_WORKFLOW_RESUME_INPUT_INVALID", "Read the persisted builtin workflow; continue with skill_workflow write/transition");
+          invariant(input.action !== "resume" || !input.resume_input, "SKILL_WORKFLOW_RESUME_INPUT_INVALID", "Legacy guidance is read-only; use domain_recipe or export/archive the existing run");
           const current = this.skillWorkflows.read(id);
-          if (input.action === "cancel") return ["completed", "cancelled"].includes(current.phase)
-            ? { run_id: id, status: current.status, phase: current.phase, revision: current.revision, verified: false }
-            : this.skillWorkflows.call({ action: "transition", run_id: id, expected_revision: current.revision, phase: "cancelled", rationale: "The client requested cancellation of this builtin workflow." }, signal);
+          if (input.action === "cancel") {
+            if (!["completed", "cancelled"].includes(current.phase)) this.skillWorkflows.call({ action: "transition", run_id: id, expected_revision: current.revision, phase: "cancelled", rationale: "The client requested cancellation of this builtin workflow." }, signal);
+            const archived=this.skillWorkflows.read(id);
+            return { run_id: id, status: archived.status, phase: archived.phase, revision: archived.revision, verified: false };
+          }
           return current;
         }
         if (this.store.get(id).workflow === "ui_test") {
-          invariant(!input.resume_input, "UI_TEST_RESUME_INPUT_INVALID", "UI tests resume captured state; use ui_test replan for strategy changes");
+          invariant(input.action !== "resume" || !input.resume_input, "UI_TEST_RESUME_INPUT_INVALID", "UI tests resume captured state; use ui_test replan for strategy changes");
           return this.tests.call({ action: input.action, test_id: id }, signal);
         }
-        if (input.action === "status") return engine.status(id, input.wait_ms);
-        if (input.action === "resume")
-          return engine.resume(id, input.resume_input);
-        return this.store.get(id).workflow === "ui_record"
+        if (input.action === "status") {
+          await engine.status(id, input.wait_ms, signal);
+          return present(id);
+        }
+        if (input.action === "resume") {
+          await engine.resume(id, input.resume_input);
+          await engine.status(id, input.wait_ms, signal);
+          return present(id);
+        }
+        await (this.store.get(id).workflow === "ui_record"
           ? this.recordings.cancel(id, () => engine.cancel(id), signal)
-          : engine.cancel(id);
+          : engine.cancel(id));
+        return present(id);
       }
       case "switch_cwd":
         return this.projects.select(tools[name].schema.parse(raw).project_path);
@@ -1215,6 +1215,8 @@ export class Runtime {
           toolchain,
           default_sdk,
           api_compatibility,
+          lsp_capabilities: this.diagnostics.lsp.capabilityReport(),
+          ui_action_capabilities: uiActionCapabilities(),
           project: project ?? null,
           ui_driver: await inspectUiDriver(this.devices, input.target, signal),
           processes: this.processes.size,
@@ -1664,11 +1666,18 @@ export class Runtime {
               : undefined,
           input = inspection ?? tools.ui_snapshot.schema.parse(raw),
           target = await this.devices.target(input.target, signal);
+        let capture = input.capture;
+        if (inspection?.display_id !== undefined && (inspection.screenshot || inspection.capture)) {
+          const display = Number(inspection.display_id);
+          invariant(Number.isSafeInteger(display) && display >= 0, "DISPLAY_INVALID", "Image capture requires a numeric display ID");
+          invariant(capture?.display_id === undefined || capture.display_id === display, "DISPLAY_SCOPE_MISMATCH", "Tree and screenshot display selections disagree");
+          capture = { format: "png", ...capture, display_id: display };
+        }
         if ("mode" in input && input.mode === "image")
           return {
             screenshot: await this.devices.screenshot(
               target,
-              input.capture,
+              capture,
               signal,
             ),
           };
@@ -1698,7 +1707,7 @@ export class Runtime {
                 ? {
                     screenshot: await this.devices.screenshot(
                       target,
-                      input.capture,
+                      capture,
                       signal,
                     ),
                   }
@@ -1786,21 +1795,19 @@ export class Runtime {
       }
       case "verify_ui": {
         const input = tools[name].schema.parse(raw);
-        return this.verification.verify(
-          await this.devices.target(input.target, signal),
-          input,
-          signal,
-        );
+        return attachReviewImage(await this.verification.verify(
+          await this.devices.target(input.target, signal), input, signal,
+        ), this.store, this.reviews, signal);
       }
       case "ui_review": {
         const input = tools[name].schema.parse(raw);
         if (input.action === "list") return this.reviews.list(input.offset, input.limit);
-        if (input.action === "status") return this.reviews.status(input.review_id);
+        if (input.action === "status") return attachReviewImage(this.reviews.status(input.review_id), this.store, this.reviews, signal);
         if (input.action === "cancel") return this.reviews.cancel(input.review_id);
         return this.reviews.complete(input.review_id, input);
       }
       case "ui_test":
-        return this.tests.call(tools[name].schema.parse(raw), signal);
+        return attachReviewImage(await this.tests.call(tools[name].schema.parse(raw), signal), this.store, this.reviews, signal);
       case "deveco_restart":
         throw new Error("Runtime restart is dispatched by the MCP host");
     }

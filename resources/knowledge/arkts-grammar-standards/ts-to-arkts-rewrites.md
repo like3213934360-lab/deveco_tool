@@ -4,7 +4,7 @@ Use this when migrating TypeScript code or diagnosing "runs in TS, errors in Ark
 
 ## First, remember: many TS constructs need NO change in ArkTS
 
-Template literals, `value as T`, `Record<K,V>` with indexed access, arrow functions, async/await — all legal. Do **not** rewrite them. Full whitelist: [`arkts-rules.md` § Explicitly allowed constructs](arkts-rules.md#explicitly-allowed-constructs).
+Template literals, `value as T`, `Record<K,V>` with indexed access, arrow functions, async/await — all legal. Do **not** rewrite them. Full whitelist: [`arkts-rules.md` § Explicitly allowed constructs](deveco://knowledge/arkts-grammar-standards/arkts-rules).
 
 ## Quick rewrite table
 

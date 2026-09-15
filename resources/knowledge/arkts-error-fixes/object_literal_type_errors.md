@@ -107,4 +107,4 @@ struct WindowSizeExample {
 
 ## 详细代码示例
 
-> [ObjectLiteralTypeError.ets](../assets/ObjectLiteralTypeError.ets) - 完整的对象字面量类型声明错误示例和修复方案
+> [ObjectLiteralTypeError.ets](deveco://knowledge/arkts-error-fixes/examples/ObjectLiteralTypeError) - 完整的对象字面量类型声明错误示例和修复方案

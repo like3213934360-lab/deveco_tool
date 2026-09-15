@@ -303,14 +303,14 @@ for (const packageCount of [1, 3])
         }
         throw new Error("Deployment did not settle");
       };
-      const invalid = z.object({ run_id: z.string() }).parse(
-        await runtime.call("workflow_run", {
+      await assert.rejects(
+        runtime.call("workflow_run", {
           action: "start",
           workflow: "app_deploy",
           input: { packages, app: { ...app, bundle_name: "com.wrong.bundle" } },
-        }),
+        }), { code: "APPLICATION_NOT_FOUND" },
       );
-      assert.equal((await finish(invalid.run_id)).status, "failed");
+      assert.equal(runtime.store.runCount(), 0, "Invalid captured application inputs are rejected before creating a task");
       assert.equal(installs, 0);
       const submit = () =>
         runtime.call("workflow_run", {

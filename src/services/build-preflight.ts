@@ -20,6 +20,11 @@ const reportSchema = z
       warnCount: z.number().int().nonnegative(),
     }),
     artifact: z.object({ artifact_id: z.string() }).passthrough(),
+    diagnostics: z.array(z.object({
+      file: z.string(), line: z.number().int().nonnegative(), column: z.number().int().nonnegative(),
+      severity: z.string(), message: z.string(), rule: z.string(), truncated: z.boolean().optional(),
+    })).max(50).default([]),
+    truncated: z.boolean().optional(),
   })
   .passthrough();
 
@@ -57,6 +62,9 @@ export async function buildPreflight(
     checked_file_count: report.checked_file_count,
     summary: report.summary,
     artifact: report.artifact,
+    diagnostics: report.diagnostics,
+    diagnostics_truncated: report.truncated ?? report.diagnostics.length < report.summary.errorCount + report.summary.warnCount,
+    origin: "arkts-preflight",
     source_identity: before,
     compilationVerified: false,
   };

@@ -2,9 +2,9 @@ import fs from "node:fs";
 import path from "node:path";
 import { spawn } from "node:child_process";
 import { StateStore } from "../../src/core/store.js";
+import { restartDefinition } from "./native-restart-definition.js";
 import {
   WorkflowEngine,
-  type WorkflowDefinition,
 } from "../../src/core/workflows.js";
 const root = process.argv[2]!;
 const trace = (stage: string, state?: unknown) => {
@@ -47,34 +47,7 @@ if (process.argv[3] === "stream") {
     await new Promise(() => {});
   });
 } else {
-  const definition: WorkflowDefinition = {
-    id: "restart",
-    description: "restart test",
-    capabilities: [],
-    completion: "done",
-    resources: () => [],
-    steps: [
-      {
-        id: "effect",
-        kind: "effect",
-        async execute() {
-          trace("effect-enter");
-          fs.appendFileSync(path.join(root, "effects"), "effect\n");
-          return { written: true };
-        },
-      },
-      {
-        id: "pause",
-        kind: "read",
-        async execute() {
-          trace("pause-enter");
-          fs.writeFileSync(path.join(root, "ready"), "1");
-          await new Promise(() => {});
-          return null;
-        },
-      },
-    ],
-  };
+  const definition = restartDefinition(root, false, trace);
   trace("create-engine");
   const engine = new WorkflowEngine(store, [definition], async () => {}),
     run = engine.start("restart", { parameters: {} });

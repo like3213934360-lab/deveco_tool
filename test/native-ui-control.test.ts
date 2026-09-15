@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { controlSchema } from "../src/core/contracts.js";
+import { controlSchema, flowSchema } from "../src/core/contracts.js";
 import { ProcessService } from "../src/core/process.js";
 import { StateStore } from "../src/core/store.js";
 import {
@@ -26,6 +26,7 @@ function snapshot(): Snapshot {
           type: "WindowScene",
           id: "window",
           bundleName: "com.test",
+          focused: true,
           displayId,
           bounds: "[100,200][500,1000]",
         },
@@ -51,6 +52,38 @@ function snapshot(): Snapshot {
   };
 }
 const encode = (value: unknown) => uiInputArguments(controlSchema.parse(value));
+test("action schemas reject ignored direct and saved fields before recording or input", () => {
+  for (const action of [
+    { action: "click", x: 10, y: 20, text: "ignored secret" },
+    { action: "keyEvent", keys: ["Back"], selector: { key: "submit" } },
+    { action: "mouseMoveTo", x: 10, y: 20, button: "right" },
+    { action: "mouseScroll", x: 10, y: 20, ticks: 2 },
+    { action: "drag", gesture: { fromXPercent: 10, fromYPercent: 10, toXPercent: 90, toYPercent: 90, stepLength: 2 } },
+  ]) assert.equal(controlSchema.safeParse(action).success, false);
+  const base = { version: 2, id: "schema-check", name: "Contract", app: { bundleName: "com.test", module: "entry", ability: "EntryAbility" } };
+  for (const step of [
+    { id: "one", action: "assertVisible", point: { xPercent: 50, yPercent: 50 } },
+    { id: "one", action: "waitHidden", selector: { key: "submit" }, keys: ["Back"] },
+    { id: "one", action: "tap", selector: { key: "submit" }, direction: 1 },
+  ]) assert.equal(flowSchema.safeParse({ ...base, steps: [step] }).success, false);
+});
+
+test("window-scoped focus commands reject background and unknown focus; contradictory selector scope never retargets", () => {
+  const tree = snapshot(), window = tree.nodes.find(node => node.type === "WindowScene" && node.displayId === "1")!;
+  const field = tree.nodes.find(node => node.key === "submit" && node.displayId === "1")!;
+  field.type = "TextInput"; field.focused = true;
+  for (const focused of [false, null]) {
+    window.focused = focused;
+    for (const raw of [{ action: "text", text: "private" }, { action: "keyEvent", keys: ["Back"] }, { action: "dircFling", direction: 1 }])
+      assert.throws(() => resolveControl(controlSchema.parse({ ...raw, window: { bundle_name: "com.test" }, display_id: 1 }), tree), { code: "UI_WINDOW_NOT_FOCUSED" });
+  }
+  window.focused = true;
+  for (const selector of [{ key: "submit", bundle_name: "com.other" }, { key: "submit", window_id: "other" }, { key: "submit", displayId: 0 }])
+    assert.throws(() => resolveControl(controlSchema.parse({ action: "click", window: { bundle_name: "com.test" }, display_id: 1, selector }), tree), { code: "UI_SCOPE_CONFLICT" });
+  const resolved = resolveControl(controlSchema.parse({ action: "text", text: "private", window: { bundle_name: "com.test" }, display_id: 1 }), tree);
+  assert.equal(controlSchema.safeParse(resolved).success, true, "Resolved private checkpoints retain the structural contract without a public window");
+  assert.deepEqual(uiInputArguments(resolved), ["text", "private", "1"]);
+});
 test("modern root windows retain explicit display selection and reject ambiguous application windows", () => {
   const tree = snapshot();
   for (const node of tree.nodes)
@@ -325,7 +358,7 @@ test("focused text requires one editable field in an explicitly identified appli
   assert.equal(resolved.x, undefined); assert.equal(resolved.y, undefined);
   assert.deepEqual(uiInputArguments(resolved), ["text", "中文🙂 focus", "1"]);
   assert.throws(() => resolveControl(controlSchema.parse({ action: "text", text: "hello" }), tree), { code: "UI_SCOPE_REQUIRED" });
-  assert.throws(() => resolveControl(controlSchema.parse({ ...input, x: 20, y: 30 }), tree), { code: "UI_INPUT_CONFLICT" });
+  assert.throws(() => controlSchema.parse({ ...input, x: 20, y: 30 }), { name: "ZodError" });
   field.focused = false;
   assert.throws(() => resolveControl(input, tree), { code: "UI_FOCUS_AMBIGUOUS" });
   field.focused = true; tree.nodes.push({ ...field, id: "second-focused" });

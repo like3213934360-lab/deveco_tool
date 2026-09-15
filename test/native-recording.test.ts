@@ -162,7 +162,7 @@ async function fixture(t: TestContext) {
   );
   atomicWrite(
     path.join(root, "config.json"),
-    JSON.stringify({ clt: path.join(root, "clt"), default_project: project }),
+    JSON.stringify({ clt: path.join(root, "clt") }),
   );
   process.env.DEVECO_CONFIG = path.join(root, "config.json");
   fs.mkdirSync(path.join(root, "clt"));
@@ -202,7 +202,7 @@ async function fixture(t: TestContext) {
 for (const transport of ["receipt", ...(process.platform === "win32" ? [] : ["posix"])]) test(`consecutive recorded controls keep separate durable receipts and an uncertain next step cannot replay (${transport})`, async (t) => {
   const f = await fixture(t);
   try {
-    const id = await start(f.runtime), log = path.join(f.root, "actions");
+    const id = await start(f.runtime, f.project), log = path.join(f.root, "actions");
     fs.writeFileSync(path.join(f.root, "uitest"), '#!/bin/sh\nprintf "%s\\n" "$*" >> "$DEVECO_TEST_ACTIONS"\nprintf "No Error\\n"\n', { mode: 0o700 });
     t.mock.method(f.runtime.devices, "control", DeviceService.prototype.control);
     let loseReply = false;
@@ -254,9 +254,10 @@ async function settled(runtime: Runtime, id: string) {
   }
   throw new Error("Recording did not settle");
 }
-async function start(runtime: Runtime, id = "recorded") {
+async function start(runtime: Runtime, project_path: string, id = "recorded") {
   const input = {
     action: "record_start",
+    project_path,
     id,
     name: "录制流程",
     route: { module: "entry", ability: "MainAbility" },
@@ -304,6 +305,7 @@ test("unknown navigation records once across concurrent submissions and restart,
     });
     const input = {
       action: "navigate",
+      project_path: f.project,
       goal: "打开新的设置页面",
       request_key: "automatic-recording",
     };
@@ -424,6 +426,7 @@ test("ambiguous automatic entries never touch a device and queued recording canc
     );
     const input = {
       action: "navigate",
+      project_path: f.project,
       goal: "未保存的路径",
       request_key: "cancel-automatic",
     };
@@ -564,7 +567,7 @@ test("recorded selectors exclude input values, gestures retain window geometry a
 test("recording survives runtime restart, pauses without leases and saves only after its sealed final assertion passes", async (t) => {
   const f = await fixture(t);
   try {
-    const id = await start(f.runtime);
+    const id = await start(f.runtime, f.project);
     assert.equal(
       f.runtime.store.db.prepare("SELECT COUNT(*) AS n FROM leases").get() &&
         (
@@ -657,7 +660,7 @@ test("recording survives runtime restart, pauses without leases and saves only a
 test("a lost recording receipt reports the accepted action, blocks further replay and can be discarded without repeating it", async (t) => {
   const f = await fixture(t);
   try {
-    const id = await start(f.runtime);
+    const id = await start(f.runtime, f.project);
     let actions = 0;
     let restoreCapacity = () => {};
     t.mock.method(f.runtime.devices, "control", async () => {
@@ -704,7 +707,7 @@ test("a lost recording receipt reports the accepted action, blocks further repla
 test("recording resolves percentages once, retains fling sampling and rejects invalid controls before writing a pending receipt", async (t) => {
   const f = await fixture(t);
   try {
-    const id = await start(f.runtime);
+    const id = await start(f.runtime, f.project);
     let captures = 0;
     t.mock.method(f.runtime.devices, "snapshot", async () => {
       captures++;
@@ -720,7 +723,7 @@ test("recording resolves percentages once, retains fling sampling and rejects in
       f.runtime.call("ui_control", {
         operation: { action: "click", x: 200, y: 400, velocity: 600 },
       }),
-      { code: "UI_INPUT_CONFLICT" },
+      { name: "ZodError" },
     );
     assert.equal(control.mock.callCount(), 0);
     assert.equal(f.runtime.recordings.status(id).step_count, 0);
@@ -793,7 +796,7 @@ test("recording resolves percentages once, retains fling sampling and rejects in
 test("recording cancellation reaches an in-flight UI action and waits for its operation guard before declaring cancelled", async (t) => {
   const f = await fixture(t);
   try {
-    const id = await start(f.runtime),
+    const id = await start(f.runtime, f.project),
       entered = Promise.withResolvers<void>();
     let stopped = false;
     t.mock.method(
@@ -827,7 +830,7 @@ test("recording cancellation reaches an in-flight UI action and waits for its op
     assert.equal(stopped, true);
     assert.equal((await settled(f.runtime, id)).status, "cancelled");
     assert.equal(f.runtime.recordings.status(id).state, "cancelled");
-    await start(f.runtime, "second");
+    await start(f.runtime, f.project, "second");
   } finally {
     await f.close();
   }
@@ -835,10 +838,11 @@ test("recording cancellation reaches an in-flight UI action and waits for its op
 test("one device has one unfinished recording and status follow-ups cannot retarget a captured task", async (t) => {
   const f = await fixture(t);
   try {
-    const id = await start(f.runtime);
+    const id = await start(f.runtime, f.project);
     const navigation = z.object({ run_id: z.string() }).parse(
       await f.runtime.call("ui_flow", {
         action: "navigate",
+        project_path: f.project,
         route: { ability: "MainAbility" },
         assert: { visible: { text: "Done" } },
       }),
@@ -852,6 +856,7 @@ test("one device has one unfinished recording and status follow-ups cannot retar
     const competing = z.object({ run_id: z.string() }).parse(
       await f.runtime.call("ui_flow", {
         action: "record_start",
+        project_path: f.project,
         id: "competing",
         name: "Competing",
         route: { ability: "MainAbility" },
@@ -1007,7 +1012,7 @@ test("hot baseline installation and patch application honor a recording created 
       code: "HOT_NO_CHANGES",
     });
     const active = await recordInPeer("device");
-    await f.runtime.call("hot_reload", { action: "stop" });
+    await f.runtime.call("hot_reload", { action: "stop", project_path: f.project });
     assert.equal(
       f.runtime.processes.size,
       0,
@@ -1033,7 +1038,7 @@ test("hot workflow reserves its captured device until completion and deduplicate
     return { active: true };
   });
   try {
-    const input = { action: "start", request_key: "hot-reservation", app: { bundle_name: bundle, module: "entry", ability: "MainAbility" } };
+    const input = { action: "start", project_path: f.project, request_key: "hot-reservation", app: { bundle_name: bundle, module: "entry", ability: "MainAbility" } };
     const submitted = z.object({ run_id: z.string() }).parse(await f.runtime.call("hot_reload", input));
     await entered.promise;
     const duplicate = z.object({ run_id: z.string() }).parse(await f.runtime.call("hot_reload", input));
@@ -1082,7 +1087,7 @@ test("action selectors cannot hide ambiguity with limit=1 in either direct contr
 test("runtime shutdown joins recorded controls and leaves an uncertain draft for inspection instead of silently saving it", async (t) => {
   const f = await fixture(t);
   try {
-    const id = await start(f.runtime),
+    const id = await start(f.runtime, f.project),
       entered = Promise.withResolvers<void>();
     let stopped = false;
     t.mock.method(

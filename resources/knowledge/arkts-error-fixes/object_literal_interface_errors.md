@@ -115,9 +115,9 @@ const breakpoints: Breakpoint[] = [
 
 ### Detailed Examples
 For more detailed code examples, see:
-- [Interface Definition](../assets/ObjectLiteralInterfaceError.ets#L1-L6)
-- [Array of Objects](../assets/ObjectLiteralInterfaceError.ets#L8-L14)
-- [ForEach Usage](../assets/ObjectLiteralInterfaceError.ets#L16-L48)
+- [Interface Definition](deveco://knowledge/arkts-error-fixes/examples/ObjectLiteralInterfaceError)
+- [Array of Objects](deveco://knowledge/arkts-error-fixes/examples/ObjectLiteralInterfaceError)
+- [ForEach Usage](deveco://knowledge/arkts-error-fixes/examples/ObjectLiteralInterfaceError)
 
 ### Best Practices
 1. **Define interfaces first**: Always define interfaces before using object literals
@@ -151,6 +151,6 @@ const articles: Article[] = [
 ```
 
 ### Related Files
-- [Code Example](../assets/ObjectLiteralInterfaceError.ets)
-- [Object Spread Type Errors](./object_spread_errors.md)
+- [Code Example](deveco://knowledge/arkts-error-fixes/examples/ObjectLiteralInterfaceError)
+- [Object Spread Type Errors](deveco://knowledge/arkts-error-fixes/object_spread_errors)
 - [ArkTS Language Guide](https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/arkts-get-started)

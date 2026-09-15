@@ -5,7 +5,9 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { CallToolResultSchema } from "@modelcontextprotocol/sdk/types.js";
 import { packageRoot } from "../../src/core/config.js";
+import type { ToolGroup } from "../../src/core/catalog.js";
 import { ToolError, invariant } from "../../src/core/errors.js";
+import { acceptanceResult } from "./acceptance-result.js";
 
 /** Isolated candidate MCP over its actual public stdio/worker path. */
 export class AcceptanceMcp {
@@ -18,6 +20,7 @@ export class AcceptanceMcp {
       installation?: string;
       state_dir?: string;
       configuration_file?: string;
+      tool_groups?: readonly ToolGroup[];
     } = {},
   ) {}
   async connect() {
@@ -47,6 +50,7 @@ export class AcceptanceMcp {
         DEVECO_CONFIG:
           this.options.configuration_file ??
           path.join(this.root, "config.json"),
+        DEVECO_TOOL_GROUPS: (this.options.tool_groups ?? ["core"]).join(","),
       },
     });
     this.transport.stderr?.on("data", (chunk: Buffer) => {
@@ -64,7 +68,8 @@ export class AcceptanceMcp {
     raw: unknown,
     signal?: AbortSignal,
   ): Promise<unknown> {
-    return (await this.callResponse(name, raw, signal)).structuredContent!.data;
+    const data = (await this.callResponse(name, raw, signal)).structuredContent!.data;
+    return acceptanceResult(data, input => this.call("workflow_run", input, signal));
   }
   async listTools() {
     invariant(this.client, "ACCEPTANCE_CLIENT_REQUIRED", "Connect MCP first");

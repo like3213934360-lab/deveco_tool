@@ -17,6 +17,7 @@ import { StateStore } from "../core/store.js";
 import { withTrace } from "../core/trace.js";
 import { DeviceService, type Snapshot, type UiNode } from "./device.js";
 import { isWindowSurface } from "./ui-tree.js";
+import { UI_ACTION_SCHEMA_VERSION, UI_CONTROL_TO_FLOW, UI_V2_ACTIONS } from "../core/ui-action-contract.js";
 
 import { resolveControl, uiInputArguments, controlDisplay } from "./ui-control.js";
 
@@ -148,6 +149,8 @@ export class RecordingService {
       target: row.target,
       state: row.state,
       flow_id: flow.id,
+      action_schema_version: flow.version,
+      current_action_schema_version: UI_ACTION_SCHEMA_VERSION,
       step_count: flow.steps.length,
       receipt_count: receipts.length,
       variables: flow.variables,
@@ -517,7 +520,7 @@ export function recordedStep(
       ...(window.abilityName ? { ability_name: window.abilityName } : {}),
     } } : {}),
   };
-  const extended = input.action.startsWith("mouse") || ["text", "dircFling"].includes(input.action);
+  const extended = UI_V2_ACTIONS.includes(input.action);
   invariant(!extended || flow.version === 2, input.action === "dircFling" ? "RECORDING_GESTURE_UNSUPPORTED" : "RECORDING_ACTION_UNSUPPORTED", "This recording predates flow v2; start a new recording to capture extended native actions");
   if (input.action === "keyEvent") {
     invariant(
@@ -608,14 +611,7 @@ export function recordedStep(
     step.point = point(input.x, input.y);
     step.fragile = true;
   }
-  step.action = input.action.startsWith("mouse") ? stepSchema.shape.action.parse(input.action) :
-    input.action === "text" ? "focusInput" : input.action === "inputText"
-      ? "input"
-      : input.action === "doubleClick"
-        ? "doubleTap"
-        : input.action === "longClick"
-          ? "longTap"
-          : "tap";
+  step.action = UI_CONTROL_TO_FLOW[input.action];
   if (input.action.startsWith("mouse")) Object.assign(step, {
     button: input.button, keys: input.keys, scroll_down: input.scroll_down,
     ticks: input.ticks, mouse_scroll_speed: input.mouse_scroll_speed,

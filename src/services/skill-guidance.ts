@@ -51,6 +51,7 @@ export const guidedRecipes: Record<GuidedKind, Recipe> = {
       "project_create",
       "project_sync",
       "project_build",
+      "build_run",
       "code_diagnose",
       "build_deploy_verify",
       "crash_diagnose",
@@ -112,7 +113,7 @@ export const guidedRecipes: Record<GuidedKind, Recipe> = {
       "Implement ArkTS/ArkUI changes using bundled standards and native validation",
     skills: ["deveco-arkts-standards"],
     knowledge: [core],
-    native_workflows: ["code_diagnose", "project_build", "build_deploy_verify"],
+    native_workflows: ["project_build", "build_run", "build_deploy_verify", "code_diagnose"],
     completion_workflows: ["project_build", "build_deploy_verify"],
     guidance: engineering,
   },
@@ -120,7 +121,7 @@ export const guidedRecipes: Record<GuidedKind, Recipe> = {
     description: "Repair blocking ArkTS diagnostics, recheck and build",
     skills: ["deveco-arkts-errors", "deveco-arkts-standards"],
     knowledge: [core],
-    native_workflows: ["code_diagnose", "project_build"],
+    native_workflows: ["project_build", "code_diagnose"],
     completion_workflows: ["project_build"],
     guidance: {
       ...engineering,
@@ -152,7 +153,7 @@ export const guidedRecipes: Record<GuidedKind, Recipe> = {
     guidance: {
       ...engineering,
       implementing:
-        "Use ui_test start/plan/resume with the captured app, target and original test plan. Follow the current step using fresh UI evidence and bounded actions. Check, read the exact review images and submit actual observations via ui_review. Replan when no progress is detected; do not replay uncertain actions.",
+        "Use ui_test start with full steps, app, target and original test plan; initialization is included. Set initialize=false for separate resume, and keep fresh_start=false to preserve prepared state. Follow the current step using fresh UI evidence and bounded actions. Use act check_after={} to check after bounded stability, or check alone for delayed results. Follow next calls and inspect the exact inline/fallback review images before submitting actual observations via ui_review. Replan when no progress is detected; do not replay uncertain actions.",
       verifying:
         "Every original step must satisfy its native assertion and required image review. Call ui_test finish, read the report and attach that succeeded ui_test run as evidence. Export retained screenshots and logs when requested.",
     },

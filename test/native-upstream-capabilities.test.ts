@@ -6,6 +6,7 @@ import { packageRoot } from "../src/core/config.js";
 import {
   auditCapabilities,
   capabilityMatrixSchema,
+  readDiscoveredCapabilities,
 } from "../scripts/lib/upstream-capabilities.js";
 import {
   capabilityCase,
@@ -25,7 +26,7 @@ const matrix = () =>
     ),
   );
 test("operation coverage inventory contains every current upstream built-in and cannot silently omit LSP operations", () => {
-  assert.equal(auditCapabilities(packageRoot, matrix()).tools, 28);
+  assert.equal(auditCapabilities(packageRoot, matrix()).tools, readDiscoveredCapabilities(packageRoot).tools.length);
   const missing = matrix();
   missing.tools.find((row) => row.tool === "lsp")!.operations.pop();
   assert.throws(() => auditCapabilities(packageRoot, missing), {
@@ -184,7 +185,7 @@ test("product exclusions and client boundaries cannot be applied to required nat
       }),
     { code: "CAPABILITY_SCOPE_INVALID" },
   );
-  const client = matrix().tools.find((row) => row.tool === "shell")!
+  const client = matrix().tools.find((row) => row.tool === "bash")!
     .operations[0]!;
   assert.throws(
     () =>
@@ -196,16 +197,16 @@ test("product exclusions and client boundaries cannot be applied to required nat
   );
   const contract = capabilityCase.parse({
     ...observedCase(),
-    operation: "shell.execute",
+    operation: "bash.execute",
     outcome: "client_required",
     source: "client_contract",
     service_support: "not_applicable",
     policy: "host-general-tools",
   });
-  validateCapabilityOutcomes("shell.execute", client, [contract]);
+  validateCapabilityOutcomes("bash.execute", client, [contract]);
   assert.throws(
     () =>
-      validateCapabilityOutcomes("shell.execute", client, [
+      validateCapabilityOutcomes("bash.execute", client, [
         { ...contract, valid_until: "2020-01-01T00:00:00Z" },
       ]),
     { code: "CAPABILITY_EVIDENCE_EXPIRED" },

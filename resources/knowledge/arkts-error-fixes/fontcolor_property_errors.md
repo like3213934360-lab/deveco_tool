@@ -68,7 +68,7 @@ struct FontColorExample {
 
 ## 详细代码示例
 
-- [FontColorPropertyError.ets](../assets/FontColorPropertyError.ets) - 完整的 fontColor 属性错误修复示例，包含正确和错误的用法对比
+- [FontColorPropertyError.ets](deveco://knowledge/arkts-error-fixes/examples/FontColorPropertyError) - 完整的 fontColor 属性错误修复示例，包含正确和错误的用法对比
 
 ## 最佳实践
 

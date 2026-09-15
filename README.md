@@ -4,7 +4,7 @@
 
 原生版本使用 **TypeScript + LangGraph + SQLite**：固定流程由代码执行，任务可持久化、查询和恢复；宿主 AI 负责理解需求、查询知识和修改业务代码。使用原生版本无须安装官方 Skill、官方 CLI 或 CodeGenie 子 MCP。
 
-> **正式稳定版为 [v0.3.0](https://github.com/like3213934360-lab/deveco_tool/releases/tag/v0.3.0)，本分支的 0.4.0 / native-7 正在验收，尚未发布。** 本轮修复 ArkTS 符号与调用层级适配，新增默认启动检查、完整 UI 动作录制重放、连续测试日志和兼容状态升级。当前完成情况与未完成发布验证见[执行记录](docs/remaining-release-progress.md)；内置知识及使用入口见[Skill 工作流](docs/builtin-skill-workflows.md)。
+> **本工作区是 0.4.0 候选实现，尚未对外发布；安装版本与本轮源码验收分别记录。** 本轮以归档源码为基线重构领域接口，并保留原生执行与恢复机制。归档报告和旧审计不能证明本次最终源码已验收；工具迁移见[领域协议迁移](docs/domain-protocol-migration.md)，按需方法见[领域配方与知识](docs/builtin-skill-workflows.md)。
 
 ## 能解决什么问题
 
@@ -46,9 +46,9 @@ flowchart TD
 | 持久化     | 官方 SQLite Checkpointer 1.0.4、better-sqlite3 12.10.0、SQLite WAL |
 | 测试       | TypeScript 测试编译后使用 Node Test Runner；六组平台 / Node CI     |
 
-进程管理、工程上下文、资源租约、错误分类、缓存、日志与制品集中实现。工程、产品、设备和输入在提交时固定；切换默认工程不会改变已经提交的任务。共享状态目录的多个 MCP 进程使用同一套租约协调冲突操作。
+进程管理、工程上下文、资源租约、错误分类、缓存、日志与制品集中实现。工程、产品、设备和输入在提交时固定；每次项目调用使用显式 `project_path`，不存在可变共享默认工程。共享状态目录的多个 MCP 进程使用同一套租约协调冲突操作。
 
-原生调用链不启动官方 CLI 或子 MCP。Skill、知识库与引导式流程均内置在 MCP 中，按当前阶段通过工具响应提供指导，无须向客户端安装 Skill。项目没有内嵌第二个自主编程 Agent：校验、顺序、分支和完成条件由工作流代码约束，开放式修复仍由宿主 AI 判断。
+原生调用链不启动官方 CLI 或子 MCP。Skill、知识库与领域配方均内置在 MCP 中，通过工具或 MCP Resources/Prompts 按需读取，无须向客户端安装 Skill，也不新建重复的指导生命周期。项目没有内嵌第二个自主编程 Agent：校验、顺序、分支和完成条件由工作流代码约束，开放式修复仍由宿主 AI 判断。
 
 ## 运行原生版本
 
@@ -75,12 +75,11 @@ npm run build
 
 ```json
 {
-  "studio": "/absolute/path/to/DevEco-Studio",
-  "default_project": "/absolute/path/to/HarmonyProject"
+  "studio": "/absolute/path/to/DevEco-Studio"
 }
 ```
 
-macOS 的 Studio 路径通常为 `/Applications/DevEco-Studio.app`。使用 CLT 时把 `studio` 改为 `clt`，两者不能同时配置；可用 `java_home` 指定 JDK。`default_project` 可省略，之后通过 `switch_cwd` 选择工程。Windows JSON 中的反斜杠需要写为 `\\`。更多组件要求见[工具链探测](docs/native-toolchains.md)。
+macOS 的 Studio 路径通常为 `/Applications/DevEco-Studio.app`。使用 CLT 时把 `studio` 改为 `clt`，两者不能同时配置；可用 `java_home` 指定 JDK。所有项目操作显式传入 `project_path`；`project_context resolve` 可先读取不可变工程描述符。旧 `default_project` 字段可被配置解析器读取，但不再作为执行默认目录。Windows JSON 中的反斜杠需要写为 `\\`。更多组件要求见[工具链探测](docs/native-toolchains.md)。
 
 在宿主的 MCP 配置中添加 stdio 服务；宿主字段格式以其自身要求为准：
 
@@ -92,16 +91,17 @@ macOS 的 Studio 路径通常为 `/Applications/DevEco-Studio.app`。使用 CLT 
       "args": ["/absolute/path/to/deveco_tool/dist/src/cli.js", "mcp"],
       "env": {
         "DEVECO_CONFIG": "/absolute/path/to/deveco-native.json",
-        "DEVECO_STATE_DIR": "/absolute/path/to/deveco-native-state"
+        "DEVECO_STATE_DIR": "/absolute/path/to/deveco-native-state",
+        "DEVECO_TOOL_GROUPS": "core"
       }
     }
   }
 }
 ```
 
-首次使用请选择独立的新状态目录；不要复用旧执行协议的数据库。原生配置使用 `DEVECO_CONFIG` 指向 JSON、`DEVECO_STATE_DIR` 指定状态目录，不读取旧版工具链环境变量作为兼容配置。
+首次使用可选择独立的新状态目录；已有 native-7 数据须使用已声明的兼容升级/备份路径，不要手工覆盖未知协议数据库。原生配置使用 `DEVECO_CONFIG` 指向 JSON、`DEVECO_STATE_DIR` 指定状态目录，不读取旧版工具链环境变量作为兼容配置。
 
-连接后先调用 `deveco_doctor` 核对工具链、工程和能力，再按需登录或运行工作流。也可在设置了同样两个环境变量的终端执行 `node dist/src/cli.js doctor`。修改编译产物后需让宿主重新连接 MCP；`deveco_restart` 只重启运行服务 Worker。
+首次配置或环境排障时，用 `deveco_doctor` 核对工具链、工程和能力，再按需登录。环境已确定时可直接运行工作流。也可在设置了同样两个环境变量的终端执行 `node dist/src/cli.js doctor`。修改编译产物后需让宿主重新连接 MCP；`maintenance restart` 只重启运行服务 Worker。可选的 `signing-admin`、`emulator-admin` 和 `compatibility` 工具组通过 `DEVECO_TOOL_GROUPS` 在连接启动时固定，详见迁移文档。
 
 通过 MCP 给 `deveco_doctor` 显式提供 `target` 可只读检测设备的 UiTest 与文字输入组件；未提供时不访问设备。检测结果不等于实际 UI 操作已经验证，详见[驱动诊断](docs/native-ui-driver.md)。
 
@@ -109,38 +109,41 @@ macOS 的 Studio 路径通常为 `/Applications/DevEco-Studio.app`。使用 CLT 
 
 ## 工作流
 
+按意图选择入口，已知的内容和任务无需每次重新查目录：
+
+| 需要做什么 | 入口 |
+| --- | --- |
+| 普通编译 | `project_build`，内置新鲜的完整预检，无需先完整诊断 |
+| 构建并启动 | `build_run`，报告构建、部署和启动结果 |
+| 检查一个具体问题 | `arkts_check`、`code_lint` 或 LSP；关联多个检查器时用 `code_diagnose` |
+| SDK/API 升级或指定兼容性扫描 | `api_compatibility`，保留源/目标版本及受影响位置 |
+| 搜索问题、案例或 API 文档 | `harmony_knowledge search`；全文文档使用 `kind=docs` |
+| 获取开发方法 | `domain_recipe read` |
+| 读取已知内容 URI | `domain_content read`；结果中的 `read` 参数可直接复用 |
+
 `workflow_catalog` 提供工作流定义、输入 Schema、所需能力和完成条件。当前公开目录包括：
 
 | 工作流                | 执行过程与完成条件                                                                |
 | --------------------- | --------------------------------------------------------------------------------- |
-| `project_create`      | 校验 SDK 与参数 → 展开模板 → 生成配置 → 验证工程身份；拒绝覆盖已有目录            |
+| `project_create`      | 校验 SDK → 暂存完整工程 → 冲突预检 → 不覆盖发布；支持空目录，非空目录需显式 `merge=true` |
 | `project_sync`        | 校验工程 → 按参数安装依赖 → 同步工程模型 → 验证实际模型                           |
-| `project_build`       | 固定工程与产品 → 按参数同步 → 构建 → 提取诊断 → 核对制品及摘要                    |
-| `app_deploy`          | 固定已有包集合 → 校验设备 → 安装 → 启动 → 核对应用进程                            |
+| `project_build`       | 固定工程与产品 → 按参数同步 → 完整预检 → 构建 → 提取诊断 → 核对制品及摘要                    |
+| `build_run`           | 构建或引用有效构建 → 部署 → 有界启动检查；不要求 UI 断言 |
+| `app_deploy`          | 引用有效构建或固定已有包集合 → 安装/启动 → 有界稳定性与页面启动检查；业务目标另行断言                            |
 | `build_deploy_verify` | 构建或热增量应用 → 部署 → 执行指定入口或流程 → 通过预先声明的 UI 断言             |
-| `code_diagnose`       | 执行指定检查 → 分类诊断 → 关联规则与案例 → 返回建议和检查覆盖情况                 |
-| `crash_diagnose`      | 固定输入日志或采集设备证据 → 按事件和进程解析 → 关联证据 → 给出诊断或证据不足说明 |
+| `code_diagnose`       | 执行指定检查 → 合并可确认等价的诊断 → 保留各来源及原报告 → 关联规则与案例                 |
+| `crash_diagnose`      | 引用原任务日志、输入日志或显式采集设备证据 → 按事件和进程解析 → 关联证据 → 给出诊断或证据不足说明 |
 | `api_compatibility`   | 校验版本组合 → 调用扫描组件 → 规范化兼容性结果 → 输出报告                         |
 
-默认不 clean、不升级 SDK、不自动修改业务代码。`project_build` 默认先同步，任务默认 `assembleHap`，也支持 HAR、HSP 和 APP 构建。`build_deploy_verify` 必须提交 `assert`，不接受把截图当作最终断言。
+默认不 clean、不升级 SDK、不自动修改业务代码。`project_build` 默认按 `auto` 策略核对同步，任务默认 `assembleHap`，也支持 HAR、HSP 和 APP 构建。`build_deploy_verify` 必须提交 `assert`，不接受把截图当作最终断言。
 
-工程工具和工作流可用 `module_targets` 指定每个模块的 Hvigor 目标，例如 `{"entry":"preview","shared":"default"}`；`product` 选择产品，`target` 仍只表示 HDC 设备。提交后固定实际选择，恢复不受默认工程切换影响。`assembleApp` 由 SDK 按产品配置打包，不接受 `modules` 或非空 `module_targets`，需选择目标时使用 HAP/HAR/HSP 构建。详见[构建目标选择](docs/native-module-targets.md)。
+工程工具和工作流可用 `module_targets` 指定每个模块的 Hvigor 目标，例如 `{"entry":"preview","shared":"default"}`；`product` 选择产品，`target` 仍只表示 HDC 设备。提交后固定实际选择，恢复使用已捕获范围，不依赖其它调用的工程选择。`assembleApp` 由 SDK 按产品配置打包，不接受 `modules` 或非空 `module_targets`，需选择目标时使用 HAP/HAR/HSP 构建。详见[构建目标选择](docs/native-module-targets.md)。
 
-创建工程时，`sdk_version` 指定已安装的编译 SDK，`target_api` 和 `compatible_api` 可分别设置目标行为 API 和最低设备 API；它们不必与编译 SDK 相同。省略时均使用所选 SDK 的 API，详见[工具链与版本配置](docs/native-toolchains.md)。
+创建工程时，`sdk_version` 指定已安装的编译 SDK，`target_api` 和 `compatible_api` 可分别设置目标行为 API 和最低设备 API；它们不必与编译 SDK 相同。省略 `sdk_version` 时使用实际配置的已安装默认 SDK；目标 API 默认取编译 SDK API，最低兼容 API 默认取目标 API，详见[工具链与版本配置](docs/native-toolchains.md)。
 
-`project_path` 是要创建的完整工程目录，`app_name` 是应用名称，`bundle_name` 必须显式填写。迁移旧 `copy_template` 调用时，请将原来的父目录和应用子目录合并为 `project_path`；新工作流不追加目录名，也不自动生成包名。目标目录即使为空也必须尚不存在。
+`project_path` 是要创建的完整工程目录，`app_name` 是应用名称，`bundle_name` 必须显式填写。迁移旧 `copy_template` 调用时，请将原来的父目录和应用子目录合并为 `project_path`；新工作流不追加目录名，也不自动生成包名。目标可以是不存在的目录或已有空目录；非空目录需显式 `merge=true`，文件、目录和链接冲突都会拒绝，不覆盖已有内容。
 
-例如，通过 MCP `tools/call` 查询构建工作流，再提交任务：
-
-```json
-{
-  "name": "workflow_catalog",
-  "arguments": {
-    "action": "get",
-    "workflow": "project_build"
-  }
-}
-```
+例如，已知工作流时可通过 MCP `tools/call` 直接提交构建任务。需要查询完成条件或能力时，再按需调用 `workflow_catalog get`：
 
 ```json
 {
@@ -153,14 +156,18 @@ macOS 的 Studio 路径通常为 `/Applications/DevEco-Studio.app`。使用 CLT 
       "project_path": "/absolute/path/to/HarmonyProject",
       "product": "default",
       "mode": "debug",
-      "sync": true,
+      "sync": "auto",
       "clean": false
     }
   }
 }
 ```
 
-`start` 在任务持久化后返回 `run_id`。用 `workflow_run` 的 `status` 动作和该 ID 查询结果，`wait_ms` 最多为 20000；`list` 列出任务，`read_artifact` 分页读取日志和报告。一个新的执行意图应使用新的 `request_key`：同一键与相同输入返回已有任务，同一键与不同输入报冲突。
+`sync` 默认 `"auto"`：标准声明式 Hvigor 工程在依赖声明、锁文件、实际安装字节、模型、配置、产品/模块、工具链及运行环境均匹配保留的成功同步记录时，可以复用该记录。仅模块 `src/main/ets/` 中的 ArkTS 源码变化不要求再次同步。自定义构建逻辑、依赖缺失或无法核对时继续原生同步。`"force"` 强制同步，`"skip"` 明确跳过；旧布尔值 `true / false` 分别等价于 `"force" / "skip"`。`project_sync` 始终执行显式同步，恢复中的任务核实原操作。
+
+`start` 持久化任务后默认等待 1000 ms，短任务可直接返回完成结果；未完成时返回同一 `run_id`。`status` 和 `resume` 同样支持 `wait_ms`，最多 20000；停止等待不取消任务。默认返回摘要，完整结果可用 `read_result` 分页读取或 `detail:"full"` 兼容模式；`list` 列出任务，`read_artifact` 读取日志和报告。新的执行意图使用新的 `request_key`：同键同输入返回已有任务，不同输入报冲突。
+
+默认工具目录包含各动作和工作流的实际输入校验，已知工作流可直接调用；完整方法与完成含义仍可按需读取。部署可引用 `build_run_id`，UI 测试可引用 `deployment_run_id` 带入已有应用、设备、工程范围和省略的需求。仅在需要逐需求交付时使用 `domain_acceptance`，用 `evidence_run_ids` 解析已绑定的 task/assertion/review 引用；多 task 的歧义映射仍需明确提供。普通编译和运行无需建立验收表。
 
 ### 持久化、恢复与取消
 
@@ -172,33 +179,36 @@ macOS 的 Studio 路径通常为 `/Applications/DevEco-Studio.app`。使用 CLT 
 
 ## 公开工具
 
-以下为**原生接口**，旧工具名称没有别名。完整参数和结构化输出以 MCP `tools/list`、`workflow_catalog` 及[契约定义](src/core/contracts.ts)为准。
+以下为默认领域接口及可选能力组。迁移期旧名称可调用但默认不广告；新指导任务不再使用 `skill_workflow start/write/transition/publish`。完整参数和结构化输出以 MCP `tools/list`、`workflow_catalog` 及[契约定义](src/core/contracts.ts)为准。
 
-| 类别       | 工具                                                 | 用途                                                           |
-| ---------- | ---------------------------------------------------- | -------------------------------------------------------------- |
-| 工作流     | `workflow_catalog`、`workflow_run`                   | 定义查询、提交、列表、状态、恢复、取消与制品读取               |
-| 知识与认证 | `harmony_knowledge`、`harmony_auth`                  | 本地 / 云端知识，开发者 / CodeGenie 登录、状态、登出和团队查询 |
-| 管理       | `switch_cwd`、`deveco_doctor`、`deveco_restart`      | 默认工程选择、环境诊断、运行服务重启                           |
-| 代码       | `lsp`、`arkts_check`、`code_lint`、`check_cpp_files` | 语言服务、静态预检、Linter 与 C/C++ 检查                       |
-| 设备       | `device_info`、`hdc_log`                             | 设备发现与属性，日志收集、故障探测和读取                       |
-| 应用       | `hot_reload`、`app_signature`                        | 热重载会话与补丁，签名配置、密钥、证书、Profile 和设备管理     |
-| UI 查询    | `ui_snapshot`、`ui_observe`、`ui_find`、`ui_inspect` | 截图 / 树、结构观察、选择器查询、窗口与层级检查                |
-| UI 操作    | `ui_tap`、`ui_control`、`ui_flow`、`verify_ui`       | 点击、手势与输入，导航、流程管理和录制，最终断言               |
-| 模拟器     | `emulator_manage`、`emulator_scenario`               | 组件、镜像、实例及场景管理                                     |
+| 类别 | 工具 | 用途 |
+| --- | --- | --- |
+| 配方与内容 | `domain_recipe`、`domain_content`、`skill_manage`、`harmony_knowledge` | 按需方法、来源资产、Skill、规则及文档检索读取 |
+| 验收与工作流 | `domain_acceptance`、`workflow_catalog`、`workflow_run` | 逐需求证据核对、固定原生执行、恢复及制品读取 |
+| 上下文与维护 | `project_context`、`deveco_doctor`、`maintenance` | 不可变工程描述符、环境诊断、Worker/存储恢复 |
+| 代码 | `lsp`、`arkts_check`、`code_lint`、`check_cpp_files` | 语言服务、静态预检、Linter 与 C/C++ 检查 |
+| 设备与认证 | `device_info`、`hdc_log`、`harmony_auth` | 设备查询、持续或有界日志、独立服务认证 |
+| 应用 | `hot_reload`、`app_signature` | 热更新会话、本地签名配置、密钥、签名与校验 |
+| UI | `ui_query`、`ui_snapshot`、`ui_control`、`ui_flow` | 严格类型化观察/查询、截图、原子控制和录制回放 |
+| UI 验收 | `verify_ui`、`ui_review`、`ui_test` | 控件断言、宿主图像审阅与有状态测试 |
+| 模拟器 | `emulator_manage`、`emulator_scenario` | 已装模拟器查询/启停、场景控制与显式效果断言 |
+| 可选管理 | `signature_admin`、`emulator_admin` | 云端证书/Profile/设备注册、实例/镜像/协议管理；按连接配置启用 |
 
-签名写操作、热重载 `start / apply` 和模拟器变更同样先返回 `run_id`，通过 `workflow_run` 查询最终结果；内部固定任务不加入八个公开工作流目录。构建、同步、部署和 API 扫描统一从工作流进入。脚本目录执行、重复 LSP、旧 UI 代理和分散认证入口不属于原生工具目录。
+签名写操作、热重载 `start / apply` 和模拟器变更同样先返回 `run_id`，通过 `workflow_run` 查询最终结果；内部固定任务不加入九个公开工作流目录。构建、同步、部署和 API 扫描统一从工作流进入。脚本目录执行、重复 LSP、旧 UI 代理和分散认证入口不属于原生工具目录。
 
 ### UI 流程与知识使用
 
 UI 流程保存在工程的 `.arkpilot/flows/<id>.json`。公开 Ability 可作为直接入口，已保存流程可按 ID 或目标导航；未知目标在工程存在明确公开入口时建立空录制，入口歧义则返回候选供显式选择。返回录制任务不表示已经到达目标。录制草稿持久化并加密，文本输入转为运行时变量，最终断言通过后才保存流程或修复选择器。保留的旧流程需先通过新版校验，详见[UI 工作流](docs/native-ui-workflows.md)。
 
-`ui_snapshot` 默认只截图，读取树需指定 `mode: "tree"` 或 `"both"`。`ui_find` 可复用快照，也可查询保存的树；离线结果不代表设备当前状态。点击前需要明确目标，手势和中文输入使用 `ui_control`，流程完成使用 `verify_ui` 或工作流断言核对。
+`ui_snapshot` 默认只截图，读取树需指定 `mode: "tree"` 或 `"both"`。`ui_query action=find` 可复用快照，也可查询保存的树；离线结果不代表设备当前状态。点击前需要明确目标，手势和中文输入使用 `ui_control`，流程完成使用 `verify_ui` 或工作流断言核对。
+
+`ui_test start` 可用 `project_path` 和 `requirements` 绑定当前项目及需求版本；`deployment_run_id` 关联已经成功的部署回执，使项目验收能够核对实际安装制品与当前源码身份。外部手动安装可以接受设备上的 UI 检查，但单独的 UI 通过不能证明设备运行的是当前项目构建，也不能独立充当项目部署验收。
 
 外观检查可用 `verify_ui.review.requirement` 提供具体要求，服务保存截图和验收报告；`workflow_run.read_artifact` 指定 `as: "image"` 后返回可供宿主 AI 审阅的 PNG/JPEG。控件断言通过与外观审阅分开记录，请求外观审阅时不会自动返回整体通过。详见 [UI 验收证据](docs/native-visual-review.md)。
 
 `harmony_knowledge` 默认查询本地内容，通过 `catalog / search / read` 按需取得规则、示例和文档。云端查询须显式指定 `source: "cloud"`。`harmony_auth` 的 `developer` 与 `codegenie` 是独立认证服务，凭据分开存储，不能互换 Token。详见[知识服务](docs/native-knowledge.md)和[认证](docs/native-authentication.md)。
 
-`crash_diagnose` 按实际异常、错误码和应用栈关联 45 条本地故障模式，并返回源版本和参考表行号。生产设备限制 shell 读取故障文件时，可经 HDC 文件服务读取同一原名文件；诊断保留截断、SourceMap 缺失和未匹配状态，详见[崩溃诊断](docs/native-crash-diagnosis.md)。
+`crash_diagnose` 可直接传 `source_run_id` 复用部署/UI 任务原日志，默认离线分析；`collect_missing:true` 才在原设备时钟窗口内补查故障文件，缺口与过期不冒充完整证据。它按实际异常、错误码和应用栈关联 45 条本地故障模式，并返回源版本和参考表行号。生产设备限制 shell 读取故障文件时，可经 HDC 文件服务读取同一原名文件；诊断保留截断、SourceMap 缺失和未匹配状态，详见[崩溃诊断](docs/native-crash-diagnosis.md)。
 
 ## 状态、日志与资源管理
 
@@ -212,7 +222,7 @@ UI 流程保存在工程的 `.arkpilot/flows/<id>.json`。公开 Ability 可作�
 
 ## 当前验收与历史记录
 
-0.4.0 候选的 ArkTS 五项新增操作、默认启动故障、完整动作录制与密码隐私、连续日志压力及恢复、状态升级回滚、模拟器与热补丁效果已完成分项验证；最终身份复验、当前性能／长稳、跨平台 CI 和正式发布尚未闭合，见[当前工作表](docs/remaining-release-progress.md)。0.4.0 发布策略要求当前迁移凭证、48 项验收、19 项性能和混合长稳，没有继承 0.3.0 的历史豁免。
+本轮处理方式与分项证据见[优化记录](docs/refactoring/2026-09-15-workflow-optimization-progress.md)，完成情况见[待办清单](docs/refactoring/2026-09-15-workflow-optimization-todo.md)；2026-09-12 的实现矩阵和验收报告仅记录此前候选；实现完成与最终验收分别记录。归档候选曾包含 LSP、启动检查、录制、日志和升级实现及历史分项报告，这些只作为可复用实现与历史证据；本次最终源码、构建、资源、SDK/设备身份必须重新对应。SDK、设备、平台或长稳条件不足时保留具体未验收项，不将 unsupported 当作 required-native 通过。旧候选发布记录见[历史工作表](docs/remaining-release-progress.md)。
 
 以下为 0.2.x 的历史执行记录，保留当时的身份、结果与限制，不作为 0.4.0 已通过的证据。
 
@@ -286,7 +296,7 @@ node dist/scripts/resources.js
 
 | 主题       | 文档                                                                                                                                                                                                           |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 迁移与交付 | [迁移执行记录](docs/native-migration-status.md) · [安装与升级](docs/native-installation.md) · [分发](docs/native-distribution.md)                                                                              |
+| 迁移与交付 | [领域协议迁移](docs/domain-protocol-migration.md) · [领域配方](docs/builtin-skill-workflows.md) · [迁移执行记录](docs/native-migration-status.md) · [安装与升级](docs/native-installation.md) · [分发](docs/native-distribution.md)                                                                              |
 | 发布维护 | [v0.2.1 发布核对](docs/maintenance-0.2.1.md) · [发布证据传递](docs/release-evidence-transfer.md) |
 | 工程与诊断 | [工具链](docs/native-toolchains.md) · [工程上下文](docs/native-project-context.md) · [语言服务](docs/native-language-service.md) · [静态预检](docs/native-static-checker.md) · [Linter](docs/native-linter.md) |
 | 设备与应用 | [设备发现](docs/native-device-info.md) · [部署](docs/native-deployment.md) · [签名与热补丁](docs/native-signing.md) · [模拟器](docs/native-emulator.md)                                                        |

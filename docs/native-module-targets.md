@@ -18,13 +18,15 @@
 
 映射键必须是工程模块名，目标必须适用于所选产品。未指定的模块优先使用 default，否则使用唯一适用目标；存在歧义时报错，避免猜选。无效模块或目标在启动 SDK 前拒绝。已选择的依赖模块目标同样用于 HSP 闭包构建，产物路径来自真实同步模型。
 
-提交工作流时保存全部实际选择，包括隐式默认值。重启恢复读取原任务，重新核对工程、产品、目标和工具链。切换默认工程不会改变任务；同一请求键改用其他目标会报冲突。LSP 的工程摘要和热重载会话键包含目标组合，不混用不同目标的会话或待应用补丁。同一工程的冲突写操作仍串行。
+提交工作流时保存全部实际选择，包括隐式默认值。重启恢复读取原任务，重新核对工程、产品、目标和工具链。每次调用显式传入 project_path，不同请求的工程选择互不改变任务；同一请求键改用其他目标会报冲突。LSP 的工程摘要和热重载会话键包含目标组合，不混用不同目标的会话或待应用补丁。同一工程的冲突写操作仍串行。
 
-`assembleApp` 是产品打包。现代 SDK 的 `PreBuildApp.checkConfigModuleStatus` 不允许通过 module 参数指定非 HAR 模块。本 MCP 对 `assembleApp` 的 `modules` 或非空 `module_targets` 明确拒绝，目标选择使用 `assembleHap`、`assembleHar` 或 `assembleHsp`。`app_deploy` 安装明确给定的制品集合，制品已经确定构建目标。
+`assembleApp` 是产品打包。现代 SDK 的 `PreBuildApp.checkConfigModuleStatus` 不允许通过 module 参数指定非 HAR 模块。本 MCP 对 `assembleApp` 的 `modules` 或非空 `module_targets` 明确拒绝，目标选择使用 `assembleHap`、`assembleHar` 或 `assembleHsp`。`app_deploy` 可用 `build_run_id` 引用成功构建，继承原产品、模块目标和完整 HAP/HSP 制品集合，并在部署前重新核对身份；也可安装显式给定的制品集合。两类输入互斥，不能在引用构建时重新选择另一组目标。
 
 旧 `start_app.target` 和 `apply_changes.target` 原本指模块构建目标，替代字段是 `module_targets[module]`；旧 `hvd` 才对应当前设备 `target`。不保留旧工具别名。
 
 2026-09-09 的冻结版本已通过 336 项回归、49 项真实多产品/目标/模块验收，以及 11 项指定 `preview` 目标的热补丁验收。运行摘要为 `a9c81e90ac50fe48f75bee7d52d6d46f27951a56ed1eaa8be345d9d04f54437b`，全部编译摘要为 `d30313300b8d569e4b7f0b043a1e1b0621d6920152c7c9ee09d3b18746ad5a8c`。
+
+以下为旧版本历史验收记录，包含当时的可变默认目录行为；不作为当前候选通过证据。当前上下文使用显式 project_path，见[工程上下文](native-project-context.md)。
 
 恢复回归包含目标捕获、重建 Runtime、默认工程切换及请求键冲突。真实 SDK 验收覆盖 default/tablet 产品各自的 default/preview 目标、跨模块 ArkTS 定义、目标静态预检，以及双 ABI C++。四组个人签名三包部署均安装一次，完成回执后注入响应丢失，重建 Runtime 恢复并通过最终 UI 断言。此范围已通过迁移接收程序接受 `start_app` 行，不代表所有 SDK 执行窗口强杀均已验证。
 

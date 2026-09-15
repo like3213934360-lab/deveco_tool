@@ -8,6 +8,8 @@ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import { verifyDistribution } from "./lib/distribution.js";
 import { invariant, errorResult } from "../src/core/errors.js";
 import { release } from "../src/core/config.js";
+import { createToolCatalog } from "../src/core/catalog.js";
+import { workflowNames } from "../src/core/contracts.js";
 
 const [directory, destination] = process.argv.slice(2);
 invariant(
@@ -105,29 +107,67 @@ try {
   fs.writeFileSync(path.join(output, "config.json"), "{}\n");
   await check("compiled-entry-mcp-handshake", connect);
   await check(
-    "29-structured-tools-and-eight-workflows-without-worker-state",
+    "connection-core-contract-and-fixed-workflows-without-worker-state",
     async () => {
       const catalog = await client!.listTools();
+      const expected = createToolCatalog(["core"]).map((tool) => tool.name).sort();
       invariant(
-        catalog.tools.length === 29 &&
-          catalog.tools.every((tool) => tool.outputSchema) &&
-          ["skill_manage", "skill_workflow", "ui_test", "ui_review"].every(
+        JSON.stringify(catalog.tools.map((tool) => tool.name).sort()) === JSON.stringify(expected) &&
+          catalog.tools.every((tool) => tool.outputSchema && tool.annotations) &&
+          ["skill_manage", "domain_recipe", "domain_content", "domain_acceptance", "project_context", "ui_query", "maintenance", "ui_test", "ui_review"].every(
             (name) => catalog.tools.some((tool) => tool.name === name),
+          ) &&
+          ["skill_workflow", "switch_cwd", "signature_admin", "emulator_admin"].every(
+            (name) => !catalog.tools.some((tool) => tool.name === name),
           ),
         "INSTALLATION_CATALOG",
         "Tool catalog is incomplete",
       );
       const graph = z
-        .object({ workflows: z.array(z.unknown()).length(8) })
+        .object({ workflows: z.array(z.object({ id: z.string() })) })
         .parse(await call("workflow_catalog", {}));
       invariant(
-        graph.workflows.length === 8 &&
+        JSON.stringify(graph.workflows.map((workflow) => workflow.id).sort()) === JSON.stringify([...workflowNames].sort()) &&
           !fs.existsSync(path.join(output, "state/state.sqlite")),
         "INSTALLATION_EAGER_STATE",
         "Static catalog must not initialize worker storage",
       );
     },
   );
+  await check("packaged-domain-recipe-resource-and-prompt-parity", async () => {
+    const recipe = await call("domain_recipe", { action: "read", id: "spec" });
+    const content = z.object({ text: z.string(), sha256: z.string() }).parse(
+      await call("domain_content", { action: "read", uri: "deveco://recipe/spec" }),
+    );
+    const resource = await client!.readResource({ uri: "deveco://recipe/spec" });
+    const resourceText = resource.contents.flatMap((item) => "text" in item ? [item.text] : []).join("");
+    invariant(
+      content.text === resourceText &&
+        JSON.stringify(JSON.parse(content.text)) === JSON.stringify(recipe) &&
+        createHash("sha256").update(content.text).digest("hex") === content.sha256,
+      "INSTALLATION_DOMAIN_CONTENT",
+      "Packaged tool and resource content must share the same recipe bytes",
+    );
+    const prompts = await client!.listPrompts();
+    invariant(prompts.prompts.some((prompt) => prompt.name === "harmonyos-spec"),
+      "INSTALLATION_DOMAIN_PROMPT", "The optional specification method must be discoverable as a prompt");
+    const prompt = await client!.getPrompt({ name: "harmonyos-spec" });
+    invariant(prompt.messages.some((message) => message.content.type === "text" &&
+      JSON.stringify(JSON.parse(message.content.text).recipe) === JSON.stringify(recipe)),
+      "INSTALLATION_DOMAIN_PROMPT", "The prompt must preserve the same packaged recipe content");
+    const disabled = await client!.callTool({ name: "signature_admin", arguments: { action: "certificates" } });
+    z.object({ error: z.object({ code: z.literal("TOOL_GROUP_DISABLED") }) }).parse(disabled.structuredContent);
+    invariant(disabled.isError === true, "INSTALLATION_GROUP_BOUNDARY", "An omitted administration group must stay disabled");
+    const sources = z.object({ entries: z.array(z.object({ uri: z.string(), sha256: z.string() })).min(1) })
+      .parse(await call("domain_content", { action: "catalog", kind: "source", limit: 1 }));
+    const source = sources.entries[0]!;
+    const original = z.object({ text: z.string(), sha256: z.literal(source.sha256) })
+      .parse(await call("domain_content", { action: "read", uri: source.uri }));
+    const sourceResource = await client!.readResource({ uri: source.uri });
+    invariant(original.text === sourceResource.contents.flatMap((item) => "text" in item ? [item.text] : []).join("") &&
+      createHash("sha256").update(original.text).digest("hex") === source.sha256,
+      "INSTALLATION_SOURCE_CONTENT", "Packaged original source must match its traced content digest through both read paths");
+  });
   await check("worker-native-sqlite-and-doctor", () =>
     call("deveco_doctor", {}),
   );
@@ -238,6 +278,7 @@ try {
         .parse(
           await call("workflow_run", {
             action: "status",
+            detail: "full",
             run_id: run.run_id,
             wait_ms: 5000,
           }),
@@ -261,7 +302,7 @@ try {
       const restored = z
         .object({ status: z.literal("succeeded"), result: z.unknown() })
         .parse(
-          await call("workflow_run", { action: "status", run_id: run.run_id }),
+          await call("workflow_run", { action: "status", detail: "full", run_id: run.run_id }),
         );
       invariant(
         JSON.stringify(restored.result) === JSON.stringify(completed.result),

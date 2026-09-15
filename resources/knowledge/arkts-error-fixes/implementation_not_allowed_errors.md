@@ -77,7 +77,7 @@ struct MyPage {
 
 ## 详细代码示例
 
-- [ImplementationNotAllowedError.ets](../assets/ImplementationNotAllowedError.ets) - 完整的实现不允许错误修复示例，包含正确的组件结构
+- [ImplementationNotAllowedError.ets](deveco://knowledge/arkts-error-fixes/examples/ImplementationNotAllowedError) - 完整的实现不允许错误修复示例，包含正确的组件结构
 
 ## 最佳实践
 

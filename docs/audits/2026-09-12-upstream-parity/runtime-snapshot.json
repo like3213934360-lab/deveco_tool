@@ -1,0 +1,2089 @@
+{
+  "audited_at": "2026-09-12",
+  "workspace": "/Users/dreamlike/DreamLike/deveco_tool",
+  "runtime_installation": "/Users/dreamlike/Library/Application Support/DevEcoMCP/installations/native-7-release-0.3.0-20260911-1",
+  "calls": {
+    "doctor": {
+      "ok": true,
+      "request_id": "e49ddb2d-5de5-4f0a-85c9-00b4b5294ebe",
+      "data": {
+        "release": "0.3.0",
+        "execution_protocol": "native-7",
+        "node": "v24.14.1",
+        "platform": "darwin",
+        "arch": "arm64",
+        "state_dir": "/Users/dreamlike/Library/Application Support/DevEcoMCP/states/native-7-release-0.3.0-20260911-1",
+        "toolchain": {
+          "root": "/Applications/DevEco-Studio.app/Contents",
+          "kind": "studio",
+          "sdk": "/Applications/DevEco-Studio.app/Contents/sdk",
+          "version": "26.0.0.821",
+          "versions": {
+            "Resources/product-info.json": "26.0.0.821",
+            "sdk/default/openharmony/ets/oh-uni-package.json": "26.0.0.105",
+            "sdk/default/openharmony/js/oh-uni-package.json": "26.0.0.105",
+            "sdk/default/openharmony/native/oh-uni-package.json": "26.0.0.105",
+            "sdk/default/openharmony/previewer/oh-uni-package.json": "26.0.0.105",
+            "sdk/default/openharmony/toolchains/oh-uni-package.json": "26.0.0.105",
+            "sdk/default/sdk-pkg.json": "26.0.0.105",
+            "tools/hvigor/hvigor-ohos-plugin/package.json": "6.26.4",
+            "tools/hvigor/hvigor/package.json": "6.26.4",
+            "tools/ohpm/package.json": "26.0.0.630",
+            "java/release": "25.0.2"
+          },
+          "fingerprint": "dfa94f6843a2e67d6af89356271bebbb38c362c9d59d63ae7ccff71e215ae293",
+          "components": {
+            "node": "/Applications/DevEco-Studio.app/Contents/tools/node/bin/node",
+            "java": "/Applications/DevEco-Studio.app/Contents/jbr/Contents/Home/bin/java",
+            "ohpm": "/Applications/DevEco-Studio.app/Contents/tools/ohpm/bin/pm-cli.js",
+            "hvigor": "/Applications/DevEco-Studio.app/Contents/tools/hvigor/bin/hvigorw.js",
+            "hdc": "/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/toolchains/hdc",
+            "arkts": "/Applications/DevEco-Studio.app/Contents/plugins/openharmony/ace-server/out/standardIndex/index.js",
+            "clangd": "/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/native/llvm/bin/clangd",
+            "linter": "/Applications/DevEco-Studio.app/Contents/plugins/codelinter/run/index.js",
+            "apiscan": "/Applications/DevEco-Studio.app/Contents/plugins/harmony/arkanalyzer-apiscan/api-change-scan.js",
+            "emulator": "/Applications/DevEco-Studio.app/Contents/tools/emulator/Emulator",
+            "signer": "/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/toolchains/lib/hap-sign-tool.jar"
+          }
+        },
+        "default_sdk": {
+          "api_level": 26,
+          "platform_version": "26.0.0",
+          "package_version": "26.0.0.105",
+          "metadata_path": "/Applications/DevEco-Studio.app/Contents/sdk/default/sdk-pkg.json"
+        },
+        "api_compatibility": {
+          "versions": [
+            "HarmonyOS_5.0.0(12)_Release",
+            "HarmonyOS_5.0.1(13)_Beta3",
+            "HarmonyOS_5.0.1(13)_Release",
+            "HarmonyOS_5.0.2(14)_Beta1",
+            "HarmonyOS_5.0.2(14)_Release",
+            "HarmonyOS_5.0.3(15)_Beta1",
+            "HarmonyOS_5.0.3(15)_Beta2",
+            "HarmonyOS_5.0.3(15)_Release",
+            "HarmonyOS_5.0.4(16)_Release",
+            "HarmonyOS_5.0.5(17)_Beta1",
+            "HarmonyOS_5.0.5(17)_Release",
+            "HarmonyOS_5.1.0(18)_Release",
+            "HarmonyOS_5.1.1(19)_Beta1",
+            "HarmonyOS_5.1.1(19)_Release",
+            "HarmonyOS_6.0.0(20)_Beta1",
+            "HarmonyOS_6.0.0(20)_Beta2",
+            "HarmonyOS_6.0.0(20)_Beta3",
+            "HarmonyOS_6.0.0(20)_Beta5",
+            "HarmonyOS_6.0.0(20)_Release",
+            "HarmonyOS_6.0.1(21)_Beta1",
+            "HarmonyOS_6.0.1(21)_Release",
+            "HarmonyOS_6.0.2(22)_Beta1",
+            "HarmonyOS_6.0.2(22)_Release",
+            "HarmonyOS_6.1.0(23)_Beta1",
+            "HarmonyOS_6.1.0(23)_Beta2",
+            "HarmonyOS_6.1.0(23)_Release",
+            "HarmonyOS_6.1.1(24)_Beta1",
+            "HarmonyOS_6.1.1(24)_Release",
+            "HarmonyOS_26.0.0(26)_Beta1",
+            "HarmonyOS_26.0.0(26)_Beta2",
+            "HarmonyOS_26.0.0(26)_Release"
+          ]
+        },
+        "project": null,
+        "ui_driver": {
+          "backend": "hdc-uitest",
+          "target": null,
+          "architecture": null,
+          "uitest_version": null,
+          "operation_verified": false,
+          "text_input": {
+            "status": "not_probed",
+            "component": null,
+            "endpoint": null,
+            "error": null
+          },
+          "status": "not_probed",
+          "error": null
+        },
+        "processes": 0,
+        "parsers": {
+          "workers": 0,
+          "active": 0,
+          "queued": 0,
+          "input_bytes": 0,
+          "completed": 0,
+          "failed": 0,
+          "spawned": 0,
+          "limits": {
+            "workers": 2,
+            "queue": 16,
+            "bytes": 67108864,
+            "idleMs": 30000,
+            "timeoutMs": 15000
+          }
+        },
+        "ui_cache": {
+          "snapshots": 0,
+          "estimated_bytes": 0,
+          "max_bytes": 67108864,
+          "max_snapshots": 8
+        },
+        "saved_ui_cache": {
+          "entries": 0,
+          "estimated_bytes": 0,
+          "hits": 0,
+          "misses": 0,
+          "evictions": 0,
+          "limits": {
+            "entries": 2,
+            "estimated_bytes": 33554432,
+            "idle_ms": 60000
+          }
+        },
+        "runtime": {
+          "pid": 18762,
+          "cpu": {
+            "user": 409050,
+            "system": 63117
+          },
+          "rss_bytes": 178700288,
+          "retained": {
+            "tasks": 0,
+            "listeners": 0,
+            "connections": 0,
+            "processes": 0,
+            "cache_entries": 0,
+            "workers": 0,
+            "process_starts": 0,
+            "scope": "Owned workflow/parser/LSP work, process listeners and sessions, LSP connections, UI caches and parser workers. This is not a count of all V8 objects or SDK internals."
+          },
+          "sdk": {
+            "process_starts": 0,
+            "processes": 0,
+            "sessions": 0,
+            "pids": [],
+            "listeners": 0
+          }
+        },
+        "recovery_required": [],
+        "validation": "Component detection only. See release evidence for tested platform/device capabilities."
+      }
+    },
+    "workflow_catalog": {
+      "ok": true,
+      "request_id": "ad9ea7ca-ec20-4b5b-936a-8ebd60f7af0f",
+      "data": {
+        "protocol": "native-7",
+        "skill_workflows": {
+          "delivery": "builtin_mcp",
+          "client_skill_installation": false,
+          "workflows": [
+            {
+              "kind": "plan",
+              "description": "Plan and carry out a scoped HarmonyOS task",
+              "skills": [
+                "deveco-native-tools"
+              ],
+              "knowledge": [],
+              "native_workflows": [
+                "project_create",
+                "project_sync",
+                "project_build",
+                "code_diagnose",
+                "build_deploy_verify",
+                "crash_diagnose",
+                "api_compatibility"
+              ],
+              "completion_workflows": [],
+              "guidance": {
+                "planning": "Inspect the captured project, SDK, original requirements and entry routes. Read the included Skill and knowledge before editing. Write the implementation plan and concrete acceptance criteria through skill_workflow write.",
+                "implementing": "Use the client's file editing capability to make the scoped changes. Native operations use the returned MCP tools and workflow schemas. Inspect business results, repair blocking diagnostics and recheck. Record progress without removing the original requirements.",
+                "verifying": "Use the native workflows appropriate to the original acceptance criteria. Read their terminal results and artifacts. Record applicable evidence_run_ids and compare the observations to the requirement. Failed, unrelated or insufficient evidence cannot justify completion."
+              },
+              "phases": [
+                "planning",
+                "implementing",
+                "verifying",
+                "completed",
+                "cancelled"
+              ],
+              "start": {
+                "tool": "skill_workflow",
+                "action": "start",
+                "kind": "plan"
+              },
+              "definition_sha256": "0d7995b21844c2474879c1be7deee4b4adc37c40502ee8e4ce0abe78383adcf8"
+            },
+            {
+              "kind": "debug",
+              "description": "Reproduce, investigate, repair and verify a runtime failure",
+              "skills": [
+                "deveco-runtime-debug",
+                "deveco-native-tools"
+              ],
+              "knowledge": [],
+              "native_workflows": [
+                "crash_diagnose",
+                "code_diagnose",
+                "project_build",
+                "build_deploy_verify"
+              ],
+              "completion_workflows": [
+                "build_deploy_verify",
+                "ui_test",
+                "ui_flow"
+              ],
+              "guidance": {
+                "planning": "Capture the original symptom, app, device and reproduction in notes.md. Read the bundled debugging Skill. Collect bounded crash/log evidence, distinguish facts from hypotheses, and choose the next observation that can distinguish causes.",
+                "implementing": "Use the client's file editing capability to make the scoped changes. Native operations use the returned MCP tools and workflow schemas. Inspect business results, repair blocking diagnostics and recheck. Record progress without removing the original requirements.",
+                "verifying": "Use the native workflows appropriate to the original acceptance criteria. Read their terminal results and artifacts. Record applicable evidence_run_ids and compare the observations to the requirement. Failed, unrelated or insufficient evidence cannot justify completion."
+              },
+              "phases": [
+                "planning",
+                "implementing",
+                "verifying",
+                "completed",
+                "cancelled"
+              ],
+              "start": {
+                "tool": "skill_workflow",
+                "action": "start",
+                "kind": "debug"
+              },
+              "definition_sha256": "35de47fe93cdabbf2e6abaa34566285679728cd3b91aa876dfd2e4586620d4ae"
+            },
+            {
+              "kind": "spec",
+              "description": "Implement a specification with persistent requirements, plan, tasks and evidence",
+              "skills": [
+                "deveco-arkts-standards",
+                "deveco-native-tools"
+              ],
+              "knowledge": [
+                "arkts-grammar-standards/recipes-core"
+              ],
+              "native_workflows": [
+                "project_sync",
+                "code_diagnose",
+                "project_build",
+                "build_deploy_verify"
+              ],
+              "completion_workflows": [
+                "project_build",
+                "build_deploy_verify",
+                "ui_test"
+              ],
+              "guidance": {
+                "planning": "Write spec.md with requirements, user scenarios and acceptance criteria; plan.md with technical context and project structure; tasks.md with checkable work. All documents must be complete before implementing. Read the bundled ArkTS rules before the first edit.",
+                "implementing": "Use the client's file editing capability to make the scoped changes. Native operations use the returned MCP tools and workflow schemas. Inspect business results, repair blocking diagnostics and recheck. Record progress without removing the original requirements.",
+                "verifying": "Use the native workflows appropriate to the original acceptance criteria. Read their terminal results and artifacts. Record applicable evidence_run_ids and compare the observations to the requirement. Failed, unrelated or insufficient evidence cannot justify completion."
+              },
+              "phases": [
+                "planning",
+                "implementing",
+                "verifying",
+                "completed",
+                "cancelled"
+              ],
+              "start": {
+                "tool": "skill_workflow",
+                "action": "start",
+                "kind": "spec"
+              },
+              "definition_sha256": "2c7c3c9db4d050c12d20dec6003b8043138ee407297a69257dc2a18135d73a71"
+            },
+            {
+              "kind": "customize",
+              "description": "Configure a selected MCP client using its actual supported interfaces",
+              "skills": [
+                "deveco-customize-host"
+              ],
+              "knowledge": [],
+              "native_workflows": [],
+              "completion_workflows": [],
+              "guidance": {
+                "planning": "Identify the selected client and the requested configuration change. Inspect its actual supported schema. Record the minimal change, validation and recovery in notes.md. Bundled HarmonyOS Skills already run through MCP; do not install Skill files into the client.",
+                "implementing": "Use the client's file editing capability to make the scoped changes. Native operations use the returned MCP tools and workflow schemas. Inspect business results, repair blocking diagnostics and recheck. Record progress without removing the original requirements.",
+                "verifying": "Use the native workflows appropriate to the original acceptance criteria. Read their terminal results and artifacts. Record applicable evidence_run_ids and compare the observations to the requirement. Failed, unrelated or insufficient evidence cannot justify completion."
+              },
+              "phases": [
+                "planning",
+                "implementing",
+                "verifying",
+                "completed",
+                "cancelled"
+              ],
+              "start": {
+                "tool": "skill_workflow",
+                "action": "start",
+                "kind": "customize"
+              },
+              "definition_sha256": "cfed0e6ba392c91c0e9275ee8ff474ab9e3eb8708427727a4addf6da8d94b626"
+            },
+            {
+              "kind": "arkts",
+              "description": "Implement ArkTS/ArkUI changes using bundled standards and native validation",
+              "skills": [
+                "deveco-arkts-standards"
+              ],
+              "knowledge": [
+                "arkts-grammar-standards/recipes-core"
+              ],
+              "native_workflows": [
+                "code_diagnose",
+                "project_build",
+                "build_deploy_verify"
+              ],
+              "completion_workflows": [
+                "project_build",
+                "build_deploy_verify"
+              ],
+              "guidance": {
+                "planning": "Inspect the captured project, SDK, original requirements and entry routes. Read the included Skill and knowledge before editing. Write the implementation plan and concrete acceptance criteria through skill_workflow write.",
+                "implementing": "Use the client's file editing capability to make the scoped changes. Native operations use the returned MCP tools and workflow schemas. Inspect business results, repair blocking diagnostics and recheck. Record progress without removing the original requirements.",
+                "verifying": "Use the native workflows appropriate to the original acceptance criteria. Read their terminal results and artifacts. Record applicable evidence_run_ids and compare the observations to the requirement. Failed, unrelated or insufficient evidence cannot justify completion."
+              },
+              "phases": [
+                "planning",
+                "implementing",
+                "verifying",
+                "completed",
+                "cancelled"
+              ],
+              "start": {
+                "tool": "skill_workflow",
+                "action": "start",
+                "kind": "arkts"
+              },
+              "definition_sha256": "bda5fcf3488995ad02babe4a940915fb3469aabdd794ded8be54e67dec468c62"
+            },
+            {
+              "kind": "repair",
+              "description": "Repair blocking ArkTS diagnostics, recheck and build",
+              "skills": [
+                "deveco-arkts-errors",
+                "deveco-arkts-standards"
+              ],
+              "knowledge": [
+                "arkts-grammar-standards/recipes-core"
+              ],
+              "native_workflows": [
+                "code_diagnose",
+                "project_build"
+              ],
+              "completion_workflows": [
+                "project_build"
+              ],
+              "guidance": {
+                "planning": "Capture the failing native diagnostic and affected declarations. Search the bundled arkts-error-fixes knowledge and read the matching cases. Record the actual cause and repair plan; retain the original failing evidence.",
+                "implementing": "Use the client's file editing capability to make the scoped changes. Native operations use the returned MCP tools and workflow schemas. Inspect business results, repair blocking diagnostics and recheck. Record progress without removing the original requirements.",
+                "verifying": "Use the native workflows appropriate to the original acceptance criteria. Read their terminal results and artifacts. Record applicable evidence_run_ids and compare the observations to the requirement. Failed, unrelated or insufficient evidence cannot justify completion."
+              },
+              "phases": [
+                "planning",
+                "implementing",
+                "verifying",
+                "completed",
+                "cancelled"
+              ],
+              "start": {
+                "tool": "skill_workflow",
+                "action": "start",
+                "kind": "repair"
+              },
+              "definition_sha256": "d70d0f42cf8aaea1d5f6b63311bfb2c3e20e6303f5db3d3a96cf3609ca95a7e7"
+            },
+            {
+              "kind": "create",
+              "description": "Create an SDK-matched project, implement its launch flow and build it",
+              "skills": [
+                "deveco-project-create",
+                "deveco-arkts-standards"
+              ],
+              "knowledge": [
+                "arkts-grammar-standards/recipes-core"
+              ],
+              "native_workflows": [
+                "project_create",
+                "project_sync",
+                "project_build",
+                "build_deploy_verify"
+              ],
+              "completion_workflows": [
+                "project_build",
+                "build_deploy_verify"
+              ],
+              "guidance": {
+                "planning": "Inspect the captured project, SDK, original requirements and entry routes. Read the included Skill and knowledge before editing. Write the implementation plan and concrete acceptance criteria through skill_workflow write.",
+                "implementing": "Use the client's file editing capability to make the scoped changes. Native operations use the returned MCP tools and workflow schemas. Inspect business results, repair blocking diagnostics and recheck. Record progress without removing the original requirements.",
+                "verifying": "Use the native workflows appropriate to the original acceptance criteria. Read their terminal results and artifacts. Record applicable evidence_run_ids and compare the observations to the requirement. Failed, unrelated or insufficient evidence cannot justify completion."
+              },
+              "phases": [
+                "planning",
+                "implementing",
+                "verifying",
+                "completed",
+                "cancelled"
+              ],
+              "start": {
+                "tool": "skill_workflow",
+                "action": "start",
+                "kind": "create"
+              },
+              "definition_sha256": "c17e9f49b05ed8d11074a89ac0e15eccb6ccd61bb95accbaf32bc3eced396f01"
+            },
+            {
+              "kind": "ui_test",
+              "description": "Execute an original UI test plan with persistent steps, scoped actions and image review",
+              "skills": [
+                "deveco-native-tools",
+                "deveco-runtime-debug"
+              ],
+              "knowledge": [],
+              "native_workflows": [
+                "app_deploy",
+                "build_deploy_verify"
+              ],
+              "completion_workflows": [
+                "ui_test"
+              ],
+              "guidance": {
+                "planning": "Inspect the captured project, SDK, original requirements and entry routes. Read the included Skill and knowledge before editing. Write the implementation plan and concrete acceptance criteria through skill_workflow write.",
+                "implementing": "Use ui_test start/plan/resume with the captured app, target and original test plan. Follow the current step using fresh UI evidence and bounded actions. Check, read the exact review images and submit actual observations via ui_review. Replan when no progress is detected; do not replay uncertain actions.",
+                "verifying": "Every original step must satisfy its native assertion and required image review. Call ui_test finish, read the report and attach that succeeded ui_test run as evidence. Export retained screenshots and logs when requested."
+              },
+              "phases": [
+                "planning",
+                "implementing",
+                "verifying",
+                "completed",
+                "cancelled"
+              ],
+              "start": {
+                "tool": "skill_workflow",
+                "action": "start",
+                "kind": "ui_test"
+              },
+              "definition_sha256": "829beca77a00f973c192fea637ca00b3f0941f1b8261ccb4e79170afd1a082e0"
+            }
+          ]
+        },
+        "workflows": [
+          {
+            "id": "project_create",
+            "description": "Create an SDK-matched project without overwriting a directory.",
+            "capabilities": [
+              "sdk",
+              "templates"
+            ],
+            "completion": "The generated project model and application identity are valid.",
+            "input_schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "object",
+              "properties": {
+                "project_path": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "app_name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128,
+                  "pattern": "^[A-Za-z][A-Za-z0-9_]*(?![\\s\\S])"
+                },
+                "bundle_name": {
+                  "type": "string",
+                  "minLength": 7,
+                  "maxLength": 128,
+                  "pattern": "^[A-Za-z](?:[A-Za-z0-9_]*[A-Za-z0-9])?(?:\\.[A-Za-z0-9](?:[A-Za-z0-9_]*[A-Za-z0-9])?){2,}(?![\\s\\S])"
+                },
+                "sdk_version": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  ]
+                },
+                "compatible_api": {
+                  "description": "Minimum device API; defaults to target_api. Must not exceed the target API.",
+                  "type": "integer",
+                  "minimum": 4,
+                  "maximum": 9007199254740991
+                },
+                "target_api": {
+                  "description": "Target runtime behavior API; defaults to the selected SDK API. Must not exceed the installed compile SDK API.",
+                  "type": "integer",
+                  "minimum": 8,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "project_path",
+                "app_name",
+                "bundle_name",
+                "sdk_version"
+              ],
+              "additionalProperties": false
+            },
+            "resume_input_schema": {
+              "type": "object",
+              "properties": {
+                "action": {
+                  "const": "recheck"
+                }
+              },
+              "required": [
+                "action"
+              ],
+              "additionalProperties": false
+            }
+          },
+          {
+            "id": "project_sync",
+            "description": "Install dependencies, synchronize and verify the native project model.",
+            "capabilities": [
+              "ohpm",
+              "hvigor"
+            ],
+            "completion": "OHPM and Hvigor complete and a current model is present.",
+            "input_schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "object",
+              "properties": {
+                "project_path": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "product": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "module_targets": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  },
+                  "additionalProperties": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  },
+                  "description": "Build target per module, for example {entry: phone, shared: default}. These are Hvigor targets, independent of the HDC device target."
+                },
+                "install": {
+                  "default": true,
+                  "type": "boolean"
+                }
+              },
+              "additionalProperties": false
+            },
+            "resume_input_schema": {
+              "type": "object",
+              "properties": {
+                "action": {
+                  "const": "recheck"
+                }
+              },
+              "required": [
+                "action"
+              ],
+              "additionalProperties": false
+            }
+          },
+          {
+            "id": "project_build",
+            "description": "Optionally sync, run a fresh ArkTS preflight, stop on blocking diagnostics, then build and validate matching package artifacts.",
+            "capabilities": [
+              "hvigor"
+            ],
+            "completion": "Native compilation succeeds and each reported artifact exists with a digest.",
+            "input_schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "object",
+              "properties": {
+                "project_path": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "product": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "module_targets": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  },
+                  "additionalProperties": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  },
+                  "description": "Build target per module, for example {entry: phone, shared: default}. These are Hvigor targets, independent of the HDC device target."
+                },
+                "preflight": {
+                  "default": {
+                    "mode": "check"
+                  },
+                  "description": "Default: run a fresh full-scope ArkTS preflight and stop on blocking diagnostics before Hvigor. A deliberate manual_override requires its reason and is recorded.",
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "mode": {
+                          "type": "string",
+                          "const": "check"
+                        }
+                      },
+                      "required": [
+                        "mode"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "mode": {
+                          "type": "string",
+                          "const": "manual_override"
+                        },
+                        "reason": {
+                          "type": "string",
+                          "minLength": 10,
+                          "maxLength": 1024
+                        }
+                      },
+                      "required": [
+                        "mode",
+                        "reason"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                },
+                "modules": {
+                  "minItems": 1,
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "mode": {
+                  "default": "debug",
+                  "type": "string",
+                  "enum": [
+                    "debug",
+                    "release"
+                  ]
+                },
+                "clean": {
+                  "default": false,
+                  "type": "boolean"
+                },
+                "sync": {
+                  "default": true,
+                  "type": "boolean"
+                },
+                "task": {
+                  "default": "assembleHap",
+                  "type": "string",
+                  "enum": [
+                    "assembleHap",
+                    "assembleHar",
+                    "assembleHsp",
+                    "assembleApp"
+                  ]
+                }
+              },
+              "additionalProperties": false
+            },
+            "resume_input_schema": {
+              "type": "object",
+              "properties": {
+                "action": {
+                  "const": "recheck"
+                }
+              },
+              "required": [
+                "action"
+              ],
+              "additionalProperties": false
+            }
+          },
+          {
+            "id": "app_deploy",
+            "description": "Validate a package, install, launch and inspect application state.",
+            "capabilities": [
+              "hdc"
+            ],
+            "completion": "Installation is acknowledged and the requested application process runs.",
+            "input_schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "object",
+              "properties": {
+                "packages": {
+                  "minItems": 1,
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "path": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "sha256": {
+                        "type": "string",
+                        "pattern": "^[a-f0-9]{64}$"
+                      }
+                    },
+                    "required": [
+                      "path"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "target": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "app": {
+                  "type": "object",
+                  "properties": {
+                    "bundle_name": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z][A-Za-z0-9_.]*$"
+                    },
+                    "module": {
+                      "type": "string",
+                      "maxLength": 16384
+                    },
+                    "ability": {
+                      "type": "string",
+                      "maxLength": 16384
+                    },
+                    "uri": {
+                      "type": "string",
+                      "maxLength": 16384
+                    },
+                    "action": {
+                      "type": "string",
+                      "maxLength": 16384
+                    },
+                    "mime_type": {
+                      "type": "string",
+                      "maxLength": 16384
+                    },
+                    "entities": {
+                      "maxItems": 32,
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "maxLength": 16384
+                      }
+                    },
+                    "parameters": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 256,
+                        "pattern": "^[^-\\s\\0][^\\s\\0]*$"
+                      },
+                      "additionalProperties": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "maxLength": 16384
+                          },
+                          {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 4294967295
+                          },
+                          {
+                            "type": "boolean"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "bundle_name",
+                    "ability"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "packages",
+                "app"
+              ],
+              "additionalProperties": false
+            },
+            "resume_input_schema": {
+              "type": "object",
+              "properties": {
+                "action": {
+                  "const": "recheck"
+                }
+              },
+              "required": [
+                "action"
+              ],
+              "additionalProperties": false
+            }
+          },
+          {
+            "id": "build_deploy_verify",
+            "description": "Check current ArkTS sources, build or hot apply only after preflight, deploy, execute a saved route and verify an explicit UI assertion.",
+            "capabilities": [
+              "hvigor",
+              "hdc",
+              "uitest"
+            ],
+            "completion": "The specified final UI assertion passes on the captured target.",
+            "input_schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "object",
+              "properties": {
+                "project_path": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "product": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "module_targets": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  },
+                  "additionalProperties": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  },
+                  "description": "Build target per module, for example {entry: phone, shared: default}. These are Hvigor targets, independent of the HDC device target."
+                },
+                "preflight": {
+                  "default": {
+                    "mode": "check"
+                  },
+                  "description": "Default: run a fresh full-scope ArkTS preflight and stop on blocking diagnostics before Hvigor. A deliberate manual_override requires its reason and is recorded.",
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "mode": {
+                          "type": "string",
+                          "const": "check"
+                        }
+                      },
+                      "required": [
+                        "mode"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "mode": {
+                          "type": "string",
+                          "const": "manual_override"
+                        },
+                        "reason": {
+                          "type": "string",
+                          "minLength": 10,
+                          "maxLength": 1024
+                        }
+                      },
+                      "required": [
+                        "mode",
+                        "reason"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                },
+                "modules": {
+                  "minItems": 1,
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "mode": {
+                  "default": "debug",
+                  "type": "string",
+                  "enum": [
+                    "debug",
+                    "release"
+                  ]
+                },
+                "clean": {
+                  "default": false,
+                  "type": "boolean"
+                },
+                "sync": {
+                  "default": true,
+                  "type": "boolean"
+                },
+                "target": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "app": {
+                  "type": "object",
+                  "properties": {
+                    "bundle_name": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z][A-Za-z0-9_.]*$"
+                    },
+                    "module": {
+                      "type": "string",
+                      "maxLength": 16384
+                    },
+                    "ability": {
+                      "type": "string",
+                      "maxLength": 16384
+                    },
+                    "uri": {
+                      "type": "string",
+                      "maxLength": 16384
+                    },
+                    "action": {
+                      "type": "string",
+                      "maxLength": 16384
+                    },
+                    "mime_type": {
+                      "type": "string",
+                      "maxLength": 16384
+                    },
+                    "entities": {
+                      "maxItems": 32,
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "maxLength": 16384
+                      }
+                    },
+                    "parameters": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 256,
+                        "pattern": "^[^-\\s\\0][^\\s\\0]*$"
+                      },
+                      "additionalProperties": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "maxLength": 16384
+                          },
+                          {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 4294967295
+                          },
+                          {
+                            "type": "boolean"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "bundle_name",
+                    "ability"
+                  ],
+                  "additionalProperties": false
+                },
+                "assert": {
+                  "type": "object",
+                  "properties": {
+                    "visible": {
+                      "type": "object",
+                      "properties": {
+                        "text": {
+                          "type": "string"
+                        },
+                        "textMode": {
+                          "default": "contains",
+                          "type": "string",
+                          "enum": [
+                            "contains",
+                            "exact"
+                          ]
+                        },
+                        "key": {
+                          "type": "string"
+                        },
+                        "type": {
+                          "type": "string"
+                        },
+                        "node_id": {
+                          "type": "string"
+                        },
+                        "window_id": {
+                          "type": "string"
+                        },
+                        "bundle_name": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "displayId": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "number"
+                            }
+                          ]
+                        },
+                        "checked": {
+                          "type": "boolean"
+                        },
+                        "selected": {
+                          "type": "boolean"
+                        },
+                        "enabled": {
+                          "type": "boolean"
+                        },
+                        "value": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "number"
+                            }
+                          ]
+                        },
+                        "clickableOnly": {
+                          "default": false,
+                          "type": "boolean"
+                        },
+                        "onScreenOnly": {
+                          "default": true,
+                          "type": "boolean"
+                        },
+                        "limit": {
+                          "default": 20,
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 200
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    "hidden": {
+                      "type": "object",
+                      "properties": {
+                        "text": {
+                          "type": "string"
+                        },
+                        "textMode": {
+                          "default": "contains",
+                          "type": "string",
+                          "enum": [
+                            "contains",
+                            "exact"
+                          ]
+                        },
+                        "key": {
+                          "type": "string"
+                        },
+                        "type": {
+                          "type": "string"
+                        },
+                        "node_id": {
+                          "type": "string"
+                        },
+                        "window_id": {
+                          "type": "string"
+                        },
+                        "bundle_name": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "displayId": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "number"
+                            }
+                          ]
+                        },
+                        "checked": {
+                          "type": "boolean"
+                        },
+                        "selected": {
+                          "type": "boolean"
+                        },
+                        "enabled": {
+                          "type": "boolean"
+                        },
+                        "value": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "number"
+                            }
+                          ]
+                        },
+                        "clickableOnly": {
+                          "default": false,
+                          "type": "boolean"
+                        },
+                        "onScreenOnly": {
+                          "default": true,
+                          "type": "boolean"
+                        },
+                        "limit": {
+                          "default": 20,
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 200
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    "timeoutMs": {
+                      "default": 5000,
+                      "type": "integer",
+                      "minimum": 100,
+                      "maximum": 600000
+                    },
+                    "alternates": {
+                      "maxItems": 5,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "text": {
+                            "type": "string"
+                          },
+                          "textMode": {
+                            "default": "contains",
+                            "type": "string",
+                            "enum": [
+                              "contains",
+                              "exact"
+                            ]
+                          },
+                          "key": {
+                            "type": "string"
+                          },
+                          "type": {
+                            "type": "string"
+                          },
+                          "node_id": {
+                            "type": "string"
+                          },
+                          "window_id": {
+                            "type": "string"
+                          },
+                          "bundle_name": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "displayId": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "number"
+                              }
+                            ]
+                          },
+                          "checked": {
+                            "type": "boolean"
+                          },
+                          "selected": {
+                            "type": "boolean"
+                          },
+                          "enabled": {
+                            "type": "boolean"
+                          },
+                          "value": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "number"
+                              }
+                            ]
+                          },
+                          "clickableOnly": {
+                            "default": false,
+                            "type": "boolean"
+                          },
+                          "onScreenOnly": {
+                            "default": true,
+                            "type": "boolean"
+                          },
+                          "limit": {
+                            "default": 20,
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 200
+                          }
+                        },
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "flow_id": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9](?:[a-z0-9_-]{0,62}[a-z0-9])?$"
+                },
+                "variables": {
+                  "default": {},
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                },
+                "hot_reload": {
+                  "default": false,
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "app",
+                "assert"
+              ],
+              "additionalProperties": false
+            },
+            "resume_input_schema": {
+              "type": "object",
+              "properties": {
+                "action": {
+                  "const": "recheck"
+                }
+              },
+              "required": [
+                "action"
+              ],
+              "additionalProperties": false
+            }
+          },
+          {
+            "id": "code_diagnose",
+            "description": "Run requested native diagnostics and associate local rules and cases.",
+            "capabilities": [
+              "arkts"
+            ],
+            "completion": "Requested checks complete with classified diagnostics; this is not compilation proof.",
+            "input_schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "object",
+              "properties": {
+                "project_path": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "product": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "module_targets": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  },
+                  "additionalProperties": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  },
+                  "description": "Build target per module, for example {entry: phone, shared: default}. These are Hvigor targets, independent of the HDC device target."
+                },
+                "files": {
+                  "minItems": 1,
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "checks": {
+                  "default": [
+                    "arkts"
+                  ],
+                  "minItems": 1,
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "arkts",
+                      "linter",
+                      "lsp",
+                      "cpp"
+                    ]
+                  }
+                }
+              },
+              "additionalProperties": false
+            },
+            "resume_input_schema": {
+              "type": "object",
+              "properties": {
+                "action": {
+                  "const": "recheck"
+                }
+              },
+              "required": [
+                "action"
+              ],
+              "additionalProperties": false
+            }
+          },
+          {
+            "id": "crash_diagnose",
+            "description": "Collect bounded crash evidence, parse frames and associate local cases.",
+            "capabilities": [],
+            "completion": "Evidence and parsed findings are reported, including insufficient-evidence status.",
+            "input_schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "object",
+              "properties": {
+                "target": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "log_file": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "log_artifact_id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "log_text": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 32768
+                },
+                "faultlog_name": {
+                  "type": "string",
+                  "maxLength": 255,
+                  "pattern": "^(?:jscrash|cppcrash|appfreeze)-[A-Za-z0-9_.-]+$"
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "crash",
+                    "hilog"
+                  ]
+                },
+                "lines": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 10000
+                },
+                "max_age_minutes": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 525600
+                },
+                "bundle_name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256,
+                  "pattern": "^[A-Za-z0-9_]+(?:\\.[A-Za-z0-9_]+)+$"
+                },
+                "process_hint": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256
+                }
+              },
+              "additionalProperties": false
+            },
+            "resume_input_schema": {
+              "type": "object",
+              "properties": {
+                "action": {
+                  "const": "recheck"
+                }
+              },
+              "required": [
+                "action"
+              ],
+              "additionalProperties": false
+            }
+          },
+          {
+            "id": "api_compatibility",
+            "description": "Validate source/target versions, scan and return native reports.",
+            "capabilities": [
+              "apiscan",
+              "hvigor"
+            ],
+            "completion": "The API scanner completes with reports or an explicit no-change result.",
+            "input_schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "object",
+              "properties": {
+                "project_path": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "product": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "module_targets": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  },
+                  "additionalProperties": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  },
+                  "description": "Build target per module, for example {entry: phone, shared: default}. These are Hvigor targets, independent of the HDC device target."
+                },
+                "source_version": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "target_version": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "files": {
+                  "minItems": 1,
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "modules": {
+                  "minItems": 1,
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "source_version",
+                "target_version"
+              ],
+              "additionalProperties": false
+            },
+            "resume_input_schema": {
+              "type": "object",
+              "properties": {
+                "action": {
+                  "const": "recheck"
+                }
+              },
+              "required": [
+                "action"
+              ],
+              "additionalProperties": false
+            }
+          }
+        ]
+      }
+    },
+    "skill_catalog": {
+      "ok": true,
+      "request_id": "309cf1a1-6a7c-41f9-b139-c6b4a8bfdcf8",
+      "data": {
+        "total": 6,
+        "next_offset": 6,
+        "skills": [
+          {
+            "name": "deveco-arkts-standards",
+            "description": "Write or modify HarmonyOS ArkTS .ets code, port TypeScript, and implement ArkUI components using the selected SDK rules and native checks.",
+            "version": "native-7.2",
+            "upstream": {
+              "url": "https://gitcode.com/openharmony-sig/deveco-code",
+              "commit": "aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a",
+              "path": "packages/opencode/resources/skills/arkts-grammar-standards/SKILL.md",
+              "sha256": "c02bc036141b7ae1bcb235ec69c40d5ad5ab73f24a88da39d83d1ba18ea2372d"
+            },
+            "files": [
+              {
+                "path": "SKILL.md",
+                "sha256": "f06d8e7ec5a44b7cb1ba7f316fe82ed20080c95ffa04b489542954a2c0f3c133"
+              }
+            ],
+            "source": "reviewed_native_adaptation",
+            "delivery": "mcp",
+            "client_installation_required": false,
+            "package_sha256": "ef5746787c7c17ddb1aee0b2ec5bc62a149b0e21dfd7a036516177739bc54aa1"
+          },
+          {
+            "name": "deveco-arkts-errors",
+            "description": "Diagnose and repair ArkTS compiler, linter, import/export, component attribute and type errors using native diagnostics and corresponding error cases.",
+            "version": "native-7.2",
+            "upstream": {
+              "url": "https://gitcode.com/openharmony-sig/deveco-code",
+              "commit": "aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a",
+              "path": "packages/opencode/resources/skills/arkts-error-fixes/SKILL.md",
+              "sha256": "580a0cb8c5d1ef5c53d998569adb9a72277b3e8db761534d1b7c3666d3220718"
+            },
+            "files": [
+              {
+                "path": "SKILL.md",
+                "sha256": "b704e5482ac16c921e8819dfbc13697fbe0643b4fae553f1789816aa358567b6"
+              }
+            ],
+            "source": "reviewed_native_adaptation",
+            "delivery": "mcp",
+            "client_installation_required": false,
+            "package_sha256": "7676c4a8305a59bf8465f15eecb68c0a0ce8badf3d06767b42e57ef0c284c6fc"
+          },
+          {
+            "name": "deveco-runtime-debug",
+            "description": "Investigate HarmonyOS ArkTS crashes, runtime failures and UI regressions using scoped device logs, retained evidence, hypotheses and verified repairs.",
+            "version": "native-7.2",
+            "upstream": {
+              "url": "https://gitcode.com/openharmony-sig/deveco-code",
+              "commit": "aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a",
+              "path": "packages/opencode/resources/skills/arkts-runtime-fix/SKILL.md",
+              "sha256": "7c8d90017bf6f700a560725f962ebdc52cf329f576ab1d082c13283604905e6d"
+            },
+            "files": [
+              {
+                "path": "SKILL.md",
+                "sha256": "81a6692f793c47a232f4d3899f888350fa87e80c0b33c28ef3003201a5b29c59"
+              },
+              {
+                "path": "references/debug-evidence.md",
+                "sha256": "e1dc090a77d75180e962ed30aa7dad87115cef4362802112c00f7112ef66ce54"
+              }
+            ],
+            "source": "reviewed_native_adaptation",
+            "delivery": "mcp",
+            "client_installation_required": false,
+            "package_sha256": "f529b16b6465101718a0c904d379ad0b73cfdb786f08633a00801b4e0d4d0bb9"
+          },
+          {
+            "name": "deveco-project-create",
+            "description": "Create a native HarmonyOS project with SDK-matched templates and implement requested features reachable from its launch page.",
+            "version": "native-7.2",
+            "upstream": {
+              "url": "https://gitcode.com/openharmony-sig/deveco-code",
+              "commit": "aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a",
+              "path": "packages/opencode/resources/skills/deveco-create-project/SKILL.md",
+              "sha256": "01846dd766bee4b69dfbca280e71a113bb799a47e2ecbee2f95512ebd0cbcf26"
+            },
+            "files": [
+              {
+                "path": "SKILL.md",
+                "sha256": "2a4acd0b18b2c3cd931ea864b6d682d14f2b5a6e9710426704343ff5f576eeec"
+              }
+            ],
+            "source": "reviewed_native_adaptation",
+            "delivery": "mcp",
+            "client_installation_required": false,
+            "package_sha256": "21aed0e1e622f88503278de69a5f35be6d3c02a73fadafc908fffcd65076d27d"
+          },
+          {
+            "name": "deveco-native-tools",
+            "description": "Use native HarmonyOS MCP for device and emulator management, signing, UI inspection/control, natural-language UI tests, evidence recovery and HarmonyOS Skill management.",
+            "version": "native-7.2",
+            "upstream": {
+              "url": "https://gitcode.com/openharmony-sig/deveco-code",
+              "commit": "aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a",
+              "path": "packages/opencode/resources/skills/deveco-cli/SKILL.md",
+              "sha256": "5402476093c5238ef466619f3971d21d54edba494ebc424e2e6581cb2b427ac7"
+            },
+            "files": [
+              {
+                "path": "SKILL.md",
+                "sha256": "daaace0ef975ec290dc977a91b31cb05692cbeaaf54002bc4b26b55a56ca933b"
+              },
+              {
+                "path": "references/ui-testing.md",
+                "sha256": "8b0a276457378683727c1a73cf8eda49d5543ae670aaeae78a077cc340fd77f7"
+              }
+            ],
+            "source": "reviewed_native_adaptation",
+            "delivery": "mcp",
+            "client_installation_required": false,
+            "package_sha256": "596a1281bbd6828d8a187863efb56bf081b940b59a1937a4299d5359b5e50967"
+          },
+          {
+            "name": "deveco-customize-host",
+            "description": "Configure a selected AI client's HarmonyOS MCP connection and project instructions using its supported interfaces and a persistent MCP workflow.",
+            "version": "native-7.2",
+            "upstream": {
+              "url": "https://gitcode.com/openharmony-sig/deveco-code",
+              "commit": "aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a",
+              "path": "packages/opencode/resources/skills/customize-deveco/SKILL.md",
+              "sha256": "a0cafa6989e3d4ba9b11d177bab576c67e0eefa364266ad328c58d4267fdb25c"
+            },
+            "files": [
+              {
+                "path": "SKILL.md",
+                "sha256": "590c583da635850efd83165433ed2215738fd75264aaff1592f27ff0bc6cb6ad"
+              },
+              {
+                "path": "references/customization.md",
+                "sha256": "366666d3e61d4b2b06bca320bd36128ca0d9f7170b2583d2905b08d805906cce"
+              }
+            ],
+            "source": "reviewed_native_adaptation",
+            "delivery": "mcp",
+            "client_installation_required": false,
+            "package_sha256": "9aa8f71710286a6fa7ecf609cbbb4a22f68a6d48ad444d7702e99715376c0918"
+          }
+        ]
+      }
+    },
+    "skill_workflow_catalog": {
+      "ok": true,
+      "request_id": "fa2284fa-f530-41d0-ad44-b7d7502329d3",
+      "data": {
+        "delivery": "builtin_mcp",
+        "client_skill_installation": false,
+        "workflows": [
+          {
+            "kind": "plan",
+            "description": "Plan and carry out a scoped HarmonyOS task",
+            "skills": [
+              "deveco-native-tools"
+            ],
+            "knowledge": [],
+            "native_workflows": [
+              "project_create",
+              "project_sync",
+              "project_build",
+              "code_diagnose",
+              "build_deploy_verify",
+              "crash_diagnose",
+              "api_compatibility"
+            ],
+            "completion_workflows": [],
+            "guidance": {
+              "planning": "Inspect the captured project, SDK, original requirements and entry routes. Read the included Skill and knowledge before editing. Write the implementation plan and concrete acceptance criteria through skill_workflow write.",
+              "implementing": "Use the client's file editing capability to make the scoped changes. Native operations use the returned MCP tools and workflow schemas. Inspect business results, repair blocking diagnostics and recheck. Record progress without removing the original requirements.",
+              "verifying": "Use the native workflows appropriate to the original acceptance criteria. Read their terminal results and artifacts. Record applicable evidence_run_ids and compare the observations to the requirement. Failed, unrelated or insufficient evidence cannot justify completion."
+            },
+            "phases": [
+              "planning",
+              "implementing",
+              "verifying",
+              "completed",
+              "cancelled"
+            ],
+            "start": {
+              "tool": "skill_workflow",
+              "action": "start",
+              "kind": "plan"
+            },
+            "definition_sha256": "0d7995b21844c2474879c1be7deee4b4adc37c40502ee8e4ce0abe78383adcf8"
+          },
+          {
+            "kind": "debug",
+            "description": "Reproduce, investigate, repair and verify a runtime failure",
+            "skills": [
+              "deveco-runtime-debug",
+              "deveco-native-tools"
+            ],
+            "knowledge": [],
+            "native_workflows": [
+              "crash_diagnose",
+              "code_diagnose",
+              "project_build",
+              "build_deploy_verify"
+            ],
+            "completion_workflows": [
+              "build_deploy_verify",
+              "ui_test",
+              "ui_flow"
+            ],
+            "guidance": {
+              "planning": "Capture the original symptom, app, device and reproduction in notes.md. Read the bundled debugging Skill. Collect bounded crash/log evidence, distinguish facts from hypotheses, and choose the next observation that can distinguish causes.",
+              "implementing": "Use the client's file editing capability to make the scoped changes. Native operations use the returned MCP tools and workflow schemas. Inspect business results, repair blocking diagnostics and recheck. Record progress without removing the original requirements.",
+              "verifying": "Use the native workflows appropriate to the original acceptance criteria. Read their terminal results and artifacts. Record applicable evidence_run_ids and compare the observations to the requirement. Failed, unrelated or insufficient evidence cannot justify completion."
+            },
+            "phases": [
+              "planning",
+              "implementing",
+              "verifying",
+              "completed",
+              "cancelled"
+            ],
+            "start": {
+              "tool": "skill_workflow",
+              "action": "start",
+              "kind": "debug"
+            },
+            "definition_sha256": "35de47fe93cdabbf2e6abaa34566285679728cd3b91aa876dfd2e4586620d4ae"
+          },
+          {
+            "kind": "spec",
+            "description": "Implement a specification with persistent requirements, plan, tasks and evidence",
+            "skills": [
+              "deveco-arkts-standards",
+              "deveco-native-tools"
+            ],
+            "knowledge": [
+              "arkts-grammar-standards/recipes-core"
+            ],
+            "native_workflows": [
+              "project_sync",
+              "code_diagnose",
+              "project_build",
+              "build_deploy_verify"
+            ],
+            "completion_workflows": [
+              "project_build",
+              "build_deploy_verify",
+              "ui_test"
+            ],
+            "guidance": {
+              "planning": "Write spec.md with requirements, user scenarios and acceptance criteria; plan.md with technical context and project structure; tasks.md with checkable work. All documents must be complete before implementing. Read the bundled ArkTS rules before the first edit.",
+              "implementing": "Use the client's file editing capability to make the scoped changes. Native operations use the returned MCP tools and workflow schemas. Inspect business results, repair blocking diagnostics and recheck. Record progress without removing the original requirements.",
+              "verifying": "Use the native workflows appropriate to the original acceptance criteria. Read their terminal results and artifacts. Record applicable evidence_run_ids and compare the observations to the requirement. Failed, unrelated or insufficient evidence cannot justify completion."
+            },
+            "phases": [
+              "planning",
+              "implementing",
+              "verifying",
+              "completed",
+              "cancelled"
+            ],
+            "start": {
+              "tool": "skill_workflow",
+              "action": "start",
+              "kind": "spec"
+            },
+            "definition_sha256": "2c7c3c9db4d050c12d20dec6003b8043138ee407297a69257dc2a18135d73a71"
+          },
+          {
+            "kind": "customize",
+            "description": "Configure a selected MCP client using its actual supported interfaces",
+            "skills": [
+              "deveco-customize-host"
+            ],
+            "knowledge": [],
+            "native_workflows": [],
+            "completion_workflows": [],
+            "guidance": {
+              "planning": "Identify the selected client and the requested configuration change. Inspect its actual supported schema. Record the minimal change, validation and recovery in notes.md. Bundled HarmonyOS Skills already run through MCP; do not install Skill files into the client.",
+              "implementing": "Use the client's file editing capability to make the scoped changes. Native operations use the returned MCP tools and workflow schemas. Inspect business results, repair blocking diagnostics and recheck. Record progress without removing the original requirements.",
+              "verifying": "Use the native workflows appropriate to the original acceptance criteria. Read their terminal results and artifacts. Record applicable evidence_run_ids and compare the observations to the requirement. Failed, unrelated or insufficient evidence cannot justify completion."
+            },
+            "phases": [
+              "planning",
+              "implementing",
+              "verifying",
+              "completed",
+              "cancelled"
+            ],
+            "start": {
+              "tool": "skill_workflow",
+              "action": "start",
+              "kind": "customize"
+            },
+            "definition_sha256": "cfed0e6ba392c91c0e9275ee8ff474ab9e3eb8708427727a4addf6da8d94b626"
+          },
+          {
+            "kind": "arkts",
+            "description": "Implement ArkTS/ArkUI changes using bundled standards and native validation",
+            "skills": [
+              "deveco-arkts-standards"
+            ],
+            "knowledge": [
+              "arkts-grammar-standards/recipes-core"
+            ],
+            "native_workflows": [
+              "code_diagnose",
+              "project_build",
+              "build_deploy_verify"
+            ],
+            "completion_workflows": [
+              "project_build",
+              "build_deploy_verify"
+            ],
+            "guidance": {
+              "planning": "Inspect the captured project, SDK, original requirements and entry routes. Read the included Skill and knowledge before editing. Write the implementation plan and concrete acceptance criteria through skill_workflow write.",
+              "implementing": "Use the client's file editing capability to make the scoped changes. Native operations use the returned MCP tools and workflow schemas. Inspect business results, repair blocking diagnostics and recheck. Record progress without removing the original requirements.",
+              "verifying": "Use the native workflows appropriate to the original acceptance criteria. Read their terminal results and artifacts. Record applicable evidence_run_ids and compare the observations to the requirement. Failed, unrelated or insufficient evidence cannot justify completion."
+            },
+            "phases": [
+              "planning",
+              "implementing",
+              "verifying",
+              "completed",
+              "cancelled"
+            ],
+            "start": {
+              "tool": "skill_workflow",
+              "action": "start",
+              "kind": "arkts"
+            },
+            "definition_sha256": "bda5fcf3488995ad02babe4a940915fb3469aabdd794ded8be54e67dec468c62"
+          },
+          {
+            "kind": "repair",
+            "description": "Repair blocking ArkTS diagnostics, recheck and build",
+            "skills": [
+              "deveco-arkts-errors",
+              "deveco-arkts-standards"
+            ],
+            "knowledge": [
+              "arkts-grammar-standards/recipes-core"
+            ],
+            "native_workflows": [
+              "code_diagnose",
+              "project_build"
+            ],
+            "completion_workflows": [
+              "project_build"
+            ],
+            "guidance": {
+              "planning": "Capture the failing native diagnostic and affected declarations. Search the bundled arkts-error-fixes knowledge and read the matching cases. Record the actual cause and repair plan; retain the original failing evidence.",
+              "implementing": "Use the client's file editing capability to make the scoped changes. Native operations use the returned MCP tools and workflow schemas. Inspect business results, repair blocking diagnostics and recheck. Record progress without removing the original requirements.",
+              "verifying": "Use the native workflows appropriate to the original acceptance criteria. Read their terminal results and artifacts. Record applicable evidence_run_ids and compare the observations to the requirement. Failed, unrelated or insufficient evidence cannot justify completion."
+            },
+            "phases": [
+              "planning",
+              "implementing",
+              "verifying",
+              "completed",
+              "cancelled"
+            ],
+            "start": {
+              "tool": "skill_workflow",
+              "action": "start",
+              "kind": "repair"
+            },
+            "definition_sha256": "d70d0f42cf8aaea1d5f6b63311bfb2c3e20e6303f5db3d3a96cf3609ca95a7e7"
+          },
+          {
+            "kind": "create",
+            "description": "Create an SDK-matched project, implement its launch flow and build it",
+            "skills": [
+              "deveco-project-create",
+              "deveco-arkts-standards"
+            ],
+            "knowledge": [
+              "arkts-grammar-standards/recipes-core"
+            ],
+            "native_workflows": [
+              "project_create",
+              "project_sync",
+              "project_build",
+              "build_deploy_verify"
+            ],
+            "completion_workflows": [
+              "project_build",
+              "build_deploy_verify"
+            ],
+            "guidance": {
+              "planning": "Inspect the captured project, SDK, original requirements and entry routes. Read the included Skill and knowledge before editing. Write the implementation plan and concrete acceptance criteria through skill_workflow write.",
+              "implementing": "Use the client's file editing capability to make the scoped changes. Native operations use the returned MCP tools and workflow schemas. Inspect business results, repair blocking diagnostics and recheck. Record progress without removing the original requirements.",
+              "verifying": "Use the native workflows appropriate to the original acceptance criteria. Read their terminal results and artifacts. Record applicable evidence_run_ids and compare the observations to the requirement. Failed, unrelated or insufficient evidence cannot justify completion."
+            },
+            "phases": [
+              "planning",
+              "implementing",
+              "verifying",
+              "completed",
+              "cancelled"
+            ],
+            "start": {
+              "tool": "skill_workflow",
+              "action": "start",
+              "kind": "create"
+            },
+            "definition_sha256": "c17e9f49b05ed8d11074a89ac0e15eccb6ccd61bb95accbaf32bc3eced396f01"
+          },
+          {
+            "kind": "ui_test",
+            "description": "Execute an original UI test plan with persistent steps, scoped actions and image review",
+            "skills": [
+              "deveco-native-tools",
+              "deveco-runtime-debug"
+            ],
+            "knowledge": [],
+            "native_workflows": [
+              "app_deploy",
+              "build_deploy_verify"
+            ],
+            "completion_workflows": [
+              "ui_test"
+            ],
+            "guidance": {
+              "planning": "Inspect the captured project, SDK, original requirements and entry routes. Read the included Skill and knowledge before editing. Write the implementation plan and concrete acceptance criteria through skill_workflow write.",
+              "implementing": "Use ui_test start/plan/resume with the captured app, target and original test plan. Follow the current step using fresh UI evidence and bounded actions. Check, read the exact review images and submit actual observations via ui_review. Replan when no progress is detected; do not replay uncertain actions.",
+              "verifying": "Every original step must satisfy its native assertion and required image review. Call ui_test finish, read the report and attach that succeeded ui_test run as evidence. Export retained screenshots and logs when requested."
+            },
+            "phases": [
+              "planning",
+              "implementing",
+              "verifying",
+              "completed",
+              "cancelled"
+            ],
+            "start": {
+              "tool": "skill_workflow",
+              "action": "start",
+              "kind": "ui_test"
+            },
+            "definition_sha256": "829beca77a00f973c192fea637ca00b3f0941f1b8261ccb4e79170afd1a082e0"
+          }
+        ]
+      }
+    }
+  },
+  "tool_metadata": [
+    {
+      "name": "mcp__deveco_tool__app_signature",
+      "description": "Use workflow_catalog for fixed multi-step tasks. Before writing or modifying the first .ets file in a task, use harmony_knowledge to read arkts-grammar-standards/recipes-core and consult the matching ArkTS or ArkUI references; review the Top-5 ArkTS traps before each additional .ets file. Keep project entry-page and routing declarations consistent with the selected module and product. After code changes, run applicable diagnostics first, then project_build, then an explicit verification step; only an explicit successful final assertion verifies UI outcomes. All HarmonyOS knowledge, Skills and guided workflow definitions are bundled in this MCP. Use them directly through tools; never install Skill files into the AI client. Large results are referenced artifacts. Use skill_workflow catalog/start for builtin plan/debug/spec/customize/arkts/repair/create/ui_test workflows. Each read/update returns current-phase Skill instructions, bundled knowledge, next tool actions and completion gates. Keep the run_id and revision, execute the indicated native MCP workflows, then attach applicable evidence. skill_manage catalog/read loads additional bundled references over MCP. For natural-language UI plans use ui_test: capture scopes, keep original requirements, execute bounded actions, check, read exact review images and complete ui_review before finish. On unchanged state inspect and replan; command acceptance alone never completes a test. Capture-only requests use ui_snapshot mode=image. Build workflows run a fresh full ArkTS preflight by default. Repair blocking diagnostics and recheck after changes; an explicit manual_override needs a recorded reason. Use workflow_run capacity/export/cleanup_plan/cleanup_apply for retained-state recovery instead of bypassing MCP deployment.\n\nUse native SDK signing tools and developer cloud certificate/profile management. Mutations return a persistent run_id; use workflow_run for status, resume, cancellation and artifact reads. configure reads a private JSON descriptor from file, creates a new material directory at output, and selects options.name for the current product; existing configurations are preserved.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__deveco_tool__app_signature(args: {\n  action: \"inspect\" | \"configure\" | \"keypair\" | \"csr\" | \"sign\" | \"verify\" | \"certificates\" | \"certificate_create\" | \"certificate_delete\" | \"profile_create\" | \"profile_delete\" | \"devices\" | \"device_register\";\n  file?: string;\n  // Build target per module, for example {entry: phone, shared: default}. These are Hvigor targets, independent of the HDC device target.\n  module_targets?: { [key: string]: string; };\n  options?: { [key: string]: string; };\n  output?: string;\n  product?: string;\n  project_path?: string;\n  request_key?: string;\n  team_id?: string;\n}): Promise<CallToolResult<{ data?: unknown; error?: { code: string; details?: unknown; message: string; retryable: boolean; }; ok: boolean; request_id: string; }>>; };\n```"
+    },
+    {
+      "name": "mcp__deveco_tool__arkts_check",
+      "description": "Use workflow_catalog for fixed multi-step tasks. Before writing or modifying the first .ets file in a task, use harmony_knowledge to read arkts-grammar-standards/recipes-core and consult the matching ArkTS or ArkUI references; review the Top-5 ArkTS traps before each additional .ets file. Keep project entry-page and routing declarations consistent with the selected module and product. After code changes, run applicable diagnostics first, then project_build, then an explicit verification step; only an explicit successful final assertion verifies UI outcomes. All HarmonyOS knowledge, Skills and guided workflow definitions are bundled in this MCP. Use them directly through tools; never install Skill files into the AI client. Large results are referenced artifacts. Use skill_workflow catalog/start for builtin plan/debug/spec/customize/arkts/repair/create/ui_test workflows. Each read/update returns current-phase Skill instructions, bundled knowledge, next tool actions and completion gates. Keep the run_id and revision, execute the indicated native MCP workflows, then attach applicable evidence. skill_manage catalog/read loads additional bundled references over MCP. For natural-language UI plans use ui_test: capture scopes, keep original requirements, execute bounded actions, check, read exact review images and complete ui_review before finish. On unchanged state inspect and replan; command acceptance alone never completes a test. Capture-only requests use ui_snapshot mode=image. Build workflows run a fresh full ArkTS preflight by default. Repair blocking diagnostics and recheck after changes; an explicit manual_override needs a recorded reason. Use workflow_run capacity/export/cleanup_plan/cleanup_apply for retained-state recovery instead of bypassing MCP deployment.\n\nSDK-backed ArkTS static preflight. This does not compile or validate a device build.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__deveco_tool__arkts_check(args: {\n  files?: Array<string>;\n  // Build target per module, for example {entry: phone, shared: default}. These are Hvigor targets, independent of the HDC device target.\n  module_targets?: { [key: string]: string; };\n  product?: string;\n  project_path?: string;\n}): Promise<CallToolResult<{ data?: unknown; error?: { code: string; details?: unknown; message: string; retryable: boolean; }; ok: boolean; request_id: string; }>>; };\n```"
+    },
+    {
+      "name": "mcp__deveco_tool__check_cpp_files",
+      "description": "Use workflow_catalog for fixed multi-step tasks. Before writing or modifying the first .ets file in a task, use harmony_knowledge to read arkts-grammar-standards/recipes-core and consult the matching ArkTS or ArkUI references; review the Top-5 ArkTS traps before each additional .ets file. Keep project entry-page and routing declarations consistent with the selected module and product. After code changes, run applicable diagnostics first, then project_build, then an explicit verification step; only an explicit successful final assertion verifies UI outcomes. All HarmonyOS knowledge, Skills and guided workflow definitions are bundled in this MCP. Use them directly through tools; never install Skill files into the AI client. Large results are referenced artifacts. Use skill_workflow catalog/start for builtin plan/debug/spec/customize/arkts/repair/create/ui_test workflows. Each read/update returns current-phase Skill instructions, bundled knowledge, next tool actions and completion gates. Keep the run_id and revision, execute the indicated native MCP workflows, then attach applicable evidence. skill_manage catalog/read loads additional bundled references over MCP. For natural-language UI plans use ui_test: capture scopes, keep original requirements, execute bounded actions, check, read exact review images and complete ui_review before finish. On unchanged state inspect and replan; command acceptance alone never completes a test. Capture-only requests use ui_snapshot mode=image. Build workflows run a fresh full ArkTS preflight by default. Repair blocking diagnostics and recheck after changes; an explicit manual_override needs a recorded reason. Use workflow_run capacity/export/cleanup_plan/cleanup_apply for retained-state recovery instead of bypassing MCP deployment.\n\nQuery clangd using native CMake compilation commands. Select an ABI when multiple architectures are built.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__deveco_tool__check_cpp_files(args: {\n  abi?: string;\n  files: Array<string>;\n  mode?: \"debug\" | \"release\";\n  // Build target per module, for example {entry: phone, shared: default}. These are Hvigor targets, independent of the HDC device target.\n  module_targets?: { [key: string]: string; };\n  product?: string;\n  project_path?: string;\n}): Promise<CallToolResult<{ data?: unknown; error?: { code: string; details?: unknown; message: string; retryable: boolean; }; ok: boolean; request_id: string; }>>; };\n```"
+    },
+    {
+      "name": "mcp__deveco_tool__code_lint",
+      "description": "Use workflow_catalog for fixed multi-step tasks. Before writing or modifying the first .ets file in a task, use harmony_knowledge to read arkts-grammar-standards/recipes-core and consult the matching ArkTS or ArkUI references; review the Top-5 ArkTS traps before each additional .ets file. Keep project entry-page and routing declarations consistent with the selected module and product. After code changes, run applicable diagnostics first, then project_build, then an explicit verification step; only an explicit successful final assertion verifies UI outcomes. All HarmonyOS knowledge, Skills and guided workflow definitions are bundled in this MCP. Use them directly through tools; never install Skill files into the AI client. Large results are referenced artifacts. Use skill_workflow catalog/start for builtin plan/debug/spec/customize/arkts/repair/create/ui_test workflows. Each read/update returns current-phase Skill instructions, bundled knowledge, next tool actions and completion gates. Keep the run_id and revision, execute the indicated native MCP workflows, then attach applicable evidence. skill_manage catalog/read loads additional bundled references over MCP. For natural-language UI plans use ui_test: capture scopes, keep original requirements, execute bounded actions, check, read exact review images and complete ui_review before finish. On unchanged state inspect and replan; command acceptance alone never completes a test. Capture-only requests use ui_snapshot mode=image. Build workflows run a fresh full ArkTS preflight by default. Repair blocking diagnostics and recheck after changes; an explicit manual_override needs a recorded reason. Use workflow_run capacity/export/cleanup_plan/cleanup_apply for retained-state recovery instead of bypassing MCP deployment.\n\nRun the native Code Linter with a bounded issue preview and complete report artifact. Fixing requires fix=true; incremental requires a Git working tree. Counts cover the complete report, not only the preview.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__deveco_tool__code_lint(args: {\n  config_path?: string;\n  fix?: boolean;\n  incremental?: boolean;\n  limit?: number;\n  // Build target per module, for example {entry: phone, shared: default}. These are Hvigor targets, independent of the HDC device target.\n  module_targets?: { [key: string]: string; };\n  path?: string;\n  product?: string;\n  project_path?: string;\n}): Promise<CallToolResult<{ data?: unknown; error?: { code: string; details?: unknown; message: string; retryable: boolean; }; ok: boolean; request_id: string; }>>; };\n```"
+    },
+    {
+      "name": "mcp__deveco_tool__deveco_doctor",
+      "description": "Use workflow_catalog for fixed multi-step tasks. Before writing or modifying the first .ets file in a task, use harmony_knowledge to read arkts-grammar-standards/recipes-core and consult the matching ArkTS or ArkUI references; review the Top-5 ArkTS traps before each additional .ets file. Keep project entry-page and routing declarations consistent with the selected module and product. After code changes, run applicable diagnostics first, then project_build, then an explicit verification step; only an explicit successful final assertion verifies UI outcomes. All HarmonyOS knowledge, Skills and guided workflow definitions are bundled in this MCP. Use them directly through tools; never install Skill files into the AI client. Large results are referenced artifacts. Use skill_workflow catalog/start for builtin plan/debug/spec/customize/arkts/repair/create/ui_test workflows. Each read/update returns current-phase Skill instructions, bundled knowledge, next tool actions and completion gates. Keep the run_id and revision, execute the indicated native MCP workflows, then attach applicable evidence. skill_manage catalog/read loads additional bundled references over MCP. For natural-language UI plans use ui_test: capture scopes, keep original requirements, execute bounded actions, check, read exact review images and complete ui_review before finish. On unchanged state inspect and replan; command acceptance alone never completes a test. Capture-only requests use ui_snapshot mode=image. Build workflows run a fresh full ArkTS preflight by default. Repair blocking diagnostics and recheck after changes; an explicit manual_override needs a recorded reason. Use workflow_run capacity/export/cleanup_plan/cleanup_apply for retained-state recovery instead of bypassing MCP deployment.\n\nInspect runtime, component paths, versions and available capabilities. With explicit target, read device architecture/UiTest version and native text component availability without starting a daemon or injecting input. Without target no device is probed. Detection does not imply a verified UI operation or completed platform validation.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__deveco_tool__deveco_doctor(args: {\n  // Build target per module, for example {entry: phone, shared: default}. These are Hvigor targets, independent of the HDC device target.\n  module_targets?: { [key: string]: string; };\n  product?: string;\n  project_path?: string;\n  target?: string;\n}): Promise<CallToolResult<{ data?: unknown; error?: { code: string; details?: unknown; message: string; retryable: boolean; }; ok: boolean; request_id: string; }>>; };\n```"
+    },
+    {
+      "name": "mcp__deveco_tool__deveco_restart",
+      "description": "Use workflow_catalog for fixed multi-step tasks. Before writing or modifying the first .ets file in a task, use harmony_knowledge to read arkts-grammar-standards/recipes-core and consult the matching ArkTS or ArkUI references; review the Top-5 ArkTS traps before each additional .ets file. Keep project entry-page and routing declarations consistent with the selected module and product. After code changes, run applicable diagnostics first, then project_build, then an explicit verification step; only an explicit successful final assertion verifies UI outcomes. All HarmonyOS knowledge, Skills and guided workflow definitions are bundled in this MCP. Use them directly through tools; never install Skill files into the AI client. Large results are referenced artifacts. Use skill_workflow catalog/start for builtin plan/debug/spec/customize/arkts/repair/create/ui_test workflows. Each read/update returns current-phase Skill instructions, bundled knowledge, next tool actions and completion gates. Keep the run_id and revision, execute the indicated native MCP workflows, then attach applicable evidence. skill_manage catalog/read loads additional bundled references over MCP. For natural-language UI plans use ui_test: capture scopes, keep original requirements, execute bounded actions, check, read exact review images and complete ui_review before finish. On unchanged state inspect and replan; command acceptance alone never completes a test. Capture-only requests use ui_snapshot mode=image. Build workflows run a fresh full ArkTS preflight by default. Repair blocking diagnostics and recheck after changes; an explicit manual_override needs a recorded reason. Use workflow_run capacity/export/cleanup_plan/cleanup_apply for retained-state recovery instead of bypassing MCP deployment.\n\nGracefully interrupt running tasks and close owned sessions, then start a new runtime worker.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__deveco_tool__deveco_restart(args: {}): Promise<CallToolResult<{ data?: unknown; error?: { code: string; details?: unknown; message: string; retryable: boolean; }; ok: boolean; request_id: string; }>>; };\n```"
+    },
+    {
+      "name": "mcp__deveco_tool__device_info",
+      "description": "Use workflow_catalog for fixed multi-step tasks. Before writing or modifying the first .ets file in a task, use harmony_knowledge to read arkts-grammar-standards/recipes-core and consult the matching ArkTS or ArkUI references; review the Top-5 ArkTS traps before each additional .ets file. Keep project entry-page and routing declarations consistent with the selected module and product. After code changes, run applicable diagnostics first, then project_build, then an explicit verification step; only an explicit successful final assertion verifies UI outcomes. All HarmonyOS knowledge, Skills and guided workflow definitions are bundled in this MCP. Use them directly through tools; never install Skill files into the AI client. Large results are referenced artifacts. Use skill_workflow catalog/start for builtin plan/debug/spec/customize/arkts/repair/create/ui_test workflows. Each read/update returns current-phase Skill instructions, bundled knowledge, next tool actions and completion gates. Keep the run_id and revision, execute the indicated native MCP workflows, then attach applicable evidence. skill_manage catalog/read loads additional bundled references over MCP. For natural-language UI plans use ui_test: capture scopes, keep original requirements, execute bounded actions, check, read exact review images and complete ui_review before finish. On unchanged state inspect and replan; command acceptance alone never completes a test. Capture-only requests use ui_snapshot mode=image. Build workflows run a fresh full ArkTS preflight by default. Repair blocking diagnostics and recheck after changes; an explicit manual_override needs a recorded reason. Use workflow_run capacity/export/cleanup_plan/cleanup_apply for retained-state recovery instead of bypassing MCP deployment.\n\nList reachable device IDs or read one device's name, type and OS properties. Missing/truncated properties are explicit; kind_source identifies transport-address inference. A complete inventory is required before selecting a device.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__deveco_tool__device_info(args: { list?: boolean; target?: string; }): Promise<CallToolResult<{ data?: unknown; error?: { code: string; details?: unknown; message: string; retryable: boolean; }; ok: boolean; request_id: string; }>>; };\n```"
+    },
+    {
+      "name": "mcp__deveco_tool__emulator_manage",
+      "description": "Use workflow_catalog for fixed multi-step tasks. Before writing or modifying the first .ets file in a task, use harmony_knowledge to read arkts-grammar-standards/recipes-core and consult the matching ArkTS or ArkUI references; review the Top-5 ArkTS traps before each additional .ets file. Keep project entry-page and routing declarations consistent with the selected module and product. After code changes, run applicable diagnostics first, then project_build, then an explicit verification step; only an explicit successful final assertion verifies UI outcomes. All HarmonyOS knowledge, Skills and guided workflow definitions are bundled in this MCP. Use them directly through tools; never install Skill files into the AI client. Large results are referenced artifacts. Use skill_workflow catalog/start for builtin plan/debug/spec/customize/arkts/repair/create/ui_test workflows. Each read/update returns current-phase Skill instructions, bundled knowledge, next tool actions and completion gates. Keep the run_id and revision, execute the indicated native MCP workflows, then attach applicable evidence. skill_manage catalog/read loads additional bundled references over MCP. For natural-language UI plans use ui_test: capture scopes, keep original requirements, execute bounded actions, check, read exact review images and complete ui_review before finish. On unchanged state inspect and replan; command acceptance alone never completes a test. Capture-only requests use ui_snapshot mode=image. Build workflows run a fresh full ArkTS preflight by default. Repair blocking diagnostics and recheck after changes; an explicit manual_override needs a recorded reason. Use workflow_run capacity/export/cleanup_plan/cleanup_apply for retained-state recovery instead of bypassing MCP deployment.\n\nManage native emulator instances, images and licenses. license_view reads installed agreement files without changing acceptance. license_accept requires the exact reviewed license_sha256. Mutations return a persistent run_id for workflow_run status/resume/cancel; instance and image mutations verify inventory.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__deveco_tool__emulator_manage(args: { action: \"list\" | \"start\" | \"stop\" | \"create\" | \"delete\" | \"images\" | \"image_install\" | \"image_uninstall\" | \"license_view\" | \"license_accept\"; device_type?: string; downloaded?: boolean; license_sha256?: string; name?: string; os_version?: string; request_key?: string; target?: string; }): Promise<CallToolResult<{ data?: unknown; error?: { code: string; details?: unknown; message: string; retryable: boolean; }; ok: boolean; request_id: string; }>>; };\n```"
+    },
+    {
+      "name": "mcp__deveco_tool__emulator_scenario",
+      "description": "Use workflow_catalog for fixed multi-step tasks. Before writing or modifying the first .ets file in a task, use harmony_knowledge to read arkts-grammar-standards/recipes-core and consult the matching ArkTS or ArkUI references; review the Top-5 ArkTS traps before each additional .ets file. Keep project entry-page and routing declarations consistent with the selected module and product. After code changes, run applicable diagnostics first, then project_build, then an explicit verification step; only an explicit successful final assertion verifies UI outcomes. All HarmonyOS knowledge, Skills and guided workflow definitions are bundled in this MCP. Use them directly through tools; never install Skill files into the AI client. Large results are referenced artifacts. Use skill_workflow catalog/start for builtin plan/debug/spec/customize/arkts/repair/create/ui_test workflows. Each read/update returns current-phase Skill instructions, bundled knowledge, next tool actions and completion gates. Keep the run_id and revision, execute the indicated native MCP workflows, then attach applicable evidence. skill_manage catalog/read loads additional bundled references over MCP. For natural-language UI plans use ui_test: capture scopes, keep original requirements, execute bounded actions, check, read exact review images and complete ui_review before finish. On unchanged state inspect and replan; command acceptance alone never completes a test. Capture-only requests use ui_snapshot mode=image. Build workflows run a fresh full ArkTS preflight by default. Repair blocking diagnostics and recheck after changes; an explicit manual_override needs a recorded reason. Use workflow_run capacity/export/cleanup_plan/cleanup_apply for retained-state recovery instead of bypassing MCP deployment.\n\nControl a running modern emulator as a persistent job returning run_id; use workflow_run for status/resume/cancel. Range and operation fields are checked before SDK calls; native help must declare the selected capability. Command acceptance does not prove application sensor state.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__deveco_tool__emulator_scenario(args: { action: \"shake\" | \"power\" | \"rotation\" | \"volume\" | \"folded_state\" | \"battery\" | \"battery_status\" | \"gps\" | \"outdoor_running\" | \"outdoor_cycling\" | \"driving_navigation\" | \"sensor\"; direction?: \"left\" | \"right\" | \"up\" | \"down\"; key?: \"longitude\" | \"latitude\" | \"altitude\" | \"bearing\" | \"light\" | \"humidity\" | \"temperature\" | \"steps\" | \"heartrate\"; name: string; request_key?: string; state?: \"open\" | \"vertical-open\" | \"half-open\" | \"close\" | \"single\" | \"double\" | \"triple\" | \"left-folded-right-half-folded\" | \"left-half-folded-right-expanded\" | \"left-expanded-right-folded\" | \"left-half-folded-right-folded\" | \"left-expanded-right-half-folded\" | \"left-half-folded-right-half-folded\"; target: string; value?: number; }): Promise<CallToolResult<{ data?: unknown; error?: { code: string; details?: unknown; message: string; retryable: boolean; }; ok: boolean; request_id: string; }>>; };\n```"
+    },
+    {
+      "name": "mcp__deveco_tool__harmony_auth",
+      "description": "Use workflow_catalog for fixed multi-step tasks. Before writing or modifying the first .ets file in a task, use harmony_knowledge to read arkts-grammar-standards/recipes-core and consult the matching ArkTS or ArkUI references; review the Top-5 ArkTS traps before each additional .ets file. Keep project entry-page and routing declarations consistent with the selected module and product. After code changes, run applicable diagnostics first, then project_build, then an explicit verification step; only an explicit successful final assertion verifies UI outcomes. All HarmonyOS knowledge, Skills and guided workflow definitions are bundled in this MCP. Use them directly through tools; never install Skill files into the AI client. Large results are referenced artifacts. Use skill_workflow catalog/start for builtin plan/debug/spec/customize/arkts/repair/create/ui_test workflows. Each read/update returns current-phase Skill instructions, bundled knowledge, next tool actions and completion gates. Keep the run_id and revision, execute the indicated native MCP workflows, then attach applicable evidence. skill_manage catalog/read loads additional bundled references over MCP. For natural-language UI plans use ui_test: capture scopes, keep original requirements, execute bounded actions, check, read exact review images and complete ui_review before finish. On unchanged state inspect and replan; command acceptance alone never completes a test. Capture-only requests use ui_snapshot mode=image. Build workflows run a fresh full ArkTS preflight by default. Repair blocking diagnostics and recheck after changes; an explicit manual_override needs a recorded reason. Use workflow_run capacity/export/cleanup_plan/cleanup_apply for retained-state recovery instead of bypassing MCP deployment.\n\nExplicit browser login, status, logout and developer teams. Developer signing and CodeGenie knowledge credentials are isolated.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__deveco_tool__harmony_auth(args: { action: \"login\" | \"status\" | \"logout\" | \"teams\"; open_browser?: boolean; provider: \"developer\" | \"codegenie\"; }): Promise<CallToolResult<{ data?: unknown; error?: { code: string; details?: unknown; message: string; retryable: boolean; }; ok: boolean; request_id: string; }>>; };\n```"
+    },
+    {
+      "name": "mcp__deveco_tool__harmony_knowledge",
+      "description": "Use workflow_catalog for fixed multi-step tasks. Before writing or modifying the first .ets file in a task, use harmony_knowledge to read arkts-grammar-standards/recipes-core and consult the matching ArkTS or ArkUI references; review the Top-5 ArkTS traps before each additional .ets file. Keep project entry-page and routing declarations consistent with the selected module and product. After code changes, run applicable diagnostics first, then project_build, then an explicit verification step; only an explicit successful final assertion verifies UI outcomes. All HarmonyOS knowledge, Skills and guided workflow definitions are bundled in this MCP. Use them directly through tools; never install Skill files into the AI client. Large results are referenced artifacts. Use skill_workflow catalog/start for builtin plan/debug/spec/customize/arkts/repair/create/ui_test workflows. Each read/update returns current-phase Skill instructions, bundled knowledge, next tool actions and completion gates. Keep the run_id and revision, execute the indicated native MCP workflows, then attach applicable evidence. skill_manage catalog/read loads additional bundled references over MCP. For natural-language UI plans use ui_test: capture scopes, keep original requirements, execute bounded actions, check, read exact review images and complete ui_review before finish. On unchanged state inspect and replan; command acceptance alone never completes a test. Capture-only requests use ui_snapshot mode=image. Build workflows run a fresh full ArkTS preflight by default. Repair blocking diagnostics and recheck after changes; an explicit manual_override needs a recorded reason. Use workflow_run capacity/export/cleanup_plan/cleanup_apply for retained-state recovery instead of bypassing MCP deployment.\n\nSearch local HarmonyOS documentation and rule/case resources. kind=docs catalog returns the six catalog names and paged documents; catalog filters local docs catalog/search. Read pages UTF-16 characters (default 16384); catalog/search pages at most 100 entries. Cloud search requires source=cloud and a CodeGenie login.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__deveco_tool__harmony_knowledge(args: { action: \"catalog\" | \"search\" | \"read\"; catalog?: \"all\" | \"harmonyos-guides\" | \"harmonyos-references\" | \"best-practices\" | \"harmonyos-faqs\" | \"harmonyos-releases\" | \"harmonyos-roadmap\"; id?: string; kind?: \"rules\" | \"docs\"; limit?: number; offset?: number; query?: string; source?: \"local\" | \"cloud\"; }): Promise<CallToolResult<{ data?: unknown; error?: { code: string; details?: unknown; message: string; retryable: boolean; }; ok: boolean; request_id: string; }>>; };\n```"
+    },
+    {
+      "name": "mcp__deveco_tool__hdc_log",
+      "description": "Use workflow_catalog for fixed multi-step tasks. Before writing or modifying the first .ets file in a task, use harmony_knowledge to read arkts-grammar-standards/recipes-core and consult the matching ArkTS or ArkUI references; review the Top-5 ArkTS traps before each additional .ets file. Keep project entry-page and routing declarations consistent with the selected module and product. After code changes, run applicable diagnostics first, then project_build, then an explicit verification step; only an explicit successful final assertion verifies UI outcomes. All HarmonyOS knowledge, Skills and guided workflow definitions are bundled in this MCP. Use them directly through tools; never install Skill files into the AI client. Large results are referenced artifacts. Use skill_workflow catalog/start for builtin plan/debug/spec/customize/arkts/repair/create/ui_test workflows. Each read/update returns current-phase Skill instructions, bundled knowledge, next tool actions and completion gates. Keep the run_id and revision, execute the indicated native MCP workflows, then attach applicable evidence. skill_manage catalog/read loads additional bundled references over MCP. For natural-language UI plans use ui_test: capture scopes, keep original requirements, execute bounded actions, check, read exact review images and complete ui_review before finish. On unchanged state inspect and replan; command acceptance alone never completes a test. Capture-only requests use ui_snapshot mode=image. Build workflows run a fresh full ArkTS preflight by default. Repair blocking diagnostics and recheck after changes; an explicit manual_override needs a recorded reason. Use workflow_run capacity/export/cleanup_plan/cleanup_apply for retained-state recovery instead of bypassing MCP deployment.\n\nCollect bounded Hilog/crash evidence (contains matches literal rendered Hilog lines), probe recent faultlogs using device time, fetch an exact faultlog name, or explicitly clear the default app/core Hilog buffers. Full retained output uses artifacts; truncated evidence is identified.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__deveco_tool__hdc_log(args: { action?: \"collect\" | \"probe\" | \"fetch\" | \"clear\"; bundle_name?: string; contains?: string; faultlog_name?: string; kind?: \"hilog\" | \"crash\"; limit?: number; lines?: number; max_age_minutes?: number; target?: string; }): Promise<CallToolResult<{ data?: unknown; error?: { code: string; details?: unknown; message: string; retryable: boolean; }; ok: boolean; request_id: string; }>>; };\n```"
+    },
+    {
+      "name": "mcp__deveco_tool__hot_reload",
+      "description": "Use workflow_catalog for fixed multi-step tasks. Before writing or modifying the first .ets file in a task, use harmony_knowledge to read arkts-grammar-standards/recipes-core and consult the matching ArkTS or ArkUI references; review the Top-5 ArkTS traps before each additional .ets file. Keep project entry-page and routing declarations consistent with the selected module and product. After code changes, run applicable diagnostics first, then project_build, then an explicit verification step; only an explicit successful final assertion verifies UI outcomes. All HarmonyOS knowledge, Skills and guided workflow definitions are bundled in this MCP. Use them directly through tools; never install Skill files into the AI client. Large results are referenced artifacts. Use skill_workflow catalog/start for builtin plan/debug/spec/customize/arkts/repair/create/ui_test workflows. Each read/update returns current-phase Skill instructions, bundled knowledge, next tool actions and completion gates. Keep the run_id and revision, execute the indicated native MCP workflows, then attach applicable evidence. skill_manage catalog/read loads additional bundled references over MCP. For natural-language UI plans use ui_test: capture scopes, keep original requirements, execute bounded actions, check, read exact review images and complete ui_review before finish. On unchanged state inspect and replan; command acceptance alone never completes a test. Capture-only requests use ui_snapshot mode=image. Build workflows run a fresh full ArkTS preflight by default. Repair blocking diagnostics and recheck after changes; an explicit manual_override needs a recorded reason. Use workflow_run capacity/export/cleanup_plan/cleanup_apply for retained-state recovery instead of bypassing MCP deployment.\n\nStart, inspect, apply or stop a native Hvigor watch session. Start and apply return a persistent run_id: inspect/resume/cancel with workflow_run. It builds and signs HQF patches and verifies quickfix receipts.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__deveco_tool__hot_reload(args: {\n  action: \"start\" | \"status\" | \"apply\" | \"stop\";\n  app?: { ability: string; action?: string; bundle_name: string; entities?: Array<string>; mime_type?: string; module?: string; parameters?: { [key: string]: string | number | boolean; }; uri?: string; };\n  files?: Array<string>;\n  // Build target per module, for example {entry: phone, shared: default}. These are Hvigor targets, independent of the HDC device target.\n  module_targets?: { [key: string]: string; };\n  modules?: Array<string>;\n  product?: string;\n  project_path?: string;\n  request_key?: string;\n  target?: string;\n}): Promise<CallToolResult<{ data?: unknown; error?: { code: string; details?: unknown; message: string; retryable: boolean; }; ok: boolean; request_id: string; }>>; };\n```"
+    },
+    {
+      "name": "mcp__deveco_tool__lsp",
+      "description": "Use workflow_catalog for fixed multi-step tasks. Before writing or modifying the first .ets file in a task, use harmony_knowledge to read arkts-grammar-standards/recipes-core and consult the matching ArkTS or ArkUI references; review the Top-5 ArkTS traps before each additional .ets file. Keep project entry-page and routing declarations consistent with the selected module and product. After code changes, run applicable diagnostics first, then project_build, then an explicit verification step; only an explicit successful final assertion verifies UI outcomes. All HarmonyOS knowledge, Skills and guided workflow definitions are bundled in this MCP. Use them directly through tools; never install Skill files into the AI client. Large results are referenced artifacts. Use skill_workflow catalog/start for builtin plan/debug/spec/customize/arkts/repair/create/ui_test workflows. Each read/update returns current-phase Skill instructions, bundled knowledge, next tool actions and completion gates. Keep the run_id and revision, execute the indicated native MCP workflows, then attach applicable evidence. skill_manage catalog/read loads additional bundled references over MCP. For natural-language UI plans use ui_test: capture scopes, keep original requirements, execute bounded actions, check, read exact review images and complete ui_review before finish. On unchanged state inspect and replan; command acceptance alone never completes a test. Capture-only requests use ui_snapshot mode=image. Build workflows run a fresh full ArkTS preflight by default. Repair blocking diagnostics and recheck after changes; an explicit manual_override needs a recorded reason. Use workflow_run capacity/export/cleanup_plan/cleanup_apply for retained-state recovery instead of bypassing MCP deployment.\n\nNative language queries: hover, definition, implementation, references, diagnostics, documentSymbol, workspaceSymbol, prepareCallHierarchy, incomingCalls, outgoingCalls. language defaults to arkts; cpp uses SDK clangd and requires a built CMake translation unit with selected ABI/mode. file selects the synchronized document/server in the chosen project. Positions are zero based UTF-16 offsets; document/workspace symbols do not need positions. workspaceSymbol uses query (empty requests all, bounded results). Call queries re-prepare current source and use item_index (default 0); prepareCallHierarchy lists selectable items. Unsupported capabilities and oversized results are explicit errors, never text-search approximations.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__deveco_tool__lsp(args: {\n  abi?: string;\n  action: \"hover\" | \"definition\" | \"implementation\" | \"references\" | \"diagnostics\" | \"documentSymbol\" | \"workspaceSymbol\" | \"prepareCallHierarchy\" | \"incomingCalls\" | \"outgoingCalls\";\n  character?: number;\n  file: string;\n  includeDeclaration?: boolean;\n  item_index?: number;\n  language?: \"arkts\" | \"cpp\";\n  line?: number;\n  mode?: \"debug\" | \"release\";\n  // Build target per module, for example {entry: phone, shared: default}. These are Hvigor targets, independent of the HDC device target.\n  module_targets?: { [key: string]: string; };\n  product?: string;\n  project_path?: string;\n  query?: string;\n}): Promise<CallToolResult<{ data?: unknown; error?: { code: string; details?: unknown; message: string; retryable: boolean; }; ok: boolean; request_id: string; }>>; };\n```"
+    },
+    {
+      "name": "mcp__deveco_tool__skill_manage",
+      "description": "Use workflow_catalog for fixed multi-step tasks. Before writing or modifying the first .ets file in a task, use harmony_knowledge to read arkts-grammar-standards/recipes-core and consult the matching ArkTS or ArkUI references; review the Top-5 ArkTS traps before each additional .ets file. Keep project entry-page and routing declarations consistent with the selected module and product. After code changes, run applicable diagnostics first, then project_build, then an explicit verification step; only an explicit successful final assertion verifies UI outcomes. All HarmonyOS knowledge, Skills and guided workflow definitions are bundled in this MCP. Use them directly through tools; never install Skill files into the AI client. Large results are referenced artifacts. Use skill_workflow catalog/start for builtin plan/debug/spec/customize/arkts/repair/create/ui_test workflows. Each read/update returns current-phase Skill instructions, bundled knowledge, next tool actions and completion gates. Keep the run_id and revision, execute the indicated native MCP workflows, then attach applicable evidence. skill_manage catalog/read loads additional bundled references over MCP. For natural-language UI plans use ui_test: capture scopes, keep original requirements, execute bounded actions, check, read exact review images and complete ui_review before finish. On unchanged state inspect and replan; command acceptance alone never completes a test. Capture-only requests use ui_snapshot mode=image. Build workflows run a fresh full ArkTS preflight by default. Repair blocking diagnostics and recheck after changes; an explicit manual_override needs a recorded reason. Use workflow_run capacity/export/cleanup_plan/cleanup_apply for retained-state recovery instead of bypassing MCP deployment.\n\nDiscover/search bundled HarmonyOS Skills and read their full instructions and references over MCP. catalog filters by query; read needs name and optional catalogued file (default SKILL.md). Content includes provenance and digests. All Skills are inside the MCP package; no client directory, installation or activation is required. Use skill_workflow to follow their builtin workflows.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__deveco_tool__skill_manage(args: { action: \"catalog\"; limit?: number; offset?: number; query?: string; } | { action: \"read\"; file?: string; name: string; }): Promise<CallToolResult<{ data?: unknown; error?: { code: string; details?: unknown; message: string; retryable: boolean; }; ok: boolean; request_id: string; }>>; };\n```"
+    },
+    {
+      "name": "mcp__deveco_tool__skill_workflow",
+      "description": "Use workflow_catalog for fixed multi-step tasks. Before writing or modifying the first .ets file in a task, use harmony_knowledge to read arkts-grammar-standards/recipes-core and consult the matching ArkTS or ArkUI references; review the Top-5 ArkTS traps before each additional .ets file. Keep project entry-page and routing declarations consistent with the selected module and product. After code changes, run applicable diagnostics first, then project_build, then an explicit verification step; only an explicit successful final assertion verifies UI outcomes. All HarmonyOS knowledge, Skills and guided workflow definitions are bundled in this MCP. Use them directly through tools; never install Skill files into the AI client. Large results are referenced artifacts. Use skill_workflow catalog/start for builtin plan/debug/spec/customize/arkts/repair/create/ui_test workflows. Each read/update returns current-phase Skill instructions, bundled knowledge, next tool actions and completion gates. Keep the run_id and revision, execute the indicated native MCP workflows, then attach applicable evidence. skill_manage catalog/read loads additional bundled references over MCP. For natural-language UI plans use ui_test: capture scopes, keep original requirements, execute bounded actions, check, read exact review images and complete ui_review before finish. On unchanged state inspect and replan; command acceptance alone never completes a test. Capture-only requests use ui_snapshot mode=image. Build workflows run a fresh full ArkTS preflight by default. Repair blocking diagnostics and recheck after changes; an explicit manual_override needs a recorded reason. Use workflow_run capacity/export/cleanup_plan/cleanup_apply for retained-state recovery instead of bypassing MCP deployment.\n\nRun MCP-owned builtin Skill workflows without any client Skill installation. catalog lists plan/debug/spec/customize/arkts/repair/create/ui_test recipes. start captures kind, absolute project_path and original objective; create accepts a new destination, other kinds require an existing directory. Optional device captures target/bundle_name and is required for ui_test; each state response supplies the current phase's bundled Skills, knowledge, next MCP actions and completion gates. write persists plan.md/spec.md/tasks.md/notes.md with expected_revision. transition follows planning, implementing, verifying, completed or cancelled, recording rationale and applicable evidence_run_ids from native workflows. Completion evidence must match the captured project/device/app and start after the latest implementation phase. Referenced native results stay protected from cleanup and are included in exports. read/list survive restart. Definitions are pinned; changed resources require a fresh run. publish writes a selected document to a new file. Client reasoning, project editing and image understanding are used when the indicated step requires them; no specific AI client is required.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__deveco_tool__skill_workflow(args: { action: \"catalog\"; } | { action: \"start\"; device?: { bundle_name: string; target: string; }; kind: \"plan\" | \"debug\" | \"spec\" | \"customize\" | \"arkts\" | \"repair\" | \"create\" | \"ui_test\"; objective: string; project_path: string; request_key?: string; } | { action: \"list\"; limit?: number; offset?: number; } | { action: \"read\"; run_id: string; } | { action: \"write\"; content: string; expected_revision: number; name: \"plan.md\" | \"spec.md\" | \"tasks.md\" | \"notes.md\"; run_id: string; } | { action: \"transition\"; evidence_run_ids?: Array<string>; expected_revision: number; phase: \"planning\" | \"implementing\" | \"verifying\" | \"completed\" | \"cancelled\"; rationale: string; run_id: string; } | { action: \"publish\"; expected_revision: number; file: string; name: \"plan.md\" | \"spec.md\" | \"tasks.md\" | \"notes.md\"; run_id: string; }): Promise<CallToolResult<{ data?: unknown; error?: { code: string; details?: unknown; message: string; retryable: boolean; }; ok: boolean; request_id: string; }>>; };\n```"
+    },
+    {
+      "name": "mcp__deveco_tool__switch_cwd",
+      "description": "Use workflow_catalog for fixed multi-step tasks. Before writing or modifying the first .ets file in a task, use harmony_knowledge to read arkts-grammar-standards/recipes-core and consult the matching ArkTS or ArkUI references; review the Top-5 ArkTS traps before each additional .ets file. Keep project entry-page and routing declarations consistent with the selected module and product. After code changes, run applicable diagnostics first, then project_build, then an explicit verification step; only an explicit successful final assertion verifies UI outcomes. All HarmonyOS knowledge, Skills and guided workflow definitions are bundled in this MCP. Use them directly through tools; never install Skill files into the AI client. Large results are referenced artifacts. Use skill_workflow catalog/start for builtin plan/debug/spec/customize/arkts/repair/create/ui_test workflows. Each read/update returns current-phase Skill instructions, bundled knowledge, next tool actions and completion gates. Keep the run_id and revision, execute the indicated native MCP workflows, then attach applicable evidence. skill_manage catalog/read loads additional bundled references over MCP. For natural-language UI plans use ui_test: capture scopes, keep original requirements, execute bounded actions, check, read exact review images and complete ui_review before finish. On unchanged state inspect and replan; command acceptance alone never completes a test. Capture-only requests use ui_snapshot mode=image. Build workflows run a fresh full ArkTS preflight by default. Repair blocking diagnostics and recheck after changes; an explicit manual_override needs a recorded reason. Use workflow_run capacity/export/cleanup_plan/cleanup_apply for retained-state recovery instead of bypassing MCP deployment.\n\nSelect the default project for future requests. Submitted workflows keep their captured context.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__deveco_tool__switch_cwd(args: { project_path: string; }): Promise<CallToolResult<{ data?: unknown; error?: { code: string; details?: unknown; message: string; retryable: boolean; }; ok: boolean; request_id: string; }>>; };\n```"
+    },
+    {
+      "name": "mcp__deveco_tool__ui_control",
+      "description": "Use workflow_catalog for fixed multi-step tasks. Before writing or modifying the first .ets file in a task, use harmony_knowledge to read arkts-grammar-standards/recipes-core and consult the matching ArkTS or ArkUI references; review the Top-5 ArkTS traps before each additional .ets file. Keep project entry-page and routing declarations consistent with the selected module and product. After code changes, run applicable diagnostics first, then project_build, then an explicit verification step; only an explicit successful final assertion verifies UI outcomes. All HarmonyOS knowledge, Skills and guided workflow definitions are bundled in this MCP. Use them directly through tools; never install Skill files into the AI client. Large results are referenced artifacts. Use skill_workflow catalog/start for builtin plan/debug/spec/customize/arkts/repair/create/ui_test workflows. Each read/update returns current-phase Skill instructions, bundled knowledge, next tool actions and completion gates. Keep the run_id and revision, execute the indicated native MCP workflows, then attach applicable evidence. skill_manage catalog/read loads additional bundled references over MCP. For natural-language UI plans use ui_test: capture scopes, keep original requirements, execute bounded actions, check, read exact review images and complete ui_review before finish. On unchanged state inspect and replan; command acceptance alone never completes a test. Capture-only requests use ui_snapshot mode=image. Build workflows run a fresh full ArkTS preflight by default. Repair blocking diagnostics and recheck after changes; an explicit manual_override needs a recorded reason. Use workflow_run capacity/export/cleanup_plan/cleanup_apply for retained-state recovery instead of bypassing MCP deployment.\n\nSend a validated UiTest touch, keyboard, focused-text or mouse operation. text inputs at the currently focused editable field without clicking; it requires an explicit window id/bundle_name and exactly one focused field. Mouse operations require a scoped selector or explicit window and use native Driver RPC. Use selector or absolute x/y; point/gesture percentages are relative to a unique selector or explicit window id/bundle_name. Display follows the selected node/window; display_id may be explicit. Accepted commands still require verify_ui.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__deveco_tool__ui_control(args: { operation: { action: \"click\" | \"doubleClick\" | \"longClick\" | \"swipe\" | \"fling\" | \"drag\" | \"dircFling\" | \"keyEvent\" | \"inputText\" | \"text\" | \"mouseClick\" | \"mouseDoubleClick\" | \"mouseLongClick\" | \"mouseMoveTo\" | \"mouseScroll\" | \"mouseMoveWithTrack\" | \"mouseDrag\"; button?: \"left\" | \"right\" | \"middle\"; direction?: number; display_id?: number; gesture?: { fromXPercent: number; fromYPercent: number; stepLength?: number; toXPercent: number; toYPercent: number; velocity?: number; }; keys?: Array<string>; mouse_scroll_speed?: number; point?: { xPercent: number; yPercent: number; }; scroll_down?: boolean; selector?: { bundle_name?: string; checked?: boolean; clickableOnly?: boolean; displayId?: string | number; enabled?: boolean; key?: string; limit?: number; node_id?: string; onScreenOnly?: boolean; selected?: boolean; text?: string; textMode?: \"contains\" | \"exact\"; type?: string; value?: string | number; window_id?: string; }; step_length?: number; text?: string; ticks?: number; velocity?: number; window?: { bundle_name?: string; id?: string; }; x?: number; x2?: number; y?: number; y2?: number; }; target?: string; }): Promise<CallToolResult<{ data?: unknown; error?: { code: string; details?: unknown; message: string; retryable: boolean; }; ok: boolean; request_id: string; }>>; };\n```"
+    },
+    {
+      "name": "mcp__deveco_tool__ui_find",
+      "description": "Use workflow_catalog for fixed multi-step tasks. Before writing or modifying the first .ets file in a task, use harmony_knowledge to read arkts-grammar-standards/recipes-core and consult the matching ArkTS or ArkUI references; review the Top-5 ArkTS traps before each additional .ets file. Keep project entry-page and routing declarations consistent with the selected module and product. After code changes, run applicable diagnostics first, then project_build, then an explicit verification step; only an explicit successful final assertion verifies UI outcomes. All HarmonyOS knowledge, Skills and guided workflow definitions are bundled in this MCP. Use them directly through tools; never install Skill files into the AI client. Large results are referenced artifacts. Use skill_workflow catalog/start for builtin plan/debug/spec/customize/arkts/repair/create/ui_test workflows. Each read/update returns current-phase Skill instructions, bundled knowledge, next tool actions and completion gates. Keep the run_id and revision, execute the indicated native MCP workflows, then attach applicable evidence. skill_manage catalog/read loads additional bundled references over MCP. For natural-language UI plans use ui_test: capture scopes, keep original requirements, execute bounded actions, check, read exact review images and complete ui_review before finish. On unchanged state inspect and replan; command acceptance alone never completes a test. Capture-only requests use ui_snapshot mode=image. Build workflows run a fresh full ArkTS preflight by default. Repair blocking diagnostics and recheck after changes; an explicit manual_override needs a recorded reason. Use workflow_run capacity/export/cleanup_plan/cleanup_apply for retained-state recovery instead of bypassing MCP deployment.\n\nFind UI nodes by stable selectors and explicit state, window or display. For offline queries provide tree_file (absolute path) or tree_artifact_id and tree_format=uitest or nodes. Saved trees never verify current device state and cannot be combined with target or snapshot_id. Multiple matches are reported.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__deveco_tool__ui_find(args: { selector?: { bundle_name?: string; checked?: boolean; clickableOnly?: boolean; displayId?: string | number; enabled?: boolean; key?: string; limit?: number; node_id?: string; onScreenOnly?: boolean; selected?: boolean; text?: string; textMode?: \"contains\" | \"exact\"; type?: string; value?: string | number; window_id?: string; }; selectors?: Array<{ id: string; selector: { bundle_name?: string; checked?: boolean; clickableOnly?: boolean; displayId?: string | number; enabled?: boolean; key?: string; limit?: number; node_id?: string; onScreenOnly?: boolean; selected?: boolean; text?: string; textMode?: \"contains\" | \"exact\"; type?: string; value?: string | number; window_id?: string; }; }>; snapshot_id?: string; target?: string; tree_artifact_id?: string; tree_file?: string; tree_format?: \"uitest\" | \"nodes\"; }): Promise<CallToolResult<{ data?: unknown; error?: { code: string; details?: unknown; message: string; retryable: boolean; }; ok: boolean; request_id: string; }>>; };\n```"
+    },
+    {
+      "name": "mcp__deveco_tool__ui_flow",
+      "description": "Use workflow_catalog for fixed multi-step tasks. Before writing or modifying the first .ets file in a task, use harmony_knowledge to read arkts-grammar-standards/recipes-core and consult the matching ArkTS or ArkUI references; review the Top-5 ArkTS traps before each additional .ets file. Keep project entry-page and routing declarations consistent with the selected module and product. After code changes, run applicable diagnostics first, then project_build, then an explicit verification step; only an explicit successful final assertion verifies UI outcomes. All HarmonyOS knowledge, Skills and guided workflow definitions are bundled in this MCP. Use them directly through tools; never install Skill files into the AI client. Large results are referenced artifacts. Use skill_workflow catalog/start for builtin plan/debug/spec/customize/arkts/repair/create/ui_test workflows. Each read/update returns current-phase Skill instructions, bundled knowledge, next tool actions and completion gates. Keep the run_id and revision, execute the indicated native MCP workflows, then attach applicable evidence. skill_manage catalog/read loads additional bundled references over MCP. For natural-language UI plans use ui_test: capture scopes, keep original requirements, execute bounded actions, check, read exact review images and complete ui_review before finish. On unchanged state inspect and replan; command acceptance alone never completes a test. Capture-only requests use ui_snapshot mode=image. Build workflows run a fresh full ArkTS preflight by default. Repair blocking diagnostics and recheck after changes; an explicit manual_override needs a recorded reason. Use workflow_run capacity/export/cleanup_plan/cleanup_apply for retained-state recovery instead of bypassing MCP deployment.\n\nInspect declared app routes and saved flows. Run/navigate/record_start persist tasks; use workflow_run for status, resume and cancel. Navigate selects one route, flow ID or goal. Routes require assert; saved flows keep their original assertion. An unmatched goal starts a recording at one exported entry (home, mainElement, then unique ability), returning navigation=recording and recording_id; no replay inputs or assertion are accepted at this point. Ambiguous entries/goals never execute. Record_start needs id, name and ability route. Wait for needs_input, then ui_tap/ui_control records accepted actions. Record_stop needs recording_id and assert; saving follows verification. Input text becomes secret variables; selector repairs require the original assertion to pass.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__deveco_tool__ui_flow(args: unknown): Promise<CallToolResult<{ data?: unknown; error?: { code: string; details?: unknown; message: string; retryable: boolean; }; ok: boolean; request_id: string; }>>; };\n```"
+    },
+    {
+      "name": "mcp__deveco_tool__ui_inspect",
+      "description": "Use workflow_catalog for fixed multi-step tasks. Before writing or modifying the first .ets file in a task, use harmony_knowledge to read arkts-grammar-standards/recipes-core and consult the matching ArkTS or ArkUI references; review the Top-5 ArkTS traps before each additional .ets file. Keep project entry-page and routing declarations consistent with the selected module and product. After code changes, run applicable diagnostics first, then project_build, then an explicit verification step; only an explicit successful final assertion verifies UI outcomes. All HarmonyOS knowledge, Skills and guided workflow definitions are bundled in this MCP. Use them directly through tools; never install Skill files into the AI client. Large results are referenced artifacts. Use skill_workflow catalog/start for builtin plan/debug/spec/customize/arkts/repair/create/ui_test workflows. Each read/update returns current-phase Skill instructions, bundled knowledge, next tool actions and completion gates. Keep the run_id and revision, execute the indicated native MCP workflows, then attach applicable evidence. skill_manage catalog/read loads additional bundled references over MCP. For natural-language UI plans use ui_test: capture scopes, keep original requirements, execute bounded actions, check, read exact review images and complete ui_review before finish. On unchanged state inspect and replan; command acceptance alone never completes a test. Capture-only requests use ui_snapshot mode=image. Build workflows run a fresh full ArkTS preflight by default. Repair blocking diagnostics and recheck after changes; an explicit manual_override needs a recorded reason. Use workflow_run capacity/export/cleanup_plan/cleanup_apply for retained-state recovery instead of bypassing MCP deployment.\n\nInspect UI tree metadata, matching nodes and optional screenshot evidence.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__deveco_tool__ui_inspect(args: { capture?: { display_id?: number; format?: \"jpeg\" | \"png\"; if_changed_from?: string; width?: number; }; display_id?: string | number; limit?: number; max_depth?: number; offset?: number; screenshot?: boolean; selector?: { bundle_name?: string; checked?: boolean; clickableOnly?: boolean; displayId?: string | number; enabled?: boolean; key?: string; limit?: number; node_id?: string; onScreenOnly?: boolean; selected?: boolean; text?: string; textMode?: \"contains\" | \"exact\"; type?: string; value?: string | number; window_id?: string; }; target?: string; window_id?: string; }): Promise<CallToolResult<{ data?: unknown; error?: { code: string; details?: unknown; message: string; retryable: boolean; }; ok: boolean; request_id: string; }>>; };\n```"
+    },
+    {
+      "name": "mcp__deveco_tool__ui_observe",
+      "description": "Use workflow_catalog for fixed multi-step tasks. Before writing or modifying the first .ets file in a task, use harmony_knowledge to read arkts-grammar-standards/recipes-core and consult the matching ArkTS or ArkUI references; review the Top-5 ArkTS traps before each additional .ets file. Keep project entry-page and routing declarations consistent with the selected module and product. After code changes, run applicable diagnostics first, then project_build, then an explicit verification step; only an explicit successful final assertion verifies UI outcomes. All HarmonyOS knowledge, Skills and guided workflow definitions are bundled in this MCP. Use them directly through tools; never install Skill files into the AI client. Large results are referenced artifacts. Use skill_workflow catalog/start for builtin plan/debug/spec/customize/arkts/repair/create/ui_test workflows. Each read/update returns current-phase Skill instructions, bundled knowledge, next tool actions and completion gates. Keep the run_id and revision, execute the indicated native MCP workflows, then attach applicable evidence. skill_manage catalog/read loads additional bundled references over MCP. For natural-language UI plans use ui_test: capture scopes, keep original requirements, execute bounded actions, check, read exact review images and complete ui_review before finish. On unchanged state inspect and replan; command acceptance alone never completes a test. Capture-only requests use ui_snapshot mode=image. Build workflows run a fresh full ArkTS preflight by default. Repair blocking diagnostics and recheck after changes; an explicit manual_override needs a recorded reason. Use workflow_run capacity/export/cleanup_plan/cleanup_apply for retained-state recovery instead of bypassing MCP deployment.\n\nCapture the current UI once and evaluate a selector or up to 32 named selectors against the same snapshot.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__deveco_tool__ui_observe(args: { capture?: { display_id?: number; format?: \"jpeg\" | \"png\"; if_changed_from?: string; width?: number; }; selector?: { bundle_name?: string; checked?: boolean; clickableOnly?: boolean; displayId?: string | number; enabled?: boolean; key?: string; limit?: number; node_id?: string; onScreenOnly?: boolean; selected?: boolean; text?: string; textMode?: \"contains\" | \"exact\"; type?: string; value?: string | number; window_id?: string; }; selectors?: Array<{ id: string; selector: { bundle_name?: string; checked?: boolean; clickableOnly?: boolean; displayId?: string | number; enabled?: boolean; key?: string; limit?: number; node_id?: string; onScreenOnly?: boolean; selected?: boolean; text?: string; textMode?: \"contains\" | \"exact\"; type?: string; value?: string | number; window_id?: string; }; }>; target?: string; }): Promise<CallToolResult<{ data?: unknown; error?: { code: string; details?: unknown; message: string; retryable: boolean; }; ok: boolean; request_id: string; }>>; };\n```"
+    },
+    {
+      "name": "mcp__deveco_tool__ui_review",
+      "description": "Use workflow_catalog for fixed multi-step tasks. Before writing or modifying the first .ets file in a task, use harmony_knowledge to read arkts-grammar-standards/recipes-core and consult the matching ArkTS or ArkUI references; review the Top-5 ArkTS traps before each additional .ets file. Keep project entry-page and routing declarations consistent with the selected module and product. After code changes, run applicable diagnostics first, then project_build, then an explicit verification step; only an explicit successful final assertion verifies UI outcomes. All HarmonyOS knowledge, Skills and guided workflow definitions are bundled in this MCP. Use them directly through tools; never install Skill files into the AI client. Large results are referenced artifacts. Use skill_workflow catalog/start for builtin plan/debug/spec/customize/arkts/repair/create/ui_test workflows. Each read/update returns current-phase Skill instructions, bundled knowledge, next tool actions and completion gates. Keep the run_id and revision, execute the indicated native MCP workflows, then attach applicable evidence. skill_manage catalog/read loads additional bundled references over MCP. For natural-language UI plans use ui_test: capture scopes, keep original requirements, execute bounded actions, check, read exact review images and complete ui_review before finish. On unchanged state inspect and replan; command acceptance alone never completes a test. Capture-only requests use ui_snapshot mode=image. Build workflows run a fresh full ArkTS preflight by default. Repair blocking diagnostics and recheck after changes; an explicit manual_override needs a recorded reason. Use workflow_run capacity/export/cleanup_plan/cleanup_apply for retained-state recovery instead of bypassing MCP deployment.\n\nInspect, complete or cancel a persistent visual review. complete requires the exact screenshot artifact_id/sha256, read_token returned when that image was read, and the host's actual observations with passed/failed/insufficient outcome. Completion is immutable and explicitly attributed to host visual assessment, independently of the native control assertion. list uses bounded pagination; no device action is performed.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__deveco_tool__ui_review(args: { action: \"list\"; limit?: number; offset?: number; } | { action: \"status\"; review_id: string; } | { action: \"cancel\"; review_id: string; } | { action: \"complete\"; artifact_id: string; assessment: { observations: string; outcome: \"passed\" | \"failed\" | \"insufficient\"; }; read_token: string; review_id: string; sha256: string; }): Promise<CallToolResult<{ data?: unknown; error?: { code: string; details?: unknown; message: string; retryable: boolean; }; ok: boolean; request_id: string; }>>; };\n```"
+    },
+    {
+      "name": "mcp__deveco_tool__ui_snapshot",
+      "description": "Use workflow_catalog for fixed multi-step tasks. Before writing or modifying the first .ets file in a task, use harmony_knowledge to read arkts-grammar-standards/recipes-core and consult the matching ArkTS or ArkUI references; review the Top-5 ArkTS traps before each additional .ets file. Keep project entry-page and routing declarations consistent with the selected module and product. After code changes, run applicable diagnostics first, then project_build, then an explicit verification step; only an explicit successful final assertion verifies UI outcomes. All HarmonyOS knowledge, Skills and guided workflow definitions are bundled in this MCP. Use them directly through tools; never install Skill files into the AI client. Large results are referenced artifacts. Use skill_workflow catalog/start for builtin plan/debug/spec/customize/arkts/repair/create/ui_test workflows. Each read/update returns current-phase Skill instructions, bundled knowledge, next tool actions and completion gates. Keep the run_id and revision, execute the indicated native MCP workflows, then attach applicable evidence. skill_manage catalog/read loads additional bundled references over MCP. For natural-language UI plans use ui_test: capture scopes, keep original requirements, execute bounded actions, check, read exact review images and complete ui_review before finish. On unchanged state inspect and replan; command acceptance alone never completes a test. Capture-only requests use ui_snapshot mode=image. Build workflows run a fresh full ArkTS preflight by default. Repair blocking diagnostics and recheck after changes; an explicit manual_override needs a recorded reason. Use workflow_run capacity/export/cleanup_plan/cleanup_apply for retained-state recovery instead of bypassing MCP deployment.\n\nCapture an image, tree or both as artifacts. Image mode skips the layout dump. JPEG preserves aspect ratio and caps the long edge at 2576px; PNG stays native unless width is explicit. if_changed_from compares fresh encoded bytes and omits an unchanged image artifact. Tree snapshot IDs expire after actions or 30 seconds.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__deveco_tool__ui_snapshot(args: { capture?: { display_id?: number; format?: \"jpeg\" | \"png\"; if_changed_from?: string; width?: number; }; mode?: \"image\" | \"tree\" | \"both\"; target?: string; }): Promise<CallToolResult<{ data?: unknown; error?: { code: string; details?: unknown; message: string; retryable: boolean; }; ok: boolean; request_id: string; }>>; };\n```"
+    },
+    {
+      "name": "mcp__deveco_tool__ui_tap",
+      "description": "Use workflow_catalog for fixed multi-step tasks. Before writing or modifying the first .ets file in a task, use harmony_knowledge to read arkts-grammar-standards/recipes-core and consult the matching ArkTS or ArkUI references; review the Top-5 ArkTS traps before each additional .ets file. Keep project entry-page and routing declarations consistent with the selected module and product. After code changes, run applicable diagnostics first, then project_build, then an explicit verification step; only an explicit successful final assertion verifies UI outcomes. All HarmonyOS knowledge, Skills and guided workflow definitions are bundled in this MCP. Use them directly through tools; never install Skill files into the AI client. Large results are referenced artifacts. Use skill_workflow catalog/start for builtin plan/debug/spec/customize/arkts/repair/create/ui_test workflows. Each read/update returns current-phase Skill instructions, bundled knowledge, next tool actions and completion gates. Keep the run_id and revision, execute the indicated native MCP workflows, then attach applicable evidence. skill_manage catalog/read loads additional bundled references over MCP. For natural-language UI plans use ui_test: capture scopes, keep original requirements, execute bounded actions, check, read exact review images and complete ui_review before finish. On unchanged state inspect and replan; command acceptance alone never completes a test. Capture-only requests use ui_snapshot mode=image. Build workflows run a fresh full ArkTS preflight by default. Repair blocking diagnostics and recheck after changes; an explicit manual_override needs a recorded reason. Use workflow_run capacity/export/cleanup_plan/cleanup_apply for retained-state recovery instead of bypassing MCP deployment.\n\nResolve exactly one enabled UI element and tap it under the same device lease. Use verify_ui for outcome verification.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__deveco_tool__ui_tap(args: { selector: { bundle_name?: string; checked?: boolean; clickableOnly?: boolean; displayId?: string | number; enabled?: boolean; key?: string; limit?: number; node_id?: string; onScreenOnly?: boolean; selected?: boolean; text?: string; textMode?: \"contains\" | \"exact\"; type?: string; value?: string | number; window_id?: string; }; target?: string; }): Promise<CallToolResult<{ data?: unknown; error?: { code: string; details?: unknown; message: string; retryable: boolean; }; ok: boolean; request_id: string; }>>; };\n```"
+    },
+    {
+      "name": "mcp__deveco_tool__ui_test",
+      "description": "Use workflow_catalog for fixed multi-step tasks. Before writing or modifying the first .ets file in a task, use harmony_knowledge to read arkts-grammar-standards/recipes-core and consult the matching ArkTS or ArkUI references; review the Top-5 ArkTS traps before each additional .ets file. Keep project entry-page and routing declarations consistent with the selected module and product. After code changes, run applicable diagnostics first, then project_build, then an explicit verification step; only an explicit successful final assertion verifies UI outcomes. All HarmonyOS knowledge, Skills and guided workflow definitions are bundled in this MCP. Use them directly through tools; never install Skill files into the AI client. Large results are referenced artifacts. Use skill_workflow catalog/start for builtin plan/debug/spec/customize/arkts/repair/create/ui_test workflows. Each read/update returns current-phase Skill instructions, bundled knowledge, next tool actions and completion gates. Keep the run_id and revision, execute the indicated native MCP workflows, then attach applicable evidence. skill_manage catalog/read loads additional bundled references over MCP. For natural-language UI plans use ui_test: capture scopes, keep original requirements, execute bounded actions, check, read exact review images and complete ui_review before finish. On unchanged state inspect and replan; command acceptance alone never completes a test. Capture-only requests use ui_snapshot mode=image. Build workflows run a fresh full ArkTS preflight by default. Repair blocking diagnostics and recheck after changes; an explicit manual_override needs a recorded reason. Use workflow_run capacity/export/cleanup_plan/cleanup_apply for retained-state recovery instead of bypassing MCP deployment.\n\nExecute a natural-language UI test as a durable host-guided session. start captures test_plan, app and device and returns test_id/run_id. The host translates the plan into ordered steps with explicit assert/review requirements using plan; resume initializes or inspects the captured app. act executes one scoped native operation with a unique attempt_id and records before/after evidence; it never marks a step passed. check verifies the current step and creates any visual review, completed via ui_review after reading its screenshot. finish succeeds only when all planned requirements pass. Three unchanged captures or action budgets block further actions; replan requires fresh evidence and a changed strategy. Uncertain actions are never replayed by resume. status/cancel survive restart. Use workflow_run artifacts/export for retained evidence.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__deveco_tool__ui_test(args: { action: \"start\"; allowed_bundles?: Array<string>; app: { ability: string; action?: string; bundle_name: string; entities?: unknown; mime_type?: string; module?: string; parameters?: unknown; uri?: string; }; display_id?: number; fresh_start?: boolean; request_key?: string; steps?: Array<unknown>; target?: string; test_plan: string; } | { action: \"plan\"; steps: Array<unknown>; test_id: string; } | { action: \"status\"; test_id: string; } | { action: \"resume\"; test_id: string; } | { action: \"cancel\"; test_id: string; } | { action: \"finish\"; test_id: string; } | { action: \"check\"; recapture?: boolean; test_id: string; } | { action: \"act\"; attempt_id: string; operation: { action: \"click\" | \"doubleClick\" | \"longClick\" | \"swipe\" | \"fling\" | \"drag\" | \"dircFling\" | \"keyEvent\" | \"inputText\" | \"text\" | \"mouseClick\" | \"mouseDoubleClick\" | \"mouseLongClick\" | \"mouseMoveTo\" | \"mouseScroll\" | \"mouseMoveWithTrack\" | \"mouseDrag\"; button?: \"left\" | \"right\" | \"middle\"; direction?: number; display_id?: number; gesture?: unknown; keys?: unknown; mouse_scroll_speed?: number; point?: unknown; scroll_down?: boolean; selector?: unknown; step_length?: number; text?: string; ticks?: number; velocity?: number; window?: unknown; x?: number; x2?: number; y?: number; y2?: number; }; step_id: string; test_id: string; } | { action: \"replan\"; reason: string; reconcile_uncertain?: boolean; strategy: string; test_id: string; } | { action: \"logs\"; chunk_id?: number; limit?: number; offset?: number; search_keywords?: Array<string>; test_id: string; } | { action: \"report\"; test_id: string; } | { action: \"export\"; directory: string; test_id: string; }): Promise<CallToolResult<{ data?: unknown; error?: { code: string; details?: unknown; message: string; retryable: boolean; }; ok: boolean; request_id: string; }>>; };\n```"
+    },
+    {
+      "name": "mcp__deveco_tool__verify_ui",
+      "description": "Use workflow_catalog for fixed multi-step tasks. Before writing or modifying the first .ets file in a task, use harmony_knowledge to read arkts-grammar-standards/recipes-core and consult the matching ArkTS or ArkUI references; review the Top-5 ArkTS traps before each additional .ets file. Keep project entry-page and routing declarations consistent with the selected module and product. After code changes, run applicable diagnostics first, then project_build, then an explicit verification step; only an explicit successful final assertion verifies UI outcomes. All HarmonyOS knowledge, Skills and guided workflow definitions are bundled in this MCP. Use them directly through tools; never install Skill files into the AI client. Large results are referenced artifacts. Use skill_workflow catalog/start for builtin plan/debug/spec/customize/arkts/repair/create/ui_test workflows. Each read/update returns current-phase Skill instructions, bundled knowledge, next tool actions and completion gates. Keep the run_id and revision, execute the indicated native MCP workflows, then attach applicable evidence. skill_manage catalog/read loads additional bundled references over MCP. For natural-language UI plans use ui_test: capture scopes, keep original requirements, execute bounded actions, check, read exact review images and complete ui_review before finish. On unchanged state inspect and replan; command acceptance alone never completes a test. Capture-only requests use ui_snapshot mode=image. Build workflows run a fresh full ArkTS preflight by default. Repair blocking diagnostics and recheck after changes; an explicit manual_override needs a recorded reason. Use workflow_run capacity/export/cleanup_plan/cleanup_apply for retained-state recovery instead of bypassing MCP deployment.\n\nPoll a final control assertion and/or capture evidence for host visual review. review.requirement creates a persistent review_id, initially required and verified=false. Read its exact image using workflow_run read_artifact as=image, then submit actual observations using ui_review complete with the returned review read_token and screenshot sha256. A failed control assertion cannot be overridden by visual assessment. Assertion and screenshot are sequential samples under one device lease. A screenshot alone never verifies an outcome.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__deveco_tool__verify_ui(args: { assert?: { alternates?: Array<{ bundle_name?: string; checked?: boolean; clickableOnly?: boolean; displayId?: string | number; enabled?: boolean; key?: string; limit?: number; node_id?: string; onScreenOnly?: boolean; selected?: boolean; text?: string; textMode?: \"contains\" | \"exact\"; type?: string; value?: string | number; window_id?: string; }>; hidden?: { bundle_name?: string; checked?: boolean; clickableOnly?: boolean; displayId?: string | number; enabled?: boolean; key?: string; limit?: number; node_id?: string; onScreenOnly?: boolean; selected?: boolean; text?: string; textMode?: \"contains\" | \"exact\"; type?: string; value?: string | number; window_id?: string; }; timeoutMs?: number; visible?: { bundle_name?: string; checked?: boolean; clickableOnly?: boolean; displayId?: string | number; enabled?: boolean; key?: string; limit?: number; node_id?: string; onScreenOnly?: boolean; selected?: boolean; text?: string; textMode?: \"contains\" | \"exact\"; type?: string; value?: string | number; window_id?: string; }; }; capture?: { display_id?: number; format?: \"jpeg\" | \"png\"; width?: number; }; review?: { requirement: string; }; target?: string; }): Promise<CallToolResult<{ data?: unknown; error?: { code: string; details?: unknown; message: string; retryable: boolean; }; ok: boolean; request_id: string; }>>; };\n```"
+    },
+    {
+      "name": "mcp__deveco_tool__workflow_catalog",
+      "description": "Use workflow_catalog for fixed multi-step tasks. Before writing or modifying the first .ets file in a task, use harmony_knowledge to read arkts-grammar-standards/recipes-core and consult the matching ArkTS or ArkUI references; review the Top-5 ArkTS traps before each additional .ets file. Keep project entry-page and routing declarations consistent with the selected module and product. After code changes, run applicable diagnostics first, then project_build, then an explicit verification step; only an explicit successful final assertion verifies UI outcomes. All HarmonyOS knowledge, Skills and guided workflow definitions are bundled in this MCP. Use them directly through tools; never install Skill files into the AI client. Large results are referenced artifacts. Use skill_workflow catalog/start for builtin plan/debug/spec/customize/arkts/repair/create/ui_test workflows. Each read/update returns current-phase Skill instructions, bundled knowledge, next tool actions and completion gates. Keep the run_id and revision, execute the indicated native MCP workflows, then attach applicable evidence. skill_manage catalog/read loads additional bundled references over MCP. For natural-language UI plans use ui_test: capture scopes, keep original requirements, execute bounded actions, check, read exact review images and complete ui_review before finish. On unchanged state inspect and replan; command acceptance alone never completes a test. Capture-only requests use ui_snapshot mode=image. Build workflows run a fresh full ArkTS preflight by default. Repair blocking diagnostics and recheck after changes; an explicit manual_override needs a recorded reason. Use workflow_run capacity/export/cleanup_plan/cleanup_apply for retained-state recovery instead of bypassing MCP deployment.\n\nRead deterministic workflow input schemas, required capabilities and completion criteria.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__deveco_tool__workflow_catalog(args: { action?: \"list\" | \"get\"; workflow?: \"project_create\" | \"project_sync\" | \"project_build\" | \"app_deploy\" | \"build_deploy_verify\" | \"code_diagnose\" | \"crash_diagnose\" | \"api_compatibility\"; }): Promise<CallToolResult<{ data?: unknown; error?: { code: string; details?: unknown; message: string; retryable: boolean; }; ok: boolean; request_id: string; }>>; };\n```"
+    },
+    {
+      "name": "mcp__deveco_tool__workflow_run",
+      "description": "Use workflow_catalog for fixed multi-step tasks. Before writing or modifying the first .ets file in a task, use harmony_knowledge to read arkts-grammar-standards/recipes-core and consult the matching ArkTS or ArkUI references; review the Top-5 ArkTS traps before each additional .ets file. Keep project entry-page and routing declarations consistent with the selected module and product. After code changes, run applicable diagnostics first, then project_build, then an explicit verification step; only an explicit successful final assertion verifies UI outcomes. All HarmonyOS knowledge, Skills and guided workflow definitions are bundled in this MCP. Use them directly through tools; never install Skill files into the AI client. Large results are referenced artifacts. Use skill_workflow catalog/start for builtin plan/debug/spec/customize/arkts/repair/create/ui_test workflows. Each read/update returns current-phase Skill instructions, bundled knowledge, next tool actions and completion gates. Keep the run_id and revision, execute the indicated native MCP workflows, then attach applicable evidence. skill_manage catalog/read loads additional bundled references over MCP. For natural-language UI plans use ui_test: capture scopes, keep original requirements, execute bounded actions, check, read exact review images and complete ui_review before finish. On unchanged state inspect and replan; command acceptance alone never completes a test. Capture-only requests use ui_snapshot mode=image. Build workflows run a fresh full ArkTS preflight by default. Repair blocking diagnostics and recheck after changes; an explicit manual_override needs a recorded reason. Use workflow_run capacity/export/cleanup_plan/cleanup_apply for retained-state recovery instead of bypassing MCP deployment.\n\nPersist/start, list, inspect, resume or cancel a workflow and read its artifacts. Storage recovery: capacity forecasts additional_bytes and lists completed cleanup candidates; cleanup_plan previews exact run_ids; export copies their evidence to a new export_directory; cleanup_apply requires the same run_ids and reviewed plan_hash, durably removes them and returns a receipt. Failed/recoverable or active runs are protected. storage_receipt reads a receipt_id. These recovery actions remain available after STATE_CAPACITY. read_artifact defaults to base64 pages; as=image returns PNG/JPEG MCP image content (at most 8 MiB) without pagination. Status waits at most 20 seconds.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__deveco_tool__workflow_run(args: { action: \"start\" | \"list\" | \"status\" | \"resume\" | \"cancel\" | \"read_artifact\" | \"capacity\" | \"cleanup_plan\" | \"cleanup_apply\" | \"export\" | \"storage_receipt\"; additional_bytes?: number; artifact_id?: string; as?: \"page\" | \"image\"; export_directory?: string; input?: { [key: string]: unknown; }; limit?: number; offset?: number; plan_hash?: string; receipt_id?: string; request_key?: string; resume_input?: { action: \"recheck\"; }; run_id?: string; run_ids?: Array<string>; wait_ms?: number; workflow?: \"project_create\" | \"project_sync\" | \"project_build\" | \"app_deploy\" | \"build_deploy_verify\" | \"code_diagnose\" | \"crash_diagnose\" | \"api_compatibility\"; }): Promise<CallToolResult<{ data?: unknown; error?: { code: string; details?: unknown; message: string; retryable: boolean; }; ok: boolean; request_id: string; }>>; };\n```"
+    }
+  ]
+}

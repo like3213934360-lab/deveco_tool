@@ -98,7 +98,7 @@ async function inspect(key: string, run: string, artifact: string, expectedArtif
   const doctor = await client.call("deveco_doctor", {});
   if (schema !== undefined) z.object({ state_schema_revision: z.literal(schema) }).parse(doctor);
   const auth = await authentication();
-  const history = z.object({ status: z.literal("succeeded"), result: z.unknown() }).parse(await client.call("workflow_run", { action: "status", run_id: run }));
+  const history = z.object({ status: z.literal("succeeded"), result: z.unknown() }).parse(await client.call("workflow_run", { action: "status", detail: "full", run_id: run }));
   const page = z.object({ data: z.string() }).parse(await client.call("workflow_run", { action: "read_artifact", artifact_id: artifact }));
   assert.equal(page.data, expectedArtifact);
   results[key] = { doctor, ...auth, history, artifact_sha256: crypto.createHash("sha256").update(Buffer.from(page.data, "base64")).digest("hex") }; save();
@@ -113,7 +113,7 @@ try {
   results.submitted = submitted; save();
   let result: unknown;
   for (let i = 0; i < 30; i++) {
-    const status = z.object({ status: z.string(), result: z.unknown(), error: z.unknown().optional() }).parse(await client!.call("workflow_run", { action: "status", run_id: submitted.run_id, wait_ms: 1000 }));
+    const status = z.object({ status: z.string(), result: z.unknown(), error: z.unknown().optional() }).parse(await client!.call("workflow_run", { action: "status", detail: "full", run_id: submitted.run_id, wait_ms: 1000 }));
     if (["running", "queued"].includes(status.status)) continue;
     assert.equal(status.status, "succeeded", JSON.stringify(status.error)); result = status.result; break;
   }

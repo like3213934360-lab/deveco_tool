@@ -71,7 +71,7 @@ test("workflow restart retains explicit module targets and request deduplication
   }
 });
 
-test("doctor follows selected projects while submitted diagnostic workflows retain their captured project", async (t) => {
+test("doctor uses explicit projects while concurrent submitted workflows retain captured scope", async (t) => {
   const root = fs.realpathSync.native(
       fs.mkdtempSync(path.join(os.tmpdir(), "deveco-context-中文 空格-")),
     ),
@@ -125,14 +125,12 @@ test("doctor follows selected projects while submitted diagnostic workflows reta
       null,
     );
     stage = "switch-alias";
-    assert.deepEqual(
-      await runtime.call("switch_cwd", { project_path: alias }),
-      { project_path: first },
-    );
+    assert.equal(z.object({project_path:z.string(),immutable:z.literal(true)}).parse(await runtime.call("switch_cwd", {project_path:alias})).project_path,first);
+    assert.equal(z.object({project:z.null()}).parse(await runtime.call("deveco_doctor",{})).project,null);
     assert.equal(
       z
         .object({ project: z.object({ root: z.string() }) })
-        .parse(await runtime.call("deveco_doctor", {})).project.root,
+        .parse(await runtime.call("deveco_doctor", {project_path:first})).project.root,
       first,
     );
     stage = "submit-workflow";
@@ -140,7 +138,7 @@ test("doctor follows selected projects while submitted diagnostic workflows reta
       await runtime.call("workflow_run", {
         action: "start",
         workflow: "code_diagnose",
-        input: { checks: ["arkts"] },
+        input: { project_path:first, checks: ["arkts"] },
         request_key: "captured-project",
       }),
     );
@@ -158,7 +156,7 @@ test("doctor follows selected projects while submitted diagnostic workflows reta
     assert.equal(
       z
         .object({ project: z.object({ root: z.string() }) })
-        .parse(await runtime.call("deveco_doctor", {})).project.root,
+        .parse(await runtime.call("deveco_doctor", {project_path:second})).project.root,
       second,
     );
     assert.equal(
@@ -188,7 +186,7 @@ test("doctor follows selected projects while submitted diagnostic workflows reta
     fs.rmSync(second, { recursive: true });
     const failed = z
       .object({ project: z.object({ error: z.object({ code: z.string() }) }) })
-      .parse(await runtime.call("deveco_doctor", {}));
+      .parse(await runtime.call("deveco_doctor", {project_path:second}));
     assert.ok(failed.project.error.code);
     assert.equal(
       z

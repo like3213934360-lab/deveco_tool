@@ -4,7 +4,7 @@
     {
       "name": "deveco-arkts-standards",
       "description": "Write or modify HarmonyOS ArkTS .ets code, port TypeScript, and implement ArkUI components using the selected SDK rules and native checks.",
-      "version": "native-7.2",
+      "version": "native-7.5",
       "upstream": {
         "url": "https://gitcode.com/openharmony-sig/deveco-code",
         "commit": "aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a",
@@ -14,14 +14,14 @@
       "files": [
         {
           "path": "SKILL.md",
-          "sha256": "f06d8e7ec5a44b7cb1ba7f316fe82ed20080c95ffa04b489542954a2c0f3c133"
+          "sha256": "ff966c0f786912f6779696fa26755a759d85968cfe3df1ec9af7132edcce46d0"
         }
       ]
     },
     {
       "name": "deveco-arkts-errors",
       "description": "Diagnose and repair ArkTS compiler, linter, import/export, component attribute and type errors using native diagnostics and corresponding error cases.",
-      "version": "native-7.2",
+      "version": "native-7.5",
       "upstream": {
         "url": "https://gitcode.com/openharmony-sig/deveco-code",
         "commit": "aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a",
@@ -31,14 +31,14 @@
       "files": [
         {
           "path": "SKILL.md",
-          "sha256": "b704e5482ac16c921e8819dfbc13697fbe0643b4fae553f1789816aa358567b6"
+          "sha256": "dd347eb4a6db9200044f9c0391c26b5bb8adbcee568d9ad3112fe985504f4f4b"
         }
       ]
     },
     {
       "name": "deveco-runtime-debug",
       "description": "Investigate HarmonyOS ArkTS crashes, runtime failures and UI regressions using scoped device logs, retained evidence, hypotheses and verified repairs.",
-      "version": "native-7.2",
+      "version": "native-7.6",
       "upstream": {
         "url": "https://gitcode.com/openharmony-sig/deveco-code",
         "commit": "aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a",
@@ -48,7 +48,7 @@
       "files": [
         {
           "path": "SKILL.md",
-          "sha256": "81a6692f793c47a232f4d3899f888350fa87e80c0b33c28ef3003201a5b29c59"
+          "sha256": "0920460c1060bfa56bd142ffded64baf60554162a623a0f0025eab98a9a14f2a"
         },
         {
           "path": "references/debug-evidence.md",
@@ -69,14 +69,14 @@
       "files": [
         {
           "path": "SKILL.md",
-          "sha256": "2a4acd0b18b2c3cd931ea864b6d682d14f2b5a6e9710426704343ff5f576eeec"
+          "sha256": "b2d7d46f7add330ef3ff629fb46d5162187dfc2316171af0677e8ba70758ca49"
         }
       ]
     },
     {
       "name": "deveco-native-tools",
       "description": "Use native HarmonyOS MCP for device and emulator management, signing, UI tests, recording/replay, evidence recovery and built-in HarmonyOS knowledge.",
-      "version": "native-7.3",
+      "version": "native-7.6",
       "upstream": {
         "url": "https://gitcode.com/openharmony-sig/deveco-code",
         "commit": "aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a",
@@ -86,17 +86,17 @@
       "files": [
         {
           "path": "SKILL.md",
-          "sha256": "3085e67515c532bb592cfbb5dda44f0e316eee8056027618a32b7823c5f231d9"
+          "sha256": "9944cb0450a6397d365c9f467c920e026f19e1fdf7f9cd85d66c96f783f0e33f"
         },
         {
           "path": "references/ui-testing.md",
-          "sha256": "4b8126d21ea194aab0a4fa25b49adb77f4308396965862400fae7e04e1ed9a77"
+          "sha256": "27a41c8d0f5b510f32710f4b83666e75c3dc12e780a3cdfc23adc883302eb272"
         }
       ]
     },
     {
       "name": "deveco-customize-host",
-      "description": "Configure a selected AI client's HarmonyOS MCP connection and project instructions using its supported interfaces and a persistent MCP workflow.",
+      "description": "Optional HarmonyOS MCP host connection and project guidance; models, permissions, agents, sessions and plugins stay with the host.",
       "version": "native-7.2",
       "upstream": {
         "url": "https://gitcode.com/openharmony-sig/deveco-code",
@@ -107,11 +107,11 @@
       "files": [
         {
           "path": "SKILL.md",
-          "sha256": "590c583da635850efd83165433ed2215738fd75264aaff1592f27ff0bc6cb6ad"
+          "sha256": "16466dbcac8a64b90f58be1cb76034a66086ff1a13274fa889dba9ec84fc0c8f"
         },
         {
           "path": "references/customization.md",
-          "sha256": "366666d3e61d4b2b06bca320bd36128ca0d9f7170b2583d2905b08d805906cce"
+          "sha256": "29c9c87f4a567e4ad8c06dc26c74854e2ebd2070b5b907cf4e77feb250481d54"
         }
       ]
     }

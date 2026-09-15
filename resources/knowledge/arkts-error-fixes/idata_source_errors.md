@@ -68,7 +68,7 @@ class MyDataSource {
 
 ## 详细代码示例
 
-请参考 [IDataSourceError.ets](../assets/IDataSourceError.ets)
+请参考 [IDataSourceError.ets](deveco://knowledge/arkts-error-fixes/examples/IDataSourceError)
 
 ## 相关 API
 

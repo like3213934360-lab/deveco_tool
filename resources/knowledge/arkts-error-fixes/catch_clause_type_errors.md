@@ -86,4 +86,4 @@ struct CameraExample {
 
 ## 详细代码示例
 
-> [CatchClauseTypeError.ets](../assets/CatchClauseTypeError.ets) - 完整的 catch 子句类型注解错误示例和修复方案
+> [CatchClauseTypeError.ets](deveco://knowledge/arkts-error-fixes/examples/CatchClauseTypeError) - 完整的 catch 子句类型注解错误示例和修复方案

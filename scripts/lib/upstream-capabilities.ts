@@ -18,72 +18,17 @@ import {
   type CapabilityCase,
 } from "./capability-evidence.js";
 
-export const upstreamTools = [
-  "invalid",
-  "shell",
-  "read",
-  "glob",
-  "grep",
-  "edit",
-  "write",
-  "task",
-  "webfetch",
-  "todowrite",
-  "websearch",
-  "skill",
-  "apply_patch",
-  "question",
-  "lsp",
-  "plan_exit",
-  "plan_write",
-  "plan_enter",
-  "spec_write",
-  "hdc_log",
-  "switch_cwd",
-  "arkts_check",
-  "build_project",
-  "start_app",
-  "verify_ui",
-  "get_ui_verification_log",
-  "save_ui_screenshot",
-  "debug_exit",
-] as const;
-// This is the reviewed public registry, independent of editable matrix rows.
-// An upstream lock update requires reviewing the registry and operation union.
-const reviewedSource = {
-  commit: "aeb4536e56d1bfe8b5a0ff3bb02acb99f3523f2a",
-  registry_file: "packages/opencode/src/tool/registry.ts",
-  registry_sha256:
-    "b171bf1fa1501d1a1b34a3f74751c0e16c470311326c55d32ed9e6ff7efda110",
-};
-const expandedOperations: Partial<
-  Record<(typeof upstreamTools)[number], readonly string[]>
-> = {
-  skill: ["list", "search", "read", "install", "uninstall"],
-  lsp: [
-    "goToDefinition",
-    "findReferences",
-    "hover",
-    "documentSymbol",
-    "workspaceSymbol",
-    "goToImplementation",
-    "prepareCallHierarchy",
-    "incomingCalls",
-    "outgoingCalls",
-  ],
-  spec_write: ["spec", "design", "tasks"],
-  hdc_log: ["collect", "clear", "list_devices"],
-  verify_ui: [
-    "testPlan",
-    "freshStart",
-    "step_execution",
-    "visual_review",
-    "resume",
-    "cancel",
-  ],
-  get_ui_verification_log: ["read", "search"],
-  save_ui_screenshot: ["export_steps"],
-};
+import { discoveryHash, reviewDiscovery, type UpstreamDiscovery } from "./upstream-discovery.js";
+
+export function readDiscoveredCapabilities(root: string) {
+  const discovery = readJson(path.join(root, "provenance/upstream-discovery.json")) as UpstreamDiscovery;
+  const { sha256, ...body } = discovery;
+  invariant(discovery.format === 1 && discoveryHash(JSON.stringify(body)) === sha256, "CAPABILITY_DISCOVERY_CHANGED", "The fixed-source discovery inventory digest changed");
+  const review = readJson(path.join(root, "provenance/upstream-discovery-review.json")) as Parameters<typeof reviewDiscovery>[1];
+  const result = reviewDiscovery(discovery, review);
+  invariant(result.ready, "CAPABILITY_REGISTRY_UNREVIEWED", `Unreviewed source assets or schemas: ${result.pending.join(", ")}`);
+  return discovery;
+}
 export const capabilityMatrixSchema = z.strictObject({
   format: z.literal(2),
   source: z.strictObject({
@@ -91,19 +36,20 @@ export const capabilityMatrixSchema = z.strictObject({
     commit: z.string().regex(/^[a-f0-9]{40}$/),
     registry_file: relative,
     registry_sha256: sha,
+    discovery_sha256: sha,
   }),
   scope: z.string().min(20),
   tools: z
     .array(
       z.strictObject({
-        tool: z.enum(upstreamTools),
+        tool: z.string().min(1),
         upstream_file: relative,
         upstream_sha256: sha,
         delivery: z.enum(["native", "mcp_guided", "client_required"]),
-        operations: z.array(operation).min(1),
+        operations: z.array(operation.extend({ source_operations: z.array(z.string().min(1)).min(1) })).min(1),
       }),
     )
-    .length(upstreamTools.length),
+    .min(1),
 });
 export function auditCapabilities(
   root: string,
@@ -113,16 +59,19 @@ export function auditCapabilities(
   const matrix = capabilityMatrixSchema.parse(raw),
     seen = new Set<string>(),
     pending: string[] = [];
+  const discovery = readDiscoveredCapabilities(root);
+const behaviorReview = readJson(path.join(root, "provenance/upstream-discovery-review.json")) as { tool_behaviors?: { tool: string; source_schema_sha256: string; behaviors: string[] }[] };
+
   const lock = lockSchema.parse(
     readJson(path.join(root, "provenance/upstream-lock.json")),
   );
   invariant(
     lock.sources.find((source) => source.id === "deveco-code")?.commit ===
       matrix.source.commit &&
-      Object.entries(reviewedSource).every(
-        ([key, value]) =>
-          matrix.source[key as keyof typeof reviewedSource] === value,
-      ),
+      discovery.source.commit === matrix.source.commit &&
+      discovery.registry.file === matrix.source.registry_file &&
+      discovery.registry.sha256 === matrix.source.registry_sha256 &&
+      discovery.sha256 === matrix.source.discovery_sha256,
     "CAPABILITY_REGISTRY_UNREVIEWED",
     "Source lock and capability matrix must refer to the explicitly reviewed upstream registry",
   );
@@ -148,25 +97,22 @@ export function auditCapabilities(
           "CAPABILITY_TARGET_MISSING",
           `Missing ${file} for ${id}`,
         );
-      validateCapabilityPolicy(row.tool, row.delivery, operation);
+      const delegated = ["bash", "plan_enter", "plan_exit", "plan_write", "debug_exit", "todowrite", "spec_write"].includes(row.tool);
+      validateCapabilityPolicy(delegated ? "shell" : row.tool, row.delivery, operation);
       if (!capabilityAccepted(operation)) pending.push(id);
     }
   }
   invariant(
-    upstreamTools.every((tool) => seen.has(tool)),
-    "CAPABILITY_TOOL_MISSING",
-    "Every registered upstream built-in must be represented",
+    discovery.tools.length === seen.size && discovery.tools.every((tool) => seen.has(tool.id)),
+    "CAPABILITY_TOOL_MISSING", "Every discovered registry tool must be represented, without invented source tools",
   );
   for (const row of matrix.tools) {
-    const expected = expandedOperations[row.tool] ?? ["execute"];
-    invariant(
-      expected.length === row.operations.length &&
-        expected.every((id) =>
-          row.operations.some((operation) => operation.id === id),
-        ),
-      "CAPABILITY_OPERATION_MISSING",
-      `Every reviewed upstream operation must be represented: ${row.tool}`,
-    );
+    const source = discovery.tools.find((tool) => tool.id === row.tool)!;
+    const expectedBehavior = behaviorReview.tool_behaviors?.find((item) => item.tool === row.tool);
+    invariant(expectedBehavior?.source_schema_sha256 === source.schema_sha256 && expectedBehavior.behaviors.length === row.operations.length && expectedBehavior.behaviors.every((id) => row.operations.some((operation) => operation.id === id)), "CAPABILITY_OPERATION_MISSING", `Every reviewed behavior is required independently of schema operation coverage: ${row.tool}`);
+    invariant(row.upstream_file === source.file && row.upstream_sha256 === source.sha256, "CAPABILITY_SOURCE_CHANGED", `Changed source definition for ${row.tool}`);
+    const represented = new Set(row.operations.flatMap((operation) => operation.source_operations));
+    invariant(source.operations.every((id) => represented.has(id)) && [...represented].every((id) => source.operations.includes(id)), "CAPABILITY_OPERATION_MISSING", `Every discovered schema operation must map to reviewed behavior: ${row.tool}`);
   }
   invariant(
     !requireEvidence || !pending.length,
@@ -215,6 +161,19 @@ export function auditCapabilities(
   }
   return {
     ready: !pending.length,
+    classification: {
+      required_native: matrix.tools.flatMap((row) => row.operations).filter((op) => op.disposition === "required").length,
+      host_delegated: matrix.tools.flatMap((row) => row.operations).filter((op) => op.disposition === "client_required").length,
+      intentional_boundary: matrix.tools.flatMap((row) => row.operations).filter((op) => op.disposition === "explicitly_excluded").length,
+    },
+    implementation: {
+      implemented: matrix.tools.flatMap((row) => row.operations).filter((op) => op.implementation === "implemented").length,
+      pending: matrix.tools.flatMap((row) => row.operations).filter((op) => op.implementation === "pending").length,
+      not_applicable: matrix.tools.flatMap((row) => row.operations).filter((op) => op.implementation === "not_applicable").length,
+    },
+    environment: "Per-case service_support and language/platform/SDK remain evidence fields; unsupported never satisfies required-native acceptance",
+    schema_operations: discovery.tools.reduce((sum, tool) => sum + tool.operations.length, 0),
+    discovery_sha256: discovery.sha256,
     tools: seen.size,
     verified_operations: matrix.tools
       .flatMap((row) => row.operations)
