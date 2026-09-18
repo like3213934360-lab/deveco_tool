@@ -7,8 +7,8 @@
     "tree": "6605d243def8bc8cebe0da693ba5729c1a283601"
   },
   "candidate": {
-    "commit": "87c360b05848132c06c6ea120e078619b9ef4634",
-    "tree": "18b08f7a58eae694bc2f538cd43f20fd5bdbd1b9"
+    "commit": "3c810278ce8b5f86ade0342dc3cd7056e6e595d2",
+    "tree": "895b972ba31de3b97b14b54ee523a0c95bc08635"
   },
   "mapping_sha256": "31052fed4b84988e7f58ae3518d5655816e46f64bd362327efc47843266189a6",
   "changes": [
@@ -124,7 +124,7 @@
       },
       "after": {
         "path": "README.md",
-        "oid": "df1affec84995065877f3dc989ab03a33a8835fd",
+        "oid": "72d2d0b0586f76c3ab41f221c6315bdfd3235bed",
         "mode": "100644",
         "type": "blob"
       },
@@ -154,7 +154,7 @@
       },
       "after": {
         "path": "SKILL.md",
-        "oid": "9d61be4c8b313cb50cfe377b78a9f74dc69a4ae5",
+        "oid": "e492c9b8248b92c1dba0bf345a26eb040299e13a",
         "mode": "100644",
         "type": "blob"
       },
@@ -171,6 +171,119 @@
       "tests": [
         "test/native-skills.test.ts",
         "scripts/native-skill-mcp-acceptance.ts"
+      ]
+    },
+    {
+      "path": "mcp/src-server/router.ts",
+      "status": "modified",
+      "before": {
+        "path": "mcp/src-server/router.ts",
+        "oid": "62d7dd0a992aeedcabe788643cf580ac25e13841",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "mcp/src-server/router.ts",
+        "oid": "389312c657675155ee6efb04f1a2fa65d24c2490",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "cli-retired-mcp-",
+      "disposition": "exclude",
+      "reason": "The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "mcp/src-server/server.ts",
+      "status": "modified",
+      "before": {
+        "path": "mcp/src-server/server.ts",
+        "oid": "08ef6df4898793f7b23aae411dbf66218cd28f96",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "mcp/src-server/server.ts",
+        "oid": "ec4f625816e441b7bac02d950698a2a883a095c1",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "cli-retired-mcp-",
+      "disposition": "exclude",
+      "reason": "The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "mcp/src-server/tools/arkts-check.ts",
+      "status": "modified",
+      "before": {
+        "path": "mcp/src-server/tools/arkts-check.ts",
+        "oid": "6142718cf8dc93714bcd9ec961ccd51de7e78cbf",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "mcp/src-server/tools/arkts-check.ts",
+        "oid": "22fe7d816a4dc3e8603851acda76f61852cab38f",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "cli-retired-mcp-",
+      "disposition": "exclude",
+      "reason": "The native architecture removes the official CLI, child MCP, skill installation and legacy Studio protocol paths.",
+      "targets": [],
+      "tests": []
+    },
+    {
+      "path": "package-lock.json",
+      "status": "modified",
+      "before": {
+        "path": "package-lock.json",
+        "oid": "293c76ec221449b6d10de05936f9cb6a674b062d",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "package-lock.json",
+        "oid": "0de2e065239a5de2fd37866d606f37487f9b8c34",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "cli-release-package-lock.json",
+      "disposition": "adapt",
+      "reason": "Review release, dependency, dispatch or license changes; the CLI remains a reference, not a runtime dependency.",
+      "targets": [
+        "provenance/upstream-lock.json"
+      ],
+      "tests": [
+        "test/native-upstream.test.ts"
+      ]
+    },
+    {
+      "path": "package.json",
+      "status": "modified",
+      "before": {
+        "path": "package.json",
+        "oid": "6c4d700644df079251f789f3c487b4932bf5758d",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "package.json",
+        "oid": "5287f0dd230164a79bf881a359b6a03365600328",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "cli-release-package.json",
+      "disposition": "adapt",
+      "reason": "Review release, dependency, dispatch or license changes; the CLI remains a reference, not a runtime dependency.",
+      "targets": [
+        "provenance/upstream-lock.json"
+      ],
+      "tests": [
+        "test/native-upstream.test.ts"
       ]
     },
     {
@@ -214,6 +327,80 @@
       ]
     },
     {
+      "path": "src/auth/utils/jwt.test.ts",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "src/auth/utils/jwt.test.ts",
+        "oid": "be97e7e5596374d06e8ec5921c2aa87abe993cbd",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "cli-src-auth-",
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/auth.ts"
+      ],
+      "tests": [
+        "test/native-reports.test.ts",
+        "test/native-auth.test.ts",
+        "scripts/native-auth-mcp-acceptance.ts"
+      ]
+    },
+    {
+      "path": "src/codelinter/report-parser.test.ts",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "src/codelinter/report-parser.test.ts",
+        "oid": "8c19facdbe97adb5f5575d9199ca53fdd27f2fa1",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "cli-src-codelinter-",
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/diagnostics.ts",
+        "src/services/lint-input.ts",
+        "src/services/lint-report.ts"
+      ],
+      "tests": [
+        "test/native-lint.test.ts",
+        "scripts/native-lint-acceptance.ts"
+      ]
+    },
+    {
+      "path": "src/commands/emulator.ts",
+      "status": "modified",
+      "before": {
+        "path": "src/commands/emulator.ts",
+        "oid": "de59721a86cb54ac1f864f90a843501006458333",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "src/commands/emulator.ts",
+        "oid": "6153b433ec5c72e2dd41585ecc6f7d23b7a1d9cf",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "cli-command-emulator.ts",
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/emulator.ts",
+        "src/core/emulator-contracts.ts",
+        "src/services/emulator-license.ts"
+      ],
+      "tests": [
+        "test/native-emulator.test.ts",
+        "test/native-emulator-protocol.test.ts",
+        "scripts/native-emulator-readonly.ts"
+      ]
+    },
+    {
       "path": "src/commands/init.ts",
       "status": "modified",
       "before": {
@@ -252,7 +439,7 @@
       },
       "after": {
         "path": "src/commands/run.ts",
-        "oid": "cb985bf0fd85ca2e6c88e906dedae2601d9b12e5",
+        "oid": "5a78c5ca5d2e0b1433c3e7de9af68c72a06e4953",
         "mode": "100644",
         "type": "blob"
       },
@@ -335,6 +522,164 @@
       "tests": [
         "test/native-skills.test.ts",
         "test/native-compatible-upgrade.test.ts"
+      ]
+    },
+    {
+      "path": "src/docs/doc-index/zip-integration.test.ts",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "src/docs/doc-index/zip-integration.test.ts",
+        "oid": "ae64166dcf57b3c804c3aea2a9f55e7159e4e45a",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "cli-src-docs-",
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/knowledge.ts",
+        "src/core/doc-catalog.ts"
+      ],
+      "tests": [
+        "test/native-resources.test.ts",
+        "test/native-reports.test.ts"
+      ]
+    },
+    {
+      "path": "src/service/emulator-list-parse.test.ts",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "src/service/emulator-list-parse.test.ts",
+        "oid": "a1f8a46fb0a354cf4574a80726d82c7c536860c4",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "cli-src-service-",
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/emulator.ts",
+        "src/core/emulator-contracts.ts",
+        "src/services/emulator-license.ts"
+      ],
+      "tests": [
+        "test/native-emulator.test.ts",
+        "scripts/native-emulator-acceptance.ts",
+        "test/native-emulator-protocol.test.ts",
+        "scripts/native-emulator-readonly.ts"
+      ]
+    },
+    {
+      "path": "src/service/emulator-manager.ts",
+      "status": "modified",
+      "before": {
+        "path": "src/service/emulator-manager.ts",
+        "oid": "19695e315038cba3bce64ace9020fe8ef1bfb3ab",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "src/service/emulator-manager.ts",
+        "oid": "dd69bd28527a3bbe832058ec21ea156b80a29f06",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "cli-src-service-",
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/emulator.ts",
+        "src/core/emulator-contracts.ts",
+        "src/services/emulator-license.ts"
+      ],
+      "tests": [
+        "test/native-emulator.test.ts",
+        "scripts/native-emulator-acceptance.ts",
+        "test/native-emulator-protocol.test.ts",
+        "scripts/native-emulator-readonly.ts"
+      ]
+    },
+    {
+      "path": "src/service/emulator-start-strategies.ts",
+      "status": "modified",
+      "before": {
+        "path": "src/service/emulator-start-strategies.ts",
+        "oid": "55c9f76909b2f1fea5b1749ff2a0afee0687ca82",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "src/service/emulator-start-strategies.ts",
+        "oid": "9ef28cedbef943afe37f8faa20ffc37d9204c901",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "cli-src-service-",
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/emulator.ts",
+        "src/core/emulator-contracts.ts",
+        "src/services/emulator-license.ts"
+      ],
+      "tests": [
+        "test/native-emulator.test.ts",
+        "scripts/native-emulator-acceptance.ts",
+        "test/native-emulator-protocol.test.ts",
+        "scripts/native-emulator-readonly.ts"
+      ]
+    },
+    {
+      "path": "src/service/emulator-types.ts",
+      "status": "modified",
+      "before": {
+        "path": "src/service/emulator-types.ts",
+        "oid": "c77acaf0e9218e43b957f1058029c0fb4f6f7f12",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "src/service/emulator-types.ts",
+        "oid": "1f31d9338c6169212c5fba578d403078fd89594f",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "cli-src-service-",
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/services/emulator.ts",
+        "src/core/emulator-contracts.ts",
+        "src/services/emulator-license.ts"
+      ],
+      "tests": [
+        "test/native-emulator.test.ts",
+        "scripts/native-emulator-acceptance.ts",
+        "test/native-emulator-protocol.test.ts",
+        "scripts/native-emulator-readonly.ts"
+      ]
+    },
+    {
+      "path": "src/skills/installer.test.ts",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "src/skills/installer.test.ts",
+        "oid": "3cc3d15505792bb88bcc6662dc3b6907cf7a45a8",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "cli-retired-src-skills-",
+      "disposition": "adapt",
+      "reason": "Skills and knowledge are bundled and supplied through MCP-owned guided workflows. Client Skill installation was explicitly removed by the owner; review every operation and boundary.",
+      "targets": [
+        "docs/builtin-skill-workflows.md",
+        "provenance/upstream-capabilities.json"
+      ],
+      "tests": [
+        "test/native-upstream-capabilities.test.ts"
       ]
     },
     {
@@ -907,6 +1252,61 @@
       ]
     },
     {
+      "path": "src/utils/emulator-image-list-parse.test.ts",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "src/utils/emulator-image-list-parse.test.ts",
+        "oid": "f5b266b88ba00990f827f3d7d6edde668f3af5a8",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "cli-core-utils",
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/core/toolchain.ts",
+        "src/core/process.ts",
+        "src/core/store.ts",
+        "src/core/files.ts"
+      ],
+      "tests": [
+        "test/native-infrastructure.test.ts",
+        "test/native-runtime.test.ts",
+        "test/native-toolchain.test.ts"
+      ]
+    },
+    {
+      "path": "src/utils/emulator-spawn.ts",
+      "status": "modified",
+      "before": {
+        "path": "src/utils/emulator-spawn.ts",
+        "oid": "c1e83eb21df43bc384498c2fe4990e73f968de3d",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "path": "src/utils/emulator-spawn.ts",
+        "oid": "fbaa078fe195d983838c7172a50c66d3d6920567",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "mapping": "cli-core-utils",
+      "disposition": "adapt",
+      "reason": "Review the upstream behavior against its native replacement and regression evidence.",
+      "targets": [
+        "src/core/toolchain.ts",
+        "src/core/process.ts",
+        "src/core/store.ts",
+        "src/core/files.ts"
+      ],
+      "tests": [
+        "test/native-infrastructure.test.ts",
+        "test/native-runtime.test.ts",
+        "test/native-toolchain.test.ts"
+      ]
+    },
+    {
       "path": "src/utils/hdc-adapter.test.ts",
       "status": "added",
       "before": null,
@@ -1064,25 +1464,39 @@
   ],
   "gate": "requires_adapter_review",
   "required_tests": [
+    "scripts/native-auth-mcp-acceptance.ts",
+    "scripts/native-emulator-acceptance.ts",
+    "scripts/native-emulator-readonly.ts",
     "scripts/native-hot-device-acceptance.ts",
     "scripts/native-hot-outcome-mcp-acceptance.ts",
+    "scripts/native-lint-acceptance.ts",
     "scripts/native-multimodule-acceptance.ts",
     "scripts/native-skill-mcp-acceptance.ts",
     "scripts/native-startup-fault-mcp-acceptance.ts",
+    "test/native-auth.test.ts",
     "test/native-compatible-upgrade.test.ts",
     "test/native-context.test.ts",
     "test/native-device-recovery.test.ts",
+    "test/native-emulator-protocol.test.ts",
+    "test/native-emulator.test.ts",
     "test/native-flow.test.ts",
     "test/native-hot-preparation.test.ts",
     "test/native-hotreload.test.ts",
     "test/native-infrastructure.test.ts",
+    "test/native-lint.test.ts",
     "test/native-logs.test.ts",
     "test/native-project-recovery.test.ts",
+    "test/native-reports.test.ts",
+    "test/native-resources.test.ts",
+    "test/native-runtime.test.ts",
     "test/native-screenshot.test.ts",
     "test/native-skills.test.ts",
     "test/native-startup-check.test.ts",
-    "test/native-storage.test.ts"
+    "test/native-storage.test.ts",
+    "test/native-toolchain.test.ts",
+    "test/native-upstream-capabilities.test.ts",
+    "test/native-upstream.test.ts"
   ],
   "note": "Source classification is a review proposal. It does not convert natural language into code, approve protocol semantics, modify the active source lock or authorize release.",
-  "sha256": "6e38fe7071f22f4b9eea338d7c8fabdd0597dd4398b644596fa44d3ffa3c5d9c"
+  "sha256": "9913f898fa7dc16a99375f4ec82320d26751f8489d19337f805b2606d6077ddd"
 }
