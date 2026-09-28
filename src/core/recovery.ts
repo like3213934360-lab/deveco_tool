@@ -80,6 +80,12 @@ export function recoveryAdvice(
         }
       : {}),
   });
+  if (code === "ARTIFACT_EOF" || code === "ARTIFACT_READ_LOOP")
+    return advice(
+      "correct_input",
+      "Stop this artifact pagination loop. next_offset is numeric, not nullable. Finish on eof=true or next_offset>=bytes; never retry a stationary cursor or automatically retry this error.",
+      [],
+    );
   if (
     [
       "RUN_VERSION_MISMATCH",

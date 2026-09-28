@@ -1002,6 +1002,7 @@ export class StateStore {
       bytes: result.bytes,
       offset,
       next_offset: offset + result.data.length,
+      eof: offset + result.data.length >= result.bytes,
       encoding: "base64",
       data: result.data.toString("base64"),
     };

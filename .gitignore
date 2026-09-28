@@ -6,5 +6,8 @@ yarn-debug.log*
 yarn-error.log*
 
 .native-build-*/
+# Local MCP runtime state (encryption keys, SQLite) and machine-specific config
+.deveco-state/
+deveco-native.json
 __pycache__/
 *.py[cod]

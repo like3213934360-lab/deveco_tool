@@ -21,17 +21,20 @@ import { errorResult, invariant } from "./core/errors.js";
 import { release, protocolVersion } from "./core/config.js";
 import { WorkerClient } from "./core/worker-client.js";
 import { toolImageResponse } from "./core/tool-image-response.js";
+import { ArtifactReadGuard } from "./core/artifact-read-guard.js";
 
 export const serverInstructions = [
-  "HarmonyOS: workflow_catalog describes native workflows; domain_recipe reads task methods and source-linked knowledge.",
-  "Pass project_path and target scopes explicitly; runs retain their scope. One-off UI tests can observe and act directly. Use ui_flow list/routes when a saved path or repeated navigation is useful; validate matching flows and record only reusable authorized setup. Complete setup before ui_test start; fresh_start=false preserves its app state.",
-  "ui_query observes; ui_control acts/records. Active ui_test steps must use ui_test act/check, retaining scope and budgets. Inspect run status before retries; reconcile unknown effects before replay. Command acceptance and verified outcomes differ. Keep run IDs/revisions and artifact evidence; maintenance provides recovery.",
+  "HarmonyOS: workflow_catalog describes native workflows; domain_recipe provides source-linked task methods.",
+  "Pass project_path and target scopes explicitly; runs retain scope. One-off UI tests can observe and act directly. Use ui_flow list/routes for saved/repeated paths; validate flows and record only reusable authorized setup. Complete setup before ui_test start; fresh_start=false preserves app state.",
+  "ui_query observes; ui_control acts/records. Active ui_test steps use ui_test act/check with retained scopes/budgets. Inspect status before retries; reconcile unknown effects before replay. Command acceptance differs from verification. Keep run IDs/revisions and artifacts; maintenance provides recovery.",
+  "Artifact next_offset is numeric, never null. Stop on eof=true, next_offset>=bytes, errors or no progress; bound loops. View PNG/JPEG with read_artifact as=image.",
 ].join(" ");
 
 export async function serve() {
   const groups = configuredToolGroups();
   const toolCatalog = createToolCatalog(groups);
   const content = new DomainContentService();
+  const artifactReads = new ArtifactReadGuard();
   const runtime = new WorkerClient((error) => {
     process.stderr.write(`${error.message}\n`);
     process.exit(1);
@@ -96,6 +99,7 @@ export async function serve() {
       );
       const name = request.params.name as ToolName;
       const input = parseConnectionInput(name, request.params.arguments ?? {}, groups);
+      await artifactReads.check(name, input, extra.signal);
       let data: unknown;
       if (name === "workflow_catalog") {
         const args = tools.workflow_catalog.schema.parse(input);

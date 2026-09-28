@@ -167,6 +167,8 @@ macOS 的 Studio 路径通常为 `/Applications/DevEco-Studio.app`。使用 CLT 
 
 `start` 持久化任务后默认等待 1000 ms，短任务可直接返回完成结果；未完成时返回同一 `run_id`。`status` 和 `resume` 同样支持 `wait_ms`，最多 20000；停止等待不取消任务。默认返回摘要，完整结果可用 `read_result` 分页读取或 `detail:"full"` 兼容模式；`list` 列出任务，`read_artifact` 读取日志和报告。新的执行意图使用新的 `request_key`：同键同输入返回已有任务，不同输入报冲突。
 
+制品分页的 `next_offset` 始终是数值；在 `eof:true` 或 `next_offset >= bytes` 时停止，不能等待 `null`。越过末尾或快速重复同一偏移会返回不可重试错误。查看 PNG/JPEG 可直接使用 `as:"image"`，见[分页示例与循环保护](docs/artifact-pagination.md)。
+
 默认工具目录包含各动作和工作流的实际输入校验，已知工作流可直接调用；完整方法与完成含义仍可按需读取。部署可引用 `build_run_id`，UI 测试可引用 `deployment_run_id` 带入已有应用、设备、工程范围和省略的需求。仅在需要逐需求交付时使用 `domain_acceptance`，用 `evidence_run_ids` 解析已绑定的 task/assertion/review 引用；多 task 的歧义映射仍需明确提供。普通编译和运行无需建立验收表。
 
 ### 持久化、恢复与取消

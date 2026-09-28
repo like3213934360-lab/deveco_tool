@@ -1,7 +1,20 @@
 import { createHash, randomUUID } from "node:crypto";
 import { maximumImageBytes } from "../core/artifact-image.js";
 import type { StateStore } from "../core/store.js";
+import { ToolError } from "../core/errors.js";
 import { imageDimensions } from "./screenshot.js";
+
+/** Public pages must not report a successful, stationary cursor forever.
+ * Keep the numeric cursor for existing byte-count based readers. */
+export function readArtifactPage(store: StateStore, id: string, offset = 0, limit = 65536) {
+  const page = store.readArtifact(id, offset, limit);
+  // An empty artifact still has one valid, empty first page.
+  if (offset >= page.bytes && (page.bytes > 0 || offset > 0))
+    throw new ToolError("ARTIFACT_EOF", "Artifact is fully read. Stop pagination; do not retry this offset.", {
+      artifact_id: id, offset, bytes: page.bytes, eof: true,
+    });
+  return page;
+}
 
 export function readImageArtifact(store: StateStore, id: string) {
   const result = store.readBinaryArtifact(id, maximumImageBytes, [

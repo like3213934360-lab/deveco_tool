@@ -1079,12 +1079,16 @@ export class Runtime {
             text(input.artifact_id, "artifact_id"),
           );
         }
-        if (input.action === "read_artifact")
-          return this.store.readArtifact(
+        if (input.action === "read_artifact") {
+          const { readArtifactPage } = await import("./artifact.js");
+          signal?.throwIfAborted();
+          return readArtifactPage(
+            this.store,
             text(input.artifact_id, "artifact_id"),
             input.offset,
             input.limit,
           );
+        }
         const engine = await this.workflows();
         if (input.action === "list") {
           const runs = this.store.list(input.offset, input.limit ?? 20).map(run => input.detail === "full" ? responses.present(run, "full") : {

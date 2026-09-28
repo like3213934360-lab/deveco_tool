@@ -79,7 +79,7 @@ export const workflowObservationContract = z.union([
   z.strictObject({
     ...imageRequest,
     as: z.literal("page").default("page"),
-    offset,
+    offset: offset.describe("Byte offset. Stop on eof=true or next_offset>=bytes; next_offset is never null. Stop on errors or no progress and bound the loop."),
     limit,
   }),
   z.strictObject({

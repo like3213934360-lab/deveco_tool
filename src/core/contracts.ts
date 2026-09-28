@@ -624,7 +624,7 @@ const nativeTools = {
     }).refine(input => input.action === "get" ? input.workflow !== undefined : input.workflow === undefined, "Specify workflow only for get"),
   },
   workflow_run: {
-    description: "Start, observe, reconcile or cancel native tasks. Each workflow has a typed input. Start/status/resume return bounded summaries after wait_ms. Read complete results by byte page, events by ID cursor, artifacts by page or image. Storage actions use maintenance.",
+    description: "Start, observe, reconcile or cancel native tasks. Each workflow has a typed input. Start/status/resume return bounded summaries after wait_ms. Read complete results by byte page, events by ID cursor, artifacts by page or image. Artifact next_offset is numeric: stop on eof or next_offset>=bytes, errors or no progress; use as=image to view PNG/JPEG. Storage actions use maintenance.",
     schema: z.union([publicWorkflowRunSchema, storageContract]),
   },
   harmony_knowledge: {
