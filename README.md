@@ -25,7 +25,16 @@ npm ci && npm run build
 
 Requires Node ≥ 22.18, plus DevEco Studio or the Command Line Tools. Devices are optional; they are needed for run/ui/device.
 
-Add the server to your MCP host:
+Register the server and export the skills in one step (cursor, claude, codex, opencode, trae-cn, codebuddy, qoder, pi; existing entries are kept unless you pass `--force`):
+
+```sh
+node dist/cli.js init --host cursor                 # user config (~/.cursor/mcp.json + ~/.cursor/skills)
+node dist/cli.js init --host codex --project .      # project config (.codex/config.toml)
+```
+
+Editors can also use the SDK language servers directly: `node dist/cli.js serve-lsp [--cpp] [--project <root>]` (stdio).
+
+Or add it by hand:
 
 ```json
 {
@@ -70,19 +79,19 @@ Check the setup with `node dist/cli.js doctor [project]`, or call the `doctor` t
 
 | Tool | What it does |
 | --- | --- |
-| `doctor` | Checks toolchain, SDK, devices, project, knowledge pack and logins; every failed check comes with a fix |
-| `project` | `info` / `create` (template, never overwrites) / `sync` / `build` (ArkTS preflight, then Hvigor; returns packages and structured errors with hints) / `clean` |
-| `run` | `build_run` (build, install, launch, crash check, optional UI assert) / `deploy` / `launch` / `stop` / `uninstall` |
+| `doctor` | Checks toolchain, SDK, devices, project, knowledge pack and logins, plus SDK compatibility (project compile/compatible SDK vs installed SDK vs device API); every failed check comes with a fix |
+| `project` | `info` / `create` (template, never overwrites) / `sync` / `build` (ArkTS preflight, then Hvigor; returns packages and structured errors with hints; `task=compileNative` builds C/C++ and writes `.idea/.deveco/cxx/compile_commands.json` for clangd) / `clean` |
+| `run` | `build_run` (build, install, launch, smoke verdict `PASS` / `FAIL_CRASH` / `FAIL_BLANK`, optional UI assert) / `deploy` / `launch` / `stop` / `uninstall` |
 | `job` | `wait` / `status` / `list` / `cancel` / `resume` / `read` (line-paged logs with `grep`) |
-| `code` | `check` (warm ArkTS static checker; `fix` applies safe auto-fixes) / `lint` / `api_scan` / `lsp`: hover, definition, implementation, references, symbols, workspace_symbols, diagnostics, completion, signature. Locate code by `symbol` plus a line hint instead of exact columns |
-| `device` | `list` / `info` / `log` (filter by bundle, level or regex; `clear`) / read-only `shell` / `send` / `recv` |
-| `ui` | `observe` (screenshot plus compact element list) / `screenshot` / `tree` / `find` / `act` (click, input with Chinese text support and replace-by-default, type, swipe, scroll, key) / `assert` / `record_start` / `record_stop` |
+| `code` | `check` (warm ArkTS static checker; `fix` applies safe auto-fixes) / `lint` / `api_scan` / `api_versions` / `lsp`: hover, definition, implementation, references, symbols, workspace_symbols, diagnostics, completion, signature. Locate code by `symbol` plus a line hint instead of exact columns |
+| `device` | `list` / `info` / `log` (filter by bundle, level or regex; `clear`) / read-only `shell` / `sqlite` (JSON rows from an on-device database or a debuggable app's RDB store; read-only unless `write`) / `send` / `recv` |
+| `ui` | `observe` (screenshot plus compact element list) / `screenshot` / `tree` (`window`, `depth`) / `windows` / `find` / `act` (click, input with Chinese text support and replace-by-default, type, swipe, scroll, key and key chords, mouse click/move/scroll/drag; `verify_change` reports whether the screen changed) / `assert` / screen recording `record_start` / `record_stop` (`discard`, `external`) / `record_status`. **UI test sessions** driven by the host AI: `test_start` → `test_step` (actions and assertions with before/after screenshots, element summary and the app's log window) → `review` (host judges a screenshot; a failed control assertion is never overridden) → `test_finish` (JSON + Markdown report) → `test_log` / `test_export` |
 | `ui_flow` | Record reusable flows through `ui act`, save them with a final assert, and replay with variables and self-repair. Stored in `.arkpilot/flows`, compatible with v0.x |
-| `diagnose` | `crash` (reads jscrash/cppcrash/appfreeze reports, extracts the signature and app frames, matches the fault-pattern library) / `build` |
+| `diagnose` | `crash` (reads jscrash/cppcrash/appfreeze reports, also on production phones; `since_minutes` time window; extracts the signature and app frames, matches the fault-pattern library) / `build` |
 | `knowledge` | Offline docs, ArkTS rules, error cases and runtime patterns: `search` / `read` (by `section`) / `catalog` / `status` / `update` / `rollback`; `source=cloud` queries CodeGenie online |
-| `skills` | Built-in HarmonyOS skills: `list` / `read`, `export` as native `SKILL.md` for your host, `search` / `install` / `uninstall` from the OpenHarmony skill market |
-| `auth` | Huawei browser login for `codegenie` (cloud knowledge) or `developer` (signing); `teams`; `import` v0.x credentials |
-| `sign` *(group)* | `auto` (one-step debug signing for real devices: keystore, certificate, device registration, profile, and `signingConfigs` in the project) / `sign` / `verify` / AppGallery Connect certificates and devices |
+| `skills` | Built-in HarmonyOS skills: `list` / `read`, `export` as native `SKILL.md` for your host, `install_mcp` registers this server in the host config (cursor, claude, codex, opencode, trae-cn, codebuddy, qoder, pi; idempotent merge), `init` does both, `search` / `install` / `uninstall` from the OpenHarmony skill market |
+| `auth` | Huawei browser login for `codegenie` (cloud knowledge) or `developer` (signing), `region` cn / global; `teams`; `import` v0.x credentials |
+| `sign` *(group)* | `auto` (one-step debug signing for real devices: keystore, certificate, device registration, profile with ACL permissions derived from `module.json5`, and `signingConfigs` in the project) / `sign` / `verify` / AppGallery Connect certificates and devices / itemized `keypair`, `csr`, `certificate_create`, `profile_create`, `profile_delete` |
 | `emulator` *(group)* | `list` / `start` (waits for boot) / `stop` / `create` / `delete` / images / license / `scenario` (battery, GPS, sensors, rotation, fold, …) |
 | `hot_reload` *(group)* | `apply` pushes ArkTS changes to the running app as an HQF quick fix in about 3 s with no restart; `reset` removes them |
 
@@ -106,7 +115,7 @@ It combines Huawei's HarmonyOS docs (guides, API reference, best practices, FAQ,
 
 ```text
 src/
-  cli.ts        entry: mcp | doctor | kb-build | kb-update
+  cli.ts        entry: mcp | doctor | init --host <h> | serve-lsp [--cpp] | kb-build | kb-update
   mcp.ts        minimal MCP stdio JSON-RPC (tools, resources, prompts, cancellation)
   server.ts     tool registry wiring; JSON Schemas built lazily on first tools/list
   jobs.ts       job definitions (build, build_run, deploy, flow replay, kb update, auto sign)

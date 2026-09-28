@@ -185,11 +185,38 @@ export async function syncProject(project: Project, signal: AbortSignal, install
   return { synced: true, product: project.product, modules: project.modules.map((m) => m.name), elapsed_ms: Date.now() - started, log_artifact: result.log_artifact };
 }
 
-export type BuildTask = "assembleHap" | "assembleHar" | "assembleHsp" | "assembleApp";
+export type BuildTask = "assembleHap" | "assembleHar" | "assembleHsp" | "assembleApp" | "compileNative";
 const taskTypes: Record<BuildTask, Module["type"][]> = {
-  assembleHap: ["entry", "feature"], assembleHar: ["har"], assembleHsp: ["shared"], assembleApp: [],
+  assembleHap: ["entry", "feature"], assembleHar: ["har"], assembleHsp: ["shared"], assembleApp: [], compileNative: ["entry", "feature", "har", "shared"],
 };
-const suffix: Record<BuildTask, string> = { assembleHap: ".hap", assembleHar: ".har", assembleHsp: ".hsp", assembleApp: ".app" };
+const suffix: Record<BuildTask, string> = { assembleHap: ".hap", assembleHar: ".har", assembleHsp: ".hsp", assembleApp: ".app", compileNative: "" };
+
+/** Central compilation database (same location DevEco Studio and deveco-cli use). */
+export function compileCommandsPath(root: string) {
+  return path.join(root, ".idea", ".deveco", "cxx", "compile_commands.json");
+}
+
+/** Merge every module's .cxx/**\/compile_commands.json into the central file. Returns entry count. */
+export function mergeCompileCommands(project: Project): number {
+  const merged: unknown[] = [];
+  for (const m of project.modules) {
+    const cxx = path.join(m.root, ".cxx");
+    if (!fs.existsSync(cxx)) continue;
+    for (const file of walk(cxx, new Set())) {
+      if (path.basename(file) !== "compile_commands.json") continue;
+      try { merged.push(...(JSON.parse(fs.readFileSync(file, "utf8")) as unknown[])); } catch { /* skip partial files */ }
+    }
+  }
+  if (!merged.length) return 0;
+  const out = compileCommandsPath(project.root);
+  fs.mkdirSync(path.dirname(out), { recursive: true });
+  fs.writeFileSync(out, JSON.stringify(merged));
+  return merged.length;
+}
+
+export function hasNativeCode(project: Project) {
+  return project.modules.some((m) => fs.existsSync(path.join(m.root, "src/main/cpp")));
+}
 
 export async function buildProject(
   project: Project,
@@ -199,7 +226,10 @@ export async function buildProject(
 ) {
   const task = options.task ?? "assembleHap";
   let modules = project.modules;
-  if (task !== "assembleApp") {
+  if (task === "compileNative") {
+    invariant(hasNativeCode(project), "INVALID_INPUT", "Project has no C/C++ sources (src/main/cpp)");
+    modules = project.modules.filter((m) => fs.existsSync(path.join(m.root, "src/main/cpp")) && (!options.modules?.length || options.modules.includes(m.name)));
+  } else if (task !== "assembleApp") {
     if (options.modules?.length) {
       const unknown = options.modules.filter((name) => !project.modules.some((m) => m.name === name));
       invariant(!unknown.length, "INVALID_INPUT", `Unknown modules: ${unknown.join(", ")}`, { modules: project.modules.map((m) => m.name) });
@@ -221,6 +251,10 @@ export async function buildProject(
   if (options.props) args.push(...options.props);
   args.push(...(options.clean ? ["clean", task] : [task]));
   const result = await hvigor(project, args, signal, "Build", jobId);
+  // Any build of a C/C++ module emits per-module compile_commands.json; keep the central one fresh for clangd.
+  const compileCommands = hasNativeCode(project) ? mergeCompileCommands(project) : 0;
+  if (task === "compileNative")
+    return { success: true, task, product: project.product, compile_commands: compileCommands ? compileCommandsPath(project.root) : null, entries: compileCommands, log_artifact: result.log_artifact, elapsed_ms: result.elapsed_ms };
   const artifacts = await buildOutputs(project, task, modules);
   invariant(artifacts.length, "BUILD_FAILED", "Build finished but produced no package", { log_artifact: result.log_artifact });
   return { success: true, task, product: project.product, mode, artifacts, warnings: result.counts.warning, diagnostics: result.diagnostics.slice(0, 10), log_artifact: result.log_artifact, elapsed_ms: result.elapsed_ms };

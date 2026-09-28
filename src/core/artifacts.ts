@@ -7,6 +7,7 @@ import { invariant } from "./errors.js";
 
 const extensions: Record<string, string> = {
   "text/plain": "txt",
+  "text/markdown": "md",
   "application/json": "json",
   "image/png": "png",
   "image/jpeg": "jpg",

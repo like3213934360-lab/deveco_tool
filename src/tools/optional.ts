@@ -11,9 +11,16 @@ export const signTool = tool({
     "auto: one-shot debug signing for real devices (needs auth provider=developer): creates keystore+CSR, debug certificate, registers connected devices, creates a debug profile and writes signingConfigs into build-profile.json5. Then run action=build_run works on real devices.",
     "sign/verify: sign a package locally (from project signingConfigs or explicit material) / verify a signed package.",
     "certificates, devices, register_device, delete_certificate: AppGallery Connect management.",
+    "Itemized (team/release signing): keypair (out .p12, keystore_password) -> csr (keystore, out .csr) -> certificate_create (csr, name, type, out .cer) -> profile_create (bundle, id=certificate id, type, out .p7b) ; profile_delete (id).",
   ].join(" "),
   schema: z.object({
-    action: z.enum(["auto", "sign", "verify", "certificates", "devices", "register_device", "delete_certificate"]),
+    action: z.enum(["auto", "sign", "verify", "certificates", "devices", "register_device", "delete_certificate",
+      "keypair", "csr", "certificate_create", "profile_create", "profile_delete"]),
+    type: z.enum(["debug", "release"]).optional().describe("certificate_create/profile_create (default debug)"),
+    name: z.string().max(100).optional().describe("certificate_create/profile_create name"),
+    csr: z.string().optional().describe("certificate_create: CSR file"),
+    bundle: z.string().optional().describe("profile_create: bundle name (or pass project)"),
+    subject: z.string().optional().describe("csr: subject, default CN=DebugKey"),
     project: z.string().optional(),
     product: fields.product,
     team: z.string().optional().describe("Developer team id (default: personal team)"),
@@ -23,7 +30,7 @@ export const signTool = tool({
     keystore: z.string().optional(), keystore_password: z.string().optional(), key_alias: z.string().optional(), key_password: z.string().optional(),
     cert: z.string().optional(), profile: z.string().optional(),
     id: z.string().optional(),
-    acl: z.array(z.string()).optional().describe("auto: ACL permissions to request in the profile"),
+    acl: z.array(z.string()).optional().describe("auto: extra ACL permissions (the ones requested in module.json5 are derived automatically)"),
     wait: fields.wait,
   }),
   async handler(input, ctx) {
@@ -33,7 +40,7 @@ export const signTool = tool({
         invariant(input.project, "INVALID_INPUT", "project is required");
         await ensureJobs();
         const { startJob, waitJob } = await import("../core/jobs.js");
-        const { job_id } = await startJob("auto_sign", { project: input.project, product: input.product, team: input.team });
+        const { job_id } = await startJob("auto_sign", { project: input.project, product: input.product, team: input.team, acl: input.acl });
         return waitJob(job_id, input.wait ?? 20000);
       }
       case "sign":
@@ -47,6 +54,28 @@ export const signTool = tool({
         return sign.registerDevice(await sign.teamId(input.team), await resolveTarget(input.target, ctx.signal), ctx.signal);
       }
       case "delete_certificate": invariant(input.id, "INVALID_INPUT", "id is required"); return sign.deleteCertificate(await sign.teamId(input.team), input.id, ctx.signal);
+      case "keypair":
+        invariant(input.out && input.keystore_password, "INVALID_INPUT", "out and keystore_password are required");
+        return sign.generateKeypair({ out: input.out, password: input.keystore_password, alias: input.key_alias }, ctx.signal);
+      case "csr":
+        invariant(input.keystore && input.keystore_password && input.out, "INVALID_INPUT", "keystore, keystore_password and out are required");
+        return sign.generateCsr({ keystore: input.keystore, password: input.keystore_password, key_password: input.key_password, alias: input.key_alias, out: input.out, subject: input.subject }, ctx.signal);
+      case "certificate_create":
+        invariant(input.csr && input.name && input.out, "INVALID_INPUT", "csr, name and out are required");
+        return sign.createCertificate(await sign.teamId(input.team), { csr: input.csr, name: input.name, type: input.type ?? "debug", out: input.out }, ctx.signal);
+      case "profile_create": {
+        invariant(input.id && input.out, "INVALID_INPUT", "id (certificate id) and out are required");
+        let bundle = input.bundle, acl = input.acl;
+        if (input.project) {
+          const { inspectProject } = await import("../domains/project.js");
+          const project = inspectProject(input.project, input.product);
+          bundle ??= project.bundleName;
+          acl = [...new Set([...sign.projectAclPermissions(project.modules).acl, ...(acl ?? [])])];
+        }
+        invariant(bundle, "INVALID_INPUT", "bundle (or project) is required");
+        return sign.createProfile(await sign.teamId(input.team), { bundle, certificate: input.id, type: input.type ?? "debug", name: input.name, acl, out: input.out }, ctx.signal);
+      }
+      case "profile_delete": invariant(input.id, "INVALID_INPUT", "id is required"); return sign.deleteProfile(await sign.teamId(input.team), input.id, ctx.signal);
     }
   },
 });

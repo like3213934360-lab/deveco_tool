@@ -44,6 +44,38 @@ async function main() {
       process.stdout.write(JSON.stringify(result, null, 2) + "\n");
       return;
     }
+    case "init": {
+      // deveco-mcp init --host cursor [--project <path>] [--force] [--skills-only|--mcp-only]
+      const flag = (name: string) => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] : undefined; };
+      const host = flag("--host");
+      if (!host) throw new Error("usage: deveco-mcp init --host <cursor|claude|codex|opencode|trae-cn|codebuddy|qoder|pi> [--project <path>] [--force] [--skills-only|--mcp-only]");
+      const { initHost } = await import("./domains/skills.js");
+      const project = flag("--project");
+      process.stdout.write(JSON.stringify(await initHost(host, {
+        project, scope: project ? "project" : "user", force: args.includes("--force"),
+        skills: !args.includes("--mcp-only"), mcp: !args.includes("--skills-only"),
+      }), null, 2) + "\n");
+      return;
+    }
+    case "serve-lsp": {
+      // Editor-facing LSP: stdio passthrough to the SDK ArkTS server (or clangd with --cpp).
+      const flag = (name: string) => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] : undefined; };
+      const { lspCommand } = await import("./domains/code.js");
+      const { spawn } = await import("node:child_process");
+      const project = flag("--project") ?? process.cwd();
+      const cmd = lspCommand(project, args.includes("--cpp") ? "cpp" : "arkts");
+      const child = spawn(cmd.file, cmd.args, { cwd: cmd.cwd, env: cmd.env as NodeJS.ProcessEnv, stdio: ["pipe", "inherit", "inherit"] });
+      for (const sig of ["SIGINT", "SIGTERM"] as const) process.on(sig, () => child.kill(sig));
+      // The SDK ArkTS server ignores the LSP `exit` notification: enforce it (and editor disconnects).
+      const stop = () => setTimeout(() => child.kill("SIGTERM"), 1000).unref();
+      process.stdin.on("data", (chunk: Buffer) => {
+        child.stdin!.write(chunk);
+        if (/"method"\s*:\s*"exit"/.test(chunk.toString("utf8"))) stop();
+      });
+      process.stdin.on("end", () => { child.stdin!.end(); stop(); });
+      child.on("exit", (code) => process.exit(code ?? 0)); // stdin listeners would otherwise keep us alive
+      return;
+    }
     case "kb-update": {
       const { update } = await import("./domains/knowledge.js");
       process.stdout.write(JSON.stringify(await update({ source: args[0], force: args.includes("--force") }, new AbortController().signal), null, 2) + "\n");
@@ -56,7 +88,7 @@ async function main() {
       return;
     }
     default:
-      process.stderr.write("usage: deveco-mcp [mcp | doctor [project] | kb-build <dir> [out] | kb-update [file] | --version]\n");
+      process.stderr.write("usage: deveco-mcp [mcp | doctor [project] | init --host <host> | serve-lsp [--cpp] [--project p] | kb-build <dir> [out] | kb-update [file] | --version]\n");
       process.exit(2);
   }
 }

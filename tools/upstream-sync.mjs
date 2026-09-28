@@ -1,11 +1,17 @@
-// Upstream alignment report: compares deveco-code tool registry + deveco-cli commands
-// against the capabilities this MCP exposes. Usage:
-//   node tools/upstream-sync.mjs [--code <deveco-code checkout>] [--cli <deveco-cli checkout>]
-// Without paths it shallow-clones both develop branches into a temp dir.
+// Upstream capability alignment: deveco-code tool registry + deveco-cli commands vs this MCP.
+// Each upstream capability maps to { tool, action, params } and is verified against the live
+// tools/list JSON Schemas (all tool groups enabled):
+//   full    - tool exists, action is in its enum, every key parameter exists in the schema
+//   partial - mapped but the tool/action/parameters are missing  -> CI fails
+//   host    - provided by the MCP host itself (file ops, shell, web, planning...)
+//   cli     - provided as a CLI subcommand (init, serve-lsp, kb-update)
+//   UNMAPPED- new upstream capability without a decision            -> CI fails
+// Usage: node tools/upstream-sync.mjs [--code <deveco-code>] [--cli <deveco-cli>] [--json]
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { connect } from "./mcp-client.mjs";
 
 const arg = (name) => { const i = process.argv.indexOf(name); return i >= 0 ? process.argv[i + 1] : undefined; };
 const temp = fs.mkdtempSync(path.join(os.tmpdir(), "upstream-"));
@@ -32,50 +38,97 @@ for (const file of fs.readdirSync(cmdDir).filter((f) => f.endsWith(".ts") && !f.
   cliCommands.push(...(subs.length ? subs.map((s) => `${top} ${s}`) : [top]));
 }
 
-// Mapping upstream capability -> this MCP (tool action). "host" = provided by the MCP host itself.
+const H = "host";
+const C = (command) => ({ cli: command });
+const T = (tool, action, params = []) => ({ tool, action, params });
+// Upstream capability -> this MCP. params = upstream key parameters, expressed as our field names.
 const map = {
-  // deveco-code agent tools
-  invalid: "host", shell: "host", bash: "host", read: "host", glob: "host", grep: "host", edit: "host", write: "host", apply_patch: "host",
-  task: "host", webfetch: "host", websearch: "host", todowrite: "host", todo: "host", question: "host", plan: "host", planwrite: "host", planenter: "host",
-  plan_exit: "host", plan_write: "host", plan_enter: "host", spec_write: "prompts implement-feature", specwrite: "prompts implement-feature", debug_exit: "host", debugexit: "host",
-  skill: "skills list/read + resources", skilltool: "skills list/read + resources",
-  lsp: "code lsp", lsptool: "code lsp",
-  switch_cwd: "explicit project param", switchcwd: "explicit project param",
-  arkts_check: "code check", arktscheck: "code check",
-  build_project: "project build", start_app: "run launch/build_run",
-  hdc_log: "device log", verify_ui: "ui assert + ui_flow", verifyui: "ui assert + ui_flow",
-  get_ui_verification_log: "job read", getuilog: "job read", save_ui_screenshot: "ui screenshot", saveuiscreenshot: "ui screenshot",
-  // deveco-cli commands
-  "auth login": "auth login", "auth logout": "auth logout", "auth status": "auth status", "auth team": "auth teams", "auth list": "auth teams",
-  build: "project build", "build clean": "project clean", check: "code check", "check versions": "doctor",
-  create: "project create", device: "device list", "device list": "device list", "device view": "device info", "device file": "device send/recv",
-  "device send": "device send", "device recv": "device recv", "device sqlite3": "device shell (read-only)",
-  "doc search": "knowledge search", "doc read": "knowledge read", "doc catalog": "knowledge catalog",
-  emulator: "emulator", "emulator download": "emulator install_image", "emulator remove": "emulator delete", "emulator list": "emulator list",
-  "emulator view": "emulator list", "emulator accept": "emulator license", "emulator shake": "emulator scenario", "emulator power": "emulator scenario",
-  "emulator rotate": "emulator scenario", "emulator volume": "emulator scenario", "emulator fold": "emulator scenario", "emulator battery": "emulator scenario",
-  "emulator geolocation": "emulator scenario gps", "emulator scene": "emulator scenario", "emulator sensor": "emulator scenario", "emulator start": "emulator start",
-  "emulator stop": "emulator stop", "emulator create": "emulator create", "emulator delete": "emulator delete",
-  init: "skills export", log: "device log", run: "run build_run (+hot_reload)", "serve mcp": "this server", "serve lsp": "code lsp",
-  "signature generate": "sign auto", "skills list": "skills search", "skills find": "skills search", "skills add": "skills install", "skills remove": "skills uninstall",
-  ui: "ui", "ui-input": "ui act", "ui-layout": "ui tree/find", "ui-screenshot": "ui screenshot", "ui-window": "ui tree", "window list": "ui tree",
-  "ui-screenrecord": "ui record_start/record_stop", screenrecord: "ui record_start/record_stop", screenshot: "ui screenshot", layout: "ui tree/find", click: "ui act",
-  "compat versions": "code api_scan / doctor", fetch: "host (webfetch)", search: "host (websearch)", patch: "host (apply_patch)",
-  "update-docs": "knowledge update", update: "knowledge update", docs: "knowledge update",
-  "serve-lsp": "code lsp", "serve-lsp-cpp": "code lsp language=cpp",
+  // ---- deveco-code agent tools
+  invalid: H, shell: H, bash: H, read: H, glob: H, grep: H, edit: H, write: H, apply_patch: H, multiedit: H, ls: H, list: H,
+  task: H, webfetch: H, websearch: H, codesearch: H, todowrite: H, todoread: H, todo: H, question: H, plan: H, planwrite: H, planenter: H, batch: H,
+  plan_exit: H, plan_write: H, plan_enter: H, debug_exit: H, debugexit: H,
+  spec_write: T("prompts", null), specwrite: T("prompts", null),
+  skill: T("skills", "read", ["name", "reference"]), skilltool: T("skills", "read", ["name"]),
+  lsp: T("code", "lsp", ["op", "file", "symbol", "line", "language"]), lsptool: T("code", "lsp", ["op", "file", "symbol"]),
+  switch_cwd: T("project", "info", ["project"]), switchcwd: T("project", "info", ["project"]),
+  arkts_check: T("code", "check", ["files", "fix"]), arktscheck: T("code", "check", ["files"]),
+  build_project: T("project", "build", ["task", "product", "mode", "modules"]),
+  start_app: T("run", "build_run", ["project", "target", "module"]),
+  hdc_log: T("device", "log", ["bundle", "grep", "level", "lines", "clear"]),
+  verify_ui: T("ui", "test_start", ["plan", "bundle", "fresh_start"]), verifyui: T("ui", "test_start", ["plan"]),
+  get_ui_verification_log: T("ui", "test_log", ["test_id", "grep", "max_chars"]), getuilog: T("ui", "test_log", ["test_id"]),
+  save_ui_screenshot: T("ui", "test_export", ["test_id", "directory"]), saveuiscreenshot: T("ui", "test_export", ["test_id", "directory"]),
+  // ---- deveco-cli commands
+  "auth login": T("auth", "login", ["provider", "region"]), "auth logout": T("auth", "logout", ["provider"]), "auth status": T("auth", "status", ["provider"]),
+  "auth team": T("auth", "teams"), "auth list": T("auth", "teams"),
+  build: T("project", "build", ["task", "product", "mode", "modules", "clean"]), "build clean": T("project", "clean"),
+  "build compileNative": T("project", "build", ["task"]),
+  check: T("code", "check", ["files"]), "check versions": T("doctor", null, ["project"]),
+  create: T("project", "create", ["project", "app_name", "bundle_name", "target_api"]),
+  device: T("device", "list"), "device list": T("device", "list"), "device view": T("device", "info", ["target"]),
+  "device file": T("device", "send", ["local", "remote"]), "device send": T("device", "send", ["local", "remote"]), "device recv": T("device", "recv", ["local", "remote"]),
+  "device sqlite3": T("device", "sqlite", ["db", "sql", "write"]),
+  "doc search": T("knowledge", "search", ["query", "source"]), "doc read": T("knowledge", "read"), "doc catalog": T("knowledge", "catalog"),
+  emulator: T("emulator", "list"), "emulator download": T("emulator", "install_image"), "emulator remove": T("emulator", "delete"), "emulator list": T("emulator", "list"),
+  "emulator view": T("emulator", "list"), "emulator accept": T("emulator", "license"), "emulator start": T("emulator", "start"), "emulator stop": T("emulator", "stop"),
+  "emulator create": T("emulator", "create"), "emulator delete": T("emulator", "delete"),
+  "emulator shake": T("emulator", "scenario"), "emulator power": T("emulator", "scenario"), "emulator rotate": T("emulator", "scenario"), "emulator volume": T("emulator", "scenario"),
+  "emulator fold": T("emulator", "scenario"), "emulator battery": T("emulator", "scenario"), "emulator geolocation": T("emulator", "scenario"),
+  "emulator scene": T("emulator", "scenario"), "emulator sensor": T("emulator", "scenario"),
+  init: T("skills", "init", ["host", "scope", "project", "force"]), log: T("device", "log", ["bundle", "grep", "level"]),
+  run: T("run", "build_run", ["project", "target", "module", "product", "mode"]),
+  "serve mcp": H, "serve lsp": C("serve-lsp [--cpp]"), "serve-lsp": C("serve-lsp"), "serve-lsp-cpp": C("serve-lsp --cpp"),
+  "signature generate": T("sign", "auto", ["project", "team", "acl"]),
+  "skills list": T("skills", "list"), "skills find": T("skills", "search", ["query"]), "skills add": T("skills", "install", ["name", "host", "scope"]),
+  "skills remove": T("skills", "uninstall", ["name", "host"]),
+  ui: T("ui", "observe"), "ui-input": T("ui", "act", ["op", "selector", "x", "y", "text", "key", "direction"]),
+  "ui-layout": T("ui", "tree", ["window", "depth", "bundle"]), "ui-screenshot": T("ui", "screenshot", ["format", "width"]),
+  "ui-window": T("ui", "windows", ["all"]), "window list": T("ui", "windows", ["all"]),
+  "ui-screenrecord": T("ui", "record_stop", ["discard", "external"]), screenrecord: T("ui", "record_status"),
+  screenshot: T("ui", "screenshot"), layout: T("ui", "tree", ["window", "depth"]), click: T("ui", "act", ["op", "selector"]),
+  "compat versions": T("code", "api_versions"), fetch: H, search: H, patch: H,
+  "update-docs": T("knowledge", "update"), update: T("knowledge", "update"), docs: T("knowledge", "update"),
 };
+
+// Live schemas of this server with every tool group enabled.
+const client = connect({ DEVECO_TOOL_GROUPS: "core,sign,emulator,hot_reload" });
+await client.initialize();
+const tools = new Map((await client.request("tools/list")).result.tools.map((t) => [t.name, t.inputSchema]));
+const prompts = (await client.request("prompts/list")).result?.prompts ?? [];
+await client.close();
+
+function verify(target) {
+  if (target === H) return { status: "host" };
+  if (target.cli) return { status: "cli", via: `deveco-mcp ${target.cli}` };
+  if (target.tool === "prompts") return prompts.length ? { status: "full", via: "MCP prompts" } : { status: "partial", missing: ["prompts"] };
+  const schema = tools.get(target.tool);
+  if (!schema) return { status: "partial", missing: [`tool ${target.tool}`] };
+  const props = schema.properties ?? {};
+  const missing = [];
+  if (target.action && !(props.action?.enum ?? []).includes(target.action)) missing.push(`action ${target.action}`);
+  for (const p of target.params) if (!(p in props)) missing.push(`param ${p}`);
+  const via = `${target.tool}${target.action ? ` action=${target.action}` : ""}`;
+  return missing.length ? { status: "partial", via, missing } : { status: "full", via };
+}
+
 const norm = (s) => s.toLowerCase();
-const rows = [...codeTools.map((t) => ["deveco-code", t]), ...cliCommands.map((c) => ["deveco-cli", c])].map(([src, name]) => {
-  const key = Object.keys(map).find((k) => norm(k) === norm(name) || norm(k) === norm(name.split(" ")[0]) && !map[name]);
-  const target = map[name] ?? (key ? map[key] : undefined);
-  return { source: src, upstream: name, mapped: target ?? "UNMAPPED" };
+const rows = [...codeTools.map((t) => ["deveco-code", t]), ...cliCommands.map((c) => ["deveco-cli", c])].map(([source, name]) => {
+  const key = map[name] !== undefined ? name : Object.keys(map).find((k) => norm(k) === norm(name)) ?? Object.keys(map).find((k) => norm(k) === norm(name.split(" ")[0]));
+  if (!key) return { source, upstream: name, status: "UNMAPPED" };
+  return { source, upstream: name, ...verify(map[key]) };
 });
-const unmapped = rows.filter((r) => r.mapped === "UNMAPPED");
-const gaps = rows.filter((r) => r.mapped.startsWith("gap"));
-console.log(JSON.stringify({
+const count = (s) => rows.filter((r) => r.status === s).length;
+const failing = rows.filter((r) => r.status === "partial" || r.status === "UNMAPPED");
+const report = {
   upstream: { "deveco-code": rev(code), "deveco-cli": rev(cli) },
-  totals: { upstream: rows.length, covered: rows.length - unmapped.length - gaps.length, host: rows.filter((r) => r.mapped === "host").length, gaps: gaps.length, unmapped: unmapped.length },
-  unmapped, gaps, rows,
-}, null, 2));
+  totals: { upstream: rows.length, full: count("full"), cli: count("cli"), host: count("host"), partial: count("partial"), unmapped: count("UNMAPPED") },
+  failing, rows,
+};
+if (process.argv.includes("--json")) console.log(JSON.stringify(report, null, 2));
+else {
+  console.log(`deveco-code@${report.upstream["deveco-code"]} deveco-cli@${report.upstream["deveco-cli"]}`);
+  console.log(JSON.stringify(report.totals));
+  for (const r of failing) console.log(`  ${r.status.padEnd(8)} ${r.source}: ${r.upstream}${r.missing ? ` (missing ${r.missing.join(", ")})` : ""}`);
+}
 if (!arg("--code") || !arg("--cli")) fs.rmSync(temp, { recursive: true, force: true });
-process.exitCode = unmapped.length ? 1 : 0;
+process.exitCode = failing.length ? 1 : 0;

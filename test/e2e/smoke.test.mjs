@@ -112,6 +112,40 @@ test("hot reload patches the running app without restart", { skip: !target }, as
   assert.equal(reset.reset, true);
 });
 
+test("windows, window-scoped tree, record_status", { skip: !target }, async () => {
+  const { windows } = await call("ui", { action: "windows", target });
+  const app = windows.find((w) => w.focused) ?? windows[0];
+  assert.ok(app, JSON.stringify(windows));
+  const tree = await call("ui", { action: "tree", target, window: app.id, depth: 8 });
+  assert.ok(tree.nodes > 0);
+  const status = await call("ui", { action: "record_status", target });
+  assert.ok(["idle", "recording", "busy"].includes(status.status));
+});
+
+test("device sqlite on the app's RDB store (read-only by default)", { skip: !target }, async () => {
+  const page = path.join(project, "entry/src/main/ets/pages/Index.ets");
+  const original = fs.readFileSync(page, "utf8");
+  fs.writeFileSync(page, `import { relationalStore } from '@kit.ArkData';\n` + original.replace(/build\(\)\s*\{/, `aboutToAppear(): void {
+    relationalStore.getRdbStore(getContext(this), { name: 'e2e.db', securityLevel: relationalStore.SecurityLevel.S1 }).then(async (store) => {
+      await store.executeSql('CREATE TABLE IF NOT EXISTS notes (id INTEGER PRIMARY KEY, title TEXT)');
+      await store.executeSql("INSERT OR REPLACE INTO notes VALUES (1, 'hello')");
+    });
+  }
+
+  build() {`));
+  try {
+    const deployed = await waitJob(await call("run", { action: "build_run", project, target, wait: 60000 }));
+    assert.equal(deployed.status, "succeeded", JSON.stringify(deployed.error ?? deployed).slice(0, 2000));
+    await new Promise((r) => setTimeout(r, 1500));
+    const rows = await call("device", { action: "sqlite", target, bundle, db: "e2e.db", sql: "select * from notes" });
+    assert.deepEqual(rows.rows, [{ id: 1, title: "hello" }]);
+    const blocked = await client.call("device", { action: "sqlite", target, bundle, db: "e2e.db", sql: "delete from notes" });
+    assert.equal(blocked.isError, true);
+  } finally {
+    fs.writeFileSync(page, original);
+  }
+});
+
 test("flow record/replay", { skip: !target }, async () => {
   // Fresh install (the previous test left a hot-reload build) so the page starts at "Hello World".
   const deployed = await waitJob(await call("run", { action: "build_run", project, target, wait: 60000 }));
@@ -122,4 +156,25 @@ test("flow record/replay", { skip: !target }, async () => {
   assert.equal(saved.saved, "smoke");
   const replay = await waitJob(await call("ui_flow", { action: "replay", project, target, id: "smoke", wait: 60000 }));
   assert.equal(replay.status, "succeeded", JSON.stringify(replay.error ?? replay).slice(0, 2000));
+});
+
+test("UI test session: steps, review, report, export", { skip: !target }, async () => {
+  const started = await call("ui", { action: "test_start", target, project, fresh_start: true, plan: "1. 显示 Hello World\n2. 点击后显示 Welcome" });
+  assert.equal(started.checklist.length, 2);
+  const id = started.test_id;
+  const first = await call("ui", { action: "test_step", target, test_id: id, visible: { text: "Hello World" } });
+  assert.equal(first.passed, true, JSON.stringify({ started, first }).slice(0, 3000));
+  const click = await call("ui", { action: "test_step", target, test_id: id, op: "click", selector: { text: "Hello World" } });
+  assert.equal(click.passed, true, JSON.stringify(click).slice(0, 2000));
+  const welcome = await call("ui", { action: "test_step", target, test_id: id, visible: { text: "Welcome" } });
+  assert.equal(welcome.passed, true, JSON.stringify(welcome).slice(0, 2000));
+  const review = await client.call("ui", { action: "review", target, test_id: id, requirement: "Welcome is shown" });
+  assert.ok(review.content.some((c) => c.type === "image"));
+  await call("ui", { action: "review", target, test_id: id, outcome: "passed", reason: "visible" });
+  const finished = await call("ui", { action: "test_finish", test_id: id });
+  assert.equal(finished.status, "passed", JSON.stringify(finished));
+  const dir = path.join(work, "ui-export");
+  const exported = await call("ui", { action: "test_export", test_id: id, directory: dir });
+  assert.ok(exported.files.includes("report.md") && fs.existsSync(path.join(dir, "test.json")));
+  assert.ok((await call("ui", { action: "test_log", test_id: id, max_chars: 200 })).chars >= 0);
 });

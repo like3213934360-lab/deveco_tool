@@ -173,7 +173,7 @@ defineJob<{ version?: string; source?: string; force?: boolean }>({
   summarize: (o) => o.update,
 });
 
-defineJob<{ project: string; product?: string; team?: string }>({
+defineJob<{ project: string; product?: string; team?: string; acl?: string[] }>({
   kind: "auto_sign",
   steps: [{
     id: "sign",
@@ -183,7 +183,7 @@ defineJob<{ project: string; product?: string; team?: string }>({
       const { autoSign } = await import("./domains/sign.js");
       const project = inspectProject(ctx.input.project, ctx.input.product);
       invariant(project.bundleName, "PROJECT_INVALID", "bundleName missing");
-      return autoSign(ctx.input.project, { product: project.product, team: ctx.input.team, bundle: project.bundleName }, ctx.signal, ctx.log);
+      return autoSign(ctx.input.project, { product: project.product, team: ctx.input.team, bundle: project.bundleName, acl: ctx.input.acl }, ctx.signal, ctx.log);
     },
   }],
   summarize: (o) => o.sign,

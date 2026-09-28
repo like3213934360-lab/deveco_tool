@@ -38,8 +38,18 @@ export function readSkill(name: string, reference?: string) {
 /** Host-native skill directories (same list the upstream CLI installs into). */
 const hostDirs: Record<string, string> = {
   cursor: ".cursor/skills", claude: ".claude/skills", codex: ".codex/skills", opencode: ".config/opencode/skills",
-  deveco: ".config/deveco/skills", "trae-cn": ".trae-cn/skills", codebuddy: ".codebuddy/skills", qoder: ".qoder/skills",
+  deveco: ".config/deveco/skills", "trae-cn": ".trae-cn/skills", codebuddy: ".codebuddy/skills", qoder: ".qoder/skills", pi: ".pi/agent/skills",
 };
+
+/** One-step host setup: export skills + register this MCP server (parity with `devecocli init`). */
+export async function initHost(host: string, options: { scope?: "user" | "project"; project?: string; force?: boolean; skills?: boolean; mcp?: boolean }) {
+  const { installMcp } = await import("./hostconfig.js");
+  const scope = options.scope ?? (options.project ? "project" : "user");
+  return {
+    ...(options.skills !== false ? { skills: exportSkills(host, scope, options.project) } : {}),
+    ...(options.mcp !== false ? { mcp: installMcp(host, { scope, project: options.project, force: options.force }) } : {}),
+  };
+}
 
 /** Export bundled skills as native SKILL.md folders so the host loads them automatically. */
 export function exportSkills(host: string, scope: "user" | "project", project?: string, names?: string[]) {

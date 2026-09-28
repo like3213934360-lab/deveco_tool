@@ -152,21 +152,25 @@ interface LspSession {
 }
 const sessions = pool<LspSession>(3);
 
-async function startLsp(root: string, language: "arkts" | "cpp"): Promise<LspSession> {
+/** Command line of the SDK language server (shared by MCP sessions and `serve-lsp`). */
+export function lspCommand(project: string, language: "arkts" | "cpp") {
   const tc = toolchain();
-  let cmd;
+  const root = path.resolve(project);
   if (language === "cpp") {
     const db = findCompileCommands(root);
     invariant(db, "CAPABILITY_UNAVAILABLE", "C/C++ language service needs compile_commands.json", undefined,
-      "Build the native module first (project action=build) so hvigor emits a compilation database");
-    cmd = { file: component("clangd", tc), args: [`--compile-commands-dir=${path.dirname(db)}`, "--log=error", "--background-index=false", "--pch-storage=memory"], cwd: root };
-  } else {
-    cmd = {
-      file: component("node", tc),
-      args: ["--max-old-space-size=2048", component("arkts", tc), "--stdio", "--logger-level=ERROR", `--projectPath=${root}`, `--sdkPath=${tc.sdk}`],
-      cwd: root, env: { ...process.env, DEVECO_SDK_HOME: tc.sdk },
-    };
+      "Run project action=build task=compileNative to generate the compilation database");
+    return { file: component("clangd", tc), args: [`--compile-commands-dir=${path.dirname(db)}`, "--log=error", "--background-index=false", "--pch-storage=memory"], cwd: root, env: process.env as Record<string, string | undefined> };
   }
+  return {
+    file: component("node", tc),
+    args: ["--max-old-space-size=2048", component("arkts", tc), "--stdio", "--logger-level=ERROR", `--projectPath=${root}`, `--sdkPath=${tc.sdk}`],
+    cwd: root, env: { ...process.env, DEVECO_SDK_HOME: tc.sdk } as Record<string, string | undefined>,
+  };
+}
+
+async function startLsp(root: string, language: "arkts" | "cpp"): Promise<LspSession> {
+  const cmd = lspCommand(root, language);
   const child = spawnManaged(cmd);
   const client = new LspClient(child);
   const session: LspSession = {
@@ -203,7 +207,9 @@ async function startLsp(root: string, language: "arkts" | "cpp"): Promise<LspSes
 }
 
 function findCompileCommands(root: string): string | undefined {
-  for (const file of walk(root, new Set(["node_modules", "oh_modules", ".git"]))) {
+  const central = path.join(root, ".idea", ".deveco", "cxx", "compile_commands.json");
+  if (isFile(central)) return central;
+  for (const file of walk(root, new Set(["node_modules", "oh_modules", ".git", ".hvigor"]))) {
     if (path.basename(file) === "compile_commands.json") return file;
   }
   return undefined;

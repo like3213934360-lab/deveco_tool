@@ -29,8 +29,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - name: Upstream alignment report (fails on unmapped upstream capabilities)
-        run: node tools/upstream-sync.mjs > alignment.json
+      - run: npm ci --omit=optional
+      - run: npm run build
+      - name: Capability-level upstream alignment (fails on partial or unmapped capabilities)
+        run: node tools/upstream-sync.mjs --json > alignment.json
       - uses: actions/upload-artifact@v4
         if: always()
         with:

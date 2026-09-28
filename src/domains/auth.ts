@@ -8,10 +8,19 @@ import { invariant, ToolError } from "../core/errors.js";
 import { spawnManaged } from "../core/proc.js";
 
 export type Provider = "developer" | "codegenie";
-const base = "https://cn.devecostudio.huawei.com";
+export type Region = "cn" | "global";
+/** Login portals (upstream ApiEndpoints.CN_LOGIN_URL / LOGIN_URL). */
+export const regionBase: Record<Region, string> = { cn: "https://cn.devecostudio.huawei.com", global: "https://devecostudio.huawei.com" };
+/** Callback siteId -> country code sent to temptoken/check (upstream utils/region.ts). */
+export const siteCountry: Record<string, string> = { "1": "CN", "5": "SG", "7": "EU", "8": "RU" };
+/** Which callback sites a region accepts: cn only the China site, global the overseas sites. */
+export function siteAllowed(region: Region, siteId: string | null) {
+  if (!siteId) return true;
+  return region === "cn" ? siteId === "1" : siteId in siteCountry && siteId !== "1";
+}
 const appIds: Record<Provider, string> = { developer: "1009", codegenie: "1008" };
 
-interface Credentials { jwt: string; access: string; saved: number; userId: string; userName: string; expires?: number }
+interface Credentials { jwt: string; access: string; saved: number; userId: string; userName: string; expires?: number; region?: Region }
 
 let key: Buffer | undefined;
 function secret(): Buffer {
@@ -48,8 +57,8 @@ async function save(provider: Provider, value: Credentials | undefined) {
   db.prepare("INSERT OR REPLACE INTO credentials(provider,data) VALUES(?,?)").run(provider, Buffer.concat([iv, cipher.getAuthTag(), body]));
 }
 
-async function checkJwt(jwt: string, refresh: boolean, signal?: AbortSignal): Promise<string> {
-  const response = await fetch(`${base}/authrouter/auth/api/jwToken/check`, { headers: { jwtToken: jwt, refresh: String(refresh) }, signal: AbortSignal.any([AbortSignal.timeout(20000), ...(signal ? [signal] : [])]) });
+async function checkJwt(jwt: string, refresh: boolean, region: Region, signal?: AbortSignal): Promise<string> {
+  const response = await fetch(`${regionBase[region]}/authrouter/auth/api/jwToken/check`, { headers: { jwtToken: jwt, refresh: String(refresh) }, signal: AbortSignal.any([AbortSignal.timeout(20000), ...(signal ? [signal] : [])]) });
   const data = (await response.json().catch(() => ({}))) as { status?: boolean; userInfo?: { accessToken?: string } };
   invariant(response.ok && data.status === true && data.userInfo?.accessToken, "AUTH_REQUIRED", "Login expired or was rejected", undefined, "Log in again with auth action=login");
   return data.userInfo.accessToken;
@@ -59,7 +68,7 @@ export async function credentials(provider: Provider, force = false, signal?: Ab
   const current = await load(provider);
   invariant(current && (!current.expires || current.expires * 1000 > Date.now()), "AUTH_REQUIRED", `Not logged in to ${provider}`, undefined, `auth action=login provider=${provider}`);
   if (!force && Date.now() - current.saved < 30 * 60000) return current;
-  const access = await checkJwt(current.jwt, true, signal);
+  const access = await checkJwt(current.jwt, true, current.region ?? "cn", signal);
   const updated = { ...current, access, saved: Date.now() };
   await save(provider, updated);
   return updated;
@@ -67,11 +76,13 @@ export async function credentials(provider: Provider, force = false, signal?: Ab
 
 /* ---------------------------------- login ---------------------------------- */
 
-const logins = new Map<Provider, { url: string; server: http.Server; done: Promise<void>; error?: string; browser: string }>();
+const logins = new Map<Provider, { url: string; server: http.Server; done: Promise<void>; error?: string; browser: string; region: Region }>();
 
-export async function login(provider: Provider, openBrowser = true) {
+export async function login(provider: Provider, openBrowser = true, region: Region = "cn") {
   const active = logins.get(provider);
-  if (active) return { provider, pending: true, login_url: active.url, browser: active.browser };
+  if (active) return { provider, region: active.region, pending: true, login_url: active.url, browser: active.browser };
+  const base = regionBase[region];
+  let site = "1";
   const nonce = crypto.randomBytes(24).toString("hex");
   let accept!: (token: string) => void;
   let reject!: (error: Error) => void;
@@ -90,7 +101,8 @@ export async function login(provider: Provider, openBrowser = true) {
       const expected = Buffer.from(nonce);
       const hostOk = [`127.0.0.1:${(server.address() as { port: number }).port}`, `localhost:${(server.address() as { port: number }).port}`].includes(req.headers.host ?? "");
       if (!hostOk || url.pathname !== "/callback" || code.length !== expected.length || !crypto.timingSafeEqual(code, expected)) throw new Error("invalid callback");
-      if (params.get("siteId") && params.get("siteId") !== "1") throw new Error("unsupported region");
+      if (!siteAllowed(region, params.get("siteId"))) throw new Error(`account site ${params.get("siteId")} does not match region ${region}`);
+      site = params.get("siteId") ?? site;
       res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" });
       if (["true", "access_denied", "quit"].includes(params.get("quit") ?? "")) {
         res.end("<h1>登录已取消</h1>");
@@ -108,17 +120,17 @@ export async function login(provider: Provider, openBrowser = true) {
   const url = `${base}/console/DevEcoIDE/apply?${new URLSearchParams({ port: String(port), appid: appIds[provider], code: nonce })}`;
   const timeout = setTimeout(() => reject(new ToolError("TIMEOUT", "Login timed out after 5 minutes")), 300000);
   timeout.unref();
-  const entry = { url, server, browser: openBrowser ? "opened" : "manual", done: Promise.resolve() } as { url: string; server: http.Server; done: Promise<void>; error?: string; browser: string };
+  const entry = { url, server, browser: openBrowser ? "opened" : "manual", done: Promise.resolve(), region } as { url: string; server: http.Server; done: Promise<void>; error?: string; browser: string; region: Region };
   entry.done = (async () => {
     try {
       const temp = await token;
-      const query = new URLSearchParams({ tempToken: temp.split("&")[0]!, site: "CN", version: "1.0.0", appid: appIds[provider] });
+      const query = new URLSearchParams({ tempToken: temp.split("&")[0]!, site: siteCountry[site] ?? "CN", version: "1.0.0", appid: appIds[provider] });
       const response = await fetch(`${base}/authrouter/auth/api/temptoken/check?${query}`, { signal: AbortSignal.timeout(20000) });
       const jwt = (await response.text()).trim();
       invariant(jwt.split(".").length === 3, "AUTH_REQUIRED", "Authentication server returned an invalid session");
       const payload = JSON.parse(Buffer.from(jwt.split(".")[1]!, "base64url").toString("utf8")) as { userId?: string; userName?: string; exp?: number };
-      const access = await checkJwt(jwt, false);
-      await save(provider, { jwt, access, saved: Date.now(), userId: payload.userId ?? "", userName: payload.userName ?? "", expires: payload.exp });
+      const access = await checkJwt(jwt, false, region);
+      await save(provider, { jwt, access, saved: Date.now(), userId: payload.userId ?? "", userName: payload.userName ?? "", expires: payload.exp, region });
     } catch (error) {
       entry.error = (error as Error).message;
     } finally {
@@ -133,7 +145,7 @@ export async function login(provider: Provider, openBrowser = true) {
     const opener = process.platform === "darwin" ? ["open", [url]] : process.platform === "win32" ? ["rundll32.exe", ["url.dll,FileProtocolHandler", url]] : ["xdg-open", [url]];
     try { spawnManaged({ file: opener[0] as string, args: opener[1] as string[] }, "ignore").unref(); } catch { entry.browser = "manual"; }
   }
-  return { provider, pending: true, login_url: url, browser: entry.browser, next: { tool: "auth", action: "status", provider, note: "Call after completing the browser login" } };
+  return { provider, region, pending: true, login_url: url, browser: entry.browser, next: { tool: "auth", action: "status", provider, note: "Call after completing the browser login" } };
 }
 
 export async function status(provider: Provider) {
@@ -143,6 +155,7 @@ export async function status(provider: Provider) {
     provider,
     logged_in: !!current && (!current.expires || current.expires * 1000 > Date.now()),
     user: current?.userName || undefined,
+    ...(current ? { region: current.region ?? "cn" } : {}),
     ...(pending ? { login_pending: !pending.error && !current, login_url: pending.url, ...(pending.error ? { error: pending.error } : {}) } : {}),
   };
 }

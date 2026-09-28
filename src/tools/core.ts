@@ -50,7 +50,7 @@ export const projectTool = tool({
     project: fields.project,
     product: fields.product,
     modules: fields.modules,
-    task: z.enum(["assembleHap", "assembleHar", "assembleHsp", "assembleApp"]).optional().describe("build: default assembleHap"),
+    task: z.enum(["assembleHap", "assembleHar", "assembleHsp", "assembleApp", "compileNative"]).optional().describe("build: default assembleHap; compileNative compiles C/C++ only and writes .idea/.deveco/cxx/compile_commands.json for clangd"),
     mode: z.string().optional().describe("build: buildMode, default debug"),
     clean: z.boolean().optional().describe("build: clean first"),
     preflight: z.boolean().optional().describe("build: run ArkTS static check first (default true; fails fast in ~2-6s)"),
@@ -194,11 +194,11 @@ export const codeTool = tool({
     "lint: Code Linter report. api_scan: API compatibility between SDK versions.",
     "lsp: hover (types/signatures), definition, implementation, references, symbols, workspace_symbols, diagnostics (multiple files), completion (available members), signature.",
     "Locate positions with symbol (plus optional line hint) instead of exact columns.",
-    "lsp_restart: restart language servers.",
+    "lsp_restart: restart language servers. api_versions: SDK versions accepted by api_scan from/to.",
   ].join(" "),
   schema: z.object({
-    action: z.enum(["check", "lint", "api_scan", "lsp", "lsp_restart"]),
-    project: fields.project,
+    action: z.enum(["check", "lint", "api_scan", "api_versions", "lsp", "lsp_restart"]),
+    project: fields.project.optional().describe("Project root (required except for api_versions)"),
     files: z.array(z.string()).max(200).optional().describe("Relative or absolute paths"),
     fix: z.boolean().optional(),
     product: fields.product,
@@ -215,19 +215,22 @@ export const codeTool = tool({
   }),
   async handler(input, ctx) {
     const code = await import("../domains/code.js");
+    if (input.action === "api_versions") return { versions: code.apiVersions() };
+    invariant(input.project, "INVALID_INPUT", "project is required");
+    const project = input.project;
     switch (input.action) {
       case "check":
-        if (input.files?.some((f) => /\.(c|cc|cpp|h|hpp)$/.test(f))) return code.cppCheck(input.project, input.files, ctx.signal);
-        return code.arktsCheck(input.project, input.files, ctx.signal, input.fix ?? false);
+        if (input.files?.some((f) => /\.(c|cc|cpp|h|hpp)$/.test(f))) return code.cppCheck(project, input.files, ctx.signal);
+        return code.arktsCheck(project, input.files, ctx.signal, input.fix ?? false);
       case "lint":
-        return code.codeLinter(input.project, { path: input.file, fix: input.fix, product: input.product }, ctx.signal);
+        return code.codeLinter(project, { path: input.file, fix: input.fix, product: input.product }, ctx.signal);
       case "api_scan":
-        return code.apiScan(input.project, { from: input.from, to: input.to, files: input.files }, ctx.signal);
+        return code.apiScan(project, { from: input.from, to: input.to, files: input.files }, ctx.signal);
       case "lsp_restart":
-        return code.restartLsp(input.project);
+        return code.restartLsp(project);
       case "lsp":
         invariant(input.op, "INVALID_INPUT", "op is required for lsp");
-        return code.lsp({ project: input.project, action: input.op, file: input.file, files: input.files, symbol: input.symbol, line: input.line, column: input.column, query: input.query, language: input.language, limit: input.limit }, ctx.signal);
+        return code.lsp({ project, action: input.op, file: input.file, files: input.files, symbol: input.symbol, line: input.line, column: input.column, query: input.query, language: input.language, limit: input.limit }, ctx.signal);
     }
   },
 });
@@ -236,9 +239,13 @@ export const deviceTool = tool({
   name: "device",
   group: "core",
   title: "Devices, logs, files",
-  description: "HDC device access. list: connected devices. info: model/API/screen. log: recent hilog (filter by bundle, grep, level; clear=true clears). shell: read-only inspection commands (ls, cat, ps, param get, bm dump, hidumper...). send/recv: transfer files.",
+  description: "HDC device access. list: connected devices. info: model/API/screen. log: recent hilog (filter by bundle, grep, level; clear=true clears). shell: read-only inspection commands (ls, cat, ps, param get, bm dump, hidumper...). sqlite: query an on-device database (db path + sql; JSON rows; read-only unless write=true). send/recv: transfer files.",
   schema: z.object({
-    action: z.enum(["list", "info", "log", "shell", "send", "recv"]),
+    action: z.enum(["list", "info", "log", "shell", "sqlite", "send", "recv"]),
+    db: z.string().optional().describe("sqlite: absolute device path, or an app RDB store name (e.g. app.db) together with bundle (+ module, default entry) of a debuggable app"),
+    module: z.string().optional().describe("sqlite: module owning the RDB store (default entry)"),
+    sql: z.string().max(20000).optional().describe("sqlite: SQL or .tables/.schema"),
+    write: z.boolean().optional().describe("sqlite: allow modifying statements"),
     target: fields.target,
     bundle: z.string().optional().describe("log: only this app's process"),
     grep: z.string().optional().describe("log: regex filter"),
@@ -260,6 +267,12 @@ export const deviceTool = tool({
       case "info": return device.deviceInfo(target, ctx.signal);
       case "log": return input.clear ? device.clearLog(target, ctx.signal) : device.hilog(target, { lines: input.lines, bundle: input.bundle, grep: input.grep, level: input.level }, ctx.signal);
       case "shell": invariant(input.command, "INVALID_INPUT", "command is required"); return device.readonlyShell(target, input.command, ctx.signal);
+      case "sqlite": {
+        invariant(input.db && input.sql, "INVALID_INPUT", "db and sql are required");
+        const db = input.db.startsWith("/") || input.db === ":memory:" ? input.db
+          : (invariant(input.bundle, "INVALID_INPUT", "A relative db name needs bundle"), device.appDatabasePath(input.bundle!, input.db, input.module));
+        return { db, ...(await device.sqlite(target, db, input.sql, { write: input.write, limit: input.lines }, ctx.signal)) };
+      }
       case "send": invariant(input.local && input.remote, "INVALID_INPUT", "local and remote are required"); return device.sendFile(target, input.local, input.remote, ctx.signal);
       case "recv": invariant(input.local && input.remote, "INVALID_INPUT", "local and remote are required"); return device.recvFile(target, input.remote, input.local, ctx.signal);
     }
@@ -274,15 +287,40 @@ export const uiTool = tool({
     "Observe and operate the device UI.",
     "observe: screenshot + compact element list (#index Type [bounds] \"text\" key=..). screenshot / tree for one of them.",
     "find: elements matching a selector.",
-    "act: click/double_click/long_click (selector or x,y), input (types text into a field; Chinese supported), type (into the focused field), swipe/drag/fling (x,y,x2,y2), scroll (direction), key (back/home/enter/...).",
+    "act: click/double_click/long_click (selector or x,y), input (types text into a field; Chinese supported), type (into the focused field), swipe/drag/fling (x,y,x2,y2), scroll (direction), key (back/home/enter/...; keys=[\"ctrl\",\"a\"] for chords up to 3), mouse_click/mouse_double_click/mouse_long_click (button, keys modifiers), mouse_move, mouse_scroll (direction up/down, ticks), mouse_drag (x2,y2) for 2in1/tablet. verify_change=true reports whether the screen changed.",
     "assert: wait until a selector is visible/hidden — use this to verify outcomes, not screenshots.",
-    "record_start/record_stop: screen recording to an mp4 file (real devices).",
+    "windows: list app windows (all=true includes system windows); tree/observe accept window id and depth.",
+    "record_start/record_stop/record_status: screen recording to mp4 (real devices; stop discard=true drops it, external=true stops a foreign recording).",
+    "UI test sessions (you execute the plan and judge visuals): test_start(plan, project or bundle, fresh_start) -> test_step(op+selector or visible/hidden assert, description) per item -> review(requirement) returns a screenshot, then review(outcome, reason) -> test_finish -> test_log / test_export(directory).",
   ].join(" "),
   schema: z.object({
-    action: z.enum(["observe", "screenshot", "tree", "find", "act", "assert", "record_start", "record_stop"]),
+    action: z.enum(["observe", "screenshot", "tree", "find", "act", "assert", "windows", "record_start", "record_stop", "record_status",
+      "test_start", "test_step", "review", "test_finish", "test_log", "test_export"]),
     target: fields.target,
+    window: z.number().int().optional().describe("tree/observe: window id from action=windows"),
+    depth: z.number().int().min(0).max(100).optional().describe("tree/observe: maximum depth"),
+    all: z.boolean().optional().describe("windows: include system windows"),
+    discard: z.boolean().optional().describe("record_stop: stop without downloading"),
+    external: z.boolean().optional().describe("record_stop: stop a recording started outside this server"),
+    test_id: z.string().optional(),
+    plan: z.string().max(20000).optional().describe("test_start: natural-language test plan with steps and expected results"),
+    project: z.string().optional().describe("test_start: project root to infer bundle/ability"),
+    fresh_start: z.boolean().optional().describe("test_start: restart the app first"),
+    description: z.string().max(500).optional().describe("test_step: which checklist item this is"),
+    requirement: z.string().max(2000).optional().describe("review: what the screen must show"),
+    outcome: z.enum(["passed", "failed", "insufficient"]).optional().describe("review: your visual judgement"),
+    reason: z.string().max(2000).optional(),
+    review_id: z.number().int().optional(),
+    directory: z.string().optional().describe("test_export: absolute output directory"),
+    max_chars: z.number().int().min(-1).optional().describe("test_log: -1 = unlimited, default 5000"),
+    grep: z.string().optional().describe("test_log: keyword/regex filter"),
     selector: selectorSchema.optional(),
-    op: z.enum(["click", "double_click", "long_click", "input", "type", "swipe", "drag", "fling", "scroll", "key"]).optional().describe("act operation"),
+    op: z.enum(["click", "double_click", "long_click", "input", "type", "swipe", "drag", "fling", "scroll", "key",
+      "mouse_click", "mouse_double_click", "mouse_long_click", "mouse_move", "mouse_scroll", "mouse_drag"]).optional().describe("act operation"),
+    keys: z.array(z.string()).min(1).max(3).optional().describe("key: chord like [\"ctrl\",\"c\"]; mouse_*: up to 2 modifier keys"),
+    button: z.enum(["left", "right", "middle"]).optional().describe("mouse click button"),
+    ticks: z.number().int().min(1).max(50).optional().describe("mouse_scroll wheel ticks (default 3)"),
+    verify_change: z.boolean().optional().describe("act: wait up to 3s and report whether the screen changed"),
     x: z.number().int().optional(), y: z.number().int().optional(), x2: z.number().int().optional(), y2: z.number().int().optional(),
     direction: z.enum(["up", "down", "left", "right"]).optional(),
     text: z.string().optional(),
@@ -301,21 +339,55 @@ export const uiTool = tool({
   async handler(input, ctx) {
     const { resolveTarget } = await import("../domains/device.js");
     const ui = await import("../domains/ui.js");
+    const uitest = () => import("../domains/uitest.js");
+    // Test log/finish/export work from stored state and must not require a connected device.
+    if (input.action === "test_log" || input.action === "test_finish" || input.action === "test_export") {
+      invariant(input.test_id, "INVALID_INPUT", "test_id is required");
+      const t = await uitest();
+      if (input.action === "test_finish") return t.finishTest(input.test_id);
+      if (input.action === "test_log") return t.testLog(input.test_id, { grep: input.grep, max_chars: input.max_chars });
+      invariant(input.directory, "INVALID_INPUT", "directory is required");
+      return t.exportTest(input.test_id, input.directory);
+    }
     const target = await resolveTarget(input.target, ctx.signal);
+    const scope = { window: input.window };
     switch (input.action) {
+      case "windows": return { windows: await ui.listWindows(target, input.all, ctx.signal) };
       case "record_start": return ui.startRecording(target, ctx.signal);
-      case "record_stop": return ui.stopRecording(target, ctx.signal);
+      case "record_stop": return ui.stopRecording(target, { discard: input.discard, external: input.external }, ctx.signal);
+      case "record_status": return ui.recordingStatus(target, ctx.signal);
+      case "test_start": {
+        invariant(input.plan, "INVALID_INPUT", "plan is required");
+        let bundle = input.bundle, ability: string | undefined, module: string | undefined;
+        if (input.project) {
+          const { inspectProject, mainAbility } = await import("../domains/project.js");
+          const project = inspectProject(input.project);
+          bundle ??= project.bundleName;
+          ({ ability, module } = mainAbility(project));
+        }
+        return (await uitest()).startTest(target, { plan: input.plan, bundle, ability, module, fresh_start: input.fresh_start }, ctx.signal);
+      }
+      case "test_step": {
+        invariant(input.test_id, "INVALID_INPUT", "test_id is required");
+        const action = input.op ? await buildAction(input, target, ui, ctx.signal) : undefined;
+        const assert = input.visible || input.hidden ? { visible: input.visible, hidden: input.hidden, timeout_ms: input.timeout_ms } : undefined;
+        return (await uitest()).testStep(input.test_id, { description: input.description, action: action?.action, selector: input.selector, assert }, ctx.signal);
+      }
+      case "review": {
+        invariant(input.test_id, "INVALID_INPUT", "test_id is required");
+        return (await uitest()).review(input.test_id, { requirement: input.requirement, outcome: input.outcome, reason: input.reason, review_id: input.review_id }, ctx.signal);
+      }
       case "screenshot": {
         const shot = await ui.screenshot(target, { format: input.format, width: input.width }, ctx.signal);
         return { artifact_id: shot.artifact_id, bytes: shot.bytes, _image: { data: shot.data, mime: shot.mime } };
       }
       case "tree": {
-        const nodes = await ui.dumpTree(target, ctx.signal);
-        return { nodes: nodes.length, tree: ui.compact(nodes, { interactive: input.interactive ?? true, limit: input.limit, bundle: input.bundle }) };
+        const nodes = await ui.dumpTree(target, ctx.signal, 0, scope);
+        return { nodes: nodes.length, tree: ui.compact(nodes, { interactive: input.interactive ?? true, limit: input.limit, bundle: input.bundle, depth: input.depth }) };
       }
       case "observe": {
-        const [nodes, shot] = await Promise.all([ui.dumpTree(target, ctx.signal), ui.screenshot(target, { format: input.format, width: input.width }, ctx.signal)]);
-        return { elements: ui.compact(nodes, { interactive: input.interactive ?? true, limit: input.limit ?? 200, bundle: input.bundle }), screenshot: shot.artifact_id, _image: { data: shot.data, mime: shot.mime } };
+        const [nodes, shot] = await Promise.all([ui.dumpTree(target, ctx.signal, 0, scope), ui.screenshot(target, { format: input.format, width: input.width }, ctx.signal)]);
+        return { elements: ui.compact(nodes, { interactive: input.interactive ?? true, limit: input.limit ?? 200, bundle: input.bundle, depth: input.depth }), screenshot: shot.artifact_id, _image: { data: shot.data, mime: shot.mime } };
       }
       case "find": {
         invariant(input.selector, "INVALID_INPUT", "selector is required");
@@ -328,33 +400,55 @@ export const uiTool = tool({
         return verdict.passed ? verdict : { ...verdict, hint: "Not satisfied: call ui observe to inspect the screen" };
       }
       case "act": {
-        invariant(input.op, "INVALID_INPUT", "op is required for act");
-        let x = input.x, y = input.y;
-        let resolved: ReturnType<typeof ui.describe> | undefined;
-        if (input.selector && ["click", "double_click", "long_click", "input"].includes(input.op)) {
-          const node = await ui.resolveOne(target, input.selector, ctx.signal);
-          ({ x, y } = ui.center(node));
-          resolved = ui.describe(node);
-        }
-        const need = (cond: unknown, what: string) => invariant(cond, "INVALID_INPUT", `${input.op} needs ${what}`);
-        let action: import("../domains/ui.js").Action;
-        switch (input.op) {
-          case "click": case "double_click": case "long_click": need(x !== undefined && y !== undefined, "selector or x,y"); action = { action: input.op, x: x!, y: y! }; break;
-          case "input": need(x !== undefined && input.text !== undefined, "selector or x,y and text"); action = { action: "input", x: x!, y: y!, text: input.text!, append: input.append }; break;
-          case "type": need(input.text !== undefined, "text"); action = { action: "type", text: input.text! }; break;
-          case "swipe": case "drag": case "fling": need([input.x, input.y, input.x2, input.y2].every((v) => v !== undefined), "x,y,x2,y2"); action = { action: input.op, x: input.x!, y: input.y!, x2: input.x2!, y2: input.y2!, speed: input.speed }; break;
-          case "scroll": need(input.direction, "direction"); action = { action: "scroll", direction: input.direction!, speed: input.speed }; break;
-          case "key": need(input.key, "key"); action = { action: "key", key: input.key! }; break;
-        }
-        const result = await ui.act(target, action!, ctx.signal);
+        const { action, resolved } = await buildAction(input, target, ui, ctx.signal);
+        const result = input.verify_change ? await ui.actAndVerify(target, action, ctx.signal) : await ui.act(target, action, ctx.signal);
         const { recordStep } = await import("../domains/flows.js");
         const { deviceInfo } = await import("../domains/device.js");
-        const recorded = await recordStep(target, action!, input.selector, await screenSize(target, deviceInfo, ctx.signal)).catch(() => undefined);
+        const recorded = await recordStep(target, action, input.selector, await screenSize(target, deviceInfo, ctx.signal)).catch(() => undefined);
         return { ...result, ...(resolved ? { element: resolved } : {}), ...(recorded ?? {}), note: "Action sent; verify with ui assert or observe" };
       }
     }
   },
 });
+
+type UiInput = {
+  op?: "click" | "double_click" | "long_click" | "input" | "type" | "swipe" | "drag" | "fling" | "scroll" | "key"
+    | "mouse_click" | "mouse_double_click" | "mouse_long_click" | "mouse_move" | "mouse_scroll" | "mouse_drag";
+  keys?: string[]; button?: "left" | "right" | "middle"; ticks?: number;
+  selector?: z.infer<typeof selectorSchema>; x?: number; y?: number; x2?: number; y2?: number; text?: string; append?: boolean;
+  direction?: "up" | "down" | "left" | "right"; key?: string; speed?: number;
+};
+/** Turn act parameters into a concrete action, resolving a selector to coordinates. */
+async function buildAction(input: UiInput, target: string, ui: typeof import("../domains/ui.js"), signal: AbortSignal) {
+  invariant(input.op, "INVALID_INPUT", "op is required");
+  let x = input.x, y = input.y;
+  let resolved: ReturnType<typeof ui.describe> | undefined;
+  if (input.selector && ["click", "double_click", "long_click", "input", "mouse_click", "mouse_double_click", "mouse_long_click", "mouse_move", "mouse_scroll"].includes(input.op)) {
+    const node = await ui.resolveOne(target, input.selector, signal);
+    ({ x, y } = ui.center(node));
+    resolved = ui.describe(node);
+  }
+  const need = (cond: unknown, what: string) => invariant(cond, "INVALID_INPUT", `${input.op} needs ${what}`);
+  let action: import("../domains/ui.js").Action;
+  switch (input.op) {
+    case "click": case "double_click": case "long_click": need(x !== undefined && y !== undefined, "selector or x,y"); action = { action: input.op, x: x!, y: y! }; break;
+    case "input": need(x !== undefined && input.text !== undefined, "selector or x,y and text"); action = { action: "input", x: x!, y: y!, text: input.text!, append: input.append }; break;
+    case "type": need(input.text !== undefined, "text"); action = { action: "type", text: input.text! }; break;
+    case "swipe": case "drag": case "fling": need([input.x, input.y, input.x2, input.y2].every((v) => v !== undefined), "x,y,x2,y2"); action = { action: input.op, x: input.x!, y: input.y!, x2: input.x2!, y2: input.y2!, speed: input.speed }; break;
+    case "scroll": need(input.direction, "direction"); action = { action: "scroll", direction: input.direction!, speed: input.speed }; break;
+    case "key":
+      need(input.key || input.keys, "key or keys");
+      action = input.keys ? { action: "keys", keys: input.keys } : { action: "key", key: input.key! }; break;
+    case "mouse_click": case "mouse_double_click": case "mouse_long_click":
+      need(x !== undefined && y !== undefined, "selector or x,y"); action = { action: input.op, x: x!, y: y!, button: input.button, keys: input.keys }; break;
+    case "mouse_move": need(x !== undefined && y !== undefined, "selector or x,y"); action = { action: "mouse_move", x: x!, y: y! }; break;
+    case "mouse_scroll":
+      need(x !== undefined && y !== undefined && (input.direction === "up" || input.direction === "down"), "selector or x,y and direction up/down");
+      action = { action: "mouse_scroll", x: x!, y: y!, direction: input.direction as "up" | "down", ticks: input.ticks, keys: input.keys }; break;
+    case "mouse_drag": need([input.x, input.y, input.x2, input.y2].every((v) => v !== undefined), "x,y,x2,y2"); action = { action: "mouse_drag", x: input.x!, y: input.y!, x2: input.x2!, y2: input.y2!, speed: input.speed }; break;
+  }
+  return { action: action!, resolved };
+}
 
 const sizes = new Map<string, { w: number; h: number }>();
 async function screenSize(target: string, info: (t: string, s?: AbortSignal) => Promise<{ screen?: { width: number; height: number } }>, signal: AbortSignal) {
@@ -430,6 +524,7 @@ export const diagnoseTool = tool({
     log: z.string().max(4_000_000).optional().describe("crash: analyze this text instead of reading the device"),
     name: z.string().optional().describe("crash: exact faultlog file name"),
     latest: z.number().int().min(1).max(5).optional(),
+    since_minutes: z.number().int().min(1).max(10080).optional().describe("crash: only reports from the last N minutes (device clock)"),
     diagnostics: z.array(z.object({ code: z.string().optional(), message: z.string() })).max(100).optional().describe("build: diagnostics to explain"),
   }),
   async handler(input, ctx) {
@@ -492,12 +587,13 @@ export const skillsTool = tool({
   group: "core",
   title: "HarmonyOS skills",
   readOnly: false,
-  description: "Built-in HarmonyOS skills (ArkTS standards, error fixing, runtime debugging, project creation, tool usage). list/read; export: install them as native SKILL.md folders for your host (cursor, claude, codex, opencode...) so they load automatically. search/install/uninstall: OpenHarmony skill market (matrix.openharmony.cn).",
+  description: "Built-in HarmonyOS skills (ArkTS standards, error fixing, runtime debugging, project creation, tool usage). list/read; export: install them as native SKILL.md folders for your host (cursor, claude, codex, opencode...) so they load automatically. install_mcp: register this MCP server in a host's config (idempotent; force overwrites). init: export + install_mcp. search/install/uninstall: OpenHarmony skill market (matrix.openharmony.cn).",
   schema: z.object({
-    action: z.enum(["list", "read", "export", "search", "install", "uninstall"]),
+    action: z.enum(["list", "read", "export", "install_mcp", "init", "search", "install", "uninstall"]),
     name: z.string().optional(),
     reference: z.string().optional().describe("read: a file under references/"),
-    host: z.string().optional().describe("export/install: cursor | claude | codex | opencode | deveco | trae-cn | codebuddy | qoder"),
+    host: z.string().optional().describe("cursor | claude | codex | opencode | trae-cn | codebuddy | qoder | pi | deveco (skills only)"),
+    force: z.boolean().optional().describe("install_mcp/init: overwrite an existing entry"),
     scope: z.enum(["user", "project"]).optional(),
     project: z.string().optional(),
     names: z.array(z.string()).optional(),
@@ -510,6 +606,12 @@ export const skillsTool = tool({
       case "list": return { skills: skills.listSkills(), note: "Also available as MCP resources deveco://skills/<name>" };
       case "read": invariant(input.name, "INVALID_INPUT", "name is required"); return skills.readSkill(input.name, input.reference);
       case "export": invariant(input.host, "INVALID_INPUT", "host is required"); return skills.exportSkills(input.host, input.scope ?? "user", input.project, input.names);
+      case "install_mcp": {
+        invariant(input.host, "INVALID_INPUT", "host is required");
+        const { installMcp } = await import("../domains/hostconfig.js");
+        return installMcp(input.host, { scope: input.scope, project: input.project, force: input.force });
+      }
+      case "init": invariant(input.host, "INVALID_INPUT", "host is required"); return skills.initHost(input.host, { scope: input.scope, project: input.project, force: input.force });
       case "search": invariant(input.query, "INVALID_INPUT", "query is required"); return skills.marketSearch(input.query, input.limit);
       case "install": invariant(input.name && input.host, "INVALID_INPUT", "name and host are required"); return skills.marketInstall(input.name, input.host, input.scope ?? "user", input.project);
       case "uninstall": invariant(input.name && input.host, "INVALID_INPUT", "name and host are required"); return skills.uninstallSkill(input.name, input.host, input.scope ?? "user", input.project);
@@ -525,6 +627,7 @@ export const authTool = tool({
   schema: z.object({
     action: z.enum(["login", "status", "logout", "teams", "import"]),
     provider: z.enum(["developer", "codegenie"]).optional(),
+    region: z.enum(["cn", "global"]).optional().describe("login: account site (default cn; global = overseas devecostudio.huawei.com)"),
     open_browser: z.boolean().optional(),
     legacy_state_dir: z.string().optional(),
   }),
@@ -532,7 +635,7 @@ export const authTool = tool({
     const auth = await import("../domains/auth.js");
     const provider = input.provider ?? "codegenie";
     switch (input.action) {
-      case "login": return auth.login(provider, input.open_browser ?? true);
+      case "login": return auth.login(provider, input.open_browser ?? true, input.region);
       case "status": return input.provider ? auth.status(provider) : { providers: await Promise.all((["developer", "codegenie"] as const).map((p) => auth.status(p))) };
       case "logout": return auth.logout(provider);
       case "teams": return auth.teams();

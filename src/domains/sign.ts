@@ -6,7 +6,7 @@ import JSON5 from "json5";
 import { invariant, ToolError } from "../core/errors.js";
 import { atomicWrite, readJson5 } from "../core/files.js";
 import { run } from "../core/proc.js";
-import { toolCommand } from "../core/toolchain.js";
+import { toolchain, toolCommand } from "../core/toolchain.js";
 import { credentials } from "./auth.js";
 import { listTargets, shell } from "./device.js";
 
@@ -148,6 +148,82 @@ export async function registerDevice(team: string, target: string, signal?: Abor
   return { registered: true, id: added.id, udid };
 }
 
+/* ------------------------- itemized material (optional group) ------------------------- */
+
+/** New keystore (.p12) with an ECC P-256 key. */
+export async function generateKeypair(input: { out: string; password: string; alias?: string }, signal?: AbortSignal) {
+  const out = path.resolve(input.out);
+  invariant(!fs.existsSync(out), "CONFLICT", `${out} already exists`);
+  invariant(input.password.length >= 6, "INVALID_INPUT", "keystore_password must have at least 6 characters");
+  fs.mkdirSync(path.dirname(out), { recursive: true });
+  await signer(["generate-keypair", "-keyAlias", input.alias ?? "debugKey", "-keyAlg", "ECC", "-keySize", "NIST-P-256", "-keystoreFile", out, "-keystorePwd", input.password, "-keyPwd", input.password], signal);
+  return { keystore: out, key_alias: input.alias ?? "debugKey" };
+}
+
+/** CSR for a key in a keystore (upload with certificate_create or in AGC). */
+export async function generateCsr(input: { keystore: string; password: string; key_password?: string; alias?: string; out: string; subject?: string }, signal?: AbortSignal) {
+  const out = path.resolve(input.out);
+  invariant(!fs.existsSync(out), "CONFLICT", `${out} already exists`);
+  await signer(["generate-csr", "-keyAlias", input.alias ?? "debugKey", "-subject", input.subject ?? "CN=DebugKey", "-signAlg", "SHA256withECDSA",
+    "-keystoreFile", path.resolve(input.keystore), "-keystorePwd", input.password, "-keyPwd", input.key_password ?? input.password, "-outFile", out], signal);
+  return { csr: out };
+}
+
+/** Create an AGC certificate from a CSR and download the .cer. */
+export async function createCertificate(team: string, input: { csr: string; name: string; type: "debug" | "release"; out: string }, signal?: AbortSignal) {
+  const out = path.resolve(input.out);
+  invariant(!fs.existsSync(out), "CONFLICT", `${out} already exists`);
+  await request(team, "/api/cps/harmony-cert-manage/v1/cert/add", "POST", { csr: fs.readFileSync(path.resolve(input.csr), "utf8"), certName: input.name, certType: input.type === "debug" ? "1" : "2" }, signal);
+  const cert = (await listCertificates(team, signal)).find((c) => c.name === input.name);
+  invariant(cert, "SIGN_CLOUD_REJECTED", "Created certificate not found in AGC");
+  await download(team, cert.object, out, signal);
+  return { certificate: cert.id, name: cert.name, type: cert.type, file: out };
+}
+
+/** Create a debug (registered devices) or release profile and download the .p7b. */
+export async function createProfile(team: string, input: { bundle: string; certificate: string; type: "debug" | "release"; name?: string; acl?: string[]; out: string }, signal?: AbortSignal) {
+  const out = path.resolve(input.out);
+  invariant(!fs.existsSync(out), "CONFLICT", `${out} already exists`);
+  const devices = input.type === "debug" ? (await listDevices(team, signal)).map((d) => d.id) : undefined;
+  invariant(input.type === "release" || devices!.length, "DEVICE_UNAVAILABLE", "Debug profiles need registered devices (sign action=register_device)");
+  const profile = await request(team, `/api/cps/provision-manage/v1/ide/${input.type === "debug" ? "test" : "real"}/provision/add`, "POST", {
+    certList: [input.certificate], packageName: input.bundle, provisionName: input.name ?? `mcp_${input.type}_${Date.now().toString(36)}`,
+    ...(devices ? { deviceList: devices } : {}), ...(input.acl?.length ? { aclPermissionList: input.acl } : {}),
+  }, signal);
+  invariant(profile.provisionFileUrl, "SIGN_CLOUD_REJECTED", "AGC returned no profile file");
+  await download(team, profile.provisionFileUrl, out, signal);
+  return { profile: profile.id ?? null, type: input.type, file: out, devices: devices?.length };
+}
+
+export async function deleteProfile(team: string, id: string, signal?: AbortSignal) {
+  await request(team, `/api/cps/provision-manage/v1/provision/delete?${new URLSearchParams({ id })}`, "DELETE", undefined, signal);
+  return { deleted: id };
+}
+
+/* ------------------------------ ACL permissions ------------------------------ */
+
+/**
+ * ACL permissions a debug profile must declare: permissions the app requests (module.json5
+ * requestPermissions in src/main and src/ohosTest) that the SDK marks system_basic + NORMAL +
+ * provisionEnable (same rule as deveco-cli AclPermissionConfig, read from PermissionDefinitions.json).
+ */
+export function projectAclPermissions(modules: { root: string }[], definitionsFile?: string) {
+  const requested = new Set<string>();
+  for (const m of modules) {
+    for (const sub of ["src/main", "src/ohosTest"]) {
+      const file = path.join(m.root, sub, "module.json5");
+      if (!fs.existsSync(file)) continue;
+      const perms = ((readJson5(file).module as { requestPermissions?: { name?: string }[] } | undefined)?.requestPermissions ?? []);
+      for (const p of perms) if (p.name) requested.add(p.name);
+    }
+  }
+  let definitions = definitionsFile ?? "";
+  if (!definitions) try { definitions = path.join(toolchain().sdk, "default/openharmony/toolchains/lib/PermissionDefinitions.json"); } catch { /* no SDK */ }
+  if (!requested.size || !definitions || !fs.existsSync(definitions)) return { requested: [...requested], acl: [] as string[] };
+  const defs = (JSON.parse(fs.readFileSync(definitions, "utf8")) as { definePermissions?: Record<string, unknown>[] }).definePermissions ?? [];
+  const aclNames = new Set(defs.filter((d) => d.availableLevel === "system_basic" && d.availableType === "NORMAL" && d.provisionEnable === true).map((d) => String(d.name)));
+  return { requested: [...requested], acl: [...requested].filter((p) => aclNames.has(p)).sort() };
+}
 /* ---------------------------- one-shot auto signing ---------------------------- */
 
 async function signer(args: string[], signal?: AbortSignal) {
@@ -196,10 +272,14 @@ export async function autoSign(project: string, options: { product?: string; tea
   invariant(devices.length, "DEVICE_UNAVAILABLE", "No devices registered in AGC; connect a device and retry");
 
   log("creating debug profile");
+  const { inspectProject } = await import("./project.js");
+  const derived = projectAclPermissions(inspectProject(root, options.product).modules).acl;
+  const acl = [...new Set([...derived, ...(options.acl ?? [])])];
+  if (acl.length) log(`ACL permissions: ${acl.join(", ")}`);
   const provisionName = crypto.createHash("sha256").update(`${product}_${options.bundle}_${options.bundle}`).digest("hex").slice(0, 16);
   const profile = await request(team, "/api/cps/provision-manage/v1/ide/test/provision/add", "POST", {
     certList: [cert.id], packageName: options.bundle, deviceList: devices.map((d) => d.id), provisionName,
-    ...(options.acl?.length ? { aclPermissionList: options.acl } : {}),
+    ...(acl.length ? { aclPermissionList: acl } : {}),
   }, signal);
   invariant(profile.provisionFileUrl, "SIGN_CLOUD_REJECTED", "AGC returned no profile file");
   await download(team, profile.provisionFileUrl, file("p7b"), signal);
@@ -216,7 +296,7 @@ export async function autoSign(project: string, options: { product?: string; tea
   });
   for (const p of config.app.products ?? []) if (p.name === product) p.signingConfig = product;
   atomicWrite(profilePath, JSON5.stringify(config, null, 2));
-  return { signed: true, product, team, certificate: cert.id, devices: devices.length, files: { p12: file("p12"), cer: file("cer"), p7b: file("p7b") }, next: { tool: "run", action: "build_run", project: root } };
+  return { signed: true, product, team, certificate: cert.id, devices: devices.length, acl_permissions: acl, files: { p12: file("p12"), cer: file("cer"), p7b: file("p7b") }, next: { tool: "run", action: "build_run", project: root } };
 }
 
 /* ------------------------------- local signing ------------------------------- */

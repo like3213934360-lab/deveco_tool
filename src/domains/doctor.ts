@@ -38,11 +38,16 @@ export async function doctor(options: { project?: string; target?: string; remot
       checks.push({ name: "devices", ok: false, detail: errorResult(error) });
     }
   }
+  let deviceApi: number | undefined;
+  const deviceCheck = checks.find((c) => c.name === "devices");
+  const info = (deviceCheck?.detail as { info?: { api_level?: number } } | undefined)?.info;
+  if (info?.api_level) deviceApi = info.api_level;
   if (options.project) {
     try {
       const { inspectProject, projectInfo } = await import("./project.js");
       const info = projectInfo(inspectProject(options.project));
       checks.push({ name: "project", ok: true, detail: info, fix: info.dependencies_installed ? undefined : "Run project action=sync" });
+      if (tc) checks.push(compatibility(info.sdk, sdkInfo(tc)?.api_level ?? undefined, deviceApi));
     } catch (error) {
       checks.push({ name: "project", ok: false, detail: errorResult(error) });
     }
@@ -58,6 +63,36 @@ export async function doctor(options: { project?: string; target?: string; remot
     ok: checks.filter((c) => ["toolchain", "sdk"].includes(c.name)).every((c) => c.ok),
     checks,
   };
+}
+
+/** API level from "5.0.0(12)", "6.0.2(22)", "26.0.0" or "12". */
+export function apiOf(version?: string): number | undefined {
+  if (!version) return undefined;
+  const paren = /\((\d+)\)/.exec(version)?.[1];
+  if (paren) return Number(paren);
+  const major = Number(/^(\d+)/.exec(version)?.[1]);
+  // Platform 26.0.0 maps to API 26; bare integers are API levels.
+  return Number.isFinite(major) ? major : undefined;
+}
+
+/** Project SDK vs installed SDK vs device API (upstream `check versions`, extended with fixes). */
+export function compatibility(sdk: { compile?: string; target?: string; compatible?: string }, installedApi: number | undefined, deviceApi: number | undefined) {
+  const compile = apiOf(sdk.compile), compatible = apiOf(sdk.compatible);
+  const problems: string[] = [];
+  const fixes: string[] = [];
+  if (compile && installedApi && compile > installedApi) {
+    problems.push(`compileSdkVersion API ${compile} is newer than the installed SDK (API ${installedApi})`);
+    fixes.push("Install the matching SDK in DevEco Studio, or lower compileSdkVersion in build-profile.json5");
+  }
+  if (compatible && compile && compatible > compile) {
+    problems.push(`compatibleSdkVersion API ${compatible} exceeds compileSdkVersion API ${compile}`);
+    fixes.push("Set compatibleSdkVersion <= compileSdkVersion");
+  }
+  if (compatible && deviceApi && deviceApi < compatible) {
+    problems.push(`Device API ${deviceApi} is below compatibleSdkVersion API ${compatible}: install will fail`);
+    fixes.push("Use a newer device/emulator image, or lower compatibleSdkVersion (check APIs with code action=api_scan)");
+  }
+  return { name: "compatibility", ok: problems.length === 0, detail: { compile_api: compile, compatible_api: compatible, installed_sdk_api: installedApi, device_api: deviceApi, problems }, fix: fixes.join("; ") || undefined };
 }
 
 export function stateUsage() {

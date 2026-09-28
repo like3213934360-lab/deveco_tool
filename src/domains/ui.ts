@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import net from "node:net";
 import path from "node:path";
+import zlib from "node:zlib";
 import { artifactDir, commitArtifact, saveArtifact } from "../core/artifacts.js";
 import { packageRoot } from "../core/config.js";
 import { invariant, ToolError } from "../core/errors.js";
@@ -113,11 +114,12 @@ export function center(node: UiNode) {
 }
 
 /** Compact line-per-node view: far fewer tokens than raw JSON. */
-export function compact(nodes: UiNode[], options: { interactive?: boolean; limit?: number; bundle?: string } = {}) {
+export function compact(nodes: UiNode[], options: { interactive?: boolean; limit?: number; bundle?: string; depth?: number } = {}) {
   const limit = options.limit ?? 300;
   const lines: string[] = [];
   for (const n of nodes) {
     if (options.bundle && n.bundle !== options.bundle) continue;
+    if (options.depth !== undefined && n.depth > options.depth) continue;
     if (!n.rect || n.visible === false) continue;
     const interesting = n.text || n.key || n.clickable || /Button|Input|TextArea|Toggle|Checkbox|Radio|Slider|Search|Select|Tab/i.test(n.type);
     if (options.interactive && !interesting) continue;
@@ -138,24 +140,137 @@ export function compact(nodes: UiNode[], options: { interactive?: boolean; limit
   return lines.join("\n");
 }
 
+/* ------------------------------ blank screen ------------------------------ */
+
+/** Minimal PNG decoder (8-bit RGB/RGBA, non-interlaced) -> grayscale. Enough for tiny on-device snapshots. */
+export function pngGray(buf: Buffer): { width: number; height: number; gray: Uint8Array } | undefined {
+  if (buf.length < 33 || buf.readUInt32BE(0) !== 0x89504e47) return undefined;
+  let offset = 8, width = 0, height = 0, colorType = 0, depth = 0;
+  const idat: Buffer[] = [];
+  while (offset + 8 <= buf.length) {
+    const length = buf.readUInt32BE(offset);
+    const type = buf.toString("latin1", offset + 4, offset + 8);
+    const data = buf.subarray(offset + 8, offset + 8 + length);
+    if (type === "IHDR") { width = data.readUInt32BE(0); height = data.readUInt32BE(4); depth = data[8]!; colorType = data[9]!; if (data[12]) return undefined; }
+    else if (type === "IDAT") idat.push(data);
+    else if (type === "IEND") break;
+    offset += 12 + length;
+  }
+  const channels = colorType === 2 ? 3 : colorType === 6 ? 4 : 0;
+  if (!channels || depth !== 8 || !width || !height || width * height > 4_000_000) return undefined;
+  const raw = zlib.inflateSync(Buffer.concat(idat));
+  const stride = width * channels;
+  const pixels = Buffer.alloc(stride * height);
+  for (let y = 0; y < height; y++) {
+    const filter = raw[y * (stride + 1)]!;
+    const line = raw.subarray(y * (stride + 1) + 1, (y + 1) * (stride + 1));
+    const out = pixels.subarray(y * stride, (y + 1) * stride);
+    const prev = y ? pixels.subarray((y - 1) * stride, y * stride) : undefined;
+    for (let i = 0; i < stride; i++) {
+      const a = i >= channels ? out[i - channels]! : 0, b = prev ? prev[i]! : 0, c = prev && i >= channels ? prev[i - channels]! : 0;
+      const x = line[i]!;
+      let predictor = 0;
+      if (filter === 1) predictor = a;
+      else if (filter === 2) predictor = b;
+      else if (filter === 3) predictor = (a + b) >> 1;
+      else if (filter === 4) { const p = a + b - c, pa = Math.abs(p - a), pb = Math.abs(p - b), pc = Math.abs(p - c); predictor = pa <= pb && pa <= pc ? a : pb <= pc ? b : c; }
+      out[i] = (x + predictor) & 0xff;
+    }
+  }
+  const gray = new Uint8Array(width * height);
+  for (let i = 0; i < width * height; i++) gray[i] = (pixels[i * channels]! * 299 + pixels[i * channels + 1]! * 587 + pixels[i * channels + 2]! * 114) / 1000;
+  return { width, height, gray };
+}
+
+/** A screen is blank when, ignoring status/navigation bars, ≥99.8% of pixels match the dominant shade. */
+export function blankScore(image: { width: number; height: number; gray: Uint8Array }) {
+  const top = Math.floor(image.height * 0.06), bottom = Math.floor(image.height * 0.96);
+  const hist = new Uint32Array(256);
+  for (let y = top; y < bottom; y++) for (let x = 0; x < image.width; x++) hist[image.gray[y * image.width + x]!]!++;
+  const total = (bottom - top) * image.width;
+  let peak = 0;
+  for (let v = 0; v < 256; v++) if (hist[v]! > hist[peak]!) peak = v;
+  let near = 0;
+  for (let v = Math.max(0, peak - 6); v <= Math.min(255, peak + 6); v++) near += hist[v]!;
+  const uniform = near / total;
+  return { uniform: Math.round(uniform * 10000) / 10000, blank: uniform >= 0.998 };
+}
+
+/** Upstream `run` smoke parity (FAIL_BLANK): one tiny PNG snapshot, decoded in-process. */
+export async function blankScreen(target: string, signal?: AbortSignal) {
+  const remote = `/data/local/tmp/deveco-blank-${crypto.randomBytes(4).toString("hex")}.png`;
+  const local = path.join(artifactDir(), `blank-${crypto.randomBytes(4).toString("hex")}.png`);
+  try {
+    const known = nativeSizes.get(target);
+    const h = known ? Math.round((known.h * 128) / known.w) : 256;
+    const shot = await shell(target, ["snapshot_display", "-f", remote, "-t", "png", "-w", "128", "-h", String(h)], signal, 20000);
+    if (!/success/i.test(shot.stdout)) return undefined;
+    await hdc(["-t", target, "file", "recv", remote, local], signal, 20000, true);
+    const image = pngGray(fs.readFileSync(local));
+    return image ? blankScore(image) : undefined;
+  } catch {
+    return undefined; // the smoke check is best-effort; never fail a launch because of it
+  } finally {
+    fs.rmSync(local, { force: true });
+    void shell(target, ["rm", "-f", remote]).catch(() => {});
+  }
+}
+
+/* -------------------------------- windows -------------------------------- */
+
+export interface WindowInfo { id: number; name: string; pid: number; display: number; type: number; focused: boolean; bounds?: number[]; visible: boolean }
+
+/** Parse the `hidumper -s WindowManagerService -a -a` window table. */
+export function parseWindows(raw: string): WindowInfo[] {
+  const lines = raw.split("\n");
+  const header = lines.findIndex((l) => l.trimStart().startsWith("WindowName"));
+  if (header < 0) return [];
+  const focus = Number(/Focus window:\s*(\d+)/.exec(raw)?.[1]);
+  const out: WindowInfo[] = [];
+  let visible = true;
+  for (const line of lines.slice(header + 1)) {
+    const t = line.trim();
+    if (/^-{5,}$/.test(t)) { visible = false; continue; } // below the separator: hidden windows
+    if (!t || /^(Focus window|All Focus|Total window)/.test(t)) break;
+    const tok = t.split(/\s+/);
+    if (tok.length < 5) continue;
+    const [name, display, pid, id, type] = [tok[0]!, Number(tok[1]), Number(tok[2]), Number(tok[3]), Number(tok[4])];
+    if (![display, pid, id, type].every(Number.isFinite)) continue;
+    const rect = /\[\s*(-?\d+)\s+(-?\d+)\s+(\d+)\s+(\d+)\s*\]/.exec(t);
+    out.push({ id, name, pid, display, type, focused: id === focus, visible, ...(rect ? { bounds: rect.slice(1, 5).map(Number) } : {}) });
+  }
+  return out;
+}
+
+export async function listWindows(target: string, all = false, signal?: AbortSignal) {
+  const dump = await shell(target, ["hidumper", "-s", "WindowManagerService", "-a", "-a"], signal, 15000);
+  const windows = parseWindows(dump.stdout);
+  // Type 1 = application main window (upstream convention); system windows are 2000+.
+  return all ? windows : windows.filter((w) => w.type < 2000 || w.focused);
+}
+
 /* ------------------------------- snapshots ------------------------------- */
 
 const cache = new Map<string, { at: number; nodes: UiNode[] }>();
 const nativeSizes = new Map<string, { w: number; h: number }>();
 
-export async function dumpTree(target: string, signal?: AbortSignal, maxAgeMs = 0): Promise<UiNode[]> {
+export async function dumpTree(target: string, signal?: AbortSignal, maxAgeMs = 0, scope: { window?: number; bundle?: string } = {}): Promise<UiNode[]> {
+  const scoped = scope.window !== undefined || scope.bundle !== undefined;
   const hit = cache.get(target);
-  if (hit && Date.now() - hit.at <= maxAgeMs) return hit.nodes;
+  if (!scoped && hit && Date.now() - hit.at <= maxAgeMs) return hit.nodes;
   const remote = `/data/local/tmp/deveco-layout-${crypto.randomBytes(4).toString("hex")}.json`;
   const local = path.join(artifactDir(), `layout-${crypto.randomBytes(4).toString("hex")}.json`);
   try {
-    const dump = await shell(target, ["uitest", "dumpLayout", "-p", remote], signal, 30000);
+    const args = ["uitest", "dumpLayout", "-p", remote];
+    if (scope.window !== undefined) args.push("-w", String(scope.window));
+    else if (scope.bundle && /^[\w.]+$/.test(scope.bundle)) args.push("-b", scope.bundle);
+    const dump = await shell(target, args, signal, 30000);
     invariant(!/fail|error/i.test(dump.stdout) || /DumpLayout saved/i.test(dump.stdout), "UI_DUMP_FAILED", `uitest dumpLayout failed: ${dump.stdout.trim().slice(0, 300)}`,
       undefined, "Make sure the screen is on and unlocked");
     await hdc(["-t", target, "file", "recv", remote, local], signal, 30000, true);
     invariant(fs.existsSync(local), "UI_DUMP_FAILED", "Layout file transfer failed");
     const nodes = flatten(JSON.parse(fs.readFileSync(local, "utf8")));
-    cache.set(target, { at: Date.now(), nodes });
+    if (!scoped) cache.set(target, { at: Date.now(), nodes });
     return nodes;
   } finally {
     fs.rmSync(local, { force: true });
@@ -206,9 +321,31 @@ export type Action =
   | { action: "scroll"; direction: "up" | "down" | "left" | "right"; speed?: number }
   | { action: "key"; key: string }
   | { action: "input"; x: number; y: number; text: string; append?: boolean }
-  | { action: "type"; text: string };
+  | { action: "type"; text: string }
+  | { action: "keys"; keys: string[] }
+  | { action: "mouse_click" | "mouse_double_click" | "mouse_long_click"; x: number; y: number; button?: "left" | "right" | "middle"; keys?: string[] }
+  | { action: "mouse_move"; x: number; y: number }
+  | { action: "mouse_scroll"; x: number; y: number; direction: "up" | "down"; ticks?: number; keys?: string[] }
+  | { action: "mouse_drag"; x: number; y: number; x2: number; y2: number; speed?: number };
 
 const keyAliases: Record<string, string> = { back: "Back", home: "Home", power: "Power", enter: "2054", delete: "2055", backspace: "2055", tab: "2049", menu: "2067", volume_up: "16", volume_down: "17" };
+/** Keys usable in chords (OpenHarmony KeyCode values). */
+const chordKeys: Record<string, number> = {
+  ctrl: 2072, ctrl_left: 2072, ctrl_right: 2073, shift: 2047, shift_left: 2047, shift_right: 2048, alt: 2045, alt_left: 2045, alt_right: 2046,
+  meta: 2076, win: 2076, enter: 2054, tab: 2049, space: 2050, esc: 2070, escape: 2070, delete: 2055, backspace: 2055, forward_delete: 2071,
+  up: 2012, down: 2013, left: 2014, right: 2015, home: 2081, end: 2082, page_up: 2068, page_down: 2069,
+  ...Object.fromEntries("abcdefghijklmnopqrstuvwxyz".split("").map((c, i) => [c, 2017 + i])),
+  ...Object.fromEntries("0123456789".split("").map((c, i) => [c, 2000 + i])),
+  ...Object.fromEntries(Array.from({ length: 12 }, (_, i) => [`f${i + 1}`, 2090 + i])),
+};
+export function chordCodes(keys: string[]): number[] {
+  invariant(keys.length >= 1 && keys.length <= 3, "INVALID_INPUT", "keys: 1 to 3 keys, e.g. [\"ctrl\", \"c\"]");
+  return keys.map((k) => {
+    const code = /^\d{1,5}$/.test(k) ? Number(k) : chordKeys[k.toLowerCase()];
+    invariant(code !== undefined, "INVALID_INPUT", `Unknown key ${k}`, { keys: Object.keys(chordKeys).slice(0, 40) });
+    return code;
+  });
+}
 
 function uiInput(a: Action): string[] {
   switch (a.action) {
@@ -226,6 +363,24 @@ function uiInput(a: Action): string[] {
     }
     case "type": return ["text", a.text];
     case "input": return ["inputText", String(a.x), String(a.y), a.text];
+    case "keys": return ["keyEvent", ...chordCodes(a.keys).map(String)];
+    default: throw new ToolError("INVALID_INPUT", `${a.action} is not a uiInput action`);
+  }
+}
+
+/** Mouse actions go through the uitest agent (Driver.mouse*), as uiInput has no mouse commands. */
+function mouseRequest(a: Extract<Action, { action: `mouse_${string}` }>): { api: string; args: unknown[] } {
+  const point = (x: number, y: number) => ({ x, y });
+  const mods = (a as { keys?: string[] }).keys ? chordCodes((a as { keys: string[] }).keys) : [];
+  invariant(mods.length <= 2, "INVALID_INPUT", "Mouse actions take at most 2 modifier keys");
+  switch (a.action) {
+    case "mouse_click": case "mouse_double_click": case "mouse_long_click": {
+      const api = { mouse_click: "Driver.mouseClick", mouse_double_click: "Driver.mouseDoubleClick", mouse_long_click: "Driver.mouseLongClick" }[a.action];
+      return { api, args: [point(a.x, a.y), { left: 0, right: 1, middle: 2 }[a.button ?? "left"], ...mods] };
+    }
+    case "mouse_move": return { api: "Driver.mouseMoveTo", args: [point(a.x, a.y)] };
+    case "mouse_scroll": return { api: "Driver.mouseScroll", args: [point(a.x, a.y), a.direction === "down", a.ticks ?? 3, mods[0] ?? 0, mods[1] ?? 0, 20] };
+    case "mouse_drag": return { api: "Driver.mouseDrag", args: [point(a.x, a.y), point(a.x2, a.y2), a.speed ?? 600] };
   }
 }
 
@@ -243,8 +398,14 @@ export async function act(target: string, a: Action, signal?: AbortSignal) {
   }
   if (a.action === "input" && /[^\x20-\x7e]/.test(a.text)) {
     // uitest inputText drops non-ASCII (Chinese) text; the hypium agent pastes it reliably.
-    await nativeInputText(target, { x: a.x, y: a.y }, a.text, signal);
+    const text = a.text, point = { x: a.x, y: a.y };
+    await withAgent(target, signal, async (call, driver) => { await call("Driver.inputText", driver, [point, text, { paste: true }]); });
     return { performed: a.action, method: "uitest-agent-paste" };
+  }
+  if (a.action.startsWith("mouse_")) {
+    const request = mouseRequest(a as Extract<Action, { action: `mouse_${string}` }>);
+    await withAgent(target, signal, async (call, driver) => { await call(request.api, driver, request.args); });
+    return { performed: a.action, method: "uitest-agent" };
   }
   const result = await shell(target, ["uitest", "uiInput", ...uiInput(a)], signal, 30000);
   const out = (result.stdout + result.stderr).trim();
@@ -252,9 +413,31 @@ export async function act(target: string, a: Action, signal?: AbortSignal) {
   return { performed: a.action };
 }
 
+/** Stable signature of what is on screen (type, text, bounds of labelled/interactive nodes). */
+export function treeSignature(nodes: UiNode[]) {
+  const parts = nodes.filter((n) => n.text || n.clickable || n.key).map((n) => `${n.type}|${n.text}|${n.rect ? Object.values(n.rect).join(",") : ""}|${n.checked ?? ""}|${n.selected ?? ""}`);
+  return crypto.createHash("sha1").update(parts.join("\n")).digest("hex").slice(0, 16);
+}
+
+/** Act, then report whether the screen changed (progress evidence; avoids "tap had no effect" misjudgements). */
+export async function actAndVerify(target: string, a: Action, signal?: AbortSignal, timeoutMs = 3000) {
+  const before = treeSignature(await dumpTree(target, signal));
+  const result = await act(target, a, signal);
+  const deadline = Date.now() + timeoutMs;
+  let after = before;
+  while (Date.now() < deadline) {
+    await new Promise((r) => setTimeout(r, 300));
+    after = treeSignature(await dumpTree(target, signal));
+    if (after !== before) break;
+  }
+  return { ...result, changed: after !== before, ...(after === before ? { hint: "Screen did not change: the target may be disabled, covered, or need a different gesture" } : {}) };
+}
+
 /* ------------------------- non-ASCII text via uitest agent ------------------------- */
 
-async function nativeInputText(target: string, point: { x: number; y: number }, text: string, signal?: AbortSignal) {
+type AgentCall = (api: string, self: string, args: unknown[]) => Promise<unknown>;
+/** Connect to the uitest hypium agent (starting it if needed), create a Driver, run fn, clean up. */
+async function withAgent(target: string, signal: AbortSignal | undefined, fn: (call: AgentCall, driver: string) => Promise<void>) {
   const machine = (await shell(target, ["uname", "-m"], signal)).stdout.trim();
   const unix = machine !== "x86_64";
   const asset = unix ? "uitest_agent_v1.2.2.so" : "uitest_agent_v1.1.9.x86_64.so";
@@ -286,7 +469,7 @@ async function nativeInputText(target: string, point: { x: number; y: number }, 
   try {
     const driver = await rpc(socket, "Driver.create", "", []);
     invariant(typeof driver === "string", "UI_AGENT_FAILED", "Invalid driver reference");
-    await rpc(socket, "Driver.inputText", driver, [point, text, { paste: true }]);
+    await fn((api, self, args) => rpc(socket, api, self, args), driver);
   } finally {
     socket.destroy();
     await hdc(["-t", target, "fport", "rm", forward, endpoint], undefined, 5000, true).catch(() => {});
@@ -357,24 +540,73 @@ export async function saveTree(nodes: UiNode[]) {
 /* ------------------------------ screen recording ------------------------------ */
 // The system screen recorder is toggled via its service ability (same protocol as deveco-cli):
 // start with a CustomizedFileName, stop by toggling again, then export via mediatool.
-const RECORDER = ["-b", "com.huawei.hmos.screenrecorder", "-a", "com.huawei.hmos.screenrecorder.ServiceExtAbility"];
-const recordings = new Map<string, { name: string; started: number }>();
+const RECORDER_BUNDLE = "com.huawei.hmos.screenrecorder";
+const RECORDER = ["-b", RECORDER_BUNDLE, "-a", `${RECORDER_BUNDLE}.ServiceExtAbility`];
+interface Recording { name: string; started: number }
+
+// Session state lives in SQLite so a restarted server can still stop/retrieve a recording.
+async function session(target: string): Promise<Recording | undefined> {
+  const { kvGet } = await import("../core/db.js");
+  const raw = await kvGet(`screenrecord:${target}`);
+  return raw ? (JSON.parse(raw) as Recording) : undefined;
+}
+async function setSession(target: string, value: Recording | undefined) {
+  const { kvSet, kvDelete } = await import("../core/db.js");
+  if (value) await kvSet(`screenrecord:${target}`, JSON.stringify(value));
+  else await kvDelete(`screenrecord:${target}`);
+}
+
+/** The recorder's service ability is ACTIVE only while recording (and briefly while finalizing). */
+async function recorderActive(target: string, signal?: AbortSignal) {
+  const dump = await shell(target, ["aa", "dump", "-e"], signal, 15000);
+  return new RegExp(`uri \\[[^\\]]*${RECORDER_BUNDLE.replace(/\./g, "\\.")}`).test(dump.stdout);
+}
+/** Wait until the recorder service has stopped (file finalized). */
+async function waitRecorderIdle(target: string, timeoutMs: number, signal?: AbortSignal) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (!(await recorderActive(target, signal))) return true;
+    await new Promise((r) => setTimeout(r, 500));
+  }
+  return false;
+}
+
+export async function recordingStatus(target: string, signal?: AbortSignal) {
+  const [active, current] = await Promise.all([recorderActive(target, signal), session(target)]);
+  const status = active ? (current ? "recording" : "busy") : "idle";
+  return {
+    status,
+    ...(current ? { file: current.name, seconds: Math.round((Date.now() - current.started) / 1000) } : {}),
+    note: status === "busy" ? "A recording started outside this server is running; stop it with record_stop external=true"
+      : status === "idle" && current ? "Recording ended outside this server; record_stop retrieves the file" : undefined,
+  };
+}
 
 export async function startRecording(target: string, signal?: AbortSignal) {
-  invariant(!recordings.has(target), "CONFLICT", "A recording is already running on this device", undefined, "Stop it with ui action=record_stop");
+  if (!(await session(target))) await waitRecorderIdle(target, 6000, signal); // a just-stopped recorder may still be finalizing
+  const status = await recordingStatus(target, signal);
+  invariant(status.status === "idle", "CONFLICT", `Screen recorder is ${status.status}`, undefined, "Stop it first with ui action=record_stop");
   const name = `devecomcp-${Date.now()}-${crypto.randomBytes(2).toString("hex")}.mp4`;
   const result = await shell(target, ["aa", "start", ...RECORDER, "--ps", "CustomizedFileName", name], signal, 15000);
   invariant(/success/i.test(result.stdout), "UI_RECORD_FAILED", `Screen recorder did not start: ${result.stdout.trim().slice(0, 200)}`,
     undefined, "Screen recording needs a real device with the system recorder (not available on some emulators)");
-  recordings.set(target, { name, started: Date.now() });
+  await setSession(target, { name, started: Date.now() });
   return { recording: true, file: name, note: "Stop with ui action=record_stop" };
 }
 
-export async function stopRecording(target: string, signal?: AbortSignal) {
-  const current = recordings.get(target);
-  invariant(current, "NOT_FOUND", "No recording started by this server on this device");
-  await shell(target, ["aa", "start", ...RECORDER], signal, 15000);
-  recordings.delete(target);
+export async function stopRecording(target: string, options: { discard?: boolean; external?: boolean } = {}, signal?: AbortSignal) {
+  const current = await session(target);
+  const active = await recorderActive(target, signal);
+  if (!current) {
+    invariant(options.external, "NOT_FOUND", "No recording started by this server on this device", undefined,
+      active ? "A foreign recording is running: pass external=true to stop it (its file is not downloaded)" : undefined);
+    if (active) await shell(target, ["aa", "start", ...RECORDER], signal, 15000);
+    return { stopped: active, downloaded: false, idle: active ? await waitRecorderIdle(target, 10000, signal) : true };
+  }
+  if (active) await shell(target, ["aa", "start", ...RECORDER], signal, 15000);
+  await setSession(target, undefined);
+  await waitRecorderIdle(target, 10000, signal);
+  if (options.discard) return { stopped: true, discarded: current.name, note: "The file remains in the device gallery" };
   // The file appears in the media library after the recorder finalizes it.
   let uri: string | undefined;
   for (let i = 0; i < 20 && !uri; i++) {

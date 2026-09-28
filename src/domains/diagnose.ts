@@ -112,16 +112,27 @@ export function matchPatterns(signature: Pick<CrashSignature, "kind" | "message"
 
 /* ------------------------------ entry points ------------------------------ */
 
-export async function diagnoseCrash(input: { target?: string; bundle?: string; log?: string; name?: string; latest?: number }, target: string | undefined, signal: AbortSignal) {
+export async function diagnoseCrash(input: { target?: string; bundle?: string; log?: string; name?: string; latest?: number; since_minutes?: number }, target: string | undefined, signal: AbortSignal) {
   const reports: { source?: string; text: string }[] = [];
   if (input.log) reports.push({ text: input.log });
   else {
     invariant(target, "DEVICE_UNAVAILABLE", "A device is required to read crash logs, or pass log text");
     let names = input.name ? [input.name] : await faultlogNames(target, signal);
     if (input.bundle) names = names.filter((n) => n.includes(input.bundle!));
-    names.sort((a, b) => (timestamp(b) ?? 0) - (timestamp(a) ?? 0));
-    invariant(names.length, "NOT_FOUND", "No crash/freeze reports found on the device", { bundle: input.bundle },
-      "Reproduce the crash, then call again; or pass log text from hilog");
+    if (input.since_minutes && !input.name) {
+      // Time window on the device clock (names carry epoch ms or local yyyymmddhhmmss).
+      const { shell } = await import("./device.js");
+      const [epoch, local] = (await shell(target, ["date +%s; date +%Y%m%d%H%M%S"], signal, 5000)).stdout.trim().split(/\s+/);
+      const window = input.since_minutes * 60000;
+      const nowLocal = localMs(local!), nowEpoch = Number(epoch) * 1000;
+      names = names.filter((n) => {
+        const t = faultTime(n);
+        return !!t && (t.local ? nowLocal : nowEpoch) - t.ms <= window;
+      });
+    }
+    names.sort((a, b) => order(b) - order(a));
+    invariant(names.length, "NOT_FOUND", input.since_minutes ? `No crash/freeze reports in the last ${input.since_minutes} minutes` : "No crash/freeze reports found on the device",
+      { bundle: input.bundle }, "Reproduce the crash, then call again; or pass log text from hilog");
     for (const name of names.slice(0, Math.min(input.latest ?? 1, 5))) reports.push({ source: name, text: await readFaultlog(target, name, signal) });
   }
   const results = [];
@@ -138,9 +149,25 @@ export async function diagnoseCrash(input: { target?: string; bundle?: string; l
   return { reports: results };
 }
 
-function timestamp(name: string) {
-  const m = /-(\d{13})(?:\.log)?$/.exec(name) ?? /-(\d{14})/.exec(name);
-  return m ? Number(m[1]) : undefined;
+/**
+ * Report time from the faultlog name: either epoch ms (13 digits) or device-local
+ * yyyymmddhhmmss[mmm] (14/17 digits). Local stamps are returned as pseudo-UTC ms of the
+ * device's wall clock, so compare them only with the device's local "now".
+ */
+export function faultTime(name: string): { ms: number; local: boolean } | undefined {
+  const m = /-(\d{13,17})(?:\.log)?$/.exec(name);
+  if (!m) return undefined;
+  const digits = m[1]!;
+  if (digits.length === 13) return { ms: Number(digits), local: false };
+  if (digits.length !== 14 && digits.length !== 17) return undefined;
+  return { ms: localMs(digits), local: true };
+}
+function localMs(stamp: string) {
+  const n = (i: number, len: number) => Number(stamp.slice(i, i + len));
+  return Date.UTC(n(0, 4), n(4, 2) - 1, n(6, 2), n(8, 2), n(10, 2), n(12, 2), stamp.length >= 17 ? n(14, 3) : 0);
+}
+function order(name: string) {
+  return faultTime(name)?.ms ?? 0;
 }
 
 function guidance(s: CrashSignature): string[] {

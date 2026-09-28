@@ -125,6 +125,7 @@ export async function recordStep(target: string, action: Action, selector: Selec
       break;
     case "scroll": step.action = "dircFling"; step.direction = { left: 0, right: 1, up: 2, down: 3 }[action.direction]; break;
     case "type": step.action = "focusInput"; break;
+    default: return { recorded_step: null, note: `${action.action} is not recorded in flows (not replayable across devices)` };
   }
   if (selector) step.selector = fromSelector(selector);
   else if ("x" in action && ["tap", "doubleTap", "longTap", "input"].includes(step.action)) step.point = pctOf(action.x, action.y);
