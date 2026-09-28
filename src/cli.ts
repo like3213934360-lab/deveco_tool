@@ -1,73 +1,67 @@
 #!/usr/bin/env node
-import fs from "node:fs";
-import { z } from "zod";
-import { errorResult, invariant } from "./core/errors.js";
-import { atomicWrite } from "./core/files.js";
+/* Entry: `deveco-mcp [mcp]` serves stdio; `doctor` and `kb-build` are local helpers. */
+
+// node:sqlite prints an ExperimentalWarning on Node 22/24; keep stderr clean for MCP hosts.
+const emitWarning = process.emitWarning.bind(process);
+process.emitWarning = ((warning: string | Error, ...rest: unknown[]) => {
+  const text = typeof warning === "string" ? warning : warning.message;
+  if (/SQLite is an experimental feature/.test(text)) return;
+  return (emitWarning as (...a: unknown[]) => void)(warning, ...rest);
+}) as typeof process.emitWarning;
+
+const [command = "mcp", ...args] = process.argv.slice(2);
+
+// A long-lived MCP server mostly waits on I/O: size-optimized V8 saves ~10 MB RSS.
+// Applied at runtime (no relaunch, so hosts see a single process).
+if (command === "mcp") {
+  const v8 = await import("node:v8");
+  v8.setFlagsFromString("--optimize-for-size");
+  v8.setFlagsFromString("--max-semi-space-size=1");
+}
 
 async function main() {
-  const command = process.argv[2] ?? "mcp";
-  if (["--version", "-v", "-V"].includes(command)) {
-    invariant(
-      process.argv.length === 3,
-      "INVALID_ARGUMENT",
-      "Version flags take no arguments",
-    );
-    const { release } = await import("./core/config.js");
-    process.stdout.write(release + "\n");
-    return;
-  }
-  if (command === "maintenance") {
-    const { maintenance } = await import("./maintenance/upgrade.js");
-    await maintenance(process.argv.slice(3));
-    return;
-  }
-  if (command === "internal-check") {
-    const { moduleTargetsSchema } = await import("./core/contracts.js");
-    const inputFile = process.argv[3],
-      outputFile = process.argv[4];
-    invariant(
-      inputFile && outputFile,
-      "CHECK_INPUT_REQUIRED",
-      "Checker input/output paths required",
-    );
-    const input = z
-      .strictObject({
-        project_path: z.string(),
-        product: z.string().optional(),
-        module_targets: moduleTargetsSchema.optional(),
-        files: z.array(z.string()).optional(),
-        cache_path: z.string().min(1),
-      })
-      .parse(JSON.parse(fs.readFileSync(inputFile, "utf8")) as unknown);
-    const { staticCheck } = await import("./services/checker.js");
-    atomicWrite(outputFile, JSON.stringify(await staticCheck(input)));
-    return;
-  }
-  if (command === "mcp") {
-    const { serve } = await import("./server.js");
-    await serve();
-    return;
-  }
-  if (command === "doctor") {
-    const { WorkerClient } = await import("./core/worker-client.js");
-    const runtime = new WorkerClient((error) => {
-      process.stderr.write(error.message + "\n");
-      process.exit(1);
-    });
-    try {
-      process.stdout.write(
-        JSON.stringify(await runtime.call("deveco_doctor", {}), null, 2) + "\n",
-      );
-    } finally {
-      await runtime.close();
+  switch (command) {
+    case "mcp": {
+      const { serve } = await import("./server.js");
+      await serve();
+      return;
     }
-    return;
+    case "doctor": {
+      const { doctor } = await import("./domains/doctor.js");
+      const project = args.find((a) => !a.startsWith("-"));
+      process.stdout.write(JSON.stringify(await doctor({ project, remote: args.includes("--remote") }, new AbortController().signal), null, 2) + "\n");
+      process.exit(0);
+      return;
+    }
+    case "kb-build": {
+      // deveco-mcp kb-build <upstream-knowledgebase-dir> [out-dir] [--version x] [--name @scope/pkg]
+      const flag = (name: string) => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] : undefined; };
+      const positional = args.filter((a, i) => !a.startsWith("--") && !args[i - 1]?.startsWith("--"));
+      const { buildKnowledgePack } = await import("./domains/kb-build.js");
+      const upstream = positional[0];
+      if (!upstream) throw new Error("usage: deveco-mcp kb-build <upstream-dir> [out-dir] [--version x] [--name @scope/pkg]");
+      const result = await buildKnowledgePack({ upstream, out: positional[1] ?? "kb-dist", version: flag("--version"), npmName: flag("--name") });
+      process.stdout.write(JSON.stringify(result, null, 2) + "\n");
+      return;
+    }
+    case "kb-update": {
+      const { update } = await import("./domains/knowledge.js");
+      process.stdout.write(JSON.stringify(await update({ source: args[0], force: args.includes("--force") }, new AbortController().signal), null, 2) + "\n");
+      return;
+    }
+    case "--version":
+    case "-v": {
+      const { version } = await import("./core/config.js");
+      process.stdout.write(version + "\n");
+      return;
+    }
+    default:
+      process.stderr.write("usage: deveco-mcp [mcp | doctor [project] | kb-build <dir> [out] | kb-update [file] | --version]\n");
+      process.exit(2);
   }
-  throw new Error(
-    "Usage: deveco-tool [mcp|doctor|maintenance|--version|-v|-V]",
-  );
 }
-main().catch((error) => {
-  process.stderr.write(JSON.stringify(errorResult(error)) + "\n");
-  process.exitCode = 1;
+
+main().catch((error: unknown) => {
+  process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+  process.exit(1);
 });

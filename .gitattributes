@@ -1,11 +1,8 @@
-# Keep owned source and metadata identical on the supported CI platforms.
 *.ts text eol=lf
+*.mjs text eol=lf
 *.json text eol=lf
 *.yml text eol=lf
 *.md text eol=lf
-# Preserve the exact committed legal notices on every platform.
 LICENSE -text
 NOTICE.* -text
-# Resource digests describe exact upstream bytes, including original whitespace.
-# This takes precedence over the general source rules above.
 resources/** -text -whitespace

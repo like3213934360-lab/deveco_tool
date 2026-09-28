@@ -4,30 +4,14 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "strict": true,
-    "allowJs": false,
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
-    "useUnknownInCatchVariables": true,
     "verbatimModuleSyntax": true,
-    "esModuleInterop": true,
-    "declaration": true,
-    "sourceMap": true,
     "skipLibCheck": true,
-    "rootDir": ".",
-    "outDir": "dist",
-    "types": [
-      "node"
-    ],
-    "noEmitOnError": true
+    "noEmit": true,
+    "incremental": true,
+    "tsBuildInfoFile": "node_modules/.cache/tsbuildinfo",
+    "types": ["node"]
   },
-  "include": [
-    "src/**/*.ts",
-    "test/**/*.ts",
-    "scripts/**/*.ts"
-  ],
-  "exclude": [
-    "test/fixtures/harmony-app",
-    "node_modules",
-    "dist"
-  ]
+  "include": ["src/**/*.ts"]
 }

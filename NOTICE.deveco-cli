@@ -1,10 +1,13 @@
-DevEco CLI protocol reference
+DevEco CLI (https://gitcode.com/openharmony-sig/deveco-cli), MIT License.
 
-The native signing material decoder was adapted from @deveco/deveco-cli
-1.3.1. The TypeScript encoder and configuration publisher implement the same
-modern Hvigor material format without running or importing the CLI.
-Files: src/services/signing-material.ts, src/services/signing-config.ts.
-The original license follows.
+Reused or adapted in deveco-mcp:
+- resources/vendor/arkts-check.cjs: vendored unchanged from packages/cli/src/resources/arkts-check.cjs
+  (commit 8f69118d993ba363621c00d8fe6762c36f6062d5); run as the warm ArkTS static-check daemon.
+- src/domains/sign.ts: Studio/Hvigor signing-material password format and AppGallery Connect
+  auto-signing flow (certificate, device, debug profile endpoints) follow packages/cli/src/signature.
+- src/domains/ui.ts: screen-recorder toggle protocol follows packages/cli/src/ui/screenrecord.
+- src/domains/skills.ts: OpenHarmony skill-market API usage follows packages/cli/src/skills.
+- Knowledge packs are built from the @deveco-test/deveco-cli-knowledgebase docs package.
 
 MIT License
 
