@@ -22,7 +22,7 @@ fs.writeFileSync(entry, [
   `export { readonlySqlAllowed } from ${JSON.stringify(path.join(root, "src/domains/device.ts"))};`,
 ].join("\n"));
 await build({ entryPoints: [entry], outfile: path.join(out, "entry.mjs"), bundle: true, format: "esm", platform: "node", packages: "external", logLevel: "error", nodePaths: [path.join(root, "node_modules")] });
-fs.symlinkSync(path.join(root, "node_modules"), path.join(out, "node_modules"));
+fs.symlinkSync(path.join(root, "node_modules"), path.join(out, "node_modules"), "junction"); // junction: no admin rights needed on Windows
 const m = await import(pathToFileURL(path.join(out, "entry.mjs")).href);
 
 test("parses the WindowManagerService window table", () => {

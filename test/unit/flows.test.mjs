@@ -3,13 +3,14 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
+import { pathToFileURL } from "node:url";
 import { build } from "esbuild";
 
 const out = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-flows-"));
 process.env.DEVECO_STATE_DIR = out;
 const bundle = path.resolve("node_modules/.cache/deveco-flows-harness.mjs");
 await build({ entryPoints: [path.resolve("src/domains/flows.ts")], outfile: bundle, bundle: true, format: "esm", platform: "node", packages: "external", logLevel: "error" });
-const flows = await import(`${bundle}?t=${Date.now()}`);
+const flows = await import(`${pathToFileURL(bundle).href}?t=${Date.now()}`);
 
 // A v0.x (version 2) flow as written by the previous implementation.
 const legacy = {

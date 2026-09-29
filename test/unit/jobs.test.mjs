@@ -3,6 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
+import { pathToFileURL } from "node:url";
 import { build } from "esbuild";
 
 // Bundle a small harness that exercises the job runner directly (TS sources -> ESM).
@@ -18,7 +19,7 @@ export { ToolError } from ${JSON.stringify(path.resolve("src/core/errors.ts"))};
 // Output inside the repo so external packages (zod, json5) resolve from node_modules.
 const bundle = path.resolve("node_modules/.cache/deveco-test-harness.mjs");
 await build({ entryPoints: [harness], outfile: bundle, bundle: true, format: "esm", platform: "node", packages: "external", logLevel: "error" });
-const m = await import(`${bundle}?t=${Date.now()}`);
+const m = await import(`${pathToFileURL(bundle).href}?t=${Date.now()}`);
 
 let effectRuns = 0;
 m.defineJob({
