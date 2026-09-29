@@ -58,7 +58,7 @@ defineJob<BuildInput>({
 });
 
 interface RunInput extends BuildInput {
-  target?: string; module?: string; ability?: string; hot_reload?: boolean;
+  target?: string; module?: string; ability?: string; hot_reload?: boolean; skip_build?: boolean; uninstall_first?: boolean;
   assert?: { visible?: Record<string, unknown>; hidden?: Record<string, unknown>; timeout_ms?: number };
 }
 
@@ -81,6 +81,19 @@ const runSteps = (build: boolean) => [
       const target = await resolveTarget(ctx.input.target, ctx.signal);
       const info = await deviceInfo(target, ctx.signal).catch(() => ({ target }));
       return { ...info, target };
+    },
+  },
+  {
+    // `devecocli run --uninstall`: remove the installed app first (clean data / signature change).
+    id: "uninstall",
+    effect: true,
+    when: (ctx: { input: RunInput }) => !!ctx.input.uninstall_first,
+    async run(ctx: { input: RunInput; outputs: Record<string, any>; signal: AbortSignal }) {
+      const { inspectProject } = await import("./domains/project.js");
+      const { uninstall } = await import("./domains/device.js");
+      const project = inspectProject(ctx.input.project, ctx.input.product);
+      invariant(project.bundleName, "PROJECT_INVALID", "bundleName missing");
+      return uninstall(ctx.outputs.target.target, project.bundleName, ctx.signal).catch((e: Error) => ({ uninstalled: false, note: e.message }));
     },
   },
   {

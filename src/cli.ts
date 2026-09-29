@@ -48,11 +48,11 @@ async function main() {
       // deveco-mcp init --host cursor [--project <path>] [--force] [--skills-only|--mcp-only]
       const flag = (name: string) => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] : undefined; };
       const host = flag("--host");
-      if (!host) throw new Error("usage: deveco-mcp init --host <cursor|claude|codex|opencode|trae-cn|codebuddy|qoder|pi> [--project <path>] [--force] [--skills-only|--mcp-only]");
+      if (!host) throw new Error("usage: deveco-mcp init --host <cursor|claude|codex|opencode|trae-cn|codebuddy|qoder|pi> [--project <path>] [--path <skills dir>] [--force] [--skills-only|--mcp-only]");
       const { initHost } = await import("./domains/skills.js");
       const project = flag("--project");
       process.stdout.write(JSON.stringify(await initHost(host, {
-        project, scope: project ? "project" : "user", force: args.includes("--force"),
+        project, scope: project ? "project" : "user", force: args.includes("--force"), dir: flag("--path"),
         skills: !args.includes("--mcp-only"), mcp: !args.includes("--skills-only"),
       }), null, 2) + "\n");
       return;
@@ -62,8 +62,14 @@ async function main() {
       const flag = (name: string) => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] : undefined; };
       const { lspCommand } = await import("./domains/code.js");
       const { spawn } = await import("node:child_process");
-      const project = flag("--project") ?? process.cwd();
-      const cmd = lspCommand(project, args.includes("--cpp") ? "cpp" : "arkts");
+      // --auto-detect: without --project, search the cwd and its subdirectories (never upward) for a project root.
+      let project = flag("--project") ?? flag("--project-path");
+      if (!project && args.includes("--auto-detect")) {
+        const { findProjectRoot } = await import("./domains/project.js");
+        project = findProjectRoot(process.cwd());
+        if (!project) throw new Error("serve-lsp --auto-detect: no HarmonyOS project (build-profile.json5 + AppScope) under the current directory");
+      }
+      const cmd = lspCommand(project ?? process.cwd(), args.includes("--cpp") ? "cpp" : "arkts");
       const child = spawn(cmd.file, cmd.args, { cwd: cmd.cwd, env: cmd.env as NodeJS.ProcessEnv, stdio: ["pipe", "inherit", "inherit"] });
       for (const sig of ["SIGINT", "SIGTERM"] as const) process.on(sig, () => child.kill(sig));
       // The SDK ArkTS server ignores the LSP `exit` notification: enforce it (and editor disconnects).
@@ -88,7 +94,7 @@ async function main() {
       return;
     }
     default:
-      process.stderr.write("usage: deveco-mcp [mcp | doctor [project] | init --host <host> | serve-lsp [--cpp] [--project p] | kb-build <dir> [out] | kb-update [file] | --version]\n");
+      process.stderr.write("usage: deveco-mcp [mcp | doctor [project] | init --host <host> | serve-lsp [--cpp] [--project p | --auto-detect] | kb-build <dir> [out] | kb-update [file] | --version]\n");
       process.exit(2);
   }
 }

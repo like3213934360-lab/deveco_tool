@@ -110,7 +110,13 @@ export async function resetHotReload(project: Project, module: string, target: s
   return { reset: true, output: clip((result.stdout + result.stderr).trim(), 300), note: "Relaunch the app to run the installed code" };
 }
 
-export async function applyHotReload(project: Project, module: string, signal: AbortSignal, log: (m: string) => void) {
+/** `devecocli run --hotreload stop`: shut down the project's hvigor daemon. */
+export async function stopDaemon(project: Project, signal: AbortSignal) {
+  const result = await run(toolCommand("hvigor", ["--stop-daemon"], project.root), { signal, timeoutMs: 60000, allowFailure: true });
+  return { stopped: result.code === 0, output: clip((result.stdout + result.stderr).trim(), 300) };
+}
+
+export async function applyHotReload(project: Project, module: string, signal: AbortSignal, log: (m: string) => void, options: { files?: string[]; restart?: boolean; ability?: string } = {}) {
   const m = project.modules.find((x) => x.name === module);
   invariant(m && ["entry", "feature"].includes(m.type), "INVALID_INPUT", `Hot reload needs an entry/feature module, got ${module}`);
   const file = statePath(project, module);
@@ -118,7 +124,10 @@ export async function applyHotReload(project: Project, module: string, signal: A
     "Start with run action=build_run hot_reload=true (installs the baseline build)");
   const baseline = JSON.parse(fs.readFileSync(file, "utf8")) as Baseline;
   const current = sourceDigests(m.root);
-  const changed = Object.keys(current).filter((f) => baseline.files[f] !== current[f]);
+  // Explicit file list (like devecocli's --apply <fileName> list) or the automatic source diff.
+  const explicit = options.files?.map((f) => path.resolve(project.root, f));
+  for (const f of explicit ?? []) invariant(current[f] !== undefined, "INVALID_INPUT", `${path.relative(project.root, f)} is not an .ets/.ts source of module ${module}`);
+  const changed = explicit ?? Object.keys(current).filter((f) => baseline.files[f] !== current[f]);
   const added = changed.filter((f) => !baseline.files[f]);
   const removed = Object.keys(baseline.files).filter((f) => !current[f]);
   invariant(changed.length, "INVALID_INPUT", "No .ets/.ts changes since the last hot reload");
@@ -170,6 +179,13 @@ export async function applyHotReload(project: Project, module: string, signal: A
       undefined, signing ? "The change may be unsupported by quick fix: redeploy with run action=build_run" : "Real devices require a signed HQF: configure signing (sign action=auto)");
   } finally {
     void shell(baseline.target, ["rm", "-rf", remote]).catch(() => {});
+  }
+  if (options.restart && options.ability) {
+    // `devecocli run --apply`: quick fix then relaunch, so startup code also runs the patch.
+    const { launchAndCheck } = await import("./device.js");
+    const { mainAbility } = await import("./project.js");
+    const main = mainAbility(project, module);
+    await launchAndCheck(baseline.target, baseline.bundle, options.ability ?? main.ability, main.module, signal, 1500);
   }
   const after = await pidOf(baseline.target, baseline.bundle, signal);
   // Commit the new baseline so the next apply only sends newer changes.

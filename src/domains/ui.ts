@@ -114,6 +114,17 @@ export function center(node: UiNode) {
 }
 
 /** Compact line-per-node view: far fewer tokens than raw JSON. */
+/** Nodes whose component id/key equals `id`, each with its whole subtree (upstream `layout --id`). */
+export function subtree(nodes: UiNode[], id: string) {
+  const roots = nodes.filter((n) => n.id === id || n.key === id);
+  const keep = new Set<number>();
+  for (const r of roots) {
+    keep.add(r.i);
+    for (const n of nodes) if (n.i > r.i && n.parent !== null && keep.has(n.parent)) keep.add(n.i);
+  }
+  return nodes.filter((n) => keep.has(n.i));
+}
+
 export function compact(nodes: UiNode[], options: { interactive?: boolean; limit?: number; bundle?: string; depth?: number } = {}) {
   const limit = options.limit ?? 300;
   const lines: string[] = [];
@@ -216,6 +227,15 @@ export async function blankScreen(target: string, signal?: AbortSignal) {
   }
 }
 
+/** Copy a produced file to a user-chosen absolute path (file, or directory => keep the name). */
+export function saveCopy(file: string, target: string) {
+  invariant(path.isAbsolute(target), "INVALID_INPUT", "save_path must be an absolute path");
+  const dest = fs.existsSync(target) && fs.statSync(target).isDirectory() ? path.join(target, path.basename(file)) : target;
+  fs.mkdirSync(path.dirname(dest), { recursive: true });
+  fs.copyFileSync(file, dest);
+  return dest;
+}
+
 /* -------------------------------- windows -------------------------------- */
 
 export interface WindowInfo { id: number; name: string; pid: number; display: number; type: number; focused: boolean; bounds?: number[]; visible: boolean }
@@ -254,24 +274,40 @@ export async function listWindows(target: string, all = false, signal?: AbortSig
 const cache = new Map<string, { at: number; nodes: UiNode[] }>();
 const nativeSizes = new Map<string, { w: number; h: number }>();
 
-export async function dumpTree(target: string, signal?: AbortSignal, maxAgeMs = 0, scope: { window?: number; bundle?: string } = {}): Promise<UiNode[]> {
+export async function dumpTree(target: string, signal?: AbortSignal, maxAgeMs = 0, scope: { window?: number; bundle?: string; all_windows?: boolean } = {}): Promise<UiNode[]> {
+  if (scope.all_windows) {
+    // Every window on every display (upstream --all-windows): one unmerged dump per display.
+    invariant(scope.window === undefined, "INVALID_INPUT", "all_windows and window are mutually exclusive");
+    const displays = [...new Set((await listWindows(target, true, signal)).map((w) => w.display))];
+    const all: UiNode[] = [];
+    for (const d of displays.length ? displays : [0]) {
+      const part = await dumpRaw(target, ["-i", "-d", String(d)], signal);
+      all.push(...part.map((n) => ({ ...n, i: n.i + all.length, parent: n.parent === null ? null : n.parent + all.length })));
+    }
+    return all;
+  }
   const scoped = scope.window !== undefined || scope.bundle !== undefined;
   const hit = cache.get(target);
   if (!scoped && hit && Date.now() - hit.at <= maxAgeMs) return hit.nodes;
+  const extra: string[] = [];
+  if (scope.window !== undefined) extra.push("-w", String(scope.window));
+  else if (scope.bundle && /^[\w.]+$/.test(scope.bundle)) extra.push("-b", scope.bundle);
+  const nodes = await dumpRaw(target, extra, signal);
+  if (!scoped) cache.set(target, { at: Date.now(), nodes });
+  return nodes;
+}
+
+async function dumpRaw(target: string, extra: string[], signal?: AbortSignal): Promise<UiNode[]> {
   const remote = `/data/local/tmp/deveco-layout-${crypto.randomBytes(4).toString("hex")}.json`;
   const local = path.join(artifactDir(), `layout-${crypto.randomBytes(4).toString("hex")}.json`);
   try {
-    const args = ["uitest", "dumpLayout", "-p", remote];
-    if (scope.window !== undefined) args.push("-w", String(scope.window));
-    else if (scope.bundle && /^[\w.]+$/.test(scope.bundle)) args.push("-b", scope.bundle);
+    const args = ["uitest", "dumpLayout", "-p", remote, ...extra];
     const dump = await shell(target, args, signal, 30000);
     invariant(!/fail|error/i.test(dump.stdout) || /DumpLayout saved/i.test(dump.stdout), "UI_DUMP_FAILED", `uitest dumpLayout failed: ${dump.stdout.trim().slice(0, 300)}`,
       undefined, "Make sure the screen is on and unlocked");
     await hdc(["-t", target, "file", "recv", remote, local], signal, 30000, true);
     invariant(fs.existsSync(local), "UI_DUMP_FAILED", "Layout file transfer failed");
-    const nodes = flatten(JSON.parse(fs.readFileSync(local, "utf8")));
-    if (!scoped) cache.set(target, { at: Date.now(), nodes });
-    return nodes;
+    return flatten(JSON.parse(fs.readFileSync(local, "utf8")));
   } finally {
     fs.rmSync(local, { force: true });
     void shell(target, ["rm", "-f", remote]).catch(() => {});
@@ -281,14 +317,14 @@ export function invalidate(target: string) {
   cache.delete(target);
 }
 
-export async function screenshot(target: string, options: { format?: "jpeg" | "png"; width?: number } = {}, signal?: AbortSignal) {
+export async function screenshot(target: string, options: { format?: "jpeg" | "png"; width?: number; display?: number; save_path?: string } = {}, signal?: AbortSignal) {
   const format = options.format ?? "jpeg";
   const remote = `/data/local/tmp/deveco-shot-${crypto.randomBytes(4).toString("hex")}.${format}`;
   const mime = format === "png" ? "image/png" : "image/jpeg";
   const id = `a_${crypto.randomBytes(8).toString("hex")}`;
   const local = path.join(artifactDir(), `${id}.${format === "png" ? "png" : "jpg"}`);
   try {
-    const args = ["snapshot_display", "-f", remote, "-t", format];
+    const args = ["snapshot_display", "-f", remote, "-t", format, ...(options.display !== undefined ? ["-i", String(options.display)] : [])];
     // Downscale on-device: bytes drive token cost; ~1080px wide keeps text legible.
     // The native size is cached per device so a single capture is usually enough.
     const width = options.width ?? 1080;
@@ -306,8 +342,10 @@ export async function screenshot(target: string, options: { format?: "jpeg" | "p
     }
     await hdc(["-t", target, "file", "recv", remote, local], signal, 30000, true);
     invariant(fs.existsSync(local) && fs.statSync(local).size > 0, "SCREENSHOT_FAILED", "Screenshot transfer failed");
+    const data = fs.readFileSync(local);
+    const saved = options.save_path ? saveCopy(local, options.save_path) : undefined;
     const artifact = await commitArtifact(id, local, mime);
-    return { artifact_id: artifact.artifact_id, bytes: artifact.bytes, mime, data: fs.readFileSync(local).toString("base64") };
+    return { artifact_id: artifact.artifact_id, bytes: artifact.bytes, mime, data: data.toString("base64"), ...(saved ? { saved } : {}) };
   } finally {
     void shell(target, ["rm", "-f", remote]).catch(() => {});
   }
@@ -347,6 +385,14 @@ export function chordCodes(keys: string[]): number[] {
   });
 }
 
+/**
+ * hdc joins shell arguments with spaces, so text is shipped base64-encoded and decoded on the device
+ * (same approach as deveco-cli): spaces, quotes, `$` and newlines arrive intact.
+ */
+export function deviceText(text: string) {
+  return `"$(printf '%s' '${Buffer.from(text, "utf8").toString("base64")}' | base64 -d)"`;
+}
+
 function uiInput(a: Action): string[] {
   switch (a.action) {
     case "click": return ["click", String(a.x), String(a.y)];
@@ -361,8 +407,8 @@ function uiInput(a: Action): string[] {
       invariant(/^(Back|Home|Power|\d{1,5})$/.test(key), "INVALID_INPUT", `Unknown key ${a.key}`, { aliases: Object.keys(keyAliases) });
       return ["keyEvent", key];
     }
-    case "type": return ["text", a.text];
-    case "input": return ["inputText", String(a.x), String(a.y), a.text];
+    case "type": return ["text", deviceText(a.text)];
+    case "input": return ["inputText", String(a.x), String(a.y), deviceText(a.text)];
     case "keys": return ["keyEvent", ...chordCodes(a.keys).map(String)];
     default: throw new ToolError("INVALID_INPUT", `${a.action} is not a uiInput action`);
   }
@@ -407,7 +453,8 @@ export async function act(target: string, a: Action, signal?: AbortSignal) {
     await withAgent(target, signal, async (call, driver) => { await call(request.api, driver, request.args); });
     return { performed: a.action, method: "uitest-agent" };
   }
-  const result = await shell(target, ["uitest", "uiInput", ...uiInput(a)], signal, 30000);
+  // One command string: hdc passes it to the device shell as-is, so deviceText()'s $(...) expands there.
+  const result = await shell(target, [["uitest", "uiInput", ...uiInput(a)].join(" ")], signal, 30000);
   const out = (result.stdout + result.stderr).trim();
   invariant(uiInputOk(out, result.code), "UI_ACTION_FAILED", `uiInput ${a.action} failed: ${out.slice(0, 300)}`);
   return { performed: a.action };
@@ -594,7 +641,7 @@ export async function startRecording(target: string, signal?: AbortSignal) {
   return { recording: true, file: name, note: "Stop with ui action=record_stop" };
 }
 
-export async function stopRecording(target: string, options: { discard?: boolean; external?: boolean } = {}, signal?: AbortSignal) {
+export async function stopRecording(target: string, options: { discard?: boolean; external?: boolean; save_path?: string } = {}, signal?: AbortSignal) {
   const current = await session(target);
   const active = await recorderActive(target, signal);
   if (!current) {
@@ -626,6 +673,7 @@ export async function stopRecording(target: string, options: { discard?: boolean
   } finally {
     void shell(target, ["rm", "-f", staging]).catch(() => {});
   }
+  const copy = options.save_path ? saveCopy(local, options.save_path) : undefined;
   const artifact = await commitArtifact(id, local, "video/mp4");
-  return { saved: local, bytes: artifact.bytes, seconds: Math.round((Date.now() - current.started) / 1000), artifact_id: artifact.artifact_id };
+  return { saved: copy ?? local, bytes: artifact.bytes, seconds: Math.round((Date.now() - current.started) / 1000), artifact_id: artifact.artifact_id };
 }

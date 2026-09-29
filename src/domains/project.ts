@@ -214,6 +214,20 @@ export function mergeCompileCommands(project: Project): number {
   return merged.length;
 }
 
+/** First HarmonyOS project root at or below `dir` (breadth-first, bounded, skips build/deps). */
+export function findProjectRoot(dir: string, maxDepth = 4): string | undefined {
+  const skip = new Set(["node_modules", "oh_modules", ".git", ".hvigor", "build", ".idea", ".deveco"]);
+  let level = [path.resolve(dir)];
+  for (let depth = 0; depth <= maxDepth && level.length; depth++) {
+    for (const d of level) if (fs.existsSync(path.join(d, "build-profile.json5")) && fs.existsSync(path.join(d, "AppScope"))) return d;
+    level = level.flatMap((d) => {
+      try { return fs.readdirSync(d, { withFileTypes: true }).filter((e) => e.isDirectory() && !skip.has(e.name) && !e.name.startsWith(".")).map((e) => path.join(d, e.name)); }
+      catch { return []; }
+    }).slice(0, 2000);
+  }
+  return undefined;
+}
+
 export function hasNativeCode(project: Project) {
   return project.modules.some((m) => fs.existsSync(path.join(m.root, "src/main/cpp")));
 }

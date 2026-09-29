@@ -49,6 +49,27 @@ export function spawnManaged(cmd: Command, stdio: "pipe" | "ignore" = "pipe"): C
     detached: process.platform !== "win32", // own process group so the whole tree can be killed
     windowsHide: true,
   });
+  track(child);
+  return child;
+}
+
+/**
+ * Long-lived programs the user expects to outlive this server (emulators, browsers):
+ * detached, not tracked, so server shutdown (killAll) never takes them down.
+ */
+export function spawnIndependent(cmd: Command, logFile?: string): ChildProcess {
+  // Output goes to a file (not a pipe) so the program never blocks or dies when this server exits.
+  const fd = logFile ? fs.openSync(logFile, "w") : "ignore";
+  const child = spawn(cmd.file, cmd.args, {
+    cwd: cmd.cwd, env: cmd.env as NodeJS.ProcessEnv | undefined,
+    stdio: ["ignore", fd, fd], detached: true, windowsHide: true,
+  });
+  if (typeof fd === "number") fs.closeSync(fd);
+  child.unref();
+  return child;
+}
+
+function track(child: ChildProcess) {
   live.add(child);
   child.once("exit", () => live.delete(child));
   child.once("error", () => live.delete(child));

@@ -1,134 +1,132 @@
-// Upstream capability alignment: deveco-code tool registry + deveco-cli commands vs this MCP.
-// Each upstream capability maps to { tool, action, params } and is verified against the live
-// tools/list JSON Schemas:
-//   full    - tool exists, action is in its enum, every key parameter exists in the schema
-//   partial - mapped but the tool/action/parameters are missing  -> CI fails
-//   host    - provided by the MCP host itself (file ops, shell, web, planning...)
-//   cli     - provided as a CLI subcommand (init, serve-lsp, kb-update)
-//   UNMAPPED- new upstream capability without a decision            -> CI fails
-// Usage: node tools/upstream-sync.mjs [--code <deveco-code>] [--cli <deveco-cli>] [--json]
+// Upstream alignment gate — fails unless EVERY upstream capability has a verified decision.
+//
+//   1. tools/upstream/extract.mjs lists every capability item of deveco-code and deveco-cli
+//      (tools, parameters, enum values, commands, options, choices, bundled MCP tools, skills...).
+//   2. tools/upstream/decisions.json maps each item to full (with a target) / host / skip (with reason).
+//   3. Each `full` target is verified against this server's live tools/list JSON Schemas,
+//      prompts/list, the skills list, or src/cli.ts.
+// Failures: undecided items, unverifiable targets, skips without reasons, stale decision keys.
+// It also lists upstream commits since decisions.upstream_rev for behaviour-level review.
+//
+// Usage: node tools/upstream-sync.mjs [--code <dir>] [--cli <dir>] [--json] [--report <file.md>]
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { connect } from "./mcp-client.mjs";
+import { extract } from "./upstream/extract.mjs";
 
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const arg = (name) => { const i = process.argv.indexOf(name); return i >= 0 ? process.argv[i + 1] : undefined; };
 const temp = fs.mkdtempSync(path.join(os.tmpdir(), "upstream-"));
 function checkout(name, given) {
   if (given) return path.resolve(given);
   const dir = path.join(temp, name);
-  execFileSync("git", ["clone", "--depth", "1", "--branch", "develop", `https://gitcode.com/openharmony-sig/${name}.git`, dir], { stdio: "ignore" });
+  execFileSync("git", ["clone", "-q", "--branch", "develop", "--filter=blob:none", `https://gitcode.com/openharmony-sig/${name}.git`, dir], { stdio: "ignore" });
   return dir;
 }
+const git = (dir, ...a) => { try { return execFileSync("git", ["-C", dir, ...a], { encoding: "utf8" }).trim(); } catch { return ""; } };
+
 const code = checkout("deveco-code", arg("--code"));
 const cli = checkout("deveco-cli", arg("--cli"));
-const rev = (dir) => execFileSync("git", ["-C", dir, "rev-parse", "--short", "HEAD"]).toString().trim();
+const decisions = JSON.parse(fs.readFileSync(path.join(root, "tools/upstream/decisions.json"), "utf8"));
+const items = extract({ code, cli });
 
-// deveco-code: tools registered in packages/opencode/src/tool/registry.ts
-const registry = fs.readFileSync(path.join(code, "packages/opencode/src/tool/registry.ts"), "utf8");
-const codeTools = [...new Set([...registry.matchAll(/(\w+):\s*Tool\.init\(/g)].map((m) => m[1]))];
-// deveco-cli: top-level commands and subcommands
-const cmdDir = path.join(cli, "packages/cli/src/commands");
-const cliCommands = [];
-for (const file of fs.readdirSync(cmdDir).filter((f) => f.endsWith(".ts") && !f.endsWith(".test.ts"))) {
-  const text = fs.readFileSync(path.join(cmdDir, file), "utf8");
-  const top = /new Command\('([\w-]+)'\)/.exec(text)?.[1] ?? file.replace(/\.ts$/, "");
-  const subs = [...text.matchAll(/\.command\('([\w-]+)/g)].map((m) => m[1]);
-  cliCommands.push(...(subs.length ? subs.map((s) => `${top} ${s}`) : [top]));
-}
+/* ---------------------------- live server state ---------------------------- */
 
-const H = "host";
-const C = (command) => ({ cli: command });
-const T = (tool, action, params = []) => ({ tool, action, params });
-// Upstream capability -> this MCP. params = upstream key parameters, expressed as our field names.
-const map = {
-  // ---- deveco-code agent tools
-  invalid: H, shell: H, bash: H, read: H, glob: H, grep: H, edit: H, write: H, apply_patch: H, multiedit: H, ls: H, list: H,
-  task: H, webfetch: H, websearch: H, codesearch: H, todowrite: H, todoread: H, todo: H, question: H, plan: H, planwrite: H, planenter: H, batch: H,
-  plan_exit: H, plan_write: H, plan_enter: H, debug_exit: H, debugexit: H,
-  spec_write: T("prompts", null), specwrite: T("prompts", null),
-  skill: T("skills", "read", ["name", "reference"]), skilltool: T("skills", "read", ["name"]),
-  lsp: T("code", "lsp", ["op", "file", "symbol", "line", "language"]), lsptool: T("code", "lsp", ["op", "file", "symbol"]),
-  switch_cwd: T("project", "info", ["project"]), switchcwd: T("project", "info", ["project"]),
-  arkts_check: T("code", "check", ["files", "fix"]), arktscheck: T("code", "check", ["files"]),
-  build_project: T("project", "build", ["task", "product", "mode", "modules"]),
-  start_app: T("run", "build_run", ["project", "target", "module"]),
-  hdc_log: T("device", "log", ["bundle", "grep", "level", "lines", "clear"]),
-  verify_ui: T("ui", "test_start", ["plan", "bundle", "fresh_start"]), verifyui: T("ui", "test_start", ["plan"]),
-  get_ui_verification_log: T("ui", "test_log", ["test_id", "grep", "max_chars"]), getuilog: T("ui", "test_log", ["test_id"]),
-  save_ui_screenshot: T("ui", "test_export", ["test_id", "directory"]), saveuiscreenshot: T("ui", "test_export", ["test_id", "directory"]),
-  // ---- deveco-cli commands
-  "auth login": T("auth", "login", ["provider", "region"]), "auth logout": T("auth", "logout", ["provider"]), "auth status": T("auth", "status", ["provider"]),
-  "auth team": T("auth", "teams"), "auth list": T("auth", "teams"),
-  build: T("project", "build", ["task", "product", "mode", "modules", "clean"]), "build clean": T("project", "clean"),
-  "build compileNative": T("project", "build", ["task"]),
-  check: T("code", "check", ["files"]), "check versions": T("doctor", null, ["project"]),
-  create: T("project", "create", ["project", "app_name", "bundle_name", "target_api"]),
-  device: T("device", "list"), "device list": T("device", "list"), "device view": T("device", "info", ["target"]),
-  "device file": T("device", "send", ["local", "remote"]), "device send": T("device", "send", ["local", "remote"]), "device recv": T("device", "recv", ["local", "remote"]),
-  "device sqlite3": T("device", "sqlite", ["db", "sql", "write"]),
-  "doc search": T("knowledge", "search", ["query", "source"]), "doc read": T("knowledge", "read"), "doc catalog": T("knowledge", "catalog"),
-  emulator: T("emulator", "list"), "emulator download": T("emulator", "install_image"), "emulator remove": T("emulator", "delete"), "emulator list": T("emulator", "list"),
-  "emulator view": T("emulator", "list"), "emulator accept": T("emulator", "license"), "emulator start": T("emulator", "start"), "emulator stop": T("emulator", "stop"),
-  "emulator create": T("emulator", "create"), "emulator delete": T("emulator", "delete"),
-  "emulator shake": T("emulator", "scenario"), "emulator power": T("emulator", "scenario"), "emulator rotate": T("emulator", "scenario"), "emulator volume": T("emulator", "scenario"),
-  "emulator fold": T("emulator", "scenario"), "emulator battery": T("emulator", "scenario"), "emulator geolocation": T("emulator", "scenario"),
-  "emulator scene": T("emulator", "scenario"), "emulator sensor": T("emulator", "scenario"),
-  init: T("skills", "init", ["host", "scope", "project", "force"]), log: T("device", "log", ["bundle", "grep", "level"]),
-  run: T("run", "build_run", ["project", "target", "module", "product", "mode"]),
-  "serve mcp": H, "serve lsp": C("serve-lsp [--cpp]"), "serve-lsp": C("serve-lsp"), "serve-lsp-cpp": C("serve-lsp --cpp"),
-  "signature generate": T("sign", "auto", ["project", "team", "acl"]),
-  "skills list": T("skills", "list"), "skills find": T("skills", "search", ["query"]), "skills add": T("skills", "install", ["name", "host", "scope"]),
-  "skills remove": T("skills", "uninstall", ["name", "host"]),
-  ui: T("ui", "observe"), "ui-input": T("ui", "act", ["op", "selector", "x", "y", "text", "key", "direction"]),
-  "ui-layout": T("ui", "tree", ["window", "depth", "bundle"]), "ui-screenshot": T("ui", "screenshot", ["format", "width"]),
-  "ui-window": T("ui", "windows", ["all"]), "window list": T("ui", "windows", ["all"]),
-  "ui-screenrecord": T("ui", "record_stop", ["discard", "external"]), screenrecord: T("ui", "record_status"),
-  screenshot: T("ui", "screenshot"), layout: T("ui", "tree", ["window", "depth"]), click: T("ui", "act", ["op", "selector"]),
-  "compat versions": T("code", "api_versions"), fetch: H, search: H, patch: H,
-  "update-docs": T("knowledge", "update"), update: T("knowledge", "update"), docs: T("knowledge", "update"),
-};
-
-// Live schemas of this server.
 const client = connect();
 await client.initialize();
 const tools = new Map((await client.request("tools/list")).result.tools.map((t) => [t.name, t.inputSchema]));
-const prompts = (await client.request("prompts/list")).result?.prompts ?? [];
+const prompts = new Set(((await client.request("prompts/list")).result?.prompts ?? []).map((p) => p.name));
+const skills = new Set((await client.call("skills", { action: "list" })).data.skills.map((s) => s.name));
 await client.close();
+const cliSource = fs.readFileSync(path.join(root, "src/cli.ts"), "utf8");
 
-function verify(target) {
-  if (target === H) return { status: "host" };
-  if (target.cli) return { status: "cli", via: `deveco-mcp ${target.cli}` };
-  if (target.tool === "prompts") return prompts.length ? { status: "full", via: "MCP prompts" } : { status: "partial", missing: ["prompts"] };
-  const schema = tools.get(target.tool);
-  if (!schema) return { status: "partial", missing: [`tool ${target.tool}`] };
+/** Verify one target expression; returns a list of problems (empty = verified). */
+export function verifyTarget(to) {
+  if (to.startsWith("cli:")) return cliSource.includes(to.slice(4)) ? [] : [`src/cli.ts lacks "${to.slice(4)}"`];
+  if (to.startsWith("prompt:")) return prompts.has(to.slice(7)) ? [] : [`prompt ${to.slice(7)} not served`];
+  if (to.startsWith("skill:")) return skills.has(to.slice(6)) ? [] : [`skill ${to.slice(6)} not bundled`];
+  const [toolName, ...conds] = to.split(/\s+/);
+  const schema = tools.get(toolName);
+  if (!schema) return [`tool ${toolName} missing`];
   const props = schema.properties ?? {};
-  const missing = [];
-  if (target.action && !(props.action?.enum ?? []).includes(target.action)) missing.push(`action ${target.action}`);
-  for (const p of target.params) if (!(p in props)) missing.push(`param ${p}`);
-  const via = `${target.tool}${target.action ? ` action=${target.action}` : ""}`;
-  return missing.length ? { status: "partial", via, missing } : { status: "full", via };
+  const problems = [];
+  for (const c of conds) {
+    const [param, value] = c.split("=");
+    const prop = props[param];
+    if (!prop) { problems.push(`${toolName}.${param} missing`); continue; }
+    const values = prop.enum ?? prop.items?.enum;
+    if (value !== undefined && values && !values.includes(value)) problems.push(`${toolName}.${param} lacks value ${value}`);
+  }
+  return problems;
 }
 
-const norm = (s) => s.toLowerCase();
-const rows = [...codeTools.map((t) => ["deveco-code", t]), ...cliCommands.map((c) => ["deveco-cli", c])].map(([source, name]) => {
-  const key = map[name] !== undefined ? name : Object.keys(map).find((k) => norm(k) === norm(name)) ?? Object.keys(map).find((k) => norm(k) === norm(name.split(" ")[0]));
-  if (!key) return { source, upstream: name, status: "UNMAPPED" };
-  return { source, upstream: name, ...verify(map[key]) };
+const globRe = (g) => new RegExp(`^${g.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*")}$`);
+const rules = decisions.rules.map((r) => ({ ...r, re: globRe(r.match) }));
+function decide(id) {
+  if (decisions.items[id]) return { ...decisions.items[id], via: "item" };
+  const rule = rules.find((r) => r.re.test(id));
+  return rule ? { ...rule, via: `rule ${rule.match}` } : undefined;
+}
+
+/* --------------------------------- check --------------------------------- */
+
+const rows = items.map((id) => {
+  const d = decide(id);
+  if (!d) return { id, status: "UNDECIDED", problems: ["no decision"] };
+  if (d.status === "full") {
+    const problems = [d.to, d.also].filter(Boolean).flatMap(verifyTarget);
+    return { id, status: problems.length ? "PARTIAL" : "full", to: d.to, via: d.via, problems };
+  }
+  if (!["host", "skip"].includes(d.status)) return { id, status: "INVALID", problems: [`unknown status ${d.status}`] };
+  if (!d.reason) return { id, status: "INVALID", problems: ["reason required"] };
+  return { id, status: d.status, reason: d.reason, via: d.via };
 });
+const itemSet = new Set(items);
+const stale = Object.keys(decisions.items).filter((k) => !itemSet.has(k));
+
+const revs = { "deveco-code": git(code, "rev-parse", "--short", "HEAD"), "deveco-cli": git(cli, "rev-parse", "--short", "HEAD") };
+const newCommits = {};
+for (const [name, dir] of [["deveco-code", code], ["deveco-cli", cli]]) {
+  const since = decisions.upstream_rev?.[name];
+  if (since && since !== revs[name]) newCommits[name] = git(dir, "log", "--oneline", `${since}..HEAD`).split("\n").filter(Boolean);
+}
+
 const count = (s) => rows.filter((r) => r.status === s).length;
-const failing = rows.filter((r) => r.status === "partial" || r.status === "UNMAPPED");
+const failing = rows.filter((r) => !["full", "host", "skip"].includes(r.status));
 const report = {
-  upstream: { "deveco-code": rev(code), "deveco-cli": rev(cli) },
-  totals: { upstream: rows.length, full: count("full"), cli: count("cli"), host: count("host"), partial: count("partial"), unmapped: count("UNMAPPED") },
-  failing, rows,
+  upstream: revs,
+  totals: { items: rows.length, full: count("full"), host: count("host"), skip: count("skip"), partial: count("PARTIAL"), undecided: count("UNDECIDED"), invalid: count("INVALID"), stale: stale.length },
+  failing, stale, new_commits: newCommits, rows,
 };
+
+if (arg("--report")) fs.writeFileSync(arg("--report"), markdown(report));
 if (process.argv.includes("--json")) console.log(JSON.stringify(report, null, 2));
 else {
-  console.log(`deveco-code@${report.upstream["deveco-code"]} deveco-cli@${report.upstream["deveco-cli"]}`);
+  console.log(`deveco-code@${revs["deveco-code"]} deveco-cli@${revs["deveco-cli"]}`);
   console.log(JSON.stringify(report.totals));
-  for (const r of failing) console.log(`  ${r.status.padEnd(8)} ${r.source}: ${r.upstream}${r.missing ? ` (missing ${r.missing.join(", ")})` : ""}`);
+  for (const r of failing) console.log(`  ${r.status.padEnd(9)} ${r.id}${r.to ? ` -> ${r.to}` : ""}: ${r.problems.join("; ")}`);
+  for (const k of stale) console.log(`  STALE     ${k} (decision for an item upstream no longer has)`);
+  for (const [n, list] of Object.entries(newCommits)) console.log(`  ${n}: ${list.length} new upstream commits since ${decisions.upstream_rev[n]} — review behaviour, then bump upstream_rev`);
 }
 if (!arg("--code") || !arg("--cli")) fs.rmSync(temp, { recursive: true, force: true });
-process.exitCode = failing.length ? 1 : 0;
+process.exitCode = failing.length || stale.length || Object.keys(newCommits).length ? 1 : 0;
+
+function markdown(r) {
+  const esc = (s) => String(s ?? "").replace(/\|/g, "\\|");
+  const lines = [
+    "# Upstream alignment / 上游对齐清单",
+    "",
+    `Generated by \`node tools/upstream-sync.mjs --report docs/upstream-alignment.md\`. Upstream: deveco-code@${r.upstream["deveco-code"]}, deveco-cli@${r.upstream["deveco-cli"]}.`,
+    "",
+    `由脚本生成，是“是否对齐”的唯一依据。共 ${r.totals.items} 项：full ${r.totals.full}，host ${r.totals.host}，skip ${r.totals.skip}，未对齐 ${r.totals.partial + r.totals.undecided + r.totals.invalid}。`,
+    "",
+    "| Upstream item | Status | deveco-mcp target / reason |",
+    "| --- | --- | --- |",
+    ...r.rows.map((x) => `| \`${esc(x.id)}\` | ${x.status} | ${esc(x.to ? `\`${x.to}\`` : x.reason)}${x.problems?.length ? ` — ${esc(x.problems.join("; "))}` : ""} |`),
+    "",
+  ];
+  return lines.join("\n");
+}

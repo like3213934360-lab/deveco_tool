@@ -97,7 +97,7 @@ export const selectorSchema = z.object({
   selected: z.boolean().optional(),
   enabled: z.boolean().optional(),
   index: z.number().int().min(0).optional().describe("Pick the n-th match when several match"),
-});
+}).meta({ id: "Selector" }); // emitted once per tool as $defs/Selector
 
 export const runTool = tool({
   name: "run",
@@ -121,12 +121,14 @@ export const runTool = tool({
     ability: z.string().optional().describe("Ability to launch (default: module mainElement)"),
     assert: assertSchema.optional(),
     hot_reload: z.boolean().optional(),
+    skip_build: z.boolean().optional().describe("build_run: deploy the latest built packages without building (same as action=deploy)"),
+    uninstall_first: z.boolean().optional().describe("build_run/deploy: uninstall the app before installing (clears app data)"),
     request_key: fields.requestKey,
     wait: fields.wait,
   }),
   async handler(input, ctx) {
     if (input.action === "build_run" || input.action === "deploy")
-      return startAndWait(input.action, input, input.request_key, input.wait ?? 3000);
+      return startAndWait(input.action === "build_run" && input.skip_build ? "deploy" : input.action, input, input.request_key, input.wait ?? 3000);
     const { inspectProject, mainAbility } = await import("../domains/project.js");
     const device = await import("../domains/device.js");
     const project = inspectProject(input.project, input.product);
@@ -189,7 +191,8 @@ export const codeTool = tool({
     "lint: Code Linter report. api_scan: API compatibility between SDK versions.",
     "lsp: hover (types/signatures), definition, implementation, references, symbols, workspace_symbols, diagnostics (multiple files), completion (available members), signature.",
     "Locate positions with symbol (plus optional line hint) instead of exact columns.",
-    "lsp_restart: restart language servers. api_versions: SDK versions accepted by api_scan from/to.",
+    "lsp op=call_hierarchy direction=incoming|outgoing: callers / callees of a function (C/C++: incoming only). op=declaration differs from definition for ArkTS re-exports.",
+    "lint: config_path, incremental (uncommitted files only), output_path. api_scan: modules or files, output_path. lsp_restart language=arkts|cpp|all. api_versions: SDK versions accepted by api_scan from/to.",
   ].join(" "),
   schema: z.object({
     action: z.enum(["check", "lint", "api_scan", "api_versions", "lsp", "lsp_restart"]),
@@ -197,13 +200,18 @@ export const codeTool = tool({
     files: z.array(z.string()).max(200).optional().describe("Relative or absolute paths"),
     fix: z.boolean().optional(),
     product: fields.product,
-    op: z.enum(["hover", "definition", "implementation", "references", "symbols", "workspace_symbols", "diagnostics", "completion", "signature"]).optional().describe("lsp operation"),
+    op: z.enum(["hover", "definition", "declaration", "implementation", "references", "symbols", "workspace_symbols", "diagnostics", "completion", "signature", "call_hierarchy"]).optional().describe("lsp operation"),
+    direction: z.enum(["incoming", "outgoing"]).optional().describe("call_hierarchy: incoming = callers (default), outgoing = callees"),
     file: z.string().optional(),
     symbol: z.string().optional().describe("Identifier to locate, e.g. 'pushUrl' or 'router.pushUrl'"),
     line: z.number().int().min(1).optional().describe("1-based line (hint when symbol is given)"),
     column: z.number().int().min(1).optional().describe("1-based column (only without symbol)"),
     query: z.string().optional().describe("workspace_symbols query"),
-    language: z.enum(["arkts", "cpp"]).optional(),
+    language: z.enum(["arkts", "cpp", "all"]).optional().describe("lsp: server to use (default by file extension); lsp_restart: which to restart (default all)"),
+    modules: fields.modules,
+    output_path: z.string().optional().describe("lint/api_scan: also save the report to this absolute path"),
+    config_path: z.string().optional().describe("lint: .json/.json5 rule config (default code-linter.json5)"),
+    incremental: z.boolean().optional().describe("lint: only uncommitted files"),
     from: z.string().optional().describe("api_scan: source version e.g. HarmonyOS_5.0.0(12)_Release"),
     to: z.string().optional().describe("api_scan: target version"),
     limit: z.number().int().min(1).max(200).optional(),
@@ -218,14 +226,15 @@ export const codeTool = tool({
         if (input.files?.some((f) => /\.(c|cc|cpp|h|hpp)$/.test(f))) return code.cppCheck(project, input.files, ctx.signal);
         return code.arktsCheck(project, input.files, ctx.signal, input.fix ?? false);
       case "lint":
-        return code.codeLinter(project, { path: input.file, fix: input.fix, product: input.product }, ctx.signal);
+        return code.codeLinter(project, { path: input.file, fix: input.fix, product: input.product, config_path: input.config_path, incremental: input.incremental, output_path: input.output_path }, ctx.signal);
       case "api_scan":
-        return code.apiScan(project, { from: input.from, to: input.to, files: input.files }, ctx.signal);
+        invariant(!(input.files?.length && input.modules?.length), "INVALID_INPUT", "Pass files or modules, not both");
+        return code.apiScan(project, { from: input.from, to: input.to, files: input.files, modules: input.modules, output_path: input.output_path }, ctx.signal);
       case "lsp_restart":
-        return code.restartLsp(project);
+        return code.restartLsp(project, input.language ?? "all");
       case "lsp":
         invariant(input.op, "INVALID_INPUT", "op is required for lsp");
-        return code.lsp({ project, action: input.op, file: input.file, files: input.files, symbol: input.symbol, line: input.line, column: input.column, query: input.query, language: input.language, limit: input.limit }, ctx.signal);
+        return code.lsp({ project, action: input.op, file: input.file, files: input.files, symbol: input.symbol, line: input.line, column: input.column, query: input.query, language: input.language === "all" ? undefined : input.language, limit: input.limit, direction: input.direction }, ctx.signal);
     }
   },
 });
@@ -233,7 +242,7 @@ export const codeTool = tool({
 export const deviceTool = tool({
   name: "device",
   title: "Devices, logs, files",
-  description: "HDC device access. list: connected devices. info: model/API/screen. log: recent hilog (filter by bundle, grep, level; clear=true clears). shell: read-only inspection commands (ls, cat, ps, param get, bm dump, hidumper...). sqlite: query an on-device database (db path + sql; JSON rows; read-only unless write=true). send/recv: transfer files.",
+  description: "HDC device access. list: connected devices. info: model/API/screen. log: recent hilog (filter by bundle, grep, level; from/to time window like from=5m to=1m; follow=true + cursor streams new lines across calls; clear=true clears). shell: read-only inspection commands (ls, cat, ps, param get, bm dump, hidumper...). sqlite: query an on-device database (db path + sql; JSON rows; read-only unless write=true). send/recv: transfer files.",
   schema: z.object({
     action: z.enum(["list", "info", "log", "shell", "sqlite", "send", "recv"]),
     db: z.string().optional().describe("sqlite: absolute device path, or an app RDB store name (e.g. app.db) together with bundle (+ module, default entry) of a debuggable app"),
@@ -246,6 +255,11 @@ export const deviceTool = tool({
     level: z.enum(["D", "I", "W", "E", "F"]).optional().describe("log: minimum level"),
     lines: z.number().int().min(1).max(20000).optional(),
     clear: z.boolean().optional(),
+    from: z.string().optional().describe("log: window start as time ago, e.g. 5m, 30s, 1h (device clock)"),
+    to: z.string().optional().describe("log: window end as time ago (default now), e.g. 1m"),
+    follow: z.boolean().optional().describe("log: only lines newer than cursor; waits up to wait_ms for new ones; returns the next cursor"),
+    cursor: z.string().optional().describe("log follow: cursor from the previous response (omit on the first call)"),
+    wait_ms: z.number().int().min(0).max(30000).optional().describe("log follow: max wait for new lines (default 5000)"),
     command: z.string().optional().describe("shell: read-only command line"),
     local: z.string().optional(),
     remote: z.string().optional(),
@@ -259,7 +273,7 @@ export const deviceTool = tool({
     const target = await device.resolveTarget(input.target, ctx.signal);
     switch (input.action) {
       case "info": return device.deviceInfo(target, ctx.signal);
-      case "log": return input.clear ? device.clearLog(target, ctx.signal) : device.hilog(target, { lines: input.lines, bundle: input.bundle, grep: input.grep, level: input.level }, ctx.signal);
+      case "log": return input.clear ? device.clearLog(target, ctx.signal) : device.hilog(target, { lines: input.lines, bundle: input.bundle, grep: input.grep, level: input.level, from: input.from, to: input.to, follow: input.follow, cursor: input.cursor, wait_ms: input.wait_ms }, ctx.signal);
       case "shell": invariant(input.command, "INVALID_INPUT", "command is required"); return device.readonlyShell(target, input.command, ctx.signal);
       case "sqlite": {
         invariant(input.db && input.sql, "INVALID_INPUT", "db and sql are required");
@@ -282,7 +296,7 @@ export const uiTool = tool({
     "find: elements matching a selector.",
     "act: click/double_click/long_click (selector or x,y), input (types text into a field; Chinese supported), type (into the focused field), swipe/drag/fling (x,y,x2,y2), scroll (direction), key (back/home/enter/...; keys=[\"ctrl\",\"a\"] for chords up to 3), mouse_click/mouse_double_click/mouse_long_click (button, keys modifiers), mouse_move, mouse_scroll (direction up/down, ticks), mouse_drag (x2,y2) for 2in1/tablet. verify_change=true reports whether the screen changed.",
     "assert: wait until a selector is visible/hidden — use this to verify outcomes, not screenshots.",
-    "windows: list app windows (all=true includes system windows); tree/observe accept window id and depth.",
+    "windows: list app windows (all=true includes system windows); tree/observe accept window id and depth; tree all_windows=true merges every window, node=<id> returns one component subtree; screenshot display=<id>, save_path.",
     "record_start/record_stop/record_status: screen recording to mp4 (real devices; stop discard=true drops it, external=true stops a foreign recording).",
     "UI test sessions (you execute the plan and judge visuals): test_start(plan, project or bundle, fresh_start) -> test_step(op+selector or visible/hidden assert, description) per item -> review(requirement) returns a screenshot, then review(outcome, reason) -> test_finish -> test_log / test_export(directory).",
   ].join(" "),
@@ -291,6 +305,10 @@ export const uiTool = tool({
       "test_start", "test_step", "review", "test_finish", "test_log", "test_export"]),
     target: fields.target,
     window: z.number().int().optional().describe("tree/observe: window id from action=windows"),
+    all_windows: z.boolean().optional().describe("tree: every window on every display (not with window)"),
+    node: z.string().optional().describe("tree: only the component with this id/key and its subtree"),
+    display: z.number().int().optional().describe("screenshot: display id (multi-screen devices)"),
+    save_path: z.string().optional().describe("screenshot/record_stop: also save the file to this absolute path (file or directory)"),
     depth: z.number().int().min(0).max(100).optional().describe("tree/observe: maximum depth"),
     all: z.boolean().optional().describe("windows: include system windows"),
     discard: z.boolean().optional().describe("record_stop: stop without downloading"),
@@ -327,7 +345,7 @@ export const uiTool = tool({
     bundle: z.string().optional().describe("observe/tree: only this app's elements"),
     format: z.enum(["jpeg", "png"]).optional(),
     width: z.number().int().min(240).max(2560).optional(),
-    limit: z.number().int().min(10).max(2000).optional(),
+    limit: z.number().int().min(1).max(2000).optional(),
   }),
   async handler(input, ctx) {
     const { resolveTarget } = await import("../domains/device.js");
@@ -347,7 +365,7 @@ export const uiTool = tool({
     switch (input.action) {
       case "windows": return { windows: await ui.listWindows(target, input.all, ctx.signal) };
       case "record_start": return ui.startRecording(target, ctx.signal);
-      case "record_stop": return ui.stopRecording(target, { discard: input.discard, external: input.external }, ctx.signal);
+      case "record_stop": return ui.stopRecording(target, { discard: input.discard, external: input.external, save_path: input.save_path }, ctx.signal);
       case "record_status": return ui.recordingStatus(target, ctx.signal);
       case "test_start": {
         invariant(input.plan, "INVALID_INPUT", "plan is required");
@@ -371,11 +389,13 @@ export const uiTool = tool({
         return (await uitest()).review(input.test_id, { requirement: input.requirement, outcome: input.outcome, reason: input.reason, review_id: input.review_id }, ctx.signal);
       }
       case "screenshot": {
-        const shot = await ui.screenshot(target, { format: input.format, width: input.width }, ctx.signal);
-        return { artifact_id: shot.artifact_id, bytes: shot.bytes, _image: { data: shot.data, mime: shot.mime } };
+        const shot = await ui.screenshot(target, { format: input.format, width: input.width, display: input.display, save_path: input.save_path }, ctx.signal);
+        return { artifact_id: shot.artifact_id, bytes: shot.bytes, ...(shot.saved ? { saved: shot.saved } : {}), _image: { data: shot.data, mime: shot.mime } };
       }
       case "tree": {
-        const nodes = await ui.dumpTree(target, ctx.signal, 0, scope);
+        const all = await ui.dumpTree(target, ctx.signal, 0, { ...scope, all_windows: input.all_windows });
+        const nodes = input.node ? ui.subtree(all, input.node) : all;
+        if (input.node && !nodes.length) return { nodes: 0, tree: "", hint: `No component with id/key ${input.node}; call ui tree to list ids` };
         return { nodes: nodes.length, tree: ui.compact(nodes, { interactive: input.interactive ?? true, limit: input.limit, bundle: input.bundle, depth: input.depth }) };
       }
       case "observe": {
@@ -583,6 +603,7 @@ export const skillsTool = tool({
     reference: z.string().optional().describe("read: a file under references/, e.g. quick-apis/01-layout.md (see list)"),
     host: z.string().optional().describe("cursor | claude | codex | opencode | trae-cn | codebuddy | qoder | pi | deveco (skills only)"),
     force: z.boolean().optional().describe("install_mcp/init: overwrite an existing entry"),
+    path: z.string().optional().describe("export/install/uninstall/init: explicit absolute skills directory instead of host/scope"),
     scope: z.enum(["user", "project"]).optional(),
     project: z.string().optional(),
     names: z.array(z.string()).optional(),
@@ -594,16 +615,16 @@ export const skillsTool = tool({
     switch (input.action) {
       case "list": return { skills: skills.listSkills(), note: "Also available as MCP resources deveco://skills/<name>" };
       case "read": invariant(input.name, "INVALID_INPUT", "name is required"); return skills.readSkill(input.name, input.reference);
-      case "export": invariant(input.host, "INVALID_INPUT", "host is required"); return skills.exportSkills(input.host, input.scope ?? "user", input.project, input.names);
+      case "export": invariant(input.host || input.path, "INVALID_INPUT", "host or path is required"); return skills.exportSkills(input.host, input.scope ?? "user", input.project, input.names, input.path);
       case "install_mcp": {
         invariant(input.host, "INVALID_INPUT", "host is required");
         const { installMcp } = await import("../domains/hostconfig.js");
         return installMcp(input.host, { scope: input.scope, project: input.project, force: input.force });
       }
-      case "init": invariant(input.host, "INVALID_INPUT", "host is required"); return skills.initHost(input.host, { scope: input.scope, project: input.project, force: input.force });
+      case "init": invariant(input.host, "INVALID_INPUT", "host is required"); return skills.initHost(input.host, { scope: input.scope, project: input.project, force: input.force, dir: input.path });
       case "search": invariant(input.query, "INVALID_INPUT", "query is required"); return skills.marketSearch(input.query, input.limit);
-      case "install": invariant(input.name && input.host, "INVALID_INPUT", "name and host are required"); return skills.marketInstall(input.name, input.host, input.scope ?? "user", input.project);
-      case "uninstall": invariant(input.name && input.host, "INVALID_INPUT", "name and host are required"); return skills.uninstallSkill(input.name, input.host, input.scope ?? "user", input.project);
+      case "install": invariant(input.name && (input.host || input.path), "INVALID_INPUT", "name and host (or path) are required"); return skills.marketInstall(input.name, input.host, input.scope ?? "user", input.project, input.path);
+      case "uninstall": invariant(input.name && (input.host || input.path), "INVALID_INPUT", "name and host (or path) are required"); return skills.uninstallSkill(input.name, input.host, input.scope ?? "user", input.project, input.path);
     }
   },
 });

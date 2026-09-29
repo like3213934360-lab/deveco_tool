@@ -3,10 +3,14 @@ on:
   push:
     branches: [main, v1]
   pull_request:
+  schedule:
+    - cron: "0 1 * * 1" # weekly: new upstream commits or capabilities fail the upstream job
+  workflow_dispatch:
 permissions:
   contents: read
 jobs:
   test:
+    if: github.event_name != 'schedule'
     strategy:
       fail-fast: false
       matrix:
@@ -31,7 +35,7 @@ jobs:
           node-version: 24
       - run: npm ci --omit=optional
       - run: npm run build
-      - name: Capability-level upstream alignment (fails on partial or unmapped capabilities)
+      - name: Exhaustive upstream alignment (fails on undecided / partial items, stale decisions or new upstream commits)
         run: node tools/upstream-sync.mjs --json > alignment.json
       - uses: actions/upload-artifact@v4
         if: always()

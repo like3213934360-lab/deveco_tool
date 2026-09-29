@@ -5,7 +5,7 @@ import path from "node:path";
 import { stateDir } from "../core/config.js";
 import { database } from "../core/db.js";
 import { invariant, ToolError } from "../core/errors.js";
-import { spawnManaged } from "../core/proc.js";
+import { spawnIndependent } from "../core/proc.js";
 
 export type Provider = "developer" | "codegenie";
 export type Region = "cn" | "global";
@@ -143,7 +143,7 @@ export async function login(provider: Provider, openBrowser = true, region: Regi
   logins.set(provider, entry);
   if (openBrowser) {
     const opener = process.platform === "darwin" ? ["open", [url]] : process.platform === "win32" ? ["rundll32.exe", ["url.dll,FileProtocolHandler", url]] : ["xdg-open", [url]];
-    try { spawnManaged({ file: opener[0] as string, args: opener[1] as string[] }, "ignore").unref(); } catch { entry.browser = "manual"; }
+    try { spawnIndependent({ file: opener[0] as string, args: opener[1] as string[] }); } catch { entry.browser = "manual"; }
   }
   return { provider, region, pending: true, login_url: url, browser: entry.browser, next: { tool: "auth", action: "status", provider, note: "Call after completing the browser login" } };
 }

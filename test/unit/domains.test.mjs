@@ -18,7 +18,10 @@ fs.writeFileSync(entry, [
   `export { siteAllowed, regionBase } from ${JSON.stringify(path.join(root, "src/domains/auth.ts"))};`,
   `export { apiOf, compatibility } from ${JSON.stringify(path.join(root, "src/domains/doctor.ts"))};`,
   `export { faultTime } from ${JSON.stringify(path.join(root, "src/domains/diagnose.ts"))};`,
-  `export { chordCodes, treeSignature } from ${JSON.stringify(path.join(root, "src/domains/ui.ts"))};`,
+  `export { chordCodes, treeSignature, subtree, deviceText } from ${JSON.stringify(path.join(root, "src/domains/ui.ts"))};`,
+  `export { createArgs, agreementsAccepted } from ${JSON.stringify(path.join(root, "src/domains/emulator.ts"))};`,
+  `export { parseDuration } from ${JSON.stringify(path.join(root, "src/domains/device.ts"))};`,
+  `export { findProjectRoot } from ${JSON.stringify(path.join(root, "src/domains/project.ts"))};`,
   `export { readonlySqlAllowed } from ${JSON.stringify(path.join(root, "src/domains/device.ts"))};`,
 ].join("\n"));
 await build({ entryPoints: [entry], outfile: path.join(out, "entry.mjs"), bundle: true, format: "esm", platform: "node", packages: "external", logLevel: "error", nodePaths: [path.join(root, "node_modules")] });
@@ -147,4 +150,40 @@ test("key chords and tree signatures", () => {
   const node = (text) => ({ type: "Text", text, clickable: true, key: null, rect: { x1: 0, y1: 0, x2: 10, y2: 10 }, checked: null, selected: null });
   assert.equal(m.treeSignature([node("a")]), m.treeSignature([node("a")]));
   assert.notEqual(m.treeSignature([node("a")]), m.treeSignature([node("b")]));
+});
+
+test("relative durations for log windows", () => {
+  assert.equal(m.parseDuration("30s"), 30000);
+  assert.equal(m.parseDuration("2.5m"), 150000);
+  assert.equal(m.parseDuration("120"), 120000);
+  assert.equal(m.parseDuration("1h"), 3600000);
+  assert.throws(() => m.parseDuration("5 minutes"));
+});
+
+test("emulator create arguments and license state", () => {
+  assert.deepEqual(m.createArgs({ name: "E", device_type: "foldable", os_version: "HarmonyOS 6.0.0(20)", screen: ["2200 2480 480 7.8", "1080 2480 480 6.4"], hot_boot: false, instance_path: "/i", force: true }),
+    ["-create", "E", "-deviceType", "foldable", "-osVersion", "HarmonyOS 6.0.0(20)", "-instancePath", "/i", "-screen", "2200 2480 480 7.8", "1080 2480 480 6.4", "-hotBoot", "false", "-force"]);
+  assert.throws(() => m.createArgs({ name: "E", device_type: "phone", os_version: "x", screen: ["1080x2340"] }));
+  assert.equal(m.agreementsAccepted("HarmonyOS_Software_Service_Agreement:agree\nHarmonyOS_SDK_Agreement:agree\n"), true);
+  assert.equal(m.agreementsAccepted("HarmonyOS_Software_Service_Agreement:agree\nHarmonyOS_SDK_Agreement:disagree\n"), false);
+  assert.equal(m.agreementsAccepted(""), false);
+});
+
+test("component subtree by id and device-side text encoding", () => {
+  const n = (i, parent, id) => ({ i, parent, depth: 0, id, key: id, type: "X", text: "", rect: null });
+  const nodes = [n(0, null, "root"), n(1, 0, "box"), n(2, 1, "a"), n(3, 2, "b"), n(4, 0, "other")];
+  assert.deepEqual(m.subtree(nodes, "box").map((x) => x.id), ["box", "a", "b"]);
+  assert.deepEqual(m.subtree(nodes, "nope"), []);
+  const encoded = m.deviceText(`a"b $x 'q'`);
+  assert.match(encoded, /^"\$\(printf '%s' '[A-Za-z0-9+/=]+' \| base64 -d\)"$/);
+  assert.equal(Buffer.from(/'([A-Za-z0-9+/=]+)'/.exec(encoded)[1], "base64").toString(), `a"b $x 'q'`);
+});
+
+test("project root auto-detection searches down, never up", () => {
+  const base = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-find-"));
+  const proj = path.join(base, "work", "MyApp");
+  fs.mkdirSync(path.join(proj, "AppScope"), { recursive: true });
+  fs.writeFileSync(path.join(proj, "build-profile.json5"), "{}");
+  assert.equal(m.findProjectRoot(base), proj);
+  assert.equal(m.findProjectRoot(path.join(proj, "AppScope")), undefined);
 });

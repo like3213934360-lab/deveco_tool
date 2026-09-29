@@ -29,9 +29,20 @@ const rssKb = Number(ps("rss="));
 await client.close();
 fs.rmSync(state, { recursive: true, force: true });
 const sorted = samples.sort((a, b) => a - b);
-console.log(JSON.stringify({
+const report = {
   handshake_ms: { median: Math.round(sorted[2]), min: Math.round(sorted[0]), max: Math.round(sorted[4]) },
   tools: list.result.tools.length, tools_list_ms: Math.round(listMs), tools_list_bytes: listBytes,
   idle_cpu_10s: { before: cpuBefore, after: cpuAfter, changed: cpuBefore !== cpuAfter },
   idle_rss_mb: Math.round(rssKb / 1024),
-}, null, 2));
+};
+console.log(JSON.stringify(report, null, 2));
+// Budgets (plan: handshake < 150 ms, idle RSS <= 70 MB, tools/list <= 36 KB). cputime has 10 ms
+// resolution, so allow one tick of drift over 10 s idle.
+const tick = (s) => { const [m, rest] = s.split(":"); return Number(m) * 60 + Number(rest); };
+const budget = [
+  [report.handshake_ms.median < 150, `handshake ${report.handshake_ms.median} ms >= 150`],
+  [report.idle_rss_mb <= 70, `idle RSS ${report.idle_rss_mb} MB > 70`],
+  [listBytes <= 36 * 1024, `tools/list ${listBytes} bytes > 36 KB`],
+  [tick(cpuAfter) - tick(cpuBefore) <= 0.011, `idle CPU ${cpuBefore} -> ${cpuAfter}`],
+].filter(([ok]) => !ok).map(([, msg]) => msg);
+if (budget.length) { console.error(`budget exceeded: ${budget.join("; ")}`); process.exitCode = 1; }

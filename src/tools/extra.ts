@@ -82,44 +82,79 @@ export const signTool = tool({
 export const emulatorTool = tool({
   name: "emulator",
   title: "Emulator",
-  description: "HarmonyOS emulators. list, start (waits until booted; returns target), stop, create, delete, images, install_image, license (accept). scenario: shake, power, rotate, volume, fold, battery (level/charging), gps (latitude/longitude/...), sensor (light/steps/heartrate), outdoor_running/outdoor_cycling/driving_navigation — then verify app reaction with ui assert.",
+  description: [
+    "HarmonyOS emulators. list (details=true: raw fields), start/stop (name or names; start waits until booted and returns target), create, delete,",
+    "images (downloaded; all=true: every downloadable image), install_image (force re-downloads), remove_image, license (accept), license_view (read-only).",
+    "start/create/install_image accept the license agreements automatically when they are not accepted yet (auto_accept_license=false to require an explicit license call).",
+    "create: device_type, os_version, memory, storage, screen_profile or screen [\"w h dpi inches\" (+ folded)], hot_boot, instance_path, image_root, force.",
+    "scenario: shake, power, rotate (left/right), volume (up/down), fold (state), battery (level, battery_status charging|discharging),",
+    "gps (latitude/longitude/altitude/bearing/city), sensor (light/humidity/temperature/steps/heartrate), outdoor_running, outdoor_cycling, driving_navigation.",
+  ].join(" "),
   schema: z.object({
-    action: z.enum(["list", "start", "stop", "create", "delete", "images", "install_image", "license", "scenario"]),
+    action: z.enum(["list", "start", "stop", "create", "delete", "images", "install_image", "remove_image", "license", "license_view", "scenario"]),
     name: z.string().optional(),
+    names: z.array(z.string()).max(8).optional().describe("start/stop several emulators"),
+    details: z.boolean().optional().describe("list: raw emulator fields"),
     cold: z.boolean().optional(),
     window: z.boolean().optional(),
-    device_type: z.string().optional().describe("phone, tablet, 2in1, foldable, wearable, tv ..."),
-    os_version: z.string().optional(),
-    memory: z.number().int().optional(), storage: z.number().int().optional(),
+    device_type: z.string().optional().describe("phone, foldable, widefold, triplefold, tablet, 2in1, wearable, tv, car ..."),
+    os_version: z.string().optional().describe('e.g. "HarmonyOS 6.0.0(20)"'),
+    memory: z.number().int().min(2).max(32).optional(), storage: z.number().int().min(2).max(1023).optional(),
+    screen_profile: z.string().optional().describe('create: predefined screen model, e.g. "Mate 70 Pro"'),
+    screen: z.array(z.string()).min(1).max(2).optional().describe('create: custom screen "width height dpi inches" (second entry = folded screen)'),
+    hot_boot: z.boolean().optional().describe("create: enable quick boot"),
+    instance_path: z.string().optional().describe("create/delete/start: emulator instance directory"),
+    image_root: z.string().optional().describe("create/start: image root directory"),
+    force: z.boolean().optional().describe("create: overwrite existing; install_image: re-download"),
+    auto_accept_license: z.boolean().optional().describe("start/create/install_image: accept the emulator license agreements automatically when needed (default true; the result says when it happened)"),
+    all: z.boolean().optional().describe("images: include images not downloaded yet"),
     scenario: z.enum(["shake", "power", "rotate", "volume", "fold", "battery", "gps", "sensor", "outdoor_running", "outdoor_cycling", "driving_navigation"]).optional(),
     direction: z.enum(["left", "right", "up", "down"]).optional(),
     state: z.string().optional().describe("fold state: open, half-open, close, ..."),
     level: z.number().int().min(0).max(100).optional(),
-    charging: z.boolean().optional(),
+    battery_status: z.enum(["charging", "discharging"]).optional(),
+    charging: z.boolean().optional().describe("deprecated alias of battery_status"),
     latitude: z.number().optional(), longitude: z.number().optional(), altitude: z.number().optional(), bearing: z.number().optional(), city: z.string().optional(),
-    light: z.number().optional(), steps: z.number().int().optional(), heartrate: z.number().int().optional(),
+    light: z.number().optional(), humidity: z.number().min(0).max(100).optional(), temperature: z.number().min(-273.1).max(100).optional(),
+    steps: z.number().int().optional(), heartrate: z.number().int().optional(),
   }),
   async handler(input, ctx) {
     const emu = await import("../domains/emulator.js");
     const name = () => { invariant(input.name, "INVALID_INPUT", "name is required"); return input.name; };
+    const many = () => { const list = input.names?.length ? input.names : [name()]; return list; };
+    const need = (cond: unknown, what: string) => invariant(cond, "INVALID_INPUT", `${input.action} needs ${what}`);
     switch (input.action) {
-      case "list": return { emulators: await emu.listEmulators(ctx.signal) };
-      case "start": return emu.startEmulator(name(), { cold: input.cold, window: input.window }, ctx.signal);
-      case "stop": return emu.stopEmulator(name(), ctx.signal);
-      case "create": invariant(input.device_type && input.os_version, "INVALID_INPUT", "device_type and os_version are required"); return emu.createEmulator({ name: name(), device_type: input.device_type, os_version: input.os_version, memory: input.memory, storage: input.storage }, ctx.signal);
-      case "delete": return emu.deleteEmulator(name(), ctx.signal);
-      case "images": return emu.images(input.device_type, ctx.signal);
-      case "install_image": invariant(input.device_type && input.os_version, "INVALID_INPUT", "device_type and os_version are required"); return emu.installImage(input.device_type, input.os_version, ctx.signal);
+      case "list": return { emulators: await emu.listEmulators(ctx.signal, input.details) };
+      case "start": {
+        const results = [];
+        for (const n of many()) results.push(await emu.startEmulator(n, { cold: input.cold, window: input.window, instance_path: input.instance_path, image_root: input.image_root, auto_accept_license: input.auto_accept_license }, ctx.signal));
+        return results.length === 1 ? results[0] : { started: results };
+      }
+      case "stop": {
+        const results = [];
+        for (const n of many()) results.push(await emu.stopEmulator(n, ctx.signal));
+        return results.length === 1 ? results[0] : { stopped: results };
+      }
+      case "create":
+        need(input.device_type && input.os_version, "device_type and os_version");
+        return emu.createEmulator({ name: name(), device_type: input.device_type!, os_version: input.os_version!, memory: input.memory, storage: input.storage,
+          instance_path: input.instance_path, image_root: input.image_root, screen_profile: input.screen_profile, screen: input.screen, hot_boot: input.hot_boot, force: input.force, auto_accept_license: input.auto_accept_license }, ctx.signal);
+      case "delete": return emu.deleteEmulator(name(), ctx.signal, input.instance_path);
+      case "images": return emu.images(input.device_type, ctx.signal, input.all);
+      case "install_image": need(input.device_type && input.os_version, "device_type and os_version"); return emu.installImage(input.device_type!, input.os_version!, ctx.signal, input.force, input.auto_accept_license ?? true);
+      case "remove_image": need(input.device_type && input.os_version, "device_type and os_version"); return emu.removeImage(input.device_type!, input.os_version!, ctx.signal);
       case "license": return emu.acceptLicense(ctx.signal);
+      case "license_view": return emu.viewLicense(ctx.signal);
       case "scenario": {
         invariant(input.scenario, "INVALID_INPUT", "scenario is required");
         const s = input.scenario;
+        const charging = input.battery_status ? input.battery_status === "charging" : input.charging;
         const spec = s === "rotate" ? { action: s, direction: input.direction as "left" | "right" }
           : s === "volume" ? { action: s, direction: input.direction as "up" | "down" }
           : s === "fold" ? { action: s, state: input.state ?? "open" }
-          : s === "battery" ? { action: s, level: input.level ?? 50, charging: input.charging }
+          : s === "battery" ? { action: s, level: input.level, charging }
           : s === "gps" ? { action: s, latitude: input.latitude, longitude: input.longitude, altitude: input.altitude, bearing: input.bearing, city: input.city }
-          : s === "sensor" ? { action: s, light: input.light, steps: input.steps, heartrate: input.heartrate }
+          : s === "sensor" ? { action: s, light: input.light, steps: input.steps, heartrate: input.heartrate, humidity: input.humidity, temperature: input.temperature }
           : { action: s };
         return emu.scenario(name(), spec as import("../domains/emulator.js").Scenario, ctx.signal);
       }
@@ -130,9 +165,11 @@ export const emulatorTool = tool({
 export const hotReloadTool = tool({
   name: "hot_reload",
   title: "Hot reload",
-  description: "Apply ArkTS code changes to the running app without reinstalling (HQF quick fix, ~3s). First deploy with run action=build_run hot_reload=true; after editing .ets files call apply (the app keeps running; changed code takes effect on its next execution, e.g. the next click or page build). reset removes applied patches. Structural changes (new files, resources, decorators) need a normal redeploy.",
+  description: "Apply ArkTS code changes to the running app without reinstalling (HQF quick fix, ~3s). First deploy with run action=build_run hot_reload=true; after editing .ets files call apply (the app keeps running; changed code takes effect on its next execution, e.g. the next click or page build). reset removes applied patches. Structural changes (new files, resources, decorators) need a normal redeploy. files: limit the patch to these files; restart=true relaunches after patching; stop_daemon: stop the project's hvigor daemon.",
   schema: z.object({
-    action: z.enum(["apply", "reset"]),
+    action: z.enum(["apply", "reset", "stop_daemon"]),
+    files: z.array(z.string()).max(500).optional().describe("apply: changed .ets/.ts files (default: detected automatically from the baseline)"),
+    restart: z.boolean().optional().describe("apply: relaunch the app after patching so startup code runs the new version"),
     project: fields.project,
     product: fields.product,
     target: fields.target,
@@ -144,6 +181,8 @@ export const hotReloadTool = tool({
     const project = inspectProject(input.project, input.product);
     const module = input.module ?? project.modules.find((m) => m.type === "entry")?.name ?? "entry";
     if (input.action === "reset") return resetHotReload(project, module, input.target, ctx.signal);
-    return applyHotReload(project, module, ctx.signal, () => {});
+    if (input.action === "stop_daemon") return (await import("../domains/hotreload.js")).stopDaemon(project, ctx.signal);
+    const { mainAbility } = await import("../domains/project.js");
+    return applyHotReload(project, module, ctx.signal, () => {}, { files: input.files, restart: input.restart, ability: input.restart ? mainAbility(project, module).ability : undefined });
   },
 });

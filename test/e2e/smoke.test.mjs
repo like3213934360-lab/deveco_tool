@@ -7,6 +7,7 @@ import os from "node:os";
 import path from "node:path";
 import { after, before, test } from "node:test";
 import { connect } from "../../tools/mcp-client.mjs";
+import { makeCallChain } from "./fixtures.mjs";
 
 const target = process.env.E2E_TARGET;
 const work = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-e2e-"));
@@ -39,7 +40,9 @@ test("doctor", async () => {
 });
 
 test("create + info", async () => {
-  const created = await call("project", { action: "create", project, app_name: "Smoke", bundle_name: bundle });
+  // Keep the app installable on the test device: compatible API = the device's API level.
+  const api = target ? (await call("device", { action: "info", target })).api_level : undefined;
+  const created = await call("project", { action: "create", project, app_name: "Smoke", bundle_name: bundle, ...(api ? { compatible_api: api } : {}) });
   assert.ok(created.files > 10);
   const info = await call("project", { action: "info", project });
   assert.equal(info.bundle_name, bundle);
@@ -66,6 +69,18 @@ test("build (job) produces a HAP", async () => {
   assert.ok(status.result.artifacts[0].path.endsWith(".hap"));
 });
 
+test("lsp call hierarchy (both directions) and declaration", async () => {
+  makeCallChain(project);
+  const util = "entry/src/main/ets/pages/Util.ets";
+  const incoming = await call("code", { action: "lsp", op: "call_hierarchy", project, file: util, symbol: "leaf" });
+  assert.deepEqual(incoming.calls.map((c) => c.name), ["middle"]);
+  const outgoing = await call("code", { action: "lsp", op: "call_hierarchy", direction: "outgoing", project, file: util, symbol: "middle", line: 5 });
+  assert.deepEqual(outgoing.calls.map((c) => c.name), ["leaf"]);
+  const decl = await call("code", { action: "lsp", op: "declaration", project, file: "entry/src/main/ets/pages/Index.ets", symbol: "middle", line: 1 });
+  assert.equal(decl.locations[0].file, util);
+  assert.deepEqual((await call("code", { action: "lsp_restart", project, language: "arkts" })).restarted, ["arkts"]);
+});
+
 test("lsp hover and definition by symbol", async () => {
   const hover = await call("code", { action: "lsp", op: "hover", project, file: "entry/src/main/ets/pages/Index.ets", symbol: "message" });
   assert.ok(hover.hover, JSON.stringify(hover));
@@ -88,11 +103,17 @@ test("run build_run + ui observe/find/act/assert", { skip: !target }, async () =
   assert.equal(verdict.passed, true, JSON.stringify(verdict));
 });
 
-test("device info + log", { skip: !target }, async () => {
+test("device info + log (time window, follow cursor)", { skip: !target }, async () => {
   const info = await call("device", { action: "info", target });
   assert.ok(info.api_level);
   const log = await call("device", { action: "log", target, lines: 50 });
   assert.ok(log.lines >= 0);
+  const windowed = await call("device", { action: "log", target, from: "2m", to: "0s", lines: 20 });
+  assert.ok(windowed.window.from < windowed.window.to);
+  const first = await call("device", { action: "log", target, follow: true, lines: 5, wait_ms: 3000 });
+  assert.match(first.cursor, /^\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}$/);
+  const next = await call("device", { action: "log", target, follow: true, cursor: first.cursor, lines: 5, wait_ms: 5000 });
+  assert.ok(next.cursor >= first.cursor);
 });
 
 test("hot reload patches the running app without restart", { skip: !target }, async () => {
@@ -112,6 +133,25 @@ test("hot reload patches the running app without restart", { skip: !target }, as
   assert.equal(reset.reset, true);
 });
 
+test("deploy without building + uninstall first; hot reload of explicit files with restart", { skip: !target }, async () => {
+  const base = await waitJob(await call("run", { action: "build_run", project, target, hot_reload: true, wait: 60000 }));
+  assert.equal(base.status, "succeeded", JSON.stringify(base.error ?? base).slice(0, 2000));
+  const redeploy = await waitJob(await call("run", { action: "build_run", project, target, skip_build: true, uninstall_first: true, hot_reload: true, wait: 60000 }));
+  assert.equal(redeploy.status, "succeeded", JSON.stringify(redeploy.error ?? redeploy).slice(0, 2000));
+  assert.equal(redeploy.kind, "deploy");
+  const page = path.join(project, "entry/src/main/ets/pages/Index.ets");
+  const original = fs.readFileSync(page, "utf8");
+  fs.writeFileSync(page, original.replace("'Hello World'", "'Hello Files'"));
+  try {
+    const applied = await call("hot_reload", { action: "apply", project, files: ["entry/src/main/ets/pages/Index.ets"], restart: true });
+    assert.equal(applied.restarted, true);
+    assert.equal((await call("ui", { action: "assert", target, visible: { text: "Hello Files" }, timeout_ms: 5000 })).passed, true);
+  } finally {
+    fs.writeFileSync(page, original);
+    await call("hot_reload", { action: "reset", project, target });
+  }
+});
+
 test("windows, window-scoped tree, record_status", { skip: !target }, async () => {
   const { windows } = await call("ui", { action: "windows", target });
   const app = windows.find((w) => w.focused) ?? windows[0];
@@ -120,6 +160,11 @@ test("windows, window-scoped tree, record_status", { skip: !target }, async () =
   assert.ok(tree.nodes > 0);
   const status = await call("ui", { action: "record_status", target });
   assert.ok(["idle", "recording", "busy"].includes(status.status));
+  const all = await call("ui", { action: "tree", target, all_windows: true, limit: 50 });
+  assert.ok(all.nodes >= tree.nodes);
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-shot-"));
+  const shot = await call("ui", { action: "screenshot", target, display: 0, save_path: dir });
+  assert.ok(fs.existsSync(shot.saved));
 });
 
 test("device sqlite on the app's RDB store (read-only by default)", { skip: !target }, async () => {

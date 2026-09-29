@@ -79,8 +79,8 @@ export async function install(target: string, packages: string[], signal: AbortS
 
 const installHints: [RegExp, string][] = [
   [/9568322|signature.*(verif|invalid)|no signature/i, "Package is unsigned or the signature does not match this device. Configure signing (sign action=auto) or use an emulator."],
-  [/9568332|version.*(downgrade|lower)/i, "Installed version is newer. Uninstall first (device action=uninstall) or increase versionCode."],
-  [/9568289|incompatible|apiVersion|compatible/i, "Device API level is lower than compatibleSdkVersion. Lower compatible_api or use a newer device image."],
+  [/9568332|version.*(downgrade|lower)/i, "Installed version is newer. Reinstall with run uninstall_first=true, or increase versionCode."],
+  [/9568289|9568297|incompatible|apiVersion|compatible|older sdk version/i, "Device API level is lower than the app's compatibleSdkVersion. Lower compatibleSdkVersion (project create compatible_api) or use a newer device image (doctor shows the compatibility check)."],
   [/9568305|dependent module does not exist|HSP/i, "A shared module (HSP) the app depends on is missing. Build and install it together (run action=deploy installs all packages)."],
   [/9568278|bundleName.*(different|inconsistent)/i, "Packages have different bundle names; install packages from one app together."],
 ];
@@ -142,7 +142,38 @@ export async function launchAndCheck(target: string, bundle: string, ability: st
 
 /* ----------------------------------- logs ----------------------------------- */
 
-export async function hilog(target: string, options: { lines?: number; bundle?: string; grep?: string; level?: string }, signal?: AbortSignal) {
+/** "30s" / "5m" / "2.5m" / "1h" / "120" (seconds) -> milliseconds. */
+export function parseDuration(value: string): number {
+  const m = /^(\d+(?:\.\d+)?)\s*(ms|s|m|h)?$/.exec(value.trim());
+  invariant(m, "INVALID_INPUT", `Invalid duration ${value}`, undefined, "Use e.g. 30s, 5m, 1.5h or plain seconds");
+  const n = Number(m[1]);
+  return Math.round(n * ({ ms: 1, s: 1000, m: 60000, h: 3600000 }[m[2] ?? "s"] ?? 1000));
+}
+
+/** hilog line timestamp prefix "MM-DD HH:MM:SS.mmm" (lexically sortable within a year). */
+const stampOf = (line: string) => /^(\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3})/.exec(line)?.[1];
+function formatStamp(ms: number) {
+  const d = new Date(ms);
+  const p = (n: number, w = 2) => String(n).padStart(w, "0");
+  return `${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}:${p(d.getUTCSeconds())}.${p(d.getUTCMilliseconds(), 3)}`;
+}
+/** Device wall clock as pseudo-UTC ms (same convention as faultlog names). */
+async function deviceNow(target: string, signal?: AbortSignal) {
+  const s = (await shell(target, ["date +%Y%m%d%H%M%S"], signal, 5000)).stdout.trim();
+  const n = (i: number, l: number) => Number(s.slice(i, i + l));
+  invariant(/^\d{14}$/.test(s), "DEVICE_UNAVAILABLE", `Unexpected device clock: ${s.slice(0, 40)}`);
+  return Date.UTC(n(0, 4), n(4, 2) - 1, n(6, 2), n(8, 2), n(10, 2), n(12, 2));
+}
+
+export interface LogOptions {
+  lines?: number; bundle?: string; grep?: string; level?: string;
+  /** relative window, e.g. from=5m to=1m => logs between 5 and 1 minutes ago (device clock) */
+  from?: string; to?: string;
+  /** follow: return lines newer than cursor (from a previous call), waiting up to wait_ms for new ones */
+  follow?: boolean; cursor?: string; wait_ms?: number;
+}
+
+export async function hilog(target: string, options: LogOptions, signal?: AbortSignal) {
   // `-x` (dump buffer) cannot be combined with -z; take the tail via the device shell instead.
   const lines = Math.min(options.lines ?? 300, 20000);
   const filters: string[] = [];
@@ -154,8 +185,51 @@ export async function hilog(target: string, options: { lines?: number; bundle?: 
     filters.push("-P", String(pid));
   }
   // Drop hilog's own permission noise (the query process logs its own PARAM reads).
-  const result = await shell(target, [`hilog -x ${filters.join(" ")} | grep -v 'C02C02/PARAM' | tail -n ${lines}`], signal, 30000);
-  return summarizeLog(result.stdout, options.grep);
+  const read = async (tail: number) => (await shell(target, [`hilog -x ${filters.join(" ")} | grep -v 'C02C02/PARAM' | tail -n ${tail}`], signal, 30000)).stdout;
+
+  // Time window: filter by line timestamps; scan a deeper tail so the window is covered.
+  let lower: string | undefined, upper: string | undefined;
+  if (options.from || options.to) {
+    const now = await deviceNow(target, signal);
+    if (options.from) lower = formatStamp(now - parseDuration(options.from));
+    if (options.to) upper = formatStamp(now - parseDuration(options.to));
+    invariant(!lower || !upper || lower <= upper, "INVALID_INPUT", "from must be further in the past than to (e.g. from=5m to=1m)");
+  }
+  if (options.follow) {
+    // Stateless follow: the cursor is the last seen timestamp; poll the ring buffer tail briefly.
+    const since = options.cursor ?? formatStamp((await deviceNow(target, signal)) - 1000);
+    invariant(/^\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}$/.test(since), "INVALID_INPUT", "cursor must come from a previous follow response");
+    const deadline = Date.now() + Math.min(options.wait_ms ?? 5000, 30000);
+    let fresh: string[] = [];
+    do {
+      fresh = (await read(Math.max(lines, 2000))).split(/\r?\n/).filter((l) => { const s = stampOf(l); return !!s && s > since; });
+      if (fresh.length) break;
+      signal?.throwIfAborted();
+      await new Promise((r) => setTimeout(r, 700));
+    } while (Date.now() < deadline);
+    const summary = await summarizeLog(fresh.slice(-lines).join("\n"), options.grep);
+    const last = fresh.map(stampOf).filter(Boolean).at(-1) ?? since;
+    return { ...summary, cursor: last, next: "Call again with follow=true and this cursor for newer lines" };
+  }
+  let raw: string;
+  if (lower) {
+    // Busy devices log >100k lines/hour, so a fixed tail misses older windows. Pre-filter on the
+    // device by minute prefixes ("MM-DD HH:MM", fixed-string grep; no awk on devices), then trim
+    // the exact bounds locally. Windows longer than 3h fall back to the newest 50k lines.
+    const start = Date.UTC(2000, Number(lower.slice(0, 2)) - 1, Number(lower.slice(3, 5)), Number(lower.slice(6, 8)), Number(lower.slice(9, 11)));
+    const endStamp = upper ?? formatStamp(await deviceNow(target, signal));
+    const end = Date.UTC(2000, Number(endStamp.slice(0, 2)) - 1, Number(endStamp.slice(3, 5)), Number(endStamp.slice(6, 8)), Number(endStamp.slice(9, 11)));
+    const minutes = Math.floor((end - start) / 60000) + 1;
+    if (minutes <= 180) {
+      const prefixes = Array.from({ length: minutes }, (_, i) => formatStamp(start + i * 60000).slice(0, 11));
+      const pattern = prefixes.map((p) => `-e '${p}'`).join(" ");
+      raw = (await shell(target, [`hilog -x ${filters.join(" ")} | grep -F ${pattern} | grep -v 'C02C02/PARAM' | tail -n ${Math.max(lines * 20, 20000)}`], signal, 60000)).stdout;
+    } else raw = await read(50000);
+  } else raw = await read(lines);
+  const windowed = lower || upper
+    ? raw.split(/\r?\n/).filter((l) => { const s = stampOf(l); return !!s && (!lower || s >= lower) && (!upper || s <= upper); }).slice(-lines).join("\n")
+    : raw;
+  return { ...(await summarizeLog(windowed, options.grep)), ...(lower || upper ? { window: { from: lower ?? null, to: upper ?? null } } : {}) };
 }
 
 async function summarizeLog(stdout: string, grep?: string) {

@@ -4,7 +4,7 @@
 
 一个轻量的鸿蒙（HarmonyOS）开发 MCP 服务。任何 MCP 宿主（Cursor、Claude Code、Codex 等）都可以通过它调用 DevEco 工具链，完成鸿蒙应用的构建、运行、调试和验证，并离线查询鸿蒙开发知识。
 
-- **完整覆盖上游。** 对照 [deveco-code](https://gitcode.com/openharmony-sig/deveco-code) 和 [deveco-cli](https://gitcode.com/openharmony-sig/deveco-cli) 做了能力级验收：上游共 81 项能力，60 项完整覆盖，3 项由命令行子命令提供，18 项由宿主 AI 自身提供，缺口为 0，见 `tools/upstream-sync.mjs`。在此之外，还提供可恢复的异步任务、UI 流程录制与回放、崩溃模式匹配、按符号名定位的 LSP 查询，以及可以独立于服务更新的知识包。
+- **完整覆盖上游。** 对照 [deveco-code](https://gitcode.com/openharmony-sig/deveco-code) 和 [deveco-cli](https://gitcode.com/openharmony-sig/deveco-cli) 做了全量验收：脚本从上游源码自动抽取每一个工具、参数、取值、命令、选项和内置 MCP 工具，共 467 项，每一项都有经过核对的对应关系（完整覆盖 355 项，由宿主 AI 提供 70 项，明确不需要 42 项并写明理由），缺口为 0。完整清单见 [docs/upstream-alignment.md](docs/upstream-alignment.md)，CI 每周自动重跑，上游有新提交或新能力时会报出。在此之外，还提供可恢复的异步任务、UI 流程录制与回放、崩溃模式匹配、按符号名定位的 LSP 查询，以及可以独立于服务更新的知识包。
 - **轻量。** 运行时依赖只有 3 个，不用 LangGraph，也没有原生模块（数据库用 Node 自带的 `node:sqlite`）。单进程运行，空闲时不占 CPU。语言服务和代码检查器按需启动，空闲 10 分钟后自动关闭。
 - **为 AI 宿主设计。** 15 个工具按用途命名，全部默认可用；返回结构化且长度有上限；每个错误都带 `code`、`category` 和修复提示 `hint`；耗时操作以任务形式异步执行。
 
@@ -80,19 +80,19 @@ node dist/cli.js init --host codex --project .      # 项目级配置（.codex/c
 | --- | --- |
 | `doctor` | 检查工具链、SDK、设备、工程、知识包和登录状态，以及 SDK 兼容性（工程的编译/兼容 SDK、已安装 SDK、设备 API 级别）；每项失败都附带修复方法 |
 | `project` | `info` / `create`（基于模板，不会覆盖已有文件）/ `sync` / `build`（先做 ArkTS 预检，再调用 Hvigor；返回产物，以及带修复提示的结构化错误；`task=compileNative` 编译 C/C++，并生成供 clangd 使用的 `.idea/.deveco/cxx/compile_commands.json`）/ `clean` |
-| `run` | `build_run`（构建、安装、启动，给出冒烟判定 `PASS` / `FAIL_CRASH` / `FAIL_BLANK`，可附带 UI 断言）/ `deploy` / `launch` / `stop` / `uninstall` |
+| `run` | `build_run`（构建、安装、启动，给出冒烟判定 `PASS` / `FAIL_CRASH` / `FAIL_BLANK`，可附带 UI 断言；`skip_build` 直接部署已有产物，`uninstall_first` 先卸载再安装）/ `deploy` / `launch` / `stop` / `uninstall` |
 | `job` | `wait` / `status` / `list` / `cancel` / `resume` / `read`（按行分页读取日志，支持 `grep`） |
-| `code` | `check`（常驻的 ArkTS 静态检查，`fix` 自动修复安全的问题）/ `lint` / `api_scan` / `api_versions` / `lsp`：hover、definition、implementation、references、symbols、workspace_symbols、diagnostics、completion、signature。用 `symbol` 加行号提示定位代码，不需要精确列号 |
-| `device` | `list` / `info` / `log`（按应用、级别或正则过滤；`clear` 清空）/ 只读 `shell` / `sqlite`（查询设备数据库或调试包的 RDB 数据库，返回 JSON；默认只读，传 `write` 才可写）/ `send` / `recv` |
-| `ui` | `observe`（截图加精简控件列表）/ `screenshot` / `tree`（支持 `window`、`depth`）/ `windows` / `find` / `act`（点击；输入，支持中文，默认替换原内容；键入；滑动；滚动；按键和组合键；鼠标点击、移动、滚轮、拖拽；`verify_change` 返回界面是否有变化）/ `assert` / 录屏 `record_start` / `record_stop`（`discard`、`external`）/ `record_status`。**UI 测试会话**由宿主 AI 驱动：`test_start` → `test_step`（执行操作或断言，记录操作前后截图、控件摘要和应用日志片段）→ `review`（宿主看截图做判断；控件断言失败时不能改判为通过）→ `test_finish`（生成 JSON 和 Markdown 报告）→ `test_log` / `test_export` |
+| `code` | `check`（常驻的 ArkTS 静态检查，`fix` 自动修复安全的问题）/ `lint`（`config_path`、`incremental` 只查未提交文件、`output_path`）/ `api_scan`（按文件或 `modules`，`output_path`）/ `api_versions` / `lsp`：hover、definition、declaration、implementation、references、symbols、workspace_symbols、diagnostics、completion、signature、call_hierarchy（`direction` 调用者/被调用者）。用 `symbol` 加行号提示定位代码，不需要精确列号 / `lsp_restart`（`language` 只重启 ArkTS 或 C++） |
+| `device` | `list` / `info` / `log`（按应用、级别或正则过滤；`from`/`to` 取相对时间段，如 5 分钟前到 1 分钟前；`follow` 加游标持续获取新日志；`clear` 清空）/ 只读 `shell` / `sqlite`（查询设备数据库或调试包的 RDB 数据库，返回 JSON；默认只读，传 `write` 才可写）/ `send` / `recv` |
+| `ui` | `observe`（截图加精简控件列表）/ `screenshot`（`display` 多屏、`save_path` 另存）/ `tree`（`window`、`depth`、`all_windows` 全部窗口、`node` 单个组件子树）/ `windows` / `find` / `act`（点击；输入，支持中文和任意特殊字符，默认替换原内容；键入；滑动；滚动；按键和组合键；鼠标点击、移动、滚轮、拖拽；`verify_change` 返回界面是否有变化）/ `assert` / 录屏 `record_start` / `record_stop`（`discard`、`external`、`save_path`）/ `record_status`。**UI 测试会话**由宿主 AI 驱动：`test_start` → `test_step`（执行操作或断言，记录操作前后截图、控件摘要和应用日志片段）→ `review`（宿主看截图做判断；控件断言失败时不能改判为通过）→ `test_finish`（生成 JSON 和 Markdown 报告）→ `test_log` / `test_export` |
 | `ui_flow` | 用 `ui act` 录制可复用的操作流程，以一个最终断言收尾保存，回放时支持变量替换和自动修复。保存在 `.arkpilot/flows`，兼容 v0.x |
 | `diagnose` | `crash`（读取 jscrash、cppcrash、appfreeze 日志，量产手机也支持；`since_minutes` 限定时间窗口；提取错误特征和应用调用栈，并匹配故障模式库）/ `build` |
 | `knowledge` | 离线文档、ArkTS 规则、错误案例和运行时问题模式：`search` / `read`（按 `section` 读取）/ `catalog` / `status` / `update` / `rollback`；`source=cloud` 在线查询 CodeGenie |
-| `skills` | 内置的鸿蒙 Skill：`list` / `read`；`export` 导出为宿主原生的 `SKILL.md`；`install_mcp` 把本服务写入宿主配置（cursor、claude、codex、opencode、trae-cn、codebuddy、qoder、pi；重复执行不会重复写入）；`init` 一次完成两者；`search` / `install` / `uninstall` 使用 OpenHarmony Skill 市场 |
+| `skills` | 内置的鸿蒙 Skill：`list` / `read`；`export` 导出为宿主原生的 `SKILL.md`（`path` 指定任意目录）；`install_mcp` 把本服务写入宿主配置（cursor、claude、codex、opencode、trae-cn、codebuddy、qoder、pi；重复执行不会重复写入）；`init` 一次完成两者；`search` / `install` / `uninstall` 使用 OpenHarmony Skill 市场 |
 | `auth` | 华为账号浏览器登录：`codegenie`（云端知识）或 `developer`（签名），`region` 可选 cn / global；`teams`；`import` 导入 v0.x 的登录凭据 |
 | `sign` | `auto`（一键为真机生成调试签名：密钥库、证书、设备注册、Profile，ACL 权限从 `module.json5` 自动推导，并写入工程的 `signingConfigs`）/ `sign` / `verify` / AppGallery Connect 证书和设备管理 / 逐项操作 `keypair`、`csr`、`certificate_create`、`profile_create`、`profile_delete` |
-| `emulator` | `list` / `start`（等待启动完成）/ `stop` / `create` / `delete` / 镜像 / 许可协议 / `scenario`（电量、GPS、传感器、旋转、折叠等） |
-| `hot_reload` | `apply` 把 ArkTS 改动以 HQF 快速修复包推送到运行中的应用，约 3 秒生效，应用不重启；`reset` 撤销改动 |
+| `emulator` | `list`（`details`）/ `start` / `stop`（`name` 或多个 `names`；启动会等待开机完成）/ `create`（`screen_profile` 或自定义 `screen`、`hot_boot`、`instance_path`、`image_root`、`force`）/ `delete` / `images`（默认已下载，`all` 全部）/ `install_image`（`force` 重新下载）/ `remove_image` / `license`（接受）/ `license_view`（只读查看）/ `scenario`（电量和充电状态、GPS、光照/湿度/温度/步数/心率传感器、旋转、折叠、运动场景等）。启动、创建、下载镜像时，如果许可协议还没同意，会自动同意并在结果中注明（`auto_accept_license=false` 可关闭） |
+| `hot_reload` | `apply` 把 ArkTS 改动以 HQF 快速修复包推送到运行中的应用，约 3 秒生效，应用不重启（`files` 指定改动文件，`restart` 打完补丁后重启应用）；`reset` 撤销改动；`stop_daemon` 停止工程的 hvigor 守护进程 |
 
 内置 3 个 Skill：
 
@@ -104,7 +104,7 @@ node dist/cli.js init --host codex --project .      # 项目级配置（.codex/c
 
 项目级导出（`scope=project` 或 `init --project`）写入 `<project>/.agents/skills`，Codex、Claude Code、Cursor、Qoder、OpenCode、DevEco Code 都会读取这个目录，一份即可通用。
 
-服务还提供 MCP **Resources**（`deveco://skills/<name>`）和 **Prompts**：`fix-build`、`debug-crash`、`implement-feature`（规格驱动：specify → plan → tasks → implement → verify）和 `upgrade-sdk`。
+服务还提供 MCP **Resources**（`deveco://skills/<name>`）和 **Prompts**：`fix-build`、`debug-crash` 和 `upgrade-sdk`。需求规划交给宿主自带的 Plan 模式。
 
 ## 知识包
 
@@ -134,7 +134,7 @@ src/
 knowledge/      规则、错误案例、Skill（崩溃模式库在 hmos-runtime-fix-skill/references；知识包和 resources 的来源）
 templates/      工程模板
 resources/      内置的 arkts-check.cjs、hypium uitest agent、许可证
-tools/          build.mjs、bench.mjs、upstream-sync.mjs、mcp-client.mjs
+tools/          build.mjs、bench.mjs（含性能预算检查）、upstream-sync.mjs + upstream/（全量抽取与决策表）、mcp-client.mjs
 test/unit       离线测试（npm test）；test/e2e：真实 SDK 和设备（npm run test:e2e）
 ```
 
@@ -156,7 +156,7 @@ npm run build                # esbuild 打包（约 60 ms）
 npm test                     # 单元测试，不需要 SDK
 DEVECO_CONFIG=... E2E_TARGET=127.0.0.1:5555 npm run test:e2e   # 真实 SDK 加设备或模拟器
 npm run bench                # 握手、空闲 CPU/内存、tools/list 大小
-node tools/upstream-sync.mjs # 能力级上游对齐检查（有 partial 或未映射项时退出码为 1）
+node tools/upstream-sync.mjs # 全量上游对齐检查（有未决策、未对齐、过期决策或上游新提交时退出码为 1；--report 生成清单）
 ```
 
 ### 从 v0.x 迁移
@@ -180,7 +180,7 @@ MIT。第三方声明：`NOTICE.deveco-cli`、`NOTICE.deveco-code`、`NOTICE.hyp
 
 A lean MCP server for HarmonyOS development. It lets any MCP host (Cursor, Claude Code, Codex, …) build, run, debug and verify HarmonyOS apps with the DevEco toolchain, and query HarmonyOS knowledge offline.
 
-- **Covers upstream fully.** Every HarmonyOS tool in [deveco-code](https://gitcode.com/openharmony-sig/deveco-code) and every command in [deveco-cli](https://gitcode.com/openharmony-sig/deveco-cli) is verified at capability level in `tools/upstream-sync.mjs` (81 upstream capabilities: 60 full, 3 CLI, 18 host-provided, 0 gaps). It also adds asynchronous jobs with recovery, flow recording and replay, crash pattern matching, symbol-based LSP lookups, and knowledge packs that update independently of the server.
+- **Covers upstream fully.** Every HarmonyOS tool in [deveco-code](https://gitcode.com/openharmony-sig/deveco-code) and every command in [deveco-cli](https://gitcode.com/openharmony-sig/deveco-cli) is verified exhaustively: a script extracts every tool, parameter, enum value, command, option and bundled MCP tool from upstream source (467 items) and each one has a verified mapping (355 full, 70 host-provided, 42 explicitly not needed with reasons), 0 gaps. See [docs/upstream-alignment.md](docs/upstream-alignment.md); CI re-runs it weekly and fails on new upstream commits or capabilities. It also adds asynchronous jobs with recovery, flow recording and replay, crash pattern matching, symbol-based LSP lookups, and knowledge packs that update independently of the server.
 - **Light.** 3 runtime dependencies. No LangGraph, no native modules (uses the built-in `node:sqlite`). A single process with zero idle CPU. Language servers and the checker start on demand and shut down after 10 idle minutes.
 - **Built for AI hosts.** 15 tools named by intent, all enabled by default. Responses are structured and bounded. Every error carries a `code`, a `category` and a fix `hint`. Long operations become jobs.
 
@@ -256,19 +256,19 @@ Check the setup with `node dist/cli.js doctor [project]`, or call the `doctor` t
 | --- | --- |
 | `doctor` | Checks toolchain, SDK, devices, project, knowledge pack and logins, plus SDK compatibility (project compile/compatible SDK vs installed SDK vs device API); every failed check comes with a fix |
 | `project` | `info` / `create` (template, never overwrites) / `sync` / `build` (ArkTS preflight, then Hvigor; returns packages and structured errors with hints; `task=compileNative` builds C/C++ and writes `.idea/.deveco/cxx/compile_commands.json` for clangd) / `clean` |
-| `run` | `build_run` (build, install, launch, smoke verdict `PASS` / `FAIL_CRASH` / `FAIL_BLANK`, optional UI assert) / `deploy` / `launch` / `stop` / `uninstall` |
+| `run` | `build_run` (build, install, launch, smoke verdict `PASS` / `FAIL_CRASH` / `FAIL_BLANK`, optional UI assert; `skip_build` deploys existing packages, `uninstall_first` reinstalls cleanly) / `deploy` / `launch` / `stop` / `uninstall` |
 | `job` | `wait` / `status` / `list` / `cancel` / `resume` / `read` (line-paged logs with `grep`) |
-| `code` | `check` (warm ArkTS static checker; `fix` applies safe auto-fixes) / `lint` / `api_scan` / `api_versions` / `lsp`: hover, definition, implementation, references, symbols, workspace_symbols, diagnostics, completion, signature. Locate code by `symbol` plus a line hint instead of exact columns |
-| `device` | `list` / `info` / `log` (filter by bundle, level or regex; `clear`) / read-only `shell` / `sqlite` (JSON rows from an on-device database or a debuggable app's RDB store; read-only unless `write`) / `send` / `recv` |
-| `ui` | `observe` (screenshot plus compact element list) / `screenshot` / `tree` (`window`, `depth`) / `windows` / `find` / `act` (click, input with Chinese text support and replace-by-default, type, swipe, scroll, key and key chords, mouse click/move/scroll/drag; `verify_change` reports whether the screen changed) / `assert` / screen recording `record_start` / `record_stop` (`discard`, `external`) / `record_status`. **UI test sessions** driven by the host AI: `test_start` → `test_step` (actions and assertions with before/after screenshots, element summary and the app's log window) → `review` (host judges a screenshot; a failed control assertion is never overridden) → `test_finish` (JSON + Markdown report) → `test_log` / `test_export` |
+| `code` | `check` (warm ArkTS static checker; `fix` applies safe auto-fixes) / `lint` (`config_path`, `incremental` for uncommitted files, `output_path`) / `api_scan` (files or `modules`, `output_path`) / `api_versions` / `lsp`: hover, definition, declaration, implementation, references, symbols, workspace_symbols, diagnostics, completion, signature, call_hierarchy (`direction` callers / callees). Locate code by `symbol` plus a line hint instead of exact columns / `lsp_restart` (`language` restarts only ArkTS or C++) |
+| `device` | `list` / `info` / `log` (filter by bundle, level or regex; `from`/`to` relative time window such as 5 minutes ago to 1 minute ago; `follow` + cursor streams new lines across calls; `clear`) / read-only `shell` / `sqlite` (JSON rows from an on-device database or a debuggable app's RDB store; read-only unless `write`) / `send` / `recv` |
+| `ui` | `observe` (screenshot plus compact element list) / `screenshot` (`display` for multi-screen, `save_path`) / `tree` (`window`, `depth`, `all_windows`, `node` for one component subtree) / `windows` / `find` / `act` (click, input with Chinese and any special characters and replace-by-default, type, swipe, scroll, key and key chords, mouse click/move/scroll/drag; `verify_change` reports whether the screen changed) / `assert` / screen recording `record_start` / `record_stop` (`discard`, `external`, `save_path`) / `record_status`. **UI test sessions** driven by the host AI: `test_start` → `test_step` (actions and assertions with before/after screenshots, element summary and the app's log window) → `review` (host judges a screenshot; a failed control assertion is never overridden) → `test_finish` (JSON + Markdown report) → `test_log` / `test_export` |
 | `ui_flow` | Record reusable flows through `ui act`, save them with a final assert, and replay with variables and self-repair. Stored in `.arkpilot/flows`, compatible with v0.x |
 | `diagnose` | `crash` (reads jscrash/cppcrash/appfreeze reports, also on production phones; `since_minutes` time window; extracts the signature and app frames, matches the fault-pattern library) / `build` |
 | `knowledge` | Offline docs, ArkTS rules, error cases and runtime patterns: `search` / `read` (by `section`) / `catalog` / `status` / `update` / `rollback`; `source=cloud` queries CodeGenie online |
-| `skills` | Built-in HarmonyOS skills: `list` / `read`, `export` as native `SKILL.md` for your host, `install_mcp` registers this server in the host config (cursor, claude, codex, opencode, trae-cn, codebuddy, qoder, pi; idempotent merge), `init` does both, `search` / `install` / `uninstall` from the OpenHarmony skill market |
+| `skills` | Built-in HarmonyOS skills: `list` / `read`, `export` as native `SKILL.md` for your host (`path` for any directory), `install_mcp` registers this server in the host config (cursor, claude, codex, opencode, trae-cn, codebuddy, qoder, pi; idempotent merge), `init` does both, `search` / `install` / `uninstall` from the OpenHarmony skill market |
 | `auth` | Huawei browser login for `codegenie` (cloud knowledge) or `developer` (signing), `region` cn / global; `teams`; `import` v0.x credentials |
 | `sign` | `auto` (one-step debug signing for real devices: keystore, certificate, device registration, profile with ACL permissions derived from `module.json5`, and `signingConfigs` in the project) / `sign` / `verify` / AppGallery Connect certificates and devices / itemized `keypair`, `csr`, `certificate_create`, `profile_create`, `profile_delete` |
-| `emulator` | `list` / `start` (waits for boot) / `stop` / `create` / `delete` / images / license / `scenario` (battery, GPS, sensors, rotation, fold, …) |
-| `hot_reload` | `apply` pushes ArkTS changes to the running app as an HQF quick fix in about 3 s with no restart; `reset` removes them |
+| `emulator` | `list` (`details`) / `start` / `stop` (`name` or several `names`; start waits for boot) / `create` (`screen_profile` or custom `screen`, `hot_boot`, `instance_path`, `image_root`, `force`) / `delete` / `images` (downloaded; `all` for every image) / `install_image` (`force` re-downloads) / `remove_image` / `license` (accept) / `license_view` (read-only) / `scenario` (battery level and charging status, GPS, light/humidity/temperature/steps/heart-rate sensors, rotation, fold, motion scenes, …). Start, create and image download accept the license agreements automatically when needed and say so in the result (`auto_accept_license=false` to opt out) |
+| `hot_reload` | `apply` pushes ArkTS changes to the running app as an HQF quick fix in about 3 s with no restart (`files` limits it to given files, `restart` relaunches after patching); `reset` removes them; `stop_daemon` stops the project's hvigor daemon |
 
 Three built-in skills:
 
@@ -280,7 +280,7 @@ Three built-in skills:
 
 Project-scope export (`scope=project` or `init --project`) writes `<project>/.agents/skills`, which Codex, Claude Code, Cursor, Qoder, OpenCode and DevEco Code all read, so one copy serves every tool.
 
-The server also exposes MCP **Resources** (`deveco://skills/<name>`) and **Prompts**: `fix-build`, `debug-crash`, `implement-feature` (spec-driven: specify → plan → tasks → implement → verify), and `upgrade-sdk`.
+The server also exposes MCP **Resources** (`deveco://skills/<name>`) and **Prompts**: `fix-build`, `debug-crash`, and `upgrade-sdk`. Feature planning is left to the host's own plan mode.
 
 ### Knowledge packs
 
@@ -310,7 +310,7 @@ src/
 knowledge/      rules, error cases, skills (crash patterns live in hmos-runtime-fix-skill/references; sources for knowledge packs and resources)
 templates/      project template
 resources/      vendored arkts-check.cjs, hypium uitest agents, licenses
-tools/          build.mjs, bench.mjs, upstream-sync.mjs, mcp-client.mjs
+tools/          build.mjs, bench.mjs (with performance budgets), upstream-sync.mjs + upstream/ (exhaustive extraction and decisions), mcp-client.mjs
 test/unit       offline tests (npm test); test/e2e: real SDK and device (npm run test:e2e)
 ```
 
@@ -332,7 +332,7 @@ npm run build                # esbuild bundle (~60 ms)
 npm test                     # unit tests, no SDK needed
 DEVECO_CONFIG=... E2E_TARGET=127.0.0.1:5555 npm run test:e2e   # real SDK + device/emulator
 npm run bench                # handshake, idle CPU/RSS, tools/list size
-node tools/upstream-sync.mjs # capability-level upstream alignment (exit 1 on partial/unmapped)
+node tools/upstream-sync.mjs # exhaustive upstream alignment (exit 1 on undecided/partial/stale items or new upstream commits; --report writes the list)
 ```
 
 #### Migrating from v0.x

@@ -62,24 +62,37 @@ function sharedProjectDir(host: string) {
 }
 
 /** One-step host setup: export skills + register this MCP server (parity with `devecocli init`). */
-export async function initHost(host: string, options: { scope?: "user" | "project"; project?: string; force?: boolean; skills?: boolean; mcp?: boolean }) {
+export async function initHost(host: string, options: { scope?: "user" | "project"; project?: string; force?: boolean; skills?: boolean; mcp?: boolean; dir?: string }) {
   const { installMcp } = await import("./hostconfig.js");
   const scope = options.scope ?? (options.project ? "project" : "user");
   return {
-    ...(options.skills !== false ? { skills: exportSkills(host, scope, options.project) } : {}),
+    ...(options.skills !== false ? { skills: exportSkills(host, scope, options.project, undefined, options.dir) } : {}),
     ...(options.mcp !== false ? { mcp: installMcp(host, { scope, project: options.project, force: options.force }) } : {}),
   };
 }
 
-/** Export bundled skills as native SKILL.md folders so the host loads them automatically. */
-export function exportSkills(host: string, scope: "user" | "project", project?: string, names?: string[]) {
+/**
+ * Where skills go: an explicit directory (`dir`, like devecocli --path), the shared project
+ * directory, or the host's user directory.
+ */
+function skillsDir(host: string | undefined, scope: "user" | "project", project?: string, dir?: string) {
+  if (dir) {
+    invariant(path.isAbsolute(dir), "INVALID_INPUT", "path must be an absolute directory");
+    return dir;
+  }
+  invariant(host, "INVALID_INPUT", "host is required (or pass path)");
   const relative = hostDirs[host];
   invariant(relative, "INVALID_INPUT", `Unknown host ${host}`, { hosts: Object.keys(hostDirs) });
-  // Project scope uses the shared .agents/skills directory, read by Codex, Claude Code, Cursor, Qoder,
-  // OpenCode and DevEco Code, so one copy serves every tool.
-  const target = scope === "project"
+  return scope === "project"
     ? path.join((invariant(project, "INVALID_INPUT", "project is required for scope=project"), path.resolve(project!)), sharedProjectDir(host))
     : path.join(os.homedir(), relative);
+}
+
+/** Export bundled skills as native SKILL.md folders so the host loads them automatically. */
+export function exportSkills(host: string | undefined, scope: "user" | "project", project?: string, names?: string[], dir?: string) {
+  // Project scope uses the shared .agents/skills directory, read by Codex, Claude Code, Cursor, Qoder,
+  // OpenCode and DevEco Code, so one copy serves every tool.
+  const target = skillsDir(host, scope, project, dir);
   const exported: string[] = [];
   for (const skill of listSkills()) {
     if (names && !names.includes(skill.name)) continue;
@@ -127,18 +140,16 @@ export async function marketSearch(keyword: string, limit = 20) {
 }
 
 /** Install a market skill (zip verified by sha256 checksum) into a host skill directory. */
-export async function marketInstall(name: string, host: string, scope: "user" | "project", project?: string) {
+export async function marketInstall(name: string, host: string | undefined, scope: "user" | "project", project?: string, dir?: string) {
   invariant(/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(name), "INVALID_INPUT", "Invalid skill name");
-  const relative = hostDirs[host];
-  invariant(relative, "INVALID_INPUT", `Unknown host ${host}`, { hosts: Object.keys(hostDirs) });
+  const root = skillsDir(host, scope, project, dir);
   const checksum = await marketJson<{ sha256: string; size: number }>(`${market}/registry/skill/${name}/checksum`);
   const response = await fetch(`${market}/registry/skill/${name}/install?format=zip`, { signal: AbortSignal.timeout(60000) });
   invariant(response.ok, "HTTP_ERROR", `Download failed (HTTP ${response.status})`);
   const bytes = Buffer.from(await response.arrayBuffer());
   const { createHash } = await import("node:crypto");
   invariant(createHash("sha256").update(bytes).digest("hex").toLowerCase() === checksum.sha256.toLowerCase(), "INTEGRITY_FAILED", "Skill archive checksum mismatch");
-  const base = scope === "project" ? (invariant(project, "INVALID_INPUT", "project is required for scope=project"), path.resolve(project)) : os.homedir();
-  const target = path.join(base, relative, name);
+  const target = path.join(root, name);
   fs.mkdirSync(target, { recursive: true });
   const zip = path.join(target, ".download.zip");
   fs.writeFileSync(zip, bytes);
@@ -157,12 +168,9 @@ export async function marketInstall(name: string, host: string, scope: "user" | 
   return { installed: name, directory: target };
 }
 
-export function uninstallSkill(name: string, host: string, scope: "user" | "project", project?: string) {
+export function uninstallSkill(name: string, host: string | undefined, scope: "user" | "project", project?: string, dir?: string) {
   invariant(/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(name), "INVALID_INPUT", "Invalid skill name");
-  const relative = hostDirs[host];
-  invariant(relative, "INVALID_INPUT", `Unknown host ${host}`, { hosts: Object.keys(hostDirs) });
-  const base = scope === "project" ? path.resolve(project ?? ".") : os.homedir();
-  const target = path.join(base, relative, name);
+  const target = path.join(skillsDir(host, scope, project, dir), name);
   if (!fs.existsSync(target)) throw new ToolError("NOT_FOUND", `${name} is not installed for ${host}`);
   fs.rmSync(target, { recursive: true, force: true });
   return { removed: name, directory: target };

@@ -100,18 +100,20 @@ export async function arktsCheck(projectRoot: string, files: string[] | undefine
 
 /* ---------------------------------- linter ---------------------------------- */
 
-export async function codeLinter(projectRoot: string, options: { path?: string; fix?: boolean; product?: string }, signal: AbortSignal) {
+export async function codeLinter(projectRoot: string, options: { path?: string; fix?: boolean; product?: string; config_path?: string; incremental?: boolean; output_path?: string }, signal: AbortSignal) {
   const tc = toolchain();
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-lint-"));
   try {
     const report = path.join(dir, "report.json");
-    const configFile = path.join(projectRoot, "code-linter.json5");
+    const configFile = options.config_path ? path.resolve(projectRoot, options.config_path) : path.join(projectRoot, "code-linter.json5");
+    invariant(!options.config_path || (isFile(configFile) && /\.json5?$/.test(configFile)), "INVALID_INPUT", "config_path must point to an existing .json or .json5 file");
     const args = [
       ...(tc.kind === "clt" ? [tc.sdk] : []),
       ...(isFile(configFile) ? ["--config", configFile] : []),
       ...(options.product ? ["--product", options.product] : []),
       "--format", "json", "--output", report,
       ...(options.fix ? ["--fix"] : []),
+      ...(options.incremental ? ["--incremental"] : []), // only uncommitted files (git)
       path.resolve(projectRoot, options.path ?? "."),
     ];
     const cmd = toolCommand("linter", args, projectRoot, {
@@ -122,6 +124,7 @@ export async function codeLinter(projectRoot: string, options: { path?: string; 
     const result = await run(cmd, { signal, timeoutMs: 300000, allowFailure: true });
     invariant(isFile(report), "CHECK_FAILED", "Code Linter produced no report", { tail: (result.stderr || result.stdout).slice(-1500) });
     const content = fs.readFileSync(report, "utf8");
+    if (options.output_path) exportReport(content, options.output_path);
     const files = JSON.parse(content) as { filePath: string; messages: { line: number; column: number; severity: string | number; message: string; rule: string }[] }[];
     const issues: CheckIssue[] = [];
     const counts: Record<string, number> = {};
@@ -191,7 +194,7 @@ async function startLsp(root: string, language: "arkts" | "cpp"): Promise<LspSes
         textDocument: {
           publishDiagnostics: { relatedInformation: true },
           hover: { contentFormat: ["markdown", "plaintext"] },
-          definition: { linkSupport: true }, implementation: { linkSupport: true }, references: {},
+          definition: { linkSupport: true }, declaration: { linkSupport: true }, implementation: { linkSupport: true }, references: {}, callHierarchy: {},
           documentSymbol: { hierarchicalDocumentSymbolSupport: true },
           completion: { completionItem: { snippetSupport: false, documentationFormat: ["markdown", "plaintext"] } },
           signatureHelp: { signatureInformation: { documentationFormat: ["markdown", "plaintext"] } },
@@ -271,7 +274,9 @@ function location(loc: any, root: string, withSnippet: boolean) {
   const uri = loc.targetUri ?? loc.uri;
   const range = loc.targetSelectionRange ?? loc.range;
   const file = uri.startsWith("file:") ? fileURLToPath(uri) : uri;
-  const rel = path.relative(root, file);
+  // clangd reports realpaths (/private/var/... on macOS): compare against the real project root too.
+  let rel = path.relative(root, file);
+  if (rel.startsWith("..")) { try { rel = path.relative(fs.realpathSync(root), file); } catch { /* keep */ } }
   return {
     file: rel.startsWith("..") ? file : rel,
     line: range.start.line + 1,
@@ -308,10 +313,10 @@ function flattenSymbols(items: any[], out: any[] = [], depth = 0): any[] {
   return out;
 }
 
-export type LspAction = "hover" | "definition" | "implementation" | "references" | "symbols" | "workspace_symbols" | "diagnostics" | "completion" | "signature";
+export type LspAction = "hover" | "definition" | "declaration" | "implementation" | "references" | "symbols" | "workspace_symbols" | "diagnostics" | "completion" | "signature" | "call_hierarchy";
 
 export async function lsp(input: {
-  project: string; action: LspAction; file?: string; files?: string[]; symbol?: string; line?: number; column?: number; query?: string; language?: "arkts" | "cpp"; limit?: number;
+  project: string; action: LspAction; file?: string; files?: string[]; symbol?: string; line?: number; column?: number; query?: string; language?: "arkts" | "cpp"; limit?: number; direction?: "incoming" | "outgoing";
 }, signal: AbortSignal) {
   const root = path.resolve(input.project);
   const language = input.language ?? (input.file && /\.(c|cc|cpp|h|hpp)$/.test(input.file) ? "cpp" : "arkts");
@@ -363,10 +368,26 @@ export async function lsp(input: {
         return { position: { line: position.line + 1, column: position.character + 1 }, hover: value || null, ...(value ? {} : { hint: "No type info here; try definition or check the symbol position" }) };
       }
       case "definition":
+      case "declaration":
       case "implementation": {
         const result = await session.client.request<any>(`textDocument/${input.action}`, params, 20000, signal);
         const list = (Array.isArray(result) ? result : result ? [result] : []).slice(0, 10);
         return { locations: list.map((l) => location(l, root, true)) };
+      }
+      case "call_hierarchy": {
+        const direction = input.direction ?? "incoming";
+        if (language === "cpp" && direction === "outgoing")
+          throw new ToolError("CAPABILITY_UNAVAILABLE", "clangd supports incoming calls only", undefined, "Use direction=incoming for C/C++");
+        const items = await session.client.request<any[]>("textDocument/prepareCallHierarchy", params, 20000, signal);
+        const item = items?.[0];
+        if (!item) return { calls: [], hint: "No function at this position; point symbol at a function or method name" };
+        const calls = await session.client.request<any[]>(`callHierarchy/${direction}Calls`, { item }, 30000, signal) ?? [];
+        const other = (c: any) => (direction === "incoming" ? c.from : c.to);
+        return {
+          function: { name: item.name, ...location({ uri: item.uri, range: item.selectionRange ?? item.range }, root, false) },
+          direction, total: calls.length,
+          calls: calls.slice(0, limit).map((c) => ({ name: other(c).name, detail: other(c).detail, ...location({ uri: other(c).uri, range: other(c).selectionRange ?? other(c).range }, root, false), sites: c.fromRanges?.length ?? 0 })),
+        };
       }
       case "references": {
         const result = await session.client.request<any[]>("textDocument/references", { ...params, context: { includeDeclaration: false } }, 30000, signal);
@@ -395,10 +416,20 @@ export async function lsp(input: {
   });
 }
 
-export async function restartLsp(project: string) {
+export async function restartLsp(project: string, language: "arkts" | "cpp" | "all" = "all") {
   const root = path.resolve(project);
-  for (const language of ["arkts", "cpp"]) await sessions.close(`${root}|${language}`);
-  return { restarted: true };
+  const languages = language === "all" ? ["arkts", "cpp"] : [language];
+  for (const l of languages) await sessions.close(`${root}|${l}`);
+  return { restarted: languages };
+}
+
+/** Save a report to a user-chosen absolute path (never overwrites a directory). */
+function exportReport(content: string, target: string) {
+  invariant(path.isAbsolute(target), "INVALID_INPUT", "output_path must be an absolute file path");
+  invariant(!fs.existsSync(target) || fs.statSync(target).isFile(), "INVALID_INPUT", "output_path is a directory");
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  fs.writeFileSync(target, content);
+  return target;
 }
 
 /** C/C++ quick check: clangd diagnostics via the pooled session. */
@@ -415,7 +446,7 @@ export function apiVersions(): string[] {
   return [...new Set(["HarmonyOS_5.0.0(12)_Release", ...files])].sort((a, b) => a.localeCompare(b, "en", { numeric: true }));
 }
 
-export async function apiScan(project: string, options: { from?: string; to?: string; files?: string[] }, signal: AbortSignal) {
+export async function apiScan(project: string, options: { from?: string; to?: string; files?: string[]; modules?: string[]; output_path?: string }, signal: AbortSignal) {
   const tc = toolchain();
   const versions = apiVersions();
   const from = options.from ?? versions[0];
@@ -432,6 +463,15 @@ export async function apiScan(project: string, options: { from?: string; to?: st
       const cpp = files.filter((f) => /\.(c|cpp)$/.test(f));
       if (ets.length) args.push("--arkTsFiles", ets.join(","));
       if (cpp.length) args.push("--cppFiles", cpp.join(","));
+    } else if (options.modules?.length) {
+      const { inspectProject } = await import("./project.js");
+      const known = inspectProject(project).modules;
+      const paths = options.modules.map((name) => {
+        const m = known.find((k) => k.name === name);
+        invariant(m, "INVALID_INPUT", `Unknown module ${name}`, { modules: known.map((k) => k.name) });
+        return m.root;
+      });
+      args.push("--modulePaths", paths.join(","));
     } else args.push("--projectPath", project);
     const result = await run(toolCommand("apiscan", args, path.dirname(component("apiscan", tc))), { signal, timeoutMs: 600000, allowFailure: true, logFile: file });
     await commitArtifact(id, file, "text/plain");
@@ -440,7 +480,8 @@ export async function apiScan(project: string, options: { from?: string; to?: st
     const content = fs.readFileSync(csv, "utf8");
     const rows = content.split(/\r?\n/).filter(Boolean);
     const artifact = await saveArtifact(content, "text/plain");
-    return { from, to, findings: Math.max(0, rows.length - 1), preview: rows.slice(0, 31).join("\n"), report_artifact: artifact.artifact_id, log_artifact: id };
+    const saved = options.output_path ? exportReport(content, options.output_path) : undefined;
+    return { from, to, ...(saved ? { saved } : {}), findings: Math.max(0, rows.length - 1), preview: rows.slice(0, 31).join("\n"), report_artifact: artifact.artifact_id, log_artifact: id };
   } finally {
     fs.rmSync(out, { recursive: true, force: true });
   }

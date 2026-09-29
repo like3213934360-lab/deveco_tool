@@ -1,5 +1,47 @@
 # Changelog / 更新日志
 
+## v1.1.0 (2026-09-29)
+
+**中文**
+
+对齐方式重建：以前的对齐检查依据一张手写对照表，会漏。现在改为由脚本从上游源码**全量自动抽取**所有能力项（工具、参数、取值、命令、选项、选项取值、deveco-cli 自带 MCP 服务的工具、Skill），共 467 项。每一项都必须有明确决策：完整覆盖（写明对应的工具和参数，由脚本对照服务实际的 JSON Schema 核对）、由宿主提供、或明确不需要（写明理由）。没有决策、核对不通过、决策过期或上游有新提交，CI 都会失败；GitHub 上每周自动检查一次。完整清单见 `docs/upstream-alignment.md`。
+
+按清单补齐的功能：
+- 代码导航：`code lsp` 新增 `call_hierarchy`（`direction` 调用者/被调用者，C++ 仅支持调用者）和 `declaration`；`lsp_restart` 可只重启 ArkTS 或 C++。
+- 代码检查：`lint` 新增 `config_path`、`incremental`（只查未提交文件）、`output_path`；`api_scan` 新增 `modules`、`output_path`。
+- 日志：`device log` 新增 `from`/`to` 相对时间段（在设备上按分钟预过滤，繁忙真机也能取到半小时前的日志）；`follow` 加游标持续获取新日志，不常驻后台进程。
+- 运行：`run build_run` 新增 `skip_build`、`uninstall_first`；`hot_reload` 新增 `files`（指定改动文件）、`restart`（打补丁后重启应用）和 `stop_daemon`。
+- 模拟器：新增 `remove_image`、`license_view`（只读）；`create` 新增 `screen_profile`、`screen`、`hot_boot`、`instance_path`、`image_root`、`force`；`start`/`stop` 支持多个名称；`images` 默认只列已下载的，`all` 列出全部；`install_image` 支持 `force`；新增湿度、温度传感器和 `battery_status`。
+- 模拟器许可协议：启动、创建、下载镜像时如果协议还没同意，会自动同意并在结果中注明（`auto_accept_license=false` 可关闭）；拒绝启动时立即返回原因，不再等待超时；模拟器进程不再随 MCP 服务退出而关闭。
+- UI：`screenshot` 新增 `display`、`save_path`；`tree` 新增 `all_windows`、`node`（单个组件子树）；`record_stop` 新增 `save_path`；文本输入改为 base64 传输，空格、引号、`$` 等特殊字符都能原样输入。
+- Skill：`export`/`install`/`uninstall`/`init` 新增 `path`（任意目录）；命令行 `serve-lsp` 新增 `--auto-detect`。
+
+其他：
+- 安装失败 9568297（设备 API 低于应用要求）给出明确提示。
+- tools/list 中重复的选择器定义只输出一次，工具描述总大小控制在 36 KB 以内。`npm run bench` 增加性能预算检查（握手 < 150 ms、空闲内存 ≤ 70 MB、工具描述 ≤ 36 KB、空闲 CPU 不增长）。
+- 经评估不做 spec 规格开发流程（宿主自带 Plan 模式已经覆盖），同时删除 `implement-feature` Prompt。
+- 行为对照：白屏判定与上游的图像指纹算法在 7 组样本上结论一致；按组件 id 点击、向焦点控件输入文本与上游行为一致。
+
+**English**
+
+Alignment rebuilt: the previous check relied on a hand-written mapping and missed things. A script now **extracts every capability item from upstream source automatically** (tools, parameters, enum values, commands, options, choices, deveco-cli's bundled MCP tools, skills): 467 items. Each needs an explicit decision: full (with a target that the script verifies against the server's live JSON Schemas), host-provided, or not needed (with a reason). Undecided or unverifiable items, stale decisions and new upstream commits all fail CI, and GitHub re-checks weekly. The full list is in `docs/upstream-alignment.md`.
+
+Gaps closed from the list:
+- Code navigation: `code lsp` adds `call_hierarchy` (`direction` callers/callees; C++ supports callers only) and `declaration`; `lsp_restart` can restart only ArkTS or C++.
+- Code checks: `lint` adds `config_path`, `incremental` (uncommitted files only) and `output_path`; `api_scan` adds `modules` and `output_path`.
+- Logs: `device log` adds `from`/`to` relative windows (pre-filtered on the device by minute, so busy phones still return logs from half an hour ago) and `follow` with a cursor that streams new lines across calls without a background process.
+- Run: `run build_run` adds `skip_build` and `uninstall_first`; `hot_reload` adds `files` (explicit changed files), `restart` (relaunch after patching) and `stop_daemon`.
+- Emulator: adds `remove_image` and read-only `license_view`; `create` adds `screen_profile`, `screen`, `hot_boot`, `instance_path`, `image_root` and `force`; `start`/`stop` take several names; `images` lists downloaded images by default and every image with `all`; `install_image` supports `force`; adds humidity and temperature sensors and `battery_status`.
+- Emulator license: start, create and image download accept the agreements automatically when needed and say so in the result (`auto_accept_license=false` opts out). A refused start now reports the reason at once instead of timing out, and emulators no longer exit when the MCP server does.
+- UI: `screenshot` adds `display` and `save_path`; `tree` adds `all_windows` and `node` (one component subtree); `record_stop` adds `save_path`. Text input is now sent base64-encoded, so spaces, quotes, `$` and other special characters arrive exactly as typed.
+- Skills: `export`/`install`/`uninstall`/`init` add `path` (any directory); the `serve-lsp` CLI command adds `--auto-detect`.
+
+Also:
+- Install error 9568297 (device API lower than the app requires) now comes with a clear hint.
+- The selector schema is emitted once in tools/list, keeping all tool descriptions within 36 KB. `npm run bench` now enforces performance budgets (handshake < 150 ms, idle RSS ≤ 70 MB, tool descriptions ≤ 36 KB, no idle CPU growth).
+- The spec-driven workflow was evaluated and dropped (the host's own plan mode covers it), and the `implement-feature` prompt was removed.
+- Behaviour checks: blank-screen detection agrees with upstream's image-fingerprint algorithm on all 7 samples; clicking by component id and typing into the focused field match upstream behaviour.
+
 ## v1.0.2 (2026-09-29)
 
 **中文**
