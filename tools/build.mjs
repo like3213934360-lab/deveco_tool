@@ -7,7 +7,17 @@ import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const started = performance.now();
-fs.rmSync(path.join(root, "dist"), { recursive: true, force: true });
+// Running MCP servers (Codex, Cursor...) lazily import chunks by their old hashed names. Deleting
+// dist/ under them breaks every not-yet-loaded tool ("Cannot find module dist/chunks/..."), so a
+// rebuild only ADDS files; chunks older than a day are pruned (no live server keeps them that long).
+const chunks = path.join(root, "dist", "chunks");
+if (fs.existsSync(chunks)) {
+  const cutoff = Date.now() - 24 * 3600 * 1000;
+  for (const f of fs.readdirSync(chunks)) {
+    const p = path.join(chunks, f);
+    if (fs.statSync(p).mtimeMs < cutoff) fs.rmSync(p, { force: true });
+  }
+}
 await build({
   entryPoints: [path.join(root, "src/cli.ts")],
   outdir: path.join(root, "dist"),

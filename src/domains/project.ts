@@ -12,6 +12,8 @@ export interface Module {
   root: string;
   type: "entry" | "feature" | "har" | "shared" | "unknown";
   target: string;
+  /** module.json5 deviceTypes ("phone", "wearable", "default" = phone...) */
+  deviceTypes: string[];
 }
 export interface Project {
   root: string;
@@ -58,9 +60,14 @@ export function inspectProject(projectPath: string, productName?: string, target
     invariant(target, "INVALID_INPUT", `Target ${item.name}@${wanted} does not apply to product ${product.name}`);
     const moduleRoot = inside(root, item.srcPath);
     let type: Module["type"] = "unknown";
+    let deviceTypes: string[] = [];
     const manifest = path.join(moduleRoot, "src/main/module.json5");
-    if (isFile(manifest)) type = ((readJson5(manifest).module as { type?: Module["type"] } | undefined)?.type ?? "unknown");
-    modules.push({ name: item.name, root: moduleRoot, type, target: target.name });
+    if (isFile(manifest)) {
+      const m = readJson5(manifest).module as { type?: Module["type"]; deviceTypes?: string[] } | undefined;
+      type = m?.type ?? "unknown";
+      deviceTypes = m?.deviceTypes ?? [];
+    }
+    modules.push({ name: item.name, root: moduleRoot, type, target: target.name, deviceTypes });
   }
   let bundleName: string | undefined;
   const app = path.join(root, "AppScope/app.json5");
@@ -73,6 +80,51 @@ export function inspectProject(projectPath: string, productName?: string, target
     compatibleSdk: text(product.compatibleSdkVersion ?? profile.app?.compatibleSdkVersion),
     modules, bundleName,
   };
+}
+
+/** Device type as used in module.json5 ("default" is the phone type). */
+export function normalizeDeviceType(type: string) {
+  const t = type.trim().toLowerCase();
+  return t === "default" ? "phone" : t === "2in1" || t === "pc" ? "2in1" : t;
+}
+
+/**
+ * Which runnable modules (entry/feature, plus the HSPs they need) to build and install.
+ * A HarmonyOS app may carry one entry per device class (phone + watch...). Installing packages
+ * made for another device class is rejected by the device, so:
+ *   - explicit `modules` always win (and must be runnable),
+ *   - otherwise pick the entry/feature modules whose deviceTypes include the device's type,
+ *   - with exactly one runnable module, that one.
+ * Ambiguity (several candidates and no device type) is an error listing the choices.
+ */
+export function selectRunModules(project: Project, options: { modules?: string[]; deviceType?: string }) {
+  const runnable = project.modules.filter((m) => m.type === "entry" || m.type === "feature");
+  if (options.modules?.length) {
+    const unknown = options.modules.filter((n) => !project.modules.some((m) => m.name === n));
+    invariant(!unknown.length, "INVALID_INPUT", `Unknown modules: ${unknown.join(", ")}`, { runnable: runnable.map((m) => m.name) });
+    const chosen = project.modules.filter((m) => options.modules!.includes(m.name) && (m.type === "entry" || m.type === "feature" || m.type === "shared"));
+    invariant(chosen.some((m) => m.type === "entry" || m.type === "feature"), "INVALID_INPUT", "modules must include an entry or feature module", { runnable: runnable.map((m) => m.name) });
+    // Refuse before touching the device: e.g. the watch HAP on a phone is rejected by the device anyway.
+    const type = options.deviceType ? normalizeDeviceType(options.deviceType) : undefined;
+    const wrong = type ? chosen.filter((m) => m.type !== "shared" && m.deviceTypes.length && !m.deviceTypes.map(normalizeDeviceType).includes(type)) : [];
+    invariant(!wrong.length, "DEVICE_MISMATCH", `${wrong.map((m) => `${m.name} (${m.deviceTypes.join("/")})`).join(", ")} cannot run on this ${type} device`,
+      { device_type: type, modules: runnable.map((m) => ({ name: m.name, deviceTypes: m.deviceTypes })) },
+      `Choose the module for this device, or connect a matching device (target=...)`);
+    return { modules: chosen, reason: "explicit" };
+  }
+  invariant(runnable.length, "PROJECT_INVALID", "Project has no entry/feature module to run");
+  if (runnable.length === 1) return { modules: runnable, reason: "only runnable module" };
+  const type = options.deviceType ? normalizeDeviceType(options.deviceType) : undefined;
+  const byDevice = type ? runnable.filter((m) => m.deviceTypes.map(normalizeDeviceType).includes(type)) : [];
+  if (byDevice.length) {
+    // One entry per device class; features only when they target the same device.
+    const entries = byDevice.filter((m) => m.type === "entry");
+    invariant(entries.length <= 1, "INVALID_INPUT", `Several entry modules support ${type}; pass modules`, { candidates: entries.map((m) => m.name) });
+    return { modules: byDevice, reason: `deviceTypes include ${type}` };
+  }
+  throw new ToolError("INVALID_INPUT", type ? `No runnable module supports device type ${type}` : "Several runnable modules; pass modules",
+    { runnable: runnable.map((m) => ({ name: m.name, type: m.type, deviceTypes: m.deviceTypes })) },
+    "Pass modules=[\"<module>\"] (e.g. the phone or the watch entry)");
 }
 
 export function mainAbility(project: Project, moduleName?: string) {

@@ -72,7 +72,8 @@ function startChecker(): Promise<CheckerProcess> {
 export async function arktsCheck(projectRoot: string, files: string[] | undefined, signal: AbortSignal, fix = false) {
   const tc = toolchain();
   invariant(tc.components.etsLoader, "CAPABILITY_UNAVAILABLE", "SDK ets-loader not found; ArkTS check needs a full SDK");
-  const request = { project: projectRoot, files: (files ?? []).map((f) => path.resolve(projectRoot, f)), fix };
+  const root = path.resolve(projectRoot);
+  const request = { project: root, files: (files ?? []).map((f) => path.resolve(root, f)), fix };
   const result = await checkers.use(tc.root, startChecker, (proc) => new Promise<any>((resolve, reject) => {
     const id = proc.nextId++;
     const timer = setTimeout(() => { proc.pending.delete(id); reject(new ToolError("TIMEOUT", "ArkTS check timed out after 180s")); }, 180000);
@@ -82,7 +83,8 @@ export async function arktsCheck(projectRoot: string, files: string[] | undefine
   }));
   invariant(!result?.error, "CHECK_FAILED", `ArkTS check could not run: ${result?.error}`);
   const issues: CheckIssue[] = (result.errors ?? []).map((e: Record<string, unknown>) => ({
-    file: path.relative(projectRoot, String(e.file ?? e.filePath ?? "")),
+    // The checker reports paths relative to the project; make them relative to the project, never to our cwd.
+    file: (() => { const f = String(e.file ?? e.filePath ?? ""); return path.relative(root, path.isAbsolute(f) ? f : path.join(root, f)); })(),
     line: Number(e.line ?? 0), column: Number(e.column ?? e.col ?? 0),
     severity: String(e.severity ?? "error"), message: String(e.message ?? ""), rule: e.rule ? String(e.rule) : e.code ? String(e.code) : undefined,
   }));

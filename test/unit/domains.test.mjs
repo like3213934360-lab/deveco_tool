@@ -21,7 +21,7 @@ fs.writeFileSync(entry, [
   `export { chordCodes, treeSignature, subtree, deviceText } from ${JSON.stringify(path.join(root, "src/domains/ui.ts"))};`,
   `export { createArgs, agreementsAccepted } from ${JSON.stringify(path.join(root, "src/domains/emulator.ts"))};`,
   `export { parseDuration } from ${JSON.stringify(path.join(root, "src/domains/device.ts"))};`,
-  `export { findProjectRoot } from ${JSON.stringify(path.join(root, "src/domains/project.ts"))};`,
+  `export { findProjectRoot, selectRunModules } from ${JSON.stringify(path.join(root, "src/domains/project.ts"))};`,
   `export { readonlySqlAllowed } from ${JSON.stringify(path.join(root, "src/domains/device.ts"))};`,
 ].join("\n"));
 await build({ entryPoints: [entry], outfile: path.join(out, "entry.mjs"), bundle: true, format: "esm", platform: "node", packages: "external", logLevel: "error", nodePaths: [path.join(root, "node_modules")] });
@@ -186,4 +186,19 @@ test("project root auto-detection searches down, never up", () => {
   fs.writeFileSync(path.join(proj, "build-profile.json5"), "{}");
   assert.equal(m.findProjectRoot(base), proj);
   assert.equal(m.findProjectRoot(path.join(proj, "AppScope")), undefined);
+});
+
+test("run module selection follows the device type (phone vs watch entry)", () => {
+  const mod = (name, type, deviceTypes) => ({ name, type, deviceTypes, root: "/x/" + name, target: "default" });
+  const project = { root: "/x", product: "default", products: ["default"], modules: [
+    mod("default", "entry", ["phone", "tablet", "2in1"]), mod("watch", "entry", ["wearable"]), mod("utils", "har", ["default"]),
+  ] };
+  assert.deepEqual(m.selectRunModules(project, { deviceType: "phone" }).modules.map((x) => x.name), ["default"]);
+  assert.deepEqual(m.selectRunModules(project, { deviceType: "wearable" }).modules.map((x) => x.name), ["watch"]);
+  assert.throws(() => m.selectRunModules(project, {}), /Several runnable modules/);
+  assert.throws(() => m.selectRunModules(project, { deviceType: "tv" }), /No runnable module supports device type tv/);
+  assert.throws(() => m.selectRunModules(project, { modules: ["watch"], deviceType: "phone" }), /cannot run on this phone device/);
+  assert.deepEqual(m.selectRunModules(project, { modules: ["watch"], deviceType: "wearable" }).modules.map((x) => x.name), ["watch"]);
+  const single = { ...project, modules: [mod("phone", "entry", ["phone"])] };
+  assert.equal(m.selectRunModules(single, {}).reason, "only runnable module");
 });

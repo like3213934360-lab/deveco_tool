@@ -238,9 +238,32 @@ async function signer(args: string[], signal?: AbortSignal) {
  * keypair+CSR -> debug certificate -> register connected devices -> debug profile ->
  * write signingConfigs (passwords encrypted with Studio material) into build-profile.json5.
  */
-export async function autoSign(project: string, options: { product?: string; team?: string; bundle: string; acl?: string[] }, signal: AbortSignal, log: (m: string) => void) {
+/**
+ * The project's own signing, if any: build-profile signingConfigs for the product, or an
+ * hvigorfile `overrides.signingConfig` (teams often keep material outside the repo that way).
+ */
+export function existingSigning(root: string, product = "default") {
+  const profile = readJson5(path.join(root, "build-profile.json5")) as { app: { signingConfigs?: { name: string; material?: unknown }[]; products?: { name: string; signingConfig?: string }[] } };
+  const configName = profile.app.products?.find((p) => p.name === product)?.signingConfig;
+  const inProfile = profile.app.signingConfigs?.find((c) => c.name === configName && c.material);
+  if (inProfile) return { source: "build-profile.json5", config: inProfile.name };
+  for (const f of ["hvigorfile.ts", "hvigorfile.js"]) {
+    const file = path.join(root, f);
+    if (fs.existsSync(file) && /overrides[\s\S]{0,200}signingConfig\s*:/.test(fs.readFileSync(file, "utf8"))) return { source: f, config: "overrides.signingConfig" };
+  }
+  return undefined;
+}
+
+export async function autoSign(project: string, options: { product?: string; team?: string; bundle: string; acl?: string[]; force?: boolean }, signal: AbortSignal, log: (m: string) => void) {
   const root = path.resolve(project);
   const product = options.product ?? "default";
+  // Never replace signing the project already has (like devecocli, only --force overwrites).
+  const current = existingSigning(root, product);
+  if (current && !options.force)
+    throw new ToolError("SIGN_CONFIGURED", `Project already has signing (${current.source}: ${current.config}); nothing changed`, current,
+      "Build and run as is. Pass force=true only if you really want to replace it with a new auto debug signature.");
+  invariant(!current || current.source === "build-profile.json5", "SIGN_CONFIGURED",
+    `Signing comes from ${current?.source} overrides; auto signing would be ignored by hvigor. Edit that file instead.`);
   const team = await teamId(options.team);
   const dir = path.join(os.homedir(), ".ohos", "config");
   fs.mkdirSync(dir, { recursive: true, mode: 0o700 });

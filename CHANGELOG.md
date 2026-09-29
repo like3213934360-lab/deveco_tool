@@ -1,5 +1,33 @@
 # Changelog / 更新日志
 
+## v1.1.1 (2026-09-29)
+
+**中文**
+
+在真实项目上发现并修复的问题（全部已在真机实测通过）：
+- **重新构建会打断正在运行的 MCP 服务**：之前每次构建都会清空 `dist/`，正在运行的 Codex/Cursor 里的服务再按需加载模块时就会报 `Cannot find module dist/chunks/...`，这正是 Codex 无法安装应用的原因。现在构建只新增文件，一天以上的旧文件才清理；已验证重新构建后，正在运行的服务仍能正常调用。
+- **多设备工程只构建、安装匹配设备的模块**：像 LingDong 这样“手机 + 手表”两个 entry 的工程，`run` 会先识别目标设备类型，再只构建和安装 `deviceTypes` 匹配的模块（手机只装 `default`，手表只装 `watch`），不会再把两个包一起装。显式指定 `modules` 时，如果模块不适用于该设备，会在安装前直接拒绝并说明原因。`launch` 和 `hot_reload` 默认模块也按设备选择。
+- **不改动工程已有的签名**：`sign auto` 检测到工程已配置签名（`build-profile.json5` 或 `hvigorfile.ts` 的 overrides）时拒绝执行，不做任何修改（`force=true` 才会替换）。热重载优先使用 hvigor 用工程签名生成的补丁包，不再自行签名。
+- **ArkTS 预检不再阻断构建**：静态预检是近似检查，在真实工程上有误报（例如 `HdsNavigation` 作为根节点），之前会直接跳过构建。现在只作为提示随结果返回，以 hvigor 编译结果为准。问题文件路径也改为相对于工程根目录。
+
+真机验证（手机 Pura 80 Pro，API 26）：
+- LingDong：`build_run` 自动选择 `default` 模块，只构建和安装 `default-default-signed.hap`，启动冒烟判定 PASS；显式指定 `watch` 时在安装前返回 `DEVICE_MISMATCH`；`sign auto` 返回 `SIGN_CONFIGURED`，签名保持不变。
+- MyStarRing：`build_run` 成功，冒烟判定 PASS。热重载在工程的一份副本上测试：使用 hvigorfile overrides 签名打出的补丁包在真机上生效（日志中出现补丁代码输出的标记），测试后已撤销补丁，并重新部署原版应用。
+- 两个工程的源码均未修改（前后逐文件哈希对比）。唯一的变化是 hvigor 每次构建都会重新生成的 `BuildProfile.ets`，这与 DevEco Studio 自己构建时的行为相同。
+
+**English**
+
+Problems found on real projects and fixed (all verified on a physical phone):
+- **Rebuilding broke running MCP servers**: every build wiped `dist/`, so a server already running in Codex or Cursor failed to load its next module (`Cannot find module dist/chunks/...`). That is why Codex could not install apps. Builds now only add files, and chunks older than a day are pruned. Verified: a running server keeps working after a rebuild.
+- **Multi-device apps build and install only the matching modules**: for projects with one entry per device class (LingDong: phone + watch), `run` detects the target device type and builds and installs only the modules whose `deviceTypes` match (phone gets `default`, watch gets `watch`), so both packages are never installed together. An explicit `modules` choice that cannot run on the device is refused before anything is installed. `launch` and the `hot_reload` default module follow the same rule.
+- **Existing project signing is never changed**: `sign auto` refuses and changes nothing when the project already has signing (`build-profile.json5` or `hvigorfile.ts` overrides); only `force=true` replaces it. Hot reload now uses the HQF that hvigor signed with the project's own signing instead of signing it itself.
+- **The ArkTS preflight no longer blocks builds**: the static check is an approximation and had false positives on real projects (such as `HdsNavigation` as the root node), which previously skipped the build. Its findings are now reported with the result and hvigor decides. Issue paths are now relative to the project root.
+
+Verified on a phone (Pura 80 Pro, API 26):
+- LingDong: `build_run` picks the `default` module and builds and installs only `default-default-signed.hap`, with smoke verdict PASS. Explicitly choosing `watch` returns `DEVICE_MISMATCH` before installing, and `sign auto` returns `SIGN_CONFIGURED` with signing untouched.
+- MyStarRing: `build_run` succeeds with smoke verdict PASS. Hot reload was tested on a copy of the project: the HQF signed through the hvigorfile overrides took effect on the phone (a marker from the patched code appeared in the log); the patch was then removed and the original app redeployed.
+- Neither project's source changed (per-file hash comparison before and after). The only difference is `BuildProfile.ets`, which hvigor regenerates on every build, just as DevEco Studio does.
+
 ## v1.1.0 (2026-09-29)
 
 **中文**

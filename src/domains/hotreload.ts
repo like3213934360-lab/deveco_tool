@@ -144,6 +144,7 @@ export async function applyHotReload(project: Project, module: string, signal: A
   const signed = path.join(outDir, `${module}-${m.target}-signed.hqf`);
   fs.rmSync(unsigned, { force: true });
   fs.rmSync(signed, { force: true });
+  const hvigorSigned = path.join(outDir, `${module}-${m.target}-signed.hqf`);
   fs.rmSync(path.join(patchDir, "ets"), { recursive: true, force: true });
   const { result, diagnostics } = await devHqf(project, module, signal).finally(() => clearBuildConfig(project));
   const patchAbc = [...walk(path.join(patchDir, "ets"), new Set())].some((f) => f.endsWith(".abc"));
@@ -151,12 +152,15 @@ export async function applyHotReload(project: Project, module: string, signal: A
     throw new ToolError("BUILD_FAILED", patchAbc || result.code !== 0 ? "Hot reload compile failed" : "Compiler produced no patch code for these changes", { ...diagnostics, tail: clip(result.stderr || result.stdout, 2000) },
       "Fix compile errors. Structural changes (new pages, decorators, resources, module.json) need a full redeploy: run action=build_run");
 
-  // 3. sign when the project has a signing config (unsigned HQF is accepted by emulators)
+  // 3. signing: hvigor signs the HQF itself whenever the project's signing is configured (build-profile
+  //    signingConfigs or hvigorfile overrides) — use that as-is. Only sign ourselves from build-profile
+  //    material when hvigor did not; never touch the project's signing files.
   let hqf = unsigned;
   const profile = readJson5(path.join(project.root, "build-profile.json5")) as { app: { signingConfigs?: any[]; products?: any[] } };
   const configName = profile.app.products?.find((p) => p.name === project.product)?.signingConfig;
-  const signing = profile.app.signingConfigs?.find((c) => c.name === configName)?.material;
-  if (signing) {
+  const signing = fs.existsSync(hvigorSigned) ? undefined : profile.app.signingConfigs?.find((c) => c.name === configName)?.material;
+  if (fs.existsSync(hvigorSigned)) hqf = hvigorSigned;
+  else if (signing) {
     const store = path.resolve(project.root, signing.storeFile);
     const sign = await run(toolCommand("signer", ["sign-app", "-mode", "localSign", "-keyAlias", signing.keyAlias, "-keyPwd", decryptPassword(signing.keyPassword, store),
       "-appCertFile", path.resolve(project.root, signing.certpath), "-profileFile", path.resolve(project.root, signing.profile), "-inFile", unsigned,
@@ -176,7 +180,7 @@ export async function applyHotReload(project: Project, module: string, signal: A
     const applied = await shell(baseline.target, ["bm", "quickfix", "-a", "-f", remoteFile, "-d"], signal, 120000);
     const text = applied.stdout + applied.stderr;
     invariant(/succe/i.test(text) && !/fail|error/i.test(text), "HOT_APPLY_FAILED", `bm quickfix failed: ${clip(text, 600)}`,
-      undefined, signing ? "The change may be unsupported by quick fix: redeploy with run action=build_run" : "Real devices require a signed HQF: configure signing (sign action=auto)");
+      undefined, hqf !== unsigned ? "The change may be unsupported by quick fix: redeploy with run action=build_run" : "Real devices require a signed HQF: configure signing (sign action=auto)");
   } finally {
     void shell(baseline.target, ["rm", "-rf", remote]).catch(() => {});
   }

@@ -23,13 +23,14 @@ const preflightStep = {
   when: (ctx: { input: BuildInput }) => ctx.input.preflight !== false,
   async run(ctx: { input: BuildInput; signal: AbortSignal; log(m: string): void }) {
     const { arktsCheck } = await import("./domains/code.js");
+    // Advisory only: the static checker is a fast approximation and can be wrong on real projects
+    // (unknown HDS containers, unusual formatting). hvigor is the compiler of record, so findings are
+    // reported alongside the build instead of blocking it.
     try {
       const result = await arktsCheck(ctx.input.project, undefined, ctx.signal);
-      invariant(result.errors === 0, "CHECK_FAILED", `ArkTS preflight found ${result.errors} error(s); build skipped`,
-        { issues: result.issues, hints: result.hints }, "Fix these errors (or pass preflight=false to let hvigor report them)");
-      return { errors: 0, warnings: result.warnings };
+      if (result.errors) ctx.log(`preflight: ${result.errors} possible error(s); building anyway (hvigor decides)`);
+      return { errors: result.errors, warnings: result.warnings, ...(result.errors ? { issues: result.issues.slice(0, 10), note: "Advisory static check; if the build succeeds these are false positives" } : {}) };
     } catch (error) {
-      if ((error as { code?: string }).code === "CHECK_FAILED" && (error as { details?: unknown }).details) throw error;
       ctx.log(`preflight unavailable: ${(error as Error).message}`);
       return { skipped: true };
     }
@@ -62,27 +63,40 @@ interface RunInput extends BuildInput {
   assert?: { visible?: Record<string, unknown>; hidden?: Record<string, unknown>; timeout_ms?: number };
 }
 
+/** Device first, then the modules that belong on it (phone vs watch entry), then build/install only those. */
 const runSteps = (build: boolean) => [
-  ...(build ? [preflightStep, {
-    ...buildStep,
-    async run(ctx: { input: RunInput; signal: AbortSignal; job_id: string }) {
-      const { inspectProject, buildProject } = await import("./domains/project.js");
-      const project = inspectProject(ctx.input.project, ctx.input.product);
-      if (!ctx.input.hot_reload) return buildStep.run(ctx);
-      // Hot-reload baseline: a normal debug build already emits the symbol map that patch compiles diff against.
-      const { hotBuildProps } = await import("./domains/hotreload.js");
-      return buildProject(project, { ...ctx.input, props: hotBuildProps() }, ctx.signal, ctx.job_id);
-    },
-  }] : []),
   {
     id: "target",
     async run(ctx: { input: RunInput; signal: AbortSignal }) {
-      const { resolveTarget, deviceInfo } = await import("./domains/device.js");
+      const { resolveTarget, deviceInfo, shell } = await import("./domains/device.js");
       const target = await resolveTarget(ctx.input.target, ctx.signal);
       const info = await deviceInfo(target, ctx.signal).catch(() => ({ target }));
-      return { ...info, target };
+      const deviceType = (await shell(target, ["param", "get", "const.product.devicetype"], ctx.signal, 10000).catch(() => undefined))?.stdout.trim();
+      return { ...info, target, device_type: deviceType && !/fail|error/i.test(deviceType) ? deviceType : undefined };
     },
   },
+  {
+    id: "select",
+    async run(ctx: { input: RunInput; outputs: Record<string, any> }) {
+      const { inspectProject, selectRunModules } = await import("./domains/project.js");
+      const project = inspectProject(ctx.input.project, ctx.input.product);
+      const explicit = ctx.input.modules?.length ? ctx.input.modules : ctx.input.module ? [ctx.input.module] : undefined;
+      const { modules, reason } = selectRunModules(project, { modules: explicit, deviceType: ctx.outputs.target.device_type });
+      return { modules: modules.map((m) => m.name), reason, device_type: ctx.outputs.target.device_type ?? null };
+    },
+  },
+  ...(build ? [preflightStep, {
+    ...buildStep,
+    async run(ctx: { input: RunInput; outputs: Record<string, any>; signal: AbortSignal; job_id: string }) {
+      const { inspectProject, buildProject } = await import("./domains/project.js");
+      const project = inspectProject(ctx.input.project, ctx.input.product);
+      // Build only the selected modules (hvigor pulls in their HAR/HSP dependencies itself).
+      const input = { ...ctx.input, modules: ctx.outputs.select.modules };
+      if (!ctx.input.hot_reload) return buildStep.run({ ...ctx, input });
+      const { hotBuildProps } = await import("./domains/hotreload.js");
+      return buildProject(project, { ...input, props: hotBuildProps() }, ctx.signal, ctx.job_id);
+    },
+  }] : []),
   {
     // `devecocli run --uninstall`: remove the installed app first (clean data / signature change).
     id: "uninstall",
@@ -103,13 +117,18 @@ const runSteps = (build: boolean) => [
       const { inspectProject, buildOutputs } = await import("./domains/project.js");
       const { install } = await import("./domains/device.js");
       const project = inspectProject(ctx.input.project, ctx.input.product);
-      const packages = ctx.outputs.build?.artifacts?.length
-        ? ctx.outputs.build.artifacts
-        : [...await buildOutputs(project, "assembleHap"), ...await buildOutputs(project, "assembleHsp").catch(() => [])];
-      invariant(packages.length, "NOT_FOUND", "No built packages found", undefined, "Use run action=build_run, or project action=build first");
-      const hsp = await buildOutputs(project, "assembleHsp").catch(() => []);
-      const paths = [...new Set([...packages.map((p: { path: string }) => p.path), ...hsp.map((p) => p.path)])];
-      return { ...(await install(ctx.outputs.target.target, paths, ctx.signal)), packages: paths.length };
+      // Only packages of the selected modules: never ship the watch HAP to a phone (or vice versa).
+      const selected = project.modules.filter((m) => (ctx.outputs.select.modules as string[]).includes(m.name));
+      const haps = ctx.outputs.build?.artifacts?.length
+        ? (ctx.outputs.build.artifacts as { path: string; module?: string }[]).filter((a) => !a.module || selected.some((m) => m.name === a.module))
+        : await buildOutputs(project, "assembleHap", selected.filter((m) => m.type !== "shared"));
+      invariant(haps.length, "NOT_FOUND", `No built package for ${selected.map((m) => m.name).join(", ")}`, undefined,
+        "Use run action=build_run, or project action=build modules=[...] first");
+      // HSPs are only needed when this app actually has shared modules; ship the ones built for this product.
+      const hsp = await buildOutputs(project, "assembleHsp", project.modules.filter((m) => m.type === "shared")).catch(() => []);
+      const paths = [...new Set([...haps.map((p: { path: string }) => p.path), ...hsp.map((p) => p.path)])];
+      const unsigned = paths.filter((p) => /-unsigned\.h[as]p$/.test(p));
+      return { ...(await install(ctx.outputs.target.target, paths, ctx.signal)), packages: paths.map((p) => p.split(/[\\/]/).pop()), ...(unsigned.length ? { unsigned: unsigned.length } : {}) };
     },
     // After a crash mid-install, the app being present with the expected bundle is good enough to continue.
     async reconcile(ctx: { input: RunInput; outputs: Record<string, any>; signal: AbortSignal }) {
@@ -127,7 +146,8 @@ const runSteps = (build: boolean) => [
       const { launchAndCheck } = await import("./domains/device.js");
       const project = inspectProject(ctx.input.project, ctx.input.product);
       invariant(project.bundleName, "PROJECT_INVALID", "bundleName missing");
-      const main = mainAbility(project, ctx.input.module);
+      const entry = (ctx.outputs.select?.modules as string[] | undefined)?.find((n) => project.modules.find((m) => m.name === n)?.type === "entry");
+      const main = mainAbility(project, ctx.input.module ?? entry);
       const result = await launchAndCheck(ctx.outputs.target.target, project.bundleName, ctx.input.ability ?? main.ability, main.module, ctx.signal);
       if (ctx.input.hot_reload) {
         const { recordBaseline } = await import("./domains/hotreload.js");
@@ -153,7 +173,7 @@ const runSteps = (build: boolean) => [
 ];
 
 const runSummary = (o: Record<string, any>) => ({
-  device: o.target?.target, build: o.build ? { artifacts: o.build.artifacts?.map((a: { path: string }) => a.path), elapsed_ms: o.build.elapsed_ms, warnings: o.build.warnings } : undefined,
+  device: o.target?.target, modules: o.select?.modules, module_selection: o.select?.reason, build: o.build ? { artifacts: o.build.artifacts?.map((a: { path: string }) => a.path), elapsed_ms: o.build.elapsed_ms, warnings: o.build.warnings } : undefined,
   installed: o.install, launch: o.launch, assert: o.assert ?? undefined,
 });
 defineJob<RunInput>({ kind: "build_run", steps: runSteps(true), summarize: runSummary });
@@ -186,7 +206,7 @@ defineJob<{ version?: string; source?: string; force?: boolean }>({
   summarize: (o) => o.update,
 });
 
-defineJob<{ project: string; product?: string; team?: string; acl?: string[] }>({
+defineJob<{ project: string; product?: string; team?: string; acl?: string[]; force?: boolean }>({
   kind: "auto_sign",
   steps: [{
     id: "sign",
@@ -196,7 +216,7 @@ defineJob<{ project: string; product?: string; team?: string; acl?: string[] }>(
       const { autoSign } = await import("./domains/sign.js");
       const project = inspectProject(ctx.input.project, ctx.input.product);
       invariant(project.bundleName, "PROJECT_INVALID", "bundleName missing");
-      return autoSign(ctx.input.project, { product: project.product, team: ctx.input.team, bundle: project.bundleName, acl: ctx.input.acl }, ctx.signal, ctx.log);
+      return autoSign(ctx.input.project, { product: project.product, team: ctx.input.team, bundle: project.bundleName, acl: ctx.input.acl, force: ctx.input.force }, ctx.signal, ctx.log);
     },
   }],
   summarize: (o) => o.sign,

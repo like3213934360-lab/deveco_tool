@@ -7,7 +7,7 @@ export const signTool = tool({
   name: "sign",
   title: "App signing",
   description: [
-    "auto: one-shot debug signing for real devices (needs auth provider=developer): creates keystore+CSR, debug certificate, registers connected devices, creates a debug profile and writes signingConfigs into build-profile.json5. Then run action=build_run works on real devices.",
+    "auto: one-shot debug signing for real devices — refuses (changes nothing) when the project already has signing, unless force=true; (needs auth provider=developer): creates keystore+CSR, debug certificate, registers connected devices, creates a debug profile and writes signingConfigs into build-profile.json5. Then run action=build_run works on real devices.",
     "sign/verify: sign a package locally (from project signingConfigs or explicit material) / verify a signed package.",
     "certificates, devices, register_device, delete_certificate: AppGallery Connect management.",
     "Itemized (team/release signing): keypair (out .p12, keystore_password) -> csr (keystore, out .csr) -> certificate_create (csr, name, type, out .cer) -> profile_create (bundle, id=certificate id, type, out .p7b) ; profile_delete (id).",
@@ -30,6 +30,7 @@ export const signTool = tool({
     cert: z.string().optional(), profile: z.string().optional(),
     id: z.string().optional(),
     acl: z.array(z.string()).optional().describe("auto: extra ACL permissions (the ones requested in module.json5 are derived automatically)"),
+    force: z.boolean().optional().describe("auto: replace signing the project already has (default: refuse and change nothing)"),
     wait: fields.wait,
   }),
   async handler(input, ctx) {
@@ -39,7 +40,7 @@ export const signTool = tool({
         invariant(input.project, "INVALID_INPUT", "project is required");
         await ensureJobs();
         const { startJob, waitJob } = await import("../core/jobs.js");
-        const { job_id } = await startJob("auto_sign", { project: input.project, product: input.product, team: input.team, acl: input.acl });
+        const { job_id } = await startJob("auto_sign", { project: input.project, product: input.product, team: input.team, acl: input.acl, force: input.force });
         return waitJob(job_id, input.wait ?? 20000);
       }
       case "sign":
@@ -179,7 +180,16 @@ export const hotReloadTool = tool({
     const { inspectProject } = await import("../domains/project.js");
     const { applyHotReload, resetHotReload } = await import("../domains/hotreload.js");
     const project = inspectProject(input.project, input.product);
-    const module = input.module ?? project.modules.find((m) => m.type === "entry")?.name ?? "entry";
+    // Default module = the entry that belongs on the target device (phone vs watch), like run.
+    let module = input.module;
+    if (!module) {
+      const { selectRunModules } = await import("../domains/project.js");
+      const { resolveTarget, shell } = await import("../domains/device.js");
+      const target = input.action === "stop_daemon" ? undefined : await resolveTarget(input.target, ctx.signal).catch(() => undefined);
+      const deviceType = target ? (await shell(target, ["param", "get", "const.product.devicetype"], ctx.signal, 10000).catch(() => undefined))?.stdout.trim() : undefined;
+      module = (() => { try { return selectRunModules(project, { deviceType }).modules.find((m) => m.type === "entry")?.name; } catch { return undefined; } })()
+        ?? project.modules.find((m) => m.type === "entry")?.name ?? "entry";
+    }
     if (input.action === "reset") return resetHotReload(project, module, input.target, ctx.signal);
     if (input.action === "stop_daemon") return (await import("../domains/hotreload.js")).stopDaemon(project, ctx.signal);
     const { mainAbility } = await import("../domains/project.js");

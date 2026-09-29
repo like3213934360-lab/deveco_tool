@@ -39,7 +39,7 @@ export const projectTool = tool({
     "info: read product/modules/SDK (instant).",
     "create: new app from the built-in template (does not overwrite).",
     "sync: ohpm install + hvigor sync (job).",
-    "build: ArkTS preflight + hvigor build (job); returns packages and structured compile errors with fix hints.",
+    "build: advisory ArkTS preflight + hvigor build (job); returns packages and structured compile errors with fix hints (hvigor decides; preflight findings never block).",
     "clean: hvigor clean.",
     "Build/sync return a job: if status is running, call job action=wait.",
   ].join(" "),
@@ -51,7 +51,7 @@ export const projectTool = tool({
     task: z.enum(["assembleHap", "assembleHar", "assembleHsp", "assembleApp", "compileNative"]).optional().describe("build: default assembleHap; compileNative compiles C/C++ only and writes .idea/.deveco/cxx/compile_commands.json for clangd"),
     mode: z.string().optional().describe("build: buildMode, default debug"),
     clean: z.boolean().optional().describe("build: clean first"),
-    preflight: z.boolean().optional().describe("build: run ArkTS static check first (default true; fails fast in ~2-6s)"),
+    preflight: z.boolean().optional().describe("build: run the advisory ArkTS static check first (default true; reported, never blocks)"),
     app_name: z.string().optional().describe("create: display name"),
     bundle_name: z.string().optional().describe("create: e.g. com.example.demo"),
     sdk_version: z.string().optional().describe("create: compile SDK platform version, default installed SDK"),
@@ -103,7 +103,7 @@ export const runTool = tool({
   name: "run",
   title: "Deploy and launch",
   description: [
-    "Put the app on a device.",
+    "Put the app on a device. Multi-device apps (e.g. phone + watch entry modules): only the modules whose module.json5 deviceTypes match the target device are built and installed (pass modules/module to choose explicitly). Project signing (build-profile or hvigorfile overrides) is used as-is.",
     "build_run: build + install + launch + startup check (crash detection) — the usual 'run it' action.",
     "deploy: install already-built packages (latest outputs) + launch.",
     "launch: start the installed app. stop: force-stop. uninstall: remove the app.",
@@ -136,7 +136,10 @@ export const runTool = tool({
     invariant(project.bundleName, "PROJECT_INVALID", "bundleName missing in AppScope/app.json5");
     if (input.action === "stop") { await device.forceStop(target, project.bundleName, ctx.signal); return { stopped: project.bundleName }; }
     if (input.action === "uninstall") return device.uninstall(target, project.bundleName, ctx.signal);
-    const main = mainAbility(project, input.module);
+    const { selectRunModules } = await import("../domains/project.js");
+    const deviceType = input.module ? undefined : (await device.shell(target, ["param", "get", "const.product.devicetype"], ctx.signal, 10000).catch(() => undefined))?.stdout.trim();
+    const entry = input.module ?? selectRunModules(project, { deviceType }).modules.find((m) => m.type === "entry")?.name;
+    const main = mainAbility(project, entry);
     return device.launchAndCheck(target, project.bundleName, input.ability ?? main.ability, main.module, ctx.signal);
   },
 });
