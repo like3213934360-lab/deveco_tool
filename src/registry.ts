@@ -9,7 +9,6 @@ export interface ImageResult {
 }
 export interface ToolDef<S extends z.ZodType = z.ZodType> {
   name: string;
-  group: "core" | "sign" | "emulator" | "hot_reload";
   title: string;
   description: string;
   schema: S;

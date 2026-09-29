@@ -1,5 +1,15 @@
 # Changelog / 更新日志
 
+## v1.0.1 (2026-09-29)
+
+**中文**
+- 取消“可选组”：`sign`、`emulator`、`hot_reload` 默认可用，15 个工具全部对宿主 AI 可见，不再需要 `DEVECO_TOOL_GROUPS`（该变量已移除）。
+- 启动时间和内存不变：这些工具的代码只在第一次调用时才加载；工具描述约增加 5 KB。
+
+**English**
+- Removed optional tool groups: `sign`, `emulator` and `hot_reload` are always enabled, so all 15 tools are visible to the host AI. `DEVECO_TOOL_GROUPS` is no longer needed and has been removed.
+- No startup or memory cost: their code still loads lazily on first call; the tool list grows by about 5 KB.
+
 ## v1.0.0 (2026-09-29)
 
 **中文** | [English](#english)

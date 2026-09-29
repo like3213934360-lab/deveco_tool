@@ -14,7 +14,7 @@ for (let i = 0; i < 5; i++) {
   samples.push(performance.now() - client.started);
   await client.close();
 }
-const client = connect({ ...env, DEVECO_TOOL_GROUPS: process.env.DEVECO_TOOL_GROUPS ?? "core" });
+const client = connect(env);
 await client.initialize();
 const t = performance.now();
 const list = await client.request("tools/list");

@@ -15,7 +15,7 @@ const bundle = "com.devecomcp.smoke";
 let client;
 
 before(async () => {
-  client = connect({ DEVECO_STATE_DIR: path.join(work, "state"), DEVECO_TOOL_GROUPS: "all" });
+  client = connect({ DEVECO_STATE_DIR: path.join(work, "state") });
   await client.initialize();
 });
 after(async () => {

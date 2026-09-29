@@ -5,7 +5,6 @@ import { ensureJobs } from "./core.js";
 
 export const signTool = tool({
   name: "sign",
-  group: "sign",
   title: "App signing",
   description: [
     "auto: one-shot debug signing for real devices (needs auth provider=developer): creates keystore+CSR, debug certificate, registers connected devices, creates a debug profile and writes signingConfigs into build-profile.json5. Then run action=build_run works on real devices.",
@@ -82,7 +81,6 @@ export const signTool = tool({
 
 export const emulatorTool = tool({
   name: "emulator",
-  group: "emulator",
   title: "Emulator",
   description: "HarmonyOS emulators. list, start (waits until booted; returns target), stop, create, delete, images, install_image, license (accept). scenario: shake, power, rotate, volume, fold, battery (level/charging), gps (latitude/longitude/...), sensor (light/steps/heartrate), outdoor_running/outdoor_cycling/driving_navigation — then verify app reaction with ui assert.",
   schema: z.object({
@@ -131,7 +129,6 @@ export const emulatorTool = tool({
 
 export const hotReloadTool = tool({
   name: "hot_reload",
-  group: "hot_reload",
   title: "Hot reload",
   description: "Apply ArkTS code changes to the running app without reinstalling (HQF quick fix, ~3s). First deploy with run action=build_run hot_reload=true; after editing .ets files call apply (the app keeps running; changed code takes effect on its next execution, e.g. the next click or page build). reset removes applied patches. Structural changes (new files, resources, decorators) need a normal redeploy.",
   schema: z.object({

@@ -148,7 +148,7 @@ export async function registerDevice(team: string, target: string, signal?: Abor
   return { registered: true, id: added.id, udid };
 }
 
-/* ------------------------- itemized material (optional group) ------------------------- */
+/* ------------------------------ itemized material ------------------------------ */
 
 /** New keystore (.p12) with an ECC P-256 key. */
 export async function generateKeypair(input: { out: string; password: string; alias?: string }, signal?: AbortSignal) {

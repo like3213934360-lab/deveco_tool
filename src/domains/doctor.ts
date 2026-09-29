@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { config, stateDir, toolGroups, version } from "../core/config.js";
+import { config, stateDir, version } from "../core/config.js";
 import { errorResult } from "../core/errors.js";
 import { sdkInfo, toolchain, type Component } from "../core/toolchain.js";
 
@@ -59,7 +59,7 @@ export async function doctor(options: { project?: string; target?: string; remot
   const auth = await Promise.all((["developer", "codegenie"] as const).map((p) => authStatus(p).catch(() => ({ provider: p, logged_in: false }))));
   checks.push({ name: "auth", ok: true, detail: auth, fix: auth.some((a) => !a.logged_in) ? "Optional: auth action=login provider=codegenie (cloud knowledge) / developer (signing)" : undefined });
   return {
-    server: { version, node: process.version, state_dir: stateDir(), groups: [...toolGroups()], config: process.env.DEVECO_CONFIG ?? null, retention_days: config().retention_days },
+    server: { version, node: process.version, state_dir: stateDir(), config: process.env.DEVECO_CONFIG ?? null, retention_days: config().retention_days },
     ok: checks.filter((c) => ["toolchain", "sdk"].includes(c.name)).every((c) => c.ok),
     checks,
   };

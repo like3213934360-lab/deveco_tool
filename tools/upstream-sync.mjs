@@ -1,6 +1,6 @@
 // Upstream capability alignment: deveco-code tool registry + deveco-cli commands vs this MCP.
 // Each upstream capability maps to { tool, action, params } and is verified against the live
-// tools/list JSON Schemas (all tool groups enabled):
+// tools/list JSON Schemas:
 //   full    - tool exists, action is in its enum, every key parameter exists in the schema
 //   partial - mapped but the tool/action/parameters are missing  -> CI fails
 //   host    - provided by the MCP host itself (file ops, shell, web, planning...)
@@ -90,8 +90,8 @@ const map = {
   "update-docs": T("knowledge", "update"), update: T("knowledge", "update"), docs: T("knowledge", "update"),
 };
 
-// Live schemas of this server with every tool group enabled.
-const client = connect({ DEVECO_TOOL_GROUPS: "core,sign,emulator,hot_reload" });
+// Live schemas of this server.
+const client = connect();
 await client.initialize();
 const tools = new Map((await client.request("tools/list")).result.tools.map((t) => [t.name, t.inputSchema]));
 const prompts = (await client.request("prompts/list")).result?.prompts ?? [];

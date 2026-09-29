@@ -15,7 +15,7 @@ test("handshake, tools/list and schema validation", async () => {
   assert.match(init.result.instructions, /HarmonyOS/);
   const list = await client.request("tools/list");
   const names = list.result.tools.map((t) => t.name);
-  assert.deepEqual(names, ["doctor", "project", "run", "job", "code", "device", "ui", "ui_flow", "diagnose", "knowledge", "skills", "auth"]);
+  assert.deepEqual(names, ["doctor", "project", "run", "job", "code", "device", "ui", "ui_flow", "diagnose", "knowledge", "skills", "auth", "sign", "emulator", "hot_reload"]);
   for (const tool of list.result.tools) assert.equal(tool.inputSchema.type, "object");
   const bad = await client.call("project", { action: "nope" });
   assert.equal(bad.isError, true);
@@ -25,15 +25,6 @@ test("handshake, tools/list and schema validation", async () => {
   assert.equal(unknown.result.isError, true);
   const ping = await client.request("ping");
   assert.deepEqual(ping.result, {});
-  await client.close();
-});
-
-test("optional tool groups", async () => {
-  const client = connect({ ...env, DEVECO_TOOL_GROUPS: "all" });
-  await client.initialize();
-  const list = await client.request("tools/list");
-  assert.equal(list.result.tools.length, 15);
-  assert.ok(list.result.tools.some((t) => t.name === "emulator"));
   await client.close();
 });
 

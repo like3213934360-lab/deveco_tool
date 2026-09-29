@@ -78,7 +78,7 @@ export async function install(target: string, packages: string[], signal: AbortS
 }
 
 const installHints: [RegExp, string][] = [
-  [/9568322|signature.*(verif|invalid)|no signature/i, "Package is unsigned or the signature does not match this device. Configure signing (sign tool, DEVECO_TOOL_GROUPS=sign) or use an emulator."],
+  [/9568322|signature.*(verif|invalid)|no signature/i, "Package is unsigned or the signature does not match this device. Configure signing (sign action=auto) or use an emulator."],
   [/9568332|version.*(downgrade|lower)/i, "Installed version is newer. Uninstall first (device action=uninstall) or increase versionCode."],
   [/9568289|incompatible|apiVersion|compatible/i, "Device API level is lower than compatibleSdkVersion. Lower compatible_api or use a newer device image."],
   [/9568305|dependent module does not exist|HSP/i, "A shared module (HSP) the app depends on is missing. Build and install it together (run action=deploy installs all packages)."],

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { toolGroups, version } from "./core/config.js";
+import { version } from "./core/config.js";
 import { errorResult, ToolError } from "./core/errors.js";
 import { McpServer } from "./mcp.js";
 import type { ToolDef } from "./registry.js";
@@ -27,8 +27,7 @@ function respond(value: unknown, isError = false) {
 }
 
 export async function serve() {
-  const groups = toolGroups();
-  const tools = allTools.filter((tool) => groups.has(tool.group));
+  const tools = allTools;
   const byName = new Map<string, ToolDef>(tools.map((tool) => [tool.name, tool]));
   let listed: unknown[] | undefined; // JSON Schemas are built on first tools/list, not at startup
 

@@ -34,11 +34,10 @@ export const hosts: Record<string, Host> = {
 export interface ServerSpec { command: string; args: string[]; env: Record<string, string> }
 
 /** How the host should launch this server: current node + this package's CLI. */
-export function defaultSpec(options: { config?: string; groups?: string } = {}): ServerSpec {
+export function defaultSpec(options: { config?: string } = {}): ServerSpec {
   const env: Record<string, string> = {};
   const config = options.config ?? process.env.DEVECO_CONFIG;
   if (config) env.DEVECO_CONFIG = path.resolve(config);
-  if (options.groups) env.DEVECO_TOOL_GROUPS = options.groups;
   // Prefer a stable node path: Homebrew's Cellar/<version> path breaks on upgrade, opt/node does not.
   const cellar = /^(.*)\/Cellar\/node(?:@\d+)?\/[^/]+\/bin\/node$/.exec(process.execPath);
   const stable = cellar && fs.existsSync(`${cellar[1]}/bin/node`) ? `${cellar[1]}/bin/node` : process.execPath;
@@ -86,7 +85,7 @@ export function mergeJsonConfig(data: Record<string, any>, format: Format, name:
   return { changed: true, exists };
 }
 
-export function installMcp(host: string, options: { scope?: "user" | "project"; project?: string; force?: boolean; config?: string; groups?: string } = {}) {
+export function installMcp(host: string, options: { scope?: "user" | "project"; project?: string; force?: boolean; config?: string } = {}) {
   const entry = hosts[host];
   invariant(entry, "INVALID_INPUT", `Unknown host ${host}`, { hosts: Object.keys(hosts) });
   const scope = options.scope ?? (options.project ? "project" : "user");

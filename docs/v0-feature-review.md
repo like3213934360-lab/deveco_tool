@@ -22,8 +22,8 @@
 | 操作前后进度证据（`ui-progress`：比较前后界面判断是否变化） | ✅ 宿主要自己截两次图对比，成本高、容易误判“点击没生效” | ✅ | ✅ 比较控件树摘要，不需要解码 JPEG | **加入**（改用控件树签名，不引入 jpeg-js） | `ui act verify_change=true` |
 | 崩溃时间窗补采（按时间窗读 faultlog、生产设备读取） | ✅ | ✅ | ✅ 现有 `faultlog` 通道加时间过滤 | **加入** | `diagnose crash since_minutes` |
 | 启动后白屏/黑屏判定（`startup-check`，上游 `run` 也有 `FAIL_BLANK`） | ✅ | ✅ 每次部署都会用 | ✅ 128px PNG + 内置解码，不依赖第三方库 | **已加入**（第一阶段审计时发现） | `run` 结果里的 `launch.smoke` |
-| 证书/Profile 逐项管理（`certificate_create`、`profile_create/delete`） | ✅ | △ 团队签名场景才用 | ✅ 复用 AGC 客户端 | **可选组** | `sign`（`DEVECO_TOOL_GROUPS=sign`） |
-| 单独生成密钥对和 CSR（`keypair`、`csr`） | △ 宿主可以直接调 hap-sign-tool，但参数多 | △ 发布签名才用 | ✅ 调用 SDK 自带的签名工具 | **可选组** | `sign action=keypair/csr` |
+| 证书/Profile 逐项管理（`certificate_create`、`profile_create/delete`） | ✅ | △ 团队签名场景才用 | ✅ 复用 AGC 客户端 | **加入** | `sign` |
+| 单独生成密钥对和 CSR（`keypair`、`csr`） | △ 宿主可以直接调 hap-sign-tool，但参数多 | △ 发布签名才用 | ✅ 调用 SDK 自带的签名工具 | **加入** | `sign action=keypair/csr` |
 | 签名配置写入（`configure`） | — | — | — | 已由 `sign auto` 覆盖 | — |
 | 应用路由与 URI 跳转（`routes`、`navigation`：解析 module.json5 skills，用 `aa start -U` 跳转） | △ 宿主能读 manifest，也能用 `device shell` 以外的方式启动 | △ 深链测试时才用 | ✅ | **暂不加入**，有需求时并入 `run launch uri=` | — |
 | 结构化 UI 日志流（`ui-log-stream`、`ui-test-continuous-log`） | — | — | — | 已由 `ui test_step` 按步骤截取日志覆盖 | `ui test_log` |
@@ -40,8 +40,8 @@
 
 ## 实施约束
 
-- 全部并入已有工具的 action 或参数，默认核心工具数仍为 12 个。
+- 全部并入已有工具的 action 或参数，不新增顶层工具（v1.0.1 起 15 个工具全部默认开启）。
 - 鼠标和组合键复用已有的 uitest agent 连接（`Driver.*` RPC）以及 `uiInput keyEvent`，不增加新进程。
 - `verify_change` 比较的是操作前后控件树摘要（类型、文本、位置）的哈希，并按页面稳定性等待，不解码截图。
 - 崩溃补采只在 `diagnose` 调用时执行，不做后台轮询。
-- 签名可选组只在 `DEVECO_TOOL_GROUPS` 包含 `sign` 时加载。
+- 签名相关代码只在第一次调用 `sign` 时加载。

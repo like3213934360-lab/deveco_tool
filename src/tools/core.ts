@@ -17,7 +17,6 @@ async function startAndWait(kind: string, input: unknown, key: string | undefine
 
 export const doctorTool = tool({
   name: "doctor",
-  group: "core",
   title: "Environment check",
   readOnly: true,
   description: "Check toolchain, SDK, devices, project, knowledge pack and logins in one call; every failed check includes a fix. Use first when anything environment-related fails.",
@@ -34,7 +33,6 @@ export const doctorTool = tool({
 
 export const projectTool = tool({
   name: "project",
-  group: "core",
   title: "Project create/sync/build",
   description: [
     "HarmonyOS project operations.",
@@ -103,7 +101,6 @@ export const selectorSchema = z.object({
 
 export const runTool = tool({
   name: "run",
-  group: "core",
   title: "Deploy and launch",
   description: [
     "Put the app on a device.",
@@ -144,7 +141,6 @@ export const runTool = tool({
 
 export const jobTool = tool({
   name: "job",
-  group: "core",
   title: "Long-running jobs",
   description: "Track jobs started by project/run/ui_flow. wait: block up to wait ms (default 20000) for completion. status/list/cancel. resume: continue an interrupted or needs_input job (force=true re-runs an uncertain step after you inspected it). read: page a log/report artifact by line, optionally filtered with grep.",
   schema: z.object({
@@ -185,7 +181,6 @@ export const jobTool = tool({
 
 export const codeTool = tool({
   name: "code",
-  group: "core",
   title: "Code intelligence & checks",
   readOnly: true,
   description: [
@@ -237,7 +232,6 @@ export const codeTool = tool({
 
 export const deviceTool = tool({
   name: "device",
-  group: "core",
   title: "Devices, logs, files",
   description: "HDC device access. list: connected devices. info: model/API/screen. log: recent hilog (filter by bundle, grep, level; clear=true clears). shell: read-only inspection commands (ls, cat, ps, param get, bm dump, hidumper...). sqlite: query an on-device database (db path + sql; JSON rows; read-only unless write=true). send/recv: transfer files.",
   schema: z.object({
@@ -281,7 +275,6 @@ export const deviceTool = tool({
 
 export const uiTool = tool({
   name: "ui",
-  group: "core",
   title: "Device UI",
   description: [
     "Observe and operate the device UI.",
@@ -461,7 +454,6 @@ async function screenSize(target: string, info: (t: string, s?: AbortSignal) => 
 
 export const uiFlowTool = tool({
   name: "ui_flow",
-  group: "core",
   title: "Record & replay UI flows",
   description: "Reusable UI paths stored in <project>/.arkpilot/flows. list; show; record (start recording, then use ui act with selectors); stop (save with a final assert proving the goal, or discard=true); replay (restart app, run steps, check the assert — job; repair=true promotes working alternates); delete.",
   schema: z.object({
@@ -513,7 +505,6 @@ export const uiFlowTool = tool({
 
 export const diagnoseTool = tool({
   name: "diagnose",
-  group: "core",
   title: "Crash & failure diagnosis",
   readOnly: true,
   description: "crash: read the latest jscrash/cppcrash/appfreeze report from the device (or analyze pasted log text), extract error type/message/code/app frames, and match the HarmonyOS fault-pattern library for likely causes and fixes. build: explain build/check diagnostics with fix hints.",
@@ -538,7 +529,6 @@ export const diagnoseTool = tool({
 
 export const knowledgeTool = tool({
   name: "knowledge",
-  group: "core",
   title: "HarmonyOS knowledge",
   readOnly: true,
   description: [
@@ -584,7 +574,6 @@ export const knowledgeTool = tool({
 
 export const skillsTool = tool({
   name: "skills",
-  group: "core",
   title: "HarmonyOS skills",
   readOnly: false,
   description: "Built-in HarmonyOS skills (ArkTS standards, error fixing, runtime debugging, project creation, tool usage). list/read; export: install them as native SKILL.md folders for your host (cursor, claude, codex, opencode...) so they load automatically. install_mcp: register this MCP server in a host's config (idempotent; force overwrites). init: export + install_mcp. search/install/uninstall: OpenHarmony skill market (matrix.openharmony.cn).",
@@ -621,7 +610,6 @@ export const skillsTool = tool({
 
 export const authTool = tool({
   name: "auth",
-  group: "core",
   title: "Huawei login",
   description: "Browser login to Huawei developer services. provider=codegenie: cloud knowledge search. provider=developer: signing (certificates, profiles, devices). login returns a URL (opened automatically); call status after finishing in the browser. teams lists developer teams. import migrates v0.x credentials from legacy_state_dir.",
   schema: z.object({

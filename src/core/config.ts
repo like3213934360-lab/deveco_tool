@@ -54,14 +54,3 @@ export function stateDir(): string {
   return dir;
 }
 
-/** Optional groups are fixed at connection start, keeping the default tool list small. */
-export function toolGroups(): Set<string> {
-  const raw = process.env.DEVECO_TOOL_GROUPS ?? "core";
-  return new Set(
-    raw
-      .split(/[,\s]+/)
-      .map((item) => item.trim())
-      .filter(Boolean)
-      .flatMap((item) => (item === "all" ? ["core", "sign", "emulator", "hot_reload"] : [item])),
-  );
-}

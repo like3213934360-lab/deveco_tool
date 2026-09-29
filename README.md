@@ -6,7 +6,7 @@
 
 - **完整覆盖上游。** 对照 [deveco-code](https://gitcode.com/openharmony-sig/deveco-code) 和 [deveco-cli](https://gitcode.com/openharmony-sig/deveco-cli) 做了能力级验收：上游共 81 项能力，60 项完整覆盖，3 项由命令行子命令提供，18 项由宿主 AI 自身提供，缺口为 0，见 `tools/upstream-sync.mjs`。在此之外，还提供可恢复的异步任务、UI 流程录制与回放、崩溃模式匹配、按符号名定位的 LSP 查询，以及可以独立于服务更新的知识包。
 - **轻量。** 运行时依赖只有 3 个，不用 LangGraph，也没有原生模块（数据库用 Node 自带的 `node:sqlite`）。单进程运行，空闲时不占 CPU。语言服务和代码检查器按需启动，空闲 10 分钟后自动关闭。
-- **为 AI 宿主设计。** 12 个核心工具按用途命名；返回结构化且长度有上限；每个错误都带 `code`、`category` 和修复提示 `hint`；耗时操作以任务形式异步执行。
+- **为 AI 宿主设计。** 15 个工具按用途命名，全部默认可用；返回结构化且长度有上限；每个错误都带 `code`、`category` 和修复提示 `hint`；耗时操作以任务形式异步执行。
 
 | 指标（M 系列 Mac，Node 24/26） | v1.0 | v0.4 |
 | --- | --- | --- |
@@ -45,8 +45,7 @@ node dist/cli.js init --host codex --project .      # 项目级配置（.codex/c
       "command": "node",
       "args": ["/absolute/path/to/deveco_tool/dist/cli.js", "mcp"],
       "env": {
-        "DEVECO_CONFIG": "/absolute/path/to/deveco-mcp.json",
-        "DEVECO_TOOL_GROUPS": "core"
+        "DEVECO_CONFIG": "/absolute/path/to/deveco-mcp.json"
       }
     }
   }
@@ -73,8 +72,6 @@ node dist/cli.js init --host codex --project .      # 项目级配置（.codex/c
 | `kb_package` | 知识包的 npm 包名 |
 | `npm_registry` | 更新知识包时使用的 npm 源 |
 
-`DEVECO_TOOL_GROUPS` 可选 `core`（默认）、`sign`、`emulator`、`hot_reload` 或 `all`。
-
 用 `node dist/cli.js doctor [project]` 或 `doctor` 工具检查环境。
 
 ## 工具
@@ -93,9 +90,9 @@ node dist/cli.js init --host codex --project .      # 项目级配置（.codex/c
 | `knowledge` | 离线文档、ArkTS 规则、错误案例和运行时问题模式：`search` / `read`（按 `section` 读取）/ `catalog` / `status` / `update` / `rollback`；`source=cloud` 在线查询 CodeGenie |
 | `skills` | 内置的鸿蒙 Skill：`list` / `read`；`export` 导出为宿主原生的 `SKILL.md`；`install_mcp` 把本服务写入宿主配置（cursor、claude、codex、opencode、trae-cn、codebuddy、qoder、pi；重复执行不会重复写入）；`init` 一次完成两者；`search` / `install` / `uninstall` 使用 OpenHarmony Skill 市场 |
 | `auth` | 华为账号浏览器登录：`codegenie`（云端知识）或 `developer`（签名），`region` 可选 cn / global；`teams`；`import` 导入 v0.x 的登录凭据 |
-| `sign` *（可选组）* | `auto`（一键为真机生成调试签名：密钥库、证书、设备注册、Profile，ACL 权限从 `module.json5` 自动推导，并写入工程的 `signingConfigs`）/ `sign` / `verify` / AppGallery Connect 证书和设备管理 / 逐项操作 `keypair`、`csr`、`certificate_create`、`profile_create`、`profile_delete` |
-| `emulator` *（可选组）* | `list` / `start`（等待启动完成）/ `stop` / `create` / `delete` / 镜像 / 许可协议 / `scenario`（电量、GPS、传感器、旋转、折叠等） |
-| `hot_reload` *（可选组）* | `apply` 把 ArkTS 改动以 HQF 快速修复包推送到运行中的应用，约 3 秒生效，应用不重启；`reset` 撤销改动 |
+| `sign` | `auto`（一键为真机生成调试签名：密钥库、证书、设备注册、Profile，ACL 权限从 `module.json5` 自动推导，并写入工程的 `signingConfigs`）/ `sign` / `verify` / AppGallery Connect 证书和设备管理 / 逐项操作 `keypair`、`csr`、`certificate_create`、`profile_create`、`profile_delete` |
+| `emulator` | `list` / `start`（等待启动完成）/ `stop` / `create` / `delete` / 镜像 / 许可协议 / `scenario`（电量、GPS、传感器、旋转、折叠等） |
+| `hot_reload` | `apply` 把 ArkTS 改动以 HQF 快速修复包推送到运行中的应用，约 3 秒生效，应用不重启；`reset` 撤销改动 |
 
 服务还提供 MCP **Resources**（`deveco://skills/<name>`）和 **Prompts**：`fix-build`、`debug-crash`、`implement-feature`（规格驱动：specify → plan → tasks → implement → verify）和 `upgrade-sdk`。
 
@@ -121,7 +118,7 @@ src/
   mcp.ts        最小化的 MCP stdio JSON-RPC（tools、resources、prompts、取消）
   server.ts     工具注册；JSON Schema 在第一次 tools/list 时才生成
   jobs.ts       任务定义（build、build_run、deploy、流程回放、知识包更新、自动签名）
-  tools/        12 个核心工具加 3 个可选组（zod schema；领域模块按需加载）
+  tools/        15 个工具（zod schema；领域模块在首次调用时才加载）
   domains/      project、device、ui、uitest、flows、code、diagnose、knowledge、kb-build、skills、hostconfig、auth、sign、emulator、hotreload、doctor、resources
   core/         config、toolchain、proc（按进程树结束）、db（node:sqlite WAL）、jobs、artifacts、sessions、lsp-client、errors、files
 knowledge/      规则、错误案例、运行时模式、Skill（知识包和 resources 的来源）
@@ -175,7 +172,7 @@ A lean MCP server for HarmonyOS development. It lets any MCP host (Cursor, Claud
 
 - **Covers upstream fully.** Every HarmonyOS tool in [deveco-code](https://gitcode.com/openharmony-sig/deveco-code) and every command in [deveco-cli](https://gitcode.com/openharmony-sig/deveco-cli) is verified at capability level in `tools/upstream-sync.mjs` (81 upstream capabilities: 60 full, 3 CLI, 18 host-provided, 0 gaps). It also adds asynchronous jobs with recovery, flow recording and replay, crash pattern matching, symbol-based LSP lookups, and knowledge packs that update independently of the server.
 - **Light.** 3 runtime dependencies. No LangGraph, no native modules (uses the built-in `node:sqlite`). A single process with zero idle CPU. Language servers and the checker start on demand and shut down after 10 idle minutes.
-- **Built for AI hosts.** 12 core tools named by intent. Responses are structured and bounded. Every error carries a `code`, a `category` and a fix `hint`. Long operations become jobs.
+- **Built for AI hosts.** 15 tools named by intent, all enabled by default. Responses are structured and bounded. Every error carries a `code`, a `category` and a fix `hint`. Long operations become jobs.
 
 | Metric (M-series Mac, Node 24/26) | v1.0 | v0.4 |
 | --- | --- | --- |
@@ -214,8 +211,7 @@ Or add it by hand:
       "command": "node",
       "args": ["/absolute/path/to/deveco_tool/dist/cli.js", "mcp"],
       "env": {
-        "DEVECO_CONFIG": "/absolute/path/to/deveco-mcp.json",
-        "DEVECO_TOOL_GROUPS": "core"
+        "DEVECO_CONFIG": "/absolute/path/to/deveco-mcp.json"
       }
     }
   }
@@ -242,8 +238,6 @@ Other config keys:
 | `kb_package` | npm package name of the knowledge pack |
 | `npm_registry` | Registry used for knowledge pack updates |
 
-`DEVECO_TOOL_GROUPS` accepts `core` (default), `sign`, `emulator`, `hot_reload`, or `all`.
-
 Check the setup with `node dist/cli.js doctor [project]`, or call the `doctor` tool.
 
 ### Tools
@@ -262,9 +256,9 @@ Check the setup with `node dist/cli.js doctor [project]`, or call the `doctor` t
 | `knowledge` | Offline docs, ArkTS rules, error cases and runtime patterns: `search` / `read` (by `section`) / `catalog` / `status` / `update` / `rollback`; `source=cloud` queries CodeGenie online |
 | `skills` | Built-in HarmonyOS skills: `list` / `read`, `export` as native `SKILL.md` for your host, `install_mcp` registers this server in the host config (cursor, claude, codex, opencode, trae-cn, codebuddy, qoder, pi; idempotent merge), `init` does both, `search` / `install` / `uninstall` from the OpenHarmony skill market |
 | `auth` | Huawei browser login for `codegenie` (cloud knowledge) or `developer` (signing), `region` cn / global; `teams`; `import` v0.x credentials |
-| `sign` *(group)* | `auto` (one-step debug signing for real devices: keystore, certificate, device registration, profile with ACL permissions derived from `module.json5`, and `signingConfigs` in the project) / `sign` / `verify` / AppGallery Connect certificates and devices / itemized `keypair`, `csr`, `certificate_create`, `profile_create`, `profile_delete` |
-| `emulator` *(group)* | `list` / `start` (waits for boot) / `stop` / `create` / `delete` / images / license / `scenario` (battery, GPS, sensors, rotation, fold, …) |
-| `hot_reload` *(group)* | `apply` pushes ArkTS changes to the running app as an HQF quick fix in about 3 s with no restart; `reset` removes them |
+| `sign` | `auto` (one-step debug signing for real devices: keystore, certificate, device registration, profile with ACL permissions derived from `module.json5`, and `signingConfigs` in the project) / `sign` / `verify` / AppGallery Connect certificates and devices / itemized `keypair`, `csr`, `certificate_create`, `profile_create`, `profile_delete` |
+| `emulator` | `list` / `start` (waits for boot) / `stop` / `create` / `delete` / images / license / `scenario` (battery, GPS, sensors, rotation, fold, …) |
+| `hot_reload` | `apply` pushes ArkTS changes to the running app as an HQF quick fix in about 3 s with no restart; `reset` removes them |
 
 The server also exposes MCP **Resources** (`deveco://skills/<name>`) and **Prompts**: `fix-build`, `debug-crash`, `implement-feature` (spec-driven: specify → plan → tasks → implement → verify), and `upgrade-sdk`.
 
@@ -290,7 +284,7 @@ src/
   mcp.ts        minimal MCP stdio JSON-RPC (tools, resources, prompts, cancellation)
   server.ts     tool registry wiring; JSON Schemas built lazily on first tools/list
   jobs.ts       job definitions (build, build_run, deploy, flow replay, kb update, auto sign)
-  tools/        12 core + 3 optional tools (zod schemas; domains are imported lazily)
+  tools/        15 tools (zod schemas; domain code is imported lazily on first call)
   domains/      project, device, ui, uitest, flows, code, diagnose, knowledge, kb-build, skills, hostconfig, auth, sign, emulator, hotreload, doctor, resources
   core/         config, toolchain, proc (process-tree kill), db (node:sqlite WAL), jobs, artifacts, sessions, lsp-client, errors, files
 knowledge/      rules, error cases, runtime patterns, skills (sources for knowledge packs and resources)
