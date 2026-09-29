@@ -149,8 +149,22 @@ async function boundedJson(value: unknown, jobId: string) {
   return JSON.stringify({ result_artifact: artifact.artifact_id, note: "Result too large; read it with job read" });
 }
 
-export async function jobStatus(id: string, detail = false) {
+/**
+ * A queued/running row that no live process owns belongs to a crashed server: mark it interrupted
+ * on first read (startup recovery runs later, off the handshake path, and may not have run yet).
+ */
+async function settleOrphan(id: string) {
   const current = await row(id);
+  if ((current.status === "queued" || current.status === "running") && !running.has(id)
+    && !(current.owner && current.owner !== process.pid && alive(current.owner))) {
+    (await database()).prepare("UPDATE jobs SET status='interrupted',updated=? WHERE id=? AND status IN ('queued','running')").run(Date.now(), id);
+    return row(id);
+  }
+  return current;
+}
+
+export async function jobStatus(id: string, detail = false) {
+  const current = await settleOrphan(id);
   const events = (await database())
     .prepare("SELECT at,message FROM events WHERE job_id=? ORDER BY id DESC LIMIT ?")
     .all(id, detail ? 50 : 5) as { at: number; message: string }[];
@@ -188,14 +202,14 @@ export async function cancelJob(id: string) {
     handle.controller.abort(new ToolError("CANCELLED", "Cancelled by request"));
     await handle.done;
   } else {
-    const current = await row(id);
+    const current = await settleOrphan(id);
     if (["queued", "interrupted", "needs_input"].includes(current.status)) await update(id, { status: "cancelled" });
   }
   return jobStatus(id);
 }
 
 export async function resumeJob(id: string, force = false) {
-  const current = await row(id);
+  const current = await settleOrphan(id);
   invariant(!running.has(id), "CONFLICT", "Job is already running");
   invariant(["interrupted", "needs_input", "failed"].includes(current.status), "INVALID_INPUT", `Job is ${current.status}; only interrupted, needs_input or failed jobs can resume`);
   if (force) (await database()).prepare("DELETE FROM effects WHERE job_id=? AND state='intent'").run(id);

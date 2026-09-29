@@ -35,6 +35,18 @@ extern "C" __attribute__((constructor)) void RegisterEntryModule(void) { napi_mo
   fs.writeFileSync(profile, JSON.stringify(data, null, 2));
 }
 
+/** Replace the home page with a page where every ui act gesture changes a visible label. */
+export function makeGesturePage(root) {
+  const page = path.join(root, "entry/src/main/ets/pages/Index.ets");
+  fs.copyFileSync(new URL("./gesture-page.ets", import.meta.url), page);
+}
+
+/** Add Shape.ets: an interface with one implementing class, for lsp implementation. */
+export function makeInterface(root) {
+  fs.writeFileSync(path.join(root, "entry/src/main/ets/pages/Shape.ets"),
+    "export interface Shape {\n  area(): number;\n}\n\nexport class Square implements Shape {\n  area(): number {\n    return 4;\n  }\n}\n");
+}
+
 /** Add Util.ets (leaf <- middle <- Index.build) to exercise call hierarchy. */
 export function makeCallChain(root) {
   fs.writeFileSync(path.join(root, "entry/src/main/ets/pages/Util.ets"),

@@ -59,6 +59,12 @@ export class SessionPool<T extends Closable> {
     } catch { /* already gone */ }
   }
 
+  /** Close `key` only if it still holds `value` (a stale instance must not close its replacement). */
+  async closeIf(key: string, value: T) {
+    const entry = this.entries.get(key);
+    if (entry && (await entry.value.catch(() => undefined)) === value) await this.close(key);
+  }
+
   async closeAll() {
     await Promise.all(this.keys().map((key) => this.close(key)));
   }

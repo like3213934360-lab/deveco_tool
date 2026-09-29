@@ -171,7 +171,7 @@ export async function marketInstall(name: string, host: string | undefined, scop
 export function uninstallSkill(name: string, host: string | undefined, scope: "user" | "project", project?: string, dir?: string) {
   invariant(/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(name), "INVALID_INPUT", "Invalid skill name");
   const target = path.join(skillsDir(host, scope, project, dir), name);
-  if (!fs.existsSync(target)) throw new ToolError("NOT_FOUND", `${name} is not installed for ${host}`);
+  if (!fs.existsSync(target)) throw new ToolError("NOT_FOUND", `${name} is not installed in ${path.dirname(target)}`);
   fs.rmSync(target, { recursive: true, force: true });
   return { removed: name, directory: target };
 }

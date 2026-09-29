@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { pathToFileURL, fileURLToPath } from "node:url";
 import { artifactPath, commitArtifact, saveArtifact } from "../core/artifacts.js";
-import { packageRoot } from "../core/config.js";
+import { packageRoot, stateDir } from "../core/config.js";
 import { invariant, ToolError } from "../core/errors.js";
 import { isFile, sha256, walk } from "../core/files.js";
 import { LspClient } from "../core/lsp-client.js";
@@ -61,6 +61,8 @@ function startChecker(): Promise<CheckerProcess> {
     });
     child.stderr?.resume();
     child.once("exit", () => {
+      // A dead daemon must leave the pool, or every later check would write into a closed pipe and wait forever.
+      void checkers.closeIf(tc.root, proc);
       for (const done of proc.pending.values()) done({ success: false, error: "ArkTS checker exited", errors: [], summary: { errorCount: 0, warnCount: 0 } });
       proc.pending.clear();
       if (!ready) reject(new ToolError("CHECK_FAILED", "ArkTS checker failed to start"));
@@ -74,14 +76,40 @@ export async function arktsCheck(projectRoot: string, files: string[] | undefine
   invariant(tc.components.etsLoader, "CAPABILITY_UNAVAILABLE", "SDK ets-loader not found; ArkTS check needs a full SDK");
   const root = path.resolve(projectRoot);
   const request = { project: root, files: (files ?? []).map((f) => path.resolve(root, f)), fix };
-  const result = await checkers.use(tc.root, startChecker, (proc) => new Promise<any>((resolve, reject) => {
+  let result = await checkOnce(tc.root, request, signal);
+  // The warm daemon died (killed along with a cancelled job, OOM): one retry on a fresh daemon.
+  if (result?.error === "ArkTS checker exited") result = await checkOnce(tc.root, request, signal);
+  invariant(!result?.error, "CHECK_FAILED", `ArkTS check could not run: ${result?.error}`);
+  return formatCheck(result, root, fix);
+}
+
+function checkOnce(key: string, request: { project: string; files: string[]; fix: boolean }, signal: AbortSignal): Promise<any> {
+  signal.throwIfAborted();
+  return checkers.use(key, startChecker, (proc) => new Promise<any>((resolve, reject) => {
+    // Pooled daemon died since the last use (killed with a cancelled job's process group, OOM...):
+    // report it as retryable instead of writing into a closed pipe and waiting forever.
+    if (proc.child.exitCode !== null || proc.child.signalCode !== null || !proc.child.stdin?.writable) {
+      void checkers.closeIf(key, proc);
+      return resolve({ error: "ArkTS checker exited" });
+    }
     const id = proc.nextId++;
-    const timer = setTimeout(() => { proc.pending.delete(id); reject(new ToolError("TIMEOUT", "ArkTS check timed out after 180s")); }, 180000);
-    signal.addEventListener("abort", () => { clearTimeout(timer); proc.pending.delete(id); reject(new ToolError("CANCELLED", "Cancelled")); }, { once: true });
+    // The daemon handles requests one at a time and cannot abort one midway: an abandoned request
+    // (cancelled job, timeout) would keep it busy and stall every later check. Drop the daemon
+    // instead; the next check starts a fresh one.
+    const abandon = (error: ToolError) => {
+      clearTimeout(timer);
+      if (!proc.pending.delete(id)) return;
+      void checkers.closeIf(key, proc);
+      reject(error);
+    };
+    const timer = setTimeout(() => abandon(new ToolError("TIMEOUT", "ArkTS check timed out after 180s")), 180000);
+    signal.addEventListener("abort", () => abandon(new ToolError("CANCELLED", "Cancelled")), { once: true });
     proc.pending.set(id, (value) => { clearTimeout(timer); resolve(value); });
     proc.child.stdin!.write(JSON.stringify({ id, ...request }) + "\n");
   }));
-  invariant(!result?.error, "CHECK_FAILED", `ArkTS check could not run: ${result?.error}`);
+}
+
+function formatCheck(result: any, root: string, fix: boolean) {
   const issues: CheckIssue[] = (result.errors ?? []).map((e: Record<string, unknown>) => ({
     // The checker reports paths relative to the project; make them relative to the project, never to our cwd.
     file: (() => { const f = String(e.file ?? e.filePath ?? ""); return path.relative(root, path.isAbsolute(f) ? f : path.join(root, f)); })(),
@@ -183,9 +211,15 @@ async function startLsp(root: string, language: "arkts" | "cpp"): Promise<LspSes
     ready: Promise.resolve(),
     close: () => client.close(),
   };
+  // A crashed server leaves the pool so the next request starts a fresh one instead of failing.
+  child.once("exit", () => void sessions.closeIf(`${root}|${language}`, session));
   client.onNotification("textDocument/publishDiagnostics", (params: { uri: string; diagnostics: any[] }) => {
     session.diagnostics.set(params.uri, { at: Date.now(), items: params.diagnostics });
   });
+  // ArkTS loads the project model asynchronously after initialize; answers before that are file-local only.
+  let modulesLoaded!: () => void;
+  const moduleInit = new Promise<void>((r) => { modulesLoaded = r; });
+  client.onNotification("aceProject/onModuleInitFinish", () => modulesLoaded());
   session.ready = (async () => {
     await client.request("initialize", {
       processId: process.pid,
@@ -203,9 +237,14 @@ async function startLsp(root: string, language: "arkts" | "cpp"): Promise<LspSes
         },
         workspace: { symbol: {}, configuration: true },
       },
-      initializationOptions: {},
+      // ArkTS: full project model (modules, SDK/HMS paths, resolved ohpm deps) so kits and @module imports resolve.
+      initializationOptions: language === "arkts"
+        ? (await import("./arktsModules.js")).arktsInitializationOptions(root, toolchain().sdk, stateDir(), component("arkts", toolchain()))
+        : {},
     }, 120000);
     client.notify("initialized", {});
+    // Bounded wait (large projects index for a while; results are still useful, just less complete).
+    if (language === "arkts") await Promise.race([moduleInit, new Promise((r) => setTimeout(r, 60000))]);
   })();
   await session.ready;
   return session;
@@ -251,15 +290,52 @@ export function locate(text: string, symbol: string | undefined, line?: number, 
     return { line: Math.max(0, line - 1), character: Math.max(0, (column ?? 1) - 1) };
   }
   const name = symbol.split(/[.#]/).pop()!;
+  // Search code only: comments and string/template contents are blanked (same length, so columns stay exact).
+  const code = maskNonCode(lines);
   const order = line === undefined
     ? lines.map((_, i) => i)
     : lines.map((_, i) => i).sort((a, b) => Math.abs(a - (line - 1)) - Math.abs(b - (line - 1)));
-  const pattern = new RegExp(`(^|[^A-Za-z0-9_$])(${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})(?![A-Za-z0-9_$])`);
+  const esc = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pattern = new RegExp(`(^|[^A-Za-z0-9_$])(${esc})(?![A-Za-z0-9_$])`);
+  // Without a line hint, prefer the declaration (function/class/struct/method/property), then any use.
+  const declaration = new RegExp(`(^\\s*(?:export\\s+)?(?:default\\s+)?(?:(?:async|static|private|public|protected|readonly|abstract|declare|override)\\s+)*(?:function\\*?\\s+|class\\s+|struct\\s+|interface\\s+|enum\\s+|type\\s+|namespace\\s+|const\\s+|let\\s+|var\\s+|@\\w+\\s+)?)(${esc})\\s*[(<:=]?`);
+  if (line === undefined) {
+    for (const i of order) {
+      const m = declaration.exec(code[i]!);
+      if (m && m[1]!.trim().length + m[2]!.length > 0 && code[i]!.slice(m.index + m[1]!.length + m[2]!.length).trimStart().match(/^[(<:={]|^$/)) return { line: i, character: m.index + m[1]!.length };
+    }
+  }
   for (const i of order) {
-    const match = pattern.exec(lines[i]!);
+    const match = pattern.exec(code[i]!);
     if (match) return { line: i, character: match.index + match[1]!.length };
   }
-  throw new ToolError("NOT_FOUND", `Symbol ${symbol} not found in file`, undefined, "Check spelling or pass line/column");
+  throw new ToolError("NOT_FOUND", `Symbol ${symbol} not found in code (comments and strings are ignored)`, undefined, "Check spelling or pass line/column");
+}
+
+/** Replace comment and string contents with spaces, keeping line lengths (tracks block comments/templates across lines). */
+export function maskNonCode(lines: string[]) {
+  let state: "code" | "block" | "template" = "code";
+  return lines.map((line) => {
+    let out = "";
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i]!, n = line[i + 1];
+      if (state === "block") { if (c === "*" && n === "/") { state = "code"; out += "  "; i++; } else out += " "; continue; }
+      if (state === "template") { if (c === "\\") { out += "  "; i++; } else if (c === "`") { state = "code"; out += "`"; } else out += " "; continue; }
+      if (c === "/" && n === "/") { out += " ".repeat(line.length - i); break; }
+      if (c === "/" && n === "*") { state = "block"; out += "  "; i++; continue; }
+      if (c === "`") { state = "template"; out += "`"; continue; }
+      if (c === "'" || c === '"') {
+        out += c;
+        let j = i + 1;
+        for (; j < line.length && line[j] !== c; j++) { if (line[j] === "\\") { out += " "; j++; } out += " "; }
+        if (j < line.length) out += c;
+        i = j;
+        continue;
+      }
+      out += c;
+    }
+    return out;
+  });
 }
 
 function snippet(file: string, line: number, context = 3) {
@@ -335,15 +411,25 @@ export async function lsp(input: {
       const out: Record<string, unknown>[] = [];
       for (const file of files.slice(0, 20)) {
         const { uri } = await sync(session, file);
-        const since = Date.now();
-        const deadline = since + 15000;
-        let entry = session.diagnostics.get(uri);
-        while ((!entry || entry.at < since - 50) && Date.now() < deadline) {
-          signal.throwIfAborted();
-          await new Promise((r) => setTimeout(r, 100));
-          entry = session.diagnostics.get(uri);
+        // Pull diagnostics first (what DevEco Studio / deveco-cli use for ArkTS: the ets-lint result
+        // with module resolution done by the server); push notifications are the fallback (clangd).
+        let items: any[] | undefined;
+        if (language === "arkts") {
+          const pulled = await session.client.request<any>("textDocument/diagnostic", { textDocument: { uri } }, 30000, signal).catch(() => undefined);
+          if (Array.isArray(pulled?.items)) items = pulled.items;
         }
-        for (const d of entry?.items ?? [])
+        if (!items) {
+          const since = Date.now();
+          const deadline = since + 15000;
+          let entry = session.diagnostics.get(uri);
+          while ((!entry || entry.at < since - 50) && Date.now() < deadline) {
+            signal.throwIfAborted();
+            await new Promise((r) => setTimeout(r, 100));
+            entry = session.diagnostics.get(uri);
+          }
+          items = entry?.items ?? [];
+        }
+        for (const d of items)
           out.push({ file: path.relative(root, file), line: d.range.start.line + 1, column: d.range.start.character + 1, severity: ["", "error", "warning", "info", "hint"][d.severity ?? 1], code: d.code, message: d.message });
       }
       const errors = out.filter((d) => d.severity === "error");

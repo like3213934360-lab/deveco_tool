@@ -96,3 +96,20 @@ test("artifacts page by line and filter with grep", async () => {
   assert.equal(errors.matched_lines, 10);
   assert.match(errors.content, /^1: line 0 ERROR/);
 });
+
+test("a job left running by a dead server reads as interrupted and resumes", async () => {
+  const db = await m.database();
+  let runs = 0;
+  m.defineJob({ kind: "t_orphan", steps: [{ id: "a", run: async () => ++runs }] });
+  // Owner pid 999999 does not exist: the server that ran it crashed.
+  db.prepare("INSERT INTO jobs(id,kind,status,input,created,updated,owner) VALUES('j_orphan','t_orphan','running','{}',0,0,999999)").run();
+  const seen = await m.jobStatus("j_orphan");
+  assert.equal(seen.status, "interrupted");
+  assert.equal(seen.next.action, "resume");
+  await m.resumeJob("j_orphan");
+  assert.equal((await m.waitJob("j_orphan", 3000)).status, "succeeded");
+  assert.equal(runs, 1);
+  // Cancel also works on an orphan.
+  db.prepare("INSERT INTO jobs(id,kind,status,input,created,updated,owner) VALUES('j_orphan2','t_orphan','queued','{}',0,0,999999)").run();
+  assert.equal((await m.cancelJob("j_orphan2")).status, "cancelled");
+});

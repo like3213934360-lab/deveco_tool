@@ -4,13 +4,14 @@ import os from "node:os";
 import path from "node:path";
 import JSON5 from "json5";
 import { invariant, ToolError } from "../core/errors.js";
-import { atomicWrite, readJson5 } from "../core/files.js";
+import { atomicWrite, clip, readJson5 } from "../core/files.js";
 import { run } from "../core/proc.js";
 import { toolchain, toolCommand } from "../core/toolchain.js";
 import { credentials } from "./auth.js";
 import { listTargets, shell } from "./device.js";
 
-const cloud = "https://connect-api.cloud.huawei.com";
+/** AppGallery Connect API; DEVECO_AGC_URL points tests at a local mock (never set in normal use). */
+const cloud = process.env.DEVECO_AGC_URL || "https://connect-api.cloud.huawei.com";
 
 /* ------------------------ Studio/Hvigor password material ------------------------ */
 // Layout and algorithm match DevEco Studio / deveco-cli KeyManager (MIT):
@@ -229,7 +230,13 @@ export function projectAclPermissions(modules: { root: string }[], definitionsFi
 async function signer(args: string[], signal?: AbortSignal) {
   const result = await run(toolCommand("signer", args), { signal, timeoutMs: 120000, allowFailure: true });
   const text = result.stdout + result.stderr;
-  invariant(result.code === 0 && !/\bERROR\b|FAILED|Exception/.test(text), "SIGN_FAILED", `hap-sign-tool ${args[0]} failed`, { output: text.slice(-1200).replace(/-(keystorePwd|keyPwd)\s+\S+/g, "-$1 ***") });
+  if (result.code !== 0 || /\bERROR\b|FAILED|Exception/.test(text)) {
+    // hap-sign-tool prints "ERROR - \nERROR: <code> <reason>"; surface the reason itself.
+    const reason = text.split("\n").map((l) => l.trim()).filter((l) => /^ERROR:|Error Message:|ERROR - \S/.test(l)).map((l) => l.replace(/^.*?ERROR\s*[-:]\s*/, "")).slice(0, 2).join("; ");
+    const pwd = /password|passwd|keystore.*(load|incorrect)|mac check/i.test(text);
+    throw new ToolError("SIGN_FAILED", `hap-sign-tool ${args[0]} failed${reason ? `: ${clip(reason, 300)}` : ""}`, { output: text.slice(-1200).replace(/-(keystorePwd|keyPwd)\s+\S+/g, "-$1 ***") },
+      pwd ? "Check keystore_password / key_password and key_alias" : undefined);
+  }
   return text;
 }
 
@@ -341,20 +348,47 @@ export async function signPackage(input: { file: string; out: string; project?: 
   return { signed: path.resolve(input.out), bytes: fs.statSync(input.out).size };
 }
 
+/** The JSON payload embedded in a signed profile (.p7b is DER; the content is plain JSON inside it). */
+export function profileSummary(p7b: Buffer) {
+  const text = p7b.toString("latin1");
+  const start = text.indexOf('{"version-name"') >= 0 ? text.indexOf('{"version-name"') : text.search(/\{"[\w-]+":[^{}]*"bundle-info"|\{\s*"version-code"/);
+  if (start < 0) return undefined;
+  // Brace-match from the start (strings may contain braces; track quotes and escapes).
+  let depth = 0, inString = false, end = -1;
+  for (let i = start; i < text.length; i++) {
+    const ch = text[i];
+    if (inString) { if (ch === "\\") i++; else if (ch === '"') inString = false; continue; }
+    if (ch === '"') inString = true;
+    else if (ch === "{") depth++;
+    else if (ch === "}" && --depth === 0) { end = i + 1; break; }
+  }
+  if (end < 0) return undefined;
+  try {
+    const p = JSON.parse(Buffer.from(text.slice(start, end), "latin1").toString("utf8"));
+    const date = (s?: number) => (s ? new Date(s * 1000).toISOString() : undefined);
+    return {
+      type: p.type, bundle: p["bundle-info"]?.["bundle-name"], developer: p["bundle-info"]?.["developer-id"],
+      app_distribution: p["app-distribution-type"], devices: p["debug-info"]?.["device-ids"]?.length,
+      valid_from: date(p.validity?.["not-before"]), expires: date(p.validity?.["not-after"]),
+      expired: p.validity?.["not-after"] ? p.validity["not-after"] * 1000 < Date.now() : undefined,
+      acl_permissions: p.acls?.["allowed-acls"],
+    };
+  } catch { return undefined; }
+}
+
 export async function verifyPackage(file: string, signal?: AbortSignal) {
+  const input = path.resolve(file);
+  invariant(fs.existsSync(input), "NOT_FOUND", `${input} does not exist`);
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-verify-"));
   try {
-    const output = await signer(["verify-app", "-inFile", path.resolve(file), "-outCertChain", path.join(dir, "chain.cer"), "-outProfile", path.join(dir, "profile.p7b")], signal);
-    const profileText = fs.existsSync(path.join(dir, "profile.p7b")) ? fs.readFileSync(path.join(dir, "profile.p7b"), "latin1") : "";
-    const json = /\{[\s\S]*"bundle-info"[\s\S]*\}/.exec(profileText)?.[0];
-    let summary: Record<string, unknown> | undefined;
-    if (json) {
-      try {
-        const p = JSON.parse(json);
-        summary = { type: p.type, bundle: p["bundle-info"]?.["bundle-name"], devices: p["debug-info"]?.["device-ids"]?.length, expires: p.validity?.["not-after"] ? new Date(p.validity["not-after"] * 1000).toISOString() : undefined };
-      } catch { /* keep raw */ }
-    }
-    return { verified: /verify.*success|success/i.test(output), profile: summary };
+    const result = await run(toolCommand("signer", ["verify-app", "-inFile", input, "-outCertChain", path.join(dir, "chain.cer"), "-outProfile", path.join(dir, "profile.p7b")]), { signal, timeoutMs: 120000, allowFailure: true });
+    const text = result.stdout + result.stderr;
+    const verified = result.code === 0 && /verify-app success/i.test(text) && !/\bERROR\b/.test(text);
+    // Not signed / tampered is an answer, not a tool failure.
+    if (!verified) return { verified: false, reason: text.split("\n").filter((l) => /ERROR/.test(l)).map((l) => l.replace(/^.*ERROR\s*-\s*/, "").trim()).filter(Boolean).slice(0, 3).join("; ") || clip(text, 300) };
+    const profileFile = path.join(dir, "profile.p7b");
+    const certs = fs.existsSync(path.join(dir, "chain.cer")) ? fs.readFileSync(path.join(dir, "chain.cer"), "utf8").match(/-----BEGIN CERTIFICATE-----/g)?.length : undefined;
+    return { verified: true, certificate_chain: certs, profile: fs.existsSync(profileFile) ? profileSummary(fs.readFileSync(profileFile)) : undefined };
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }

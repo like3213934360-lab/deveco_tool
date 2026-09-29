@@ -10,7 +10,9 @@ import { spawnIndependent } from "../core/proc.js";
 export type Provider = "developer" | "codegenie";
 export type Region = "cn" | "global";
 /** Login portals (upstream ApiEndpoints.CN_LOGIN_URL / LOGIN_URL). */
-export const regionBase: Record<Region, string> = { cn: "https://cn.devecostudio.huawei.com", global: "https://devecostudio.huawei.com" };
+export const regionBase: Record<Region, string> = process.env.DEVECO_LOGIN_URL
+  ? { cn: process.env.DEVECO_LOGIN_URL, global: process.env.DEVECO_LOGIN_URL } // tests: local mock portal
+  : { cn: "https://cn.devecostudio.huawei.com", global: "https://devecostudio.huawei.com" };
 /** Callback siteId -> country code sent to temptoken/check (upstream utils/region.ts). */
 export const siteCountry: Record<string, string> = { "1": "CN", "5": "SG", "7": "EU", "8": "RU" };
 /** Which callback sites a region accepts: cn only the China site, global the overseas sites. */
@@ -169,7 +171,7 @@ export async function logout(provider: Provider) {
 
 export async function teams(signal?: AbortSignal) {
   const auth = await credentials("developer", false, signal);
-  const response = await fetch("https://connect-api.cloud.huawei.com/api/ups/user-permission-service/v1/user-team-list", {
+  const response = await fetch(`${process.env.DEVECO_AGC_URL || "https://connect-api.cloud.huawei.com"}/api/ups/user-permission-service/v1/user-team-list`, {
     headers: { uid: auth.userId, oauth2Token: auth.access, source: "cli", lang: "zh_CN" }, signal: AbortSignal.timeout(20000),
   });
   const data = (await response.json()) as { ret?: { code: number; msg?: string }; teams?: { id: string | number; name: string; userType?: number }[] };

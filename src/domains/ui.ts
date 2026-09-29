@@ -442,8 +442,9 @@ export async function act(target: string, a: Action, signal?: AbortSignal) {
       await new Promise((resolve) => setTimeout(resolve, 250));
     }
   }
-  if (a.action === "input" && /[^\x20-\x7e]/.test(a.text)) {
-    // uitest inputText drops non-ASCII (Chinese) text; the hypium agent pastes it reliably.
+  if (a.action === "input" && /[^\x20-\x7e]|['"`]/.test(a.text)) {
+    // uitest inputText drops non-ASCII (Chinese) text, and typed quotes go through the IME's smart
+    // punctuation (' -> ‘’); the hypium agent pastes the exact text instead.
     const text = a.text, point = { x: a.x, y: a.y };
     await withAgent(target, signal, async (call, driver) => { await call("Driver.inputText", driver, [point, text, { paste: true }]); });
     return { performed: a.action, method: "uitest-agent-paste" };

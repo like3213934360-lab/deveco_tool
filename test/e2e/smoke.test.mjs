@@ -7,7 +7,7 @@ import os from "node:os";
 import path from "node:path";
 import { after, before, test } from "node:test";
 import { connect } from "../../tools/mcp-client.mjs";
-import { makeCallChain } from "./fixtures.mjs";
+import { makeCallChain, makeGesturePage, makeInterface } from "./fixtures.mjs";
 
 const target = process.env.E2E_TARGET;
 const work = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-e2e-"));
@@ -79,6 +79,40 @@ test("lsp call hierarchy (both directions) and declaration", async () => {
   const decl = await call("code", { action: "lsp", op: "declaration", project, file: "entry/src/main/ets/pages/Index.ets", symbol: "middle", line: 1 });
   assert.equal(decl.locations[0].file, util);
   assert.deepEqual((await call("code", { action: "lsp_restart", project, language: "arkts" })).restarted, ["arkts"]);
+});
+
+test("lsp implementation of an interface", async () => {
+  makeInterface(project);
+  const impl = await call("code", { action: "lsp", op: "implementation", project, file: "entry/src/main/ets/pages/Shape.ets", symbol: "Shape" });
+  assert.ok(impl.locations?.some((l) => l.file.endsWith("Shape.ets") && l.line >= 5), JSON.stringify(impl));
+});
+
+test("job status / list / read / cancel / resume", async () => {
+  const done = await waitJob(await call("project", { action: "build", project, wait: 60000 }));
+  assert.equal(done.status, "succeeded", JSON.stringify(done.error ?? done).slice(0, 2000));
+  const status = await call("job", { action: "status", job_id: done.job_id, detail: true });
+  assert.equal(status.status, "succeeded");
+  assert.ok(status.recent_events.length > 0);
+  const listed = await call("job", { action: "list", status: "succeeded", limit: 50 });
+  assert.ok(listed.jobs.some((j) => j.job_id === done.job_id));
+  // The build log is an artifact: page it and grep it.
+  const page = await call("job", { action: "read", artifact_id: done.result.log_artifact, limit: 20 });
+  assert.ok(page.total_lines > 0 && page.content.length > 0);
+  const grep = await call("job", { action: "read", artifact_id: done.result.log_artifact, grep: "BUILD SUCCESSFUL|Finished" });
+  assert.ok(grep.matched_lines >= 1, JSON.stringify(grep).slice(0, 500));
+  // Cancel a running clean build, then resume the cancelled... not allowed; a failed job can resume.
+  const running = await call("project", { action: "build", project, clean: true, wait: 0 });
+  const cancelled = await call("job", { action: "cancel", job_id: running.job_id });
+  assert.equal(cancelled.status, "cancelled", JSON.stringify(cancelled));
+  const refused = await client.call("job", { action: "resume", job_id: running.job_id });
+  assert.equal(refused.data.error.code, "INVALID_INPUT");
+  const missing = await client.call("job", { action: "status", job_id: "nope" });
+  assert.equal(missing.isError, true);
+});
+
+test("hot_reload stop_daemon", async () => {
+  const stopped = await call("hot_reload", { action: "stop_daemon", project });
+  assert.equal(stopped.stopped, true, JSON.stringify(stopped));
 });
 
 test("lsp hover and definition by symbol", async () => {
@@ -222,4 +256,53 @@ test("UI test session: steps, review, report, export", { skip: !target }, async 
   const exported = await call("ui", { action: "test_export", test_id: id, directory: dir });
   assert.ok(exported.files.includes("report.md") && fs.existsSync(path.join(dir, "test.json")));
   assert.ok((await call("ui", { action: "test_log", test_id: id, max_chars: 200 })).chars >= 0);
+});
+
+test("ui act: every gesture, text input and mouse operation has its effect", { skip: !target }, async () => {
+  makeGesturePage(project);
+  const deployed = await waitJob(await call("run", { action: "build_run", project, target, wait: 60000 }));
+  assert.equal(deployed.status, "succeeded", JSON.stringify(deployed.error ?? deployed).slice(0, 2000));
+  const node = async (id) => (await call("ui", { action: "find", target, selector: { id } })).matches[0];
+  const at = async (id) => { const m = await node(id); return { m, x: Math.round((m.bounds[0] + m.bounds[2]) / 2), y: Math.round((m.bounds[1] + m.bounds[3]) / 2) }; };
+  const expect = async (id, re, what) => { const m = await node(id); assert.match(m?.text ?? "", re, what); };
+  const act = (args) => call("ui", { action: "act", target, ...args });
+
+  let b = await at("TapBox");
+  await act({ op: "click", x: b.x, y: b.y }); await expect("TapBox", /taps:1/, "click");
+  b = await at("DoubleBox");
+  await act({ op: "double_click", x: b.x, y: b.y }); await expect("DoubleBox", /doubles:1/, "double_click");
+  b = await at("LongBox");
+  await act({ op: "long_click", x: b.x, y: b.y }); await expect("LongBox", /longs:1/, "long_click");
+  b = await at("SwipeBox");
+  await act({ op: "swipe", x: b.m.bounds[0] + 60, y: b.y, x2: b.m.bounds[2] - 60, y2: b.y }); await expect("SwipeBox", /swipe:right/, "swipe");
+  await act({ op: "fling", x: b.m.bounds[2] - 60, y: b.y, x2: b.m.bounds[0] + 60, y2: b.y, speed: 3000 }); await expect("SwipeBox", /swipe:left/, "fling");
+  b = await at("DragBox");
+  await act({ op: "drag", x: b.x, y: b.y, x2: b.x, y2: b.y + 300 }); await expect("DragBox", /dragged:1/, "drag");
+
+  b = await at("Field");
+  await act({ op: "input", x: b.x, y: b.y, text: `a b$c'd "q"` }); await expect("Echo", /^typed:a b\$c'd "q"$/, "input keeps spaces, $ and straight quotes");
+  await act({ op: "input", x: b.x, y: b.y, text: "你好 鸿蒙" }); await expect("Echo", /^typed:你好 鸿蒙$/, "input replaces, Chinese");
+  await act({ op: "type", text: " xyz" }); await expect("Echo", /^typed:你好 鸿蒙 xyz$/, "type into focused field");
+  await act({ op: "input", x: b.x, y: b.y, text: "!", append: true }); await expect("Echo", /^typed:你好 鸿蒙 xyz!$/, "input append");
+  await act({ op: "key", key: "back" }); // hide the soft keyboard
+  await new Promise((r) => setTimeout(r, 800));
+
+  b = await at("TapBox");
+  await act({ op: "mouse_click", x: b.x, y: b.y }); await expect("TapBox", /taps:2/, "mouse_click");
+  b = await at("DoubleBox");
+  await act({ op: "mouse_double_click", x: b.x, y: b.y }); await expect("DoubleBox", /doubles:2/, "mouse_double_click");
+  b = await at("LongBox");
+  await act({ op: "mouse_long_click", x: b.x, y: b.y }); await expect("LongBox", /longs:2/, "mouse_long_click");
+  b = await at("SwipeBox");
+  await act({ op: "mouse_drag", x: b.m.bounds[0] + 60, y: b.y, x2: b.m.bounds[2] - 60, y2: b.y }); await expect("SwipeBox", /swipe:right/, "mouse_drag");
+  const firstRow = async () => (await call("ui", { action: "tree", target, node: "Rows", interactive: false, limit: 40 })).tree.match(/"row \d+"/)?.[0];
+  const before = await firstRow();
+  const rows = await at("Rows");
+  await act({ op: "mouse_scroll", x: rows.x, y: rows.y, direction: "down", ticks: 5 });
+  assert.notEqual(await firstRow(), before, "mouse_scroll moves the list");
+  await act({ op: "mouse_move", x: rows.x, y: rows.y });
+  b = await at("TapBox");
+  assert.equal((await act({ op: "click", x: b.x, y: b.y, verify_change: true })).changed, true, "verify_change sees the label update");
+  const bad = await client.call("ui", { action: "act", target, op: "key", key: "not-a-key" });
+  assert.equal(bad.data.error.code, "INVALID_INPUT");
 });

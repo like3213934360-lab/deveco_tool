@@ -12,8 +12,36 @@ async function emulator(args: string[], signal?: AbortSignal, timeoutMs = 120000
   return (result.stdout + result.stderr).trim();
 }
 
-export async function listEmulators(signal?: AbortSignal, details = false) {
-  const text = await emulator(["-list", "-details"], signal, 30000).catch(() => emulator(["-list"], signal, 30000));
+/*
+ * The Emulator CLI exits 0 even when an operation fails ("Device delete fail.", "No images are
+ * available ..."), so success is decided from its output (same rule as deveco-cli runEmulatorChecked).
+ */
+const baseReject = /Invalid command|无效命令|please attach the correct parameter/i;
+export function emulatorFailure(op: string, output: string): { code: string; hint?: string } | undefined {
+  const notFound: Record<string, RegExp> = {
+    delete: /does not exist|not exist/i, stop: /not exists?\b/i, remove_image: /No images are available/i,
+  };
+  const rejects: Record<string, RegExp> = {
+    create: /Device create fail|already exists|Invalid OS version|cannot be empty|not (?:been )?downloaded|is not found|not exists/i,
+    delete: /Device delete fail/i,
+    stop: /\bfailed\b/i,
+    install_image: /incorrect|not possible|download(?:ing)? fail|install(?:ation)? fail/i,
+    remove_image: /fail/i,
+  };
+  if (notFound[op]?.test(output)) return { code: "NOT_FOUND", hint: op === "remove_image" ? "List downloaded images with emulator action=images" : "List emulators with emulator action=list" };
+  if (baseReject.test(output) || rejects[op]?.test(output)) return { code: "EMULATOR_FAILED" };
+  return undefined;
+}
+async function emulatorChecked(op: string, args: string[], signal?: AbortSignal, timeoutMs?: number) {
+  const out = await emulator(args, signal, timeoutMs);
+  const failure = emulatorFailure(op, out);
+  if (failure) throw new ToolError(failure.code, `Emulator ${op} failed: ${clip(out.split("\n").filter((l) => l.trim()).join(" "), 400)}`, { args: args.filter((a) => a !== "-force") }, failure.hint);
+  return out;
+}
+
+export async function listEmulators(signal?: AbortSignal, details = false, instancePath?: string) {
+  const where = instancePath ? ["-instancePath", instancePath] : [];
+  const text = await emulator(["-list", "-details", ...where], signal, 30000).catch(() => emulator(["-list", ...where], signal, 30000));
   if (details) { try { return JSON.parse(text) as Record<string, string>[]; } catch { /* plain list below */ } }
   const running = await runningNames(signal);
   const names = text.split(/\r?\n/).map((l) => l.trim()).filter((l) => l && !/^\[Empty\]$/.test(l));
@@ -121,8 +149,13 @@ export async function startEmulator(name: string, options: { cold?: boolean; win
   invariant(false, "TIMEOUT", `Emulator ${name} did not come online within 3 minutes`, undefined, "Check DevEco Studio Device Manager; accept the license with emulator action=license");
 }
 
-export async function stopEmulator(name: string, signal?: AbortSignal) {
-  return { stopped: name, output: clip(await emulator(["-stop", name], signal, 60000), 500) };
+export async function stopEmulator(name: string, signal?: AbortSignal, instancePath?: string) {
+  // Like deveco-cli: stopping an emulator that is not running is a no-op, not an error.
+  const known = await listEmulators(signal, false, instancePath).catch(() => undefined);
+  const entry = known?.find((e) => e.name === name);
+  if (known && !entry) throw new ToolError("NOT_FOUND", `Emulator ${name} not found`, { emulators: known.map((e) => e.name) });
+  if (entry && !entry.running) return { stopped: name, already_stopped: true };
+  return { stopped: name, output: clip(await emulatorChecked("stop", ["-stop", name], signal, 60000), 500) };
 }
 
 export interface CreateInput {
@@ -148,10 +181,12 @@ export function createArgs(input: CreateInput) {
 export async function createEmulator(input: CreateInput & { auto_accept_license?: boolean }, signal?: AbortSignal) {
   await ensureLicense(input.auto_accept_license ?? true, signal);
   const args = createArgs(input);
-  return { created: input.name, output: clip(await emulator(args, signal, 600000), 1000) };
+  return { created: input.name, output: clip(await emulatorChecked("create", args, signal, 600000), 1000) };
 }
 export async function deleteEmulator(name: string, signal?: AbortSignal, instancePath?: string) {
-  return { deleted: name, output: clip(await emulator(["-delete", name, ...(instancePath ? ["-instancePath", instancePath] : []), "-force"], signal), 500) };
+  // Deleting a running instance corrupts it; refuse like deveco-cli.
+  if ((await runningNames(signal)).has(name)) throw new ToolError("CONFLICT", `Emulator ${name} is running`, undefined, "Stop it first with emulator action=stop");
+  return { deleted: name, output: clip(await emulatorChecked("delete", ["-delete", name, ...(instancePath ? ["-instancePath", instancePath] : []), "-force"], signal), 500) };
 }
 /** Downloaded images by default (upstream `image list`); all=true lists every downloadable image. */
 export async function images(deviceType?: string, signal?: AbortSignal, all = false) {
@@ -161,10 +196,10 @@ export async function installImage(deviceType: string, osVersion: string, signal
   await ensureLicense(autoAcceptLicense, signal);
   // -force skips interactive prompts; re-download of an existing image additionally needs the image removed first.
   if (force) await removeImage(deviceType, osVersion, signal).catch(() => undefined);
-  return { output: clip(await emulator(["-install", "-deviceType", deviceType, "-osVersion", osVersion, "-force"], signal, 60 * 60000), 2000) };
+  return { installed: `${deviceType} ${osVersion}`, output: clip(await emulatorChecked("install_image", ["-install", "-deviceType", deviceType, "-osVersion", osVersion, "-force"], signal, 60 * 60000), 2000) };
 }
 export async function removeImage(deviceType: string, osVersion: string, signal?: AbortSignal) {
-  return { removed: `${deviceType} ${osVersion}`, output: clip(await emulator(["-uninstall", "-deviceType", deviceType, "-osVersion", osVersion, "-force"], signal, 300000), 1000) };
+  return { removed: `${deviceType} ${osVersion}`, output: clip(await emulatorChecked("remove_image", ["-uninstall", "-deviceType", deviceType, "-osVersion", osVersion, "-force"], signal, 300000), 1000) };
 }
 export async function acceptLicense(signal?: AbortSignal) {
   const out = await emulator(["-license", "accept"], signal);

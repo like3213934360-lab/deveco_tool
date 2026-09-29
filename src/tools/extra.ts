@@ -104,7 +104,7 @@ export const emulatorTool = tool({
     screen_profile: z.string().optional().describe('create: predefined screen model, e.g. "Mate 70 Pro"'),
     screen: z.array(z.string()).min(1).max(2).optional().describe('create: custom screen "width height dpi inches" (second entry = folded screen)'),
     hot_boot: z.boolean().optional().describe("create: enable quick boot"),
-    instance_path: z.string().optional().describe("create/delete/start: emulator instance directory"),
+    instance_path: z.string().optional().describe("list/create/delete/start/stop: emulator instance directory (default: the Emulator's own)"),
     image_root: z.string().optional().describe("create/start: image root directory"),
     force: z.boolean().optional().describe("create: overwrite existing; install_image: re-download"),
     auto_accept_license: z.boolean().optional().describe("start/create/install_image: accept the emulator license agreements automatically when needed (default true; the result says when it happened)"),
@@ -125,7 +125,7 @@ export const emulatorTool = tool({
     const many = () => { const list = input.names?.length ? input.names : [name()]; return list; };
     const need = (cond: unknown, what: string) => invariant(cond, "INVALID_INPUT", `${input.action} needs ${what}`);
     switch (input.action) {
-      case "list": return { emulators: await emu.listEmulators(ctx.signal, input.details) };
+      case "list": return { emulators: await emu.listEmulators(ctx.signal, input.details, input.instance_path) };
       case "start": {
         const results = [];
         for (const n of many()) results.push(await emu.startEmulator(n, { cold: input.cold, window: input.window, instance_path: input.instance_path, image_root: input.image_root, auto_accept_license: input.auto_accept_license }, ctx.signal));
@@ -133,7 +133,7 @@ export const emulatorTool = tool({
       }
       case "stop": {
         const results = [];
-        for (const n of many()) results.push(await emu.stopEmulator(n, ctx.signal));
+        for (const n of many()) results.push(await emu.stopEmulator(n, ctx.signal, input.instance_path));
         return results.length === 1 ? results[0] : { stopped: results };
       }
       case "create":

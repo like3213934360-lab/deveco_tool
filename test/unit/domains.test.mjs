@@ -14,12 +14,12 @@ fs.writeFileSync(entry, [
   `export { parseWindows, pngGray, blankScore } from ${JSON.stringify(path.join(root, "src/domains/ui.ts"))};`,
   `export { checklist } from ${JSON.stringify(path.join(root, "src/domains/uitest.ts"))};`,
   `export { mergeCodexToml, mergeJsonConfig } from ${JSON.stringify(path.join(root, "src/domains/hostconfig.ts"))};`,
-  `export { projectAclPermissions } from ${JSON.stringify(path.join(root, "src/domains/sign.ts"))};`,
+  `export { projectAclPermissions, profileSummary } from ${JSON.stringify(path.join(root, "src/domains/sign.ts"))};`,
   `export { siteAllowed, regionBase } from ${JSON.stringify(path.join(root, "src/domains/auth.ts"))};`,
   `export { apiOf, compatibility } from ${JSON.stringify(path.join(root, "src/domains/doctor.ts"))};`,
   `export { faultTime } from ${JSON.stringify(path.join(root, "src/domains/diagnose.ts"))};`,
   `export { chordCodes, treeSignature, subtree, deviceText } from ${JSON.stringify(path.join(root, "src/domains/ui.ts"))};`,
-  `export { createArgs, agreementsAccepted } from ${JSON.stringify(path.join(root, "src/domains/emulator.ts"))};`,
+  `export { createArgs, agreementsAccepted, emulatorFailure } from ${JSON.stringify(path.join(root, "src/domains/emulator.ts"))};`,
   `export { parseDuration } from ${JSON.stringify(path.join(root, "src/domains/device.ts"))};`,
   `export { findProjectRoot, selectRunModules } from ${JSON.stringify(path.join(root, "src/domains/project.ts"))};`,
   `export { readonlySqlAllowed } from ${JSON.stringify(path.join(root, "src/domains/device.ts"))};`,
@@ -201,4 +201,27 @@ test("run module selection follows the device type (phone vs watch entry)", () =
   assert.deepEqual(m.selectRunModules(project, { modules: ["watch"], deviceType: "wearable" }).modules.map((x) => x.name), ["watch"]);
   const single = { ...project, modules: [mod("phone", "entry", ["phone"])] };
   assert.equal(m.selectRunModules(single, {}).reason, "only runnable module");
+});
+
+test("emulator CLI failures are detected from output (it exits 0)", () => {
+  assert.equal(m.emulatorFailure("delete", "Device does not exist: x\n\nDevice delete fail.").code, "NOT_FOUND");
+  assert.equal(m.emulatorFailure("delete", "[WARNING] Force delete enabled. Removing device folder:x\n\nDevice delete success."), undefined);
+  assert.equal(m.emulatorFailure("stop", 'Stop emulator  "x"  failed, emulator is not exists.').code, "NOT_FOUND");
+  assert.equal(m.emulatorFailure("stop", "Stop emulator x successfully"), undefined);
+  assert.equal(m.emulatorFailure("create", "Device already exists. Please start it directly or use a different device name.\nDevice create fail.").code, "EMULATOR_FAILED");
+  assert.equal(m.emulatorFailure("create", "The hotBoot parameter is not set, the default startup mode is cold boot.\n\nDevice create success. You can use the '-start' command to start it."), undefined);
+  assert.equal(m.emulatorFailure("install_image", "The type or version entered is incorrect; download is not possible.").code, "EMULATOR_FAILED");
+  assert.equal(m.emulatorFailure("install_image", "image is downloaded successfully."), undefined);
+  assert.equal(m.emulatorFailure("remove_image", "No images are available in the local environment.").code, "NOT_FOUND");
+});
+
+test("signed profile summary is parsed from the p7b payload", () => {
+  const payload = JSON.stringify({ "version-name": "2.0.0", type: "debug", "bundle-info": { "bundle-name": "com.a.b", "developer-id": "d1", "development-certificate": "-----BEGIN CERTIFICATE-----\n{x}\n-----END" }, "debug-info": { "device-ids": ["u1", "u2"] }, validity: { "not-before": 1, "not-after": 4102444800 }, acls: { "allowed-acls": ["ohos.permission.X"] } });
+  const p7b = Buffer.concat([Buffer.from([0x30, 0x82, 0x10, 0x00]), Buffer.from(payload), Buffer.from([0xa0, 0x82, 0x7b, 0x7d])]);
+  const s = m.profileSummary(p7b);
+  assert.equal(s.bundle, "com.a.b");
+  assert.equal(s.devices, 2);
+  assert.equal(s.expired, false);
+  assert.deepEqual(s.acl_permissions, ["ohos.permission.X"]);
+  assert.equal(m.profileSummary(Buffer.from("not a profile")), undefined);
 });

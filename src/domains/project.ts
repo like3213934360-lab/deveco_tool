@@ -316,7 +316,11 @@ export async function buildProject(
   if (mode !== "release") args.push("-p", "debuggable=true");
   if (options.props) args.push(...options.props);
   args.push(...(options.clean ? ["clean", task] : [task]));
-  const result = await hvigor(project, args, signal, "Build", jobId);
+  // hvigor rewrites each module's BuildProfile.ets (build mode constants). When those files are
+  // committed, a build would show up as a source change: restore their exact bytes afterwards.
+  const profiles = project.modules.map((m) => path.join(m.root, "BuildProfile.ets")).filter((f) => isFile(f)).map((f) => [f, fs.readFileSync(f)] as const);
+  const restoreProfiles = () => { for (const [f, bytes] of profiles) { try { if (!fs.readFileSync(f).equals(bytes)) fs.writeFileSync(f, bytes); } catch { /* removed by clean */ } } };
+  const result = await hvigor(project, args, signal, "Build", jobId).finally(restoreProfiles);
   // Any build of a C/C++ module emits per-module compile_commands.json; keep the central one fresh for clangd.
   const compileCommands = hasNativeCode(project) ? mergeCompileCommands(project) : 0;
   if (task === "compileNative")
