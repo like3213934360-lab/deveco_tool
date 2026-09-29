@@ -15,7 +15,11 @@ export const packageRoot = (() => {
   }
   return path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 })();
-export const version = "1.0.0";
+/** Single source of truth: package.json (read once at startup). */
+export const version: string = (() => {
+  try { return (JSON.parse(fs.readFileSync(path.join(packageRoot, "package.json"), "utf8")) as { version: string }).version; }
+  catch { return "0.0.0-dev"; } // bundled outside the package (tests)
+})();
 
 const configSchema = z
   .object({
