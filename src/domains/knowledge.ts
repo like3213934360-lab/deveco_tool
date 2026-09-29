@@ -198,10 +198,11 @@ export async function search(query: string, options: { catalog?: Catalog | "all"
   return {
     query: trimmed, tokens, match: mode, pack: handle.pack.manifest.version, total: ranked.length,
     results: ranked.slice(offset, offset + limit).map((r) => ({
-      id: r.id, title: r.title, catalog: catalogs[r.catalog] ?? r.catalog, section: r.section || undefined, snippet: r.snippet.replace(/\s+/g, " ").slice(0, 300),
+      id: r.id, title: r.title, catalog: catalogs[r.catalog] ?? r.catalog, origin: r.catalog < 6 ? "official" : "rules", section: r.section || undefined, snippet: r.snippet.replace(/\s+/g, " ").slice(0, 300),
     })),
     next: ranked.length > offset + limit ? { offset: offset + limit } : null,
-    hint: ranked.length ? "Read a result with knowledge action=read id=<id>" : "No match: try fewer or English API terms, or source=cloud",
+    pack_built: handle.pack.manifest.created_at,
+    hint: ranked.length ? "Read a result with knowledge action=read id=<id>. For exact signatures and @since levels, the project SDK (code action=lsp op=hover) is authoritative." : "No match: try fewer or English API terms, or source=cloud",
   };
 }
 
@@ -436,5 +437,111 @@ export async function cloudSearch(query: string, signal: AbortSignal) {
   invariant(data?.code === 200 && typeof prompt === "string", "HTTP_ERROR", "Cloud knowledge returned no answer");
   const marker = "【检索信息】：";
   const content = prompt.includes(marker) ? prompt.slice(prompt.indexOf(marker) + marker.length) : prompt;
-  return { source: "cloud", content: content.slice(0, 16000), truncated: content.length > 16000 };
+  const localTitles = await officialTitleIndex().catch(() => undefined);
+  const labelled = labelCloudSources(content, localTitles, query);
+  const packed = packCloudSections(labelled.sections, 16000);
+  return {
+    source: "cloud",
+    authority: AUTHORITY,
+    // Official sections first; community sections are shortened. Every section is still listed here.
+    counts: { official: labelled.sources.filter((s) => s.origin === "official").length, community: labelled.sources.filter((s) => s.origin === "community").length },
+    sources: labelled.sources.slice(0, 40).map(({ why: _why, ...s }) => ({ ...s, title: s.title.slice(0, 80), shown: packed.shown.has(s.n) ? (packed.clipped.has(s.n) ? "excerpt" : "full") : "omitted" })),
+    content: packed.content,
+    truncated: packed.omitted > 0 || packed.clipped.size > 0,
+    ...(packed.omitted ? { hint: `${packed.omitted} lower-priority section(s) omitted; official ones with local_doc can be read in full with knowledge action=read id=<local_doc>` } : {}),
+  };
+}
+
+/**
+ * Fit labelled sections into `budget` characters: official sections first (in CodeGenie's order,
+ * each up to 4000 chars), then community sections (up to 800 chars each). CodeGenie returns
+ * dozens of sections; taking the first N characters used to show mostly blog posts.
+ */
+export function packCloudSections(sections: { n: number; origin: "official" | "community"; text: string; doc?: string }[], budget: number) {
+  const shown = new Set<number>(), clipped = new Set<number>();
+  const out: string[] = [];
+  let used = 0;
+  const ordered = [...sections.filter((s) => s.origin === "official"), ...sections.filter((s) => s.origin === "community")];
+  const seenDocs = new Set<string>();
+  // Room for a short excerpt of every official page before any gets its full share, and a few
+  // community excerpts (flagged, as leads only) after them.
+  const officialCount = ordered.filter((s) => s.origin === "official").length;
+  const officialCap = Math.max(1200, Math.min(3000, Math.floor((budget * 0.85) / Math.max(1, officialCount))));
+  for (const s of ordered) {
+    // CodeGenie often returns the same official page several times; show it once.
+    if (s.doc) { if (seenDocs.has(s.doc)) continue; seenDocs.add(s.doc); }
+    const cap = s.origin === "official" ? officialCap : 600;
+    const room = budget - used;
+    if (room < 300) break;
+    const max = Math.min(cap, room);
+    const text = s.text.length > max ? `${s.text.slice(0, max)}…\n` : s.text;
+    if (s.text.length > max) clipped.add(s.n);
+    shown.add(s.n);
+    out.push(text);
+    used += text.length;
+  }
+  return { content: out.join(""), shown, clipped, omitted: sections.length - shown.size };
+}
+
+/* ------------------------------ source authority ------------------------------ */
+
+/** Precedence when sources disagree (shown to agents with cloud answers and in tool docs). */
+export const AUTHORITY = "When sources disagree: 1) the project's SDK declarations (code action=lsp op=hover/definition) and a successful build win; "
+  + "2) official docs: local pack results and cloud sections marked official (prefer the one matching the project's API level; read the local copy via local_doc); "
+  + "3) cloud sections marked community are blog posts: never use them as the API contract, only as hints to verify.";
+
+/** Official doc titles of the local pack -> document ids (for recognising official cloud sections). */
+async function officialTitleIndex() {
+  const handle = await db();
+  const rows = handle.db.prepare("SELECT document_id, doc_title FROM documents WHERE catalog_id < 6").all() as { document_id: string; doc_title: string }[];
+  const index = new Map<string, string[]>();
+  for (const r of rows) {
+    const key = normTitle(r.doc_title);
+    const list = index.get(key);
+    if (list) list.push(r.document_id); else index.set(key, [r.document_id]);
+  }
+  return index;
+}
+const normTitle = (t: string) => t.replace(/\s+/g, "").toLowerCase();
+
+export interface CloudSource { n: number; title: string; origin: "official" | "community"; local_doc?: string; why: string }
+
+/**
+ * CodeGenie returns numbered sections "[n]网页标题：T|||网页时间：|||网页分类：|||网页内容：..." that mix Huawei's
+ * official docs with community blog posts, without saying which is which. Label each one:
+ * - official: the title is an official doc title in the local pack (also after dropping a "Kit/服务-" prefix),
+ *   or the text is an official doc page (starts with "# <title>") or a Huawei Codelab;
+ * - community: everything else (articles, tutorials, notes).
+ * Each section header in the text gets the label so the agent sees it inline.
+ */
+export function labelCloudSources(content: string, titles: Map<string, string[]> | undefined, query = "") {
+  const sources: CloudSource[] = [];
+  const sections: { n: number; origin: CloudSource["origin"]; text: string; doc?: string }[] = [];
+  const header = /^\[(\d+)\]网页标题：(.*?)\|\|\|网页时间：(.*?)\|\|\|网页分类：(.*?)\|\|\|网页内容：/;
+  const parts = content.split(/(?=^\[\d+\]网页标题：)/m);
+  const out = parts.map((part) => {
+    const m = header.exec(part);
+    if (!m) return part;
+    const [, n, rawTitle] = m;
+    const title = rawTitle!.trim();
+    const body = part.slice(m[0].length);
+    const candidates = [title, title.replace(/^[\w\s]*?(Kit|服务|Service)\s*[-－:：]?\s*/i, ""), title.replace(/^.*?[-－]/, "")];
+    let local: string[] | undefined;
+    for (const c of candidates) if (!local && c && titles?.has(normTitle(c))) local = titles.get(normTitle(c));
+    const page = new RegExp(`^\\s*#\\s*${title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*$`, "m").test(body.slice(0, 200));
+    const codelab = /Codelab/i.test(body.slice(0, 400));
+    const origin: CloudSource["origin"] = local || page || codelab ? "official" : "community";
+    const why = local ? "title matches an official doc in the local pack" : page ? "official doc page format" : codelab ? "Huawei Codelab" : "not an official doc title (article/tutorial)";
+    // Several official docs can share a title ("使用入门", "基于服务账号生成鉴权令牌"): pick the one whose
+    // path shares the most words with the query and the section title (e.g. "Push" -> Push_Kit_推送服务).
+    const terms = `${query} ${title}`.toLowerCase().split(/[^a-z0-9]+/).filter((t) => t.length > 2);
+    const score = (id: string) => terms.reduce((n, t) => n + (id.toLowerCase().includes(t) ? 1 : 0), 0);
+    const doc = local && (local.length === 1 ? local[0] : [...local].sort((x, y) => score(y) - score(x))[0]);
+    sources.push({ n: Number(n), title, origin, ...(doc ? { local_doc: doc } : {}), why });
+    const label = origin === "official" ? "官方文档/official" : "社区文章/community — 未核实，不能作为 API 依据";
+    const text = part.replace(header, `[${n}]【${label}】网页标题：${title}|||网页内容：`);
+    sections.push({ n: Number(n), origin, text, ...(doc ? { doc } : {}) });
+    return text;
+  });
+  return { sources, sections, content: out.join("") };
 }

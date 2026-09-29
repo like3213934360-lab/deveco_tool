@@ -9,6 +9,7 @@ const instructions = [
   "HarmonyOS/ArkTS development tools. Start with doctor when the environment is unknown.",
   "Always pass absolute project paths. Long operations (build, run, sync) return a job; use job action=wait rather than repeating the call.",
   "Before answering ArkTS/ArkUI/@kit API questions from memory, use knowledge search/read; for exact API signatures use code action=lsp op=hover/definition against the project SDK.",
+  "If sources disagree, trust in this order: project SDK declarations and a successful build > official docs (local pack, cloud sections marked official) > community articles (hints only, never the API contract).",
   "After editing .ets files run code action=check before building. Verify UI outcomes with ui assert, not screenshots alone. Never retry a job in needs_input without inspecting it.",
 ].join(" ");
 

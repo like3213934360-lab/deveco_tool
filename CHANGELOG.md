@@ -1,5 +1,25 @@
 # Changelog / 更新日志
 
+## v1.1.3 (2026-09-29)
+
+**中文**
+
+资料冲突时以谁为准，现在有明确规则，并由工具直接落实：
+- **取信顺序**：① 工程 SDK 的接口声明和编译结果 → ② 官方文档（本地知识库、云端结果中标为官方的段落）→ ③ 社区文章（只作线索，不能作为 API 依据）。这条规则写进了服务说明、`knowledge` 工具说明和 `deveco-mcp-workflow` 技能，所有宿主 AI 按同一规则判断。
+- **云端结果逐段标注来源**：CodeGenie 返回的几十段内容原本不区分官方和社区，现在每段都标成【官方文档】或【社区文章】；官方段落附带本地知识库对应文档的 `local_doc`，可读全文核对。返回内容官方优先，同一官方页面只出现一次，社区文章只保留短摘录。以 Push Kit 查询为例：原先前 16000 字里大多是博客，现在前面都是官方页面，其中包括 `pushService` 接口参考。
+- **本地结果标注 `origin`**：`official` 为官方文档，`rules` 为规则/案例库。
+- **修复：LSP 解析不了 HMS Kit**（`@kit.PushKit`、`@kit.UIDesignKit` 等）。启动语言服务时同时传了 `--sdkPath`，服务端会用它重建工程模型，并把 HMS 路径拼成 `sdk/default/default/hms`，导致这些 Kit 的悬停结果都是 `any`，诊断报"找不到模块"，恰好让"查 SDK 核实"这一步失效。现在 MCP 自己发送工程模型时不再传 `--sdkPath`（`serve-lsp` 不变）。修复后，`pushService.getToken` 的悬停能给出真实签名 `getToken(): Promise<string>` 和 `@since 4.0.0(10)`；LingDong 首页的误报诊断从 7 个降为 0。
+- **悬停结果更易读**：签名中的 `&lt;` 等 HTML 转义还原为 `<`；`@since`、`@deprecated`、`@syscap` 等版本信息不会再被长长的 `@throws` 列表挤掉。
+
+**English**
+
+When sources disagree, there is now one explicit rule, and the tools apply it:
+- **Precedence**: 1) the project's SDK declarations and a successful build; 2) official docs (the local pack, and cloud sections marked official); 3) community articles (leads only, never the API contract). The rule is in the server instructions, the `knowledge` tool description and the `deveco-mcp-workflow` skill, so every host agent judges the same way.
+- **Cloud answers labelled per section**: CodeGenie's dozens of sections did not say which were official and which were community posts. Each section is now marked official or community, and official ones carry `local_doc`, the id of the matching local doc to read in full. Official sections come first, each official page appears once, and community sections are shortened. On a Push Kit query, the first 16000 characters used to be mostly blog posts; they now start with official pages, including the `pushService` API reference.
+- **Local results carry `origin`**: `official` for docs, `rules` for the rule and case library.
+- **Fix: the LSP could not resolve HMS kits** (`@kit.PushKit`, `@kit.UIDesignKit`...). The ArkTS server was started with `--sdkPath` as well as the MCP's own project model, so it rebuilt the model and derived the HMS path as `sdk/default/default/hms`. Every HMS kit then hovered as `any` and was reported as "cannot find module", which broke exactly the step of checking the SDK. The MCP session no longer passes `--sdkPath` (`serve-lsp` is unchanged). Hover on `pushService.getToken` now returns the real signature `getToken(): Promise<string>` and `@since 4.0.0(10)`, and LingDong's home page went from 7 false diagnostics to 0.
+- **Readable hovers**: HTML entities in signatures such as `&lt;` are decoded to `<`, and `@since`, `@deprecated`, `@syscap` and similar tags are kept even after a long `@throws` list.
+
 ## v1.1.2 (2026-09-29)
 
 **中文**

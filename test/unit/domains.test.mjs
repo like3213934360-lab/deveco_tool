@@ -20,6 +20,7 @@ fs.writeFileSync(entry, [
   `export { faultTime } from ${JSON.stringify(path.join(root, "src/domains/diagnose.ts"))};`,
   `export { chordCodes, treeSignature, subtree, deviceText } from ${JSON.stringify(path.join(root, "src/domains/ui.ts"))};`,
   `export { createArgs, agreementsAccepted, emulatorFailure } from ${JSON.stringify(path.join(root, "src/domains/emulator.ts"))};`,
+  `export { labelCloudSources, packCloudSections, AUTHORITY } from ${JSON.stringify(path.join(root, "src/domains/knowledge.ts"))};`,
   `export { parseDuration } from ${JSON.stringify(path.join(root, "src/domains/device.ts"))};`,
   `export { findProjectRoot, selectRunModules } from ${JSON.stringify(path.join(root, "src/domains/project.ts"))};`,
   `export { readonlySqlAllowed } from ${JSON.stringify(path.join(root, "src/domains/device.ts"))};`,
@@ -247,4 +248,26 @@ test("ArkTS checker: braces in comments/strings and HMS containers are not error
   assert.deepEqual(rules(chk.validateEntryBuildRootNode, custom), []);
   const commented = write("F.ets", "@Entry\n@Component\nstruct F {\n  build() {\n    // Row() {\n    Column() {\n      Text('x')\n    }\n  }\n}\n");
   assert.deepEqual(rules(chk.validateEntryBuildRootNode, commented), []);
+});
+
+test("cloud answers: sections labelled official/community, official first, duplicates once", () => {
+  const titles = new Map([["获取pushtoken", ["开发指南/Push_Kit_推送服务/开发准备/获取Push_Token/push-get-token"]],
+    ["使用入门", ["开发指南/IAP_Kit_应用内支付服务/使用入门/iap-dev-guide", "开发指南/Push_Kit_推送服务/使用入门/push-gettingstart"]]]);
+  const sec = (n, title, body) => `[${n}]网页标题：${title}|||网页时间：|||网页分类：无|||网页内容：${body}\n`;
+  const content = sec(1, "Push Kit 从入门到精通：全指南", "一、引言：我在项目里踩了很多坑……".repeat(40))
+    + sec(2, "推送服务-获取Push Token", "官方步骤……")
+    + sec(3, "使用入门", "# 使用入门\n\n## 开发流程")
+    + sec(4, "获取Push Token", "同一官方页面的另一段")
+    + sec(5, "Navigation页面路由", "# Navigation页面路由\n\n正文")
+    + sec(6, "本篇Codelab", "### 介绍\n本篇Codelab介绍了……");
+  const r = m.labelCloudSources(content, titles, "Push Kit 使用入门");
+  assert.deepEqual(r.sources.map((s) => s.origin), ["community", "official", "official", "official", "official", "official"]);
+  assert.equal(r.sources[1].local_doc, "开发指南/Push_Kit_推送服务/开发准备/获取Push_Token/push-get-token"); // "推送服务-" prefix dropped
+  assert.equal(r.sources[2].local_doc, "开发指南/Push_Kit_推送服务/使用入门/push-gettingstart"); // shared title resolved by query
+  assert.match(r.content, /\[1\]【社区文章\/community/);
+  const packed = m.packCloudSections(r.sections, 3000);
+  assert.ok(packed.content.indexOf("[2]【官方") < packed.content.indexOf("[1]【社区"), "official sections come first");
+  assert.equal(packed.shown.has(4), false, "a second section of the same official page is not repeated");
+  assert.ok(packed.content.length <= 3100);
+  assert.match(m.AUTHORITY, /SDK declarations/);
 });

@@ -558,7 +558,8 @@ export const knowledgeTool = tool({
     "Offline HarmonyOS docs (guides, API reference, best practices, FAQ, release notes) plus ArkTS rules, compile-error cases and runtime crash patterns, from an updatable knowledge pack.",
     "search: full-text (Chinese or English; use API names, decorators, error codes). read: a document by id (section= for one heading).",
     "catalog/status: pack info. update: download the latest pack (check=true only checks). rollback: previous pack.",
-    "source=cloud: search Huawei's online CodeGenie knowledge (needs auth provider=codegenie).",
+    "source=cloud: search Huawei's online CodeGenie knowledge (needs auth provider=codegenie); its sections are labelled official or community.",
+    "Conflicting answers: the project's SDK declarations (code action=lsp op=hover) and a successful build win, then official docs (local pack / cloud sections marked official), and community articles never define the API.",
   ].join(" "),
   schema: z.object({
     action: z.enum(["search", "read", "catalog", "status", "update", "rollback"]),

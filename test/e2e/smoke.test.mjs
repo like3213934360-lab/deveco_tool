@@ -81,6 +81,20 @@ test("lsp call hierarchy (both directions) and declaration", async () => {
   assert.deepEqual((await call("code", { action: "lsp_restart", project, language: "arkts" })).restarted, ["arkts"]);
 });
 
+test("lsp resolves HMS kits against the SDK (signature + @since for source conflicts)", async () => {
+  const file = "entry/src/main/ets/pages/PushProbe.ets";
+  fs.writeFileSync(path.join(project, file), "import { pushService } from '@kit.PushKit';\n\nexport function probe(): void {\n  pushService.getToken();\n}\n");
+  try {
+    const hover = await call("code", { action: "lsp", op: "hover", project, file, symbol: "getToken", line: 4 });
+    assert.match(hover.hover ?? "", /getToken\(\): Promise<string>/, JSON.stringify(hover));
+    assert.match(hover.hover, /@since 4\.0\.0\(10\)/);
+    const diag = await call("code", { action: "lsp", op: "diagnostics", project, file });
+    assert.equal(diag.errors, 0, JSON.stringify(diag.diagnostics));
+  } finally {
+    fs.rmSync(path.join(project, file));
+  }
+});
+
 test("lsp implementation of an interface", async () => {
   makeInterface(project);
   const impl = await call("code", { action: "lsp", op: "implementation", project, file: "entry/src/main/ets/pages/Shape.ets", symbol: "Shape" });

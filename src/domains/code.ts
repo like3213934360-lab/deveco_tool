@@ -185,8 +185,15 @@ interface LspSession {
 }
 const sessions = pool<LspSession>(3);
 
-/** Command line of the SDK language server (shared by MCP sessions and `serve-lsp`). */
-export function lspCommand(project: string, language: "arkts" | "cpp") {
+/**
+ * Command line of the SDK language server (shared by MCP sessions and `serve-lsp`).
+ * withModel: the caller sends its own project model (initializationOptions.modules), as the MCP
+ * session does. Then --sdkPath must NOT be passed: with it the server rebuilds the model itself and
+ * derives the HMS path as <sdkPath>/default/hms from <sdk>/default, i.e. sdk/default/default/hms, so
+ * every HMS kit (@kit.PushKit, @kit.UIDesignKit...) failed to resolve and hovered as `any`.
+ * serve-lsp keeps --sdkPath because editors that do not send modules rely on the server's own model.
+ */
+export function lspCommand(project: string, language: "arkts" | "cpp", withModel = false) {
   const tc = toolchain();
   const root = path.resolve(project);
   if (language === "cpp") {
@@ -197,13 +204,13 @@ export function lspCommand(project: string, language: "arkts" | "cpp") {
   }
   return {
     file: component("node", tc),
-    args: ["--max-old-space-size=2048", component("arkts", tc), "--stdio", "--logger-level=ERROR", `--projectPath=${root}`, `--sdkPath=${tc.sdk}`],
+    args: ["--max-old-space-size=2048", component("arkts", tc), "--stdio", "--logger-level=ERROR", `--projectPath=${root}`, ...(withModel ? [] : [`--sdkPath=${tc.sdk}`])],
     cwd: root, env: { ...process.env, DEVECO_SDK_HOME: tc.sdk } as Record<string, string | undefined>,
   };
 }
 
 async function startLsp(root: string, language: "arkts" | "cpp"): Promise<LspSession> {
-  const cmd = lspCommand(root, language);
+  const cmd = lspCommand(root, language, true);
   const child = spawnManaged(cmd);
   const client = new LspClient(child);
   const session: LspSession = {
@@ -371,9 +378,17 @@ function hoverText(result: any): string {
   if (raw.startsWith("{") && raw.includes('"info"')) {
     try {
       const parsed = JSON.parse(raw) as { info?: { code?: { value?: string }; data?: { document?: string; tags?: string[] }[] }[] };
+      // The server HTML-escapes code (Promise&lt;string&gt;); agents need the literal signature.
+      const unescape = (s: string) => s.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, "&");
       return (parsed.info ?? []).map((i) => [
-        i.code?.value ? "```ts\n" + i.code.value + "\n```" : "",
-        ...(i.data ?? []).map((d) => [d.document, ...(d.tags ?? []).slice(0, 6)].filter(Boolean).join("\n")),
+        i.code?.value ? "```ts\n" + unescape(i.code.value) + "\n```" : "",
+        // Keep version/support tags even when a long @throws list precedes them.
+        ...(i.data ?? []).map((d) => {
+          const tags = d.tags ?? [];
+          const key = tags.filter((t) => /^@(since|deprecated|atomicservice|crossplatform|syscap|stagemodelonly|systemapi|permission)\b/.test(t));
+          const rest = tags.filter((t) => !key.includes(t)).slice(0, 6);
+          return [d.document, ...rest, ...key].filter(Boolean).join("\n");
+        }),
       ].filter(Boolean).join("\n")).join("\n\n").slice(0, 6000);
     } catch { /* fall through */ }
   }
