@@ -108,6 +108,9 @@ const waitLogin = async (provider) => {
   throw new Error("login did not finish");
 };
 
+// The fake hdc is a shell script; Windows only runs hdc.exe, so device-dependent parts are POSIX-only.
+const posix = process.platform !== "win32";
+
 // ------------------------------------ tests ------------------------------------
 test("browser login: forged callbacks are rejected, cancel and success are handled", async () => {
   const started = await call("auth", { action: "login", provider: "developer", open_browser: false });
@@ -144,7 +147,7 @@ test("teams and token refresh on 401", async () => {
   assert.equal(agc.refreshes, before + 1, "a 401 refreshes the token once and retries");
 });
 
-test("register_device is idempotent and maps the device type", async () => {
+test("register_device is idempotent and maps the device type", { skip: !posix && "fake hdc is a shell script" }, async () => {
   const first = await call("sign", { action: "register_device" });
   assert.equal(first.registered, true);
   assert.equal(first.udid, UDID);
@@ -159,6 +162,7 @@ test("itemized chain: certificate_create -> profile_create (debug/release) -> pr
   const dir = path.join(work, "material");
   fs.mkdirSync(dir);
   fs.writeFileSync(path.join(dir, "k.csr"), "-----BEGIN NEW CERTIFICATE REQUEST-----\nMOCK\n-----END NEW CERTIFICATE REQUEST-----\n");
+  if (!agc.devices.length) agc.devices.push({ id: "d1", udid: UDID, deviceName: "seeded", deviceType: "4" }); // Windows: register_device skipped
   const cert = await call("sign", { action: "certificate_create", csr: path.join(dir, "k.csr"), name: "mcp-test", out: path.join(dir, "k.cer") });
   assert.equal(cert.type, "debug");
   assert.equal(fs.readFileSync(cert.file, "utf8"), "CERT mcp-test");
@@ -183,11 +187,13 @@ test("itemized chain: certificate_create -> profile_create (debug/release) -> pr
 
 test("AGC rejections carry a code and an actionable hint; missing inputs are refused", async () => {
   agc.devices = [];
-  agc.deviceLimit = true;
-  const r = await client.call("sign", { action: "register_device" });
-  assert.equal(r.data.error.code, "SIGN_CLOUD_REJECTED");
-  assert.match(r.data.error.hint, /Device limit/);
-  agc.deviceLimit = false;
+  if (posix) {
+    agc.deviceLimit = true;
+    const r = await client.call("sign", { action: "register_device" });
+    assert.equal(r.data.error.code, "SIGN_CLOUD_REJECTED");
+    assert.match(r.data.error.hint, /Device limit/);
+    agc.deviceLimit = false;
+  }
   const noDevices = await client.call("sign", { action: "profile_create", id: "c1", bundle: "com.example.mock", out: path.join(work, "x.p7b") });
   assert.equal(noDevices.data.error.code, "DEVICE_UNAVAILABLE");
   for (const args of [{ action: "delete_certificate" }, { action: "profile_delete" }, { action: "certificate_create", name: "x" }]) {
