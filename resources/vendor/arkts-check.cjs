@@ -1057,6 +1057,56 @@ function countBraceDelta(line, state) {
   return delta;
 }
 
+// The '{' / '}' characters of a line that are code (same lexing as
+// countBraceDelta: strings, template literals and comments are skipped), in order.
+function codeBraces(line, state) {
+  const st = state || { quote: null, inBlockComment: false };
+  const out = [];
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (st.inBlockComment) {
+      if (ch === '*' && line[i + 1] === '/') { st.inBlockComment = false; i++; }
+      continue;
+    }
+    if (st.quote) {
+      if (ch === '\\') { i++; continue; }
+      if (ch === st.quote) st.quote = null;
+      continue;
+    }
+    if (ch === '/' && line[i + 1] === '*') { st.inBlockComment = true; i++; continue; }
+    if (ch === '/' && line[i + 1] === '/') break;
+    if (ch === '"' || ch === "'" || ch === '`') { st.quote = ch; continue; }
+    if (ch === '{' || ch === '}') out.push(ch);
+  }
+  if (st.quote === '"' || st.quote === "'") st.quote = null;
+  return out;
+}
+
+// The line with string/template contents and comments replaced by spaces (same
+// lexing and cross-line state as countBraceDelta); quotes themselves are kept.
+function maskNonCode(line, state) {
+  const st = state || { quote: null, inBlockComment: false };
+  let out = '';
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (st.inBlockComment) {
+      if (ch === '*' && line[i + 1] === '/') { st.inBlockComment = false; out += '  '; i++; } else out += ' ';
+      continue;
+    }
+    if (st.quote) {
+      if (ch === '\\') { out += '  '; i++; continue; }
+      if (ch === st.quote) { st.quote = null; out += ch; } else out += ' ';
+      continue;
+    }
+    if (ch === '/' && line[i + 1] === '*') { st.inBlockComment = true; out += '  '; i++; continue; }
+    if (ch === '/' && line[i + 1] === '/') { out += ' '.repeat(line.length - i); break; }
+    if (ch === '"' || ch === "'" || ch === '`') st.quote = ch;
+    out += ch;
+  }
+  if (st.quote === '"' || st.quote === "'") st.quote = null;
+  return out;
+}
+
 // End line (exclusive) of the struct body opening at `lines[lineIdx]`, found by
 // brace matching rather than by "wherever the next struct declaration starts".
 // The line-range approximation over-runs in two ways that both cause false
@@ -1242,11 +1292,14 @@ function validateRegularPropertyInit(files, projectPath) {
       // single-line `Child({ cb: () => {} })` form are covered.
       let depth = 0;
       let started = false;
+      const argLex = { quote: null, inBlockComment: false };
       for (let j = i; j < lines.length; j++) {
         // On the call's own line, skip past `Component(` so the component name is
         // not mistaken for a key; later lines are scanned whole.
         const offset = j === i ? call.index + call[0].length : 0;
-        const text = lines[j].slice(offset);
+        // Strings and comments blanked out: a '{' in `label: '{x}'` or in a
+        // trailing comment must neither open a nested literal nor look like a key.
+        const text = maskNonCode(lines[j].slice(offset), argLex);
 
         // The call regex already consumed the literal's opening `{`, so on the
         // call's own line we start INSIDE the object at depth 1.
@@ -1468,6 +1521,45 @@ function isBuiltinComponentName(name) {
   return CONTAINER_COMPONENTS.has(name) || BUILTIN_LEAF_COMPONENTS.has(name);
 }
 
+// hvigor's own container test reads ets-loader/components/*.json of BOTH SDK
+// parts: openharmony/ (built-ins) and hms/ (HarmonyOS kits such as HdsNavigation,
+// HdsTabs, loaded as external components via externalApiPaths). A component is a
+// container exactly when its descriptor is not `atomic`. The static sets above
+// only cover openharmony at one API level, which reported HMS containers like
+// `HdsNavigation` as non-containers. Read the installed SDK instead; fall back to
+// the static sets when no SDK descriptors can be found.
+let sdkComponentKinds = null;
+function loadSdkComponentKinds() {
+  if (sdkComponentKinds) return sdkComponentKinds;
+  const kinds = new Map(); // name -> 'container' | 'atomic'
+  const home = findDevecoHome();
+  const roots = home ? ['openharmony', 'hms'].flatMap((part) => [
+    path.join(home, 'sdk', 'default', part, 'ets', 'build-tools', 'ets-loader', 'components'),
+    path.join(home, 'sdk', part, 'ets', 'build-tools', 'ets-loader', 'components'),
+  ]) : [];
+  for (const dir of roots) {
+    let entries = [];
+    try { entries = fs.readdirSync(dir); } catch { continue; }
+    for (const f of entries) {
+      if (!f.endsWith('.json')) continue;
+      try {
+        const d = JSON.parse(fs.readFileSync(path.join(dir, f), 'utf-8'));
+        if (d && typeof d.name === 'string') kinds.set(d.name, d.atomic ? 'atomic' : 'container');
+      } catch { /* malformed descriptor: ignore */ }
+    }
+  }
+  sdkComponentKinds = kinds;
+  return kinds;
+}
+/** true / false when the SDK (or the static fallback) knows the component; undefined when unknown. */
+function isContainerComponent(name) {
+  const kinds = loadSdkComponentKinds();
+  if (kinds.has(name)) return kinds.get(name) === 'container';
+  if (CONTAINER_COMPONENTS.has(name)) return true;
+  if (BUILTIN_LEAF_COMPONENTS.has(name)) return false;
+  return undefined;
+}
+
 function validateStructNameCollisions(files, projectPath) {
   const diagnostics = [];
   for (const filePath of files) {
@@ -1521,16 +1613,15 @@ function validateEntryBuildRootNode(files, projectPath) {
       // depth 1 (its immediate children).
       let depth = 1;
       const roots = [];
+      const lex = { quote: null, inBlockComment: false };
       for (let i = buildLine + 1; i < bodyEnd && depth > 0; i++) {
         const trimmed = lines[i].trim();
-        if (depth === 1 && trimmed && !trimmed.startsWith('//') && !trimmed.startsWith('.') && !trimmed.startsWith('}')) {
+        const inText = lex.inBlockComment || lex.quote !== null;
+        if (depth === 1 && !inText && trimmed && !trimmed.startsWith('//') && !trimmed.startsWith('/*') && !trimmed.startsWith('*') && !trimmed.startsWith('.') && !trimmed.startsWith('}')) {
           const comp = /^([A-Z][\w$]*)\s*[({]/.exec(trimmed);
           if (comp) roots.push({ name: comp[1], line: i + 1 });
         }
-        for (const ch of lines[i]) {
-          if (ch === '{') depth++;
-          else if (ch === '}') depth--;
-        }
+        depth += countBraceDelta(lines[i], lex);
       }
 
       if (roots.length === 0) continue; // empty/unparsed build() — not ours to judge
@@ -1543,7 +1634,9 @@ function validateEntryBuildRootNode(files, projectPath) {
           rule: 'entry-build-root-node',
           message: `In an '@Entry' decorated component, the 'build' method can have only one root node, which must be a container component. Struct '${name}' has ${roots.length} root nodes (${roots.map((r) => r.name).join(', ')}); wrap them in a single container such as Column or Stack.`,
         });
-      } else if (!CONTAINER_COMPONENTS.has(roots[0].name)) {
+      } else if (isContainerComponent(roots[0].name) === false) {
+        // Only a component the SDK knows to be atomic is an error. An unknown name
+        // (a custom @Component, an external kit component) is not ours to judge.
         diagnostics.push({
           file: relFile,
           line: roots[0].line,
@@ -1622,10 +1715,16 @@ function validateBuilderBodyStatements(files, projectPath) {
     for (const body of collectBuilderBodies(lines)) {
       // 'ui' for the body's own scope; each nested brace pushes 'ui' or 'js'.
       const scopes = ['ui'];
+      // Quote/comment state threaded across lines: braces inside comments
+      // (`// Text() {`), strings and template literals must not open scopes.
+      // Counting them used to leave the scan "inside" the builder after it
+      // closed, so every method that followed was reported as builder code.
+      const lex = { quote: null, inBlockComment: false };
       for (let i = body.lineIdx + 1; i < lines.length && scopes.length > 0; i++) {
         const line = lines[i];
         const trimmed = line.trim();
-        if (scopes[scopes.length - 1] === 'ui' && !trimmed.startsWith('//')) {
+        const inText = lex.inBlockComment || lex.quote !== null;
+        if (scopes[scopes.length - 1] === 'ui' && !inText && !trimmed.startsWith('//') && !trimmed.startsWith('/*') && !trimmed.startsWith('*')) {
           const where = body.kind === 'build' ? 'build()' : '@Builder';
           const isDecl = BUILDER_LOCAL_DECL_RE.test(line);
           const isLoop = BUILDER_NON_UI_STATEMENT_RE.test(line);
@@ -1652,9 +1751,9 @@ function validateBuilderBodyStatements(files, projectPath) {
         // false positive on the handler rather than missing the item builder;
         // splitting it needs an expression-level parse, not a line scan.
         const js = /=>|(?:^|[^\w.$])function\b/.test(line) && !UI_ITEM_BUILDER_RE.test(line);
-        for (const ch of line) {
+        for (const ch of codeBraces(line, lex)) {
           if (ch === '{') scopes.push(js ? 'js' : scopes[scopes.length - 1]);
-          else if (ch === '}') scopes.pop();
+          else scopes.pop();
         }
       }
     }

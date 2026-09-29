@@ -1,7 +1,7 @@
 DevEco CLI (https://gitcode.com/openharmony-sig/deveco-cli), MIT License.
 
 Reused or adapted in deveco-mcp:
-- resources/vendor/arkts-check.cjs: vendored unchanged from packages/cli/src/resources/arkts-check.cjs
+- resources/vendor/arkts-check.cjs: vendored from packages/cli/src/resources/arkts-check.cjs, with false-positive fixes (comment/string-aware brace scanning in the builder-body, entry-root and call-site rules; container list read from the installed SDK incl. HMS components)
   (commit 8f69118d993ba363621c00d8fe6762c36f6062d5); run as the warm ArkTS static-check daemon.
 - src/domains/sign.ts: Studio/Hvigor signing-material password format and AppGallery Connect
   auto-signing flow (certificate, device, debug profile endpoints) follow packages/cli/src/signature.

@@ -1,5 +1,31 @@
 # Changelog / 更新日志
 
+## v1.1.2 (2026-09-29)
+
+**中文**
+
+每个工具的每个动作都做了实测（单元测试 44 项、模拟器端到端测试 19 项、LingDong 真机 62 项全部通过），并修复了测试中发现的问题：
+- **代码静态检查的误报**（上游 `deveco-cli` 自带的 `arkts-check.cjs` 同样存在）：注释或字符串里的 `{`、`}` 被当成代码，导致 `@Builder` 之后的普通方法都被判为"界面代码里不能声明变量/写循环"；容器组件名单是写死的，不认识 `HdsNavigation` 等 HMS 组件。现在括号扫描会跳过注释和字符串，容器判断改为读取本机 SDK（OpenHarmony + HMS）的组件描述，与编译器一致；SDK 不认识的组件不再报错。LingDong 全项目检查由 119 个误报降为 0；8 个用例（4 个真错误 + 4 个易误报的合法写法）的结论与编译器完全一致。
+- **构建成功时明确告诉 AI 预检报错是误报**：构建结果中的 `preflight` 会写明"编译器已接受这些代码，不要为此修改"，避免 AI 去改能正常编译的代码。
+- **模拟器操作失败被当成成功**：Emulator 命令失败时也返回成功，现在按输出判断；运行中的模拟器拒绝删除；`list`/`stop` 支持 `instance_path`。
+- **取消构建后代码检查一直卡住**：检查进程或语言服务退出后会自动换新进程，不再卡住。
+- **MCP 服务崩溃后任务无法继续**：被中断的任务会显示为"已中断"，可以继续执行或取消。
+- **输入框中的英文引号被改成中文弯引号**：现在原样输入。
+- **签名校验**：未签名的包返回 `verified=false` 和原因，不再报工具错误；校验通过时给出 profile 摘要（包名、设备数、到期时间、ACL 权限）。签名密码错误时直接说明原因。
+- **测试**：新增云端签名和登录的模拟服务测试、覆盖所有 UI 操作的手势测试页；真机冒烟测试只使用 LingDong。
+
+**English**
+
+Every action of every tool is now exercised by tests (44 unit, 19 emulator end-to-end and 62 real-device checks on LingDong, all passing). Fixes for the problems the tests found:
+- **False positives in the ArkTS static check** (also present in upstream `deveco-cli`'s `arkts-check.cjs`): braces inside comments and strings were counted as code, so every method after a `@Builder` was reported as builder code; the container list was hard-coded and missed HMS components such as `HdsNavigation`. Brace scanning now skips comments and strings, and container detection reads the installed SDK's component descriptors (OpenHarmony and HMS), as the compiler does. Components the SDK does not know are no longer reported. LingDong's whole-project check went from 119 false errors to 0, and the verdict on 8 cases (4 real errors and 4 valid but easily misjudged patterns) now matches the compiler on all of them.
+- **A successful build tells the agent that preflight errors were false positives**: the build result's `preflight` says the compiler accepted the code and that nothing should be changed for it.
+- **Failed emulator operations were reported as successes**: the Emulator CLI exits 0 on failure, so failure is now detected from its output. Deleting a running emulator is refused, and `list`/`stop` accept `instance_path`.
+- **Code checks hung after a cancelled build**: a checker or language server whose process died is replaced automatically.
+- **Jobs could not continue after an MCP server crash**: interrupted jobs now show as interrupted and can be resumed or cancelled.
+- **Straight quotes in text input became curly quotes**: text is now entered exactly as given.
+- **Signature verification**: unsigned packages return `verified=false` with a reason instead of a tool error; verified packages include a profile summary (bundle, device count, expiry, ACL permissions). A wrong keystore password is now reported as such.
+- **Tests**: mock-service tests for cloud signing and login, and a gesture page covering every UI action. The real-device smoke test uses LingDong only.
+
 ## v1.1.1 (2026-09-29)
 
 **中文**

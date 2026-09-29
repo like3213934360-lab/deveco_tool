@@ -190,7 +190,7 @@ export const codeTool = tool({
   readOnly: true,
   description: [
     "ArkTS/C++ code checks and language server queries against the project's SDK.",
-    "check: fast ArkTS static check (files, or whole project) with error-fix hints — run after editing .ets files, before building. fix=true applies upstream safe auto-fixes.",
+    "check: fast ArkTS static check (files, or whole project) with error-fix hints — run after editing .ets files, before building. fix=true applies upstream safe auto-fixes. The compiler is the final judge: if project build succeeds, code it flagged is valid — do not rewrite it.",
     "lint: Code Linter report. api_scan: API compatibility between SDK versions.",
     "lsp: hover (types/signatures), definition, implementation, references, symbols, workspace_symbols, diagnostics (multiple files), completion (available members), signature.",
     "Locate positions with symbol (plus optional line hint) instead of exact columns.",

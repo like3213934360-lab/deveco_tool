@@ -225,3 +225,26 @@ test("signed profile summary is parsed from the p7b payload", () => {
   assert.deepEqual(s.acl_permissions, ["ohos.permission.X"]);
   assert.equal(m.profileSummary(Buffer.from("not a profile")), undefined);
 });
+
+test("ArkTS checker: braces in comments/strings and HMS containers are not errors", async () => {
+  const { createRequire } = await import("node:module");
+  const chk = createRequire(import.meta.url)(path.join(root, "resources/vendor/arkts-check.cjs"));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "chk-"));
+  const write = (name, text) => { const f = path.join(dir, name); fs.writeFileSync(f, text); return f; };
+  const rules = (fn, f) => fn([f], dir).map((d) => d.rule);
+  // A commented-out `Text() {` used to keep the scan "inside" the builder: every later method was flagged.
+  const comment = write("A.ets", "@Component\nstruct A {\n  @Builder\n  item() {\n    Column() {\n      // Text() {\n      Text('a')\n    }\n  }\n  private later(): number {\n    const v: number = 1;\n    for (let i = 0; i < 2; i++) {}\n    return v;\n  }\n  build() { this.item() }\n}\n");
+  assert.deepEqual(rules(chk.validateBuilderBodyStatements, comment), []);
+  const strings = write("B.ets", "@Component\nstruct B {\n  @Builder\n  item() {\n    Text('{ open')\n    Text(`} close`)\n  }\n  private calc(): number {\n    const a: number = 1;\n    return a;\n  }\n  build() { this.item() }\n}\n");
+  assert.deepEqual(rules(chk.validateBuilderBodyStatements, strings), []);
+  // Real violations are still reported.
+  const bad = write("C.ets", "@Component\nstruct C {\n  @Builder\n  item() {\n    let x: number = 1\n    Text('a')\n  }\n  build() { this.item() }\n}\n");
+  assert.deepEqual(rules(chk.validateBuilderBodyStatements, bad), ["builder-body-ui-only"]);
+  // @Entry root: an atomic component is an error; an unknown/custom component is not judged.
+  const leaf = write("D.ets", "@Entry\n@Component\nstruct D {\n  build() {\n    Image('x')\n  }\n}\n");
+  assert.deepEqual(rules(chk.validateEntryBuildRootNode, leaf), ["entry-build-root-node"]);
+  const custom = write("E.ets", "@Entry\n@Component\nstruct E {\n  build() {\n    HdsNavigation(this.stack) {\n      Text('x')\n    }\n  }\n}\n");
+  assert.deepEqual(rules(chk.validateEntryBuildRootNode, custom), []);
+  const commented = write("F.ets", "@Entry\n@Component\nstruct F {\n  build() {\n    // Row() {\n    Column() {\n      Text('x')\n    }\n  }\n}\n");
+  assert.deepEqual(rules(chk.validateEntryBuildRootNode, commented), []);
+});

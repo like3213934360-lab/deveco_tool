@@ -29,7 +29,7 @@ const preflightStep = {
     try {
       const result = await arktsCheck(ctx.input.project, undefined, ctx.signal);
       if (result.errors) ctx.log(`preflight: ${result.errors} possible error(s); building anyway (hvigor decides)`);
-      return { errors: result.errors, warnings: result.warnings, ...(result.errors ? { issues: result.issues.slice(0, 10), note: "Advisory static check; if the build succeeds these are false positives" } : {}) };
+      return { errors: result.errors, warnings: result.warnings, ...(result.errors ? { issues: result.issues.slice(0, 10) } : {}) };
     } catch (error) {
       ctx.log(`preflight unavailable: ${(error as Error).message}`);
       return { skipped: true };
@@ -52,10 +52,21 @@ const buildStep = {
   },
 };
 
+/**
+ * The compiler has the last word. A successful build proves the preflight errors were false
+ * positives: report that explicitly (and drop the error list) so no agent goes "fixing" code
+ * that compiles. When the build fails, the job fails with hvigor's own diagnostics instead.
+ */
+function settlePreflight(preflight: any, buildSucceeded: boolean) {
+  if (!preflight?.errors || !buildSucceeded) return preflight;
+  return { errors: 0, warnings: preflight.warnings, overruled: preflight.errors,
+    note: `The static preflight flagged ${preflight.errors} error(s), but the compiler accepted the code: they were false positives. Do not change code for them.` };
+}
+
 defineJob<BuildInput>({
   kind: "build",
   steps: [preflightStep, buildStep],
-  summarize: (o) => ({ ...o.build, preflight: o.preflight }),
+  summarize: (o) => ({ ...o.build, preflight: settlePreflight(o.preflight, true) }),
 });
 
 interface RunInput extends BuildInput {
@@ -175,6 +186,7 @@ const runSteps = (build: boolean) => [
 const runSummary = (o: Record<string, any>) => ({
   device: o.target?.target, modules: o.select?.modules, module_selection: o.select?.reason, build: o.build ? { artifacts: o.build.artifacts?.map((a: { path: string }) => a.path), elapsed_ms: o.build.elapsed_ms, warnings: o.build.warnings } : undefined,
   installed: o.install, launch: o.launch, assert: o.assert ?? undefined,
+  ...(o.preflight ? { preflight: settlePreflight(o.preflight, !!o.build) } : {}),
 });
 defineJob<RunInput>({ kind: "build_run", steps: runSteps(true), summarize: runSummary });
 defineJob<RunInput>({ kind: "deploy", steps: runSteps(false), summarize: runSummary });
