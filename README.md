@@ -31,7 +31,7 @@ npm ci && npm run build
 
 ```sh
 node dist/cli.js init --host cursor                 # 用户级配置（~/.cursor/mcp.json + ~/.cursor/skills）
-node dist/cli.js init --host codex --project .      # 项目级配置（.codex/config.toml）
+node dist/cli.js init --host codex --project .      # 项目级配置（.codex/config.toml + .agents/skills）
 ```
 
 编辑器也可以直接使用 SDK 的语言服务：`node dist/cli.js serve-lsp [--cpp] [--project <root>]`（stdio）。
@@ -94,6 +94,16 @@ node dist/cli.js init --host codex --project .      # 项目级配置（.codex/c
 | `emulator` | `list` / `start`（等待启动完成）/ `stop` / `create` / `delete` / 镜像 / 许可协议 / `scenario`（电量、GPS、传感器、旋转、折叠等） |
 | `hot_reload` | `apply` 把 ArkTS 改动以 HQF 快速修复包推送到运行中的应用，约 3 秒生效，应用不重启；`reset` 撤销改动 |
 
+内置 3 个 Skill：
+
+| Skill | 用途 |
+| --- | --- |
+| `hmos-arkui-develop-skill` | 写 ArkTS/ArkUI 前必读：26 条高频致命错误、组件 API 速查卡片（`quick-apis`）和约束规则（`quick-rules`）。来自上游 DevEco Code，MIT 许可 |
+| `hmos-runtime-fix-skill` | 闪退、崩溃、白屏排查流程和 9 类崩溃模式库；已改为使用本服务的 `diagnose`、`device log`。来自上游 DevEco Code，MIT 许可 |
+| `deveco-mcp-workflow` | 各种场景下该用哪个 deveco 工具、按什么顺序调用 |
+
+项目级导出（`scope=project` 或 `init --project`）写入 `<project>/.agents/skills`，Codex、Claude Code、Cursor、Qoder、OpenCode、DevEco Code 都会读取这个目录，一份即可通用。
+
 服务还提供 MCP **Resources**（`deveco://skills/<name>`）和 **Prompts**：`fix-build`、`debug-crash`、`implement-feature`（规格驱动：specify → plan → tasks → implement → verify）和 `upgrade-sdk`。
 
 ## 知识包
@@ -104,7 +114,7 @@ node dist/cli.js init --host codex --project .      # 项目级配置（.codex/c
 - `index.db`：FTS5 全文索引，附带中文查询分词用的词表
 - `docs.zip`
 
-内容包括华为鸿蒙官方文档（开发指南、API 参考、最佳实践、FAQ、版本说明，约 1.47 万篇），以及本仓库 `knowledge/` 目录下的 ArkTS 规则、31 个编译错误案例、运行时崩溃模式和 Skill。
+内容包括华为鸿蒙官方文档（开发指南、API 参考、最佳实践、FAQ、版本说明，约 1.47 万篇），以及本仓库 `knowledge/` 目录下的 ArkTS 规则、31 个编译错误案例和上述 Skill（含崩溃模式库和 ArkUI 速查）。
 
 - **内置：** npm 包 `@deveco-mcp/kb` 是可选依赖；本地开发时也可以用 `kb-dist/current`。
 - **更新：** `knowledge action=update` 以任务形式运行：从 npm 下载，校验 sha512，解压到临时目录，检查结构，原子切换版本，并保留上一版本以便 `rollback`。`file=<path.tgz>` 安装本地知识包；`file=upstream` 从华为最新的 `@deveco-test/deveco-cli-knowledgebase` 生成新知识包。
@@ -121,7 +131,7 @@ src/
   tools/        15 个工具（zod schema；领域模块在首次调用时才加载）
   domains/      project、device、ui、uitest、flows、code、diagnose、knowledge、kb-build、skills、hostconfig、auth、sign、emulator、hotreload、doctor、resources
   core/         config、toolchain、proc（按进程树结束）、db（node:sqlite WAL）、jobs、artifacts、sessions、lsp-client、errors、files
-knowledge/      规则、错误案例、运行时模式、Skill（知识包和 resources 的来源）
+knowledge/      规则、错误案例、Skill（崩溃模式库在 hmos-runtime-fix-skill/references；知识包和 resources 的来源）
 templates/      工程模板
 resources/      内置的 arkts-check.cjs、hypium uitest agent、许可证
 tools/          build.mjs、bench.mjs、upstream-sync.mjs、mcp-client.mjs
@@ -197,7 +207,7 @@ Register the server and export the skills in one step (cursor, claude, codex, op
 
 ```sh
 node dist/cli.js init --host cursor                 # user config (~/.cursor/mcp.json + ~/.cursor/skills)
-node dist/cli.js init --host codex --project .      # project config (.codex/config.toml)
+node dist/cli.js init --host codex --project .      # project config (.codex/config.toml + .agents/skills)
 ```
 
 Editors can also use the SDK language servers directly: `node dist/cli.js serve-lsp [--cpp] [--project <root>]` (stdio).
@@ -260,6 +270,16 @@ Check the setup with `node dist/cli.js doctor [project]`, or call the `doctor` t
 | `emulator` | `list` / `start` (waits for boot) / `stop` / `create` / `delete` / images / license / `scenario` (battery, GPS, sensors, rotation, fold, …) |
 | `hot_reload` | `apply` pushes ArkTS changes to the running app as an HQF quick fix in about 3 s with no restart; `reset` removes them |
 
+Three built-in skills:
+
+| Skill | Purpose |
+| --- | --- |
+| `hmos-arkui-develop-skill` | Read before writing ArkTS/ArkUI: 26 high-frequency fatal mistakes, component API cards (`quick-apis`) and constraint rules (`quick-rules`). From upstream DevEco Code, MIT |
+| `hmos-runtime-fix-skill` | Crash / white-screen diagnosis flow and a 9-category crash pattern library, adapted to this server's `diagnose` and `device log`. From upstream DevEco Code, MIT |
+| `deveco-mcp-workflow` | Which deveco tool to use for each task, and in what order |
+
+Project-scope export (`scope=project` or `init --project`) writes `<project>/.agents/skills`, which Codex, Claude Code, Cursor, Qoder, OpenCode and DevEco Code all read, so one copy serves every tool.
+
 The server also exposes MCP **Resources** (`deveco://skills/<name>`) and **Prompts**: `fix-build`, `debug-crash`, `implement-feature` (spec-driven: specify → plan → tasks → implement → verify), and `upgrade-sdk`.
 
 ### Knowledge packs
@@ -270,7 +290,7 @@ A knowledge pack is a `.tgz` containing three files:
 - `index.db` — an FTS5 index with a vocabulary table for Chinese query segmentation
 - `docs.zip`
 
-It combines Huawei's HarmonyOS docs (guides, API reference, best practices, FAQ, release notes; about 14.7k documents) with this repository's `knowledge/` directory (ArkTS rules, 31 compile-error cases, runtime crash patterns, skills).
+It combines Huawei's HarmonyOS docs (guides, API reference, best practices, FAQ, release notes; about 14.7k documents) with this repository's `knowledge/` directory (ArkTS rules, 31 compile-error cases, and the skills above, including the crash pattern library and ArkUI quick reference).
 
 - **Built-in:** the npm package `@deveco-mcp/kb` is an optional dependency, and `kb-dist/current` works for local development.
 - **Update:** `knowledge action=update` runs as a job. It downloads from npm, verifies the sha512 integrity, extracts to a temporary directory, checks the schema, switches versions atomically, and keeps the previous version for `rollback`. `file=<path.tgz>` installs a local pack. `file=upstream` builds a fresh pack from Huawei's latest `@deveco-test/deveco-cli-knowledgebase`.
@@ -287,7 +307,7 @@ src/
   tools/        15 tools (zod schemas; domain code is imported lazily on first call)
   domains/      project, device, ui, uitest, flows, code, diagnose, knowledge, kb-build, skills, hostconfig, auth, sign, emulator, hotreload, doctor, resources
   core/         config, toolchain, proc (process-tree kill), db (node:sqlite WAL), jobs, artifacts, sessions, lsp-client, errors, files
-knowledge/      rules, error cases, runtime patterns, skills (sources for knowledge packs and resources)
+knowledge/      rules, error cases, skills (crash patterns live in hmos-runtime-fix-skill/references; sources for knowledge packs and resources)
 templates/      project template
 resources/      vendored arkts-check.cjs, hypium uitest agents, licenses
 tools/          build.mjs, bench.mjs, upstream-sync.mjs, mcp-client.mjs

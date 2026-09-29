@@ -28,12 +28,12 @@ const prompts: Record<string, { description: string; args: { name: string; descr
   "debug-crash": {
     description: "Reproduce, diagnose and fix an app crash",
     args: [{ name: "project", description: "Absolute project path", required: true }, { name: "symptom", description: "What the user saw" }],
-    text: (a) => `The app in ${a.project} crashes${a.symptom ? ` (${a.symptom})` : ""}. 1) run action=build_run to deploy. 2) Reproduce with ui tools. 3) diagnose action=crash to read the fault log and matched patterns. 4) Open the top app frame, fix the root cause. 5) Redeploy and verify with ui assert.`,
+    text: (a) => `The app in ${a.project} crashes${a.symptom ? ` (${a.symptom})` : ""}. 1) run action=build_run to deploy. 2) Reproduce with ui tools. 3) diagnose action=crash to read the fault log and matched patterns; follow skill hmos-runtime-fix-skill. 4) Open the top app frame, fix the root cause. 5) Redeploy and verify with ui assert.`,
   },
   "implement-feature": {
     description: "Spec-driven feature implementation for HarmonyOS (specify → plan → tasks → implement → verify)",
     args: [{ name: "project", description: "Absolute project path", required: true }, { name: "feature", description: "Feature request", required: true }],
-    text: (a) => `Implement in ${a.project}: ${a.feature}\nPhases: (1) Specify: restate requirements and acceptance criteria. (2) Plan: pages, components, state (@ComponentV2/@Local...), APIs — verify APIs with knowledge search and code lsp hover. (3) Tasks: ordered checklist. (4) Implement: follow skills deveco-arkts-standards; run code action=check after edits. (5) Verify: run action=build_run, then ui assert each acceptance criterion.`,
+    text: (a) => `Implement in ${a.project}: ${a.feature}\nPhases: (1) Specify: restate requirements and acceptance criteria. (2) Plan: pages, components, state (@ComponentV2/@Local...), APIs — verify APIs with knowledge search and code lsp hover. (3) Tasks: ordered checklist. (4) Implement: follow skill hmos-arkui-develop-skill (quick-apis + quick-rules); run code action=check after edits. (5) Verify: run action=build_run, then ui assert each acceptance criterion.`,
   },
   "upgrade-sdk": {
     description: "Check API compatibility before raising the SDK level",

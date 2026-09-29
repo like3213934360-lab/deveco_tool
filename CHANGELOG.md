@@ -1,5 +1,31 @@
 # Changelog / 更新日志
 
+## v1.0.2 (2026-09-29)
+
+**中文**
+- 内置 Skill 换成上游 DevEco Code 自带的两个（MIT 许可，保留署名），再加一个本服务的工作流 Skill：
+  - `hmos-arkui-develop-skill`：ArkTS/ArkUI 高频致命错误清单，以及组件 API 速查（`quick-apis`）和约束规则（`quick-rules`），共 35 个参考文件。
+  - `hmos-runtime-fix-skill`：崩溃排查流程和 9 类崩溃模式库；把原来的 `devecocli` 和私有脚本调用改成本服务的 `diagnose`、`device log`、`run`、`ui`。
+  - `deveco-mcp-workflow`：各种场景下该用哪个 deveco 工具。
+- 删除 v0.4 遗留的 6 个 Skill：它们引用的旧工具名在 v1 里已不存在。不提供上游的 `customize-deveco`（配置 DevEco Code 自身）和 `deveco-cli`（命令行用法）两个 Skill。
+- `diagnose` 的崩溃模式匹配改为直接读取 `hmos-runtime-fix-skill/references`，Skill 文档和匹配规则只维护一份。
+- 项目级导出改写到 `<project>/.agents/skills`，这是 Codex、Claude Code、Cursor、Qoder、OpenCode、DevEco Code 共同读取的目录。
+- `skills read` 支持多级参考文件路径（如 `quick-apis/01-layout.md`），并拒绝越出 Skill 目录的路径。
+- 服务版本号改为从 `package.json` 读取。
+- 知识包重新生成：`skills` 目录收录 38 篇文档（包含 ArkUI 速查）。
+
+**English**
+- Built-in skills are now the two shipped with upstream DevEco Code (MIT, attribution kept) plus a workflow skill for this server:
+  - `hmos-arkui-develop-skill`: a list of high-frequency fatal ArkTS/ArkUI mistakes, plus component API cards (`quick-apis`) and constraint rules (`quick-rules`), 35 reference files in total.
+  - `hmos-runtime-fix-skill`: the crash-fix flow and a 9-category crash pattern library. Calls to `devecocli` and the private scripts are replaced with this server's `diagnose`, `device log`, `run` and `ui`.
+  - `deveco-mcp-workflow`: which deveco tool to use for each task.
+- Removed the 6 skills left over from v0.4, which referenced tool names that no longer exist in v1. Upstream's `customize-deveco` (configuring DevEco Code itself) and `deveco-cli` (CLI usage) skills are not included.
+- `diagnose` now matches crash patterns directly from `hmos-runtime-fix-skill/references`, so the skill docs and the matcher share one source.
+- Project-scope export now writes `<project>/.agents/skills`, the directory shared by Codex, Claude Code, Cursor, Qoder, OpenCode and DevEco Code.
+- `skills read` accepts nested reference paths (e.g. `quick-apis/01-layout.md`) and rejects paths that escape the skill directory.
+- The server version is now read from `package.json`.
+- Rebuilt the knowledge pack: the `skills` catalog now holds 38 documents, including the ArkUI quick reference.
+
 ## v1.0.1 (2026-09-29)
 
 **中文**

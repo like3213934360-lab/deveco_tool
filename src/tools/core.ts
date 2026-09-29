@@ -576,11 +576,11 @@ export const skillsTool = tool({
   name: "skills",
   title: "HarmonyOS skills",
   readOnly: false,
-  description: "Built-in HarmonyOS skills (ArkTS standards, error fixing, runtime debugging, project creation, tool usage). list/read; export: install them as native SKILL.md folders for your host (cursor, claude, codex, opencode...) so they load automatically. install_mcp: register this MCP server in a host's config (idempotent; force overwrites). init: export + install_mcp. search/install/uninstall: OpenHarmony skill market (matrix.openharmony.cn).",
+  description: "Built-in HarmonyOS skills: hmos-arkui-develop-skill (ArkTS/ArkUI gotchas + API quick reference, from DevEco Code), hmos-runtime-fix-skill (crash/white-screen diagnosis + fault pattern library), deveco-mcp-workflow (which deveco tool to use when). list/read; export: install them as native SKILL.md folders (scope=project writes <project>/.agents/skills, shared by Codex, Claude Code, Cursor, Qoder, OpenCode). install_mcp: register this MCP server in a host's config (idempotent; force overwrites). init: export + install_mcp. search/install/uninstall: OpenHarmony skill market (matrix.openharmony.cn).",
   schema: z.object({
     action: z.enum(["list", "read", "export", "install_mcp", "init", "search", "install", "uninstall"]),
     name: z.string().optional(),
-    reference: z.string().optional().describe("read: a file under references/"),
+    reference: z.string().optional().describe("read: a file under references/, e.g. quick-apis/01-layout.md (see list)"),
     host: z.string().optional().describe("cursor | claude | codex | opencode | trae-cn | codebuddy | qoder | pi | deveco (skills only)"),
     force: z.boolean().optional().describe("install_mcp/init: overwrite an existing entry"),
     scope: z.enum(["user", "project"]).optional(),

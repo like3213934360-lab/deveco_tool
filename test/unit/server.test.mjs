@@ -32,10 +32,14 @@ test("skills are exposed as tools, resources and prompts", async () => {
   const client = connect(env);
   await client.initialize();
   const skills = await client.call("skills", { action: "list" });
-  assert.ok(skills.data.skills.length >= 5);
+  assert.deepEqual(skills.data.skills.map((s) => s.name).sort(), ["deveco-mcp-workflow", "hmos-arkui-develop-skill", "hmos-runtime-fix-skill"]);
+  const card = await client.call("skills", { action: "read", name: "hmos-arkui-develop-skill", reference: "quick-apis/_index.md" });
+  assert.match(card.data.content, /ArkUI API/);
+  const escape = await client.call("skills", { action: "read", name: "hmos-arkui-develop-skill", reference: "../../../package.json" });
+  assert.equal(escape.isError, true);
   const resources = await client.request("resources/list");
-  assert.ok(resources.result.resources.some((r) => r.uri === "deveco://skills/deveco-arkts-standards"));
-  const read = await client.request("resources/read", { uri: "deveco://skills/deveco-arkts-standards" });
+  assert.ok(resources.result.resources.some((r) => r.uri === "deveco://skills/hmos-arkui-develop-skill"));
+  const read = await client.request("resources/read", { uri: "deveco://skills/hmos-arkui-develop-skill" });
   assert.match(read.result.contents[0].text, /ArkTS/);
   const prompts = await client.request("prompts/list");
   assert.ok(prompts.result.prompts.some((p) => p.name === "fix-build"));

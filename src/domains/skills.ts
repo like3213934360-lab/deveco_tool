@@ -16,13 +16,23 @@ function frontMatter(text: string) {
   return fields;
 }
 
+const refDir = (dir: string) => ["references", "reference"].map((d) => path.join(dir, d)).find((d) => fs.existsSync(d));
+
+/** Reference files relative to the skill's references/ directory (nested folders allowed). */
+function listReferences(dir: string) {
+  const root = refDir(dir);
+  if (!root) return [];
+  return (fs.readdirSync(root, { recursive: true }) as string[])
+    .filter((f) => f.endsWith(".md") && fs.statSync(path.join(root, f)).isFile())
+    .map((f) => f.split(path.sep).join("/")).sort();
+}
+
 export function listSkills() {
   const root = skillsRoot();
   if (!fs.existsSync(root)) return [];
   return fs.readdirSync(root).filter((name) => fs.existsSync(path.join(root, name, "SKILL.md"))).map((name) => {
     const meta = frontMatter(fs.readFileSync(path.join(root, name, "SKILL.md"), "utf8"));
-    const references = fs.existsSync(path.join(root, name, "references")) ? fs.readdirSync(path.join(root, name, "references")) : [];
-    return { name, description: meta.description ?? "", references };
+    return { name, description: meta.description ?? "", references: listReferences(path.join(root, name)) };
   });
 }
 
@@ -30,16 +40,26 @@ export function readSkill(name: string, reference?: string) {
   invariant(/^[a-z0-9-]+$/.test(name), "INVALID_INPUT", "Invalid skill name");
   const dir = path.join(skillsRoot(), name);
   invariant(fs.existsSync(dir), "NOT_FOUND", `Skill ${name} not found`, { available: listSkills().map((s) => s.name) });
-  const file = reference ? path.join(dir, "references", path.basename(reference)) : path.join(dir, "SKILL.md");
-  invariant(fs.existsSync(file), "NOT_FOUND", `${reference ?? "SKILL.md"} not found in ${name}`);
-  return { name, file: path.relative(skillsRoot(), file), content: fs.readFileSync(file, "utf8") };
+  let file = path.join(dir, "SKILL.md");
+  if (reference) {
+    const rel = reference.replace(/^\.?\/?(references?\/)?/, "");
+    invariant(/^[\w.-]+(\/[\w.-]+)*\.md$/.test(rel) && !rel.split("/").includes(".."), "INVALID_INPUT", "reference must be a .md path under references/");
+    file = path.join(refDir(dir) ?? path.join(dir, "references"), rel);
+    invariant(fs.existsSync(file), "NOT_FOUND", `${reference} not found in ${name}`, { references: listReferences(dir) });
+  }
+  return { name, file: path.relative(skillsRoot(), file).split(path.sep).join("/"), content: fs.readFileSync(file, "utf8") };
 }
 
-/** Host-native skill directories (same list the upstream CLI installs into). */
+/** Host-native user-level skill directories (same list the upstream CLI installs into). */
 const hostDirs: Record<string, string> = {
   cursor: ".cursor/skills", claude: ".claude/skills", codex: ".codex/skills", opencode: ".config/opencode/skills",
   deveco: ".config/deveco/skills", "trae-cn": ".trae-cn/skills", codebuddy: ".codebuddy/skills", qoder: ".qoder/skills", pi: ".pi/agent/skills",
 };
+
+const noSharedDir = new Set(["trae-cn", "codebuddy", "pi"]);
+function sharedProjectDir(host: string) {
+  return noSharedDir.has(host) ? hostDirs[host]! : ".agents/skills";
+}
 
 /** One-step host setup: export skills + register this MCP server (parity with `devecocli init`). */
 export async function initHost(host: string, options: { scope?: "user" | "project"; project?: string; force?: boolean; skills?: boolean; mcp?: boolean }) {
@@ -55,8 +75,11 @@ export async function initHost(host: string, options: { scope?: "user" | "projec
 export function exportSkills(host: string, scope: "user" | "project", project?: string, names?: string[]) {
   const relative = hostDirs[host];
   invariant(relative, "INVALID_INPUT", `Unknown host ${host}`, { hosts: Object.keys(hostDirs) });
-  const base = scope === "project" ? (invariant(project, "INVALID_INPUT", "project is required for scope=project"), path.resolve(project)) : os.homedir();
-  const target = path.join(base, relative);
+  // Project scope uses the shared .agents/skills directory, read by Codex, Claude Code, Cursor, Qoder,
+  // OpenCode and DevEco Code, so one copy serves every tool.
+  const target = scope === "project"
+    ? path.join((invariant(project, "INVALID_INPUT", "project is required for scope=project"), path.resolve(project!)), sharedProjectDir(host))
+    : path.join(os.homedir(), relative);
   const exported: string[] = [];
   for (const skill of listSkills()) {
     if (names && !names.includes(skill.name)) continue;

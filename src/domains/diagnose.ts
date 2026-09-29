@@ -69,11 +69,13 @@ const typeFiles: Record<string, string> = {
   typeerror_patterns: "TypeError", urierror_patterns: "URIError",
 };
 
-/** Load the reviewed markdown tables (knowledge/runtime) once. */
+const RUNTIME_REFS = "knowledge/skills/hmos-runtime-fix-skill/references";
+
+/** Load the reviewed markdown tables (hmos-runtime-fix-skill references) once. */
 function loadPatterns(): Pattern[] {
   if (patterns) return patterns;
   patterns = [];
-  const dir = path.join(packageRoot, "knowledge/runtime");
+  const dir = path.join(packageRoot, RUNTIME_REFS);
   for (const file of fs.existsSync(dir) ? fs.readdirSync(dir) : []) {
     const name = file.replace(/\.md$/, "");
     const text = fs.readFileSync(path.join(dir, file), "utf8");
@@ -91,7 +93,7 @@ function loadPatterns(): Pattern[] {
       const literals = raw.split(/\s\/\s/).map((group) =>
         [...group.matchAll(/`([^`]+)`/g)].flatMap((m) => m[1]!.split(/<[a-z-]+>/).map((s) => s.trim()).filter(Boolean)),
       ).filter((g) => g.length);
-      patterns.push({ kind, pattern: raw, literals, conclusion: cells[fault ? 3 : 1]!, fix: cells[fault ? 4 : 2]!, source: `knowledge/runtime/${file}` });
+      patterns.push({ kind, pattern: raw, literals, conclusion: cells[fault ? 3 : 1]!, fix: cells[fault ? 4 : 2]!, source: `${RUNTIME_REFS}/${file}` });
     }
   }
   return patterns;

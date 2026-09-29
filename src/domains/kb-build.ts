@@ -40,11 +40,16 @@ export async function buildKnowledgePack(options: { upstream: string; out: strin
     // Local knowledge: rules / error cases / runtime patterns / skills, one document per markdown file.
     const local = path.join(packageRoot, "knowledge");
     const localDocs: { id: string; title: string; catalog: number; file: string; text: string }[] = [];
-    for (const dir of ["rules", "errors", "runtime", "skills"] as const) {
-      const catalogName = dir;
+    const sources: [catalog: (typeof catalogs)[number], dir: string][] = [
+      ["rules", "rules"], ["errors", "errors"],
+      ["runtime", "skills/hmos-runtime-fix-skill/references"], ["skills", "skills"],
+    ];
+    for (const [catalogName, dir] of sources) {
       const base = path.join(local, dir);
       if (!fs.existsSync(base)) continue;
       for (const file of walkMd(base)) {
+        if (path.basename(file) === "NOTICE.md") continue;
+        if (catalogName === "skills" && file.includes(`${path.sep}hmos-runtime-fix-skill${path.sep}references${path.sep}`)) continue; // indexed as runtime
         const rel = path.relative(base, file).replaceAll("\\", "/").replace(/\.md$/, "");
         const text = fs.readFileSync(file, "utf8");
         const title = /^#\s+(.+)$/m.exec(text)?.[1]?.trim() ?? /^name:\s*(.+)$/m.exec(text)?.[1]?.trim() ?? rel;
