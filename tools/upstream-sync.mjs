@@ -91,7 +91,11 @@ const revs = { "deveco-code": git(code, "rev-parse", "--short", "HEAD"), "deveco
 const newCommits = {};
 for (const [name, dir] of [["deveco-code", code], ["deveco-cli", cli]]) {
   const since = decisions.upstream_rev?.[name];
-  if (since && since !== revs[name]) newCommits[name] = git(dir, "log", "--oneline", `${since}..HEAD`).split("\n").filter(Boolean);
+  // Abbreviated hashes differ in length between clones: compare by prefix, and only report real commits.
+  if (!since || revs[name].startsWith(since) || since.startsWith(revs[name])) continue;
+  const list = git(dir, "log", "--oneline", `${since}..HEAD`).split("\n").filter(Boolean);
+  if (list.length) newCommits[name] = list;
+  else if (!git(dir, "cat-file", "-t", since)) newCommits[name] = [`(recorded ${since} not found in the clone — re-check and bump upstream_rev)`];
 }
 
 const count = (s) => rows.filter((r) => r.status === s).length;

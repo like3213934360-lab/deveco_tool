@@ -36,7 +36,9 @@ jobs:
       - run: npm ci --omit=optional
       - run: npm run build
       - name: Exhaustive upstream alignment (fails on undecided / partial items, stale decisions or new upstream commits)
-        run: node tools/upstream-sync.mjs --json > alignment.json
+        run: |
+          set -o pipefail
+          node tools/upstream-sync.mjs --json > alignment.json || { node -e 'const r=require("./alignment.json");console.log(JSON.stringify(r.totals));for(const f of r.failing)console.log(f.status,f.id,f.problems.join("; "));for(const s of r.stale)console.log("STALE",s);console.log("new upstream commits:",JSON.stringify(r.new_commits))'; exit 1; }
       - uses: actions/upload-artifact@v4
         if: always()
         with:
