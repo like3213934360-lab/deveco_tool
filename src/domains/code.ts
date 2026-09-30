@@ -585,9 +585,14 @@ export async function apiScan(project: string, options: { from?: string; to?: st
       });
       args.push("--modulePaths", paths.join(","));
     } else args.push("--projectPath", project);
-    const result = await run(toolCommand("apiscan", args, path.dirname(component("apiscan", tc))), { signal, timeoutMs: 600000, allowFailure: true, logFile: file });
+    // The scanner creates os.tmpdir()/api-scan-* and never removes it: point its tmpdir inside `out`,
+    // which the finally below deletes.
+    const scratch = path.join(out, "tmp");
+    fs.mkdirSync(scratch);
+    const tmpEnv = { TMPDIR: scratch, TMP: scratch, TEMP: scratch };
+    const result = await run(toolCommand("apiscan", args, path.dirname(component("apiscan", tc)), tmpEnv), { signal, timeoutMs: 600000, allowFailure: true, logFile: file });
     await commitArtifact(id, file, "text/plain");
-    const csv = [...walk(out, new Set())].find((f) => f.endsWith(".csv"));
+    const csv = [...walk(out, new Set(["tmp"]))].find((f) => f.endsWith(".csv"));
     invariant(csv, "CHECK_FAILED", "API scan produced no report", { exit_code: result.code, log_artifact: id, tail: (result.stderr || result.stdout).slice(-1500) });
     const content = fs.readFileSync(csv, "utf8");
     const rows = content.split(/\r?\n/).filter(Boolean);

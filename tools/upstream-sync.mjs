@@ -20,6 +20,10 @@ import { extract } from "./upstream/extract.mjs";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const arg = (name) => { const i = process.argv.indexOf(name); return i >= 0 ? process.argv[i + 1] : undefined; };
 const temp = fs.mkdtempSync(path.join(os.tmpdir(), "upstream-"));
+// Always remove the temp clones, including after a failed clone, a thrown error or Ctrl-C.
+const removeTemp = () => fs.rmSync(temp, { recursive: true, force: true });
+process.on("exit", removeTemp);
+for (const sig of ["SIGINT", "SIGTERM", "SIGHUP"]) process.once(sig, () => { removeTemp(); process.exit(130); });
 function checkout(name, given) {
   if (given) return path.resolve(given);
   const dir = path.join(temp, name);
@@ -115,7 +119,6 @@ else {
   for (const k of stale) console.log(`  STALE     ${k} (decision for an item upstream no longer has)`);
   for (const [n, list] of Object.entries(newCommits)) console.log(`  ${n}: ${list.length} new upstream commits since ${decisions.upstream_rev[n]} — review behaviour, then bump upstream_rev`);
 }
-if (!arg("--code") || !arg("--cli")) fs.rmSync(temp, { recursive: true, force: true });
 process.exitCode = failing.length || stale.length || Object.keys(newCommits).length ? 1 : 0;
 
 function markdown(r) {
