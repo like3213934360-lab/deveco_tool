@@ -25,8 +25,13 @@ export function tool<S extends z.ZodType>(def: ToolDef<S>): ToolDef<S> {
   return def;
 }
 
-/** Longest a single call blocks; longer waits are capped (never rejected) and continue with job wait. */
-export const MAX_WAIT_MS = 60000;
+/**
+ * Longest a single call blocks; longer waits are capped (never rejected) and continue with job wait.
+ * Kept under the MCP SDK default client request timeout (60s, used e.g. by opencode when no timeout is
+ * configured) so a still-running job returns its job_id instead of the client timing out with an empty
+ * result. Measured server-side overhead outside the wait is ~10ms; 5s margin covers cold starts.
+ */
+export const MAX_WAIT_MS = 55000;
 
 /** Shared field helpers keep descriptions consistent across tools. */
 export const fields = {

@@ -3,6 +3,7 @@ import { cleanup, saveArtifact } from "./artifacts.js";
 import { database } from "./db.js";
 import { errorResult, invariant, ToolError } from "./errors.js";
 import { sha256 } from "./files.js";
+import { MAX_WAIT_MS } from "../registry.js";
 
 /**
  * Minimal durable task runner (replaces LangGraph):
@@ -190,7 +191,7 @@ export async function waitJob(id: string, ms = 1000) {
   const handle = running.get(id);
   if (handle && ms > 0) {
     let timer: NodeJS.Timeout | undefined;
-    await Promise.race([handle.done, new Promise<void>((resolve) => (timer = setTimeout(resolve, Math.min(ms, 60000))))]);
+    await Promise.race([handle.done, new Promise<void>((resolve) => (timer = setTimeout(resolve, Math.min(ms, MAX_WAIT_MS))))]);
     clearTimeout(timer);
   }
   return jobStatus(id);

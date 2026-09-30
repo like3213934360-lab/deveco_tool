@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { invariant } from "../core/errors.js";
-import { fields, tool } from "../registry.js";
+import { fields, MAX_WAIT_MS, tool } from "../registry.js";
 
 /* Job definitions are registered lazily the first time a job-producing tool runs. */
 let jobsReady: Promise<void> | undefined;
@@ -163,11 +163,11 @@ export const runTool = tool({
 export const jobTool = tool({
   name: "job",
   title: "Long-running jobs",
-  description: "Track jobs started by project/run/ui_flow. wait: block up to wait ms (default 20000, at most 60000; call again while running) for completion. status/list/cancel. resume: continue an interrupted or needs_input job (force=true re-runs an uncertain step after you inspected it); it returns status running — then use wait. read: page a log/report artifact by line, optionally filtered with grep.",
+  description: `Track jobs started by project/run/ui_flow. wait: block up to wait ms (default 20000, at most ${MAX_WAIT_MS}; call again while running) for completion. status/list/cancel. resume: continue an interrupted or needs_input job (force=true re-runs an uncertain step after you inspected it); it returns status running — then use wait. read: page a log/report artifact by line, optionally filtered with grep.`,
   schema: z.object({
     action: z.enum(["wait", "status", "list", "cancel", "resume", "read"]),
     job_id: z.string().optional(),
-    wait: z.number().int().min(0).max(60000).optional(),
+    wait: z.number().int().min(0).max(MAX_WAIT_MS).optional(),
     detail: z.boolean().optional(),
     force: z.boolean().optional(),
     status: z.string().optional().describe("list: filter by status"),
