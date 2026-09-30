@@ -10,7 +10,7 @@ import { connect } from "../../tools/mcp-client.mjs";
 
 test("imports v0.x credentials and reports login status", async () => {
   const work = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-auth-"));
-  process.on("exit", () => fs.rmSync(work, { recursive: true, force: true }));
+  process.on("exit", () => { try { fs.rmSync(work, { recursive: true, force: true }); } catch { /* Windows: file still locked */ } });
   const legacy = path.join(work, "legacy");
   fs.mkdirSync(legacy);
   const key = crypto.randomBytes(32);

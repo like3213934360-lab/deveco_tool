@@ -6,7 +6,7 @@ import { test } from "node:test";
 import { connect } from "../../tools/mcp-client.mjs";
 
 const state = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-test-"));
-process.on("exit", () => fs.rmSync(state, { recursive: true, force: true })); // tests leave nothing behind
+process.on("exit", () => { try { fs.rmSync(state, { recursive: true, force: true }); } catch { /* Windows: file still locked */ } }); // tests leave nothing behind
 const env = { DEVECO_STATE_DIR: state, DEVECO_CONFIG: path.join(state, "none.json") };
 
 test("handshake, tools/list and schema validation", async () => {

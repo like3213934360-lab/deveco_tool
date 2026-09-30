@@ -11,7 +11,7 @@ import { DatabaseSync } from "node:sqlite";
 import { connect } from "../../tools/mcp-client.mjs";
 
 const work = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-kbu-"));
-process.on("exit", () => fs.rmSync(work, { recursive: true, force: true })); // tests leave nothing behind
+process.on("exit", () => { try { fs.rmSync(work, { recursive: true, force: true }); } catch { /* Windows: file still locked */ } }); // tests leave nothing behind
 let server, client, url;
 // Fixture archives need the zip/tar CLIs; skip where unavailable (e.g. some Windows runners).
 const hasTools = ["zip", "tar"].every((tool) => { try { execFileSync(tool, tool === "zip" ? ["-v"] : ["--version"], { stdio: "ignore" }); return true; } catch { return false; } });

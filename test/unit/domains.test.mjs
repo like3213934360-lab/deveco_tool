@@ -9,7 +9,7 @@ import { build } from "esbuild";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const out = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-unit-"));
-process.on("exit", () => fs.rmSync(out, { recursive: true, force: true })); // tests leave nothing behind
+process.on("exit", () => { try { fs.rmSync(out, { recursive: true, force: true }); } catch { /* Windows: file still locked */ } }); // tests leave nothing behind
 const entry = path.join(out, "entry.ts");
 fs.writeFileSync(entry, [
   `export { parseWindows, pngGray, blankScore } from ${JSON.stringify(path.join(root, "src/domains/ui.ts"))};`,

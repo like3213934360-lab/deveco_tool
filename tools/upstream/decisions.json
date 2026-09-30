@@ -7,7 +7,7 @@
     "  '<tool> [param] [param=value] ...'  checked against the live tools/list JSON Schema (value must be in the enum when one exists)",
     "  'cli:<text>'  src/cli.ts must contain the text;  'prompt:<name>' / 'skill:<name>'  must be served by the MCP server"
   ],
-  "upstream_rev": { "deveco-code": "a7ae14c24", "deveco-cli": "4a5730f" },
+  "upstream_rev": { "deveco-code": "a7ae14c24", "deveco-cli": "ea47eb0" },
   "items": {
     "code:tool:arkts_check": { "status": "full", "to": "code action=check" },
     "code:tool:arkts_check:param:files": { "status": "full", "to": "code action=check files" },
@@ -284,9 +284,9 @@
 
     "cli:cmd:update": { "status": "skip", "reason": "Self-update of the devecocli binary; this server is updated with git/npm." },
     "cli:cmd:update _check": { "status": "skip", "reason": "Internal background version check of devecocli." },
-    "cli:cmd:update docs": { "status": "full", "to": "knowledge action=update" },
-    "cli:cmd:update docs:opt:--check": { "status": "full", "to": "knowledge check" },
-    "cli:cmd:update docs:opt:--force": { "status": "full", "to": "knowledge force" },
+    "cli:cmd:docs update": { "status": "full", "to": "knowledge action=update" },
+    "cli:cmd:docs update:opt:--check": { "status": "full", "to": "knowledge check" },
+    "cli:cmd:docs update:opt:--force": { "status": "full", "to": "knowledge force" },
 
     "climcp:tool:check": { "status": "full", "to": "code action=check" },
     "climcp:tool:check:param:files": { "status": "full", "to": "code files" },

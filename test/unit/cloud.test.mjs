@@ -10,7 +10,7 @@ import { after, before, test } from "node:test";
 import { connect } from "../../tools/mcp-client.mjs";
 
 const work = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-cloud-"));
-process.on("exit", () => fs.rmSync(work, { recursive: true, force: true })); // tests leave nothing behind
+process.on("exit", () => { try { fs.rmSync(work, { recursive: true, force: true }); } catch { /* Windows: file still locked */ } }); // tests leave nothing behind
 const UDID = "A".repeat(32) + "0123456789ABCDEF0123456789ABCDEF";
 const b64 = (o) => Buffer.from(JSON.stringify(o)).toString("base64url");
 const JWT = `${b64({ alg: "none" })}.${b64({ userId: "u42", userName: "mock", exp: Math.floor(Date.now() / 1000) + 3600 })}.sig`;

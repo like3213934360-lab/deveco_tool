@@ -253,7 +253,8 @@ export class BuildOutputParser {
     this.realRoot ??= (() => { try { return fs.realpathSync(this.root); } catch { return this.root; } })();
     for (const root of [this.root, this.realRoot]) {
       const rel = path.relative(root, file);
-      if (!rel.startsWith("..") && !path.isAbsolute(rel)) return rel;
+      // Always forward slashes: stable across platforms (Windows hvigor prints either separator).
+      if (!rel.startsWith("..") && !path.isAbsolute(rel)) return rel.split(path.sep).join("/");
     }
     return file;
   }

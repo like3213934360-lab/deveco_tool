@@ -8,7 +8,8 @@ import { build } from "esbuild";
 
 // Bundle a small harness that exercises the job runner directly (TS sources -> ESM).
 const out = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-jobs-"));
-process.on("exit", () => fs.rmSync(out, { recursive: true, force: true })); // tests leave nothing behind
+// Tests leave nothing behind; on Windows the state DB may still be open at exit (EPERM): best effort there.
+process.on("exit", () => { try { fs.rmSync(out, { recursive: true, force: true }); } catch { /* Windows: file still locked */ } });
 process.env.DEVECO_STATE_DIR = out;
 const harness = path.join(out, "harness.ts");
 fs.writeFileSync(harness, `
