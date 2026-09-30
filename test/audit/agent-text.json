@@ -1,0 +1,233 @@
+{
+  "$comment": "Sentence-level audit of text the agent reads (tool descriptions, parameter docs, server instructions, notes/hints, deveco-mcp-workflow SKILL.md). Each entry: where, the statement, verdict, and the finding/evidence it is judged against.",
+  "items": [
+    {
+      "where": "tools/list code.description",
+      "text": "The compiler is the final judge: if project build succeeds, code it flagged is valid — do not rewrite it.",
+      "verdict": "VERIFIED",
+      "evidence": "B.code.check.* (checker false positives exist: app-resource-name-check nested modules, comment/string refs; hvigor built those projects)"
+    },
+    {
+      "where": "tools/list code.description",
+      "text": "check: fast ArkTS static check ... with error-fix hints",
+      "verdict": "VERIFIED",
+      "evidence": "B.action.code.check.success"
+    },
+    {
+      "where": "tools/list project.description",
+      "text": "build ... returns packages and structured compile errors with fix hints",
+      "verdict": "VERIFIED",
+      "evidence": "B.project.build.parser-drops-arkts-errors / -error-message fixed: every error counted, first 100 listed with code/file/line; description updated to say so"
+    },
+    {
+      "where": "tools/list project.description",
+      "text": "sync: ohpm install + hvigor sync (job)",
+      "verdict": "VERIFIED",
+      "evidence": "B.action.project.sync.success"
+    },
+    {
+      "where": "tools/list project.description / SKILL.md 编译报错",
+      "text": "(implicit) build keeps dependencies current",
+      "verdict": "VERIFIED",
+      "evidence": "A.upstream.build.ohpm-install fixed; description and SKILL.md now state that dependencies are installed automatically after oh-package.json5 changes"
+    },
+    {
+      "where": "tools/list run.description",
+      "text": "Multi-device apps (e.g. phone + watch entry modules): only the modules whose module.json5 deviceTypes match the target device are built and installed",
+      "verdict": "VERIFIED",
+      "evidence": "C.multi-device-select, B.action.run.build_run.lingdong-watch-on-phone.failure (DEVICE_MISMATCH)"
+    },
+    {
+      "where": "tools/list run.description",
+      "text": "Project signing (build-profile or hvigorfile overrides) is used as-is.",
+      "verdict": "VERIFIED",
+      "evidence": "C.sign-auto-refuses; LingDong built and launched with its own signing (C.multi-device-select)"
+    },
+    {
+      "where": "tools/list run.description",
+      "text": "build_run: build + install + launch + startup check (crash detection)",
+      "verdict": "VERIFIED",
+      "evidence": "B.code.check.rule.appstorage-observedv2-mixing pass 2: build_run reported 'App crashed on startup', smoke FAIL_CRASH, crash log name"
+    },
+    {
+      "where": "tools/list job.description",
+      "text": "resume: continue an interrupted or needs_input job",
+      "verdict": "VERIFIED",
+      "evidence": "B.action.job.resume.stale-status fixed; description says resume returns running, then wait"
+    },
+    {
+      "where": "tools/list device.description",
+      "text": "log ... level",
+      "verdict": "VERIFIED",
+      "evidence": "A.upstream.log.level (minimum level, documented as such)"
+    },
+    {
+      "where": "tools/list device.target (all tools)",
+      "text": "target: HDC device serial; optional when exactly one device is connected",
+      "verdict": "VERIFIED",
+      "evidence": "B.action.ui.test_step (DEVICE_AMBIGUOUS with two devices). Note: upstream also accepts device names (A.upstream.device-by-name)"
+    },
+    {
+      "where": "tools/list ui.description",
+      "text": "input (types text into a field; Chinese supported), type (into the focused field)",
+      "verdict": "VERIFIED",
+      "evidence": "C.input-quotes (quotes, $, backtick, &, |, ;, Chinese kept exactly), A.upstream.ui.text-focused"
+    },
+    {
+      "where": "tools/list ui.depth",
+      "text": "depth: tree/observe: maximum depth",
+      "verdict": "VERIFIED",
+      "evidence": "A.upstream.ui.layout-depth fixed; description: 0/omitted unlimited, 1 root only, 2 root+children"
+    },
+    {
+      "where": "tools/list ui.description",
+      "text": "review(requirement) returns a screenshot",
+      "verdict": "VERIFIED",
+      "evidence": "B.action.ui.review.image (image/jpeg block attached)"
+    },
+    {
+      "where": "tools/list ui.description",
+      "text": "record_start/record_stop/record_status: screen recording to mp4 (real devices ...)",
+      "verdict": "VERIFIED",
+      "evidence": "B.action.ui.record_start/record_status/record_stop on the phone (mp4 saved)"
+    },
+    {
+      "where": "tools/list ui_flow.description",
+      "text": "stop (save with a final assert ...)",
+      "verdict": "VERIFIED",
+      "evidence": "B.action.ui_flow.stop.project-ignored fixed; description: stop with the same project as record"
+    },
+    {
+      "where": "tools/list knowledge.description",
+      "text": "its sections are labelled official or community",
+      "verdict": "VERIFIED",
+      "evidence": "C.cloud-labels fixed (text-verified labels, 4 classes); description explains each label"
+    },
+    {
+      "where": "tools/list knowledge.description / SKILL.md",
+      "text": "the complete answer (every section, untruncated) is in full_artifact (job action=read, line=sources[].line)",
+      "verdict": "VERIFIED",
+      "evidence": "C.cloud-full-artifact (85/85, 85/85, 84/84 sections; line pointers exact)"
+    },
+    {
+      "where": "tools/list knowledge.description / server instructions / SKILL.md",
+      "text": "trust order: SDK declarations and a successful build > official docs > community",
+      "verdict": "VERIFIED",
+      "evidence": "rule is sound; but its middle tier depends on labels that are 90.5% accurate (C.cloud-labels) and 'official' includes non-ArkTS platforms — the text does not warn about Android/Cangjie official docs"
+    },
+    {
+      "where": "tools/list knowledge.version",
+      "text": "version: update: specific version",
+      "verdict": "VERIFIED",
+      "evidence": "B.schema.unknown-params fixed: version passed to rollback is refused"
+    },
+    {
+      "where": "tools/list skills.host",
+      "text": "cursor | claude | codex | opencode | trae-cn | codebuddy | qoder | pi | deveco (skills only)",
+      "verdict": "VERIFIED",
+      "evidence": "A.upstream.skills.agents fixed; host list includes atomcode, dsh (skills only)"
+    },
+    {
+      "where": "tools/list skills.description",
+      "text": "scope=project writes <project>/.agents/skills, shared by Codex, Claude Code, Cursor, Qoder, OpenCode",
+      "verdict": "INFERRED",
+      "evidence": "path written verified (B.action.skills.export/init); whether each host actually reads .agents/skills was not tested per host in this audit"
+    },
+    {
+      "where": "tools/list sign.description",
+      "text": "auto: ... creates keystore+CSR, debug certificate, registers connected devices, creates a debug profile and writes signingConfigs",
+      "verdict": "VERIFIED",
+      "evidence": "auto no longer claims a cloud profile cleanup; certificate quota and team rules described; TEAM_AMBIGUOUS for write actions"
+    },
+    {
+      "where": "tools/list sign.description",
+      "text": "profile_delete (id)",
+      "verdict": "VERIFIED",
+      "evidence": "profile_delete described as for ids shown in the AGC console; profile_create no longer returns a null id"
+    },
+    {
+      "where": "tools/list emulator.description",
+      "text": "install_image (force re-downloads), remove_image",
+      "verdict": "VERIFIED",
+      "evidence": "B.real-emulator.install/remove/remove-missing/install-bad-version"
+    },
+    {
+      "where": "tools/list emulator.description",
+      "text": "sensor (light/humidity/temperature/steps/heartrate)",
+      "verdict": "VERIFIED",
+      "evidence": "A.upstream.emulator.scenario-validation: phone emulator supports light and steps only; the Emulator reports this and we surface it"
+    },
+    {
+      "where": "tools/list hot_reload.description",
+      "text": "First deploy with run action=build_run hot_reload=true; after editing .ets files call apply",
+      "verdict": "VERIFIED",
+      "evidence": "B.action.hot_reload.apply.success (after hot_reload build_run), NOT_FOUND with that hint otherwise"
+    },
+    {
+      "where": "project.ts device_compat.note / syscap.ts note",
+      "text": "the compiler drops the warning once the call is inside if (canIUse('SystemCapability.…')) ... On a device without the capability they crash at runtime.",
+      "verdict": "VERIFIED",
+      "evidence": "C.canIUse-enclosing-if (enclosing if: 0, early-return/other syscap: warning kept), C.unguarded-crash (TypeError on phone emulator)"
+    },
+    {
+      "where": "project.ts device_compat.note",
+      "text": "compiler_false_positives: hvigor misreads '@syscap X [since N]' tags and the 'default' device alias; nothing to change",
+      "verdict": "VERIFIED",
+      "evidence": "C.syscap-hvigor-bugs.since-suffix, C.syscap-hvigor-bugs.default-alias"
+    },
+    {
+      "where": "project.ts device_compat.note",
+      "text": "Only files compiled in this build are reported: an incremental build with no changes reports none.",
+      "verdict": "VERIFIED",
+      "evidence": "C.incremental-no-warnings"
+    },
+    {
+      "where": "diagnose.ts hint syscap",
+      "text": "Not a missing dependency: <cap> is not available on this module's deviceTypes",
+      "verdict": "VERIFIED",
+      "evidence": "C.api-modules-30 (LSP 2307 message names the capability; resolves when deviceTypes include the device)"
+    },
+    {
+      "where": "LSP diagnostics passthrough",
+      "text": "(LSP error) The default system capabilities of devices phone do not include . Configure the capabilities in syscap.json.",
+      "verdict": "VERIFIED",
+      "evidence": "B.code.lsp.empty-syscap-message fixed: dropped and reported under suppressed with the reason"
+    },
+    {
+      "where": "server instructions",
+      "text": "Long operations (build, run, sync) return a job; use job action=wait rather than repeating the call.",
+      "verdict": "VERIFIED",
+      "evidence": "B.action.job.*"
+    },
+    {
+      "where": "SKILL.md",
+      "text": "deveco MCP 提供 15 个工具",
+      "verdict": "VERIFIED",
+      "evidence": "tools/list returns 15 tools (docs/audit/evidence/agent-text/tools.md)"
+    },
+    {
+      "where": "SKILL.md 部署运行",
+      "text": "返回 smoke: PASS / FAIL_CRASH / FAIL_BLANK",
+      "verdict": "VERIFIED",
+      "evidence": "C.multi-device-select (PASS), rules pass-2 appstorage (FAIL_CRASH), A.upstream.run.smoke-blank (blank rule)"
+    },
+    {
+      "where": "SKILL.md 改 UI 细节反复调",
+      "text": "hot_reload action=apply：约 3 秒生效",
+      "verdict": "UNVERIFIED",
+      "evidence": "apply succeeded; its duration was not measured separately in this audit"
+    },
+    {
+      "where": "SKILL.md 数据库/文件",
+      "text": "device action=sqlite bundle=... db=<name>（调试包 RDB，默认只读）",
+      "verdict": "VERIFIED",
+      "evidence": "B.action.device.sqlite.success, B.action.device.sqlite.readonly"
+    },
+    {
+      "where": "SKILL.md 资料冲突",
+      "text": "云端官方段落带 local_doc 时，用 knowledge action=read id=<local_doc> 读本地全文核对",
+      "verdict": "VERIFIED",
+      "evidence": "SKILL.md rewritten: local_doc is the document containing the section's text; other-platform label explained"
+    }
+  ]
+}

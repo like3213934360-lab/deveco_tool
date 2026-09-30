@@ -39,7 +39,8 @@ export const projectTool = tool({
     "info: read product/modules/SDK (instant).",
     "create: new app from the built-in template (does not overwrite).",
     "sync: ohpm install + hvigor sync (job).",
-    "build: advisory ArkTS preflight + hvigor build (job); returns packages and structured compile errors with fix hints (hvigor decides; preflight findings never block).",
+    "build: advisory ArkTS preflight + hvigor build (job); returns packages, or every compile error (code, file, line, message; the first 100 listed, the rest counted) with fix hints (hvigor decides; preflight findings never block).",
+    "Dependencies are installed automatically when oh-package.json5 / build-profile.json5 changed since the last install. modules accept name@target; mode must be debug, release or a buildModeSet name.",
     "clean: hvigor clean.",
     "Build/sync return a job: if status is running, call job action=wait.",
   ].join(" "),
@@ -61,6 +62,13 @@ export const projectTool = tool({
     request_key: fields.requestKey,
     wait: fields.wait,
   }),
+  params: {
+    info: ["project", "product"],
+    create: ["project", "app_name", "bundle_name", "sdk_version", "target_api", "compatible_api", "merge"],
+    sync: ["project", "product", "request_key", "wait"],
+    build: ["project", "product", "modules", "task", "mode", "clean", "preflight", "request_key", "wait"],
+    clean: ["project", "product"],
+  },
   async handler(input) {
     const project = await import("../domains/project.js");
     switch (input.action) {
@@ -106,7 +114,8 @@ export const runTool = tool({
     "Put the app on a device. Multi-device apps (e.g. phone + watch entry modules): only the modules whose module.json5 deviceTypes match the target device are built and installed (pass modules/module to choose explicitly). Project signing (build-profile or hvigorfile overrides) is used as-is.",
     "build_run: build + install + launch + startup check (crash detection) — the usual 'run it' action.",
     "deploy: install already-built packages (latest outputs) + launch.",
-    "launch: start the installed app. stop: force-stop. uninstall: remove the app.",
+    "launch: start the installed app. stop: force-stop. uninstall: remove the app (uninstalled:false with reason not_installed when it was not installed).",
+    "Several devices connected and no target: the call fails with DEVICE_AMBIGUOUS listing them — ask the user which one, never pick yourself.",
     "Pass assert to verify a UI outcome after launch (e.g. {visible:{text:'Welcome'}}).",
     "hot_reload=true on build_run installs a hot-reload build; then use hot_reload tool for instant updates.",
   ].join(" "),
@@ -126,13 +135,20 @@ export const runTool = tool({
     request_key: fields.requestKey,
     wait: fields.wait,
   }),
+  params: {
+    build_run: ["project", "product", "modules", "target", "mode", "module", "ability", "assert", "hot_reload", "skip_build", "uninstall_first", "request_key", "wait"],
+    deploy: ["project", "product", "modules", "target", "module", "ability", "assert", "hot_reload", "uninstall_first", "request_key", "wait"],
+    launch: ["project", "product", "target", "module", "ability"],
+    stop: ["project", "product", "target"],
+    uninstall: ["project", "product", "target"],
+  },
   async handler(input, ctx) {
     if (input.action === "build_run" || input.action === "deploy")
       return startAndWait(input.action === "build_run" && input.skip_build ? "deploy" : input.action, input, input.request_key, input.wait ?? 3000);
-    const { inspectProject, mainAbility } = await import("../domains/project.js");
+    const { inspectProject, mainAbility, runnableDeviceTypes } = await import("../domains/project.js");
     const device = await import("../domains/device.js");
     const project = inspectProject(input.project, input.product);
-    const target = await device.resolveTarget(input.target, ctx.signal);
+    const target = await device.resolveTarget(input.target, ctx.signal, runnableDeviceTypes(project));
     invariant(project.bundleName, "PROJECT_INVALID", "bundleName missing in AppScope/app.json5");
     if (input.action === "stop") { await device.forceStop(target, project.bundleName, ctx.signal); return { stopped: project.bundleName }; }
     if (input.action === "uninstall") return device.uninstall(target, project.bundleName, ctx.signal);
@@ -147,7 +163,7 @@ export const runTool = tool({
 export const jobTool = tool({
   name: "job",
   title: "Long-running jobs",
-  description: "Track jobs started by project/run/ui_flow. wait: block up to wait ms (default 20000) for completion. status/list/cancel. resume: continue an interrupted or needs_input job (force=true re-runs an uncertain step after you inspected it). read: page a log/report artifact by line, optionally filtered with grep.",
+  description: "Track jobs started by project/run/ui_flow. wait: block up to wait ms (default 20000, at most 60000; call again while running) for completion. status/list/cancel. resume: continue an interrupted or needs_input job (force=true re-runs an uncertain step after you inspected it); it returns status running — then use wait. read: page a log/report artifact by line, optionally filtered with grep.",
   schema: z.object({
     action: z.enum(["wait", "status", "list", "cancel", "resume", "read"]),
     job_id: z.string().optional(),
@@ -160,6 +176,10 @@ export const jobTool = tool({
     line: z.number().int().min(0).optional().describe("read: start line (0-based); use next_line from the previous page"),
     grep: z.string().optional().describe("read: regex filter, e.g. 'error|ERROR'"),
   }),
+  params: {
+    wait: ["job_id", "wait"], status: ["job_id", "detail"], list: ["limit", "status"], cancel: ["job_id"],
+    resume: ["job_id", "force"], read: ["artifact_id", "line", "limit", "grep"],
+  },
   async handler(input) {
     await ensureJobs();
     const jobs = await import("../core/jobs.js");
@@ -219,6 +239,14 @@ export const codeTool = tool({
     to: z.string().optional().describe("api_scan: target version"),
     limit: z.number().int().min(1).max(200).optional(),
   }),
+  params: {
+    check: ["project", "files", "fix"],
+    lint: ["project", "file", "fix", "product", "config_path", "incremental", "output_path"],
+    api_scan: ["project", "from", "to", "files", "modules", "output_path"],
+    api_versions: ["project"],
+    lsp: ["project", "op", "file", "files", "symbol", "line", "column", "query", "language", "limit", "direction", "product"],
+    lsp_restart: ["project", "language"],
+  },
   async handler(input, ctx) {
     const code = await import("../domains/code.js");
     if (input.action === "api_versions") return { versions: code.apiVersions() };
@@ -267,6 +295,12 @@ export const deviceTool = tool({
     local: z.string().optional(),
     remote: z.string().optional(),
   }),
+  params: {
+    list: [], info: ["target"],
+    log: ["target", "bundle", "grep", "level", "lines", "clear", "from", "to", "follow", "cursor", "wait_ms"],
+    shell: ["target", "command"], sqlite: ["target", "db", "module", "sql", "write", "bundle", "lines"],
+    send: ["target", "local", "remote"], recv: ["target", "local", "remote"],
+  },
   async handler(input, ctx) {
     const device = await import("../domains/device.js");
     if (input.action === "list") {
@@ -311,8 +345,8 @@ export const uiTool = tool({
     all_windows: z.boolean().optional().describe("tree: every window on every display (not with window)"),
     node: z.string().optional().describe("tree: only the component with this id/key and its subtree"),
     display: z.number().int().optional().describe("screenshot: display id (multi-screen devices)"),
-    save_path: z.string().optional().describe("screenshot/record_stop: also save the file to this absolute path (file or directory)"),
-    depth: z.number().int().min(0).max(100).optional().describe("tree/observe: maximum depth"),
+    save_path: z.string().optional().describe("screenshot/record_stop: also save the file to this absolute path (file or directory); removed with the other artifacts after retention_days (default 1)"),
+    depth: z.number().int().min(0).max(100).optional().describe("tree/observe: levels to show (like devecocli --depth): 0 or omitted = unlimited, 1 = root only, 2 = root + children"),
     all: z.boolean().optional().describe("windows: include system windows"),
     discard: z.boolean().optional().describe("record_stop: stop without downloading"),
     external: z.boolean().optional().describe("record_stop: stop a recording started outside this server"),
@@ -325,7 +359,7 @@ export const uiTool = tool({
     outcome: z.enum(["passed", "failed", "insufficient"]).optional().describe("review: your visual judgement"),
     reason: z.string().max(2000).optional(),
     review_id: z.number().int().optional(),
-    directory: z.string().optional().describe("test_export: absolute output directory"),
+    directory: z.string().optional().describe("test_export: absolute output directory (exported files expire after retention_days, default 1)"),
     max_chars: z.number().int().min(-1).optional().describe("test_log: -1 = unlimited, default 5000"),
     grep: z.string().optional().describe("test_log: keyword/regex filter"),
     selector: selectorSchema.optional(),
@@ -350,6 +384,23 @@ export const uiTool = tool({
     width: z.number().int().min(240).max(2560).optional(),
     limit: z.number().int().min(1).max(2000).optional(),
   }),
+  params: (() => {
+    const act = ["target", "op", "selector", "keys", "button", "ticks", "verify_change", "x", "y", "x2", "y2", "direction", "text", "append", "key", "speed"];
+    return {
+      observe: ["target", "window", "depth", "interactive", "limit", "bundle", "format", "width"],
+      screenshot: ["target", "display", "save_path", "format", "width"],
+      tree: ["target", "window", "all_windows", "node", "depth", "interactive", "limit", "bundle"],
+      find: ["target", "selector", "limit"],
+      act,
+      assert: ["target", "visible", "hidden", "timeout_ms"],
+      windows: ["target", "all"],
+      record_start: ["target"], record_status: ["target"], record_stop: ["target", "discard", "external", "save_path"],
+      test_start: ["target", "plan", "project", "bundle", "fresh_start"],
+      test_step: [...act, "test_id", "description", "visible", "hidden", "timeout_ms"],
+      review: ["target", "test_id", "requirement", "outcome", "reason", "review_id"],
+      test_finish: ["target", "test_id"], test_log: ["target", "test_id", "grep", "max_chars"], test_export: ["target", "test_id", "directory"],
+    };
+  })(),
   async handler(input, ctx) {
     const { resolveTarget } = await import("../domains/device.js");
     const ui = await import("../domains/ui.js");
@@ -363,7 +414,12 @@ export const uiTool = tool({
       invariant(input.directory, "INVALID_INPUT", "directory is required");
       return t.exportTest(input.test_id, input.directory);
     }
-    const target = await resolveTarget(input.target, ctx.signal);
+    let projectTypes: string[] | undefined;
+    if (input.action === "test_start" && input.project && !input.target) {
+      const { inspectProject, runnableDeviceTypes } = await import("../domains/project.js");
+      try { projectTypes = runnableDeviceTypes(inspectProject(input.project)); } catch { /* reported by test_start below */ }
+    }
+    const target = await resolveTarget(input.target, ctx.signal, projectTypes);
     const scope = { window: input.window };
     switch (input.action) {
       case "windows": return { windows: await ui.listWindows(target, input.all, ctx.signal) };
@@ -478,7 +534,7 @@ async function screenSize(target: string, info: (t: string, s?: AbortSignal) => 
 export const uiFlowTool = tool({
   name: "ui_flow",
   title: "Record & replay UI flows",
-  description: "Reusable UI paths stored in <project>/.arkpilot/flows. list; show; record (start recording, then use ui act with selectors); stop (save with a final assert proving the goal, or discard=true); replay (restart app, run steps, check the assert — job; repair=true promotes working alternates); delete.",
+  description: "Reusable UI paths stored in <project>/.arkpilot/flows. list; show; record (start recording, then use ui act with selectors; one recording per device, kept across restarts until stopped); stop (same project as record; save with a final assert proving the goal, or discard=true); replay (restart app, run steps, check the assert — job; repair=true promotes working alternates); delete.",
   schema: z.object({
     action: z.enum(["list", "show", "record", "stop", "replay", "delete"]),
     project: fields.project,
@@ -492,6 +548,11 @@ export const uiFlowTool = tool({
     request_key: fields.requestKey,
     wait: fields.wait,
   }),
+  params: {
+    list: ["project"], show: ["project", "id"], delete: ["project", "id"],
+    record: ["project", "target", "id", "name"], stop: ["project", "target", "assert", "discard"],
+    replay: ["project", "target", "id", "variables", "repair", "request_key", "wait"],
+  },
   async handler(input, ctx) {
     const flows = await import("../domains/flows.js");
     switch (input.action) {
@@ -517,7 +578,7 @@ export const uiFlowTool = tool({
       }
       case "stop": {
         const { resolveTarget } = await import("../domains/device.js");
-        return flows.stopRecording(await resolveTarget(input.target, ctx.signal), { assert: input.assert, discard: input.discard }, ctx.signal);
+        return flows.stopRecording(await resolveTarget(input.target, ctx.signal), { project: input.project, assert: input.assert, discard: input.discard }, ctx.signal);
       }
       case "replay":
         invariant(input.id, "INVALID_INPUT", "id is required");
@@ -541,6 +602,7 @@ export const diagnoseTool = tool({
     since_minutes: z.number().int().min(1).max(10080).optional().describe("crash: only reports from the last N minutes (device clock)"),
     diagnostics: z.array(z.object({ code: z.string().optional(), message: z.string() })).max(100).optional().describe("build: diagnostics to explain"),
   }),
+  params: { crash: ["target", "bundle", "log", "name", "latest", "since_minutes"], build: ["diagnostics"] },
   async handler(input, ctx) {
     const diagnose = await import("../domains/diagnose.js");
     if (input.action === "build") return { hints: diagnose.buildFailureHints(input.diagnostics ?? []) };
@@ -558,8 +620,8 @@ export const knowledgeTool = tool({
     "Offline HarmonyOS docs (guides, API reference, best practices, FAQ, release notes) plus ArkTS rules, compile-error cases and runtime crash patterns, from an updatable knowledge pack.",
     "search: full-text (Chinese or English; use API names, decorators, error codes). read: a document by id (section= for one heading).",
     "catalog/status: pack info. update: download the latest pack (check=true only checks). rollback: previous pack.",
-    "source=cloud: search Huawei's online CodeGenie knowledge (needs auth provider=codegenie); its sections are labelled official or community.",
-    "Conflicting answers: the project's SDK declarations (code action=lsp op=hover) and a successful build win, then official docs (local pack / cloud sections marked official), and community articles never define the API.",
+    "source=cloud: search Huawei's online CodeGenie knowledge (needs auth provider=codegenie). Each section is labelled by its text: official (found in the official docs; local_doc = that document), official_other_platform (official Huawei text for Android/Java or Cangjie, not ArkTS), community (not in the official docs), unverified (could not be decided: treat like community). Official first inline; the complete answer (every section, untruncated) is in full_artifact (job action=read, line=sources[].line).",
+    "Conflicting answers: the project's SDK declarations (code action=lsp op=hover) and a successful build win, then official docs (local pack / cloud sections marked official), and community / unverified sections never define the API.",
   ].join(" "),
   schema: z.object({
     action: z.enum(["search", "read", "catalog", "status", "update", "rollback"]),
@@ -576,6 +638,11 @@ export const knowledgeTool = tool({
     file: z.string().optional().describe("update: install from a local .tgz pack, or 'upstream' to build one from Huawei's latest docs package"),
     force: z.boolean().optional(),
   }),
+  params: {
+    search: ["query", "catalog", "kind", "source", "limit", "offset"],
+    read: ["id", "offset", "limit", "section"],
+    catalog: [], status: ["check"], update: ["check", "version", "file", "force", "limit"], rollback: [],
+  },
   async handler(input, ctx) {
     const kb = await import("../domains/knowledge.js");
     switch (input.action) {
@@ -605,7 +672,7 @@ export const skillsTool = tool({
     action: z.enum(["list", "read", "export", "install_mcp", "init", "search", "install", "uninstall"]),
     name: z.string().optional(),
     reference: z.string().optional().describe("read: a file under references/, e.g. quick-apis/01-layout.md (see list)"),
-    host: z.string().optional().describe("cursor | claude | codex | opencode | trae-cn | codebuddy | qoder | pi | deveco (skills only)"),
+    host: z.string().optional().describe("cursor | claude | codex | opencode | trae-cn | codebuddy | qoder | pi (skills + MCP); deveco | atomcode | dsh (skills only)"),
     force: z.boolean().optional().describe("install_mcp/init: overwrite an existing entry"),
     path: z.string().optional().describe("export/install/uninstall/init: explicit absolute skills directory instead of host/scope"),
     scope: z.enum(["user", "project"]).optional(),
@@ -614,6 +681,15 @@ export const skillsTool = tool({
     query: z.string().optional(),
     limit: z.number().int().min(1).max(50).optional(),
   }),
+  params: {
+    list: [], read: ["name", "reference"],
+    export: ["host", "scope", "project", "names", "path"],
+    install_mcp: ["host", "scope", "project", "force"],
+    init: ["host", "scope", "project", "force", "path"],
+    search: ["query", "limit"],
+    install: ["name", "host", "scope", "project", "path"],
+    uninstall: ["name", "host", "scope", "project", "path"],
+  },
   async handler(input) {
     const skills = await import("../domains/skills.js");
     switch (input.action) {
@@ -644,6 +720,10 @@ export const authTool = tool({
     open_browser: z.boolean().optional(),
     legacy_state_dir: z.string().optional(),
   }),
+  params: {
+    login: ["provider", "region", "open_browser"], status: ["provider"], logout: ["provider"],
+    teams: [], import: ["legacy_state_dir"],
+  },
   async handler(input) {
     const auth = await import("../domains/auth.js");
     const provider = input.provider ?? "codegenie";

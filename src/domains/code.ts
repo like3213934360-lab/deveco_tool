@@ -424,6 +424,7 @@ export async function lsp(input: {
       const files = (input.files ?? (input.file ? [input.file] : [])).map((f) => path.resolve(root, f));
       invariant(files.length, "INVALID_INPUT", "Pass file or files");
       const out: Record<string, unknown>[] = [];
+      let suppressed = 0;
       for (const file of files.slice(0, 20)) {
         const { uri } = await sync(session, file);
         // Pull diagnostics first (what DevEco Studio / deveco-cli use for ArkTS: the ets-lint result
@@ -444,14 +445,22 @@ export async function lsp(input: {
           }
           items = entry?.items ?? [];
         }
-        for (const d of items)
+        for (const d of items) {
+          // ace-server reports "...devices phone do not include . Configure the capabilities in syscap.json." for
+          // modules whose declarations carry no @syscap tag (e.g. @ohos.arkui.layoutAlgorithm). hvigor compiles
+          // them (verified), so this is not an error; it is dropped and counted.
+          if (/system capabilities of devices .* do not include \.\s/i.test(String(d.message))) { suppressed++; continue; }
           out.push({ file: path.relative(root, file), line: d.range.start.line + 1, column: d.range.start.character + 1, severity: ["", "error", "warning", "info", "hint"][d.severity ?? 1], code: d.code, message: d.message });
+        }
       }
       const errors = out.filter((d) => d.severity === "error");
       return {
         errors: errors.length, warnings: out.filter((d) => d.severity === "warning").length,
+        ...(suppressed ? { suppressed: { count: suppressed, reason: "language-server syscap errors with an empty capability name (module has no @syscap tag); the compiler accepts these imports" } } : {}),
         diagnostics: out.sort((a, b) => (a.severity === "error" ? -1 : 1) - (b.severity === "error" ? -1 : 1)).slice(0, limit),
-        hints: buildFailureHints(errors.map((e) => ({ code: e.code ? String(e.code) : undefined, message: String(e.message) }))),
+        // Errors, plus the one warning class that crashes at runtime (API not on every device: needs canIUse).
+        hints: buildFailureHints(out.filter((d) => d.severity === "error" || /not supported on all devices|canIUse/i.test(String(d.message)))
+          .map((e) => ({ code: e.code ? String(e.code) : undefined, message: String(e.message) }))),
       };
     }
     invariant(input.file, "INVALID_INPUT", "file is required");

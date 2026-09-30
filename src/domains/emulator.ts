@@ -117,6 +117,8 @@ export async function startEmulator(name: string, options: { cold?: boolean; win
   // so an early refusal (license, missing image, bad config) is reported immediately instead of timing out.
   const logFile = path.join(os.tmpdir(), `deveco-emulator-${name.replace(/[^\w.-]/g, "_")}.log`);
   const child = spawnIndependent(cmd, logFile);
+  // Kept only when the start fails (for diagnosis); tracked so retention removes it like other outputs.
+  await (await import("../core/artifacts.js")).trackExport(logFile).catch(() => {});
   let exited: number | null | undefined;
   child.once("exit", (code) => { exited = code; });
   const deadline = Date.now() + 180000;
@@ -142,6 +144,9 @@ export async function startEmulator(name: string, options: { cold?: boolean; win
           if (boot === "true") break;
           await new Promise((r) => setTimeout(r, 2000));
         }
+        // The launcher log only matters for diagnosing a refused start; the emulator keeps writing to
+        // its own logs, and the file is reused (same name) on the next start, so drop it once booted.
+        fs.rmSync(logFile, { force: true });
         return { started: name, target, ...(licenseAcceptedNow ? { license: "accepted automatically (HarmonyOS software + SDK agreements; review with emulator action=license_view)" } : {}) };
       }
     }
@@ -190,13 +195,32 @@ export async function deleteEmulator(name: string, signal?: AbortSignal, instanc
 }
 /** Downloaded images by default (upstream `image list`); all=true lists every downloadable image. */
 export async function images(deviceType?: string, signal?: AbortSignal, all = false) {
-  return { output: clip(await emulator(["-imageList", ...(deviceType ? ["-deviceType", deviceType] : []), ...(all ? [] : ["-downloaded", "true"])], signal, 60000), 8000) };
+  const out = await emulator(["-imageList", ...(deviceType ? ["-deviceType", deviceType] : []), ...(all ? [] : ["-downloaded", "true"])], signal, 60000);
+  // The Emulator prints JSON rows, or a sentence when nothing matches ("No images matching the criteria were found.").
+  const start = out.indexOf("[");
+  try {
+    const rows = JSON.parse(start >= 0 ? out.slice(start) : out) as Record<string, string>[];
+    return { images: rows.map((r) => ({ device_type: r.deviceType, os_version: r.osVersion, software_version: r.SoftWareVersion ?? r.softwareVersion, downloaded: String(r.downloaded) === "true", upgradable: String(r.upgradable) === "true", release: r.releaseType })) };
+  } catch {
+    if (/No images/i.test(out)) return { images: [] };
+    return { images: [], output: clip(out, 2000) };
+  }
 }
 export async function installImage(deviceType: string, osVersion: string, signal: AbortSignal, force = false, autoAcceptLicense = true) {
   await ensureLicense(autoAcceptLicense, signal);
   // -force skips interactive prompts; re-download of an existing image additionally needs the image removed first.
   if (force) await removeImage(deviceType, osVersion, signal).catch(() => undefined);
-  return { installed: `${deviceType} ${osVersion}`, output: clip(await emulatorChecked("install_image", ["-install", "-deviceType", deviceType, "-osVersion", osVersion, "-force"], signal, 60 * 60000), 2000) };
+  const started = Date.now();
+  const out = await emulatorChecked("install_image", ["-install", "-deviceType", deviceType, "-osVersion", osVersion, "-force"], signal, 60 * 60000);
+  // Summary instead of the progress stream ("\r12.3% (x/y bytes)" thousands of times).
+  const bytes = [...out.matchAll(/\((\d+)\/(\d+) bytes\)/g)].at(-1)?.[2];
+  const lines = out.split(/[\r\n]+/).map((l) => l.trim()).filter((l) => l && !/^\d+(\.\d+)?% \(/.test(l));
+  return {
+    installed: `${deviceType} ${osVersion}`,
+    ...(/downloaded to (\S+)/i.exec(out)?.[1] ? { path: /downloaded to (\S+)/i.exec(out)![1] } : /download to (\S+)/i.exec(out)?.[1] ? { path: /download to (\S+)/i.exec(out)![1] } : {}),
+    ...(bytes ? { bytes: Number(bytes) } : {}), seconds: Math.round((Date.now() - started) / 1000),
+    output: clip(lines.join("\n"), 600),
+  };
 }
 export async function removeImage(deviceType: string, osVersion: string, signal?: AbortSignal) {
   return { removed: `${deviceType} ${osVersion}`, output: clip(await emulatorChecked("remove_image", ["-uninstall", "-deviceType", deviceType, "-osVersion", osVersion, "-force"], signal, 300000), 1000) };

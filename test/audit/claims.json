@@ -1,0 +1,33 @@
+{
+  "$comment": "Every conclusion stated to the user in this session. Each is re-checked by a test/audit script and gets a verdict in docs/audit/findings.jsonl (id C.<key>).",
+  "claims": [
+    { "key": "multi-device-select", "claim": "build_run on a phone builds/installs only the phone entry module of a phone+watch project; an explicit watch module is refused with DEVICE_MISMATCH before install", "check": "tools-actions" },
+    { "key": "sign-auto-refuses", "claim": "sign auto refuses (SIGN_CONFIGURED) and changes nothing on projects that already have signing (build-profile or hvigorfile overrides)", "check": "tools-actions" },
+    { "key": "buildprofile-restored", "claim": "BuildProfile.ets bytes are restored after every build", "check": "cross-risk" },
+    { "key": "check-false-positives-fixed", "claim": "arkts-check: LingDong whole-project errors 119 -> 0; 8 cases agree with hvigor", "check": "check-rules" },
+    { "key": "hms-kits-resolve", "claim": "LSP resolves all 103 kits (47 OpenHarmony + 56 HMS); hover gives real signatures after dropping --sdkPath", "check": "tools-actions" },
+    { "key": "api-modules-30", "claim": "30 of 715 API modules unresolved on a phone module: 22 are 2in1-only (resolve when deviceTypes include 2in1), 8 others are device/system-only", "check": "syscap-verify" },
+    { "key": "cloud-labels", "claim": "cloud sections labelled official/community correctly", "check": "cloud-labels" },
+    { "key": "cloud-full-artifact", "claim": "full_artifact holds every cloud section untruncated; sources[].line points at each section", "check": "cloud-labels" },
+    { "key": "local-kb-complete", "claim": "knowledge read pages through a whole document (38895 chars in 4 pages)", "check": "tools-actions" },
+    { "key": "retention", "claim": "run artifacts, save_path copies, test exports and UI tests expire after 1 day; untracked user files are never removed; cleanup also runs at startup", "check": "cross-risk" },
+    { "key": "emulator-failure-detection", "claim": "Emulator CLI failures (exit 0) are detected from output; success outputs are not misread", "check": "real-emulator" },
+    { "key": "job-orphan-resume", "claim": "a job orphaned by a crashed server reads as interrupted and resumes to success", "check": "tools-actions" },
+    { "key": "daemon-recovery", "claim": "ArkTS checker / LSP processes that die are replaced; a cancelled build no longer hangs later checks", "check": "tools-actions" },
+    { "key": "input-quotes", "claim": "ui act input keeps straight quotes and special characters exactly", "check": "tools-actions" },
+    { "key": "verify-unsigned", "claim": "sign verify returns verified=false with a reason for unsigned packages, and a profile summary for signed ones", "check": "tools-actions" },
+    { "key": "syscap-hvigor-bugs", "claim": "hvigor syscap warning has two defects: '[since N]' tag suffix never matches (85 false in LingDong) and 'default' deviceType loses phone HMS capabilities (21 false); 83 real (missing on 2in1)", "check": "syscap-verify" },
+    { "key": "canIUse-enclosing-if", "claim": "hvigor suppresses the syscap warning only when the call is inside an enclosing if (canIUse('<exact syscap>'))", "check": "syscap-verify" },
+    { "key": "unguarded-crash", "claim": "calling a capability-missing API without canIUse crashes at runtime (TypeError on phone for a 2in1-only kit)", "check": "syscap-verify" },
+    { "key": "push-token-signature", "claim": "pushService.on('tokenUpdate', ability, callback) requires Ability; @since 5.1.0(18)", "check": "tools-actions" },
+    { "key": "push-client-id", "claim": "client_id appears only for the v1 revoke API and AGC management APIs; v3 push does not need it", "check": "cloud-labels" },
+    { "key": "all-actions-tested", "claim": "all 126 tool actions are covered by tests (some via mock services)", "check": "tools-actions" },
+    { "key": "upstream-467", "claim": "467 upstream items: 355 full / 70 host / 42 skip, 0 gaps", "check": "upstream-semantic" },
+    { "key": "perf", "claim": "handshake ~86-89 ms median, idle RSS 67-68 MB, tools/list ~36 KB", "check": "cross-risk" },
+    { "key": "skills-paths", "claim": "skill/MCP config paths per host match the upstream deveco-cli tables", "check": "upstream-semantic" },
+    { "key": "lsp-codes-not-in-kb", "claim": "LSP diagnostic codes (2307, 28005, 28057) and some 8-digit codes return no knowledge results", "check": "tools-actions" },
+    { "key": "tests-clean-temp", "claim": "unit tests leave no temp directories behind", "check": "cross-risk" },
+    { "key": "agc-formats", "claim": "AGC request routes and bodies match upstream deveco-cli", "check": "upstream-semantic" },
+    { "key": "incremental-no-warnings", "claim": "an incremental build without source changes reports no compile warnings (device_compat empty)", "check": "syscap-verify" }
+  ]
+}

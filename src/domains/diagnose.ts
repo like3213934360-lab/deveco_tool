@@ -191,9 +191,23 @@ export function buildFailureHints(diagnostics: { code?: string; message: string 
     if (/object literal|arkts-no-untyped-obj-literals/i.test(m)) hints.set("literal", "Object literals need a declared class/interface type (knowledge: errors/object_literal_type_errors)");
     if (/spread|arkts-no-spread/i.test(m)) hints.set("spread", "Object spread is restricted in ArkTS (knowledge: errors/object_spread_errors)");
     if (/possibly (null|undefined)|strictNullChecks/i.test(m)) hints.set("null", "Handle null/undefined explicitly (knowledge: errors/possibly_null_errors)");
-    if (/Cannot find module|not found.*module|resolve/i.test(m)) hints.set("module", "Missing dependency or wrong import path: run project action=sync, check oh-package.json5");
+    // Device capability (LSP 28005 / 2307 with this text, 28057): the module exists; the target devices lack it.
+    if (/system capabilities of devices .* do not include SystemCapability\.\w/i.test(m)) {
+      const cap = /(SystemCapability(?:\.\w+)+)/.exec(m)![1];
+      hints.set(`syscap:${cap}`, `Not a missing dependency: ${cap} is not available on this module's deviceTypes (module.json5). Use it only from a module whose deviceTypes support it, or add the capability in syscap.json and guard calls with canIUse('${cap}')`);
+    } else if (/not supported on all devices|Use the canIUse condition/i.test(m)) {
+      hints.set("canIUse", "API not available on every device in deviceTypes: wrap each call in if (canIUse('SystemCapability.…')) { … }, otherwise it crashes on devices without it. The capability is the @syscap of the API: code action=lsp op=hover on it");
+    } else if (/Cannot find module|not found.*module|resolve/i.test(m)) hints.set("module", "Missing dependency or wrong import path: run project action=sync, check oh-package.json5");
     if (/compatibleSdkVersion|since API|requires API/i.test(m)) hints.set("api", "API not available at compatibleSdkVersion: raise compatible_api or guard with canIUse");
-    if (d.code) hints.set(`code:${d.code}`, `knowledge action=search query="${d.code}"`);
+    if (/Invalid project path|00306003/i.test(m) && /path/i.test(m))
+      hints.set("path", "hvigor rejects this project path (typically non-ASCII characters or spaces in a parent directory). Move or copy the project to an ASCII-only path and build there");
+    if (/signingConfig|00303107|SignHap/i.test(m)) hints.set("sign", "Packaging needs signing: sign action=auto (debug, real devices) or configure signingConfigs; emulators accept unsigned builds only for entry HAPs built without signing steps");
+    if (/Unknown resource name/i.test(m)) hints.set("res", "The $r('app.<type>.<name>') resource is not defined in any module's resources/base/element or media: add it or fix the name");
+    if (/Cannot find module '([^']+)'/i.test(m) && !/SystemCapability/.test(m) && /oh-package|dependenc|@ohos\/|^[a-z]/i.test(/Cannot find module '([^']+)'/i.exec(m)![1]!))
+      hints.set("module", "Missing dependency or wrong import path: add it to the module's oh-package.json5 and run project action=sync (builds also sync automatically when oh-package.json5 changed)");
+    // Only codes the knowledge pack can match: 8-digit build codes and named rules (arkts-no-any-unknown).
+    // LSP server codes (2307, 28005...) and upstream check rule ids are not indexed; search the message instead.
+    if (d.code && (/^\d{8}$/.test(d.code) || /^arkts-[a-z-]+$/.test(d.code))) hints.set(`code:${d.code}`, `knowledge action=search query="${d.code}"`);
   }
   return [...hints.values()].slice(0, 8);
 }

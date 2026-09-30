@@ -10,6 +10,7 @@ import { after, before, test } from "node:test";
 import { connect } from "../../tools/mcp-client.mjs";
 
 const work = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-cloud-"));
+process.on("exit", () => fs.rmSync(work, { recursive: true, force: true })); // tests leave nothing behind
 const UDID = "A".repeat(32) + "0123456789ABCDEF0123456789ABCDEF";
 const b64 = (o) => Buffer.from(JSON.stringify(o)).toString("base64url");
 const JWT = `${b64({ alg: "none" })}.${b64({ userId: "u42", userName: "mock", exp: Math.floor(Date.now() / 1000) + 3600 })}.sig`;
@@ -36,7 +37,7 @@ function handle(req, res, body) {
   const data = body ? JSON.parse(body) : {};
   const file = (name, content) => { agc.files.set(name, content); return { newUrl: `${base}/file/${name}`, sha256: crypto.createHash("sha256").update(content).digest("hex") }; };
   switch (`${req.method} ${url.pathname}`) {
-    case "GET /api/ups/user-permission-service/v1/user-team-list": return json({ teams: [{ id: 7, name: "Team", userType: 1 }] });
+    case "GET /api/ups/user-permission-service/v1/user-team-list": return json({ teams: agc.teams ?? [{ id: 7, name: "Team", userType: 1 }] });
     case "POST /api/cps/harmony-cert-manage/v1/cert/list": return ok({ certList: agc.certs });
     case "POST /api/cps/harmony-cert-manage/v1/cert/add": {
       assert.match(data.csr, /BEGIN NEW CERTIFICATE REQUEST|CSR/);
@@ -58,7 +59,8 @@ function handle(req, res, body) {
       const id = `p${agc.profiles.length + 1}`;
       agc.profiles.push({ id, ...data, kind: url.pathname.includes("/test/") ? "debug" : "release" });
       agc.files.set(`prov-${id}`, `PROFILE ${data.packageName}`);
-      return ok({ id, provisionFileUrl: `prov-${id}` });
+      // Real AGC answers the IDE endpoint with the file URL only (no profile id).
+      return ok({ provisionFileUrl: `prov-${id}` });
     }
     case "DELETE /api/cps/provision-manage/v1/provision/delete":
       agc.profiles = agc.profiles.filter((p) => p.id !== url.searchParams.get("id"));
@@ -178,11 +180,26 @@ test("itemized chain: certificate_create -> profile_create (debug/release) -> pr
   assert.equal(agc.profiles.at(-1).kind, "release");
   assert.equal(agc.profiles.at(-1).deviceList, undefined, "release profiles are not bound to devices");
 
-  await call("sign", { action: "profile_delete", id: release.profile });
-  await call("sign", { action: "profile_delete", id: debug.profile });
-  assert.equal(agc.profiles.length, 0);
+  assert.equal(debug.profile, undefined, "no profile id is invented (AGC returns none)");
+  assert.equal((await client.call("sign", { action: "profile_delete", id: "p1" })).data.error.code, "INVALID_INPUT", "non-numeric ids are refused");
   await call("sign", { action: "delete_certificate", id: cert.certificate });
   assert.equal(agc.certs.length, 0);
+  // Deleting a certificate that does not exist is NOT_FOUND (AGC itself would answer success).
+  assert.equal((await client.call("sign", { action: "delete_certificate", id: cert.certificate })).data.error.code, "NOT_FOUND");
+  // Missing CSR file: NOT_FOUND with a hint, not an internal error.
+  const noCsr = await client.call("sign", { action: "certificate_create", csr: path.join(dir, "missing.csr"), name: "x", out: path.join(dir, "x.cer") });
+  assert.equal(noCsr.data.error.code, "NOT_FOUND");
+});
+
+test("several developer teams: AGC writes need an explicit team, reads default to the personal one", async () => {
+  agc.teams = [{ id: 7, name: "Team", userType: 1 }, { id: 8, name: "Company", userType: 2 }];
+  try {
+    const r = await client.call("sign", { action: "certificate_create", csr: "/x.csr", name: "x", out: path.join(work, "t.cer") });
+    assert.equal(r.data.error.code, "TEAM_AMBIGUOUS");
+    assert.deepEqual(r.data.error.details.teams.map((t) => t.id), ["7", "8"]);
+    assert.match(r.data.error.hint, /ask the user/);
+    assert.ok(Array.isArray((await call("sign", { action: "certificates" })).certificates), "reads still work");
+  } finally { agc.teams = undefined; }
 });
 
 test("AGC rejections carry a code and an actionable hint; missing inputs are refused", async () => {

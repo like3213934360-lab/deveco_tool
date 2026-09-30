@@ -1,5 +1,55 @@
 # Changelog / 更新日志
 
+## v1.2.0 (2026-09-30)
+
+**中文**
+
+对全部 15 个工具、93 个动作、上游 467 项对齐和此前所有结论做了一次带原始证据的审计（报告：`docs/audit/AUDIT.md`，逐条结论：`docs/audit/FINDINGS.md`，可复跑脚本：`test/audit/`），并修复了找出的全部问题。
+
+行为变化（请留意）：
+- **参数写错直接报错**：不认识的参数、或传给了不使用它的动作的参数，一律报 `INVALID_INPUT` 且不执行，并给出正确的参数名（例如 `wiat` → `wait`）。以前会被忽略、按默认值执行。
+- **`wait` 超过 60000 不再报错**：自动按 60000 处理并在结果里注明，任务没完成就继续 `job wait`。
+- **多台设备时先问用户**：连着多台设备又没传 `target`，返回 `DEVICE_AMBIGUOUS`，列出每台设备的名称、型号、真机/模拟器、是否匹配工程，要求 AI 先问用户；`target` 也可以填设备名。
+- **多个开发者团队时先问用户**：会在 AGC 新建或删除东西的签名操作，账号有多个团队又没传 `team` 时返回 `TEAM_AMBIGUOUS` 并列出团队；只读查询仍默认个人团队。
+- **云端知识标签**：按正文与本地官方文档比对，分为 `official`、`official_other_platform`（华为给 Android/Java 或仓颉的官方文档）、`community`、`unverified`。实测 679 段：官方被标成社区 47 → 0，社区被标成官方 5 → 0。
+- **界面树 `depth`** 与 devecocli 一致：0 不限，1 只有根节点。
+- **`emulator images`** 按行返回（设备类型、系统版本、是否已下载），没有时为空列表；`install_image` 返回路径、大小、耗时，不再返回进度条。
+
+修复：
+- 构建失败时只返回 1 条错误：现在全部计数，前 100 条逐条给出错误码、文件、行号、原因；hvigor 级错误保留原因行（如"工程路径含非 ASCII 字符"）并给出提示。
+- 加依赖后构建失败：`oh-package.json5` / `build-profile.json5` 变化后，构建前自动 `ohpm install`。
+- `modules` 支持 `模块@target`；构建模式先校验并列出可选值；构建时 hvigor 新生成的 `BuildProfile.ets` 会在构建后删除。
+- 静态检查误报：嵌套目录模块、AppScope、未在 build-profile 声明的本地库的资源都能识别；注释和字符串里的 `$r(...)` 不再报；`sys.*` 全部种类都检查；资源目录名检查覆盖所有模块和限定词目录；删除从未启用且会误报的 `@ObjectLink` 规则。myTestAPP：编译器 209 个错误全部命中，资源误报 79 → 0。
+- LSP 对无 `@syscap` 模块报的空能力名错误不再显示（编译器实际接受）。
+- 本地搜索摘要改用原文，不再是分词后的索引文本。
+- 签名：`profile_create` 不再返回无效的 `profile:null`；删除不存在的证书返回 `NOT_FOUND`（以前报成功）；CSR 不存在返回 `NOT_FOUND`；补齐证书上限、非鸿蒙开发者、Profile 重名的错误提示。
+- 卸载区分"未安装"和失败；`job resume` 返回 `running` 并提示 `wait`；`ui_flow stop` 校验工程；锁屏时启动/录屏会提示"请先解锁"。
+- 支持 atomcode、dsh 两个工具的技能目录；遵循 `HTTPS_PROXY` / `HTTP_PROXY` / `NO_PROXY`。
+
+**English**
+
+An evidence-based audit of all 15 tools (93 actions), the 467 upstream alignment items and every earlier claim (report `docs/audit/AUDIT.md`, per-item results `docs/audit/FINDINGS.md`, re-runnable scripts `test/audit/`), and fixes for everything it found.
+
+Behaviour changes:
+- **Unknown or misplaced parameters are rejected** with `INVALID_INPUT` and nothing runs; the error names the right parameter (`wiat` → `wait`). They used to be ignored silently.
+- **`wait` above 60000 is capped**, not rejected, with a note; keep calling `job wait` while the job runs.
+- **Several devices: ask the user.** Without `target`, `DEVICE_AMBIGUOUS` lists each device (name, model, emulator or real, matches the project) and tells the agent to ask. `target` also accepts a device name.
+- **Several developer teams: ask the user.** Signing actions that create or delete in AGC return `TEAM_AMBIGUOUS` with the teams unless `team` is given; reads still default to the personal team.
+- **Cloud knowledge labels** come from comparing each section's text with the local official docs: `official`, `official_other_platform` (Huawei docs for Android/Java or Cangjie), `community`, `unverified`. On 679 real sections, official-as-community went 47 → 0 and community-as-official 5 → 0.
+- **UI tree `depth`** matches devecocli: 0 unlimited, 1 root only.
+- **`emulator images`** returns rows (device type, OS version, downloaded), `[]` when none; `install_image` returns path, size and duration instead of the progress stream.
+
+Fixes:
+- Failed builds returned one error: every error is now counted and the first 100 are listed with code, file, line and cause; hvigor-level errors keep their cause line (e.g. non-ASCII project path) with a hint.
+- Adding a dependency broke the next build: builds run `ohpm install` first when `oh-package.json5` / `build-profile.json5` changed.
+- `modules` accept `module@target`; the build mode is validated with the valid choices listed; `BuildProfile.ets` files that hvigor generates during a build are removed afterwards.
+- Static check false positives: resources of nested modules, AppScope and undeclared local libraries are indexed; `$r(...)` in comments and strings is ignored; every `sys.*` kind is checked; resource directory names are checked in all modules including qualifier directories; the never-enabled `@ObjectLink` rule (a false positive against hvigor) is removed. myTestAPP: all 209 compiler errors found, resource false positives 79 → 0.
+- LSP errors with an empty capability name for modules without `@syscap` are dropped (the compiler accepts them).
+- Local search snippets come from the original text, not the tokenised index.
+- Signing: `profile_create` no longer returns a meaningless `profile:null`; deleting a certificate that does not exist is `NOT_FOUND` (it used to report success); a missing CSR is `NOT_FOUND`; hints for the certificate limit, non-HarmonyOS accounts and duplicate profile names.
+- Uninstall tells "not installed" from failure; `job resume` answers `running` with `wait`; `ui_flow stop` checks the project; a locked screen is reported as such on launch and screen recording.
+- Skill directories for atomcode and dsh; `HTTPS_PROXY` / `HTTP_PROXY` / `NO_PROXY` are honoured.
+
 ## v1.1.3 (2026-09-29)
 
 **中文**

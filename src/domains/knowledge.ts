@@ -158,6 +158,33 @@ function tokenizeRaw(query: string, vocab: Set<string>): string[] {
   return [...new Set(tokens.filter((t) => t.length > 0))].slice(0, 16);
 }
 
+/**
+ * Snippet from the document's original text (segments.lead_text), not from the tokenised index
+ * text, which repeats case variants and splits words ("[client] [Client] [id] [ID]"). Centred on the
+ * first query term found; falls back to the index snippet only when a segment has no lead text.
+ */
+export function readableSnippet(lead: string | undefined, indexSnippet: string, tokens: string[], max = 300) {
+  const text = (lead ?? "").replace(/\s+/g, " ").trim();
+  if (!text) return indexSnippet.replace(/\s+/g, " ").slice(0, max);
+  const lower = text.toLowerCase();
+  const hit = tokens.map((t) => lower.indexOf(t.toLowerCase())).filter((i) => i >= 0).sort((a, b) => a - b)[0] ?? 0;
+  const start = Math.max(0, Math.min(hit - 60, text.length - max));
+  return `${start > 0 ? "…" : ""}${text.slice(start, start + max)}${start + max < text.length ? "…" : ""}`;
+}
+
+/** Ids of the best-matching official documents for a text (no snippets; used to verify cloud sections). */
+async function officialDocIds(text: string, limit = 4) {
+  const handle = await db();
+  const vocab = vocabulary(handle.db, handle);
+  const tokens = tokenize(text, vocab).filter((t) => t.length > 1).slice(0, 8);
+  if (!tokens.length) return [];
+  const rows = handle.db.prepare(`
+    SELECT d.document_id AS id FROM segments_fts JOIN segments s ON s.id = segments_fts.rowid JOIN documents d ON d.id = s.doc_id
+    WHERE segments_fts MATCH ? AND d.catalog_id < 6 ORDER BY bm25(segments_fts) LIMIT 40`)
+    .all(tokens.map((t) => `"${t.replaceAll('"', '""')}"`).join(" OR ")) as { id: string }[];
+  return [...new Set(rows.map((r) => r.id))].slice(0, limit);
+}
+
 export async function search(query: string, options: { catalog?: Catalog | "all"; kind?: "docs" | "rules" | "all"; limit?: number; offset?: number } = {}) {
   const trimmed = query.trim();
   invariant(trimmed, "INVALID_INPUT", "query must not be empty");
@@ -173,12 +200,12 @@ export async function search(query: string, options: { catalog?: Catalog | "all"
   const kindFilter = options.kind === "docs" ? "d.catalog_id < 6" : options.kind === "rules" ? "d.catalog_id >= 6" : "1";
   const sql = `
     SELECT d.document_id AS id, d.doc_title AS title, d.catalog_id AS catalog, s.section_title AS section,
-           snippet(segments_fts, 0, '[', ']', '…', 24) AS snippet, bm25(segments_fts) AS score
+           s.lead_text AS lead, snippet(segments_fts, 0, '[', ']', '…', 24) AS snippet, bm25(segments_fts) AS score
     FROM segments_fts JOIN segments s ON s.id = segments_fts.rowid JOIN documents d ON d.id = s.doc_id
     WHERE segments_fts MATCH ? AND (? IS NULL OR d.catalog_id = ?) AND ${kindFilter}
     ORDER BY score LIMIT ?`;
   // AND first for precision; fall back to OR for recall.
-  let rows = handle.db.prepare(sql).all(quoted.join(" AND "), catalogId, catalogId, 200) as { id: string; title: string; catalog: number; section: string; snippet: string; score: number }[];
+  let rows = handle.db.prepare(sql).all(quoted.join(" AND "), catalogId, catalogId, 200) as { id: string; title: string; catalog: number; section: string; lead: string; snippet: string; score: number }[];
   let mode = "all_terms";
   if (rows.length < 3 && quoted.length > 1) {
     rows = handle.db.prepare(sql).all(quoted.join(" OR "), catalogId, catalogId, 200) as typeof rows;
@@ -198,7 +225,7 @@ export async function search(query: string, options: { catalog?: Catalog | "all"
   return {
     query: trimmed, tokens, match: mode, pack: handle.pack.manifest.version, total: ranked.length,
     results: ranked.slice(offset, offset + limit).map((r) => ({
-      id: r.id, title: r.title, catalog: catalogs[r.catalog] ?? r.catalog, origin: r.catalog < 6 ? "official" : "rules", section: r.section || undefined, snippet: r.snippet.replace(/\s+/g, " ").slice(0, 300),
+      id: r.id, title: r.title, catalog: catalogs[r.catalog] ?? r.catalog, origin: r.catalog < 6 ? "official" : "rules", section: r.section || undefined, snippet: readableSnippet(r.lead, r.snippet, tokens),
     })),
     next: ranked.length > offset + limit ? { offset: offset + limit } : null,
     pack_built: handle.pack.manifest.created_at,
@@ -437,31 +464,45 @@ export async function cloudSearch(query: string, signal: AbortSignal) {
   invariant(data?.code === 200 && typeof prompt === "string", "HTTP_ERROR", "Cloud knowledge returned no answer");
   const marker = "【检索信息】：";
   const content = prompt.includes(marker) ? prompt.slice(prompt.indexOf(marker) + marker.length) : prompt;
-  const localTitles = await officialTitleIndex().catch(() => undefined);
-  const labelled = labelCloudSources(content, localTitles, query);
-  const packed = packCloudSections(labelled.sections, 16000);
+  const labelStart = Date.now();
+  const lookup = await officialLookup().catch(() => undefined);
+  const labelled = await labelCloudSources(content, lookup);
+  const labelMs = Date.now() - labelStart;
+  const packed = packCloudSections(labelled.sections, 12000);
+  // Nothing is dropped: the complete labelled answer (every section, untruncated) is saved as an
+  // artifact, and each source records the line where its section starts, so any section that is
+  // shortened or not shown inline can be read in full with job action=read.
+  const full = labelled.sections.map((x) => x.text.endsWith("\n") ? x.text : `${x.text}\n`).join("");
+  const lines = new Map<number, number>();
+  let line = 0;
+  for (const x of labelled.sections) { lines.set(x.n, line); line += (x.text.endsWith("\n") ? x.text : `${x.text}\n`).split("\n").length - 1; }
+  const { saveArtifact } = await import("../core/artifacts.js");
+  const artifact = await saveArtifact(full);
+  const incomplete = packed.omitted > 0 || packed.clipped.size > 0;
   return {
     source: "cloud",
+    label_ms: labelMs,
     authority: AUTHORITY,
-    // Official sections first; community sections are shortened. Every section is still listed here.
-    counts: { official: labelled.sources.filter((s) => s.origin === "official").length, community: labelled.sources.filter((s) => s.origin === "community").length },
-    sources: labelled.sources.slice(0, 40).map(({ why: _why, ...s }) => ({ ...s, title: s.title.slice(0, 80), shown: packed.shown.has(s.n) ? (packed.clipped.has(s.n) ? "excerpt" : "full") : "omitted" })),
+    counts: Object.fromEntries((["official", "official_other_platform", "community", "unverified"] as const).map((o) => [o, labelled.sources.filter((s) => s.origin === o).length])),
+    // Every section CodeGenie returned: shown full / excerpt / omitted inline, and where to read it whole.
+    sources: labelled.sources.map(({ why: _why, ...s }) => ({ ...s, title: s.title.slice(0, 60), shown: packed.shown.has(s.n) ? (packed.clipped.has(s.n) ? "excerpt" : "full") : "omitted", line: lines.get(s.n) })),
     content: packed.content,
-    truncated: packed.omitted > 0 || packed.clipped.size > 0,
-    ...(packed.omitted ? { hint: `${packed.omitted} lower-priority section(s) omitted; official ones with local_doc can be read in full with knowledge action=read id=<local_doc>` } : {}),
+    full_artifact: artifact.artifact_id,
+    ...(incomplete ? { hint: `Inline content is prioritised (official first). The complete answer, every section untruncated, is in full_artifact: job action=read artifact_id=${artifact.artifact_id} line=<source.line> limit=80 (or grep=...). Official sections with local_doc can also be read locally with knowledge action=read id=<local_doc>.` } : {}),
   };
 }
 
 /**
- * Fit labelled sections into `budget` characters: official sections first (in CodeGenie's order,
- * each up to 4000 chars), then community sections (up to 800 chars each). CodeGenie returns
- * dozens of sections; taking the first N characters used to show mostly blog posts.
+ * Inline view within `budget` characters: official sections first (in CodeGenie's order, an even
+ * share each), then short community excerpts. CodeGenie returns dozens of sections; taking the first
+ * N characters used to show mostly blog posts. The full answer is always saved as an artifact.
  */
-export function packCloudSections(sections: { n: number; origin: "official" | "community"; text: string; doc?: string }[], budget: number) {
+export function packCloudSections(sections: { n: number; origin: CloudOrigin; text: string; doc?: string }[], budget: number) {
   const shown = new Set<number>(), clipped = new Set<number>();
   const out: string[] = [];
   let used = 0;
-  const ordered = [...sections.filter((s) => s.origin === "official"), ...sections.filter((s) => s.origin === "community")];
+  const rank: Record<CloudOrigin, number> = { official: 0, official_other_platform: 1, unverified: 2, community: 3 };
+  const ordered = [...sections].sort((a, b) => rank[a.origin] - rank[b.origin]);
   const seenDocs = new Set<string>();
   // Room for a short excerpt of every official page before any gets its full share, and a few
   // community excerpts (flagged, as leads only) after them.
@@ -488,9 +529,10 @@ export function packCloudSections(sections: { n: number; origin: "official" | "c
 /** Precedence when sources disagree (shown to agents with cloud answers and in tool docs). */
 export const AUTHORITY = "When sources disagree: 1) the project's SDK declarations (code action=lsp op=hover/definition) and a successful build win; "
   + "2) official docs: local pack results and cloud sections marked official (prefer the one matching the project's API level; read the local copy via local_doc); "
-  + "3) cloud sections marked community are blog posts: never use them as the API contract, only as hints to verify.";
+  + "cloud sections marked official_other_platform are official Huawei docs for Android/Java (HMS Core) or Cangjie: not ArkTS API; "
+  + "3) cloud sections marked community or unverified: never use them as the API contract, only as hints to verify.";
 
-/** Official doc titles of the local pack -> document ids (for recognising official cloud sections). */
+/** Official doc titles of the local pack -> document ids. */
 async function officialTitleIndex() {
   const handle = await db();
   const rows = handle.db.prepare("SELECT document_id, doc_title FROM documents WHERE catalog_id < 6").all() as { document_id: string; doc_title: string }[];
@@ -504,44 +546,143 @@ async function officialTitleIndex() {
 }
 const normTitle = (t: string) => t.replace(/\s+/g, "").toLowerCase();
 
-export interface CloudSource { n: number; title: string; origin: "official" | "community"; local_doc?: string; why: string }
+/**
+ * Candidate official documents for a cloud section: docs with the same title (also without a
+ * "Kit/服务-" prefix) plus the best full-text hits for two distinctive sentences of the body.
+ */
+async function officialLookup(): Promise<OfficialLookup> {
+  const titles = await officialTitleIndex();
+  const handle = await db();
+  const cache = new Map<string, Set<string>>();
+  // Indexed once per document (the same docs come back for many sections).
+  const docText = async (id: string) => {
+    if (!cache.has(id)) cache.set(id, windows(normText(await readZipEntry(path.join(handle.pack.dir, "docs.zip"), `${id}.md`).catch(() => ""))));
+    return cache.get(id)!;
+  };
+  return async (title, body) => {
+    const out: { id: string; text: Set<string> }[] = [];
+    const seen = new Set<string>();
+    const sh = shingles(body);
+    let settled = false;
+    const add = async (id: string) => {
+      if (seen.has(id) || seen.size >= 16) return;
+      seen.add(id);
+      const text = await docText(id);
+      out.push({ id, text });
+      if (!settled && textOverlap(sh, text) >= 0.5) settled = true;
+    };
+    for (const c of [title, title.replace(/^[\w\s]*?(Kit|服务|Service)\s*[-－:：]?\s*/i, ""), title.replace(/^.*?[-－]/, "")])
+      for (const id of (c && titles.get(normTitle(c))) || []) await add(id);
+    // A same-title doc that already contains the section's text settles it; otherwise search by content.
+    if (settled) return out;
+    const sentences = body.replace(/[#*`>|]/g, " ").split(/[。！？\n]/).map((s) => s.trim()).filter((s) => s.length >= 16).sort((a, b) => b.length - a.length);
+    for (const q of [title, ...sentences.slice(0, 2).map((s) => s.slice(0, 60))]) {
+      for (const id of await officialDocIds(q).catch(() => [])) await add(id);
+      if (settled) break;
+    }
+    return out;
+  };
+}
+
+/**
+ * official: the section's text is found in an official document of the local pack (verified by text
+ *   overlap, not by title), or it is official HarmonyOS content the pack does not carry (Codelab);
+ * official_other_platform: official Huawei text for another platform/language (HMS Core Android/Java,
+ *   Cangjie) — authoritative for that platform, not for ArkTS;
+ * community: articles/Q&A whose text is not in the official docs;
+ * unverified: could not be decided (too short, or partial overlap).
+ */
+export type CloudOrigin = "official" | "official_other_platform" | "community" | "unverified";
+export interface CloudSource { n: number; title: string; origin: CloudOrigin; local_doc?: string; overlap?: number; why: string }
+
+/** Distinctive 12-character shingles of a text (markup and whitespace removed). */
+export function shingles(text: string, n = 12, step = 6) {
+  const t = text.replace(/[#*`>|\-[\]()\s]/g, "");
+  const out = new Set<string>();
+  for (let i = 0; i + n <= t.length; i += step) out.add(t.slice(i, i + n));
+  return out;
+}
+const normText = (t: string) => t.replace(/[#*`>|\-[\]()\s]/g, "");
+/** Every 12-character window of a normalised text: O(1) membership instead of a substring scan. */
+export function windows(normalised: string, n = 12) {
+  const out = new Set<string>();
+  for (let i = 0; i + n <= normalised.length; i++) out.add(normalised.slice(i, i + n));
+  return out;
+}
+/** Share of `section` shingles that occur in `doc` (0..1). `doc` is raw text or a windows() set. */
+export function textOverlap(section: Set<string>, doc: string | Set<string>) {
+  if (!section.size) return 0;
+  let hit = 0;
+  if (typeof doc === "string") { const d = normText(doc); for (const s of section) if (d.includes(s)) hit++; }
+  else for (const s of section) if (doc.has(s)) hit++;
+  return hit / section.size;
+}
+const OTHER_PLATFORM = /AbilitySlice|HiLogLabel|\bEMUI\b|HMS Core（APK）|HMS Core\(APK\)|onNewToken|public class \w+ extends|```(java|kotlin)|```cangjie|import kit\.\w+\.\*|仓颉API/;
+
+/** Finds official docs for a section: same-title docs plus docs matching a distinctive sentence (text: raw, or windows()). */
+export type OfficialLookup = (title: string, body: string) => Promise<{ id: string; text: string | Set<string> }[]>;
 
 /**
  * CodeGenie returns numbered sections "[n]网页标题：T|||网页时间：|||网页分类：|||网页内容：..." that mix Huawei's
- * official docs with community blog posts, without saying which is which. Label each one:
- * - official: the title is an official doc title in the local pack (also after dropping a "Kit/服务-" prefix),
- *   or the text is an official doc page (starts with "# <title>") or a Huawei Codelab;
- * - community: everything else (articles, tutorials, notes).
- * Each section header in the text gets the label so the agent sees it inline.
+ * official docs with community blog posts, without saying which is which. Titles cannot tell them
+ * apart (community posts reuse official titles and republish official text; official pages have
+ * generic titles), so each section is judged by its text: shared text with an official document of
+ * the local pack (>= 50% of its 12-character shingles) makes it official, and that document becomes
+ * local_doc; almost none (<= 10%) makes it community. Codelabs are official content the pack does not
+ * carry. Everything else is left unverified rather than guessed. Measured on 679 real sections
+ * (test/audit/cloud-labels.mjs).
  */
-export function labelCloudSources(content: string, titles: Map<string, string[]> | undefined, query = "") {
+export async function labelCloudSources(content: string, lookup: OfficialLookup | undefined) {
   const sources: CloudSource[] = [];
-  const sections: { n: number; origin: CloudSource["origin"]; text: string; doc?: string }[] = [];
+  const sections: { n: number; origin: CloudOrigin; text: string; doc?: string }[] = [];
   const header = /^\[(\d+)\]网页标题：(.*?)\|\|\|网页时间：(.*?)\|\|\|网页分类：(.*?)\|\|\|网页内容：/;
   const parts = content.split(/(?=^\[\d+\]网页标题：)/m);
-  const out = parts.map((part) => {
+  // Candidate lookups are independent: resolve them up front, a few at a time.
+  const bests = new Map<number, { id: string; overlap: number }>();
+  if (lookup) {
+    const jobs = parts.map((part, i) => ({ i, m: header.exec(part), part })).filter((j) => j.m);
+    let next = 0;
+    await Promise.all(Array.from({ length: 2 }, async () => {
+      while (next < jobs.length) {
+        const { i, m, part } = jobs[next++]!;
+        const body = part.slice(m![0].length);
+        const sh = shingles(body);
+        if (sh.size < 5) continue;
+        for (const cand of await lookup(m![2]!.trim(), body).catch(() => [])) {
+          const overlap = textOverlap(sh, cand.text);
+          const prev = bests.get(i);
+          if (!prev || overlap > prev.overlap) bests.set(i, { id: cand.id, overlap });
+        }
+      }
+    }));
+  }
+  const out: string[] = [];
+  for (const [i, part] of parts.entries()) {
     const m = header.exec(part);
-    if (!m) return part;
+    if (!m) { out.push(part); continue; }
     const [, n, rawTitle] = m;
     const title = rawTitle!.trim();
     const body = part.slice(m[0].length);
-    const candidates = [title, title.replace(/^[\w\s]*?(Kit|服务|Service)\s*[-－:：]?\s*/i, ""), title.replace(/^.*?[-－]/, "")];
-    let local: string[] | undefined;
-    for (const c of candidates) if (!local && c && titles?.has(normTitle(c))) local = titles.get(normTitle(c));
-    const page = new RegExp(`^\\s*#\\s*${title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*$`, "m").test(body.slice(0, 200));
+    const sh = shingles(body);
+    const best = bests.get(i);
+    const overlap = best ? Math.round(best.overlap * 100) / 100 : 0;
     const codelab = /Codelab/i.test(body.slice(0, 400));
-    const origin: CloudSource["origin"] = local || page || codelab ? "official" : "community";
-    const why = local ? "title matches an official doc in the local pack" : page ? "official doc page format" : codelab ? "Huawei Codelab" : "not an official doc title (article/tutorial)";
-    // Several official docs can share a title ("使用入门", "基于服务账号生成鉴权令牌"): pick the one whose
-    // path shares the most words with the query and the section title (e.g. "Push" -> Push_Kit_推送服务).
-    const terms = `${query} ${title}`.toLowerCase().split(/[^a-z0-9]+/).filter((t) => t.length > 2);
-    const score = (id: string) => terms.reduce((n, t) => n + (id.toLowerCase().includes(t) ? 1 : 0), 0);
-    const doc = local && (local.length === 1 ? local[0] : [...local].sort((x, y) => score(y) - score(x))[0]);
-    sources.push({ n: Number(n), title, origin, ...(doc ? { local_doc: doc } : {}), why });
-    const label = origin === "official" ? "官方文档/official" : "社区文章/community — 未核实，不能作为 API 依据";
+    const otherPlatform = OTHER_PLATFORM.test(body);
+    let origin: CloudOrigin, why: string;
+    if (best && best.overlap >= 0.5) { origin = otherPlatform ? "official_other_platform" : "official"; why = `text found in official doc ${best.id} (${Math.round(best.overlap * 100)}% shared)`; }
+    else if (otherPlatform && (codelab || /^#\s/m.test(body.slice(0, 200)))) { origin = "official_other_platform"; why = "Huawei doc for another platform/language (Android/Java or Cangjie)"; }
+    else if (codelab) { origin = "official"; why = "Huawei Codelab (not in the local pack)"; }
+    else if (sh.size >= 5 && lookup && (!best || best.overlap <= 0.1)) { origin = "community"; why = "text not found in the official docs"; }
+    else { origin = "unverified"; why = sh.size < 5 ? "too short to verify" : lookup ? `partial overlap with official doc (${Math.round(overlap * 100)}%)` : "local pack unavailable"; }
+    const doc = origin === "official" || origin === "official_other_platform" ? (best && best.overlap >= 0.5 ? best.id : undefined) : undefined;
+    sources.push({ n: Number(n), title, origin, ...(doc ? { local_doc: doc } : {}), ...(best ? { overlap } : {}), why });
+    const label = origin === "official" ? "官方文档/official"
+      : origin === "official_other_platform" ? "官方文档·非 ArkTS 平台/official_other_platform — 仅适用于该平台"
+      : origin === "community" ? "社区文章/community — 未核实，不能作为 API 依据"
+      : "未确认来源/unverified — 按社区内容对待，需自行核实";
     const text = part.replace(header, `[${n}]【${label}】网页标题：${title}|||网页内容：`);
     sections.push({ n: Number(n), origin, text, ...(doc ? { doc } : {}) });
-    return text;
-  });
+    out.push(text);
+  }
   return { sources, sections, content: out.join("") };
 }

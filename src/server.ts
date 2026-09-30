@@ -2,7 +2,7 @@ import { z } from "zod";
 import { version } from "./core/config.js";
 import { errorResult, ToolError } from "./core/errors.js";
 import { McpServer } from "./mcp.js";
-import type { ToolDef } from "./registry.js";
+import { MAX_WAIT_MS, type ToolDef } from "./registry.js";
 import { allTools } from "./tools/index.js";
 
 const instructions = [
@@ -11,6 +11,8 @@ const instructions = [
   "Before answering ArkTS/ArkUI/@kit API questions from memory, use knowledge search/read; for exact API signatures use code action=lsp op=hover/definition against the project SDK.",
   "If sources disagree, trust in this order: project SDK declarations and a successful build > official docs (local pack, cloud sections marked official) > community articles (hints only, never the API contract).",
   "After editing .ets files run code action=check before building. Verify UI outcomes with ui assert, not screenshots alone. Never retry a job in needs_input without inspecting it.",
+  "Several devices connected (DEVICE_AMBIGUOUS) or several developer teams (TEAM_AMBIGUOUS): ask the user which one to use; never pick one yourself.",
+  "Unknown or misplaced parameters are rejected and nothing runs: use the names from the error.",
 ].join(" ");
 
 type Content = { type: "text"; text: string } | { type: "image"; data: string; mimeType: string };
@@ -25,6 +27,53 @@ function respond(value: unknown, isError = false) {
   }
   content.unshift({ type: "text", text: JSON.stringify(value) });
   return { content, ...(isError ? { isError: true } : {}) };
+}
+
+/** Edit distance, for "did you mean" on misspelled parameters. */
+function distance(a: string, b: string) {
+  const d = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)] as number[]);
+  for (let j = 1; j <= b.length; j++) d[0]![j] = j;
+  for (let i = 1; i <= a.length; i++)
+    for (let j = 1; j <= b.length; j++)
+      d[i]![j] = Math.min(d[i - 1]![j]! + 1, d[i]![j - 1]! + 1, d[i - 1]![j - 1]! + (a[i - 1] === b[j - 1] ? 0 : 1));
+  return d[a.length]![b.length]!;
+}
+function closest(name: string, known: string[]) {
+  const best = known.map((k) => [k, distance(name, k)] as const).sort((x, y) => x[1] - y[1])[0];
+  return best && best[1] <= Math.max(2, Math.floor(name.length / 3)) ? best[0] : undefined;
+}
+
+/**
+ * Arguments are checked before the schema: an unknown or misplaced parameter must never be ignored
+ * (it silently ran with defaults before, e.g. rollback with version=...). `wait` above the cap is
+ * clamped instead of rejected, because hosts routinely ask for long waits.
+ */
+export function checkArguments(tool: ToolDef, raw: Record<string, unknown>) {
+  const args = { ...raw };
+  const notes: string[] = [];
+  const shape = (tool.schema as unknown as { shape?: Record<string, unknown> }).shape ?? {};
+  const known = Object.keys(shape);
+  const unknown = Object.keys(args).filter((k) => !known.includes(k));
+  if (unknown.length)
+    throw new ToolError("INVALID_INPUT", `Unknown parameter(s) for ${tool.name}: ${unknown.join(", ")}`,
+      { unknown, did_you_mean: Object.fromEntries(unknown.map((u) => [u, closest(u, known) ?? null])), accepted: known },
+      "Nothing was executed. Use the parameter names listed in accepted and call again");
+  const action = typeof args.action === "string" ? args.action : undefined;
+  const allowed = action && tool.params?.[action];
+  if (allowed) {
+    const misplaced = Object.keys(args).filter((k) => k !== "action" && args[k] !== undefined && !allowed.includes(k));
+    if (misplaced.length)
+      throw new ToolError("INVALID_INPUT", `${tool.name} action=${action} does not use: ${misplaced.join(", ")}`,
+        { not_used: misplaced, accepted_for_action: allowed },
+        "Nothing was executed. Remove these parameters (they belong to other actions) and call again");
+  }
+  for (const key of ["wait"]) {
+    if (typeof args[key] === "number" && (args[key] as number) > MAX_WAIT_MS) {
+      notes.push(`${key}=${args[key]} capped at ${MAX_WAIT_MS} ms; if the job is still running, call job action=wait again`);
+      args[key] = MAX_WAIT_MS;
+    }
+  }
+  return { args, notes };
 }
 
 export async function serve() {
@@ -49,9 +98,11 @@ export async function serve() {
     const tool = byName.get(name);
     if (!tool) return respond({ error: errorResult(new ToolError("INVALID_INPUT", `Unknown tool ${name}`)) }, true);
     try {
-      const parsed = tool.schema.safeParse(params.arguments ?? {});
+      const { args, notes } = checkArguments(tool, (params.arguments ?? {}) as Record<string, unknown>);
+      const parsed = tool.schema.safeParse(args);
       if (!parsed.success) throw new ToolError("INVALID_INPUT", z.prettifyError(parsed.error), undefined, "Fix the listed fields and call again");
-      return respond(await tool.handler(parsed.data, { signal }));
+      const result = await tool.handler(parsed.data, { signal });
+      return respond(notes.length && result && typeof result === "object" && !Array.isArray(result) ? { ...(result as object), notes } : result);
     } catch (error) {
       return respond({ error: errorResult(error) }, true);
     }
@@ -91,4 +142,6 @@ export async function serve() {
   server.start(() => void shutdown());
   // Mark jobs from dead processes as interrupted, off the handshake path.
   setTimeout(() => void import("./core/jobs.js").then((m) => m.recoverJobs()).catch(() => {}), 2000).unref();
+  // Retention also applies to sessions that never run a job (screenshots, cloud answers, UI tests).
+  void import("./core/artifacts.js").then((m) => m.scheduleCleanup()).catch(() => {});
 }

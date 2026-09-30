@@ -82,7 +82,11 @@ async function request(team: string, route: string, method: string, body?: unkno
       { body: text.slice(0, 500) }, response.status === 403 ? "The account lacks AGC permission for this team, or a proxy blocks connect-api.cloud.huawei.com" : undefined);
     const data = text ? (JSON.parse(text) as Record<string, any>) : {};
     if (data.ret && data.ret.code !== 0) {
-      const hint = /205389938/.test(text) ? "Profile limit reached: delete old debug profiles in AGC" : /205389859/.test(text) ? "Device limit reached: remove unused devices in AGC" : undefined;
+      const hint = /205389938/.test(text) ? "Profile limit reached: delete old debug profiles in AGC"
+        : /205389859/.test(text) ? "Device limit reached: remove unused devices in AGC"
+        : /205389872/.test(text) ? "Certificate limit reached for this team: delete an unused certificate (sign action=certificates / delete_certificate, after asking the user), or use sign action=auto, which replaces its own auto_debug_<team>.cer instead of adding one"
+        : /205389904/.test(text) ? "This account is not enabled for HarmonyOS app development in this team: apply for the permission in AppGallery Connect, or use another team (auth action=teams)"
+        : /205389830/.test(text) ? "A profile with this name already exists: use another name" : undefined;
       throw new ToolError("SIGN_CLOUD_REJECTED", `AGC rejected ${route} (${data.ret.code}): ${data.ret.msg ?? ""}`, undefined, hint);
     }
     return data;
@@ -102,9 +106,22 @@ async function download(team: string, source: string, file: string, signal?: Abo
   return file;
 }
 
-export async function teamId(team?: string) {
+/**
+ * Team for AGC calls. Read-only calls default to the personal team. Calls that create or delete
+ * something in AGC (write=true) must not guess when the account belongs to several teams: they fail
+ * with TEAM_AMBIGUOUS listing the teams, so the agent asks the user.
+ */
+export async function teamId(team?: string, write = false) {
   if (team) return team;
   const auth = await credentials("developer");
+  if (write) {
+    const { teams } = await import("./auth.js");
+    const list = (await teams().catch(() => ({ teams: [] as { id: string; name: string; role?: number }[] }))).teams;
+    if (list.length > 1)
+      throw new ToolError("TEAM_AMBIGUOUS", `This account belongs to ${list.length} developer teams and no team was given`, { teams: list },
+        "Do not choose on your own: ask the user which team to use, then call again with team=<id>");
+    if (list.length === 1) return list[0]!.id;
+  }
   return auth.userId;
 }
 
@@ -124,8 +141,14 @@ export async function listDevices(team: string, signal?: AbortSignal) {
   return out;
 }
 export async function deleteCertificate(team: string, id: string, signal?: AbortSignal) {
+  // AGC answers success for unknown ids: check the list first, and confirm afterwards.
+  const before = await listCertificates(team, signal);
+  const cert = before.find((c) => c.id === id);
+  invariant(cert, "NOT_FOUND", `No certificate ${id} in team ${team}`, { certificates: before.map((c) => ({ id: c.id, name: c.name, type: c.type })) });
   await request(team, "/api/cps/harmony-cert-manage/v1/cert/delete", "DELETE", { certIds: [id] }, signal);
-  return { deleted: id };
+  const still = (await listCertificates(team, signal)).some((c) => c.id === id);
+  invariant(!still, "SIGN_CLOUD_REJECTED", `AGC still lists certificate ${id} after the delete`);
+  return { deleted: id, name: cert.name, type: cert.type };
 }
 
 export async function deviceUdid(target: string, signal?: AbortSignal) {
@@ -174,6 +197,7 @@ export async function generateCsr(input: { keystore: string; password: string; k
 export async function createCertificate(team: string, input: { csr: string; name: string; type: "debug" | "release"; out: string }, signal?: AbortSignal) {
   const out = path.resolve(input.out);
   invariant(!fs.existsSync(out), "CONFLICT", `${out} already exists`);
+  invariant(fs.existsSync(path.resolve(input.csr)), "NOT_FOUND", `CSR file ${path.resolve(input.csr)} does not exist`, undefined, "Create one with sign action=csr");
   await request(team, "/api/cps/harmony-cert-manage/v1/cert/add", "POST", { csr: fs.readFileSync(path.resolve(input.csr), "utf8"), certName: input.name, certType: input.type === "debug" ? "1" : "2" }, signal);
   const cert = (await listCertificates(team, signal)).find((c) => c.name === input.name);
   invariant(cert, "SIGN_CLOUD_REJECTED", "Created certificate not found in AGC");
@@ -193,12 +217,17 @@ export async function createProfile(team: string, input: { bundle: string; certi
   }, signal);
   invariant(profile.provisionFileUrl, "SIGN_CLOUD_REJECTED", "AGC returned no profile file");
   await download(team, profile.provisionFileUrl, out, signal);
-  return { profile: profile.id ?? null, type: input.type, file: out, devices: devices?.length };
+  // The IDE provisioning endpoint (the one DevEco Studio's automatic signing uses) returns only the file
+  // URL, no profile id (verified: response keys ret, provisionFileUrl); these profiles do not show up
+  // in the AGC console's profile list, so there is nothing to track or delete.
+  return { type: input.type, file: out, devices: devices?.length, note: "Created through the IDE signing endpoint: the profile file is all AGC returns; it is not listed in the AGC console" };
 }
 
+/** Delete a profile by the id shown in the AGC console (AGC does not report whether the id existed). */
 export async function deleteProfile(team: string, id: string, signal?: AbortSignal) {
+  invariant(/^\d{6,}$/.test(id), "INVALID_INPUT", `'${id}' is not an AGC profile id`, undefined, "Use the numeric id from the AGC console (证书、APP ID和Profile > Profile)");
   await request(team, `/api/cps/provision-manage/v1/provision/delete?${new URLSearchParams({ id })}`, "DELETE", undefined, signal);
-  return { deleted: id };
+  return { requested: id, note: "AGC accepted the delete request; it does not confirm whether a profile with this id existed" };
 }
 
 /* ------------------------------ ACL permissions ------------------------------ */
@@ -271,7 +300,7 @@ export async function autoSign(project: string, options: { product?: string; tea
       "Build and run as is. Pass force=true only if you really want to replace it with a new auto debug signature.");
   invariant(!current || current.source === "build-profile.json5", "SIGN_CONFIGURED",
     `Signing comes from ${current?.source} overrides; auto signing would be ignored by hvigor. Edit that file instead.`);
-  const team = await teamId(options.team);
+  const team = await teamId(options.team, true);
   const dir = path.join(os.homedir(), ".ohos", "config");
   fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
   const hash = crypto.createHash("sha256").update(root).digest("base64url").replace(/[-_=]/g, "");
@@ -313,8 +342,6 @@ export async function autoSign(project: string, options: { product?: string; tea
   }, signal);
   invariant(profile.provisionFileUrl, "SIGN_CLOUD_REJECTED", "AGC returned no profile file");
   await download(team, profile.provisionFileUrl, file("p7b"), signal);
-  if (profile.id) await request(team, `/api/cps/provision-manage/v1/provision/delete?${new URLSearchParams({ id: profile.id })}`, "DELETE", undefined, signal).catch(() => {});
-
   log("writing signingConfigs");
   const encrypted = encryptPassword(password, file("p12"));
   const profilePath = path.join(root, "build-profile.json5");

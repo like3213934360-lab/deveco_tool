@@ -86,7 +86,7 @@ export function listFlows(project: string): { id: string; name?: string; bundle?
 
 /* --------------------------------- recording --------------------------------- */
 
-interface Draft { project: string; target: string; flow: Flow; values: Record<string, string> }
+interface Draft { project: string; target: string; flow: Flow; values: Record<string, string>; started?: number }
 
 async function draft(target: string): Promise<Draft | undefined> {
   const raw = await kvGet(`recording:${target}`);
@@ -94,9 +94,13 @@ async function draft(target: string): Promise<Draft | undefined> {
 }
 
 export async function startRecording(project: string, target: string, id: string, name: string, app: Flow["app"]) {
-  invariant(!(await draft(target)), "CONFLICT", `A recording is already active on ${target}`, undefined, "Stop or discard it with ui_flow action=stop");
+  const open = await draft(target);
+  // Drafts survive server restarts: say whose it is, so a forgotten one can be dealt with.
+  invariant(!open, "CONFLICT", `A recording is already active on ${target}`,
+    open ? { flow: open.flow.id, project: open.project, steps: open.flow.steps.length, started: open.started ? new Date(open.started).toISOString() : undefined } : undefined,
+    "Finish it with ui_flow action=stop (project of that recording, with an assert) or drop it with discard=true");
   const flow: Flow = { version: 2, id, name, app, start: { mode: "restart" }, variables: {}, steps: [] };
-  await kvSet(`recording:${target}`, JSON.stringify({ project, target, flow, values: {} } satisfies Draft));
+  await kvSet(`recording:${target}`, JSON.stringify({ project, target, flow, values: {}, started: Date.now() } satisfies Draft));
   return { recording: id, target, note: "Perform steps with ui act (selector-based actions are recorded). Finish with ui_flow action=stop and an assert." };
 }
 
@@ -134,9 +138,14 @@ export async function recordStep(target: string, action: Action, selector: Selec
   return { recorded_step: step.id };
 }
 
-export async function stopRecording(target: string, options: { assert?: { visible?: Selector; hidden?: Selector; timeout_ms?: number }; discard?: boolean }, signal?: AbortSignal) {
+export async function stopRecording(target: string, options: { project?: string; assert?: { visible?: Selector; hidden?: Selector; timeout_ms?: number }; discard?: boolean }, signal?: AbortSignal) {
   const current = await draft(target);
   invariant(current, "NOT_FOUND", `No active recording on ${target}`);
+  // The flow is saved into the project it was recorded for; a different project here is a mistake.
+  // Discarding writes nothing, so it is allowed from any project (e.g. a draft left by a deleted project).
+  invariant(options.discard || !options.project || path.resolve(options.project) === path.resolve(current.project), "INVALID_INPUT",
+    `The recording on ${target} belongs to ${current.project}, not ${path.resolve(options.project ?? "")}`,
+    { flow: current.flow.id, project: current.project }, "Pass that project to save it there, or discard=true to drop it");
   if (options.discard) {
     await kvDelete(`recording:${target}`);
     return { discarded: current.flow.id };

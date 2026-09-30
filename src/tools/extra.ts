@@ -10,7 +10,9 @@ export const signTool = tool({
     "auto: one-shot debug signing for real devices — refuses (changes nothing) when the project already has signing, unless force=true; (needs auth provider=developer): creates keystore+CSR, debug certificate, registers connected devices, creates a debug profile and writes signingConfigs into build-profile.json5. Then run action=build_run works on real devices.",
     "sign/verify: sign a package locally (from project signingConfigs or explicit material) / verify a signed package.",
     "certificates, devices, register_device, delete_certificate: AppGallery Connect management.",
-    "Itemized (team/release signing): keypair (out .p12, keystore_password) -> csr (keystore, out .csr) -> certificate_create (csr, name, type, out .cer) -> profile_create (bundle, id=certificate id, type, out .p7b) ; profile_delete (id).",
+    "Itemized (team/release signing): keypair (out .p12, keystore_password) -> csr (keystore, out .csr) -> certificate_create (csr, name, type, out .cer) -> profile_create (bundle, id=certificate id, type, out .p7b) ; profile_delete (id of a profile shown in the AGC console).",
+    "Accounts in several developer teams: actions that create or delete in AGC (auto, certificate_create, profile_create, register_device, delete_certificate, profile_delete) fail with TEAM_AMBIGUOUS until team is given — ask the user which team.",
+    "Certificate quota: each team holds a limited number of certificates; auto replaces its own auto_debug_<team>.cer instead of adding one.",
   ].join(" "),
   schema: z.object({
     action: z.enum(["auto", "sign", "verify", "certificates", "devices", "register_device", "delete_certificate",
@@ -22,7 +24,7 @@ export const signTool = tool({
     subject: z.string().optional().describe("csr: subject, default CN=DebugKey"),
     project: z.string().optional(),
     product: fields.product,
-    team: z.string().optional().describe("Developer team id (default: personal team)"),
+    team: z.string().optional().describe("Developer team id (auth action=teams). Reads default to the personal team; actions that create/delete in AGC require it when the account has several teams (ask the user)"),
     target: fields.target,
     file: z.string().optional(),
     out: z.string().optional(),
@@ -33,6 +35,17 @@ export const signTool = tool({
     force: z.boolean().optional().describe("auto: replace signing the project already has (default: refuse and change nothing)"),
     wait: fields.wait,
   }),
+  params: {
+    auto: ["project", "product", "team", "acl", "force", "wait"],
+    sign: ["file", "out", "project", "product", "keystore", "keystore_password", "key_alias", "key_password", "cert", "profile"],
+    verify: ["file"],
+    certificates: ["team"], devices: ["team"], register_device: ["team", "target"], delete_certificate: ["team", "id"],
+    keypair: ["out", "keystore_password", "key_alias"],
+    csr: ["keystore", "keystore_password", "key_password", "key_alias", "out", "subject"],
+    certificate_create: ["team", "csr", "name", "type", "out"],
+    profile_create: ["team", "id", "bundle", "project", "product", "type", "name", "acl", "out"],
+    profile_delete: ["team", "id"],
+  },
   async handler(input, ctx) {
     const sign = await import("../domains/sign.js");
     switch (input.action) {
@@ -51,9 +64,9 @@ export const signTool = tool({
       case "devices": return { devices: await sign.listDevices(await sign.teamId(input.team), ctx.signal) };
       case "register_device": {
         const { resolveTarget } = await import("../domains/device.js");
-        return sign.registerDevice(await sign.teamId(input.team), await resolveTarget(input.target, ctx.signal), ctx.signal);
+        return sign.registerDevice(await sign.teamId(input.team, true), await resolveTarget(input.target, ctx.signal), ctx.signal);
       }
-      case "delete_certificate": invariant(input.id, "INVALID_INPUT", "id is required"); return sign.deleteCertificate(await sign.teamId(input.team), input.id, ctx.signal);
+      case "delete_certificate": invariant(input.id, "INVALID_INPUT", "id is required"); return sign.deleteCertificate(await sign.teamId(input.team, true), input.id, ctx.signal);
       case "keypair":
         invariant(input.out && input.keystore_password, "INVALID_INPUT", "out and keystore_password are required");
         return sign.generateKeypair({ out: input.out, password: input.keystore_password, alias: input.key_alias }, ctx.signal);
@@ -62,7 +75,7 @@ export const signTool = tool({
         return sign.generateCsr({ keystore: input.keystore, password: input.keystore_password, key_password: input.key_password, alias: input.key_alias, out: input.out, subject: input.subject }, ctx.signal);
       case "certificate_create":
         invariant(input.csr && input.name && input.out, "INVALID_INPUT", "csr, name and out are required");
-        return sign.createCertificate(await sign.teamId(input.team), { csr: input.csr, name: input.name, type: input.type ?? "debug", out: input.out }, ctx.signal);
+        return sign.createCertificate(await sign.teamId(input.team, true), { csr: input.csr, name: input.name, type: input.type ?? "debug", out: input.out }, ctx.signal);
       case "profile_create": {
         invariant(input.id && input.out, "INVALID_INPUT", "id (certificate id) and out are required");
         let bundle = input.bundle, acl = input.acl;
@@ -73,9 +86,9 @@ export const signTool = tool({
           acl = [...new Set([...sign.projectAclPermissions(project.modules).acl, ...(acl ?? [])])];
         }
         invariant(bundle, "INVALID_INPUT", "bundle (or project) is required");
-        return sign.createProfile(await sign.teamId(input.team), { bundle, certificate: input.id, type: input.type ?? "debug", name: input.name, acl, out: input.out }, ctx.signal);
+        return sign.createProfile(await sign.teamId(input.team, true), { bundle, certificate: input.id, type: input.type ?? "debug", name: input.name, acl, out: input.out }, ctx.signal);
       }
-      case "profile_delete": invariant(input.id, "INVALID_INPUT", "id is required"); return sign.deleteProfile(await sign.teamId(input.team), input.id, ctx.signal);
+      case "profile_delete": invariant(input.id, "INVALID_INPUT", "id is required"); return sign.deleteProfile(await sign.teamId(input.team, true), input.id, ctx.signal);
     }
   },
 });
@@ -85,7 +98,7 @@ export const emulatorTool = tool({
   title: "Emulator",
   description: [
     "HarmonyOS emulators. list (details=true: raw fields), start/stop (name or names; start waits until booted and returns target), create, delete,",
-    "images (downloaded; all=true: every downloadable image), install_image (force re-downloads), remove_image, license (accept), license_view (read-only).",
+    "images (rows of device_type/os_version; downloaded only, all=true: every downloadable image; [] when none), install_image (force re-downloads; returns path, bytes, seconds), remove_image, license (accept), license_view (read-only).",
     "start/create/install_image accept the license agreements automatically when they are not accepted yet (auto_accept_license=false to require an explicit license call).",
     "create: device_type, os_version, memory, storage, screen_profile or screen [\"w h dpi inches\" (+ folded)], hot_boot, instance_path, image_root, force.",
     "scenario: shake, power, rotate (left/right), volume (up/down), fold (state), battery (level, battery_status charging|discharging),",
@@ -119,6 +132,18 @@ export const emulatorTool = tool({
     light: z.number().optional(), humidity: z.number().min(0).max(100).optional(), temperature: z.number().min(-273.1).max(100).optional(),
     steps: z.number().int().optional(), heartrate: z.number().int().optional(),
   }),
+  params: {
+    list: ["details", "instance_path"],
+    start: ["name", "names", "cold", "window", "instance_path", "image_root", "auto_accept_license"],
+    stop: ["name", "names", "instance_path"],
+    create: ["name", "device_type", "os_version", "memory", "storage", "instance_path", "image_root", "screen_profile", "screen", "hot_boot", "force", "auto_accept_license"],
+    delete: ["name", "instance_path"],
+    images: ["device_type", "all"],
+    install_image: ["device_type", "os_version", "force", "auto_accept_license"],
+    remove_image: ["device_type", "os_version"],
+    license: [], license_view: [],
+    scenario: ["name", "scenario", "direction", "state", "level", "battery_status", "charging", "latitude", "longitude", "altitude", "bearing", "city", "light", "humidity", "temperature", "steps", "heartrate"],
+  },
   async handler(input, ctx) {
     const emu = await import("../domains/emulator.js");
     const name = () => { invariant(input.name, "INVALID_INPUT", "name is required"); return input.name; };
@@ -176,21 +201,32 @@ export const hotReloadTool = tool({
     target: fields.target,
     module: z.string().optional().describe("Default: entry module"),
   }),
+  params: {
+    apply: ["files", "restart", "project", "product", "target", "module"],
+    reset: ["project", "product", "target", "module"],
+    stop_daemon: ["project", "product"],
+  },
   async handler(input, ctx) {
     const { inspectProject } = await import("../domains/project.js");
     const { applyHotReload, resetHotReload } = await import("../domains/hotreload.js");
     const project = inspectProject(input.project, input.product);
+    const { resolveTarget, shell } = await import("../domains/device.js");
+    const { runnableDeviceTypes } = await import("../domains/project.js");
+    // apply/reset act on the device the hot-reload baseline was installed on (recorded then); an
+    // explicit target is only resolved (name or serial) and used to pick the module.
+    const target = input.action === "stop_daemon" || !input.target ? undefined : await resolveTarget(input.target, ctx.signal, runnableDeviceTypes(project));
     // Default module = the entry that belongs on the target device (phone vs watch), like run.
     let module = input.module;
     if (!module) {
       const { selectRunModules } = await import("../domains/project.js");
-      const { resolveTarget, shell } = await import("../domains/device.js");
-      const target = input.action === "stop_daemon" ? undefined : await resolveTarget(input.target, ctx.signal).catch(() => undefined);
+      const { baselineModules } = await import("../domains/hotreload.js");
+      const withBaseline = target ? [] : baselineModules(project);
       const deviceType = target ? (await shell(target, ["param", "get", "const.product.devicetype"], ctx.signal, 10000).catch(() => undefined))?.stdout.trim() : undefined;
-      module = (() => { try { return selectRunModules(project, { deviceType }).modules.find((m) => m.type === "entry")?.name; } catch { return undefined; } })()
+      module = (withBaseline.length === 1 ? withBaseline[0] : undefined)
+        ?? (() => { try { return selectRunModules(project, { deviceType }).modules.find((m) => m.type === "entry")?.name; } catch { return undefined; } })()
         ?? project.modules.find((m) => m.type === "entry")?.name ?? "entry";
     }
-    if (input.action === "reset") return resetHotReload(project, module, input.target, ctx.signal);
+    if (input.action === "reset") return resetHotReload(project, module, target, ctx.signal);
     if (input.action === "stop_daemon") return (await import("../domains/hotreload.js")).stopDaemon(project, ctx.signal);
     const { mainAbility } = await import("../domains/project.js");
     return applyHotReload(project, module, ctx.signal, () => {}, { files: input.files, restart: input.restart, ability: input.restart ? mainAbility(project, module).ability : undefined });

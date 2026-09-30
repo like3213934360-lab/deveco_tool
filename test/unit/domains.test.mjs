@@ -9,6 +9,7 @@ import { build } from "esbuild";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const out = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-unit-"));
+process.on("exit", () => fs.rmSync(out, { recursive: true, force: true })); // tests leave nothing behind
 const entry = path.join(out, "entry.ts");
 fs.writeFileSync(entry, [
   `export { parseWindows, pngGray, blankScore } from ${JSON.stringify(path.join(root, "src/domains/ui.ts"))};`,
@@ -17,12 +18,13 @@ fs.writeFileSync(entry, [
   `export { projectAclPermissions, profileSummary } from ${JSON.stringify(path.join(root, "src/domains/sign.ts"))};`,
   `export { siteAllowed, regionBase } from ${JSON.stringify(path.join(root, "src/domains/auth.ts"))};`,
   `export { apiOf, compatibility } from ${JSON.stringify(path.join(root, "src/domains/doctor.ts"))};`,
-  `export { faultTime } from ${JSON.stringify(path.join(root, "src/domains/diagnose.ts"))};`,
+  `export { faultTime, buildFailureHints } from ${JSON.stringify(path.join(root, "src/domains/diagnose.ts"))};`,
   `export { chordCodes, treeSignature, subtree, deviceText } from ${JSON.stringify(path.join(root, "src/domains/ui.ts"))};`,
   `export { createArgs, agreementsAccepted, emulatorFailure } from ${JSON.stringify(path.join(root, "src/domains/emulator.ts"))};`,
   `export { labelCloudSources, packCloudSections, AUTHORITY } from ${JSON.stringify(path.join(root, "src/domains/knowledge.ts"))};`,
+  `export { applicableSyscap, deviceCaps } from ${JSON.stringify(path.join(root, "src/domains/syscap.ts"))};`,
   `export { parseDuration } from ${JSON.stringify(path.join(root, "src/domains/device.ts"))};`,
-  `export { findProjectRoot, selectRunModules } from ${JSON.stringify(path.join(root, "src/domains/project.ts"))};`,
+  `export { findProjectRoot, selectRunModules, BuildOutputParser } from ${JSON.stringify(path.join(root, "src/domains/project.ts"))};`,
   `export { readonlySqlAllowed } from ${JSON.stringify(path.join(root, "src/domains/device.ts"))};`,
 ].join("\n"));
 await build({ entryPoints: [entry], outfile: path.join(out, "entry.mjs"), bundle: true, format: "esm", platform: "node", packages: "external", logLevel: "error", nodePaths: [path.join(root, "node_modules")] });
@@ -74,7 +76,7 @@ test("merges host MCP configs idempotently (JSON + TOML)", () => {
 });
 
 test("derives ACL permissions from module.json5 and SDK definitions", () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-acl-"));
+  const dir = fs.mkdtempSync(path.join(out, "acl-"));
   fs.mkdirSync(path.join(dir, "src/main"), { recursive: true });
   fs.mkdirSync(path.join(dir, "src/ohosTest"), { recursive: true });
   fs.writeFileSync(path.join(dir, "src/main/module.json5"), '{ module: { requestPermissions: [{ name: "ohos.permission.INTERNET" }, { name: "ohos.permission.READ_AUDIO" }] } }');
@@ -181,7 +183,7 @@ test("component subtree by id and device-side text encoding", () => {
 });
 
 test("project root auto-detection searches down, never up", () => {
-  const base = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-find-"));
+  const base = fs.mkdtempSync(path.join(out, "find-"));
   const proj = path.join(base, "work", "MyApp");
   fs.mkdirSync(path.join(proj, "AppScope"), { recursive: true });
   fs.writeFileSync(path.join(proj, "build-profile.json5"), "{}");
@@ -230,7 +232,7 @@ test("signed profile summary is parsed from the p7b payload", () => {
 test("ArkTS checker: braces in comments/strings and HMS containers are not errors", async () => {
   const { createRequire } = await import("node:module");
   const chk = createRequire(import.meta.url)(path.join(root, "resources/vendor/arkts-check.cjs"));
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "chk-"));
+  const dir = fs.mkdtempSync(path.join(out, "chk-"));
   const write = (name, text) => { const f = path.join(dir, name); fs.writeFileSync(f, text); return f; };
   const rules = (fn, f) => fn([f], dir).map((d) => d.rule);
   // A commented-out `Text() {` used to keep the scan "inside" the builder: every later method was flagged.
@@ -250,24 +252,120 @@ test("ArkTS checker: braces in comments/strings and HMS containers are not error
   assert.deepEqual(rules(chk.validateEntryBuildRootNode, commented), []);
 });
 
-test("cloud answers: sections labelled official/community, official first, duplicates once", () => {
-  const titles = new Map([["获取pushtoken", ["开发指南/Push_Kit_推送服务/开发准备/获取Push_Token/push-get-token"]],
-    ["使用入门", ["开发指南/IAP_Kit_应用内支付服务/使用入门/iap-dev-guide", "开发指南/Push_Kit_推送服务/使用入门/push-gettingstart"]]]);
+test("ArkTS checker: resources of nested modules, AppScope and local libs; comments/strings; directory names", async () => {
+  const { createRequire } = await import("node:module");
+  const chk = createRequire(import.meta.url)(path.join(root, "resources/vendor/arkts-check.cjs"));
+  const proj = fs.mkdtempSync(path.join(out, "res-"));
+  const put = (rel, text) => { const f = path.join(proj, rel); fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, text); return f; };
+  put("build-profile.json5", JSON.stringify({ modules: [{ name: "entry", srcPath: "./entry" }, { name: "lib", srcPath: "./features/sub/lib" }] }));
+  put("entry/src/main/resources/base/element/string.json", JSON.stringify({ string: [{ name: "entry_s", value: "x" }] }));
+  put("features/sub/lib/src/main/resources/base/element/string.json", JSON.stringify({ string: [{ name: "nested_s", value: "x" }] }));
+  put("AppScope/resources/base/element/color.json", JSON.stringify({ color: [{ name: "app_c", value: "#fff" }] }));
+  put("libs/vendor/x/src/main/resources/base/element/string.json", JSON.stringify({ string: [{ name: "vendor_s", value: "x" }] }));
+  const lib = put("features/sub/lib/src/main/ets/A.ets", "Text($r('app.string.nested_s'))\nText($r('app.color.app_c'))\nText($r('app.string.entry_s'))\n// Text($r('app.string.nope_c'))\nText(\"$r('app.string.nope_s')\")\nText($r('app.string.missing'))\n");
+  const vendor = put("libs/vendor/x/src/main/ets/V.ets", "Text($r('app.string.vendor_s'))\n");
+  const found = chk.validateAppResources([lib, vendor], proj).map((d) => `${path.basename(d.file)}:${d.line}`);
+  assert.deepEqual(found, ["A.ets:6"], "only the really missing resource is reported");
+  put("entry/src/main/resources/zz-bogus/element/x.json", "{}");
+  put("entry/src/main/resources/zz_ZX/element/x.json", "{}");
+  put("features/sub/lib/src/main/resources/dark/bad/x.txt", "");
+  const dirs = chk.validateResourceDirNames(proj).map((d) => d.file.split(path.sep).slice(-2).join("/"));
+  assert.deepEqual(dirs.sort(), ["dark/bad", "resources/zz-bogus"]);
+});
+
+test("cloud answers: labelled by text found in official docs, not by title; official first, duplicates once", async () => {
+  const pushDoc = "Push Token标识了每台设备上每个应用，开发者调用getToken()接口向Push Kit服务端请求Token，获取到Token后，使用Push Token来推送消息。Token一般情况不会变化，仅下列场景Token会发生变化：清除应用数据后重新打开应用。";
+  const navDoc = "Navigation组件是路由导航的根视图容器，一般作为页面的根容器使用，其内部默认包含了标题栏、内容区和工具栏。NavPathStack提供pushPath等路由跳转接口。";
+  const docs = { "push/get-token": pushDoc, "arkui/navigation": navDoc };
+  const lookup = async () => Object.entries(docs).map(([id, text]) => ({ id, text }));
   const sec = (n, title, body) => `[${n}]网页标题：${title}|||网页时间：|||网页分类：无|||网页内容：${body}\n`;
-  const content = sec(1, "Push Kit 从入门到精通：全指南", "一、引言：我在项目里踩了很多坑……".repeat(40))
-    + sec(2, "推送服务-获取Push Token", "官方步骤……")
-    + sec(3, "使用入门", "# 使用入门\n\n## 开发流程")
-    + sec(4, "获取Push Token", "同一官方页面的另一段")
-    + sec(5, "Navigation页面路由", "# Navigation页面路由\n\n正文")
-    + sec(6, "本篇Codelab", "### 介绍\n本篇Codelab介绍了……");
-  const r = m.labelCloudSources(content, titles, "Push Kit 使用入门");
-  assert.deepEqual(r.sources.map((s) => s.origin), ["community", "official", "official", "official", "official", "official"]);
-  assert.equal(r.sources[1].local_doc, "开发指南/Push_Kit_推送服务/开发准备/获取Push_Token/push-get-token"); // "推送服务-" prefix dropped
-  assert.equal(r.sources[2].local_doc, "开发指南/Push_Kit_推送服务/使用入门/push-gettingstart"); // shared title resolved by query
+  const content = sec(1, "Push Kit 从入门到精通：全指南", "一、引言：我在项目里踩了很多坑，这篇文章记录我自己的实践经验和心得体会，".repeat(8))
+    + sec(2, "HarmonyOS 在线和离线推送（API12+）", `问题解答：${pushDoc}`) // community-looking title, official text
+    + sec(3, "推送服务-获取Push Token", pushDoc)
+    + sec(4, "路由", navDoc)
+    + sec(5, "获取和注销Token", "# 获取和注销Token\n public class TokenAbilitySlice extends AbilitySlice { private static final HiLogLabel LABEL = null; }")
+    + sec(6, "短", "太短");
+  const r = await m.labelCloudSources(content, lookup);
+  assert.deepEqual(r.sources.map((s) => s.origin), ["community", "official", "official", "official", "official_other_platform", "unverified"]);
+  assert.equal(r.sources[1].local_doc, "push/get-token");
+  assert.equal(r.sources[3].local_doc, "arkui/navigation");
   assert.match(r.content, /\[1\]【社区文章\/community/);
+  assert.match(r.content, /\[5\]【官方文档·非 ArkTS 平台/);
   const packed = m.packCloudSections(r.sections, 3000);
-  assert.ok(packed.content.indexOf("[2]【官方") < packed.content.indexOf("[1]【社区"), "official sections come first");
-  assert.equal(packed.shown.has(4), false, "a second section of the same official page is not repeated");
+  assert.ok(packed.content.indexOf("[3]【官方") < packed.content.indexOf("[1]【社区"), "official sections come first");
+  assert.equal(packed.shown.has(3), false, "a second section of the same official doc is not repeated");
   assert.ok(packed.content.length <= 3100);
   assert.match(m.AUTHORITY, /SDK declarations/);
+});
+
+test("device-compatibility: build warnings summarized, capability hints instead of 'missing dependency'", () => {
+  const p = new m.BuildOutputParser("/proj");
+  const lines = [
+    "\u001b[33mWARN: \u001b[33mArkTS:WARN File: /proj/entry/src/main/ets/pages/Use.ets:4:38", " The system capacity of this api 'fileGuard' is not supported on all devices", "",
+    "WARN: ArkTS:WARN File: /proj/entry/src/main/ets/pages/Use.ets:9:12", " The system capacity of this api 'fileGuard' is not supported on all devices", "",
+    "WARN: ArkTS:WARN File: /proj/oh_modules/.ohpm/x/oh_modules/x/src/main/ets/A.ts:21:36", " The system capacity of this api 'createRandom' is not supported on all devices", "",
+    "WARN: ArkTS:WARN File: /proj/entry/src/main/ets/pages/B.ets:3:3", " Some other warning", "",
+  ];
+  for (const l of lines) p.line(l);
+  const r = p.finish();
+  assert.equal(r.device_compat.project_warnings, 2);
+  assert.equal(r.device_compat.dependency_warnings, 1);
+  assert.deepEqual(r.device_compat.apis, [{ api: "fileGuard", count: 2, at: ["entry/src/main/ets/pages/Use.ets:4:38", "entry/src/main/ets/pages/Use.ets:9:12"] }]);
+  const hints = m.buildFailureHints([{ code: "2307", message: "The default system capabilities of devices phone do not include SystemCapability.PCService.FileGuard. Configure the capabilities in syscap.json." }]);
+  assert.equal(hints.length, 1);
+  assert.match(hints[0], /Not a missing dependency: SystemCapability\.PCService\.FileGuard is not available/);
+  assert.doesNotMatch(hints.join(), /oh-package|query="2307"/);
+  assert.match(m.buildFailureHints([{ code: "28057", message: "The API is not supported on all devices. Use the canIUse condition to determine whether the API is supported." }])[0], /canIUse/);
+  assert.match(m.buildFailureHints([{ message: "Cannot find module 'foo'" }])[0], /Missing dependency/);
+});
+
+test("build output: every ArkTS error block and the cause line of hvigor errors are kept", () => {
+  const p = new m.BuildOutputParser("/proj");
+  const lines = [
+    "> hvigor ERROR: Failed :lib:default@HarCompileArkTS... ",
+    "> hvigor ERROR: 00305015 Rollup Error",
+    "Error Message: Unexpected token (Note that you need plugins to import files that are not JavaScript)",
+    ". At file: /proj/lib/src/main/ets/A.ets:271",
+    ...Array.from({ length: 150 }, (_, i) => [`${i + 1} ERROR: 10605040 ArkTS Compiler Error`, `Error Message: Object literals cannot be used as type declarations (arkts-no-obj-literals-as-types) At File: /proj/lib/src/main/ets/A.ets:${i + 1}:5`, "", ""]).flat(),
+    "> hvigor ERROR: 00306003 Specification Limit Violation",
+    "Error Message: Invalid project path. Current path does not match: /中文/路径",
+    "> hvigor ERROR: BUILD FAILED in 1 s",
+  ];
+  for (const l of lines) p.line(l);
+  const r = p.finish();
+  assert.equal(r.counts.error, 152, "every error is counted");
+  assert.equal(r.diagnostics.filter((d) => d.severity === "error" && d.file).length, 100, "100 compile errors listed");
+  assert.equal(r.more_errors, 51, "150 compile + 1 rollup error with a file, 100 listed");
+  assert.equal(r.diagnostics[0].code, "00306003", "build-level errors are never crowded out and come first");
+  assert.deepEqual(r.failed_tasks, ["lib:default@HarCompileArkTS"]);
+  const obj = r.diagnostics.find((d) => d.code === "10605040");
+  assert.deepEqual([obj.file, obj.line, obj.column], ["lib/src/main/ets/A.ets", 1, 5]);
+  assert.match(obj.message, /^Object literals cannot/);
+  const rollup = r.diagnostics.find((d) => d.code === "00305015");
+  assert.equal(rollup.file, "lib/src/main/ets/A.ets");
+  assert.equal(rollup.line, 271);
+  const path0 = r.diagnostics.find((d) => d.code === "00306003");
+  assert.match(path0.message, /Specification Limit Violation: Invalid project path/, "the cause line is kept");
+  assert.match(m.buildFailureHints([path0]).join(), /ASCII-only path/);
+});
+
+test("syscap verification: version-ranged tags and the 'default' (phone) alias are resolved like the SDK", () => {
+  const hover = "@syscap SystemCapability.Security.CryptoFramework [since 9 - 11]\n@syscap SystemCapability.Security.CryptoFramework.Cipher [since 12]";
+  assert.equal(m.applicableSyscap(hover, 11), "SystemCapability.Security.CryptoFramework");
+  assert.equal(m.applicableSyscap(hover, 26), "SystemCapability.Security.CryptoFramework.Cipher");
+  assert.equal(m.applicableSyscap("@syscap SystemCapability.Multimedia.Audio.Core [since 12]", 26), "SystemCapability.Multimedia.Audio.Core");
+  assert.equal(m.applicableSyscap("@syscap SystemCapability.AI.Agent.AgentKit", 26), "SystemCapability.AI.Agent.AgentKit");
+  assert.equal(m.applicableSyscap("no tags here", 26), undefined);
+  // Fake SDK: 'default' must include phone's HMS capabilities (hvigor drops them), exact file names only.
+  const sdk = fs.mkdtempSync(path.join(out, "sdk-"));
+  const oh = path.join(sdk, "default/openharmony/ets/api/device-define"), hm = path.join(sdk, "default/hms/ets/api/device-define");
+  fs.mkdirSync(oh, { recursive: true }); fs.mkdirSync(hm, { recursive: true });
+  const put = (dir, name, caps) => fs.writeFileSync(path.join(dir, name), JSON.stringify({ SysCaps: caps }));
+  put(oh, "default.json", ["SystemCapability.A"]);
+  put(hm, "phone-hmos.json", ["SystemCapability.Health.WearEngine"]);
+  put(oh, "wearable.json", ["SystemCapability.W"]);
+  put(hm, "liteWearable-hmos.json", ["SystemCapability.Lite"]);
+  const d = m.deviceCaps("default", sdk);
+  assert.ok(d.has("SystemCapability.A") && d.has("SystemCapability.Health.WearEngine"));
+  assert.deepEqual([...m.deviceCaps("wearable", sdk)], ["SystemCapability.W"], "liteWearable files are not wearable");
 });

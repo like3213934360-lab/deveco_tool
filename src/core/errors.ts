@@ -15,6 +15,7 @@ const categories: Record<string, ErrorCategory> = {
   CAPABILITY_UNAVAILABLE: "environment",
   DEVICE_UNAVAILABLE: "environment",
   DEVICE_AMBIGUOUS: "input",
+  TEAM_AMBIGUOUS: "input",
   AUTH_REQUIRED: "environment",
   KB_MISSING: "environment",
   PROJECT_INVALID: "project",

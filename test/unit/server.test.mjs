@@ -6,6 +6,7 @@ import { test } from "node:test";
 import { connect } from "../../tools/mcp-client.mjs";
 
 const state = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-test-"));
+process.on("exit", () => fs.rmSync(state, { recursive: true, force: true })); // tests leave nothing behind
 const env = { DEVECO_STATE_DIR: state, DEVECO_CONFIG: path.join(state, "none.json") };
 
 test("handshake, tools/list and schema validation", async () => {
@@ -25,6 +26,23 @@ test("handshake, tools/list and schema validation", async () => {
   assert.equal(unknown.result.isError, true);
   const ping = await client.request("ping");
   assert.deepEqual(ping.result, {});
+  await client.close();
+});
+
+test("arguments: unknown/misplaced parameters are refused, long waits are capped", async () => {
+  const client = connect(env);
+  await client.initialize();
+  const typo = await client.call("job", { action: "list", limit: 1, wiat: 5 });
+  assert.equal(typo.data.error.code, "INVALID_INPUT");
+  assert.equal(typo.data.error.details.did_you_mean.wiat, "wait");
+  const misplaced = await client.call("knowledge", { action: "rollback", version: "1.0.0" });
+  assert.equal(misplaced.data.error.code, "INVALID_INPUT");
+  assert.deepEqual(misplaced.data.error.details.not_used, ["version"]);
+  const capped = await client.call("job", { action: "list", limit: 1 });
+  assert.equal(capped.isError, false);
+  // wait above the cap is clamped (not rejected) and noted; job_id missing is the only error here
+  const waited = await client.call("job", { action: "wait", job_id: "j_none", wait: 600000 });
+  assert.equal(waited.data.error.code, "NOT_FOUND");
   await client.close();
 });
 

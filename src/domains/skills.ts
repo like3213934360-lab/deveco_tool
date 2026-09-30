@@ -54,20 +54,25 @@ export function readSkill(name: string, reference?: string) {
 const hostDirs: Record<string, string> = {
   cursor: ".cursor/skills", claude: ".claude/skills", codex: ".codex/skills", opencode: ".config/opencode/skills",
   deveco: ".config/deveco/skills", "trae-cn": ".trae-cn/skills", codebuddy: ".codebuddy/skills", qoder: ".qoder/skills", pi: ".pi/agent/skills",
+  atomcode: ".atomcode/skills", dsh: ".dsh/skills",
 };
 
-const noSharedDir = new Set(["trae-cn", "codebuddy", "pi"]);
+/** Hosts that do not read the shared .agents/skills: project scope uses their own directory (devecocli: projectPath or .<agent>/skills). */
+const ownProjectDir: Record<string, string> = { "trae-cn": ".trae-cn/skills", codebuddy: ".codebuddy/skills", pi: ".pi/agent/skills", atomcode: ".atomcode/skills", dsh: ".dsh/skills" };
 function sharedProjectDir(host: string) {
-  return noSharedDir.has(host) ? hostDirs[host]! : ".agents/skills";
+  return ownProjectDir[host] ?? ".agents/skills";
 }
 
 /** One-step host setup: export skills + register this MCP server (parity with `devecocli init`). */
 export async function initHost(host: string, options: { scope?: "user" | "project"; project?: string; force?: boolean; skills?: boolean; mcp?: boolean; dir?: string }) {
-  const { installMcp } = await import("./hostconfig.js");
+  const { installMcp, hosts } = await import("./hostconfig.js");
   const scope = options.scope ?? (options.project ? "project" : "user");
+  // Hosts without an MCP config table upstream (deveco, atomcode, dsh) get skills only.
+  const mcp = options.mcp !== false && host in hosts;
   return {
     ...(options.skills !== false ? { skills: exportSkills(host, scope, options.project, undefined, options.dir) } : {}),
-    ...(options.mcp !== false ? { mcp: installMcp(host, { scope, project: options.project, force: options.force }) } : {}),
+    ...(mcp ? { mcp: installMcp(host, { scope, project: options.project, force: options.force }) } : {}),
+    ...(options.mcp !== false && !mcp ? { mcp: { skipped: `${host} has no MCP configuration file; register the server in its settings manually` } } : {}),
   };
 }
 

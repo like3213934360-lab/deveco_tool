@@ -27,7 +27,7 @@ const configSchema = z
     clt: z.string().optional(),
     java_home: z.string().optional(),
     state_dir: z.string().optional(),
-    retention_days: z.number().int().min(1).max(365).default(7),
+    retention_days: z.number().int().min(1).max(365).default(1),
     max_jobs: z.number().int().min(10).max(10000).default(200),
     max_artifact_mb: z.number().int().min(16).max(65536).default(512),
     session_idle_minutes: z.number().int().min(1).max(240).default(10),

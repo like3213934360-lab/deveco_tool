@@ -25,6 +25,11 @@ function statePath(project: Project, module: string) {
   return path.join(m.root, "build", project.product, "intermediates", "deveco-mcp-hot.json");
 }
 
+/** Modules that have a hot-reload baseline (installed with build_run hot_reload=true). */
+export function baselineModules(project: Project) {
+  return project.modules.filter((m) => (m.type === "entry" || m.type === "feature") && fs.existsSync(statePath(project, m.name))).map((m) => m.name);
+}
+
 function sourceDigests(moduleRoot: string) {
   const out: Record<string, string> = {};
   for (const file of walk(path.join(moduleRoot, "src/main/ets"), new Set())) if (/\.(ets|ts)$/.test(file)) out[file] = sha256(fs.readFileSync(file));

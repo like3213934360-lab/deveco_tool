@@ -8,6 +8,7 @@ import { build } from "esbuild";
 
 // Bundle a small harness that exercises the job runner directly (TS sources -> ESM).
 const out = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-jobs-"));
+process.on("exit", () => fs.rmSync(out, { recursive: true, force: true })); // tests leave nothing behind
 process.env.DEVECO_STATE_DIR = out;
 const harness = path.join(out, "harness.ts");
 fs.writeFileSync(harness, `
@@ -112,4 +113,41 @@ test("a job left running by a dead server reads as interrupted and resumes", asy
   // Cancel also works on an orphan.
   db.prepare("INSERT INTO jobs(id,kind,status,input,created,updated,owner) VALUES('j_orphan2','t_orphan','queued','{}',0,0,999999)").run();
   assert.equal((await m.cancelJob("j_orphan2")).status, "cancelled");
+});
+
+test("cleanup removes expired job-less artifacts, stray files and old UI tests; keeps recent ones", async () => {
+  const db = await m.database();
+  const fs = await import("node:fs");
+  const path = await import("node:path");
+  const old = await m.saveArtifact("old screenshot text");
+  const fresh = await m.saveArtifact("fresh");
+  db.prepare("UPDATE artifacts SET created=0 WHERE id=?").run(old.artifact_id);
+  const dir = m.artifactDir();
+  const stray = path.join(dir, "a_stray000000000.txt");
+  fs.writeFileSync(stray, "orphan");
+  fs.utimesSync(stray, new Date(0), new Date(0));
+  db.exec("CREATE TABLE IF NOT EXISTS ui_tests (id TEXT PRIMARY KEY, data TEXT NOT NULL, updated INTEGER NOT NULL)");
+  db.prepare("INSERT OR REPLACE INTO ui_tests VALUES('t_old','{}',0),('t_new','{}',?)").run(Date.now());
+  await m.cleanup();
+  await assert.rejects(m.readArtifact(old.artifact_id), (e) => e.code === "NOT_FOUND");
+  assert.equal((await m.readArtifact(fresh.artifact_id)).content, "fresh");
+  assert.equal(fs.existsSync(stray), false);
+  assert.deepEqual(db.prepare("SELECT id FROM ui_tests ORDER BY id").all().map((r) => r.id), ["t_new"]);
+});
+
+test("exported copies expire with the artifacts; untracked user files are never touched", async () => {
+  const db = await m.database();
+  const fs = await import("node:fs");
+  const path = await import("node:path");
+  const dir = path.join(out, "exports");
+  fs.mkdirSync(dir, { recursive: true });
+  const oldCopy = path.join(dir, "shot.jpg"), newCopy = path.join(dir, "new.jpg"), mine = path.join(dir, "user-notes.txt");
+  for (const f of [oldCopy, newCopy, mine]) fs.writeFileSync(f, "x");
+  await m.trackExport(oldCopy);
+  await m.trackExport(newCopy);
+  db.prepare("UPDATE exports SET created=0 WHERE path=?").run(oldCopy);
+  await m.cleanup();
+  assert.equal(fs.existsSync(oldCopy), false);
+  assert.equal(fs.existsSync(newCopy), true);
+  assert.equal(fs.existsSync(mine), true, "files this server did not write are left alone");
 });

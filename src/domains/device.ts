@@ -16,17 +16,46 @@ export async function listTargets(signal?: AbortSignal): Promise<string[]> {
   return result.stdout.split(/\r?\n/).map((l) => l.trim()).filter((l) => l && !/^\[Empty\]$/i.test(l));
 }
 
-/** Resolve the device: explicit serial, or the only connected one. */
-export async function resolveTarget(target: string | undefined, signal?: AbortSignal): Promise<string> {
+/** Short identity of a connected device (for choosing one): name, model, emulator or real, device type. */
+export async function deviceSummary(target: string, signal?: AbortSignal) {
+  const keys = ["const.product.name", "const.product.model", "ohos.qemu.hvd.name", "const.product.devicetype", "const.ohos.apiversion"];
+  const v = await Promise.all(keys.map((k) => shell(target, ["param", "get", k], signal, 8000).then((r) => r.stdout.trim()).catch(() => "")));
+  const ok = (s: string) => (s && !/fail|error|not found|invalid/i.test(s) ? s : undefined);
+  const emulatorName = ok(v[2]!);
+  return {
+    target, name: emulatorName ?? ok(v[0]!), model: ok(v[1]!), emulator: !!emulatorName || /^127\.0\.0\.1:|^localhost:/.test(target),
+    device_type: ok(v[3]!), api_level: ok(v[4]!) ? Number(v[4]) : undefined,
+  };
+}
+
+/**
+ * Resolve the device: an explicit serial or device name (like devecocli --device), or the only
+ * connected one. With several devices and no target, never pick one: the user decides, so the error
+ * lists every device (and whether it matches the project's deviceTypes when a project is given).
+ */
+export async function resolveTarget(target: string | undefined, signal?: AbortSignal, projectDeviceTypes?: string[]): Promise<string> {
   const targets = await listTargets(signal);
   if (target) {
-    invariant(targets.includes(target), "DEVICE_UNAVAILABLE", `Device ${target} is not connected`, { connected: targets });
-    return target;
+    if (targets.includes(target)) return target;
+    const summaries = await Promise.all(targets.map((t) => deviceSummary(t, signal)));
+    const want = target.trim().toLowerCase();
+    const byName = summaries.filter((s) => [s.name, s.model].some((n) => n?.toLowerCase() === want));
+    invariant(byName.length <= 1, "DEVICE_AMBIGUOUS", `Several connected devices are named ${target}; pass the serial`, { devices: byName });
+    invariant(byName.length === 1, "DEVICE_UNAVAILABLE", `Device ${target} is not connected`, { connected: summaries },
+      "Pass target as one of the connected serials or names");
+    return byName[0]!.target;
   }
   invariant(targets.length > 0, "DEVICE_UNAVAILABLE", "No HarmonyOS device or emulator is connected", undefined,
     "Connect a device (USB debugging on) or start an emulator (emulator tool / DevEco Studio)");
-  invariant(targets.length === 1, "DEVICE_AMBIGUOUS", "Several devices are connected; pass target", { connected: targets });
-  return targets[0]!;
+  if (targets.length === 1) return targets[0]!;
+  const summaries = await Promise.all(targets.map((t) => deviceSummary(t, signal)));
+  const types = projectDeviceTypes?.map((t) => (t === "default" ? "phone" : t.toLowerCase()));
+  const devices = summaries.map((s) => ({
+    ...s,
+    ...(types ? { matches_project: !!s.device_type && types.includes(s.device_type === "default" ? "phone" : s.device_type.toLowerCase()) } : {}),
+  }));
+  throw new ToolError("DEVICE_AMBIGUOUS", `${targets.length} devices are connected and no target was given`, { devices },
+    "Do not choose on your own: ask the user which device to use (list name, real device or emulator), then call again with target=<serial>");
 }
 
 export async function shell(target: string, command: string[], signal?: AbortSignal, timeoutMs = 30000) {
@@ -90,9 +119,14 @@ function installError(text: string) {
   return new ToolError("INSTALL_FAILED", `Install failed${code ? ` (${code})` : ""}`, { output: clip(text.trim(), 1500) }, hint);
 }
 
+/** Like devecocli: success, "not installed" (not an error), or a real failure (error). */
 export async function uninstall(target: string, bundle: string, signal?: AbortSignal) {
   const result = await hdc(["-t", target, "uninstall", bundle], signal, 60000, true);
-  return { bundle, uninstalled: /successfully/i.test(result.stdout), output: clip(result.stdout.trim(), 300) };
+  const text = `${result.stdout}\n${result.stderr}`;
+  if (/uninstall bundle successfully|successfully/i.test(text)) return { bundle, uninstalled: true };
+  if (/uninstall missing installed bundle|9568386|not installed|does not exist/i.test(text)) return { bundle, uninstalled: false, reason: "not_installed" };
+  throw new ToolError("UNINSTALL_FAILED", `Uninstall of ${bundle} failed`, { output: clip(text.trim(), 500) },
+    "The app may be protected or in use; check the output, stop it with run action=stop and retry");
 }
 
 export async function forceStop(target: string, bundle: string, signal?: AbortSignal) {
@@ -103,7 +137,8 @@ export async function launch(target: string, bundle: string, ability: string, mo
   const result = await shell(target, ["aa", "start", "-b", bundle, "-a", ability, ...(module ? ["-m", module] : [])], signal);
   const text = result.stdout + result.stderr;
   invariant(/start ability successfully/i.test(text), "LAUNCH_FAILED", `Launch failed: ${clip(text.trim(), 400)}`, undefined,
-    /10106102|not exist|does not exist/i.test(text) ? "Ability or bundle not installed — deploy first" : undefined);
+    /10106102|screen is locked/i.test(text) ? "The device screen is locked (a passcode cannot be entered remotely): ask the user to unlock the device, then launch again"
+      : /10104001|not exist|does not exist/i.test(text) ? "Ability or bundle not installed — deploy first" : undefined);
   return { launched: true, bundle, ability };
 }
 

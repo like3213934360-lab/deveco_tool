@@ -120,7 +120,37 @@ export async function cleanup() {
       fs.rmSync(row.file, { force: true });
       db.prepare("DELETE FROM artifacts WHERE id=?").run(row.id);
     }
+    // Exported copies (only paths this server created and recorded; never anything else).
+    for (const row of db.prepare("SELECT path FROM exports WHERE created < ?").all(cutoff) as { path: string }[]) {
+      try { fs.rmSync(row.path, { recursive: true, force: true }); } catch { /* already gone or not ours to remove */ }
+      db.prepare("DELETE FROM exports WHERE path=?").run(row.path);
+    }
+    // UI test sessions (their screenshots are job-less artifacts, removed above by age).
+    try { db.prepare("DELETE FROM ui_tests WHERE updated < ?").run(cutoff); } catch { /* table not created yet */ }
+    // Files in artifacts/ that no row points to (crash between write and commit, deleted rows).
+    const known = new Set((db.prepare("SELECT file FROM artifacts").all() as { file: string }[]).map((r) => path.basename(r.file)));
+    const dir = artifactDir();
+    for (const name of fs.readdirSync(dir)) {
+      if (known.has(name)) continue;
+      const file = path.join(dir, name);
+      const stat = fs.statSync(file, { throwIfNoEntry: false });
+      // Grace period: a streaming log is written before it is committed.
+      if (stat?.isFile() && Date.now() - stat.mtimeMs > 3600000) fs.rmSync(file, { force: true });
+    }
   } finally {
     cleaning = false;
   }
+}
+
+/**
+ * Copies written outside the state directory (screenshot/record save_path, test_export directories)
+ * are tracked too, so the same retention removes them: nothing this server produces accumulates.
+ */
+export async function trackExport(file: string) {
+  (await database()).prepare("INSERT OR REPLACE INTO exports(path,created) VALUES(?,?)").run(path.resolve(file), Date.now());
+}
+
+/** Start-of-session cleanup, off the handshake path (a server that only answers queries never finishes a job). */
+export function scheduleCleanup(delayMs = 5000) {
+  setTimeout(() => void cleanup().catch(() => {}), delayMs).unref();
 }

@@ -3,7 +3,7 @@ import fs from "node:fs";
 import net from "node:net";
 import path from "node:path";
 import zlib from "node:zlib";
-import { artifactDir, commitArtifact, saveArtifact } from "../core/artifacts.js";
+import { artifactDir, commitArtifact, saveArtifact, trackExport } from "../core/artifacts.js";
 import { packageRoot } from "../core/config.js";
 import { invariant, ToolError } from "../core/errors.js";
 import { hdc, shell } from "./device.js";
@@ -130,7 +130,8 @@ export function compact(nodes: UiNode[], options: { interactive?: boolean; limit
   const lines: string[] = [];
   for (const n of nodes) {
     if (options.bundle && n.bundle !== options.bundle) continue;
-    if (options.depth !== undefined && n.depth > options.depth) continue;
+    // devecocli semantics: 0 = unlimited, 1 = root only, 2 = root + children (node depth is 0-based).
+    if (options.depth && n.depth >= options.depth) continue;
     if (!n.rect || n.visible === false) continue;
     const interesting = n.text || n.key || n.clickable || /Button|Input|TextArea|Toggle|Checkbox|Radio|Slider|Search|Select|Tab/i.test(n.type);
     if (options.interactive && !interesting) continue;
@@ -344,6 +345,7 @@ export async function screenshot(target: string, options: { format?: "jpeg" | "p
     invariant(fs.existsSync(local) && fs.statSync(local).size > 0, "SCREENSHOT_FAILED", "Screenshot transfer failed");
     const data = fs.readFileSync(local);
     const saved = options.save_path ? saveCopy(local, options.save_path) : undefined;
+    if (saved) await trackExport(saved);
     const artifact = await commitArtifact(id, local, mime);
     return { artifact_id: artifact.artifact_id, bytes: artifact.bytes, mime, data: data.toString("base64"), ...(saved ? { saved } : {}) };
   } finally {
@@ -637,7 +639,9 @@ export async function startRecording(target: string, signal?: AbortSignal) {
   const name = `devecomcp-${Date.now()}-${crypto.randomBytes(2).toString("hex")}.mp4`;
   const result = await shell(target, ["aa", "start", ...RECORDER, "--ps", "CustomizedFileName", name], signal, 15000);
   invariant(/success/i.test(result.stdout), "UI_RECORD_FAILED", `Screen recorder did not start: ${result.stdout.trim().slice(0, 200)}`,
-    undefined, "Screen recording needs a real device with the system recorder (not available on some emulators)");
+    undefined, /10106102|screen is locked/i.test(result.stdout)
+      ? "The device screen is locked (with a passcode it cannot be unlocked remotely): ask the user to unlock the device, then retry"
+      : "Screen recording needs a real device with the system recorder (not available on some emulators)");
   await setSession(target, { name, started: Date.now() });
   return { recording: true, file: name, note: "Stop with ui action=record_stop" };
 }
@@ -675,6 +679,7 @@ export async function stopRecording(target: string, options: { discard?: boolean
     void shell(target, ["rm", "-f", staging]).catch(() => {});
   }
   const copy = options.save_path ? saveCopy(local, options.save_path) : undefined;
+  if (copy) await trackExport(copy);
   const artifact = await commitArtifact(id, local, "video/mp4");
   return { saved: copy ?? local, bytes: artifact.bytes, seconds: Math.round((Date.now() - current.started) / 1000), artifact_id: artifact.artifact_id };
 }

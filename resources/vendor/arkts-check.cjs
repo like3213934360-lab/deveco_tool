@@ -298,31 +298,39 @@ function loadSystemResourceNames(devecoHome) {
   }
   if (!resFile) return null;
 
+  // Every line ends with the resource name in quotes: "id:<n>, '<value>' '<name>'" (values may
+  // themselves contain quotes, so take the last quoted token).
   const names = new Set();
   const content = fs.readFileSync(resFile, 'utf-8');
-  const linePattern = /^id:\d+,\s*'[^']*'\s+'([^']+)'/;
   for (const line of content.split('\n')) {
-    const m = line.match(linePattern);
+    if (!/^id:\d+,/.test(line)) continue;
+    const m = /'([A-Za-z0-9_.]+)'\s*$/.exec(line.trimEnd());
     if (m) names.add(m[1]);
   }
   return names;
 }
 
+// All sys.* kinds resolve by name against the SDK table (hvigor: 10903329 "Unknown resource name").
+const SYS_RESOURCE_REF_RE = /\$r\(\s*['"]sys\.(media|symbol|color|float|string|integer|boolean|plural|pattern|strarray|intarray)\.([^'"]+)['"]\s*\)/g;
+
 function validateSystemResources(files, devecoHome, projectPath) {
   const validNames = loadSystemResourceNames(devecoHome);
-  if (!validNames) return [];
+  if (!validNames || validNames.size === 0) return [];
 
   const diagnostics = [];
-  const refPattern = /\$r\(\s*['"]sys\.(media|symbol)\.([^'"]+)['"]\s*\)/g;
+  const refPattern = SYS_RESOURCE_REF_RE;
 
   for (const filePath of files) {
     if (!fs.existsSync(filePath)) continue;
     const content = fs.readFileSync(filePath, 'utf-8');
     const fileLines = content.split('\n');
+    const lex = { quote: null, inBlockComment: false };
     for (let i = 0; i < fileLines.length; i++) {
+      const code = maskNonCode(fileLines[i], lex);
       let match;
       refPattern.lastIndex = 0;
       while ((match = refPattern.exec(fileLines[i])) !== null) {
+        if (code.slice(match.index, match.index + 3) !== '$r(') continue;
         const resName = match[2];
         if (!validNames.has(resName)) {
           diagnostics.push({
@@ -362,18 +370,42 @@ const APP_RESOURCE_REF_RE = /\$r\(\s*['"]app\.([a-z]+)\.([A-Za-z0-9_]+)['"]\s*\)
 // so an unknown-name check does not apply to them here.
 const APP_RESOURCE_INDEXED_KINDS = new Set(['media', 'color', 'string', 'float', 'integer', 'boolean', 'intarray', 'strarray', 'pattern', 'plural', 'profile', 'symbol']);
 
-function loadAppResourceNames(projectPath) {
-  const names = new Set();
-  let moduleDirs;
+// Every module root of the project: the srcPath entries of build-profile.json5 (modules may live in
+// nested directories such as ./features/x or ./casesfeature/y), plus top-level directories that hold
+// a src/main (single-level layouts and profiles that cannot be parsed).
+function projectModuleRoots(projectPath) {
+  const roots = new Set();
   try {
-    moduleDirs = fs.readdirSync(projectPath, { withFileTypes: true }).filter((d) => d.isDirectory());
-  } catch {
-    return names;
-  }
+    const parsed = parseJson5Loose(fs.readFileSync(path.join(projectPath, 'build-profile.json5'), 'utf-8'));
+    for (const m of (parsed && Array.isArray(parsed.modules) ? parsed.modules : [])) {
+      if (m && typeof m.srcPath === 'string') roots.add(path.resolve(projectPath, m.srcPath));
+    }
+  } catch { /* fall back to the directory scan */ }
+  try {
+    for (const d of fs.readdirSync(projectPath, { withFileTypes: true })) {
+      if (!d.isDirectory() || d.name === 'node_modules' || d.name === 'oh_modules' || d.name.startsWith('.')) continue;
+      if (fs.existsSync(path.join(projectPath, d.name, 'src', 'main'))) roots.add(path.join(projectPath, d.name));
+    }
+  } catch { /* unreadable project */ }
+  if (fs.existsSync(path.join(projectPath, 'src', 'main'))) roots.add(projectPath);
+  return [...roots];
+}
 
-  for (const mod of moduleDirs) {
-    if (mod.name === 'node_modules' || mod.name === 'oh_modules' || mod.name.startsWith('.')) continue;
-    const resourcesDir = path.join(projectPath, mod.name, 'src', 'main', 'resources');
+// Module root of a source file: the directory above its `src/main` (covers local HARs that are not
+// declared in build-profile.json5, e.g. libs/<vendor>/<lib> consumed through oh-package.json5).
+function owningModuleRoot(filePath) {
+  const parts = path.resolve(filePath).split(path.sep);
+  for (let i = parts.length - 2; i > 0; i--) if (parts[i] === 'src' && parts[i + 1] === 'main') return parts.slice(0, i).join(path.sep) || path.sep;
+  return undefined;
+}
+
+function loadAppResourceNames(projectPath, files) {
+  const names = new Set();
+  const roots = new Set(projectModuleRoots(projectPath));
+  for (const f of files || []) { const r = owningModuleRoot(f); if (r) roots.add(r); }
+  // AppScope/resources is merged into every module's app.* namespace by the resource compiler.
+  const resourceDirs = [...[...roots].map((r) => path.join(r, 'src', 'main', 'resources')), path.join(projectPath, 'AppScope', 'resources')];
+  for (const resourcesDir of resourceDirs) {
     let qualifiers;
     try {
       qualifiers = fs.readdirSync(resourcesDir, { withFileTypes: true }).filter((d) => d.isDirectory());
@@ -422,7 +454,7 @@ function loadAppResourceNames(projectPath) {
 }
 
 function validateAppResources(files, projectPath) {
-  const validNames = loadAppResourceNames(projectPath);
+  const validNames = loadAppResourceNames(projectPath, files);
   // No resources directory at all (or unreadable): stay silent rather than
   // reporting every reference as unknown.
   if (validNames.size === 0) return [];
@@ -439,10 +471,14 @@ function validateAppResources(files, projectPath) {
     try { content = fs.readFileSync(filePath, 'utf-8'); } catch { continue; }
     const relFile = path.relative(projectPath, filePath);
     const fileLines = content.split('\n');
+    const lex = { quote: null, inBlockComment: false };
     for (let i = 0; i < fileLines.length; i++) {
+      const code = maskNonCode(fileLines[i], lex);
       let match;
       APP_RESOURCE_REF_RE.lastIndex = 0;
       while ((match = APP_RESOURCE_REF_RE.exec(fileLines[i])) !== null) {
+        // Only real references: `$r(` must be code (not inside a comment or a string literal).
+        if (code.slice(match.index, match.index + 3) !== '$r(') continue;
         const kind = match[1];
         const resName = match[2];
         if (!APP_RESOURCE_INDEXED_KINDS.has(kind)) continue;
@@ -665,12 +701,23 @@ const QUALIFIER_RESOURCE_DIRS = new Set(['element', 'media', 'profile']);
 // which no static check reported because nothing looked at directory layout.
 const TOP_LEVEL_RESOURCE_DIRS = new Set(['rawfile', 'resfile']);
 
+// Resource qualifier directory names (HarmonyOS resource categorisation): "base", or segments
+// joined by "-"/"_" among MCC/MNC, language (zh, en...), script (Hans...), region (CN, US...),
+// orientation, device type, color mode and screen density. Anything else is rejected by the resource
+// compiler ("Invalid qualifier key"), verified with hvigor 26.
+const QUALIFIER_SEGMENT_RES = [
+  /^mcc\d{3}$/, /^mnc\d{2,3}$/, /^[a-z]{2,3}$/, /^[A-Z][a-z]{3}$/, /^[A-Z]{2}$/,
+  /^(vertical|horizontal)$/, /^(phone|tablet|car|tv|wearable|2in1|pc)$/, /^(dark|light)$/, /^(sdpi|mdpi|ldpi|xldpi|xxldpi|xxxldpi)$/,
+];
+function isQualifierDirName(name) {
+  if (name === 'base') return true;
+  const segments = name.split('-').flatMap((s) => s.split('_'));
+  return segments.length > 0 && segments.every((s) => QUALIFIER_SEGMENT_RES.some((re) => re.test(s)));
+}
+
 function validateResourceDirNames(projectPath) {
   const diagnostics = [];
-  const roots = [
-    path.join(projectPath, 'entry', 'src', 'main', 'resources'),
-    path.join(projectPath, 'src', 'main', 'resources'),
-  ];
+  const roots = projectModuleRoots(projectPath).map((m) => path.join(m, 'src', 'main', 'resources'));
 
   for (const root of roots) {
     let qualifiers;
@@ -681,6 +728,14 @@ function validateResourceDirNames(projectPath) {
       // A top-level entry is either a qualifier directory or rawfile/resfile;
       // both are legal here, and only the former has constrained children.
       if (TOP_LEVEL_RESOURCE_DIRS.has(qualifier.name)) continue;
+      if (!isQualifierDirName(qualifier.name)) {
+        diagnostics.push({
+          file: path.relative(projectPath, path.join(root, qualifier.name)),
+          line: 1, column: 1, severity: 'error', rule: 'resource-dir-name',
+          message: `Invalid qualifier directory name '${qualifier.name}'. Use base, rawfile, resfile or qualifiers such as zh_CN, en_US, dark, phone, xxldpi (joined with '-').`,
+        });
+        continue;
+      }
 
       const qualifierPath = path.join(root, qualifier.name);
       let children;
@@ -2090,73 +2145,8 @@ function validateV2MemberDecoratorRules(files, projectPath) {
   return diagnostics;
 }
 
-// 10905307: @ObjectLink's type must be a class decorated with @Observed/@ObservedV2.
-//
-// NOT WIRED INTO computeProjectDiagnostics. The naive form of this rule ("type
-// is a project class without @Observed -> error") fires on code that hvigor
-// accepts: a bootstrap project that builds successfully has `@ObjectLink task:
-// HealthTask` where HealthTask carries no @Observed at all. Whatever makes that
-// legal (inherited decoration, a V2 container path, or a laxer check than the
-// error message implies) is not captured here, and one real failure is not worth
-// a false positive on passing code. Kept — exported for tests — so the next
-// attempt starts from the known-insufficient version rather than from scratch.
-const OBJECT_LINK_TYPE_RE = /^\s*@ObjectLink\b(?:\([^)]*\))?\s+([A-Za-z_$][\w$]*)\s*(?:\?|!)?\s*:\s*([A-Za-z_$][\w$]*)\b(?!\s*[<[.])/;
-
-function collectObservedClassNames(files) {
-  const names = new Set();
-  for (const filePath of files) {
-    let content;
-    try { content = fs.readFileSync(filePath, 'utf-8'); } catch { continue; }
-    const lines = content.split('\n');
-    for (let i = 0; i < lines.length; i++) {
-      const m = CLASS_DECL_RE.exec(lines[i]);
-      if (!m) continue;
-      const decorators = collectStructDecorators(lines, i, m[2]);
-      if (decorators.has('Observed') || decorators.has('ObservedV2')) names.add(m[3]);
-    }
-  }
-  return names;
-}
-
-function validateObjectLinkTypes(files, projectPath) {
-  const declarationFiles = projectPath ? unionProjectFiles(files, projectPath) : files;
-  const observed = collectObservedClassNames(declarationFiles);
-  // Class declarations we can see at all — only judge types declared in-project,
-  // so an SDK or third-party type is never guessed at.
-  const declared = new Set();
-  for (const filePath of declarationFiles) {
-    let content;
-    try { content = fs.readFileSync(filePath, 'utf-8'); } catch { continue; }
-    for (const line of content.split('\n')) {
-      const m = CLASS_DECL_RE.exec(line);
-      if (m) declared.add(m[3]);
-    }
-  }
-
-  const diagnostics = [];
-  for (const filePath of files) {
-    let content;
-    try { content = fs.readFileSync(filePath, 'utf-8'); } catch { continue; }
-    const lines = content.split('\n');
-    const relFile = path.relative(projectPath, filePath);
-    for (let i = 0; i < lines.length; i++) {
-      const m = OBJECT_LINK_TYPE_RE.exec(lines[i]);
-      if (!m) continue;
-      const typeName = m[2];
-      if (!declared.has(typeName)) continue; // not a project class -> out of scope
-      if (observed.has(typeName)) continue;
-      diagnostics.push({
-        file: relFile,
-        line: i + 1,
-        column: 1,
-        severity: 'error',
-        rule: 'object-link-observed-type',
-        message: `'@ObjectLink' cannot be used with this type. Apply it only to classes decorated by '@Observed' or '@ObservedV2'. '${typeName}' has neither; add '@Observed' to the class, or use a different state decorator for '${m[1]}'.`,
-      });
-    }
-  }
-  return diagnostics;
-}
+// @ObjectLink type rule removed: it was never wired into the checks (also upstream), and hvigor
+// accepts @ObjectLink on a plain class (verified with hvigor 26), so enabling it would be a false positive.
 
 function validateModelVersion(projectPath) {
   const hvigorPath = path.join(projectPath, 'hvigor', 'hvigor-config.json5');
@@ -3723,7 +3713,6 @@ module.exports = {
   validateV2MemberDecoratorRules,
   validateNavDestinationRegistration, validateHideNavBarUsage,
   validateNavDestinationRoot, validateAppStorageV2Mixing,
-  validateObjectLinkTypes, collectObservedClassNames,
   validateRouteMapProfile, ROUTE_MAP_ALLOWED_KEYS, ROUTE_MAP_REQUIRED_KEYS,
   validateRouteMapBuildFunction,
   validateResourceDirNames, QUALIFIER_RESOURCE_DIRS, TOP_LEVEL_RESOURCE_DIRS,

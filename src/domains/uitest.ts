@@ -235,5 +235,8 @@ export async function exportTest(testId: string, directory: string) {
   copy(s.report, "report");
   fs.writeFileSync(path.join(directory, "test.json"), JSON.stringify(s, null, 2));
   files.push(path.join(directory, "test.json"));
+  // Track the files we wrote (not the directory, which may hold the user's own files).
+  const { trackExport } = await import("../core/artifacts.js");
+  for (const f of files) await trackExport(f);
   return { exported: files.length, directory, files: files.map((f) => path.basename(f)) };
 }

@@ -2,6 +2,12 @@ import { defineJob } from "./core/jobs.js";
 import { invariant } from "./core/errors.js";
 import type { BuildTask } from "./domains/project.js";
 
+/** Project model honouring `modules: ["name@target"]`, and the plain module names. */
+async function projectOf(input: { project: string; product?: string; modules?: string[] }) {
+  const { projectFor } = await import("./domains/project.js");
+  return projectFor(input);
+}
+
 /* All long-running workflows. Effect steps (install) are journaled; others are safe to re-run. */
 
 interface BuildInput { project: string; product?: string; modules?: string[]; task?: BuildTask; mode?: string; clean?: boolean; preflight?: boolean }
@@ -40,10 +46,11 @@ const preflightStep = {
 const buildStep = {
   id: "build",
   async run(ctx: { input: BuildInput; signal: AbortSignal; job_id: string }) {
-    const { inspectProject, buildProject } = await import("./domains/project.js");
+    const { buildProject } = await import("./domains/project.js");
     const { buildFailureHints } = await import("./domains/diagnose.js");
     try {
-      return await buildProject(inspectProject(ctx.input.project, ctx.input.product), ctx.input, ctx.signal, ctx.job_id);
+      const { project, modules } = await projectOf(ctx.input);
+      return await buildProject(project, { ...ctx.input, modules }, ctx.signal, ctx.job_id);
     } catch (error) {
       const details = (error as { details?: { diagnostics?: { code?: string; message: string }[] } }).details;
       if (details?.diagnostics) Object.assign(details, { hints: buildFailureHints(details.diagnostics) });
@@ -80,7 +87,9 @@ const runSteps = (build: boolean) => [
     id: "target",
     async run(ctx: { input: RunInput; signal: AbortSignal }) {
       const { resolveTarget, deviceInfo, shell } = await import("./domains/device.js");
-      const target = await resolveTarget(ctx.input.target, ctx.signal);
+      const { inspectProject, runnableDeviceTypes } = await import("./domains/project.js");
+      const types = (() => { try { return runnableDeviceTypes(inspectProject(ctx.input.project, ctx.input.product)); } catch { return undefined; } })();
+      const target = await resolveTarget(ctx.input.target, ctx.signal, types);
       const info = await deviceInfo(target, ctx.signal).catch(() => ({ target }));
       const deviceType = (await shell(target, ["param", "get", "const.product.devicetype"], ctx.signal, 10000).catch(() => undefined))?.stdout.trim();
       return { ...info, target, device_type: deviceType && !/fail|error/i.test(deviceType) ? deviceType : undefined };
@@ -89,9 +98,9 @@ const runSteps = (build: boolean) => [
   {
     id: "select",
     async run(ctx: { input: RunInput; outputs: Record<string, any> }) {
-      const { inspectProject, selectRunModules } = await import("./domains/project.js");
-      const project = inspectProject(ctx.input.project, ctx.input.product);
-      const explicit = ctx.input.modules?.length ? ctx.input.modules : ctx.input.module ? [ctx.input.module] : undefined;
+      const { selectRunModules } = await import("./domains/project.js");
+      const { project, modules: names } = await projectOf(ctx.input);
+      const explicit = names?.length ? names : ctx.input.module ? [ctx.input.module] : undefined;
       const { modules, reason } = selectRunModules(project, { modules: explicit, deviceType: ctx.outputs.target.device_type });
       return { modules: modules.map((m) => m.name), reason, device_type: ctx.outputs.target.device_type ?? null };
     },
@@ -99,11 +108,16 @@ const runSteps = (build: boolean) => [
   ...(build ? [preflightStep, {
     ...buildStep,
     async run(ctx: { input: RunInput; outputs: Record<string, any>; signal: AbortSignal; job_id: string }) {
-      const { inspectProject, buildProject } = await import("./domains/project.js");
-      const project = inspectProject(ctx.input.project, ctx.input.product);
+      const { buildProject } = await import("./domains/project.js");
+      const { project } = await projectOf(ctx.input);
       // Build only the selected modules (hvigor pulls in their HAR/HSP dependencies itself).
       const input = { ...ctx.input, modules: ctx.outputs.select.modules };
-      if (!ctx.input.hot_reload) return buildStep.run({ ...ctx, input });
+      if (!ctx.input.hot_reload) return buildProject(project, input, ctx.signal, ctx.job_id).catch(async (error) => {
+        const { buildFailureHints } = await import("./domains/diagnose.js");
+        const details = (error as { details?: { diagnostics?: { code?: string; message: string }[] } }).details;
+        if (details?.diagnostics) Object.assign(details, { hints: buildFailureHints(details.diagnostics) });
+        throw error;
+      });
       const { hotBuildProps } = await import("./domains/hotreload.js");
       return buildProject(project, { ...input, props: hotBuildProps() }, ctx.signal, ctx.job_id);
     },
@@ -125,9 +139,9 @@ const runSteps = (build: boolean) => [
     id: "install",
     effect: true,
     async run(ctx: { input: RunInput; outputs: Record<string, any>; signal: AbortSignal }) {
-      const { inspectProject, buildOutputs } = await import("./domains/project.js");
+      const { buildOutputs } = await import("./domains/project.js");
       const { install } = await import("./domains/device.js");
-      const project = inspectProject(ctx.input.project, ctx.input.product);
+      const { project } = await projectOf(ctx.input);
       // Only packages of the selected modules: never ship the watch HAP to a phone (or vice versa).
       const selected = project.modules.filter((m) => (ctx.outputs.select.modules as string[]).includes(m.name));
       const haps = ctx.outputs.build?.artifacts?.length
@@ -184,7 +198,7 @@ const runSteps = (build: boolean) => [
 ];
 
 const runSummary = (o: Record<string, any>) => ({
-  device: o.target?.target, modules: o.select?.modules, module_selection: o.select?.reason, build: o.build ? { artifacts: o.build.artifacts?.map((a: { path: string }) => a.path), elapsed_ms: o.build.elapsed_ms, warnings: o.build.warnings } : undefined,
+  device: o.target?.target, modules: o.select?.modules, module_selection: o.select?.reason, build: o.build ? { artifacts: o.build.artifacts?.map((a: { path: string }) => a.path), elapsed_ms: o.build.elapsed_ms, warnings: o.build.warnings, ...(o.build.device_compat ? { device_compat: o.build.device_compat } : {}) } : undefined,
   installed: o.install, launch: o.launch, assert: o.assert ?? undefined,
   ...(o.preflight ? { preflight: settlePreflight(o.preflight, !!o.build) } : {}),
 });

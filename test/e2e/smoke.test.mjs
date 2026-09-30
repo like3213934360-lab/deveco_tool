@@ -11,6 +11,7 @@ import { makeCallChain, makeGesturePage, makeInterface } from "./fixtures.mjs";
 
 const target = process.env.E2E_TARGET;
 const work = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-e2e-"));
+process.on("exit", () => fs.rmSync(work, { recursive: true, force: true })); // tests leave nothing behind
 const project = path.join(work, "SmokeApp");
 const bundle = "com.devecomcp.smoke";
 let client;
@@ -210,7 +211,7 @@ test("windows, window-scoped tree, record_status", { skip: !target }, async () =
   assert.ok(["idle", "recording", "busy"].includes(status.status));
   const all = await call("ui", { action: "tree", target, all_windows: true, limit: 50 });
   assert.ok(all.nodes >= tree.nodes);
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-shot-"));
+  const dir = fs.mkdtempSync(path.join(work, "shot-"));
   const shot = await call("ui", { action: "screenshot", target, display: 0, save_path: dir });
   assert.ok(fs.existsSync(shot.saved));
 });

@@ -11,6 +11,14 @@ process.emitWarning = ((warning: string | Error, ...rest: unknown[]) => {
 
 const [command = "mcp", ...args] = process.argv.slice(2);
 
+// Honour HTTPS_PROXY / HTTP_PROXY / NO_PROXY for every outbound request (login, CodeGenie, AGC, skill
+// market, knowledge updates), like devecocli does since deveco-code c68ca36d2. Node's fetch ignores
+// these variables unless told; setGlobalProxyFromEnv (Node >= 24) enables it for this process.
+if (process.env.HTTPS_PROXY || process.env.https_proxy || process.env.HTTP_PROXY || process.env.http_proxy) {
+  const http = (await import("node:http")) as { setGlobalProxyFromEnv?: () => unknown };
+  try { http.setGlobalProxyFromEnv?.(); } catch { /* older Node: direct connections */ }
+}
+
 // A long-lived MCP server mostly waits on I/O: size-optimized V8 saves ~10 MB RSS.
 // Applied at runtime (no relaunch, so hosts see a single process).
 if (command === "mcp") {

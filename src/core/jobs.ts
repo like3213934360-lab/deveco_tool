@@ -213,6 +213,9 @@ export async function resumeJob(id: string, force = false) {
   invariant(!running.has(id), "CONFLICT", "Job is already running");
   invariant(["interrupted", "needs_input", "failed"].includes(current.status), "INVALID_INPUT", `Job is ${current.status}; only interrupted, needs_input or failed jobs can resume`);
   if (force) (await database()).prepare("DELETE FROM effects WHERE job_id=? AND state='intent'").run(id);
+  // Mark it running before answering: the caller must see the resumed state (and be told to wait),
+  // not the old "interrupted" with next=resume, which invited a second, conflicting resume.
+  (await database()).prepare("UPDATE jobs SET status='running',owner=?,updated=? WHERE id=?").run(process.pid, Date.now(), id);
   execute(id);
   return jobStatus(id);
 }
