@@ -17,7 +17,7 @@ fs.writeFileSync(entry, [
   `export { screenDiff, stepAction, visibleLabels } from ${src("domains/uibatch.ts")};`,
   `export { snapshotSources, diffSources } from ${src("domains/preflight.ts")};`,
   `export { saveExecutedFlow, readFlow } from ${src("domains/flows.ts")};`,
-  `export { parseSourceRefs, resolveRef, locate, snippet } from ${src("domains/sourcemap.ts")};`,
+  `export { parseSourceRefs, resolveRef, locate, snippet, mapPosition } from ${src("domains/sourcemap.ts")};`,
   `export { BuildOutputParser } from ${src("domains/project.ts")};`,
   `export { noteLaunch, noteTaps, repeatSuggestion, resetRepeats } from ${src("domains/repeat.ts")};`,
   `export { decideHot, changedInputs, inputsSnapshot } from ${src("domains/hotpath.ts")};`,
@@ -144,6 +144,32 @@ test("locate: module names map to module folders, .ts frames find .ets sources, 
   assert.equal(m.resolveRef({ rel: "/etc/hosts", line: 1 }, project), undefined);
   assert.deepEqual(m.locate("no locations here", project), []);
   assert.deepEqual(m.locate("x.ets:1:1", undefined), []);
+});
+
+test("source maps: compiled .ts frames map back to the .ets line (release-bundle stacks)", () => {
+  // Generated line 1 -> source line 1; line 2 empty; line 3: col 0 -> src line 5 col 4, col 10 -> src line 6 col 2.
+  // VLQ: "AAAA" = [0,0,0,0]; "AAIJ" = [0,0,+4,-? ]... build it explicitly.
+  const enc = (n) => { let v = n < 0 ? (-n << 1) | 1 : n << 1, s = ""; do { let d = v & 31; v >>>= 5; if (v) d |= 32; s += "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"[d]; } while (v); return s; };
+  const seg = (...xs) => xs.map(enc).join("");
+  const map = { sources: ["entry/src/main/ets/pages/Index.ets"], mappings: [seg(0, 0, 0, 0), "", `${seg(0, 0, 4, 4)},${seg(10, 0, 1, -2)}`].join(";") };
+  assert.deepEqual(m.mapPosition(map, 1, 1), { source: "entry/src/main/ets/pages/Index.ets", line: 1, column: 1 });
+  assert.deepEqual(m.mapPosition(map, 3, 5), { source: "entry/src/main/ets/pages/Index.ets", line: 5, column: 5 });
+  assert.deepEqual(m.mapPosition(map, 3, 41), { source: "entry/src/main/ets/pages/Index.ets", line: 6, column: 3 });
+  assert.equal(m.mapPosition(map, 2, 1), undefined, "unmapped line");
+  // locate() uses the project's loader_out source map for "module|module|ver|src/....ts" frames.
+  const proj = fs.mkdtempSync(path.join(out, "map-"));
+  const ets = path.join(proj, "entry/src/main/ets/pages/Index.ets");
+  fs.mkdirSync(path.dirname(ets), { recursive: true });
+  fs.writeFileSync(ets, Array.from({ length: 10 }, (_, i) => `line ${i + 1}`).join("\n"));
+  const mapsDir = path.join(proj, "entry/build/default/intermediates/loader_out/default/ets");
+  fs.mkdirSync(mapsDir, { recursive: true });
+  fs.writeFileSync(path.join(mapsDir, "sourceMaps.map"), JSON.stringify({ "entry|entry|1.0.0|src/main/ets/pages/Index.ts": { version: 3, ...map } }));
+  const later = new Date(Date.now() + 60000); fs.utimesSync(path.join(mapsDir, "sourceMaps.map"), later, later);
+  const found = m.locate("at aboutToAppear (entry|entry|1.0.0|src/main/ets/pages/Index.ts:3:41)", { root: proj, modules: [{ name: "entry", root: path.join(proj, "entry") }] });
+  assert.equal(found[0].file, "entry/src/main/ets/pages/Index.ets");
+  assert.equal(found[0].line, 6);
+  assert.equal(found[0].mapped_from, "entry/src/main/ets/pages/Index.ts:3:41");
+  assert.equal(found[0].stale, undefined);
 });
 
 test("build parser: a failed signing step reports the signer's cause, not just 'Tools execution failed'", () => {
