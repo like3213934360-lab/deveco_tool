@@ -141,7 +141,7 @@ export async function grayShot(target: string, size: { w: number; h: number } | 
     return img;
   } finally {
     fs.rmSync(local, { force: true });
-    void shell(target, ["rm", "-f", remote]).catch(() => {});
+    await shell(target, ["rm", "-f", remote], undefined, 5000).catch(() => {}); // awaited: the host may exit right after this call
   }
 }
 

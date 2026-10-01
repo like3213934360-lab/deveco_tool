@@ -375,12 +375,13 @@ export const uiTool = tool({
     "assert: wait until a selector is visible/hidden — use this to verify outcomes, not screenshots.",
     "windows: list app windows (all=true includes system windows); tree/observe accept window id and depth; tree all_windows=true merges every window, node=<id> returns one component subtree; screenshot display=<id>, save_path.",
     "visual: screenshot regression check — compares the screen with the baseline saved under name (per device model, in <project>/.arkpilot/baselines; the first call saves it, update=true replaces it): same, changed_ratio, changed regions (device pixels) and diff_artifact (current screen with changes boxed in red). Status/navigation bars are ignored.",
+    "layout: check the current screen for layout bugs (elements off screen, overlapping tap targets, clipped or collapsed text, tiny tap targets); forms=[foldable,widefold,triplefold] instead runs a job that installs the latest build on an emulator of each form (created/started as needed, stopped afterwards), optionally walks then_flow, and checks every fold state.",
     "perf: scroll smoothness check of the current screen — flings up/down (repeat, default 3; or your own gestures via steps of swipe/fling/scroll) and measures every composed frame: avg_fps, frame_ms p50/p95/max, janky_frames, jank_rate, verdict (smooth/minor_jank/janky), plus app memory (pss) before/after when bundle is given.",
     "record_start/record_stop/record_status: screen recording to mp4 (real devices; stop discard=true drops it, external=true stops a foreign recording).",
     "UI test sessions (you execute the plan and judge visuals): test_start(plan, project or bundle, fresh_start) -> test_step(op+selector or visible/hidden assert, description) per item -> review(requirement) returns a screenshot, then review(outcome, reason) -> test_finish -> test_log / test_export(directory).",
   ].join(" "),
   schema: z.object({
-    action: z.enum(["observe", "screenshot", "tree", "find", "act", "assert", "windows", "perf", "visual", "record_start", "record_stop", "record_status",
+    action: z.enum(["observe", "screenshot", "tree", "find", "act", "assert", "windows", "perf", "visual", "layout", "record_start", "record_stop", "record_status",
       "test_start", "test_step", "review", "test_finish", "test_log", "test_export"]),
     target: fields.target,
     window: z.number().int().optional().describe("tree/observe: window id from action=windows"),
@@ -434,6 +435,11 @@ export const uiTool = tool({
     name: z.string().optional().describe("visual: baseline name, e.g. gif-page"),
     update: z.boolean().optional().describe("visual: save the current screen as the baseline"),
     threshold: z.number().int().min(1).max(64).optional().describe("visual: per-block mean gray difference that counts as changed (default 8)"),
+    forms: z.array(z.enum(["foldable", "widefold", "triplefold"])).min(1).max(3).optional().describe("layout: device forms to check on emulators (job; needs project and a built package)"),
+    then_flow: z.string().optional().describe("layout forms: ui_flow to the page to check"),
+    keep_running: z.boolean().optional().describe("layout forms: leave the emulators running"),
+    request_key: fields.requestKey,
+    wait: fields.wait,
   }),
   params: (() => {
     const act = ["target", "op", "selector", "keys", "button", "ticks", "verify_change", "x", "y", "x2", "y2", "direction", "text", "append", "key", "speed"];
@@ -447,6 +453,7 @@ export const uiTool = tool({
       windows: ["target", "all"],
       perf: ["target", "steps", "repeat", "bundle"],
       visual: ["target", "project", "name", "update", "threshold"],
+      layout: ["target", "project", "bundle", "forms", "then_flow", "keep_running", "request_key", "wait"],
       record_start: ["target"], record_status: ["target"], record_stop: ["target", "discard", "external", "save_path"],
       test_start: ["target", "plan", "project", "bundle", "fresh_start"],
       test_step: [...act, "test_id", "description", "visible", "hidden", "timeout_ms"],
@@ -476,6 +483,21 @@ export const uiTool = tool({
     const scope = { window: input.window };
     switch (input.action) {
       case "windows": return { windows: await ui.listWindows(target, input.all, ctx.signal) };
+      case "layout": {
+        if (input.forms) {
+          invariant(input.project, "INVALID_INPUT", "layout forms needs project");
+          return startAndWait("layout_check", { project: input.project, forms: input.forms, then_flow: input.then_flow, keep_running: input.keep_running }, input.request_key, input.wait ?? 3000);
+        }
+        const { checkLayout } = await import("../domains/layout.js");
+        const { deviceInfo, shell } = await import("../domains/device.js");
+        const [nodes, info, dms] = await Promise.all([ui.dumpTree(target, ctx.signal), deviceInfo(target, ctx.signal),
+          shell(target, ["hidumper", "-s", "DisplayManagerService", "-a", "-a"], ctx.signal, 10000).catch(() => undefined)]);
+        const density = Number(/VirtualPixelRatio:\s*([\d.]+)/.exec(dms?.stdout ?? "")?.[1]) || undefined;
+        const win = (await ui.listWindows(target, false, ctx.signal).catch(() => [])).find((w) => w.focused && w.bounds);
+        const size = win?.bounds ? { w: win.bounds[2]!, h: win.bounds[3]! } : info.screen ? { w: info.screen.width, h: info.screen.height } : { w: 1080, h: 2400 };
+        const bundle = input.bundle ?? nodes.find((n) => n.bundle && !/systemui|sceneboard|launcher/.test(n.bundle) && n.text)?.bundle ?? undefined;
+        return { window: `${size.w}x${size.h}`, ...(bundle ? { bundle } : {}), ...checkLayout(nodes, size, { bundle, density }) };
+      }
       case "visual": {
         invariant(input.project && input.name, "INVALID_INPUT", "visual needs project and name");
         const { visualCheck } = await import("../domains/visual.js");

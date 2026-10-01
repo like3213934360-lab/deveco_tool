@@ -27,6 +27,7 @@ deveco MCP 提供 15 个工具。按下面的顺序使用，避免自己拼 `hdc
 | 改代码反复调 | 每次改完直接 `run action=build_run`。从第二次部署起，只改了入口模块的 .ets/.ts 时会自动热修复正在运行的应用并重启（约 6 秒，`path=hot_reload`），其他改动自动走完整部署（`path=full`，`fallback_reason` 写明原因）；什么都没改时只重启（`path=relaunch`）。需要强制完整部署时传 `run_mode=full` |
 | 部署后进到正在改的页面 | 路径存成 flow 后，`run action=build_run then_flow=<id>`，部署完自动走到该页面 |
 | 界面回归 | `ui action=visual project=<root> name=<名称>`：第一次保存基准截图，之后对比，返回变化比例、变化区域和红框标注图（`diff_artifact`）；`ui_flow action=replay snapshot=true` 在回放到页面后自动对比 |
+| 一多布局 | `ui action=layout` 检查当前页面（超出屏幕、可点区域重叠、文字被裁切或被挤没、点击区域过小）；`ui action=layout project=<root> forms=["foldable","widefold","triplefold"]` 在三种折叠形态模拟器上逐个折叠状态检查（任务，模拟器自动创建、用完关闭；先构建好） |
 | 滑动性能 | `ui action=perf bundle=<包名>`：在当前页面上下滑动并逐帧统计，返回平均帧率、帧耗时 p50/p95/最大值、卡顿帧数、结论（smooth/minor_jank/janky）和内存变化 |
 | 验证界面 | `ui act` 的返回里自带 `after`（新出现/消失的控件、是否换页），一般不用再 `observe`；需要看图时才 `ui observe`；用 `ui assert` 判定结果 |
 | 走多步路径 | **一次调用**：`ui act steps=[{op:"click",selector:{text:"工具"}},{op:"click",selector:{text:"动态锁屏"}}] assert={visible:{text:"选择壁纸"}}`。每步自动等待控件出现，失败时返回失败的那一步和当前可见控件 |

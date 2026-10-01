@@ -385,6 +385,18 @@ defineJob<{ project: string; target?: string; id: string; variables: Record<stri
   summarize: (o) => o.replay,
 });
 
+defineJob<import("./domains/layout.js").LayoutInput>({
+  kind: "layout_check",
+  steps: [{
+    id: "check",
+    async run(ctx) {
+      const { layoutCheck } = await import("./domains/layout.js");
+      return layoutCheck(ctx.input, ctx.signal, ctx.log);
+    },
+  }],
+  summarize: (o) => o.check,
+});
+
 defineJob<{ version?: string; source?: string; force?: boolean }>({
   kind: "kb_update",
   steps: [{

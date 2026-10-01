@@ -1,5 +1,41 @@
 # Changelog / 更新日志
 
+## v1.3.0 (2026-10-01)
+
+**中文**
+
+目标是让宿主 AI 少走几步。opencode 实际会话里，模型每一步要 15 到 150 秒，工具调用只要 1 到 3 秒，所以每少一次往返就省下一整步。这些功能都在真机（Mate 80、Pura 80 Pro，API 26）和真实工程上验收过（`test/audit/efficiency.mjs`）。
+
+拿同一个任务对比（改页面代码 → 部署 → 进到目标页 → 验证）：以前每轮要调用 7–9 次工具，平均花在模型思考上的时间约 213 秒；现在只要 2 次，即 `run build_run then_flow=<id>` 加上 `ui assert`（部署超过 55 秒时再多一次 `job wait`）。
+
+- **`ui act steps`**：一次调用走完整条路径，每步自动等待控件出现；失败时返回失败的那一步和当前可见控件；可以带最终断言，`save_flow` 存成 flow。
+- **每次 `act` 都返回 `after`**：新出现和消失的控件、是否换页，一般不用再调 `observe`。
+- **增量预检**：`build` / `build_run` 只检查上次以来内容真正改动过的 .ets/.ts（LingDong：0.4 秒，原来全量 4–22 秒）。hvigor 每次构建都会重写的 `BuildProfile.ets` 会被忽略。服务端说明和 SKILL 里不再要求先单独调用 `code check`。
+- **自动热修复**（`run_mode=auto`，默认开启）：从第二次部署起，只改了入口模块代码时，直接给正在运行的应用打补丁并重启。MyStarRing 在 Mate 80 上实测约 6 秒，完整部署要 15–25 秒。资源、配置、其他模块、新增或删除文件、补丁失败时，自动改走完整部署，并通过 `fallback_reason` 说明原因；没有改动时只重启。传 `run_mode=full` 可以强制完整部署。
+- **`then_flow`**：部署完自动走到保存过的页面；flow 不存在时，在构建开始前就报错。重启后又走了一遍同样的路径时，会提示把它存成 flow。
+- **启动崩溃自带诊断**：`build_run`、`launch` 和热修复后启动崩溃时，直接附上错误类型、可能原因，以及工程内出错的文件、行号和前后几行代码（`crash.source`）。`diagnose crash`、`device log` 带上 `project` 时也会这样定位。编译错误会附上出错位置的代码。
+- **`ui visual`**：截图回归。按名称和机型保存基准截图，之后对比，返回变化比例、变化区域和红框标注图；状态栏和导航栏不参与对比。`ui_flow replay snapshot=true` 会在回放后做一次对比。
+- **`ui perf`**：滑动性能体检。按逐帧时间戳统计帧率、帧耗时 p50/p95/最大值、卡顿帧、结论和内存变化。不用 `SP_daemon -f`，因为它在 API 26 上滑动时也报 0；刷新率从帧间隔推断，以适配 60/120 Hz 自适应屏。
+- **`ui layout`**：布局检查，包括超出屏幕、可点区域重叠、文字被裁切或被挤没、点击区域过小。加 `forms` 时，会在折叠屏、阔折叠、三折叠模拟器上逐个形态、逐个折叠状态检查，模拟器按需创建，用完关闭。
+- **签名失败说清原因**：构建失败时报出签名工具自己的错误码和原因（例如 11013002 证书过期）并给出续签提示，不再只有一句 "Tools execution failed"；安装时报 "sign info inconsistent" 会说明需要先卸载。
+
+**English**
+
+Fewer host round trips. In a real opencode session every model step took 15-150 s while tool calls took 1-3 s, so each avoided round trip saves a whole step. Everything below was accepted on real phones (Mate 80, Pura 80 Pro, API 26) and real projects (`test/audit/efficiency.mjs`).
+
+Same task (edit page code -> deploy -> reach the page -> verify): 7-9 tool calls per round before (about 213 s of model steps on average), 2 now: `run build_run then_flow=<id>` + `ui assert` (one `job wait` more when the deploy exceeds 55 s).
+
+- **`ui act steps`**: a whole path in one call, each step waiting for its element; on failure the failing step and the visible controls; optional final assert; `save_flow` stores it as a flow.
+- **Every `act` returns `after`**: elements that appeared/disappeared and whether the page changed, so observe is rarely needed.
+- **Incremental preflight**: build/build_run check only the .ets/.ts whose content changed since the last preflight (LingDong: 0.4 s instead of 4-22 s; hvigor's rewritten `BuildProfile.ets` ignored). Instructions and SKILL no longer ask for a separate code check.
+- **Automatic quick fix** (`run_mode=auto`, default): from the second deploy on, code-only changes of the entry module are patched into the running app and relaunched (MyStarRing on Mate 80: about 6 s vs 15-25 s). Resources, manifests, other modules, added/deleted files or a failed patch deploy fully with `fallback_reason`; an unchanged project only relaunches. `run_mode=full` forces a full deploy.
+- **`then_flow`**: lands on a saved page after the deploy (unknown flows fail before building). A path walked again after a relaunch is suggested for saving.
+- **Startup crashes come diagnosed**: build_run, launch and quick-fix relaunches attach the error type, likely causes and the project file, line and surrounding code (`crash.source`); `diagnose crash` and `device log` do the same with `project`. Compile errors carry the code at the error.
+- **`ui visual`**: screenshot regression with per-name, per-model baselines: change ratio, regions, red-boxed diff image; status/navigation bars ignored. `ui_flow replay snapshot=true`.
+- **`ui perf`**: scroll smoothness from per-frame timestamps: fps, frame time p50/p95/max, janky frames, verdict, memory delta (not `SP_daemon -f`, which reports 0 while scrolling on API 26; refresh rate inferred from frame intervals for 60/120 Hz panels).
+- **`ui layout`**: off-screen elements, overlapping tap targets, clipped or collapsed text, tiny targets; `forms` checks every fold state on foldable, widefold and triplefold emulators (created on demand, stopped afterwards).
+- **Signing failures explained**: the signer's own code and cause (e.g. 11013002 certificate expired) with a renewal hint instead of "Tools execution failed"; install "sign info inconsistent" explains the reinstall.
+
 ## v1.2.0 (2026-09-30)
 
 **中文**

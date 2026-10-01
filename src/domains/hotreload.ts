@@ -187,7 +187,7 @@ export async function applyHotReload(project: Project, module: string, signal: A
     invariant(/succe/i.test(text) && !/fail|error/i.test(text), "HOT_APPLY_FAILED", `bm quickfix failed: ${clip(text, 600)}`,
       undefined, hqf !== unsigned ? "The change may be unsupported by quick fix: redeploy with run action=build_run" : "Real devices require a signed HQF: configure signing (sign action=auto)");
   } finally {
-    void shell(baseline.target, ["rm", "-rf", remote]).catch(() => {});
+    await shell(baseline.target, ["rm", "-rf", remote], undefined, 5000).catch(() => {}); // awaited: the host may exit right after this call
   }
   let launch: Awaited<ReturnType<typeof import("./device.js").launchAndCheck>> | undefined;
   if (options.restart && options.ability) {

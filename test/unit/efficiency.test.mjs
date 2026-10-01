@@ -23,6 +23,7 @@ fs.writeFileSync(entry, [
   `export { decideHot, changedInputs, inputsSnapshot } from ${src("domains/hotpath.ts")};`,
   `export { encodePng, decodeGray, compareGray, annotate, baselinePath } from ${src("domains/visual.ts")};`,
   `export { pngGray } from ${src("domains/ui.ts")};`,
+  `export { checkLayout } from ${src("domains/layout.ts")};`,
   `export { parseComposerFps, mergeFrames, frameStats, perfVerdict, parseSpFps, parsePss } from ${src("domains/perf.ts")};`,
   `export { buildFailureHints } from ${src("domains/diagnose.ts")};`,
 ].join("\n"));
@@ -267,8 +268,45 @@ test("visual: PNG round trip, unchanged screen = same, a moved card = one boxed 
   const r = moved.regions.find((x) => x.y >= 130);
   assert.ok(r.x <= 20 && r.x + r.w >= 70 && r.y <= 150 && r.y + r.h >= 190, JSON.stringify(r));
   assert.throws(() => m.compareGray(a, { width: 10, height: 10, gray: new Uint8Array(100) }), /differ in size/);
-  assert.match(m.baselinePath("/p", "gif-page", "VYG-AL00"), /\.arkpilot\/baselines\/gif-page@VYG-AL00\.png$/);
+  assert.match(m.baselinePath("/p", "gif-page", "VYG-AL00"), /\.arkpilot[\\/]baselines[\\/]gif-page@VYG-AL00\.png$/);
   assert.throws(() => m.baselinePath("/p", "../x", "m"), /baseline name/);
+});
+
+test("layout rules: off-screen, overlapping targets, clipped/collapsed text; scrollers and tab bars are not bugs", () => {
+  let id = 0;
+  const n = (type, rect, extra = {}) => ({ i: id++, parent: extra.parent ?? null, depth: 1, id: null, type, key: extra.key ?? "", text: extra.text ?? "",
+    rect: rect ? { x1: rect[0], y1: rect[1], x2: rect[2], y2: rect[3] } : null, clickable: extra.clickable ?? false, enabled: true, visible: true,
+    checked: null, selected: null, focused: null, bundle: extra.bundle ?? "com.app", window: null, page: null });
+  const screen = { w: 1000, h: 2000 };
+  const root = n("Column", [0, 0, 1000, 2000]);
+  const ok = [root, n("Button", [100, 100, 400, 260], { parent: root.i, text: "确定", clickable: true })];
+  assert.deepEqual(m.checkLayout(ok, screen, { density: 3 }), { passed: true, checked: 1, counts: {}, issues: [] });
+  // A system dialog in front (no app element): no verdict instead of a false pass.
+  const covered = m.checkLayout([n("Text", [0, 0, 100, 50], { text: "允许通知？", bundle: "com.ohos.notificationdialog" })], screen, { bundle: "com.app" });
+  assert.equal(covered.passed, false);
+  assert.match(covered.error, /nothing was checked/);
+
+  const row = n("Row", [0, 300, 1000, 400]);
+  const list = n("List", [0, 0, 1000, 2000]);
+  const bar = n("Stack", [0, 1800, 1000, 2000], { clickable: true }); // unlabelled tab-bar background
+  const nodes = [
+    root, row, list, bar,
+    n("Text", [900, 310, 1200, 390], { parent: row.i, text: "很长的标题被挤出屏幕" }), // off screen + clipped by row
+    n("Button", [100, 500, 400, 650], { text: "A", clickable: true }),
+    n("Button", [150, 520, 450, 660], { text: "B", clickable: true }), // overlaps A
+    n("Text", [10, 700, 10, 760], { text: "看不见" }), // collapsed
+    n("Text", [0, 2100, 500, 2200], { parent: list.i, text: "滚动区里的下一项" }), // below the fold inside a List: fine
+    n("Column", [100, 1850, 300, 1990], { parent: bar.i, text: "首页", clickable: true }), // tab over its bar: fine
+    n("Image", [600, 500, 660, 560], { key: "close", clickable: true }), // 20x20 vp
+  ];
+  const r = m.checkLayout(nodes, screen, { density: 3 });
+  assert.equal(r.passed, false);
+  assert.deepEqual(r.counts, { offscreen: 1, collapsed: 1, tiny_target: 1, overlap: 1, clipped: 1 });
+  assert.equal(r.issues.find((x) => x.rule === "overlap").other, 'Button "B"');
+  assert.equal(r.issues.find((x) => x.rule === "tiny_target").detail, "20x20 vp");
+  // tiny targets alone are advice, not a failure; other bundles are ignored.
+  assert.equal(m.checkLayout([root, nodes.at(-1)], screen, { density: 3 }).passed, true);
+  assert.equal(m.checkLayout(nodes, screen, { bundle: "com.other" }).issues.length, 0);
 });
 
 test("hot path inputs: resources compared by content", () => {

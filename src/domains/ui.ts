@@ -224,7 +224,7 @@ export async function blankScreen(target: string, signal?: AbortSignal) {
     return undefined; // the smoke check is best-effort; never fail a launch because of it
   } finally {
     fs.rmSync(local, { force: true });
-    void shell(target, ["rm", "-f", remote]).catch(() => {});
+    await shell(target, ["rm", "-f", remote], undefined, 5000).catch(() => {}); // awaited: the host may exit right after this call
   }
 }
 
@@ -311,7 +311,7 @@ async function dumpRaw(target: string, extra: string[], signal?: AbortSignal): P
     return flatten(JSON.parse(fs.readFileSync(local, "utf8")));
   } finally {
     fs.rmSync(local, { force: true });
-    void shell(target, ["rm", "-f", remote]).catch(() => {});
+    await shell(target, ["rm", "-f", remote], undefined, 5000).catch(() => {}); // awaited: the host may exit right after this call
   }
 }
 export function invalidate(target: string) {
@@ -349,7 +349,7 @@ export async function screenshot(target: string, options: { format?: "jpeg" | "p
     const artifact = await commitArtifact(id, local, mime);
     return { artifact_id: artifact.artifact_id, bytes: artifact.bytes, mime, data: data.toString("base64"), ...(saved ? { saved } : {}) };
   } finally {
-    void shell(target, ["rm", "-f", remote]).catch(() => {});
+    await shell(target, ["rm", "-f", remote], undefined, 5000).catch(() => {}); // awaited: the host may exit right after this call
   }
 }
 
@@ -509,7 +509,7 @@ async function withAgent(target: string, signal: AbortSignal | undefined, fn: (c
   } finally {
     socket.destroy();
     await hdc(["-t", target, "fport", "rm", forward, endpoint], undefined, 5000, true).catch(() => {});
-    if (remote) void shell(target, ["rm", "-f", remote]).catch(() => {});
+    if (remote) await shell(target, ["rm", "-f", remote], undefined, 5000).catch(() => {}); // awaited: the host may exit right after this call
   }
 }
 
@@ -662,7 +662,7 @@ export async function stopRecording(target: string, options: { discard?: boolean
   try {
     await hdc(["-t", target, "file", "recv", staging, local], signal, 120000);
   } finally {
-    void shell(target, ["rm", "-f", staging]).catch(() => {});
+    await shell(target, ["rm", "-f", staging], undefined, 5000).catch(() => {}); // awaited: the host may exit right after this call
   }
   const copy = options.save_path ? saveCopy(local, options.save_path) : undefined;
   if (copy) await trackExport(copy);
