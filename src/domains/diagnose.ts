@@ -4,6 +4,7 @@ import { packageRoot } from "../core/config.js";
 import { invariant } from "../core/errors.js";
 import { saveArtifact } from "../core/artifacts.js";
 import { faultlogNames, readFaultlog } from "./device.js";
+import { locate, type ResolvedRef } from "./sourcemap.js";
 
 /* ------------------------------ crash parsing ------------------------------ */
 
@@ -114,7 +115,8 @@ export function matchPatterns(signature: Pick<CrashSignature, "kind" | "message"
 
 /* ------------------------------ entry points ------------------------------ */
 
-export async function diagnoseCrash(input: { target?: string; bundle?: string; log?: string; name?: string; latest?: number; since_minutes?: number }, target: string | undefined, signal: AbortSignal) {
+export async function diagnoseCrash(input: { target?: string; bundle?: string; log?: string; name?: string; latest?: number; since_minutes?: number; project?: string }, target: string | undefined, signal: AbortSignal) {
+  const project = input.project ? await projectModel(input.project) : undefined;
   const reports: { source?: string; text: string }[] = [];
   if (input.log) reports.push({ text: input.log });
   else {
@@ -141,14 +143,46 @@ export async function diagnoseCrash(input: { target?: string; bundle?: string; l
   for (const report of reports) {
     const signature = parseCrash(report.text, report.source);
     const artifact = await saveArtifact(report.text);
+    // The project's own frames with the code around them: the first place to look.
+    const source = project ? locate(signature.frames.join("\n") || report.text.split(/^HiLog:\s*$/m)[0]!, project) : [];
     results.push({
       ...signature,
+      ...(source.length ? { source } : {}),
       candidates: signature.type === "jscrash" || signature.kind ? matchPatterns(signature) : [],
       report_artifact: artifact.artifact_id,
       guidance: guidance(signature),
     });
   }
   return { reports: results };
+}
+
+/** Project modules for source lookup; undefined when the path is not a readable project (never throws). */
+export async function projectModel(root: string) {
+  try {
+    const { inspectProject } = await import("./project.js");
+    const p = inspectProject(root);
+    return { root: p.root, modules: p.modules.map((m) => ({ name: m.name, root: m.root })) };
+  } catch {
+    return undefined;
+  }
+}
+
+/** Compact crash summary for run/launch failures: what crashed, where in the project, likely causes. */
+export async function crashSummary(target: string, bundle: string, names: string[], project: string | undefined, signal: AbortSignal) {
+  try {
+    const result = await diagnoseCrash({ bundle, name: names.sort((a, b) => order(b) - order(a))[0], project }, target, signal);
+    const r = result.reports[0];
+    if (!r) return undefined;
+    const source = (r as { source?: ResolvedRef[] }).source;
+    return {
+      type: r.type, kind: r.kind, message: r.message, code: r.code, app_frames: r.app_frames.slice(0, 5),
+      ...(source ? { source } : {}),
+      candidates: r.candidates.slice(0, 3).map((c) => ({ conclusion: c.conclusion, fix: c.fix })),
+      report_artifact: r.report_artifact,
+    };
+  } catch {
+    return undefined; // best-effort: the launch result already says it crashed
+  }
 }
 
 /**

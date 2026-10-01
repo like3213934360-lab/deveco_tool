@@ -39,7 +39,7 @@ export const projectTool = tool({
     "info: read product/modules/SDK (instant).",
     "create: new app from the built-in template (does not overwrite).",
     "sync: ohpm install + hvigor sync (job).",
-    "build: advisory ArkTS preflight + hvigor build (job); returns packages, or every compile error (code, file, line, message; the first 100 listed, the rest counted) with fix hints (hvigor decides; preflight findings never block).",
+    "build: advisory ArkTS preflight (only files edited since the last preflight; no separate code check needed) + hvigor build (job); returns packages, or every compile error (code, file, line, message; the first 100 listed, the rest counted) with fix hints (hvigor decides; preflight findings never block).",
     "Dependencies are installed automatically when oh-package.json5 / build-profile.json5 changed since the last install. modules accept name@target; mode must be debug, release or a buildModeSet name.",
     "clean: hvigor clean.",
     "Build/sync return a job: if status is running, call job action=wait.",
@@ -107,12 +107,24 @@ export const selectorSchema = z.object({
   index: z.number().int().min(0).optional().describe("Pick the n-th match when several match"),
 }).meta({ id: "Selector" }); // emitted once per tool as $defs/Selector
 
+const batchStepSchema = z.object({
+  op: z.enum(["click", "double_click", "long_click", "input", "type", "swipe", "drag", "fling", "scroll", "key",
+    "mouse_click", "mouse_double_click", "mouse_long_click", "mouse_move", "mouse_scroll", "mouse_drag", "wait"]),
+  selector: selectorSchema.optional(),
+  x: z.number().int().optional(), y: z.number().int().optional(), x2: z.number().int().optional(), y2: z.number().int().optional(),
+  text: z.string().optional(), append: z.boolean().optional(), key: z.string().optional(), keys: z.array(z.string()).min(1).max(3).optional(),
+  direction: z.enum(["up", "down", "left", "right"]).optional(), speed: z.number().int().min(200).max(40000).optional(),
+  button: z.enum(["left", "right", "middle"]).optional(), ticks: z.number().int().min(1).max(50).optional(),
+  ms: z.number().int().min(0).max(10000).optional().describe("wait without selector: pause in ms"),
+  timeout_ms: z.number().int().min(100).max(60000).optional().describe("how long to wait for the selector (default 10000)"),
+}).strict();
+
 export const runTool = tool({
   name: "run",
   title: "Deploy and launch",
   description: [
     "Put the app on a device. Multi-device apps (e.g. phone + watch entry modules): only the modules whose module.json5 deviceTypes match the target device are built and installed (pass modules/module to choose explicitly). Project signing (build-profile or hvigorfile overrides) is used as-is.",
-    "build_run: build + install + launch + startup check (crash detection) — the usual 'run it' action.",
+    "build_run: ArkTS preflight of the edited files + build + install + launch + startup check (crash detection) — the usual 'run it' action; call it right after editing (no code check first).",
     "deploy: install already-built packages (latest outputs) + launch.",
     "launch: start the installed app. stop: force-stop. uninstall: remove the app (uninstalled:false with reason not_installed when it was not installed).",
     "Several devices connected and no target: the call fails with DEVICE_AMBIGUOUS listing them — ask the user which one, never pick yourself.",
@@ -156,7 +168,11 @@ export const runTool = tool({
     const deviceType = input.module ? undefined : (await device.shell(target, ["param", "get", "const.product.devicetype"], ctx.signal, 10000).catch(() => undefined))?.stdout.trim();
     const entry = input.module ?? selectRunModules(project, { deviceType }).modules.find((m) => m.type === "entry")?.name;
     const main = mainAbility(project, entry);
-    return device.launchAndCheck(target, project.bundleName, input.ability ?? main.ability, main.module, ctx.signal);
+    const launched = await device.launchAndCheck(target, project.bundleName, input.ability ?? main.ability, main.module, ctx.signal);
+    if (!launched.crashed) return launched;
+    const { crashSummary } = await import("../domains/diagnose.js");
+    const crash = await crashSummary(target, project.bundleName, launched.new_crash_logs, input.project, ctx.signal);
+    return { ...launched, ...(crash ? { crash } : {}) };
   },
 });
 
@@ -210,7 +226,7 @@ export const codeTool = tool({
   readOnly: true,
   description: [
     "ArkTS/C++ code checks and language server queries against the project's SDK.",
-    "check: fast ArkTS static check (files, or whole project) with error-fix hints — run after editing .ets files, before building. fix=true applies upstream safe auto-fixes. The compiler is the final judge: if project build succeeds, code it flagged is valid — do not rewrite it.",
+    "check: fast ArkTS static check (files, or whole project) with error-fix hints — for checking without building; project build / run build_run already check the edited files. fix=true applies upstream safe auto-fixes. The compiler is the final judge: if project build succeeds, code it flagged is valid — do not rewrite it.",
     "lint: Code Linter report. api_scan: API compatibility between SDK versions.",
     "lsp: hover (types/signatures), definition, implementation, references, symbols, workspace_symbols, diagnostics (multiple files), completion (available members), signature.",
     "Locate positions with symbol (plus optional line hint) instead of exact columns.",
@@ -294,10 +310,11 @@ export const deviceTool = tool({
     command: z.string().optional().describe("shell: read-only command line"),
     local: z.string().optional(),
     remote: z.string().optional(),
+    project: z.string().optional().describe("log: project root; adds source = project files/lines named in the error lines, with the code around them"),
   }),
   params: {
     list: [], info: ["target"],
-    log: ["target", "bundle", "grep", "level", "lines", "clear", "from", "to", "follow", "cursor", "wait_ms"],
+    log: ["target", "bundle", "grep", "level", "lines", "clear", "from", "to", "follow", "cursor", "wait_ms", "project"],
     shell: ["target", "command"], sqlite: ["target", "db", "module", "sql", "write", "bundle", "lines"],
     send: ["target", "local", "remote"], recv: ["target", "local", "remote"],
   },
@@ -310,7 +327,15 @@ export const deviceTool = tool({
     const target = await device.resolveTarget(input.target, ctx.signal);
     switch (input.action) {
       case "info": return device.deviceInfo(target, ctx.signal);
-      case "log": return input.clear ? device.clearLog(target, ctx.signal) : device.hilog(target, { lines: input.lines, bundle: input.bundle, grep: input.grep, level: input.level, from: input.from, to: input.to, follow: input.follow, cursor: input.cursor, wait_ms: input.wait_ms }, ctx.signal);
+      case "log": {
+        if (input.clear) return device.clearLog(target, ctx.signal);
+        const log = await device.hilog(target, { lines: input.lines, bundle: input.bundle, grep: input.grep, level: input.level, from: input.from, to: input.to, follow: input.follow, cursor: input.cursor, wait_ms: input.wait_ms }, ctx.signal);
+        if (!input.project || !log.errors.length) return log;
+        const { projectModel } = await import("../domains/diagnose.js");
+        const { locate } = await import("../domains/sourcemap.js");
+        const source = locate(log.errors.join("\n"), await projectModel(input.project));
+        return source.length ? { ...log, source } : log;
+      }
       case "shell": invariant(input.command, "INVALID_INPUT", "command is required"); return device.readonlyShell(target, input.command, ctx.signal);
       case "sqlite": {
         invariant(input.db && input.sql, "INVALID_INPUT", "db and sql are required");
@@ -331,7 +356,9 @@ export const uiTool = tool({
     "Observe and operate the device UI.",
     "observe: screenshot + compact element list (#index Type [bounds] \"text\" key=..). screenshot / tree for one of them.",
     "find: elements matching a selector.",
-    "act: click/double_click/long_click (selector or x,y), input (types text into a field; Chinese supported), type (into the focused field), swipe/drag/fling (x,y,x2,y2), scroll (direction), key (back/home/enter/...; keys=[\"ctrl\",\"a\"] for chords up to 3), mouse_click/mouse_double_click/mouse_long_click (button, keys modifiers), mouse_move, mouse_scroll (direction up/down, ticks), mouse_drag (x2,y2) for 2in1/tablet. verify_change=true reports whether the screen changed.",
+    "act: click/double_click/long_click (selector or x,y), input (types text into a field; Chinese supported), type (into the focused field), swipe/drag/fling (x,y,x2,y2), scroll (direction), key (back/home/enter/...; keys=[\"ctrl\",\"a\"] for chords up to 3), mouse_click/mouse_double_click/mouse_long_click (button, keys modifiers), mouse_move, mouse_scroll (direction up/down, ticks), mouse_drag (x2,y2) for 2in1/tablet.",
+    "act returns after={changed, kind: none/updated/navigated, added, removed}: the elements that appeared/disappeared, so no observe is needed just to see the result (diff=false skips it).",
+    "act steps=[{op, selector|x,y, text...}, {op:'wait', selector}] runs a whole path in ONE call (each step waits for its element; stops at the first failure and lists what is visible); add assert to verify the goal, and save_flow={project,id} to store the path for run then_flow / ui_flow replay.",
     "assert: wait until a selector is visible/hidden — use this to verify outcomes, not screenshots.",
     "windows: list app windows (all=true includes system windows); tree/observe accept window id and depth; tree all_windows=true merges every window, node=<id> returns one component subtree; screenshot display=<id>, save_path.",
     "record_start/record_stop/record_status: screen recording to mp4 (real devices; stop discard=true drops it, external=true stops a foreign recording).",
@@ -368,7 +395,12 @@ export const uiTool = tool({
     keys: z.array(z.string()).min(1).max(3).optional().describe("key: chord like [\"ctrl\",\"c\"]; mouse_*: up to 2 modifier keys"),
     button: z.enum(["left", "right", "middle"]).optional().describe("mouse click button"),
     ticks: z.number().int().min(1).max(50).optional().describe("mouse_scroll wheel ticks (default 3)"),
-    verify_change: z.boolean().optional().describe("act: wait up to 3s and report whether the screen changed"),
+    verify_change: z.boolean().optional().describe("act: keep polling up to 3s until the screen changes (slow transitions); the after diff is returned either way"),
+    diff: z.boolean().optional().describe("act: return the after diff (default true)"),
+    steps: z.array(batchStepSchema).min(1).max(30).optional().describe("act: several steps in one call (instead of op)"),
+    assert: assertSchema.optional().describe("act with steps: final check that the goal was reached"),
+    save_flow: z.object({ project: z.string(), id: z.string(), name: z.string().optional() }).optional()
+      .describe("act with steps + assert: save the executed path as a ui_flow (replays restart the app, so start from the launch screen)"),
     x: z.number().int().optional(), y: z.number().int().optional(), x2: z.number().int().optional(), y2: z.number().int().optional(),
     direction: z.enum(["up", "down", "left", "right"]).optional(),
     text: z.string().optional(),
@@ -387,11 +419,11 @@ export const uiTool = tool({
   params: (() => {
     const act = ["target", "op", "selector", "keys", "button", "ticks", "verify_change", "x", "y", "x2", "y2", "direction", "text", "append", "key", "speed"];
     return {
+      act: [...act, "diff", "steps", "assert", "save_flow"],
       observe: ["target", "window", "depth", "interactive", "limit", "bundle", "format", "width"],
       screenshot: ["target", "display", "save_path", "format", "width"],
       tree: ["target", "window", "all_windows", "node", "depth", "interactive", "limit", "bundle"],
       find: ["target", "selector", "limit"],
-      act,
       assert: ["target", "visible", "hidden", "timeout_ms"],
       windows: ["target", "all"],
       record_start: ["target"], record_status: ["target"], record_stop: ["target", "discard", "external", "save_path"],
@@ -472,12 +504,55 @@ export const uiTool = tool({
         return verdict.passed ? verdict : { ...verdict, hint: "Not satisfied: call ui observe to inspect the screen" };
       }
       case "act": {
-        const { action, resolved } = await buildAction(input, target, ui, ctx.signal);
-        const result = input.verify_change ? await ui.actAndVerify(target, action, ctx.signal) : await ui.act(target, action, ctx.signal);
-        const { recordStep } = await import("../domains/flows.js");
         const { deviceInfo } = await import("../domains/device.js");
-        const recorded = await recordStep(target, action, input.selector, await screenSize(target, deviceInfo, ctx.signal)).catch(() => undefined);
-        return { ...result, ...(resolved ? { element: resolved } : {}), ...(recorded ?? {}), note: "Action sent; verify with ui assert or observe" };
+        const flows = await import("../domains/flows.js");
+        const batch = await import("../domains/uibatch.js");
+        if (input.steps) {
+          invariant(!input.op, "INVALID_INPUT", "Pass either op (one action) or steps (several), not both");
+          invariant(!input.save_flow || input.assert, "INVALID_INPUT", "save_flow needs an assert that proves the goal was reached");
+          const result = await batch.runBatch(target, input.steps, { assert: input.assert }, ctx.signal);
+          const screen = await screenSize(target, deviceInfo, ctx.signal).catch(() => undefined);
+          // An active ui_flow recording captures batch steps too.
+          for (const e of result.executed) await flows.recordStep(target, e.action, e.selector, screen).catch(() => undefined);
+          let saved: unknown;
+          if (result.passed && input.save_flow) {
+            const { inspectProject, mainAbility } = await import("../domains/project.js");
+            const project = inspectProject(input.save_flow.project);
+            invariant(project.bundleName, "PROJECT_INVALID", "bundleName missing");
+            const main = mainAbility(project);
+            saved = flows.saveExecutedFlow(input.save_flow.project, input.save_flow.id, input.save_flow.name ?? input.save_flow.id,
+              { bundleName: project.bundleName, module: main.module, ability: main.ability }, result.executed, input.assert!, screen);
+          }
+          const { executed: _e, ...rest } = result;
+          return {
+            ...rest, ...(saved ? { saved_flow: saved } : {}),
+            ...(!result.passed ? { hint: result.failed_step !== undefined ? "Fix the failing step using the visible list, then call again with the remaining steps" : "The final assert failed: check after/visible" } : {}),
+          };
+        }
+        const { action, resolved } = await buildAction(input, target, ui, ctx.signal);
+        const wantDiff = input.diff !== false;
+        const before = wantDiff || input.verify_change ? await ui.dumpTree(target, ctx.signal, 1500).catch(() => undefined) : undefined;
+        const result = await ui.act(target, action, ctx.signal);
+        let after: ReturnType<typeof batch.screenDiff> | undefined;
+        if (before) {
+          // One dump after a short settle; verify_change keeps polling (up to 3s) for slow transitions.
+          const deadline = Date.now() + (input.verify_change ? 3000 : 0);
+          await new Promise((r) => setTimeout(r, 400));
+          for (;;) {
+            const nodes = await ui.dumpTree(target, ctx.signal).catch(() => undefined);
+            if (!nodes) break;
+            after = batch.screenDiff(before, nodes);
+            if (after.changed || Date.now() >= deadline) break;
+            await new Promise((r) => setTimeout(r, 300));
+          }
+        }
+        const recorded = await flows.recordStep(target, action, input.selector, await screenSize(target, deviceInfo, ctx.signal).catch(() => undefined)).catch(() => undefined);
+        return {
+          ...result, ...(resolved ? { element: resolved } : {}), ...(recorded ?? {}),
+          ...(after && wantDiff ? { after } : {}),
+          ...(after && input.verify_change ? { changed: after.changed, ...(!after.changed ? { hint: "Screen did not change: the target may be disabled, covered, or need a different gesture" } : {}) } : {}),
+          ...(!after ? { note: "Action sent; verify with ui assert or observe" } : {}),
+        };
       }
     }
   },
@@ -591,7 +666,7 @@ export const diagnoseTool = tool({
   name: "diagnose",
   title: "Crash & failure diagnosis",
   readOnly: true,
-  description: "crash: read the latest jscrash/cppcrash/appfreeze report from the device (or analyze pasted log text), extract error type/message/code/app frames, and match the HarmonyOS fault-pattern library for likely causes and fixes. build: explain build/check diagnostics with fix hints.",
+  description: "crash: read the latest jscrash/cppcrash/appfreeze report from the device (or analyze pasted log text), extract error type/message/code/app frames, and match the HarmonyOS fault-pattern library for likely causes and fixes; with project, source lists the project's own frames (file, line, code around it). run build_run/launch already attach this summary when the app crashes on startup. build: explain build/check diagnostics with fix hints.",
   schema: z.object({
     action: z.enum(["crash", "build"]),
     target: fields.target,
@@ -601,8 +676,9 @@ export const diagnoseTool = tool({
     latest: z.number().int().min(1).max(5).optional(),
     since_minutes: z.number().int().min(1).max(10080).optional().describe("crash: only reports from the last N minutes (device clock)"),
     diagnostics: z.array(z.object({ code: z.string().optional(), message: z.string() })).max(100).optional().describe("build: diagnostics to explain"),
+    project: z.string().optional().describe("crash: project root; adds source = the project's own frames with the code around each line"),
   }),
-  params: { crash: ["target", "bundle", "log", "name", "latest", "since_minutes"], build: ["diagnostics"] },
+  params: { crash: ["target", "bundle", "log", "name", "latest", "since_minutes", "project"], build: ["diagnostics"] },
   async handler(input, ctx) {
     const diagnose = await import("../domains/diagnose.js");
     if (input.action === "build") return { hints: diagnose.buildFailureHints(input.diagnostics ?? []) };

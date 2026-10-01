@@ -330,11 +330,20 @@ async function hvigor(project: Project, args: string[], signal: AbortSignal, lab
     const result = await run(cmd, { signal, timeoutMs: 30 * 60000, logFile: file, keepBytes: 64 * 1024, allowFailure: true, onLine: (line) => parser.line(line) });
     const log = await commitArtifact(id, file, "text/plain", jobId);
     const parsed = parser.finish();
-    if (result.code !== 0)
+    if (result.code !== 0) {
+      // The code at the first few error locations, so the fix needs no extra file read.
+      const { snippet } = await import("./sourcemap.js");
+      let shown = 0;
+      for (const d of parsed.diagnostics) {
+        if (shown >= 5 || d.severity !== "error" || !d.file || !d.line) continue;
+        const lines = snippet(path.isAbsolute(d.file) ? d.file : path.join(project.root, d.file), d.line, 2);
+        if (lines.length) { (d as Diagnostic & { source?: string[] }).source = lines; shown++; }
+      }
       throw new ToolError("BUILD_FAILED", `${label} failed (${parsed.counts.error} errors)`, {
         ...parsed, device_apis: undefined, device_compat: undefined, log_artifact: log.artifact_id, elapsed_ms: result.elapsedMs,
         ...(parsed.diagnostics.length ? {} : { tail: (result.stderr || result.stdout).slice(-3000) }),
       }, "Fix the listed diagnostics (knowledge search with the error code helps), then build again. Read the full log with job read artifact_id=" + log.artifact_id);
+    }
     return { ...parsed, log_artifact: log.artifact_id, elapsed_ms: result.elapsedMs };
   } catch (error) {
     if (!(error instanceof ToolError && error.code === "BUILD_FAILED")) await commitArtifact(id, file, "text/plain", jobId).catch(() => {});

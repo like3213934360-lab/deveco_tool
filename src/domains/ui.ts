@@ -469,20 +469,6 @@ export function treeSignature(nodes: UiNode[]) {
   return crypto.createHash("sha1").update(parts.join("\n")).digest("hex").slice(0, 16);
 }
 
-/** Act, then report whether the screen changed (progress evidence; avoids "tap had no effect" misjudgements). */
-export async function actAndVerify(target: string, a: Action, signal?: AbortSignal, timeoutMs = 3000) {
-  const before = treeSignature(await dumpTree(target, signal));
-  const result = await act(target, a, signal);
-  const deadline = Date.now() + timeoutMs;
-  let after = before;
-  while (Date.now() < deadline) {
-    await new Promise((r) => setTimeout(r, 300));
-    after = treeSignature(await dumpTree(target, signal));
-    if (after !== before) break;
-  }
-  return { ...result, changed: after !== before, ...(after === before ? { hint: "Screen did not change: the target may be disabled, covered, or need a different gesture" } : {}) };
-}
-
 /* ------------------------- non-ASCII text via uitest agent ------------------------- */
 
 type AgentCall = (api: string, self: string, args: unknown[]) => Promise<unknown>;

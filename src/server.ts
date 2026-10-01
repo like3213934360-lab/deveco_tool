@@ -10,7 +10,9 @@ const instructions = [
   "Always pass absolute project paths. Long operations (build, run, sync) return a job; use job action=wait rather than repeating the call.",
   "Before answering ArkTS/ArkUI/@kit API questions from memory, use knowledge search/read; for exact API signatures use code action=lsp op=hover/definition against the project SDK.",
   "If sources disagree, trust in this order: project SDK declarations and a successful build > official docs (local pack, cloud sections marked official) > community articles (hints only, never the API contract).",
-  "After editing .ets files run code action=check before building. Verify UI outcomes with ui assert, not screenshots alone. Never retry a job in needs_input without inspecting it.",
+  "project build and run build_run already run the ArkTS check on the files edited since the last build: do not call code action=check before them (use it only when you want to check without building).",
+  "Fewest calls: ui act steps=[...] walks a whole UI path in one call and every act returns what changed on screen (after), so observe is rarely needed; save a path you walk repeatedly (save_flow) and pass run then_flow=<id> to land on that page after each deploy.",
+  "Verify UI outcomes with ui assert, not screenshots alone. Never retry a job in needs_input without inspecting it.",
   "Several devices connected (DEVICE_AMBIGUOUS) or several developer teams (TEAM_AMBIGUOUS): ask the user which one to use; never pick one yourself.",
   "Unknown or misplaced parameters are rejected and nothing runs: use the names from the error.",
 ].join(" ");

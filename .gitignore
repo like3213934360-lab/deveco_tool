@@ -11,3 +11,4 @@ deveco-mcp.json
 
 # Audit raw evidence: local only (contains account and device data)
 docs/audit/evidence/
+.scratch/

@@ -14,20 +14,21 @@ deveco MCP 提供 15 个工具。按下面的顺序使用，避免自己拼 `hdc
 - 失败结果都带 `code`、`category` 和 `hint`，先按 `hint` 处理。状态为 `needs_input` 的任务，先 `job action=status` 看清楚再决定是否 `resume force=true`。
 - 连接多台设备时（返回 `DEVICE_AMBIGUOUS`，里面列出每台设备的名称、真机/模拟器、是否匹配工程），**先问用户部署到哪台**，不要自己挑；得到答复后传 `target=<序列号或设备名>`。
 - 账号有多个开发者团队时（返回 `TEAM_AMBIGUOUS`），同样先问用户用哪个团队，再传 `team=<团队 id>`。
-- 参数名写错或传给了不使用它的动作，会直接报错且不执行；按错误里的参数名改正后再调用。`wait` 超过 60000 会自动按 60000 处理，任务没完成就继续 `job action=wait`。
+- 参数名写错或传给了不使用它的动作，会直接报错且不执行；按错误里的参数名改正后再调用。`wait` 超过 55000 会自动按 55000 处理（低于宿主常见的 60 秒请求超时），任务没完成就继续 `job action=wait`。
 
 ## 常用流程
 
 | 场景 | 调用顺序 |
 | --- | --- |
 | 环境不明 | `doctor project=<root>`：工具链、SDK、设备、兼容性、登录状态 |
-| 写/改 ArkTS | 先加载 `hmos-arkui-develop-skill` → 修改 → `code action=check files=[...]` → `project action=build` |
+| 写/改 ArkTS | 先加载 `hmos-arkui-develop-skill` → 修改 → 直接 `run action=build_run`（或 `project action=build`）。构建前会自动静态检查上次以来改动的文件，**不要再单独调 `code action=check`**；只想检查、不构建时才用它 |
 | 编译报错 | `project action=build` 返回全部编译错误（错误码、文件、行号、原因）→ 按错误码查 `knowledge action=search` 或 `diagnose action=build` → 修复 → 重新 check/build。改了 `oh-package.json5` 后，构建会自动先装依赖 |
 | 部署运行 | `run action=build_run project=<root>`：构建、安装、启动，返回 `smoke: PASS / FAIL_CRASH / FAIL_BLANK` |
 | 改 UI 细节反复调 | `hot_reload action=apply`：约 3 秒生效，应用不重启；结束后 `hot_reload action=reset` |
-| 验证界面 | `ui observe` 看屏幕 → `ui act`（`verify_change=true` 确认操作生效）→ `ui assert` 判定结果 |
+| 验证界面 | `ui act` 的返回里自带 `after`（新出现/消失的控件、是否换页），一般不用再 `observe`；需要看图时才 `ui observe`；用 `ui assert` 判定结果 |
+| 走多步路径 | **一次调用**：`ui act steps=[{op:"click",selector:{text:"工具"}},{op:"click",selector:{text:"动态锁屏"}}] assert={visible:{text:"选择壁纸"}}`。每步自动等待控件出现，失败时返回失败的那一步和当前可见控件 |
 | 多步 UI 测试 | `ui test_start plan=...` → 每步 `ui test_step` → 需要看图时 `ui review` → `ui test_finish` → `ui test_export` |
-| 可复用的操作路径 | `ui_flow action=record` → `ui act` … → `ui_flow action=stop` 并附最终断言 → 以后 `ui_flow action=replay` |
+| 可复用的操作路径 | 同一条路径要反复走（每次部署后都要进同一个页面）时，在上面的 `steps` 调用里加 `save_flow={project,id}` 存下来（从应用首页开始走），以后用 `ui_flow action=replay`；也可以 `ui_flow action=record` → `ui act` … → `ui_flow action=stop` 并附最终断言 |
 | 闪退/崩溃/白屏 | 加载 `hmos-runtime-fix-skill`；`diagnose action=crash bundle=... since_minutes=10` |
 | 查 API/文档 | `knowledge action=search`（离线官方文档）；精确签名用 `code action=lsp op=hover symbol=...`；需要最新云端答案用 `knowledge source=cloud`（需 `auth provider=codegenie`，结果分段标注官方/社区）；有冲突见下文“资料冲突时以谁为准” |
 | 真机签名 | `auth action=login provider=developer` → `sign action=auto project=<root>`（账号有多个团队时先问用户用哪个，传 `team`）→ `run action=build_run` |

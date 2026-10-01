@@ -29,13 +29,23 @@ const preflightStep = {
   when: (ctx: { input: BuildInput }) => ctx.input.preflight !== false,
   async run(ctx: { input: BuildInput; signal: AbortSignal; log(m: string): void }) {
     const { arktsCheck } = await import("./domains/code.js");
+    const { changedSources, rememberSources } = await import("./domains/preflight.js");
     // Advisory only: the static checker is a fast approximation and can be wrong on real projects
     // (unknown HDS containers, unusual formatting). hvigor is the compiler of record, so findings are
     // reported alongside the build instead of blocking it.
     try {
-      const result = await arktsCheck(ctx.input.project, undefined, ctx.signal);
+      // Only the .ets/.ts files edited since the last preflight (LingDong: 0.4 s vs 4-22 s for all 1,659).
+      const scope = await changedSources(ctx.input.project);
+      if (scope.files && !scope.files.length) return { errors: 0, warnings: 0, scope: "unchanged", files: 0 };
+      const result = await arktsCheck(ctx.input.project, scope.files, ctx.signal);
+      // Issues are capped at 50: when errors were cut off, some failing files are unknown, so keep the old baseline.
+      const failing = result.issues.filter((i) => i.severity === "error").map((i) => i.file);
+      if (failing.length >= result.errors) await rememberSources(ctx.input.project, scope.snapshot, failing);
       if (result.errors) ctx.log(`preflight: ${result.errors} possible error(s); building anyway (hvigor decides)`);
-      return { errors: result.errors, warnings: result.warnings, ...(result.errors ? { issues: result.issues.slice(0, 10) } : {}) };
+      return {
+        errors: result.errors, warnings: result.warnings, scope: scope.files ? "changed" : "project", files: scope.files?.length ?? result.files,
+        ...(result.errors ? { issues: result.issues.slice(0, 10) } : {}),
+      };
     } catch (error) {
       ctx.log(`preflight unavailable: ${(error as Error).message}`);
       return { skipped: true };
@@ -178,8 +188,13 @@ const runSteps = (build: boolean) => [
         const { recordBaseline } = await import("./domains/hotreload.js");
         await recordBaseline(project, main.module, project.bundleName, ctx.outputs.target.target, ctx.signal);
       }
-      invariant(result.started, "LAUNCH_FAILED", result.crashed ? "App crashed on startup" : "App process is not running after launch", result,
-        "Run diagnose action=crash to see the crash report");
+      if (!result.started) {
+        // Diagnose right here: crash kind, message, the project's own frames with code, likely causes.
+        const { crashSummary } = await import("./domains/diagnose.js");
+        const crash = result.crashed ? await crashSummary(ctx.outputs.target.target, project.bundleName, result.new_crash_logs, ctx.input.project, ctx.signal) : undefined;
+        invariant(false, "LAUNCH_FAILED", result.crashed ? "App crashed on startup" : "App process is not running after launch", { ...result, ...(crash ? { crash } : {}) },
+          crash?.source?.length ? `Fix ${crash.source[0]!.file}:${crash.source[0]!.line} (see crash.source), then build_run again` : "Run diagnose action=crash to see the crash report");
+      }
       return result;
     },
   },

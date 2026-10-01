@@ -104,11 +104,12 @@ export async function startRecording(project: string, target: string, id: string
   return { recording: id, target, note: "Perform steps with ui act (selector-based actions are recorded). Finish with ui_flow action=stop and an assert." };
 }
 
-/** Called by ui act: append a replayable step when a recording is active. */
-export async function recordStep(target: string, action: Action, selector: Selector | undefined, screen: { w: number; h: number } | undefined) {
-  const current = await draft(target);
-  if (!current) return undefined;
-  const step: Step = { id: `s${current.flow.steps.length + 1}`, action: "tap", timeoutMs: 10000 };
+/**
+ * Turn one executed UI action into a replayable flow step (shared by recording and batch save_flow).
+ * Input text becomes a secret ${inputN} variable; returns undefined for actions flows cannot replay.
+ */
+export function makeStep(flow: Flow, values: Record<string, string>, action: Action, selector: Selector | undefined, screen: { w: number; h: number } | undefined): Step | undefined {
+  const step: Step = { id: `s${flow.steps.length + 1}`, action: "tap", timeoutMs: 10000 };
   const pctOf = (x: number, y: number) => screen ? { xPercent: +(x * 100 / screen.w).toFixed(2), yPercent: +(y * 100 / screen.h).toFixed(2) } : undefined;
   switch (action.action) {
     case "click": step.action = "tap"; break;
@@ -116,9 +117,9 @@ export async function recordStep(target: string, action: Action, selector: Selec
     case "long_click": step.action = "longTap"; break;
     case "input": {
       step.action = "input";
-      const variable = `input${Object.keys(current.flow.variables).length + 1}`;
-      current.flow.variables[variable] = { required: true, secret: true };
-      current.values[variable] = action.text;
+      const variable = `input${Object.keys(flow.variables).length + 1}`;
+      flow.variables[variable] = { required: true, secret: true };
+      values[variable] = action.text;
       step.value = `\${${variable}}`;
       break;
     }
@@ -129,13 +130,45 @@ export async function recordStep(target: string, action: Action, selector: Selec
       break;
     case "scroll": step.action = "dircFling"; step.direction = { left: 0, right: 1, up: 2, down: 3 }[action.direction]; break;
     case "type": step.action = "focusInput"; break;
-    default: return { recorded_step: null, note: `${action.action} is not recorded in flows (not replayable across devices)` };
+    default: return undefined;
   }
   if (selector) step.selector = fromSelector(selector);
   else if ("x" in action && ["tap", "doubleTap", "longTap", "input"].includes(step.action)) step.point = pctOf(action.x, action.y);
+  return step;
+}
+
+/** Called by ui act: append a replayable step when a recording is active. */
+export async function recordStep(target: string, action: Action, selector: Selector | undefined, screen: { w: number; h: number } | undefined) {
+  const current = await draft(target);
+  if (!current) return undefined;
+  const step = makeStep(current.flow, current.values, action, selector, screen);
+  if (!step) return { recorded_step: null, note: `${action.action} is not recorded in flows (not replayable across devices)` };
   current.flow.steps.push(step);
   await kvSet(`recording:${target}`, JSON.stringify(current));
   return { recorded_step: step.id };
+}
+
+/**
+ * Save an already executed, assert-verified action sequence as a flow (ui act steps + save_flow).
+ * Replays restart the app first, so the sequence should start from the app's launch screen.
+ */
+export function saveExecutedFlow(project: string, id: string, name: string, app: Flow["app"], executed: { action: Action; selector?: Selector }[],
+  assert: { visible?: Selector; hidden?: Selector; timeout_ms?: number }, screen: { w: number; h: number } | undefined) {
+  flowFile(project, id); // validates the id before anything is written
+  const flow: Flow = { version: 2, id, name, app, start: { mode: "restart" }, variables: {}, steps: [] };
+  const values: Record<string, string> = {};
+  const skipped: string[] = [];
+  for (const e of executed) {
+    const step = makeStep(flow, values, e.action, e.selector, screen);
+    if (step) flow.steps.push(step); else skipped.push(e.action.action);
+  }
+  invariant(flow.steps.length > 0, "INVALID_INPUT", "None of the steps can be saved as a flow", { skipped });
+  flow.assert = {
+    ...(assert.visible ? { visible: fromSelector(assert.visible) } : { hidden: fromSelector(assert.hidden!) }),
+    timeoutMs: assert.timeout_ms ?? 5000,
+  };
+  writeFlow(project, flow);
+  return { saved: id, steps: flow.steps.length, variables: Object.keys(flow.variables), file: flowFile(project, id), ...(skipped.length ? { not_saved: skipped } : {}) };
 }
 
 export async function stopRecording(target: string, options: { project?: string; assert?: { visible?: Selector; hidden?: Selector; timeout_ms?: number }; discard?: boolean }, signal?: AbortSignal) {
