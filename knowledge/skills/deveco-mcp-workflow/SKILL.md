@@ -24,12 +24,15 @@ deveco MCP 提供 15 个工具。按下面的顺序使用，避免自己拼 `hdc
 | 写/改 ArkTS | 先加载 `hmos-arkui-develop-skill` → 修改 → 直接 `run action=build_run`（或 `project action=build`）。构建前会自动静态检查上次以来改动的文件，**不要再单独调 `code action=check`**；只想检查、不构建时才用它 |
 | 编译报错 | `project action=build` 返回全部编译错误（错误码、文件、行号、原因）→ 按错误码查 `knowledge action=search` 或 `diagnose action=build` → 修复 → 重新 check/build。改了 `oh-package.json5` 后，构建会自动先装依赖 |
 | 部署运行 | `run action=build_run project=<root>`：构建、安装、启动，返回 `smoke: PASS / FAIL_CRASH / FAIL_BLANK` |
-| 改 UI 细节反复调 | `hot_reload action=apply`：约 3 秒生效，应用不重启；结束后 `hot_reload action=reset` |
+| 改代码反复调 | 每次改完直接 `run action=build_run`。从第二次部署起，只改了入口模块的 .ets/.ts 时会自动热修复正在运行的应用并重启（约 6 秒，`path=hot_reload`），其他改动自动走完整部署（`path=full`，`fallback_reason` 写明原因）；什么都没改时只重启（`path=relaunch`）。需要强制完整部署时传 `run_mode=full` |
+| 部署后进到正在改的页面 | 路径存成 flow 后，`run action=build_run then_flow=<id>`，部署完自动走到该页面 |
+| 界面回归 | `ui action=visual project=<root> name=<名称>`：第一次保存基准截图，之后对比，返回变化比例、变化区域和红框标注图（`diff_artifact`）；`ui_flow action=replay snapshot=true` 在回放到页面后自动对比 |
+| 滑动性能 | `ui action=perf bundle=<包名>`：在当前页面上下滑动并逐帧统计，返回平均帧率、帧耗时 p50/p95/最大值、卡顿帧数、结论（smooth/minor_jank/janky）和内存变化 |
 | 验证界面 | `ui act` 的返回里自带 `after`（新出现/消失的控件、是否换页），一般不用再 `observe`；需要看图时才 `ui observe`；用 `ui assert` 判定结果 |
 | 走多步路径 | **一次调用**：`ui act steps=[{op:"click",selector:{text:"工具"}},{op:"click",selector:{text:"动态锁屏"}}] assert={visible:{text:"选择壁纸"}}`。每步自动等待控件出现，失败时返回失败的那一步和当前可见控件 |
 | 多步 UI 测试 | `ui test_start plan=...` → 每步 `ui test_step` → 需要看图时 `ui review` → `ui test_finish` → `ui test_export` |
 | 可复用的操作路径 | 同一条路径要反复走（每次部署后都要进同一个页面）时，在上面的 `steps` 调用里加 `save_flow={project,id}` 存下来（从应用首页开始走），以后用 `ui_flow action=replay`；也可以 `ui_flow action=record` → `ui act` … → `ui_flow action=stop` 并附最终断言 |
-| 闪退/崩溃/白屏 | 加载 `hmos-runtime-fix-skill`；`diagnose action=crash bundle=... since_minutes=10` |
+| 闪退/崩溃/白屏 | `run build_run` 启动就崩时，返回的 `crash` 里已有错误类型、工程内出错的文件和行（`source`，附前后几行代码）和可能原因，直接按它改；其他情况加载 `hmos-runtime-fix-skill`，`diagnose action=crash bundle=... project=<root> since_minutes=10`（带 `project` 才会定位到源码） |
 | 查 API/文档 | `knowledge action=search`（离线官方文档）；精确签名用 `code action=lsp op=hover symbol=...`；需要最新云端答案用 `knowledge source=cloud`（需 `auth provider=codegenie`，结果分段标注官方/社区）；有冲突见下文“资料冲突时以谁为准” |
 | 真机签名 | `auth action=login provider=developer` → `sign action=auto project=<root>`（账号有多个团队时先问用户用哪个，传 `team`）→ `run action=build_run` |
 | 模拟器 | `emulator action=list` / `start` / `stop`；`scenario` 模拟电量、GPS、旋转、折叠等 |

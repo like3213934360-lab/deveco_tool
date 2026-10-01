@@ -108,6 +108,7 @@ export async function install(target: string, packages: string[], signal: AbortS
 
 const installHints: [RegExp, string][] = [
   [/9568322|signature.*(verif|invalid)|no signature/i, "Package is unsigned or the signature does not match this device. Configure signing (sign action=auto) or use an emulator."],
+  [/sign info inconsistent/i, "The installed copy of this app was signed with a different certificate (e.g. before the debug certificate was renewed). Reinstall with run uninstall_first=true — this deletes the app's data on the device, so confirm with the user first."],
   [/9568332|version.*(downgrade|lower)/i, "Installed version is newer. Reinstall with run uninstall_first=true, or increase versionCode."],
   [/9568289|9568297|incompatible|apiVersion|compatible|older sdk version/i, "Device API level is lower than the app's compatibleSdkVersion. Lower compatibleSdkVersion (project create compatible_api) or use a newer device image (doctor shows the compatibility check)."],
   [/9568305|dependent module does not exist|HSP/i, "A shared module (HSP) the app depends on is missing. Build and install it together (run action=deploy installs all packages)."],
@@ -142,6 +143,13 @@ export async function launch(target: string, bundle: string, ability: string, mo
   return { launched: true, bundle, ability };
 }
 
+/** Identity of the installed copy (changes on every install/update); undefined when not installed. */
+export async function installStamp(target: string, bundle: string, signal?: AbortSignal) {
+  const dump = (await shell(target, ["bm", "dump", "-n", bundle], signal, 15000).catch(() => undefined))?.stdout ?? "";
+  const install = /"installTime":\s*(\d+)/.exec(dump)?.[1], update = /"updateTime":\s*(\d+)/.exec(dump)?.[1];
+  return install ? `${install}:${update ?? ""}` : undefined;
+}
+
 export async function pidOf(target: string, bundle: string, signal?: AbortSignal): Promise<number | undefined> {
   const out = (await shell(target, ["pidof", bundle], signal, 10000)).stdout.trim();
   const pid = Number(out.split(/\s+/)[0]);
@@ -153,6 +161,7 @@ export async function launchAndCheck(target: string, bundle: string, ability: st
   const before = new Set(await faultlogNames(target, signal));
   await forceStop(target, bundle, signal).catch(() => {});
   await launch(target, bundle, ability, module, signal);
+  (await import("./repeat.js")).noteLaunch(target);
   const deadline = Date.now() + observeMs;
   let pid: number | undefined;
   while (Date.now() < deadline) {

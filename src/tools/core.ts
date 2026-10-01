@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { invariant } from "../core/errors.js";
+import * as repeatModule from "../domains/repeat.js";
 import { fields, MAX_WAIT_MS, tool } from "../registry.js";
 
 /* Job definitions are registered lazily the first time a job-producing tool runs. */
@@ -128,7 +129,8 @@ export const runTool = tool({
     "deploy: install already-built packages (latest outputs) + launch.",
     "launch: start the installed app. stop: force-stop. uninstall: remove the app (uninstalled:false with reason not_installed when it was not installed).",
     "Several devices connected and no target: the call fails with DEVICE_AMBIGUOUS listing them — ask the user which one, never pick yourself.",
-    "Pass assert to verify a UI outcome after launch (e.g. {visible:{text:'Welcome'}}).",
+    "Pass assert to verify a UI outcome after launch (e.g. {visible:{text:'Welcome'}}). then_flow=<ui_flow id> walks to the page you are working on right after launch (save the path once with ui act steps + save_flow).",
+    "Fast iterations are automatic (run_mode=auto, default): from the second build_run of a project on a device, when only .ets/.ts code of the entry module changed and the app is still the installed and running copy, the running app is quick-fixed in seconds instead of rebuilt and reinstalled; anything else (resources, manifests, other modules, new/deleted files, a failed patch) deploys normally. The result says path=hot_reload|full and fallback_reason. run_mode=full always deploys.",
     "hot_reload=true on build_run installs a hot-reload build; then use hot_reload tool for instant updates.",
   ].join(" "),
   schema: z.object({
@@ -144,19 +146,30 @@ export const runTool = tool({
     hot_reload: z.boolean().optional(),
     skip_build: z.boolean().optional().describe("build_run: deploy the latest built packages without building (same as action=deploy)"),
     uninstall_first: z.boolean().optional().describe("build_run/deploy: uninstall the app before installing (clears app data)"),
+    run_mode: z.enum(["auto", "full"]).optional().describe("build_run: auto (default) quick-fixes code-only changes of the entry module in the running app; full always builds and reinstalls"),
+    then_flow: z.string().optional().describe("build_run/deploy: after launch, replay this saved ui_flow (lands on the page you are working on); a flow that no longer matches is reported, the deploy still succeeds"),
+    flow_variables: z.record(z.string(), z.string()).optional().describe("then_flow: values for its ${var} inputs"),
     request_key: fields.requestKey,
     wait: fields.wait,
   }),
   params: {
-    build_run: ["project", "product", "modules", "target", "mode", "module", "ability", "assert", "hot_reload", "skip_build", "uninstall_first", "request_key", "wait"],
-    deploy: ["project", "product", "modules", "target", "module", "ability", "assert", "hot_reload", "uninstall_first", "request_key", "wait"],
+    build_run: ["project", "product", "modules", "target", "mode", "run_mode", "module", "ability", "assert", "hot_reload", "skip_build", "uninstall_first", "then_flow", "flow_variables", "request_key", "wait"],
+    deploy: ["project", "product", "modules", "target", "module", "ability", "assert", "hot_reload", "uninstall_first", "then_flow", "flow_variables", "request_key", "wait"],
     launch: ["project", "product", "target", "module", "ability"],
     stop: ["project", "product", "target"],
     uninstall: ["project", "product", "target"],
   },
   async handler(input, ctx) {
-    if (input.action === "build_run" || input.action === "deploy")
+    if (input.action === "build_run" || input.action === "deploy") {
+      if (input.then_flow) {
+        // Fail before a long build when the flow does not exist or needs variables that were not given.
+        const { readFlow } = await import("../domains/flows.js");
+        const flow = readFlow(input.project, input.then_flow);
+        const missing = Object.entries(flow.variables).filter(([k, v]) => v.required && input.flow_variables?.[k] === undefined).map(([k]) => k);
+        invariant(!missing.length, "INVALID_INPUT", `then_flow ${input.then_flow} needs flow_variables: ${missing.join(", ")}`);
+      }
       return startAndWait(input.action === "build_run" && input.skip_build ? "deploy" : input.action, input, input.request_key, input.wait ?? 3000);
+    }
     const { inspectProject, mainAbility, runnableDeviceTypes } = await import("../domains/project.js");
     const device = await import("../domains/device.js");
     const project = inspectProject(input.project, input.product);
@@ -361,11 +374,13 @@ export const uiTool = tool({
     "act steps=[{op, selector|x,y, text...}, {op:'wait', selector}] runs a whole path in ONE call (each step waits for its element; stops at the first failure and lists what is visible); add assert to verify the goal, and save_flow={project,id} to store the path for run then_flow / ui_flow replay.",
     "assert: wait until a selector is visible/hidden — use this to verify outcomes, not screenshots.",
     "windows: list app windows (all=true includes system windows); tree/observe accept window id and depth; tree all_windows=true merges every window, node=<id> returns one component subtree; screenshot display=<id>, save_path.",
+    "visual: screenshot regression check — compares the screen with the baseline saved under name (per device model, in <project>/.arkpilot/baselines; the first call saves it, update=true replaces it): same, changed_ratio, changed regions (device pixels) and diff_artifact (current screen with changes boxed in red). Status/navigation bars are ignored.",
+    "perf: scroll smoothness check of the current screen — flings up/down (repeat, default 3; or your own gestures via steps of swipe/fling/scroll) and measures every composed frame: avg_fps, frame_ms p50/p95/max, janky_frames, jank_rate, verdict (smooth/minor_jank/janky), plus app memory (pss) before/after when bundle is given.",
     "record_start/record_stop/record_status: screen recording to mp4 (real devices; stop discard=true drops it, external=true stops a foreign recording).",
     "UI test sessions (you execute the plan and judge visuals): test_start(plan, project or bundle, fresh_start) -> test_step(op+selector or visible/hidden assert, description) per item -> review(requirement) returns a screenshot, then review(outcome, reason) -> test_finish -> test_log / test_export(directory).",
   ].join(" "),
   schema: z.object({
-    action: z.enum(["observe", "screenshot", "tree", "find", "act", "assert", "windows", "record_start", "record_stop", "record_status",
+    action: z.enum(["observe", "screenshot", "tree", "find", "act", "assert", "windows", "perf", "visual", "record_start", "record_stop", "record_status",
       "test_start", "test_step", "review", "test_finish", "test_log", "test_export"]),
     target: fields.target,
     window: z.number().int().optional().describe("tree/observe: window id from action=windows"),
@@ -379,7 +394,7 @@ export const uiTool = tool({
     external: z.boolean().optional().describe("record_stop: stop a recording started outside this server"),
     test_id: z.string().optional(),
     plan: z.string().max(20000).optional().describe("test_start: natural-language test plan with steps and expected results"),
-    project: z.string().optional().describe("test_start: project root to infer bundle/ability"),
+    project: z.string().optional().describe("test_start: project root to infer bundle/ability; visual: project whose .arkpilot/baselines holds the baseline"),
     fresh_start: z.boolean().optional().describe("test_start: restart the app first"),
     description: z.string().max(500).optional().describe("test_step: which checklist item this is"),
     requirement: z.string().max(2000).optional().describe("review: what the screen must show"),
@@ -415,6 +430,10 @@ export const uiTool = tool({
     format: z.enum(["jpeg", "png"]).optional(),
     width: z.number().int().min(240).max(2560).optional(),
     limit: z.number().int().min(1).max(2000).optional(),
+    repeat: z.number().int().min(1).max(20).optional().describe("perf: number of up+down fling pairs (default 3)"),
+    name: z.string().optional().describe("visual: baseline name, e.g. gif-page"),
+    update: z.boolean().optional().describe("visual: save the current screen as the baseline"),
+    threshold: z.number().int().min(1).max(64).optional().describe("visual: per-block mean gray difference that counts as changed (default 8)"),
   }),
   params: (() => {
     const act = ["target", "op", "selector", "keys", "button", "ticks", "verify_change", "x", "y", "x2", "y2", "direction", "text", "append", "key", "speed"];
@@ -426,6 +445,8 @@ export const uiTool = tool({
       find: ["target", "selector", "limit"],
       assert: ["target", "visible", "hidden", "timeout_ms"],
       windows: ["target", "all"],
+      perf: ["target", "steps", "repeat", "bundle"],
+      visual: ["target", "project", "name", "update", "threshold"],
       record_start: ["target"], record_status: ["target"], record_stop: ["target", "discard", "external", "save_path"],
       test_start: ["target", "plan", "project", "bundle", "fresh_start"],
       test_step: [...act, "test_id", "description", "visible", "hidden", "timeout_ms"],
@@ -455,6 +476,25 @@ export const uiTool = tool({
     const scope = { window: input.window };
     switch (input.action) {
       case "windows": return { windows: await ui.listWindows(target, input.all, ctx.signal) };
+      case "visual": {
+        invariant(input.project && input.name, "INVALID_INPUT", "visual needs project and name");
+        const { visualCheck } = await import("../domains/visual.js");
+        const { deviceInfo } = await import("../domains/device.js");
+        const info = await deviceInfo(target, ctx.signal);
+        return visualCheck(target, { project: input.project, name: input.name, update: input.update, threshold: input.threshold },
+          { model: info.model ?? info.name ?? target, size: info.screen ? { w: info.screen.width, h: info.screen.height } : undefined }, ctx.signal);
+      }
+      case "perf": {
+        const { measureScroll } = await import("../domains/perf.js");
+        const { stepAction } = await import("../domains/uibatch.js");
+        const { deviceInfo } = await import("../domains/device.js");
+        const gestures = input.steps?.map((s) => {
+          invariant(["swipe", "fling", "drag", "scroll"].includes(s.op), "INVALID_INPUT", `perf steps take gestures (swipe/fling/drag/scroll), not ${s.op}`);
+          return stepAction(s);
+        });
+        const screen = await screenSize(target, deviceInfo, ctx.signal).catch(() => undefined);
+        return measureScroll(target, { gestures, repeat: input.repeat, bundle: input.bundle, screen }, ctx.signal);
+      }
       case "record_start": return ui.startRecording(target, ctx.signal);
       case "record_stop": return ui.stopRecording(target, { discard: input.discard, external: input.external, save_path: input.save_path }, ctx.signal);
       case "record_status": return ui.recordingStatus(target, ctx.signal);
@@ -524,8 +564,9 @@ export const uiTool = tool({
               { bundleName: project.bundleName, module: main.module, ability: main.ability }, result.executed, input.assert!, screen);
           }
           const { executed: _e, ...rest } = result;
+          const repeat = saved ? undefined : repeatHint(target, result.executed);
           return {
-            ...rest, ...(saved ? { saved_flow: saved } : {}),
+            ...rest, ...(saved ? { saved_flow: saved } : {}), ...(repeat ? { suggest: repeat } : {}),
             ...(!result.passed ? { hint: result.failed_step !== undefined ? "Fix the failing step using the visible list, then call again with the remaining steps" : "The final assert failed: check after/visible" } : {}),
           };
         }
@@ -547,8 +588,9 @@ export const uiTool = tool({
           }
         }
         const recorded = await flows.recordStep(target, action, input.selector, await screenSize(target, deviceInfo, ctx.signal).catch(() => undefined)).catch(() => undefined);
+        const repeat = recorded ? undefined : repeatHint(target, [{ action, selector: input.selector }]);
         return {
-          ...result, ...(resolved ? { element: resolved } : {}), ...(recorded ?? {}),
+          ...result, ...(resolved ? { element: resolved } : {}), ...(recorded ?? {}), ...(repeat ? { suggest: repeat } : {}),
           ...(after && wantDiff ? { after } : {}),
           ...(after && input.verify_change ? { changed: after.changed, ...(!after.changed ? { hint: "Screen did not change: the target may be disabled, covered, or need a different gesture" } : {}) } : {}),
           ...(!after ? { note: "Action sent; verify with ui assert or observe" } : {}),
@@ -597,6 +639,21 @@ async function buildAction(input: UiInput, target: string, ui: typeof import("..
   return { action: action!, resolved };
 }
 
+/**
+ * Repeated-path hint: selector clicks extend the current path; any other action that moves through
+ * the UI (coordinate taps, gestures, keys) breaks it. Text input and waits do not.
+ */
+function repeatHint(target: string, executed: { action: import("../domains/ui.js").Action; selector?: z.infer<typeof selectorSchema> }[]) {
+  try {
+    const taps = executed.flatMap((e) => (e.action.action === "click" ? [e.selector] : ["input", "type"].includes(e.action.action) ? [] : [undefined]));
+    const { noteTaps, repeatSuggestion } = repeatModule;
+    const path = noteTaps(target, taps);
+    return path ? repeatSuggestion(path) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 const sizes = new Map<string, { w: number; h: number }>();
 async function screenSize(target: string, info: (t: string, s?: AbortSignal) => Promise<{ screen?: { width: number; height: number } }>, signal: AbortSignal) {
   if (!sizes.has(target)) {
@@ -620,13 +677,14 @@ export const uiFlowTool = tool({
     assert: assertSchema.optional().describe("stop: final assert required to save"),
     discard: z.boolean().optional(),
     repair: z.boolean().optional(),
+    snapshot: z.boolean().optional().describe("replay: after the final assert, compare the screen with the flow's visual baseline (saved on the first snapshot replay)"),
     request_key: fields.requestKey,
     wait: fields.wait,
   }),
   params: {
     list: ["project"], show: ["project", "id"], delete: ["project", "id"],
     record: ["project", "target", "id", "name"], stop: ["project", "target", "assert", "discard"],
-    replay: ["project", "target", "id", "variables", "repair", "request_key", "wait"],
+    replay: ["project", "target", "id", "variables", "repair", "snapshot", "request_key", "wait"],
   },
   async handler(input, ctx) {
     const flows = await import("../domains/flows.js");
@@ -657,7 +715,7 @@ export const uiFlowTool = tool({
       }
       case "replay":
         invariant(input.id, "INVALID_INPUT", "id is required");
-        return startAndWait("flow_replay", { project: input.project, target: input.target, id: input.id, variables: input.variables ?? {}, repair: input.repair ?? false }, input.request_key, input.wait ?? 5000);
+        return startAndWait("flow_replay", { project: input.project, target: input.target, id: input.id, variables: input.variables ?? {}, repair: input.repair ?? false, snapshot: input.snapshot ?? false }, input.request_key, input.wait ?? 5000);
     }
   },
 });

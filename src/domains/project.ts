@@ -213,8 +213,9 @@ export class BuildOutputParser {
     // Numbered compiler entry: "12 ERROR: 10605040 ArkTS Compiler Error" / "3 WARN: ArkTS:WARN File: ..."
     const numbered = /^\d+\s+(ERROR|WARN):\s*(\d{8})?\s*(.*)$/.exec(text);
     const arkts = /ArkTS:(ERROR|WARN)\b/.exec(text);
-    // hvigor-level: "> hvigor ERROR: 00306003 Specification Limit Violation"
-    const hvigorError = /^>?\s*hvigor ERROR:\s*(?:(\d{8})\s+)?(.*)$/.exec(text);
+    // hvigor-level: "> hvigor ERROR: 00306003 Specification Limit Violation"; packaging/signing tools
+    // print the same shape without the prefix: "ERROR: 11013002 Certificate format is incorrect, ..."
+    const hvigorError = /^>?\s*(?:hvigor )?ERROR:\s*(?:(\d{8})\s+)?(.*)$/.exec(text);
     if (numbered || arkts || (hvigorError && hvigorError[1])) {
       this.flush();
       const severity = (numbered?.[1] ?? arkts?.[1] ?? "ERROR") === "ERROR" ? "error" : "warning";
@@ -240,6 +241,8 @@ export class BuildOutputParser {
     }
     const native = /^(.+\.(?:cpp|cc|c|h|hpp)):(\d+):(\d+):\s*(?:fatal )?error:\s*(.+)$/.exec(text);
     if (native) this.push({ severity: "error", file: this.relative(native[1]!), line: +native[2]!, column: +native[3]!, message: native[4]! });
+    // "Tools execution failed." only says a packaging tool (signer, packer) failed: its own coded ERROR carries the cause.
+    else if (/^>?\s*hvigor ERROR:\s*Tools execution failed/.test(text)) this.toolsFailed = true;
     else if (/^>?\s*hvigor ERROR:/.test(text) && !/BUILD FAILED|ArkTS Compiler Error\s*$/.test(text)) this.push({ severity: "error", message: text.replace(/^>?\s*hvigor ERROR:\s*/, "") });
     else if (/error TS\d+/.test(text)) this.push({ severity: "error", message: text });
   }
@@ -259,6 +262,7 @@ export class BuildOutputParser {
     return file;
   }
   private realRoot?: string;
+  private toolsFailed = false;
   private push(d: Diagnostic) {
     const key = `${d.file}:${d.line}:${d.column}:${d.message}`;
     if (this.seen.has(key)) return;
@@ -284,6 +288,9 @@ export class BuildOutputParser {
   }
   finish() {
     this.flush();
+    // The generic line only when no tool printed its own coded cause.
+    if (this.toolsFailed && !this.diagnostics.some((d) => d.severity === "error" && !d.file))
+      this.push({ severity: "error", message: `Tools execution failed.${this.failedTasks.length ? ` (${this.failedTasks.at(-1)})` : ""}` });
     // Errors first so the host sees blocking issues immediately.
     this.diagnostics.sort((a, b) => (a.severity === b.severity ? 0 : a.severity === "error" ? -1 : 1));
     // Build-level errors first (they explain why the build stopped), then compile errors by file.

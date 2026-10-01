@@ -235,7 +235,9 @@ export function buildFailureHints(diagnostics: { code?: string; message: string 
     if (/compatibleSdkVersion|since API|requires API/i.test(m)) hints.set("api", "API not available at compatibleSdkVersion: raise compatible_api or guard with canIUse");
     if (/Invalid project path|00306003/i.test(m) && /path/i.test(m))
       hints.set("path", "hvigor rejects this project path (typically non-ASCII characters or spaces in a parent directory). Move or copy the project to an ASCII-only path and build there");
-    if (/signingConfig|00303107|SignHap/i.test(m)) hints.set("sign", "Packaging needs signing: sign action=auto (debug, real devices) or configure signingConfigs; emulators accept unsigned builds only for entry HAPs built without signing steps");
+    if (/certificate has expired|11013002/i.test(m))
+      hints.set("cert-expired", "The signing certificate in build-profile.json5 has expired (debug certificates are short-lived): renew it with sign action=auto force=true (needs auth provider=developer), or in DevEco Studio > Project Structure > Signing Configs");
+    else if (/signingConfig|00303107|SignHap/i.test(m)) hints.set("sign", "Packaging needs signing: sign action=auto (debug, real devices) or configure signingConfigs; emulators accept unsigned builds only for entry HAPs built without signing steps");
     if (/Unknown resource name/i.test(m)) hints.set("res", "The $r('app.<type>.<name>') resource is not defined in any module's resources/base/element or media: add it or fix the name");
     if (/Cannot find module '([^']+)'/i.test(m) && !/SystemCapability/.test(m) && /oh-package|dependenc|@ohos\/|^[a-z]/i.test(/Cannot find module '([^']+)'/i.exec(m)![1]!))
       hints.set("module", "Missing dependency or wrong import path: add it to the module's oh-package.json5 and run project action=sync (builds also sync automatically when oh-package.json5 changed)");

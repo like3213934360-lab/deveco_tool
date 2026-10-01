@@ -1,4 +1,5 @@
-import { defineJob } from "./core/jobs.js";
+import path from "node:path";
+import { defineJob, type Step } from "./core/jobs.js";
 import { invariant } from "./core/errors.js";
 import type { BuildTask } from "./domains/project.js";
 
@@ -89,10 +90,149 @@ defineJob<BuildInput>({
 interface RunInput extends BuildInput {
   target?: string; module?: string; ability?: string; hot_reload?: boolean; skip_build?: boolean; uninstall_first?: boolean;
   assert?: { visible?: Record<string, unknown>; hidden?: Record<string, unknown>; timeout_ms?: number };
+  /** ui_flow id replayed right after launch (lands on the page being worked on) */
+  then_flow?: string; flow_variables?: Record<string, string>;
+  /** auto (default): quick-fix the running app when provably equivalent; full: always build + install */
+  run_mode?: "auto" | "full";
 }
 
-/** Device first, then the modules that belong on it (phone vs watch entry), then build/install only those. */
-const runSteps = (build: boolean) => [
+/* ---------------------------- auto hot reload ---------------------------- */
+
+/** Iterating = a previous full deploy of this project to this device within this window. */
+const ITERATING_MS = 2 * 3600 * 1000;
+/** Test hosts and CI can disable the automatic quick-fix path entirely (DEVECO_AUTO_HOT=0). */
+const autoHotEnabled = () => process.env.DEVECO_AUTO_HOT !== "0";
+// Release/other build modes are never quick-fixed: only debug builds were baselined.
+const autoMode = (input: RunInput) => autoHotEnabled() && input.run_mode !== "full" && !input.hot_reload && !input.uninstall_first && !input.skip_build && (!input.mode || input.mode === "debug");
+const wentHot = (ctx: { outputs: Record<string, any> }) => ctx.outputs.hot?.path === "hot_reload";
+const relaunchOnly = (ctx: { outputs: Record<string, any> }) => ctx.outputs.hot?.path === "relaunch";
+/** Wrap a deploy step so it is skipped when the quick fix already updated the app (or nothing changed). */
+function unlessHot(step: Step<RunInput>): Step<RunInput> {
+  // An unchanged project still relaunches (the caller asked to run it), but neither builds nor installs.
+  const skip = (ctx: { outputs: Record<string, any> }) => wentHot(ctx) || (relaunchOnly(ctx) && step.id !== "launch");
+  return { ...step, when: (ctx) => !skip(ctx) && (step.when ? step.when(ctx) : true) };
+}
+
+async function hotContext(ctx: { input: RunInput; outputs: Record<string, any>; signal: AbortSignal }) {
+  const { projectFor } = await import("./domains/project.js");
+  const { stateDir } = await import("./core/config.js");
+  const hp = await import("./domains/hotpath.js");
+  const { project } = await projectFor(ctx.input);
+  const target = ctx.outputs.target.target as string;
+  const entryName = (ctx.outputs.select.modules as string[]).find((n) => project.modules.find((m) => m.name === n)?.type === "entry");
+  const module = project.modules.find((m) => m.name === (ctx.input.module ?? entryName));
+  const file = hp.stateFile(stateDir(), project.root, target);
+  return { hp, project, target, module, file };
+}
+
+const hotStep = {
+  id: "hot",
+  when: (ctx: { input: RunInput }) => autoMode(ctx.input),
+  async run(ctx: { input: RunInput; outputs: Record<string, any>; signal: AbortSignal; log(m: string): void }) {
+    const { hp, project, target, module, file } = await hotContext(ctx);
+    const state = hp.readState(file);
+    if (!module || !project.bundleName) return { path: "full", fallback_reason: "no entry module to quick-fix" };
+    const { installStamp, pidOf } = await import("./domains/device.js");
+    const [install, pid] = await Promise.all([installStamp(target, project.bundleName, ctx.signal), pidOf(target, project.bundleName, ctx.signal)]);
+    const sources = hp.currentSources(project.root, state?.sources);
+    const decision = hp.decideHot(state, { target, install, running: !!pid, sources, inputs: hp.inputsSnapshot(project.root, state?.inputs && typeof state.inputs === "object" ? state.inputs : undefined), moduleRel: path.relative(project.root, module.root).replaceAll("\\", "/") });
+    if (!decision.hot && decision.unchanged) {
+      // Same code, same installed copy: skip build + install; the launch step restarts it (fresh state).
+      return { path: "relaunch", note: "No changes since the last deploy: relaunched the installed app" };
+    }
+    if (!decision.hot) return { path: "full", fallback_reason: decision.reason };
+    const started = Date.now();
+    try {
+      const { applyHotReload } = await import("./domains/hotreload.js");
+      const { mainAbility } = await import("./domains/project.js");
+      // restart: build_run means "a freshly launched app with the new code" — a page whose build() already
+      // ran would otherwise keep showing the old UI (seen in the e2e gesture page test).
+      const ability = ctx.input.ability ?? mainAbility(project, module.name).ability;
+      const applied = await applyHotReload(project, module.name, ctx.signal, ctx.log, { files: decision.files.map((f) => path.join(project.root, f)), restart: true, ability });
+      hp.writeState(file, { ...state!, sources });
+      if (applied.launch && !applied.launch.started) {
+        // The patched code crashes on startup: same diagnosis as a normal deploy.
+        const { crashSummary } = await import("./domains/diagnose.js");
+        const crash = applied.launch.crashed ? await crashSummary(target, project.bundleName, applied.launch.new_crash_logs, ctx.input.project, ctx.signal) : undefined;
+        invariant(false, "LAUNCH_FAILED", applied.launch.crashed ? "App crashed on startup after the quick fix" : "App process is not running after the quick fix",
+          { path: "hot_reload", files: applied.files, ...applied.launch, ...(crash ? { crash } : {}) },
+          crash?.source?.length ? `Fix ${crash.source[0]!.file}:${crash.source[0]!.line} (see crash.source), then build_run again` : "Run diagnose action=crash to see the crash report");
+      }
+      return { path: "hot_reload", files: applied.files, elapsed_ms: Date.now() - started, ...(applied.launch ? { launch: applied.launch } : {}) };
+    } catch (error) {
+      // The new code itself crashes: a full deploy would crash the same way. Report it.
+      if ((error as { code?: string }).code === "LAUNCH_FAILED") throw error;
+      // Anything the quick fix cannot do (compile error, unsupported change, device refused) -> real deploy.
+      ctx.log(`hot reload failed, deploying normally: ${(error as Error).message}`);
+      hp.writeState(file, { ...state!, install: "" }); // the next deploy re-records a baseline
+      return { path: "full", fallback_reason: `quick fix failed: ${(error as Error).message.slice(0, 200)}` };
+    }
+  },
+};
+
+/** After a full deploy in auto mode: record the quick-fix baseline once the user is iterating. */
+const baselineStep = {
+  id: "baseline",
+  when: (ctx: { input: RunInput; outputs: Record<string, any> }) => autoMode(ctx.input) && !wentHot(ctx) && !relaunchOnly(ctx),
+  async run(ctx: { input: RunInput; outputs: Record<string, any>; signal: AbortSignal; log(m: string): void }) {
+    try {
+      const { hp, project, target, module, file } = await hotContext(ctx);
+      if (!module || !project.bundleName || !["entry", "feature"].includes(module.type)) return { recorded: false };
+      const previous = hp.readState(file);
+      const iterating = !!previous?.last_full && Date.now() - previous.last_full < ITERATING_MS;
+      const base = { module: module.name, moduleRoot: module.root, target, last_full: Date.now() };
+      if (!iterating) {
+        // First deploy: remember it; the baseline compile is only paid when a second deploy follows.
+        hp.writeState(file, { ...base, install: "", sources: {}, inputs: {} });
+        return { recorded: false, note: "next build_run records the quick-fix baseline" };
+      }
+      const started = Date.now();
+      const { recordBaseline } = await import("./domains/hotreload.js");
+      // Snapshot before compiling: an edit made while the baseline compiles is then seen as a change.
+      const sources = hp.currentSources(project.root), inputs = hp.inputsSnapshot(project.root);
+      await recordBaseline(project, module.name, project.bundleName, target, ctx.signal);
+      const { installStamp } = await import("./domains/device.js");
+      const install = (await installStamp(target, project.bundleName, ctx.signal)) ?? "";
+      hp.writeState(file, { ...base, install, sources, inputs });
+      return { recorded: true, elapsed_ms: Date.now() - started, note: "later build_run calls quick-fix code changes of this module in seconds" };
+    } catch (error) {
+      ctx.log(`baseline not recorded: ${(error as Error).message}`);
+      return { recorded: false, error: (error as Error).message.slice(0, 200) };
+    }
+  },
+};
+
+/** After launch: walk a saved flow to the target page (attach: the app was just started). */
+const flowStep = {
+  id: "flow",
+  when: (ctx: { input: RunInput }) => !!ctx.input.then_flow,
+  async run(ctx: { input: RunInput; outputs: Record<string, any>; signal: AbortSignal; log(m: string): void }) {
+    const { replayFlow } = await import("./domains/flows.js");
+    const { deviceInfo } = await import("./domains/device.js");
+    const target = ctx.outputs.target.target as string;
+    const screen = ctx.outputs.target.screen ?? (await deviceInfo(target, ctx.signal).catch(() => undefined))?.screen;
+    try {
+      return await replayFlow(ctx.input.project, ctx.input.then_flow!, target, ctx.input.flow_variables ?? {},
+        { attach: true, screen: screen ? { w: screen.width, h: screen.height } : undefined }, ctx.signal, ctx.log);
+    } catch (error) {
+      // The app is installed and running: a flow that no longer matches the UI must not fail the deploy.
+      const e = error as { code?: string; message: string; details?: unknown };
+      return { flow: ctx.input.then_flow, passed: false, error: { code: e.code, message: e.message, details: e.details },
+        hint: "The app is deployed; the flow did not reach its page. Inspect with ui observe, then update the flow (ui act steps + save_flow)" };
+    }
+  },
+};
+
+/**
+ * Device first, then the modules that belong on it (phone vs watch entry), then build/install only those.
+ * In auto mode a provable code-only change is quick-fixed instead (hot step) and the deploy steps are skipped.
+ */
+const runSteps = (build: boolean): Step<RunInput>[] => {
+  const steps = baseRunSteps(build).map((s) => (["uninstall", "install", "launch"].includes(s.id) ? unlessHot(s) : s));
+  const at = steps.findIndex((s) => s.id === "launch");
+  return [...steps.slice(0, at + 1), ...(build ? [baselineStep as Step<RunInput>] : []), ...steps.slice(at + 1)];
+};
+const baseRunSteps = (build: boolean): Step<RunInput>[] => [
   {
     id: "target",
     async run(ctx: { input: RunInput; signal: AbortSignal }) {
@@ -115,7 +255,7 @@ const runSteps = (build: boolean) => [
       return { modules: modules.map((m) => m.name), reason, device_type: ctx.outputs.target.device_type ?? null };
     },
   },
-  ...(build ? [preflightStep, {
+  ...(build ? [hotStep as Step<RunInput>, unlessHot(preflightStep as Step<RunInput>), unlessHot({
     ...buildStep,
     async run(ctx: { input: RunInput; outputs: Record<string, any>; signal: AbortSignal; job_id: string }) {
       const { buildProject } = await import("./domains/project.js");
@@ -131,7 +271,7 @@ const runSteps = (build: boolean) => [
       const { hotBuildProps } = await import("./domains/hotreload.js");
       return buildProject(project, { ...input, props: hotBuildProps() }, ctx.signal, ctx.job_id);
     },
-  }] : []),
+  })] : []),
   {
     // `devecocli run --uninstall`: remove the installed app first (clean data / signature change).
     id: "uninstall",
@@ -198,6 +338,7 @@ const runSteps = (build: boolean) => [
       return result;
     },
   },
+  flowStep,
   {
     id: "assert",
     when: (ctx: { input: RunInput }) => !!ctx.input.assert,
@@ -213,14 +354,16 @@ const runSteps = (build: boolean) => [
 ];
 
 const runSummary = (o: Record<string, any>) => ({
-  device: o.target?.target, modules: o.select?.modules, module_selection: o.select?.reason, build: o.build ? { artifacts: o.build.artifacts?.map((a: { path: string }) => a.path), elapsed_ms: o.build.elapsed_ms, warnings: o.build.warnings, ...(o.build.device_compat ? { device_compat: o.build.device_compat } : {}) } : undefined,
-  installed: o.install, launch: o.launch, assert: o.assert ?? undefined,
+  device: o.target?.target, modules: o.select?.modules, module_selection: o.select?.reason,
+  ...(o.hot ? { path: o.hot.path, ...(o.hot.fallback_reason ? { fallback_reason: o.hot.fallback_reason } : {}), ...(o.hot.note ? { note: o.hot.note } : {}), ...(o.hot.path === "hot_reload" ? { hot_reload: { files: o.hot.files, elapsed_ms: o.hot.elapsed_ms, note: "Quick-fixed the installed app (no rebuild/reinstall) and relaunched it with the new code" } } : {}) } : {}),
+  ...(o.baseline?.recorded ? { baseline: o.baseline } : {}), build: o.build ? { artifacts: o.build.artifacts?.map((a: { path: string }) => a.path), elapsed_ms: o.build.elapsed_ms, warnings: o.build.warnings, ...(o.build.device_compat ? { device_compat: o.build.device_compat } : {}) } : undefined,
+  installed: o.install, launch: o.launch, ...(o.flow ? { flow: o.flow } : {}), assert: o.assert ?? undefined,
   ...(o.preflight ? { preflight: settlePreflight(o.preflight, !!o.build) } : {}),
 });
 defineJob<RunInput>({ kind: "build_run", steps: runSteps(true), summarize: runSummary });
 defineJob<RunInput>({ kind: "deploy", steps: runSteps(false), summarize: runSummary });
 
-defineJob<{ project: string; target?: string; id: string; variables: Record<string, string>; repair: boolean }>({
+defineJob<{ project: string; target?: string; id: string; variables: Record<string, string>; repair: boolean; snapshot?: boolean }>({
   kind: "flow_replay",
   steps: [{
     id: "replay",
@@ -229,7 +372,14 @@ defineJob<{ project: string; target?: string; id: string; variables: Record<stri
       const { replayFlow } = await import("./domains/flows.js");
       const target = await resolveTarget(ctx.input.target, ctx.signal);
       const info = await deviceInfo(target, ctx.signal);
-      return replayFlow(ctx.input.project, ctx.input.id, target, ctx.input.variables, { repair: ctx.input.repair, screen: info.screen ? { w: info.screen.width, h: info.screen.height } : undefined }, ctx.signal, ctx.log);
+      const screen = info.screen ? { w: info.screen.width, h: info.screen.height } : undefined;
+      const result = await replayFlow(ctx.input.project, ctx.input.id, target, ctx.input.variables, { repair: ctx.input.repair, screen }, ctx.signal, ctx.log);
+      if (!ctx.input.snapshot) return result;
+      // The page the flow proved it reached, compared with how it looked last time.
+      const { visualCheck } = await import("./domains/visual.js");
+      const visual = await visualCheck(target, { project: ctx.input.project, name: `flow-${ctx.input.id}` }, { model: info.model ?? info.name ?? target, size: screen }, ctx.signal)
+        .catch((e: Error) => ({ error: e.message }));
+      return { ...result, visual };
     },
   }],
   summarize: (o) => o.replay,

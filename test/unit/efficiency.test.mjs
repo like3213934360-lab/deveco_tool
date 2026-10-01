@@ -18,6 +18,13 @@ fs.writeFileSync(entry, [
   `export { snapshotSources, diffSources } from ${src("domains/preflight.ts")};`,
   `export { saveExecutedFlow, readFlow } from ${src("domains/flows.ts")};`,
   `export { parseSourceRefs, resolveRef, locate, snippet } from ${src("domains/sourcemap.ts")};`,
+  `export { BuildOutputParser } from ${src("domains/project.ts")};`,
+  `export { noteLaunch, noteTaps, repeatSuggestion, resetRepeats } from ${src("domains/repeat.ts")};`,
+  `export { decideHot, changedInputs, inputsSnapshot } from ${src("domains/hotpath.ts")};`,
+  `export { encodePng, decodeGray, compareGray, annotate, baselinePath } from ${src("domains/visual.ts")};`,
+  `export { pngGray } from ${src("domains/ui.ts")};`,
+  `export { parseComposerFps, mergeFrames, frameStats, perfVerdict, parseSpFps, parsePss } from ${src("domains/perf.ts")};`,
+  `export { buildFailureHints } from ${src("domains/diagnose.ts")};`,
 ].join("\n"));
 await build({ entryPoints: [entry], outfile: path.join(out, "entry.mjs"), bundle: true, format: "esm", platform: "node", packages: "external", logLevel: "error", nodePaths: [path.join(root, "node_modules")] });
 fs.symlinkSync(path.join(root, "node_modules"), path.join(out, "node_modules"), "junction");
@@ -136,6 +143,147 @@ test("locate: module names map to module folders, .ts frames find .ets sources, 
   assert.equal(m.resolveRef({ rel: "/etc/hosts", line: 1 }, project), undefined);
   assert.deepEqual(m.locate("no locations here", project), []);
   assert.deepEqual(m.locate("x.ets:1:1", undefined), []);
+});
+
+test("build parser: a failed signing step reports the signer's cause, not just 'Tools execution failed'", () => {
+  // MyStarRing on 2026-10-01: the debug certificate expired at 15:36.
+  const log = [
+    "> hvigor \u001b[91mERROR: Failed :phone:default@SignHap... \u001b[39m",
+    "> hvigor \u001b[91mERROR: Tools execution failed.",
+    "10-01 20:20:46.862  ERROR - The certificate has expired! NotAfter: Thu Oct 01 15:36:53 CST 2026",
+    "10-01 20:20:47.109  ERROR - ",
+    "ERROR: 11013002 Certificate format is incorrect, please check your appCertFile parameter.",
+    "Error Message: The certificate has expired! NotAfter: Thu Oct 01 15:36:53 CST 2026",
+    "> hvigor \u001b[91mERROR: BUILD FAILED in 5 s 937 ms \u001b[39m",
+  ];
+  const p = new m.BuildOutputParser("/proj");
+  for (const l of log) p.line(l);
+  const r = p.finish();
+  const errors = r.diagnostics.filter((d) => d.severity === "error");
+  assert.equal(errors.length, 1);
+  assert.equal(errors[0].code, "11013002");
+  assert.match(errors[0].message, /certificate has expired/);
+  assert.deepEqual(r.failed_tasks, ["phone:default@SignHap"]);
+  assert.ok(m.buildFailureHints(errors).some((h) => /expired.*sign action=auto force=true/.test(h)));
+  // Without a coded cause the generic line is still reported (never an empty error list).
+  const q = new m.BuildOutputParser("/proj");
+  for (const l of [log[0], log[1], log[6]]) q.line(l);
+  assert.deepEqual(q.finish().diagnostics.map((d) => d.message), ["Tools execution failed. (phone:default@SignHap)"]);
+});
+
+test("repeat detection: the same opening taps after a relaunch are suggested once, with exact selectors", () => {
+  m.resetRepeats();
+  const tools = { text: "工具", exact: true, clickable: true }, gif = { text: "视频转 GIF", exact: true };
+  m.noteLaunch("d1");
+  assert.equal(m.noteTaps("d1", [tools, gif]), undefined, "first walk: nothing to compare with");
+  m.noteLaunch("d1");
+  assert.equal(m.noteTaps("d1", [tools]), undefined, "one tap is not a path");
+  assert.deepEqual(m.noteTaps("d1", [gif]), [tools, gif], "same 2 taps after a relaunch (across calls)");
+  assert.equal(m.noteTaps("d1", []), undefined, "suggested only once");
+  // Another device has its own history; a coordinate tap breaks the path.
+  m.noteLaunch("d2");
+  assert.equal(m.noteTaps("d2", [tools, gif]), undefined);
+  m.noteLaunch("d2");
+  assert.equal(m.noteTaps("d2", [tools, undefined, gif]), undefined);
+  // A different start is not a repeat.
+  m.noteLaunch("d1");
+  assert.equal(m.noteTaps("d1", [{ text: "我的" }, gif]), undefined);
+  const s = m.repeatSuggestion([tools, gif]);
+  assert.deepEqual(s.steps, [{ op: "click", selector: tools }, { op: "click", selector: gif }]);
+  assert.match(s.note, /then_flow/);
+});
+
+test("auto hot reload: only provably equivalent changes are quick-fixed; every other case says why", () => {
+  const src = { "products/phone/src/main/ets/pages/Index.ets": "1:1:a", "features/tools/src/main/ets/A.ets": "1:1:b" };
+  const i1 = { "products/phone/src/main/resources/base/element/string.json": "1:1:r1" };
+  const state = { module: "phone", moduleRoot: "/p/products/phone", target: "D", install: "100:200", sources: src, inputs: i1 };
+  const now = (o = {}) => ({ target: "D", install: "100:200", running: true, sources: src, inputs: i1, moduleRel: "products/phone", ...o });
+  const edit = { ...src, "products/phone/src/main/ets/pages/Index.ets": "2:1:c" };
+  assert.deepEqual(m.decideHot(state, now({ sources: edit })), { hot: true, files: ["products/phone/src/main/ets/pages/Index.ets"] });
+  assert.equal(m.decideHot(state, now()).unchanged, true, "nothing changed: relaunch only");
+  const reason = (s, n) => m.decideHot(s, n).reason;
+  assert.match(reason(undefined, now()), /no quick-fix baseline/);
+  assert.match(reason({ ...state, install: "" }, now()), /no quick-fix baseline/);
+  assert.match(reason(state, now({ target: "E", sources: edit })), /another device/);
+  assert.match(reason(state, now({ install: "100:300", sources: edit })), /reinstalled/);
+  assert.match(reason(state, now({ running: false, sources: edit })), /not running/);
+  assert.match(reason(state, now({ inputs: { "products/phone/src/main/resources/base/element/string.json": "2:1:r2" }, sources: edit })), /resources, manifests or dependencies changed \(products\/phone\/src\/main\/resources/);
+  // A resource touched but restored (same content, new mtime) is not a change.
+  assert.equal(m.decideHot(state, now({ inputs: { "products/phone/src/main/resources/base/element/string.json": "9:1:r1" } })).unchanged, true);
+  assert.match(reason({ ...state, inputs: "legacy-digest" }, now()), /no quick-fix baseline/, "old state format is ignored");
+  assert.match(reason(state, now({ sources: { ...src, "products/phone/src/main/ets/pages/New.ets": "1:1:n" } })), /added/);
+  assert.match(reason(state, now({ sources: { "features/tools/src/main/ets/A.ets": "1:1:b" } })), /deleted/);
+  assert.match(reason(state, now({ sources: { ...src, "features/tools/src/main/ets/A.ets": "2:1:z" } })), /outside module phone/);
+  // A touched file with the same content is not a change.
+  assert.equal(m.decideHot(state, now({ sources: { ...src, "features/tools/src/main/ets/A.ets": "9:1:b" } })).unchanged, true);
+});
+
+test("perf: composer timestamps -> fps, percentiles and jank, independent of the idle refresh rate", () => {
+  const dump = ["", "----RenderService----", "The fps of screen [Id:0] is:", ...Array.from({ length: 5 }, (_, i) => String(32380167659063 - i * 8333333)), ""].join("\n");
+  assert.equal(m.parseComposerFps(dump).length, 5);
+  // 1 s of smooth 120 Hz, then a 3-frame hitch, then smooth again; a 2 s idle pause between gestures.
+  const t0 = 1e12, frame = 1e9 / 120, series = [];
+  let t = t0;
+  for (let i = 0; i < 120; i++) series.push((t += frame));
+  series.push((t += 4 * frame)); // 33 ms gap: 3 frames missed
+  for (let i = 0; i < 60; i++) series.push((t += frame));
+  t += 2e9; // idle
+  for (let i = 0; i < 60; i++) series.push((t += frame));
+  const merged = m.mergeFrames(series.slice(0, 150), series.slice(100)); // overlapping polls
+  assert.equal(merged.length, series.length);
+  const s = m.frameStats(merged, 60); // the device reported 60 Hz (idle reading): 120 Hz is inferred
+  assert.equal(s.refresh_hz, 120);
+  assert.equal(s.janky_frames, 1);
+  assert.equal(s.missed_frames, 3);
+  assert.ok(s.avg_fps > 115 && s.avg_fps < 120, String(s.avg_fps));
+  assert.equal(s.frame_ms.p50, 8.33);
+  assert.equal(s.frame_ms.max, 33.3);
+  assert.equal(m.perfVerdict(s), "smooth");
+  const bad = []; t = t0;
+  for (let i = 0; i < 100; i++) bad.push((t += i % 4 === 0 ? 4 * frame : frame));
+  assert.equal(m.perfVerdict(m.frameStats(bad, 120)), "janky");
+  assert.equal(m.frameStats([t0, t0 + frame], 120), undefined, "too few frames: no verdict");
+  assert.deepEqual(m.parseSpFps("set num:4 success\nfps:30|1790762831007\nfps:118|1790762834007\n"), [{ fps: 30, at: 1790762831007 }, { fps: 118, at: 1790762834007 }]);
+  assert.equal(m.parsePss("order:45 pss=900413\norder:46 refreshrate=60"), 900413);
+});
+
+test("visual: PNG round trip, unchanged screen = same, a moved card = one boxed region; bars ignored", () => {
+  const W = 120, H = 240;
+  const screen = (card = { x: 20, y: 60 }, clock = 0) => {
+    const g = new Uint8Array(W * H).fill(240);
+    for (let y = 0; y < 10; y++) for (let x = 0; x < W; x++) g[y * W + x] = clock; // status bar (top 6 %)
+    for (let y = card.y; y < card.y + 40; y++) for (let x = card.x; x < card.x + 50; x++) g[y * W + x] = 40;
+    return { width: W, height: H, gray: g };
+  };
+  const a = screen();
+  const png = m.encodePng(W, H, a.gray);
+  assert.deepEqual(m.decodeGray(png), a, "grayscale round trip");
+  // The RGB annotation decodes with the generic decoder too.
+  assert.equal(m.pngGray(m.annotate(a, [{ x: 0, y: 20, w: 30, h: 30 }])).width, W);
+  assert.deepEqual(m.compareGray(a, screen({ x: 20, y: 60 }, 255)), { changed_ratio: 0, regions: [] }, "clock change in the status bar is ignored");
+  const moved = m.compareGray(a, screen({ x: 20, y: 150 }));
+  assert.ok(moved.changed_ratio > 0.05);
+  assert.equal(moved.regions.length, 2, "old and new position are separate regions");
+  const r = moved.regions.find((x) => x.y >= 130);
+  assert.ok(r.x <= 20 && r.x + r.w >= 70 && r.y <= 150 && r.y + r.h >= 190, JSON.stringify(r));
+  assert.throws(() => m.compareGray(a, { width: 10, height: 10, gray: new Uint8Array(100) }), /differ in size/);
+  assert.match(m.baselinePath("/p", "gif-page", "VYG-AL00"), /\.arkpilot\/baselines\/gif-page@VYG-AL00\.png$/);
+  assert.throws(() => m.baselinePath("/p", "../x", "m"), /baseline name/);
+});
+
+test("hot path inputs: resources compared by content", () => {
+  const proj = fs.mkdtempSync(path.join(out, "in-"));
+  const f = path.join(proj, "entry/src/main/resources/base/element/string.json");
+  fs.mkdirSync(path.dirname(f), { recursive: true });
+  fs.writeFileSync(f, "{}");
+  fs.writeFileSync(path.join(proj, "entry/src/main/ets.ets"), "code");
+  const a = m.inputsSnapshot(proj);
+  assert.deepEqual(Object.keys(a), ["entry/src/main/resources/base/element/string.json"]);
+  const later = new Date(Date.now() + 5000);
+  fs.utimesSync(f, later, later);
+  assert.deepEqual(m.changedInputs(a, m.inputsSnapshot(proj, a)), [], "touched, same content");
+  fs.writeFileSync(f, '{"x":1}');
+  assert.deepEqual(m.changedInputs(a, m.inputsSnapshot(proj, a)), ["entry/src/main/resources/base/element/string.json"]);
 });
 
 test("saveExecutedFlow: executed batch becomes a replayable flow with secret input variables", () => {

@@ -201,15 +201,17 @@ export async function stopRecording(target: string, options: { project?: string;
 
 /* ---------------------------------- replay ---------------------------------- */
 
-export async function replayFlow(project: string, id: string, target: string, variables: Record<string, string>, options: { repair?: boolean; screen?: { w: number; h: number } }, signal: AbortSignal, log: (m: string) => void) {
+export async function replayFlow(project: string, id: string, target: string, variables: Record<string, string>, options: { repair?: boolean; screen?: { w: number; h: number }; attach?: boolean }, signal: AbortSignal, log: (m: string) => void) {
   const flow = readFlow(project, id);
   const missing = Object.entries(flow.variables).filter(([k, v]) => v.required && variables[k] === undefined).map(([k]) => k);
   invariant(!missing.length, "INVALID_INPUT", `Missing flow variables: ${missing.join(", ")}`, { variables: Object.keys(flow.variables) });
-  if (flow.start.mode === "restart") {
+  // attach: the app was just (re)launched by the caller (run then_flow), so do not restart it again.
+  if (flow.start.mode === "restart" && !options.attach) {
     await forceStop(target, flow.app.bundleName, signal).catch(() => {});
     await launch(target, flow.app.bundleName, flow.app.ability, flow.app.module, signal);
-    await waitFor(target, { bundle: flow.app.bundleName }, "visible", 10000, signal);
+    (await import("./repeat.js")).noteLaunch(target);
   }
+  if (flow.start.mode === "restart") await waitFor(target, { bundle: flow.app.bundleName }, "visible", 10000, signal);
   let repaired = false;
   const results: { step: string; ok: boolean; detail?: unknown }[] = [];
   const screen = options.screen;

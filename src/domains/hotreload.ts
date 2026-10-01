@@ -189,19 +189,20 @@ export async function applyHotReload(project: Project, module: string, signal: A
   } finally {
     void shell(baseline.target, ["rm", "-rf", remote]).catch(() => {});
   }
+  let launch: Awaited<ReturnType<typeof import("./device.js").launchAndCheck>> | undefined;
   if (options.restart && options.ability) {
     // `devecocli run --apply`: quick fix then relaunch, so startup code also runs the patch.
     const { launchAndCheck } = await import("./device.js");
     const { mainAbility } = await import("./project.js");
     const main = mainAbility(project, module);
-    await launchAndCheck(baseline.target, baseline.bundle, options.ability ?? main.ability, main.module, signal, 1500);
+    launch = await launchAndCheck(baseline.target, baseline.bundle, options.ability ?? main.ability, main.module, signal, 1500);
   }
   const after = await pidOf(baseline.target, baseline.bundle, signal);
   // Commit the new baseline so the next apply only sends newer changes.
   fs.writeFileSync(file, JSON.stringify({ ...baseline, files: current, at: Date.now() }));
   return {
     applied: true, files: changed.map((f) => path.relative(project.root, f)), added: added.length,
-    restarted: after !== pid, pid: after,
+    restarted: after !== pid, pid: after, ...(launch ? { launch } : {}),
     note: "Verify the change with ui observe/assert",
   };
 }
