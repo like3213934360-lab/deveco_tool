@@ -44,10 +44,12 @@ export function parseCrash(text: string, source?: string): CrashSignature {
     const hilog = /\b(TypeError|ReferenceError|RangeError|SyntaxError|URIError|BusinessError|OutOfMemoryError|Error):\s*(.+)/.exec(primary);
     if (hilog) { kind = hilog[1]; message ??= hilog[2]; }
   }
-  const stackStart = primary.search(/^\s*(Stacktrace|Stack|Tid:\d+)/m);
-  // Only the crashing thread: stop at the next "Tid:" / "Other thread" block.
+  const stackStart = primary.search(/^\s*(Stacktrace|Stack|Fault thread info:|Tid:\d+)/m);
+  // Only the crashing thread: from the stack start up to the next thread header. A stack that starts
+  // with its own "Tid:" line (or "Fault thread info:" + "Tid:") must not swallow the next thread.
   const stackText = stackStart >= 0 ? primary.slice(stackStart) : primary;
-  const firstThread = stackText.split(/\n\s*(?:Tid:\d+|Other thread info:|Thread name:)/).slice(0, stackText.trimStart().startsWith("Tid:") ? 2 : 1).join("\n");
+  const head = /^\s*(?:Fault thread info:\s*\n\s*)?Tid:\d+[^\n]*\n?/.exec(stackText)?.[0] ?? "";
+  const firstThread = stackText.slice(head.length).split(/\n\s*(?:Tid:\d+|Other thread info:|Thread name:)/)[0]!;
   const frames = firstThread
     .split(/\r?\n/)
     .map((l) => l.trim())

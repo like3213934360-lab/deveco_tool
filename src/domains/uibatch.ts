@@ -1,17 +1,55 @@
 import { ToolError } from "../core/errors.js";
-import { act, center, describe, dumpTree, invalidate, select, treeSignature, waitFor, type Action, type Selector, type UiNode } from "./ui.js";
+import { act, center, describe, dumpTree, invalidate, pickMatch, select, treeSignature, waitFor, type Action, type Selector, type UiNode } from "./ui.js";
 
 /* ------------------------------ screen diff ------------------------------ */
 
-/** Labelled / interactive nodes identify what a user sees; layout-only containers are noise. */
-function labels(nodes: UiNode[], bundle?: string) {
+const SYSTEM_BUNDLE = /^com\.(ohos|huawei\.hmos)\.(systemui|sceneboard|launcher|notificationdialog|permissionmanager)/;
+
+/** The app's bundle: the non-system bundle owning most labelled nodes. Pure. */
+export function appBundle(nodes: UiNode[]) {
+  const counts = new Map<string, number>();
+  for (const n of nodes) if (n.bundle && (n.text || n.key) && !SYSTEM_BUNDLE.test(n.bundle)) counts.set(n.bundle, (counts.get(n.bundle) ?? 0) + 1);
+  return [...counts].sort((x, y) => y[1] - x[1])[0]?.[0];
+}
+
+/** Screen bounds: the largest root rectangle in the dump. */
+function screenOf(nodes: UiNode[]) {
+  let w = 0, h = 0;
+  for (const n of nodes) if (n.rect && n.depth <= 1) { w = Math.max(w, n.rect.x2); h = Math.max(h, n.rect.y2); }
+  return w && h ? { w, h } : undefined;
+}
+
+/**
+ * Labelled / interactive nodes identify what a user sees; layout-only containers are noise.
+ * With onScreen, nodes whose centre lies outside the screen (list items scrolled away, hidden tab
+ * pages kept in the tree) are skipped.
+ */
+function labels(nodes: UiNode[], bundle?: string, onScreen = false) {
   const out = new Map<string, UiNode>();
+  const screen = onScreen ? screenOf(nodes) : undefined;
   for (const n of nodes) {
     if (!n.rect || n.visible === false || n.rect.x2 <= n.rect.x1 || n.rect.y2 <= n.rect.y1) continue;
     if (bundle && n.bundle !== bundle) continue;
     if (!n.text && !n.key) continue;
+    if (screen) {
+      const cx = (n.rect.x1 + n.rect.x2) / 2, cy = (n.rect.y1 + n.rect.y2) / 2;
+      if (cx < 0 || cy < 0 || cx > screen.w || cy > screen.h) continue;
+    }
     const id = `${n.type}|${n.text}|${n.key ?? ""}`;
     if (!out.has(id)) out.set(id, n);
+  }
+  return out;
+}
+
+/** Page and overlay containers: when one appears or disappears the user is on another page/layer. */
+const PAGE = /^(NavDestination|Dialog|Popup|Sheet|Menu)$/;
+const PAGE_KEY = /modal|dialog|sheet|popup|destination/i;
+function pages(nodes: UiNode[], bundle?: string) {
+  const out = new Set<string>();
+  for (const n of nodes) {
+    if (bundle && n.bundle !== bundle) continue;
+    if (!n.rect || n.visible === false || n.rect.x2 <= n.rect.x1 || n.rect.y2 <= n.rect.y1) continue;
+    if (PAGE.test(n.type) || (n.key && PAGE_KEY.test(n.key))) out.add(`${n.type}|${n.key ?? ""}|${n.text}`);
   }
   return out;
 }
@@ -20,12 +58,12 @@ function labels(nodes: UiNode[], bundle?: string) {
  * app's bundle is known or can be inferred as the bundle owning most labelled nodes.
  */
 export function visibleLabels(nodes: UiNode[], bundle?: string, limit = 25) {
-  const counts = new Map<string, number>();
-  for (const n of nodes) if (n.bundle && (n.text || n.key)) counts.set(n.bundle, (counts.get(n.bundle) ?? 0) + 1);
-  const system = /^com\.(ohos|huawei\.hmos)\.(systemui|sceneboard|launcher)/;
-  const app = bundle ?? [...counts].filter(([b]) => !system.test(b)).sort((x, y) => y[1] - x[1])[0]?.[0];
+  const app = bundle ?? appBundle(nodes);
   const own = [...labels(nodes, app).values()].filter((n) => n.text || n.clickable);
-  return (own.length ? own : [...labels(nodes).values()]).slice(0, limit).map(label);
+  // A system dialog in front of the app (permission/notification) is what the user sees: list it first.
+  const overlay = [...labels(nodes).values()].filter((n) => n.bundle && SYSTEM_BUNDLE.test(n.bundle) && /notificationdialog|permissionmanager/.test(n.bundle) && (n.text || n.clickable));
+  const shown = [...overlay, ...own];
+  return (shown.length ? shown : [...labels(nodes).values()]).slice(0, limit).map(label);
 }
 
 const label = (n: UiNode) => {
@@ -34,19 +72,29 @@ const label = (n: UiNode) => {
 };
 
 /**
- * Another page: most of what was on screen is gone AND most of what is on screen now is new
- * (a dialog or an expanded row keeps most of the old content; a tab switch keeps the tab bar only).
+ * Another page or layer, from three independent signals on the app's own on-screen elements:
+ *  1. a page/overlay container (NavDestination, Dialog, a "modal"/"sheet" layer...) appeared or vanished;
+ *  2. at least half of the labelled elements on screen were replaced (tab switch, full-screen page);
+ *  3. the app's window changed.
  */
-function navigated(beforeSize: number, afterSize: number, added: number, removed: number) {
-  return removed >= 3 && added >= 3 && removed / Math.max(1, beforeSize) >= 0.6 && added / Math.max(1, afterSize) >= 0.5;
+function navigated(before: UiNode[], after: UiNode[], bundle: string | undefined, a: Map<string, UiNode>, b: Map<string, UiNode>) {
+  const pa = pages(before, bundle), pb = pages(after, bundle);
+  if ([...pa].some((p) => !pb.has(p)) || [...pb].some((p) => !pa.has(p))) return true;
+  const added = [...b.keys()].filter((k) => !a.has(k)).length, removed = [...a.keys()].filter((k) => !b.has(k)).length;
+  // Tab switches keep the tab bar, so only one side reaches half (tools tab: +20 of 25 new, -5 of 10 old).
+  if (added >= 3 && removed >= 3 && (removed / Math.max(1, a.size) >= 0.5 || added / Math.max(1, b.size) >= 0.5)) return true;
+  const win = (nodes: UiNode[]) => nodes.find((n) => n.bundle === bundle && n.window)?.window;
+  return !!bundle && !!win(before) && !!win(after) && win(before) !== win(after);
 }
 
 /**
  * What changed on screen after an action, in a few hundred bytes: added/removed labelled elements
- * (the new page's content when navigating) so the caller rarely needs a follow-up observe.
+ * of the app (system UI such as the status bar is left out; so are elements scrolled off screen),
+ * so the caller rarely needs a follow-up observe.
  */
-export function screenDiff(before: UiNode[], after: UiNode[], limit = 10) {
-  const a = labels(before), b = labels(after);
+export function screenDiff(before: UiNode[], after: UiNode[], limit = 10, bundle?: string) {
+  const app = bundle ?? appBundle(after) ?? appBundle(before);
+  const a = labels(before, app, true), b = labels(after, app, true);
   const added = [...b].filter(([k]) => !a.has(k)).map(([, n]) => n);
   const removed = [...a].filter(([k]) => !b.has(k)).map(([, n]) => n);
   // Stable order: top-to-bottom, left-to-right, the way a person reads the page.
@@ -54,7 +102,8 @@ export function screenDiff(before: UiNode[], after: UiNode[], limit = 10) {
   added.sort(order); removed.sort(order);
   // Same labels can still change state or position (toggle checked, list scrolled): the full tree
   // signature (type, text, bounds, checked, selected) catches those.
-  const changed = added.length > 0 || removed.length > 0 || treeSignature(before) !== treeSignature(after);
+  const own = (nodes: UiNode[]) => (app ? nodes.filter((n) => n.bundle === app) : nodes);
+  const changed = added.length > 0 || removed.length > 0 || treeSignature(own(before)) !== treeSignature(own(after));
   return {
     changed,
     added: added.slice(0, limit).map(label),
@@ -62,7 +111,7 @@ export function screenDiff(before: UiNode[], after: UiNode[], limit = 10) {
     ...(added.length > limit ? { more_added: added.length - limit } : {}),
     ...(removed.length > limit ? { more_removed: removed.length - limit } : {}),
     // Mostly replaced content = navigated to another page; otherwise an in-page update.
-    kind: !changed ? "none" : navigated(a.size, b.size, added.length, removed.length) ? "navigated" : added.length || removed.length ? "updated" : "state",
+    kind: !changed ? "none" : navigated(before, after, app, a, b) ? "navigated" : added.length || removed.length ? "updated" : "state",
   } as const;
 }
 
@@ -105,20 +154,14 @@ export function stepAction(s: BatchStep, point?: { x: number; y: number }): Acti
   }
 }
 
-/** Pick one node for a selector: exact single match, the single clickable one, or explicit index. */
-function pick(matches: UiNode[], selector: Selector) {
-  if (matches.length === 1 || selector.index !== undefined) return matches[0];
-  const clickable = matches.filter((m) => m.clickable);
-  if (clickable.length === 1) return clickable[0];
-  // Same label twice (e.g. a tab title repeated in the page header): the top-most is the stable choice.
-  if (matches.every((m) => m.text === matches[0]!.text)) return [...matches].sort((a, b) => a.rect!.y1 - b.rect!.y1 || a.rect!.x1 - b.rect!.x1)[0];
-  return undefined;
-}
+const pick = pickMatch;
 
 export interface BatchResult {
   passed: boolean;
   steps: { i: number; op: string; ok: boolean; target?: string; ms: number; error?: string }[];
   failed_step?: number;
+  /** set when the call ran out of time: call again with steps from this index */
+  stopped_at?: number;
   error?: { code: string; message: string };
   visible?: string[];
   after?: ReturnType<typeof screenDiff>;
@@ -131,28 +174,45 @@ export interface BatchResult {
  * appears, so no fixed sleeps are needed between steps: the dump that locates the next element
  * also proves the previous action took effect. Stops at the first failing step.
  */
-export async function runBatch(target: string, steps: BatchStep[], options: { assert?: { visible?: Selector; hidden?: Selector; timeout_ms?: number }; bundle?: string }, signal: AbortSignal): Promise<BatchResult> {
+export async function runBatch(target: string, steps: BatchStep[], options: { assert?: { visible?: Selector; hidden?: Selector; timeout_ms?: number }; bundle?: string; budgetMs?: number }, signal: AbortSignal): Promise<BatchResult> {
   const results: BatchResult["steps"] = [];
   const executed: BatchResult["executed"] = [];
+  // One call must answer before the host's request timeout: every wait is bounded by what is left.
+  const callDeadline = Date.now() + (options.budgetMs ?? 52000);
+  const left = () => callDeadline - Date.now();
   const first = await dumpTree(target, signal, 1500);
   let last = first;
+  let fresh = true; // `last` reflects the screen after the latest action
+  // A step locating its element by selector needs a tree taken after the previous action.
+  const wantsTree = (s: BatchStep | undefined) => !!s && !!s.selector && needsPoint.has(s.op);
   for (let i = 0; i < steps.length; i++) {
     signal.throwIfAborted();
     const s = steps[i]!;
     const started = Date.now();
+    if (left() < 1500) {
+      // Out of time: report what was done and where to resume, instead of letting the host time out.
+      const nodes = await dumpTree(target, signal).catch(() => last);
+      return {
+        passed: false, steps: results, failed_step: i, stopped_at: i, executed,
+        error: { code: "TIMEOUT", message: `Stopped before step ${i}: one call may take at most ${Math.round((options.budgetMs ?? 52000) / 1000)} s` },
+        visible: visibleLabels(nodes, options.bundle), after: screenDiff(first, nodes, 10, options.bundle),
+      };
+    }
     try {
       if (s.op === "wait") {
         if (s.selector) {
-          const verdict = await waitFor(target, s.selector, "visible", s.timeout_ms ?? 10000, signal);
+          const verdict = await waitFor(target, s.selector, "visible", Math.min(s.timeout_ms ?? 10000, left() - 1000), signal);
           if (!verdict.passed) throw new ToolError("UI_NOT_FOUND", "Element did not appear", { selector: s.selector });
-        } else await new Promise((r) => setTimeout(r, Math.min(s.ms ?? 500, 10000)));
+          fresh = false;
+        } else await new Promise((r) => setTimeout(r, Math.min(s.ms ?? 500, 10000, Math.max(0, left() - 1500))));
         results.push({ i, op: "wait", ok: true, ms: Date.now() - started });
         continue;
       }
       let point: { x: number; y: number } | undefined;
       let hit: UiNode | undefined;
       if (s.selector && needsPoint.has(s.op)) {
-        const deadline = Date.now() + (s.timeout_ms ?? 10000);
+        if (!fresh) { invalidate(target); last = await dumpTree(target, signal); fresh = true; }
+        const deadline = Date.now() + Math.min(s.timeout_ms ?? 10000, left() - 1000);
         let ambiguous: UiNode[] | undefined;
         for (;;) {
           const matches = select(last, s.selector);
@@ -174,9 +234,13 @@ export async function runBatch(target: string, steps: BatchStep[], options: { as
       await act(target, action, signal);
       executed.push({ action, selector: s.selector });
       results.push({ i, op: s.op, ok: true, ...(hit ? { target: label(hit) } : {}), ms: Date.now() - started });
-      // Next selector step re-dumps on demand; give the UI a short beat to start its transition.
-      await new Promise((r) => setTimeout(r, 250));
-      last = await dumpTree(target, signal);
+      fresh = false;
+      // Dump only when the next step has to find an element (it also proves this step took effect);
+      // gestures, keys and coordinate taps need no tree. The final tree is taken once at the end.
+      if (wantsTree(steps[i + 1])) {
+        await new Promise((r) => setTimeout(r, 250));
+        last = await dumpTree(target, signal); fresh = true;
+      }
     } catch (error) {
       const e = error as ToolError;
       results.push({ i, op: s.op, ok: false, ms: Date.now() - started, error: e.message });
@@ -185,18 +249,19 @@ export async function runBatch(target: string, steps: BatchStep[], options: { as
         passed: false, steps: results, failed_step: i, executed,
         error: { code: e.code ?? "UI_ACTION_FAILED", message: e.message },
         visible: visibleLabels(nodes, options.bundle),
-        after: screenDiff(first, nodes),
+        after: screenDiff(first, nodes, 10, options.bundle),
       };
     }
   }
   let assertion: Awaited<ReturnType<typeof waitFor>> | undefined;
   if (options.assert && (options.assert.visible || options.assert.hidden)) {
     const selector = (options.assert.visible ?? options.assert.hidden)!;
-    assertion = await waitFor(target, selector, options.assert.visible ? "visible" : "hidden", options.assert.timeout_ms ?? 5000, signal);
-    last = await dumpTree(target, signal, 1500);
+    assertion = await waitFor(target, selector, options.assert.visible ? "visible" : "hidden", Math.max(500, Math.min(options.assert.timeout_ms ?? 5000, left() - 1500)), signal);
+    last = await dumpTree(target, signal, 1500); fresh = true;
   }
+  if (!fresh) { await new Promise((r) => setTimeout(r, 250)); invalidate(target); last = await dumpTree(target, signal); }
   return {
-    passed: !assertion || assertion.passed, steps: results, executed, after: screenDiff(first, last),
+    passed: !assertion || assertion.passed, steps: results, executed, after: screenDiff(first, last, 10, options.bundle),
     ...(assertion ? { assert: assertion } : {}),
   };
 }

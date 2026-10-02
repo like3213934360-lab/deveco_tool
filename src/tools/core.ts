@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { invariant } from "../core/errors.js";
 import * as repeatModule from "../domains/repeat.js";
-import { fields, MAX_WAIT_MS, tool } from "../registry.js";
+import { fields, MAX_WAIT_MS, SYNC_WAIT_MS, tool } from "../registry.js";
 
 /* Job definitions are registered lazily the first time a job-producing tool runs. */
 let jobsReady: Promise<void> | undefined;
@@ -36,21 +36,16 @@ export const projectTool = tool({
   name: "project",
   title: "Project create/sync/build",
   description: [
-    "HarmonyOS project operations.",
-    "info: read product/modules/SDK (instant).",
-    "create: new app from the built-in template (does not overwrite).",
-    "sync: ohpm install + hvigor sync (job).",
-    "build: advisory ArkTS preflight (only files edited since the last preflight; no separate code check needed) + hvigor build (job); returns packages, or every compile error (code, file, line, message; the first 100 listed, the rest counted) with fix hints (hvigor decides; preflight findings never block).",
-    "Dependencies are installed automatically when oh-package.json5 / build-profile.json5 changed since the last install. modules accept name@target; mode must be debug, release or a buildModeSet name.",
-    "clean: hvigor clean.",
-    "Build/sync return a job: if status is running, call job action=wait.",
+    "HarmonyOS project operations. info (instant); create from the built-in template (never overwrites); clean.",
+    "sync: ohpm install + hvigor sync (job). build (job): preflight of edited files (advisory, never blocks) + hvigor; returns packages or every compile error (code, file, line, message, code around it; first 100 listed) with fix hints. Dependencies install automatically when oh-package.json5/build-profile.json5 changed.",
+    "Jobs still running: call job action=wait.",
   ].join(" "),
   schema: z.object({
     action: z.enum(["info", "create", "sync", "build", "clean"]),
     project: fields.project,
     product: fields.product,
     modules: fields.modules,
-    task: z.enum(["assembleHap", "assembleHar", "assembleHsp", "assembleApp", "compileNative"]).optional().describe("build: default assembleHap; compileNative compiles C/C++ only and writes .idea/.deveco/cxx/compile_commands.json for clangd"),
+    task: z.enum(["assembleHap", "assembleHar", "assembleHsp", "assembleApp", "compileNative"]).optional().describe("build: default assembleHap; compileNative writes compile_commands.json for clangd"),
     mode: z.string().optional().describe("build: buildMode, default debug"),
     clean: z.boolean().optional().describe("build: clean first"),
     preflight: z.boolean().optional().describe("build: run the advisory ArkTS static check first (default true; reported, never blocks)"),
@@ -108,30 +103,31 @@ export const selectorSchema = z.object({
   index: z.number().int().min(0).optional().describe("Pick the n-th match when several match"),
 }).meta({ id: "Selector" }); // emitted once per tool as $defs/Selector
 
+const uiOpSchema = z.enum(["click", "double_click", "long_click", "input", "type", "swipe", "drag", "fling", "scroll", "key",
+  "mouse_click", "mouse_double_click", "mouse_long_click", "mouse_move", "mouse_scroll", "mouse_drag"]).meta({ id: "UiOp" });
 const batchStepSchema = z.object({
-  op: z.enum(["click", "double_click", "long_click", "input", "type", "swipe", "drag", "fling", "scroll", "key",
-    "mouse_click", "mouse_double_click", "mouse_long_click", "mouse_move", "mouse_scroll", "mouse_drag", "wait"]),
+  op: z.union([uiOpSchema, z.literal("wait")]),
   selector: selectorSchema.optional(),
   x: z.number().int().optional(), y: z.number().int().optional(), x2: z.number().int().optional(), y2: z.number().int().optional(),
   text: z.string().optional(), append: z.boolean().optional(), key: z.string().optional(), keys: z.array(z.string()).min(1).max(3).optional(),
   direction: z.enum(["up", "down", "left", "right"]).optional(), speed: z.number().int().min(200).max(40000).optional(),
   button: z.enum(["left", "right", "middle"]).optional(), ticks: z.number().int().min(1).max(50).optional(),
   ms: z.number().int().min(0).max(10000).optional().describe("wait without selector: pause in ms"),
-  timeout_ms: z.number().int().min(100).max(60000).optional().describe("how long to wait for the selector (default 10000)"),
+  timeout_ms: z.number().int().min(100).optional().describe("selector wait (default 10000)"),
 }).strict();
 
 export const runTool = tool({
   name: "run",
   title: "Deploy and launch",
   description: [
-    "Put the app on a device. Multi-device apps (e.g. phone + watch entry modules): only the modules whose module.json5 deviceTypes match the target device are built and installed (pass modules/module to choose explicitly). Project signing (build-profile or hvigorfile overrides) is used as-is.",
-    "build_run: ArkTS preflight of the edited files + build + install + launch + startup check (crash detection) — the usual 'run it' action; call it right after editing (no code check first).",
-    "deploy: install already-built packages (latest outputs) + launch.",
-    "launch: start the installed app. stop: force-stop. uninstall: remove the app (uninstalled:false with reason not_installed when it was not installed).",
-    "Several devices connected and no target: the call fails with DEVICE_AMBIGUOUS listing them — ask the user which one, never pick yourself.",
-    "Pass assert to verify a UI outcome after launch (e.g. {visible:{text:'Welcome'}}). then_flow=<ui_flow id> walks to the page you are working on right after launch (save the path once with ui act steps + save_flow).",
-    "Fast iterations are automatic (run_mode=auto, default): from the second build_run of a project on a device, when only .ets/.ts code of the entry module changed and the app is still the installed and running copy, the running app is quick-fixed in seconds instead of rebuilt and reinstalled; anything else (resources, manifests, other modules, new/deleted files, a failed patch) deploys normally. The result says path=hot_reload|full and fallback_reason. run_mode=full always deploys.",
-    "hot_reload=true on build_run installs a hot-reload build; then use hot_reload tool for instant updates.",
+    "Put the app on a device (only the modules whose deviceTypes match it; project signing used as-is).",
+    "build_run: preflight of edited files + build + install + launch + crash check - call it right after editing, no code check first.",
+    "From the second build_run on a device (run_mode=auto, default), a code-only change of the entry module is quick-fixed into the running app in seconds; anything else deploys fully. Result: path=hot_reload|full|relaunch, fallback_reason. run_mode=full always deploys.",
+    "A startup crash fails with LAUNCH_FAILED and crash.source (project file, line, code).",
+    "then_flow=<ui_flow id>: walk to the page you work on after launch. assert: verify the launch screen.",
+    "deploy: install the latest build + launch. launch / stop / uninstall.",
+    "Several devices and no target: DEVICE_AMBIGUOUS lists them - ask the user, never pick yourself.",
+    "hot_reload=true installs a build for the hot_reload tool.",
   ].join(" "),
   schema: z.object({
     action: z.enum(["build_run", "deploy", "launch", "stop", "uninstall"]),
@@ -146,8 +142,8 @@ export const runTool = tool({
     hot_reload: z.boolean().optional(),
     skip_build: z.boolean().optional().describe("build_run: deploy the latest built packages without building (same as action=deploy)"),
     uninstall_first: z.boolean().optional().describe("build_run/deploy: uninstall the app before installing (clears app data)"),
-    run_mode: z.enum(["auto", "full"]).optional().describe("build_run: auto (default) quick-fixes code-only changes of the entry module in the running app; full always builds and reinstalls"),
-    then_flow: z.string().optional().describe("build_run/deploy: after launch, replay this saved ui_flow (lands on the page you are working on); a flow that no longer matches is reported, the deploy still succeeds"),
+    run_mode: z.enum(["auto", "full"]).optional().describe("build_run: auto (default) quick-fixes code-only changes; full always reinstalls"),
+    then_flow: z.string().optional().describe("build_run/deploy: replay this ui_flow after launch (a mismatch is reported, the deploy still succeeds)"),
     flow_variables: z.record(z.string(), z.string()).optional().describe("then_flow: values for its ${var} inputs"),
     request_key: fields.requestKey,
     wait: fields.wait,
@@ -192,7 +188,7 @@ export const runTool = tool({
 export const jobTool = tool({
   name: "job",
   title: "Long-running jobs",
-  description: `Track jobs started by project/run/ui_flow. wait: block up to wait ms (default 20000, at most ${MAX_WAIT_MS}; call again while running) for completion. status/list/cancel. resume: continue an interrupted or needs_input job (force=true re-runs an uncertain step after you inspected it); it returns status running — then use wait. read: page a log/report artifact by line, optionally filtered with grep.`,
+  description: `Jobs of project/run/ui_flow/ui layout. wait (default 20000, max ${MAX_WAIT_MS} ms; call again while running), status, list, cancel; resume an interrupted/needs_input job (force=true re-runs an uncertain step after checking it). read: page an artifact (log, report, image) by line, grep to filter.`,
   schema: z.object({
     action: z.enum(["wait", "status", "list", "cancel", "resume", "read"]),
     job_id: z.string().optional(),
@@ -238,13 +234,10 @@ export const codeTool = tool({
   title: "Code intelligence & checks",
   readOnly: true,
   description: [
-    "ArkTS/C++ code checks and language server queries against the project's SDK.",
-    "check: fast ArkTS static check (files, or whole project) with error-fix hints — for checking without building; project build / run build_run already check the edited files. fix=true applies upstream safe auto-fixes. The compiler is the final judge: if project build succeeds, code it flagged is valid — do not rewrite it.",
-    "lint: Code Linter report. api_scan: API compatibility between SDK versions.",
-    "lsp: hover (types/signatures), definition, implementation, references, symbols, workspace_symbols, diagnostics (multiple files), completion (available members), signature.",
-    "Locate positions with symbol (plus optional line hint) instead of exact columns.",
-    "lsp op=call_hierarchy direction=incoming|outgoing: callers / callees of a function (C/C++: incoming only). op=declaration differs from definition for ArkTS re-exports.",
-    "lint: config_path, incremental (uncommitted files only), output_path. api_scan: modules or files, output_path. lsp_restart language=arkts|cpp|all. api_versions: SDK versions accepted by api_scan from/to.",
+    "ArkTS/C++ checks and language-server queries against the project's SDK.",
+    "check: fast ArkTS static check with fix hints, for checking without building (project build / run build_run already check edited files); fix=true applies safe auto-fixes. The compiler is the final judge: code a successful build accepts is valid.",
+    "lint: Code Linter report. api_scan / api_versions: API compatibility between SDK versions.",
+    "lsp op: hover, definition, declaration, implementation, references, symbols, workspace_symbols, diagnostics, completion, signature, call_hierarchy (direction). Locate by symbol (+ line hint). lsp_restart.",
   ].join(" "),
   schema: z.object({
     action: z.enum(["check", "lint", "api_scan", "api_versions", "lsp", "lsp_restart"]),
@@ -302,7 +295,7 @@ export const codeTool = tool({
 export const deviceTool = tool({
   name: "device",
   title: "Devices, logs, files",
-  description: "HDC device access. list: connected devices. info: model/API/screen. log: recent hilog (filter by bundle, grep, level; from/to time window like from=5m to=1m; follow=true + cursor streams new lines across calls; clear=true clears). shell: read-only inspection commands (ls, cat, ps, param get, bm dump, hidumper...). sqlite: query an on-device database (db path + sql; JSON rows; read-only unless write=true). send/recv: transfer files.",
+  description: "Devices. list; info (model/API/screen). log: hilog filtered by bundle/grep/level, from/to window (from=5m), follow+cursor, clear; project= locates source lines. shell: read-only commands. sqlite: query an on-device database (read-only unless write=true). send/recv files.",
   schema: z.object({
     action: z.enum(["list", "info", "log", "shell", "sqlite", "send", "recv"]),
     db: z.string().optional().describe("sqlite: absolute device path, or an app RDB store name (e.g. app.db) together with bundle (+ module, default entry) of a debuggable app"),
@@ -367,18 +360,15 @@ export const uiTool = tool({
   title: "Device UI",
   description: [
     "Observe and operate the device UI.",
-    "observe: screenshot + compact element list (#index Type [bounds] \"text\" key=..). screenshot / tree for one of them.",
-    "find: elements matching a selector.",
-    "act: click/double_click/long_click (selector or x,y), input (types text into a field; Chinese supported), type (into the focused field), swipe/drag/fling (x,y,x2,y2), scroll (direction), key (back/home/enter/...; keys=[\"ctrl\",\"a\"] for chords up to 3), mouse_click/mouse_double_click/mouse_long_click (button, keys modifiers), mouse_move, mouse_scroll (direction up/down, ticks), mouse_drag (x2,y2) for 2in1/tablet.",
-    "act returns after={changed, kind: none/updated/navigated, added, removed}: the elements that appeared/disappeared, so no observe is needed just to see the result (diff=false skips it).",
-    "act steps=[{op, selector|x,y, text...}, {op:'wait', selector}] runs a whole path in ONE call (each step waits for its element; stops at the first failure and lists what is visible); add assert to verify the goal, and save_flow={project,id} to store the path for run then_flow / ui_flow replay.",
-    "assert: wait until a selector is visible/hidden — use this to verify outcomes, not screenshots.",
-    "windows: list app windows (all=true includes system windows); tree/observe accept window id and depth; tree all_windows=true merges every window, node=<id> returns one component subtree; screenshot display=<id>, save_path.",
-    "visual: screenshot regression check — compares the screen with the baseline saved under name (per device model, in <project>/.arkpilot/baselines; the first call saves it, update=true replaces it): same, changed_ratio, changed regions (device pixels) and diff_artifact (current screen with changes boxed in red). Status/navigation bars are ignored.",
-    "layout: check the current screen for layout bugs (elements off screen, overlapping tap targets, clipped or collapsed text, tiny tap targets); forms=[foldable,widefold,triplefold] instead runs a job that installs the latest build on an emulator of each form (created/started as needed, stopped afterwards), optionally walks then_flow, and checks every fold state.",
-    "perf: scroll smoothness check of the current screen — flings up/down (repeat, default 3; or your own gestures via steps of swipe/fling/scroll) and measures every composed frame: avg_fps, frame_ms p50/p95/max, janky_frames, jank_rate, verdict (smooth/minor_jank/janky), plus app memory (pss) before/after when bundle is given.",
-    "record_start/record_stop/record_status: screen recording to mp4 (real devices; stop discard=true drops it, external=true stops a foreign recording).",
-    "UI test sessions (you execute the plan and judge visuals): test_start(plan, project or bundle, fresh_start) -> test_step(op+selector or visible/hidden assert, description) per item -> review(requirement) returns a screenshot, then review(outcome, reason) -> test_finish -> test_log / test_export(directory).",
+    "observe: screenshot + element list; screenshot, tree (window, depth, all_windows, node), find, windows.",
+    "act op: click/double_click/long_click (selector or x,y), input (into a field, any text), type, swipe/drag/fling (x,y,x2,y2), scroll, key (or keys chord), mouse_* for 2in1/tablet.",
+    "act returns after={changed, kind none/state/updated/navigated, added, removed} for the app's on-screen elements, so observe is rarely needed.",
+    "act steps=[...] runs a whole path in ONE call (each step waits for its element; stops at the first failure listing what is visible). Put assert in the same call to verify the goal; save_flow={project,id} keeps the path for run then_flow. One call lasts at most ~52 s (stopped_at tells where to continue).",
+    "assert: wait until a selector is visible/hidden (verify outcomes this way, not by screenshots).",
+    "visual: compare the screen with a baseline saved under name (first call saves; update=true replaces): changed_ratio, regions, diff_artifact; dimming = global_shift.",
+    "layout: layout bugs on screen (off screen, overlapping or tiny tap targets, clipped text); forms=[foldable,widefold,triplefold] checks emulators of each form (job).",
+    "perf: scroll smoothness from every frame (avg_fps, frame_ms p95, janky_frames, verdict; pss with bundle).",
+    "record_start/record_stop/record_status: mp4 recording. UI test sessions: test_start -> test_step -> review -> test_finish -> test_log/test_export.",
   ].join(" "),
   schema: z.object({
     action: z.enum(["observe", "screenshot", "tree", "find", "act", "assert", "windows", "perf", "visual", "layout", "record_start", "record_stop", "record_status",
@@ -386,47 +376,46 @@ export const uiTool = tool({
     target: fields.target,
     window: z.number().int().optional().describe("tree/observe: window id from action=windows"),
     all_windows: z.boolean().optional().describe("tree: every window on every display (not with window)"),
-    node: z.string().optional().describe("tree: only the component with this id/key and its subtree"),
+    node: z.string().optional().describe("tree: one component (id/key) subtree"),
     display: z.number().int().optional().describe("screenshot: display id (multi-screen devices)"),
-    save_path: z.string().optional().describe("screenshot/record_stop: also save the file to this absolute path (file or directory); removed with the other artifacts after retention_days (default 1)"),
-    depth: z.number().int().min(0).max(100).optional().describe("tree/observe: levels to show (like devecocli --depth): 0 or omitted = unlimited, 1 = root only, 2 = root + children"),
+    save_path: z.string().optional().describe("screenshot/record_stop: also copy to this absolute path (expires after retention_days)"),
+    depth: z.number().int().min(0).max(100).optional().describe("tree/observe: levels (0 = all, 1 = root only)"),
     all: z.boolean().optional().describe("windows: include system windows"),
     discard: z.boolean().optional().describe("record_stop: stop without downloading"),
-    external: z.boolean().optional().describe("record_stop: stop a recording started outside this server"),
+    external: z.boolean().optional().describe("record_stop: stop a foreign recording"),
     test_id: z.string().optional(),
-    plan: z.string().max(20000).optional().describe("test_start: natural-language test plan with steps and expected results"),
-    project: z.string().optional().describe("test_start: project root to infer bundle/ability; visual: project whose .arkpilot/baselines holds the baseline"),
+    plan: z.string().max(20000).optional().describe("test_start: steps and expected results"),
+    project: z.string().optional().describe("test_start/visual/layout: project root"),
     fresh_start: z.boolean().optional().describe("test_start: restart the app first"),
     description: z.string().max(500).optional().describe("test_step: which checklist item this is"),
     requirement: z.string().max(2000).optional().describe("review: what the screen must show"),
     outcome: z.enum(["passed", "failed", "insufficient"]).optional().describe("review: your visual judgement"),
     reason: z.string().max(2000).optional(),
     review_id: z.number().int().optional(),
-    directory: z.string().optional().describe("test_export: absolute output directory (exported files expire after retention_days, default 1)"),
+    directory: z.string().optional().describe("test_export: absolute output directory"),
     max_chars: z.number().int().min(-1).optional().describe("test_log: -1 = unlimited, default 5000"),
     grep: z.string().optional().describe("test_log: keyword/regex filter"),
     selector: selectorSchema.optional(),
-    op: z.enum(["click", "double_click", "long_click", "input", "type", "swipe", "drag", "fling", "scroll", "key",
-      "mouse_click", "mouse_double_click", "mouse_long_click", "mouse_move", "mouse_scroll", "mouse_drag"]).optional().describe("act operation"),
-    keys: z.array(z.string()).min(1).max(3).optional().describe("key: chord like [\"ctrl\",\"c\"]; mouse_*: up to 2 modifier keys"),
+    op: uiOpSchema.optional(),
+    keys: z.array(z.string()).min(1).max(3).optional().describe("key chord e.g. [\"ctrl\",\"c\"]; mouse_*: modifiers"),
     button: z.enum(["left", "right", "middle"]).optional().describe("mouse click button"),
     ticks: z.number().int().min(1).max(50).optional().describe("mouse_scroll wheel ticks (default 3)"),
-    verify_change: z.boolean().optional().describe("act: keep polling up to 3s until the screen changes (slow transitions); the after diff is returned either way"),
+    verify_change: z.boolean().optional().describe("act: poll up to 3 s for a change (slow transitions)"),
     diff: z.boolean().optional().describe("act: return the after diff (default true)"),
-    steps: z.array(batchStepSchema).min(1).max(30).optional().describe("act: several steps in one call (instead of op)"),
-    assert: assertSchema.optional().describe("act with steps: final check that the goal was reached"),
+    steps: z.array(batchStepSchema).min(1).max(30).optional().describe("act: a path in one call (instead of op)"),
+    assert: assertSchema.optional().describe("act steps: final check"),
     save_flow: z.object({ project: z.string(), id: z.string(), name: z.string().optional() }).optional()
-      .describe("act with steps + assert: save the executed path as a ui_flow (replays restart the app, so start from the launch screen)"),
+      .describe("act steps + assert: save as a ui_flow (start from the launch screen)"),
     x: z.number().int().optional(), y: z.number().int().optional(), x2: z.number().int().optional(), y2: z.number().int().optional(),
     direction: z.enum(["up", "down", "left", "right"]).optional(),
     text: z.string().optional(),
     append: z.boolean().optional().describe("input: keep existing text (default replaces it)"),
-    key: z.string().optional().describe("back, home, power, enter, delete, tab, volume_up... or numeric keycode"),
+    key: z.string().optional().describe("back, home, enter, delete... or a keycode"),
     speed: z.number().int().min(200).max(40000).optional(),
     visible: selectorSchema.optional(),
     hidden: selectorSchema.optional(),
     timeout_ms: z.number().int().min(100).max(120000).optional(),
-    interactive: z.boolean().optional().describe("observe/tree: only interactive or labelled elements (default true)"),
+    interactive: z.boolean().optional().describe("observe/tree: interactive/labelled only (default true)"),
     bundle: z.string().optional().describe("observe/tree: only this app's elements"),
     format: z.enum(["jpeg", "png"]).optional(),
     width: z.number().int().min(240).max(2560).optional(),
@@ -434,8 +423,8 @@ export const uiTool = tool({
     repeat: z.number().int().min(1).max(20).optional().describe("perf: number of up+down fling pairs (default 3)"),
     name: z.string().optional().describe("visual: baseline name, e.g. gif-page"),
     update: z.boolean().optional().describe("visual: save the current screen as the baseline"),
-    threshold: z.number().int().min(1).max(64).optional().describe("visual: per-block mean gray difference that counts as changed (default 8)"),
-    forms: z.array(z.enum(["foldable", "widefold", "triplefold"])).min(1).max(3).optional().describe("layout: device forms to check on emulators (job; needs project and a built package)"),
+    threshold: z.number().int().min(1).max(64).optional().describe("visual: gray difference per block (default 8)"),
+    forms: z.array(z.enum(["foldable", "widefold", "triplefold"])).min(1).max(3).optional().describe("layout: emulator forms to check (job)"),
     then_flow: z.string().optional().describe("layout forms: ui_flow to the page to check"),
     keep_running: z.boolean().optional().describe("layout forms: leave the emulators running"),
     request_key: fields.requestKey,
@@ -572,7 +561,7 @@ export const uiTool = tool({
         if (input.steps) {
           invariant(!input.op, "INVALID_INPUT", "Pass either op (one action) or steps (several), not both");
           invariant(!input.save_flow || input.assert, "INVALID_INPUT", "save_flow needs an assert that proves the goal was reached");
-          const result = await batch.runBatch(target, input.steps, { assert: input.assert }, ctx.signal);
+          const result = await batch.runBatch(target, input.steps, { assert: input.assert, budgetMs: SYNC_WAIT_MS }, ctx.signal);
           const screen = await screenSize(target, deviceInfo, ctx.signal).catch(() => undefined);
           // An active ui_flow recording captures batch steps too.
           for (const e of result.executed) await flows.recordStep(target, e.action, e.selector, screen).catch(() => undefined);
@@ -589,18 +578,24 @@ export const uiTool = tool({
           const repeat = saved ? undefined : repeatHint(target, result.executed);
           return {
             ...rest, ...(saved ? { saved_flow: saved } : {}), ...(repeat ? { suggest: repeat } : {}),
-            ...(!result.passed ? { hint: result.failed_step !== undefined ? "Fix the failing step using the visible list, then call again with the remaining steps" : "The final assert failed: check after/visible" } : {}),
+            ...(!result.passed ? { hint: result.stopped_at !== undefined ? `Time budget of one call used up: call again with steps from index ${result.stopped_at}`
+              : result.failed_step !== undefined ? "Fix the failing step using the visible list, then call again with the remaining steps" : "The final assert failed: check after/visible" } : {}),
           };
         }
         const { action, resolved } = await buildAction(input, target, ui, ctx.signal);
         const wantDiff = input.diff !== false;
-        const before = wantDiff || input.verify_change ? await ui.dumpTree(target, ctx.signal, 1500).catch(() => undefined) : undefined;
+        // "before" costs no extra dump in the common cases: a selector was just resolved on a fresh tree,
+        // or the previous act left its "after" tree in the cache (every act invalidates the cache first,
+        // so a cached tree is the last screen this server observed). verify_change needs a fresh one.
+        const before = wantDiff || input.verify_change ? await ui.dumpTree(target, ctx.signal, input.verify_change ? 1500 : 30000).catch(() => undefined) : undefined;
+        const acted = Date.now();
         const result = await ui.act(target, action, ctx.signal);
         let after: ReturnType<typeof batch.screenDiff> | undefined;
         if (before) {
-          // One dump after a short settle; verify_change keeps polling (up to 3s) for slow transitions.
+          // One dump after a short settle (skipped when the action itself took long, e.g. a fling);
+          // verify_change keeps polling (up to 3 s) for slow transitions.
           const deadline = Date.now() + (input.verify_change ? 3000 : 0);
-          await new Promise((r) => setTimeout(r, 400));
+          if (Date.now() - acted < 1000) await new Promise((r) => setTimeout(r, 400));
           for (;;) {
             const nodes = await ui.dumpTree(target, ctx.signal).catch(() => undefined);
             if (!nodes) break;
@@ -688,7 +683,7 @@ async function screenSize(target: string, info: (t: string, s?: AbortSignal) => 
 export const uiFlowTool = tool({
   name: "ui_flow",
   title: "Record & replay UI flows",
-  description: "Reusable UI paths stored in <project>/.arkpilot/flows. list; show; record (start recording, then use ui act with selectors; one recording per device, kept across restarts until stopped); stop (same project as record; save with a final assert proving the goal, or discard=true); replay (restart app, run steps, check the assert — job; repair=true promotes working alternates); delete.",
+  description: "Reusable UI paths in <project>/.arkpilot/flows (quickest to create: ui act steps + save_flow). list, show, delete; record then ui act ... then stop with a final assert (or discard=true); replay (restarts the app, job; repair=true promotes working alternates; snapshot=true compares the screen).",
   schema: z.object({
     action: z.enum(["list", "show", "record", "stop", "replay", "delete"]),
     project: fields.project,
@@ -746,7 +741,7 @@ export const diagnoseTool = tool({
   name: "diagnose",
   title: "Crash & failure diagnosis",
   readOnly: true,
-  description: "crash: read the latest jscrash/cppcrash/appfreeze report from the device (or analyze pasted log text), extract error type/message/code/app frames, and match the HarmonyOS fault-pattern library for likely causes and fixes; with project, source lists the project's own frames (file, line, code around it). run build_run/launch already attach this summary when the app crashes on startup. build: explain build/check diagnostics with fix hints.",
+  description: "crash: latest jscrash/cppcrash/appfreeze report (or pasted log): error, app frames, likely causes from the fault-pattern library; project= adds source (file, line, code). build_run/launch attach this on a startup crash. build: fix hints for diagnostics.",
   schema: z.object({
     action: z.enum(["crash", "build"]),
     target: fields.target,
@@ -773,11 +768,10 @@ export const knowledgeTool = tool({
   title: "HarmonyOS knowledge",
   readOnly: true,
   description: [
-    "Offline HarmonyOS docs (guides, API reference, best practices, FAQ, release notes) plus ArkTS rules, compile-error cases and runtime crash patterns, from an updatable knowledge pack.",
-    "search: full-text (Chinese or English; use API names, decorators, error codes). read: a document by id (section= for one heading).",
-    "catalog/status: pack info. update: download the latest pack (check=true only checks). rollback: previous pack.",
-    "source=cloud: search Huawei's online CodeGenie knowledge (needs auth provider=codegenie). Each section is labelled by its text: official (found in the official docs; local_doc = that document), official_other_platform (official Huawei text for Android/Java or Cangjie, not ArkTS), community (not in the official docs), unverified (could not be decided: treat like community). Official first inline; the complete answer (every section, untruncated) is in full_artifact (job action=read, line=sources[].line).",
-    "Conflicting answers: the project's SDK declarations (code action=lsp op=hover) and a successful build win, then official docs (local pack / cloud sections marked official), and community / unverified sections never define the API.",
+    "Offline HarmonyOS docs (guides, API reference, best practices, FAQ, release notes), ArkTS rules, compile-error cases and crash patterns from an updatable pack.",
+    "search: full text (Chinese/English; API names, decorators, error codes). read: a document by id (section= one heading). catalog/status; update (check=true only checks); rollback.",
+    "source=cloud: Huawei CodeGenie (auth provider=codegenie); sections are labelled official (local_doc = matching document) / official_other_platform (not ArkTS) / community / unverified; full answer in full_artifact (job action=read).",
+    "Conflicts: SDK declarations (code lsp hover) and a successful build win, then official docs; community never defines the API.",
   ].join(" "),
   schema: z.object({
     action: z.enum(["search", "read", "catalog", "status", "update", "rollback"]),
@@ -823,7 +817,7 @@ export const skillsTool = tool({
   name: "skills",
   title: "HarmonyOS skills",
   readOnly: false,
-  description: "Built-in HarmonyOS skills: hmos-arkui-develop-skill (ArkTS/ArkUI gotchas + API quick reference, from DevEco Code), hmos-runtime-fix-skill (crash/white-screen diagnosis + fault pattern library), deveco-mcp-workflow (which deveco tool to use when). list/read; export: install them as native SKILL.md folders (scope=project writes <project>/.agents/skills, shared by Codex, Claude Code, Cursor, Qoder, OpenCode). install_mcp: register this MCP server in a host's config (idempotent; force overwrites). init: export + install_mcp. search/install/uninstall: OpenHarmony skill market (matrix.openharmony.cn).",
+  description: "Built-in skills: hmos-arkui-develop-skill (ArkTS/ArkUI gotchas + API reference), hmos-runtime-fix-skill (crash/white-screen diagnosis), deveco-mcp-workflow (which tool when). list/read; export as SKILL.md folders (scope=project: <project>/.agents/skills); install_mcp registers this server in a host config; init = export + install_mcp; search/install/uninstall: OpenHarmony skill market.",
   schema: z.object({
     action: z.enum(["list", "read", "export", "install_mcp", "init", "search", "install", "uninstall"]),
     name: z.string().optional(),

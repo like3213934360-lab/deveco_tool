@@ -6,7 +6,7 @@ import zlib from "node:zlib";
 import { artifactDir, commitArtifact, saveArtifact, trackExport } from "../core/artifacts.js";
 import { packageRoot } from "../core/config.js";
 import { invariant, ToolError } from "../core/errors.js";
-import { hdc, shell } from "./device.js";
+import { assertConnected, hdc, shell } from "./device.js";
 
 /* --------------------------------- tree --------------------------------- */
 
@@ -304,10 +304,12 @@ async function dumpRaw(target: string, extra: string[], signal?: AbortSignal): P
   try {
     const args = ["uitest", "dumpLayout", "-p", remote, ...extra];
     const dump = await shell(target, args, signal, 30000);
-    invariant(!/fail|error/i.test(dump.stdout) || /DumpLayout saved/i.test(dump.stdout), "UI_DUMP_FAILED", `uitest dumpLayout failed: ${dump.stdout.trim().slice(0, 300)}`,
-      undefined, "Make sure the screen is on and unlocked");
+    if (/fail|error/i.test(dump.stdout) && !/DumpLayout saved/i.test(dump.stdout)) {
+      await assertConnected(target, signal);
+      throw new ToolError("UI_DUMP_FAILED", `uitest dumpLayout failed: ${dump.stdout.trim().slice(0, 300)}`, undefined, "Make sure the screen is on and unlocked");
+    }
     await hdc(["-t", target, "file", "recv", remote, local], signal, 30000, true);
-    invariant(fs.existsSync(local), "UI_DUMP_FAILED", "Layout file transfer failed");
+    if (!fs.existsSync(local)) { await assertConnected(target, signal); throw new ToolError("UI_DUMP_FAILED", "Layout file transfer failed"); }
     return flatten(JSON.parse(fs.readFileSync(local, "utf8")));
   } finally {
     fs.rmSync(local, { force: true });
@@ -332,6 +334,7 @@ export async function screenshot(target: string, options: { format?: "jpeg" | "p
     const known = nativeSizes.get(target);
     if (known && known.w > width) args.push("-w", String(width), "-h", String(Math.round((known.h * width) / known.w)));
     const probe = await shell(target, args, signal, 30000);
+    if (!/success/i.test(probe.stdout)) await assertConnected(target, signal);
     invariant(/success/i.test(probe.stdout), "SCREENSHOT_FAILED", `snapshot_display failed: ${probe.stdout.trim().slice(0, 300)}`,
       undefined, "Screen may be off or locked; wake/unlock the device");
     const native = /process:[^\n]*?width:\s*(\d+)[^\n]*?height:\s*(\d+)/i.exec(probe.stdout) ?? /width:\s*(\d+)[^\n]*?height:\s*(\d+)/i.exec(probe.stdout);
@@ -342,6 +345,7 @@ export async function screenshot(target: string, options: { format?: "jpeg" | "p
         await shell(target, [...args, "-w", String(width), "-h", String(Math.round((size.h * width) / size.w))], signal, 30000);
     }
     await hdc(["-t", target, "file", "recv", remote, local], signal, 30000, true);
+    if (!(fs.existsSync(local) && fs.statSync(local).size > 0)) await assertConnected(target, signal);
     invariant(fs.existsSync(local) && fs.statSync(local).size > 0, "SCREENSHOT_FAILED", "Screenshot transfer failed");
     const data = fs.readFileSync(local);
     const saved = options.save_path ? saveCopy(local, options.save_path) : undefined;
@@ -555,18 +559,30 @@ export function describe(n: UiNode) {
   return { node: n.i, type: n.type, text: n.text || undefined, key: n.key ?? undefined, bounds: n.rect ? [n.rect.x1, n.rect.y1, n.rect.x2, n.rect.y2] : undefined, clickable: n.clickable ?? undefined };
 }
 
+/**
+ * One node for a selector, the same rule for ui act and act steps: a single match, the single
+ * clickable one, an explicit index, or - when every match carries the same label (a section title
+ * repeated on a card, a tab label and its column) - the top-most. Undefined when still ambiguous. Pure.
+ */
+export function pickMatch(matches: UiNode[], selector: Selector) {
+  if (matches.length === 1 || selector.index !== undefined) return matches[0];
+  const clickable = matches.filter((m) => m.clickable);
+  if (clickable.length === 1) return clickable[0];
+  if (matches.length > 1 && matches.every((m) => m.text === matches[0]!.text))
+    return [...matches].sort((a, b) => a.rect!.y1 - b.rect!.y1 || a.rect!.x1 - b.rect!.x1)[0];
+  return undefined;
+}
+
 /** Resolve a selector to exactly one node (or explain ambiguity). */
 export async function resolveOne(target: string, selector: Selector, signal?: AbortSignal) {
-  const matches = select(await dumpTree(target, signal, 1500), selector);
+  let matches = select(await dumpTree(target, signal, 1500), selector);
+  // A cached tree can predate a transition: never fail on it without one fresh look.
+  if (!matches.length && cache.has(target)) { invalidate(target); matches = select(await dumpTree(target, signal), selector); }
   invariant(matches.length > 0, "UI_NOT_FOUND", "No element matches the selector", { selector },
     "Call ui observe to see current elements; the page may still be loading");
-  if (matches.length > 1 && selector.index === undefined) {
-    // Prefer clickable matches when ambiguous.
-    const clickable = matches.filter((m) => m.clickable);
-    if (clickable.length === 1) return clickable[0]!;
-    throw new ToolError("UI_AMBIGUOUS", `${matches.length} elements match; refine selector or pass index`, { candidates: matches.slice(0, 8).map(describe) });
-  }
-  return matches[0]!;
+  const hit = pickMatch(matches, selector);
+  if (!hit) throw new ToolError("UI_AMBIGUOUS", `${matches.length} elements match; refine selector or pass index`, { candidates: matches.slice(0, 8).map(describe) });
+  return hit;
 }
 
 export async function saveTree(nodes: UiNode[]) {

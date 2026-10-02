@@ -28,8 +28,8 @@ const run = await c.call("run", { action: "build_run", project: proj, then_flow:
 out.flows = { list, show: show.data, then_flow: run.data };
 record("F.fault.flow-corrupt", list.flows?.every((f) => f.invalid) && show.isError && show.data.error?.code && run.isError ? "VERIFIED" : "DEFECT",
   `corrupted flow files: list marks ${list.flows?.filter((f) => f.invalid).length}/2 invalid; show -> ${show.data.error?.code}: ${show.data.error?.message?.slice(0, 80)}; build_run then_flow -> ${run.data.error?.code} (before any build)`, [ev("fault-flows.json", out.flows)]);
-record("F.fault.flow-corrupt-message", show.data.error?.code !== "INTERNAL" && !/Unexpected token|JSON/.test(show.data.error?.message ?? "") ? "VERIFIED" : "DEFECT",
-  `a corrupted flow is reported as ${show.data.error?.code} "${show.data.error?.message?.slice(0, 100)}" — ${/Unexpected token|JSON|SyntaxError/.test(show.data.error?.message ?? "") ? "a raw parser message with no hint which file/how to fix" : "a structured error"}`, [ev("fault-flows.json", out.flows)], { severity: "low", dimension: "availability" });
+record("F.fault.flow-corrupt-message", show.data.error?.code === "FLOW_INVALID" && show.data.error?.details?.file && show.data.error?.hint ? "VERIFIED" : "DEFECT",
+  `a corrupted flow is reported as ${show.data.error?.code} "${show.data.error?.message?.slice(0, 100)}", file=${show.data.error?.details?.file ? "given" : "missing"}, hint=${show.data.error?.hint ? "given" : "missing"}`, [ev("fault-flows.json", out.flows)], { severity: "low", dimension: "availability" });
 await c.close();
 
 // 2. Corrupted hot-path and preflight state (both in the state dir): the next run must ignore them.
@@ -52,9 +52,10 @@ try {
   first = await c.call("job", { action: "list" });
   await c.close();
 } catch (e) { started = false; first = { error: String(e.message).slice(0, 300) }; }
-out.db = { started, first: first?.data ?? first };
-record("F.fault.db-corrupt", started && !first?.isError ? "VERIFIED" : started && first?.data?.error?.hint ? "VERIFIED" : "DEFECT",
-  `corrupted state.db: server started=${started}; job list -> ${first?.isError ? `${first.data.error?.code}: ${first.data.error?.message?.slice(0, 120)} hint=${first.data.error?.hint ?? "none"}` : "ok"}`, [ev("fault-db.json", out.db)], { severity: "medium", dimension: "availability" });
+out.db = { started, first: first?.data ?? first, backups: fs.readdirSync(state).filter((f) => f.includes(".corrupt-")) };
+const note = (first?.data?.notes ?? []).find((n) => /corrupted/.test(n));
+record("F.fault.db-corrupt", started && !first?.isError && note && out.db.backups.length ? "VERIFIED" : "DEFECT",
+  `corrupted state.db: server started=${started}; job list -> ${first?.isError ? `${first.data.error?.code}: ${first.data.error?.message?.slice(0, 120)}` : "ok"}; note: ${note ? note.slice(0, 140) : "none"}; backup kept: ${out.db.backups.join(", ") || "none"}`, [ev("fault-db.json", out.db)], { severity: "medium", dimension: "availability" });
 
 // 4. Two server instances on one state dir: concurrent job writes do not corrupt each other.
 const s2 = path.join(tmp, "state2");

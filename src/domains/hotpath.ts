@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { atomicWrite } from "../core/files.js";
 import { diffSources, snapshotSources, type SourceSnapshot } from "./preflight.js";
 
 /*
@@ -95,8 +96,7 @@ export function readState(file: string): HotState | undefined {
   try { return JSON.parse(fs.readFileSync(file, "utf8")) as HotState; } catch { return undefined; }
 }
 export function writeState(file: string, state: HotState) {
-  fs.mkdirSync(path.dirname(file), { recursive: true });
-  fs.writeFileSync(file, JSON.stringify(state));
+  atomicWrite(file, JSON.stringify(state));
 }
 export function currentSources(root: string, previous?: SourceSnapshot) {
   return snapshotSources(root, previous);

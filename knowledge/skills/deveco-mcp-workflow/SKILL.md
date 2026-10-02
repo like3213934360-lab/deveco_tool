@@ -24,7 +24,7 @@ deveco MCP 提供 15 个工具。按下面的顺序使用，避免自己拼 `hdc
 | 写/改 ArkTS | 先加载 `hmos-arkui-develop-skill` → 修改 → 直接 `run action=build_run`（或 `project action=build`）。构建前会自动静态检查上次以来改动的文件，**不要再单独调 `code action=check`**；只想检查、不构建时才用它 |
 | 编译报错 | `project action=build` 返回全部编译错误（错误码、文件、行号、原因）→ 按错误码查 `knowledge action=search` 或 `diagnose action=build` → 修复 → 重新 check/build。改了 `oh-package.json5` 后，构建会自动先装依赖 |
 | 部署运行 | `run action=build_run project=<root>`：构建、安装、启动，返回 `smoke: PASS / FAIL_CRASH / FAIL_BLANK` |
-| 改代码反复调 | 每次改完直接 `run action=build_run`。从第二次部署起，只改了入口模块的 .ets/.ts 时会自动热修复正在运行的应用并重启（约 6 秒，`path=hot_reload`），其他改动自动走完整部署（`path=full`，`fallback_reason` 写明原因）；什么都没改时只重启（`path=relaunch`）。需要强制完整部署时传 `run_mode=full` |
+| 改代码反复调 | 每次改完直接 `run action=build_run`。从第二次部署起，只改了入口模块的 .ets/.ts 时会自动热修复正在运行的应用并重启（约 6–10 秒，`path=hot_reload`），其他改动自动走完整部署（`path=full`，`fallback_reason` 写明原因）；什么都没改时只重启（`path=relaunch`）。需要强制完整部署时传 `run_mode=full` |
 | 部署后进到正在改的页面 | 路径存成 flow 后，`run action=build_run then_flow=<id>`，部署完自动走到该页面 |
 | 界面回归 | `ui action=visual project=<root> name=<名称>`：第一次保存基准截图，之后对比，返回变化比例、变化区域和红框标注图（`diff_artifact`）；`ui_flow action=replay snapshot=true` 在回放到页面后自动对比 |
 | 一多布局 | `ui action=layout` 检查当前页面（超出屏幕、可点区域重叠、文字被裁切或被挤没、点击区域过小）；`ui action=layout project=<root> forms=["foldable","widefold","triplefold"]` 在三种折叠形态模拟器上逐个折叠状态检查（任务，模拟器自动创建、用完关闭；先构建好） |

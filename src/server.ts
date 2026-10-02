@@ -2,7 +2,7 @@ import { z } from "zod";
 import { version } from "./core/config.js";
 import { errorResult, ToolError } from "./core/errors.js";
 import { McpServer } from "./mcp.js";
-import { MAX_WAIT_MS, type ToolDef } from "./registry.js";
+import { MAX_WAIT_MS, SYNC_WAIT_MS, type ToolDef } from "./registry.js";
 import { allTools } from "./tools/index.js";
 
 const instructions = [
@@ -75,7 +75,50 @@ export function checkArguments(tool: ToolDef, raw: Record<string, unknown>) {
       args[key] = MAX_WAIT_MS;
     }
   }
+  // Synchronous waits (ui assert/test_step timeout_ms, per-step timeout_ms) run inside one request:
+  // above the cap the host's request timeout fires first and it gets nothing back.
+  const capTimeout = (obj: Record<string, unknown>, where: string) => {
+    if (typeof obj.timeout_ms === "number" && obj.timeout_ms > SYNC_WAIT_MS) {
+      notes.push(`${where}timeout_ms=${obj.timeout_ms} capped at ${SYNC_WAIT_MS} ms (one call must finish before the host's request timeout)`);
+      obj.timeout_ms = SYNC_WAIT_MS;
+    }
+  };
+  capTimeout(args, "");
+  for (const key of ["assert"]) if (args[key] && typeof args[key] === "object") { args[key] = { ...(args[key] as object) }; capTimeout(args[key] as Record<string, unknown>, `${key}.`); }
+  if (Array.isArray(args.steps)) {
+    const before = notes.length;
+    args.steps = (args.steps as unknown[]).map((s, i) => {
+      if (!s || typeof s !== "object") return s;
+      const copy = { ...(s as Record<string, unknown>) };
+      capTimeout(copy, `steps[${i}].`);
+      return copy;
+    });
+    // One note for the batch, not one per step.
+    if (notes.length - before > 1) notes.splice(before, notes.length - before, `${notes.length - before} steps had timeout_ms above ${SYNC_WAIT_MS} ms and were capped; the whole call is limited to ${SYNC_WAIT_MS} ms`);
+  }
   return { args, notes };
+}
+
+/**
+ * tools/list goes into every host's model context: drop JSON Schema noise that carries no meaning
+ * for the model (zod's int() emits +/-2^53 bounds on every integer). Validation is unaffected: the
+ * server validates with the zod schema, not with this JSON. Pure.
+ */
+export function compactSchema(node: unknown): unknown {
+  if (Array.isArray(node)) return node.map(compactSchema);
+  if (!node || typeof node !== "object") return node;
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(node as Record<string, unknown>)) {
+    if ((k === "minimum" && v === Number.MIN_SAFE_INTEGER) || (k === "maximum" && v === Number.MAX_SAFE_INTEGER)) continue;
+    out[k] = compactSchema(v);
+  }
+  return out;
+}
+
+/** Told once per process: the state database was found corrupted and recreated. */
+async function recoveryNote() {
+  const { takeRecoveryNote } = await import("./core/db.js");
+  return takeRecoveryNote();
 }
 
 export async function serve() {
@@ -89,8 +132,8 @@ export async function serve() {
       const { $schema: _s, ...schema } = z.toJSONSchema(tool.schema, { io: "input" }) as Record<string, unknown>;
       return {
         name: tool.name, title: tool.title, description: tool.description,
-        inputSchema: { ...schema, type: "object" },
-        annotations: { title: tool.title, readOnlyHint: tool.readOnly ?? false, openWorldHint: false },
+        inputSchema: { ...(compactSchema(schema) as object), type: "object" },
+        annotations: { readOnlyHint: tool.readOnly ?? false, openWorldHint: false },
       };
     });
     return { tools: listed };
@@ -99,14 +142,21 @@ export async function serve() {
     const name = String(params.name);
     const tool = byName.get(name);
     if (!tool) return respond({ error: errorResult(new ToolError("INVALID_INPUT", `Unknown tool ${name}`)) }, true);
+    let notes: string[] = [];
     try {
-      const { args, notes } = checkArguments(tool, (params.arguments ?? {}) as Record<string, unknown>);
+      const checked = checkArguments(tool, (params.arguments ?? {}) as Record<string, unknown>);
+      const args = checked.args;
+      notes = checked.notes;
       const parsed = tool.schema.safeParse(args);
       if (!parsed.success) throw new ToolError("INVALID_INPUT", z.prettifyError(parsed.error), undefined, "Fix the listed fields and call again");
       const result = await tool.handler(parsed.data, { signal });
+      const recovery = await recoveryNote();
+      if (recovery) notes.push(recovery);
       return respond(notes.length && result && typeof result === "object" && !Array.isArray(result) ? { ...(result as object), notes } : result);
     } catch (error) {
-      return respond({ error: errorResult(error) }, true);
+      const recovery = await recoveryNote();
+      if (recovery) notes.push(recovery);
+      return respond({ error: errorResult(error), ...(notes.length ? { notes } : {}) }, true);
     }
   });
   server.on("resources/list", async () => {

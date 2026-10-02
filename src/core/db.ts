@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import path from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import { stateDir } from "./config.js";
@@ -57,14 +58,54 @@ CREATE TABLE IF NOT EXISTS kv (
 );
 `;
 
-/** Lazily opened single state database (WAL, one connection per process). */
+/** Set when this process found the state database corrupted and replaced it (reported by doctor and errors). */
+export let recovered: { at: string; backup: string; reason: string } | undefined;
+
+const CORRUPT = /not a database|malformed|SQLITE_(CORRUPT|NOTADB)|file is encrypted/i;
+
+function open(DatabaseSync: typeof import("node:sqlite").DatabaseSync, file: string) {
+  const handle = new DatabaseSync(file);
+  try {
+    handle.exec("PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL; PRAGMA busy_timeout=5000; PRAGMA foreign_keys=OFF;");
+    handle.exec(schema);
+    // A truncated file can open and still be unreadable: touch every table once.
+    for (const t of ["jobs", "effects", "events", "artifacts", "credentials", "exports", "kv"]) handle.prepare(`SELECT 1 FROM ${t} LIMIT 1`).get();
+    return handle;
+  } catch (error) {
+    handle.close();
+    throw error;
+  }
+}
+
+/**
+ * Lazily opened single state database (WAL, one connection per process). A corrupted file is moved
+ * aside (state.db.corrupt-<time>, kept for diagnosis) and a fresh database is created, so one bad
+ * file cannot make every job/flow/login call fail with an opaque INTERNAL error.
+ */
 export async function database(): Promise<DatabaseSync> {
   if (db) return db;
   const { DatabaseSync } = await import("node:sqlite");
-  db = new DatabaseSync(path.join(stateDir(), "state.db"));
-  db.exec("PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL; PRAGMA busy_timeout=5000; PRAGMA foreign_keys=OFF;");
-  db.exec(schema);
+  const file = path.join(stateDir(), "state.db");
+  try {
+    db = open(DatabaseSync, file);
+  } catch (error) {
+    const reason = (error as Error).message;
+    if (!CORRUPT.test(reason)) throw error;
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const backup = `${file}.corrupt-${stamp}`;
+    for (const suffix of ["", "-wal", "-shm"]) if (fs.existsSync(file + suffix)) fs.renameSync(file + suffix, backup + suffix);
+    db = open(DatabaseSync, file);
+    recovered = { at: new Date().toISOString(), backup, reason: reason.slice(0, 200) };
+  }
   return db;
+}
+
+/** One-line explanation for responses after a recovery (consumed once per process by the server). */
+let announced = false;
+export function takeRecoveryNote() {
+  if (!recovered || announced) return undefined;
+  announced = true;
+  return `The state database was corrupted (${recovered.reason}) and has been recreated; job history, flow recording drafts and logins were lost (log in again with auth). The old file is kept at ${recovered.backup}`;
 }
 
 export function closeDatabase() {

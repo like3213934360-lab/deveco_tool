@@ -86,7 +86,17 @@ for (const [rule, spec] of Object.entries(cases)) {
 await c.close();
 const ev = evidence("check-rules", "rules-vs-hvigor.json", results);
 for (const r of results) {
-  const v = r.verdict === "agrees" ? "VERIFIED" : r.verdict === "runtime" ? "UNVERIFIED" : "DEFECT";
+  // Accepted decisions (docs/audit/AUDIT.md): hvigor builds @ObjectLink on a plain class and the upstream
+  // rule is dead code, so the expected outcome is "checker silent, hvigor builds" (no false positive).
+  const expectNoSignal = new Set(["object-link-observed-type"]);
+  // Runtime-claim rules and rules whose trigger needs a specific shape are judged by check-rules-2.mjs
+  // (exact-shape case + a device run); this first pass only lists them, never overwrites that verdict.
+  if (["nav-destination-root-node", "nav-destination-single-builder", "hide-nav-bar-hides-content", "appstorage-observedv2-mixing"].includes(r.rule)) {
+    console.log(`(pass 2) ${r.rule}: first-pass result ${r.verdict}; verdict comes from check-rules-2.mjs`); continue;
+  }
+  const v = expectNoSignal.has(r.rule) ? (r.verdict === "no-signal" ? "VERIFIED" : "DEFECT")
+    : r.verdict === "agrees" ? "VERIFIED" : r.verdict === "runtime" ? "UNVERIFIED" : "DEFECT";
+  if (expectNoSignal.has(r.rule)) { record(`B.code.check.rule.${r.rule}`, v, v === "VERIFIED" ? "accepted: checker stays silent and hvigor builds the case (the upstream rule is not wired in, by decision - enabling it would be a false positive)" : `expected no checker error and a successful build, got ${r.verdict}`, [ev]); continue; }
   record(`B.code.check.rule.${r.rule}`, v, r.verdict === "agrees" ? "violation case: checker and hvigor both reject"
     : r.verdict === "runtime" ? "checker reports an error for code hvigor compiles; rule claims a runtime failure (white screen/crash) — needs a device run to confirm"
     : r.verdict === "false-pos" ? `checker errors but hvigor builds this code: ${r.checker[0] ?? ""}`

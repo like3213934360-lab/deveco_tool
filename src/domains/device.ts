@@ -7,8 +7,32 @@ import { clip } from "../core/files.js";
 import { run, type RunResult } from "../core/proc.js";
 import { toolCommand } from "../core/toolchain.js";
 
+/**
+ * hdc's wording when the -t target is not connected (verified, exit code 0 nonetheless):
+ * "[Fail]Not match target founded, check connect-key please".
+ */
+export const TARGET_GONE = /Not match target founded|check connect-key|device offline/i;
+
 export async function hdc(args: string[], signal?: AbortSignal, timeoutMs = 30000, allowFailure = false): Promise<RunResult> {
-  return run(toolCommand("hdc", args), { signal, timeoutMs, allowFailure, keepBytes: 4 * 1024 * 1024 });
+  const result = await run(toolCommand("hdc", args), { signal, timeoutMs, allowFailure, keepBytes: 4 * 1024 * 1024 });
+  // A device that disconnects mid-call makes later steps fail with misleading messages
+  // (e.g. "layout file transfer failed"): report the real cause.
+  if (args[0] === "-t" && TARGET_GONE.test(result.stdout + result.stderr)) throw gone(args[1]!);
+  return result;
+}
+
+function gone(target: string) {
+  return new ToolError("DEVICE_UNAVAILABLE", `Device ${target} is not connected (it disconnected or was switched off)`, { target },
+    "Reconnect the device (USB/Wi-Fi debugging) or start the emulator, then call again; ask the user if it should be a different device");
+}
+
+/**
+ * A device can vanish mid-command without hdc saying so (a file transfer just produces nothing).
+ * Callers whose device step failed call this to report the real cause instead of their own symptom.
+ */
+export async function assertConnected(target: string, signal?: AbortSignal) {
+  const connected = await listTargets(signal).catch(() => undefined);
+  if (connected && !connected.includes(target)) throw gone(target);
 }
 
 export async function listTargets(signal?: AbortSignal): Promise<string[]> {
@@ -285,12 +309,18 @@ async function summarizeLog(stdout: string, grep?: string) {
   }
   const text = lines.join("\n");
   const artifact = text.length > 8000 ? await saveArtifact(text) : undefined;
-  return {
-    lines: lines.length,
-    errors: lines.filter((l) => /\s[EF]\s/.test(l)).slice(-20),
-    tail: lines.slice(-(artifact ? 40 : lines.length)).join("\n"),
-    ...(artifact ? { artifact_id: artifact.artifact_id } : {}),
+  if (!artifact) return { lines: lines.length, errors: lines.filter((l) => /\s[EF]\s/.test(l)).slice(-20), tail: text };
+  // Long logs: the full text is in the artifact; inline stays under ~7 KB whatever the line lengths
+  // (errors up to 3 KB, the tail fills the rest; single lines clipped to 300 chars).
+  const clip = (l: string) => (l.length > 300 ? `${l.slice(0, 300)}…` : l);
+  const fit = (items: string[], budget: number) => {
+    const out: string[] = [];
+    for (let i = items.length - 1, used = 0; i >= 0; i--) { const l = clip(items[i]!); if (used + l.length + 1 > budget) break; out.unshift(l); used += l.length + 1; }
+    return out;
   };
+  const errors = fit(lines.filter((l) => /\s[EF]\s/.test(l)).slice(-20), 3000);
+  const tail = fit(lines.slice(-40), 7000 - errors.join("\n").length);
+  return { lines: lines.length, errors, tail: tail.join("\n"), artifact_id: artifact.artifact_id, ...(tail.length < Math.min(40, lines.length) ? { tail_lines: tail.length } : {}) };
 }
 
 export async function clearLog(target: string, signal?: AbortSignal) {

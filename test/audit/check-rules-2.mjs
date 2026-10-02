@@ -52,7 +52,9 @@ for (const [rule, src] of Object.entries(cases)) {
 await c.close();
 const ev = evidence("check-rules", "rules-pass2.json", results);
 const judge = {
-  "object-link-observed-type": (r) => (r.fired.length && r.build === "failed" ? ["VERIFIED", "fires; hvigor rejects the same code"] : r.fired.length ? ["DEFECT", "rule fires but hvigor builds the code (false positive)"] : ["DEFECT", `rule did not fire on '@ObjectLink p: P' with plain class P; hvigor ${r.build}`]),
+  // Accepted (docs/audit/AUDIT.md): hvigor builds @ObjectLink on a plain class and the upstream rule is dead code;
+  // the expected outcome is "rule silent + build succeeds" (enabling the rule would be a false positive).
+  "object-link-observed-type": (r) => (!r.fired.length && r.build !== "failed" ? ["VERIFIED", "accepted: checker silent and hvigor builds '@ObjectLink p: P' with a plain class (rule not wired in, by decision)"] : r.fired.length && r.build !== "failed" ? ["DEFECT", "rule now fires but hvigor builds the code (false positive)"] : ["DEFECT", `hvigor now rejects the case (build ${r.build}): the decision to keep the rule off must be revisited`]),
   "nav-destination-single-builder": (r) => (!r.fired.length ? ["DEFECT", "did not fire on two chained .navDestination calls"] : r.device?.pushed_A_shows === "B" ? ["VERIFIED", "fires; on device pushPath('A') opens B (last builder wins), as the rule states"] : ["DEFECT", `fires but device shows ${r.device?.pushed_A_shows} for route A — the rule's runtime claim is wrong`]),
   "hide-nav-bar-hides-content": (r) => (!r.fired.length ? ["DEFECT", "did not fire"] : r.device?.hello_visible === false ? ["VERIFIED", "fires; on device the content under Navigation is hidden"] : ["DEFECT", `fires but the content is visible on device (hello_visible=${r.device?.hello_visible}) — false positive`]),
   "nav-destination-root-node": (r) => (!r.fired.length ? ["DEFECT", "did not fire"] : r.device?.routed_visible === false ? ["VERIFIED", "fires; on device the routed page without NavDestination shows nothing"] : ["DEFECT", `fires but the routed content is visible on device (routed_visible=${r.device?.routed_visible}) — false positive`]),

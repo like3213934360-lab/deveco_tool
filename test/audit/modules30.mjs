@@ -28,5 +28,9 @@ const ev = evidence("syscap", "modules30.json", { rows, raw: res });
 const never = rows.filter((r) => !r.resolves_on.length);
 const pcOnly = rows.filter((r) => r.resolves_on.includes("2in1") && !r.resolves_on.includes("phone"));
 for (const r of rows) console.log(r.module.padEnd(50), (r.resolves_on.join(",") || "NONE").padEnd(30), (r.phone ?? "").slice(0, 70));
-record("C.api-modules-30", never.length ? "DEFECT" : "VERIFIED",
-  `all 30 checked on phone/2in1/tablet/car/tv/wearable: ${pcOnly.length} resolve on 2in1 but not phone; ${never.length} resolve on none (${never.map((r) => r.module).join(", ")}); earlier claim said 22 PC-only + 8 device/system-only`, [ev]);
+// SDK fact accepted on 2026-09-30: @ohos.wifiext's syscap (SystemCapability.Communication.WiFi.AP.Extension)
+// is only in the SDK's api-white-list, so it resolves on no device type. Anything else resolving nowhere is new.
+const accepted = new Set(["@ohos.wifiext"]);
+const unexpected = never.filter((r) => !accepted.has(r.module));
+record("C.api-modules-30", unexpected.length ? "DEFECT" : "VERIFIED",
+  `all 30 checked on phone/2in1/tablet/car/tv/wearable: ${pcOnly.length} resolve on 2in1 but not phone; resolve on none: ${never.map((r) => r.module).join(", ") || "-"}${never.some((r) => accepted.has(r.module)) ? " (@ohos.wifiext: accepted SDK fact, its syscap is only in api-white-list)" : ""}${unexpected.length ? `; UNEXPECTED: ${unexpected.map((r) => r.module).join(", ")}` : ""}`, [ev]);

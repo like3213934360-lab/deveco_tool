@@ -68,7 +68,33 @@ export async function changedSources(root: string, maxFiles = 200) {
   const snapshot = snapshotSources(root, previous);
   if (!previous) return { files: undefined, snapshot };
   const changed = diffSources(previous, snapshot);
-  return { files: changed.length > maxFiles ? undefined : changed, snapshot };
+  if (changed.length > maxFiles) return { files: undefined, snapshot };
+  // A changed export breaks its importers although they did not change: check those too.
+  const importers = importersOf(root, changed, Object.keys(snapshot), 50);
+  return { files: [...new Set([...changed, ...importers])].sort(), snapshot, ...(importers.length ? { importers: importers.length } : {}) };
+}
+
+/**
+ * Files that import one of `changed` through a relative path ('./Helper', '../model/Item'): the
+ * dependents whose type check can change. Module imports (@ohos/..., HAR names) are not followed;
+ * those importers are still checked by hvigor at build time. Bounded to `limit` files. Pure-ish (reads files).
+ */
+export function importersOf(root: string, changed: string[], all: string[], limit = 50) {
+  if (!changed.length) return [];
+  const targets = new Set(changed.map((f) => f.replace(/\.(ets|ts)$/, "")));
+  const out: string[] = [];
+  const re = /\bfrom\s+['"](\.{1,2}\/[^'"]+)['"]|\bimport\s*\(\s*['"](\.{1,2}\/[^'"]+)['"]\s*\)/g;
+  for (const file of all) {
+    if (targets.has(file.replace(/\.(ets|ts)$/, "")) || out.length >= limit) continue;
+    let text: string;
+    try { text = fs.readFileSync(path.join(root, file), "utf8"); } catch { continue; }
+    for (const m of text.matchAll(re)) {
+      const spec = (m[1] ?? m[2])!;
+      const resolved = path.posix.normalize(path.posix.join(path.posix.dirname(file), spec)).replace(/\.(ets|ts)$/, "");
+      if (targets.has(resolved) || targets.has(`${resolved}/Index`) || targets.has(`${resolved}/index`)) { out.push(file); break; }
+    }
+  }
+  return out;
 }
 
 /** Remember the checked state; files with errors are left out so the next preflight checks them again. */

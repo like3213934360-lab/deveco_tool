@@ -7,6 +7,16 @@ import { sdkInfo, toolchain, type Component } from "../core/toolchain.js";
 /** One call that tells the host what works, what is missing and how to fix it. */
 export async function doctor(options: { project?: string; target?: string; remote?: boolean }, signal: AbortSignal) {
   const checks: { name: string; ok: boolean; detail?: unknown; fix?: string }[] = [];
+  try {
+    const { database, recovered } = await import("../core/db.js");
+    await database();
+    const now = (await import("../core/db.js")).recovered ?? recovered;
+    checks.push(now
+      ? { name: "state", ok: false, detail: now, fix: `The state database was corrupted and recreated (backup ${now.backup}); log in again with auth if needed. The backup can be deleted` }
+      : { name: "state", ok: true, detail: { dir: stateDir() } });
+  } catch (error) {
+    checks.push({ name: "state", ok: false, detail: errorResult(error), fix: `Check permissions of ${stateDir()} (or set DEVECO_STATE_DIR)` });
+  }
   let tc: ReturnType<typeof toolchain> | undefined;
   try {
     tc = toolchain();

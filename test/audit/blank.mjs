@@ -5,11 +5,20 @@ import path from "node:path";
 import os from "node:os";
 import { build } from "esbuild";
 import { pathToFileURL } from "node:url";
+import { execFileSync } from "node:child_process";
 import { evidence, record, repo } from "./lib.mjs";
 
 const out = fs.mkdtempSync(path.join(os.tmpdir(), "audit-blank-"));
+// Removed on every exit path (a failed clone/build used to leave the directory behind).
+const cleanup = () => fs.rmSync(out, { recursive: true, force: true });
+process.on("exit", cleanup);
+for (const sig of ["SIGINT", "SIGTERM"]) process.once(sig, () => { cleanup(); process.exit(130); });
+// Upstream deveco-cli: --cli <dir> reuses a checkout, otherwise a shallow clone into the temp dir.
+const given = process.argv.includes("--cli") ? process.argv[process.argv.indexOf("--cli") + 1] : undefined;
+const cli = given ? path.resolve(given) : path.join(out, "deveco-cli");
+if (!given) execFileSync("git", ["clone", "-q", "--depth", "1", "--branch", "develop", "https://gitcode.com/openharmony-sig/deveco-cli.git", cli], { stdio: "ignore" });
 const entry = path.join(out, "e.ts");
-fs.writeFileSync(entry, `export { blankScore } from ${JSON.stringify(path.join(repo, "src/domains/ui.ts"))};\nexport { ScreenPhash } from ${JSON.stringify("/tmp/up2/deveco-cli/packages/cli/src/smoke/screen-phash.ts")};\n`);
+fs.writeFileSync(entry, `export { blankScore } from ${JSON.stringify(path.join(repo, "src/domains/ui.ts"))};\nexport { ScreenPhash } from ${JSON.stringify(path.join(cli, "packages/cli/src/smoke/screen-phash.ts"))};\n`);
 await build({ entryPoints: [entry], outfile: path.join(out, "e.mjs"), bundle: true, format: "esm", platform: "node", packages: "external", logLevel: "error", nodePaths: [path.join(repo, "node_modules")] });
 fs.symlinkSync(path.join(repo, "node_modules"), path.join(out, "node_modules"));
 const { blankScore, ScreenPhash } = await import(pathToFileURL(path.join(out, "e.mjs")).href);
@@ -33,8 +42,11 @@ const rows = Object.entries(cases).map(([k, rgb]) => {
   return { case: k, ours_blank: ours.blank, ours_uniform: ours.uniform, upstream_blank: up?.isBlank ?? null, upstream_hamming: up?.hamming ?? null };
 });
 console.table(rows);
+// Ground truth per image (what a person calls a blank screen); upstream's verdict is reported for information.
+const truth = { solid_white: true, solid_black: true, solid_grey_240: true, solid_mid_grey_128: true, white_with_small_text: false, white_with_status_bar_only: true, gradient: false, normal_ui: false };
+const wrong = rows.filter((r) => r.ours_blank !== truth[r.case]);
 const differ = rows.filter((r) => r.ours_blank !== r.upstream_blank);
-const ev = evidence("upstream", "blank-verdict.json", rows);
-record("A.upstream.run.smoke-blank", differ.length ? "DEFECT" : "VERIFIED",
-  differ.length ? `blank-screen verdict differs from upstream on ${differ.length}/${rows.length} images: ${differ.map((r) => `${r.case} (ours ${r.ours_blank}, upstream ${r.upstream_blank}/h${r.upstream_hamming})`).join("; ")}` : "same verdict as upstream on all test images", [ev]);
-fs.rmSync(out, { recursive: true, force: true });
+const ev = evidence("upstream", "blank-verdict.json", rows.map((r) => ({ ...r, truth: truth[r.case] })));
+record("A.upstream.run.smoke-blank", wrong.length ? "DEFECT" : "VERIFIED",
+  (wrong.length ? `our blank verdict is wrong on ${wrong.map((r) => r.case).join(", ")}` : `our blank verdict matches the ground truth on all ${rows.length} images`)
+  + (differ.length ? `; upstream pHash differs on ${differ.map((r) => `${r.case} (upstream ${r.upstream_blank}, h${r.upstream_hamming}, truth ${truth[r.case]})`).join("; ")}` : "; upstream agrees on all"), [ev]);

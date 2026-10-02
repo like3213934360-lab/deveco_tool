@@ -18,6 +18,15 @@ test("handshake, tools/list and schema validation", async () => {
   const names = list.result.tools.map((t) => t.name);
   assert.deepEqual(names, ["doctor", "project", "run", "job", "code", "device", "ui", "ui_flow", "diagnose", "knowledge", "skills", "auth", "sign", "emulator", "hot_reload"]);
   for (const tool of list.result.tools) assert.equal(tool.inputSchema.type, "object");
+  // Hard budget: tools/list is loaded into every host's context on every session.
+  const listBytes = JSON.stringify(list.result).length;
+  assert.ok(listBytes <= 36 * 1024, `tools/list is ${listBytes} bytes, budget 36 KB (36864)`);
+  assert.doesNotMatch(JSON.stringify(list.result), /9007199254740991/, "no +/-2^53 integer bounds");
+  // Over-long sync waits are capped instead of outliving the host's request timeout.
+  const capped = await client.call("ui", { action: "assert", timeout_ms: 70000, visible: { text: "x" }, target: "none" });
+  assert.ok(capped.data.notes?.some((n) => /timeout_ms=70000 capped at 52000/.test(n)), JSON.stringify(capped.data).slice(0, 200));
+  const steps = await client.call("ui", { action: "act", target: "none", steps: [{ op: "click", x: 1, y: 1, timeout_ms: 60000 }, { op: "click", x: 1, y: 1, timeout_ms: 60000 }] });
+  assert.ok(steps.data.notes?.some((n) => /2 steps had timeout_ms above 52000/.test(n)), JSON.stringify(steps.data).slice(0, 200));
   const bad = await client.call("project", { action: "nope" });
   assert.equal(bad.isError, true);
   assert.equal(bad.data.error.code, "INVALID_INPUT");
@@ -63,6 +72,11 @@ test("skills are exposed as tools, resources and prompts", async () => {
   assert.ok(prompts.result.prompts.some((p) => p.name === "fix-build"));
   const prompt = await client.request("prompts/get", { name: "fix-build", arguments: { project: "/p" } });
   assert.match(prompt.result.messages[0].content.text, /\/p/);
+  // 1.3 guidance: the build re-checks edited files itself; a startup crash already carries its source.
+  assert.doesNotMatch(prompt.result.messages[0].content.text, /then use code action=check/);
+  const crash = (await client.request("prompts/get", { name: "debug-crash", arguments: { project: "/p" } })).result.messages[0].content.text;
+  assert.match(crash, /crash\.source/);
+  assert.match(crash, /diagnose action=crash project=\/p/);
   await client.close();
 });
 

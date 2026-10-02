@@ -15,7 +15,7 @@ const src = (f) => JSON.stringify(path.join(root, "src", f));
 const entry = path.join(out, "entry.ts");
 fs.writeFileSync(entry, [
   `export { screenDiff, stepAction, visibleLabels } from ${src("domains/uibatch.ts")};`,
-  `export { snapshotSources, diffSources } from ${src("domains/preflight.ts")};`,
+  `export { snapshotSources, diffSources, importersOf } from ${src("domains/preflight.ts")};`,
   `export { saveExecutedFlow, readFlow } from ${src("domains/flows.ts")};`,
   `export { parseSourceRefs, resolveRef, locate, snippet, mapPosition } from ${src("domains/sourcemap.ts")};`,
   `export { BuildOutputParser } from ${src("domains/project.ts")};`,
@@ -25,7 +25,7 @@ fs.writeFileSync(entry, [
   `export { pngGray } from ${src("domains/ui.ts")};`,
   `export { checkLayout } from ${src("domains/layout.ts")};`,
   `export { parseComposerFps, mergeFrames, frameStats, perfVerdict, parseSpFps, parsePss } from ${src("domains/perf.ts")};`,
-  `export { buildFailureHints } from ${src("domains/diagnose.ts")};`,
+  `export { buildFailureHints, parseCrash } from ${src("domains/diagnose.ts")};`,
 ].join("\n"));
 await build({ entryPoints: [entry], outfile: path.join(out, "entry.mjs"), bundle: true, format: "esm", platform: "node", packages: "external", logLevel: "error", nodePaths: [path.join(root, "node_modules")] });
 fs.symlinkSync(path.join(root, "node_modules"), path.join(out, "node_modules"), "junction");
@@ -106,6 +106,21 @@ test("preflight: only real content edits count; build rewrites of BuildProfile.e
   write("entry/src/main/ets/pages/Index.ets", "a2");
   write("entry/src/main/ets/pages/New.ets", "n");
   assert.deepEqual(m.diffSources(first, m.snapshotSources(proj, first)), ["entry/src/main/ets/pages/Index.ets", "entry/src/main/ets/pages/New.ets"]);
+});
+
+test("preflight: importers of a changed file are checked too (relative imports)", () => {
+  const proj = fs.mkdtempSync(path.join(out, "imp-"));
+  const put = (f, s) => { fs.mkdirSync(path.dirname(path.join(proj, f)), { recursive: true }); fs.writeFileSync(path.join(proj, f), s); };
+  put("entry/src/main/ets/pages/Helper.ets", "export function twice(n: number): number { return n * 2 }\n");
+  put("entry/src/main/ets/pages/Index.ets", "import { twice } from './Helper';\n");
+  put("entry/src/main/ets/view/Card.ets", "import { twice } from '../pages/Helper';\n");
+  put("entry/src/main/ets/view/Other.ets", "import { x } from '@ohos/lib';\n");
+  put("entry/src/main/ets/model/Index.ets", "export const a = 1\n");
+  put("entry/src/main/ets/view/UsesModel.ets", "import { a } from '../model';\n");
+  const all = Object.keys(m.snapshotSources(proj));
+  assert.deepEqual(m.importersOf(proj, ["entry/src/main/ets/pages/Helper.ets"], all).sort(), ["entry/src/main/ets/pages/Index.ets", "entry/src/main/ets/view/Card.ets"]);
+  assert.deepEqual(m.importersOf(proj, ["entry/src/main/ets/model/Index.ets"], all), ["entry/src/main/ets/view/UsesModel.ets"], "directory import resolves to Index");
+  assert.deepEqual(m.importersOf(proj, [], all), []);
 });
 
 test("parseSourceRefs: debug, release-bundle, normalized OHM and compiler locations; system frames skipped", () => {
@@ -294,6 +309,20 @@ test("visual: PNG round trip, unchanged screen = same, a moved card = one boxed 
   const r = moved.regions.find((x) => x.y >= 130);
   assert.ok(r.x <= 20 && r.x + r.w >= 70 && r.y <= 150 && r.y + r.h >= 190, JSON.stringify(r));
   assert.throws(() => m.compareGray(a, { width: 10, height: 10, gray: new Uint8Array(100) }), /differ in size/);
+  // The whole screen dimmed by 40 levels (display dimming / night mode): a global shift, not a change.
+  const dim = { width: W, height: H, gray: a.gray.map((v) => Math.max(0, v - 40)) };
+  const g = m.compareGray(a, dim);
+  assert.deepEqual([g.changed_ratio, g.global_shift, g.brightness_delta], [0, true, -40]);
+  // Dimmed AND the card moved: the move is still found.
+  const dimMoved = screen({ x: 20, y: 150 }); for (let i = 0; i < dimMoved.gray.length; i++) dimMoved.gray[i] = Math.max(0, dimMoved.gray[i] - 40);
+  const gm = m.compareGray(a, dimMoved);
+  assert.equal(gm.global_shift, true);
+  assert.equal(gm.regions.length, 2);
+  // A different page that happens to be darker overall is NOT a global shift (structure differs).
+  const other = { width: W, height: H, gray: new Uint8Array(W * H).fill(60) };
+  for (let y = 100; y < 220; y++) for (let x = 10; x < 110; x++) other.gray[y * W + x] = 200;
+  const go = m.compareGray(a, other);
+  assert.ok(go.changed_ratio > 0.1, JSON.stringify(go).slice(0, 120));
   assert.match(m.baselinePath("/p", "gif-page", "VYG-AL00"), /\.arkpilot[\\/]baselines[\\/]gif-page@VYG-AL00\.png$/);
   assert.throws(() => m.baselinePath("/p", "../x", "m"), /baseline name/);
 });
@@ -348,6 +377,38 @@ test("hot path inputs: resources compared by content", () => {
   assert.deepEqual(m.changedInputs(a, m.inputsSnapshot(proj, a)), [], "touched, same content");
   fs.writeFileSync(f, '{"x":1}');
   assert.deepEqual(m.changedInputs(a, m.inputsSnapshot(proj, a)), ["entry/src/main/resources/base/element/string.json"]);
+});
+
+test("cppcrash: only the faulting thread's frames, also with 'Fault thread info:' + 'Tid:' headers", () => {
+  const text = ["Module name:com.app", "Reason:Signal:SIGSEGV(SEGV_MAPERR)@0x0", "Fault thread info:", "Tid:12345, Name:com.app",
+    "#00 pc 000a1b2c /data/storage/el1/bundle/libs/arm64/libentry.so(Napi_Process+44)", "#01 pc 00012345 /system/lib64/libace_napi.z.so",
+    "Tid:12346, Name:OS_IPC", "#00 pc 00099999 /system/lib64/libc.so"].join("\n");
+  const c = m.parseCrash(text, "cppcrash-com.app-1-20261002112233000.log");
+  assert.equal(c.kind, "SIGSEGV");
+  assert.equal(c.frames.length, 2);
+  assert.ok(!c.frames.some((f) => /libc\.so/.test(f)));
+  const bare = m.parseCrash(text.replace("Fault thread info:\n", ""), "cppcrash-x");
+  assert.equal(bare.frames.length, 2, "stack starting directly with Tid:");
+});
+
+test("state database: a corrupted file is moved aside and recreated, with a one-time note", async () => {
+  const dir = fs.mkdtempSync(path.join(out, "db-"));
+  fs.writeFileSync(path.join(dir, "state.db"), "this is not a sqlite database".repeat(100));
+  const prev = process.env.DEVECO_STATE_DIR;
+  process.env.DEVECO_STATE_DIR = dir;
+  const bundle = path.join(out, "db.mjs");
+  await build({ entryPoints: [path.join(root, "src/core/db.ts")], outfile: bundle, bundle: true, format: "esm", platform: "node", packages: "external", logLevel: "error" });
+  const db = await import(`${pathToFileURL(bundle).href}?t=${Date.now()}`);
+  try {
+    const conn = await db.database();
+    assert.equal(conn.prepare("SELECT count(*) AS n FROM jobs").get().n, 0);
+    assert.match(db.takeRecoveryNote(), /corrupted .* recreated/);
+    assert.equal(db.takeRecoveryNote(), undefined, "announced once");
+    assert.equal(fs.readdirSync(dir).filter((f) => f.startsWith("state.db.corrupt-")).length, 1);
+  } finally {
+    db.closeDatabase();
+    process.env.DEVECO_STATE_DIR = prev;
+  }
 });
 
 test("saveExecutedFlow: executed batch becomes a replayable flow with secret input variables", () => {

@@ -23,12 +23,12 @@ const prompts: Record<string, { description: string; args: { name: string; descr
   "fix-build": {
     description: "Build the project and fix compile errors iteratively",
     args: [{ name: "project", description: "Absolute project path", required: true }],
-    text: (a) => `Build ${a.project} with the project tool (action=build). For each reported diagnostic: read the file, search knowledge for the error code/message, fix it, then use code action=check on changed files. Repeat build until it succeeds. Do not change unrelated code.`,
+    text: (a) => `Build ${a.project} with the project tool (action=build). Each reported diagnostic carries the file, line and the code around it (source): fix it there, searching knowledge for the error code/message when the cause is unclear. Build again until it succeeds (the build itself re-checks the edited files first, so no separate code check is needed). Do not change unrelated code.`,
   },
   "debug-crash": {
     description: "Reproduce, diagnose and fix an app crash",
     args: [{ name: "project", description: "Absolute project path", required: true }, { name: "symptom", description: "What the user saw" }],
-    text: (a) => `The app in ${a.project} crashes${a.symptom ? ` (${a.symptom})` : ""}. 1) run action=build_run to deploy. 2) Reproduce with ui tools. 3) diagnose action=crash to read the fault log and matched patterns; follow skill hmos-runtime-fix-skill. 4) Open the top app frame, fix the root cause. 5) Redeploy and verify with ui assert.`,
+    text: (a) => `The app in ${a.project} crashes${a.symptom ? ` (${a.symptom})` : ""}. 1) run action=build_run (target=<device>). If it fails with LAUNCH_FAILED, crash.source already gives the project file, line and code, plus likely causes: fix that and build_run again. 2) Otherwise reproduce in one call with ui act steps=[...] (add assert for the expected screen); save the path with save_flow so later deploys can use run then_flow=<id>. 3) Read the crash with diagnose action=crash project=${a.project} bundle=<bundle> since_minutes=10 (project adds the source location); follow skill hmos-runtime-fix-skill for the root cause. 4) Fix it, build_run again (code-only changes are quick-fixed in seconds) and verify with ui assert.`,
   },
   "upgrade-sdk": {
     description: "Check API compatibility before raising the SDK level",

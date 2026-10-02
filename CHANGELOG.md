@@ -1,5 +1,33 @@
 # Changelog / 更新日志
 
+## v1.3.1 (2026-10-02)
+
+**中文**
+
+修复 v1.3.0 全面审查（`docs/audit/REVIEW-1.3.md`）发现的问题。每项都在 Mate 80 + MyStarRing 上用对应的审查脚本复测过。
+
+- **单次调用不再超过宿主超时**：`timeout_ms` 超过 52 秒（`ui assert`、`test_step`、`steps` 里每一步）会被截断并附注说明；`ui act steps` 整次调用最多 52 秒，到时返回已完成的步骤和 `stopped_at`，从那一步继续调用即可。以前 `assert timeout_ms=70000` 会让宿主先超时、什么都拿不到。
+- **`after` 更准**：只统计 app 自己、当前在屏幕上的控件（不再混入状态栏）；页面/弹层容器变化、一半以上内容被替换或窗口变化都判为 `navigated`，切换页签也能正确识别。
+- **少读界面树**：`steps` 只在下一步要按选择器找控件时才重新读取界面；单次 `act` 复用上一次操作留下的界面树，滚动这类本身就慢的操作不再额外等 400 毫秒。10 步混合路径 20.8 秒 → 16.1 秒。
+- **状态库损坏自动恢复**：`state.db` 损坏时改名备份为 `state.db.corrupt-<时间>` 并重建，第一次返回和 `doctor` 会说明丢了什么（任务记录、录制草稿、登录）。
+- **截图对比识别整屏变暗**：整屏亮度一致变化（调暗、夜间模式、半透明遮罩）报告为 `global_shift`，扣除后再比较；变化超过一半时额外保存当时的截图（`current_artifact`）。
+- **`tools/list` 从 45.3 KB 降到 36.1 KB**：去掉整数参数无意义的 ±2^53 边界、操作类型只定义一次、说明文字精简。单元测试设了 36 KB 硬上限。
+- **prompts 更新**：`fix-build` 不再要求每轮先 `code check`；`debug-crash` 先用 `build_run` 返回的 `crash.source`。
+- 其他：单次 `act` 和 `steps` 对同名控件的选择规则一致；增量预检会一并检查引用了被改文件的文件；cppcrash 只取崩溃线程的调用栈；热修复状态和截图基准改为原子写入；flow 文件损坏报 `FLOW_INVALID` 并给出文件路径；设备中途断开报 `DEVICE_UNAVAILABLE`；`device log` 内联内容限制在约 7 KB。
+- 文档：热修复耗时改为实测值（`hot_reload` 约 5 秒，自动热修复 6–10 秒）；`wait` 默认值随动作不同。
+
+**English**
+
+Fixes for the issues found by the v1.3.0 review (`docs/audit/REVIEW-1.3.md`), each re-tested with its review script on a Mate 80 with MyStarRing.
+
+- **No call outlives the host's request timeout**: `timeout_ms` above 52 s (ui assert, test_step, every step) is capped with a note; one `ui act steps` call lasts at most 52 s and then returns the finished steps and `stopped_at`.
+- **Accurate `after`**: only the app's own on-screen elements (no status bar); a page/overlay container change, half the content replaced or a window change counts as `navigated` (tab switches included).
+- **Fewer layout dumps**: steps re-dump only before a selector step; a single act reuses the tree the previous act left; no fixed 400 ms wait after slow actions. 10-step mixed path 20.8 s -> 16.1 s.
+- **State database self-repair**: a corrupted `state.db` is moved aside and recreated, with a one-time note and a doctor check.
+- **Visual check**: a uniform brightness change is reported as `global_shift` and removed before comparing; the plain screenshot is kept when more than half changed.
+- **tools/list 45.3 KB -> 36.1 KB** with a 36 KB hard limit in the unit tests.
+- Prompts, ambiguity rule shared by act and steps, preflight checks importers of edited files, cppcrash faulting thread only, atomic state writes, `FLOW_INVALID`, `DEVICE_UNAVAILABLE` on mid-call disconnects, `device log` inline output bounded, corrected timing numbers in the docs.
+
 ## v1.3.0 (2026-10-01)
 
 **中文**
@@ -11,7 +39,7 @@
 - **`ui act steps`**：一次调用走完整条路径，每步自动等待控件出现；失败时返回失败的那一步和当前可见控件；可以带最终断言，`save_flow` 存成 flow。
 - **每次 `act` 都返回 `after`**：新出现和消失的控件、是否换页，一般不用再调 `observe`。
 - **增量预检**：`build` / `build_run` 只检查上次以来内容真正改动过的 .ets/.ts（LingDong：0.4 秒，原来全量 4–22 秒）。hvigor 每次构建都会重写的 `BuildProfile.ets` 会被忽略。服务端说明和 SKILL 里不再要求先单独调用 `code check`。
-- **自动热修复**（`run_mode=auto`，默认开启）：从第二次部署起，只改了入口模块代码时，直接给正在运行的应用打补丁并重启。MyStarRing 在 Mate 80 上实测约 6 秒，完整部署要 15–25 秒。资源、配置、其他模块、新增或删除文件、补丁失败时，自动改走完整部署，并通过 `fallback_reason` 说明原因；没有改动时只重启。传 `run_mode=full` 可以强制完整部署。
+- **自动热修复**（`run_mode=auto`，默认开启）：从第二次部署起，只改了入口模块代码时，直接给正在运行的应用打补丁并重启。MyStarRing 在 Mate 80 上实测 6–10 秒，完整部署要 15–25 秒。资源、配置、其他模块、新增或删除文件、补丁失败时，自动改走完整部署，并通过 `fallback_reason` 说明原因；没有改动时只重启。传 `run_mode=full` 可以强制完整部署。
 - **`then_flow`**：部署完自动走到保存过的页面；flow 不存在时，在构建开始前就报错。重启后又走了一遍同样的路径时，会提示把它存成 flow。
 - **启动崩溃自带诊断**：`build_run`、`launch` 和热修复后启动崩溃时，直接附上错误类型、可能原因，以及工程内出错的文件、行号和前后几行代码（`crash.source`）。`diagnose crash`、`device log` 带上 `project` 时也会这样定位。编译错误会附上出错位置的代码。
 - **`ui visual`**：截图回归。按名称和机型保存基准截图，之后对比，返回变化比例、变化区域和红框标注图；状态栏和导航栏不参与对比。`ui_flow replay snapshot=true` 会在回放后做一次对比。
@@ -28,7 +56,7 @@ Same task (edit page code -> deploy -> reach the page -> verify): 7-9 tool calls
 - **`ui act steps`**: a whole path in one call, each step waiting for its element; on failure the failing step and the visible controls; optional final assert; `save_flow` stores it as a flow.
 - **Every `act` returns `after`**: elements that appeared/disappeared and whether the page changed, so observe is rarely needed.
 - **Incremental preflight**: build/build_run check only the .ets/.ts whose content changed since the last preflight (LingDong: 0.4 s instead of 4-22 s; hvigor's rewritten `BuildProfile.ets` ignored). Instructions and SKILL no longer ask for a separate code check.
-- **Automatic quick fix** (`run_mode=auto`, default): from the second deploy on, code-only changes of the entry module are patched into the running app and relaunched (MyStarRing on Mate 80: about 6 s vs 15-25 s). Resources, manifests, other modules, added/deleted files or a failed patch deploy fully with `fallback_reason`; an unchanged project only relaunches. `run_mode=full` forces a full deploy.
+- **Automatic quick fix** (`run_mode=auto`, default): from the second deploy on, code-only changes of the entry module are patched into the running app and relaunched (MyStarRing on Mate 80: 6-10 s vs 15-25 s). Resources, manifests, other modules, added/deleted files or a failed patch deploy fully with `fallback_reason`; an unchanged project only relaunches. `run_mode=full` forces a full deploy.
 - **`then_flow`**: lands on a saved page after the deploy (unknown flows fail before building). A path walked again after a relaunch is suggested for saving.
 - **Startup crashes come diagnosed**: build_run, launch and quick-fix relaunches attach the error type, likely causes and the project file, line and surrounding code (`crash.source`); `diagnose crash` and `device log` do the same with `project`. Compile errors carry the code at the error.
 - **`ui visual`**: screenshot regression with per-name, per-model baselines: change ratio, regions, red-boxed diff image; status/navigation bars ignored. `ui_flow replay snapshot=true`.

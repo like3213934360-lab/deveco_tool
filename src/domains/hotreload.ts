@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { invariant, ToolError } from "../core/errors.js";
-import { clip, readJson5, sha256, walk } from "../core/files.js";
+import { atomicWrite, clip, readJson5, sha256, walk } from "../core/files.js";
 import { run } from "../core/proc.js";
 import { toolCommand } from "../core/toolchain.js";
 import { hdc, pidOf, shell } from "./device.js";
@@ -98,7 +98,7 @@ export async function recordBaseline(project: Project, module: string, bundle: s
   invariant(result.code === 0, "BUILD_FAILED", "Hot reload baseline compile failed", { ...diagnostics, tail: clip(result.stderr || result.stdout, 1500) });
   const baseline: Baseline = { module, bundle, target, files: sourceDigests(m.root), at: Date.now() };
   fs.mkdirSync(path.dirname(statePath(project, module)), { recursive: true });
-  fs.writeFileSync(statePath(project, module), JSON.stringify(baseline));
+  atomicWrite(statePath(project, module), JSON.stringify(baseline));
   return { baseline: true, module, files: Object.keys(baseline.files).length };
 }
 
@@ -199,7 +199,7 @@ export async function applyHotReload(project: Project, module: string, signal: A
   }
   const after = await pidOf(baseline.target, baseline.bundle, signal);
   // Commit the new baseline so the next apply only sends newer changes.
-  fs.writeFileSync(file, JSON.stringify({ ...baseline, files: current, at: Date.now() }));
+  atomicWrite(file, JSON.stringify({ ...baseline, files: current, at: Date.now() }));
   return {
     applied: true, files: changed.map((f) => path.relative(project.root, f)), added: added.length,
     restarted: after !== pid, pid: after, ...(launch ? { launch } : {}),

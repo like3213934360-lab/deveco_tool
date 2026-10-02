@@ -66,7 +66,14 @@ function flowFile(project: string, id: string) {
 export function readFlow(project: string, id: string): Flow {
   const file = flowFile(project, id);
   invariant(fs.existsSync(file), "NOT_FOUND", `Flow ${id} not found`, { available: listFlows(project).map((f) => f.id) });
-  return flowSchema.parse(JSON.parse(fs.readFileSync(file, "utf8")));
+  try {
+    return flowSchema.parse(JSON.parse(fs.readFileSync(file, "utf8")));
+  } catch (error) {
+    // A hand-edited or truncated file: say which one and what to do, not a raw parser message.
+    const detail = error instanceof z.ZodError ? z.prettifyError(error) : (error as Error).message;
+    throw new ToolError("FLOW_INVALID", `Flow ${id} cannot be read: ${detail.slice(0, 300)}`, { file },
+      "Fix the JSON in that file, or delete it (ui_flow action=delete) and record the path again (ui act steps + save_flow)");
+  }
 }
 export function writeFlow(project: string, flow: Flow) {
   atomicWrite(flowFile(project, flow.id), JSON.stringify(flowSchema.parse(flow), null, 2) + "\n");

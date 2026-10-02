@@ -110,3 +110,28 @@
 | AGC | 只读查询了证书和设备列表，没有新建或删除任何东西 |
 | 临时文件 | 设备上没有新增 `deveco-*` 文件；主机上有 1 个过期 v1.2 脚本崩溃后留下的临时目录，已手动删除 |
 | 手机自动锁屏 | 审查中途自动锁屏了一次，你把自动锁屏时间调长了；受影响的 7 个用例已全部重跑 |
+
+## 八、修复结果（v1.3.1，2026-10-02）
+
+所有问题都按第六节的顺序修复，并在 Mate 80 + MyStarRing 上用对应的审查脚本复测；`findings.jsonl` 里每条都追加了新结论，`FINDINGS.md` 已重新生成。目前没有任何一条的最新结论是 DEFECT。
+
+| 问题 | 修复后实测 |
+| --- | --- |
+| F.avail.sync-timeouts | `ui assert timeout_ms=70000` 52.6 秒返回并附注截断说明；30 步、每步 `timeout_ms=60000` 都找不到控件，51.5 秒返回；30 步固定等待在 52.2 秒停下，返回 `stopped_at=20` 和"从第 20 步继续"提示 |
+| F.after.navigated-detection / system-noise | 打开页面、返回、切换页签都判为 `navigated`，滚动判为 `updated`；`after` 里没有状态栏控件 |
+| F.batch.dump-per-step | 同一条 10 步混合路径 20.8 秒 → 16.1 秒（减少 22%）。**没有达到计划的 30%**：其中 6 步是按选择器点击，每步都需要在上一步操作后重新读取界面（uitest 读一次约 1.3 秒，这是下限），两次滚动在 uitest 内部各要约 1.9 秒 |
+| F.after.latency | 连续的单次 `act`（复用上一次留下的界面树）1.9–2.4 秒；启动后的第一次和滚动仍是 3.2–3.4 秒（原因同上） |
+| F.fault.db-corrupt | 往状态库写垃圾后 `job list` 正常，返回里说明已重建、丢了什么、备份在哪；`doctor` 有 `state` 检查项 |
+| F.visual.global-brightness | 单元测试：整屏暗 40 级判为 `global_shift`、变化比例 0；变暗同时卡片移动仍检出 2 个区域；不同的暗色页面仍判为变化。真机上同页 5 次均为 0，滚动 200 px 仍检出 |
+| F.bench.tools-list-size | 45,303 → 36,054 字节；单元测试里 36 KB 硬上限（三个平台的 CI 都会跑）。`tools/bench.mjs` 本地保留同一预算，但没有放进 CI：它的空闲 CPU/内存预算在开发机上本来就贴着上限，放进 CI 会时好时坏 |
+| F.docs.prompts-stale | 两个 prompt 已更新，单元测试检查文字 |
+| 低优先级 7 项 | 都已修复并复测：歧义选择一致、预检带上引用方（LingDong 1831 个文件扫描 56 毫秒）、cppcrash 只取崩溃线程、原子写、`FLOW_INVALID`、模拟器中途关机报 `DEVICE_UNAVAILABLE`（5.8 秒） |
+| 文档数字 | 热修复约 5 秒、自动热修复 6–10 秒、`wait` 默认值随动作不同 |
+| F.audit.scripts-stale | 4 个脚本都能直接重跑：check-rules 22 条通过，另外 4 条需要真机验证的由 check-rules-2 在 Pura 90 模拟器上验证通过；modules30 通过；blank 自己临时 clone 上游、退出时删除，按标准答案判定通过；syscap-full 没有构建时自己构建，结果 83/291/3 与 MCP 一致 |
+| 复测中新发现：F.soak.response-sizes | `device log` 的内联内容随日志行长度变化会到 12.6 KB；现在限制在约 7 KB（全文在 artifact 里） |
+
+**整体复测**：单元测试 73/73；模拟器端到端测试 20/20；review-ui、review-ui2、review-hot、review-fault、review-build、review-device、review-soak（100 次操作 + 20 次部署）全部重跑，除 F.layout.findings-review（需要人看的布局提示）外均为 VERIFIED。
+
+**opencode 宿主实测**（同一任务、同一免费模型）：deveco 调用从 3 次降到 2 次（`build_run` + `ui assert`，没有多余的 `act`）。这次总耗时 232 秒（上次 85 秒），原因是模型这次多做了 grep/glob 探索（15 个模型步骤），以及 app 刚被审查重装过，`build_run` 走了完整部署（26.4 秒，`fallback_reason` 为 "the app was reinstalled since the baseline"），不是工具变慢。
+
+**对环境的影响**：MyStarRing 源码与复测前完全一致（opencode 改的 Index.ets 已还原）；工程里仍是 22 个 flow，没有基准截图；设备上没有 `deveco-*` 临时文件；主机上没有临时目录残留（发现 1 个 13:44 的 `audit-blank-*`，是修复 blank.mjs 时一次失败运行留下的，已删除）；Pura 90 模拟器已关闭；为 syscap-full 构建过一次 LingDong（只有构建产物，源码未动）。

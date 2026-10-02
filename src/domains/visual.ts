@@ -4,7 +4,8 @@ import path from "node:path";
 import zlib from "node:zlib";
 import { invariant } from "../core/errors.js";
 import { artifactDir, commitArtifact } from "../core/artifacts.js";
-import { hdc, shell } from "./device.js";
+import { atomicWrite } from "../core/files.js";
+import { assertConnected, hdc, shell } from "./device.js";
 import { pngGray } from "./ui.js";
 
 /*
@@ -80,11 +81,25 @@ export function compareGray(a: Gray, b: Gray, options: { block?: number; thresho
   const top = Math.floor(a.height * (options.top ?? 0.06)), bottom = Math.floor(a.height * (1 - (options.bottom ?? 0.04)));
   const cols = Math.ceil(a.width / block), rows = Math.ceil((bottom - top) / block);
   const diff = new Uint8Array(cols * rows);
+  // Per-block mean difference (signed) first: a uniform shift of most blocks is a brightness/dimming
+  // or overlay change of the whole screen, not a layout change.
+  const signed = new Float32Array(cols * rows);
+  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+    let sum = 0, n = 0;
+    for (let y = top + r * block; y < Math.min(bottom, top + (r + 1) * block); y++)
+      for (let x = c * block; x < Math.min(a.width, (c + 1) * block); x++) { const i = y * a.width + x; sum += b.gray[i]! - a.gray[i]!; n++; }
+    signed[r * cols + c] = n ? sum / n : 0;
+  }
+  const sorted = Array.from(signed).sort((x, y) => x - y);
+  const median = sorted[Math.floor(sorted.length / 2)] ?? 0;
+  // 75 %: a real change (a moved card, a new banner) may occupy the rest while the screen is dimmed.
+  const near = sorted.filter((v) => Math.abs(v - median) <= threshold).length / Math.max(1, sorted.length);
+  const globalShift = Math.abs(median) > threshold && near >= 0.75 ? Math.round(median) : 0;
   let changed = 0;
   for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
     let sum = 0, n = 0;
     for (let y = top + r * block; y < Math.min(bottom, top + (r + 1) * block); y++)
-      for (let x = c * block; x < Math.min(a.width, (c + 1) * block); x++) { const i = y * a.width + x; sum += Math.abs(a.gray[i]! - b.gray[i]!); n++; }
+      for (let x = c * block; x < Math.min(a.width, (c + 1) * block); x++) { const i = y * a.width + x; sum += Math.abs(b.gray[i]! - a.gray[i]! - globalShift); n++; }
     if (n && sum / n > threshold) { diff[r * cols + c] = 1; changed++; }
   }
   // Merge 8-connected differing blocks into bounding boxes (flood fill).
@@ -105,7 +120,7 @@ export function compareGray(a: Gray, b: Gray, options: { block?: number; thresho
     regions.push({ x: minC * block, y: top + minR * block, w: Math.min(a.width, (maxC + 1) * block) - minC * block, h: Math.min(bottom, top + (maxR + 1) * block) - (top + minR * block) });
   }
   regions.sort((p, q) => q.w * q.h - p.w * p.h);
-  return { changed_ratio: +(changed / (cols * rows)).toFixed(4), regions };
+  return { changed_ratio: +(changed / (cols * rows)).toFixed(4), regions, ...(globalShift ? { global_shift: true, brightness_delta: globalShift } : {}) };
 }
 
 /** The new shot in gray with the changed regions outlined in red (RGB PNG). Pure. */
@@ -134,6 +149,7 @@ export async function grayShot(target: string, size: { w: number; h: number } | 
   try {
     const h = size ? Math.round((size.h * WIDTH) / size.w) : 800;
     const shot = await shell(target, ["snapshot_display", "-f", remote, "-t", "png", "-w", String(WIDTH), "-h", String(h)], signal, 20000);
+    if (!/success/i.test(shot.stdout)) await assertConnected(target, signal);
     invariant(/success/i.test(shot.stdout), "SCREENSHOT_FAILED", `snapshot_display failed: ${shot.stdout.trim().slice(0, 200)}`, undefined, "Wake and unlock the device");
     await hdc(["-t", target, "file", "recv", remote, local], signal, 20000, true);
     const img = fs.existsSync(local) ? pngGray(fs.readFileSync(local)) : undefined;
@@ -158,24 +174,32 @@ export async function visualCheck(target: string, input: { project: string; name
   const file = baselinePath(input.project, input.name, device.model);
   const current = await grayShot(target, device.size, signal);
   if (input.update || !fs.existsSync(file)) {
-    fs.mkdirSync(path.dirname(file), { recursive: true });
-    fs.writeFileSync(file, encodePng(current.width, current.height, current.gray));
+    atomicWrite(file, encodePng(current.width, current.height, current.gray));
     return { baseline: input.update ? "updated" : "created", file, note: "Later calls with this name compare the screen against it" };
   }
   const base = decodeGray(fs.readFileSync(file));
   invariant(base, "VISUAL_BASELINE_INVALID", `Cannot read baseline ${file}`, undefined, "Recreate it with update=true");
   const result = compareGray(base, current, { threshold: input.threshold });
   const same = result.changed_ratio === 0;
-  let artifact: string | undefined;
+  let artifact: string | undefined, currentArtifact: string | undefined;
   if (!same) {
     const id = `a_${crypto.randomBytes(8).toString("hex")}`;
     const out = path.join(artifactDir(), `${id}.png`);
     fs.writeFileSync(out, annotate(current, result.regions));
     artifact = (await commitArtifact(id, out, "image/png")).artifact_id;
   }
+  // Most of the screen changed: keep the plain shot too, so the cause (dialog, dimming, another page) can be checked.
+  if (result.changed_ratio > 0.5 || result.global_shift) {
+    const id = `a_${crypto.randomBytes(8).toString("hex")}`;
+    const out = path.join(artifactDir(), `${id}.png`);
+    fs.writeFileSync(out, encodePng(current.width, current.height, current.gray));
+    currentArtifact = (await commitArtifact(id, out, "image/png")).artifact_id;
+  }
   const scale = device.size ? device.size.w / current.width : 1;
   return {
     same, changed_ratio: result.changed_ratio,
+    ...(result.global_shift ? { global_shift: true, brightness_delta: result.brightness_delta, note_global: "The whole screen got uniformly brighter/darker (dimming, night mode, a translucent overlay): compared after removing that shift" } : {}),
+    ...(currentArtifact ? { current_artifact: currentArtifact } : {}),
     // Regions in device pixels (what ui tree bounds use), largest first.
     regions: result.regions.slice(0, 10).map((r) => ({ x: Math.round(r.x * scale), y: Math.round(r.y * scale), w: Math.round(r.w * scale), h: Math.round(r.h * scale) })),
     ...(artifact ? { diff_artifact: artifact, note: "diff_artifact: the current screen with changed areas boxed in red (job action=read)" } : {}),

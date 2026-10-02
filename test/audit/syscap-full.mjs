@@ -17,9 +17,21 @@ const tagAt = (hover, api) => { // range-aware: API 26 compile level
 };
 const root = PROJECTS.lingdong;
 const c = await mcp({ shared: true });
+// The latest successful LingDong build in the shared state; without one, build it now (the
+// classification needs the full hvigor log of the current code).
 const jobs = (await c.call("job", { action: "list", limit: 60 })).data.jobs.filter((j) => j.kind === "build" && j.status === "succeeded");
-let res; for (const j of jobs) { const s = (await c.call("job", { action: "status", job_id: j.job_id })).data; if (s.result?.device_compat?.unguarded_calls === 83) { res = s.result; break; } }
-if (!res) { console.error("no LingDong build with device_compat in shared state"); process.exit(2); }
+let res;
+for (const j of jobs) {
+  const s = (await c.call("job", { action: "status", job_id: j.job_id })).data;
+  if (path.resolve(s.input?.project ?? "") === path.resolve(root) && s.result?.device_compat && s.result?.log_artifact) { res = s.result; break; }
+}
+if (!res) {
+  console.error("no LingDong build in the shared state: building it (a few minutes)");
+  let job = (await c.call("project", { action: "build", project: root, wait: 55000 })).data;
+  while (job.status === "running" || job.status === "queued") job = (await c.call("job", { action: "wait", job_id: job.job_id, wait: 55000 })).data;
+  if (job.status !== "succeeded" || !job.result?.device_compat) { console.error(`LingDong build ${job.status}: ${JSON.stringify(job.error ?? {}).slice(0, 300)}`); await c.close(); process.exit(2); }
+  res = job.result;
+}
 let all = "", line = 0;
 for (;;) { const p = (await c.call("job", { action: "read", artifact_id: res.log_artifact, line, limit: 2000 })).data; all += p.content + "\n"; if (p.next_line == null) break; line = p.next_line; }
 const lines = all.replace(/\x1b\[[0-9;]*m/g, "").split("\n");
