@@ -2,7 +2,7 @@
 
 由 `node test/audit/report.mjs` 从 `docs/audit/findings.jsonl` 生成；同一编号以最后一次记录为准。
 
-共 483 项：VERIFIED 469，DEFECT 0，UNVERIFIED 5，INFERRED 9。
+共 484 项：VERIFIED 470，DEFECT 0，UNVERIFIED 5，INFERRED 9。
 
 ## DEFECT
 
@@ -459,6 +459,7 @@
 | F.fault.flow-corrupt-message | a corrupted flow is reported as FLOW_INVALID "Flow broken cannot be read: Expected property name or '}' in JSON at position 2 (line 1 column 3)", file=given, hint=given | `docs/audit/evidence/review-1.3/fault-flows.json` |
 | F.fault.hotpath-corrupt | corrupted hotpath state files: server starts and works (readState returns undefined -> treated as no baseline, see F.hot decisions) | `docs/audit/evidence/review-1.3/fault-hotpath.json` |
 | F.fault.two-instances | two servers on one state dir, 10 sync jobs + 10 job lists in parallel: 0 errors [], 10 jobs visible from the other instance (succeeded,failed) | `docs/audit/evidence/review-1.3/fault-concurrent.json` |
+| F.host.artifact-discovery | v1.3.2: only build failures, cloud knowledge and the emulator license told the host how to read the complete content; crash reports, device log/shell/sqlite and successful builds returned a bare id. The server now adds read_full (exact job action=read call) to every response carrying an artifact id, nested in results or errors; instructions and the workflow SKILL state it too. Verified on Mate 80: failed build (log_artifact), diagnose crash (report_artifact), device log 500 lines (artifact_id) all carry read_full; job read itself does not; unit test covers the response shapes | `src/server.ts`<br>`test/unit/efficiency.test.mjs`<br>`knowledge/skills/deveco-mcp-workflow/SKILL.md` |
 | F.host.opencode | 1.3.1 re-run, same task and free model: 2 deveco calls (build_run 26.4 s, path=full because the app had been reinstalled by the review; ui assert 1.4 s), no code check, no observe, no extra act (1.3.0: 3 calls). tools/list is 19% smaller and the host found everything it needed. Wall time 232 s vs 85 s is the model (15 model steps incl. grep/glob exploration it skipped last time, 1 failed grep) plus the full deploy, not the tools | `docs/audit/evidence/review-1.3/host-opencode-1.3.1.json` |
 | F.host.single-tap-as-steps | re-measured with opencode: the host verified with one ui assert and no separate act; deveco calls 3 -> 2 for the same task | `docs/audit/evidence/review-1.3/host-opencode-1.3.1.json` |
 | F.hot.app-not-running | app not running: succeeded path=full fallback=the app is not running  26092 ms | `docs/audit/evidence/review-1.3/hot-decisions.json` |

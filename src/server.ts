@@ -15,7 +15,32 @@ const instructions = [
   "Verify UI outcomes with ui assert, not screenshots alone. Never retry a job in needs_input without inspecting it.",
   "Several devices connected (DEVICE_AMBIGUOUS) or several developer teams (TEAM_AMBIGUOUS): ask the user which one to use; never pick one yourself.",
   "Unknown or misplaced parameters are rejected and nothing runs: use the names from the error.",
+  "Responses are summaries: every artifact id in them (log_artifact, report_artifact, full_artifact, artifact_id...) holds the complete text (full build log, crash report, hilog, cloud answer); read it with job action=read artifact_id=<id> (line/limit to page, grep to filter). Artifacts expire after about a day.",
 ].join(" ");
+
+const ARTIFACT_ID = /^a_[0-9a-f]{16}$/;
+/** Every artifact id in a response, wherever it is nested (result, error.details, reports[]...). Pure. */
+export function artifactIds(value: unknown, out = new Map<string, string>(), key = "", depth = 0): Map<string, string> {
+  if (depth > 6 || value === null || value === undefined) return out;
+  if (typeof value === "string") { if (ARTIFACT_ID.test(value) && !out.has(value)) out.set(value, key || "artifact_id"); return out; }
+  if (Array.isArray(value)) { for (const v of value.slice(0, 50)) artifactIds(v, out, key, depth + 1); return out; }
+  if (typeof value === "object") for (const [k, v] of Object.entries(value as Record<string, unknown>)) if (k !== "_image") artifactIds(v, out, k, depth + 1);
+  return out;
+}
+
+/**
+ * One line telling the host where the complete content is, for every response carrying an
+ * artifact: hosts (especially smaller models) do not reliably connect an id field to job read.
+ * Added centrally so no tool can forget it. Undefined when there is nothing to read or the
+ * response already is a job read.
+ */
+export function artifactHint(tool: string, value: unknown, action?: unknown) {
+  if (tool === "job" && action === "read") return undefined;
+  const ids = [...artifactIds(value)];
+  if (!ids.length) return undefined;
+  const shown = ids.slice(0, 3).map(([id, field]) => `${field}: job action=read artifact_id=${id}`).join("; ");
+  return `Complete content (summarised above) - ${shown}${ids.length > 3 ? `; +${ids.length - 3} more` : ""}. Page with line/limit, filter with grep`;
+}
 
 type Content = { type: "text"; text: string } | { type: "image"; data: string; mimeType: string };
 
@@ -152,11 +177,15 @@ export async function serve() {
       const result = await tool.handler(parsed.data, { signal });
       const recovery = await recoveryNote();
       if (recovery) notes.push(recovery);
-      return respond(notes.length && result && typeof result === "object" && !Array.isArray(result) ? { ...(result as object), notes } : result);
+      const read = artifactHint(name, result, (params.arguments as Record<string, unknown> | undefined)?.action);
+      const extra = { ...(notes.length ? { notes } : {}), ...(read ? { read_full: read } : {}) };
+      return respond(Object.keys(extra).length && result && typeof result === "object" && !Array.isArray(result) ? { ...(result as object), ...extra } : result);
     } catch (error) {
       const recovery = await recoveryNote();
       if (recovery) notes.push(recovery);
-      return respond({ error: errorResult(error), ...(notes.length ? { notes } : {}) }, true);
+      const err = errorResult(error);
+      const read = artifactHint(name, err, (params.arguments as Record<string, unknown> | undefined)?.action);
+      return respond({ error: err, ...(notes.length ? { notes } : {}), ...(read ? { read_full: read } : {}) }, true);
     }
   });
   server.on("resources/list", async () => {

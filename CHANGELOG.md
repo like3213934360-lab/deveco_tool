@@ -1,5 +1,15 @@
 # Changelog / 更新日志
 
+## v1.3.2 (2026-10-02)
+
+**中文**
+
+- **告诉宿主 AI 完整内容在哪里**：工具返回的都是摘要，完整内容（构建日志、崩溃报告、hilog、shell 输出、云端答案）存在 artifact 里。以前只有构建失败和云端知识库会提示怎么读，崩溃报告、设备日志等只给一个 id。现在由服务器统一处理：任何返回（包括错误、嵌套在 `reports[]` 或 `details` 里的）只要带有 artifact，都会附上 `read_full`，写明 `job action=read artifact_id=<id>`；服务器给宿主的总说明和 `deveco-mcp-workflow` SKILL 里也加了这条。真机上验证了构建失败、`diagnose crash`、`device log` 三种返回。
+
+**English**
+
+- **The host is told where the complete content is**: every response carrying an artifact (build log, crash report, hilog, shell output, cloud answer; also inside errors and nested results) now gets a `read_full` line with the exact `job action=read artifact_id=<id>` call, added centrally by the server. The server instructions and the deveco-mcp-workflow skill say the same.
+
 ## v1.3.1 (2026-10-02)
 
 **中文**

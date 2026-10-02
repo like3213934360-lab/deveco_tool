@@ -26,6 +26,7 @@ fs.writeFileSync(entry, [
   `export { checkLayout } from ${src("domains/layout.ts")};`,
   `export { parseComposerFps, mergeFrames, frameStats, perfVerdict, parseSpFps, parsePss } from ${src("domains/perf.ts")};`,
   `export { buildFailureHints, parseCrash } from ${src("domains/diagnose.ts")};`,
+  `export { artifactHint, artifactIds } from ${src("server.ts")};`,
 ].join("\n"));
 await build({ entryPoints: [entry], outfile: path.join(out, "entry.mjs"), bundle: true, format: "esm", platform: "node", packages: "external", logLevel: "error", nodePaths: [path.join(root, "node_modules")] });
 fs.symlinkSync(path.join(root, "node_modules"), path.join(out, "node_modules"), "junction");
@@ -377,6 +378,28 @@ test("hot path inputs: resources compared by content", () => {
   assert.deepEqual(m.changedInputs(a, m.inputsSnapshot(proj, a)), [], "touched, same content");
   fs.writeFileSync(f, '{"x":1}');
   assert.deepEqual(m.changedInputs(a, m.inputsSnapshot(proj, a)), ["entry/src/main/resources/base/element/string.json"]);
+});
+
+test("artifact read hints: every artifact id in any response shape gets a job read line", () => {
+  const a = "a_0123456789abcdef", b = "a_fedcba9876543210", c = "a_1111111111111111";
+  // build failure (error.details.log_artifact), crash reports (reports[].report_artifact), device log (artifact_id)
+  const err = { code: "BUILD_FAILED", details: { log_artifact: a, diagnostics: [] } };
+  assert.match(m.artifactHint("project", err), new RegExp(`log_artifact: job action=read artifact_id=${a}`));
+  const crash = { reports: [{ type: "jscrash", report_artifact: b }, { report_artifact: c }] };
+  const h = m.artifactHint("diagnose", crash);
+  assert.match(h, new RegExp(`report_artifact: job action=read artifact_id=${b}`));
+  assert.match(h, new RegExp(c));
+  assert.match(m.artifactHint("device", { lines: 300, tail: "...", artifact_id: a }), /artifact_id: job action=read/);
+  assert.match(m.artifactHint("run", { status: "failed", error: { details: { crash: { report_artifact: a } } } }), /report_artifact/);
+  // nothing to read / reading already
+  assert.equal(m.artifactHint("ui", { passed: true }), undefined);
+  assert.equal(m.artifactHint("job", { content: a }, "read"), undefined);
+  assert.ok(m.artifactHint("job", { status: "succeeded", result: { log_artifact: a } }, "wait"), "job wait results point at their logs too");
+  // not every a_ string is an id
+  assert.equal(m.artifactIds({ text: "a_short", name: "a_0123456789abcdeg" }).size, 0);
+  // bounded: many ids -> 3 listed + count
+  const many = { files: Array.from({ length: 6 }, (_, i) => ({ artifact_id: `a_${String(i).repeat(16)}` })) };
+  assert.match(m.artifactHint("ui", many), /\+3 more/);
 });
 
 test("cppcrash: only the faulting thread's frames, also with 'Fault thread info:' + 'Tid:' headers", () => {

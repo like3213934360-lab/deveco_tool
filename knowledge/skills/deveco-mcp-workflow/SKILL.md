@@ -39,6 +39,7 @@ deveco MCP 提供 15 个工具。按下面的顺序使用，避免自己拼 `hdc
 | 模拟器 | `emulator action=list` / `start` / `stop`；`scenario` 模拟电量、GPS、旋转、折叠等 |
 | 数据库/文件 | `device action=sqlite bundle=... db=<name>`（调试包 RDB，默认只读）；`device send/recv` |
 | C/C++ | `project action=build task=compileNative` 生成编译数据库 → `code action=lsp language=cpp` |
+| 看完整日志/报告 | 返回内容都是摘要；带 `read_full` 字段时，说明完整内容（构建日志 `log_artifact`、崩溃报告 `report_artifact`、hilog/shell 全文 `artifact_id`、云端答案 `full_artifact`）还在，按里面给的 `job action=read artifact_id=<id>` 读，`line`/`limit` 翻页，`grep` 过滤。大约保留 1 天 |
 
 ## 原则
 

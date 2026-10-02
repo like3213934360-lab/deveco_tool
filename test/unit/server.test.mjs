@@ -27,6 +27,8 @@ test("handshake, tools/list and schema validation", async () => {
   assert.ok(capped.data.notes?.some((n) => /timeout_ms=70000 capped at 52000/.test(n)), JSON.stringify(capped.data).slice(0, 200));
   const steps = await client.call("ui", { action: "act", target: "none", steps: [{ op: "click", x: 1, y: 1, timeout_ms: 60000 }, { op: "click", x: 1, y: 1, timeout_ms: 60000 }] });
   assert.ok(steps.data.notes?.some((n) => /2 steps had timeout_ms above 52000/.test(n)), JSON.stringify(steps.data).slice(0, 200));
+  // The host is told where the complete content of summarised responses lives.
+  assert.match(init.result.instructions, /job action=read artifact_id=<id>/);
   const bad = await client.call("project", { action: "nope" });
   assert.equal(bad.isError, true);
   assert.equal(bad.data.error.code, "INVALID_INPUT");
