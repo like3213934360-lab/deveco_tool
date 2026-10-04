@@ -13,9 +13,9 @@ const bundle = path.join(root, "node_modules/.cache/deveco-layout-harness.mjs");
 await build({ stdin: { contents: `export { uiTool } from ${JSON.stringify(path.join(root, "src/tools/core.ts"))}; export { layoutCheck } from ${JSON.stringify(path.join(root, "src/domains/layout.ts"))};`, resolveDir: root }, outfile: bundle,
   bundle: true, platform: "node", format: "esm", packages: "external", logLevel: "error", plugins: [{ name: "sdk", setup(b) {
     b.onResolve({ filter: /(?:device|project|emulator|ui|jobs)\.js$/ }, (a) => {
-      if (/tools\/core\.ts$/.test(a.importer) && /core\/jobs\.js$/.test(a.path)) return { path: "jobs", namespace: "fixture" };
-      if (/tools\/core\.ts$/.test(a.importer) && /device\.js$/.test(a.path)) return { path: "routing", namespace: "fixture" };
-      if (/domains\/layout\.ts$/.test(a.importer)) return { path: path.basename(a.path, ".js"), namespace: "fixture" };
+      if (/tools\/core\.ts$/.test(a.importer.replaceAll("\\", "/")) && /core\/jobs\.js$/.test(a.path)) return { path: "jobs", namespace: "fixture" };
+      if (/tools\/core\.ts$/.test(a.importer.replaceAll("\\", "/")) && /device\.js$/.test(a.path)) return { path: "routing", namespace: "fixture" };
+      if (/domains\/layout\.ts$/.test(a.importer.replaceAll("\\", "/"))) return { path: path.basename(a.path, ".js"), namespace: "fixture" };
     });
     b.onLoad({ filter: /.*/, namespace: "fixture" }, (a) => ({ contents: {
       jobs: `export async function startJob(kind,input){globalThis.__devecoLayoutFixture.job={kind,input}; return {job_id:'owned',deduplicated:false}};export async function waitJob(){return {status:'running',job_id:'owned'}};`,

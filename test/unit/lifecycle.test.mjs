@@ -13,7 +13,7 @@ const fixture = globalThis.__devecoLifecycle = { active: false, mode: "ok", remo
 const bundle = path.join(root, "node_modules/.cache/deveco-lifecycle.mjs");
 await build({ stdin: { contents: `export * from ${JSON.stringify(path.join(root, "src/domains/ui.ts"))};export * from ${JSON.stringify(path.join(root, "src/domains/emulator.ts"))};export {closeDatabase} from ${JSON.stringify(path.join(root, "src/core/db.ts"))};`, resolveDir: root }, outfile: bundle,
   bundle: true, format: "esm", platform: "node", packages: "external", logLevel: "error", plugins: [{ name: "sdk", setup(b) {
-    b.onResolve({ filter: /(?:device|proc|toolchain)\.js$/ }, (a) => /domains\/(?:ui|emulator)\.ts$/.test(a.importer) ? { path: path.basename(a.path, ".js"), namespace: "fixture" } : undefined);
+    b.onResolve({ filter: /(?:device|proc|toolchain)\.js$/ }, (a) => /domains\/(?:ui|emulator)\.ts$/.test(a.importer.replaceAll("\\", "/")) ? { path: path.basename(a.path, ".js"), namespace: "fixture" } : undefined);
     b.onLoad({ filter: /.*/, namespace: "fixture" }, (a) => ({ contents: {
       toolchain: `export function toolCommand(_name,args){return {file:'fixture',args}};`,
       proc: `export function spawnIndependent(){throw new Error('unexpected start')};export async function run(cmd){const f=globalThis.__devecoLifecycle;f.cli.push(cmd.args);if(cmd.args[0]==='-stop'){f.stopping=true;return {stdout:'Stop emulator owned successfully',stderr:''}};if(cmd.args[0]==='-list'){if(f.stopping&&++f.polls>=3)f.running=false;return {stdout:JSON.stringify([{name:'owned',isRunning:String(f.running),'hw.ramSize':'4096'}]),stderr:''}};throw new Error('unexpected mutation '+cmd.args)};`,

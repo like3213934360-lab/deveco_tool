@@ -38,7 +38,7 @@
 - 性能预算未改：握手 <150 ms、tools/list ≤36 KiB、RSS ≤70 MB、10 秒空闲 CPU ≤0.011秒。Node24：98 ms / 10 ms / 36168字节 / 67 MB / 0 CPU 增量；Node26：77 ms / 4 ms / 36168字节 / 70 MB / 0 CPU 增量。bench 的空闲窗口改为启动恢复（2秒）、清理（5秒）及后台启动工作稳定后开始；原来的 1.5秒窗口混入启动 CPU。此前 RSS/CPU 超预算样本留存，没有降低阈值。
 - 上游源码检查：467 项，full355 / host70 / skip42，partial/undecided/invalid/stale 均0，未出现新 upstream commit。
 - 最后一轮稳定性：100 次 UI（50 mouse / 50 touch）逐次断言通过，20 次部署断言通过。31 次采样 active RSS 72368–76336 KiB，FD 均为17；这是操作期采样，独立空闲预算见上面的 bench。专属应用卸载、实例停止/删除成功，HDC forward 列表为空。脱敏汇总见 [EVIDENCE-1.3.3.json](EVIDENCE-1.3.3.json)。
-- CI：提交后检查最终 SHA 的全部七个 check；结果在 PR 中可核对。
+- CI：首轮 Windows 夹具 importer 以反斜杠表示，四个 transport/home mock 没有生效而意外尝试读取真实 SDK；已统一 importer 分隔符，保留全部断言和矩阵。提交后检查最终 SHA 的全部七个 check，结果在 PR 中可核对。
 
 ## 102 入口当前证据
 

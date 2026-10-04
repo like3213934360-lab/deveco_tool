@@ -10,7 +10,7 @@ const root = path.resolve(import.meta.dirname, "../.."), work = fs.mkdtempSync(p
 process.env.APPDATA = path.join(work, "AppData");
 const bundle = path.join(root, "node_modules/.cache/deveco-host-install.mjs");
 await build({ stdin: { contents: `export * from ${JSON.stringify(path.join(root, "src/domains/hostconfig.ts"))};export {initHost,listSkills} from ${JSON.stringify(path.join(root, "src/domains/skills.ts"))};`, resolveDir: root }, outfile: bundle, bundle: true, format: "esm", platform: "node", packages: "external", logLevel: "error", plugins: [{ name: "home", setup(b) {
-  b.onResolve({ filter: /^node:os$/ }, (a) => /domains\/(?:hostconfig|skills)\.ts$/.test(a.importer) ? { path: "os", namespace: "fixture" } : undefined);
+  b.onResolve({ filter: /^node:os$/ }, (a) => /domains\/(?:hostconfig|skills)\.ts$/.test(a.importer.replaceAll("\\", "/")) ? { path: "os", namespace: "fixture" } : undefined);
   b.onLoad({ filter: /.*/, namespace: "fixture" }, () => ({ contents: `export default {homedir:()=>${JSON.stringify(work)}};` }));
 } }] });
 const m = await import(pathToFileURL(bundle).href);
