@@ -9,13 +9,12 @@ import path from "node:path";
 import { after, before, test } from "node:test";
 import { DatabaseSync } from "node:sqlite";
 import { connect } from "../../tools/mcp-client.mjs";
+import { zipFixture } from "../zip-fixture.mjs";
 
 const work = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-kbu-"));
 process.on("exit", () => { try { fs.rmSync(work, { recursive: true, force: true }); } catch { /* Windows: file still locked */ } }); // tests leave nothing behind
 let server, client, url;
-// Fixture archives need the zip/tar CLIs; skip where unavailable (e.g. some Windows runners).
-const hasTools = ["zip", "tar"].every((tool) => { try { execFileSync(tool, tool === "zip" ? ["-v"] : ["--version"], { stdio: "ignore" }); return true; } catch { return false; } });
-const it = (name, fn) => test(name, { skip: !hasTools && "zip/tar not available" }, fn);
+const it = test;
 
 function makePack(version, title) {
   const dir = path.join(work, `src-${version}`, "package");
@@ -33,10 +32,7 @@ function makePack(version, title) {
     INSERT INTO segments_fts(rowid,search_text) VALUES(1,'${title.toLowerCase()} 路由 跳转');
     INSERT INTO vocab VALUES('路由'),('跳转');`);
   sql.close();
-  const docs = path.join(work, `docs-${version}`);
-  fs.mkdirSync(path.join(docs, "doc"), { recursive: true });
-  fs.writeFileSync(path.join(docs, "doc/one.md"), `# ${title}\n\n## Usage\nbody ${version}\n`);
-  execFileSync("zip", ["-q", "-r", path.join(dir, "docs.zip"), "."], { cwd: docs });
+  fs.writeFileSync(path.join(dir, "docs.zip"), zipFixture({ "doc/one.md": `# ${title}\n\n## Usage\nbody ${version}\n` }));
   fs.writeFileSync(path.join(dir, "manifest.json"), JSON.stringify({ schema: 1, version, sources: {}, created_at: new Date().toISOString(), counts: { "harmonyos-guides": 1 } }));
   fs.writeFileSync(path.join(dir, "package.json"), JSON.stringify({ name: "@test/kb", version }));
   const tgz = path.join(work, `kb-${version}.tgz`);
@@ -46,7 +42,6 @@ function makePack(version, title) {
 }
 
 before(async () => {
-  if (!hasTools) return;
   const packs = { "1.0.0": makePack("1.0.0", "Alpha"), "2.0.0": makePack("2.0.0", "Beta") };
   let tamper = false;
   server = http.createServer((req, res) => {
@@ -68,7 +63,7 @@ before(async () => {
   client = connect({ DEVECO_STATE_DIR: path.join(work, "state"), DEVECO_CONFIG: config });
   await client.initialize();
 });
-after(async () => { if (!hasTools) return; await client.close(); server.close(); });
+after(async () => { await client.close(); server.close(); });
 
 const call = async (args) => {
   const r = await client.call("knowledge", args);

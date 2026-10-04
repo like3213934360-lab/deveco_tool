@@ -24,6 +24,8 @@ export interface Step<I = any> {
   id: string;
   /** Mutates external state (install, sign, click). Guarded by intent/receipt records. */
   effect?: boolean;
+  /** Even an explicit force-resume must reconcile this effect, never replay it blindly. */
+  replay?: false;
   run(ctx: StepContext<I>): Promise<unknown>;
   /** After an interrupted effect: return the observed outcome, or undefined when unknown. */
   reconcile?(ctx: StepContext<I>): Promise<unknown>;
@@ -34,6 +36,8 @@ export interface JobDefinition<I = any> {
   kind: string;
   steps: Step<I>[];
   summarize?(outputs: Record<string, any>, input: I): unknown;
+  /** Domain-owned compensation; the runner persists its outcome with the step journal. */
+  onFailure?(ctx: StepContext<I>, error: unknown): Promise<void>;
 }
 
 interface JobRow {
@@ -115,7 +119,7 @@ function execute(id: string) {
             value = step.reconcile ? await step.reconcile(ctx) : undefined;
             if (value === undefined)
               throw new ToolError("EFFECT_UNCERTAIN", `Step ${step.id} was interrupted and its outcome is unknown`,
-                { step: step.id }, "Inspect the device/project, then call job resume with force=true to run the step again");
+                { step: step.id }, step.replay === false ? "Inspect external state, then resume to reconcile; force cannot replay this step" : "Inspect the device/project, then call job resume with force=true to run the step again");
           } else {
             db.prepare("INSERT OR REPLACE INTO effects(job_id,step,state,updated) VALUES(?,?,?,?)").run(id, step.id, "intent", Date.now());
             value = await step.run(ctx);
@@ -129,9 +133,10 @@ function execute(id: string) {
       const result = definition.summarize ? definition.summarize(outputs, input) : outputs;
       await update(id, { status: "succeeded", step: null, result: await boundedJson(result, id) });
     } catch (error) {
+      try { await definition.onFailure?.(ctx, error); } catch (compensationError) { error = compensationError; }
       const failure = errorResult(error);
       const shutdown = (controller.signal.reason as ToolError | undefined)?.code === "SHUTDOWN";
-      const status: JobStatus = shutdown ? "interrupted" : controller.signal.aborted ? "cancelled" : failure.code === "EFFECT_UNCERTAIN" ? "needs_input" : "failed";
+      const status: JobStatus = shutdown ? "interrupted" : failure.code === "EFFECT_UNCERTAIN" ? "needs_input" : controller.signal.aborted ? "cancelled" : "failed";
       await update(id, { status, error: JSON.stringify(failure), outputs: JSON.stringify(outputs) });
       await event(id, `${status}: ${failure.code} ${failure.message}`);
     } finally {
@@ -213,7 +218,11 @@ export async function resumeJob(id: string, force = false) {
   const current = await settleOrphan(id);
   invariant(!running.has(id), "CONFLICT", "Job is already running");
   invariant(["interrupted", "needs_input", "failed"].includes(current.status), "INVALID_INPUT", `Job is ${current.status}; only interrupted, needs_input or failed jobs can resume`);
-  if (force) (await database()).prepare("DELETE FROM effects WHERE job_id=? AND state='intent'").run(id);
+  if (force) {
+    const db = await database();
+    for (const step of definitions.get(current.kind)?.steps ?? [])
+      if (step.replay !== false) db.prepare("DELETE FROM effects WHERE job_id=? AND step=? AND state='intent'").run(id, step.id);
+  }
   // Mark it running before answering: the caller must see the resumed state (and be told to wait),
   // not the old "interrupted" with next=resume, which invited a second, conflicting resume.
   (await database()).prepare("UPDATE jobs SET status='running',owner=?,updated=? WHERE id=?").run(process.pid, Date.now(), id);

@@ -463,6 +463,10 @@ export const uiTool = tool({
       invariant(input.directory, "INVALID_INPUT", "directory is required");
       return t.exportTest(input.test_id, input.directory);
     }
+    if (input.action === "layout" && input.forms) {
+      invariant(input.project, "INVALID_INPUT", "layout forms needs project");
+      return startAndWait("layout_check", { project: input.project, forms: input.forms, then_flow: input.then_flow, keep_running: input.keep_running }, input.request_key, input.wait ?? 3000);
+    }
     let projectTypes: string[] | undefined;
     if (input.action === "test_start" && input.project && !input.target) {
       const { inspectProject, runnableDeviceTypes } = await import("../domains/project.js");
@@ -473,10 +477,6 @@ export const uiTool = tool({
     switch (input.action) {
       case "windows": return { windows: await ui.listWindows(target, input.all, ctx.signal) };
       case "layout": {
-        if (input.forms) {
-          invariant(input.project, "INVALID_INPUT", "layout forms needs project");
-          return startAndWait("layout_check", { project: input.project, forms: input.forms, then_flow: input.then_flow, keep_running: input.keep_running }, input.request_key, input.wait ?? 3000);
-        }
         const { checkLayout } = await import("../domains/layout.js");
         const { deviceInfo, shell } = await import("../domains/device.js");
         const [nodes, info, dms] = await Promise.all([ui.dumpTree(target, ctx.signal), deviceInfo(target, ctx.signal),
@@ -522,9 +522,13 @@ export const uiTool = tool({
       }
       case "test_step": {
         invariant(input.test_id, "INVALID_INPUT", "test_id is required");
+        if (input.op) await buildAction({ ...input, selector: undefined, x: input.selector ? 0 : input.x, y: input.selector ? 0 : input.y }, target, ui, ctx.signal);
+        const consent = input.op ? await ui.acceptAgreements(target, ctx.signal) : undefined;
         const action = input.op ? await buildAction(input, target, ui, ctx.signal) : undefined;
         const assert = input.visible || input.hidden ? { visible: input.visible, hidden: input.hidden, timeout_ms: input.timeout_ms } : undefined;
-        return (await uitest()).testStep(input.test_id, { description: input.description, action: action?.action, selector: input.selector, assert }, ctx.signal);
+        const result = await (await uitest()).testStep(input.test_id, { description: input.description, action: action?.action, selector: input.selector, assert }, ctx.signal);
+        const accepted = [...(consent?.accepted ?? []), ...(result.agreements_accepted ?? [])];
+        return { ...result, ...(accepted.length ? { agreements_accepted: accepted } : {}) };
       }
       case "review": {
         invariant(input.test_id, "INVALID_INPUT", "test_id is required");
@@ -555,12 +559,15 @@ export const uiTool = tool({
         return verdict.passed ? verdict : { ...verdict, hint: "Not satisfied: call ui observe to inspect the screen" };
       }
       case "act": {
+        invariant(input.op || input.steps, "INVALID_INPUT", "Pass op or steps");
+        invariant(!(input.op && input.steps), "INVALID_INPUT", "Pass either op (one action) or steps (several), not both");
+        invariant(!input.save_flow || input.assert, "INVALID_INPUT", "save_flow needs an assert that proves the goal was reached");
+        if (input.op) await buildAction({ ...input, selector: undefined, x: input.selector ? 0 : input.x, y: input.selector ? 0 : input.y }, target, ui, ctx.signal);
+        const consent = await ui.acceptAgreements(target, ctx.signal);
         const { deviceInfo } = await import("../domains/device.js");
         const flows = await import("../domains/flows.js");
         const batch = await import("../domains/uibatch.js");
         if (input.steps) {
-          invariant(!input.op, "INVALID_INPUT", "Pass either op (one action) or steps (several), not both");
-          invariant(!input.save_flow || input.assert, "INVALID_INPUT", "save_flow needs an assert that proves the goal was reached");
           const result = await batch.runBatch(target, input.steps, { assert: input.assert, budgetMs: SYNC_WAIT_MS }, ctx.signal);
           const screen = await screenSize(target, deviceInfo, ctx.signal).catch(() => undefined);
           // An active ui_flow recording captures batch steps too.
@@ -577,7 +584,7 @@ export const uiTool = tool({
           const { executed: _e, ...rest } = result;
           const repeat = saved ? undefined : repeatHint(target, result.executed);
           return {
-            ...rest, ...(saved ? { saved_flow: saved } : {}), ...(repeat ? { suggest: repeat } : {}),
+            ...rest, ...([...consent.accepted, ...(result.agreements_accepted ?? [])].length ? { agreements_accepted: [...consent.accepted, ...(result.agreements_accepted ?? [])] } : {}), ...(saved ? { saved_flow: saved } : {}), ...(repeat ? { suggest: repeat } : {}),
             ...(!result.passed ? { hint: result.stopped_at !== undefined ? `Time budget of one call used up: call again with steps from index ${result.stopped_at}`
               : result.failed_step !== undefined ? "Fix the failing step using the visible list, then call again with the remaining steps" : "The final assert failed: check after/visible" } : {}),
           };
@@ -597,8 +604,11 @@ export const uiTool = tool({
           const deadline = Date.now() + (input.verify_change ? 3000 : 0);
           if (Date.now() - acted < 1000) await new Promise((r) => setTimeout(r, 400));
           for (;;) {
-            const nodes = await ui.dumpTree(target, ctx.signal).catch(() => undefined);
-            if (!nodes) break;
+            const observed = await ui.dumpTree(target, ctx.signal).catch(() => undefined);
+            if (!observed) break;
+            const post = await ui.acceptAgreements(target, ctx.signal, observed);
+            consent.accepted.push(...post.accepted);
+            const nodes = post.nodes ?? observed;
             after = batch.screenDiff(before, nodes);
             if (after.changed || Date.now() >= deadline) break;
             await new Promise((r) => setTimeout(r, 300));
@@ -607,7 +617,7 @@ export const uiTool = tool({
         const recorded = await flows.recordStep(target, action, input.selector, await screenSize(target, deviceInfo, ctx.signal).catch(() => undefined)).catch(() => undefined);
         const repeat = recorded ? undefined : repeatHint(target, [{ action, selector: input.selector }]);
         return {
-          ...result, ...(resolved ? { element: resolved } : {}), ...(recorded ?? {}), ...(repeat ? { suggest: repeat } : {}),
+          ...result, ...([...consent.accepted, ...(result.agreements_accepted ?? [])].length ? { agreements_accepted: [...consent.accepted, ...(result.agreements_accepted ?? [])] } : {}), ...(resolved ? { element: resolved } : {}), ...(recorded ?? {}), ...(repeat ? { suggest: repeat } : {}),
           ...(after && wantDiff ? { after } : {}),
           ...(after && input.verify_change ? { changed: after.changed, ...(!after.changed ? { hint: "Screen did not change: the target may be disabled, covered, or need a different gesture" } : {}) } : {}),
           ...(!after ? { note: "Action sent; verify with ui assert or observe" } : {}),
@@ -706,8 +716,8 @@ export const uiFlowTool = tool({
   async handler(input, ctx) {
     const flows = await import("../domains/flows.js");
     switch (input.action) {
-      case "list": return { flows: flows.listFlows(input.project) };
-      case "show": invariant(input.id, "INVALID_INPUT", "id is required"); return flows.readFlow(input.project, input.id);
+      case "list": return { flows: flows.listFlows(input.project), drafts: await flows.listDrafts(input.project) };
+      case "show": invariant(input.id, "INVALID_INPUT", "id is required"); return flows.showFlow(input.project, input.id);
       case "delete": {
         invariant(input.id, "INVALID_INPUT", "id is required");
         flows.readFlow(input.project, input.id);
@@ -728,7 +738,13 @@ export const uiFlowTool = tool({
       }
       case "stop": {
         const { resolveTarget } = await import("../domains/device.js");
-        return flows.stopRecording(await resolveTarget(input.target, ctx.signal), { project: input.project, assert: input.assert, discard: input.discard }, ctx.signal);
+        let target = input.target;
+        if (input.discard && !target) {
+          const drafts = await flows.listDrafts(input.project);
+          invariant(drafts.length === 1, drafts.length ? "DEVICE_AMBIGUOUS" : "NOT_FOUND", "Choose a draft target from ui_flow list", { drafts });
+          target = drafts[0]!.target;
+        }
+        return flows.stopRecording(input.discard ? target! : await resolveTarget(target, ctx.signal), { project: input.project, assert: input.assert, discard: input.discard }, ctx.signal);
       }
       case "replay":
         invariant(input.id, "INVALID_INPUT", "id is required");
@@ -804,10 +820,10 @@ export const knowledgeTool = tool({
         invariant(input.id, "INVALID_INPUT", "id is required");
         return kb.read(input.id, { offset: input.offset, limit: input.limit, section: input.section });
       case "catalog": return kb.catalog();
-      case "status": return kb.status(input.check ?? true);
+      case "status": return kb.status(input.check ?? true, ctx.signal);
       case "update":
         // Downloads can take minutes on slow networks: run as a job and return early.
-        return input.check ? kb.status(true) : startAndWait("kb_update", { version: input.version, source: input.file, force: input.force }, undefined, input.limit ?? 20000);
+        return input.check ? kb.status(true, ctx.signal) : startAndWait("kb_update", { version: input.version, source: input.file, force: input.force }, undefined, input.limit ?? 20000);
       case "rollback": return kb.rollback();
     }
   },

@@ -1,5 +1,5 @@
 import { ToolError } from "../core/errors.js";
-import { act, center, describe, dumpTree, invalidate, pickMatch, select, treeSignature, waitFor, type Action, type Selector, type UiNode } from "./ui.js";
+import { acceptAgreements, act, center, describe, dumpTree, invalidate, pickMatch, select, treeSignature, waitFor, type Action, type Selector, type UiNode } from "./ui.js";
 
 /* ------------------------------ screen diff ------------------------------ */
 
@@ -166,6 +166,7 @@ export interface BatchResult {
   visible?: string[];
   after?: ReturnType<typeof screenDiff>;
   assert?: unknown;
+  agreements_accepted?: { text: string; kind: string }[];
   executed: { action: Action; selector?: Selector }[];
 }
 
@@ -177,10 +178,17 @@ export interface BatchResult {
 export async function runBatch(target: string, steps: BatchStep[], options: { assert?: { visible?: Selector; hidden?: Selector; timeout_ms?: number }; bundle?: string; budgetMs?: number }, signal: AbortSignal): Promise<BatchResult> {
   const results: BatchResult["steps"] = [];
   const executed: BatchResult["executed"] = [];
+  const accepted: { text: string; kind: string }[] = [];
+  const agreements = () => accepted.length ? { agreements_accepted: accepted } : {};
+  const ready = async (nodes: UiNode[]) => {
+    const consent = await acceptAgreements(target, signal, nodes);
+    accepted.push(...consent.accepted);
+    return consent.nodes ?? nodes;
+  };
   // One call must answer before the host's request timeout: every wait is bounded by what is left.
   const callDeadline = Date.now() + (options.budgetMs ?? 52000);
   const left = () => callDeadline - Date.now();
-  const first = await dumpTree(target, signal, 1500);
+  const first = await ready(await dumpTree(target, signal, 1500));
   let last = first;
   let fresh = true; // `last` reflects the screen after the latest action
   // A step locating its element by selector needs a tree taken after the previous action.
@@ -193,7 +201,7 @@ export async function runBatch(target: string, steps: BatchStep[], options: { as
       // Out of time: report what was done and where to resume, instead of letting the host time out.
       const nodes = await dumpTree(target, signal).catch(() => last);
       return {
-        passed: false, steps: results, failed_step: i, stopped_at: i, executed,
+        passed: false, steps: results, failed_step: i, stopped_at: i, executed, ...agreements(),
         error: { code: "TIMEOUT", message: `Stopped before step ${i}: one call may take at most ${Math.round((options.budgetMs ?? 52000) / 1000)} s` },
         visible: visibleLabels(nodes, options.bundle), after: screenDiff(first, nodes, 10, options.bundle),
       };
@@ -201,7 +209,8 @@ export async function runBatch(target: string, steps: BatchStep[], options: { as
     try {
       if (s.op === "wait") {
         if (s.selector) {
-          const verdict = await waitFor(target, s.selector, "visible", Math.min(s.timeout_ms ?? 10000, left() - 1000), signal);
+          const verdict = await waitFor(target, s.selector, "visible", Math.min(s.timeout_ms ?? 10000, left() - 1000), signal, true);
+          accepted.push(...(verdict.agreements_accepted ?? []));
           if (!verdict.passed) throw new ToolError("UI_NOT_FOUND", "Element did not appear", { selector: s.selector });
           fresh = false;
         } else await new Promise((r) => setTimeout(r, Math.min(s.ms ?? 500, 10000, Math.max(0, left() - 1500))));
@@ -211,7 +220,7 @@ export async function runBatch(target: string, steps: BatchStep[], options: { as
       let point: { x: number; y: number } | undefined;
       let hit: UiNode | undefined;
       if (s.selector && needsPoint.has(s.op)) {
-        if (!fresh) { invalidate(target); last = await dumpTree(target, signal); fresh = true; }
+        if (!fresh) { invalidate(target); last = await ready(await dumpTree(target, signal)); fresh = true; }
         const deadline = Date.now() + Math.min(s.timeout_ms ?? 10000, left() - 1000);
         let ambiguous: UiNode[] | undefined;
         for (;;) {
@@ -226,12 +235,13 @@ export async function runBatch(target: string, steps: BatchStep[], options: { as
           }
           await new Promise((r) => setTimeout(r, 200));
           invalidate(target);
-          last = await dumpTree(target, signal);
+          last = await ready(await dumpTree(target, signal));
         }
         point = center(hit);
       }
       const action = stepAction(s, point);
-      await act(target, action, signal);
+      const performed = await act(target, action, signal);
+      accepted.push(...(performed.agreements_accepted ?? []));
       executed.push({ action, selector: s.selector });
       results.push({ i, op: s.op, ok: true, ...(hit ? { target: label(hit) } : {}), ms: Date.now() - started });
       fresh = false;
@@ -239,14 +249,14 @@ export async function runBatch(target: string, steps: BatchStep[], options: { as
       // gestures, keys and coordinate taps need no tree. The final tree is taken once at the end.
       if (wantsTree(steps[i + 1])) {
         await new Promise((r) => setTimeout(r, 250));
-        last = await dumpTree(target, signal); fresh = true;
+        last = await ready(await dumpTree(target, signal)); fresh = true;
       }
     } catch (error) {
       const e = error as ToolError;
       results.push({ i, op: s.op, ok: false, ms: Date.now() - started, error: e.message });
       const nodes = await dumpTree(target, signal).catch(() => last);
       return {
-        passed: false, steps: results, failed_step: i, executed,
+        passed: false, steps: results, failed_step: i, executed, ...agreements(),
         error: { code: e.code ?? "UI_ACTION_FAILED", message: e.message },
         visible: visibleLabels(nodes, options.bundle),
         after: screenDiff(first, nodes, 10, options.bundle),
@@ -256,12 +266,13 @@ export async function runBatch(target: string, steps: BatchStep[], options: { as
   let assertion: Awaited<ReturnType<typeof waitFor>> | undefined;
   if (options.assert && (options.assert.visible || options.assert.hidden)) {
     const selector = (options.assert.visible ?? options.assert.hidden)!;
-    assertion = await waitFor(target, selector, options.assert.visible ? "visible" : "hidden", Math.max(500, Math.min(options.assert.timeout_ms ?? 5000, left() - 1500)), signal);
+    assertion = await waitFor(target, selector, options.assert.visible ? "visible" : "hidden", Math.max(500, Math.min(options.assert.timeout_ms ?? 5000, left() - 1500)), signal, true);
+    accepted.push(...(assertion.agreements_accepted ?? []));
     last = await dumpTree(target, signal, 1500); fresh = true;
   }
   if (!fresh) { await new Promise((r) => setTimeout(r, 250)); invalidate(target); last = await dumpTree(target, signal); }
   return {
-    passed: !assertion || assertion.passed, steps: results, executed, after: screenDiff(first, last, 10, options.bundle),
+    passed: !assertion || assertion.passed, steps: results, executed, ...agreements(), after: screenDiff(first, last, 10, options.bundle),
     ...(assertion ? { assert: assertion } : {}),
   };
 }

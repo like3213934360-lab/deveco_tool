@@ -99,6 +99,19 @@ test("artifacts page by line and filter with grep", async () => {
   assert.match(errors.content, /^1: line 0 ERROR/);
 });
 
+test("force resume never repeats a protected cloud mutation without a receipt", async () => {
+  const db = await m.database(); let runs = 0;
+  m.defineJob({ kind: "t_protected", steps: [{ id: "create", effect: true, replay: false, run: async () => { runs++; } }] });
+  db.prepare("INSERT INTO jobs(id,kind,status,input,created,updated) VALUES('j_protected','t_protected','interrupted','{}',0,0)").run();
+  db.prepare("INSERT INTO effects(job_id,step,state,updated) VALUES('j_protected','create','intent',0)").run();
+  for (const force of [false, true, true]) {
+    await m.resumeJob("j_protected", force);
+    const status = await m.waitJob("j_protected", 3000);
+    assert.equal(status.status, "needs_input"); assert.equal(status.error.code, "EFFECT_UNCERTAIN");
+  }
+  assert.equal(runs, 0);
+});
+
 test("a job left running by a dead server reads as interrupted and resumes", async () => {
   const db = await m.database();
   let runs = 0;

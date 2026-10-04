@@ -67,7 +67,7 @@ export const decryptPassword = (hex: string, storeFile: string) => gcmDecrypt(wo
 
 /* ------------------------------ cloud requests ------------------------------ */
 
-async function request(team: string, route: string, method: string, body?: unknown, signal?: AbortSignal) {
+export async function request(team: string, route: string, method: string, body?: unknown, signal?: AbortSignal) {
   let auth = await credentials("developer", false, signal);
   for (let attempt = 0; attempt < 2; attempt++) {
     const response = await fetch(cloud + route, {
@@ -84,7 +84,7 @@ async function request(team: string, route: string, method: string, body?: unkno
     if (data.ret && data.ret.code !== 0) {
       const hint = /205389938/.test(text) ? "Profile limit reached: delete old debug profiles in AGC"
         : /205389859/.test(text) ? "Device limit reached: remove unused devices in AGC"
-        : /205389872/.test(text) ? "Certificate limit reached for this team: delete an unused certificate (sign action=certificates / delete_certificate, after asking the user), or use sign action=auto, which replaces its own auto_debug_<team>.cer instead of adding one"
+        : /205389872/.test(text) ? "Certificate limit reached for this team. Keep existing signing material and build with it; request additional quota in AGC. Auto replacement also needs a free slot and never revokes a working certificate to make room."
         : /205389904/.test(text) ? "This account is not enabled for HarmonyOS app development in this team: apply for the permission in AppGallery Connect, or use another team (auth action=teams)"
         : /205389830/.test(text) ? "A profile with this name already exists: use another name" : undefined;
       throw new ToolError("SIGN_CLOUD_REJECTED", `AGC rejected ${route} (${data.ret.code}): ${data.ret.msg ?? ""}`, undefined, hint);
@@ -94,11 +94,11 @@ async function request(team: string, route: string, method: string, body?: unkno
   throw new ToolError("AUTH_REQUIRED", "Developer login expired");
 }
 
-async function download(team: string, source: string, file: string, signal?: AbortSignal) {
+export async function download(team: string, source: string, file: string, signal?: AbortSignal) {
   const reply = await request(team, "/api/amis/app-manage/v1/objects/url/reapply", "POST", { sourceUrls: source }, signal);
   const first = reply.urlsInfo?.[0] as { newUrl: string; sha256: string } | undefined;
   invariant(first, "SIGN_CLOUD_REJECTED", "AGC returned no download URL");
-  const response = await fetch(first.newUrl, { signal: AbortSignal.timeout(60000) });
+  const response = await fetch(first.newUrl, { signal: AbortSignal.any([AbortSignal.timeout(60000), ...(signal ? [signal] : [])]) });
   invariant(response.ok, "HTTP_ERROR", `Download failed (HTTP ${response.status})`);
   const bytes = Buffer.from(await response.arrayBuffer());
   invariant(crypto.createHash("sha256").update(bytes).digest("hex") === first.sha256.toLowerCase(), "INTEGRITY_FAILED", "Downloaded signing file checksum mismatch");
@@ -256,7 +256,7 @@ export function projectAclPermissions(modules: { root: string }[], definitionsFi
 }
 /* ---------------------------- one-shot auto signing ---------------------------- */
 
-async function signer(args: string[], signal?: AbortSignal) {
+export async function signer(args: string[], signal?: AbortSignal) {
   const result = await run(toolCommand("signer", args), { signal, timeoutMs: 120000, allowFailure: true });
   const text = result.stdout + result.stderr;
   if (result.code !== 0 || /\bERROR\b|FAILED|Exception/.test(text)) {
@@ -290,72 +290,6 @@ export function existingSigning(root: string, product = "default") {
   return undefined;
 }
 
-export async function autoSign(project: string, options: { product?: string; team?: string; bundle: string; acl?: string[]; force?: boolean }, signal: AbortSignal, log: (m: string) => void) {
-  const root = path.resolve(project);
-  const product = options.product ?? "default";
-  // Never replace signing the project already has (like devecocli, only --force overwrites).
-  const current = existingSigning(root, product);
-  if (current && !options.force)
-    throw new ToolError("SIGN_CONFIGURED", `Project already has signing (${current.source}: ${current.config}); nothing changed`, current,
-      "Build and run as is. Pass force=true only if you really want to replace it with a new auto debug signature.");
-  invariant(!current || current.source === "build-profile.json5", "SIGN_CONFIGURED",
-    `Signing comes from ${current?.source} overrides; auto signing would be ignored by hvigor. Edit that file instead.`);
-  const team = await teamId(options.team, true);
-  const dir = path.join(os.homedir(), ".ohos", "config");
-  fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
-  const hash = crypto.createHash("sha256").update(root).digest("base64url").replace(/[-_=]/g, "");
-  const baseName = `${product.replace(/[\\/:*?"<>|=-]/g, "_")}_${path.basename(root)}_${hash}=`;
-  const file = (ext: string) => path.join(dir, `${baseName}.${ext}`);
-  const password = crypto.randomBytes(8).toString("hex");
-  for (const ext of ["p12", "csr", "cer", "p7b"]) fs.rmSync(file(ext), { force: true });
-
-  log("generating keypair and CSR");
-  await signer(["generate-keypair", "-keyAlias", "debugKey", "-keyAlg", "ECC", "-keySize", "NIST-P-256", "-keystoreFile", file("p12"), "-keystorePwd", password, "-keyPwd", password], signal);
-  await signer(["generate-csr", "-keyAlias", "debugKey", "-subject", "CN=DebugKey", "-signAlg", "SHA256withECDSA", "-keystoreFile", file("p12"), "-keystorePwd", password, "-keyPwd", password, "-outFile", file("csr")], signal);
-
-  log("requesting debug certificate");
-  const certName = `auto_debug_${team.replace(/[^A-Za-z0-9_]/g, "")}.cer`;
-  const existing = (await listCertificates(team, signal)).find((c) => c.name === certName);
-  if (existing) await deleteCertificate(team, existing.id, signal);
-  await request(team, "/api/cps/harmony-cert-manage/v1/cert/add", "POST", { csr: fs.readFileSync(file("csr"), "utf8"), certName, certType: "1" }, signal);
-  const cert = (await listCertificates(team, signal)).find((c) => c.name === certName);
-  invariant(cert, "SIGN_CLOUD_REJECTED", "Created certificate not found in AGC");
-  await download(team, cert.object, file("cer"), signal);
-
-  log("registering connected devices");
-  const targets = await listTargets(signal);
-  for (const target of targets) {
-    try { await registerDevice(team, target, signal); } catch (error) { log(`device ${target}: ${(error as Error).message}`); }
-  }
-  const devices = await listDevices(team, signal);
-  invariant(devices.length, "DEVICE_UNAVAILABLE", "No devices registered in AGC; connect a device and retry");
-
-  log("creating debug profile");
-  const { inspectProject } = await import("./project.js");
-  const derived = projectAclPermissions(inspectProject(root, options.product).modules).acl;
-  const acl = [...new Set([...derived, ...(options.acl ?? [])])];
-  if (acl.length) log(`ACL permissions: ${acl.join(", ")}`);
-  const provisionName = crypto.createHash("sha256").update(`${product}_${options.bundle}_${options.bundle}`).digest("hex").slice(0, 16);
-  const profile = await request(team, "/api/cps/provision-manage/v1/ide/test/provision/add", "POST", {
-    certList: [cert.id], packageName: options.bundle, deviceList: devices.map((d) => d.id), provisionName,
-    ...(acl.length ? { aclPermissionList: acl } : {}),
-  }, signal);
-  invariant(profile.provisionFileUrl, "SIGN_CLOUD_REJECTED", "AGC returned no profile file");
-  await download(team, profile.provisionFileUrl, file("p7b"), signal);
-  log("writing signingConfigs");
-  const encrypted = encryptPassword(password, file("p12"));
-  const profilePath = path.join(root, "build-profile.json5");
-  const config = readJson5(profilePath) as { app: { signingConfigs?: any[]; products?: any[] } };
-  config.app.signingConfigs = (config.app.signingConfigs ?? []).filter((c) => c.name !== product);
-  config.app.signingConfigs.push({
-    name: product, type: "HarmonyOS",
-    material: { certpath: file("cer"), keyAlias: "debugKey", keyPassword: encrypted, profile: file("p7b"), signAlg: "SHA256withECDSA", storeFile: file("p12"), storePassword: encrypted },
-  });
-  for (const p of config.app.products ?? []) if (p.name === product) p.signingConfig = product;
-  atomicWrite(profilePath, JSON5.stringify(config, null, 2));
-  return { signed: true, product, team, certificate: cert.id, devices: devices.length, acl_permissions: acl, files: { p12: file("p12"), cer: file("cer"), p7b: file("p7b") }, next: { tool: "run", action: "build_run", project: root } };
-}
-
 /* ------------------------------- local signing ------------------------------- */
 
 export async function signPackage(input: { file: string; out: string; project?: string; product?: string; keystore?: string; keystore_password?: string; key_alias?: string; key_password?: string; cert?: string; profile?: string }, signal?: AbortSignal) {
@@ -376,7 +310,7 @@ export async function signPackage(input: { file: string; out: string; project?: 
 }
 
 /** The JSON payload embedded in a signed profile (.p7b is DER; the content is plain JSON inside it). */
-export function profileSummary(p7b: Buffer) {
+export function profilePayload(p7b: Buffer): Record<string, any> | undefined {
   const text = p7b.toString("latin1");
   const start = text.indexOf('{"version-name"') >= 0 ? text.indexOf('{"version-name"') : text.search(/\{"[\w-]+":[^{}]*"bundle-info"|\{\s*"version-code"/);
   if (start < 0) return undefined;
@@ -391,7 +325,13 @@ export function profileSummary(p7b: Buffer) {
   }
   if (end < 0) return undefined;
   try {
-    const p = JSON.parse(Buffer.from(text.slice(start, end), "latin1").toString("utf8"));
+    return JSON.parse(Buffer.from(text.slice(start, end), "latin1").toString("utf8"));
+  } catch { return undefined; }
+}
+export function profileSummary(p7b: Buffer) {
+  const p = profilePayload(p7b);
+  if (!p) return undefined;
+  try {
     const date = (s?: number) => (s ? new Date(s * 1000).toISOString() : undefined);
     return {
       type: p.type, bundle: p["bundle-info"]?.["bundle-name"], developer: p["bundle-info"]?.["developer-id"],

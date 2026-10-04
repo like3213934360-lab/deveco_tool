@@ -24,7 +24,11 @@ function handle(req, res, body) {
   const json = (data, status = 200) => { res.writeHead(status, { "content-type": "application/json" }); res.end(JSON.stringify(data)); };
   const ok = (extra = {}) => json({ ret: { code: 0 }, ...extra });
   // login portal
-  if (url.pathname === "/authrouter/auth/api/temptoken/check") return res.end(url.searchParams.get("tempToken") === "tmp-ok" ? JWT : "bad");
+  if (url.pathname === "/authrouter/auth/api/temptoken/check") {
+    agc.loginChecks ??= [];
+    agc.loginChecks.push(Object.fromEntries(url.searchParams));
+    return res.end(url.searchParams.get("tempToken") === "tmp-ok" ? JWT : "bad");
+  }
   if (url.pathname === "/authrouter/auth/api/jwToken/check") {
     if (req.headers.refresh === "true") agc.refreshes++;
     return json(req.headers.jwttoken === JWT ? { status: true, userInfo: { accessToken: `acc-${agc.refreshes}` } } : { status: false });
@@ -139,6 +143,26 @@ test("browser login: forged callbacks are rejected, cancel and success are handl
   const cancelled = await waitLogin("codegenie");
   assert.equal(cancelled.logged_in, false);
   assert.match(cancelled.error, /cancel/i);
+});
+
+test("both login providers support cn/global with region-matched callbacks", async () => {
+  for (const provider of ["developer", "codegenie"]) {
+    for (const region of ["global", "cn"]) {
+      await call("auth", { action: "logout", provider });
+      const started = await call("auth", { action: "login", provider, region, open_browser: false });
+      assert.equal(started.region, region);
+      const url = new URL(started.login_url), appid = provider === "developer" ? "1009" : "1008";
+      assert.equal(url.searchParams.get("appid"), appid);
+      const callback = `http://127.0.0.1:${url.searchParams.get("port")}/callback`;
+      const code = url.searchParams.get("code"), siteId = region === "cn" ? "1" : "5";
+      assert.equal((await fetch(callback, { method: "POST", body: new URLSearchParams({ code, tempToken: "tmp-ok", siteId: region === "cn" ? "5" : "1" }) })).status, 400);
+      assert.equal((await fetch(callback, { method: "POST", body: new URLSearchParams({ code, tempToken: "tmp-ok", siteId }) })).status, 200);
+      const status = await waitLogin(provider);
+      assert.equal(status.logged_in, true); assert.equal(status.region, region);
+      assert.equal(agc.loginChecks.at(-1).appid, appid);
+      assert.equal(agc.loginChecks.at(-1).site, region === "cn" ? "CN" : "SG");
+    }
+  }
 });
 
 test("teams and token refresh on 401", async () => {

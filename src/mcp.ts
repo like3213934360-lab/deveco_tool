@@ -5,6 +5,8 @@
  */
 type Json = Record<string, unknown>;
 export type Handler = (params: Json, signal: AbortSignal) => Promise<unknown>;
+const object = (value: unknown): value is Json => !!value && typeof value === "object" && !Array.isArray(value);
+const requestId = (value: unknown): value is string | number => typeof value === "string" || (typeof value === "number" && Number.isSafeInteger(value));
 
 const supported = ["2025-06-18", "2025-03-26", "2024-11-05"];
 
@@ -40,21 +42,44 @@ export class McpServer {
   }
 
   private receive(line: string) {
-    let message: { id?: string | number; method?: string; params?: Json };
+    let message: unknown;
     try {
       message = JSON.parse(line);
     } catch {
       this.send({ id: null, error: { code: -32700, message: "Parse error" } });
       return;
     }
-    const { id, method, params = {} } = message;
-    if (!method) return; // responses to server->client requests are not used
-    if (id === undefined) {
-      if (method === "notifications/cancelled") this.inflight.get((params as { requestId: string | number }).requestId)?.abort();
+    // MCP uses named params and non-null string/integer ids. This transport does not
+    // advertise batching, including for the older protocol versions we negotiate.
+    const id = object(message) && requestId(message.id) ? message.id : null;
+    const invalid = (code: number, detail: string) => this.send({ id, error: { code, message: detail } });
+    if (!object(message) || message.jsonrpc !== "2.0" || typeof message.method !== "string" || !message.method
+      || (Object.hasOwn(message, "id") && !requestId(message.id))) {
+      invalid(-32600, "Invalid Request (expected a single MCP JSON-RPC 2.0 request)");
+      return;
+    }
+    const { method } = message;
+    const notification = !Object.hasOwn(message, "id");
+    if (message.params !== undefined && !object(message.params)) {
+      if (!notification) invalid(-32602, "Invalid params: expected an object");
+      return;
+    }
+    const params = (message.params ?? {}) as Json;
+    if (notification) {
+      if (method === "notifications/cancelled" && requestId(params.requestId)) this.inflight.get(params.requestId)?.abort();
+      return;
+    }
+    if (this.inflight.has(id!)) {
+      invalid(-32600, "Request id is already in use");
       return;
     }
     if (method === "initialize") {
-      const requested = String((params as { protocolVersion?: string }).protocolVersion ?? "");
+      if (typeof params.protocolVersion !== "string" || !object(params.capabilities) || !object(params.clientInfo)
+        || typeof params.clientInfo.name !== "string" || typeof params.clientInfo.version !== "string") {
+        invalid(-32602, "initialize requires protocolVersion, capabilities and clientInfo");
+        return;
+      }
+      const requested = params.protocolVersion;
       this.send({ id, result: { protocolVersion: supported.includes(requested) ? requested : supported[0], capabilities: this.capabilities, serverInfo: this.info, instructions: this.instructions } });
       return;
     }
@@ -64,10 +89,10 @@ export class McpServer {
       return;
     }
     const controller = new AbortController();
-    this.inflight.set(id, controller);
-    handler(params, controller.signal)
+    this.inflight.set(id!, controller);
+    Promise.resolve().then(() => handler(params, controller.signal))
       .then((result) => { if (!controller.signal.aborted) this.send({ id, result }); })
-      .catch((error: unknown) => this.send({ id, error: { code: (error as { rpcCode?: number }).rpcCode ?? -32603, message: error instanceof Error ? error.message : String(error) } }))
-      .finally(() => this.inflight.delete(id));
+      .catch((error: unknown) => { if (!controller.signal.aborted) this.send({ id, error: { code: (error as { rpcCode?: number })?.rpcCode ?? -32603, message: error instanceof Error ? error.message : String(error) } }); })
+      .finally(() => this.inflight.delete(id!));
   }
 }

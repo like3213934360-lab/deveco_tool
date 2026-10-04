@@ -7,7 +7,7 @@ export const signTool = tool({
   name: "sign",
   title: "App signing",
   description: [
-    "auto: one-shot debug signing for real devices (needs auth provider=developer): keystore, CSR, debug certificate, registers connected devices, debug profile, writes signingConfigs. Refuses when the project already has signing unless force=true; replaces its own auto_debug_<team>.cer instead of adding certificates.",
+    "auto: one-shot debug signing for real devices (needs auth provider=developer): keystore, CSR, debug certificate, registers connected devices, debug profile, writes signingConfigs. Refuses when the project already has signing unless force=true; prepares a new chain before switching configuration; needs a free certificate slot and retains old material. Interrupted cloud mutations require reconciliation.",
     "sign / verify a package. certificates, devices, register_device, delete_certificate: AGC management.",
     "Itemized signing: keypair -> csr -> certificate_create -> profile_create; profile_delete.",
     "Several developer teams: actions that create/delete in AGC fail with TEAM_AMBIGUOUS until team is given - ask the user.",
@@ -114,7 +114,7 @@ export const emulatorTool = tool({
     hot_boot: z.boolean().optional().describe("create: enable quick boot"),
     instance_path: z.string().optional().describe("list/create/delete/start/stop: emulator instance directory (default: the Emulator's own)"),
     image_root: z.string().optional().describe("create/start: image root directory"),
-    force: z.boolean().optional().describe("create: overwrite existing; install_image: re-download"),
+    force: z.boolean().optional().describe("create: existing overwrite unavailable (preserved); install_image: re-download"),
     auto_accept_license: z.boolean().optional().describe("start/create/install_image: accept the license when needed (default true)"),
     all: z.boolean().optional().describe("images: include images not downloaded yet"),
     scenario: z.enum(["shake", "power", "rotate", "volume", "fold", "battery", "gps", "sensor", "outdoor_running", "outdoor_cycling", "driving_navigation"]).optional(),

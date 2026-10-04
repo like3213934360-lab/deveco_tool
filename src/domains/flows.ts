@@ -5,7 +5,7 @@ import { kvDelete, kvGet, kvSet } from "../core/db.js";
 import { invariant, ToolError } from "../core/errors.js";
 import { atomicWrite } from "../core/files.js";
 import { forceStop, launch } from "./device.js";
-import { act, center, describe, dumpTree, select, waitFor, type Action, type Selector } from "./ui.js";
+import { acceptAgreements, act, center, describe, dumpTree, select, waitFor, type Action, type Selector } from "./ui.js";
 
 /* Flows are stored in <project>/.arkpilot/flows/<id>.json (compatible with v0.x files). */
 
@@ -99,6 +99,22 @@ async function draft(target: string): Promise<Draft | undefined> {
   const raw = await kvGet(`recording:${target}`);
   return raw ? (JSON.parse(raw) as Draft) : undefined;
 }
+export async function listDrafts(project: string) {
+  const { kvEntries } = await import("../core/db.js");
+  return (await kvEntries("recording:")).map((r) => JSON.parse(r.value) as Draft)
+    .filter((d) => path.resolve(d.project) === path.resolve(project))
+    .map((d) => ({ id: d.flow.id, name: d.flow.name, target: d.target, steps: d.flow.steps.length,
+      started: d.started ? new Date(d.started).toISOString() : undefined, status: "draft" as const }));
+}
+export async function showFlow(project: string, id: string) {
+  if (fs.existsSync(flowFile(project, id))) return readFlow(project, id);
+  const matches = (await listDrafts(project)).filter((d) => d.id === id);
+  invariant(matches.length, "NOT_FOUND", `Flow ${id} not found`, { available: listFlows(project).map((f) => f.id) });
+  invariant(matches.length === 1, "CONFLICT", "More than one target has this flow draft", { targets: matches.map((d) => d.target) });
+  const d = (await draft(matches[0]!.target))!;
+  // Deliberately omit the stored input values (they can contain secrets).
+  return { ...d.flow, status: "draft", target: d.target, next: "ui_flow stop with final assert, or discard=true" };
+}
 
 export async function startRecording(project: string, target: string, id: string, name: string, app: Flow["app"]) {
   const open = await draft(target);
@@ -182,10 +198,10 @@ export async function stopRecording(target: string, options: { project?: string;
   const current = await draft(target);
   invariant(current, "NOT_FOUND", `No active recording on ${target}`);
   // The flow is saved into the project it was recorded for; a different project here is a mistake.
-  // Discarding writes nothing, so it is allowed from any project (e.g. a draft left by a deleted project).
-  invariant(options.discard || !options.project || path.resolve(options.project) === path.resolve(current.project), "INVALID_INPUT",
+  // Discarding also belongs to that project; omitted project permits explicit-target recovery.
+  invariant(!options.project || path.resolve(options.project) === path.resolve(current.project), "INVALID_INPUT",
     `The recording on ${target} belongs to ${current.project}, not ${path.resolve(options.project ?? "")}`,
-    { flow: current.flow.id, project: current.project }, "Pass that project to save it there, or discard=true to drop it");
+    { flow: current.flow.id, project: current.project }, "Pass the project of the recording to save or discard it");
   if (options.discard) {
     await kvDelete(`recording:${target}`);
     return { discarded: current.flow.id };
@@ -210,6 +226,17 @@ export async function stopRecording(target: string, options: { project?: string;
 
 export async function replayFlow(project: string, id: string, target: string, variables: Record<string, string>, options: { repair?: boolean; screen?: { w: number; h: number }; attach?: boolean }, signal: AbortSignal, log: (m: string) => void) {
   const flow = readFlow(project, id);
+  const accepted: { text: string; kind: string }[] = [];
+  const ready = async (nodes?: Awaited<ReturnType<typeof dumpTree>>) => {
+    const consent = await acceptAgreements(target, signal, nodes);
+    accepted.push(...consent.accepted);
+    return consent.nodes;
+  };
+  const wait = async (selector: Selector, state: "visible" | "hidden", timeout: number) => {
+    const verdict = await waitFor(target, selector, state, timeout, signal, true);
+    accepted.push(...(verdict.agreements_accepted ?? []));
+    return verdict;
+  };
   const missing = Object.entries(flow.variables).filter(([k, v]) => v.required && variables[k] === undefined).map(([k]) => k);
   invariant(!missing.length, "INVALID_INPUT", `Missing flow variables: ${missing.join(", ")}`, { variables: Object.keys(flow.variables) });
   // attach: the app was just (re)launched by the caller (run then_flow), so do not restart it again.
@@ -218,7 +245,8 @@ export async function replayFlow(project: string, id: string, target: string, va
     await launch(target, flow.app.bundleName, flow.app.ability, flow.app.module, signal);
     (await import("./repeat.js")).noteLaunch(target);
   }
-  if (flow.start.mode === "restart") await waitFor(target, { bundle: flow.app.bundleName }, "visible", 10000, signal);
+  await ready();
+  if (flow.start.mode === "restart") await wait({ bundle: flow.app.bundleName }, "visible", 10000);
   let repaired = false;
   const results: { step: string; ok: boolean; detail?: unknown }[] = [];
   const screen = options.screen;
@@ -230,9 +258,10 @@ export async function replayFlow(project: string, id: string, target: string, va
     signal.throwIfAborted();
     const timeout = step.timeoutMs ?? 10000;
     try {
+      await ready();
       if (["waitVisible", "assertVisible", "waitHidden", "assertHidden"].includes(step.action)) {
         invariant(step.selector, "FLOW_INVALID", `${step.id} needs a selector`);
-        const verdict = await waitFor(target, toSelector(step.selector), /Visible/.test(step.action) ? "visible" : "hidden", timeout, signal);
+        const verdict = await wait(toSelector(step.selector), /Visible/.test(step.action) ? "visible" : "hidden", timeout);
         invariant(verdict.passed, "ASSERTION_FAILED", `${step.id} ${step.action} failed`, { matches: verdict.matches });
         results.push({ step: step.id, ok: true });
         continue;
@@ -242,7 +271,7 @@ export async function replayFlow(project: string, id: string, target: string, va
         const candidates = [step.selector, ...(step.alternates ?? [])];
         const deadline = Date.now() + timeout;
         for (;;) {
-          const nodes = await dumpTree(target, signal);
+          const nodes = await ready(await dumpTree(target, signal)) ?? await dumpTree(target, signal);
           const hit = candidates.map((c, i) => ({ i, m: select(nodes, toSelector(c)) })).find((c) => c.m.length > 0);
           if (hit) {
             xy = center(hit.m.find((n) => n.clickable) ?? hit.m[0]!);
@@ -275,7 +304,8 @@ export async function replayFlow(project: string, id: string, target: string, va
       };
       const build = map[step.action];
       invariant(build, "FLOW_UNSUPPORTED", `${step.id}: action ${step.action} is not supported by this version`);
-      await act(target, build(), signal);
+      const performed = await act(target, build(), signal);
+      accepted.push(...(performed.agreements_accepted ?? []));
       log(`${step.id} ${step.action} ok`);
       results.push({ step: step.id, ok: true });
       await new Promise((r) => setTimeout(r, 300));
@@ -284,17 +314,17 @@ export async function replayFlow(project: string, id: string, target: string, va
       if (repaired) writeFlow(project, flow);
       const nodes = await dumpTree(target, signal).catch(() => []);
       throw new ToolError("FLOW_STEP_FAILED", `Flow ${id} failed at ${step.id}`, {
-        results, visible: nodes.filter((n) => n.text && n.bundle === flow.app.bundleName).slice(0, 20).map(describe),
+        results, ...(accepted.length ? { agreements_accepted: accepted } : {}), visible: nodes.filter((n) => n.text && n.bundle === flow.app.bundleName).slice(0, 20).map(describe),
       }, "Inspect with ui observe; update the flow by re-recording or pass repair=true with alternates");
     }
   }
   let assertion: unknown = null;
   if (flow.assert) {
     const selector = flow.assert.visible ?? flow.assert.hidden;
-    const verdict = await waitFor(target, toSelector(selector!), flow.assert.visible ? "visible" : "hidden", flow.assert.timeoutMs ?? 5000, signal);
+    const verdict = await wait(toSelector(selector!), flow.assert.visible ? "visible" : "hidden", flow.assert.timeoutMs ?? 5000);
     assertion = verdict;
     invariant(verdict.passed, "ASSERTION_FAILED", `Flow ${id} final assert failed`, { results, matches: verdict.matches });
   }
   if (repaired) writeFlow(project, flow);
-  return { flow: id, passed: true, steps: results.length, repaired, assertion };
+  return { flow: id, passed: true, steps: results.length, repaired, assertion, ...(accepted.length ? { agreements_accepted: accepted } : {}) };
 }

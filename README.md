@@ -69,6 +69,7 @@ node dist/cli.js init --host codex --project .      # 项目级配置（.codex/c
 | `max_jobs` | 最多保留的任务数，默认 200 |
 | `max_artifact_mb` | 制品总大小上限，默认 512 |
 | `session_idle_minutes` | 语言服务等会话的空闲关闭时间，默认 10 |
+| `auto_accept_ui_agreements` | UI 操作、批量操作、流程回放及部署/测试断言自动处理协议与权限弹窗，默认 `true`；按同一窗口中的文案和控件状态识别，结果记录 `agreements_accepted`。纯观察不触发同意 |
 | `kb_package` | 知识包的 npm 包名 |
 | `npm_registry` | 更新知识包时使用的 npm 源 |
 
@@ -86,11 +87,11 @@ node dist/cli.js init --host codex --project .      # 项目级配置（.codex/c
 | `device` | `list` / `info` / `log`（按应用、级别或正则过滤；`from`/`to` 取相对时间段，如 5 分钟前到 1 分钟前；`follow` 加游标持续获取新日志；`clear` 清空；带 `project` 时把报错行里的源码位置定位到工程文件）/ 只读 `shell` / `sqlite`（查询设备数据库或调试包的 RDB 数据库，返回 JSON；默认只读，传 `write` 才可写）/ `send` / `recv` |
 | `ui` | `observe`（截图加精简控件列表）/ `screenshot`（`display` 多屏、`save_path` 另存）/ `tree`（`window`、`depth`（0 不限，1 只有根节点，与 devecocli 一致）、`all_windows` 全部窗口、`node` 单个组件子树）/ `windows` / `find` / `act`（点击；输入，支持中文和任意特殊字符，默认替换原内容；键入；滑动；滚动；按键和组合键；鼠标点击、移动、滚轮、拖拽；每次返回 `after`：新出现和消失的控件、是否换页，一般不必再 `observe`；`steps` 一次调用执行整条路径，每步自动等待控件出现，可带最终断言，`save_flow` 存成 flow；同一路径重启后又走一遍时会提示存起来）/ `assert` / `visual`（截图回归：按名称和机型保存基准，之后对比，返回变化比例、区域和红框标注图）/ `layout`（检查当前页面的布局问题：超出屏幕、可点区域重叠、文字被裁切或被挤没、点击区域过小；`forms` 在折叠屏、阔折叠、三折叠模拟器上逐个形态和折叠状态检查）/ `perf`（在当前页面滑动，按逐帧时间统计帧率、帧耗时 p50/p95/最大值、卡顿帧和内存变化） / 录屏 `record_start` / `record_stop`（`discard`、`external`、`save_path`）/ `record_status`。**UI 测试会话**由宿主 AI 驱动：`test_start` → `test_step`（执行操作或断言，记录操作前后截图、控件摘要和应用日志片段）→ `review`（宿主看截图做判断；控件断言失败时不能改判为通过）→ `test_finish`（生成 JSON 和 Markdown 报告）→ `test_log` / `test_export` |
 | `ui_flow` | 用 `ui act` 录制可复用的操作流程，以一个最终断言收尾保存，回放时支持变量替换和自动修复，`snapshot` 回放后做截图回归。保存在 `.arkpilot/flows`，兼容 v0.x |
-| `diagnose` | `crash`（读取 jscrash、cppcrash、appfreeze 日志，量产手机也支持；`since_minutes` 限定时间窗口；提取错误特征和应用调用栈，并匹配故障模式库；带 `project` 时给出工程内出错的文件、行和前后代码）/ `build` |
+| `diagnose` | `crash`（读取 jscrash、cppcrash、appfreeze 日志，量产手机也支持；`since_minutes` 限定时间窗口；提取错误特征和应用调用栈，并匹配故障模式库；带 `project` 时解析已有 ArkTS 源码位置及前后代码。Native PC 保留在报告中，尚不提供 C++ 地址符号化）/ `build` |
 | `knowledge` | 离线文档、ArkTS 规则、错误案例和运行时问题模式：`search` / `read`（按 `section` 读取）/ `catalog` / `status` / `update` / `rollback`；`source=cloud` 在线查询 CodeGenie，每段按正文与本地官方文档比对，标注官方 / 官方·非 ArkTS 平台 / 社区 / 未确认 |
 | `skills` | 内置的鸿蒙 Skill：`list` / `read`；`export` 导出为宿主原生的 `SKILL.md`（`path` 指定任意目录）；`install_mcp` 把本服务写入宿主配置（cursor、claude、codex、opencode、trae-cn、codebuddy、qoder、pi；重复执行不会重复写入；atomcode、dsh、deveco 只导出技能）；`init` 一次完成两者；`search` / `install` / `uninstall` 使用 OpenHarmony Skill 市场 |
 | `auth` | 华为账号浏览器登录：`codegenie`（云端知识）或 `developer`（签名），`region` 可选 cn / global；`teams`；`import` 导入 v0.x 的登录凭据 |
-| `sign` | `auto`（工程已配置签名时拒绝执行、不做任何修改，`force` 才替换；否则一键为真机生成调试签名：密钥库、证书、设备注册、Profile，ACL 权限从 `module.json5` 自动推导，并写入工程的 `signingConfigs`）/ `sign` / `verify` / AppGallery Connect 证书和设备管理 / 逐项操作 `keypair`、`csr`、`certificate_create`、`profile_create`、`profile_delete`。账号属于多个开发者团队时，会在 AGC 新建或删除东西的操作必须指定 `team`（否则列出团队让 AI 先问用户） |
+| `sign` | `auto`（工程已配置签名时拒绝执行、不做任何修改，`force` 时先准备并验证新材料，再原子切换配置；保留旧材料和证书，需要空闲证书名额；否则一键为真机生成调试签名：密钥库、证书、设备注册、Profile，ACL 权限从 `module.json5` 自动推导，并写入工程的 `signingConfigs`）/ `sign` / `verify` / AppGallery Connect 证书和设备管理 / 逐项操作 `keypair`、`csr`、`certificate_create`、`profile_create`、`profile_delete`。账号属于多个开发者团队时，会在 AGC 新建或删除东西的操作必须指定 `team`（否则列出团队让 AI 先问用户） |
 | `emulator` | `list`（`details`）/ `start` / `stop`（`name` 或多个 `names`；启动会等待开机完成）/ `create`（`screen_profile` 或自定义 `screen`、`hot_boot`、`instance_path`、`image_root`、`force`）/ `delete` / `images`（按行返回设备类型和系统版本；默认已下载，`all` 全部）/ `install_image`（`force` 重新下载；返回路径、大小、耗时）/ `remove_image` / `license`（接受）/ `license_view`（只读查看）/ `scenario`（电量和充电状态、GPS、光照/湿度/温度/步数/心率传感器、旋转、折叠、运动场景等）。启动、创建、下载镜像时，如果许可协议还没同意，会自动同意并在结果中注明（`auto_accept_license=false` 可关闭） |
 | `hot_reload` | `apply` 把 ArkTS 改动以 HQF 快速修复包推送到运行中的应用，约 5 秒生效（实测 4.4–4.7 秒），应用不重启（`files` 指定改动文件，`restart` 打完补丁后重启应用）；`reset` 撤销改动；`stop_daemon` 停止工程的 hvigor 守护进程 |
 
@@ -143,7 +144,7 @@ test/unit       离线测试（npm test）；test/e2e：真实 SDK 和设备（n
 - 每一步的输出在下一步开始前保存。
 - 有副作用的步骤（安装、签名）执行前先记录意图，完成后记录回执。
 - 如果在两者之间崩溃，任务会进入 `needs_input`，不会盲目重做。
-- 检查过现场后，可以用 `job resume force=true` 重新执行该步骤。
+- 检查过现场后，通常可以用 `job resume force=true` 重新执行该步骤；自动签名的云端创建和配置提交必须先核对回执，`force` 不能跳过这个保护。
 - 启动时，所属进程已经退出的任务会被标记为 `interrupted`。
 
 保留策略按时间、任务数和总大小三个上限控制。清理在每个任务结束后执行，不使用定时器。
@@ -245,6 +246,7 @@ Other config keys:
 | `max_jobs` | Default 200 |
 | `max_artifact_mb` | Default 512 |
 | `session_idle_minutes` | Default 10 |
+| `auto_accept_ui_agreements` | Automatically accept agreement and permission dialogs during UI actions, batches, replay and deploy/test assertions. Default `true`; uses text and control state within the same window, reports `agreements_accepted`. Observation alone does not accept |
 | `kb_package` | npm package name of the knowledge pack |
 | `npm_registry` | Registry used for knowledge pack updates |
 
@@ -262,11 +264,11 @@ Check the setup with `node dist/cli.js doctor [project]`, or call the `doctor` t
 | `device` | `list` / `info` / `log` (filter by bundle, level or regex; `from`/`to` relative time window such as 5 minutes ago to 1 minute ago; `follow` + cursor streams new lines across calls; `clear`; with `project`, source locations in error lines are resolved to project files) / read-only `shell` / `sqlite` (JSON rows from an on-device database or a debuggable app's RDB store; read-only unless `write`) / `send` / `recv` |
 | `ui` | `observe` (screenshot plus compact element list) / `screenshot` (`display` for multi-screen, `save_path`) / `tree` (`window`, `depth` (0 = unlimited, 1 = root only, as in devecocli), `all_windows`, `node` for one component subtree) / `windows` / `find` / `act` (click, input with Chinese and any special characters and replace-by-default, type, swipe, scroll, key and key chords, mouse click/move/scroll/drag; every act returns `after`: elements that appeared/disappeared and whether the page changed, so observe is rarely needed; `steps` runs a whole path in one call, each step waiting for its element, with an optional final assert and `save_flow`; a path walked again after a relaunch is suggested for saving) / `assert` / `visual` (screenshot regression: baselines per name and device model, change ratio, regions and a red-boxed diff image) / `layout` (layout bugs on the current screen: off screen, overlapping tap targets, clipped or collapsed text, tiny targets; `forms` checks every fold state on foldable, widefold and triplefold emulators) / `perf` (scrolls the current screen and reports fps, frame time p50/p95/max, janky frames and memory from per-frame timestamps) / screen recording `record_start` / `record_stop` (`discard`, `external`, `save_path`) / `record_status`. **UI test sessions** driven by the host AI: `test_start` → `test_step` (actions and assertions with before/after screenshots, element summary and the app's log window) → `review` (host judges a screenshot; a failed control assertion is never overridden) → `test_finish` (JSON + Markdown report) → `test_log` / `test_export` |
 | `ui_flow` | Record reusable flows through `ui act`, save them with a final assert, and replay with variables and self-repair; `snapshot` adds a screenshot regression check. Stored in `.arkpilot/flows`, compatible with v0.x |
-| `diagnose` | `crash` (reads jscrash/cppcrash/appfreeze reports, also on production phones; `since_minutes` time window; extracts the signature and app frames, matches the fault-pattern library; with `project`, the project file, line and surrounding code) / `build` |
+| `diagnose` | `crash` (reads jscrash/cppcrash/appfreeze reports, also on production phones; `since_minutes` time window; extracts the signature and app frames, matches the fault-pattern library; with `project`, resolves existing ArkTS source locations and surrounding code. Native PCs are retained; C++ address symbolication is not implemented) / `build` |
 | `knowledge` | Offline docs, ArkTS rules, error cases and runtime patterns: `search` / `read` (by `section`) / `catalog` / `status` / `update` / `rollback`; `source=cloud` queries CodeGenie online; each section is checked against the local official docs and labelled official / official for another platform / community / unverified |
 | `skills` | Built-in HarmonyOS skills: `list` / `read`, `export` as native `SKILL.md` for your host (`path` for any directory), `install_mcp` registers this server in the host config (cursor, claude, codex, opencode, trae-cn, codebuddy, qoder, pi; idempotent merge; atomcode, dsh and deveco get skills only), `init` does both, `search` / `install` / `uninstall` from the OpenHarmony skill market |
 | `auth` | Huawei browser login for `codegenie` (cloud knowledge) or `developer` (signing), `region` cn / global; `teams`; `import` v0.x credentials |
-| `sign` | `auto` (refuses and changes nothing when the project already has signing unless `force`; otherwise one-step debug signing for real devices: keystore, certificate, device registration, profile with ACL permissions derived from `module.json5`, and `signingConfigs` in the project) / `sign` / `verify` / AppGallery Connect certificates and devices / itemized `keypair`, `csr`, `certificate_create`, `profile_create`, `profile_delete`. For accounts in several developer teams, actions that create or delete in AGC require `team` (otherwise the teams are listed so the agent asks the user) |
+| `sign` | `auto` (refuses and changes nothing when the project already has signing unless `force`; prepares and verifies a new chain before atomically switching config, keeps old material and certificates, and needs a free certificate slot; otherwise one-step debug signing for real devices: keystore, certificate, device registration, profile with ACL permissions derived from `module.json5`, and `signingConfigs` in the project) / `sign` / `verify` / AppGallery Connect certificates and devices / itemized `keypair`, `csr`, `certificate_create`, `profile_create`, `profile_delete`. For accounts in several developer teams, actions that create or delete in AGC require `team` (otherwise the teams are listed so the agent asks the user) |
 | `emulator` | `list` (`details`) / `start` / `stop` (`name` or several `names`; start waits for boot) / `create` (`screen_profile` or custom `screen`, `hot_boot`, `instance_path`, `image_root`, `force`) / `delete` / `images` (rows of device type and OS version; downloaded, `all` for every image) / `install_image` (`force` re-downloads; returns path, size, duration) / `remove_image` / `license` (accept) / `license_view` (read-only) / `scenario` (battery level and charging status, GPS, light/humidity/temperature/steps/heart-rate sensors, rotation, fold, motion scenes, …). Start, create and image download accept the license agreements automatically when needed and say so in the result (`auto_accept_license=false` to opt out) |
 | `hot_reload` | `apply` pushes ArkTS changes to the running app as an HQF quick fix in about 5 s (measured 4.4-4.7 s) with no restart (`files` limits it to given files, `restart` relaunches after patching); `reset` removes them; `stop_daemon` stops the project's hvigor daemon |
 
@@ -319,7 +321,7 @@ Jobs replace LangGraph with a small durable step runner:
 - Each step's output is persisted before the next step starts.
 - Steps with side effects (install, signing) record an intent before running and a receipt after.
 - If a crash happens between the two, the job goes to `needs_input` and is never replayed blindly.
-- `job resume force=true` re-runs such a step after you have inspected it.
+- `job resume force=true` normally re-runs such a step after inspection. Auto-sign cloud creation and configuration commit require receipt reconciliation; force cannot bypass this protection.
 - Jobs owned by a process that died are marked `interrupted` on startup.
 
 Retention is capped by age, job count and bytes, and cleanup runs after each job rather than on a timer.

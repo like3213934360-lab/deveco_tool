@@ -20,7 +20,10 @@ const t = performance.now();
 const list = await client.request("tools/list");
 const listMs = performance.now() - t;
 const listBytes = JSON.stringify(list.result).length;
-await new Promise((r) => setTimeout(r, 1500));
+// Startup schedules one-shot job recovery (2 s) and retention cleanup (5 s).
+// Measure idle after those and their background compilation/GC settle; counting them in the idle
+// window measures startup CPU instead. The 10 s observation window and every budget stay unchanged.
+await new Promise((r) => setTimeout(r, 15000));
 const ps = (fields) => execFileSync("ps", ["-o", fields, "-p", String(client.child.pid)]).toString().trim().split("\n").pop().trim();
 const cpuBefore = ps("cputime=");
 await new Promise((r) => setTimeout(r, 10000));

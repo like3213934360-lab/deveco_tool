@@ -346,7 +346,7 @@ const baseRunSteps = (build: boolean): Step<RunInput>[] => [
       const { waitFor } = await import("./domains/ui.js");
       const a = ctx.input.assert!;
       const selector = (a.visible ?? a.hidden) as import("./domains/ui.js").Selector;
-      const verdict = await waitFor(ctx.outputs.target.target, selector, a.visible ? "visible" : "hidden", a.timeout_ms ?? 8000, ctx.signal);
+      const verdict = await waitFor(ctx.outputs.target.target, selector, a.visible ? "visible" : "hidden", a.timeout_ms ?? 8000, ctx.signal, true);
       invariant(verdict.passed, "ASSERTION_FAILED", "UI assertion failed after launch", verdict, "Inspect with ui observe");
       return verdict;
     },
@@ -391,7 +391,7 @@ defineJob<import("./domains/layout.js").LayoutInput>({
     id: "check",
     async run(ctx) {
       const { layoutCheck } = await import("./domains/layout.js");
-      return layoutCheck(ctx.input, ctx.signal, ctx.log);
+      return layoutCheck(ctx.input, ctx.signal, ctx.log, ctx.job_id);
     },
   }],
   summarize: (o) => o.check,
@@ -409,18 +409,19 @@ defineJob<{ version?: string; source?: string; force?: boolean }>({
   summarize: (o) => o.update,
 });
 
-defineJob<{ project: string; product?: string; team?: string; acl?: string[]; force?: boolean }>({
+// Each remote mutation has its own durable intent/receipt. Import the signing domain lazily.
+const autoDomain = () => import("./domains/sign-auto.js");
+defineJob<import("./domains/sign-auto.js").AutoInput>({
   kind: "auto_sign",
-  steps: [{
-    id: "sign",
-    effect: true,
-    async run(ctx) {
-      const { inspectProject } = await import("./domains/project.js");
-      const { autoSign } = await import("./domains/sign.js");
-      const project = inspectProject(ctx.input.project, ctx.input.product);
-      invariant(project.bundleName, "PROJECT_INVALID", "bundleName missing");
-      return autoSign(ctx.input.project, { product: project.product, team: ctx.input.team, bundle: project.bundleName, acl: ctx.input.acl, force: ctx.input.force }, ctx.signal, ctx.log);
-    },
-  }],
-  summarize: (o) => o.sign,
+  steps: [
+    { id: "prepare", run: async (ctx) => (await autoDomain()).prepare(ctx) },
+    { id: "certificate", effect: true, replay: false, run: async (ctx) => (await autoDomain()).certificate(ctx), reconcile: async (ctx) => (await autoDomain()).reconcileCertificate(ctx) },
+    { id: "devices", run: async (ctx) => (await autoDomain()).devices(ctx) },
+    { id: "profile", effect: true, replay: false, run: async (ctx) => (await autoDomain()).profile(ctx) },
+    { id: "material", run: async (ctx) => (await autoDomain()).material(ctx) },
+    { id: "commit", effect: true, replay: false, run: async (ctx) => (await autoDomain()).commit(ctx), reconcile: async (ctx) => (await autoDomain()).reconcileCommit(ctx) },
+    { id: "release", run: async (ctx) => (await autoDomain()).release(ctx) },
+  ],
+  onFailure: async (ctx, error) => (await autoDomain()).compensate(ctx, error),
+  summarize: (o) => o.commit,
 });

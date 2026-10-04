@@ -13,6 +13,7 @@ const instructions = [
   "project build and run build_run already run the ArkTS check on the files edited since the last build: do not call code action=check before them (use it only when you want to check without building).",
   "Fewest calls: ui act steps=[...] walks a whole UI path in one call and every act returns what changed on screen (after), so observe is rarely needed; save a path you walk repeatedly (save_flow) and pass run then_flow=<id> to land on that page after each deploy.",
   "Verify UI outcomes with ui assert, not screenshots alone. Never retry a job in needs_input without inspecting it.",
+  "UI actions automatically accept recognizable agreement and permission prompts and report agreements_accepted. Recognition uses current window text and control state, never an application name or fixed control id. If onboarding still blocks the app, observe its current controls before continuing; do not repeat the original action blindly.",
   "Several devices connected (DEVICE_AMBIGUOUS) or several developer teams (TEAM_AMBIGUOUS): ask the user which one to use; never pick one yourself.",
   "Unknown or misplaced parameters are rejected and nothing runs: use the names from the error.",
   "Responses are summaries: every artifact id in them (log_artifact, report_artifact, full_artifact, artifact_id...) holds the complete text (full build log, crash report, hilog, cloud answer); read it with job action=read artifact_id=<id> (line/limit to page, grep to filter). Artifacts expire after about a day.",
@@ -194,16 +195,20 @@ export async function serve() {
   });
   server.on("resources/templates/list", async () => ({ resourceTemplates: [] }));
   server.on("resources/read", async (params) => {
+    if (typeof params.uri !== "string" || !params.uri.trim()) throw new ToolError("INVALID_INPUT", "resources/read requires a nonempty uri");
     const { readResource } = await import("./domains/resources.js");
-    return { contents: [await readResource(String(params.uri))] };
+    return { contents: [await readResource(params.uri)] };
   });
   server.on("prompts/list", async () => {
     const { listPrompts } = await import("./domains/resources.js");
     return { prompts: listPrompts() };
   });
   server.on("prompts/get", async (params) => {
+    if (typeof params.name !== "string" || !params.name.trim()
+      || (params.arguments !== undefined && (!params.arguments || typeof params.arguments !== "object" || Array.isArray(params.arguments))))
+      throw new ToolError("INVALID_INPUT", "prompts/get requires a name and object arguments");
     const { getPrompt } = await import("./domains/resources.js");
-    return getPrompt(String(params.name), (params.arguments ?? {}) as Record<string, string>);
+    return getPrompt(params.name, (params.arguments ?? {}) as Record<string, unknown>);
   });
 
   let stopping = false;

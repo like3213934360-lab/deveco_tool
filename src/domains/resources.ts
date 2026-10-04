@@ -40,8 +40,17 @@ const prompts: Record<string, { description: string; args: { name: string; descr
 export function listPrompts() {
   return Object.entries(prompts).map(([name, p]) => ({ name, description: p.description, arguments: p.args }));
 }
-export function getPrompt(name: string, args: Record<string, string>) {
-  const prompt = prompts[name];
+export function getPrompt(name: string, args: Record<string, unknown>) {
+  const prompt = Object.hasOwn(prompts, name) ? prompts[name] : undefined;
   invariant(prompt, "NOT_FOUND", `Unknown prompt ${name}`);
-  return { description: prompt.description, messages: [{ role: "user" as const, content: { type: "text" as const, text: prompt.text(args) } }] };
+  invariant(args && typeof args === "object" && !Array.isArray(args), "INVALID_INPUT", "Prompt arguments must be an object");
+  const checked: Record<string, string> = {};
+  for (const arg of prompt.args) {
+    const value = args[arg.name];
+    invariant(value === undefined ? !arg.required : typeof value === "string" && (!arg.required || !!value.trim()),
+      "INVALID_INPUT", `Prompt argument ${arg.name} must be ${arg.required ? "a non-empty" : "a"} string`);
+    if (typeof value === "string") checked[arg.name] = value;
+  }
+  invariant(Object.keys(args).every((key) => prompt.args.some((arg) => arg.name === key)), "INVALID_INPUT", "Unknown prompt argument");
+  return { description: prompt.description, messages: [{ role: "user" as const, content: { type: "text" as const, text: prompt.text(checked) } }] };
 }

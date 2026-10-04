@@ -23,6 +23,7 @@ export interface StepRecord {
   selector?: Selector;
   passed?: boolean;
   detail?: unknown;
+  agreements_accepted?: { text: string; kind: string }[];
   before?: string; // screenshot artifact ids
   after?: string;
   elements?: string;
@@ -94,7 +95,7 @@ export async function startTest(target: string, input: { plan: string; bundle?: 
     invariant(input.ability, "INVALID_INPUT", "fresh_start needs the app ability (pass project or ability)");
     await forceStop(target, input.bundle, signal).catch(() => {});
     await launch(target, input.bundle, input.ability, input.module, signal);
-    await waitFor(target, { bundle: input.bundle }, "visible", 10000, signal);
+    await waitFor(target, { bundle: input.bundle }, "visible", 10000, signal, true);
   }
   const s: TestSession = {
     id: `t_${Date.now().toString(36)}${crypto.randomBytes(2).toString("hex")}`,
@@ -120,15 +121,17 @@ export async function testStep(testId: string, step: { description?: string; act
   try {
     if (step.action) {
       record.before = await shot(s.target, signal);
-      await act(s.target, step.action, signal);
+      const performed = await act(s.target, step.action, signal);
+      record.agreements_accepted = performed.agreements_accepted;
       await new Promise((r) => setTimeout(r, 600));
       record.passed = true;
     }
     if (step.assert) {
       const selector = (step.assert.visible ?? step.assert.hidden)!;
-      const verdict = await waitFor(s.target, selector, step.assert.visible ? "visible" : "hidden", step.assert.timeout_ms ?? 5000, signal);
+      const verdict = await waitFor(s.target, selector, step.assert.visible ? "visible" : "hidden", step.assert.timeout_ms ?? 5000, signal, true);
       record.passed = verdict.passed;
       record.detail = verdict;
+      if (verdict.agreements_accepted?.length) record.agreements_accepted = [...(record.agreements_accepted ?? []), ...verdict.agreements_accepted];
     }
   } catch (error) {
     record.passed = false;
@@ -148,6 +151,7 @@ export async function testStep(testId: string, step: { description?: string; act
   const errors = log.split("\n").filter((l) => /\s[EF]\s/.test(l)).slice(-5);
   return {
     step: record.n, passed: record.passed, detail: record.detail, after_screenshot: record.after, elements: record.elements,
+    ...(record.agreements_accepted?.length ? { agreements_accepted: record.agreements_accepted } : {}),
     ...(errors.length ? { app_errors: errors } : {}),
   };
 }

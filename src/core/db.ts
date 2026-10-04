@@ -66,7 +66,7 @@ const CORRUPT = /not a database|malformed|SQLITE_(CORRUPT|NOTADB)|file is encryp
 function open(DatabaseSync: typeof import("node:sqlite").DatabaseSync, file: string) {
   const handle = new DatabaseSync(file);
   try {
-    handle.exec("PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL; PRAGMA busy_timeout=5000; PRAGMA foreign_keys=OFF;");
+    handle.exec("PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; PRAGMA busy_timeout=5000; PRAGMA foreign_keys=OFF;");
     handle.exec(schema);
     // A truncated file can open and still be unreadable: touch every table once.
     for (const t of ["jobs", "effects", "events", "artifacts", "credentials", "exports", "kv"]) handle.prepare(`SELECT 1 FROM ${t} LIMIT 1`).get();
@@ -116,6 +116,9 @@ export function closeDatabase() {
 export async function kvGet(key: string): Promise<string | undefined> {
   const row = (await database()).prepare("SELECT value FROM kv WHERE key=?").get(key) as { value: string } | undefined;
   return row?.value;
+}
+export async function kvEntries(prefix: string): Promise<{ key: string; value: string }[]> {
+  return (await database()).prepare("SELECT key,value FROM kv WHERE substr(key,1,?)=? ORDER BY key").all(prefix.length, prefix) as { key: string; value: string }[];
 }
 export async function kvDelete(key: string) {
   (await database()).prepare("DELETE FROM kv WHERE key=?").run(key);

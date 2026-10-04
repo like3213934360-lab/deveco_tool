@@ -165,7 +165,7 @@ test("relative durations for log windows", () => {
 
 test("emulator create arguments and license state", () => {
   assert.deepEqual(m.createArgs({ name: "E", device_type: "foldable", os_version: "HarmonyOS 6.0.0(20)", screen: ["2200 2480 480 7.8", "1080 2480 480 6.4"], hot_boot: false, instance_path: "/i", force: true }),
-    ["-create", "E", "-deviceType", "foldable", "-osVersion", "HarmonyOS 6.0.0(20)", "-instancePath", "/i", "-screen", "2200 2480 480 7.8", "1080 2480 480 6.4", "-hotBoot", "false", "-force"]);
+    ["-create", "E", "-deviceType", "foldable", "-osVersion", "HarmonyOS 6.0.0(20)", "-instancePath", "/i", "-screen", "2200 2480 480 7.8", "1080 2480 480 6.4", "-hotBoot", "false"]);
   assert.throws(() => m.createArgs({ name: "E", device_type: "phone", os_version: "x", screen: ["1080x2340"] }));
   assert.equal(m.agreementsAccepted("HarmonyOS_Software_Service_Agreement:agree\nHarmonyOS_SDK_Agreement:agree\n"), true);
   assert.equal(m.agreementsAccepted("HarmonyOS_Software_Service_Agreement:agree\nHarmonyOS_SDK_Agreement:disagree\n"), false);

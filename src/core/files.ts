@@ -19,8 +19,13 @@ export function readJson5(file: string): Record<string, unknown> {
 export function atomicWrite(file: string, data: string | Buffer, mode?: number) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   const temp = `${file}.${process.pid}.${crypto.randomBytes(4).toString("hex")}.tmp`;
-  fs.writeFileSync(temp, data, mode === undefined ? undefined : { mode });
-  fs.renameSync(temp, file);
+  try {
+    const fd = fs.openSync(temp, "wx", mode);
+    try { fs.writeFileSync(fd, data); fs.fsyncSync(fd); } finally { fs.closeSync(fd); }
+    fs.renameSync(temp, file);
+  } finally {
+    fs.rmSync(temp, { force: true });
+  }
 }
 
 export function sha256(data: string | Buffer) {

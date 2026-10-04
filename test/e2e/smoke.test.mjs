@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import JSON5 from "json5";
 import { after, before, test } from "node:test";
 import { connect } from "../../tools/mcp-client.mjs";
 import { makeCallChain, makeGesturePage, makeInterface } from "./fixtures.mjs";
@@ -216,6 +217,47 @@ test("windows, window-scoped tree, record_status", { skip: !target }, async () =
   assert.ok(fs.existsSync(shot.saved));
 });
 
+test("auto deploy relaunches unchanged installs and fully deploys dependency changes", { skip: !target }, async () => {
+  const deploy = async () => {
+    const status = await waitJob(await call("run", { action: "build_run", project, target, wait: 60000 }));
+    assert.equal(status.status, "succeeded", JSON.stringify(status.error ?? status).slice(0, 2000));
+    return status.result;
+  };
+  const stamp = async () => {
+    const dump = await call("device", { action: "shell", target, command: `bm dump -n ${bundle}` });
+    const text = dump.stdout ?? dump.output ?? JSON.stringify(dump);
+    const match = /"updateTime"\s*:\s*(\d+)/.exec(text);
+    assert.ok(match, "device bundle metadata must contain updateTime");
+    return match[1];
+  };
+  await deploy();
+  const baseline = await deploy(), before = await stamp();
+  const unchanged = await deploy();
+  assert.equal(unchanged.path, "relaunch");
+  assert.ok(!unchanged.installed, "relaunch must not include an install receipt");
+  assert.equal(unchanged.build, undefined);
+  assert.notEqual(unchanged.launch.pid, baseline.launch.pid, "the app really restarted");
+  assert.equal(await stamp(), before, "the installed bundle really stayed unchanged");
+  const manifest = path.join(project, "entry/oh-package.json5"), original = fs.readFileSync(manifest, "utf8");
+  const dependency = path.join(work, "AuditLocal");
+  fs.mkdirSync(dependency);
+  fs.writeFileSync(path.join(dependency, "oh-package.json5"), JSON.stringify({ name: "audit-local", version: "1.0.0", main: "Index.ets" }));
+  fs.writeFileSync(path.join(dependency, "Index.ets"), "export const auditValue: number = 1;\n");
+  const edited = JSON5.parse(original);
+  edited.dependencies = { ...edited.dependencies, "audit-local": "file:../../AuditLocal" };
+  fs.writeFileSync(manifest, JSON.stringify(edited, null, 2));
+  try {
+    const changed = await deploy();
+    assert.equal(changed.path, "full");
+    assert.match(changed.fallback_reason, /dependencies changed.*oh-package/);
+    assert.ok(changed.installed && changed.build);
+    assert.notEqual(await stamp(), before, "dependency change really reinstalled the bundle");
+    assert.ok(fs.existsSync(path.join(project, "entry/oh_modules/audit-local")), "OHPM really installed the local dependency");
+  } finally {
+    fs.writeFileSync(manifest, original);
+  }
+});
+
 test("device sqlite on the app's RDB store (read-only by default)", { skip: !target }, async () => {
   const page = path.join(project, "entry/src/main/ets/pages/Index.ets");
   const original = fs.readFileSync(page, "utf8");
@@ -294,14 +336,6 @@ test("ui act: every gesture, text input and mouse operation has its effect", { s
   b = await at("DragBox");
   await act({ op: "drag", x: b.x, y: b.y, x2: b.x, y2: b.y + 300 }); await expect("DragBox", /dragged:1/, "drag");
 
-  b = await at("Field");
-  await act({ op: "input", x: b.x, y: b.y, text: `a b$c'd "q"` }); await expect("Echo", /^typed:a b\$c'd "q"$/, "input keeps spaces, $ and straight quotes");
-  await act({ op: "input", x: b.x, y: b.y, text: "你好 鸿蒙" }); await expect("Echo", /^typed:你好 鸿蒙$/, "input replaces, Chinese");
-  await act({ op: "type", text: " xyz" }); await expect("Echo", /^typed:你好 鸿蒙 xyz$/, "type into focused field");
-  await act({ op: "input", x: b.x, y: b.y, text: "!", append: true }); await expect("Echo", /^typed:你好 鸿蒙 xyz!$/, "input append");
-  await act({ op: "key", key: "back" }); // hide the soft keyboard
-  await new Promise((r) => setTimeout(r, 800));
-
   b = await at("TapBox");
   await act({ op: "mouse_click", x: b.x, y: b.y }); await expect("TapBox", /taps:2/, "mouse_click");
   b = await at("DoubleBox");
@@ -320,4 +354,23 @@ test("ui act: every gesture, text input and mouse operation has its effect", { s
   assert.equal((await act({ op: "click", x: b.x, y: b.y, verify_change: true })).changed, true, "verify_change sees the label update");
   const bad = await client.call("ui", { action: "act", target, op: "key", key: "not-a-key" });
   assert.equal(bad.data.error.code, "INVALID_INPUT");
+});
+
+// Exact input effects; the generic production consent handler handles first-use legal prompts.
+test("ui input: exact punctuation, Chinese, focused typing and append", { skip: !target }, async () => {
+  const node = async (id) => (await call("ui", { action: "find", target, selector: { id } })).matches[0];
+  const at = async (id) => { const m = await node(id); assert.ok(m, `${id} must be on screen`); return { x: Math.round((m.bounds[0] + m.bounds[2]) / 2), y: Math.round((m.bounds[1] + m.bounds[3]) / 2) }; };
+  const expect = async (id, re, what) => { const m = await node(id); assert.match(m?.text ?? "", re, `${what}; Echo fixture includes typed: prefix`); };
+  const act = (args) => call("ui", { action: "act", target, ...args });
+  let b = await at("Field");
+  await act({ op: "click", x: b.x, y: b.y });
+  // The production agreement handler resolves arbitrary legal-consent dialogs.
+  b = await at("Field");
+  await act({ op: "input", x: b.x, y: b.y, text: `a b$c'd "q"` }); await expect("Echo", /^typed:a b\$c'd "q"$/, "input keeps spaces, $ and straight quotes");
+  await act({ op: "input", x: b.x, y: b.y, text: "你好 鸿蒙" }); await expect("Echo", /^typed:你好 鸿蒙$/, "input replaces, Chinese");
+  await act({ op: "type", text: " xyz" }); await expect("Echo", /^typed:你好 鸿蒙 xyz$/, "type into focused field");
+  await act({ op: "input", x: b.x, y: b.y, text: "!", append: true }); await expect("Echo", /^typed:你好 鸿蒙 xyz!$/, "input append");
+  await act({ op: "key", key: "back" }); // hide the soft keyboard
+  await new Promise((r) => setTimeout(r, 800));
+
 });

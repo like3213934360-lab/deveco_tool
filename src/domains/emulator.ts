@@ -160,7 +160,17 @@ export async function stopEmulator(name: string, signal?: AbortSignal, instanceP
   const entry = known?.find((e) => e.name === name);
   if (known && !entry) throw new ToolError("NOT_FOUND", `Emulator ${name} not found`, { emulators: known.map((e) => e.name) });
   if (entry && !entry.running) return { stopped: name, already_stopped: true };
-  return { stopped: name, output: clip(await emulatorChecked("stop", ["-stop", name], signal, 60000), 500) };
+  const output = await emulatorChecked("stop", ["-stop", name], signal, 60000);
+  const deadline = Date.now() + 15000;
+  let stopped = 0;
+  while (Date.now() < deadline) {
+    signal?.throwIfAborted();
+    const live = (await listEmulators(signal, false, instancePath)).find((e) => e.name === name)?.running;
+    stopped = live ? 0 : stopped + 1;
+    if (stopped >= 2) return { stopped: name, output: clip(output, 500) };
+    await new Promise((r) => setTimeout(r, 250));
+  }
+  throw new ToolError("TIMEOUT", `Emulator ${name} still reports running after stop; do not delete it`);
 }
 
 export interface CreateInput {
@@ -180,17 +190,22 @@ export function createArgs(input: CreateInput) {
     args.push("-screen", ...input.screen.map((s) => s.trim()));
   }
   if (input.hot_boot !== undefined) args.push("-hotBoot", String(input.hot_boot));
-  if (input.force) args.push("-force");
+  // This SDK's -create has no overwrite option. -force belongs to interactive
+  // delete/install commands and does not replace an existing instance.
   return args;
 }
 export async function createEmulator(input: CreateInput & { auto_accept_license?: boolean }, signal?: AbortSignal) {
-  await ensureLicense(input.auto_accept_license ?? true, signal);
   const args = createArgs(input);
+  const existing = (await listEmulators(signal, false, input.instance_path)).find((e) => e.name === input.name);
+  if (existing) throw new ToolError(input.force ? "CAPABILITY_UNAVAILABLE" : "CONFLICT",
+    input.force ? "The installed Emulator cannot safely overwrite an existing instance; nothing changed" : `Emulator ${input.name} already exists`,
+    { name: input.name }, "Create a distinct name, or explicitly stop/delete that instance before recreating it");
+  await ensureLicense(input.auto_accept_license ?? true, signal);
   return { created: input.name, output: clip(await emulatorChecked("create", args, signal, 600000), 1000) };
 }
 export async function deleteEmulator(name: string, signal?: AbortSignal, instancePath?: string) {
   // Deleting a running instance corrupts it; refuse like deveco-cli.
-  if ((await runningNames(signal)).has(name)) throw new ToolError("CONFLICT", `Emulator ${name} is running`, undefined, "Stop it first with emulator action=stop");
+  if ((await listEmulators(signal, false, instancePath)).some((e) => e.name === name && e.running)) throw new ToolError("CONFLICT", `Emulator ${name} is running`, undefined, "Stop it first with emulator action=stop");
   return { deleted: name, output: clip(await emulatorChecked("delete", ["-delete", name, ...(instancePath ? ["-instancePath", instancePath] : []), "-force"], signal), 500) };
 }
 /** Downloaded images by default (upstream `image list`); all=true lists every downloadable image. */

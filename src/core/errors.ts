@@ -30,6 +30,8 @@ const categories: Record<string, ErrorCategory> = {
 };
 
 export class ToolError extends Error {
+  /** Protocol handlers use this; tools/call still returns structured tool errors. */
+  get rpcCode() { return this.code === "INVALID_INPUT" || this.code === "NOT_FOUND" ? -32602 : -32603; }
   constructor(
     readonly code: string,
     message: string,

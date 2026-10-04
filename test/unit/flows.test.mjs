@@ -54,3 +54,20 @@ test("selector conversion keeps meaning", () => {
   assert.deepEqual(s, { text: "登录", exact: true, key: "k", type: undefined, id: undefined, bundle: "b", checked: undefined, selected: undefined, enabled: undefined, clickable: true });
   assert.deepEqual(flows.fromSelector(s), { text: "登录", textMode: "exact", key: "k", bundle_name: "b", clickableOnly: true });
 });
+
+test("draft discovery survives reconnect, isolates project/target and hides input secrets", async () => {
+  const project = path.join(out, "draft-project"), other = path.join(out, "other-project");
+  const app = legacy.app;
+  await flows.startRecording(project, "offline-target", "draft", "Draft", app);
+  await flows.recordStep("offline-target", { action: "input", x: 10, y: 10, text: "secret-input" }, { id: "field" }, { w: 100, h: 100 });
+  assert.equal((await flows.listDrafts(other)).length, 0);
+  const list = await flows.listDrafts(project); assert.equal(list[0].target, "offline-target");
+  const shown = await flows.showFlow(project, "draft"); assert.equal(shown.status, "draft"); assert.doesNotMatch(JSON.stringify(shown), /secret-input/);
+  // A newly loaded domain reads the persisted draft instead of an in-memory singleton.
+  const reconnected = await import(`${pathToFileURL(bundle).href}?reconnect=1`);
+  assert.equal((await reconnected.showFlow(project, "draft")).status, "draft");
+  await assert.rejects(reconnected.stopRecording("offline-target", { project: other, discard: true }), (e) => e.code === "INVALID_INPUT");
+  await assert.rejects(reconnected.stopRecording("offline-target", { project }), (e) => e.code === "INVALID_INPUT");
+  assert.equal((await reconnected.stopRecording("offline-target", { project, discard: true })).discarded, "draft");
+  assert.equal((await flows.listDrafts(project)).length, 0);
+});

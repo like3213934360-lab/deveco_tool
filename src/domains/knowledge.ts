@@ -1,11 +1,14 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { Readable, Transform } from "node:stream";
+import { pipeline } from "node:stream/promises";
 import { createRequire } from "node:module";
 import type { DatabaseSync } from "node:sqlite";
 import { config, packageRoot, stateDir } from "../core/config.js";
 import { invariant, ToolError } from "../core/errors.js";
 import { run } from "../core/proc.js";
+import { atomicWrite } from "../core/files.js";
 
 /*
  * Knowledge pack layout (directory):
@@ -70,8 +73,8 @@ function bundledDir(): string | undefined {
 
 export function activePack(): { dir: string; manifest: Manifest; origin: "updated" | "bundled" } | undefined {
   try {
-    const current = JSON.parse(fs.readFileSync(path.join(kbRoot(), "current.json"), "utf8")) as { version: string };
-    const dir = path.join(kbRoot(), current.version);
+    const current = JSON.parse(fs.readFileSync(path.join(kbRoot(), "current.json"), "utf8")) as { version: string; directory?: string };
+    const dir = path.join(kbRoot(), current.directory ?? current.version);
     const manifest = readManifest(dir);
     if (manifest) return { dir, manifest, origin: "updated" };
   } catch { /* fall through */ }
@@ -318,23 +321,25 @@ export async function catalog() {
 
 /* --------------------------------- update --------------------------------- */
 
-async function registryMeta(name: string) {
+async function registryMeta(name: string, signal?: AbortSignal) {
   const url = `${config().npm_registry.replace(/\/$/, "")}/${name.replace("/", "%2F")}`;
-  const response = await fetch(url, { signal: AbortSignal.timeout(20000), headers: { accept: "application/vnd.npm.install-v1+json" } });
-  invariant(response.ok, "HTTP_ERROR", `Registry returned ${response.status} for ${name}`, undefined, "Check network access or set npm_registry in the config");
+  const response = await fetch(url, { signal: AbortSignal.any([AbortSignal.timeout(20000), ...(signal ? [signal] : [])]), headers: { accept: "application/vnd.npm.install-v1+json" } });
+  invariant(response.ok, "HTTP_ERROR", `Registry returned ${response.status} for ${name}`, undefined,
+    response.status === 404 ? `Package ${name} is not published in this registry. Use knowledge action=update file=upstream to build from the configured Huawei docs package, or file=<verified local tarball>; the installed pack is preserved.` : "Check network access or set npm_registry in the config");
   return (await response.json()) as { "dist-tags": Record<string, string>; versions: Record<string, { dist: { tarball: string; integrity: string }; kbSchema?: number }> };
 }
 
-export async function status(checkRemote = false) {
+export async function status(checkRemote = false, signal?: AbortSignal) {
   const pack = activePack();
   const local = pack ? { version: pack.manifest.version, origin: pack.origin, created_at: pack.manifest.created_at, sdk_api_range: pack.manifest.sdk_api_range, counts: pack.manifest.counts } : null;
   if (!checkRemote) return { installed: local };
   try {
-    const meta = await registryMeta(config().kb_package);
+    const meta = await registryMeta(config().kb_package, signal);
     const latest = meta["dist-tags"].latest;
     return { installed: local, latest, update_available: !!latest && latest !== local?.version };
   } catch (error) {
-    return { installed: local, latest: null, remote_error: (error as Error).message };
+    signal?.throwIfAborted();
+    return { installed: local, latest: null, remote_error: (error as Error).message, ...((error as ToolError).hint ? { hint: (error as ToolError).hint } : {}) };
   }
 }
 
@@ -345,13 +350,14 @@ export async function status(checkRemote = false) {
 export async function update(options: { version?: string; source?: string; force?: boolean }, signal: AbortSignal) {
   const root = kbRoot();
   let tarball: string;
+  let downloaded = false;
   let integrity: string | undefined;
   let version = options.version;
   if (options.source && fs.existsSync(options.source)) {
     tarball = path.resolve(options.source);
   } else if (options.source === "upstream") {
     // Build a pack locally from Huawei's docs package (useful before our pack is published, or to get newer docs first).
-    const meta = await registryMeta(config().kb_upstream_package);
+    const meta = await registryMeta(config().kb_upstream_package, signal);
     const latest = meta["dist-tags"].latest!;
     const entry = meta.versions[latest]!;
     const dir = path.join(root, `.upstream-${crypto.randomBytes(4).toString("hex")}`);
@@ -360,10 +366,8 @@ export async function update(options: { version?: string; source?: string; force
       const file = path.join(dir, "upstream.tgz");
       const response = await fetch(entry.dist.tarball, { signal: AbortSignal.any([signal, AbortSignal.timeout(30 * 60000)]) });
       invariant(response.ok && response.body, "HTTP_ERROR", `Upstream download failed with HTTP ${response.status}`);
-      const out = fs.createWriteStream(file);
       const hash = crypto.createHash("sha512");
-      for await (const chunk of response.body as unknown as AsyncIterable<Uint8Array>) { hash.update(chunk); out.write(chunk); }
-      await new Promise<void>((resolve, reject) => out.end((e?: Error | null) => (e ? reject(e) : resolve())));
+      await pipeline(Readable.fromWeb(response.body as any), new Transform({ transform(chunk, _encoding, done) { hash.update(chunk); done(null, chunk); } }), fs.createWriteStream(file), { signal });
       invariant(`sha512-${hash.digest("base64")}` === entry.dist.integrity, "INTEGRITY_FAILED", "Upstream docs package failed integrity verification");
       await run({ file: "tar", args: ["-xzf", file, "-C", dir] }, { signal, timeoutMs: 600000 });
       const { buildKnowledgePack } = await import("./kb-build.js");
@@ -375,7 +379,7 @@ export async function update(options: { version?: string; source?: string; force
   } else {
     let url = options.source;
     if (!url) {
-      const meta = await registryMeta(config().kb_package);
+      const meta = await registryMeta(config().kb_package, signal);
       version ??= meta["dist-tags"].latest;
       const entry = version ? meta.versions[version] : undefined;
       invariant(entry, "NOT_FOUND", `Knowledge pack version ${version} not found`, { available: Object.keys(meta.versions).slice(-10) });
@@ -386,11 +390,15 @@ export async function update(options: { version?: string; source?: string; force
       if (!options.force && current?.manifest.version === version) return { updated: false, version, reason: "already installed" };
     }
     tarball = path.join(root, `.download-${crypto.randomBytes(4).toString("hex")}.tgz`);
-    const response = await fetch(url, { signal: AbortSignal.any([signal, AbortSignal.timeout(30 * 60000)]) });
-    invariant(response.ok && response.body, "HTTP_ERROR", `Download failed with HTTP ${response.status}`);
-    const out = fs.createWriteStream(tarball);
-    for await (const chunk of response.body as unknown as AsyncIterable<Uint8Array>) out.write(chunk);
-    await new Promise<void>((resolve, reject) => out.end((e?: Error | null) => (e ? reject(e) : resolve())));
+    downloaded = true;
+    try {
+      const response = await fetch(url, { signal: AbortSignal.any([signal, AbortSignal.timeout(30 * 60000)]) });
+      invariant(response.ok && response.body, "HTTP_ERROR", `Download failed with HTTP ${response.status}`);
+      await pipeline(Readable.fromWeb(response.body as any), fs.createWriteStream(tarball), { signal });
+    } catch (error) {
+      fs.rmSync(tarball, { force: true });
+      throw error;
+    }
   }
   try {
     if (integrity) {
@@ -407,21 +415,28 @@ export async function update(options: { version?: string; source?: string; force
       const extracted = fs.existsSync(path.join(temp, "package")) ? path.join(temp, "package") : temp;
       const manifest = readManifest(extracted);
       invariant(manifest, "INVALID_INPUT", `Archive is not a schema ${KB_SCHEMA} knowledge pack (manifest.json + index.db required)`);
-      const destination = path.join(root, manifest.version);
-      fs.rmSync(destination, { recursive: true, force: true });
-      fs.renameSync(extracted, destination);
+      invariant(/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(manifest.version), "INVALID_INPUT", "Knowledge pack version is not a safe directory name");
+      signal.throwIfAborted();
       const previous = activePack();
+      const directory = `${manifest.version}-${crypto.randomBytes(8).toString("hex")}`;
+      const destination = path.join(root, directory);
+      fs.renameSync(extracted, destination);
       const pointer = path.join(root, "current.json");
-      fs.writeFileSync(`${pointer}.tmp`, JSON.stringify({ version: manifest.version, previous: previous?.origin === "updated" ? previous.manifest.version : null, at: new Date().toISOString() }));
-      fs.renameSync(`${pointer}.tmp`, pointer);
+      const previousDirectory = previous?.origin === "updated" ? path.basename(previous.dir) : null;
+      try {
+        atomicWrite(pointer, JSON.stringify({ version: manifest.version, directory, previous: previousDirectory, at: new Date().toISOString() }));
+      } catch (error) {
+        fs.rmSync(destination, { recursive: true, force: true });
+        throw error;
+      }
       closeKnowledge();
-      prune(root, [manifest.version, previous?.origin === "updated" ? previous.manifest.version : ""]);
+      prune(root, [directory, previousDirectory ?? ""]);
       return { updated: true, version: manifest.version, previous: previous ? `${previous.manifest.version} (${previous.origin})` : null, counts: manifest.counts };
     } finally {
       fs.rmSync(temp, { recursive: true, force: true });
     }
   } finally {
-    if (tarball.includes(".download-")) fs.rmSync(tarball, { force: true });
+    if (downloaded) fs.rmSync(tarball, { force: true });
   }
 }
 
@@ -431,7 +446,8 @@ export function rollback() {
   invariant(fs.existsSync(pointer), "NOT_FOUND", "No updated pack to roll back from");
   const current = JSON.parse(fs.readFileSync(pointer, "utf8")) as { version: string; previous: string | null };
   if (current.previous && readManifest(path.join(root, current.previous))) {
-    fs.writeFileSync(pointer, JSON.stringify({ version: current.previous, previous: null, at: new Date().toISOString() }));
+    const manifest = readManifest(path.join(root, current.previous))!;
+    atomicWrite(pointer, JSON.stringify({ version: manifest.version, directory: current.previous, previous: null, at: new Date().toISOString() }));
   } else fs.rmSync(pointer);
   closeKnowledge();
   const active = activePack();

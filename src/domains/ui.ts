@@ -3,8 +3,9 @@ import fs from "node:fs";
 import net from "node:net";
 import path from "node:path";
 import zlib from "node:zlib";
+import { StringDecoder } from "node:string_decoder";
 import { artifactDir, commitArtifact, saveArtifact, trackExport } from "../core/artifacts.js";
-import { packageRoot } from "../core/config.js";
+import { config, packageRoot } from "../core/config.js";
 import { invariant, ToolError } from "../core/errors.js";
 import { assertConnected, hdc, shell } from "./device.js";
 
@@ -438,7 +439,28 @@ function mouseRequest(a: Extract<Action, { action: `mouse_${string}` }>): { api:
 
 const uiInputOk = (out: string, code: number | null) => code === 0 && (!out || /No Error|success/i.test(out));
 
+/** Shared by actions, batches and flows; observation alone stays read-only. */
+export async function acceptAgreements(target: string, signal?: AbortSignal, initial?: UiNode[], settleMs = 0) {
+  if (!config().auto_accept_ui_agreements) return { nodes: initial, accepted: [] as { text: string; kind: string }[] };
+  const { resolveAgreements } = await import("./agreements.js");
+  return resolveAgreements(initial ?? await dumpTree(target, signal, 1500), {
+    settleMs,
+    read: async () => { await new Promise((r) => setTimeout(r, 500)); invalidate(target); return dumpTree(target, signal); },
+    click: async (node) => {
+      const point = center(node);
+      const r = await shell(target, ["uitest", "uiInput", "click", String(point.x), String(point.y)], signal, 15000);
+      invariant(uiInputOk((r.stdout + r.stderr).trim(), r.code), "UI_ACTION_FAILED", "Agreement click failed");
+      invalidate(target);
+    },
+  }, signal);
+}
+
 export async function act(target: string, a: Action, signal?: AbortSignal) {
+  const consent = await acceptAgreements(target, signal);
+  const completed = async (result: { performed: string; method?: string }) => {
+    consent.accepted.push(...(await acceptAgreements(target, signal, undefined, 1000)).accepted);
+    return { ...result, ...(consent.accepted.length ? { agreements_accepted: consent.accepted } : {}) };
+  };
   invalidate(target);
   if (a.action === "input" && !a.append) {
     // Replace semantics (what hosts expect): focus, select all (Ctrl+A), delete.
@@ -446,6 +468,7 @@ export async function act(target: string, a: Action, signal?: AbortSignal) {
       const r = await shell(target, ["uitest", "uiInput", ...args], signal, 15000);
       invariant(uiInputOk((r.stdout + r.stderr).trim(), r.code), "UI_ACTION_FAILED", `Clearing the field failed: ${r.stdout.trim()}`);
       await new Promise((resolve) => setTimeout(resolve, 250));
+      if (args[0] === "click") consent.accepted.push(...(await acceptAgreements(target, signal, undefined, 1000)).accepted);
     }
   }
   if (a.action === "input" && /[^\x20-\x7e]|['"`]/.test(a.text)) {
@@ -453,18 +476,18 @@ export async function act(target: string, a: Action, signal?: AbortSignal) {
     // punctuation (' -> ‘’); the hypium agent pastes the exact text instead.
     const text = a.text, point = { x: a.x, y: a.y };
     await withAgent(target, signal, async (call, driver) => { await call("Driver.inputText", driver, [point, text, { paste: true }]); });
-    return { performed: a.action, method: "uitest-agent-paste" };
+    return completed({ performed: a.action, method: "uitest-agent-paste" });
   }
   if (a.action.startsWith("mouse_")) {
     const request = mouseRequest(a as Extract<Action, { action: `mouse_${string}` }>);
     await withAgent(target, signal, async (call, driver) => { await call(request.api, driver, request.args); });
-    return { performed: a.action, method: "uitest-agent" };
+    return completed({ performed: a.action, method: "uitest-agent" });
   }
   // One command string: hdc passes it to the device shell as-is, so deviceText()'s $(...) expands there.
   const result = await shell(target, [["uitest", "uiInput", ...uiInput(a)].join(" ")], signal, 30000);
   const out = (result.stdout + result.stderr).trim();
   invariant(uiInputOk(out, result.code), "UI_ACTION_FAILED", `uiInput ${a.action} failed: ${out.slice(0, 300)}`);
-  return { performed: a.action };
+  return completed({ performed: a.action });
 }
 
 /** Stable signature of what is on screen (type, text, bounds of labelled/interactive nodes). */
@@ -486,48 +509,71 @@ async function withAgent(target: string, signal: AbortSignal | undefined, fn: (c
     ? /@uitest_socket\s*$/m.test((await shell(target, ["cat", "/proc/net/unix"], signal)).stdout)
     : /[:.]8012\s+.*LISTEN/.test((await shell(target, ["netstat", "-an"], signal)).stdout);
   let remote: string | undefined;
-  if (!(await ready())) {
-    const name = `deveco-agent-${crypto.randomBytes(4).toString("hex")}.so`;
-    remote = `/data/local/tmp/${name}`;
-    await hdc(["-t", target, "file", "send", path.join(packageRoot, "resources/native/hypium", asset), remote], signal, 30000);
-    await shell(target, ["uitest", "start-daemon", "singleness", "--extension-name", name], signal);
-    const deadline = Date.now() + 5000;
-    while (!(await ready())) {
-      invariant(Date.now() < deadline, "UI_AGENT_START", "UiTest agent did not become ready");
-      await new Promise((r) => setTimeout(r, 150));
-    }
-  }
-  const port = await new Promise<number>((resolve, reject) => {
-    const server = net.createServer().listen(0, "127.0.0.1", () => {
-      const address = server.address();
-      server.close(() => (typeof address === "object" && address ? resolve(address.port) : reject(new Error("no port"))));
-    });
-  });
-  const forward = `tcp:${port}`;
-  await hdc(["-t", target, "fport", forward, endpoint], signal, 10000);
-  const socket = net.createConnection({ host: "127.0.0.1", port });
+  let forward: string | undefined;
+  let socket: net.Socket | undefined;
   try {
-    const driver = await rpc(socket, "Driver.create", "", []);
+    if (!(await ready())) {
+      const name = `deveco-agent-${crypto.randomBytes(4).toString("hex")}.so`;
+      remote = `/data/local/tmp/${name}`;
+      await hdc(["-t", target, "file", "send", path.join(packageRoot, "resources/native/hypium", asset), remote], signal, 30000);
+      await shell(target, ["uitest", "start-daemon", "singleness", "--extension-name", name], signal);
+      const deadline = Date.now() + 5000;
+      while (!(await ready())) {
+        invariant(Date.now() < deadline, "UI_AGENT_START", "UiTest agent did not become ready");
+        await new Promise((r) => setTimeout(r, 150));
+      }
+    }
+    const port = await new Promise<number>((resolve, reject) => {
+      const server = net.createServer().listen(0, "127.0.0.1", () => {
+        const address = server.address();
+        server.close(() => (typeof address === "object" && address ? resolve(address.port) : reject(new Error("no port"))));
+      });
+      server.once("error", reject);
+    });
+    forward = `tcp:${port}`;
+    await hdc(["-t", target, "fport", forward, endpoint], signal, 10000);
+    socket = net.createConnection({ host: "127.0.0.1", port, ...(signal ? { signal } : {}) });
+    // Keep resets between sequential calls from becoming unhandled process errors.
+    socket.on("error", () => {});
+    await new Promise<void>((resolve, reject) => {
+      const connected = () => { socket!.off("error", failed); resolve(); };
+      const failed = (error: Error) => { socket!.off("connect", connected); socket!.off("error", failed); reject(error); };
+      socket!.once("connect", connected); socket!.once("error", failed);
+    });
+    const active = socket;
+    const driver = await agentRpc(active, "Driver.create", "", [], signal);
     invariant(typeof driver === "string", "UI_AGENT_FAILED", "Invalid driver reference");
-    await fn((api, self, args) => rpc(socket, api, self, args), driver);
+    await fn((api, self, args) => agentRpc(active, api, self, args, signal), driver);
   } finally {
-    socket.destroy();
-    await hdc(["-t", target, "fport", "rm", forward, endpoint], undefined, 5000, true).catch(() => {});
+    socket?.destroy();
+    if (forward) await hdc(["-t", target, "fport", "rm", forward, endpoint], undefined, 5000, true).catch(() => {});
     if (remote) await shell(target, ["rm", "-f", remote], undefined, 5000).catch(() => {}); // awaited: the host may exit right after this call
   }
 }
 
-function rpc(socket: net.Socket, api: string, self: string, args: unknown[]): Promise<unknown> {
+export function agentRpc(socket: net.Socket, api: string, self: string, args: unknown[], signal?: AbortSignal): Promise<unknown> {
+  signal?.throwIfAborted();
+  if (socket.destroyed) return Promise.reject(new ToolError("UI_AGENT_CLOSED", "UiTest agent connection is closed; action was not sent"));
   return new Promise((resolve, reject) => {
     let raw = "";
+    let settled = false;
+    const decoder = new StringDecoder("utf8");
     const timer = setTimeout(() => done(new ToolError("UI_AGENT_TIMEOUT", "UiTest agent timed out")), 15000);
     const done = (error?: Error, value?: unknown) => {
+      if (settled) return;
+      settled = true;
       clearTimeout(timer);
       socket.off("data", onData);
+      socket.off("error", failed);
+      socket.off("close", closed);
+      signal?.removeEventListener("abort", aborted);
       error ? reject(error) : resolve(value);
     };
+    const failed = (error: Error) => done(new ToolError("UI_AGENT_CONNECTION", `UiTest agent ${api} disconnected; outcome is unknown`, { cause: error.message }, "Inspect the UI before another action; sent actions are never replayed automatically"));
+    const closed = () => failed(new Error("socket closed"));
+    const aborted = () => { done(new ToolError("CANCELLED", "UiTest agent call cancelled; sent action outcome may be unknown")); socket.destroy(); };
     const onData = (chunk: Buffer) => {
-      raw += chunk.toString("utf8");
+      raw += decoder.write(chunk);
       try {
         const reply = JSON.parse(raw) as { result?: unknown; exception?: unknown };
         if (reply.exception) done(new ToolError("UI_AGENT_FAILED", `${api} failed: ${JSON.stringify(reply.exception).slice(0, 300)}`));
@@ -535,22 +581,31 @@ function rpc(socket: net.Socket, api: string, self: string, args: unknown[]): Pr
       } catch { /* wait for more */ }
     };
     socket.on("data", onData);
-    socket.once("error", (e) => done(e));
-    socket.write(JSON.stringify({ module: "com.ohos.devicetest.hypiumApiHelper", method: "callHypiumApi", params: { api, this: self, args, message_type: "hypium" }, request_id: crypto.randomUUID() }));
+    socket.once("error", failed);
+    socket.once("close", closed);
+    signal?.addEventListener("abort", aborted, { once: true });
+    socket.write(JSON.stringify({ module: "com.ohos.devicetest.hypiumApiHelper", method: "callHypiumApi", params: { api, this: self, args, message_type: "hypium" }, request_id: crypto.randomUUID() }), (error) => { if (error) failed(error); });
   });
 }
 
 /* ------------------------------ assertions ------------------------------ */
 
-export async function waitFor(target: string, selector: Selector, state: "visible" | "hidden", timeoutMs: number, signal?: AbortSignal) {
+export async function waitFor(target: string, selector: Selector, state: "visible" | "hidden", timeoutMs: number, signal?: AbortSignal, autoAccept = false) {
   const deadline = Date.now() + timeoutMs;
   let last: UiNode[] = [];
+  const accepted: { text: string; kind: string }[] = [];
   for (;;) {
     signal?.throwIfAborted();
-    last = select(await dumpTree(target, signal), selector);
+    let nodes = await dumpTree(target, signal);
+    if (autoAccept) {
+      const consent = await acceptAgreements(target, signal, nodes);
+      nodes = consent.nodes ?? nodes;
+      accepted.push(...consent.accepted);
+    }
+    last = select(nodes, selector);
     const ok = state === "visible" ? last.length > 0 : last.length === 0;
-    if (ok) return { passed: true, state, matches: last.slice(0, 3).map(describe) };
-    if (Date.now() >= deadline) return { passed: false, state, matches: last.slice(0, 3).map(describe) };
+    const result = { passed: ok, state, matches: last.slice(0, 3).map(describe), ...(accepted.length ? { agreements_accepted: accepted } : {}) };
+    if (ok || Date.now() >= deadline) return result;
     await new Promise((r) => setTimeout(r, 400));
   }
 }
@@ -635,7 +690,8 @@ export async function recordingStatus(target: string, signal?: AbortSignal) {
 }
 
 export async function startRecording(target: string, signal?: AbortSignal) {
-  if (!(await session(target))) await waitRecorderIdle(target, 6000, signal); // a just-stopped recorder may still be finalizing
+  invariant(!(await session(target)), "CONFLICT", "This server already owns a recording or pending export", undefined, "Use record_stop to retrieve it, or discard=true before starting another recording");
+  await waitRecorderIdle(target, 6000, signal); // a just-stopped recorder may still be finalizing
   const status = await recordingStatus(target, signal);
   invariant(status.status === "idle", "CONFLICT", `Screen recorder is ${status.status}`, undefined, "Stop it first with ui action=record_stop");
   const name = `devecomcp-${Date.now()}-${crypto.randomBytes(2).toString("hex")}.mp4`;
@@ -658,9 +714,8 @@ export async function stopRecording(target: string, options: { discard?: boolean
     return { stopped: active, downloaded: false, idle: active ? await waitRecorderIdle(target, 10000, signal) : true };
   }
   if (active) await shell(target, ["aa", "start", ...RECORDER], signal, 15000);
-  await setSession(target, undefined);
-  await waitRecorderIdle(target, 10000, signal);
-  if (options.discard) return { stopped: true, discarded: current.name, note: "The file remains in the device gallery" };
+  invariant(await waitRecorderIdle(target, 10000, signal), "UI_RECORD_FAILED", "Recorder is still finalizing; recording session retained for retry");
+  if (options.discard) { await setSession(target, undefined); return { stopped: true, discarded: current.name, note: "The file remains in the device gallery" }; }
   // The file appears in the media library after the recorder finalizes it.
   let uri: string | undefined;
   for (let i = 0; i < 20 && !uri; i++) {
@@ -670,18 +725,38 @@ export async function stopRecording(target: string, options: { discard?: boolean
   }
   invariant(uri, "UI_RECORD_FAILED", "Recording was not found in the media library");
   const staging = `/data/local/tmp/${current.name}`;
-  const exported = await shell(target, ["mediatool", "recv", uri, staging], signal, 120000);
-  invariant(exported.stdout.includes(staging), "UI_RECORD_FAILED", `Export failed: ${exported.stdout.trim().slice(0, 200)}`,
-    undefined, "Emulators often cannot export recordings; use a real device, or take screenshots with ui action=screenshot");
   const id = `a_${crypto.randomBytes(8).toString("hex")}`;
   const local = path.join(artifactDir(), `${id}.mp4`);
   try {
+    const exported = await shell(target, ["mediatool", "recv", uri, staging], signal, 120000);
+    invariant(exported.stdout.includes(staging) && !/\[FAIL\]/.test(exported.stdout), /open source media file failed/i.test(exported.stdout) ? "CAPABILITY_UNAVAILABLE" : "UI_RECORD_FAILED", `Export failed: ${exported.stdout.trim().slice(0, 200)}`,
+      undefined, "Recording session retained: retry record_stop when media is finalized, or discard=true; this environment may lack recorder/media export support");
     await hdc(["-t", target, "file", "recv", staging, local], signal, 120000);
+    invariant(mp4Video(fs.readFileSync(local)), "UI_RECORD_FAILED", "Export is not a finalized MP4 video; recording session retained");
+  } catch (error) {
+    fs.rmSync(local, { force: true });
+    throw error;
   } finally {
     await shell(target, ["rm", "-f", staging], undefined, 5000).catch(() => {}); // awaited: the host may exit right after this call
   }
   const copy = options.save_path ? saveCopy(local, options.save_path) : undefined;
   if (copy) await trackExport(copy);
   const artifact = await commitArtifact(id, local, "video/mp4");
+  await setSession(target, undefined);
   return { saved: copy ?? local, bytes: artifact.bytes, seconds: Math.round((Date.now() - current.started) / 1000), artifact_id: artifact.artifact_id };
+}
+
+/** Container sanity check; codec playback is verified separately on the target environment. */
+export function mp4Video(bytes: Buffer) {
+  const boxes: { type: string; body: Buffer }[] = [];
+  for (let offset = 0; offset < bytes.length;) {
+    if (bytes.length - offset < 8) return false;
+    let size = bytes.readUInt32BE(offset), header = 8;
+    if (size === 1) { if (bytes.length - offset < 16) return false; const big = bytes.readBigUInt64BE(offset + 8); if (big > BigInt(Number.MAX_SAFE_INTEGER)) return false; size = Number(big); header = 16; }
+    if (size === 0) size = bytes.length - offset;
+    if (size < header || offset + size > bytes.length) return false;
+    boxes.push({ type: bytes.toString("ascii", offset + 4, offset + 8), body: bytes.subarray(offset + header, offset + size) }); offset += size;
+  }
+  return boxes.some((b) => b.type === "ftyp") && boxes.some((b) => b.type === "mdat" && b.body.length > 0)
+    && boxes.some((b) => b.type === "moov" && b.body.includes(Buffer.from("vide")));
 }

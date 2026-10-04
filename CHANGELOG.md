@@ -1,5 +1,24 @@
 # Changelog / 更新日志
 
+## v1.3.3 (2026-10-04)
+
+**中文**
+
+- 协议与权限弹窗自动处理通用化：根据同一窗口的文案、按钮及勾选状态识别，不绑定应用名称或控件 ID；普通 UI 操作、批量操作、流程回放、部署及测试断言共用同一逻辑。默认开启，可用 `auto_accept_ui_agreements=false` 关闭；结果保留自动同意记录。
+- 自动签名改为分阶段持久化任务：新材料通过校验后才原子切换工程配置，失败保留旧签名；只补偿本次明确创建的资源，中断且结果未知时先核对回执，强制恢复不能重复云端创建。
+- MCP 严格验证 JSON-RPC 请求、通知、初始化和取消；畸形输入不再终止进程，必填 prompt 参数不再插入 undefined。
+- 知识包取消传到底层下载；流式下载校验和原子切换保护已安装包，同版本替换失败可恢复，未发布的默认包给出上游/本地安装路径。
+- forms 布局不再解析无关设备，模拟器使用专属实例并等待真正停止后清理；已有实例的 force 覆盖明确报告当前 SDK 不支持。
+- 修复 UI agent 首次连接及分片 UTF-8 响应；发送后的副作用不盲目重试。录像导出失败保留可恢复会话并清理本次临时文件；流程草稿可重连查询且按工程隔离。
+- 新增协议、持久化故障、签名补偿/进程中断、下载故障、通用弹窗及宿主写入回归。当前验收与外部限制见 `docs/audit/REPAIR-1.3.3.md`。
+
+**English**
+
+- Generic agreement and permission handling shared by UI actions, batches, replay and deploy/test assertions; text and control state replace app-specific IDs. Enabled by default, configurable with `auto_accept_ui_agreements=false`, with an acceptance record in results.
+- Durable staged auto-signing validates new material before switching configuration and preserves the old chain. Compensation is limited to attempt-owned resources; uncertain effects require reconciliation even with force.
+- Strict JSON-RPC validation, live cancellation propagation, atomic knowledge updates, owned layout emulators, truthful force capability errors, agent connection/frame cleanup, recoverable recording exports and project-isolated flow drafts.
+- Regression and acceptance evidence, including external limits, is recorded in `docs/audit/REPAIR-1.3.3.md`.
+
 ## v1.3.2 (2026-10-02)
 
 **中文**

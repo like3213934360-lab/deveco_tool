@@ -1,4 +1,9 @@
 import { invariant } from "../core/errors.js";
+import fs from "node:fs";
+import path from "node:path";
+import crypto from "node:crypto";
+import { stateDir } from "../core/config.js";
+import { atomicWrite } from "../core/files.js";
 import type { UiNode } from "./ui.js";
 
 /*
@@ -103,25 +108,29 @@ async function newestImage(deviceType: string, signal: AbortSignal) {
 }
 
 /** One form: create/reuse emulator, boot, install, launch, (flow), then check each fold state. */
-async function checkForm(form: string, input: LayoutInput, packages: string[], app: { bundle: string; ability: string; module: string }, signal: AbortSignal, log: Log) {
+async function checkForm(form: string, input: LayoutInput, packages: string[], app: { bundle: string; ability: string; module: string }, signal: AbortSignal, log: Log, owner: string) {
   const spec = LAYOUT_FORMS[form]!;
   const emu = await import("./emulator.js");
   const device = await import("./device.js");
   const { dumpTree } = await import("./ui.js");
   // Emulator names allow letters, digits, spaces, _ and + only (verified: "-" is rejected).
-  const name = `deveco_layout_${form}`;
-  const existing = (await emu.listEmulators(signal)).find((e) => e.name === name);
-  if (!existing) {
-    const os = await newestImage(spec.device_type, signal);
-    if (!os) return { form, skipped: `no downloaded ${spec.device_type} image (emulator action=install_image device_type=${spec.device_type})` };
-    log(`${form}: creating emulator ${name} (${os})`);
-    await emu.createEmulator({ name, device_type: spec.device_type, os_version: os }, signal);
-  }
-  const wasRunning = existing && "running" in existing && existing.running;
-  log(`${form}: starting`);
-  const started = await emu.startEmulator(name, { window: false }, signal);
-  const target = started.target!;
+  const name = `deveco_layout_${form}_${owner.replace(/[^\w]/g, "_")}`;
+  const instancePath = path.join(stateDir(), "layout", owner, form);
+  const marker = path.join(instancePath, ".owner");
+  if (fs.existsSync(instancePath)) invariant(fs.existsSync(marker) && fs.readFileSync(marker, "utf8") === owner, "CONFLICT", "Layout instance ownership cannot be proven");
+  else { fs.mkdirSync(instancePath, { recursive: true }); atomicWrite(marker, owner, 0o600); }
+  const existing = (await emu.listEmulators(signal, false, instancePath)).find((e) => e.name === name);
+  let completed = false;
   try {
+    if (!existing) {
+      const os = await newestImage(spec.device_type, signal);
+      if (!os) return { form, skipped: `no downloaded ${spec.device_type} image (emulator action=install_image device_type=${spec.device_type})` };
+      log(`${form}: creating emulator ${name} (${os})`);
+      await emu.createEmulator({ name, device_type: spec.device_type, os_version: os, instance_path: instancePath }, signal);
+    }
+    log(`${form}: starting`);
+    const started = await emu.startEmulator(name, { window: false, instance_path: instancePath }, signal);
+    const target = started.target!;
     log(`${form}: installing`);
     await device.install(target, packages, signal);
     await device.forceStop(target, app.bundle, signal).catch(() => {});
@@ -132,7 +141,8 @@ async function checkForm(form: string, input: LayoutInput, packages: string[], a
     for (const state of spec.states) {
       signal.throwIfAborted();
       if (state !== spec.states[0] || spec.states.length > 1) {
-        await emu.scenario(name, { action: "fold", state }, signal).catch((e: Error) => log(`${form}: fold ${state} not applied: ${e.message}`));
+        try { await emu.scenario(name, { action: "fold", state }, signal); }
+        catch (error) { signal.throwIfAborted(); results.push({ state, passed: false, checked: 0, error: `Fold state was not applied: ${(error as Error).message}` }); continue; }
         await new Promise((r) => setTimeout(r, 2500)); // re-layout after the fold animation
         await settleApp(target, app.bundle, signal, log);
       }
@@ -151,9 +161,18 @@ async function checkForm(form: string, input: LayoutInput, packages: string[], a
       const shot = await (await import("./ui.js")).screenshot(target, { format: "jpeg", width: 720 }, signal).catch(() => undefined);
       results.push({ state, window: `${size.w}x${size.h}`, ...check, ...(shot ? { screenshot: shot.artifact_id } : {}), ...(tree ? { tree: tree.artifact_id } : {}) });
     }
-    return { form, device: info.model ?? name, results };
+    completed = true;
+    return { form, device: info.model ?? name, results, ...(input.keep_running ? { emulator: name, instance_path: instancePath, retained: true } : {}) };
   } finally {
-    if (!input.keep_running && !wasRunning) await emu.stopEmulator(name, signal).catch(() => {});
+    if (!input.keep_running || !completed) {
+      // A cancelled request still needs bounded cleanup of its own instance.
+      const cleanup = AbortSignal.timeout(90000);
+      if ((await emu.listEmulators(cleanup, false, instancePath)).some((e) => e.name === name)) {
+        await emu.stopEmulator(name, cleanup, instancePath);
+        await emu.deleteEmulator(name, cleanup, instancePath);
+      }
+      fs.rmSync(instancePath, { recursive: true, force: true });
+    }
   }
 }
 
@@ -162,14 +181,14 @@ async function checkForm(form: string, input: LayoutInput, packages: string[], a
  * seen on every form). Decline them (least privilege), then wait until the app's own UI is on screen.
  */
 async function settleApp(target: string, bundle: string, signal: AbortSignal, log: Log) {
-  const { dumpTree, select, center, act, invalidate } = await import("./ui.js");
+  const { dumpTree, acceptAgreements, invalidate } = await import("./ui.js");
   const deadline = Date.now() + 15000;
   while (Date.now() < deadline) {
     invalidate(target);
-    const nodes = await dumpTree(target, signal);
-    const dialog = nodes.some((n) => n.bundle && /permissionmanager|notificationdialog|permission/i.test(n.bundle));
-    const deny = dialog ? select(nodes, { text: "不允许", exact: true }).concat(select(nodes, { text: "禁止", exact: true }), select(nodes, { text: "Don't allow", exact: true }), select(nodes, { text: "Deny", exact: true }))[0] : undefined;
-    if (deny) { log("declining a system permission dialog"); await act(target, { action: "click", ...center(deny) }, signal); await new Promise((r) => setTimeout(r, 800)); continue; }
+    const initial = await dumpTree(target, signal);
+    const consent = await acceptAgreements(target, signal, initial);
+    if (consent.accepted.length) log(`accepted ${consent.accepted.length} agreement/permission decisions`);
+    const nodes = consent.nodes ?? initial;
     if (nodes.some((n) => n.bundle === bundle && (n.text || n.clickable))) return;
     await new Promise((r) => setTimeout(r, 800));
   }
@@ -189,7 +208,7 @@ async function pixelRatio(target: string, signal: AbortSignal) {
 }
 
 /** Run the check on every requested form, one emulator at a time (memory), reporting per form. */
-export async function layoutCheck(input: LayoutInput, signal: AbortSignal, log: Log) {
+export async function layoutCheck(input: LayoutInput, signal: AbortSignal, log: Log, owner = crypto.randomBytes(8).toString("hex")) {
   const { inspectProject, mainAbility, buildOutputs } = await import("./project.js");
   const project = inspectProject(input.project, input.product);
   invariant(project.bundleName, "PROJECT_INVALID", "bundleName missing");
@@ -210,8 +229,9 @@ export async function layoutCheck(input: LayoutInput, signal: AbortSignal, log: 
     const allowed = !supported.length || supported.includes("default") || supported.includes(form) || (supported.includes("phone") && form !== "triplefold") || (form === "triplefold" && supported.some((t) => ["phone", "tablet"].includes(t)));
     if (!allowed) { reports.push({ form, skipped: `entry deviceTypes ${supported.join("/")} exclude ${form}` }); continue; }
     try {
-      reports.push(await checkForm(form, input, packages, { bundle: project.bundleName, ability: main.ability, module: main.module }, signal, log));
+      reports.push(await checkForm(form, input, packages, { bundle: project.bundleName, ability: main.ability, module: main.module }, signal, log, owner));
     } catch (error) {
+      signal.throwIfAborted();
       const e = error as { code?: string; message: string; hint?: string };
       reports.push({ form, error: { code: e.code, message: e.message.slice(0, 300), ...(e.hint ? { hint: e.hint } : {}) } });
     }
@@ -220,5 +240,5 @@ export async function layoutCheck(input: LayoutInput, signal: AbortSignal, log: 
   const failed = rows.filter((x) => x.passed === false).map((x) => `${x.form}/${x.state}`);
   const checked = rows.filter((x) => (x.checked ?? 0) > 0).length;
   // Passed only when something was actually checked and nothing failed.
-  return { passed: checked > 0 && failed.length === 0 && reports.every((r) => !(r as { error?: unknown }).error), checked_states: checked, failed, forms: reports };
+  return { passed: checked > 0 && failed.length === 0 && reports.every((r) => !(r as { error?: unknown; skipped?: unknown }).error && !(r as { skipped?: unknown }).skipped), checked_states: checked, failed, forms: reports };
 }
