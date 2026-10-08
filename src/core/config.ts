@@ -5,21 +5,23 @@ import { fileURLToPath } from "node:url";
 import { z } from "zod";
 import { readJson5 } from "./files.js";
 
-/** Package root: nearest ancestor with our package.json (code may live in dist/ or dist/chunks/). */
+/** Package root: nearest ancestor with our package.json, including immutable build generations. */
 export const packageRoot = (() => {
   let dir = path.dirname(fileURLToPath(import.meta.url));
-  for (let i = 0; i < 5; i++) {
+  while (true) {
     const manifest = path.join(dir, "package.json");
     if (fs.existsSync(manifest) && /"name":\s*"deveco-mcp"/.test(fs.readFileSync(manifest, "utf8"))) return dir;
-    dir = path.dirname(dir);
+    const parent = path.dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
   }
   return path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 })();
-/** Single source of truth: package.json (read once at startup). */
-export const version: string = (() => {
-  try { return (JSON.parse(fs.readFileSync(path.join(packageRoot, "package.json"), "utf8")) as { version: string }).version; }
-  catch { return "0.0.0-dev"; } // bundled outside the package (tests)
-})();
+// Replaced at compile time. Running code never relabels itself after a package/source update.
+declare const __DEVECO_BUILD__: { version: string; input_hash: string };
+export const buildInfo = typeof __DEVECO_BUILD__ === "undefined"
+  ? { version: "0.0.0-dev", input_hash: "unbundled" } : __DEVECO_BUILD__;
+export const version = buildInfo.version;
 
 const configSchema = z
   .object({

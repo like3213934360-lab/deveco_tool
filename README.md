@@ -27,14 +27,18 @@ npm ci && npm run build
 
 需要 Node 22.18 及以上，以及 DevEco Studio 或 Command Line Tools。设备不是必需的，只有 run、ui、device 相关功能需要真机或模拟器。
 
+宿主启动入口固定为 `bin/deveco-mcp.mjs`。源码目录启动时会核对源码指纹和全部产物；更新源码后漏构建，会先自动完成本地构建，构建失败则拒绝启动旧代码。npm 包在打包前重建，安装后发现产物不完整或版本不符会明确报错。版本号在编译时固定，启动日志和 `doctor.server.build_id` 可确认实际构建身份。
+
+构建通过不可变目录和原子切换发布新产物，保留已运行连接的分包；现有指向 `dist/cli.js` 的配置也会进入同一启动校验。已运行的连接继续使用原构建，重载宿主 MCP 后才采用新构建。旧产物不按时间自动删除；需要回收时，先关闭使用此目录的全部连接，再删除 `dist` 并运行 `npm run build`。npm 包仅包含当前构建。
+
 用一条命令完成 MCP 配置并导出 Skill。支持 cursor、claude、codex、opencode、trae-cn、codebuddy、qoder、pi；已有同名配置不会被覆盖，除非加 `--force`：
 
 ```sh
-node dist/cli.js init --host cursor                 # 用户级配置（~/.cursor/mcp.json + ~/.cursor/skills）
-node dist/cli.js init --host codex --project .      # 项目级配置（.codex/config.toml + .agents/skills）
+node bin/deveco-mcp.mjs init --host cursor                 # 用户级配置（~/.cursor/mcp.json + ~/.cursor/skills）
+node bin/deveco-mcp.mjs init --host codex --project .      # 项目级配置（.codex/config.toml + .agents/skills）
 ```
 
-编辑器也可以直接使用 SDK 的语言服务：`node dist/cli.js serve-lsp [--cpp] [--project <root>]`（stdio）。
+编辑器也可以直接使用 SDK 的语言服务：`node bin/deveco-mcp.mjs serve-lsp [--cpp] [--project <root>]`（stdio）。
 
 也可以手动配置：
 
@@ -43,7 +47,7 @@ node dist/cli.js init --host codex --project .      # 项目级配置（.codex/c
   "mcpServers": {
     "deveco": {
       "command": "node",
-      "args": ["/absolute/path/to/deveco_tool/dist/cli.js", "mcp"],
+      "args": ["/absolute/path/to/deveco_tool/bin/deveco-mcp.mjs", "mcp"],
       "env": {
         "DEVECO_CONFIG": "/absolute/path/to/deveco-mcp.json"
       }
@@ -73,7 +77,7 @@ node dist/cli.js init --host codex --project .      # 项目级配置（.codex/c
 | `kb_package` | 知识包的 npm 包名 |
 | `npm_registry` | 更新知识包时使用的 npm 源 |
 
-用 `node dist/cli.js doctor [project]` 或 `doctor` 工具检查环境。
+用 `node bin/deveco-mcp.mjs doctor [project]` 或 `doctor` 工具检查环境。
 
 ## 工具
 
@@ -119,7 +123,7 @@ node dist/cli.js init --host codex --project .      # 项目级配置（.codex/c
 
 - **内置：** npm 包 `@deveco-mcp/kb` 是可选依赖；本地开发时也可以用 `kb-dist/current`。
 - **更新：** `knowledge action=update` 以任务形式运行：从 npm 下载，校验 sha512，解压到临时目录，检查结构，原子切换版本，并保留上一版本以便 `rollback`。`file=<path.tgz>` 安装本地知识包；`file=upstream` 从华为最新的 `@deveco-test/deveco-cli-knowledgebase` 生成新知识包。
-- **构建与发布：** `node dist/cli.js kb-build <上游包目录> kb-dist --version x.y.z` 生成可以发布到 npm 的包。`doctor remote=true` 会提示是否有新版本，但不会自动下载。
+- **构建与发布：** `node bin/deveco-mcp.mjs kb-build <上游包目录> kb-dist --version x.y.z` 生成可以发布到 npm 的包。`doctor remote=true` 会提示是否有新版本，但不会自动下载。
 
 ## 架构
 
@@ -204,14 +208,18 @@ npm ci && npm run build
 
 Requires Node ≥ 22.18, plus DevEco Studio or the Command Line Tools. Devices are optional; they are needed for run/ui/device.
 
+Hosts launch `bin/deveco-mcp.mjs`. In a source checkout it verifies the source fingerprint and all compiled outputs, builds stale/missing outputs locally before starting, and refuses to run old code if that build fails. npm packing rebuilds the package; an incomplete or mismatched installed package fails explicitly. The version is compiled into the code; startup logs and `doctor.server.build_id` identify the actual build.
+
+Builds publish immutable directories through an atomic pointer and retain lazy chunks for existing connections. Existing `dist/cli.js` configurations enter the same startup gate. Running connections keep their original build until the host reloads MCP. Old outputs are never deleted by age; to reclaim them, close all connections using the checkout, delete `dist`, then run `npm run build`. npm archives contain only the active build.
+
 Register the server and export the skills in one step (cursor, claude, codex, opencode, trae-cn, codebuddy, qoder, pi; existing entries are kept unless you pass `--force`):
 
 ```sh
-node dist/cli.js init --host cursor                 # user config (~/.cursor/mcp.json + ~/.cursor/skills)
-node dist/cli.js init --host codex --project .      # project config (.codex/config.toml + .agents/skills)
+node bin/deveco-mcp.mjs init --host cursor                 # user config (~/.cursor/mcp.json + ~/.cursor/skills)
+node bin/deveco-mcp.mjs init --host codex --project .      # project config (.codex/config.toml + .agents/skills)
 ```
 
-Editors can also use the SDK language servers directly: `node dist/cli.js serve-lsp [--cpp] [--project <root>]` (stdio).
+Editors can also use the SDK language servers directly: `node bin/deveco-mcp.mjs serve-lsp [--cpp] [--project <root>]` (stdio).
 
 Or add it by hand:
 
@@ -220,7 +228,7 @@ Or add it by hand:
   "mcpServers": {
     "deveco": {
       "command": "node",
-      "args": ["/absolute/path/to/deveco_tool/dist/cli.js", "mcp"],
+      "args": ["/absolute/path/to/deveco_tool/bin/deveco-mcp.mjs", "mcp"],
       "env": {
         "DEVECO_CONFIG": "/absolute/path/to/deveco-mcp.json"
       }
@@ -250,7 +258,7 @@ Other config keys:
 | `kb_package` | npm package name of the knowledge pack |
 | `npm_registry` | Registry used for knowledge pack updates |
 
-Check the setup with `node dist/cli.js doctor [project]`, or call the `doctor` tool.
+Check the setup with `node bin/deveco-mcp.mjs doctor [project]`, or call the `doctor` tool.
 
 ### Tools
 
@@ -296,7 +304,7 @@ It combines Huawei's HarmonyOS docs (guides, API reference, best practices, FAQ,
 
 - **Built-in:** the npm package `@deveco-mcp/kb` is an optional dependency, and `kb-dist/current` works for local development.
 - **Update:** `knowledge action=update` runs as a job. It downloads from npm, verifies the sha512 integrity, extracts to a temporary directory, checks the schema, switches versions atomically, and keeps the previous version for `rollback`. `file=<path.tgz>` installs a local pack. `file=upstream` builds a fresh pack from Huawei's latest `@deveco-test/deveco-cli-knowledgebase`.
-- **Build and publish:** `node dist/cli.js kb-build <upstream-package-dir> kb-dist --version x.y.z` writes an npm-publishable tarball. `doctor remote=true` shows whether a newer pack exists; packs are never downloaded automatically.
+- **Build and publish:** `node bin/deveco-mcp.mjs kb-build <upstream-package-dir> kb-dist --version x.y.z` writes an npm-publishable tarball. `doctor remote=true` shows whether a newer pack exists; packs are never downloaded automatically.
 
 ### Architecture
 

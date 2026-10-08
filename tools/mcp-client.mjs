@@ -5,9 +5,9 @@ import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
-export function connect(env = {}) {
+export function connect(env = {}, entry = path.join(root, "bin/deveco-mcp.mjs")) {
   const started = performance.now();
-  const child = spawn(process.execPath, [path.join(root, "dist/cli.js"), "mcp"], { env: { ...process.env, ...env }, stdio: ["pipe", "pipe", "pipe"] });
+  const child = spawn(process.execPath, [entry, "mcp"], { env: { ...process.env, ...env }, stdio: ["pipe", "pipe", "pipe"] });
   let buffer = "";
   let id = 0;
   const pending = new Map();

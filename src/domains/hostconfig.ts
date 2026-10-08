@@ -41,7 +41,7 @@ export function defaultSpec(options: { config?: string } = {}): ServerSpec {
   // Prefer a stable node path: Homebrew's Cellar/<version> path breaks on upgrade, opt/node does not.
   const cellar = /^(.*)\/Cellar\/node(?:@\d+)?\/[^/]+\/bin\/node$/.exec(process.execPath);
   const stable = cellar && fs.existsSync(`${cellar[1]}/bin/node`) ? `${cellar[1]}/bin/node` : process.execPath;
-  return { command: stable, args: [path.join(packageRoot, "dist", "cli.js"), "mcp"], env };
+  return { command: stable, args: [path.join(packageRoot, "bin", "deveco-mcp.mjs"), "mcp"], env };
 }
 
 function readJson(file: string): Record<string, any> {

@@ -1,6 +1,6 @@
 {
   "name": "deveco-mcp",
-  "version": "1.3.3",
+  "version": "1.3.4",
   "description": "Lean HarmonyOS MCP server: build, deploy, device UI, code intelligence and updatable knowledge packs for any MCP host.",
   "type": "module",
   "license": "MIT",
@@ -8,9 +8,10 @@
     "node": ">=22.18.0"
   },
   "bin": {
-    "deveco-mcp": "dist/cli.js"
+    "deveco-mcp": "bin/deveco-mcp.mjs"
   },
   "files": [
+    "bin/",
     "dist/",
     "knowledge/",
     "templates/",
@@ -25,10 +26,11 @@
     "test": "node tools/build.mjs && node --test --test-concurrency=4 \"test/unit/*.test.mjs\"",
     "test:e2e": "node tools/build.mjs && node --test --test-concurrency=1 \"test/e2e/*.test.mjs\"",
     "bench": "node tools/bench.mjs",
-    "mcp": "node dist/cli.js mcp",
-    "doctor": "node dist/cli.js doctor",
-    "kb:build": "node dist/cli.js kb-build",
-    "upstream:sync": "node tools/upstream-sync.mjs"
+    "mcp": "node bin/deveco-mcp.mjs mcp",
+    "doctor": "node bin/deveco-mcp.mjs doctor",
+    "kb:build": "node bin/deveco-mcp.mjs kb-build",
+    "upstream:sync": "node tools/upstream-sync.mjs",
+    "prepack": "node tools/prepack.mjs"
   },
   "dependencies": {
     "json5": "2.2.3",
