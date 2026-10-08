@@ -3,11 +3,41 @@
     "Every upstream capability item (tools/upstream/extract.mjs) must resolve to exactly one decision, or CI fails.",
     "Lookup order: exact key in 'items', then the first matching glob in 'rules' ('*' = any characters).",
     "status: full (to = verified target) | host (provided by the MCP host) | skip (reason required).",
+    "upstream_reviews records source review scope and dispositions; it does not change gate validation.",
     "Target syntax (all space-separated conditions must hold):",
     "  '<tool> [param] [param=value] ...'  checked against the live tools/list JSON Schema (value must be in the enum when one exists)",
     "  'cli:<text>'  src/cli.ts must contain the text;  'prompt:<name>' / 'skill:<name>'  must be served by the MCP server"
   ],
-  "upstream_rev": { "deveco-code": "520b921e6", "deveco-cli": "ea47eb0" },
+  "upstream_rev": { "deveco-code": "3cb1d73440846784037b4550a3a6e3fc22817c2f", "deveco-cli": "a007f9e09d50497a515ee5ceb22bd70a6a364d3a" },
+  "upstream_reviews": [
+    {
+      "date": "2026-10-08",
+      "upstream": "deveco-cli",
+      "from": "ea47eb0",
+      "to": "77e6241bd708a60ae89f2ca3960c5dabc8af74bf",
+      "commits": ["1980718eeb799dd219c31849e50121a404b80161", "77e6241bd708a60ae89f2ca3960c5dabc8af74bf", "51dd0e7c22a88abb1cecf765aa5d72381971c582", "93ed7daa81736191e2f3546d75e57cf19ab7e5a0"],
+      "decision": "skip",
+      "reason": "User explicitly chose to skip both upstream updates: Qoder marketplace packaging/private CLI installation (including the CLI-only --no-prompt flag) and the smoke settle-wait adjustment. No upstream implementation is imported. MCP login already returns without an Enter prompt; normal launches keep their existing 3000ms default and hot-reload relaunch keeps its existing 1500ms override. This decision does not claim that all launch paths have identical timing."
+    },
+    {
+      "date": "2026-10-08",
+      "upstream": "deveco-cli",
+      "from": "77e6241bd708a60ae89f2ca3960c5dabc8af74bf",
+      "to": "a007f9e09d50497a515ee5ceb22bd70a6a364d3a",
+      "commits": ["4803d58ff805e33d29a14434ae238b490b0bcedf", "d4b1dfd94b45a367fe2634a4d666c7908c368abc", "a007f9e09d50497a515ee5ceb22bd70a6a364d3a"],
+      "decision": "reviewed_existing_scope",
+      "reason": "Reviewed the CLI/Docs version cache, notifications, CLI-upgrade auto-sync, npm metadata array guard and retry throttle. devecocli self-update and its background check are already excluded. The Docs engine's supportedDocsApi/apiVersion policy manages upstream CLI packages; this MCP uses an independent knowledge-pack schema and retains explicit knowledge update/check/force, integrity verification, atomic activation and rollback. Existing command mappings are retained as capability mappings, not proof of identical version selection: MCP rejects an incompatible selected schema and does not automatically select the highest compatible historical Docs-engine package. No automatic CLI/Docs synchronization or terminal notification is adopted, and no new extracted capability is introduced."
+    },
+    {
+      "date": "2026-10-08",
+      "upstream": "deveco-code",
+      "from": "520b921e6",
+      "to": "3cb1d73440846784037b4550a3a6e3fc22817c2f",
+      "commits": ["3cb1d73440846784037b4550a3a6e3fc22817c2f"],
+      "decision": "host",
+      "reason": "Only the IntelliJ migration prompt bar's light/dark theme colors change. IDE UI rendering is outside this MCP server's HarmonyOS development tools; no tool, command, parameter or skill capability changes."
+    }
+  ],
   "items": {
     "code:tool:arkts_check": { "status": "full", "to": "code action=check" },
     "code:tool:arkts_check:param:files": { "status": "full", "to": "code action=check files" },
@@ -53,6 +83,7 @@
 
     "cli:cmd:auth": { "status": "full", "to": "auth" },
     "cli:cmd:auth login": { "status": "full", "to": "auth action=login" },
+    "cli:cmd:auth login:opt:--no-prompt": { "status": "skip", "reason": "CLI Enter-confirmation option skipped by explicit user decision (2026-10-08). MCP login already returns a browser URL without reading stdin; browser account authorization remains required. No CLI flag is added." },
     "cli:cmd:auth logout": { "status": "full", "to": "auth action=logout" },
     "cli:cmd:auth status": { "status": "full", "to": "auth action=status" },
     "cli:cmd:auth team": { "status": "full", "to": "auth action=teams" },
