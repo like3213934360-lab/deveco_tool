@@ -1,0 +1,934 @@
+{
+  "date": "2026-10-10",
+  "host": "Codex App",
+  "server": {
+    "version": "1.4.5",
+    "build_id": "44db485182694c582ba2e60e94a09673edf6dfbe12b555810c8dbe3c4cab9193",
+    "node": "v26.0.0"
+  },
+  "device": {
+    "connection": "USB selected by user",
+    "name": "HUAWEI Pura 80 Pro",
+    "model": "LMR-AL00",
+    "api_level": 26,
+    "software": "LMR-AL00 7.0.0.109(SP6C00E105R7P5)",
+    "os": "OpenHarmony-7.0.0.105"
+  },
+  "scope": [
+    "signed test-app deployment",
+    "native hot_reload.apply/reset, two rounds",
+    "independent patch query and process stop",
+    "UI assertions and externally inserted SQLite marker retention",
+    "native recording export plus strict existing recording E2E"
+  ],
+  "signing": {
+    "team_selected_by_user": true,
+    "auto_sign_failures": [
+      "TEAM_AMBIGUOUS before team selection",
+      "SIGN_CLOUD_REJECTED 205389872: certificate quota exceeded"
+    ],
+    "existing_valid_certificate_and_key_reused": true,
+    "existing_device_registration_confirmed": true,
+    "profile_created_for_test_bundle": true,
+    "profile_certificate_bundle_validity_and_device_checked": true,
+    "original_projects_and_certificates_unchanged": true
+  },
+  "reset": {
+    "rounds": 2,
+    "variants": [
+      "apply without restart",
+      "explicit files plus restart=true"
+    ],
+    "source_still_patched_during_each_reset": true,
+    "marker_created_by_app_startup": false,
+    "marker": {
+      "id": 14501,
+      "value": "physical-v145-preserved"
+    },
+    "patch_versions_before_reset": [
+      3000001,
+      3000003
+    ],
+    "patch_versions_after_reset": [
+      0,
+      0
+    ],
+    "process_stopped_each_time": true,
+    "original_ui_and_click_behavior_restored_each_time": true,
+    "data_retained_each_time": true,
+    "source_restored_after_acceptance": true
+  },
+  "recordings": [
+    {
+      "path": "Codex native MCP",
+      "bytes": 248222,
+      "codec_name": "h264",
+      "width": 862,
+      "height": 1920,
+      "duration": "11.007000",
+      "nb_read_frames": "78",
+      "strictDecode": "passed",
+      "sha256": "0f7e8c4f8191c546a3d1141f6469505685ffdab8c8ad25dc65236e08dd977bb5",
+      "final_status": "idle",
+      "pending_file": false
+    },
+    {
+      "path": "existing test/e2e/recording.test.mjs, unchanged",
+      "bytes": 153191,
+      "codec_name": "h264",
+      "width": 862,
+      "height": 1920,
+      "duration": "3.609022",
+      "nb_read_frames": "67",
+      "strictDecode": "passed",
+      "sha256": "f351e7baeb0811f8f0401bc7a90f3e7fa810faf361b5b7f477f5c48996c959b7",
+      "final_status": "idle",
+      "pending_file": false,
+      "test": {
+        "pass": 1,
+        "fail": 0,
+        "skip": 0
+      }
+    }
+  ],
+  "evidence_hashes": {
+    "native_trace_sha256": "b01c620a199cf9d7c3cce9ad037c81b74a7f43e9526e5055f6844295b5e287fb",
+    "e2e_trace_sha256": "4636a6a5b3f6eb8535b471b660206a568ed4338e89cb1d78e1f87cb055cb8121",
+    "e2e_tap_sha256": "3f55d889bd71b20d0df7e2cd0448182472ce863e9e7430c7db209554bcbca046",
+    "baseline_source_sha256": "eb0665a1816fbfa4e5cf7017a63c74eb21d383b774860033bd3cd7eccf919150"
+  },
+  "not_verified": [
+    "OpenCode v1.4.5 real-model rerun",
+    "all MCP tools on all physical models",
+    "microphone/audio capture"
+  ],
+  "runtime_changes": false,
+  "calls": [
+    {
+      "tool": "run",
+      "arguments": {
+        "action": "build_run",
+        "project": "<test-project>",
+        "run_mode": "full",
+        "hot_reload": true,
+        "wait": 55000,
+        "assert": {
+          "visible": {
+            "text": "Hello World",
+            "exact": true
+          },
+          "timeout_ms": 8000
+        }
+      },
+      "result": {
+        "kind": "build_run",
+        "status": "succeeded",
+        "elapsed_ms": 15853,
+        "result": {
+          "modules": [
+            "entry"
+          ],
+          "module_selection": "only runnable module",
+          "build": {
+            "artifacts": [
+              "<test-project>/entry/build/default/outputs/default/entry-default-signed.hap"
+            ],
+            "elapsed_ms": 3356,
+            "warnings": 2
+          },
+          "installed": {
+            "installed": [
+              "entry-default-signed.hap"
+            ],
+            "method": "hdc install",
+            "packages": [
+              "entry-default-signed.hap"
+            ],
+            "package_files": [
+              {
+                "path": "<test-project>/entry/build/default/outputs/default/entry-default-signed.hap",
+                "sha256": "8a93b45a159626af442f2a0bf8d66ea777c9449bd389122dbdacf929e7c71116"
+              }
+            ]
+          },
+          "launch": {
+            "started": true,
+            "pid": 53039,
+            "crashed": false,
+            "new_crash_logs": [],
+            "smoke": "PASS",
+            "screen_uniformity": 0.9826
+          },
+          "assert": {
+            "passed": true,
+            "state": "visible",
+            "matches": [
+              {
+                "node": 3,
+                "type": "Text",
+                "text": "Hello World",
+                "key": "HelloWorld",
+                "bounds": [
+                  148,
+                  1339,
+                  1129,
+                  1544
+                ],
+                "clickable": true
+              }
+            ]
+          },
+          "preflight": {
+            "errors": 0,
+            "warnings": 2,
+            "scope": "project",
+            "files": 3
+          }
+        }
+      }
+    },
+    {
+      "tool": "device",
+      "arguments": {
+        "action": "sqlite",
+        "bundle": "com.devecomcp.physical145",
+        "db": "reset-proof.db",
+        "sql": "INSERT INTO proof (id,value) VALUES (14501,'physical-v145-preserved')",
+        "write": true
+      },
+      "result": {
+        "db": "/data/app/el2/100/database/com.devecomcp.physical145/entry/rdb/reset-proof.db",
+        "output": ""
+      }
+    },
+    {
+      "tool": "ui",
+      "arguments": {
+        "action": "record_start"
+      },
+      "result": {
+        "recording": true,
+        "file": "devecomcp-1791636373262-ee6f.mp4",
+        "note": "Recorder service active; encoded video is unverified until record_stop retrieves and validates the MP4"
+      }
+    },
+    {
+      "tool": "ui",
+      "arguments": {
+        "action": "record_status"
+      },
+      "result": {
+        "status": "recording",
+        "file": "devecomcp-1791636373262-ee6f.mp4",
+        "seconds": 6,
+        "note": "Recorder service active; encoded video is unverified until record_stop retrieves and validates the MP4"
+      }
+    },
+    {
+      "tool": "ui",
+      "arguments": {
+        "action": "act",
+        "op": "click",
+        "selector": {
+          "text": "Hello World",
+          "exact": true
+        }
+      },
+      "result": {
+        "performed": "click",
+        "element": {
+          "node": 3,
+          "type": "Text",
+          "text": "Hello World",
+          "key": "HelloWorld",
+          "bounds": [
+            148,
+            1339,
+            1129,
+            1544
+          ],
+          "clickable": true
+        },
+        "after": {
+          "changed": true,
+          "added": [
+            "Text \"Welcome\" clickable"
+          ],
+          "removed": [
+            "Text \"Hello World\" clickable"
+          ],
+          "kind": "updated"
+        }
+      }
+    },
+    {
+      "tool": "ui",
+      "arguments": {
+        "action": "assert",
+        "visible": {
+          "text": "Welcome",
+          "exact": true
+        },
+        "timeout_ms": 5000
+      },
+      "result": {
+        "passed": true,
+        "state": "visible",
+        "matches": [
+          {
+            "node": 3,
+            "type": "Text",
+            "text": "Welcome",
+            "key": "HelloWorld",
+            "bounds": [
+              262,
+              1339,
+              1015,
+              1544
+            ],
+            "clickable": true
+          }
+        ]
+      }
+    },
+    {
+      "tool": "ui",
+      "arguments": {
+        "action": "record_stop",
+        "save_path": "<private-evidence>/recording-native.mp4"
+      },
+      "result": {
+        "saved": "<private-evidence>/recording-native.mp4",
+        "bytes": 248222,
+        "seconds": 20
+      }
+    },
+    {
+      "tool": "hot_reload",
+      "arguments": {
+        "action": "apply",
+        "project": "<test-project>"
+      },
+      "result": {
+        "applied": true,
+        "files": [
+          "entry/src/main/ets/pages/Index.ets"
+        ],
+        "added": 0,
+        "restarted": false,
+        "pid": 53039,
+        "note": "Verify the change with ui observe/assert"
+      }
+    },
+    {
+      "tool": "ui",
+      "arguments": {
+        "action": "act",
+        "op": "click",
+        "selector": {
+          "text": "Welcome",
+          "exact": true
+        }
+      },
+      "result": {
+        "performed": "click",
+        "element": {
+          "node": 3,
+          "type": "Text",
+          "text": "Welcome",
+          "key": "HelloWorld",
+          "bounds": [
+            262,
+            1339,
+            1015,
+            1544
+          ],
+          "clickable": true
+        },
+        "after": {
+          "changed": true,
+          "added": [
+            "Text \"Physical145Patched\" clickable"
+          ],
+          "removed": [
+            "Text \"Welcome\" clickable"
+          ],
+          "kind": "updated"
+        }
+      }
+    },
+    {
+      "tool": "ui",
+      "arguments": {
+        "action": "assert",
+        "visible": {
+          "text": "Physical145Patched",
+          "exact": true
+        },
+        "timeout_ms": 5000
+      },
+      "result": {
+        "passed": true,
+        "state": "visible",
+        "matches": [
+          {
+            "node": 3,
+            "type": "Text",
+            "text": "Physical145Patched",
+            "key": "HelloWorld",
+            "bounds": [
+              4,
+              1237,
+              1272,
+              1647
+            ],
+            "clickable": true
+          }
+        ]
+      }
+    },
+    {
+      "tool": "device",
+      "arguments": {
+        "action": "shell",
+        "command": "bm quickfix -q -b com.devecomcp.physical145"
+      },
+      "result": {
+        "exit_code": 0,
+        "output": "Information as follows:\nApplicationQuickFixInfo:\n  bundle name: com.devecomcp.physical145\n  bundle version code: 1000000\n  bundle version name: 1.0.0\n  patch version code: 3000001\n  patch version name: 3000001\n  cpu abi: arm64-v8a\n  native library path: \n  type: patch\n  ModuelQuickFixInfo:\n    module name: entry\n    module sha256: \n    file path: /data/app/el1/bundle/public/com.devecomcp.physical145/patch_3000001/entry.hqf\n"
+      }
+    },
+    {
+      "tool": "hot_reload",
+      "arguments": {
+        "action": "reset",
+        "project": "<test-project>"
+      },
+      "result": {
+        "reset": true,
+        "method": "restore_baseline_packages",
+        "patch_version": 0,
+        "packages": [
+          "entry-default-signed.hap"
+        ],
+        "note": "Original packages restored without rebuilding; app data preserved. Launch the app to run the baseline code"
+      }
+    },
+    {
+      "tool": "device",
+      "arguments": {
+        "action": "shell",
+        "command": "bm quickfix -q -b com.devecomcp.physical145"
+      },
+      "result": {
+        "exit_code": 0,
+        "output": "Information as follows:\nApplicationQuickFixInfo:\n  bundle name: com.devecomcp.physical145\n  bundle version code: 1000000\n  bundle version name: 1.0.0\n  patch version code: 0\n  patch version name: \n  cpu abi: \n  native library path: \n  type: \n"
+      }
+    },
+    {
+      "tool": "device",
+      "arguments": {
+        "action": "shell",
+        "command": "pidof com.devecomcp.physical145"
+      },
+      "result": {
+        "exit_code": 0,
+        "output": ""
+      }
+    },
+    {
+      "tool": "run",
+      "arguments": {
+        "action": "launch",
+        "project": "<test-project>"
+      },
+      "result": {
+        "started": true,
+        "pid": 55203,
+        "crashed": false,
+        "new_crash_logs": [],
+        "smoke": "PASS",
+        "screen_uniformity": 0.9826
+      }
+    },
+    {
+      "tool": "ui",
+      "arguments": {
+        "action": "assert",
+        "visible": {
+          "text": "Hello World",
+          "exact": true
+        },
+        "timeout_ms": 5000
+      },
+      "result": {
+        "passed": true,
+        "state": "visible",
+        "matches": [
+          {
+            "node": 3,
+            "type": "Text",
+            "text": "Hello World",
+            "key": "HelloWorld",
+            "bounds": [
+              148,
+              1339,
+              1129,
+              1544
+            ],
+            "clickable": true
+          }
+        ]
+      }
+    },
+    {
+      "tool": "ui",
+      "arguments": {
+        "action": "act",
+        "op": "click",
+        "selector": {
+          "text": "Hello World",
+          "exact": true
+        }
+      },
+      "result": {
+        "performed": "click",
+        "element": {
+          "node": 3,
+          "type": "Text",
+          "text": "Hello World",
+          "key": "HelloWorld",
+          "bounds": [
+            148,
+            1339,
+            1129,
+            1544
+          ],
+          "clickable": true
+        },
+        "after": {
+          "changed": true,
+          "added": [
+            "Text \"Welcome\" clickable"
+          ],
+          "removed": [
+            "Text \"Hello World\" clickable"
+          ],
+          "kind": "updated"
+        }
+      }
+    },
+    {
+      "tool": "ui",
+      "arguments": {
+        "action": "assert",
+        "visible": {
+          "text": "Welcome",
+          "exact": true
+        },
+        "timeout_ms": 5000
+      },
+      "result": {
+        "passed": true,
+        "state": "visible",
+        "matches": [
+          {
+            "node": 3,
+            "type": "Text",
+            "text": "Welcome",
+            "key": "HelloWorld",
+            "bounds": [
+              262,
+              1339,
+              1015,
+              1544
+            ],
+            "clickable": true
+          }
+        ]
+      }
+    },
+    {
+      "tool": "ui",
+      "arguments": {
+        "action": "assert",
+        "hidden": {
+          "text": "Physical145Patched",
+          "exact": true
+        },
+        "timeout_ms": 5000
+      },
+      "result": {
+        "passed": true,
+        "state": "hidden",
+        "matches": []
+      }
+    },
+    {
+      "tool": "device",
+      "arguments": {
+        "action": "sqlite",
+        "bundle": "com.devecomcp.physical145",
+        "db": "reset-proof.db",
+        "sql": "SELECT id,value FROM proof ORDER BY id"
+      },
+      "result": {
+        "db": "/data/app/el2/100/database/com.devecomcp.physical145/entry/rdb/reset-proof.db",
+        "rows": [
+          {
+            "id": 14501,
+            "value": "physical-v145-preserved"
+          }
+        ],
+        "total": 1
+      }
+    },
+    {
+      "tool": "run",
+      "arguments": {
+        "action": "build_run",
+        "project": "<test-project>",
+        "run_mode": "full",
+        "hot_reload": true,
+        "wait": 55000,
+        "assert": {
+          "visible": {
+            "text": "Hello World",
+            "exact": true
+          },
+          "timeout_ms": 8000
+        }
+      },
+      "result": {
+        "kind": "build_run",
+        "status": "succeeded",
+        "elapsed_ms": 11873,
+        "result": {
+          "modules": [
+            "entry"
+          ],
+          "module_selection": "only runnable module",
+          "build": {
+            "artifacts": [
+              "<test-project>/entry/build/default/outputs/default/entry-default-signed.hap"
+            ],
+            "elapsed_ms": 3102,
+            "warnings": 2
+          },
+          "installed": {
+            "installed": [
+              "entry-default-signed.hap"
+            ],
+            "method": "hdc install",
+            "packages": [
+              "entry-default-signed.hap"
+            ],
+            "package_files": [
+              {
+                "path": "<test-project>/entry/build/default/outputs/default/entry-default-signed.hap",
+                "sha256": "8b6c0d0763c02d271366fd62b0a4a28eff8e43a8245e78cb3ef6c10c4b6d6afb"
+              }
+            ]
+          },
+          "launch": {
+            "started": true,
+            "pid": 56591,
+            "crashed": false,
+            "new_crash_logs": [],
+            "smoke": "PASS",
+            "screen_uniformity": 0.9826
+          },
+          "assert": {
+            "passed": true,
+            "state": "visible",
+            "matches": [
+              {
+                "node": 3,
+                "type": "Text",
+                "text": "Hello World",
+                "key": "HelloWorld",
+                "bounds": [
+                  148,
+                  1339,
+                  1129,
+                  1544
+                ],
+                "clickable": true
+              }
+            ]
+          },
+          "preflight": {
+            "errors": 0,
+            "warnings": 0,
+            "scope": "unchanged",
+            "files": 0
+          }
+        }
+      }
+    },
+    {
+      "tool": "hot_reload",
+      "arguments": {
+        "action": "apply",
+        "project": "<test-project>",
+        "files": [
+          "entry/src/main/ets/pages/Index.ets"
+        ],
+        "restart": true
+      },
+      "result": {
+        "applied": true,
+        "files": [
+          "entry/src/main/ets/pages/Index.ets"
+        ],
+        "added": 0,
+        "restarted": true,
+        "pid": 56622,
+        "launch": {
+          "started": true,
+          "pid": 56622,
+          "crashed": false,
+          "new_crash_logs": [],
+          "smoke": "PASS",
+          "screen_uniformity": 0.968
+        },
+        "note": "Verify the change with ui observe/assert"
+      }
+    },
+    {
+      "tool": "ui",
+      "arguments": {
+        "action": "assert",
+        "visible": {
+          "text": "Physical145Restarted",
+          "exact": true
+        },
+        "timeout_ms": 5000
+      },
+      "result": {
+        "passed": true,
+        "state": "visible",
+        "matches": [
+          {
+            "node": 3,
+            "type": "Text",
+            "text": "Physical145Restarted",
+            "key": "HelloWorld",
+            "bounds": [
+              35,
+              1237,
+              1242,
+              1647
+            ],
+            "clickable": true
+          }
+        ]
+      }
+    },
+    {
+      "tool": "device",
+      "arguments": {
+        "action": "shell",
+        "command": "bm quickfix -q -b com.devecomcp.physical145"
+      },
+      "result": {
+        "exit_code": 0,
+        "output": "Information as follows:\nApplicationQuickFixInfo:\n  bundle name: com.devecomcp.physical145\n  bundle version code: 1000000\n  bundle version name: 1.0.0\n  patch version code: 3000003\n  patch version name: 3000003\n  cpu abi: arm64-v8a\n  native library path: \n  type: patch\n  ModuelQuickFixInfo:\n    module name: entry\n    module sha256: \n    file path: /data/app/el1/bundle/public/com.devecomcp.physical145/patch_3000003/entry.hqf\n"
+      }
+    },
+    {
+      "tool": "hot_reload",
+      "arguments": {
+        "action": "reset",
+        "project": "<test-project>"
+      },
+      "result": {
+        "reset": true,
+        "method": "restore_baseline_packages",
+        "patch_version": 0,
+        "packages": [
+          "entry-default-signed.hap"
+        ],
+        "note": "Original packages restored without rebuilding; app data preserved. Launch the app to run the baseline code"
+      }
+    },
+    {
+      "tool": "device",
+      "arguments": {
+        "action": "shell",
+        "command": "bm quickfix -q -b com.devecomcp.physical145"
+      },
+      "result": {
+        "exit_code": 0,
+        "output": "Information as follows:\nApplicationQuickFixInfo:\n  bundle name: com.devecomcp.physical145\n  bundle version code: 1000000\n  bundle version name: 1.0.0\n  patch version code: 0\n  patch version name: \n  cpu abi: \n  native library path: \n  type: \n"
+      }
+    },
+    {
+      "tool": "device",
+      "arguments": {
+        "action": "shell",
+        "command": "pidof com.devecomcp.physical145"
+      },
+      "result": {
+        "exit_code": 0,
+        "output": ""
+      }
+    },
+    {
+      "tool": "run",
+      "arguments": {
+        "action": "launch",
+        "project": "<test-project>"
+      },
+      "result": {
+        "started": true,
+        "pid": 57306,
+        "crashed": false,
+        "new_crash_logs": [],
+        "smoke": "PASS",
+        "screen_uniformity": 0.9826
+      }
+    },
+    {
+      "tool": "ui",
+      "arguments": {
+        "action": "assert",
+        "visible": {
+          "text": "Hello World",
+          "exact": true
+        },
+        "timeout_ms": 5000
+      },
+      "result": {
+        "passed": true,
+        "state": "visible",
+        "matches": [
+          {
+            "node": 3,
+            "type": "Text",
+            "text": "Hello World",
+            "key": "HelloWorld",
+            "bounds": [
+              148,
+              1339,
+              1129,
+              1544
+            ],
+            "clickable": true
+          }
+        ]
+      }
+    },
+    {
+      "tool": "ui",
+      "arguments": {
+        "action": "act",
+        "op": "click",
+        "selector": {
+          "text": "Hello World",
+          "exact": true
+        }
+      },
+      "result": {
+        "performed": "click",
+        "element": {
+          "node": 3,
+          "type": "Text",
+          "text": "Hello World",
+          "key": "HelloWorld",
+          "bounds": [
+            148,
+            1339,
+            1129,
+            1544
+          ],
+          "clickable": true
+        },
+        "after": {
+          "changed": true,
+          "added": [
+            "Text \"Welcome\" clickable"
+          ],
+          "removed": [
+            "Text \"Hello World\" clickable"
+          ],
+          "kind": "updated"
+        }
+      }
+    },
+    {
+      "tool": "ui",
+      "arguments": {
+        "action": "assert",
+        "visible": {
+          "text": "Welcome",
+          "exact": true
+        },
+        "timeout_ms": 5000
+      },
+      "result": {
+        "passed": true,
+        "state": "visible",
+        "matches": [
+          {
+            "node": 3,
+            "type": "Text",
+            "text": "Welcome",
+            "key": "HelloWorld",
+            "bounds": [
+              262,
+              1339,
+              1015,
+              1544
+            ],
+            "clickable": true
+          }
+        ]
+      }
+    },
+    {
+      "tool": "ui",
+      "arguments": {
+        "action": "assert",
+        "hidden": {
+          "text": "Physical145Restarted",
+          "exact": true
+        },
+        "timeout_ms": 5000
+      },
+      "result": {
+        "passed": true,
+        "state": "hidden",
+        "matches": []
+      }
+    },
+    {
+      "tool": "device",
+      "arguments": {
+        "action": "sqlite",
+        "bundle": "com.devecomcp.physical145",
+        "db": "reset-proof.db",
+        "sql": "SELECT id,value FROM proof ORDER BY id"
+      },
+      "result": {
+        "db": "/data/app/el2/100/database/com.devecomcp.physical145/entry/rdb/reset-proof.db",
+        "rows": [
+          {
+            "id": 14501,
+            "value": "physical-v145-preserved"
+          }
+        ],
+        "total": 1
+      }
+    },
+    {
+      "tool": "ui",
+      "arguments": {
+        "action": "record_status"
+      },
+      "result": {
+        "status": "idle"
+      }
+    }
+  ]
+}
