@@ -1,5 +1,5 @@
 import { ToolError } from "../core/errors.js";
-import { acceptAgreements, act, center, describe, dumpTree, invalidate, pickMatch, select, treeSignature, waitFor, type Action, type Selector, type UiNode } from "./ui.js";
+import { automaticActions, automaticResult, acceptAgreements, act, center, describe, dumpTree, invalidate, pickMatch, select, treeSignature, waitFor, type Action, type AutomaticResult, type Selector, type UiNode } from "./ui.js";
 
 /* ------------------------------ screen diff ------------------------------ */
 
@@ -156,7 +156,7 @@ export function stepAction(s: BatchStep, point?: { x: number; y: number }): Acti
 
 const pick = pickMatch;
 
-export interface BatchResult {
+export interface BatchResult extends AutomaticResult {
   passed: boolean;
   steps: { i: number; op: string; ok: boolean; target?: string; ms: number; error?: string }[];
   failed_step?: number;
@@ -166,7 +166,6 @@ export interface BatchResult {
   visible?: string[];
   after?: ReturnType<typeof screenDiff>;
   assert?: unknown;
-  agreements_accepted?: { text: string; kind: string }[];
   executed: { action: Action; selector?: Selector }[];
 }
 
@@ -179,7 +178,7 @@ export async function runBatch(target: string, steps: BatchStep[], options: { as
   const results: BatchResult["steps"] = [];
   const executed: BatchResult["executed"] = [];
   const accepted: { text: string; kind: string }[] = [];
-  const agreements = () => accepted.length ? { agreements_accepted: accepted } : {};
+  const agreements = () => automaticResult(accepted);
   const ready = async (nodes: UiNode[]) => {
     const consent = await acceptAgreements(target, signal, nodes);
     accepted.push(...consent.accepted);
@@ -210,7 +209,7 @@ export async function runBatch(target: string, steps: BatchStep[], options: { as
       if (s.op === "wait") {
         if (s.selector) {
           const verdict = await waitFor(target, s.selector, "visible", Math.min(s.timeout_ms ?? 10000, left() - 1000), signal, true);
-          accepted.push(...(verdict.agreements_accepted ?? []));
+          accepted.push(...automaticActions(verdict));
           if (!verdict.passed) throw new ToolError("UI_NOT_FOUND", "Element did not appear", { selector: s.selector });
           fresh = false;
         } else await new Promise((r) => setTimeout(r, Math.min(s.ms ?? 500, 10000, Math.max(0, left() - 1500))));
@@ -241,7 +240,7 @@ export async function runBatch(target: string, steps: BatchStep[], options: { as
       }
       const action = stepAction(s, point);
       const performed = await act(target, action, signal);
-      accepted.push(...(performed.agreements_accepted ?? []));
+      accepted.push(...automaticActions(performed));
       executed.push({ action, selector: s.selector });
       results.push({ i, op: s.op, ok: true, ...(hit ? { target: label(hit) } : {}), ms: Date.now() - started });
       fresh = false;
@@ -267,7 +266,7 @@ export async function runBatch(target: string, steps: BatchStep[], options: { as
   if (options.assert && (options.assert.visible || options.assert.hidden)) {
     const selector = (options.assert.visible ?? options.assert.hidden)!;
     assertion = await waitFor(target, selector, options.assert.visible ? "visible" : "hidden", Math.max(500, Math.min(options.assert.timeout_ms ?? 5000, left() - 1500)), signal, true);
-    accepted.push(...(assertion.agreements_accepted ?? []));
+    accepted.push(...automaticActions(assertion));
     last = await dumpTree(target, signal, 1500); fresh = true;
   }
   if (!fresh) { await new Promise((r) => setTimeout(r, 250)); invalidate(target); last = await dumpTree(target, signal); }

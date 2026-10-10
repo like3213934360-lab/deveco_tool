@@ -9,6 +9,9 @@ import { config, packageRoot } from "../core/config.js";
 import { invariant, ToolError } from "../core/errors.js";
 import { assertConnected, hdc, shell } from "./device.js";
 
+import { automaticResult } from "./agreements.js";
+export { automaticActions, automaticResult, type AutomaticAction, type AutomaticResult } from "./agreements.js";
+
 /* --------------------------------- tree --------------------------------- */
 
 export interface Rect { x1: number; y1: number; x2: number; y2: number }
@@ -441,15 +444,16 @@ const uiInputOk = (out: string, code: number | null) => code === 0 && (!out || /
 
 /** Shared by actions, batches and flows; observation alone stays read-only. */
 export async function acceptAgreements(target: string, signal?: AbortSignal, initial?: UiNode[], settleMs = 0) {
-  if (!config().auto_accept_ui_agreements) return { nodes: initial, accepted: [] as { text: string; kind: string }[] };
+  const { auto_accept_ui_agreements: agreements, auto_complete_ui_onboarding: onboarding } = config();
+  if (!agreements && !onboarding) return { nodes: initial, accepted: [] as { text: string; kind: string }[] };
   const { resolveAgreements } = await import("./agreements.js");
   return resolveAgreements(initial ?? await dumpTree(target, signal, 1500), {
-    settleMs,
+    settleMs, agreements, onboarding,
     read: async () => { await new Promise((r) => setTimeout(r, 500)); invalidate(target); return dumpTree(target, signal); },
     click: async (node) => {
       const point = center(node);
       const r = await shell(target, ["uitest", "uiInput", "click", String(point.x), String(point.y)], signal, 15000);
-      invariant(uiInputOk((r.stdout + r.stderr).trim(), r.code), "UI_ACTION_FAILED", "Agreement click failed");
+      invariant(uiInputOk((r.stdout + r.stderr).trim(), r.code), "UI_ACTION_FAILED", "Automatic UI click failed");
       invalidate(target);
     },
   }, signal);
@@ -459,7 +463,7 @@ export async function act(target: string, a: Action, signal?: AbortSignal) {
   const consent = await acceptAgreements(target, signal);
   const completed = async (result: { performed: string; method?: string }) => {
     consent.accepted.push(...(await acceptAgreements(target, signal, undefined, 1000)).accepted);
-    return { ...result, ...(consent.accepted.length ? { agreements_accepted: consent.accepted } : {}) };
+    return { ...result, ...automaticResult(consent.accepted) };
   };
   invalidate(target);
   if (a.action === "input" && !a.append) {
@@ -604,7 +608,7 @@ export async function waitFor(target: string, selector: Selector, state: "visibl
     }
     last = select(nodes, selector);
     const ok = state === "visible" ? last.length > 0 : last.length === 0;
-    const result = { passed: ok, state, matches: last.slice(0, 3).map(describe), ...(accepted.length ? { agreements_accepted: accepted } : {}) };
+    const result = { passed: ok, state, matches: last.slice(0, 3).map(describe), ...automaticResult(accepted) };
     if (ok || Date.now() >= deadline) return result;
     await new Promise((r) => setTimeout(r, 400));
   }

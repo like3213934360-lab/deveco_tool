@@ -34,6 +34,7 @@ const configSchema = z
     max_artifact_mb: z.number().int().min(16).max(65536).default(512),
     session_idle_minutes: z.number().int().min(1).max(240).default(10),
     auto_accept_ui_agreements: z.boolean().default(true),
+    auto_complete_ui_onboarding: z.boolean().default(true),
     kb_package: z.string().default("@deveco-mcp/kb"),
     kb_upstream_package: z.string().default("@deveco-test/deveco-cli-knowledgebase"),
     npm_registry: z.string().url().default("https://registry.npmjs.org"),

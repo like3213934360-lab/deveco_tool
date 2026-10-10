@@ -4,7 +4,7 @@
 
 一个轻量的鸿蒙（HarmonyOS）开发 MCP 服务。任何 MCP 宿主（Cursor、Claude Code、Codex 等）都可以通过它调用 DevEco 工具链，完成鸿蒙应用的构建、运行、调试和验证，并离线查询鸿蒙开发知识。
 
-- **完整覆盖上游。** 对照 [deveco-code](https://gitcode.com/openharmony-sig/deveco-code) 和 [deveco-cli](https://gitcode.com/openharmony-sig/deveco-cli) 做了全量验收：脚本从上游源码自动抽取每一个工具、参数、取值、命令、选项和内置 MCP 工具，共 467 项，每一项都有经过核对的对应关系（完整覆盖 355 项，由宿主 AI 提供 70 项，明确不需要 42 项并写明理由），缺口为 0。完整清单见 [docs/upstream-alignment.md](docs/upstream-alignment.md)，CI 每周自动重跑，上游有新提交或新能力时会报出。在此之外，还提供可恢复的异步任务、UI 流程录制与回放、崩溃模式匹配、按符号名定位的 LSP 查询，以及可以独立于服务更新的知识包。
+- **完整覆盖上游。** 对照 [deveco-code](https://gitcode.com/openharmony-sig/deveco-code) 和 [deveco-cli](https://gitcode.com/openharmony-sig/deveco-cli) 做了源码能力清点与逐项映射：脚本从上游源码自动抽取每一个工具、参数、取值、命令、选项和内置 MCP 工具，共 475 项，每一项都有经过核对的对应关系（完整覆盖 362 项，由宿主 AI 提供 70 项，明确不需要 43 项并写明理由），缺口为 0。完整清单见 [docs/upstream-alignment.md](docs/upstream-alignment.md)，CI 每周自动重跑，上游有新提交或新能力时会报出。在此之外，还提供可恢复的异步任务、UI 流程录制与回放、崩溃模式匹配、按符号名定位的 LSP 查询，以及可以独立于服务更新的知识包。
 - **轻量。** 运行时依赖只有 3 个，不用 LangGraph，也没有原生模块（数据库用 Node 自带的 `node:sqlite`）。单进程运行，空闲时不占 CPU。语言服务和代码检查器按需启动，空闲 10 分钟后自动关闭。
 - **为 AI 宿主设计。** 15 个工具按用途命名，全部默认可用；返回结构化且长度有上限；每个错误都带 `code`、`category` 和修复提示 `hint`；耗时操作以任务形式异步执行。
 
@@ -17,6 +17,8 @@
 | 运行时依赖 | 3 | 16 |
 | 源码行数（`src`） | 约 5.7k | 约 35k |
 | 知识检索 | 3–20 ms | — |
+
+本次 v1.4.0 的环境、性能及逐项验证结果见 [升级验收记录](docs/UPGRADE-1.4.0.md)。
 
 ## 安装
 
@@ -74,17 +76,20 @@ node bin/deveco-mcp.mjs init --host codex --project .      # 项目级配置（.
 | `max_artifact_mb` | 制品总大小上限，默认 512 |
 | `session_idle_minutes` | 语言服务等会话的空闲关闭时间，默认 10 |
 | `auto_accept_ui_agreements` | UI 操作、批量操作、流程回放及部署/测试断言自动处理协议与权限弹窗，默认 `true`；按同一窗口中的文案和控件状态识别，结果记录 `agreements_accepted`。纯观察不触发同意 |
+| `auto_complete_ui_onboarding` | 自动完成可识别的首次设置、欢迎页和功能介绍，默认 `true`；保留当前已选默认项，不改选项，记录 `onboarding_completed`。协议与权限由上一项独立控制，纯观察不触发处理 |
 | `kb_package` | 知识包的 npm 包名 |
 | `npm_registry` | 更新知识包时使用的 npm 源 |
 
 用 `node bin/deveco-mcp.mjs doctor [project]` 或 `doctor` 工具检查环境。
+
+引导处理按同一窗口中的页面语义、可操作按钮和选中状态判断，不依赖应用名、包名或固定控件 ID。支持“下一步／继续／完成／开始使用”，功能介绍有明确“跳过”时可直接结束；需要填写账户资料、没有默认选项或无法唯一识别的页面留给宿主根据当前界面处理。单次最多 8 步，每步读取新界面，页面不变或循环会明确报错，原操作不会重放。
 
 ## 工具
 
 | 工具 | 功能 |
 | --- | --- |
 | `doctor` | 检查工具链、SDK、设备、工程、知识包和登录状态，以及 SDK 兼容性（工程的编译/兼容 SDK、已安装 SDK、设备 API 级别）；每项失败都附带修复方法 |
-| `project` | `info` / `create`（基于模板，不会覆盖已有文件）/ `sync` / `build`（先对上次以来改过的 .ets/.ts 做 ArkTS 预检，再调用 Hvigor；返回产物，或全部编译错误（错误码、文件、行号、原因，前 100 条逐条列出）和修复提示；`oh-package.json5` 改动后自动先装依赖；`modules` 支持 `模块@target`；`task=compileNative` 编译 C/C++，并生成供 clangd 使用的 `.idea/.deveco/cxx/compile_commands.json`）/ `clean` |
+| `project` | `info` / `create`（基于模板，不会覆盖已有文件；`device_types` 指定设备类型）/ `sync` / `build`（先对上次以来改过的 .ets/.ts 做 ArkTS 预检，再调用 Hvigor；返回产物，或全部编译错误（错误码、文件、行号、原因，前 100 条逐条列出）和修复提示；`oh-package.json5` 改动后自动先装依赖；`modules` 支持 `模块@target`；`task=compileNative` 编译 C/C++，并生成供 clangd 使用的 `.idea/.deveco/cxx/compile_commands.json`）/ `clean` |
 | `run` | 多设备工程（如手机 + 手表两个 entry）只构建和安装与目标设备 `deviceTypes` 匹配的模块，工程已有签名原样使用。连着多台设备又没指定 `target` 时不会自己挑，会列出每台设备（名称、真机/模拟器、是否匹配工程）让 AI 先问用户；`target` 可填序列号或设备名。`build_run`（构建、安装、启动，给出冒烟判定 `PASS` / `FAIL_CRASH` / `FAIL_BLANK`，可附带 UI 断言；启动就崩时附上崩溃诊断和工程内出错的源码位置；**从第二次部署起，只改了入口模块代码时自动热修复正在运行的应用并重启（实测 6–10 秒，完整部署 15–25 秒）**，其他改动自动完整部署并说明原因，没改动时只重启，`run_mode=full` 强制完整部署；`then_flow` 部署后自动走到保存的页面；`skip_build` 直接部署已有产物，`uninstall_first` 先卸载再安装）/ `deploy` / `launch` / `stop` / `uninstall` |
 | `job` | `wait` / `status` / `list` / `cancel` / `resume` / `read`（按行分页读取日志，支持 `grep`） |
 | `code` | `check`（常驻的 ArkTS 静态检查，`fix` 自动修复安全的问题）/ `lint`（`config_path`、`incremental` 只查未提交文件、`output_path`）/ `api_scan`（按文件或 `modules`，`output_path`）/ `api_versions` / `lsp`：hover、definition、declaration、implementation、references、symbols、workspace_symbols、diagnostics、completion、signature、call_hierarchy（`direction` 调用者/被调用者）。用 `symbol` 加行号提示定位代码，不需要精确列号 / `lsp_restart`（`language` 只重启 ArkTS 或 C++） |
@@ -96,8 +101,16 @@ node bin/deveco-mcp.mjs init --host codex --project .      # 项目级配置（.
 | `skills` | 内置的鸿蒙 Skill：`list` / `read`；`export` 导出为宿主原生的 `SKILL.md`（`path` 指定任意目录）；`install_mcp` 把本服务写入宿主配置（cursor、claude、codex、opencode、trae-cn、codebuddy、qoder、pi；重复执行不会重复写入；atomcode、dsh、deveco 只导出技能）；`init` 一次完成两者；`search` / `install` / `uninstall` 使用 OpenHarmony Skill 市场 |
 | `auth` | 华为账号浏览器登录：`codegenie`（云端知识）或 `developer`（签名），`region` 可选 cn / global；`teams`；`import` 导入 v0.x 的登录凭据 |
 | `sign` | `auto`（工程已配置签名时拒绝执行、不做任何修改，`force` 时先准备并验证新材料，再原子切换配置；保留旧材料和证书，需要空闲证书名额；否则一键为真机生成调试签名：密钥库、证书、设备注册、Profile，ACL 权限从 `module.json5` 自动推导，并写入工程的 `signingConfigs`）/ `sign` / `verify` / AppGallery Connect 证书和设备管理 / 逐项操作 `keypair`、`csr`、`certificate_create`、`profile_create`、`profile_delete`。账号属于多个开发者团队时，会在 AGC 新建或删除东西的操作必须指定 `team`（否则列出团队让 AI 先问用户） |
-| `emulator` | `list`（`details`）/ `start` / `stop`（`name` 或多个 `names`；启动会等待开机完成）/ `create`（`screen_profile` 或自定义 `screen`、`hot_boot`、`instance_path`、`image_root`、`force`）/ `delete` / `images`（按行返回设备类型和系统版本；默认已下载，`all` 全部）/ `install_image`（`force` 重新下载；返回路径、大小、耗时）/ `remove_image` / `license`（接受）/ `license_view`（只读查看）/ `scenario`（电量和充电状态、GPS、光照/湿度/温度/步数/心率传感器、旋转、折叠、运动场景等）。启动、创建、下载镜像时，如果许可协议还没同意，会自动同意并在结果中注明（`auto_accept_license=false` 可关闭） |
+| `emulator` | `list`（`details`）/ `start`（`boot_mode`、`hdc_port`、`window`）/ `stop`（`name` 或多个 `names`；启动会核验实例、端口及开机完成）/ `create`（`screen_profile` 或自定义 `screen`、`hot_boot`、`instance_path`、`image_root`、`force`）/ `delete` / `images`（按行返回设备类型和系统版本；默认已下载，`all` 全部）/ `install_image`（`force` 重新下载；返回路径、大小、耗时）/ `remove_image` / `license`（接受）/ `license_view`（只读查看）/ `scenario`（电量和充电状态、GPS、光照/湿度/温度/步数/心率传感器、旋转、折叠、运动场景等）。启动、创建、下载镜像时，如果许可协议还没同意，会自动同意并在结果中注明（`auto_accept_license=false` 可关闭） |
 | `hot_reload` | `apply` 把 ArkTS 改动以 HQF 快速修复包推送到运行中的应用，约 5 秒生效（实测 4.4–4.7 秒），应用不重启（`files` 指定改动文件，`restart` 打完补丁后重启应用）；`reset` 撤销改动；`stop_daemon` 停止工程的 hvigor 守护进程 |
+
+建项时，`device_types` 接受 `phone`、`tablet`、`2in1`、`car`、`wearable`、`tv` 的非空组合，默认 `["phone"]`；去重后写入 `entry/src/main/module.json5`，并在结果中返回。非法类型、已有文件冲突或不可用的 API 映射在写入前报错。
+
+模拟器 `start` 的 `boot_mode` 可选 `coldboot`（保留数据冷启动）、`snapshot`（恢复已保存的 Quick Boot 快照）、`reset`（**清空实例数据**），省略时使用实例默认设置。旧参数 `cold=true` 等价于 `coldboot`，与 `boot_mode` 冲突时报错。`snapshot` 需要 `hot_boot=true`、已有 VM 快照及本次恢复日志证据；无快照、SDK 恢复失败或无法证明恢复时明确报错，不改用冷启动。快照可能恢复原 HDC 端口；与请求端口不一致也会报错。
+
+`hdc_port` 是 10000–16555 的整数，仅支持单实例；占用时报错，不自动换端口。`window=false` 无窗口启动。已运行实例只接受不带启动设置的等待请求；要改变模式、端口、窗口或路径，先显式停止。启动最长等待 3 分钟，只有匹配实例真正完成开机才成功；取消、超时或失败不自动重启、重置或停止实例，保留失败诊断供检查。
+
+本服务独立实现这些能力，不依赖上游 CLI；Skill 的存放位置和更新由用户决定，不随版本自动分发、迁移或同步，也不引入 Windows NTLM 代理。升级验收和 TODO 见 [v1.4.0 升级记录](docs/UPGRADE-1.4.0.md)。
 
 内置 3 个 Skill：
 
@@ -185,7 +198,7 @@ MIT。第三方声明：`NOTICE.deveco-cli`、`NOTICE.deveco-code`、`NOTICE.hyp
 
 A lean MCP server for HarmonyOS development. It lets any MCP host (Cursor, Claude Code, Codex, …) build, run, debug and verify HarmonyOS apps with the DevEco toolchain, and query HarmonyOS knowledge offline.
 
-- **Covers upstream fully.** Every HarmonyOS tool in [deveco-code](https://gitcode.com/openharmony-sig/deveco-code) and every command in [deveco-cli](https://gitcode.com/openharmony-sig/deveco-cli) is verified exhaustively: a script extracts every tool, parameter, enum value, command, option and bundled MCP tool from upstream source (467 items) and each one has a verified mapping (355 full, 70 host-provided, 42 explicitly not needed with reasons), 0 gaps. See [docs/upstream-alignment.md](docs/upstream-alignment.md); CI re-runs it weekly and fails on new upstream commits or capabilities. It also adds asynchronous jobs with recovery, flow recording and replay, crash pattern matching, symbol-based LSP lookups, and knowledge packs that update independently of the server.
+- **Covers upstream fully.** Every HarmonyOS tool in [deveco-code](https://gitcode.com/openharmony-sig/deveco-code) and every command in [deveco-cli](https://gitcode.com/openharmony-sig/deveco-cli) is inventoried and mapped: a script extracts every tool, parameter, enum value, command, option and bundled MCP tool from upstream source (475 items) and each one has a verified mapping (362 full, 70 host-provided, 43 explicitly not needed with reasons), 0 gaps. See [docs/upstream-alignment.md](docs/upstream-alignment.md); CI re-runs it weekly and fails on new upstream commits or capabilities. It also adds asynchronous jobs with recovery, flow recording and replay, crash pattern matching, symbol-based LSP lookups, and knowledge packs that update independently of the server.
 - **Light.** 3 runtime dependencies. No LangGraph, no native modules (uses the built-in `node:sqlite`). A single process with zero idle CPU. Language servers and the checker start on demand and shut down after 10 idle minutes.
 - **Built for AI hosts.** 15 tools named by intent, all enabled by default. Responses are structured and bounded. Every error carries a `code`, a `category` and a fix `hint`. Long operations become jobs.
 
@@ -255,6 +268,7 @@ Other config keys:
 | `max_artifact_mb` | Default 512 |
 | `session_idle_minutes` | Default 10 |
 | `auto_accept_ui_agreements` | Automatically accept agreement and permission dialogs during UI actions, batches, replay and deploy/test assertions. Default `true`; uses text and control state within the same window, reports `agreements_accepted`. Observation alone does not accept |
+| `auto_complete_ui_onboarding` | Complete recognizable first-run setup, welcome screens and feature tours with existing defaults. Default `true`; reports `onboarding_completed`. Consent uses its separate setting; observation remains read-only |
 | `kb_package` | npm package name of the knowledge pack |
 | `npm_registry` | Registry used for knowledge pack updates |
 
@@ -265,7 +279,7 @@ Check the setup with `node bin/deveco-mcp.mjs doctor [project]`, or call the `do
 | Tool | What it does |
 | --- | --- |
 | `doctor` | Checks toolchain, SDK, devices, project, knowledge pack and logins, plus SDK compatibility (project compile/compatible SDK vs installed SDK vs device API); every failed check comes with a fix |
-| `project` | `info` / `create` (template, never overwrites) / `sync` / `build` (ArkTS preflight of the .ets/.ts files changed since the last one, then Hvigor; returns packages, or every compile error (code, file, line, cause; first 100 listed) with hints; installs dependencies first when `oh-package.json5` changed; `modules` accept `module@target`; `task=compileNative` builds C/C++ and writes `.idea/.deveco/cxx/compile_commands.json` for clangd) / `clean` |
+| `project` | `info` / `create` (template, never overwrites; `device_types` selects target devices) / `sync` / `build` (ArkTS preflight of the .ets/.ts files changed since the last one, then Hvigor; returns packages, or every compile error (code, file, line, cause; first 100 listed) with hints; installs dependencies first when `oh-package.json5` changed; `modules` accept `module@target`; `task=compileNative` builds C/C++ and writes `.idea/.deveco/cxx/compile_commands.json` for clangd) / `clean` |
 | `run` | Multi-device apps (e.g. phone + watch entries) build and install only the modules whose `deviceTypes` match the target device; existing project signing is used as-is. With several devices and no `target` it never picks one: it lists them (name, real device or emulator, matches the project) so the agent asks the user; `target` takes a serial or a device name. `build_run` (build, install, launch, smoke verdict `PASS` / `FAIL_CRASH` / `FAIL_BLANK`, optional UI assert; a startup crash comes with its diagnosis and the project source location; **from the second deploy on, code-only changes of the entry module are quick-fixed into the running app and relaunched (6-10 s measured, vs 15-25 s for a full deploy)**, anything else deploys fully with the reason, an unchanged project only relaunches, `run_mode=full` forces a full deploy; `then_flow` walks to a saved page after the deploy; `skip_build` deploys existing packages, `uninstall_first` reinstalls cleanly) / `deploy` / `launch` / `stop` / `uninstall` |
 | `job` | `wait` / `status` / `list` / `cancel` / `resume` / `read` (line-paged logs with `grep`) |
 | `code` | `check` (warm ArkTS static checker; `fix` applies safe auto-fixes) / `lint` (`config_path`, `incremental` for uncommitted files, `output_path`) / `api_scan` (files or `modules`, `output_path`) / `api_versions` / `lsp`: hover, definition, declaration, implementation, references, symbols, workspace_symbols, diagnostics, completion, signature, call_hierarchy (`direction` callers / callees). Locate code by `symbol` plus a line hint instead of exact columns / `lsp_restart` (`language` restarts only ArkTS or C++) |
@@ -277,8 +291,16 @@ Check the setup with `node bin/deveco-mcp.mjs doctor [project]`, or call the `do
 | `skills` | Built-in HarmonyOS skills: `list` / `read`, `export` as native `SKILL.md` for your host (`path` for any directory), `install_mcp` registers this server in the host config (cursor, claude, codex, opencode, trae-cn, codebuddy, qoder, pi; idempotent merge; atomcode, dsh and deveco get skills only), `init` does both, `search` / `install` / `uninstall` from the OpenHarmony skill market |
 | `auth` | Huawei browser login for `codegenie` (cloud knowledge) or `developer` (signing), `region` cn / global; `teams`; `import` v0.x credentials |
 | `sign` | `auto` (refuses and changes nothing when the project already has signing unless `force`; prepares and verifies a new chain before atomically switching config, keeps old material and certificates, and needs a free certificate slot; otherwise one-step debug signing for real devices: keystore, certificate, device registration, profile with ACL permissions derived from `module.json5`, and `signingConfigs` in the project) / `sign` / `verify` / AppGallery Connect certificates and devices / itemized `keypair`, `csr`, `certificate_create`, `profile_create`, `profile_delete`. For accounts in several developer teams, actions that create or delete in AGC require `team` (otherwise the teams are listed so the agent asks the user) |
-| `emulator` | `list` (`details`) / `start` / `stop` (`name` or several `names`; start waits for boot) / `create` (`screen_profile` or custom `screen`, `hot_boot`, `instance_path`, `image_root`, `force`) / `delete` / `images` (rows of device type and OS version; downloaded, `all` for every image) / `install_image` (`force` re-downloads; returns path, size, duration) / `remove_image` / `license` (accept) / `license_view` (read-only) / `scenario` (battery level and charging status, GPS, light/humidity/temperature/steps/heart-rate sensors, rotation, fold, motion scenes, …). Start, create and image download accept the license agreements automatically when needed and say so in the result (`auto_accept_license=false` to opt out) |
+| `emulator` | `list` (`details`) / `start` (`boot_mode`, `hdc_port`, `window`) / `stop` (`name` or several `names`; start verifies identity, port and boot completion) / `create` (`screen_profile` or custom `screen`, `hot_boot`, `instance_path`, `image_root`, `force`) / `delete` / `images` (rows of device type and OS version; downloaded, `all` for every image) / `install_image` (`force` re-downloads; returns path, size, duration) / `remove_image` / `license` (accept) / `license_view` (read-only) / `scenario` (battery level and charging status, GPS, light/humidity/temperature/steps/heart-rate sensors, rotation, fold, motion scenes, …). Start, create and image download accept the license agreements automatically when needed and say so in the result (`auto_accept_license=false` to opt out) |
 | `hot_reload` | `apply` pushes ArkTS changes to the running app as an HQF quick fix in about 5 s (measured 4.4-4.7 s) with no restart (`files` limits it to given files, `restart` relaunches after patching); `reset` removes them; `stop_daemon` stops the project's hvigor daemon |
+
+`project create` accepts a nonempty `device_types` array containing `phone`, `tablet`, `2in1`, `car`, `wearable` and/or `tv` (default `["phone"]`). It deduplicates the array, writes `entry/src/main/module.json5` and returns the chosen types. Invalid types, existing-file conflicts and unavailable API mappings fail before writing.
+
+`emulator start` supports `boot_mode=coldboot` (preserve data), `snapshot` (restore saved Quick Boot state) and `reset` (**erase instance data**). Omission uses the instance default; legacy `cold=true` means `coldboot`, and conflicting arguments fail. Explicit `snapshot` requires Quick Boot, saved VM state and evidence from this launch's restore log. Missing snapshots, failed restores or unverifiable restores fail without a coldboot retry. A snapshot may restore its original HDC port; a mismatch with the requested port fails too.
+
+`hdc_port` is an integer from 10000 to 16555 for one instance only; an occupied port fails without choosing another. `window=false` starts without a window. Running instances accept only a plain readiness wait; stop explicitly before changing startup settings. Startup waits at most three minutes and succeeds only after identity, requested port and boot completion are verified. Cancellation, timeout and failure retain diagnostics without automatically restarting, resetting or stopping the instance.
+
+These features are independently implemented, with no upstream CLI dependency. Users control Skill locations and updates; no automatic distribution/migration/version synchronization or Windows NTLM proxy is added. See the [v1.4.0 upgrade TODO and acceptance](docs/UPGRADE-1.4.0.md).
 
 Three built-in skills:
 

@@ -5,7 +5,7 @@ import { kvDelete, kvGet, kvSet } from "../core/db.js";
 import { invariant, ToolError } from "../core/errors.js";
 import { atomicWrite } from "../core/files.js";
 import { forceStop, launch } from "./device.js";
-import { acceptAgreements, act, center, describe, dumpTree, select, waitFor, type Action, type Selector } from "./ui.js";
+import { automaticActions, automaticResult, acceptAgreements, act, center, describe, dumpTree, select, waitFor, type Action, type Selector } from "./ui.js";
 
 /* Flows are stored in <project>/.arkpilot/flows/<id>.json (compatible with v0.x files). */
 
@@ -234,7 +234,7 @@ export async function replayFlow(project: string, id: string, target: string, va
   };
   const wait = async (selector: Selector, state: "visible" | "hidden", timeout: number) => {
     const verdict = await waitFor(target, selector, state, timeout, signal, true);
-    accepted.push(...(verdict.agreements_accepted ?? []));
+    accepted.push(...automaticActions(verdict));
     return verdict;
   };
   const missing = Object.entries(flow.variables).filter(([k, v]) => v.required && variables[k] === undefined).map(([k]) => k);
@@ -305,7 +305,7 @@ export async function replayFlow(project: string, id: string, target: string, va
       const build = map[step.action];
       invariant(build, "FLOW_UNSUPPORTED", `${step.id}: action ${step.action} is not supported by this version`);
       const performed = await act(target, build(), signal);
-      accepted.push(...(performed.agreements_accepted ?? []));
+      accepted.push(...automaticActions(performed));
       log(`${step.id} ${step.action} ok`);
       results.push({ step: step.id, ok: true });
       await new Promise((r) => setTimeout(r, 300));
@@ -314,7 +314,7 @@ export async function replayFlow(project: string, id: string, target: string, va
       if (repaired) writeFlow(project, flow);
       const nodes = await dumpTree(target, signal).catch(() => []);
       throw new ToolError("FLOW_STEP_FAILED", `Flow ${id} failed at ${step.id}`, {
-        results, ...(accepted.length ? { agreements_accepted: accepted } : {}), visible: nodes.filter((n) => n.text && n.bundle === flow.app.bundleName).slice(0, 20).map(describe),
+        results, ...automaticResult(accepted), visible: nodes.filter((n) => n.text && n.bundle === flow.app.bundleName).slice(0, 20).map(describe),
       }, "Inspect with ui observe; update the flow by re-recording or pass repair=true with alternates");
     }
   }
@@ -326,5 +326,5 @@ export async function replayFlow(project: string, id: string, target: string, va
     invariant(verdict.passed, "ASSERTION_FAILED", `Flow ${id} final assert failed`, { results, matches: verdict.matches });
   }
   if (repaired) writeFlow(project, flow);
-  return { flow: id, passed: true, steps: results.length, repaired, assertion, ...(accepted.length ? { agreements_accepted: accepted } : {}) };
+  return { flow: id, passed: true, steps: results.length, repaired, assertion, ...automaticResult(accepted) };
 }

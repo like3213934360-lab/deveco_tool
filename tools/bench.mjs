@@ -22,7 +22,7 @@ const listMs = performance.now() - t;
 const listBytes = JSON.stringify(list.result).length;
 // Startup schedules one-shot job recovery (2 s) and retention cleanup (5 s).
 // Measure idle after those and their background compilation/GC settle; counting them in the idle
-// window measures startup CPU instead. The 10 s observation window and every budget stay unchanged.
+// window measures startup CPU instead. Keep the 10 s observation window.
 await new Promise((r) => setTimeout(r, 15000));
 const ps = (fields) => execFileSync("ps", ["-o", fields, "-p", String(client.child.pid)]).toString().trim().split("\n").pop().trim();
 const cpuBefore = ps("cputime=");
@@ -39,12 +39,13 @@ const report = {
   idle_rss_mb: Math.round(rssKb / 1024),
 };
 console.log(JSON.stringify(report, null, 2));
-// Budgets (plan: handshake < 150 ms, idle RSS <= 70 MB, tools/list <= 36 KB). cputime has 10 ms
+// RSS: 70 MB baseline budget + user-authorized 20% growth (2026-10-10) = 84 MB.
+// Other budgets stay unchanged: handshake < 150 ms, tools/list <= 36 KB. cputime has 10 ms
 // resolution, so allow one tick of drift over 10 s idle.
 const tick = (s) => { const [m, rest] = s.split(":"); return Number(m) * 60 + Number(rest); };
 const budget = [
   [report.handshake_ms.median < 150, `handshake ${report.handshake_ms.median} ms >= 150`],
-  [report.idle_rss_mb <= 70, `idle RSS ${report.idle_rss_mb} MB > 70`],
+  [report.idle_rss_mb <= 84, `idle RSS ${report.idle_rss_mb} MB > 84`],
   [listBytes <= 36 * 1024, `tools/list ${listBytes} bytes > 36 KB`],
   [tick(cpuAfter) - tick(cpuBefore) <= 0.011, `idle CPU ${cpuBefore} -> ${cpuAfter}`],
 ].filter(([ok]) => !ok).map(([, msg]) => msg);

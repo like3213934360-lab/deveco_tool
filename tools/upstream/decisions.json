@@ -8,8 +8,32 @@
     "  '<tool> [param] [param=value] ...'  checked against the live tools/list JSON Schema (value must be in the enum when one exists)",
     "  'cli:<text>'  src/cli.ts must contain the text;  'prompt:<name>' / 'skill:<name>'  must be served by the MCP server"
   ],
-  "upstream_rev": { "deveco-code": "3cb1d73440846784037b4550a3a6e3fc22817c2f", "deveco-cli": "a007f9e09d50497a515ee5ceb22bd70a6a364d3a" },
+  "upstream_rev": { "deveco-code": "7bc6d7b1867d73a97c01623fa445222b580deefb", "deveco-cli": "3e2fa15c9e63c4fe95c060ee513ffd3f445e7ad2" },
   "upstream_reviews": [
+    {
+      "date": "2026-10-10",
+      "upstream": "deveco-cli",
+      "from": "7179dde6c7edff1ca684f0bc0e7454bfdb5ad75d",
+      "to": "3e2fa15c9e63c4fe95c060ee513ffd3f445e7ad2",
+      "decision": "no_new_capability",
+      "reason": "Reviewed 7e5336d and its merge while completing acceptance. Only the CLI's screen-recording no-device diagnostic and tests change: recommend a physical device before generic device selection. No new command, parameter or recording capability. MCP keeps its own device selection and runtime recorder capability check; this review does not claim identical diagnostic wording. No runtime change is imported."
+    },
+    {
+      "date": "2026-10-10",
+      "upstream": "deveco-cli",
+      "from": "a007f9e09d50497a515ee5ceb22bd70a6a364d3a",
+      "to": "7179dde6c7edff1ca684f0bc0e7454bfdb5ad75d",
+      "decision": "independent_implementation",
+      "reason": "Reviewed all 58 commits (35 non-merge) and all changed production files through 1.3.5-Test.2. Adopt device_types (483251c) and explicit boot modes/HDC port/window (8cbc890) as independent MCP features. Canonical lowercase device enums, strict batch/port validation, one native launch, actual identity/boot/port verification and current-attempt snapshot evidence are covered by unit and real API 26 acceptance in docs/UPGRADE-1.4.0.md. CLI launch-strategy fallbacks are not imported. User explicitly excludes Skill symlink distribution/version migration (c9834f0, f65c09f) and Windows NTLM/curl proxy (28c530e and follow-ups); Skill locations and updates remain user-controlled. Remaining changes are tests, version/package metadata and documentation, not new MCP runtime capabilities. Existing exclusions remain in force. Schema mappings below are capability mappings, not claims of identical CLI behavior or all-platform SDK validation."
+    },
+    {
+      "date": "2026-10-10",
+      "upstream": "deveco-code",
+      "from": "3cb1d73440846784037b4550a3a6e3fc22817c2f",
+      "to": "7bc6d7b1867d73a97c01623fa445222b580deefb",
+      "decision": "host",
+      "reason": "Reviewed all five commits: telemetry consent defaults/privacy, quota display and warnings, DEVECO_HOME validation in third-party onboarding, Skill authoring documentation and 0.2.2/model catalog metadata. These affect the upstream agent/host and its setup, not this independent HarmonyOS MCP runtime. No runtime dependency, automatic Skill distribution or host model/telemetry behavior is imported."
+    },
     {
       "date": "2026-10-08",
       "upstream": "deveco-cli",
@@ -121,6 +145,7 @@
     "cli:cmd:create:opt:--project-path": { "status": "full", "to": "project project" },
     "cli:cmd:create:opt:--app-name": { "status": "full", "to": "project app_name" },
     "cli:cmd:create:opt:--bundle-name": { "status": "full", "to": "project bundle_name" },
+    "cli:cmd:create:opt:--device-types": { "status": "full", "to": "project action=create device_types" },
     "cli:cmd:create:opt:--api-level": { "status": "full", "to": "project target_api" },
 
     "cli:cmd:device": { "status": "full", "to": "device" },
@@ -151,6 +176,12 @@
     "cli:cmd:emulator list": { "status": "full", "to": "emulator action=list" },
     "cli:cmd:emulator list:opt:--details": { "status": "full", "to": "emulator details" },
     "cli:cmd:emulator start": { "status": "full", "to": "emulator action=start" },
+    "cli:cmd:emulator start:opt:--boot-mode": { "status": "full", "to": "emulator action=start boot_mode" },
+    "cli:cmd:emulator start:choice:--boot-mode=coldboot": { "status": "full", "to": "emulator action=start boot_mode=coldboot" },
+    "cli:cmd:emulator start:choice:--boot-mode=snapshot": { "status": "full", "to": "emulator action=start boot_mode=snapshot" },
+    "cli:cmd:emulator start:choice:--boot-mode=reset": { "status": "full", "to": "emulator action=start boot_mode=reset" },
+    "cli:cmd:emulator start:opt:--hdcport": { "status": "full", "to": "emulator action=start hdc_port" },
+    "cli:cmd:emulator start:opt:--no-window": { "status": "full", "to": "emulator action=start window" },
     "cli:cmd:emulator start:arg:names": { "status": "full", "to": "emulator names" },
     "cli:cmd:emulator stop": { "status": "full", "to": "emulator action=stop" },
     "cli:cmd:emulator stop:arg:names": { "status": "full", "to": "emulator names" },

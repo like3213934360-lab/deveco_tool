@@ -6,7 +6,7 @@ import { pathToFileURL } from "node:url";
 import { build } from "esbuild";
 const bundle = path.resolve("node_modules/.cache/deveco-agreements.mjs");
 await build({ entryPoints: [path.resolve("src/domains/agreements.ts")], outfile: bundle, bundle: true, format: "esm", platform: "node", packages: "external", logLevel: "error" });
-const { agreementAction, resolveAgreements } = await import(pathToFileURL(bundle).href);
+const { agreementAction, onboardingAction, automaticResult, resolveAgreements } = await import(pathToFileURL(bundle).href);
 after(() => fs.rmSync(bundle, { force: true }));
 const n = (i, text, type = "Text", extra = {}) => ({ i, parent: null, text, type, rect: { x1: 0, y1: i * 50, x2: 400, y2: i * 50 + 40 }, window: "front", bundle: "arbitrary.app", visible: true, checked: null, ...extra });
 const dialog = (body, accept, extra = {}) => [n(0, body), n(1, "不同意", "Button"), n(2, accept, "Button", extra)];
@@ -50,4 +50,68 @@ test("a delayed unrelated agreement is handled without repeating the original ac
   let clicks = 0;
   const result = await resolveAgreements([], { settleMs: 1000, read: async () => { await new Promise((r) => setTimeout(r, 10)); return frames.shift() ?? []; }, click: async () => clicks++ });
   assert.equal(clicks, 1); assert.equal(result.accepted.length, 1);
+});
+
+const setup = (title = "请选择中文键盘布局", selected = true) => [n(0, title), n(1, "26键", "Radio", { checked: selected }), n(2, "9键", "Radio", { checked: false }), n(3, "下一步", "Button")];
+test("generic setup preserves selected defaults across unrelated languages and products", () => {
+  for (const title of ["请选择中文键盘布局", "选择应用主题", "请选择界面语言", "Choose your keyboard layout", "Select your display mode", "初始设置", "First-time setup"]) {
+    const nodes = setup(title);
+    assert.equal(onboardingAction(nodes).node.i, 3, title);
+    assert.match(onboardingAction(nodes).text, /26键/);
+    assert.equal(nodes[1].checked, true);
+    assert.equal(nodes[2].checked, false);
+  }
+  const nested = setup(); nested[3] = n(3, "", "Button"); nested.push(n(4, "下一步", "Text", { parent: 3 }));
+  assert.equal(onboardingAction(nested).node.i, 3);
+});
+test("welcome and feature tours support completion or explicit skipping without selecting preferences", () => {
+  for (const [title, button] of [["欢迎使用开发工具", "开始使用"], ["新功能介绍", "我知道了"], ["Feature tour", "Done"], ["Getting started", "Continue"]])
+    assert.equal(onboardingAction([n(0, title), n(1, button, "Button")]).node.i, 1);
+  assert.equal(onboardingAction([n(0, "新手教程"), n(1, "下一步", "Button"), n(2, "跳过引导", "Button")]).node.i, 2);
+  const defaults = [n(0, "初始设置"), n(1, "启用提示音", "Switch", { checked: false }), n(2, "完成", "Button")];
+  assert.equal(onboardingAction(defaults).node.i, 2); assert.equal(defaults[1].checked, false);
+});
+test("business next buttons, missing defaults, sensitive forms and unrelated windows are untouched", () => {
+  for (const nodes of [
+    setup("订单信息"), setup("请选择中文键盘布局", false),
+    [...setup(), n(4, "订阅付费服务")], [...setup(), n(4, "登录账户")],
+    [...setup(), n(4, "用户协议和隐私政策")], [...setup(), n(4, "允许应用访问相机")],
+    [...setup(), n(4, "", "TextInput")], [...setup(), n(4, "完成", "Button")],
+    setup().map((v) => v.i === 3 ? { ...v, enabled: false } : v),
+    setup().map((v) => v.i === 3 ? { ...v, visible: false } : v),
+    setup().map((v) => v.i === 3 ? { ...v, window: "other" } : v),
+    setup().map((v) => v.i === 3 ? { ...v, bundle: "other" } : v),
+  ]) assert.equal(onboardingAction(nodes), undefined, JSON.stringify(nodes));
+});
+test("mixed consent, setup defaults and feature tours finish once and report separate evidence", async () => {
+  const initial = dialog("请阅读服务条款和隐私政策", "同意");
+  const frames = [setup(), setup("选择应用主题"), [n(0, "新功能介绍"), n(1, "完成", "Button")], []], clicks = [];
+  const result = await resolveAgreements(initial, { read: async () => frames.shift(), click: async (node) => clicks.push(node.i) });
+  assert.deepEqual(clicks, [2, 3, 3, 1]);
+  const report = automaticResult(result.accepted);
+  assert.equal(report.agreements_accepted.length, 1); assert.equal(report.onboarding_completed.length, 3);
+  assert.deepEqual(automaticResult(report), report);
+});
+test("unchanged or cyclic guides fail without repeating a sent click", async () => {
+  const initial = setup(); let clicks = 0;
+  await assert.rejects(resolveAgreements(initial, { read: async () => initial, click: async () => clicks++ }), (e) => e.code === "UI_ONBOARDING_BLOCKED" && e.details.onboarding_completed.length === 1);
+  assert.equal(clicks, 1);
+  const frames = [setup("选择应用主题"), initial]; clicks = 0;
+  await assert.rejects(resolveAgreements(initial, { read: async () => frames.shift(), click: async () => clicks++ }), (e) => e.code === "UI_ONBOARDING_BLOCKED");
+  assert.equal(clicks, 2);
+});
+test("slow guide transitions are observed again without another click", async () => {
+  const initial = setup(), frames = [initial, initial, [n(0, "新功能介绍"), n(1, "完成", "Button")], []], clicks = [];
+  const result = await resolveAgreements(initial, { read: async () => frames.shift(), click: async (node) => clicks.push(node.i) });
+  assert.deepEqual(clicks, [3, 1]); assert.equal(result.accepted.length, 2);
+});
+test("guide chains are bounded and configuration independently controls consent and onboarding", async () => {
+  let page = 0, clicks = 0;
+  const guide = () => [n(0, `新手教程 ${page++}`), n(1, "下一步", "Button")];
+  await assert.rejects(resolveAgreements(guide(), { read: async () => guide(), click: async () => clicks++ }), (e) => e.code === "UI_ONBOARDING_BLOCKED");
+  assert.equal(clicks, 8);
+  for (const [nodes, options] of [[setup(), { onboarding: false }], [dialog("请阅读服务条款和隐私政策", "同意"), { agreements: false }]]) {
+    const result = await resolveAgreements(nodes, { ...options, read: async () => [], click: async () => assert.fail("disabled handler clicked") });
+    assert.deepEqual(result.accepted, []);
+  }
 });

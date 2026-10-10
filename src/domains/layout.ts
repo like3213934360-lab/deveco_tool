@@ -177,8 +177,7 @@ async function checkForm(form: string, input: LayoutInput, packages: string[], a
 }
 
 /**
- * A fresh install on a fresh emulator opens system permission dialogs over the app (notifications,
- * seen on every form). Decline them (least privilege), then wait until the app's own UI is on screen.
+ * Handle initial consent and setup pages, then wait until the app's own UI is on screen.
  */
 async function settleApp(target: string, bundle: string, signal: AbortSignal, log: Log) {
   const { dumpTree, acceptAgreements, invalidate } = await import("./ui.js");
@@ -187,7 +186,7 @@ async function settleApp(target: string, bundle: string, signal: AbortSignal, lo
     invalidate(target);
     const initial = await dumpTree(target, signal);
     const consent = await acceptAgreements(target, signal, initial);
-    if (consent.accepted.length) log(`accepted ${consent.accepted.length} agreement/permission decisions`);
+    if (consent.accepted.length) log(`completed ${consent.accepted.length} automatic UI decisions`);
     const nodes = consent.nodes ?? initial;
     if (nodes.some((n) => n.bundle === bundle && (n.text || n.clickable))) return;
     await new Promise((r) => setTimeout(r, 800));

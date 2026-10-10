@@ -1,5 +1,27 @@
 # Changelog / 更新日志
 
+## v1.4.0 (2026-10-10)
+
+**中文**
+
+- 建项支持六种 `device_types` 及组合，默认 phone、去重并返回实际配置；类型、SDK 映射和文件冲突在写入前验证，修复 Windows 模板路径匹配。
+- 模拟器支持显式 `coldboot` / `snapshot` / `reset`、单实例固定 `hdc_port`，保留 `cold` 和 `window`。参数冲突、端口占用及已运行实例的设置变更明确报错，不换模式或端口重试。
+- 启动核验实例身份、实际端口和真正开机完成；并发启动隔离，取消和超时不再误报成功，失败保留独立诊断日志。
+- 针对 SDK 无快照时静默冷启动的行为，启动前只读检查 Quick Boot 快照索引，并验证本次恢复日志；历史日志、缺失快照或 SDK 降级不能作为成功依据。
+- 自动处理扩展为通用引导链：首次设置、欢迎页及功能介绍按语义和控件状态识别，保留已选默认项；操作、批量、回放和测试共用，单独记录 `onboarding_completed`，页面不变或循环明确失败。新增独立开关 `auto_complete_ui_onboarding`。
+- 按用户确认，空闲 RSS 预算允许相对原 70 MB 上限增长 20%（84 MB）；其余性能门禁及测试环境保持不变。
+- 保持独立 MCP 实现；按用户要求排除 Skill 自动分发/版本同步和 Windows NTLM 代理。逐项验收与交付记录见 [升级 TODO](docs/UPGRADE-1.4.0.md)。
+
+**English**
+
+- Six project device types and combinations, validated before writing and reflected in the generated module; portable template path matching on Windows.
+- Explicit emulator boot modes and fixed single-instance HDC ports, with legacy cold/window support and strict conflict checks. No alternate-mode or alternate-port retry.
+- Startup succeeds only after identity, actual port and boot completion checks. Bounded waits, cancellation, concurrent-start protection and isolated failure diagnostics.
+- Saved Quick Boot metadata and current-attempt restore evidence prevent the SDK's silent snapshot-to-coldboot substitution from being reported as success.
+- Generic first-run setup and feature-tour handling preserves selected defaults across actions, batches, replay and tests. Separate onboarding evidence and configuration, bounded transitions and unchanged-page detection.
+- User-approved idle RSS headroom: 20% over the prior 70 MB budget (84 MB); other performance gates and the test environment remain unchanged.
+- No upstream CLI runtime dependency, automatic Skill distribution/synchronization or Windows NTLM proxy. Acceptance details: [upgrade TODO](docs/UPGRADE-1.4.0.md).
+
 ## v1.3.3 (2026-10-04)
 
 **中文**

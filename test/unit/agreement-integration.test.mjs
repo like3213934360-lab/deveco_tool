@@ -63,6 +63,31 @@ test("invalid action arguments accept no consent", async () => {
     await assert.rejects(m.uiTool.handler({ action: "act", target: "test", ...args }, ctx), (e) => e.code === "INVALID_INPUT");
   assert.deepEqual(f.clicks, []);
 });
+const onboarding = (title = "选择应用主题") => ({ attributes: { bundleName: "arbitrary.setup", windowId: "setup", bounds: "[0,0][400,800]" }, children: [raw(title), raw("跟随系统", "Radio", 100, { checked: true }), raw("深色", "Radio", 150, { checked: false }), raw("下一步", "Button", 200)] });
+test("ordinary UI action completes generic onboarding and preserves separate consent evidence", async () => {
+  reset([onboarding(), dialog("请阅读服务条款和隐私政策", "同意", "terms.vendor"), app()]);
+  await m.uiTool.handler({ action: "tree", target: "test" }, ctx); assert.deepEqual(f.clicks, []);
+  const result = await m.uiTool.handler({ action: "act", target: "test", op: "click", selector: { id: "action" }, diff: false }, ctx);
+  assert.equal(result.onboarding_completed.length, 1); assert.match(result.onboarding_completed[0].text, /跟随系统/);
+  assert.equal(result.agreements_accepted.length, 1); assert.deepEqual(f.clicks, [220, 220, 420]);
+});
+test("batch and replay complete guides between actions without recording them as user steps", async () => {
+  for (const mode of ["batch", "replay"]) {
+    reset([app()]);
+    f.onTap = () => f.frames.unshift(onboarding("请选择界面语言"));
+    m.writeFlow(work, { version: 2, id: "setup", name: "setup", app: { bundleName: "example.application", ability: "EntryAbility", module: "entry" }, start: { mode: "attach" }, variables: {}, steps: [{ id: "tap", action: "tap", selector: { node_id: "action" } }], assert: { visible: { node_id: "action" } } });
+    const result = mode === "batch" ? await m.runBatch("test", [{ op: "click", selector: { id: "action" } }], { assert: { visible: { id: "action" } } }, ctx.signal) : await m.replayFlow(work, "setup", "test", {}, {}, ctx.signal, () => {});
+    delete f.onTap;
+    assert.equal(result.passed, true); assert.equal(result.onboarding_completed.length, 1); assert.equal(result.agreements_accepted, undefined);
+    assert.deepEqual(f.clicks, [420, 220]); assert.equal(f.taps, 1);
+  }
+});
+test("onboarding opt-out leaves setup untouched without disabling agreements", async () => {
+  fs.writeFileSync(process.env.DEVECO_CONFIG, JSON.stringify({ auto_complete_ui_onboarding: false })); m.resetConfig();
+  reset([onboarding()]); assert.deepEqual((await m.acceptAgreements("test", ctx.signal)).accepted, []); assert.deepEqual(f.clicks, []);
+  reset([dialog("用户协议与隐私政策", "同意", "any.vendor"), app()]);
+  assert.equal((await m.acceptAgreements("test", ctx.signal)).accepted.length, 1);
+});
 test("configuration opt-out leaves consent untouched", async () => {
   reset([dialog("用户协议与隐私政策", "同意", "any.vendor")]);
   fs.writeFileSync(process.env.DEVECO_CONFIG, JSON.stringify({ auto_accept_ui_agreements: false })); m.resetConfig();

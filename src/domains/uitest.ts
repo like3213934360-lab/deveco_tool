@@ -5,7 +5,7 @@ import { saveArtifact } from "../core/artifacts.js";
 import { database } from "../core/db.js";
 import { invariant, ToolError } from "../core/errors.js";
 import { forceStop, launch, pidOf, shell } from "./device.js";
-import { act, compact, dumpTree, screenshot, waitFor, type Action, type Selector } from "./ui.js";
+import { automaticResult, act, compact, dumpTree, screenshot, waitFor, type Action, type AutomaticAction, type AutomaticResult, type Selector } from "./ui.js";
 
 /*
  * Host-driven UI test sessions (parity with deveco-code verify_ui / get_ui_verification_log /
@@ -15,7 +15,7 @@ import { act, compact, dumpTree, screenshot, waitFor, type Action, type Selector
  * A failed control assertion can never be overridden by a visual review.
  */
 
-export interface StepRecord {
+export interface StepRecord extends AutomaticResult {
   n: number;
   kind: "act" | "assert" | "observe" | "review";
   description?: string;
@@ -23,7 +23,6 @@ export interface StepRecord {
   selector?: Selector;
   passed?: boolean;
   detail?: unknown;
-  agreements_accepted?: { text: string; kind: string }[];
   before?: string; // screenshot artifact ids
   after?: string;
   elements?: string;
@@ -112,17 +111,17 @@ export async function startTest(target: string, input: { plan: string; bundle?: 
   };
 }
 
-export async function testStep(testId: string, step: { description?: string; action?: Action; selector?: Selector; assert?: { visible?: Selector; hidden?: Selector; timeout_ms?: number } }, signal: AbortSignal) {
+export async function testStep(testId: string, step: { description?: string; action?: Action; selector?: Selector; automatic?: AutomaticAction[]; assert?: { visible?: Selector; hidden?: Selector; timeout_ms?: number } }, signal: AbortSignal) {
   const s = await load(testId);
   invariant(s.status === "running", "CONFLICT", `Test ${testId} is ${s.status}`);
   invariant(step.action || step.assert, "INVALID_INPUT", "Pass op (+selector/coordinates) or assert");
   const started = Date.now();
-  const record: StepRecord = { n: s.steps.length, kind: step.action ? "act" : "assert", description: step.description, action: step.action, selector: step.selector, at: started };
+  const record: StepRecord = { n: s.steps.length, kind: step.action ? "act" : "assert", description: step.description, action: step.action, selector: step.selector, at: started, ...automaticResult(step.automatic) };
   try {
     if (step.action) {
       record.before = await shot(s.target, signal);
       const performed = await act(s.target, step.action, signal);
-      record.agreements_accepted = performed.agreements_accepted;
+      Object.assign(record, automaticResult(record, performed));
       await new Promise((r) => setTimeout(r, 600));
       record.passed = true;
     }
@@ -131,7 +130,7 @@ export async function testStep(testId: string, step: { description?: string; act
       const verdict = await waitFor(s.target, selector, step.assert.visible ? "visible" : "hidden", step.assert.timeout_ms ?? 5000, signal, true);
       record.passed = verdict.passed;
       record.detail = verdict;
-      if (verdict.agreements_accepted?.length) record.agreements_accepted = [...(record.agreements_accepted ?? []), ...verdict.agreements_accepted];
+      Object.assign(record, automaticResult(record, verdict));
     }
   } catch (error) {
     record.passed = false;
@@ -151,7 +150,7 @@ export async function testStep(testId: string, step: { description?: string; act
   const errors = log.split("\n").filter((l) => /\s[EF]\s/.test(l)).slice(-5);
   return {
     step: record.n, passed: record.passed, detail: record.detail, after_screenshot: record.after, elements: record.elements,
-    ...(record.agreements_accepted?.length ? { agreements_accepted: record.agreements_accepted } : {}),
+    ...automaticResult(record),
     ...(errors.length ? { app_errors: errors } : {}),
   };
 }

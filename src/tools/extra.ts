@@ -102,10 +102,12 @@ export const emulatorTool = tool({
   schema: z.object({
     action: z.enum(["list", "start", "stop", "create", "delete", "images", "install_image", "remove_image", "license", "license_view", "scenario"]),
     name: z.string().optional(),
-    names: z.array(z.string()).max(8).optional().describe("start/stop several emulators"),
+    names: z.array(z.string()).min(1).max(8).optional().describe("start/stop several emulators"),
     details: z.boolean().optional().describe("list: raw emulator fields"),
-    cold: z.boolean().optional(),
-    window: z.boolean().optional(),
+    cold: z.boolean().optional().describe("start: legacy coldboot flag; must agree with boot_mode"),
+    boot_mode: z.enum(["coldboot", "snapshot", "reset"]).optional().describe("start: preserve data, restore saved Quick Boot snapshot, or ERASE data; default instance setting"),
+    hdc_port: z.number().int().min(10000).max(16555).optional().describe("start: fixed port, single instance only; occupied ports fail"),
+    window: z.boolean().optional().describe("start: false for no window"),
     device_type: z.string().optional().describe("phone, foldable, widefold, triplefold, tablet, 2in1, wearable, tv, car ..."),
     os_version: z.string().optional().describe('e.g. "HarmonyOS 6.0.0(20)"'),
     memory: z.number().int().min(2).max(32).optional(), storage: z.number().int().min(2).max(1023).optional(),
@@ -129,7 +131,7 @@ export const emulatorTool = tool({
   }),
   params: {
     list: ["details", "instance_path"],
-    start: ["name", "names", "cold", "window", "instance_path", "image_root", "auto_accept_license"],
+    start: ["name", "names", "cold", "boot_mode", "hdc_port", "window", "instance_path", "image_root", "auto_accept_license"],
     stop: ["name", "names", "instance_path"],
     create: ["name", "device_type", "os_version", "memory", "storage", "instance_path", "image_root", "screen_profile", "screen", "hot_boot", "force", "auto_accept_license"],
     delete: ["name", "instance_path"],
@@ -147,8 +149,14 @@ export const emulatorTool = tool({
     switch (input.action) {
       case "list": return { emulators: await emu.listEmulators(ctx.signal, input.details, input.instance_path) };
       case "start": {
+        invariant(input.name === undefined || input.names === undefined, "INVALID_INPUT", "Pass name or names, not both");
+        const names = many();
+        invariant(names.length === new Set(names).size, "INVALID_INPUT", "names must not contain duplicates");
+        invariant(input.hdc_port === undefined || names.length === 1, "INVALID_INPUT", "hdc_port requires exactly one emulator");
+        // Validate the entire batch before starting its first instance.
+        for (const n of names) emu.startArgs(n, input);
         const results = [];
-        for (const n of many()) results.push(await emu.startEmulator(n, { cold: input.cold, window: input.window, instance_path: input.instance_path, image_root: input.image_root, auto_accept_license: input.auto_accept_license }, ctx.signal));
+        for (const n of names) results.push(await emu.startEmulator(n, input, ctx.signal));
         return results.length === 1 ? results[0] : { started: results };
       }
       case "stop": {

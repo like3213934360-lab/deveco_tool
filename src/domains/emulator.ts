@@ -1,11 +1,15 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import net from "node:net";
+import { randomUUID } from "node:crypto";
+import { setTimeout as delay } from "node:timers/promises";
 import { invariant, ToolError } from "../core/errors.js";
 import { clip } from "../core/files.js";
 import { run, spawnIndependent } from "../core/proc.js";
 import { toolCommand } from "../core/toolchain.js";
 import { listTargets, shell } from "./device.js";
+import { snapshotBoot } from "./emulator-snapshot.js";
 
 async function emulator(args: string[], signal?: AbortSignal, timeoutMs = 120000) {
   const result = await run(toolCommand("emulator", args), { signal, timeoutMs, allowFailure: true });
@@ -102,56 +106,158 @@ export async function ensureLicense(auto: boolean, signal?: AbortSignal) {
   return true;
 }
 
-/** Start detached; wait until a matching hdc target appears (boot can take ~1 min). */
-export async function startEmulator(name: string, options: { cold?: boolean; window?: boolean; instance_path?: string; image_root?: string; auto_accept_license?: boolean }, signal: AbortSignal) {
-  const licenseAcceptedNow = await ensureLicense(options.auto_accept_license ?? true, signal);
-  // Already running: return its target instead of waiting for a "new" device that never appears.
-  for (const target of await listTargets(signal)) {
-    const hvd = (await shell(target, ["param", "get", "ohos.qemu.hvd.name"], signal, 5000).catch(() => undefined))?.stdout.trim();
-    if (hvd === name) return { started: name, target, already_running: true };
+export interface StartInput {
+  cold?: boolean; boot_mode?: "coldboot" | "snapshot" | "reset"; hdc_port?: number; window?: boolean;
+  instance_path?: string; image_root?: string; auto_accept_license?: boolean;
+}
+
+/** One native invocation: never retry with a different mode, port or instance directory. */
+export function startArgs(name: string, options: StartInput) {
+  invariant(name.trim(), "INVALID_INPUT", "Emulator name must not be empty");
+  invariant(options.boot_mode === undefined || ["coldboot", "snapshot", "reset"].includes(options.boot_mode), "INVALID_INPUT", "Invalid boot_mode");
+  invariant(options.cold === undefined || options.boot_mode === undefined || options.cold === (options.boot_mode === "coldboot"),
+    "INVALID_INPUT", "cold and boot_mode conflict; use boot_mode alone");
+  invariant(options.hdc_port === undefined || Number.isInteger(options.hdc_port) && options.hdc_port >= 10000 && options.hdc_port <= 16555,
+    "INVALID_INPUT", "hdc_port must be an integer from 10000 to 16555");
+  const mode = options.boot_mode ?? (options.cold ? "coldboot" : undefined);
+  return ["-hvd", name, ...(mode ? ["-bootMode", mode] : []),
+    ...(options.hdc_port !== undefined ? ["-hdcPort", String(options.hdc_port)] : []), ...(options.window === false ? ["-noWindow"] : []),
+    ...(options.instance_path ? ["-instancePath", options.instance_path] : []), ...(options.image_root ? ["-imageRoot", options.image_root] : [])];
+}
+
+async function freePort(port: number) {
+  const server = net.createServer();
+  await new Promise<void>((resolve, reject) => {
+    server.once("error", (error: NodeJS.ErrnoException) => reject(new ToolError(error.code === "EADDRINUSE" ? "CONFLICT" : "PROCESS_FAILED",
+      `Cannot use HDC port ${port}: ${error.message}`, { hdc_port: port })));
+    server.listen({ host: "127.0.0.1", port, exclusive: true }, () => server.close((error) => error ? reject(error) : resolve()));
+  });
+}
+
+/** Device disappearance during boot is transient; other HDC failures must remain visible. */
+async function bootParam(target: string, key: string, signal: AbortSignal) {
+  try {
+    const result = await shell(target, ["param", "get", key], signal, 5000);
+    invariant(result.code === 0, "PROCESS_FAILED", `Cannot read emulator parameter ${key}`, { target, exit_code: result.code, output: clip(result.stdout + result.stderr, 500) });
+    return result.stdout.trim();
   }
-  const before = new Set(await listTargets(signal));
-  const cmd = toolCommand("emulator", ["-hvd", name, ...(options.cold ? ["-bootMode", "coldboot"] : []), ...(options.window === false ? ["-noWindow"] : []),
-    ...(options.instance_path ? ["-instancePath", options.instance_path] : []), ...(options.image_root ? ["-imageRoot", options.image_root] : [])]);
-  // The emulator must outlive this server (hosts restart MCP servers freely); its output goes to a log file
-  // so an early refusal (license, missing image, bad config) is reported immediately instead of timing out.
-  const logFile = path.join(os.tmpdir(), `deveco-emulator-${name.replace(/[^\w.-]/g, "_")}.log`);
-  const child = spawnIndependent(cmd, logFile);
-  // Kept only when the start fails (for diagnosis); tracked so retention removes it like other outputs.
-  await (await import("../core/artifacts.js")).trackExport(logFile).catch(() => {});
-  let exited: number | null | undefined;
-  child.once("exit", (code) => { exited = code; });
-  const deadline = Date.now() + 180000;
-  while (Date.now() < deadline) {
+  catch (error) {
     signal.throwIfAborted();
-    await new Promise((r) => setTimeout(r, 2000));
-    if (exited !== undefined) {
-      const log = fs.existsSync(logFile) ? fs.readFileSync(logFile, "utf8") : "";
-      // The launcher may exit after handing off to the VM process; only fail when it reported a refusal.
-      if (/agree to the agreement|Unable to start|Failed to start|not exist|error/i.test(log.slice(-2000))) {
-        const license = /agreement/i.test(log);
-        throw new ToolError(license ? "LICENSE_REQUIRED" : "EMULATOR_FAILED", `Emulator ${name} refused to start: ${clip(log.split("\n").filter((l) => l.trim()).slice(-2).join(" "), 300)}`,
-          { log: logFile }, license ? "The image's license agreement is not accepted yet: review it with emulator action=license_view, then accept with emulator action=license (user decision)" : "Check the emulator instance and image (emulator action=list / images)");
-      }
-    }
-    for (const target of await listTargets(signal)) {
-      if (before.has(target)) continue;
-      const hvd = (await shell(target, ["param", "get", "ohos.qemu.hvd.name"], signal, 5000).catch(() => undefined))?.stdout.trim();
-      if (hvd === name) {
-        // Wait for the launcher so app installs don't race boot.
-        for (let i = 0; i < 30; i++) {
-          const boot = (await shell(target, ["param", "get", "bootevent.boot.completed"], signal, 5000)).stdout.trim();
-          if (boot === "true") break;
-          await new Promise((r) => setTimeout(r, 2000));
-        }
-        // The launcher log only matters for diagnosing a refused start; the emulator keeps writing to
-        // its own logs, and the file is reused (same name) on the next start, so drop it once booted.
-        fs.rmSync(logFile, { force: true });
-        return { started: name, target, ...(licenseAcceptedNow ? { license: "accepted automatically (HarmonyOS software + SDK agreements; review with emulator action=license_view)" } : {}) };
-      }
-    }
+    if (error instanceof ToolError && error.code === "DEVICE_UNAVAILABLE") return undefined;
+    throw error;
   }
-  invariant(false, "TIMEOUT", `Emulator ${name} did not come online within 3 minutes`, undefined, "Check DevEco Studio Device Manager; accept the license with emulator action=license");
+}
+async function matchingTargets(name: string, signal: AbortSignal) {
+  const targets = await listTargets(signal);
+  const matches = await Promise.all(targets.map(async (target) => await bootParam(target, "ohos.qemu.hvd.name", signal) === name ? target : undefined));
+  const found = matches.filter((t): t is string => t !== undefined);
+  invariant(found.length <= 1, "CONFLICT", `Several connected emulators are named ${name}`, { targets: found });
+  return found[0];
+}
+
+/** Read a bounded tail: a long-lived VM can write a large launcher log. */
+function startLog(file: string) {
+  if (!fs.existsSync(file)) return "";
+  const fd = fs.openSync(file, "r");
+  try {
+    const size = fs.fstatSync(fd).size, bytes = Buffer.alloc(Math.min(size, 16384));
+    const read = fs.readSync(fd, bytes, 0, bytes.length, Math.max(0, size - bytes.length));
+    return bytes.subarray(0, read).toString("utf8");
+  } finally { fs.closeSync(fd); }
+}
+
+const starting = new Set<string>();
+/** Start detached; only a matching HDC identity with boot.completed=true is a successful start. */
+export async function startEmulator(name: string, options: StartInput, signal: AbortSignal) {
+  const args = startArgs(name, options);
+  // Refuse overlapping requests, including the gap before the SDK publishes a running instance.
+  const keys = [`name:${name}`, ...(options.hdc_port === undefined ? [] : [`port:${options.hdc_port}`])];
+  invariant(keys.every((key) => !starting.has(key)), "CONFLICT", `Emulator ${name} or its port is already starting`);
+  keys.forEach((key) => starting.add(key));
+  const timeout = AbortSignal.timeout(180000), pending = AbortSignal.any([signal, timeout]);
+  let logFile: string | undefined;
+  let launched = false;
+  try {
+    pending.throwIfAborted();
+    // Startup needs authoritative metadata. A plain-name list cannot verify Quick Boot or running state.
+    const raw = await emulatorChecked("start", ["-list", "-details", ...(options.instance_path ? ["-instancePath", options.instance_path] : [])], pending, 30000);
+    let rows: Record<string, string>[];
+    try { rows = JSON.parse(raw); } catch { throw new ToolError("CAPABILITY_UNAVAILABLE", "Emulator cannot provide instance details", { output: clip(raw, 500) }); }
+    invariant(Array.isArray(rows) && rows.every((row) => row && typeof row.name === "string"),
+      "CAPABILITY_UNAVAILABLE", "Emulator returned invalid instance details");
+    const instances = rows.filter((e) => e.name === name);
+    invariant(instances.length === 1, instances.length ? "CONFLICT" : "NOT_FOUND", `Expected one emulator named ${name}`, { matches: instances.length });
+    const instance = instances[0]!;
+    const mode = options.boot_mode ?? (options.cold ? "coldboot" : undefined);
+    const targetBefore = await matchingTargets(name, pending);
+    const alreadyRunning = instance.isRunning === "true" || !!targetBefore;
+    const explicit = mode !== undefined || options.hdc_port !== undefined || options.window !== undefined || options.instance_path !== undefined || options.image_root !== undefined;
+    invariant(!alreadyRunning || !explicit, "CONFLICT", `Emulator ${name} is already running; startup options cannot be applied`, { target: targetBefore },
+      "Stop this instance explicitly before starting it with new options");
+    let licenseAcceptedNow = false;
+    let restoredSnapshot: (() => boolean) | undefined;
+    if (!alreadyRunning) {
+      const required = [mode ? "-bootMode" : undefined, options.hdc_port !== undefined ? "-hdcPort" : undefined, options.window === false ? "-noWindow" : undefined].filter((f): f is string => !!f);
+      if (required.length) {
+        const help = await emulator(["-help"], pending, 15000);
+        invariant(required.every((f) => help.toLowerCase().includes(f.toLowerCase())) && (!mode || help.includes(mode)),
+          "CAPABILITY_UNAVAILABLE", "Installed Emulator does not declare the requested startup options", { required, boot_mode: mode });
+      }
+      if (mode === "snapshot") {
+        invariant(instance.isHotBoot === "true" && instance.instancePath, "CAPABILITY_UNAVAILABLE", `Emulator ${name} needs Quick Boot and a known instance directory`, undefined,
+          "Use an instance created with hot_boot=true and an existing saved snapshot");
+        restoredSnapshot = snapshotBoot(instance.instancePath);
+      }
+      if (options.hdc_port !== undefined) await freePort(options.hdc_port);
+      licenseAcceptedNow = await ensureLicense(options.auto_accept_license ?? true, pending);
+      logFile = path.join(os.tmpdir(), `deveco-emulator-${randomUUID()}.log`);
+      await (await import("../core/artifacts.js")).trackExport(logFile);
+    }
+    let exited: number | null | undefined, spawnError: Error | undefined;
+    if (logFile) {
+      pending.throwIfAborted();
+      const child = spawnIndependent(toolCommand("emulator", args), logFile);
+      launched = true;
+      child.once("error", (error) => { spawnError = error; });
+      child.once("exit", (code) => { exited = code; });
+    }
+    let target = targetBefore;
+    for (;;) {
+      pending.throwIfAborted();
+      restoredSnapshot?.(); // Detect SDK coldboot substitution even before a target appears.
+      if (spawnError) throw new ToolError("PROCESS_FAILED", `Cannot start emulator ${name}: ${spawnError.message}`, { log: logFile });
+      const log = logFile ? startLog(logFile) : "";
+      const refused = /agree to the agreement|Unable to start|Failed to start|Invalid command|please attach the correct parameter|(?:snapshot|boot) .{0,60}failed|could not use snapshot|default snapshot is not exist/i.test(log);
+      if (refused || exited !== undefined && exited !== 0) throw new ToolError(/agreement/i.test(log) ? "LICENSE_REQUIRED" : "EMULATOR_FAILED",
+        `Emulator ${name} refused to start`, { log: logFile, exit_code: exited, tail: clip(log, 2000) }, "Inspect the launcher log and emulator instance; no startup options were retried");
+      target ??= await matchingTargets(name, pending);
+      if (target) {
+        const port = /:(\d+)$/.exec(target)?.[1];
+        invariant(options.hdc_port === undefined || Number(port) === options.hdc_port, "CONFLICT", "Emulator came online on a different HDC port",
+          { target, hdc_port: options.hdc_port, log: logFile });
+        const boot = await bootParam(target, "bootevent.boot.completed", pending);
+        // Recheck identity on completion: a disconnected serial can be reused by another instance.
+        if (boot === "true" && await bootParam(target, "ohos.qemu.hvd.name", pending) === name) {
+          pending.throwIfAborted();
+          invariant(!restoredSnapshot || restoredSnapshot(), "EFFECT_UNCERTAIN", "Emulator booted without evidence of the requested snapshot restore",
+            { name, target, log: logFile, snapshot_log: instance.instancePath ? path.join(instance.instancePath, "Log/qemu.log") : undefined });
+          if (logFile) fs.rmSync(logFile, { force: true });
+          return { started: name, target, boot_completed: true,
+            ...(alreadyRunning ? { already_running: true } : {}), ...(mode ? { boot_mode: mode } : {}),
+            ...(options.hdc_port !== undefined ? { hdc_port: options.hdc_port } : {}),
+            ...(licenseAcceptedNow ? { license: "accepted automatically (HarmonyOS software + SDK agreements; review with emulator action=license_view)" } : {}) };
+        }
+        if (boot === undefined || boot === "true") target = undefined;
+      }
+      await delay(1000, undefined, { signal: pending });
+    }
+  } catch (error) {
+    if (pending.aborted) throw new ToolError(signal.aborted ? "CANCELLED" : "TIMEOUT",
+      signal.aborted ? `Stopped waiting for emulator ${name}` : `Emulator ${name} did not complete boot within 3 minutes`,
+      { name, launched, ...(logFile ? { log: logFile, tail: clip(startLog(logFile), 2000) } : {}) },
+      "The emulator may still be running; inspect it before retrying or stopping it");
+    throw error;
+  } finally { keys.forEach((key) => starting.delete(key)); }
 }
 
 export async function stopEmulator(name: string, signal?: AbortSignal, instancePath?: string) {

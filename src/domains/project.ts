@@ -553,18 +553,22 @@ export async function cleanProject(project: Project, signal: AbortSignal) {
 /* --------------------------------- create --------------------------------- */
 
 export async function createProject(input: {
-  project: string; app_name: string; bundle_name: string; sdk_version?: string; target_api?: number; compatible_api?: number; merge?: boolean;
+  project: string; app_name: string; bundle_name: string; sdk_version?: string; target_api?: number; compatible_api?: number; device_types?: string[]; merge?: boolean;
 }) {
   const destination = path.resolve(input.project);
   invariant(/^[a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z0-9_]+){2,}$/.test(input.bundle_name), "INVALID_INPUT", "bundle_name must look like com.example.app (at least 3 segments)");
+  const deviceTypes = [...new Set(input.device_types ?? ["phone"])];
+  invariant(deviceTypes.length && deviceTypes.every((t) => ["phone", "tablet", "2in1", "car", "wearable", "tv"].includes(t)),
+    "INVALID_INPUT", "device_types must contain phone, tablet, 2in1, car, wearable or tv");
   if (fs.existsSync(destination))
     invariant(input.merge || fs.readdirSync(destination).length === 0, "CONFLICT", `${destination} is not empty`, undefined, "Pass merge=true to add files without overwriting");
   const sdk = sdkInfo(toolchain());
   invariant(sdk?.platform_version && sdk.api_level, "TOOLCHAIN_MISSING", "Installed SDK version metadata is missing");
   const compileVersion = input.sdk_version ?? sdk.platform_version;
   const versionFor = (api: number | undefined) => (api === undefined || api === sdk.api_level ? compileVersion : versionForApi(api));
+  const compatibleVersion = versionFor(input.compatible_api ?? input.target_api), targetVersion = versionFor(input.target_api);
   const template = path.join(packageRoot, "templates/application");
-  const files = [...walk(template, new Set())].map((file) => path.relative(template, file));
+  const files = [...walk(template, new Set())].map((file) => path.relative(template, file).split(path.sep).join("/"));
   const target = (rel: string) => path.join(destination, path.basename(rel) === "gitignore.txt" ? path.join(path.dirname(rel), ".gitignore") : rel);
   const conflicts = files.filter((rel) => fs.existsSync(target(rel)));
   invariant(!conflicts.length, "CONFLICT", "Project creation would overwrite existing files", { conflicts: conflicts.slice(0, 20) });
@@ -579,14 +583,18 @@ export async function createProject(input: {
       content = Buffer.from(JSON.stringify(app, null, 2));
     } else if (rel === "AppScope/resources/base/element/string.json") {
       content = Buffer.from(JSON.stringify({ string: [{ name: "app_name", value: input.app_name }] }, null, 2));
+    } else if (rel === "entry/src/main/module.json5") {
+      const data = readJson5(path.join(template, rel));
+      (data.module as Record<string, unknown>).deviceTypes = deviceTypes;
+      content = Buffer.from(JSON.stringify(data, null, 2));
     } else if (rel === "build-profile.json5") {
       const profile = readJson5(path.join(template, rel));
       // No signingConfig: debug builds on emulators work unsigned; sign action configures real devices.
       (profile.app as Record<string, unknown>).products = [{
         name: "default",
         compileSdkVersion: compileVersion,
-        compatibleSdkVersion: versionFor(input.compatible_api ?? input.target_api),
-        targetSdkVersion: versionFor(input.target_api),
+        compatibleSdkVersion: compatibleVersion,
+        targetSdkVersion: targetVersion,
         runtimeOS: "HarmonyOS",
         buildOption: { strictMode: { caseSensitiveCheck: true, useNormalizedOHMUrl: true } },
       }];
@@ -601,7 +609,7 @@ export async function createProject(input: {
   }
   const project = inspectProject(destination);
   return {
-    created: destination, files: written.length, bundle_name: input.bundle_name, product: project.product,
+    created: destination, files: written.length, bundle_name: input.bundle_name, product: project.product, device_types: deviceTypes,
     sdk: { compile: compileVersion, api_level: sdk.api_level },
     next: [{ tool: "project", action: "build", project: destination }, { tool: "run", action: "build_run", project: destination }],
   };

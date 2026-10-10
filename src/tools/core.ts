@@ -54,13 +54,14 @@ export const projectTool = tool({
     sdk_version: z.string().optional().describe("create: compile SDK platform version, default installed SDK"),
     target_api: z.number().int().optional(),
     compatible_api: z.number().int().optional(),
+    device_types: z.array(z.enum(["phone", "tablet", "2in1", "car", "wearable", "tv"])).min(1).optional().describe("create: target devices, default [phone]; duplicates removed"),
     merge: z.boolean().optional().describe("create: allow a non-empty directory (never overwrites)"),
     request_key: fields.requestKey,
     wait: fields.wait,
   }),
   params: {
     info: ["project", "product"],
-    create: ["project", "app_name", "bundle_name", "sdk_version", "target_api", "compatible_api", "merge"],
+    create: ["project", "app_name", "bundle_name", "sdk_version", "target_api", "compatible_api", "device_types", "merge"],
     sync: ["project", "product", "request_key", "wait"],
     build: ["project", "product", "modules", "task", "mode", "clean", "preflight", "request_key", "wait"],
     clean: ["project", "product"],
@@ -526,9 +527,7 @@ export const uiTool = tool({
         const consent = input.op ? await ui.acceptAgreements(target, ctx.signal) : undefined;
         const action = input.op ? await buildAction(input, target, ui, ctx.signal) : undefined;
         const assert = input.visible || input.hidden ? { visible: input.visible, hidden: input.hidden, timeout_ms: input.timeout_ms } : undefined;
-        const result = await (await uitest()).testStep(input.test_id, { description: input.description, action: action?.action, selector: input.selector, assert }, ctx.signal);
-        const accepted = [...(consent?.accepted ?? []), ...(result.agreements_accepted ?? [])];
-        return { ...result, ...(accepted.length ? { agreements_accepted: accepted } : {}) };
+        return (await uitest()).testStep(input.test_id, { description: input.description, action: action?.action, selector: input.selector, automatic: consent?.accepted, assert }, ctx.signal);
       }
       case "review": {
         invariant(input.test_id, "INVALID_INPUT", "test_id is required");
@@ -584,7 +583,7 @@ export const uiTool = tool({
           const { executed: _e, ...rest } = result;
           const repeat = saved ? undefined : repeatHint(target, result.executed);
           return {
-            ...rest, ...([...consent.accepted, ...(result.agreements_accepted ?? [])].length ? { agreements_accepted: [...consent.accepted, ...(result.agreements_accepted ?? [])] } : {}), ...(saved ? { saved_flow: saved } : {}), ...(repeat ? { suggest: repeat } : {}),
+            ...rest, ...ui.automaticResult(consent.accepted, result), ...(saved ? { saved_flow: saved } : {}), ...(repeat ? { suggest: repeat } : {}),
             ...(!result.passed ? { hint: result.stopped_at !== undefined ? `Time budget of one call used up: call again with steps from index ${result.stopped_at}`
               : result.failed_step !== undefined ? "Fix the failing step using the visible list, then call again with the remaining steps" : "The final assert failed: check after/visible" } : {}),
           };
@@ -617,7 +616,7 @@ export const uiTool = tool({
         const recorded = await flows.recordStep(target, action, input.selector, await screenSize(target, deviceInfo, ctx.signal).catch(() => undefined)).catch(() => undefined);
         const repeat = recorded ? undefined : repeatHint(target, [{ action, selector: input.selector }]);
         return {
-          ...result, ...([...consent.accepted, ...(result.agreements_accepted ?? [])].length ? { agreements_accepted: [...consent.accepted, ...(result.agreements_accepted ?? [])] } : {}), ...(resolved ? { element: resolved } : {}), ...(recorded ?? {}), ...(repeat ? { suggest: repeat } : {}),
+          ...result, ...ui.automaticResult(consent.accepted, result), ...(resolved ? { element: resolved } : {}), ...(recorded ?? {}), ...(repeat ? { suggest: repeat } : {}),
           ...(after && wantDiff ? { after } : {}),
           ...(after && input.verify_change ? { changed: after.changed, ...(!after.changed ? { hint: "Screen did not change: the target may be disabled, covered, or need a different gesture" } : {}) } : {}),
           ...(!after ? { note: "Action sent; verify with ui assert or observe" } : {}),

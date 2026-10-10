@@ -36,7 +36,7 @@ export async function assertConnected(target: string, signal?: AbortSignal) {
 }
 
 export async function listTargets(signal?: AbortSignal): Promise<string[]> {
-  const result = await hdc(["list", "targets"], signal, 10000, true);
+  const result = await hdc(["list", "targets"], signal, 10000);
   return result.stdout.split(/\r?\n/).map((l) => l.trim()).filter((l) => l && !/^\[Empty\]$/i.test(l));
 }
 
