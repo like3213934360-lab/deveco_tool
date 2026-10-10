@@ -18,7 +18,7 @@
 | 源码行数（`src`） | 约 5.7k | 约 35k |
 | 知识检索 | 3–20 ms | — |
 
-本次 v1.4.0 的环境、性能及逐项验证结果见 [升级验收记录](docs/UPGRADE-1.4.0.md)。
+v1.4.1 的提示词压缩、宿主重复来源和复测方法见 [提示词验收记录](docs/UPGRADE-1.4.1.md)；功能升级的真实 SDK 验证见 [v1.4.0 验收记录](docs/UPGRADE-1.4.0.md)。
 版本发布遵循 [GitHub 发布流程](docs/RELEASING.md)：`main` 上的新稳定版本通过全部 CI 后自动发布，并核验 tag、提交和 Latest。
 
 ## 安装
@@ -212,6 +212,8 @@ A lean MCP server for HarmonyOS development. It lets any MCP host (Cursor, Claud
 | Runtime dependencies | 3 | 16 |
 | Source lines (`src`) | ~5.7k | ~35k |
 | Knowledge search | 3–20 ms | — |
+
+See [v1.4.1 prompt acceptance](docs/UPGRADE-1.4.1.md) for instruction compression, host repetition and measurement methods; [v1.4.0 acceptance](docs/UPGRADE-1.4.0.md) records the feature upgrade's real SDK evidence. [GitHub delivery](docs/RELEASING.md) verifies CI, the immutable release tag and Latest.
 
 ### Install
 

@@ -1,5 +1,19 @@
 # Changelog / 更新日志
 
+## v1.4.1 (2026-10-10)
+
+**中文**
+
+- 查明公共说明重复来自宿主工具展开层：MCP 握手发送一次，原始工具清单没有重复前缀。将操作专属规则保留在对应工具，公共说明从 442 缩至 121 tokens；按现有宿主格式推算全量展开从 13,899 降至 9,008 tokens（-35.2%，o200k_base），不等同于宿主重载实测或每轮计费。
+- 保留全部 15 个工具、参数 Schema、校验及执行逻辑；保留知识来源优先级、任务续等、UI 引导与断言、设备/团队选择和完整 artifact 读取约束。
+- 新增独立提示词审计命令、UTF-8 字节计数及公共说明/重复展开体积门禁，防止只检查 tools/list 而遗漏宿主放大效应。验收与发布状态见 [升级 TODO](docs/UPGRADE-1.4.1.md)。
+
+**English**
+
+- Traced instruction repetition to host tool expansion, not MCP tools/list. Scoped operational guidance to its tool and reduced shared instructions from 442 to 121 tokens. Projecting the verified host format gives 13,899 -> 9,008 tokens (-35.2%, o200k_base); this is not a reloaded-host measurement or per-request billing.
+- All 15 tools, input schemas, validation and handlers remain unchanged. Source precedence, job continuation, UI onboarding/assertions, ambiguity handling and full-artifact access remain documented.
+- Added a prompt audit command, UTF-8 byte accounting and budgets for shared instructions and repeated-prefix expansion. Acceptance: [upgrade TODO](docs/UPGRADE-1.4.1.md).
+
 ## v1.4.0 (2026-10-10)
 
 **中文**

@@ -5,18 +5,14 @@ import { McpServer } from "./mcp.js";
 import { MAX_WAIT_MS, SYNC_WAIT_MS, type ToolDef } from "./registry.js";
 import { allTools } from "./tools/index.js";
 
+// Hosts may prepend this to every tool. Keep only cross-tool rules here; operation guidance belongs
+// in its tool description so it remains available when a host loads only that tool.
 const instructions = [
-  "HarmonyOS/ArkTS development tools. Start with doctor when the environment is unknown.",
-  "Always pass absolute project paths. Long operations (build, run, sync) return a job; use job action=wait rather than repeating the call.",
-  "Before answering ArkTS/ArkUI/@kit API questions from memory, use knowledge search/read; for exact API signatures use code action=lsp op=hover/definition against the project SDK.",
-  "If sources disagree, trust in this order: project SDK declarations and a successful build > official docs (local pack, cloud sections marked official) > community articles (hints only, never the API contract).",
-  "project build and run build_run already run the ArkTS check on the files edited since the last build: do not call code action=check before them (use it only when you want to check without building).",
-  "Fewest calls: ui act steps=[...] walks a whole UI path in one call and every act returns what changed on screen (after), so observe is rarely needed; save a path you walk repeatedly (save_flow) and pass run then_flow=<id> to land on that page after each deploy.",
-  "Verify UI outcomes with ui assert, not screenshots alone. Never retry a job in needs_input without inspecting it.",
-  "UI actions automatically accept recognizable consent prompts (agreements_accepted) and complete setup/tours with existing defaults (onboarding_completed). Recognition uses current window text and control state, never an application name or fixed control id. If onboarding still blocks the app, observe its current controls before continuing; do not repeat the original action blindly.",
-  "Several devices connected (DEVICE_AMBIGUOUS) or several developer teams (TEAM_AMBIGUOUS): ask the user which one to use; never pick one yourself.",
-  "Unknown or misplaced parameters are rejected and nothing runs: use the names from the error.",
-  "Responses are summaries: every artifact id in them (log_artifact, report_artifact, full_artifact, artifact_id...) holds the complete text (full build log, crash report, hilog, cloud answer); read it with job action=read artifact_id=<id> (line/limit to page, grep to filter). Artifacts expire after about a day.",
+  "HarmonyOS/ArkTS development tools. Use doctor for unknown/failing environments. Pass absolute project paths.",
+  "Before answering ArkTS/ArkUI/@kit API questions, use knowledge search/read; exact signatures: code lsp hover/definition.",
+  "For jobs, use job action=wait; never repeat the operation or retry needs_input without inspection.",
+  "DEVICE_AMBIGUOUS/TEAM_AMBIGUOUS: ask the user. Invalid parameters execute nothing; follow the error.",
+  "Responses are summaries. Full content: job action=read artifact_id=<id> for any returned artifact id (expires after ~1 day).",
 ].join(" ");
 
 const ARTIFACT_ID = /^a_[0-9a-f]{16}$/;

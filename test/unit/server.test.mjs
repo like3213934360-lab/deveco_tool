@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 import { connect } from "../../tools/mcp-client.mjs";
+import { promptMetrics } from "../../tools/prompt-audit.mjs";
 
 const state = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-test-"));
 process.on("exit", () => { try { fs.rmSync(state, { recursive: true, force: true }); } catch { /* Windows: file still locked */ } }); // tests leave nothing behind
@@ -18,9 +19,11 @@ test("handshake, tools/list and schema validation", async () => {
   const names = list.result.tools.map((t) => t.name);
   assert.deepEqual(names, ["doctor", "project", "run", "job", "code", "device", "ui", "ui_flow", "diagnose", "knowledge", "skills", "auth", "sign", "emulator", "hot_reload"]);
   for (const tool of list.result.tools) assert.equal(tool.inputSchema.type, "object");
-  // Hard budget: tools/list is loaded into every host's context on every session.
-  const listBytes = JSON.stringify(list.result).length;
-  assert.ok(listBytes <= 36 * 1024, `tools/list is ${listBytes} bytes, budget 36 KB (36864)`);
+  // Bound both the protocol and hosts that prepend server instructions to each tool.
+  const metrics = promptMetrics(init.result.instructions, list.result.tools);
+  assert.ok(metrics.tools_list_bytes <= 36 * 1024, `tools/list: ${metrics.tools_list_bytes} bytes > 36 KB`);
+  assert.ok(metrics.instructions_bytes <= 640, `instructions: ${metrics.instructions_bytes} bytes > 640`);
+  assert.ok(metrics.repeated_instructions_bytes <= 44 * 1024, `repeated instructions: ${metrics.repeated_instructions_bytes} bytes > 44 KB`);
   assert.doesNotMatch(JSON.stringify(list.result), /9007199254740991/, "no +/-2^53 integer bounds");
   // Over-long sync waits are capped instead of outliving the host's request timeout.
   const capped = await client.call("ui", { action: "assert", timeout_ms: 70000, visible: { text: "x" }, target: "none" });
