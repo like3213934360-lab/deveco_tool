@@ -1,0 +1,39 @@
+name: release
+on:
+  workflow_run:
+    workflows: [ci]
+    types: [completed]
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: release-main
+  cancel-in-progress: false
+jobs:
+  publish:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Publish and verify the version after all CI checks
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CI_RUN_ID: ${{ github.event.workflow_run.id }}
+        run: node tools/release.mjs --run "$CI_RUN_ID" > "$RUNNER_TEMP/release.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: verified-release
+          path: ${{ runner.temp }}/release.json
+          if-no-files-found: error

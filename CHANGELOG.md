@@ -9,6 +9,7 @@
 - 启动核验实例身份、实际端口和真正开机完成；并发启动隔离，取消和超时不再误报成功，失败保留独立诊断日志。
 - 针对 SDK 无快照时静默冷启动的行为，启动前只读检查 Quick Boot 快照索引，并验证本次恢复日志；历史日志、缺失快照或 SDK 降级不能作为成功依据。
 - 自动处理扩展为通用引导链：首次设置、欢迎页及功能介绍按语义和控件状态识别，保留已选默认项；操作、批量、回放和测试共用，单独记录 `onboarding_completed`，页面不变或循环明确失败。新增独立开关 `auto_complete_ui_onboarding`。
+- 补齐 GitHub 自动发布：新版 main 的全部 CI 通过后创建 Release，回读核验 tag、提交和 Latest，生成发布回执；仓库规范明确交付终点，避免只推送代码而遗漏发布。
 - 按用户确认，空闲 RSS 预算允许相对原 70 MB 上限增长 20%（84 MB）；其余性能门禁及测试环境保持不变。
 - 保持独立 MCP 实现；按用户要求排除 Skill 自动分发/版本同步和 Windows NTLM 代理。逐项验收与交付记录见 [升级 TODO](docs/UPGRADE-1.4.0.md)。
 
@@ -19,6 +20,7 @@
 - Startup succeeds only after identity, actual port and boot completion checks. Bounded waits, cancellation, concurrent-start protection and isolated failure diagnostics.
 - Saved Quick Boot metadata and current-attempt restore evidence prevent the SDK's silent snapshot-to-coldboot substitution from being reported as success.
 - Generic first-run setup and feature-tour handling preserves selected defaults across actions, batches, replay and tests. Separate onboarding evidence and configuration, bounded transitions and unchanged-page detection.
+- Successful main CI automatically publishes new stable versions and verifies the release, commit, immutable tag and Latest status, with an auditable receipt and repository delivery rules.
 - User-approved idle RSS headroom: 20% over the prior 70 MB budget (84 MB); other performance gates and the test environment remain unchanged.
 - No upstream CLI runtime dependency, automatic Skill distribution/synchronization or Windows NTLM proxy. Acceptance details: [upgrade TODO](docs/UPGRADE-1.4.0.md).
 

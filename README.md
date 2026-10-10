@@ -19,6 +19,7 @@
 | 知识检索 | 3–20 ms | — |
 
 本次 v1.4.0 的环境、性能及逐项验证结果见 [升级验收记录](docs/UPGRADE-1.4.0.md)。
+版本发布遵循 [GitHub 发布流程](docs/RELEASING.md)：`main` 上的新稳定版本通过全部 CI 后自动发布，并核验 tag、提交和 Latest。
 
 ## 安装
 
