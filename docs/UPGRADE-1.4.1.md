@@ -11,7 +11,7 @@
 | [x] | 本地测试与性能 | typecheck、155 项单测零失败/跳过；协议 102 个入口回归；握手 81 ms、空闲 RSS 68 MB、10 秒 CPU 不变 |
 | [x] | 新进程实际 SDK 检查 | doctor 1.4.1、构建 ID 一致、环境 7 项检查通过 |
 | [x] | 上游在线核对 | 475 项：362 full / 70 host / 43 skip；缺口、过期决策及新提交均为 0 |
-| [ ] | GitHub 交付 | 推送后等待精确提交 CI 7/7、release、tag/Latest 和发布回执复核 |
+| [x] | GitHub 交付 | `d7ee39c` 的 CI 7/7、release 成功；tag/Latest、工作流回执及本地只读复核一致，链接见下文 |
 
 ## 重复发生在哪一层
 
@@ -83,4 +83,12 @@ print(len(enc.encode(p['instructions'] + '\n\n' + raw)))
 
 本轮只改元数据，SDK/设备执行逻辑及参数完全未动，未重复创建模拟器执行设备 E2E，也未将 v1.4.0 的 23 项 E2E 计作本版新实测。新进程 doctor 检查实际 SDK/设备环境通过，构建 ID 为 `cec1cb32384f1d122fc790b73d41c72a60927e16a081428ed426c56e8ae129a6`。性能：握手中位数 81 ms，tools/list 4 ms，空闲 RSS 68 MB，10 秒 CPU 从 0:00.13 到 0:00.13；均通过既有预算。
 
-GitHub 精确 SHA、CI、Release 和 Latest 将在实际通过后补充。未执行 npm 发布、宿主重启或 Skill 自动分发。
+GitHub 交付已于 2026-10-10 核验：
+
+- 发布提交：[`d7ee39ce1157b2fa6a2d6323345ba64bdc8f93e0`](https://github.com/like3213934360-lab/deveco_tool/commit/d7ee39ce1157b2fa6a2d6323345ba64bdc8f93e0)。
+- [CI 38028661454](https://github.com/like3213934360-lab/deveco_tool/actions/runs/38028661454)：Linux/macOS/Windows × Node 22/24 六项测试和 upstream 共 7/7 成功，无跳过。
+- [release 38028722804](https://github.com/like3213934360-lab/deveco_tool/actions/runs/38028722804)：成功发布并上传 `verified-release`；回执中的 head/released_commit 均为上述提交，`latest=true`。
+- [v1.4.1 Release](https://github.com/like3213934360-lab/deveco_tool/releases/tag/v1.4.1)：稳定版、非草稿，tag 指向发布提交；GitHub Latest 身份与其一致。
+- 本地 `node tools/release.mjs --run 38028661454 --check` 再次通过；与下载的工作流回执一致。
+
+本验收记录随后以纯文档提交补充；不移动已发布 tag，不重发同版本 Release，后续 main 的 CI/release 仍按发布流程核验。当前宿主仍报告 v1.4.0，需要重载后再测实际工具声明。未执行 npm 发布、宿主重启或 Skill 自动分发。
