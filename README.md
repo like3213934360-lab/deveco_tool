@@ -18,7 +18,7 @@
 | 源码行数（`src`） | 约 5.7k | 约 35k |
 | 知识检索 | 3–20 ms | — |
 
-v1.4.3 补明 action 与条件参数，优先进行 OpenCode 免费模型多轮发现与真实调用验收，并修复宿主退出导致模拟器被结束的问题。Codex 等待用户重载后另验；Claude 不在本轮适配名单。证据与未完成项见 [验收与 TODO](docs/UPGRADE-1.4.3.md)。功能升级的真实 SDK 验证见 [v1.4.0 验收记录](docs/UPGRADE-1.4.0.md)。
+v1.4.3 补明 action 与条件参数，优先进行 OpenCode 免费模型多轮发现与真实调用验收，并修复宿主退出导致模拟器被结束的问题。Codex App 重载已确认，关键原生调用及 UI 评审两轮通过；热重载 reset、录屏导出仍有真实失败，未宣称全功能通过。Claude 不在本轮适配名单。证据与未完成项见 [验收与 TODO](docs/UPGRADE-1.4.3.md)。功能升级的真实 SDK 验证见 [v1.4.0 验收记录](docs/UPGRADE-1.4.0.md)。
 版本发布遵循 [GitHub 发布流程](docs/RELEASING.md)：`main` 上的新稳定版本通过全部 CI 后自动发布，并核验 tag、提交和 Latest。
 
 ## 安装
@@ -213,7 +213,7 @@ A lean MCP server for HarmonyOS development. It lets MCP hosts (OpenCode, Codex,
 | Source lines (`src`) | ~5.7k | ~35k |
 | Knowledge search | 3–20 ms | — |
 
-See [v1.4.3 acceptance and TODO](docs/UPGRADE-1.4.3.md) for explicit action guidance, repeated OpenCode free-model planning/execution trials and emulator lifecycle repair. Codex verification awaits the user’s reload; Claude is outside this round’s scope; [v1.4.0 acceptance](docs/UPGRADE-1.4.0.md) records the feature upgrade's real SDK evidence. [GitHub delivery](docs/RELEASING.md) verifies CI, the immutable release tag and Latest.
+See [v1.4.3 acceptance and TODO](docs/UPGRADE-1.4.3.md) for explicit action guidance, repeated OpenCode free-model planning/execution trials and emulator lifecycle repair. Codex App reload is confirmed and two focused native UI/review rounds passed; active hot-reload reset and recording export still fail, so full acceptance remains incomplete. Claude is outside this round’s scope; [v1.4.0 acceptance](docs/UPGRADE-1.4.0.md) records the feature upgrade's real SDK evidence. [GitHub delivery](docs/RELEASING.md) verifies CI, the immutable release tag and Latest.
 
 ### Install
 

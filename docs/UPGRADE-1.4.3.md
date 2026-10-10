@@ -1,6 +1,6 @@
 # v1.4.3 明确 action、OpenCode 多轮验收与独立进程生命周期
 
-优先保证模型能发现并正确使用功能。适配范围为 OpenCode、Codex；按用户要求，本轮不测试 Claude，Codex 必须等用户再次确认重启后才开始。免费模型按每轮显式选择，不改变持久宿主配置、认证、SDK 或设备环境，不新增 Skill 自动分发和 Windows NTLM 代理。
+优先保证模型能发现并正确使用功能。适配范围为 OpenCode、Codex；按用户要求，本轮不测试 Claude。2026-10-10 用户确认重启后，已补充 Codex App 原生验收。免费模型按每轮显式选择，不改变持久宿主配置、认证、SDK 或设备环境，不新增 Skill 自动分发和 Windows NTLM 代理。
 
 ## TODO 与证据
 
@@ -11,11 +11,14 @@
 | [x] | 拟调用和执行分开判定 | discovery 禁止实际工具调用；live 核对 OpenCode tool_use 与透明代理 tools/call/response，并要求正确输出和同 job_id 成功终态 |
 | [x] | 真实进程生命周期根因修复 | 原候选模拟器在 OpenCode 退出时被终止；修复后原生启动会话退出，模拟器父进程已脱离宿主且设备继续在线；启动错误/非零退出仍失败 |
 | [x] | 本地单测与类型检查 | typecheck；171/171 单测，零失败/跳过；真实 OS 进程、UTF-8 分片、大响应导出和评分器负例均覆盖 |
-| [x] | 最终构建真实 SDK E2E 与性能 | 主流程 22/22，通用引导专项 1/1，均零失败/跳过且构建 ID 一致。最终性能：握手中位 97 ms、清单 4 ms、空闲 RSS 64 MB（门禁 84 MB）、10 秒 CPU 不变 |
+| [x] | 最终构建既有 SDK E2E 与性能 | 主流程 22/22，通用引导专项 1/1，均零失败/跳过且构建 ID 一致；既有套件未检查 reset 后原行为恢复，本轮补充验证发现失败。最终性能：握手中位 97 ms、清单 4 ms、空闲 RSS 64 MB（门禁 84 MB）、10 秒 CPU 不变 |
 | [x] | OpenCode 免费模型多轮试验与失败归档 | 11 个免费模型，共 223 个候选/专项尝试；逐项保留构建身份、计划评分、原生调用、服务错误与中断，不将不同构建合并为发布版通过 |
-| [ ] | 最终构建模型复验 | 最后补明 test_step 后，Muse/MiMo 两个首轮均被免费 provider 限流；后续轮次与视觉流程未开始，不计通过 |
+| [ ] | OpenCode 最终构建模型复验 | 最后补明 test_step 后，Muse/MiMo 两个首轮均被免费 provider 限流；后续轮次与视觉流程未开始，不计通过；Codex 的结果不替代该项 |
 | [ ] | 所有免费模型、所有 action 的原生执行全通过 | 未达到；计划覆盖不等于执行覆盖，不因发布而勾选 |
-| [ ] | Codex App 重载与模型验收 | 等用户再次确认重启；没有在本轮擅自开始 Codex 模型测试 |
+| [x] | Codex App 实际重载 | 用户确认重启后，原生 doctor 在验收前后均返回 v1.4.3 / `1444f7e…`，与发布构建一致 |
+| [x] | Codex App 关键调用多轮验收与失败归档 | 当前模型 gpt-6-astra / xhigh；101 次原生调用涉及 15 个工具、63 个入口；log/sqlite、对象参数及 UI 测试/视觉评审各两轮通过；完整边界与失败见下文及公开证据 |
+| [ ] | Codex 全功能验收通过 | 未达到；调用数不是通过数，当前会话不是无历史上下文的盲测；reset 与录屏失败仍保留 |
+| [ ] | 热重载 reset 根因修复与行为回归 | 已复现返回 reset=true 但重启后补丁仍生效；须解决已启用补丁撤销，并在真实 SDK 测试中断言恢复原行为，不能只检查返回字段 |
 | [x] | GitHub 提交、全部 CI、Release、tag、Latest | 发布提交 `583e9018628caedd27498dacae4155b9bd668827`；七项 CI、自动发布与只读复核均通过，tag 指向该提交且为 Latest；链接见交付记录 |
 
 ## 修正依据与边界
@@ -68,7 +71,27 @@ node tools/model-eval.mjs --host opencode --model opencode/muse-spark-1.3-contri
 
 原始记录在本地 `.scratch/v143/`，含路径、设备与账号信息，不上传。公开摘要仅包含去标识结果与哈希。已中止的候选批次、服务端不可用、测试编排中断和最终构建分别记录；不能挑选好的一轮代表全部通过。
 
-公开证据：[223 次模型试验逐项摘要](evidence/v1.4.3-models.json)、[最终构建测试与独立产物检查](evidence/v1.4.3-acceptance.json)。跨候选共请求过 74 个协议入口，其中 70 个有成功响应或已结束的成功任务；该数量包含不完整流程中的成功调用，不等于 70 个功能均已完整验收。
+公开证据：[223 次模型试验逐项摘要](evidence/v1.4.3-models.json)、[发布前最终构建测试与独立产物检查](evidence/v1.4.3-acceptance.json)、[重启后的 Codex App 原生验收](evidence/v1.4.3-codex-app.json)。发布前证据保留当时的待验状态，后续进展由新证据记录。跨候选共请求过 74 个协议入口，其中 70 个有成功响应或已结束的成功任务；该数量包含不完整流程中的成功调用，不等于 70 个功能均已完整验收。
+
+## Codex App 重启后的原生验收
+
+用户确认后，直接由当前 Codex App 会话的 gpt-6-astra / xhigh 调用宿主暴露的 MCP，未改用 Codex CLI 或替换模型。验收前后 doctor 均确认 v1.4.3、构建 `1444f7e…`；使用原有 DevEco 26.0.0.821、SDK 26.0.0.105 / API 26、指定临时工程及专用模拟器。没有操作实体手机、其他模拟器、账号设置或持久宿主配置。
+
+宿主加载 15 个工具、102 个协议入口，14 个 action 工具保留显式 `Required: action=<operation>.`。实际执行 101 次调用，涉及 15 个工具、63 个不同入口，包含故障诊断与测试工程恢复，不是 101 次通过或 63 项完整功能通过。两次协议错误分别是录屏取回失败，以及只读 shell 按策略拒绝 `bm quickfix -h`；另外两次 UI 断言揭示 reset 的行为失败，不能因该工具返回成功而忽略。
+
+| 范围 | 实际证据 | 边界 |
+| --- | --- | --- |
+| action 与对象参数 | log/sqlite 各两轮真实调用成功；两轮 selector、visible 均传对象，点击和断言成功 | 本轮没有 OpenCode 的缺 action 或对象字符串问题；不证明所有模型都不会误用 |
+| UI 测试与视觉评审 | 两轮 test_start → test_step 点击/visible → review 取图 → 模型看图后提交判断 → test_finish → test_export；每轮 4 步，零失败、未决评审，每轮导出 8 个文件 | 当前模型确实收到并查看两张评审图；不替代纯文本模型的控件验收，也不推断其能理解图片 |
+| 构建与代码工具 | clean/sync/build、lint 零问题、LSP hover/definition/restart、日志和任务终态查询 | 5 个排队任务均使用同一 job_id 等到 succeeded，其中 1 个是失败后的工程恢复任务 |
+| 部署与 UI 辅助 | deploy、stop/launch、路径录制/重放/删除自建流程、布局检查、视觉基线/相同比较、PNG 截图 | 截图文件头和尺寸独立检查；不是录屏验收 |
+| 文件与本地签名 | 47 字节文件往返 SHA-256 相同；生成临时 keypair/CSR，OpenSSL 独立验证 CSR 签名和主体 | 不涉及云端证书或 profile 创建，不改变账号 |
+| 热重载 | apply 后 UI 显示新文字；reset 返回成功后，重启仍显示补丁文字，原文字/补丁隐藏两项断言均失败 | reset 未通过，已归档为实现缺陷；完整重新部署只用于恢复测试工程 |
+| 录屏取回 | 对现有待导出会话调用 record_stop，仍报 CAPABILITY_UNAVAILABLE / open source media file failed | 没有 discard、另录替代视频或生成假 MP4，待取回会话保留 |
+
+当前会话包含历史实现、源码和夹具上下文，因此这些结果证明指定流程的真实调用与 SDK 行为，不能当作新会话的盲测发现能力。Codex 未保存原始 provider/传输层抓包，不能沿用 OpenCode 的参数逐字一致性结论。全部入口/参数组合、其他 Codex 模型、新引导页面、持久安装及云端写操作仍未完整验收；本轮没有证明 OpenCode 免费服务已经恢复。
+
+原始返回、截图、测试报告、临时密钥和诊断输出仅保存在本地 `.scratch/v143/codex-app-20261010/`，公开文件只保留逐次调用入口、参数名/类型、状态和哈希。测试工程源码已恢复到原字节，完整部署后原文字断言通过且设备补丁版本为 0；这些恢复证据不改变 reset 的失败结论。本次只增加验收证据和文档，没有修改运行代码或既有测试。
 
 ## 多轮结果的解释
 
@@ -92,12 +115,15 @@ node tools/model-eval.mjs --host opencode --model opencode/muse-spark-1.3-contri
 
 - [ ] 所有 102 个入口在全部免费模型上的原生成功执行；103 项规划夹具不能替代。账号登录/注销/迁移、云端创建与删除、镜像安装/删除、知识包安装与回滚等不改变持久环境的限制内无法完整执行，不能从只读检查推断成功。
 - [ ] 解决录屏系统服务产出空文件的问题，并重新验收真实 MP4 导出。
+- [ ] 修复已启用热重载补丁的 reset 行为；补齐重启后原文字可见、补丁文字不可见及设备补丁状态的真实 SDK 回归。
 - [ ] 继续处理多传跨 action 参数、遗漏步骤、错误格式和超时；目前没有证据保证任意模型每轮都正确。
 - [ ] 免费服务恢复后，补跑最终构建的 test_step 等专项、剩余纯文本轮次及视觉流程；保留本轮受阻记录。
-- [ ] Codex App 用户确认重启后的实际构建 ID 与模型验收；Windows OpenCode 原生生命周期尚无实机证据，跨平台进程单测与该验收分开。
+- [ ] Codex 新会话的能力发现与剩余功能验收；当前会话的两轮成功调用不代替无历史上下文的盲测。
+- [ ] Windows OpenCode 原生生命周期实机验收；跨平台进程单测与该验收分开。
 
 ## 已发现的真实失败
 
+- Codex 原生验收发现 hot_reload.reset 的成功返回不等于撤销生效：apply 后显示补丁文字，恢复源文件并 reset、stop/launch 后仍显示补丁文字，设备查询仍报告补丁版本 3000001。[官方 bm 文档](https://developer.huawei.com/consumer/cn/doc/harmonyos-guides-v5/bm-tool-V5) 将 `quickfix -r -b` 定义为卸载未使能的补丁；当前 `src/domains/hotreload.ts` 却把命令成功解释为恢复安装代码并删除本地基线。这是 MCP 实现语义错误，不能归因于模型或宿主。已有 E2E 只检查 `reset.reset === true`，缺少重启后的行为断言，因此此前 E2E 通过不能证明 reset 正确。本轮未修复；显式重新部署只用于恢复临时工程，不作为降级实现或通过证据。
 - 初始完整 UI 压测发现指定模拟器端口有此前遗留的待导出录屏记录；模型先尝试取回，失败后擅自调用 discard=true，违反“不丢弃录像”的任务约束。这清除了该会话的待导出标记，工具声明媒体文件仍留在设备图库；未删除媒体文件。原始违规调用和中断记录保留，不计通过。随后增加转发前禁止动作检查，后续命中同类行为会在执行前结束试验。
 - 新录屏尝试返回 `CAPABILITY_UNAVAILABLE`：SDK 的 mediatool 报 open source media file failed。只读查询确认媒体库存在记录，但对应 MP4 文件为 0 字节；尚未查明系统录制器生成空文件的更深层原因。没有切换设备、重置模拟器、改 SDK 或生成替代 MP4。录屏导出仍未通过，保留会话；另建的 UI 专项不包含录屏，不能替代该失败项。
 - 纯文本 Lightning 首轮擅自使用 OpenCode task/explore 读取工程，违反只用 MCP 的任务约束；子会话导出确认仍为同一个免费模型，但该轮属于外部上下文污染，整体失败，不能证明仅凭工具说明完成任务。
@@ -112,4 +138,4 @@ node tools/model-eval.mjs --host opencode --model opencode/muse-spark-1.3-contri
 - [Release 工作流 38040199340](https://github.com/like3213934360-lab/deveco_tool/actions/runs/38040199340) 成功；已下载 `verified-release` 并执行 `node tools/release.mjs --run 38040132557 --check`，[公开回执](evidence/v1.4.3-release.json) 一致确认 [v1.4.3](https://github.com/like3213934360-lab/deveco_tool/releases/tag/v1.4.3) 为 Latest、tag 指向发布提交。
 - 本文件的发布回填为后续文档提交，不移动或重建已发布 tag；该提交仍须经过全部 CI 和既有 Release 核验。
 
-GitHub 发布、npm 发布和宿主重载各自独立。OpenCode 临时验收进程已加载最终工具清单，但模型调用被限流；这不代表用户持久会话已重载。未运行 npm 发布；Codex App 是否运行新版，等待用户再次确认重启后的 doctor.server.build_id 与模型验收证明。
+GitHub 发布、npm 发布和宿主重载各自独立。OpenCode 临时验收进程已加载最终工具清单，但模型调用被限流；这不代表用户持久会话已重载。Codex App 已在用户确认后通过验收前后两次 doctor.server.build_id 确认运行发布构建，并完成上述原生调用；仍有明确失败与未覆盖项。未运行 npm 发布。

@@ -1,0 +1,2333 @@
+{
+  "schema": 1,
+  "date": "2026-10-10",
+  "host": "Codex App",
+  "model": {
+    "model": "gpt-6-astra",
+    "effort": "xhigh",
+    "source": "current Codex App rollout turn_context"
+  },
+  "started_at": "2026-10-10T09:14:54.340Z",
+  "finished_at": "2026-10-10T09:23:51.001Z",
+  "runtime": {
+    "version": "1.4.3",
+    "build_id": "1444f7e71f76a5368079e3055ca0b88395e32a55dcfe5776833bbed324c64843",
+    "reload_verified_before_and_after": true,
+    "source_commit": "583e9018628caedd27498dacae4155b9bd668827",
+    "checkout_commit": "d99cec67ec464a81669b982a652759b55bd3c361"
+  },
+  "environment": {
+    "node": "v26.0.0",
+    "toolchain": "26.0.0.821",
+    "sdk": "26.0.0.105",
+    "api": 26,
+    "device": "existing dedicated API 26 emulator"
+  },
+  "scope": {
+    "context": "Existing Codex App conversation with prior implementation context; not blind discovery",
+    "mechanism": "Native tools.mcp__deveco__ calls in the current Codex App conversation, with returned content preserved locally; no Codex CLI model substitution.",
+    "raw_provider_or_transport_capture": false,
+    "blind_discovery": false,
+    "fresh_sessions": false,
+    "runtime_changes": false,
+    "sdk_or_host_configuration_changes": false,
+    "image_judgement": "Two review images were rendered to the current model before submitting outcomes; control assertions remain separate."
+  },
+  "metadata": {
+    "tools": 15,
+    "explicit_required_action_tools": 14,
+    "protocol_entries": 102,
+    "host_metadata_sha256": "52d40062a81038b1ada759009d275a8efc4a03a1adf9ec0cc7c75c92ce95673d"
+  },
+  "totals": {
+    "native_calls": 101,
+    "tools_called": 15,
+    "entries_called": 63,
+    "protocol_errors": 2,
+    "negative_assertions": 2,
+    "note": "Calls include diagnosis and explicit fixture restoration. A successful protocol response is not a passed feature; hot_reload.reset is a semantic failure."
+  },
+  "focused_regressions": {
+    "device_log_rounds": 2,
+    "sqlite_select_rounds": 2,
+    "selector_find_rounds": 2,
+    "ui_sessions": [
+      {
+        "round": 1,
+        "status": "passed",
+        "steps": 4,
+        "failed_reviews": 0,
+        "unresolved_reviews": 0,
+        "report_sha256": "b6866145eaefa6dd1e471e1887efc634bf005f3e65e46c08e5183459d2d3dd59",
+        "review_image_sha256": "6949e46d79a94c8bb7a51a500cb1603929a4112359bc30aafbc04e0939bfa3dc"
+      },
+      {
+        "round": 2,
+        "status": "passed",
+        "steps": 4,
+        "failed_reviews": 0,
+        "unresolved_reviews": 0,
+        "report_sha256": "407eda3418be2d9cce1e44e183dc6d52bdcd86428a9f10118ad71811e635ab78",
+        "review_image_sha256": "6483a4e286088c55d4cdaf88f02d1640f276d7778aecd8749488611ed48bbe15"
+      }
+    ],
+    "test_step_action_and_assertion": "Each round executed click + visible assertion, then two-stage image review, finish and report export."
+  },
+  "jobs": [
+    {
+      "started_by": "project.build",
+      "request_sequence": 26,
+      "terminal_sequence": 29,
+      "status": "succeeded",
+      "phase": "acceptance"
+    },
+    {
+      "started_by": "run.deploy",
+      "request_sequence": 38,
+      "terminal_sequence": 39,
+      "status": "succeeded",
+      "phase": "acceptance"
+    },
+    {
+      "started_by": "ui_flow.replay",
+      "request_sequence": 70,
+      "terminal_sequence": 71,
+      "status": "succeeded",
+      "phase": "acceptance"
+    },
+    {
+      "started_by": "run.build_run",
+      "request_sequence": 79,
+      "terminal_sequence": 80,
+      "status": "succeeded",
+      "phase": "acceptance"
+    },
+    {
+      "started_by": "run.build_run",
+      "request_sequence": 96,
+      "terminal_sequence": 97,
+      "status": "succeeded",
+      "phase": "fixture-restoration"
+    }
+  ],
+  "independent_artifacts": {
+    "transfer": {
+      "bytes": 47,
+      "sha256": "33e2a09b9546b7dc941d0517080a1f6daad1a039ebde632b353e448e9de6586b",
+      "roundtrip_equal": true
+    },
+    "csr": {
+      "signature_verified": true,
+      "subject": "CN=McpCodexProbe",
+      "sha256": "0f1a2bfbbc158c49df9a86399daef37031cd4ec413943393fe7ae600826c3e7b"
+    },
+    "screenshot": {
+      "format": "png",
+      "bytes": 73024,
+      "sha256": "3edac99de226159ed2f8fde612cd32279f0a1a153156b38f810365e0a17167ae",
+      "width": 1080,
+      "height": 2337
+    },
+    "fixture_restoration": {
+      "source_equal": true,
+      "source_sha256": "b3cce7ae9ce3cf543fa02f0749b539592a414e59ccb6acc09d7e993e0226c5e6",
+      "patch_version_after_redeploy": 0,
+      "visible": "Welcome",
+      "hidden": "Codex Patch",
+      "note": "Full deployment explicitly restores the test fixture; it does not turn the failed reset test into a pass."
+    }
+  },
+  "findings": [
+    {
+      "id": "hot-reload-reset",
+      "status": "failed",
+      "cause": "MCP implementation treats removal of inactive patches as rollback of an active patch.",
+      "evidence": "reset returned true; after stop/launch the click still displayed Codex Patch, two assertions failed, and native bm query still reported patch 3000001.",
+      "source": "src/domains/hotreload.ts resetHotReload",
+      "test_gap": "Existing SDK test checks reset.reset but does not relaunch and assert restored behavior.",
+      "reference": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides-v5/bm-tool-V5",
+      "fixed": false
+    },
+    {
+      "id": "pending-recording-export",
+      "status": "failed",
+      "error_code": "CAPABILITY_UNAVAILABLE",
+      "evidence": "Existing pending recording failed retrieval with open source media file failed; session retained, no discard or replacement recording.",
+      "fixed": false
+    },
+    {
+      "id": "readonly-shell-help-probe",
+      "status": "rejected-as-designed",
+      "error_code": "INVALID_INPUT",
+      "evidence": "Diagnostic bm quickfix -h was refused by the read-only command policy. Subsequent native bm inspection is separate shell diagnosis, not counted as MCP success."
+    }
+  ],
+  "not_verified": [
+    "All 102 protocol entries and all parameter combinations",
+    "Blind capability discovery in fresh Codex sessions or other Codex models",
+    "Direct provider/transport serialization equality for the Codex App",
+    "Active hot-reload patch reset",
+    "Nonempty MP4 export or a new recording session",
+    "Cloud account mutations, remote certificate/profile operations, persistent skill or MCP installation, knowledge package update/rollback, emulator image/lifecycle mutations",
+    "New onboarding or keyboard-setup occurrence in this Codex run",
+    "OpenCode provider recovery or outstanding final-build rounds",
+    "Windows host runtime",
+    "npm publication"
+  ],
+  "raw_calls_sha256": "4e4cea2d6dcf4640f2a6ab368e7d8fb39ac474b9b02874834ecb5d8cf0282bb2",
+  "entries": {
+    "auth.login": {
+      "calls": 0,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "auth.status": {
+      "calls": 1,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "auth.logout": {
+      "calls": 0,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "auth.teams": {
+      "calls": 0,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "auth.import": {
+      "calls": 0,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "code.check": {
+      "calls": 1,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "code.lint": {
+      "calls": 1,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "code.api_scan": {
+      "calls": 0,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "code.api_versions": {
+      "calls": 1,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "code.lsp": {
+      "calls": 2,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "code.lsp_restart": {
+      "calls": 1,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "device.list": {
+      "calls": 1,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "device.info": {
+      "calls": 1,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "device.log": {
+      "calls": 3,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "device.shell": {
+      "calls": 2,
+      "protocol_errors": 1,
+      "negative_assertions": 0
+    },
+    "device.sqlite": {
+      "calls": 2,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "device.send": {
+      "calls": 1,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "device.recv": {
+      "calls": 1,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "diagnose.crash": {
+      "calls": 0,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "diagnose.build": {
+      "calls": 1,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "doctor": {
+      "calls": 2,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "emulator.list": {
+      "calls": 1,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "emulator.start": {
+      "calls": 0,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "emulator.stop": {
+      "calls": 0,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "emulator.create": {
+      "calls": 0,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "emulator.delete": {
+      "calls": 0,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "emulator.images": {
+      "calls": 1,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "emulator.install_image": {
+      "calls": 0,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "emulator.remove_image": {
+      "calls": 0,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "emulator.license": {
+      "calls": 0,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "emulator.license_view": {
+      "calls": 1,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "emulator.scenario": {
+      "calls": 0,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "hot_reload.apply": {
+      "calls": 1,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "hot_reload.reset": {
+      "calls": 1,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "hot_reload.stop_daemon": {
+      "calls": 0,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "job.wait": {
+      "calls": 5,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "job.status": {
+      "calls": 1,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "job.list": {
+      "calls": 1,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "job.cancel": {
+      "calls": 0,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "job.resume": {
+      "calls": 0,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "job.read": {
+      "calls": 2,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "knowledge.search": {
+      "calls": 1,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "knowledge.read": {
+      "calls": 1,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "knowledge.catalog": {
+      "calls": 1,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "knowledge.status": {
+      "calls": 1,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "knowledge.update": {
+      "calls": 0,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "knowledge.rollback": {
+      "calls": 0,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "project.info": {
+      "calls": 1,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "project.create": {
+      "calls": 0,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "project.sync": {
+      "calls": 1,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "project.build": {
+      "calls": 1,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "project.clean": {
+      "calls": 1,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "run.build_run": {
+      "calls": 2,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "run.deploy": {
+      "calls": 1,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "run.launch": {
+      "calls": 3,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "run.stop": {
+      "calls": 3,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "run.uninstall": {
+      "calls": 0,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "sign.auto": {
+      "calls": 0,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "sign.sign": {
+      "calls": 0,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "sign.verify": {
+      "calls": 0,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "sign.certificates": {
+      "calls": 0,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "sign.devices": {
+      "calls": 0,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "sign.register_device": {
+      "calls": 0,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "sign.delete_certificate": {
+      "calls": 0,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "sign.keypair": {
+      "calls": 1,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "sign.csr": {
+      "calls": 1,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "sign.certificate_create": {
+      "calls": 0,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "sign.profile_create": {
+      "calls": 0,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "sign.profile_delete": {
+      "calls": 0,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "skills.list": {
+      "calls": 1,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "skills.read": {
+      "calls": 2,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "skills.export": {
+      "calls": 0,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "skills.install_mcp": {
+      "calls": 0,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "skills.init": {
+      "calls": 0,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "skills.search": {
+      "calls": 0,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "skills.install": {
+      "calls": 0,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "skills.uninstall": {
+      "calls": 0,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "ui.observe": {
+      "calls": 1,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "ui.screenshot": {
+      "calls": 1,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "ui.tree": {
+      "calls": 1,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "ui.find": {
+      "calls": 2,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "ui.act": {
+      "calls": 4,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "ui.assert": {
+      "calls": 8,
+      "protocol_errors": 0,
+      "negative_assertions": 2
+    },
+    "ui.windows": {
+      "calls": 1,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "ui.perf": {
+      "calls": 0,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "ui.visual": {
+      "calls": 2,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "ui.layout": {
+      "calls": 1,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "ui.record_start": {
+      "calls": 0,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "ui.record_stop": {
+      "calls": 1,
+      "protocol_errors": 1,
+      "negative_assertions": 0
+    },
+    "ui.record_status": {
+      "calls": 1,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "ui.test_start": {
+      "calls": 2,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "ui.test_step": {
+      "calls": 4,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "ui.review": {
+      "calls": 4,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "ui.test_finish": {
+      "calls": 2,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "ui.test_log": {
+      "calls": 1,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "ui.test_export": {
+      "calls": 2,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "ui_flow.list": {
+      "calls": 1,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "ui_flow.show": {
+      "calls": 1,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "ui_flow.record": {
+      "calls": 1,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "ui_flow.stop": {
+      "calls": 1,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "ui_flow.replay": {
+      "calls": 1,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    },
+    "ui_flow.delete": {
+      "calls": 1,
+      "protocol_errors": 0,
+      "negative_assertions": 0
+    }
+  },
+  "calls": [
+    {
+      "sequence": 1,
+      "entry": "doctor",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "project",
+        "target"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "arguments_sha256": "37bcb6255174d826e640ccd5e30d127bb3e2457505d85ce93c8a2fee1c71127c",
+      "response_sha256": "e4453c1453453af523d870fbaea618aa188350e1ed37467a186d50c726e1af17",
+      "images": []
+    },
+    {
+      "sequence": 2,
+      "entry": "device.list",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "arguments_sha256": "584e7600815c4c752e42f8f3c00aa4bf1597f13bb08ed5de443b33097e1a1751",
+      "response_sha256": "bfed4b8cda0f29b778741d1a12baee80edcb1e294c9ad2c4c25622b6163aacfe",
+      "images": []
+    },
+    {
+      "sequence": 3,
+      "entry": "device.info",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "target"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "arguments_sha256": "235b2b13c384f3a406e90bcc54cb9f85f717d4c03dbc3d0bedd84c98280d3b9c",
+      "response_sha256": "697334b85186d9054f0def439be23e2111e1a1b73a07e6fac7a677cdc6b41871",
+      "images": []
+    },
+    {
+      "sequence": 4,
+      "entry": "device.log",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "from",
+        "grep",
+        "lines",
+        "target"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "arguments_sha256": "2cc31b4ed8662d65f1964a05c5cce311e174c8071e2115485ca1d686e3ed1f0f",
+      "response_sha256": "0af5b6909f685e82a08b517a6acf010b347e61a68bc976e7064008e32cee2ba6",
+      "images": []
+    },
+    {
+      "sequence": 5,
+      "entry": "device.sqlite",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "db",
+        "sql",
+        "target"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "arguments_sha256": "2ca6054384accb78c98d03172fc35e4692395d8b901709d8d755e657edc14f44",
+      "response_sha256": "8ceca6f7347802e3aead4c6238ae810370f2eb8ab91154eb1af83bd46db59156",
+      "images": []
+    },
+    {
+      "sequence": 6,
+      "entry": "device.shell",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "command",
+        "target"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "arguments_sha256": "b46003c58d526aef53a60ad3727a8e867d2d1f4353db2bb3eaa56e7ed4143311",
+      "response_sha256": "42875c302e437538c04588c517148053df4aabc30353746fff43af9d42c288de",
+      "images": []
+    },
+    {
+      "sequence": 7,
+      "entry": "project.info",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "project"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "arguments_sha256": "b9a5e41e8046e127b3c16eefbe6e8374e5fe51d27eec3b73da48202c239051a1",
+      "response_sha256": "d002d17ca2bacc35495ec2f8b6a536a6349a9ada8088c915dd82584cdd98f9d1",
+      "images": []
+    },
+    {
+      "sequence": 8,
+      "entry": "knowledge.catalog",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "arguments_sha256": "890d4d110d3ed9810aeb2ececd3ebda68bef46d296c5bfd387348f6c8bd4bd7e",
+      "response_sha256": "cca4212af60e50cc5e3148182022f9c6564034d37691ca255e66d391af663d07",
+      "images": []
+    },
+    {
+      "sequence": 9,
+      "entry": "knowledge.status",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "check"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "arguments_sha256": "529758011befe72d5a9e280188cb25f4d539e8eb816567bf5bca20f27d19adaa",
+      "response_sha256": "4da2d6b4f79c14d27aec4debc69e9c81694266bc94b7599dbcbdd79f3390dbad",
+      "images": []
+    },
+    {
+      "sequence": 10,
+      "entry": "auth.status",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "provider"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "arguments_sha256": "56ff4436a7c8c9163ded15c0773d5176ed42c1c8ba89a38a457aa5e16edbc4dc",
+      "response_sha256": "b223a92bfd7c500a2d45f0234d7bdb13c2069f7f285e8ea60db20cf1b826e740",
+      "images": []
+    },
+    {
+      "sequence": 11,
+      "entry": "emulator.list",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "arguments_sha256": "584e7600815c4c752e42f8f3c00aa4bf1597f13bb08ed5de443b33097e1a1751",
+      "response_sha256": "2b5db8cf77fc25255599fe4ef750613f73fb7be131df3eb80660e82e3e281f65",
+      "images": []
+    },
+    {
+      "sequence": 12,
+      "entry": "emulator.images",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "arguments_sha256": "e4652e119f438ffc4bc631f106f65428f4673159f9acade3ec1e58aa529079cd",
+      "response_sha256": "e0929821f9ccd3377eca44d572234d8cefc7c93b678761dc3853cc5c71a4ea08",
+      "images": []
+    },
+    {
+      "sequence": 13,
+      "entry": "emulator.license_view",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "arguments_sha256": "b0e8573b41559b40579838f708ba4fe30616b59e34698f872a65594569d2385b",
+      "response_sha256": "417e4e99ab89ed7a5135c3648c80f7715a0fa37241bae0f329f51e9f35cc6e95",
+      "images": []
+    },
+    {
+      "sequence": 14,
+      "entry": "job.list",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "limit"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "arguments_sha256": "b126b2abefc010c29d596567e499fdefe0cabc7156954e9f8437018a524d4976",
+      "response_sha256": "1a7f812e07f71d26b739d3af295285abb2cfdd9485af3d85c306c19eb7abbba2",
+      "images": []
+    },
+    {
+      "sequence": 15,
+      "entry": "code.check",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "files",
+        "project"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "assertion_passed": true,
+      "arguments_sha256": "d5e73d855e32f68ebabec283013af7be993177d549075c42b270edfba3142ed3",
+      "response_sha256": "9a59431294d71a4182b029635b9b2e86f24efd8c09d834ec7e60e686d7d9a4fb",
+      "images": []
+    },
+    {
+      "sequence": 16,
+      "entry": "code.api_versions",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "arguments_sha256": "ca9fb38f4f023d21a207938095890f3434feba6da2281ee321e83a55ece40403",
+      "response_sha256": "d833390b9536621eb718691b36beb80e538a0a016a1da1c95f1e412a56b7be93",
+      "images": []
+    },
+    {
+      "sequence": 17,
+      "entry": "knowledge.search",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "catalog",
+        "limit",
+        "query"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "arguments_sha256": "4e143f84bb0aef78b8d6c028bdd15c7c8e726659c6a4865362bb69c83fbf1bd8",
+      "response_sha256": "e599b6d0652e78e3998c619401d858c44fea040ca3590902fecf19f449dc293c",
+      "images": []
+    },
+    {
+      "sequence": 18,
+      "entry": "skills.list",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "arguments_sha256": "584e7600815c4c752e42f8f3c00aa4bf1597f13bb08ed5de443b33097e1a1751",
+      "response_sha256": "f335bec160d7cda03d3b7f3c268018c481eb16742eb3c23ee6d08a0742c185b3",
+      "images": []
+    },
+    {
+      "sequence": 19,
+      "entry": "skills.read",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "name"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "arguments_sha256": "754cecbce18d46eebe0bdb85604cace0689857a908bcd8616252773e3dfd8445",
+      "response_sha256": "7277cfaf8862d0161534ce1adc59d7625c2b0c0df83fc9fe0f96bada0c7d586a",
+      "images": []
+    },
+    {
+      "sequence": 20,
+      "entry": "diagnose.build",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "diagnostics"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "arguments_sha256": "03b9f54c6f1feab144539a25d37aea857ec281c90bb5f6d9f62df05721c7d4da",
+      "response_sha256": "cf4e0b18da27e138ae6821e28acb558b716ed873f96239062525944a15aacd06",
+      "images": []
+    },
+    {
+      "sequence": 21,
+      "entry": "job.read",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "artifact_id",
+        "limit"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "arguments_sha256": "6b8ed5f59e6fce8d719e833a362808f70305ac9252cadb12f30f518b24d82f14",
+      "response_sha256": "329edf57c234f63a3f52a1ffbb7f03deca46395ed4b4974f1952963abdc90fd7",
+      "images": []
+    },
+    {
+      "sequence": 22,
+      "entry": "knowledge.read",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "id"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "arguments_sha256": "09f1b28bc2a927e64cebb2c988c51ca32198c9f2be83a3ea64eb364f4e776cbb",
+      "response_sha256": "18bab6cbc73b89ed6c1aa970647fb0cd2f40955e0d046bcafbda3ba9d0802726",
+      "images": []
+    },
+    {
+      "sequence": 23,
+      "entry": "code.lsp",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "file",
+        "op",
+        "project",
+        "symbol"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "arguments_sha256": "e9cef36c8dfb9c3c4f93a4cc3c843611db01586c7c0440f3c9cde1b4a33eb40f",
+      "response_sha256": "e467d602c8e30da7460f5f29dcfbd5c5e572cbf15355977ed98a72f092e1f105",
+      "images": []
+    },
+    {
+      "sequence": 24,
+      "entry": "project.clean",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "project"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "arguments_sha256": "c90d3f8cd020d2cb191d211ff82a7fc271e74b4abb530938287b047948696861",
+      "response_sha256": "9e2615a65ac8d404c8abbdb1031202022cdda57e2099ffc2aa072a1dcd4033cc",
+      "images": []
+    },
+    {
+      "sequence": 25,
+      "entry": "project.sync",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "project"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "status": "succeeded",
+      "arguments_sha256": "7e4e556f4ac86e3ad6132519be6630bbb5eaab013fa8a1ad3c0b52acc2f0b25e",
+      "response_sha256": "ff1f84bc6f199df391036b16b6823cc9367e0bec7ba466e99738115ba4e2bba0",
+      "images": []
+    },
+    {
+      "sequence": 26,
+      "entry": "project.build",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "project",
+        "wait"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "status": "queued",
+      "arguments_sha256": "d3de5c625626a74fe1d66de587a75b91aec5ef02fc03e9f138da8128199bc7eb",
+      "response_sha256": "602993f9efd564c390c300e077ee17d87363e110b9fbf6ee542f6b9fb87063ba",
+      "images": []
+    },
+    {
+      "sequence": 27,
+      "entry": "code.lint",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "output_path",
+        "project"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "arguments_sha256": "462697a8231d6135bf31217f8adbfcbc795f0b1d1d484b60c1cf3078683ddfa4",
+      "response_sha256": "5d6494e49498d8b04ddc3e82a125bd717e0eccb03d76f71de1b47b9385baf34e",
+      "images": []
+    },
+    {
+      "sequence": 28,
+      "entry": "code.lsp",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "file",
+        "op",
+        "project",
+        "symbol"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "arguments_sha256": "fccb24e469df4ed7fd57a012e5e081aab9e309a68faacd7f28285fd46444e11f",
+      "response_sha256": "b6d50e43b6959c68d78466992eeea0c43cb6a3a0e99ea2f87bcc090ecbbc2152",
+      "images": []
+    },
+    {
+      "sequence": 29,
+      "entry": "job.wait",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "job_id",
+        "wait"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "status": "succeeded",
+      "arguments_sha256": "21e25157ccd85242b712f6b72fac65df1831774bd87e0391f35a899ddff9de86",
+      "response_sha256": "3b9ce7a76a77cd31563adeeddb43e9cc43575b3d5fef19a3d68373a3b8d85719",
+      "images": []
+    },
+    {
+      "sequence": 30,
+      "entry": "device.send",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "local",
+        "remote",
+        "target"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "arguments_sha256": "9e5d90f748eca83c98bd17020c76de7c3acbc4fa09ecac9d539655a27b688c51",
+      "response_sha256": "b78d0e85182b9aca11b451063a88efb87cdf99cf791ddbad84df0944b69ea71d",
+      "images": []
+    },
+    {
+      "sequence": 31,
+      "entry": "device.recv",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "local",
+        "remote",
+        "target"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "arguments_sha256": "d7f23b8cca24ca29af951f30ad697bf9f9dedb8b5d47564683b0d8f2f9321f21",
+      "response_sha256": "05e05a21ef96f7d911f09ec1723b6e4202249159647724f8ebc95b0b8eeeb998",
+      "images": []
+    },
+    {
+      "sequence": 32,
+      "entry": "sign.keypair",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "key_alias",
+        "keystore_password",
+        "out"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "arguments_sha256": "666cd0258cbae49f848ba42f98b20140a73595e5d588de7a1e277e66080c6feb",
+      "response_sha256": "3ac530525619ee41b2960e12aa55d6185534514d45f3ecfc16bb3da6641108fe",
+      "images": []
+    },
+    {
+      "sequence": 33,
+      "entry": "sign.csr",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "key_alias",
+        "keystore",
+        "keystore_password",
+        "out",
+        "subject"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "arguments_sha256": "74b13ef7f597355ce7ed24b6b94d8663a62a938acace103a22bd9d2b99388769",
+      "response_sha256": "194fdaf3b5f100a4cb6f5a48885ac3487ff28d9875f8f0a02ebe09c35aed27af",
+      "images": []
+    },
+    {
+      "sequence": 34,
+      "entry": "job.status",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "detail",
+        "job_id"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "status": "succeeded",
+      "arguments_sha256": "bca546cfb5a8e18e969e88c15df84403a75079e70d08aa761b6ce6af05c5244d",
+      "response_sha256": "45b1806623eefa660560ecdd3b28da1170ce64035330e2d5afa7a5c3b4d9480e",
+      "images": []
+    },
+    {
+      "sequence": 35,
+      "entry": "job.read",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "artifact_id",
+        "limit"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "arguments_sha256": "13a7c760c1f160607d3b4436f7d03f2d067d402d9dae96bedfc32cad03ef8a7e",
+      "response_sha256": "559800f44fe8f81b92d0e23bef540fb5005fd03fe51686cc73d7d798eda51baf",
+      "images": []
+    },
+    {
+      "sequence": 36,
+      "entry": "device.log",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "from",
+        "grep",
+        "lines",
+        "target"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "arguments_sha256": "2cc31b4ed8662d65f1964a05c5cce311e174c8071e2115485ca1d686e3ed1f0f",
+      "response_sha256": "0ec0cf20ce559d6c8b83d08425dd7d4daef2b818df4797e9ddccdb6292b07d98",
+      "images": []
+    },
+    {
+      "sequence": 37,
+      "entry": "device.sqlite",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "db",
+        "sql",
+        "target"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "arguments_sha256": "2ca6054384accb78c98d03172fc35e4692395d8b901709d8d755e657edc14f44",
+      "response_sha256": "8ceca6f7347802e3aead4c6238ae810370f2eb8ab91154eb1af83bd46db59156",
+      "images": []
+    },
+    {
+      "sequence": 38,
+      "entry": "run.deploy",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "project",
+        "target",
+        "wait"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "status": "queued",
+      "arguments_sha256": "89e5eed115f676ad4e1c178eec70031345be5a31de5420b3b89bf0e9b3118be9",
+      "response_sha256": "dffcf17cbdb031e6aefdcfccc473220f3e35760047f34176102610b1366ae70c",
+      "images": []
+    },
+    {
+      "sequence": 39,
+      "entry": "job.wait",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "job_id",
+        "wait"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "status": "succeeded",
+      "arguments_sha256": "dfe12dc51fb2891574f91cc59cd615d576781679e53592ea123755ad00df2a4e",
+      "response_sha256": "fde6f3df69916b67f8674318074d13c7a6017096c006e7110d57d83663526dd8",
+      "images": []
+    },
+    {
+      "sequence": 40,
+      "entry": "ui.windows",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "target"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "arguments_sha256": "ed9b037cecd3b5dfd158096061b4fdc828d3d9772b4d14659f7e17c7d66f7fb5",
+      "response_sha256": "e2c04d0339419299d4e0b8fcdda34f92ca27ccf716ac3b64e4a068c492387a7f",
+      "images": []
+    },
+    {
+      "sequence": 41,
+      "entry": "ui.tree",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "depth",
+        "interactive",
+        "target"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "arguments_sha256": "cc1376a234de82e98d0bbe246c08a4ea900254cacaf1492bd4abdd2d42f8a505",
+      "response_sha256": "163c4a56b12355017b7fbf6f3e91a13f0e4dd57a0d8d80dd950e43f4f886e551",
+      "images": []
+    },
+    {
+      "sequence": 42,
+      "entry": "ui.find",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "selector",
+        "target"
+      ],
+      "object_parameters": {
+        "selector": "object"
+      },
+      "protocol_error": false,
+      "arguments_sha256": "1882d4a295f0bf56c63e32f1c74a194c385f5afaf0cdda6a919b9086ad2c57cb",
+      "response_sha256": "c083950ea14bec7b0ed2222f3033c8ed75ebfec0af9c8afdc6f596f35c7e1e3b",
+      "images": []
+    },
+    {
+      "sequence": 43,
+      "entry": "ui.assert",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "target",
+        "visible"
+      ],
+      "object_parameters": {
+        "visible": "object"
+      },
+      "protocol_error": false,
+      "assertion_passed": true,
+      "arguments_sha256": "ddacf66c6ca32e4c5c90cdad4c9d59b23968a1d75f9998aced1d43ff526791e7",
+      "response_sha256": "5a9e57ff347d7c63d117e0bca5aae5c806ad1bf3d613f2b2916b66c00af7044f",
+      "images": []
+    },
+    {
+      "sequence": 44,
+      "entry": "ui.test_start",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "fresh_start",
+        "plan",
+        "project",
+        "target"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "arguments_sha256": "ea99ba331f4de40a5705693f41330fce50a9311775a0a3ae1740ad4a06da51d1",
+      "response_sha256": "82e47818a3fbb992252b09dc36f8a35d227d27b6386ed9fda2c2711732dab8c6",
+      "images": []
+    },
+    {
+      "sequence": 45,
+      "entry": "ui.test_step",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "description",
+        "op",
+        "selector",
+        "target",
+        "test_id"
+      ],
+      "object_parameters": {
+        "selector": "object"
+      },
+      "protocol_error": false,
+      "assertion_passed": true,
+      "arguments_sha256": "5ee864cc090d26c2057f4f7ee63c3c26971a4b8797f2539ade02499f78da4781",
+      "response_sha256": "93fe9d50b39683ddb73deef666cb6cf55665f7b184850d0f6620edd2f89f1038",
+      "images": []
+    },
+    {
+      "sequence": 46,
+      "entry": "ui.test_step",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "description",
+        "target",
+        "test_id",
+        "visible"
+      ],
+      "object_parameters": {
+        "visible": "object"
+      },
+      "protocol_error": false,
+      "assertion_passed": true,
+      "arguments_sha256": "cb0cef210b3d8cfe1bf4eba35e538bef22b4ad7bc0ed0ccd77afa2d5a3e180c5",
+      "response_sha256": "b44b490a9aa3523512cb305a9ac80afc0498b1b8f5b2dd18c891b2fb241d907a",
+      "images": []
+    },
+    {
+      "sequence": 47,
+      "entry": "ui.review",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "requirement",
+        "target",
+        "test_id"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "arguments_sha256": "2876aabcf31e10e42f98182194cfe0fa8b3fdbd54fd9c8de84bd15d7ba1c9e0c",
+      "response_sha256": "4f00a427d0692256226ef35ad590d643346af12e936bea0ede289f5851fae6bb",
+      "images": [
+        {
+          "mime": "image/jpeg",
+          "sha256": "6949e46d79a94c8bb7a51a500cb1603929a4112359bc30aafbc04e0939bfa3dc"
+        }
+      ]
+    },
+    {
+      "sequence": 48,
+      "entry": "ui.review",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "outcome",
+        "reason",
+        "review_id",
+        "target",
+        "test_id"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "arguments_sha256": "6e3cf9f12ca964914d1b04fdde1d4548635395c373db1a60526641f3368873ca",
+      "response_sha256": "7ac2162834c5d2cbab6efc075c43a8c956dbecea80d2d38d2c07ea27b7620336",
+      "images": []
+    },
+    {
+      "sequence": 49,
+      "entry": "ui.test_finish",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "target",
+        "test_id"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "status": "passed",
+      "arguments_sha256": "845e6ffb47d88885e2cfab7d350b7b7231b427035fdc003f686f7754dc2c6c3c",
+      "response_sha256": "42204699177ddb4e39649409fd3a3627e9ae2a85a9400d8300e3a98cad14c486",
+      "images": []
+    },
+    {
+      "sequence": 50,
+      "entry": "ui.test_export",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "directory",
+        "target",
+        "test_id"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "arguments_sha256": "2fb78797466a11b0bfc3ed2b7c8abd27da260c171afbd8dd73d1a29c6f02de4f",
+      "response_sha256": "43dd8f996a188e0394b54fb3e62b1e5df35c5c4cf5dec1762c21266f032f6366",
+      "images": []
+    },
+    {
+      "sequence": 51,
+      "entry": "ui.test_log",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "max_chars",
+        "target",
+        "test_id"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "arguments_sha256": "0001378d68612f2900e347d913d481246f4428c87af1a200d3610f2b45560ee1",
+      "response_sha256": "a25745ed0cd630b87eaf2564ebb0f83ad6f518fece8767a15b010656793b3f71",
+      "images": []
+    },
+    {
+      "sequence": 52,
+      "entry": "run.stop",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "project",
+        "target"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "arguments_sha256": "572d91186319388efd27cccd3855d03fdb96c92b3a9d4810ad80382d8eae0504",
+      "response_sha256": "6bfe4afc9a76c0da81aafc60d3a45da98145f640bf111599894c25596b6156b7",
+      "images": []
+    },
+    {
+      "sequence": 53,
+      "entry": "run.launch",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "project",
+        "target"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "arguments_sha256": "95fd01054d5460dfc7d30a30773423bbd2ea7b676f54f8b6f419d2763869ed7b",
+      "response_sha256": "2080a0a6ae159640a9a3805e1bf7b3a16aa4b4a643bb301ffbbddbfad8eadd0f",
+      "images": []
+    },
+    {
+      "sequence": 54,
+      "entry": "ui.find",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "selector",
+        "target"
+      ],
+      "object_parameters": {
+        "selector": "object"
+      },
+      "protocol_error": false,
+      "arguments_sha256": "1882d4a295f0bf56c63e32f1c74a194c385f5afaf0cdda6a919b9086ad2c57cb",
+      "response_sha256": "c083950ea14bec7b0ed2222f3033c8ed75ebfec0af9c8afdc6f596f35c7e1e3b",
+      "images": []
+    },
+    {
+      "sequence": 55,
+      "entry": "ui.assert",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "target",
+        "visible"
+      ],
+      "object_parameters": {
+        "visible": "object"
+      },
+      "protocol_error": false,
+      "assertion_passed": true,
+      "arguments_sha256": "ddacf66c6ca32e4c5c90cdad4c9d59b23968a1d75f9998aced1d43ff526791e7",
+      "response_sha256": "5a9e57ff347d7c63d117e0bca5aae5c806ad1bf3d613f2b2916b66c00af7044f",
+      "images": []
+    },
+    {
+      "sequence": 56,
+      "entry": "ui.test_start",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "fresh_start",
+        "plan",
+        "project",
+        "target"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "arguments_sha256": "9fbfd10bd13524d21fa4d635f2cf510bc8f93784232de39f5448e704d4924f83",
+      "response_sha256": "64d627ca917750a205c2e02760b452f5f1ea7334f05e06a3b28eb91a8b9fbdcf",
+      "images": []
+    },
+    {
+      "sequence": 57,
+      "entry": "ui.test_step",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "description",
+        "op",
+        "selector",
+        "target",
+        "test_id"
+      ],
+      "object_parameters": {
+        "selector": "object"
+      },
+      "protocol_error": false,
+      "assertion_passed": true,
+      "arguments_sha256": "3cf17361fed97be52c066ccce52c194667ef48c0400f7a2e3d7833080f118b6f",
+      "response_sha256": "1d6621bd5fc834d90c0058bc0a173f7ae6a77816dae230e78d02878e6d5179f3",
+      "images": []
+    },
+    {
+      "sequence": 58,
+      "entry": "ui.test_step",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "description",
+        "target",
+        "test_id",
+        "visible"
+      ],
+      "object_parameters": {
+        "visible": "object"
+      },
+      "protocol_error": false,
+      "assertion_passed": true,
+      "arguments_sha256": "dc4157791225d7198175431eb216c3652817ab48973e5122f7598cbf663f9df4",
+      "response_sha256": "15481e6e322fb0527f461e1449b6f53810169fce019502eaa031be409cce4321",
+      "images": []
+    },
+    {
+      "sequence": 59,
+      "entry": "ui.review",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "requirement",
+        "target",
+        "test_id"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "arguments_sha256": "5b668e94efd3d9259ff42259593ca975e5be0e3ad62a954d3e9fee104cf3fc42",
+      "response_sha256": "020414f6e63284ad28b83e98e4562366773136781ca1941a3ace4978e0828f7e",
+      "images": [
+        {
+          "mime": "image/jpeg",
+          "sha256": "6483a4e286088c55d4cdaf88f02d1640f276d7778aecd8749488611ed48bbe15"
+        }
+      ]
+    },
+    {
+      "sequence": 60,
+      "entry": "ui.review",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "outcome",
+        "reason",
+        "review_id",
+        "target",
+        "test_id"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "arguments_sha256": "4577c610e3184d3b6cb51352adf1881e22545d1c958e7a3ab2778fd8dab9edbb",
+      "response_sha256": "7ac2162834c5d2cbab6efc075c43a8c956dbecea80d2d38d2c07ea27b7620336",
+      "images": []
+    },
+    {
+      "sequence": 61,
+      "entry": "ui.test_finish",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "target",
+        "test_id"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "status": "passed",
+      "arguments_sha256": "1d67c20ff71c39872eb6bf9eb0b02c1b3bd091336800c3b59b76594660bb1dc1",
+      "response_sha256": "cb9a755c7c8a8bee7b5caca3b21cc745a6ff2b22365a37b8bcc39c852087bfe1",
+      "images": []
+    },
+    {
+      "sequence": 62,
+      "entry": "ui.test_export",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "directory",
+        "target",
+        "test_id"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "arguments_sha256": "bfebf19b2f55c94eec41cc8aa8dbc02f37377e697f8dc0d0923690207abd12ae",
+      "response_sha256": "9dcfc76e9dfd40cf592d4bafdbde6c9b3d8997255240f7bdf1277e736f77b03a",
+      "images": []
+    },
+    {
+      "sequence": 63,
+      "entry": "run.stop",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "project",
+        "target"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "arguments_sha256": "572d91186319388efd27cccd3855d03fdb96c92b3a9d4810ad80382d8eae0504",
+      "response_sha256": "6bfe4afc9a76c0da81aafc60d3a45da98145f640bf111599894c25596b6156b7",
+      "images": []
+    },
+    {
+      "sequence": 64,
+      "entry": "run.launch",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "project",
+        "target"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "arguments_sha256": "95fd01054d5460dfc7d30a30773423bbd2ea7b676f54f8b6f419d2763869ed7b",
+      "response_sha256": "492a513f0fe4a4d0e2e4e84687ce43e9319545dde819de2fe262f8349f85d5f6",
+      "images": []
+    },
+    {
+      "sequence": 65,
+      "entry": "ui_flow.list",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "project"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "arguments_sha256": "739bdd364e1e2282be43eb883ab1be7a9ac5f9b1b70597b80fb7de7c3676a577",
+      "response_sha256": "89f18f76157d3575886bfc6d51457e1713fd5544cd78822be04eca35eddf84c0",
+      "images": []
+    },
+    {
+      "sequence": 66,
+      "entry": "ui_flow.record",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "id",
+        "project",
+        "target"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "arguments_sha256": "9f927bcdcf83a5298ca0642be29c1c9fe2ff225f958dd0181e2587efcbfe7aaf",
+      "response_sha256": "31e3722abef9448edad400ca0ebae2a3d1297ec1e7cf5b57e2913f7e7ade2c2d",
+      "images": []
+    },
+    {
+      "sequence": 67,
+      "entry": "ui.act",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "op",
+        "selector",
+        "target"
+      ],
+      "object_parameters": {
+        "selector": "object"
+      },
+      "protocol_error": false,
+      "arguments_sha256": "3386fed19b92b8c5151e0101805fcce9fa1fadeda95ea33fec573c3045d89ddf",
+      "response_sha256": "8705b0033e3a05cf4ceeb24c1cb7cb121bd15aae7966e8370acc6b30791f83c1",
+      "images": []
+    },
+    {
+      "sequence": 68,
+      "entry": "ui_flow.stop",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "assert",
+        "project",
+        "target"
+      ],
+      "object_parameters": {
+        "assert": "object"
+      },
+      "protocol_error": false,
+      "arguments_sha256": "2d6e92558c8e64367faead79857dbb3fbc253dd7a5ed6b738709a78944faf331",
+      "response_sha256": "4aa06c9f01ea87dcfeccb976b33e162b9f9321f8e719171fb97002d9dd7a6322",
+      "images": []
+    },
+    {
+      "sequence": 69,
+      "entry": "ui_flow.show",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "id",
+        "project"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "arguments_sha256": "5bb66cc96903ee20c2cd74009df59e77116d179bbaa5739276f37833e8922a4b",
+      "response_sha256": "fc8624ca123ce10e333c131dbc03b490f2bd7fc650f6a08310f8bac1dc070e54",
+      "images": []
+    },
+    {
+      "sequence": 70,
+      "entry": "ui_flow.replay",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "id",
+        "project",
+        "target",
+        "wait"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "status": "queued",
+      "arguments_sha256": "c9baa65e3515a6adcca0a10bd21f78af59cca7a8c547e3326199f9ea76ce70b4",
+      "response_sha256": "6e12fdc8179afd50369536b88c62059dd379e8d9e997a80e09c01b40753a8fac",
+      "images": []
+    },
+    {
+      "sequence": 71,
+      "entry": "job.wait",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "job_id",
+        "wait"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "status": "succeeded",
+      "arguments_sha256": "0dc664e9bebd0ced7d54f44000afb72a1bc9f2838f7cf9053a2a7247b5ba91ee",
+      "response_sha256": "fe5ac6c5a36d01e8eb790610e3add0eebf35739e632ca5de059bafd49b9c3e2d",
+      "images": []
+    },
+    {
+      "sequence": 72,
+      "entry": "ui_flow.delete",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "id",
+        "project"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "arguments_sha256": "81404a36512bdfa9264c8b7e688cc8d770ea3fcaf42697f35872edc69909ee7a",
+      "response_sha256": "b80ff7a575965cf4a92c32e100eda6f51055c5e3fe222354d5b2eb29b60f7746",
+      "images": []
+    },
+    {
+      "sequence": 73,
+      "entry": "ui.layout",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "target"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "assertion_passed": true,
+      "arguments_sha256": "94c8ac57c28b8b61d3548597a56c393bf002f38965f690b4facb06c987306cb9",
+      "response_sha256": "16c8623e82cb63cce799571c07c1bda0c8ee87faa12121f257e9924cd88264e6",
+      "images": []
+    },
+    {
+      "sequence": 74,
+      "entry": "ui.visual",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "name",
+        "project",
+        "target",
+        "update"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "arguments_sha256": "20419c3a507d35e96e7c2b7c616a80011e92fba5d8d2dcebe5ddaef04b149d3c",
+      "response_sha256": "7f79c9a42c6794e00a31ca3481f01d8d8eb8ee77c1045d534e33c197ad180595",
+      "images": []
+    },
+    {
+      "sequence": 75,
+      "entry": "ui.visual",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "name",
+        "project",
+        "target",
+        "update"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "arguments_sha256": "6d634522de73b5a3d179899e67b79baca2381c9beff042a673231f7436751c34",
+      "response_sha256": "068d0eab09b9f2108841e623c23cf00ce1d8de2f3f8795a52f92a199aea055bc",
+      "images": []
+    },
+    {
+      "sequence": 76,
+      "entry": "ui.screenshot",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "format",
+        "save_path",
+        "target"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "arguments_sha256": "3af22944f53fd0b8b1b160b72df5734a267c294513fd95000171c579115ca9a2",
+      "response_sha256": "39bdb28eb4d9d1519a539997ca28406bcd4a725aca01a024433c20804379624d",
+      "images": [
+        {
+          "mime": "image/png",
+          "sha256": "3edac99de226159ed2f8fde612cd32279f0a1a153156b38f810365e0a17167ae"
+        }
+      ]
+    },
+    {
+      "sequence": 77,
+      "entry": "ui.record_status",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "target"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "status": "idle",
+      "arguments_sha256": "09bbf5490d41680206bd4dcc66b6d2f9923884c14b3d976e17609de94f117f3c",
+      "response_sha256": "2e4d678de73de207169e64948c696e13463feb1ce4faf5240d4edb54e285e279",
+      "images": []
+    },
+    {
+      "sequence": 78,
+      "entry": "ui.record_stop",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "save_path",
+        "target"
+      ],
+      "object_parameters": {},
+      "protocol_error": true,
+      "error_code": "CAPABILITY_UNAVAILABLE",
+      "arguments_sha256": "f2ff739c91eecbb314fa04ab9c3e30d57711f9ea74424188930a06edb96891af",
+      "response_sha256": "3ca0d995de20f32549a11585709d3263be8be39792aa3de838bcc8508f76dd96",
+      "images": []
+    },
+    {
+      "sequence": 79,
+      "entry": "run.build_run",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "hot_reload",
+        "project",
+        "run_mode",
+        "target",
+        "wait"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "status": "queued",
+      "arguments_sha256": "a6c08e156fb1df6e09c158e35aae7d03229b7d64e7ab9bef82ff2f82ca0cb30e",
+      "response_sha256": "dba68b3d3e82e820f32326c54e380c56e86513d9ca09a6e84be23e8251778926",
+      "images": []
+    },
+    {
+      "sequence": 80,
+      "entry": "job.wait",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "job_id",
+        "wait"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "status": "succeeded",
+      "arguments_sha256": "ffc191643601611c567fd24cc4966f2f9b2170f13c3de39be3d03ab811b30329",
+      "response_sha256": "6e3c9c5985719c4f26b4535b4bc52c39c7beb1d6b1dfdc93a4e73181f859631d",
+      "images": []
+    },
+    {
+      "sequence": 81,
+      "entry": "skills.read",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "name"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "arguments_sha256": "01837357a95c1ffd80b6bb07bacb132dcd1f8bacfed6baf6a9520007e1f85c21",
+      "response_sha256": "0118062ecc4321ba27ead5f83636f2773edb848d8dd04dff149ae28d2800e0b9",
+      "images": []
+    },
+    {
+      "sequence": 82,
+      "entry": "hot_reload.apply",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "files",
+        "project",
+        "restart",
+        "target"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "arguments_sha256": "39311984c7920ccd2258f1547a77164b72712fe51fbb3b198e86d6463f500717",
+      "response_sha256": "9c4c727f4116cabacd5fff6e80a6b80962d8b04d60dc22742292fc47c6d6eff9",
+      "images": []
+    },
+    {
+      "sequence": 83,
+      "entry": "ui.assert",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "target",
+        "visible"
+      ],
+      "object_parameters": {
+        "visible": "object"
+      },
+      "protocol_error": false,
+      "assertion_passed": true,
+      "arguments_sha256": "ddacf66c6ca32e4c5c90cdad4c9d59b23968a1d75f9998aced1d43ff526791e7",
+      "response_sha256": "5a9e57ff347d7c63d117e0bca5aae5c806ad1bf3d613f2b2916b66c00af7044f",
+      "images": []
+    },
+    {
+      "sequence": 84,
+      "entry": "ui.act",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "op",
+        "selector",
+        "target"
+      ],
+      "object_parameters": {
+        "selector": "object"
+      },
+      "protocol_error": false,
+      "arguments_sha256": "3386fed19b92b8c5151e0101805fcce9fa1fadeda95ea33fec573c3045d89ddf",
+      "response_sha256": "679cd1037982c6f80c8604119f137c06b9149909119648a01effab8856902486",
+      "images": []
+    },
+    {
+      "sequence": 85,
+      "entry": "ui.assert",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "target",
+        "visible"
+      ],
+      "object_parameters": {
+        "visible": "object"
+      },
+      "protocol_error": false,
+      "assertion_passed": true,
+      "arguments_sha256": "a3564314de5027fe0df241e37365ce0204e6d3010e5d03ee444cb028748295eb",
+      "response_sha256": "f9b3d5c539ac5442d34f2d4188f73c713bea2e1f2c11369460ba599f01a1ac85",
+      "images": []
+    },
+    {
+      "sequence": 86,
+      "entry": "hot_reload.reset",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "project",
+        "target"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "arguments_sha256": "ef91ea4a61b5dd59006bf523d6f17ce12aa408f73db7685e66abd17001c4ed45",
+      "response_sha256": "6ca4fd332d939615cf2d36798c2c23c631a92f04e2891c94c251449ca9ee9ca5",
+      "images": []
+    },
+    {
+      "sequence": 87,
+      "entry": "run.stop",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "project",
+        "target"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "arguments_sha256": "572d91186319388efd27cccd3855d03fdb96c92b3a9d4810ad80382d8eae0504",
+      "response_sha256": "6bfe4afc9a76c0da81aafc60d3a45da98145f640bf111599894c25596b6156b7",
+      "images": []
+    },
+    {
+      "sequence": 88,
+      "entry": "run.launch",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "project",
+        "target"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "arguments_sha256": "95fd01054d5460dfc7d30a30773423bbd2ea7b676f54f8b6f419d2763869ed7b",
+      "response_sha256": "e43e21de53859d522fa08767118715781e7d633b35adc3f6fa2e6de0db5f717b",
+      "images": []
+    },
+    {
+      "sequence": 89,
+      "entry": "ui.act",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "op",
+        "selector",
+        "target"
+      ],
+      "object_parameters": {
+        "selector": "object"
+      },
+      "protocol_error": false,
+      "arguments_sha256": "3386fed19b92b8c5151e0101805fcce9fa1fadeda95ea33fec573c3045d89ddf",
+      "response_sha256": "679cd1037982c6f80c8604119f137c06b9149909119648a01effab8856902486",
+      "images": []
+    },
+    {
+      "sequence": 90,
+      "entry": "ui.assert",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "target",
+        "visible"
+      ],
+      "object_parameters": {
+        "visible": "object"
+      },
+      "protocol_error": false,
+      "assertion_passed": false,
+      "arguments_sha256": "7ad56d2e660f31ce242288d199ea563162223d824109d8458154ec9154fcbeeb",
+      "response_sha256": "a1c588d9bfbee2aab173dda0a74fe7f44ce9d2f0fa9c7a10f4701ca70b25ae58",
+      "images": []
+    },
+    {
+      "sequence": 91,
+      "entry": "ui.assert",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "hidden",
+        "target"
+      ],
+      "object_parameters": {
+        "hidden": "object"
+      },
+      "protocol_error": false,
+      "assertion_passed": false,
+      "arguments_sha256": "0032efe117b407955d84fd29db88a6ecda9376c2f531b31e3dc289aa72d0735d",
+      "response_sha256": "c4918ec8440b8fc61fa309664b232344a9d1e1059b6ac59e7b5744d25b1e9b0a",
+      "images": []
+    },
+    {
+      "sequence": 92,
+      "entry": "code.lsp_restart",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "language",
+        "project"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "arguments_sha256": "3f3f8f697a553010d10f5d3aa1c38e56ba4e0e298b29ad88d485235360782d98",
+      "response_sha256": "1500f427c0cf2dbdaf7af4690058567aed328462aad3e9155c2a64d847cd94c3",
+      "images": []
+    },
+    {
+      "sequence": 93,
+      "entry": "ui.observe",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "target"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "arguments_sha256": "6f6d682b404b0ce69008e5898f0dfcff2a4de9575ea235ca62151ef507bafad4",
+      "response_sha256": "b3d1a4069bef3d2fdc2e1de54ec4a26e7b30657f216c945c67b3ec6e3a206d0b",
+      "images": [
+        {
+          "mime": "image/jpeg",
+          "sha256": "4745e79e235db679d354ca4edc5226d8c279bd39388f56e0f32cd5d3ab89e211"
+        }
+      ]
+    },
+    {
+      "sequence": 94,
+      "entry": "device.shell",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "command",
+        "target"
+      ],
+      "object_parameters": {},
+      "protocol_error": true,
+      "error_code": "INVALID_INPUT",
+      "arguments_sha256": "7d2642cce3760304a7f37ae06890a4050d08263cea362dab3a66800e56303270",
+      "response_sha256": "3c03cce1fdfb3c8aa9a52b4bd94d5fd6bf98f3e0b9a3fc9583a77a781d1eb0c6",
+      "images": []
+    },
+    {
+      "sequence": 95,
+      "entry": "device.log",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "action",
+        "from",
+        "grep",
+        "lines",
+        "target"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "arguments_sha256": "ab1e8d0a4c4c7496c2e3ad83d33271ec3630231a1f0a4013a4748fbdb4b56093",
+      "response_sha256": "7ae5d57dfc16aba630c90dc0774632472973a8be68a81150b8a8efcfcbf42385",
+      "images": []
+    },
+    {
+      "sequence": 96,
+      "entry": "run.build_run",
+      "phase": "fixture-restoration",
+      "argument_keys": [
+        "action",
+        "assert",
+        "project",
+        "run_mode",
+        "target",
+        "wait"
+      ],
+      "object_parameters": {
+        "assert": "object"
+      },
+      "protocol_error": false,
+      "status": "queued",
+      "arguments_sha256": "769758e7f1de6c62e5f2d8c043bf18791a4996995be80523f4fc49afbf3871a1",
+      "response_sha256": "e19e58838d29ea33c1353548753289930d26159f5b6e36ee9229ff7859c0949d",
+      "images": []
+    },
+    {
+      "sequence": 97,
+      "entry": "job.wait",
+      "phase": "fixture-restoration",
+      "argument_keys": [
+        "action",
+        "job_id",
+        "wait"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "status": "succeeded",
+      "arguments_sha256": "f08486e010988346f6144ada55527c98edb34c039c37caadd7880fa8398f0a9e",
+      "response_sha256": "55d2d14d5ea2a845edce5212fcd50354556850b53d89cc26c666aadef978547b",
+      "images": []
+    },
+    {
+      "sequence": 98,
+      "entry": "ui.act",
+      "phase": "fixture-restoration",
+      "argument_keys": [
+        "action",
+        "op",
+        "selector",
+        "target"
+      ],
+      "object_parameters": {
+        "selector": "object"
+      },
+      "protocol_error": false,
+      "arguments_sha256": "3386fed19b92b8c5151e0101805fcce9fa1fadeda95ea33fec573c3045d89ddf",
+      "response_sha256": "0d19262d3a318a596f0e3679d200b974bfe23c7e1a5999a4b9faaffdb6afa0b2",
+      "images": []
+    },
+    {
+      "sequence": 99,
+      "entry": "ui.assert",
+      "phase": "fixture-restoration",
+      "argument_keys": [
+        "action",
+        "target",
+        "visible"
+      ],
+      "object_parameters": {
+        "visible": "object"
+      },
+      "protocol_error": false,
+      "assertion_passed": true,
+      "arguments_sha256": "7ad56d2e660f31ce242288d199ea563162223d824109d8458154ec9154fcbeeb",
+      "response_sha256": "0bbe7858151201fe2816aa4fc6b317c315f5393d60a25289a47189d537f29cac",
+      "images": []
+    },
+    {
+      "sequence": 100,
+      "entry": "ui.assert",
+      "phase": "fixture-restoration",
+      "argument_keys": [
+        "action",
+        "hidden",
+        "target"
+      ],
+      "object_parameters": {
+        "hidden": "object"
+      },
+      "protocol_error": false,
+      "assertion_passed": true,
+      "arguments_sha256": "0032efe117b407955d84fd29db88a6ecda9376c2f531b31e3dc289aa72d0735d",
+      "response_sha256": "8776f7a0845131d6746a36f43fa420931a1ae8797ff2c02d5beb15a17bcb1f3a",
+      "images": []
+    },
+    {
+      "sequence": 101,
+      "entry": "doctor",
+      "phase": "acceptance-or-diagnosis",
+      "argument_keys": [
+        "project",
+        "target"
+      ],
+      "object_parameters": {},
+      "protocol_error": false,
+      "arguments_sha256": "37bcb6255174d826e640ccd5e30d127bb3e2457505d85ce93c8a2fee1c71127c",
+      "response_sha256": "e4453c1453453af523d870fbaea618aa188350e1ed37467a186d50c726e1af17",
+      "images": []
+    }
+  ]
+}
