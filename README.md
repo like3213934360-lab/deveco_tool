@@ -18,7 +18,7 @@
 | 源码行数（`src`） | 约 5.7k | 约 35k |
 | 知识检索 | 3–20 ms | — |
 
-v1.4.4 修正 reset：明确覆盖安装预存原始基线包、保留应用数据并核验补丁清零；录屏补齐服务状态、会话归属和导出错误核验。离线回归与真实 SDK/模型验收分开：按用户要求，设备/宿主测试等待 Codex 重启通知；旧 API 26 的 0 字节录像成因及真实取回仍未验证。见 [验收与 TODO](docs/UPGRADE-1.4.4.md)。此前 OpenCode/Codex 验收见 [v1.4.3 记录](docs/UPGRADE-1.4.3.md)，Claude 不在本轮适配名单。
+v1.4.5 补齐 reset 的独立补丁查询与数据保留回归。Codex 原生调用已验证覆盖安装原始基线包后恢复原行为、补丁清零且 SQLite 标记保留；当前 API 26 模拟器缺少视频编码器，按用户决定属于正常不支持，不计为 MCP 缺陷；真机录屏尚未验证。离线、SDK 与宿主模型证据分别记录，见 [验收与 TODO](docs/UPGRADE-1.4.5.md)。此前 OpenCode/Codex 验收见 [v1.4.3 记录](docs/UPGRADE-1.4.3.md)，Claude 不在本轮适配名单。
 版本发布遵循 [GitHub 发布流程](docs/RELEASING.md)：`main` 上的新稳定版本通过全部 CI 后自动发布，并核验 tag、提交和 Latest。
 
 ## 安装
@@ -213,7 +213,7 @@ A lean MCP server for HarmonyOS development. It lets MCP hosts (OpenCode, Codex,
 | Source lines (`src`) | ~5.7k | ~35k |
 | Knowledge search | 3–20 ms | — |
 
-See [v1.4.4 acceptance and TODO](docs/UPGRADE-1.4.4.md) for explicit baseline-package restoration and recorder lifecycle/export checks. Real device and host testing awaits the user's Codex restart confirmation; the original API 26 zero-byte video's cause and successful retrieval remain unverified. Earlier model evidence is in [v1.4.3](docs/UPGRADE-1.4.3.md). Claude is outside this round's scope. [GitHub delivery](docs/RELEASING.md) verifies CI, the immutable release tag and Latest.
+See [v1.4.5 acceptance and TODO](docs/UPGRADE-1.4.5.md) for independent patch queries and data-retention regression checks. Native Codex calls verified restoration of baseline behavior and a separately inserted SQLite marker. The original API 26 emulator has no available video encoder; this is an expected environment limitation, not an MCP defect. Real-device recording remains unverified. Local, SDK and host evidence remain distinct. Earlier model evidence is in [v1.4.3](docs/UPGRADE-1.4.3.md). Claude is outside this round's scope. [GitHub delivery](docs/RELEASING.md) verifies CI, the immutable release tag and Latest.
 
 ### Install
 

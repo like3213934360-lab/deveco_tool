@@ -716,7 +716,8 @@ export async function recordingStatus(target: string, signal?: AbortSignal) {
     status,
     ...(current ? { file: current.name, seconds: Math.round((Date.now() - current.started) / 1000) } : {}),
     note: status === "busy" ? "Recorder ownership is unknown or external; this server will not toggle it"
-      : status === "idle" && current ? "Recording ended outside this server; record_stop retrieves the file" : undefined,
+      : status === "recording" ? "Recorder service active; encoded video is unverified until record_stop retrieves and validates the MP4"
+      : current ? "Recorder service ended; video is unverified until record_stop retrieves and validates the MP4" : undefined,
   };
 }
 
@@ -739,7 +740,7 @@ export async function startRecording(target: string, signal?: AbortSignal) {
     const recorder = await recorderActive(target, signal, true);
     if (recorder) {
       await setSession(target, { ...current, recorder });
-      return { recording: true, file: name, note: "Recorder service confirmed; record_stop must retrieve and validate the MP4" };
+      return { recording: true, file: name, note: "Recorder service active; encoded video is unverified until record_stop retrieves and validates the MP4" };
     }
     await delay(250, undefined, { signal });
   }

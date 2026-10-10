@@ -271,7 +271,7 @@ test("auto deploy relaunches unchanged installs and fully deploys dependency cha
   }
 });
 
-test("device sqlite on the app's RDB store (read-only by default)", { skip: !target }, async () => {
+test("device sqlite is read-only by default and reset preserves existing app data", { skip: !target }, async () => {
   const page = path.join(project, "entry/src/main/ets/pages/Index.ets");
   const original = fs.readFileSync(page, "utf8");
   fs.writeFileSync(page, `import { relationalStore } from '@kit.ArkData';\n` + original.replace(/build\(\)\s*\{/, `aboutToAppear(): void {
@@ -283,13 +283,22 @@ test("device sqlite on the app's RDB store (read-only by default)", { skip: !tar
 
   build() {`));
   try {
-    const deployed = await waitJob(await call("run", { action: "build_run", project, target, wait: 60000 }));
+    const deployed = await waitJob(await call("run", { action: "build_run", project, target, run_mode: "full", hot_reload: true, wait: 60000 }));
     assert.equal(deployed.status, "succeeded", JSON.stringify(deployed.error ?? deployed).slice(0, 2000));
     await new Promise((r) => setTimeout(r, 1500));
     const rows = await call("device", { action: "sqlite", target, bundle, db: "e2e.db", sql: "select * from notes" });
     assert.deepEqual(rows.rows, [{ id: 1, title: "hello" }]);
     const blocked = await client.call("device", { action: "sqlite", target, bundle, db: "e2e.db", sql: "delete from notes" });
     assert.equal(blocked.isError, true);
+    // This row is never inserted by app startup: reinstalling with data loss cannot recreate the proof.
+    await call("device", { action: "sqlite", target, bundle, db: "e2e.db", sql: "INSERT INTO notes VALUES (2, 'preserved across reset')", write: true });
+    fs.writeFileSync(page, fs.readFileSync(page, "utf8").replace("'Welcome'", "'Patched Database'"));
+    assert.equal((await call("hot_reload", { action: "apply", project, target })).applied, true);
+    await call("ui", { action: "act", target, op: "click", selector: { text: "Hello World", exact: true } });
+    assert.equal((await call("ui", { action: "assert", target, visible: { text: "Patched Database", exact: true } })).passed, true);
+    await verifyReset("Patched Database");
+    const retained = await call("device", { action: "sqlite", target, bundle, db: "e2e.db", sql: "SELECT * FROM notes WHERE id = 2" });
+    assert.deepEqual(retained.rows, [{ id: 2, title: "preserved across reset" }]);
   } finally {
     fs.writeFileSync(page, original);
   }

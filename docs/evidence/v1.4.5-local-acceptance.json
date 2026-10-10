@@ -1,0 +1,60 @@
+{
+  "version": "1.4.5",
+  "build_id": "44db485182694c582ba2e60e94a09673edf6dfbe12b555810c8dbe3c4cab9193",
+  "node": "v26.0.0",
+  "typecheck": "passed",
+  "unit": {
+    "passed": 184,
+    "failed": 0,
+    "skipped": 0
+  },
+  "sdk_smoke": {
+    "target": "127.0.0.1:5555",
+    "passed": 22,
+    "failed": 0,
+    "skipped": 0,
+    "duration_ms": 214021.181,
+    "reset_cases": 3,
+    "sqlite_marker_survived": true
+  },
+  "bench": {
+    "handshake_ms": {
+      "median": 101,
+      "min": 95,
+      "max": 119
+    },
+    "tools": 15,
+    "instructions_bytes": 1737,
+    "instructions_chars": 1737,
+    "longest_description_chars": 1594,
+    "tools_list_bytes": 36848,
+    "repeated_instructions_bytes": 62963,
+    "tools_list_ms": 4,
+    "idle_cpu_10s": {
+      "before": "0:00.14",
+      "after": "0:00.14",
+      "changed": false
+    },
+    "idle_rss_mb": 44
+  },
+  "upstream": {
+    "items": 491,
+    "full": 374,
+    "host": 74,
+    "skip": 43,
+    "partial": 0,
+    "undecided": 0,
+    "invalid": 0,
+    "stale": 0
+  },
+  "logs": {
+    "unit-final-v145.log": "a8dad7bbb766208e224f7ddc8c2cdd0b1e2161b2ccdb03b5fc78a417a900928b",
+    "sdk-smoke-final-v145.log": "a3784a52afeed63ab0ac7fd54b81e8a3435e551532ce787c632173ae04496e18",
+    "bench-final-v145.log": "acb3213fe84c4b12d552b48e2ed0477d791802b86247e62273b144c20dbec71a",
+    "upstream-v145.log": "06dc03e5fe290a4be1972db991a9b37e8329e6028adbb66bc1a412389e9679a6"
+  },
+  "native_host_version": "1.4.4",
+  "real_device_recording_verified": false,
+  "emulator_recording_classification": "expected_unsupported_environment",
+  "opencode_retested": false
+}

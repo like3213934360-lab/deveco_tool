@@ -410,18 +410,23 @@ export async function sqlite(target: string, db: string, sql: string, options: {
 const readonlyCommands = new Set(["ls", "cat", "ps", "top", "df", "du", "param", "hidumper", "bm", "aa", "pidof", "uname", "date", "getprop", "wm", "snapshot_display", "hilog", "free", "uptime", "id", "whoami", "mount", "netstat", "ifconfig", "power-shell"]);
 const readonlySub: Record<string, RegExp> = {
   param: /^get$/,
-  bm: /^dump$/,
   aa: /^dump$/,
   hilog: /^-/,
   "power-shell": /^(dump|display)$/,
 };
-export async function readonlyShell(target: string, command: string, signal?: AbortSignal) {
+export function readonlyShellArgs(command: string): string[] {
   invariant(!/[;&|`$<>\n]/.test(command), "INVALID_INPUT", "Shell operators are not allowed in read-only shell");
   const parts = command.trim().split(/\s+/);
   const head = parts[0] ?? "";
   invariant(readonlyCommands.has(head), "INVALID_INPUT", `${head} is not in the read-only allowlist`, { allowed: [...readonlyCommands] });
   if (readonlySub[head]) invariant(readonlySub[head]!.test(parts[1] ?? ""), "INVALID_INPUT", `Only read-only ${head} subcommands are allowed`);
+  invariant(head !== "bm" || parts[1] === "dump" || (parts.length === 5 && parts[1] === "quickfix" && parts[2] === "-q" && parts[3] === "-b" && /^[A-Za-z][A-Za-z0-9_.]*$/.test(parts[4]!)),
+    "INVALID_INPUT", "Only bm dump or bm quickfix -q -b <bundle> is allowed");
   invariant(!(head === "hilog" && parts.includes("-r")), "INVALID_INPUT", "Use device action=log clear=true to clear logs");
+  return parts;
+}
+export async function readonlyShell(target: string, command: string, signal?: AbortSignal) {
+  const parts = readonlyShellArgs(command);
   const result = await shell(target, parts, signal, 30000);
   const text = result.stdout + (result.stderr ? `\n${result.stderr}` : "");
   const artifact = text.length > 12000 ? await saveArtifact(text) : undefined;

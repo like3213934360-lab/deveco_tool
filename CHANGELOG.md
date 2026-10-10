@@ -1,5 +1,19 @@
 # Changelog / 更新日志
 
+## v1.4.5 (2026-10-10)
+
+**中文**
+
+- 修正 reset 独立验收的只读查询入口：允许精确的 `bm quickfix -q -b <bundle>`，继续拒绝修改命令与追加参数；补齐负例。
+- 强化真实 SDK 验收，验证补丁生效后恢复原行为，并保留由 MCP 单独写入、应用启动不会重建的 SQLite 标记。Codex 原生 v1.4.4 已实际验证同一 reset 实现的恢复与数据保留。
+- 明确录屏服务状态不等于已编码视频。原 API 26 模拟器实时日志和公开编码器查询确认没有可用视频编码器；按用户决定归为正常环境限制，不计 MCP 缺陷，真机录屏仍未验证。保留原待导出会话，不替换环境、不伪造成功。见 [验收与 TODO](docs/UPGRADE-1.4.5.md)。
+
+**English**
+
+- Allow the exact read-only `bm quickfix -q -b <bundle>` query required by independent reset verification; reject mutations and extra arguments.
+- Extend SDK acceptance to verify baseline behavior and a separately inserted SQLite marker that startup cannot recreate. Native Codex v1.4.4 calls verified restoration and data retention for the same reset implementation.
+- Clarify that recorder service state does not prove encoded video. Live logs and the public encoder API confirm no available video encoder on the original API 26 emulator. This is an expected environment limitation, not an MCP defect; real-device recording is unverified. Pending recordings and the test environment are preserved.
+
 ## v1.4.4 (2026-10-10)
 
 **中文**

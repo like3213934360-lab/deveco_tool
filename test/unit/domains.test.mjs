@@ -25,11 +25,21 @@ fs.writeFileSync(entry, [
   `export { applicableSyscap, deviceCaps } from ${JSON.stringify(path.join(root, "src/domains/syscap.ts"))};`,
   `export { parseDuration } from ${JSON.stringify(path.join(root, "src/domains/device.ts"))};`,
   `export { findProjectRoot, selectRunModules, BuildOutputParser } from ${JSON.stringify(path.join(root, "src/domains/project.ts"))};`,
-  `export { readonlySqlAllowed } from ${JSON.stringify(path.join(root, "src/domains/device.ts"))};`,
+  `export { readonlySqlAllowed, readonlyShellArgs } from ${JSON.stringify(path.join(root, "src/domains/device.ts"))};`,
 ].join("\n"));
 await build({ entryPoints: [entry], outfile: path.join(out, "entry.mjs"), bundle: true, format: "esm", platform: "node", packages: "external", logLevel: "error", nodePaths: [path.join(root, "node_modules")] });
 fs.symlinkSync(path.join(root, "node_modules"), path.join(out, "node_modules"), "junction"); // junction: no admin rights needed on Windows
 const m = await import(pathToFileURL(path.join(out, "entry.mjs")).href);
+
+test("read-only shell queries quick fixes without allowing mutation or extra arguments", () => {
+  assert.deepEqual(m.readonlyShellArgs(" bm quickfix -q -b com.example.app "), ["bm", "quickfix", "-q", "-b", "com.example.app"]);
+  assert.deepEqual(m.readonlyShellArgs("bm dump -n com.example.app"), ["bm", "dump", "-n", "com.example.app"]);
+  for (const command of [
+    "bm quickfix -r -b com.example.app", "bm quickfix -a -f patch.hqf", "bm quickfix -q",
+    "bm quickfix -q -b", "bm quickfix -q -b -r", "bm quickfix -q -b com.example.app -r",
+    "bm quickfix -q -b com.example.app; reboot", "bm install app.hap", "reboot", "hilog -r",
+  ]) assert.throws(() => m.readonlyShellArgs(command), { code: "INVALID_INPUT" }, command);
+});
 
 test("parses the WindowManagerService window table", () => {
   const raw = [

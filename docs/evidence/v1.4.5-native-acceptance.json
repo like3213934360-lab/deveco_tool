@@ -1,0 +1,388 @@
+{
+  "date": "2026-10-10",
+  "host": "Codex App",
+  "native_server": {
+    "version": "1.4.4",
+    "build_id": "9fd198d4954f7bec17f6d1e60866cd5a13bc200154d497994f9d1be887463eda"
+  },
+  "environment": {
+    "target": "127.0.0.1:5555",
+    "api": 26,
+    "deveco": "26.0.0.821",
+    "sdk": "26.0.0.105"
+  },
+  "reset": {
+    "calls": [
+      {
+        "tool": "run",
+        "action": "build_run",
+        "result": {
+          "status": "succeeded"
+        },
+        "arguments": {
+          "action": "build_run",
+          "run_mode": "full",
+          "hot_reload": true,
+          "wait": 55000
+        }
+      },
+      {
+        "tool": "device",
+        "action": "sqlite",
+        "result": {
+          "db": "/data/app/el2/100/database/com.devecomcp.probe143/entry/rdb/reset-proof.db",
+          "output": ""
+        },
+        "arguments": {
+          "action": "sqlite",
+          "bundle": "com.devecomcp.probe143",
+          "db": "reset-proof.db",
+          "write": true,
+          "sql": "INSERT INTO proof VALUES (1, 'reset-preserve-179162-v144')"
+        }
+      },
+      {
+        "tool": "device",
+        "action": "sqlite",
+        "result": {
+          "db": "/data/app/el2/100/database/com.devecomcp.probe143/entry/rdb/reset-proof.db",
+          "rows": [
+            {
+              "id": 1,
+              "value": "reset-preserve-179162-v144"
+            }
+          ],
+          "total": 1
+        },
+        "arguments": {
+          "action": "sqlite",
+          "bundle": "com.devecomcp.probe143",
+          "db": "reset-proof.db",
+          "sql": "SELECT * FROM proof"
+        }
+      },
+      {
+        "tool": "hot_reload",
+        "action": "apply",
+        "result": {
+          "applied": true,
+          "files": [
+            "entry/src/main/ets/pages/Index.ets"
+          ],
+          "added": 0,
+          "restarted": false,
+          "pid": 14542,
+          "note": "Verify the change with ui observe/assert"
+        },
+        "arguments": {
+          "action": "apply"
+        }
+      },
+      {
+        "tool": "ui",
+        "action": "act",
+        "result": {
+          "performed": "click",
+          "element": {
+            "node": 3,
+            "type": "Text",
+            "text": "Hello World",
+            "key": "HelloWorld",
+            "bounds": [
+              170,
+              1345,
+              1151,
+              1550
+            ],
+            "clickable": true
+          },
+          "after": {
+            "changed": true,
+            "added": [
+              "Text \"Reset Probe Patched\" clickable"
+            ],
+            "removed": [
+              "Text \"Hello World\" clickable"
+            ],
+            "kind": "updated"
+          }
+        },
+        "arguments": {
+          "action": "act",
+          "op": "click",
+          "selector": {
+            "text": "Hello World",
+            "exact": true
+          }
+        }
+      },
+      {
+        "tool": "ui",
+        "action": "assert",
+        "result": {
+          "passed": true,
+          "state": "visible",
+          "matches": [
+            {
+              "node": 3,
+              "type": "Text",
+              "text": "Reset Probe Patched",
+              "key": "HelloWorld",
+              "bounds": [
+                131,
+                1242,
+                1189,
+                1652
+              ],
+              "clickable": true
+            }
+          ]
+        },
+        "arguments": {
+          "action": "assert",
+          "visible": {
+            "text": "Reset Probe Patched",
+            "exact": true
+          },
+          "timeout_ms": 5000
+        }
+      },
+      {
+        "tool": "hot_reload",
+        "action": "reset",
+        "result": {
+          "reset": true,
+          "method": "restore_baseline_packages",
+          "patch_version": 0,
+          "packages": [
+            "entry-default-unsigned.hap"
+          ],
+          "note": "Original packages restored without rebuilding; app data preserved. Launch the app to run the baseline code"
+        },
+        "arguments": {
+          "action": "reset"
+        }
+      },
+      {
+        "tool": "device",
+        "action": "shell",
+        "result": {
+          "exit_code": 0,
+          "output": ""
+        },
+        "arguments": {
+          "action": "shell",
+          "command": "pidof com.devecomcp.probe143"
+        }
+      },
+      {
+        "tool": "run",
+        "action": "launch",
+        "result": {
+          "started": true,
+          "pid": 15298,
+          "crashed": false
+        },
+        "arguments": {
+          "action": "launch"
+        }
+      },
+      {
+        "tool": "ui",
+        "action": "assert",
+        "result": {
+          "passed": true,
+          "state": "visible",
+          "matches": [
+            {
+              "node": 3,
+              "type": "Text",
+              "text": "Hello World",
+              "key": "HelloWorld",
+              "bounds": [
+                170,
+                1345,
+                1151,
+                1550
+              ],
+              "clickable": true
+            }
+          ]
+        },
+        "arguments": {
+          "action": "assert",
+          "visible": {
+            "text": "Hello World",
+            "exact": true
+          },
+          "timeout_ms": 5000
+        }
+      },
+      {
+        "tool": "ui",
+        "action": "act",
+        "result": {
+          "performed": "click",
+          "element": {
+            "node": 3,
+            "type": "Text",
+            "text": "Hello World",
+            "key": "HelloWorld",
+            "bounds": [
+              170,
+              1345,
+              1151,
+              1550
+            ],
+            "clickable": true
+          },
+          "after": {
+            "changed": true,
+            "added": [
+              "Text \"Welcome\" clickable"
+            ],
+            "removed": [
+              "Text \"Hello World\" clickable"
+            ],
+            "kind": "updated"
+          }
+        },
+        "arguments": {
+          "action": "act",
+          "op": "click",
+          "selector": {
+            "text": "Hello World",
+            "exact": true
+          }
+        }
+      },
+      {
+        "tool": "ui",
+        "action": "assert",
+        "result": {
+          "passed": true,
+          "state": "visible",
+          "matches": [
+            {
+              "node": 3,
+              "type": "Text",
+              "text": "Welcome",
+              "key": "HelloWorld",
+              "bounds": [
+                284,
+                1345,
+                1037,
+                1550
+              ],
+              "clickable": true
+            }
+          ]
+        },
+        "arguments": {
+          "action": "assert",
+          "visible": {
+            "text": "Welcome",
+            "exact": true
+          },
+          "timeout_ms": 5000
+        }
+      },
+      {
+        "tool": "ui",
+        "action": "assert",
+        "result": {
+          "passed": true,
+          "state": "hidden",
+          "matches": []
+        },
+        "arguments": {
+          "action": "assert",
+          "hidden": {
+            "text": "Reset Probe Patched",
+            "exact": true
+          },
+          "timeout_ms": 5000
+        }
+      },
+      {
+        "tool": "device",
+        "action": "sqlite",
+        "result": {
+          "db": "/data/app/el2/100/database/com.devecomcp.probe143/entry/rdb/reset-proof.db",
+          "rows": [
+            {
+              "id": 1,
+              "value": "reset-preserve-179162-v144"
+            }
+          ],
+          "total": 1
+        },
+        "arguments": {
+          "action": "sqlite",
+          "bundle": "com.devecomcp.probe143",
+          "db": "reset-proof.db",
+          "sql": "SELECT * FROM proof"
+        }
+      }
+    ],
+    "independent_hdc_query": {
+      "bundle": "com.devecomcp.probe143",
+      "patch_version": 0
+    },
+    "source_still_patched_at_reset": true,
+    "data_marker_created_by_app_startup": false
+  },
+  "recording": {
+    "original_source_bytes": 0,
+    "original_receipt_retained": true,
+    "strict_e2e_passed": false,
+    "live_log_sha256": "5ddc33df8902911f6280265399f1529467d79b052bee254cdb1de44776100b01",
+    "correlated_errors": [
+      "CodecServer Init failed, ret: 63569932, enc, mime: video/avc",
+      "AVCodecVideoEncoderImpl CreateByMime: no memory",
+      "SurfaceEncoderAdapter: Create codecServer failed",
+      "HiRecorder PrepareVideoEncoder fail",
+      "ScreenCaptureServer: recorder Prepare failed",
+      "screenrecorder StartRecording AVRecorder Prepare failed, 5400103"
+    ],
+    "public_api": "media.AVRecorder.getAvailableEncoder()",
+    "available_encoders": [
+      {
+        "mimeType": "audio/mp4a-latm",
+        "type": "audio",
+        "bitRate": {
+          "min": 1,
+          "max": 500000
+        },
+        "channels": {
+          "min": 1,
+          "max": 8
+        },
+        "sampleRate": [
+          7350,
+          8000,
+          11025,
+          12000,
+          16000,
+          22050,
+          24000,
+          32000,
+          44100,
+          48000,
+          64000,
+          88200,
+          96000
+        ]
+      }
+    ],
+    "video_encoder_count": 0,
+    "limits": [
+      "The failed standalone native probe did not execute; it is not capability evidence.",
+      "The original recording has no contemporaneous log; the new reproduction has correlated logs.",
+      "Service ACTIVE is not encoded-video evidence."
+    ],
+    "classification": "expected_unsupported_environment",
+    "user_decision": "Emulator recording unsupported is normal behavior, not an MCP defect",
+    "real_device_verified": false
+  }
+}
