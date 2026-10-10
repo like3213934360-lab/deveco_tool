@@ -1,0 +1,1067 @@
+{
+  "date": "2026-10-10",
+  "host": "Codex App native MCP in the existing conversation",
+  "version": "1.4.6",
+  "build_id": "a5f40b0c097887e8512d777956597e565eaa6babec72de4899befa0baa9ec226",
+  "scope": "15 tool entries; representative real calls, not all 102 actions or a fresh-context blind benchmark",
+  "strict_first_attempt_pass": false,
+  "counts": {
+    "calls": 78,
+    "tools": 15,
+    "returned": 72,
+    "model_request_rejections": 5,
+    "expected_absence": 1
+  },
+  "trace_sha256": "3fbaad05e6ef1b2f0c22112540c0fea645bcd68b837ae1bafb03bb5a9dfba684",
+  "auth": {
+    "elapsed_ms": 76976,
+    "pending_attempt_preserved": true,
+    "login_attempts_distinct": 4
+  },
+  "checks": {
+    "native_reload": true,
+    "build_install_launch_assert": true,
+    "knowledge_search_read": true,
+    "sdk_hover": true,
+    "flow_replay_with_required_variables": true,
+    "emulator_inventory_unchanged": true,
+    "existing_flows_preserved": true,
+    "test_app_uninstalled": true,
+    "recording_idle": true,
+    "final_logins_valid": true,
+    "review": {
+      "session_status": "passed",
+      "failed_reviews": 0,
+      "unresolved_reviews": 0,
+      "image_sha256": "aab6975e5facc7cd4849044086879543bd372ff1668d10fc2d3b72f565c3ca18",
+      "report_sha256": "6f6a2263aba5ad18314780636940e8e5ef6eba88577066cb7742b8718f3a3fdc"
+    },
+    "reset": {
+      "method": "restore_baseline_packages",
+      "patch_version": 0,
+      "limit": "No active patch applied in this round; previous enabled-patch reset acceptance remains separate"
+    },
+    "ui_sequence": {
+      "rounds": 3,
+      "calls": 9,
+      "limit": "Earlier HDC timeout not reproduced; historical root cause remains unknown"
+    }
+  },
+  "media": {
+    "sha256": "0529b430890ecac74fa5ba721d363b5aa2e79eda8deecee1b6b19a298dd53aa4",
+    "programs": [],
+    "stream_groups": [],
+    "streams": [
+      {
+        "codec_name": "aac",
+        "r_frame_rate": "0/0",
+        "avg_frame_rate": "0/0",
+        "time_base": "1/48000",
+        "nb_read_frames": "1829"
+      },
+      {
+        "codec_name": "h264",
+        "width": 862,
+        "height": 1920,
+        "r_frame_rate": "60000/1001",
+        "avg_frame_rate": "3438000/700391",
+        "time_base": "1/90000",
+        "nb_read_frames": "191"
+      }
+    ],
+    "format": {
+      "duration": "39.018000",
+      "size": "1188179"
+    },
+    "source_pts_strictly_increasing": true,
+    "default_ffmpeg_exit": 0,
+    "default_ffmpeg_stderr": "[null @ 0x7753078500] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 17 >= 17\n[null @ 0x7753078500] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 23 >= 23\n[null @ 0x7753078500] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 29 >= 29\n[null @ 0x7753078500] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 35 >= 35\n[null @ 0x7753078500] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 41 >= 41\n[null @ 0x7753078500] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 52 >= 52\n[null @ 0x7753078500] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 58 >= 58\n[null @ 0x7753078500] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 64 >= 64\n[null @ 0x7753078500] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 154 >= 154\n[null @ 0x7753078500] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 1986 >= 1986\n",
+    "default_timebase_collisions": [
+      {
+        "frame": 7,
+        "tick": 17
+      },
+      {
+        "frame": 13,
+        "tick": 23
+      },
+      {
+        "frame": 19,
+        "tick": 29
+      },
+      {
+        "frame": 25,
+        "tick": 35
+      },
+      {
+        "frame": 31,
+        "tick": 41
+      },
+      {
+        "frame": 42,
+        "tick": 52
+      },
+      {
+        "frame": 48,
+        "tick": 58
+      },
+      {
+        "frame": 54,
+        "tick": 64
+      },
+      {
+        "frame": 66,
+        "tick": 154
+      },
+      {
+        "frame": 172,
+        "tick": 1986
+      }
+    ],
+    "source_timebase_video_decode": {
+      "exit": 0,
+      "stderr": ""
+    },
+    "audio_decode": {
+      "exit": 0,
+      "stderr": ""
+    },
+    "file_unchanged": true
+  },
+  "observations": [
+    {
+      "id": "natural-plan-version-split",
+      "source": "src/domains/uitest.ts:67",
+      "actual_checklist": [
+        "Codex App v1.",
+        "4.",
+        "6 原生验收：Hello World 可见，点击后 Welcome 可见；",
+        "取图后实际观察并提交判定。"
+      ],
+      "status": "unfixed",
+      "cause": "Every period is treated as a sentence separator, including periods in a version number; the original plan is preserved."
+    },
+    {
+      "id": "action-parameter-discoverability",
+      "source": "src/tools/core.ts action params",
+      "status": "follow-up",
+      "cause": "A combined tool schema exposes fields that individual actions reject; model omitted explicit target/flow variables and mixed assert/wait across actions. Original failures retained."
+    }
+  ],
+  "calls": [
+    {
+      "index": 1,
+      "tool": "doctor",
+      "action": null,
+      "request_fields": [
+        "target",
+        "remote"
+      ],
+      "result": "returned"
+    },
+    {
+      "index": 2,
+      "tool": "auth",
+      "action": "status",
+      "request_fields": [
+        "action",
+        "provider"
+      ],
+      "result": "returned"
+    },
+    {
+      "index": 3,
+      "tool": "skills",
+      "action": "list",
+      "request_fields": [
+        "action"
+      ],
+      "result": "returned"
+    },
+    {
+      "index": 4,
+      "tool": "project",
+      "action": "info",
+      "request_fields": [
+        "action",
+        "project"
+      ],
+      "result": "returned"
+    },
+    {
+      "index": 5,
+      "tool": "emulator",
+      "action": "list",
+      "request_fields": [
+        "action"
+      ],
+      "result": "returned"
+    },
+    {
+      "index": 6,
+      "tool": "knowledge",
+      "action": "status",
+      "request_fields": [
+        "action",
+        "check"
+      ],
+      "result": "returned"
+    },
+    {
+      "index": 7,
+      "tool": "knowledge",
+      "action": "catalog",
+      "request_fields": [
+        "action"
+      ],
+      "result": "returned"
+    },
+    {
+      "index": 8,
+      "tool": "job",
+      "action": "list",
+      "request_fields": [
+        "action",
+        "limit"
+      ],
+      "result": "returned"
+    },
+    {
+      "index": 9,
+      "tool": "auth",
+      "action": "login",
+      "request_fields": [
+        "action",
+        "provider",
+        "open_browser"
+      ],
+      "result": "returned"
+    },
+    {
+      "index": 10,
+      "tool": "auth",
+      "action": "status",
+      "request_fields": [
+        "action",
+        "provider"
+      ],
+      "result": "returned"
+    },
+    {
+      "index": 11,
+      "tool": "auth",
+      "action": "logout",
+      "request_fields": [
+        "action",
+        "provider"
+      ],
+      "result": "returned"
+    },
+    {
+      "index": 12,
+      "tool": "auth",
+      "action": "status",
+      "request_fields": [
+        "action",
+        "provider"
+      ],
+      "result": "returned"
+    },
+    {
+      "index": 13,
+      "tool": "auth",
+      "action": "login",
+      "request_fields": [
+        "action",
+        "provider",
+        "open_browser"
+      ],
+      "result": "returned"
+    },
+    {
+      "index": 14,
+      "tool": "run",
+      "action": "build_run",
+      "request_fields": [
+        "action",
+        "project",
+        "target",
+        "run_mode",
+        "hot_reload",
+        "assert",
+        "wait"
+      ],
+      "result": "returned",
+      "status": "running"
+    },
+    {
+      "index": 15,
+      "tool": "skills",
+      "action": "read",
+      "request_fields": [
+        "action",
+        "name"
+      ],
+      "result": "returned"
+    },
+    {
+      "index": 16,
+      "tool": "knowledge",
+      "action": "search",
+      "request_fields": [
+        "action",
+        "query",
+        "catalog",
+        "limit"
+      ],
+      "result": "returned"
+    },
+    {
+      "index": 17,
+      "tool": "auth",
+      "action": "status",
+      "request_fields": [
+        "action",
+        "provider"
+      ],
+      "result": "returned"
+    },
+    {
+      "index": 18,
+      "tool": "sign",
+      "action": "certificates",
+      "request_fields": [
+        "action",
+        "team"
+      ],
+      "result": "returned"
+    },
+    {
+      "index": 19,
+      "tool": "job",
+      "action": "wait",
+      "request_fields": [
+        "action",
+        "job_id",
+        "wait"
+      ],
+      "result": "returned",
+      "status": "running"
+    },
+    {
+      "index": 20,
+      "tool": "auth",
+      "action": "login",
+      "request_fields": [
+        "action",
+        "provider",
+        "open_browser"
+      ],
+      "result": "returned"
+    },
+    {
+      "index": 21,
+      "tool": "auth",
+      "action": "status",
+      "request_fields": [
+        "action",
+        "provider"
+      ],
+      "result": "returned"
+    },
+    {
+      "index": 22,
+      "tool": "job",
+      "action": "wait",
+      "request_fields": [
+        "action",
+        "job_id",
+        "wait"
+      ],
+      "result": "returned",
+      "status": "succeeded"
+    },
+    {
+      "index": 23,
+      "tool": "knowledge",
+      "action": "read",
+      "request_fields": [
+        "action",
+        "id",
+        "section",
+        "limit"
+      ],
+      "result": "returned"
+    },
+    {
+      "index": 24,
+      "tool": "code",
+      "action": "lsp",
+      "request_fields": [
+        "action",
+        "project",
+        "file",
+        "op",
+        "symbol",
+        "line"
+      ],
+      "result": "returned"
+    },
+    {
+      "index": 25,
+      "tool": "device",
+      "action": "info",
+      "request_fields": [
+        "action",
+        "target"
+      ],
+      "result": "returned"
+    },
+    {
+      "index": 26,
+      "tool": "ui_flow",
+      "action": "list",
+      "request_fields": [
+        "action",
+        "project"
+      ],
+      "result": "returned"
+    },
+    {
+      "index": 27,
+      "tool": "ui",
+      "action": "windows",
+      "request_fields": [
+        "action",
+        "target"
+      ],
+      "elapsed_ms": 162,
+      "result": "returned"
+    },
+    {
+      "index": 28,
+      "tool": "ui",
+      "action": "tree",
+      "request_fields": [
+        "action",
+        "target",
+        "bundle"
+      ],
+      "elapsed_ms": 1137,
+      "result": "returned"
+    },
+    {
+      "index": 29,
+      "tool": "ui",
+      "action": "find",
+      "request_fields": [
+        "action",
+        "target",
+        "selector"
+      ],
+      "elapsed_ms": 1066,
+      "result": "returned"
+    },
+    {
+      "index": 30,
+      "tool": "ui",
+      "action": "assert",
+      "request_fields": [
+        "action",
+        "target",
+        "visible"
+      ],
+      "elapsed_ms": 1118,
+      "result": "returned"
+    },
+    {
+      "index": 31,
+      "tool": "ui",
+      "action": "test_start",
+      "request_fields": [
+        "action",
+        "project",
+        "target",
+        "plan"
+      ],
+      "elapsed_ms": 2107,
+      "result": "returned"
+    },
+    {
+      "index": 32,
+      "tool": "ui",
+      "action": "test_step",
+      "request_fields": [
+        "action",
+        "test_id",
+        "visible",
+        "description"
+      ],
+      "result": "rejected",
+      "error": {
+        "code": "DEVICE_AMBIGUOUS",
+        "message": "2 devices are connected and no target was given"
+      }
+    },
+    {
+      "index": 33,
+      "tool": "ui",
+      "action": "test_step",
+      "request_fields": [
+        "action",
+        "test_id",
+        "op",
+        "selector",
+        "assert",
+        "description"
+      ],
+      "result": "rejected",
+      "error": {
+        "code": "INVALID_INPUT",
+        "message": "ui action=test_step does not use: assert"
+      }
+    },
+    {
+      "index": 34,
+      "tool": "ui",
+      "action": "review",
+      "request_fields": [
+        "action",
+        "test_id",
+        "requirement"
+      ],
+      "result": "rejected",
+      "error": {
+        "code": "DEVICE_AMBIGUOUS",
+        "message": "2 devices are connected and no target was given"
+      }
+    },
+    {
+      "index": 35,
+      "tool": "ui",
+      "action": "test_step",
+      "request_fields": [
+        "action",
+        "test_id",
+        "target",
+        "visible",
+        "description"
+      ],
+      "result": "returned"
+    },
+    {
+      "index": 36,
+      "tool": "ui",
+      "action": "test_step",
+      "request_fields": [
+        "action",
+        "test_id",
+        "target",
+        "op",
+        "selector",
+        "description"
+      ],
+      "result": "returned"
+    },
+    {
+      "index": 37,
+      "tool": "ui",
+      "action": "test_step",
+      "request_fields": [
+        "action",
+        "test_id",
+        "target",
+        "visible",
+        "description"
+      ],
+      "result": "returned"
+    },
+    {
+      "index": 38,
+      "tool": "ui",
+      "action": "review",
+      "request_fields": [
+        "action",
+        "test_id",
+        "target",
+        "requirement"
+      ],
+      "result": "returned"
+    },
+    {
+      "index": 39,
+      "tool": "ui",
+      "action": "review",
+      "request_fields": [
+        "action",
+        "test_id",
+        "target",
+        "review_id",
+        "outcome",
+        "reason"
+      ],
+      "result": "returned"
+    },
+    {
+      "index": 40,
+      "tool": "ui",
+      "action": "test_finish",
+      "request_fields": [
+        "action",
+        "test_id",
+        "target"
+      ],
+      "result": "returned",
+      "status": "passed"
+    },
+    {
+      "index": 41,
+      "tool": "auth",
+      "action": "status",
+      "request_fields": [
+        "action",
+        "provider"
+      ],
+      "result": "returned"
+    },
+    {
+      "index": 42,
+      "tool": "auth",
+      "action": "logout",
+      "request_fields": [
+        "action",
+        "provider"
+      ],
+      "result": "returned"
+    },
+    {
+      "index": 43,
+      "tool": "auth",
+      "action": "login",
+      "request_fields": [
+        "action",
+        "provider",
+        "open_browser"
+      ],
+      "result": "returned"
+    },
+    {
+      "index": 44,
+      "tool": "ui",
+      "action": "record_start",
+      "request_fields": [
+        "action",
+        "target"
+      ],
+      "result": "returned"
+    },
+    {
+      "index": 45,
+      "tool": "ui",
+      "action": "act",
+      "request_fields": [
+        "action",
+        "target",
+        "steps",
+        "assert",
+        "save_flow"
+      ],
+      "elapsed_ms": 15686,
+      "result": "returned"
+    },
+    {
+      "index": 46,
+      "tool": "ui",
+      "action": "assert",
+      "request_fields": [
+        "action",
+        "target",
+        "visible"
+      ],
+      "elapsed_ms": 695,
+      "result": "returned"
+    },
+    {
+      "index": 47,
+      "tool": "ui",
+      "action": "record_stop",
+      "request_fields": [
+        "action",
+        "target",
+        "save_path"
+      ],
+      "elapsed_ms": 9298,
+      "result": "returned"
+    },
+    {
+      "index": 48,
+      "tool": "auth",
+      "action": "status",
+      "request_fields": [
+        "action",
+        "provider"
+      ],
+      "elapsed_ms": 22,
+      "result": "returned"
+    },
+    {
+      "index": 49,
+      "tool": "ui_flow",
+      "action": "replay",
+      "request_fields": [
+        "action",
+        "project",
+        "target",
+        "id",
+        "wait"
+      ],
+      "elapsed_ms": 288,
+      "result": "rejected",
+      "error": {
+        "code": "INVALID_INPUT",
+        "message": "Missing flow variables: input1"
+      },
+      "status": "failed"
+    },
+    {
+      "index": 50,
+      "tool": "auth",
+      "action": "status",
+      "request_fields": [
+        "action",
+        "provider"
+      ],
+      "result": "returned"
+    },
+    {
+      "index": 51,
+      "tool": "ui_flow",
+      "action": "show",
+      "request_fields": [
+        "action",
+        "project",
+        "id"
+      ],
+      "result": "returned"
+    },
+    {
+      "index": 52,
+      "tool": "ui_flow",
+      "action": "replay",
+      "request_fields": [
+        "action",
+        "project",
+        "target",
+        "id",
+        "variables",
+        "wait"
+      ],
+      "result": "returned",
+      "status": "running"
+    },
+    {
+      "index": 53,
+      "tool": "job",
+      "action": "read",
+      "request_fields": [
+        "action",
+        "artifact_id",
+        "line",
+        "limit"
+      ],
+      "result": "returned"
+    },
+    {
+      "index": 54,
+      "tool": "job",
+      "action": "wait",
+      "request_fields": [
+        "action",
+        "job_id",
+        "wait"
+      ],
+      "result": "returned",
+      "status": "succeeded"
+    },
+    {
+      "index": 55,
+      "tool": "ui",
+      "action": "assert",
+      "request_fields": [
+        "action",
+        "target",
+        "visible"
+      ],
+      "result": "returned"
+    },
+    {
+      "index": 56,
+      "tool": "ui",
+      "action": "record_status",
+      "request_fields": [
+        "action",
+        "target"
+      ],
+      "result": "returned",
+      "status": "idle"
+    },
+    {
+      "index": 57,
+      "tool": "diagnose",
+      "action": "crash",
+      "request_fields": [
+        "action",
+        "project",
+        "target",
+        "bundle",
+        "since_minutes",
+        "latest"
+      ],
+      "result": "expected_absence",
+      "error": {
+        "code": "NOT_FOUND",
+        "message": "No crash/freeze reports in the last 5 minutes"
+      }
+    },
+    {
+      "index": 58,
+      "tool": "hot_reload",
+      "action": "reset",
+      "request_fields": [
+        "action",
+        "project",
+        "target"
+      ],
+      "result": "returned"
+    },
+    {
+      "index": 59,
+      "tool": "run",
+      "action": "launch",
+      "request_fields": [
+        "action",
+        "project",
+        "target",
+        "wait"
+      ],
+      "result": "rejected",
+      "error": {
+        "code": "INVALID_INPUT",
+        "message": "run action=launch does not use: wait"
+      }
+    },
+    {
+      "index": 60,
+      "tool": "run",
+      "action": "launch",
+      "request_fields": [
+        "action",
+        "project",
+        "target"
+      ],
+      "elapsed_ms": 4457,
+      "result": "returned"
+    },
+    {
+      "index": 61,
+      "tool": "ui",
+      "action": "tree",
+      "request_fields": [
+        "action",
+        "target",
+        "bundle"
+      ],
+      "elapsed_ms": 516,
+      "result": "returned"
+    },
+    {
+      "index": 62,
+      "tool": "ui",
+      "action": "find",
+      "request_fields": [
+        "action",
+        "target",
+        "selector"
+      ],
+      "elapsed_ms": 569,
+      "result": "returned"
+    },
+    {
+      "index": 63,
+      "tool": "ui",
+      "action": "assert",
+      "request_fields": [
+        "action",
+        "target",
+        "visible"
+      ],
+      "elapsed_ms": 570,
+      "result": "returned"
+    },
+    {
+      "index": 64,
+      "tool": "ui",
+      "action": "tree",
+      "request_fields": [
+        "action",
+        "target",
+        "bundle"
+      ],
+      "elapsed_ms": 515,
+      "result": "returned"
+    },
+    {
+      "index": 65,
+      "tool": "ui",
+      "action": "find",
+      "request_fields": [
+        "action",
+        "target",
+        "selector"
+      ],
+      "elapsed_ms": 579,
+      "result": "returned"
+    },
+    {
+      "index": 66,
+      "tool": "ui",
+      "action": "assert",
+      "request_fields": [
+        "action",
+        "target",
+        "visible"
+      ],
+      "elapsed_ms": 529,
+      "result": "returned"
+    },
+    {
+      "index": 67,
+      "tool": "ui",
+      "action": "tree",
+      "request_fields": [
+        "action",
+        "target",
+        "bundle"
+      ],
+      "elapsed_ms": 598,
+      "result": "returned"
+    },
+    {
+      "index": 68,
+      "tool": "ui",
+      "action": "find",
+      "request_fields": [
+        "action",
+        "target",
+        "selector"
+      ],
+      "elapsed_ms": 599,
+      "result": "returned"
+    },
+    {
+      "index": 69,
+      "tool": "ui",
+      "action": "assert",
+      "request_fields": [
+        "action",
+        "target",
+        "visible"
+      ],
+      "elapsed_ms": 532,
+      "result": "returned"
+    },
+    {
+      "index": 70,
+      "tool": "ui_flow",
+      "action": "delete",
+      "request_fields": [
+        "action",
+        "project",
+        "id"
+      ],
+      "result": "returned"
+    },
+    {
+      "index": 71,
+      "tool": "ui_flow",
+      "action": "list",
+      "request_fields": [
+        "action",
+        "project"
+      ],
+      "result": "returned"
+    },
+    {
+      "index": 72,
+      "tool": "run",
+      "action": "uninstall",
+      "request_fields": [
+        "action",
+        "project",
+        "target"
+      ],
+      "result": "returned"
+    },
+    {
+      "index": 73,
+      "tool": "hot_reload",
+      "action": "stop_daemon",
+      "request_fields": [
+        "action",
+        "project"
+      ],
+      "result": "returned"
+    },
+    {
+      "index": 74,
+      "tool": "device",
+      "action": "shell",
+      "request_fields": [
+        "action",
+        "target",
+        "command"
+      ],
+      "result": "returned"
+    },
+    {
+      "index": 75,
+      "tool": "auth",
+      "action": "status",
+      "request_fields": [
+        "action",
+        "provider"
+      ],
+      "result": "returned"
+    },
+    {
+      "index": 76,
+      "tool": "emulator",
+      "action": "list",
+      "request_fields": [
+        "action"
+      ],
+      "result": "returned"
+    },
+    {
+      "index": 77,
+      "tool": "ui",
+      "action": "test_export",
+      "request_fields": [
+        "action",
+        "test_id",
+        "directory"
+      ],
+      "result": "returned"
+    },
+    {
+      "index": 78,
+      "tool": "doctor",
+      "action": null,
+      "request_fields": [
+        "target",
+        "remote"
+      ],
+      "result": "returned"
+    }
+  ]
+}

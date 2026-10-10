@@ -28,7 +28,20 @@
 | 参数等价 | 原 MCP 实际证明 tree 缺省 depth 与 0、静态检查相对/绝对路径、模拟器 name 与单元素 names 等价；这些独立证据不改写模型严格评分 |
 | 本地检查 | typecheck；186/186 单测、失败/跳过均 0；上游 491 项，374 full / 74 host / 43 skip，未决、部分、失效均 0；握手中位 106 ms，空闲 RSS 72 MB，10 秒 CPU 不变 |
 
-最终运行构建 ID：`a5f40b0c097887e8512d777956597e565eaa6babec72de4899befa0baa9ec226`。各真实 stdio 进程通过 initialize/doctor 或不可变 entry 固定来源；中间版本模型结果另列，不能转记为最终版本通过。Codex App 原生 doctor 仍是 v1.4.5 / `44db485182694c582ba2e60e94a09673edf6dfbe12b555810c8dbe3c4cab9193`，本轮未擅自重启。
+最终运行构建 ID：`a5f40b0c097887e8512d777956597e565eaa6babec72de4899befa0baa9ec226`。各真实 stdio 进程通过 initialize/doctor 或不可变 entry 固定来源；中间版本模型结果另列，不能转记为最终版本通过。发布时 Codex App 原生仍是 v1.4.5，随后用户自行重启；下方单独记录重启后的原生验收。
+
+## 用户重启后的 Codex App 原生验收
+
+2026-10-10，开始及结束两次原生 doctor 均确认 v1.4.6 和上述构建 ID。仍使用指定 USB 真机、原 SDK、个人团队和原 FullProbe 测试工程。当前对话由模型实际选择并执行 **78 次原生 MCP 调用，覆盖 15 个工具入口**；不是独立 stdio，也不是拟调用计划。它是带现有对话上下文的代表性流程，不是重新跑完 102 个 action 或与 OpenCode 完全同条件的盲测。详见[脱敏调用与检查证据](evidence/v1.4.6-codex-native.json)。
+
+- **登录修复**：旧会话有效时新尝试仍为 pending；注销后凭据状态为未登录，真实浏览器登录恢复成功。完成的尝试可重新发起，等待 76,976 ms 后新尝试仍为同一尝试；最后再次浏览器登录，`logged_in=true`、`login_pending=false`，developer 登录仍有效。
+- **工具与真机**：工程信息、知识库 catalog/status/search/read、Skill list/read、团队证书只读查询、模拟器清单、SDK TextInput hover、任务等待及报告读取通过。实际构建、安装、启动和 Hello World 断言通过；点击后 Welcome 断言通过；批量点击与中文输入、保存流程、补齐返回的必填变量后回放成功。原 tree/find/assert 顺序连续 3 轮、9 次调用通过，不能据此关闭旧 HDC 超时 TODO。
+- **视觉与录屏**：review 首次只取图，模型实际查看返回图片后提交真实 review_id 和具体理由，finish/export 无失败或悬而未决的 review。MP4 实际取回 1,188,179 字节，H.264 862×1920、191 帧、39.018 秒，另有 AAC 音轨；只证明音轨可解码，不证明麦克风或声音内容符合预期。原 MP4 的 PTS 严格递增；FFmpeg 默认输出时间基 1001/60000 取整产生 10 处重复 DTS，退出码虽为 0 仍保留错误日志。使用 `-enc_time_base demux -fps_mode passthrough` 保留源时间基 1/90000 后视频严格解码无报错，AAC 独立严格解码也无报错，原文件 SHA-256 不变；没有重编码、修改原文件或忽略错误。工具 seconds 为录制会话经过时间，媒体时长以 ffprobe 为准。
+- **reset 与清理**：原始基线包覆盖安装返回 `method=restore_baseline_packages`、`patch_version=0`，重新启动与页面断言通过。本轮未先启用补丁，不冒充一次新的“已启用补丁撤销”验收。最终卸载本轮专用应用、删除新增流程、录屏 idle、原流程和 7 个模拟器清单相同，登录已恢复；没有更改测试源码、SDK 或宿主配置。
+
+**不记首轮全通过**：78 次调用中 72 次返回正常结果，5 次模型请求被拒绝，1 次 diagnose 查询明确返回最近 5 分钟没有该应用崩溃报告（预期缺少对象，不是成功取回崩溃报告）。5 次错误分别为 test_step/review 两次漏 target、test_step 混入 assert、replay 漏 input1、launch 混入 wait；纠正后原失败仍保留。源码 action 参数表严格拒绝跨动作字段，test_step 用顶层 visible/hidden，launch 不接受 wait；test_id 不会绕过多设备选择，流程输入默认抽成必填变量。合并工具 schema 与各 action 参数表的差异仍可能误导模型，不能只因纠正后成功就称模型可靠性已解决。
+
+另发现自然语言 plan 的分句显示问题：`uitest.checklist` 把版本号 `v1.4.6` 中的句点也当句末，生成了碎片清单；原计划全文、实际步骤及最终断言仍保留。根因已定位，当前版本未修复，列入 TODO；没有改写原失败输入来冒充通过。
 
 ## OpenCode 多轮真实模型
 
@@ -61,7 +74,9 @@
 - [ ] 原 HDC 超时具体根因：空输出且未捕获对应设备日志，暂不能确定；后续成功不等于已修复。
 - [ ] 有效旧凭据迁移、云端配额具备后的创建、专用云端对象删除验收。
 - [ ] 所有免费模型可靠完成全部工具场景：当前证据不满足，不能称为全绿。
-- [ ] 用户重启后以原生 doctor 验证 Codex 加载 v1.4.6，再做新版原生模型复验。
+- [x] 用户重启后两次原生 doctor 确认 v1.4.6；完成 78 次原生调用、15 个工具入口的代表性复验，保留 5 次模型错误，不宣称全部 action 或首轮全通过。
+- [ ] 明确各 action 的字段适用范围、会话设备与流程必填变量提示，再验证模型首次调用可靠性；不放宽服务端校验。
+- [ ] 自然语言 plan 分句保留版本号中的句点；当前清单碎片问题根因已定位，尚未修复。
 - [ ] 其他机型、跨系统真实 SDK、录屏音频及首次 license 接受。
 
 ## GitHub 交付回执
@@ -70,4 +85,4 @@
 
 [v1.4.6 Release](https://github.com/like3213934360-lab/deveco_tool/releases/tag/v1.4.6)已发布且为 Latest；tag 指向上述发布提交。同版本文档回执提交不移动 tag，也不重发 Release；其自身 CI 和 release 核验须另外完成。
 
-没有执行 npm 发布。Codex App 原生 MCP 仍是 v1.4.5，本轮独立 stdio 对 v1.4.6 的验收不能替代用户重启后的原生复验。
+没有执行 npm 发布。用户重启后的 Codex App 原生已确认 v1.4.6，实际验收证据见上文；它与此前独立 stdio 及 OpenCode 结果分别记录。本次后续提交仅补充文档与证据，不改变运行产物或既有 tag。
