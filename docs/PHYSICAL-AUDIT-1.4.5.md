@@ -96,9 +96,18 @@ node test/audit/physical.mjs review
 - [x] typecheck、184/184 单测（失败/跳过均为 0）、上游门禁通过；491 项中 374 full / 74 host / 43 skip，未决/失效均为 0。
 - [x] bench 通过：握手中位数 95 ms，空闲 RSS 71 MB，10 秒 CPU 不变；15 工具 36,848 字节、公共说明 1,737 字节。
 - [x] 保持 v1.4.5：仅新增测试与证据，运行产物未变，不重发或移动已有 tag。
-- [ ] 本轮提交推送、全部 CI、release 回执和 Latest 核验后回填交付记录。
+- [x] 验收提交 `2dddc85a4911d3def6442bfbd27943cd549e57b5` 已推送，七项 CI 全部成功；release 工作流与本地只读核验回执一致，v1.4.5 仍为 Latest。
 - [ ] 12 项未验证操作：按上表保留，不将只读检查或未操作当成真实成功。
 - [ ] 受限签名路径：证书配额具备后再验证 auto / certificate_create，不删除现有材料制造条件。
 - [ ] 模拟器专用动作另按原模拟器环境验收，不用 USB 真机替代。
 - [ ] OpenCode v1.4.5 真实模型复验；本轮 stdio 调用不证明其模型选择和连续工具调用效果。Claude 不在适配范围。
 - [ ] 其他机型、Windows/Linux 真实 SDK、C++ 其他 LSP 操作、折叠屏等形态及音频/麦克风录制，尚无本轮证据。
+
+## 交付回执
+
+- 验收提交：[2dddc85a4911d3def6442bfbd27943cd549e57b5](https://github.com/like3213934360-lab/deveco_tool/commit/2dddc85a4911d3def6442bfbd27943cd549e57b5)，远程 main 与本地 SHA 一致。
+- [CI 38055424573](https://github.com/like3213934360-lab/deveco_tool/actions/runs/38055424573)：三个系统 × Node 22/24 的六项测试和上游门禁全部成功，无跳过任务。
+- [release 38055487962](https://github.com/like3213934360-lab/deveco_tool/actions/runs/38055487962) 成功；下载的 verified-release 与 `node tools/release.mjs --run 38055424573 --check` 输出逐字节相同，见[公开回执](evidence/v1.4.5-usb-release.json)。
+- [v1.4.5 Release](https://github.com/like3213934360-lab/deveco_tool/releases/tag/v1.4.5) 保持 Latest，tag 仍指向 `ed0649aa03183c9824d3a38f49bd56cb30f116c2`。本次没有 npm 发布或宿主重启；当前原生 doctor 独立确认的版本与构建 ID 见上文。
+
+本节是验收提交完成后回填的文档；后续同版本文档提交仍须完成自身全部 CI 和既有 Release 核验，不能复用旧提交的 CI 作为最终交付证明。
