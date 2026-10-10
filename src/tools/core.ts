@@ -36,7 +36,7 @@ export const projectTool = tool({
   name: "project",
   title: "Project create/sync/build",
   description: [
-    "HarmonyOS project operations. info (instant); create from the built-in template (never overwrites); clean.",
+    "HarmonyOS projects. info (instant); create from the built-in template (never overwrites); clean.",
     "sync: ohpm install + hvigor sync (job). build (job): preflight of edited files (advisory, never blocks) + hvigor; returns packages or every compile error (code, file, line, message, code around it; first 100 listed) with fix hints. Dependencies install automatically when oh-package.json5/build-profile.json5 changed.",
     "Build already checks edited files: no code check first.",
   ].join(" "),
@@ -123,7 +123,7 @@ export const runTool = tool({
   description: [
     "Deploy device-compatible modules using project signing unchanged.",
     "build_run: check edited files + build + install + launch + crash check; no code check first.",
-    "run_mode=auto (default): after the first build_run, entry-module code-only edits are quick-fixed; other changes fully deploy. Result: path=hot_reload|full|relaunch, fallback_reason. run_mode=full always deploys.",
+    "run_mode=auto (default): after the first build_run on the same device, entry-module code-only edits are quick-fixed; other changes fully deploy. Result: path=hot_reload|full|relaunch, fallback_reason. run_mode=full always deploys.",
     "Startup crashes fail with LAUNCH_FAILED and crash.source (file, line, code).",
     "then_flow=<ui_flow id>: replay a saved path after launch; assert verifies the launch screen.",
     "deploy: install the latest build + launch; launch/stop/uninstall. hot_reload=true prepares manual hot_reload.",
@@ -187,7 +187,7 @@ export const runTool = tool({
 export const jobTool = tool({
   name: "job",
   title: "Long-running jobs",
-  description: `Jobs of project/run/ui_flow/ui layout. wait (default 20000, max ${MAX_WAIT_MS} ms; call again while running), status, list, cancel; resume an interrupted/needs_input job (force=true re-runs an uncertain step after checking it). read: page an artifact (log, report, image) by line, grep to filter.`,
+  description: `Long-running operations. wait (default 20000, max ${MAX_WAIT_MS} ms; call again while running, never restart the operation), status, list, cancel; resume interrupted/needs_input jobs only after inspection (force=true re-runs an uncertain step). read: page full artifacts (logs, reports, images) by artifact_id and line/limit; grep filters.`,
   schema: z.object({
     action: z.enum(["wait", "status", "list", "cancel", "resume", "read"]),
     job_id: z.string().optional(),
@@ -360,13 +360,13 @@ export const uiTool = tool({
   description: [
     "Device UI. observe: screenshot + elements; screenshot/tree/find/windows inspect. tree filters: window, depth, all_windows, node.",
     "act: click/double_click/long_click by selector or x,y; input field text, type; swipe/drag/fling x,y,x2,y2; scroll; key or keys chord; mouse_* for 2in1/tablet.",
-    "act returns after={changed,kind:none/state/updated/navigated,added,removed}; usually no extra observe needed.",
+    "act returns after={changed,kind:none/state/updated/navigated,added,removed} for the app's on-screen elements; usually no extra observe needed.",
     "Use act steps=[...] for a whole path: waits for each element, stops at first failure with visible controls. Include assert to verify; save_flow={project,id} saves for run then_flow. Limit ~52 s; stopped_at marks continuation.",
     "assert waits for visible/hidden selectors; verify outcomes with it, not screenshots alone.",
     "Actions accept recognizable consent (agreements_accepted) and complete setup/tours preserving defaults (onboarding_completed), using window text/control state, never app names/fixed IDs. If still blocked, observe controls before continuing; never blindly repeat.",
     "visual compares a named baseline (first call saves, update=true replaces): changed_ratio, regions, diff_artifact; dimming=global_shift.",
     "layout finds off-screen/overlapping/tiny targets and clipped text; forms=[foldable,widefold,triplefold] checks each emulator form (job).",
-    "perf: per-frame avg_fps, frame_ms p95, janky_frames, verdict; bundle adds pss. record_start/record_stop/record_status: mp4.",
+    "perf: scroll smoothness/jank from per-frame avg_fps, frame_ms p95, janky_frames, verdict; bundle adds pss. record_start/record_stop/record_status: mp4.",
     "Tests: test_start -> test_step -> review -> test_finish -> test_log/test_export.",
   ].join(" "),
   schema: z.object({
@@ -875,7 +875,7 @@ export const skillsTool = tool({
 export const authTool = tool({
   name: "auth",
   title: "Huawei login",
-  description: "Browser login to Huawei developer services. provider=codegenie: cloud knowledge search. provider=developer: signing (certificates, profiles, devices). login returns a URL (opened automatically); call status after finishing in the browser. teams lists developer teams. import migrates v0.x credentials from legacy_state_dir.",
+  description: "Browser login to Huawei developer services. provider=codegenie: cloud knowledge search. provider=developer: signing (certificates, profiles, devices). login returns a URL (opened automatically); call status after finishing in the browser. logout removes saved credentials. teams lists developer teams. import migrates v0.x credentials from legacy_state_dir.",
   schema: z.object({
     action: z.enum(["login", "status", "logout", "teams", "import"]),
     provider: z.enum(["developer", "codegenie"]).optional(),

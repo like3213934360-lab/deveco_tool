@@ -1,4 +1,4 @@
-// Protocol bytes, not model tokens. A host that repeats instructions needs a separate budget.
+// Protocol sizes, not model tokens. Report host expansion without trading away capability guidance.
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
@@ -11,6 +11,8 @@ export function promptMetrics(instructions, tools) {
   return {
     tools: tools.length,
     instructions_bytes: bytes(instructions),
+    instructions_chars: [...instructions].length,
+    longest_description_chars: Math.max(0, ...tools.map((t) => [...t.description].length)),
     tools_list_bytes: bytes(JSON.stringify({ tools })),
     // Controlled comparison of the same JSON tools, with one instruction prefix per tool.
     repeated_instructions_bytes: bytes(JSON.stringify({ tools: tools.map((t) => ({ ...t, description: `${instructions}\n\n${t.description}` })) })),

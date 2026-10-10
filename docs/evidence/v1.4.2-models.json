@@ -1,0 +1,225 @@
+{
+  "date": "2026-10-10",
+  "scope": "Planning cases are not execution. Raw trials remain local because live responses include device/project data. See UPGRADE-1.4.2.md for blockers and manual live review.",
+  "build_id": "df5196999e620bf0297d999a85904d5d95e1b0d5d208b3b6abeb508a17067aa0",
+  "codex_app": {
+    "host": "Codex App",
+    "version": "1.4.2",
+    "build_id": "df5196999e620bf0297d999a85904d5d95e1b0d5d208b3b6abeb508a17067aa0",
+    "definitions_matched": 15,
+    "checks": 9,
+    "all_checks_ok": true,
+    "scope": "Current developer conversation; actual readonly MCP calls, not a blind discovery trial"
+  },
+  "trials": [
+    {
+      "trial": "baseline-claude-final",
+      "host": "claude",
+      "host_version": "2.1.281 (Claude Code)",
+      "suite": "discovery",
+      "server_version": "1.4.1",
+      "build_id": "cec1cb32384f1d122fc790b73d41c72a60927e16a081428ed426c56e8ae129a6",
+      "exit_code": 0,
+      "elapsed_ms": 49750,
+      "passed": false,
+      "scenario_count": 29,
+      "passed_cases": 28,
+      "failed_cases": [
+        "signing"
+      ],
+      "hashes": {
+        "metadata.json": "900631c3a4df2f9d36035f108fcb348d517071e6135c38f23e45f485cb37b113",
+        "prompt.txt": "4eea6d1f36e9ec11d5cdbad2fd95949baa2a37fc608821acae3c5481dc211f81",
+        "events.jsonl": "fc1b334d454385693ee3c51bd924f23468e5f7839956dff9eb823dd6dc0011a2",
+        "answer.txt": "52019e2dbdff3cd941650949b959e8de862db4aea333c532fbce4d3b45af0797",
+        "report.json": "7286b26bd7b3202a997c245a8a702087047198cf04a0188bac339723939d7c54"
+      }
+    },
+    {
+      "trial": "candidate-claude-final",
+      "host": "claude",
+      "host_version": "2.1.281 (Claude Code)",
+      "suite": "discovery",
+      "server_version": "1.4.2",
+      "build_id": "22d8de8f57315e09352912b67cf0282f4fdfffac0592864d0521133210278305",
+      "exit_code": 0,
+      "elapsed_ms": 47879,
+      "passed": true,
+      "scenario_count": 29,
+      "passed_cases": 29,
+      "failed_cases": [],
+      "hashes": {
+        "metadata.json": "03c4d5811ed7796ca56a0161435a6b3dd3bba33a6d463032ac6ae14b72eee697",
+        "prompt.txt": "4eea6d1f36e9ec11d5cdbad2fd95949baa2a37fc608821acae3c5481dc211f81",
+        "events.jsonl": "f3b5d5db70df3051156273ce56d654615250569a8ce6c363a4f1204ad965b7b0",
+        "answer.txt": "979d4e3913a57b17b7794bdbc2fc512b25edead03a5eb59699c281b3a4d7608f",
+        "report.json": "1d5d35f0c986f701786337961d421fc481908544d5fa0202fd2d985f6f2bc6c2"
+      }
+    },
+    {
+      "trial": "baseline-opencode-final",
+      "host": "opencode",
+      "host_version": "1.18.35",
+      "suite": "discovery",
+      "server_version": "1.4.1",
+      "build_id": "cec1cb32384f1d122fc790b73d41c72a60927e16a081428ed426c56e8ae129a6",
+      "exit_code": 0,
+      "elapsed_ms": 29752,
+      "passed": false,
+      "scenario_count": 29,
+      "passed_cases": 23,
+      "failed_cases": [
+        "api-compat",
+        "device-log",
+        "sqlite",
+        "crash",
+        "signing",
+        "snapshot"
+      ],
+      "hashes": {
+        "metadata.json": "900631c3a4df2f9d36035f108fcb348d517071e6135c38f23e45f485cb37b113",
+        "prompt.txt": "4eea6d1f36e9ec11d5cdbad2fd95949baa2a37fc608821acae3c5481dc211f81",
+        "events.jsonl": "06c95babe1f6a2212a3d157b6b64b16cb3c8cbe26b5dd6f0942332d0326fade2",
+        "answer.txt": "fa56e87dc7bbe74227ce78b375d0d250a243a19f565d2ec61eeaf5b70c76d713",
+        "report.json": "3a682f882e7292aacbb12f6030f0146733be23a2fa3cf4905ea06a8211f78c82"
+      }
+    },
+    {
+      "trial": "candidate-opencode-final",
+      "host": "opencode",
+      "host_version": "1.18.35",
+      "suite": "discovery",
+      "server_version": "1.4.2",
+      "build_id": "22d8de8f57315e09352912b67cf0282f4fdfffac0592864d0521133210278305",
+      "exit_code": 0,
+      "elapsed_ms": 46261,
+      "passed": false,
+      "scenario_count": 29,
+      "passed_cases": 28,
+      "failed_cases": [
+        "snapshot"
+      ],
+      "hashes": {
+        "metadata.json": "03c4d5811ed7796ca56a0161435a6b3dd3bba33a6d463032ac6ae14b72eee697",
+        "prompt.txt": "4eea6d1f36e9ec11d5cdbad2fd95949baa2a37fc608821acae3c5481dc211f81",
+        "events.jsonl": "638bcbb14b4618858fbef6fe762956666862c2890573d451a6adb3afbbc507c8",
+        "answer.txt": "9f8315bf47c84825041da5bc7e6a2ce85393fcf1a232376b9a4c2191039ff125",
+        "report.json": "bb8340d28cadd65d5411d32a57b88a38aef69f0848cc33b7f38c0f0ae1a59a1c"
+      }
+    },
+    {
+      "trial": "candidate-opencode-release-2",
+      "host": "opencode",
+      "host_version": "1.18.35",
+      "suite": "discovery",
+      "server_version": "1.4.2",
+      "build_id": "df5196999e620bf0297d999a85904d5d95e1b0d5d208b3b6abeb508a17067aa0",
+      "exit_code": 0,
+      "elapsed_ms": 130825,
+      "passed": false,
+      "scenario_count": 29,
+      "passed_cases": 27,
+      "failed_cases": [
+        "device-log",
+        "sqlite"
+      ],
+      "hashes": {
+        "metadata.json": "1b84bae41e87c8b1b8c38f07449f9a93c94e6052c9bf9d7a6fb8d81a1e531964",
+        "prompt.txt": "4eea6d1f36e9ec11d5cdbad2fd95949baa2a37fc608821acae3c5481dc211f81",
+        "events.jsonl": "db034e8e74f427d2c07009a5e46952857cdbf1fe67179ea349e8f38a52fa9357",
+        "answer.txt": "00d2b808db4f42ae7f9775a5d97175b05f39d8f75a569884d94d280695dc852f",
+        "report.json": "8404e404755f0fed2711824bec2d7c39a4dd62d5248e76b4b8d42deab8b8cd69"
+      }
+    },
+    {
+      "trial": "live-opencode-release-2",
+      "host": "opencode",
+      "host_version": "1.18.35",
+      "suite": "live",
+      "server_version": "1.4.2",
+      "build_id": "df5196999e620bf0297d999a85904d5d95e1b0d5d208b3b6abeb508a17067aa0",
+      "exit_code": 0,
+      "elapsed_ms": 32414,
+      "passed": null,
+      "hashes": {
+        "metadata.json": "1b84bae41e87c8b1b8c38f07449f9a93c94e6052c9bf9d7a6fb8d81a1e531964",
+        "prompt.txt": "d50ad8a4dd6f41e18ab75190620c0da3d4e65f407271b68d051d44b13b56dcf2",
+        "events.jsonl": "e44fe82bf3746d8c7766be8d1d88da6ece10d0d937bfdeb0571d499ea49494d3",
+        "answer.txt": "7ae64414e1ff1af54b12b5474f69c0df9e62fb873a00c39be8243b1eb3a650e6",
+        "report.json": "0ff9f42938a5a8e198ab9c4cfd4c01e80d7c08035d148a9b73d216c63234fee7"
+      }
+    },
+    {
+      "trial": "live-claude",
+      "host": "claude",
+      "host_version": "2.1.281 (Claude Code)",
+      "suite": "live",
+      "server_version": "1.4.2",
+      "build_id": "22d8de8f57315e09352912b67cf0282f4fdfffac0592864d0521133210278305",
+      "exit_code": 1,
+      "elapsed_ms": 12544,
+      "passed": false,
+      "error": "host process failed\n\n1 !== 0\n",
+      "hashes": {
+        "metadata.json": "03c4d5811ed7796ca56a0161435a6b3dd3bba33a6d463032ac6ae14b72eee697",
+        "prompt.txt": "d50ad8a4dd6f41e18ab75190620c0da3d4e65f407271b68d051d44b13b56dcf2",
+        "events.jsonl": "add9bfdd18df1961e16e31944ef74df5edc186e29a12be83743d8450e5d8ee57",
+        "report.json": "2c6c1c82908313129a492164de585d6399fe7b1e0cc460fbf07d73037830d280"
+      }
+    },
+    {
+      "trial": "baseline-codex-final",
+      "host": "codex",
+      "host_version": "codex-cli 0.156.1",
+      "suite": "discovery",
+      "server_version": "1.4.1",
+      "build_id": "cec1cb32384f1d122fc790b73d41c72a60927e16a081428ed426c56e8ae129a6",
+      "exit_code": 1,
+      "elapsed_ms": 6469,
+      "passed": false,
+      "error": "host process failed\n\n1 !== 0\n",
+      "hashes": {
+        "metadata.json": "900631c3a4df2f9d36035f108fcb348d517071e6135c38f23e45f485cb37b113",
+        "prompt.txt": "4eea6d1f36e9ec11d5cdbad2fd95949baa2a37fc608821acae3c5481dc211f81",
+        "events.jsonl": "aad59f0b6ebed721bc76e73841ff17f8a32482ed9e0947dec74d0dfed9d686f3",
+        "report.json": "2cdfb4a50389fc3a416e1fed8abc43e68a0eb820c9a392848cf0847ae8eaf63f"
+      }
+    },
+    {
+      "trial": "candidate-codex-final",
+      "host": "codex",
+      "host_version": "codex-cli 0.156.1",
+      "suite": "discovery",
+      "server_version": "1.4.2",
+      "build_id": "22d8de8f57315e09352912b67cf0282f4fdfffac0592864d0521133210278305",
+      "exit_code": 1,
+      "elapsed_ms": 7646,
+      "passed": false,
+      "error": "host process failed\n\n1 !== 0\n",
+      "hashes": {
+        "metadata.json": "03c4d5811ed7796ca56a0161435a6b3dd3bba33a6d463032ac6ae14b72eee697",
+        "prompt.txt": "4eea6d1f36e9ec11d5cdbad2fd95949baa2a37fc608821acae3c5481dc211f81",
+        "events.jsonl": "a272b004c2404efbf04872bed4b834790d1f3e700135639683925cf3fa1dca72",
+        "report.json": "6f9a66b8099f6b568ced9c07891c9d579ad3432c8261a8fef26ce827296210f5"
+      }
+    },
+    {
+      "trial": "live-codex",
+      "host": "codex",
+      "host_version": "codex-cli 0.156.1",
+      "suite": "live",
+      "server_version": "1.4.2",
+      "build_id": "22d8de8f57315e09352912b67cf0282f4fdfffac0592864d0521133210278305",
+      "exit_code": 1,
+      "elapsed_ms": 9157,
+      "passed": false,
+      "error": "host process failed\n\n1 !== 0\n",
+      "hashes": {
+        "metadata.json": "03c4d5811ed7796ca56a0161435a6b3dd3bba33a6d463032ac6ae14b72eee697",
+        "prompt.txt": "d50ad8a4dd6f41e18ab75190620c0da3d4e65f407271b68d051d44b13b56dcf2",
+        "events.jsonl": "a15cbc477dfee666cf4fd23eab05086e6b0f35e8696474c1d2ec819bdb540b32",
+        "report.json": "e0c21974a57bb8a317f3cd0a9eae69b140ec152a42b6c1be3c10d3754f099188"
+      }
+    }
+  ]
+}

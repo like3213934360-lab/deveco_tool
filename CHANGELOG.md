@@ -1,5 +1,19 @@
 # Changelog / 更新日志
 
+## v1.4.2 (2026-10-10)
+
+**中文**
+
+- 修正过度压缩：公共说明恢复全部 15 个工具的任务索引，以及 SDK 依据、UI 引导、批量操作、回放、断言和完整产物读取规则。工具描述保留独立调用所需的条件，补充自动签名的设备范围、模拟器端口限制、注销和滚动流畅度用途。
+- 同时考虑 Codex、OpenCode 和 Claude 的不同加载方式；移除上一版过紧的公共说明/重复展开字节门禁，改查默认截断边界，继续报告开销。参数校验、执行逻辑、原 tools/list 和运行性能预算不变，不增加宿主特例或降级路径。
+- 新增覆盖 15 个工具的 29 项真实模型发现试验、独立只读执行试验及评分器测试。保留失败、接口/余额阻塞和构建身份；不将方案输出等同于执行成功。Codex App 已在重载后完成实际调用。逐宿主证据及未完成项见 [升级 TODO](docs/UPGRADE-1.4.2.md)。
+
+**English**
+
+- Restored a discoverable index of all 15 tools and shared SDK, UI onboarding, batching, replay, assertion and artifact guidance. Standalone descriptions clarify automatic signing scope, emulator port restrictions, logout and scroll performance.
+- Accounted for Codex, OpenCode and Claude loading behavior. Replaced overly tight shared/repeated instruction byte gates with truncation checks while retaining size reports, tools/list and runtime budgets. Validation and handlers are unchanged; no host-specific fallback was added.
+- Added 29 real-model planning scenarios, separate read-only execution trials and grader tests. Failed trials, provider blockers and build identities remain recorded; proposed calls are not execution evidence. Reloaded Codex App calls were verified. Host-specific results and remaining work: [upgrade TODO](docs/UPGRADE-1.4.2.md).
+
 ## v1.4.1 (2026-10-10)
 
 **中文**

@@ -5,14 +5,14 @@ import { McpServer } from "./mcp.js";
 import { MAX_WAIT_MS, SYNC_WAIT_MS, type ToolDef } from "./registry.js";
 import { allTools } from "./tools/index.js";
 
-// Hosts may prepend this to every tool. Keep only cross-tool rules here; operation guidance belongs
-// in its tool description so it remains available when a host loads only that tool.
+// Some hosts defer tool definitions; others repeat these instructions for every tool. Keep a
+// discoverable capability index here, with call details on each tool and shared rules in both places.
 const instructions = [
-  "HarmonyOS/ArkTS development tools. Use doctor for unknown/failing environments. Pass absolute project paths.",
-  "Before answering ArkTS/ArkUI/@kit API questions, use knowledge search/read; exact signatures: code lsp hover/definition.",
-  "For jobs, use job action=wait; never repeat the operation or retry needs_input without inspection.",
-  "DEVICE_AMBIGUOUS/TEAM_AMBIGUOUS: ask the user. Invalid parameters execute nothing; follow the error.",
-  "Responses are summaries. Full content: job action=read artifact_id=<id> for any returned artifact id (expires after ~1 day).",
+  "HarmonyOS/ArkTS development tools. Discover by task: doctor environment; project create/sync/build; run deploy/launch; code SDK APIs/checks/LSP; knowledge docs; device logs/files/SQLite; ui interaction/tests/layout/scroll performance/recording; ui_flow record/replay; diagnose crashes; emulator lifecycle/boot modes/sensors; hot_reload patches; auth logins/teams; sign packages/certificates; skills user-managed skills/host setup; job wait/resume/read full artifacts.",
+  "Use doctor for unknown/failing environments. Pass absolute project paths. Before answering ArkTS/ArkUI/@kit API questions, use knowledge action=search/read; exact signatures: code action=lsp op=hover/definition against the project SDK. Conflicts: project SDK declarations and a successful build > official docs > community hints, never an API contract.",
+  "project build and run build_run already check edited files; no code check first. For running jobs use job action=wait, never repeat the operation. Inspect needs_input before resume; DEVICE_AMBIGUOUS/TEAM_AMBIGUOUS: ask the user, never choose silently. Invalid parameters execute nothing; follow the error.",
+  "UI actions handle recognizable consent and setup/tours automatically, preserving selected defaults. If blocked, observe current controls before continuing, never retry blindly. Use ui act steps=[...] for a path; after reports changes. Verify with ui assert, not screenshots alone. Save repeated paths with save_flow; run then_flow=<id> replays after deploy.",
+  "Responses are summaries. Read any returned artifact id with job action=read artifact_id=<id>; line/limit page, grep filters. Artifacts expire after about a day. Skill placement and updates are user-managed; no automatic distribution or synchronization.",
 ].join(" ");
 
 const ARTIFACT_ID = /^a_[0-9a-f]{16}$/;
