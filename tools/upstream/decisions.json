@@ -8,8 +8,16 @@
     "  '<tool> [param] [param=value] ...'  checked against the live tools/list JSON Schema (value must be in the enum when one exists)",
     "  'cli:<text>'  src/cli.ts must contain the text;  'prompt:<name>' / 'skill:<name>'  must be served by the MCP server"
   ],
-  "upstream_rev": { "deveco-code": "74c374db9fd4b9325d42252b8bd603ab10d4dc5d", "deveco-cli": "3e2fa15c9e63c4fe95c060ee513ffd3f445e7ad2" },
+  "upstream_rev": { "deveco-code": "bbf950db3b6158f3488a2bfc08358a248339e7d8", "deveco-cli": "3e2fa15c9e63c4fe95c060ee513ffd3f445e7ad2" },
   "upstream_reviews": [
+    {
+      "date": "2026-10-10",
+      "upstream": "deveco-code",
+      "from": "74c374db9fd4b9325d42252b8bd603ab10d4dc5d",
+      "to": "bbf950db3b6158f3488a2bfc08358a248339e7d8",
+      "decision": "host",
+      "reason": "Reviewed the two changed files: v0.2.3 changelog documents the already-reviewed snip/startup fixes, and models.dev.json refreshes the host provider/model catalog snapshot. No executable tool implementation, command or MCP schema changes. This independent server does not select host models or import the upstream catalog; the extracted capability inventory is unchanged."
+    },
     {
       "date": "2026-10-10",
       "upstream": "deveco-code",
