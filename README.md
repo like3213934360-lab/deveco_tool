@@ -18,7 +18,7 @@
 | 源码行数（`src`） | 约 5.7k | 约 35k |
 | 知识检索 | 3–20 ms | — |
 
-v1.4.3 补明 action 与条件参数，优先进行 OpenCode 免费模型多轮发现与真实调用验收，并修复宿主退出导致模拟器被结束的问题。Codex App 重载已确认，关键原生调用及 UI 评审两轮通过；热重载 reset、录屏导出仍有真实失败，未宣称全功能通过。Claude 不在本轮适配名单。证据与未完成项见 [验收与 TODO](docs/UPGRADE-1.4.3.md)。功能升级的真实 SDK 验证见 [v1.4.0 验收记录](docs/UPGRADE-1.4.0.md)。
+v1.4.4 修正 reset：明确覆盖安装预存原始基线包、保留应用数据并核验补丁清零；录屏补齐服务状态、会话归属和导出错误核验。离线回归与真实 SDK/模型验收分开：按用户要求，设备/宿主测试等待 Codex 重启通知；旧 API 26 的 0 字节录像成因及真实取回仍未验证。见 [验收与 TODO](docs/UPGRADE-1.4.4.md)。此前 OpenCode/Codex 验收见 [v1.4.3 记录](docs/UPGRADE-1.4.3.md)，Claude 不在本轮适配名单。
 版本发布遵循 [GitHub 发布流程](docs/RELEASING.md)：`main` 上的新稳定版本通过全部 CI 后自动发布，并核验 tag、提交和 Latest。
 
 ## 安装
@@ -103,7 +103,7 @@ node bin/deveco-mcp.mjs init --host codex --project .      # 项目级配置（.
 | `auth` | 华为账号浏览器登录：`codegenie`（云端知识）或 `developer`（签名），`region` 可选 cn / global；`teams`；`import` 导入 v0.x 的登录凭据 |
 | `sign` | `auto`（工程已配置签名时拒绝执行、不做任何修改，`force` 时先准备并验证新材料，再原子切换配置；保留旧材料和证书，需要空闲证书名额；否则一键为真机生成调试签名：密钥库、证书、设备注册、Profile，ACL 权限从 `module.json5` 自动推导，并写入工程的 `signingConfigs`）/ `sign` / `verify` / AppGallery Connect 证书和设备管理 / 逐项操作 `keypair`、`csr`、`certificate_create`、`profile_create`、`profile_delete`。账号属于多个开发者团队时，会在 AGC 新建或删除东西的操作必须指定 `team`（否则列出团队让 AI 先问用户） |
 | `emulator` | `list`（`details`）/ `start`（`boot_mode`、`hdc_port`、`window`）/ `stop`（`name` 或多个 `names`；启动会核验实例、端口及开机完成）/ `create`（`screen_profile` 或自定义 `screen`、`hot_boot`、`instance_path`、`image_root`、`force`）/ `delete` / `images`（按行返回设备类型和系统版本；默认已下载，`all` 全部）/ `install_image`（`force` 重新下载；返回路径、大小、耗时）/ `remove_image` / `license`（接受）/ `license_view`（只读查看）/ `scenario`（电量和充电状态、GPS、光照/湿度/温度/步数/心率传感器、旋转、折叠、运动场景等）。启动、创建、下载镜像时，如果许可协议还没同意，会自动同意并在结果中注明（`auto_accept_license=false` 可关闭） |
-| `hot_reload` | `apply` 把 ArkTS 改动以 HQF 快速修复包推送到运行中的应用，约 5 秒生效（实测 4.4–4.7 秒），应用不重启（`files` 指定改动文件，`restart` 打完补丁后重启应用）；`reset` 撤销改动；`stop_daemon` 停止工程的 hvigor 守护进程 |
+| `hot_reload` | `apply` 把 ArkTS 改动以 HQF 快速修复包推送到运行中的应用，约 5 秒生效（实测 4.4–4.7 秒），应用不重启（`files` 指定改动文件，`restart` 打完补丁后重启应用）；`reset` 覆盖安装保存的原始基线包（停止应用、保留数据、不重新编译，校验补丁清零；旧基线须重新部署建立）；`stop_daemon` 停止工程的 hvigor 守护进程 |
 
 建项时，`device_types` 接受 `phone`、`tablet`、`2in1`、`car`、`wearable`、`tv` 的非空组合，默认 `["phone"]`；去重后写入 `entry/src/main/module.json5`，并在结果中返回。非法类型、已有文件冲突或不可用的 API 映射在写入前报错。
 
@@ -213,7 +213,7 @@ A lean MCP server for HarmonyOS development. It lets MCP hosts (OpenCode, Codex,
 | Source lines (`src`) | ~5.7k | ~35k |
 | Knowledge search | 3–20 ms | — |
 
-See [v1.4.3 acceptance and TODO](docs/UPGRADE-1.4.3.md) for explicit action guidance, repeated OpenCode free-model planning/execution trials and emulator lifecycle repair. Codex App reload is confirmed and two focused native UI/review rounds passed; active hot-reload reset and recording export still fail, so full acceptance remains incomplete. Claude is outside this round’s scope; [v1.4.0 acceptance](docs/UPGRADE-1.4.0.md) records the feature upgrade's real SDK evidence. [GitHub delivery](docs/RELEASING.md) verifies CI, the immutable release tag and Latest.
+See [v1.4.4 acceptance and TODO](docs/UPGRADE-1.4.4.md) for explicit baseline-package restoration and recorder lifecycle/export checks. Real device and host testing awaits the user's Codex restart confirmation; the original API 26 zero-byte video's cause and successful retrieval remain unverified. Earlier model evidence is in [v1.4.3](docs/UPGRADE-1.4.3.md). Claude is outside this round's scope. [GitHub delivery](docs/RELEASING.md) verifies CI, the immutable release tag and Latest.
 
 ### Install
 
@@ -295,7 +295,7 @@ Check the setup with `node bin/deveco-mcp.mjs doctor [project]`, or call the `do
 | `auth` | Huawei browser login for `codegenie` (cloud knowledge) or `developer` (signing), `region` cn / global; `teams`; `import` v0.x credentials |
 | `sign` | `auto` (refuses and changes nothing when the project already has signing unless `force`; prepares and verifies a new chain before atomically switching config, keeps old material and certificates, and needs a free certificate slot; otherwise one-step debug signing for real devices: keystore, certificate, device registration, profile with ACL permissions derived from `module.json5`, and `signingConfigs` in the project) / `sign` / `verify` / AppGallery Connect certificates and devices / itemized `keypair`, `csr`, `certificate_create`, `profile_create`, `profile_delete`. For accounts in several developer teams, actions that create or delete in AGC require `team` (otherwise the teams are listed so the agent asks the user) |
 | `emulator` | `list` (`details`) / `start` (`boot_mode`, `hdc_port`, `window`) / `stop` (`name` or several `names`; start verifies identity, port and boot completion) / `create` (`screen_profile` or custom `screen`, `hot_boot`, `instance_path`, `image_root`, `force`) / `delete` / `images` (rows of device type and OS version; downloaded, `all` for every image) / `install_image` (`force` re-downloads; returns path, size, duration) / `remove_image` / `license` (accept) / `license_view` (read-only) / `scenario` (battery level and charging status, GPS, light/humidity/temperature/steps/heart-rate sensors, rotation, fold, motion scenes, …). Start, create and image download accept the license agreements automatically when needed and say so in the result (`auto_accept_license=false` to opt out) |
-| `hot_reload` | `apply` pushes ArkTS changes to the running app as an HQF quick fix in about 5 s (measured 4.4-4.7 s) with no restart (`files` limits it to given files, `restart` relaunches after patching); `reset` removes them; `stop_daemon` stops the project's hvigor daemon |
+| `hot_reload` | `apply` pushes ArkTS changes to the running app as an HQF quick fix in about 5 s (measured 4.4-4.7 s) with no restart (`files` limits it to given files, `restart` relaunches after patching); `reset` replacement-installs archived baseline packages (stops the app, preserves data, no rebuild, verifies zero patches; legacy baselines need a new deployment); `stop_daemon` stops the project's hvigor daemon |
 
 `project create` accepts a nonempty `device_types` array containing `phone`, `tablet`, `2in1`, `car`, `wearable` and/or `tv` (default `["phone"]`). It deduplicates the array, writes `entry/src/main/module.json5` and returns the chosen types. Invalid types, existing-file conflicts and unavailable API mappings fail before writing.
 

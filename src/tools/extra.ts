@@ -195,11 +195,11 @@ export const emulatorTool = tool({
 export const hotReloadTool = tool({
   name: "hot_reload",
   title: "Hot reload",
-  description: "Manual quick fix (HQF, ~5 s) of the running app; run build_run already does this automatically for code-only changes. apply after run build_run hot_reload=true (restart=true relaunches; files limits the patch); reset removes patches; stop_daemon stops hvigor. New files, resources and decorators need a redeploy.",
+  description: "apply: HQF (~5s) after run build_run hot_reload=true; files limits edits, restart relaunches. build_run auto-patches code. reset: replace-install saved baseline packages; stops app, keeps data, verifies patch=0; no rebuild. Old baseline: redeploy. stop_daemon: stop hvigor. New files/resources/decorators need redeploy.",
   schema: z.object({
     action: z.enum(["apply", "reset", "stop_daemon"]),
     files: z.array(z.string()).max(500).optional().describe("apply: changed .ets/.ts files (default: detected automatically from the baseline)"),
-    restart: z.boolean().optional().describe("apply: relaunch the app after patching so startup code runs the new version"),
+    restart: z.boolean().optional().describe("apply: relaunch after patching to execute startup code"),
     project: fields.project,
     product: fields.product,
     target: fields.target,

@@ -35,6 +35,19 @@ const waitJob = async (status) => {
   while (status.status === "running" || status.status === "queued") status = await call("job", { action: "wait", job_id: status.job_id, wait: 60000 });
   return status;
 };
+const verifyReset = async (patchedText) => {
+  const reset = await call("hot_reload", { action: "reset", project, target });
+  assert.equal(reset.reset, true);
+  assert.equal(reset.method, "restore_baseline_packages");
+  assert.equal(reset.patch_version, 0);
+  const query = await call("device", { action: "shell", target, command: `bm quickfix -q -b ${bundle}` });
+  assert.match(query.output, /^\s*patch version code:\s*0\s*$/m);
+  await call("run", { action: "launch", project, target });
+  assert.equal((await call("ui", { action: "assert", target, visible: { text: "Hello World", exact: true }, timeout_ms: 5000 })).passed, true);
+  await call("ui", { action: "act", target, op: "click", selector: { text: "Hello World", exact: true } });
+  assert.equal((await call("ui", { action: "assert", target, visible: { text: "Welcome", exact: true }, timeout_ms: 5000 })).passed, true);
+  assert.equal((await call("ui", { action: "assert", target, hidden: { text: patchedText, exact: true }, timeout_ms: 5000 })).passed, true);
+};
 
 test("doctor", async () => {
   const report = await call("doctor", {});
@@ -178,9 +191,9 @@ test("hot reload patches the running app without restart", { skip: !target }, as
   await call("ui", { action: "act", target, op: "click", selector: { text: "Hello World" } });
   const verdict = await call("ui", { action: "assert", target, visible: { text: "Patched Live" }, timeout_ms: 5000 });
   assert.equal(verdict.passed, true);
-  fs.writeFileSync(page, fs.readFileSync(page, "utf8").replace("'Patched Live'", "'Welcome'"));
-  const reset = await call("hot_reload", { action: "reset", project, target });
-  assert.equal(reset.reset, true);
+  // Keep patched sources during reset: rebuilding them would fail the original-behavior assertion.
+  try { await verifyReset("Patched Live"); }
+  finally { fs.writeFileSync(page, fs.readFileSync(page, "utf8").replace("'Patched Live'", "'Welcome'")); }
 });
 
 test("deploy without building + uninstall first; hot reload of explicit files with restart", { skip: !target }, async () => {
@@ -196,9 +209,9 @@ test("deploy without building + uninstall first; hot reload of explicit files wi
     const applied = await call("hot_reload", { action: "apply", project, files: ["entry/src/main/ets/pages/Index.ets"], restart: true });
     assert.equal(applied.restarted, true);
     assert.equal((await call("ui", { action: "assert", target, visible: { text: "Hello Files" }, timeout_ms: 5000 })).passed, true);
+    await verifyReset("Hello Files");
   } finally {
     fs.writeFileSync(page, original);
-    await call("hot_reload", { action: "reset", project, target });
   }
 });
 

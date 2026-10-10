@@ -2,10 +2,10 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { invariant, ToolError } from "../core/errors.js";
-import { atomicWrite, clip, readJson5, sha256, walk } from "../core/files.js";
+import { atomicWrite, clip, fileSha256, inside, readJson5, sha256, walk } from "../core/files.js";
 import { run } from "../core/proc.js";
 import { toolCommand } from "../core/toolchain.js";
-import { hdc, pidOf, shell } from "./device.js";
+import { hdc, install, installStamp, pidOf, shell } from "./device.js";
 import { BuildOutputParser, type Project } from "./project.js";
 import { decryptPassword } from "./sign.js";
 
@@ -18,11 +18,18 @@ import { decryptPassword } from "./sign.js";
  * State: <module>/build/<product>/intermediates/deveco-mcp-hot.json
  */
 
-interface Baseline { module: string; bundle: string; target: string; files: Record<string, string>; at: number }
+interface Baseline {
+  module: string; bundle: string; target: string; files: Record<string, string>; at: number;
+  restore?: { directory: string; install: string; packages: { file: string; sha256: string }[] };
+}
 
 function statePath(project: Project, module: string) {
   const m = project.modules.find((x) => x.name === module)!;
   return path.join(m.root, "build", project.product, "intermediates", "deveco-mcp-hot.json");
+}
+function baselineArchive(file: string, directory: string) {
+  invariant(/^deveco-mcp-baseline-[a-f0-9]{16}$/.test(directory), "CONFLICT", "Invalid baseline archive directory");
+  return path.join(path.dirname(file), directory);
 }
 
 /** Modules that have a hot-reload baseline (installed with build_run hot_reload=true). */
@@ -89,30 +96,78 @@ async function devHqf(project: Project, module: string, signal: AbortSignal) {
  * Baseline: compile the unchanged module once through the cold-reload pipeline so hvigor
  * writes the symbol map (loader_out/ets/symbolMap.map) that later patch compiles diff against.
  */
-export async function recordBaseline(project: Project, module: string, bundle: string, target: string, signal: AbortSignal) {
+export async function recordBaseline(project: Project, module: string, bundle: string, target: string, signal: AbortSignal, packages: { path: string; sha256: string }[]) {
   const m = project.modules.find((x) => x.name === module);
   invariant(m, "INVALID_INPUT", `Unknown module ${module}`);
-  writeBuildConfig(project, module, false);
-  writeChangeList(project, module, []);
-  const { result, diagnostics } = await devHqf(project, module, signal).finally(() => clearBuildConfig(project));
-  invariant(result.code === 0, "BUILD_FAILED", "Hot reload baseline compile failed", { ...diagnostics, tail: clip(result.stderr || result.stdout, 1500) });
-  const baseline: Baseline = { module, bundle, target, files: sourceDigests(m.root), at: Date.now() };
-  fs.mkdirSync(path.dirname(statePath(project, module)), { recursive: true });
-  atomicWrite(statePath(project, module), JSON.stringify(baseline));
-  return { baseline: true, module, files: Object.keys(baseline.files).length };
+  invariant(packages?.length, "NOT_FOUND", "Installed package receipt is missing; deploy again with hot_reload=true");
+  const stamp = await installStamp(target, bundle, signal);
+  invariant(stamp, "EFFECT_UNCERTAIN", "Cannot identify the installed baseline");
+  const file = statePath(project, module);
+  const previous = fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, "utf8")) as Baseline : undefined;
+  const directory = `deveco-mcp-baseline-${crypto.randomBytes(8).toString("hex")}`;
+  const archive = baselineArchive(file, directory);
+  const saved: { file: string; sha256: string }[] = [];
+  const files = sourceDigests(m.root);
+  fs.mkdirSync(archive, { recursive: true });
+  try {
+    for (const pkg of packages) {
+      const name = path.basename(pkg.path);
+      invariant(!saved.some((p) => p.file === name), "CONFLICT", `Duplicate baseline package name: ${name}`);
+      fs.copyFileSync(pkg.path, path.join(archive, name), fs.constants.COPYFILE_EXCL | fs.constants.COPYFILE_FICLONE);
+      invariant(await fileSha256(path.join(archive, name)) === pkg.sha256, "CONFLICT", `Package changed after deployment: ${name}`);
+      saved.push({ file: name, sha256: pkg.sha256 });
+    }
+    writeBuildConfig(project, module, false);
+    writeChangeList(project, module, []);
+    const { result, diagnostics } = await devHqf(project, module, signal).finally(() => clearBuildConfig(project));
+    invariant(result.code === 0, "BUILD_FAILED", "Hot reload baseline compile failed", { ...diagnostics, tail: clip(result.stderr || result.stdout, 1500) });
+    invariant(saved.every((p) => fs.existsSync(path.join(archive, p.file))), "CONFLICT", "Baseline packages were removed during compilation");
+    invariant(await installStamp(target, bundle, signal) === stamp, "CONFLICT", "Installed app changed while recording the baseline");
+    const baseline: Baseline = { module, bundle, target, files, at: Date.now(), restore: { directory, install: stamp, packages: saved } };
+    atomicWrite(file, JSON.stringify(baseline));
+  } catch (error) {
+    fs.rmSync(archive, { recursive: true, force: true });
+    throw error;
+  }
+  if (previous?.restore) fs.rmSync(baselineArchive(file, previous.restore.directory), { recursive: true, force: true });
+  return { baseline: true, module, files: Object.keys(files).length, packages: saved.length };
 }
 
-/** Remove applied quick fixes (restores the installed code on next launch) and drop the baseline. */
+/** bm quickfix -r only deletes inactive patches. Restore the exact installed packages instead. */
 export async function resetHotReload(project: Project, module: string, target: string | undefined, signal: AbortSignal) {
   const file = statePath(project, module);
   const baseline = fs.existsSync(file) ? (JSON.parse(fs.readFileSync(file, "utf8")) as Baseline) : undefined;
   const device = target ?? baseline?.target;
-  invariant(device && project.bundleName, "INVALID_INPUT", "No device/bundle to reset; pass target");
-  const result = await shell(device, ["bm", "quickfix", "-r", "-b", project.bundleName], signal, 60000);
-  fs.rmSync(file, { force: true });
-  const m = project.modules.find((x) => x.name === module);
-  if (m) fs.rmSync(path.join(m.root, "patch.json"), { force: true });
-  return { reset: true, output: clip((result.stdout + result.stderr).trim(), 300), note: "Relaunch the app to run the installed code" };
+  invariant(baseline?.restore?.packages.length, "NOT_FOUND", "No saved installation packages for this baseline", undefined,
+    "Create a new baseline with run build_run hot_reload=true; older baselines cannot be reconstructed from current sources");
+  invariant(device === baseline.target && project.bundleName === baseline.bundle, "CONFLICT", "Reset device/bundle does not match the baseline");
+  const archive = baselineArchive(file, baseline.restore.directory);
+  const packages = [];
+  for (const pkg of baseline.restore.packages) {
+    const saved = inside(archive, pkg.file);
+    invariant(fs.existsSync(saved) && await fileSha256(saved) === pkg.sha256, "CONFLICT", `Baseline package missing or changed: ${pkg.file}`);
+    packages.push(saved);
+  }
+  invariant(await installStamp(device, baseline.bundle, signal) === baseline.restore.install, "CONFLICT", "Installed app changed since this baseline; reset refused");
+  await install(device, packages, signal, true);
+  const result = await shell(device, ["bm", "quickfix", "-q", "-b", baseline.bundle], signal, 15000);
+  const output = result.stdout + result.stderr;
+  invariant(result.code === 0 && /^\s*patch version code:\s*0\s*$/m.test(output)
+    && new RegExp(`^\\s*bundle name:\\s*${baseline.bundle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*$`, "m").test(output)
+    && !/fail|error/i.test(output), "EFFECT_UNCERTAIN", "Baseline packages installed, but cleared patch state could not be verified; baseline retained", { output: clip(output, 800) });
+  // Replacement clears bundle-wide patches, including baselines recorded for other modules.
+  for (const name of baselineModules(project)) {
+    const state = statePath(project, name);
+    const other = JSON.parse(fs.readFileSync(state, "utf8")) as Baseline;
+    if (other.bundle !== baseline.bundle || other.target !== device) continue;
+    if (other.restore) fs.rmSync(baselineArchive(state, other.restore.directory), { recursive: true, force: true });
+    fs.rmSync(state, { force: true });
+    fs.rmSync(path.join(project.modules.find((m) => m.name === name)!.root, "patch.json"), { force: true });
+  }
+  const { stateDir } = await import("../core/config.js");
+  const { stateFile } = await import("./hotpath.js");
+  fs.rmSync(stateFile(stateDir(), project.root, device), { force: true });
+  return { reset: true, method: "restore_baseline_packages", patch_version: 0, packages: baseline.restore.packages.map((p) => p.file), note: "Original packages restored without rebuilding; app data preserved. Launch the app to run the baseline code" };
 }
 
 /** `devecocli run --hotreload stop`: shut down the project's hvigor daemon. */

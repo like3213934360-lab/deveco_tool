@@ -4,9 +4,10 @@ import net from "node:net";
 import path from "node:path";
 import zlib from "node:zlib";
 import { StringDecoder } from "node:string_decoder";
+import { setTimeout as delay } from "node:timers/promises";
 import { artifactDir, commitArtifact, saveArtifact, trackExport } from "../core/artifacts.js";
 import { config, packageRoot } from "../core/config.js";
-import { invariant, ToolError } from "../core/errors.js";
+import { errorResult, invariant, ToolError } from "../core/errors.js";
 import { assertConnected, hdc, shell } from "./device.js";
 
 import { automaticResult } from "./agreements.js";
@@ -653,7 +654,7 @@ export async function saveTree(nodes: UiNode[]) {
 // start with a CustomizedFileName, stop by toggling again, then export via mediatool.
 const RECORDER_BUNDLE = "com.huawei.hmos.screenrecorder";
 const RECORDER = ["-b", RECORDER_BUNDLE, "-a", `${RECORDER_BUNDLE}.ServiceExtAbility`];
-interface Recording { name: string; started: number }
+interface Recording { name: string; started: number; recorder?: string; stopping?: boolean }
 
 // Session state lives in SQLite so a restarted server can still stop/retrieve a recording.
 async function session(target: string): Promise<Recording | undefined> {
@@ -661,51 +662,89 @@ async function session(target: string): Promise<Recording | undefined> {
   const raw = await kvGet(`screenrecord:${target}`);
   return raw ? (JSON.parse(raw) as Recording) : undefined;
 }
-async function setSession(target: string, value: Recording | undefined) {
-  const { kvSet, kvDelete } = await import("../core/db.js");
+async function setSession(target: string, value: Recording | undefined, expectedName?: string) {
+  const { kvSet, database } = await import("../core/db.js");
   if (value) await kvSet(`screenrecord:${target}`, JSON.stringify(value));
-  else await kvDelete(`screenrecord:${target}`);
+  else (await database()).prepare("DELETE FROM kv WHERE key=? AND json_extract(value,'$.name')=?").run(`screenrecord:${target}`, expectedName!);
 }
 
-/** The recorder's service ability is ACTIVE only while recording (and briefly while finalizing). */
-async function recorderActive(target: string, signal?: AbortSignal) {
-  const dump = await shell(target, ["aa", "dump", "-e"], signal, 15000);
-  return new RegExp(`uri \\[[^\\]]*${RECORDER_BUNDLE.replace(/\./g, "\\.")}`).test(dump.stdout);
+/** Parse an identified service instance; an empty/error/truncated dump is never idle evidence. */
+export function recorderInstance(output: string, activeOnly = false) {
+  invariant(/ExtensionRecords|AbilityRecord ID/.test(output) && !/\[(?:Fail|E\d+)\]|\berror\b/i.test(output), "UI_RECORD_FAILED", "Cannot read recorder state", { output: output.slice(0, 500) });
+  const blocks: string[][] = [];
+  for (const line of output.split(/\r?\n/)) {
+    if (/^\s*uri \[/.test(line)) {
+      invariant(/^\s*uri \[[^\]]+\]\s*$/.test(line), "UI_RECORD_FAILED", "Truncated recorder state");
+      blocks.push([line]);
+    } else blocks.at(-1)?.push(line);
+  }
+  invariant(blocks.length > 0 || !/AbilityRecord ID/.test(output), "UI_RECORD_FAILED", "Recorder dump is missing its URI blocks");
+  const instances = [];
+  for (const lines of blocks) {
+    const block = lines.join("\n");
+    const uri = /uri \[([^\]]+)\]/.exec(block)![1]!.split("/").filter(Boolean);
+    const id = /AbilityRecord ID\s*[#:]\s*(\d+)/.exec(block)?.[1];
+    const started = /start time \[(\d+)\]/.exec(block)?.[1];
+    invariant(id && started && /state #\w+/.test(block), "UI_RECORD_FAILED", "Incomplete recorder instance identity");
+    if (uri[0] !== RECORDER_BUNDLE || !["ServiceExtAbility", `${RECORDER_BUNDLE}.ServiceExtAbility`].includes(uri.at(-1)!)) continue;
+    instances.push({ id: `${id}:${started}`, active: /state #ACTIVE\b/.test(block) });
+  }
+  invariant(instances.length <= 1, "CONFLICT", "Multiple screen recorder instances; state is ambiguous");
+  return instances[0] && (!activeOnly || instances[0].active) ? instances[0].id : undefined;
 }
-/** Wait until the recorder service has stopped (file finalized). */
-async function waitRecorderIdle(target: string, timeoutMs: number, signal?: AbortSignal) {
+async function recorderActive(target: string, signal?: AbortSignal, activeOnly = false) {
+  const dump = await shell(target, ["aa", "dump", "-e"], signal, 15000);
+  invariant(dump.code === 0, "UI_RECORD_FAILED", "Cannot query recorder state", { output: dump.stdout + dump.stderr });
+  return recorderInstance(dump.stdout + dump.stderr, activeOnly);
+}
+/** Service disappearance allows export; only the exported MP4 proves finalization. */
+async function waitRecorderIdle(target: string, timeoutMs: number, signal?: AbortSignal, expected?: string) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    if (!(await recorderActive(target, signal))) return true;
-    await new Promise((r) => setTimeout(r, 500));
+    const active = await recorderActive(target, signal);
+    if (!active) return true;
+    invariant(!expected || active === expected, "CONFLICT", "A different recorder instance is running; it was not stopped");
+    await delay(500, undefined, { signal });
   }
   return false;
 }
 
 export async function recordingStatus(target: string, signal?: AbortSignal) {
   const [active, current] = await Promise.all([recorderActive(target, signal), session(target)]);
-  const status = active ? (current ? "recording" : "busy") : "idle";
+  const status = active ? (current?.recorder === active ? "recording" : "busy") : "idle";
   return {
     status,
     ...(current ? { file: current.name, seconds: Math.round((Date.now() - current.started) / 1000) } : {}),
-    note: status === "busy" ? "A recording started outside this server is running; stop it with record_stop external=true"
+    note: status === "busy" ? "Recorder ownership is unknown or external; this server will not toggle it"
       : status === "idle" && current ? "Recording ended outside this server; record_stop retrieves the file" : undefined,
   };
 }
 
 export async function startRecording(target: string, signal?: AbortSignal) {
   invariant(!(await session(target)), "CONFLICT", "This server already owns a recording or pending export", undefined, "Use record_stop to retrieve it, or discard=true before starting another recording");
-  await waitRecorderIdle(target, 6000, signal); // a just-stopped recorder may still be finalizing
-  const status = await recordingStatus(target, signal);
-  invariant(status.status === "idle", "CONFLICT", `Screen recorder is ${status.status}`, undefined, "Stop it first with ui action=record_stop");
+  invariant(await waitRecorderIdle(target, 6000, signal), "CONFLICT", "Screen recorder is busy", undefined, "Stop an external recording explicitly with record_stop external=true");
   const name = `devecomcp-${Date.now()}-${crypto.randomBytes(2).toString("hex")}.mp4`;
+  const current: Recording = { name, started: Date.now() };
+  // Persist intent before the toggle, so interruption cannot lose the pending recording.
+  const { database } = await import("../core/db.js");
+  const claimed = (await database()).prepare("INSERT INTO kv(key,value) VALUES(?,?) ON CONFLICT(key) DO NOTHING").run(`screenrecord:${target}`, JSON.stringify(current));
+  invariant(claimed.changes === 1, "CONFLICT", "Another recording session already owns this target");
   const result = await shell(target, ["aa", "start", ...RECORDER, "--ps", "CustomizedFileName", name], signal, 15000);
-  invariant(/success/i.test(result.stdout), "UI_RECORD_FAILED", `Screen recorder did not start: ${result.stdout.trim().slice(0, 200)}`,
+  invariant(result.code === 0 && /success/i.test(result.stdout) && !/fail|error/i.test(result.stdout + result.stderr), "UI_RECORD_FAILED", `Screen recorder start was not confirmed: ${(result.stdout + result.stderr).trim().slice(0, 200)}`,
     undefined, /10106102|screen is locked/i.test(result.stdout)
       ? "The device screen is locked (with a passcode it cannot be unlocked remotely): ask the user to unlock the device, then retry"
       : "Screen recording needs a real device with the system recorder (not available on some emulators)");
-  await setSession(target, { name, started: Date.now() });
-  return { recording: true, file: name, note: "Stop with ui action=record_stop" };
+  const deadline = Date.now() + 10000;
+  while (Date.now() < deadline) {
+    const recorder = await recorderActive(target, signal, true);
+    if (recorder) {
+      await setSession(target, { ...current, recorder });
+      return { recording: true, file: name, note: "Recorder service confirmed; record_stop must retrieve and validate the MP4" };
+    }
+    await delay(250, undefined, { signal });
+  }
+  throw new ToolError("UI_RECORD_FAILED", "Start command was accepted but no recorder service appeared; session retained", { file: name },
+    "Inspect device recorder logs and consent/setup UI. No video is verified; do not blindly repeat record_start");
 }
 
 export async function stopRecording(target: string, options: { discard?: boolean; external?: boolean; save_path?: string } = {}, signal?: AbortSignal) {
@@ -715,39 +754,63 @@ export async function stopRecording(target: string, options: { discard?: boolean
     invariant(options.external, "NOT_FOUND", "No recording started by this server on this device", undefined,
       active ? "A foreign recording is running: pass external=true to stop it (its file is not downloaded)" : undefined);
     if (active) await shell(target, ["aa", "start", ...RECORDER], signal, 15000);
-    return { stopped: active, downloaded: false, idle: active ? await waitRecorderIdle(target, 10000, signal) : true };
+    invariant(!active || await waitRecorderIdle(target, 10000, signal, active), "UI_RECORD_FAILED", "External recorder did not stop");
+    return { stopped: !!active, downloaded: false, idle: true };
   }
-  if (active) await shell(target, ["aa", "start", ...RECORDER], signal, 15000);
-  invariant(await waitRecorderIdle(target, 10000, signal), "UI_RECORD_FAILED", "Recorder is still finalizing; recording session retained for retry");
-  if (options.discard) { await setSession(target, undefined); return { stopped: true, discarded: current.name, note: "The file remains in the device gallery" }; }
+  invariant(!active || active === current.recorder, "CONFLICT", "Active recorder does not match the saved session; it was not stopped", { file: current.name });
+  if (active && !current.stopping) {
+    const { database } = await import("../core/db.js");
+    const updated = (await database()).prepare("UPDATE kv SET value=? WHERE key=? AND value=?")
+      .run(JSON.stringify({ ...current, stopping: true }), `screenrecord:${target}`, JSON.stringify(current));
+    invariant(updated.changes === 1, "CONFLICT", "Recording session changed during stop");
+    await shell(target, ["aa", "start", ...RECORDER], signal, 15000);
+  }
+  invariant(await waitRecorderIdle(target, 10000, signal, current.recorder), "UI_RECORD_FAILED", "Recorder has not stopped; session retained, stop toggle will not be repeated");
+  if (options.discard) { await setSession(target, undefined, current.name); return { stopped: true, discarded: current.name, note: "Any media file remains in the device gallery" }; }
   // The file appears in the media library after the recorder finalizes it.
   let uri: string | undefined;
   for (let i = 0; i < 20 && !uri; i++) {
-    await new Promise((r) => setTimeout(r, 500));
+    await delay(500, undefined, { signal });
     const query = await shell(target, ["mediatool", "query", current.name, "-u"], signal, 10000);
-    uri = /"(file:\/\/[^"]+)"/.exec(query.stdout)?.[1];
+    invariant(query.code === 0, "UI_RECORD_FAILED", "Media query failed", { output: query.stdout + query.stderr });
+    uri = recordingUri(query.stdout + query.stderr);
   }
   invariant(uri, "UI_RECORD_FAILED", "Recording was not found in the media library");
-  const staging = `/data/local/tmp/${current.name}`;
   const id = `a_${crypto.randomBytes(8).toString("hex")}`;
+  const staging = `/data/local/tmp/${id}-${current.name}`;
   const local = path.join(artifactDir(), `${id}.mp4`);
+  let failure: unknown;
   try {
     const exported = await shell(target, ["mediatool", "recv", uri, staging], signal, 120000);
-    invariant(exported.stdout.includes(staging) && !/\[FAIL\]/.test(exported.stdout), /open source media file failed/i.test(exported.stdout) ? "CAPABILITY_UNAVAILABLE" : "UI_RECORD_FAILED", `Export failed: ${exported.stdout.trim().slice(0, 200)}`,
-      undefined, "Recording session retained: retry record_stop when media is finalized, or discard=true; this environment may lack recorder/media export support");
+    invariant(exported.code === 0 && exported.stdout.includes(staging) && !/\[FAIL\]|\berror\b/i.test(exported.stdout + exported.stderr), "UI_RECORD_FAILED", `Export failed: ${(exported.stdout + exported.stderr).trim().slice(0, 400)}`,
+      { file: current.name, uri }, "Session retained; no video recovered. An unreadable or empty source is not proof that media export is unsupported. Inspect recorder/media logs before retrying; discard=true explicitly releases the receipt");
     await hdc(["-t", target, "file", "recv", staging, local], signal, 120000);
     invariant(mp4Video(fs.readFileSync(local)), "UI_RECORD_FAILED", "Export is not a finalized MP4 video; recording session retained");
   } catch (error) {
-    fs.rmSync(local, { force: true });
-    throw error;
-  } finally {
-    await shell(target, ["rm", "-f", staging], undefined, 5000).catch(() => {}); // awaited: the host may exit right after this call
+    failure = error;
   }
+  try {
+    const cleaned = await shell(target, ["rm", "-f", staging], undefined, 5000); // cleanup must survive caller cancellation
+    invariant(cleaned.code === 0 && !/fail|error|denied/i.test(cleaned.stdout + cleaned.stderr), "UI_RECORD_FAILED", "Cannot remove recording staging file", { staging, output: cleaned.stdout + cleaned.stderr });
+  } catch (error) {
+    failure = failure ? new ToolError("UI_RECORD_FAILED", "Recording export and staging cleanup both failed; session retained", { export: errorResult(failure), cleanup: errorResult(error), staging }) : error;
+  }
+  if (failure) { fs.rmSync(local, { force: true }); throw failure; }
   const copy = options.save_path ? saveCopy(local, options.save_path) : undefined;
   if (copy) await trackExport(copy);
   const artifact = await commitArtifact(id, local, "video/mp4");
-  await setSession(target, undefined);
+  await setSession(target, undefined, current.name);
   return { saved: copy ?? local, bytes: artifact.bytes, seconds: Math.round((Date.now() - current.started) / 1000), artifact_id: artifact.artifact_id };
+}
+
+/** A filename must resolve to exactly one media entry; never select the first ambiguous URI. */
+export function recordingUri(output: string) {
+  const count = /find\s+(\d+)\s+result/i.exec(output)?.[1];
+  invariant(count !== undefined && !/\[FAIL\]|\berror\b/i.test(output), "UI_RECORD_FAILED", "Cannot parse media lookup", { output: output.slice(0, 500) });
+  const uris = [...output.matchAll(/"(file:\/\/[^"]+)"/g)].map((m) => m[1]!);
+  invariant(Number(count) <= 1 && uris.length <= 1, "CONFLICT", "Recording filename matches multiple media entries");
+  invariant(Number(count) === uris.length, "UI_RECORD_FAILED", "Incomplete media lookup");
+  return uris[0];
 }
 
 /** Container sanity check; codec playback is verified separately on the target environment. */

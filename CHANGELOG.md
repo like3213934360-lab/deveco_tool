@@ -1,5 +1,19 @@
 # Changelog / 更新日志
 
+## v1.4.4 (2026-10-10)
+
+**中文**
+
+- 修复 hot_reload.reset 的命令语义：经用户明确选择，改为覆盖安装预存的原始 HAP/HSP，保留应用数据，不编译当前源码、不卸载、不切换方案。校验设备、bundle、安装标识及包哈希，设备确认补丁版本为 0 后才返回成功并清理基线。旧基线缺少归档时明确要求新建，不伪造恢复。
+- 录屏启动需要 ACTIVE 服务证据；持久化启动/停止意图与服务身份，防止误停其他录制和取消后重复切换。媒体条目必须唯一，导出错误保留原始原因和待取回会话，不把打开源文件失败一律误判为能力缺失；同时报告导出与清理失败。
+- 补齐离线负例与严格设备 E2E：reset 必须恢复原页面行为，录屏必须有实际视频帧并可严格解码。按用户要求，本轮设备/宿主实测等待 Codex 重启通知；旧 API 26 的 0 字节录像成因与新版真实取回仍待验证，不宣称已完全解决。见 [验收与 TODO](docs/UPGRADE-1.4.4.md)。
+
+**English**
+
+- Reset now explicitly restores archived baseline HAP/HSP packages by replacement install, as authorized by the user. It preserves app data, verifies package hashes and installation identity, and requires patch version zero before success. No rebuild, uninstall or alternate recovery path; legacy baselines require a new deployment.
+- Confirm an ACTIVE recorder service after start, persist toggle intent and service identity, reject ambiguous media, and retain failed exports. Unreadable media is no longer mislabeled as unsupported capability; cleanup failures remain visible.
+- Add negative regressions and strict reset-behavior/video-decoding E2E checks. Device and host acceptance is deferred until the user confirms a Codex restart. The original API 26 zero-byte recording's cause and successful retrieval remain unverified; see [acceptance and TODO](docs/UPGRADE-1.4.4.md).
+
 ## v1.4.3 (2026-10-10)
 
 **中文**

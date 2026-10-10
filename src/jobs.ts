@@ -190,7 +190,7 @@ const baselineStep = {
       const { recordBaseline } = await import("./domains/hotreload.js");
       // Snapshot before compiling: an edit made while the baseline compiles is then seen as a change.
       const sources = hp.currentSources(project.root), inputs = hp.inputsSnapshot(project.root);
-      await recordBaseline(project, module.name, project.bundleName, target, ctx.signal);
+      await recordBaseline(project, module.name, project.bundleName, target, ctx.signal, ctx.outputs.install?.package_files);
       const { installStamp } = await import("./domains/device.js");
       const install = (await installStamp(target, project.bundleName, ctx.signal)) ?? "";
       hp.writeState(file, { ...base, install, sources, inputs });
@@ -303,7 +303,9 @@ const baseRunSteps = (build: boolean): Step<RunInput>[] => [
       const hsp = await buildOutputs(project, "assembleHsp", project.modules.filter((m) => m.type === "shared")).catch(() => []);
       const paths = [...new Set([...haps.map((p: { path: string }) => p.path), ...hsp.map((p) => p.path)])];
       const unsigned = paths.filter((p) => /-unsigned\.h[as]p$/.test(p));
-      return { ...(await install(ctx.outputs.target.target, paths, ctx.signal)), packages: paths.map((p) => p.split(/[\\/]/).pop()), ...(unsigned.length ? { unsigned: unsigned.length } : {}) };
+      const { fileSha256 } = await import("./core/files.js");
+      const package_files = ctx.input.hot_reload || autoMode(ctx.input) ? await Promise.all(paths.map(async (path) => ({ path, sha256: await fileSha256(path) }))) : undefined;
+      return { ...(await install(ctx.outputs.target.target, paths, ctx.signal)), packages: paths.map((p) => p.split(/[\\/]/).pop()), package_files, ...(unsigned.length ? { unsigned: unsigned.length } : {}) };
     },
     // After a crash mid-install, the app being present with the expected bundle is good enough to continue.
     async reconcile(ctx: { input: RunInput; outputs: Record<string, any>; signal: AbortSignal }) {
@@ -326,7 +328,7 @@ const baseRunSteps = (build: boolean): Step<RunInput>[] => [
       const result = await launchAndCheck(ctx.outputs.target.target, project.bundleName, ctx.input.ability ?? main.ability, main.module, ctx.signal);
       if (ctx.input.hot_reload) {
         const { recordBaseline } = await import("./domains/hotreload.js");
-        await recordBaseline(project, main.module, project.bundleName, ctx.outputs.target.target, ctx.signal);
+        await recordBaseline(project, main.module, project.bundleName, ctx.outputs.target.target, ctx.signal, ctx.outputs.install?.package_files);
       }
       if (!result.started) {
         // Diagnose right here: crash kind, message, the project's own frames with code, likely causes.
