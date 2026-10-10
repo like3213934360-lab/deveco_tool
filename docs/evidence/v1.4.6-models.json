@@ -1,0 +1,3493 @@
+{
+  "date": "2026-10-10",
+  "host": "OpenCode 1.18.35",
+  "grading_unchanged": true,
+  "previous_failed_trials_retained": true,
+  "private_content_uploaded": false,
+  "matrices": [
+    {
+      "group": "discovery",
+      "build_id": "44db485182694c582ba2e60e94a09673edf6dfbe12b555810c8dbe3c4cab9193",
+      "suite": "discovery",
+      "models": [
+        "opencode/muse-spark-1.3-contributor-free",
+        "opencode/mimo-v2.6-flash-free"
+      ],
+      "rounds": 2,
+      "modality": "text only; no visual model acceptance",
+      "expected_trials": 16,
+      "trials_completed": 16,
+      "passed_trials": 5,
+      "cases": 412,
+      "passed_cases": 371,
+      "calls": 0,
+      "successful_calls": 0,
+      "trials": [
+        {
+          "trial": "mimo-v2.6-flash-free-1-1",
+          "passed": false,
+          "case_count": 26,
+          "passed_cases": 24,
+          "failed_cases": [
+            {
+              "id": "test-session",
+              "reasons": [
+                "invalid_call"
+              ]
+            },
+            {
+              "id": "snapshot",
+              "reasons": [
+                "invalid_call",
+                "forbidden",
+                "missing_note",
+                "missing_note"
+              ]
+            }
+          ],
+          "tool_calls": 0,
+          "successful_calls": 0,
+          "tool_errors": [],
+          "host_tool_names": [],
+          "error": null,
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "2e358b6b98313cc6add2bd4e023f3580fd2813597a37782628a547c065595aab",
+          "evidence": {
+            "answer.txt": "c33d8581bf5a6d82e9d0606d02cf72129338d26a7e250a8a33332d870c64cc93",
+            "cases.json": "bc7b1f0c3f276da794aaa5fe786ada21a45becbbe5c110ed612db31e4df87b18",
+            "events.jsonl": "5e8dfb35c43a1453fcc263d39bd2014501660de475cc4167f9d4b479b6fa30b3",
+            "metadata.json": "6ab4efdce13ade0501b8b5a3f323974dfd3a1ab4ed08bc2d5982ad5b3c071939",
+            "prompt.txt": "ea33e2cf6595dce24a95524786b5d4fe8b8e2750779113e91d82e2e9b86f2281",
+            "provider-1.request.json": "5d17b4e5e76a2072ae7696b75fbbecbf2ca5f863baa3c027bb78d2090f34bc2b",
+            "provider-1.response.txt": "11903089f175cc86d58da1f5bdcb0991ed7058ca33fc367c3b7dc9e54eab9762",
+            "session.json": "262b583ae00cc37f1e7d375cd543b474fe420a24d2cfd6d00c27fc70e2b2c415",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "7daf5da565f4d4465d169e6d995f34ad31a13b4222234f3bc4d25d025139a3d3"
+          }
+        },
+        {
+          "trial": "mimo-v2.6-flash-free-1-2",
+          "passed": false,
+          "case_count": 26,
+          "passed_cases": 25,
+          "failed_cases": [
+            {
+              "id": "ui-tree",
+              "reasons": [
+                "missing"
+              ]
+            }
+          ],
+          "tool_calls": 0,
+          "successful_calls": 0,
+          "tool_errors": [],
+          "host_tool_names": [],
+          "error": null,
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "3aaceb7c375cef0ee57a43e5b7b30d426bd74ba007054c4255abe2fc70b3611a",
+          "evidence": {
+            "answer.txt": "aa6c3f7c409721678840b952b2eeae8f4a9e2f8d5e5e19feb6894e64119e0b88",
+            "cases.json": "74644a5f736082be58bcdba90097f68bcaf3aa610bfcb17073ed9015634d793e",
+            "events.jsonl": "f42f04d25c55772f354aba7dacce65bf1335e2bc5de275cfaefbcfd52f0bedeb",
+            "metadata.json": "6ab4efdce13ade0501b8b5a3f323974dfd3a1ab4ed08bc2d5982ad5b3c071939",
+            "prompt.txt": "dfd8b90cf4a58b65c5bf5114ece3b5fde2153ece97fdd2f1250f220eeba71d34",
+            "provider-1.request.json": "fe7248a28799b43242de405d74b7e0790950b7553b9cfd38f5d046ef25218e20",
+            "provider-1.response.txt": "6cebef1ebdaa1e5d87860185a6f423c0accf971ae5778b857637ff3dc0cecca8",
+            "session.json": "47d685158c2ba230879afa2b103564baa3069b2e1d952c5bcf653bb29138a1d6",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "7daf5da565f4d4465d169e6d995f34ad31a13b4222234f3bc4d25d025139a3d3"
+          }
+        },
+        {
+          "trial": "mimo-v2.6-flash-free-1-3",
+          "passed": false,
+          "case_count": 26,
+          "passed_cases": 24,
+          "failed_cases": [
+            {
+              "id": "ui-review",
+              "reasons": [
+                "missing",
+                "forbidden_field"
+              ]
+            },
+            {
+              "id": "flow-stop",
+              "reasons": [
+                "missing"
+              ]
+            }
+          ],
+          "tool_calls": 0,
+          "successful_calls": 0,
+          "tool_errors": [],
+          "host_tool_names": [],
+          "error": null,
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "1ede1b72829f7e587a598198e49d68a55639417566326106696562ebe3e43cc2",
+          "evidence": {
+            "answer.txt": "e1da880b5eaa05a291de31ec33e988d41b97c100299a8e8e7399c26f038e465b",
+            "cases.json": "c1ef175e0a1e5d5dedb8a6a3e0f2b960bd1ef3bc494461cd0e8310dcbf7f5bba",
+            "events.jsonl": "3df3969234810f9e5d93abebb07d0e360222be2c444cee813a3c6b2ee42681d7",
+            "metadata.json": "6ab4efdce13ade0501b8b5a3f323974dfd3a1ab4ed08bc2d5982ad5b3c071939",
+            "prompt.txt": "89d163c022c120d8a52f2b64647c82949262711e88641ce8ba838eb745402002",
+            "provider-1.request.json": "d4ac97d5cbc44236f815a8a25e842633fe8d4e602c0eab657183da0781f49232",
+            "provider-1.response.txt": "a1b6e8cdc1e146634e1ce74366b56e86142c1c067d105c0f08b487ca0d2055b9",
+            "session.json": "cd1f83b741878cccbe53beb97227481be9ba299b06872fe07404de0ec376787a",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "7daf5da565f4d4465d169e6d995f34ad31a13b4222234f3bc4d25d025139a3d3"
+          }
+        },
+        {
+          "trial": "mimo-v2.6-flash-free-1-4",
+          "passed": false,
+          "case_count": 25,
+          "passed_cases": 0,
+          "failed_cases": [],
+          "tool_calls": 0,
+          "successful_calls": 0,
+          "tool_errors": [],
+          "host_tool_names": [],
+          "error": "Expected property name or '}' in JSON at position 2 (line 1 column 3)",
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "ee4c8e640633d5a640f457cabc774b839fbba7bf7a6d21d9322756ab5da099bd",
+          "evidence": {
+            "answer.txt": "29499e5c2d825025218db0df6ad9cc636bd5bb5dd8509392f3e9c5c4f9d18123",
+            "cases.json": "c1473008ee2fbd1321ef72b0e7ab679537b62e6c863b1f8c5b7dc5671ec51818",
+            "events.jsonl": "2a20b5f7a4e7444ffdac2fbc3f3601e4079dd5b1b7ad749b2fb5a091a5662f65",
+            "metadata.json": "6ab4efdce13ade0501b8b5a3f323974dfd3a1ab4ed08bc2d5982ad5b3c071939",
+            "prompt.txt": "8da8d6b36be2b132e4f7f224b506cc39214625d4ba3656c081c45d9c563d793f",
+            "provider-1.request.json": "9e02994516a0d9b3063afd1bbeffdfc7f651839627f0251a297a485688109f49",
+            "provider-1.response.txt": "dc58f6015bc9dd8f42c0fd0b5a47e58821048f839532976122d4561eff1542a8",
+            "session.json": "b89fc863f5e5f6b35f5024bbff5c17a2c4ca3ed7d611809cc65416d6fa748952",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "7daf5da565f4d4465d169e6d995f34ad31a13b4222234f3bc4d25d025139a3d3"
+          }
+        },
+        {
+          "trial": "mimo-v2.6-flash-free-2-1",
+          "passed": false,
+          "case_count": 26,
+          "passed_cases": 24,
+          "failed_cases": [
+            {
+              "id": "knowledge-update",
+              "reasons": [
+                "missing"
+              ]
+            },
+            {
+              "id": "snapshot",
+              "reasons": [
+                "invalid_call",
+                "forbidden",
+                "missing_note",
+                "missing_note"
+              ]
+            }
+          ],
+          "tool_calls": 0,
+          "successful_calls": 0,
+          "tool_errors": [],
+          "host_tool_names": [],
+          "error": null,
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "f015bc8d22ff04b6eedfe90b4cd7cdb9a55622e90fda67ba7a6866830c685f93",
+          "evidence": {
+            "answer.txt": "4e4b1add1407960a07f52833d7e261dce6d7478309de208b121c262784aea7cf",
+            "cases.json": "bc7b1f0c3f276da794aaa5fe786ada21a45becbbe5c110ed612db31e4df87b18",
+            "events.jsonl": "0b5a960cd6c0bbc9558fe7efd4edf753457082464f06ae19c01dc306171e8dfc",
+            "metadata.json": "6ab4efdce13ade0501b8b5a3f323974dfd3a1ab4ed08bc2d5982ad5b3c071939",
+            "prompt.txt": "ea33e2cf6595dce24a95524786b5d4fe8b8e2750779113e91d82e2e9b86f2281",
+            "provider-1.request.json": "5d17b4e5e76a2072ae7696b75fbbecbf2ca5f863baa3c027bb78d2090f34bc2b",
+            "provider-1.response.txt": "c2d044b0979dbfa1c4749117d1ff3c5b3883ceb240d935d34d4137554e5a9e3b",
+            "session.json": "24ec50436ed3206df3ec0f3de8b9a04b1c72308cb2cfec2b02eef8466072e4b9",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "7daf5da565f4d4465d169e6d995f34ad31a13b4222234f3bc4d25d025139a3d3"
+          }
+        },
+        {
+          "trial": "mimo-v2.6-flash-free-2-2",
+          "passed": false,
+          "case_count": 26,
+          "passed_cases": 25,
+          "failed_cases": [
+            {
+              "id": "ui-tree",
+              "reasons": [
+                "missing"
+              ]
+            }
+          ],
+          "tool_calls": 0,
+          "successful_calls": 0,
+          "tool_errors": [],
+          "host_tool_names": [],
+          "error": null,
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "3265933bfd4247a4d2f39e9f02e2f9ea1801edfa19e7079ed4330f36caa61c7d",
+          "evidence": {
+            "answer.txt": "920c34b5c0d373e22c2d5ebe7a16a90fec5878a6cbf6556992119ea46695b01a",
+            "cases.json": "74644a5f736082be58bcdba90097f68bcaf3aa610bfcb17073ed9015634d793e",
+            "events.jsonl": "8318b2b0d4fd0e4714030921a8a6ee642a7bf5f6980fd8fcd74e1acd718ad6d7",
+            "metadata.json": "6ab4efdce13ade0501b8b5a3f323974dfd3a1ab4ed08bc2d5982ad5b3c071939",
+            "prompt.txt": "dfd8b90cf4a58b65c5bf5114ece3b5fde2153ece97fdd2f1250f220eeba71d34",
+            "provider-1.request.json": "fe7248a28799b43242de405d74b7e0790950b7553b9cfd38f5d046ef25218e20",
+            "provider-1.response.txt": "2e9db773fd62c51b1c8a84641793763870962fbd53d87d8e1f3d2be6bf5a298f",
+            "session.json": "624f2100f27d550b1356e007285cff570749f327679ec78f6829c93d6a06757f",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "7daf5da565f4d4465d169e6d995f34ad31a13b4222234f3bc4d25d025139a3d3"
+          }
+        },
+        {
+          "trial": "mimo-v2.6-flash-free-2-3",
+          "passed": false,
+          "case_count": 26,
+          "passed_cases": 25,
+          "failed_cases": [
+            {
+              "id": "ui-review",
+              "reasons": [
+                "missing",
+                "forbidden_field"
+              ]
+            }
+          ],
+          "tool_calls": 0,
+          "successful_calls": 0,
+          "tool_errors": [],
+          "host_tool_names": [],
+          "error": null,
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "881efe299dd07b807f282a4f37fca71fa5fccdc845b0022a2d40541c2ca76842",
+          "evidence": {
+            "answer.txt": "5ad0ca250cb6149435c0aa924ad64dcd445d2643737eb8e924bb000ceacaa481",
+            "cases.json": "c1ef175e0a1e5d5dedb8a6a3e0f2b960bd1ef3bc494461cd0e8310dcbf7f5bba",
+            "events.jsonl": "c8b569ed385d61d460e5e16bba9e3fe097df91b7baf82f88db1c10bc30a5a259",
+            "metadata.json": "6ab4efdce13ade0501b8b5a3f323974dfd3a1ab4ed08bc2d5982ad5b3c071939",
+            "prompt.txt": "89d163c022c120d8a52f2b64647c82949262711e88641ce8ba838eb745402002",
+            "provider-1.request.json": "d4ac97d5cbc44236f815a8a25e842633fe8d4e602c0eab657183da0781f49232",
+            "provider-1.response.txt": "307b8fc7214aed1ce85f605bd8bf6b15b229af9ba1a62ff289a5ee969856f38c",
+            "session.json": "5510e9aecbf4376cf39de5b6b898291ef20426d1bc35fe296d4980edffd46bb1",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "7daf5da565f4d4465d169e6d995f34ad31a13b4222234f3bc4d25d025139a3d3"
+          }
+        },
+        {
+          "trial": "mimo-v2.6-flash-free-2-4",
+          "passed": true,
+          "case_count": 25,
+          "passed_cases": 25,
+          "failed_cases": [],
+          "tool_calls": 0,
+          "successful_calls": 0,
+          "tool_errors": [],
+          "host_tool_names": [],
+          "error": null,
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "921d7837806ab0c7937479ed6a87bb3d3ff6db0afe9a3a49d820272e37187b9a",
+          "evidence": {
+            "answer.txt": "a4dbc53304afcddc2b0d8465348c8fcc15dc81ebc28fb2e2c96f4ec0b511a028",
+            "cases.json": "c1473008ee2fbd1321ef72b0e7ab679537b62e6c863b1f8c5b7dc5671ec51818",
+            "events.jsonl": "607113fa127c4fa50863a7b9a559a185560a564512cd2d01dd13a82b3a2539f8",
+            "metadata.json": "6ab4efdce13ade0501b8b5a3f323974dfd3a1ab4ed08bc2d5982ad5b3c071939",
+            "prompt.txt": "8da8d6b36be2b132e4f7f224b506cc39214625d4ba3656c081c45d9c563d793f",
+            "provider-1.request.json": "9e02994516a0d9b3063afd1bbeffdfc7f651839627f0251a297a485688109f49",
+            "provider-1.response.txt": "cb9f54a6fc4c14f36600af9ddf9f714bf551d951cf898ff298a80091cbcb4f6c",
+            "session.json": "a63adf1630e996b3503fabc9e5e71f3c9141818432eafedb4d71fe9a2f316719",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "7daf5da565f4d4465d169e6d995f34ad31a13b4222234f3bc4d25d025139a3d3"
+          }
+        },
+        {
+          "trial": "muse-spark-1.3-contributor-free-1-1",
+          "passed": false,
+          "case_count": 26,
+          "passed_cases": 25,
+          "failed_cases": [
+            {
+              "id": "snapshot",
+              "reasons": [
+                "invalid_call",
+                "forbidden",
+                "missing_note",
+                "missing_note"
+              ]
+            }
+          ],
+          "tool_calls": 0,
+          "successful_calls": 0,
+          "tool_errors": [],
+          "host_tool_names": [],
+          "error": null,
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "d2df013faff5fb7089db866765acd44e0530a9cc2c1e8b84fb713a322d935387",
+          "evidence": {
+            "answer.txt": "13607dc1a86ff8296aab785e69ebf4c1655edd9de0f895f1b78facded53f5cba",
+            "cases.json": "bc7b1f0c3f276da794aaa5fe786ada21a45becbbe5c110ed612db31e4df87b18",
+            "events.jsonl": "7113e6256cdde2108340755740b513cb99fb64924d4925240a06a8403cd77ac9",
+            "metadata.json": "6ab4efdce13ade0501b8b5a3f323974dfd3a1ab4ed08bc2d5982ad5b3c071939",
+            "prompt.txt": "ea33e2cf6595dce24a95524786b5d4fe8b8e2750779113e91d82e2e9b86f2281",
+            "provider-1.request.json": "ef001e80207cdee387a3b84c8f729dc665ca40fad7102a33c67bf22f3cdaac48",
+            "provider-1.response.txt": "0b5d24934fc8c40d2fc4204785c3c8ab3b03c32551a1beea26975cc45a4eaa0b",
+            "session.json": "24c4d42a390eefa9a2f8ed59475fdc55ab9c25b770e525d88bf3d43869b3d640",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "7daf5da565f4d4465d169e6d995f34ad31a13b4222234f3bc4d25d025139a3d3"
+          }
+        },
+        {
+          "trial": "muse-spark-1.3-contributor-free-1-2",
+          "passed": false,
+          "case_count": 26,
+          "passed_cases": 23,
+          "failed_cases": [
+            {
+              "id": "snapshot-valid",
+              "reasons": [
+                "missing"
+              ]
+            },
+            {
+              "id": "code-check",
+              "reasons": [
+                "missing"
+              ]
+            },
+            {
+              "id": "ui-tree",
+              "reasons": [
+                "missing"
+              ]
+            }
+          ],
+          "tool_calls": 0,
+          "successful_calls": 0,
+          "tool_errors": [],
+          "host_tool_names": [],
+          "error": null,
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "ba1434562d3ab732efab92c42a802b72b04a0df92744fc8bdc4b80eba6a2468d",
+          "evidence": {
+            "answer.txt": "4a50f26514cd66b39efb66f95ce6046b99cb5fdd574efea8e64c16102ccec002",
+            "cases.json": "74644a5f736082be58bcdba90097f68bcaf3aa610bfcb17073ed9015634d793e",
+            "events.jsonl": "b3d3e07909b6ba53849173a3b6ccf68bdcd4b290128509f0198cf5d504fa1e2d",
+            "metadata.json": "6ab4efdce13ade0501b8b5a3f323974dfd3a1ab4ed08bc2d5982ad5b3c071939",
+            "prompt.txt": "dfd8b90cf4a58b65c5bf5114ece3b5fde2153ece97fdd2f1250f220eeba71d34",
+            "provider-1.request.json": "67d55e447e7ff18e145a08c1f8bfa1ac77dddbff1dfe23245ca944484adc52d8",
+            "provider-1.response.txt": "d6a8b94bd710c37bf37c78b298813015dfc85723a7ee2a01b812f75f4b0591fd",
+            "session.json": "ec2c9ff049491c86e4937b43edcd11f14d46ebf3065c7bd3ae6a226f497f07d2",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "7daf5da565f4d4465d169e6d995f34ad31a13b4222234f3bc4d25d025139a3d3"
+          }
+        },
+        {
+          "trial": "muse-spark-1.3-contributor-free-1-3",
+          "passed": true,
+          "case_count": 26,
+          "passed_cases": 26,
+          "failed_cases": [],
+          "tool_calls": 0,
+          "successful_calls": 0,
+          "tool_errors": [],
+          "host_tool_names": [],
+          "error": null,
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "6bcfab3ae6f68ee5d52edeed12d689e4a947a2985bfee2164c504f9c3d3be795",
+          "evidence": {
+            "answer.txt": "2771520c7c7d74eb1b2f8f9125c475f60ee553c7a2b81ccc0b1eb70ad2053e52",
+            "cases.json": "c1ef175e0a1e5d5dedb8a6a3e0f2b960bd1ef3bc494461cd0e8310dcbf7f5bba",
+            "events.jsonl": "90848ea497658c05d0932fc8f480f14fcf8ea75618750b039f91565c53d7a4d4",
+            "metadata.json": "6ab4efdce13ade0501b8b5a3f323974dfd3a1ab4ed08bc2d5982ad5b3c071939",
+            "prompt.txt": "89d163c022c120d8a52f2b64647c82949262711e88641ce8ba838eb745402002",
+            "provider-1.request.json": "4c93010ec001aa3a726d277ddbd288575e275dabebc67d96dd618dab2957ae8f",
+            "provider-1.response.txt": "65f1b43c251aef9dd769ad0319414eb6d3772de01c95f10fe6b3615dc1a570f6",
+            "session.json": "f35201ac7563c0a2d1483f1554835ae8c68eeb188354adc513dfeb32bb5fa744",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "7daf5da565f4d4465d169e6d995f34ad31a13b4222234f3bc4d25d025139a3d3"
+          }
+        },
+        {
+          "trial": "muse-spark-1.3-contributor-free-1-4",
+          "passed": true,
+          "case_count": 25,
+          "passed_cases": 25,
+          "failed_cases": [],
+          "tool_calls": 0,
+          "successful_calls": 0,
+          "tool_errors": [],
+          "host_tool_names": [],
+          "error": null,
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "6a4fbab062d632fb3068aa95c78bd0c433dff1e86a790ac7018c1f3147954a15",
+          "evidence": {
+            "answer.txt": "cf47238cffc8e7cd2b13b7613b748545a5f9b544c3815347312fcde8f9c0f26d",
+            "cases.json": "c1473008ee2fbd1321ef72b0e7ab679537b62e6c863b1f8c5b7dc5671ec51818",
+            "events.jsonl": "b3b09296e61217abcd618e581e59ec01f3ddfa707816017ee53faf9ccd3e7a64",
+            "metadata.json": "6ab4efdce13ade0501b8b5a3f323974dfd3a1ab4ed08bc2d5982ad5b3c071939",
+            "prompt.txt": "8da8d6b36be2b132e4f7f224b506cc39214625d4ba3656c081c45d9c563d793f",
+            "provider-1.request.json": "cfc3c50c8aef196d0dc83f0ab66e8020152bf49ff0b508a3d2f9647457b11ffc",
+            "provider-1.response.txt": "48057439d59eb7eb83152875a422f61163a052365f4d8dc142b6ded89219c035",
+            "session.json": "2a906dd722f4d4eccfc211d55c97e013c95fc0928d6724a98520245e7c77a5f8",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "7daf5da565f4d4465d169e6d995f34ad31a13b4222234f3bc4d25d025139a3d3"
+          }
+        },
+        {
+          "trial": "muse-spark-1.3-contributor-free-2-1",
+          "passed": false,
+          "case_count": 26,
+          "passed_cases": 25,
+          "failed_cases": [
+            {
+              "id": "snapshot",
+              "reasons": [
+                "invalid_call",
+                "forbidden",
+                "missing_note",
+                "missing_note"
+              ]
+            }
+          ],
+          "tool_calls": 0,
+          "successful_calls": 0,
+          "tool_errors": [],
+          "host_tool_names": [],
+          "error": null,
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "6c701acbf92dd3f5f3f3d38b35f90d150fbae1861f7d63f0c88f5985e41474ba",
+          "evidence": {
+            "answer.txt": "152064d1790853f54c7bf88435af8ad96d9b930b2edf5acdd269f5276f17e274",
+            "cases.json": "bc7b1f0c3f276da794aaa5fe786ada21a45becbbe5c110ed612db31e4df87b18",
+            "events.jsonl": "1cc23d394583a93c18b553614b8dd40e6254f3a02252a8b3fcf88be95f961e4c",
+            "metadata.json": "6ab4efdce13ade0501b8b5a3f323974dfd3a1ab4ed08bc2d5982ad5b3c071939",
+            "prompt.txt": "ea33e2cf6595dce24a95524786b5d4fe8b8e2750779113e91d82e2e9b86f2281",
+            "provider-1.request.json": "d1bde4533728af55165523bd5e164f83bda8e66a28083ffefe2f638715e83d4c",
+            "provider-1.response.txt": "4fe05f35edc78557f58ffc4f9d24ea82aaa17d6339f290a11685d711fb40ff94",
+            "session.json": "9154775dcfdf72bbf361287d0a8c8cee7e5a025d41b2aa9a7099e3379a8d9584",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "7daf5da565f4d4465d169e6d995f34ad31a13b4222234f3bc4d25d025139a3d3"
+          }
+        },
+        {
+          "trial": "muse-spark-1.3-contributor-free-2-2",
+          "passed": false,
+          "case_count": 26,
+          "passed_cases": 24,
+          "failed_cases": [
+            {
+              "id": "code-check",
+              "reasons": [
+                "missing"
+              ]
+            },
+            {
+              "id": "ui-tree",
+              "reasons": [
+                "missing"
+              ]
+            }
+          ],
+          "tool_calls": 0,
+          "successful_calls": 0,
+          "tool_errors": [],
+          "host_tool_names": [],
+          "error": null,
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "85d9319f8cc61c6c686636d3d33837121496298c39e8c886d2b741583be37ca5",
+          "evidence": {
+            "answer.txt": "bc6b7bb27414975260cfd907ffc2363a7e5ed84a80ffa1ccd90c2bd11be3acd9",
+            "cases.json": "74644a5f736082be58bcdba90097f68bcaf3aa610bfcb17073ed9015634d793e",
+            "events.jsonl": "5c95097d56fcb43ca996014079c76fef603d83355b9b9917417fd3ab0cd5f8ab",
+            "metadata.json": "6ab4efdce13ade0501b8b5a3f323974dfd3a1ab4ed08bc2d5982ad5b3c071939",
+            "prompt.txt": "dfd8b90cf4a58b65c5bf5114ece3b5fde2153ece97fdd2f1250f220eeba71d34",
+            "provider-1.request.json": "fef4fb889e7bc8e6258683ce09abdee3acf06aaca6e41d242234d7e533582da7",
+            "provider-1.response.txt": "de6e5501069abab9772914fdb41a52a6c07da632b8464df5e263ecdd28c6ca3d",
+            "session.json": "2eda48becfe8aa132a65cd40d2c43b99357548716cc789f65c9acc74f6d17908",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "7daf5da565f4d4465d169e6d995f34ad31a13b4222234f3bc4d25d025139a3d3"
+          }
+        },
+        {
+          "trial": "muse-spark-1.3-contributor-free-2-3",
+          "passed": true,
+          "case_count": 26,
+          "passed_cases": 26,
+          "failed_cases": [],
+          "tool_calls": 0,
+          "successful_calls": 0,
+          "tool_errors": [],
+          "host_tool_names": [],
+          "error": null,
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "513dd7e7b8da9e9a40a457d0960923ce3c9d19bd1e71a2b4115a51ff7f858997",
+          "evidence": {
+            "answer.txt": "fcbd4b98f57e176cf753c9b24fdb38654e4fb1674e7b38240477dbbe4db3b3a1",
+            "cases.json": "c1ef175e0a1e5d5dedb8a6a3e0f2b960bd1ef3bc494461cd0e8310dcbf7f5bba",
+            "events.jsonl": "afcdc37c81b52a57df940231d8a15504500eeda2a38ee6bf773ab8aeeb2bda39",
+            "metadata.json": "6ab4efdce13ade0501b8b5a3f323974dfd3a1ab4ed08bc2d5982ad5b3c071939",
+            "prompt.txt": "89d163c022c120d8a52f2b64647c82949262711e88641ce8ba838eb745402002",
+            "provider-1.request.json": "11fe678567750b86f9aeb5394c1fcbf14346701d643a3be11b2148c7f167726e",
+            "provider-1.response.txt": "26d21166ff6fbddf32bc86e2d55a1927aedb5ed1117de68697efec20b40967bf",
+            "session.json": "65f90a6c865e736ce28cbb495082b4768d9c9ed01a21ebf34da920f26646ae14",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "7daf5da565f4d4465d169e6d995f34ad31a13b4222234f3bc4d25d025139a3d3"
+          }
+        },
+        {
+          "trial": "muse-spark-1.3-contributor-free-2-4",
+          "passed": true,
+          "case_count": 25,
+          "passed_cases": 25,
+          "failed_cases": [],
+          "tool_calls": 0,
+          "successful_calls": 0,
+          "tool_errors": [],
+          "host_tool_names": [],
+          "error": null,
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "793a041e764fe40f5ebcf4b72ea92d8239bc3dee7adf9c7cde54878dbd202ae6",
+          "evidence": {
+            "answer.txt": "69b59fe1ea99db40dff2882f6e61763422a6abf1a20455c95a5ef5554263426d",
+            "cases.json": "c1473008ee2fbd1321ef72b0e7ab679537b62e6c863b1f8c5b7dc5671ec51818",
+            "events.jsonl": "602550fb77bca9ca9f7b56a0d789ce4b4bc314fd873dbfd84562cfc0561975c8",
+            "metadata.json": "6ab4efdce13ade0501b8b5a3f323974dfd3a1ab4ed08bc2d5982ad5b3c071939",
+            "prompt.txt": "8da8d6b36be2b132e4f7f224b506cc39214625d4ba3656c081c45d9c563d793f",
+            "provider-1.request.json": "ff435ed7513e8e90aca37b9c87fba89be74e181a987e891bf2e2af5a9aeb926b",
+            "provider-1.response.txt": "48e95ac751ee16ab1725083223e76987175d40ae7b8a714b4168942e8f0acc97",
+            "session.json": "be0b4477221d3fac0cef133b7d9f84feab523bb1fa9159ffe6f6b8eb0177da41",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "7daf5da565f4d4465d169e6d995f34ad31a13b4222234f3bc4d25d025139a3d3"
+          }
+        }
+      ]
+    },
+    {
+      "group": "discovery-final",
+      "build_id": "3ec0a09699a8d7542660a8f2a594aeb7cb2b77b2c0c9402854b3ee80911d0270",
+      "suite": "discovery",
+      "models": [
+        "opencode/muse-spark-1.3-contributor-free",
+        "opencode/mimo-v2.6-flash-free"
+      ],
+      "rounds": 2,
+      "modality": "text only; no visual model acceptance",
+      "expected_trials": 16,
+      "trials_completed": 16,
+      "passed_trials": 4,
+      "cases": 412,
+      "passed_cases": 321,
+      "calls": 0,
+      "successful_calls": 0,
+      "trials": [
+        {
+          "trial": "mimo-v2.6-flash-free-1-1",
+          "passed": false,
+          "case_count": 26,
+          "passed_cases": 25,
+          "failed_cases": [
+            {
+              "id": "snapshot",
+              "reasons": [
+                "invalid_call",
+                "forbidden",
+                "missing_note",
+                "missing_note"
+              ]
+            }
+          ],
+          "tool_calls": 0,
+          "successful_calls": 0,
+          "tool_errors": [],
+          "host_tool_names": [],
+          "error": null,
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "9f4ea4b515e33820f960fc1b3a8d9e6b6253d1cc463a3520b9d00c17c3679805",
+          "evidence": {
+            "answer.txt": "fa9184fce8403b17eb61be82cb2be385995bebd0ab05ad14d1a1484088073601",
+            "cases.json": "bc7b1f0c3f276da794aaa5fe786ada21a45becbbe5c110ed612db31e4df87b18",
+            "events.jsonl": "d79134c0e44a8b031ddb86335732f47a74a8b95d7a3f5b64d31d6f694be492e2",
+            "metadata.json": "79922b2c97f0b559737045c337c40640bb3525fb745aae7bba296b91bbd12377",
+            "prompt.txt": "ea33e2cf6595dce24a95524786b5d4fe8b8e2750779113e91d82e2e9b86f2281",
+            "provider-1.request.json": "d5adef8d37760441f69e31ba73f7c53f1bc2c9e02c9ffe9e4523d016d711e138",
+            "provider-1.response.txt": "7a59bbbda27f030202f195ef6b011e0c0040562f70485662e3a9a4c7392519bb",
+            "session.json": "3269140ebb3ef26992ef346272b820e31bd5c5019695dd260c0366c91ad6b2c4",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "de529a2737c94e49f97e3104dcbb18a5a0259da6b0ebd90890dfedbb88d84ba8"
+          }
+        },
+        {
+          "trial": "mimo-v2.6-flash-free-1-2",
+          "passed": false,
+          "case_count": 26,
+          "passed_cases": 0,
+          "failed_cases": [],
+          "tool_calls": 0,
+          "successful_calls": 0,
+          "tool_errors": [],
+          "host_tool_names": [],
+          "error": "Expected ',' or '}' after property value in JSON at position 4257 (line 26 column 122)",
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "a6ca5344c7142cadd36cd9482697780054e81636a7d169ec584fb25dfa1fc06b",
+          "evidence": {
+            "answer.txt": "d2906681e4fd54498c17d6fac9aa7d0163a41319dc3f5eb486f2e5eaf7df7dba",
+            "cases.json": "74644a5f736082be58bcdba90097f68bcaf3aa610bfcb17073ed9015634d793e",
+            "events.jsonl": "93935d2be05742c8f30164f952a511f1f122be37c9da4fc9fda6fdc79d494b2a",
+            "metadata.json": "79922b2c97f0b559737045c337c40640bb3525fb745aae7bba296b91bbd12377",
+            "prompt.txt": "dfd8b90cf4a58b65c5bf5114ece3b5fde2153ece97fdd2f1250f220eeba71d34",
+            "provider-1.request.json": "48e58710b59d96da32fa6db49eb1cbffe3fbc4ecf4abea00c5e8c2c7511071cc",
+            "provider-1.response.txt": "c62554e3a205158daa934cf6883149d08ee97ff0cc6f3522c5cca7d175f9b54c",
+            "session.json": "485ed533e3622a94c0d8d6607abc2c38391dc3918fa1c3d9395974353f718fca",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "de529a2737c94e49f97e3104dcbb18a5a0259da6b0ebd90890dfedbb88d84ba8"
+          }
+        },
+        {
+          "trial": "mimo-v2.6-flash-free-1-3",
+          "passed": false,
+          "case_count": 26,
+          "passed_cases": 25,
+          "failed_cases": [
+            {
+              "id": "auth-status",
+              "reasons": [
+                "missing"
+              ]
+            }
+          ],
+          "tool_calls": 0,
+          "successful_calls": 0,
+          "tool_errors": [],
+          "host_tool_names": [],
+          "error": null,
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "6bdf38729ad6ade19d1ca8dc9147b9ca754cb652ebf04ac67cfa18b688e582fc",
+          "evidence": {
+            "answer.txt": "9a54e965c6ba5e79337937b4c361e63168a5cdb74eb4012cf0ce20ef11c86d9a",
+            "cases.json": "c1ef175e0a1e5d5dedb8a6a3e0f2b960bd1ef3bc494461cd0e8310dcbf7f5bba",
+            "events.jsonl": "5c8b37ac6155dbc9bcf13b4f087a5a130db93e1710b37eb57384556842047382",
+            "metadata.json": "79922b2c97f0b559737045c337c40640bb3525fb745aae7bba296b91bbd12377",
+            "prompt.txt": "89d163c022c120d8a52f2b64647c82949262711e88641ce8ba838eb745402002",
+            "provider-1.request.json": "6f213762d4e4efd167043ebcf92582409f04f685e90c24594fd31013af3cae12",
+            "provider-1.response.txt": "9a416ea5ede56a42d7a011cc04aa32497907ff19c6a0c9b8ce4322b4a98e7621",
+            "session.json": "640d8c8f94a066e665543583f2ace8b730d02693672244b6d46c7597de48796d",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "de529a2737c94e49f97e3104dcbb18a5a0259da6b0ebd90890dfedbb88d84ba8"
+          }
+        },
+        {
+          "trial": "mimo-v2.6-flash-free-1-4",
+          "passed": false,
+          "case_count": 25,
+          "passed_cases": 24,
+          "failed_cases": [
+            {
+              "id": "emu-stop",
+              "reasons": [
+                "missing"
+              ]
+            }
+          ],
+          "tool_calls": 0,
+          "successful_calls": 0,
+          "tool_errors": [],
+          "host_tool_names": [],
+          "error": null,
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "3a8fb41d78cd98ad0edb44487177b0142b3f6251f17147ff6c80549269bd550b",
+          "evidence": {
+            "answer.txt": "472fcb47025cc18ce0c004be222498f2aac490193a631dc9fbdbad3a13deb570",
+            "cases.json": "c1473008ee2fbd1321ef72b0e7ab679537b62e6c863b1f8c5b7dc5671ec51818",
+            "events.jsonl": "8e160eb025acf27e2eb23ff1434ff3cd431f1c1a4eca6d22b2d5a259dbe9ded7",
+            "metadata.json": "79922b2c97f0b559737045c337c40640bb3525fb745aae7bba296b91bbd12377",
+            "prompt.txt": "8da8d6b36be2b132e4f7f224b506cc39214625d4ba3656c081c45d9c563d793f",
+            "provider-1.request.json": "0795fc5a19dd57e64aa5549e9b8d1cf701248811a52ecba334dc50a1e5b11ddb",
+            "provider-1.response.txt": "fbd866d6a5c5f1250d228388af6d7437b211721f4507868c361ac27e320d34b5",
+            "session.json": "05b109ddb7a4fd6941b56e47a50ec78def8798fe2f662f9c2da450e1d5461146",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "de529a2737c94e49f97e3104dcbb18a5a0259da6b0ebd90890dfedbb88d84ba8"
+          }
+        },
+        {
+          "trial": "mimo-v2.6-flash-free-2-1",
+          "passed": false,
+          "case_count": 26,
+          "passed_cases": 23,
+          "failed_cases": [
+            {
+              "id": "knowledge-update",
+              "reasons": [
+                "missing"
+              ]
+            },
+            {
+              "id": "signing",
+              "reasons": [
+                "forbidden_field"
+              ]
+            },
+            {
+              "id": "snapshot",
+              "reasons": [
+                "invalid_call",
+                "forbidden",
+                "missing_note",
+                "missing_note"
+              ]
+            }
+          ],
+          "tool_calls": 0,
+          "successful_calls": 0,
+          "tool_errors": [],
+          "host_tool_names": [],
+          "error": null,
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "c013f34407fd82446574197938431960bf958b45cc92a3238d44a7304734ec2a",
+          "evidence": {
+            "answer.txt": "6ac985286decf4e801ad86f35450b499a2a6556384b7a11d4d5fe60fd9f6b418",
+            "cases.json": "bc7b1f0c3f276da794aaa5fe786ada21a45becbbe5c110ed612db31e4df87b18",
+            "events.jsonl": "4270e60e9cdb3299d6dbfcd173b372ae47fc309eb1c4bc174384360a2221d606",
+            "metadata.json": "79922b2c97f0b559737045c337c40640bb3525fb745aae7bba296b91bbd12377",
+            "prompt.txt": "ea33e2cf6595dce24a95524786b5d4fe8b8e2750779113e91d82e2e9b86f2281",
+            "provider-1.request.json": "d5adef8d37760441f69e31ba73f7c53f1bc2c9e02c9ffe9e4523d016d711e138",
+            "provider-1.response.txt": "4f781f254b407149d03e4de564e1b19fa7aebbf526ab412555902879d2dde332",
+            "session.json": "b393e45ce47c5909e756feb480afe88a889cb6362d992383c4adde3cc9aac98a",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "de529a2737c94e49f97e3104dcbb18a5a0259da6b0ebd90890dfedbb88d84ba8"
+          }
+        },
+        {
+          "trial": "mimo-v2.6-flash-free-2-2",
+          "passed": false,
+          "case_count": 26,
+          "passed_cases": 23,
+          "failed_cases": [
+            {
+              "id": "code-restart",
+              "reasons": [
+                "missing"
+              ]
+            },
+            {
+              "id": "ui-tree",
+              "reasons": [
+                "missing"
+              ]
+            },
+            {
+              "id": "ui-assert",
+              "reasons": [
+                "missing"
+              ]
+            }
+          ],
+          "tool_calls": 0,
+          "successful_calls": 0,
+          "tool_errors": [],
+          "host_tool_names": [],
+          "error": null,
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "5648c6840f061a5bb3bd77edac0addd48ce306e44f2cb06505ae4032a4b3eaed",
+          "evidence": {
+            "answer.txt": "49403078c3984ebff5d1840a6d8ab9ca11ad36dbe484631efa75d06e5de0cb9f",
+            "cases.json": "74644a5f736082be58bcdba90097f68bcaf3aa610bfcb17073ed9015634d793e",
+            "events.jsonl": "5444cb67a5c37bb377f7642bca32890dd5f7d04ceeaf0781cb68ac3c5a5c5ee2",
+            "metadata.json": "79922b2c97f0b559737045c337c40640bb3525fb745aae7bba296b91bbd12377",
+            "prompt.txt": "dfd8b90cf4a58b65c5bf5114ece3b5fde2153ece97fdd2f1250f220eeba71d34",
+            "provider-1.request.json": "48e58710b59d96da32fa6db49eb1cbffe3fbc4ecf4abea00c5e8c2c7511071cc",
+            "provider-1.response.txt": "585a302f583c5f29052d3455c8db09b2bef49d474fc175de8fa54e558b361c5e",
+            "session.json": "b8585e72f2ba38afb93190a8efe6ef9e403971860049470f643b031bf17715d9",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "de529a2737c94e49f97e3104dcbb18a5a0259da6b0ebd90890dfedbb88d84ba8"
+          }
+        },
+        {
+          "trial": "mimo-v2.6-flash-free-2-3",
+          "passed": false,
+          "case_count": 26,
+          "passed_cases": 25,
+          "failed_cases": [
+            {
+              "id": "flow-stop",
+              "reasons": [
+                "missing"
+              ]
+            }
+          ],
+          "tool_calls": 0,
+          "successful_calls": 0,
+          "tool_errors": [],
+          "host_tool_names": [],
+          "error": null,
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "0a00b49dff55cd973c8dd14df5d41ed7f2fd0ba3c73952ee66b2d213aa15c838",
+          "evidence": {
+            "answer.txt": "6dedaff7a48047522e7baf35a140691bf413d27b7bc5b7a4a030308835780cf4",
+            "cases.json": "c1ef175e0a1e5d5dedb8a6a3e0f2b960bd1ef3bc494461cd0e8310dcbf7f5bba",
+            "events.jsonl": "7f393e86a0bebe415e71b2be06fec61b4a56584e367b0e818a04034fdb4ef2f2",
+            "metadata.json": "79922b2c97f0b559737045c337c40640bb3525fb745aae7bba296b91bbd12377",
+            "prompt.txt": "89d163c022c120d8a52f2b64647c82949262711e88641ce8ba838eb745402002",
+            "provider-1.request.json": "6f213762d4e4efd167043ebcf92582409f04f685e90c24594fd31013af3cae12",
+            "provider-1.response.txt": "6bbde1353be74c47177b067bff2377832b5546ccca114684c98e341415658473",
+            "session.json": "01cadf1084d75350cebb018fec5c37f0755ffb8ac9fd5d7430c304ee526aa859",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "de529a2737c94e49f97e3104dcbb18a5a0259da6b0ebd90890dfedbb88d84ba8"
+          }
+        },
+        {
+          "trial": "mimo-v2.6-flash-free-2-4",
+          "passed": false,
+          "case_count": 25,
+          "passed_cases": 24,
+          "failed_cases": [
+            {
+              "id": "auth-logout",
+              "reasons": [
+                "missing"
+              ]
+            }
+          ],
+          "tool_calls": 0,
+          "successful_calls": 0,
+          "tool_errors": [],
+          "host_tool_names": [],
+          "error": null,
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "db0f94e2f9f280dabcb4bc7ebe737879fe94d6ce5275a421558879775aa148d5",
+          "evidence": {
+            "answer.txt": "6315b522384ec84450b7642cf086cc54903052a08e8495db7e59d2030c984d2b",
+            "cases.json": "c1473008ee2fbd1321ef72b0e7ab679537b62e6c863b1f8c5b7dc5671ec51818",
+            "events.jsonl": "5be8d97be1542b9f5f3d5c480c680dae9aa157da4c989fada40d5a9771485a15",
+            "metadata.json": "79922b2c97f0b559737045c337c40640bb3525fb745aae7bba296b91bbd12377",
+            "prompt.txt": "8da8d6b36be2b132e4f7f224b506cc39214625d4ba3656c081c45d9c563d793f",
+            "provider-1.request.json": "0795fc5a19dd57e64aa5549e9b8d1cf701248811a52ecba334dc50a1e5b11ddb",
+            "provider-1.response.txt": "e876b3c423b19b1d8ed8212f8cf29904ca2e627446e81997335c0a4b7adf0215",
+            "session.json": "5ef5b62fd07a51be22f2eeb91acb26564f86a6720228bde981360fe1a620bc86",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "de529a2737c94e49f97e3104dcbb18a5a0259da6b0ebd90890dfedbb88d84ba8"
+          }
+        },
+        {
+          "trial": "muse-spark-1.3-contributor-free-1-1",
+          "passed": false,
+          "case_count": 26,
+          "passed_cases": 25,
+          "failed_cases": [
+            {
+              "id": "snapshot",
+              "reasons": [
+                "invalid_call",
+                "forbidden",
+                "missing_note",
+                "missing_note"
+              ]
+            }
+          ],
+          "tool_calls": 0,
+          "successful_calls": 0,
+          "tool_errors": [],
+          "host_tool_names": [],
+          "error": null,
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "d3da61eb3497a9a9a1dbd0d772cd54457ed99dfc0c70abc7ab21864a50c00b2b",
+          "evidence": {
+            "answer.txt": "a3c7397e609fa28e532798843f508b62d1193f3be5dafb791e9b4137e1eb1e07",
+            "cases.json": "bc7b1f0c3f276da794aaa5fe786ada21a45becbbe5c110ed612db31e4df87b18",
+            "events.jsonl": "5a57f0a850b81a427eb9d44ed2a54098541d138f4dbd4b9baf2988c650542093",
+            "metadata.json": "79922b2c97f0b559737045c337c40640bb3525fb745aae7bba296b91bbd12377",
+            "prompt.txt": "ea33e2cf6595dce24a95524786b5d4fe8b8e2750779113e91d82e2e9b86f2281",
+            "provider-1.request.json": "8577125ff23bb47aae46753257a5a158e0d1bf2f929b441f6315fde1aae31274",
+            "provider-1.response.txt": "6f82d85659b255bb8d56cb071a82e05e0defe39884ad80c0d4adc1af45706267",
+            "session.json": "0c32867c28a0c1f2a55e88f9005da70ad77a7942adf69aabb455ae169465ee62",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "de529a2737c94e49f97e3104dcbb18a5a0259da6b0ebd90890dfedbb88d84ba8"
+          }
+        },
+        {
+          "trial": "muse-spark-1.3-contributor-free-1-2",
+          "passed": false,
+          "case_count": 26,
+          "passed_cases": 0,
+          "failed_cases": [],
+          "tool_calls": 0,
+          "successful_calls": 0,
+          "tool_errors": [],
+          "host_tool_names": [],
+          "error": "Expected ',' or '}' after property value in JSON at position 4666 (line 1 column 4667)",
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "0c7d07ead2666abbb0a344f06dfa6fa3bad395dc47b6763a0309a0c7557dc571",
+          "evidence": {
+            "answer.txt": "5fadad185c3091d45c5d43c11f29812a21dff0e18ee117618698341ec2fbfe0a",
+            "cases.json": "74644a5f736082be58bcdba90097f68bcaf3aa610bfcb17073ed9015634d793e",
+            "events.jsonl": "238d0da276c7dfc35ca07c2b9ec2d024e60b7e98cb4ea3ab516c92da709a33e8",
+            "metadata.json": "79922b2c97f0b559737045c337c40640bb3525fb745aae7bba296b91bbd12377",
+            "prompt.txt": "dfd8b90cf4a58b65c5bf5114ece3b5fde2153ece97fdd2f1250f220eeba71d34",
+            "provider-1.request.json": "8f9b08c68a60264c7e49fbf666713eefbe5c2ffd6ce911bc914d4511627c24a1",
+            "provider-1.response.txt": "b9ac941865f10d9bed96b384a02694072ca099a6296f1c0ca86477da5c2cafd3",
+            "session.json": "2ede2db5b5134afa55803d09f4209611899b55a80755929e940fc448c82ab047",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "de529a2737c94e49f97e3104dcbb18a5a0259da6b0ebd90890dfedbb88d84ba8"
+          }
+        },
+        {
+          "trial": "muse-spark-1.3-contributor-free-1-3",
+          "passed": true,
+          "case_count": 26,
+          "passed_cases": 26,
+          "failed_cases": [],
+          "tool_calls": 0,
+          "successful_calls": 0,
+          "tool_errors": [],
+          "host_tool_names": [],
+          "error": null,
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "1b6876f44fe8ec65760a809f2b637f2fba6bdb79753d01cf8be55b3a792f6124",
+          "evidence": {
+            "answer.txt": "bf8c5428ec7cd241481ff80481c983f3e25e2ee4b33850b6dcfadc4ee99bc3e5",
+            "cases.json": "c1ef175e0a1e5d5dedb8a6a3e0f2b960bd1ef3bc494461cd0e8310dcbf7f5bba",
+            "events.jsonl": "a0d6be60fb72ec3d5cbff9438a48f4567fa3c0fe59314535f50f7c96cc16d71d",
+            "metadata.json": "79922b2c97f0b559737045c337c40640bb3525fb745aae7bba296b91bbd12377",
+            "prompt.txt": "89d163c022c120d8a52f2b64647c82949262711e88641ce8ba838eb745402002",
+            "provider-1.request.json": "b59873dd2300e3f386b52f52a20fa431660fb04c736ddcb15efa13ff297f0f43",
+            "provider-1.response.txt": "29b3acc5e143b942dcc7c77bdec038ad0f544a48e3ae479e6d0ae2f39045f8ab",
+            "session.json": "4947bc73700845552f0a30c0c6f8691b7bf0359497776ed69408449c7e047489",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "de529a2737c94e49f97e3104dcbb18a5a0259da6b0ebd90890dfedbb88d84ba8"
+          }
+        },
+        {
+          "trial": "muse-spark-1.3-contributor-free-1-4",
+          "passed": true,
+          "case_count": 25,
+          "passed_cases": 25,
+          "failed_cases": [],
+          "tool_calls": 0,
+          "successful_calls": 0,
+          "tool_errors": [],
+          "host_tool_names": [],
+          "error": null,
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "a805ae6ddeaeafa83fd509f9b5d61f7ac3f98514fc166d1f798c6d7b5e8c722e",
+          "evidence": {
+            "answer.txt": "2bf4ef0986780917b09aee935b7d85f1f49e014b56f116807b542cb733db51e6",
+            "cases.json": "c1473008ee2fbd1321ef72b0e7ab679537b62e6c863b1f8c5b7dc5671ec51818",
+            "events.jsonl": "e4aa5c641301e7dc2a9bc8010a38425c9e832e463299614005ba753b6f227f6b",
+            "metadata.json": "79922b2c97f0b559737045c337c40640bb3525fb745aae7bba296b91bbd12377",
+            "prompt.txt": "8da8d6b36be2b132e4f7f224b506cc39214625d4ba3656c081c45d9c563d793f",
+            "provider-1.request.json": "2ba9707de0cd75cbc65d311e1e4a11dc8a2cb255a11eda0a89c23f69f6a01f12",
+            "provider-1.response.txt": "c9b04f3b64d3aa1159ec0450c4d2c09aa881977cd130df2664f19a6ed232d05b",
+            "session.json": "f9c06495f6272dceacaf59915501f318a5d4b4ce1830660eff37ca329e2e97bc",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "de529a2737c94e49f97e3104dcbb18a5a0259da6b0ebd90890dfedbb88d84ba8"
+          }
+        },
+        {
+          "trial": "muse-spark-1.3-contributor-free-2-1",
+          "passed": true,
+          "case_count": 26,
+          "passed_cases": 26,
+          "failed_cases": [],
+          "tool_calls": 0,
+          "successful_calls": 0,
+          "tool_errors": [],
+          "host_tool_names": [],
+          "error": null,
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "cd9d2cebccb123f65441e9e8af73d9fdff86fce1b075c09bb892d205b1f1a7c0",
+          "evidence": {
+            "answer.txt": "09dc36c2c8efb9bf0adad857e3561eec9af12480c11e1d3caec0d795ce461681",
+            "cases.json": "bc7b1f0c3f276da794aaa5fe786ada21a45becbbe5c110ed612db31e4df87b18",
+            "events.jsonl": "8c1bf0c52aad69c11ee9ff437df526d6189f8db45fb1073cdff48250072775d9",
+            "metadata.json": "79922b2c97f0b559737045c337c40640bb3525fb745aae7bba296b91bbd12377",
+            "prompt.txt": "ea33e2cf6595dce24a95524786b5d4fe8b8e2750779113e91d82e2e9b86f2281",
+            "provider-1.request.json": "54ef1c9a8d26d155900c6def9c580f64de82d9ceb951812df6e87e56e403e709",
+            "provider-1.response.txt": "b4240370a9c85de79fbcc5a3e1150e9d5e6553b8e79aa4e3b7c3c841b40804b3",
+            "session.json": "095db0414a70840155553a985aad3244a6bd7248f3e350da6a798cee6781653e",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "de529a2737c94e49f97e3104dcbb18a5a0259da6b0ebd90890dfedbb88d84ba8"
+          }
+        },
+        {
+          "trial": "muse-spark-1.3-contributor-free-2-2",
+          "passed": false,
+          "case_count": 26,
+          "passed_cases": 0,
+          "failed_cases": [],
+          "tool_calls": 0,
+          "successful_calls": 0,
+          "tool_errors": [],
+          "host_tool_names": [],
+          "error": "Expected ',' or '}' after property value in JSON at position 4158 (line 1 column 4159)",
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "3e7edb016407b7f2050d4983276d13028636bae583b2f48a241f17f74848d718",
+          "evidence": {
+            "answer.txt": "7c699af9ea3469cd5d11020f33aaf96e0fcb54ae909f2f98142da117286a0388",
+            "cases.json": "74644a5f736082be58bcdba90097f68bcaf3aa610bfcb17073ed9015634d793e",
+            "events.jsonl": "7ae2d6885dfec353295c83d66356c7514d2c409cf6df5ce68e5832061c00cca6",
+            "metadata.json": "79922b2c97f0b559737045c337c40640bb3525fb745aae7bba296b91bbd12377",
+            "prompt.txt": "dfd8b90cf4a58b65c5bf5114ece3b5fde2153ece97fdd2f1250f220eeba71d34",
+            "provider-1.request.json": "de1dcc171cad3e5d7591595ac979bae0d2a37d063be8cb3abfbcf59b2c6f6d82",
+            "provider-1.response.txt": "28497970354effcfba2fe5988332bfb34cbc2237dce0b45188c3664330af2f81",
+            "session.json": "f47295bcec96f482ba434c702115291b9f57aae7a205015b9967df6a9fafa0cb",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "de529a2737c94e49f97e3104dcbb18a5a0259da6b0ebd90890dfedbb88d84ba8"
+          }
+        },
+        {
+          "trial": "muse-spark-1.3-contributor-free-2-3",
+          "passed": false,
+          "case_count": 26,
+          "passed_cases": 25,
+          "failed_cases": [
+            {
+              "id": "flow-stop",
+              "reasons": [
+                "missing"
+              ]
+            }
+          ],
+          "tool_calls": 0,
+          "successful_calls": 0,
+          "tool_errors": [],
+          "host_tool_names": [],
+          "error": null,
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "75633af439c2ba5b1769f12b43a4b634f083bfb7f93c1d558413393c0aab5bff",
+          "evidence": {
+            "answer.txt": "5cced87eef656231f0561fd8612a01b0e271eabe8e3f924f9d1ed51de405d4ce",
+            "cases.json": "c1ef175e0a1e5d5dedb8a6a3e0f2b960bd1ef3bc494461cd0e8310dcbf7f5bba",
+            "events.jsonl": "5022ad2fffa6eb89457fc00c39bb1e27e4f9b6280a0f6d07141f8f4ba2851dc8",
+            "metadata.json": "79922b2c97f0b559737045c337c40640bb3525fb745aae7bba296b91bbd12377",
+            "prompt.txt": "89d163c022c120d8a52f2b64647c82949262711e88641ce8ba838eb745402002",
+            "provider-1.request.json": "bda90c1d15e4e73567c0255bce66dabfded2ad3edcd774e281c7d3dac3ddf846",
+            "provider-1.response.txt": "56675d1580548d4d65c0ced068cbc4a330d01512e00331beac05d536446ab42b",
+            "session.json": "69589f50e31b31ecaa6fedd04bc5dc27c02c6e0c1f11ec94bf4771235b68c128",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "de529a2737c94e49f97e3104dcbb18a5a0259da6b0ebd90890dfedbb88d84ba8"
+          }
+        },
+        {
+          "trial": "muse-spark-1.3-contributor-free-2-4",
+          "passed": true,
+          "case_count": 25,
+          "passed_cases": 25,
+          "failed_cases": [],
+          "tool_calls": 0,
+          "successful_calls": 0,
+          "tool_errors": [],
+          "host_tool_names": [],
+          "error": null,
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "d4ed9d6374de891ba7fd5f9a91049d3d32638090dbf1321c46df7d144b0afc54",
+          "evidence": {
+            "answer.txt": "d4179cf6ef4d729f99c6eb34fbbf5ee4dba4252ba5ec9fb0de7466197da76c26",
+            "cases.json": "c1473008ee2fbd1321ef72b0e7ab679537b62e6c863b1f8c5b7dc5671ec51818",
+            "events.jsonl": "d750f66a6d5eece391f3b06ecf81e652b059c1d96c745ead3d9c310a19cfb7da",
+            "metadata.json": "79922b2c97f0b559737045c337c40640bb3525fb745aae7bba296b91bbd12377",
+            "prompt.txt": "8da8d6b36be2b132e4f7f224b506cc39214625d4ba3656c081c45d9c563d793f",
+            "provider-1.request.json": "6f7c91192d29eb8152e36715364e54324a67ed0e0510ca4eaa6a40535b0b8bf0",
+            "provider-1.response.txt": "9865f07fa9bc7e030bdad0183a0ca8441c85d691d69a8af4c5bc7c92b7e2082e",
+            "session.json": "08f5ef2d5e15efb4cd92d293e18f21ef05628cfba7c65b9c2c8839c5baf1a66f",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "de529a2737c94e49f97e3104dcbb18a5a0259da6b0ebd90890dfedbb88d84ba8"
+          }
+        }
+      ]
+    },
+    {
+      "group": "discovery-release",
+      "build_id": "a5f40b0c097887e8512d777956597e565eaa6babec72de4899befa0baa9ec226",
+      "suite": "discovery",
+      "models": [
+        "opencode/muse-spark-1.3-contributor-free",
+        "opencode/mimo-v2.6-flash-free"
+      ],
+      "rounds": 2,
+      "modality": "text only; no visual model acceptance",
+      "expected_trials": 16,
+      "trials_completed": 16,
+      "passed_trials": 5,
+      "cases": 412,
+      "passed_cases": 342,
+      "calls": 0,
+      "successful_calls": 0,
+      "trials": [
+        {
+          "trial": "mimo-v2.6-flash-free-1-1",
+          "passed": false,
+          "case_count": 26,
+          "passed_cases": 24,
+          "failed_cases": [
+            {
+              "id": "knowledge-update",
+              "reasons": [
+                "missing"
+              ]
+            },
+            {
+              "id": "snapshot",
+              "reasons": [
+                "invalid_call",
+                "forbidden",
+                "missing_note",
+                "missing_note"
+              ]
+            }
+          ],
+          "tool_calls": 0,
+          "successful_calls": 0,
+          "tool_errors": [],
+          "host_tool_names": [],
+          "error": null,
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "2b78553f80cf2af04d5356f629bd1c3730f74772aebb48be66369f94275891e3",
+          "evidence": {
+            "answer.txt": "597dc266a9722e68d9f24a5caee4e781c2b39ec0943bb30d64f956e6fa724f84",
+            "cases.json": "bc7b1f0c3f276da794aaa5fe786ada21a45becbbe5c110ed612db31e4df87b18",
+            "events.jsonl": "5bd799dd2358092f627a351aed9cf3b87ba12beedd6ab3f6a781fb79d729e33f",
+            "metadata.json": "5bec080508299aa3b63ed2037786cb651c653a660c7508dd0dc06e8d55ec8b2f",
+            "prompt.txt": "ea33e2cf6595dce24a95524786b5d4fe8b8e2750779113e91d82e2e9b86f2281",
+            "provider-1.request.json": "1c0321e70bc8a4142f02a84e35d22a8a8a33b0ad158ba3deca7515fc21e9f936",
+            "provider-1.response.txt": "4baf35e2becdb0bdc620237db01ae549a64f155fa22ec66171959c27ce8f1288",
+            "session.json": "69c35fde102859cca567758108f0114aa50cbf270051cc8b8442f64de4990c8a",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "ac2d5128b971cba01e3a77bf16d253da2ae05f1ef458d38b2bb1a07199ac70f8"
+          }
+        },
+        {
+          "trial": "mimo-v2.6-flash-free-1-2",
+          "passed": false,
+          "case_count": 26,
+          "passed_cases": 0,
+          "failed_cases": [],
+          "tool_calls": 0,
+          "successful_calls": 0,
+          "tool_errors": [],
+          "host_tool_names": [],
+          "error": "Expected ',' or '}' after property value in JSON at position 4459 (line 26 column 122)",
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "607d4d5ac553ed4fe61166731388dd7ab926d5b548c9c60e254a90cb0c010117",
+          "evidence": {
+            "answer.txt": "c89f1979726e04e26494c45d64e2071b922a7c34f3ab2f007b7aae826c334a59",
+            "cases.json": "74644a5f736082be58bcdba90097f68bcaf3aa610bfcb17073ed9015634d793e",
+            "events.jsonl": "75b666fe6b06de53974ce010a868dc2c82ef0b98264a7b07446f4fc913c19843",
+            "metadata.json": "5bec080508299aa3b63ed2037786cb651c653a660c7508dd0dc06e8d55ec8b2f",
+            "prompt.txt": "dfd8b90cf4a58b65c5bf5114ece3b5fde2153ece97fdd2f1250f220eeba71d34",
+            "provider-1.request.json": "23e926c388fb6a64a62431b957be8cd70e83647c220ad5fef2863549bb30a5a3",
+            "provider-1.response.txt": "c9be7bbe1b6c899932271b844182d5d232b020987138088ccef13240757c7ba7",
+            "session.json": "97e7e87921fc3ad6e0104673e26661998ed46f411057a820f18ad942f2112cf1",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "ac2d5128b971cba01e3a77bf16d253da2ae05f1ef458d38b2bb1a07199ac70f8"
+          }
+        },
+        {
+          "trial": "mimo-v2.6-flash-free-1-3",
+          "passed": true,
+          "case_count": 26,
+          "passed_cases": 26,
+          "failed_cases": [],
+          "tool_calls": 0,
+          "successful_calls": 0,
+          "tool_errors": [],
+          "host_tool_names": [],
+          "error": null,
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "95f11f14d5fad4cbf6b01df559536b8f24b8f17b807413f08105a416d76ca625",
+          "evidence": {
+            "answer.txt": "90256777fd391846f54c864aa5c7e853f10684b9a51376db81a47522741837e7",
+            "cases.json": "c1ef175e0a1e5d5dedb8a6a3e0f2b960bd1ef3bc494461cd0e8310dcbf7f5bba",
+            "events.jsonl": "eb8a18730069fac75a3add6bcfd15b9dfe9582961826e53526d2c14fc199c7b1",
+            "metadata.json": "5bec080508299aa3b63ed2037786cb651c653a660c7508dd0dc06e8d55ec8b2f",
+            "prompt.txt": "89d163c022c120d8a52f2b64647c82949262711e88641ce8ba838eb745402002",
+            "provider-1.request.json": "b5753256b7b4794f8967bbd0889bebfb26922669732843e4f23150f9a9470cb0",
+            "provider-1.response.txt": "e70f9903e071a06712b251db65c292d480dd7c57f8cc25bd6006540c7fd2389a",
+            "session.json": "f6ec400865b971b01f410d7509146c5092d912ac747a67223e97e3116698486d",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "ac2d5128b971cba01e3a77bf16d253da2ae05f1ef458d38b2bb1a07199ac70f8"
+          }
+        },
+        {
+          "trial": "mimo-v2.6-flash-free-1-4",
+          "passed": false,
+          "case_count": 25,
+          "passed_cases": 22,
+          "failed_cases": [
+            {
+              "id": "sign-create-cert",
+              "reasons": [
+                "invalid_call",
+                "missing"
+              ]
+            },
+            {
+              "id": "sign-create-profile",
+              "reasons": [
+                "invalid_call",
+                "missing"
+              ]
+            },
+            {
+              "id": "emu-stop",
+              "reasons": [
+                "missing"
+              ]
+            }
+          ],
+          "tool_calls": 0,
+          "successful_calls": 0,
+          "tool_errors": [],
+          "host_tool_names": [],
+          "error": null,
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "ee42936db73de8db54fa6a51b3234c3ec36b8ffc7b2836ea688fa5f09b7b7814",
+          "evidence": {
+            "answer.txt": "bb67993409584f2aac0f9ca553c6cbc303a7f60e13122ee09e5a132fa37b4d52",
+            "cases.json": "c1473008ee2fbd1321ef72b0e7ab679537b62e6c863b1f8c5b7dc5671ec51818",
+            "events.jsonl": "f5f8029a6be7e31fcffc4e7592992351fa8da63223ea101552e97627b198b54a",
+            "metadata.json": "5bec080508299aa3b63ed2037786cb651c653a660c7508dd0dc06e8d55ec8b2f",
+            "prompt.txt": "8da8d6b36be2b132e4f7f224b506cc39214625d4ba3656c081c45d9c563d793f",
+            "provider-1.request.json": "75957d1e266089adec3d2c8971f42056122c11a735fb0b51fbdbb14395a27aeb",
+            "provider-1.response.txt": "e7fea22fa1cc737657eb3020f283d1b934eb80828e8be53ef75cad0396107754",
+            "session.json": "0138c47ea0bef09df92814f3a6bfa4d674b4ff6ad549ee97db43cc1f1c4c58a5",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "ac2d5128b971cba01e3a77bf16d253da2ae05f1ef458d38b2bb1a07199ac70f8"
+          }
+        },
+        {
+          "trial": "mimo-v2.6-flash-free-2-1",
+          "passed": false,
+          "case_count": 26,
+          "passed_cases": 0,
+          "failed_cases": [],
+          "tool_calls": 0,
+          "successful_calls": 0,
+          "tool_errors": [],
+          "host_tool_names": [],
+          "error": "Expected property name or '}' in JSON at position 2 (line 1 column 3)",
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "bd03beb5410e9944c1bcb2a0a2835dc53628a9e2bcc94361d5b0e0d34fb0cb9c",
+          "evidence": {
+            "answer.txt": "56db6874d62a8a3e2545caa5194d67de58641f6236a4c7fce67af9645c92c7e7",
+            "cases.json": "bc7b1f0c3f276da794aaa5fe786ada21a45becbbe5c110ed612db31e4df87b18",
+            "events.jsonl": "164871184ee1bcccb60d16481f311be60b822e15c1278ba5add8b803907c71d5",
+            "metadata.json": "5bec080508299aa3b63ed2037786cb651c653a660c7508dd0dc06e8d55ec8b2f",
+            "prompt.txt": "ea33e2cf6595dce24a95524786b5d4fe8b8e2750779113e91d82e2e9b86f2281",
+            "provider-1.request.json": "1c0321e70bc8a4142f02a84e35d22a8a8a33b0ad158ba3deca7515fc21e9f936",
+            "provider-1.response.txt": "3989e97958a879d9280896ec307a7ce82993cfcd800366863e97cb63e5374c43",
+            "session.json": "aa413233677562d02d0cbcc0fc1925e2657f7298c08ce7e75cf6538e24945522",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "ac2d5128b971cba01e3a77bf16d253da2ae05f1ef458d38b2bb1a07199ac70f8"
+          }
+        },
+        {
+          "trial": "mimo-v2.6-flash-free-2-2",
+          "passed": false,
+          "case_count": 26,
+          "passed_cases": 25,
+          "failed_cases": [
+            {
+              "id": "code-restart",
+              "reasons": [
+                "missing"
+              ]
+            }
+          ],
+          "tool_calls": 0,
+          "successful_calls": 0,
+          "tool_errors": [],
+          "host_tool_names": [],
+          "error": null,
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "6883530ce5fa8e8f50563272177ef0271671aa3f306f0e55bd51da77ebd7f406",
+          "evidence": {
+            "answer.txt": "899e7d03f1fb1204a36d057d0c1da5b28d985579272ecd1018630386de1a6aa5",
+            "cases.json": "74644a5f736082be58bcdba90097f68bcaf3aa610bfcb17073ed9015634d793e",
+            "events.jsonl": "d0bb8a27af92d9e4ab56b864f835afd65beb55478f14c9af83678a33c4420dde",
+            "metadata.json": "5bec080508299aa3b63ed2037786cb651c653a660c7508dd0dc06e8d55ec8b2f",
+            "prompt.txt": "dfd8b90cf4a58b65c5bf5114ece3b5fde2153ece97fdd2f1250f220eeba71d34",
+            "provider-1.request.json": "23e926c388fb6a64a62431b957be8cd70e83647c220ad5fef2863549bb30a5a3",
+            "provider-1.response.txt": "48b6abbdbebde82b40e21a3c914f8155a3d8a361debf4fa1a92c42b8ab81d3a3",
+            "session.json": "717b4016add09b25f70434bf0e2838155320ef227d081ab2986f0a8d36cafbe1",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "ac2d5128b971cba01e3a77bf16d253da2ae05f1ef458d38b2bb1a07199ac70f8"
+          }
+        },
+        {
+          "trial": "mimo-v2.6-flash-free-2-3",
+          "passed": false,
+          "case_count": 26,
+          "passed_cases": 24,
+          "failed_cases": [
+            {
+              "id": "ui-review",
+              "reasons": [
+                "missing"
+              ]
+            },
+            {
+              "id": "flow-stop",
+              "reasons": [
+                "missing"
+              ]
+            }
+          ],
+          "tool_calls": 0,
+          "successful_calls": 0,
+          "tool_errors": [],
+          "host_tool_names": [],
+          "error": null,
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "9e0a2d637fe0bf10fd1ba4974a84051b060d82fc8fda2468cda83c1487ba4b40",
+          "evidence": {
+            "answer.txt": "a8ad4d404ce1cb02b3a2693d44b6879fc2a7fdaeaf571954ce058c0dc492ff75",
+            "cases.json": "c1ef175e0a1e5d5dedb8a6a3e0f2b960bd1ef3bc494461cd0e8310dcbf7f5bba",
+            "events.jsonl": "ae4932e33aec6e8a526feac6685a5b4a917d84bf80e8045bde8381986f2d0e9d",
+            "metadata.json": "5bec080508299aa3b63ed2037786cb651c653a660c7508dd0dc06e8d55ec8b2f",
+            "prompt.txt": "89d163c022c120d8a52f2b64647c82949262711e88641ce8ba838eb745402002",
+            "provider-1.request.json": "b5753256b7b4794f8967bbd0889bebfb26922669732843e4f23150f9a9470cb0",
+            "provider-1.response.txt": "c8f9299d1c3bff2738ceecc919aa4d3c75806ba204f34a3777af2a3614b59615",
+            "session.json": "06d7b08772db05ad2118b5bfab72f156d864941cf1d5f7a43ad671dd162c9a7e",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "ac2d5128b971cba01e3a77bf16d253da2ae05f1ef458d38b2bb1a07199ac70f8"
+          }
+        },
+        {
+          "trial": "mimo-v2.6-flash-free-2-4",
+          "passed": false,
+          "case_count": 25,
+          "passed_cases": 22,
+          "failed_cases": [
+            {
+              "id": "sign-create-cert",
+              "reasons": [
+                "invalid_call",
+                "missing"
+              ]
+            },
+            {
+              "id": "sign-create-profile",
+              "reasons": [
+                "invalid_call",
+                "missing"
+              ]
+            },
+            {
+              "id": "emu-stop",
+              "reasons": [
+                "missing"
+              ]
+            }
+          ],
+          "tool_calls": 0,
+          "successful_calls": 0,
+          "tool_errors": [],
+          "host_tool_names": [],
+          "error": null,
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "d2c044d50a3e1d97462294b58f1df5a966329014d7d0a93671719694a19ca25a",
+          "evidence": {
+            "answer.txt": "cdb9ba244d353ddf867b58f58fc10d51b0f827938906c152b8e910b648f980b8",
+            "cases.json": "c1473008ee2fbd1321ef72b0e7ab679537b62e6c863b1f8c5b7dc5671ec51818",
+            "events.jsonl": "43fd083ebdc09de9c164b561a1a769a155d09a8996c7acfb457c144cc6d3a547",
+            "metadata.json": "5bec080508299aa3b63ed2037786cb651c653a660c7508dd0dc06e8d55ec8b2f",
+            "prompt.txt": "8da8d6b36be2b132e4f7f224b506cc39214625d4ba3656c081c45d9c563d793f",
+            "provider-1.request.json": "75957d1e266089adec3d2c8971f42056122c11a735fb0b51fbdbb14395a27aeb",
+            "provider-1.response.txt": "130d801b2fc3ad45e50a6aaa44c631b38749446ab39d355f1eceba30cb752c63",
+            "session.json": "da7b5019a31b34296b6db0b3cd9edd952e36a91ec05ca2f88315bc7d82fd3b68",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "ac2d5128b971cba01e3a77bf16d253da2ae05f1ef458d38b2bb1a07199ac70f8"
+          }
+        },
+        {
+          "trial": "muse-spark-1.3-contributor-free-1-1",
+          "passed": true,
+          "case_count": 26,
+          "passed_cases": 26,
+          "failed_cases": [],
+          "tool_calls": 0,
+          "successful_calls": 0,
+          "tool_errors": [],
+          "host_tool_names": [],
+          "error": null,
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "9e19cde0c51b8585263931148c0921c56f137e3b7d0eec99b0465cd5fa6dfd0c",
+          "evidence": {
+            "answer.txt": "3369c9aaa14c2371a1d3c1e70527bd99da46d64af16536105618b84d80ce51bb",
+            "cases.json": "bc7b1f0c3f276da794aaa5fe786ada21a45becbbe5c110ed612db31e4df87b18",
+            "events.jsonl": "e1140ed31a8429713c58e91f358da14336782e1c27104d46ebd06a361eb0546f",
+            "metadata.json": "5bec080508299aa3b63ed2037786cb651c653a660c7508dd0dc06e8d55ec8b2f",
+            "prompt.txt": "ea33e2cf6595dce24a95524786b5d4fe8b8e2750779113e91d82e2e9b86f2281",
+            "provider-1.request.json": "6f2e495774c91f77725570374e375d9eefb2bc668314db35c5b19c5c9a70574c",
+            "provider-1.response.txt": "072fe39549565122488299181216b828b18ccaa7571f790dc4ac53fc991073e2",
+            "session.json": "aa0df97670f235f7a1576bc414d3fb1c5b61793f8e56d6bd85a3e28671455edd",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "ac2d5128b971cba01e3a77bf16d253da2ae05f1ef458d38b2bb1a07199ac70f8"
+          }
+        },
+        {
+          "trial": "muse-spark-1.3-contributor-free-1-2",
+          "passed": false,
+          "case_count": 26,
+          "passed_cases": 24,
+          "failed_cases": [
+            {
+              "id": "code-check",
+              "reasons": [
+                "missing"
+              ]
+            },
+            {
+              "id": "ui-tree",
+              "reasons": [
+                "missing"
+              ]
+            }
+          ],
+          "tool_calls": 0,
+          "successful_calls": 0,
+          "tool_errors": [],
+          "host_tool_names": [],
+          "error": null,
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "33846eefd360848080be6068e18a2e45f4ea4bcd2fdd85a6925ebb7fba573307",
+          "evidence": {
+            "answer.txt": "7312a672fef0f4d8460e8e588d79fd60c3787c99fd5311395f272ad85857cb01",
+            "cases.json": "74644a5f736082be58bcdba90097f68bcaf3aa610bfcb17073ed9015634d793e",
+            "events.jsonl": "f3e01695e90414cdb8582ac689e05ce8b0c560b2049f79a2b40a51dfbb5b1ffd",
+            "metadata.json": "5bec080508299aa3b63ed2037786cb651c653a660c7508dd0dc06e8d55ec8b2f",
+            "prompt.txt": "dfd8b90cf4a58b65c5bf5114ece3b5fde2153ece97fdd2f1250f220eeba71d34",
+            "provider-1.request.json": "3de8d3a372c04f2e4c2487ccaf45bd18eff2865060f196878e379e750d087032",
+            "provider-1.response.txt": "a9ca57c4d3a9847b106249f412f0661d632d9e72e6991a7bb7dab0cb967d96c9",
+            "session.json": "edee2a66a7bee3784624611332c950d1b32974c4821bdca14683a2d1e03b337b",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "ac2d5128b971cba01e3a77bf16d253da2ae05f1ef458d38b2bb1a07199ac70f8"
+          }
+        },
+        {
+          "trial": "muse-spark-1.3-contributor-free-1-3",
+          "passed": true,
+          "case_count": 26,
+          "passed_cases": 26,
+          "failed_cases": [],
+          "tool_calls": 0,
+          "successful_calls": 0,
+          "tool_errors": [],
+          "host_tool_names": [],
+          "error": null,
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "66f6d5321889550eaafbea2aa3037b0ad338c68ba6fdaecc530c97ee1d7e484f",
+          "evidence": {
+            "answer.txt": "ed65d89a64d7cab7746c2b86380a0422620b46ce2a00a311a96547d71beb6984",
+            "cases.json": "c1ef175e0a1e5d5dedb8a6a3e0f2b960bd1ef3bc494461cd0e8310dcbf7f5bba",
+            "events.jsonl": "a3b829e83394e1cf3b3668032f356c6790e68fa4b04356ec3b4b53f357dc5ef4",
+            "metadata.json": "5bec080508299aa3b63ed2037786cb651c653a660c7508dd0dc06e8d55ec8b2f",
+            "prompt.txt": "89d163c022c120d8a52f2b64647c82949262711e88641ce8ba838eb745402002",
+            "provider-1.request.json": "bfea826b058eebab98992f8899765fc5c4348cc3d1468e0fa525c83a9dd8a511",
+            "provider-1.response.txt": "505f1c1e3d1a75c7a70318ef9fca76e867abd91359da2e01453d08dafd2c4b42",
+            "session.json": "33a9acb3f022a71115c9fc89ce10bc9bacf345a4cd433b7e44d5d75398236e6d",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "ac2d5128b971cba01e3a77bf16d253da2ae05f1ef458d38b2bb1a07199ac70f8"
+          }
+        },
+        {
+          "trial": "muse-spark-1.3-contributor-free-1-4",
+          "passed": true,
+          "case_count": 25,
+          "passed_cases": 25,
+          "failed_cases": [],
+          "tool_calls": 0,
+          "successful_calls": 0,
+          "tool_errors": [],
+          "host_tool_names": [],
+          "error": null,
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "74898e06d27c9d9fa69a401306104cbb0429a4789de611b364b9b3e8adf66478",
+          "evidence": {
+            "answer.txt": "6964bad3370c5ed0a9ac21a2b24b81627edd5840e986d16b573255eaf3bc5e19",
+            "cases.json": "c1473008ee2fbd1321ef72b0e7ab679537b62e6c863b1f8c5b7dc5671ec51818",
+            "events.jsonl": "c916e000d07005f08dd202a5038345e60018cf9cee535ea2f60174786543dd97",
+            "metadata.json": "5bec080508299aa3b63ed2037786cb651c653a660c7508dd0dc06e8d55ec8b2f",
+            "prompt.txt": "8da8d6b36be2b132e4f7f224b506cc39214625d4ba3656c081c45d9c563d793f",
+            "provider-1.request.json": "e55f1b6bbfb046c435a9c194cd3a6c5424eadf17608015b7b93e41325b473b86",
+            "provider-1.response.txt": "1306052414895c5f6f0ca31d91afcbcf938912b1bcfd037a8747849734091b3c",
+            "session.json": "10d5b0741e8e7c61df9cad748bd56243f930183a333fb731c2b2ee52e1226f29",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "ac2d5128b971cba01e3a77bf16d253da2ae05f1ef458d38b2bb1a07199ac70f8"
+          }
+        },
+        {
+          "trial": "muse-spark-1.3-contributor-free-2-1",
+          "passed": false,
+          "case_count": 26,
+          "passed_cases": 25,
+          "failed_cases": [
+            {
+              "id": "snapshot",
+              "reasons": [
+                "invalid_call",
+                "forbidden",
+                "missing_note",
+                "missing_note"
+              ]
+            }
+          ],
+          "tool_calls": 0,
+          "successful_calls": 0,
+          "tool_errors": [],
+          "host_tool_names": [],
+          "error": null,
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "d13409126d035c7a6fe2399f2bf6e623aca806d73b22304c5ffb6c36b222eff9",
+          "evidence": {
+            "answer.txt": "51a1a9aab16305e1b258726fc78fda426e28e2ee1558bd594b879c329b742173",
+            "cases.json": "bc7b1f0c3f276da794aaa5fe786ada21a45becbbe5c110ed612db31e4df87b18",
+            "events.jsonl": "3f24fed6575ca0a38aab334905a94ce03548a1ffe52f77adbef9ce474dd3c0a6",
+            "metadata.json": "5bec080508299aa3b63ed2037786cb651c653a660c7508dd0dc06e8d55ec8b2f",
+            "prompt.txt": "ea33e2cf6595dce24a95524786b5d4fe8b8e2750779113e91d82e2e9b86f2281",
+            "provider-1.request.json": "8a12f0cbc67b0e2cc9e1c0ac652f4fbbf8355f62bc63eb85811d35c120060321",
+            "provider-1.response.txt": "7f3573d27c79cae36d0ec20c7254622a33db36e55198a2efccbe6f13ee77efe9",
+            "session.json": "d32be7a3f29373a3a7713ee5b8d9082bfa2307820ec8a9cf4b9a2492bb1f8e37",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "ac2d5128b971cba01e3a77bf16d253da2ae05f1ef458d38b2bb1a07199ac70f8"
+          }
+        },
+        {
+          "trial": "muse-spark-1.3-contributor-free-2-2",
+          "passed": false,
+          "case_count": 26,
+          "passed_cases": 23,
+          "failed_cases": [
+            {
+              "id": "snapshot-valid",
+              "reasons": [
+                "missing"
+              ]
+            },
+            {
+              "id": "code-check",
+              "reasons": [
+                "missing"
+              ]
+            },
+            {
+              "id": "ui-tree",
+              "reasons": [
+                "missing"
+              ]
+            }
+          ],
+          "tool_calls": 0,
+          "successful_calls": 0,
+          "tool_errors": [],
+          "host_tool_names": [],
+          "error": null,
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "47b64f59b714579eb4b1e0294d8489453786b8be7961667588d97914e66dae04",
+          "evidence": {
+            "answer.txt": "392ef645ee6f27bfa304c8805b562bcffcbe8b0b1a3e5474e976abf24502eed6",
+            "cases.json": "74644a5f736082be58bcdba90097f68bcaf3aa610bfcb17073ed9015634d793e",
+            "events.jsonl": "8f70242149086c43415699de11034d190502cb4783d46bfd5969a9bdfd829039",
+            "metadata.json": "5bec080508299aa3b63ed2037786cb651c653a660c7508dd0dc06e8d55ec8b2f",
+            "prompt.txt": "dfd8b90cf4a58b65c5bf5114ece3b5fde2153ece97fdd2f1250f220eeba71d34",
+            "provider-1.request.json": "1cf23328d8b0269110ce7e19829943a7d444064597257c563af8c6d5fef56b09",
+            "provider-1.response.txt": "89e10d9dacff690ad9781e4046895b45ab4bc650d13cdd467a5d39ba4faecfea",
+            "session.json": "ab26b84cb76168961fe017cedde47a74cd9e4ec7d1ad5bbb84934673d114cb36",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "ac2d5128b971cba01e3a77bf16d253da2ae05f1ef458d38b2bb1a07199ac70f8"
+          }
+        },
+        {
+          "trial": "muse-spark-1.3-contributor-free-2-3",
+          "passed": false,
+          "case_count": 26,
+          "passed_cases": 25,
+          "failed_cases": [
+            {
+              "id": "flow-stop",
+              "reasons": [
+                "missing"
+              ]
+            }
+          ],
+          "tool_calls": 0,
+          "successful_calls": 0,
+          "tool_errors": [],
+          "host_tool_names": [],
+          "error": null,
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "c50cae82f45ee932ff22ad9efb3e9d67547af61ed7f11ab2d39610399f0d05da",
+          "evidence": {
+            "answer.txt": "c55e1a6dd01123712b805782578460b385e08b2452b681191a579191cb52b395",
+            "cases.json": "c1ef175e0a1e5d5dedb8a6a3e0f2b960bd1ef3bc494461cd0e8310dcbf7f5bba",
+            "events.jsonl": "7cfd2e03a68063fd945bc01e3f4ba3258fd32537cb72e24b9f544516d0a9e88a",
+            "metadata.json": "5bec080508299aa3b63ed2037786cb651c653a660c7508dd0dc06e8d55ec8b2f",
+            "prompt.txt": "89d163c022c120d8a52f2b64647c82949262711e88641ce8ba838eb745402002",
+            "provider-1.request.json": "66ee79d4ac58dde9c64496f2262168c263687405d6f13268d47949ec5015bbc3",
+            "provider-1.response.txt": "9975153172a69c4a6ffa3647aa3fe5a7a559ed543feaae3149593adea79158b4",
+            "session.json": "ee1c4e9de168ffdb44a3cb760a535fe19def596a1698d7db681e06c0723349cc",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "ac2d5128b971cba01e3a77bf16d253da2ae05f1ef458d38b2bb1a07199ac70f8"
+          }
+        },
+        {
+          "trial": "muse-spark-1.3-contributor-free-2-4",
+          "passed": true,
+          "case_count": 25,
+          "passed_cases": 25,
+          "failed_cases": [],
+          "tool_calls": 0,
+          "successful_calls": 0,
+          "tool_errors": [],
+          "host_tool_names": [],
+          "error": null,
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "3f5847796fad9cdb14b49e26f1543712378090abf34b01c36f86d7ac387334e0",
+          "evidence": {
+            "answer.txt": "9e65f0f59b23c551b5906e924d2436aac27e3a803f431979abd57402e9bd60ab",
+            "cases.json": "c1473008ee2fbd1321ef72b0e7ab679537b62e6c863b1f8c5b7dc5671ec51818",
+            "events.jsonl": "fd2d9c826072f54872a898950b8471f4abdf7a67d6d440eb4289b09286c51735",
+            "metadata.json": "5bec080508299aa3b63ed2037786cb651c653a660c7508dd0dc06e8d55ec8b2f",
+            "prompt.txt": "8da8d6b36be2b132e4f7f224b506cc39214625d4ba3656c081c45d9c563d793f",
+            "provider-1.request.json": "563e03e0395b820ec353b3d660921049e6ab6dc90554e0a98284ac365c29e7cf",
+            "provider-1.response.txt": "395f4d8666cdbdbd7c80f928393b5850b77079494f352b24715dd999356b1709",
+            "session.json": "3d545474f88aad7b660d18be701e11332a2668000dc9a8849b6b535106baa759",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "ac2d5128b971cba01e3a77bf16d253da2ae05f1ef458d38b2bb1a07199ac70f8"
+          }
+        }
+      ]
+    },
+    {
+      "group": "free-live",
+      "build_id": "3ec0a09699a8d7542660a8f2a594aeb7cb2b77b2c0c9402854b3ee80911d0270",
+      "suite": "live",
+      "models": [
+        "opencode/big-pickle",
+        "opencode/exo-free",
+        "opencode/ling-3.0-flash-fin-free",
+        "opencode/ling-3.1-flash-free",
+        "opencode/longcat-2.5-preview-free",
+        "opencode/mimo-v2.6-flash-free",
+        "opencode/muse-spark-1.3-contributor-free",
+        "opencode/nemotron-3-ultra-free",
+        "opencode/nemotron-3.5-lightning-free",
+        "opencode/space-bunny-free",
+        "opencode/step-5-preview-free"
+      ],
+      "rounds": 2,
+      "modality": "text only; no visual model acceptance",
+      "expected_trials": 22,
+      "trials_completed": 22,
+      "passed_trials": 5,
+      "cases": 110,
+      "passed_cases": 66,
+      "calls": 122,
+      "successful_calls": 118,
+      "trials": [
+        {
+          "trial": "big-pickle-1",
+          "passed": true,
+          "case_count": 5,
+          "passed_cases": 5,
+          "failed_cases": [],
+          "tool_calls": 7,
+          "successful_calls": 7,
+          "tool_errors": [],
+          "host_tool_names": [
+            "deveco_doctor",
+            "deveco_knowledge",
+            "deveco_knowledge",
+            "deveco_device",
+            "deveco_skills",
+            "deveco_auth",
+            "deveco_skills"
+          ],
+          "error": null,
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "6ffc2551b3a347d26f77ba0cbc9632bf82e2cc47e4b7bc180a6c8c52f515a93f",
+          "evidence": {
+            "answer.txt": "4d8de23e3ff39145b5ba82b6cadfdb627fe76e49b422b679a0a5a1f4bbc6e144",
+            "cases.json": "7bfa84f22da86c5ac978d330a85c0871cb7c6905579039b318a73412ff918eb0",
+            "events.jsonl": "e1b99368d49c919cad5ffdb78502848cd8177da6be139ecf34874bf037193e03",
+            "metadata.json": "79922b2c97f0b559737045c337c40640bb3525fb745aae7bba296b91bbd12377",
+            "prompt.txt": "a4df24c2934293736dc8b66004b45d7675066cfbde127ee5ea31791ec72e2d99",
+            "provider-1.request.json": "b78befb3c1a673631b87119b4f8a9e65f82678fa7deccbd07b88cf5523dae898",
+            "provider-1.response.txt": "d6625c617febb833376eaff43784bd7e7dc0e7ae61ebe02cb0e3806b4b840a12",
+            "provider-2.request.json": "864d34072e7227e758d3ce005901a24eb9040e71beebf56df23e518b07a9fcf3",
+            "provider-2.response.txt": "9f1d85277c756727a44e5943b772853f8387ac839498bfacf7d0c4b90b4ecc11",
+            "provider-3.request.json": "ffb6d9337366ae268abc2aeb614f2e013023d07af0fea5d0e5a87474bfe7893e",
+            "provider-3.response.txt": "0933e2397ce3b38230c5beb8ac340a902831dc8ffdd6f66793526b9eaa6e36df",
+            "session.json": "1ed1108da56bc9272f9ab5053233b460e5fe026837afe6d485eb9065590fdbf5",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "f2ba7c7db17e902cf41f0cfb4e93e05994437bf52154ed8f26dbc58dcbf03eb6"
+          }
+        },
+        {
+          "trial": "big-pickle-2",
+          "passed": false,
+          "case_count": 5,
+          "passed_cases": 0,
+          "failed_cases": [],
+          "tool_calls": 7,
+          "successful_calls": 7,
+          "tool_errors": [],
+          "host_tool_names": [
+            "todowrite",
+            "deveco_doctor",
+            "deveco_device",
+            "deveco_knowledge",
+            "deveco_knowledge",
+            "deveco_skills",
+            "deveco_auth",
+            "deveco_skills"
+          ],
+          "error": "live trial used tools outside the MCP",
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "d1f21d7fb5d6fc0008147cbe90e336b81078315154e9bb11f02f9d9222e057ab",
+          "evidence": {
+            "cases.json": "7bfa84f22da86c5ac978d330a85c0871cb7c6905579039b318a73412ff918eb0",
+            "events.jsonl": "00242301f1291e89ead8db5b8e8a4bcbfeba6b618652ffa039ef44288a706c17",
+            "metadata.json": "79922b2c97f0b559737045c337c40640bb3525fb745aae7bba296b91bbd12377",
+            "prompt.txt": "a4df24c2934293736dc8b66004b45d7675066cfbde127ee5ea31791ec72e2d99",
+            "provider-1.request.json": "b78befb3c1a673631b87119b4f8a9e65f82678fa7deccbd07b88cf5523dae898",
+            "provider-1.response.txt": "dff0dc46cc03ec54360d582c70276bc779a7bc444e04967e0c575ba732005ab3",
+            "provider-2.request.json": "6f1fedd7fb2027823962b40ed48a327b213bae2e103368f70e1505e459b789f1",
+            "provider-2.response.txt": "8ff46c790813d75eb1c1d28e969e67bf449fb6d2e5e9017f071c45733d3751cf",
+            "provider-3.request.json": "830c4cf9dcd64e844f9418ee28bbd5b318dabc537827bf2ccb3bb60404f33d1f",
+            "provider-3.response.txt": "98e5bdd5481810cb3d6951a1280994ef817f9c2212bf832024246a31a3f83431",
+            "provider-4.request.json": "161f33341d84e279a125b07466dc66bc0c1941c5f3f53e1ed6efd561a18294a0",
+            "provider-4.response.txt": "7d151b3fcfce8d856cdb7c6448d3eac9d5bc530cbcb4984576073928f72c6dd5",
+            "provider-5.request.json": "77b00735641789b4c26b067978b370ecfe4e43bed4fa2b1a49d3e266180a4c16",
+            "provider-5.response.txt": "9b5cce0d27537507838c3c207e43834482d801e07c373bc16ef98ff973b07b4c",
+            "session.json": "6616d91d50b5440bfa0271489c3ec60693dec177decf25e7a065ba3e3374fb55",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "49d2482b7833ef80b34c9b6f7b564cda79ac5c83be192ae3f85df2a20223ce5e"
+          }
+        },
+        {
+          "trial": "exo-free-1",
+          "passed": false,
+          "case_count": 5,
+          "passed_cases": 0,
+          "failed_cases": [],
+          "tool_calls": 0,
+          "successful_calls": 0,
+          "tool_errors": [],
+          "host_tool_names": [],
+          "error": "host process failed\n\n1 !== 0\n",
+          "timed_out": false,
+          "provider_errors": [
+            {
+              "name": "APIError",
+              "status": 410,
+              "message": "Model exo-free has been deprecated."
+            }
+          ],
+          "report_sha256": "dac7d87fa3bc00576726f58d3b8ae2f3dc915e19d2fcea204c89b8099f1162fc",
+          "evidence": {
+            "cases.json": "7bfa84f22da86c5ac978d330a85c0871cb7c6905579039b318a73412ff918eb0",
+            "events.jsonl": "e48f8ed1b02905363b2a2b116856efa841128b3a5bc42d8c2e5efb37cd125251",
+            "metadata.json": "79922b2c97f0b559737045c337c40640bb3525fb745aae7bba296b91bbd12377",
+            "prompt.txt": "a4df24c2934293736dc8b66004b45d7675066cfbde127ee5ea31791ec72e2d99",
+            "provider-1.request.json": "00d355e50ac2dec43558807d7cd0f6e440b53dac0479e4eecaf469c734035f5c",
+            "provider-1.response.txt": "b9ac51810327fc8ecbe182d5e693984677179e2c3c7d2f4684e4dc0bd4f1785f",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "de529a2737c94e49f97e3104dcbb18a5a0259da6b0ebd90890dfedbb88d84ba8"
+          }
+        },
+        {
+          "trial": "exo-free-2",
+          "passed": false,
+          "case_count": 5,
+          "passed_cases": 0,
+          "failed_cases": [],
+          "tool_calls": 0,
+          "successful_calls": 0,
+          "tool_errors": [],
+          "host_tool_names": [],
+          "error": "host process failed\n\n1 !== 0\n",
+          "timed_out": false,
+          "provider_errors": [
+            {
+              "name": "APIError",
+              "status": 410,
+              "message": "Model exo-free has been deprecated."
+            }
+          ],
+          "report_sha256": "ad9258159388324853e4c4434fb1a84f4d1b4bc3a4c0f0dde1ed42f4091d54cf",
+          "evidence": {
+            "cases.json": "7bfa84f22da86c5ac978d330a85c0871cb7c6905579039b318a73412ff918eb0",
+            "events.jsonl": "0b0625fce2b246fc9cb8f580d157d3a39d74e51d9cfff3e4991ecbe8eee4697b",
+            "metadata.json": "79922b2c97f0b559737045c337c40640bb3525fb745aae7bba296b91bbd12377",
+            "prompt.txt": "a4df24c2934293736dc8b66004b45d7675066cfbde127ee5ea31791ec72e2d99",
+            "provider-1.request.json": "00d355e50ac2dec43558807d7cd0f6e440b53dac0479e4eecaf469c734035f5c",
+            "provider-1.response.txt": "b9ac51810327fc8ecbe182d5e693984677179e2c3c7d2f4684e4dc0bd4f1785f",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "de529a2737c94e49f97e3104dcbb18a5a0259da6b0ebd90890dfedbb88d84ba8"
+          }
+        },
+        {
+          "trial": "ling-3.0-flash-fin-free-1",
+          "passed": false,
+          "case_count": 5,
+          "passed_cases": 0,
+          "failed_cases": [],
+          "tool_calls": 0,
+          "successful_calls": 0,
+          "tool_errors": [],
+          "host_tool_names": [],
+          "error": "host process failed\n\n1 !== 0\n",
+          "timed_out": false,
+          "provider_errors": [
+            {
+              "name": "APIError",
+              "status": 400,
+              "message": "Upstream request failed: Model is unavailable."
+            }
+          ],
+          "report_sha256": "9a3fb7eb3fe3e8f5ded91a5cad78f4b47a63434f986213387a0ca939a103a161",
+          "evidence": {
+            "cases.json": "7bfa84f22da86c5ac978d330a85c0871cb7c6905579039b318a73412ff918eb0",
+            "events.jsonl": "b4c5680c7603061dcc5f6c1c6c4c6658c71610dcd994ba008c7ff83bf6b6a5a5",
+            "metadata.json": "79922b2c97f0b559737045c337c40640bb3525fb745aae7bba296b91bbd12377",
+            "prompt.txt": "a4df24c2934293736dc8b66004b45d7675066cfbde127ee5ea31791ec72e2d99",
+            "provider-1.request.json": "505ecc931dd41fb2d0f1111c852ebd5f5dbce6be063345fcc0d248374c38f0bc",
+            "provider-1.response.txt": "f195ebdcacf468e3d1aee939d20ee04347824156cde96789d6308029cad4bb22",
+            "provider-2.request.json": "505ecc931dd41fb2d0f1111c852ebd5f5dbce6be063345fcc0d248374c38f0bc",
+            "provider-2.response.txt": "f195ebdcacf468e3d1aee939d20ee04347824156cde96789d6308029cad4bb22",
+            "provider-3.request.json": "505ecc931dd41fb2d0f1111c852ebd5f5dbce6be063345fcc0d248374c38f0bc",
+            "provider-3.response.txt": "f195ebdcacf468e3d1aee939d20ee04347824156cde96789d6308029cad4bb22",
+            "provider-4.request.json": "505ecc931dd41fb2d0f1111c852ebd5f5dbce6be063345fcc0d248374c38f0bc",
+            "provider-4.response.txt": "f195ebdcacf468e3d1aee939d20ee04347824156cde96789d6308029cad4bb22",
+            "provider-5.request.json": "505ecc931dd41fb2d0f1111c852ebd5f5dbce6be063345fcc0d248374c38f0bc",
+            "provider-5.response.txt": "f195ebdcacf468e3d1aee939d20ee04347824156cde96789d6308029cad4bb22",
+            "provider-6.request.json": "505ecc931dd41fb2d0f1111c852ebd5f5dbce6be063345fcc0d248374c38f0bc",
+            "provider-6.response.txt": "f195ebdcacf468e3d1aee939d20ee04347824156cde96789d6308029cad4bb22",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "de529a2737c94e49f97e3104dcbb18a5a0259da6b0ebd90890dfedbb88d84ba8"
+          }
+        },
+        {
+          "trial": "ling-3.0-flash-fin-free-2",
+          "passed": false,
+          "case_count": 5,
+          "passed_cases": 0,
+          "failed_cases": [],
+          "tool_calls": 0,
+          "successful_calls": 0,
+          "tool_errors": [],
+          "host_tool_names": [],
+          "error": "host process failed\n\n1 !== 0\n",
+          "timed_out": false,
+          "provider_errors": [
+            {
+              "name": "APIError",
+              "status": 400,
+              "message": "Upstream request failed: Model is unavailable."
+            }
+          ],
+          "report_sha256": "f059cd013522fc07965622c0ae563d38969d5b789d678081350f2b770f66ccb4",
+          "evidence": {
+            "cases.json": "7bfa84f22da86c5ac978d330a85c0871cb7c6905579039b318a73412ff918eb0",
+            "events.jsonl": "e11ce167e01d701df238fc8e9ed8579ec20f2696bf588f13c6a8b661b50587f0",
+            "metadata.json": "79922b2c97f0b559737045c337c40640bb3525fb745aae7bba296b91bbd12377",
+            "prompt.txt": "a4df24c2934293736dc8b66004b45d7675066cfbde127ee5ea31791ec72e2d99",
+            "provider-1.request.json": "505ecc931dd41fb2d0f1111c852ebd5f5dbce6be063345fcc0d248374c38f0bc",
+            "provider-1.response.txt": "f195ebdcacf468e3d1aee939d20ee04347824156cde96789d6308029cad4bb22",
+            "provider-2.request.json": "505ecc931dd41fb2d0f1111c852ebd5f5dbce6be063345fcc0d248374c38f0bc",
+            "provider-2.response.txt": "f195ebdcacf468e3d1aee939d20ee04347824156cde96789d6308029cad4bb22",
+            "provider-3.request.json": "505ecc931dd41fb2d0f1111c852ebd5f5dbce6be063345fcc0d248374c38f0bc",
+            "provider-3.response.txt": "f195ebdcacf468e3d1aee939d20ee04347824156cde96789d6308029cad4bb22",
+            "provider-4.request.json": "505ecc931dd41fb2d0f1111c852ebd5f5dbce6be063345fcc0d248374c38f0bc",
+            "provider-4.response.txt": "f195ebdcacf468e3d1aee939d20ee04347824156cde96789d6308029cad4bb22",
+            "provider-5.request.json": "505ecc931dd41fb2d0f1111c852ebd5f5dbce6be063345fcc0d248374c38f0bc",
+            "provider-5.response.txt": "f195ebdcacf468e3d1aee939d20ee04347824156cde96789d6308029cad4bb22",
+            "provider-6.request.json": "505ecc931dd41fb2d0f1111c852ebd5f5dbce6be063345fcc0d248374c38f0bc",
+            "provider-6.response.txt": "f195ebdcacf468e3d1aee939d20ee04347824156cde96789d6308029cad4bb22",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "de529a2737c94e49f97e3104dcbb18a5a0259da6b0ebd90890dfedbb88d84ba8"
+          }
+        },
+        {
+          "trial": "ling-3.1-flash-free-1",
+          "passed": false,
+          "case_count": 5,
+          "passed_cases": 0,
+          "failed_cases": [],
+          "tool_calls": 6,
+          "successful_calls": 6,
+          "tool_errors": [],
+          "host_tool_names": [],
+          "error": "host process failed\n\n1 !== 0\n",
+          "timed_out": false,
+          "provider_errors": [
+            {
+              "name": "APIError",
+              "status": 429,
+              "message": "Upstream request failed: Endpoint is unavailable."
+            }
+          ],
+          "report_sha256": "81ceedc3aff5eb4ebe87333c7a5598bb016147464e647209a2f1ce418c0342ce",
+          "evidence": {
+            "cases.json": "7bfa84f22da86c5ac978d330a85c0871cb7c6905579039b318a73412ff918eb0",
+            "events.jsonl": "7c21a605e3a9a9d825e7a065ea7a29f1049561cf606298c1fb9496a5b316c847",
+            "metadata.json": "79922b2c97f0b559737045c337c40640bb3525fb745aae7bba296b91bbd12377",
+            "prompt.txt": "a4df24c2934293736dc8b66004b45d7675066cfbde127ee5ea31791ec72e2d99",
+            "provider-1.request.json": "83e0609f378ffff867af883a721a1d6bf558b518eff106295c342f5c1dbbaa12",
+            "provider-1.response.txt": "383a32f36b13eeb656780607b2c1b74d815168aa0b2694215be235c07621240f",
+            "provider-2.request.json": "83e0609f378ffff867af883a721a1d6bf558b518eff106295c342f5c1dbbaa12",
+            "provider-2.response.txt": "16e451ae95d22594639e696d4f9f95265b7dadfb1afb231e59fb3850abe3e8fb",
+            "provider-3.request.json": "9287416f47db9c0a59e22acbe4fd59335049ed9086b73d63c5a3b8f62d95032f",
+            "provider-3.response.txt": "383a32f36b13eeb656780607b2c1b74d815168aa0b2694215be235c07621240f",
+            "provider-4.request.json": "9287416f47db9c0a59e22acbe4fd59335049ed9086b73d63c5a3b8f62d95032f",
+            "provider-4.response.txt": "383a32f36b13eeb656780607b2c1b74d815168aa0b2694215be235c07621240f",
+            "provider-5.request.json": "9287416f47db9c0a59e22acbe4fd59335049ed9086b73d63c5a3b8f62d95032f",
+            "provider-5.response.txt": "383a32f36b13eeb656780607b2c1b74d815168aa0b2694215be235c07621240f",
+            "provider-6.request.json": "9287416f47db9c0a59e22acbe4fd59335049ed9086b73d63c5a3b8f62d95032f",
+            "provider-6.response.txt": "383a32f36b13eeb656780607b2c1b74d815168aa0b2694215be235c07621240f",
+            "provider-7.request.json": "9287416f47db9c0a59e22acbe4fd59335049ed9086b73d63c5a3b8f62d95032f",
+            "provider-7.response.txt": "383a32f36b13eeb656780607b2c1b74d815168aa0b2694215be235c07621240f",
+            "provider-8.request.json": "9287416f47db9c0a59e22acbe4fd59335049ed9086b73d63c5a3b8f62d95032f",
+            "provider-8.response.txt": "383a32f36b13eeb656780607b2c1b74d815168aa0b2694215be235c07621240f",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "13ff47006f9271bf317402d17435c9e458165e77358328f54415df76d6f19c31"
+          }
+        },
+        {
+          "trial": "ling-3.1-flash-free-2",
+          "passed": false,
+          "case_count": 5,
+          "passed_cases": 4,
+          "failed_cases": [
+            {
+              "id": "auth",
+              "reasons": [
+                "missing",
+                "missing_successful_call"
+              ]
+            }
+          ],
+          "tool_calls": 7,
+          "successful_calls": 7,
+          "tool_errors": [],
+          "host_tool_names": [
+            "deveco_doctor",
+            "deveco_knowledge",
+            "deveco_device",
+            "deveco_knowledge",
+            "deveco_skills",
+            "deveco_auth",
+            "deveco_skills"
+          ],
+          "error": null,
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "12b5eb4a2ce8f8074d63e376b97a64c42c5e43fd426d2a11bec5660a4a8e40dc",
+          "evidence": {
+            "answer.txt": "5f5cc508ec783ae9f707b6e34d125d5347b8c7a5261891688b4c4cce3df9b405",
+            "cases.json": "7bfa84f22da86c5ac978d330a85c0871cb7c6905579039b318a73412ff918eb0",
+            "events.jsonl": "2d84272339d326c5f5f96b0423445e17d43ef5b9175feea684ffb7680ee1c18a",
+            "metadata.json": "79922b2c97f0b559737045c337c40640bb3525fb745aae7bba296b91bbd12377",
+            "prompt.txt": "a4df24c2934293736dc8b66004b45d7675066cfbde127ee5ea31791ec72e2d99",
+            "provider-1.request.json": "83e0609f378ffff867af883a721a1d6bf558b518eff106295c342f5c1dbbaa12",
+            "provider-1.response.txt": "57a9e7fcd70130c93186f64d6eb7e05d94bf1759116d82af7dcb348196690820",
+            "provider-2.request.json": "7cac28e4ece6fa4f0ef84a53a517df60d2773f4ae8dd5b4c4caeb5da61a679a8",
+            "provider-2.response.txt": "383a32f36b13eeb656780607b2c1b74d815168aa0b2694215be235c07621240f",
+            "provider-3.request.json": "7cac28e4ece6fa4f0ef84a53a517df60d2773f4ae8dd5b4c4caeb5da61a679a8",
+            "provider-3.response.txt": "383a32f36b13eeb656780607b2c1b74d815168aa0b2694215be235c07621240f",
+            "provider-4.request.json": "7cac28e4ece6fa4f0ef84a53a517df60d2773f4ae8dd5b4c4caeb5da61a679a8",
+            "provider-4.response.txt": "383a32f36b13eeb656780607b2c1b74d815168aa0b2694215be235c07621240f",
+            "provider-5.request.json": "7cac28e4ece6fa4f0ef84a53a517df60d2773f4ae8dd5b4c4caeb5da61a679a8",
+            "provider-5.response.txt": "383a32f36b13eeb656780607b2c1b74d815168aa0b2694215be235c07621240f",
+            "provider-6.request.json": "7cac28e4ece6fa4f0ef84a53a517df60d2773f4ae8dd5b4c4caeb5da61a679a8",
+            "provider-6.response.txt": "63256b4aa4fb0fa74906ddaa008f6fc0f7173b9a4e546325e526c20cdd7e943f",
+            "provider-7.request.json": "1fe5425402a63c7d614e91dc1c9c751a5608aa935ccbf835db9d9f38879021fb",
+            "provider-7.response.txt": "fe2361dab6fb6cd6a413c795296eca34bc103bba953fecb230c748c3eb08ca6e",
+            "session.json": "b2a47483346281121ec850c4e88ede61d8da11ec2550e39fa1a060fad380ac65",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "d09739aa3b92f78810e5ffd11cac32a0213977e18a1ed3aaeb8cda9955f822e5"
+          }
+        },
+        {
+          "trial": "longcat-2.5-preview-free-1",
+          "passed": false,
+          "case_count": 5,
+          "passed_cases": 4,
+          "failed_cases": [
+            {
+              "id": "catalog",
+              "reasons": [
+                "missing",
+                "missing_successful_call"
+              ]
+            }
+          ],
+          "tool_calls": 8,
+          "successful_calls": 7,
+          "tool_errors": [
+            {
+              "tool": "knowledge",
+              "action": "catalog",
+              "code": "INVALID_INPUT",
+              "pending": false
+            }
+          ],
+          "host_tool_names": [
+            "deveco_doctor",
+            "deveco_device",
+            "deveco_knowledge",
+            "deveco_skills",
+            "deveco_auth",
+            "deveco_knowledge",
+            "deveco_device",
+            "deveco_skills"
+          ],
+          "error": null,
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "7cf8c94ebbc6620426f23acb3daf66703cb907c039e826192241b48aa483a40e",
+          "evidence": {
+            "answer.txt": "0618d82634d90e6bf66361176bccafa2494752e62c410dc3c3be98a565699a4a",
+            "cases.json": "7bfa84f22da86c5ac978d330a85c0871cb7c6905579039b318a73412ff918eb0",
+            "events.jsonl": "07c26fd06a0fe21a4d9dd1083790bb72d75470b4041409840c1e330c9ab6b7f0",
+            "metadata.json": "79922b2c97f0b559737045c337c40640bb3525fb745aae7bba296b91bbd12377",
+            "prompt.txt": "a4df24c2934293736dc8b66004b45d7675066cfbde127ee5ea31791ec72e2d99",
+            "provider-1.request.json": "874f491aa116c827a5f66283627ba209605dfa1550ceddf5897e9ef849c7f565",
+            "provider-1.response.txt": "d15baf9c226184e83510a38b2a9d4591853db1d54f74e68bd9a8281cd947fe21",
+            "provider-2.request.json": "a87362c2efb24afd3a67f9e66baa50af401862ccfc02b5c25b2fb89f1d3dff45",
+            "provider-2.response.txt": "008d959f004e5be39ccc602b444d66aed8ba47c928f5fd24db69f0b9855e49cc",
+            "provider-3.request.json": "24622f952f0cf9b2e9ef49238ae3440aa74ce4dbf07642cb4c9b73b767d7a523",
+            "provider-3.response.txt": "54e89438d2b40c585a34dd82aa63c0e36f2822a9be2ea4920cb94dd840fa9d3e",
+            "session.json": "d1e6cd08cb9a146a23db59ddda452ef105a5cb74942cda40b107f8607b8cf82e",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "3424c86334fe5741f4a5bb9abf55ca1a32f47f734445205e81ec7dc6d0ebe657"
+          }
+        },
+        {
+          "trial": "longcat-2.5-preview-free-2",
+          "passed": false,
+          "case_count": 5,
+          "passed_cases": 3,
+          "failed_cases": [
+            {
+              "id": "catalog",
+              "reasons": [
+                "missing",
+                "missing_successful_call"
+              ]
+            },
+            {
+              "id": "auth",
+              "reasons": [
+                "missing",
+                "missing_successful_call"
+              ]
+            }
+          ],
+          "tool_calls": 6,
+          "successful_calls": 6,
+          "tool_errors": [],
+          "host_tool_names": [
+            "deveco_doctor",
+            "deveco_knowledge",
+            "deveco_device",
+            "deveco_skills",
+            "deveco_auth",
+            "deveco_skills"
+          ],
+          "error": null,
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "709256f620d4fbbdeb6ddaf66d4e094b25eb54974965253b155e80319a2bb5fe",
+          "evidence": {
+            "answer.txt": "0c1404025a08544b570fa21c8f08ea1611b363ff577242a8738256e3b83ce5d2",
+            "cases.json": "7bfa84f22da86c5ac978d330a85c0871cb7c6905579039b318a73412ff918eb0",
+            "events.jsonl": "481aede91875c34e4e66a8157d7f6b139e48e6c35c77711242689fd2798aa558",
+            "metadata.json": "79922b2c97f0b559737045c337c40640bb3525fb745aae7bba296b91bbd12377",
+            "prompt.txt": "a4df24c2934293736dc8b66004b45d7675066cfbde127ee5ea31791ec72e2d99",
+            "provider-1.request.json": "874f491aa116c827a5f66283627ba209605dfa1550ceddf5897e9ef849c7f565",
+            "provider-1.response.txt": "3cd7f7caf14b69aa5c0297213d5c21205db63585193431bda2fdd492d6259013",
+            "provider-2.request.json": "ff38f535f71388f0c5b1a2e9b49a1161f16a3a300bdf1c110c81fef9c18e7ad1",
+            "provider-2.response.txt": "ad31e096f77381384f03151977336518e9623df76a183a2f305bc4a2b90ae223",
+            "provider-3.request.json": "ae6c81b9e0763dd7ab23fe4e0a6177083202f3acd8e667475c3c4cc78ac8bb40",
+            "provider-3.response.txt": "ba7d2a53d67da9b309525a53ccddfd622747e2469fc7d004b6ad4e154a39c2e4",
+            "session.json": "fe90cca82d7a73a7f497936f57375eeb43826874d7a48c2136f99e1820093c20",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "b706d16f1c3f45367e0e2af80c249c161ee14d960b5bfb9d51b74d264fc89640"
+          }
+        },
+        {
+          "trial": "mimo-v2.6-flash-free-1",
+          "passed": false,
+          "case_count": 5,
+          "passed_cases": 5,
+          "failed_cases": [],
+          "tool_calls": 8,
+          "successful_calls": 7,
+          "tool_errors": [
+            {
+              "tool": "knowledge",
+              "action": "catalog",
+              "code": "INVALID_INPUT",
+              "pending": false
+            }
+          ],
+          "host_tool_names": [
+            "deveco_doctor",
+            "deveco_device",
+            "deveco_knowledge",
+            "deveco_knowledge",
+            "deveco_skills",
+            "deveco_skills",
+            "deveco_auth",
+            "deveco_knowledge"
+          ],
+          "error": null,
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "75f306f015a72fc9c14aae63b56cb18cf1c1f8fb82526ba9ece613730253b453",
+          "evidence": {
+            "answer.txt": "8905b8042087faee0157019559dcfd28cbfd9add64d582d7a81620a681089006",
+            "cases.json": "7bfa84f22da86c5ac978d330a85c0871cb7c6905579039b318a73412ff918eb0",
+            "events.jsonl": "7175ab7253eea82ad4e9deea7bc5bd3ebb1d78df5fb0ecd83f6af2d9ebedb92f",
+            "metadata.json": "79922b2c97f0b559737045c337c40640bb3525fb745aae7bba296b91bbd12377",
+            "prompt.txt": "a4df24c2934293736dc8b66004b45d7675066cfbde127ee5ea31791ec72e2d99",
+            "provider-1.request.json": "c033e67dcc7f1d2fbe9d51088b20823742db85c6b3f808d51406d4bd15e29467",
+            "provider-1.response.txt": "863d10dd904f9309123cc5c72620541d5675785977afb7057be25b3e3b121acc",
+            "provider-2.request.json": "d4c77c8895674325332a4464cacfc26f2b7cbfce2782616e9bd91ff6ff4263bd",
+            "provider-2.response.txt": "61468754e565bf764b2d08fd31fcac53b6cd01087d62d1eb62d8efa9becf79f6",
+            "provider-3.request.json": "c4e65f18f5f9ee25915585ff1cef1a2400c4165bf4a81bdef6cf160e74b32d0b",
+            "provider-3.response.txt": "faf91433e2ff414aa8263ceb2e90ba07a18ad6393e5b9ad31bc4ddef87e38e59",
+            "session.json": "7dd866af81285ddf21449cdcb21c54aab408c4c7212dd88ee8c61ca0068c836e",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "1ee455968f9272ac05a67665e3a71c066c8cae8be2b0aa9e2d6718891a696130"
+          }
+        },
+        {
+          "trial": "mimo-v2.6-flash-free-2",
+          "passed": false,
+          "case_count": 5,
+          "passed_cases": 4,
+          "failed_cases": [
+            {
+              "id": "catalog",
+              "reasons": [
+                "missing",
+                "missing_successful_call"
+              ]
+            }
+          ],
+          "tool_calls": 6,
+          "successful_calls": 6,
+          "tool_errors": [],
+          "host_tool_names": [
+            "deveco_doctor",
+            "deveco_knowledge",
+            "deveco_device",
+            "deveco_skills",
+            "deveco_auth",
+            "deveco_skills"
+          ],
+          "error": null,
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "4bfbfb89d0be60588e527ae32f8080de7e9a46772a9c8e1c09853757b3876ed3",
+          "evidence": {
+            "answer.txt": "50334d34e044e35a198317a28fc2777ed6bdea5a62391c8c53d4635ae7fe81d6",
+            "cases.json": "7bfa84f22da86c5ac978d330a85c0871cb7c6905579039b318a73412ff918eb0",
+            "events.jsonl": "4773f915e9a9df667a0c9c2eedc6ebea8672e0d826948f42789fc9f862b4399a",
+            "metadata.json": "79922b2c97f0b559737045c337c40640bb3525fb745aae7bba296b91bbd12377",
+            "prompt.txt": "a4df24c2934293736dc8b66004b45d7675066cfbde127ee5ea31791ec72e2d99",
+            "provider-1.request.json": "c033e67dcc7f1d2fbe9d51088b20823742db85c6b3f808d51406d4bd15e29467",
+            "provider-1.response.txt": "a84debd2106de9a951f019884868d553a52dc1ce1ee49aa064c8d43c8e5fc6a6",
+            "provider-2.request.json": "3d122062ff9e57aad1b43a68d702eeee7696df1f29c02af046e0fb304995d5c1",
+            "provider-2.response.txt": "6ef1393e785d15070bdb341ec3400874eb551ae9e8a69291914c5dbd952eb028",
+            "provider-3.request.json": "ea22c250d39059ab9b69ae5c76231baaafc0dbc6cbe0fbccb566dbcbbeb46e62",
+            "provider-3.response.txt": "6156123d5b1b26a25a36e51ea10b4d9c917995d83c33a1816dcf5e049ac5d0fb",
+            "session.json": "d7f72a1056c00dad5bdd6fa9eb002fcd7aaa9793492fa5ba6f767e38b030b3b7",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "c96361215b8cd85995bdf36c618f2799cce635e672f91305bb8f32ae11b0bff4"
+          }
+        },
+        {
+          "trial": "muse-spark-1.3-contributor-free-1",
+          "passed": true,
+          "case_count": 5,
+          "passed_cases": 5,
+          "failed_cases": [],
+          "tool_calls": 7,
+          "successful_calls": 7,
+          "tool_errors": [],
+          "host_tool_names": [
+            "deveco_doctor",
+            "deveco_device",
+            "deveco_knowledge",
+            "deveco_knowledge",
+            "deveco_skills",
+            "deveco_skills",
+            "deveco_auth"
+          ],
+          "error": null,
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "8c1b159e5def6076675af76bbf0eabfdffff5845806019c5183d61f055e28c04",
+          "evidence": {
+            "answer.txt": "c6ec134e151a044438feb365d4d4c78e7802c435240be260f6c26cc8f3588822",
+            "cases.json": "7bfa84f22da86c5ac978d330a85c0871cb7c6905579039b318a73412ff918eb0",
+            "events.jsonl": "2f0455a0a50c3e69d0ecb6e66916bf228cd78900a05882dc16d579497215a580",
+            "metadata.json": "79922b2c97f0b559737045c337c40640bb3525fb745aae7bba296b91bbd12377",
+            "prompt.txt": "a4df24c2934293736dc8b66004b45d7675066cfbde127ee5ea31791ec72e2d99",
+            "provider-1.request.json": "eb8df5790de5ea7fbfd64f05e56d51b1e93403cf5e44c4fbc5121b494684019d",
+            "provider-1.response.txt": "44491f9ac0aa291621c762a6ae68aa94448e05d41dc17de7e37d1bd7bd52d96b",
+            "provider-2.request.json": "fedca37929fb6656bf8cd2426f6d24d7d885fa43d6f40b1d9d35dfa5b0b68435",
+            "provider-2.response.txt": "c7612858de7f6bd52ae3d0c3935359422cb336f524a983be6da3235b85543510",
+            "provider-3.request.json": "4459ace63ab38248f37e7868fb7b0251d43d3650d61a83f9b291ba3920f5eaa8",
+            "provider-3.response.txt": "07b997e9ac80fde1dcda2fe4c620c071c3e30c7c511d62b1a440842f71011235",
+            "provider-4.request.json": "b78490ce739a24c0340beff8684ba08ac6c840e5ac8deb9b20c4f9c4c448da87",
+            "provider-4.response.txt": "68bcec85b456d237cca83df889401842e165642ee337e360cb1a561d57b5fa65",
+            "provider-5.request.json": "6c7ed80034b9de0173be24e71f5e7956530a7dc0510d53ff931459289d1178d7",
+            "provider-5.response.txt": "576b82a1ddad2eba56060b7a00cbd22c0e6bfef6c3e89aee699eb5100637f651",
+            "provider-6.request.json": "c0ba7391f3993300ba71a8d0fb5faa788968d55256f6f7c2e5b9e6e96eca08cf",
+            "provider-6.response.txt": "76240530b546113b9345a519ae770bd147f051751cd06db981b7a75c8af78f31",
+            "provider-7.request.json": "01642ae28e831a5d6d18d6529b474cfa3eb18dfabd62609aa1d2de4d5c814ccc",
+            "provider-7.response.txt": "72904acd70e427df5d00c2d3d8d875580896f9a0f97a83c17835d66ae754b6f2",
+            "provider-8.request.json": "68f9b05692e2e7b994606a3b089f86badd9ad32c3d6850329031dee35c3a5ca2",
+            "provider-8.response.txt": "624ce1dd92bdc5fbf92503059f26d08ef8d1d7901a1488bb61fd89cd1a2508f2",
+            "session.json": "af05ca6e29d1302b679dd46abacec7cfe4ec9ceb977032a7a0854d31ed53d8b1",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "2ee27bc2622cf9e54e5d657df9e0446bfcdffbe6ad255c0a9689fbdb5ae381de"
+          }
+        },
+        {
+          "trial": "muse-spark-1.3-contributor-free-2",
+          "passed": true,
+          "case_count": 5,
+          "passed_cases": 5,
+          "failed_cases": [],
+          "tool_calls": 7,
+          "successful_calls": 7,
+          "tool_errors": [],
+          "host_tool_names": [
+            "deveco_doctor",
+            "deveco_device",
+            "deveco_knowledge",
+            "deveco_knowledge",
+            "deveco_skills",
+            "deveco_skills",
+            "deveco_auth"
+          ],
+          "error": null,
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "e1353c36a78de09a46bd06ec657f6493e35960f79383759ad3dcac3760b3f941",
+          "evidence": {
+            "answer.txt": "e1209f031449049692817a4d6e36ee01f9827127ef16ccac8c7fa4d507e0602b",
+            "cases.json": "7bfa84f22da86c5ac978d330a85c0871cb7c6905579039b318a73412ff918eb0",
+            "events.jsonl": "a27dbc1e5191419c9c5b232d0e2c157eb882489b3335f014f50f9f9fc93ac17d",
+            "metadata.json": "79922b2c97f0b559737045c337c40640bb3525fb745aae7bba296b91bbd12377",
+            "prompt.txt": "a4df24c2934293736dc8b66004b45d7675066cfbde127ee5ea31791ec72e2d99",
+            "provider-1.request.json": "9b3f64ad7522e5602da3ca2e3181c7e656cf272c62ecdc8ec3f80dfad949b35e",
+            "provider-1.response.txt": "54631a9e124aa2353f934bfa732dc5a2728154356b94d83540d5c9d740e16dd7",
+            "provider-2.request.json": "fc5433cfebe3daf6dd66c6de25b15f04e1d7b9f9d0d95bed756d829b7c28cb3f",
+            "provider-2.response.txt": "e980d4036d3388e2e68cde0f8c4397e050f56a0cd148afefde15645451a554e7",
+            "provider-3.request.json": "b5fbe2798375e1d0f142c46d3e9d2e03b1b2db1c292020e708fd9e8fc02ca0ab",
+            "provider-3.response.txt": "dd0300e03ca01be8038b345562ff68d723c1d72d3771ebe4cf6aacdad26b0afe",
+            "provider-4.request.json": "3475b1c1e1dbaa2a8b1ca6d0c6f2fae7b9264f03631b31ba08493465525aefb6",
+            "provider-4.response.txt": "b3cd55ecbbfec8119ff1ae6c4bb106a600d5350c0eebd7bd4b75a53f9482f339",
+            "provider-5.request.json": "994cf56b40ce97ba182e0d4dcc5a16dc907b3a76bdeb82e2ff5a17e17de7979b",
+            "provider-5.response.txt": "2583c6795621c4907ea2beaed7ac79e843437089be94c9d49bcb1464cad39952",
+            "provider-6.request.json": "2e3fc2d51f7cf5d7c7e6f98cf23350671c1186e7c17581d53bd2d22b7d84c819",
+            "provider-6.response.txt": "0d0690a6f95e733b993c9ec5686f58e154837b71278c1f3761431dd7402f79e1",
+            "provider-7.request.json": "c1147da5d6469d450e4cf6b2a4fb19895c2477e5fbcd94c5589e278e2ce382a8",
+            "provider-7.response.txt": "f4e1a2219e323a078901601c253afdf2bae3e8012d51de96b32efa9a02c59b4c",
+            "provider-8.request.json": "f62066ce52d2aea3dba78bc4e52de3f96e5046e5defe8ba74b1269905f3d883e",
+            "provider-8.response.txt": "4ef4ad466c03a5637746e3d1a5419beca48457a03573c1f4ca0a54c1b70add01",
+            "session.json": "a78097e2312ad2f542bf732a4eedf49396171df0d9df271ce135a9775043ce6d",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "2ee27bc2622cf9e54e5d657df9e0446bfcdffbe6ad255c0a9689fbdb5ae381de"
+          }
+        },
+        {
+          "trial": "nemotron-3-ultra-free-1",
+          "passed": false,
+          "case_count": 5,
+          "passed_cases": 4,
+          "failed_cases": [
+            {
+              "id": "catalog",
+              "reasons": [
+                "missing",
+                "missing_successful_call"
+              ]
+            }
+          ],
+          "tool_calls": 6,
+          "successful_calls": 6,
+          "tool_errors": [],
+          "host_tool_names": [
+            "deveco_doctor",
+            "deveco_knowledge",
+            "deveco_device",
+            "deveco_skills",
+            "deveco_auth",
+            "deveco_skills"
+          ],
+          "error": null,
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "d041d7268a8f9d1ec8f934ddc1211a0f1e7397958ac0f4637295daf942a341b7",
+          "evidence": {
+            "answer.txt": "241e7adf46a2e9e101d29249e28a4255cd45e2e5631f5a7fbbd3f348a10fdcda",
+            "cases.json": "7bfa84f22da86c5ac978d330a85c0871cb7c6905579039b318a73412ff918eb0",
+            "events.jsonl": "919f2b83208bfe8517e2c76e334b1f38f9075a8415fdd4a9f728baf51ad716e3",
+            "metadata.json": "79922b2c97f0b559737045c337c40640bb3525fb745aae7bba296b91bbd12377",
+            "prompt.txt": "a4df24c2934293736dc8b66004b45d7675066cfbde127ee5ea31791ec72e2d99",
+            "provider-1.request.json": "99e003c917dd3d4f5e48ca09d7e82bd1672e7c93581781dc099f31a8f0fb601e",
+            "provider-1.response.txt": "7aef666d6d6bc48189120ca450134c5468c49a03ac882c07b2fe17a5e0202223",
+            "provider-2.request.json": "66f776a0316a9d952297355c6165ff1ab8e06a34b815b1ab7ab8c25993c8c96e",
+            "provider-2.response.txt": "febfa210bc574c6fc21c5010e620fa995182c0073bcbc1137f51818c93ebc172",
+            "provider-3.request.json": "815aedc9cfe2526117b86d3fd931eafcdf1ef5803fb15756e0a5f53ce8cf4f7a",
+            "provider-3.response.txt": "db55fbf6d1eb4d76f13b2be5a2c22634e4de7b69f7d5d7fba0ed1a03f88bdbeb",
+            "session.json": "df95ca3fa952ab0eea4f4018da25f138e7caaa650bb242a3a8aebc4a875e0c39",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "c31ee656f3e28017a1aa6ad80e2547d9f4593fcb6b1d07d4fcc41ac7baa617c6"
+          }
+        },
+        {
+          "trial": "nemotron-3-ultra-free-2",
+          "passed": false,
+          "case_count": 5,
+          "passed_cases": 4,
+          "failed_cases": [
+            {
+              "id": "catalog",
+              "reasons": [
+                "missing",
+                "missing_successful_call"
+              ]
+            }
+          ],
+          "tool_calls": 6,
+          "successful_calls": 6,
+          "tool_errors": [],
+          "host_tool_names": [
+            "deveco_doctor",
+            "deveco_device",
+            "deveco_knowledge",
+            "deveco_skills",
+            "deveco_auth",
+            "deveco_skills"
+          ],
+          "error": null,
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "4cbcbb57a770420b0888d9fa327d7cd7657722e019b5b50f353666139c4e3548",
+          "evidence": {
+            "answer.txt": "dc15d5d683e9b84da7cce61374fbc27ce1ea63913a80f429827d374de649479a",
+            "cases.json": "7bfa84f22da86c5ac978d330a85c0871cb7c6905579039b318a73412ff918eb0",
+            "events.jsonl": "1e4be9fb831a87acd2b15974a34a9471fbd49d05f2310a10c5cec2a21d43be0b",
+            "metadata.json": "79922b2c97f0b559737045c337c40640bb3525fb745aae7bba296b91bbd12377",
+            "prompt.txt": "a4df24c2934293736dc8b66004b45d7675066cfbde127ee5ea31791ec72e2d99",
+            "provider-1.request.json": "99e003c917dd3d4f5e48ca09d7e82bd1672e7c93581781dc099f31a8f0fb601e",
+            "provider-1.response.txt": "4ffe22b3a04e520d1be165f8a016fa503312bdba3be60a291bac5b302aab8408",
+            "provider-2.request.json": "3b79da937940daa42bf07fb10cf6ac57d373a761f0354eb8bdfd4781a06f1f2e",
+            "provider-2.response.txt": "7d1b83b0adac260060632ae287d8e2f428f66ebf6e4d383fd74649ced7b66e40",
+            "provider-3.request.json": "6146ab533642e2e5e8da163c61e826bdeff78f4a7a12dfca3e6a5c009e262665",
+            "provider-3.response.txt": "6653c6f0af7e5c36b2f0785626a52e63908764c3fba53c43f2b133395cdd7f02",
+            "session.json": "ddd378fcbb50c15987dace103dd6cd3a9abd96cb62a25d3d32acb3c7e4b597ed",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "62db8b8dfa7cdba78643e24079f5257ccec3c500393fc18030fac766b533c8a1"
+          }
+        },
+        {
+          "trial": "nemotron-3.5-lightning-free-1",
+          "passed": false,
+          "case_count": 5,
+          "passed_cases": 3,
+          "failed_cases": [
+            {
+              "id": "catalog",
+              "reasons": [
+                "missing",
+                "missing_successful_call"
+              ]
+            },
+            {
+              "id": "auth",
+              "reasons": [
+                "missing",
+                "missing_successful_call"
+              ]
+            }
+          ],
+          "tool_calls": 7,
+          "successful_calls": 6,
+          "tool_errors": [
+            {
+              "tool": "knowledge",
+              "action": "catalog",
+              "code": "INVALID_INPUT",
+              "pending": false
+            }
+          ],
+          "host_tool_names": [
+            "deveco_doctor",
+            "deveco_device",
+            "deveco_knowledge",
+            "deveco_skills",
+            "deveco_auth",
+            "deveco_knowledge",
+            "deveco_skills"
+          ],
+          "error": null,
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "dfd2fbccd42b5055e8b957d74d712624cacf732ee3381df5b11865ed4bee7b1c",
+          "evidence": {
+            "answer.txt": "69fd259a08f26991b1d4c954981002bf43bf6467cac5f92a51714eec4544bc58",
+            "cases.json": "7bfa84f22da86c5ac978d330a85c0871cb7c6905579039b318a73412ff918eb0",
+            "events.jsonl": "01849a6aecb07380b3cd7f7e959b45b732176902f2022c2851f5c7f7f58f8a56",
+            "metadata.json": "79922b2c97f0b559737045c337c40640bb3525fb745aae7bba296b91bbd12377",
+            "prompt.txt": "a4df24c2934293736dc8b66004b45d7675066cfbde127ee5ea31791ec72e2d99",
+            "provider-1.request.json": "efde0c3227462013a7f0748ad38df6b373d7365c1d3864c637736c3c90ec9660",
+            "provider-1.response.txt": "7a267a03a25d1723140d334fe4d0955e9766de7c7bd5126af2fb0942b98c6069",
+            "provider-2.request.json": "f4dfb88cb8cba1667161054efbe81303a243e7e471526976ab4da1e4d87db922",
+            "provider-2.response.txt": "fd5a48649063f192859f1355708e4a8bf84c037fe055375bd8f6bb6cff3c89ac",
+            "provider-3.request.json": "4d000093eb87d2cee811a462c5a64531c86bda88677442415048f1b38c102c4c",
+            "provider-3.response.txt": "2f051cbc12653e8b1ef2142bb5824c9d306c014c0581089f79fd5f86c7cd788c",
+            "provider-4.request.json": "088d8ae943e174937a7a5c21193470e5186f15ad301d4cfd422637b6247f4bf3",
+            "provider-4.response.txt": "2b72d741b52c32f20db948228e1dff354b9d46aee7fa358b129adfb8d725f0a8",
+            "session.json": "45549f41f36fedf3699cf0fce78923251effc4d5033449219190358a47ef597e",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "87d60de29bc04055114dcd566092dbe12bc37aa12cd438eb76873f27648a27e3"
+          }
+        },
+        {
+          "trial": "nemotron-3.5-lightning-free-2",
+          "passed": false,
+          "case_count": 5,
+          "passed_cases": 3,
+          "failed_cases": [
+            {
+              "id": "catalog",
+              "reasons": [
+                "missing",
+                "missing_successful_call"
+              ]
+            },
+            {
+              "id": "auth",
+              "reasons": [
+                "missing",
+                "missing_successful_call"
+              ]
+            }
+          ],
+          "tool_calls": 6,
+          "successful_calls": 6,
+          "tool_errors": [],
+          "host_tool_names": [
+            "deveco_doctor",
+            "deveco_device",
+            "deveco_knowledge",
+            "deveco_skills",
+            "deveco_auth",
+            "deveco_skills"
+          ],
+          "error": null,
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "1d9f173e7ecc8467de7123f02eac09c62c8bf2d75bdf7a3924b8c02550d7c4db",
+          "evidence": {
+            "answer.txt": "c04df74ab0c38ecb8d36d881ebbbe624ac7c7a37010686be3a43bc8460abe7b8",
+            "cases.json": "7bfa84f22da86c5ac978d330a85c0871cb7c6905579039b318a73412ff918eb0",
+            "events.jsonl": "22c5dc90dad2eec8238d94267860fb22e7fad15b79129f9fd3dc722ecf4d16c5",
+            "metadata.json": "79922b2c97f0b559737045c337c40640bb3525fb745aae7bba296b91bbd12377",
+            "prompt.txt": "a4df24c2934293736dc8b66004b45d7675066cfbde127ee5ea31791ec72e2d99",
+            "provider-1.request.json": "efde0c3227462013a7f0748ad38df6b373d7365c1d3864c637736c3c90ec9660",
+            "provider-1.response.txt": "60055d5740beb3b49b82ef06a7f4940c6fa16b9eb4a4283f2cea90c5b68e53ab",
+            "provider-2.request.json": "5291aa7209d2d721c6b94ac561d5d2ab47fcc9849c547ef35438a766834b39da",
+            "provider-2.response.txt": "02d73407639da4009d123d28726ecda2eeced16f5f732f149703a6a758d1be1c",
+            "provider-3.request.json": "1faa3a18003df85e721aea4fbc2783214dbcf8c3dda53370b4132671119715e2",
+            "provider-3.response.txt": "2be52a0de965e580884fa87b5dafdbfac207235529019cf48a5467c18f3ccb92",
+            "session.json": "7bd1d9472186daef86dc7aaaf096c9a913851183627910e517c6692723f87c93",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "eeaf1c278551e0fd857277f62a0c8a8c1f7207ccef143b142e67b255a9af59fc"
+          }
+        },
+        {
+          "trial": "space-bunny-free-1",
+          "passed": false,
+          "case_count": 5,
+          "passed_cases": 4,
+          "failed_cases": [
+            {
+              "id": "auth",
+              "reasons": [
+                "missing",
+                "missing_successful_call"
+              ]
+            }
+          ],
+          "tool_calls": 8,
+          "successful_calls": 7,
+          "tool_errors": [
+            {
+              "tool": "knowledge",
+              "action": "catalog",
+              "code": "INVALID_INPUT",
+              "pending": false
+            }
+          ],
+          "host_tool_names": [
+            "deveco_doctor",
+            "deveco_device",
+            "deveco_knowledge",
+            "deveco_knowledge",
+            "deveco_knowledge",
+            "deveco_skills",
+            "deveco_skills",
+            "deveco_auth"
+          ],
+          "error": null,
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "72c62d0ce938a6835cfda57dd8e27152b548044193d47fd54979fd27921d1da0",
+          "evidence": {
+            "answer.txt": "b8d44a986afe7bbbfcf86f25d6f15acc0445cf39e7bc6a563007c1b0d23d31c3",
+            "cases.json": "7bfa84f22da86c5ac978d330a85c0871cb7c6905579039b318a73412ff918eb0",
+            "events.jsonl": "a861ac2d26f99158d03fc17df4fc8f4ea8f98293f3a5841467c04998017cb96e",
+            "metadata.json": "79922b2c97f0b559737045c337c40640bb3525fb745aae7bba296b91bbd12377",
+            "prompt.txt": "a4df24c2934293736dc8b66004b45d7675066cfbde127ee5ea31791ec72e2d99",
+            "provider-1.request.json": "594bb6102f57d2e02d1e957d057d1a9b87e03e3dda5d935c1f4cac02426b3e2e",
+            "provider-1.response.txt": "2d3c822bb30a35eb3563a751e2f55e756b6d6c93ec49e1e63717abf0cc1a358b",
+            "provider-2.request.json": "a7ddcc4a46da363371661ee1107947dfe1c21fbb5ef82343d8926e85f2c52194",
+            "provider-2.response.txt": "f284fbb14bb7ec8305f7495cbde48dd5394368a3b9a2a73c2c85e273f4a6852c",
+            "provider-3.request.json": "29180fc5cb53181b629eaf3c20db6681623a57f23ee74d1bb7d812245d562d24",
+            "provider-3.response.txt": "eec9275c9c590060569426f4fd014dd5c3aac1021e8b09fc41e2ae27cfb4fba3",
+            "provider-4.request.json": "8bdbee048138e891e8aeb92c9323a1321b04e72ab26ad83b7a67dfc7098237c9",
+            "provider-4.response.txt": "37e2c9ed654ff68451b44fd7dba3c1a54aed63ef5b1635970b5b1b3bb06f5d61",
+            "provider-5.request.json": "93d7abb69a79a14eac60f5481f4d5acb960e5e854a69210cd6f69bf6fcb023b9",
+            "provider-5.response.txt": "cdf712b45a4a230d2adbcb3e5a3c17295fbfa556cc5e8a0b73b8bc2466000e5b",
+            "session.json": "35175f65540a604a50843522bc78114c627020e9a8114704ebda50892bc34b07",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "f441e143d981772e1cff9f11cf29bff3342b430c76898534fcf636a2af8568d6"
+          }
+        },
+        {
+          "trial": "space-bunny-free-2",
+          "passed": true,
+          "case_count": 5,
+          "passed_cases": 5,
+          "failed_cases": [],
+          "tool_calls": 7,
+          "successful_calls": 7,
+          "tool_errors": [],
+          "host_tool_names": [
+            "deveco_doctor",
+            "deveco_device",
+            "deveco_knowledge",
+            "deveco_knowledge",
+            "deveco_skills",
+            "deveco_auth",
+            "deveco_skills"
+          ],
+          "error": null,
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "16ed450581853e431d22eafab2ab052a322261a884e7b11c0c5a25f56693a588",
+          "evidence": {
+            "answer.txt": "283eada2a4b1296c7c9a22515f419989adb9a258fff79405312aa029b9d5e075",
+            "cases.json": "7bfa84f22da86c5ac978d330a85c0871cb7c6905579039b318a73412ff918eb0",
+            "events.jsonl": "8570fccc4faf39e7cacc014c5960eb8764f19e45e1b4132bebb563eeb57f2e35",
+            "metadata.json": "79922b2c97f0b559737045c337c40640bb3525fb745aae7bba296b91bbd12377",
+            "prompt.txt": "a4df24c2934293736dc8b66004b45d7675066cfbde127ee5ea31791ec72e2d99",
+            "provider-1.request.json": "594bb6102f57d2e02d1e957d057d1a9b87e03e3dda5d935c1f4cac02426b3e2e",
+            "provider-1.response.txt": "10c57dfc4ee504daee0757046e50abe5c312eca8879fa7628cdf8e15e07d183e",
+            "provider-2.request.json": "431cb96234ccecd2b822d65965295c4769d4da64b46da78a5f12e5a4d1e71233",
+            "provider-2.response.txt": "fadb2efe64813dc7e4c4cccac76076f5c9a4a44c614ab3d55216eca65e0c8df3",
+            "provider-3.request.json": "8c9e386540d58bc2192f4027bdec808b9a659935770ba28c18e034f5bd427f41",
+            "provider-3.response.txt": "7a996c1c8a7772cb628b6c8761e3b0c2ae68ec38ea9373d0c1e4a3991cde7e9a",
+            "provider-4.request.json": "8c51e858189dd0cd92f249794cdc9e57c1d5402f49b57a199075b333812cb834",
+            "provider-4.response.txt": "a77787c75be7b66b242f35bc07639dcc20f50a309dae07603be819bc1df03819",
+            "session.json": "b9101c2f29bc4940db6d27fc9d75f0e8a4ef2575e0664fee45ba13fc962c2b42",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "52a48e76122052fcd1419b9aef40bd055fc757e4d188ebb4e45f3446a3b54103"
+          }
+        },
+        {
+          "trial": "step-5-preview-free-1",
+          "passed": true,
+          "case_count": 5,
+          "passed_cases": 5,
+          "failed_cases": [],
+          "tool_calls": 7,
+          "successful_calls": 7,
+          "tool_errors": [],
+          "host_tool_names": [
+            "deveco_doctor",
+            "deveco_device",
+            "deveco_knowledge",
+            "deveco_skills",
+            "deveco_auth",
+            "deveco_skills",
+            "deveco_knowledge"
+          ],
+          "error": null,
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "b8627d285bddaded98f9a177cbdb7436266bb876a0321619a61bf74f771ed0c2",
+          "evidence": {
+            "answer.txt": "c3888f5d1b7ce21129b2200b3fca957a320ff05cb7c2017705f5d7867193d5f0",
+            "cases.json": "7bfa84f22da86c5ac978d330a85c0871cb7c6905579039b318a73412ff918eb0",
+            "events.jsonl": "6fa4a9d4bee53efe42d836ef7c4ce37a9092de86393b052563dd58251380b7fa",
+            "metadata.json": "79922b2c97f0b559737045c337c40640bb3525fb745aae7bba296b91bbd12377",
+            "prompt.txt": "a4df24c2934293736dc8b66004b45d7675066cfbde127ee5ea31791ec72e2d99",
+            "provider-1.request.json": "423d23a28156abcc62b403539c7b14917c7c75166b2d5e9f94216e45956f7481",
+            "provider-1.response.txt": "6a7cf9566b8f32601066f383ae88a552022ddd77e6547068e5b160484086d7ab",
+            "provider-2.request.json": "e2bf8f2fc1d84b54baebf8e8684850c036220244eb653a486023791231a5aca8",
+            "provider-2.response.txt": "383a32f36b13eeb656780607b2c1b74d815168aa0b2694215be235c07621240f",
+            "provider-3.request.json": "e2bf8f2fc1d84b54baebf8e8684850c036220244eb653a486023791231a5aca8",
+            "provider-3.response.txt": "f4caa76be955462387b1af2304fbafcf87a06d8b8a9006c30019895857268d49",
+            "provider-4.request.json": "920f3e2e7736774ce2d79ebc4d9267ddf527be53bd75232c93bf9a1eb3919c52",
+            "provider-4.response.txt": "814994263cabd617a9c1817b01753e7abc1a2f09ebedf8e8e6c67f352de4454c",
+            "session.json": "bded2ef8c07e7dce18f7a8783524500440afdc3d9c0a7859dc051747d828b5a7",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "ee5ef45da7fabd59337c3bfd071ab05fa34ea3dfca1e89e2bc66d97daafe1856"
+          }
+        },
+        {
+          "trial": "step-5-preview-free-2",
+          "passed": false,
+          "case_count": 5,
+          "passed_cases": 3,
+          "failed_cases": [
+            {
+              "id": "catalog",
+              "reasons": [
+                "missing",
+                "missing_successful_call"
+              ]
+            },
+            {
+              "id": "auth",
+              "reasons": [
+                "missing",
+                "missing_successful_call"
+              ]
+            }
+          ],
+          "tool_calls": 6,
+          "successful_calls": 6,
+          "tool_errors": [],
+          "host_tool_names": [
+            "deveco_doctor",
+            "deveco_device",
+            "deveco_knowledge",
+            "deveco_skills",
+            "deveco_auth",
+            "deveco_skills"
+          ],
+          "error": null,
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "a7947917056486e67a8a09594c680b7d9cf6392b6539d1718f957d9372ea8d98",
+          "evidence": {
+            "answer.txt": "5424e9cbe348cadb13a113464ec99a6ba675b8f79d87f24f370356ee09daaa0a",
+            "cases.json": "7bfa84f22da86c5ac978d330a85c0871cb7c6905579039b318a73412ff918eb0",
+            "events.jsonl": "8733554b9cba849d9ad263adb0719b56c4eb53c3feb5f6feafc0e93d1f1e2bdf",
+            "metadata.json": "79922b2c97f0b559737045c337c40640bb3525fb745aae7bba296b91bbd12377",
+            "prompt.txt": "a4df24c2934293736dc8b66004b45d7675066cfbde127ee5ea31791ec72e2d99",
+            "provider-1.request.json": "423d23a28156abcc62b403539c7b14917c7c75166b2d5e9f94216e45956f7481",
+            "provider-1.response.txt": "383a32f36b13eeb656780607b2c1b74d815168aa0b2694215be235c07621240f",
+            "provider-2.request.json": "423d23a28156abcc62b403539c7b14917c7c75166b2d5e9f94216e45956f7481",
+            "provider-2.response.txt": "1028fe8f64c9551fddb20e09acf45443f09275ee9f2f6ef93e620a714e9cfbe2",
+            "provider-3.request.json": "dbd93d8df928bd539217281d8357d9cfc6dfb3946c75dd0188d28b42b52bcb74",
+            "provider-3.response.txt": "2d2fb37664206b57d76599ed4fd4a0d5c3a6fc2239326f3741fcde87ab42176c",
+            "provider-4.request.json": "872ea0c340ab4c95dbfec47d7ec02427d276f367ba7b1e93437909cce0579b91",
+            "provider-4.response.txt": "cf1c9d5c46a5e83e0ae8fd51c4840cea089e4b7225219aae4714568c22535677",
+            "session.json": "11d93b6693619a3be474451b04d067599e2c09587b3d90f419b04cdc84b688fc",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "7c066d3d8a1fdae287974a98b7893bb4e10cf32af05299b7af33eb6db0768178"
+          }
+        }
+      ]
+    },
+    {
+      "group": "usb-live",
+      "build_id": "a5f40b0c097887e8512d777956597e565eaa6babec72de4899befa0baa9ec226",
+      "suite": "live",
+      "models": [
+        "opencode/muse-spark-1.3-contributor-free",
+        "opencode/mimo-v2.6-flash-free",
+        "opencode/big-pickle"
+      ],
+      "rounds": 2,
+      "modality": "text only; no visual model acceptance",
+      "expected_trials": 6,
+      "trials_completed": 6,
+      "passed_trials": 0,
+      "cases": 102,
+      "passed_cases": 46,
+      "calls": 155,
+      "successful_calls": 147,
+      "trials": [
+        {
+          "trial": "big-pickle-1",
+          "passed": false,
+          "case_count": 17,
+          "passed_cases": 0,
+          "failed_cases": [],
+          "tool_calls": 6,
+          "successful_calls": 6,
+          "tool_errors": [],
+          "host_tool_names": [],
+          "error": "host process failed\n\nnull !== 0\n",
+          "timed_out": true,
+          "provider_errors": [],
+          "report_sha256": "e25ce07f49a50365f90c58ac7080e361a734860d18f1d59d29f8ae0ca23b7998",
+          "evidence": {
+            "cases.json": "126321363c6830bc44518fe0be5356c729edb08a5f4f97262711d84b796237c9",
+            "events.jsonl": "6bc5eeddd2681ca7df1fe2b5a8d9eaf6b3c77c265600851fe88cf85774489415",
+            "metadata.json": "5bec080508299aa3b63ed2037786cb651c653a660c7508dd0dc06e8d55ec8b2f",
+            "prompt.txt": "e653c668f2016e8ee9ee60abd9aeee1f91ab64c36272dd82c2b4b73a39855ef5",
+            "provider-1.request.json": "cbfda0d3e77c2a7f415c9ab1da165e24474ada3522c0ffbb712e766c3a395543",
+            "provider-1.response.txt": "8796ac63171ce6fe3baa526d006d9b785e7a86ccf52c09fa75d65d2876b4fe63",
+            "provider-2.request.json": "5394554b1fd5161fa18e05979a37c76ff61055964b362eac82d755fb95bc3c5b",
+            "provider-3.request.json": "5394554b1fd5161fa18e05979a37c76ff61055964b362eac82d755fb95bc3c5b",
+            "provider-4.request.json": "5394554b1fd5161fa18e05979a37c76ff61055964b362eac82d755fb95bc3c5b",
+            "provider-4.response.txt": "fbaa891c4a94e9dfceb51cb43e342c200b07f130b385c66967ef1d70e574e685",
+            "provider-5.request.json": "8fde2259888ba4e716bfe61caf0c3759226ce579e64d4ebf037ef2c7bf982a2e",
+            "provider-6.request.json": "8fde2259888ba4e716bfe61caf0c3759226ce579e64d4ebf037ef2c7bf982a2e",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "918082e137e65be10889205fdb7f54b81de810a526f259b501e2af58a9babf60"
+          }
+        },
+        {
+          "trial": "big-pickle-2",
+          "passed": false,
+          "case_count": 17,
+          "passed_cases": 0,
+          "failed_cases": [],
+          "tool_calls": 28,
+          "successful_calls": 28,
+          "tool_errors": [],
+          "host_tool_names": [
+            "todowrite",
+            "deveco_doctor",
+            "deveco_device",
+            "deveco_device",
+            "deveco_device",
+            "deveco_device",
+            "deveco_device",
+            "deveco_project",
+            "deveco_code",
+            "deveco_knowledge",
+            "deveco_knowledge",
+            "deveco_skills",
+            "deveco_auth",
+            "deveco_code",
+            "deveco_emulator",
+            "deveco_job",
+            "deveco_emulator",
+            "deveco_emulator",
+            "deveco_diagnose",
+            "deveco_skills",
+            "deveco_knowledge",
+            "deveco_knowledge",
+            "todowrite",
+            "deveco_run",
+            "deveco_run",
+            "deveco_ui",
+            "deveco_ui",
+            "deveco_ui",
+            "deveco_ui",
+            "deveco_ui"
+          ],
+          "error": "live trial used tools outside the MCP",
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "5718e4effb52e8345bce51aa2591d3f3b2e01931fdfb0459e0054782a53fd061",
+          "evidence": {
+            "cases.json": "126321363c6830bc44518fe0be5356c729edb08a5f4f97262711d84b796237c9",
+            "events.jsonl": "5c6c9ef9f55533ae3aa2a7ab51243f9ae41aeb4d9f5c2e38bac656a10507c6f2",
+            "metadata.json": "5bec080508299aa3b63ed2037786cb651c653a660c7508dd0dc06e8d55ec8b2f",
+            "prompt.txt": "e653c668f2016e8ee9ee60abd9aeee1f91ab64c36272dd82c2b4b73a39855ef5",
+            "provider-1.request.json": "cbfda0d3e77c2a7f415c9ab1da165e24474ada3522c0ffbb712e766c3a395543",
+            "provider-1.response.txt": "b69a128aab59d326e6f00f262882dced894215ea57ff648993d1814fe494e920",
+            "provider-10.request.json": "617885b91ddae45651211dd74f8df4ea0dd5716c83203f50815c75200174c4ff",
+            "provider-10.response.txt": "6c3a05ecaa7c9957717f1aa8ef13ee3a2fe67c68d1509e9e3ff968b50dfa154b",
+            "provider-11.request.json": "2cd042ffadb2292a9b9ae43f203ef519b32a137967ae6fb59d8ca9f4fb02dc23",
+            "provider-11.response.txt": "d16831926830c1bb7ca89f8338fe4e916b526d852e85dd0aa9c0cb8a0706226c",
+            "provider-12.request.json": "d3cfb74cf4b9f9832d3248ef7f870a7773ffbb83bfacd0f69dda928f653f1a87",
+            "provider-12.response.txt": "2447988153f67bdc8ced3a66cd993eb99bf6aaf25a954e5c19c69761831f2e00",
+            "provider-13.request.json": "e6ce6c9e18733ba9ce03a78b292a41b29be35792d924a40542d6e2c85cd2f744",
+            "provider-13.response.txt": "eebc245dcc85d06ec3c090df5a8187d6d95145a7f5b6b5bdffbe1cd92eecd64f",
+            "provider-2.request.json": "4e525be8db8bfa9f91446b9cb7f07c8a6a34fe1c9451175c38de8867e93d31c5",
+            "provider-2.response.txt": "8a84eb8f9656b451e4936765ff4e9ca1799e19955d43e038605e0a8960973870",
+            "provider-3.request.json": "cdfe4d35dfb1247b76a9e5cacae23dd39a386bdbe0e206325c06bc4943ca3ee3",
+            "provider-3.response.txt": "6a15a09c5af78a041535ed003c0acedc38fcaa50792ba7ef5d4e11b047fc9e2f",
+            "provider-4.request.json": "05a1e59fd695fefcd40b1edbc7a0b4082fd64722056df61c3ebb51ac4ec1c11f",
+            "provider-4.response.txt": "76cc2f9f4dacc24a2c778001fcae5df502af31788558714d20bc71b38bab492c",
+            "provider-5.request.json": "c6b77d51acfa456658b93057be17d9fd0f02e8a31bff1078bf36b17260ddb170",
+            "provider-5.response.txt": "e700d6f85ce847dddd9c03bdc7bc16ae761342e9f333eba9bcbbb83c40f2f7e6",
+            "provider-6.request.json": "774eb7d2d9f98851b9fb68a6aba8121533bca3c83dbb04047da337e0646a2f8c",
+            "provider-6.response.txt": "0b5e0a562996e9e41dc4a47681fe27e3a155b0097916c312a5dad59bfe4bddb6",
+            "provider-7.request.json": "b2adf5dcf5980e3805b36f919aa26dc195efc82729f0c7c4f18a80283df0899e",
+            "provider-7.response.txt": "1c31999c1dbd4623603d770d0a0234455ea42337c0a9a51aee1d809a75eb196e",
+            "provider-8.request.json": "2b9aded091efce9b42ecf34f4597b2d82b24031e9c8875326e9534be48acc4a3",
+            "provider-8.response.txt": "ebb3460b68c8cb1769ee1d02705f9838cd3c108e088f947c4c9492e4a62fbc36",
+            "provider-9.request.json": "0c0af4168395f7ee298b1da3f9ba10bea8c3c6ce87fbd84f11d1f3a8a239b2e9",
+            "provider-9.response.txt": "2296c29a57a83e91c0f5b5c32495716c2d1ef10b6512c01a5f2c1f4736dfae23",
+            "session.json": "7a9f183d86e408f92b29a707294457ba671ec0a45a3d9e7bb46b8ac74781ffe8",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "c86ffd1390fe182a6cecfa82f902c5f230ebde0b6cd3fa6edaf4031b8dd74f41"
+          }
+        },
+        {
+          "trial": "mimo-v2.6-flash-free-1",
+          "passed": false,
+          "case_count": 17,
+          "passed_cases": 15,
+          "failed_cases": [
+            {
+              "id": "device-log",
+              "reasons": [
+                "missing",
+                "missing_successful_call"
+              ]
+            },
+            {
+              "id": "text-ui",
+              "reasons": [
+                "missing",
+                "missing_successful_call",
+                "missing_successful_call"
+              ]
+            }
+          ],
+          "tool_calls": 29,
+          "successful_calls": 27,
+          "tool_errors": [
+            {
+              "tool": "knowledge",
+              "action": "read",
+              "code": "NOT_FOUND",
+              "pending": false
+            },
+            {
+              "tool": "ui",
+              "action": "find",
+              "code": "TIMEOUT",
+              "pending": false
+            }
+          ],
+          "host_tool_names": [
+            "deveco_doctor",
+            "deveco_device",
+            "deveco_device",
+            "deveco_device",
+            "deveco_device",
+            "deveco_device",
+            "deveco_project",
+            "deveco_code",
+            "deveco_code",
+            "deveco_knowledge",
+            "deveco_knowledge",
+            "deveco_knowledge",
+            "deveco_skills",
+            "deveco_auth",
+            "deveco_emulator",
+            "deveco_emulator",
+            "deveco_knowledge",
+            "deveco_skills",
+            "deveco_emulator",
+            "deveco_job",
+            "deveco_diagnose",
+            "deveco_run",
+            "deveco_knowledge",
+            "deveco_run",
+            "deveco_ui",
+            "deveco_ui",
+            "deveco_ui",
+            "deveco_ui",
+            "deveco_ui"
+          ],
+          "error": null,
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "61f3d97cd803b756893f3f45a6fa11c762b960cb13f8275e76f5bb0a17f6e39d",
+          "evidence": {
+            "answer.txt": "db4acd2771745197a5391610988969ef9a86472a3691fb6084237a1575541ef8",
+            "cases.json": "126321363c6830bc44518fe0be5356c729edb08a5f4f97262711d84b796237c9",
+            "events.jsonl": "5c1a793e79f5f5f4c349b4416d144f6ef9e0731a5e175a1e87efee56af698894",
+            "metadata.json": "5bec080508299aa3b63ed2037786cb651c653a660c7508dd0dc06e8d55ec8b2f",
+            "prompt.txt": "e653c668f2016e8ee9ee60abd9aeee1f91ab64c36272dd82c2b4b73a39855ef5",
+            "provider-1.request.json": "19e9495134a491a4da049acf4311afefad9cca9e84fce6c4d8738773e833a9fe",
+            "provider-1.response.txt": "dffbbeb5f472a19acfda037fd484d0eff7fd1e7cf3176b9191045cc2b42d8218",
+            "provider-2.request.json": "0310d58787a821d65dba7ce2de50c5f09027a8b66a6c75d637d40c7d8cc88079",
+            "provider-2.response.txt": "f38f4e5b356d7b349b2df1e746bedcff5c06648ba77d5ca33b75ccd43832df67",
+            "provider-3.request.json": "945f8b28d3ce25293faa9a702c5849bdf219f4fac130493e931573a04de8a7ea",
+            "provider-3.response.txt": "2499c16440098d0505f2e6760b4b55d821a75500d3af5337d9518b889267afae",
+            "provider-4.request.json": "09cf34ca5a481db55290654d47ef0073921c649f70704a8d5a7440437a679c95",
+            "provider-4.response.txt": "63ee7c55306a21ffde72254aaf8c4d37c973bd9554973f7fda80488479050289",
+            "provider-5.request.json": "927e6de8b5fbee69c77cbe976d20b5c228f87dc95013c0eb8ee09ec0b520560b",
+            "provider-5.response.txt": "c76e900bf71c28094c1e60d56fa1c91bf596a71ec08d88bcbd516d71a06c9e87",
+            "provider-6.request.json": "ff247b42b072b8d376f84d57978afc829a2eb84d3ecfa0d7f6507b2090633d74",
+            "provider-6.response.txt": "be080aae444f3f3da7c533a66ae43ecda9a2e17186f84410f20ac3a922ff158f",
+            "provider-7.request.json": "e36ce054579de9a9a000b220e833d53afcc25c22068ddfe5ae915c828c13f009",
+            "provider-7.response.txt": "98f10b45795ee0da75ad938afab8df39c8d62313184db0f4385c951f7918f36c",
+            "provider-8.request.json": "017482458c58fd6635b0b328d3b7db7604e996f76eca317d692ece8c115b3201",
+            "provider-8.response.txt": "d2bf3ac1d7915c462cdc9b5670479da0df4a17b0acef2b69065fa035a5f75b8c",
+            "provider-9.request.json": "040fccbd73054afb8cf67eabe682fb7c68ab8f5de97a97546fb405eadd8a139a",
+            "provider-9.response.txt": "48d10caf9b3c32626d1951feb745016e005911e58c231b15f1c43c5921c3e051",
+            "session.json": "4b732b8dfdc448aea433cf6ed8fb76643094ff31b53a374e0eb5f562d97a146c",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "a2deefc07f6e9f3e88a3bfd78fad7cd7fa31ca7ef68a2962bd5e0d316484afdf"
+          }
+        },
+        {
+          "trial": "mimo-v2.6-flash-free-2",
+          "passed": false,
+          "case_count": 17,
+          "passed_cases": 0,
+          "failed_cases": [
+            {
+              "id": "environment",
+              "reasons": [
+                "invalid_call"
+              ]
+            },
+            {
+              "id": "devices",
+              "reasons": [
+                "invalid_call"
+              ]
+            },
+            {
+              "id": "device-info",
+              "reasons": [
+                "invalid_call"
+              ]
+            },
+            {
+              "id": "device-log",
+              "reasons": [
+                "invalid_call",
+                "missing",
+                "missing_successful_call"
+              ]
+            },
+            {
+              "id": "sqlite",
+              "reasons": [
+                "invalid_call"
+              ]
+            },
+            {
+              "id": "shell",
+              "reasons": [
+                "invalid_call"
+              ]
+            },
+            {
+              "id": "project",
+              "reasons": [
+                "invalid_call"
+              ]
+            },
+            {
+              "id": "code",
+              "reasons": [
+                "invalid_call"
+              ]
+            },
+            {
+              "id": "api-versions",
+              "reasons": [
+                "invalid_call"
+              ]
+            },
+            {
+              "id": "knowledge",
+              "reasons": [
+                "invalid_call"
+              ]
+            },
+            {
+              "id": "catalog",
+              "reasons": [
+                "invalid_call"
+              ]
+            },
+            {
+              "id": "skills",
+              "reasons": [
+                "invalid_call"
+              ]
+            },
+            {
+              "id": "auth",
+              "reasons": [
+                "invalid_call"
+              ]
+            },
+            {
+              "id": "emulator",
+              "reasons": [
+                "invalid_call"
+              ]
+            },
+            {
+              "id": "jobs",
+              "reasons": [
+                "invalid_call"
+              ]
+            },
+            {
+              "id": "diagnose",
+              "reasons": [
+                "invalid_call"
+              ]
+            },
+            {
+              "id": "text-ui",
+              "reasons": [
+                "invalid_call",
+                "missing",
+                "missing",
+                "missing_successful_call",
+                "missing_successful_call"
+              ]
+            }
+          ],
+          "tool_calls": 31,
+          "successful_calls": 27,
+          "tool_errors": [
+            {
+              "tool": "knowledge",
+              "action": "read",
+              "code": "NOT_FOUND",
+              "pending": false
+            },
+            {
+              "tool": "knowledge",
+              "action": "read",
+              "code": "NOT_FOUND",
+              "pending": false
+            },
+            {
+              "tool": "run",
+              "action": "launch",
+              "code": "INVALID_INPUT",
+              "pending": false
+            },
+            {
+              "tool": "ui",
+              "action": "assert",
+              "code": "INVALID_INPUT",
+              "pending": false
+            }
+          ],
+          "host_tool_names": [
+            "deveco_doctor",
+            "deveco_device",
+            "deveco_device",
+            "deveco_device",
+            "deveco_device",
+            "deveco_device",
+            "deveco_project",
+            "deveco_code",
+            "deveco_code",
+            "deveco_knowledge",
+            "deveco_knowledge",
+            "deveco_knowledge",
+            "deveco_skills",
+            "deveco_skills",
+            "deveco_auth",
+            "deveco_emulator",
+            "deveco_knowledge",
+            "deveco_emulator",
+            "deveco_emulator",
+            "deveco_job",
+            "deveco_diagnose",
+            "deveco_knowledge",
+            "deveco_knowledge",
+            "deveco_run",
+            "deveco_run",
+            "deveco_run",
+            "deveco_ui",
+            "deveco_ui",
+            "deveco_ui",
+            "deveco_ui",
+            "deveco_ui"
+          ],
+          "error": null,
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "ce782b0a3d86dccaa77af14895d1ec07a065db5d513aec6f95bd09233c15668f",
+          "evidence": {
+            "answer.txt": "fd213e09a7d98db53cbdb46350549025f26081f5bebf86a859d343230b026cfd",
+            "cases.json": "126321363c6830bc44518fe0be5356c729edb08a5f4f97262711d84b796237c9",
+            "events.jsonl": "371907c3718534c18f92daa5602d0fdb99b0de6f695705c3b1e4c34b5c64caab",
+            "metadata.json": "5bec080508299aa3b63ed2037786cb651c653a660c7508dd0dc06e8d55ec8b2f",
+            "prompt.txt": "e653c668f2016e8ee9ee60abd9aeee1f91ab64c36272dd82c2b4b73a39855ef5",
+            "provider-1.request.json": "19e9495134a491a4da049acf4311afefad9cca9e84fce6c4d8738773e833a9fe",
+            "provider-1.response.txt": "73980da24aeda78063e4d05077d69720e84c66244ab78b24d250dac9810e04e9",
+            "provider-10.request.json": "2e4dab8b962699eaba41a1a60ed97d5a3a7963fdc2cb5c41e2fc4ede5b98ecd2",
+            "provider-10.response.txt": "785bb8a6b9f04cb840741627861041da864718892aea988d55c048b7c9434132",
+            "provider-11.request.json": "9a36b464211fe2febf6951b371cee593e48ef61536adee00a1006966d41dc56b",
+            "provider-11.response.txt": "23495895018c1f36ca529918627a5e4ce8fbebeb3e5b3657b0536cf2e7a34f35",
+            "provider-12.request.json": "e17bb06f91f61e217a038a973d0b6181b4b5f978e9ca7bf6c0ea8aa4f8c23d70",
+            "provider-12.response.txt": "6693d286734bd779a9bcb3305a53d2d6e2f6709992cfa78aba4e86e4f2c59de0",
+            "provider-2.request.json": "82db3a17a6f2c011e41e9abab5a5c6fa601fbc65a6753499d1394cbef004324e",
+            "provider-2.response.txt": "3f3685932f9717ae2a08e9ed19cd99cb9f980abe1e67f2a11853ee33678f7c35",
+            "provider-3.request.json": "68c77317e31f0ca6518fc253d780adc61bca3e4d8454227efd88a748510c2fe4",
+            "provider-3.response.txt": "3ee9bf07cf6e3eb939200f2df551422d056619037853eb3b568a61c7387eb298",
+            "provider-4.request.json": "f971558296677419ede9f19bd1b7de763e2b7a56bb078f23dbf71872c04437e2",
+            "provider-4.response.txt": "62fd469b8c754211ea9cafbce5ab341996ab6f0a9fc663489d929e9aa7e6d8aa",
+            "provider-5.request.json": "3a4d53406abd03a2d52945e305d4d0bff09e58a61a0687bdae38fddfaa788bf3",
+            "provider-5.response.txt": "dbe0e5704886b239df128b94462b5bf34bcf52fd9582129b2f832c6e4cbfe424",
+            "provider-6.request.json": "05c7eeb56b827a1cce211d428b9f3b3de6add1fc7911cd5347b9100ec2b25c5c",
+            "provider-6.response.txt": "3ad19006cefc6fcd74185fe8d05d0858d702f78cbd27841b3a26d6b69e17ebff",
+            "provider-7.request.json": "4dda496275f9ed7cdd878367c49269317563d7bff98dbcc414ee17b13fa91134",
+            "provider-7.response.txt": "6754201f4d948d45aaa6c53b4bbd547dfe161159d1160153c17dd39499a09d5a",
+            "provider-8.request.json": "3d3a4655b6e8dfae4a8073a429844e070b0f8dd5ce7a462cf29e2f613cb26f83",
+            "provider-8.response.txt": "cb9aecb0d46d0198ec90f4e051698f032dd3a60eadbd5642bb02b75666932a86",
+            "provider-9.request.json": "1af85e9a427ac490ae9fccb0da314b911503e314768bb36c35f192c26ca5d6f2",
+            "provider-9.response.txt": "2b307791058df4402163bbab3bc9cb96c1c7b30956fe77b2e9404d26f133a38d",
+            "session.json": "1ada5ab5f03bc5b518aefbd2f33b6213cce679e6ee58f6934feec5cc87f7e7ad",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "04794c5ea812090bdc7e14facde0e7f142e194b098dbbe73f2f62a2fec421db5"
+          }
+        },
+        {
+          "trial": "muse-spark-1.3-contributor-free-1",
+          "passed": false,
+          "case_count": 17,
+          "passed_cases": 16,
+          "failed_cases": [
+            {
+              "id": "jobs",
+              "reasons": [
+                "missing",
+                "missing_successful_call"
+              ]
+            }
+          ],
+          "tool_calls": 33,
+          "successful_calls": 31,
+          "tool_errors": [
+            {
+              "tool": "code",
+              "action": "check",
+              "code": "INVALID_INPUT",
+              "pending": false
+            },
+            {
+              "tool": "ui",
+              "action": "find",
+              "code": "INVALID_INPUT",
+              "pending": false
+            }
+          ],
+          "host_tool_names": [
+            "deveco_doctor",
+            "deveco_device",
+            "deveco_device",
+            "deveco_device",
+            "deveco_device",
+            "deveco_device",
+            "deveco_project",
+            "deveco_code",
+            "deveco_code",
+            "deveco_code",
+            "deveco_knowledge",
+            "deveco_knowledge",
+            "deveco_knowledge",
+            "deveco_knowledge",
+            "deveco_skills",
+            "deveco_skills",
+            "deveco_auth",
+            "deveco_emulator",
+            "deveco_emulator",
+            "deveco_emulator",
+            "deveco_job",
+            "deveco_job",
+            "deveco_job",
+            "deveco_diagnose",
+            "deveco_run",
+            "deveco_run",
+            "deveco_ui",
+            "deveco_ui",
+            "deveco_ui",
+            "deveco_ui",
+            "deveco_ui",
+            "deveco_ui",
+            "deveco_ui"
+          ],
+          "error": null,
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "4cd237eb66bf886da1f1b6e206771118bd00b9a3146615641edfb57870ad3215",
+          "evidence": {
+            "answer.txt": "fe655a62693f3e9bf54da3332ed229c510162965dfee62c1f9f7f0560c67dd79",
+            "cases.json": "126321363c6830bc44518fe0be5356c729edb08a5f4f97262711d84b796237c9",
+            "events.jsonl": "58e9aff3d7bbc63f05a5c731723d6dcae781ec66646452a4e38bb95ee3dd54c1",
+            "metadata.json": "5bec080508299aa3b63ed2037786cb651c653a660c7508dd0dc06e8d55ec8b2f",
+            "prompt.txt": "e653c668f2016e8ee9ee60abd9aeee1f91ab64c36272dd82c2b4b73a39855ef5",
+            "provider-1.request.json": "426e19d3607509bf0c1966ecbf357e64afb9305bf8803b0d42f0df3b241f7f73",
+            "provider-1.response.txt": "ba500fdb920d648911692712f082813489930d441a990a20bc97ae0454bb0d7f",
+            "provider-10.request.json": "1aafcf6f0af80e7b29f43c00a63a120f7357c8be9fef141da3d6b27a2e18492f",
+            "provider-10.response.txt": "3db25458c8180f1610564736bf87d5eb02624b13ee9b88384493d40e973e8dba",
+            "provider-11.request.json": "3a7c12a068bb20a2466c9d264dc71b926f773b84bc9f6b6dbb728ac75159779c",
+            "provider-11.response.txt": "ba3e9d69943ae84e8fc69ff3dd9bdf68980e60e64f3e7ad25ec4b9f45b58566c",
+            "provider-12.request.json": "ce6e917e2e14e7e3436ae56d28bbee10fbda4b06a0672a2f9fb6836a79c60695",
+            "provider-12.response.txt": "e6b0a2f346241e46619ada6c77320eb15121559d2dea0a268d2db4f6aa54df8f",
+            "provider-13.request.json": "f0b569a951569165e9722e13b9619b1d16c33c9a7f3bade76d4f4f33368988a4",
+            "provider-13.response.txt": "8a0eab9f9e8a76f7aa6abb9668dc6e9a88518761fa0887f8b263568acbc7acb5",
+            "provider-14.request.json": "e587bc1ffd1fad085318f57eb48bcd1994d4f7f08ccd7e4ad55cab19c34bb759",
+            "provider-14.response.txt": "6d894afd6d99cd43a02c456bb1be9352685d5cee57a90ea04fc0221754028265",
+            "provider-15.request.json": "ffcd9b854bdc69996356421bd2bade5011a47f2c54d433b57202d0db9676e45b",
+            "provider-15.response.txt": "a07a01572509e1cebfe0516e29f8a9876eef15342d576a453ccf71e21773791b",
+            "provider-16.request.json": "3993d20a3f9ee2d88679c2643f399dae054bd0cf9c157ed2f6cacce224d58de7",
+            "provider-16.response.txt": "e3ea3064530c9deb12cc8993a8d3e7d7dd191b537608a8b13910307a9a2b43d6",
+            "provider-17.request.json": "b5330c166cd89cd5546f9dd3ec5278f864c433c8a7defef25c65593a51d50929",
+            "provider-17.response.txt": "80bd77d9bca734fbb4765b68587e0e4bd8271c8be97711f2f73cb88e67231e59",
+            "provider-18.request.json": "9c9c01586ae188690e169fcddbe628b03792d9357facbf852a05c16b3dcc7682",
+            "provider-18.response.txt": "f0ec2742597617b7c87546e020e70b572a0c43c818f7bbaab019ff4277099f07",
+            "provider-19.request.json": "2929fab7c5baf256cd34f18d3687704cfe7c17d2319bd490dac7364346de0039",
+            "provider-19.response.txt": "f1fee477797d0373fcdf49bd1f7954fcc0fd5deee179372f3f181570d47ee7f4",
+            "provider-2.request.json": "426e19d3607509bf0c1966ecbf357e64afb9305bf8803b0d42f0df3b241f7f73",
+            "provider-2.response.txt": "15249d94c215f5469c8f00c7de49b2f046bf90344d0047cdef0fc5ee12d8cb6a",
+            "provider-20.request.json": "0b242cce67c4443370d77894481d3c1af151fc18ce173fa65d080245241e2546",
+            "provider-20.response.txt": "3154c0a83fb71e3e8191347a157556e1795e0964a75407c0298e974dc1627c19",
+            "provider-21.request.json": "69f5b88785c6aa60ae84bdbdbd8f358cf9451285f596927d5c986e7d2556248e",
+            "provider-21.response.txt": "6b56e66487dc8a6e6d2e59854700af9dd83b354d4e6bea3a45ea8b6f00e8c2d0",
+            "provider-22.request.json": "df124f752e5583185896d5c21de2c7f7a73dbafcaf7c02452ee9d65f411966d3",
+            "provider-22.response.txt": "5f673f393d47552bd5fa217136d8edaee039290c57bbde5ae48a5d197f14fd66",
+            "provider-23.request.json": "dd508e55495cf1d7924d3b9857afcc0b0cb482b030aa9300cb6c32db2ec18e20",
+            "provider-23.response.txt": "856ce5bd24f10b8965dabd3e2a2e19a395d5b17a0a0b8483f53dc09e70b160f7",
+            "provider-24.request.json": "c35dffc072ac2bc25d8bdf0491b5e6d9f77a91baa7e2338cc7f980d6e44edd18",
+            "provider-24.response.txt": "32c18d6bbd0f31251fe70f1deb4b25cb6ba7f18ffa591971dae6473a384aa512",
+            "provider-25.request.json": "4ece9030980d9c7778aa824b400c86cd7ddbea9ba51aa41d605460aad3b50288",
+            "provider-25.response.txt": "0f7a62b16ebb2d2b97f9ceef02eec6b5458373926e8ca925e04936f21198dadf",
+            "provider-26.request.json": "62e321f76500dce45551556a3d24678cca9741daa7771132882bf08cf6f436e4",
+            "provider-26.response.txt": "38b03be30459d11e14f2e9249d5ee3d9d9a5c3d8f42d8a4d74816272d89ff033",
+            "provider-27.request.json": "6d6e8374cae7e3241be409052423c41c12bd528acce4b707e74ce7ea34203ed7",
+            "provider-27.response.txt": "5c81072af6d2e421e29f12e43eec118148112e80317d5089ab35bb57a0701c58",
+            "provider-28.request.json": "93055b79e74b24a41bb053eeb46bb03700817f2d3aaa97a8811f39497b7e80a0",
+            "provider-28.response.txt": "7c149f4fa4d8548ea84bf017248251a3a854fca46b8fa6ee05b37fe0a7408ea8",
+            "provider-29.request.json": "2d1e99a7d6d4a1f178651c5111cd3ea2eb1a48dbd737e7fd4c7949a1ce0f63bb",
+            "provider-29.response.txt": "a191f12ee03e6cfa829c5f625a01fed0948b99ddac982ab05df640cf42de3f7d",
+            "provider-3.request.json": "6d6a03cdaf9ef6d7761b4aa0716f19c16b5f0fd78c35e1dc336fd08c6d774758",
+            "provider-3.response.txt": "2f1802f56b58d05a55d64168d6bceb84d35177169b6cc795f623a2b6e51f1e14",
+            "provider-30.request.json": "12342759245d7beadfb561df6cd00b3ae06a2cb71384532598dd636efe45f982",
+            "provider-30.response.txt": "7451358380f4068cf733cee7f9f979a04679278b3e54faa1b1abe7445697e78c",
+            "provider-31.request.json": "667b7875c7b6647149f2741e996d54a34dd876313bbc207350b8f434481542ba",
+            "provider-31.response.txt": "d7de5902b5493dc82917d867557012bb435a0ac84fa723a6b1a1d6d68b2d63ee",
+            "provider-32.request.json": "799c5913314b996aabc5a12447fb1447dfa721e255f70309dda2d838f92a9908",
+            "provider-32.response.txt": "054b50d9f1236062f27d8611dd7831731b78f8fd7b7e5f0bb11f82943c525c8c",
+            "provider-33.request.json": "8d8e050c6006c1bf31344d4672299316af49e7352f9dd5e6161949d2b504c7f0",
+            "provider-33.response.txt": "ea9f23c75ce27f0c0017cdda779eff0a32ea755aeef13848bc0bc4c685122722",
+            "provider-34.request.json": "27bc144decf48bd117427537b9c43722f658088277593896ce9cb4106bd24abd",
+            "provider-34.response.txt": "4a7b85a70f5dae071f751f8ff52f5e885fbf6cadb66bd5cccb5720bf8680d251",
+            "provider-35.request.json": "33a36815904aa96241d1fcaf9b03b1b742e691070f9f4e0ce57ccf86cd30af22",
+            "provider-35.response.txt": "46af031e8c302ded9957aa16e0616456a16a791bd0136b49518dddd7c33bb45a",
+            "provider-4.request.json": "af3db2f09dbfcb42a1e3e5bc2259b7a3d2e2b438dc41c11ade85c36df26c2a24",
+            "provider-4.response.txt": "55a5003ce0feb2ce16a86691016a39be9bfa1c2adfe25023a933b3010c8d0547",
+            "provider-5.request.json": "f2ca6ae6f2dfb4109cb7564ac00d26c5e643cd8f432fb35b9dda521941073c47",
+            "provider-5.response.txt": "37d163f6bf3d6736b6fe5bd924c957a16f76c5047041efd45cfa61ab8d709ee6",
+            "provider-6.request.json": "b084cbb2d611655464eaf61f2d2502e45ac6b627e645ba7da7d44e9a8e1f11fe",
+            "provider-6.response.txt": "71e856b488fec46c4facf30b4760a2b1d25a087e20294988c7e80171dfa5cb9c",
+            "provider-7.request.json": "735cae1fb2a26d6b0c67e6b3c7b5594e6ab23fc8675c569776df120e367af252",
+            "provider-7.response.txt": "777622efac85e30815db7d423cfcc27f879edcab2b8a7763b0aa5b3dd0cf9011",
+            "provider-8.request.json": "8ce88cb593772ce8e1f2f4f710325f1548c3a02b4dcbb53dddcb82b2c0ce0cec",
+            "provider-8.response.txt": "fc6cb488814796a8475e8409598ea19ecfaf0e144af0acb26aed6b99601ff6db",
+            "provider-9.request.json": "5c335de580e8e0449f417db19f05bb29482ae3a0a7c62de519c2630e1f832408",
+            "provider-9.response.txt": "46c1377359907b5875d77747626daad4a7f14e01a6cbe2296e5990586376b11d",
+            "session.json": "7cdf39396b64e5d9ae899e26d63de4b81dcdacff8b50014b3e9a766a15f982a9",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "175dc0492181852d152d7aca165a656fde4ce73b6f7de2ffbdc213e073854ebd"
+          }
+        },
+        {
+          "trial": "muse-spark-1.3-contributor-free-2",
+          "passed": false,
+          "case_count": 17,
+          "passed_cases": 15,
+          "failed_cases": [
+            {
+              "id": "jobs",
+              "reasons": [
+                "missing",
+                "missing_successful_call"
+              ]
+            },
+            {
+              "id": "text-ui",
+              "reasons": [
+                "missing",
+                "missing_successful_call"
+              ]
+            }
+          ],
+          "tool_calls": 28,
+          "successful_calls": 28,
+          "tool_errors": [],
+          "host_tool_names": [
+            "deveco_doctor",
+            "deveco_device",
+            "deveco_device",
+            "deveco_device",
+            "deveco_device",
+            "deveco_device",
+            "deveco_project",
+            "deveco_code",
+            "deveco_code",
+            "deveco_knowledge",
+            "deveco_knowledge",
+            "deveco_knowledge",
+            "deveco_knowledge",
+            "deveco_skills",
+            "deveco_skills",
+            "deveco_auth",
+            "deveco_emulator",
+            "deveco_emulator",
+            "deveco_emulator",
+            "deveco_job",
+            "deveco_diagnose",
+            "deveco_run",
+            "deveco_run",
+            "deveco_ui",
+            "deveco_ui",
+            "deveco_ui",
+            "deveco_ui",
+            "deveco_ui"
+          ],
+          "error": null,
+          "timed_out": false,
+          "provider_errors": [],
+          "report_sha256": "85611efd7547f93ee57b523ceeffcccfaa0e537d4d25c85da02b8a58b5fc9892",
+          "evidence": {
+            "answer.txt": "75745dbcfccc48c8bd3b38e3c214ac1fba4eaa755b11af7523125a1d1b0fa04c",
+            "cases.json": "126321363c6830bc44518fe0be5356c729edb08a5f4f97262711d84b796237c9",
+            "events.jsonl": "9cd1fa85beb08c2905b3b60d6297896a6a04b29126df56af62a9593fd1ceed0f",
+            "metadata.json": "5bec080508299aa3b63ed2037786cb651c653a660c7508dd0dc06e8d55ec8b2f",
+            "prompt.txt": "e653c668f2016e8ee9ee60abd9aeee1f91ab64c36272dd82c2b4b73a39855ef5",
+            "provider-1.request.json": "dcbcc8173bf38c6ad0232f46c526148efc9492f9c8493e8e06a060a91ccc2876",
+            "provider-1.response.txt": "03cb9ada3ba562d86161b1d212b3782fe608a0b13662e696ef9fdc8b3f9796a7",
+            "provider-10.request.json": "320e9abb25d5fde1f4c23b03011f81feee86d4d6ed65185b7e9e92a3e462683e",
+            "provider-10.response.txt": "bf4f75c4ecbb6ec2c03dff0aa3b4a374be133db41146e5626dc2a670ee308755",
+            "provider-11.request.json": "568ffebba45b254dae0df6f6191d8cbb70ad1b2026e59731625713196ca28a30",
+            "provider-11.response.txt": "514b607c48507cb4e05a1f2171149c8761b0fe548f312b83b8bac0ff94ad634b",
+            "provider-12.request.json": "d44512d36e28a41edb7c0794731ec36d7d5d93335d11831a53a574c5510f58c9",
+            "provider-12.response.txt": "8d54634e09153a5e35020a34ec43786b47704ba2372e7b6ba3baa38d9fdfd65c",
+            "provider-13.request.json": "413271d11c265ef78e7313706d6f7351e35b4b1bbc5cd2698d02c3103ac93e6e",
+            "provider-13.response.txt": "3ad9e4088b73421099647cd31ca83c2427b863405ae75e62b69b2645de6defb7",
+            "provider-14.request.json": "bd7603d15a25aff41246c426d40c39aaf9c4a7fb160356a69c2de6a143dc5e86",
+            "provider-14.response.txt": "426c721b7750c353b081eda83f3d9e6ec0d21aaf22f6404d298e2950b4d5baf6",
+            "provider-15.request.json": "22d59f889c693b5ac690587cfb1c36de77af6186cecc54381941822210ff179a",
+            "provider-15.response.txt": "62f42479b30417c00d7aac14167e94d6f4430fec7eec2ac10477cf791abca81b",
+            "provider-16.request.json": "4761a6772d19b20f124ea84e7cf7024b2dbe00b2c3384456724a912e3a6851ed",
+            "provider-16.response.txt": "7101532774a8986cd21e82614ac5d1b5d4c71567afa91cbfea9d8dfe8288871a",
+            "provider-17.request.json": "0cc6f3f0e92cfcd6d1682c29dc2c90a3df26b3b6165312271af64a5a0b202a51",
+            "provider-17.response.txt": "9cca753bbe21b7a34e83b73135c772391406f2d64c1d489a22f079467c8666ca",
+            "provider-18.request.json": "37b3dc7083e02aaf7db3142143bcc5e4d0a610446c0f0338bb9a53af6b3428d4",
+            "provider-18.response.txt": "f11fb513eacc90647e2e4016b71ad8eed43fa5a0a1a175579d5cb3da5c00ced1",
+            "provider-19.request.json": "e0d18726039f22491a8bd5192e726ee3e9f26aa877e45f981cf4bebe495fc58f",
+            "provider-19.response.txt": "496afc010a5b9e2380d2be2b9ecc3194859e137bc7c8c23437ac5dbf20c826a3",
+            "provider-2.request.json": "c3c607965d112a156de695aed13d5354e0b43d6eeab7b8cc71c0aee259305018",
+            "provider-2.response.txt": "4ef182f16010d691c706e5d649b524fb5f2e65aa0928ecd34e290d7a46a2bbad",
+            "provider-20.request.json": "1b80cf1520725f5c5ca5b0a4ac962f502edd8e61a7d3d59a1d261dc4b039a9c0",
+            "provider-20.response.txt": "e2ccbd3c650c7b518f0cec4773d342fa4af945cfa51fd2dcbb4137336463e287",
+            "provider-21.request.json": "9f98485c929ee63e4baaa7765b9bf237b9642057f57e10e62defa653b0efbb02",
+            "provider-21.response.txt": "1d6fd8d4716dba4abd906f82a668955d4acaf19521513af4dfa04cef9722a484",
+            "provider-22.request.json": "491960d8dcb2b41783691f7d50251f7a7f7e74f88d81d8a3fcbf2086bf3c1641",
+            "provider-22.response.txt": "d4486e6779fc2e8857bd80dae4a048eca065f50b43c115747a46b23f6d77ebdf",
+            "provider-23.request.json": "2c38d63c541a1f84d3425d9dbf5cfedf28cf383db95c4c843a7da200a5876c2e",
+            "provider-23.response.txt": "95e2353ccbee18f6e8343181e48eeb96f174998bb77fba8b32d3b171138062d3",
+            "provider-24.request.json": "6456936affb26e71600a8fbfbf7d9537c511d448d7ef90bdce33dcb01e05d143",
+            "provider-24.response.txt": "ca01c562074aab26474e103b89d5215169be415d317e519bf1bd013840788c2a",
+            "provider-25.request.json": "84ff64a6e29a23e9d0cc61b6df61a18c33d7b05098f3dc4523f08b64e96aeb0f",
+            "provider-25.response.txt": "2d0a1ee73a495604512a21392ab1620d746866115e4c4f48b162a2926ead5de0",
+            "provider-26.request.json": "b0e8752db1056363978f0fc1b071781a6be3c612b4421e8e87551429305fccd1",
+            "provider-26.response.txt": "b6a0981616a51dbbd31a6081e9285e8c29ce29f33f77fbd8928097a7cab613e8",
+            "provider-27.request.json": "9e007418c8b90ea33a7e6844cb5d1232b48b078f528636e59aca654754080ce5",
+            "provider-27.response.txt": "170e377109de48c9746dea187c8ac97b137109478e2af118fa0f364f01879a8d",
+            "provider-28.request.json": "66b9def96b26978a943a5bf6741c6e82def7bf903e04cbe2bbfb8a3644cb0b6e",
+            "provider-28.response.txt": "146985f24bafdafbb27c64fd02610b9bd0c1c69c6664c881dd6ef065330138ed",
+            "provider-29.request.json": "5475445847914072f0b5b95409bc3f5ff8a334cbb29875ef509b76804eac774d",
+            "provider-29.response.txt": "e4f11b27fe0b19888c18673ce6e381e5d4ed8d5ef82f82e4f42351ad89e80003",
+            "provider-3.request.json": "d6c279e21c356e2b91220152d4ffedc5dd1bb0887a84a5e7bccb9b474ce9b2b8",
+            "provider-3.response.txt": "c53e11d5d9b43a4746da93e4ce567f9b9781fa1299641b366bc6625a0eb49e65",
+            "provider-4.request.json": "3dacce4aae9c42536cfa6e666a5fc075c69276e8ba269ff3435e6eb928fe859c",
+            "provider-4.response.txt": "e1659440475a0070997a8e3a6fc2e5f0bfba6fb9e1f3a7502445e2d81ea6eabf",
+            "provider-5.request.json": "51fa6894b49cc819348a60bdbd09cb8bc493483720df84032ec67047f8b9433e",
+            "provider-5.response.txt": "78f83dc48368db1749d8e7bf2cfc4786c0101f6fce322c2cdec3c3706e95b6cf",
+            "provider-6.request.json": "aa6fbe6f3c7d67b83517718210c76c13767de426039fada7d9f3f0b4a6e9771b",
+            "provider-6.response.txt": "54f66d959a2a510e9f467764daef4cb5a900cbcf61506f1a2e8fa6b9eb8ee3b6",
+            "provider-7.request.json": "261665c9aee506bbbb1c0f802ecb8437baabd4d81b982dfa4638b9d53fba21fb",
+            "provider-7.response.txt": "d16b62fd184cebad26e056b5229009729d9ad0430c21e019a9e0395ef1ea3b0f",
+            "provider-8.request.json": "4a5904d59ae7b9d991200ac86f0e47336fdc6620391d6eaf1d443975fb33109d",
+            "provider-8.response.txt": "e5cf890b3528ac373bafa356d09f3d291aa77e8c766c69a8552cc0fb75e0c486",
+            "provider-9.request.json": "8efb3cdc34abb6c94ac9bb0fd72f57ce0f04b681d03a8acc9f6bfa6cca6ac221",
+            "provider-9.response.txt": "9831bec6f312ad61b3f0ee3794d0dc9f2e7dd768a044bd4849174875ec56bbba",
+            "session.json": "c2d6a190bfa609ab98fe74905c0d7c47c9c2ac057e975c8c066dad891dce518e",
+            "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "transport.jsonl": "c0dcf11c0501a7b0cbb15ba05ea5ce2cb336f2b61f82f1bb38ad7b50e7c3fb8f"
+          }
+        }
+      ]
+    }
+  ]
+}

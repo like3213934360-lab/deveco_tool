@@ -27,6 +27,7 @@ function handle(req, res, body) {
   if (url.pathname === "/authrouter/auth/api/temptoken/check") {
     agc.loginChecks ??= [];
     agc.loginChecks.push(Object.fromEntries(url.searchParams));
+    if (url.searchParams.get("tempToken") === "tmp-delayed") { agc.delayedLogin = res; return; }
     return res.end(url.searchParams.get("tempToken") === "tmp-ok" ? JWT : "bad");
   }
   if (url.pathname === "/authrouter/auth/api/jwToken/check") {
@@ -108,7 +109,7 @@ const call = async (tool, args) => {
 const waitLogin = async (provider) => {
   for (let i = 0; i < 50; i++) {
     const s = await call("auth", { action: "status", provider });
-    if (s.logged_in || s.error) return s;
+    if (!s.login_pending && (s.logged_in || s.error)) return s;
     await new Promise((r) => setTimeout(r, 100));
   }
   throw new Error("login did not finish");
@@ -163,6 +164,47 @@ test("both login providers support cn/global with region-matched callbacks", asy
       assert.equal(agc.loginChecks.at(-1).site, region === "cn" ? "CN" : "SG");
     }
   }
+});
+
+test("fresh login is pending despite old credentials, failures can retry immediately", async () => {
+  assert.equal((await call("auth", { action: "status", provider: "developer" })).logged_in, true);
+  const started = await call("auth", { action: "login", provider: "developer", open_browser: false });
+  const pending = await call("auth", { action: "status", provider: "developer" });
+  assert.equal(pending.logged_in, true); assert.equal(pending.login_pending, true);
+  const url = new URL(started.login_url);
+  const response = await fetch(`http://127.0.0.1:${url.searchParams.get("port")}/callback`, {
+    method: "POST", body: new URLSearchParams({ code: url.searchParams.get("code"), tempToken: "invalid", siteId: "1" }),
+  });
+  assert.doesNotMatch(await response.text(), /登录成功/);
+  const failed = await waitLogin("developer");
+  assert.equal(failed.login_pending, false); assert.equal(failed.logged_in, true);
+  assert.match(failed.error, /invalid session/);
+  const retry = await call("auth", { action: "login", provider: "developer", open_browser: false });
+  assert.notEqual(retry.login_url, started.login_url);
+  const next = new URL(retry.login_url);
+  await fetch(`http://127.0.0.1:${next.searchParams.get("port")}/callback`, {
+    method: "POST", body: new URLSearchParams({ code: next.searchParams.get("code"), tempToken: "tmp-ok", siteId: "1" }),
+  });
+  assert.equal((await waitLogin("developer")).logged_in, true);
+});
+
+test("logout aborts an in-flight token exchange and cannot restore credentials later", async () => {
+  await call("auth", { action: "logout", provider: "codegenie" });
+  const started = await call("auth", { action: "login", provider: "codegenie", open_browser: false });
+  const url = new URL(started.login_url);
+  await fetch(`http://127.0.0.1:${url.searchParams.get("port")}/callback`, {
+    method: "POST", body: new URLSearchParams({ code: url.searchParams.get("code"), tempToken: "tmp-delayed", siteId: "1" }),
+  });
+  for (let i = 0; !agc.delayedLogin && i < 50; i++) await new Promise((r) => setTimeout(r, 10));
+  assert.ok(agc.delayedLogin, "the real HTTP token request reached the mock portal");
+  await call("auth", { action: "logout", provider: "codegenie" });
+  agc.delayedLogin.end(JWT);
+  assert.equal((await call("auth", { action: "status", provider: "codegenie" })).logged_in, false);
+  await assert.rejects(fetch(`http://127.0.0.1:${url.searchParams.get("port")}/callback`));
+  const next = await call("auth", { action: "login", provider: "codegenie", open_browser: false });
+  assert.notEqual(next.login_url, started.login_url);
+  assert.equal((await call("auth", { action: "status", provider: "codegenie" })).login_pending, true);
+  await call("auth", { action: "logout", provider: "codegenie" });
 });
 
 test("teams and token refresh on 401", async () => {

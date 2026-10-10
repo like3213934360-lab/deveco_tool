@@ -1,0 +1,1503 @@
+{
+  "date": "2026-10-10",
+  "version": "1.4.6",
+  "build_id": "a5f40b0c097887e8512d777956597e565eaa6babec72de4899befa0baa9ec226",
+  "native_codex": {
+    "version": "1.4.5",
+    "build_id": "44db485182694c582ba2e60e94a09673edf6dfbe12b555810c8dbe3c4cab9193",
+    "reloaded_to_1_4_6": false
+  },
+  "counts": {
+    "verified": 97,
+    "environment_limited": 2,
+    "unverified": 3
+  },
+  "scope": "Cumulative action-path coverage; previous v1.4.5 evidence is not a full v1.4.6 rerun or proof of model reliability",
+  "action_matrix": [
+    {
+      "tool": "doctor",
+      "action": "(none)",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "doctor"
+      ]
+    },
+    {
+      "tool": "project",
+      "action": "info",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "project.info-sync-build"
+      ]
+    },
+    {
+      "tool": "project",
+      "action": "create",
+      "status": "verified",
+      "origin": "v1.4.5:native_this_round",
+      "evidence": "本轮 Codex 原生 MCP 创建新的专用工程，fixture recipe 的 7 个源码/配置文件哈希与实测工程一致"
+    },
+    {
+      "tool": "project",
+      "action": "sync",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "project.info-sync-build"
+      ]
+    },
+    {
+      "tool": "project",
+      "action": "build",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "project.info-sync-build",
+        "code.lsp.cpp",
+        "job.cancel",
+        "diagnose.build-job.resume"
+      ]
+    },
+    {
+      "tool": "project",
+      "action": "clean",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "project.clean"
+      ]
+    },
+    {
+      "tool": "run",
+      "action": "build_run",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "run.build_run",
+        "ui.act.mouse_move.effect",
+        "ui.onboarding-preserves-defaults",
+        "diagnose.crash-real-startup",
+        "run.auto-baseline",
+        "run.auto-relaunch"
+      ]
+    },
+    {
+      "tool": "run",
+      "action": "deploy",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "run.deploy-then_flow"
+      ]
+    },
+    {
+      "tool": "run",
+      "action": "launch",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "preflight",
+        "ui.act.batch",
+        "ui.visual",
+        "run.stop-launch"
+      ]
+    },
+    {
+      "tool": "run",
+      "action": "stop",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "run.stop-launch"
+      ]
+    },
+    {
+      "tool": "run",
+      "action": "uninstall",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "run.uninstall"
+      ]
+    },
+    {
+      "tool": "job",
+      "action": "wait",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "project.info-sync-build",
+        "code.lsp.cpp",
+        "run.build_run",
+        "ui_flow.record-stop-list-show-replay",
+        "run.deploy-then_flow",
+        "diagnose.build-job.resume",
+        "ui.act.mouse_move.effect",
+        "ui.onboarding-preserves-defaults",
+        "diagnose.crash-real-startup",
+        "run.auto-baseline",
+        "run.auto-relaunch"
+      ]
+    },
+    {
+      "tool": "job",
+      "action": "status",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "project.info-sync-build"
+      ]
+    },
+    {
+      "tool": "job",
+      "action": "list",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "project.info-sync-build"
+      ]
+    },
+    {
+      "tool": "job",
+      "action": "cancel",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "job.cancel"
+      ]
+    },
+    {
+      "tool": "job",
+      "action": "resume",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "diagnose.build-job.resume"
+      ]
+    },
+    {
+      "tool": "job",
+      "action": "read",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "knowledge.cloud-search",
+        "project.info-sync-build",
+        "ui.visual",
+        "diagnose.crash-real-startup"
+      ]
+    },
+    {
+      "tool": "code",
+      "action": "check",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "code.check"
+      ]
+    },
+    {
+      "tool": "code",
+      "action": "lint",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "code.lint"
+      ]
+    },
+    {
+      "tool": "code",
+      "action": "api_scan",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "code.api-versions-scan"
+      ]
+    },
+    {
+      "tool": "code",
+      "action": "api_versions",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "code.api-versions-scan"
+      ]
+    },
+    {
+      "tool": "code",
+      "action": "lsp",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "code.lsp.hover",
+        "code.lsp.definition",
+        "code.lsp.declaration",
+        "code.lsp.implementation",
+        "code.lsp.references",
+        "code.lsp.symbols",
+        "code.lsp.workspace_symbols",
+        "code.lsp.diagnostics",
+        "code.lsp.completion",
+        "code.lsp.signature",
+        "code.lsp.call_hierarchy",
+        "code.lsp.cpp"
+      ]
+    },
+    {
+      "tool": "code",
+      "action": "lsp_restart",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "code.lsp_restart"
+      ]
+    },
+    {
+      "tool": "device",
+      "action": "list",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "device.list-info"
+      ]
+    },
+    {
+      "tool": "device",
+      "action": "info",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "preflight"
+      ]
+    },
+    {
+      "tool": "device",
+      "action": "log",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "device.log-window-follow"
+      ]
+    },
+    {
+      "tool": "device",
+      "action": "shell",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "device.shell",
+        "run.stop-launch",
+        "run.auto-relaunch",
+        "run.uninstall"
+      ]
+    },
+    {
+      "tool": "device",
+      "action": "sqlite",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "device.sqlite",
+        "device.sqlite.readonly-rejection"
+      ]
+    },
+    {
+      "tool": "device",
+      "action": "send",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "device.send-recv"
+      ]
+    },
+    {
+      "tool": "device",
+      "action": "recv",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "device.send-recv"
+      ]
+    },
+    {
+      "tool": "ui",
+      "action": "observe",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "ui.observe-screenshot-tree-find-windows"
+      ]
+    },
+    {
+      "tool": "ui",
+      "action": "screenshot",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "ui.observe-screenshot-tree-find-windows"
+      ]
+    },
+    {
+      "tool": "ui",
+      "action": "tree",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "ui.observe-screenshot-tree-find-windows",
+        "ui.act.scroll",
+        "ui.act.mouse_scroll",
+        "ui.onboarding-preserves-defaults"
+      ]
+    },
+    {
+      "tool": "ui",
+      "action": "find",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "ui.observe-screenshot-tree-find-windows",
+        "ui.act.click",
+        "ui.act.double_click",
+        "ui.act.long_click",
+        "ui.act.swipe",
+        "ui.act.fling",
+        "ui.act.drag",
+        "ui.act.mouse_click",
+        "ui.act.mouse_double_click",
+        "ui.act.mouse_long_click",
+        "ui.act.mouse_drag",
+        "ui.act.scroll",
+        "ui.act.mouse_scroll",
+        "ui.act.mouse_move",
+        "ui.act.input-type-key",
+        "ui.act.batch",
+        "ui.perf",
+        "ui.onboarding-preserves-defaults"
+      ]
+    },
+    {
+      "tool": "ui",
+      "action": "act",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "ui.act.click",
+        "ui.act.double_click",
+        "ui.act.long_click",
+        "ui.act.swipe",
+        "ui.act.fling",
+        "ui.act.drag",
+        "ui.act.mouse_click",
+        "ui.act.mouse_double_click",
+        "ui.act.mouse_long_click",
+        "ui.act.mouse_drag",
+        "ui.act.scroll",
+        "ui.act.mouse_scroll",
+        "ui.act.mouse_move",
+        "ui.act.input-type-key",
+        "ui.act.batch",
+        "ui_flow.record-stop-list-show-replay",
+        "ui.visual",
+        "ui.act.mouse_move.effect",
+        "ui.record-start-status-stop-decode"
+      ]
+    },
+    {
+      "tool": "ui",
+      "action": "assert",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "preflight",
+        "ui.act.batch",
+        "ui_flow.record-stop-list-show-replay",
+        "run.deploy-then_flow",
+        "ui.visual",
+        "ui.act.mouse_move.effect",
+        "run.auto-baseline",
+        "run.stop-launch",
+        "run.auto-relaunch",
+        "ui.record-start-status-stop-decode"
+      ]
+    },
+    {
+      "tool": "ui",
+      "action": "windows",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "ui.observe-screenshot-tree-find-windows"
+      ]
+    },
+    {
+      "tool": "ui",
+      "action": "perf",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "ui.perf"
+      ]
+    },
+    {
+      "tool": "ui",
+      "action": "visual",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "ui.visual"
+      ]
+    },
+    {
+      "tool": "ui",
+      "action": "layout",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "ui.layout"
+      ]
+    },
+    {
+      "tool": "ui",
+      "action": "record_start",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "ui.record-start-status-stop-decode"
+      ]
+    },
+    {
+      "tool": "ui",
+      "action": "record_stop",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "ui.record-start-status-stop-decode"
+      ]
+    },
+    {
+      "tool": "ui",
+      "action": "record_status",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "ui.record-start-status-stop-decode"
+      ]
+    },
+    {
+      "tool": "ui",
+      "action": "test_start",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "ui.test_start-step-review-capture",
+        "ui.test-failed-assertion",
+        "ui.onboarding-preserves-defaults"
+      ]
+    },
+    {
+      "tool": "ui",
+      "action": "test_step",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "ui.test_start-step-review-capture",
+        "ui.test-failed-assertion",
+        "ui.onboarding-preserves-defaults"
+      ]
+    },
+    {
+      "tool": "ui",
+      "action": "review",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "ui.test_start-step-review-capture",
+        "ui.review-finish-log-export"
+      ]
+    },
+    {
+      "tool": "ui",
+      "action": "test_finish",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "ui.review-finish-log-export",
+        "ui.test-failed-assertion",
+        "ui.onboarding-preserves-defaults"
+      ]
+    },
+    {
+      "tool": "ui",
+      "action": "test_log",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "ui.review-finish-log-export"
+      ]
+    },
+    {
+      "tool": "ui",
+      "action": "test_export",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "ui.review-finish-log-export",
+        "ui.onboarding-preserves-defaults"
+      ]
+    },
+    {
+      "tool": "ui_flow",
+      "action": "list",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "ui_flow.record-stop-list-show-replay",
+        "ui_flow.delete"
+      ]
+    },
+    {
+      "tool": "ui_flow",
+      "action": "show",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "ui_flow.record-stop-list-show-replay"
+      ]
+    },
+    {
+      "tool": "ui_flow",
+      "action": "record",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "ui_flow.record-stop-list-show-replay"
+      ]
+    },
+    {
+      "tool": "ui_flow",
+      "action": "stop",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "ui_flow.record-stop-list-show-replay"
+      ]
+    },
+    {
+      "tool": "ui_flow",
+      "action": "replay",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "ui_flow.record-stop-list-show-replay"
+      ]
+    },
+    {
+      "tool": "ui_flow",
+      "action": "delete",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "ui_flow.delete"
+      ]
+    },
+    {
+      "tool": "diagnose",
+      "action": "crash",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "diagnose.crash-real-startup"
+      ]
+    },
+    {
+      "tool": "diagnose",
+      "action": "build",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "diagnose.build-job.resume"
+      ]
+    },
+    {
+      "tool": "knowledge",
+      "action": "search",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "knowledge.local-search-read",
+        "knowledge.cloud-search"
+      ]
+    },
+    {
+      "tool": "knowledge",
+      "action": "read",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "knowledge.local-search-read"
+      ]
+    },
+    {
+      "tool": "knowledge",
+      "action": "catalog",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "knowledge.catalog-status-update-check"
+      ]
+    },
+    {
+      "tool": "knowledge",
+      "action": "status",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "knowledge.catalog-status-update-check"
+      ]
+    },
+    {
+      "tool": "knowledge",
+      "action": "update",
+      "status": "verified",
+      "origin": "remaining_acceptance"
+    },
+    {
+      "tool": "knowledge",
+      "action": "rollback",
+      "status": "verified",
+      "origin": "remaining_acceptance"
+    },
+    {
+      "tool": "skills",
+      "action": "list",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "skills.list-read-search"
+      ]
+    },
+    {
+      "tool": "skills",
+      "action": "read",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "skills.list-read-search"
+      ]
+    },
+    {
+      "tool": "skills",
+      "action": "export",
+      "status": "verified",
+      "origin": "remaining_acceptance"
+    },
+    {
+      "tool": "skills",
+      "action": "install_mcp",
+      "status": "verified",
+      "origin": "remaining_acceptance"
+    },
+    {
+      "tool": "skills",
+      "action": "init",
+      "status": "verified",
+      "origin": "remaining_acceptance"
+    },
+    {
+      "tool": "skills",
+      "action": "search",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "skills.list-read-search"
+      ]
+    },
+    {
+      "tool": "skills",
+      "action": "install",
+      "status": "verified",
+      "origin": "remaining_acceptance"
+    },
+    {
+      "tool": "skills",
+      "action": "uninstall",
+      "status": "verified",
+      "origin": "remaining_acceptance"
+    },
+    {
+      "tool": "auth",
+      "action": "login",
+      "status": "verified",
+      "origin": "remaining_acceptance"
+    },
+    {
+      "tool": "auth",
+      "action": "status",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "auth.status-teams"
+      ]
+    },
+    {
+      "tool": "auth",
+      "action": "logout",
+      "status": "verified",
+      "origin": "remaining_acceptance"
+    },
+    {
+      "tool": "auth",
+      "action": "teams",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "auth.status-teams"
+      ]
+    },
+    {
+      "tool": "auth",
+      "action": "import",
+      "status": "unverified",
+      "reason": "不迁移或覆盖宿主现有凭据",
+      "origin": "v1.4.5:undefined"
+    },
+    {
+      "tool": "sign",
+      "action": "auto",
+      "status": "environment_limited",
+      "reason": "前一轮同机同团队实际返回证书配额 205389872，未删除旧证书腾出额度；非成功签名",
+      "origin": "v1.4.5:undefined"
+    },
+    {
+      "tool": "sign",
+      "action": "sign",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "sign.sign-verify"
+      ]
+    },
+    {
+      "tool": "sign",
+      "action": "verify",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "sign.verify",
+        "sign.sign-verify"
+      ]
+    },
+    {
+      "tool": "sign",
+      "action": "certificates",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "sign.certificates-devices"
+      ]
+    },
+    {
+      "tool": "sign",
+      "action": "devices",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "sign.certificates-devices"
+      ]
+    },
+    {
+      "tool": "sign",
+      "action": "register_device",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "sign.certificates-devices"
+      ]
+    },
+    {
+      "tool": "sign",
+      "action": "delete_certificate",
+      "status": "unverified",
+      "reason": "不删除或撤销现有证书",
+      "origin": "v1.4.5:undefined"
+    },
+    {
+      "tool": "sign",
+      "action": "keypair",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "sign.keypair-csr"
+      ]
+    },
+    {
+      "tool": "sign",
+      "action": "csr",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "sign.keypair-csr"
+      ]
+    },
+    {
+      "tool": "sign",
+      "action": "certificate_create",
+      "status": "environment_limited",
+      "reason": "同一证书配额阻塞；本轮没有直接创建新云证书",
+      "origin": "v1.4.5:undefined",
+      "notes": "Actual cloud rejection 205389872; existing certificate inventory unchanged"
+    },
+    {
+      "tool": "sign",
+      "action": "profile_create",
+      "status": "verified",
+      "origin": "v1.4.5:native_this_round",
+      "evidence": "本轮 Codex 原生 MCP 为专用测试包生成 profile，随后真实签名安装成功"
+    },
+    {
+      "tool": "sign",
+      "action": "profile_delete",
+      "status": "unverified",
+      "reason": "IDE 签名 profile 没有可删除的云端 profile ID；未选取现有用户 profile",
+      "origin": "v1.4.5:undefined"
+    },
+    {
+      "tool": "emulator",
+      "action": "list",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "emulator.readonly-inventory"
+      ]
+    },
+    {
+      "tool": "emulator",
+      "action": "start",
+      "status": "verified",
+      "origin": "remaining_acceptance"
+    },
+    {
+      "tool": "emulator",
+      "action": "stop",
+      "status": "verified",
+      "origin": "remaining_acceptance"
+    },
+    {
+      "tool": "emulator",
+      "action": "create",
+      "status": "verified",
+      "origin": "remaining_acceptance"
+    },
+    {
+      "tool": "emulator",
+      "action": "delete",
+      "status": "verified",
+      "origin": "remaining_acceptance"
+    },
+    {
+      "tool": "emulator",
+      "action": "images",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "emulator.readonly-inventory"
+      ]
+    },
+    {
+      "tool": "emulator",
+      "action": "install_image",
+      "status": "verified",
+      "origin": "remaining_acceptance"
+    },
+    {
+      "tool": "emulator",
+      "action": "remove_image",
+      "status": "verified",
+      "origin": "remaining_acceptance"
+    },
+    {
+      "tool": "emulator",
+      "action": "license",
+      "status": "verified",
+      "origin": "remaining_acceptance",
+      "notes": "Already accepted; idempotent acceptance only"
+    },
+    {
+      "tool": "emulator",
+      "action": "license_view",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "emulator.readonly-inventory"
+      ]
+    },
+    {
+      "tool": "emulator",
+      "action": "scenario",
+      "status": "verified",
+      "origin": "remaining_acceptance"
+    },
+    {
+      "tool": "hot_reload",
+      "action": "apply",
+      "status": "verified",
+      "origin": "v1.4.5:previous_native_same_build",
+      "evidence": "同版本、同 USB 真机上一轮两次原生补丁已证明 UI 生效；见 v1.4.5-physical-acceptance.json"
+    },
+    {
+      "tool": "hot_reload",
+      "action": "reset",
+      "status": "verified",
+      "origin": "v1.4.5:previous_native_same_build",
+      "evidence": "同版本、同 USB 真机上一轮两次原生 reset 已证明 patch=0、原页面恢复和 SQLite 标记保留；见 v1.4.5-physical-acceptance.json"
+    },
+    {
+      "tool": "hot_reload",
+      "action": "stop_daemon",
+      "status": "verified",
+      "origin": "v1.4.5:stdio_this_round",
+      "cases": [
+        "hot_reload.stop_daemon"
+      ]
+    }
+  ],
+  "attempts": [
+    {
+      "file": "auth-1791640500333-results.json",
+      "phase": "auth",
+      "version": "1.4.6",
+      "build_id": null,
+      "results": [
+        {
+          "id": "auth.existing-session-pending-logout-login",
+          "status": "passed"
+        },
+        {
+          "id": "auth.completed-login-restarts-and-old-cleanup-preserves-new",
+          "status": "passed"
+        },
+        {
+          "id": "auth.other-provider-unchanged",
+          "status": "passed"
+        }
+      ],
+      "results_sha256": "8833d1772453fe986793fafd34ed8c4fc4fe730b5153521a0a5aac304d11edec",
+      "trace_sha256": "410435873bac63aa3323a64b272345032de24d08f951e71ff953ed0f06e948d6",
+      "initialize_sha256": "5e8446970f0107bd21b306f23247c69110459a9e57b5244a11a79ed65de35051"
+    },
+    {
+      "file": "auth-1791641082215-results.json",
+      "phase": "auth",
+      "version": "1.4.6",
+      "build_id": null,
+      "results": [
+        {
+          "id": "auth.existing-session-pending-logout-login",
+          "status": "passed"
+        },
+        {
+          "id": "auth.completed-login-restarts-and-old-cleanup-preserves-new",
+          "status": "passed"
+        },
+        {
+          "id": "auth.other-provider-unchanged",
+          "status": "passed"
+        }
+      ],
+      "results_sha256": "e9b0f02827865977474c064945eca9d20e7e1b2441a8ab8f8dd2c993a317739f",
+      "trace_sha256": "134d0ac4faf544abbe114017d271f1267691d4082bb36e0653e00da2519c80b6",
+      "initialize_sha256": "5e8446970f0107bd21b306f23247c69110459a9e57b5244a11a79ed65de35051"
+    },
+    {
+      "file": "auth-1791641382641-results.json",
+      "phase": "auth",
+      "version": "1.4.6",
+      "build_id": "a5f40b0c097887e8512d777956597e565eaa6babec72de4899befa0baa9ec226",
+      "results": [
+        {
+          "id": "auth.existing-session-pending-logout-login",
+          "status": "passed"
+        },
+        {
+          "id": "auth.completed-login-restarts-and-old-cleanup-preserves-new",
+          "status": "passed"
+        },
+        {
+          "id": "auth.other-provider-unchanged",
+          "status": "passed"
+        }
+      ],
+      "results_sha256": "00e0302cb98fcab3c486cd39b11221fb1a509e4f3533381a19f8706f44947937",
+      "trace_sha256": "066bc24c2aa84395305f41903f07a1a56520ea9df2b412f12520efe2432aee57",
+      "initialize_sha256": "5e8446970f0107bd21b306f23247c69110459a9e57b5244a11a79ed65de35051"
+    },
+    {
+      "file": "cpp-1791641237060-results.json",
+      "phase": "cpp",
+      "version": "1.4.6",
+      "build_id": null,
+      "results": [
+        {
+          "id": "cpp.declaration",
+          "status": "passed"
+        },
+        {
+          "id": "cpp.references",
+          "status": "passed"
+        },
+        {
+          "id": "cpp.symbols",
+          "status": "passed"
+        },
+        {
+          "id": "cpp.workspace_symbols",
+          "status": "passed"
+        },
+        {
+          "id": "cpp.diagnostics",
+          "status": "passed"
+        },
+        {
+          "id": "cpp.completion",
+          "status": "passed"
+        },
+        {
+          "id": "cpp.signature",
+          "status": "passed"
+        },
+        {
+          "id": "cpp.incoming",
+          "status": "passed"
+        },
+        {
+          "id": "cpp.outgoing-explicitly-unavailable",
+          "status": "passed"
+        },
+        {
+          "id": "cpp.implementation",
+          "status": "failed"
+        },
+        {
+          "id": "cpp.fixture-restored",
+          "status": "passed"
+        }
+      ],
+      "results_sha256": "f01308d352bd9304e17519c87fc5662bb7cfd49a4de8af9f960fef0d819127e1",
+      "trace_sha256": "04d897cf47facc5f30ed084ba520ac0c72990034c279f444b8887088a628ed4d",
+      "initialize_sha256": "5e8446970f0107bd21b306f23247c69110459a9e57b5244a11a79ed65de35051"
+    },
+    {
+      "file": "cpp-1791641302529-results.json",
+      "phase": "cpp",
+      "version": "1.4.6",
+      "build_id": null,
+      "results": [
+        {
+          "id": "cpp.declaration",
+          "status": "passed"
+        },
+        {
+          "id": "cpp.references",
+          "status": "passed"
+        },
+        {
+          "id": "cpp.symbols",
+          "status": "passed"
+        },
+        {
+          "id": "cpp.workspace_symbols",
+          "status": "passed"
+        },
+        {
+          "id": "cpp.diagnostics",
+          "status": "passed"
+        },
+        {
+          "id": "cpp.completion",
+          "status": "passed"
+        },
+        {
+          "id": "cpp.signature",
+          "status": "passed"
+        },
+        {
+          "id": "cpp.incoming",
+          "status": "passed"
+        },
+        {
+          "id": "cpp.outgoing-explicitly-unavailable",
+          "status": "passed"
+        },
+        {
+          "id": "cpp.implementation",
+          "status": "passed"
+        },
+        {
+          "id": "cpp.fixture-restored",
+          "status": "passed"
+        }
+      ],
+      "results_sha256": "520d5e6b879e5b5111962398806ce7f0b3b00ed293a7b48b7462738b003a53ff",
+      "trace_sha256": "fb15120a06867e711427317a5618687f43907a81d8ef6099e8e53ff136e7bddc",
+      "initialize_sha256": "5e8446970f0107bd21b306f23247c69110459a9e57b5244a11a79ed65de35051"
+    },
+    {
+      "file": "cpp-1791641465777-results.json",
+      "phase": "cpp",
+      "version": "1.4.6",
+      "build_id": "a5f40b0c097887e8512d777956597e565eaa6babec72de4899befa0baa9ec226",
+      "results": [
+        {
+          "id": "cpp.declaration",
+          "status": "passed"
+        },
+        {
+          "id": "cpp.references",
+          "status": "passed"
+        },
+        {
+          "id": "cpp.symbols",
+          "status": "passed"
+        },
+        {
+          "id": "cpp.workspace_symbols",
+          "status": "passed"
+        },
+        {
+          "id": "cpp.diagnostics",
+          "status": "passed"
+        },
+        {
+          "id": "cpp.completion",
+          "status": "passed"
+        },
+        {
+          "id": "cpp.signature",
+          "status": "passed"
+        },
+        {
+          "id": "cpp.incoming",
+          "status": "passed"
+        },
+        {
+          "id": "cpp.outgoing-explicitly-unavailable",
+          "status": "passed"
+        },
+        {
+          "id": "cpp.implementation",
+          "status": "passed"
+        },
+        {
+          "id": "cpp.fixture-restored",
+          "status": "passed"
+        }
+      ],
+      "results_sha256": "b48fd8924c4122f552140e8ccfeeeac7611741c6f812fbb9df45ed357398e9b5",
+      "trace_sha256": "d465f9ebfddc72994a1494af1935ada82bcf3459788bb1fa3b6d4edcec25c7f5",
+      "initialize_sha256": "5e8446970f0107bd21b306f23247c69110459a9e57b5244a11a79ed65de35051"
+    },
+    {
+      "file": "emulator-1791640444152-results.json",
+      "phase": "emulator",
+      "version": "1.4.5",
+      "build_id": null,
+      "results": [
+        {
+          "id": "emulator.license-idempotent",
+          "status": "passed"
+        },
+        {
+          "id": "emulator.create",
+          "status": "passed"
+        },
+        {
+          "id": "emulator.start-coldboot",
+          "status": "passed"
+        },
+        {
+          "id": "emulator.reject-delete-running",
+          "status": "passed"
+        },
+        {
+          "id": "emulator.scenario-fold-real-screen",
+          "status": "passed"
+        },
+        {
+          "id": "emulator.stop",
+          "status": "passed"
+        },
+        {
+          "id": "emulator.delete",
+          "status": "passed"
+        }
+      ],
+      "results_sha256": "08d6be052e8f1bb6ade995cd710aa7d432e600d79c48ffc1e8d06fe3e5bd27da",
+      "trace_sha256": "c1a4f765f208809a5fa03e03a482cc9d7cb6ced066c5a9f70d5547c69ad07f28",
+      "initialize_sha256": "af119d090c7c232c0ed3498006c2b287a341e4be7225dcf5eed312227e01b08d"
+    },
+    {
+      "file": "emulator-1791640674583-results.json",
+      "phase": "emulator",
+      "version": "1.4.6",
+      "build_id": null,
+      "results": [
+        {
+          "id": "emulator.license-idempotent",
+          "status": "passed"
+        },
+        {
+          "id": "emulator.create",
+          "status": "passed"
+        },
+        {
+          "id": "emulator.start-coldboot",
+          "status": "passed"
+        },
+        {
+          "id": "emulator.reject-delete-running",
+          "status": "passed"
+        },
+        {
+          "id": "emulator.single-name-and-names-equivalent",
+          "status": "passed"
+        },
+        {
+          "id": "emulator.scenario-fold-real-screen",
+          "status": "passed"
+        },
+        {
+          "id": "emulator.stop",
+          "status": "passed"
+        },
+        {
+          "id": "emulator.delete",
+          "status": "passed"
+        }
+      ],
+      "results_sha256": "89bee681c22d9d0051e395917d0c9df08ac93047e4286cd069eb7f86fff5028f",
+      "trace_sha256": "abafc0c8afb7dc8f53092dcfba1a391dcd05f00fcb6af55c3567c0fb3aaa9108",
+      "initialize_sha256": "5e8446970f0107bd21b306f23247c69110459a9e57b5244a11a79ed65de35051"
+    },
+    {
+      "file": "equivalence-1791640932934-results.json",
+      "phase": "equivalence",
+      "version": "1.4.6",
+      "build_id": null,
+      "results": [
+        {
+          "id": "model-live.install-dedicated-app",
+          "status": "passed"
+        },
+        {
+          "id": "ui.tree-default-depth-equals-zero",
+          "status": "passed"
+        },
+        {
+          "id": "code.check-relative-and-absolute-path-equivalent",
+          "status": "passed"
+        }
+      ],
+      "results_sha256": "3de83b76598d9ffbedb6b5ed848926c50179fec69cfad854a5fa87a3298643e4",
+      "trace_sha256": "3db77ee537194b6e8502ab94ecc6651db7767257058b85aaa277f4a7588363ee",
+      "initialize_sha256": "5e8446970f0107bd21b306f23247c69110459a9e57b5244a11a79ed65de35051"
+    },
+    {
+      "file": "knowledge-1791640501102-results.json",
+      "phase": "knowledge",
+      "version": "1.4.6",
+      "build_id": null,
+      "results": [
+        {
+          "id": "knowledge.update-upstream-and-rollback",
+          "status": "passed"
+        }
+      ],
+      "results_sha256": "7623368af3fee949d7c87a7d9d9be48ec0ff9bfc1fb2629983dab82306dcff48",
+      "trace_sha256": "e27e6f7e9b44edd7944fee37d43061e7009df5aab1e2b4b6fbdb882420682f1e",
+      "initialize_sha256": "5e8446970f0107bd21b306f23247c69110459a9e57b5244a11a79ed65de35051"
+    },
+    {
+      "file": "skills-1791640101025-results.json",
+      "phase": "skills",
+      "version": "1.4.5",
+      "build_id": null,
+      "results": [
+        {
+          "id": "skills.export-full-content",
+          "status": "passed"
+        },
+        {
+          "id": "skills.install_mcp-codex",
+          "status": "passed"
+        },
+        {
+          "id": "skills.init-codex",
+          "status": "passed"
+        },
+        {
+          "id": "skills.install_mcp-opencode",
+          "status": "failed"
+        },
+        {
+          "id": "skills.init-opencode",
+          "status": "passed"
+        },
+        {
+          "id": "skills.market-install-uninstall",
+          "status": "passed"
+        },
+        {
+          "id": "skills.global-configs-unchanged",
+          "status": "passed"
+        }
+      ],
+      "results_sha256": "90b4d294e6d9b0e8b8b4e06e835f17f7fec822bd92e50f0f0e797170b4d00245",
+      "trace_sha256": "7ab12ac0908ccc14269b6761aa01fc45d0aee7dfa8826eb5ae1b1abee622a7e6",
+      "initialize_sha256": "af119d090c7c232c0ed3498006c2b287a341e4be7225dcf5eed312227e01b08d"
+    },
+    {
+      "file": "skills-1791640154886-results.json",
+      "phase": "skills",
+      "version": "1.4.5",
+      "build_id": null,
+      "results": [
+        {
+          "id": "skills.export-full-content",
+          "status": "passed"
+        },
+        {
+          "id": "skills.install_mcp-codex",
+          "status": "passed"
+        },
+        {
+          "id": "skills.init-codex",
+          "status": "passed"
+        },
+        {
+          "id": "skills.install_mcp-opencode",
+          "status": "passed"
+        },
+        {
+          "id": "skills.init-opencode",
+          "status": "passed"
+        },
+        {
+          "id": "skills.market-install-uninstall",
+          "status": "passed"
+        },
+        {
+          "id": "skills.global-configs-unchanged",
+          "status": "passed"
+        }
+      ],
+      "results_sha256": "60b0f515f6d1b179e43e52180e7efb2a21be9b77dd6aa68776343a5f5d1da0b1",
+      "trace_sha256": "ff03074163369f0fd49a3f60da27a77f2ce1596e2d7f080907fdfb6f258795f6",
+      "initialize_sha256": "af119d090c7c232c0ed3498006c2b287a341e4be7225dcf5eed312227e01b08d"
+    },
+    {
+      "file": "skills-1791641133987-results.json",
+      "phase": "skills",
+      "version": "1.4.6",
+      "build_id": null,
+      "results": [
+        {
+          "id": "skills.export-full-content",
+          "status": "passed"
+        },
+        {
+          "id": "skills.install_mcp-codex",
+          "status": "passed"
+        },
+        {
+          "id": "skills.init-codex",
+          "status": "passed"
+        },
+        {
+          "id": "skills.install_mcp-opencode",
+          "status": "passed"
+        },
+        {
+          "id": "skills.init-opencode",
+          "status": "passed"
+        },
+        {
+          "id": "skills.market-install-uninstall",
+          "status": "passed"
+        },
+        {
+          "id": "skills.global-configs-unchanged",
+          "status": "passed"
+        }
+      ],
+      "results_sha256": "c914287da8db3dd81e25b7ba248f20ed34bacd0654311b80ce728bc9b7ce7508",
+      "trace_sha256": "9c07cbc6698babcb55285384fbd15821d21db8d5337b87a4ed47957b755bc122",
+      "initialize_sha256": "5e8446970f0107bd21b306f23247c69110459a9e57b5244a11a79ed65de35051"
+    },
+    {
+      "file": "skills-1791641455332-results.json",
+      "phase": "skills",
+      "version": "1.4.6",
+      "build_id": "a5f40b0c097887e8512d777956597e565eaa6babec72de4899befa0baa9ec226",
+      "results": [
+        {
+          "id": "skills.export-full-content",
+          "status": "passed"
+        },
+        {
+          "id": "skills.install_mcp-codex",
+          "status": "passed"
+        },
+        {
+          "id": "skills.init-codex",
+          "status": "passed"
+        },
+        {
+          "id": "skills.install_mcp-opencode",
+          "status": "passed"
+        },
+        {
+          "id": "skills.init-opencode",
+          "status": "passed"
+        },
+        {
+          "id": "skills.market-install-uninstall",
+          "status": "passed"
+        },
+        {
+          "id": "skills.global-configs-unchanged",
+          "status": "passed"
+        }
+      ],
+      "results_sha256": "612f6230794bda5128de222d0db038512ef990f936be953a397d224764b1892e",
+      "trace_sha256": "a0c236e68f1dc4bcd86a4ac0c2610b54792e247f5d62e5ae994fb3c533a91609",
+      "initialize_sha256": "5e8446970f0107bd21b306f23247c69110459a9e57b5244a11a79ed65de35051"
+    }
+  ],
+  "receipts": {
+    "pending-login.json": "495c554bc89a181db201066f26c28cc71690c088dbae327f85f272577ae1a06d",
+    "pending-status.json": "af4b81024a2fd8c1d24f3da1e6ed02cdc2b9f1d3235684419c6575d335ff9fbd",
+    "native-image-lifecycle.json": "62ccd048b17731cd49bb5c31564cbe783e5a91875c6eb3b716941fd7329655c5",
+    "legacy-import.json": "7a0c2a1bbf9675809e6bd7f56743861627042a44258cc7e8075ae269dba48e33",
+    "certificate-create.json": "8eda5349c98fafc554e61097a82979c089e8f5d8e1ae75d92d2e17822e0ce807",
+    "certificate-after.json": "35686fc8d7204a3bfcd42dce880ee956dbc511483ac4e773d459e781bcba22d2",
+    "layout-forms.json": "01a31034e686cd54525f9eb1e1a673740156d16b8dfbff2dab1aa898e86a8cf1",
+    "cpp-probes.json": "484deedf33dfd6b9f5ed24e5f40be517f41e431023c642094677b1b313a7ddeb",
+    "clangd-direct.json": "5776e70a60d1ea8fb593b2fd8149118749c5767963e6b2bec5d5fc89ae71024e",
+    "clangd-warm.json": "6cebd5c418a2a8bbe9f93bbea038a923d04bd803b3c0355f1c95737b7d344b0d",
+    "cpp-sync-probe.json": "07e120f595dc13162227ec4d5e7be7122d5b16b2c8a50aa72ab90162c7a415a9",
+    "ui-timeout-logs.json": "c61546828fe3703c41ae056f31c6bef2a62be03cc21ee365cb1355f9cca01dbe",
+    "unit-release.log": "51496c695de5cf1f36fe642afeda2d9fe61f81d57b649a52d39dafaf4f74a613",
+    "unit.log": "ca63da1aaf6d4d5b1a6bd5674431eecea12c475b0833ebddb540a1750fbe7c1f",
+    "metadata-unit.log": "91353dcf156ebba92dde9a0d6ab985abff02150d166dac39b187a7dc73eebb54",
+    "skills-final.log": "78ce2e4f2cdc12ca84529ed8839e8da9f9dc8b7887c8f55f3aa79608010fb36b",
+    "equivalence.log": "7b4945abfdb194993260ec5a7cb923f20a8d3cb8f251a36a00f073ba92765830",
+    "bench.log": "07f8cc1f99bc355f655739fbcc1e67f47794ccb43da4de38ec6c852c5649b7af",
+    "upstream.log": "c439902ee149fae024064d3b42b68143960b3b743ef371bc6b673f80cde61985",
+    "ui-recheck.json": "cf1dc881586c5bd46568b2786dc00c8dd4b2a893f5cec6069593907628f08095",
+    "ui-recheck.log": "ec6c3bfd1815db7c1f5d1f07ab68391999b1f19d3b60b68daf9b9a5cb585f254",
+    "cleanup.json": "969ce13c927a0099373c5ffa043839f0096e952b04f716950370050aa3a4c672"
+  },
+  "private_content_uploaded": false
+}

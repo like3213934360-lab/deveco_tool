@@ -10,8 +10,9 @@ const state = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-test-"));
 process.on("exit", () => { try { fs.rmSync(state, { recursive: true, force: true }); } catch { /* Windows: file still locked */ } }); // tests leave nothing behind
 const env = { DEVECO_STATE_DIR: state, DEVECO_CONFIG: path.join(state, "none.json") };
 
-test("handshake, tools/list and schema validation", async () => {
+test("handshake, tools/list and schema validation", async (t) => {
   const client = connect(env);
+  t.after(() => client.close());
   const init = await client.initialize();
   assert.equal(init.result.serverInfo.name, "deveco-mcp");
   assert.match(init.result.instructions, /HarmonyOS/);
@@ -40,7 +41,6 @@ test("handshake, tools/list and schema validation", async () => {
   assert.equal(unknown.result.isError, true);
   const ping = await client.request("ping");
   assert.deepEqual(ping.result, {});
-  await client.close();
 });
 
 test("arguments: unknown/misplaced parameters are refused, long waits are capped", async () => {

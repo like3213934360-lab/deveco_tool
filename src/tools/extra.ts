@@ -107,7 +107,7 @@ export const emulatorTool = tool({
     details: z.boolean().optional().describe("list: raw emulator fields"),
     cold: z.boolean().optional().describe("start: legacy coldboot flag; must agree with boot_mode"),
     boot_mode: z.enum(["coldboot", "snapshot", "reset"]).optional().describe("start: preserve data, restore saved Quick Boot snapshot, or ERASE data; default instance setting"),
-    hdc_port: z.number().int().min(10000).max(16555).optional().describe("start: fixed port, single instance only; occupied ports fail"),
+    hdc_port: z.number().int().min(10000).max(16555).optional().describe("start: integer 10000-16555, one instance; invalid: ask, never call/substitute; occupied: fail"),
     window: z.boolean().optional().describe("start: false for no window"),
     device_type: z.string().optional().describe("phone, foldable, widefold, triplefold, tablet, 2in1, wearable, tv, car ..."),
     os_version: z.string().optional().describe('e.g. "HarmonyOS 6.0.0(20)"'),

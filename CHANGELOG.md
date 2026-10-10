@@ -1,5 +1,19 @@
 # Changelog / 更新日志
 
+## v1.4.6 (2026-10-10)
+
+**中文**
+
+- 修复已有凭据时新登录 pending 状态错误、已完成登录复用失效回调、旧定时清理删除新尝试以及注销后迟到令牌恢复凭据的问题。浏览器回调不再提前宣称成功，注销明确取消并等待登录请求结束。
+- 补充 review 取图/判定两阶段和 hdc_port 非法范围的字段说明，保留全部 action 与必要使用说明，原元数据大小门禁不变。
+- 补齐用户指定目录中的 Skill 注册/安装/卸载、真实登录、知识库更新回滚、模拟器与折叠形态、C++ LSP 验收；保留多轮 OpenCode 拟调用和真实调用的原始失败及环境限制。见 [验收与 TODO](docs/UPGRADE-1.4.6.md)。
+
+**English**
+
+- Track pending browser login independently of existing credentials. Reuse only active attempts, scope delayed cleanup to its attempt, and abort and await login on logout to prevent late credential restoration. Browser callbacks no longer claim success before token validation.
+- Clarify the two-stage visual review contract and invalid emulator port handling without removing actions or required usage guidance; retain the existing metadata budget gate.
+- Extend real acceptance for user-selected Skill directories, authentication, knowledge update/rollback, emulator lifecycle/fold states and C++ LSP. Preserve unsuccessful OpenCode planning/live trials and explicit environment limits rather than claiming universal model success.
+
 ## v1.4.5 (2026-10-10)
 
 **中文**

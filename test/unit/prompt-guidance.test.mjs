@@ -44,7 +44,14 @@ test("guidance covers discovery, standalone tools, safe continuation and evidenc
     assert.match(byName.device.description, /action=log:.*action=sqlite:/);
     assert.match(byName.code.description, /action=lsp requires op:/);
     assert.match(byName.emulator.description, /license accepts; license_view reads/);
-    assert.match(byName.ui.description, /review\(requirement, then review_id\+outcome\+reason\)/);
+    assert.match(byName.ui.description, /review\(test_id\+requirement\) captures an image; inspect it before review\(test_id\+review_id\+outcome\+reason\)/);
+    assert.match(byName.ui.description, /Omit outcome\/review_id on capture/);
+    assert.match(byName.ui.inputSchema.properties.review_id.description, /returned image id; never invent/);
+    assert.match(byName.ui.inputSchema.properties.outcome.description, /only after seeing the image; omit on capture/);
+    assert.match(byName.auth.description, /login_pending=false, logged_in=true, no error/);
+    assert.match(byName.auth.description, /logged_in alone may be an old session/);
+    assert.match(byName.auth.description, /logout cancels login and deletes credentials/);
+    assert.match(byName.emulator.inputSchema.properties.hdc_port.description, /10000-16555.*invalid: ask, never call\/substitute/);
     assert.match(byName.ui.description, /test_step\(test_id, op\/selector or visible\/hidden\)/);
     assert.match(byName.ui.description, /selector\/visible\/hidden: objects, e.g. \{"text":"Hi"\}/);
     for (const name of ["selector", "visible", "hidden"]) {

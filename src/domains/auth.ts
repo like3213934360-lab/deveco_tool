@@ -78,11 +78,15 @@ export async function credentials(provider: Provider, force = false, signal?: Ab
 
 /* ---------------------------------- login ---------------------------------- */
 
-const logins = new Map<Provider, { url: string; server: http.Server; done: Promise<void>; error?: string; browser: string; region: Region }>();
+interface Login {
+  url: string; server: http.Server; done: Promise<void>; pending: boolean; cancel: () => void;
+  error?: string; browser: string; region: Region;
+}
+const logins = new Map<Provider, Login>();
 
 export async function login(provider: Provider, openBrowser = true, region: Region = "cn") {
   const active = logins.get(provider);
-  if (active) return { provider, region: active.region, pending: true, login_url: active.url, browser: active.browser };
+  if (active?.pending) return { provider, region: active.region, pending: true, login_url: active.url, browser: active.browser };
   const base = regionBase[region];
   let site = "1";
   const nonce = crypto.randomBytes(24).toString("hex");
@@ -90,6 +94,8 @@ export async function login(provider: Provider, openBrowser = true, region: Regi
   let reject!: (error: Error) => void;
   const token = new Promise<string>((a, r) => { accept = a; reject = r; });
   token.catch(() => {});
+  const controller = new AbortController();
+  const cancel = (error: ToolError) => { controller.abort(error); reject(error); };
   const server = http.createServer((req, res) => {
     void (async () => {
       const url = new URL(req.url ?? "/", "http://127.0.0.1");
@@ -113,33 +119,36 @@ export async function login(provider: Provider, openBrowser = true, region: Regi
       }
       const temp = params.get("tempToken");
       if (!temp) throw new Error("missing token");
-      res.end("<h1>DevEco MCP 登录成功</h1><p>可以关闭此页面并返回。</p>");
+      res.end("<h1>DevEco MCP 已收到登录信息</h1><p>正在验证，请返回宿主通过 auth status 确认登录结果。</p>");
       accept(temp);
     })().catch(() => { if (!res.headersSent) { res.writeHead(400); res.end("invalid"); } });
   });
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const port = (server.address() as { port: number }).port;
   const url = `${base}/console/DevEcoIDE/apply?${new URLSearchParams({ port: String(port), appid: appIds[provider], code: nonce })}`;
-  const timeout = setTimeout(() => reject(new ToolError("TIMEOUT", "Login timed out after 5 minutes")), 300000);
+  const timeout = setTimeout(() => cancel(new ToolError("TIMEOUT", "Login timed out after 5 minutes")), 300000);
   timeout.unref();
-  const entry = { url, server, browser: openBrowser ? "opened" : "manual", done: Promise.resolve(), region } as { url: string; server: http.Server; done: Promise<void>; error?: string; browser: string; region: Region };
+  const entry: Login = { url, server, browser: openBrowser ? "opened" : "manual", done: Promise.resolve(), region, pending: true,
+    cancel: () => cancel(new ToolError("AUTH_REQUIRED", "Login was cancelled by logout")) };
   entry.done = (async () => {
     try {
       const temp = await token;
       const query = new URLSearchParams({ tempToken: temp.split("&")[0]!, site: siteCountry[site] ?? "CN", version: "1.0.0", appid: appIds[provider] });
-      const response = await fetch(`${base}/authrouter/auth/api/temptoken/check?${query}`, { signal: AbortSignal.timeout(20000) });
+      const response = await fetch(`${base}/authrouter/auth/api/temptoken/check?${query}`, { signal: AbortSignal.any([controller.signal, AbortSignal.timeout(20000)]) });
       const jwt = (await response.text()).trim();
       invariant(jwt.split(".").length === 3, "AUTH_REQUIRED", "Authentication server returned an invalid session");
       const payload = JSON.parse(Buffer.from(jwt.split(".")[1]!, "base64url").toString("utf8")) as { userId?: string; userName?: string; exp?: number };
-      const access = await checkJwt(jwt, false, region);
+      const access = await checkJwt(jwt, false, region, controller.signal);
+      controller.signal.throwIfAborted();
       await save(provider, { jwt, access, saved: Date.now(), userId: payload.userId ?? "", userName: payload.userName ?? "", expires: payload.exp, region });
     } catch (error) {
       entry.error = (error as Error).message;
     } finally {
+      entry.pending = false;
       clearTimeout(timeout);
       server.close();
       server.closeAllConnections();
-      setTimeout(() => logins.delete(provider), 60000).unref();
+      setTimeout(() => { if (logins.get(provider) === entry) logins.delete(provider); }, 60000).unref();
     }
   })();
   logins.set(provider, entry);
@@ -158,13 +167,17 @@ export async function status(provider: Provider) {
     logged_in: !!current && (!current.expires || current.expires * 1000 > Date.now()),
     user: current?.userName || undefined,
     ...(current ? { region: current.region ?? "cn" } : {}),
-    ...(pending ? { login_pending: !pending.error && !current, login_url: pending.url, ...(pending.error ? { error: pending.error } : {}) } : {}),
+    ...(pending ? { login_pending: pending.pending, login_url: pending.url, ...(pending.error ? { error: pending.error } : {}) } : {}),
   };
 }
 
 export async function logout(provider: Provider) {
   const pending = logins.get(provider);
-  if (pending) { pending.server.close(); logins.delete(provider); }
+  if (pending) {
+    pending.cancel();
+    await pending.done;
+    if (logins.get(provider) === pending) logins.delete(provider);
+  }
   await save(provider, undefined);
   return { provider, logged_in: false };
 }

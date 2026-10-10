@@ -1,0 +1,23 @@
+{
+  "source": "Captured OpenCode outbound provider request, before remote processing",
+  "rows": [
+    {
+      "trial": "muse-spark-1.3-contributor-free-1-1",
+      "provider_model": "muse-spark-1.3-contributor-free",
+      "hdc_port": {
+        "description": "start: integer 10000-16555, one instance; invalid: ask, never call/substitute; occupied: fail",
+        "type": "integer"
+      }
+    },
+    {
+      "trial": "mimo-v2.6-flash-free-1-1",
+      "provider_model": "mimo-v2.6-flash-free",
+      "hdc_port": {
+        "description": "start: integer 10000-16555, one instance; invalid: ask, never call/substitute; occupied: fail",
+        "type": "integer",
+        "minimum": 10000,
+        "maximum": 16555
+      }
+    }
+  ]
+}
