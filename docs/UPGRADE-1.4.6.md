@@ -57,11 +57,17 @@
 - [x] 本地类型、186 项单测、性能、上游门禁通过。
 - [x] OpenCode 76 轮全部执行完成：48 轮拟调用、22 轮免费模型基础实际调用、6 轮最终 USB 调用；失败保留，未宣称全通过。
 - [x] HDC 原 tree/find/assert 顺序连续复核 10 轮（30 个 UI 调用）通过，最大 1,136 ms；原失败仍保留。卸载本轮 audit145 应用，旧 physical145 仍在、原 7 个模拟器元数据不变、有效登录已保留。
-- [ ] 推送本次提交；该提交七项 CI 全部成功；release 工作流、tag、Release、Latest 及本地只读回执一致。
+- [x] 发布提交 `080de85dd14bad1f44dee2ff58a91df0d30c7e80` 已推送；七项 CI 全部成功；release 工作流、tag、Release、Latest 及本地只读回执一致。
 - [ ] 原 HDC 超时具体根因：空输出且未捕获对应设备日志，暂不能确定；后续成功不等于已修复。
 - [ ] 有效旧凭据迁移、云端配额具备后的创建、专用云端对象删除验收。
 - [ ] 所有免费模型可靠完成全部工具场景：当前证据不满足，不能称为全绿。
 - [ ] 用户重启后以原生 doctor 验证 Codex 加载 v1.4.6，再做新版原生模型复验。
 - [ ] 其他机型、跨系统真实 SDK、录屏音频及首次 license 接受。
 
-没有执行 npm 发布。GitHub 交付状态和真实宿主重载分别记录。
+## GitHub 交付回执
+
+发布提交 `080de85dd14bad1f44dee2ff58a91df0d30c7e80` 的 [CI 七项任务](https://github.com/like3213934360-lab/deveco_tool/actions/runs/38059988470)全部成功，[自动 release 工作流](https://github.com/like3213934360-lab/deveco_tool/actions/runs/38060072753)成功。已下载 `verified-release` 制品，并与干净 checkout 中 `node tools/release.mjs --run 38059988470 --check` 输出逐字节比对一致；[公开回执](evidence/v1.4.6-release.json)记录 tag、发布提交和 CI。
+
+[v1.4.6 Release](https://github.com/like3213934360-lab/deveco_tool/releases/tag/v1.4.6)已发布且为 Latest；tag 指向上述发布提交。同版本文档回执提交不移动 tag，也不重发 Release；其自身 CI 和 release 核验须另外完成。
+
+没有执行 npm 发布。Codex App 原生 MCP 仍是 v1.4.5，本轮独立 stdio 对 v1.4.6 的验收不能替代用户重启后的原生复验。
