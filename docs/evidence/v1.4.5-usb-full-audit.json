@@ -1,0 +1,1717 @@
+{
+  "date": "2026-10-10",
+  "version": "1.4.5",
+  "build_id": "44db485182694c582ba2e60e94a09673edf6dfbe12b555810c8dbe3c4cab9193",
+  "repository_runtime_commit": "ed0649aa03183c9824d3a38f49bd56cb30f116c2",
+  "device": {
+    "connection": "USB selected by user",
+    "name": "HUAWEI Pura 80 Pro",
+    "model": "LMR-AL00",
+    "api_level": 26
+  },
+  "execution": {
+    "native_host": "Codex App: doctor, project.create, sign.profile_create and targeted LSP investigation",
+    "runner": "test/audit/physical.mjs via real stdio MCP; actual SDK/services/USB effects, not mocks or planned calls",
+    "opencode_model_retested": false,
+    "claude_in_scope": false,
+    "runtime_modified": false,
+    "test_environment_modified": false,
+    "unrelated_apps_modified": false
+  },
+  "counts": {
+    "tools": 15,
+    "actions": 102,
+    "verified": 80,
+    "environment_limited": 10,
+    "unverified": 12,
+    "cases": 72,
+    "passed": 72,
+    "failed": 0,
+    "prior_native_actions": 2
+  },
+  "cases": [
+    {
+      "phase": "host",
+      "id": "doctor",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 291
+    },
+    {
+      "phase": "host",
+      "id": "device.list-info",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 312
+    },
+    {
+      "phase": "host",
+      "id": "knowledge.local-search-read",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 473
+    },
+    {
+      "phase": "host",
+      "id": "knowledge.catalog-status-update-check",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 470
+    },
+    {
+      "phase": "host",
+      "id": "knowledge.cloud-search",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 4950
+    },
+    {
+      "phase": "host",
+      "id": "auth.status-teams",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 165
+    },
+    {
+      "phase": "host",
+      "id": "skills.list-read-search",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 383
+    },
+    {
+      "phase": "host",
+      "id": "emulator.readonly-inventory",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 715
+    },
+    {
+      "phase": "sdk",
+      "id": "project.info-sync-build",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 4237
+    },
+    {
+      "phase": "sdk",
+      "id": "code.check",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 834
+    },
+    {
+      "phase": "sdk",
+      "id": "code.lint",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 2371
+    },
+    {
+      "phase": "sdk",
+      "id": "code.api-versions-scan",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 5601
+    },
+    {
+      "phase": "sdk",
+      "id": "code.lsp.hover",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 1763
+    },
+    {
+      "phase": "sdk",
+      "id": "code.lsp.definition",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 3
+    },
+    {
+      "phase": "sdk",
+      "id": "code.lsp.declaration",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 1
+    },
+    {
+      "phase": "sdk",
+      "id": "code.lsp.implementation",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 31
+    },
+    {
+      "phase": "sdk",
+      "id": "code.lsp.references",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 84
+    },
+    {
+      "phase": "sdk",
+      "id": "code.lsp.symbols",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 3
+    },
+    {
+      "phase": "sdk",
+      "id": "code.lsp.workspace_symbols",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 67
+    },
+    {
+      "phase": "sdk",
+      "id": "code.lsp.diagnostics",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 67
+    },
+    {
+      "phase": "sdk",
+      "id": "code.lsp.completion",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 37
+    },
+    {
+      "phase": "sdk",
+      "id": "code.lsp.signature",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 1
+    },
+    {
+      "phase": "sdk",
+      "id": "code.lsp.call_hierarchy",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 8
+    },
+    {
+      "phase": "sdk",
+      "id": "code.lsp.cpp",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 1037
+    },
+    {
+      "phase": "sdk",
+      "id": "code.lsp_restart",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 1
+    },
+    {
+      "phase": "device",
+      "id": "run.build_run",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 11216
+    },
+    {
+      "phase": "device",
+      "id": "device.shell",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 130
+    },
+    {
+      "phase": "device",
+      "id": "device.send-recv",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 103
+    },
+    {
+      "phase": "device",
+      "id": "device.sqlite",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 227
+    },
+    {
+      "phase": "device",
+      "id": "device.sqlite.readonly-rejection",
+      "kind": "negative",
+      "status": "passed",
+      "ms": 120
+    },
+    {
+      "phase": "device",
+      "id": "device.log-window-follow",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 2863
+    },
+    {
+      "phase": "device",
+      "id": "ui.observe-screenshot-tree-find-windows",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 4009
+    },
+    {
+      "phase": "device",
+      "id": "sign.verify",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 312
+    },
+    {
+      "phase": "gestures",
+      "id": "ui.act.click",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 3379
+    },
+    {
+      "phase": "gestures",
+      "id": "ui.act.double_click",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 2730
+    },
+    {
+      "phase": "gestures",
+      "id": "ui.act.long_click",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 4287
+    },
+    {
+      "phase": "gestures",
+      "id": "ui.act.swipe",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 6461
+    },
+    {
+      "phase": "gestures",
+      "id": "ui.act.fling",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 3317
+    },
+    {
+      "phase": "gestures",
+      "id": "ui.act.drag",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 5106
+    },
+    {
+      "phase": "gestures",
+      "id": "ui.act.mouse_click",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 3738
+    },
+    {
+      "phase": "gestures",
+      "id": "ui.act.mouse_double_click",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 3282
+    },
+    {
+      "phase": "gestures",
+      "id": "ui.act.mouse_long_click",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 5332
+    },
+    {
+      "phase": "gestures",
+      "id": "ui.act.mouse_drag",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 7838
+    },
+    {
+      "phase": "gestures",
+      "id": "ui.act.scroll",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 6164
+    },
+    {
+      "phase": "gestures",
+      "id": "ui.act.mouse_scroll",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 4782
+    },
+    {
+      "phase": "gestures",
+      "id": "ui.act.mouse_move",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 2315
+    },
+    {
+      "phase": "gestures",
+      "id": "ui.act.input-type-key",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 24702
+    },
+    {
+      "phase": "gestures",
+      "id": "ui.act.batch",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 11166
+    },
+    {
+      "phase": "flows",
+      "id": "ui_flow.record-stop-list-show-replay",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 13302
+    },
+    {
+      "phase": "flows",
+      "id": "run.deploy-then_flow",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 8611
+    },
+    {
+      "phase": "flows",
+      "id": "ui.visual",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 12053
+    },
+    {
+      "phase": "flows",
+      "id": "ui.layout",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 663
+    },
+    {
+      "phase": "flows",
+      "id": "ui.perf",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 12596
+    },
+    {
+      "phase": "flows",
+      "id": "ui_flow.delete",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 3
+    },
+    {
+      "phase": "review",
+      "id": "ui.test_start-step-review-capture",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 11325
+    },
+    {
+      "phase": "review_finish",
+      "id": "ui.review-finish-log-export",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 32
+    },
+    {
+      "phase": "review_finish",
+      "id": "ui.test-failed-assertion",
+      "kind": "negative",
+      "status": "passed",
+      "ms": 5037
+    },
+    {
+      "phase": "signing",
+      "id": "sign.certificates-devices",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 426
+    },
+    {
+      "phase": "signing",
+      "id": "sign.keypair-csr",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 577
+    },
+    {
+      "phase": "signing",
+      "id": "sign.sign-verify",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 625
+    },
+    {
+      "phase": "jobs",
+      "id": "project.clean",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 698
+    },
+    {
+      "phase": "jobs",
+      "id": "job.cancel",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 863
+    },
+    {
+      "phase": "jobs",
+      "id": "diagnose.build-job.resume",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 6428
+    },
+    {
+      "phase": "variants",
+      "id": "ui.act.mouse_move.effect",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 16391
+    },
+    {
+      "phase": "variants",
+      "id": "ui.onboarding-preserves-defaults",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 21881
+    },
+    {
+      "phase": "variants",
+      "id": "diagnose.crash-real-startup",
+      "kind": "negative",
+      "status": "passed",
+      "ms": 9132
+    },
+    {
+      "phase": "lifecycle",
+      "id": "run.auto-baseline",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 16901
+    },
+    {
+      "phase": "lifecycle",
+      "id": "run.stop-launch",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 5675
+    },
+    {
+      "phase": "lifecycle",
+      "id": "run.auto-relaunch",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 6021
+    },
+    {
+      "phase": "lifecycle",
+      "id": "ui.record-start-status-stop-decode",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 14634
+    },
+    {
+      "phase": "lifecycle",
+      "id": "run.uninstall",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 666
+    },
+    {
+      "phase": "lifecycle",
+      "id": "hot_reload.stop_daemon",
+      "kind": "positive",
+      "status": "passed",
+      "ms": 156
+    }
+  ],
+  "action_matrix": [
+    {
+      "tool": "doctor",
+      "action": "(none)",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "doctor"
+      ]
+    },
+    {
+      "tool": "project",
+      "action": "info",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "project.info-sync-build"
+      ]
+    },
+    {
+      "tool": "project",
+      "action": "create",
+      "status": "verified",
+      "origin": "native_this_round",
+      "evidence": "本轮 Codex 原生 MCP 创建新的专用工程，fixture recipe 的 7 个源码/配置文件哈希与实测工程一致"
+    },
+    {
+      "tool": "project",
+      "action": "sync",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "project.info-sync-build"
+      ]
+    },
+    {
+      "tool": "project",
+      "action": "build",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "project.info-sync-build",
+        "code.lsp.cpp",
+        "job.cancel",
+        "diagnose.build-job.resume"
+      ]
+    },
+    {
+      "tool": "project",
+      "action": "clean",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "project.clean"
+      ]
+    },
+    {
+      "tool": "run",
+      "action": "build_run",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "run.build_run",
+        "ui.act.mouse_move.effect",
+        "ui.onboarding-preserves-defaults",
+        "diagnose.crash-real-startup",
+        "run.auto-baseline",
+        "run.auto-relaunch"
+      ]
+    },
+    {
+      "tool": "run",
+      "action": "deploy",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "run.deploy-then_flow"
+      ]
+    },
+    {
+      "tool": "run",
+      "action": "launch",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "preflight",
+        "ui.act.batch",
+        "ui.visual",
+        "run.stop-launch"
+      ]
+    },
+    {
+      "tool": "run",
+      "action": "stop",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "run.stop-launch"
+      ]
+    },
+    {
+      "tool": "run",
+      "action": "uninstall",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "run.uninstall"
+      ]
+    },
+    {
+      "tool": "job",
+      "action": "wait",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "project.info-sync-build",
+        "code.lsp.cpp",
+        "run.build_run",
+        "ui_flow.record-stop-list-show-replay",
+        "run.deploy-then_flow",
+        "diagnose.build-job.resume",
+        "ui.act.mouse_move.effect",
+        "ui.onboarding-preserves-defaults",
+        "diagnose.crash-real-startup",
+        "run.auto-baseline",
+        "run.auto-relaunch"
+      ]
+    },
+    {
+      "tool": "job",
+      "action": "status",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "project.info-sync-build"
+      ]
+    },
+    {
+      "tool": "job",
+      "action": "list",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "project.info-sync-build"
+      ]
+    },
+    {
+      "tool": "job",
+      "action": "cancel",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "job.cancel"
+      ]
+    },
+    {
+      "tool": "job",
+      "action": "resume",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "diagnose.build-job.resume"
+      ]
+    },
+    {
+      "tool": "job",
+      "action": "read",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "knowledge.cloud-search",
+        "project.info-sync-build",
+        "ui.visual",
+        "diagnose.crash-real-startup"
+      ]
+    },
+    {
+      "tool": "code",
+      "action": "check",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "code.check"
+      ]
+    },
+    {
+      "tool": "code",
+      "action": "lint",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "code.lint"
+      ]
+    },
+    {
+      "tool": "code",
+      "action": "api_scan",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "code.api-versions-scan"
+      ]
+    },
+    {
+      "tool": "code",
+      "action": "api_versions",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "code.api-versions-scan"
+      ]
+    },
+    {
+      "tool": "code",
+      "action": "lsp",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "code.lsp.hover",
+        "code.lsp.definition",
+        "code.lsp.declaration",
+        "code.lsp.implementation",
+        "code.lsp.references",
+        "code.lsp.symbols",
+        "code.lsp.workspace_symbols",
+        "code.lsp.diagnostics",
+        "code.lsp.completion",
+        "code.lsp.signature",
+        "code.lsp.call_hierarchy",
+        "code.lsp.cpp"
+      ]
+    },
+    {
+      "tool": "code",
+      "action": "lsp_restart",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "code.lsp_restart"
+      ]
+    },
+    {
+      "tool": "device",
+      "action": "list",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "device.list-info"
+      ]
+    },
+    {
+      "tool": "device",
+      "action": "info",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "preflight"
+      ]
+    },
+    {
+      "tool": "device",
+      "action": "log",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "device.log-window-follow"
+      ]
+    },
+    {
+      "tool": "device",
+      "action": "shell",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "device.shell",
+        "run.stop-launch",
+        "run.auto-relaunch",
+        "run.uninstall"
+      ]
+    },
+    {
+      "tool": "device",
+      "action": "sqlite",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "device.sqlite",
+        "device.sqlite.readonly-rejection"
+      ]
+    },
+    {
+      "tool": "device",
+      "action": "send",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "device.send-recv"
+      ]
+    },
+    {
+      "tool": "device",
+      "action": "recv",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "device.send-recv"
+      ]
+    },
+    {
+      "tool": "ui",
+      "action": "observe",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "ui.observe-screenshot-tree-find-windows"
+      ]
+    },
+    {
+      "tool": "ui",
+      "action": "screenshot",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "ui.observe-screenshot-tree-find-windows"
+      ]
+    },
+    {
+      "tool": "ui",
+      "action": "tree",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "ui.observe-screenshot-tree-find-windows",
+        "ui.act.scroll",
+        "ui.act.mouse_scroll",
+        "ui.onboarding-preserves-defaults"
+      ]
+    },
+    {
+      "tool": "ui",
+      "action": "find",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "ui.observe-screenshot-tree-find-windows",
+        "ui.act.click",
+        "ui.act.double_click",
+        "ui.act.long_click",
+        "ui.act.swipe",
+        "ui.act.fling",
+        "ui.act.drag",
+        "ui.act.mouse_click",
+        "ui.act.mouse_double_click",
+        "ui.act.mouse_long_click",
+        "ui.act.mouse_drag",
+        "ui.act.scroll",
+        "ui.act.mouse_scroll",
+        "ui.act.mouse_move",
+        "ui.act.input-type-key",
+        "ui.act.batch",
+        "ui.perf",
+        "ui.onboarding-preserves-defaults"
+      ]
+    },
+    {
+      "tool": "ui",
+      "action": "act",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "ui.act.click",
+        "ui.act.double_click",
+        "ui.act.long_click",
+        "ui.act.swipe",
+        "ui.act.fling",
+        "ui.act.drag",
+        "ui.act.mouse_click",
+        "ui.act.mouse_double_click",
+        "ui.act.mouse_long_click",
+        "ui.act.mouse_drag",
+        "ui.act.scroll",
+        "ui.act.mouse_scroll",
+        "ui.act.mouse_move",
+        "ui.act.input-type-key",
+        "ui.act.batch",
+        "ui_flow.record-stop-list-show-replay",
+        "ui.visual",
+        "ui.act.mouse_move.effect",
+        "ui.record-start-status-stop-decode"
+      ]
+    },
+    {
+      "tool": "ui",
+      "action": "assert",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "preflight",
+        "ui.act.batch",
+        "ui_flow.record-stop-list-show-replay",
+        "run.deploy-then_flow",
+        "ui.visual",
+        "ui.act.mouse_move.effect",
+        "run.auto-baseline",
+        "run.stop-launch",
+        "run.auto-relaunch",
+        "ui.record-start-status-stop-decode"
+      ]
+    },
+    {
+      "tool": "ui",
+      "action": "windows",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "ui.observe-screenshot-tree-find-windows"
+      ]
+    },
+    {
+      "tool": "ui",
+      "action": "perf",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "ui.perf"
+      ]
+    },
+    {
+      "tool": "ui",
+      "action": "visual",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "ui.visual"
+      ]
+    },
+    {
+      "tool": "ui",
+      "action": "layout",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "ui.layout"
+      ]
+    },
+    {
+      "tool": "ui",
+      "action": "record_start",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "ui.record-start-status-stop-decode"
+      ]
+    },
+    {
+      "tool": "ui",
+      "action": "record_stop",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "ui.record-start-status-stop-decode"
+      ]
+    },
+    {
+      "tool": "ui",
+      "action": "record_status",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "ui.record-start-status-stop-decode"
+      ]
+    },
+    {
+      "tool": "ui",
+      "action": "test_start",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "ui.test_start-step-review-capture",
+        "ui.test-failed-assertion",
+        "ui.onboarding-preserves-defaults"
+      ]
+    },
+    {
+      "tool": "ui",
+      "action": "test_step",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "ui.test_start-step-review-capture",
+        "ui.test-failed-assertion",
+        "ui.onboarding-preserves-defaults"
+      ]
+    },
+    {
+      "tool": "ui",
+      "action": "review",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "ui.test_start-step-review-capture",
+        "ui.review-finish-log-export"
+      ]
+    },
+    {
+      "tool": "ui",
+      "action": "test_finish",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "ui.review-finish-log-export",
+        "ui.test-failed-assertion",
+        "ui.onboarding-preserves-defaults"
+      ]
+    },
+    {
+      "tool": "ui",
+      "action": "test_log",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "ui.review-finish-log-export"
+      ]
+    },
+    {
+      "tool": "ui",
+      "action": "test_export",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "ui.review-finish-log-export",
+        "ui.onboarding-preserves-defaults"
+      ]
+    },
+    {
+      "tool": "ui_flow",
+      "action": "list",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "ui_flow.record-stop-list-show-replay",
+        "ui_flow.delete"
+      ]
+    },
+    {
+      "tool": "ui_flow",
+      "action": "show",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "ui_flow.record-stop-list-show-replay"
+      ]
+    },
+    {
+      "tool": "ui_flow",
+      "action": "record",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "ui_flow.record-stop-list-show-replay"
+      ]
+    },
+    {
+      "tool": "ui_flow",
+      "action": "stop",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "ui_flow.record-stop-list-show-replay"
+      ]
+    },
+    {
+      "tool": "ui_flow",
+      "action": "replay",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "ui_flow.record-stop-list-show-replay"
+      ]
+    },
+    {
+      "tool": "ui_flow",
+      "action": "delete",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "ui_flow.delete"
+      ]
+    },
+    {
+      "tool": "diagnose",
+      "action": "crash",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "diagnose.crash-real-startup"
+      ]
+    },
+    {
+      "tool": "diagnose",
+      "action": "build",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "diagnose.build-job.resume"
+      ]
+    },
+    {
+      "tool": "knowledge",
+      "action": "search",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "knowledge.local-search-read",
+        "knowledge.cloud-search"
+      ]
+    },
+    {
+      "tool": "knowledge",
+      "action": "read",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "knowledge.local-search-read"
+      ]
+    },
+    {
+      "tool": "knowledge",
+      "action": "catalog",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "knowledge.catalog-status-update-check"
+      ]
+    },
+    {
+      "tool": "knowledge",
+      "action": "status",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "knowledge.catalog-status-update-check"
+      ]
+    },
+    {
+      "tool": "knowledge",
+      "action": "update",
+      "status": "unverified",
+      "reason": "check=true 已实际通过；下载并替换知识库版本未执行"
+    },
+    {
+      "tool": "knowledge",
+      "action": "rollback",
+      "status": "unverified",
+      "reason": "不切换当前知识库版本"
+    },
+    {
+      "tool": "skills",
+      "action": "list",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "skills.list-read-search"
+      ]
+    },
+    {
+      "tool": "skills",
+      "action": "read",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "skills.list-read-search"
+      ]
+    },
+    {
+      "tool": "skills",
+      "action": "export",
+      "status": "unverified",
+      "reason": "Skill 位置由用户管理，本轮未指定新的导出目的地"
+    },
+    {
+      "tool": "skills",
+      "action": "install_mcp",
+      "status": "unverified",
+      "reason": "不修改 Codex/OpenCode MCP 注册配置"
+    },
+    {
+      "tool": "skills",
+      "action": "init",
+      "status": "unverified",
+      "reason": "不创建或覆盖用户的 Skill / 宿主配置"
+    },
+    {
+      "tool": "skills",
+      "action": "search",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "skills.list-read-search"
+      ]
+    },
+    {
+      "tool": "skills",
+      "action": "install",
+      "status": "unverified",
+      "reason": "不修改用户管理的 Skill 安装"
+    },
+    {
+      "tool": "skills",
+      "action": "uninstall",
+      "status": "unverified",
+      "reason": "不删除用户管理的 Skill"
+    },
+    {
+      "tool": "auth",
+      "action": "login",
+      "status": "unverified",
+      "reason": "已有登录未退出；未重新开启浏览器授权"
+    },
+    {
+      "tool": "auth",
+      "action": "status",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "auth.status-teams"
+      ]
+    },
+    {
+      "tool": "auth",
+      "action": "logout",
+      "status": "unverified",
+      "reason": "不删除当前登录凭据"
+    },
+    {
+      "tool": "auth",
+      "action": "teams",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "auth.status-teams"
+      ]
+    },
+    {
+      "tool": "auth",
+      "action": "import",
+      "status": "unverified",
+      "reason": "不迁移或覆盖宿主现有凭据"
+    },
+    {
+      "tool": "sign",
+      "action": "auto",
+      "status": "environment_limited",
+      "reason": "前一轮同机同团队实际返回证书配额 205389872，未删除旧证书腾出额度；非成功签名"
+    },
+    {
+      "tool": "sign",
+      "action": "sign",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "sign.sign-verify"
+      ]
+    },
+    {
+      "tool": "sign",
+      "action": "verify",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "sign.verify",
+        "sign.sign-verify"
+      ]
+    },
+    {
+      "tool": "sign",
+      "action": "certificates",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "sign.certificates-devices"
+      ]
+    },
+    {
+      "tool": "sign",
+      "action": "devices",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "sign.certificates-devices"
+      ]
+    },
+    {
+      "tool": "sign",
+      "action": "register_device",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "sign.certificates-devices"
+      ]
+    },
+    {
+      "tool": "sign",
+      "action": "delete_certificate",
+      "status": "unverified",
+      "reason": "不删除或撤销现有证书"
+    },
+    {
+      "tool": "sign",
+      "action": "keypair",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "sign.keypair-csr"
+      ]
+    },
+    {
+      "tool": "sign",
+      "action": "csr",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "sign.keypair-csr"
+      ]
+    },
+    {
+      "tool": "sign",
+      "action": "certificate_create",
+      "status": "environment_limited",
+      "reason": "同一证书配额阻塞；本轮没有直接创建新云证书"
+    },
+    {
+      "tool": "sign",
+      "action": "profile_create",
+      "status": "verified",
+      "origin": "native_this_round",
+      "evidence": "本轮 Codex 原生 MCP 为专用测试包生成 profile，随后真实签名安装成功"
+    },
+    {
+      "tool": "sign",
+      "action": "profile_delete",
+      "status": "unverified",
+      "reason": "IDE 签名 profile 没有可删除的云端 profile ID；未选取现有用户 profile"
+    },
+    {
+      "tool": "emulator",
+      "action": "list",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "emulator.readonly-inventory"
+      ]
+    },
+    {
+      "tool": "emulator",
+      "action": "start",
+      "status": "environment_limited",
+      "reason": "模拟器专用操作不适用于 USB 真机；本轮不切换设备、不改镜像、许可或传感器环境"
+    },
+    {
+      "tool": "emulator",
+      "action": "stop",
+      "status": "environment_limited",
+      "reason": "模拟器专用操作不适用于 USB 真机；本轮不切换设备、不改镜像、许可或传感器环境"
+    },
+    {
+      "tool": "emulator",
+      "action": "create",
+      "status": "environment_limited",
+      "reason": "模拟器专用操作不适用于 USB 真机；本轮不切换设备、不改镜像、许可或传感器环境"
+    },
+    {
+      "tool": "emulator",
+      "action": "delete",
+      "status": "environment_limited",
+      "reason": "模拟器专用操作不适用于 USB 真机；本轮不切换设备、不改镜像、许可或传感器环境"
+    },
+    {
+      "tool": "emulator",
+      "action": "images",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "emulator.readonly-inventory"
+      ]
+    },
+    {
+      "tool": "emulator",
+      "action": "install_image",
+      "status": "environment_limited",
+      "reason": "模拟器专用操作不适用于 USB 真机；本轮不切换设备、不改镜像、许可或传感器环境"
+    },
+    {
+      "tool": "emulator",
+      "action": "remove_image",
+      "status": "environment_limited",
+      "reason": "模拟器专用操作不适用于 USB 真机；本轮不切换设备、不改镜像、许可或传感器环境"
+    },
+    {
+      "tool": "emulator",
+      "action": "license",
+      "status": "environment_limited",
+      "reason": "模拟器专用操作不适用于 USB 真机；本轮不切换设备、不改镜像、许可或传感器环境"
+    },
+    {
+      "tool": "emulator",
+      "action": "license_view",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "emulator.readonly-inventory"
+      ]
+    },
+    {
+      "tool": "emulator",
+      "action": "scenario",
+      "status": "environment_limited",
+      "reason": "模拟器专用操作不适用于 USB 真机；本轮不切换设备、不改镜像、许可或传感器环境"
+    },
+    {
+      "tool": "hot_reload",
+      "action": "apply",
+      "status": "verified",
+      "origin": "previous_native_same_build",
+      "evidence": "同版本、同 USB 真机上一轮两次原生补丁已证明 UI 生效；见 v1.4.5-physical-acceptance.json"
+    },
+    {
+      "tool": "hot_reload",
+      "action": "reset",
+      "status": "verified",
+      "origin": "previous_native_same_build",
+      "evidence": "同版本、同 USB 真机上一轮两次原生 reset 已证明 patch=0、原页面恢复和 SQLite 标记保留；见 v1.4.5-physical-acceptance.json"
+    },
+    {
+      "tool": "hot_reload",
+      "action": "stop_daemon",
+      "status": "verified",
+      "origin": "stdio_this_round",
+      "cases": [
+        "hot_reload.stop_daemon"
+      ]
+    }
+  ],
+  "trace_receipts": [
+    {
+      "phase": "host",
+      "trace": "host-1791637309947.jsonl",
+      "sha256": "935e1850a0a5b192fc7f747936e737ef886b0d90fd9bd504bd9868325847e5be",
+      "calls": 19
+    },
+    {
+      "phase": "sdk",
+      "trace": "sdk-1791637339706.jsonl",
+      "sha256": "302caac861f5c27f5537f462324574542df9ef5b7d903648fc767ce12cfb69f3",
+      "calls": 30
+    },
+    {
+      "phase": "device",
+      "trace": "device-1791637311077.jsonl",
+      "sha256": "622ed631c8fa583ab005efcd36a9ab7a40d707f890cc35fa5121231492a6aa39",
+      "calls": 19
+    },
+    {
+      "phase": "gestures",
+      "trace": "gestures-1791637469719.jsonl",
+      "sha256": "2e5930e20c6f408ca80e45e6385808e64aea020f83ffcd841dff043b43d801ed",
+      "calls": 54
+    },
+    {
+      "phase": "flows",
+      "trace": "flows-1791637859683.jsonl",
+      "sha256": "b2110547b8e15a27016dd84fa7ff8e5b39e0bd4fdf3b2e6bdbd6c9020cc4bf55",
+      "calls": 30
+    },
+    {
+      "phase": "review",
+      "trace": "review-1791637708829.jsonl",
+      "sha256": "c09296260a6eb364b1c7e611b006da5c34868072251b6fa60a0182c5f6802ed0",
+      "calls": 6
+    },
+    {
+      "phase": "review_finish",
+      "trace": "review_finish-1791637737879.jsonl",
+      "sha256": "05a687e20ac6c861aa6d6d8c8d03dbbb52a6a3738a5350db787d88599f1e9666",
+      "calls": 8
+    },
+    {
+      "phase": "signing",
+      "trace": "signing-1791638488410.jsonl",
+      "sha256": "0b3fcf4d609a876b9fbf43581919b22e9a9dc0d8a0c55146f02b7144f0bfd852",
+      "calls": 8
+    },
+    {
+      "phase": "jobs",
+      "trace": "jobs-1791637503003.jsonl",
+      "sha256": "a5f146d937440d5d231167b091d3b24c936d1f17834d0107c6036af92b734b51",
+      "calls": 10
+    },
+    {
+      "phase": "variants",
+      "trace": "variants-1791637779893.jsonl",
+      "sha256": "cb273673184dd23d6de7c97be8a7ac0ed8d654b74d801e2f618ab15dd8f90959",
+      "calls": 22
+    },
+    {
+      "phase": "lifecycle",
+      "trace": "lifecycle-1791638084100.jsonl",
+      "sha256": "e5b708a5f20158a7ee667497ac3ca75d697e83f936f597fcb2ff758481941f0c",
+      "calls": 24
+    }
+  ],
+  "earlier_attempt_receipts": [
+    {
+      "trace": "flows-1791637573782.jsonl",
+      "sha256": "cbae45fb2eed81ec2ed714c4e185420a096f040bd39d1aea1423b3d967bf01ba"
+    },
+    {
+      "trace": "flows-1791637619637.jsonl",
+      "sha256": "8def77cb941aad06d2c08b8f095de482ee07151718abad46e170b2516a68b8b8"
+    },
+    {
+      "trace": "gestures-1791637340858.jsonl",
+      "sha256": "25509ae0728bf37788d1800e46316857e355e9d688d63a84682650d30c54367d"
+    },
+    {
+      "trace": "host-1791637064116.jsonl",
+      "sha256": "bd372356d017044e79e5faee3664e6901bfc926ccb4c0b4f5f0dd675919e24ac"
+    },
+    {
+      "trace": "jobs-1791637470879.jsonl",
+      "sha256": "143e4e2c08d842b07d456820aea6db754e1774ee16a91516166d02420f720c08"
+    },
+    {
+      "trace": "lifecycle-1791637928400.jsonl",
+      "sha256": "4c2fdfd7afc5bc52fcdc12a06cf157004c52395c34504eb0cefd7f968dedb1a3"
+    },
+    {
+      "trace": "lifecycle-1791638014456.jsonl",
+      "sha256": "2755975ad7653aee59204db8934418bc1537a9f2c5e89dd57c6c29ffa755cc11"
+    },
+    {
+      "trace": "sdk-1791637073941.jsonl",
+      "sha256": "a20904c00b76489867198b7a9545f84279c19104421030e4a634c38a1e6bde83"
+    },
+    {
+      "trace": "signing-1791637398928.jsonl",
+      "sha256": "bc4e2ae87d483eabd8d23cae59370ed331c53dfa31251b9c49a94d8b3a552023"
+    },
+    {
+      "trace": "signing-1791637435956.jsonl",
+      "sha256": "4620008e24416007e706790a590bdf08c4220e3ae1c16aa4c3f42b2e0f123257"
+    },
+    {
+      "trace": "signing-1791638467223.jsonl",
+      "sha256": "7130cd8b4edf90e611f6d36e1025360b5b5036c0890fc57b3bcea7f07067cc5a"
+    }
+  ],
+  "fixture_files_sha256": {
+    "entry/src/main/ets/pages/Index.ets": "cd4ec53f93d31c6e22a3cfcaf28cefca27eb31502780612fea2285540a5be110",
+    "entry/src/main/ets/pages/Util.ets": "5f7fb6274a48381bc8f53ef925ace05c9be7f0c4ed254a7ff44b375554274bc8",
+    "entry/src/main/ets/pages/Shape.ets": "360cc28da5c1fc46a626e5128ad49549ce494effc9cd83ea11a2269bb3d007c5",
+    "entry/src/main/ets/entryability/EntryAbility.ets": "4181bbda97439f6601c7a306f953c1f354b536e644afd2ed3eb3abdff8626ca4",
+    "entry/src/main/cpp/napi_init.cpp": "f4cf088997d912161fab05140a7f010022cde7aa90c2c45006bcd65774ec2c85",
+    "entry/src/main/cpp/CMakeLists.txt": "676d94d8af49c5634a25c6340ee8a14c7f2e6fa80682e1997021fe4aa1305812",
+    "entry/build-profile.json5": "a94408d53828662652c127593f2c86198e85c139e441c57b2e754528e3e7898e"
+  },
+  "fixture_recipe_matched": true,
+  "fixture_restored": true,
+  "signed_profile_sha256": "7c5befb74b16ea88017f73bbe38d9a26f50c934dcc6cd41368799fb472c71487",
+  "observations": {
+    "perf": {
+      "source": "composer",
+      "gestures": 2,
+      "elapsed_ms": 8347,
+      "verdict": "smooth",
+      "frames": 298,
+      "refresh_hz": 120,
+      "avg_fps": 108,
+      "frame_ms": {
+        "p50": 8.33,
+        "p95": 8.54,
+        "p99": 41.67,
+        "max": 58.3
+      },
+      "janky_frames": 13,
+      "jank_rate": 0.0438,
+      "missed_frames": 33,
+      "active_ms": 2750,
+      "memory": {
+        "pss_kb_before": 31267,
+        "pss_kb_after": 29109,
+        "delta_kb": -2158
+      }
+    },
+    "recording": {
+      "bytes": 217268,
+      "sha256": "5605d327649d6fcdc863f93216ad02dbaa1a78f52ab64ab528aa81daf8db2a58",
+      "codec": "h264",
+      "width": 862,
+      "height": 1920,
+      "frames": 68,
+      "duration_seconds": 5.333,
+      "strict_ffmpeg_decode": true
+    },
+    "auto_relaunch": "Auto mode initialized through actual build_run calls; path=relaunch, no build/install result, HAP hash+mtime and device install/update timestamps unchanged",
+    "onboarding": "Original onboarding fixture; 3 automatic transitions, system default retained, orders:0 and business Next left alone",
+    "crash": "Dedicated test app actually crashed; LAUNCH_FAILED + device faultlog + project source; original fixture restored",
+    "visual_review": "Host inspected the actual returned screenshot; verdict bound to its SHA-256 before finish/export",
+    "new_test_app_uninstalled": true,
+    "prior_physical_probe_preserved": true
+  },
+  "limits": [
+    "Action-level paths are not an exhaustive Cartesian product of every parameter or device type",
+    "knowledge.update check-only passed, mutation remains unverified",
+    "No microphone/audio acceptance",
+    "No real Windows/Linux SDK, other models, foldables, tablets, cars or wearables",
+    "No OpenCode v1.4.5 model reacceptance; stdio success is not model tool-selection evidence",
+    "UI onboarding validated on the real phone with the repository fixture; did not reset its IME/preferences"
+  ],
+  "local_checks": {
+    "typecheck": "passed",
+    "unit": {
+      "passed": 184,
+      "failed": 0,
+      "skipped": 0
+    },
+    "upstream": {
+      "items": 491,
+      "full": 374,
+      "host": 74,
+      "skip": 43,
+      "undecided": 0,
+      "invalid": 0,
+      "stale": 0
+    },
+    "bench": {
+      "handshake_median_ms": 95,
+      "idle_rss_mb": 71,
+      "idle_cpu_changed_10s": false
+    }
+  },
+  "root_causes": [
+    "A repeated signing phase reused an existing output; MCP correctly rejected overwrite with CONFLICT. Each run now uses a unique output and all three signing checks passed again.",
+    "Early harness failures used incorrect response fields after real responses, or invalid action parameters rejected before effects. All original traces retained.",
+    "Completion was requested before the identifier; real SDK completion at column 14 returns leaf(n: number): number.",
+    "An EC keystore was incorrectly judged by arbitrary byte size; final acceptance verifies the PKCS#12 and CSR cryptographically.",
+    "Manual and automatic hot-reload baselines have separate state; final auto test establishes the documented auto precondition and strictly proves no rebuild/reinstall.",
+    "Skipped install is returned as null; final exact assertion and independent device install timestamps verify it."
+  ],
+  "test_files_sha256": {
+    "test/audit/physical.mjs": "4acc144c33e20623b74b302767499081a0ab2b78bd6807060fa327b8dd8bc691",
+    "test/audit/physical-fixture.mjs": "dd1bc4d1287b0d3c7e931554f936e02c7a46db667867a416acd0995d45cebe32"
+  },
+  "earlier_perf": {
+    "source": "composer",
+    "gestures": 2,
+    "elapsed_ms": 8711,
+    "verdict": "minor_jank",
+    "frames": 447,
+    "refresh_hz": 120,
+    "avg_fps": 97.5,
+    "frame_ms": {
+      "p50": 8.33,
+      "p95": 16.67,
+      "p99": 50,
+      "max": 141.7
+    },
+    "janky_frames": 31,
+    "jank_rate": 0.0695,
+    "missed_frames": 103,
+    "active_ms": 4575,
+    "memory": {
+      "pss_kb_before": 29089,
+      "pss_kb_after": 27474,
+      "delta_kb": -1615
+    }
+  },
+  "product_defects_found": [],
+  "private_evidence_uploaded": false
+}
