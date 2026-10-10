@@ -1,0 +1,661 @@
+{
+  "date": "2026-10-10",
+  "host": "Codex App",
+  "server": {
+    "version": "1.4.5",
+    "build_id": "44db485182694c582ba2e60e94a09673edf6dfbe12b555810c8dbe3c4cab9193",
+    "node": "v26.0.0"
+  },
+  "emulator": "deveco_mcp_eval_143",
+  "target": "127.0.0.1:5555",
+  "rounds": 2,
+  "round1_end_call_index": 17,
+  "source_still_patched_during_each_reset": true,
+  "marker_created_by_app_startup": false,
+  "raw_trace_sha256": "116e28e828b602a171505ae36a60b9fd315a52f0a00e7f161302a96703a878ad",
+  "calls": [
+    {
+      "tool": "emulator",
+      "arguments": {
+        "action": "start",
+        "name": "deveco_mcp_eval_143",
+        "boot_mode": "coldboot"
+      },
+      "result": {
+        "started": "deveco_mcp_eval_143",
+        "target": "127.0.0.1:5555",
+        "boot_completed": true,
+        "boot_mode": "coldboot"
+      }
+    },
+    {
+      "tool": "ui",
+      "arguments": {
+        "action": "record_status"
+      },
+      "result": {
+        "status": "idle",
+        "file": "devecomcp-1791617813081-a332.mp4",
+        "seconds": 17764,
+        "note": "Recorder service ended; video is unverified until record_stop retrieves and validates the MP4"
+      }
+    },
+    {
+      "tool": "device",
+      "arguments": {
+        "action": "shell",
+        "command": "bm quickfix -q -b com.devecomcp.probe143"
+      },
+      "result": {
+        "exit_code": 0,
+        "output": "Information as follows:\nApplicationQuickFixInfo:\n  bundle name: com.devecomcp.probe143\n  bundle version code: 1000000\n  bundle version name: 1.0.0\n  patch version code: 0\n  patch version name: \n  cpu abi: \n  native library path: \n  type: \n"
+      }
+    },
+    {
+      "tool": "run",
+      "arguments": {
+        "action": "build_run",
+        "run_mode": "full",
+        "hot_reload": true,
+        "wait": 55000
+      },
+      "result": {
+        "job_id": "j_mv2dkbbp02e10d",
+        "kind": "build_run",
+        "status": "succeeded",
+        "elapsed_ms": 10234,
+        "launch": {
+          "started": true,
+          "pid": 3151,
+          "crashed": false,
+          "new_crash_logs": [],
+          "smoke": "PASS",
+          "screen_uniformity": 0.984
+        },
+        "package_sha256": [
+          "5ab64ffddc3d6815090810ed516c3317fa8ca676ade91b418269431c80806a6d"
+        ]
+      }
+    },
+    {
+      "tool": "device",
+      "arguments": {
+        "action": "sqlite",
+        "bundle": "com.devecomcp.probe143",
+        "db": "reset-proof.db",
+        "sql": "INSERT INTO proof VALUES (14501, 'codex-v145-reload-preserved')",
+        "write": true
+      },
+      "result": {
+        "db": "/data/app/el2/100/database/com.devecomcp.probe143/entry/rdb/reset-proof.db",
+        "output": ""
+      }
+    },
+    {
+      "tool": "hot_reload",
+      "arguments": {
+        "action": "apply"
+      },
+      "result": {
+        "applied": true,
+        "files": [
+          "entry/src/main/ets/pages/Index.ets"
+        ],
+        "added": 0,
+        "restarted": false,
+        "pid": 3151,
+        "note": "Verify the change with ui observe/assert"
+      }
+    },
+    {
+      "tool": "ui",
+      "arguments": {
+        "action": "act",
+        "op": "click",
+        "selector": {
+          "text": "Hello World",
+          "exact": true
+        }
+      },
+      "result": {
+        "performed": "click",
+        "element": {
+          "node": 3,
+          "type": "Text",
+          "text": "Hello World",
+          "key": "HelloWorld",
+          "bounds": [
+            170,
+            1345,
+            1151,
+            1550
+          ],
+          "clickable": true
+        },
+        "after": {
+          "changed": true,
+          "added": [
+            "Text \"Codex 145 Patched\" clickable"
+          ],
+          "removed": [
+            "Text \"Hello World\" clickable"
+          ],
+          "kind": "updated"
+        }
+      }
+    },
+    {
+      "tool": "ui",
+      "arguments": {
+        "action": "assert",
+        "visible": {
+          "text": "Codex 145 Patched",
+          "exact": true
+        },
+        "timeout_ms": 5000
+      },
+      "result": {
+        "passed": true,
+        "state": "visible",
+        "matches": [
+          {
+            "node": 3,
+            "type": "Text",
+            "text": "Codex 145 Patched",
+            "key": "HelloWorld",
+            "bounds": [
+              193,
+              1242,
+              1128,
+              1652
+            ],
+            "clickable": true
+          }
+        ]
+      }
+    },
+    {
+      "tool": "device",
+      "arguments": {
+        "action": "shell",
+        "command": "bm quickfix -q -b com.devecomcp.probe143"
+      },
+      "result": {
+        "exit_code": 0,
+        "output": "Information as follows:\nApplicationQuickFixInfo:\n  bundle name: com.devecomcp.probe143\n  bundle version code: 1000000\n  bundle version name: 1.0.0\n  patch version code: 3000006\n  patch version name: 3000006\n  cpu abi: arm64-v8a\n  native library path: \n  type: patch\n  ModuelQuickFixInfo:\n    module name: entry\n    module sha256: \n    file path: /data/app/el1/bundle/public/com.devecomcp.probe143/patch_3000006/entry.hqf\n"
+      }
+    },
+    {
+      "tool": "hot_reload",
+      "arguments": {
+        "action": "reset"
+      },
+      "result": {
+        "reset": true,
+        "method": "restore_baseline_packages",
+        "patch_version": 0,
+        "packages": [
+          "entry-default-unsigned.hap"
+        ],
+        "note": "Original packages restored without rebuilding; app data preserved. Launch the app to run the baseline code"
+      }
+    },
+    {
+      "tool": "device",
+      "arguments": {
+        "action": "shell",
+        "command": "bm quickfix -q -b com.devecomcp.probe143"
+      },
+      "result": {
+        "exit_code": 0,
+        "output": "Information as follows:\nApplicationQuickFixInfo:\n  bundle name: com.devecomcp.probe143\n  bundle version code: 1000000\n  bundle version name: 1.0.0\n  patch version code: 0\n  patch version name: \n  cpu abi: \n  native library path: \n  type: \n"
+      }
+    },
+    {
+      "tool": "device",
+      "arguments": {
+        "action": "shell",
+        "command": "pidof com.devecomcp.probe143"
+      },
+      "result": {
+        "exit_code": 0,
+        "output": ""
+      }
+    },
+    {
+      "tool": "run",
+      "arguments": {
+        "action": "launch"
+      },
+      "result": {
+        "started": true,
+        "pid": 3827,
+        "crashed": false,
+        "new_crash_logs": [],
+        "smoke": "PASS",
+        "screen_uniformity": 0.984
+      }
+    },
+    {
+      "tool": "ui",
+      "arguments": {
+        "action": "assert",
+        "visible": {
+          "text": "Hello World",
+          "exact": true
+        },
+        "timeout_ms": 5000
+      },
+      "result": {
+        "passed": true,
+        "state": "visible",
+        "matches": [
+          {
+            "node": 3,
+            "type": "Text",
+            "text": "Hello World",
+            "key": "HelloWorld",
+            "bounds": [
+              170,
+              1345,
+              1151,
+              1550
+            ],
+            "clickable": true
+          }
+        ]
+      }
+    },
+    {
+      "tool": "ui",
+      "arguments": {
+        "action": "act",
+        "op": "click",
+        "selector": {
+          "text": "Hello World",
+          "exact": true
+        }
+      },
+      "result": {
+        "performed": "click",
+        "element": {
+          "node": 3,
+          "type": "Text",
+          "text": "Hello World",
+          "key": "HelloWorld",
+          "bounds": [
+            170,
+            1345,
+            1151,
+            1550
+          ],
+          "clickable": true
+        },
+        "after": {
+          "changed": true,
+          "added": [
+            "Text \"Welcome\" clickable"
+          ],
+          "removed": [
+            "Text \"Hello World\" clickable"
+          ],
+          "kind": "updated"
+        }
+      }
+    },
+    {
+      "tool": "ui",
+      "arguments": {
+        "action": "assert",
+        "visible": {
+          "text": "Welcome",
+          "exact": true
+        },
+        "timeout_ms": 5000
+      },
+      "result": {
+        "passed": true,
+        "state": "visible",
+        "matches": [
+          {
+            "node": 3,
+            "type": "Text",
+            "text": "Welcome",
+            "key": "HelloWorld",
+            "bounds": [
+              284,
+              1345,
+              1037,
+              1550
+            ],
+            "clickable": true
+          }
+        ]
+      }
+    },
+    {
+      "tool": "ui",
+      "arguments": {
+        "action": "assert",
+        "hidden": {
+          "text": "Codex 145 Patched",
+          "exact": true
+        },
+        "timeout_ms": 5000
+      },
+      "result": {
+        "passed": true,
+        "state": "hidden",
+        "matches": []
+      }
+    },
+    {
+      "tool": "device",
+      "arguments": {
+        "action": "sqlite",
+        "bundle": "com.devecomcp.probe143",
+        "db": "reset-proof.db",
+        "sql": "SELECT * FROM proof ORDER BY id"
+      },
+      "result": {
+        "db": "/data/app/el2/100/database/com.devecomcp.probe143/entry/rdb/reset-proof.db",
+        "rows": [
+          {
+            "id": 1,
+            "value": "reset-preserve-179162-v144"
+          },
+          {
+            "id": 14501,
+            "value": "codex-v145-reload-preserved"
+          }
+        ],
+        "total": 2
+      }
+    },
+    {
+      "tool": "run",
+      "arguments": {
+        "action": "build_run",
+        "run_mode": "full",
+        "hot_reload": true,
+        "wait": 55000
+      },
+      "result": {
+        "job_id": "j_mv2dlndc87239c",
+        "kind": "build_run",
+        "status": "succeeded",
+        "elapsed_ms": 8856,
+        "launch": {
+          "started": true,
+          "pid": 4484,
+          "crashed": false,
+          "new_crash_logs": [],
+          "smoke": "PASS",
+          "screen_uniformity": 0.984
+        },
+        "package_sha256": [
+          "2fc761ea2994ba48b158f2f1c8eb1d6dae0529d2e1aaedb84ebafb9fc168de43"
+        ]
+      }
+    },
+    {
+      "tool": "hot_reload",
+      "arguments": {
+        "action": "apply",
+        "files": [
+          "entry/src/main/ets/pages/Index.ets"
+        ],
+        "restart": true
+      },
+      "result": {
+        "applied": true,
+        "files": [
+          "entry/src/main/ets/pages/Index.ets"
+        ],
+        "added": 0,
+        "restarted": true,
+        "pid": 4555,
+        "launch": {
+          "started": true,
+          "pid": 4555,
+          "crashed": false,
+          "new_crash_logs": [],
+          "smoke": "PASS",
+          "screen_uniformity": 0.9727
+        },
+        "note": "Verify the change with ui observe/assert"
+      }
+    },
+    {
+      "tool": "ui",
+      "arguments": {
+        "action": "assert",
+        "visible": {
+          "text": "Codex 145 Restarted",
+          "exact": true
+        },
+        "timeout_ms": 5000
+      },
+      "result": {
+        "passed": true,
+        "state": "visible",
+        "matches": [
+          {
+            "node": 3,
+            "type": "Text",
+            "text": "Codex 145 Restarted",
+            "key": "HelloWorld",
+            "bounds": [
+              193,
+              1242,
+              1128,
+              1652
+            ],
+            "clickable": true
+          }
+        ]
+      }
+    },
+    {
+      "tool": "device",
+      "arguments": {
+        "action": "shell",
+        "command": "bm quickfix -q -b com.devecomcp.probe143"
+      },
+      "result": {
+        "exit_code": 0,
+        "output": "Information as follows:\nApplicationQuickFixInfo:\n  bundle name: com.devecomcp.probe143\n  bundle version code: 1000000\n  bundle version name: 1.0.0\n  patch version code: 3000008\n  patch version name: 3000008\n  cpu abi: arm64-v8a\n  native library path: \n  type: patch\n  ModuelQuickFixInfo:\n    module name: entry\n    module sha256: \n    file path: /data/app/el1/bundle/public/com.devecomcp.probe143/patch_3000008/entry.hqf\n"
+      }
+    },
+    {
+      "tool": "hot_reload",
+      "arguments": {
+        "action": "reset"
+      },
+      "result": {
+        "reset": true,
+        "method": "restore_baseline_packages",
+        "patch_version": 0,
+        "packages": [
+          "entry-default-unsigned.hap"
+        ],
+        "note": "Original packages restored without rebuilding; app data preserved. Launch the app to run the baseline code"
+      }
+    },
+    {
+      "tool": "device",
+      "arguments": {
+        "action": "shell",
+        "command": "bm quickfix -q -b com.devecomcp.probe143"
+      },
+      "result": {
+        "exit_code": 0,
+        "output": "Information as follows:\nApplicationQuickFixInfo:\n  bundle name: com.devecomcp.probe143\n  bundle version code: 1000000\n  bundle version name: 1.0.0\n  patch version code: 0\n  patch version name: \n  cpu abi: \n  native library path: \n  type: \n"
+      }
+    },
+    {
+      "tool": "device",
+      "arguments": {
+        "action": "shell",
+        "command": "pidof com.devecomcp.probe143"
+      },
+      "result": {
+        "exit_code": 0,
+        "output": ""
+      }
+    },
+    {
+      "tool": "run",
+      "arguments": {
+        "action": "launch"
+      },
+      "result": {
+        "started": true,
+        "pid": 5181,
+        "crashed": false,
+        "new_crash_logs": [],
+        "smoke": "PASS",
+        "screen_uniformity": 0.984
+      }
+    },
+    {
+      "tool": "ui",
+      "arguments": {
+        "action": "assert",
+        "visible": {
+          "text": "Hello World",
+          "exact": true
+        },
+        "timeout_ms": 5000
+      },
+      "result": {
+        "passed": true,
+        "state": "visible",
+        "matches": [
+          {
+            "node": 3,
+            "type": "Text",
+            "text": "Hello World",
+            "key": "HelloWorld",
+            "bounds": [
+              170,
+              1345,
+              1151,
+              1550
+            ],
+            "clickable": true
+          }
+        ]
+      }
+    },
+    {
+      "tool": "ui",
+      "arguments": {
+        "action": "act",
+        "op": "click",
+        "selector": {
+          "text": "Hello World",
+          "exact": true
+        }
+      },
+      "result": {
+        "performed": "click",
+        "element": {
+          "node": 3,
+          "type": "Text",
+          "text": "Hello World",
+          "key": "HelloWorld",
+          "bounds": [
+            170,
+            1345,
+            1151,
+            1550
+          ],
+          "clickable": true
+        },
+        "after": {
+          "changed": true,
+          "added": [
+            "Text \"Welcome\" clickable"
+          ],
+          "removed": [
+            "Text \"Hello World\" clickable"
+          ],
+          "kind": "updated"
+        }
+      }
+    },
+    {
+      "tool": "ui",
+      "arguments": {
+        "action": "assert",
+        "visible": {
+          "text": "Welcome",
+          "exact": true
+        },
+        "timeout_ms": 5000
+      },
+      "result": {
+        "passed": true,
+        "state": "visible",
+        "matches": [
+          {
+            "node": 3,
+            "type": "Text",
+            "text": "Welcome",
+            "key": "HelloWorld",
+            "bounds": [
+              284,
+              1345,
+              1037,
+              1550
+            ],
+            "clickable": true
+          }
+        ]
+      }
+    },
+    {
+      "tool": "ui",
+      "arguments": {
+        "action": "assert",
+        "hidden": {
+          "text": "Codex 145 Restarted",
+          "exact": true
+        },
+        "timeout_ms": 5000
+      },
+      "result": {
+        "passed": true,
+        "state": "hidden",
+        "matches": []
+      }
+    },
+    {
+      "tool": "device",
+      "arguments": {
+        "action": "sqlite",
+        "bundle": "com.devecomcp.probe143",
+        "db": "reset-proof.db",
+        "sql": "SELECT * FROM proof ORDER BY id"
+      },
+      "result": {
+        "db": "/data/app/el2/100/database/com.devecomcp.probe143/entry/rdb/reset-proof.db",
+        "rows": [
+          {
+            "id": 1,
+            "value": "reset-preserve-179162-v144"
+          },
+          {
+            "id": 14501,
+            "value": "codex-v145-reload-preserved"
+          }
+        ],
+        "total": 2
+      }
+    }
+  ],
+  "recording_classification": "expected_unsupported_environment",
+  "new_recording_started": false,
+  "opencode_retested": false
+}

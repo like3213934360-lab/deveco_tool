@@ -24,7 +24,8 @@
 | [x] | 模拟器录屏验收分类 | v1.4.4 严格视频 E2E 实际未通过，原始结果保留；按用户决定归为预期不支持，不计为 MCP 缺陷或发布阻塞，也不改写成视频成功 |
 | [ ] | 支持录屏的真机取回、视频帧与严格解码 | 尚未验证；本轮不切换到其他连接设备。此项是后续能力验证，不是当前模拟器的待修复缺陷 |
 | [x] | v1.4.5 推送、全部 CI、Release、tag、Latest | 发布提交 ed0649aa03183c9824d3a38f49bd56cb30f116c2；CI 38044962560 的 7 项任务全部通过，release 38045019299 成功；工作流回执及本地只读核验一致，tag 指向该提交且 v1.4.5 为 Latest |
-| [ ] | Codex 实际重载 v1.4.5 | 当前原生连接仍为 v1.4.4；新构建的 stdio/SDK 结果不替代宿主重载 |
+| [x] | Codex 实际重载 v1.4.5 | 用户再次重启后，原生 doctor 返回 v1.4.5，build ID 与最终发布构建完全一致；下方记录两轮原生效果验收 |
+| [x] | v1.4.5 Codex 两轮实际调用 | 不重启补丁与显式 files+restart 补丁均先验证生效；源码仍保留补丁时 reset，MCP 独立查询 patch=0，原进程停止，原页面/点击行为恢复，旧、新 SQLite 标记均保留 |
 | [ ] | OpenCode 新版真实模型复验 | 本轮未重新运行 OpenCode；此前结果不自动延续为 v1.4.5 通过。Claude 不在适配范围 |
 
 [脱敏原生证据](evidence/v1.4.5-native-acceptance.json)区分已加载版本、调用、设备效果和失败边界。完整原始日志保存在私有 `.scratch/v144/`，不上传设备日志。
@@ -44,4 +45,15 @@
 - [Release 工作流 38045019299](https://github.com/like3213934360-lab/deveco_tool/actions/runs/38045019299) 成功；已下载 verified-release，并运行 `node tools/release.mjs --run 38044962560 --check` 独立核对。[v1.4.5](https://github.com/like3213934360-lab/deveco_tool/releases/tag/v1.4.5) 为 Latest，tag 指向发布提交，见[公开核验回执](evidence/v1.4.5-release.json)。
 - 此次回填只修改文档，不移动或重建 tag；回填提交仍须经过全部 CI 与既有 Release 核验。
 
-发布后再用原生 doctor 复核：Codex 仍运行 v1.4.4（原 build ID 不变），原录屏待取回会话仍在。没有执行宿主重启或 npm 发布；GitHub 发布不能替代这些证据。
+发布当时 Codex 仍运行 v1.4.4。用户随后再次重启，现已通过原生 doctor 核验 v1.4.5，详见下方；没有执行 npm 发布。GitHub 发布不能替代宿主证据。
+
+
+## 用户重启后的 Codex 原生验收
+
+2026-10-10 用户再次确认已重启 Codex。原生 doctor 返回 v1.4.5 与最终 build ID `44db485182694c582ba2e60e94a09673edf6dfbe12b555810c8dbe3c4cab9193`，完成实际宿主重载验证。初始无在线设备，通过原生 emulator start 冷启动原专用 `deveco_mcp_eval_143`，保留原数据，没有重置、更换镜像或切换到真机。
+
+两轮均通过 Codex App 的原生 MCP 工具完成构建部署、apply、UI 断言、reset、独立补丁查询、启动及 SQLite 查询；文件工具仅修改验收工程源码。第一轮修改点击行为并保留原进程；第二轮显式传入 files 和 restart=true，修改启动文字并确认新进程。两轮都在源码仍带补丁时 reset，独立查询补丁版本分别从 3000006、3000008 变为 0，pidof 确认应用已停止；重新启动后 Hello World 可见、点击出现 Welcome、补丁文字隐藏。
+
+上轮写入的 SQLite 标记 `reset-preserve-179162-v144` 和本轮由 MCP 单独插入的 `codex-v145-reload-preserved` 两轮后都仍在；应用初始化仅建表，不会重建标记。验收完成后恢复私有工程原源码。录屏只读取状态，旧待取回文件名保持不变，新说明明确视频尚未验证；本轮没有启动新录屏，模拟器不支持仍视为正常能力边界。
+
+[本轮原生调用证据](evidence/v1.4.5-codex-reload.json)独立于先前 v1.4.4 的证据。本次仅回填文档，不改变运行产物、不升级版本、不移动 v1.4.5 tag；推送后仍核验当前提交全部 CI 和已有 Release/Latest。OpenCode 新版复验与真机录屏仍未完成。
