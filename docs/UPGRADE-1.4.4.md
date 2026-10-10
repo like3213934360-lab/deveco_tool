@@ -17,7 +17,7 @@
 | [x] | 加强待执行 E2E | reset 在源码仍保留补丁时检查设备 patch=0、启动后原文字可见、点击后原行为恢复、补丁文字隐藏；录屏检查真实视频帧、时长及 ffmpeg 严格解码，失败保留调用与日志，不丢弃会话 |
 | [x] | 最终版本本地单元测试、类型检查与性能门禁 | v1.4.4 最终构建 183/183 单测通过，失败/跳过均为 0；typecheck、diff --check 通过。握手中位数 88 ms（86–96 ms）、空闲 RSS 68 MB、10 秒空闲 CPU 不变；15 个工具共 36,848 字节，公共说明 1,737 字节，既有门禁未修改 |
 | [x] | 上游对齐 | 491 项：374 full、74 host、43 skip；partial/undecided/invalid/stale 均为 0，无新上游提交。skip 是既有明确范围决策，不是测试跳过 |
-| [ ] | GitHub 提交、全部 CI、Release、tag、Latest | 待推送和自动发布后的核验回执 |
+| [x] | GitHub 提交、全部 CI、Release、tag、Latest | 发布提交 2606007d93c477385a33ae02d25395f635285bfb；CI 38043365893 的 7 项任务全部通过，release 38043440071 成功；工作流回执及本地只读核验一致，v1.4.4 为 Latest、tag 指向发布提交。详见下方交付记录 |
 | [ ] | Codex 实际重载 v1.4.4 | 等用户确认重启后，原生 doctor 核对版本与 build_id；GitHub 发布不证明宿主重载 |
 | [ ] | reset 真实 SDK 与应用数据保留验收 | 等重启通知后运行加强的 E2E，再以 Codex 原生调用独立复核；现有 v1.4.3 完整部署恢复证据不是新版 reset 验收 |
 | [ ] | API 26 原录屏失败的设备根因 | 保留原始 0 字节文件及待取回会话；需当次 recorder/media/codec 日志区分权限/引导、编码器、服务生命周期和媒体写入失败。不可用另一个环境的成功覆盖失败 |
@@ -42,4 +42,9 @@
 
 本地环境为 macOS arm64 / Node v26.0.0，最终构建 ID：`9fd198d4954f7bec17f6d1e60866cd5a13bc200154d497994f9d1be887463eda`。单测与性能检查通过 stdio 子进程完成，只证明新构建的本地行为，不证明 Codex 已重载。设备 E2E 仅完成语法检查，尚未执行。
 
-远程 CI 与 release 工作流核验待推送后回填。npm 发布与宿主重启不属于 GitHub Release 的已完成证据。
+- 发布提交：[2606007d93c477385a33ae02d25395f635285bfb](https://github.com/like3213934360-lab/deveco_tool/commit/2606007d93c477385a33ae02d25395f635285bfb)。
+- [CI 38043365893](https://github.com/like3213934360-lab/deveco_tool/actions/runs/38043365893)：Windows/macOS/Linux × Node 22/24 六项测试及上游门禁全部通过，无跳过任务。
+- [Release 工作流 38043440071](https://github.com/like3213934360-lab/deveco_tool/actions/runs/38043440071) 成功，已下载 `verified-release`；本地 `node tools/release.mjs --run 38043365893 --check` 再次确认 [v1.4.4](https://github.com/like3213934360-lab/deveco_tool/releases/tag/v1.4.4) 为 Latest，tag 精确指向发布提交。[公开核验回执](evidence/v1.4.4-release.json)。
+- 本次交付回填只修改文档，不移动或重建已发布 tag；回填提交仍须经过全部 CI 和既有 Release 核验。
+
+实际 MCP 是否运行新版仍待用户重启通知后核验，本轮没有重启宿主或执行设备测试，也没有运行 npm 发布。GitHub 发布不能替代这些证据。
