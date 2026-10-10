@@ -8,8 +8,16 @@
     "  '<tool> [param] [param=value] ...'  checked against the live tools/list JSON Schema (value must be in the enum when one exists)",
     "  'cli:<text>'  src/cli.ts must contain the text;  'prompt:<name>' / 'skill:<name>'  must be served by the MCP server"
   ],
-  "upstream_rev": { "deveco-code": "7bc6d7b1867d73a97c01623fa445222b580deefb", "deveco-cli": "3e2fa15c9e63c4fe95c060ee513ffd3f445e7ad2" },
+  "upstream_rev": { "deveco-code": "74c374db9fd4b9325d42252b8bd603ab10d4dc5d", "deveco-cli": "3e2fa15c9e63c4fe95c060ee513ffd3f445e7ad2" },
   "upstream_reviews": [
+    {
+      "date": "2026-10-10",
+      "upstream": "deveco-code",
+      "from": "7bc6d7b1867d73a97c01623fa445222b580deefb",
+      "to": "74c374db9fd4b9325d42252b8bd603ab10d4dc5d",
+      "decision": "host",
+      "reason": "Reviewed both commits detected by the delivery CI. 66ecf05 adds host history snipping: default-on Read/Grep/Glob result replacement in the model projection after 10000 accumulated tokens, with the last 15 user turns protected, original results retained in storage, boundary/turn markers and TUI token accounting. 74c374d fixes a missing conditional block around the privacy startup gate return. Both concern the upstream agent's conversation projection or TUI, outside this independent MCP server's tool runtime; no host history mutation or upstream runtime dependency is imported. The extracted MCP capability inventory remains unchanged."
+    },
     {
       "date": "2026-10-10",
       "upstream": "deveco-cli",
