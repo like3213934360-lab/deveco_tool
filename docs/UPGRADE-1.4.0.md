@@ -11,8 +11,8 @@
 | [x] | P1 | 通用 UI 引导 | `src/domains/agreements.ts`、UI 操作/批量/回放/测试链路 | 默认选项保持、欢迎页、功能介绍、独立开关与记录；跨窗口、业务按钮、循环、慢转场均有回归；真实 UI 三步引导、默认主题、业务按钮不误触及报告留存均通过 |
 | [x] | P1 | 回归和实际 SDK 验收 | `test/unit/`、`test/e2e/` | typecheck、145 项单测及重置后的 23 项真实 E2E 全部通过，零失败、零跳过；原有 22 项用例未修改 |
 | [x] | P1 | 文档与上游审阅 | `README.md`、`CHANGELOG.md`、`tools/upstream/decisions.json` | 源码能力映射 475 项：362 full、70 host、43 skip，缺口 0；行为证据与映射明确区分 |
-| [ ] | P1 | 版本与交付 | `package.json`、锁文件、GitHub | 版本 1.4.0；构建、性能、独立安装及 main CI 通过；补齐自动 Release 与 Latest 核验后再勾选 |
-| [ ] | P1 | 防止遗漏发布 | `AGENTS.md`、`.github/workflows/release.yml`、`tools/release.mjs` | 仓库规范、CI 成功后自动发布、不可变 tag 和 Latest 回读、发布回执；真实工作流验收中 |
+| [x] | P1 | 版本与交付 | `package.json`、锁文件、GitHub | 版本 1.4.0；构建、性能、独立安装及 main CI 通过；已自动发布 Release，tag 与通过 CI 的提交一致，Latest 回读及本地只读复核通过 |
+| [x] | P1 | 防止遗漏发布 | `AGENTS.md`、`.github/workflows/release.yml`、`tools/release.mjs` | 仓库规范、CI 成功后自动发布、不可变 tag 和 Latest 回读、发布回执；真实工作流验证失败 CI 阻断与成功 CI 自动发布，新增 8 项单测全部通过 |
 
 ## 环境与基线
 
@@ -52,6 +52,8 @@
 
 实现提交 `72fdfa983ec4c9468b83e1449043e3fcc1094d4f` 已推送。首轮 CI 六个 OS/Node 测试任务全部通过，上游门禁正确检出验收期间的两个新提交。补齐审阅和实际验收的提交 `3b5b91d8fb78352cd65a78e8dde26553c5035e06` 已推送 main，[GitHub CI 7/7 全部通过](https://github.com/like3213934360-lab/deveco_tool/actions/runs/38021943836)：Ubuntu/macOS/Windows × Node 22/24 的类型检查和单测，以及在线上游对齐门禁。代码构建 ID 与上述本地验收一致；本段的 CI 证据对应明确提交，后续文档提交另行核对最终 SHA 的 CI。
 
-前一轮只完成源码推送，没有创建 GitHub Release，却将版本交付勾选完成；本轮纠正该完成标准。新增仓库规范和自动发布门禁，发布后再补充 Release 核验结果。发布工具的 8 项单测覆盖错误 SHA、失败/跳过 CI、同版本运行代码变化、不可变 tag、只读核验、重复执行和 Latest 回读失败。
+前一轮只完成源码推送，没有创建 GitHub Release，却将版本交付勾选完成；本轮纠正该完成标准，新增仓库规范和自动发布门禁。发布工具的 8 项单测覆盖错误 SHA、失败/跳过 CI、同版本运行代码变化、不可变 tag、只读核验、重复执行和 Latest 回读失败；本地 typecheck 与完整 153 项单测通过。
+
+发布提交 `a23a2d80034a2f2353da7ce5789bb5777b34229c` 的 [CI 7/7 通过](https://github.com/like3213934360-lab/deveco_tool/actions/runs/38022732851)，随后 [release 工作流自动发布并核验成功](https://github.com/like3213934360-lab/deveco_tool/actions/runs/38022789892)。[v1.4.0 Release](https://github.com/like3213934360-lab/deveco_tool/releases/tag/v1.4.0) 于 2026-10-10 12:04（北京时间）发布：非草稿、非预发布、Latest，tag 实际指向上述完整 SHA。已下载核对 `verified-release` 回执，并在本地执行 `node tools/release.mjs --run 38022732851 --check` 独立只读复核，结果一致。此前失败的上游门禁使 release 正确跳过，补齐实际审阅后才发布，未绕过失败项。后续验收文档提交不移动该 tag，仍须核对其最终 CI 和发布回执。
 
 运行中的旧 MCP 连接继续使用原构建；宿主重载后才加载新构建，不能以源码版本代替运行时版本证明。发布流程改动不改变 MCP 运行源码或其构建 ID；既有 23 项真实 E2E 证据继续对应同一运行构建。未执行 npm 发布或宿主重启。
