@@ -19,7 +19,7 @@
 | [ ] | Claude 最终构建及完整读取闭环 | 候选 29/29 发现方案和 4 次调用成功；现有服务端余额不足中断，最后描述调整后的构建未重测；不更换服务或模型制造通过 |
 | [ ] | Claude Tool Search 延迟发现模式实测 | 当前 Claude 代理配置未启用该模式；只完成官方文档/现有宿主行为分析，未声称实测 |
 | [ ] | 本版设备 UI/安装/签名等写入操作的模型实测 | 本版不改执行逻辑；真实模型只读场景不能证明所有写入操作已执行，设备 E2E 也未重跑 |
-| [ ] | GitHub 提交、全部 CI、Release、tag、Latest | 发布后核验并补充链接；不以 push 或单一 CI 代替发布完成 |
+| [x] | GitHub 提交、全部 CI、Release、tag、Latest | `322db17` 的 CI 7/7、release 成功；工作流回执与本地 --check 一致，稳定版 tag/Latest 指向正确，链接见下文 |
 
 ## 为什么这样放说明
 
@@ -79,4 +79,12 @@ node tools/model-eval.mjs --host claude --suite live --project /absolute/project
 
 最终构建 ID：`df5196999e620bf0297d999a85904d5d95e1b0d5d208b3b6abeb508a17067aa0`。用户重启后 Codex App 的 doctor 与该值一致，且实际 15 个工具说明匹配，已经完成该 App 的真实重载核验。未执行 npm 发布。
 
-GitHub CI、Release、tag 与 Latest：待发布工作流完成后补充，未完成前不勾选 TODO。
+2026-10-10 已完成发布核验：
+
+- 发布提交：[`322db17b67ca921f488c2bf512f04075f71111b7`](https://github.com/like3213934360-lab/deveco_tool/commit/322db17b67ca921f488c2bf512f04075f71111b7)。
+- [CI 38031108675](https://github.com/like3213934360-lab/deveco_tool/actions/runs/38031108675)：Linux/macOS/Windows × Node 22/24 六项测试和 upstream 共 7/7 成功，无跳过。
+- [release 38031186672](https://github.com/like3213934360-lab/deveco_tool/actions/runs/38031186672)：自动发布成功，已下载 `verified-release` 回执；head/released_commit 均为发布提交，`latest=true`。
+- [v1.4.2 Release](https://github.com/like3213934360-lab/deveco_tool/releases/tag/v1.4.2)：稳定版、非草稿；不可变 tag 指向发布提交，GitHub Latest 与其一致。
+- 本地 `node tools/release.mjs --run 38031108675 --check` 通过，结果与工作流回执一致。
+
+本记录随后以纯文档提交补充；不移动 tag、不重发同版本 Release，后续 main 的 CI/release 仍独立核验。上述真实模型缺口保持未勾选，发布成功不替代模型或设备验收。
