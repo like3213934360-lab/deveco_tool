@@ -23,7 +23,7 @@
 | [x] | 保留原录屏与明确失败 | 原 0 字节媒体及待导出回执仍在，原生 record_stop 返回 UI_RECORD_FAILED；没有将其清理或当作通过 |
 | [x] | 模拟器录屏验收分类 | v1.4.4 严格视频 E2E 实际未通过，原始结果保留；按用户决定归为预期不支持，不计为 MCP 缺陷或发布阻塞，也不改写成视频成功 |
 | [ ] | 支持录屏的真机取回、视频帧与严格解码 | 尚未验证；本轮不切换到其他连接设备。此项是后续能力验证，不是当前模拟器的待修复缺陷 |
-| [ ] | v1.4.5 推送、全部 CI、Release、tag、Latest | 按发布流程核验后回填 |
+| [x] | v1.4.5 推送、全部 CI、Release、tag、Latest | 发布提交 ed0649aa03183c9824d3a38f49bd56cb30f116c2；CI 38044962560 的 7 项任务全部通过，release 38045019299 成功；工作流回执及本地只读核验一致，tag 指向该提交且 v1.4.5 为 Latest |
 | [ ] | Codex 实际重载 v1.4.5 | 当前原生连接仍为 v1.4.4；新构建的 stdio/SDK 结果不替代宿主重载 |
 | [ ] | OpenCode 新版真实模型复验 | 本轮未重新运行 OpenCode；此前结果不自动延续为 v1.4.5 通过。Claude 不在适配范围 |
 
@@ -39,4 +39,9 @@
 
 最终本地构建 ID：`44db485182694c582ba2e60e94a09673edf6dfbe12b555810c8dbe3c4cab9193`。[本地与 SDK 验收证据](evidence/v1.4.5-local-acceptance.json)对应最终代码，完整 SDK smoke 214 秒，22 项全部通过；首次查询修正后的中间版本也完成 22/22，但不用于替代最终新增的数据保留断言。
 
-待 GitHub 发布核验。GitHub 发布不等于 npm 发布，也不等于 Codex/OpenCode 已重载。
+- 发布提交：[ed0649aa03183c9824d3a38f49bd56cb30f116c2](https://github.com/like3213934360-lab/deveco_tool/commit/ed0649aa03183c9824d3a38f49bd56cb30f116c2)。
+- [CI 38044962560](https://github.com/like3213934360-lab/deveco_tool/actions/runs/38044962560)：Windows/macOS/Linux × Node 22/24 六项测试及上游门禁全部通过，没有跳过任务。
+- [Release 工作流 38045019299](https://github.com/like3213934360-lab/deveco_tool/actions/runs/38045019299) 成功；已下载 verified-release，并运行 `node tools/release.mjs --run 38044962560 --check` 独立核对。[v1.4.5](https://github.com/like3213934360-lab/deveco_tool/releases/tag/v1.4.5) 为 Latest，tag 指向发布提交，见[公开核验回执](evidence/v1.4.5-release.json)。
+- 此次回填只修改文档，不移动或重建 tag；回填提交仍须经过全部 CI 与既有 Release 核验。
+
+发布后再用原生 doctor 复核：Codex 仍运行 v1.4.4（原 build ID 不变），原录屏待取回会话仍在。没有执行宿主重启或 npm 发布；GitHub 发布不能替代这些证据。
