@@ -20,7 +20,7 @@ export const doctorTool = tool({
   name: "doctor",
   title: "Environment check",
   readOnly: true,
-  description: "Check toolchain, SDK, devices, project, knowledge pack and logins in one call; every failed check includes a fix. Use first when anything environment-related fails.",
+  description: "No action field. Check toolchain, SDK, devices, project, knowledge pack and logins; each failed check includes a fix. Use first for environment failures.",
   schema: z.object({
     project: fields.project.optional(),
     target: fields.target,
@@ -36,8 +36,8 @@ export const projectTool = tool({
   name: "project",
   title: "Project create/sync/build",
   description: [
-    "HarmonyOS projects. info (instant); create from the built-in template (never overwrites); clean.",
-    "sync: ohpm install + hvigor sync (job). build (job): preflight of edited files (advisory, never blocks) + hvigor; returns packages or every compile error (code, file, line, message, code around it; first 100 listed) with fix hints. Dependencies install automatically when oh-package.json5/build-profile.json5 changed.",
+    "info: metadata (instant); create: built-in template, never overwrites; clean: build outputs.",
+    "sync: ohpm install + hvigor sync (job). build (job): advisory edited-file preflight (never blocks) + hvigor; packages or all compile errors (first 100 listed: code/file/line/message/source) with fix hints. Auto-installs dependencies when oh-package.json5/build-profile.json5 changes.",
     "Build already checks edited files: no code check first.",
   ].join(" "),
   schema: z.object({
@@ -91,7 +91,7 @@ const assertSchema = z.object({
   timeout_ms: z.number().int().min(100).max(120000).optional(),
 });
 export const selectorSchema = z.object({
-  text: z.string().optional().describe("Substring match (case-insensitive) unless exact=true"),
+  text: z.string().optional().describe("Case-insensitive substring unless exact=true"),
   exact: z.boolean().optional(),
   key: z.string().optional().describe("Component id/key set in ArkUI (.id('...'))"),
   type: z.string().optional().describe("Component type, e.g. Button, TextInput"),
@@ -101,7 +101,7 @@ export const selectorSchema = z.object({
   checked: z.boolean().optional(),
   selected: z.boolean().optional(),
   enabled: z.boolean().optional(),
-  index: z.number().int().min(0).optional().describe("Pick the n-th match when several match"),
+  index: z.number().int().min(0).optional().describe("Nth match if ambiguous"),
 }).meta({ id: "Selector" }); // emitted once per tool as $defs/Selector
 
 const uiOpSchema = z.enum(["click", "double_click", "long_click", "input", "type", "swipe", "drag", "fling", "scroll", "key",
@@ -121,9 +121,9 @@ export const runTool = tool({
   name: "run",
   title: "Deploy and launch",
   description: [
-    "Deploy device-compatible modules using project signing unchanged.",
+    "Deploy device-compatible modules; preserve project signing.",
     "build_run: check edited files + build + install + launch + crash check; no code check first.",
-    "run_mode=auto (default): after the first build_run on the same device, entry-module code-only edits are quick-fixed; other changes fully deploy. Result: path=hot_reload|full|relaunch, fallback_reason. run_mode=full always deploys.",
+    "run_mode=auto (default): after the first build_run on the same device, entry-module code-only edits are quick-fixed; other changes fully deploy. Returns path=hot_reload|full|relaunch, fallback_reason. run_mode=full always deploys.",
     "Startup crashes fail with LAUNCH_FAILED and crash.source (file, line, code).",
     "then_flow=<ui_flow id>: replay a saved path after launch; assert verifies the launch screen.",
     "deploy: install the latest build + launch; launch/stop/uninstall. hot_reload=true prepares manual hot_reload.",
@@ -187,7 +187,7 @@ export const runTool = tool({
 export const jobTool = tool({
   name: "job",
   title: "Long-running jobs",
-  description: `Long-running operations. wait (default 20000, max ${MAX_WAIT_MS} ms; call again while running, never restart the operation), status, list, cancel; resume interrupted/needs_input jobs only after inspection (force=true re-runs an uncertain step). read: page full artifacts (logs, reports, images) by artifact_id and line/limit; grep filters.`,
+  description: `Jobs: wait (default 20000, max ${MAX_WAIT_MS} ms; repeat while running, never restart), status, list, cancel; resume interrupted/needs_input jobs only after inspection (force=true repeats an uncertain step). read: full artifacts (logs/reports/images) by artifact_id; line/limit page, grep filters.`,
   schema: z.object({
     action: z.enum(["wait", "status", "list", "cancel", "resume", "read"]),
     job_id: z.string().optional(),
@@ -233,10 +233,10 @@ export const codeTool = tool({
   title: "Code intelligence & checks",
   readOnly: true,
   description: [
-    "ArkTS/C++ checks and language-server queries against the project's SDK.",
-    "check: fast ArkTS static check with fix hints, for checking without building (project build / run build_run already check edited files); fix=true applies safe auto-fixes. The compiler is the final judge: code a successful build accepts is valid.",
+    "ArkTS/C++ checks and LSP against the project SDK.",
+    "check: fast static check with fix hints without building (project build / run build_run already check edited files); fix=true applies safe fixes. The compiler is the final judge: a successful build validates code.",
     "lint: Code Linter report. api_scan / api_versions: API compatibility between SDK versions.",
-    "lsp op: hover, definition, declaration, implementation, references, symbols, workspace_symbols, diagnostics, completion, signature, call_hierarchy (direction). Locate by symbol (+ line hint). lsp_restart.",
+    "action=lsp requires op: hover, definition, declaration, implementation, references, symbols, workspace_symbols, diagnostics, completion, signature, call_hierarchy (direction). Locate by symbol (+ line hint). lsp_restart restarts servers.",
   ].join(" "),
   schema: z.object({
     action: z.enum(["check", "lint", "api_scan", "api_versions", "lsp", "lsp_restart"]),
@@ -294,7 +294,7 @@ export const codeTool = tool({
 export const deviceTool = tool({
   name: "device",
   title: "Devices, logs, files",
-  description: "Devices. list; info (model/API/screen). log: hilog filtered by bundle/grep/level, from/to window (from=5m), follow+cursor, clear; project= locates source lines. shell: read-only commands. sqlite: query an on-device database (read-only unless write=true). send/recv files.",
+  description: "list: connected devices; info: model/API/screen. action=log: hilog by bundle/grep/level, from/to window (from=5m), follow+cursor, clear; project locates source. shell: read-only commands. action=sqlite: db+sql query (read-only unless write=true). send: local to remote; recv: remote to local.",
   schema: z.object({
     action: z.enum(["list", "info", "log", "shell", "sqlite", "send", "recv"]),
     db: z.string().optional().describe("sqlite: absolute device path, or an app RDB store name (e.g. app.db) together with bundle (+ module, default entry) of a debuggable app"),
@@ -358,16 +358,17 @@ export const uiTool = tool({
   name: "ui",
   title: "Device UI",
   description: [
-    "Device UI. observe: screenshot + elements; screenshot/tree/find/windows inspect. tree filters: window, depth, all_windows, node.",
+    "observe: screenshot + elements; screenshot/tree/find/windows inspect. tree filters: window, depth, all_windows, node.",
+    "selector/visible/hidden: objects, e.g. {\"text\":\"Hi\"}.",
     "act: click/double_click/long_click by selector or x,y; input field text, type; swipe/drag/fling x,y,x2,y2; scroll; key or keys chord; mouse_* for 2in1/tablet.",
-    "act returns after={changed,kind:none/state/updated/navigated,added,removed} for the app's on-screen elements; usually no extra observe needed.",
-    "Use act steps=[...] for a whole path: waits for each element, stops at first failure with visible controls. Include assert to verify; save_flow={project,id} saves for run then_flow. Limit ~52 s; stopped_at marks continuation.",
+    "act returns after={changed,kind:none/state/updated/navigated,added,removed} for the app's on-screen elements; usually no extra observe.",
+    "act steps=[...]: waits for each element, stops at first failure with visible controls. assert verifies; save_flow={project,id} saves for run then_flow. Limit ~52 s; stopped_at marks continuation.",
     "assert waits for visible/hidden selectors; verify outcomes with it, not screenshots alone.",
-    "Actions accept recognizable consent (agreements_accepted) and complete setup/tours preserving defaults (onboarding_completed), using window text/control state, never app names/fixed IDs. If still blocked, observe controls before continuing; never blindly repeat.",
+    "Actions accept consent (agreements_accepted), finish setup/tours preserving defaults (onboarding_completed) by window text/control state, never app names/fixed IDs. If still blocked, observe controls; never blindly repeat.",
     "visual compares a named baseline (first call saves, update=true replaces): changed_ratio, regions, diff_artifact; dimming=global_shift.",
-    "layout finds off-screen/overlapping/tiny targets and clipped text; forms=[foldable,widefold,triplefold] checks each emulator form (job).",
+    "layout: off-screen/overlapping/tiny targets, clipped text; forms=[foldable,widefold,triplefold] checks each emulator form (job).",
     "perf: scroll smoothness/jank from per-frame avg_fps, frame_ms p95, janky_frames, verdict; bundle adds pss. record_start/record_stop/record_status: mp4.",
-    "Tests: test_start -> test_step -> review -> test_finish -> test_log/test_export.",
+    "Tests: test_start(plan) -> test_step(test_id, op/selector or visible/hidden) -> review(requirement, then review_id+outcome+reason) -> test_finish -> test_log/test_export.",
   ].join(" "),
   schema: z.object({
     action: z.enum(["observe", "screenshot", "tree", "find", "act", "assert", "windows", "perf", "visual", "layout", "record_start", "record_stop", "record_status",
@@ -690,7 +691,7 @@ async function screenSize(target: string, info: (t: string, s?: AbortSignal) => 
 export const uiFlowTool = tool({
   name: "ui_flow",
   title: "Record & replay UI flows",
-  description: "Reusable UI paths in <project>/.arkpilot/flows; create with ui act steps + save_flow. list/show/delete; record -> ui act -> stop with a final assert (or discard=true). replay restarts the app (job); repair=true promotes working alternates, snapshot=true compares screens. Uses ui consent/setup handling; inspect a blocking screen before retrying.",
+  description: "Paths in <project>/.arkpilot/flows; save via ui act steps + save_flow. list/show/delete; record -> ui act -> stop with final assert (or discard=true). replay restarts app (job); repair=true promotes working alternates, snapshot=true compares screens. Uses ui consent/setup handling; inspect blockers before retrying.",
   schema: z.object({
     action: z.enum(["list", "show", "record", "stop", "replay", "delete"]),
     project: fields.project,
@@ -754,7 +755,7 @@ export const diagnoseTool = tool({
   name: "diagnose",
   title: "Crash & failure diagnosis",
   readOnly: true,
-  description: "crash: latest jscrash/cppcrash/appfreeze report (or pasted log): error, app frames, likely causes from the fault-pattern library; project= adds source (file, line, code). build_run/launch attach this on a startup crash. build: fix hints for diagnostics.",
+  description: "crash: latest jscrash/cppcrash/appfreeze or pasted log; error, app frames, fault-pattern causes; project adds source (file/line/code). build_run/launch attach startup crashes. build: fix hints, diagnostics only (no project).",
   schema: z.object({
     action: z.enum(["crash", "build"]),
     target: fields.target,
@@ -781,8 +782,8 @@ export const knowledgeTool = tool({
   title: "HarmonyOS knowledge",
   readOnly: true,
   description: [
-    "Offline HarmonyOS docs (guides, API reference, best practices, FAQ, release notes), ArkTS rules, compile-error cases and crash patterns from an updatable pack.",
-    "search: full text (Chinese/English; API names, decorators, error codes). read: a document by id (section= one heading). catalog/status; update (check=true only checks); rollback.",
+    "Updatable offline pack: HarmonyOS guides/API reference/best practices/FAQ/release notes, ArkTS rules, compile-error cases and crash patterns.",
+    "search: Chinese/English full text, APIs, decorators, error codes. read: document id (section=heading). catalog: no parameters; status/update/rollback.",
     "source=cloud: Huawei CodeGenie (auth provider=codegenie); sections are labelled official (local_doc = matching document) / official_other_platform (not ArkTS) / community / unverified; full answer in full_artifact (job action=read).",
     "Conflicts: SDK declarations (code lsp hover) and a successful build win, then official docs; community never defines the API.",
   ].join(" "),
@@ -796,7 +797,7 @@ export const knowledgeTool = tool({
     source: z.enum(["local", "cloud"]).optional(),
     offset: z.number().int().min(0).optional(),
     limit: z.number().int().min(1).max(40000).optional(),
-    check: z.boolean().optional(),
+    check: z.boolean().optional().describe("status: default true (online), false = offline; update: true = check only"),
     version: z.string().optional().describe("update: specific version"),
     file: z.string().optional().describe("update: install from a local .tgz pack, or 'upstream' to build one from Huawei's latest docs package"),
     force: z.boolean().optional(),
@@ -830,7 +831,7 @@ export const skillsTool = tool({
   name: "skills",
   title: "HarmonyOS skills",
   readOnly: false,
-  description: "Built-in skills: hmos-arkui-develop-skill (ArkTS/ArkUI gotchas + API reference), hmos-runtime-fix-skill (crash/white-screen diagnosis), deveco-mcp-workflow (which tool when). list/read; export as SKILL.md folders (scope=project: <project>/.agents/skills); install_mcp registers this server in a host config; init = export + install_mcp; search/install/uninstall: OpenHarmony skill market.",
+  description: "Built-ins: hmos-arkui-develop-skill (ArkTS/ArkUI gotchas + API reference), hmos-runtime-fix-skill (crash/white-screen diagnosis), deveco-mcp-workflow (tool selection). list/read; export: SKILL.md folders (scope=project: <project>/.agents/skills); install_mcp: host registration; init: export + install_mcp; search/install/uninstall: OpenHarmony market.",
   schema: z.object({
     action: z.enum(["list", "read", "export", "install_mcp", "init", "search", "install", "uninstall"]),
     name: z.string().optional(),
@@ -838,9 +839,9 @@ export const skillsTool = tool({
     host: z.string().optional().describe("cursor | claude | codex | opencode | trae-cn | codebuddy | qoder | pi (skills + MCP); deveco | atomcode | dsh (skills only)"),
     force: z.boolean().optional().describe("install_mcp/init: overwrite an existing entry"),
     path: z.string().optional().describe("export/install/uninstall/init: explicit absolute skills directory instead of host/scope"),
-    scope: z.enum(["user", "project"]).optional(),
+    scope: z.enum(["user", "project"]).optional().describe("Default user; project scope requires scope=project + project"),
     project: z.string().optional(),
-    names: z.array(z.string()).optional(),
+    names: z.array(z.string()).optional().describe("export: skill names (not name); default all"),
     query: z.string().optional(),
     limit: z.number().int().min(1).max(50).optional(),
   }),
@@ -875,7 +876,7 @@ export const skillsTool = tool({
 export const authTool = tool({
   name: "auth",
   title: "Huawei login",
-  description: "Browser login to Huawei developer services. provider=codegenie: cloud knowledge search. provider=developer: signing (certificates, profiles, devices). login returns a URL (opened automatically); call status after finishing in the browser. logout removes saved credentials. teams lists developer teams. import migrates v0.x credentials from legacy_state_dir.",
+  description: "Huawei browser login. provider=codegenie: cloud knowledge; provider=developer: signing (certificates/profiles/devices). login returns and opens a URL; then call status after browser completion. logout removes credentials. teams lists developer teams. import migrates v0.x credentials from legacy_state_dir.",
   schema: z.object({
     action: z.enum(["login", "status", "logout", "teams", "import"]),
     provider: z.enum(["developer", "codegenie"]).optional(),

@@ -53,20 +53,53 @@ export function spawnManaged(cmd: Command, stdio: "pipe" | "ignore" = "pipe"): C
   return child;
 }
 
-/**
- * Long-lived programs the user expects to outlive this server (emulators, browsers):
- * detached, not tracked, so server shutdown (killAll) never takes them down.
- */
-export function spawnIndependent(cmd: Command, logFile?: string): ChildProcess {
-  // Output goes to a file (not a pipe) so the program never blocks or dies when this server exits.
+// A short-lived parent observes startup, then exits to reparent the program. A detached
+// process alone is still a descendant: hosts such as OpenCode kill descendants on exit.
+const independentLauncher = `
+const {spawn} = require('node:child_process');
+const cmd = JSON.parse(process.argv[1]);
+const child = spawn(cmd.file, cmd.args, {cwd:cmd.cwd, stdio:'inherit', detached:true, windowsHide:true});
+child.once('error', error => { process.send({error:error.message}); process.disconnect(); });
+child.once('spawn', () => process.send({pid:child.pid}));
+child.once('exit', (code, signal) => { if(process.connected) process.send({code,signal}); });
+process.once('disconnect', () => child.unref());
+`;
+
+export interface IndependentProcess {
+  pid: number;
+  exitCode?: number | null;
+  signalCode?: NodeJS.Signals | null;
+  detach(): Promise<void>;
+}
+
+/** Observe startup until detach() reparents the program; output never uses the server's pipes. */
+export async function spawnIndependent(cmd: Command, logFile?: string): Promise<IndependentProcess> {
   const fd = logFile ? fs.openSync(logFile, "w") : "ignore";
-  const child = spawn(cmd.file, cmd.args, {
+  const child = spawn(process.execPath, ["-e", independentLauncher, JSON.stringify({ file: cmd.file, args: cmd.args, cwd: cmd.cwd })], {
     cwd: cmd.cwd, env: cmd.env as NodeJS.ProcessEnv | undefined,
-    stdio: ["ignore", fd, fd], detached: true, windowsHide: true,
+    stdio: ["ignore", fd, fd, "ipc"], detached: true, windowsHide: true,
   });
   if (typeof fd === "number") fs.closeSync(fd);
-  child.unref();
-  return child;
+  const exited = new Promise<void>((resolve) => { child.once("exit", () => resolve()); child.once("error", () => resolve()); });
+  const state: IndependentProcess = { pid: 0, async detach() {
+    if (child.connected) child.disconnect();
+    await exited;
+  } };
+  try {
+    await new Promise<void>((resolve, reject) => {
+      child.once("error", reject);
+      child.once("exit", () => { if (!state.pid) reject(new Error("Independent launcher exited before spawn acknowledgement")); });
+      child.on("message", (message: { pid?: number; error?: string; code?: number | null; signal?: NodeJS.Signals | null }) => {
+        if (message.error) reject(new Error(message.error));
+        else if (message.pid) { state.pid = message.pid; resolve(); }
+        else { state.exitCode = message.code; state.signalCode = message.signal; }
+      });
+    });
+    return state;
+  } catch (error) {
+    await state.detach();
+    throw new ToolError("PROCESS_FAILED", `Cannot start ${cmd.file}: ${(error as Error).message}`);
+  }
 }
 
 function track(child: ChildProcess) {

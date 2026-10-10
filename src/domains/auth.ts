@@ -145,7 +145,7 @@ export async function login(provider: Provider, openBrowser = true, region: Regi
   logins.set(provider, entry);
   if (openBrowser) {
     const opener = process.platform === "darwin" ? ["open", [url]] : process.platform === "win32" ? ["rundll32.exe", ["url.dll,FileProtocolHandler", url]] : ["xdg-open", [url]];
-    try { spawnIndependent({ file: opener[0] as string, args: opener[1] as string[] }); } catch { entry.browser = "manual"; }
+    try { await (await spawnIndependent({ file: opener[0] as string, args: opener[1] as string[] })).detach(); } catch { entry.browser = "manual"; }
   }
   return { provider, region, pending: true, login_url: url, browser: entry.browser, next: { tool: "auth", action: "status", provider, note: "Call after completing the browser login" } };
 }

@@ -7,10 +7,10 @@ export const signTool = tool({
   name: "sign",
   title: "App signing",
   description: [
-    "auto: debug signing for all connected devices (auth provider=developer; no target): keystore, CSR, debug certificate, device registration, debug profile, signingConfigs. Existing signing requires force=true; prepares the new chain before switching; needs a free certificate slot; keeps old material. Interrupted cloud mutations require reconciliation.",
+    "auto: debug signing for all connected devices (auth provider=developer; no target): keystore, CSR, debug certificate, device registration, debug profile, signingConfigs. Existing signing needs force=true; prepares new chain before switching; needs a free certificate slot; keeps old material. Interrupted cloud mutations require reconciliation.",
     "sign / verify a package. certificates, devices, register_device, delete_certificate: AGC management.",
-    "Signing steps: keypair -> csr -> certificate_create -> profile_create; profile_delete.",
-    "Multiple teams: AGC create/delete fails with TEAM_AMBIGUOUS until team is given - ask the user.",
+    "Steps: keypair (out+keystore_password, optional key_alias) -> csr -> certificate_create -> profile_create (id=certificate ID); profile_delete.",
+    "AGC create/delete with multiple teams: TEAM_AMBIGUOUS until team is given; ask the user.",
   ].join(" "),
   schema: z.object({
     action: z.enum(["auto", "sign", "verify", "certificates", "devices", "register_device", "delete_certificate",
@@ -97,7 +97,7 @@ export const emulatorTool = tool({
   description: [
     "HarmonyOS emulators. list, start/stop (start awaits boot, returns target), create (device_type, os_version, screen_profile or screen, memory, storage...), delete.",
     "start: boot_mode=coldboot/snapshot/reset; hdc_port 10000-16555, one instance. Invalid port: ask, never call or substitute.",
-    "images (downloaded; all=true: every image), install_image / remove_image. license / license_view (start/create/install_image accept it automatically unless auto_accept_license=false).",
+    "images (downloaded; all=true: all), install_image / remove_image. license accepts; license_view reads. start/create/install_image auto-accept unless auto_accept_license=false.",
     "scenario: shake, power, rotate, volume, fold (state), battery, gps, sensor, outdoor_running, outdoor_cycling, driving_navigation.",
   ].join(" "),
   schema: z.object({

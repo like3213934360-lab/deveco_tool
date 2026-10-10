@@ -107,14 +107,14 @@ export async function startTest(target: string, input: { plan: string; bundle?: 
   await save(s);
   return {
     test_id: s.id, checklist: s.checklist, baseline_screenshot: baseline, elements: s.steps[0]!.elements,
-    next: "Execute each checklist item with ui action=test_step (op/selector or assert), use action=review for visual checks, then action=test_finish",
+    next: "Execute each checklist item with ui action=test_step (op/selector or top-level visible/hidden), use action=review for visual checks, then action=test_finish",
   };
 }
 
 export async function testStep(testId: string, step: { description?: string; action?: Action; selector?: Selector; automatic?: AutomaticAction[]; assert?: { visible?: Selector; hidden?: Selector; timeout_ms?: number } }, signal: AbortSignal) {
   const s = await load(testId);
   invariant(s.status === "running", "CONFLICT", `Test ${testId} is ${s.status}`);
-  invariant(step.action || step.assert, "INVALID_INPUT", "Pass op (+selector/coordinates) or assert");
+  invariant(step.action || step.assert, "INVALID_INPUT", "Pass op (+selector/coordinates), visible or hidden");
   const started = Date.now();
   const record: StepRecord = { n: s.steps.length, kind: step.action ? "act" : "assert", description: step.description, action: step.action, selector: step.selector, at: started, ...automaticResult(step.automatic) };
   try {

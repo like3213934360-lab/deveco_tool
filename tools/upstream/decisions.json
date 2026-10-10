@@ -8,8 +8,16 @@
     "  '<tool> [param] [param=value] ...'  checked against the live tools/list JSON Schema (value must be in the enum when one exists)",
     "  'cli:<text>'  src/cli.ts must contain the text;  'prompt:<name>' / 'skill:<name>'  must be served by the MCP server"
   ],
-  "upstream_rev": { "deveco-code": "bbf950db3b6158f3488a2bfc08358a248339e7d8", "deveco-cli": "3e2fa15c9e63c4fe95c060ee513ffd3f445e7ad2" },
+  "upstream_rev": { "deveco-code": "bbf950db3b6158f3488a2bfc08358a248339e7d8", "deveco-cli": "372879fb421e663bf78cc22811d0da41d95b4260" },
   "upstream_reviews": [
+    {
+      "date": "2026-10-10",
+      "upstream": "deveco-cli",
+      "from": "3e2fa15c9e63c4fe95c060ee513ffd3f445e7ad2",
+      "to": "372879fb421e663bf78cc22811d0da41d95b4260",
+      "decision": "existing_independent_capability_and_host",
+      "reason": "Reviewed ea2e5c1 and merge 372879f: verify launches ui-verification-mcp@0.0.18 with separately configured vision credentials, calls verifyUI, caches logs/screenshots, and exposes log/screenshot commands. Existing independent ui test_start/test_step/review/test_finish plus test_log/test_export cover the testing and artifact capabilities; a host model executes the plan and supplies visual judgments, not a new nested model dependency. verify init/base-url/model-name/api-key are host configuration. Mappings are capability mappings, not claims of identical autonomous execution or model accuracy. Text-only hosts cannot perform image review. No upstream permissive JSON handling, swallowed artifact-export errors or missing-config stop instruction is imported. Also reviewed DEVECO_CLI_DATA_DIR normalization in token/crypto storage, cache retention, device selection, documentation and dependency metadata; MCP keeps its existing independent state/tool lifecycle. Real SDK and OpenCode evidence and remaining failures are recorded in docs/UPGRADE-1.4.3.md."
+    },
     {
       "date": "2026-10-10",
       "upstream": "deveco-code",
@@ -128,6 +136,22 @@
     "cli:cmd:auth status": { "status": "full", "to": "auth action=status" },
     "cli:cmd:auth team": { "status": "full", "to": "auth action=teams" },
     "cli:cmd:auth team list": { "status": "full", "to": "auth action=teams" },
+
+    "cli:cmd:verify": {"status": "full", "to": "ui action=test_start", "also": "ui action=review"},
+    "cli:cmd:verify:opt:--test-plan": {"status": "full", "to": "ui action=test_start plan"},
+    "cli:cmd:verify:opt:--bundle-name": {"status": "full", "to": "ui bundle"},
+    "cli:cmd:verify:opt:--no-fresh-start": {"status": "full", "to": "ui fresh_start"},
+    "cli:cmd:verify log": {"status": "full", "to": "ui action=test_log"},
+    "cli:cmd:verify log:opt:--id": {"status": "full", "to": "ui test_id"},
+    "cli:cmd:verify log:opt:--max-log-size": {"status": "full", "to": "ui max_chars"},
+    "cli:cmd:verify log:opt:--search-keywords": {"status": "full", "to": "ui grep"},
+    "cli:cmd:verify screenshot": {"status": "full", "to": "ui action=test_export"},
+    "cli:cmd:verify screenshot:opt:--id": {"status": "full", "to": "ui test_id"},
+    "cli:cmd:verify screenshot:opt:--save-path": {"status": "full", "to": "ui directory"},
+    "cli:cmd:verify init": {"status": "host", "reason": "The MCP host owns model selection, endpoint and credentials. UI review uses its image-capable model; this independent server does not configure or invoke a nested model."},
+    "cli:cmd:verify init:opt:--base-url": {"status": "host", "reason": "The MCP host owns model selection, endpoint and credentials. UI review uses its image-capable model; this independent server does not configure or invoke a nested model."},
+    "cli:cmd:verify init:opt:--model-name": {"status": "host", "reason": "The MCP host owns model selection, endpoint and credentials. UI review uses its image-capable model; this independent server does not configure or invoke a nested model."},
+    "cli:cmd:verify init:opt:--api-key": {"status": "host", "reason": "The MCP host owns model selection, endpoint and credentials. UI review uses its image-capable model; this independent server does not configure or invoke a nested model."},
 
     "cli:cmd:build": { "status": "full", "to": "project action=build" },
     "cli:cmd:build:opt:--build-mode": { "status": "full", "to": "project mode" },

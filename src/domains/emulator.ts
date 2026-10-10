@@ -6,7 +6,7 @@ import { randomUUID } from "node:crypto";
 import { setTimeout as delay } from "node:timers/promises";
 import { invariant, ToolError } from "../core/errors.js";
 import { clip } from "../core/files.js";
-import { run, spawnIndependent } from "../core/proc.js";
+import { run, spawnIndependent, type IndependentProcess } from "../core/proc.js";
 import { toolCommand } from "../core/toolchain.js";
 import { listTargets, shell } from "./device.js";
 import { snapshotBoot } from "./emulator-snapshot.js";
@@ -176,6 +176,7 @@ export async function startEmulator(name: string, options: StartInput, signal: A
   keys.forEach((key) => starting.add(key));
   const timeout = AbortSignal.timeout(180000), pending = AbortSignal.any([signal, timeout]);
   let logFile: string | undefined;
+  let child: IndependentProcess | undefined;
   let launched = false;
   try {
     pending.throwIfAborted();
@@ -213,22 +214,19 @@ export async function startEmulator(name: string, options: StartInput, signal: A
       logFile = path.join(os.tmpdir(), `deveco-emulator-${randomUUID()}.log`);
       await (await import("../core/artifacts.js")).trackExport(logFile);
     }
-    let exited: number | null | undefined, spawnError: Error | undefined;
     if (logFile) {
       pending.throwIfAborted();
-      const child = spawnIndependent(toolCommand("emulator", args), logFile);
+      child = await spawnIndependent(toolCommand("emulator", args), logFile);
       launched = true;
-      child.once("error", (error) => { spawnError = error; });
-      child.once("exit", (code) => { exited = code; });
     }
     let target = targetBefore;
     for (;;) {
       pending.throwIfAborted();
       restoredSnapshot?.(); // Detect SDK coldboot substitution even before a target appears.
-      if (spawnError) throw new ToolError("PROCESS_FAILED", `Cannot start emulator ${name}: ${spawnError.message}`, { log: logFile });
+      const exited = child?.exitCode;
       const log = logFile ? startLog(logFile) : "";
       const refused = /agree to the agreement|Unable to start|Failed to start|Invalid command|please attach the correct parameter|(?:snapshot|boot) .{0,60}failed|could not use snapshot|default snapshot is not exist/i.test(log);
-      if (refused || exited !== undefined && exited !== 0) throw new ToolError(/agreement/i.test(log) ? "LICENSE_REQUIRED" : "EMULATOR_FAILED",
+      if (refused || child?.signalCode || exited !== undefined && exited !== 0) throw new ToolError(/agreement/i.test(log) ? "LICENSE_REQUIRED" : "EMULATOR_FAILED",
         `Emulator ${name} refused to start`, { log: logFile, exit_code: exited, tail: clip(log, 2000) }, "Inspect the launcher log and emulator instance; no startup options were retried");
       target ??= await matchingTargets(name, pending);
       if (target) {
@@ -257,7 +255,7 @@ export async function startEmulator(name: string, options: StartInput, signal: A
       { name, launched, ...(logFile ? { log: logFile, tail: clip(startLog(logFile), 2000) } : {}) },
       "The emulator may still be running; inspect it before retrying or stopping it");
     throw error;
-  } finally { keys.forEach((key) => starting.delete(key)); }
+  } finally { await child?.detach(); keys.forEach((key) => starting.delete(key)); }
 }
 
 export async function stopEmulator(name: string, signal?: AbortSignal, instancePath?: string) {

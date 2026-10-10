@@ -1,0 +1,579 @@
+{
+  "version": "1.4.3",
+  "build_id": "1444f7e71f76a5368079e3055ca0b88395e32a55dcfe5776833bbed324c64843",
+  "environment": {
+    "os": "macOS 27.0.1",
+    "node": "26.0.0",
+    "opencode": "1.18.35",
+    "deveco": "26.0.0.821",
+    "sdk": "26.0.0.105",
+    "target": "Disposable HarmonyOS API 26 emulator; no physical-device mutations"
+  },
+  "verification": {
+    "unit": {
+      "tests": 171,
+      "passed": 171,
+      "failed": 0,
+      "skipped": 0,
+      "sha256": "38bde0e869fba860056da3724452f336049d6e9b152a6157d1a3ff9d8a48a34b"
+    },
+    "typecheck": {
+      "passed": true,
+      "sha256": "73813588931277bba41c20b2a0d5b58ac437d2e2461db7af23fa29f7936900d7"
+    },
+    "sdk_smoke": {
+      "tests": 22,
+      "passed": 22,
+      "failed": 0,
+      "skipped": 0,
+      "sha256": "db90a4bad66e1bca1175f93b18ea33d647514df227d4de02254a13fa4becf19c"
+    },
+    "sdk_onboarding": {
+      "tests": 1,
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "sha256": "54546b523035caba1e85e1d03c71b442be90bd5d126200d6963f9642dc2a284d"
+    },
+    "benchmark": {
+      "handshake_ms": {
+        "median": 97,
+        "min": 87,
+        "max": 107
+      },
+      "tools": 15,
+      "instructions_bytes": 1737,
+      "instructions_chars": 1737,
+      "longest_description_chars": 1594,
+      "tools_list_bytes": 36862,
+      "repeated_instructions_bytes": 62977,
+      "tools_list_ms": 4,
+      "idle_cpu_10s": {
+        "before": "0:00.14",
+        "after": "0:00.14",
+        "changed": false
+      },
+      "idle_rss_mb": 64
+    },
+    "schema_equivalence": {
+      "baseline_version": "1.4.2",
+      "candidate_version": "1.4.3",
+      "build_id": "1444f7e71f76a5368079e3055ca0b88395e32a55dcfe5776833bbed324c64843",
+      "tools": 15,
+      "names_titles_annotations_and_schema_constraints_equal": true,
+      "instructions_equal": true,
+      "normalization": "Remove description; remove redundant type only when equal to the referenced definition type. Preserve all other keys.",
+      "metadata_sha256": [
+        "1b84bae41e87c8b1b8c38f07449f9a93c94e6052c9bf9d7a6fb8d81a1e531964",
+        "35e3ee69e764b5f7590a1e1db7112ba03e66d7e21279807ac387c5f2335c7df3"
+      ]
+    },
+    "upstream": {
+      "revisions": {
+        "deveco-code": "bbf950db3",
+        "deveco-cli": "372879f"
+      },
+      "totals": {
+        "items": 491,
+        "full": 374,
+        "host": 74,
+        "skip": 43,
+        "partial": 0,
+        "undecided": 0,
+        "invalid": 0,
+        "stale": 0
+      },
+      "sha256": "dcc5db89e44c56cadf5f1db75e6a5fbd53d57e35a6297a3c4a4e965f6ae89762"
+    }
+  },
+  "model_trials": {
+    "attempts": 223,
+    "by_build": {
+      "4ca9fdc8988d51b3c33b6bb7f362ded798ca7f919e6258269d0e3a0ee67d622c": {
+        "attempts": 29,
+        "whole_trial_passes": 5
+      },
+      "6f6d071800b3e28e801f62bd04180722adc7dc12bc9bd476209772606283f96b": {
+        "attempts": 22,
+        "whole_trial_passes": 2
+      },
+      "a8eef032811a9e029ef13f57838198eaa83baf29be6b89183617e0993db7addd": {
+        "attempts": 9,
+        "whole_trial_passes": 1
+      },
+      "8b7f4accc92902677b63d97123f3ded82b22266c15124e990daef4e34043fa35": {
+        "attempts": 42,
+        "whole_trial_passes": 3
+      },
+      "1444f7e71f76a5368079e3055ca0b88395e32a55dcfe5776833bbed324c64843": {
+        "attempts": 2,
+        "whole_trial_passes": 0
+      },
+      "3e60d57e28f557fbe1cb37a9c4a52e36f3ca742666b205598cf8bf43d5081868": {
+        "attempts": 28,
+        "whole_trial_passes": 8
+      },
+      "437fde87f025253b99418277a141d19f93a39a38855d57cdf2784bfe06580715": {
+        "attempts": 2,
+        "whole_trial_passes": 1
+      },
+      "8ff4841ae8aad8d8bd18a3d5849593e9fc88ba54f859f22f21885f648c4bca3e": {
+        "attempts": 84,
+        "whole_trial_passes": 9
+      },
+      "cb3db4bd70c5a876cea16148c089628399b2826ca066f9c3192b618b9ed52b92": {
+        "attempts": 4,
+        "whole_trial_passes": 2
+      },
+      "07ae1c2b485a57e6ab960b529ba4c4d741c0fe2ed598388ffc3732a194645f7a": {
+        "attempts": 1,
+        "whole_trial_passes": 0
+      }
+    },
+    "summary_sha256": "2794aa77fda3e34247a498d3f6f6bdeb5b1406d1a34d045643dc04dd00c0213d",
+    "coverage_note": "Successful protocol results/resolved jobs only, across all candidate builds. Not proof that every feature, artifact, scenario or model passed.",
+    "calls_by_action": {
+      "auth.status": {
+        "requested": 21,
+        "completed": 21
+      },
+      "auth.teams": {
+        "requested": 7,
+        "completed": 4
+      },
+      "code.api_versions": {
+        "requested": 19,
+        "completed": 19
+      },
+      "code.check": {
+        "requested": 26,
+        "completed": 20
+      },
+      "code.lint": {
+        "requested": 4,
+        "completed": 4
+      },
+      "code.lsp": {
+        "requested": 9,
+        "completed": 9
+      },
+      "code.lsp_restart": {
+        "requested": 4,
+        "completed": 4
+      },
+      "device.info": {
+        "requested": 22,
+        "completed": 19
+      },
+      "device.list": {
+        "requested": 27,
+        "completed": 25
+      },
+      "device.log": {
+        "requested": 23,
+        "completed": 20
+      },
+      "device.recv": {
+        "requested": 4,
+        "completed": 4
+      },
+      "device.send": {
+        "requested": 4,
+        "completed": 4
+      },
+      "device.shell": {
+        "requested": 21,
+        "completed": 18
+      },
+      "device.sqlite": {
+        "requested": 24,
+        "completed": 19
+      },
+      "diagnose.build": {
+        "requested": 27,
+        "completed": 23
+      },
+      "diagnose.crash": {
+        "requested": 8,
+        "completed": 5
+      },
+      "doctor": {
+        "requested": 22,
+        "completed": 22
+      },
+      "emulator.create": {
+        "requested": 1,
+        "completed": 1
+      },
+      "emulator.images": {
+        "requested": 19,
+        "completed": 19
+      },
+      "emulator.license_view": {
+        "requested": 18,
+        "completed": 18
+      },
+      "emulator.list": {
+        "requested": 21,
+        "completed": 21
+      },
+      "emulator.start": {
+        "requested": 2,
+        "completed": 2
+      },
+      "job.list": {
+        "requested": 21,
+        "completed": 21
+      },
+      "job.read": {
+        "requested": 30,
+        "completed": 30
+      },
+      "job.status": {
+        "requested": 5,
+        "completed": 5
+      },
+      "job.wait": {
+        "requested": 9,
+        "completed": 9
+      },
+      "knowledge": {
+        "requested": 4,
+        "completed": 0
+      },
+      "knowledge.api_versions": {
+        "requested": 3,
+        "completed": 0
+      },
+      "knowledge.catalog": {
+        "requested": 45,
+        "completed": 28
+      },
+      "knowledge.read": {
+        "requested": 53,
+        "completed": 49
+      },
+      "knowledge.search": {
+        "requested": 27,
+        "completed": 27
+      },
+      "knowledge.status": {
+        "requested": 24,
+        "completed": 24
+      },
+      "project.build": {
+        "requested": 5,
+        "completed": 5
+      },
+      "project.clean": {
+        "requested": 4,
+        "completed": 4
+      },
+      "project.create": {
+        "requested": 5,
+        "completed": 5
+      },
+      "project.info": {
+        "requested": 24,
+        "completed": 24
+      },
+      "project.sync": {
+        "requested": 4,
+        "completed": 4
+      },
+      "run.build_run": {
+        "requested": 1,
+        "completed": 1
+      },
+      "run.deploy": {
+        "requested": 7,
+        "completed": 5
+      },
+      "run.launch": {
+        "requested": 11,
+        "completed": 11
+      },
+      "run.start": {
+        "requested": 1,
+        "completed": 0
+      },
+      "run.stop": {
+        "requested": 12,
+        "completed": 11
+      },
+      "sign.certificates": {
+        "requested": 4,
+        "completed": 4
+      },
+      "sign.csr": {
+        "requested": 4,
+        "completed": 4
+      },
+      "sign.devices": {
+        "requested": 4,
+        "completed": 4
+      },
+      "sign.keypair": {
+        "requested": 5,
+        "completed": 4
+      },
+      "skills.export": {
+        "requested": 4,
+        "completed": 4
+      },
+      "skills.list": {
+        "requested": 20,
+        "completed": 20
+      },
+      "skills.read": {
+        "requested": 19,
+        "completed": 19
+      },
+      "ui": {
+        "requested": 1,
+        "completed": 0
+      },
+      "ui_flow.delete": {
+        "requested": 3,
+        "completed": 3
+      },
+      "ui_flow.list": {
+        "requested": 3,
+        "completed": 3
+      },
+      "ui_flow.record": {
+        "requested": 3,
+        "completed": 3
+      },
+      "ui_flow.replay": {
+        "requested": 3,
+        "completed": 3
+      },
+      "ui_flow.show": {
+        "requested": 3,
+        "completed": 3
+      },
+      "ui_flow.stop": {
+        "requested": 6,
+        "completed": 3
+      },
+      "ui.act": {
+        "requested": 17,
+        "completed": 14
+      },
+      "ui.assert": {
+        "requested": 14,
+        "completed": 7
+      },
+      "ui.find": {
+        "requested": 94,
+        "completed": 12
+      },
+      "ui.layout": {
+        "requested": 1,
+        "completed": 1
+      },
+      "ui.observe": {
+        "requested": 5,
+        "completed": 5
+      },
+      "ui.record_start": {
+        "requested": 2,
+        "completed": 1
+      },
+      "ui.record_status": {
+        "requested": 2,
+        "completed": 2
+      },
+      "ui.record_stop": {
+        "requested": 4,
+        "completed": 1
+      },
+      "ui.review": {
+        "requested": 4,
+        "completed": 4
+      },
+      "ui.screenshot": {
+        "requested": 3,
+        "completed": 3
+      },
+      "ui.test_export": {
+        "requested": 2,
+        "completed": 2
+      },
+      "ui.test_finish": {
+        "requested": 4,
+        "completed": 4
+      },
+      "ui.test_log": {
+        "requested": 3,
+        "completed": 3
+      },
+      "ui.test_start": {
+        "requested": 7,
+        "completed": 7
+      },
+      "ui.test_step": {
+        "requested": 28,
+        "completed": 4
+      },
+      "ui.tree": {
+        "requested": 8,
+        "completed": 7
+      },
+      "ui.visual": {
+        "requested": 2,
+        "completed": 2
+      },
+      "ui.windows": {
+        "requested": 5,
+        "completed": 5
+      }
+    },
+    "stopped_queue": {
+      "at": "2026-10-10T09:00:30.784Z",
+      "reason": "Provider rate limits and unavailable model; no alternate model or provider substituted",
+      "not_started": [
+        "focused-final-plans/muse-spark-1.3-contributor-free-2",
+        "focused-final-plans/mimo-v2.6-flash-free-2",
+        "text-ui-live/nemotron-3-ultra-free-2",
+        "text-ui-live/nemotron-3.5-lightning-free-2",
+        "ui-candidate-mimo-1",
+        "ui-candidate-muse-1",
+        "ui-candidate-mimo-2",
+        "ui-candidate-muse-2"
+      ],
+      "interrupted_due_to_queue_stop": [
+        "text-ui-live/ling-3.1-flash-free-2"
+      ]
+    }
+  },
+  "artifacts": {
+    "note": "Independent file checks for the named earlier candidate trials; not relabelled as final-build acceptance.",
+    "checks": [
+      {
+        "trial": "project-muse-1",
+        "files": {
+          "received.txt": "3f53bfa96dd8dd7140fc31364977888603dade3db4ddaca46b1bb37e62dc72c3",
+          "debug.csr": "edbb6ddc454442d29ec058053849fc43d7e44d3ac63ac31e869b535891868b21",
+          "lint.json": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "transfer_exact": true,
+        "csr_signature_and_subject": true
+      },
+      {
+        "trial": "ui-final-1",
+        "files": {
+          "screen.png": "991c2fc7b03a3204b2b7ebc4e735f35d5aa0b11ef5e9aed27c8b42ef340d0598"
+        },
+        "png_signature": false,
+        "ui_test_status": "passed"
+      },
+      {
+        "trial": "ui-muse-1",
+        "files": {}
+      },
+      {
+        "trial": "workflow-project-1",
+        "files": {
+          "received.txt": "3f53bfa96dd8dd7140fc31364977888603dade3db4ddaca46b1bb37e62dc72c3",
+          "debug.csr": "7eabec3f251a038f97064dde27059642d8a5b3f4b7a89fe5754886073eb0686c",
+          "lint.json": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "transfer_exact": true,
+        "csr_signature_and_subject": true
+      },
+      {
+        "trial": "workflow-project-2",
+        "files": {
+          "received.txt": "3f53bfa96dd8dd7140fc31364977888603dade3db4ddaca46b1bb37e62dc72c3",
+          "debug.csr": "954413b268dd2a666a585b0aeb93ef4edff7b87c70503fbaa355b3d8008c7d56",
+          "lint.json": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "transfer_exact": true,
+        "csr_signature_and_subject": true
+      },
+      {
+        "trial": "workflow-project-3",
+        "files": {
+          "debug.csr": "ca8f9001154965f8c2435a16cf8056108ec45ffb8d0368db1c954ccf89510cc1",
+          "lint.json": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "csr_signature_and_subject": true
+      },
+      {
+        "trial": "workflow-ui-1",
+        "files": {
+          "screen.png": "46ee7c152c6bc21d0ea27913380539dc8a69147ea419bbe74c953559965e534a"
+        },
+        "png_signature": false,
+        "ui_test_status": "passed"
+      },
+      {
+        "trial": "workflow-ui-2",
+        "files": {
+          "screen.png": "5b000ef52b8982f8db18abcae2c3af58ccaea4b83968351131a8f81efad90575"
+        },
+        "png_signature": false
+      },
+      {
+        "trial": "workflow-ui-3",
+        "files": {}
+      },
+      {
+        "trial": "extra-native-1-1",
+        "project_api_26": true,
+        "project_phone": true,
+        "bundle_matches": true,
+        "exported_skills": [
+          "deveco-mcp-workflow"
+        ],
+        "skill_sha256": "5215df8b8b9ed954c87c5db7408c14809c1961e668c98d68b541ce099983b40f",
+        "skill_nonempty": true
+      },
+      {
+        "trial": "extra-native-1-2",
+        "project_api_26": true,
+        "project_phone": true,
+        "bundle_matches": true,
+        "exported_skills": [
+          "deveco-mcp-workflow"
+        ],
+        "skill_sha256": "5215df8b8b9ed954c87c5db7408c14809c1961e668c98d68b541ce099983b40f",
+        "skill_nonempty": true
+      },
+      {
+        "trial": "extra-native-2-1",
+        "project_api_26": true,
+        "project_phone": true,
+        "bundle_matches": true,
+        "exported_skills": [
+          "deveco-mcp-workflow"
+        ],
+        "skill_sha256": "5215df8b8b9ed954c87c5db7408c14809c1961e668c98d68b541ce099983b40f",
+        "skill_nonempty": true
+      },
+      {
+        "trial": "extra-native-2-2",
+        "project_api_26": true,
+        "project_phone": true,
+        "bundle_matches": true,
+        "exported_skills": [
+          "deveco-mcp-workflow"
+        ],
+        "skill_sha256": "5215df8b8b9ed954c87c5db7408c14809c1961e668c98d68b541ce099983b40f",
+        "skill_nonempty": true
+      }
+    ]
+  },
+  "not_verified": [
+    "Final-build real-model behavior: provider rate-limited both focused trials before any tool call",
+    "Every action on every free model",
+    "Final visual model workflow and remaining text-only rounds",
+    "Nonempty MP4 export on the existing emulator",
+    "Codex App reload and actual-model acceptance, pending user confirmation",
+    "Windows OpenCode native emulator lifecycle",
+    "npm publication"
+  ],
+  "privacy": "Only allowlisted summaries and SHA-256 evidence are public. Raw host/provider/device transcripts remain private."
+}

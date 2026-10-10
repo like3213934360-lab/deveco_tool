@@ -24,6 +24,10 @@ test("guidance covers discovery, standalone tools, safe continuation and evidenc
     for (const t of tools) assert.ok(!t.description.includes(instructions), `${t.name}: server must not duplicate the global prefix`);
     for (const t of tools) {
       assert.match(instructions.slice(0, 512), new RegExp(`\\b${t.name}\\b`), `${t.name}: discoverable before tool loading`);
+      if (t.inputSchema.properties.action) {
+        assert.ok(t.inputSchema.required.includes("action"), `${t.name}: no inferred/default action`);
+        assert.match(t.description, /^Required: action=<operation>\./, `${t.name}: explicit discriminator guidance`);
+      }
       for (const action of t.inputSchema.properties.action?.enum ?? [])
         assert.ok(t.description.includes(action), `${t.name}.${action}: explain every advertised action on its own tool`);
     }
@@ -37,6 +41,17 @@ test("guidance covers discovery, standalone tools, safe continuation and evidenc
     assert.match(byName.knowledge.description, /SDK declarations.*successful build win, then official docs; community never defines the API/);
     assert.match(byName.job.description, /resume.*needs_input.*only after inspection/);
     assert.match(byName.job.description, /read:.*artifact.*artifact_id.*line\/limit.*grep/);
+    assert.match(byName.device.description, /action=log:.*action=sqlite:/);
+    assert.match(byName.code.description, /action=lsp requires op:/);
+    assert.match(byName.emulator.description, /license accepts; license_view reads/);
+    assert.match(byName.ui.description, /review\(requirement, then review_id\+outcome\+reason\)/);
+    assert.match(byName.ui.description, /test_step\(test_id, op\/selector or visible\/hidden\)/);
+    assert.match(byName.ui.description, /selector\/visible\/hidden: objects, e.g. \{"text":"Hi"\}/);
+    for (const name of ["selector", "visible", "hidden"]) {
+      assert.equal(byName.ui.inputSchema.properties[name].type, "object");
+      assert.equal(byName.ui.inputSchema.properties[name].$ref, "#/$defs/Selector");
+      assert.equal(byName.ui.inputSchema.$defs.Selector.type, "object");
+    }
     assert.match(byName.ui.description, /act steps=\[.*waits for each element.*stops at first failure/);
     assert.match(byName.ui.description, /after=.*no extra observe/);
     assert.match(byName.ui.description, /app's on-screen elements/);
@@ -48,7 +63,12 @@ test("guidance covers discovery, standalone tools, safe continuation and evidenc
     assert.match(byName.ui_flow.description, /consent\/setup handling.*inspect.*before retrying/);
     assert.match(byName.sign.description, /Interrupted cloud mutations require reconciliation/);
     assert.match(byName.sign.description, /TEAM_AMBIGUOUS.*ask the user/);
-    assert.match(byName.ui.inputSchema.properties.target.description, /ask the user when several/);
+    assert.match(byName.ui.inputSchema.properties.target.description, /Device serial\/name; ask user if several connected/);
+    assert.match(byName.knowledge.inputSchema.properties.check.description, /status: default true \(online\), false = offline; update: true = check only/);
+    assert.match(byName.knowledge.description, /catalog: no parameters/);
+    assert.match(byName.diagnose.description, /build: fix hints, diagnostics only \(no project\)/);
+    assert.match(byName.skills.inputSchema.properties.scope.description, /Default user; project scope requires scope=project \+ project/);
+    assert.match(byName.skills.inputSchema.properties.names.description, /export: skill names \(not name\); default all/);
   } finally {
     await client.close();
     fs.rmSync(state, { recursive: true, force: true });

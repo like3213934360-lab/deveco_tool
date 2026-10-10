@@ -2,9 +2,9 @@
 
 **中文** | [English](#english)
 
-一个轻量的鸿蒙（HarmonyOS）开发 MCP 服务。任何 MCP 宿主（Cursor、Claude Code、Codex 等）都可以通过它调用 DevEco 工具链，完成鸿蒙应用的构建、运行、调试和验证，并离线查询鸿蒙开发知识。
+一个轻量的鸿蒙（HarmonyOS）开发 MCP 服务。MCP 宿主（OpenCode、Codex、Cursor 等）都可以通过它调用 DevEco 工具链，完成鸿蒙应用的构建、运行、调试和验证，并离线查询鸿蒙开发知识。
 
-- **完整覆盖上游。** 对照 [deveco-code](https://gitcode.com/openharmony-sig/deveco-code) 和 [deveco-cli](https://gitcode.com/openharmony-sig/deveco-cli) 做了源码能力清点与逐项映射：脚本从上游源码自动抽取每一个工具、参数、取值、命令、选项和内置 MCP 工具，共 475 项，每一项都有经过核对的对应关系（完整覆盖 362 项，由宿主 AI 提供 70 项，明确不需要 43 项并写明理由），缺口为 0。完整清单见 [docs/upstream-alignment.md](docs/upstream-alignment.md)，CI 每周自动重跑，上游有新提交或新能力时会报出。在此之外，还提供可恢复的异步任务、UI 流程录制与回放、崩溃模式匹配、按符号名定位的 LSP 查询，以及可以独立于服务更新的知识包。
+- **逐项核对上游能力。** 对照 [deveco-code](https://gitcode.com/openharmony-sig/deveco-code) 和 [deveco-cli](https://gitcode.com/openharmony-sig/deveco-cli) 做了源码能力清点与逐项映射：脚本从上游源码自动抽取每一个工具、参数、取值、命令、选项和内置 MCP 工具，共 491 项，每一项都有经过核对的对应关系（MCP 能力映射 374 项，由宿主 AI 提供 74 项，明确不需要 43 项并写明理由），未决映射为 0；这不等于所有模型、设备均已实际验收。完整清单见 [docs/upstream-alignment.md](docs/upstream-alignment.md)，CI 每周自动重跑，上游有新提交或新能力时会报出。在此之外，还提供可恢复的异步任务、UI 流程录制与回放、崩溃模式匹配、按符号名定位的 LSP 查询，以及可以独立于服务更新的知识包。
 - **轻量。** 运行时依赖只有 3 个，不用 LangGraph，也没有原生模块（数据库用 Node 自带的 `node:sqlite`）。单进程运行，空闲时不占 CPU。语言服务和代码检查器按需启动，空闲 10 分钟后自动关闭。
 - **为 AI 宿主设计。** 15 个工具按用途命名，全部默认可用；返回结构化且长度有上限；每个错误都带 `code`、`category` 和修复提示 `hint`；耗时操作以任务形式异步执行。
 
@@ -18,7 +18,7 @@
 | 源码行数（`src`） | 约 5.7k | 约 35k |
 | 知识检索 | 3–20 ms | — |
 
-v1.4.2 优先保证能力可发现和正确调用，恢复必要说明并增加 Codex App、OpenCode、Claude 的真实模型验收，证据及未完成项见 [提示词验收与 TODO](docs/UPGRADE-1.4.2.md)。功能升级的真实 SDK 验证见 [v1.4.0 验收记录](docs/UPGRADE-1.4.0.md)。
+v1.4.3 补明 action 与条件参数，优先进行 OpenCode 免费模型多轮发现与真实调用验收，并修复宿主退出导致模拟器被结束的问题。Codex 等待用户重载后另验；Claude 不在本轮适配名单。证据与未完成项见 [验收与 TODO](docs/UPGRADE-1.4.3.md)。功能升级的真实 SDK 验证见 [v1.4.0 验收记录](docs/UPGRADE-1.4.0.md)。
 版本发布遵循 [GitHub 发布流程](docs/RELEASING.md)：`main` 上的新稳定版本通过全部 CI 后自动发布，并核验 tag、提交和 Latest。
 
 ## 安装
@@ -197,9 +197,9 @@ MIT。第三方声明：`NOTICE.deveco-cli`、`NOTICE.deveco-code`、`NOTICE.hyp
 
 ## English
 
-A lean MCP server for HarmonyOS development. It lets any MCP host (Cursor, Claude Code, Codex, …) build, run, debug and verify HarmonyOS apps with the DevEco toolchain, and query HarmonyOS knowledge offline.
+A lean MCP server for HarmonyOS development. It lets MCP hosts (OpenCode, Codex, Cursor, …) build, run, debug and verify HarmonyOS apps with the DevEco toolchain, and query HarmonyOS knowledge offline.
 
-- **Covers upstream fully.** Every HarmonyOS tool in [deveco-code](https://gitcode.com/openharmony-sig/deveco-code) and every command in [deveco-cli](https://gitcode.com/openharmony-sig/deveco-cli) is inventoried and mapped: a script extracts every tool, parameter, enum value, command, option and bundled MCP tool from upstream source (475 items) and each one has a verified mapping (362 full, 70 host-provided, 43 explicitly not needed with reasons), 0 gaps. See [docs/upstream-alignment.md](docs/upstream-alignment.md); CI re-runs it weekly and fails on new upstream commits or capabilities. It also adds asynchronous jobs with recovery, flow recording and replay, crash pattern matching, symbol-based LSP lookups, and knowledge packs that update independently of the server.
+- **Source-audited upstream mappings.** Every HarmonyOS tool in [deveco-code](https://gitcode.com/openharmony-sig/deveco-code) and every command in [deveco-cli](https://gitcode.com/openharmony-sig/deveco-cli) is inventoried and mapped: a script extracts every tool, parameter, enum value, command, option and bundled MCP tool from upstream source (491 items) and each one has a verified mapping (374 MCP mappings, 74 host-provided, 43 explicitly not needed with reasons), with no undecided mappings. This does not establish execution coverage across every model and device. See [docs/upstream-alignment.md](docs/upstream-alignment.md); CI re-runs it weekly and fails on new upstream commits or capabilities. It also adds asynchronous jobs with recovery, flow recording and replay, crash pattern matching, symbol-based LSP lookups, and knowledge packs that update independently of the server.
 - **Light.** 3 runtime dependencies. No LangGraph, no native modules (uses the built-in `node:sqlite`). A single process with zero idle CPU. Language servers and the checker start on demand and shut down after 10 idle minutes.
 - **Built for AI hosts.** 15 tools named by intent, all enabled by default. Responses are structured and bounded. Every error carries a `code`, a `category` and a fix `hint`. Long operations become jobs.
 
@@ -213,7 +213,7 @@ A lean MCP server for HarmonyOS development. It lets any MCP host (Cursor, Claud
 | Source lines (`src`) | ~5.7k | ~35k |
 | Knowledge search | 3–20 ms | — |
 
-See [v1.4.2 prompt acceptance and TODO](docs/UPGRADE-1.4.2.md) for restored discovery guidance, real Codex App/OpenCode/Claude trials and remaining gaps; [v1.4.0 acceptance](docs/UPGRADE-1.4.0.md) records the feature upgrade's real SDK evidence. [GitHub delivery](docs/RELEASING.md) verifies CI, the immutable release tag and Latest.
+See [v1.4.3 acceptance and TODO](docs/UPGRADE-1.4.3.md) for explicit action guidance, repeated OpenCode free-model planning/execution trials and emulator lifecycle repair. Codex verification awaits the user’s reload; Claude is outside this round’s scope; [v1.4.0 acceptance](docs/UPGRADE-1.4.0.md) records the feature upgrade's real SDK evidence. [GitHub delivery](docs/RELEASING.md) verifies CI, the immutable release tag and Latest.
 
 ### Install
 

@@ -297,7 +297,11 @@ test("flow record/replay", { skip: !target }, async () => {
 test("UI test session: steps, review, report, export", { skip: !target }, async () => {
   const started = await call("ui", { action: "test_start", target, project, fresh_start: true, plan: "1. 显示 Hello World\n2. 点击后显示 Welcome" });
   assert.equal(started.checklist.length, 2);
+  assert.match(started.next, /top-level visible\/hidden/);
   const id = started.test_id;
+  const empty = await client.call("ui", { action: "test_step", target, test_id: id });
+  assert.equal(empty.isError, true);
+  assert.match(empty.data.error.message, /visible or hidden/);
   const first = await call("ui", { action: "test_step", target, test_id: id, visible: { text: "Hello World" } });
   assert.equal(first.passed, true, JSON.stringify({ started, first }).slice(0, 3000));
   const click = await call("ui", { action: "test_step", target, test_id: id, op: "click", selector: { text: "Hello World" } });

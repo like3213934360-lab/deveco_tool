@@ -134,6 +134,15 @@ export function compactSchema(node: unknown): unknown {
     if ((k === "minimum" && v === Number.MIN_SAFE_INTEGER) || (k === "maximum" && v === Number.MAX_SAFE_INTEGER)) continue;
     out[k] = compactSchema(v);
   }
+  // Some provider tool parsers inspect only a top-level argument's type before decoding it.
+  // Keep the full reference and repeat its declared type; never infer or coerce tool input.
+  const definitions = out.$defs as Record<string, { type?: string }> | undefined;
+  if (definitions && out.properties) for (const field of Object.values(out.properties as Record<string, Record<string, unknown>>)) {
+    if (typeof field.$ref === "string" && field.$ref.startsWith("#/$defs/")) {
+      const type = definitions[field.$ref.slice(8)]?.type;
+      if (type && field.type === undefined) field.type = type;
+    }
+  }
   return out;
 }
 

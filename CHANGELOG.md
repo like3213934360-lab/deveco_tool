@@ -1,5 +1,23 @@
 # Changelog / 更新日志
 
+## v1.4.3 (2026-10-10)
+
+**中文**
+
+- 为 14 个 action 工具统一补明必填操作入口，doctor 明确没有 action；补齐日志/SQLite、LSP、协议阅读与接受、视觉评审两阶段、Skill 导出/作用域、签名字段、知识包离线状态的参数说明。保留全部公共能力索引、参数校验和原有大小/性能门禁。
+- 保留完整 `$ref`，在顶层参数重复声明引用定义的同值 type，修复部分免费模型把 selector 对象编码成字符串的兼容性问题；不猜测类型、不自动解析模型字符串、不改变输入校验。两种模型、各两轮原生调用及 provider 原始响应对照通过。
+- 修复 OpenCode 退出时模拟器被宿主清理的问题：独立程序通过短暂启动进程观察启动，再退出父进程，完成进程脱离后才返回；保留启动失败、日志和实际开机检查，不重试或替换启动选项。
+- 修正 UI 测试会话返回提示：断言步骤使用公开参数 visible/hidden，避免模型按旧提示传入不被接受的 assert；保留严格校验并补充真实 SDK 回归。
+- 扩展为覆盖 102 个协议入口的 103 项拟调用场景，以及独立的真实调用验收。记录宿主事件、原始 MCP 请求/响应、模型与构建身份，核对异步任务终态；免费模型多轮试验保留所有失败，不修补模型答案、不把计划计作执行；按输入模态区分文字控件操作与视觉验收。范围、证据和未验证项见 [升级 TODO](docs/UPGRADE-1.4.3.md)。
+
+**English**
+
+- Explicit required-action guidance for 14 tools, with doctor exempt. Clarified conditional parameters and defaults for logs, SQLite, LSP, license acceptance, visual reviews, skills, signing and offline knowledge status without changing validation constraints or existing budgets.
+- Preserve complete `$ref` definitions and repeat their declared type at top-level arguments for provider interoperability. Two models passed two native-call rounds each, with raw provider/MCP argument equality; no string coercion or relaxed validation.
+- Keep independently launched emulators alive after OpenCode exits by releasing their short-lived startup parent before reporting success. Startup diagnostics and boot checks remain intact; no option retry or downgrade.
+- Correct UI test continuation hints to use the public visible/hidden fields instead of the rejected assert field, retaining strict validation and adding real-SDK regression coverage.
+- Added 103 planning scenarios covering all 102 protocol entries and separate transport-verified execution trials. Multi-round free-model results retain failures, model/build identities and asynchronous terminal states. See [acceptance and remaining work](docs/UPGRADE-1.4.3.md).
+
 ## v1.4.2 (2026-10-10)
 
 **中文**

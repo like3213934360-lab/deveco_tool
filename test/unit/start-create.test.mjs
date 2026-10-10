@@ -25,12 +25,12 @@ await build({ stdin: { contents: entry, resolveDir: root }, outfile: bundle, bun
     });
     b.onLoad({ filter: /.*/, namespace: "fixture" }, (a) => ({ contents: {
       toolchain: `export function toolCommand(_,args){return {file:'fixture',args}};export function toolchain(){return {sdk:'fixture'}};export function sdkInfo(){return {platform_version:'26.0.0',api_level:26}};`,
-      proc: `import fs from 'node:fs';import {EventEmitter} from 'node:events';
+      proc: `import fs from 'node:fs';
         export async function run(cmd,{signal}={}) {signal?.throwIfAborted();const f=globalThis.__startCreate;f.commands.push(cmd.args);
           if(cmd.args[0]==='-list')return {stdout:f.raw??JSON.stringify(f.instances),stderr:''};
           if(cmd.args[0]==='-help')return {stdout:f.help,stderr:''};if(cmd.args[0]==='-version')return {stdout:'1.0.0',stderr:''};throw new Error('unexpected command '+cmd.args)};
-        export function spawnIndependent(cmd,log) {const f=globalThis.__startCreate;f.starts.push(cmd.args);f.logs.push(log);fs.writeFileSync(log,f.log);f.launched=true;f.onLaunch?.();
-          const child=new EventEmitter();setImmediate(()=>{if(f.spawnError)child.emit('error',f.spawnError);else if(f.exit!==undefined)child.emit('exit',f.exit)});return child};`,
+        export async function spawnIndependent(cmd,log) {const f=globalThis.__startCreate;f.starts.push(cmd.args);f.logs.push(log);fs.writeFileSync(log,f.log);f.launched=true;f.onLaunch?.();
+          if(f.spawnError)throw Object.assign(f.spawnError,{code:'PROCESS_FAILED'});return {exitCode:f.exit,async detach(){f.detached=true}}};`,
       device: `export async function listTargets(signal){signal?.throwIfAborted();const f=globalThis.__startCreate;return !f.launched&&!f.running?[]:Object.keys(f.targets)};
         export async function shell(target,args,signal){signal?.throwIfAborted();const f=globalThis.__startCreate;f.queries.push([target,args.at(-1)]);
           if(f.readError)throw f.readError;return {stdout:args.at(-1)==='ohos.qemu.hvd.name'?f.targets[target]??'':f.boot,stderr:'',code:f.readCode??0}};`,

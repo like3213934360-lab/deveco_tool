@@ -22,7 +22,7 @@ export interface ToolDef<S extends z.ZodType = z.ZodType> {
 }
 
 export function tool<S extends z.ZodType>(def: ToolDef<S>): ToolDef<S> {
-  return def;
+  return def.params ? { ...def, description: `Required: action=<operation>. ${def.description}` } : def;
 }
 
 /**
@@ -37,10 +37,10 @@ export const SYNC_WAIT_MS = MAX_WAIT_MS - 3000;
 
 /** Shared field helpers keep descriptions consistent across tools. */
 export const fields = {
-  project: z.string().min(1).describe("Absolute project root (has build-profile.json5)"),
-  product: z.string().min(1).optional().describe("Product (only when several exist)"),
-  modules: z.array(z.string().min(1)).max(64).optional().describe("Module names (default: all for the product)"),
-  target: z.string().min(1).optional().describe("Device serial/name; ask the user when several are connected"),
-  requestKey: z.string().min(1).max(200).optional().describe("same key+input returns the existing job"),
-  wait: z.number().int().min(0).max(MAX_WAIT_MS).optional().describe(`ms to wait before returning a job (default per action, max ${MAX_WAIT_MS}; then job action=wait)`),
+  project: z.string().min(1).describe("Absolute project root (build-profile.json5)"),
+  product: z.string().min(1).optional().describe("Product if multiple"),
+  modules: z.array(z.string().min(1)).max(64).optional().describe("Modules (default all in product)"),
+  target: z.string().min(1).optional().describe("Device serial/name; ask user if several connected"),
+  requestKey: z.string().min(1).max(200).optional().describe("Same key+input reuses job"),
+  wait: z.number().int().min(0).max(MAX_WAIT_MS).optional().describe(`ms (action default, max ${MAX_WAIT_MS}); then job action=wait`),
 };
