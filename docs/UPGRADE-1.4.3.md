@@ -16,7 +16,7 @@
 | [ ] | 最终构建模型复验 | 最后补明 test_step 后，Muse/MiMo 两个首轮均被免费 provider 限流；后续轮次与视觉流程未开始，不计通过 |
 | [ ] | 所有免费模型、所有 action 的原生执行全通过 | 未达到；计划覆盖不等于执行覆盖，不因发布而勾选 |
 | [ ] | Codex App 重载与模型验收 | 等用户再次确认重启；没有在本轮擅自开始 Codex 模型测试 |
-| [ ] | GitHub 提交、全部 CI、Release、tag、Latest | 发布后记录 SHA、工作流与核验回执 |
+| [x] | GitHub 提交、全部 CI、Release、tag、Latest | 发布提交 `583e9018628caedd27498dacae4155b9bd668827`；七项 CI、自动发布与只读复核均通过，tag 指向该提交且为 Latest；链接见交付记录 |
 
 ## 修正依据与边界
 
@@ -107,4 +107,9 @@ node tools/model-eval.mjs --host opencode --model opencode/muse-spark-1.3-contri
 
 最终运行构建 ID：`1444f7e71f76a5368079e3055ca0b88395e32a55dcfe5776833bbed324c64843`。
 
-GitHub 发布、npm 发布和宿主重载各自独立。未运行 npm 发布；Codex App 是否运行新版，等待用户重启后的 doctor.server.build_id 证明。
+- 发布提交：[583e9018628caedd27498dacae4155b9bd668827](https://github.com/like3213934360-lab/deveco_tool/commit/583e9018628caedd27498dacae4155b9bd668827)。
+- [CI 38040132557](https://github.com/like3213934360-lab/deveco_tool/actions/runs/38040132557)：Windows/macOS/Linux × Node 22/24 六项测试，以及上游门禁全部通过，无跳过任务。
+- [Release 工作流 38040199340](https://github.com/like3213934360-lab/deveco_tool/actions/runs/38040199340) 成功；已下载 `verified-release` 并执行 `node tools/release.mjs --run 38040132557 --check`，[公开回执](evidence/v1.4.3-release.json) 一致确认 [v1.4.3](https://github.com/like3213934360-lab/deveco_tool/releases/tag/v1.4.3) 为 Latest、tag 指向发布提交。
+- 本文件的发布回填为后续文档提交，不移动或重建已发布 tag；该提交仍须经过全部 CI 和既有 Release 核验。
+
+GitHub 发布、npm 发布和宿主重载各自独立。OpenCode 临时验收进程已加载最终工具清单，但模型调用被限流；这不代表用户持久会话已重载。未运行 npm 发布；Codex App 是否运行新版，等待用户再次确认重启后的 doctor.server.build_id 与模型验收证明。
