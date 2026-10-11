@@ -106,7 +106,7 @@ Codex App 已通过原生 doctor 确认加载与本次发布一致的运行构�
 
 - [x] 本次新录屏从开始、录制状态、停止取回、严格解码到最终 idle 全链路通过。
 - [x] TODO、验收说明与公开证据已按本地原始日志逐项核对，保留原文件哈希和实际构建 ID。
-- [ ] 本次证据提交推送、该 SHA 全部 CI、release 工作流回执及既有 Release/tag/Latest 核验。
+- [x] 证据提交 [`10b984a820a6054299719e51af50cf2da7219be7`](https://github.com/like3213934360-lab/deveco_tool/commit/10b984a820a6054299719e51af50cf2da7219be7) 已推送；[七项 CI](https://github.com/like3213934360-lab/deveco_tool/actions/runs/38130815616) 全部通过、无跳过，[release 工作流](https://github.com/like3213934360-lab/deveco_tool/actions/runs/38130882022)成功。下载的 verified-release 回执与干净 checkout 中的只读核验逐字节相同，见[本次交付回执](evidence/v1.4.7-mate80-recording-release.json)；v1.4.7 仍为 Latest，tag 保持 `5e9226591b8aa47e726111a2c8cd158e2b4f0697`。回填文档提交另核验自身 CI 和 release。
 - [ ] Mate 80 完整 `test/audit/physical.mjs lifecycle`、其他 MCP 操作、长时间/多轮录制、画面内容人工验收、音画同步及麦克风内容，本次未验证。
 - [ ] Windows/Linux 真实 FFmpeg、其他 FFmpeg 版本与 OpenCode 模型验收，本次未运行；Claude 不在适配范围。其他历史未验证项按上方 TODO 保留。
 
