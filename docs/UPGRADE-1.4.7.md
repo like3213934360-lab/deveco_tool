@@ -81,6 +81,6 @@ Codex App 已通过原生 doctor 确认加载与本次发布一致的运行构�
 - [x] 4 项真实 FFmpeg 8.1.2 回归通过，失败/跳过均 0：固定帧率无音轨、密集时间戳 VFR 加 AAC、分别损坏视频/音频有效载荷、截断容器。合成素材只验证检查器，不算设备验收。
 - [x] 先前 Codex 真机原视频 `deveco-codex-147-final.mp4` 经统一 CLI 检查通过：305,198 字节，H.264 862×1920、84 帧，AAC 504 个解码帧，全部子进程退出码 0 且 error 级 stderr 为空。检查前后 SHA-256 均为 `9680475eda7d39a5d06e48a35dd370fbfcaebd39326f1d0f303c28c309b3aedb`；原视频未修改，私有完整回执保存在 `.scratch/recording-check/codex-147-original.json`。此前旧命令的警告记录仍保留，不改写为历史无警告通过。
 - [x] 本次 `npm test` 194/194，失败/取消/跳过均 0；typecheck、脚本语法及 diff 检查通过。上游 491 项仍为 374 full / 74 host / 43 skip，无未决、失效或新增提交；package/lock 均为 1.4.7，重建运行指纹仍为 `6dc15c8d525de1c1a4a4e2afa4694aa8d471f9169e59c253b2bb7d1b0e630dad`。
-- [ ] 本次脚本提交推送、该 SHA 全部 CI、release 工作流回执、既有 v1.4.7 Release/tag/Latest 核验。
+- [x] 脚本提交 [`ae231b290797b89db4c9c5375e31552b7d2cb854`](https://github.com/like3213934360-lab/deveco_tool/commit/ae231b290797b89db4c9c5375e31552b7d2cb854) 已推送，[七项 CI](https://github.com/like3213934360-lab/deveco_tool/actions/runs/38112154923)全部通过、无跳过；[release 工作流](https://github.com/like3213934360-lab/deveco_tool/actions/runs/38112209317)成功，下载回执与本地只读核验逐字节相同，见[本次交付回执](evidence/v1.4.7-recording-check-release.json)。既有 v1.4.7 仍为 Latest，tag 保持 `5e9226591b8aa47e726111a2c8cd158e2b4f0697`。回填文档提交另核验自身 CI 和 release，不移动该 tag。
 
 本次未重新录制真机视频或跑完整设备生命周期，不把已有 MP4 的再检查说成新的 MCP 端到端调用；Windows/Linux 真实 FFmpeg、其他 FFmpeg 版本、麦克风内容和音画同步未验证。OpenCode / Claude 未运行。MCP 运行代码未改变，无需用户重启；宿主加载状态沿用上文已有原生 doctor 证据，本次不追加已重载声明。
