@@ -22,11 +22,11 @@
 | `npm run bench` | 握手、空闲 CPU/RSS、提示说明门限；需要 POSIX ps，预算不变 |
 | `npm run upstream:sync -- --json` | 当前上游清单与本地独立能力映射；需要 Git/network |
 | `npm run test:model -- --host codex --suite discovery --out /absolute/new-run` | 真实 Codex CLI 的拟调用方案；不代表调用执行，不替代 Codex App 验收 |
-| `npm run test:model -- --host opencode --model provider/id --suite live --cases /absolute/cases.json --out /absolute/new-run` | 明确选择宿主/原模型的真实调用验收；本轮禁止运行 OpenCode |
-| `npm run test:models -- --out /absolute/new-matrix --rounds 2` | 明确授权后才运行 OpenCode 免费模型矩阵，不自动降级/替换模型 |
+| `npm run test:model -- --host opencode --model provider/id --suite live --cases /absolute/cases.json --out /absolute/new-run` | 明确选择宿主/原模型的真实调用验收；遵守用户指定的模型与模态范围 |
+| `npm run test:models -- --out /absolute/new-matrix --rounds 2 --models provider/id,...` | 明确授权后才运行所选 OpenCode 免费模型矩阵；先核对当前目录中的工具调用、模态和费用，不自动降级/替换模型 |
 | `npm run test:model-report -- /absolute/private-run /absolute/new-summary.json` | 从真实证据生成脱敏摘要 |
 
-模型 `live-cases.mjs`、`workflow-cases.mjs` 是场景生成器，`proxy.mjs` 和 `capture.mjs` 由评测器加载。分别运行 `node test/model/live-cases.mjs <existing-project> <target> <new-cases.json>` 或 `node test/model/workflow-cases.mjs project|ui|ui-text <dedicated-project> <emulator-target> <new-artifacts-directory> <new-cases.json>` 生成输入；这些操作本身不算模型验收。保留拟调用、实际请求/响应、任务终态、模型模态和宿主版本的区别。
+模型 `live-cases.mjs`、`workflow-cases.mjs` 是场景生成器，`proxy.mjs` 和 `capture.mjs` 由评测器加载。分别运行 `node test/model/live-cases.mjs <existing-project> <target> <new-cases.json>` 或 `node test/model/workflow-cases.mjs project|ui|ui-text <dedicated-project> <explicit-target> <new-artifacts-directory> <new-cases.json>` 生成输入；这些操作本身不算模型验收。保留拟调用、实际请求/响应、任务终态、模型模态和宿主版本的区别。每次有写入的试验独占新的制品目录，前一轮结束并清理本轮对象后才能继续；模型能力目录不能代替服务端实际可用性验证。
 
 ## 真实验收条件与作用范围
 
@@ -52,17 +52,17 @@ node --test --test-concurrency=1 test/e2e/hotreload.test.mjs
 | `e2e/device.test.mjs` | 完整夹具及指定 USB 真机，`E2E_HDC` 为现有 SDK HDC 绝对路径，仅用于清理本轮传输文件（MCP shell 为只读）；会构建、安装、写专用 SQLite、交互、卸载；不能把单独运行后续依赖步骤称为整套通过 |
 | `e2e/hotreload.test.mjs` | 完整夹具；热补丁、显式覆盖基线 reset、独立数据标记、多轮时限、依赖改变后部署；恢复源文件 |
 | `e2e/ui.test.mjs` | 完整夹具已安装；批量负例、超时、视觉稳定性/损坏基线、滚动性能和失效流程；只删除本轮命名的基线/流程 |
-| `e2e/soak.test.mjs` | 完整夹具、POSIX ps/lsof；100 次操作及 20 次部署，原 RSS/进程/句柄/临时文件/输出预算 |
+| `e2e/soak.test.mjs` | 完整夹具、POSIX ps/lsof；100 次操作及 20 次部署，原 RSS/进程/句柄/临时文件/输出预算。采样包含宿主临时目录，同机其他测试也必须暂停，不能并行运行离线套件 |
 | `e2e/process.test.mjs` | POSIX、真实 SDK；仅 SIGKILL 本轮 MCP/检查器/LSP 子进程，验证任务恢复与无遗留子进程 |
 | `e2e/services.test.mjs` | 原登录、知识库、SDK 和 USB；只读服务清单、检索和账号团队查询 |
 | `e2e/signing.test.mjs` | `E2E_TEAM`；列出现有签名对象、在证据目录生成密钥/CSR、验证 HAP，不改变工程签名 |
-| `e2e/sign-cloud.test.mjs` | `E2E_TEAM`、已登记 `E2E_TARGET`、实际云配额；新建唯一证书/profile，仅删除本轮返回的 ID；无配额时失败，不借用用户证书兜底 |
+| `e2e/sign-cloud.test.mjs` | `E2E_TEAM`、已登记 `E2E_TARGET`、`E2E_HDC` 与实际云配额；HDC 只读 UDID 独立核对登记，MCP shell 白名单不变。新建唯一证书与 IDE profile，OpenSSL 验证 profile 签名、bundle 和设备，仅删除本轮证书。IDE profile 不返回控制台 ID，控制台 profile 删除需另行授权的专用对象及独立确认，此套件不冒充覆盖；无配额时失败，不借用用户证书兜底 |
 | `e2e/cloud.test.mjs` | 原 CodeGenie 登录及联网；来源标签、域名、制品完整性与独立文档重合率；不可判定来源单独记未验证 |
 | `e2e/skills.test.mjs` | 用户指定 `E2E_SKILLS` 绝对目录、`E2E_HOST=codex` 或 `opencode`（无默认两宿主循环）；专用目录内 export/install/uninstall/init，原全局配置哈希不变 |
 | `e2e/auth.test.mjs` | 显式 `DEVECO_STATE_DIR` 与原浏览器登录；注销/重登录 CodeGenie，其他 provider 凭据哈希不变；需用户参与，不混入普通测试 |
 | `e2e/knowledge.test.mjs` | 显式 `DEVECO_STATE_DIR` 及其已安装 KB；联网更新并回滚，校验原内容哈希；不替用户准备/重置知识库 |
 | `e2e/emulator.test.mjs` | `--test-name-pattern='^emulator$'` 加明确 `E2E_IMAGE`，须已有 foldable 镜像；创建本轮实例，折叠、停止、删除并比对既有实例；license 会接受条款，须在授权范围内 |
-| 同文件 `emulator image lifecycle` | 明确 `E2E_DEVICE_TYPE`、`E2E_IMAGE`、`E2E_ALLOW_IMAGE_WRITE=1`；仅在授权镜像安装/删除测试时使用。拒绝删除既有镜像；本轮不执行 |
+| 同文件 `emulator image lifecycle` | 明确 `E2E_DEVICE_TYPE`、`E2E_IMAGE`、`E2E_ALLOW_IMAGE_WRITE=1`；仅在授权镜像安装/删除测试时使用。拒绝删除既有镜像；无未安装的适用镜像时记录前置条件阻塞 |
 | `e2e/review.test.mjs` | 分开运行 `--test-name-pattern='^capture$'` 与 `'^finish$'`。宿主必须先实际查看 capture 图片；finish 要求 `E2E_REVIEW` 目录及 `E2E_DECISION` JSON（test_id、review_id、image_sha256、outcome、reason），不会自动批准 |
 
 `node --test --test-name-pattern='<pattern>' --test-concurrency=1 <file>` 的过滤范围必须记录，未选场景不能计为通过。测试失败/清理失败均非零退出；超时只发送取消并失败，不重放操作。外部条件缺失直接失败/阻塞，不静默跳过；“环境不支持”要有设备/工具原始证据，不能代替功能通过。

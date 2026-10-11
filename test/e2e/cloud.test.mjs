@@ -9,7 +9,7 @@ const norm = (s) => s.replace(/[#*`>|\-\[\]()\s]/g, "");
 
 test("cloud source completeness and independent document overlap", async (t) => {
   const { call, receipt } = await session(t);
-  for (const [index, query] of queries.entries()) await t.test(query, async () => {
+  for (const [index, query] of queries.entries()) await t.test(query, async (t) => {
     const result = await call("knowledge", { action: "search", source: "cloud", query });
     let full = "", line = 0;
     for (;;) {
@@ -21,7 +21,7 @@ test("cloud source completeness and independent document overlap", async (t) => 
     const heads = [...full.matchAll(/^\[(\d+)\]【/gm)].map((m) => +m[1]), lines = full.split("\n");
     assert.ok(result.sources.length > 0); assert.equal(heads.length, result.sources.length); assert.equal(new Set(heads).size, heads.length);
     const rows = [];
-    for (const source of result.sources) {
+    for (const source of result.sources) await t.test(`source ${source.n}: ${source.title}`, async () => {
       assert.ok(lines[source.line].startsWith(`[${source.n}]【`));
       const section = full.split(/(?=^\[\d+\]【)/m).find((s) => s.startsWith(`[${source.n}]【`));
       if (source.origin === "official") assert.doesNotMatch(section, /AbilitySlice|HiLogLabel|EMUI|Android|\.java\b|onNewToken|public class \w+ extends|```cangjie|仓颉API|import kit\.\w+\.\*/);
@@ -47,7 +47,7 @@ test("cloud source completeness and independent document overlap", async (t) => 
         assert.equal(source.origin === "official_other_platform" ? "official" : source.origin, truth);
         if (truth === "official" && source.local_doc) assert.equal(source.local_doc, best.id);
       }
-    }
+    });
     receipt(`overlap-${index}.json`, rows);
     assert.ok(rows.some((r) => r.truth !== "undetermined"), "No independently decidable source");
   });

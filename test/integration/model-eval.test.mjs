@@ -1,9 +1,11 @@
 // The grader must reject invalid plans; these tests are not real model acceptance.
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { after, before, test } from "node:test";
+import { fileURLToPath } from "node:url";
 import { connect } from "../support/mcp.mjs";
 import { actualCalls, actionScenarios, callSet, grade, gradeLive, scenarios, unfinishedJobs } from "../model/eval.mjs";
 
@@ -19,6 +21,17 @@ after(async () => {
   fs.rmSync(state, { recursive: true, force: true });
 });
 const scenario = (id) => scenarios.filter((s) => s.id === id);
+
+test("live scenario generator resolves the package version independently of the working directory", () => {
+  const project = path.join(state, "project"), out = path.join(state, "live-cases.json");
+  fs.mkdirSync(project); fs.writeFileSync(path.join(project, "build-profile.json5"), "{}");
+  execFileSync(process.execPath, [fileURLToPath(new URL("../model/live-cases.mjs", import.meta.url)), project, "explicit-target", out], { cwd: state });
+  const cases = JSON.parse(fs.readFileSync(out, "utf8"));
+  const version = JSON.parse(fs.readFileSync(new URL("../../package.json", import.meta.url))).version;
+  assert.equal(cases.find((s) => s.id === "environment").expect[0].result.server.version, version);
+  const devices = cases.flatMap((s) => s.expect).filter((c) => c.tool === "device" && c.arguments.action !== "list");
+  assert.ok(devices.length > 0); assert.ok(devices.every((c) => c.arguments.target === "explicit-target"));
+});
 
 test("model scenarios cover every advertised tool and have unique ids", () => {
   assert.equal(new Set(scenarios.map((s) => s.id)).size, scenarios.length);

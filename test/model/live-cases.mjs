@@ -6,7 +6,7 @@ import path from "node:path";
 const [project, target, out] = process.argv.slice(2);
 assert.ok(project && path.isAbsolute(project) && fs.existsSync(path.join(project, "build-profile.json5")));
 assert.ok(target && out && !fs.existsSync(out), "Usage: node test/model/live-cases.mjs <existing absolute project> <explicit target> <new cases.json>");
-const version = JSON.parse(fs.readFileSync(new URL("../package.json", import.meta.url))).version;
+const version = JSON.parse(fs.readFileSync(new URL("../../package.json", import.meta.url))).version;
 const cases = [
   { id: "environment", goal: `只读检查实际开发环境，设备明确指定为 ${target}，报告 MCP 版本与构建 ID，不联网更新。`, expect: [{ tool: "doctor", result: { server: { version }, ok: true } }] },
   { id: "devices", goal: `列出连接的设备。后续所有设备操作已明确指定 ${target}，不能改用其他设备。`, expect: [{ tool: "device", arguments: { action: "list" } }] },

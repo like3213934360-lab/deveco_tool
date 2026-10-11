@@ -106,19 +106,21 @@ test("hot reload and deploy", async (t) => {
     }
   });
 
-  await t.test("three successive patches keep the original six-second budget", async () => {
-    await terminal(call, await call("run", { action: "build_run", project, target, hot_reload: true, run_mode: "full", wait: 0 }));
+  await t.test("three successive patches keep the original six-second budget", async (t) => {
+    assert.equal((await terminal(call, await call("run", { action: "build_run", project, target, hot_reload: true, run_mode: "full", wait: 0 }))).status, "succeeded");
+    t.after(async () => {
+      fs.writeFileSync(source, originalSource);
+      assert.equal((await call("hot_reload", { action: "reset", project, target })).reset, true);
+    });
     let previous = "Hello World";
-    try {
-      for (const next of ["Hello One", "Hello Two", "Hello Three"]) {
-        fs.writeFileSync(source, fs.readFileSync(source, "utf8").replace(`'${previous}'`, `'${next}'`));
-        const started = performance.now();
-        assert.equal((await call("hot_reload", { action: "apply", project, target, restart: true })).applied, true);
-        assert.ok(performance.now() - started <= 6000);
-        assert.equal((await call("ui", { action: "assert", target, visible: { text: next, exact: true }, timeout_ms: 5000 })).passed, true);
-        previous = next;
-      }
-    } finally { fs.writeFileSync(source, originalSource); }
-    assert.equal((await call("hot_reload", { action: "reset", project, target })).reset, true);
+    for (const next of ["Hello One", "Hello Two", "Hello Three"]) await t.test(next, async () => {
+      fs.writeFileSync(source, fs.readFileSync(source, "utf8").replace(`'${previous}'`, `'${next}'`));
+      previous = next;
+      const started = performance.now();
+      assert.equal((await call("hot_reload", { action: "apply", project, target, restart: true })).applied, true);
+      const elapsed = performance.now() - started;
+      assert.equal((await call("ui", { action: "assert", target, visible: { text: next, exact: true }, timeout_ms: 5000 })).passed, true);
+      assert.ok(elapsed <= 6000, `Patch and restart took ${Math.round(elapsed)} ms; budget is 6000 ms`);
+    });
   });
 });

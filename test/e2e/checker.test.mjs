@@ -35,7 +35,7 @@ for (const [kind, cases] of [["violations", violations], ["legal", legal]]) test
 
 test("checker runtime claims", async (t) => {
   const target = required("E2E_TARGET");
-  const { call, directory } = await session(t);
+  const { call, job, directory } = await session(t);
   const api = (await call("device", { action: "info", target })).api_level;
   for (const [rule, source] of Object.entries(runtime)) await t.test(rule, async () => {
     const project = path.join(directory, rule);
@@ -43,7 +43,8 @@ test("checker runtime claims", async (t) => {
     fs.writeFileSync(path.join(project, "entry/src/main/ets/pages/Index.ets"), source);
     const checked = await call("code", { action: "check", project });
     assert.equal(checked.issues.some((d) => d.rule === rule), rule !== "object-link-observed-type");
-    const result = await waitJob(call, await call("run", { action: "build_run", project, target, preflight: false, wait: 0 }));
+    await job("project", { action: "build", project, preflight: false, wait: 0 });
+    const result = await waitJob(call, await call("run", { action: "deploy", project, target, wait: 0 }));
     if (rule === "appstorage-observedv2-mixing") {
       assert.equal(result.status, "failed"); assert.equal(result.error.code, "LAUNCH_FAILED");
     } else {

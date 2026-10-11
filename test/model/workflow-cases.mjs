@@ -1,4 +1,4 @@
-// Mutating acceptance uses only an explicitly supplied disposable project and emulator.
+// Mutating acceptance uses only an explicitly supplied disposable project and device.
 // Each invocation gets its own output directory; never overwrite a previous trial's evidence.
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -7,7 +7,7 @@ import path from "node:path";
 const [suite, project, target, directory, out] = process.argv.slice(2);
 assert.ok(["project", "ui", "ui-text"].includes(suite) && path.isAbsolute(project) && fs.existsSync(path.join(project, "build-profile.json5")));
 assert.ok(target && path.isAbsolute(directory) && !fs.existsSync(directory) && out && !fs.existsSync(out),
-  "Usage: node test/model/workflow-cases.mjs project|ui|ui-text <disposable project> <emulator target> <new absolute artifacts directory> <new cases.json>");
+  "Usage: node test/model/workflow-cases.mjs project|ui|ui-text <disposable project> <explicit target> <new absolute artifacts directory> <new cases.json>");
 fs.mkdirSync(directory, { recursive: true });
 const call = (tool, action, args = {}, result) => ({ tool, arguments: { action, ...args }, ...(result ? { result } : {}) });
 const ui = (action, args = {}, result) => call("ui", action, { target, ...args }, result);
@@ -22,7 +22,7 @@ const cases = suite === "project" ? [
     call("code", "lint", { project, output_path: `${directory}/lint.json` }), call("code", "lsp", { project, op: "hover", symbol: "message" }),
     call("code", "lsp", { project, op: "definition", symbol: "message" }), call("code", "lsp_restart", { project, language: "arkts" }),
   ], forbid: [call("code", "lint", { fix: true })] },
-  { id: "transfer", goal: `仅对验收模拟器 ${target}：把 ${input} 发送到 ${remote}，再取回到 ${received}。不得改用别的设备。`, expect: [
+  { id: "transfer", goal: `仅对验收设备 ${target}：把 ${input} 发送到 ${remote}，再取回到 ${received}。不得改用别的设备。`, expect: [
     call("device", "send", { target, local: input, remote }), call("device", "recv", { target, remote, local: received }),
   ] },
   { id: "keypair", goal: `仅在本轮临时目录生成本地调试密钥 ${directory}/debug.p12，别名 debug，验收用口令 TestOnly12345；用它生成 CN=McpProbe 的 CSR ${directory}/debug.csr。不调用云端证书创建，不修改项目签名。`, expect: [
@@ -30,13 +30,13 @@ const cases = suite === "project" ? [
     call("sign", "csr", { keystore: `${directory}/debug.p12`, key_alias: "debug", keystore_password: "TestOnly12345", subject: "CN=McpProbe", out: `${directory}/debug.csr` }),
   ], forbid: [call("sign", "auto"), call("sign", "certificate_create"), call("sign", "profile_create")] },
 ] : suite === "ui-text" ? [
-  { id: "text-ui", goal: `仅操作验收工程 ${project} 和模拟器 ${target}。停止并重新启动本测试应用，读取窗口与控件树，定位 Hello World 并断言它可见；点击它后，断言 Welcome 可见。只根据控件树与文字判断，不请求截图、观察画面或视觉评审。每次操作明确指定本设备。`, expect: [
+  { id: "text-ui", goal: `仅操作验收工程 ${project} 和指定设备 ${target}。停止并重新启动本测试应用，读取窗口与控件树，定位 Hello World 并断言它可见；点击它后，断言 Welcome 可见。只根据控件树与文字判断，不请求截图、观察画面或视觉评审。每次操作明确指定本设备。`, expect: [
     call("run", "stop", { project, target }), call("run", "launch", { project, target }), ui("windows"), ui("tree"),
     ui("find", { selector: { text: "Hello World" } }), ui("assert", { visible: { text: "Hello World" } }, { passed: true }),
     ui("act", { op: "click", selector: { text: "Hello World" } }), ui("assert", { visible: { text: "Welcome" } }, { passed: true }),
   ], forbid: ["observe", "screenshot", "review", "record_start", "record_stop"].map((action) => ui(action)) },
 ] : [
-  { id: "deploy", goal: `下面只操作验收工程 ${project} 和模拟器 ${target}。部署最近构建包并启动（不构建），等到任务成功；然后停止并重新启动本测试应用。确认 Hello World 可见。`, expect: [
+  { id: "deploy", goal: `下面只操作验收工程 ${project} 和指定设备 ${target}。部署最近构建包并启动（不构建），等到任务成功；然后停止并重新启动本测试应用。确认 Hello World 可见。`, expect: [
     call("run", "deploy", { project, target }), call("run", "stop", { project, target }), call("run", "launch", { project, target }),
     ui("assert", { visible: { text: "Hello World" } }, { passed: true }),
   ] },
