@@ -71,3 +71,16 @@
 [v1.4.7 Release](https://github.com/like3213934360-lab/deveco_tool/releases/tag/v1.4.7) 为稳定发布且是 Latest，tag 实际提交等于上述 SHA，Release ID 为 `409398302`。回填本文和回执不改变运行代码、不移动 tag、不重发 Release；文档提交自身的 CI 和 release 核验另外执行。
 
 Codex App 已通过原生 doctor 确认加载与本次发布一致的运行构建，见上文；这不是由 GitHub 状态推断，也无需再次重启。没有执行 npm 发布。
+
+## FFmpeg 验收脚本统一（发布后补充）
+
+2026-10-11，按用户要求将上述诊断确认的时间基处理固化到[共用验收入口](RECORDING-CHECK.md)，E2E 与 USB 真机脚本均调用它。保留原有门槛，增加全部音视频流解码、空输出拒绝及退出码为 0 时的 stderr 检查。工具版本、原始命令和诊断写入独占回执，错误不忽略、不降级。只修改工具、测试和文档；运行版本仍为 v1.4.7，不改 package/lock、CI 环境、原始视频或 MCP 运行依赖，不重发 Release 或移动 tag。
+
+- [x] 两处录屏验收统一调用 `tools/recording-check.mjs`，独立检查已有 MP4 也使用同一入口。
+- [x] 5 项进程契约回归通过：包括零退出码错误日志、非零退出、信号、缺失工具、超时、缓冲区溢出、无效媒体及覆盖原文件/旧证据拒绝。
+- [x] 4 项真实 FFmpeg 8.1.2 回归通过，失败/跳过均 0：固定帧率无音轨、密集时间戳 VFR 加 AAC、分别损坏视频/音频有效载荷、截断容器。合成素材只验证检查器，不算设备验收。
+- [x] 先前 Codex 真机原视频 `deveco-codex-147-final.mp4` 经统一 CLI 检查通过：305,198 字节，H.264 862×1920、84 帧，AAC 504 个解码帧，全部子进程退出码 0 且 error 级 stderr 为空。检查前后 SHA-256 均为 `9680475eda7d39a5d06e48a35dd370fbfcaebd39326f1d0f303c28c309b3aedb`；原视频未修改，私有完整回执保存在 `.scratch/recording-check/codex-147-original.json`。此前旧命令的警告记录仍保留，不改写为历史无警告通过。
+- [x] 本次 `npm test` 194/194，失败/取消/跳过均 0；typecheck、脚本语法及 diff 检查通过。上游 491 项仍为 374 full / 74 host / 43 skip，无未决、失效或新增提交；package/lock 均为 1.4.7，重建运行指纹仍为 `6dc15c8d525de1c1a4a4e2afa4694aa8d471f9169e59c253b2bb7d1b0e630dad`。
+- [ ] 本次脚本提交推送、该 SHA 全部 CI、release 工作流回执、既有 v1.4.7 Release/tag/Latest 核验。
+
+本次未重新录制真机视频或跑完整设备生命周期，不把已有 MP4 的再检查说成新的 MCP 端到端调用；Windows/Linux 真实 FFmpeg、其他 FFmpeg 版本、麦克风内容和音画同步未验证。OpenCode / Claude 未运行。MCP 运行代码未改变，无需用户重启；宿主加载状态沿用上文已有原生 doctor 证据，本次不追加已重载声明。

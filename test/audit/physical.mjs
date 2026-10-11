@@ -7,6 +7,7 @@ import path from "node:path";
 import { execFileSync } from "node:child_process";
 import JSON5 from "json5";
 import { connect } from "../../tools/mcp-client.mjs";
+import { checkRecording, requireRecordingTools } from "../../tools/recording-check.mjs";
 
 const target = process.env.AUDIT_TARGET, project = process.env.AUDIT_PROJECT, directory = process.env.AUDIT_DIR;
 const phase = process.argv[2];
@@ -15,6 +16,7 @@ assert.ok(["host", "sdk", "device", "gestures", "flows", "review", "review_finis
 assert.ok(path.isAbsolute(project) && path.isAbsolute(directory));
 const bundle = JSON5.parse(fs.readFileSync(path.join(project, "AppScope/app.json5"), "utf8")).app.bundleName;
 assert.match(bundle, /^com\.devecomcp\./, "Only a dedicated MCP test app may be mutated");
+if (phase === "lifecycle") requireRecordingTools();
 fs.mkdirSync(directory, { recursive: true });
 const client = connect(), results = [];
 let current = "preflight", kind = "positive", sequence = 0;
@@ -503,9 +505,8 @@ try {
       const status = await ui({ action: "record_status" }); assert.ok(status.recording || status.status === "recording", JSON.stringify(status));
       await ui({ action: "act", op: "click", selector: { key: "HelloWorld" } }); await visible("Welcome");
       await ui({ action: "record_stop", save_path: out }); assert.ok(fs.statSync(out).size > 10000);
-      const probe = JSON.parse(execFileSync("ffprobe", ["-v", "error", "-count_frames", "-show_streams", "-show_format", "-of", "json", out], { encoding: "utf8" }));
+      const probe = checkRecording(out, out + ".check.json");
       assert.ok(probe.streams.some((s) => s.codec_type === "video" && Number(s.nb_read_frames) > 10));
-      execFileSync("ffmpeg", ["-v", "error", "-xerror", "-i", out, "-f", "null", "-"], { stdio: "pipe" });
       fs.writeFileSync(out + ".json", JSON.stringify(probe, null, 2));
     });
     await check("run.uninstall", async () => {

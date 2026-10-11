@@ -1,12 +1,12 @@
 // Real recorder acceptance. A codec/export failure fails this test; receipts and diagnostics remain.
 // Requires E2E_TARGET plus ffprobe/ffmpeg already installed; never installs tools or changes the image.
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { test } from "node:test";
 import { connect } from "../../tools/mcp-client.mjs";
+import { checkRecording, requireRecordingTools } from "../../tools/recording-check.mjs";
 
 test("system recording exports actual frames and decodes without errors", { skip: !process.env.E2E_TARGET }, async () => {
   const target = process.env.E2E_TARGET;
@@ -22,8 +22,7 @@ test("system recording exports actual frames and decodes without errors", { skip
   };
   try {
     // Fail before device mutation when an independent decoder is unavailable.
-    execFileSync("ffprobe", ["-version"], { stdio: "ignore" });
-    execFileSync("ffmpeg", ["-version"], { stdio: "ignore" });
+    requireRecordingTools();
     await client.initialize();
     await call("doctor", { target });
     const started = await call("ui", { action: "record_start", target });
@@ -34,12 +33,12 @@ test("system recording exports actual frames and decodes without errors", { skip
     const file = path.join(directory, "recording.mp4");
     const saved = await call("ui", { action: "record_stop", target, save_path: file });
     assert.equal(saved.bytes, fs.statSync(file).size); assert.ok(saved.bytes > 0); assert.ok(saved.artifact_id);
-    const media = JSON.parse(execFileSync("ffprobe", ["-v", "error", "-select_streams", "v:0", "-count_frames", "-show_entries", "stream=codec_name,width,height,nb_read_frames,duration", "-of", "json", file], { encoding: "utf8", timeout: 120000 }));
+    const media = checkRecording(file, path.join(directory, "recording-check.json"));
     fs.writeFileSync(path.join(directory, "media.json"), JSON.stringify(media, null, 2));
-    assert.ok(media.streams?.length === 1);
-    const video = media.streams[0];
+    const videos = media.streams.filter((s) => s.codec_type === "video");
+    assert.equal(videos.length, 1);
+    const video = videos[0];
     assert.ok(video.width > 0 && video.height > 0 && Number(video.nb_read_frames) > 1 && Number(video.duration) >= 1);
-    execFileSync("ffmpeg", ["-v", "error", "-xerror", "-i", file, "-map", "0:v:0", "-f", "null", "-"], { stdio: "pipe", timeout: 120000 });
     const ended = await call("ui", { action: "record_status", target });
     assert.equal(ended.status, "idle"); assert.equal(ended.file, undefined);
   } catch (error) {
