@@ -1,30 +1,20 @@
-// Real recorder acceptance. A codec/export failure fails this test; receipts and diagnostics remain.
-// Requires E2E_TARGET plus ffprobe/ffmpeg already installed; never installs tools or changes the image.
+// Fresh recording on the explicitly selected device; original bytes and strict decoder receipt remain.
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { test } from "node:test";
-import { connect } from "../../tools/mcp-client.mjs";
-import { checkRecording, requireRecordingTools } from "../../tools/recording-check.mjs";
+import { session, required, sha } from "../support/acceptance.mjs";
+import { checkRecording, requireRecordingTools } from "../support/recording.mjs";
 
-test("system recording exports actual frames and decodes without errors", { skip: !process.env.E2E_TARGET }, async () => {
-  const target = process.env.E2E_TARGET;
-  const directory = path.resolve(`.scratch/recording-${Date.now()}`), calls = [];
-  fs.mkdirSync(directory, { recursive: true });
-  const client = connect({ DEVECO_STATE_DIR: path.join(directory, "state") });
-  const call = async (name, args) => {
-    const result = await client.call(name, args);
-    calls.push({ at: new Date().toISOString(), name, args, result });
-    fs.writeFileSync(path.join(directory, "calls.json"), JSON.stringify(calls, null, 2));
-    assert.equal(result.isError, false, JSON.stringify(result.data));
-    return result.data;
-  };
+test("system recording exports actual frames and decodes without errors", async (t) => {
+  const target = required("E2E_TARGET");
+  requireRecordingTools();
+  const { call, raw, directory, receipt } = await session(t);
+  await call("device", { action: "info", target });
   try {
-    // Fail before device mutation when an independent decoder is unavailable.
-    requireRecordingTools();
-    await client.initialize();
-    await call("doctor", { target });
+    const before = await call("ui", { action: "record_status", target });
+    assert.equal(before.status, "idle"); assert.equal(before.file, undefined, "Resolve the existing recording explicitly before a fresh trial");
     const started = await call("ui", { action: "record_start", target });
     assert.equal(started.recording, true);
     const status = await call("ui", { action: "record_status", target });
@@ -32,21 +22,18 @@ test("system recording exports actual frames and decodes without errors", { skip
     await delay(2500);
     const file = path.join(directory, "recording.mp4");
     const saved = await call("ui", { action: "record_stop", target, save_path: file });
-    assert.equal(saved.bytes, fs.statSync(file).size); assert.ok(saved.bytes > 0); assert.ok(saved.artifact_id);
-    const media = checkRecording(file, path.join(directory, "recording-check.json"));
-    fs.writeFileSync(path.join(directory, "media.json"), JSON.stringify(media, null, 2));
+    assert.equal(saved.bytes, fs.statSync(file).size); assert.ok(saved.bytes > 10000); assert.ok(saved.artifact_id);
+    const hash = sha(fs.readFileSync(file)), media = checkRecording(file, path.join(directory, "recording-check.json"));
+    assert.equal(sha(fs.readFileSync(file)), hash, "Strict decoding must not change the original video");
+    receipt("media.json", { ...media, sha256: hash });
     const videos = media.streams.filter((s) => s.codec_type === "video");
     assert.equal(videos.length, 1);
-    const video = videos[0];
-    assert.ok(video.width > 0 && video.height > 0 && Number(video.nb_read_frames) > 1 && Number(video.duration) >= 1);
+    assert.ok(videos[0].width > 0 && videos[0].height > 0 && Number(videos[0].nb_read_frames) > 10 && Number(videos[0].duration) >= 1);
     const ended = await call("ui", { action: "record_status", target });
     assert.equal(ended.status, "idle"); assert.equal(ended.file, undefined);
   } catch (error) {
-    // Preserve both the original failure and diagnostics failure; never discard the pending recording.
-    let diagnostic;
-    try { diagnostic = await client.call("device", { action: "log", target, from: "2m", lines: 1000 }); }
-    catch (failure) { diagnostic = { error: failure.message }; }
-    fs.writeFileSync(path.join(directory, "failure.json"), JSON.stringify({ error: error.message, diagnostic }, null, 2));
+    try { receipt("failure.json", { error: String(error), diagnostic: await raw("device", { action: "log", target, from: "2m", lines: 1000 }) }); }
+    catch (diagnostic) { throw new AggregateError([error, diagnostic], "Recording and diagnostic collection failed"); }
     throw error;
-  } finally { await client.close(); }
+  }
 });

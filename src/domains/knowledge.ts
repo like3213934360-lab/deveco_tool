@@ -646,7 +646,7 @@ export type OfficialLookup = (title: string, body: string) => Promise<{ id: stri
  * the local pack (>= 50% of its 12-character shingles) makes it official, and that document becomes
  * local_doc; almost none (<= 10%) makes it community. Codelabs are official content the pack does not
  * carry. Everything else is left unverified rather than guessed. Measured on 679 real sections
- * (test/audit/cloud-labels.mjs).
+ * (test/e2e/cloud.test.mjs).
  */
 export async function labelCloudSources(content: string, lookup: OfficialLookup | undefined) {
   const sources: CloudSource[] = [];

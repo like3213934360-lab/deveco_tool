@@ -14,7 +14,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { connect } from "./mcp-client.mjs";
+import { connect } from "../test/support/mcp.mjs";
 import { extract } from "./upstream/extract.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");

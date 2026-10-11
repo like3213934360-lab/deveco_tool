@@ -1,18 +1,16 @@
 # 录屏文件严格验收
 
-录屏 E2E 与 USB 真机验收统一调用 `tools/recording-check.mjs`。FFmpeg / ffprobe 只用于独立验收，需在验收机器上已有；脚本不安装、升级工具或修改环境，MCP 运行与 npm 包不依赖它们。
+录屏 E2E 与 USB 真机验收统一调用 `test/support/recording.mjs`。FFmpeg / ffprobe 只用于独立验收，需在验收机器上已有；脚本不安装、升级工具或修改环境，MCP 运行与 npm 包不依赖它们。
 
 ## 使用
 
 在仓库根目录检查已取回的原始录屏，明确指定一个尚不存在的回执路径：
 
-```sh
-node tools/recording-check.mjs /absolute/recording.mp4 /absolute/new-check.json
-```
+当前命令、参数和前置条件统一见 [测试运行指南](../test/README.md)。
 
 回执目录必须已存在。回执独占创建，既不覆盖旧证据，也不允许把原视频或其链接用作输出。失败会非零退出；工具版本、参数、退出码、信号、stdout、stderr、探测结果和失败原因保存在回执中。视频只作为输入，解码结果交给 null 输出，不写媒体文件。
 
-`test/e2e/recording.test.mjs` 自动保存 `recording-check.json`；`test/audit/physical.mjs lifecycle` 自动保存 `<录屏文件>.check.json`。两者在设备操作前检查工具可用性，保持原帧数、时长、文件大小及 MCP 状态断言。无需在验收结束后临时补命令。
+`test/e2e/recording.test.mjs` 统一录制、取回并保存 `recording-check.json`，在设备操作前检查工具可用性。保留两处旧流程较严格的帧数（>10）、文件大小（>10000 bytes）、时长（≥1秒）及最终 idle 断言。
 
 ## 检查规则
 
@@ -32,7 +30,7 @@ node tools/recording-check.mjs /absolute/recording.mp4 /absolute/new-check.json
 node --test test/unit/recording-check.test.mjs
 
 # 使用现有真实 FFmpeg：固定/可变帧率、音轨、损坏负例，无安装或跳过
-node --test test/media/recording.test.mjs
+npm run test:media
 ```
 
 真实解码回归在独立临时目录生成小型合成素材与损坏副本，绝不改设备原视频；这些素材只能证明检查器的行为，不当作真机录屏或 MCP 调用成功。普通 CI 的依赖和测试环境保持原样，进程契约回归随六组系统/Node 单测运行；真实 FFmpeg 回归与真机原视频检查单独记录。

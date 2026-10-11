@@ -3,8 +3,8 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { connect } from "./mcp-client.mjs";
-import { promptMetrics } from "./prompt-audit.mjs";
+import { connect } from "../test/support/mcp.mjs";
+import { promptMetrics } from "../test/support/prompts.mjs";
 
 const state = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-bench-"));
 const env = { DEVECO_STATE_DIR: state, ...(process.env.DEVECO_CONFIG ? { DEVECO_CONFIG: process.env.DEVECO_CONFIG } : {}) };

@@ -1,5 +1,21 @@
 # Changelog / 更新日志
 
+## v1.4.8 (2026-10-11)
+
+**中文**
+
+- 完整治理测试与维护脚本：删除退役 audit/smoke/media 目录与旧入口，将独有有效场景合并到 unit、integration、e2e、model，历史证据与来源提交保留。
+- 统一严格 MCP 客户端、超时取消、任务等待、专用夹具和私有证据；录屏继续共用严格 FFmpeg 检查，无新增运行依赖。
+- 加入目录/引用/运行依赖门禁、公共模块 JSDoc 检查及传输负例；统一 package 入口、测试指南、逐项覆盖映射与 AGENTS 长期规则。
+- package 入口属于现有运行指纹，按发布门禁升级版本与锁文件；产品工具行为、提示说明和性能预算不变。已验证与未验证范围见 [验收说明](docs/UPGRADE-1.4.8.md)。
+
+**English**
+
+- Retire historical audit runners and consolidate retained scenarios under one layered Node test suite, preserving historical evidence.
+- Share strict MCP transport, cancellation, job waiting, dedicated fixtures and private receipts; retain strict media decoding without new runtime dependencies.
+- Enforce layout, references and runtime/test separation, type-check shared helpers, and document every retired entry point and acceptance boundary.
+- Bump the version because package entry changes affect the existing runtime fingerprint; tool behavior, guidance and performance budgets remain unchanged.
+
 ## v1.4.7 (2026-10-11)
 
 **中文**

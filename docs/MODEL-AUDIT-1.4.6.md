@@ -1,5 +1,7 @@
 # v1.4.6 OpenCode 模型验收
 
+> 历史记录：本文中的旧测试/工具路径与命令属于 [治理前提交 4b45c433](https://github.com/like3213934360-lab/deveco_tool/tree/4b45c433925b50153dace95b167fee91dddd5fe6)，结论原样保留。当前入口见 [测试指南](../test/README.md)，迁移去向见 [治理映射](TEST-GOVERNANCE.md)。
+
 本轮沿用 OpenCode 1.18.35、现有登录/提供商、指定 USB 真机和原 SDK。`tools/model-eval.mjs`、`tools/model-matrix.mjs` 的严格评分、10 分钟单轮期限、允许工具及场景匹配规则均未改变。没有修复模型输出 JSON、删掉失败调用或以纠正后的成功覆盖首次失败。
 
 完整的脱敏逐轮结果、不可变构建 ID、原始请求/响应及 transport 哈希见[证据 JSON](evidence/v1.4.6-models.json)。原始文件在私有 `.scratch/remaining-audit`，包括历史错误，不上传登录信息、设备日志和源码路径。

@@ -1,5 +1,7 @@
 # v1.4.3 明确 action、OpenCode 多轮验收与独立进程生命周期
 
+> 历史记录：本文中的旧测试/工具路径与命令属于 [治理前提交 4b45c433](https://github.com/like3213934360-lab/deveco_tool/tree/4b45c433925b50153dace95b167fee91dddd5fe6)，结论原样保留。当前入口见 [测试指南](../test/README.md)，迁移去向见 [治理映射](TEST-GOVERNANCE.md)。
+
 优先保证模型能发现并正确使用功能。适配范围为 OpenCode、Codex；按用户要求，本轮不测试 Claude。2026-10-10 用户确认重启后，已补充 Codex App 原生验收。免费模型按每轮显式选择，不改变持久宿主配置、认证、SDK 或设备环境，不新增 Skill 自动分发和 Windows NTLM 代理。
 
 ## TODO 与证据

@@ -153,8 +153,8 @@ src/
 knowledge/      规则、错误案例、Skill（崩溃模式库在 hmos-runtime-fix-skill/references；知识包和 resources 的来源）
 templates/      工程模板
 resources/      内置的 arkts-check.cjs、hypium uitest agent、许可证
-tools/          build.mjs、bench.mjs（含性能预算检查）、upstream-sync.mjs + upstream/（全量抽取与决策表）、mcp-client.mjs
-test/unit       离线测试（npm test）；test/e2e：真实 SDK 和设备（npm run test:e2e）
+tools/          build.mjs、bench.mjs（含性能预算检查）、upstream-sync.mjs + upstream/（全量抽取与决策表）
+test/           unit / integration / e2e / model；support 与 fixtures 共用
 ```
 
 任务机制用一个小型的持久化步骤执行器代替了 LangGraph：
@@ -170,10 +170,9 @@ test/unit       离线测试（npm test）；test/e2e：真实 SDK 和设备（n
 ## 开发
 
 ```sh
-npm run typecheck            # 只对 src/ 做增量 tsc 检查
+npm run typecheck            # 产品与公共测试模块静态检查
 npm run build                # esbuild 打包（约 60 ms）
-npm test                     # 单元测试，不需要 SDK
-DEVECO_CONFIG=... E2E_TARGET=127.0.0.1:5555 npm run test:e2e   # 真实 SDK 加设备或模拟器
+npm test                     # 全部离线单元/集成测试，不需要 SDK
 npm run bench                # 握手、空闲 CPU/内存、tools/list 大小
 node tools/upstream-sync.mjs # 全量上游对齐检查（有未决策、未对齐、过期决策或上游新提交时退出码为 1；--report 生成清单）
 ```
@@ -345,8 +344,8 @@ src/
 knowledge/      rules, error cases, skills (crash patterns live in hmos-runtime-fix-skill/references; sources for knowledge packs and resources)
 templates/      project template
 resources/      vendored arkts-check.cjs, hypium uitest agents, licenses
-tools/          build.mjs, bench.mjs (with performance budgets), upstream-sync.mjs + upstream/ (exhaustive extraction and decisions), mcp-client.mjs
-test/unit       offline tests (npm test); test/e2e: real SDK and device (npm run test:e2e)
+tools/          build.mjs, bench.mjs (with performance budgets), upstream-sync.mjs + upstream/ (exhaustive extraction and decisions)
+test/           unit / integration / e2e / model; shared support and fixtures
 ```
 
 Jobs replace LangGraph with a small durable step runner:
@@ -362,10 +361,9 @@ Retention is capped by age, job count and bytes, and cleanup runs after each job
 ### Development
 
 ```sh
-npm run typecheck            # tsc on src/ only, incremental
+npm run typecheck            # product and shared test module checks
 npm run build                # esbuild bundle (~60 ms)
-npm test                     # unit tests, no SDK needed
-DEVECO_CONFIG=... E2E_TARGET=127.0.0.1:5555 npm run test:e2e   # real SDK + device/emulator
+npm test                     # all offline unit/integration tests, no SDK needed
 npm run bench                # handshake, idle CPU/RSS, tools/list size
 node tools/upstream-sync.mjs # exhaustive upstream alignment (exit 1 on undecided/partial/stale items or new upstream commits; --report writes the list)
 ```
@@ -382,3 +380,5 @@ v0.x is frozen at tag `v0.4-final`, and v1 does not read its state directory.
 ### License
 
 MIT. Third-party notices: `NOTICE.deveco-cli`, `NOTICE.deveco-code`, `NOTICE.hypium`, `resources/licenses/`.
+
+测试入口、真实 SDK/设备/模型条件及证据分类统一见 [test/README.md](test/README.md)。Current test commands, explicit prerequisites and evidence boundaries: [test guide](test/README.md).

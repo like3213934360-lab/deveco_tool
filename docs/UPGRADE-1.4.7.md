@@ -1,5 +1,7 @@
 # v1.4.7 action 说明与测试计划修复
 
+> 历史记录：本文中的旧测试/工具路径与命令属于 [治理前提交 4b45c433](https://github.com/like3213934360-lab/deveco_tool/tree/4b45c433925b50153dace95b167fee91dddd5fe6)，结论原样保留。当前入口见 [测试指南](../test/README.md)，迁移去向见 [治理映射](TEST-GOVERNANCE.md)。
+
 2026-10-11，修复版本号被错误分句、补齐各 action 参数说明，并拒绝此前可能被忽略的断言组合。保持现有 tools/domains/core 分层、延迟加载和作业语义；没有增加降级、放宽断言或修改测试工程、SDK、宿主配置。此次只验收 Codex，按用户要求不运行 OpenCode 或 Claude。
 
 ## 修复与验证来源

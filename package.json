@@ -1,6 +1,6 @@
 {
   "name": "deveco-mcp",
-  "version": "1.4.7",
+  "version": "1.4.8",
   "description": "Lean HarmonyOS MCP server: build, deploy, device UI, code intelligence and updatable knowledge packs for any MCP host.",
   "type": "module",
   "license": "MIT",
@@ -22,15 +22,26 @@
   ],
   "scripts": {
     "build": "node tools/build.mjs",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "node tools/build.mjs && node --test --test-concurrency=4 \"test/unit/*.test.mjs\"",
-    "test:e2e": "node tools/build.mjs && node --test --test-concurrency=1 \"test/e2e/*.test.mjs\"",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p test/tsconfig.json",
+    "test": "node tools/build.mjs && node --test --test-concurrency=4 \"test/unit/*.test.mjs\" \"test/integration/*.test.mjs\"",
+    "test:e2e": "node tools/build.mjs && node --test --test-concurrency=1 test/e2e/project.test.mjs",
     "bench": "node tools/bench.mjs",
     "mcp": "node bin/deveco-mcp.mjs mcp",
     "doctor": "node bin/deveco-mcp.mjs doctor",
     "kb:build": "node bin/deveco-mcp.mjs kb-build",
     "upstream:sync": "node tools/upstream-sync.mjs",
-    "prepack": "node tools/prepack.mjs"
+    "prepack": "node tools/prepack.mjs",
+    "test:unit": "node --test --test-concurrency=4 \"test/unit/*.test.mjs\"",
+    "test:integration": "node tools/build.mjs && node --test --test-concurrency=4 \"test/integration/*.test.mjs\"",
+    "test:media": "node --test test/integration/media/recording.test.mjs",
+    "test:model": "node test/model/eval.mjs",
+    "test:models": "node test/model/matrix.mjs",
+    "test:model-report": "node test/model/report.mjs",
+    "test:prompts": "node test/support/prompts.mjs",
+    "test:recording": "node tools/build.mjs && node --test test/e2e/recording.test.mjs",
+    "test:video": "node test/support/recording.mjs",
+    "test:sdk": "node tools/build.mjs && node --test --test-concurrency=1 test/e2e/sdk.test.mjs",
+    "test:device": "node tools/build.mjs && node --test --test-concurrency=1 test/e2e/device.test.mjs"
   },
   "dependencies": {
     "json5": "2.2.3",

@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
-import { checkRecording } from "../../tools/recording-check.mjs";
+import { checkRecording } from "../support/recording.mjs";
 
 const media = { streams: [
   { index: 0, codec_type: "audio", nb_read_frames: "24" },

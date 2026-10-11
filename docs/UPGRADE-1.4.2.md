@@ -1,5 +1,7 @@
 # v1.4.2 能力发现、正确调用与模型验收 TODO
 
+> 历史记录：本文中的旧测试/工具路径与命令属于 [治理前提交 4b45c433](https://github.com/like3213934360-lab/deveco_tool/tree/4b45c433925b50153dace95b167fee91dddd5fe6)，结论原样保留。当前入口见 [测试指南](../test/README.md)，迁移去向见 [治理映射](TEST-GOVERNANCE.md)。
+
 > 后续范围与复测见 [v1.4.3](UPGRADE-1.4.3.md)。以下为历史证据；当前适配名单为 OpenCode、Codex，Claude 缺口不再列为当前待办。
 
 本版修正 v1.4.1 对公共说明的过度压缩。验收顺序是能力能被发现、参数与约束能被正确理解、真实调用可核对，最后才比较 token 开销。保留独立实现、现有代码风格和执行逻辑，不改变 SDK、设备、模型、认证或持久宿主配置，不新增 Skill 分发或 Windows NTLM 代理。
