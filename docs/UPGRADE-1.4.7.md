@@ -47,7 +47,7 @@
 - `npm run typecheck` 通过；`npm test` 189/189，失败、取消、跳过均 0，包含真实 stdio 参数负例和引导处理无副作用断言。
 - `npm run bench` 通过：握手中位 81 ms（80–86 ms），tools/list 4 ms，空闲 RSS 69 MB，10 秒 CPU 读数不变；未提高性能或说明体积门限。
 - 上游对齐 491 项：374 full / 74 host / 43 skip；partial、undecided、invalid、stale 均 0，无新增未处理上游提交。这些 skip 是既定能力归属决定，不是 GitHub CI 跳过任务。
-- package.json、package-lock.json 和锁文件根包版本均为 1.4.7；重建指纹与 Codex 当前运行指纹相同。GitHub 跨系统 CI 仍需按实际提交单独核验。
+- package.json、package-lock.json 和锁文件根包版本均为 1.4.7；重建指纹与 Codex 当前运行指纹相同。GitHub 跨系统 CI 按实际发布提交单独核验，见下方回执。
 
 ## TODO
 
@@ -56,7 +56,7 @@
 - [x] 最终构建的 Codex 102 次原生调用完成；正向、计划内负例、顺序失误及未验证边界分别记录。
 - [x] 用户重启后的实际 MCP 构建确认；本轮运行代码此后未修改，无需再次重启。
 - [x] 本地 189 项单测、类型、性能、上游对齐及版本一致性检查通过。
-- [ ] 提交并推送；核验发布提交全部 CI、release 工作流及 verified-release 回执、Release、tag 和 Latest。
+- [x] 发布提交 `5e9226591b8aa47e726111a2c8cd158e2b4f0697` 已推送；七项 CI 全部通过，release 工作流及 verified-release 回执、Release、tag 和 Latest 核验一致，见下方链接。
 - [ ] OpenCode 本版本复验：用户明确暂不运行；此前失败不能由本轮 Codex 成功替代。Claude 不在适配名单。
 - [ ] 全入口、多模型首次调用可靠性：本轮是带已有对话上下文的代表性流程，并非 102 个入口全部成功或严格同条件模型对照。
 - [ ] 新启用补丁后的 reset 与独立数据标记保留，本轮未重测；保留以往证据，不追加本轮通过声明。
@@ -66,4 +66,8 @@
 
 ## GitHub 交付
 
-发布尚待本提交的 CI 和自动 release 核验。完成后补充实际 SHA、工作流链接和回执；不提前勾选，不移动已发布 tag。没有执行 npm 发布。
+发布提交 [`5e9226591b8aa47e726111a2c8cd158e2b4f0697`](https://github.com/like3213934360-lab/deveco_tool/commit/5e9226591b8aa47e726111a2c8cd158e2b4f0697) 的 [CI](https://github.com/like3213934360-lab/deveco_tool/actions/runs/38110095497) 七项全部成功，没有失败或跳过；[自动 release 工作流](https://github.com/like3213934360-lab/deveco_tool/actions/runs/38110145044)成功。下载的 verified-release 制品与干净 checkout 中 `node tools/release.mjs --run 38110095497 --check` 输出逐字节相同，见[公开回执](evidence/v1.4.7-release.json)。
+
+[v1.4.7 Release](https://github.com/like3213934360-lab/deveco_tool/releases/tag/v1.4.7) 为稳定发布且是 Latest，tag 实际提交等于上述 SHA，Release ID 为 `409398302`。回填本文和回执不改变运行代码、不移动 tag、不重发 Release；文档提交自身的 CI 和 release 核验另外执行。
+
+Codex App 已通过原生 doctor 确认加载与本次发布一致的运行构建，见上文；这不是由 GitHub 状态推断，也无需再次重启。没有执行 npm 发布。
