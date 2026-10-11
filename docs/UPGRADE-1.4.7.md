@@ -57,12 +57,13 @@
 - [x] 用户重启后的实际 MCP 构建确认；本轮运行代码此后未修改，无需再次重启。
 - [x] 本地 189 项单测、类型、性能、上游对齐及版本一致性检查通过。
 - [x] 发布提交 `5e9226591b8aa47e726111a2c8cd158e2b4f0697` 已推送；七项 CI 全部通过，release 工作流及 verified-release 回执、Release、tag 和 Latest 核验一致，见下方链接。
+- [x] 统一录屏脚本的 USB Mate 80 新录制、取回和严格解码全链路补验通过：1/1 用例、5 次真实 stdio MCP 调用，结束状态 idle；细节及证据见下方补验记录。
 - [ ] OpenCode 本版本复验：用户明确暂不运行；此前失败不能由本轮 Codex 成功替代。Claude 不在适配名单。
 - [ ] 全入口、多模型首次调用可靠性：本轮是带已有对话上下文的代表性流程，并非 102 个入口全部成功或严格同条件模型对照。
 - [ ] 新启用补丁后的 reset 与独立数据标记保留，本轮未重测；保留以往证据，不追加本轮通过声明。
 - [ ] 有效旧凭据迁移；云端配额具备后的 sign.auto / certificate_create，以及本轮专用云端证书/profile 删除。旧库无有效数据、历史配额错误 205389872、无可安全删除对象的限制未在本轮解除。
 - [ ] 历史 HDC 超时设备侧根因；本轮未复现不能将其关闭。SDK clangd didChange 后即时 implementation 的索引时序边界仍保留。
-- [ ] 其他真机、Windows/Linux 真实 SDK、录屏音频/麦克风内容、首次 license 接受。模拟器缺少视频编码器按用户决定属于正常环境限制。
+- [ ] Pura 80 Pro、Mate 80 之外的真机；Mate 80 其他 MCP 入口、Windows/Linux 真实 SDK、录屏音画同步及音频/麦克风内容、首次 license 接受。Mate 80 的单次录屏成功不扩大为全工具验收；模拟器缺少视频编码器按用户决定属于正常环境限制。
 
 ## GitHub 交付
 
@@ -83,4 +84,30 @@ Codex App 已通过原生 doctor 确认加载与本次发布一致的运行构�
 - [x] 本次 `npm test` 194/194，失败/取消/跳过均 0；typecheck、脚本语法及 diff 检查通过。上游 491 项仍为 374 full / 74 host / 43 skip，无未决、失效或新增提交；package/lock 均为 1.4.7，重建运行指纹仍为 `6dc15c8d525de1c1a4a4e2afa4694aa8d471f9169e59c253b2bb7d1b0e630dad`。
 - [x] 脚本提交 [`ae231b290797b89db4c9c5375e31552b7d2cb854`](https://github.com/like3213934360-lab/deveco_tool/commit/ae231b290797b89db4c9c5375e31552b7d2cb854) 已推送，[七项 CI](https://github.com/like3213934360-lab/deveco_tool/actions/runs/38112154923)全部通过、无跳过；[release 工作流](https://github.com/like3213934360-lab/deveco_tool/actions/runs/38112209317)成功，下载回执与本地只读核验逐字节相同，见[本次交付回执](evidence/v1.4.7-recording-check-release.json)。既有 v1.4.7 仍为 Latest，tag 保持 `5e9226591b8aa47e726111a2c8cd158e2b4f0697`。回填文档提交另核验自身 CI 和 release，不移动该 tag。
 
-本次未重新录制真机视频或跑完整设备生命周期，不把已有 MP4 的再检查说成新的 MCP 端到端调用；Windows/Linux 真实 FFmpeg、其他 FFmpeg 版本、麦克风内容和音画同步未验证。OpenCode / Claude 未运行。MCP 运行代码未改变，无需用户重启；宿主加载状态沿用上文已有原生 doctor 证据，本次不追加已重载声明。
+脚本交付阶段尚未重新录制真机视频或跑完整设备生命周期，已有 MP4 的再检查不计作新的 MCP 端到端调用；后续新录屏补验见下节。Windows/Linux 真实 FFmpeg、其他 FFmpeg 版本、麦克风内容和音画同步未验证。OpenCode / Claude 未运行。MCP 运行代码未改变，无需用户重启；宿主加载状态沿用上文已有原生 doctor 证据，脚本交付不追加已重载声明。
+
+## USB Mate 80 新录屏全链路补验
+
+2026-10-11 17:59（Asia/Shanghai），原 Pura 80 Pro 未连接，经用户明确指定，使用当前 USB HUAWEI Mate 80（VYG-AL00、API 26、系统 7.0.0.109）。原样执行 `E2E_TARGET=<用户指定的 USB Mate 80> node --test test/e2e/recording.test.mjs`，测试结果 **1/1 通过，失败、取消、跳过均 0**。
+
+前置 Codex App 原生 doctor 与录屏脚本的独立 stdio doctor 均确认 v1.4.7、构建 `6dc15c8d525de1c1a4a4e2afa4694aa8d471f9169e59c253b2bb7d1b0e630dad`。环境沿用 DevEco 26.0.0.821、SDK 26.0.0.105、Node v26.0.0、FFmpeg / ffprobe 8.1.2。脚本源码对应 `fd9ff82463e0180a9d1934aeec83851a7e889d12`，其原有独立状态目录和输出目录未改；没有安装应用、修改设备设置或 SDK/FFmpeg/宿主配置，没有更换断言或重编码原视频。
+
+本次由统一 E2E 脚本发起 **5 次真实 stdio MCP 调用**，全部 `isError=false`；Codex 原生工具用于前置环境与空闲状态检查。这 5 次不并入上文 102 次原生模型调用，也不作为新的模型选工具验收。
+
+| 环节 | 原始证据与结果 |
+| --- | --- |
+| 开始与录制中状态 | `record_start.recording=true`；随后 `record_status.status=recording`，文件名与开始返回值相同 |
+| 停止与取回 | `record_stop` 返回本次新 MP4、artifact_id 和 791,828 字节，独立读取文件大小一致 |
+| 媒体内容 | H.264，868×1920，77 个解码帧，视频时长 3.504044 秒；AAC，170 个解码帧，音轨/容器时长 3.627 秒。MCP `seconds=13` 是录屏会话经过时间，不当作媒体时长 |
+| 统一严格检查 | 同一流程直接调用 `tools/recording-check.mjs`；保留 `-xerror`、`-err_detect explode`、源视频时间基及帧时间戳，解码全部已有音视频流。4 个子进程退出码均为 0、signal=null、error 级 stderr 为空；回执 passed=true，没有临时追加解码命令 |
+| 最终状态 | 再次 `record_status` 返回 idle，未保留待取回文件状态；用例正常结束、进程退出码 0 |
+
+原视频 SHA-256 为 `0545412fed8be717143bd4e82aad75c4f9b7c94922c3cb94bce0203c64a0256a`。完整调用、媒体信息、检查回执和原视频保留在私有 `.scratch/recording-1791712751554/`；[公开脱敏证据](evidence/v1.4.7-mate80-recording.json)记录来源提交、脚本及原始文件哈希、实际调用、解码参数和结果。USB 序列号、绝对本地路径及账户信息不发布；原视频不上传 GitHub。此前 Pura 80 Pro 的旧命令警告和两次操作顺序失误仍按原记录保留。
+
+- [x] 本次新录屏从开始、录制状态、停止取回、严格解码到最终 idle 全链路通过。
+- [x] TODO、验收说明与公开证据已按本地原始日志逐项核对，保留原文件哈希和实际构建 ID。
+- [ ] 本次证据提交推送、该 SHA 全部 CI、release 工作流回执及既有 Release/tag/Latest 核验。
+- [ ] Mate 80 完整 `test/audit/physical.mjs lifecycle`、其他 MCP 操作、长时间/多轮录制、画面内容人工验收、音画同步及麦克风内容，本次未验证。
+- [ ] Windows/Linux 真实 FFmpeg、其他 FFmpeg 版本与 OpenCode 模型验收，本次未运行；Claude 不在适配范围。其他历史未验证项按上方 TODO 保留。
+
+本次回填只改文档与证据，不升级 v1.4.7、不移动已发布 tag、不重发 Release，也不执行 npm 发布或宿主重载。
