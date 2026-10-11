@@ -67,4 +67,8 @@
 
 ## GitHub 交付
 
-本节在推送、七项 CI、自动 release 工作流及其 verified-release 回执、不可变 tag、Release 与 Latest 全部核对后回填。当前本地构建通过不代替远端交付。Codex App 未在本轮重载，未执行 npm 发布。
+发布提交 [`263231282bf9edf1299240456d55f5334c4c3157`](https://github.com/like3213934360-lab/deveco_tool/commit/263231282bf9edf1299240456d55f5334c4c3157) 已推送。[CI](https://github.com/like3213934360-lab/deveco_tool/actions/runs/38133316216) 七项全部成功，没有失败或跳过；[自动 release 工作流](https://github.com/like3213934360-lab/deveco_tool/actions/runs/38133382661)成功。下载的 verified-release 回执与干净 checkout 中 `node tools/release.mjs --run 38133316216 --check` 输出逐字节相同，见[公开发布回执](evidence/v1.4.8-release.json)。
+
+[v1.4.8 Release](https://github.com/like3213934360-lab/deveco_tool/releases/tag/v1.4.8) 是稳定发布且为 Latest，Release ID 为 `409606181`；tag 实际指向上述发布提交。后续证据回填只改文档，保留 tag 不动，并独立核验文档提交的全部 CI 与 release 回读；当前 main 可以领先于发布提交。
+
+本轮验收启动的独立 stdio MCP 已运行上述 1.4.8 构建。**Codex App 未在本轮重载，实际宿主是否已加载本构建未验证**，不能由 GitHub 发布推断；无需为本次脚本治理再次重启。没有执行 npm 发布。
