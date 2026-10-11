@@ -62,9 +62,11 @@ async function save(s: TestSession) {
 /** Split a natural-language plan into a checklist (numbered/bulleted lines, else sentences). */
 export function checklist(plan: string): string[] {
   const lines = plan.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-  const items = lines.filter((l) => /^(\d+[.)、]|[-*•])\s*/.test(l)).map((l) => l.replace(/^(\d+[.)、]|[-*•])\s*/, ""));
+  const marker = /^(\d+[.)、](?!\d)|[-*•])\s*/;
+  const items = lines.filter((l) => marker.test(l)).map((l) => l.replace(marker, ""));
   if (items.length) return items.slice(0, 50);
-  return plan.split(/(?<=[。.;；!?！？])\s*/).map((s) => s.trim()).filter((s) => s.length > 1).slice(0, 50);
+  // A period inside a version, decimal, filename or URL is not a sentence boundary.
+  return plan.split(/(?<=[。;；!?！？])\s*|(?<=\.)\s+/).map((s) => s.trim()).filter((s) => s.length > 1).slice(0, 50);
 }
 
 async function shot(target: string, signal?: AbortSignal) {

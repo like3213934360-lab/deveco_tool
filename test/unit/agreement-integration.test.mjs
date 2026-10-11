@@ -59,9 +59,12 @@ test("replay handles consent at startup and in final assertion without recording
 });
 test("invalid action arguments accept no consent", async () => {
   reset([dialog("用户协议与隐私政策", "同意", "any.vendor")]);
-  for (const args of [{}, { op: "click", steps: [{ op: "click", x: 1, y: 1 }] }, { op: "input", selector: { id: "action" } }])
+  for (const args of [{}, { op: "click", steps: [{ op: "click", x: 1, y: 1 }] }, { op: "input", selector: { id: "action" } },
+    { op: "click", selector: { id: "action" }, assert: { visible: { text: "Done" } } },
+    { op: "click", selector: { id: "action" }, save_flow: { project: work, id: "never-saved" } }])
     await assert.rejects(m.uiTool.handler({ action: "act", target: "test", ...args }, ctx), (e) => e.code === "INVALID_INPUT");
   assert.deepEqual(f.clicks, []);
+  assert.equal(f.taps, 0);
 });
 const onboarding = (title = "选择应用主题") => ({ attributes: { bundleName: "arbitrary.setup", windowId: "setup", bounds: "[0,0][400,800]" }, children: [raw(title), raw("跟随系统", "Radio", 100, { checked: true }), raw("深色", "Radio", 150, { checked: false }), raw("下一步", "Button", 200)] });
 test("ordinary UI action completes generic onboarding and preserves separate consent evidence", async () => {

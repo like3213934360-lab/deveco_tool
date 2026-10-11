@@ -35,7 +35,7 @@ test("guidance covers discovery, standalone tools, safe continuation and evidenc
     // These constraints must remain on the relevant tool even when other tools are not loaded.
     assert.match(byName.project.description, /Build already checks edited files: no code check first/);
     assert.match(byName.run.description, /build_run: check edited files.*no code check first/);
-    assert.match(byName.run.description, /then_flow=.*assert verifies/);
+    assert.match(byName.run.description, /then_flow=.*replay after launch; assert then verifies the final screen/);
     assert.match(byName.run.description, /first build_run on the same device/);
     assert.match(byName.code.description, /compiler is the final judge/);
     assert.match(byName.knowledge.description, /SDK declarations.*successful build win, then official docs; community never defines the API/);
@@ -70,12 +70,45 @@ test("guidance covers discovery, standalone tools, safe continuation and evidenc
     assert.match(byName.ui_flow.description, /consent\/setup handling.*inspect.*before retrying/);
     assert.match(byName.sign.description, /Interrupted cloud mutations require reconciliation/);
     assert.match(byName.sign.description, /TEAM_AMBIGUOUS.*ask the user/);
-    assert.match(byName.ui.inputSchema.properties.target.description, /Device serial\/name; ask user if several connected/);
+    assert.match(byName.ui.inputSchema.properties.target.description, /Device serial\/name; multiple devices: ask user/);
     assert.match(byName.knowledge.inputSchema.properties.check.description, /status: default true \(online\), false = offline; update: true = check only/);
     assert.match(byName.knowledge.description, /catalog: no parameters/);
     assert.match(byName.diagnose.description, /build: fix hints, diagnostics only \(no project\)/);
     assert.match(byName.skills.inputSchema.properties.scope.description, /Default user; project scope requires scope=project \+ project/);
     assert.match(byName.skills.inputSchema.properties.names.description, /export: skill names \(not name\); default all/);
+
+    // A merged input schema must still explain which action consumes each ambiguous field.
+    assert.match(byName.project.description, /request_key\/wait: sync\/build only/);
+    assert.match(byName.run.description, /launch: project\/product\/target\/module\/ability only/);
+    assert.match(byName.run.description, /wait\/request_key: build_run\/deploy only/);
+    assert.match(byName.run.description, /hot_reload=true saves baseline after successful launch/);
+    assert.match(byName.run.inputSchema.properties.flow_variables.description, /required variables from ui_flow show/);
+    assert.match(byName.code.inputSchema.properties.files.description, /check\/api_scan\/lsp diagnostics:.*check uses files, not file/);
+    assert.match(byName.code.inputSchema.properties.file.description, /lint\/lsp: one file/);
+    assert.match(byName.device.inputSchema.properties.bundle.description, /log:.*sqlite: debuggable app owning db/);
+    assert.match(byName.ui.description, /wait\/request_key: layout forms only/);
+    assert.match(byName.ui.inputSchema.properties.test_id.description, /test_step\/review: multiple devices need session target/);
+    assert.match(byName.ui.inputSchema.properties.test_id.description, /test_finish\/test_log\/test_export need no device/);
+    assert.match(byName.ui.inputSchema.properties.assert.description, /test_step uses top-level visible\/hidden, never assert/);
+    assert.match(byName.ui.inputSchema.properties.steps.description, /act:.*perf:/);
+    assert.match(byName.ui_flow.description, /show first, supply required variables.*input1/);
+    assert.match(byName.ui_flow.description, /wait\/request_key: replay only/);
+    assert.match(byName.ui_flow.inputSchema.properties.variables.description, /required\/secret by default/);
+    assert.match(byName.auth.inputSchema.properties.provider.description, /login\/logout: default codegenie; status: omitted=both; teams: no parameters/);
+    assert.match(byName.sign.description, /csr\(keystore\+keystore_password\+out\).*certificate_create\(csr\+name\+out\).*profile_create\(id=certificate ID,out,bundle or project\).*profile_delete\(id=numeric AGC console profile ID\)/);
+    assert.match(byName.sign.description, /wait: auto only/);
+    assert.match(byName.project.description, /create\(app_name,bundle_name\)/);
+    assert.match(byName.run.inputSchema.properties.then_flow.description, /flow failure does not fail deploy; inspect flow.passed/);
+    assert.match(byName.code.inputSchema.properties.file.description, /except workspace_symbols/);
+    assert.match(byName.ui.inputSchema.properties.steps.description, /perf: swipe\/fling\/drag\/scroll only/);
+    assert.match(byName.ui.inputSchema.properties.fresh_start.description, /requires project/);
+    assert.match(byName.ui.inputSchema.properties.then_flow.description, /without required variables/);
+    assert.match(byName.ui_flow.inputSchema.properties.id.description, /1-64.*alphanumeric ends/);
+    assert.match(byName.knowledge.description, /source=cloud: only query/);
+    assert.match(byName.knowledge.inputSchema.properties.limit.description, /search: results; read: characters; update: job wait ms/);
+    assert.match(byName.sign.description, /sign: file\+out and project signingConfigs or all keystore\/password\/alias\/cert\/profile fields; verify: file/);
+    assert.match(byName.sign.description, /keystore_password>=6 chars/);
+    assert.match(byName.emulator.inputSchema.properties.names.description, /name or names, not both/);
   } finally {
     await client.close();
     fs.rmSync(state, { recursive: true, force: true });

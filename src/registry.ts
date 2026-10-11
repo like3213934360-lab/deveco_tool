@@ -37,10 +37,10 @@ export const SYNC_WAIT_MS = MAX_WAIT_MS - 3000;
 
 /** Shared field helpers keep descriptions consistent across tools. */
 export const fields = {
-  project: z.string().min(1).describe("Absolute project root (build-profile.json5)"),
+  project: z.string().min(1).describe("Absolute root with build-profile.json5"),
   product: z.string().min(1).optional().describe("Product if multiple"),
   modules: z.array(z.string().min(1)).max(64).optional().describe("Modules (default all in product)"),
-  target: z.string().min(1).optional().describe("Device serial/name; ask user if several connected"),
+  target: z.string().min(1).optional().describe("Device serial/name; multiple devices: ask user"),
   requestKey: z.string().min(1).max(200).optional().describe("Same key+input reuses job"),
-  wait: z.number().int().min(0).max(MAX_WAIT_MS).optional().describe(`ms (action default, max ${MAX_WAIT_MS}); then job action=wait`),
+  wait: z.number().int().min(0).max(MAX_WAIT_MS).optional().describe("ms (action default); running: job action=wait"),
 };

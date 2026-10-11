@@ -1,5 +1,21 @@
 # Changelog / 更新日志
 
+## v1.4.7 (2026-10-11)
+
+**中文**
+
+- 修复 UI 测试计划把版本号、小数、文件名和 URL 内部句点误识别为句末，以及行首版本号被当成编号的问题；保留中英文句子和列表边界。
+- 补明 action 参数适用范围、测试步骤的顶层断言、视觉评审目标设备、流程必填变量和签名步骤参数；明确部署时先回放流程、再断言最终画面。保留公共说明、功能入口与严格参数校验，通过等义去重维持原元数据体积门禁。
+- 拒绝空断言、同时指定 visible/hidden，以及单动作携带仅批量执行支持的 assert/save_flow；在设备操作或作业创建前报告参数错误，避免接受却忽略请求。
+- Codex 原生调用、三轮计划、USB 真机及本地检查结果见[验收与 TODO](docs/UPGRADE-1.4.7.md)；保留预期拒绝、调用顺序失误和未验证范围，本轮未运行 OpenCode 或 Claude。
+
+**English**
+
+- Preserve internal dots in versions, decimals, filenames and URLs when splitting UI test plans, including versions at line start; retain sentence and list boundaries.
+- Clarify action-specific parameters, top-level test assertions, visual review targets, required flow variables and signing inputs; deploy replays the flow before asserting the final screen. Keep global guidance, capabilities and strict validation; remove redundant wording within the existing metadata budget.
+- Reject empty assertions, simultaneous visible/hidden selectors, and single actions carrying batch-only assert/save_flow options before device operations or job creation, instead of accepting ignored requests.
+- Record native Codex calls, three plan rounds, USB device checks and local validation in the acceptance notes; distinguish expected rejections, sequencing mistakes and unverified scope. OpenCode and Claude were not run in this round.
+
 ## v1.4.6 (2026-10-10)
 
 **中文**

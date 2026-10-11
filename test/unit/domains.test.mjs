@@ -62,6 +62,18 @@ test("splits a test plan into a checklist", () => {
   assert.deepEqual(m.checklist("打开首页。点击登录。"), ["打开首页。", "点击登录。"]);
 });
 
+test("checklist preserves versions and dotted tokens without losing sentence or list boundaries", () => {
+  assert.deepEqual(m.checklist("Codex v1.4.6 验证。Hello World 可见；点击后 Welcome 可见。"),
+    ["Codex v1.4.6 验证。", "Hello World 可见；", "点击后 Welcome 可见。"]);
+  assert.deepEqual(m.checklist("1.4.6 验证。安装 26.0.0.105；检查 3.14。"),
+    ["1.4.6 验证。", "安装 26.0.0.105；", "检查 3.14。"]);
+  assert.deepEqual(m.checklist("Open Index.ets at https://example.com/v1.4.6. Check 127.0.0.1:5555!"),
+    ["Open Index.ets at https://example.com/v1.4.6.", "Check 127.0.0.1:5555!"]);
+  assert.deepEqual(m.checklist("1. 验证 v1.4.6\n2)检查 3.14\n3、打开 Index.ets"),
+    ["验证 v1.4.6", "检查 3.14", "打开 Index.ets"]);
+  assert.deepEqual(m.checklist("v1.4.6 验证.\nNext step. Finish."), ["v1.4.6 验证.", "Next step.", "Finish."]);
+});
+
 test("sqlite guard only allows read statements by default", () => {
   assert.ok(m.readonlySqlAllowed("select * from t; pragma table_info(t)"));
   assert.ok(m.readonlySqlAllowed(".tables"));

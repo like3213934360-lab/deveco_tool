@@ -85,6 +85,55 @@ test("skills are exposed as tools, resources and prompts", async () => {
   await client.close();
 });
 
+test("documented action boundaries reject cross-action fields before execution", async (t) => {
+  const client = connect(env);
+  t.after(() => client.close());
+  await client.initialize();
+  for (const [name, args, rejected, accepted] of [
+    ["project", { action: "info", project: state, wait: 1000 }, "wait", "product"],
+    ["run", { action: "launch", project: state, wait: 1000 }, "wait", "ability"],
+    ["run", { action: "stop", project: state, assert: {} }, "assert", "target"],
+    ["code", { action: "check", project: state, file: "Index.ets" }, "file", "files"],
+    ["ui", { action: "test_step", test_id: "none", assert: { visible: { text: "Hi" } } }, "assert", "visible"],
+    ["ui", { action: "review", test_id: "none", visible: { text: "Hi" } }, "visible", "requirement"],
+    ["ui", { action: "test_start", plan: "Hello", wait: 1000 }, "wait", "plan"],
+    ["ui_flow", { action: "show", project: state, id: "none", variables: {} }, "variables", "id"],
+    ["auth", { action: "teams", provider: "developer" }, "provider", undefined],
+    ["sign", { action: "verify", file: "missing.hap", wait: 1000 }, "wait", "file"],
+  ]) {
+    const result = await client.call(name, args);
+    assert.equal(result.isError, true, `${name}.${args.action}`);
+    assert.equal(result.data.error.code, "INVALID_INPUT");
+    assert.deepEqual(result.data.error.details.not_used, [rejected]);
+    const allowed = result.data.error.details.accepted_for_action;
+    if (accepted) assert.ok(allowed.includes(accepted), `${name}.${args.action}: ${accepted}`);
+    else assert.deepEqual(allowed, []);
+    assert.match(result.data.error.hint, /Nothing was executed/);
+  }
+});
+
+test("assertion combinations fail before device resolution or job creation", async (t) => {
+  const client = connect(env);
+  t.after(() => client.close());
+  await client.initialize();
+  const visible = { text: "Ready" }, hidden = { text: "Error" };
+  for (const [name, args] of [
+    ["run", { action: "build_run", project: state, assert: {} }],
+    ["run", { action: "deploy", project: state, assert: { visible, hidden } }],
+    ["ui_flow", { action: "stop", project: state, assert: {} }],
+    ["ui", { action: "assert", visible, hidden }],
+    ["ui", { action: "test_step", test_id: "none", visible, hidden }],
+    ["ui", { action: "act", op: "click", x: 1, y: 1, assert: { visible } }],
+    ["ui", { action: "act", steps: [{ op: "click", x: 1, y: 1 }], assert: {} }],
+  ]) {
+    const result = await client.call(name, args);
+    assert.equal(result.isError, true, `${name}.${args.action}`);
+    assert.equal(result.data.error.code, "INVALID_INPUT");
+    assert.match(result.data.error.message, /exactly one visible or hidden|assert\/save_flow require steps/);
+  }
+  assert.deepEqual((await client.call("job", { action: "list" })).data.jobs, []);
+});
+
 test("project info and create errors are structured", async () => {
   const client = connect(env);
   await client.initialize();
