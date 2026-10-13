@@ -57,4 +57,8 @@ Windows 原有 register_device 用例因夹具是 POSIX shell 脚本而跳过；
 
 ## GitHub 交付
 
-按发布流程检查该提交的七项 CI、自动 release、verified-release 回执、不可变 tag 及 Latest。核验完成后回填本节与 TODO；最终文档提交及其独立 CI/release 核验链接在交付回复中单列，避免自引用 SHA 产生循环提交。
+发布提交 [`b6f67709e7b075d852733a2622c9964156d73e6a`](https://github.com/like3213934360-lab/deveco_tool/commit/b6f67709e7b075d852733a2622c9964156d73e6a) 已推送。[CI 38340246234](https://github.com/like3213934360-lab/deveco_tool/actions/runs/38340246234) 七项全部成功，包括 Windows Node 22/24 的真实知识包生成与正文回读；没有 job 跳过。[自动 release 38340367776](https://github.com/like3213934360-lab/deveco_tool/actions/runs/38340367776) 成功。下载的 verified-release 回执与干净 checkout 中的 `node tools/release.mjs --run 38340246234 --check` 输出逐字节相同，见 [发布回执](evidence/v1.4.9-release.json)。
+
+[v1.4.9 Release](https://github.com/like3213934360-lab/deveco_tool/releases/tag/v1.4.9)（ID `411217099`）为稳定发布、非草稿、非预发布，并且为 Latest；远程 tag 实际指向上述发布提交。后续仅回填文档及公开回执，保留 tag 不动，继续独立核验最终文档提交的七项 CI 与 release 回读。为避免自引用 SHA 循环，最终文档提交及其核验链接在交付回复中单列。
+
+独立 stdio 已实际验证最终构建 `74a552f64d034ede14dfe273c0d3f6434475890396382f13e51b62a835b261bd`。Codex App 仍运行修复前的 1.4.9 / `1f14cb94a6b0dc2d2061252a2ac34e7cf81b8e5e2a74736fabe8b57e1ae9aae2`；未重载最终发布构建，也未执行 npm 发布。

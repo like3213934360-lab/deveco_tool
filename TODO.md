@@ -132,7 +132,7 @@ Windows/Linux 真实 SDK/媒体、多设备并发、其他设备/媒体版本、
 - [x] 审查 Code 3 个、CLI 24 个新增上游提交，更新有据可查的来源边界；491 项能力映射通过，partial/undecided/invalid/stale/未审查新提交均 0。
 - [x] 独立 stdio 最终运行指纹为 `74a552f64d034ede14dfe273c0d3f6434475890396382f13e51b62a835b261bd`；Codex App 原生 doctor 仍为修复前的 1.4.9 / `1f14cb94a6b0dc2d2061252a2ac34e7cf81b8e5e2a74736fabe8b57e1ae9aae2`，最终构建未重载。本轮没有重启宿主或执行 npm 发布。
 - [x] 保留首次 CI 38339636734 的两个 Windows 任务失败（zip ENOENT）及 release 跳过；修复产品 ZIP 后端与开发指针，没有调整 CI 环境或跳过新增用例。
-- [ ] 提交全部 1.4.9 改动并推送 main，核验该提交七项 CI、自动 release、下载回执、本地只读核验，以及 v1.4.9 tag/Release/Latest 一致；完成后回填证据。
+- [x] 全部 1.4.9 改动及 Windows 产品修复已推送；发布提交 `b6f67709e7b075d852733a2622c9964156d73e6a` 的 [CI 38340246234](https://github.com/like3213934360-lab/deveco_tool/actions/runs/38340246234) 七项成功，[release 38340367776](https://github.com/like3213934360-lab/deveco_tool/actions/runs/38340367776) 成功，下载回执与本地只读核验逐字节一致。v1.4.9 tag 指向发布提交，Release ID 411217099 为 Latest；证据见 [验收交付](docs/UPGRADE-1.4.9.md#github-交付) 与 [发布回执](docs/evidence/v1.4.9-release.json)。最终文档提交仍独立完成七项 CI、release 及只读核验，结果在交付回复中单列，不移动 tag。
 
 真实模拟器端口/UUID 重建、完整模型矩阵、其他宿主与 Windows/Linux 真实 SDK/媒体等未验证范围仍开放；既有性能、云配额、镜像及原子写入问题不因发布被关闭。
 
