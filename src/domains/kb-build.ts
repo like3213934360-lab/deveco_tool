@@ -71,7 +71,14 @@ export async function buildKnowledgePack(options: { upstream: string; out: strin
       fs.mkdirSync(path.dirname(out), { recursive: true });
       fs.writeFileSync(out, doc.text);
     }
-    if (localDocs.length) await run({ file: "zip", args: ["-q", "-r", docsOut, "."], cwd: staging }, { timeoutMs: 300000 });
+    if (localDocs.length) {
+      // Windows supplies bsdtar, not Info-ZIP. Convert the original archive and add exact
+      // local ids in one command; never retry a failed archiver or change the output format.
+      const command = process.platform === "win32"
+        ? { file: "tar", args: ["--format=zip", "-cf", docsOut, `@${docsZip}`, ...localDocs.map((doc) => `${doc.id}.md`)], cwd: staging }
+        : { file: "zip", args: ["-q", "-r", docsOut, "."], cwd: staging };
+      await run(command, { timeoutMs: 300000 });
+    }
 
     const apiRange = sdkRange(buildMeta);
     const manifest: Manifest = {
@@ -95,7 +102,7 @@ export async function buildKnowledgePack(options: { upstream: string; out: strin
     // Stable pointer for local development (bundledDir falls back to kb-dist/current).
     const current = path.join(path.resolve(options.out), "current");
     fs.rmSync(current, { recursive: true, force: true });
-    fs.symlinkSync(target, current, "dir");
+    fs.symlinkSync(target, current, process.platform === "win32" ? "junction" : "dir");
     // npm-style tarball (top-level "package/") so `knowledge update source=<file>` and `npm publish <file>` both work.
     const tarball = path.join(path.resolve(options.out), `deveco-kb-${version}.tgz`);
     const pack = path.join(work, "package");

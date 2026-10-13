@@ -1,5 +1,5 @@
 // Isolated knowledge registry/conversion regression. Run: node --test test/integration/kb-source.test.mjs
-// Requires Node >=22.18, esbuild, tar and zip; never uses running dist, accounts or devices.
+// Requires Node >=22.18, esbuild and tar; POSIX also uses zip. No accounts or devices.
 import assert from "node:assert/strict";
 import crypto from "node:crypto";
 import fs from "node:fs";
@@ -268,6 +268,9 @@ test("fingerprint includes relative paths/bodies, excludes NOTICE, and indexes r
   const upstream = archive(upstreamName, "1.3.5-Test.1");
   const built = await m.buildKnowledgePack({ upstream: upstream.dir, out: path.join(work, "fingerprint-out"), local, version: "1.0.0" });
   assert.equal(built.counts.runtime, 1); assert.equal(built.counts.skills, undefined); assert.equal(built.counts.rules, undefined);
+  await m.update({ source: built.tarball }, signal);
+  assert.match((await m.read("doc/one")).content, /router navigation official/);
+  assert.match((await m.read("runtime/b")).content, /new body/);
   const invalidPkg = JSON.parse(fs.readFileSync(path.join(upstream.dir, "package.json"))); invalidPkg.apiVersion = 2;
   fs.writeFileSync(path.join(upstream.dir, "package.json"), JSON.stringify(invalidPkg));
   await assert.rejects(m.buildKnowledgePack({ upstream: upstream.dir, out: path.join(work, "invalid-out") }), code("INVALID_INPUT"));
