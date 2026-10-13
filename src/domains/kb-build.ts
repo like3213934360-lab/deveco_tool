@@ -5,7 +5,7 @@ import path from "node:path";
 import { packageRoot, version as mcpVersion } from "../core/config.js";
 import { invariant } from "../core/errors.js";
 import { run } from "../core/proc.js";
-import { catalogs, KB_SCHEMA, type Manifest } from "./knowledge.js";
+import { catalogs, KB_SCHEMA, UPSTREAM_API_VERSION, type Manifest } from "./knowledge.js";
 
 /**
  * Build a knowledge pack from:
@@ -14,12 +14,15 @@ import { catalogs, KB_SCHEMA, type Manifest } from "./knowledge.js";
  *   - this repository's knowledge/ directory (rules, error cases, runtime patterns, skills).
  * Output: <out>/<version>/{manifest.json,index.db,docs.zip} and <out>/deveco-kb-<version>.tgz (npm-packable).
  */
-export async function buildKnowledgePack(options: { upstream: string; out: string; version?: string; npmName?: string }) {
+export async function buildKnowledgePack(options: { upstream: string; out: string; version?: string; npmName?: string; local?: string }) {
   const upstreamDir = fs.existsSync(path.join(options.upstream, "package")) ? path.join(options.upstream, "package") : options.upstream;
   const docsZip = path.join(upstreamDir, "docs.zip");
   const indexZip = path.join(upstreamDir, "index.zip");
   invariant(fs.existsSync(docsZip) && fs.existsSync(indexZip), "INVALID_INPUT", `${upstreamDir} must contain docs.zip and index.zip`);
-  const upstreamPkg = JSON.parse(fs.readFileSync(path.join(upstreamDir, "package.json"), "utf8")) as { name: string; version: string };
+  const upstreamPkg = JSON.parse(fs.readFileSync(path.join(upstreamDir, "package.json"), "utf8")) as { name: string; version: string; apiVersion?: number };
+  invariant(upstreamPkg.apiVersion === UPSTREAM_API_VERSION, "INVALID_INPUT", `Upstream package must support apiVersion ${UPSTREAM_API_VERSION}`);
+  const localDocs = localKnowledgeDocuments(options.local);
+  const contentSha256 = hashLocalDocuments(localDocs);
   const work = fs.mkdtempSync(path.join(os.tmpdir(), "kb-build-"));
   try {
     const { extractZip } = await import("../core/unzip.js");
@@ -29,6 +32,7 @@ export async function buildKnowledgePack(options: { upstream: string; out: strin
     const buildMeta = fs.existsSync(path.join(work, "build-meta.json")) ? JSON.parse(fs.readFileSync(path.join(work, "build-meta.json"), "utf8")) : {};
 
     const version = options.version ?? `${upstreamPkg.version.replace(/-.*$/, "")}-${new Date().toISOString().slice(0, 10).replaceAll("-", "")}`;
+    invariant(/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(version), "INVALID_INPUT", "Knowledge pack version is not a safe directory name");
     const target = path.join(path.resolve(options.out), version);
     fs.rmSync(target, { recursive: true, force: true });
     fs.mkdirSync(target, { recursive: true });
@@ -38,24 +42,6 @@ export async function buildKnowledgePack(options: { upstream: string; out: strin
     const { DatabaseSync } = await import("node:sqlite");
     const db = new DatabaseSync(indexDb);
     // Local knowledge: rules / error cases / runtime patterns / skills, one document per markdown file.
-    const local = path.join(packageRoot, "knowledge");
-    const localDocs: { id: string; title: string; catalog: number; file: string; text: string }[] = [];
-    const sources: [catalog: (typeof catalogs)[number], dir: string][] = [
-      ["rules", "rules"], ["errors", "errors"],
-      ["runtime", "skills/hmos-runtime-fix-skill/references"], ["skills", "skills"],
-    ];
-    for (const [catalogName, dir] of sources) {
-      const base = path.join(local, dir);
-      if (!fs.existsSync(base)) continue;
-      for (const file of walkMd(base)) {
-        if (path.basename(file) === "NOTICE.md") continue;
-        if (catalogName === "skills" && file.includes(`${path.sep}hmos-runtime-fix-skill${path.sep}references${path.sep}`)) continue; // indexed as runtime
-        const rel = path.relative(base, file).replaceAll("\\", "/").replace(/\.md$/, "");
-        const text = fs.readFileSync(file, "utf8");
-        const title = /^#\s+(.+)$/m.exec(text)?.[1]?.trim() ?? /^name:\s*(.+)$/m.exec(text)?.[1]?.trim() ?? rel;
-        localDocs.push({ id: `${catalogName}/${rel}`, title, catalog: catalogs.indexOf(catalogName), file, text });
-      }
-    }
     db.exec("BEGIN");
     const insertDoc = db.prepare("INSERT INTO documents(document_id, catalog_id, doc_title) VALUES(?,?,?)");
     const insertSeg = db.prepare("INSERT INTO segments(doc_id, section_title, lead_text, search_text, excerpt_truncated) VALUES(?,?,?,?,0)");
@@ -94,7 +80,7 @@ export async function buildKnowledgePack(options: { upstream: string; out: strin
       ...(apiRange ? { sdk_api_range: apiRange } : {}),
       sources: {
         upstream: { package: upstreamPkg.name, version: upstreamPkg.version, index_version: buildMeta.indexVersion, docs_sha256: buildMeta.docsZipSha256 },
-        local: { files: localDocs.length, generator: `deveco-mcp ${mcpVersion}` },
+        local: { files: localDocs.length, generator: `deveco-mcp ${mcpVersion}`, content_sha256: contentSha256 },
       },
       created_at: new Date().toISOString(),
       docs_sha256: sha256File(docsOut),
@@ -120,6 +106,40 @@ export async function buildKnowledgePack(options: { upstream: string; out: strin
   } finally {
     fs.rmSync(work, { recursive: true, force: true });
   }
+}
+
+type LocalDocument = { id: string; title: string; catalog: number; file: string; text: string; relative: string };
+
+function localKnowledgeDocuments(local = path.join(packageRoot, "knowledge")): LocalDocument[] {
+  const localDocs: LocalDocument[] = [];
+  const sources: [catalog: (typeof catalogs)[number], dir: string][] = [
+    ["rules", "rules"], ["errors", "errors"],
+    ["runtime", "skills/hmos-runtime-fix-skill/references"], ["skills", "skills"],
+  ];
+  for (const [catalogName, dir] of sources) {
+    const base = path.join(local, dir);
+    if (!fs.existsSync(base)) continue;
+    for (const file of walkMd(base)) {
+      if (path.basename(file) === "NOTICE.md") continue;
+      if (catalogName === "skills" && file.includes(`${path.sep}hmos-runtime-fix-skill${path.sep}references${path.sep}`)) continue; // indexed as runtime
+      const rel = path.relative(base, file).replaceAll("\\", "/").replace(/\.md$/, "");
+      const text = fs.readFileSync(file, "utf8");
+      const title = /^#\s+(.+)$/m.exec(text)?.[1]?.trim() ?? /^name:\s*(.+)$/m.exec(text)?.[1]?.trim() ?? rel;
+      localDocs.push({ id: `${catalogName}/${rel}`, title, catalog: catalogs.indexOf(catalogName), file, text, relative: path.relative(local, file).replaceAll("\\", "/") });
+    }
+  }
+  return localDocs.sort((a, b) => a.relative < b.relative ? -1 : a.relative > b.relative ? 1 : 0);
+}
+
+function hashLocalDocuments(docs: LocalDocument[]) {
+  const hash = crypto.createHash("sha256");
+  for (const doc of docs) hash.update(JSON.stringify([doc.relative, doc.text]) + "\n");
+  return hash.digest("hex");
+}
+
+/** Relative paths and exact bodies of the files the builder indexes (NOTICE and duplicate runtime excluded). */
+export function localKnowledgeContentSha256(local = path.join(packageRoot, "knowledge")) {
+  return hashLocalDocuments(localKnowledgeDocuments(local));
 }
 
 function* walkMd(dir: string): Generator<string> {

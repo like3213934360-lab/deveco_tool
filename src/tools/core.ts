@@ -358,31 +358,32 @@ export const uiTool = tool({
   name: "ui",
   title: "Device UI",
   description: [
-    "observe: screenshot + elements; screenshot/tree/find/windows: inspect. tree: window/depth/all_windows/node.",
+    "observe: screenshot+elements; screenshot/tree/find/windows: inspect. tree: window/depth/all_windows/node.",
     "selector/visible/hidden: objects, e.g. {\"text\":\"Hi\"}.",
-    "act: click/double_click/long_click via selector or x,y; input field text; type; swipe/drag/fling x,y,x2,y2; scroll; key or keys chord; mouse_* for 2in1/tablet.",
-    "act after={changed,kind:none/state/updated/navigated,added,removed} describes the app's on-screen elements; usually no extra observe.",
-    "act steps=[...]: waits for each element, stops at first failure with visible controls. assert verifies; save_flow={project,id} saves for run then_flow. ~52 s/call; stopped_at marks continuation.",
-    "assert waits for visible OR hidden; verify outcomes with it, not screenshots alone.",
-    "Actions accept consent (agreements_accepted) and setup/tours preserving defaults (onboarding_completed) by window text/control state, never app names/fixed IDs. If still blocked, observe; never blindly repeat.",
-    "visual: named baseline (first call saves, update=true replaces); changed_ratio/regions/diff_artifact; dimming=global_shift.",
-    "layout: off-screen/overlapping/tiny targets, clipped text; forms=[foldable,widefold,triplefold] checks emulator forms (job). wait/request_key: layout forms only.",
-    "perf: scroll smoothness/jank: per-frame avg_fps/frame_ms p95/janky_frames/verdict; bundle adds pss. record_start/record_stop/record_status: mp4.",
+    "act: click/double_click/long_click selector or x,y; input/type text; swipe/drag/fling x,y,x2,y2; scroll; key/keys chord; mouse_* for tablet/2in1.",
+    "act after={changed,kind:none/state/updated/navigated,added,removed}: app's on-screen elements; no extra observe.",
+    "act steps=[...]: waits for each element, stops at first failure with controls. save_flow={project,id} for run then_flow. ~52 s/call; stopped_at=continuation.",
+    "assert: visible OR hidden, not screenshots alone.",
+    "Accept consent (agreements_accepted) and setup/tours preserving defaults (onboarding_completed) by window text/control state, never app names/fixed IDs. If still blocked, observe; never blindly repeat.",
+    "visual: baseline (first saves, update replaces); changed_ratio/regions/diff_artifact; dimming=global_shift.",
+    "layout: off-screen/overlap/tiny targets, clipped text; forms=[foldable,widefold,triplefold] job. wait/request_key: layout forms only.",
+    "perf: scroll smoothness/jank; no data=inconclusive + diagnostic_artifact; bundle adds pss. record_start/record_stop/record_status: mp4. record_receipts/record_archive(target,name)/record_restore(receipt_id): offline; preserve receipts, no device I/O.",
     "Tests: test_start(plan) -> test_step(test_id, op/selector or visible/hidden) -> review(test_id+requirement) captures an image; inspect it before review(test_id+review_id+outcome+reason) -> test_finish -> test_log/test_export. Omit outcome/review_id on capture.",
   ].join(" "),
   schema: z.object({
-    action: z.enum(["observe", "screenshot", "tree", "find", "act", "assert", "windows", "perf", "visual", "layout", "record_start", "record_stop", "record_status",
+    action: z.enum(["observe", "screenshot", "tree", "find", "act", "assert", "windows", "perf", "visual", "layout", "record_start", "record_stop", "record_status", "record_receipts", "record_archive", "record_restore",
       "test_start", "test_step", "review", "test_finish", "test_log", "test_export"]),
     target: fields.target,
-    window: z.number().int().optional().describe("tree/observe: window id from action=windows"),
+    window: z.number().int().optional().describe("tree/observe: id from windows"),
     all_windows: z.boolean().optional().describe("tree: all windows/displays; excludes window"),
     node: z.string().optional().describe("tree: one component (id/key) subtree"),
-    display: z.number().int().optional().describe("screenshot: display id (multi-screen devices)"),
-    save_path: z.string().optional().describe("screenshot/record_stop: absolute copy path; expires after retention_days"),
-    depth: z.number().int().min(0).max(100).optional().describe("tree/observe: levels (0 = all, 1 = root only)"),
+    display: z.number().int().optional().describe("screenshot: display id"),
+    save_path: z.string().optional().describe("screenshot/record_stop: absolute copy; retention_days expiry"),
+    depth: z.number().int().min(0).max(100).optional().describe("tree/observe: depth (0 all, 1 root)"),
     all: z.boolean().optional().describe("windows: include system windows"),
     discard: z.boolean().optional().describe("record_stop: stop without downloading"),
     external: z.boolean().optional().describe("record_stop: stop a foreign recording"),
+    receipt_id: z.string().optional().describe("record_restore: archived receipt id"),
     test_id: z.string().optional().describe("test_step/review: multiple devices need session target; test_finish/test_log/test_export need no device"),
     plan: z.string().max(20000).optional().describe("test_start: steps + expected results"),
     project: z.string().optional().describe("test_start/visual/layout: project root"),
@@ -400,7 +401,7 @@ export const uiTool = tool({
     keys: z.array(z.string()).min(1).max(3).optional().describe("key chord e.g. [\"ctrl\",\"c\"]; mouse_*: modifiers"),
     button: z.enum(["left", "right", "middle"]).optional().describe("mouse click button"),
     ticks: z.number().int().min(1).max(50).optional().describe("mouse_scroll wheel ticks (default 3)"),
-    verify_change: z.boolean().optional().describe("act: poll up to 3 s for slow transitions"),
+    verify_change: z.boolean().optional().describe("act: poll up to 3 s"),
     diff: z.boolean().optional().describe("act: return the after diff (default true)"),
     steps: z.array(batchStepSchema).min(1).max(30).optional().describe("act: path instead of op; perf: swipe/fling/drag/scroll only"),
     assert: assertSchema.optional().describe("act steps: final check; test_step uses top-level visible/hidden, never assert"),
@@ -416,13 +417,13 @@ export const uiTool = tool({
     hidden: selectorSchema.optional(),
     timeout_ms: z.number().int().min(100).max(120000).optional(),
     interactive: z.boolean().optional().describe("observe/tree: interactive/labelled only (default true)"),
-    bundle: z.string().optional().describe("observe/tree/layout: filter app; test_start: tested app; perf: app memory"),
+    bundle: z.string().optional().describe("observe/tree/layout/test_start/perf: app bundle"),
     format: z.enum(["jpeg", "png"]).optional(),
     width: z.number().int().min(240).max(2560).optional(),
     limit: z.number().int().min(1).max(2000).optional(),
     repeat: z.number().int().min(1).max(20).optional().describe("perf: number of up+down fling pairs (default 3)"),
-    name: z.string().optional().describe("visual: baseline name, e.g. gif-page"),
-    update: z.boolean().optional().describe("visual: replace baseline with current screen"),
+    name: z.string().optional().describe("visual: baseline; record_archive: exact pending filename"),
+    update: z.boolean().optional().describe("visual: replace baseline"),
     threshold: z.number().int().min(1).max(64).optional().describe("visual: gray difference per block (default 8)"),
     forms: z.array(z.enum(["foldable", "widefold", "triplefold"])).min(1).max(3).optional().describe("layout: emulator forms to check (job)"),
     then_flow: z.string().optional().describe("layout forms: ui_flow without required variables"),
@@ -444,6 +445,7 @@ export const uiTool = tool({
       visual: ["target", "project", "name", "update", "threshold"],
       layout: ["target", "project", "bundle", "forms", "then_flow", "keep_running", "request_key", "wait"],
       record_start: ["target"], record_status: ["target"], record_stop: ["target", "discard", "external", "save_path"],
+      record_receipts: ["target"], record_archive: ["target", "name", "reason"], record_restore: ["receipt_id"],
       test_start: ["target", "plan", "project", "bundle", "fresh_start"],
       test_step: [...act, "test_id", "description", "visible", "hidden", "timeout_ms"],
       review: ["target", "test_id", "requirement", "outcome", "reason", "review_id"],
@@ -457,6 +459,15 @@ export const uiTool = tool({
     const { resolveTarget } = await import("../domains/device.js");
     const ui = await import("../domains/ui.js");
     const uitest = () => import("../domains/uitest.js");
+    if (input.action === "record_receipts") return ui.recordingReceipts(input.target);
+    if (input.action === "record_archive") {
+      invariant(input.target && input.name, "INVALID_INPUT", "record_archive needs literal target and exact pending filename in name");
+      return ui.archiveRecording(input.target, input.name, input.reason);
+    }
+    if (input.action === "record_restore") {
+      invariant(input.receipt_id, "INVALID_INPUT", "record_restore needs receipt_id");
+      return ui.restoreRecording(input.receipt_id);
+    }
     // Test log/finish/export work from stored state and must not require a connected device.
     if (input.action === "test_log" || input.action === "test_finish" || input.action === "test_export") {
       invariant(input.test_id, "INVALID_INPUT", "test_id is required");
@@ -824,7 +835,7 @@ export const knowledgeTool = tool({
       case "status": return kb.status(input.check ?? true, ctx.signal);
       case "update":
         // Downloads can take minutes on slow networks: run as a job and return early.
-        return input.check ? kb.status(true, ctx.signal) : startAndWait("kb_update", { version: input.version, source: input.file, force: input.force }, undefined, input.limit ?? 20000);
+        return input.check ? kb.status(true, ctx.signal, { source: input.file, version: input.version }) : startAndWait("kb_update", { version: input.version, source: input.file, force: input.force }, undefined, input.limit ?? 20000);
       case "rollback": return kb.rollback();
     }
   },

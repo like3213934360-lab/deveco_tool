@@ -1,5 +1,8 @@
 import { act, type Action } from "./ui.js";
 import { shell } from "./device.js";
+import { setTimeout as delay } from "node:timers/promises";
+import { saveArtifact } from "../core/artifacts.js";
+import { errorResult } from "../core/errors.js";
 
 /*
  * Scroll performance check. Data sources verified on a Pura 80 Pro (API 26):
@@ -66,18 +69,26 @@ export function perfVerdict(stats: NonNullable<ReturnType<typeof frameStats>>) {
 export const parseSpFps = (text: string) => [...text.matchAll(/fps:(\d+)\|(\d+)/g)].map((m) => ({ fps: Number(m[1]), at: Number(m[2]) }));
 export const parsePss = (text: string) => { const v = /^order:\d+\s+pss=(\d+)/m.exec(text)?.[1]; return v ? Number(v) : undefined; };
 
-// One command string: hdc only keeps the quoted "composer fps" argument together that way (verified).
-async function composer(target: string, signal?: AbortSignal) {
-  return parseComposerFps((await shell(target, ["hidumper -s RenderService -a 'composer fps'"], signal, 15000)).stdout);
+interface Capture {
+  command: string[];
+  code?: number | null;
+  stdout?: string;
+  stderr?: string;
+  truncated?: boolean;
+  elapsed_ms?: number;
+  error?: ReturnType<typeof errorResult>;
 }
-async function refreshRate(target: string, signal?: AbortSignal) {
-  const out = (await shell(target, ["SP_daemon", "-N", "1", "-f"], signal, 15000).catch(() => undefined))?.stdout ?? "";
-  const hz = Number(/refreshrate=(\d+)/.exec(out)?.[1]);
-  return hz > 0 ? hz : undefined;
-}
-async function pss(target: string, bundle: string | undefined, signal?: AbortSignal) {
-  if (!bundle || !/^[\w.]+$/.test(bundle)) return undefined;
-  return parsePss((await shell(target, ["SP_daemon", "-N", "1", "-PKG", bundle, "-r"], signal, 20000).catch(() => undefined))?.stdout ?? "");
+
+/** Classify command evidence, without guessing why the screen did or did not animate. */
+export function perfCommandFailure(result: Capture) {
+  if (result.error) return result.error.code === "TIMEOUT" ? "timeout" : "command_error";
+  if (result.truncated) return "output_truncated";
+  const text = (result.stdout ?? "") + (result.stderr ?? "");
+  if (/permission denied|not permitted|access denied/i.test(text)) return "permission_denied";
+  if (/command not found|not found.*(?:SP_daemon|hidumper)|unknown (?:command|option)|unsupported|not supported/i.test(text)) return "unsupported_command";
+  if (result.code !== 0 || /\[fail\]|\berror\b/i.test(text)) return "command_failed";
+  if (!text.trim()) return "empty_output";
+  return undefined;
 }
 
 export interface PerfOptions {
@@ -88,7 +99,7 @@ export interface PerfOptions {
   screen?: { w: number; h: number };
 }
 
-/** Clear, run the gestures while polling frame times, then summarise. */
+/** Sample composer and profiler concurrently over one gesture run; retain raw command evidence. */
 export async function measureScroll(target: string, options: PerfOptions, signal: AbortSignal) {
   const w = options.screen?.w ?? 1080, h = options.screen?.h ?? 2400;
   const x = Math.round(w / 2), top = Math.round(h * 0.3), bottom = Math.round(h * 0.75);
@@ -96,31 +107,93 @@ export async function measureScroll(target: string, options: PerfOptions, signal
     { action: "swipe", x, y: bottom, x2: x, y2: top, speed: 3000 } as Action,
     { action: "swipe", x, y: top, x2: x, y2: bottom, speed: 3000 } as Action,
   ]).flat();
-  const memBefore = await pss(target, options.bundle, signal);
-  const hz = await refreshRate(target, signal);
-  await shell(target, ["hidumper -s RenderService -a 'composer fpsClear'"], signal, 10000).catch(() => undefined);
-  const series: number[][] = [];
-  const started = Date.now();
-  let lastPoll = Date.now();
-  for (const g of gestures) {
-    signal.throwIfAborted();
-    await act(target, g, signal);
-    // The composer keeps a bounded window: poll often enough not to lose frames between reads.
-    if (Date.now() - lastPoll > 1500) { series.push(await composer(target, signal)); lastPoll = Date.now(); }
-  }
-  await new Promise((r) => setTimeout(r, 600)); // let the last fling settle
-  series.push(await composer(target, signal));
-  const stats = frameStats(mergeFrames(...series), hz);
-  const memAfter = await pss(target, options.bundle, signal);
-  const memory = memBefore !== undefined && memAfter !== undefined ? { pss_kb_before: memBefore, pss_kb_after: memAfter, delta_kb: memAfter - memBefore } : undefined;
-  if (stats) return { source: "composer", gestures: gestures.length, elapsed_ms: Date.now() - started, verdict: perfVerdict(stats), ...stats, ...(memory ? { memory } : {}) };
-  // Fallback: per-second fps while repeating the gestures once more.
-  const sampler = shell(target, ["SP_daemon", "-profilerfps", String(Math.max(3, gestures.length))], signal, 60000);
-  for (const g of gestures) await act(target, g, signal);
-  const samples = parseSpFps((await sampler).stdout).filter((s) => s.fps > 0);
-  return {
-    source: "profilerfps", gestures: gestures.length, elapsed_ms: Date.now() - started,
-    ...(samples.length ? { avg_fps: +(samples.reduce((s, x) => s + x.fps, 0) / samples.length).toFixed(1), min_fps: Math.min(...samples.map((s) => s.fps)), samples: samples.length } : { note: "No frame data: the screen did not animate (nothing scrollable at the centre?)" }),
-    ...(memory ? { memory } : {}),
+  const captures: Capture[] = [];
+  const capture = async (command: string[], timeoutMs: number, commandSignal = signal) => {
+    let result: Capture;
+    try {
+      const output = await shell(target, command, commandSignal, timeoutMs);
+      result = { command, code: output.code, stdout: output.stdout, stderr: output.stderr, truncated: output.truncated, elapsed_ms: output.elapsedMs };
+    } catch (error) {
+      signal.throwIfAborted();
+      result = { command, error: errorResult(error) };
+    }
+    captures.push(result);
+    return result;
   };
+  const readPss = async () => {
+    if (!options.bundle || !/^[\w.]+$/.test(options.bundle)) return undefined;
+    const result = await capture(["SP_daemon", "-N", "1", "-PKG", options.bundle, "-r"], 20000);
+    return perfCommandFailure(result) ? undefined : parsePss(result.stdout ?? "");
+  };
+  const memBefore = await readPss();
+  const refresh = await capture(["SP_daemon", "-N", "1", "-f"], 15000);
+  const reportedHz = Number(/refreshrate=(\d+)/.exec(refresh.stdout ?? "")?.[1]);
+  const hz = !perfCommandFailure(refresh) && reportedHz > 0 ? reportedHz : undefined;
+  const cleared = await capture(["hidumper -s RenderService -a 'composer fpsClear'"], 10000);
+  const clearFailed = !!cleared.error || cleared.code !== 0 || /\[fail\]|\berror\b|not supported|permission denied/i.test((cleared.stdout ?? "") + (cleared.stderr ?? ""));
+  const series: number[][] = [], dumps: Capture[] = [];
+  const sampleComposer = async () => {
+    const result = await capture(["hidumper -s RenderService -a 'composer fps'"], 15000);
+    dumps.push(result);
+    if (!clearFailed && !perfCommandFailure(result)) series.push(parseComposerFps(result.stdout ?? ""));
+  };
+  const started = Date.now();
+  const controller = new AbortController();
+  const samplerSignal = AbortSignal.any([signal, controller.signal]);
+  // Attach rejection handling immediately: gesture failures must not leave a sampler running.
+  let collecting = true;
+  const sampler = (async () => {
+    const results: Capture[] = [];
+    do {
+      const since = Date.now();
+      const result = await capture(["SP_daemon", "-profilerfps", "1"], 15000, samplerSignal);
+      results.push(result);
+      if (perfCommandFailure(result) || !collecting) break; // never retry a failed/unsupported command
+      // Bound polling even if a device returns immediately; avoid a busy loop.
+      if (Date.now() - since < 900) await delay(900 - (Date.now() - since), undefined, { signal: samplerSignal });
+    } while (collecting);
+    return results;
+  })();
+  void sampler.catch(() => undefined); // handled even if caller cancellation arrives during an action
+  let profiler: Capture[];
+  try {
+    let lastPoll = Date.now();
+    for (const g of gestures) {
+      signal.throwIfAborted();
+      await act(target, g, signal);
+      if (Date.now() - lastPoll > 1500) { await sampleComposer(); lastPoll = Date.now(); }
+    }
+    await delay(600, undefined, { signal });
+    await sampleComposer();
+    collecting = false;
+    profiler = await sampler;
+  } finally {
+    collecting = false;
+    controller.abort();
+    await sampler.catch(() => undefined);
+  }
+  signal.throwIfAborted();
+  const frames = mergeFrames(...series);
+  const stats = frameStats(frames, hz);
+  const memAfter = await readPss();
+  const memory = memBefore !== undefined && memAfter !== undefined ? { pss_kb_before: memBefore, pss_kb_after: memAfter, delta_kb: memAfter - memBefore } : undefined;
+  const allSamples = profiler.flatMap((result) => parseSpFps(result.stdout ?? ""));
+  const samples = profiler.filter((result) => !perfCommandFailure(result)).flatMap((result) => parseSpFps(result.stdout ?? "")).filter((s) => s.fps > 0);
+  const profilerFailure = profiler.map(perfCommandFailure).find(Boolean);
+  const zeroRecords = dumps.reduce((sum, dump) => sum + [...(dump.stdout ?? "").matchAll(/^\s*0\s*$/gm)].length, 0);
+  const diagnostics = {
+    composer: { polls: dumps.length, timestamps: frames.length, zero_records: zeroRecords, reason: stats ? undefined : clearFailed ? "clear_failed" : dumps.map(perfCommandFailure).find(Boolean) ?? (frames.length ? "insufficient_frame_intervals" : zeroRecords ? "all_zero_timestamps" : "no_frame_timestamps") },
+    profilerfps: { polls: profiler.length, valid_samples: samples.length, zero_samples: allSamples.filter((s) => s.fps === 0).length, total_samples: allSamples.length,
+      reason: samples.length ? undefined : profilerFailure ?? (allSamples.length ? "all_zero_samples" : "unrecognized_output") },
+  };
+  const artifact = await saveArtifact(JSON.stringify({ target, started_at: new Date(started).toISOString(), gestures, captures, diagnostics }, null, 2), "application/json");
+  const common = { gestures: gestures.length, elapsed_ms: Date.now() - started, diagnostics, diagnostic_artifact: artifact.artifact_id, ...(memory ? { memory } : {}) };
+  if (stats) return { source: "composer", verdict: perfVerdict(stats), ...stats, ...common };
+  if (samples.length) return {
+    source: "profilerfps", verdict: "fps_only", avg_fps: +(samples.reduce((s, x) => s + x.fps, 0) / samples.length).toFixed(1),
+    min_fps: Math.min(...samples.map((s) => s.fps)), samples: samples.length, ...common,
+    note: "Per-second positive FPS samples only (zero samples reported separately); no per-frame jank verdict is available",
+  };
+  return { source: "none", verdict: "inconclusive", ...common,
+    note: "No valid frame data. This does not prove the screen was idle or the emulator is unsupported. Read diagnostic_artifact for stdout/stderr/exit codes and inspect the gesture target and device profiling capabilities" };
 }

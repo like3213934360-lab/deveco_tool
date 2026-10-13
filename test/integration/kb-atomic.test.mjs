@@ -8,11 +8,14 @@ import { after, test } from "node:test";
 import { pathToFileURL } from "node:url";
 import { build } from "esbuild";
 
-const root = path.resolve(import.meta.dirname, "../.."), work = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-kba-"));
+const root = path.resolve(import.meta.dirname, "../.."), work = fs.mkdtempSync(path.join(process.env.PI_SCRATCH_DIR || os.tmpdir(), "deveco-kba-"));
 process.env.DEVECO_STATE_DIR = path.join(work, "state"); process.env.DEVECO_CONFIG = path.join(work, "config.json"); fs.writeFileSync(process.env.DEVECO_CONFIG, "{}");
 const fixture = globalThis.__devecoKbAtomic = { fail: false };
-const bundle = path.join(root, "node_modules/.cache/deveco-kb-atomic.mjs");
-await build({ entryPoints: [path.join(root, "src/domains/knowledge.ts")], outfile: bundle, bundle: true, format: "esm", platform: "node", packages: "external", logLevel: "error", plugins: [{ name: "rename-fault", setup(b) {
+const bundle = path.join(work, "knowledge.mjs");
+await build({ entryPoints: [path.join(root, "src/domains/knowledge.ts")], outfile: bundle, bundle: true, format: "esm", platform: "node", logLevel: "error",
+  define: { "import.meta.url": JSON.stringify(pathToFileURL(path.join(root, "src/core/config.ts")).href) },
+  banner: { js: `import {createRequire as testRequire} from "node:module"; const require = testRequire(${JSON.stringify(path.join(root, "package.json"))});` },
+  plugins: [{ name: "rename-fault", setup(b) {
   b.onResolve({ filter: /^node:fs$/ }, (a) => /(?:files|knowledge)\.ts$/.test(a.importer) ? { path: "fs", namespace: "fault" } : undefined);
   b.onLoad({ filter: /.*/, namespace: "fault" }, () => ({ contents: `import fs from 'node:fs';export default {...fs,renameSync:(a,b)=>{if(globalThis.__devecoKbAtomic.fail&&b.endsWith('current.json'))throw new Error('injected pointer failure');return fs.renameSync(a,b)}};` }));
 } }] });

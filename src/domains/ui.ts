@@ -654,7 +654,75 @@ export async function saveTree(nodes: UiNode[]) {
 // start with a CustomizedFileName, stop by toggling again, then export via mediatool.
 const RECORDER_BUNDLE = "com.huawei.hmos.screenrecorder";
 const RECORDER = ["-b", RECORDER_BUNDLE, "-a", `${RECORDER_BUNDLE}.ServiceExtAbility`];
-interface Recording { name: string; started: number; recorder?: string; stopping?: boolean }
+interface RecordingIdentity { kind: "device" | "emulator"; id: string; name?: string }
+interface Recording { name: string; started: number; recorder?: string; stopping?: boolean; identity?: RecordingIdentity }
+
+// A loopback HDC key is a transport address, not the identity of an emulator instance.
+async function recordingIdentity(target: string, signal?: AbortSignal): Promise<RecordingIdentity> {
+  const result = await shell(target, ["param", "get", "ohos.qemu.hvd.name"], signal, 8000);
+  invariant(result.code === 0, "UI_RECORD_FAILED", "Cannot identify recording target", { output: result.stdout + result.stderr });
+  const name = result.stdout.trim();
+  if (!name || /not found|not exist|invalid|fail|error/i.test(name)) {
+    invariant(!/^(?:127\.0\.0\.1|localhost|\[::1\]):/.test(target), "UI_RECORD_FAILED", "Emulator identity is unavailable; recording was not toggled");
+    return { kind: "device", id: target };
+  }
+  const { run } = await import("../core/proc.js");
+  const { toolCommand } = await import("../core/toolchain.js");
+  const listed = await run(toolCommand("emulator", ["-list", "-details"]), { signal, timeoutMs: 30000 });
+  let entries: { name?: string; uuid?: string }[];
+  try { entries = JSON.parse(listed.stdout); }
+  catch { throw new ToolError("UI_RECORD_FAILED", "Cannot read emulator UUID; recording was not toggled", { output: listed.stdout + listed.stderr }); }
+  invariant(Array.isArray(entries), "UI_RECORD_FAILED", "Emulator identity list is invalid");
+  const matches = entries.filter((e) => e.name === name && e.uuid);
+  invariant(matches.length === 1, "UI_RECORD_FAILED", "Cannot uniquely identify the emulator instance", { target, name });
+  return { kind: "emulator", id: matches[0]!.uuid!, name };
+}
+function sameRecordingIdentity(saved: RecordingIdentity | undefined, actual: RecordingIdentity) {
+  return !!saved && saved.kind === actual.kind && saved.id === actual.id;
+}
+
+/** List complete pending and archived receipts without resolving or contacting any device. */
+export async function recordingReceipts(target?: string) {
+  const { kvEntries } = await import("../core/db.js");
+  const pending = (await kvEntries("screenrecord:")).map(({ key, value }) => ({ target: key.slice("screenrecord:".length), receipt: JSON.parse(value) as Recording, raw: value }));
+  const archived = (await kvEntries("screenrecord-archive:")).map(({ key, value }) => ({ receipt_id: key.slice("screenrecord-archive:".length), ...JSON.parse(value) }));
+  return { pending: pending.filter((r) => !target || r.target === target), archived: archived.filter((r) => !target || r.target === target), note: "Offline receipts only; no recorder or video state is verified" };
+}
+
+/** Atomically preserve an exact receipt and release its transport slot, without device I/O. */
+export async function archiveRecording(target: string, expectedFile: string, reason?: string) {
+  const { database } = await import("../core/db.js");
+  const db = await database(), key = `screenrecord:${target}`;
+  const receipt_id = crypto.randomUUID();
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    const row = db.prepare("SELECT value FROM kv WHERE key=?").get(key) as { value: string } | undefined;
+    invariant(row, "NOT_FOUND", "No pending receipt at this target");
+    invariant((JSON.parse(row.value) as Recording).name === expectedFile, "CONFLICT", "Receipt changed; list record_receipts and confirm its name");
+    const archived = { target, raw: row.value, receipt: JSON.parse(row.value), archived_at: new Date().toISOString(), reason };
+    db.prepare("INSERT INTO kv(key,value) VALUES(?,?)").run(`screenrecord-archive:${receipt_id}`, JSON.stringify(archived));
+    db.prepare("DELETE FROM kv WHERE key=? AND value=?").run(key, row.value);
+    db.exec("COMMIT");
+    return { receipt_id, ...archived, note: "Receipt archived offline; no device recording was stopped and no video was deleted" };
+  } catch (error) { db.exec("ROLLBACK"); throw error; }
+}
+
+/** Restore only into an empty slot. This never rebinds identity or toggles a recorder. */
+export async function restoreRecording(receiptId: string) {
+  const { database } = await import("../core/db.js");
+  const db = await database(), key = `screenrecord-archive:${receiptId}`;
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    const row = db.prepare("SELECT value FROM kv WHERE key=?").get(key) as { value: string } | undefined;
+    invariant(row, "NOT_FOUND", "Archived recording receipt not found");
+    const archived = JSON.parse(row.value) as { target: string; raw: string };
+    const restored = db.prepare("INSERT INTO kv(key,value) VALUES(?,?) ON CONFLICT(key) DO NOTHING").run(`screenrecord:${archived.target}`, archived.raw);
+    invariant(restored.changes === 1, "CONFLICT", "Target already has a pending receipt; archive was retained");
+    db.prepare("DELETE FROM kv WHERE key=? AND value=?").run(key, row.value);
+    db.exec("COMMIT");
+    return { restored: true, target: archived.target, receipt: JSON.parse(archived.raw), note: "Restored offline. Identity must match before record_stop; legacy unbound receipts cannot be used to toggle a device" };
+  } catch (error) { db.exec("ROLLBACK"); throw error; }
+}
 
 // Session state lives in SQLite so a restarted server can still stop/retrieve a recording.
 async function session(target: string): Promise<Recording | undefined> {
@@ -664,7 +732,10 @@ async function session(target: string): Promise<Recording | undefined> {
 }
 async function setSession(target: string, value: Recording | undefined, expectedName?: string) {
   const { kvSet, database } = await import("../core/db.js");
-  if (value) await kvSet(`screenrecord:${target}`, JSON.stringify(value));
+  if (value && expectedName) {
+    const updated = (await database()).prepare("UPDATE kv SET value=? WHERE key=? AND json_extract(value,'$.name')=?").run(JSON.stringify(value), `screenrecord:${target}`, expectedName);
+    invariant(updated.changes === 1, "CONFLICT", "Recording receipt changed during start; it was not overwritten");
+  } else if (value) await kvSet(`screenrecord:${target}`, JSON.stringify(value));
   else (await database()).prepare("DELETE FROM kv WHERE key=? AND json_extract(value,'$.name')=?").run(`screenrecord:${target}`, expectedName!);
 }
 
@@ -710,7 +781,13 @@ async function waitRecorderIdle(target: string, timeoutMs: number, signal?: Abor
 }
 
 export async function recordingStatus(target: string, signal?: AbortSignal) {
-  const [active, current] = await Promise.all([recorderActive(target, signal), session(target)]);
+  const current = await session(target);
+  const identity = await recordingIdentity(target, signal);
+  if (current && !sameRecordingIdentity(current.identity, identity)) return {
+    status: "identity_mismatch", file: current.name, saved_identity: current.identity, actual_identity: identity,
+    note: "Pending receipt belongs to another or unknown identity. Use record_receipts then record_archive offline; no recorder was queried or toggled",
+  };
+  const active = await recorderActive(target, signal);
   const status = active ? (current?.recorder === active ? "recording" : "busy") : "idle";
   return {
     status,
@@ -722,10 +799,11 @@ export async function recordingStatus(target: string, signal?: AbortSignal) {
 }
 
 export async function startRecording(target: string, signal?: AbortSignal) {
-  invariant(!(await session(target)), "CONFLICT", "This server already owns a recording or pending export", undefined, "Use record_stop to retrieve it, or discard=true before starting another recording");
+  invariant(!(await session(target)), "CONFLICT", "This server already owns a recording or pending export", undefined, "Use record_stop on the same identity, or record_receipts then record_archive offline to preserve and release the receipt");
+  const identity = await recordingIdentity(target, signal);
   invariant(await waitRecorderIdle(target, 6000, signal), "CONFLICT", "Screen recorder is busy", undefined, "Stop an external recording explicitly with record_stop external=true");
   const name = `devecomcp-${Date.now()}-${crypto.randomBytes(2).toString("hex")}.mp4`;
-  const current: Recording = { name, started: Date.now() };
+  const current: Recording = { name, started: Date.now(), identity };
   // Persist intent before the toggle, so interruption cannot lose the pending recording.
   const { database } = await import("../core/db.js");
   const claimed = (await database()).prepare("INSERT INTO kv(key,value) VALUES(?,?) ON CONFLICT(key) DO NOTHING").run(`screenrecord:${target}`, JSON.stringify(current));
@@ -739,7 +817,7 @@ export async function startRecording(target: string, signal?: AbortSignal) {
   while (Date.now() < deadline) {
     const recorder = await recorderActive(target, signal, true);
     if (recorder) {
-      await setSession(target, { ...current, recorder });
+      await setSession(target, { ...current, recorder }, current.name);
       return { recording: true, file: name, note: "Recorder service active; encoded video is unverified until record_stop retrieves and validates the MP4" };
     }
     await delay(250, undefined, { signal });
@@ -750,6 +828,10 @@ export async function startRecording(target: string, signal?: AbortSignal) {
 
 export async function stopRecording(target: string, options: { discard?: boolean; external?: boolean; save_path?: string } = {}, signal?: AbortSignal) {
   const current = await session(target);
+  if (current) {
+    const identity = await recordingIdentity(target, signal);
+    invariant(sameRecordingIdentity(current.identity, identity), "CONFLICT", "Recording target identity does not match the saved receipt; recorder was not toggled", { saved_identity: current.identity, actual_identity: identity, file: current.name }, "List record_receipts and archive the old receipt offline; do not stop a reused emulator port");
+  }
   const active = await recorderActive(target, signal);
   if (!current) {
     invariant(options.external, "NOT_FOUND", "No recording started by this server on this device", undefined,

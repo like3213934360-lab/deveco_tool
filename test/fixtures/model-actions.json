@@ -72,5 +72,8 @@
   {"id":"emu-license","goal":"用户已经阅读并明确授权接受模拟器许可协议。","expect":[{"tool":"emulator","arguments":{"action":"license"}}]},
   {"id":"emu-license-view","goal":"读取模拟器许可协议的正文。","expect":[{"tool":"emulator","arguments":{"action":"license_view"}}]},
   {"id":"patch-reset","goal":"移除 device-1 上 /workspace/Demo 已安装的手动热修复补丁。","expect":[{"tool":"hot_reload","arguments":{"action":"reset","project":"/workspace/Demo","target":"device-1"}}]},
-  {"id":"patch-stop-daemon","goal":"只停止 /workspace/Demo 的 hvigor 守护进程。","expect":[{"tool":"hot_reload","arguments":{"action":"stop_daemon","project":"/workspace/Demo"}}]}
+  {"id":"patch-stop-daemon","goal":"只停止 /workspace/Demo 的 hvigor 守护进程。","expect":[{"tool":"hot_reload","arguments":{"action":"stop_daemon","project":"/workspace/Demo"}}]},
+  {"id":"ui-record-receipts","expect":[{"tool":"ui","arguments":{"action":"record_receipts"}}],"goal":"离线列出所有待导出与归档录屏回执，不连接设备。"},
+  {"id":"ui-record-archive","expect":[{"tool":"ui","arguments":{"action":"record_archive","target":"127.0.0.1:5555","name":"old.mp4","reason":"old emulator"}}],"goal":"离线归档端口127.0.0.1:5555 的 old.mp4 回执，保留视频，不操作设备。"},
+  {"id":"ui-record-restore","expect":[{"tool":"ui","arguments":{"action":"record_restore","receipt_id":"receipt-example"}}],"goal":"离线恢复录屏归档回执 receipt-example，不认领设备身份或停止录屏。"}
 ]

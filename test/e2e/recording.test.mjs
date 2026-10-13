@@ -17,6 +17,18 @@ test("system recording exports actual frames and decodes without errors", async 
     assert.equal(before.status, "idle"); assert.equal(before.file, undefined, "Resolve the existing recording explicitly before a fresh trial");
     const started = await call("ui", { action: "record_start", target });
     assert.equal(started.recording, true);
+    const listed = await call("ui", { action: "record_receipts", target });
+    assert.equal(listed.pending.length, 1);
+    const pending = listed.pending[0];
+    assert.equal(pending.receipt.name, started.file);
+    assert.ok(pending.receipt.identity?.id, "Fresh recordings must bind a target identity");
+    const archived = await call("ui", { action: "record_archive", target, name: started.file, reason: "Explicit recording receipt round trip" });
+    assert.equal(archived.raw, pending.raw);
+    assert.equal((await call("ui", { action: "record_status", target })).status, "busy", "Archiving a receipt must not stop the recorder");
+    const restored = await call("ui", { action: "record_restore", receipt_id: archived.receipt_id });
+    assert.equal(restored.restored, true);
+    assert.equal((await call("ui", { action: "record_receipts", target })).pending[0].raw, pending.raw);
+    receipt("recording-receipt.json", { identity: pending.receipt.identity, original_raw: pending.raw, restored });
     const status = await call("ui", { action: "record_status", target });
     assert.equal(status.status, "recording"); assert.equal(status.file, started.file);
     await delay(2500);

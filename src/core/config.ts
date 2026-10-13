@@ -36,6 +36,8 @@ const configSchema = z
     auto_accept_ui_agreements: z.boolean().default(true),
     auto_complete_ui_onboarding: z.boolean().default(true),
     kb_package: z.string().default("@deveco-mcp/kb"),
+    kb_source: z.enum(["upstream", "pack"]).default("upstream"),
+    kb_upstream_tag: z.enum(["latest", "daily"]).default("latest"),
     kb_upstream_package: z.string().default("@deveco-test/deveco-cli-knowledgebase"),
     npm_registry: z.string().url().default("https://registry.npmjs.org"),
   })
@@ -47,7 +49,11 @@ export function config(): Config {
   if (cached) return cached;
   const file = process.env.DEVECO_CONFIG;
   const raw = file && fs.existsSync(file) ? readJson5(file) : {};
-  cached = configSchema.parse(raw);
+  // Preserve explicitly configured private pack sources unless the user selects upstream.
+  // Keep invalid non-object configuration inputs subject to the schema rather than spreading them.
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return configSchema.parse(raw);
+  const input = raw as Record<string, unknown>;
+  cached = configSchema.parse({ ...input, ...(input.kb_source === undefined && typeof input.kb_package === "string" && input.kb_package !== "@deveco-mcp/kb" ? { kb_source: "pack" } : {}) });
   return cached;
 }
 export function resetConfig() {

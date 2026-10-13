@@ -54,7 +54,8 @@ function kbRoot() {
 function readManifest(dir: string): Manifest | undefined {
   try {
     const manifest = JSON.parse(fs.readFileSync(path.join(dir, "manifest.json"), "utf8")) as Manifest;
-    return manifest.schema === KB_SCHEMA && fs.existsSync(path.join(dir, "index.db")) ? manifest : undefined;
+    return manifest.schema === KB_SCHEMA && typeof manifest.version === "string" && typeof manifest.created_at === "string"
+      && record(manifest.sources) && fs.statSync(path.join(dir, "index.db")).isFile() ? manifest : undefined;
   } catch {
     return undefined;
   }
@@ -321,45 +322,147 @@ export async function catalog() {
 
 /* --------------------------------- update --------------------------------- */
 
-async function registryMeta(name: string, signal?: AbortSignal) {
+// The upstream archive API is independent of our converted pack schema.
+export const UPSTREAM_API_VERSION = 1;
+type RemoteEntry = { version?: string; apiVersion?: number; kbSchema?: number; dist: { tarball: string; integrity: string } };
+type RegistryMeta = { "dist-tags": Record<string, string>; versions: Record<string, RemoteEntry> };
+export type UpdateOptions = { version?: string; source?: string; force?: boolean };
+
+function record(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+async function registryMeta(name: string, signal?: AbortSignal): Promise<RegistryMeta> {
   const url = `${config().npm_registry.replace(/\/$/, "")}/${name.replace("/", "%2F")}`;
-  const response = await fetch(url, { signal: AbortSignal.any([AbortSignal.timeout(20000), ...(signal ? [signal] : [])]), headers: { accept: "application/vnd.npm.install-v1+json" } });
-  invariant(response.ok, "HTTP_ERROR", `Registry returned ${response.status} for ${name}`, undefined,
-    response.status === 404 ? `Package ${name} is not published in this registry. Use knowledge action=update file=upstream to build from the configured Huawei docs package, or file=<verified local tarball>; the installed pack is preserved.` : "Check network access or set npm_registry in the config");
-  return (await response.json()) as { "dist-tags": Record<string, string>; versions: Record<string, { dist: { tarball: string; integrity: string }; kbSchema?: number }> };
+  // Full metadata includes custom apiVersion/kbSchema fields, unlike abbreviated install metadata.
+  const response = await fetch(url, { signal: AbortSignal.any([AbortSignal.timeout(20000), ...(signal ? [signal] : [])]), headers: { accept: "application/json" } });
+  invariant(response.ok, "HTTP_ERROR", `Registry returned ${response.status} for ${name}`, undefined, "Check network access or set npm_registry in the config");
+  const meta: unknown = await response.json();
+  invariant(record(meta) && record(meta["dist-tags"]) && record(meta.versions), "INVALID_INPUT", `Invalid registry metadata for ${name}`);
+  return meta as RegistryMeta;
 }
 
-export async function status(checkRemote = false, signal?: AbortSignal) {
-  const pack = activePack();
-  const local = pack ? { version: pack.manifest.version, origin: pack.origin, created_at: pack.manifest.created_at, sdk_api_range: pack.manifest.sdk_api_range, counts: pack.manifest.counts } : null;
-  if (!checkRemote) return { installed: local };
-  try {
-    const meta = await registryMeta(config().kb_package, signal);
-    const latest = meta["dist-tags"].latest;
-    return { installed: local, latest, update_available: !!latest && latest !== local?.version };
-  } catch (error) {
-    signal?.throwIfAborted();
-    return { installed: local, latest: null, remote_error: (error as Error).message, ...((error as ToolError).hint ? { hint: (error as ToolError).hint } : {}) };
+const semver = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/;
+function versionParts(version: string) {
+  const match = typeof version === "string" ? semver.exec(version) : null;
+  invariant(match && !(match[4]?.split(".").some((p) => /^0\d+$/.test(p))), "INVALID_INPUT", `Invalid registry version ${version}`);
+  const core = match.slice(1, 4).map(Number);
+  invariant(core.every(Number.isSafeInteger), "INVALID_INPUT", `Invalid registry version ${version}`);
+  return { core, pre: match[4]?.split(".") };
+}
+function compareVersions(a: string, b: string) {
+  const x = versionParts(a), y = versionParts(b);
+  for (let i = 0; i < 3; i++) if (x.core[i] !== y.core[i]) return x.core[i]! > y.core[i]! ? 1 : -1;
+  if (!x.pre || !y.pre) return x.pre ? -1 : y.pre ? 1 : 0;
+  for (let i = 0; i < Math.max(x.pre.length, y.pre.length); i++) {
+    const p = x.pre[i], q = y.pre[i];
+    if (p === q) continue;
+    if (p === undefined || q === undefined) return p === undefined ? -1 : 1;
+    const pn = /^\d+$/.test(p), qn = /^\d+$/.test(q);
+    if (pn && qn) return BigInt(p) > BigInt(q) ? 1 : -1;
+    if (pn !== qn) return pn ? -1 : 1;
+    return p > q ? 1 : -1;
   }
+  return 0;
+}
+function validateEntry(meta: RegistryMeta, version: string): RemoteEntry {
+  versionParts(version);
+  const entry = meta.versions[version];
+  invariant(record(entry), "NOT_FOUND", `Knowledge version ${version} not found`);
+  invariant(entry.version === undefined || entry.version === version, "INVALID_INPUT", `Registry version mismatch for ${version}`);
+  invariant(record(entry.dist) && typeof entry.dist.tarball === "string" && /^https?:\/\//.test(entry.dist.tarball)
+    && typeof entry.dist.integrity === "string" && /^sha512-[A-Za-z0-9+/]{86}==$/.test(entry.dist.integrity), "INVALID_INPUT", `Missing or invalid SHA512 dist metadata for ${version}`);
+  try { new URL(entry.dist.tarball); } catch { throw new ToolError("INVALID_INPUT", `Invalid tarball URL for ${version}`); }
+  return entry;
+}
+function sourceKind(options: UpdateOptions): "upstream" | "pack" | "file" {
+  if (options.source === "upstream" || options.source === "pack") return options.source;
+  if (options.source !== undefined) return "file";
+  return config().kb_source;
+}
+async function resolveRemote(options: UpdateOptions, signal?: AbortSignal) {
+  if (options.version !== undefined) versionParts(options.version);
+  const source = sourceKind(options);
+  invariant(source !== "file", "INVALID_INPUT", "Check-only supports registry sources (upstream or pack), not local tarballs or URLs; omit check to install the supplied file");
+  const name = source === "upstream" ? config().kb_upstream_package : config().kb_package;
+  const tag = source === "upstream" ? config().kb_upstream_tag : "latest";
+  const meta = await registryMeta(name, signal);
+  const latest = meta["dist-tags"][tag];
+  invariant(typeof latest === "string" && latest.length, "INVALID_INPUT", `Registry has no ${tag} tag for ${name}`);
+  const tagged = validateEntry(meta, latest);
+  let version = options.version ?? latest;
+  let entry = options.version ? validateEntry(meta, version) : tagged;
+  const compatible = (candidate: RemoteEntry) => {
+    if (source === "pack") {
+      invariant(candidate.kbSchema === undefined || Number.isInteger(candidate.kbSchema), "INVALID_INPUT", "Invalid kbSchema metadata");
+      return (candidate.kbSchema ?? KB_SCHEMA) === KB_SCHEMA;
+    }
+    invariant(Number.isInteger(candidate.apiVersion) && candidate.apiVersion! >= 1, "INVALID_INPUT", "Upstream metadata must declare a positive apiVersion");
+    return candidate.apiVersion === UPSTREAM_API_VERSION;
+  };
+  const taggedCompatible = compatible(tagged);
+  if (!compatible(entry)) {
+    invariant(!options.version && source === "upstream", "INVALID_INPUT", `Knowledge version ${version} is incompatible`, { apiVersion: entry.apiVersion, kbSchema: entry.kbSchema, supported_api_version: UPSTREAM_API_VERSION });
+    // Never follow a newer daily version when the selected latest tag is incompatible.
+    const candidates = Object.keys(meta.versions).filter((v) => compareVersions(v, latest) < 0)
+      .sort((a, b) => compareVersions(b, a));
+    const found = candidates.find((v) => compatible(validateEntry(meta, v)));
+    invariant(found, "INVALID_INPUT", `No upstream version supports apiVersion ${UPSTREAM_API_VERSION}`, { latest, tag });
+    version = found;
+    entry = validateEntry(meta, version);
+  }
+  return {
+    source, package: name, tag, latest, available_version: version, entry,
+    compatibility: { supported_api_version: source === "upstream" ? UPSTREAM_API_VERSION : undefined, latest_compatible: taggedCompatible,
+      selected_compatible: true, fallback: !options.version && version !== latest,
+      reason: !options.version && version !== latest ? `${tag} ${latest} requires apiVersion ${tagged.apiVersion}; selected highest compatible historical version ${version}` : "Selected version is compatible" },
+  };
 }
 
-/**
- * Download a pack from npm (or a URL/local tarball), verify integrity, extract and
- * switch atomically. Keeps the previous version for rollback.
- */
-export async function update(options: { version?: string; source?: string; force?: boolean }, signal: AbortSignal) {
+async function localContentStatus(pack: ReturnType<typeof activePack>) {
+  const { localKnowledgeContentSha256 } = await import("./kb-build.js");
+  const current = localKnowledgeContentSha256();
+  const installed = (pack?.manifest.sources.local as { content_sha256?: string } | undefined)?.content_sha256;
+  const state = !installed ? "unknown" : installed === current ? "unchanged" : "changed";
+  return { local_content: { installed: installed ?? null, current, state }, local_update_available: installed ? installed !== current : null, local_refresh_recommended: !installed || installed !== current };
+}
+function installedUpstream(pack: ReturnType<typeof activePack>) {
+  return pack?.manifest.sources.upstream as { package?: string; version?: string } | undefined;
+}
+function upstreamNeedsUpdate(remote: Awaited<ReturnType<typeof resolveRemote>>, pack: ReturnType<typeof activePack>, explicit = false) {
+  const installed = installedUpstream(pack);
+  if (installed?.package !== remote.package || !installed?.version) return true;
+  return explicit ? remote.available_version !== installed.version : compareVersions(remote.available_version, installed.version) > 0;
+}
+
+// The first two arguments retain the original API; check-only callers pass file/version as options.
+export async function status(checkRemote = false, signal?: AbortSignal, options: UpdateOptions = {}) {
+  const pack = activePack();
+  const installed = pack ? { version: pack.manifest.version, origin: pack.origin, created_at: pack.manifest.created_at, sdk_api_range: pack.manifest.sdk_api_range, counts: pack.manifest.counts, upstream_version: installedUpstream(pack)?.version } : null;
+  const local = await localContentStatus(pack);
+  if (!checkRemote) return { installed, ...local };
+  const { entry, ...remote } = await resolveRemote(options, signal);
+  const updateAvailable = remote.source === "upstream" ? upstreamNeedsUpdate({ ...remote, entry }, pack, !!options.version) : remote.available_version !== installed?.version;
+  return { installed, ...local, ...remote, update_available: updateAvailable,
+    ...(remote.source === "upstream" ? { upstream_update_available: updateAvailable, upstream: { installed_version: installedUpstream(pack)?.version ?? null, latest: remote.latest, available_version: remote.available_version, api_version: entry.apiVersion } } : {}) };
+}
+
+/** Download, verify, convert (upstream only), and atomically install. */
+export async function update(options: UpdateOptions, signal: AbortSignal): Promise<{ updated: boolean; version: string; reason?: string; previous?: string | null; counts?: Record<string, number>; source?: string; tag?: string; latest?: string; available_version?: string; compatibility?: Awaited<ReturnType<typeof resolveRemote>>["compatibility"] }> {
   const root = kbRoot();
   let tarball: string;
   let downloaded = false;
   let integrity: string | undefined;
-  let version = options.version;
-  if (options.source && fs.existsSync(options.source)) {
-    tarball = path.resolve(options.source);
-  } else if (options.source === "upstream") {
-    // Build a pack locally from Huawei's docs package (useful before our pack is published, or to get newer docs first).
-    const meta = await registryMeta(config().kb_upstream_package, signal);
-    const latest = meta["dist-tags"].latest!;
-    const entry = meta.versions[latest]!;
+  let expectedVersion: string | undefined;
+  const kind = sourceKind(options);
+  invariant(kind !== "file" || !options.version, "INVALID_INPUT", "version is only supported for registry sources, not a file or URL");
+  if (kind === "upstream") {
+    const remote = await resolveRemote(options, signal);
+    const { entry, ...details } = remote;
+    const current = activePack();
+    const local = await localContentStatus(current);
+    if (!options.force && !upstreamNeedsUpdate(remote, current, !!options.version) && local.local_content.state === "unchanged")
+      return { updated: false, version: current!.manifest.version, reason: "upstream and local content already installed", ...details };
     const dir = path.join(root, `.upstream-${crypto.randomBytes(4).toString("hex")}`);
     fs.mkdirSync(dir);
     try {
@@ -370,29 +473,34 @@ export async function update(options: { version?: string; source?: string; force
       await pipeline(Readable.fromWeb(response.body as any), new Transform({ transform(chunk, _encoding, done) { hash.update(chunk); done(null, chunk); } }), fs.createWriteStream(file), { signal });
       invariant(`sha512-${hash.digest("base64")}` === entry.dist.integrity, "INTEGRITY_FAILED", "Upstream docs package failed integrity verification");
       await run({ file: "tar", args: ["-xzf", file, "-C", dir] }, { signal, timeoutMs: 600000 });
+      const upstreamDir = path.join(dir, "package");
+      const pkg = JSON.parse(fs.readFileSync(path.join(upstreamDir, "package.json"), "utf8"));
+      invariant(pkg.name === remote.package && pkg.version === remote.available_version && pkg.apiVersion === UPSTREAM_API_VERSION, "INVALID_INPUT", "Upstream archive metadata does not match the selected compatible registry version");
       const { buildKnowledgePack } = await import("./kb-build.js");
-      const built = await buildKnowledgePack({ upstream: path.join(dir, "package"), out: path.join(dir, "out") });
-      return await update({ source: built.tarball }, signal);
+      const built = await buildKnowledgePack({ upstream: upstreamDir, out: path.join(dir, "out") });
+      signal.throwIfAborted();
+      return { ...await update({ source: built.tarball }, signal), ...details };
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
     }
+  } else if (kind === "file" && options.source && fs.existsSync(options.source)) {
+    tarball = path.resolve(options.source);
   } else {
     let url = options.source;
-    if (!url) {
-      const meta = await registryMeta(config().kb_package, signal);
-      version ??= meta["dist-tags"].latest;
-      const entry = version ? meta.versions[version] : undefined;
-      invariant(entry, "NOT_FOUND", `Knowledge pack version ${version} not found`, { available: Object.keys(meta.versions).slice(-10) });
-      invariant((entry.kbSchema ?? KB_SCHEMA) === KB_SCHEMA, "INVALID_INPUT", `Pack ${version} needs schema ${entry.kbSchema}; update deveco-mcp`);
-      url = entry.dist.tarball;
-      integrity = entry.dist.integrity;
+    if (kind === "pack") {
+      const remote = await resolveRemote(options, signal);
+      url = remote.entry.dist.tarball;
+      integrity = remote.entry.dist.integrity;
+      expectedVersion = remote.available_version;
       const current = activePack();
-      if (!options.force && current?.manifest.version === version) return { updated: false, version, reason: "already installed" };
+      if (!options.force && current?.manifest.version === remote.available_version) return { updated: false, version: remote.available_version, reason: "already installed" };
+    } else {
+      invariant(url && /^https?:\/\//.test(url), "INVALID_INPUT", "source must be upstream, pack, an existing local tarball or an HTTP(S) URL");
     }
     tarball = path.join(root, `.download-${crypto.randomBytes(4).toString("hex")}.tgz`);
     downloaded = true;
     try {
-      const response = await fetch(url, { signal: AbortSignal.any([signal, AbortSignal.timeout(30 * 60000)]) });
+      const response = await fetch(url!, { signal: AbortSignal.any([signal, AbortSignal.timeout(30 * 60000)]) });
       invariant(response.ok && response.body, "HTTP_ERROR", `Download failed with HTTP ${response.status}`);
       await pipeline(Readable.fromWeb(response.body as any), fs.createWriteStream(tarball), { signal });
     } catch (error) {
@@ -416,6 +524,7 @@ export async function update(options: { version?: string; source?: string; force
       const manifest = readManifest(extracted);
       invariant(manifest, "INVALID_INPUT", `Archive is not a schema ${KB_SCHEMA} knowledge pack (manifest.json + index.db required)`);
       invariant(/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(manifest.version), "INVALID_INPUT", "Knowledge pack version is not a safe directory name");
+      invariant(!expectedVersion || manifest.version === expectedVersion, "INVALID_INPUT", "Archive version does not match the requested registry version");
       signal.throwIfAborted();
       const previous = activePack();
       const directory = `${manifest.version}-${crypto.randomBytes(8).toString("hex")}`;

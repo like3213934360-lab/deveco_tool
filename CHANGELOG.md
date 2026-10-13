@@ -1,5 +1,16 @@
 # Changelog / 更新日志
 
+## v1.4.9 (2026-10-13)
+
+- 默认知识库改用官方 upstream/latest，校验上游 API 和完整性；检查与安装共用来源/版本解析，保留私有包、原子安装与回滚。分别报告官方文档版本和本地增强指纹，同内容不重复安装；daily 必须显式选择。
+- 录屏回执绑定设备序列号或模拟器 UUID，拒绝复用端口/未知旧身份；新增离线 record_receipts、record_archive、record_restore，事务保存完整旧回执，不停止设备、不删除视频。
+- FPS 两路并发采集，手势仅执行一次；保留原始命令输出、错误与退出码，无有效数据明确 inconclusive，不再推断页面未动画。仅逐帧数据给卡顿判定，逐秒样本标 fps_only。
+- 补充来源解析、原子回滚、回执恢复及采集取消的回归；真实 SDK、USB Pura 80 Pro 录屏和知识库更新回滚的结果与边界见 [验收说明](docs/UPGRADE-1.4.9.md)。上游新增提交已逐项审查，保留独立实现和宿主职责边界。
+
+- Default to official upstream/latest knowledge with shared source/version compatibility resolution, content fingerprints and preserved private packs, atomic installation and rollback.
+- Bind recording receipts to serials/emulator UUIDs; preserve and restore complete receipts offline without touching a device or deleting media.
+- Sample composer and profiler over a single gesture run; preserve raw diagnostics, report no-data as inconclusive and per-second samples as fps_only.
+
 ## v1.4.8 (2026-10-11)
 
 **中文**

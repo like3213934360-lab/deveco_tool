@@ -28,6 +28,8 @@
 
 模型 `live-cases.mjs`、`workflow-cases.mjs` 是场景生成器，`proxy.mjs` 和 `capture.mjs` 由评测器加载。分别运行 `node test/model/live-cases.mjs <existing-project> <target> <new-cases.json>` 或 `node test/model/workflow-cases.mjs project|ui|ui-text <dedicated-project> <explicit-target> <new-artifacts-directory> <new-cases.json>` 生成输入；这些操作本身不算模型验收。保留拟调用、实际请求/响应、任务终态、模型模态和宿主版本的区别。每次有写入的试验独占新的制品目录，前一轮结束并清理本轮对象后才能继续；模型能力目录不能代替服务端实际可用性验证。
 
+新增专项（也包含在 `npm test`）：`node --test test/integration/kb-source.test.mjs test/integration/lifecycle.test.mjs test/integration/perf.test.mjs`。知识库回归使用隔离 registry、tar/zip 与 SQLite；录屏验证离线完整归档、恢复冲突和 UUID 隔离；FPS 验证单次手势并发采集、取消、权限/退出错误和 inconclusive。全部不连接真机。
+
 ## 真实验收条件与作用范围
 
 所有 E2E 要求显式绝对 `E2E_DIR`，每个测试独占新目录；调用日志、图片哈希、初始化/构建身份及制品留在此处，失败也保留。`E2E_PROJECT` 必须为 bundle 前缀 `com.devecomcp.` 的专用工程，保持现有签名；`E2E_TARGET` 必须是用户选定的设备。USB app 套件拒绝网络连接及模拟器，不自动选择设备。普通 SDK 模板与录屏不依赖专用应用。运行前先 `npm run build`；操作同一工程或设备的真实验收必须串行。
@@ -60,7 +62,7 @@ node --test --test-concurrency=1 test/e2e/hotreload.test.mjs
 | `e2e/cloud.test.mjs` | 原 CodeGenie 登录及联网；来源标签、域名、制品完整性与独立文档重合率；不可判定来源单独记未验证 |
 | `e2e/skills.test.mjs` | 用户指定 `E2E_SKILLS` 绝对目录、`E2E_HOST=codex` 或 `opencode`（无默认两宿主循环）；专用目录内 export/install/uninstall/init，原全局配置哈希不变 |
 | `e2e/auth.test.mjs` | 显式 `DEVECO_STATE_DIR` 与原浏览器登录；注销/重登录 CodeGenie，其他 provider 凭据哈希不变；需用户参与，不混入普通测试 |
-| `e2e/knowledge.test.mjs` | 显式 `DEVECO_STATE_DIR` 及其已安装 KB；联网更新并回滚，校验原内容哈希；不替用户准备/重置知识库 |
+| `e2e/knowledge.test.mjs` | 显式 `DEVECO_STATE_DIR` 及其已安装 KB；检查与默认更新一致、同内容不重复安装；显式 force 重建并回滚，校验原内容哈希；不替用户准备/重置知识库 |
 | `e2e/emulator.test.mjs` | `--test-name-pattern='^emulator$'` 加明确 `E2E_IMAGE`，须已有 foldable 镜像；创建本轮实例，折叠、停止、删除并比对既有实例；license 会接受条款，须在授权范围内 |
 | 同文件 `emulator image lifecycle` | 明确 `E2E_DEVICE_TYPE`、`E2E_IMAGE`、`E2E_ALLOW_IMAGE_WRITE=1`；仅在授权镜像安装/删除测试时使用。拒绝删除既有镜像；无未安装的适用镜像时记录前置条件阻塞 |
 | `e2e/review.test.mjs` | 分开运行 `--test-name-pattern='^capture$'` 与 `'^finish$'`。宿主必须先实际查看 capture 图片；finish 要求 `E2E_REVIEW` 目录及 `E2E_DECISION` JSON（test_id、review_id、image_sha256、outcome、reason），不会自动批准 |
@@ -69,4 +71,4 @@ node --test --test-concurrency=1 test/e2e/hotreload.test.mjs
 
 ## 证据与发布
 
-公开脱敏结果在 `docs/evidence/`；私有 `E2E_DIR` 含源代码、截图、视频及云端资料，禁止整体提交。回执与原视频排他创建，不覆盖旧证据。FFmpeg 严格检查的原理见 [媒体检查](../docs/RECORDING-CHECK.md)。本轮范围和未验证项见 [v1.4.8](../docs/UPGRADE-1.4.8.md)，发布遵循 [RELEASING](../docs/RELEASING.md)。发布成功不证明 Codex App 已重载或模型已重新验收。
+公开脱敏结果在 `docs/evidence/`；私有 `E2E_DIR` 含源代码、截图、视频及云端资料，禁止整体提交。回执与原视频排他创建，不覆盖旧证据。FFmpeg 严格检查的原理见 [媒体检查](../docs/RECORDING-CHECK.md)。本轮范围和未验证项见 [v1.4.9](../docs/UPGRADE-1.4.9.md)，发布遵循 [RELEASING](../docs/RELEASING.md)。发布成功不证明 Codex App 已重载或模型已重新验收。

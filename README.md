@@ -78,7 +78,8 @@ node bin/deveco-mcp.mjs init --host codex --project .      # 项目级配置（.
 | `session_idle_minutes` | 语言服务等会话的空闲关闭时间，默认 10 |
 | `auto_accept_ui_agreements` | UI 操作、批量操作、流程回放及部署/测试断言自动处理协议与权限弹窗，默认 `true`；按同一窗口中的文案和控件状态识别，结果记录 `agreements_accepted`。纯观察不触发同意 |
 | `auto_complete_ui_onboarding` | 自动完成可识别的首次设置、欢迎页和功能介绍，默认 `true`；保留当前已选默认项，不改选项，记录 `onboarding_completed`。协议与权限由上一项独立控制，纯观察不触发处理 |
-| `kb_package` | 知识包的 npm 包名 |
+| `kb_source` / `kb_upstream_tag` | 默认 `upstream` / `latest`；`daily` 需显式配置 |
+| `kb_package` | 成品包 npm 名；显式自定义名称且无 kb_source 时保留 pack 来源 |
 | `npm_registry` | 更新知识包时使用的 npm 源 |
 
 用 `node bin/deveco-mcp.mjs doctor [project]` 或 `doctor` 工具检查环境。
@@ -125,6 +126,10 @@ node bin/deveco-mcp.mjs init --host codex --project .      # 项目级配置（.
 
 服务还提供 MCP **Resources**（`deveco://skills/<name>`）和 **Prompts**：`fix-build`、`debug-crash` 和 `upgrade-sdk`。需求规划交给宿主自带的 Plan 模式。
 
+录屏回执安全：`ui action=record_receipts` 可离线查看（target 是原始连接键）。确认文件名后用 `record_archive target=<原键> name=<完整文件名> reason=<说明>` 保存完整回执并释放占位；`record_restore receipt_id=<id>` 仅恢复到空槽，不自动认领身份或停止设备。旧格式未绑定身份的回执必须先归档，不能用于操作复用端口。归档不停止正在录屏的服务，亦不删除视频。
+
+FPS 无有效数据返回 `verdict=inconclusive` 和 `diagnostic_artifact`；用 `job action=read artifact_id=<id>` 查看 stdout/stderr/退出码。两路采集同时进行，手势不重复；`fps_only` 仅代表逐秒正 FPS 样本，零样本另报，不代表逐帧卡顿通过。
+
 ## 知识包
 
 知识包是一个 `.tgz`，包含三个文件：
@@ -136,7 +141,7 @@ node bin/deveco-mcp.mjs init --host codex --project .      # 项目级配置（.
 内容包括华为鸿蒙官方文档（开发指南、API 参考、最佳实践、FAQ、版本说明，约 1.47 万篇），以及本仓库 `knowledge/` 目录下的 ArkTS 规则、31 个编译错误案例和上述 Skill（含崩溃模式库和 ArkUI 速查）。
 
 - **内置：** npm 包 `@deveco-mcp/kb` 是可选依赖；本地开发时也可以用 `kb-dist/current`。
-- **更新：** `knowledge action=update` 以任务形式运行：从 npm 下载，校验 sha512，解压到临时目录，检查结构，原子切换版本，并保留上一版本以便 `rollback`。`file=<path.tgz>` 安装本地知识包；`file=upstream` 从华为最新的 `@deveco-test/deveco-cli-knowledgebase` 生成新知识包。
+- **更新：** `knowledge action=update` 以任务形式运行：从 npm 下载，校验 sha512，解压到临时目录，检查结构，原子切换版本，并保留上一版本以便 `rollback`。`file=<path.tgz>` 安装本地知识包；默认从官方 `@deveco-test/deveco-cli-knowledgebase` 的 latest 生成知识包（API 兼容性检查）；`file=pack` 选择配置的成品包。`check=true` 使用同样的来源/版本解析，本地文件/URL 检查明确拒绝而非忽略。本地增强指纹与上游版本分别报告，同内容不重复安装，`force=true` 强制重建；旧包缺指纹显示 unknown/建议刷新。
 - **构建与发布：** `node bin/deveco-mcp.mjs kb-build <上游包目录> kb-dist --version x.y.z` 生成可以发布到 npm 的包。`doctor remote=true` 会提示是否有新版本，但不会自动下载。
 
 ## 架构
@@ -271,7 +276,8 @@ Other config keys:
 | `session_idle_minutes` | Default 10 |
 | `auto_accept_ui_agreements` | Automatically accept agreement and permission dialogs during UI actions, batches, replay and deploy/test assertions. Default `true`; uses text and control state within the same window, reports `agreements_accepted`. Observation alone does not accept |
 | `auto_complete_ui_onboarding` | Complete recognizable first-run setup, welcome screens and feature tours with existing defaults. Default `true`; reports `onboarding_completed`. Consent uses its separate setting; observation remains read-only |
-| `kb_package` | npm package name of the knowledge pack |
+| `kb_source` / `kb_upstream_tag` | Defaults: `upstream` / `latest`; opt in to `daily` |
+| `kb_package` | Pack npm name; custom names without kb_source retain pack mode |
 | `npm_registry` | Registry used for knowledge pack updates |
 
 Check the setup with `node bin/deveco-mcp.mjs doctor [project]`, or call the `doctor` tool.
@@ -327,7 +333,7 @@ A knowledge pack is a `.tgz` containing three files:
 It combines Huawei's HarmonyOS docs (guides, API reference, best practices, FAQ, release notes; about 14.7k documents) with this repository's `knowledge/` directory (ArkTS rules, 31 compile-error cases, and the skills above, including the crash pattern library and ArkUI quick reference).
 
 - **Built-in:** the npm package `@deveco-mcp/kb` is an optional dependency, and `kb-dist/current` works for local development.
-- **Update:** `knowledge action=update` runs as a job. It downloads from npm, verifies the sha512 integrity, extracts to a temporary directory, checks the schema, switches versions atomically, and keeps the previous version for `rollback`. `file=<path.tgz>` installs a local pack. `file=upstream` builds a fresh pack from Huawei's latest `@deveco-test/deveco-cli-knowledgebase`.
+- **Update:** `knowledge action=update` runs as a job. It downloads from npm, verifies the sha512 integrity, extracts to a temporary directory, checks the schema, switches versions atomically, and keeps the previous version for `rollback`. `file=<path.tgz>` installs a local pack. The default builds from official `@deveco-test/deveco-cli-knowledgebase` latest with API compatibility checks; `file=pack` selects the configured pack. `check=true` uses the same source/version resolution and explicitly rejects local-file/URL checks instead of ignoring them. Local fingerprints and upstream versions are reported separately; unchanged content is a no-op, `force=true` rebuilds, and older packs without a fingerprint recommend refresh.
 - **Build and publish:** `node bin/deveco-mcp.mjs kb-build <upstream-package-dir> kb-dist --version x.y.z` writes an npm-publishable tarball. `doctor remote=true` shows whether a newer pack exists; packs are never downloaded automatically.
 
 ### Architecture

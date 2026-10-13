@@ -11,15 +11,15 @@ process.env.DEVECO_STATE_DIR = work;
 const box = (type, text) => { const b = Buffer.alloc(8 + text.length); b.writeUInt32BE(b.length); b.write(type, 4); b.write(text, 8); return b; };
 const fixture = globalThis.__devecoLifecycle = { active: false, recorder: 1, toggles: 0, mode: "ok", removed: [], cli: [], running: true, stopping: false, polls: 0, video: Buffer.concat([box("ftyp", "isom"), box("mdat", "samples"), box("moov", "vide")]) };
 const bundle = path.join(root, "node_modules/.cache/deveco-lifecycle.mjs");
-await build({ stdin: { contents: `export * from ${JSON.stringify(path.join(root, "src/domains/ui.ts"))};export * from ${JSON.stringify(path.join(root, "src/domains/emulator.ts"))};export {closeDatabase} from ${JSON.stringify(path.join(root, "src/core/db.ts"))};`, resolveDir: root }, outfile: bundle,
+await build({ stdin: { contents: `export * from ${JSON.stringify(path.join(root, "src/domains/ui.ts"))};export * from ${JSON.stringify(path.join(root, "src/domains/emulator.ts"))};export {closeDatabase,kvSet,kvGet} from ${JSON.stringify(path.join(root, "src/core/db.ts"))};`, resolveDir: root }, outfile: bundle,
   bundle: true, format: "esm", platform: "node", packages: "external", logLevel: "error", plugins: [{ name: "sdk", setup(b) {
     b.onResolve({ filter: /(?:device|proc|toolchain)\.js$/ }, (a) => /domains\/(?:ui|emulator)\.ts$/.test(a.importer.replaceAll("\\", "/")) ? { path: path.basename(a.path, ".js"), namespace: "fixture" } : undefined);
     b.onLoad({ filter: /.*/, namespace: "fixture" }, (a) => ({ contents: {
       toolchain: `export function toolCommand(_name,args){return {file:'fixture',args}};`,
-      proc: `export function spawnIndependent(){throw new Error('unexpected start')};export async function run(cmd){const f=globalThis.__devecoLifecycle;f.cli.push(cmd.args);if(cmd.args[0]==='-stop'){f.stopping=true;return {stdout:'Stop emulator owned successfully',stderr:''}};if(cmd.args[0]==='-list'){if(f.stopping&&++f.polls>=3)f.running=false;return {stdout:JSON.stringify([{name:'owned',isRunning:String(f.running),'hw.ramSize':'4096'}]),stderr:''}};throw new Error('unexpected mutation '+cmd.args)};`,
+      proc: `export function spawnIndependent(){throw new Error('unexpected start')};export async function run(cmd){const f=globalThis.__devecoLifecycle;f.cli.push(cmd.args);if(cmd.args[0]==='-stop'){f.stopping=true;return {stdout:'Stop emulator owned successfully',stderr:''}};if(cmd.args[0]==='-list'){if(f.stopping&&++f.polls>=3)f.running=false;return {stdout:JSON.stringify([{name:'owned',uuid:f.identityUuid??'uuid-one',isRunning:String(f.running),'hw.ramSize':'4096'}]),stderr:''}};throw new Error('unexpected mutation '+cmd.args)};`,
       device: `import fs from 'node:fs';const f=()=>globalThis.__devecoLifecycle;export async function listTargets(){return []};export async function assertConnected(){};export async function hdc(args){fs.writeFileSync(args.at(-1),f().video);return {stdout:'',stderr:'',code:0}};export async function shell(_t,args,signal){
         if(args[0]==='rm'){f().removed.push({path:args.at(-1),aborted:signal?.aborted});if(f().cleanupFail)return {stdout:'Permission denied',stderr:'',code:1};return {stdout:'',stderr:'',code:0}};
-        signal?.throwIfAborted();if(args[0]==='aa'&&args[1]==='dump')return {stdout:f().dump??('ExtensionRecords:\\n'+(f().active?'uri [/com.huawei.hmos.screenrecorder/entry/ServiceExtAbility]\\nAbilityRecord ID #'+f().recorder+' state #ACTIVE start time [123]':'')),stderr:'',code:0};
+        signal?.throwIfAborted();if(args[0]==='param')return {stdout:f().emulatorName??'',stderr:'',code:0};if(args[0]==='aa'&&args[1]==='dump')return {stdout:f().dump??('ExtensionRecords:\\n'+(f().active?'uri [/com.huawei.hmos.screenrecorder/entry/ServiceExtAbility]\\nAbilityRecord ID #'+f().recorder+' state #ACTIVE start time [123]':'')),stderr:'',code:0};
         if(args[0]==='aa'){f().toggles++;if(!f().noStart)f().active=!f().active;if(f().toggleCancel){f().controller.abort();signal.throwIfAborted()};return {stdout:'start ability success',stderr:'',code:0}};
         if(args[0]==='mediatool'&&args[1]==='query')return {stdout:'find 1 result\\n"file://media/fixture"',stderr:'',code:0};
         if(args[0]==='mediatool'&&args[1]==='recv'){if(f().mode==='source')return {stdout:'[FAIL] open source media file failed',stderr:'',code:0};if(f().mode==='cancel'){f().controller.abort();signal.throwIfAborted()};return {stdout:args.at(-1),stderr:'',code:0}};throw new Error('unexpected shell '+args)};`,
@@ -113,4 +113,40 @@ test("export and staging cleanup failures are both reported without losing the r
   await assert.rejects(m.stopRecording("fixture"), (e) => e.code === "UI_RECORD_FAILED" && /open source/.test(e.details.export.message) && /staging/.test(e.details.cleanup.message));
   assert.equal((await m.recordingStatus("fixture")).file, started.file);
   fixture.cleanupFail = false; fixture.mode = "ok"; await m.stopRecording("fixture", { discard: true });
+});
+
+
+test("offline archive preserves exact legacy receipt, restore is atomic and never calls the SDK", async () => {
+  const raw = JSON.stringify({ name: "old.mp4", started: 1, extra: { preserved: true } });
+  await m.kvSet("screenrecord:offline:5555", raw);
+  const before = fixture.cli.length, toggles = fixture.toggles;
+  await assert.rejects(m.archiveRecording("offline:5555", "changed.mp4"), (e) => e.code === "CONFLICT");
+  const archived = await m.archiveRecording("offline:5555", "old.mp4", "old instance");
+  assert.equal(archived.raw, raw);
+  assert.equal(await m.kvGet("screenrecord:offline:5555"), undefined);
+  assert.equal((await m.recordingReceipts("offline:5555")).archived[0].raw, raw);
+  await m.kvSet("screenrecord:offline:5555", JSON.stringify({ name: "new.mp4", started: 2 }));
+  await assert.rejects(m.restoreRecording(archived.receipt_id), (e) => e.code === "CONFLICT");
+  const newer = await m.archiveRecording("offline:5555", "new.mp4");
+  await m.restoreRecording(archived.receipt_id);
+  assert.equal(await m.kvGet("screenrecord:offline:5555"), raw);
+  await m.archiveRecording("offline:5555", "old.mp4");
+  assert.ok(newer.receipt_id);
+  assert.equal(fixture.cli.length, before); assert.equal(fixture.toggles, toggles);
+});
+
+test("reused emulator port and same-name recreated UUID cannot stop another identity", async () => {
+  fixture.emulatorName = "owned"; fixture.identityUuid = "uuid-one";
+  const started = await m.startRecording("127.0.0.1:12345"), before = fixture.toggles;
+  fixture.identityUuid = "uuid-two";
+  assert.equal((await m.recordingStatus("127.0.0.1:12345")).status, "identity_mismatch");
+  await assert.rejects(m.stopRecording("127.0.0.1:12345", { discard: true }), (e) => e.code === "CONFLICT");
+  assert.equal(fixture.toggles, before);
+  const archived = await m.archiveRecording("127.0.0.1:12345", started.file);
+  assert.equal(archived.receipt.identity.id, "uuid-one");
+  fixture.active = false;
+  const newer = await m.startRecording("127.0.0.1:12345");
+  assert.notEqual(newer.file, started.file);
+  await m.stopRecording("127.0.0.1:12345", { discard: true });
+  fixture.emulatorName = undefined;
 });
