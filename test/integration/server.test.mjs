@@ -38,9 +38,23 @@ test("handshake, tools/list and schema validation", async (t) => {
   assert.equal(bad.data.error.code, "INVALID_INPUT");
   assert.equal(bad.data.error.category, "input");
   const unknown = await client.request("tools/call", { name: "missing", arguments: {} });
-  assert.equal(unknown.result.isError, true);
+  assert.equal(unknown.error.code, -32602);
+  assert.equal(unknown.result, undefined);
   const ping = await client.request("ping");
   assert.deepEqual(ping.result, {});
+});
+
+test("tools/list annotations cover every action and external interaction", async (t) => {
+  const client = connect(env);
+  t.after(() => client.close());
+  await client.initialize();
+  const list = await client.request("tools/list");
+  const readOnly = new Set(["doctor", "diagnose"]);
+  const closedWorld = new Set(["code", "diagnose"]);
+  for (const tool of list.result.tools) {
+    assert.equal(tool.annotations.readOnlyHint, readOnly.has(tool.name), `${tool.name}: include optional write actions`);
+    assert.equal(tool.annotations.openWorldHint, !closedWorld.has(tool.name), `${tool.name}: include services, devices and other external interactions`);
+  }
 });
 
 test("arguments: unknown/misplaced parameters are refused, long waits are capped", async () => {
@@ -110,6 +124,27 @@ test("documented action boundaries reject cross-action fields before execution",
     else assert.deepEqual(allowed, []);
     assert.match(result.data.error.hint, /Nothing was executed/);
   }
+});
+
+test("invalid source and device operations fail before SDK or device resolution", async (t) => {
+  const client = connect(env);
+  t.after(() => client.close());
+  await client.initialize();
+  const mixed = await client.call("code", { action: "check", project: state, files: ["Native.cpp", "Index.ets"] });
+  assert.equal(mixed.isError, true);
+  assert.equal(mixed.data.error.code, "INVALID_INPUT");
+  assert.match(mixed.data.error.message, /separate calls/);
+  const sqlite = await client.call("device", { action: "sqlite", target: "missing-device", bundle: "com.example.app", db: "app.db", sql: ".tables" });
+  assert.equal(sqlite.isError, true);
+  assert.equal(sqlite.data.error.code, "INVALID_INPUT");
+  assert.match(sqlite.data.error.hint, /module\.json5/);
+  for (const command of ["ifconfig wlan0 down", "date -s 20261015", "mount -o remount,rw /", "hilog -w start"]) {
+    const shell = await client.call("device", { action: "shell", target: "missing-device", command });
+    assert.equal(shell.isError, true, command);
+    assert.equal(shell.data.error.code, "INVALID_INPUT", command);
+    assert.match(shell.data.error.message, /Unsupported read-only command form/);
+  }
+  assert.deepEqual((await client.call("job", { action: "list" })).data.jobs, []);
 });
 
 test("assertion combinations fail before device resolution or job creation", async (t) => {

@@ -13,12 +13,16 @@ import { snapshotBoot } from "./emulator-snapshot.js";
 
 async function emulator(args: string[], signal?: AbortSignal, timeoutMs = 120000) {
   const result = await run(toolCommand("emulator", args), { signal, timeoutMs, allowFailure: true });
-  return (result.stdout + result.stderr).trim();
+  const output = (result.stdout + result.stderr).trim();
+  if (result.code !== 0 || result.signal) throw new ToolError("EMULATOR_FAILED",
+    `Emulator ${args[0]} exited with ${result.signal ?? result.code}`,
+    { args: args.filter((a) => a !== "-force"), exit_code: result.code, signal: result.signal, output: clip(output, 1000) });
+  return output;
 }
 
 /*
  * The Emulator CLI exits 0 even when an operation fails ("Device delete fail.", "No images are
- * available ..."), so success is decided from its output (same rule as deveco-cli runEmulatorChecked).
+ * available ..."). Check these SDK errors in addition to the process exit status.
  */
 const baseReject = /Invalid command|无效命令|please attach the correct parameter/i;
 export function emulatorFailure(op: string, output: string): { code: string; hint?: string } | undefined {
@@ -45,7 +49,7 @@ async function emulatorChecked(op: string, args: string[], signal?: AbortSignal,
 
 export async function listEmulators(signal?: AbortSignal, details = false, instancePath?: string) {
   const where = instancePath ? ["-instancePath", instancePath] : [];
-  const text = await emulator(["-list", "-details", ...where], signal, 30000).catch(() => emulator(["-list", ...where], signal, 30000));
+  const text = await emulatorChecked("list", ["-list", "-details", ...where], signal, 30000);
   if (details) { try { return JSON.parse(text) as Record<string, string>[]; } catch { /* plain list below */ } }
   const running = await runningNames(signal);
   const names = text.split(/\r?\n/).map((l) => l.trim()).filter((l) => l && !/^\[Empty\]$/.test(l));
@@ -260,10 +264,10 @@ export async function startEmulator(name: string, options: StartInput, signal: A
 
 export async function stopEmulator(name: string, signal?: AbortSignal, instancePath?: string) {
   // Like deveco-cli: stopping an emulator that is not running is a no-op, not an error.
-  const known = await listEmulators(signal, false, instancePath).catch(() => undefined);
-  const entry = known?.find((e) => e.name === name);
-  if (known && !entry) throw new ToolError("NOT_FOUND", `Emulator ${name} not found`, { emulators: known.map((e) => e.name) });
-  if (entry && !entry.running) return { stopped: name, already_stopped: true };
+  const known = await listEmulators(signal, false, instancePath);
+  const entry = known.find((e) => e.name === name);
+  if (!entry) throw new ToolError("NOT_FOUND", `Emulator ${name} not found`, { emulators: known.map((e) => e.name) });
+  if (!entry.running) return { stopped: name, already_stopped: true };
   const output = await emulatorChecked("stop", ["-stop", name], signal, 60000);
   const deadline = Date.now() + 15000;
   let stopped = 0;
@@ -282,6 +286,8 @@ export interface CreateInput {
   instance_path?: string; image_root?: string; screen_profile?: string; screen?: string[]; hot_boot?: boolean; force?: boolean;
 }
 export function createArgs(input: CreateInput) {
+  invariant(input.name.trim().length > 0 && input.name.length <= 60 && /^[A-Za-z0-9_ +]+$/.test(input.name),
+    "INVALID_INPUT", "Emulator create name must contain 1–60 ASCII letters, digits, spaces, underscores (_) or plus signs (+); blank names and hyphens are not allowed");
   const args = ["-create", input.name, "-deviceType", input.device_type, "-osVersion", input.os_version];
   if (input.memory) args.push("-memory", String(input.memory));
   if (input.storage) args.push("-storage", String(input.storage));
@@ -328,7 +334,10 @@ export async function images(deviceType?: string, signal?: AbortSignal, all = fa
 export async function installImage(deviceType: string, osVersion: string, signal: AbortSignal, force = false, autoAcceptLicense = true) {
   await ensureLicense(autoAcceptLicense, signal);
   // -force skips interactive prompts; re-download of an existing image additionally needs the image removed first.
-  if (force) await removeImage(deviceType, osVersion, signal).catch(() => undefined);
+  if (force) {
+    try { await removeImage(deviceType, osVersion, signal); }
+    catch (error) { if (!(error instanceof ToolError && error.code === "NOT_FOUND")) throw error; }
+  }
   const started = Date.now();
   const out = await emulatorChecked("install_image", ["-install", "-deviceType", deviceType, "-osVersion", osVersion, "-force"], signal, 60 * 60000);
   // Summary instead of the progress stream ("\r12.3% (x/y bytes)" thousands of times).

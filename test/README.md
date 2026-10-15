@@ -30,6 +30,8 @@
 
 新增专项（也包含在 `npm test`）：`node --test test/integration/kb-source.test.mjs test/integration/lifecycle.test.mjs test/integration/perf.test.mjs`。知识库回归使用隔离 registry、tar/zip 与 SQLite；录屏验证离线完整归档、恢复冲突和 UUID 隔离；FPS 验证单次手势并发采集、取消、权限/退出错误和 inconclusive。全部不连接真机。
 
+MCP 契约回归同样包含在 `npm test`：`integration/protocol.test.mjs`、`server.test.mjs` 覆盖协议、注解及提前拒绝；`device.test.mjs` 验证 SQLite 路径完整引用；`emulator.test.mjs`、`signing.test.mjs` 用隔离进程验证退出状态和配置引用；`jobs.test.mjs` 与 `unit/efficiency.test.mjs` 验证检查范围、完整报告及构建预检结果。未增加测试运行器或依赖。
+
 ## 真实验收条件与作用范围
 
 所有 E2E 要求显式绝对 `E2E_DIR`，每个测试独占新目录；调用日志、图片哈希、初始化/构建身份及制品留在此处，失败也保留。`E2E_PROJECT` 必须为 bundle 前缀 `com.devecomcp.` 的专用工程，保持现有签名；`E2E_TARGET` 必须是用户选定的设备。USB app 套件拒绝网络连接及模拟器，不自动选择设备。普通 SDK 模板与录屏不依赖专用应用。运行前先 `npm run build`；操作同一工程或设备的真实验收必须串行。
@@ -51,13 +53,16 @@ node --test --test-concurrency=1 test/e2e/hotreload.test.mjs
 | `e2e/project.test.mjs` | 真实 SDK；专用新工程，无设备 |
 | `e2e/sdk.test.mjs` | 原完整夹具与签名；临时改 C++ 后逐字恢复 |
 | `e2e/checker.test.mjs` | `--test-name-pattern='checker (violations|legal)'` 独立编译正反例；`checker runtime claims` 另需明确的原模拟器（新模板不配置真机签名），安装/卸载专用应用 |
+| 同文件 `checker file scope and complete report` | 仅 SDK 和 E2E_DIR；新建专用工程，验证显式 .ts、61 条额外文件诊断的完整分页报告，以及无效 fix 请求保持文件哈希不变 |
 | `e2e/device.test.mjs` | 完整夹具及指定 USB 真机，`E2E_HDC` 为现有 SDK HDC 绝对路径，仅用于清理本轮传输文件（MCP shell 为只读）；会构建、安装、写专用 SQLite、交互、卸载；不能把单独运行后续依赖步骤称为整套通过 |
+| 同文件 `device read-only command contracts` | 仅 E2E_DIR 和 E2E_TARGET；只读 shell、内存 SQLite 与参数拒绝，不安装/卸载应用或改变设备配置 |
 | `e2e/hotreload.test.mjs` | 完整夹具；热补丁、显式覆盖基线 reset、独立数据标记、多轮时限、依赖改变后部署；恢复源文件 |
 | `e2e/ui.test.mjs` | 完整夹具已安装；批量负例、超时、视觉稳定性/损坏基线、滚动性能和失效流程；只删除本轮命名的基线/流程 |
 | `e2e/soak.test.mjs` | 完整夹具、POSIX ps/lsof；100 次操作及 20 次部署，原 RSS/进程/句柄/临时文件/输出预算。采样包含宿主临时目录，同机其他测试也必须暂停，不能并行运行离线套件 |
 | `e2e/process.test.mjs` | POSIX、真实 SDK；仅 SIGKILL 本轮 MCP/检查器/LSP 子进程，验证任务恢复与无遗留子进程 |
 | `e2e/services.test.mjs` | 原登录、知识库、SDK 和 USB；只读服务清单、检索和账号团队查询 |
 | `e2e/signing.test.mjs` | `E2E_TEAM`；列出现有签名对象、在证据目录生成密钥/CSR、验证 HAP，不改变工程签名 |
+| 同文件 `local signing reference` | 仅 E2E_PROJECT、E2E_DIR；专用工程须已有完整本地签名材料及单 entry unsigned HAP。临时 phone→debug 配置引用现有材料，真实签名/验签并核对原文件哈希，清理临时配置；不连云端 |
 | `e2e/sign-cloud.test.mjs` | `E2E_TEAM`、已登记 `E2E_TARGET`、`E2E_HDC` 与实际云配额；HDC 只读 UDID 独立核对登记，MCP shell 白名单不变。新建唯一证书与 IDE profile，OpenSSL 验证 profile 签名、bundle 和设备，仅删除本轮证书。IDE profile 不返回控制台 ID，控制台 profile 删除需另行授权的专用对象及独立确认，此套件不冒充覆盖；无配额时失败，不借用用户证书兜底 |
 | `e2e/cloud.test.mjs` | 原 CodeGenie 登录及联网；来源标签、域名、制品完整性与独立文档重合率；不可判定来源单独记未验证 |
 | `e2e/skills.test.mjs` | 用户指定 `E2E_SKILLS` 绝对目录、`E2E_HOST=codex` 或 `opencode`（无默认两宿主循环）；专用目录内 export/install/uninstall/init，原全局配置哈希不变 |
@@ -71,4 +76,4 @@ node --test --test-concurrency=1 test/e2e/hotreload.test.mjs
 
 ## 证据与发布
 
-公开脱敏结果在 `docs/evidence/`；私有 `E2E_DIR` 含源代码、截图、视频及云端资料，禁止整体提交。回执与原视频排他创建，不覆盖旧证据。FFmpeg 严格检查的原理见 [媒体检查](../docs/RECORDING-CHECK.md)。本轮范围和未验证项见 [v1.4.9](../docs/UPGRADE-1.4.9.md)，发布遵循 [RELEASING](../docs/RELEASING.md)。发布成功不证明 Codex App 已重载或模型已重新验收。
+公开脱敏结果在 `docs/evidence/`；私有 `E2E_DIR` 含源代码、截图、视频及云端资料，禁止整体提交。回执与原视频排他创建，不覆盖旧证据。FFmpeg 严格检查的原理见 [媒体检查](../docs/RECORDING-CHECK.md)。本轮范围和未验证项见 [v1.4.10](../docs/UPGRADE-1.4.10.md)，发布遵循 [RELEASING](../docs/RELEASING.md)。发布成功不证明 Codex App 已重载或模型已重新验收。

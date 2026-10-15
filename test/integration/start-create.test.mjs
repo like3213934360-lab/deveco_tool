@@ -27,8 +27,8 @@ await build({ stdin: { contents: entry, resolveDir: root }, outfile: bundle, bun
       toolchain: `export function toolCommand(_,args){return {file:'fixture',args}};export function toolchain(){return {sdk:'fixture'}};export function sdkInfo(){return {platform_version:'26.0.0',api_level:26}};`,
       proc: `import fs from 'node:fs';
         export async function run(cmd,{signal}={}) {signal?.throwIfAborted();const f=globalThis.__startCreate;f.commands.push(cmd.args);
-          if(cmd.args[0]==='-list')return {stdout:f.raw??JSON.stringify(f.instances),stderr:''};
-          if(cmd.args[0]==='-help')return {stdout:f.help,stderr:''};if(cmd.args[0]==='-version')return {stdout:'1.0.0',stderr:''};throw new Error('unexpected command '+cmd.args)};
+          if(cmd.args[0]==='-list')return {code:0,signal:null,stdout:f.raw??JSON.stringify(f.instances),stderr:''};
+          if(cmd.args[0]==='-help')return {code:0,signal:null,stdout:f.help,stderr:''};if(cmd.args[0]==='-version')return {code:0,signal:null,stdout:'1.0.0',stderr:''};throw new Error('unexpected command '+cmd.args)};
         export async function spawnIndependent(cmd,log) {const f=globalThis.__startCreate;f.starts.push(cmd.args);f.logs.push(log);fs.writeFileSync(log,f.log);f.launched=true;f.onLaunch?.();
           if(f.spawnError)throw Object.assign(f.spawnError,{code:'PROCESS_FAILED'});return {exitCode:f.exit,async detach(){f.detached=true}}};`,
       device: `export async function listTargets(signal){signal?.throwIfAborted();const f=globalThis.__startCreate;return !f.launched&&!f.running?[]:Object.keys(f.targets)};

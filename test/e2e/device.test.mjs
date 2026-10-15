@@ -36,15 +36,15 @@ test("device", async (t) => {
   });
   const table = `proof_${crypto.randomUUID().replaceAll("-", "")}`;
   await t.test("device.sqlite", async () => {
-    await call("device", { action: "sqlite", target, bundle, db: "audit.db", write: true, sql: `CREATE TABLE ${table}(id INTEGER PRIMARY KEY, value TEXT); INSERT INTO ${table} VALUES (1,'physical-audit')` });
-    defer(() => call("device", { action: "sqlite", target, bundle, db: "audit.db", write: true, sql: `DROP TABLE ${table}` }));
-    const d = await call("device", { action: "sqlite", target, bundle, db: "audit.db", sql: `SELECT * FROM ${table} ORDER BY id` });
+    await call("device", { action: "sqlite", target, bundle, module: "entry", db: "audit.db", write: true, sql: `CREATE TABLE ${table}(id INTEGER PRIMARY KEY, value TEXT); INSERT INTO ${table} VALUES (1,'physical-audit')` });
+    defer(() => call("device", { action: "sqlite", target, bundle, module: "entry", db: "audit.db", write: true, sql: `DROP TABLE ${table}` }));
+    const d = await call("device", { action: "sqlite", target, bundle, module: "entry", db: "audit.db", sql: `SELECT * FROM ${table} ORDER BY id` });
     assert.deepEqual(d.rows, [{ id: 1, value: "physical-audit" }]);
   });
   await t.test("device.sqlite.readonly-rejection", async () => {
-    const r = await raw("device", { action: "sqlite", target, bundle, db: "audit.db", sql: `DELETE FROM ${table}` });
+    const r = await raw("device", { action: "sqlite", target, bundle, module: "entry", db: "audit.db", sql: `DELETE FROM ${table}` });
     assert.equal(r.isError, true);
-    assert.equal((await call("device", { action: "sqlite", target, bundle, db: "audit.db", sql: `SELECT * FROM ${table}` })).rows.length, 1);
+    assert.equal((await call("device", { action: "sqlite", target, bundle, module: "entry", db: "audit.db", sql: `SELECT * FROM ${table}` })).rows.length, 1);
   });
   await t.test("device.log-window-follow", async () => {
     const d = await call("device", { action: "log", target, bundle, project, from: "2m", to: "0s", lines: 50 });
@@ -331,4 +331,21 @@ test("equivalence", async (t) => {
     assert.deepEqual(absolute, relative);
   });
 
+});
+
+
+test("device read-only command contracts", async (t) => {
+  const target = required("E2E_TARGET");
+  const { call, raw } = await session(t);
+  assert.ok((await call("device", { action: "shell", target, command: "uname -a" })).output.trim());
+  assert.ok((await call("device", { action: "shell", target, command: "date" })).output.trim());
+  assert.ok((await call("device", { action: "shell", target, command: "ifconfig" })).output.trim());
+  assert.deepEqual((await call("device", { action: "sqlite", target, db: ":memory:", sql: "SELECT 1 AS probe" })).rows, [{ probe: 1 }]);
+  // Every forbidden form is rejected locally before HDC; never execute device mutations.
+  for (const command of ["ifconfig wlan0 down", "mount -o remount,rw /", "date -s 2026-01-01", "hilog -w start"]) {
+    const result = await raw("device", { action: "shell", target, command });
+    assert.equal(result.isError, true); assert.equal(result.data.error.code, "INVALID_INPUT");
+  }
+  const missing = await raw("device", { action: "sqlite", target, bundle: "com.devecomcp.probe", db: "app.db", sql: "SELECT 1" });
+  assert.equal(missing.data.error.code, "INVALID_INPUT"); assert.match(missing.data.error.hint, /module.json5/);
 });

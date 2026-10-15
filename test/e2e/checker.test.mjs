@@ -4,8 +4,56 @@ import fs from "node:fs";
 import path from "node:path";
 import { test } from "node:test";
 import { violations, legal, runtime } from "../fixtures/checker.mjs";
-import { session, required } from "../support/acceptance.mjs";
+import { session, required, hashes } from "../support/acceptance.mjs";
 import { waitJob } from "../support/mcp.mjs";
+
+test("checker file scope and complete report", async (t) => {
+  const { call, raw, directory } = await session(t);
+  const project = path.join(directory, "scope");
+  await call("project", { action: "create", project, app_name: "Scope", bundle_name: "com.devecomcp.scope" });
+  const file = "entry/src/main/ets/pages/Index.ets";
+  const helper = "entry/src/main/ets/pages/Helper.ets";
+  const typescript = "entry/src/main/ets/pages/Typed.ts";
+  fs.writeFileSync(path.join(project, helper), Array.from({ length: 61 }, (_, i) => `export const bad${i}: string = ${i};`).join("\n"));
+  fs.writeFileSync(path.join(project, file), "import { bad0 } from './Helper';\n@Entry\n@Component\nstruct Index { build() { Column() { Text(bad0) } } }\n");
+  fs.writeFileSync(path.join(project, typescript), "export const typed: string = 1;\n");
+  const before = hashes(project);
+  for (const files of [[], ["missing.ets"], [file, "missing.ets"], ["entry/src/main/ets"], ["AppScope/app.json5"]]) {
+    const rejected = await raw("code", { action: "check", project, files, fix: true });
+    assert.equal(rejected.isError, true);
+    assert.equal(rejected.data.error.code, "INVALID_INPUT", JSON.stringify(rejected.data));
+    assert.deepEqual(hashes(project), before, "An invalid scope cannot write source or checker caches");
+  }
+  const checked = await call("code", { action: "check", project, files: [file] });
+  assert.equal(checked.files, 1);
+  assert.equal(checked.scope.mode, "files");
+  assert.equal(checked.scope.requested_files, 1);
+  assert.ok(checked.scope.additional_files >= 1, JSON.stringify(checked));
+  assert.ok(checked.total > 50);
+  assert.equal(checked.truncated, true);
+  assert.equal(checked.issues.length, 50);
+  let content = "", line = 0, pages = 0;
+  do {
+    const page = await call("job", { action: "read", artifact_id: checked.report_artifact, line, limit: 41 });
+    content += page.content + "\n";
+    line = page.next_line;
+    pages++;
+  } while (line !== null);
+  const report = JSON.parse(content);
+  assert.ok(pages > 1);
+  assert.equal(report.issues.length, checked.total);
+  assert.equal(report.issues.filter((issue) => issue.file === path.normalize(helper) && issue.severity === "error").length, 61);
+  assert.equal(report.scope.diagnostic_files, new Set(report.issues.map((issue) => issue.file).filter(Boolean)).size);
+  assert.deepEqual(report.checked_files, [path.normalize(file)]);
+  const typed = await call("code", { action: "check", project, files: [typescript] });
+  assert.equal(typed.files, 1);
+  assert.equal(typed.passed, false, "An explicit .ts input must reach the real SDK compiler");
+  assert.ok(typed.issues.some((issue) => issue.file === path.normalize(typescript) && issue.severity === "error"));
+  const all = await call("code", { action: "check", project });
+  assert.equal(all.scope.mode, "project");
+  assert.equal(all.scope.requested_files, null);
+  assert.ok(all.files > 1, "Omitting files still checks the project");
+});
 
 for (const [kind, cases] of [["violations", violations], ["legal", legal]]) test(`checker ${kind}`, async (t) => {
   const { call, job, directory } = await session(t);

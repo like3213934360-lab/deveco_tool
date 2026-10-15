@@ -12,7 +12,10 @@ export interface ToolDef<S extends z.ZodType = z.ZodType> {
   title: string;
   description: string;
   schema: S;
+  /** Annotations describe every action in this tool, including optional write modes. */
   readOnly?: boolean;
+  /** Defaults to true; set false only when every action stays within a closed domain. */
+  openWorld?: boolean;
   /**
    * Parameters each action uses (besides `action`). A call passing a parameter its action does not
    * use is rejected instead of silently ignored (a misplaced argument must never run with defaults).

@@ -9,6 +9,7 @@ import { run } from "../core/proc.js";
 import { toolchain, toolCommand } from "../core/toolchain.js";
 import { credentials } from "./auth.js";
 import { listTargets, shell } from "./device.js";
+import { inspectProject } from "./project.js";
 
 /** AppGallery Connect API; DEVECO_AGC_URL points tests at a local mock (never set in normal use). */
 const cloud = process.env.DEVECO_AGC_URL || "https://connect-api.cloud.huawei.com";
@@ -63,7 +64,17 @@ function workKey(baseDir: string): Buffer {
   return work;
 }
 export const encryptPassword = (password: string, storeFile: string) => gcmEncrypt(workKey(path.dirname(storeFile)), Buffer.from(password)).toString("hex");
-export const decryptPassword = (hex: string, storeFile: string) => gcmDecrypt(workKey(path.dirname(storeFile)), Buffer.from(hex, "hex")).toString("utf8");
+export function decryptPassword(hex: string, storeFile: string) {
+  invariant(fs.existsSync(path.join(path.dirname(storeFile), "material")), "SIGN_MATERIAL_INVALID",
+    "Signing password encryption material is missing beside the keystore", { keystore: storeFile },
+    "Use the original DevEco signing material directory, or pass explicit signing fields with plaintext passwords");
+  try { return gcmDecrypt(workKey(path.dirname(storeFile)), Buffer.from(hex, "hex")).toString("utf8"); }
+  catch (error) {
+    if (error instanceof ToolError) throw error;
+    throw new ToolError("SIGN_MATERIAL_INVALID", "Cannot decrypt signing password with the keystore's DevEco material", { keystore: storeFile },
+      "Use the original matching material directory, or pass explicit signing fields with plaintext passwords");
+  }
+}
 
 /* ------------------------------ cloud requests ------------------------------ */
 
@@ -278,11 +289,17 @@ export async function signer(args: string[], signal?: AbortSignal) {
  * The project's own signing, if any: build-profile signingConfigs for the product, or an
  * hvigorfile `overrides.signingConfig` (teams often keep material outside the repo that way).
  */
-export function existingSigning(root: string, product = "default") {
-  const profile = readJson5(path.join(root, "build-profile.json5")) as { app: { signingConfigs?: { name: string; material?: unknown }[]; products?: { name: string; signingConfig?: string }[] } };
-  const configName = profile.app.products?.find((p) => p.name === product)?.signingConfig;
-  const inProfile = profile.app.signingConfigs?.find((c) => c.name === configName && c.material);
-  if (inProfile) return { source: "build-profile.json5", config: inProfile.name };
+type SigningMaterial = { storeFile: string; storePassword: string; keyAlias: string; keyPassword: string; certpath: string; profile: string };
+function projectSigning(root: string, product?: string) {
+  const project = inspectProject(root, product);
+  const profile = readJson5(path.join(project.root, "build-profile.json5")) as { app: { signingConfigs?: { name: string; material?: Partial<SigningMaterial> }[]; products?: { name: string; signingConfig?: string }[] } };
+  const configName = profile.app.products?.find((p) => p.name === project.product)?.signingConfig;
+  const entry = profile.app.signingConfigs?.find((c) => c.name === configName);
+  return { root: project.root, product: project.product, configName, entry };
+}
+export function existingSigning(root: string, product?: string) {
+  const { entry: inProfile } = projectSigning(root, product);
+  if (inProfile?.material) return { source: "build-profile.json5", config: inProfile.name };
   for (const f of ["hvigorfile.ts", "hvigorfile.js"]) {
     const file = path.join(root, f);
     if (fs.existsSync(file) && /overrides[\s\S]{0,200}signingConfig\s*:/.test(fs.readFileSync(file, "utf8"))) return { source: f, config: "overrides.signingConfig" };
@@ -294,15 +311,20 @@ export function existingSigning(root: string, product = "default") {
 
 export async function signPackage(input: { file: string; out: string; project?: string; product?: string; keystore?: string; keystore_password?: string; key_alias?: string; key_password?: string; cert?: string; profile?: string }, signal?: AbortSignal) {
   let material = { keystore: input.keystore, storePwd: input.keystore_password, alias: input.key_alias, keyPwd: input.key_password, cert: input.cert, profile: input.profile };
-  if (!material.keystore && input.project) {
-    const config = readJson5(path.join(path.resolve(input.project), "build-profile.json5")) as { app: { signingConfigs?: any[] } };
-    const entry = config.app.signingConfigs?.find((c) => c.name === (input.product ?? "default"));
-    invariant(entry, "SIGN_CONFIG_MISSING", "No signingConfig for this product", undefined, "Run sign action=auto first");
+  if (Object.values(material).every((value) => value === undefined) && input.project) {
+    const { root, product, configName, entry } = projectSigning(input.project, input.product);
+    const context = { product, signing_config: configName ?? null, source: "build-profile.json5" };
+    invariant(entry?.material, "SIGN_CONFIG_MISSING", `Product ${product} has no local signing material in its referenced signingConfig`, context,
+      "Reference an existing signingConfig with material, or pass all explicit keystore/password/alias/cert/profile fields. DevEco automatic signing and hvigor overrides can sign builds without exposing material here; sign auto is only for explicitly creating new signing material.");
     const m = entry.material;
-    const store = path.resolve(input.project, m.storeFile);
-    material = { keystore: store, storePwd: decryptPassword(m.storePassword, store), alias: m.keyAlias, keyPwd: decryptPassword(m.keyPassword, store), cert: path.resolve(input.project, m.certpath), profile: path.resolve(input.project, m.profile) };
+    const fields = ["storeFile", "storePassword", "keyAlias", "keyPassword", "certpath", "profile"] as const;
+    const missing = fields.filter((key) => typeof m[key] !== "string" || !m[key]);
+    invariant(!missing.length, "SIGN_MATERIAL_INVALID", "Referenced signingConfig has incomplete material", { ...context, missing },
+      "Complete the referenced signingConfig material, or pass all explicit signing fields");
+    const store = path.resolve(root, m.storeFile!);
+    material = { keystore: store, storePwd: decryptPassword(m.storePassword!, store), alias: m.keyAlias, keyPwd: decryptPassword(m.keyPassword!, store), cert: path.resolve(root, m.certpath!), profile: path.resolve(root, m.profile!) };
   }
-  invariant(material.keystore && material.storePwd && material.alias && material.keyPwd && material.cert && material.profile, "INVALID_INPUT", "Signing material incomplete: pass project (with signingConfigs) or keystore/password/alias/cert/profile");
+  invariant(material.keystore && material.storePwd && material.alias && material.keyPwd && material.cert && material.profile, "INVALID_INPUT", "Signing material incomplete: pass project with referenced signingConfigs material, or all keystore/keystore_password/key_alias/key_password/cert/profile fields");
   invariant(!fs.existsSync(input.out), "CONFLICT", `${input.out} already exists`);
   await signer(["sign-app", "-mode", "localSign", "-keyAlias", material.alias, "-keyPwd", material.keyPwd, "-appCertFile", material.cert, "-profileFile", material.profile,
     "-inFile", path.resolve(input.file), "-signAlg", "SHA256withECDSA", "-keystoreFile", material.keystore, "-keystorePwd", material.storePwd, "-outFile", path.resolve(input.out)], signal);

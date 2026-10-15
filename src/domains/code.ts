@@ -75,15 +75,15 @@ export async function arktsCheck(projectRoot: string, files: string[] | undefine
   const tc = toolchain();
   invariant(tc.components.etsLoader, "CAPABILITY_UNAVAILABLE", "SDK ets-loader not found; ArkTS check needs a full SDK");
   const root = path.resolve(projectRoot);
-  const request = { project: root, files: (files ?? []).map((f) => path.resolve(root, f)), fix };
+  const request = { project: root, files: files?.map((f) => path.resolve(root, f)), fix };
   let result = await checkOnce(tc.root, request, signal);
   // The warm daemon died (killed along with a cancelled job, OOM): one retry on a fresh daemon.
   if (result?.error === "ArkTS checker exited") result = await checkOnce(tc.root, request, signal);
-  invariant(!result?.error, "CHECK_FAILED", `ArkTS check could not run: ${result?.error}`);
-  return formatCheck(result, root, fix);
+  invariant(!result?.error, result?.errorCode ?? "CHECK_FAILED", `ArkTS check could not run: ${result?.error}`, result?.details);
+  return formatCheck(result, root, fix, files !== undefined);
 }
 
-function checkOnce(key: string, request: { project: string; files: string[]; fix: boolean }, signal: AbortSignal): Promise<any> {
+function checkOnce(key: string, request: { project: string; files?: string[]; fix: boolean }, signal: AbortSignal): Promise<any> {
   signal.throwIfAborted();
   return checkers.use(key, startChecker, (proc) => new Promise<any>((resolve, reject) => {
     // Pooled daemon died since the last use (killed with a cancelled job's process group, OOM...):
@@ -109,23 +109,35 @@ function checkOnce(key: string, request: { project: string; files: string[]; fix
   }));
 }
 
-function formatCheck(result: any, root: string, fix: boolean) {
+export async function formatCheck(result: any, root: string, fix: boolean, explicit: boolean) {
   const issues: CheckIssue[] = (result.errors ?? []).map((e: Record<string, unknown>) => ({
     // The checker reports paths relative to the project; make them relative to the project, never to our cwd.
     file: (() => { const f = String(e.file ?? e.filePath ?? ""); return path.relative(root, path.isAbsolute(f) ? f : path.join(root, f)); })(),
     line: Number(e.line ?? 0), column: Number(e.column ?? e.col ?? 0),
     severity: String(e.severity ?? "error"), message: String(e.message ?? ""), rule: e.rule ? String(e.rule) : e.code ? String(e.code) : undefined,
   }));
-  return {
+  issues.sort((a, b) => (a.severity === "error" ? -1 : 1) - (b.severity === "error" ? -1 : 1));
+  const checked = new Set<string>(result.checkedFiles);
+  const diagnosticFiles = new Set(issues.map((i) => i.file).filter(Boolean));
+  const summary = {
     passed: result.summary?.errorCount === 0,
     errors: result.summary?.errorCount ?? 0,
     warnings: result.summary?.warnCount ?? 0,
     files: result.summary?.fileCount,
-    issues: issues.sort((a, b) => (a.severity === "error" ? -1 : 1) - (b.severity === "error" ? -1 : 1)).slice(0, 50),
+    scope: {
+      mode: explicit ? "files" : "project",
+      requested_files: explicit ? checked.size : null,
+      diagnostic_files: diagnosticFiles.size,
+      additional_files: [...diagnosticFiles].filter((file) => !checked.has(file)).length,
+      unlocated_issues: issues.filter((i) => !i.file).length,
+    },
+    total: issues.length,
     ...(fix ? { fixed: result.fixed ?? [], also_modified: result.alsoModified ?? [] } : {}),
     hints: buildFailureHints(issues.filter((i) => i.severity === "error").map((i) => ({ code: i.rule, message: i.message }))),
-    note: "Static preflight; a successful build is the final proof of compilation",
+    note: "files counts input roots; scope.additional_files counts diagnostic files outside those roots, including dependencies. Static preflight; a successful build is the final proof of compilation",
   };
+  const artifact = await saveArtifact(JSON.stringify({ ...summary, checked_files: [...checked], issues }, null, 2), "application/json");
+  return { ...summary, issues: issues.slice(0, 50), truncated: issues.length > 50, report_artifact: artifact.artifact_id };
 }
 
 /* ---------------------------------- linter ---------------------------------- */

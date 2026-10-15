@@ -231,17 +231,18 @@ export const jobTool = tool({
 export const codeTool = tool({
   name: "code",
   title: "Code checks & LSP",
-  readOnly: true,
+  readOnly: false,
+  openWorld: false,
   description: [
     "ArkTS/C++ checks and LSP use the project SDK.",
-    "check: static check/fix hints, no build (build/build_run check edits); fix=true applies safe fixes. The compiler is the final judge.",
+    "check: static checks/fix hints, no build; fix=true applies safe fixes. May diagnose dependencies; scope counts roots, report_artifact has all issues. The compiler is the final judge.",
     "lint: Code Linter report. api_scan / api_versions: API compatibility between SDK versions.",
-    "action=lsp requires op: hover/definition/declaration/implementation/references/symbols/workspace_symbols/diagnostics/completion/signature/call_hierarchy (direction). Locate by symbol (+line hint). lsp_restart restarts servers.",
+    "action=lsp requires op: see enum; locate by symbol (+line hint). lsp_restart restarts servers.",
   ].join(" "),
   schema: z.object({
     action: z.enum(["check", "lint", "api_scan", "api_versions", "lsp", "lsp_restart"]),
     project: fields.project.optional().describe("Project root; required except api_versions"),
-    files: z.array(z.string()).max(200).optional().describe("check/api_scan/lsp diagnostics: relative/absolute; check uses files, not file"),
+    files: z.array(z.string()).max(200).optional().describe("check/api_scan/lsp diagnostics: check uses files, not file. Existing .ets/.ts or C/C++; omit for project; no mixed languages"),
     fix: z.boolean().optional(),
     product: fields.product,
     op: z.enum(["hover", "definition", "declaration", "implementation", "references", "symbols", "workspace_symbols", "diagnostics", "completion", "signature", "call_hierarchy"]).optional().describe("lsp operation"),
@@ -275,7 +276,11 @@ export const codeTool = tool({
     const project = input.project;
     switch (input.action) {
       case "check":
-        if (input.files?.some((f) => /\.(c|cc|cpp|h|hpp)$/.test(f))) return code.cppCheck(project, input.files, ctx.signal);
+        if (input.files?.some((f) => /\.(c|cc|cpp|h|hpp)$/.test(f))) {
+          invariant(input.files.every((f) => /\.(c|cc|cpp|h|hpp)$/.test(f)), "INVALID_INPUT", "Check ArkTS/TypeScript and C/C++ files in separate calls");
+          invariant(!input.fix, "INVALID_INPUT", "fix=true is only supported for ArkTS/TypeScript checks");
+          return code.cppCheck(project, input.files, ctx.signal);
+        }
         return code.arktsCheck(project, input.files, ctx.signal, input.fix ?? false);
       case "lint":
         return code.codeLinter(project, { path: input.file, fix: input.fix, product: input.product, config_path: input.config_path, incremental: input.incremental, output_path: input.output_path }, ctx.signal);
@@ -298,7 +303,7 @@ export const deviceTool = tool({
   schema: z.object({
     action: z.enum(["list", "info", "log", "shell", "sqlite", "send", "recv"]),
     db: z.string().optional().describe("sqlite: absolute device path or RDB name (app.db) + debuggable bundle"),
-    module: z.string().optional().describe("sqlite: module owning the RDB store (default entry)"),
+    module: z.string().optional().describe("sqlite db name: required owning module from module.json5 (entry/default)"),
     sql: z.string().max(20000).optional().describe("sqlite: SQL or .tables/.schema"),
     write: z.boolean().optional().describe("sqlite: allow modifying statements"),
     target: fields.target,
@@ -328,6 +333,17 @@ export const deviceTool = tool({
     if (input.action === "list") {
       const targets = await device.listTargets(ctx.signal);
       return { devices: await Promise.all(targets.map((t) => device.deviceInfo(t, ctx.signal).catch(() => ({ target: t })))) };
+    }
+    if (input.action === "shell") {
+      invariant(input.command, "INVALID_INPUT", "command is required");
+      device.readonlyShellArgs(input.command);
+    }
+    if (input.action === "sqlite") {
+      invariant(input.db && input.sql, "INVALID_INPUT", "db and sql are required");
+      if (!input.db.startsWith("/") && input.db !== ":memory:") {
+        invariant(input.bundle, "INVALID_INPUT", "A relative db name needs bundle");
+        device.appDatabasePath(input.bundle, input.db, input.module);
+      }
     }
     const target = await device.resolveTarget(input.target, ctx.signal);
     switch (input.action) {
@@ -769,6 +785,7 @@ export const diagnoseTool = tool({
   name: "diagnose",
   title: "Crash & failure diagnosis",
   readOnly: true,
+  openWorld: false,
   description: "crash: latest jscrash/cppcrash/appfreeze or pasted log; error, app frames, fault-pattern causes; project adds source (file/line/code). build_run/launch attach startup crashes. build: fix hints, diagnostics only (no project).",
   schema: z.object({
     action: z.enum(["crash", "build"]),
@@ -794,7 +811,7 @@ export const diagnoseTool = tool({
 export const knowledgeTool = tool({
   name: "knowledge",
   title: "Knowledge",
-  readOnly: true,
+  readOnly: false,
   description: [
     "Updatable offline HarmonyOS guides/APIs/best practices/FAQ/releases, ArkTS rules/compile errors/crash patterns.",
     "search: Chinese/English full text, APIs, decorators, errors. read: id, section=heading. catalog: no parameters; rollback: restore previous pack, no parameters. status/update: check.",

@@ -45,6 +45,7 @@ const preflightStep = {
       if (result.errors) ctx.log(`preflight: ${result.errors} possible error(s); building anyway (hvigor decides)`);
       return {
         errors: result.errors, warnings: result.warnings, scope: scope.files ? "changed" : "project", files: scope.files?.length ?? result.files,
+        diagnostic_scope: result.scope, report_artifact: result.report_artifact,
         ...(result.errors ? { issues: result.issues.slice(0, 10) } : {}),
       };
     } catch (error) {
@@ -75,10 +76,11 @@ const buildStep = {
  * positives: report that explicitly (and drop the error list) so no agent goes "fixing" code
  * that compiles. When the build fails, the job fails with hvigor's own diagnostics instead.
  */
-function settlePreflight(preflight: any, buildSucceeded: boolean) {
+export function settlePreflight(preflight: any, buildSucceeded: boolean) {
   if (!preflight?.errors || !buildSucceeded) return preflight;
-  return { errors: 0, warnings: preflight.warnings, overruled: preflight.errors,
-    note: `The static preflight flagged ${preflight.errors} error(s), but the compiler accepted the code: they were false positives. Do not change code for them.` };
+  const { issues, ...summary } = preflight;
+  return { ...summary, errors: 0, overruled: preflight.errors,
+    note: `The static preflight flagged ${preflight.errors} error(s), but the compiler accepted the code: they were false positives. Do not change code for them. report_artifact retains the original static findings, not the build verdict.` };
 }
 
 defineJob<BuildInput>({

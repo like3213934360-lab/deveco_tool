@@ -14,7 +14,7 @@ const entry = path.join(out, "entry.ts");
 fs.writeFileSync(entry, [
   `export { parseWindows, pngGray, blankScore } from ${JSON.stringify(path.join(root, "src/domains/ui.ts"))};`,
   `export { checklist } from ${JSON.stringify(path.join(root, "src/domains/uitest.ts"))};`,
-  `export { mergeCodexToml, mergeJsonConfig } from ${JSON.stringify(path.join(root, "src/domains/hostconfig.ts"))};`,
+  `export { mergeCodexToml, mergeJsonConfig, installMcp } from ${JSON.stringify(path.join(root, "src/domains/hostconfig.ts"))};`,
   `export { projectAclPermissions, profileSummary } from ${JSON.stringify(path.join(root, "src/domains/sign.ts"))};`,
   `export { siteAllowed, regionBase } from ${JSON.stringify(path.join(root, "src/domains/auth.ts"))};`,
   `export { apiOf, compatibility } from ${JSON.stringify(path.join(root, "src/domains/doctor.ts"))};`,
@@ -25,7 +25,7 @@ fs.writeFileSync(entry, [
   `export { applicableSyscap, deviceCaps } from ${JSON.stringify(path.join(root, "src/domains/syscap.ts"))};`,
   `export { parseDuration } from ${JSON.stringify(path.join(root, "src/domains/device.ts"))};`,
   `export { findProjectRoot, selectRunModules, BuildOutputParser } from ${JSON.stringify(path.join(root, "src/domains/project.ts"))};`,
-  `export { readonlySqlAllowed, readonlyShellArgs } from ${JSON.stringify(path.join(root, "src/domains/device.ts"))};`,
+  `export { readonlySqlAllowed, readonlyShellArgs, appDatabasePath } from ${JSON.stringify(path.join(root, "src/domains/device.ts"))};`,
 ].join("\n"));
 await build({ entryPoints: [entry], outfile: path.join(out, "entry.mjs"), bundle: true, format: "esm", platform: "node", packages: "external", logLevel: "error", nodePaths: [path.join(root, "node_modules")] });
 fs.symlinkSync(path.join(root, "node_modules"), path.join(out, "node_modules"), "junction"); // junction: no admin rights needed on Windows
@@ -39,6 +39,22 @@ test("read-only shell queries quick fixes without allowing mutation or extra arg
     "bm quickfix -q -b", "bm quickfix -q -b -r", "bm quickfix -q -b com.example.app -r",
     "bm quickfix -q -b com.example.app; reboot", "bm install app.hap", "reboot", "hilog -r",
   ]) assert.throws(() => m.readonlyShellArgs(command), { code: "INVALID_INPUT" }, command);
+});
+
+test("read-only shell validates arguments of commands that can mutate devices", () => {
+  for (const command of ["ls /data/local/tmp", "uname -a", "param get ohos.qemu.hvd.name", "ifconfig", "ifconfig wlan0", "ifconfig -a", "mount", "date", "date -u +%Y", "getprop", "hilog -x", "hidumper -s WindowManagerService", "power-shell dump", "wm size"]) {
+    assert.deepEqual(m.readonlyShellArgs(command), command.split(" "), command);
+  }
+  for (const command of ["ifconfig wlan0 down", "ifconfig wlan0 1.2.3.4", "mount -o remount,rw /", "date -s 2026-01-01", "date 101512002026", "hilog -w start", "hilog -G 16M", "hilog -r", "hidumper -s RenderService -a flush", "power-shell display", "wm size 100x100", "snapshot_display -f /data/local/tmp/x.png", "param set test value", "param get x set y", "date -u; reboot", "date\nreboot", "date\rreboot", "cat 'file'", "cat \\file"]) {
+    assert.throws(() => m.readonlyShellArgs(command), { code: "INVALID_INPUT" }, command);
+  }
+});
+
+test("SQLite shorthand requires the exact module instead of assuming entry", () => {
+  assert.equal(m.appDatabasePath("com.example.app", "app.db", "default"), "/data/app/el2/100/database/com.example.app/default/rdb/app.db");
+  assert.equal(m.appDatabasePath("com.example.app", "app.db", "entry"), "/data/app/el2/100/database/com.example.app/entry/rdb/app.db");
+  assert.throws(() => m.appDatabasePath("com.example.app", "app.db"), (e) => e.code === "INVALID_INPUT" && /module.json5/.test(e.hint));
+  assert.throws(() => m.appDatabasePath("com.example.app", "app.db", "../default"), { code: "INVALID_INPUT" });
 });
 
 test("parses the WindowManagerService window table", () => {
@@ -95,6 +111,12 @@ test("merges host MCP configs idempotently (JSON + TOML)", () => {
   const merged = m.mergeCodexToml(toml, "deveco", spec, true).text;
   assert.ok(merged.includes('model = "o3"') && merged.includes("[mcp_servers.other]") && !merged.includes('"old"') && !merged.includes('X = "1"'));
   assert.ok(merged.includes('args = ["/x/cli.js", "mcp"]') && merged.includes('A = "1"'));
+});
+
+test("skill-only hosts receive actionable MCP registration guidance", () => {
+  for (const host of ["deveco", "atomcode", "dsh"]) {
+    assert.throws(() => m.installMcp(host), (e) => e.code === "INVALID_INPUT" && /skill export\/install only/.test(e.hint) && e.details.hosts.includes("codex"));
+  }
 });
 
 test("derives ACL permissions from module.json5 and SDK definitions", () => {

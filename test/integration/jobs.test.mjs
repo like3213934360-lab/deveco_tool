@@ -17,6 +17,8 @@ export * from ${JSON.stringify(path.resolve("src/core/jobs.ts"))};
 export * from ${JSON.stringify(path.resolve("src/core/artifacts.ts"))};
 export * from ${JSON.stringify(path.resolve("src/core/db.ts"))};
 export { ToolError } from ${JSON.stringify(path.resolve("src/core/errors.ts"))};
+export { formatCheck } from ${JSON.stringify(path.resolve("src/domains/code.ts"))};
+export { settlePreflight } from ${JSON.stringify(path.resolve("src/jobs.ts"))};
 `);
 // Output inside the repo so external packages (zod, json5) resolve from node_modules.
 const bundle = path.resolve("node_modules/.cache/deveco-test-harness.mjs");
@@ -97,6 +99,53 @@ test("artifacts page by line and filter with grep", async () => {
   const errors = await m.readArtifact(artifact.artifact_id, { grep: "ERROR" });
   assert.equal(errors.matched_lines, 10);
   assert.match(errors.content, /^1: line 0 ERROR/);
+});
+
+test("checker summaries distinguish dependency scope and retain every diagnostic in a pageable artifact", async () => {
+  const root = path.join(out, "project");
+  const checked = path.join("entry", "src", "main", "ets", "Main.ets"), dependency = path.join("library", "src", "main", "ets", "Helper.ets");
+  const diagnostics = [
+    ...Array.from({ length: 65 }, (_, i) => ({ file: dependency, line: i + 1, column: 1, severity: "warning", message: `dependency issue ${i}`, rule: "sample-warning" })),
+    { file: path.join(root, checked), line: 1, column: 1, severity: "error", message: "root error" },
+    { line: 0, column: 0, severity: "error", message: "project configuration error" },
+  ];
+  const result = await m.formatCheck({ checkedFiles: [checked], errors: diagnostics, summary: { errorCount: 2, warnCount: 65, fileCount: 1 } }, root, false, true);
+  assert.equal(result.files, 1);
+  assert.equal(result.total, 67);
+  assert.deepEqual(result.scope, { mode: "files", requested_files: 1, diagnostic_files: 2, additional_files: 1, unlocated_issues: 1 });
+  assert.equal(result.truncated, true);
+  assert.equal(result.issues.length, 50);
+  assert.deepEqual(result.issues.slice(0, 2).map((issue) => issue.severity), ["error", "error"]);
+  let line = 0, content = "", pages = 0;
+  do {
+    const page = await m.readArtifact(result.report_artifact, { line, limit: 37 });
+    content += page.content + "\n";
+    line = page.next_line;
+    pages++;
+  } while (line !== null);
+  assert.ok(pages > 1);
+  const report = JSON.parse(content);
+  assert.equal(report.issues.length, 67);
+  assert.deepEqual(report.checked_files, [checked]);
+  assert.equal(report.issues.at(-1).message, "dependency issue 64");
+  assert.deepEqual(report.scope, result.scope);
+  const match = await m.readArtifact(result.report_artifact, { grep: "dependency issue 64" });
+  assert.equal(match.matched_lines, 1);
+  const preflight = { errors: result.errors, warnings: result.warnings, files: result.files, scope: "changed", diagnostic_scope: result.scope, report_artifact: result.report_artifact, issues: result.issues.slice(0, 10) };
+  const settled = m.settlePreflight(preflight, true);
+  assert.equal(settled.errors, 0);
+  assert.equal(settled.overruled, 2);
+  assert.equal(settled.issues, undefined, "The build summary cannot keep compiler-overruled errors active");
+  assert.equal(settled.report_artifact, result.report_artifact);
+  assert.deepEqual(settled.diagnostic_scope, result.scope);
+  assert.equal(settled.scope, "changed");
+  assert.equal(settled.files, 1);
+  assert.match(settled.note, /original static findings, not the build verdict/);
+  assert.equal(preflight.errors, 2, "Settling a build must not rewrite original findings");
+  assert.equal(m.settlePreflight(preflight, false), preflight);
+  const clean = await m.formatCheck({ checkedFiles: [], errors: [], summary: { errorCount: 0, warnCount: 0, fileCount: 0 } }, root, false, false);
+  assert.deepEqual(clean.scope, { mode: "project", requested_files: null, diagnostic_files: 0, additional_files: 0, unlocated_issues: 0 });
+  assert.equal(clean.truncated, false);
 });
 
 test("force resume never repeats a protected cloud mutation without a receipt", async () => {

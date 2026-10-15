@@ -8,7 +8,7 @@ const fs = require('fs');
 
 function parseArgs(argv) {
   // 默认只读检查；--fix 才改写源文件，避免直跑脚本时静默修改代码。
-  const args = { project: '', files: [], fix: false, serve: false };
+  const args = { project: '', files: undefined, fix: false, serve: false };
   let i = 2;
   while (i < argv.length) {
     if (argv[i] === '--project' && argv[i + 1]) {
@@ -20,12 +20,14 @@ function parseArgs(argv) {
     } else if (argv[i] === '--fix') {
       args.fix = true;
     } else if (argv[i] === '--files') {
+      args.files ??= [];
       i++;
       while (i < argv.length && !argv[i].startsWith('--')) {
         args.files.push(argv[i++]);
       }
       continue;
     } else if (!argv[i].startsWith('--')) {
+      args.files ??= [];
       args.files.push(argv[i]);
     }
     i++;
@@ -3506,6 +3508,38 @@ function runCheck(args) {
     };
   }
 
+  // An explicit scope is a contract: reject every invalid member before SDK
+  // discovery or analysis, and never turn an empty/invalid list into a scan.
+  const hasExplicitFiles = args.files !== undefined;
+  const inputError = (message, details) => ({
+    success: false, errorCode: 'INVALID_INPUT', error: message, details,
+    errors: [], summary: { errorCount: 0, warnCount: 0, fileCount: 0 },
+  });
+  if (hasExplicitFiles && (!Array.isArray(args.files) || args.files.length === 0)) {
+    return inputError('files must be a non-empty array; omit files to check the project');
+  }
+  let files;
+  if (hasExplicitFiles) {
+    const invalid = [];
+    files = [];
+    for (const file of args.files) {
+      if (typeof file !== 'string' || !file.trim()) {
+        invalid.push({ file, reason: 'Expected a non-empty source file path' });
+        continue;
+      }
+      const absolute = path.resolve(args.project, file);
+      if (!/\.(ets|ts)$/.test(absolute) || /\.d\.(ets|ts)$/.test(absolute)) {
+        invalid.push({ file, reason: 'Expected a .ets or .ts source file, not a declaration file' });
+      } else if (!fs.statSync(absolute, { throwIfNoEntry: false })?.isFile()) {
+        invalid.push({ file, reason: 'File does not exist or is not a regular file' });
+      } else {
+        files.push(absolute);
+      }
+    }
+    if (invalid.length) return inputError('Invalid files; no files were checked or fixed', { invalid_files: invalid });
+    files = [...new Set(files)];
+  }
+
   const devecoHome = findDevecoHome();
   if (!devecoHome) {
     return { success: false, error: 'Cannot find DevEco Studio. Set DEVECO_HOME environment variable.', errors: [], summary: { errorCount: 0, warnCount: 0 } };
@@ -3515,23 +3549,14 @@ function runCheck(args) {
   if (!etsLoaderPath) {
     return { success: false, error: `Cannot find ets-loader in DevEco SDK at: ${devecoHome}`, errors: [], summary: { errorCount: 0, warnCount: 0 } };
   }
-  let files = args.files.map(f => path.isAbsolute(f) ? f : path.resolve(args.project, f));
-  // Filter out directories and non-.ets files from the explicit file list.
-  // When the CLI passes `.` (cwd) as a positional arg, it resolves to a
-  // directory path that would crash fs.readFileSync in validateSystemResources.
-  if (files.length > 0) {
-    files = files.filter(f => fs.existsSync(f) && fs.statSync(f).isFile() && f.endsWith('.ets') && !f.endsWith('.d.ets'));
-  }
-  // 用户是否显式指定了有效的 .ets 文件（用于跳过项目级校验器）
-  const hasExplicitFiles = files.length > 0;
-  if (files.length === 0) {
+  if (!hasExplicitFiles) {
     // 全模块收集：entry-only 版本在多模块工程（products/features/commons 等，
     // 无 entry 模块）下返回空集，导致静默 0 文件空跑。
     files = collectProjectEtsFiles(args.project);
   }
 
   if (files.length === 0) {
-    return { success: true, errors: [], summary: { errorCount: 0, warnCount: 0 } };
+    return { success: true, errors: [], checkedFiles: [], summary: { errorCount: 0, warnCount: 0, fileCount: 0 } };
   }
 
   const moduleJsonCandidates = [
@@ -3598,6 +3623,7 @@ function runCheck(args) {
   return {
     success: errorCount === 0,
     errors: filtered,
+    checkedFiles: files.map(f => path.relative(args.project, f)),
     fixed,
     alsoModified,
     summary: { errorCount, warnCount, fixedCount: fixed.length, checkerDiagCount, fileCount: files.length },
@@ -3657,8 +3683,8 @@ function handleRequest(line) {
     try {
       return runCheck({
         project: req.project ? path.resolve(req.project) : '',
-        files: Array.isArray(req.files) ? req.files : [],
-        fix: req.fix !== false,
+        files: req.files,
+        fix: req.fix === true,
         cache: true,
       });
     } catch (e) {

@@ -8,8 +8,24 @@
     "  '<tool> [param] [param=value] ...'  checked against the live tools/list JSON Schema (value must be in the enum when one exists)",
     "  'cli:<text>'  src/cli.ts must contain the text;  'prompt:<name>' / 'skill:<name>'  must be served by the MCP server"
   ],
-  "upstream_rev": { "deveco-code": "74a8dcd63025c0c26dfb546518af5879ecf8163b", "deveco-cli": "1b2389be7df657d7749b9d4294f2bba487200eb3" },
+  "upstream_rev": { "deveco-code": "f535194ff67347270f2d28bdf966c6570af2211a", "deveco-cli": "78b122be9507027a3b155d26dbc63669cb684471" },
   "upstream_reviews": [
+    {
+      "date": "2026-10-15",
+      "upstream": "deveco-code",
+      "from": "74a8dcd63025c0c26dfb546518af5879ecf8163b",
+      "to": "f535194ff67347270f2d28bdf966c6570af2211a",
+      "decision": "host_and_user_managed_skill",
+      "reason": "Reviewed all four commits, executable host changes, and the D2A entry/controller and model-call boundaries; the 242-file change is dominated by the new skill's reference library, not an MCP runtime upgrade. c09fb7d/01e16b6 reorder host providers; f535194 clamps request/variant budgets and propagates model limits into compaction. e7b2941 adds the Pixso/Figma workflow, workflow telemetry and two tools that upload worktree images (plus optional source) to a separately configured vision model. compare_images returns semantic visual issues; recognize_ui_components writes a provenance-bearing inventory and can emit a degraded result after empty model responses. These are delegated to a vision-capable host and its file tools, not mapped to deterministic ui visual pixel comparison or claimed available on a text-only host. The upstream nested model, retry/degraded behavior, telemetry, workflow controller and Anchor/Pixso integrations are not imported. Skill selection, installation and updates remain user-managed; this review neither installs the new D2A skill nor claims its reference library or generated-code workflow was executed."
+    },
+    {
+      "date": "2026-10-15",
+      "upstream": "deveco-cli",
+      "from": "1b2389be7df657d7749b9d4294f2bba487200eb3",
+      "to": "78b122be9507027a3b155d26dbc63669cb684471",
+      "decision": "reviewed_independent_boundaries",
+      "reason": "Reviewed 27 commits (17 non-merge), all production diffs and the test/documentation inventory across 30 net changed files. f0d384e adds module-scoped clean and a hvigor execution mode, removes forced execution flags/daemon stop, makes ohpm conditional, and reduces memory sampling; this server retains its existing unscoped project clean and managed hvigor policy, and explicitly skips the two new clean controls rather than confusing execution mode with debug/release build mode. Existing dependency-stamp synchronization remains independent, not identical to the CLI mtime policy. 8ae9f94 adds {workspace}/relative custom compile-database environment paths; this server keeps explicit project-based discovery and compileNative generation, without importing that environment override or its invalid-path fallback. 2642df6 selects the docs publish tag, pins the bundled docs dependency and distinguishes installed from bundled data; independent knowledge updates already select configured latest/daily tags and keep their own schema/integrity/activation/rollback contract, without CLI self-update or automatic docs synchronization. d805211 rejects a missing bundle before the nested verifier starts; MCP UI sessions remain host-driven and may inspect an explicitly selected device without an app bundle, so identical verifier execution is not claimed. Remaining commits are tests, reverts, merges and documentation. No Skill auto-distribution or Windows NTLM behavior is adopted."
+    },
     {
       "date": "2026-10-13",
       "upstream": "deveco-code",
@@ -136,11 +152,21 @@
     "code:tool:save_ui_screenshot:param:dirname": { "status": "full", "to": "ui directory" },
     "code:tool:skill": { "status": "full", "to": "skills action=read" },
     "code:tool:skill:param:name": { "status": "full", "to": "skills name" },
+    "code:tool:compare_images": { "status": "host", "reason": "Semantic image comparison belongs to a vision-capable host; no nested vision model or equivalent pixel-diff claim is added. Text-only hosts cannot provide this capability." },
+    "code:tool:compare_images:param:actualImage": { "status": "host", "reason": "The image-capable host reads the actual screenshot; the server does not configure or call the upstream vision provider." },
+    "code:tool:compare_images:param:referenceImage": { "status": "host", "reason": "The image-capable host reads the reference image; deterministic ui visual comparison is not semantic design review." },
+    "code:tool:compare_images:param:requirements": { "status": "host", "reason": "Visual-review requirements are host model input; identical upstream vision output is not claimed." },
+    "code:tool:recognize_ui_components": { "status": "host", "reason": "Visual component interpretation belongs to a vision-capable host, with ordinary host file output; no nested vision model or identical upstream inventory schema is supplied." },
+    "code:tool:recognize_ui_components:param:image": { "status": "host", "reason": "The image-capable host reads the UI image; text-only hosts cannot perform visual recognition." },
+    "code:tool:recognize_ui_components:param:outputPath": { "status": "host", "reason": "Saving host-produced analysis is a host file-write capability; this server does not implement the upstream model-generated inventory format." },
+    "code:tool:recognize_ui_components:param:requirements": { "status": "host", "reason": "Component-recognition requirements are host model input; identical upstream vision output is not claimed." },
+    "code:tool:recognize_ui_components:param:sourceFile": { "status": "host", "reason": "Reading optional React/HTML/text source for interpretation is a host file-read capability." },
 
     "code:skill:hmos-arkui-develop-skill": { "status": "full", "to": "skill:hmos-arkui-develop-skill" },
     "code:skill:hmos-runtime-fix-skill": { "status": "full", "to": "skill:hmos-runtime-fix-skill" },
     "code:skill:customize-deveco": { "status": "skip", "reason": "Configures DevEco Code itself; not applicable to other hosts (user decision)." },
     "code:skill:deveco-cli": { "status": "skip", "reason": "Teaches devecocli shell usage; the same capabilities are MCP tools here (user decision)." },
+    "code:skill:hmos-d2a-design-to-arkts-entry": { "status": "skip", "reason": "Upstream host-specific Pixso/Figma workflow with controller, Anchor/Pixso integrations and nested vision tools; not bundled or auto-installed. Skill selection and updates remain user-managed under AGENTS.md; this MCP does not claim the D2A workflow." },
     "code:command:debug": { "status": "full", "to": "prompt:debug-crash" },
     "code:command:review": { "status": "host", "reason": "Generic code review is a host capability." },
     "code:command:initialize": { "status": "host", "reason": "AGENTS.md generation is a host capability." },
@@ -174,6 +200,8 @@
     "cli:cmd:build:opt:--modules": { "status": "full", "to": "project modules" },
     "cli:cmd:build:opt:--product": { "status": "full", "to": "project product" },
     "cli:cmd:build clean": { "status": "full", "to": "project action=clean" },
+    "cli:cmd:build clean:opt:--mode": { "status": "skip", "reason": "This selects hvigor execution mode (default module), not debug/release build mode. Independent project clean retains its existing unscoped contract; no execution-mode parity is claimed or silently mapped to project.mode." },
+    "cli:cmd:build clean:opt:--modules": { "status": "skip", "reason": "Module-scoped cleanup is a new upstream CLI control. Independent project clean remains unscoped and rejects modules; this release does not expand its destructive cleanup contract or claim module-selective behavior." },
 
     "cli:cmd:check": { "status": "full", "to": "code" },
     "cli:cmd:check arkts": { "status": "full", "to": "code action=check" },

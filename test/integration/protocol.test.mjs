@@ -50,10 +50,8 @@ test("invalid frames return protocol errors and the subprocess stays usable", as
   assert.equal((await c.next()).error.code, -32601);
   c.send({ jsonrpc: "2.0", id: "init", method: "initialize", params: {} });
   assert.equal((await c.next()).error.code, -32602);
-  for (const version of ["2025-06-18", "2025-03-26", "2024-11-05"]) {
-    c.send({ jsonrpc: "2.0", id: version, method: "initialize", params: { protocolVersion: version, capabilities: {}, clientInfo: { name: "regression", version: "1" } } });
-    assert.equal((await c.next()).result.protocolVersion, version);
-  }
+  c.send({ jsonrpc: "2.0", id: "initialize", method: "initialize", params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "regression", version: "1" } } });
+  assert.equal((await c.next()).result.protocolVersion, "2025-06-18");
   // Valid notifications, including malformed notification params, must stay silent.
   for (const method of ["ping", "not-a-method", "notifications/cancelled"])
     c.send({ jsonrpc: "2.0", method, params: [] });
@@ -65,6 +63,54 @@ test("invalid frames return protocol errors and the subprocess stays usable", as
   for (const id of [0, "0", 42, "last"]) c.send({ jsonrpc: "2.0", id, method: "ping" });
   const ids = await Promise.all(Array.from({ length: 4 }, c.next));
   assert.deepEqual(new Set(ids.map((m) => m.id)), new Set([0, "0", 42, "last"]));
+});
+
+test("version negotiation only claims the implemented single-message protocol", async (t) => {
+  for (const requested of ["2025-06-18", "2025-03-26", "2024-11-05", "2099-01-01"]) {
+    const c = raw(t);
+    c.send({ jsonrpc: "2.0", id: "init", method: "initialize", params: { protocolVersion: requested, capabilities: {}, clientInfo: { name: "regression", version: "1" } } });
+    assert.equal((await c.next()).result.protocolVersion, "2025-06-18", requested);
+    c.send({ jsonrpc: "2.0", method: "notifications/initialized" });
+    c.send([{ jsonrpc: "2.0", id: 1, method: "ping" }, { jsonrpc: "2.0", id: 2, method: "ping" }]);
+    const batch = await c.next();
+    assert.equal(batch.id, null); assert.equal(batch.error.code, -32600);
+    c.send({ jsonrpc: "2.0", id: "after", method: "ping" });
+    assert.deepEqual(await c.next(), { jsonrpc: "2.0", id: "after", result: {} });
+  }
+});
+
+test("tools/call rejects malformed envelopes before resolving or executing tools", async (t) => {
+  const c = raw(t);
+  let id = 0;
+  c.send({ jsonrpc: "2.0", id: ++id, method: "initialize", params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "regression", version: "1" } } });
+  assert.equal((await c.next()).result.protocolVersion, "2025-06-18");
+  c.send({ jsonrpc: "2.0", method: "notifications/initialized" });
+  for (const params of [
+    ...[undefined, null, true, 1, [], {}, "", "  "].map((name) => ({ name, arguments: {} })),
+    ...[null, [], [1], "", "x", true, false, 1, 0].map((args) => ({ name: "doctor", arguments: args })),
+  ]) {
+    c.send({ jsonrpc: "2.0", id: ++id, method: "tools/call", params });
+    const response = await c.next();
+    assert.equal(response.error?.code, -32602, JSON.stringify(params));
+    assert.equal(response.result, undefined, "malformed envelopes never become tool results");
+  }
+  for (const name of ["missing", "__proto__"]) {
+    c.send({ jsonrpc: "2.0", id: ++id, method: "tools/call", params: { name, arguments: {} } });
+    const response = await c.next();
+    assert.equal(response.error.code, -32602);
+    assert.equal(response.error.message, `Unknown tool: ${name}`);
+    assert.equal(response.result, undefined);
+  }
+  // Omitted arguments are a valid envelope. The action schema still returns a tool error.
+  c.send({ jsonrpc: "2.0", id: ++id, method: "tools/call", params: { name: "job" } });
+  const missingAction = await c.next();
+  assert.equal(missingAction.error, undefined);
+  assert.equal(missingAction.result.isError, true);
+  assert.equal(JSON.parse(missingAction.result.content[0].text).error.code, "INVALID_INPUT");
+  c.send({ jsonrpc: "2.0", id: ++id, method: "tools/call", params: { name: "job", arguments: { action: "list" } } });
+  const valid = await c.next();
+  assert.equal(valid.error, undefined);
+  assert.deepEqual(JSON.parse(valid.result.content[0].text).jobs, []);
 });
 
 test("required prompt arguments never interpolate missing or malformed project values", async (t) => {

@@ -6,6 +6,7 @@ import path from "node:path";
 import { test } from "node:test";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { build } from "esbuild";
+import { parseArgs, runCheck } from "../../resources/vendor/arkts-check.cjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const out = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-eff-"));
@@ -31,6 +32,32 @@ fs.writeFileSync(entry, [
 await build({ entryPoints: [entry], outfile: path.join(out, "entry.mjs"), bundle: true, format: "esm", platform: "node", packages: "external", logLevel: "error", nodePaths: [path.join(root, "node_modules")] });
 fs.symlinkSync(path.join(root, "node_modules"), path.join(out, "node_modules"), "junction");
 const m = await import(pathToFileURL(path.join(out, "entry.mjs")).href);
+
+test("checker explicit file scopes reject invalid and mixed inputs before check or fix", () => {
+  const project = fs.mkdtempSync(path.join(out, "checker-"));
+  const source = path.join(project, "Main.ets");
+  const original = "let unsafe: any = {};\n";
+  fs.writeFileSync(source, original);
+  fs.writeFileSync(path.join(project, "notes.txt"), original);
+  fs.writeFileSync(path.join(project, "types.d.ets"), original);
+  fs.writeFileSync(path.join(project, "types.d.ts"), original);
+  fs.mkdirSync(path.join(project, "folder.ets"));
+  const invalidScopes = [[], ["missing.ets"], ["folder.ets"], ["notes.txt"], ["types.d.ets"], ["types.d.ts"], [""], [42], "Main.ets", null];
+  for (const files of invalidScopes) for (const fix of [false, true]) {
+    const result = runCheck({ project, files, fix });
+    assert.equal(result.errorCode, "INVALID_INPUT", JSON.stringify({ files, result }));
+    assert.equal(result.summary.fileCount, 0);
+    assert.equal(fs.readFileSync(source, "utf8"), original);
+    assert.equal(fs.existsSync(path.join(project, ".cache")), false);
+  }
+  const mixed = runCheck({ project, files: [source, "missing.ets", "notes.txt"], fix: true });
+  assert.equal(mixed.errorCode, "INVALID_INPUT");
+  assert.deepEqual(mixed.details.invalid_files.map((entry) => entry.file), ["missing.ets", "notes.txt"]);
+  assert.equal(fs.readFileSync(source, "utf8"), original);
+  assert.equal(parseArgs(["node", "checker", "--project", project]).files, undefined, "Only omission selects the project");
+  assert.deepEqual(parseArgs(["node", "checker", "--project", project, "--files"]).files, [], "An empty --files remains explicit");
+  assert.deepEqual(parseArgs(["node", "checker", "--project", project, "Main.ets"]).files, ["Main.ets"]);
+});
 
 let seq = 0;
 const node = (type, text, rect, extra = {}) => ({

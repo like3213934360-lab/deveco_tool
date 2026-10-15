@@ -3,9 +3,50 @@ import assert from "node:assert/strict";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import JSON5 from "json5";
 import { execFileSync } from "node:child_process";
 import { test } from "node:test";
-import { app } from "../support/acceptance.mjs";
+import { app, sha } from "../support/acceptance.mjs";
+
+test("local signing reference", async (t) => {
+  const { call, directory, project, bundle, receipt } = await app(t, false);
+  const info = await call("project", { action: "info", project });
+  const sourceFile = path.join(project, "build-profile.json5"), original = fs.readFileSync(sourceFile);
+  const source = JSON5.parse(original.toString()), selected = source.app.products.find((p) => p.name === info.product);
+  const signing = source.app.signingConfigs?.find((c) => c.name === selected.signingConfig);
+  assert.ok(signing?.material, "This acceptance needs existing local signing material; IDE-only signing is not replaced");
+  const material = { ...signing.material };
+  for (const field of ["storeFile", "certpath", "profile"]) {
+    assert.equal(typeof material[field], "string", `Missing existing material field ${field}`);
+    material[field] = path.resolve(project, material[field]); assert.ok(fs.existsSync(material[field]), `Missing existing ${field}`);
+  }
+  const materialHashes = ["storeFile", "certpath", "profile"].map((field) => [material[field], sha(fs.readFileSync(material[field]))]);
+  const unsigned = info.modules.filter((m) => m.type === "entry").flatMap((m) => {
+    const outputs = path.join(project, m.path, "build", info.product, "outputs", m.target);
+    return fs.existsSync(outputs) ? fs.readdirSync(outputs).filter((name) => name.endsWith("-unsigned.hap")).map((name) => path.join(outputs, name)) : [];
+  });
+  assert.equal(unsigned.length, 1, "Build the dedicated single-entry project first; this test never selects among multiple HAPs");
+  const originalHapHash = sha(fs.readFileSync(unsigned[0]));
+  const configured = path.join(directory, "referenced-signing"); fs.mkdirSync(configured, { mode: 0o700 });
+  // Only this private, short-lived profile changes names; all original material stays in place.
+  fs.writeFileSync(path.join(configured, "build-profile.json5"), JSON.stringify({ app: {
+    products: [{ name: "phone", signingConfig: "debug" }], signingConfigs: [{ ...signing, name: "debug", material }],
+  } }), { mode: 0o600 });
+  try {
+    const out = path.join(directory, "phone-debug-signed.hap");
+    await call("sign", { action: "sign", project: configured, file: unsigned[0], out });
+    const verified = await call("sign", { action: "verify", file: out });
+    assert.equal(verified.verified, true); assert.equal(verified.profile.bundle, bundle);
+    assert.ok(verified.certificate_chain > 0);
+    receipt("local-signing.json", { product: "phone", signing_config: "debug", original_product: info.product,
+      signed: true, verified: true, bundle, output_sha256: sha(fs.readFileSync(out)), source_material: "existing; unchanged", cloud_operations: 0 });
+  } finally {
+    fs.rmSync(configured, { recursive: true, force: true });
+    assert.deepEqual(fs.readFileSync(sourceFile), original);
+    assert.equal(sha(fs.readFileSync(unsigned[0])), originalHapHash);
+    for (const [file, hash] of materialHashes) assert.equal(sha(fs.readFileSync(file)), hash);
+  }
+});
 
 test("signing", async (t) => {
   const { call, job, directory, run, project, bundle } = await app(t);

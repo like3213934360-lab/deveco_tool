@@ -87,7 +87,10 @@ export function mergeJsonConfig(data: Record<string, any>, format: Format, name:
 
 export function installMcp(host: string, options: { scope?: "user" | "project"; project?: string; force?: boolean; config?: string } = {}) {
   const entry = hosts[host];
-  invariant(entry, "INVALID_INPUT", `Unknown host ${host}`, { hosts: Object.keys(hosts) });
+  invariant(entry, "INVALID_INPUT", `MCP registration is not supported for host ${host}`, { hosts: Object.keys(hosts) },
+    ["deveco", "atomcode", "dsh"].includes(host)
+      ? "This host supports skill export/install only. Register the MCP command manually in its MCP settings, or select a listed host."
+      : "Select a supported host from details.hosts");
   const scope = options.scope ?? (options.project ? "project" : "user");
   invariant(scope === "user" || options.project, "INVALID_INPUT", "project is required for scope=project");
   const file = scope === "user" ? entry.global : path.join(path.resolve(options.project!), entry.project);

@@ -16,7 +16,7 @@ test("hot reload and deploy", async (t) => {
     assert.equal(reset.reset, true);
     assert.equal(reset.method, "restore_baseline_packages");
     assert.equal(reset.patch_version, 0);
-    const retained = await call("device", { action: "sqlite", target, bundle, db: "audit.db", sql: "SELECT * FROM proof WHERE id = 71" });
+    const retained = await call("device", { action: "sqlite", target, bundle, module: "entry", db: "audit.db", sql: "SELECT * FROM proof WHERE id = 71" });
     assert.deepEqual(retained.rows, [{ id: 71, value: "preserved across reset" }]);
     const query = await call("device", { action: "shell", target, command: `bm quickfix -q -b ${bundle}` });
     assert.match(query.output, /^\s*patch version code:\s*0\s*$/m);
@@ -30,7 +30,7 @@ test("hot reload and deploy", async (t) => {
   await t.test("hot reload patches the running app without restart", async () => {
     const status = await waitJob(await call("run", { action: "build_run", project, target, hot_reload: true, wait: 60000 }));
     assert.equal(status.status, "succeeded", JSON.stringify(status.error ?? status).slice(0, 2000));
-    await call("device", { action: "sqlite", target, bundle, db: "audit.db", sql: "INSERT OR REPLACE INTO proof VALUES (71, 'preserved across reset')", write: true });
+    await call("device", { action: "sqlite", target, bundle, module: "entry", db: "audit.db", sql: "INSERT OR REPLACE INTO proof VALUES (71, 'preserved across reset')", write: true });
     const pid = status.result.launch.pid;
     const page = path.join(project, "entry/src/main/ets/pages/Index.ets");
     fs.writeFileSync(page, fs.readFileSync(page, "utf8").replace("this.message = 'Welcome'", "this.message = 'Patched Live'"));
@@ -51,7 +51,7 @@ test("hot reload and deploy", async (t) => {
     const redeploy = await waitJob(await call("run", { action: "build_run", project, target, skip_build: true, uninstall_first: true, hot_reload: true, wait: 60000 }));
     assert.equal(redeploy.status, "succeeded", JSON.stringify(redeploy.error ?? redeploy).slice(0, 2000));
     assert.equal(redeploy.kind, "deploy");
-    await call("device", { action: "sqlite", target, bundle, db: "audit.db", sql: "INSERT OR REPLACE INTO proof VALUES (71, 'preserved across reset')", write: true });
+    await call("device", { action: "sqlite", target, bundle, module: "entry", db: "audit.db", sql: "INSERT OR REPLACE INTO proof VALUES (71, 'preserved across reset')", write: true });
     const page = path.join(project, "entry/src/main/ets/pages/Index.ets");
     const original = fs.readFileSync(page, "utf8");
     fs.writeFileSync(page, original.replace("'Hello World'", "'Hello Files'"));

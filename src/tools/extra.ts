@@ -98,11 +98,11 @@ export const emulatorTool = tool({
     "HarmonyOS: list; start/stop (start waits for boot, returns target); create(device_type,os_version,screen_profile or screen,memory,storage...); delete.",
     "start: boot_mode=coldboot/snapshot/reset; hdc_port 10000-16555, one instance. Invalid port: ask, never call or substitute.",
     "images: downloaded (all=true: all); install_image/remove_image. license accepts; license_view reads. start/create/install_image accept unless auto_accept_license=false.",
-    "scenario: shake, power, rotate, volume, fold (state), battery, gps, sensor, outdoor_running, outdoor_cycling, driving_navigation.",
+    "scenario: inject sensors/motion; select scenario (see enum).",
   ].join(" "),
   schema: z.object({
     action: z.enum(["list", "start", "stop", "create", "delete", "images", "install_image", "remove_image", "license", "license_view", "scenario"]),
-    name: z.string().optional(),
+    name: z.string().optional().describe("Instance name (scenario too); create: 1-60 letters/digits/spaces/_/+; no hyphens"),
     names: z.array(z.string()).min(1).max(8).optional().describe("start/stop: name or names, not both"),
     details: z.boolean().optional().describe("list: raw emulator fields"),
     cold: z.boolean().optional().describe("start: legacy coldboot flag; must agree with boot_mode"),

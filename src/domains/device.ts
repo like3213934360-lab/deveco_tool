@@ -381,7 +381,8 @@ export function readonlySqlAllowed(sql: string) {
 
 /** Query an on-device SQLite database (app rdb stores, preferences, ...). Read-only unless write=true. */
 /** App RDB stores of debuggable apps: /data/app/el2/<user>/database/<bundle>/<module>/rdb/<name>. */
-export function appDatabasePath(bundle: string, name: string, module = "entry") {
+export function appDatabasePath(bundle: string, name: string, module?: string) {
+  invariant(module, "INVALID_INPUT", "A relative db name needs the owning module; no default is assumed", undefined, "Pass module from module.json5 (e.g. entry or default), or use an absolute db path");
   invariant(/^[\w.]+$/.test(bundle) && /^[\w.-]+$/.test(name) && /^[\w-]+$/.test(module), "INVALID_INPUT", "Invalid bundle, module or database name");
   return `/data/app/el2/100/database/${bundle}/${module}/rdb/${name}`;
 }
@@ -394,10 +395,10 @@ export async function sqlite(target: string, db: string, sql: string, options: {
   // Pass SQL through stdin-free argv; single-quote escape for the device shell.
   const quoted = `'${sql.replace(/'/g, `'\\''`)}'`;
   const dot = /^\s*\./.test(sql);
-  const result = await shell(target, [`sqlite3 ${dot ? "" : "-json "}${options.write ? "" : "-readonly "}${db} ${quoted}`], signal, 30000);
+  const result = await shell(target, [`sqlite3 ${dot ? "" : "-json "}${options.write ? "" : "-readonly "}'${db}' ${quoted}`], signal, 30000);
   const text = (result.stdout + result.stderr).trim();
   invariant(!/^(Error|Parse error|Runtime error)/m.test(text), "SQLITE_FAILED", text.slice(0, 500),
-    undefined, /unable to open/i.test(text) ? "Path not readable: app databases live under /data/app/el2/100/database/<bundle>/<module>/rdb/<name> (debuggable builds; pass db=<name> with bundle)" : undefined);
+    { db }, /unable to open/i.test(text) ? "Verify the exact bundle, owning module and db name, and that the debuggable app has created the database. App databases live under /data/app/el2/100/database/<bundle>/<module>/rdb/<name>" : undefined);
   if (dot || !text) return { output: text.slice(0, 20000) };
   let rows: unknown[];
   try { rows = JSON.parse(text) as unknown[]; } catch { return { output: text.slice(0, 20000) }; }
@@ -406,23 +407,29 @@ export async function sqlite(target: string, db: string, sql: string, options: {
   return { rows: rows.slice(0, limit), total: rows.length, ...(artifact ? { artifact_id: artifact.artifact_id } : {}) };
 }
 
-/** Read-only shell allowlist: inspection commands only. */
-const readonlyCommands = new Set(["ls", "cat", "ps", "top", "df", "du", "param", "hidumper", "bm", "aa", "pidof", "uname", "date", "getprop", "wm", "snapshot_display", "hilog", "free", "uptime", "id", "whoami", "mount", "netstat", "ifconfig", "power-shell"]);
-const readonlySub: Record<string, RegExp> = {
-  param: /^get$/,
-  aa: /^dump$/,
-  hilog: /^-/,
-  "power-shell": /^(dump|display)$/,
-};
+/** Query-only executables can accept arguments; mixed read/write commands need explicit query forms. */
+const readonlyCommands = new Set(["ls", "cat", "ps", "top", "df", "du", "pidof", "uname", "free", "uptime", "id", "whoami", "netstat"]);
+const queryCommands = ["param", "hidumper", "bm", "aa", "date", "getprop", "wm", "hilog", "mount", "ifconfig", "power-shell"];
 export function readonlyShellArgs(command: string): string[] {
-  invariant(!/[;&|`$<>\n]/.test(command), "INVALID_INPUT", "Shell operators are not allowed in read-only shell");
+  invariant(!/[;&|`$<>\r\n\0'"\\]/.test(command), "INVALID_INPUT", "Shell operators, quotes and escapes are not allowed in read-only shell");
   const parts = command.trim().split(/\s+/);
-  const head = parts[0] ?? "";
-  invariant(readonlyCommands.has(head), "INVALID_INPUT", `${head} is not in the read-only allowlist`, { allowed: [...readonlyCommands] });
-  if (readonlySub[head]) invariant(readonlySub[head]!.test(parts[1] ?? ""), "INVALID_INPUT", `Only read-only ${head} subcommands are allowed`);
-  invariant(head !== "bm" || parts[1] === "dump" || (parts.length === 5 && parts[1] === "quickfix" && parts[2] === "-q" && parts[3] === "-b" && /^[A-Za-z][A-Za-z0-9_.]*$/.test(parts[4]!)),
-    "INVALID_INPUT", "Only bm dump or bm quickfix -q -b <bundle> is allowed");
-  invariant(!(head === "hilog" && parts.includes("-r")), "INVALID_INPUT", "Use device action=log clear=true to clear logs");
+  const [head = "", ...args] = parts;
+  let allowed = readonlyCommands.has(head);
+  switch (head) {
+    case "mount": allowed = args.length === 0; break;
+    case "ifconfig": allowed = args.length === 0 || (args.length === 1 && /^(?:-a|[A-Za-z][A-Za-z0-9_.:-]*)$/.test(args[0]!)); break;
+    case "date": allowed = /^(?:-u(?: \+[^ ]+)?|\+[^ ]+|--help)?$/.test(args.join(" ")); break;
+    case "getprop": allowed = args.length <= 1 && (!args.length || /^[\w.]+$/.test(args[0]!)); break;
+    case "param": allowed = args[0] === "get" && args.length <= 2 && (args.length === 1 || /^[\w.]+$/.test(args[1]!)); break;
+    case "aa": allowed = args[0] === "dump"; break;
+    case "bm": allowed = args[0] === "dump" || (args.length === 4 && args[0] === "quickfix" && args[1] === "-q" && args[2] === "-b" && /^[A-Za-z][A-Za-z0-9_.]*$/.test(args[3]!)); break;
+    case "hidumper": allowed = args.length === 0 || (args.length === 1 && ["-h", "-l"].includes(args[0]!)) || (args.length === 2 && args[0] === "-s" && /^[\w.]+$/.test(args[1]!)); break;
+    case "wm": allowed = args.length === 1 && ["help", "size", "density"].includes(args[0]!); break;
+    case "hilog": allowed = args.length === 1 && ["-h", "--help", "-x"].includes(args[0]!); break;
+    case "power-shell": allowed = args.length === 1 && args[0] === "dump"; break;
+  }
+  invariant(allowed, "INVALID_INPUT", `Unsupported read-only command form: ${head}`, { commands: [...readonlyCommands, ...queryCommands] },
+    "Use query-only arguments; use device action=log for filtered logs or explicit clear, and ui screenshot for screen capture");
   return parts;
 }
 export async function readonlyShell(target: string, command: string, signal?: AbortSignal) {

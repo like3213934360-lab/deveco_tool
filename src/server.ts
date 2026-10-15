@@ -16,6 +16,7 @@ const instructions = [
 ].join(" ");
 
 const ARTIFACT_ID = /^a_[0-9a-f]{16}$/;
+const object = (value: unknown): value is Record<string, unknown> => !!value && typeof value === "object" && !Array.isArray(value);
 /** Every artifact id in a response, wherever it is nested (result, error.details, reports[]...). Pure. */
 export function artifactIds(value: unknown, out = new Map<string, string>(), key = "", depth = 0): Map<string, string> {
   if (depth > 6 || value === null || value === undefined) return out;
@@ -72,7 +73,8 @@ function closest(name: string, known: string[]) {
  * (it silently ran with defaults before, e.g. rollback with version=...). `wait` above the cap is
  * clamped instead of rejected, because hosts routinely ask for long waits.
  */
-export function checkArguments(tool: ToolDef, raw: Record<string, unknown>) {
+export function checkArguments(tool: ToolDef, raw: unknown) {
+  if (!object(raw)) throw new ToolError("INVALID_INPUT", "Tool arguments must be an object");
   const args = { ...raw };
   const notes: string[] = [];
   const shape = (tool.schema as unknown as { shape?: Record<string, unknown> }).shape ?? {};
@@ -164,18 +166,23 @@ export async function serve() {
       return {
         name: tool.name, title: tool.title, description: tool.description,
         inputSchema: { ...(compactSchema(schema) as object), type: "object" },
-        annotations: { readOnlyHint: tool.readOnly ?? false, openWorldHint: false },
+        annotations: { readOnlyHint: tool.readOnly ?? false, openWorldHint: tool.openWorld ?? true },
       };
     });
     return { tools: listed };
   });
   server.on("tools/call", async (params, signal) => {
-    const name = String(params.name);
+    // Malformed MCP envelopes and unknown tools are protocol errors. Valid tool arguments
+    // retain the actionable structured errors below (unknown fields, schemas, execution).
+    if (typeof params.name !== "string" || !params.name.trim()
+      || (params.arguments !== undefined && !object(params.arguments)))
+      throw new ToolError("INVALID_INPUT", "tools/call requires a nonempty name and object arguments");
+    const name = params.name;
     const tool = byName.get(name);
-    if (!tool) return respond({ error: errorResult(new ToolError("INVALID_INPUT", `Unknown tool ${name}`)) }, true);
+    if (!tool) throw new ToolError("INVALID_INPUT", `Unknown tool: ${name}`);
     let notes: string[] = [];
     try {
-      const checked = checkArguments(tool, (params.arguments ?? {}) as Record<string, unknown>);
+      const checked = checkArguments(tool, params.arguments ?? {});
       const args = checked.args;
       notes = checked.notes;
       const parsed = tool.schema.safeParse(args);

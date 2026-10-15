@@ -8,7 +8,9 @@ export type Handler = (params: Json, signal: AbortSignal) => Promise<unknown>;
 const object = (value: unknown): value is Json => !!value && typeof value === "object" && !Array.isArray(value);
 const requestId = (value: unknown): value is string | number => typeof value === "string" || (typeof value === "number" && Number.isSafeInteger(value));
 
-const supported = ["2025-06-18", "2025-03-26", "2024-11-05"];
+// Older revisions require receiving JSON-RPC batches, which this single-message transport
+// does not implement. Negotiate the version we implement; the client decides compatibility.
+const protocolVersion = "2025-06-18";
 
 export class McpServer {
   private readonly handlers = new Map<string, Handler>();
@@ -49,8 +51,7 @@ export class McpServer {
       this.send({ id: null, error: { code: -32700, message: "Parse error" } });
       return;
     }
-    // MCP uses named params and non-null string/integer ids. This transport does not
-    // advertise batching, including for the older protocol versions we negotiate.
+    // MCP 2025-06-18 uses single messages, named params and non-null string/integer ids.
     const id = object(message) && requestId(message.id) ? message.id : null;
     const invalid = (code: number, detail: string) => this.send({ id, error: { code, message: detail } });
     if (!object(message) || message.jsonrpc !== "2.0" || typeof message.method !== "string" || !message.method
@@ -79,8 +80,7 @@ export class McpServer {
         invalid(-32602, "initialize requires protocolVersion, capabilities and clientInfo");
         return;
       }
-      const requested = params.protocolVersion;
-      this.send({ id, result: { protocolVersion: supported.includes(requested) ? requested : supported[0], capabilities: this.capabilities, serverInfo: this.info, instructions: this.instructions } });
+      this.send({ id, result: { protocolVersion, capabilities: this.capabilities, serverInfo: this.info, instructions: this.instructions } });
       return;
     }
     const handler = this.handlers.get(method);
