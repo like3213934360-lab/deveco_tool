@@ -1,4 +1,4 @@
-// Requires the explicitly selected dedicated project and physical device; failures are evidence.
+// Requires the explicitly selected dedicated project and device; failures are evidence.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';

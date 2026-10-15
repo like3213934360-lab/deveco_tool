@@ -6,6 +6,7 @@ import { run } from "../core/proc.js";
 import { toolCommand, sdkInfo } from "../core/toolchain.js";
 import { fileSha256, walk } from "../core/files.js";
 import { inspectProject } from "./project.js";
+import { openHdcTarget } from "../core/hdc-target.js";
 
 export interface ProjectTestInput {
   project: string; product?: string; kind: "local" | "instrument"; modules?: string[]; scope?: string[];
@@ -52,12 +53,12 @@ export async function runProjectTests(input: ProjectTestInput, signal: AbortSign
   invariant(modules.length && (!input.modules || modules.length === new Set(input.modules).size), "INVALID_INPUT", "Select existing modules containing test sources");
   const discovered = modules.map((m) => ({ module: m.name, files: [...walk(path.join(m.root, `src/${kind}`))].filter((f) => /\.test\.ets$/.test(f)).map((f) => path.relative(project.root, f)) }));
   invariant(discovered.every((m) => m.files.length), "TESTS_MISSING", "Every selected module must contain test sources", { discovered });
+  let target: string | undefined;
   if (input.kind === "instrument") {
     invariant(input.allow_data_reset === true, "DATA_RESET_REQUIRED", "SDK onDeviceTest uninstalls the application before testing and erases its data", undefined,
       "Use a dedicated test application and explicitly pass allow_data_reset=true");
-    const { listTargets, resolveTarget } = await import("./device.js");
-    const target = await resolveTarget(input.target, signal), targets = await listTargets(signal);
-    invariant(targets.length === 1 && targets[0] === target, "CAPABILITY_UNAVAILABLE", "SDK onDeviceTest has no target selector; exactly the selected device must be connected", { target, connected: targets });
+    const { resolveTarget } = await import("./device.js");
+    target = await resolveTarget(input.target, signal);
   }
   const reports = modules.map((m) => ({ module: m.name,
     result: path.join(m.root, `.test/default/intermediates/${kind}/coverage_data/test_result.txt`),
@@ -69,18 +70,27 @@ export async function runProjectTests(input: ProjectTestInput, signal: AbortSign
     args.push("-p", `scope=${input.scope.join(",")}`);
   }
   const log = artifactPath(), started = Date.now();
-  let execution;
-  try { execution = await run(toolCommand("hvigor", args, project.root), { signal, timeoutMs: input.timeout_ms ?? 600000, logFile: log.file, allowFailure: true }); }
+  let execution, route: Awaited<ReturnType<typeof openHdcTarget>> | undefined;
+  try {
+    if (target) route = await openHdcTarget(target);
+    try {
+      execution = await run(toolCommand("hvigor", args, project.root, route ? { OHOS_HDC_SERVER_PORT: String(route.port) } : undefined),
+        { signal, timeoutMs: input.timeout_ms ?? 600000, logFile: log.file, allowFailure: true });
+      route?.assertHealthy();
+    } finally { await route?.close(); }
+  }
   catch (error) {
-    const artifact = await commitArtifact(log.id, log.file, "text/plain", jobId);
-    if (error instanceof ToolError) throw new ToolError(error.code, error.message, { ...error.details, log_artifact: artifact.artifact_id });
+    const artifact = fs.existsSync(log.file) ? await commitArtifact(log.id, log.file, "text/plain", jobId)
+      : await saveArtifact(String(error), "text/plain", jobId);
+    if (error instanceof ToolError) throw new ToolError(error.code, error.message, { ...error.details, log_artifact: artifact.artifact_id, target, routing: route?.routing });
     throw error;
   }
   const logArtifact = await commitArtifact(log.id, log.file, "text/plain", jobId);
+  const context = { target, routing: route?.routing, log_artifact: logArtifact.artifact_id };
   const results = [];
   for (const report of reports) {
     const stat = fs.statSync(report.result, { throwIfNoEntry: false });
-    invariant(stat && stat.mtimeMs >= started - 1000 && stat.mtimeMs !== before.get(report.result), "TEST_REPORT_MISSING", "SDK did not produce a fresh test report", { module: report.module, exit_code: execution.code, log_artifact: logArtifact.artifact_id });
+    invariant(stat && stat.mtimeMs >= started - 1000 && stat.mtimeMs !== before.get(report.result), "TEST_REPORT_MISSING", "SDK did not produce a fresh test report", { ...context, module: report.module, exit_code: execution.code });
     const raw = fs.readFileSync(report.result, "utf8");
     const artifact = await saveArtifact(raw, "text/plain", jobId);
     let parsed;
@@ -89,7 +99,7 @@ export async function runProjectTests(input: ProjectTestInput, signal: AbortSign
     let coverage;
     if (input.coverage !== false) {
       const cstat = fs.statSync(report.coverage, { throwIfNoEntry: false });
-      invariant(cstat && cstat.mtimeMs >= started - 1000 && cstat.mtimeMs !== before.get(report.coverage), "TEST_REPORT_MISSING", "SDK did not produce fresh coverage", { module: report.module, counts: parsed.counts, report_artifact: artifact.artifact_id, log_artifact: logArtifact.artifact_id });
+      invariant(cstat && cstat.mtimeMs >= started - 1000 && cstat.mtimeMs !== before.get(report.coverage), "TEST_REPORT_MISSING", "SDK did not produce fresh coverage", { ...context, module: report.module, counts: parsed.counts, report_artifact: artifact.artifact_id });
       const rawCoverage = fs.readFileSync(report.coverage, "utf8"), data = JSON.parse(rawCoverage);
       invariant(data.summary && Array.isArray(data.files), "TEST_REPORT_INVALID", "Unrecognized SDK coverage report");
       coverage = { summary: data.summary, sha256: await fileSha256(report.coverage), artifact_id: (await saveArtifact(rawCoverage, "application/json", jobId)).artifact_id };
@@ -98,10 +108,12 @@ export async function runProjectTests(input: ProjectTestInput, signal: AbortSign
   }
   const counts = results.reduce((sum, r) => ({ total: sum.total + r.counts.total, passed: sum.passed + r.counts.passed,
     failed: sum.failed + r.counts.failed, errors: sum.errors + r.counts.errors, ignored: sum.ignored + r.counts.ignored }), { total: 0, passed: 0, failed: 0, errors: 0, ignored: 0 });
+  invariant(!route || route.routing.commands > 0, "EVIDENCE_MISSING", "SDK produced reports without executing through the selected HDC target", { target, log_artifact: logArtifact.artifact_id });
   const executed = results.flatMap((r) => r.cases);
   const scopeMatches = !input.scope?.length || (executed.every((c) => input.scope!.some((s) => s === c.suite || s === `${c.suite}#${c.name}`)) && input.scope.every((s) => executed.some((c) => s === c.suite || s === `${c.suite}#${c.name}`)));
   const verdict = execution.code !== 0 || counts.failed || counts.errors ? "failed"
     : !scopeMatches || counts.total === 0 || counts.ignored || (input.expected_tests !== undefined && counts.total !== input.expected_tests) ? "inconclusive" : "passed";
-  return { verdict, kind: input.kind, scope_matches: scopeMatches, counts, discovered, expected_tests: input.expected_tests, results, sdk: sdkInfo(), target: input.target,
+  return { verdict, kind: input.kind, scope_matches: scopeMatches, counts, discovered, expected_tests: input.expected_tests, results, sdk: sdkInfo(), target,
+    routing: route?.routing,
     data_reset: input.kind === "instrument", elapsed_ms: execution.elapsedMs, exit_code: execution.code, log_artifact: logArtifact.artifact_id };
 }

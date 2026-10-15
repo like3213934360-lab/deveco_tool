@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { app } from '../support/acceptance.mjs';
 
-test('scenario: explicit dedicated application on the selected physical device', async (t) => {
+test('scenario: explicit dedicated application on the selected device', async (t) => {
   const { call, raw, job, project, target, bundle, receipt } = await app(t);
   await job('run', { action: 'build_run', project, target, run_mode: 'full', wait: 0 });
   await t.test('entry-graph-and-want', async () => {

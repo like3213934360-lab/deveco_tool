@@ -208,6 +208,17 @@ Windows/Linux 真实 SDK/媒体、多设备并发、其他设备/媒体版本、
 - [x] 原 runtime 回归增强为四个进程并发，验证单代发布、哈希/协议、复用、锁与桥恢复；类型检查和 276/276 完整离线回归通过。真实 SDK doctor/device info 在 1.5.1 新进程通过；不改写 1.5.0 业务验收及其失败边界。详见 [1.5.1 说明](docs/UPGRADE-1.5.1.md) 与 [证据](docs/evidence/v1.5.1-acceptance.json)。
 - [x] 发布提交 `cc104ce48b00a7f5097795a9bd9188354edc3f87` 已推送，[CI 38705796101](https://github.com/like3213934360-lab/deveco_tool/actions/runs/38705796101) 七项通过，[release 38706020103](https://github.com/like3213934360-lab/deveco_tool/actions/runs/38706020103) 成功。v1.5.1 tag 指向该提交、Release ID 413576783 为 Latest，1.5.0 tag 仍为 07b4587。下载回执与本地 `--check` 一致，见 [回执](docs/evidence/v1.5.1-release.json)。最终文档提交独立核验 CI/既有 Release，并在交付回复列链接。SDK 覆盖率、模型、性能及宿主重载等未通过项继续保留。
 
+## v1.5.2 指定设备仪器测试与模拟器验收（2026-10-15）
+
+用户要求后续仅使用模拟器，真机保持供用户使用；当前两台设备同时在线。原生 Codex App 已确认重载 1.5.1/7647cd93c31b。原“仅允许一台连接设备”的限制属于 MCP 能力缺口，不作为模拟器不支持的结论。
+
+- [x] 将 SDK onDeviceTest 的 HDC 设备调用绑定到显式目标；不移动设备连接、不修改 SDK/全局环境、不放宽测试/覆盖率判定。未知协议或目标掉线明确失败，不切换设备。见 [实现与验收](docs/UPGRADE-1.5.2.md)。
+- [x] 286/286 离线回归（18.939 s）包含并发、错误目标、协议异常、真实握手超时、取消与端口清理；多设备同时在线时 Instrument 正例 1 pass、负例 1 failure，均记录 9 条所选模拟器通道命令。不存在/歧义目标拒绝；连接列表前后相同。
+- [x] 最终候选模拟器 verify 八项检查通过（Instrument 显式不请求覆盖率），场景 6/6、基线/判定契约 5/5、桌面卡片 2×2 与 2×4 各 1/1。原始 77 份 artifact 完整保存；专用 app/卡片移除，临时工程及签名材料清理，启动的模拟器已停止且原实例保留。其他真机资源占用未触碰。
+- [ ] Instrument 覆盖率仍失败：SDK 00507008、init_coverage.json 额外 JSON 内容；用例 1 pass 不替代覆盖率。性能三轮及显式滚动复核全零数据，inconclusive；已证明列表移动，疑似模拟器采集限制但未定性。其他宿主及周期调度未验证。详见 [脱敏证据](docs/evidence/v1.5.2-acceptance.json)。
+- [x] 分开记录原生 Codex App 调用与独立 CLI 模型评测；原生 1.5.1 重载已证实，CLI 1.5.1 本轮仍 2 项完成、8 项审批拒绝，未冒充完整模型通过或 1.5.2 原生重载。
+- [ ] 同步版本/锁文件、CHANGELOG、说明与证据，完成最终回归、GitHub CI、Release/tag/Latest/回执核验；记录实际宿主构建边界。
+
 ## 方法依据
 
 - [Google 工程评审规范](https://google.github.io/eng-practices/review/reviewer/looking-for.html)：测试同样需要维护，审查有效性、可读性和复杂度，避免过度设计。

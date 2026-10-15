@@ -69,14 +69,18 @@ export async function session(t, env = {}) {
   return { client, call, raw, job, directory, run, receipt, defer };
 }
 
-export async function app(t, device = true) {
+export async function app(t, device = true, kind = process.env.E2E_DEVICE_KIND ?? "usb") {
   const target = device ? required("E2E_TARGET") : undefined, project = required("E2E_PROJECT");
   assert.ok(path.isAbsolute(project));
   const bundle = JSON5.parse(fs.readFileSync(path.join(project, "AppScope/app.json5"), "utf8")).app.bundleName;
   assert.match(bundle, /^com\.devecomcp\./, "Only a dedicated MCP test app may be mutated");
   const context = await session(t);
   const { call } = context, info = device ? await call("device", { action: "info", target }) : undefined;
-  if (device) assert.ok(!target.includes(":") && !/emulator/i.test(`${info.model} ${info.name}`), "Select the USB physical device");
+  if (device) {
+    assert.ok(["usb", "emulator"].includes(kind), "Select an explicit supported acceptance device kind");
+    if (kind === "emulator") assert.ok(info.emulator?.name && /emulator/i.test(`${info.model} ${info.name}`), "Select the explicit running emulator");
+    else assert.ok(!target.includes(":") && !/emulator/i.test(`${info.model} ${info.name}`), "Select the USB physical device");
+  }
   const ui = (args) => call("ui", { target, ...args });
   const visible = async (text) => assert.equal((await ui({ action: "assert", visible: { text, exact: true }, timeout_ms: 5000 })).passed, true);
   const launch = () => call("run", { action: "launch", project, target });

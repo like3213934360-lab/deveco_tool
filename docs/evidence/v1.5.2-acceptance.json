@@ -1,0 +1,202 @@
+{
+  "version": "1.5.2",
+  "source_baseline": "73e0def84290572f0f624d6361eacc8928af3bbb",
+  "candidate_build_id": "95efd94316345b9497e78615951e22ab97493752708e0424660a08efac11b088",
+  "sdk": {
+    "api_level": 26,
+    "platform_version": "26.0.0",
+    "version": "26.0.0.105"
+  },
+  "host": {
+    "codex_app_version": "1.5.1",
+    "build_id": "7647cd93c31bdbb6efc3050cad6ea5cad845bc68c459526a389d5febcb66dbbd",
+    "candidate_executed_by": "independent MCP stdio processes",
+    "npm_published": false
+  },
+  "offline": {
+    "passed": 286,
+    "failed": 0,
+    "duration_ms": 18938.931417,
+    "previous_v151_ms": 16153,
+    "typecheck": "passed",
+    "upstream_items": 503,
+    "pack_files": 311,
+    "pack_bytes": 1522841
+  },
+  "multi_device": {
+    "connected": 2,
+    "selected": "explicit API26 emulator",
+    "physical_device_mutations": false,
+    "connected_list_unchanged_during_tests": true,
+    "positive": {
+      "verdict": "passed",
+      "counts": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0,
+        "errors": 0,
+        "ignored": 0
+      },
+      "routing_commands": 9
+    },
+    "negative": {
+      "verdict": "failed",
+      "counts": {
+        "total": 1,
+        "passed": 0,
+        "failed": 1,
+        "errors": 0,
+        "ignored": 0
+      },
+      "sdk_exit": 0,
+      "routing_commands": 9
+    },
+    "rejected": [
+      "DEVICE_AMBIGUOUS",
+      "DEVICE_UNAVAILABLE"
+    ],
+    "preflight": "ready_for_attempt"
+  },
+  "instrument_coverage": {
+    "verdict": "failed",
+    "test_counts": {
+      "passed": 1,
+      "total": 1
+    },
+    "error": "TEST_REPORT_MISSING",
+    "sdk_code": "00507008",
+    "cause": "getInitCoverageData JSON extra content at position 64823",
+    "raw_init_sha256": "cf141f536a52da117fa23187918b0d35b09e55ca15a2e3f1b8a917f2472e50d8",
+    "emulator_unsupported_established": false
+  },
+  "verify": {
+    "verdict": "passed",
+    "job_id": "j_mv9c4i9aa247c8",
+    "checks": [
+      {
+        "id": "build",
+        "type": "build",
+        "required": true,
+        "verdict": "passed",
+        "elapsed_ms": 5130
+      },
+      {
+        "id": "local",
+        "type": "test",
+        "required": true,
+        "verdict": "passed",
+        "elapsed_ms": 4204
+      },
+      {
+        "id": "instrument",
+        "type": "test",
+        "required": true,
+        "verdict": "passed",
+        "elapsed_ms": 5392
+      },
+      {
+        "id": "deploy",
+        "type": "deploy",
+        "required": true,
+        "verdict": "passed",
+        "elapsed_ms": 3657
+      },
+      {
+        "id": "screen",
+        "type": "assert",
+        "required": true,
+        "verdict": "passed",
+        "elapsed_ms": 695
+      },
+      {
+        "id": "crash",
+        "type": "crash",
+        "required": true,
+        "verdict": "passed",
+        "elapsed_ms": 75
+      },
+      {
+        "id": "entries",
+        "type": "entries",
+        "required": true,
+        "verdict": "passed",
+        "elapsed_ms": 9
+      },
+      {
+        "id": "source-integrity",
+        "type": "integrity",
+        "required": true,
+        "verdict": "passed",
+        "elapsed_ms": 0
+      }
+    ],
+    "permanent_files": 11,
+    "instrument_coverage": false
+  },
+  "scenarios": {
+    "passed": 6,
+    "failed": 0
+  },
+  "baselines": {
+    "contract_tests_passed": 5,
+    "contract_tests_failed": 0,
+    "build_diagnostics_size_launch": "passed",
+    "visual": "passed",
+    "performance": "inconclusive",
+    "incomplete_checklist": "inconclusive as required"
+  },
+  "performance": {
+    "verdict": "inconclusive",
+    "samples": 3,
+    "explicit_scroll_recheck": "inconclusive",
+    "list_movement": "row 0 to row 20 observed",
+    "composer": "all_zero_timestamps",
+    "profilerfps": "all_zero_samples",
+    "sdk_commands_exit": 0,
+    "emulator_limitation": "suspected, not established"
+  },
+  "forms": {
+    "host": "emulator desktop",
+    "2x2": "passed",
+    "2x4": "passed",
+    "verified": [
+      "add",
+      "onUpdate",
+      "click refresh",
+      "configuration page",
+      "owned removal"
+    ],
+    "other_hosts": "not verified",
+    "periodic_scheduling": "not verified"
+  },
+  "model": {
+    "version": "1.5.1",
+    "host": "Codex CLI",
+    "actual_completed": 2,
+    "approval_rejected": 8,
+    "candidate_1_5_2_full_evaluation": "not passed/not rerun"
+  },
+  "cleanup": {
+    "task_app_uninstalled": true,
+    "task_forms_removed": true,
+    "started_emulator_stopped": true,
+    "existing_emulator_preserved": true,
+    "physical_device_left_connected": true,
+    "task_reservations_remaining": 0,
+    "unrelated_physical_device_reservation_preserved": true
+  },
+  "raw_evidence": {
+    "private_only": true,
+    "preserved_artifacts": 77,
+    "missing_referenced_artifacts": 0,
+    "initial_failures_preserved": true
+  },
+  "limitations": [
+    "Instrument coverage SDK failure",
+    "No valid emulator FPS",
+    "CLI approval blocks 8 cases",
+    "No native host reload to 1.5.2",
+    "Other card hosts and periodic scheduling unverified",
+    "No runtime ArkTS source identity mapping"
+  ]
+}

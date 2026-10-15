@@ -84,16 +84,21 @@ node --test --test-concurrency=1 test/e2e/hotreload.test.mjs
 
 | 命令 | 用途及依赖 |
 | --- | --- |
-| `npm run test:verify` | Local/Instrument 用例核算、整体验收、基线、部分 UI checklist；真实 SDK、唯一 USB 设备、专用工程 |
+| `npm run test:verify` | Local/Instrument 用例核算、整体验收、基线、部分 UI checklist；真实 SDK、所选设备、专用工程；其他设备可保持连接 |
+| `npm run test:instrument-target` | 多设备中显式选模拟器的仪器测试、覆盖率、负例及目标拒绝；另需一台同时连接的设备 |
 | `npm run test:scenarios` | Want、数据库发现/夹具冲突、权限、清数据、后台、trace；调试应用及设备相关权限 |
 | `npm run test:forms` | 已明确选定的桌面卡片交互、配置页和移除；另需 E2E_FORM_HOST=desktop、E2E_FORM_KEY 为本次添加的专用 FormItem 标识 |
 
-共同必填 E2E_PROJECT、E2E_TARGET、E2E_DIR（新的绝对证据目录），遵守已有 support/acceptance 的专用 bundle 和真实设备检查。缺条件失败，不自动改设备或安装 SDK。Instrument 测试和 scenario 会清除**专用测试应用**数据。
+共同必填 E2E_PROJECT、E2E_TARGET、E2E_DIR（新的绝对证据目录），遵守已有 support/acceptance 的专用 bundle 和真实设备检查。默认仍要求 USB 真机；模拟器需显式 E2E_DEVICE_KIND=emulator，并通过 device info 核验（instrument-target 固定要求模拟器）。不会自动换目标或混用两种验收结论。缺条件失败，不自动改设备或安装 SDK。Instrument 测试和 scenario 会清除**专用测试应用**数据。
 
 工程材料 `fixtures/project-tests/`：将 List/Acceptance.test.ets 放到指定测试模块 src/test 和 src/ohosTest/ets/test，ohosTest 使用 default product SDK 模板。addition 正例必须通过，negative 故意失败，不能“修好”它。现有 FullProbe 页面需提供 HelloWorld、Field、Util.ets 与初始化 audit.db 的逻辑。`form/` 放入专用工程的 ets/probe 和 resources/base/profile，module 声明 ProbeForm/type=form、ohos.extension.form→$profile:probe_form；仅在专用工程声明用于 grant/revoke 的 APPROXIMATELY_LOCATION 权限。不得复制个人签名资料入仓库。
 
-form 用例不猜测或添加宿主组件：先在指定实际宿主添加本次专用卡片、记录实际 FormItem key，然后执行测试。它检查所属 bundle，并只移除这张卡片。桌面导航最多查前三页，不碰其他卡片；锁屏/负一屏/模拟器需独立用例及证据，当前没有对应验收。首次失败保留，修正后使用新 E2E_DIR。
+form 用例不猜测或添加宿主组件：先在指定实际宿主添加本次专用卡片、记录实际 FormItem key，然后执行测试。它检查所属 bundle，并只移除这张卡片。桌面导航最多查前三页，不碰其他卡片；锁屏/负一屏需独立用例及证据，当前没有对应验收。模拟器与真机分别按实际设备记录。首次失败保留，修正后使用新 E2E_DIR。
 
 `unit/verification.test.mjs` 检查测试核算、部分计划、基线、跨进程锁、永久证据等独立规则；`integration/verification.test.mjs` 用真实 MCP/job/进程及项目命令验证超时、取消、清理、污染和 CLI 共享路径，不伪造 SDK/设备成功。标准 `npm test` 已包含它们；CI 仍是三平台 × Node 22/24。
 
 `node test/model/live-cases.mjs <PROJECT> <TARGET> <new.json> verification` 生成 10 项只读发现/调用样例，交给现有 `test/model/eval.mjs --host codex --suite live --cases ... --out ...`。使用宿主现有模型配置，权限失败不得改成通过。多步证据推理问题另见 `fixtures/verification-evaluation.xml`：按冻结专用验收报告绑定 PROJECT/artifact ID；问题素材、拟调用、真实调用与最终答案评分必须分别记录，XML 本身不代表模型通过。
+
+`integration/hdc-target.test.mjs`（已纳入 `npm test`）使用真实本地 TCP 连接验证任务级 HDC 目标绑定、并发隔离、分包/粘包与二进制透传、错误目标/全局命令拒绝、握手超时、断连和取消清理。这些协议夹具不代表 SDK 或设备测试通过。产品 Instrument 支持明确选定的真机或模拟器；上述既有 USB 套件的默认设备保护条件保留，模拟器验收单独记录实际 MCP 调用及原始 SDK/设备证据。
+
+多设备模拟器专项：`npm run test:instrument-target`，显式传 E2E_PROJECT/E2E_TARGET/E2E_DIR；必须有另一台已连接设备，所选目标必须经 device info 证明为模拟器，专用工程需具备 SDK onDeviceTest 所要求的签名。覆盖正例、故意失败例和覆盖率，其他设备仅进行只读枚举，不执行测试操作；不把模拟器结果写成 USB 验收。
