@@ -280,5 +280,24 @@
     "failure": "Unclosed coordination SQLite connection caused EBUSY/EPERM in signing-test cleanup. Business assertions passed; cleanup remained failing.",
     "repair": "Close the coordinator after jobs stop in server shutdown and test teardown. No retries, ignored cleanup errors or changed Windows permissions.",
     "log_sha256": "2ea297d73fbde79c6b1b9b87f0efcc0e76bfc0a65048ae1db51cae09ba36c357"
+  },
+  "cleanup": {
+    "removed_task_owned_temporary_directories": 8,
+    "preserved_artifacts": 131,
+    "missing_artifacts": 0,
+    "remaining_resource_locks": 0,
+    "cleanup_receipt_sha256": "110583b18fb38b059bfb9f4fef826090b04f0ee7e8e16ba4a6c3d42d0308b82c",
+    "unrelated_workspace_changes": "none present at completion; pre-existing unrelated scratch directories preserved"
+  },
+  "release": {
+    "commit": "07b458724d91ab74e5ee420b2efccb9fe0cf0a41",
+    "ci": "https://github.com/like3213934360-lab/deveco_tool/actions/runs/38703951622",
+    "ci_jobs_passed": 7,
+    "workflow": "https://github.com/like3213934360-lab/deveco_tool/actions/runs/38704195070",
+    "url": "https://github.com/like3213934360-lab/deveco_tool/releases/tag/v1.5.0",
+    "id": 413563576,
+    "latest": true,
+    "tag_matches_commit": true,
+    "downloaded_and_local_receipts_identical": true
   }
 }

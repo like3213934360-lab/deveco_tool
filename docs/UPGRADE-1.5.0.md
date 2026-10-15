@@ -50,3 +50,9 @@ GitHub 的提交、全部 CI、release、不可变 tag、Latest 与回执按 [�
 协调连接关闭修复后的最终运行构建为 **1.5.0 / `5a26d9f5683c732fed63c41d09bcecb4412d87929744a93f2a23308379e8d976`**；原生宿主仍未重载。
 
 最终构建真实 SDK 复测保留 **失败**：Local 正/负例、不采集覆盖率的 Instrument 及完整 verify 链通过，但 Instrument 覆盖率再次缺失，SDK 仍报相同 JSON 解析错误。MCP 保存了实际 1 pass 的原始测试报告与错误日志并拒绝整个请求；Node 汇总为 3 pass / 2 fail（失败子项加父项）。不继续重试筛选绿色结果，覆盖率可靠性留作未通过项；前述 5/5 仅是较早独立运行的事实。
+
+## GitHub 交付
+
+发布提交 `07b458724d91ab74e5ee420b2efccb9fe0cf0a41` 的 [CI 38703951622](https://github.com/like3213934360-lab/deveco_tool/actions/runs/38703951622) 七项全部通过；[release 38704195070](https://github.com/like3213934360-lab/deveco_tool/actions/runs/38704195070) 成功。[v1.5.0 Release](https://github.com/like3213934360-lab/deveco_tool/releases/tag/v1.5.0) 为非草稿、非预发布的 Latest，ID 413563576，tag 精确指向发布提交。下载 verified-release 与本地 `--check` 逐字节一致，见 [回执](evidence/v1.5.0-release.json)。
+
+已清理本次 8 个临时 SDK 工程/上游审查目录，131 份原始产物及失败日志、截图、调用证据独立保留，无遗失 artifact；最终资源占用为空。后续同版本文档提交独立检查 CI 和既有 Release，链接在交付答复中列出，避免自引用提交循环；不重发或移动 tag。SDK 覆盖率、模型权限、性能及宿主边界不会因 GitHub 发布变成通过。
