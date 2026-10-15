@@ -73,5 +73,16 @@
     "runtime_test_added_lines": 11,
     "runtime_test_removed_lines": 4,
     "new_files_in_src_or_test": 0
+  },
+  "release": {
+    "commit": "cc104ce48b00a7f5097795a9bd9188354edc3f87",
+    "ci": "https://github.com/like3213934360-lab/deveco_tool/actions/runs/38705796101",
+    "ci_jobs_passed": 7,
+    "workflow": "https://github.com/like3213934360-lab/deveco_tool/actions/runs/38706020103",
+    "id": 413576783,
+    "latest": true,
+    "tag_matches_commit": true,
+    "v1_5_0_tag_unchanged": true,
+    "receipts_identical": true
   }
 }

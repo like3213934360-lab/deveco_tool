@@ -19,3 +19,7 @@ v1.5.0 已发布后，文档提交 `6d49c063ce9f2538121e40fbf655a2d6977790f8` �
 GitHub 提交、七项 CI、自动 release、不可变 tag、Latest 及回执将单独核验后记录于 TODO 与发布回执。
 
 体量变化：构建工具 +36/-4 行，原 runtime 用例 +11/-4 行，没有新增长期测试入口或运行依赖。
+
+## GitHub 交付
+
+发布提交 `cc104ce48b00a7f5097795a9bd9188354edc3f87` 的 [CI 38705796101](https://github.com/like3213934360-lab/deveco_tool/actions/runs/38705796101) 七项全部通过，[release 38706020103](https://github.com/like3213934360-lab/deveco_tool/actions/runs/38706020103) 成功。[v1.5.1](https://github.com/like3213934360-lab/deveco_tool/releases/tag/v1.5.1) 为稳定版 Latest，ID 413576783，tag 精确指向发布提交；v1.5.0 仍指向 07b4587，未移动或重建。下载回执与本地只读核验逐字节一致，见 [回执](evidence/v1.5.1-release.json)。后续文档提交继续独立核验，不重发同版本；最终链接在交付答复列出。

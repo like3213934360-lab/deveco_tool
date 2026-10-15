@@ -206,7 +206,7 @@ Windows/Linux 真实 SDK/媒体、多设备并发、其他设备/媒体版本、
 - [x] 保留文档提交 `6d49c06` 的 [CI 38704541589](https://github.com/like3213934360-lab/deveco_tool/actions/runs/38704541589) Windows/Node 22 首次启动 EPERM；其余六项通过，release 正确跳过。真实构建发布路径有缺陷，不能当作测试噪声。
 - [x] 用引导层目录锁串行构建、锁内验证完整构建并复用同代，避免同时替换 pointer；相同启动桥不重复覆盖。失败仍报错，锁超时不自动抢占。运行工具已变化，升为 1.5.1，保留 1.5.0 tag。
 - [x] 原 runtime 回归增强为四个进程并发，验证单代发布、哈希/协议、复用、锁与桥恢复；类型检查和 276/276 完整离线回归通过。真实 SDK doctor/device info 在 1.5.1 新进程通过；不改写 1.5.0 业务验收及其失败边界。详见 [1.5.1 说明](docs/UPGRADE-1.5.1.md) 与 [证据](docs/evidence/v1.5.1-acceptance.json)。
-- [ ] 继续核验新提交七项 CI、1.5.1 Release、tag、Latest 和回执；未完成前不称为最终交付。
+- [x] 发布提交 `cc104ce48b00a7f5097795a9bd9188354edc3f87` 已推送，[CI 38705796101](https://github.com/like3213934360-lab/deveco_tool/actions/runs/38705796101) 七项通过，[release 38706020103](https://github.com/like3213934360-lab/deveco_tool/actions/runs/38706020103) 成功。v1.5.1 tag 指向该提交、Release ID 413576783 为 Latest，1.5.0 tag 仍为 07b4587。下载回执与本地 `--check` 一致，见 [回执](docs/evidence/v1.5.1-release.json)。最终文档提交独立核验 CI/既有 Release，并在交付回复列链接。SDK 覆盖率、模型、性能及宿主重载等未通过项继续保留。
 
 ## 方法依据
 
