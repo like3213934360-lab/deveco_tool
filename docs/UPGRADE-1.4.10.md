@@ -58,4 +58,8 @@ GitHub 发布、npm 发布、宿主重载分别核验。本轮不执行 npm 发�
 
 下载的 verified-release 与 `node tools/release.mjs --run 38689007850 --check` 逐字节一致，见 [发布回执](evidence/v1.4.10-release.json)。原生 doctor 另证当前 Codex App 仍加载 1.4.9 / `74a552f64d034ede14dfe273c0d3f6434475890396382f13e51b62a835b261bd`；本轮独立 stdio 构建为 `c2c74b0a94d8202f59946245941bc6794bb48e8f990eae5eac6d87d2abddbd50`。
 
-最终文档提交按 [发布流程](RELEASING.md) 独立完成 CI 和既有 Release 核验，其链接在交付回复列出，避免自引用提交循环；不移动 tag，不重发同版本。
+文档提交 `d1d748d` 的 [CI 38689309019](https://github.com/like3213934360-lab/deveco_tool/actions/runs/38689309019) 两次在 Windows/Node 24 的知识库测试中遇到 `fetch failed / ECONNRESET`，对应 integrity/pointer 和 array versions 两个不同用例；其余六项通过，两个自动 release 均正确跳过，原日志保留。
+
+定位到测试夹具同步执行 tar，阻塞同进程 HTTP 服务和客户端的事件循环超过 keep-alive 时间。使用未修改默认连接配置的最小复现，完整消费 JSON 后阻塞子进程 7 秒，观察到 socket timeout 后下一请求 ECONNRESET；异步子进程对照允许定时器正常处理。将现有 archive→metadata→isolate 夹具链改为异步，保留完全相同的 tar 参数、归档内容、所有业务断言与真实断连负例；没有加重试、延长超时、改运行环境或调整门限。依据和复验见 [夹具修复证据](evidence/v1.4.10-fixture.json)。修复后原知识库套件 20/20、全量离线 256/256（16.766 s）、类型检查通过。运行产物及构建指纹不变，按流程不重发同版本。
+
+最终文档与测试提交按 [发布流程](RELEASING.md) 独立完成 CI 和既有 Release 核验，其链接在交付回复列出，避免自引用提交循环；不移动 tag。

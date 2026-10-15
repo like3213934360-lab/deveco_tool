@@ -6,8 +6,9 @@ import fs from "node:fs";
 import http from "node:http";
 import os from "node:os";
 import path from "node:path";
-import { execFileSync } from "node:child_process";
+import { execFile } from "node:child_process";
 import { pathToFileURL } from "node:url";
+import { promisify } from "node:util";
 import { after, before, test } from "node:test";
 import { DatabaseSync } from "node:sqlite";
 import { build } from "esbuild";
@@ -21,6 +22,7 @@ const fault = globalThis.__devecoKbSource = { pointer: false };
 let m, server, url, registry, responseStatus, disconnect, tamper, state, downloads;
 let sequence = 0;
 const archives = new Map();
+const exec = promisify(execFile);
 const integrity = (bytes) => `sha512-${crypto.createHash("sha512").update(bytes).digest("base64")}`;
 function index(file) {
   const db = new DatabaseSync(file);
@@ -32,7 +34,7 @@ function index(file) {
     INSERT INTO segments VALUES(1,1,'Usage','router navigation','router navigation',0);`);
   db.close();
 }
-function archive(name, version, upstream = true) {
+async function archive(name, version, upstream = true) {
   const dir = path.join(work, `fixture-${++sequence}`, "package");
   fs.mkdirSync(dir, { recursive: true });
   const dbFile = path.join(dir, upstream ? "search.db" : "index.db");
@@ -44,31 +46,34 @@ function archive(name, version, upstream = true) {
   } else fs.writeFileSync(path.join(dir, "manifest.json"), JSON.stringify({ schema: 1, version, sources: {}, created_at: "2026-01-01", counts: { "harmonyos-guides": 1 } }));
   fs.writeFileSync(path.join(dir, "package.json"), JSON.stringify({ name, version, ...(upstream ? { apiVersion: 1 } : { kbSchema: 1 }) }));
   const file = path.join(path.dirname(dir), "fixture.tgz");
-  execFileSync("tar", ["-czf", file, "-C", path.dirname(dir), "package"]);
+  // Keep the local registry and fetch socket timers running while tar prepares fixtures.
+  await exec("tar", ["-czf", file, "-C", path.dirname(dir), "package"]);
   const bytes = fs.readFileSync(file);
   const key = `${name}/${version}/${sequence}`;
   archives.set(key, bytes);
   return { version, ...(upstream ? { apiVersion: 1 } : { kbSchema: 1 }), dist: { tarball: `${url}/archive/${encodeURIComponent(key)}`, integrity: integrity(bytes) }, dir, file };
 }
-function metadata(name, versions, tags, upstream = true) {
-  return { "dist-tags": tags, versions: Object.fromEntries(versions.map((v) => {
-    const { dir, file, ...entry } = archive(name, v, upstream);
-    return [v, entry];
-  })) };
+async function metadata(name, versions, tags, upstream = true) {
+  const entries = [];
+  for (const version of versions) {
+    const { dir, file, ...entry } = await archive(name, version, upstream);
+    entries.push([version, entry]);
+  }
+  return { "dist-tags": tags, versions: Object.fromEntries(entries) };
 }
 function configure(value = {}) {
   fs.writeFileSync(process.env.DEVECO_CONFIG, JSON.stringify({ npm_registry: url, ...value }));
   m.resetConfig();
 }
-function isolate(value = {}) {
+async function isolate(value = {}) {
   state = path.join(work, `state-${++sequence}`);
   process.env.DEVECO_STATE_DIR = state;
   process.env.DEVECO_CONFIG = path.join(work, `config-${sequence}.json`);
   configure(value);
   responseStatus = 200; disconnect = false; tamper = false; downloads = 0;
   registry = {
-    [upstreamName]: metadata(upstreamName, ["1.3.5-Test.1", "1.3.5-Test.2"], { latest: "1.3.5-Test.1", daily: "1.3.5-Test.2" }),
-    "@private/kb": metadata("@private/kb", ["1.0.0", "2.0.0"], { latest: "2.0.0" }, false),
+    [upstreamName]: await metadata(upstreamName, ["1.3.5-Test.1", "1.3.5-Test.2"], { latest: "1.3.5-Test.1", daily: "1.3.5-Test.2" }),
+    "@private/kb": await metadata("@private/kb", ["1.0.0", "2.0.0"], { latest: "2.0.0" }, false),
   };
 }
 const pointer = () => fs.readFileSync(path.join(state, "kb/current.json"), "utf8");
@@ -111,9 +116,9 @@ after(async () => {
 });
 
 test("default latest upstream converts, searches, reads, fingerprints, no-ops and force rolls back", async () => {
-  isolate();
+  await isolate();
   // Seed only the isolated state, so an optional bundled pack cannot affect update availability.
-  await m.update({ source: archive("@private/kb", "1.0.0", false).file }, signal);
+  await m.update({ source: (await archive("@private/kb", "1.0.0", false)).file }, signal);
   assert.equal(m.config().kb_source, "upstream");
   const check = await m.status(true);
   assert.equal(check.source, "upstream"); assert.equal(check.tag, "latest");
@@ -135,7 +140,7 @@ test("default latest upstream converts, searches, reads, fingerprints, no-ops an
 });
 
 test("private kb_package preserves pack mode, pinned versions and source override checks", async () => {
-  isolate({ kb_package: "@private/kb" });
+  await isolate({ kb_package: "@private/kb" });
   assert.equal(m.config().kb_source, "pack");
   assert.equal((await m.status(true)).source, "pack");
   assert.equal((await m.update({ version: "1.0.0" }, signal)).version, "1.0.0");
@@ -152,7 +157,7 @@ test("private kb_package preserves pack mode, pinned versions and source overrid
 });
 
 test("daily is opt-in and explicit upstream version is obeyed, including downgrade", async () => {
-  isolate({ kb_upstream_tag: "daily" });
+  await isolate({ kb_upstream_tag: "daily" });
   const s = await m.status(true); assert.equal(s.tag, "daily"); assert.equal(s.available_version, "1.3.5-Test.2");
   await m.update({}, signal); assert.equal(m.activePack().manifest.sources.upstream.version, s.available_version);
   const pinned = await m.status(true, signal, { version: "1.3.5-Test.1" });
@@ -165,8 +170,8 @@ test("daily is opt-in and explicit upstream version is obeyed, including downgra
 });
 
 test("incompatible latest selects highest compatible history semantically, never newer daily", async () => {
-  isolate();
-  registry[upstreamName] = metadata(upstreamName, ["1.3.5-Test.2", "1.3.5-Test.10", "2.0.0", "3.0.0"], { latest: "2.0.0", daily: "3.0.0" });
+  await isolate();
+  registry[upstreamName] = await metadata(upstreamName, ["1.3.5-Test.2", "1.3.5-Test.10", "2.0.0", "3.0.0"], { latest: "2.0.0", daily: "3.0.0" });
   registry[upstreamName].versions["2.0.0"].apiVersion = 2;
   const s = await m.status(true);
   assert.equal(s.latest, "2.0.0"); assert.equal(s.available_version, "1.3.5-Test.10");
@@ -191,7 +196,7 @@ test("invalid metadata and insufficient compatibility reject both check and upda
     ["version mismatch", (x) => { x.versions["1.3.5-Test.1"].version = "9.0.0"; }],
   ];
   for (const [name, mutate, expected = "INVALID_INPUT"] of cases) await t.test(name, async () => {
-    isolate(); mutate(registry[upstreamName]);
+    await isolate(); mutate(registry[upstreamName]);
     await assert.rejects(m.status(true), code(expected));
     await assert.rejects(m.update({}, signal), code(expected));
     assert.equal(fs.existsSync(path.join(state, "kb/current.json")), false);
@@ -199,8 +204,8 @@ test("invalid metadata and insufficient compatibility reject both check and upda
 });
 
 test("check-only rejects file/URL rather than ignoring it; file and URL installs remain supported", async () => {
-  isolate();
-  const p = archive("@private/kb", "1.0.0", false);
+  await isolate();
+  const p = await archive("@private/kb", "1.0.0", false);
   for (const source of [p.file, p.dist.tarball]) {
     await assert.rejects(m.status(true, signal, { source }), /Check-only supports registry/);
     assert.equal((await m.update({ source }, signal)).version, "1.0.0");
@@ -209,7 +214,7 @@ test("check-only rejects file/URL rather than ignoring it; file and URL installs
 });
 
 test("registry pin rejects archives of another version even with valid SHA512", async () => {
-  isolate({ kb_package: "@private/kb" });
+  await isolate({ kb_package: "@private/kb" });
   await m.update({ version: "1.0.0" }, signal); const before = pointer();
   registry["@private/kb"].versions["2.0.0"].dist = registry["@private/kb"].versions["1.0.0"].dist;
   await assert.rejects(m.update({ version: "2.0.0" }, signal), /Archive version does not match/);
@@ -219,7 +224,7 @@ test("registry pin rejects archives of another version even with valid SHA512", 
 });
 
 test("HTTP401/404 and real disconnected registry surface errors, not no-update", async () => {
-  isolate(); await m.update({}, signal); const before = pointer();
+  await isolate(); await m.update({}, signal); const before = pointer();
   for (const status of [401, 404, 500]) {
     responseStatus = status;
     await assert.rejects(m.status(true), code("HTTP_ERROR"));
@@ -232,7 +237,7 @@ test("HTTP401/404 and real disconnected registry surface errors, not no-update",
 });
 
 test("legacy fingerprint is unknown; differing indexed content is local refresh, not official update", async () => {
-  isolate(); await m.update({}, signal);
+  await isolate(); await m.update({}, signal);
   const manifestFile = path.join(m.activePack().dir, "manifest.json");
   const legacy = JSON.parse(fs.readFileSync(manifestFile));
   delete legacy.sources.local.content_sha256;
@@ -244,7 +249,7 @@ test("legacy fingerprint is unknown; differing indexed content is local refresh,
   assert.equal((await m.status(false)).local_content.state, "unchanged");
   const local = path.join(work, "alternate-knowledge"); fs.mkdirSync(path.join(local, "rules"), { recursive: true });
   fs.writeFileSync(path.join(local, "rules/example.md"), "# Alternate rules\n\nDifferent indexed knowledge.\n");
-  const upstream = archive(upstreamName, "1.3.5-Test.1");
+  const upstream = await archive(upstreamName, "1.3.5-Test.1");
   const built = await m.buildKnowledgePack({ upstream: upstream.dir, out: path.join(work, "alternate-out"), local });
   assert.equal(JSON.parse(fs.readFileSync(path.join(built.dir, "manifest.json"))).sources.local.content_sha256, m.localKnowledgeContentSha256(local));
   await m.update({ source: built.tarball }, signal);
@@ -255,7 +260,7 @@ test("legacy fingerprint is unknown; differing indexed content is local refresh,
 });
 
 test("fingerprint includes relative paths/bodies, excludes NOTICE, and indexes runtime exactly once", async () => {
-  isolate();
+  await isolate();
   const local = path.join(work, "fingerprint"), runtime = path.join(local, "skills/hmos-runtime-fix-skill/references");
   fs.mkdirSync(runtime, { recursive: true }); fs.mkdirSync(path.join(local, "rules"));
   fs.writeFileSync(path.join(runtime, "a.md"), "# Runtime\nbody\n");
@@ -265,7 +270,7 @@ test("fingerprint includes relative paths/bodies, excludes NOTICE, and indexes r
   fs.renameSync(path.join(runtime, "a.md"), path.join(runtime, "b.md")); assert.notEqual(m.localKnowledgeContentSha256(local), first);
   const renamed = m.localKnowledgeContentSha256(local);
   fs.writeFileSync(path.join(runtime, "b.md"), "# Runtime\nnew body\n"); assert.notEqual(m.localKnowledgeContentSha256(local), renamed);
-  const upstream = archive(upstreamName, "1.3.5-Test.1");
+  const upstream = await archive(upstreamName, "1.3.5-Test.1");
   const built = await m.buildKnowledgePack({ upstream: upstream.dir, out: path.join(work, "fingerprint-out"), local, version: "1.0.0" });
   assert.equal(built.counts.runtime, 1); assert.equal(built.counts.skills, undefined); assert.equal(built.counts.rules, undefined);
   await m.update({ source: built.tarball }, signal);
@@ -277,7 +282,7 @@ test("fingerprint includes relative paths/bodies, excludes NOTICE, and indexes r
 });
 
 test("integrity and pointer failures preserve active pointer and previous rollback for both sources", async () => {
-  isolate();
+  await isolate();
   await m.update({ version: "1.3.5-Test.1" }, signal);
   await m.update({ version: "1.3.5-Test.2" }, signal);
   const before = pointer(), active = m.activePack().dir;

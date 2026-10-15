@@ -146,6 +146,7 @@ Windows/Linux 真实 SDK/媒体、多设备并发、其他设备/媒体版本、
 - [x] 真机只读查询及拒绝危险参数、真实签名引用及验签、61 条诊断分页完整性通过。原签名配置及材料哈希不变；未向真机执行拒绝的修改命令。
 - [x] 503 项上游门禁、原性能/提示说明预算和打包 dry-run 通过；保留提示语与上游门禁首次失败，按实际原因修复及审查。
 - [x] 发布提交 `5b383f0bd4e772b92a1949abc4e0b68df113985e` 已推送；[CI 38689007850](https://github.com/like3213934360-lab/deveco_tool/actions/runs/38689007850) 七项首次全部通过，[release 38689158770](https://github.com/like3213934360-lab/deveco_tool/actions/runs/38689158770) 成功。v1.4.10 tag 指向该提交、Release ID 413461613 为 Latest，下载回执与本地 `--check` 逐字节一致，见 [回执](docs/evidence/v1.4.10-release.json)。最终文档提交仍独立核验，结果在交付答复列出。
+- [x] 保留文档提交 `d1d748d` 的 CI 38689309019 两次 Windows/Node 24 ECONNRESET。最小复现定位到同步 tar 阻塞测试服务/客户端事件循环与 keep-alive 定时器；改为异步夹具创建，原业务断言、断连负例、连接配置和预算全部保留。只改测试，不改变已发布产物或 tag；见 [证据](docs/evidence/v1.4.10-fixture.json)。
 - [ ] Codex App/DSH 重载及新版完整模型验收未做；原生 doctor 确认当前 Codex App 为 1.4.9 / `74a552f64d034ede14dfe273c0d3f6434475890396382f13e51b62a835b261bd`。npm 未发布。历史未验证/失败项目不因本次发布关闭。
 
 ## 方法依据
