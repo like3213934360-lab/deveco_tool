@@ -201,6 +201,13 @@ Windows/Linux 真实 SDK/媒体、多设备并发、其他设备/媒体版本、
 
 本轮不建设系统级代理/DNS 劫持、任意应用内存注入、跨主机设备农场、完整分布式/超级终端测试平台或 AGC 自动提审/灰度平台。源码 checkout 隔离由宿主承担，MCP 负责其自身修改与设备副作用的范围、回执和恢复。预览不替代真实卡片宿主验收，通用诊断不替代项目业务断言。
 
+## v1.5.1 并发构建收尾（2026-10-15）
+
+- [x] 保留文档提交 `6d49c06` 的 [CI 38704541589](https://github.com/like3213934360-lab/deveco_tool/actions/runs/38704541589) Windows/Node 22 首次启动 EPERM；其余六项通过，release 正确跳过。真实构建发布路径有缺陷，不能当作测试噪声。
+- [x] 用引导层目录锁串行构建、锁内验证完整构建并复用同代，避免同时替换 pointer；相同启动桥不重复覆盖。失败仍报错，锁超时不自动抢占。运行工具已变化，升为 1.5.1，保留 1.5.0 tag。
+- [x] 原 runtime 回归增强为四个进程并发，验证单代发布、哈希/协议、复用、锁与桥恢复；类型检查和 276/276 完整离线回归通过。真实 SDK doctor/device info 在 1.5.1 新进程通过；不改写 1.5.0 业务验收及其失败边界。详见 [1.5.1 说明](docs/UPGRADE-1.5.1.md) 与 [证据](docs/evidence/v1.5.1-acceptance.json)。
+- [ ] 继续核验新提交七项 CI、1.5.1 Release、tag、Latest 和回执；未完成前不称为最终交付。
+
 ## 方法依据
 
 - [Google 工程评审规范](https://google.github.io/eng-practices/review/reviewer/looking-for.html)：测试同样需要维护，审查有效性、可读性和复杂度，避免过度设计。

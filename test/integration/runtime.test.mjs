@@ -82,6 +82,7 @@ test("a failed compile cannot publish or silently start the last valid build", a
   assert.equal(fs.readFileSync(path.join(dir, "dist/current.json"), "utf8"), pointer);
   assert.equal(run(dir, `dist/${original.entry}`).stdout.trim(), "1.0.0");
   assert.ok(fs.readdirSync(path.join(dir, "dist/builds")).every((f) => !f.startsWith(".staging")));
+  assert.equal(fs.existsSync(path.join(dir, 'dist/.build-lock')), false, 'failed compilation releases its build ownership');
 });
 
 test("missing/corrupt output is rebuilt locally and rejected in a source-less installation", async (t) => {
@@ -108,11 +109,17 @@ test("missing/corrupt output is rebuilt locally and rejected in a source-less in
 });
 
 test("simultaneous first launches publish complete generations and keep stdout valid JSON-RPC", async (t) => {
-  const dir = fixture(t), a = client(t, dir), b = client(t, dir);
-  const results = await Promise.all([a.initialize(), b.initialize()]);
+  const dir = fixture(t), clients = Array.from({ length: 4 }, () => client(t, dir));
+  const results = await Promise.all(clients.map((c) => c.initialize()));
   for (const r of results) assert.equal(r.result.serverInfo.version, "1.0.0");
-  verifyBuild(dir);
-  await Promise.all([a.close(), b.close()]);
+  const manifest = verifyBuild(dir);
+  assert.equal(fs.readdirSync(path.join(dir, 'dist/builds')).length, 1, 'one verified generation is shared by concurrent builders');
+  assert.equal(fs.existsSync(path.join(dir, 'dist/.build-lock')), false);
+  const reused = await buildPackage(dir); assert.equal(reused.entry, manifest.entry);
+  await Promise.all(clients.map((c) => c.close()));
+  fs.rmSync(path.join(dir, 'dist/cli.js'));
+  assert.equal((await buildPackage(dir)).entry, manifest.entry);
+  assert.match(fs.readFileSync(path.join(dir, 'dist/cli.js'), 'utf8'), /deveco-mcp\.mjs/);
 });
 
 test("npm pack builds current sources and ships only the selected generation, which starts without build tools", async (t) => {

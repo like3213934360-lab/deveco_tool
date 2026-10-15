@@ -7,11 +7,44 @@ import { randomBytes } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { atomicWrite, digest, packageInfo, sourceFingerprint, verifyBuild } from "../bin/runtime.mjs";
 
+function ensureBridge(dist) {
+  const bridge = path.join(dist, "cli.js"), text = '#!/usr/bin/env node\nimport "../bin/deveco-mcp.mjs";\n';
+  if (!fs.existsSync(bridge) || fs.readFileSync(bridge, "utf8") !== text) atomicWrite(bridge, text);
+  fs.chmodSync(bridge, 0o755);
+}
+
 export async function buildPackage(root) {
-  const input_hash = sourceFingerprint(root);
-  const { version } = packageInfo(root);
   const dist = path.join(root, "dist");
   fs.mkdirSync(path.join(dist, "builds"), { recursive: true });
+  // The launcher must work before runtime dependencies are loaded. Serialize builders here,
+  // then reuse a verified generation instead of racing to replace the Windows pointer twice.
+  const lock = path.join(dist, ".build-lock"), deadline = Date.now() + 30000;
+  for (;;) {
+    try { fs.mkdirSync(lock); break; }
+    catch (error) {
+      if (error.code !== "EEXIST") throw error;
+      if (Date.now() >= deadline) throw new Error(`Build is reserved: ${lock}. Inspect owner.json and the owning process; remove this lock only after confirming the builder stopped.`);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+  }
+  try {
+    fs.writeFileSync(path.join(lock, "owner.json"), JSON.stringify({ pid: process.pid, started_at: new Date().toISOString() }));
+    let current;
+    try { current = verifyBuild(root, sourceFingerprint(root)); }
+    catch (error) {
+      // Missing, stale or damaged outputs are the launcher's existing rebuild contract.
+      // Filesystem permission/I/O errors must not be reinterpreted as a cache miss.
+      if (error.code && error.code !== "ENOENT") throw error;
+      if (!error.code && !/^(Compiled build does not match|Incomplete build manifest|Invalid build output|Missing or changed build output)/.test(error.message) && !(error instanceof SyntaxError)) throw error;
+    }
+    if (current) { ensureBridge(dist); return current; }
+    return await compilePackage(root, dist);
+  } finally { fs.rmSync(lock, { recursive: true }); }
+}
+
+async function compilePackage(root, dist) {
+  const input_hash = sourceFingerprint(root);
+  const { version } = packageInfo(root);
   const nonce = randomBytes(6).toString("hex");
   const generation = `builds/${input_hash}-${nonce}`;
   const staging = path.join(dist, "builds", `.staging-${nonce}`);
@@ -32,8 +65,7 @@ export async function buildPackage(root) {
     fs.renameSync(staging, path.join(dist, generation));
     atomicWrite(path.join(dist, "current.json"), JSON.stringify(manifest, null, 2) + "\n");
     // Existing hosts pointing at dist/cli.js enter the same gate without editing their settings.
-    atomicWrite(path.join(dist, "cli.js"), '#!/usr/bin/env node\nimport "../bin/deveco-mcp.mjs";\n');
-    fs.chmodSync(path.join(dist, "cli.js"), 0o755);
+    ensureBridge(dist);
     return verifyBuild(root, input_hash);
   } finally {
     fs.rmSync(staging, { recursive: true, force: true });
