@@ -41,7 +41,8 @@ const report = {
 };
 console.log(JSON.stringify(report, null, 2));
 // RSS: 70 MB baseline budget + user-authorized 20% growth (2026-10-10) = 84 MB.
-// Other budgets stay unchanged: handshake < 150 ms, tools/list <= 36 KB. cputime has 10 ms
+// v1.5 adds verification/scenario contracts to the same 15 tools: tools/list <= 44 KiB,
+// matching integration/server.test.mjs. Latency/RSS/CPU budgets stay unchanged. cputime has 10 ms
 // resolution, so allow one tick of drift over 10 s idle.
 // Claude Code currently truncates each instruction/description at 2048 characters by default.
 // Check that boundary; report repeated-prefix cost rather than deleting necessary guidance to fit it.
@@ -49,7 +50,7 @@ const tick = (s) => { const [m, rest] = s.split(":"); return Number(m) * 60 + Nu
 const budget = [
   [report.handshake_ms.median < 150, `handshake ${report.handshake_ms.median} ms >= 150`],
   [report.idle_rss_mb <= 84, `idle RSS ${report.idle_rss_mb} MB > 84`],
-  [prompts.tools_list_bytes <= 36 * 1024, `tools/list ${prompts.tools_list_bytes} bytes > 36 KB`],
+  [prompts.tools_list_bytes <= 44 * 1024, `tools/list ${prompts.tools_list_bytes} bytes > 44 KiB`],
   [prompts.instructions_chars <= 2048, `instructions ${prompts.instructions_chars} characters > 2048`],
   [prompts.longest_description_chars <= 2048, `tool description ${prompts.longest_description_chars} characters > 2048`],
   [tick(cpuAfter) - tick(cpuBefore) <= 0.011, `idle CPU ${cpuBefore} -> ${cpuAfter}`],

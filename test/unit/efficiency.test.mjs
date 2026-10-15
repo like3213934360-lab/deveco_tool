@@ -363,7 +363,7 @@ test("layout rules: off-screen, overlapping targets, clipped/collapsed text; scr
   const screen = { w: 1000, h: 2000 };
   const root = n("Column", [0, 0, 1000, 2000]);
   const ok = [root, n("Button", [100, 100, 400, 260], { parent: root.i, text: "确定", clickable: true })];
-  assert.deepEqual(m.checkLayout(ok, screen, { density: 3 }), { passed: true, checked: 1, counts: {}, issues: [] });
+  assert.deepEqual(m.checkLayout(ok, screen, { density: 3 }), { passed: true, checked: 1, checked_unit: "nodes", density_source: "device", counts: {}, issues: [] });
   // A system dialog in front (no app element): no verdict instead of a false pass.
   const covered = m.checkLayout([n("Text", [0, 0, 100, 50], { text: "允许通知？", bundle: "com.ohos.notificationdialog" })], screen, { bundle: "com.app" });
   assert.equal(covered.passed, false);

@@ -17,6 +17,8 @@ import { automaticResult, act, compact, dumpTree, screenshot, waitFor, type Acti
 
 export interface StepRecord extends AutomaticResult {
   n: number;
+  checklist_item?: number;
+  asserted?: boolean;
   kind: "act" | "assert" | "observe" | "review";
   description?: string;
   action?: Action;
@@ -29,7 +31,7 @@ export interface StepRecord extends AutomaticResult {
   log?: string;
   at: number;
 }
-export interface Review { step: number; screenshot: string; requirement: string; outcome?: "passed" | "failed" | "insufficient"; reason?: string }
+export interface Review { checklist_item?: number; step: number; screenshot: string; requirement: string; outcome?: "passed" | "failed" | "insufficient"; reason?: string }
 export interface TestSession {
   id: string;
   target: string;
@@ -57,6 +59,18 @@ async function load(id: string): Promise<TestSession> {
 }
 async function save(s: TestSession) {
   (await ensureTable()).prepare("INSERT OR REPLACE INTO ui_tests(id,data,updated) VALUES(?,?,?)").run(s.id, JSON.stringify(s), Date.now());
+}
+
+export async function testTarget(id: string) { return (await load(id)).target; }
+function checklistItem(s: TestSession, item?: number) {
+  const selected = item ?? (s.checklist.length === 1 ? 1 : undefined);
+  invariant(selected && selected >= 1 && selected <= s.checklist.length, "INVALID_INPUT", "Pass checklist_item (1-based) from test_start for this assertion/review");
+  return selected;
+}
+export function missingChecklist(s: Pick<TestSession, "checklist" | "steps" | "reviews">) {
+  return s.checklist.map((requirement, index) => ({ checklist_item: index + 1, requirement })).filter(({ checklist_item }) =>
+    !s.steps.some((st) => st.checklist_item === checklist_item && (st.kind === "assert" || st.asserted) && st.passed === true)
+    && !s.reviews.some((r) => r.checklist_item === checklist_item && r.outcome === "passed"));
 }
 
 /** Split a natural-language plan into a checklist (numbered/bulleted lines, else sentences). */
@@ -113,12 +127,13 @@ export async function startTest(target: string, input: { plan: string; bundle?: 
   };
 }
 
-export async function testStep(testId: string, step: { description?: string; action?: Action; selector?: Selector; automatic?: AutomaticAction[]; assert?: { visible?: Selector; hidden?: Selector; timeout_ms?: number } }, signal: AbortSignal) {
+export async function testStep(testId: string, step: { checklist_item?: number; description?: string; action?: Action; selector?: Selector; automatic?: AutomaticAction[]; assert?: { visible?: Selector; hidden?: Selector; timeout_ms?: number } }, signal: AbortSignal) {
   const s = await load(testId);
   invariant(s.status === "running", "CONFLICT", `Test ${testId} is ${s.status}`);
   invariant(step.action || step.assert, "INVALID_INPUT", "Pass op (+selector/coordinates), visible or hidden");
+  const item = step.assert ? checklistItem(s, step.checklist_item) : step.checklist_item;
   const started = Date.now();
-  const record: StepRecord = { n: s.steps.length, kind: step.action ? "act" : "assert", description: step.description, action: step.action, selector: step.selector, at: started, ...automaticResult(step.automatic) };
+  const record: StepRecord = { n: s.steps.length, checklist_item: item, asserted: !!step.assert, kind: step.action ? "act" : "assert", description: step.description, action: step.action, selector: step.selector, at: started, ...automaticResult(step.automatic) };
   try {
     if (step.action) {
       record.before = await shot(s.target, signal);
@@ -158,7 +173,7 @@ export async function testStep(testId: string, step: { description?: string; act
 }
 
 /** Start a visual review: returns the screenshot for the host to judge; submit with outcome. */
-export async function review(testId: string, input: { requirement?: string; outcome?: "passed" | "failed" | "insufficient"; reason?: string; review_id?: number }, signal: AbortSignal) {
+export async function review(testId: string, input: { checklist_item?: number; requirement?: string; outcome?: "passed" | "failed" | "insufficient"; reason?: string; review_id?: number }, signal: AbortSignal) {
   const s = await load(testId);
   if (input.outcome !== undefined) {
     const index = input.review_id ?? s.reviews.findIndex((r) => r.outcome === undefined);
@@ -171,8 +186,9 @@ export async function review(testId: string, input: { requirement?: string; outc
     return { review_id: index, recorded: input.outcome };
   }
   invariant(input.requirement, "INVALID_INPUT", "requirement is required to start a review (what the screen must look like)");
+  const item = checklistItem(s, input.checklist_item);
   const shotResult = await screenshot(s.target, { width: 1080 }, signal);
-  s.reviews.push({ step: s.steps.length, screenshot: shotResult.artifact_id, requirement: input.requirement });
+  s.reviews.push({ checklist_item: item, step: s.steps.length, screenshot: shotResult.artifact_id, requirement: input.requirement });
   await save(s);
   return {
     review_id: s.reviews.length - 1, requirement: input.requirement,
@@ -186,8 +202,9 @@ export async function finishTest(testId: string) {
   const failedControl = s.steps.filter((st) => (st.kind === "act" || st.kind === "assert") && st.passed === false);
   const failedReview = s.reviews.filter((r) => r.outcome === "failed");
   const unresolved = s.reviews.filter((r) => r.outcome === undefined || r.outcome === "insufficient");
-  const assertions = s.steps.filter((st) => st.kind === "assert").length;
-  s.status = failedControl.length || failedReview.length ? "failed" : unresolved.length || (assertions === 0 && s.reviews.length === 0) ? "inconclusive" : "passed";
+  const assertions = s.steps.filter((st) => st.kind === "assert" || st.asserted).length;
+  const missing = missingChecklist(s);
+  s.status = failedControl.length || failedReview.length ? "failed" : missing.length || unresolved.length || (assertions === 0 && s.reviews.length === 0) ? "inconclusive" : "passed";
   s.finished = Date.now();
   const md = [
     `# UI test ${s.id}: ${s.status.toUpperCase()}`, "", `Device: ${s.target}${s.bundle ? `  App: ${s.bundle}` : ""}`, `Duration: ${Math.round((s.finished - s.started) / 1000)}s`, "",
@@ -201,8 +218,9 @@ export async function finishTest(testId: string) {
   await save(s);
   return {
     test_id: s.id, status: s.status, steps: s.steps.length, failed_steps: failedControl.map((st) => st.n), failed_reviews: failedReview.length,
+    checklist_coverage: { total: s.checklist.length, completed: s.checklist.length - missing.length, missing },
     unresolved_reviews: unresolved.length, report_artifact: artifact.artifact_id,
-    ...(s.status === "inconclusive" ? { hint: assertions === 0 && !s.reviews.length ? "No assertion or review was recorded: a test needs evidence" : "Complete pending/insufficient reviews" } : {}),
+    ...(s.status === "inconclusive" ? { hint: assertions === 0 && !s.reviews.length ? "No assertion or review was recorded: a test needs evidence" : "Complete missing checklist assertions and pending/insufficient reviews" } : {}),
   };
 }
 

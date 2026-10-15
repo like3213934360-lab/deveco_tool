@@ -1,0 +1,231 @@
+{
+  "schema": 1,
+  "version": "1.5.0",
+  "source_base": "3e217cf4c37e27ef4fa53f23b3ec4d476908d494",
+  "final_build_id": "90f45d1397d3bda21132333689136e8edb609d8014d190613d92c375342ce35b",
+  "environment": {
+    "host": "macOS arm64",
+    "node": "26.0.0",
+    "deveco": "26.0.0.821",
+    "sdk": "26.0.0.105",
+    "device": "USB Pura 80 Pro, API 26",
+    "application": "dedicated com.devecomcp test fixture"
+  },
+  "logs": [
+    {
+      "file": "regression-final5.log",
+      "sha256": "41b2163a05a970031c9cbc9f86d4b23e3cab1d76facc760ea41816438633e9db",
+      "tests": 276,
+      "pass": 276,
+      "fail": 0,
+      "duration_ms": 16280.805833
+    },
+    {
+      "file": "final-sdk.log",
+      "sha256": "a61f25f8b5363e50bdcdd3d2ffcb2ed73136d56c84d14f41163aec690856e61d",
+      "tests": 9,
+      "pass": 7,
+      "fail": 2,
+      "duration_ms": 148110.241041
+    },
+    {
+      "file": "final-sdk2.log",
+      "sha256": "c99577ac195f3a0b2684399797b522628cfa8d94a13713ce21821df78d3e7338",
+      "tests": 5,
+      "pass": 5,
+      "fail": 0,
+      "duration_ms": 39235.644334
+    },
+    {
+      "file": "final-scenario2.log",
+      "sha256": "16a8b18b888c0c5a85f1648d9e2cea7db41fe36b49d1b7457afe74d82a9cb57f",
+      "tests": 6,
+      "pass": 6,
+      "fail": 0,
+      "duration_ms": 27314.272167
+    },
+    {
+      "file": "form-run2.log",
+      "sha256": "128e9d86d2de3b7fa2a92f2e41c3e68ca302342ac54effb46ce48b80fe12508d",
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "duration_ms": 59616.542834
+    },
+    {
+      "file": "form24-final.log",
+      "sha256": "0da9fa5ab2cf7b67d06f76fb25ff4698f327d548d7f0bc6e4c412ec05075f928",
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "duration_ms": 62812.771875
+    },
+    {
+      "file": "bench-final.json",
+      "sha256": "d65f36d4f1ee980ca7e7e6d128e433b522facca562f6a5ab85c2240e57938c83"
+    },
+    {
+      "file": "bench-final2.json",
+      "sha256": "5444f7d1701299d597855c95a0694bfc8d0b11cce4f9540464edf2c5257904aa"
+    },
+    {
+      "file": "bench-isolated.json",
+      "sha256": "907f36dd49b53c636d6b8ef8787ff0ebfbe3267185eb7f08fdbd6a8d56a63ba3"
+    },
+    {
+      "file": "pack-final.log",
+      "sha256": "3d32100ff15f178556d0882eb63117b5cc6d3cd5000a1b604d9e6ce39dfa44a9"
+    },
+    {
+      "file": "sdk-regression.log",
+      "sha256": "9a172f988a5e24d8d9d6644c7104f9fe3629d294e509f32ac2ad8cbc240563e4",
+      "tests": 31,
+      "pass": 31,
+      "fail": 0,
+      "duration_ms": 26191.456
+    }
+  ],
+  "benchmark": {
+    "handshake_ms": {
+      "median": 85,
+      "min": 83,
+      "max": 111
+    },
+    "tools": 15,
+    "instructions_bytes": 1737,
+    "instructions_chars": 1737,
+    "longest_description_chars": 1706,
+    "tools_list_bytes": 40650,
+    "repeated_instructions_bytes": 66765,
+    "tools_list_ms": 4,
+    "idle_cpu_10s": {
+      "before": "0:00.13",
+      "after": "0:00.13",
+      "changed": false
+    },
+    "idle_rss_mb": 70
+  },
+  "tools_list_previous_bytes": 36832,
+  "tools_list_budget_change": {
+    "before_kib": 36,
+    "after_kib": 44,
+    "reason": "Explicit new verify/test/scenario contracts on the same 15 tools; no runtime or latency budget relaxation"
+  },
+  "sdk_test_evidence": {
+    "local_positive": {
+      "passed": 1,
+      "failed": 0
+    },
+    "local_negative": {
+      "passed": 0,
+      "failed": 1,
+      "sdk_exit_code": 0,
+      "mcp_verdict": "failed"
+    },
+    "instrument_positive": {
+      "passed": 1,
+      "coverage_artifact": true,
+      "coverage_lines_percent": 0,
+      "meaning": "Arithmetic-only probe; zero application coverage is not a coverage adequacy claim"
+    },
+    "strict_gate": "build, local test, deploy, UI assert, crash window, entry declarations passed",
+    "prior_failure": {
+      "log": "final-sdk.log",
+      "code": "TEST_REPORT_MISSING",
+      "sdk_error": "00507008 getInitCoverageData: Unexpected non-whitespace character after JSON at position 4040",
+      "sdk_exit": 0,
+      "followup": "Independent later execution passed. Original failure retained; SDK incremental coverage generation remains an observed instability, not fixed by MCP."
+    }
+  },
+  "forms": {
+    "desktop": [
+      "2*2",
+      "2*4"
+    ],
+    "verified": [
+      "attachment",
+      "host onUpdate refresh",
+      "interaction",
+      "configuration page",
+      "owned removal"
+    ],
+    "attachment_host_version": "1.4.10",
+    "final_2x4_test_version": "1.5.0",
+    "unverified": [
+      "lock screen",
+      "negative-one screen",
+      "emulator host",
+      "periodic scheduler"
+    ]
+  },
+  "performance": {
+    "verdict": "inconclusive",
+    "source": "composer",
+    "samples": 3,
+    "excluded_intervals": [
+      7,
+      7,
+      6
+    ],
+    "claim": "Capture/aggregation boundaries verified; smoothness not established"
+  },
+  "model": {
+    "host": "codex",
+    "host_version": "codex-cli 0.162.1",
+    "candidate_server_version": "1.4.10",
+    "candidate_build_id": "460a634207eff4432192141e5f1d4e95228cf4f409ae00fc40bb02f04ab59c3f",
+    "successful_cases": 2,
+    "blocked_cases": 8,
+    "reason": "MCP tool call requires approval, but approval policy is never",
+    "final_version_full_model_acceptance": "not verified",
+    "evaluation_material": "test/fixtures/verification-evaluation.xml is material, not execution evidence"
+  },
+  "host": {
+    "version": "1.4.10",
+    "build_id": "c2c74b0a94d8202f59946245941bc6794bb48e8f990eae5eac6d87d2abddbd50",
+    "node": "v26.0.0",
+    "reloaded": false
+  },
+  "upstream": {
+    "upstream": {
+      "deveco-code": "f535194ff",
+      "deveco-cli": "15c32e0"
+    },
+    "totals": {
+      "items": 503,
+      "full": 374,
+      "host": 83,
+      "skip": 46,
+      "partial": 0,
+      "undecided": 0,
+      "invalid": 0,
+      "stale": 0
+    },
+    "failing": [],
+    "stale": [],
+    "new_commits": {}
+  },
+  "limits": [
+    "No exact runtime component/ArkTS stack mapping without official metadata",
+    "No per-section API version filter without knowledge metadata",
+    "No system proxy/DNS interception, arbitrary runtime injection or AGC submission",
+    "Same-host participating-process mutex; no cross-host queue or automatic stale-owner stealing",
+    "No npm publication or Codex/DSH host reload"
+  ],
+  "private_evidence": "Original call traces, failures, screenshots and copied artifacts retained locally; this public summary excludes personal paths, device serials and credentials.",
+  "volume": {
+    "src": {
+      "before_files": 49,
+      "after_files": 58,
+      "before_lines": 11674,
+      "after_lines": 12674
+    },
+    "test": {
+      "before_files": 82,
+      "after_files": 94,
+      "before_lines": 7917,
+      "after_lines": 8420
+    },
+    "meaning": "Inventory only, not evidence of coverage or quality"
+  }
+}

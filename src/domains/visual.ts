@@ -3,8 +3,8 @@ import fs from "node:fs";
 import path from "node:path";
 import zlib from "node:zlib";
 import { invariant } from "../core/errors.js";
-import { artifactDir, commitArtifact } from "../core/artifacts.js";
-import { atomicWrite } from "../core/files.js";
+import { artifactDir, commitArtifact, saveArtifact } from "../core/artifacts.js";
+import { atomicWrite, sha256 } from "../core/files.js";
 import { assertConnected, hdc, shell } from "./device.js";
 import { pngGray } from "./ui.js";
 
@@ -170,12 +170,22 @@ export function baselinePath(project: string, name: string, model: string) {
  * Compare the screen with a stored baseline (or store it). mode: "compare" (default; stores the baseline
  * when none exists yet), "update" (overwrite the baseline with the current screen).
  */
-export async function visualCheck(target: string, input: { project: string; name: string; update?: boolean; threshold?: number }, device: { model: string; size?: { w: number; h: number } }, signal?: AbortSignal) {
+export async function visualCheck(target: string, input: { project: string; name: string; update?: boolean; require_baseline?: boolean; threshold?: number; context?: string }, device: { model: string; size?: { w: number; h: number }; os?: string; api?: number }, signal?: AbortSignal) {
   const file = baselinePath(input.project, input.name, device.model);
+  invariant(!input.require_baseline || fs.existsSync(file), "BASELINE_MISSING", `Missing visual baseline ${file}`);
+  const { inspectProject } = await import("./project.js");
+  const p = inspectProject(input.project);
+  const context = { model: device.model, size: device.size, os: device.os, api: device.api, compile_sdk: p.compileSdk, product: p.product, scenario: input.context, method: "gray-block-v1", threshold: input.threshold ?? 8 };
+  const metadata = `${file}.json`, identity = sha256(JSON.stringify(context));
+  if (input.require_baseline) {
+    invariant(fs.existsSync(metadata), "BASELINE_INCOMPATIBLE", "Visual baseline lacks environment metadata; record and review a new baseline");
+    invariant(JSON.parse(fs.readFileSync(metadata, "utf8")).identity === identity && JSON.parse(fs.readFileSync(metadata, "utf8")).image_sha256 === sha256(fs.readFileSync(file)), "BASELINE_INCOMPATIBLE", "Visual baseline device/SDK/method/scenario differs", { file });
+  }
   const current = await grayShot(target, device.size, signal);
   if (input.update || !fs.existsSync(file)) {
     atomicWrite(file, encodePng(current.width, current.height, current.gray));
-    return { baseline: input.update ? "updated" : "created", file, note: "Later calls with this name compare the screen against it" };
+    atomicWrite(metadata, JSON.stringify({ schema: 1, identity, context, image_sha256: sha256(fs.readFileSync(file)) }, null, 2));
+    return { baseline: input.update ? "updated" : "created", file, baseline_artifact: (await saveArtifact(fs.readFileSync(file), "image/png")).artifact_id, context, note: "Later calls with this name compare the screen against it" };
   }
   const base = decodeGray(fs.readFileSync(file));
   invariant(base, "VISUAL_BASELINE_INVALID", `Cannot read baseline ${file}`, undefined, "Recreate it with update=true");
@@ -198,6 +208,9 @@ export async function visualCheck(target: string, input: { project: string; name
   const scale = device.size ? device.size.w / current.width : 1;
   return {
     same, changed_ratio: result.changed_ratio,
+    baseline_artifact: (await saveArtifact(fs.readFileSync(file), "image/png")).artifact_id,
+    captured_artifact: (await saveArtifact(encodePng(current.width, current.height, current.gray), "image/png")).artifact_id,
+    context,
     ...(result.global_shift ? { global_shift: true, brightness_delta: result.brightness_delta, note_global: "The whole screen got uniformly brighter/darker (dimming, night mode, a translucent overlay): compared after removing that shift" } : {}),
     ...(currentArtifact ? { current_artifact: currentArtifact } : {}),
     // Regions in device pixels (what ui tree bounds use), largest first.

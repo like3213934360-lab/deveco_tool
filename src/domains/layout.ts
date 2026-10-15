@@ -27,7 +27,7 @@ const area = (r: { x1: number; y1: number; x2: number; y2: number }) => Math.max
  * screen: window size in px; density: px per vp (deviceInfo VirtualPixelRatio, e.g. 3.5).
  * bundle: only the app's own elements (system bars and launcher are not the app's layout). Pure.
  */
-export function checkLayout(nodes: UiNode[], screen: { w: number; h: number }, options: { bundle?: string; density?: number; limit?: number } = {}) {
+export function checkLayout(nodes: UiNode[], screen: { w: number; h: number }, options: { bundle?: string; density?: number; limit?: number; min_target_vp?: number; strict_targets?: boolean } = {}) {
   const byIndex = new Map(nodes.map((n) => [n.i, n]));
   const own = nodes.filter((n) => n.rect && n.visible !== false && (!options.bundle || n.bundle === options.bundle));
   const inScroll = (n: UiNode) => {
@@ -46,7 +46,7 @@ export function checkLayout(nodes: UiNode[], screen: { w: number; h: number }, o
     // Horizontal overflow is a bug anywhere outside horizontal scrollers; vertical only outside any scroller.
     const out = r.x1 < -2 || r.x2 > screen.w + 2 || ((r.y1 < -2 || r.y2 > screen.h + 2) && !inScroll(n));
     if (out && !inScroll(n)) issues.push({ rule: "offscreen", element: label(n), bounds: box(n), detail: `screen ${screen.w}x${screen.h}` });
-    if (n.clickable && (w / density < 32 || h / density < 32) && n.type !== "Text")
+    if (n.clickable && (w / density < (options.min_target_vp ?? 32) || h / density < (options.min_target_vp ?? 32)) && n.type !== "Text")
       issues.push({ rule: "tiny_target", element: label(n), bounds: box(n), detail: `${Math.round(w / density)}x${Math.round(h / density)} vp` });
   }
 
@@ -80,7 +80,7 @@ export function checkLayout(nodes: UiNode[], screen: { w: number; h: number }, o
   const counts = issues.reduce<Record<string, number>>((c, x) => ((c[x.rule] = (c[x.rule] ?? 0) + 1), c), {});
   // Nothing of the app on screen (covered by a system dialog, still starting, crashed): no verdict.
   if (!interesting.length) return { passed: false, checked: 0, counts, issues: [], error: "No elements of the app on screen (covered by a dialog, still loading, or not in front): nothing was checked" };
-  return { passed: !issues.some((x) => x.rule !== "tiny_target"), checked: interesting.length, counts, issues: issues.slice(0, options.limit ?? 20), ...(issues.length > (options.limit ?? 20) ? { more: issues.length - (options.limit ?? 20) } : {}) };
+  return { passed: !issues.some((x) => options.strict_targets || x.rule !== "tiny_target"), checked: interesting.length, checked_unit: "nodes", density_source: options.density ? "device" : "assumed", counts, issues: issues.slice(0, options.limit ?? 20), ...(issues.length > (options.limit ?? 20) ? { more: issues.length - (options.limit ?? 20) } : {}) };
 }
 
 /** Forms checked by default and the fold states worth a separate look (Emulator -foldedState values). */

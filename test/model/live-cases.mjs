@@ -3,11 +3,11 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 
-const [project, target, out] = process.argv.slice(2);
+const [project, target, out, mode] = process.argv.slice(2);
 assert.ok(project && path.isAbsolute(project) && fs.existsSync(path.join(project, "build-profile.json5")));
 assert.ok(target && out && !fs.existsSync(out), "Usage: node test/model/live-cases.mjs <existing absolute project> <explicit target> <new cases.json>");
 const version = JSON.parse(fs.readFileSync(new URL("../../package.json", import.meta.url))).version;
-const cases = [
+let cases = [
   { id: "environment", goal: `只读检查实际开发环境，设备明确指定为 ${target}，报告 MCP 版本与构建 ID，不联网更新。`, expect: [{ tool: "doctor", result: { server: { version }, ok: true } }] },
   { id: "devices", goal: `列出连接的设备。后续所有设备操作已明确指定 ${target}，不能改用其他设备。`, expect: [{ tool: "device", arguments: { action: "list" } }] },
   { id: "device-info", goal: "查询指定设备的型号、API 和屏幕信息。", expect: [{ tool: "device", arguments: { action: "info", target } }] },
@@ -25,5 +25,14 @@ const cases = [
   { id: "jobs", goal: "列出最近五个 MCP 任务，不取消或恢复它们。", expect: [{ tool: "job", arguments: { action: "list", limit: 5 } }] },
   { id: "diagnose", goal: "只分析给定编译诊断 Object literal must correspond to some explicitly declared class or interface，给出修复线索。", expect: [{ tool: "diagnose", arguments: { action: "build", diagnostics: [{ message: "Object literal must correspond to some explicitly declared class or interface" }] } }] },
 ];
+if (mode === "verification") cases = [
+  cases.find((c) => c.id === "environment"), cases.find((c) => c.id === "device-info"), cases.find((c) => c.id === "project"),
+  { id: "entry-graph", goal: `只读列出工程 ${project} 的 Ability、Extension、卡片和 formConfigAbility；不要启动它们。`, expect: [{ tool: "project", arguments: { action: "entries", project }, result: { scope: "declared-configuration" } }] },
+  { id: "source-candidates", goal: `只读查找工程 ${project} 中 HelloWorld 节点标识对应的源码候选，并说明是否已有运行时映射。`, expect: [{ tool: "code", arguments: { action: "origin", project, key: "HelloWorld" }, result: { runtime_identity_verified: false } }] },
+  { id: "resources", goal: "只查看本机 MCP 资源占用，不释放、不取消。", expect: [{ tool: "job", arguments: { action: "resources" } }] },
+  { id: "project-docs", goal: `检索 ArkUI @Local 文档，必须传工程 ${project} 上下文，说明 compile/compatible/target 的区别，不修改知识包。`, expect: [{ tool: "knowledge", arguments: { action: "search", project } }] },
+  cases.find((c) => c.id === "sqlite"), cases.find((c) => c.id === "jobs"), cases.find((c) => c.id === "diagnose"),
+];
+else assert.ok(!mode, "Optional mode is verification");
 for (const s of cases) for (const c of s.expect) if (c.tool === "device" && c.arguments.action !== "list") c.arguments.target = target;
 fs.writeFileSync(out, JSON.stringify(cases, null, 2) + "\n", { flag: "wx", mode: 0o600 });

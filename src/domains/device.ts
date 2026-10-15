@@ -158,8 +158,21 @@ export async function forceStop(target: string, bundle: string, signal?: AbortSi
   await shell(target, ["aa", "force-stop", bundle], signal);
 }
 
-export async function launch(target: string, bundle: string, ability: string, module: string | undefined, signal?: AbortSignal) {
-  const result = await shell(target, ["aa", "start", "-b", bundle, "-a", ability, ...(module ? ["-m", module] : [])], signal);
+export function wantArgs(want?: { uri?: string; action?: string; parameters?: Record<string, string | number | boolean> }) {
+  const quote = (v: string) => "'" + v.replaceAll("'", "'\\''") + "'";
+  const args: string[] = [];
+  for (const [flag, value] of [["-U", want?.uri], ["-A", want?.action]]) if (value) { invariant(!/[\0\r\n]/.test(value), "INVALID_INPUT", "Invalid Want value"); args.push(flag!, quote(value)); }
+  for (const [key, value] of Object.entries(want?.parameters ?? {})) {
+    invariant(/^[\w.:-]{1,128}$/.test(key), "INVALID_INPUT", "Invalid Want parameter key");
+    invariant(typeof value !== "number" || (Number.isSafeInteger(value) && value >= -2147483648 && value <= 2147483647), "INVALID_INPUT", "Want integers must fit int32");
+    invariant(!/[\0\r\n]/.test(String(value)), "INVALID_INPUT", "Invalid Want parameter value");
+    args.push(typeof value === "boolean" ? "--pb" : typeof value === "number" ? "--pi" : "--ps", quote(key), quote(String(value)));
+  }
+  return args;
+}
+export async function launch(target: string, bundle: string, ability: string, module: string | undefined, signal?: AbortSignal, want?: { uri?: string; action?: string; parameters?: Record<string, string | number | boolean> }) {
+  const extra = wantArgs(want);
+  const result = await shell(target, ["aa", "start", "-b", bundle, "-a", ability, ...(module ? ["-m", module] : []), ...extra], signal);
   const text = result.stdout + result.stderr;
   invariant(/start ability successfully/i.test(text), "LAUNCH_FAILED", `Launch failed: ${clip(text.trim(), 400)}`, undefined,
     /10106102|screen is locked/i.test(text) ? "The device screen is locked (a passcode cannot be entered remotely): ask the user to unlock the device, then launch again"
@@ -181,10 +194,10 @@ export async function pidOf(target: string, bundle: string, signal?: AbortSignal
 }
 
 /** Launch and watch for a few seconds: process alive and no new crash log means "started". */
-export async function launchAndCheck(target: string, bundle: string, ability: string, module: string | undefined, signal: AbortSignal, observeMs = 3000) {
+export async function launchAndCheck(target: string, bundle: string, ability: string, module: string | undefined, signal: AbortSignal, observeMs = 3000, want?: Parameters<typeof launch>[5]) {
   const before = new Set(await faultlogNames(target, signal));
   await forceStop(target, bundle, signal).catch(() => {});
-  await launch(target, bundle, ability, module, signal);
+  await launch(target, bundle, ability, module, signal, want);
   (await import("./repeat.js")).noteLaunch(target);
   const deadline = Date.now() + observeMs;
   let pid: number | undefined;
@@ -329,6 +342,18 @@ export async function clearLog(target: string, signal?: AbortSignal) {
 }
 
 const faultDir = "/data/log/faultlog/faultlogger";
+/** Strict scan distinguishes an empty service inventory from an unreadable inventory. */
+export async function faultlogInventory(target: string, signal?: AbortSignal) {
+  const listing = await shell(target, ["ls", faultDir], signal, 10000);
+  const direct = listing.code === 0 && !/denied|not found|No such file|error|failed/i.test(listing.stdout + listing.stderr);
+  const dump = direct ? undefined : await shell(target, ["hidumper", "-s", "1201", "-a", "-p Faultlogger"], signal, 15000);
+  const raw = direct ? listing.stdout : dump?.stdout ?? "";
+  const artifact = await saveArtifact(JSON.stringify({ listing, service: dump }), "application/json");
+  invariant(direct || dump?.code === 0 && /Fault log list:/.test(raw), "EVIDENCE_MISSING", "Neither directory nor Faultlogger returned a readable crash inventory", { scan_artifact: artifact.artifact_id });
+  const names = [...new Set([...raw.matchAll(/(?:jscrash|cppcrash|appfreeze|sysfreeze)-[A-Za-z0-9_.-]+/g)].map((m) => m[0]))];
+  return { names, source: direct ? "directory" : "Faultlogger", scan_artifact: artifact.artifact_id };
+}
+
 export async function faultlogNames(target: string, signal?: AbortSignal): Promise<string[]> {
   const listing = await shell(target, ["ls", faultDir], signal, 10000).catch(() => undefined);
   const names = new Set<string>();

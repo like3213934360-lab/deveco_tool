@@ -1,0 +1,15 @@
+<evaluation>
+  <!-- Bind PROJECT and positive/negative/incomplete report IDs from a frozen dedicated acceptance run.
+       Read-only questions; answers are fixture invariants, not changing device/job counts.
+       Transport grading is performed by test/model/eval.mjs; this file is not a test runner. -->
+  <qa_pair><question>读取负例测试 job 的终态及其原始 SDK 报告，再核对逐用例与汇总。SDK 输出 BUILD SUCCESSFUL 时，这份 Acceptance#negative 的验收判定是什么？</question><answer>failed</answer></qa_pair>
+  <qa_pair><question>读取正例测试 job 及覆盖率原始 artifact。Acceptance#addition 实际通过的用例数是多少？发现的文件数不能代替执行数。</question><answer>1</answer></qa_pair>
+  <qa_pair><question>先查 PROJECT 的 SDK 信息，再用同一工程上下文检索并读取本地官方文档。compatible SDK 是否能单独证明所有更高版本文档都不可用？</question><answer>false</answer></qa_pair>
+  <qa_pair><question>读取 PROJECT 的入口图谱，再定位卡片 profile 的来源。专用 ProbeForm 的默认尺寸是什么？不要以设备屏幕尺寸作答。</question><answer>2*2</answer></qa_pair>
+  <qa_pair><question>读取 PROJECT 入口图谱并查看相应 Ability 配置来源。ProbeForm 的 formConfigAbility 指向哪个 Ability？</question><answer>EntryAbility</answer></qa_pair>
+  <qa_pair><question>读取 PROJECT 的 HelloWorld 静态源码候选，再核对 doctor 的源码映射能力说明。literal-id 匹配是否证明了运行时组件身份？</question><answer>false</answer></qa_pair>
+  <qa_pair><question>读取缺基线验收 job 的报告和其中 visual 检查详情。没有经录制的基线时，这份验收的判定是什么？</question><answer>blocked</answer></qa_pair>
+  <qa_pair><question>读取基线录制 job 的报告及 build 样本。建立新基线后，该轮是否能够作为回归比较通过？</question><answer>false</answer></qa_pair>
+  <qa_pair><question>读取 UI 计划的两项 checklist 和完成回执，并核对实际断言项。只覆盖第一项的专用 incomplete 会话应处于什么状态？</question><answer>inconclusive</answer></qa_pair>
+  <qa_pair><question>读取官方 trace 的采集回执和源码候选返回，核对两者的 attribution/runtime_identity_verified。原始 trace 加 literal-text 候选是否足以宣称已定位 ArkTS 高耗时调用栈？</question><answer>false</answer></qa_pair>
+</evaluation>

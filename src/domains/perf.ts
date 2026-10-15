@@ -31,8 +31,10 @@ export function mergeFrames(...series: number[][]) {
 export function frameStats(timestampsNs: number[], reportedHz?: number, idleMs = 200) {
   const ts = [...timestampsNs].sort((a, b) => a - b);
   const gaps: number[] = [];
+  const intervals: { start_ns: number; end_ns: number; duration_ms: number; excluded: boolean }[] = [];
   for (let i = 1; i < ts.length; i++) {
     const ms = (ts[i]! - ts[i - 1]!) / 1e6;
+    if (ms > 0) intervals.push({ start_ns: ts[i - 1]!, end_ns: ts[i]!, duration_ms: ms, excluded: ms > idleMs });
     if (ms > 0 && ms <= idleMs) gaps.push(ms);
   }
   if (gaps.length < 10) return undefined;
@@ -48,6 +50,9 @@ export function frameStats(timestampsNs: number[], reportedHz?: number, idleMs =
   // Frames the display could have shown but did not, e.g. a 25 ms gap at 120 Hz = 2 missed frames.
   const missed = janky.reduce((s, g) => s + Math.round(g / budget) - 1, 0);
   return {
+    excluded_intervals: intervals.filter((i) => i.excluded),
+    janky_intervals: intervals.filter((i) => !i.excluded && i.duration_ms > budget * 1.5),
+    attribution: "composer timestamps; excluded gaps may be idle or stalls, not proof of either",
     frames: gaps.length + 1,
     refresh_hz: refreshHz,
     avg_fps: +((gaps.length / active) * 1000).toFixed(1),

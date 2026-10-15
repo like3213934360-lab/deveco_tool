@@ -1,6 +1,6 @@
 {
   "name": "deveco-mcp",
-  "version": "1.4.10",
+  "version": "1.5.0",
   "description": "Lean HarmonyOS MCP server: build, deploy, device UI, code intelligence and updatable knowledge packs for any MCP host.",
   "type": "module",
   "license": "MIT",
@@ -41,7 +41,10 @@
     "test:recording": "node tools/build.mjs && node --test test/e2e/recording.test.mjs",
     "test:video": "node test/support/recording.mjs",
     "test:sdk": "node tools/build.mjs && node --test --test-concurrency=1 test/e2e/sdk.test.mjs",
-    "test:device": "node tools/build.mjs && node --test --test-concurrency=1 test/e2e/device.test.mjs"
+    "test:device": "node tools/build.mjs && node --test --test-concurrency=1 test/e2e/device.test.mjs",
+    "test:verify": "node tools/build.mjs && node --test --test-concurrency=1 test/e2e/verification.test.mjs test/e2e/baselines.test.mjs",
+    "test:scenarios": "node tools/build.mjs && node --test --test-concurrency=1 test/e2e/scenario.test.mjs",
+    "test:forms": "node tools/build.mjs && node --test --test-concurrency=1 test/e2e/form.test.mjs"
   },
   "dependencies": {
     "json5": "2.2.3",

@@ -38,13 +38,27 @@ export const projectTool = tool({
   description: [
     "info: metadata; create(app_name,bundle_name): built-in template, never overwrites; clean: build outputs.",
     "sync (job): ohpm install + hvigor sync. build (job): advisory edited-file preflight + hvigor; packages or first 100 compile errors (code/file/line/message/source) with fixes. oh-package.json5/build-profile.json5 edits auto-install dependencies.",
-    "Build already checks edited files: no code check first. request_key/wait: sync/build only.",
+    "test (job): SDK local/instrument tests with verified case counts; instrument requires allow_data_reset and a sole connected target. verify (job): JSON plan -> independent acceptance verdict + permanent JSON/JUnit/HTML evidence. entries: declared Ability/Extension/form/shortcut graph.",
+    "Build already checks edited files: no code check first. request_key/wait: sync/build/test/verify only.",
   ].join(" "),
   schema: z.object({
-    action: z.enum(["info", "create", "sync", "build", "clean"]),
+    action: z.enum(["info", "create", "sync", "build", "clean", "test", "verify", "entries"]),
     project: fields.project,
     product: fields.product,
     modules: fields.modules,
+    kind: z.enum(["local", "instrument"]).optional(),
+    scope: z.array(z.string()).min(1).max(100).optional(),
+    coverage: z.boolean().optional(),
+    target: fields.target,
+    timeout_ms: z.number().int().min(1000).max(1800000).optional(),
+    allow_data_reset: z.boolean().optional().describe("instrument: required; SDK uninstalls app and erases its data"),
+    expected_tests: z.number().int().min(1).optional(),
+    plan: z.string().optional().describe("verify: project-relative or absolute JSON plan"),
+    output: z.string().optional().describe("verify: new absolute permanent evidence directory"),
+    changed_only: z.boolean().optional(),
+    base: z.string().optional().describe("verify changed_only: explicit Git base ref"),
+    baseline_mode: z.enum(["compare", "record"]).optional(),
+    allow_commands: z.boolean().optional().describe("verify: explicitly permit reviewed project commands"),
     task: z.enum(["assembleHap", "assembleHar", "assembleHsp", "assembleApp", "compileNative"]).optional().describe("build: default assembleHap; compileNative writes compile_commands.json for clangd"),
     mode: z.string().optional().describe("build: buildMode, default debug"),
     clean: z.boolean().optional().describe("build: clean first"),
@@ -60,15 +74,28 @@ export const projectTool = tool({
     wait: fields.wait,
   }),
   params: {
-    info: ["project", "product"],
+    info: ["project", "product"], entries: ["project", "product"],
+    test: ["project", "product", "kind", "modules", "scope", "coverage", "target", "timeout_ms", "allow_data_reset", "expected_tests", "request_key", "wait"],
+    verify: ["project", "product", "plan", "output", "target", "changed_only", "base", "baseline_mode", "allow_commands", "request_key", "wait"],
     create: ["project", "app_name", "bundle_name", "sdk_version", "target_api", "compatible_api", "device_types", "merge"],
     sync: ["project", "product", "request_key", "wait"],
     build: ["project", "product", "modules", "task", "mode", "clean", "preflight", "request_key", "wait"],
     clean: ["project", "product"],
   },
-  async handler(input) {
+  async handler(input, ctx) {
     const project = await import("../domains/project.js");
     switch (input.action) {
+      case "entries": return (await import("../domains/entries.js")).entryGraph(input.project, input.product);
+      case "test":
+        invariant(input.kind, "INVALID_INPUT", "test requires kind=local|instrument");
+        return startAndWait("project_test", input, input.request_key, input.wait);
+      case "verify": {
+        invariant(input.plan && input.output, "INVALID_INPUT", "verify requires plan and output");
+        const verify = await import("../domains/verify.js");
+        const jobInput = { ...input, plan: input.plan, output: input.output };
+        if (verify.planNeedsDevice(verify.readPlan(jobInput).plan)) jobInput.target = await (await import("../domains/device.js")).resolveTarget(input.target, ctx.signal);
+        return startAndWait("verify", jobInput, input.request_key, input.wait);
+      }
       case "info":
         return project.projectInfo(project.inspectProject(input.project, input.product));
       case "create": {
@@ -126,7 +153,7 @@ export const runTool = tool({
     "run_mode=auto (default): first build_run on the same device deploys; later entry-module code-only edits quick-fix, others fully deploy. Returns path=hot_reload|full|relaunch, fallback_reason. full always deploys.",
     "Startup crash: LAUNCH_FAILED + crash.source(file/line/code).",
     "then_flow=<ui_flow id>: replay after launch; assert then verifies the final screen.",
-    "deploy: install latest build + launch. launch: project/product/target/module/ability only; stop/uninstall: project/product/target only. wait/request_key: build_run/deploy only. hot_reload=true saves baseline after successful launch.",
+    "deploy: install latest build + launch. launch: project/product/target/module/ability/want only; stop/uninstall: project/product/target only. wait/request_key: build_run/deploy only. hot_reload=true saves baseline after successful launch.",
   ].join(" "),
   schema: z.object({
     action: z.enum(["build_run", "deploy", "launch", "stop", "uninstall"]),
@@ -137,6 +164,7 @@ export const runTool = tool({
     mode: z.string().optional(),
     module: z.string().optional().describe("Launch module (default entry)"),
     ability: z.string().optional().describe("Launch ability (default module mainElement)"),
+    want: z.object({ uri: z.string().max(4096).optional(), action: z.string().max(256).optional(), parameters: z.record(z.string(), z.union([z.string().max(4096), z.number().int(), z.boolean()])).optional() }).strict().optional().describe("launch: URI/action and typed Want parameters"),
     assert: assertSchema.optional(),
     hot_reload: z.boolean().optional(),
     skip_build: z.boolean().optional().describe("build_run: latest packages without building (=deploy)"),
@@ -150,7 +178,7 @@ export const runTool = tool({
   params: {
     build_run: ["project", "product", "modules", "target", "mode", "run_mode", "module", "ability", "assert", "hot_reload", "skip_build", "uninstall_first", "then_flow", "flow_variables", "request_key", "wait"],
     deploy: ["project", "product", "modules", "target", "module", "ability", "assert", "hot_reload", "uninstall_first", "then_flow", "flow_variables", "request_key", "wait"],
-    launch: ["project", "product", "target", "module", "ability"],
+    launch: ["project", "product", "target", "module", "ability", "want"],
     stop: ["project", "product", "target"],
     uninstall: ["project", "product", "target"],
   },
@@ -176,7 +204,7 @@ export const runTool = tool({
     const deviceType = input.module ? undefined : (await device.shell(target, ["param", "get", "const.product.devicetype"], ctx.signal, 10000).catch(() => undefined))?.stdout.trim();
     const entry = input.module ?? selectRunModules(project, { deviceType }).modules.find((m) => m.type === "entry")?.name;
     const main = mainAbility(project, entry);
-    const launched = await device.launchAndCheck(target, project.bundleName, input.ability ?? main.ability, main.module, ctx.signal);
+    const launched = await device.launchAndCheck(target, project.bundleName, input.ability ?? main.ability, main.module, ctx.signal, 3000, input.want);
     if (!launched.crashed) return launched;
     const { crashSummary } = await import("../domains/diagnose.js");
     const crash = await crashSummary(target, project.bundleName, launched.new_crash_logs, input.project, ctx.signal);
@@ -187,9 +215,11 @@ export const runTool = tool({
 export const jobTool = tool({
   name: "job",
   title: "Jobs",
-  description: `Jobs: wait (default 20000, max ${MAX_WAIT_MS} ms; repeat while running, never restart), status, list, cancel; resume interrupted/needs_input jobs only after inspection (force=true repeats an uncertain step). read: full artifacts (logs/reports/images) by artifact_id; line/limit page, grep filters.`,
+  description: `resources: inspect same-host reservations; release_resource: exact resource+owner_pid, dead owners only after effect reconciliation. Jobs: wait (default 20000, max ${MAX_WAIT_MS} ms; repeat while running, never restart), status, list, cancel; resume interrupted/needs_input jobs only after inspection (force=true repeats an uncertain step). read: full artifacts (logs/reports/images) by artifact_id; line/limit page, grep filters.`,
   schema: z.object({
-    action: z.enum(["wait", "status", "list", "cancel", "resume", "read"]),
+    action: z.enum(["wait", "status", "list", "cancel", "resume", "read", "resources", "release_resource"]),
+    resource: z.string().optional(),
+    owner_pid: z.number().int().positive().optional(),
     job_id: z.string().optional(),
     wait: z.number().int().min(0).max(MAX_WAIT_MS).optional(),
     detail: z.boolean().optional(),
@@ -201,10 +231,16 @@ export const jobTool = tool({
     grep: z.string().optional().describe("read: regex filter, e.g. 'error|ERROR'"),
   }),
   params: {
+    resources: [], release_resource: ["resource", "owner_pid"],
     wait: ["job_id", "wait"], status: ["job_id", "detail"], list: ["limit", "status"], cancel: ["job_id"],
     resume: ["job_id", "force"], read: ["artifact_id", "line", "limit", "grep"],
   },
   async handler(input) {
+    if (input.action === "resources") return (await import("../core/operations.js")).resourceStatus();
+    if (input.action === "release_resource") {
+      invariant(input.resource && input.owner_pid, "INVALID_INPUT", "Exact resource and owner_pid required after reconciling side effects");
+      return (await import("../core/operations.js")).releaseResource(input.resource, input.owner_pid);
+    }
     await ensureJobs();
     const jobs = await import("../core/jobs.js");
     if (input.action === "list") return { jobs: await jobs.listJobs(input.limit ?? 20, input.status) };
@@ -234,13 +270,13 @@ export const codeTool = tool({
   readOnly: false,
   openWorld: false,
   description: [
-    "ArkTS/C++ checks and LSP use the project SDK.",
+    "origin: key/text/file static source candidates with Git changed-line/blame context; no runtime mapping. ArkTS/C++ checks and LSP use the project SDK.",
     "check: static checks/fix hints, no build; fix=true applies safe fixes. May diagnose dependencies; scope counts roots, report_artifact has all issues. The compiler is the final judge.",
     "lint: Code Linter report. api_scan / api_versions: API compatibility between SDK versions.",
     "action=lsp requires op: see enum; locate by symbol (+line hint). lsp_restart restarts servers.",
   ].join(" "),
   schema: z.object({
-    action: z.enum(["check", "lint", "api_scan", "api_versions", "lsp", "lsp_restart"]),
+    action: z.enum(["check", "lint", "api_scan", "api_versions", "lsp", "lsp_restart", "origin"]),
     project: fields.project.optional().describe("Project root; required except api_versions"),
     files: z.array(z.string()).max(200).optional().describe("check/api_scan/lsp diagnostics: check uses files, not file. Existing .ets/.ts or C/C++; omit for project; no mixed languages"),
     fix: z.boolean().optional(),
@@ -251,6 +287,8 @@ export const codeTool = tool({
     symbol: z.string().optional().describe("Locate identifier, e.g. pushUrl or router.pushUrl"),
     line: z.number().int().min(1).optional().describe("1-based line (hint when symbol is given)"),
     column: z.number().int().min(1).optional().describe("1-based column (only without symbol)"),
+    key: z.string().optional(),
+    text: z.string().optional(),
     query: z.string().optional().describe("workspace_symbols query"),
     language: z.enum(["arkts", "cpp", "all"]).optional().describe("lsp: default by extension; lsp_restart: default all servers"),
     modules: fields.modules,
@@ -262,6 +300,7 @@ export const codeTool = tool({
     limit: z.number().int().min(1).max(200).optional(),
   }),
   params: {
+    origin: ["project", "key", "text", "file", "line"],
     check: ["project", "files", "fix"],
     lint: ["project", "file", "fix", "product", "config_path", "incremental", "output_path"],
     api_scan: ["project", "from", "to", "files", "modules", "output_path"],
@@ -270,6 +309,7 @@ export const codeTool = tool({
     lsp_restart: ["project", "language"],
   },
   async handler(input, ctx) {
+    if (input.action === "origin") { invariant(input.project, "INVALID_INPUT", "origin requires project"); return (await import("../domains/origin.js")).sourceOrigin(input.project, input, ctx.signal); }
     const code = await import("../domains/code.js");
     if (input.action === "api_versions") return { versions: code.apiVersions() };
     invariant(input.project, "INVALID_INPUT", "project is required");
@@ -299,9 +339,16 @@ export const codeTool = tool({
 export const deviceTool = tool({
   name: "device",
   title: "Devices/logs/files",
-  description: "list: connected devices; info: model/API/screen. action=log: hilog by bundle/grep/level, from/to window (from=5m), follow+cursor, clear; project locates source. shell: read-only commands. action=sqlite: db+sql query (read-only unless write=true). send: local to remote; recv: remote to local.",
+  description: "list: connected devices; info: model/API/screen. action=log: hilog by bundle/grep/level, from/to window (from=5m), follow+cursor, clear; project locates source. shell: read-only commands. databases: discover app RDB paths (debug/user100). fixture: owned scratch table prepare/inspect/cleanup, refuses cleanup if changed. scenario: background/clear_data/grant/revoke; explicit reset for clear_data. trace: bounded official hitrace capture, no inferred source stack. action=sqlite: db+sql query (read-only unless write=true). send: local to remote; recv: remote to local.",
   schema: z.object({
-    action: z.enum(["list", "info", "log", "shell", "sqlite", "send", "recv"]),
+    action: z.enum(["list", "info", "log", "shell", "sqlite", "send", "recv", "databases", "scenario", "fixture", "trace"]),
+    operation: z.enum(["background", "clear_data", "grant", "revoke", "prepare", "inspect", "cleanup"]).optional(),
+    permission: z.string().optional(),
+    allow_data_reset: z.boolean().optional(),
+    fixture_id: z.string().optional(),
+    rows: z.array(z.record(z.string(), z.string())).min(1).max(500).optional(),
+    seconds: z.number().int().min(1).max(30).optional(),
+    categories: z.array(z.string()).min(1).max(10).optional(),
     db: z.string().optional().describe("sqlite: absolute device path or RDB name (app.db) + debuggable bundle"),
     module: z.string().optional().describe("sqlite db name: required owning module from module.json5 (entry/default)"),
     sql: z.string().max(20000).optional().describe("sqlite: SQL or .tables/.schema"),
@@ -324,6 +371,8 @@ export const deviceTool = tool({
   }),
   params: {
     list: [], info: ["target"],
+    databases: ["target", "bundle", "module"], scenario: ["target", "operation", "bundle", "permission", "allow_data_reset"],
+    fixture: ["target", "operation", "db", "bundle", "module", "fixture_id", "rows"], trace: ["target", "seconds", "categories"],
     log: ["target", "bundle", "grep", "level", "lines", "clear", "from", "to", "follow", "cursor", "wait_ms", "project"],
     shell: ["target", "command"], sqlite: ["target", "db", "module", "sql", "write", "bundle", "lines"],
     send: ["target", "local", "remote"], recv: ["target", "local", "remote"],
@@ -358,6 +407,16 @@ export const deviceTool = tool({
         return source.length ? { ...log, source } : log;
       }
       case "shell": invariant(input.command, "INVALID_INPUT", "command is required"); return device.readonlyShell(target, input.command, ctx.signal);
+      case "databases": { invariant(input.bundle, "INVALID_INPUT", "bundle required"); return (await import("../domains/scenario.js")).databases(target, input.bundle, input.module, ctx.signal); }
+      case "scenario": {
+        invariant(input.operation && ["background", "clear_data", "grant", "revoke"].includes(input.operation), "INVALID_INPUT", "scenario operation must be background|clear_data|grant|revoke");
+        return (await import("../domains/scenario.js")).systemScenario(target, { ...input, operation: input.operation as "background" | "clear_data" | "grant" | "revoke" }, ctx.signal);
+      }
+      case "fixture": {
+        invariant(input.operation && ["prepare", "inspect", "cleanup"].includes(input.operation), "INVALID_INPUT", "fixture operation must be prepare|inspect|cleanup");
+        return (await import("../domains/scenario.js")).fixture(target, { ...input, operation: input.operation as "prepare" | "inspect" | "cleanup" }, ctx.signal);
+      }
+      case "trace": return (await import("../domains/scenario.js")).captureTrace(target, input.seconds ?? 5, input.categories ?? ["ace", "app", "sched"], ctx.signal);
       case "sqlite": {
         invariant(input.db && input.sql, "INVALID_INPUT", "db and sql are required");
         const db = input.db.startsWith("/") || input.db === ":memory:" ? input.db
@@ -384,7 +443,7 @@ export const uiTool = tool({
     "visual: baseline (first saves, update replaces); changed_ratio/regions/diff_artifact; dimming=global_shift.",
     "layout: off-screen/overlap/tiny targets, clipped text; forms=[foldable,widefold,triplefold] job. wait/request_key: layout forms only.",
     "perf: scroll smoothness/jank; no data=inconclusive + diagnostic_artifact; bundle adds pss. record_start/record_stop/record_status: mp4. record_receipts/record_archive(target,name)/record_restore(receipt_id): offline; preserve receipts, no device I/O.",
-    "Tests: test_start(plan) -> test_step(test_id, op/selector or visible/hidden) -> review(test_id+requirement) captures an image; inspect it before review(test_id+review_id+outcome+reason) -> test_finish -> test_log/test_export. Omit outcome/review_id on capture.",
+    "Tests: test_start(plan) -> test_step(test_id, op/selector or visible/hidden) -> review(test_id+requirement) captures an image; inspect it before review(test_id+review_id+outcome+reason) -> test_finish -> test_log/test_export. Omit outcome/review_id on capture. checklist_item links assertions/reviews to every plan item; missing coverage is inconclusive.",
   ].join(" "),
   schema: z.object({
     action: z.enum(["observe", "screenshot", "tree", "find", "act", "assert", "windows", "perf", "visual", "layout", "record_start", "record_stop", "record_status", "record_receipts", "record_archive", "record_restore",
@@ -400,10 +459,11 @@ export const uiTool = tool({
     discard: z.boolean().optional().describe("record_stop: stop without downloading"),
     external: z.boolean().optional().describe("record_stop: stop a foreign recording"),
     receipt_id: z.string().optional().describe("record_restore: archived receipt id"),
-    test_id: z.string().optional().describe("test_step/review: multiple devices need session target; test_finish/test_log/test_export need no device"),
+    test_id: z.string().optional().describe("test_step/review: stored session target; conflicting target rejected; test_finish/test_log/test_export need no device"),
     plan: z.string().max(20000).optional().describe("test_start: steps + expected results"),
     project: z.string().optional().describe("test_start/visual/layout: project root"),
     fresh_start: z.boolean().optional().describe("test_start: restart app; requires project"),
+    checklist_item: z.number().int().min(1).max(50).optional().describe("test_step/review: 1-based checklist item; required for multi-item plans"),
     description: z.string().max(500).optional().describe("test_step: checklist item"),
     requirement: z.string().max(2000).optional().describe("review: what the screen must show"),
     outcome: z.enum(["passed", "failed", "insufficient"]).optional().describe("review: judge only after seeing the image; omit on capture"),
@@ -440,12 +500,19 @@ export const uiTool = tool({
     repeat: z.number().int().min(1).max(20).optional().describe("perf: number of up+down fling pairs (default 3)"),
     name: z.string().optional().describe("visual: baseline; record_archive: exact pending filename"),
     update: z.boolean().optional().describe("visual: replace baseline"),
+    context: z.string().max(256).optional().describe("visual: declared scene/theme/locale identity"),
+    require_baseline: z.boolean().optional().describe("visual: missing baseline is an error, never auto-create"),
+    min_target_vp: z.number().min(1).max(100).optional(),
+    strict_targets: z.boolean().optional().describe("layout: tiny targets fail; default advisory"),
     threshold: z.number().int().min(1).max(64).optional().describe("visual: gray difference per block (default 8)"),
     forms: z.array(z.enum(["foldable", "widefold", "triplefold"])).min(1).max(3).optional().describe("layout: emulator forms to check (job)"),
     then_flow: z.string().optional().describe("layout forms: ui_flow without required variables"),
     keep_running: z.boolean().optional().describe("layout forms: leave the emulators running"),
     request_key: fields.requestKey,
     wait: fields.wait,
+  }).superRefine((input, ctx) => {
+    if (input.visible && input.hidden) ctx.addIssue({ code: "custom", message: "Pass exactly one visible or hidden selector" });
+    if (input.action === "act" && !input.steps && (input.assert || input.save_flow)) ctx.addIssue({ code: "custom", message: "assert/save_flow require steps; use a one-step array for one action plus assertion" });
   }),
   params: (() => {
     const act = ["target", "op", "selector", "keys", "button", "ticks", "verify_change", "x", "y", "x2", "y2", "direction", "text", "append", "key", "speed"];
@@ -458,20 +525,20 @@ export const uiTool = tool({
       assert: ["target", "visible", "hidden", "timeout_ms"],
       windows: ["target", "all"],
       perf: ["target", "steps", "repeat", "bundle"],
-      visual: ["target", "project", "name", "update", "threshold"],
-      layout: ["target", "project", "bundle", "forms", "then_flow", "keep_running", "request_key", "wait"],
+      visual: ["target", "project", "name", "update", "threshold", "require_baseline", "context"],
+      layout: ["target", "project", "bundle", "forms", "then_flow", "keep_running", "min_target_vp", "strict_targets", "request_key", "wait"],
       record_start: ["target"], record_status: ["target"], record_stop: ["target", "discard", "external", "save_path"],
       record_receipts: ["target"], record_archive: ["target", "name", "reason"], record_restore: ["receipt_id"],
       test_start: ["target", "plan", "project", "bundle", "fresh_start"],
-      test_step: [...act, "test_id", "description", "visible", "hidden", "timeout_ms"],
-      review: ["target", "test_id", "requirement", "outcome", "reason", "review_id"],
+      test_step: [...act, "test_id", "checklist_item", "description", "visible", "hidden", "timeout_ms"],
+      review: ["target", "test_id", "checklist_item", "requirement", "outcome", "reason", "review_id"],
       test_finish: ["target", "test_id"], test_log: ["target", "test_id", "grep", "max_chars"], test_export: ["target", "test_id", "directory"],
     };
   })(),
   async handler(input, ctx) {
+    // Domain callers also use this handler without the MCP schema boundary.
     invariant(!(input.visible && input.hidden), "INVALID_INPUT", "Pass exactly one visible or hidden selector");
-    if (input.action === "act" && !input.steps)
-      invariant(!input.assert && !input.save_flow, "INVALID_INPUT", "assert/save_flow require steps; use a one-step array for one action plus assertion");
+    if (input.action === "act" && !input.steps) invariant(!input.assert && !input.save_flow, "INVALID_INPUT", "assert/save_flow require steps; use a one-step array for one action plus assertion");
     const { resolveTarget } = await import("../domains/device.js");
     const ui = await import("../domains/ui.js");
     const uitest = () => import("../domains/uitest.js");
@@ -515,15 +582,15 @@ export const uiTool = tool({
         const win = (await ui.listWindows(target, false, ctx.signal).catch(() => [])).find((w) => w.focused && w.bounds);
         const size = win?.bounds ? { w: win.bounds[2]!, h: win.bounds[3]! } : info.screen ? { w: info.screen.width, h: info.screen.height } : { w: 1080, h: 2400 };
         const bundle = input.bundle ?? nodes.find((n) => n.bundle && !/systemui|sceneboard|launcher/.test(n.bundle) && n.text)?.bundle ?? undefined;
-        return { window: `${size.w}x${size.h}`, ...(bundle ? { bundle } : {}), ...checkLayout(nodes, size, { bundle, density }) };
+        return { window: `${size.w}x${size.h}`, ...(bundle ? { bundle } : {}), ...checkLayout(nodes, size, { bundle, density, min_target_vp: input.min_target_vp, strict_targets: input.strict_targets }) };
       }
       case "visual": {
         invariant(input.project && input.name, "INVALID_INPUT", "visual needs project and name");
         const { visualCheck } = await import("../domains/visual.js");
         const { deviceInfo } = await import("../domains/device.js");
         const info = await deviceInfo(target, ctx.signal);
-        return visualCheck(target, { project: input.project, name: input.name, update: input.update, threshold: input.threshold },
-          { model: info.model ?? info.name ?? target, size: info.screen ? { w: info.screen.width, h: info.screen.height } : undefined }, ctx.signal);
+        return visualCheck(target, { project: input.project, name: input.name, update: input.update, threshold: input.threshold, require_baseline: input.require_baseline, context: input.context },
+          { model: info.model ?? info.name ?? target, os: info.os, api: info.api_level, size: info.screen ? { w: info.screen.width, h: info.screen.height } : undefined }, ctx.signal);
       }
       case "perf": {
         const { measureScroll } = await import("../domains/perf.js");
@@ -556,11 +623,11 @@ export const uiTool = tool({
         const consent = input.op ? await ui.acceptAgreements(target, ctx.signal) : undefined;
         const action = input.op ? await buildAction(input, target, ui, ctx.signal) : undefined;
         const assert = input.visible || input.hidden ? { visible: input.visible, hidden: input.hidden, timeout_ms: input.timeout_ms } : undefined;
-        return (await uitest()).testStep(input.test_id, { description: input.description, action: action?.action, selector: input.selector, automatic: consent?.accepted, assert }, ctx.signal);
+        return (await uitest()).testStep(input.test_id, { checklist_item: input.checklist_item, description: input.description, action: action?.action, selector: input.selector, automatic: consent?.accepted, assert }, ctx.signal);
       }
       case "review": {
         invariant(input.test_id, "INVALID_INPUT", "test_id is required");
-        return (await uitest()).review(input.test_id, { requirement: input.requirement, outcome: input.outcome, reason: input.reason, review_id: input.review_id }, ctx.signal);
+        return (await uitest()).review(input.test_id, { checklist_item: input.checklist_item, requirement: input.requirement, outcome: input.outcome, reason: input.reason, review_id: input.review_id }, ctx.signal);
       }
       case "screenshot": {
         const shot = await ui.screenshot(target, { format: input.format, width: input.width, display: input.display, save_path: input.save_path }, ctx.signal);
@@ -795,10 +862,11 @@ export const diagnoseTool = tool({
     name: z.string().optional().describe("crash: exact faultlog file name"),
     latest: z.number().int().min(1).max(5).optional(),
     since_minutes: z.number().int().min(1).max(10080).optional().describe("crash: only reports from the last N minutes (device clock)"),
+    strict: z.boolean().optional().describe("crash: require readable inventory; empty scan is an explicit result"),
     diagnostics: z.array(z.object({ code: z.string().optional(), message: z.string() })).max(100).optional().describe("build: diagnostics to explain"),
     project: z.string().optional().describe("crash: project root; adds source code around app frames"),
   }),
-  params: { crash: ["target", "bundle", "log", "name", "latest", "since_minutes", "project"], build: ["diagnostics"] },
+  params: { crash: ["target", "bundle", "log", "name", "latest", "since_minutes", "project", "strict"], build: ["diagnostics"] },
   async handler(input, ctx) {
     const diagnose = await import("../domains/diagnose.js");
     if (input.action === "build") return { hints: diagnose.buildFailureHints(input.diagnostics ?? []) };
@@ -820,6 +888,8 @@ export const knowledgeTool = tool({
   ].join(" "),
   schema: z.object({
     action: z.enum(["search", "read", "catalog", "status", "update", "rollback"]),
+    project: fields.project.optional(),
+    product: fields.product,
     query: z.string().optional(),
     id: z.string().optional(),
     section: z.string().optional(),
@@ -834,20 +904,25 @@ export const knowledgeTool = tool({
     force: z.boolean().optional().describe("update only"),
   }),
   params: {
-    search: ["query", "catalog", "kind", "source", "limit", "offset"],
-    read: ["id", "offset", "limit", "section"],
+    search: ["project", "product", "query", "catalog", "kind", "source", "limit", "offset"],
+    read: ["project", "product", "id", "offset", "limit", "section"],
     catalog: [], status: ["check"], update: ["check", "version", "file", "force", "limit"], rollback: [],
   },
   async handler(input, ctx) {
     const kb = await import("../domains/knowledge.js");
+    const contextualize = async (result: unknown) => {
+      if (!input.project) return result;
+      const p = (await import("../domains/project.js")).inspectProject(input.project, input.product);
+      return { result, project_api: { compile: p.compileSdk, compatible: p.compatibleSdk, target: p.targetSdk, product: p.product }, document_version_filter: "unknown: knowledge pack lacks per-section since/deprecated metadata", guidance: "Compile SDK determines available declarations; compatible SDK sets minimum runtime. Check SDK @since with code lsp hover and guard newer APIs; documents are not silently discarded using compatibleSdkVersion." };
+    };
     switch (input.action) {
       case "search":
         invariant(input.query, "INVALID_INPUT", "query is required");
         if (input.source === "cloud") return kb.cloudSearch(input.query, ctx.signal);
-        return kb.search(input.query, { catalog: input.catalog, kind: input.kind, limit: input.limit, offset: input.offset });
+        return contextualize(await kb.search(input.query, { catalog: input.catalog, kind: input.kind, limit: input.limit, offset: input.offset }));
       case "read":
         invariant(input.id, "INVALID_INPUT", "id is required");
-        return kb.read(input.id, { offset: input.offset, limit: input.limit, section: input.section });
+        return contextualize(await kb.read(input.id, { offset: input.offset, limit: input.limit, section: input.section }));
       case "catalog": return kb.catalog();
       case "status": return kb.status(input.check ?? true, ctx.signal);
       case "update":

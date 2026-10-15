@@ -98,8 +98,13 @@ function execute(id: string) {
     const input = JSON.parse(current.input);
     const outputs: Record<string, any> = JSON.parse(current.outputs);
     await update(id, { status: "running", owner: process.pid, error: null });
+    input._job_id = id;
+    if (outputs.target?.target) input.target = outputs.target.target;
     const ctx: StepContext = { job_id: id, input, outputs, signal: controller.signal, log: (m) => void event(id, m) };
     try {
+      const { withOperation } = await import("./operations.js");
+      await withOperation(`job:${current.kind}`, input, controller.signal, async () => {
+      try {
       for (const step of definition.steps) {
         if (step.id in outputs) continue;
         controller.signal.throwIfAborted();
@@ -130,10 +135,15 @@ function execute(id: string) {
         await update(id, { outputs: JSON.stringify(outputs) });
         await event(id, `step ${step.id} finished`);
       }
+      controller.signal.throwIfAborted();
       const result = definition.summarize ? definition.summarize(outputs, input) : outputs;
       await update(id, { status: "succeeded", step: null, result: await boundedJson(result, id) });
+      } catch (error) {
+        try { await definition.onFailure?.(ctx, error); } catch (compensationError) { error = compensationError; }
+        throw error;
+      }
+      });
     } catch (error) {
-      try { await definition.onFailure?.(ctx, error); } catch (compensationError) { error = compensationError; }
       const failure = errorResult(error);
       const shutdown = (controller.signal.reason as ToolError | undefined)?.code === "SHUTDOWN";
       const status: JobStatus = shutdown ? "interrupted" : failure.code === "EFFECT_UNCERTAIN" ? "needs_input" : controller.signal.aborted ? "cancelled" : "failed";

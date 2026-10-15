@@ -34,6 +34,26 @@ async function main() {
       await serve();
       return;
     }
+    case "verify": {
+      const values = new Set(["--project", "--plan", "--out", "--target", "--base", "--baseline-mode"]);
+      const flags = new Set(["--changed-only", "--allow-commands"]);
+      const parsed: Record<string, string> = {};
+      for (let i = 0; i < args.length; i++) {
+        const key = args[i]!;
+        if (values.has(key) && args[i + 1] && !args[i + 1]!.startsWith("--")) parsed[key] = args[++i]!;
+        else if (!flags.has(key)) throw new Error(`Unknown or incomplete verify argument: ${key}`);
+      }
+      if (!parsed["--project"] || !parsed["--plan"] || !parsed["--out"]) throw new Error("verify --project <absolute path> --plan <file> --out <new absolute directory> [--target id] [--changed-only --base ref] [--baseline-mode compare|record] [--allow-commands]");
+      const { invokeTool } = await import("./server.js");
+      const { waitJob, cancelJob } = await import("./core/jobs.js");
+      const signal = new AbortController();
+      let result: any = await invokeTool("project", { action: "verify", project: parsed["--project"], plan: parsed["--plan"], output: parsed["--out"], target: parsed["--target"], base: parsed["--base"], baseline_mode: parsed["--baseline-mode"], changed_only: args.includes("--changed-only"), allow_commands: args.includes("--allow-commands"), wait: 0 }, signal.signal);
+      for (const sig of ["SIGINT", "SIGTERM"] as const) process.on(sig, () => { void cancelJob(result.job_id); });
+      while (["running", "queued"].includes(result.status)) result = await waitJob(result.job_id, 1000);
+      process.stdout.write(JSON.stringify(result, null, 2) + "\n");
+      process.exit(result.status === "succeeded" && result.result?.verdict === "passed" ? 0 : 1);
+      return;
+    }
     case "doctor": {
       const { doctor } = await import("./domains/doctor.js");
       const project = args.find((a) => !a.startsWith("-"));
@@ -102,7 +122,7 @@ async function main() {
       return;
     }
     default:
-      process.stderr.write("usage: deveco-mcp [mcp | doctor [project] | init --host <host> | serve-lsp [--cpp] [--project p | --auto-detect] | kb-build <dir> [out] | kb-update [file] | --version]\n");
+      process.stderr.write("usage: deveco-mcp [mcp | verify --project <path> --plan <file> --out <directory> | doctor [project] | init --host <host> | serve-lsp [--cpp] [--project p | --auto-detect] | kb-build <dir> [out] | kb-update [file] | --version]\n");
       process.exit(2);
   }
 }

@@ -16,6 +16,7 @@ const root = path.resolve(import.meta.dirname, "../..");
 const work = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-auto-"));
 const home = path.join(work, "home"); fs.mkdirSync(home);
 process.env.DEVECO_STATE_DIR = path.join(work, "state");
+process.env.DEVECO_COORDINATION_DIR = path.join(work, "coordination");
 const pem = fs.readFileSync(path.join(root, "test/fixtures/public-cert.pem"), "utf8");
 const fixture = globalThis.__devecoSignFixture = { home, pem, fault: null, config: null };
 let mode = "ok", certs = [], creates = 0, profiles = 0, deletes = [], hold, mutated;
@@ -67,7 +68,7 @@ function bytes(object) {
     "debug-info": { "device-ids": [mode === "wrong-device" ? "FOREIGN" : "FIXTURE-UDID"] }, validity: { "not-before": 1, "not-after": 4102444800 } }));
 }
 const bundle = path.join(root, "node_modules/.cache/deveco-auto-harness.mjs");
-await build({ stdin: { contents: `import ${JSON.stringify(path.join(root, "src/jobs.ts"))}; export * from ${JSON.stringify(path.join(root, "src/core/jobs.ts"))}; export * from ${JSON.stringify(path.join(root, "src/core/db.ts"))};`, resolveDir: root },
+await build({ stdin: { contents: `import ${JSON.stringify(path.join(root, "src/jobs.ts"))}; export * from ${JSON.stringify(path.join(root, "src/core/operations.ts"))}; export * from ${JSON.stringify(path.join(root, "src/core/jobs.ts"))}; export * from ${JSON.stringify(path.join(root, "src/core/db.ts"))};`, resolveDir: root },
   outfile: bundle, bundle: true, platform: "node", format: "esm", packages: "external", logLevel: "error",
   plugins: [{ name: "isolated-sdk", setup(b) {
     b.onResolve({ filter: /^node:os$/ }, (a) => /sign-auto\.ts$/.test(a.importer) ? { path: "os", namespace: "fixture" } : undefined);
@@ -183,6 +184,11 @@ test("a killed signing process reconciles certificate and atomic-config intents 
     const interrupted = await m.jobStatus(id, true); assert.equal(interrupted.status, "interrupted");
     if (stage === "certificate") unchanged(p);
     mode = "ok"; mutated = undefined;
+    // A dead owner is never silently stolen. Reconcile effects, explicitly release, then resume.
+    const resources = await m.resourceStatus();
+    const reservation = resources.find((r) => r.pid === child.pid);
+    assert.ok(reservation && !reservation.owner_alive);
+    await m.releaseResource(reservation.resource, reservation.pid);
     await m.resumeJob(id, true); const recovered = await m.waitJob(id, 5000);
     assert.equal(recovered.status, "succeeded", JSON.stringify(recovered));
     assert.equal(creates, 1); assert.equal(profiles, 1); assert.equal(certs.length, 2); assert.deepEqual(deletes, []);

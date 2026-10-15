@@ -20,9 +20,9 @@ test("handshake, tools/list and schema validation", async (t) => {
   const names = list.result.tools.map((t) => t.name);
   assert.deepEqual(names, ["doctor", "project", "run", "job", "code", "device", "ui", "ui_flow", "diagnose", "knowledge", "skills", "auth", "sign", "emulator", "hot_reload"]);
   for (const tool of list.result.tools) assert.equal(tool.inputSchema.type, "object");
-  // Preserve the protocol budget and keep guidance inside the host's default truncation boundary.
+  // The 1.5 schema adds test/verify/scenario contracts without adding tools; cap at 44 KiB. Keep guidance inside the host's default truncation boundary.
   const metrics = promptMetrics(init.result.instructions, list.result.tools);
-  assert.ok(metrics.tools_list_bytes <= 36 * 1024, `tools/list: ${metrics.tools_list_bytes} bytes > 36 KB`);
+  assert.ok(metrics.tools_list_bytes <= 44 * 1024, `tools/list: ${metrics.tools_list_bytes} bytes > 44 KB`);
   assert.ok(metrics.instructions_chars <= 2048, `instructions: ${metrics.instructions_chars} characters > 2048`);
   assert.ok(metrics.longest_description_chars <= 2048, `description: ${metrics.longest_description_chars} characters > 2048`);
   assert.doesNotMatch(JSON.stringify(list.result), /9007199254740991/, "no +/-2^53 integer bounds");

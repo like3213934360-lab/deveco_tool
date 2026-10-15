@@ -429,3 +429,15 @@ defineJob<import("./domains/sign-auto.js").AutoInput>({
   onFailure: async (ctx, error) => (await autoDomain()).compensate(ctx, error),
   summarize: (o) => o.commit,
 });
+
+// Test and verify effects are never blindly replayed after an interrupted SDK/device action.
+defineJob<import("./domains/project-test.js").ProjectTestInput>({
+  kind: "project_test", steps: [{ id: "tests", effect: true, replay: false, async run(ctx) {
+    return (await import("./domains/project-test.js")).runProjectTests(ctx.input, ctx.signal, ctx.job_id);
+  } }], summarize: (o) => o.tests,
+});
+defineJob<import("./domains/verify.js").VerifyInput>({
+  kind: "verify", steps: [{ id: "verify", effect: true, replay: false, async run(ctx) {
+    return (await import("./domains/verify.js")).runVerification(ctx.input, ctx.signal, ctx.job_id);
+  } }], summarize: (o) => o.verify,
+});

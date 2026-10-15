@@ -117,18 +117,21 @@ export function matchPatterns(signature: Pick<CrashSignature, "kind" | "message"
 
 /* ------------------------------ entry points ------------------------------ */
 
-export async function diagnoseCrash(input: { target?: string; bundle?: string; log?: string; name?: string; latest?: number; since_minutes?: number; project?: string }, target: string | undefined, signal: AbortSignal) {
+export async function diagnoseCrash(input: { target?: string; bundle?: string; log?: string; name?: string; latest?: number; since_minutes?: number; project?: string; strict?: boolean }, target: string | undefined, signal: AbortSignal) {
   const project = input.project ? await projectModel(input.project) : undefined;
   const reports: { source?: string; text: string }[] = [];
   if (input.log) reports.push({ text: input.log });
   else {
     invariant(target, "DEVICE_UNAVAILABLE", "A device is required to read crash logs, or pass log text");
-    let names = input.name ? [input.name] : await faultlogNames(target, signal);
+    const inventory = input.strict ? await (await import("./device.js")).faultlogInventory(target, signal) : undefined;
+    let names = input.name ? [input.name] : inventory?.names ?? await faultlogNames(target, signal);
     if (input.bundle) names = names.filter((n) => n.includes(input.bundle!));
     if (input.since_minutes && !input.name) {
       // Time window on the device clock (names carry epoch ms or local yyyymmddhhmmss).
       const { shell } = await import("./device.js");
       const [epoch, local] = (await shell(target, ["date +%s; date +%Y%m%d%H%M%S"], signal, 5000)).stdout.trim().split(/\s+/);
+      invariant(!input.strict || /^\d+$/.test(epoch ?? "") && /^\d{14}$/.test(local ?? ""), "EVIDENCE_MISSING", "Device clock could not define the crash scan window");
+      invariant(!input.strict || names.every((n) => faultTime(n)), "EVIDENCE_MISSING", "Crash inventory contains an unrecognized timestamp");
       const window = input.since_minutes * 60000;
       const nowLocal = localMs(local!), nowEpoch = Number(epoch) * 1000;
       names = names.filter((n) => {
@@ -137,6 +140,7 @@ export async function diagnoseCrash(input: { target?: string; bundle?: string; l
       });
     }
     names.sort((a, b) => order(b) - order(a));
+    if (!names.length && inventory) return { reports: [], scan: { source: inventory.source, scan_artifact: inventory.scan_artifact, since_minutes: input.since_minutes, bundle: input.bundle } };
     invariant(names.length, "NOT_FOUND", input.since_minutes ? `No crash/freeze reports in the last ${input.since_minutes} minutes` : "No crash/freeze reports found on the device",
       { bundle: input.bundle }, "Reproduce the crash, then call again; or pass log text from hilog");
     for (const name of names.slice(0, Math.min(input.latest ?? 1, 5))) reports.push({ source: name, text: await readFaultlog(target, name, signal) });

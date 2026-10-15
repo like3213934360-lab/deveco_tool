@@ -77,3 +77,23 @@ node --test --test-concurrency=1 test/e2e/hotreload.test.mjs
 ## 证据与发布
 
 公开脱敏结果在 `docs/evidence/`；私有 `E2E_DIR` 含源代码、截图、视频及云端资料，禁止整体提交。回执与原视频排他创建，不覆盖旧证据。FFmpeg 严格检查的原理见 [媒体检查](../docs/RECORDING-CHECK.md)。本轮范围和未验证项见 [v1.4.10](../docs/UPGRADE-1.4.10.md)，发布遵循 [RELEASING](../docs/RELEASING.md)。发布成功不证明 Codex App 已重载或模型已重新验收。
+
+## Agent 验收闭环（1.5）
+
+新增正式入口：
+
+| 命令 | 用途及依赖 |
+| --- | --- |
+| `npm run test:verify` | Local/Instrument 用例核算、整体验收、基线、部分 UI checklist；真实 SDK、唯一 USB 设备、专用工程 |
+| `npm run test:scenarios` | Want、数据库发现/夹具冲突、权限、清数据、后台、trace；调试应用及设备相关权限 |
+| `npm run test:forms` | 已明确选定的桌面卡片交互、配置页和移除；另需 E2E_FORM_HOST=desktop、E2E_FORM_KEY 为本次添加的专用 FormItem 标识 |
+
+共同必填 E2E_PROJECT、E2E_TARGET、E2E_DIR（新的绝对证据目录），遵守已有 support/acceptance 的专用 bundle 和真实设备检查。缺条件失败，不自动改设备或安装 SDK。Instrument 测试和 scenario 会清除**专用测试应用**数据。
+
+工程材料 `fixtures/project-tests/`：将 List/Acceptance.test.ets 放到指定测试模块 src/test 和 src/ohosTest/ets/test，ohosTest 使用 default product SDK 模板。addition 正例必须通过，negative 故意失败，不能“修好”它。现有 FullProbe 页面需提供 HelloWorld、Field、Util.ets 与初始化 audit.db 的逻辑。`form/` 放入专用工程的 ets/probe 和 resources/base/profile，module 声明 ProbeForm/type=form、ohos.extension.form→$profile:probe_form；仅在专用工程声明用于 grant/revoke 的 APPROXIMATELY_LOCATION 权限。不得复制个人签名资料入仓库。
+
+form 用例不猜测或添加宿主组件：先在指定实际宿主添加本次专用卡片、记录实际 FormItem key，然后执行测试。它检查所属 bundle，并只移除这张卡片。桌面导航最多查前三页，不碰其他卡片；锁屏/负一屏/模拟器需独立用例及证据，当前没有对应验收。首次失败保留，修正后使用新 E2E_DIR。
+
+`unit/verification.test.mjs` 检查测试核算、部分计划、基线、跨进程锁、永久证据等独立规则；`integration/verification.test.mjs` 用真实 MCP/job/进程及项目命令验证超时、取消、清理、污染和 CLI 共享路径，不伪造 SDK/设备成功。标准 `npm test` 已包含它们；CI 仍是三平台 × Node 22/24。
+
+`node test/model/live-cases.mjs <PROJECT> <TARGET> <new.json> verification` 生成 10 项只读发现/调用样例，交给现有 `test/model/eval.mjs --host codex --suite live --cases ... --out ...`。使用宿主现有模型配置，权限失败不得改成通过。多步证据推理问题另见 `fixtures/verification-evaluation.xml`：按冻结专用验收报告绑定 PROJECT/artifact ID；问题素材、拟调用、真实调用与最终答案评分必须分别记录，XML 本身不代表模型通过。

@@ -78,8 +78,8 @@ test("guidance covers discovery, standalone tools, safe continuation and evidenc
     assert.match(byName.skills.inputSchema.properties.names.description, /export: skill names \(not name\); default all/);
 
     // A merged input schema must still explain which action consumes each ambiguous field.
-    assert.match(byName.project.description, /request_key\/wait: sync\/build only/);
-    assert.match(byName.run.description, /launch: project\/product\/target\/module\/ability only/);
+    assert.match(byName.project.description, /request_key\/wait: sync\/build\/test\/verify only/);
+    assert.match(byName.run.description, /launch: project\/product\/target\/module\/ability\/want only/);
     assert.match(byName.run.description, /wait\/request_key: build_run\/deploy only/);
     assert.match(byName.run.description, /hot_reload=true saves baseline after successful launch/);
     assert.match(byName.run.inputSchema.properties.flow_variables.description, /required variables from ui_flow show/);
@@ -87,7 +87,7 @@ test("guidance covers discovery, standalone tools, safe continuation and evidenc
     assert.match(byName.code.inputSchema.properties.file.description, /lint\/lsp: one file/);
     assert.match(byName.device.inputSchema.properties.bundle.description, /log:.*sqlite: debuggable app owning db/);
     assert.match(byName.ui.description, /wait\/request_key: layout forms only/);
-    assert.match(byName.ui.inputSchema.properties.test_id.description, /test_step\/review: multiple devices need session target/);
+    assert.match(byName.ui.inputSchema.properties.test_id.description, /test_step\/review: stored session target; conflicting target rejected/);
     assert.match(byName.ui.inputSchema.properties.test_id.description, /test_finish\/test_log\/test_export need no device/);
     assert.match(byName.ui.inputSchema.properties.assert.description, /test_step uses top-level visible\/hidden, never assert/);
     assert.match(byName.ui.inputSchema.properties.steps.description, /act:.*perf:/);

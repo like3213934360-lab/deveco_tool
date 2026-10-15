@@ -72,6 +72,7 @@ export async function doctor(options: { project?: string; target?: string; remot
     server: { version, build_id: buildInfo.input_hash, node: process.version, state_dir: stateDir(), config: process.env.DEVECO_CONFIG ?? null, retention_days: config().retention_days },
     ok: checks.filter((c) => ["toolchain", "sdk"].includes(c.name)).every((c) => c.ok),
     checks,
+    capabilities: await (await import("./capabilities.js")).capabilities(options.project, (deviceCheck?.detail as { connected?: string[] } | undefined)?.connected ?? [], options.target),
   };
 }
 

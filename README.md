@@ -1,10 +1,13 @@
 # deveco-mcp
 
+1.5 新增工程测试与声明式验收：`deveco-mcp verify --project ... --plan ... --out ...`。读取 `verdict` 判断验收，job 完成不等于用例通过。完整契约、基线、场景与证据包见 [工程验收指南](docs/VERIFY.md)。
+
+
 **中文** | [English](#english)
 
 一个轻量的鸿蒙（HarmonyOS）开发 MCP 服务。MCP 宿主（OpenCode、Codex、Cursor 等）都可以通过它调用 DevEco 工具链，完成鸿蒙应用的构建、运行、调试和验证，并离线查询鸿蒙开发知识。
 
-- **逐项核对上游能力。** 对照 [deveco-code](https://gitcode.com/openharmony-sig/deveco-code) 和 [deveco-cli](https://gitcode.com/openharmony-sig/deveco-cli) 做了源码能力清点与逐项映射：脚本从上游源码自动抽取每一个工具、参数、取值、命令、选项和内置 MCP 工具，共 491 项，每一项都有经过核对的对应关系（MCP 能力映射 374 项，由宿主 AI 提供 74 项，明确不需要 43 项并写明理由），未决映射为 0；这不等于所有模型、设备均已实际验收。完整清单见 [docs/upstream-alignment.md](docs/upstream-alignment.md)，CI 每周自动重跑，上游有新提交或新能力时会报出。在此之外，还提供可恢复的异步任务、UI 流程录制与回放、崩溃模式匹配、按符号名定位的 LSP 查询，以及可以独立于服务更新的知识包。
+- **逐项核对上游能力。** 对照 [deveco-code](https://gitcode.com/openharmony-sig/deveco-code) 和 [deveco-cli](https://gitcode.com/openharmony-sig/deveco-cli) 做了源码能力清点与逐项映射：脚本从上游源码自动抽取每一个工具、参数、取值、命令、选项和内置 MCP 工具，共 503 项，每一项都有经过核对的对应关系（MCP 能力映射 374 项，由宿主 AI 提供 83 项，明确不需要 46 项并写明理由），未决映射为 0；这不等于所有模型、设备均已实际验收。完整清单见 [docs/upstream-alignment.md](docs/upstream-alignment.md)，CI 每周自动重跑，上游有新提交或新能力时会报出。在此之外，还提供可恢复的异步任务、UI 流程录制与回放、崩溃模式匹配、按符号名定位的 LSP 查询，以及可以独立于服务更新的知识包。
 - **轻量。** 运行时依赖只有 3 个，不用 LangGraph，也没有原生模块（数据库用 Node 自带的 `node:sqlite`）。单进程运行，空闲时不占 CPU。语言服务和代码检查器按需启动，空闲 10 分钟后自动关闭。
 - **为 AI 宿主设计。** 15 个工具按用途命名，全部默认可用；返回结构化且长度有上限；每个错误都带 `code`、`category` 和修复提示 `hint`；耗时操作以任务形式异步执行。
 

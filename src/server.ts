@@ -51,7 +51,7 @@ function respond(value: unknown, isError = false) {
     value = rest;
   }
   content.unshift({ type: "text", text: JSON.stringify(value) });
-  return { content, ...(isError ? { isError: true } : {}) };
+  return { content, ...(object(value) ? { structuredContent: value } : {}), ...(isError ? { isError: true } : {}) };
 }
 
 /** Edit distance, for "did you mean" on misspelled parameters. */
@@ -123,6 +123,21 @@ export function checkArguments(tool: ToolDef, raw: unknown) {
   return { args, notes };
 }
 
+/** Shared validated dispatch for MCP and the headless verifier; no transport or shell indirection. */
+export function validateTool(name: string, input: Record<string, unknown>) {
+  const definition = allTools.find((t) => t.name === name);
+  if (!definition) throw new ToolError("INVALID_INPUT", `Unknown tool: ${name}`);
+  const { args } = checkArguments(definition, input);
+  const parsed = definition.schema.safeParse(args);
+  if (!parsed.success) throw new ToolError("INVALID_INPUT", z.prettifyError(parsed.error));
+  return { definition, data: parsed.data as Record<string, unknown> };
+}
+export async function invokeTool(name: string, input: Record<string, unknown>, signal: AbortSignal) {
+  const { definition, data } = validateTool(name, input);
+  const { withOperation } = await import("./core/operations.js");
+  return withOperation(name, data, signal, () => definition.handler(data, { signal }));
+}
+
 /**
  * tools/list goes into every host's model context: drop JSON Schema noise that carries no meaning
  * for the model (zod's int() emits +/-2^53 bounds on every integer). Validation is unaffected: the
@@ -187,7 +202,8 @@ export async function serve() {
       notes = checked.notes;
       const parsed = tool.schema.safeParse(args);
       if (!parsed.success) throw new ToolError("INVALID_INPUT", z.prettifyError(parsed.error), undefined, "Fix the listed fields and call again");
-      const result = await tool.handler(parsed.data, { signal });
+      const { withOperation } = await import("./core/operations.js");
+      const result = await withOperation(name, parsed.data as Record<string, unknown>, signal, () => tool.handler(parsed.data, { signal }));
       const recovery = await recoveryNote();
       if (recovery) notes.push(recovery);
       const read = artifactHint(name, result, (params.arguments as Record<string, unknown> | undefined)?.action);

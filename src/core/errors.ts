@@ -8,6 +8,9 @@ export type ErrorCategory =
   | "internal";
 
 const categories: Record<string, ErrorCategory> = {
+  RESOURCE_BUSY: "environment",
+  BASELINE_MISSING: "evidence", BASELINE_INCOMPATIBLE: "evidence", EVIDENCE_MISSING: "evidence",
+  TEST_REPORT_MISSING: "evidence", TEST_REPORT_INVALID: "evidence", TESTS_MISSING: "evidence",
   INVALID_INPUT: "input",
   NOT_FOUND: "input",
   CONFLICT: "input",

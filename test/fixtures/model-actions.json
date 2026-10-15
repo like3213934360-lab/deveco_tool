@@ -75,5 +75,15 @@
   {"id":"patch-stop-daemon","goal":"只停止 /workspace/Demo 的 hvigor 守护进程。","expect":[{"tool":"hot_reload","arguments":{"action":"stop_daemon","project":"/workspace/Demo"}}]},
   {"id":"ui-record-receipts","expect":[{"tool":"ui","arguments":{"action":"record_receipts"}}],"goal":"离线列出所有待导出与归档录屏回执，不连接设备。"},
   {"id":"ui-record-archive","expect":[{"tool":"ui","arguments":{"action":"record_archive","target":"127.0.0.1:5555","name":"old.mp4","reason":"old emulator"}}],"goal":"离线归档端口127.0.0.1:5555 的 old.mp4 回执，保留视频，不操作设备。"},
-  {"id":"ui-record-restore","expect":[{"tool":"ui","arguments":{"action":"record_restore","receipt_id":"receipt-example"}}],"goal":"离线恢复录屏归档回执 receipt-example，不认领设备身份或停止录屏。"}
+  {"id":"ui-record-restore","expect":[{"tool":"ui","arguments":{"action":"record_restore","receipt_id":"receipt-example"}}],"goal":"离线恢复录屏归档回执 receipt-example，不认领设备身份或停止录屏。"},
+  {"id":"project-test","goal":"执行 Demo 的本地 Suite#one 测试并核对一个用例","expect":[{"tool":"project","arguments":{"action":"test","project":"/workspace/Demo","kind":"local","scope":["Suite#one"],"expected_tests":1}}]},
+  {"id":"project-verify","goal":"按验收计划验证 Demo 并导出证据","expect":[{"tool":"project","arguments":{"action":"verify","project":"/workspace/Demo","plan":"verify.json","output":"/workspace/evidence/new"}}]},
+  {"id":"project-entries","goal":"列出工程 Ability Extension 卡片入口配置","expect":[{"tool":"project","arguments":{"action":"entries","project":"/workspace/Demo"}}]},
+  {"id":"job-resources","goal":"只查询本机 MCP 资源占用","expect":[{"tool":"job","arguments":{"action":"resources"}}]},
+  {"id":"job-release-resource","goal":"已核验死进程 12345 的副作用，释放它的明确工程锁","expect":[{"tool":"job","arguments":{"action":"release_resource","resource":"project:/workspace/Demo","owner_pid":12345}}]},
+  {"id":"code-origin","goal":"查找 HelloWorld 节点标识的静态源码候选","expect":[{"tool":"code","arguments":{"action":"origin","project":"/workspace/Demo","key":"HelloWorld"}}]},
+  {"id":"device-databases","goal":"查找 device-1 上 com.example.demo 的真实数据库名","expect":[{"tool":"device","arguments":{"action":"databases","target":"device-1","bundle":"com.example.demo"}}]},
+  {"id":"device-fixture","goal":"在已授权的调试数据库里准备独立的夹具表","expect":[{"tool":"device","arguments":{"action":"fixture","target":"device-1","operation":"prepare","bundle":"com.example.demo","module":"entry","db":"app.db","rows":[{"status":"dirty"}]}}]},
+  {"id":"device-scenario","goal":"将 device-1 当前窗口退到后台","expect":[{"tool":"device","arguments":{"action":"scenario","target":"device-1","operation":"background"}}]},
+  {"id":"device-trace","goal":"采集 device-1 上 3 秒官方 ArkUI 原始 trace","expect":[{"tool":"device","arguments":{"action":"trace","target":"device-1","seconds":3,"categories":["ace"]}}]}
 ]
