@@ -54,4 +54,8 @@ GitHub 发布、npm 发布、宿主重载分别核验。本轮不执行 npm 发�
 
 ## GitHub 交付
 
-按 [发布流程](RELEASING.md) 推送后，继续核对全部 CI、release 工作流、不可变 tag、Latest 和 verified-release 回执；完成后回填本节和 TODO。最终文档提交的独立 CI/回执链接列在交付回复，避免自引用提交循环。
+发布提交为 `5b383f0bd4e772b92a1949abc4e0b68df113985e`，已推送 main，包含项目级 mcp-builder。该提交的 [CI 38689007850](https://github.com/like3213934360-lab/deveco_tool/actions/runs/38689007850) 七项首次全部通过；[release 38689158770](https://github.com/like3213934360-lab/deveco_tool/actions/runs/38689158770) 成功。GitHub [v1.4.10 Release](https://github.com/like3213934360-lab/deveco_tool/releases/tag/v1.4.10) 为稳定版 Latest，ID 413461613，tag 指向上述发布提交。
+
+下载的 verified-release 与 `node tools/release.mjs --run 38689007850 --check` 逐字节一致，见 [发布回执](evidence/v1.4.10-release.json)。原生 doctor 另证当前 Codex App 仍加载 1.4.9 / `74a552f64d034ede14dfe273c0d3f6434475890396382f13e51b62a835b261bd`；本轮独立 stdio 构建为 `c2c74b0a94d8202f59946245941bc6794bb48e8f990eae5eac6d87d2abddbd50`。
+
+最终文档提交按 [发布流程](RELEASING.md) 独立完成 CI 和既有 Release 核验，其链接在交付回复列出，避免自引用提交循环；不移动 tag，不重发同版本。

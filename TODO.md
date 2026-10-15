@@ -145,8 +145,8 @@ Windows/Linux 真实 SDK/媒体、多设备并发、其他设备/媒体版本、
 - [x] package/lock 同步 1.4.10，CHANGELOG/测试指南/版本验收齐全；类型检查、256/256 离线回归、50 项 SDK/模板验收和最终 3 项契约验收通过。新增三份集成测试，未删除场景或降低门限；离线耗时 16.076→16.229 s。
 - [x] 真机只读查询及拒绝危险参数、真实签名引用及验签、61 条诊断分页完整性通过。原签名配置及材料哈希不变；未向真机执行拒绝的修改命令。
 - [x] 503 项上游门禁、原性能/提示说明预算和打包 dry-run 通过；保留提示语与上游门禁首次失败，按实际原因修复及审查。
-- [ ] 推送发布提交，核验该提交全部七项 CI、自动 release、tag、Latest 与 verified-release 回执；完成后回填，最终文档提交的核验链接另在交付答复列出。
-- [ ] Codex App/DSH 重载及新版完整模型验收未做；npm 未发布。历史未验证/失败项目不因本次发布关闭。
+- [x] 发布提交 `5b383f0bd4e772b92a1949abc4e0b68df113985e` 已推送；[CI 38689007850](https://github.com/like3213934360-lab/deveco_tool/actions/runs/38689007850) 七项首次全部通过，[release 38689158770](https://github.com/like3213934360-lab/deveco_tool/actions/runs/38689158770) 成功。v1.4.10 tag 指向该提交、Release ID 413461613 为 Latest，下载回执与本地 `--check` 逐字节一致，见 [回执](docs/evidence/v1.4.10-release.json)。最终文档提交仍独立核验，结果在交付答复列出。
+- [ ] Codex App/DSH 重载及新版完整模型验收未做；原生 doctor 确认当前 Codex App 为 1.4.9 / `74a552f64d034ede14dfe273c0d3f6434475890396382f13e51b62a835b261bd`。npm 未发布。历史未验证/失败项目不因本次发布关闭。
 
 ## 方法依据
 
