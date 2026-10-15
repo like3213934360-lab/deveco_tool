@@ -217,7 +217,7 @@ Windows/Linux 真实 SDK/媒体、多设备并发、其他设备/媒体版本、
 - [x] 最终候选模拟器 verify 八项检查通过（Instrument 显式不请求覆盖率），场景 6/6、基线/判定契约 5/5、桌面卡片 2×2 与 2×4 各 1/1。原始 77 份 artifact 完整保存；专用 app/卡片移除，临时工程及签名材料清理，启动的模拟器已停止且原实例保留。其他真机资源占用未触碰。
 - [ ] Instrument 覆盖率仍失败：SDK 00507008、init_coverage.json 额外 JSON 内容；用例 1 pass 不替代覆盖率。性能三轮及显式滚动复核全零数据，inconclusive；已证明列表移动，疑似模拟器采集限制但未定性。其他宿主及周期调度未验证。详见 [脱敏证据](docs/evidence/v1.5.2-acceptance.json)。
 - [x] 分开记录原生 Codex App 调用与独立 CLI 模型评测；原生 1.5.1 重载已证实，CLI 1.5.1 本轮仍 2 项完成、8 项审批拒绝，未冒充完整模型通过或 1.5.2 原生重载。
-- [ ] 同步版本/锁文件、CHANGELOG、说明与证据，完成最终回归、GitHub CI、Release/tag/Latest/回执核验；记录实际宿主构建边界。
+- [x] 版本/锁文件、CHANGELOG、说明与证据同步。发布提交 `4dc382a147ba9f1e03a249ffecb0a4e3ec168ded` 的 [CI 38713489277](https://github.com/like3213934360-lab/deveco_tool/actions/runs/38713489277) 七项首次全部通过，[release 38713690465](https://github.com/like3213934360-lab/deveco_tool/actions/runs/38713690465) 成功。v1.5.2 tag 指向该提交，稳定 Release 为 Latest，下载回执与本地 --check 逐字节一致，见 [回执](docs/evidence/v1.5.2-release.json)。后续文档提交独立检查 CI/既有 Release；不移动 tag，不把发布视为原生宿主 1.5.2 重载。
 
 ## 方法依据
 

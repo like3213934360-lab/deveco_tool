@@ -34,3 +34,7 @@ Codex App 本轮已真实重载 1.5.1 / 7647cd93c31b；候选 1.5.2 的测试通
 没有删除有效测试或新增运行依赖。离线用例从 276 到 286，耗时 16.153→18.939 s；协议回归增加真实 10 秒超时验证。既有验收复用显式设备类型参数，新增一个多设备仪器测试入口并登记 package/test README；上游 503 项门禁、原性能预算及 npm pack dry-run 通过。
 
 GitHub CI/Release、模拟器验收和宿主实际构建身份分别核验；后续回执不改写上述未通过项。
+
+## GitHub 交付
+
+发布提交 `4dc382a147ba9f1e03a249ffecb0a4e3ec168ded` 的 [CI 38713489277](https://github.com/like3213934360-lab/deveco_tool/actions/runs/38713489277) 七项首次全部通过，[release 38713690465](https://github.com/like3213934360-lab/deveco_tool/actions/runs/38713690465) 成功。[v1.5.2](https://github.com/like3213934360-lab/deveco_tool/releases/tag/v1.5.2) 为稳定 Latest，tag 精确指向发布提交。下载回执与本地只读核验逐字节相同，见 [回执](evidence/v1.5.2-release.json)。后续同版本文档提交不改变发布产物与 tag，独立核验其 CI 和既有 Release。
