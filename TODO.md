@@ -160,7 +160,7 @@ Windows/Linux 真实 SDK/媒体、多设备并发、其他设备/媒体版本、
 - [x] **统一验收契约与能力发现。** 定义执行状态与验收结果的区别，明确通过、失败、阻塞、不确定、未执行的聚合规则；必选项缺失不能通过。扩展 doctor 返回按工程/设备/动作区分的可用性、前置条件、探测证据和修复指引；未探测不能标为可用。补齐新增接口的输入/输出约束、读写标注、错误恢复提示与分页。
   证据：evidence/quality 聚合、doctor capability matrix、结构化返回及严格参数校验已实现；276 项离线回归与真机 doctor 验证未执行项始终 executed=false。 详见 [1.5.0 验收说明](docs/UPGRADE-1.5.0.md) 与 [脱敏结果](docs/evidence/v1.5.0-acceptance.json)。
 - [x] **执行工程测试。** 接入当前真实 SDK 支持的 Local Test、Instrument Test 和覆盖率流程；支持模块/套件/用例选择、超时、取消与原始报告。核对发现数、执行数及 Pass/Failure/Error/Ignore，零用例、报告缺失和非完整执行不能冒充通过；各平台支持范围独立记录。
-  证据：真实 Local 正例 1 pass、负例 1 failure（SDK exit 0），Instrument 1 pass；新鲜覆盖率与 scope 核算通过。SDK 覆盖率首次解析失败保留，后续独立复测通过；Linux Local Test 明确不支持。 详见 [1.5.0 验收说明](docs/UPGRADE-1.5.0.md) 与 [脱敏结果](docs/evidence/v1.5.0-acceptance.json)。
+  证据：真实 Local 正例 1 pass、负例 1 failure（SDK exit 0），Instrument 1 pass；新鲜覆盖率与 scope 核算曾通过；最终构建 SDK 覆盖率再次解析失败，请求明确失败且报告保留，可靠性未通过；Linux Local Test 明确不支持。 详见 [1.5.0 验收说明](docs/UPGRADE-1.5.0.md) 与 [脱敏结果](docs/evidence/v1.5.0-acceptance.json)。
 - [x] **实现声明式 verify 与无交互入口。** 工程内保存有限、可校验的验收计划，复用构建、部署、工程测试、flow、UI 断言、视觉、布局、性能及指定窗口崩溃扫描。逐项记录期望、实际、判定和证据，部署成功不能覆盖 flow 失败，文本计划不能以部分已执行断言代表全部完成。复用同一执行逻辑提供 MCP 与 CI 命令行入口。
   证据：MCP 与 CLI 共用执行器；真实 build/test/deploy/assert/crash/entries 完整链 passed，CLI 四种 verdict 的退出码、污染/准备失败/取消清理和持久证据回归通过。 详见 [1.5.0 验收说明](docs/UPGRADE-1.5.0.md) 与 [脱敏结果](docs/evidence/v1.5.0-acceptance.json)。
 - [x] **实现受约束的 changed-only。** 通过项目显式的文件/模块到检查项关联选择用例，列出选择理由和未覆盖变更；共享配置、依赖及未映射变更要求全量验收或明确阻塞，不静默跳过。记录比较基点和工作区改动，局部结果不标成全量通过。
@@ -184,8 +184,10 @@ Windows/Linux 真实 SDK/媒体、多设备并发、其他设备/媒体版本、
 
 ### 尚未通过的验收与交付状态
 
+- [ ] 最终构建 Instrument 覆盖率：SDK 00507008 JSON 解析错误复现，1 个测试用例通过但缺少新覆盖率，MCP 请求失败。Local、无覆盖率 Instrument 和完整 verify 链通过；不把早先 5/5 运行替代此项。
+
 - [x] 最终类型检查、276/276 离线回归、31/31 原 SDK/LSP/C++ 回归、工程验收 5/5、场景 6/6、2×4 卡片 1/1；质量/视觉及不完整 UI 计划边界 5/5。所有首次失败及候选 build_id 保留，详见验收说明。
-- [ ] 模型评测：早期候选真实 Codex CLI 2/10 完成、8/10 被宿主审批策略阻塞；最终新版完整模型验收未通过。XML/拟调用不计实际成功。
+- [ ] 模型评测：早期候选及最终 1.5.0 构建的真实 Codex CLI 均 2/10 完成、8/10 被宿主审批策略阻塞；新版完整模型验收未通过。XML/拟调用不计实际成功。
 - [ ] 原生 Codex App/DSH 重载未执行；本轮 doctor 仍为 1.4.10/c2c74b0a。npm 未发布。
 - [ ] GitHub 发布：待记录提交、七项 CI、release 工作流、tag、Latest 与核验回执。
 

@@ -95,7 +95,7 @@ await build({ stdin: { contents: `import ${JSON.stringify(path.join(root, "src/j
     });
   } }] });
 const m = await import(pathToFileURL(bundle).href);
-after(async () => { await m.shutdownJobs(); m.closeDatabase(); server.closeAllConnections(); await new Promise((r) => server.close(r)); fs.rmSync(work, { recursive: true, force: true }); fs.rmSync(bundle, { force: true }); delete globalThis.__devecoSignFixture; });
+after(async () => { await m.shutdownJobs(); await m.closeCoordination(); m.closeDatabase(); server.closeAllConnections(); await new Promise((r) => server.close(r)); fs.rmSync(work, { recursive: true, force: true }); fs.rmSync(bundle, { force: true }); delete globalThis.__devecoSignFixture; });
 
 function setup(existing = true) {
   mode = "ok"; fixture.fault = null; creates = 0; profiles = 0; deletes = []; certs = [{ id: "old-cert", certName: "business", certType: 1, certObjectId: "old" }];

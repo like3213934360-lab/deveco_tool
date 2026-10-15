@@ -13,10 +13,10 @@ process.env.DEVECO_STATE_DIR = path.join(work, 'state');
 process.env.DEVECO_COORDINATION_DIR = path.join(work, 'coordination');
 fs.symlinkSync(path.join(root, 'node_modules'), path.join(work, 'node_modules'), 'junction');
 const entry = path.join(work, 'entry.ts'), bundle = path.join(work, 'entry.mjs');
-fs.writeFileSync(entry, ['domains/project-test', 'domains/evidence', 'domains/quality', 'domains/verify', 'core/operations', 'core/artifacts', 'domains/device', 'domains/entries', 'domains/uitest'].map((p) => `export * from ${JSON.stringify(path.join(root, 'src', p + '.ts'))}`).join('\n'));
+fs.writeFileSync(entry, ['domains/project-test', 'domains/evidence', 'domains/quality', 'domains/verify', 'core/operations', 'core/artifacts', 'core/db', 'domains/device', 'domains/entries', 'domains/uitest'].map((p) => `export * from ${JSON.stringify(path.join(root, 'src', p + '.ts'))}`).join('\n'));
 await build({ entryPoints: [entry], outfile: bundle, bundle: true, format: 'esm', platform: 'node', packages: 'external', logLevel: 'error' });
 const m = await import(pathToFileURL(bundle));
-after(() => { try { fs.rmSync(work, { recursive: true, force: true }); } catch { /* Windows open SQLite handle */ } });
+after(async () => { await m.closeCoordination(); m.closeDatabase(); fs.rmSync(work, { recursive: true, force: true }); });
 const report = (outcome, summary) => `class=Suite\ntest=one\nresult=${outcome}\nTests run: ${summary}\n`;
 
 test('SDK exit zero never substitutes for complete test accounting', () => {

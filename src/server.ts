@@ -243,11 +243,12 @@ export async function serve() {
   const shutdown = async () => {
     if (stopping) return;
     stopping = true;
-    const [{ shutdownJobs }, { closeAllSessions }, { killAll }, { closeDatabase }] = await Promise.all([
-      import("./core/jobs.js"), import("./core/sessions.js"), import("./core/proc.js"), import("./core/db.js"),
+    const [{ shutdownJobs }, { closeAllSessions }, { killAll }, { closeDatabase }, { closeCoordination }] = await Promise.all([
+      import("./core/jobs.js"), import("./core/sessions.js"), import("./core/proc.js"), import("./core/db.js"), import("./core/operations.js"),
     ]);
     await Promise.race([Promise.all([shutdownJobs(), closeAllSessions()]), new Promise((r) => setTimeout(r, 3000))]);
     killAll();
+    await closeCoordination();
     closeDatabase();
     process.exit(0);
   };

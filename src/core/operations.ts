@@ -29,6 +29,12 @@ async function coordination() {
   })();
 }
 
+/** Called after operations stop, so Windows can release the coordinator file as well. */
+export async function closeCoordination() {
+  if (coordinator) (await coordinator).close();
+  coordinator = undefined;
+}
+
 /** A dead process is evidence of interruption, never permission to repeat its effects. */
 export async function resourceStatus() {
   const db = await coordination();

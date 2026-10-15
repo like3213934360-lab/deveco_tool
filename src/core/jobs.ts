@@ -104,44 +104,44 @@ function execute(id: string) {
     try {
       const { withOperation } = await import("./operations.js");
       await withOperation(`job:${current.kind}`, input, controller.signal, async () => {
-      try {
-      for (const step of definition.steps) {
-        if (step.id in outputs) continue;
-        controller.signal.throwIfAborted();
-        if (step.when && !step.when(ctx)) {
-          outputs[step.id] = null;
-          continue;
-        }
-        await update(id, { step: step.id });
-        await event(id, `step ${step.id} started`);
-        let value: unknown;
-        if (step.effect) {
-          const db = await database();
-          const effect = db.prepare("SELECT state,receipt FROM effects WHERE job_id=? AND step=?").get(id, step.id) as { state: string; receipt: string | null } | undefined;
-          if (effect?.state === "done") value = JSON.parse(effect.receipt ?? "null");
-          else if (effect?.state === "intent") {
-            // The previous attempt may or may not have taken effect.
-            value = step.reconcile ? await step.reconcile(ctx) : undefined;
-            if (value === undefined)
-              throw new ToolError("EFFECT_UNCERTAIN", `Step ${step.id} was interrupted and its outcome is unknown`,
-                { step: step.id }, step.replay === false ? "Inspect external state, then resume to reconcile; force cannot replay this step" : "Inspect the device/project, then call job resume with force=true to run the step again");
-          } else {
-            db.prepare("INSERT OR REPLACE INTO effects(job_id,step,state,updated) VALUES(?,?,?,?)").run(id, step.id, "intent", Date.now());
-            value = await step.run(ctx);
+        try {
+          for (const step of definition.steps) {
+            if (step.id in outputs) continue;
+            controller.signal.throwIfAborted();
+            if (step.when && !step.when(ctx)) {
+              outputs[step.id] = null;
+              continue;
+            }
+            await update(id, { step: step.id });
+            await event(id, `step ${step.id} started`);
+            let value: unknown;
+            if (step.effect) {
+              const db = await database();
+              const effect = db.prepare("SELECT state,receipt FROM effects WHERE job_id=? AND step=?").get(id, step.id) as { state: string; receipt: string | null } | undefined;
+              if (effect?.state === "done") value = JSON.parse(effect.receipt ?? "null");
+              else if (effect?.state === "intent") {
+                // The previous attempt may or may not have taken effect.
+                value = step.reconcile ? await step.reconcile(ctx) : undefined;
+                if (value === undefined)
+                  throw new ToolError("EFFECT_UNCERTAIN", `Step ${step.id} was interrupted and its outcome is unknown`,
+                    { step: step.id }, step.replay === false ? "Inspect external state, then resume to reconcile; force cannot replay this step" : "Inspect the device/project, then call job resume with force=true to run the step again");
+              } else {
+                db.prepare("INSERT OR REPLACE INTO effects(job_id,step,state,updated) VALUES(?,?,?,?)").run(id, step.id, "intent", Date.now());
+                value = await step.run(ctx);
+              }
+              db.prepare("UPDATE effects SET state='done',receipt=?,updated=? WHERE job_id=? AND step=?").run(JSON.stringify(value ?? null), Date.now(), id, step.id);
+            } else value = await step.run(ctx);
+            outputs[step.id] = value ?? null;
+            await update(id, { outputs: JSON.stringify(outputs) });
+            await event(id, `step ${step.id} finished`);
           }
-          db.prepare("UPDATE effects SET state='done',receipt=?,updated=? WHERE job_id=? AND step=?").run(JSON.stringify(value ?? null), Date.now(), id, step.id);
-        } else value = await step.run(ctx);
-        outputs[step.id] = value ?? null;
-        await update(id, { outputs: JSON.stringify(outputs) });
-        await event(id, `step ${step.id} finished`);
-      }
-      controller.signal.throwIfAborted();
-      const result = definition.summarize ? definition.summarize(outputs, input) : outputs;
-      await update(id, { status: "succeeded", step: null, result: await boundedJson(result, id) });
-      } catch (error) {
-        try { await definition.onFailure?.(ctx, error); } catch (compensationError) { error = compensationError; }
-        throw error;
-      }
+          controller.signal.throwIfAborted();
+          const result = definition.summarize ? definition.summarize(outputs, input) : outputs;
+          await update(id, { status: "succeeded", step: null, result: await boundedJson(result, id) });
+        } catch (error) {
+          try { await definition.onFailure?.(ctx, error); } catch (compensationError) { error = compensationError; }
+          throw error;
+        }
       });
     } catch (error) {
       const failure = errorResult(error);

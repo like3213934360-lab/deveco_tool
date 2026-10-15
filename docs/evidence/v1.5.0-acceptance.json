@@ -2,7 +2,7 @@
   "schema": 1,
   "version": "1.5.0",
   "source_base": "3e217cf4c37e27ef4fa53f23b3ec4d476908d494",
-  "final_build_id": "90f45d1397d3bda21132333689136e8edb609d8014d190613d92c375342ce35b",
+  "final_build_id": "5a26d9f5683c732fed63c41d09bcecb4412d87929744a93f2a23308379e8d976",
   "environment": {
     "host": "macOS arm64",
     "node": "26.0.0",
@@ -83,6 +83,22 @@
       "pass": 31,
       "fail": 0,
       "duration_ms": 26191.456
+    },
+    {
+      "file": "regression-coordination.log",
+      "sha256": "54d98b9964f2889d2c45f54f6f68d87a7b99147f7de604407bc83b1e645140d6",
+      "tests": 276,
+      "pass": 276,
+      "fail": 0,
+      "duration_ms": 16325.769666
+    },
+    {
+      "file": "post-repair-sdk.log",
+      "sha256": "8550f01d5e47bbb76479488014012d709adafaad96da2b72d554ebf3723cf4e6",
+      "tests": 5,
+      "pass": 3,
+      "fail": 2,
+      "duration_ms": 38799.703083
     }
   ],
   "benchmark": {
@@ -135,6 +151,15 @@
       "sdk_error": "00507008 getInitCoverageData: Unexpected non-whitespace character after JSON at position 4040",
       "sdk_exit": 0,
       "followup": "Independent later execution passed. Original failure retained; SDK incremental coverage generation remains an observed instability, not fixed by MCP."
+    },
+    "final_build_retest": {
+      "build_id": "5a26d9f5683c732fed63c41d09bcecb4412d87929744a93f2a23308379e8d976",
+      "local_positive_and_negative": "passed",
+      "instrument_without_coverage": "passed",
+      "instrument_with_coverage": "failed: TEST_REPORT_MISSING; executed case passed 1 but SDK coverage generation failed again",
+      "full_gate": "passed",
+      "overall_suite": "failed (one subtest plus parent)",
+      "decision": "No additional retry to seek a green result; known SDK coverage instability remains an unpassed acceptance item."
     }
   },
   "forms": {
@@ -172,13 +197,29 @@
   "model": {
     "host": "codex",
     "host_version": "codex-cli 0.162.1",
-    "candidate_server_version": "1.4.10",
-    "candidate_build_id": "460a634207eff4432192141e5f1d4e95228cf4f409ae00fc40bb02f04ab59c3f",
+    "candidate_server_version": "1.5.0",
+    "candidate_build_id": "90f45d1397d3bda21132333689136e8edb609d8014d190613d92c375342ce35b",
     "successful_cases": 2,
     "blocked_cases": 8,
     "reason": "MCP tool call requires approval, but approval policy is never",
-    "final_version_full_model_acceptance": "not verified",
-    "evaluation_material": "test/fixtures/verification-evaluation.xml is material, not execution evidence"
+    "final_version_full_model_acceptance": "blocked: attempted on 1.5.0 candidate 90f45d1397d3, 2 completed and 8 approval-policy rejections; coordinator-close-only repair not model-retested",
+    "evaluation_material": "test/fixtures/verification-evaluation.xml is material, not execution evidence",
+    "previous_attempt": {
+      "candidate_server_version": "1.4.10",
+      "candidate_build_id": "460a634207eff4432192141e5f1d4e95228cf4f409ae00fc40bb02f04ab59c3f",
+      "successful_cases": 2,
+      "blocked_cases": 8
+    },
+    "elapsed_ms": 107001,
+    "stale_fixture_attempt": {
+      "directory": "model-final",
+      "grading_passed": 1,
+      "completed_calls": 2,
+      "approval_rejections": 8,
+      "reason": "Reused cases still expected server version 1.4.10; fresh cases generated with the existing version-aware generator for subsequent attempt."
+    },
+    "graded_passed_cases": 2,
+    "approval_rejections_from_events": 8
   },
   "host": {
     "version": "1.4.10",
@@ -218,7 +259,7 @@
       "before_files": 49,
       "after_files": 58,
       "before_lines": 11674,
-      "after_lines": 12674
+      "after_lines": 12681
     },
     "test": {
       "before_files": 82,
@@ -227,5 +268,17 @@
       "after_lines": 8420
     },
     "meaning": "Inventory only, not evidence of coverage or quality"
+  },
+  "ci_first_attempt": {
+    "commit": "ce275df76eabc377ec4b32868fd4e4c783849319",
+    "run": "https://github.com/like3213934360-lab/deveco_tool/actions/runs/38703105916",
+    "passed_jobs": 5,
+    "failed_jobs": [
+      "windows Node 22",
+      "windows Node 24"
+    ],
+    "failure": "Unclosed coordination SQLite connection caused EBUSY/EPERM in signing-test cleanup. Business assertions passed; cleanup remained failing.",
+    "repair": "Close the coordinator after jobs stop in server shutdown and test teardown. No retries, ignored cleanup errors or changed Windows permissions.",
+    "log_sha256": "2ea297d73fbde79c6b1b9b87f0efcc0e76bfc0a65048ae1db51cae09ba36c357"
   }
 }
