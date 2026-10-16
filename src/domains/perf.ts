@@ -1,4 +1,4 @@
-import { act, type Action } from "./ui.js";
+import { act, dumpTree, treeSignature, type Action } from "./ui.js";
 import { shell } from "./device.js";
 import { setTimeout as delay } from "node:timers/promises";
 import { saveArtifact } from "../core/artifacts.js";
@@ -161,11 +161,18 @@ export async function measureScroll(target: string, options: PerfOptions, signal
   })();
   void sampler.catch(() => undefined); // handled even if caller cancellation arrives during an action
   let profiler: Capture[];
+  const activity: { index: number; started_ms: number; finished_ms: number; status: string; scope: string }[] = [];
   try {
     let lastPoll = Date.now();
     for (const g of gestures) {
       signal.throwIfAborted();
-      await act(target, g, signal);
+      const scoped = g.action === "scroll" && g.selector;
+      const before = scoped ? undefined : treeSignature(await dumpTree(target, signal));
+      const at = Date.now(), result = await act(target, g, signal);
+      const finished = Date.now();
+      activity.push({ index: activity.length, started_ms: at - started, finished_ms: finished - started,
+        status: scoped ? result.motion?.status ?? "unobserved" : treeSignature(await dumpTree(target, signal)) !== before ? "changed" : "unchanged",
+        scope: scoped ? "selected-subtree" : "screen" });
       if (Date.now() - lastPoll > 1500) { await sampleComposer(); lastPoll = Date.now(); }
     }
     await delay(600, undefined, { signal });
@@ -191,9 +198,10 @@ export async function measureScroll(target: string, options: PerfOptions, signal
     profilerfps: { polls: profiler.length, valid_samples: samples.length, zero_samples: allSamples.filter((s) => s.fps === 0).length, total_samples: allSamples.length,
       reason: samples.length ? undefined : profilerFailure ?? (allSamples.length ? "all_zero_samples" : "unrecognized_output") },
   };
-  const artifact = await saveArtifact(JSON.stringify({ target, started_at: new Date(started).toISOString(), gestures, captures, diagnostics }, null, 2), "application/json");
-  const common = { gestures: gestures.length, elapsed_ms: Date.now() - started, diagnostics, diagnostic_artifact: artifact.artifact_id, ...(memory ? { memory } : {}) };
-  if (stats) return { source: "composer", verdict: perfVerdict(stats), ...stats, ...common };
+  const activityVerified = activity.length > 0 && activity.every((a) => a.status === "changed");
+  const artifact = await saveArtifact(JSON.stringify({ target, started_at: new Date(started).toISOString(), gestures, activity, captures, diagnostics }, null, 2), "application/json");
+  const common = { gestures: gestures.length, elapsed_ms: Date.now() - started, activity, activity_verified: activityVerified, diagnostics, diagnostic_artifact: artifact.artifact_id, ...(memory ? { memory } : {}) };
+  if (stats) return { source: "composer", verdict: activityVerified && !stats.excluded_intervals.length ? perfVerdict(stats) : "inconclusive", ...stats, ...common };
   if (samples.length) return {
     source: "profilerfps", verdict: "fps_only", avg_fps: +(samples.reduce((s, x) => s + x.fps, 0) / samples.length).toFixed(1),
     min_fps: Math.min(...samples.map((s) => s.fps)), samples: samples.length, ...common,

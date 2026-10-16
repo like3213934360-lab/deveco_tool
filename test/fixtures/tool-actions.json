@@ -39,6 +39,7 @@
   "ui.perf",
   "ui.visual",
   "ui.layout",
+  "ui.form",
   "ui.record_start",
   "ui.record_stop",
   "ui.record_status",

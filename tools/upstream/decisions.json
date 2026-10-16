@@ -7,7 +7,7 @@
     "  '<tool> [param] [param=value] ...'  checked against the live tools/list JSON Schema (value must be in the enum when one exists)",
     "  'cli:<text>'  src/cli.ts must contain the text;  'prompt:<name>' / 'skill:<name>'  must be served by the MCP server"
   ],
-  "upstream_rev": { "deveco-code": "6c22235e5fadf0f18a35fdee06b78b6812ca422c", "deveco-cli": "15c32e0981f2aab4bbaa39087f22052a4e7c5014" },
+  "upstream_rev": { "deveco-code": "6c22235e5fadf0f18a35fdee06b78b6812ca422c", "deveco-cli": "48c38f6a9ba7c7e7f12ac8a73b384d7a045c20f6" },
   "items": {
     "code:tool:arkts_check": { "status": "full", "to": "code action=check" },
     "code:tool:arkts_check:param:files": { "status": "full", "to": "code action=check files" },
@@ -90,6 +90,9 @@
     "cli:cmd:build:opt:--modules": { "status": "full", "to": "project modules" },
     "cli:cmd:build:opt:--product": { "status": "full", "to": "project product" },
     "cli:cmd:build clean": { "status": "full", "to": "project action=clean" },
+    "cli:cmd:build:opt:--assemble-type": { "status": "full", "to": "project task" },
+    "cli:cmd:build:opt:--signing-config": { "status": "skip", "reason": "Upstream temporarily rewrites the selected product signingConfig and restores it after build. This independent MCP preserves project-owned signing references and hvigor overrides; callers select an existing product or pass explicit material to sign. Per-build signing-config override is not implemented or claimed." },
+    "cli:cmd:signature generate:opt:--type": { "status": "skip", "reason": "One-shot sign auto intentionally creates debug material only. Release certificate/profile creation is available through explicit itemized sign actions, but the new automatic release chain and product-config mutation are not implemented or claimed; they require separate cloud lifecycle and quota acceptance." },
     "cli:cmd:build clean:opt:--mode": { "status": "skip", "reason": "This selects hvigor execution mode (default module), not debug/release build mode. Independent project clean retains its existing unscoped contract; no execution-mode parity is claimed or silently mapped to project.mode." },
     "cli:cmd:build clean:opt:--modules": { "status": "skip", "reason": "Module-scoped cleanup is a new upstream CLI control. Independent project clean remains unscoped and rejects modules; this release does not expand its destructive cleanup contract or claim module-selective behavior." },
 

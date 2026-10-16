@@ -228,10 +228,10 @@ test("entry graph exposes declared main/device scope and callable product-specif
     '  /* name: "EntryAbility" is also a comment */',
     '  description: \'{"name":"EntryAbility"}\',',
     '  abilities: [',
-    '    { "name": "EntryAbility", exported: true },',
+    '    { "name": "EntryAbility", exported: true, metadata: [{name:"ohos.ability.shortcuts",resource:"$profile:cards"}] },',
     '    { name /* property comment */ : \'MatrixAbility\', exported: true }',
     '  ],',
-    '  extensionAbilities: [{ name: "CardService", type: "form" }]',
+    '  extensionAbilities: [{ name: "CardService", type: "form", metadata: [{ name: "ohos.extension.form", resource: "$profile:cards" }] }]',
     '} }',
   ].join("\r\n"));
   write("watch/src/main/module.json5", [
@@ -272,6 +272,8 @@ test("entry graph exposes declared main/device scope and callable product-specif
     }
     assert.equal(find("CardService").main, false); assert.equal(find("CardService").launch, null);
     assert.equal(find("Tile").source.line, 2); assert.equal(find("Tile").validation, "passed");
+    assert.equal(find("Tile").config_ability_resolution.status, "declared-in-module");
+    assert.deepEqual(find("Tile").referenced_by, [{ kind: "form", owner: "CardService", resource: "$profile:cards" }]);
     assert.equal(find("open").source.line, 4);
     assert.equal((await client.call("project", { action: "entries", project })).data.entries.length, 0, "The handles must preserve the selected non-default product");
     write("phone/src/main/resources/base/profile/cards.json", JSON.stringify({ forms: [
@@ -280,9 +282,29 @@ test("entry graph exposes declared main/device scope and callable product-specif
       { name: "OtherModule", src: "./ets/Tile.ets", supportDimensions: ["2*2"], defaultDimension: "2*2", formConfigAbility: "WatchAbility" },
     ] }));
     const invalid = await call();
-    assert.deepEqual(invalid.issues.map((i) => i.problems), [["name/src/supportDimensions missing"], ["defaultDimension is not supported"], ["formConfigAbility is not declared in this module"]]);
+    assert.deepEqual(invalid.issues.map((i) => i.problems), [["name/src/supportDimensions missing"], ["defaultDimension is not supported"]]);
     const unnamed = invalid.entries.find((e) => e.kind === "form" && !e.name);
     assert.equal(unnamed.source.line, null); assert.equal(unnamed.source.precision, "unresolved");
+    assert.equal(invalid.entries.find((e) => e.name === "OtherModule").config_ability_resolution.status, "unresolved");
+    // Orphans, including malformed profiles, must never become entries or fail this graph.
+    write("phone/src/main/resources/base/profile/orphan.json", "invalid JSON");
+    const manifest = JSON.parse(JSON.stringify({ module: { name: "phone-runtime", type: "entry", deviceTypes: ["phone"], abilities: [
+      { name: "Private", exported: false }, { name: "ImplicitPrivate" }, { name: "Public", exported: true },
+    ], extensionAbilities: [
+      { name: "First", metadata: [{ name: "ohos.extension.form", resource: "$profile:cards" }] },
+      { name: "Second", metadata: [{ name: "ohos.extension.form", resource: "$profile:cards" }] },
+      { name: "Missing", metadata: [{ name: "ohos.extension.form", resource: "$profile:absent" }] },
+    ] } }));
+    write("phone/src/main/module.json5", JSON.stringify(manifest));
+    const referenced = await call();
+    const privateEntry = referenced.entries.find((e) => e.name === "Private"), publicEntry = referenced.entries.find((e) => e.name === "Public");
+    assert.equal(referenced.entries.find((e) => e.name === "ImplicitPrivate").launch, null);
+    assert.equal(privateEntry.launch, null); assert.equal(privateEntry.external_launch, "restricted");
+    assert.equal(publicEntry.launch.ability, "Public"); assert.deepEqual(publicEntry.skills, []);
+    assert.equal(publicEntry.module_name, "phone-runtime");
+    assert.equal(referenced.entries.find((e) => e.name === "OtherModule").referenced_by.length, 2);
+    assert.ok(referenced.issues.some((e) => e.owner === "Missing" && e.resource === "$profile:absent"));
+    assert.equal(referenced.entries.some((e) => e.kind === "shortcut"), false, "Shortcut arrays also require metadata references");
   } finally { await client.close(); fs.rmSync(project, { recursive: true, force: true }); }
 });
 
@@ -300,10 +322,10 @@ test("entry graph handles independent project layouts, duplicate names and inval
     "{ module: { name: 'installed_module', type: 'entry', deviceTypes: ['tablet'], mainElement: 'Open',",
     "  metadata: [{ name: 'Open', value: 'unrelated' }],",
     "  abilities: [{",
-    "    'na\\u006de': 'Open', exported: true, metadata: [{ name: 'Second' }]",
+    "    'na\\u006de': 'Open', exported: true, metadata: [{ name: 'Second' }, { name: 'ohos.ability.shortcuts', resource: '$profile:forms' }]",
     "  }, {",
     "    name: 'Second', exported: false",
-    "  }]",
+    "  }], extensionAbilities: [{ name: 'Cards', type: 'form', metadata: [{ name: 'ohos.extension.form', resource: '$profile:forms' }] }]",
     "} }",
   ];
   write("features/service/src/main/module.json5", "{ module: { name: 'service', type: 'feature', mainElement: 'Worker', extensionAbilities: [{ name: 'Worker', type: 'workScheduler', exported: false }] } }");
@@ -326,13 +348,13 @@ test("entry graph handles independent project layouts, duplicate names and inval
       write(manifestFile, manifest.join(newline));
       const result = await call(); assert.equal(result.isError, false, JSON.stringify(result.data));
       const { entries, issues } = result.data;
-      assert.deepEqual(issues, []); assert.equal(entries.length, 6);
+      assert.deepEqual(issues, []); assert.equal(entries.length, 7);
       assert.equal(entries.some((entry) => entry.module === "library"), false);
       const open = entries.find((entry) => entry.kind === "ability" && entry.name === "Open");
       assert.equal(open.main, true); assert.equal(open.source.line, 4); assert.deepEqual(open.device_types, ["tablet"]);
       assert.deepEqual(open.launch, { tool: "run", action: "launch", project, product: "tablet", module: "client-build", ability: "Open" });
       const second = entries.find((entry) => entry.name === "Second");
-      assert.equal(second.main, false); assert.equal(second.exported, false); assert.equal(second.source.line, 6);
+      assert.equal(second.main, false); assert.equal(second.exported, false); assert.equal(second.source.line, 6); assert.equal(second.launch, null); assert.equal(second.external_launch, "restricted");
       const worker = entries.find((entry) => entry.name === "Worker");
       assert.equal(worker.main, true); assert.equal(worker.launch, null); assert.deepEqual(worker.device_types, []);
       const forms = entries.filter((entry) => entry.kind === "form");

@@ -38,7 +38,7 @@ export const projectTool = tool({
   description: [
     "info: metadata; create(app_name,bundle_name): built-in template, never overwrites; clean: build outputs.",
     "sync (job): ohpm install + hvigor sync. build (job): advisory edited-file preflight + hvigor; packages or first 100 compile errors (code/file/line/message/source) with fixes. oh-package.json5/build-profile.json5 edits auto-install dependencies.",
-    "test (job): SDK local/instrument tests with verified case counts; instrument requires allow_data_reset and a sole connected target. verify (job): JSON plan -> independent acceptance verdict + permanent JSON/JUnit/HTML evidence. entries: declared Ability/Extension/form/shortcut graph with main/device_types/runtime_verified=false; not installed-device evidence.",
+    "test (job): SDK local/instrument tests with verified case counts; instrument requires allow_data_reset and an explicit target when several devices are connected; other targets remain untouched. verify (job): JSON plan -> scoped acceptance verdict + JSON/JUnit/HTML evidence; launch/perf need baseline or max, otherwise inconclusive. entries: declared Ability/Extension/form/shortcut graph with main/device_types/runtime_verified=false; not installed-device evidence.",
     "Build already checks edited files: no code check first. request_key/wait: sync/build/test/verify only.",
   ].join(" "),
   schema: z.object({
@@ -441,14 +441,24 @@ export const uiTool = tool({
     "assert: visible OR hidden, not screenshots alone.",
     "Accept consent (agreements_accepted) and setup/tours preserving defaults (onboarding_completed) by window text/control state, never app names/fixed IDs. If still blocked, observe; never blindly repeat.",
     "visual: baseline (first saves, update replaces); changed_ratio/regions/diff_artifact; dimming=global_shift.",
-    "layout: off-screen/overlap/tiny targets, clipped text; forms=[foldable,widefold,triplefold] job. wait/request_key: layout forms only.",
+    "layout: geometry heuristics; forms=[foldable,widefold,triplefold] job. wait/request_key: layout forms and form.",
+    "form (job): form_action=inventory|catalog|exercise|matrix. Desktop only; catalog returns form_index. exercise adds, inspects and removes only its instance. form_size needs a host size control; matrix takes explicit form_cases. then_flow runs project assertions on the attached card; no business/rendering verdict inferred.",
     "perf: scroll smoothness/jank; no data=inconclusive + diagnostic_artifact; bundle adds pss. record_start/record_stop/record_status: mp4. record_receipts/record_archive(target,name)/record_restore(receipt_id): offline; preserve receipts, no device I/O.",
     "Tests: test_start(plan) -> test_step(test_id, op/selector or visible/hidden) -> review(test_id+requirement) captures an image; inspect it before review(test_id+review_id+outcome+reason) -> test_finish -> test_log/test_export. Omit outcome/review_id on capture. checklist_item links assertions/reviews to every plan item; missing coverage is inconclusive.",
   ].join(" "),
   schema: z.object({
     action: z.enum(["observe", "screenshot", "tree", "find", "act", "assert", "windows", "perf", "visual", "layout", "record_start", "record_stop", "record_status", "record_receipts", "record_archive", "record_restore",
-      "test_start", "test_step", "review", "test_finish", "test_log", "test_export"]),
+      "test_start", "test_step", "review", "test_finish", "test_log", "test_export", "form"]),
+    form_action: z.enum(["inventory", "catalog", "exercise", "matrix"]).optional(),
+    form_index: z.number().int().min(0).max(99).optional(),
+    form_size: z.string().regex(/^[1-6]\*[1-6]$/).optional(),
+    max_pages: z.number().int().min(1).max(30).optional(),
+    form_cases: z.array(z.object({ target: z.string().min(1).optional(),
+      emulator: z.object({ device_type: z.string().min(1), os_version: z.string().min(1) }).strict().optional(),
+      form_index: z.number().int().min(0).max(99), form_size: z.string().regex(/^[1-6]\*[1-6]$/).optional(),
+    }).strict().refine((v) => !!v.target !== !!v.emulator, "Each case requires exactly one target or emulator")).min(1).max(20).optional(),
     target: fields.target,
+    product: fields.product,
     window: z.number().int().optional().describe("tree/observe: id from windows"),
     all_windows: z.boolean().optional().describe("tree: all windows/displays; excludes window"),
     node: z.string().optional().describe("tree: one component (id/key) subtree"),
@@ -506,7 +516,7 @@ export const uiTool = tool({
     strict_targets: z.boolean().optional().describe("layout: tiny targets fail; default advisory"),
     threshold: z.number().int().min(1).max(64).optional().describe("visual: gray difference per block (default 8)"),
     forms: z.array(z.enum(["foldable", "widefold", "triplefold"])).min(1).max(3).optional().describe("layout: emulator forms to check (job)"),
-    then_flow: z.string().optional().describe("layout forms: ui_flow without required variables"),
+    then_flow: z.string().optional().describe("layout/form: ui_flow without required variables; form requires start.mode=attach"),
     keep_running: z.boolean().optional().describe("layout forms: leave the emulators running"),
     request_key: fields.requestKey,
     wait: fields.wait,
@@ -519,6 +529,7 @@ export const uiTool = tool({
     return {
       act: [...act, "diff", "steps", "assert", "save_flow"],
       observe: ["target", "window", "depth", "interactive", "limit", "bundle", "format", "width"],
+      form: ["target", "project", "product", "bundle", "form_action", "form_index", "form_size", "max_pages", "form_cases", "then_flow", "wait", "request_key"],
       screenshot: ["target", "display", "save_path", "format", "width"],
       tree: ["target", "window", "all_windows", "node", "depth", "interactive", "limit", "bundle"],
       find: ["target", "selector", "limit"],
@@ -539,6 +550,27 @@ export const uiTool = tool({
     // Domain callers also use this handler without the MCP schema boundary.
     invariant(!(input.visible && input.hidden), "INVALID_INPUT", "Pass exactly one visible or hidden selector");
     if (input.action === "act" && !input.steps) invariant(!input.assert && !input.save_flow, "INVALID_INPUT", "assert/save_flow require steps; use a one-step array for one action plus assertion");
+    if (input.action === "form") {
+      invariant(input.form_action, "INVALID_INPUT", "form_action is required");
+      if (input.form_action === "matrix") {
+        invariant(input.form_cases && !input.target && input.form_index === undefined && !input.form_size, "INVALID_INPUT", "matrix requires form_cases; place target/form_index/form_size inside each case");
+        invariant(input.project || input.form_cases.every((c) => !c.emulator), "INVALID_INPUT", "Disposable emulator cases require a project to build and deploy");
+      } else {
+        invariant(!input.form_cases, "INVALID_INPUT", "form_cases is used only by matrix");
+        invariant(input.form_action === "exercise" || input.form_index === undefined && !input.form_size, "INVALID_INPUT", "form_index/form_size are used only by exercise");
+      }
+      if (input.form_action !== "inventory") (await import("../domains/forms.js")).formContext({ ...input, target: input.target ?? "" });
+      if (input.then_flow) {
+        invariant(input.project && ["exercise", "matrix"].includes(input.form_action), "INVALID_INPUT", "then_flow requires a project and exercise/matrix");
+        const flow = (await import("../domains/flows.js")).readFlow(input.project, input.then_flow);
+        invariant(flow.start.mode === "attach" && !Object.values(flow.variables).some((v) => v.required), "INVALID_INPUT", "Card flows must attach to the current host and require no variables");
+        invariant(flow.assert?.visible || flow.assert?.hidden || flow.steps.some((step) => ["assertVisible", "assertHidden"].includes(step.action) && step.selector),
+          "INVALID_INPUT", "Card flows require an explicit visible/hidden assertion; actions alone cannot verify content");
+      }
+      const kind = input.form_action === "exercise" ? "form_check" : input.form_action === "matrix" ? "form_matrix" : "form_inventory";
+      const { wait, request_key, ...jobInput } = input;
+      return startAndWait(kind, jobInput, request_key, wait ?? 1500);
+    }
     const { resolveTarget } = await import("../domains/device.js");
     const ui = await import("../domains/ui.js");
     const uitest = () => import("../domains/uitest.js");
@@ -746,7 +778,7 @@ async function buildAction(input: UiInput, target: string, ui: typeof import("..
     case "input": need(x !== undefined && input.text !== undefined, "selector or x,y and text"); action = { action: "input", x: x!, y: y!, text: input.text!, append: input.append }; break;
     case "type": need(input.text !== undefined, "text"); action = { action: "type", text: input.text! }; break;
     case "swipe": case "drag": case "fling": need([input.x, input.y, input.x2, input.y2].every((v) => v !== undefined), "x,y,x2,y2"); action = { action: input.op, x: input.x!, y: input.y!, x2: input.x2!, y2: input.y2!, speed: input.speed }; break;
-    case "scroll": need(input.direction, "direction"); action = { action: "scroll", direction: input.direction!, speed: input.speed }; break;
+    case "scroll": need(input.direction, "direction"); action = { action: "scroll", direction: input.direction!, speed: input.speed, ...(input.selector ? { selector: input.selector } : {}) }; break;
     case "key":
       need(input.key || input.keys, "key or keys");
       action = input.keys ? { action: "keys", keys: input.keys } : { action: "key", key: input.key! }; break;
@@ -788,7 +820,7 @@ async function screenSize(target: string, info: (t: string, s?: AbortSignal) => 
 export const uiFlowTool = tool({
   name: "ui_flow",
   title: "Record/replay UI flows",
-  description: "In <project>/.arkpilot/flows; save via ui act steps + save_flow. list/show/delete; record -> ui act -> stop with final assert (or discard=true). replay restarts app (job); show first, supply required variables (e.g. input1). wait/request_key: replay only. repair=true promotes working alternates, snapshot=true compares screens. Uses ui consent/setup handling; inspect blockers before retrying.",
+  description: "In <project>/.arkpilot/flows; save via ui act steps + save_flow. list(project); show/delete(project,id); record(project,target,id,name) -> ui act -> stop(project,target,assert or discard=true). replay(project,target,id,variables) uses the saved restart/attach mode (job); show first, supply required variables (e.g. input1). wait/request_key: replay only. repair=true promotes working alternates, snapshot=true compares screens. Uses ui consent/setup handling; inspect blockers before retrying.",
   schema: z.object({
     action: z.enum(["list", "show", "record", "stop", "replay", "delete"]),
     project: fields.project,

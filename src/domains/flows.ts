@@ -300,7 +300,7 @@ export async function replayFlow(project: string, id: string, target: string, va
         swipe: () => ({ action: "swipe", ...gesture! }),
         drag: () => ({ action: "drag", ...gesture! }),
         fling: () => ({ action: "fling", ...gesture! }),
-        dircFling: () => ({ action: "scroll", direction: (["left", "right", "up", "down"] as const)[step.direction ?? 3]! }),
+        dircFling: () => ({ action: "scroll", direction: (["left", "right", "up", "down"] as const)[step.direction ?? 3]!, ...(step.selector ? { selector: toSelector(step.selector) } : {}) }),
       };
       const build = map[step.action];
       invariant(build, "FLOW_UNSUPPORTED", `${step.id}: action ${step.action} is not supported by this version`);

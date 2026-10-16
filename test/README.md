@@ -92,13 +92,13 @@ node --test --test-concurrency=1 test/e2e/hotreload.test.mjs
 | `npm run test:verify` | Local/Instrument 用例核算、整体验收、基线、部分 UI checklist；真实 SDK、所选设备、专用工程；其他设备可保持连接 |
 | `npm run test:instrument-target` | 多设备中显式选模拟器的仪器测试、覆盖率、负例及目标拒绝；另需一台同时连接的设备 |
 | `npm run test:scenarios` | Want、数据库发现/夹具冲突、权限、清数据、后台、trace；调试应用及设备相关权限 |
-| `npm run test:forms` | 已明确选定的桌面卡片交互、配置页和移除；另需 E2E_FORM_HOST=desktop、E2E_FORM_KEY 为本次添加的专用 FormItem 标识 |
+| `npm run test:forms` | 系统卡片中心添加、专用夹具交互和配置页断言、按新增实例移除；E2E_FORM_INDEX 为 catalog 返回的预览序号 |
 
 共同必填 E2E_PROJECT、E2E_TARGET、E2E_DIR（新的绝对证据目录），遵守已有 support/acceptance 的专用 bundle 和真实设备检查。默认仍要求 USB 真机；模拟器需显式 E2E_DEVICE_KIND=emulator，并通过 device info 核验（instrument-target 固定要求模拟器）。不会自动换目标或混用两种验收结论。缺条件失败，不自动改设备或安装 SDK。Instrument 测试和 scenario 会清除**专用测试应用**数据。
 
 工程材料 `fixtures/project-tests/`：将 List/Acceptance.test.ets 放到指定测试模块 src/test 和 src/ohosTest/ets/test，ohosTest 使用 default product SDK 模板。addition 正例必须通过，negative 故意失败，不能“修好”它。现有 FullProbe 页面需提供 HelloWorld、Field、Util.ets 与初始化 audit.db 的逻辑。`form/` 放入专用工程的 ets/probe 和 resources/base/profile，module 声明 ProbeForm/type=form、ohos.extension.form→$profile:probe_form；仅在专用工程声明用于 grant/revoke 的 APPROXIMATELY_LOCATION 权限。不得复制个人签名资料入仓库。
 
-form 用例不猜测或添加宿主组件：先在指定实际宿主添加本次专用卡片、记录实际 FormItem key，然后执行测试。它检查所属 bundle，并只移除这张卡片。桌面导航最多查前三页，不碰其他卡片；锁屏/负一屏需独立用例及证据，当前没有对应验收。模拟器与真机分别按实际设备记录。首次失败保留，修正后使用新 E2E_DIR。
+form 用例先完整清点桌面，再通过 `ui form exercise` 添加指定预览，运行工程自有 flow 断言，并只移除本次新增实例。取消和失败使用独立限时清理，失败不自动重试。`E2E_FORM_INDEX` 来自 `ui form catalog`，不等于声明数组下标；无需人工添加卡片或抄写实例 key。清点默认有界扫描 12 页，可设 max_pages；超出范围不能声称完整。锁屏/负一屏没有经过验证的适配器。专用夹具内的文本、点击后内容和配置页预期只属于该测试工程。
 
 `unit/verification.test.mjs` 检查测试核算、部分计划、基线、跨进程锁、永久证据等独立规则；`integration/verification.test.mjs` 用真实 MCP/job/进程及项目命令验证超时、取消、清理、污染和 CLI 共享路径，不伪造 SDK/设备成功。标准 `npm test` 已包含它们；CI 仍是三平台 × Node 22/24。
 

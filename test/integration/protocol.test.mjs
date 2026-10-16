@@ -133,15 +133,15 @@ test("required prompt arguments never interpolate missing or malformed project v
   finally { await reconnected.close(); }
 });
 
-test("all 102 audited entrypoints remain discoverable and reject unknown fields before execution", async (t) => {
+test("all 103 audited entrypoints remain discoverable and reject unknown fields before execution", async (t) => {
   const c = connect(raw(t).env);
   try {
     await c.initialize();
     const listed = await c.request("tools/list");
     const tools = new Map(listed.result.tools.map((tool) => [tool.name, tool]));
     const entries = JSON.parse(fs.readFileSync(path.join(root, "test/fixtures/tool-actions.json")));
-    assert.equal(entries.length, 102);
-    assert.equal(new Set(entries).size, 102);
+    assert.equal(entries.length, 103);
+    assert.equal(new Set(entries).size, 103);
     for (const entry of entries) {
       const [name, action] = entry.split(".");
       const tool = tools.get(name);

@@ -20,7 +20,7 @@ await build({ stdin: { contents: `export {uiTool} from ${JSON.stringify(path.joi
   b.onResolve({ filter: /device\.js$/ }, (a) => /(?:domains\/(?:ui|flows)\.ts|tools\/core\.ts)$/.test(a.importer.replaceAll("\\", "/")) ? { path: "device", namespace: "fixture" } : undefined);
   b.onLoad({ filter: /.*/, namespace: "fixture" }, () => ({ contents: `import fs from 'node:fs';const f=()=>globalThis.__devecoConsent;export async function resolveTarget(){return 'test'};export async function assertConnected(){};export async function forceStop(){};export async function launch(){};export async function deviceInfo(){return {screen:{width:400,height:800}}};
     export async function hdc(args){fs.writeFileSync(args.at(-1),JSON.stringify(f().frames[0]));return {stdout:'',stderr:'',code:0}};
-    export async function shell(_target,args,signal){signal?.throwIfAborted();const command=args.join(' ');if(command.includes('dumpLayout'))return {stdout:'DumpLayout saved',stderr:'',code:0};if(args[0]==='rm')return {stdout:'',stderr:'',code:0};const hit=/uiInput click (\\d+) (\\d+)/.exec(command);if(!hit)throw new Error('unexpected command '+command);f().clicks.push(Number(hit[2]));if(Number(hit[2])===220)f().frames.shift();else if(Number(hit[2])===420){f().taps++;f().onTap?.()};return {stdout:'No Error',stderr:'',code:0}};` }));
+    export async function shell(_target,args,signal){signal?.throwIfAborted();const command=args.join(' ');if(command.includes('dumpLayout'))return {stdout:'DumpLayout saved',stderr:'',code:0};if(args[0]==='rm')return {stdout:'',stderr:'',code:0};if(command.includes('uiInput swipe')){f().swipes??=[];f().swipes.push(command);if(f().frames.length>1)f().frames.shift();return {stdout:'No Error',stderr:'',code:0}};const hit=/uiInput click (\\d+) (\\d+)/.exec(command);if(!hit)throw new Error('unexpected command '+command);f().clicks.push(Number(hit[2]));if(Number(hit[2])===220)f().frames.shift();else if(Number(hit[2])===420){f().taps++;f().onTap?.()};return {stdout:'No Error',stderr:'',code:0}};` }));
 } }] });
 const m = await import(pathToFileURL(bundle).href);
 const ctx = { signal: new AbortController().signal };
@@ -95,4 +95,28 @@ test("configuration opt-out leaves consent untouched", async () => {
   reset([dialog("用户协议与隐私政策", "同意", "any.vendor")]);
   fs.writeFileSync(process.env.DEVECO_CONFIG, JSON.stringify({ auto_accept_ui_agreements: false })); m.resetConfig();
   const result = await m.acceptAgreements("test", ctx.signal); assert.deepEqual(result.accepted, []); assert.deepEqual(f.clicks, []);
+});
+
+test('scroll keeps the nested selector through tool, batch and flow; missing/ambiguous targets never gesture', async () => {
+  const frame = (text, count = 1) => ({ attributes: { bundleName: 'example.application', bounds: '[0,0][1000,1800]' }, children: Array.from({ length: count }, () => ({ attributes: { type: 'Scroll', key: 'nested', bounds: '[100,200][500,800]', visible: true }, children: [raw(text)] })) });
+  for (const mode of ['tool', 'batch', 'flow']) {
+    reset([frame('before'), frame('after')]); f.swipes = [];
+    if (mode === 'tool') {
+      const result = await m.uiTool.handler({ action: 'act', op: 'scroll', target: 'test', selector: { key: 'nested' }, direction: 'up', diff: false }, ctx);
+      assert.equal(result.motion.status, 'changed');
+    } else if (mode === 'batch') {
+      assert.equal((await m.runBatch('test', [{ op: 'scroll', selector: { key: 'nested' }, direction: 'up' }], {}, ctx.signal)).passed, true);
+    } else {
+      m.writeFlow(work, { version: 2, id: 'scroll', name: 'nested scroll', app: { bundleName: 'example.application', ability: 'EntryAbility', module: 'entry' }, start: { mode: 'attach' }, variables: {}, steps: [{ id: 'scroll', action: 'dircFling', selector: { key: 'nested' }, direction: 2 }], assert: { visible: { text: 'after' } } });
+      assert.equal((await m.replayFlow(work, 'scroll', 'test', {}, {}, ctx.signal, () => {})).passed, true);
+    }
+    assert.equal(f.swipes.length, 1); assert.match(f.swipes[0], /swipe 300 680 300 320/);
+  }
+  reset([frame('still')]);
+  assert.equal((await m.act('test', { action: 'scroll', selector: { key: 'nested' }, direction: 'up' }, ctx.signal)).motion.status, 'unchanged');
+  for (const count of [0, 2]) {
+    reset([frame('ambiguous', count)]); f.swipes = [];
+    await assert.rejects(m.act('test', { action: 'scroll', selector: { key: 'nested' }, direction: 'up' }, ctx.signal), { code: count ? 'UI_AMBIGUOUS' : 'UI_NOT_FOUND' });
+    assert.equal(f.swipes.length, 0);
+  }
 });

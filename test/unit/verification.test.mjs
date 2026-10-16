@@ -97,3 +97,14 @@ test('partial UI checklist evidence never covers unseen requirements', () => {
   session.reviews.push({ checklist_item: 2, outcome: 'passed', step: 3, requirement: 'second', screenshot: 'artifact' });
   assert.deepEqual(m.missingChecklist(session), []);
 });
+
+test('card verification separates attachment, project assertions and owned cleanup', () => {
+  const technical = { attachment_verified: true, cleanup: { removed: true, preexisting_preserved: true } };
+  assert.equal(m.judge('form', technical), 'inconclusive');
+  assert.equal(m.judge('form', { ...technical, project_assertions: { passed: true } }), 'passed');
+  assert.equal(m.judge('form', { ...technical, project_assertions: { passed: false } }), 'failed');
+  for (const cleanup of [{ removed: false, preexisting_preserved: true }, { removed: true }, { removed: true, preexisting_preserved: false }]) {
+    assert.equal(m.judge('form', { ...technical, cleanup, project_assertions: { passed: true } }), 'failed');
+  }
+  assert.equal(m.planNeedsDevice(m.planSchema.parse({ schema: 1, checks: [{ id: 'card', type: 'form' }] })), true);
+});

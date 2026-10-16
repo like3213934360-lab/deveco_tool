@@ -141,7 +141,7 @@ export function stepAction(s: BatchStep, point?: { x: number; y: number }): Acti
     case "swipe": case "drag": case "fling":
       need([s.x, s.y, s.x2, s.y2].every((v) => v !== undefined), "x,y,x2,y2");
       return { action: s.op, x: s.x!, y: s.y!, x2: s.x2!, y2: s.y2!, speed: s.speed };
-    case "scroll": need(s.direction, "direction"); return { action: "scroll", direction: s.direction!, speed: s.speed };
+    case "scroll": need(s.direction, "direction"); return { action: "scroll", direction: s.direction!, speed: s.speed, ...(s.selector ? { selector: s.selector } : {}) };
     case "key": need(s.key || s.keys, "key or keys"); return s.keys ? { action: "keys", keys: s.keys } : { action: "key", key: s.key! };
     case "mouse_click": case "mouse_double_click": case "mouse_long_click":
       need(x !== undefined && y !== undefined, "selector or x,y"); return { action: s.op, x: x!, y: y!, button: s.button, keys: s.keys };

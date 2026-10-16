@@ -63,8 +63,11 @@ type Profile = {
 export function inspectProject(projectPath: string, productName?: string, targets: Record<string, string> = {}): Project {
   const root = path.resolve(projectPath);
   const profileFile = path.join(root, "build-profile.json5");
-  invariant(isFile(profileFile), "PROJECT_INVALID", `${root} is not a HarmonyOS project (build-profile.json5 missing)`,
-    undefined, "Pass the project root, or create one with project action=create");
+  if (!isFile(profileFile)) {
+    const search = projectRoots(root);
+    throw new ToolError("PROJECT_INVALID", `${root} is not a HarmonyOS project (build-profile.json5 missing)`, search,
+      search.candidates.length ? "Pass project=<one of candidates>; no candidate was automatically selected" : "Pass the project root, or create one with project action=create");
+  }
   const profile = readJson5(profileFile) as Profile;
   const products = profile.app?.products ?? [];
   invariant(products.length > 0, "PROJECT_INVALID", "build-profile.json5 declares no products");
@@ -424,17 +427,34 @@ export function mergeCompileCommands(project: Project): number {
 }
 
 /** First HarmonyOS project root at or below `dir` (breadth-first, bounded, skips build/deps). */
-export function findProjectRoot(dir: string, maxDepth = 4): string | undefined {
+export function projectRoots(dir: string, maxDepth = 4) {
   const skip = new Set(["node_modules", "oh_modules", ".git", ".hvigor", "build", ".idea", ".deveco"]);
   let level = [path.resolve(dir)];
+  const candidates: string[] = [];
+  let visited = 0, truncated = false;
   for (let depth = 0; depth <= maxDepth && level.length; depth++) {
-    for (const d of level) if (fs.existsSync(path.join(d, "build-profile.json5")) && fs.existsSync(path.join(d, "AppScope"))) return d;
-    level = level.flatMap((d) => {
-      try { return fs.readdirSync(d, { withFileTypes: true }).filter((e) => e.isDirectory() && !skip.has(e.name) && !e.name.startsWith(".")).map((e) => path.join(d, e.name)); }
-      catch { return []; }
-    }).slice(0, 2000);
+    const next: string[] = [];
+    for (const d of level) {
+      if (++visited > 2000) { truncated = true; break; }
+      if (isFile(path.join(d, "build-profile.json5")) && fs.existsSync(path.join(d, "AppScope"))) { candidates.push(d); continue; }
+      try {
+        for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+          if (!e.isDirectory() || skip.has(e.name) || e.name.startsWith(".")) continue;
+          if (depth === maxDepth || next.length >= 2000) { truncated = true; continue; }
+          next.push(path.join(d, e.name));
+        }
+      } catch (error) {
+        if (!["ENOENT", "ENOTDIR", "EACCES", "EPERM"].includes((error as NodeJS.ErrnoException).code ?? "")) throw error;
+        truncated = true;
+      }
+    }
+    if (visited > 2000) break;
+    level = next;
   }
-  return undefined;
+  return { candidates, searched_root: path.resolve(dir), max_depth: maxDepth, visited: Math.min(visited, 2000), truncated };
+}
+export function findProjectRoot(dir: string, maxDepth = 4): string | undefined {
+  return projectRoots(dir, maxDepth).candidates[0];
 }
 
 export function hasNativeCode(project: Project) {

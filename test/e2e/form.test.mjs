@@ -1,38 +1,39 @@
-// Existing attachment is explicitly selected; this test removes only that dedicated test form.
+// Assertions describe the dedicated fixture; the MCP host adapter does not interpret them.
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
 import { test } from 'node:test';
 import { app, required } from '../support/acceptance.mjs';
 
-test('form: desktop host interaction, configuration page and owned removal', async (t) => {
-  const host = required('E2E_FORM_HOST'), key = required('E2E_FORM_KEY');
-  assert.equal(host, 'desktop', 'Only desktop host automation is implemented');
-  const { ui, call, job, project, target, bundle, visible, receipt, info } = await app(t);
-  assert.ok(key.startsWith(`FormItem_${bundle}_`) && /^\d+$/.test(key.slice(`FormItem_${bundle}_`.length)));
+test('form: owned attachment, fixture interaction, configuration page and removal', async (t) => {
+  const index = Number(required('E2E_FORM_INDEX'));
+  assert.ok(Number.isInteger(index) && index >= 0);
+  const { job, project, target, bundle, receipt, defer } = await app(t);
   await job('run', { action: 'build_run', project, target, run_mode: 'full', wait: 0 });
-  const desktop = async () => {
-    await ui({ action: 'act', op: 'key', key: 'Home' });
-    for (let page = 0; page < 3; page++) {
-      if ((await ui({ action: 'find', selector: { key } })).count === 1) return;
-      await ui({ action: 'act', op: 'swipe', x: Math.round(info.screen.width * .85), y: Math.round(info.screen.height * .63), x2: Math.round(info.screen.width * .15), y2: Math.round(info.screen.height * .63) });
-    }
-    assert.fail('Selected test form was not found on the first three desktop pages');
-  };
-  await desktop();
-  await visible('MCP Form Probe');
-  await ui({ action: 'act', op: 'click', selector: { text: 'Refresh', exact: true } });
-  await visible('Card tapped');
-  await ui({ action: 'screenshot' });
-  receipt('host-tree.json', await ui({ action: 'tree', interactive: false, node: key }));
-  await ui({ action: 'act', op: 'long_click', selector: { key } });
-  await ui({ action: 'act', op: 'click', selector: { text: '编辑', exact: true } });
-  await visible('Hello World');
-  receipt('configuration-page.json', await ui({ action: 'tree' }));
-  await desktop();
-  await ui({ action: 'act', op: 'long_click', selector: { key } });
-  await ui({ action: 'act', op: 'click', selector: { text: '移除', exact: true } });
-  // Removal may show a confirmation sheet; inspect it rather than issuing a blind second click.
-  const remaining = await ui({ action: 'find', selector: { text: '移除', exact: true } });
-  if (remaining.count === 1) await ui({ action: 'act', op: 'click', selector: { text: '移除', exact: true } });
-  assert.equal((await ui({ action: 'assert', hidden: { key }, timeout_ms: 5000 })).passed, true);
-  receipt('cleanup.json', { host, key, removed: true, other_forms_touched: false });
+  const before = (await job('ui', { action: 'form', form_action: 'inventory', target, wait: 0 })).result;
+  assert.equal(before.complete, true);
+  const id = 'mcp-form-fixture', directory = path.join(project, '.arkpilot/flows'), file = path.join(directory, `${id}.json`);
+  const existed = fs.existsSync(directory);
+  fs.mkdirSync(directory, { recursive: true });
+  fs.writeFileSync(file, JSON.stringify({
+    version: 2, id, name: 'Dedicated form fixture assertions', app: { bundleName: bundle, module: 'entry', ability: 'EntryAbility' },
+    start: { mode: 'attach' }, variables: {}, steps: [
+      { id: 'initial', action: 'assertVisible', selector: { text: 'MCP Form Probe', textMode: 'exact' } },
+      { id: 'tap', action: 'tap', selector: { text: 'Refresh', textMode: 'exact' } },
+      { id: 'message', action: 'assertVisible', selector: { text: 'Card tapped', textMode: 'exact' } },
+      { id: 'menu', action: 'longTap', selector: { text: 'MCP Form Probe', textMode: 'exact' } },
+      { id: 'configure', action: 'tap', selector: { text: '编辑', textMode: 'exact' } },
+    ], assert: { visible: { text: 'Hello World', textMode: 'exact' } },
+  }), { flag: 'wx' });
+  defer(() => { fs.rmSync(file); if (!existed && fs.readdirSync(directory).length === 0) fs.rmdirSync(directory); });
+  const exercised = await job('ui', { action: 'form', form_action: 'exercise', project, target, form_index: index, then_flow: id, wait: 0 });
+  assert.equal(exercised.result.attachment_verified, true);
+  assert.equal(exercised.result.project_assertions.passed, true);
+  assert.equal(exercised.result.cleanup.preexisting_preserved, true);
+  assert.equal(exercised.result.cleanup.removed, true);
+  const after = (await job('ui', { action: 'form', form_action: 'inventory', target, wait: 0 })).result;
+  assert.equal(after.complete, true);
+  const identities = (inventory) => inventory.instances.map((v) => `${v.bundle}:${v.instance_id}`).sort();
+  assert.deepEqual(identities(after), identities(before));
+  receipt('host-evidence.json', exercised.result);
 });

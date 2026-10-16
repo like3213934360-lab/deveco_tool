@@ -19,12 +19,12 @@ fs.writeFileSync(entry, [
   `export { siteAllowed, regionBase } from ${JSON.stringify(path.join(root, "src/domains/auth.ts"))};`,
   `export { apiOf, compatibility } from ${JSON.stringify(path.join(root, "src/domains/doctor.ts"))};`,
   `export { faultTime, buildFailureHints, parseCrash } from ${JSON.stringify(path.join(root, "src/domains/diagnose.ts"))};`,
-  `export { chordCodes, treeSignature, subtree, deviceText } from ${JSON.stringify(path.join(root, "src/domains/ui.ts"))};`,
+  `export { scrollGesture, chordCodes, treeSignature, subtree, deviceText } from ${JSON.stringify(path.join(root, "src/domains/ui.ts"))};`,
   `export { createArgs, agreementsAccepted, emulatorFailure } from ${JSON.stringify(path.join(root, "src/domains/emulator.ts"))};`,
   `export { labelCloudSources, packCloudSections, AUTHORITY } from ${JSON.stringify(path.join(root, "src/domains/knowledge.ts"))};`,
   `export { applicableSyscap, deviceCaps } from ${JSON.stringify(path.join(root, "src/domains/syscap.ts"))};`,
   `export { parseDuration } from ${JSON.stringify(path.join(root, "src/domains/device.ts"))};`,
-  `export { findProjectRoot, selectRunModules, BuildOutputParser } from ${JSON.stringify(path.join(root, "src/domains/project.ts"))};`,
+  `export { projectRoots, findProjectRoot, selectRunModules, BuildOutputParser } from ${JSON.stringify(path.join(root, "src/domains/project.ts"))};`,
   `export { readonlySqlAllowed, readonlyShellArgs, appDatabasePath } from ${JSON.stringify(path.join(root, "src/domains/device.ts"))};`,
 ].join("\n"));
 await build({ entryPoints: [entry], outfile: path.join(out, "entry.mjs"), bundle: true, format: "esm", platform: "node", packages: "external", logLevel: "error", nodePaths: [path.join(root, "node_modules")] });
@@ -448,4 +448,30 @@ test("native crash and freeze keep fault-thread and app-frame attribution", () =
   const pf = m.parseCrash(freeze, "appfreeze-com.dream.toollist-20020075-20261002112233.log");
   assert.equal(pc.type, "cppcrash"); assert.equal(pc.kind, "SIGSEGV"); assert.equal(pc.frames.length, 2); assert.ok(pc.app_frames.length >= 1);
   assert.equal(pf.type, "appfreeze"); assert.equal(pf.kind, "THREAD_BLOCK_6S"); assert.ok(pf.app_frames.length >= 1);
+});
+
+test('project root hints are bounded candidates and skip caches without choosing another project', () => {
+  const base = path.join(out, 'multi-root');
+  const put = (relative) => { const dir = path.join(base, relative); fs.mkdirSync(dir, { recursive: true }); fs.writeFileSync(path.join(dir, 'build-profile.json5'), '{}'); fs.mkdirSync(path.join(dir, 'AppScope')); fs.writeFileSync(path.join(dir, 'AppScope/app.json5'), '{}'); return dir; };
+  const first = put('client'), second = put('products/watch');
+  put('node_modules/dependency'); put('.local/backup'); put('build/old');
+  assert.deepEqual(m.projectRoots(base).candidates.sort(), [first, second].sort());
+  assert.deepEqual(m.projectRoots(first).candidates, [first]);
+  const empty = path.join(out, 'no-project'); fs.mkdirSync(empty);
+  assert.deepEqual(m.projectRoots(empty).candidates, []);
+  assert.equal(m.projectRoots(base, 1).candidates.includes(second), false);
+});
+
+test('target scroll gestures stay inside nested bounds and preserve requested direction', () => {
+  const rect = { x1: 100, y1: 200, x2: 500, y2: 800 };
+  for (const direction of ['up', 'down', 'left', 'right']) {
+    const g = m.scrollGesture(rect, direction, 1000);
+    assert.ok(g.x > rect.x1 && g.x < rect.x2 && g.x2 > rect.x1 && g.x2 < rect.x2);
+    assert.ok(g.y > rect.y1 && g.y < rect.y2 && g.y2 > rect.y1 && g.y2 < rect.y2);
+    if (direction === 'up') assert.ok(g.y > g.y2);
+    if (direction === 'down') assert.ok(g.y < g.y2);
+    if (direction === 'left') assert.ok(g.x > g.x2);
+    if (direction === 'right') assert.ok(g.x < g.x2);
+  }
+  assert.throws(() => m.scrollGesture({ x1: 1, x2: 2, y1: 1, y2: 2 }, 'up'), { code: 'UI_NO_BOUNDS' });
 });

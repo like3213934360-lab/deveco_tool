@@ -10,7 +10,7 @@ const root = path.resolve(import.meta.dirname, "../.."), work = fs.mkdtempSync(p
 process.env.DEVECO_STATE_DIR = work;
 const fixture = globalThis.__devecoLayoutFixture = { instances: [{ name: "deveco_layout_foldable", running: true }], mutations: [], rejectFold: false };
 const bundle = path.join(root, "node_modules/.cache/deveco-layout-harness.mjs");
-await build({ stdin: { contents: `export { uiTool } from ${JSON.stringify(path.join(root, "src/tools/core.ts"))}; export { layoutCheck } from ${JSON.stringify(path.join(root, "src/domains/layout.ts"))};`, resolveDir: root }, outfile: bundle,
+await build({ stdin: { contents: `export { uiTool } from ${JSON.stringify(path.join(root, "src/tools/core.ts"))}; export { layoutCheck, withOwnedEmulator } from ${JSON.stringify(path.join(root, "src/domains/layout.ts"))};`, resolveDir: root }, outfile: bundle,
   bundle: true, platform: "node", format: "esm", packages: "external", logLevel: "error", plugins: [{ name: "sdk", setup(b) {
     b.onResolve({ filter: /(?:device|project|emulator|ui|jobs)\.js$/ }, (a) => {
       if (/tools\/core\.ts$/.test(a.importer.replaceAll("\\", "/")) && /core\/jobs\.js$/.test(a.path)) return { path: "jobs", namespace: "fixture" };
@@ -23,7 +23,7 @@ await build({ stdin: { contents: `export { uiTool } from ${JSON.stringify(path.j
       project: `export function inspectProject(root){return {root,bundleName:'com.test.layout',modules:[{name:'entry',type:'entry',deviceTypes:['phone']}]}};export function mainAbility(){return {ability:'EntryAbility',module:'entry'}};export async function buildOutputs(_p,task){return task==='assembleHap'?[{path:'/fake.hap'}]:[]};`,
       emulator: `const f=()=>globalThis.__devecoLayoutFixture;export async function images(){return {images:[{downloaded:true,device_type:'foldable',os_version:'HarmonyOS 7.0.0(26)'}]}};export async function listEmulators(){return f().instances};
         export async function createEmulator(input){f().mutations.push(['create',input]);f().instances.push({name:input.name,running:false})};export async function startEmulator(name,options){f().mutations.push(['start',name,options]);f().instances.find(e=>e.name===name).running=true;return {target:'owned-target'}};
-        export async function stopEmulator(name,signal){if(signal.aborted)throw new Error('cleanup signal aborted');f().mutations.push(['stop',name]);f().instances.find(e=>e.name===name).running=false};export async function deleteEmulator(name){f().mutations.push(['delete',name]);f().instances=f().instances.filter(e=>e.name!==name)};
+        export async function stopEmulator(name,signal){if(signal.aborted)throw new Error('cleanup signal aborted');f().mutations.push(['stop',name]);f().instances.find(e=>e.name===name).running=false};export async function deleteEmulator(name){f().mutations.push(['delete',name]);if(f().rejectDelete)throw new Error('delete blocked');f().instances=f().instances.filter(e=>e.name!==name)};
         export async function scenario(_name,s){if(f().rejectFold&&s.state==='close')throw new Error('unsupported fold')};`,
       device: `export async function install(){};export async function forceStop(){};export async function launch(){};export async function deviceInfo(){return {model:'fixture',screen:{width:1000,height:2000}}};export async function shell(){return {stdout:'VirtualPixelRatio: 3'}};`,
       ui: `export async function dumpTree(){return [{i:0,parent:null,type:'Text',text:'app',bundle:'com.test.layout',rect:{x1:0,y1:0,x2:300,y2:100}}]};export async function acceptAgreements(_t,_s,nodes){return {nodes,accepted:[]}};export function select(){return []};export function center(){return {x:1,y:1}};export async function act(){};export function invalidate(){};export async function listWindows(){return [{type:1,visible:true,name:'app',bounds:[0,0,1000,2000]}]};export async function saveTree(){return {artifact_id:'fixture'}};export async function screenshot(){return undefined};`,
@@ -47,4 +47,29 @@ test("forms use only their owned instance and an unapplied fold cannot pass", as
   assert.ok(fixture.mutations.every((entry) => (typeof entry[1] === "string" ? entry[1] : entry[1].name) !== "deveco_layout_foldable"));
   const created = fixture.mutations.find((e) => e[0] === "create")[1];
   assert.ok(created.instance_path.startsWith(work)); assert.equal(fs.existsSync(created.instance_path), false);
+});
+
+test('disposable targets require the installed image and clean after failed/cancelled work', async () => {
+  const input = { owner: 'j_card_owned', purpose: 'card_0', device_type: 'foldable', os_version: 'HarmonyOS 7.0.0(26)' };
+  let count = fixture.mutations.length;
+  await assert.rejects(m.withOwnedEmulator({ ...input, os_version: 'unavailable' }, new AbortController().signal, async () => {}), { code: 'CAPABILITY_UNAVAILABLE' });
+  assert.equal(fixture.mutations.length, count);
+  for (const cancel of [false, true]) {
+    const controller = new AbortController();
+    await assert.rejects(m.withOwnedEmulator(input, controller.signal, async ({ target }) => {
+      assert.equal(target, 'owned-target');
+      if (cancel) controller.abort(new Error('cancelled'));
+      else throw new Error('application failed');
+    }), cancel ? /cancelled/ : /application failed/);
+    assert.deepEqual(fixture.instances, [{ name: 'deveco_layout_foldable', running: true }]);
+    assert.equal(fs.existsSync(path.join(work, 'emulators', input.owner)), false);
+  }
+  fixture.rejectDelete = true;
+  count = fixture.mutations.length;
+  await assert.rejects(m.withOwnedEmulator(input, new AbortController().signal, async () => { throw new Error('primary failure'); }), e =>
+    e.code === 'EMULATOR_CLEANUP_FAILED' && e.details.original.message === 'primary failure' && e.details.cleanup.message === 'delete blocked');
+  assert.equal(fixture.mutations.slice(count).filter((v) => v[0] === 'delete').length, 1);
+  assert.equal(fs.existsSync(path.join(work, 'emulators', input.owner, input.purpose, '.owner')), true);
+  fixture.rejectDelete = false;
+  fixture.instances = [{ name: 'deveco_layout_foldable', running: true }];
 });

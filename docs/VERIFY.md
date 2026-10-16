@@ -21,7 +21,7 @@ deveco-mcp verify --project /absolute/project --plan verify.json --target SERIAL
 
 CLI 仅 passed 返回 0，包括基线录制在内的其他结果均非零。MCP 用 `project {action:"verify",project,plan,output,target,wait:0}`，持续 `job wait` 到终态，再读 verdict。`output` 必须是新目录，位于工程源码外或 `.arkpilot/` 下，并在 `DEVECO_STATE_DIR` 外；不会覆盖原报告。JSON、JUnit、离线 HTML、原始 artifact 和 SHA-256 manifest 不参与短期 retention。请自行保管证据目录，其中可含工程路径、设备标识、截图和应用日志。
 
-计划支持 build、deploy、test、flow、assert、visual、layout、perf、crash、diagnostics、launch、command、entries。options 使用对应现有动作的参数；不能覆盖 project/product/target/action/request_key/wait。所有工具参数在准备动作前检查。不开放循环、表达式或任意工具名。未运行项目如实列出；source-integrity 检查包括未提交/未跟踪源码，不自动 `git reset` 或覆盖用户文件。
+计划支持 build、deploy、test、flow、assert、visual、layout、perf、crash、diagnostics、launch、command、entries、form。options 使用对应现有动作的参数；不能覆盖 project/product/target/action/request_key/wait。所有工具参数在准备动作前检查。不开放循环、表达式或任意工具名。未运行项目如实列出；source-integrity 检查包括未提交/未跟踪源码，不自动 `git reset` 或覆盖用户文件。
 
 ## 测试、变更范围与基线
 
@@ -30,7 +30,8 @@ CLI 仅 passed 返回 0，包括基线录制在内的其他结果均非零。MCP
 - `--changed-only --base <ref>` 按每项 affects 的相对文件/目录前缀选检查，`*` 覆盖全工程。未覆盖变更阻塞；结果 scope 为 changed-only。共享配置/依赖应映射到必选的全量检查；没有映射不会被跳过。这是工程声明的影响映射，不声称自动证明依赖闭包。
 - 每项可设 baseline、tolerance_percent、max、repeats。数值取重复样本中位数；原样本完整保留。build 提供 build_ms、warnings、package_bytes；diagnostics 比较完整诊断集合；perf 提供 p95_ms、jank_rate、fps；launch 提供 launch_check_ms；command 可返回数值 metrics（默认越低越好）。max 是上界，不适合最低 FPS，应使用 higher 方向的 FPS 基线。
 - `--baseline-mode record` 显式写 `.arkpilot/quality-baselines/`；结果 recorded，不能冒充回归通过。compare 是默认；缺失或 SDK/设备/方法/场景不匹配的基线阻塞。质量基线记录和比较没有自动容差重试；review 后由项目设容差。构建请显式 clean；性能和 launch 建议 repeats≥3，并固定工程、设备、电源、UI 起点及温控条件。
-- launch_check_ms 是 force-stop 后启动及约 3 秒存活/崩溃/空白屏检查的端到端耗时，**不是**系统首帧时间。perf 的 >200ms 间隔保留为 excluded_intervals，不能区分空闲与长卡顿时 verifier 给 inconclusive。原始 hitrace 不提供未经证实的 ArkTS 栈映射。
+- perf 与 launch 若既未指定 baseline，也没有任何 max 阈值，返回 inconclusive；测得数值本身不是质量通过条件。
+- launch_check_ms 是 force-stop 后启动及约 3 秒存活/崩溃/空白屏检查的端到端耗时，**不是**系统首帧时间。perf 的 >200ms 间隔保留为 excluded_intervals。动作带 selector 时只在唯一匹配区域内滚动，并记录该子树的前后变化及操作窗口；目标未动、丢失、帧时间戳全零或存在无法归因的长空窗时返回 inconclusive。整个窗口的变化也不等于业务更新。原始 hitrace 不提供未经证实的 ArkTS 栈映射。
 - visual 通过 name 引用图像基线；verify 禁止默认创建。sidecar 校验设备、OS/API、工程 SDK、比较方法、context 和图片哈希，旧无元数据基线须重新录制。通过 options.context 声明主题/语言/字体/业务场景；MCP 不会猜测这些设置。完整截图基线与采样进入证据包。
 - layout 在 verify 内默认 48vp、tiny_target 作为失败项；节点数标为 checked_unit=nodes。无法取得真实 density 时为 inconclusive。独立 `ui layout` 保留原先 advisory tiny-target 默认，可显式 strict_targets/min_target_vp。
 - crash 必须给 since_minutes；严格读取目录或 Faultlogger 的有效清单并验证设备时钟，读取失败不能被解释为“没有崩溃”。
@@ -43,7 +44,18 @@ CLI 仅 passed 返回 0，包括基线录制在内的其他结果均非零。MCP
 
 项目可显式声明 prepare/cleanup 和 command 检查，命令为 `{file,args,cwd,timeout_ms}`，不接受 shell 字符串；cwd 限工程内真实路径。prepare 必须配 cleanup。只在 `allow_commands:true`/`--allow-commands` 时运行；这是执行项目代码的明确授权，**不是安全沙箱**。命令需要输出 JSON `{verdict:"passed|failed|blocked|inconclusive",...}`，退出 0 不足以通过。prepare 失败或取消后仍用独立限时信号清理；清理失败验收失败。HTTP mock、错误响应、feature flag、测试账号由工程测试接口实现；不注入任意应用内存或安装全局代理。
 
-`project entries` 列出声明的 Ability、Extension、skills/URI、静态快捷方式、form 尺寸和 formConfigAbility 及来源候选行。Extension 不伪装成可启动 UIAbility。`run launch want={uri,action,parameters}` 支持字符串/int32/boolean；参数整体引用。卡片配置检查不代替宿主添加、刷新、交互和移除；正式夹具与桌面用例见 test/README.md。
+`project entries` 列出声明的 Ability、Extension、skills/URI、静态快捷方式、form 尺寸和 formConfigAbility 及来源候选行。图谱沿 Extension 的 `ohos.extension.form` 和 Ability 的 `ohos.ability.shortcuts` metadata 解析 profile，只返回引用的配置及资源变体候选。缺失引用单独报告；未引用的配置不作为入口。`module` 是构建模块名，`module_name` 是安装模块名。`exported` 未填按 SDK 默认 false 处理，私有 Ability 不生成外部启动句柄；公开 Ability 不因缺少 skills 被排除。所有句柄均未运行验证，main 不保证启动成功。Extension 不伪装成可启动 UIAbility。`run launch want={uri,action,parameters}` 支持字符串/int32/boolean；参数整体引用。卡片配置检查不代替宿主添加、刷新、交互和移除；正式夹具与桌面用例见 test/README.md。
+
+`ui action=form` 复用系统桌面的可识别控件；不提供独立卡片渲染器，也不宣称锁屏/负一屏可用。
+
+- `form_action=inventory` 返回实例字符串 ID、bundle、所在页、边界和可见文本；默认最多 12 页，可设 max_pages（1–30），complete=false 表示不能确认清点完整。像素边界不换算成声明尺寸。
+- `catalog` 需要 project（可选 product）或 bundle，返回系统卡片中心的 form_index。预览序号不是声明标识。`exercise` 添加指定预览，按前后差集定位唯一新实例，关联显式 formId 的日志并清理。应用日志仅作为原始证据，不按专有错误码推断业务根因；声明匹配缺字段或资源变体不明确时保留候选。
+- `form_size="2*4"` 只操作宿主明确暴露的尺寸控件，找不到就报不支持，不换用别的尺寸。实际尺寸证据与请求参数分开返回。
+- `then_flow` 可运行工程定义的交互、配置页和内容断言；flow 必须 start.mode=attach、无必填变量，且至少包含一个显式 visible/hidden 断言。MCP 不内置这些业务预期。verify 的 form check 使用同一 exercise，只有新增实例、旧实例保护、清理和工程断言都有证据时该检查才能 passed；未提供 then_flow 为 inconclusive。这个判定只覆盖该工程声明的断言。
+- `matrix` 接受 form_cases，每项显式给 target 或 emulator={device_type,os_version}（二选一）以及 form_index，可选 form_size。真机/已有模拟器仅使用所选目标；一次性模拟器要求 project，并复用构建部署流程，仅使用已安装的匹配镜像，不下载或自动接受许可。按 case 查看 status/result/error；编排 job 完成不代表全部 case 通过。
+- 清理只处理本次新增卡片或创建的模拟器，不删除已有实例。失败/取消使用独立限时信号清理一次，失败保留错误和定位信息，不无限重试。进程中断产生的不确定副作用不能强制重放。资源占用返回 RESOURCE_BUSY。
+
+`device log` 先按查询条件过滤，再应用返回条数限制；普通、时间窗口与 follow 均有扫描上限并返回 scan。follow 游标包含同毫秒内的序号，消费未匹配行以避免重复轮询；它只覆盖仍存在于设备日志缓冲区且在扫描范围内的记录，possibly_truncated=true 时不能声称完整。
 
 `code origin key|text|file,line` 给 literal-id/text 静态候选与 Git changed/blame 信息，明确 runtime_identity_verified=false。`knowledge search/read project/product` 保留编译、目标、最低兼容 SDK 的区别；知识包缺乏逐段 since/deprecated 元数据时报告 unknown，不按最低兼容 API 丢弃文档。精确签名仍以工程 SDK 声明为准。
 

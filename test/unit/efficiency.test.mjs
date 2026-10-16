@@ -110,6 +110,7 @@ test("stepAction: selector point wins; missing inputs are reported by op", () =>
   assert.deepEqual(m.stepAction({ op: "input", text: "你好" }, { x: 5, y: 6 }), { action: "input", x: 5, y: 6, text: "你好", append: undefined });
   assert.deepEqual(m.stepAction({ op: "key", keys: ["ctrl", "a"] }), { action: "keys", keys: ["ctrl", "a"] });
   assert.deepEqual(m.stepAction({ op: "scroll", direction: "down" }), { action: "scroll", direction: "down", speed: undefined });
+  assert.deepEqual(m.stepAction({ op: "scroll", direction: "up", selector: { key: "nested" } }), { action: "scroll", direction: "up", speed: undefined, selector: { key: "nested" } });
   assert.throws(() => m.stepAction({ op: "click" }), /click needs selector or x,y/);
   assert.throws(() => m.stepAction({ op: "swipe", x: 1, y: 2 }), /x,y,x2,y2/);
 });

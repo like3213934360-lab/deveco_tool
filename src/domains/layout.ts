@@ -1,4 +1,4 @@
-import { invariant } from "../core/errors.js";
+import { errorResult, invariant, ToolError } from "../core/errors.js";
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
@@ -107,30 +107,54 @@ async function newestImage(deviceType: string, signal: AbortSignal) {
   return list.sort((a, b) => api(b.os_version) - api(a.os_version))[0]?.os_version;
 }
 
+/** One owned instance, shared by layout and card matrices. Never touches a user's instance. */
+export async function withOwnedEmulator<T>(input: { owner: string; purpose: string; device_type: string; os_version: string; keep_running?: boolean },
+  signal: AbortSignal, work: (instance: { name: string; target: string; instancePath: string }) => Promise<T>): Promise<T> {
+  const emu = await import("./emulator.js");
+  const available = (await emu.images(input.device_type, signal)).images;
+  invariant(available.some((i) => i.downloaded && i.device_type?.toLowerCase() === input.device_type && i.os_version === input.os_version),
+    "CAPABILITY_UNAVAILABLE", "No installed image matches the explicit emulator constraints", { device_type: input.device_type, os_version: input.os_version });
+  const name = `deveco_${input.purpose}_${input.owner}`.replace(/[^\w]/g, "_").slice(0, 60);
+  const instancePath = path.join(stateDir(), "emulators", input.owner, input.purpose), marker = path.join(instancePath, ".owner");
+  invariant(!fs.existsSync(instancePath), "CONFLICT", "Owned instance directory already exists; reconcile it before another attempt", { instancePath });
+  fs.mkdirSync(instancePath, { recursive: true }); atomicWrite(marker, input.owner, 0o600);
+  let completed = false, original: unknown;
+  try {
+    await emu.createEmulator({ name, device_type: input.device_type, os_version: input.os_version, instance_path: instancePath, auto_accept_license: false }, signal);
+    const started = await emu.startEmulator(name, { window: false, instance_path: instancePath, auto_accept_license: false }, signal);
+    invariant(started.target, "EVIDENCE_MISSING", "Owned emulator started without a target receipt");
+    const result = await work({ name, target: started.target, instancePath });
+    signal.throwIfAborted(); completed = true; return result;
+  } catch (error) { original = error; throw error; }
+  finally {
+    if (!input.keep_running || !completed) {
+      const cleanup = AbortSignal.timeout(90000);
+      try {
+        invariant(fs.readFileSync(marker, "utf8") === input.owner, "CONFLICT", "Owned emulator marker changed");
+        if ((await emu.listEmulators(cleanup, false, instancePath)).some((e) => e.name === name)) {
+          await emu.stopEmulator(name, cleanup, instancePath);
+          await emu.deleteEmulator(name, cleanup, instancePath);
+        }
+        fs.rmSync(instancePath, { recursive: true });
+        const parent = path.dirname(instancePath);
+        if (!fs.readdirSync(parent).length) fs.rmdirSync(parent);
+      } catch (error) {
+        throw new ToolError("EMULATOR_CLEANUP_FAILED", "Owned emulator cleanup failed; it is not retried automatically", { instancePath, name,
+          ...(original ? { original: errorResult(original) } : {}), cleanup: errorResult(error) });
+      }
+    }
+  }
+}
+
 /** One form: create/reuse emulator, boot, install, launch, (flow), then check each fold state. */
 async function checkForm(form: string, input: LayoutInput, packages: string[], app: { bundle: string; ability: string; module: string }, signal: AbortSignal, log: Log, owner: string) {
   const spec = LAYOUT_FORMS[form]!;
   const emu = await import("./emulator.js");
   const device = await import("./device.js");
   const { dumpTree } = await import("./ui.js");
-  // Emulator names allow letters, digits, spaces, _ and + only (verified: "-" is rejected).
-  const name = `deveco_layout_${form}_${owner.replace(/[^\w]/g, "_")}`;
-  const instancePath = path.join(stateDir(), "layout", owner, form);
-  const marker = path.join(instancePath, ".owner");
-  if (fs.existsSync(instancePath)) invariant(fs.existsSync(marker) && fs.readFileSync(marker, "utf8") === owner, "CONFLICT", "Layout instance ownership cannot be proven");
-  else { fs.mkdirSync(instancePath, { recursive: true }); atomicWrite(marker, owner, 0o600); }
-  const existing = (await emu.listEmulators(signal, false, instancePath)).find((e) => e.name === name);
-  let completed = false;
-  try {
-    if (!existing) {
-      const os = await newestImage(spec.device_type, signal);
-      if (!os) return { form, skipped: `no downloaded ${spec.device_type} image (emulator action=install_image device_type=${spec.device_type})` };
-      log(`${form}: creating emulator ${name} (${os})`);
-      await emu.createEmulator({ name, device_type: spec.device_type, os_version: os, instance_path: instancePath }, signal);
-    }
-    log(`${form}: starting`);
-    const started = await emu.startEmulator(name, { window: false, instance_path: instancePath }, signal);
-    const target = started.target!;
+  const osVersion = await newestImage(spec.device_type, signal);
+  if (!osVersion) return { form, skipped: `no downloaded ${spec.device_type} image` };
+  return withOwnedEmulator({ owner, purpose: form, device_type: spec.device_type, os_version: osVersion, keep_running: input.keep_running }, signal, async ({ name, target, instancePath }) => {
     log(`${form}: installing`);
     await device.install(target, packages, signal);
     await device.forceStop(target, app.bundle, signal).catch(() => {});
@@ -161,19 +185,8 @@ async function checkForm(form: string, input: LayoutInput, packages: string[], a
       const shot = await (await import("./ui.js")).screenshot(target, { format: "jpeg", width: 720 }, signal).catch(() => undefined);
       results.push({ state, window: `${size.w}x${size.h}`, ...check, ...(shot ? { screenshot: shot.artifact_id } : {}), ...(tree ? { tree: tree.artifact_id } : {}) });
     }
-    completed = true;
     return { form, device: info.model ?? name, results, ...(input.keep_running ? { emulator: name, instance_path: instancePath, retained: true } : {}) };
-  } finally {
-    if (!input.keep_running || !completed) {
-      // A cancelled request still needs bounded cleanup of its own instance.
-      const cleanup = AbortSignal.timeout(90000);
-      if ((await emu.listEmulators(cleanup, false, instancePath)).some((e) => e.name === name)) {
-        await emu.stopEmulator(name, cleanup, instancePath);
-        await emu.deleteEmulator(name, cleanup, instancePath);
-      }
-      fs.rmSync(instancePath, { recursive: true, force: true });
-    }
-  }
+  });
 }
 
 /**

@@ -270,7 +270,13 @@ export async function hilog(target: string, options: LogOptions, signal?: AbortS
     filters.push("-P", String(pid));
   }
   // Drop hilog's own permission noise (the query process logs its own PARAM reads).
-  const read = async (tail: number) => (await shell(target, [`hilog -x ${filters.join(" ")} | grep -v 'C02C02/PARAM' | tail -n ${tail}`], signal, 30000)).stdout;
+  const scanLimit = options.grep || options.from || options.to || options.follow ? 50000 : lines;
+  let transportTruncated = false;
+  const read = async (tail: number) => {
+    const result = await shell(target, [`hilog -x ${filters.join(" ")} | grep -v 'C02C02/PARAM' | tail -n ${tail}`], signal, 30000);
+    transportTruncated ||= result.truncated === true;
+    return result.stdout;
+  };
 
   // Time window: filter by line timestamps; scan a deeper tail so the window is covered.
   let lower: string | undefined, upper: string | undefined;
@@ -283,18 +289,19 @@ export async function hilog(target: string, options: LogOptions, signal?: AbortS
   if (options.follow) {
     // Stateless follow: the cursor is the last seen timestamp; poll the ring buffer tail briefly.
     const since = options.cursor ?? formatStamp((await deviceNow(target, signal)) - 1000);
-    invariant(/^\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}$/.test(since), "INVALID_INPUT", "cursor must come from a previous follow response");
+    invariant(/^\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}(?:#\d+)?$/.test(since), "INVALID_INPUT", "cursor must come from a previous follow response");
     const deadline = Date.now() + Math.min(options.wait_ms ?? 5000, 30000);
-    let fresh: string[] = [];
+    let raw = "", selection: ReturnType<typeof selectLogLines>;
     do {
-      fresh = (await read(Math.max(lines, 2000))).split(/\r?\n/).filter((l) => { const s = stampOf(l); return !!s && s > since; });
-      if (fresh.length) break;
-      signal?.throwIfAborted();
+      raw = await read(scanLimit + 1);
+      selection = selectLogLines(raw, { limit: lines, grep: options.grep, lower, upper, cursor: since });
+      if (selection.scanned_new || Date.now() >= deadline) break;
       await new Promise((r) => setTimeout(r, 700));
-    } while (Date.now() < deadline);
-    const summary = await summarizeLog(fresh.slice(-lines).join("\n"), options.grep);
-    const last = fresh.map(stampOf).filter(Boolean).at(-1) ?? since;
-    return { ...summary, cursor: last, next: "Call again with follow=true and this cursor for newer lines" };
+      signal?.throwIfAborted();
+    } while (true);
+    return { ...(await summarizeLog(selection.text)), cursor: selection.cursor ?? since,
+      scan: { limit: scanLimit, possibly_truncated: transportTruncated || raw.split(/\r?\n/).filter(Boolean).length > scanLimit, has_more: selection.has_more },
+      next: "Call again with follow=true and this cursor; the cursor tracks consumed lines, including non-matches" };
   }
   let raw: string;
   if (lower) {
@@ -308,13 +315,35 @@ export async function hilog(target: string, options: LogOptions, signal?: AbortS
     if (minutes <= 180) {
       const prefixes = Array.from({ length: minutes }, (_, i) => formatStamp(start + i * 60000).slice(0, 11));
       const pattern = prefixes.map((p) => `-e '${p}'`).join(" ");
-      raw = (await shell(target, [`hilog -x ${filters.join(" ")} | grep -F ${pattern} | grep -v 'C02C02/PARAM' | tail -n ${Math.max(lines * 20, 20000)}`], signal, 60000)).stdout;
-    } else raw = await read(50000);
-  } else raw = await read(lines);
-  const windowed = lower || upper
-    ? raw.split(/\r?\n/).filter((l) => { const s = stampOf(l); return !!s && (!lower || s >= lower) && (!upper || s <= upper); }).slice(-lines).join("\n")
-    : raw;
-  return { ...(await summarizeLog(windowed, options.grep)), ...(lower || upper ? { window: { from: lower ?? null, to: upper ?? null } } : {}) };
+      const result = await shell(target, [`hilog -x ${filters.join(" ")} | grep -F ${pattern} | grep -v 'C02C02/PARAM' | tail -n ${scanLimit + 1}`], signal, 60000);
+      raw = result.stdout;
+      transportTruncated ||= result.truncated === true;
+    } else raw = await read(scanLimit + 1);
+  } else raw = await read(scanLimit + 1);
+  const selection = selectLogLines(raw, { limit: lines, grep: options.grep, lower, upper });
+  return { ...(await summarizeLog(selection.text)),
+    scan: { limit: scanLimit, possibly_truncated: transportTruncated || raw.split(/\r?\n/).filter(Boolean).length > scanLimit, has_more: selection.has_more },
+    ...(lower || upper ? { window: { from: lower ?? null, to: upper ?? null } } : {}) };
+}
+
+/** Filter before limiting. Follow pages consume matching lines chronologically, including timestamp ties. */
+export function selectLogLines(raw: string, options: { limit: number; grep?: string; lower?: string; upper?: string; cursor?: string }) {
+  let pattern: RegExp | undefined;
+  if (options.grep) {
+    try { pattern = new RegExp(options.grep, "i"); }
+    catch { pattern = new RegExp(options.grep.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i"); }
+  }
+  const [since, consumed] = (options.cursor ?? "").split("#"), counts = new Map<string, number>();
+  const records = raw.split(/\r?\n/).filter(Boolean).map((line) => {
+    const stamp = stampOf(line), n = (counts.get(stamp ?? "") ?? 0) + 1;
+    if (stamp) counts.set(stamp, n);
+    return { line, stamp, n, cursor: stamp ? `${stamp}#${n}` : undefined };
+  }).filter((r) => !options.cursor || r.stamp && (r.stamp > since! || r.stamp === since && consumed !== undefined && r.n > Number(consumed)));
+  const matched = records.filter((r) => (!options.lower || r.stamp && r.stamp >= options.lower) && (!options.upper || r.stamp && r.stamp <= options.upper) && (!pattern || pattern.test(r.line)));
+  const picked = options.cursor ? matched.slice(0, options.limit) : matched.slice(-options.limit);
+  const hasMore = matched.length > picked.length;
+  return { text: picked.map((r) => r.line).join("\n"), has_more: hasMore, scanned_new: records.length,
+    cursor: (hasMore ? picked.at(-1) : records.at(-1))?.cursor ?? options.cursor };
 }
 
 async function summarizeLog(stdout: string, grep?: string) {

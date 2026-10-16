@@ -17,7 +17,7 @@ export const planSchema = z.object({
   prepare: commandSchema.optional(), cleanup: commandSchema.optional(),
   checks: z.array(z.object({
     id: z.string().regex(/^[\w.-]{1,80}$/),
-    type: z.enum(["build", "deploy", "test", "flow", "assert", "visual", "perf", "layout", "crash", "diagnostics", "launch", "command", "entries"]),
+    type: z.enum(["build", "deploy", "test", "flow", "assert", "visual", "perf", "layout", "crash", "diagnostics", "launch", "command", "entries", "form"]),
     required: z.boolean().default(true), options: z.record(z.string(), z.unknown()).default({}),
     affects: z.array(z.string().min(1)).default([]),
     baseline: z.string().regex(/^[\w.-]{1,80}$/).optional(),
@@ -37,8 +37,8 @@ export const planSchema = z.object({
 type Plan = z.infer<typeof planSchema>;
 type Check = Plan["checks"][number];
 export interface VerifyInput { project: string; product?: string; plan: string; output: string; target?: string; changed_only?: boolean; base?: string; baseline_mode?: "compare" | "record"; allow_commands?: boolean }
-const destinations: Record<string, [string, string]> = { build: ["project", "build"], deploy: ["run", "deploy"], test: ["project", "test"], flow: ["ui_flow", "replay"], assert: ["ui", "assert"], visual: ["ui", "visual"], perf: ["ui", "perf"], layout: ["ui", "layout"], crash: ["diagnose", "crash"], diagnostics: ["code", "check"], launch: ["run", "launch"], entries: ["project", "entries"] };
-const deviceTypes = new Set(["deploy", "flow", "assert", "visual", "perf", "layout", "crash", "launch"]);
+const destinations: Record<string, [string, string]> = { build: ["project", "build"], deploy: ["run", "deploy"], test: ["project", "test"], flow: ["ui_flow", "replay"], assert: ["ui", "assert"], visual: ["ui", "visual"], perf: ["ui", "perf"], layout: ["ui", "layout"], crash: ["diagnose", "crash"], diagnostics: ["code", "check"], launch: ["run", "launch"], entries: ["project", "entries"], form: ["ui", "form"] };
+const deviceTypes = new Set(["deploy", "flow", "assert", "visual", "perf", "layout", "crash", "launch", "form"]);
 export function readPlan(input: VerifyInput) {
   const file = path.resolve(input.project, input.plan);
   const raw = fs.readFileSync(file, "utf8");
@@ -60,8 +60,8 @@ function callInput(check: Check, input: VerifyInput, bundle: string | undefined)
   const [tool, action] = destinations[check.type]!;
   invariant(!["project", "target", "product", "action", "request_key", "wait"].some((k) => k in check.options), "INVALID_INPUT", "Plan options cannot override execution identity", { check: check.id });
   const args: Record<string, unknown> = { ...check.options, action };
-  if (["project", "run", "code", "ui_flow", "diagnose"].includes(tool) || ["visual", "layout"].includes(check.type)) args.project = input.project;
-  if (["project", "run"].includes(tool) && input.product) args.product = input.product;
+  if (["project", "run", "code", "ui_flow", "diagnose"].includes(tool) || ["visual", "layout", "form"].includes(check.type)) args.project = input.project;
+  if ((["project", "run"].includes(tool) || check.type === "form") && input.product) args.product = input.product;
   if (deviceTypes.has(check.type) || (check.type === "test" && check.options.kind === "instrument")) args.target = input.target;
   if (["perf", "layout", "crash"].includes(check.type)) args.bundle ??= bundle;
   if (check.type === "visual") { args.require_baseline = input.baseline_mode !== "record"; args.update = input.baseline_mode === "record"; }
@@ -70,6 +70,10 @@ function callInput(check: Check, input: VerifyInput, bundle: string | undefined)
   if (check.type === "crash") invariant(args.since_minutes && !args.log && !args.name, "INVALID_INPUT", "Crash checks need a since_minutes window, not pasted logs or a selected report");
   if (check.type === "layout") { args.strict_targets ??= true; args.min_target_vp ??= 48; }
   if (check.type === "layout") invariant(!args.forms, "INVALID_INPUT", "Use separate plans for emulator form-factor jobs; verify owns one explicitly resolved target");
+  if (check.type === "form") {
+    invariant((!args.form_action || args.form_action === "exercise") && !args.form_cases, "INVALID_INPUT", "Form checks exercise one preview on the plan's selected device");
+    args.form_action = "exercise";
+  }
   return { tool, args };
 }
 async function dispatch(tool: string, args: Record<string, unknown>, signal: AbortSignal): Promise<any> {
@@ -110,15 +114,17 @@ async function command(cmd: z.infer<typeof commandSchema>, root: string, signal:
     throw new ToolError("COMMAND_FAILED", "Project command did not produce usable evidence", { error: errorResult(error), log_artifact: artifact?.artifact_id });
   }
 }
-function judge(type: string, result: any): Verdict {
+export function judge(type: string, result: any): Verdict {
   if (type === "test" || type === "command") return result.verdict;
   if (type === "build") return result.success === true ? "passed" : "failed";
   if (type === "deploy") return result.flow?.passed === false || result.crashed || result.launch?.crashed || result.launch?.started === false || result.launch?.smoke === "FAIL_BLANK" ? "failed" : "passed";
   if (type === "launch") return result.started === true && result.smoke === "PASS" ? "passed" : "failed";
   if (type === "entries") return result.issues?.length ? "failed" : result.entries?.length ? "passed" : "inconclusive";
+  if (type === "form") return result.attachment_verified !== true || result.cleanup?.removed !== true || result.cleanup?.preexisting_preserved !== true || result.project_assertions?.passed === false ? "failed"
+    : result.project_assertions?.passed === true ? "passed" : "inconclusive";
   if (type === "diagnostics") return result.errors ? "failed" : "passed";
   if (type === "visual") return ["created", "updated"].includes(result.baseline) ? "recorded" : result.same === true && !result.global_shift ? "passed" : "failed";
-  if (type === "perf") return result.source !== "composer" || result.excluded_intervals?.length ? "inconclusive" : "passed";
+  if (type === "perf") return result.source !== "composer" || result.excluded_intervals?.length || result.activity_verified !== true ? "inconclusive" : "passed";
   if (type === "crash") return result.reports?.length ? "failed" : "passed";
   if (type === "layout" && result.density_source === "assumed") return "inconclusive";
   return result.passed === true ? "passed" : "failed";

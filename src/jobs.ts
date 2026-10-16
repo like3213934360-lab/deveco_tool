@@ -11,6 +11,94 @@ async function projectOf(input: { project: string; product?: string; modules?: s
 
 /* All long-running workflows. Effect steps (install) are journaled; others are safe to re-run. */
 
+const formDomain = () => import("./domains/forms.js");
+type FormJobInput = import("./domains/forms.js").FormInput & { form_action?: string; _form_cleanup_attempted?: boolean };
+defineJob<FormJobInput>({
+  kind: "form_inventory",
+  steps: [{ id: "inspect", run: async (ctx) => ctx.input.form_action === "catalog"
+    ? (await formDomain()).catalogForms(ctx.input, ctx.signal) : (await formDomain()).inventoryForms(ctx.input, ctx.signal) }],
+  summarize: (o) => o.inspect,
+});
+defineJob<FormJobInput>({
+  kind: "form_check",
+  steps: [
+    { id: "reachability", run: async (ctx) => (await formDomain()).formReachability(ctx.input, ctx.signal) },
+    { id: "before", run: async (ctx) => (await formDomain()).inventoryForms(ctx.input, ctx.signal) },
+    { id: "attach", effect: true, replay: false, run: async (ctx) => (await formDomain()).attachForm(ctx.input, ctx.outputs.before, ctx.signal) },
+    { id: "inspect", run: async (ctx) => (await formDomain()).inspectForm(ctx.input, ctx.outputs.attach, ctx.signal) },
+    { id: "flow", effect: true, replay: false, when: (ctx) => !!ctx.input.then_flow, run: async (ctx) => {
+      const { replayFlow } = await import("./domains/flows.js");
+      const result = await replayFlow(ctx.input.project!, ctx.input.then_flow!, ctx.input.target, {}, { attach: true }, ctx.signal, ctx.log);
+      invariant(result.passed, "ASSERTION_FAILED", "Project-owned card flow failed", result);
+      return result;
+    } },
+    { id: "cleanup", effect: true, replay: false, run: async (ctx) => {
+      ctx.input._form_cleanup_attempted = true;
+      return (await formDomain()).removeForm(ctx.input, ctx.outputs.attach, AbortSignal.timeout(90000));
+    } },
+  ],
+  onFailure: async (ctx, error) => {
+    if ((error as { code?: string })?.code === "EFFECT_UNCERTAIN") return;
+    if (ctx.outputs.attach && !ctx.outputs.cleanup && !ctx.input._form_cleanup_attempted) {
+      ctx.input._form_cleanup_attempted = true;
+      try { ctx.outputs.cleanup = await (await formDomain()).removeForm(ctx.input, ctx.outputs.attach, AbortSignal.timeout(90000)); }
+      catch (cleanup) {
+        const { ToolError, errorResult } = await import("./core/errors.js");
+        throw new ToolError("FORM_CLEANUP_FAILED", "Card job failed and owned cleanup failed once", { original: errorResult(error), cleanup: errorResult(cleanup), instance: ctx.outputs.attach.instance });
+      }
+    }
+  },
+  summarize: (o) => ({ ...o.inspect, reachability: o.reachability, project_assertions: o.flow, cleanup: o.cleanup, scope: "desktop-attachment-evidence", business_correctness: "not-judged" }),
+});
+defineJob<FormJobInput & { form_cases: { target?: string; emulator?: { device_type: string; os_version: string }; form_index: number; form_size?: string }[] }>({
+  kind: "form_matrix",
+  steps: [{ id: "cases", effect: true, replay: false, async run(ctx) {
+    const { startJob, waitJob, cancelJob, jobStatus } = await import("./core/jobs.js");
+    const { withResources } = await import("./core/operations.js");
+    const { ToolError, errorResult } = await import("./core/errors.js");
+    const cleanupFailed = (code: unknown) => code === "FORM_CLEANUP_FAILED" || code === "EMULATOR_CLEANUP_FAILED";
+    const runChild = async (kind: string, input: Record<string, unknown>, key: string) => {
+      const { job_id } = await startJob(kind, input, key);
+      try {
+        let result;
+        do { result = await waitJob(job_id, 1000); ctx.signal.throwIfAborted(); } while (["queued", "running"].includes(result.status));
+        return { ...result, detail: await jobStatus(job_id, true) };
+      } catch (error) {
+        const cancelled = await cancelJob(job_id);
+        if (cleanupFailed(cancelled.error?.code)) throw new ToolError(cancelled.error.code, cancelled.error.message, { job_id, cleanup: cancelled.error });
+        throw error;
+      }
+    };
+    const results = [];
+    for (const [index, selected] of ctx.input.form_cases.entries()) {
+      ctx.signal.throwIfAborted();
+      const exercise = (target: string) => runChild("form_check", { project: ctx.input.project, product: ctx.input.product, bundle: ctx.input.bundle,
+        max_pages: ctx.input.max_pages, then_flow: ctx.input.then_flow, form_index: selected.form_index, form_size: selected.form_size, target }, `${ctx.job_id}:form:${index}`);
+      try {
+        const result = selected.emulator ? await withResources(["emulator:manager"], "form-matrix-emulator", async () => {
+          const { withOwnedEmulator } = await import("./domains/layout.js");
+          return withOwnedEmulator({ ...selected.emulator!, owner: ctx.job_id, purpose: `card_${index}` }, ctx.signal, async ({ target }) => {
+            const deployed = await runChild("build_run", { project: ctx.input.project, product: ctx.input.product, target, run_mode: "full" }, `${ctx.job_id}:deploy:${index}`);
+            invariant(deployed.status === "succeeded", "BUILD_FAILED", "Disposable card target was not deployed", deployed);
+            return exercise(target);
+          });
+        }) : await exercise(selected.target!);
+        results.push({ ...selected, job_id: result.job_id, status: result.status, result: result.result, error: result.error,
+          reachability: "outputs" in result.detail ? result.detail.outputs.reachability : undefined });
+      } catch (error) {
+        if (ctx.signal.aborted) throw error;
+        results.push({ ...selected, status: "failed", error: errorResult(error) });
+      }
+      if (cleanupFailed(results.at(-1)?.error?.code)) {
+        results.push(...ctx.input.form_cases.slice(index + 1).map((entry) => ({ ...entry, status: "not_run", error: { code: "EVIDENCE_MISSING", message: "An earlier case left uncertain cleanup; reconcile it before continuing" } })));
+        break;
+      }
+    }
+    return results;
+  } }],
+  summarize: (o) => ({ cases: o.cases, scope: "explicit-targets-and-previews", business_correctness: "not-judged" }),
+});
+
 interface BuildInput { project: string; product?: string; modules?: string[]; task?: BuildTask; mode?: string; clean?: boolean; preflight?: boolean }
 
 defineJob<{ project: string; product?: string }>({

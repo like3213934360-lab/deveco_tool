@@ -86,7 +86,7 @@ test("guidance covers discovery, standalone tools, safe continuation and evidenc
     assert.match(byName.code.inputSchema.properties.files.description, /check\/api_scan\/lsp diagnostics:.*check uses files, not file/);
     assert.match(byName.code.inputSchema.properties.file.description, /lint\/lsp: one file/);
     assert.match(byName.device.inputSchema.properties.bundle.description, /log:.*sqlite: debuggable app owning db/);
-    assert.match(byName.ui.description, /wait\/request_key: layout forms only/);
+    assert.match(byName.ui.description, /wait\/request_key: layout forms and form/);
     assert.match(byName.ui.inputSchema.properties.test_id.description, /test_step\/review: stored session target; conflicting target rejected/);
     assert.match(byName.ui.inputSchema.properties.test_id.description, /test_finish\/test_log\/test_export need no device/);
     assert.match(byName.ui.inputSchema.properties.assert.description, /test_step uses top-level visible\/hidden, never assert/);

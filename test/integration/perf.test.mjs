@@ -14,7 +14,7 @@ await build({ entryPoints: [path.join(root, "src/domains/perf.ts")], outfile: en
   b.onResolve({ filter: /(?:ui|device|artifacts)\.js$/ }, (a) => /domains\/perf\.ts$/.test(a.importer.replaceAll("\\", "/")) ? { path: path.basename(a.path, ".js"), namespace: "fixture" } : undefined);
   b.onLoad({ filter: /.*/, namespace: "fixture" }, (a) => ({ contents: {
     artifacts: `export async function saveArtifact(raw){globalThis.__devecoPerf.artifact=JSON.parse(raw);return {artifact_id:'diagnostic'}}`,
-    ui: `export async function act(_t,_g,signal){const f=globalThis.__devecoPerf;signal.throwIfAborted();f.gestures++;if(!f.samplerStarted)throw new Error('sampling did not begin before gestures');if(f.failGesture)throw new Error('gesture failed');if(f.cancel)f.controller.abort()}`,
+    ui: `export async function dumpTree(){return [{frame:globalThis.__devecoPerf.still?0:globalThis.__devecoPerf.gestures}]};export function treeSignature(nodes){return JSON.stringify(nodes)};export async function act(_t,_g,signal){const f=globalThis.__devecoPerf;signal.throwIfAborted();f.gestures++;if(!f.samplerStarted)throw new Error('sampling did not begin before gestures');if(f.failGesture)throw new Error('gesture failed');if(f.cancel)f.controller.abort();return {}}`,
     device: `export async function shell(_t,args,signal){const f=globalThis.__devecoPerf;signal.throwIfAborted();f.commands.push(args);let out={code:0,stdout:'',stderr:'',truncated:false,elapsedMs:1};if(args.includes('-profilerfps')){f.samplerStarted=true;if(f.waitSampler)await new Promise((r,j)=>signal.addEventListener('abort',()=>{f.samplerAborted=true;j(new Error('sampler aborted'))},{once:true}));return {...out,...f.profiler}};if(args[0].includes('fpsClear'))return {...out,...f.clear};if(args[0].includes('composer fps'))return {...out,...f.composer};return {...out,stdout:'order:1 refreshrate=60'}}`,
   }[a.path] }));
 } }] });
@@ -44,6 +44,11 @@ test("valid composer frames preserve frame statistics and verdict", async () => 
   const r = await m.measureScroll('fixture', { repeat: 1 }, reset({ composer: { stdout } }));
   assert.equal(r.source, 'composer'); assert.equal(r.verdict, 'smooth'); assert.equal(r.avg_fps, 60);
   assert.equal(r.frame_ms.p95, 16.67); assert.equal(f.gestures, 2);
+});
+test("valid frame timestamps alone do not prove scrolling occurred", async () => {
+  const stdout = Array.from({ length: 61 }, (_, i) => String(Math.round(1e12 + i * 1e9 / 60))).join('\n');
+  const r = await m.measureScroll('fixture', { repeat: 1 }, reset({ still: true, composer: { stdout } }));
+  assert.equal(r.avg_fps, 60); assert.equal(r.activity_verified, false); assert.equal(r.verdict, 'inconclusive');
 });
 test("permission/exit failures remain explicit and their raw streams are retained", async () => {
   const r = await m.measureScroll('fixture', { repeat: 1 }, reset({ composer: { code: 1, stderr: 'Permission denied' }, profiler: { code: 127, stderr: 'SP_daemon: command not found' } }));

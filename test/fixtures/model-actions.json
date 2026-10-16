@@ -85,5 +85,6 @@
   {"id":"device-databases","goal":"查找 device-1 上 com.example.demo 的真实数据库名","expect":[{"tool":"device","arguments":{"action":"databases","target":"device-1","bundle":"com.example.demo"}}]},
   {"id":"device-fixture","goal":"在已授权的调试数据库里准备独立的夹具表","expect":[{"tool":"device","arguments":{"action":"fixture","target":"device-1","operation":"prepare","bundle":"com.example.demo","module":"entry","db":"app.db","rows":[{"status":"dirty"}]}}]},
   {"id":"device-scenario","goal":"将 device-1 当前窗口退到后台","expect":[{"tool":"device","arguments":{"action":"scenario","target":"device-1","operation":"background"}}]},
-  {"id":"device-trace","goal":"采集 device-1 上 3 秒官方 ArkUI 原始 trace","expect":[{"tool":"device","arguments":{"action":"trace","target":"device-1","seconds":3,"categories":["ace"]}}]}
+  {"id":"device-trace","goal":"采集 device-1 上 3 秒官方 ArkUI 原始 trace","expect":[{"tool":"device","arguments":{"action":"trace","target":"device-1","seconds":3,"categories":["ace"]}}]},
+  {"id":"ui-form-inventory","goal":"仅清点 device-1 桌面的卡片实例，不添加或删除卡片。","expect":[{"tool":"ui","arguments":{"action":"form","form_action":"inventory","target":"device-1"}}]}
 ]

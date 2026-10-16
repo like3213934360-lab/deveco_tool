@@ -9,7 +9,7 @@ import { build } from "esbuild";
 const root = path.resolve(import.meta.dirname, "../..");
 const bundle = path.join(root, "node_modules/.cache/deveco-device.mjs");
 const fixture = globalThis.__devecoDevice = { calls: [], result: { code: 0, signal: null, stdout: '[{"ok":1}]', stderr: "" } };
-await build({ stdin: { contents: `export { sqlite, appDatabasePath, launchAndCheck } from ${JSON.stringify(path.join(root, "src/domains/device.ts"))};`, resolveDir: root }, outfile: bundle,
+await build({ stdin: { contents: `export { sqlite, appDatabasePath, launchAndCheck, selectLogLines, hilog } from ${JSON.stringify(path.join(root, "src/domains/device.ts"))};`, resolveDir: root }, outfile: bundle,
   bundle: true, format: "esm", platform: "node", packages: "external", logLevel: "error", plugins: [{ name: "device-process", setup(b) {
     b.onResolve({ filter: /(?:proc|toolchain|ui|repeat)\.js$/ }, (a) => a.importer.replaceAll("\\", "/").endsWith("/domains/device.ts") ? { path: path.basename(a.path, ".js"), namespace: "fixture" } : undefined);
     b.onLoad({ filter: /.*/, namespace: "fixture" }, (a) => ({ contents: {
@@ -21,6 +21,24 @@ await build({ stdin: { contents: `export { sqlite, appDatabasePath, launchAndChe
   } }] });
 const m = await import(pathToFileURL(bundle).href);
 after(() => { fs.rmSync(bundle, { force: true }); delete globalThis.__devecoDevice; });
+
+test("log filtering precedes limits and follow preserves matches sharing a timestamp", async () => {
+  const stamp = '10-16 10:00:00.123';
+  const raw = [`${stamp} E app: first needle`, `${stamp} E app: second needle`, `${stamp} I noise`, '10-16 10:00:01.000 I noise'].join('\n');
+  assert.match(m.selectLogLines(raw, { limit: 1, grep: 'needle' }).text, /second needle$/);
+  const first = m.selectLogLines(raw, { limit: 1, grep: 'needle', cursor: '10-16 09:59:59.000' });
+  assert.match(first.text, /first needle$/); assert.equal(first.has_more, true);
+  const second = m.selectLogLines(raw, { limit: 1, grep: 'needle', cursor: first.cursor });
+  assert.match(second.text, /second needle$/); assert.equal(second.has_more, false);
+  assert.equal(m.selectLogLines(raw, { limit: 1, grep: 'needle', cursor: second.cursor }).text, '');
+  assert.equal(m.selectLogLines(raw, { limit: 3, grep: 'needle', lower: '10-16 10:00:01.000' }).text, '');
+  fixture.respond = ({ args }) => {
+    assert.match(args.at(-1), /tail -n 50001$/);
+    return { code: 0, stdout: raw, stderr: '', truncated: false };
+  };
+  try { const result = await m.hilog('fixture-device', { lines: 1, grep: 'needle' }); assert.match(result.tail, /second needle$/); assert.equal(result.scan.has_more, true); }
+  finally { delete fixture.respond; }
+});
 
 test("SQLite paths with whitespace or option-like text stay inside one quoted database argument", async () => {
   const result = await m.sqlite("fixture-device", "/data/foo -init /tmp/rc", "SELECT 1");

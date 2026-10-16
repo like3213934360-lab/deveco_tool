@@ -120,8 +120,8 @@ export function center(node: UiNode) {
 
 /** Compact line-per-node view: far fewer tokens than raw JSON. */
 /** Nodes whose component id/key equals `id`, each with its whole subtree (upstream `layout --id`). */
-export function subtree(nodes: UiNode[], id: string) {
-  const roots = nodes.filter((n) => n.id === id || n.key === id);
+export function subtree(nodes: UiNode[], id: string | number) {
+  const roots = nodes.filter((n) => typeof id === "number" ? n.i === id : n.id === id || n.key === id);
   const keep = new Set<number>();
   for (const r of roots) {
     keep.add(r.i);
@@ -367,7 +367,7 @@ export async function screenshot(target: string, options: { format?: "jpeg" | "p
 export type Action =
   | { action: "click" | "double_click" | "long_click"; x: number; y: number }
   | { action: "swipe" | "drag" | "fling"; x: number; y: number; x2: number; y2: number; speed?: number }
-  | { action: "scroll"; direction: "up" | "down" | "left" | "right"; speed?: number }
+  | { action: "scroll"; direction: "up" | "down" | "left" | "right"; speed?: number; selector?: Selector }
   | { action: "key"; key: string }
   | { action: "input"; x: number; y: number; text: string; append?: boolean }
   | { action: "type"; text: string }
@@ -460,11 +460,35 @@ export async function acceptAgreements(target: string, signal?: AbortSignal, ini
   }, signal);
 }
 
+export function scrollGesture(rect: Rect, direction: "up" | "down" | "left" | "right", speed?: number): Action {
+  const w = rect.x2 - rect.x1, h = rect.y2 - rect.y1;
+  invariant(w >= 10 && h >= 10, "UI_NO_BOUNDS", "Scroll target is too small for a bounded gesture");
+  const horizontal = direction === "left" || direction === "right", reverse = direction === "down" || direction === "right";
+  const start = reverse ? .2 : .8, end = reverse ? .8 : .2;
+  return { action: "swipe", x: Math.round(rect.x1 + w * (horizontal ? start : .5)), y: Math.round(rect.y1 + h * (horizontal ? .5 : start)),
+    x2: Math.round(rect.x1 + w * (horizontal ? end : .5)), y2: Math.round(rect.y1 + h * (horizontal ? .5 : end)), speed };
+}
+
 export async function act(target: string, a: Action, signal?: AbortSignal) {
   const consent = await acceptAgreements(target, signal);
+  const scroll = a.action === "scroll" && a.selector ? a : undefined;
+  let before: string | undefined;
+  if (scroll) {
+    const nodes = await dumpTree(target, signal), matches = select(nodes, scroll.selector!);
+    invariant(matches.length === 1, matches.length ? "UI_AMBIGUOUS" : "UI_NOT_FOUND", "Scroll requires exactly one visible target", { selector: scroll.selector, matches: matches.length });
+    const node = matches[0]!;
+    before = treeSignature(subtree(nodes, node.i));
+    a = scrollGesture(node.rect!, scroll.direction, scroll.speed);
+  }
   const completed = async (result: { performed: string; method?: string }) => {
     consent.accepted.push(...(await acceptAgreements(target, signal, undefined, 1000)).accepted);
-    return { ...result, ...automaticResult(consent.accepted) };
+    let motion;
+    if (scroll) {
+      const nodes = await dumpTree(target, signal), matches = select(nodes, scroll.selector!), node = matches.length === 1 ? matches[0] : undefined;
+      motion = { selector: scroll.selector, status: !node ? "target_unresolved" : treeSignature(subtree(nodes, node.i)) !== before ? "changed" : "unchanged",
+        scope: "selected-subtree", note: "Visible subtree change is evidence of motion, not proof of business correctness" };
+    }
+    return { ...result, ...(scroll ? { performed: "scroll", method: "bounded-swipe", motion } : {}), ...automaticResult(consent.accepted) };
   };
   invalidate(target);
   if (a.action === "input" && !a.append) {
