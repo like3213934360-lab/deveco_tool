@@ -233,7 +233,7 @@ test("24-hour expiry applies to active jobs and reads immediately reject expired
   assert.equal(db.prepare("SELECT status FROM jobs WHERE id='j_active'").get().status, "running");
 });
 
-test("failed deletion keeps its record, continues other files, retries and never recursively removes exports", async () => {
+test("failed deletion is recorded once, skips later sweeps and never recursively removes exports", async (t) => {
   const db = await m.database();
   const directory = path.join(out, "protected-export"), other = path.join(out, "expired-copy");
   fs.mkdirSync(directory);
@@ -242,14 +242,53 @@ test("failed deletion keeps its record, continues other files, retries and never
   await m.trackExport(directory);
   await m.trackExport(other);
   db.prepare("UPDATE exports SET created=0 WHERE path IN (?,?)").run(directory, other);
-  await assert.rejects(m.cleanup(), /Cannot remove expired output.*retention record is kept/);
+  const unlink = fs.promises.unlink;
+  const attempts = t.mock.method(fs.promises, "unlink", (file) => unlink(file));
+  assert.equal((await m.cleanup()).failed, 1);
   assert.equal(fs.existsSync(path.join(directory, "user-file")), true);
   assert.ok(db.prepare("SELECT 1 FROM exports WHERE path=?").get(directory));
   assert.equal(fs.existsSync(other), false);
   assert.equal(db.prepare("SELECT 1 FROM exports WHERE path=?").get(other), undefined);
-  fs.rmSync(directory, { recursive: true }); // Only remove our test fixture, then retry the missing path.
-  await m.cleanup();
+  assert.ok(db.prepare("SELECT code,failed_at FROM retention_failures WHERE path=?").get(directory));
+  fs.rmSync(directory, { recursive: true }); // Fix the obstruction; this must not re-enable deletion.
+  fs.writeFileSync(directory, "retained for manual cleanup");
+  for (let i = 0; i < 3; i++) assert.equal((await m.cleanup()).failed, 0);
+  assert.equal(attempts.mock.calls.filter((call) => call.arguments[0] === directory).length, 1);
+  assert.equal(fs.readFileSync(directory, "utf8"), "retained for manual cleanup");
+  // A newly generated export has a new lifetime, not an automatic retry of the failed output.
+  await m.trackExport(directory);
+  assert.equal(db.prepare("SELECT 1 FROM retention_failures WHERE path=?").get(directory), undefined);
+  assert.ok(fs.existsSync(directory));
+  db.prepare("UPDATE exports SET created=0 WHERE path=?").run(directory);
+  assert.equal((await m.cleanup()).failed, 0);
   assert.equal(db.prepare("SELECT 1 FROM exports WHERE path=?").get(directory), undefined);
+  assert.equal(fs.existsSync(directory), false);
+});
+
+test("failed artifacts and crash leftovers are excluded from every cleanup path and the byte quota", async (t) => {
+  const db = await m.database();
+  const old = await m.saveArtifact("blocked media"), fresh = await m.saveArtifact("fresh media");
+  const file = db.prepare("SELECT file FROM artifacts WHERE id=?").get(old.artifact_id).file;
+  const orphan = path.join(m.artifactDir(), "failed-orphan.mp4");
+  fs.writeFileSync(orphan, "unfinished recording");
+  fs.utimesSync(orphan, new Date(0), new Date(0));
+  db.prepare("UPDATE artifacts SET created=0,bytes=? WHERE id=?").run(600 * 1024 * 1024, old.artifact_id);
+  const unlink = fs.promises.unlink;
+  const attempts = t.mock.method(fs.promises, "unlink", async (name) => {
+    if (name === file || name === orphan) throw Object.assign(new Error("Access denied"), { code: "EACCES" });
+    await unlink(name);
+  });
+  assert.equal((await m.cleanup()).failed, 2);
+  for (let i = 0; i < 3; i++) assert.equal((await m.cleanup()).failed, 0);
+  for (const name of [file, orphan]) {
+    assert.equal(attempts.mock.calls.filter((call) => call.arguments[0] === name).length, 1);
+    assert.equal(db.prepare("SELECT code FROM retention_failures WHERE path=?").get(name).code, "EACCES");
+    assert.ok(fs.existsSync(name));
+  }
+  assert.equal((await m.readArtifact(fresh.artifact_id)).content, "fresh media");
+  await m.commitArtifact(old.artifact_id, file, "text/plain");
+  assert.equal(db.prepare("SELECT 1 FROM retention_failures WHERE path=?").get(file), undefined);
+  assert.equal((await m.readArtifact(old.artifact_id)).content, "blocked media");
 });
 
 test("byte quota evicts oldest files and retains recent files without reading media content", async () => {

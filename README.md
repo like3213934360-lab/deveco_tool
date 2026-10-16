@@ -73,7 +73,7 @@ node bin/deveco-mcp.mjs init --host codex --project .      # 项目级配置（.
 | `kb_package` | 成品包 npm 名；显式自定义名称且无 kb_source 时保留 pack 来源 |
 | `npm_registry` | 更新知识包时使用的 npm 源 |
 
-MCP 运行时按文件到期时间清理；退出或电脑休眠期间不能执行删除，恢复运行后补清。仅电脑缓存和已登记的导出副本受此规则管理，手机图库原视频、工程基线及永久 verify 交付包保留。删除失败会在 stderr 报错、保留索引并在 30 秒后重试。
+MCP 运行时按文件到期时间清理；退出或电脑休眠期间不能执行删除，恢复运行后补清。仅电脑缓存和已登记的导出副本受此规则管理，手机图库原视频、工程基线及永久 verify 交付包保留。删除失败时，每轮仅输出一条精简 stderr 汇总，每个失败路径在现有状态库中保留一条记录，后续检查及重启均跳过，不自动重试；失败文件需手动处理。MCP 重新生成同一路径的文件后按新文件计时。数据库或目录访问等清理基础设施出错时停止本进程的自动清理，修复后重启恢复。无法回收的失败文件不挤占可清理文件的容量预算，磁盘实际占用可能超过上限。
 
 用 `node bin/deveco-mcp.mjs doctor [project]` 或 `doctor` 工具检查环境。
 
@@ -260,7 +260,7 @@ Other config keys:
 | `kb_package` | Pack npm name; custom names without kb_source retain pack mode |
 | `npm_registry` | Registry used for knowledge pack updates |
 
-While MCP is running, cleanup follows file expiry deadlines. Deletion catches up after shutdown or sleep. Only local caches and tracked export copies expire; phone gallery originals, project baselines and permanent verify bundles remain. Failed deletions are reported on stderr, keep their records and retry after 30 seconds.
+While MCP is running, cleanup follows file expiry deadlines. Deletion catches up after shutdown or sleep. Only local caches and tracked export copies expire; phone gallery originals, project baselines and permanent verify bundles remain. Each sweep emits at most one short failure summary on stderr and stores one record per failed path in the existing state database. Later checks and restarts skip those files without retrying; remove them manually. Regenerating a file through MCP starts a new lifetime. Database or directory access errors stop automatic cleanup in that process until repaired and restarted. Unreclaimable files do not consume the reclaimable-file quota, so actual disk usage may exceed the limit.
 
 Check the setup with `node bin/deveco-mcp.mjs doctor [project]`, or call the `doctor` tool.
 

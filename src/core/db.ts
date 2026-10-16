@@ -55,6 +55,11 @@ CREATE TABLE IF NOT EXISTS exports (
   created INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS exports_created ON exports(created,path);
+CREATE TABLE IF NOT EXISTS retention_failures (
+  path TEXT PRIMARY KEY,
+  code TEXT NOT NULL,
+  failed_at INTEGER NOT NULL
+);
 CREATE TABLE IF NOT EXISTS kv (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL
@@ -78,7 +83,7 @@ function open(DatabaseSync: typeof import("node:sqlite").DatabaseSync, file: str
       handle.exec("COMMIT");
     } catch (error) { handle.exec("ROLLBACK"); throw error; }
     // A truncated file can open and still be unreadable: touch every table once.
-    for (const t of ["jobs", "effects", "events", "artifacts", "credentials", "exports", "kv"]) handle.prepare(`SELECT 1 FROM ${t} LIMIT 1`).get();
+    for (const t of ["jobs", "effects", "events", "artifacts", "credentials", "exports", "retention_failures", "kv"]) handle.prepare(`SELECT 1 FROM ${t} LIMIT 1`).get();
     return handle;
   } catch (error) {
     handle.close();

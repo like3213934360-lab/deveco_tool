@@ -29,9 +29,11 @@ export function artifactPath(mime = "text/plain") {
 
 export async function commitArtifact(id: string, file: string, mime: string, jobId?: string) {
   const bytes = fs.statSync(file, { throwIfNoEntry: false })?.size ?? 0;
-  (await database())
+  const db = await database();
+  db
     .prepare("INSERT OR REPLACE INTO artifacts(id,job_id,file,mime,bytes,created) VALUES(?,?,?,?,?,?)")
     .run(id, jobId ?? null, file, mime, bytes, Date.now());
+  db.prepare("DELETE FROM retention_failures WHERE path=?").run(file);
   scheduleCleanup(1000);
   return { artifact_id: id, bytes, mime };
 }
@@ -94,7 +96,8 @@ export async function readArtifact(id: string, options: { line?: number; limit?:
 const DAY = 86400000;
 const BATCH = 64;
 const RECHECK = 60000;
-let cleaning: Promise<void> | undefined;
+type CleanupResult = { removed: number; failed: number; first_failure?: { path: string; code: string } };
+let cleaning: Promise<CleanupResult> | undefined;
 let ticking = false;
 let timer: NodeJS.Timeout | undefined;
 let wakeAt = Infinity;
@@ -108,19 +111,38 @@ async function sweep(maintenance: boolean, discover: boolean) {
   const db = await database();
   const cfg = config();
   const cutoff = Date.now() - DAY;
-  let failure: Error | undefined;
-  const remove = async (file: string) => {
-    try { await fs.promises.unlink(file); return true; }
+  const result: CleanupResult = { removed: 0, failed: 0 };
+  const pending: { path: string; code: string; current: () => boolean }[] = [];
+  const blocked = db.prepare("SELECT 1 FROM retention_failures WHERE path=?");
+  const mark = db.prepare("INSERT OR IGNORE INTO retention_failures(path,code,failed_at) VALUES(?,?,?)");
+  const flushFailures = () => {
+    if (!pending.length) return;
+    db.exec("BEGIN IMMEDIATE");
+    try {
+      for (const item of pending) {
+        if (!item.current()) continue;
+        if (mark.run(item.path, item.code, Date.now()).changes) {
+          result.failed++;
+          result.first_failure ??= { path: item.path, code: item.code };
+        }
+      }
+      db.exec("COMMIT");
+      pending.length = 0;
+    } catch (error) { db.exec("ROLLBACK"); throw error; }
+  };
+  const remove = async (file: string, current: () => boolean) => {
+    try { await fs.promises.unlink(file); result.removed++; return true; }
     catch (error) {
       if ((error as NodeJS.ErrnoException).code === "ENOENT") return true;
-      failure ??= new Error(`Cannot remove expired output ${file}: ${(error as Error).message}. Check file permissions; its retention record is kept for retry.`);
+      pending.push({ path: file, code: ((error as NodeJS.ErrnoException).code ?? "UNKNOWN").slice(0, 64), current });
       return false;
     }
   };
   const prune = async (table: "artifacts" | "exports", where: string, params: number[] = [], bytesToFree = Infinity) => {
     const key = table === "artifacts" ? "id" : "path";
+    const fileColumn = table === "artifacts" ? "file" : "path";
     const fields = table === "artifacts" ? "file,bytes" : "path AS file,0 AS bytes";
-    const select = db.prepare(`SELECT ${key} AS key,${fields},created FROM ${table} WHERE (${where}) AND (created,${key})>(?,?) ORDER BY created,${key} LIMIT ${BATCH}`);
+    const select = db.prepare(`SELECT ${key} AS key,${fields},created FROM ${table} WHERE (${where}) AND NOT EXISTS (SELECT 1 FROM retention_failures WHERE path=${table}.${fileColumn}) AND (created,${key})>(?,?) ORDER BY created,${key} LIMIT ${BATCH}`);
     const forget = db.prepare(`DELETE FROM ${table} WHERE ${key}=? AND created=?`);
     const unchanged = db.prepare(`SELECT 1 FROM ${table} WHERE ${key}=? AND created=?`);
     let created = -1, last = "";
@@ -130,8 +152,8 @@ async function sweep(maintenance: boolean, discover: boolean) {
       const removed = [];
       for (const row of rows) {
         if (bytesToFree <= 0) break;
-        if (!unchanged.get(row.key, row.created)) continue;
-        if (await remove(row.file)) { removed.push(row); bytesToFree -= row.bytes; }
+        if (!unchanged.get(row.key, row.created) || blocked.get(row.file)) continue;
+        if (await remove(row.file, () => !!unchanged.get(row.key, row.created))) { removed.push(row); bytesToFree -= row.bytes; }
       }
       // One short transaction per page, never hold a SQLite lock across filesystem awaits.
       db.exec("BEGIN IMMEDIATE");
@@ -139,6 +161,7 @@ async function sweep(maintenance: boolean, discover: boolean) {
         for (const row of removed) forget.run(row.key, row.created);
         db.exec("COMMIT");
       } catch (error) { db.exec("ROLLBACK"); throw error; }
+      flushFailures();
       const end = rows[rows.length - 1]!;
       created = end.created; last = end.key;
       await yieldTurn();
@@ -166,7 +189,8 @@ async function sweep(maintenance: boolean, discover: boolean) {
     }
     await prune("artifacts", "job_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM jobs WHERE jobs.id=artifacts.job_id)");
     const budget = cfg.max_artifact_mb * 1024 * 1024;
-    const { used } = db.prepare("SELECT COALESCE(SUM(bytes),0) AS used FROM artifacts").get() as { used: number };
+    // Unreclaimable files cannot be made smaller by repeatedly evicting healthy new output.
+    const { used } = db.prepare("SELECT COALESCE(SUM(bytes),0) AS used FROM artifacts WHERE NOT EXISTS (SELECT 1 FROM retention_failures WHERE path=artifacts.file)").get() as { used: number };
     if (used > budget) await prune("artifacts", "1", [], used - budget);
     if (db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='ui_tests'").get()) {
       db.prepare("DELETE FROM ui_tests WHERE updated<=?").run(cutoff);
@@ -181,24 +205,27 @@ async function sweep(maintenance: boolean, discover: boolean) {
     let count = 0;
     for await (const entry of await fs.promises.opendir(dir)) {
       const file = path.join(dir, entry.name);
-      if (entry.isFile() && !known.get(file)) {
+      if (entry.isFile() && !known.get(file) && !blocked.get(file)) {
         let stat;
         try { stat = await fs.promises.stat(file); }
-        catch (error) { if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error; }
+        catch (error) {
+          if ((error as NodeJS.ErrnoException).code !== "ENOENT") pending.push({ path: file, code: ((error as NodeJS.ErrnoException).code ?? "UNKNOWN").slice(0, 64), current: () => !known.get(file) });
+        }
         if (stat) {
           const expires = Math.min(stat.birthtimeMs > 0 ? stat.birthtimeMs : stat.mtimeMs, stat.mtimeMs) + DAY;
-          if (expires <= Date.now() && !known.get(file)) await remove(file);
+          if (expires <= Date.now() && !known.get(file)) await remove(file, () => !known.get(file));
           else orphanAt = Math.min(orphanAt, expires);
         }
       }
-      if (++count % BATCH === 0) await yieldTurn();
+      if (++count % BATCH === 0) { flushFailures(); await yieldTurn(); }
     }
   }
-  if (failure) throw failure;
+  flushFailures();
+  return result;
 }
 
-/** Explicit cleanup shares the in-flight sweep; callers receive failures, never a false success. */
-export function cleanup(maintenance = true, discover = true): Promise<void> {
+/** File failures are itemized in SQLite and counted; infrastructure failures reject the sweep. */
+export function cleanup(maintenance = true, discover = true): Promise<CleanupResult> {
   if (!cleaning) {
     if (maintenance) maintenanceAt = Date.now() + 3600000;
     if (discover) discoveryAt = Date.now() + 3600000;
@@ -212,7 +239,9 @@ export function cleanup(maintenance = true, discover = true): Promise<void> {
  * are tracked too, so the same retention removes them: nothing this server produces accumulates.
  */
 export async function trackExport(file: string) {
-  (await database()).prepare("INSERT OR REPLACE INTO exports(path,created) VALUES(?,?)").run(path.resolve(file), Date.now());
+  const db = await database(), resolved = path.resolve(file);
+  db.prepare("INSERT OR REPLACE INTO exports(path,created) VALUES(?,?)").run(resolved, Date.now());
+  db.prepare("DELETE FROM retention_failures WHERE path=?").run(resolved);
   scheduleCleanup(1000);
 }
 
@@ -230,18 +259,21 @@ async function tick() {
   if (ticking) return;
   ticking = true;
   try {
-    await cleanup(Date.now() >= maintenanceAt, Date.now() >= Math.min(discoveryAt, orphanAt));
+    const result = await cleanup(Date.now() >= maintenanceAt, Date.now() >= Math.min(discoveryAt, orphanAt));
+    if (result.failed) {
+      process.stderr.write(`[retention] ${result.failed} deletion(s) failed; first: ${JSON.stringify(result.first_failure?.path.slice(0, 300))} (${result.first_failure?.code}). Automatic retries disabled, including after restart; remove affected files manually.\n`);
+    }
     if (stopped) return;
     const db = await database();
-    const artifact = db.prepare("SELECT created FROM artifacts ORDER BY created LIMIT 1").get() as { created: number } | undefined;
-    const exported = db.prepare("SELECT created FROM exports ORDER BY created LIMIT 1").get() as { created: number } | undefined;
+    const artifact = db.prepare("SELECT created FROM artifacts WHERE NOT EXISTS (SELECT 1 FROM retention_failures WHERE path=artifacts.file) ORDER BY created LIMIT 1").get() as { created: number } | undefined;
+    const exported = db.prepare("SELECT created FROM exports WHERE NOT EXISTS (SELECT 1 FROM retention_failures WHERE path=exports.path) ORDER BY created LIMIT 1").get() as { created: number } | undefined;
     // Cheap reconciliation catches another writer, wall-clock changes and wake from sleep.
     arm(Math.min(Date.now() + RECHECK, maintenanceAt, discoveryAt, orphanAt, (artifact?.created ?? Infinity) + DAY, (exported?.created ?? Infinity) + DAY));
   } catch (error) {
-    process.stderr.write(`[retention] ${(error as Error).message}; retry in 30s\n`);
-    maintenanceAt = Date.now() + 30000;
-    discoveryAt = Math.min(discoveryAt, maintenanceAt);
-    arm(maintenanceAt);
+    stopped = true;
+    clearTimeout(timer);
+    wakeAt = Infinity;
+    process.stderr.write(`[retention] Cleanup stopped: ${JSON.stringify((error as Error).message.slice(0, 500))}. No automatic retry; fix the error and restart MCP.\n`);
   } finally {
     ticking = false;
   }

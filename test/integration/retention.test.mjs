@@ -65,35 +65,97 @@ test("MCP expires media and exports at their deadline without jobs, and remains 
   }
 });
 
-test("MCP reports deletion failure and automatically retries after the filesystem obstruction is removed", async (t) => {
-  const state = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-retention-retry-"));
-  const blocked = path.join(state, "export.mp4");
-  fs.mkdirSync(blocked);
-  fs.writeFileSync(path.join(blocked, "keep"), "user content");
+test("MCP logs a bounded failure summary, never retries the file and preserves the exclusion after restart", async (t) => {
+  const state = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-retention-failure-"));
+  const blocked = path.join(state, "export-0.mp4");
   const db = new DatabaseSync(path.join(state, "state.db"));
   db.exec("CREATE TABLE exports(path TEXT PRIMARY KEY,created INTEGER NOT NULL)");
-  db.prepare("INSERT INTO exports VALUES(?,0)").run(blocked);
+  db.exec("BEGIN");
+  for (let i = 0; i < 70; i++) {
+    const file = path.join(state, `export-${i}.mp4`);
+    fs.mkdirSync(file);
+    fs.writeFileSync(path.join(file, "keep"), "user content");
+    db.prepare("INSERT INTO exports VALUES(?,0)").run(file);
+  }
+  const healthy = path.join(state, "healthy.mp4");
+  fs.writeFileSync(healthy, "expiring normally");
+  db.prepare("INSERT INTO exports VALUES(?,?)").run(healthy, Date.now() - 86400000 + 1500);
+  db.exec("COMMIT");
   db.close();
-  const client = connect({ DEVECO_STATE_DIR: state, DEVECO_CONFIG: path.join(state, "none.json") });
+  const env = { DEVECO_STATE_DIR: state, DEVECO_CONFIG: path.join(state, "none.json") };
+  let client = connect(env);
   try {
     await client.initialize();
     const started = Date.now();
     while (!client.stderr.includes("[retention]") && Date.now() - started < 5000) {
       await new Promise((resolve) => setTimeout(resolve, 20));
     }
-    assert.match(client.stderr, /Cannot remove expired output.*record is kept.*retry in 30s/);
+    assert.match(client.stderr, /70 deletion\(s\) failed.*Automatic retries disabled, including after restart/);
     assert.equal(fs.readFileSync(path.join(blocked, "keep"), "utf8"), "user content");
-    fs.rmSync(blocked, { recursive: true }); // Resolve only the obstruction created by this test.
-    fs.writeFileSync(blocked, "previous export");
-    await new Promise((resolve) => setTimeout(resolve, 200));
-    assert.ok(fs.existsSync(blocked), "The failure must back off, not spin on an expired row");
-    while (fs.existsSync(blocked) && Date.now() - started < 35000) {
+    fs.rmSync(blocked, { recursive: true }); // Correct the obstruction without generating a new MCP export.
+    fs.writeFileSync(blocked, "retained for manual cleanup");
+    while (Date.now() - started < 31000) {
       assert.deepEqual((await client.request("ping", {}, 1000)).result, {});
+      assert.ok(fs.existsSync(blocked), "A failed file must not be retried, even after its permissions/obstruction change");
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
-    assert.equal(fs.existsSync(blocked), false);
-    assert.equal(client.stderr.match(/\[retention\]/g)?.length, 1, "No repeated failure loop");
-    t.diagnostic(`Automatic retry removed the export after ${Date.now() - started} ms`);
+    assert.equal(fs.existsSync(healthy), false, "Failures must not block other expiry deadlines");
+    const lines = client.stderr.split("\n").filter((line) => line.startsWith("[retention]"));
+    assert.equal(lines.length, 1);
+    assert.ok(lines[0].length < 600, "One bounded summary, not one log per file or per poll");
+    await client.close();
+    client = connect(env);
+    await client.initialize();
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+    assert.equal(fs.readFileSync(blocked, "utf8"), "retained for manual cleanup");
+    assert.doesNotMatch(client.stderr, /\[retention\]/, "Restart must not retry or relog the failed files");
+    const check = new DatabaseSync(path.join(state, "state.db"), { readOnly: true });
+    try { assert.equal(check.prepare("SELECT COUNT(*) AS n FROM retention_failures").get().n, 70); }
+    finally { check.close(); }
+    t.diagnostic("70 failed files: one log, no retry after 31 seconds or process restart; healthy export expired");
+  } finally {
+    await client.close();
+    fs.rmSync(state, { recursive: true, force: true });
+  }
+});
+
+test("an inaccessible cleanup directory stops the cleaner once until a repaired process restarts", async () => {
+  const state = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-retention-stopped-"));
+  const dir = path.join(state, "artifacts"), copy = path.join(state, "copy.mp4");
+  fs.writeFileSync(dir, "directory obstruction");
+  fs.writeFileSync(copy, "await manual repair");
+  const db = new DatabaseSync(path.join(state, "state.db"));
+  db.exec("CREATE TABLE exports(path TEXT PRIMARY KEY,created INTEGER NOT NULL)");
+  const deadline = Date.now() + 1500;
+  db.prepare("INSERT INTO exports VALUES(?,?)").run(copy, deadline - 86400000);
+  db.close();
+  const env = { DEVECO_STATE_DIR: state, DEVECO_CONFIG: path.join(state, "none.json") };
+  let client = connect(env);
+  try {
+    await client.initialize();
+    const started = Date.now();
+    while (!client.stderr.includes("[retention]") && Date.now() - started < 5000) {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+    assert.match(client.stderr, /Cleanup stopped:.*No automatic retry; fix the error and restart MCP/);
+    assert.ok(Date.now() < deadline, "The directory error must precede the export deadline");
+    fs.unlinkSync(dir);
+    fs.mkdirSync(dir);
+    while (Date.now() < deadline + 500) {
+      assert.deepEqual((await client.request("ping", {}, 1000)).result, {});
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+    assert.ok(fs.existsSync(copy), "Fixing the directory must not silently restart a stopped cleaner");
+    assert.equal(client.stderr.split("\n").filter((line) => line.startsWith("[retention]")).length, 1);
+    await client.close();
+    client = connect(env);
+    await client.initialize();
+    const restarted = Date.now();
+    while (fs.existsSync(copy) && Date.now() - restarted < 5000) {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+    assert.equal(fs.existsSync(copy), false, "A repaired process restart restores normal expiry");
+    assert.doesNotMatch(client.stderr, /\[retention\]/);
   } finally {
     await client.close();
     fs.rmSync(state, { recursive: true, force: true });
