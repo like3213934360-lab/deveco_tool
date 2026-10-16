@@ -215,3 +215,73 @@ test("recording receipt tools are offline and preserve legacy bytes", async (t) 
   const again = await client.call("ui", { action: "record_receipts", target: "offline:5555" });
   assert.equal(again.data.pending[0].raw, raw);
 });
+
+test("entry graph exposes declared main/device scope and callable product-specific handles with declaration locations", async () => {
+  const project = path.join(state, "entry-graph"), client = connect(env);
+  const write = (file, text) => { const full = path.join(project, file); fs.mkdirSync(path.dirname(full), { recursive: true }); fs.writeFileSync(full, text); };
+  write("build-profile.json5", JSON.stringify({ app: { products: [{ name: "default" }, { name: "release" }] }, modules: ["phone", "watch"].map((name) => ({ name, srcPath: name, targets: [{ name: "default", applyToProducts: ["release"] }] })) }));
+  write("AppScope/app.json5", JSON.stringify({ app: { bundleName: "com.example.graph" } }));
+  write("phone/src/main/module.json5", [
+    '{ module: { name: "phone", type: "entry",',
+    '  mainElement: "EntryAbility", deviceTypes: ["phone", "tablet", "2in1"],',
+    '  // "name": "EntryAbility" is only a comment',
+    '  /* name: "EntryAbility" is also a comment */',
+    '  description: \'{"name":"EntryAbility"}\',',
+    '  abilities: [',
+    '    { "name": "EntryAbility", exported: true },',
+    '    { name /* property comment */ : \'MatrixAbility\', exported: true }',
+    '  ],',
+    '  extensionAbilities: [{ name: "CardService", type: "form" }]',
+    '} }',
+  ].join("\r\n"));
+  write("watch/src/main/module.json5", [
+    "{ module: { name: 'watch', type: 'entry', mainElement: 'WatchAbility', deviceTypes: ['wearable'],",
+    "  abilities: [{ 'name':",
+    "    'Watch\\u0041bility', exported: true }]",
+    "} }",
+  ].join("\n"));
+  write("phone/src/main/resources/base/profile/cards.json", [
+    '{ description: "Tile", forms: [',
+    '  { name: "Tile", src: "./ets/Tile.ets", supportDimensions: ["2*2"], defaultDimension: "2*2", formConfigAbility: "ability://EntryAbility" }',
+    '], shortcuts: [',
+    '  { shortcutId: "open", wants: [{ bundleName: "com.example.graph", abilityName: "EntryAbility" }] }',
+    '] }',
+  ].join("\n"));
+  // The resource path filter must not try to parse unrelated JSON assets.
+  write("phone/src/main/resources/rawfile/large.json", "not JSON: forms: ignored");
+  try {
+    await client.initialize();
+    const call = async () => {
+      const result = await client.call("project", { action: "entries", project, product: "release" });
+      assert.equal(result.isError, false, JSON.stringify(result.data)); return result.data;
+    };
+    const graph = await call();
+    assert.equal(graph.scope, "declared-configuration"); assert.equal(graph.product, "release");
+    assert.deepEqual(graph.issues, []); assert.equal(graph.entries.length, 6);
+    assert.match(graph.runtime, /not installation or launch receipts/);
+    for (const item of graph.entries) {
+      assert.equal(item.runtime_verified, false);
+      assert.deepEqual(item.device_types, item.module === "phone" ? ["phone", "tablet", "2in1"] : ["wearable"]);
+      assert.equal(item.source.precision, "declaration-candidate");
+    }
+    const find = (name) => graph.entries.find((e) => e.name === name || e.shortcutId === name);
+    for (const [name, line, main] of [["EntryAbility", 7, true], ["MatrixAbility", 8, false], ["WatchAbility", 2, true]]) {
+      const item = find(name);
+      assert.equal(item.main, main); assert.equal(item.source.line, line);
+      assert.deepEqual(item.launch, { tool: "run", action: "launch", project, product: "release", module: item.module, ability: name });
+    }
+    assert.equal(find("CardService").main, false); assert.equal(find("CardService").launch, null);
+    assert.equal(find("Tile").source.line, 2); assert.equal(find("Tile").validation, "passed");
+    assert.equal(find("open").source.line, 4);
+    assert.equal((await client.call("project", { action: "entries", project })).data.entries.length, 0, "The handles must preserve the selected non-default product");
+    write("phone/src/main/resources/base/profile/cards.json", JSON.stringify({ forms: [
+      { src: "./ets/Tile.ets", supportDimensions: ["2*2"], defaultDimension: "2*2" },
+      { name: "BadSize", src: "./ets/Tile.ets", supportDimensions: ["2*2"], defaultDimension: "4*4" },
+      { name: "OtherModule", src: "./ets/Tile.ets", supportDimensions: ["2*2"], defaultDimension: "2*2", formConfigAbility: "WatchAbility" },
+    ] }));
+    const invalid = await call();
+    assert.deepEqual(invalid.issues.map((i) => i.problems), [["name/src/supportDimensions missing"], ["defaultDimension is not supported"], ["formConfigAbility is not declared in this module"]]);
+    const unnamed = invalid.entries.find((e) => e.kind === "form" && !e.name);
+    assert.equal(unnamed.source.line, null); assert.equal(unnamed.source.precision, "unresolved");
+  } finally { await client.close(); fs.rmSync(project, { recursive: true, force: true }); }
+});

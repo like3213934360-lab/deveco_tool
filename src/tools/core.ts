@@ -38,7 +38,7 @@ export const projectTool = tool({
   description: [
     "info: metadata; create(app_name,bundle_name): built-in template, never overwrites; clean: build outputs.",
     "sync (job): ohpm install + hvigor sync. build (job): advisory edited-file preflight + hvigor; packages or first 100 compile errors (code/file/line/message/source) with fixes. oh-package.json5/build-profile.json5 edits auto-install dependencies.",
-    "test (job): SDK local/instrument tests with verified case counts; instrument requires allow_data_reset and a sole connected target. verify (job): JSON plan -> independent acceptance verdict + permanent JSON/JUnit/HTML evidence. entries: declared Ability/Extension/form/shortcut graph.",
+    "test (job): SDK local/instrument tests with verified case counts; instrument requires allow_data_reset and a sole connected target. verify (job): JSON plan -> independent acceptance verdict + permanent JSON/JUnit/HTML evidence. entries: declared Ability/Extension/form/shortcut graph with main/device_types/runtime_verified=false; not installed-device evidence.",
     "Build already checks edited files: no code check first. request_key/wait: sync/build/test/verify only.",
   ].join(" "),
   schema: z.object({

@@ -158,7 +158,7 @@ const hotStep = {
         const crash = applied.launch.crashed ? await crashSummary(target, project.bundleName, applied.launch.new_crash_logs, ctx.input.project, ctx.signal) : undefined;
         invariant(false, "LAUNCH_FAILED", applied.launch.crashed ? "App crashed on startup after the quick fix" : "App process is not running after the quick fix",
           { path: "hot_reload", files: applied.files, ...applied.launch, ...(crash ? { crash } : {}) },
-          crash?.source?.length ? `Fix ${crash.source[0]!.file}:${crash.source[0]!.line} (see crash.source), then build_run again` : "Run diagnose action=crash to see the crash report");
+          crash?.source?.length ? `Fix ${crash.source[0]!.file}:${crash.source[0]!.line} (see crash.source), then build_run again` : applied.launch.crashed ? "Run diagnose action=crash to see the crash report" : applied.launch.hint);
       }
       return { path: "hot_reload", files: applied.files, elapsed_ms: Date.now() - started, ...(applied.launch ? { launch: applied.launch } : {}) };
     } catch (error) {
@@ -337,7 +337,7 @@ const baseRunSteps = (build: boolean): Step<RunInput>[] => [
         const { crashSummary } = await import("./domains/diagnose.js");
         const crash = result.crashed ? await crashSummary(ctx.outputs.target.target, project.bundleName, result.new_crash_logs, ctx.input.project, ctx.signal) : undefined;
         invariant(false, "LAUNCH_FAILED", result.crashed ? "App crashed on startup" : "App process is not running after launch", { ...result, ...(crash ? { crash } : {}) },
-          crash?.source?.length ? `Fix ${crash.source[0]!.file}:${crash.source[0]!.line} (see crash.source), then build_run again` : "Run diagnose action=crash to see the crash report");
+          crash?.source?.length ? `Fix ${crash.source[0]!.file}:${crash.source[0]!.line} (see crash.source), then build_run again` : result.crashed ? "Run diagnose action=crash to see the crash report" : result.hint);
       }
       return result;
     },

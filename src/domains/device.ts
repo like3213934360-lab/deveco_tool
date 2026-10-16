@@ -210,13 +210,17 @@ export async function launchAndCheck(target: string, bundle: string, ability: st
   const after = await pidOf(target, bundle, signal);
   const crashes = (await faultlogNames(target, signal)).filter((name) => !before.has(name) && name.includes(bundle));
   const ok = !!after && crashes.length === 0;
-  // Smoke verdict (upstream parity): PASS / FAIL_CRASH / FAIL_BLANK (solid white/black screen after launch).
+  // A missing process without a new crash log is not evidence of a crash.
   const blank = ok ? await (await import("./ui.js")).blankScreen(target, signal) : undefined;
-  const smoke = !ok ? "FAIL_CRASH" : blank?.blank ? "FAIL_BLANK" : "PASS";
+  const smoke = crashes.length ? "FAIL_CRASH" : !after ? "FAIL_NO_PROCESS" : blank?.blank ? "FAIL_BLANK" : "PASS";
   return {
     started: ok, pid: after, crashed: crashes.length > 0, new_crash_logs: crashes, smoke,
     ...(blank ? { screen_uniformity: blank.uniform } : {}),
-    ...(ok ? {} : { next: { tool: "diagnose", action: "crash", target, bundle } }),
+    ...(smoke === "FAIL_CRASH" ? { next: { tool: "diagnose", action: "crash", target, bundle } } : {}),
+    ...(smoke === "FAIL_NO_PROCESS" ? {
+      next: { tool: "device", action: "log", target, grep: bundle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), from: "1m" },
+      hint: "No app process was observed after launch, and no new crash log was found. Check the installed module/ability, any custom process name, and recent device logs (device action=log without bundle; bundle filtering requires a running PID)",
+    } : {}),
     ...(smoke === "FAIL_BLANK" ? { hint: "The app runs but shows a blank screen: check the entry page (loadContent path), build() content and startup errors in device log" } : {}),
   };
 }
