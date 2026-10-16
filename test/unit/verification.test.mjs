@@ -98,6 +98,14 @@ test('partial UI checklist evidence never covers unseen requirements', () => {
   assert.deepEqual(m.missingChecklist(session), []);
 });
 
+test('performance verification cannot pass missing or failed frame sampling', () => {
+  const complete = { source: 'composer', verdict: 'smooth', activity_verified: true, excluded_intervals: [], sampling: { status: 'overlapping' } };
+  assert.equal(m.judge('perf', complete), 'passed');
+  for (const sampling of [undefined, { status: 'gaps' }, { status: 'insufficient' }]) assert.equal(m.judge('perf', { ...complete, sampling }), 'inconclusive');
+  assert.equal(m.judge('perf', { ...complete, verdict: 'inconclusive' }), 'inconclusive');
+  assert.equal(m.judge('perf', { ...complete, excluded_intervals: [{ duration_ms: 500 }] }), 'inconclusive');
+});
+
 test('card verification separates attachment, project assertions and owned cleanup', () => {
   const technical = { attachment_verified: true, cleanup: { removed: true, preexisting_preserved: true } };
   assert.equal(m.judge('form', technical), 'inconclusive');

@@ -25,13 +25,13 @@ CLI 仅 passed 返回 0，包括基线录制在内的其他结果均非零。MCP
 
 ## 测试、变更范围与基线
 
-- `project test kind=local|instrument`：模块、suite 或 suite#method、coverage、expected_tests、timeout_ms。SDK 原始逐用例结果与汇总交叉核对；退出 0、BUILD SUCCESSFUL 不代表用例通过。零用例、Ignore、数量/范围不符、缺失/旧报告不能通过。当前 SDK 只支持 default product；Local Test 在 macOS/Windows，Linux 明确不可用。
+- `project test kind=local|instrument`：模块、suite 或 suite#method、coverage、expected_tests、timeout_ms。timeout_ms 是后台任务期限（默认 10 分钟，最长 30 分钟），独立于单次调用的 wait；长任务通过 job wait 继续等待。SDK 原始逐用例结果与汇总交叉核对；退出 0、BUILD SUCCESSFUL 不代表用例通过。零用例、Ignore、数量/范围不符、缺失/旧报告不能通过。当前 SDK 只支持 default product；Local Test 在 macOS/Windows，Linux 明确不可用。
 - Instrument Test 会卸载应用并清数据，必须 `allow_data_reset:true`。多设备并存时必须传 `target`；单设备可自动解析。MCP 将 SDK 子进程的 HDC 通道绑定到解析后的目标，不断开其他设备、不改 SDK 或全局环境。目标不可用、握手不兼容或 SDK 请求全局设备操作时失败，不切换目标。使用专用调试应用；原始测试与覆盖率报告仍须完整、新鲜且核算一致。
 - `--changed-only --base <ref>` 按每项 affects 的相对文件/目录前缀选检查，`*` 覆盖全工程。未覆盖变更阻塞；结果 scope 为 changed-only。共享配置/依赖应映射到必选的全量检查；没有映射不会被跳过。这是工程声明的影响映射，不声称自动证明依赖闭包。
 - 每项可设 baseline、tolerance_percent、max、repeats。数值取重复样本中位数；原样本完整保留。build 提供 build_ms、warnings、package_bytes；diagnostics 比较完整诊断集合；perf 提供 p95_ms、jank_rate、fps；launch 提供 launch_check_ms；command 可返回数值 metrics（默认越低越好）。max 是上界，不适合最低 FPS，应使用 higher 方向的 FPS 基线。
 - `--baseline-mode record` 显式写 `.arkpilot/quality-baselines/`；结果 recorded，不能冒充回归通过。compare 是默认；缺失或 SDK/设备/方法/场景不匹配的基线阻塞。质量基线记录和比较没有自动容差重试；review 后由项目设容差。构建请显式 clean；性能和 launch 建议 repeats≥3，并固定工程、设备、电源、UI 起点及温控条件。
 - perf 与 launch 若既未指定 baseline，也没有任何 max 阈值，返回 inconclusive；测得数值本身不是质量通过条件。
-- launch_check_ms 是 force-stop 后启动及约 3 秒存活/崩溃/空白屏检查的端到端耗时，**不是**系统首帧时间。perf 的 >200ms 间隔保留为 excluded_intervals。动作带 selector 时只在唯一匹配区域内滚动，并记录该子树的前后变化及操作窗口；目标未动、丢失、帧时间戳全零或存在无法归因的长空窗时返回 inconclusive。整个窗口的变化也不等于业务更新。原始 hitrace 不提供未经证实的 ArkTS 栈映射。
+- launch_check_ms 是 force-stop 后启动及约 3 秒存活/崩溃/空白屏检查的端到端耗时，**不是**系统首帧时间。perf 在手势期间独立限频读取帧缓冲，结束后停止采样；原始证据包含各命令的起止时间及 sampling 窗口。相邻有效窗口必须有重叠；不重叠、采样失败、帧时间戳全零或 >200ms 的未归因间隔均不能判通过，长间隔保留为 excluded_intervals。动作带 selector 时只在唯一匹配区域内滚动，并记录该子树的前后变化及操作窗口；目标未动或丢失时返回 inconclusive。整个窗口的变化也不等于业务更新。原始 hitrace 不提供未经证实的 ArkTS 栈映射。
 - visual 通过 name 引用图像基线；verify 禁止默认创建。sidecar 校验设备、OS/API、工程 SDK、比较方法、context 和图片哈希，旧无元数据基线须重新录制。通过 options.context 声明主题/语言/字体/业务场景；MCP 不会猜测这些设置。完整截图基线与采样进入证据包。
 - layout 在 verify 内默认 48vp、tiny_target 作为失败项；节点数标为 checked_unit=nodes。无法取得真实 density 时为 inconclusive。独立 `ui layout` 保留原先 advisory tiny-target 默认，可显式 strict_targets/min_target_vp。
 - crash 必须给 since_minutes；严格读取目录或 Faultlogger 的有效清单并验证设备时钟，读取失败不能被解释为“没有崩溃”。

@@ -107,9 +107,13 @@ export function checkArguments(tool: ToolDef, raw: unknown) {
       obj.timeout_ms = SYNC_WAIT_MS;
     }
   };
-  capTimeout(args, "");
-  for (const key of ["assert"]) if (args[key] && typeof args[key] === "object") { args[key] = { ...(args[key] as object) }; capTimeout(args[key] as Record<string, unknown>, `${key}.`); }
-  if (Array.isArray(args.steps)) {
+  // Only UI waits run synchronously. A background project's task deadline (or run's
+  // post-deploy assertion) is independent of the tools/call response deadline.
+  if (tool.name === "ui") {
+    capTimeout(args, "");
+    if (object(args.assert)) { args.assert = { ...args.assert }; capTimeout(args.assert as Record<string, unknown>, "assert."); }
+  }
+  if (tool.name === "ui" && Array.isArray(args.steps)) {
     const before = notes.length;
     args.steps = (args.steps as unknown[]).map((s, i) => {
       if (!s || typeof s !== "object") return s;

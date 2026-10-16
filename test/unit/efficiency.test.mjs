@@ -25,13 +25,24 @@ fs.writeFileSync(entry, [
   `export { encodePng, decodeGray, compareGray, annotate, baselinePath } from ${src("domains/visual.ts")};`,
   `export { pngGray } from ${src("domains/ui.ts")};`,
   `export { checkLayout } from ${src("domains/layout.ts")};`,
-  `export { parseComposerFps, mergeFrames, frameStats, perfVerdict, parseSpFps, parsePss } from ${src("domains/perf.ts")};`,
+  `export { parseComposerFps, mergeFrames, frameStats, perfVerdict, parseSpFps, parsePss, composerCoverage } from ${src("domains/perf.ts")};`,
   `export { buildFailureHints, parseCrash } from ${src("domains/diagnose.ts")};`,
-  `export { artifactHint, artifactIds } from ${src("server.ts")};`,
+  `export { artifactHint, artifactIds, validateTool } from ${src("server.ts")};`,
 ].join("\n"));
 await build({ entryPoints: [entry], outfile: path.join(out, "entry.mjs"), bundle: true, format: "esm", platform: "node", packages: "external", logLevel: "error", nodePaths: [path.join(root, "node_modules")] });
 fs.symlinkSync(path.join(root, "node_modules"), path.join(out, "node_modules"), "junction");
 const m = await import(pathToFileURL(path.join(out, "entry.mjs")).href);
+
+test("task deadlines survive shared validation while synchronous UI waits stay bounded", () => {
+  const input = { action: "test", project: "/fixture", kind: "instrument", timeout_ms: 600000, wait: 1000 };
+  assert.equal(m.validateTool("project", input).data.timeout_ms, 600000);
+  assert.equal(m.validateTool("project", { ...input, timeout_ms: 1800000 }).data.timeout_ms, 1800000);
+  assert.throws(() => m.validateTool("project", { ...input, timeout_ms: 1800001 }));
+  assert.equal(m.validateTool("ui", { action: "assert", visible: { text: "ready" }, timeout_ms: 70000 }).data.timeout_ms, 52000);
+  const run = m.validateTool("run", { action: "build_run", project: "/fixture", assert: { visible: { text: "ready" }, timeout_ms: 70000 } });
+  assert.equal(run.data.assert.timeout_ms, 70000);
+  assert.equal(input.timeout_ms, 600000, "validation must not mutate the caller's task deadline");
+});
 
 test("checker explicit file scopes reject invalid and mixed inputs before check or fix", () => {
   const project = fs.mkdtempSync(path.join(out, "checker-"));
@@ -316,6 +327,14 @@ test("perf: composer timestamps -> fps, percentiles and jank, independent of the
   assert.equal(m.frameStats([t0, t0 + frame], 120), undefined, "too few frames: no verdict");
   assert.deepEqual(m.parseSpFps("set num:4 success\nfps:30|1790762831007\nfps:118|1790762834007\n"), [{ fps: 30, at: 1790762831007 }, { fps: 118, at: 1790762834007 }]);
   assert.equal(m.parsePss("order:45 pss=900413\norder:46 refreshrate=60"), 900413);
+});
+
+test("composer coverage requires overlapping histories and exposes empty or disjoint windows", () => {
+  assert.equal(m.composerCoverage([[], [1, 2, 3], [3, 4, 5]]).status, "overlapping");
+  assert.equal(m.composerCoverage([[1, 2, 3]]).status, "insufficient");
+  assert.equal(m.composerCoverage([[1, 2], [3, 4]]).status, "gaps");
+  assert.equal(m.composerCoverage([[1, 2], [], [2, 3]]).gaps[0].reason, "empty_window_after_frames");
+  assert.deepEqual(m.composerCoverage([[3, 2, 1, 1], [4, 3]]).windows[0], { poll: 0, frames: 3, first_ns: 1, last_ns: 3 });
 });
 
 test("visual: PNG round trip, unchanged screen = same, a moved card = one boxed region; bars ignored", () => {

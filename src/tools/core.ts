@@ -50,7 +50,7 @@ export const projectTool = tool({
     scope: z.array(z.string()).min(1).max(100).optional(),
     coverage: z.boolean().optional(),
     target: fields.target,
-    timeout_ms: z.number().int().min(1000).max(1800000).optional(),
+    timeout_ms: z.number().int().min(1000).max(1800000).optional().describe("test: task deadline, default 600000; independent of wait"),
     allow_data_reset: z.boolean().optional().describe("instrument: required; SDK uninstalls app and erases its data"),
     expected_tests: z.number().int().min(1).optional(),
     plan: z.string().optional().describe("verify: project-relative or absolute JSON plan"),

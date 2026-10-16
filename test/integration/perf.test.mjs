@@ -14,15 +14,40 @@ await build({ entryPoints: [path.join(root, "src/domains/perf.ts")], outfile: en
   b.onResolve({ filter: /(?:ui|device|artifacts)\.js$/ }, (a) => /domains\/perf\.ts$/.test(a.importer.replaceAll("\\", "/")) ? { path: path.basename(a.path, ".js"), namespace: "fixture" } : undefined);
   b.onLoad({ filter: /.*/, namespace: "fixture" }, (a) => ({ contents: {
     artifacts: `export async function saveArtifact(raw){globalThis.__devecoPerf.artifact=JSON.parse(raw);return {artifact_id:'diagnostic'}}`,
-    ui: `export async function dumpTree(){return [{frame:globalThis.__devecoPerf.still?0:globalThis.__devecoPerf.gestures}]};export function treeSignature(nodes){return JSON.stringify(nodes)};export async function act(_t,_g,signal){const f=globalThis.__devecoPerf;signal.throwIfAborted();f.gestures++;if(!f.samplerStarted)throw new Error('sampling did not begin before gestures');if(f.failGesture)throw new Error('gesture failed');if(f.cancel)f.controller.abort();return {}}`,
-    device: `export async function shell(_t,args,signal){const f=globalThis.__devecoPerf;signal.throwIfAborted();f.commands.push(args);let out={code:0,stdout:'',stderr:'',truncated:false,elapsedMs:1};if(args.includes('-profilerfps')){f.samplerStarted=true;if(f.waitSampler)await new Promise((r,j)=>signal.addEventListener('abort',()=>{f.samplerAborted=true;j(new Error('sampler aborted'))},{once:true}));return {...out,...f.profiler}};if(args[0].includes('fpsClear'))return {...out,...f.clear};if(args[0].includes('composer fps'))return {...out,...f.composer};return {...out,stdout:'order:1 refreshrate=60'}}`,
+    ui: `import { setTimeout as delay } from 'node:timers/promises';
+      export async function dumpTree(){return [{frame:globalThis.__devecoPerf.still?0:globalThis.__devecoPerf.gestures}]}
+      export function treeSignature(nodes){return JSON.stringify(nodes)}
+      export async function act(_t,_g,signal){
+        const f=globalThis.__devecoPerf;signal.throwIfAborted();f.gestures++;
+        if(!f.samplerStarted)throw new Error('sampling did not begin before gestures');
+        if(f.failGesture)throw new Error('gesture failed');if(f.cancel)f.controller.abort();
+        f.inGesture=true;
+        try { if(f.gestureMs)await delay(f.gestureMs,undefined,{signal}); }
+        finally { f.inGesture=false; }
+        return {};
+      }`,
+    device: `export async function shell(_t,args,signal){
+      const f=globalThis.__devecoPerf;signal.throwIfAborted();f.commands.push(args);
+      const out={code:0,stdout:'',stderr:'',truncated:false,elapsedMs:1};
+      if(args.includes('-profilerfps')){
+        f.samplerStarted=true;
+        if(f.waitSampler)await new Promise((r,j)=>signal.addEventListener('abort',()=>{f.samplerAborted=true;j(new Error('sampler aborted'))},{once:true}));
+        return {...out,...f.profiler};
+      }
+      if(args[0].includes('fpsClear'))return {...out,...f.clear};
+      if(args[0].includes('composer fps')){
+        f.composerCalls++;if(f.inGesture)f.pollsDuringGestures++;
+        return {...out,...(typeof f.composer==='function'?await f.composer(signal):f.composer)};
+      }
+      return {...out,stdout:'order:1 refreshrate=60'};
+    }`,
   }[a.path] }));
 } }] });
 const m = await import(pathToFileURL(entry).href);
 after(() => { fs.rmSync(work, { recursive: true, force: true }); delete globalThis.__devecoPerf; });
 function reset(values = {}) {
   for (const k of Object.keys(f)) delete f[k];
-  Object.assign(f, { commands: [], gestures: 0, profiler: { stdout: 'fps:0|1\nfps:0|2\n' }, composer: { stdout: 'RenderService fps unavailable' }, ...values });
+  Object.assign(f, { commands: [], gestures: 0, composerCalls: 0, pollsDuringGestures: 0, profiler: { stdout: 'fps:0|1\nfps:0|2\n' }, composer: { stdout: 'RenderService fps unavailable' }, ...values });
   return new AbortController().signal;
 }
 test("empty/zero FPS is inconclusive with raw evidence, never a claim that the UI did not animate", async () => {
@@ -76,7 +101,52 @@ test("caller cancellation cancels sampling and never emits a successful result",
 
 test("composer zero records and truncated profiler output remain diagnostic, not valid frame data", async () => {
   const r = await m.measureScroll('fixture', { repeat: 1 }, reset({ composer: { stdout: 'The fps of screen [Id:0] is:\n0\n0\n0\n' }, profiler: { stdout: 'fps:60|1', truncated: true } }));
-  assert.equal(r.verdict, 'inconclusive'); assert.equal(r.diagnostics.composer.zero_records, 3);
+  assert.equal(r.verdict, 'inconclusive'); assert.equal(r.diagnostics.composer.zero_records, 6);
   assert.equal(r.diagnostics.composer.reason, 'all_zero_timestamps');
   assert.equal(r.diagnostics.profilerfps.reason, 'output_truncated');
+});
+
+test("long gestures cannot outrun the bounded frame history between composer reads", async () => {
+  const started = Date.now();
+  const signal = reset({ gestureMs: 3500, composer: () => {
+    const last = Math.floor((Date.now() - started) * 120 / 1000);
+    const first = Math.max(0, last - 383);
+    return { stdout: Array.from({ length: last - first + 1 }, (_, i) => String(Math.round(1e12 + (first + i) * 1e9 / 120))).join('\n') };
+  } });
+  const r = await m.measureScroll('fixture', { repeat: 1 }, signal);
+  assert.ok(f.pollsDuringGestures >= 5, 'sample while act() is awaiting the device');
+  assert.equal(r.sampling.status, 'overlapping'); assert.deepEqual(r.sampling.gaps, []);
+  assert.equal(r.verdict, 'smooth'); assert.deepEqual(r.excluded_intervals, []);
+  assert.ok(r.frames >= 840, 'retain both full 3.5-second gestures, not only two 384-frame tails');
+  const reads = f.artifact.captures.filter(c => c.command[0].includes('composer fps') && !c.command[0].includes('fpsClear'));
+  assert.ok(reads.length < 15, 'bounded cadence, no busy loop');
+  for (let i = 1; i < reads.length; i++) assert.ok(reads[i].started_ms >= reads[i - 1].finished_ms, 'no overlapping reads');
+});
+
+test("disjoint windows stay inconclusive even when the missing interval is below the long-gap threshold", async () => {
+  const signal = reset({ composer: () => ({ stdout: Array.from({ length: 61 }, (_, i) => String(Math.round(1e12 + (f.composerCalls - 1) * 1.05e9 + i * 1e9 / 60))).join('\n') }) });
+  const r = await m.measureScroll('fixture', { repeat: 1 }, signal);
+  assert.equal(r.source, 'composer'); assert.deepEqual(r.excluded_intervals, []);
+  assert.equal(r.sampling.status, 'gaps'); assert.equal(r.sampling.gaps[0].reason, 'non_overlapping_windows');
+  assert.equal(r.verdict, 'inconclusive');
+});
+
+test("a composer read failure stops that sampler without retrying at the end", async () => {
+  const stdout = Array.from({ length: 61 }, (_, i) => String(Math.round(1e12 + i * 1e9 / 60))).join('\n');
+  const r = await m.measureScroll('fixture', { repeat: 1 }, reset({ gestureMs: 800, composer: () => f.composerCalls === 1 ? { stdout } : { code: 1, stderr: 'Permission denied' } }));
+  assert.equal(f.composerCalls, 2); assert.equal(r.verdict, 'inconclusive');
+  assert.equal(r.diagnostics.composer.reason, 'permission_denied');
+});
+
+test("cancellation aborts an in-flight composer read and leaves no background polling", async () => {
+  const controller = new AbortController();
+  reset({ gestureMs: 3000, composer: async signal => {
+    if (f.composerCalls === 1) return { stdout: 'The fps of screen [Id:0] is:\n' };
+    await new Promise((_resolve, reject) => {
+      signal.addEventListener('abort', () => { f.composerAborted = true; reject(new Error('composer aborted')); }, { once: true });
+      controller.abort();
+    });
+  } });
+  await assert.rejects(m.measureScroll('fixture', { repeat: 1 }, controller.signal));
+  assert.equal(f.composerAborted, true); assert.equal(f.composerCalls, 2); assert.equal(f.artifact, undefined);
 });

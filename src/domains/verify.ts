@@ -124,7 +124,7 @@ export function judge(type: string, result: any): Verdict {
     : result.project_assertions?.passed === true ? "passed" : "inconclusive";
   if (type === "diagnostics") return result.errors ? "failed" : "passed";
   if (type === "visual") return ["created", "updated"].includes(result.baseline) ? "recorded" : result.same === true && !result.global_shift ? "passed" : "failed";
-  if (type === "perf") return result.source !== "composer" || result.excluded_intervals?.length || result.activity_verified !== true ? "inconclusive" : "passed";
+  if (type === "perf") return result.source !== "composer" || result.verdict === "inconclusive" || result.sampling?.status !== "overlapping" || result.excluded_intervals?.length || result.activity_verified !== true ? "inconclusive" : "passed";
   if (type === "crash") return result.reports?.length ? "failed" : "passed";
   if (type === "layout" && result.density_source === "assumed") return "inconclusive";
   return result.passed === true ? "passed" : "failed";

@@ -24,8 +24,8 @@ export function mergeFrames(...series: number[][]) {
 }
 
 /**
- * Frame statistics over the time the screen was actually animating: gaps longer than `idleMs`
- * (screen idle between gestures, nothing to compose) are not frames the user waited for.
+ * Descriptive statistics for observed short intervals. Longer gaps remain explicit:
+ * they may be idle, a stall or missing samples, and prevent a quality verdict.
  * A dropped/janky frame is a gap longer than 1.5 refresh intervals. Pure.
  */
 export function frameStats(timestampsNs: number[], reportedHz?: number, idleMs = 200) {
@@ -81,7 +81,27 @@ interface Capture {
   stderr?: string;
   truncated?: boolean;
   elapsed_ms?: number;
+  started_ms?: number;
+  finished_ms?: number;
   error?: ReturnType<typeof errorResult>;
+}
+
+/** No overlap means the bounded device history cannot prove the intervening frames were captured. */
+export function composerCoverage(series: number[][]) {
+  const windows: { poll: number; frames: number; first_ns: number; last_ns: number }[] = [];
+  const gaps: { after_poll: number; before_poll: number; reason: string }[] = [];
+  let previous: Set<number> | undefined, previousPoll = 0;
+  for (const [poll, values] of series.entries()) {
+    const frames = [...new Set(values)].sort((a, b) => a - b);
+    if (!frames.length) {
+      if (previous) gaps.push({ after_poll: previousPoll, before_poll: poll, reason: "empty_window_after_frames" });
+      continue;
+    }
+    windows.push({ poll, frames: frames.length, first_ns: frames[0]!, last_ns: frames.at(-1)! });
+    if (previous && !frames.some((frame) => previous!.has(frame))) gaps.push({ after_poll: previousPoll, before_poll: poll, reason: "non_overlapping_windows" });
+    previous = new Set(frames); previousPoll = poll;
+  }
+  return { status: gaps.length ? "gaps" : windows.length < 2 ? "insufficient" : "overlapping", windows, gaps };
 }
 
 /** Classify command evidence, without guessing why the screen did or did not animate. */
@@ -106,6 +126,7 @@ export interface PerfOptions {
 
 /** Sample composer and profiler concurrently over one gesture run; retain raw command evidence. */
 export async function measureScroll(target: string, options: PerfOptions, signal: AbortSignal) {
+  const started = Date.now();
   const w = options.screen?.w ?? 1080, h = options.screen?.h ?? 2400;
   const x = Math.round(w / 2), top = Math.round(h * 0.3), bottom = Math.round(h * 0.75);
   const gestures = options.gestures ?? Array.from({ length: options.repeat ?? 3 }, () => [
@@ -114,6 +135,7 @@ export async function measureScroll(target: string, options: PerfOptions, signal
   ]).flat();
   const captures: Capture[] = [];
   const capture = async (command: string[], timeoutMs: number, commandSignal = signal) => {
+    const at = Date.now();
     let result: Capture;
     try {
       const output = await shell(target, command, commandSignal, timeoutMs);
@@ -122,6 +144,8 @@ export async function measureScroll(target: string, options: PerfOptions, signal
       signal.throwIfAborted();
       result = { command, error: errorResult(error) };
     }
+    result.started_ms = at - started;
+    result.finished_ms = Date.now() - started;
     captures.push(result);
     return result;
   };
@@ -137,16 +161,27 @@ export async function measureScroll(target: string, options: PerfOptions, signal
   const cleared = await capture(["hidumper -s RenderService -a 'composer fpsClear'"], 10000);
   const clearFailed = !!cleared.error || cleared.code !== 0 || /\[fail\]|\berror\b|not supported|permission denied/i.test((cleared.stdout ?? "") + (cleared.stderr ?? ""));
   const series: number[][] = [], dumps: Capture[] = [];
-  const sampleComposer = async () => {
-    const result = await capture(["hidumper -s RenderService -a 'composer fps'"], 15000);
+  let composerFailure: string | undefined;
+  const sampleComposer = async (commandSignal = signal) => {
+    const result = await capture(["hidumper -s RenderService -a 'composer fps'"], 15000, commandSignal);
     dumps.push(result);
-    if (!clearFailed && !perfCommandFailure(result)) series.push(parseComposerFps(result.stdout ?? ""));
+    composerFailure ??= perfCommandFailure(result);
+    if (!clearFailed && !composerFailure) series.push(parseComposerFps(result.stdout ?? ""));
   };
-  const started = Date.now();
+  // Read before any gesture, then independently at 1 Hz. Sampling after act() loses
+  // frames whenever a gesture/tree wait outlives RenderService's recent-frame buffer.
+  if (!clearFailed) await sampleComposer();
   const controller = new AbortController();
   const samplerSignal = AbortSignal.any([signal, controller.signal]);
   // Attach rejection handling immediately: gesture failures must not leave a sampler running.
   let collecting = true;
+  const composerSampler = (async () => {
+    while (collecting && !clearFailed && !composerFailure) {
+      await delay(1000, undefined, { signal: samplerSignal });
+      if (collecting) await sampleComposer(samplerSignal);
+    }
+  })();
+  void composerSampler.catch(() => undefined);
   const sampler = (async () => {
     const results: Capture[] = [];
     do {
@@ -163,7 +198,6 @@ export async function measureScroll(target: string, options: PerfOptions, signal
   let profiler: Capture[];
   const activity: { index: number; started_ms: number; finished_ms: number; status: string; scope: string }[] = [];
   try {
-    let lastPoll = Date.now();
     for (const g of gestures) {
       signal.throwIfAborted();
       const scoped = g.action === "scroll" && g.selector;
@@ -173,20 +207,21 @@ export async function measureScroll(target: string, options: PerfOptions, signal
       activity.push({ index: activity.length, started_ms: at - started, finished_ms: finished - started,
         status: scoped ? result.motion?.status ?? "unobserved" : treeSignature(await dumpTree(target, signal)) !== before ? "changed" : "unchanged",
         scope: scoped ? "selected-subtree" : "screen" });
-      if (Date.now() - lastPoll > 1500) { await sampleComposer(); lastPoll = Date.now(); }
     }
     await delay(600, undefined, { signal });
-    await sampleComposer();
     collecting = false;
-    profiler = await sampler;
+    [profiler] = await Promise.all([sampler, composerSampler]);
+    // Join first: never overlap two composer commands, including the final read.
+    if (!clearFailed && !composerFailure) await sampleComposer();
   } finally {
     collecting = false;
     controller.abort();
-    await sampler.catch(() => undefined);
+    await Promise.allSettled([sampler, composerSampler]);
   }
   signal.throwIfAborted();
   const frames = mergeFrames(...series);
   const stats = frameStats(frames, hz);
+  const sampling = { interval_ms: 1000, ...composerCoverage(series) };
   const memAfter = await readPss();
   const memory = memBefore !== undefined && memAfter !== undefined ? { pss_kb_before: memBefore, pss_kb_after: memAfter, delta_kb: memAfter - memBefore } : undefined;
   const allSamples = profiler.flatMap((result) => parseSpFps(result.stdout ?? ""));
@@ -194,14 +229,14 @@ export async function measureScroll(target: string, options: PerfOptions, signal
   const profilerFailure = profiler.map(perfCommandFailure).find(Boolean);
   const zeroRecords = dumps.reduce((sum, dump) => sum + [...(dump.stdout ?? "").matchAll(/^\s*0\s*$/gm)].length, 0);
   const diagnostics = {
-    composer: { polls: dumps.length, timestamps: frames.length, zero_records: zeroRecords, reason: stats ? undefined : clearFailed ? "clear_failed" : dumps.map(perfCommandFailure).find(Boolean) ?? (frames.length ? "insufficient_frame_intervals" : zeroRecords ? "all_zero_timestamps" : "no_frame_timestamps") },
+    composer: { polls: dumps.length, timestamps: frames.length, zero_records: zeroRecords, reason: clearFailed ? "clear_failed" : composerFailure ?? (stats ? undefined : frames.length ? "insufficient_frame_intervals" : zeroRecords ? "all_zero_timestamps" : "no_frame_timestamps") },
     profilerfps: { polls: profiler.length, valid_samples: samples.length, zero_samples: allSamples.filter((s) => s.fps === 0).length, total_samples: allSamples.length,
       reason: samples.length ? undefined : profilerFailure ?? (allSamples.length ? "all_zero_samples" : "unrecognized_output") },
   };
   const activityVerified = activity.length > 0 && activity.every((a) => a.status === "changed");
-  const artifact = await saveArtifact(JSON.stringify({ target, started_at: new Date(started).toISOString(), gestures, activity, captures, diagnostics }, null, 2), "application/json");
-  const common = { gestures: gestures.length, elapsed_ms: Date.now() - started, activity, activity_verified: activityVerified, diagnostics, diagnostic_artifact: artifact.artifact_id, ...(memory ? { memory } : {}) };
-  if (stats) return { source: "composer", verdict: activityVerified && !stats.excluded_intervals.length ? perfVerdict(stats) : "inconclusive", ...stats, ...common };
+  const artifact = await saveArtifact(JSON.stringify({ target, started_at: new Date(started).toISOString(), gestures, activity, captures, diagnostics, sampling }, null, 2), "application/json");
+  const common = { gestures: gestures.length, elapsed_ms: Date.now() - started, activity, activity_verified: activityVerified, diagnostics, sampling, diagnostic_artifact: artifact.artifact_id, ...(memory ? { memory } : {}) };
+  if (stats) return { source: "composer", verdict: activityVerified && !composerFailure && sampling.status === "overlapping" && !stats.excluded_intervals.length ? perfVerdict(stats) : "inconclusive", ...stats, ...common };
   if (samples.length) return {
     source: "profilerfps", verdict: "fps_only", avg_fps: +(samples.reduce((s, x) => s + x.fps, 0) / samples.length).toFixed(1),
     min_fps: Math.min(...samples.map((s) => s.fps)), samples: samples.length, ...common,
