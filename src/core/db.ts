@@ -44,6 +44,8 @@ CREATE TABLE IF NOT EXISTS artifacts (
   bytes INTEGER NOT NULL,
   created INTEGER NOT NULL
 );
+CREATE INDEX IF NOT EXISTS artifacts_created ON artifacts(created,id);
+CREATE INDEX IF NOT EXISTS artifacts_file ON artifacts(file);
 CREATE TABLE IF NOT EXISTS credentials (
   provider TEXT PRIMARY KEY,
   data BLOB
@@ -52,6 +54,7 @@ CREATE TABLE IF NOT EXISTS exports (
   path TEXT PRIMARY KEY,
   created INTEGER NOT NULL
 );
+CREATE INDEX IF NOT EXISTS exports_created ON exports(created,path);
 CREATE TABLE IF NOT EXISTS kv (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL

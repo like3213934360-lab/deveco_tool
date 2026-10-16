@@ -31,6 +31,8 @@
 
 MCP 契约回归同样包含在 `npm test`：`integration/protocol.test.mjs`、`server.test.mjs` 覆盖协议、注解及提前拒绝；`device.test.mjs` 验证 SQLite 路径完整引用；`emulator.test.mjs`、`signing.test.mjs` 用隔离进程验证退出状态和配置引用；`jobs.test.mjs` 与 `unit/efficiency.test.mjs` 验证检查范围、完整报告及构建预检结果。未增加测试运行器或依赖。
 
+电脑端产物保留回归也包含在 `npm test`：`node --test test/integration/jobs.test.mjs test/integration/retention.test.mjs`。前者验证过期边界、活动任务、容量限额、失败重试及目录保护；后者启动真实 MCP 进程，验证无任务时到期自动删除和批量删除期间的协议响应。仅使用自行清理的临时目录，不连接设备。
+
 ## 当前宿主模型验收
 
 直接在当前 Codex App 中调用已加载的 MCP，不启动 Codex CLI，也不改审批设置。先用 doctor 确认运行版本、SDK、工程和显式设备，再完成场景中的实际调用及结果断言。返回静态候选、无数据或未执行必须按实际边界报告；工具发现和拟调用方案不能计为执行通过。

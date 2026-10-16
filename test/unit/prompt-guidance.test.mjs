@@ -18,7 +18,7 @@ test("guidance covers discovery, standalone tools, safe continuation and evidenc
       /exact signatures: code action=lsp op=hover\/definition.*project SDK/, /SDK declarations.*successful build > official docs > community hints/,
       /job action=wait, never repeat/, /Inspect needs_input before resume/,
       /DEVICE_AMBIGUOUS\/TEAM_AMBIGUOUS: ask the user/, /Invalid parameters execute nothing/,
-      /summaries.*any returned artifact id.*job action=read artifact_id=<id>.*line\/limit.*grep.*about a day/,
+      /summaries.*any returned artifact id.*job action=read artifact_id=<id>.*line\/limit.*grep.*tracked local exports expire after 24h/,
       /consent and setup\/tours automatically.*preserving selected defaults/, /ui act steps=.*ui assert.*save_flow.*then_flow/,
       /Skill placement and updates are user-managed/]) assert.match(instructions, rule);
     for (const t of tools) assert.ok(!t.description.includes(instructions), `${t.name}: server must not duplicate the global prefix`);

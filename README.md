@@ -63,7 +63,7 @@ node bin/deveco-mcp.mjs init --host codex --project .      # 项目级配置（.
 | `clt` | Command Line Tools 路径，可以代替 `studio` |
 | `java_home` | 使用的 JDK |
 | `state_dir` | 状态目录，默认 `~/.deveco-mcp` |
-| `retention_days` | 截图、录屏、日志、测试导出等运行产物的保留天数，默认 1（含 `save_path` / `test_export` 导出的副本） |
+| `retention_days` | 固定为 1：电脑端截图、录屏、日志及 `save_path` / `test_export` 副本满 24 小时自动删除；不接受更长保留期 |
 | `max_jobs` | 最多保留的任务数，默认 200 |
 | `max_artifact_mb` | 制品总大小上限，默认 512 |
 | `session_idle_minutes` | 语言服务等会话的空闲关闭时间，默认 10 |
@@ -72,6 +72,8 @@ node bin/deveco-mcp.mjs init --host codex --project .      # 项目级配置（.
 | `kb_source` / `kb_upstream_tag` | 默认 `upstream` / `latest`；`daily` 需显式配置 |
 | `kb_package` | 成品包 npm 名；显式自定义名称且无 kb_source 时保留 pack 来源 |
 | `npm_registry` | 更新知识包时使用的 npm 源 |
+
+MCP 运行时按文件到期时间清理；退出或电脑休眠期间不能执行删除，恢复运行后补清。仅电脑缓存和已登记的导出副本受此规则管理，手机图库原视频、工程基线及永久 verify 交付包保留。删除失败会在 stderr 报错、保留索引并在 30 秒后重试。
 
 用 `node bin/deveco-mcp.mjs doctor [project]` 或 `doctor` 工具检查环境。
 
@@ -248,7 +250,7 @@ Other config keys:
 | `clt` | Command Line Tools path; use instead of `studio` |
 | `java_home` | JDK to use |
 | `state_dir` | State location; default `~/.deveco-mcp` |
-| `retention_days` | Days to keep run output (screenshots, recordings, logs, test exports incl. `save_path` / `test_export` copies). Default 1 |
+| `retention_days` | Fixed at 1: local screenshots, recordings, logs and `save_path` / `test_export` copies are deleted automatically after 24 hours; longer retention is rejected |
 | `max_jobs` | Default 200 |
 | `max_artifact_mb` | Default 512 |
 | `session_idle_minutes` | Default 10 |
@@ -257,6 +259,8 @@ Other config keys:
 | `kb_source` / `kb_upstream_tag` | Defaults: `upstream` / `latest`; opt in to `daily` |
 | `kb_package` | Pack npm name; custom names without kb_source retain pack mode |
 | `npm_registry` | Registry used for knowledge pack updates |
+
+While MCP is running, cleanup follows file expiry deadlines. Deletion catches up after shutdown or sleep. Only local caches and tracked export copies expire; phone gallery originals, project baselines and permanent verify bundles remain. Failed deletions are reported on stderr, keep their records and retry after 30 seconds.
 
 Check the setup with `node bin/deveco-mcp.mjs doctor [project]`, or call the `doctor` tool.
 

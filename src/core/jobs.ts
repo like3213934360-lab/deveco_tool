@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import { cleanup, saveArtifact } from "./artifacts.js";
+import { scheduleCleanup, saveArtifact } from "./artifacts.js";
 import { database } from "./db.js";
 import { errorResult, invariant, ToolError } from "./errors.js";
 import { sha256 } from "./files.js";
@@ -151,7 +151,7 @@ function execute(id: string) {
       await event(id, `${status}: ${failure.code} ${failure.message}`);
     } finally {
       running.delete(id);
-      void cleanup().catch(() => {});
+      scheduleCleanup(1000);
     }
   })();
   running.set(id, { controller, done: done.catch(() => {}) });

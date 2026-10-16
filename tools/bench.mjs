@@ -21,7 +21,7 @@ const t = performance.now();
 const list = await client.request("tools/list");
 const listMs = performance.now() - t;
 const prompts = promptMetrics(init.result.instructions, list.result.tools);
-// Startup schedules one-shot job recovery (2 s) and retention cleanup (5 s).
+// Startup schedules job recovery (2 s) and begins deadline-based output retention.
 // Measure idle after those and their background compilation/GC settle; counting them in the idle
 // window measures startup CPU instead. Keep the 10 s observation window.
 await new Promise((r) => setTimeout(r, 15000));

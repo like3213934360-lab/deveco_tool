@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { setImmediate as yieldTurn } from "node:timers/promises";
 import { config, stateDir } from "./config.js";
 import { database } from "./db.js";
 import { invariant } from "./errors.js";
@@ -31,6 +32,7 @@ export async function commitArtifact(id: string, file: string, mime: string, job
   (await database())
     .prepare("INSERT OR REPLACE INTO artifacts(id,job_id,file,mime,bytes,created) VALUES(?,?,?,?,?,?)")
     .run(id, jobId ?? null, file, mime, bytes, Date.now());
+  scheduleCleanup(1000);
   return { artifact_id: id, bytes, mime };
 }
 
@@ -41,7 +43,7 @@ export async function saveArtifact(data: string | Buffer, mime = "text/plain", j
 }
 
 async function lookup(id: string) {
-  const row = (await database()).prepare("SELECT file,mime,bytes FROM artifacts WHERE id=?").get(id) as
+  const row = (await database()).prepare("SELECT file,mime,bytes FROM artifacts WHERE id=? AND created>?").get(id, Date.now() - DAY) as
     | { file: string; mime: string; bytes: number }
     | undefined;
   invariant(row && fs.existsSync(row.file), "NOT_FOUND", `Artifact ${id} does not exist or was cleaned up`);
@@ -89,57 +91,120 @@ export async function readArtifact(id: string, options: { line?: number; limit?:
   };
 }
 
-let cleaning = false;
-/** Bounded retention by age, count and bytes. Runs after jobs finish, never on a timer. */
-export async function cleanup() {
-  if (cleaning) return;
-  cleaning = true;
-  try {
-    const db = await database();
-    const cfg = config();
-    const cutoff = Date.now() - cfg.retention_days * 86400000;
+const DAY = 86400000;
+const BATCH = 64;
+const RECHECK = 60000;
+let cleaning: Promise<void> | undefined;
+let ticking = false;
+let timer: NodeJS.Timeout | undefined;
+let wakeAt = Infinity;
+let maintenanceAt = 0;
+let discoveryAt = 0;
+let orphanAt = Infinity;
+let stopped = false;
+
+/** Age checks use indexed, bounded pages; directory discovery and quotas run only on maintenance. */
+async function sweep(maintenance: boolean, discover: boolean) {
+  const db = await database();
+  const cfg = config();
+  const cutoff = Date.now() - DAY;
+  let failure: Error | undefined;
+  const remove = async (file: string) => {
+    try { await fs.promises.unlink(file); return true; }
+    catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return true;
+      failure ??= new Error(`Cannot remove expired output ${file}: ${(error as Error).message}. Check file permissions; its retention record is kept for retry.`);
+      return false;
+    }
+  };
+  const prune = async (table: "artifacts" | "exports", where: string, params: number[] = [], bytesToFree = Infinity) => {
+    const key = table === "artifacts" ? "id" : "path";
+    const fields = table === "artifacts" ? "file,bytes" : "path AS file,0 AS bytes";
+    const select = db.prepare(`SELECT ${key} AS key,${fields},created FROM ${table} WHERE (${where}) AND (created,${key})>(?,?) ORDER BY created,${key} LIMIT ${BATCH}`);
+    const forget = db.prepare(`DELETE FROM ${table} WHERE ${key}=? AND created=?`);
+    const unchanged = db.prepare(`SELECT 1 FROM ${table} WHERE ${key}=? AND created=?`);
+    let created = -1, last = "";
+    while (bytesToFree > 0) {
+      const rows = select.all(...params, created, last) as { key: string; file: string; bytes: number; created: number }[];
+      if (!rows.length) break;
+      const removed = [];
+      for (const row of rows) {
+        if (bytesToFree <= 0) break;
+        if (!unchanged.get(row.key, row.created)) continue;
+        if (await remove(row.file)) { removed.push(row); bytesToFree -= row.bytes; }
+      }
+      // One short transaction per page, never hold a SQLite lock across filesystem awaits.
+      db.exec("BEGIN IMMEDIATE");
+      try {
+        for (const row of removed) forget.run(row.key, row.created);
+        db.exec("COMMIT");
+      } catch (error) { db.exec("ROLLBACK"); throw error; }
+      const end = rows[rows.length - 1]!;
+      created = end.created; last = end.key;
+      await yieldTurn();
+    }
+  };
+  // Active or paused jobs must not exempt their media from the 24-hour limit.
+  await prune("artifacts", "created<=?", [cutoff]);
+  await prune("exports", "created<=?", [cutoff]);
+  if (maintenance) {
     const active = "('queued','running','needs_input')";
-    const old = db
-      .prepare(`SELECT id FROM jobs WHERE status NOT IN ${active} AND (updated < ? OR id IN (SELECT id FROM jobs WHERE status NOT IN ${active} ORDER BY updated DESC LIMIT -1 OFFSET ?))`)
-      .all(cutoff, cfg.max_jobs) as { id: string }[];
-    for (const { id } of old) {
-      db.prepare("DELETE FROM jobs WHERE id=?").run(id);
-      db.prepare("DELETE FROM effects WHERE job_id=?").run(id);
-      db.prepare("DELETE FROM events WHERE job_id=?").run(id);
+    const old = db.prepare(`SELECT id FROM jobs WHERE status NOT IN ${active} AND (updated<=? OR id IN (SELECT id FROM jobs WHERE status NOT IN ${active} ORDER BY updated DESC LIMIT -1 OFFSET ?)) LIMIT ${BATCH}`);
+    while (true) {
+      const rows = old.all(cutoff, cfg.max_jobs) as { id: string }[];
+      if (!rows.length) break;
+      db.exec("BEGIN IMMEDIATE");
+      try {
+        for (const { id } of rows) {
+          db.prepare("DELETE FROM jobs WHERE id=?").run(id);
+          db.prepare("DELETE FROM effects WHERE job_id=?").run(id);
+          db.prepare("DELETE FROM events WHERE job_id=?").run(id);
+        }
+        db.exec("COMMIT");
+      } catch (error) { db.exec("ROLLBACK"); throw error; }
+      await yieldTurn();
     }
-    const orphans = db.prepare("SELECT id,file FROM artifacts WHERE (job_id IS NOT NULL AND job_id NOT IN (SELECT id FROM jobs)) OR (job_id IS NULL AND created < ?)").all(cutoff) as { id: string; file: string }[];
+    await prune("artifacts", "job_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM jobs WHERE jobs.id=artifacts.job_id)");
     const budget = cfg.max_artifact_mb * 1024 * 1024;
-    const rows = db.prepare("SELECT id,file,bytes FROM artifacts ORDER BY created DESC").all() as { id: string; file: string; bytes: number }[];
-    let used = 0;
-    const over: { id: string; file: string }[] = [];
-    for (const row of rows) {
-      used += row.bytes;
-      if (used > budget) over.push(row);
+    const { used } = db.prepare("SELECT COALESCE(SUM(bytes),0) AS used FROM artifacts").get() as { used: number };
+    if (used > budget) await prune("artifacts", "1", [], used - budget);
+    if (db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='ui_tests'").get()) {
+      db.prepare("DELETE FROM ui_tests WHERE updated<=?").run(cutoff);
     }
-    for (const row of [...orphans, ...over]) {
-      fs.rmSync(row.file, { force: true });
-      db.prepare("DELETE FROM artifacts WHERE id=?").run(row.id);
-    }
-    // Exported copies (only paths this server created and recorded; never anything else).
-    for (const row of db.prepare("SELECT path FROM exports WHERE created < ?").all(cutoff) as { path: string }[]) {
-      try { fs.rmSync(row.path, { recursive: true, force: true }); } catch { /* already gone or not ours to remove */ }
-      db.prepare("DELETE FROM exports WHERE path=?").run(row.path);
-    }
-    // UI test sessions (their screenshots are job-less artifacts, removed above by age).
-    try { db.prepare("DELETE FROM ui_tests WHERE updated < ?").run(cutoff); } catch { /* table not created yet */ }
-    // Files in artifacts/ that no row points to (crash between write and commit, deleted rows).
-    const known = new Set((db.prepare("SELECT file FROM artifacts").all() as { file: string }[]).map((r) => path.basename(r.file)));
-    const dir = artifactDir();
-    for (const name of fs.readdirSync(dir)) {
-      if (known.has(name)) continue;
-      const file = path.join(dir, name);
-      const stat = fs.statSync(file, { throwIfNoEntry: false });
-      // Grace period: a streaming log is written before it is committed.
-      if (stat?.isFile() && Date.now() - stat.mtimeMs > 3600000) fs.rmSync(file, { force: true });
-    }
-  } finally {
-    cleaning = false;
   }
+  // Discover crash leftovers hourly, streaming directory entries instead of retaining a file list.
+  // Once discovered, each earliest orphan deadline participates in the same timer as registered files.
+  if (discover) {
+    orphanAt = Infinity;
+    const known = db.prepare("SELECT 1 FROM artifacts WHERE file=? LIMIT 1");
+    const dir = artifactDir();
+    let count = 0;
+    for await (const entry of await fs.promises.opendir(dir)) {
+      const file = path.join(dir, entry.name);
+      if (entry.isFile() && !known.get(file)) {
+        let stat;
+        try { stat = await fs.promises.stat(file); }
+        catch (error) { if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error; }
+        if (stat) {
+          const expires = Math.min(stat.birthtimeMs > 0 ? stat.birthtimeMs : stat.mtimeMs, stat.mtimeMs) + DAY;
+          if (expires <= Date.now() && !known.get(file)) await remove(file);
+          else orphanAt = Math.min(orphanAt, expires);
+        }
+      }
+      if (++count % BATCH === 0) await yieldTurn();
+    }
+  }
+  if (failure) throw failure;
+}
+
+/** Explicit cleanup shares the in-flight sweep; callers receive failures, never a false success. */
+export function cleanup(maintenance = true, discover = true): Promise<void> {
+  if (!cleaning) {
+    if (maintenance) maintenanceAt = Date.now() + 3600000;
+    if (discover) discoveryAt = Date.now() + 3600000;
+    cleaning = sweep(maintenance, discover).finally(() => { cleaning = undefined; });
+  }
+  return cleaning;
 }
 
 /**
@@ -148,9 +213,51 @@ export async function cleanup() {
  */
 export async function trackExport(file: string) {
   (await database()).prepare("INSERT OR REPLACE INTO exports(path,created) VALUES(?,?)").run(path.resolve(file), Date.now());
+  scheduleCleanup(1000);
 }
 
-/** Start-of-session cleanup, off the handshake path (a server that only answers queries never finishes a job). */
-export function scheduleCleanup(delayMs = 5000) {
-  setTimeout(() => void cleanup().catch(() => {}), delayMs).unref();
+function arm(at: number) {
+  if (stopped || at >= wakeAt) return;
+  clearTimeout(timer);
+  wakeAt = at;
+  timer = setTimeout(() => {
+    wakeAt = Infinity;
+    void tick();
+  }, Math.max(0, at - Date.now())).unref();
+}
+
+async function tick() {
+  if (ticking) return;
+  ticking = true;
+  try {
+    await cleanup(Date.now() >= maintenanceAt, Date.now() >= Math.min(discoveryAt, orphanAt));
+    if (stopped) return;
+    const db = await database();
+    const artifact = db.prepare("SELECT created FROM artifacts ORDER BY created LIMIT 1").get() as { created: number } | undefined;
+    const exported = db.prepare("SELECT created FROM exports ORDER BY created LIMIT 1").get() as { created: number } | undefined;
+    // Cheap reconciliation catches another writer, wall-clock changes and wake from sleep.
+    arm(Math.min(Date.now() + RECHECK, maintenanceAt, discoveryAt, orphanAt, (artifact?.created ?? Infinity) + DAY, (exported?.created ?? Infinity) + DAY));
+  } catch (error) {
+    process.stderr.write(`[retention] ${(error as Error).message}; retry in 30s\n`);
+    maintenanceAt = Date.now() + 30000;
+    discoveryAt = Math.min(discoveryAt, maintenanceAt);
+    arm(maintenanceAt);
+  } finally {
+    ticking = false;
+  }
+}
+
+/** One unref timer for deadlines and coalesced quota checks, off the handshake path. */
+export function scheduleCleanup(delayMs = 0) {
+  if (stopped) return;
+  maintenanceAt = Math.min(maintenanceAt, Date.now() + delayMs);
+  arm(Date.now() + delayMs);
+}
+
+/** Stop before closing SQLite; pending filesystem operations must finish first. */
+export async function stopCleanup() {
+  stopped = true;
+  clearTimeout(timer);
+  wakeAt = Infinity;
+  await cleaning;
 }

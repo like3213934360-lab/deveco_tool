@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { test } from "node:test";
+import { after, test } from "node:test";
 import { pathToFileURL } from "node:url";
 import { build } from "esbuild";
 
@@ -24,6 +24,12 @@ export { settlePreflight } from ${JSON.stringify(path.resolve("src/jobs.ts"))};
 const bundle = path.resolve("node_modules/.cache/deveco-test-harness.mjs");
 await build({ entryPoints: [harness], outfile: bundle, bundle: true, format: "esm", platform: "node", packages: "external", logLevel: "error" });
 const m = await import(`${pathToFileURL(bundle).href}?t=${Date.now()}`);
+after(async () => {
+  await m.stopCleanup();
+  m.closeDatabase();
+  fs.rmSync(out, { recursive: true, force: true });
+  fs.rmSync(bundle, { force: true });
+});
 
 let effectRuns = 0;
 m.defineJob({
@@ -213,4 +219,96 @@ test("exported copies expire with the artifacts; untracked user files are never 
   assert.equal(fs.existsSync(oldCopy), false);
   assert.equal(fs.existsSync(newCopy), true);
   assert.equal(fs.existsSync(mine), true, "files this server did not write are left alone");
+});
+
+test("24-hour expiry applies to active jobs and reads immediately reject expired artifacts", async () => {
+  const db = await m.database();
+  db.prepare("INSERT INTO jobs(id,kind,status,input,created,updated) VALUES('j_active','t_slow','running','{}',0,0)").run();
+  const old = await m.saveArtifact("expired media", "text/plain", "j_active");
+  db.prepare("UPDATE artifacts SET created=? WHERE id=?").run(Date.now() - 86400000, old.artifact_id);
+  const file = db.prepare("SELECT file FROM artifacts WHERE id=?").get(old.artifact_id).file;
+  await assert.rejects(m.readArtifact(old.artifact_id), { code: "NOT_FOUND" });
+  await m.cleanup();
+  assert.equal(fs.existsSync(file), false);
+  assert.equal(db.prepare("SELECT status FROM jobs WHERE id='j_active'").get().status, "running");
+});
+
+test("failed deletion keeps its record, continues other files, retries and never recursively removes exports", async () => {
+  const db = await m.database();
+  const directory = path.join(out, "protected-export"), other = path.join(out, "expired-copy");
+  fs.mkdirSync(directory);
+  fs.writeFileSync(path.join(directory, "user-file"), "keep");
+  fs.writeFileSync(other, "delete");
+  await m.trackExport(directory);
+  await m.trackExport(other);
+  db.prepare("UPDATE exports SET created=0 WHERE path IN (?,?)").run(directory, other);
+  await assert.rejects(m.cleanup(), /Cannot remove expired output.*retention record is kept/);
+  assert.equal(fs.existsSync(path.join(directory, "user-file")), true);
+  assert.ok(db.prepare("SELECT 1 FROM exports WHERE path=?").get(directory));
+  assert.equal(fs.existsSync(other), false);
+  assert.equal(db.prepare("SELECT 1 FROM exports WHERE path=?").get(other), undefined);
+  fs.rmSync(directory, { recursive: true }); // Only remove our test fixture, then retry the missing path.
+  await m.cleanup();
+  assert.equal(db.prepare("SELECT 1 FROM exports WHERE path=?").get(directory), undefined);
+});
+
+test("byte quota evicts oldest files and retains recent files without reading media content", async () => {
+  const db = await m.database(), files = [];
+  try {
+    for (let i = 0; i < 3; i++) {
+      const item = m.artifactPath("video/mp4");
+      fs.closeSync(fs.openSync(item.file, "w"));
+      fs.truncateSync(item.file, 200 * 1024 * 1024); // Sparse fixture: real size, no large allocation.
+      await m.commitArtifact(item.id, item.file, "video/mp4");
+      db.prepare("UPDATE artifacts SET created=? WHERE id=?").run(Date.now() - 3000 + i * 1000, item.id);
+      files.push(item);
+    }
+    await m.cleanup();
+    assert.deepEqual(files.map(({ file }) => fs.existsSync(file)), [false, true, true]);
+  } finally {
+    for (const { id, file } of files) {
+      fs.rmSync(file, { force: true });
+      db.prepare("DELETE FROM artifacts WHERE id=?").run(id);
+    }
+  }
+});
+
+test("capture notifications coalesce and do not repeatedly scan the artifact directory", async (t) => {
+  await m.cleanup();
+  const original = fs.promises.opendir;
+  const scans = t.mock.method(fs.promises, "opendir", (...args) => original(...args));
+  for (let i = 0; i < 20; i++) await m.saveArtifact("small capture");
+  await new Promise((resolve) => setTimeout(resolve, 1300));
+  assert.equal(scans.mock.callCount(), 0);
+});
+
+test("an export refreshed during a cleanup batch keeps its new file and retention record", async (t) => {
+  const db = await m.database();
+  const first = path.join(out, "refresh-a.mp4"), refreshed = path.join(out, "refresh-b.mp4");
+  for (const file of [first, refreshed]) { fs.writeFileSync(file, "old"); await m.trackExport(file); }
+  db.prepare("UPDATE exports SET created=0 WHERE path IN (?,?)").run(first, refreshed);
+  const unlink = fs.promises.unlink;
+  t.mock.method(fs.promises, "unlink", async (file) => {
+    await unlink(file);
+    if (file === first) {
+      fs.writeFileSync(refreshed, "new capture");
+      await m.trackExport(refreshed);
+    }
+  });
+  await m.cleanup();
+  assert.equal(fs.existsSync(first), false);
+  assert.equal(fs.readFileSync(refreshed, "utf8"), "new capture");
+  assert.ok(db.prepare("SELECT created FROM exports WHERE path=?").get(refreshed).created > Date.now() - 5000);
+});
+
+test("shutdown cancels pending deadlines and later writes cannot rearm cleanup", async () => {
+  const db = await m.database();
+  const item = await m.saveArtifact("finish shutdown first");
+  const file = db.prepare("SELECT file FROM artifacts WHERE id=?").get(item.artifact_id).file;
+  db.prepare("UPDATE artifacts SET created=0 WHERE id=?").run(item.artifact_id);
+  m.scheduleCleanup();
+  await m.stopCleanup();
+  m.scheduleCleanup();
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  assert.ok(fs.existsSync(file));
 });

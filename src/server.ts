@@ -12,7 +12,7 @@ const instructions = [
   "Use doctor for unknown/failing environments. Pass absolute project paths. Before answering ArkTS/ArkUI/@kit API questions, use knowledge action=search/read; exact signatures: code action=lsp op=hover/definition against the project SDK. Conflicts: project SDK declarations and a successful build > official docs > community hints, never an API contract.",
   "project build and run build_run already check edited files; no code check first. For running jobs use job action=wait, never repeat the operation. Inspect needs_input before resume; DEVICE_AMBIGUOUS/TEAM_AMBIGUOUS: ask the user, never choose silently. Invalid parameters execute nothing; follow the error.",
   "UI actions handle recognizable consent and setup/tours automatically, preserving selected defaults. If blocked, observe current controls before continuing, never retry blindly. Use ui act steps=[...] for a path; after reports changes. Verify with ui assert, not screenshots alone. Save repeated paths with save_flow; run then_flow=<id> replays after deploy.",
-  "Responses are summaries. Read any returned artifact id with job action=read artifact_id=<id>; line/limit page, grep filters. Artifacts expire after about a day. Skill placement and updates are user-managed; no automatic distribution or synchronization.",
+  "Responses are summaries. Read any returned artifact id with job action=read artifact_id=<id>; line/limit page, grep filters. Artifacts and tracked local exports expire after 24h. Skill placement and updates are user-managed; no automatic distribution or synchronization.",
 ].join(" ");
 
 const ARTIFACT_ID = /^a_[0-9a-f]{16}$/;
@@ -243,12 +243,13 @@ export async function serve() {
   const shutdown = async () => {
     if (stopping) return;
     stopping = true;
-    const [{ shutdownJobs }, { closeAllSessions }, { killAll }, { closeDatabase }, { closeCoordination }] = await Promise.all([
-      import("./core/jobs.js"), import("./core/sessions.js"), import("./core/proc.js"), import("./core/db.js"), import("./core/operations.js"),
+    const [{ shutdownJobs }, { closeAllSessions }, { killAll }, { closeDatabase }, { closeCoordination }, { stopCleanup }] = await Promise.all([
+      import("./core/jobs.js"), import("./core/sessions.js"), import("./core/proc.js"), import("./core/db.js"), import("./core/operations.js"), import("./core/artifacts.js"),
     ]);
     await Promise.race([Promise.all([shutdownJobs(), closeAllSessions()]), new Promise((r) => setTimeout(r, 3000))]);
     killAll();
     await closeCoordination();
+    await stopCleanup().catch((error) => process.stderr.write(`[retention] Shutdown: ${error.message}\n`));
     closeDatabase();
     process.exit(0);
   };
@@ -258,5 +259,6 @@ export async function serve() {
   // Mark jobs from dead processes as interrupted, off the handshake path.
   setTimeout(() => void import("./core/jobs.js").then((m) => m.recoverJobs()).catch(() => {}), 2000).unref();
   // Retention also applies to sessions that never run a job (screenshots, cloud answers, UI tests).
-  void import("./core/artifacts.js").then((m) => m.scheduleCleanup()).catch(() => {});
+  void import("./core/artifacts.js").then((m) => { if (!stopping) m.scheduleCleanup(); })
+    .catch((error) => process.stderr.write(`[retention] Startup failed: ${error.message}\n`));
 }

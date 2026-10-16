@@ -453,7 +453,7 @@ export const uiTool = tool({
     all_windows: z.boolean().optional().describe("tree: all windows/displays; excludes window"),
     node: z.string().optional().describe("tree: one component (id/key) subtree"),
     display: z.number().int().optional().describe("screenshot: display id"),
-    save_path: z.string().optional().describe("screenshot/record_stop: absolute copy; retention_days expiry"),
+    save_path: z.string().optional().describe("screenshot/record_stop: absolute copy; automatically deleted after 24h"),
     depth: z.number().int().min(0).max(100).optional().describe("tree/observe: depth (0 all, 1 root)"),
     all: z.boolean().optional().describe("windows: include system windows"),
     discard: z.boolean().optional().describe("record_stop: stop without downloading"),
