@@ -285,3 +285,84 @@ test("entry graph exposes declared main/device scope and callable product-specif
     assert.equal(unnamed.source.line, null); assert.equal(unnamed.source.precision, "unresolved");
   } finally { await client.close(); fs.rmSync(project, { recursive: true, force: true }); }
 });
+
+test("entry graph handles independent project layouts, duplicate names and invalid configuration", async (t) => {
+  const project = path.join(state, "generic entries"), client = connect(env);
+  const write = (file, text) => { const full = path.join(project, file); fs.mkdirSync(path.dirname(full), { recursive: true }); fs.writeFileSync(full, text); };
+  write("build-profile.json5", JSON.stringify({ app: { products: [{ name: "tablet" }, { name: "watch" }] }, modules: [
+    { name: "client-build", srcPath: "products/平板", targets: [{ name: "preview", applyToProducts: ["tablet"] }] },
+    { name: "service-build", srcPath: "features/service", targets: [{ name: "default", applyToProducts: ["tablet"] }] },
+    { name: "library", srcPath: "commons/library" },
+  ] }));
+  write("AppScope/app.json5", '{ app: { bundleName: "com.example.generic" } }');
+  const manifestFile = "products/平板/src/main/module.json5";
+  const manifest = [
+    "{ module: { name: 'installed_module', type: 'entry', deviceTypes: ['tablet'], mainElement: 'Open',",
+    "  metadata: [{ name: 'Open', value: 'unrelated' }],",
+    "  abilities: [{",
+    "    'na\\u006de': 'Open', exported: true, metadata: [{ name: 'Second' }]",
+    "  }, {",
+    "    name: 'Second', exported: false",
+    "  }]",
+    "} }",
+  ];
+  write("features/service/src/main/module.json5", "{ module: { name: 'service', type: 'feature', mainElement: 'Worker', extensionAbilities: [{ name: 'Worker', type: 'workScheduler', exported: false }] } }");
+  write("commons/library/src/main/module.json5", "{ module: { name: 'library', type: 'har', deviceTypes: ['tablet'] } }");
+  const profileFile = "products/平板/src/main/resources/base/profile/forms.json";
+  const profile = [
+    '{ metadata: [{ name: "Tile", shortcutId: "open" }],',
+    '  "fo\\u0072ms": [{',
+    '    name: "Tile", src: "./ets/Tile.ets", supportDimensions: ["2*2"], defaultDimension: "2*2", formConfigAbility: "ability://Open"',
+    '  }], shortcuts: [{',
+    '    shortcutId: "open", wants: [{ bundleName: "com.example.generic", moduleName: "installed_module", abilityName: "Open" }]',
+    '  }] }',
+  ].join("\n");
+  write(profileFile, profile);
+  write("products/平板/src/main/resources/dark/profile/forms.json", '{ forms: [{ name: "Tile", src: "./ets/DarkTile.ets", supportDimensions: ["2*2"], defaultDimension: "2*2" }] }');
+  try {
+    await client.initialize();
+    const call = (product = "tablet") => client.call("project", { action: "entries", project, product });
+    for (const [label, newline] of [["LF", "\n"], ["CRLF", "\r\n"], ["CR", "\r"], ["JSON5 line separator", "\u2028"]]) await t.test(label, async () => {
+      write(manifestFile, manifest.join(newline));
+      const result = await call(); assert.equal(result.isError, false, JSON.stringify(result.data));
+      const { entries, issues } = result.data;
+      assert.deepEqual(issues, []); assert.equal(entries.length, 6);
+      assert.equal(entries.some((entry) => entry.module === "library"), false);
+      const open = entries.find((entry) => entry.kind === "ability" && entry.name === "Open");
+      assert.equal(open.main, true); assert.equal(open.source.line, 4); assert.deepEqual(open.device_types, ["tablet"]);
+      assert.deepEqual(open.launch, { tool: "run", action: "launch", project, product: "tablet", module: "client-build", ability: "Open" });
+      const second = entries.find((entry) => entry.name === "Second");
+      assert.equal(second.main, false); assert.equal(second.exported, false); assert.equal(second.source.line, 6);
+      const worker = entries.find((entry) => entry.name === "Worker");
+      assert.equal(worker.main, true); assert.equal(worker.launch, null); assert.deepEqual(worker.device_types, []);
+      const forms = entries.filter((entry) => entry.kind === "form");
+      assert.equal(forms.length, 2); assert.equal(new Set(forms.map((entry) => entry.source.file)).size, 2);
+      assert.equal(forms.find((entry) => entry.source.file === path.normalize(profileFile)).source.line, 3);
+      assert.equal(entries.find((entry) => entry.kind === "shortcut").source.line, 5);
+      assert.ok(entries.every((entry) => entry.runtime_verified === false));
+    });
+    await t.test("product selection is explicit and does not leak excluded modules", async () => {
+      assert.deepEqual((await call("watch")).data.entries, []);
+      assert.equal((await client.call("project", { action: "entries", project })).data.error.code, "PRODUCT_AMBIGUOUS");
+      assert.equal((await call("missing")).data.error.code, "PRODUCT_AMBIGUOUS");
+    });
+    for (const [label, file, data, field] of [
+      ["missing module", manifestFile, {}, "module"],
+      ["null ability", manifestFile, { module: { abilities: [null] } }, "module.abilities.0"],
+      ["object abilities", manifestFile, { module: { abilities: { name: "Bad" } } }, "module.abilities"],
+      ["unnamed ability", manifestFile, { module: { abilities: [{}] } }, "module.abilities.0.name"],
+      ["null forms", profileFile, { forms: null }, "forms"],
+      ["null form", profileFile, { forms: [null] }, "forms.0"],
+      ["string dimensions", profileFile, { forms: [{ supportDimensions: "2*2" }] }, "forms.0.supportDimensions"],
+      ["object shortcuts", profileFile, { shortcuts: {} }, "shortcuts"],
+    ]) await t.test(label, async () => {
+      write(manifestFile, manifest.join("\n")); write(profileFile, profile); write(file, JSON.stringify(data));
+      const result = await call();
+      assert.equal(result.isError, true); assert.equal(result.data.error.code, "PROJECT_INVALID");
+      assert.equal(result.data.error.category, "project");
+      assert.equal(result.data.error.details.file, path.join(project, file));
+      assert.ok(result.data.error.details.issues.some((issue) => issue.path === field));
+      assert.match(result.data.error.hint, /configuration fields/);
+    });
+  } finally { await client.close(); fs.rmSync(project, { recursive: true, force: true }); }
+});

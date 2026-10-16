@@ -139,7 +139,7 @@ FPS 无有效数据返回 `verdict=inconclusive` 和 `diagnostic_artifact`；用
 
 知识包回收保留当前版本、一个必要回滚版本和仍被新版 MCP 进程打开的版本；更新或回滚完成即回收其余版本，进程退出后的占用在后续维护中释放。下载/转换临时目录用完即删，中断残留、`<state>/backups/` 内的临时修复副本及损坏数据库恢复副本最多保留 24 小时（正在使用时延后）。这些目录只放可回收数据，不创建常规修复备份；永久交付、凭据和用户资料不能放入其中。清理复用同一个后台定时器，启动和每小时检查，已知到期时间参与调度；文件流式异步删除，失败路径持久跳过并精简提示。旧版 MCP 没有占用登记，更新/回滚知识包前须先重载所有仍在运行的旧版实例。
 
-入口图谱 `project action=entries` 返回静态声明：`main` 对应模块的 `mainElement`，`device_types` 为模块声明的兼容设备，`runtime_verified: false` 不代表已安装或可成功启动。`launch` 保留所选 `product`，可补上明确的 `target` 后调用。`source.line` 定位 `name` / `shortcutId` 声明；无法定位时返回 null。`formConfigAbility` 仍只在同模块内校验。启动返回 `FAIL_NO_PROCESS` 表示未观察到进程且没有新崩溃记录，应检查安装、进程名及设备日志；仅有新崩溃记录才返回 `FAIL_CRASH`。
+入口图谱 `project action=entries` 返回静态声明：`main` 对应模块的 `mainElement`，`device_types` 为模块声明的兼容设备，`runtime_verified: false` 不代表已安装或可成功启动。`launch` 保留所选 `product`，可补上明确的 `target` 后调用。`source.line` 按对象路径定位当前条目的 `name` / `shortcutId` 声明，不会匹配到同名 metadata；无法定位时返回 null。配置结构错误返回 `PROJECT_INVALID`，并列出文件及字段路径。`formConfigAbility` 仍只在同模块内校验。启动返回 `FAIL_NO_PROCESS` 表示未观察到进程且没有新崩溃记录，应检查安装、进程名及设备日志；仅有新崩溃记录才返回 `FAIL_CRASH`。
 
 ## 架构
 
@@ -324,7 +324,7 @@ It combines Huawei's HarmonyOS docs (guides, API reference, best practices, FAQ,
 
 Knowledge cleanup keeps the current pack, one rollback pack and packs still open in updated MCP processes. Updates/rollbacks reclaim other generations; later maintenance releases dead-process pins. Temporary download/conversion workspaces are deleted on completion. Interrupted work, temporary repair copies under `<state>/backups/` and damaged-database recovery copies expire after 24 hours unless in use. Only disposable data belongs there; no routine repair backups are created. Credentials, user data and permanent deliverables remain outside these directories. Cleanup shares the existing timer, reconciles at startup/hourly and schedules known deadlines. Tree deletion streams asynchronously; failed paths are persistently excluded with a short warning. Reload all older MCP instances before updating/rolling back knowledge packs because those instances do not register usage.
 
-`project action=entries` reports declarations: `main` identifies the module mainElement, `device_types` lists declared compatibility, and `runtime_verified: false` does not establish installation or launch success. Each `launch` handle preserves the selected `product`; supply an explicit `target` when calling it. `source.line` points to a name/shortcutId property, or null when unresolved. Form configuration abilities are still checked within the same module. `FAIL_NO_PROCESS` means no process was observed and no new crash log was found: inspect installation, process naming and device logs. Only new crash evidence yields `FAIL_CRASH`.
+`project action=entries` reports declarations: `main` identifies the module mainElement, `device_types` lists declared compatibility, and `runtime_verified: false` does not establish installation or launch success. Each `launch` handle preserves the selected `product`; supply an explicit `target` when calling it. `source.line` follows the entry’s object path to its name/shortcutId property, avoiding unrelated names in metadata, or returns null when unresolved. Invalid configuration shapes return `PROJECT_INVALID` with the file and field paths. Form configuration abilities are still checked within the same module. `FAIL_NO_PROCESS` means no process was observed and no new crash log was found: inspect installation, process naming and device logs. Only new crash evidence yields `FAIL_CRASH`.
 
 ### Architecture
 
