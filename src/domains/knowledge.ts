@@ -574,7 +574,7 @@ export async function update(options: UpdateOptions, signal: AbortSignal): Promi
       } catch (error) { reportCleanup(await removeStorage(destination)); throw error; }
       await closeKnowledge();
       requestStorageCleanup();
-      reportCleanup(await collectStorage());
+      reportCleanup(await collectStorage(true));
       return { updated: true, version: manifest.version, previous: previous ? `${previous.manifest.version} (${previous.origin})` : null, counts: manifest.counts };
     });
   } finally {
@@ -596,7 +596,7 @@ export async function rollback() {
   });
   await closeKnowledge();
   requestStorageCleanup();
-  reportCleanup(await collectStorage());
+  reportCleanup(await collectStorage(true));
   scheduleCleanup(1000);
   const active = activePack();
   return { rolled_back_to: active ? `${active.manifest.version} (${active.origin})` : "none" };

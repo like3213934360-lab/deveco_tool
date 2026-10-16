@@ -125,7 +125,7 @@ test("first sign, repeat refusal, force replacement retain all prior signing mat
 
 test("quota failure leaves old config/files/cloud intact and closes only staging", async () => {
   const p = setup(); mode = "quota"; const s = await run(p);
-  assert.equal(s.status, "failed"); assert.equal(s.error.code, "SIGN_CLOUD_REJECTED"); unchanged(p);
+  assert.equal(s.status, "failed", JSON.stringify(s)); assert.equal(s.error.code, "SIGN_CLOUD_REJECTED", JSON.stringify(s)); unchanged(p);
   assert.equal(certs.length, 1); assert.deepEqual(deletes, []); assert.equal(s.outputs.compensation.closed, true);
   assert.equal(fs.existsSync(s.outputs.prepare.dir), false);
 });
@@ -149,7 +149,7 @@ test("lost certificate reply reconciles by exclusive name without another POST, 
 test("HTTP failure/unknown profile outcome never blindly repeat remote creation", async () => {
   for (const failure of ["http", "lost-profile"]) {
     const p = setup(); mode = failure; const s = await run(p);
-    assert.equal(s.status, "needs_input"); unchanged(p);
+    assert.equal(s.status, "needs_input", `${failure}: ${JSON.stringify(s)}`); unchanged(p);
     const count = [creates, profiles]; mode = "ok";
     await m.resumeJob(s.job_id, true); const resumed = await m.waitJob(s.job_id, 5000);
     assert.equal(resumed.status, "needs_input"); assert.deepEqual([creates, profiles], count); unchanged(p);

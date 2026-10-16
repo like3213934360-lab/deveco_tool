@@ -133,7 +133,7 @@ it("multiple generations preserve another process's open pack and reclaim it aft
     assert.equal(fs.existsSync(held), false, "A dead reader no longer protects its old pack");
     assert.equal(dirs().length, 2);
     assert.equal((await call({ action: "rollback" })).isError, false);
-    assert.equal(dirs().length, 1, "Rollback removes the rejected generation immediately");
+    assert.equal(dirs().length, 1, `Rollback removes the rejected generation immediately; dirs=${JSON.stringify(dirs())}; stderr=${client.stderr}`);
     assert.match((await call({ action: "read", id: "doc/one" })).data.content, /body 4\.0\.0/);
   } finally { await reader.close(); }
 });

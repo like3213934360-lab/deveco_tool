@@ -134,8 +134,10 @@ export async function removeStorage(file: string, eligible: () => boolean = () =
   return result;
 }
 
-/** Startup/hourly reconciliation, plus immediate sweeps after update/rollback. No extra timer. */
-export function collectStorage(): Promise<CleanupResult> {
+/** Pointer changes need a scan that starts after the change, even if an older sweep is running.
+ * Concurrent callers share that follow-up scan; failed paths stay excluded. No retry loop/timer. */
+export async function collectStorage(afterChange = false): Promise<CleanupResult> {
+  if (afterChange && collecting) await collecting;
   return collecting ??= collect().finally(() => { collecting = undefined; });
 }
 async function collect(): Promise<CleanupResult> {

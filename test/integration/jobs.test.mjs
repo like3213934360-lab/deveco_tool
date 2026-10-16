@@ -412,6 +412,40 @@ test("failed knowledge/backup trees are persisted once and skipped before any la
   } finally { for (const dir of roots) fs.rmSync(dir, { recursive: true, force: true }); }
 });
 
+test("a pointer change waits for an older sweep then collects the newly unreferenced pack", async (t) => {
+  await m.stopCleanup();
+  const kb = path.join(out, "kb"), backups = path.join(out, "backups");
+  const old = path.join(kb, "before-change"), current = path.join(kb, "after-change");
+  for (const dir of [old, current, backups]) fs.mkdirSync(dir, { recursive: true });
+  const pointer = path.join(kb, "current.json");
+  fs.writeFileSync(pointer, JSON.stringify({ directory: "before-change", previous: "after-change" }));
+  let resume, reached;
+  const barrier = new Promise((resolve) => { resume = resolve; });
+  const paused = new Promise((resolve) => { reached = resolve; });
+  const opendir = fs.promises.opendir;
+  let held = false, scans = 0;
+  t.mock.method(fs.promises, "opendir", async (dir, ...args) => {
+    if (dir === canonicalPath(kb)) scans++;
+    if (dir === canonicalPath(backups) && !held) { held = true; reached(); await barrier; }
+    return opendir(dir, ...args);
+  });
+  let first, second;
+  try {
+    first = m.collectStorage();
+    await Promise.race([paused, first.then(() => { throw new Error("Sweep finished before reaching the controlled pointer-change boundary"); })]);
+    fs.writeFileSync(pointer, JSON.stringify({ directory: "after-change", previous: null }));
+    m.requestStorageCleanup();
+    second = m.collectStorage(true);
+    resume(); await second;
+    assert.equal(fs.existsSync(old), false, "The old sweep already passed kb before the pointer changed");
+    assert.equal(fs.existsSync(current), true);
+    assert.equal(scans, 2, "One follow-up scan, not a retry loop");
+  } finally {
+    resume(); await first; if (second) await second;
+    for (const dir of [kb, backups]) fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("a claimed deletion refuses new users and a temporary repair workspace is removed on failure", async (t) => {
   const dir = path.join(out, "backups", "claimed"), file = path.join(dir, "copy");
   fs.mkdirSync(dir, { recursive: true }); fs.writeFileSync(file, "x");
