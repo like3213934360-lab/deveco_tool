@@ -81,7 +81,8 @@ const CORRUPT = /not a database|malformed|SQLITE_(CORRUPT|NOTADB)|file is encryp
 function open(DatabaseSync: typeof import("node:sqlite").DatabaseSync, file: string) {
   const handle = new DatabaseSync(file);
   try {
-    handle.exec("PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; PRAGMA busy_timeout=5000; PRAGMA foreign_keys=OFF;");
+    // Lock contention also applies to journal-mode setup, before schema initialization.
+    handle.exec("PRAGMA busy_timeout=5000; PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; PRAGMA foreign_keys=OFF;");
     // Bootstrap/migrations share one durable commit. Autocommitting each CREATE can stall
     // the first protocol requests behind many fsyncs when retention opens a fresh database.
     handle.exec("BEGIN IMMEDIATE");
@@ -106,6 +107,8 @@ function open(DatabaseSync: typeof import("node:sqlite").DatabaseSync, file: str
 export async function database(): Promise<DatabaseSync> {
   if (db) return db;
   const { DatabaseSync } = await import("node:sqlite");
+  // Another caller may finish opening while this one awaits the shared module import.
+  if (db) return db;
   const file = path.join(stateDir(), "state.db");
   try {
     db = open(DatabaseSync, file);

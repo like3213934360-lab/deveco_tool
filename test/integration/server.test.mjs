@@ -207,7 +207,11 @@ test("recording receipt tools are offline and preserve legacy bytes", async (t) 
   const { DatabaseSync } = await import("node:sqlite");
   const db = new DatabaseSync(path.join(state, "state.db"));
   const raw = JSON.stringify({ name: "legacy.mp4", started: 1, unknown: { keep: true } });
-  db.prepare("INSERT INTO kv(key,value) VALUES(?,?)").run("screenrecord:offline:5555", raw); db.close();
+  try {
+    // This fixture writes beside the running server's cleanup, using the same bounded lock wait.
+    db.exec("PRAGMA busy_timeout=5000");
+    db.prepare("INSERT INTO kv(key,value) VALUES(?,?)").run("screenrecord:offline:5555", raw);
+  } finally { db.close(); }
   const archive = await client.call("ui", { action: "record_archive", target: "offline:5555", name: "legacy.mp4", reason: "old instance" });
   assert.equal(archive.isError, false); assert.equal(archive.data.raw, raw);
   const restored = await client.call("ui", { action: "record_restore", receipt_id: archive.data.receipt_id });

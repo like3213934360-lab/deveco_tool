@@ -4,6 +4,8 @@ import os from "node:os";
 import path from "node:path";
 import { after, test } from "node:test";
 import { pathToFileURL } from "node:url";
+import { once } from "node:events";
+import { Worker } from "node:worker_threads";
 import { build } from "esbuild";
 import { connect } from "../support/mcp.mjs";
 
@@ -47,6 +49,46 @@ m.defineJob({
 });
 m.defineJob({ kind: "t_fail", steps: [{ id: "x", run: async () => { throw new m.ToolError("BUILD_FAILED", "boom", { detail: 1 }, "fix it"); } }] });
 m.defineJob({ kind: "t_slow", steps: [{ id: "wait", run: (ctx) => new Promise((resolve, reject) => { const t = setTimeout(resolve, 10000); ctx.signal.addEventListener("abort", () => { clearTimeout(t); reject(ctx.signal.reason); }); }) }] });
+
+test("concurrent first database calls share one connection and close it completely", async () => {
+  const connections = await Promise.all(Array.from({ length: 12 }, () => m.database()));
+  try {
+    assert.equal(new Set(connections).size, 1, "lazy initialization must not leak extra connections");
+    m.closeDatabase();
+    for (const db of connections) assert.throws(() => db.prepare("SELECT 1"), /not open|closed/i);
+  } finally {
+    m.closeDatabase();
+    for (const db of new Set(connections)) if (db.isOpen) db.close();
+  }
+});
+
+test("database startup waits for an existing writer before changing journal mode", async () => {
+  const worker = new Worker(`
+    const { parentPort, workerData } = require('node:worker_threads');
+    const { DatabaseSync } = require('node:sqlite');
+    const db = new DatabaseSync(workerData);
+    db.exec('PRAGMA journal_mode=DELETE; CREATE TABLE IF NOT EXISTS kv(key TEXT PRIMARY KEY,value TEXT NOT NULL); BEGIN EXCLUSIVE');
+    db.prepare('INSERT INTO kv(key,value) VALUES(?,?)').run('startup-lock', 'preserved');
+    parentPort.once('message', () => setTimeout(() => {
+      db.exec('COMMIT'); db.close(); parentPort.close();
+    }, 250));
+    parentPort.postMessage('locked');
+  `, { eval: true, workerData: path.join(out, "state.db") });
+  const exited = once(worker, "exit");
+  try {
+    assert.deepEqual(await once(worker, "message"), ["locked"]);
+    worker.postMessage("release after startup attempts to open");
+    const db = await m.database();
+    assert.equal(db.prepare("SELECT value FROM kv WHERE key='startup-lock'").get().value, "preserved");
+    assert.equal(db.prepare("PRAGMA journal_mode").get().journal_mode, "wal");
+    assert.equal(m.recovered, undefined, "contention must never trigger corruption recovery");
+    assert.deepEqual(await exited, [0]);
+  } finally {
+    await worker.terminate();
+    await exited;
+    m.closeDatabase();
+  }
+});
 
 test("runs steps in order, skips when=false, summarizes", async () => {
   const { job_id } = await m.startJob("t_ok", { n: 1 });

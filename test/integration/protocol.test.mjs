@@ -152,7 +152,9 @@ test("all 103 audited entrypoints remain discoverable and reject unknown fields 
       assert.equal(response.data.error.code, "INVALID_INPUT", entry);
       assert.deepEqual(response.data.error.details.unknown, ["audit_unknown_field"], entry);
     }
-    assert.deepEqual((await c.call("job", { action: "list" })).data.jobs, [], "no invalid call created a job");
+    const jobs = await c.call("job", { action: "list" });
+    assert.equal(jobs.isError, false, JSON.stringify(jobs.data));
+    assert.deepEqual(jobs.data.jobs, [], "no invalid call created a job");
   } finally { await c.close(); }
 });
 
