@@ -13,7 +13,6 @@ function fixture() {
     if (args[1] === `${head}:package.json`) return JSON.stringify({ version: "1.4.0" });
     if (args[1] === `${head}:package-lock.json`) return JSON.stringify({ version: "1.4.0", packages: { "": { version: "1.4.0" } } });
     if (args[1] === `${head}:CHANGELOG.md`) return "# Changelog\n\n## v1.4.0 (2026-10-10)\n\n- Real changes\n\n## v1.3.4\n\n- Previous release\n";
-    if (args[1] === `${head}:docs/UPGRADE-1.4.0.md`) return "Acceptance evidence";
     throw Error(`Unexpected git ${args.join(" ")}`);
   };
   f.api = async (route, options = {}) => {
@@ -69,6 +68,7 @@ test("release publishes exactly the tested SHA and verifies Latest", async () =>
   assert.equal(f.writes[0].make_latest, "true");
   assert.match(f.writes[0].body, /Real changes/);
   assert.doesNotMatch(f.writes[0].body, /Previous release/);
+  assert.doesNotMatch(f.writes[0].body, /docs\/(?:UPGRADE-|evidence\/|audit\/)/);
   assert.equal(result.released_commit, head);
   assert.equal(result.latest, true);
 });

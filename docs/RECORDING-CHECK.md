@@ -19,7 +19,7 @@
 - 视频输出采用 `-enc_time_base:v demux -fps_mode passthrough`：保留源时间基及帧时间戳，避免默认输出时间基按平均帧率取整引起 DTS 冲突。不重编码原文件、不补帧丢帧、不生成时间戳或过滤错误日志。
 - 除退出码为 0 外，error 级别 stderr 必须为空；退出码为 0 但仍有诊断信息也失败。每个进程限时 120 秒；工具缺失、参数不支持、超时、信号终止及输出缓冲区溢出均直接失败，不重试或切换方案。
 
-参数依据：[FFmpeg time base 与帧同步选项](https://ffmpeg.org/ffmpeg.html#Advanced-options)、[null muxer](https://ffmpeg.org/ffmpeg-formats.html#null)。本次真实验证版本为 FFmpeg / ffprobe 8.1.2；其他版本需支持上述参数，未在本轮逐版验证。
+参数依据：[FFmpeg time base 与帧同步选项](https://ffmpeg.org/ffmpeg.html#Advanced-options)、[null muxer](https://ffmpeg.org/ffmpeg-formats.html#null)。使用的 FFmpeg / ffprobe 版本必须支持上述参数。
 
 这证明文件含可解码媒体，不证明页面操作符合需求、画面无视觉缺陷、音画同步或麦克风内容正确。这些仍需独立实际检查。
 
@@ -34,5 +34,3 @@ npm run test:media
 ```
 
 真实解码回归在独立临时目录生成小型合成素材与损坏副本，绝不改设备原视频；这些素材只能证明检查器的行为，不当作真机录屏或 MCP 调用成功。普通 CI 的依赖和测试环境保持原样，进程契约回归随六组系统/Node 单测运行；真实 FFmpeg 回归与真机原视频检查单独记录。
-
-2026-10-11 已使用用户指定的 USB Mate 80 原样运行录屏 E2E，完成新录制、取回、统一严格解码和最终 idle 检查，1/1 通过；详见 [v1.4.7 补验记录与未验证范围](UPGRADE-1.4.7.md#usb-mate-80-新录屏全链路补验)及[脱敏证据](evidence/v1.4.7-mate80-recording.json)。

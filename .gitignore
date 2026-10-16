@@ -9,6 +9,5 @@ npm-debug.log*
 deveco-native.json
 deveco-mcp.json
 
-# Audit raw evidence: local only (contains account and device data)
-docs/audit/evidence/
+# Temporary work; remove after use
 .scratch/

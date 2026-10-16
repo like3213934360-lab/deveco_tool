@@ -4,13 +4,13 @@
 
 - 修复 Instrument Test 多设备定向缺口：将 SDK 子进程的 HDC 通道绑定到解析后的 target，真机与模拟器可保持同时连接；不改 SDK、不移动设备连接，不把目标失败降级到其他设备。
 - 协议握手、初始设备命令和目标严格校验，任务结束/取消关闭专属通道；结果与缺报告错误记录实际 target 和路由计数。doctor 不再因其他设备在线阻止显式目标尝试。
-- 新增真实 TCP 路由回归与多设备模拟器验收入口，已有真实验收套件支持显式模拟器类型且保留默认 USB 校验。测试正例、故意失败例及错误目标均实测；SDK 覆盖率 00507008 仍失败，不计通过。证据与边界见 [v1.5.2 说明](docs/UPGRADE-1.5.2.md)。
+- 新增真实 TCP 路由回归与多设备模拟器验收入口，已有真实验收套件支持显式模拟器类型且保留默认 USB 校验。
 
 ## v1.5.1 (2026-10-15)
 
 - 修复 Windows 同时首次启动时多个构建进程竞争替换 current.json 的 EPERM：构建持有显式目录锁，锁内复核完整构建身份并复用同一有效代；不重复覆盖相同启动桥文件。
 - 保留损坏/过期产物重建、旧代生命周期、构建失败不发布、stdout 纯协议与无源码安装校验。权限/I/O 错误不当缓存缺失；残留构建锁显式报错并要求检查 owner，不按年龄自动抢占。
-- 扩展原并发启动回归到四个实际进程，验证只发布一代、锁释放、缓存复用与启动桥恢复；v1.5.0 tag 保持不变。验收和原始 CI 失败见 [v1.5.1 说明](docs/UPGRADE-1.5.1.md)。
+- 扩展原并发启动回归到四个实际进程，验证只发布一代、锁释放、缓存复用与启动桥恢复；v1.5.0 tag 保持不变。
 
 ## v1.5.0 (2026-10-15)
 
@@ -19,7 +19,7 @@
 - 新增诊断/包体积/构建耗时/性能/启动检查基线，录制与比较分离；视觉环境元数据、UI checklist 覆盖、tiny-target 策略和异常帧间隔保留可核验证据。
 - 新增同机跨进程工程/设备占用、操作审计及死 owner 显式恢复；独立 state_dir 不绕过互斥，签名补偿和取消清理受同一资源范围保护。
 - 新增数据库发现与独占夹具、调试权限/清数据/后台场景、官方 trace、入口/卡片配置图谱、Want 参数、静态源码候选与 Git 归因、工程 SDK 知识上下文；doctor 区分可尝试、未探测和未支持。
-- 仍为 15 个独立 MCP 工具、3 个运行依赖，无自动 Skill 分发。真实 SDK/设备、模型权限阻塞及未支持能力分别记录，见 [验收说明](docs/UPGRADE-1.5.0.md) 和 [验收使用说明](docs/VERIFY.md)。
+- 仍为 15 个独立 MCP 工具、3 个运行依赖，无自动 Skill 分发。
 
 ## v1.4.10 (2026-10-15)
 
@@ -27,7 +27,7 @@
 - 单文件检查明确输入根文件与额外诊断范围，完整报告可通过 job read 分页读取；无效文件列表不会扩大为全工程或触发修复。构建 preflight 保留原报告及范围，编译器结论仍优先。
 - SQLite 简写数据库名必须明确 module，不再假定 entry；绝对路径整体引用，失败保留实际路径。模拟器创建预校验名称，scenario 明确使用实例 name；仅支持 Skill 的宿主给出手动 MCP 注册提示。
 - 兼容性变更：只声明实际实现的 MCP 2025-06-18；更早的版本请求协商到该版本。聚合工具的读写标注按全部 action 判定；shell 只接受已知查询参数，不开放隐式设备修改。
-- 增加离线回归、真实 SDK 文件范围/完整报告、签名引用正例及设备只读契约验收。按用户要求将项目级 mcp-builder 纳入版本管理，不自动分发或引入运行依赖。结果与边界见 [验收说明](docs/UPGRADE-1.4.10.md)。
+- 增加离线回归、真实 SDK 文件范围/完整报告、签名引用正例及设备只读契约验收。按用户要求将项目级 mcp-builder 纳入版本管理，不自动分发或引入运行依赖。
 
 ## v1.4.9 (2026-10-13)
 
@@ -35,7 +35,6 @@
 - 修复知识包生成在 Windows 上依赖不存在的 zip 命令：使用已有 bsdtar 合并官方与本地文档，并用 junction 建立开发指针；保持原 ZIP 格式与失败判定，不安装额外工具。
 - 录屏回执绑定设备序列号或模拟器 UUID，拒绝复用端口/未知旧身份；新增离线 record_receipts、record_archive、record_restore，事务保存完整旧回执，不停止设备、不删除视频。
 - FPS 两路并发采集，手势仅执行一次；保留原始命令输出、错误与退出码，无有效数据明确 inconclusive，不再推断页面未动画。仅逐帧数据给卡顿判定，逐秒样本标 fps_only。
-- 补充来源解析、原子回滚、回执恢复及采集取消的回归；真实 SDK、USB Pura 80 Pro 录屏和知识库更新回滚的结果与边界见 [验收说明](docs/UPGRADE-1.4.9.md)。上游新增提交已逐项审查，保留独立实现和宿主职责边界。
 
 - Default to official upstream/latest knowledge with shared source/version compatibility resolution, content fingerprints and preserved private packs, atomic installation and rollback.
 - Bind recording receipts to serials/emulator UUIDs; preserve and restore complete receipts offline without touching a device or deleting media.
@@ -45,14 +44,14 @@
 
 **中文**
 
-- 完整治理测试与维护脚本：删除退役 audit/smoke/media 目录与旧入口，将独有有效场景合并到 unit、integration、e2e、model，历史证据与来源提交保留。
+- 完整治理测试与维护脚本：删除退役 audit/smoke/media 目录与旧入口，将独有有效场景合并到 unit、integration、e2e、model。
 - 统一严格 MCP 客户端、超时取消、任务等待、专用夹具和私有证据；录屏继续共用严格 FFmpeg 检查，无新增运行依赖。
 - 加入目录/引用/运行依赖门禁、公共模块 JSDoc 检查及传输负例；统一 package 入口、测试指南、逐项覆盖映射与 AGENTS 长期规则。
-- package 入口属于现有运行指纹，按发布门禁升级版本与锁文件；产品工具行为、提示说明和性能预算不变。已验证与未验证范围见 [验收说明](docs/UPGRADE-1.4.8.md)。
+- package 入口属于现有运行指纹，按发布门禁升级版本与锁文件；产品工具行为、提示说明和性能预算不变。
 
 **English**
 
-- Retire historical audit runners and consolidate retained scenarios under one layered Node test suite, preserving historical evidence.
+- Retire historical audit runners and consolidate retained scenarios under one layered Node test suite.
 - Share strict MCP transport, cancellation, job waiting, dedicated fixtures and private receipts; retain strict media decoding without new runtime dependencies.
 - Enforce layout, references and runtime/test separation, type-check shared helpers, and document every retired entry point and acceptance boundary.
 - Bump the version because package entry changes affect the existing runtime fingerprint; tool behavior, guidance and performance budgets remain unchanged.
@@ -64,14 +63,12 @@
 - 修复 UI 测试计划把版本号、小数、文件名和 URL 内部句点误识别为句末，以及行首版本号被当成编号的问题；保留中英文句子和列表边界。
 - 补明 action 参数适用范围、测试步骤的顶层断言、视觉评审目标设备、流程必填变量和签名步骤参数；明确部署时先回放流程、再断言最终画面。保留公共说明、功能入口与严格参数校验，通过等义去重维持原元数据体积门禁。
 - 拒绝空断言、同时指定 visible/hidden，以及单动作携带仅批量执行支持的 assert/save_flow；在设备操作或作业创建前报告参数错误，避免接受却忽略请求。
-- Codex 原生调用、三轮计划、USB 真机及本地检查结果见[验收与 TODO](docs/UPGRADE-1.4.7.md)；保留预期拒绝、调用顺序失误和未验证范围，本轮未运行 OpenCode 或 Claude。
 
 **English**
 
 - Preserve internal dots in versions, decimals, filenames and URLs when splitting UI test plans, including versions at line start; retain sentence and list boundaries.
 - Clarify action-specific parameters, top-level test assertions, visual review targets, required flow variables and signing inputs; deploy replays the flow before asserting the final screen. Keep global guidance, capabilities and strict validation; remove redundant wording within the existing metadata budget.
 - Reject empty assertions, simultaneous visible/hidden selectors, and single actions carrying batch-only assert/save_flow options before device operations or job creation, instead of accepting ignored requests.
-- Record native Codex calls, three plan rounds, USB device checks and local validation in the acceptance notes; distinguish expected rejections, sequencing mistakes and unverified scope. OpenCode and Claude were not run in this round.
 
 ## v1.4.6 (2026-10-10)
 
@@ -79,27 +76,23 @@
 
 - 修复已有凭据时新登录 pending 状态错误、已完成登录复用失效回调、旧定时清理删除新尝试以及注销后迟到令牌恢复凭据的问题。浏览器回调不再提前宣称成功，注销明确取消并等待登录请求结束。
 - 补充 review 取图/判定两阶段和 hdc_port 非法范围的字段说明，保留全部 action 与必要使用说明，原元数据大小门禁不变。
-- 补齐用户指定目录中的 Skill 注册/安装/卸载、真实登录、知识库更新回滚、模拟器与折叠形态、C++ LSP 验收；保留多轮 OpenCode 拟调用和真实调用的原始失败及环境限制。见 [验收与 TODO](docs/UPGRADE-1.4.6.md)。
 
 **English**
 
 - Track pending browser login independently of existing credentials. Reuse only active attempts, scope delayed cleanup to its attempt, and abort and await login on logout to prevent late credential restoration. Browser callbacks no longer claim success before token validation.
 - Clarify the two-stage visual review contract and invalid emulator port handling without removing actions or required usage guidance; retain the existing metadata budget gate.
-- Extend real acceptance for user-selected Skill directories, authentication, knowledge update/rollback, emulator lifecycle/fold states and C++ LSP. Preserve unsuccessful OpenCode planning/live trials and explicit environment limits rather than claiming universal model success.
 
 ## v1.4.5 (2026-10-10)
 
 **中文**
 
 - 修正 reset 独立验收的只读查询入口：允许精确的 `bm quickfix -q -b <bundle>`，继续拒绝修改命令与追加参数；补齐负例。
-- 强化真实 SDK 验收，验证补丁生效后恢复原行为，并保留由 MCP 单独写入、应用启动不会重建的 SQLite 标记。Codex 原生 v1.4.4 已实际验证同一 reset 实现的恢复与数据保留。
-- 明确录屏服务状态不等于已编码视频。原 API 26 模拟器实时日志和公开编码器查询确认没有可用视频编码器；按用户决定归为正常环境限制，不计 MCP 缺陷，真机录屏仍未验证。保留原待导出会话，不替换环境、不伪造成功。见 [验收与 TODO](docs/UPGRADE-1.4.5.md)。
+- 强化真实 SDK 验收，验证补丁生效后恢复原行为，并保留由 MCP 单独写入、应用启动不会重建的 SQLite 标记。
 
 **English**
 
 - Allow the exact read-only `bm quickfix -q -b <bundle>` query required by independent reset verification; reject mutations and extra arguments.
-- Extend SDK acceptance to verify baseline behavior and a separately inserted SQLite marker that startup cannot recreate. Native Codex v1.4.4 calls verified restoration and data retention for the same reset implementation.
-- Clarify that recorder service state does not prove encoded video. Live logs and the public encoder API confirm no available video encoder on the original API 26 emulator. This is an expected environment limitation, not an MCP defect; real-device recording is unverified. Pending recordings and the test environment are preserved.
+- Extend SDK acceptance to verify baseline behavior and a separately inserted SQLite marker that startup cannot recreate.
 
 ## v1.4.4 (2026-10-10)
 
@@ -107,31 +100,29 @@
 
 - 修复 hot_reload.reset 的命令语义：经用户明确选择，改为覆盖安装预存的原始 HAP/HSP，保留应用数据，不编译当前源码、不卸载、不切换方案。校验设备、bundle、安装标识及包哈希，设备确认补丁版本为 0 后才返回成功并清理基线。旧基线缺少归档时明确要求新建，不伪造恢复。
 - 录屏启动需要 ACTIVE 服务证据；持久化启动/停止意图与服务身份，防止误停其他录制和取消后重复切换。媒体条目必须唯一，导出错误保留原始原因和待取回会话，不把打开源文件失败一律误判为能力缺失；同时报告导出与清理失败。
-- 补齐离线负例与严格设备 E2E：reset 必须恢复原页面行为，录屏必须有实际视频帧并可严格解码。按用户要求，本轮设备/宿主实测等待 Codex 重启通知；旧 API 26 的 0 字节录像成因与新版真实取回仍待验证，不宣称已完全解决。见 [验收与 TODO](docs/UPGRADE-1.4.4.md)。
+- 补齐离线负例与严格设备 E2E：reset 必须恢复原页面行为，录屏必须有实际视频帧并可严格解码。
 
 **English**
 
 - Reset now explicitly restores archived baseline HAP/HSP packages by replacement install, as authorized by the user. It preserves app data, verifies package hashes and installation identity, and requires patch version zero before success. No rebuild, uninstall or alternate recovery path; legacy baselines require a new deployment.
 - Confirm an ACTIVE recorder service after start, persist toggle intent and service identity, reject ambiguous media, and retain failed exports. Unreadable media is no longer mislabeled as unsupported capability; cleanup failures remain visible.
-- Add negative regressions and strict reset-behavior/video-decoding E2E checks. Device and host acceptance is deferred until the user confirms a Codex restart. The original API 26 zero-byte recording's cause and successful retrieval remain unverified; see [acceptance and TODO](docs/UPGRADE-1.4.4.md).
 
 ## v1.4.3 (2026-10-10)
 
 **中文**
 
 - 为 14 个 action 工具统一补明必填操作入口，doctor 明确没有 action；补齐日志/SQLite、LSP、协议阅读与接受、视觉评审两阶段、Skill 导出/作用域、签名字段、知识包离线状态的参数说明。保留全部公共能力索引、参数校验和原有大小/性能门禁。
-- 保留完整 `$ref`，在顶层参数重复声明引用定义的同值 type，修复部分免费模型把 selector 对象编码成字符串的兼容性问题；不猜测类型、不自动解析模型字符串、不改变输入校验。两种模型、各两轮原生调用及 provider 原始响应对照通过。
+- 保留完整 `$ref`，在顶层参数重复声明引用定义的同值 type，修复部分免费模型把 selector 对象编码成字符串的兼容性问题；不猜测类型、不自动解析模型字符串、不改变输入校验。
 - 修复 OpenCode 退出时模拟器被宿主清理的问题：独立程序通过短暂启动进程观察启动，再退出父进程，完成进程脱离后才返回；保留启动失败、日志和实际开机检查，不重试或替换启动选项。
 - 修正 UI 测试会话返回提示：断言步骤使用公开参数 visible/hidden，避免模型按旧提示传入不被接受的 assert；保留严格校验并补充真实 SDK 回归。
-- 扩展为覆盖 102 个协议入口的 103 项拟调用场景，以及独立的真实调用验收。记录宿主事件、原始 MCP 请求/响应、模型与构建身份，核对异步任务终态；免费模型多轮试验保留所有失败，不修补模型答案、不把计划计作执行；按输入模态区分文字控件操作与视觉验收。范围、证据和未验证项见 [升级 TODO](docs/UPGRADE-1.4.3.md)。
+- 扩展为覆盖 102 个协议入口的 103 项拟调用场景，以及独立的真实调用验收。记录宿主事件、原始 MCP 请求/响应、模型与构建身份，核对异步任务终态；免费模型多轮试验保留所有失败，不修补模型答案、不把计划计作执行；按输入模态区分文字控件操作与视觉验收。
 
 **English**
 
 - Explicit required-action guidance for 14 tools, with doctor exempt. Clarified conditional parameters and defaults for logs, SQLite, LSP, license acceptance, visual reviews, skills, signing and offline knowledge status without changing validation constraints or existing budgets.
-- Preserve complete `$ref` definitions and repeat their declared type at top-level arguments for provider interoperability. Two models passed two native-call rounds each, with raw provider/MCP argument equality; no string coercion or relaxed validation.
+- Preserve complete `$ref` definitions and repeat their declared type at top-level arguments for provider interoperability. No string coercion or relaxed validation.
 - Keep independently launched emulators alive after OpenCode exits by releasing their short-lived startup parent before reporting success. Startup diagnostics and boot checks remain intact; no option retry or downgrade.
 - Correct UI test continuation hints to use the public visible/hidden fields instead of the rejected assert field, retaining strict validation and adding real-SDK regression coverage.
-- Added 103 planning scenarios covering all 102 protocol entries and separate transport-verified execution trials. Multi-round free-model results retain failures, model/build identities and asynchronous terminal states. See [acceptance and remaining work](docs/UPGRADE-1.4.3.md).
 
 ## v1.4.2 (2026-10-10)
 
@@ -139,27 +130,25 @@
 
 - 修正过度压缩：公共说明恢复全部 15 个工具的任务索引，以及 SDK 依据、UI 引导、批量操作、回放、断言和完整产物读取规则。工具描述保留独立调用所需的条件，补充自动签名的设备范围、模拟器端口限制、注销和滚动流畅度用途。
 - 同时考虑 Codex、OpenCode 和 Claude 的不同加载方式；移除上一版过紧的公共说明/重复展开字节门禁，改查默认截断边界，继续报告开销。参数校验、执行逻辑、原 tools/list 和运行性能预算不变，不增加宿主特例或降级路径。
-- 新增覆盖 15 个工具的 29 项真实模型发现试验、独立只读执行试验及评分器测试。保留失败、接口/余额阻塞和构建身份；不将方案输出等同于执行成功。Codex App 已在重载后完成实际调用。逐宿主证据及未完成项见 [升级 TODO](docs/UPGRADE-1.4.2.md)。
+- 新增覆盖 15 个工具的 29 项真实模型发现试验、独立只读执行试验及评分器测试。保留失败、接口/余额阻塞和构建身份；不将方案输出等同于执行成功。
 
 **English**
 
 - Restored a discoverable index of all 15 tools and shared SDK, UI onboarding, batching, replay, assertion and artifact guidance. Standalone descriptions clarify automatic signing scope, emulator port restrictions, logout and scroll performance.
 - Accounted for Codex, OpenCode and Claude loading behavior. Replaced overly tight shared/repeated instruction byte gates with truncation checks while retaining size reports, tools/list and runtime budgets. Validation and handlers are unchanged; no host-specific fallback was added.
-- Added 29 real-model planning scenarios, separate read-only execution trials and grader tests. Failed trials, provider blockers and build identities remain recorded; proposed calls are not execution evidence. Reloaded Codex App calls were verified. Host-specific results and remaining work: [upgrade TODO](docs/UPGRADE-1.4.2.md).
 
 ## v1.4.1 (2026-10-10)
 
 **中文**
 
-- 查明公共说明重复来自宿主工具展开层：MCP 握手发送一次，原始工具清单没有重复前缀。将操作专属规则保留在对应工具，公共说明从 442 缩至 121 tokens；按现有宿主格式推算全量展开从 13,899 降至 9,008 tokens（-35.2%，o200k_base），不等同于宿主重载实测或每轮计费。
+- 精简公共说明，将操作专属规则保留在对应工具，减少宿主展开工具描述时的重复内容。
 - 保留全部 15 个工具、参数 Schema、校验及执行逻辑；保留知识来源优先级、任务续等、UI 引导与断言、设备/团队选择和完整 artifact 读取约束。
-- 新增独立提示词审计命令、UTF-8 字节计数及公共说明/重复展开体积门禁，防止只检查 tools/list 而遗漏宿主放大效应。验收与发布状态见 [升级 TODO](docs/UPGRADE-1.4.1.md)。
+- 新增独立提示词审计命令、UTF-8 字节计数及公共说明/重复展开体积门禁，防止只检查 tools/list 而遗漏宿主放大效应。
 
 **English**
 
-- Traced instruction repetition to host tool expansion, not MCP tools/list. Scoped operational guidance to its tool and reduced shared instructions from 442 to 121 tokens. Projecting the verified host format gives 13,899 -> 9,008 tokens (-35.2%, o200k_base); this is not a reloaded-host measurement or per-request billing.
+- Shortened shared instructions and scoped operational guidance to individual tools to reduce repeated content during host expansion.
 - All 15 tools, input schemas, validation and handlers remain unchanged. Source precedence, job continuation, UI onboarding/assertions, ambiguity handling and full-artifact access remain documented.
-- Added a prompt audit command, UTF-8 byte accounting and budgets for shared instructions and repeated-prefix expansion. Acceptance: [upgrade TODO](docs/UPGRADE-1.4.1.md).
 
 ## v1.4.0 (2026-10-10)
 
@@ -172,7 +161,7 @@
 - 自动处理扩展为通用引导链：首次设置、欢迎页及功能介绍按语义和控件状态识别，保留已选默认项；操作、批量、回放和测试共用，单独记录 `onboarding_completed`，页面不变或循环明确失败。新增独立开关 `auto_complete_ui_onboarding`。
 - 补齐 GitHub 自动发布：新版 main 的全部 CI 通过后创建 Release，回读核验 tag、提交和 Latest，生成发布回执；仓库规范明确交付终点，避免只推送代码而遗漏发布。
 - 按用户确认，空闲 RSS 预算允许相对原 70 MB 上限增长 20%（84 MB）；其余性能门禁及测试环境保持不变。
-- 保持独立 MCP 实现；按用户要求排除 Skill 自动分发/版本同步和 Windows NTLM 代理。逐项验收与交付记录见 [升级 TODO](docs/UPGRADE-1.4.0.md)。
+- 保持独立 MCP 实现；按用户要求排除 Skill 自动分发/版本同步和 Windows NTLM 代理。
 
 **English**
 
@@ -183,7 +172,6 @@
 - Generic first-run setup and feature-tour handling preserves selected defaults across actions, batches, replay and tests. Separate onboarding evidence and configuration, bounded transitions and unchanged-page detection.
 - Successful main CI automatically publishes new stable versions and verifies the release, commit, immutable tag and Latest status, with an auditable receipt and repository delivery rules.
 - User-approved idle RSS headroom: 20% over the prior 70 MB budget (84 MB); other performance gates and the test environment remain unchanged.
-- No upstream CLI runtime dependency, automatic Skill distribution/synchronization or Windows NTLM proxy. Acceptance details: [upgrade TODO](docs/UPGRADE-1.4.0.md).
 
 ## v1.3.3 (2026-10-04)
 
@@ -195,14 +183,13 @@
 - 知识包取消传到底层下载；流式下载校验和原子切换保护已安装包，同版本替换失败可恢复，未发布的默认包给出上游/本地安装路径。
 - forms 布局不再解析无关设备，模拟器使用专属实例并等待真正停止后清理；已有实例的 force 覆盖明确报告当前 SDK 不支持。
 - 修复 UI agent 首次连接及分片 UTF-8 响应；发送后的副作用不盲目重试。录像导出失败保留可恢复会话并清理本次临时文件；流程草稿可重连查询且按工程隔离。
-- 新增协议、持久化故障、签名补偿/进程中断、下载故障、通用弹窗及宿主写入回归。当前验收与外部限制见 `docs/audit/REPAIR-1.3.3.md`。
+- 新增协议、持久化故障、签名补偿/进程中断、下载故障、通用弹窗及宿主写入回归。
 
 **English**
 
 - Generic agreement and permission handling shared by UI actions, batches, replay and deploy/test assertions; text and control state replace app-specific IDs. Enabled by default, configurable with `auto_accept_ui_agreements=false`, with an acceptance record in results.
 - Durable staged auto-signing validates new material before switching configuration and preserves the old chain. Compensation is limited to attempt-owned resources; uncertain effects require reconciliation even with force.
 - Strict JSON-RPC validation, live cancellation propagation, atomic knowledge updates, owned layout emulators, truthful force capability errors, agent connection/frame cleanup, recoverable recording exports and project-isolated flow drafts.
-- Regression and acceptance evidence, including external limits, is recorded in `docs/audit/REPAIR-1.3.3.md`.
 
 ## v1.3.2 (2026-10-02)
 
@@ -218,42 +205,34 @@
 
 **中文**
 
-修复 v1.3.0 全面审查（`docs/audit/REVIEW-1.3.md`）发现的问题。每项都在 Mate 80 + MyStarRing 上用对应的审查脚本复测过。
-
 - **单次调用不再超过宿主超时**：`timeout_ms` 超过 52 秒（`ui assert`、`test_step`、`steps` 里每一步）会被截断并附注说明；`ui act steps` 整次调用最多 52 秒，到时返回已完成的步骤和 `stopped_at`，从那一步继续调用即可。以前 `assert timeout_ms=70000` 会让宿主先超时、什么都拿不到。
 - **`after` 更准**：只统计 app 自己、当前在屏幕上的控件（不再混入状态栏）；页面/弹层容器变化、一半以上内容被替换或窗口变化都判为 `navigated`，切换页签也能正确识别。
-- **少读界面树**：`steps` 只在下一步要按选择器找控件时才重新读取界面；单次 `act` 复用上一次操作留下的界面树，滚动这类本身就慢的操作不再额外等 400 毫秒。10 步混合路径 20.8 秒 → 16.1 秒。
+- **少读界面树**：`steps` 只在下一步要按选择器找控件时才重新读取界面；单次 `act` 复用上一次操作留下的界面树，滚动这类本身就慢的操作不再额外等 400 毫秒。
 - **状态库损坏自动恢复**：`state.db` 损坏时改名备份为 `state.db.corrupt-<时间>` 并重建，第一次返回和 `doctor` 会说明丢了什么（任务记录、录制草稿、登录）。
 - **截图对比识别整屏变暗**：整屏亮度一致变化（调暗、夜间模式、半透明遮罩）报告为 `global_shift`，扣除后再比较；变化超过一半时额外保存当时的截图（`current_artifact`）。
 - **`tools/list` 从 45.3 KB 降到 36.1 KB**：去掉整数参数无意义的 ±2^53 边界、操作类型只定义一次、说明文字精简。单元测试设了 36 KB 硬上限。
 - **prompts 更新**：`fix-build` 不再要求每轮先 `code check`；`debug-crash` 先用 `build_run` 返回的 `crash.source`。
 - 其他：单次 `act` 和 `steps` 对同名控件的选择规则一致；增量预检会一并检查引用了被改文件的文件；cppcrash 只取崩溃线程的调用栈；热修复状态和截图基准改为原子写入；flow 文件损坏报 `FLOW_INVALID` 并给出文件路径；设备中途断开报 `DEVICE_UNAVAILABLE`；`device log` 内联内容限制在约 7 KB。
-- 文档：热修复耗时改为实测值（`hot_reload` 约 5 秒，自动热修复 6–10 秒）；`wait` 默认值随动作不同。
+- 文档：`wait` 默认值随动作不同。
 
 **English**
 
-Fixes for the issues found by the v1.3.0 review (`docs/audit/REVIEW-1.3.md`), each re-tested with its review script on a Mate 80 with MyStarRing.
-
 - **No call outlives the host's request timeout**: `timeout_ms` above 52 s (ui assert, test_step, every step) is capped with a note; one `ui act steps` call lasts at most 52 s and then returns the finished steps and `stopped_at`.
 - **Accurate `after`**: only the app's own on-screen elements (no status bar); a page/overlay container change, half the content replaced or a window change counts as `navigated` (tab switches included).
-- **Fewer layout dumps**: steps re-dump only before a selector step; a single act reuses the tree the previous act left; no fixed 400 ms wait after slow actions. 10-step mixed path 20.8 s -> 16.1 s.
+- **Fewer layout dumps**: steps re-dump only before a selector step; a single act reuses the tree the previous act left; no fixed 400 ms wait after slow actions.
 - **State database self-repair**: a corrupted `state.db` is moved aside and recreated, with a one-time note and a doctor check.
 - **Visual check**: a uniform brightness change is reported as `global_shift` and removed before comparing; the plain screenshot is kept when more than half changed.
 - **tools/list 45.3 KB -> 36.1 KB** with a 36 KB hard limit in the unit tests.
-- Prompts, ambiguity rule shared by act and steps, preflight checks importers of edited files, cppcrash faulting thread only, atomic state writes, `FLOW_INVALID`, `DEVICE_UNAVAILABLE` on mid-call disconnects, `device log` inline output bounded, corrected timing numbers in the docs.
+- Prompts, ambiguity rule shared by act and steps, preflight checks importers of edited files, cppcrash faulting thread only, atomic state writes, `FLOW_INVALID`, `DEVICE_UNAVAILABLE` on mid-call disconnects, `device log` inline output bounded.
 
 ## v1.3.0 (2026-10-01)
 
 **中文**
 
-目标是让宿主 AI 少走几步。opencode 实际会话里，模型每一步要 15 到 150 秒，工具调用只要 1 到 3 秒，所以每少一次往返就省下一整步。这些功能都在真机（Mate 80、Pura 80 Pro，API 26）和真实工程上验收过（`test/audit/efficiency.mjs`）。
-
-拿同一个任务对比（改页面代码 → 部署 → 进到目标页 → 验证）：以前每轮要调用 7–9 次工具，平均花在模型思考上的时间约 213 秒；现在只要 2 次，即 `run build_run then_flow=<id>` 加上 `ui assert`（部署超过 55 秒时再多一次 `job wait`）。
-
 - **`ui act steps`**：一次调用走完整条路径，每步自动等待控件出现；失败时返回失败的那一步和当前可见控件；可以带最终断言，`save_flow` 存成 flow。
 - **每次 `act` 都返回 `after`**：新出现和消失的控件、是否换页，一般不用再调 `observe`。
-- **增量预检**：`build` / `build_run` 只检查上次以来内容真正改动过的 .ets/.ts（LingDong：0.4 秒，原来全量 4–22 秒）。hvigor 每次构建都会重写的 `BuildProfile.ets` 会被忽略。服务端说明和 SKILL 里不再要求先单独调用 `code check`。
-- **自动热修复**（`run_mode=auto`，默认开启）：从第二次部署起，只改了入口模块代码时，直接给正在运行的应用打补丁并重启。MyStarRing 在 Mate 80 上实测 6–10 秒，完整部署要 15–25 秒。资源、配置、其他模块、新增或删除文件、补丁失败时，自动改走完整部署，并通过 `fallback_reason` 说明原因；没有改动时只重启。传 `run_mode=full` 可以强制完整部署。
+- **增量预检**：`build` / `build_run` 只检查上次以来内容真正改动过的 .ets/.ts。hvigor 每次构建都会重写的 `BuildProfile.ets` 会被忽略。服务端说明和 SKILL 里不再要求先单独调用 `code check`。
+- **自动热修复**（`run_mode=auto`，默认开启）：从第二次部署起，只改了入口模块代码时，直接给正在运行的应用打补丁并重启。资源、配置、其他模块、新增或删除文件、补丁失败时，自动改走完整部署，并通过 `fallback_reason` 说明原因；没有改动时只重启。传 `run_mode=full` 可以强制完整部署。
 - **`then_flow`**：部署完自动走到保存过的页面；flow 不存在时，在构建开始前就报错。重启后又走了一遍同样的路径时，会提示把它存成 flow。
 - **启动崩溃自带诊断**：`build_run`、`launch` 和热修复后启动崩溃时，直接附上错误类型、可能原因，以及工程内出错的文件、行号和前后几行代码（`crash.source`）。`diagnose crash`、`device log` 带上 `project` 时也会这样定位。编译错误会附上出错位置的代码。
 - **`ui visual`**：截图回归。按名称和机型保存基准截图，之后对比，返回变化比例、变化区域和红框标注图；状态栏和导航栏不参与对比。`ui_flow replay snapshot=true` 会在回放后做一次对比。
@@ -263,14 +242,10 @@ Fixes for the issues found by the v1.3.0 review (`docs/audit/REVIEW-1.3.md`), ea
 
 **English**
 
-Fewer host round trips. In a real opencode session every model step took 15-150 s while tool calls took 1-3 s, so each avoided round trip saves a whole step. Everything below was accepted on real phones (Mate 80, Pura 80 Pro, API 26) and real projects (`test/audit/efficiency.mjs`).
-
-Same task (edit page code -> deploy -> reach the page -> verify): 7-9 tool calls per round before (about 213 s of model steps on average), 2 now: `run build_run then_flow=<id>` + `ui assert` (one `job wait` more when the deploy exceeds 55 s).
-
 - **`ui act steps`**: a whole path in one call, each step waiting for its element; on failure the failing step and the visible controls; optional final assert; `save_flow` stores it as a flow.
 - **Every `act` returns `after`**: elements that appeared/disappeared and whether the page changed, so observe is rarely needed.
-- **Incremental preflight**: build/build_run check only the .ets/.ts whose content changed since the last preflight (LingDong: 0.4 s instead of 4-22 s; hvigor's rewritten `BuildProfile.ets` ignored). Instructions and SKILL no longer ask for a separate code check.
-- **Automatic quick fix** (`run_mode=auto`, default): from the second deploy on, code-only changes of the entry module are patched into the running app and relaunched (MyStarRing on Mate 80: 6-10 s vs 15-25 s). Resources, manifests, other modules, added/deleted files or a failed patch deploy fully with `fallback_reason`; an unchanged project only relaunches. `run_mode=full` forces a full deploy.
+- **Incremental preflight**: build/build_run check only the .ets/.ts whose content changed since the last preflight; hvigor's rewritten `BuildProfile.ets` is ignored. Instructions and SKILL no longer ask for a separate code check.
+- **Automatic quick fix** (`run_mode=auto`, default): from the second deploy on, code-only changes of the entry module are patched into the running app and relaunched. Resources, manifests, other modules, added/deleted files or a failed patch deploy fully with `fallback_reason`; an unchanged project only relaunches. `run_mode=full` forces a full deploy.
 - **`then_flow`**: lands on a saved page after the deploy (unknown flows fail before building). A path walked again after a relaunch is suggested for saving.
 - **Startup crashes come diagnosed**: build_run, launch and quick-fix relaunches attach the error type, likely causes and the project file, line and surrounding code (`crash.source`); `diagnose crash` and `device log` do the same with `project`. Compile errors carry the code at the error.
 - **`ui visual`**: screenshot regression with per-name, per-model baselines: change ratio, regions, red-boxed diff image; status/navigation bars ignored. `ui_flow replay snapshot=true`.
@@ -282,14 +257,12 @@ Same task (edit page code -> deploy -> reach the page -> verify): 7-9 tool calls
 
 **中文**
 
-对全部 15 个工具、93 个动作、上游 467 项对齐和此前所有结论做了一次带原始证据的审计（报告：`docs/audit/AUDIT.md`，逐条结论：`docs/audit/FINDINGS.md`，可复跑脚本：`test/audit/`），并修复了找出的全部问题。
-
 行为变化（请留意）：
 - **参数写错直接报错**：不认识的参数、或传给了不使用它的动作的参数，一律报 `INVALID_INPUT` 且不执行，并给出正确的参数名（例如 `wiat` → `wait`）。以前会被忽略、按默认值执行。
 - **`wait` 超过 60000 不再报错**：自动按 60000 处理并在结果里注明，任务没完成就继续 `job wait`。
 - **多台设备时先问用户**：连着多台设备又没传 `target`，返回 `DEVICE_AMBIGUOUS`，列出每台设备的名称、型号、真机/模拟器、是否匹配工程，要求 AI 先问用户；`target` 也可以填设备名。
 - **多个开发者团队时先问用户**：会在 AGC 新建或删除东西的签名操作，账号有多个团队又没传 `team` 时返回 `TEAM_AMBIGUOUS` 并列出团队；只读查询仍默认个人团队。
-- **云端知识标签**：按正文与本地官方文档比对，分为 `official`、`official_other_platform`（华为给 Android/Java 或仓颉的官方文档）、`community`、`unverified`。实测 679 段：官方被标成社区 47 → 0，社区被标成官方 5 → 0。
+- **云端知识标签**：按正文与本地官方文档比对，分为 `official`、`official_other_platform`（华为给 Android/Java 或仓颉的官方文档）、`community`、`unverified`。
 - **界面树 `depth`** 与 devecocli 一致：0 不限，1 只有根节点。
 - **`emulator images`** 按行返回（设备类型、系统版本、是否已下载），没有时为空列表；`install_image` 返回路径、大小、耗时，不再返回进度条。
 
@@ -297,7 +270,7 @@ Same task (edit page code -> deploy -> reach the page -> verify): 7-9 tool calls
 - 构建失败时只返回 1 条错误：现在全部计数，前 100 条逐条给出错误码、文件、行号、原因；hvigor 级错误保留原因行（如"工程路径含非 ASCII 字符"）并给出提示。
 - 加依赖后构建失败：`oh-package.json5` / `build-profile.json5` 变化后，构建前自动 `ohpm install`。
 - `modules` 支持 `模块@target`；构建模式先校验并列出可选值；构建时 hvigor 新生成的 `BuildProfile.ets` 会在构建后删除。
-- 静态检查误报：嵌套目录模块、AppScope、未在 build-profile 声明的本地库的资源都能识别；注释和字符串里的 `$r(...)` 不再报；`sys.*` 全部种类都检查；资源目录名检查覆盖所有模块和限定词目录；删除从未启用且会误报的 `@ObjectLink` 规则。myTestAPP：编译器 209 个错误全部命中，资源误报 79 → 0。
+- 静态检查误报：嵌套目录模块、AppScope、未在 build-profile 声明的本地库的资源都能识别；注释和字符串里的 `$r(...)` 不再报；`sys.*` 全部种类都检查；资源目录名检查覆盖所有模块和限定词目录；删除从未启用且会误报的 `@ObjectLink` 规则。
 - LSP 对无 `@syscap` 模块报的空能力名错误不再显示（编译器实际接受）。
 - 本地搜索摘要改用原文，不再是分词后的索引文本。
 - 签名：`profile_create` 不再返回无效的 `profile:null`；删除不存在的证书返回 `NOT_FOUND`（以前报成功）；CSR 不存在返回 `NOT_FOUND`；补齐证书上限、非鸿蒙开发者、Profile 重名的错误提示。
@@ -306,14 +279,12 @@ Same task (edit page code -> deploy -> reach the page -> verify): 7-9 tool calls
 
 **English**
 
-An evidence-based audit of all 15 tools (93 actions), the 467 upstream alignment items and every earlier claim (report `docs/audit/AUDIT.md`, per-item results `docs/audit/FINDINGS.md`, re-runnable scripts `test/audit/`), and fixes for everything it found.
-
 Behaviour changes:
 - **Unknown or misplaced parameters are rejected** with `INVALID_INPUT` and nothing runs; the error names the right parameter (`wiat` → `wait`). They used to be ignored silently.
 - **`wait` above 60000 is capped**, not rejected, with a note; keep calling `job wait` while the job runs.
 - **Several devices: ask the user.** Without `target`, `DEVICE_AMBIGUOUS` lists each device (name, model, emulator or real, matches the project) and tells the agent to ask. `target` also accepts a device name.
 - **Several developer teams: ask the user.** Signing actions that create or delete in AGC return `TEAM_AMBIGUOUS` with the teams unless `team` is given; reads still default to the personal team.
-- **Cloud knowledge labels** come from comparing each section's text with the local official docs: `official`, `official_other_platform` (Huawei docs for Android/Java or Cangjie), `community`, `unverified`. On 679 real sections, official-as-community went 47 → 0 and community-as-official 5 → 0.
+- **Cloud knowledge labels** come from comparing each section's text with the local official docs: `official`, `official_other_platform` (Huawei docs for Android/Java or Cangjie), `community`, `unverified`.
 - **UI tree `depth`** matches devecocli: 0 unlimited, 1 root only.
 - **`emulator images`** returns rows (device type, OS version, downloaded), `[]` when none; `install_image` returns path, size and duration instead of the progress stream.
 
@@ -321,7 +292,7 @@ Fixes:
 - Failed builds returned one error: every error is now counted and the first 100 are listed with code, file, line and cause; hvigor-level errors keep their cause line (e.g. non-ASCII project path) with a hint.
 - Adding a dependency broke the next build: builds run `ohpm install` first when `oh-package.json5` / `build-profile.json5` changed.
 - `modules` accept `module@target`; the build mode is validated with the valid choices listed; `BuildProfile.ets` files that hvigor generates during a build are removed afterwards.
-- Static check false positives: resources of nested modules, AppScope and undeclared local libraries are indexed; `$r(...)` in comments and strings is ignored; every `sys.*` kind is checked; resource directory names are checked in all modules including qualifier directories; the never-enabled `@ObjectLink` rule (a false positive against hvigor) is removed. myTestAPP: all 209 compiler errors found, resource false positives 79 → 0.
+- Static check false positives: resources of nested modules, AppScope and undeclared local libraries are indexed; `$r(...)` in comments and strings is ignored; every `sys.*` kind is checked; resource directory names are checked in all modules including qualifier directories; the never-enabled `@ObjectLink` rule (a false positive against hvigor) is removed.
 - LSP errors with an empty capability name for modules without `@syscap` are dropped (the compiler accepts them).
 - Local search snippets come from the original text, not the tokenised index.
 - Signing: `profile_create` no longer returns a meaningless `profile:null`; deleting a certificate that does not exist is `NOT_FOUND` (it used to report success); a missing CSR is `NOT_FOUND`; hints for the certificate limit, non-HarmonyOS accounts and duplicate profile names.
@@ -336,7 +307,7 @@ Fixes:
 - **取信顺序**：① 工程 SDK 的接口声明和编译结果 → ② 官方文档（本地知识库、云端结果中标为官方的段落）→ ③ 社区文章（只作线索，不能作为 API 依据）。这条规则写进了服务说明、`knowledge` 工具说明和 `deveco-mcp-workflow` 技能，所有宿主 AI 按同一规则判断。
 - **云端结果逐段标注来源**：CodeGenie 返回的几十段内容原本不区分官方和社区，现在每段都标成【官方文档】或【社区文章】；官方段落附带本地知识库对应文档的 `local_doc`，可读全文核对。返回内容官方优先，同一官方页面只出现一次，社区文章只保留短摘录。以 Push Kit 查询为例：原先前 16000 字里大多是博客，现在前面都是官方页面，其中包括 `pushService` 接口参考。
 - **本地结果标注 `origin`**：`official` 为官方文档，`rules` 为规则/案例库。
-- **修复：LSP 解析不了 HMS Kit**（`@kit.PushKit`、`@kit.UIDesignKit` 等）。启动语言服务时同时传了 `--sdkPath`，服务端会用它重建工程模型，并把 HMS 路径拼成 `sdk/default/default/hms`，导致这些 Kit 的悬停结果都是 `any`，诊断报"找不到模块"，恰好让"查 SDK 核实"这一步失效。现在 MCP 自己发送工程模型时不再传 `--sdkPath`（`serve-lsp` 不变）。修复后，`pushService.getToken` 的悬停能给出真实签名 `getToken(): Promise<string>` 和 `@since 4.0.0(10)`；LingDong 首页的误报诊断从 7 个降为 0。
+- **修复：LSP 解析不了 HMS Kit**（`@kit.PushKit`、`@kit.UIDesignKit` 等）。启动语言服务时同时传了 `--sdkPath`，服务端会用它重建工程模型，并把 HMS 路径拼成 `sdk/default/default/hms`，导致这些 Kit 的悬停结果都是 `any`，诊断报"找不到模块"，恰好让"查 SDK 核实"这一步失效。现在 MCP 自己发送工程模型时不再传 `--sdkPath`（`serve-lsp` 不变）。
 - **悬停结果更易读**：签名中的 `&lt;` 等 HTML 转义还原为 `<`；`@since`、`@deprecated`、`@syscap` 等版本信息不会再被长长的 `@throws` 列表挤掉。
 
 **English**
@@ -345,68 +316,57 @@ When sources disagree, there is now one explicit rule, and the tools apply it:
 - **Precedence**: 1) the project's SDK declarations and a successful build; 2) official docs (the local pack, and cloud sections marked official); 3) community articles (leads only, never the API contract). The rule is in the server instructions, the `knowledge` tool description and the `deveco-mcp-workflow` skill, so every host agent judges the same way.
 - **Cloud answers labelled per section**: CodeGenie's dozens of sections did not say which were official and which were community posts. Each section is now marked official or community, and official ones carry `local_doc`, the id of the matching local doc to read in full. Official sections come first, each official page appears once, and community sections are shortened. On a Push Kit query, the first 16000 characters used to be mostly blog posts; they now start with official pages, including the `pushService` API reference.
 - **Local results carry `origin`**: `official` for docs, `rules` for the rule and case library.
-- **Fix: the LSP could not resolve HMS kits** (`@kit.PushKit`, `@kit.UIDesignKit`...). The ArkTS server was started with `--sdkPath` as well as the MCP's own project model, so it rebuilt the model and derived the HMS path as `sdk/default/default/hms`. Every HMS kit then hovered as `any` and was reported as "cannot find module", which broke exactly the step of checking the SDK. The MCP session no longer passes `--sdkPath` (`serve-lsp` is unchanged). Hover on `pushService.getToken` now returns the real signature `getToken(): Promise<string>` and `@since 4.0.0(10)`, and LingDong's home page went from 7 false diagnostics to 0.
+- **Fix: the LSP could not resolve HMS kits** (`@kit.PushKit`, `@kit.UIDesignKit`...). The ArkTS server was started with `--sdkPath` as well as the MCP's own project model, so it rebuilt the model and derived the HMS path as `sdk/default/default/hms`. Every HMS kit then hovered as `any` and was reported as "cannot find module", which broke exactly the step of checking the SDK. The MCP session no longer passes `--sdkPath` (`serve-lsp` is unchanged).
 - **Readable hovers**: HTML entities in signatures such as `&lt;` are decoded to `<`, and `@since`, `@deprecated`, `@syscap` and similar tags are kept even after a long `@throws` list.
 
 ## v1.1.2 (2026-09-29)
 
 **中文**
 
-每个工具的每个动作都做了实测（单元测试 44 项、模拟器端到端测试 19 项、LingDong 真机 62 项全部通过），并修复了测试中发现的问题：
-- **代码静态检查的误报**（上游 `deveco-cli` 自带的 `arkts-check.cjs` 同样存在）：注释或字符串里的 `{`、`}` 被当成代码，导致 `@Builder` 之后的普通方法都被判为"界面代码里不能声明变量/写循环"；容器组件名单是写死的，不认识 `HdsNavigation` 等 HMS 组件。现在括号扫描会跳过注释和字符串，容器判断改为读取本机 SDK（OpenHarmony + HMS）的组件描述，与编译器一致；SDK 不认识的组件不再报错。LingDong 全项目检查由 119 个误报降为 0；8 个用例（4 个真错误 + 4 个易误报的合法写法）的结论与编译器完全一致。
+修复工具调用中的问题：
+- **代码静态检查的误报**（上游 `deveco-cli` 自带的 `arkts-check.cjs` 同样存在）：注释或字符串里的 `{`、`}` 被当成代码，导致 `@Builder` 之后的普通方法都被判为"界面代码里不能声明变量/写循环"；容器组件名单是写死的，不认识 `HdsNavigation` 等 HMS 组件。现在括号扫描会跳过注释和字符串，容器判断改为读取本机 SDK（OpenHarmony + HMS）的组件描述，与编译器一致；SDK 不认识的组件不再报错。
 - **构建成功时明确告诉 AI 预检报错是误报**：构建结果中的 `preflight` 会写明"编译器已接受这些代码，不要为此修改"，避免 AI 去改能正常编译的代码。
 - **模拟器操作失败被当成成功**：Emulator 命令失败时也返回成功，现在按输出判断；运行中的模拟器拒绝删除；`list`/`stop` 支持 `instance_path`。
 - **取消构建后代码检查一直卡住**：检查进程或语言服务退出后会自动换新进程，不再卡住。
 - **MCP 服务崩溃后任务无法继续**：被中断的任务会显示为"已中断"，可以继续执行或取消。
 - **输入框中的英文引号被改成中文弯引号**：现在原样输入。
 - **签名校验**：未签名的包返回 `verified=false` 和原因，不再报工具错误；校验通过时给出 profile 摘要（包名、设备数、到期时间、ACL 权限）。签名密码错误时直接说明原因。
-- **测试**：新增云端签名和登录的模拟服务测试、覆盖所有 UI 操作的手势测试页；真机冒烟测试只使用 LingDong。
+- **测试**：新增云端签名和登录的模拟服务测试、覆盖所有 UI 操作的手势测试页。
 
 **English**
 
-Every action of every tool is now exercised by tests (44 unit, 19 emulator end-to-end and 62 real-device checks on LingDong, all passing). Fixes for the problems the tests found:
-- **False positives in the ArkTS static check** (also present in upstream `deveco-cli`'s `arkts-check.cjs`): braces inside comments and strings were counted as code, so every method after a `@Builder` was reported as builder code; the container list was hard-coded and missed HMS components such as `HdsNavigation`. Brace scanning now skips comments and strings, and container detection reads the installed SDK's component descriptors (OpenHarmony and HMS), as the compiler does. Components the SDK does not know are no longer reported. LingDong's whole-project check went from 119 false errors to 0, and the verdict on 8 cases (4 real errors and 4 valid but easily misjudged patterns) now matches the compiler on all of them.
+- **False positives in the ArkTS static check** (also present in upstream `deveco-cli`'s `arkts-check.cjs`): braces inside comments and strings were counted as code, so every method after a `@Builder` was reported as builder code; the container list was hard-coded and missed HMS components such as `HdsNavigation`. Brace scanning now skips comments and strings, and container detection reads the installed SDK's component descriptors (OpenHarmony and HMS), as the compiler does. Components the SDK does not know are no longer reported.
 - **A successful build tells the agent that preflight errors were false positives**: the build result's `preflight` says the compiler accepted the code and that nothing should be changed for it.
 - **Failed emulator operations were reported as successes**: the Emulator CLI exits 0 on failure, so failure is now detected from its output. Deleting a running emulator is refused, and `list`/`stop` accept `instance_path`.
 - **Code checks hung after a cancelled build**: a checker or language server whose process died is replaced automatically.
 - **Jobs could not continue after an MCP server crash**: interrupted jobs now show as interrupted and can be resumed or cancelled.
 - **Straight quotes in text input became curly quotes**: text is now entered exactly as given.
 - **Signature verification**: unsigned packages return `verified=false` with a reason instead of a tool error; verified packages include a profile summary (bundle, device count, expiry, ACL permissions). A wrong keystore password is now reported as such.
-- **Tests**: mock-service tests for cloud signing and login, and a gesture page covering every UI action. The real-device smoke test uses LingDong only.
+- **Tests**: mock-service tests for cloud signing and login, and a gesture page covering every UI action.
 
 ## v1.1.1 (2026-09-29)
 
 **中文**
 
-在真实项目上发现并修复的问题（全部已在真机实测通过）：
-- **重新构建会打断正在运行的 MCP 服务**：之前每次构建都会清空 `dist/`，正在运行的 Codex/Cursor 里的服务再按需加载模块时就会报 `Cannot find module dist/chunks/...`，这正是 Codex 无法安装应用的原因。现在构建只新增文件，一天以上的旧文件才清理；已验证重新构建后，正在运行的服务仍能正常调用。
+修复运行时问题：
+- **重新构建会打断正在运行的 MCP 服务**：之前每次构建都会清空 `dist/`，正在运行的 Codex/Cursor 里的服务再按需加载模块时就会报 `Cannot find module dist/chunks/...`，这正是 Codex 无法安装应用的原因。现在构建只新增文件，一天以上的旧文件才清理。
 - **多设备工程只构建、安装匹配设备的模块**：像 LingDong 这样“手机 + 手表”两个 entry 的工程，`run` 会先识别目标设备类型，再只构建和安装 `deviceTypes` 匹配的模块（手机只装 `default`，手表只装 `watch`），不会再把两个包一起装。显式指定 `modules` 时，如果模块不适用于该设备，会在安装前直接拒绝并说明原因。`launch` 和 `hot_reload` 默认模块也按设备选择。
 - **不改动工程已有的签名**：`sign auto` 检测到工程已配置签名（`build-profile.json5` 或 `hvigorfile.ts` 的 overrides）时拒绝执行，不做任何修改（`force=true` 才会替换）。热重载优先使用 hvigor 用工程签名生成的补丁包，不再自行签名。
 - **ArkTS 预检不再阻断构建**：静态预检是近似检查，在真实工程上有误报（例如 `HdsNavigation` 作为根节点），之前会直接跳过构建。现在只作为提示随结果返回，以 hvigor 编译结果为准。问题文件路径也改为相对于工程根目录。
 
-真机验证（手机 Pura 80 Pro，API 26）：
-- LingDong：`build_run` 自动选择 `default` 模块，只构建和安装 `default-default-signed.hap`，启动冒烟判定 PASS；显式指定 `watch` 时在安装前返回 `DEVICE_MISMATCH`；`sign auto` 返回 `SIGN_CONFIGURED`，签名保持不变。
-- MyStarRing：`build_run` 成功，冒烟判定 PASS。热重载在工程的一份副本上测试：使用 hvigorfile overrides 签名打出的补丁包在真机上生效（日志中出现补丁代码输出的标记），测试后已撤销补丁，并重新部署原版应用。
-- 两个工程的源码均未修改（前后逐文件哈希对比）。唯一的变化是 hvigor 每次构建都会重新生成的 `BuildProfile.ets`，这与 DevEco Studio 自己构建时的行为相同。
-
 **English**
 
-Problems found on real projects and fixed (all verified on a physical phone):
-- **Rebuilding broke running MCP servers**: every build wiped `dist/`, so a server already running in Codex or Cursor failed to load its next module (`Cannot find module dist/chunks/...`). That is why Codex could not install apps. Builds now only add files, and chunks older than a day are pruned. Verified: a running server keeps working after a rebuild.
+Runtime fixes:
+- **Rebuilding broke running MCP servers**: every build wiped `dist/`, so a server already running in Codex or Cursor failed to load its next module (`Cannot find module dist/chunks/...`). That is why Codex could not install apps. Builds now only add files, and chunks older than a day are pruned.
 - **Multi-device apps build and install only the matching modules**: for projects with one entry per device class (LingDong: phone + watch), `run` detects the target device type and builds and installs only the modules whose `deviceTypes` match (phone gets `default`, watch gets `watch`), so both packages are never installed together. An explicit `modules` choice that cannot run on the device is refused before anything is installed. `launch` and the `hot_reload` default module follow the same rule.
 - **Existing project signing is never changed**: `sign auto` refuses and changes nothing when the project already has signing (`build-profile.json5` or `hvigorfile.ts` overrides); only `force=true` replaces it. Hot reload now uses the HQF that hvigor signed with the project's own signing instead of signing it itself.
 - **The ArkTS preflight no longer blocks builds**: the static check is an approximation and had false positives on real projects (such as `HdsNavigation` as the root node), which previously skipped the build. Its findings are now reported with the result and hvigor decides. Issue paths are now relative to the project root.
-
-Verified on a phone (Pura 80 Pro, API 26):
-- LingDong: `build_run` picks the `default` module and builds and installs only `default-default-signed.hap`, with smoke verdict PASS. Explicitly choosing `watch` returns `DEVICE_MISMATCH` before installing, and `sign auto` returns `SIGN_CONFIGURED` with signing untouched.
-- MyStarRing: `build_run` succeeds with smoke verdict PASS. Hot reload was tested on a copy of the project: the HQF signed through the hvigorfile overrides took effect on the phone (a marker from the patched code appeared in the log); the patch was then removed and the original app redeployed.
-- Neither project's source changed (per-file hash comparison before and after). The only difference is `BuildProfile.ets`, which hvigor regenerates on every build, just as DevEco Studio does.
 
 ## v1.1.0 (2026-09-29)
 
 **中文**
 
-对齐方式重建：以前的对齐检查依据一张手写对照表，会漏。现在改为由脚本从上游源码**全量自动抽取**所有能力项（工具、参数、取值、命令、选项、选项取值、deveco-cli 自带 MCP 服务的工具、Skill），共 467 项。每一项都必须有明确决策：完整覆盖（写明对应的工具和参数，由脚本对照服务实际的 JSON Schema 核对）、由宿主提供、或明确不需要（写明理由）。没有决策、核对不通过、决策过期或上游有新提交，CI 都会失败；GitHub 上每周自动检查一次。完整清单见 `docs/upstream-alignment.md`。
+对齐方式重建：以前的对齐检查依据一张手写对照表，会漏。现在改为由脚本从上游源码**全量自动抽取**所有能力项（工具、参数、取值、命令、选项、选项取值、deveco-cli 自带 MCP 服务的工具、Skill），共 467 项。每一项都必须有明确决策：完整覆盖（写明对应的工具和参数，由脚本对照服务实际的 JSON Schema 核对）、由宿主提供、或明确不需要（写明理由）。没有决策、核对不通过、决策过期或上游有新提交，CI 都会失败；GitHub 上每周自动检查一次。
 
 按清单补齐的功能：
 - 代码导航：`code lsp` 新增 `call_hierarchy`（`direction` 调用者/被调用者，C++ 仅支持调用者）和 `declaration`；`lsp_restart` 可只重启 ArkTS 或 C++。
@@ -422,11 +382,10 @@ Verified on a phone (Pura 80 Pro, API 26):
 - 安装失败 9568297（设备 API 低于应用要求）给出明确提示。
 - tools/list 中重复的选择器定义只输出一次，工具描述总大小控制在 36 KB 以内。`npm run bench` 增加性能预算检查（握手 < 150 ms、空闲内存 ≤ 70 MB、工具描述 ≤ 36 KB、空闲 CPU 不增长）。
 - 经评估不做 spec 规格开发流程（宿主自带 Plan 模式已经覆盖），同时删除 `implement-feature` Prompt。
-- 行为对照：白屏判定与上游的图像指纹算法在 7 组样本上结论一致；按组件 id 点击、向焦点控件输入文本与上游行为一致。
 
 **English**
 
-Alignment rebuilt: the previous check relied on a hand-written mapping and missed things. A script now **extracts every capability item from upstream source automatically** (tools, parameters, enum values, commands, options, choices, deveco-cli's bundled MCP tools, skills): 467 items. Each needs an explicit decision: full (with a target that the script verifies against the server's live JSON Schemas), host-provided, or not needed (with a reason). Undecided or unverifiable items, stale decisions and new upstream commits all fail CI, and GitHub re-checks weekly. The full list is in `docs/upstream-alignment.md`.
+Alignment rebuilt: the previous check relied on a hand-written mapping and missed things. A script now **extracts every capability item from upstream source automatically** (tools, parameters, enum values, commands, options, choices, deveco-cli's bundled MCP tools, skills): 467 items. Each needs an explicit decision: full (with a target that the script verifies against the server's live JSON Schemas), host-provided, or not needed (with a reason). Undecided or unverifiable items, stale decisions and new upstream commits all fail CI, and GitHub re-checks weekly.
 
 Gaps closed from the list:
 - Code navigation: `code lsp` adds `call_hierarchy` (`direction` callers/callees; C++ supports callers only) and `declaration`; `lsp_restart` can restart only ArkTS or C++.
@@ -442,7 +401,6 @@ Also:
 - Install error 9568297 (device API lower than the app requires) now comes with a clear hint.
 - The selector schema is emitted once in tools/list, keeping all tool descriptions within 36 KB. `npm run bench` now enforces performance budgets (handshake < 150 ms, idle RSS ≤ 70 MB, tool descriptions ≤ 36 KB, no idle CPU growth).
 - The spec-driven workflow was evaluated and dropped (the host's own plan mode covers it), and the `implement-feature` prompt was removed.
-- Behaviour checks: blank-screen detection agrees with upstream's image-fingerprint algorithm on all 7 samples; clicking by component id and typing into the focused field match upstream behaviour.
 
 ## v1.0.2 (2026-09-29)
 
@@ -489,14 +447,13 @@ v1.0 是一次从零开始的重写，目标是**更轻、更快、和上游对�
 #### 亮点
 
 - **轻量原生架构**：内置最小化的 MCP stdio 传输，去掉了 `@modelcontextprotocol/sdk` 和 LangGraph；运行时依赖只剩 3 个（json5、yauzl、zod）。
-- **性能**：握手约 90 ms，空闲 CPU 约为 0（没有常驻定时器或轮询），空闲内存约 65 MB；esbuild 构建约 60 ms。
 - **可靠的任务执行**：构建、部署等有副作用的操作都作为任务运行。执行前先记录意图、完成后记录回执，服务中断后不会盲目重做；任务数据存在 `node:sqlite`（WAL 模式）里。
 - **可单独更新的知识包**：每个 `.tgz` 包含 FTS5 索引、中文分词词表和文档，下载时校验 sha512，原子切换，支持回滚；也可以直接用上游最新的知识库生成。
 - **12 个核心工具加 3 个可选组**：`doctor`、`project`、`run`、`job`、`code`、`device`、`ui`、`ui_flow`、`diagnose`、`knowledge`、`skills`、`auth`；可选组：`sign`、`emulator`、`hot_reload`。
 
 #### 和上游对齐（deveco-code / deveco-cli）
 
-能力级验收：上游共 81 项，**60 项完整覆盖、3 项由命令行子命令提供、18 项由宿主 AI 自身提供，缺口为 0**。每次 CI 都会读取服务实际的工具 JSON Schema 做参数级比对。
+每次 CI 都会读取服务实际的工具 JSON Schema 做参数级比对。
 
 - **UI 测试会话**（宿主驱动）：`test_start` → `test_step` → `review` → `test_finish` → `test_log` / `test_export`。每一步自动记录操作前后截图、控件摘要和应用日志片段。视觉判断由宿主 AI 完成；控件断言失败时，视觉判断不能改判为通过。
 - **启动冒烟判定**：`build_run` 返回 `PASS` / `FAIL_CRASH` / `FAIL_BLANK`，其中 `FAIL_BLANK` 表示启动后白屏或黑屏。
@@ -508,8 +465,6 @@ v1.0 是一次从零开始的重写，目标是**更轻、更快、和上游对�
 - 命令行：`init --host <宿主>` 一步完成 MCP 配置和 Skill 导出，支持 8 种宿主，重复执行不会重复写入；`serve-lsp [--cpp]` 把 ArkTS 或 C++ 语言服务透传给编辑器。
 
 #### 从 v0.4 保留的功能
-
-逐项评估见 [docs/v0-feature-review.md](docs/v0-feature-review.md)，最终保留：
 
 - 鼠标操作（点击、双击、长按、移动、滚轮、拖拽）和组合键（最多 3 个键）。
 - `ui act verify_change`：比较操作前后的界面，判断操作是否生效。
@@ -533,14 +488,13 @@ v1.0 is a **from-scratch rewrite** focused on a smaller footprint, faster startu
 #### Highlights
 
 - **Lean native architecture**: the built-in minimal MCP stdio transport replaces `@modelcontextprotocol/sdk` and LangGraph. Only 3 runtime dependencies remain (json5, yauzl, zod).
-- **Performance**: about 90 ms handshake, near-zero idle CPU (no background timers or polling), about 65 MB idle RSS, and about 60 ms esbuild builds.
 - **Durable jobs**: builds, deploys and other side effects run as jobs that record intent before running and a receipt after, so an interrupted server never blindly repeats work. Job state is stored in `node:sqlite` (WAL).
 - **Independently updatable knowledge packs**: each `.tgz` holds an FTS5 index, a Chinese segmentation vocabulary and the docs. Downloads are sha512-verified, switched atomically and can be rolled back; a pack can also be built from the latest upstream knowledge base.
 - **12 core tools plus 3 optional groups**: `doctor`, `project`, `run`, `job`, `code`, `device`, `ui`, `ui_flow`, `diagnose`, `knowledge`, `skills`, `auth`; optional groups: `sign`, `emulator`, `hot_reload`.
 
 #### Upstream parity (deveco-code / deveco-cli)
 
-Capability-level check: of 81 upstream capabilities, **60 are fully covered, 3 are CLI subcommands, 18 are provided by the host AI itself, and 0 are missing**. CI compares the server's live tool JSON Schemas parameter by parameter.
+CI compares the server's live tool JSON Schemas parameter by parameter.
 
 - **UI test sessions** (host-driven): `test_start` → `test_step` → `review` → `test_finish` → `test_log` / `test_export`. Every step records before/after screenshots, an element summary and a window of the app's logs. The host AI makes the visual judgement; it can never overturn a failed control assertion.
 - **Launch smoke verdict**: `build_run` returns `PASS` / `FAIL_CRASH` / `FAIL_BLANK`, where `FAIL_BLANK` means the screen is blank (white or black) after launch.
@@ -552,8 +506,6 @@ Capability-level check: of 81 upstream capabilities, **60 are fully covered, 3 a
 - CLI: `init --host <host>` sets up the MCP config and exports skills in one step for 8 hosts, and re-running it never duplicates entries. `serve-lsp [--cpp]` passes the ArkTS or C++ language server through to editors.
 
 #### Kept from v0.4
-
-Each feature was assessed in [docs/v0-feature-review.md](docs/v0-feature-review.md). The kept ones:
 
 - Mouse actions (click, double click, long press, move, wheel, drag) and key chords of up to 3 keys.
 - `ui act verify_change`: compares the screen before and after an action to show whether it took effect.

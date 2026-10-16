@@ -1,6 +1,6 @@
 # 测试运行指南
 
-这是当前测试入口的唯一说明。历史验收中的旧命令只适用于其来源提交；删除与覆盖对应关系见 [治理映射](../docs/TEST-GOVERNANCE.md)。目录规则见 [AGENTS.md](../AGENTS.md)。不以测试/产品行数比例决定删减，不安装工具、更换模型、模拟器镜像或签名配置来让测试通过。
+这是当前测试入口的唯一说明。目录规则见 [AGENTS.md](../AGENTS.md)。不以测试/产品行数比例决定删减，不安装工具、更换模型、模拟器镜像或签名配置来让测试通过。
 
 ## 分层与入口
 
@@ -21,7 +21,6 @@
 | `npm run test:prompts -- --snapshot /absolute/new-snapshot.json` | 实际 tools/list 与 instructions 字节/字符统计，不声称是 token 数 |
 | `npm run bench` | 握手、空闲 CPU/RSS、提示说明门限；需要 POSIX ps，预算不变 |
 | `npm run upstream:sync -- --json` | 当前上游清单与本地独立能力映射；需要 Git/network |
-| `npm run test:model -- --host codex --suite discovery --out /absolute/new-run` | 真实 Codex CLI 的拟调用方案；不代表调用执行，不替代 Codex App 验收 |
 | `npm run test:model -- --host opencode --model provider/id --suite live --cases /absolute/cases.json --out /absolute/new-run` | 明确选择宿主/原模型的真实调用验收；遵守用户指定的模型与模态范围 |
 | `npm run test:models -- --out /absolute/new-matrix --rounds 2 --models provider/id,...` | 明确授权后才运行所选 OpenCode 免费模型矩阵；先核对当前目录中的工具调用、模态和费用，不自动降级/替换模型 |
 | `npm run test:model-report -- /absolute/private-run /absolute/new-summary.json` | 从真实证据生成脱敏摘要 |
@@ -31,6 +30,10 @@
 新增专项（也包含在 `npm test`）：`node --test test/integration/kb-source.test.mjs test/integration/lifecycle.test.mjs test/integration/perf.test.mjs`。知识库回归使用隔离 registry、tar/zip 与 SQLite；录屏验证离线完整归档、恢复冲突和 UUID 隔离；FPS 验证单次手势并发采集、取消、权限/退出错误和 inconclusive。全部不连接真机。
 
 MCP 契约回归同样包含在 `npm test`：`integration/protocol.test.mjs`、`server.test.mjs` 覆盖协议、注解及提前拒绝；`device.test.mjs` 验证 SQLite 路径完整引用；`emulator.test.mjs`、`signing.test.mjs` 用隔离进程验证退出状态和配置引用；`jobs.test.mjs` 与 `unit/efficiency.test.mjs` 验证检查范围、完整报告及构建预检结果。未增加测试运行器或依赖。
+
+## 当前宿主模型验收
+
+直接在当前 Codex App 中调用已加载的 MCP，不启动 Codex CLI，也不改审批设置。先用 doctor 确认运行版本、SDK、工程和显式设备，再完成场景中的实际调用及结果断言。返回静态候选、无数据或未执行必须按实际边界报告；工具发现和拟调用方案不能计为执行通过。
 
 ## 真实验收条件与作用范围
 
@@ -46,7 +49,7 @@ npm run test:recording
 node --test --test-concurrency=1 test/e2e/hotreload.test.mjs
 ```
 
-需要创建完整夹具时，在新专用模板工程调用 `makeApp(project)`（`test/support/project.mjs` 导出）：它添加手势、调用链、接口、C++ 和 SQLite 建表，不配置签名。仅复用既有夹具时不得重新运行。源码变更测试恢复自己修改的源文件；构建目录、测试数据库/安装和日志属于专用测试对象。历史原视频、私有日志和截图不得随测试代码删除。
+需要创建完整夹具时，在新专用模板工程调用 `makeApp(project)`（`test/support/project.mjs` 导出）：它添加手势、调用链、接口、C++ 和 SQLite 建表，不配置签名。仅复用既有夹具时不得重新运行。源码变更测试恢复自己修改的源文件；构建目录、测试数据库/安装和日志属于专用测试对象。需要留存的原始证据使用仓库外目录。
 
 | 按能力执行的文件 | 额外条件及影响 |
 | --- | --- |
@@ -76,7 +79,7 @@ node --test --test-concurrency=1 test/e2e/hotreload.test.mjs
 
 ## 证据与发布
 
-公开脱敏结果在 `docs/evidence/`；私有 `E2E_DIR` 含源代码、截图、视频及云端资料，禁止整体提交。回执与原视频排他创建，不覆盖旧证据。FFmpeg 严格检查的原理见 [媒体检查](../docs/RECORDING-CHECK.md)。本轮范围和未验证项见 [v1.4.10](../docs/UPGRADE-1.4.10.md)，发布遵循 [RELEASING](../docs/RELEASING.md)。发布成功不证明 Codex App 已重载或模型已重新验收。
+测试结果直接在当前任务中报告，仓库不保存审查报告或历史记录。需要留存的原始资料使用仓库外的显式 `E2E_DIR`；其中可能包含源代码、截图、视频及云端资料，禁止提交。回执与原视频排他创建。媒体校验见 [媒体检查](../docs/RECORDING-CHECK.md)，发布遵循 [RELEASING](../docs/RELEASING.md)。发布成功不证明宿主已重载。
 
 ## Agent 验收闭环（1.5）
 
@@ -97,7 +100,7 @@ form 用例不猜测或添加宿主组件：先在指定实际宿主添加本次
 
 `unit/verification.test.mjs` 检查测试核算、部分计划、基线、跨进程锁、永久证据等独立规则；`integration/verification.test.mjs` 用真实 MCP/job/进程及项目命令验证超时、取消、清理、污染和 CLI 共享路径，不伪造 SDK/设备成功。标准 `npm test` 已包含它们；CI 仍是三平台 × Node 22/24。
 
-`node test/model/live-cases.mjs <PROJECT> <TARGET> <new.json> verification` 生成 10 项只读发现/调用样例，交给现有 `test/model/eval.mjs --host codex --suite live --cases ... --out ...`。使用宿主现有模型配置，权限失败不得改成通过。多步证据推理问题另见 `fixtures/verification-evaluation.xml`：按冻结专用验收报告绑定 PROJECT/artifact ID；问题素材、拟调用、真实调用与最终答案评分必须分别记录，XML 本身不代表模型通过。
+`node test/model/live-cases.mjs <PROJECT> <TARGET> <new.json> verification` 生成 10 项只读发现/调用样例，通过当前 Codex App 已加载的 MCP 逐项实际调用。使用现有环境，权限失败不得改成通过。多步证据推理问题另见 `fixtures/verification-evaluation.xml`：按冻结专用验收报告绑定 PROJECT/artifact ID；问题素材、拟调用、真实调用与最终答案评分必须分别记录，XML 本身不代表模型通过。
 
 `integration/hdc-target.test.mjs`（已纳入 `npm test`）使用真实本地 TCP 连接验证任务级 HDC 目标绑定、并发隔离、分包/粘包与二进制透传、错误目标/全局命令拒绝、握手超时、断连和取消清理。这些协议夹具不代表 SDK 或设备测试通过。产品 Instrument 支持明确选定的真机或模拟器；上述既有 USB 套件的默认设备保护条件保留，模拟器验收单独记录实际 MCP 调用及原始 SDK/设备证据。
 

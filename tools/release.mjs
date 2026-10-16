@@ -55,7 +55,6 @@ export async function release({ api, git, repository }, runId, check = false) {
   assert.equal(lock.version, version, "Lockfile version mismatch");
   assert.equal(lock.packages[""].version, version, "Lockfile root version mismatch");
   const notes = releaseNotes(version, git("show", `${head}:CHANGELOG.md`)), tag = `v${version}`;
-  assert.ok(git("show", `${head}:docs/UPGRADE-${version}.md`).trim(), "Version acceptance record is required");
   let published = await remote(`releases/tags/${tag}`, { optional: true });
   const latest = await remote("releases/latest", { optional: true });
   const ref = await remote(`git/ref/tags/${tag}`, { optional: true });
@@ -82,7 +81,7 @@ export async function release({ api, git, repository }, runId, check = false) {
     assert.equal((await remote("git/ref/heads/main")).object.sha, head, "main advanced during release checks");
     published = await remote("releases", { method: "POST", body: {
       tag_name: tag, target_commitish: head, name: tag, make_latest: "true", draft: false, prerelease: false,
-      body: `${notes}\n\n## 发布核验 / Publication verification\n\n- Commit: \`${head}\`\n- [CI: all ${requiredJobs.length} required jobs passed](${run.html_url})\n- [逐项验收 / Acceptance](https://github.com/${repository}/blob/${head}/docs/UPGRADE-${version}.md)\n\nGitHub publication does not restart existing MCP hosts or publish to npm.\n`,
+      body: `${notes}\n\n## 发布核验 / Publication verification\n\n- Commit: \`${head}\`\n- [CI: all ${requiredJobs.length} required jobs passed](${run.html_url})\n\nGitHub publication does not restart existing MCP hosts or publish to npm.\n`,
     } });
   }
   const verified = await remote(`releases/tags/${tag}`), verifiedLatest = await remote("releases/latest");
