@@ -70,7 +70,13 @@ function open(DatabaseSync: typeof import("node:sqlite").DatabaseSync, file: str
   const handle = new DatabaseSync(file);
   try {
     handle.exec("PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; PRAGMA busy_timeout=5000; PRAGMA foreign_keys=OFF;");
-    handle.exec(schema);
+    // Bootstrap/migrations share one durable commit. Autocommitting each CREATE can stall
+    // the first protocol requests behind many fsyncs when retention opens a fresh database.
+    handle.exec("BEGIN IMMEDIATE");
+    try {
+      handle.exec(schema);
+      handle.exec("COMMIT");
+    } catch (error) { handle.exec("ROLLBACK"); throw error; }
     // A truncated file can open and still be unreadable: touch every table once.
     for (const t of ["jobs", "effects", "events", "artifacts", "credentials", "exports", "kv"]) handle.prepare(`SELECT 1 FROM ${t} LIMIT 1`).get();
     return handle;
