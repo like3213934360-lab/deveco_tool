@@ -137,6 +137,8 @@ FPS 无有效数据返回 `verdict=inconclusive` 和 `diagnostic_artifact`；用
 - **更新：** `knowledge action=update` 以任务形式运行：从 npm 下载，校验 sha512，解压到临时目录，检查结构，原子切换版本，并保留上一版本以便 `rollback`。`file=<path.tgz>` 安装本地知识包；默认从官方 `@deveco-test/deveco-cli-knowledgebase` 的 latest 生成知识包（API 兼容性检查）；`file=pack` 选择配置的成品包。`check=true` 使用同样的来源/版本解析，本地文件/URL 检查明确拒绝而非忽略。本地增强指纹与上游版本分别报告，同内容不重复安装，`force=true` 强制重建；旧包缺指纹显示 unknown/建议刷新。
 - **构建与发布：** `node bin/deveco-mcp.mjs kb-build <上游包目录> kb-dist --version x.y.z` 生成可以发布到 npm 的包。`doctor remote=true` 会提示是否有新版本，但不会自动下载。
 
+知识包回收保留当前版本、一个必要回滚版本和仍被新版 MCP 进程打开的版本；更新或回滚完成即回收其余版本，进程退出后的占用在后续维护中释放。下载/转换临时目录用完即删，中断残留、`<state>/backups/` 内的临时修复副本及损坏数据库恢复副本最多保留 24 小时（正在使用时延后）。这些目录只放可回收数据，不创建常规修复备份；永久交付、凭据和用户资料不能放入其中。清理复用同一个后台定时器，启动和每小时检查，已知到期时间参与调度；文件流式异步删除，失败路径持久跳过并精简提示。旧版 MCP 没有占用登记，更新/回滚知识包前须先重载所有仍在运行的旧版实例。
+
 ## 架构
 
 ```text
@@ -317,6 +319,8 @@ It combines Huawei's HarmonyOS docs (guides, API reference, best practices, FAQ,
 - **Built-in:** the npm package `@deveco-mcp/kb` is an optional dependency, and `kb-dist/current` works for local development.
 - **Update:** `knowledge action=update` runs as a job. It downloads from npm, verifies the sha512 integrity, extracts to a temporary directory, checks the schema, switches versions atomically, and keeps the previous version for `rollback`. `file=<path.tgz>` installs a local pack. The default builds from official `@deveco-test/deveco-cli-knowledgebase` latest with API compatibility checks; `file=pack` selects the configured pack. `check=true` uses the same source/version resolution and explicitly rejects local-file/URL checks instead of ignoring them. Local fingerprints and upstream versions are reported separately; unchanged content is a no-op, `force=true` rebuilds, and older packs without a fingerprint recommend refresh.
 - **Build and publish:** `node bin/deveco-mcp.mjs kb-build <upstream-package-dir> kb-dist --version x.y.z` writes an npm-publishable tarball. `doctor remote=true` shows whether a newer pack exists; packs are never downloaded automatically.
+
+Knowledge cleanup keeps the current pack, one rollback pack and packs still open in updated MCP processes. Updates/rollbacks reclaim other generations; later maintenance releases dead-process pins. Temporary download/conversion workspaces are deleted on completion. Interrupted work, temporary repair copies under `<state>/backups/` and damaged-database recovery copies expire after 24 hours unless in use. Only disposable data belongs there; no routine repair backups are created. Credentials, user data and permanent deliverables remain outside these directories. Cleanup shares the existing timer, reconciles at startup/hourly and schedules known deadlines. Tree deletion streams asynchronously; failed paths are persistently excluded with a short warning. Reload all older MCP instances before updating/rolling back knowledge packs because those instances do not register usage.
 
 ### Architecture
 

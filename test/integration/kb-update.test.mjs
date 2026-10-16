@@ -7,6 +7,7 @@ import http from "node:http";
 import os from "node:os";
 import path from "node:path";
 import { after, before, test } from "node:test";
+import { once } from "node:events";
 import { DatabaseSync } from "node:sqlite";
 import { connect } from "../support/mcp.mjs";
 import { zipFixture } from "../support/zip.mjs";
@@ -110,4 +111,29 @@ it("tampered download is rejected and the active pack is unchanged", async () =>
   assert.equal(r.data.error.code, "INTEGRITY_FAILED");
   const s = await call({ action: "search", query: "alpha" });
   assert.equal(s.data.results[0].title, "Alpha");
+});
+
+it("multiple generations preserve another process's open pack and reclaim it after that process dies", async () => {
+  const kb = path.join(work, "state", "kb"), pointer = () => JSON.parse(fs.readFileSync(path.join(kb, "current.json"), "utf8"));
+  const held = path.join(kb, pointer().directory);
+  const reader = connect({ DEVECO_STATE_DIR: path.join(work, "state"), DEVECO_CONFIG: path.join(work, "config.json") });
+  try {
+    await reader.initialize();
+    assert.match((await reader.call("knowledge", { action: "read", id: "doc/one" })).data.content, /body 1\.0\.0/);
+    for (const [version, title] of [["2.0.0", "Beta"], ["3.0.0", "Gamma"], ["4.0.0", "Delta"]]) {
+      if (version !== "2.0.0") makePack(version, title);
+      const installed = await call({ action: "update", file: path.join(work, `kb-${version}.tgz`) });
+      assert.equal(installed.isError, false, JSON.stringify(installed));
+    }
+    assert.ok(fs.existsSync(held), "An open SQLite/ZIP pack must survive even beyond the rollback generation");
+    const dirs = () => fs.readdirSync(kb, { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => e.name);
+    assert.equal(dirs().length, 3, "Only current, rollback and the pinned reader remain");
+    const ended = once(reader.child, "close"); reader.child.kill("SIGKILL"); await ended;
+    assert.equal((await call({ action: "update", file: path.join(work, "kb-4.0.0.tgz"), force: true })).isError, false);
+    assert.equal(fs.existsSync(held), false, "A dead reader no longer protects its old pack");
+    assert.equal(dirs().length, 2);
+    assert.equal((await call({ action: "rollback" })).isError, false);
+    assert.equal(dirs().length, 1, "Rollback removes the rejected generation immediately");
+    assert.match((await call({ action: "read", id: "doc/one" })).data.content, /body 4\.0\.0/);
+  } finally { await reader.close(); }
 });

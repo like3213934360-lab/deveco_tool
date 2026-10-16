@@ -39,7 +39,7 @@ async function archive(name, version, upstream = true) {
   fs.mkdirSync(dir, { recursive: true });
   const dbFile = path.join(dir, upstream ? "search.db" : "index.db");
   index(dbFile);
-  fs.writeFileSync(path.join(dir, "docs.zip"), zipFixture({ "doc/one.md": "# Router\n\n## Usage\nrouter navigation official\n" }));
+  fs.writeFileSync(path.join(dir, "docs.zip"), zipFixture({ "doc/one.md": `# Router\n\n## Usage\nrouter navigation official ${version}\n` }));
   if (upstream) {
     fs.writeFileSync(path.join(dir, "index.zip"), zipFixture({ "search.db": fs.readFileSync(dbFile) }));
     fs.rmSync(dbFile);
@@ -66,6 +66,7 @@ function configure(value = {}) {
   m.resetConfig();
 }
 async function isolate(value = {}) {
+  await m.closeKnowledge(); m.closeDatabase();
   state = path.join(work, `state-${++sequence}`);
   process.env.DEVECO_STATE_DIR = state;
   process.env.DEVECO_CONFIG = path.join(work, `config-${sequence}.json`);
@@ -81,7 +82,7 @@ const code = (expected) => (e) => e.code === expected;
 
 before(async () => {
   const bundle = path.join(work, "knowledge.mjs");
-  await build({ stdin: { contents: 'export * from "./src/domains/knowledge.ts"; export * from "./src/domains/kb-build.ts"; export { config, resetConfig } from "./src/core/config.ts";', resolveDir: root, sourcefile: "kb-test-entry.ts" },
+  await build({ stdin: { contents: 'export * from "./src/domains/knowledge.ts"; export * from "./src/domains/kb-build.ts"; export { config, resetConfig } from "./src/core/config.ts"; export { closeDatabase } from "./src/core/db.ts"; export { stopCleanup } from "./src/core/artifacts.ts"; export { collectStorage } from "./src/core/storage.ts";', resolveDir: root, sourcefile: "kb-test-entry.ts" },
     outfile: bundle, bundle: true, format: "esm", platform: "node", logLevel: "error",
     // Preserve package-root discovery when relocating the temporary bundle outside the repository.
     define: { "import.meta.url": JSON.stringify(pathToFileURL(path.join(root, "src/core/config.ts")).href) },
@@ -91,6 +92,8 @@ before(async () => {
       b.onLoad({ filter: /.*/, namespace: "fault" }, () => ({ contents: "import fs from 'node:fs'; export default {...fs, renameSync:(a,b)=>{if(globalThis.__devecoKbSource.pointer&&b.endsWith('current.json'))throw new Error('injected pointer failure'); return fs.renameSync(a,b)}};" }));
     } }] });
   m = await import(pathToFileURL(bundle).href);
+  // Direct module fixtures swap state directories. Real background timers are covered by MCP tests.
+  await m.stopCleanup();
   server = http.createServer((req, res) => {
     if (disconnect) { req.socket.destroy(); return; }
     if (responseStatus !== 200) { res.writeHead(responseStatus); res.end("registry error"); return; }
@@ -108,11 +111,42 @@ before(async () => {
   url = `http://127.0.0.1:${server.address().port}`;
 });
 after(async () => {
-  m?.closeKnowledge();
+  await m?.closeKnowledge();
+  await m?.stopCleanup();
+  m?.closeDatabase();
   server?.closeAllConnections();
   if (server) await new Promise((resolve) => server.close(resolve));
   fs.rmSync(work, { recursive: true, force: true });
   delete globalThis.__devecoKbSource;
+});
+
+test("an in-flight archive read survives two version switches and releases its retired pack afterward", async (t) => {
+  await isolate();
+  const first = await archive("@private/kb", "1.0.0", false), second = await archive("@private/kb", "2.0.0", false), third = await archive("@private/kb", "3.0.0", false);
+  await m.update({ source: first.file }, signal);
+  const original = m.activePack().dir, identity = fs.statSync(path.join(original, "docs.zip"));
+  let entered, resume;
+  const started = new Promise((r) => entered = r), pause = new Promise((r) => resume = r);
+  const read = fs.read;
+  t.mock.method(fs, "read", (...args) => {
+    const current = fs.fstatSync(args[0]), callback = args.pop();
+    return read(...args, (...values) => {
+      if (current.dev === identity.dev && current.ino === identity.ino) { entered(); void pause.then(() => callback(...values)); }
+      else callback(...values);
+    });
+  });
+  const reading = m.read("doc/one");
+  try {
+    await started;
+    await m.update({ source: second.file }, signal);
+    await m.update({ source: third.file }, signal);
+    assert.ok(fs.existsSync(original), "A suspended read owns its original pack even after two updates");
+    resume();
+    assert.match((await reading).content, /official 1\.0\.0/);
+    await m.collectStorage();
+    assert.equal(fs.existsSync(original), false);
+    assert.equal(m.activePack().manifest.version, "3.0.0");
+  } finally { resume(); await reading; }
 });
 
 test("default latest upstream converts, searches, reads, fingerprints, no-ops and force rolls back", async () => {
@@ -136,7 +170,7 @@ test("default latest upstream converts, searches, reads, fingerprints, no-ops an
   assert.equal((await m.update({}, signal)).updated, false);
   assert.equal(pointer(), before); assert.equal(downloads, count);
   await m.update({ force: true }, signal); assert.notEqual(pointer(), before);
-  m.rollback(); assert.equal(m.activePack().manifest.sources.upstream.version, "1.3.5-Test.1");
+  await m.rollback(); assert.equal(m.activePack().manifest.sources.upstream.version, "1.3.5-Test.1");
 });
 
 test("private kb_package preserves pack mode, pinned versions and source override checks", async () => {
@@ -296,6 +330,6 @@ test("integrity and pointer failures preserve active pointer and previous rollba
   try { await assert.rejects(m.update({ source: "upstream", force: true }, signal), /injected pointer failure/); }
   finally { fault.pointer = false; }
   assert.equal(pointer(), before);
-  m.rollback(); assert.equal(m.activePack().manifest.sources.upstream.version, "1.3.5-Test.1");
+  await m.rollback(); assert.equal(m.activePack().manifest.sources.upstream.version, "1.3.5-Test.1");
   assert.deepEqual(fs.readdirSync(path.join(state, "kb")).filter((name) => name.startsWith(".")), []);
 });

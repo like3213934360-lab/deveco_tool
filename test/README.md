@@ -31,7 +31,7 @@
 
 MCP 契约回归同样包含在 `npm test`：`integration/protocol.test.mjs`、`server.test.mjs` 覆盖协议、注解及提前拒绝；`device.test.mjs` 验证 SQLite 路径完整引用；`emulator.test.mjs`、`signing.test.mjs` 用隔离进程验证退出状态和配置引用；`jobs.test.mjs` 与 `unit/efficiency.test.mjs` 验证检查范围、完整报告及构建预检结果。未增加测试运行器或依赖。
 
-电脑端产物保留回归也包含在 `npm test`：`node --test test/integration/jobs.test.mjs test/integration/retention.test.mjs`。前者验证过期边界、活动任务、容量限额、失败后停止重试及目录保护；后者启动真实 MCP 进程，验证无任务时到期自动删除、批量删除期间的协议响应、失败日志汇总和重启后继续跳过失败文件。仅使用自行清理的临时目录，不连接设备。
+电脑端产物保留回归也包含在 `npm test`：`node --test test/integration/jobs.test.mjs test/integration/retention.test.mjs`。前者验证过期边界、活动任务、容量限额、失败后停止重试及目录保护；后者启动真实 MCP 进程，验证无任务时到期自动删除、批量删除期间的协议响应、失败日志汇总和重启后继续跳过失败文件。仅使用自行清理的临时目录，不连接设备。 知识包生命周期由 `kb-source.test.mjs`、`kb-update.test.mjs` 与这些保留回归共同覆盖：并发读取、多进程占用、异常退出、回滚回收、临时修复目录过期、符号链接边界及失败状态跨进程持久化。
 
 ## 当前宿主模型验收
 

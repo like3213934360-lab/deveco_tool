@@ -24,6 +24,9 @@ test("MCP expires media and exports at their deadline without jobs, and remains 
     expired.push(file);
   }
   db.exec("COMMIT");
+  const discardedPack = path.join(state, "kb", "unused-pack");
+  fs.mkdirSync(discardedPack, { recursive: true });
+  for (let i = 0; i < 512; i++) fs.writeFileSync(path.join(discardedPack, `doc-${i}`), "x");
   const deadline = Date.now() + 2500;
   const media = path.join(dir, "due.mp4"), copy = path.join(state, "copy.mp4");
   const orphan = path.join(dir, "unfinished.mp4"), fresh = path.join(dir, "fresh.mp4");
@@ -41,7 +44,7 @@ test("MCP expires media and exports at their deadline without jobs, and remains 
     assert.ok(fs.existsSync(media));
     assert.ok(fs.existsSync(copy));
     const latencies = [];
-    let callsDuringCleanup = 0;
+    let callsDuringCleanup = 0, callsDuringPackCleanup = 0;
     while (Date.now() < deadline + 5000) {
       const deleting = expired.some((file) => fs.existsSync(file));
       const start = performance.now();
@@ -49,16 +52,19 @@ test("MCP expires media and exports at their deadline without jobs, and remains 
       latencies.push(performance.now() - start);
       assert.deepEqual(response.result, {});
       if (deleting) callsDuringCleanup++;
-      if (!deleting && [media, copy, orphan].every((file) => !fs.existsSync(file))) break;
+      if (!deleting && fs.existsSync(discardedPack)) callsDuringPackCleanup++;
+      if (!deleting && [media, copy, orphan, discardedPack].every((file) => !fs.existsSync(file))) break;
       await new Promise((resolve) => setTimeout(resolve, 10));
     }
     assert.ok(callsDuringCleanup > 0, "Protocol requests must run while the backlog is being removed");
+    assert.ok(callsDuringPackCleanup > 0, "Protocol requests must also run during recursive package cleanup");
+    assert.equal(fs.existsSync(discardedPack), false);
     assert.deepEqual(expired.filter((file) => fs.existsSync(file)), []);
     assert.deepEqual([media, copy, orphan].map((file) => fs.existsSync(file)), [false, false, false]);
     assert.ok(fs.existsSync(fresh));
     assert.ok(fs.existsSync(user));
     assert.doesNotMatch(client.stderr, /\[retention\]/);
-    t.diagnostic(`512 expired files; ${callsDuringCleanup} pings during cleanup; max ping ${Math.max(...latencies).toFixed(1)} ms; expiry observed ${Date.now() - deadline} ms after deadline`);
+    t.diagnostic(`512 expired files and 512 package files; ${callsDuringCleanup}/${callsDuringPackCleanup} pings during cleanup; max ping ${Math.max(...latencies).toFixed(1)} ms; expiry observed ${Date.now() - deadline} ms after deadline`);
   } finally {
     await client.close();
     fs.rmSync(state, { recursive: true, force: true });

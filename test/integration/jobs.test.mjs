@@ -5,9 +5,11 @@ import path from "node:path";
 import { after, test } from "node:test";
 import { pathToFileURL } from "node:url";
 import { build } from "esbuild";
+import { connect } from "../support/mcp.mjs";
 
 // Bundle a small harness that exercises the job runner directly (TS sources -> ESM).
 const out = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-jobs-"));
+const canonicalPath = (file) => { const p = fs.realpathSync(file); return process.platform === "win32" ? p.toLowerCase() : p; };
 // Tests leave nothing behind; on Windows the state DB may still be open at exit (EPERM): best effort there.
 process.on("exit", () => { try { fs.rmSync(out, { recursive: true, force: true }); } catch { /* Windows: file still locked */ } });
 process.env.DEVECO_STATE_DIR = out;
@@ -16,6 +18,7 @@ fs.writeFileSync(harness, `
 export * from ${JSON.stringify(path.resolve("src/core/jobs.ts"))};
 export * from ${JSON.stringify(path.resolve("src/core/artifacts.ts"))};
 export * from ${JSON.stringify(path.resolve("src/core/db.ts"))};
+export * from ${JSON.stringify(path.resolve("src/core/storage.ts"))};
 export { ToolError } from ${JSON.stringify(path.resolve("src/core/errors.ts"))};
 export { formatCheck } from ${JSON.stringify(path.resolve("src/domains/code.ts"))};
 export { settlePreflight } from ${JSON.stringify(path.resolve("src/jobs.ts"))};
@@ -340,6 +343,92 @@ test("an export refreshed during a cleanup batch keeps its new file and retentio
   assert.ok(db.prepare("SELECT created FROM exports WHERE path=?").get(refreshed).created > Date.now() - 5000);
 });
 
+test("managed storage retains current, rollback and live work; expires repair copies without following links", async () => {
+  const kb = path.join(out, "kb"), backups = path.join(out, "backups");
+  const keep = path.join(out, "keep-user-data");
+  fs.mkdirSync(keep); fs.writeFileSync(path.join(keep, "user.txt"), "keep");
+  for (const name of ["current", "previous", "orphan", ".tmp-aabb", ".upstream-ccdd", ".unknown"]) {
+    fs.mkdirSync(path.join(kb, name), { recursive: true });
+    fs.writeFileSync(path.join(kb, name, "data"), name);
+    fs.utimesSync(path.join(kb, name), new Date(0), new Date(0));
+  }
+  fs.writeFileSync(path.join(kb, "current.json"), JSON.stringify({ version: "current", directory: "current", previous: "previous" }));
+  for (const name of ["expired", "fresh", "busy"]) {
+    fs.mkdirSync(path.join(backups, name), { recursive: true });
+    fs.writeFileSync(path.join(backups, name, "copy"), name);
+  }
+  fs.symlinkSync(keep, path.join(backups, "expired", "link"), process.platform === "win32" ? "junction" : "dir");
+  for (const name of ["expired", "busy"]) fs.utimesSync(path.join(backups, name), new Date(0), new Date(0));
+  const damaged = path.join(out, "state.db.corrupt-old");
+  fs.writeFileSync(damaged, "old recovery copy"); fs.utimesSync(damaged, new Date(0), new Date(0));
+  const recovery = path.join(out, `state.db.corrupt-${new Date().toISOString().replace(/[:.]/g, "-")}`);
+  fs.writeFileSync(recovery, "just recovered, original mtime was old"); fs.utimesSync(recovery, new Date(0), new Date(0));
+  const releases = await m.storageGuard((db) => [m.pinStorage(db, path.join(backups, "busy")), m.pinStorage(db, path.join(kb, ".upstream-ccdd"))]);
+  try {
+    assert.equal((await m.collectStorage()).failed, 0);
+    for (const name of ["current", "previous", ".upstream-ccdd", ".unknown"]) assert.ok(fs.existsSync(path.join(kb, name)));
+    for (const name of ["orphan", ".tmp-aabb"]) assert.equal(fs.existsSync(path.join(kb, name)), false);
+    assert.equal(fs.existsSync(path.join(backups, "expired")), false);
+    assert.equal(fs.existsSync(damaged), false);
+    assert.ok(fs.existsSync(recovery), "A new recovery copy starts its own TTL despite retaining an old database mtime");
+    assert.ok(fs.existsSync(path.join(backups, "busy")));
+    assert.ok(fs.existsSync(path.join(backups, "fresh")));
+    assert.equal(fs.readFileSync(path.join(keep, "user.txt"), "utf8"), "keep");
+    for (const release of releases) release();
+    assert.equal((await m.collectStorage()).failed, 0);
+    assert.equal(fs.existsSync(path.join(backups, "busy")), false);
+    assert.equal(fs.existsSync(path.join(kb, ".upstream-ccdd")), false);
+  } finally {
+    for (const release of releases) release();
+    for (const dir of [kb, backups, keep]) fs.rmSync(dir, { recursive: true, force: true });
+    fs.rmSync(recovery, { force: true });
+  }
+});
+
+test("failed knowledge/backup trees are persisted once and skipped before any later directory traversal", async (t) => {
+  const roots = [path.join(out, "kb", "failed-pack"), path.join(out, "backups", "failed-repair")];
+  for (const dir of roots) { fs.mkdirSync(dir, { recursive: true }); fs.writeFileSync(path.join(dir, "blocked"), "keep"); fs.utimesSync(dir, new Date(0), new Date(0)); }
+  roots.forEach((dir, i) => { roots[i] = canonicalPath(dir); });
+  const unlink = fs.promises.unlink;
+  const attempts = t.mock.method(fs.promises, "unlink", async (file) => {
+    if (roots.includes(path.dirname(file))) throw Object.assign(new Error("Access denied"), { code: "EACCES" });
+    return unlink(file);
+  });
+  try {
+    assert.equal((await m.collectStorage()).failed, 2);
+    const count = attempts.mock.callCount();
+    const opendir = fs.promises.opendir, scans = t.mock.method(fs.promises, "opendir", (...args) => opendir(...args));
+    for (let i = 0; i < 3; i++) assert.equal((await m.collectStorage()).failed, 0);
+    assert.equal(attempts.mock.callCount(), count);
+    assert.equal(scans.mock.calls.filter((call) => roots.includes(call.arguments[0])).length, 0);
+    const db = await m.database();
+    for (const dir of roots) assert.equal(db.prepare("SELECT code FROM retention_failures WHERE path=?").get(dir).code, "EACCES");
+    attempts.mock.restore();
+    fs.rmSync(roots[1], { recursive: true }); // Manual removal, followed by a genuinely new repair operation.
+    await m.temporaryStorage(roots[1], async () => { fs.writeFileSync(path.join(roots[1], "new-copy"), "new lifetime"); });
+    assert.equal(fs.existsSync(roots[1]), false);
+    assert.equal(db.prepare("SELECT 1 FROM retention_failures WHERE path=?").get(roots[1]), undefined);
+  } finally { for (const dir of roots) fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("a claimed deletion refuses new users and a temporary repair workspace is removed on failure", async (t) => {
+  const dir = path.join(out, "backups", "claimed"), file = path.join(dir, "copy");
+  fs.mkdirSync(dir, { recursive: true }); fs.writeFileSync(file, "x");
+  let entered, resume;
+  const started = new Promise((r) => entered = r), pause = new Promise((r) => resume = r);
+  const unlink = fs.promises.unlink;
+  const canonicalFile = canonicalPath(file);
+  t.mock.method(fs.promises, "unlink", async (name) => { if (name === canonicalFile) { entered(); await pause; } return unlink(name); });
+  const removing = m.removeStorage(dir);
+  try {
+    await started;
+    await assert.rejects(m.storageGuard((db) => m.pinStorage(db, file)), { code: "RESOURCE_BUSY" });
+  } finally { resume(); await removing; }
+  assert.equal(fs.existsSync(dir), false);
+  await assert.rejects(m.temporaryStorage(dir, async () => { fs.writeFileSync(file, "temporary"); throw new Error("repair failed"); }), /repair failed/);
+  assert.equal(fs.existsSync(dir), false);
+});
+
 test("shutdown cancels pending deadlines and later writes cannot rearm cleanup", async () => {
   const db = await m.database();
   const item = await m.saveArtifact("finish shutdown first");
@@ -350,4 +439,29 @@ test("shutdown cancels pending deadlines and later writes cannot rearm cleanup",
   m.scheduleCleanup();
   await new Promise((resolve) => setTimeout(resolve, 50));
   assert.ok(fs.existsSync(file));
+});
+
+test("managed deletion failures remain excluded in a fresh MCP process", async (t) => {
+  const roots = [path.join(out, "kb", "restart-failed-pack"), path.join(out, "backups", "restart-failed-repair")];
+  for (const dir of roots) { fs.mkdirSync(dir, { recursive: true }); fs.writeFileSync(path.join(dir, "blocked"), "manual cleanup only"); fs.utimesSync(dir, new Date(0), new Date(0)); }
+  const canonical = roots.map(canonicalPath), unlink = fs.promises.unlink;
+  const fault = t.mock.method(fs.promises, "unlink", (file) => canonical.includes(path.dirname(file))
+    ? Promise.reject(Object.assign(new Error("Access denied"), { code: "EACCES" })) : unlink(file));
+  assert.equal((await m.collectStorage()).failed, 2);
+  fault.mock.restore();
+  const removable = path.join(out, "kb", "restart-orphan");
+  fs.mkdirSync(removable); fs.writeFileSync(path.join(removable, "data"), "remove");
+  await m.stopCleanup(); m.closeDatabase();
+  const client = connect({ DEVECO_STATE_DIR: out, DEVECO_CONFIG: path.join(out, "none.json") });
+  try {
+    await client.initialize();
+    const started = Date.now();
+    while (fs.existsSync(removable) && Date.now() - started < 5000) {
+      await client.request("ping", {}, 1000);
+      await new Promise((r) => setTimeout(r, 10));
+    }
+    assert.equal(fs.existsSync(removable), false);
+    for (const dir of roots) assert.equal(fs.readFileSync(path.join(dir, "blocked"), "utf8"), "manual cleanup only");
+    assert.doesNotMatch(client.stderr, /\[retention\]/);
+  } finally { await client.close(); }
 });

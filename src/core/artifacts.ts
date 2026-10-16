@@ -5,6 +5,7 @@ import { setImmediate as yieldTurn } from "node:timers/promises";
 import { config, stateDir } from "./config.js";
 import { database } from "./db.js";
 import { invariant } from "./errors.js";
+import { collectStorage, storageDeadline, reportCleanup, type CleanupResult } from "./storage.js";
 
 const extensions: Record<string, string> = {
   "text/plain": "txt",
@@ -96,7 +97,6 @@ export async function readArtifact(id: string, options: { line?: number; limit?:
 const DAY = 86400000;
 const BATCH = 64;
 const RECHECK = 60000;
-type CleanupResult = { removed: number; failed: number; first_failure?: { path: string; code: string } };
 let cleaning: Promise<CleanupResult> | undefined;
 let ticking = false;
 let timer: NodeJS.Timeout | undefined;
@@ -221,6 +221,11 @@ async function sweep(maintenance: boolean, discover: boolean) {
     }
   }
   flushFailures();
+  if (Date.now() >= storageDeadline()) {
+    const stored = await collectStorage();
+    result.removed += stored.removed; result.failed += stored.failed;
+    result.first_failure ??= stored.first_failure;
+  }
   return result;
 }
 
@@ -260,15 +265,13 @@ async function tick() {
   ticking = true;
   try {
     const result = await cleanup(Date.now() >= maintenanceAt, Date.now() >= Math.min(discoveryAt, orphanAt));
-    if (result.failed) {
-      process.stderr.write(`[retention] ${result.failed} deletion(s) failed; first: ${JSON.stringify(result.first_failure?.path.slice(0, 300))} (${result.first_failure?.code}). Automatic retries disabled, including after restart; remove affected files manually.\n`);
-    }
+    reportCleanup(result);
     if (stopped) return;
     const db = await database();
     const artifact = db.prepare("SELECT created FROM artifacts WHERE NOT EXISTS (SELECT 1 FROM retention_failures WHERE path=artifacts.file) ORDER BY created LIMIT 1").get() as { created: number } | undefined;
     const exported = db.prepare("SELECT created FROM exports WHERE NOT EXISTS (SELECT 1 FROM retention_failures WHERE path=exports.path) ORDER BY created LIMIT 1").get() as { created: number } | undefined;
     // Cheap reconciliation catches another writer, wall-clock changes and wake from sleep.
-    arm(Math.min(Date.now() + RECHECK, maintenanceAt, discoveryAt, orphanAt, (artifact?.created ?? Infinity) + DAY, (exported?.created ?? Infinity) + DAY));
+    arm(Math.min(Date.now() + RECHECK, maintenanceAt, discoveryAt, orphanAt, storageDeadline(), (artifact?.created ?? Infinity) + DAY, (exported?.created ?? Infinity) + DAY));
   } catch (error) {
     stopped = true;
     clearTimeout(timer);

@@ -12,7 +12,7 @@ const root = path.resolve(import.meta.dirname, "../.."), work = fs.mkdtempSync(p
 process.env.DEVECO_STATE_DIR = path.join(work, "state"); process.env.DEVECO_CONFIG = path.join(work, "config.json"); fs.writeFileSync(process.env.DEVECO_CONFIG, "{}");
 const fixture = globalThis.__devecoKbAtomic = { fail: false };
 const bundle = path.join(work, "knowledge.mjs");
-await build({ entryPoints: [path.join(root, "src/domains/knowledge.ts")], outfile: bundle, bundle: true, format: "esm", platform: "node", logLevel: "error",
+await build({ stdin: { contents: 'export * from "./src/domains/knowledge.ts"; export { closeDatabase } from "./src/core/db.ts"; export { stopCleanup } from "./src/core/artifacts.ts";', resolveDir: root }, outfile: bundle, bundle: true, format: "esm", platform: "node", logLevel: "error",
   define: { "import.meta.url": JSON.stringify(pathToFileURL(path.join(root, "src/core/config.ts")).href) },
   banner: { js: `import {createRequire as testRequire} from "node:module"; const require = testRequire(${JSON.stringify(path.join(root, "package.json"))});` },
   plugins: [{ name: "rename-fault", setup(b) {
@@ -20,7 +20,7 @@ await build({ entryPoints: [path.join(root, "src/domains/knowledge.ts")], outfil
   b.onLoad({ filter: /.*/, namespace: "fault" }, () => ({ contents: `import fs from 'node:fs';export default {...fs,renameSync:(a,b)=>{if(globalThis.__devecoKbAtomic.fail&&b.endsWith('current.json'))throw new Error('injected pointer failure');return fs.renameSync(a,b)}};` }));
 } }] });
 const m = await import(pathToFileURL(bundle).href);
-after(() => { m.closeKnowledge(); fs.rmSync(bundle, { force: true }); fs.rmSync(work, { recursive: true, force: true }); delete globalThis.__devecoKbAtomic; });
+after(async () => { await m.closeKnowledge(); await m.stopCleanup(); m.closeDatabase(); fs.rmSync(bundle, { force: true }); fs.rmSync(work, { recursive: true, force: true }); delete globalThis.__devecoKbAtomic; });
 function pack(version, marker) {
   const dir = path.join(work, `src-${marker}`, "package"); fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, "manifest.json"), JSON.stringify({ schema: 1, version, sources: {}, created_at: marker })); fs.writeFileSync(path.join(dir, "index.db"), marker);
@@ -33,7 +33,7 @@ test("same-version pointer failure preserves the active bytes and the caller's a
   assert.deepEqual(fs.readFileSync(path.join(work, "state/kb/current.json")), before); assert.equal(fs.readFileSync(path.join(old.dir, "index.db"), "utf8"), "old");
   assert.equal(fs.existsSync(a), true); assert.equal(fs.existsSync(b), true);
   await m.update({ source: b, force: true }, signal); assert.equal(m.activePack().manifest.created_at, "new");
-  m.rollback(); assert.equal(m.activePack().manifest.created_at, "old");
+  await m.rollback(); assert.equal(m.activePack().manifest.created_at, "old");
 });
 test("unsafe archive version cannot escape the KB directory or alter the active pack", async () => {
   const before = m.activePack().dir;

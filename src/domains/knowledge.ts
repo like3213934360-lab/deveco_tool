@@ -9,6 +9,9 @@ import { config, packageRoot, stateDir } from "../core/config.js";
 import { invariant, ToolError } from "../core/errors.js";
 import { run } from "../core/proc.js";
 import { atomicWrite } from "../core/files.js";
+import { storageGuard, storageTransaction, pinStorage, temporaryStorage, removeStorage, collectStorage, reportCleanup, requestStorageCleanup } from "../core/storage.js";
+import { database as stateDatabase } from "../core/db.js";
+import { scheduleCleanup } from "../core/artifacts.js";
 
 /*
  * Knowledge pack layout (directory):
@@ -35,19 +38,9 @@ export interface Manifest {
 export const catalogs = ["harmonyos-guides", "harmonyos-references", "best-practices", "harmonyos-faqs", "harmonyos-releases", "harmonyos-roadmap", "rules", "errors", "runtime", "skills"] as const;
 export type Catalog = (typeof catalogs)[number];
 
-let swept = false;
 function kbRoot() {
   const dir = path.join(stateDir(), "kb");
   fs.mkdirSync(dir, { recursive: true });
-  if (!swept) {
-    // Remove leftovers of interrupted downloads/extractions (older than 1 hour).
-    swept = true;
-    for (const entry of fs.readdirSync(dir)) {
-      if (!entry.startsWith(".")) continue;
-      const full = path.join(dir, entry);
-      if (Date.now() - fs.statSync(full).mtimeMs > 3600000) fs.rmSync(full, { recursive: true, force: true });
-    }
-  }
   return dir;
 }
 
@@ -86,23 +79,65 @@ export function activePack(): { dir: string; manifest: Manifest; origin: "update
 
 /* --------------------------------- search --------------------------------- */
 
-let opened: { dir: string; db: DatabaseSync; vocab?: Set<string> } | undefined;
-
-async function db() {
-  const pack = activePack();
-  invariant(pack, "KB_MISSING", "No knowledge pack is installed", undefined, "Run knowledge action=update to download one");
-  if (opened?.dir === pack.dir) return { ...opened, pack };
-  opened?.db.close();
-  const { DatabaseSync } = await import("node:sqlite");
-  const database = new DatabaseSync(path.join(pack.dir, "index.db"), { readOnly: true });
-  opened = { dir: pack.dir, db: database };
-  return { ...opened, pack };
+interface KnowledgeHandle {
+  dir: string;
+  pack: NonNullable<ReturnType<typeof activePack>>;
+  db: DatabaseSync;
+  vocab?: Set<string>;
+  zip?: Promise<ZipIndex>;
+  users: number;
+  retired: boolean;
+  release: () => void;
 }
-export function closeKnowledge() {
-  opened?.db.close();
-  opened = undefined;
-  void zipIndex?.index.then((z) => z.zip.close()).catch(() => {});
-  zipIndex = undefined;
+let opened: KnowledgeHandle | undefined;
+
+async function withKnowledge<T>(fn: (handle: KnowledgeHandle) => Promise<T>): Promise<T> {
+  let handle: KnowledgeHandle;
+  let retired: KnowledgeHandle | undefined;
+  if (opened && activePack()?.dir === opened.dir) {
+    handle = opened;
+    handle.users++;
+  } else {
+    const [state, { DatabaseSync }] = await Promise.all([stateDatabase(), import("node:sqlite")]);
+    let replacement: KnowledgeHandle | undefined, acquired: KnowledgeHandle | undefined;
+    try {
+      handle = storageTransaction(state, (db) => {
+        const pack = activePack();
+        invariant(pack, "KB_MISSING", "No knowledge pack is installed", undefined, "Run knowledge action=update to download one");
+        if (opened?.dir !== pack.dir) {
+          const release = pinStorage(db, pack.dir);
+          const index = new DatabaseSync(path.join(pack.dir, "index.db"), { readOnly: true });
+          retired = opened;
+          replacement = { dir: pack.dir, pack, db: index, users: 0, retired: false, release };
+          opened = replacement;
+        }
+        acquired = opened;
+        opened.users++;
+        return opened;
+      });
+    } catch (error) {
+      if (acquired) acquired.users--;
+      if (replacement) { opened = retired; replacement.db.close(); }
+      throw error;
+    }
+    if (retired) retired.retired = true;
+  }
+  try {
+    // Retire outside the state transaction. Suspended readers finish against their original pack.
+    if (retired && !retired.users) await disposeKnowledge(retired);
+    return await fn(handle);
+  } finally { if (--handle.users === 0 && handle.retired) await disposeKnowledge(handle); }
+}
+
+async function disposeKnowledge(handle: KnowledgeHandle) {
+  handle.db.close();
+  if (handle.zip) await handle.zip.then(({ zip }) => closeZip(zip), () => {}); // A failed open was already reported to its reader.
+  handle.release();
+  scheduleCleanup(1000);
+}
+export async function closeKnowledge() {
+  const old = opened; opened = undefined;
+  if (old) { old.retired = true; if (!old.users) await disposeKnowledge(old); }
 }
 
 /**
@@ -177,8 +212,7 @@ export function readableSnippet(lead: string | undefined, indexSnippet: string, 
 }
 
 /** Ids of the best-matching official documents for a text (no snippets; used to verify cloud sections). */
-async function officialDocIds(text: string, limit = 4) {
-  const handle = await db();
+async function officialDocIds(handle: KnowledgeHandle, text: string, limit = 4) {
   const vocab = vocabulary(handle.db, handle);
   const tokens = tokenize(text, vocab).filter((t) => t.length > 1).slice(0, 8);
   if (!tokens.length) return [];
@@ -192,79 +226,81 @@ async function officialDocIds(text: string, limit = 4) {
 export async function search(query: string, options: { catalog?: Catalog | "all"; kind?: "docs" | "rules" | "all"; limit?: number; offset?: number } = {}) {
   const trimmed = query.trim();
   invariant(trimmed, "INVALID_INPUT", "query must not be empty");
-  const handle = await db();
-  const vocab = vocabulary(handle.db, handle);
-  let tokens = tokenize(trimmed, vocab);
-  if (!tokens.length) tokens = tokenizeRaw(trimmed, vocab);
-  invariant(tokens.length, "INVALID_INPUT", "query has no searchable terms");
-  const limit = Math.min(options.limit ?? 8, 30);
-  const offset = options.offset ?? 0;
-  const quoted = tokens.map((t) => `"${t.replaceAll('"', '""')}"`);
-  const catalogId = options.catalog && options.catalog !== "all" ? catalogs.indexOf(options.catalog) : null;
-  const kindFilter = options.kind === "docs" ? "d.catalog_id < 6" : options.kind === "rules" ? "d.catalog_id >= 6" : "1";
-  const sql = `
-    SELECT d.document_id AS id, d.doc_title AS title, d.catalog_id AS catalog, s.section_title AS section,
-           s.lead_text AS lead, snippet(segments_fts, 0, '[', ']', '…', 24) AS snippet, bm25(segments_fts) AS score
-    FROM segments_fts JOIN segments s ON s.id = segments_fts.rowid JOIN documents d ON d.id = s.doc_id
-    WHERE segments_fts MATCH ? AND (? IS NULL OR d.catalog_id = ?) AND ${kindFilter}
-    ORDER BY score LIMIT ?`;
-  // AND first for precision; fall back to OR for recall.
-  let rows = handle.db.prepare(sql).all(quoted.join(" AND "), catalogId, catalogId, 200) as { id: string; title: string; catalog: number; section: string; lead: string; snippet: string; score: number }[];
-  let mode = "all_terms";
-  if (rows.length < 3 && quoted.length > 1) {
-    rows = handle.db.prepare(sql).all(quoted.join(" OR "), catalogId, catalogId, 200) as typeof rows;
-    mode = "any_term";
-  }
-  // Collapse segments to documents, boosting title hits (the upstream reranker's main signal).
-  const q = trimmed.toLowerCase();
-  const best = new Map<string, (typeof rows)[number] & { rank: number }>();
-  for (const row of rows) {
-    const title = row.title.toLowerCase();
-    const boost = title.includes(q) ? 4 : tokens.every((t) => title.includes(t)) ? 1.8 : tokens.some((t) => t.length > 2 && title.includes(t)) ? 1.25 : 1;
-    const rank = row.score * boost; // bm25 is negative: larger magnitude is better
-    const prev = best.get(row.id);
-    if (!prev || rank < prev.rank) best.set(row.id, { ...row, rank });
-  }
-  const ranked = [...best.values()].sort((a, b) => a.rank - b.rank);
-  return {
-    query: trimmed, tokens, match: mode, pack: handle.pack.manifest.version, total: ranked.length,
-    results: ranked.slice(offset, offset + limit).map((r) => ({
-      id: r.id, title: r.title, catalog: catalogs[r.catalog] ?? r.catalog, origin: r.catalog < 6 ? "official" : "rules", section: r.section || undefined, snippet: readableSnippet(r.lead, r.snippet, tokens),
-    })),
-    next: ranked.length > offset + limit ? { offset: offset + limit } : null,
-    pack_built: handle.pack.manifest.created_at,
-    hint: ranked.length ? "Read a result with knowledge action=read id=<id>. For exact signatures and @since levels, the project SDK (code action=lsp op=hover) is authoritative." : "No match: try fewer or English API terms, or source=cloud",
-  };
+  return withKnowledge(async (handle) => {
+    const vocab = vocabulary(handle.db, handle);
+    let tokens = tokenize(trimmed, vocab);
+    if (!tokens.length) tokens = tokenizeRaw(trimmed, vocab);
+    invariant(tokens.length, "INVALID_INPUT", "query has no searchable terms");
+    const limit = Math.min(options.limit ?? 8, 30);
+    const offset = options.offset ?? 0;
+    const quoted = tokens.map((t) => `"${t.replaceAll('"', '""')}"`);
+    const catalogId = options.catalog && options.catalog !== "all" ? catalogs.indexOf(options.catalog) : null;
+    const kindFilter = options.kind === "docs" ? "d.catalog_id < 6" : options.kind === "rules" ? "d.catalog_id >= 6" : "1";
+    const sql = `
+      SELECT d.document_id AS id, d.doc_title AS title, d.catalog_id AS catalog, s.section_title AS section,
+             s.lead_text AS lead, snippet(segments_fts, 0, '[', ']', '…', 24) AS snippet, bm25(segments_fts) AS score
+      FROM segments_fts JOIN segments s ON s.id = segments_fts.rowid JOIN documents d ON d.id = s.doc_id
+      WHERE segments_fts MATCH ? AND (? IS NULL OR d.catalog_id = ?) AND ${kindFilter}
+      ORDER BY score LIMIT ?`;
+    // AND first for precision; fall back to OR for recall.
+    let rows = handle.db.prepare(sql).all(quoted.join(" AND "), catalogId, catalogId, 200) as { id: string; title: string; catalog: number; section: string; lead: string; snippet: string; score: number }[];
+    let mode = "all_terms";
+    if (rows.length < 3 && quoted.length > 1) {
+      rows = handle.db.prepare(sql).all(quoted.join(" OR "), catalogId, catalogId, 200) as typeof rows;
+      mode = "any_term";
+    }
+    // Collapse segments to documents, boosting title hits (the upstream reranker's main signal).
+    const q = trimmed.toLowerCase();
+    const best = new Map<string, (typeof rows)[number] & { rank: number }>();
+    for (const row of rows) {
+      const title = row.title.toLowerCase();
+      const boost = title.includes(q) ? 4 : tokens.every((t) => title.includes(t)) ? 1.8 : tokens.some((t) => t.length > 2 && title.includes(t)) ? 1.25 : 1;
+      const rank = row.score * boost; // bm25 is negative: larger magnitude is better
+      const prev = best.get(row.id);
+      if (!prev || rank < prev.rank) best.set(row.id, { ...row, rank });
+    }
+    const ranked = [...best.values()].sort((a, b) => a.rank - b.rank);
+    return {
+      query: trimmed, tokens, match: mode, pack: handle.pack.manifest.version, total: ranked.length,
+      results: ranked.slice(offset, offset + limit).map((r) => ({
+        id: r.id, title: r.title, catalog: catalogs[r.catalog] ?? r.catalog, origin: r.catalog < 6 ? "official" : "rules", section: r.section || undefined, snippet: readableSnippet(r.lead, r.snippet, tokens),
+      })),
+      next: ranked.length > offset + limit ? { offset: offset + limit } : null,
+      pack_built: handle.pack.manifest.created_at,
+      hint: ranked.length ? "Read a result with knowledge action=read id=<id>. For exact signatures and @since levels, the project SDK (code action=lsp op=hover) is authoritative." : "No match: try fewer or English API terms, or source=cloud",
+    };
+  });
 }
 
 /* ---------------------------------- read ---------------------------------- */
 
 export async function read(id: string, options: { offset?: number; limit?: number; section?: string } = {}) {
-  const handle = await db();
-  const doc = handle.db.prepare("SELECT id, document_id, doc_title, catalog_id FROM documents WHERE document_id = ?").get(id) as
-    | { id: number; document_id: string; doc_title: string; catalog_id: number } | undefined;
-  invariant(doc, "NOT_FOUND", `Document ${id} not found`, undefined, "Use an id returned by knowledge search");
-  const text = await readZipEntry(path.join(handle.pack.dir, "docs.zip"), `${doc.document_id}.md`);
-  let content = text;
-  if (options.section) {
-    const lines = text.split("\n");
-    const start = lines.findIndex((l) => /^#{1,6}\s/.test(l) && l.toLowerCase().includes(options.section!.toLowerCase()));
-    if (start >= 0) {
-      const level = /^(#+)/.exec(lines[start]!)![1]!.length;
-      const end = lines.findIndex((l, i) => i > start && new RegExp(`^#{1,${level}}\\s`).test(l));
-      content = lines.slice(start, end < 0 ? undefined : end).join("\n");
+  return withKnowledge(async (handle) => {
+    const doc = handle.db.prepare("SELECT id, document_id, doc_title, catalog_id FROM documents WHERE document_id = ?").get(id) as
+      | { id: number; document_id: string; doc_title: string; catalog_id: number } | undefined;
+    invariant(doc, "NOT_FOUND", `Document ${id} not found`, undefined, "Use an id returned by knowledge search");
+    const text = await readZipEntry(handle, `${doc.document_id}.md`);
+    let content = text;
+    if (options.section) {
+      const lines = text.split("\n");
+      const start = lines.findIndex((l) => /^#{1,6}\s/.test(l) && l.toLowerCase().includes(options.section!.toLowerCase()));
+      if (start >= 0) {
+        const level = /^(#+)/.exec(lines[start]!)![1]!.length;
+        const end = lines.findIndex((l, i) => i > start && new RegExp(`^#{1,${level}}\\s`).test(l));
+        content = lines.slice(start, end < 0 ? undefined : end).join("\n");
+      }
     }
-  }
-  const offset = options.offset ?? 0;
-  const limit = Math.min(options.limit ?? 12000, 40000);
-  const chunk = content.slice(offset, offset + limit);
-  const headings = offset === 0 && content.length > limit ? text.split("\n").filter((l) => /^#{1,3}\s/.test(l)).map((l) => l.trim()).slice(0, 60) : undefined;
-  return {
-    id: doc.document_id, title: doc.doc_title, catalog: catalogs[doc.catalog_id] ?? doc.catalog_id,
-    content: chunk, total_chars: content.length,
-    next: offset + limit < content.length ? { offset: offset + limit } : null,
-    ...(headings ? { outline: headings, hint: "Long document: pass section=<heading> to read one part" } : {}),
-  };
+    const offset = options.offset ?? 0;
+    const limit = Math.min(options.limit ?? 12000, 40000);
+    const chunk = content.slice(offset, offset + limit);
+    const headings = offset === 0 && content.length > limit ? text.split("\n").filter((l) => /^#{1,3}\s/.test(l)).map((l) => l.trim()).slice(0, 60) : undefined;
+    return {
+      id: doc.document_id, title: doc.doc_title, catalog: catalogs[doc.catalog_id] ?? doc.catalog_id,
+      content: chunk, total_chars: content.length,
+      next: offset + limit < content.length ? { offset: offset + limit } : null,
+      ...(headings ? { outline: headings, hint: "Long document: pass section=<heading> to read one part" } : {}),
+    };
+  });
 }
 
 /*
@@ -273,7 +309,10 @@ export async function read(id: string, options: { offset?: number; limit?: numbe
  * archives store UTF-8 names without the UTF-8 flag, so names are decoded manually.
  */
 type ZipIndex = { zip: import("yauzl").ZipFile; entries: Map<string, import("yauzl").Entry> };
-let zipIndex: { file: string; index: Promise<ZipIndex> } | undefined;
+function closeZip(zip: import("yauzl").ZipFile): Promise<void> {
+  if (!zip.isOpen) return Promise.resolve();
+  return new Promise((resolve) => { zip.once("close", resolve); zip.close(); });
+}
 
 function openZipIndex(zipFile: string): Promise<ZipIndex> {
   return import("yauzl").then(({ default: yauzl }) => new Promise<ZipIndex>((resolve, reject) => {
@@ -286,18 +325,15 @@ function openZipIndex(zipFile: string): Promise<ZipIndex> {
         zip.readEntry();
       });
       zip.on("end", () => resolve({ zip, entries }));
-      zip.on("error", reject);
+      zip.on("error", (error) => { void closeZip(zip).then(() => reject(error)); });
       zip.readEntry();
     });
   }));
 }
 
-async function readZipEntry(zipFile: string, name: string): Promise<string> {
-  if (zipIndex?.file !== zipFile) {
-    void zipIndex?.index.then((z) => z.zip.close()).catch(() => {});
-    zipIndex = { file: zipFile, index: openZipIndex(zipFile) };
-  }
-  const { zip, entries } = await zipIndex.index;
+async function readZipEntry(handle: KnowledgeHandle, name: string): Promise<string> {
+  handle.zip ??= openZipIndex(path.join(handle.dir, "docs.zip"));
+  const { zip, entries } = await handle.zip;
   const entry = entries.get(name);
   invariant(entry, "NOT_FOUND", `${name} missing from docs archive`);
   return new Promise((resolve, reject) => {
@@ -312,12 +348,13 @@ async function readZipEntry(zipFile: string, name: string): Promise<string> {
 }
 
 export async function catalog() {
-  const handle = await db();
-  const counts = handle.db.prepare("SELECT catalog_id, COUNT(*) AS n FROM documents GROUP BY catalog_id").all() as { catalog_id: number; n: number }[];
-  return {
-    pack: { version: handle.pack.manifest.version, origin: handle.pack.origin, sdk_api_range: handle.pack.manifest.sdk_api_range },
-    catalogs: counts.map((c) => ({ name: catalogs[c.catalog_id] ?? String(c.catalog_id), documents: c.n })),
-  };
+  return withKnowledge(async (handle) => {
+    const counts = handle.db.prepare("SELECT catalog_id, COUNT(*) AS n FROM documents GROUP BY catalog_id").all() as { catalog_id: number; n: number }[];
+    return {
+      pack: { version: handle.pack.manifest.version, origin: handle.pack.origin, sdk_api_range: handle.pack.manifest.sdk_api_range },
+      catalogs: counts.map((c) => ({ name: catalogs[c.catalog_id] ?? String(c.catalog_id), documents: c.n })),
+    };
+  });
 }
 
 /* --------------------------------- update --------------------------------- */
@@ -451,7 +488,7 @@ export async function status(checkRemote = false, signal?: AbortSignal, options:
 export async function update(options: UpdateOptions, signal: AbortSignal): Promise<{ updated: boolean; version: string; reason?: string; previous?: string | null; counts?: Record<string, number>; source?: string; tag?: string; latest?: string; available_version?: string; compatibility?: Awaited<ReturnType<typeof resolveRemote>>["compatibility"] }> {
   const root = kbRoot();
   let tarball: string;
-  let downloaded = false;
+  let releaseDownload: (() => void) | undefined;
   let integrity: string | undefined;
   let expectedVersion: string | undefined;
   const kind = sourceKind(options);
@@ -464,8 +501,7 @@ export async function update(options: UpdateOptions, signal: AbortSignal): Promi
     if (!options.force && !upstreamNeedsUpdate(remote, current, !!options.version) && local.local_content.state === "unchanged")
       return { updated: false, version: current!.manifest.version, reason: "upstream and local content already installed", ...details };
     const dir = path.join(root, `.upstream-${crypto.randomBytes(4).toString("hex")}`);
-    fs.mkdirSync(dir);
-    try {
+    return temporaryStorage(dir, async () => {
       const file = path.join(dir, "upstream.tgz");
       const response = await fetch(entry.dist.tarball, { signal: AbortSignal.any([signal, AbortSignal.timeout(30 * 60000)]) });
       invariant(response.ok && response.body, "HTTP_ERROR", `Upstream download failed with HTTP ${response.status}`);
@@ -480,9 +516,7 @@ export async function update(options: UpdateOptions, signal: AbortSignal): Promi
       const built = await buildKnowledgePack({ upstream: upstreamDir, out: path.join(dir, "out") });
       signal.throwIfAborted();
       return { ...await update({ source: built.tarball }, signal), ...details };
-    } finally {
-      fs.rmSync(dir, { recursive: true, force: true });
-    }
+    });
   } else if (kind === "file" && options.source && fs.existsSync(options.source)) {
     tarball = path.resolve(options.source);
   } else {
@@ -498,13 +532,14 @@ export async function update(options: UpdateOptions, signal: AbortSignal): Promi
       invariant(url && /^https?:\/\//.test(url), "INVALID_INPUT", "source must be upstream, pack, an existing local tarball or an HTTP(S) URL");
     }
     tarball = path.join(root, `.download-${crypto.randomBytes(4).toString("hex")}.tgz`);
-    downloaded = true;
+    releaseDownload = await storageGuard((db) => pinStorage(db, tarball));
     try {
       const response = await fetch(url!, { signal: AbortSignal.any([signal, AbortSignal.timeout(30 * 60000)]) });
       invariant(response.ok && response.body, "HTTP_ERROR", `Download failed with HTTP ${response.status}`);
       await pipeline(Readable.fromWeb(response.body as any), fs.createWriteStream(tarball), { signal });
     } catch (error) {
-      fs.rmSync(tarball, { force: true });
+      releaseDownload();
+      reportCleanup(await removeStorage(tarball));
       throw error;
     }
   }
@@ -516,8 +551,7 @@ export async function update(options: UpdateOptions, signal: AbortSignal): Promi
       invariant(hash.digest("base64") === expected, "INTEGRITY_FAILED", "Downloaded knowledge pack failed integrity verification");
     }
     const temp = path.join(root, `.tmp-${crypto.randomBytes(4).toString("hex")}`);
-    fs.mkdirSync(temp);
-    try {
+    return await temporaryStorage(temp, async () => {
       const extracted0 = await run({ file: "tar", args: ["-xzf", tarball, "-C", temp] }, { signal, timeoutMs: 600000, allowFailure: true });
       invariant(extracted0.code === 0, "INVALID_INPUT", "Not a knowledge pack archive (.tgz expected)", { tail: extracted0.stderr.slice(-300) });
       const extracted = fs.existsSync(path.join(temp, "package")) ? path.join(temp, "package") : temp;
@@ -526,48 +560,46 @@ export async function update(options: UpdateOptions, signal: AbortSignal): Promi
       invariant(/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(manifest.version), "INVALID_INPUT", "Knowledge pack version is not a safe directory name");
       invariant(!expectedVersion || manifest.version === expectedVersion, "INVALID_INPUT", "Archive version does not match the requested registry version");
       signal.throwIfAborted();
-      const previous = activePack();
       const directory = `${manifest.version}-${crypto.randomBytes(8).toString("hex")}`;
       const destination = path.join(root, directory);
-      fs.renameSync(extracted, destination);
-      const pointer = path.join(root, "current.json");
-      const previousDirectory = previous?.origin === "updated" ? path.basename(previous.dir) : null;
+      let previous;
       try {
-        atomicWrite(pointer, JSON.stringify({ version: manifest.version, directory, previous: previousDirectory, at: new Date().toISOString() }));
-      } catch (error) {
-        fs.rmSync(destination, { recursive: true, force: true });
-        throw error;
-      }
-      closeKnowledge();
-      prune(root, [directory, previousDirectory ?? ""]);
+        previous = await storageGuard(() => {
+          const current = activePack();
+          fs.renameSync(extracted, destination);
+          atomicWrite(path.join(root, "current.json"), JSON.stringify({ version: manifest.version, directory,
+            previous: current?.origin === "updated" ? path.basename(current.dir) : null, at: new Date().toISOString() }));
+          return current;
+        });
+      } catch (error) { reportCleanup(await removeStorage(destination)); throw error; }
+      await closeKnowledge();
+      requestStorageCleanup();
+      reportCleanup(await collectStorage());
       return { updated: true, version: manifest.version, previous: previous ? `${previous.manifest.version} (${previous.origin})` : null, counts: manifest.counts };
-    } finally {
-      fs.rmSync(temp, { recursive: true, force: true });
-    }
+    });
   } finally {
-    if (downloaded) fs.rmSync(tarball, { force: true });
+    if (releaseDownload) { releaseDownload(); reportCleanup(await removeStorage(tarball)); }
+    scheduleCleanup(1000);
   }
 }
 
-export function rollback() {
-  const root = kbRoot();
-  const pointer = path.join(root, "current.json");
-  invariant(fs.existsSync(pointer), "NOT_FOUND", "No updated pack to roll back from");
-  const current = JSON.parse(fs.readFileSync(pointer, "utf8")) as { version: string; previous: string | null };
-  if (current.previous && readManifest(path.join(root, current.previous))) {
-    const manifest = readManifest(path.join(root, current.previous))!;
-    atomicWrite(pointer, JSON.stringify({ version: manifest.version, directory: current.previous, previous: null, at: new Date().toISOString() }));
-  } else fs.rmSync(pointer);
-  closeKnowledge();
+export async function rollback() {
+  await storageGuard(() => {
+    const root = kbRoot();
+    const pointer = path.join(root, "current.json");
+    invariant(fs.existsSync(pointer), "NOT_FOUND", "No updated pack to roll back from");
+    const current = JSON.parse(fs.readFileSync(pointer, "utf8")) as { version: string; previous: string | null };
+    if (current.previous && readManifest(path.join(root, current.previous))) {
+      const manifest = readManifest(path.join(root, current.previous))!;
+      atomicWrite(pointer, JSON.stringify({ version: manifest.version, directory: current.previous, previous: null, at: new Date().toISOString() }));
+    } else fs.rmSync(pointer);
+  });
+  await closeKnowledge();
+  requestStorageCleanup();
+  reportCleanup(await collectStorage());
+  scheduleCleanup(1000);
   const active = activePack();
   return { rolled_back_to: active ? `${active.manifest.version} (${active.origin})` : "none" };
-}
-
-function prune(root: string, keep: string[]) {
-  for (const entry of fs.readdirSync(root)) {
-    if (entry.startsWith(".") || entry === "current.json" || keep.includes(entry)) continue;
-    fs.rmSync(path.join(root, entry), { recursive: true, force: true });
-  }
 }
 
 /* ---------------------------------- cloud ---------------------------------- */
@@ -590,8 +622,10 @@ export async function cloudSearch(query: string, signal: AbortSignal) {
   const marker = "【检索信息】：";
   const content = prompt.includes(marker) ? prompt.slice(prompt.indexOf(marker) + marker.length) : prompt;
   const labelStart = Date.now();
-  const lookup = await officialLookup().catch(() => undefined);
-  const labelled = await labelCloudSources(content, lookup);
+  const labelled = await withKnowledge(async (handle) => labelCloudSources(content, await officialLookup(handle))).catch((error) => {
+    if (error.code === "KB_MISSING") return labelCloudSources(content, undefined);
+    throw error;
+  });
   const labelMs = Date.now() - labelStart;
   const packed = packCloudSections(labelled.sections, 12000);
   // Nothing is dropped: the complete labelled answer (every section, untruncated) is saved as an
@@ -658,8 +692,7 @@ export const AUTHORITY = "When sources disagree: 1) the project's SDK declaratio
   + "3) cloud sections marked community or unverified: never use them as the API contract, only as hints to verify.";
 
 /** Official doc titles of the local pack -> document ids. */
-async function officialTitleIndex() {
-  const handle = await db();
+async function officialTitleIndex(handle: KnowledgeHandle) {
   const rows = handle.db.prepare("SELECT document_id, doc_title FROM documents WHERE catalog_id < 6").all() as { document_id: string; doc_title: string }[];
   const index = new Map<string, string[]>();
   for (const r of rows) {
@@ -675,13 +708,12 @@ const normTitle = (t: string) => t.replace(/\s+/g, "").toLowerCase();
  * Candidate official documents for a cloud section: docs with the same title (also without a
  * "Kit/服务-" prefix) plus the best full-text hits for two distinctive sentences of the body.
  */
-async function officialLookup(): Promise<OfficialLookup> {
-  const titles = await officialTitleIndex();
-  const handle = await db();
+async function officialLookup(handle: KnowledgeHandle): Promise<OfficialLookup> {
+  const titles = await officialTitleIndex(handle);
   const cache = new Map<string, Set<string>>();
   // Indexed once per document (the same docs come back for many sections).
   const docText = async (id: string) => {
-    if (!cache.has(id)) cache.set(id, windows(normText(await readZipEntry(path.join(handle.pack.dir, "docs.zip"), `${id}.md`).catch(() => ""))));
+    if (!cache.has(id)) cache.set(id, windows(normText(await readZipEntry(handle, `${id}.md`).catch(() => ""))));
     return cache.get(id)!;
   };
   return async (title, body) => {
@@ -702,7 +734,7 @@ async function officialLookup(): Promise<OfficialLookup> {
     if (settled) return out;
     const sentences = body.replace(/[#*`>|]/g, " ").split(/[。！？\n]/).map((s) => s.trim()).filter((s) => s.length >= 16).sort((a, b) => b.length - a.length);
     for (const q of [title, ...sentences.slice(0, 2).map((s) => s.slice(0, 60))]) {
-      for (const id of await officialDocIds(q).catch(() => [])) await add(id);
+      for (const id of await officialDocIds(handle, q).catch(() => [])) await add(id);
       if (settled) break;
     }
     return out;

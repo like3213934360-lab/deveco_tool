@@ -12,7 +12,7 @@ export async function doctor(options: { project?: string; target?: string; remot
     await database();
     const now = (await import("../core/db.js")).recovered ?? recovered;
     checks.push(now
-      ? { name: "state", ok: false, detail: now, fix: `The state database was corrupted and recreated (backup ${now.backup}); log in again with auth if needed. The backup can be deleted` }
+      ? { name: "state", ok: false, detail: now, fix: `The state database was corrupted and recreated (temporary recovery copy ${now.backup}, expires after 24 hours); log in again with auth if needed` }
       : { name: "state", ok: true, detail: { dir: stateDir() } });
   } catch (error) {
     checks.push({ name: "state", ok: false, detail: errorResult(error), fix: `Check permissions of ${stateDir()} (or set DEVECO_STATE_DIR)` });

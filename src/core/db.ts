@@ -60,6 +60,13 @@ CREATE TABLE IF NOT EXISTS retention_failures (
   code TEXT NOT NULL,
   failed_at INTEGER NOT NULL
 );
+CREATE TABLE IF NOT EXISTS retention_pins (
+  path TEXT NOT NULL,
+  owner TEXT NOT NULL,
+  pid INTEGER NOT NULL,
+  kind TEXT NOT NULL,
+  PRIMARY KEY(path,owner)
+);
 CREATE TABLE IF NOT EXISTS kv (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL
@@ -83,7 +90,7 @@ function open(DatabaseSync: typeof import("node:sqlite").DatabaseSync, file: str
       handle.exec("COMMIT");
     } catch (error) { handle.exec("ROLLBACK"); throw error; }
     // A truncated file can open and still be unreadable: touch every table once.
-    for (const t of ["jobs", "effects", "events", "artifacts", "credentials", "exports", "retention_failures", "kv"]) handle.prepare(`SELECT 1 FROM ${t} LIMIT 1`).get();
+    for (const t of ["jobs", "effects", "events", "artifacts", "credentials", "exports", "retention_failures", "retention_pins", "kv"]) handle.prepare(`SELECT 1 FROM ${t} LIMIT 1`).get();
     return handle;
   } catch (error) {
     handle.close();
@@ -93,7 +100,7 @@ function open(DatabaseSync: typeof import("node:sqlite").DatabaseSync, file: str
 
 /**
  * Lazily opened single state database (WAL, one connection per process). A corrupted file is moved
- * aside (state.db.corrupt-<time>, kept for diagnosis) and a fresh database is created, so one bad
+ * aside (state.db.corrupt-<time>, retained for 24 hours) and a fresh database is created, so one bad
  * file cannot make every job/flow/login call fail with an opaque INTERNAL error.
  */
 export async function database(): Promise<DatabaseSync> {
@@ -119,7 +126,7 @@ let announced = false;
 export function takeRecoveryNote() {
   if (!recovered || announced) return undefined;
   announced = true;
-  return `The state database was corrupted (${recovered.reason}) and has been recreated; job history, flow recording drafts and logins were lost (log in again with auth). The old file is kept at ${recovered.backup}`;
+  return `The state database was corrupted (${recovered.reason}) and has been recreated; job history, flow recording drafts and logins were lost (log in again with auth). Temporary recovery copy: ${recovered.backup} (expires after 24 hours)`;
 }
 
 export function closeDatabase() {
