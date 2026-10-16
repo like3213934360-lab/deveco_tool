@@ -9,7 +9,8 @@ import { connect } from "../support/mcp.mjs";
 
 // Bundle a small harness that exercises the job runner directly (TS sources -> ESM).
 const out = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-jobs-"));
-const canonicalPath = (file) => { const p = fs.realpathSync(file); return process.platform === "win32" ? p.toLowerCase() : p; };
+// Native resolution expands Windows runner short names (e.g. RUNNER~1); JS realpath does not.
+const canonicalPath = (file) => { const p = fs.realpathSync.native(file); return process.platform === "win32" ? p.toLowerCase() : p; };
 // Tests leave nothing behind; on Windows the state DB may still be open at exit (EPERM): best effort there.
 process.on("exit", () => { try { fs.rmSync(out, { recursive: true, force: true }); } catch { /* Windows: file still locked */ } });
 process.env.DEVECO_STATE_DIR = out;
@@ -395,7 +396,7 @@ test("failed knowledge/backup trees are persisted once and skipped before any la
     return unlink(file);
   });
   try {
-    assert.equal((await m.collectStorage()).failed, 2);
+    assert.equal((await m.collectStorage()).failed, 2, JSON.stringify({ roots, unlinks: attempts.mock.calls.map((c) => c.arguments[0]) }));
     const count = attempts.mock.callCount();
     const opendir = fs.promises.opendir, scans = t.mock.method(fs.promises, "opendir", (...args) => opendir(...args));
     for (let i = 0; i < 3; i++) assert.equal((await m.collectStorage()).failed, 0);
@@ -421,7 +422,7 @@ test("a claimed deletion refuses new users and a temporary repair workspace is r
   t.mock.method(fs.promises, "unlink", async (name) => { if (name === canonicalFile) { entered(); await pause; } return unlink(name); });
   const removing = m.removeStorage(dir);
   try {
-    await started;
+    await Promise.race([started, removing.then(() => assert.fail("Deletion completed without reaching the intended file gate"))]);
     await assert.rejects(m.storageGuard((db) => m.pinStorage(db, file)), { code: "RESOURCE_BUSY" });
   } finally { resume(); await removing; }
   assert.equal(fs.existsSync(dir), false);
