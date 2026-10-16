@@ -36,21 +36,22 @@ export const projectTool = tool({
   name: "project",
   title: "Project create/sync/build",
   description: [
-    "info: metadata; create(app_name,bundle_name): built-in template, never overwrites; clean: build outputs.",
+    "info: metadata; create(app_name,bundle_name): built-in template, never overwrites; clean (job): build outputs by modules/execution_mode=module|project.",
     "sync (job): ohpm install + hvigor sync. build (job): advisory edited-file preflight + hvigor; packages or first 100 compile errors (code/file/line/message/source) with fixes. oh-package.json5/build-profile.json5 edits auto-install dependencies.",
-    "test (job): SDK local/instrument tests with verified case counts; instrument requires allow_data_reset and an explicit target when several devices are connected; other targets remain untouched. verify (job): JSON plan -> scoped acceptance verdict + JSON/JUnit/HTML evidence; launch/perf need baseline or max, otherwise inconclusive. entries: declared Ability/Extension/form/shortcut graph with main/device_types/runtime_verified=false; not installed-device evidence.",
-    "Build already checks edited files: no code check first. request_key/wait: sync/build/test/verify only.",
+    "test (job): SDK local/instrument tests with verified case counts; instrument requires allow_data_reset and an explicit target when several devices are connected; other targets remain untouched. verify (job): JSON plan -> scoped acceptance verdict + JSON/JUnit/HTML evidence; launch/perf: baseline or max required, else inconclusive. entries: declared Ability/Extension/form/shortcut graph with main/device_types/runtime_verified=false; not installed-device evidence.",
+    "Build already checks edited files: no code check first. request_key/wait: sync/build/clean/test/verify only.",
   ].join(" "),
   schema: z.object({
     action: z.enum(["info", "create", "sync", "build", "clean", "test", "verify", "entries"]),
     project: fields.project,
     product: fields.product,
     modules: fields.modules,
+    execution_mode: z.enum(["module", "project"]).optional().describe("clean execution scope"),
     kind: z.enum(["local", "instrument"]).optional(),
     scope: z.array(z.string()).min(1).max(100).optional(),
     coverage: z.boolean().optional(),
     target: fields.target,
-    timeout_ms: z.number().int().min(1000).max(1800000).optional().describe("test: task deadline, default 600000; independent of wait"),
+    timeout_ms: z.number().int().min(1000).max(1800000).optional().describe("Test deadline ms; default 600000"),
     allow_data_reset: z.boolean().optional().describe("instrument: required; SDK uninstalls app and erases its data"),
     expected_tests: z.number().int().min(1).optional(),
     plan: z.string().optional().describe("verify: project-relative or absolute JSON plan"),
@@ -80,7 +81,7 @@ export const projectTool = tool({
     create: ["project", "app_name", "bundle_name", "sdk_version", "target_api", "compatible_api", "device_types", "merge"],
     sync: ["project", "product", "request_key", "wait"],
     build: ["project", "product", "modules", "task", "mode", "clean", "preflight", "request_key", "wait"],
-    clean: ["project", "product"],
+    clean: ["project", "product", "modules", "execution_mode", "wait", "request_key"],
   },
   async handler(input, ctx) {
     const project = await import("../domains/project.js");
@@ -103,7 +104,7 @@ export const projectTool = tool({
         return project.createProject({ ...input, app_name: input.app_name, bundle_name: input.bundle_name });
       }
       case "clean":
-        return project.cleanProject(project.inspectProject(input.project, input.product), new AbortController().signal);
+        return startAndWait("project_clean", input, input.request_key, input.wait);
       case "sync":
         return startAndWait("sync", { project: input.project, product: input.product }, input.request_key, input.wait);
       case "build":
@@ -118,8 +119,15 @@ const assertSchema = z.object({
   timeout_ms: z.number().int().min(100).max(120000).optional(),
 }).refine((input) => !!input.visible !== !!input.hidden, "Pass exactly one visible or hidden selector");
 export const selectorSchema = z.object({
-  text: z.string().optional().describe("Case-insensitive substring unless exact=true"),
+  text: z.string().optional().describe("Substring; exact=true"),
   exact: z.boolean().optional(),
+  text_match: z.enum(["contains", "exact", "prefix", "suffix"]).optional(),
+  description: z.string().optional().describe("Substring"),
+  focused: z.boolean().optional(),
+  scrollable: z.boolean().optional(),
+  long_clickable: z.boolean().optional(),
+  checkable: z.boolean().optional(),
+  within: z.string().optional().describe("Ancestor id/key"),
   key: z.string().optional().describe("ArkUI .id('...')"),
   type: z.string().optional().describe("E.g. Button, TextInput"),
   id: z.string().optional(),
@@ -128,7 +136,7 @@ export const selectorSchema = z.object({
   checked: z.boolean().optional(),
   selected: z.boolean().optional(),
   enabled: z.boolean().optional(),
-  index: z.number().int().min(0).optional().describe("Nth match if ambiguous"),
+  index: z.number().int().optional().describe("Zero-based; -1=last"),
 }).meta({ id: "Selector" }); // emitted once per tool as $defs/Selector
 
 const uiOpSchema = z.enum(["click", "double_click", "long_click", "input", "type", "swipe", "drag", "fling", "scroll", "key",
@@ -339,10 +347,23 @@ export const codeTool = tool({
 export const deviceTool = tool({
   name: "device",
   title: "Devices/logs/files",
-  description: "list: connected devices; info: model/API/screen. action=log: hilog by bundle/grep/level, from/to window (from=5m), follow+cursor, clear; project locates source. shell: read-only commands. databases: discover app RDB paths (debug/user100). fixture: owned scratch table prepare/inspect/cleanup, refuses cleanup if changed. scenario: background/clear_data/grant/revoke; explicit reset for clear_data. trace: bounded official hitrace capture, no inferred source stack. action=sqlite: db+sql query (read-only unless write=true). send: local to remote; recv: remote to local.",
+  description: "list/info: devices, model/API/screen. action=log: hilog bundle/grep/level/from/to/follow/cursor/clear; project locates source. shell: read-only. databases: debug RDB paths. fixture: owned scratch table prepare/inspect/cleanup; refuses changed data. scenario: background/clear_data/grant/revoke. trace: bounded hitrace, no inferred stack. action=sqlite: db+sql; read-only unless write=true. send/recv: local/remote files. app operation=list|info|foreground|start|stop|install(job)|uninstall|clear_cache|clear_data; projectless; resets need allow_data_reset=true. file=exists|delete: single file. clipboard=read|write|clear: testhelper. screen=size|status|wake|sleep|rotation|rotate|rotation_lock|sleeptime|viewmode; rotation value=0..3; lock boolean. system=time|timezone (optional string value)|unlock|control_center|notification_center. Support checked on use; command completion is not state/business verification.",
   schema: z.object({
-    action: z.enum(["list", "info", "log", "shell", "sqlite", "send", "recv", "databases", "scenario", "fixture", "trace"]),
-    operation: z.enum(["background", "clear_data", "grant", "revoke", "prepare", "inspect", "cleanup"]).optional(),
+    action: z.enum(["list", "info", "log", "shell", "sqlite", "send", "recv", "databases", "scenario", "fixture", "trace", "app", "file", "clipboard", "screen", "system"]),
+    operation: z.enum(["background", "clear_data", "grant", "revoke", "prepare", "inspect", "cleanup", "list", "info", "foreground", "start", "stop", "uninstall", "install", "clear_cache", "exists", "delete", "read", "write", "clear", "size", "rotation", "rotate", "rotation_lock", "sleeptime", "viewmode", "wake", "sleep", "status", "time", "timezone", "unlock", "control_center", "notification_center"]).optional(),
+    ability: z.string().optional(),
+    want: z.object({ uri: z.string().max(4096).optional(), action: z.string().max(256).optional(), parameters: z.record(z.string(), z.union([z.string().max(4096), z.number().int(), z.boolean()])).optional() }).strict().optional(),
+    files: z.array(z.string()).min(1).max(64).optional().describe("Install: absolute HAP/HSP paths"),
+    shared: z.array(z.string()).min(1).max(64).optional().describe("app install: shared HSP paths"),
+    replace: z.boolean().optional().describe("app install: default true"),
+    user: z.number().int().min(0).optional().describe("app install: OS user ID"),
+    install_timeout: z.number().int().min(180).max(600).optional().describe("bm wait seconds"),
+    text: z.string().max(16384).optional().describe("clipboard write"),
+    value: z.union([z.string().max(256), z.number().int(), z.boolean()]).optional().describe("Value to set; omit to query"),
+    offset: z.number().int().min(0).optional(),
+    limit: z.number().int().min(1).max(200).optional(),
+    wait: fields.wait,
+    request_key: fields.requestKey,
     permission: z.string().optional(),
     allow_data_reset: z.boolean().optional(),
     fixture_id: z.string().optional(),
@@ -371,6 +392,9 @@ export const deviceTool = tool({
   }),
   params: {
     list: [], info: ["target"],
+    app: ["target", "operation", "bundle", "ability", "module", "want", "allow_data_reset", "files", "shared", "replace", "user", "install_timeout", "offset", "limit", "wait", "request_key"],
+    file: ["target", "operation", "remote"], clipboard: ["target", "operation", "text"],
+    screen: ["target", "operation", "value"], system: ["target", "operation", "value"],
     databases: ["target", "bundle", "module"], scenario: ["target", "operation", "bundle", "permission", "allow_data_reset"],
     fixture: ["target", "operation", "db", "bundle", "module", "fixture_id", "rows"], trace: ["target", "seconds", "categories"],
     log: ["target", "bundle", "grep", "level", "lines", "clear", "from", "to", "follow", "cursor", "wait_ms", "project"],
@@ -379,6 +403,22 @@ export const deviceTool = tool({
   },
   async handler(input, ctx) {
     const device = await import("../domains/device.js");
+    if (["app", "file", "clipboard", "screen", "system"].includes(input.action)) {
+      const controls = await import("../domains/device-controls.js");
+      controls.validateControl(input);
+      if (input.action === "app" && input.operation === "install") {
+        device.validatePackages(input.files ?? [], { shared: input.shared });
+        return startAndWait("device_install", input, input.request_key, input.wait);
+      }
+      const target = await device.resolveTarget(input.target, ctx.signal);
+      switch (input.action) {
+        case "app": return controls.appControl(target, { ...input, operation: input.operation! }, ctx.signal);
+        case "file": return controls.deviceFile(target, input.operation!, input.remote!, ctx.signal);
+        case "clipboard": return controls.clipboard(target, input.operation!, input.text, ctx.signal);
+        case "screen": return controls.screenControl(target, input.operation!, input.value, ctx.signal);
+        case "system": return controls.systemControl(target, input.operation!, input.value as string | undefined, ctx.signal);
+      }
+    }
     if (input.action === "list") {
       const targets = await device.listTargets(ctx.signal);
       return { devices: await Promise.all(targets.map((t) => device.deviceInfo(t, ctx.signal).catch(() => ({ target: t })))) };
@@ -433,23 +473,23 @@ export const uiTool = tool({
   name: "ui",
   title: "Device UI",
   description: [
-    "observe: screenshot+elements; screenshot/tree/find/windows: inspect. tree: window/depth/all_windows/node.",
+    "observe: screenshot+elements; screenshot/tree/find/windows: inspect. find: timeout_ms/window/bundle/offset/limit; assert: window/bundle. tree: window/depth/all_windows/node.",
     "selector/visible/hidden: objects, e.g. {\"text\":\"Hi\"}.",
     "act: click/double_click/long_click selector or x,y; input/type text; swipe/drag/fling x,y,x2,y2; scroll; key/keys chord; mouse_* for tablet/2in1.",
-    "act after={changed,kind:none/state/updated/navigated,added,removed}: app's on-screen elements; no extra observe.",
+    "act after={changed,kind,added,removed}: app's on-screen elements; no extra observe.",
     "act steps=[...]: waits for each element, stops at first failure with controls. save_flow={project,id} for run then_flow. ~52 s/call; stopped_at=continuation.",
     "assert: visible OR hidden, not screenshots alone.",
-    "Accept consent (agreements_accepted) and setup/tours preserving defaults (onboarding_completed) by window text/control state, never app names/fixed IDs. If still blocked, observe; never blindly repeat.",
+    "Accept consent (agreements_accepted) and setup preserving defaults (onboarding_completed) by window text/control state, never app names/fixed IDs. If still blocked, observe; never blindly repeat.",
     "visual: baseline (first saves, update replaces); changed_ratio/regions/diff_artifact; dimming=global_shift.",
     "layout: geometry heuristics; forms=[foldable,widefold,triplefold] job. wait/request_key: layout forms and form.",
-    "form (job): form_action=inventory|catalog|exercise|matrix. Desktop only; catalog returns form_index. exercise adds, inspects and removes only its instance. form_size needs a host size control; matrix takes explicit form_cases. then_flow runs project assertions on the attached card; no business/rendering verdict inferred.",
+    "form (job): form_action=inventory|catalog|exercise|matrix; desktop only; no business verdict inferred.",
     "perf: scroll smoothness/jank; no data=inconclusive + diagnostic_artifact; bundle adds pss. record_start/record_stop/record_status: mp4. record_receipts/record_archive(target,name)/record_restore(receipt_id): offline; preserve receipts, no device I/O.",
-    "Tests: test_start(plan) -> test_step(test_id, op/selector or visible/hidden) -> review(test_id+requirement) captures an image; inspect it before review(test_id+review_id+outcome+reason) -> test_finish -> test_log/test_export. Omit outcome/review_id on capture. checklist_item links assertions/reviews to every plan item; missing coverage is inconclusive.",
+    "Tests: test_start(plan) -> test_step(test_id, op/selector or visible/hidden) -> review(test_id+requirement) captures an image; inspect it before review(test_id+review_id+outcome+reason) -> test_finish -> test_log/test_export. Omit outcome/review_id on capture. checklist_item links every plan item; missing coverage=inconclusive.",
   ].join(" "),
   schema: z.object({
     action: z.enum(["observe", "screenshot", "tree", "find", "act", "assert", "windows", "perf", "visual", "layout", "record_start", "record_stop", "record_status", "record_receipts", "record_archive", "record_restore",
       "test_start", "test_step", "review", "test_finish", "test_log", "test_export", "form"]),
-    form_action: z.enum(["inventory", "catalog", "exercise", "matrix"]).optional(),
+    form_action: z.enum(["inventory", "catalog", "exercise", "matrix"]).optional().describe("catalog returns form_index; exercise adds/checks/removes its own instance; matrix needs form_cases; form_size needs a host size control; then_flow runs project assertions"),
     form_index: z.number().int().min(0).max(99).optional(),
     form_size: z.string().regex(/^[1-6]\*[1-6]$/).optional(),
     max_pages: z.number().int().min(1).max(30).optional(),
@@ -459,7 +499,7 @@ export const uiTool = tool({
     }).strict().refine((v) => !!v.target !== !!v.emulator, "Each case requires exactly one target or emulator")).min(1).max(20).optional(),
     target: fields.target,
     product: fields.product,
-    window: z.number().int().optional().describe("tree/observe: id from windows"),
+    window: z.number().int().optional().describe("tree/observe/find/assert: id from windows"),
     all_windows: z.boolean().optional().describe("tree: all windows/displays; excludes window"),
     node: z.string().optional().describe("tree: one component (id/key) subtree"),
     display: z.number().int().optional().describe("screenshot: display id"),
@@ -482,6 +522,7 @@ export const uiTool = tool({
     directory: z.string().optional().describe("test_export: absolute output directory"),
     max_chars: z.number().int().min(-1).optional().describe("test_log: -1 = unlimited, default 5000"),
     grep: z.string().optional().describe("test_log: keyword/regex filter"),
+    offset: z.number().int().min(0).optional(),
     selector: selectorSchema.optional(),
     op: uiOpSchema.optional(),
     keys: z.array(z.string()).min(1).max(3).optional().describe("key chord e.g. [\"ctrl\",\"c\"]; mouse_*: modifiers"),
@@ -503,7 +544,7 @@ export const uiTool = tool({
     hidden: selectorSchema.optional(),
     timeout_ms: z.number().int().min(100).max(120000).optional(),
     interactive: z.boolean().optional().describe("observe/tree: interactive/labelled only (default true)"),
-    bundle: z.string().optional().describe("observe/tree/layout/test_start/perf: app bundle"),
+    bundle: z.string().optional().describe("observe/tree/find/assert/layout/test_start/perf: app bundle"),
     format: z.enum(["jpeg", "png"]).optional(),
     width: z.number().int().min(240).max(2560).optional(),
     limit: z.number().int().min(1).max(2000).optional(),
@@ -532,8 +573,8 @@ export const uiTool = tool({
       form: ["target", "project", "product", "bundle", "form_action", "form_index", "form_size", "max_pages", "form_cases", "then_flow", "wait", "request_key"],
       screenshot: ["target", "display", "save_path", "format", "width"],
       tree: ["target", "window", "all_windows", "node", "depth", "interactive", "limit", "bundle"],
-      find: ["target", "selector", "limit"],
-      assert: ["target", "visible", "hidden", "timeout_ms"],
+      find: ["target", "selector", "limit", "offset", "timeout_ms", "window", "bundle"],
+      assert: ["target", "visible", "hidden", "timeout_ms", "window", "bundle"],
       windows: ["target", "all"],
       perf: ["target", "steps", "repeat", "bundle"],
       visual: ["target", "project", "name", "update", "threshold", "require_baseline", "context"],
@@ -602,7 +643,7 @@ export const uiTool = tool({
       try { projectTypes = runnableDeviceTypes(inspectProject(input.project)); } catch { /* reported by test_start below */ }
     }
     const target = await resolveTarget(input.target, ctx.signal, projectTypes);
-    const scope = { window: input.window };
+    const scope = { window: input.window, bundle: input.bundle };
     switch (input.action) {
       case "windows": return { windows: await ui.listWindows(target, input.all, ctx.signal) };
       case "layout": {
@@ -677,12 +718,11 @@ export const uiTool = tool({
       }
       case "find": {
         invariant(input.selector, "INVALID_INPUT", "selector is required");
-        const matches = ui.select(await ui.dumpTree(target, ctx.signal), input.selector);
-        return { count: matches.length, matches: matches.slice(0, input.limit ?? 20).map(ui.describe) };
+        return ui.findElements(target, input.selector, input, ctx.signal);
       }
       case "assert": {
         invariant(input.visible || input.hidden, "INVALID_INPUT", "Pass visible or hidden selector");
-        const verdict = await ui.waitFor(target, (input.visible ?? input.hidden)!, input.visible ? "visible" : "hidden", input.timeout_ms ?? 5000, ctx.signal);
+        const verdict = await ui.waitFor(target, (input.visible ?? input.hidden)!, input.visible ? "visible" : "hidden", input.timeout_ms ?? 5000, ctx.signal, false, scope);
         return verdict.passed ? verdict : { ...verdict, hint: "Not satisfied: call ui observe to inspect the screen" };
       }
       case "act": {

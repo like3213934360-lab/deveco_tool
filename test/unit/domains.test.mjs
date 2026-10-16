@@ -12,7 +12,7 @@ const out = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-unit-"));
 process.on("exit", () => { try { fs.rmSync(out, { recursive: true, force: true }); } catch { /* Windows: file still locked */ } }); // tests leave nothing behind
 const entry = path.join(out, "entry.ts");
 fs.writeFileSync(entry, [
-  `export { parseWindows, pngGray, blankScore } from ${JSON.stringify(path.join(root, "src/domains/ui.ts"))};`,
+  `export { parseWindows, pngGray, blankScore, select, flatten } from ${JSON.stringify(path.join(root, "src/domains/ui.ts"))};`,
   `export { checklist } from ${JSON.stringify(path.join(root, "src/domains/uitest.ts"))};`,
   `export { mergeCodexToml, mergeJsonConfig, installMcp } from ${JSON.stringify(path.join(root, "src/domains/hostconfig.ts"))};`,
   `export { projectAclPermissions, profileSummary } from ${JSON.stringify(path.join(root, "src/domains/sign.ts"))};`,
@@ -24,12 +24,34 @@ fs.writeFileSync(entry, [
   `export { labelCloudSources, packCloudSections, AUTHORITY } from ${JSON.stringify(path.join(root, "src/domains/knowledge.ts"))};`,
   `export { applicableSyscap, deviceCaps } from ${JSON.stringify(path.join(root, "src/domains/syscap.ts"))};`,
   `export { parseDuration } from ${JSON.stringify(path.join(root, "src/domains/device.ts"))};`,
-  `export { projectRoots, findProjectRoot, selectRunModules, BuildOutputParser } from ${JSON.stringify(path.join(root, "src/domains/project.ts"))};`,
+  `export { projectRoots, findProjectRoot, selectRunModules, BuildOutputParser, cleanArguments } from ${JSON.stringify(path.join(root, "src/domains/project.ts"))};`,
   `export { readonlySqlAllowed, readonlyShellArgs, appDatabasePath } from ${JSON.stringify(path.join(root, "src/domains/device.ts"))};`,
 ].join("\n"));
 await build({ entryPoints: [entry], outfile: path.join(out, "entry.mjs"), bundle: true, format: "esm", platform: "node", packages: "external", logLevel: "error", nodePaths: [path.join(root, "node_modules")] });
 fs.symlinkSync(path.join(root, "node_modules"), path.join(out, "node_modules"), "junction"); // junction: no admin rights needed on Windows
 const m = await import(pathToFileURL(path.join(out, "entry.mjs")).href);
+
+test("UI selectors combine semantic attributes, text modes, subtree and negative indices", () => {
+  const nodes = m.flatten({ attributes: { id: "root", bounds: "[0,0][100,100]" }, children: [
+    { attributes: { id: "a", text: "Save draft", description: "Store locally", scrollable: "true", focused: "true", bounds: "[0,0][50,20]" } },
+    { attributes: { id: "b", text: "Save all", description: "Store remotely", bounds: "[0,20][50,40]" } },
+  ] });
+  assert.equal(m.select(nodes, { text: "save", text_match: "prefix", description: "locally", focused: true, scrollable: true })[0].key, "a");
+  assert.equal(m.select(nodes, { text: "save", index: -1 })[0].key, "b");
+  assert.equal(m.select(nodes, { text: "all", text_match: "suffix" })[0].key, "b");
+  assert.equal(m.select(nodes, { text: "save", exact: true }).length, 0);
+  assert.equal(m.select(nodes, { text: "save", within: "a" }).length, 1);
+  assert.equal(m.select(nodes, { text: "save", index: -3 }).length, 0);
+});
+
+test("module cleanup sends only validated product/module targets to hvigor", () => {
+  const project = { product: "demo", modules: [{ name: "phone", target: "test" }, { name: "watch", target: "default" }] };
+  assert.deepEqual(m.cleanArguments(project, ["phone"]), ["--mode", "module", "-p", "product=demo", "-p", "module=phone@test", "clean"]);
+  assert.deepEqual(m.cleanArguments(project), ["clean"]);
+  assert.throws(() => m.cleanArguments(project, ["missing"]), { code: "INVALID_INPUT" });
+  assert.throws(() => m.cleanArguments(project, ["phone"], "project"), { code: "INVALID_INPUT" });
+  assert.throws(() => m.cleanArguments(project, []), { code: "INVALID_INPUT" });
+});
 
 test("read-only shell queries quick fixes without allowing mutation or extra arguments", () => {
   assert.deepEqual(m.readonlyShellArgs(" bm quickfix -q -b com.example.app "), ["bm", "quickfix", "-q", "-b", "com.example.app"]);

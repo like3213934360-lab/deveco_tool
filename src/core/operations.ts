@@ -91,19 +91,23 @@ export async function releaseResource(resource: string, ownerPid: number) {
   return { released: resource, owner_pid: ownerPid, effects_replayed: false };
 }
 
-const asynchronous = new Set(["project.sync", "project.build", "project.test", "project.verify", "run.build_run", "run.deploy", "ui_flow.replay", "sign.auto", "hot_reload.apply", "hot_reload.reset", "knowledge.update", "ui.form"]);
+const asynchronous = new Set(["project.clean", "project.sync", "project.build", "project.test", "project.verify", "run.build_run", "run.deploy", "ui_flow.replay", "sign.auto", "hot_reload.apply", "hot_reload.reset", "knowledge.update", "ui.form"]);
 
 /** Resolve aliases before locking and before executing; the caller then uses this exact device. */
 export async function operationResources(name: string, input: Record<string, any>, signal: AbortSignal): Promise<string[]> {
   const action = String(input.action ?? "");
+  if (name === "device" && ["app", "file", "clipboard", "screen", "system"].includes(action)) {
+    (await import("../domains/device-controls.js")).validateControl(input);
+    if (action === "app" && input.operation === "install") return [];
+  }
   if (name === "device" && action === "sqlite" && input.db && !input.db.startsWith("/") && input.db !== ":memory:") {
     const { appDatabasePath } = await import("../domains/device.js");
     appDatabasePath(input.bundle ?? "", input.db, input.module);
   }
   if (!name.startsWith("job:") && (asynchronous.has(`${name}.${action}`) || (name === "ui" && action === "layout" && input.forms))) return [];
   const job = name.startsWith("job:") ? name.slice(4) : undefined;
-  const device = job ? ["build_run", "deploy", "flow_replay", "hot_reload", "hot_reset", "form_check", "form_inventory"].includes(job) || (job === "project_test" && input.kind === "instrument") || (job === "verify" && !!input.target)
-    : name === "run" || (name === "device" && ["sqlite", "send", "recv", "scenario", "databases", "fixture", "trace"].includes(action))
+  const device = job ? ["device_install", "build_run", "deploy", "flow_replay", "hot_reload", "hot_reset", "form_check", "form_inventory"].includes(job) || (job === "project_test" && input.kind === "instrument") || (job === "verify" && !!input.target)
+    : name === "run" || (name === "device" && ["app", "file", "clipboard", "screen", "system", "sqlite", "send", "recv", "scenario", "databases", "fixture", "trace"].includes(action))
       || (name === "ui" && !["test_finish", "test_export", "test_log", "record_receipts", "record_archive", "record_restore"].includes(action))
       || (name === "ui_flow" && ["record", "stop"].includes(action));
   const keys: string[] = [];

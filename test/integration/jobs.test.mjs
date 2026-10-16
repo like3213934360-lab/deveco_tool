@@ -188,6 +188,31 @@ test("a job left running by a dead server reads as interrupted and resumes", asy
   assert.equal((await m.cancelJob("j_orphan2")).status, "cancelled");
 });
 
+test("explicit cleanup observes files created after an earlier discovery snapshot", async (t) => {
+  await m.stopCleanup();
+  const original = fs.promises.opendir;
+  let release, reached;
+  const gate = new Promise((r) => { release = r; });
+  const paused = new Promise((r) => { reached = r; });
+  let held = false;
+  t.mock.method(fs.promises, "opendir", async (...args) => {
+    const directory = await original(...args);
+    if (args[0] !== m.artifactDir() || held) return directory;
+    held = true;
+    // Freeze the exact directory snapshot, independently of OS enumeration timing.
+    const entries = []; for await (const entry of directory) entries.push(entry);
+    return { async *[Symbol.asyncIterator]() { reached(); await gate; yield* entries; } };
+  });
+  const earlier = m.cleanup();
+  await paused;
+  const stray = path.join(m.artifactDir(), "after-snapshot.txt");
+  fs.writeFileSync(stray, "old orphan"); fs.utimesSync(stray, new Date(0), new Date(0));
+  const requested = m.cleanup();
+  release();
+  await Promise.all([earlier, requested]);
+  assert.equal(fs.existsSync(stray), false);
+});
+
 test("cleanup removes expired job-less artifacts, stray files and old UI tests; keeps recent ones", async () => {
   const db = await m.database();
   const fs = await import("node:fs");

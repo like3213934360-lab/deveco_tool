@@ -20,11 +20,31 @@ await build({ stdin: { contents: `export {uiTool} from ${JSON.stringify(path.joi
   b.onResolve({ filter: /device\.js$/ }, (a) => /(?:domains\/(?:ui|flows)\.ts|tools\/core\.ts)$/.test(a.importer.replaceAll("\\", "/")) ? { path: "device", namespace: "fixture" } : undefined);
   b.onLoad({ filter: /.*/, namespace: "fixture" }, () => ({ contents: `import fs from 'node:fs';const f=()=>globalThis.__devecoConsent;export async function resolveTarget(){return 'test'};export async function assertConnected(){};export async function forceStop(){};export async function launch(){};export async function deviceInfo(){return {screen:{width:400,height:800}}};
     export async function hdc(args){fs.writeFileSync(args.at(-1),JSON.stringify(f().frames[0]));return {stdout:'',stderr:'',code:0}};
-    export async function shell(_target,args,signal){signal?.throwIfAborted();const command=args.join(' ');if(command.includes('dumpLayout'))return {stdout:'DumpLayout saved',stderr:'',code:0};if(args[0]==='rm')return {stdout:'',stderr:'',code:0};if(command.includes('uiInput swipe')){f().swipes??=[];f().swipes.push(command);if(f().frames.length>1)f().frames.shift();return {stdout:'No Error',stderr:'',code:0}};const hit=/uiInput click (\\d+) (\\d+)/.exec(command);if(!hit)throw new Error('unexpected command '+command);f().clicks.push(Number(hit[2]));if(Number(hit[2])===220)f().frames.shift();else if(Number(hit[2])===420){f().taps++;f().onTap?.()};return {stdout:'No Error',stderr:'',code:0}};` }));
+    export async function shell(_target,args,signal){signal?.throwIfAborted();const command=args.join(' ');if(command.includes('dumpLayout')){(f().dumps??=[]).push(command);return {stdout:'DumpLayout saved',stderr:'',code:0}};if(args[0]==='rm')return {stdout:'',stderr:'',code:0};if(command.includes('uiInput swipe')){f().swipes??=[];f().swipes.push(command);if(f().frames.length>1)f().frames.shift();return {stdout:'No Error',stderr:'',code:0}};const hit=/uiInput click (\\d+) (\\d+)/.exec(command);if(!hit)throw new Error('unexpected command '+command);f().clicks.push(Number(hit[2]));if(Number(hit[2])===220)f().frames.shift();else if(Number(hit[2])===420){f().taps++;f().onTap?.()};return {stdout:'No Error',stderr:'',code:0}};` }));
 } }] });
 const m = await import(pathToFileURL(bundle).href);
 const ctx = { signal: new AbortController().signal };
 after(async () => { await m.closeDatabase(); fs.rmSync(bundle, { force: true }); fs.rmSync(work, { recursive: true, force: true }); delete globalThis.__devecoConsent; });
+
+test("find and assert preserve window scope, wait for changing content and cancel polling", async () => {
+  reset([app()]);
+  const timer = setTimeout(() => { f.frames = [{ attributes: { bounds: "[0,0][400,800]" }, children: [raw("Ready one"), raw("Ready two", "Text", 50)] }]; }, 50);
+  try {
+    const result = await m.uiTool.handler({ action: "find", target: "test", window: 123, selector: { text: "Ready", text_match: "prefix" }, timeout_ms: 1200, limit: 1 }, ctx);
+    assert.equal(result.count, 2); assert.equal(result.next_offset, 1); assert.equal(result.scope.window, 123);
+    assert.equal(result.matches[0].text, "Ready one");
+    const second = await m.uiTool.handler({ action: "find", target: "test", window: 123, selector: { text: "Ready" }, offset: 1, limit: 1 }, ctx);
+    assert.equal(second.matches[0].text, "Ready two"); assert.equal(second.next_offset, null);
+    assert.equal((await m.uiTool.handler({ action: "assert", target: "test", window: 123, hidden: { text: "Missing" }, timeout_ms: 100 }, ctx)).passed, true);
+    const controller = new AbortController();
+    const cancel = setTimeout(() => controller.abort(), 30);
+    try { await assert.rejects(m.findElements("test", { text: "Missing" }, { timeout_ms: 5000, window: 123 }, controller.signal), (e) => e.name === "AbortError"); }
+    finally { clearTimeout(cancel); }
+    assert.deepEqual(f.clicks, []);
+    assert.ok(f.dumps.length >= 4); assert.ok(f.dumps.every((command) => command.includes("-w 123")));
+    f.dumps = [];
+  } finally { clearTimeout(timer); }
+});
 
 test("ordinary UI selector resolves after unrelated agreements, and read-only observation never accepts", async () => {
   reset([dialog("地图服务的用户协议和隐私政策", "同意并继续", "map.vendor"), dialog("Camera permission: access to your camera", "Allow", "camera.vendor"), app()]);

@@ -10,6 +10,18 @@ async function projectOf(input: { project: string; product?: string; modules?: s
 }
 
 /* All long-running workflows. Effect steps (install) are journaled; others are safe to re-run. */
+defineJob<{ project: string; product?: string; modules?: string[]; execution_mode?: "module" | "project" }>({
+  kind: "project_clean",
+  steps: [{ id: "clean", effect: true, replay: false, async run(ctx) {
+    const { project, modules } = await projectOf(ctx.input);
+    return (await import("./domains/project.js")).cleanProject(project, ctx.signal, modules, ctx.input.execution_mode);
+  } }], summarize: (o) => o.clean,
+});
+defineJob<{ target: string; files?: string[]; shared?: string[]; replace?: boolean; user?: number; install_timeout?: number }>({
+  kind: "device_install", steps: [{ id: "install", effect: true, replay: false, async run(ctx) {
+    return (await import("./domains/device.js")).install(ctx.input.target, ctx.input.files ?? [], ctx.signal, ctx.input.replace ?? true, ctx.input);
+  } }], summarize: (o) => o.install,
+});
 
 const formDomain = () => import("./domains/forms.js");
 type FormJobInput = import("./domains/forms.js").FormInput & { form_action?: string; _form_cleanup_attempted?: boolean };

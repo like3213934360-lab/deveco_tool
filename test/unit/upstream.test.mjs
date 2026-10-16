@@ -23,6 +23,7 @@ test("extracts every commander / zod / effect-schema construct from upstream-sha
     "cli:cmd:emulator team list", "cli:cmd:emulator team list:opt:--all",
     // exported command added by name + inline addCommand(new Command(...))
     "cli:cmd:ui tap:opt:--id", "cli:cmd:ui tap:arg:x", "cli:cmd:ui shot:opt:--display",
+    "cli:cmd:ui wake", "cli:cmd:ui wake:opt:--device", "cli:cmd:ui timezone:arg:timezone",
     // bundled MCP server: array-driven registration sharing a schema variable, multi-line zod enum
     "climcp:tool:hover:param:line", "climcp:tool:definition:param:file",
     "climcp:tool:restart:enum:target=cpp", "climcp:tool:restart:param:force",
@@ -35,6 +36,7 @@ test("extracts every commander / zod / effect-schema construct from upstream-sha
   // No enum values leak across parameters.
   assert.ok(!items.has("code:tool:demo_tool:enum:filePath=a"));
   assert.ok(!items.has("climcp:tool:restart:enum:force=all"));
+  assert.ok(!items.has("cli:cmd:ui wake:arg:timezone"));
 });
 
 test("every decision rule and item is well-formed", () => {

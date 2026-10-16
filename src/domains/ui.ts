@@ -31,6 +31,10 @@ export interface UiNode {
   checked: boolean | null;
   selected: boolean | null;
   focused: boolean | null;
+  description?: string;
+  scrollable?: boolean | null;
+  long_clickable?: boolean | null;
+  checkable?: boolean | null;
   bundle: string | null;
   window: string | null;
   page: string | null;
@@ -38,6 +42,13 @@ export interface UiNode {
 export interface Selector {
   text?: string;
   exact?: boolean;
+  text_match?: "contains" | "exact" | "prefix" | "suffix";
+  description?: string;
+  focused?: boolean;
+  scrollable?: boolean;
+  long_clickable?: boolean;
+  checkable?: boolean;
+  within?: string;
   key?: string;
   type?: string;
   id?: string;
@@ -85,6 +96,8 @@ export function flatten(raw: unknown): UiNode[] {
       clickable: flag(attrs.clickable), enabled: flag(attrs.enabled), visible: flag(attrs.visible),
       checked: flag(attrs.checked ?? attrs.isChecked), selected: flag(attrs.selected ?? attrs.isSelected),
       focused: flag(attrs.focused), bundle, window, page: str(attrs.pagePath),
+      description: str(attrs.description ?? attrs.accessibilityText) ?? undefined,
+      scrollable: flag(attrs.scrollable), long_clickable: flag(attrs.longClickable), checkable: flag(attrs.checkable),
     });
     invariant(nodes.length <= 100000, "UI_TREE_TOO_LARGE", "UI tree exceeds 100000 nodes");
     const children = node.children ?? node.$children;
@@ -98,8 +111,14 @@ export function flatten(raw: unknown): UiNode[] {
 export function select(nodes: UiNode[], s: Selector): UiNode[] {
   const text = s.text?.toLowerCase();
   const type = s.type?.toLowerCase();
-  const hits = nodes.filter((n) =>
-    (text === undefined || (s.exact ? n.text.toLowerCase() === text : n.text.toLowerCase().includes(text))) &&
+  const mode = s.text_match ?? (s.exact ? "exact" : "contains");
+  const hits = (s.within ? subtree(nodes, s.within) : nodes).filter((n) =>
+    (text === undefined || (mode === "exact" ? n.text.toLowerCase() === text : mode === "prefix" ? n.text.toLowerCase().startsWith(text) : mode === "suffix" ? n.text.toLowerCase().endsWith(text) : n.text.toLowerCase().includes(text))) &&
+    (s.description === undefined || n.description?.toLowerCase().includes(s.description.toLowerCase())) &&
+    (s.focused === undefined || n.focused === s.focused) &&
+    (s.scrollable === undefined || n.scrollable === s.scrollable) &&
+    (s.long_clickable === undefined || n.long_clickable === s.long_clickable) &&
+    (s.checkable === undefined || n.checkable === s.checkable) &&
     (s.key === undefined || n.key === s.key) &&
     (type === undefined || n.type.toLowerCase() === type) &&
     (s.id === undefined || n.id === s.id) &&
@@ -110,7 +129,7 @@ export function select(nodes: UiNode[], s: Selector): UiNode[] {
     (s.enabled === undefined || n.enabled === s.enabled) &&
     n.visible !== false && !!n.rect && n.rect.x2 > n.rect.x1 && n.rect.y2 > n.rect.y1,
   );
-  return s.index !== undefined ? hits.slice(s.index, s.index + 1) : hits;
+  return s.index !== undefined ? (hits.at(s.index) ? [hits.at(s.index)!] : []) : hits;
 }
 
 export function center(node: UiNode) {
@@ -299,6 +318,10 @@ export async function dumpTree(target: string, signal?: AbortSignal, maxAgeMs = 
   if (scope.window !== undefined) extra.push("-w", String(scope.window));
   else if (scope.bundle && /^[\w.]+$/.test(scope.bundle)) extra.push("-b", scope.bundle);
   const nodes = await dumpRaw(target, extra, signal);
+  if (scope.window !== undefined && scope.bundle) {
+    invariant(nodes.some((n) => n.bundle), "EVIDENCE_MISSING", "Window tree does not expose bundle identity; use window or bundle alone");
+    return nodes.filter((n) => n.bundle === scope.bundle);
+  }
   if (!scoped) cache.set(target, { at: Date.now(), nodes });
   return nodes;
 }
@@ -580,6 +603,22 @@ async function withAgent(target: string, signal: AbortSignal | undefined, fn: (c
   }
 }
 
+/** Reuses the existing short-lived UITest connection; no resident client or polling loop. */
+export async function displayControl(target: string, operation: string, value: string | number | boolean | undefined, signal: AbortSignal) {
+  invariant(operation !== "rotate" || typeof value === "number" && Number.isInteger(value) && value >= 0 && value <= 3,
+    "INVALID_INPUT", "rotate value must be 0,1,2,3 (0/90/180/270 degrees)");
+  invariant(operation !== "rotation_lock" || typeof value === "boolean", "INVALID_INPUT", "rotation_lock requires boolean value");
+  let rotation: unknown;
+  await withAgent(target, signal, async (call, driver) => {
+    if (operation === "rotate") await call("Driver.setDisplayRotation", driver, [value]);
+    if (operation === "rotation_lock") await call("Driver.setDisplayRotationEnabled", driver, [!value]);
+    rotation = await call("Driver.getDisplayRotation", driver, []);
+  });
+  invariant(typeof rotation === "number" && [0, 1, 2, 3].includes(rotation), "DEVICE_OUTPUT_INVALID", "UITest returned an invalid rotation", { rotation });
+  invalidate(target);
+  return { target, rotation, ...(operation === "rotate" ? { verified: rotation === value } : operation === "rotation_lock" ? { command_confirmed: true, state_verified: false, locked_requested: value } : {}) };
+}
+
 export function agentRpc(socket: net.Socket, api: string, self: string, args: unknown[], signal?: AbortSignal): Promise<unknown> {
   signal?.throwIfAborted();
   if (socket.destroyed) return Promise.reject(new ToolError("UI_AGENT_CLOSED", "UiTest agent connection is closed; action was not sent"));
@@ -619,13 +658,13 @@ export function agentRpc(socket: net.Socket, api: string, self: string, args: un
 
 /* ------------------------------ assertions ------------------------------ */
 
-export async function waitFor(target: string, selector: Selector, state: "visible" | "hidden", timeoutMs: number, signal?: AbortSignal, autoAccept = false) {
+export async function waitFor(target: string, selector: Selector, state: "visible" | "hidden", timeoutMs: number, signal?: AbortSignal, autoAccept = false, scope: { window?: number; bundle?: string } = {}) {
   const deadline = Date.now() + timeoutMs;
   let last: UiNode[] = [];
   const accepted: { text: string; kind: string }[] = [];
   for (;;) {
     signal?.throwIfAborted();
-    let nodes = await dumpTree(target, signal);
+    let nodes = await dumpTree(target, signal, 0, scope);
     if (autoAccept) {
       const consent = await acceptAgreements(target, signal, nodes);
       nodes = consent.nodes ?? nodes;
@@ -635,7 +674,20 @@ export async function waitFor(target: string, selector: Selector, state: "visibl
     const ok = state === "visible" ? last.length > 0 : last.length === 0;
     const result = { passed: ok, state, matches: last.slice(0, 3).map(describe), ...automaticResult(accepted) };
     if (ok || Date.now() >= deadline) return result;
-    await new Promise((r) => setTimeout(r, 400));
+    await delay(Math.min(400, Math.max(0, deadline - Date.now())), undefined, { signal });
+  }
+}
+
+export async function findElements(target: string, selector: Selector, options: { window?: number; bundle?: string; timeout_ms?: number; limit?: number; offset?: number }, signal: AbortSignal) {
+  const deadline = Date.now() + (options.timeout_ms ?? 0);
+  for (;;) {
+    signal.throwIfAborted();
+    const matches = select(await dumpTree(target, signal, 0, options), selector);
+    if (matches.length || Date.now() >= deadline) {
+      const offset = options.offset ?? 0, limit = options.limit ?? 20;
+      return { count: matches.length, matches: matches.slice(offset, offset + limit).map(describe), next_offset: offset + limit < matches.length ? offset + limit : null, timed_out: !matches.length && !!options.timeout_ms, scope: { window: options.window, bundle: options.bundle } };
+    }
+    await delay(Math.min(400, Math.max(0, deadline - Date.now())), undefined, { signal });
   }
 }
 

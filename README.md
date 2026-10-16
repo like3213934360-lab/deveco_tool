@@ -123,6 +123,12 @@ MCP 运行时按文件到期时间清理；退出或电脑休眠期间不能执�
 
 FPS 无有效数据返回 `verdict=inconclusive` 和 `diagnostic_artifact`；用 `job action=read artifact_id=<id>` 查看 stdout/stderr/退出码。两路采集同时进行，手势不重复；`fps_only` 仅代表逐秒正 FPS 样本，零样本另报，不代表逐帧卡顿通过。
 
+设备平台操作统一在 `device`：`action=app` 配合 `operation=list/info/foreground/start/stop/install/uninstall/clear_cache/clear_data`，无需工程目录。安装传入 `files`（HAP/HSP）与可选 `shared`（共享 HSP）、`user`、`install_timeout`（SDK 秒数）；结果为后台任务，使用 `job wait` 继续等待。卸载和清数据需要 `allow_data_reset=true`。`start` 接受 bundle/ability/module 或 Want 的 URI/action，仅确认系统接受请求，不等于应用正常运行。
+
+`file operation=exists/delete remote=...` 只删除指定文件，不递归删除目录，失败不重复尝试。`clipboard operation=read/write/clear` 使用设备 testhelper。`screen` 提供 size/status/wake/sleep、rotation/rotate（value=0..3）、rotation_lock（布尔值）、sleeptime（毫秒、-1 或 restore）和 viewmode（dark/light）；`system` 提供 time/timezone 的读取与设置，以及 unlock/control_center/notification_center 手势。设备缺少权限或命令时明确失败；结果中的 `verified`、`state_verified` 和 `runtime_verified` 限定证据范围。滑动不代表成功解锁，密码锁仍需要用户解锁。测试修改设置后应按原值恢复；sleeptime=restore 取消 MCP 设置的息屏覆盖。安装的 install_timeout 遵循 bm 的 180–600 秒范围。剪贴板保留原始空白与特殊字符，写入/清空后读取校验；time/timezone 返回去除命令提示的值，便于恢复原设置。
+
+例如 `device {action:"app",operation:"foreground",target:"<serial>"}` 查询前台，`device {action:"screen",operation:"viewmode",value:"dark",target:"<serial>"}` 切换深色；`ui {action:"find",window:123,selector:{text:"保存",text_match:"prefix"},timeout_ms:3000,target:"<serial>"}` 等待指定窗口的匹配控件。查找结果用 offset/limit 分页；选择器还支持 description、focused、scrollable、long_clickable、checkable、within（子树 id/key）和负 index。保留结构化选择器，不支持 CLI DSL/Base64 或完整 XPath。`project clean` 可传 modules（含 name@target）、execution_mode 和 wait；不传模块保持 SDK 默认清理范围。
+
 ## 知识包
 
 知识包是一个 `.tgz`，包含三个文件：

@@ -235,6 +235,18 @@ export function cliCommands(cmdFiles, entryFile) {
 
   for (const file of cmdFiles) {
     const text = read(file);
+    // Exported command arrays, attached with `for (const cmd of commands) parent.addCommand(cmd)`.
+    for (const m of text.matchAll(/(?:export\s+)?const\s+(\w+)\s*(?::\s*Command\[\])?\s*=\s*\[/g)) {
+      const open = m.index + m[0].length - 1;
+      const body = text.slice(open + 1, matchBracket(text, open));
+      const commands = [...body.matchAll(/new Command\(\s*['"`]([\w-]+)['"`]\s*\)/g)];
+      if (!commands.length) continue;
+      const group = node(""); vars.set(`${file}:${m[1]}`, group);
+      for (const [i, command] of commands.entries()) {
+        const id = node(command[1]); nodes.get(group).children.push(id);
+        scanChain(file, body.slice(command.index + command[0].length, commands[i + 1]?.index ?? body.length), id);
+      }
+    }
     // Root variables: const x = new Command('name')  |  export const x = new Command('name')
     for (const m of text.matchAll(/(?:export\s+)?(?:const|let)\s+(\w+)\s*=\s*new Command\(\s*['"`]([\w-]+)['"`]\s*\)/g)) {
       const id = node(m[2]);
@@ -267,6 +279,10 @@ export function cliCommands(cmdFiles, entryFile) {
       }
     }
     const def = /export\s+default\s+(\w+)/.exec(text)?.[1];
+    for (const m of text.matchAll(/for\s*\(\s*const\s+(\w+)\s+of\s+(\w+)\s*\)\s*\{?\s*(\w+)\.addCommand\(\s*\1\s*\)/g)) {
+      const parent = vars.get(`${file}:${m[3]}`);
+      if (parent !== undefined) nodes.get(parent).children.push({ ref: m[2], file });
+    }
     exportsByFile.set(file, { def, named: [...text.matchAll(/export\s+(?:const|function)\s+(\w+)/g)].map((x) => x[1]) });
   }
 
@@ -305,6 +321,7 @@ export function cliCommands(cmdFiles, entryFile) {
     if (seen.has(id)) return;
     seen.add(id);
     const n = nodes.get(id);
+    if (!n.name) { for (const c of n.children) visit(c, prefix, new Set(seen)); return; }
     const p = prefix ? `${prefix} ${n.name}` : n.name;
     items.push(`cli:cmd:${p}`);
     for (const o of n.opts) if (!["--help", "--version"].includes(o)) items.push(`cli:cmd:${p}:opt:${o}`);

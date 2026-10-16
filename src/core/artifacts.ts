@@ -230,7 +230,10 @@ async function sweep(maintenance: boolean, discover: boolean) {
 }
 
 /** File failures are itemized in SQLite and counted; infrastructure failures reject the sweep. */
-export function cleanup(maintenance = true, discover = true): Promise<CleanupResult> {
+export async function cleanup(maintenance = true, discover = true): Promise<CleanupResult> {
+  // An explicit request must inspect state created after an older sweep took its snapshot.
+  // Concurrent requests arriving together still share the next sweep; failed paths stay blocked.
+  await cleaning;
   if (!cleaning) {
     if (maintenance) maintenanceAt = Date.now() + 3600000;
     if (discover) discoveryAt = Date.now() + 3600000;
@@ -264,7 +267,7 @@ async function tick() {
   if (ticking) return;
   ticking = true;
   try {
-    const result = await cleanup(Date.now() >= maintenanceAt, Date.now() >= Math.min(discoveryAt, orphanAt));
+    const result = await (cleaning ?? cleanup(Date.now() >= maintenanceAt, Date.now() >= Math.min(discoveryAt, orphanAt)));
     reportCleanup(result);
     if (stopped) return;
     const db = await database();

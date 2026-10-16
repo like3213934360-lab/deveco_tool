@@ -565,9 +565,20 @@ export async function buildOutputs(project: Project, task: BuildTask = "assemble
   return list.map(({ mtime: _m, ...rest }) => rest);
 }
 
-export async function cleanProject(project: Project, signal: AbortSignal) {
-  await hvigor(project, ["clean"], signal, "Clean");
-  return { cleaned: true };
+export function cleanArguments(project: Project, modules?: string[], executionMode?: "module" | "project") {
+  invariant(!modules || modules.length > 0, "INVALID_INPUT", "modules must not be empty");
+  invariant(!modules || executionMode !== "project", "INVALID_INPUT", "Module selection requires execution_mode=module");
+  const selected = modules?.map((name) => {
+    const m = project.modules.find((m) => m.name === name);
+    invariant(m, "INVALID_INPUT", `Unknown module: ${name}`);
+    return `${m.name}@${m.target}`;
+  });
+  return selected ? ["--mode", "module", "-p", `product=${project.product}`, "-p", `module=${selected.join(",")}`, "clean"]
+    : executionMode ? ["--mode", executionMode, "-p", `product=${project.product}`, "clean"] : ["clean"];
+}
+export async function cleanProject(project: Project, signal: AbortSignal, modules?: string[], executionMode?: "module" | "project") {
+  const result = await hvigor(project, cleanArguments(project, modules, executionMode), signal, "Clean");
+  return { cleaned: true, scope: modules ? "selected-modules" : executionMode ?? "sdk-default", modules, log_artifact: result.log_artifact };
 }
 
 /* --------------------------------- create --------------------------------- */

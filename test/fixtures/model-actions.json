@@ -86,5 +86,10 @@
   {"id":"device-fixture","goal":"在已授权的调试数据库里准备独立的夹具表","expect":[{"tool":"device","arguments":{"action":"fixture","target":"device-1","operation":"prepare","bundle":"com.example.demo","module":"entry","db":"app.db","rows":[{"status":"dirty"}]}}]},
   {"id":"device-scenario","goal":"将 device-1 当前窗口退到后台","expect":[{"tool":"device","arguments":{"action":"scenario","target":"device-1","operation":"background"}}]},
   {"id":"device-trace","goal":"采集 device-1 上 3 秒官方 ArkUI 原始 trace","expect":[{"tool":"device","arguments":{"action":"trace","target":"device-1","seconds":3,"categories":["ace"]}}]},
-  {"id":"ui-form-inventory","goal":"仅清点 device-1 桌面的卡片实例，不添加或删除卡片。","expect":[{"tool":"ui","arguments":{"action":"form","form_action":"inventory","target":"device-1"}}]}
+  {"id":"ui-form-inventory","goal":"仅清点 device-1 桌面的卡片实例，不添加或删除卡片。","expect":[{"tool":"ui","arguments":{"action":"form","form_action":"inventory","target":"device-1"}}]},
+  {"id":"device-app-list","goal":"无需工程目录，列出 device-1 上安装的应用。","expect":[{"tool":"device","arguments":{"action":"app","operation":"list","target":"device-1"}}]},
+  {"id":"device-file-exists","goal":"检查 device-1 的指定文件是否存在，不删除。","expect":[{"tool":"device","arguments":{"action":"file","operation":"exists","remote":"/data/local/tmp/test.txt","target":"device-1"}}]},
+  {"id":"device-clipboard-read","goal":"读取 device-1 剪贴板。","expect":[{"tool":"device","arguments":{"action":"clipboard","operation":"read","target":"device-1"}}]},
+  {"id":"device-screen-state","goal":"查询 device-1 当前亮屏状态。","expect":[{"tool":"device","arguments":{"action":"screen","operation":"status","target":"device-1"}}]},
+  {"id":"device-timezone","goal":"读取 device-1 时区，不修改。","expect":[{"tool":"device","arguments":{"action":"system","operation":"timezone","target":"device-1"}}]}
 ]

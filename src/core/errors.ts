@@ -16,6 +16,8 @@ const categories: Record<string, ErrorCategory> = {
   CONFLICT: "input",
   TOOLCHAIN_MISSING: "environment",
   CAPABILITY_UNAVAILABLE: "environment",
+  DEVICE_COMMAND_FAILED: "tool", DEVICE_CLEANUP_FAILED: "tool",
+  DEVICE_OUTPUT_INVALID: "evidence", DELETE_NOT_CONFIRMED: "evidence",
   DEVICE_UNAVAILABLE: "environment",
   DEVICE_AMBIGUOUS: "input",
   TEAM_AMBIGUOUS: "input",
