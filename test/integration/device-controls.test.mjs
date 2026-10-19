@@ -84,7 +84,7 @@ test("system time rejects invalid dates before issuing any command; no automatic
   f.respond = () => reply("Current State: SLEEP");
   assert.equal((await m.screenControl("target", "wake", undefined, signal)).verified, false);
   f.respond = () => reply('Get parameter "persist.ace.darkmode" fail! errNum is:1002!');
-  await assert.rejects(m.screenControl("target", "viewmode", "dark", signal), { code: "CAPABILITY_UNAVAILABLE" });
+  await assert.rejects(m.screenControl("target", "viewmode", undefined, signal), { code: "CAPABILITY_UNAVAILABLE" });
   f.respond = () => reply("unexpected mode");
   await assert.rejects(m.screenControl("target", "viewmode", undefined, signal), { code: "CAPABILITY_UNAVAILABLE" });
   f.calls = []; f.respond = () => reply("Error: unsupported operation", 1);
@@ -111,4 +111,19 @@ test("package install shares HAP/HSP staging and cleans it once on failure or ca
   assert.equal(f.calls.filter((a) => a[3]?.startsWith("rm ")).length, 1);
   assert.throws(() => m.validatePackages([hap, hap]), { code: "INVALID_INPUT" });
   assert.throws(() => m.validatePackages([hap], { install_timeout: 90 }), { code: "INVALID_INPUT" });
+});
+
+
+test("viewmode setter does not depend on a missing legacy parameter and accepts only exact idempotent receipt", async () => {
+  f.calls = []; f.respond = args => args[3] === 'testhelper' ? reply('Set view mode to dark successfully.') : reply('Get parameter fail!', 1);
+  const changed = await m.screenControl('target', 'viewmode', 'dark', signal);
+  assert.equal(changed.command_confirmed, true); assert.equal(changed.state_verified, false);
+  assert.equal(f.calls.length, 1); assert.deepEqual(f.calls[0].slice(3), ['testhelper', 'set-viewmode', 'dark']);
+  f.respond = () => reply('Error: View mode is already set to light.', 1);
+  const unchanged = await m.screenControl('target', 'viewmode', 'light', signal);
+  assert.equal(unchanged.state_verified, true); assert.equal(unchanged.unchanged, true);
+  await assert.rejects(m.screenControl('target', 'viewmode', 'dark', signal), { code: 'DEVICE_COMMAND_FAILED' });
+  for (const output of ['Error: Service is not available.', 'success', 'Set view mode to dark successfully.\nError: failure']) {
+    f.respond = () => reply(output); await assert.rejects(m.screenControl('target', 'viewmode', 'dark', signal), { code: 'DEVICE_COMMAND_FAILED' });
+  }
 });

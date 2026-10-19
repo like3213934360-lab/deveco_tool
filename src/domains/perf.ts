@@ -158,6 +158,13 @@ export async function measureScroll(target: string, options: PerfOptions, signal
   const refresh = await capture(["SP_daemon", "-N", "1", "-f"], 15000);
   const reportedHz = Number(/refreshrate=(\d+)/.exec(refresh.stdout ?? "")?.[1]);
   const hz = !perfCommandFailure(refresh) && reportedHz > 0 ? reportedHz : undefined;
+  // fpsClear can report success, then expose old fence timestamps again on the next
+  // composition. Exclude previously observed timestamps; this is not a device-clock boundary.
+  const previous = await capture(["hidumper -s RenderService -a 'composer fps'"], 15000);
+  let boundaryFailure = perfCommandFailure(previous);
+  const previousFrames = boundaryFailure ? [] : parseComposerFps(previous.stdout ?? "");
+  const watermark = previousFrames.length ? Math.max(...previousFrames) : 0;
+  boundaryFailure ??= previousFrames.length ? undefined : "no_pre_run_timestamps";
   const cleared = await capture(["hidumper -s RenderService -a 'composer fpsClear'"], 10000);
   const clearFailed = !!cleared.error || cleared.code !== 0 || /\[fail\]|\berror\b|not supported|permission denied/i.test((cleared.stdout ?? "") + (cleared.stderr ?? ""));
   const series: number[][] = [], dumps: Capture[] = [];
@@ -166,7 +173,7 @@ export async function measureScroll(target: string, options: PerfOptions, signal
     const result = await capture(["hidumper -s RenderService -a 'composer fps'"], 15000, commandSignal);
     dumps.push(result);
     composerFailure ??= perfCommandFailure(result);
-    if (!clearFailed && !composerFailure) series.push(parseComposerFps(result.stdout ?? ""));
+    if (!clearFailed && !composerFailure) series.push(parseComposerFps(result.stdout ?? "").filter((timestamp) => timestamp > watermark));
   };
   // Read before any gesture, then independently at 1 Hz. Sampling after act() loses
   // frames whenever a gesture/tree wait outlives RenderService's recent-frame buffer.
@@ -220,6 +227,7 @@ export async function measureScroll(target: string, options: PerfOptions, signal
   }
   signal.throwIfAborted();
   const frames = mergeFrames(...series);
+  const staleFrames = mergeFrames(...dumps.map((dump) => parseComposerFps(dump.stdout ?? ""))).filter((timestamp) => timestamp <= watermark);
   const stats = frameStats(frames, hz);
   const sampling = { interval_ms: 1000, ...composerCoverage(series) };
   const memAfter = await readPss();
@@ -229,14 +237,14 @@ export async function measureScroll(target: string, options: PerfOptions, signal
   const profilerFailure = profiler.map(perfCommandFailure).find(Boolean);
   const zeroRecords = dumps.reduce((sum, dump) => sum + [...(dump.stdout ?? "").matchAll(/^\s*0\s*$/gm)].length, 0);
   const diagnostics = {
-    composer: { polls: dumps.length, timestamps: frames.length, zero_records: zeroRecords, reason: clearFailed ? "clear_failed" : composerFailure ?? (stats ? undefined : frames.length ? "insufficient_frame_intervals" : zeroRecords ? "all_zero_timestamps" : "no_frame_timestamps") },
+    composer: { boundary: { watermark_ns: watermark, stale_timestamps: staleFrames.length, error: boundaryFailure }, polls: dumps.length, timestamps: frames.length, zero_records: zeroRecords, reason: clearFailed ? "clear_failed" : composerFailure ?? (stats ? undefined : frames.length ? "insufficient_frame_intervals" : zeroRecords ? "all_zero_timestamps" : "no_frame_timestamps") },
     profilerfps: { polls: profiler.length, valid_samples: samples.length, zero_samples: allSamples.filter((s) => s.fps === 0).length, total_samples: allSamples.length,
       reason: samples.length ? undefined : profilerFailure ?? (allSamples.length ? "all_zero_samples" : "unrecognized_output") },
   };
   const activityVerified = activity.length > 0 && activity.every((a) => a.status === "changed");
   const artifact = await saveArtifact(JSON.stringify({ target, started_at: new Date(started).toISOString(), gestures, activity, captures, diagnostics, sampling }, null, 2), "application/json");
   const common = { gestures: gestures.length, elapsed_ms: Date.now() - started, activity, activity_verified: activityVerified, diagnostics, sampling, diagnostic_artifact: artifact.artifact_id, ...(memory ? { memory } : {}) };
-  if (stats) return { source: "composer", verdict: activityVerified && !composerFailure && sampling.status === "overlapping" && !stats.excluded_intervals.length ? perfVerdict(stats) : "inconclusive", ...stats, ...common };
+  if (stats) return { source: "composer", verdict: activityVerified && !boundaryFailure && !composerFailure && sampling.status === "overlapping" && !stats.excluded_intervals.length ? perfVerdict(stats) : "inconclusive", ...stats, ...common };
   if (samples.length) return {
     source: "profilerfps", verdict: "fps_only", avg_fps: +(samples.reduce((s, x) => s + x.fps, 0) / samples.length).toFixed(1),
     min_fps: Math.min(...samples.map((s) => s.fps)), samples: samples.length, ...common,

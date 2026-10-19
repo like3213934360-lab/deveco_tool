@@ -7,7 +7,7 @@
     "  '<tool> [param] [param=value] ...'  checked against the live tools/list JSON Schema (value must be in the enum when one exists)",
     "  'cli:<text>'  src/cli.ts must contain the text;  'prompt:<name>' / 'skill:<name>'  must be served by the MCP server"
   ],
-  "upstream_rev": { "deveco-code": "6c22235e5fadf0f18a35fdee06b78b6812ca422c", "deveco-cli": "bea703906b4fc1d6d818e97e375e6811e707aa18" },
+  "upstream_rev": { "deveco-code": "ace7a2af99f9a04bfd11c53cce36846039efcae6", "deveco-cli": "bea703906b4fc1d6d818e97e375e6811e707aa18" },
   "items": {
     "code:tool:arkts_check": { "status": "full", "to": "code action=check" },
     "code:tool:arkts_check:param:files": { "status": "full", "to": "code action=check files" },

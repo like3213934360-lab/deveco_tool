@@ -149,12 +149,21 @@ export async function screenControl(target: string, operation: string, value: nu
   if (["rotation", "rotate", "rotation_lock"].includes(operation)) return displayControl(target, operation, value, signal);
   if (operation === "viewmode") {
     invariant(value === undefined || value === "dark" || value === "light", "INVALID_INPUT", "viewmode value must be dark|light; omit to query");
-    const read = () => checkedCommand(target, ["param", "get", "persist.ace.darkmode"], signal);
-    const before = await read();
-    invariant(["dark", "light"].includes(before), "CAPABILITY_UNAVAILABLE", "Device does not expose a recognized viewmode", { output: before });
-    if (value !== undefined && before !== value) await checkedCommand(target, ["testhelper", "set-viewmode", value], signal);
-    const after = value === undefined ? before : await read();
-    return { target, value: after, previous: before, verified: value === undefined ? undefined : after === value };
+    if (value === undefined) {
+      const current = await checkedCommand(target, ["param", "get", "persist.ace.darkmode"], signal);
+      invariant(["dark", "light"].includes(current), "CAPABILITY_UNAVAILABLE", "Device does not expose a recognized viewmode", { output: current });
+      return { target, value: current, source: "persist.ace.darkmode" };
+    }
+    // The system getter used by testhelper is independent of the optional legacy parameter.
+    // In particular, a missing persist.ace.darkmode must not prevent a supported setter.
+    const result = await shell(target, ["testhelper", "set-viewmode", value], signal, 15000);
+    invariant(!result.truncated, "DEVICE_OUTPUT_INVALID", "Incomplete testhelper viewmode response");
+    const output = `${result.stdout}\n${result.stderr}`.trim();
+    invariant(!/not supported|not found|inaccessible|permission denied/i.test(output), "CAPABILITY_UNAVAILABLE", "Device cannot set viewmode", { output });
+    const unchanged = output === `Error: View mode is already set to ${value}.`;
+    invariant(unchanged || result.code === 0 && output === `Set view mode to ${value} successfully.`, "DEVICE_COMMAND_FAILED", "testhelper did not confirm viewmode", { output, exit_code: result.code });
+    return { target, requested: value, command_confirmed: true, unchanged, state_verified: unchanged,
+      ...(unchanged ? { value, source: "testhelper system getter" } : { note: "Setter accepted; verify application Configuration.colorMode or the system UI. The legacy parameter may be absent." }) };
   }
   if (operation === "sleeptime") {
     invariant(value === "restore" || typeof value === "number" && (value === -1 || Number.isInteger(value) && value >= 5000 && value <= 3600000), "INVALID_INPUT", "sleeptime value: -1, 5000..3600000 ms, or restore");

@@ -354,7 +354,7 @@ export const deviceTool = tool({
     ability: z.string().optional(),
     want: z.object({ uri: z.string().max(4096).optional(), action: z.string().max(256).optional(), parameters: z.record(z.string(), z.union([z.string().max(4096), z.number().int(), z.boolean()])).optional() }).strict().optional(),
     files: z.array(z.string()).min(1).max(64).optional().describe("Install: absolute HAP/HSP paths"),
-    shared: z.array(z.string()).min(1).max(64).optional().describe("app install: shared HSP paths"),
+    shared: z.array(z.string()).min(1).max(64).optional().describe("Inter-app HSPs (system-only); intra-app: files"),
     replace: z.boolean().optional().describe("app install: default true"),
     user: z.number().int().min(0).optional().describe("app install: OS user ID"),
     install_timeout: z.number().int().min(180).max(600).optional().describe("bm wait seconds"),

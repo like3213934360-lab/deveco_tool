@@ -603,6 +603,18 @@ async function withAgent(target: string, signal: AbortSignal | undefined, fn: (c
   }
 }
 
+/** Observe asynchronous rotation after one setter; never resend the mutation. */
+export async function settledRotation(read: () => Promise<unknown>, expected: number | undefined, signal: AbortSignal, timeoutMs = 2000) {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    signal.throwIfAborted();
+    const rotation = await read();
+    invariant(typeof rotation === "number" && [0, 1, 2, 3].includes(rotation), "DEVICE_OUTPUT_INVALID", "UITest returned an invalid rotation", { rotation });
+    if (expected === undefined || rotation === expected || Date.now() >= deadline) return rotation;
+    await delay(Math.min(100, Math.max(0, deadline - Date.now())), undefined, { signal });
+  }
+}
+
 /** Reuses the existing short-lived UITest connection; no resident client or polling loop. */
 export async function displayControl(target: string, operation: string, value: string | number | boolean | undefined, signal: AbortSignal) {
   invariant(operation !== "rotate" || typeof value === "number" && Number.isInteger(value) && value >= 0 && value <= 3,
@@ -612,11 +624,11 @@ export async function displayControl(target: string, operation: string, value: s
   await withAgent(target, signal, async (call, driver) => {
     if (operation === "rotate") await call("Driver.setDisplayRotation", driver, [value]);
     if (operation === "rotation_lock") await call("Driver.setDisplayRotationEnabled", driver, [!value]);
-    rotation = await call("Driver.getDisplayRotation", driver, []);
+    rotation = await settledRotation(() => call("Driver.getDisplayRotation", driver, []), operation === "rotate" ? value as number : undefined, signal);
   });
   invariant(typeof rotation === "number" && [0, 1, 2, 3].includes(rotation), "DEVICE_OUTPUT_INVALID", "UITest returned an invalid rotation", { rotation });
   invalidate(target);
-  return { target, rotation, ...(operation === "rotate" ? { verified: rotation === value } : operation === "rotation_lock" ? { command_confirmed: true, state_verified: false, locked_requested: value } : {}) };
+  return { target, rotation, ...(operation === "rotate" ? { verified: rotation === value, rotation_lock_side_effect: "UITest may disable rotation lock; restore it explicitly if needed" } : operation === "rotation_lock" ? { command_confirmed: true, state_verified: false, locked_requested: value } : {}) };
 }
 
 export function agentRpc(socket: net.Socket, api: string, self: string, args: unknown[], signal?: AbortSignal): Promise<unknown> {

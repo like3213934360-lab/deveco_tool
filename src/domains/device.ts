@@ -147,6 +147,7 @@ export async function install(target: string, packages: string[], signal: AbortS
 }
 
 const installHints: [RegExp, string][] = [
+  [/9568265|install param error/i, "Use files for HAPs and intra-app HSPs together. shared maps to bm -s for inter-app HSPs only; these require system distribution privileges and are not third-party shared modules."],
   [/9568322|signature.*(verif|invalid)|no signature/i, "Package is unsigned or the signature does not match this device. Configure signing (sign action=auto) or use an emulator."],
   [/sign info inconsistent/i, "The installed copy of this app was signed with a different certificate (e.g. before the debug certificate was renewed). Reinstall with run uninstall_first=true — this deletes the app's data on the device, so confirm with the user first."],
   [/9568332|version.*(downgrade|lower)/i, "Installed version is newer. Reinstall with run uninstall_first=true, or increase versionCode."],

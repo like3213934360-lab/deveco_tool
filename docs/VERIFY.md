@@ -25,7 +25,7 @@ CLI 仅 passed 返回 0，包括基线录制在内的其他结果均非零。MCP
 
 ## 测试、变更范围与基线
 
-- `project test kind=local|instrument`：模块、suite 或 suite#method、coverage、expected_tests、timeout_ms。timeout_ms 是后台任务期限（默认 10 分钟，最长 30 分钟），独立于单次调用的 wait；长任务通过 job wait 继续等待。SDK 原始逐用例结果与汇总交叉核对；退出 0、BUILD SUCCESSFUL 不代表用例通过。零用例、Ignore、数量/范围不符、缺失/旧报告不能通过。当前 SDK 只支持 default product；Local Test 在 macOS/Windows，Linux 明确不可用。
+- `project test kind=local|instrument`：模块、suite 或 suite#method、coverage、expected_tests、timeout_ms。timeout_ms 是后台任务期限（默认 10 分钟，最长 30 分钟），独立于单次调用的 wait；长任务通过 job wait 继续等待。启用 coverage 时串行执行构建，避免多个插桩阶段同时改写覆盖率文件；不会自动清缓存或修补 SDK 产物，SDK 报告生成错误返回 SDK_COVERAGE_FAILED。SDK 原始逐用例结果与汇总交叉核对；退出 0、BUILD SUCCESSFUL 不代表用例通过。零用例、Ignore、数量/范围不符、缺失/旧报告不能通过。当前 SDK 只支持 default product；Local Test 在 macOS/Windows，Linux 明确不可用。
 - Instrument Test 会卸载应用并清数据，必须 `allow_data_reset:true`。多设备并存时必须传 `target`；单设备可自动解析。MCP 将 SDK 子进程的 HDC 通道绑定到解析后的目标，不断开其他设备、不改 SDK 或全局环境。目标不可用、握手不兼容或 SDK 请求全局设备操作时失败，不切换目标。使用专用调试应用；原始测试与覆盖率报告仍须完整、新鲜且核算一致。
 - `--changed-only --base <ref>` 按每项 affects 的相对文件/目录前缀选检查，`*` 覆盖全工程。未覆盖变更阻塞；结果 scope 为 changed-only。共享配置/依赖应映射到必选的全量检查；没有映射不会被跳过。这是工程声明的影响映射，不声称自动证明依赖闭包。
 - 每项可设 baseline、tolerance_percent、max、repeats。数值取重复样本中位数；原样本完整保留。build 提供 build_ms、warnings、package_bytes；diagnostics 比较完整诊断集合；perf 提供 p95_ms、jank_rate、fps；launch 提供 launch_check_ms；command 可返回数值 metrics（默认越低越好）。max 是上界，不适合最低 FPS，应使用 higher 方向的 FPS 基线。

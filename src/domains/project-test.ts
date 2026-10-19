@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { createInterface } from "node:readline";
 import { artifactPath, commitArtifact, saveArtifact } from "../core/artifacts.js";
 import { invariant, ToolError } from "../core/errors.js";
 import { run } from "../core/proc.js";
@@ -42,6 +43,18 @@ export function parseTestReport(text: string) {
   return { counts, cases, verdict: failed || errors ? "failed" : !total || ignored ? "inconclusive" : "passed" };
 }
 
+/** SDK report generation can log an error yet exit zero. Scan once without loading the build log. */
+export async function sdkCoverageFailure(logFile: string): Promise<string | undefined> {
+  const stream = fs.createReadStream(logFile, { encoding: "utf8" });
+  const lines = createInterface({ input: stream, crlfDelay: Infinity });
+  try {
+    for await (const line of lines) {
+      if (/getInitCoverageData failed,\s*(?:SyntaxError|Error):/.test(line)) return line.replace(/\x1b\[[0-9;]*m/g, "").slice(0, 1200);
+    }
+  } finally { lines.close(); stream.destroy(); }
+  return undefined;
+}
+
 /** Execute SDK tasks without treating BUILD SUCCESSFUL or exit zero as a test pass. */
 export async function runProjectTests(input: ProjectTestInput, signal: AbortSignal, jobId?: string) {
   const project = inspectProject(input.project, input.product);
@@ -64,7 +77,7 @@ export async function runProjectTests(input: ProjectTestInput, signal: AbortSign
     result: path.join(m.root, `.test/default/intermediates/${kind}/coverage_data/test_result.txt`),
     coverage: path.join(m.root, `.test/default/outputs/${kind}/reports/coverageReport.json`) }));
   const before = new Map(reports.flatMap((r) => [r.result, r.coverage]).map((f) => [f, fs.statSync(f, { throwIfNoEntry: false })?.mtimeMs]));
-  const args = [input.kind === "local" ? "test" : "onDeviceTest", "-p", `module=${modules.map((m) => m.name).join(",")}`, "-p", `coverage=${input.coverage ?? true}`, "--no-daemon"];
+  const args = [input.kind === "local" ? "test" : "onDeviceTest", "-p", `module=${modules.map((m) => m.name).join(",")}`, "-p", `coverage=${input.coverage ?? true}`, "--no-daemon", ...(input.coverage !== false ? ["--no-parallel"] : [])];
   if (input.scope?.length) {
     invariant(input.scope.every((s) => /^[A-Za-z]\w*(?:#\w+)?$/.test(s)), "INVALID_INPUT", "scope entries must be suite or suite#method");
     args.push("-p", `scope=${input.scope.join(",")}`);
@@ -87,6 +100,7 @@ export async function runProjectTests(input: ProjectTestInput, signal: AbortSign
   }
   const logArtifact = await commitArtifact(log.id, log.file, "text/plain", jobId);
   const context = { target, routing: route?.routing, log_artifact: logArtifact.artifact_id };
+  const coverageError = input.coverage !== false ? await sdkCoverageFailure(log.file) : undefined;
   const results = [];
   for (const report of reports) {
     const stat = fs.statSync(report.result, { throwIfNoEntry: false });
@@ -98,10 +112,15 @@ export async function runProjectTests(input: ProjectTestInput, signal: AbortSign
     catch (error) { throw new ToolError("TEST_REPORT_INVALID", "SDK report accounting is incomplete", { report_artifact: artifact.artifact_id, log_artifact: logArtifact.artifact_id, reason: String(error) }); }
     let coverage;
     if (input.coverage !== false) {
+      invariant(!coverageError, "SDK_COVERAGE_FAILED", "SDK coverage generation failed, regardless of its build exit code", { ...context, module: report.module, counts: parsed.counts, report_artifact: artifact.artifact_id, sdk_error: coverageError,
+        init_coverage: path.join(path.dirname(path.dirname(report.result)), "init_coverage.json") }, "Inspect the SDK generator error; do not repair generated JSON or treat a clean retry as resolving the original fault");
       const cstat = fs.statSync(report.coverage, { throwIfNoEntry: false });
       invariant(cstat && cstat.mtimeMs >= started - 1000 && cstat.mtimeMs !== before.get(report.coverage), "TEST_REPORT_MISSING", "SDK did not produce fresh coverage", { ...context, module: report.module, counts: parsed.counts, report_artifact: artifact.artifact_id });
-      const rawCoverage = fs.readFileSync(report.coverage, "utf8"), data = JSON.parse(rawCoverage);
-      invariant(data.summary && Array.isArray(data.files), "TEST_REPORT_INVALID", "Unrecognized SDK coverage report");
+      const rawCoverage = fs.readFileSync(report.coverage, "utf8");
+      let data;
+      try { data = JSON.parse(rawCoverage); }
+      catch (error) { throw new ToolError("TEST_REPORT_INVALID", "SDK coverage report is invalid JSON", { ...context, module: report.module, reason: String(error), coverage_file: report.coverage }); }
+      invariant(data && data.summary && Array.isArray(data.files), "TEST_REPORT_INVALID", "Unrecognized SDK coverage report");
       coverage = { summary: data.summary, sha256: await fileSha256(report.coverage), artifact_id: (await saveArtifact(rawCoverage, "application/json", jobId)).artifact_id };
     }
     results.push({ module: report.module, ...parsed, report_artifact: artifact.artifact_id, coverage });
@@ -115,5 +134,5 @@ export async function runProjectTests(input: ProjectTestInput, signal: AbortSign
     : !scopeMatches || counts.total === 0 || counts.ignored || (input.expected_tests !== undefined && counts.total !== input.expected_tests) ? "inconclusive" : "passed";
   return { verdict, kind: input.kind, scope_matches: scopeMatches, counts, discovered, expected_tests: input.expected_tests, results, sdk: sdkInfo(), target,
     routing: route?.routing,
-    data_reset: input.kind === "instrument", elapsed_ms: execution.elapsedMs, exit_code: execution.code, log_artifact: logArtifact.artifact_id };
+    coverage_build: input.coverage !== false ? "serial" : undefined, data_reset: input.kind === "instrument", elapsed_ms: execution.elapsedMs, exit_code: execution.code, log_artifact: logArtifact.artifact_id };
 }

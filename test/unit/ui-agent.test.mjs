@@ -9,7 +9,7 @@ import { build } from "esbuild";
 
 const bundle = path.resolve("node_modules/.cache/deveco-agent-harness.mjs");
 await build({ entryPoints: [path.resolve("src/domains/ui.ts")], outfile: bundle, bundle: true, format: "esm", platform: "node", packages: "external", logLevel: "error" });
-const { agentRpc, mp4Video } = await import(pathToFileURL(bundle).href);
+const { agentRpc, mp4Video, settledRotation } = await import(pathToFileURL(bundle).href);
 after(() => fs.rmSync(bundle, { force: true }));
 async function connection(t, onRequest) {
   const sockets = new Set();
@@ -61,4 +61,16 @@ test("recording export requires finalized MP4 video container and media bytes", 
   const valid = Buffer.concat([box("ftyp", Buffer.from("isom")), box("mdat", Buffer.from("samples")), box("moov", Buffer.from("vide"))]);
   assert.equal(mp4Video(valid), true);
   for (const bad of [Buffer.alloc(0), Buffer.from("[FAIL]"), valid.subarray(0, -1), box("ftyp", Buffer.from("isom")), Buffer.concat([box("ftyp", Buffer.from("isom")), box("mdat", Buffer.from("samples"))])]) assert.equal(mp4Video(bad), false);
+});
+
+
+test("rotation waits for asynchronous state without replaying a setter and remains bounded", async () => {
+  const signal = new AbortController().signal; let calls = 0;
+  assert.equal(await settledRotation(async () => ++calls < 3 ? 0 : 1, 1, signal), 1);
+  assert.equal(calls, 3);
+  calls = 0; assert.equal(await settledRotation(async () => { calls++; return 0; }, 1, signal, 20), 0);
+  assert.ok(calls <= 3);
+  await assert.rejects(settledRotation(async () => '1', 1, signal), { code: 'DEVICE_OUTPUT_INVALID' });
+  const controller = new AbortController(); controller.abort();
+  await assert.rejects(settledRotation(async () => 1, 1, controller.signal));
 });

@@ -36,6 +36,7 @@ await build({ entryPoints: [path.join(root, "src/domains/perf.ts")], outfile: en
       }
       if(args[0].includes('fpsClear'))return {...out,...f.clear};
       if(args[0].includes('composer fps')){
+        if(!f.baselineRead){f.baselineRead=true;return {...out,stdout:'999000000000',...f.baseline};}
         f.composerCalls++;if(f.inGesture)f.pollsDuringGestures++;
         return {...out,...(typeof f.composer==='function'?await f.composer(signal):f.composer)};
       }
@@ -149,4 +150,36 @@ test("cancellation aborts an in-flight composer read and leaves no background po
   } });
   await assert.rejects(m.measureScroll('fixture', { repeat: 1 }, controller.signal));
   assert.equal(f.composerAborted, true); assert.equal(f.composerCalls, 2); assert.equal(f.artifact, undefined);
+});
+
+
+test("timestamps resurfacing after successful clear cannot contaminate the current measurement", async () => {
+  const fresh = Array.from({length: 61}, (_, i) => String(Math.round(2e12 + i * 1e9 / 60))).join('\n');
+  const old = '1000000000000\n1000016666667';
+  const result = await m.measureScroll('fixture', { repeat: 1 }, reset({ baseline: { stdout: old }, composer: { stdout: old + '\n' + fresh } }));
+  assert.equal(result.verdict, 'smooth'); assert.equal(result.frames, 61);
+  assert.equal(result.diagnostics.composer.boundary.stale_timestamps, 2);
+  assert.deepEqual(result.excluded_intervals, []);
+  assert.ok(f.artifact.captures.some(c => c.stdout === old + '\n' + fresh), 'raw history remains available');
+});
+
+test("unavailable watermark cannot turn an unbounded history into a quality verdict", async () => {
+  const stdout = Array.from({length: 61}, (_, i) => String(Math.round(2e12 + i * 1e9 / 60))).join('\n');
+  const result = await m.measureScroll('fixture', {repeat: 1}, reset({baseline: {code: 1, stderr: 'Permission denied'}, composer: {stdout}}));
+  assert.equal(result.verdict, 'inconclusive');
+  assert.equal(result.diagnostics.composer.boundary.error, 'permission_denied');
+});
+
+test("new long gaps remain inconclusive after old timestamps are removed", async () => {
+  const frames = [...Array.from({length: 20}, (_, i) => 2e12 + i * 1e9 / 60), ...Array.from({length: 20}, (_, i) => 2e12 + 2e9 + i * 1e9 / 60)];
+  const result = await m.measureScroll('fixture', {repeat: 1}, reset({baseline: {stdout: '1000000000000'}, composer: {stdout: frames.map(Math.round).join('\n')}}));
+  assert.equal(result.verdict, 'inconclusive'); assert.equal(result.excluded_intervals.length, 1);
+});
+
+
+test("zero pre-run records do not prove subsequently returned timestamps are fresh", async () => {
+  const stdout = Array.from({length: 61}, (_, i) => String(Math.round(2e12 + i * 1e9 / 60))).join('\n');
+  const result = await m.measureScroll('fixture', {repeat: 1}, reset({baseline: {stdout: 'The fps of screen [Id:0] is:\n0\n0'}, composer: {stdout}}));
+  assert.equal(result.verdict, 'inconclusive');
+  assert.equal(result.diagnostics.composer.boundary.error, 'no_pre_run_timestamps');
 });
