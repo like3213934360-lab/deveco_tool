@@ -1,11 +1,34 @@
 import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
 import { app } from '../support/acceptance.mjs';
 
 test('baselines: measured SDK/device evidence with explicit record and compare', async (t) => {
-  const { call, job, ui, project, target, directory, receipt } = await app(t);
+  const { call, job, ui, project, target, directory, receipt, defer, info } = await app(t);
+  const prefix = `acceptance-${crypto.randomUUID()}`;
+  const names = Object.fromEntries(['build', 'diagnostics', 'launch', 'visual'].map((kind) => [kind, `${prefix}-${kind}`]));
+  const root = fs.realpathSync(project), state = path.join(root, '.arkpilot');
+  if (fs.existsSync(state)) assert.equal(fs.realpathSync(state), state, 'Project state directory must not be redirected');
+  const model = info.model ?? info.name ?? target;
+  assert.equal(typeof model, 'string'); assert.ok(model.length > 0);
+  const visual = path.join(root, '.arkpilot', 'baselines', `${names.visual}@${model.replace(/[^\w.-]+/g, '_')}.png`);
+  const files = [...['build', 'diagnostics', 'launch'].map((kind) => path.join(root, '.arkpilot', 'quality-baselines', `${names[kind]}.json`)), visual, `${visual}.json`];
+  // Claim only absent, exact UUID-scoped files before recording, including partial-failure outputs.
+  for (const file of files) {
+    const parent = path.dirname(file);
+    if (fs.existsSync(parent)) assert.equal(fs.realpathSync(parent), parent, 'Baseline directory must not be redirected');
+    assert.equal(fs.lstatSync(file, { throwIfNoEntry: false }), undefined, `Refusing to overwrite ${file}`);
+  }
+  for (const file of files) defer(() => {
+    const stat = fs.lstatSync(file, { throwIfNoEntry: false });
+    if (!stat) return;
+    assert.equal(fs.realpathSync(path.dirname(file)), path.dirname(file), 'Baseline directory changed; retain for inspection');
+    assert.ok(stat.isFile() && !stat.isSymbolicLink(), `Not an owned baseline file: ${file}`);
+    fs.rmSync(file); // No directory/glob deletion; all pre-existing baselines remain untouched.
+  });
+  receipt('baseline-ownership.json', { names, files });
   let sequence = 0;
   const verify = async (checks, mode = 'compare') => {
     const n = sequence++, plan = path.join(directory, `plan-${n}.json`);
@@ -15,15 +38,15 @@ test('baselines: measured SDK/device evidence with explicit record and compare',
   };
   await t.test('build-size-warning-diagnostics-and-launch-baselines', async () => {
     const checks = [
-      { id: 'build', type: 'build', options: { clean: true }, baseline: 'acceptance-build', repeats: 3, tolerance_percent: 25 },
-      { id: 'diagnostics', type: 'diagnostics', options: { files: ['entry/src/main/ets/pages/Util.ets'] }, baseline: 'acceptance-diagnostics' },
-      { id: 'launch', type: 'launch', baseline: 'acceptance-launch', repeats: 3, tolerance_percent: 25 },
+      { id: 'build', type: 'build', options: { clean: true }, baseline: names.build, repeats: 3, tolerance_percent: 25 },
+      { id: 'diagnostics', type: 'diagnostics', options: { files: ['entry/src/main/ets/pages/Util.ets'] }, baseline: names.diagnostics },
+      { id: 'launch', type: 'launch', baseline: names.launch, repeats: 3, tolerance_percent: 25 },
     ];
     assert.equal((await verify(checks, 'record')).verdict, 'recorded');
     assert.equal((await verify(checks)).verdict, 'passed');
   });
   await t.test('visual-record-compare-and-missing-baseline', async () => {
-    const checks = [{ id: 'visual', type: 'visual', options: { name: `acceptance-visual-${Date.now()}`, context: 'fixture-home-default' } }];
+    const checks = [{ id: 'visual', type: 'visual', options: { name: names.visual, context: 'fixture-home-default' } }];
     assert.equal((await verify(checks)).verdict, 'blocked');
     assert.equal((await verify(checks, 'record')).verdict, 'recorded');
     assert.equal((await verify(checks)).verdict, 'passed');

@@ -149,17 +149,22 @@ export function subtree(nodes: UiNode[], id: string | number) {
   return nodes.filter((n) => keep.has(n.i));
 }
 
-export function compact(nodes: UiNode[], options: { interactive?: boolean; limit?: number; bundle?: string; depth?: number } = {}) {
+interface TreeOptions { interactive?: boolean; limit?: number; bundle?: string; depth?: number }
+
+/** Compact tree and filter accounting share one pass; depth always refers to the original tree. */
+export function compactTree(nodes: UiNode[], options: TreeOptions = {}) {
   const limit = options.limit ?? 300;
   const lines: string[] = [];
+  const filtered = { bundle: 0, depth: 0, geometry: 0, interactive: 0, detail: 0, limit: 0 };
   for (const n of nodes) {
-    if (options.bundle && n.bundle !== options.bundle) continue;
+    if (options.bundle && n.bundle !== options.bundle) { filtered.bundle++; continue; }
     // devecocli semantics: 0 = unlimited, 1 = root only, 2 = root + children (node depth is 0-based).
-    if (options.depth && n.depth >= options.depth) continue;
-    if (!n.rect || n.visible === false) continue;
+    if (options.depth && n.depth >= options.depth) { filtered.depth++; continue; }
+    if (!n.rect || n.visible === false) { filtered.geometry++; continue; }
     const interesting = n.text || n.key || n.clickable || /Button|Input|TextArea|Toggle|Checkbox|Radio|Slider|Search|Select|Tab/i.test(n.type);
-    if (options.interactive && !interesting) continue;
-    if (!interesting && !options.interactive && n.depth > 3 && !n.text) continue;
+    if (options.interactive && !interesting) { filtered.interactive++; continue; }
+    if (!interesting && !options.interactive && n.depth > 3 && !n.text) { filtered.detail++; continue; }
+    if (lines.length >= limit) { filtered.limit++; continue; }
     const r = n.rect;
     const attrs = [
       n.key ? `key=${n.key}` : "",
@@ -171,9 +176,22 @@ export function compact(nodes: UiNode[], options: { interactive?: boolean; limit
       n.focused ? "focused" : "",
     ].filter(Boolean).join(" ");
     lines.push(`${"  ".repeat(Math.min(n.depth, 12))}#${n.i} ${n.type} [${r.x1},${r.y1},${r.x2},${r.y2}] ${attrs}`.trimEnd());
-    if (lines.length >= limit) { lines.push(`… truncated at ${limit} nodes; filter with ui find`); break; }
   }
-  return lines.join("\n");
+  const shown = lines.length;
+  if (filtered.limit) lines.push(`… ${filtered.limit} more matching nodes; filter with ui find`);
+  const hint = shown || !nodes.length ? undefined : [
+    "No nodes remain after filtering.",
+    filtered.interactive ? "Use interactive=false to include unlabelled containers." : "",
+    filtered.depth ? "Increase depth or use depth=0; depth=1 includes roots only." : "",
+    filtered.bundle ? "Check the requested bundle against the current window." : "",
+    filtered.geometry ? "Nodes without bounds or marked invisible are excluded." : "",
+  ].filter(Boolean).join(" ");
+  return { tree: lines.join("\n"), shown_nodes: shown, filtered_nodes: filtered, truncated: filtered.limit > 0, ...(hint ? { hint } : {}) };
+}
+
+/** Text-only rendering for flow/session records; uses the same filters as ui tree. */
+export function compact(nodes: UiNode[], options: TreeOptions = {}) {
+  return compactTree(nodes, options).tree;
 }
 
 /* ------------------------------ blank screen ------------------------------ */
@@ -292,6 +310,33 @@ export async function listWindows(target: string, all = false, signal?: AbortSig
   const windows = parseWindows(dump.stdout);
   // Type 1 = application main window (upstream convention); system windows are 2000+.
   return all ? windows : windows.filter((w) => w.type < 2000 || w.focused);
+}
+
+/** One bounded query after an absent match, never on each poll or a successful visible match. */
+async function missingUiContext(target: string, scope: { window?: number; bundle?: string }, signal?: AbortSignal) {
+  try {
+    const dump = await shell(target, ["hidumper", "-s", "WindowManagerService", "-a", "-a"], signal, 3000);
+    invariant(dump.code === 0 && !dump.truncated && /^\s*WindowName\s/m.test(dump.stdout) && /Focus window:\s*-?\d+/.test(dump.stdout),
+      "DEVICE_OUTPUT_INVALID", "Window context is unavailable or incomplete");
+    const windows = parseWindows(dump.stdout), visible = windows.filter((w) => w.visible);
+    const focused = visible.find((w) => w.focused);
+    // OpenHarmony wm_common.h WindowType: KEYGUARD=2110, DESKTOP=2001. Names vary by host.
+    const display = windows.find((w) => w.id === scope.window)?.display ?? focused?.display;
+    const keyguard = visible.find((w) => w.type === 2110 && (display === undefined || w.display === display));
+    const status = keyguard ? "lockscreen_visible" : focused?.type === 2001 ? "desktop"
+      : focused ? focused.type < 2000 ? "application" : "system_window" : "no_focused_window";
+    return { ui_context: { status, source: "WindowManagerService", focused_window: focused ?? null,
+      visible_app_windows: visible.filter((w) => w.type < 2000).length,
+      ...(keyguard ? { lockscreen_window: keyguard.id } : {}),
+      ...(scope.window !== undefined ? { requested_window_visible: visible.some((w) => w.id === scope.window) } : {}),
+    }, hint: keyguard ? "The lock screen is visible. Unlock the device before checking app controls; a passcode cannot be unlocked remotely."
+      : focused?.type === 2001 ? "The desktop is focused. For app controls, launch/select the intended app; desktop selectors remain valid."
+      : "No selector match in the queried tree. Check the window/bundle scope with ui observe; absence alone does not verify the app state." };
+  } catch (error) {
+    signal?.throwIfAborted();
+    return { ui_context: { status: "unavailable", error: errorResult(error) },
+      hint: "No selector match; window context could not be verified. Inspect ui observe and the context error before changing the selector." };
+  }
 }
 
 /* ------------------------------- snapshots ------------------------------- */
@@ -685,7 +730,7 @@ export async function waitFor(target: string, selector: Selector, state: "visibl
     last = select(nodes, selector);
     const ok = state === "visible" ? last.length > 0 : last.length === 0;
     const result = { passed: ok, state, matches: last.slice(0, 3).map(describe), ...automaticResult(accepted) };
-    if (ok || Date.now() >= deadline) return result;
+    if (ok || Date.now() >= deadline) return { ...result, ...(!last.length ? await missingUiContext(target, scope, signal) : {}) };
     await delay(Math.min(400, Math.max(0, deadline - Date.now())), undefined, { signal });
   }
 }
@@ -697,7 +742,8 @@ export async function findElements(target: string, selector: Selector, options: 
     const matches = select(await dumpTree(target, signal, 0, options), selector);
     if (matches.length || Date.now() >= deadline) {
       const offset = options.offset ?? 0, limit = options.limit ?? 20;
-      return { count: matches.length, matches: matches.slice(offset, offset + limit).map(describe), next_offset: offset + limit < matches.length ? offset + limit : null, timed_out: !matches.length && !!options.timeout_ms, scope: { window: options.window, bundle: options.bundle } };
+      return { count: matches.length, matches: matches.slice(offset, offset + limit).map(describe), next_offset: offset + limit < matches.length ? offset + limit : null, timed_out: !matches.length && !!options.timeout_ms, scope: { window: options.window, bundle: options.bundle },
+        ...(!matches.length ? await missingUiContext(target, options, signal) : {}) };
     }
     await delay(Math.min(400, Math.max(0, deadline - Date.now())), undefined, { signal });
   }

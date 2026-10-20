@@ -1,6 +1,6 @@
 {
   "name": "deveco-mcp",
-  "version": "1.6.1",
+  "version": "1.6.3",
   "description": "Lean HarmonyOS MCP server: build, deploy, device UI, code intelligence and updatable knowledge packs for any MCP host.",
   "type": "module",
   "license": "MIT",
@@ -34,6 +34,10 @@
     "test:unit": "node --test --test-concurrency=4 \"test/unit/*.test.mjs\"",
     "test:integration": "node tools/build.mjs && node --test --test-concurrency=4 \"test/integration/*.test.mjs\"",
     "test:media": "node --test test/integration/media/recording.test.mjs",
+    "test:cli-local": "node tools/build.mjs && node --test --test-concurrency=1 test/integration/cli-local.test.mjs",
+    "test:lsp": "node tools/build.mjs && node --test --test-concurrency=1 test/e2e/lsp.test.mjs",
+    "test:device-controls": "node tools/build.mjs && node --test --test-concurrency=1 --test-name-pattern=\"^device controls$\" test/e2e/device-controls.test.mjs",
+    "test:emulator-controls": "node tools/build.mjs && node --test --test-concurrency=1 --test-name-pattern=\"^disposable emulator system controls$\" test/e2e/device-controls.test.mjs",
     "test:model": "node test/model/eval.mjs",
     "test:models": "node test/model/matrix.mjs",
     "test:model-report": "node test/model/report.mjs",

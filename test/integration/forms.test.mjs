@@ -73,7 +73,34 @@ test('inventory scans beyond three pages, deduplicates wrapper keys and retains 
   assert.equal((await m.inventoryForms({...input,max_pages:1},reset({pages:1,cards:[]}))).complete,true);
 });
 test('unknown host fails explicitly',async()=>{
-  reset(); f.act=async()=>{}; f.view='unknown';await assert.rejects(m.inventoryForms(input,f.controller.signal),{code:'CAPABILITY_UNAVAILABLE'});
+  reset(); f.act=async()=>{}; f.view='unknown';
+  let reads = 0; f.tree = () => { reads++; return nodes(); };
+  await assert.rejects(m.inventoryForms(input,f.controller.signal),{code:'CAPABILITY_UNAVAILABLE'});
+  assert.ok(reads > 1 && reads < 30, 'Readiness polling must stop on an unsupported host');
+});
+test('owned cleanup waits for desktop transitions without repeating Home or removal', async () => {
+  const signal = reset(), before = await m.inventoryForms(input, signal);
+  const attached = await m.attachForm({ ...input, form_index: 0 }, before, signal);
+  const act = f.act; let transitioning = 0;
+  f.calls = [];
+  f.act = async (action, signal) => {
+    await act(action, signal);
+    if (action.action === 'key' || action.action === 'swipe') transitioning = 3;
+  };
+  f.tree = () => transitioning-- > 0 ? [] : nodes();
+  const removed = await m.removeForm(input, attached, signal);
+  assert.equal(removed.removed, true);
+  assert.equal(removed.preexisting_preserved, true);
+  assert.deepEqual(f.cards.map((v) => v.id), before.instances.map((v) => v.instance_id));
+  assert.equal(f.calls.filter((v) => v.action === 'long_click').length, 1);
+  assert.equal(f.calls.filter((v) => v.action === 'key').length, 2, 'One Home per inventory; no action retries');
+});
+test('desktop readiness wait honors cancellation before any card mutation', async () => {
+  const signal = reset(); let reads = 0;
+  f.tree = () => { if (++reads === 2) f.controller.abort(new Error('cancelled during Home')); return []; };
+  await assert.rejects(m.inventoryForms(input, signal), /cancelled during Home/);
+  assert.equal(f.calls.length, 1);
+  assert.equal(f.calls[0].action, 'key');
 });
 test('catalog rewinds a default preview in the middle and cannot call a bounded partial scan complete', async () => {
   const catalog = await m.catalogForms(input, reset({ preview: 2, previews: 4 }));

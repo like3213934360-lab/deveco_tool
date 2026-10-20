@@ -70,23 +70,30 @@ test("valid composer frames preserve frame statistics and verdict", async () => 
   const r = await m.measureScroll('fixture', { repeat: 1 }, reset({ composer: { stdout } }));
   assert.equal(r.source, 'composer'); assert.equal(r.verdict, 'smooth'); assert.equal(r.avg_fps, 60);
   assert.equal(r.frame_ms.p95, 16.67); assert.equal(f.gestures, 2);
+  assert.deepEqual(r.reasons, []);
 });
 test("valid frame timestamps alone do not prove scrolling occurred", async () => {
   const stdout = Array.from({ length: 61 }, (_, i) => String(Math.round(1e12 + i * 1e9 / 60))).join('\n');
   const r = await m.measureScroll('fixture', { repeat: 1 }, reset({ still: true, composer: { stdout } }));
   assert.equal(r.avg_fps, 60); assert.equal(r.activity_verified, false); assert.equal(r.verdict, 'inconclusive');
+  assert.deepEqual(r.reasons.map(r=>r.code), ['activity_unverified']);
+  assert.deepEqual(r.reasons[0].gesture_indexes, [0,1]);
+  assert.deepEqual(f.artifact.reasons, r.reasons);
 });
 test("permission/exit failures remain explicit and their raw streams are retained", async () => {
   const r = await m.measureScroll('fixture', { repeat: 1 }, reset({ composer: { code: 1, stderr: 'Permission denied' }, profiler: { code: 127, stderr: 'SP_daemon: command not found' } }));
   assert.equal(r.verdict, 'inconclusive');
   assert.equal(r.diagnostics.composer.reason, 'permission_denied');
   assert.equal(r.diagnostics.profilerfps.reason, 'unsupported_command');
+  assert.ok(r.reasons.some(r=>r.code==='composer_failed'&&r.message.includes('permission_denied')));
+  assert.ok(r.reasons.some(r=>r.code==='frame_data_insufficient'));
   assert.ok(f.artifact.captures.some(c => c.code === 127 && c.stderr.includes('not found')));
 });
 test("failed clear prevents using stale composer timestamps as a successful measurement", async () => {
   const stdout = Array.from({ length: 61 }, (_, i) => String(Math.round(1e12 + i * 1e9 / 60))).join('\n');
   const r = await m.measureScroll('fixture', { repeat: 1 }, reset({ clear: { code: 1 }, composer: { stdout } }));
   assert.equal(r.verdict, 'inconclusive'); assert.equal(r.diagnostics.composer.reason, 'clear_failed');
+  assert.ok(r.reasons.some(r=>r.code==='clear_failed'));
 });
 test("gesture failure cancels the concurrent sampler and is not swallowed", async () => {
   const signal = reset({ failGesture: true, waitSampler: true });
@@ -130,6 +137,7 @@ test("disjoint windows stay inconclusive even when the missing interval is below
   assert.equal(r.source, 'composer'); assert.deepEqual(r.excluded_intervals, []);
   assert.equal(r.sampling.status, 'gaps'); assert.equal(r.sampling.gaps[0].reason, 'non_overlapping_windows');
   assert.equal(r.verdict, 'inconclusive');
+  assert.ok(r.reasons.some(r=>r.code==='sampling_incomplete'));
 });
 
 test("a composer read failure stops that sampler without retrying at the end", async () => {
@@ -174,6 +182,7 @@ test("new long gaps remain inconclusive after old timestamps are removed", async
   const frames = [...Array.from({length: 20}, (_, i) => 2e12 + i * 1e9 / 60), ...Array.from({length: 20}, (_, i) => 2e12 + 2e9 + i * 1e9 / 60)];
   const result = await m.measureScroll('fixture', {repeat: 1}, reset({baseline: {stdout: '1000000000000'}, composer: {stdout: frames.map(Math.round).join('\n')}}));
   assert.equal(result.verdict, 'inconclusive'); assert.equal(result.excluded_intervals.length, 1);
+  assert.ok(result.reasons.some(r=>r.code==='unattributed_gaps'));
 });
 
 

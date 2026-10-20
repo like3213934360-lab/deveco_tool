@@ -133,24 +133,29 @@ test("required prompt arguments never interpolate missing or malformed project v
   finally { await reconnected.close(); }
 });
 
-test("all 103 audited entrypoints remain discoverable and reject unknown fields before execution", async (t) => {
+test("the audited entrypoint set exactly matches discovery and rejects unknown fields before execution", async (t) => {
   const c = connect(raw(t).env);
   try {
     await c.initialize();
     const listed = await c.request("tools/list");
-    const tools = new Map(listed.result.tools.map((tool) => [tool.name, tool]));
-    const entries = JSON.parse(fs.readFileSync(path.join(root, "test/fixtures/tool-actions.json")));
-    assert.equal(entries.length, 103);
-    assert.equal(new Set(entries).size, 103);
+    const entries = JSON.parse(fs.readFileSync(path.join(root, "test/fixtures/tool-actions.json"), "utf8"));
+    const discovered = listed.result.tools.flatMap(({ name, inputSchema }) => {
+      const action = inputSchema.properties.action;
+      if (!action) return [name];
+      assert.ok(Array.isArray(action.enum) && action.enum.length > 0, `${name}: actions must be enumerated`);
+      return action.enum.map((value) => `${name}.${value}`);
+    });
+    assert.equal(new Set(entries).size, entries.length, "the audited fixture must not contain duplicates");
+    assert.equal(new Set(discovered).size, discovered.length, "discovery must not contain duplicate entrypoints");
+    assert.deepEqual([...discovered].sort(), [...entries].sort(), "every discovered entrypoint must be audited, with no stale fixture entries");
     for (const entry of entries) {
       const [name, action] = entry.split(".");
-      const tool = tools.get(name);
-      assert.ok(tool, `${entry}: tool must remain discoverable`);
-      if (action) assert.ok(tool.inputSchema.properties.action.enum.includes(action), `${entry}: action must remain discoverable`);
+      // In particular, auth/sign/cloud actions must stop at validation, never enter their handlers.
       const response = await c.call(name, { ...(action ? { action } : {}), audit_unknown_field: true });
       assert.equal(response.isError, true, entry);
       assert.equal(response.data.error.code, "INVALID_INPUT", entry);
       assert.deepEqual(response.data.error.details.unknown, ["audit_unknown_field"], entry);
+      assert.match(response.data.error.hint, /Nothing was executed/, entry);
     }
     const jobs = await c.call("job", { action: "list" });
     assert.equal(jobs.isError, false, JSON.stringify(jobs.data));

@@ -1,5 +1,6 @@
 // Real acceptance; explicit objects and private traces. See ../README.md.
 import assert from "node:assert/strict";
+import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { test } from "node:test";
@@ -8,20 +9,21 @@ import { session, required } from "../support/acceptance.mjs";
 test("emulator", async (t) => {
   const { call, raw, directory, run, defer } = await session(t);
 
-  const os_version = required("E2E_IMAGE"), name = `deveco_test_${Date.now()}`;
+  const os_version = required("E2E_IMAGE"), name = `deveco_test_${crypto.randomUUID().replaceAll("-", "").slice(0, 16)}`;
   const before = (await call("emulator", { action: "list", details: true })).emulators;
+  assert.ok(!before.some((instance) => instance.name === name), "Refuse to claim a pre-existing instance");
   fs.writeFileSync(path.join(directory, `${run}-instances.json`), JSON.stringify(before, null, 2));
-  let target, created = false;
+  let target, creationRequested = false;
   defer(async () => {
-    if (!created) return;
+    if (!creationRequested) return;
     const instance = (await call("emulator", { action: "list" })).emulators.find((e) => e.name === name);
     if (instance?.running) await call("emulator", { action: "stop", name });
     if (instance) await call("emulator", { action: "delete", name });
   });
   await t.test("emulator.license-idempotent", async () => assert.equal((await call("emulator", { action: "license" })).accepted, true));
   await t.test("emulator.create", async () => {
+    creationRequested = true; // A failed response can still leave this UUID-named instance to clean up.
     assert.equal((await call("emulator", { action: "create", name, device_type: "foldable", os_version, auto_accept_license: false })).created, name);
-    created = true;
     const d = (await call("emulator", { action: "list", details: true })).emulators.find((e) => e.name === name);
     assert.equal(d.deviceType, "foldable"); assert.equal(d.isRunning, "false");
   });
@@ -36,8 +38,8 @@ test("emulator", async (t) => {
     assert.equal(d.isError, true); assert.equal(d.data.error.code, "CONFLICT");
   });
   await t.test("emulator.single-name-and-names-equivalent", async () => {
-    const one = await call("emulator", { action: "start", name });
-    const many = await call("emulator", { action: "start", names: [name] });
+    const one = await call("emulator", { action: "start", name, auto_accept_license: false });
+    const many = await call("emulator", { action: "start", names: [name], auto_accept_license: false });
     assert.equal(one.already_running, true); assert.deepEqual(many, one);
   });
   await t.test("emulator.scenario-fold-real-screen", async () => {
@@ -58,7 +60,7 @@ test("emulator", async (t) => {
   });
   await t.test("emulator.delete", async () => {
     assert.equal((await call("emulator", { action: "delete", name })).deleted, name);
-    created = false;
+    creationRequested = false;
     const after = (await call("emulator", { action: "list", details: true })).emulators;
     assert.deepEqual(after, before, "existing instances and their settings must stay intact");
   });

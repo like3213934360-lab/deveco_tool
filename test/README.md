@@ -13,9 +13,13 @@
 | `npm run test:unit` | 独立规则及纯逻辑；某些规则夹具包含临时文件 |
 | `npm run test:integration` | MCP、进程、数据库、打包、模型采集/评分的离线回归 |
 | `npm run test:media` | 已安装 ffmpeg/ffprobe 的真实生成与严格解码；缺少命令直接失败 |
-| `npm run test:e2e` | 现有 SDK 的新模板、Kit、增量 HAR/HSP 构建；仅在专用证据目录创建工程 |
+| `npm run test:cli-local` | 本地 init 模式/范围/保护、SQLite + ZIP 知识包构建及本地安装、缺工程的 serve-lsp 拒绝；Node >=22.18、tar、POSIX zip，无 SDK/账号/远程 registry |
+| `npm run test:lsp` | 真实 SDK 的编辑器 stdio：initialize、ArkTS hover / C++ 符号、shutdown/exit、独立 EOF/SIGTERM、ArkTS 分块 exit；POSIX、E2E_DIR、含 leaf/Add 与 compile_commands.json 的完整 E2E_PROJECT，无设备 |
+| `npm run test:device-controls` | 专用应用安装/启停/清缓存/清数据/卸载、独占文件、私有剪贴板恢复、屏幕/时间只读查询；E2E_DIR/PROJECT/TARGET 和明确设备类型；不写真机系统设置 |
+| `npm run test:emulator-controls` | 仅本轮新建可销毁模拟器；E2E_DIR/TARGET、E2E_DEVICE_KIND=emulator、E2E_ALLOW_SYSTEM_WRITE=1；休眠、旋转、主题、系统面板、时间/时区写入与恢复，禁止用于真机 |
+| `npm run test:e2e` | 现有 SDK 的新模板、编译失败后修复并恢复任务、Kit、增量 HAR/HSP 构建；仅在专用证据目录创建工程 |
 | `npm run test:sdk` | 指定现有专用工程的 ArkTS/C++、编译、lint、API 扫描、30 模块 × 6 设备类型解析 |
-| `npm run test:device` | 指定 USB 真机及专用应用：设备、手势、流程、任务、引导、崩溃、生命周期；最后卸载专用应用 |
+| `npm run test:device` | 显式设备及专用应用（默认 USB，模拟器须 E2E_DEVICE_KIND=emulator）：设备、手势、流程、任务、引导、崩溃、生命周期；等价性场景会重新安装，结束后须显式清理 |
 | `npm run test:recording` | 指定设备全新录制、取回、严格解码、最终 idle；不改变原视频 |
 | `npm run test:video -- /absolute/video.mp4 /absolute/new-receipt.json` | 只读检查已有视频，回执排他创建 |
 | `npm run test:prompts -- --snapshot /absolute/new-snapshot.json` | 实际 tools/list 与 instructions 字节/字符统计，不声称是 token 数 |
@@ -27,15 +31,19 @@
 
 模型 `live-cases.mjs`、`workflow-cases.mjs` 是场景生成器，`proxy.mjs` 和 `capture.mjs` 由评测器加载。分别运行 `node test/model/live-cases.mjs <existing-project> <target> <new-cases.json>` 或 `node test/model/workflow-cases.mjs project|ui|ui-text <dedicated-project> <explicit-target> <new-artifacts-directory> <new-cases.json>` 生成输入；这些操作本身不算模型验收。保留拟调用、实际请求/响应、任务终态、模型模态和宿主版本的区别。每次有写入的试验独占新的制品目录，前一轮结束并清理本轮对象后才能继续；模型能力目录不能代替服务端实际可用性验证。
 
-新增专项（也包含在 `npm test`）：`node --test test/integration/kb-source.test.mjs test/integration/lifecycle.test.mjs test/integration/perf.test.mjs`。知识库回归使用隔离 registry、tar/zip 与 SQLite；录屏验证离线完整归档、恢复冲突和 UUID 隔离；FPS 验证单次长手势期间的有界并发采集、设备帧缓冲区窗口重叠、失败/取消停止采集和 inconclusive。全部不连接真机。性能回归同时验证清空后重新出现的旧时间戳不会进入本轮统计，本轮长间隔仍为 inconclusive。
+新增专项（也包含在 `npm test`）：`node --test test/integration/kb-source.test.mjs test/integration/lifecycle.test.mjs test/integration/perf.test.mjs`。知识库回归使用隔离 registry、tar/zip 与 SQLite；录屏验证离线完整归档、恢复冲突和 UUID 隔离；FPS 验证单次长手势期间的有界并发采集、设备帧缓冲区窗口重叠、失败/取消停止采集和 inconclusive。全部不连接真机。性能回归同时验证清空后重新出现的旧时间戳不会进入本轮统计，本轮长间隔仍为 inconclusive，并核对各未满足条件及手势序号的 reasons。
 
 `node --test test/integration/device-controls.test.mjs`（也含于 `npm test`）验证平台命令与参数、不可用能力、数据重置要求、临时包清理和取消；使用隔离传输响应，不算真实设备验收。`unit/domains.test.mjs` 覆盖模块清理范围和选择器规则；`unit/upstream.test.mjs` 覆盖数组注册命令。
 
-`node --test test/integration/project-test.test.mjs`（也含于 `npm test`）验证覆盖率编译串行调度、SDK 退出零但报告生成失败、工程用例失败与坏 JSON；使用隔离 SDK 边界，不算真实 SDK 验收。
+`node --test test/integration/project-test.test.mjs`（也含于 `npm test`）验证覆盖率编译串行调度、SDK 退出零但报告生成失败、工程用例失败与坏 JSON，以及编译失败、非编译执行失败和成功退出但缺报告的分类；使用隔离 SDK 边界，不算真实 SDK 验收。
 
 MCP 契约回归同样包含在 `npm test`：`integration/protocol.test.mjs`、`server.test.mjs` 覆盖协议、注解及提前拒绝；`server.test.mjs` 还覆盖多产品入口图谱、模块别名、扩展主入口、无入口 HAR、设备声明、同名字段隔离、JSON5 转义/换行及结构错误指引；`device.test.mjs` 验证 SQLite 路径完整引用，以及未启动/崩溃/空白屏的判定与后续指引；`emulator.test.mjs`、`signing.test.mjs` 用隔离进程验证退出状态和配置引用；`jobs.test.mjs` 与 `unit/efficiency.test.mjs` 验证检查范围、完整报告、构建预检结果、数据库并发初始化及真实写锁争用。未增加测试运行器或依赖。
 
 电脑端产物保留回归也包含在 `npm test`：`node --test test/integration/jobs.test.mjs test/integration/retention.test.mjs`。前者验证过期边界、活动任务、容量限额、失败后停止重试、目录保护及引用变化与旧扫描并发的回收边界；后者启动真实 MCP 进程，验证无任务时到期自动删除、批量删除期间的协议响应、失败日志汇总和重启后继续跳过失败文件。仅使用自行清理的临时目录，不连接设备。 知识包生命周期由 `kb-source.test.mjs`、`kb-update.test.mjs` 与这些保留回归共同覆盖：并发读取、多进程占用、异常退出、回滚回收、临时修复目录过期、符号链接边界及失败状态跨进程持久化。
+
+`unit/domains.test.mjs` 与 `integration/agreements.test.mjs` 验证根节点深度、过滤计数、平台锁屏/桌面/应用窗口、上下文查询失败及正常命中不增加查询；后者只模拟设备传输。`integration/start-create.test.mjs` 验证 build 的布尔 synced 和独立 sync_reason，真实 SDK 对应 `e2e/project.test.mjs` 的模板构建与增量构建。
+
+`integration/verification.test.mjs` 验证源码定位在截断前排除 Git 忽略的缓存，并保留未跟踪源码与显式文件定位；`integration/forms.test.mjs` 验证桌面过渡等待、取消与超时，保留未知宿主失败和卡片唯一实例清理规则。构建预检的源码身份比较由 `jobs.test.mjs` 与 `unit/efficiency.test.mjs` 覆盖，真实编译失败、源码修复和同一任务恢复由 `e2e/project.test.mjs` 覆盖。
 
 ## 当前宿主模型验收
 
@@ -63,7 +71,10 @@ node --test --test-concurrency=1 test/e2e/hotreload.test.mjs
 | `e2e/sdk.test.mjs` | 原完整夹具与签名；临时改 C++ 后逐字恢复 |
 | `e2e/checker.test.mjs` | `--test-name-pattern='checker (violations|legal)'` 独立编译正反例；`checker runtime claims` 另需明确的原模拟器（新模板不配置真机签名），安装/卸载专用应用 |
 | 同文件 `checker file scope and complete report` | 仅 SDK 和 E2E_DIR；新建专用工程，验证显式 .ts、61 条额外文件诊断的完整分页报告，以及无效 fix 请求保持文件哈希不变 |
-| `e2e/device.test.mjs` | 完整夹具及指定 USB 真机，`E2E_HDC` 为现有 SDK HDC 绝对路径，仅用于清理本轮传输文件（MCP shell 为只读）；会构建、安装、写专用 SQLite、交互、卸载；不能把单独运行后续依赖步骤称为整套通过 |
+| `e2e/device.test.mjs` | 完整夹具及明确设备类型，`E2E_HDC` 为现有 SDK HDC 绝对路径，仅用于清理本轮传输文件（MCP shell 为只读）；会构建、安装、写专用 SQLite、交互、卸载再安装；不能把单独运行后续依赖步骤称为整套通过 |
+| `e2e/lsp.test.mjs` | 使用 `npm run test:lsp`；直接 node 运行前必须构建，陈旧构建明确失败。完整夹具中 Util.ets 有 leaf、napi_init.cpp 有 Add，C++ 已生成编译数据库；保留原始 stdio 和写入边界，仅清理本轮独立进程组，不与修改同工程/构建身份的任务并行 |
+| `e2e/device-controls.test.mjs` 的 `device controls` | 使用对应 npm 入口；专用单签名 HAP，接入下述标记夹具，当前路径前提为 user 100。会清空专用应用数据，成功后留未安装；失败不补装/补卸。剪贴板原文不落调用日志，只留哈希/长度并立即恢复；不支持的查询真实失败，不用写入制造可读值 |
+| 同文件 `disposable emulator system controls` | 使用独立 npm 入口并显式开启双门，运行前确认实例属于本轮且可销毁；有 getter 的能力独立回读，无 getter 的 rotation_lock/sleeptime 或系统手势不声称状态已验证。时间修改最后执行，先恢复壁钟再恢复时区；恢复失败保留原错误并失败 |
 | 同文件 `device read-only command contracts` | 仅 E2E_DIR 和 E2E_TARGET；只读 shell、内存 SQLite 与参数拒绝，不安装/卸载应用或改变设备配置 |
 | `e2e/hotreload.test.mjs` | 完整夹具；热补丁、显式覆盖基线 reset、独立数据标记、多轮时限、依赖改变后部署；恢复源文件 |
 | `e2e/ui.test.mjs` | 完整夹具已安装；批量负例、超时、视觉稳定性/损坏基线、滚动性能和失效流程；只删除本轮命名的基线/流程 |
@@ -81,6 +92,8 @@ node --test --test-concurrency=1 test/e2e/hotreload.test.mjs
 | 同文件 `emulator image lifecycle` | 明确 `E2E_DEVICE_TYPE`、`E2E_IMAGE`、`E2E_ALLOW_IMAGE_WRITE=1`；仅在授权镜像安装/删除测试时使用。拒绝删除既有镜像；无未安装的适用镜像时记录前置条件阻塞 |
 | `e2e/review.test.mjs` | 分开运行 `--test-name-pattern='^capture$'` 与 `'^finish$'`。宿主必须先实际查看 capture 图片；finish 要求 `E2E_REVIEW` 目录及 `E2E_DECISION` JSON（test_id、review_id、image_sha256、outcome、reason），不会自动批准 |
 
+设备控制夹具：显式将 [ControlMarkers.ets](fixtures/device-controls/ControlMarkers.ets) 原样复制到专用工程的 `entry/src/main/ets/entryability/ControlMarkers.ets`，在 `EntryAbility` 导入 `createControlMarkers` 并从已有的 `onCreate(want, launchParam)` 调用 `createControlMarkers(this.context, want)`，保留其他初始化。测试通过固定 Want 参数 `devecoControlsMarker` 请求本轮 UUID 标记，由应用自身写入 `UIAbilityContext` 的模块级 `cacheDir/filesDir`（当前 user 100 外部路径为应用 `haps/<entry_module>/cache|files`），不依赖 HDC 写应用沙箱或提权。夹具进行同步不存在预检并使用 `NOFOLLOW`，不宣称原子排他创建。测试不会替调用方修改工程；勿接入普通业务应用。
+
 `node --test --test-name-pattern='<pattern>' --test-concurrency=1 <file>` 的过滤范围必须记录，未选场景不能计为通过。测试失败/清理失败均非零退出；超时只发送取消并失败，不重放操作。外部条件缺失直接失败/阻塞，不静默跳过；“环境不支持”要有设备/工具原始证据，不能代替功能通过。
 
 ## 证据与发布
@@ -96,13 +109,15 @@ node --test --test-concurrency=1 test/e2e/hotreload.test.mjs
 | `npm run test:verify` | Local/Instrument 用例核算、整体验收、基线、部分 UI checklist；真实 SDK、所选设备、专用工程；其他设备可保持连接 |
 | `npm run test:instrument-target` | 多设备中显式选模拟器的仪器测试、覆盖率、负例及目标拒绝；另需一台同时连接的设备 |
 | `npm run test:scenarios` | Want、数据库发现/夹具冲突、权限、清数据、后台、trace；调试应用及设备相关权限 |
-| `npm run test:forms` | 系统卡片中心添加、专用夹具交互和配置页断言、按新增实例移除；E2E_FORM_INDEX 为 catalog 返回的预览序号 |
+| `npm run test:forms` | 平台卡片添加与唯一实例清理，以及专用夹具交互和配置页断言；E2E_FORM_INDEX 为 catalog 返回的预览序号 |
 
 共同必填 E2E_PROJECT、E2E_TARGET、E2E_DIR（新的绝对证据目录），遵守已有 support/acceptance 的专用 bundle 和真实设备检查。默认仍要求 USB 真机；模拟器需显式 E2E_DEVICE_KIND=emulator，并通过 device info 核验（instrument-target 固定要求模拟器）。不会自动换目标或混用两种验收结论。缺条件失败，不自动改设备或安装 SDK。Instrument 测试和 scenario 会清除**专用测试应用**数据。
 
 工程材料 `fixtures/project-tests/`：将 List/Acceptance.test.ets 放到指定测试模块 src/test 和 src/ohosTest/ets/test，ohosTest 使用 default product SDK 模板。addition 正例必须通过，negative 故意失败，不能“修好”它。现有 FullProbe 页面需提供 HelloWorld、Field、Util.ets 与初始化 audit.db 的逻辑。`form/` 放入专用工程的 ets/probe 和 resources/base/profile，module 声明 ProbeForm/type=form、ohos.extension.form→$profile:probe_form；仅在专用工程声明用于 grant/revoke 的 APPROXIMATELY_LOCATION 权限。不得复制个人签名资料入仓库。
 
 form 用例先完整清点桌面，再通过 `ui form exercise` 添加指定预览，运行工程自有 flow 断言，并只移除本次新增实例。取消和失败使用独立限时清理，失败不自动重试。`E2E_FORM_INDEX` 来自 `ui form catalog`，不等于声明数组下标；无需人工添加卡片或抄写实例 key。清点默认有界扫描 12 页，可设 max_pages；超出范围不能声称完整。锁屏/负一屏没有经过验证的适配器。专用夹具内的文本、点击后内容和配置页预期只属于该测试工程。
+
+仅验证 MCP 平台实例链路时，执行 `node --test --test-name-pattern='^form: owned desktop attachment and cleanup$' test/e2e/form.test.mjs`。此用例使用明确授权的已安装应用，必填 E2E_PROJECT、E2E_TARGET、E2E_DIR、E2E_FORM_INDEX；可选 E2E_FORM_MAX_PAGES（1–30，默认 12）。它记录设备信息并比较前后完整清点，不要求专用业务夹具，也不将卡片业务内容纳入断言。
 
 `unit/verification.test.mjs` 检查测试核算、部分计划、基线、跨进程锁、永久证据等独立规则；`integration/verification.test.mjs` 用真实 MCP/job/进程及项目命令验证超时、取消、清理、污染和 CLI 共享路径，不伪造 SDK/设备成功。标准 `npm test` 已包含它们；CI 仍是三平台 × Node 22/24。
 

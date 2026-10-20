@@ -493,10 +493,10 @@ export async function buildProject(
   const depsChanged = stamp === undefined ? !installedAfterManifests(project) : stamp !== dependencyStamp(project);
   if (stamp === undefined && !depsChanged) writeDependencyStamp(project);
   const noModules = !fs.existsSync(path.join(project.root, "oh_modules")) && isFile(path.join(project.root, "oh-package.json5"));
-  let synced: string | undefined;
+  let syncReason: string | undefined;
   if (options.sync || noModules || depsChanged) {
     await syncProject(project, signal, true, jobId);
-    synced = options.sync ? "requested" : noModules ? "dependencies not installed" : "oh-package.json5 / build-profile.json5 changed since the last install";
+    syncReason = options.sync ? "requested" : noModules ? "dependencies not installed" : "oh-package.json5 / build-profile.json5 changed since the last install";
   }
   // A leftover hot-reload buildConfig.json (e.g. from an interrupted apply) breaks regular ArkTS compiles.
   for (const m of project.modules) fs.rmSync(path.join(m.root, "build", "config", "buildConfig.json"), { force: true });
@@ -519,8 +519,9 @@ export async function buildProject(
   const result = await hvigor(project, args, signal, "Build", jobId).finally(restoreProfiles);
   // Any build of a C/C++ module emits per-module compile_commands.json; keep the central one fresh for clangd.
   const compileCommands = hasNativeCode(project) ? mergeCompileCommands(project) : 0;
+  const syncResult = { synced: syncReason !== undefined, ...(syncReason ? { sync_reason: syncReason } : {}) };
   if (task === "compileNative")
-    return { success: true, task, product: project.product, compile_commands: compileCommands ? compileCommandsPath(project.root) : null, entries: compileCommands, log_artifact: result.log_artifact, elapsed_ms: result.elapsed_ms };
+    return { success: true, task, product: project.product, ...syncResult, compile_commands: compileCommands ? compileCommandsPath(project.root) : null, entries: compileCommands, log_artifact: result.log_artifact, elapsed_ms: result.elapsed_ms };
   const artifacts = await buildOutputs(project, task, modules);
   invariant(artifacts.length, "BUILD_FAILED", "Build finished but produced no package", { log_artifact: result.log_artifact });
   // Device-compatibility warnings are listed apart: they are the warnings that turn into runtime crashes.
@@ -534,7 +535,7 @@ export async function buildProject(
       deviceCompat = summarizeVerified(await verifyDeviceApis(project, own, signal), result.device_apis.length - own.length);
     } catch { /* keep the compiler's unverified list */ }
   }
-  return { success: true, task, product: project.product, mode, ...(synced ? { synced } : {}), artifacts, warnings: result.counts.warning, diagnostics: general.slice(0, 10),
+  return { success: true, task, product: project.product, mode, ...syncResult, artifacts, warnings: result.counts.warning, diagnostics: general.slice(0, 10),
     ...(deviceCompat ? { device_compat: deviceCompat } : {}), log_artifact: result.log_artifact, elapsed_ms: result.elapsed_ms };
 }
 

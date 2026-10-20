@@ -1,12 +1,13 @@
 // Real acceptance; explicit objects and private traces. See ../README.md.
 import assert from "node:assert/strict";
+import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { test } from "node:test";
 import { app } from "../support/acceptance.mjs";
 
 test("UI failure boundaries and stability", async (t) => {
-  const { raw, job, target, project, bundle, ui, launch, visible, run, defer } = await app(t);
+  const { raw, job, target, project, bundle, ui, launch, visible, run, defer, info } = await app(t);
   await launch(); await visible("Hello World");
   await t.test("invalid batches and keys are rejected", async () => {
     for (const args of [
@@ -40,20 +41,58 @@ test("UI failure boundaries and stability", async (t) => {
     assert.ok(chained.after); assert.ok(performance.now() - warmStart < 2500);
     t.diagnostic(`First act: ${Math.round(warmStart - actStart)} ms`);
   });
-  await t.test("visual comparison stays stable and rejects corrupt baselines", async () => {
-    await launch();
-    const name = run, baseline = await ui({ action: "visual", project, name });
-    assert.equal(baseline.baseline, "created");
-    defer(() => fs.rmSync(baseline.file));
+  const newVisualBaseline = async (label) => {
+    const name = `ui-${label}-${crypto.randomUUID()}`, state = path.join(fs.realpathSync(project), ".arkpilot");
+    if (fs.existsSync(state)) assert.equal(fs.realpathSync(state), state);
+    const model = info.model ?? info.name ?? target;
+    assert.equal(typeof model, "string"); assert.ok(model.length > 0);
+    const file = path.join(state, "baselines", `${name}@${model.replace(/[^\w.-]+/g, "_")}.png`);
+    const files = [file, `${file}.json`], parent = path.dirname(file);
+    if (fs.existsSync(parent)) assert.equal(fs.realpathSync(parent), parent);
+    for (const owned of files) assert.equal(fs.lstatSync(owned, { throwIfNoEntry: false }), undefined, `Refusing to overwrite ${owned}`);
+    for (const owned of files) defer(() => {
+      const stat = fs.lstatSync(owned, { throwIfNoEntry: false });
+      if (!stat) return;
+      assert.equal(fs.realpathSync(parent), parent, "Baseline directory changed; retain for inspection");
+      assert.ok(stat.isFile() && !stat.isSymbolicLink(), `Not an owned baseline file: ${owned}`);
+      assert.equal(fs.realpathSync(owned), owned);
+      fs.rmSync(owned);
+    });
+    const baseline = await ui({ action: "visual", project, name });
+    assert.equal(baseline.baseline, "created"); assert.equal(fs.realpathSync(baseline.file), file);
+    return { name, file };
+  };
+  await t.test("visual comparison stays stable and detects verified row motion", async () => {
+    await launch(); await visible("row 0");
+    const { name } = await newVisualBaseline("stable");
     for (let i = 0; i < 5; i++) {
       await new Promise((r) => setTimeout(r, 2000));
       assert.equal((await ui({ action: "visual", project, name })).changed_ratio, 0);
     }
-    await ui({ action: "act", op: "scroll", selector: { key: "Rows" }, direction: "down" });
+    const rowLines = (tree) => {
+      assert.equal(tree.truncated, false);
+      const rows = tree.tree.split("\n").filter((line) => /"row \d+"/.test(line)).map((line) => line.replace(/^\s*#\d+\s+/, "").trim());
+      assert.ok(rows.length > 0, "Rows subtree must expose actual row text and bounds");
+      return rows;
+    };
+    const before = rowLines(await ui({ action: "tree", node: "Rows", interactive: false }));
+    assert.ok(before.some((line) => /"row 0"/.test(line)), "Start at the first row before the preselected gesture");
+    // Direction describes the finger: swipe up to reveal later rows from the list's initial position.
+    const moved = await ui({ action: "act", op: "scroll", selector: { key: "Rows" }, direction: "up" });
+    assert.equal(moved.motion?.status, "changed"); assert.equal(moved.after?.changed, true);
+    const after = rowLines(await ui({ action: "tree", node: "Rows", interactive: false }));
+    assert.notDeepEqual(after, before, "Visible row text or bounds must change, not just action status/node numbers");
     assert.ok((await ui({ action: "visual", project, name })).changed_ratio > 0);
-    fs.writeFileSync(baseline.file, "not a png");
+  });
+  await t.test("visual comparison rejects an independently owned corrupt baseline", async () => {
+    await launch(); await visible("Hello World");
+    const { name, file } = await newVisualBaseline("corrupt");
+    const stat = fs.lstatSync(file);
+    assert.ok(stat.isFile() && !stat.isSymbolicLink()); assert.equal(fs.realpathSync(file), file);
+    fs.writeFileSync(file, "not a png");
     const corrupt = await raw("ui", { action: "visual", target, project, name });
-    assert.equal(corrupt.isError, true); assert.match(corrupt.data.error.hint, /update=true/);
+    assert.equal(corrupt.isError, true); assert.equal(corrupt.data.error.code, "VISUAL_BASELINE_INVALID");
+    assert.match(corrupt.data.error.hint, /update=true/);
   });
   await t.test("scroll performance remains repeatable and idle samples stay inconclusive", async () => {
     const rates = [];

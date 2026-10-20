@@ -20,13 +20,18 @@ await build({ stdin: { contents: entry, resolveDir: root }, outfile: bundle, bun
   plugins: [{ name: "sdk", setup(b) {
     b.onResolve({ filter: /(?:device|proc|toolchain)\.js$|^node:timers\/promises$/ }, (a) => {
       const importer = a.importer.replaceAll("\\", "/");
-      if (importer.endsWith("/domains/emulator.ts") || importer.endsWith("/domains/project.ts") && a.path.endsWith("toolchain.js"))
+      if (importer.endsWith("/domains/emulator.ts") || importer.endsWith("/domains/project.ts") && /(?:toolchain|proc)\.js$/.test(a.path))
         return { path: a.path === "node:timers/promises" ? "timers" : path.basename(a.path, ".js"), namespace: "fixture" };
     });
     b.onLoad({ filter: /.*/, namespace: "fixture" }, (a) => ({ contents: {
-      toolchain: `export function toolCommand(_,args){return {file:'fixture',args}};export function toolchain(){return {sdk:'fixture'}};export function sdkInfo(){return {platform_version:'26.0.0',api_level:26}};`,
-      proc: `import fs from 'node:fs';
-        export async function run(cmd,{signal}={}) {signal?.throwIfAborted();const f=globalThis.__startCreate;f.commands.push(cmd.args);
+      toolchain: `export function toolCommand(name,args,cwd){return {file:name,args,cwd}};export function toolchain(){return {sdk:'fixture'}};export function sdkInfo(){return {platform_version:'26.0.0',api_level:26}};`,
+      proc: `import fs from 'node:fs'; import path from 'node:path';
+        export async function run(cmd,{signal,logFile}={}) {signal?.throwIfAborted();const f=globalThis.__startCreate;f.commands.push(cmd.args);
+          if(cmd.file==='ohpm'||cmd.args.includes('--sync')||cmd.args.includes('assembleHap')) {
+            if(logFile)fs.writeFileSync(logFile,'BUILD SUCCESSFUL');
+            if(cmd.args.includes('assembleHap')){const out=path.join(cmd.cwd,'entry/build/default/outputs/default');fs.mkdirSync(out,{recursive:true});fs.writeFileSync(path.join(out,'entry-default-unsigned.hap'),'fixture package');}
+            return {code:0,stdout:'BUILD SUCCESSFUL',stderr:'',elapsedMs:1};
+          }
           if(cmd.args[0]==='-list')return {code:0,signal:null,stdout:f.raw??JSON.stringify(f.instances),stderr:''};
           if(cmd.args[0]==='-help')return {code:0,signal:null,stdout:f.help,stderr:''};if(cmd.args[0]==='-version')return {code:0,signal:null,stdout:'1.0.0',stderr:''};throw new Error('unexpected command '+cmd.args)};
         export async function spawnIndependent(cmd,log) {const f=globalThis.__startCreate;f.starts.push(cmd.args);f.logs.push(log);fs.writeFileSync(log,f.log);f.launched=true;f.onLaunch?.();
@@ -50,6 +55,17 @@ const start = (options = {}, signal = new AbortController().signal) => m.startEm
 const moduleOf = (project) => JSON5.parse(fs.readFileSync(path.join(project, "entry/src/main/module.json5"), "utf8")).module;
 const create = (name, rest = {}) => m.createProject({ project: path.join(work, name), app_name: "Test app", bundle_name: "com.example.test", ...rest });
 const rejected = (code) => (error) => error.code === code;
+
+test("build reports whether it synchronized separately from the reason", async () => {
+  const made = await create('sync-result'), project = m.inspectProject(made.created);
+  const first = await m.buildProject(project, {}, new AbortController().signal);
+  assert.equal(first.synced, true); assert.equal(first.sync_reason, 'dependencies not installed');
+  fs.mkdirSync(path.join(project.root, 'oh_modules'));
+  const second = await m.buildProject(project, {}, new AbortController().signal);
+  assert.equal(second.synced, false); assert.equal(second.sync_reason, undefined);
+  const requested = await m.buildProject(project, {sync:true}, new AbortController().signal);
+  assert.equal(requested.synced, true); assert.equal(requested.sync_reason, 'requested');
+});
 
 test("create writes the requested device types and preserves all other template fields", async () => {
   const template = JSON5.parse(fs.readFileSync(path.join(root, "templates/application/entry/src/main/module.json5"), "utf8")).module;

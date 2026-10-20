@@ -208,11 +208,23 @@ test("logout aborts an in-flight token exchange and cannot restore credentials l
 });
 
 test("teams and token refresh on 401", async () => {
-  assert.deepEqual((await call("auth", { action: "teams" })).teams, [{ id: "7", name: "Team", role: 1 }]);
+  assert.deepEqual((await call("auth", { action: "teams" })).teams, [{ id: "7", name: "Te****", role: 1 }]);
   agc.fail401 = 1;
   const before = agc.refreshes;
   assert.deepEqual((await call("sign", { action: "certificates" })).certificates, []);
   assert.equal(agc.refreshes, before + 1, "a 401 refreshes the token once and retries");
+});
+
+test("team display names are masked while IDs and roles remain available for selection", async () => {
+  const names = ['李四', '李寅生', 'Alice', 'A', '', '😀明'];
+  agc.teams = names.map((name, i) => ({ id: 100 + i, name, userType: i % 2 + 1 }));
+  try {
+    assert.deepEqual((await call("auth", { action: "teams" })).teams, [
+      { id: '100', name: '李****', role: 1 }, { id: '101', name: '李****', role: 2 },
+      { id: '102', name: 'Al****', role: 1 }, { id: '103', name: 'A****', role: 2 },
+      { id: '104', name: '', role: 1 }, { id: '105', name: '😀****', role: 2 },
+    ]);
+  } finally { agc.teams = undefined; }
 });
 
 test("register_device is idempotent and maps the device type", { skip: !posix && "fake hdc is a shell script" }, async () => {

@@ -1,5 +1,6 @@
 // Real SDK is the independent compiler oracle; runtime-only claims have separate device tests.
 import assert from "node:assert/strict";
+import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { test } from "node:test";
@@ -85,23 +86,55 @@ test("checker runtime claims", async (t) => {
   const target = required("E2E_TARGET");
   const { call, job, directory } = await session(t);
   const api = (await call("device", { action: "info", target })).api_level;
+  const installed = async (bundle) => {
+    let offset = 0;
+    do {
+      const page = await call("device", { action: "app", operation: "list", target, offset, limit: 200 });
+      assert.ok(Array.isArray(page.bundles));
+      if (page.bundles.includes(bundle)) return true;
+      assert.ok(page.next_offset === null || Number.isInteger(page.next_offset) && page.next_offset > offset);
+      offset = page.next_offset;
+    } while (offset !== null);
+    return false;
+  };
   for (const [rule, source] of Object.entries(runtime)) await t.test(rule, async () => {
-    const project = path.join(directory, rule);
-    await call("project", { action: "create", project, app_name: "Rules", bundle_name: "com.devecomcp.rules", compatible_api: api });
+    const project = path.join(directory, rule), bundle = `com.devecomcp.rules.r${crypto.randomUUID().replaceAll("-", "")}`;
+    await call("project", { action: "create", project, app_name: "Rules", bundle_name: bundle, compatible_api: api });
     fs.writeFileSync(path.join(project, "entry/src/main/ets/pages/Index.ets"), source);
     const checked = await call("code", { action: "check", project });
     assert.equal(checked.issues.some((d) => d.rule === rule), rule !== "object-link-observed-type");
     await job("project", { action: "build", project, preflight: false, wait: 0 });
-    const result = await waitJob(call, await call("run", { action: "deploy", project, target, wait: 0 }));
-    if (rule === "appstorage-observedv2-mixing") {
-      assert.equal(result.status, "failed"); assert.equal(result.error.code, "LAUNCH_FAILED");
-    } else {
-      assert.equal(result.status, "succeeded", JSON.stringify(result));
-      if (rule.startsWith("nav-destination")) await call("ui", { action: "act", target, op: "click", selector: { key: "go" } });
-      const expected = rule === "nav-destination-single-builder" ? "B" : rule === "nav-destination-root-node" ? "ROUTED" : "Hello World";
-      if (rule !== "object-link-observed-type") assert.equal((await call("ui", { action: "assert", target,
-        [rule === "nav-destination-single-builder" ? "visible" : "hidden"]: { text: expected, exact: true }, timeout_ms: 5000 })).passed, true);
+    assert.equal(await installed(bundle), false, "Never replace or uninstall a pre-existing application");
+    let deployment, failure;
+    try {
+      deployment = await call("run", { action: "deploy", project, target, wait: 0 });
+      deployment = await waitJob(call, deployment);
+      if (rule === "appstorage-observedv2-mixing") {
+        assert.equal(deployment.status, "failed"); assert.equal(deployment.error.code, "LAUNCH_FAILED");
+      } else {
+        assert.equal(deployment.status, "succeeded", JSON.stringify(deployment));
+        if (rule.startsWith("nav-destination")) await call("ui", { action: "act", target, op: "click", selector: { key: "go" } });
+        const expected = rule === "nav-destination-single-builder" ? "B" : rule === "nav-destination-root-node" ? "ROUTED" : "Hello World";
+        if (rule !== "object-link-observed-type") assert.equal((await call("ui", { action: "assert", target,
+          [rule === "nav-destination-single-builder" ? "visible" : "hidden"]: { text: expected, exact: true }, timeout_ms: 5000 })).passed, true);
+      }
+    } catch (error) { failure = error; throw error; }
+    finally {
+      try {
+        assert.ok(deployment?.job_id, `Deploy response unavailable; retain ${bundle} until its job is resolved explicitly`);
+        if (["queued", "running"].includes(deployment.status)) {
+          deployment = await waitJob(call, await call("job", { action: "cancel", job_id: deployment.job_id }));
+        }
+        assert.ok(["succeeded", "failed", "cancelled"].includes(deployment.status), "Deploy must end before uninstall");
+        assert.equal((await call("project", { action: "info", project })).bundle_name, bundle, "Project ownership changed; do not uninstall");
+        const cleaned = await call("run", { action: "uninstall", project, target });
+        assert.equal(cleaned.bundle, bundle);
+        assert.ok(cleaned.uninstalled === true || cleaned.uninstalled === false && cleaned.reason === "not_installed", JSON.stringify(cleaned));
+        assert.equal(await installed(bundle), false, "Runtime application was not removed");
+      } catch (cleanup) {
+        if (failure) throw new AggregateError([failure, cleanup], "Runtime check and owned-app cleanup failed", { cause: failure });
+        throw cleanup;
+      }
     }
-    await call("run", { action: "uninstall", project, target });
   });
 });

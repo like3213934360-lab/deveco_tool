@@ -12,7 +12,7 @@ const out = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-unit-"));
 process.on("exit", () => { try { fs.rmSync(out, { recursive: true, force: true }); } catch { /* Windows: file still locked */ } }); // tests leave nothing behind
 const entry = path.join(out, "entry.ts");
 fs.writeFileSync(entry, [
-  `export { parseWindows, pngGray, blankScore, select, flatten } from ${JSON.stringify(path.join(root, "src/domains/ui.ts"))};`,
+  `export { parseWindows, pngGray, blankScore, select, flatten, compactTree } from ${JSON.stringify(path.join(root, "src/domains/ui.ts"))};`,
   `export { checklist } from ${JSON.stringify(path.join(root, "src/domains/uitest.ts"))};`,
   `export { mergeCodexToml, mergeJsonConfig, installMcp } from ${JSON.stringify(path.join(root, "src/domains/hostconfig.ts"))};`,
   `export { projectAclPermissions, profileSummary } from ${JSON.stringify(path.join(root, "src/domains/sign.ts"))};`,
@@ -30,6 +30,28 @@ fs.writeFileSync(entry, [
 await build({ entryPoints: [entry], outfile: path.join(out, "entry.mjs"), bundle: true, format: "esm", platform: "node", packages: "external", logLevel: "error", nodePaths: [path.join(root, "node_modules")] });
 fs.symlinkSync(path.join(root, "node_modules"), path.join(out, "node_modules"), "junction"); // junction: no admin rights needed on Windows
 const m = await import(pathToFileURL(path.join(out, "entry.mjs")).href);
+
+test("tree depth and interactivity retain their semantics and explain every omitted node", () => {
+  const nodes=m.flatten({attributes:{bounds:'[0,0][100,100]'},children:[
+    {attributes:{type:'WindowScene',key:'scene',bounds:'[0,0][100,100]'},children:[
+      {attributes:{type:'Button',text:'Ready',bounds:'[0,0][20,20]'}},
+    ]},
+  ]});
+  const filtered=m.compactTree(nodes,{depth:1,interactive:true});
+  assert.equal(filtered.tree,''); assert.equal(filtered.shown_nodes,0);
+  assert.equal(filtered.filtered_nodes.depth,2); assert.equal(filtered.filtered_nodes.interactive,1);
+  assert.equal(filtered.filtered_nodes.geometry,0); assert.match(filtered.hint,/interactive=false/);
+  const rootOnly=m.compactTree(nodes,{depth:1,interactive:false});
+  assert.equal(rootOnly.shown_nodes,1); assert.match(rootOnly.tree,/#0 /); assert.doesNotMatch(rootOnly.tree,/WindowScene/);
+  assert.equal(m.compactTree(nodes,{depth:2,interactive:false}).shown_nodes,2);
+  const all=m.compactTree(nodes,{depth:0,interactive:false,limit:3});
+  assert.equal(all.shown_nodes,3); assert.equal(all.truncated,false);
+  const limited=m.compactTree(nodes,{depth:0,interactive:false,limit:1});
+  assert.equal(limited.shown_nodes,1); assert.equal(limited.filtered_nodes.limit,2); assert.equal(limited.truncated,true);
+  assert.match(limited.tree,/2 more matching nodes/);
+  assert.equal(m.compactTree(nodes,{bundle:'other'}).filtered_nodes.bundle,3);
+  assert.equal(m.compactTree([]).shown_nodes,0);
+});
 
 test("UI selectors combine semantic attributes, text modes, subtree and negative indices", () => {
   const nodes = m.flatten({ attributes: { id: "root", bounds: "[0,0][100,100]" }, children: [

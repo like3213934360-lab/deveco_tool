@@ -22,6 +22,11 @@ const hash = (file: string) => crypto.createHash("sha1").update(fs.readFileSync(
 const stamp = (entry: string | undefined) => entry?.split(":").slice(0, 2).join(":");
 const content = (entry: string | undefined) => entry?.split(":")[2];
 
+/** Content identity, independent of traversal order and build-generated timestamp changes. */
+export function sourceIdentity(snapshot: SourceSnapshot) {
+  return crypto.createHash("sha256").update(JSON.stringify(Object.keys(snapshot).sort().map((file) => [file, content(snapshot[file])]))).digest("hex");
+}
+
 /**
  * Relative path -> "mtimeMs:size:sha1" of every .ets/.ts source. Hashes are reused from `previous`
  * while mtime and size are unchanged, so a steady state costs one stat per file.

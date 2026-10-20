@@ -20,6 +20,10 @@ test("handshake, tools/list and schema validation", async (t) => {
   const names = list.result.tools.map((t) => t.name);
   assert.deepEqual(names, ["doctor", "project", "run", "job", "code", "device", "ui", "ui_flow", "diagnose", "knowledge", "skills", "auth", "sign", "emulator", "hot_reload"]);
   for (const tool of list.result.tools) assert.equal(tool.inputSchema.type, "object");
+  const logFields = list.result.tools.find(t => t.name === 'device').inputSchema.properties;
+  assert.match(logFields.from.description, /5m\/30s\/1h/);
+  assert.match(logFields.to.description, /1m/);
+  assert.doesNotMatch(logFields.from.description + logFields.to.description, /\dm ago/);
   // The 1.5 schema adds test/verify/scenario contracts without adding tools; cap at 44 KiB. Keep guidance inside the host's default truncation boundary.
   const metrics = promptMetrics(init.result.instructions, list.result.tools);
   assert.ok(metrics.tools_list_bytes <= 44 * 1024, `tools/list: ${metrics.tools_list_bytes} bytes > 44 KB`);

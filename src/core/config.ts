@@ -38,7 +38,7 @@ const configSchema = z
     kb_package: z.string().default("@deveco-mcp/kb"),
     kb_source: z.enum(["upstream", "pack"]).default("upstream"),
     kb_upstream_tag: z.enum(["latest", "daily"]).default("latest"),
-    kb_upstream_package: z.string().default("@deveco-test/deveco-cli-knowledgebase"),
+    kb_upstream_package: z.string().default("@deveco/deveco-cli-knowledgebase"),
     npm_registry: z.string().url().default("https://registry.npmjs.org"),
   })
   .passthrough();

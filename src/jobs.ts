@@ -1,5 +1,5 @@
 import path from "node:path";
-import { defineJob, type Step } from "./core/jobs.js";
+import { defineJob, type Step, type StepContext } from "./core/jobs.js";
 import { invariant } from "./core/errors.js";
 import type { BuildTask } from "./domains/project.js";
 
@@ -130,14 +130,15 @@ const preflightStep = {
   when: (ctx: { input: BuildInput }) => ctx.input.preflight !== false,
   async run(ctx: { input: BuildInput; signal: AbortSignal; log(m: string): void }) {
     const { arktsCheck } = await import("./domains/code.js");
-    const { changedSources, rememberSources } = await import("./domains/preflight.js");
+    const { changedSources, rememberSources, sourceIdentity } = await import("./domains/preflight.js");
     // Advisory only: the static checker is a fast approximation and can be wrong on real projects
     // (unknown HDS containers, unusual formatting). hvigor is the compiler of record, so findings are
     // reported alongside the build instead of blocking it.
     try {
       // Only the .ets/.ts files edited since the last preflight (LingDong: 0.4 s vs 4-22 s for all 1,659).
       const scope = await changedSources(ctx.input.project);
-      if (scope.files && !scope.files.length) return { errors: 0, warnings: 0, scope: "unchanged", files: 0 };
+      const source_identity = sourceIdentity(scope.snapshot);
+      if (scope.files && !scope.files.length) return { errors: 0, warnings: 0, scope: "unchanged", files: 0, source_identity };
       const result = await arktsCheck(ctx.input.project, scope.files, ctx.signal);
       // Issues are capped at 50: when errors were cut off, some failing files are unknown, so keep the old baseline.
       const failing = result.issues.filter((i) => i.severity === "error").map((i) => i.file);
@@ -145,7 +146,7 @@ const preflightStep = {
       if (result.errors) ctx.log(`preflight: ${result.errors} possible error(s); building anyway (hvigor decides)`);
       return {
         errors: result.errors, warnings: result.warnings, scope: scope.files ? "changed" : "project", files: scope.files?.length ?? result.files,
-        diagnostic_scope: result.scope, report_artifact: result.report_artifact,
+        diagnostic_scope: result.scope, report_artifact: result.report_artifact, source_identity,
         ...(result.errors ? { issues: result.issues.slice(0, 10) } : {}),
       };
     } catch (error) {
@@ -155,29 +156,46 @@ const preflightStep = {
   },
 };
 
+/** A resumed build must not reuse findings from code the caller has since repaired. */
+async function buildWithPreflight<T extends object>(ctx: StepContext<BuildInput>, compile: () => Promise<T>) {
+  if (ctx.input.preflight === false || !ctx.outputs.preflight || ctx.outputs.preflight.skipped) return compile();
+  const { snapshotSources, sourceIdentity } = await import("./domains/preflight.js");
+  const before = sourceIdentity(snapshotSources(ctx.input.project));
+  if (ctx.outputs.preflight.source_identity !== before) {
+    ctx.log(`preflight source changed or unverified; refreshing findings${ctx.outputs.preflight.report_artifact ? ` from ${ctx.outputs.preflight.report_artifact}` : ""}`);
+    ctx.outputs.preflight = await preflightStep.run(ctx);
+  }
+  const built = await compile();
+  // Edits during the compiler run also prevent a same-source comparison.
+  return { ...built, source_identity: before === sourceIdentity(snapshotSources(ctx.input.project)) ? before : null };
+}
+
 const buildStep = {
   id: "build",
-  async run(ctx: { input: BuildInput; signal: AbortSignal; job_id: string }) {
-    const { buildProject } = await import("./domains/project.js");
-    const { buildFailureHints } = await import("./domains/diagnose.js");
-    try {
-      const { project, modules } = await projectOf(ctx.input);
-      return await buildProject(project, { ...ctx.input, modules }, ctx.signal, ctx.job_id);
-    } catch (error) {
-      const details = (error as { details?: { diagnostics?: { code?: string; message: string }[] } }).details;
-      if (details?.diagnostics) Object.assign(details, { hints: buildFailureHints(details.diagnostics) });
-      throw error;
-    }
+  async run(ctx: StepContext<BuildInput>) {
+    return buildWithPreflight(ctx, async () => {
+      const { buildProject } = await import("./domains/project.js");
+      const { buildFailureHints } = await import("./domains/diagnose.js");
+      try {
+        const { project, modules } = await projectOf(ctx.input);
+        return await buildProject(project, { ...ctx.input, modules }, ctx.signal, ctx.job_id);
+      } catch (error) {
+        const details = (error as { details?: { diagnostics?: { code?: string; message: string }[] } }).details;
+        if (details?.diagnostics) Object.assign(details, { hints: buildFailureHints(details.diagnostics) });
+        throw error;
+      }
+    });
   },
 };
 
 /**
- * The compiler has the last word. A successful build proves the preflight errors were false
- * positives: report that explicitly (and drop the error list) so no agent goes "fixing" code
- * that compiles. When the build fails, the job fails with hvigor's own diagnostics instead.
+ * Only findings matched to the compiled source snapshot can be overruled. Older jobs or
+ * concurrent source edits retain their static findings without inventing a compiler comparison.
  */
-export function settlePreflight(preflight: any, buildSucceeded: boolean) {
+export function settlePreflight(preflight: any, buildSucceeded: boolean, builtIdentity?: string | null) {
   if (!preflight?.errors || !buildSucceeded) return preflight;
+  if (!preflight.source_identity || preflight.source_identity !== builtIdentity)
+    return { ...preflight, source_match: false, note: "Static findings were not matched to the compiled source snapshot; they are not classified as false positives. report_artifact retains the original static findings." };
   const { issues, ...summary } = preflight;
   return { ...summary, errors: 0, overruled: preflight.errors,
     note: `The static preflight flagged ${preflight.errors} error(s), but the compiler accepted the code: they were false positives. Do not change code for them. report_artifact retains the original static findings, not the build verdict.` };
@@ -186,7 +204,7 @@ export function settlePreflight(preflight: any, buildSucceeded: boolean) {
 defineJob<BuildInput>({
   kind: "build",
   steps: [preflightStep, buildStep],
-  summarize: (o) => ({ ...o.build, preflight: settlePreflight(o.preflight, true) }),
+  summarize: (o) => ({ ...o.build, preflight: settlePreflight(o.preflight, true, o.build.source_identity) }),
 });
 
 interface RunInput extends BuildInput {
@@ -359,19 +377,21 @@ const baseRunSteps = (build: boolean): Step<RunInput>[] => [
   },
   ...(build ? [hotStep as Step<RunInput>, unlessHot(preflightStep as Step<RunInput>), unlessHot({
     ...buildStep,
-    async run(ctx: { input: RunInput; outputs: Record<string, any>; signal: AbortSignal; job_id: string }) {
-      const { buildProject } = await import("./domains/project.js");
-      const { project } = await projectOf(ctx.input);
-      // Build only the selected modules (hvigor pulls in their HAR/HSP dependencies itself).
-      const input = { ...ctx.input, modules: ctx.outputs.select.modules };
-      if (!ctx.input.hot_reload) return buildProject(project, input, ctx.signal, ctx.job_id).catch(async (error) => {
-        const { buildFailureHints } = await import("./domains/diagnose.js");
-        const details = (error as { details?: { diagnostics?: { code?: string; message: string }[] } }).details;
-        if (details?.diagnostics) Object.assign(details, { hints: buildFailureHints(details.diagnostics) });
-        throw error;
+    async run(ctx: StepContext<RunInput>) {
+      return buildWithPreflight(ctx, async () => {
+        const { buildProject } = await import("./domains/project.js");
+        const { project } = await projectOf(ctx.input);
+        // Build only the selected modules (hvigor pulls in their HAR/HSP dependencies itself).
+        const input = { ...ctx.input, modules: ctx.outputs.select.modules };
+        if (!ctx.input.hot_reload) return buildProject(project, input, ctx.signal, ctx.job_id).catch(async (error) => {
+          const { buildFailureHints } = await import("./domains/diagnose.js");
+          const details = (error as { details?: { diagnostics?: { code?: string; message: string }[] } }).details;
+          if (details?.diagnostics) Object.assign(details, { hints: buildFailureHints(details.diagnostics) });
+          throw error;
+        });
+        const { hotBuildProps } = await import("./domains/hotreload.js");
+        return buildProject(project, { ...input, props: hotBuildProps() }, ctx.signal, ctx.job_id);
       });
-      const { hotBuildProps } = await import("./domains/hotreload.js");
-      return buildProject(project, { ...input, props: hotBuildProps() }, ctx.signal, ctx.job_id);
     },
   })] : []),
   {
@@ -462,7 +482,7 @@ const runSummary = (o: Record<string, any>) => ({
   ...(o.hot ? { path: o.hot.path, ...(o.hot.fallback_reason ? { fallback_reason: o.hot.fallback_reason } : {}), ...(o.hot.note ? { note: o.hot.note } : {}), ...(o.hot.path === "hot_reload" ? { hot_reload: { files: o.hot.files, elapsed_ms: o.hot.elapsed_ms, note: "Quick-fixed the installed app (no rebuild/reinstall) and relaunched it with the new code" } } : {}) } : {}),
   ...(o.baseline?.recorded ? { baseline: o.baseline } : {}), build: o.build ? { artifacts: o.build.artifacts?.map((a: { path: string }) => a.path), elapsed_ms: o.build.elapsed_ms, warnings: o.build.warnings, ...(o.build.device_compat ? { device_compat: o.build.device_compat } : {}) } : undefined,
   installed: o.install, launch: o.launch, ...(o.flow ? { flow: o.flow } : {}), assert: o.assert ?? undefined,
-  ...(o.preflight ? { preflight: settlePreflight(o.preflight, !!o.build) } : {}),
+  ...(o.preflight ? { preflight: settlePreflight(o.preflight, !!o.build, o.build?.source_identity) } : {}),
 });
 defineJob<RunInput>({ kind: "build_run", steps: runSteps(true), summarize: runSummary });
 defineJob<RunInput>({ kind: "deploy", steps: runSteps(false), summarize: runSummary });

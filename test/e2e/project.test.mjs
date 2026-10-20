@@ -41,6 +41,33 @@ test("template SDK build", async (t) => {
     const status = await waitJob(await call("project", { action: "build", project, wait: 60000 }));
     assert.equal(status.status, "succeeded", JSON.stringify(status.error ?? status).slice(0, 3000));
     assert.ok(status.result.artifacts[0].path.endsWith(".hap"));
+    assert.equal(status.result.synced, true);
+    assert.equal(status.result.sync_reason, "dependencies not installed");
+    const incremental = await waitJob(await call("project", { action: "build", project, wait: 60000 }));
+    assert.equal(incremental.status, "succeeded"); assert.equal(incremental.result.synced, false);
+    assert.equal(incremental.result.sync_reason, undefined);
+  });
+
+  await t.test("resuming a repaired build refreshes preflight instead of claiming a false positive", async () => {
+    const file = path.join(project, "entry/src/main/ets/pages/Index.ets"), original = fs.readFileSync(file, "utf8");
+    try {
+      fs.writeFileSync(file, `let brokenResumeValue: any = 1;\n${original}`);
+      const failed = await waitJob(await call("project", { action: "build", project, wait: 0 }));
+      assert.equal(failed.status, "failed");
+      assert.equal(failed.error.code, "BUILD_FAILED");
+      const detail = await call("job", { action: "status", job_id: failed.job_id, detail: true });
+      assert.ok(detail.outputs.preflight.errors > 0);
+      const first = detail.outputs.preflight;
+      fs.writeFileSync(file, original);
+      const resumed = await waitJob(await call("job", { action: "resume", job_id: failed.job_id }));
+      assert.equal(resumed.status, "succeeded", JSON.stringify(resumed.error));
+      assert.equal(resumed.result.preflight.errors, 0);
+      assert.equal(resumed.result.preflight.overruled, undefined);
+      assert.notEqual(resumed.result.preflight.source_identity, first.source_identity);
+      assert.equal(resumed.result.preflight.source_identity, resumed.result.source_identity);
+      assert.ok(resumed.recent_events.some((line) => line.includes("preflight source changed or unverified")));
+      assert.ok((await call("job", { action: "read", artifact_id: first.report_artifact, limit: 10 })).content);
+    } finally { fs.writeFileSync(file, original); }
   });
 
   await t.test("lsp resolves HMS kits against the SDK (signature + @since for source conflicts)", async () => {

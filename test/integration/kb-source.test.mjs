@@ -16,7 +16,7 @@ import { zipFixture } from "../support/zip.mjs";
 
 const root = path.resolve(import.meta.dirname, "../..");
 const work = fs.mkdtempSync(path.join(process.env.PI_SCRATCH_DIR || os.tmpdir(), "deveco-kb-source-"));
-const upstreamName = "@deveco-test/deveco-cli-knowledgebase";
+const upstreamName = "@deveco/deveco-cli-knowledgebase";
 const signal = new AbortController().signal;
 const fault = globalThis.__devecoKbSource = { pointer: false };
 let m, server, url, registry, responseStatus, disconnect, tamper, state, downloads;
@@ -154,6 +154,7 @@ test("default latest upstream converts, searches, reads, fingerprints, no-ops an
   // Seed only the isolated state, so an optional bundled pack cannot affect update availability.
   await m.update({ source: (await archive("@private/kb", "1.0.0", false)).file }, signal);
   assert.equal(m.config().kb_source, "upstream");
+  assert.equal(m.config().kb_upstream_package, upstreamName);
   const check = await m.status(true);
   assert.equal(check.source, "upstream"); assert.equal(check.tag, "latest");
   assert.equal(check.available_version, "1.3.5-Test.1"); assert.equal(check.update_available, true);
@@ -171,6 +172,18 @@ test("default latest upstream converts, searches, reads, fingerprints, no-ops an
   assert.equal(pointer(), before); assert.equal(downloads, count);
   await m.update({ force: true }, signal); assert.notEqual(pointer(), before);
   await m.rollback(); assert.equal(m.activePack().manifest.sources.upstream.version, "1.3.5-Test.1");
+});
+
+test("an explicitly configured legacy upstream package remains usable", async () => {
+  const legacy = "@deveco-test/deveco-cli-knowledgebase";
+  await isolate({ kb_upstream_package: legacy });
+  registry[legacy] = await metadata(legacy, ["1.0.0"], { latest: "1.0.0" });
+  const checked = await m.status(true, signal);
+  assert.equal(checked.package, legacy);
+  assert.equal(checked.available_version, "1.0.0");
+  await m.update({}, signal);
+  assert.equal(m.activePack().manifest.sources.upstream.package, legacy);
+  assert.equal(m.activePack().manifest.sources.upstream.version, "1.0.0");
 });
 
 test("private kb_package preserves pack mode, pinned versions and source override checks", async () => {

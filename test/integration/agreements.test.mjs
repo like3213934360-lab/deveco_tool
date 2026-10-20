@@ -14,17 +14,56 @@ const f = globalThis.__devecoConsent = { frames: [], clicks: [], taps: 0 };
 const raw = (text, type = "Text", y = 0, attrs = {}) => ({ attributes: { type, text, bounds: `[0,${y}][200,${y + 40}]`, visible: true, enabled: true, ...attrs } });
 const dialog = (body, button, bundle) => ({ attributes: { bundleName: bundle, windowId: "dialog", bounds: "[0,0][400,800]" }, children: [raw(body), raw("不同意", "Button", 100), raw(button, "Button", 200)] });
 const app = () => ({ attributes: { bundleName: "example.application", windowId: "app", bounds: "[0,0][400,800]" }, children: [raw(`taps:${f.taps}`, "Button", 400, { id: "action", clickable: true })] });
-const reset = (frames) => { f.frames = frames; f.clicks = []; f.taps = 0; m.invalidate("test"); };
+const reset = (frames) => { f.frames = frames; f.clicks = []; f.taps = 0; f.contextReads = 0; f.dumps = []; delete f.windowReply; m.invalidate("test"); };
 const bundle = path.join(root, "node_modules/.cache/deveco-consent-integration.mjs");
 await build({ stdin: { contents: `export {uiTool} from ${JSON.stringify(path.join(root, "src/tools/core.ts"))};export * from ${JSON.stringify(path.join(root, "src/domains/ui.ts"))};export {runBatch} from ${JSON.stringify(path.join(root, "src/domains/uibatch.ts"))};export {replayFlow,writeFlow} from ${JSON.stringify(path.join(root, "src/domains/flows.ts"))};export {resetConfig} from ${JSON.stringify(path.join(root, "src/core/config.ts"))};export {closeDatabase} from ${JSON.stringify(path.join(root, "src/core/db.ts"))};`, resolveDir: root }, outfile: bundle, bundle: true, format: "esm", platform: "node", packages: "external", logLevel: "error", plugins: [{ name: "transport", setup(b) {
   b.onResolve({ filter: /device\.js$/ }, (a) => /(?:domains\/(?:ui|flows)\.ts|tools\/core\.ts)$/.test(a.importer.replaceAll("\\", "/")) ? { path: "device", namespace: "fixture" } : undefined);
   b.onLoad({ filter: /.*/, namespace: "fixture" }, () => ({ contents: `import fs from 'node:fs';const f=()=>globalThis.__devecoConsent;export async function resolveTarget(){return 'test'};export async function assertConnected(){};export async function forceStop(){};export async function launch(){};export async function deviceInfo(){return {screen:{width:400,height:800}}};
     export async function hdc(args){fs.writeFileSync(args.at(-1),JSON.stringify(f().frames[0]));return {stdout:'',stderr:'',code:0}};
-    export async function shell(_target,args,signal){signal?.throwIfAborted();const command=args.join(' ');if(command.includes('dumpLayout')){(f().dumps??=[]).push(command);return {stdout:'DumpLayout saved',stderr:'',code:0}};if(args[0]==='rm')return {stdout:'',stderr:'',code:0};if(command.includes('uiInput swipe')){f().swipes??=[];f().swipes.push(command);if(f().frames.length>1)f().frames.shift();return {stdout:'No Error',stderr:'',code:0}};const hit=/uiInput click (\\d+) (\\d+)/.exec(command);if(!hit)throw new Error('unexpected command '+command);f().clicks.push(Number(hit[2]));if(Number(hit[2])===220)f().frames.shift();else if(Number(hit[2])===420){f().taps++;f().onTap?.()};return {stdout:'No Error',stderr:'',code:0}};` }));
+    export async function shell(_target,args,signal){signal?.throwIfAborted();const command=args.join(' ');if(command.includes('WindowManagerService')){f().contextReads++;return f().windowReply??{code:0,stderr:'',stdout:'WindowName DisplayId Pid WinId Type\\nFixture 0 7 123 1\\nFocus window: 123'}};if(command.includes('dumpLayout')){(f().dumps??=[]).push(command);return {stdout:'DumpLayout saved',stderr:'',code:0}};if(args[0]==='rm')return {stdout:'',stderr:'',code:0};if(command.includes('uiInput swipe')){f().swipes??=[];f().swipes.push(command);if(f().frames.length>1)f().frames.shift();return {stdout:'No Error',stderr:'',code:0}};const hit=/uiInput click (\\d+) (\\d+)/.exec(command);if(!hit)throw new Error('unexpected command '+command);f().clicks.push(Number(hit[2]));if(Number(hit[2])===220)f().frames.shift();else if(Number(hit[2])===420){f().taps++;f().onTap?.()};return {stdout:'No Error',stderr:'',code:0}};` }));
 } }] });
 const m = await import(pathToFileURL(bundle).href);
 const ctx = { signal: new AbortController().signal };
 after(async () => { await m.closeDatabase(); fs.rmSync(bundle, { force: true }); fs.rmSync(work, { recursive: true, force: true }); delete globalThis.__devecoConsent; });
+
+test("absent UI matches report platform window context once, without guessing lock state", async () => {
+  for (const [name, rows, focus, status] of [
+    ['lock', 'ArbitraryHost 0 7 9 2110', 9, 'lockscreen_visible'],
+    ['desktop', 'ArbitraryDesktop 0 7 9 2001\n-----\nHiddenLock 0 7 10 2110', 9, 'desktop'],
+    ['app', 'ArbitraryApp 0 7 9 1', 9, 'application'],
+    ['system', 'ArbitraryPanel 0 7 9 2109', 9, 'system_window'],
+    ['no-focus', 'ArbitraryApp 0 7 9 1', -1, 'no_focused_window'],
+  ]) {
+    reset([app()]);
+    f.windowReply={code:0,stderr:'',stdout:`WindowName DisplayId Pid WinId Type\n${rows}\nFocus window: ${focus}`};
+    const found=await m.uiTool.handler({action:'find',target:'test',window:123,selector:{text:'Missing'},timeout_ms:10},ctx);
+    assert.equal(found.count,0,name); assert.equal(found.ui_context.status,status,name);
+    assert.equal(found.ui_context.requested_window_visible,false); assert.equal(f.contextReads,1);
+    assert.match(found.hint,status==='lockscreen_visible'?/Unlock/:status==='desktop'?/desktop selectors remain valid/:/scope/);
+    const absent=await m.uiTool.handler({action:'assert',target:'test',hidden:{text:'Missing'},timeout_ms:0},ctx);
+    assert.equal(absent.passed,true); assert.equal(absent.ui_context.status,status);
+    const visible=await m.uiTool.handler({action:'assert',target:'test',visible:{text:'Missing'},timeout_ms:0},ctx);
+    assert.equal(visible.passed,false); assert.equal(visible.hint,absent.hint);
+  }
+  reset([app()]);
+  const matched=await m.uiTool.handler({action:'find',target:'test',selector:{text:'taps:'}},ctx);
+  assert.equal(matched.count,1); assert.equal(f.contextReads,0); assert.equal(matched.ui_context,undefined);
+  for (const reply of [{code:1,stderr:'denied',stdout:''},{code:0,stderr:'',stdout:'unsupported output'}]) {
+    f.windowReply=reply;
+    const result=await m.uiTool.handler({action:'find',target:'test',selector:{text:'Missing'}},ctx);
+    assert.equal(result.ui_context.status,'unavailable'); assert.equal(result.ui_context.error.code,'DEVICE_OUTPUT_INVALID');
+    assert.match(result.hint,/could not be verified/);
+  }
+});
+
+test("tree tool reports filtering counts without promoting descendants to roots", async () => {
+  reset([{attributes:{bounds:'[0,0][400,800]'},children:[raw('Ready')]}]);
+  const result=await m.uiTool.handler({action:'tree',target:'test',depth:1},ctx);
+  assert.equal(result.nodes,2); assert.equal(result.shown_nodes,0); assert.equal(result.tree,'');
+  assert.match(result.hint,/interactive=false/);
+  const rootOnly=await m.uiTool.handler({action:'tree',target:'test',depth:1,interactive:false},ctx);
+  assert.equal(rootOnly.shown_nodes,1); assert.doesNotMatch(rootOnly.tree,/Ready/);
+});
 
 test("find and assert preserve window scope, wait for changing content and cancel polling", async () => {
   reset([app()]);

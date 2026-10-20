@@ -46,12 +46,23 @@ function selectedPreview(nodes: UiNode[], bundle: string) {
   return selected;
 }
 
+const desktopWorkspace = (nodes: UiNode[]) => nodes.find((n) => /^SwiperPage_Grid_WorkSpace_\d+$/.test(n.key ?? "") && n.rect && n.visible !== false);
 function desktopPage(nodes: UiNode[]) {
-  const node = nodes.find((n) => /^SwiperPage_Grid_WorkSpace_\d+$/.test(n.key ?? "") && n.rect && n.visible !== false);
+  const node = desktopWorkspace(nodes);
   invariant(node, "CAPABILITY_UNAVAILABLE", "The current UI is not a supported desktop page", undefined, "Unlock the selected device and return to its desktop; lock-screen and other hosts require separate adapters");
   return { index: Number(node.key!.match(/(\d+)$/)![1]), node };
 }
 async function fresh(target: string, signal: AbortSignal) { invalidate(target); return dumpTree(target, signal); }
+/** Home and page animations complete asynchronously; observe readiness without replaying actions. */
+async function desktopNodes(target: string, signal: AbortSignal) {
+  let nodes = await fresh(target, signal);
+  for (let attempt = 0; !desktopWorkspace(nodes) && attempt < 20; attempt++) {
+    await delay(250, undefined, { signal });
+    nodes = await fresh(target, signal);
+  }
+  desktopPage(nodes); // Unknown/locked hosts still fail explicitly when the bounded wait expires.
+  return nodes;
+}
 async function slide(target: string, node: UiNode, left: boolean, signal: AbortSignal) {
   const r = node.rect!;
   await act(target, { action: "swipe", x: Math.round(r.x1 + (r.x2 - r.x1) * (left ? .85 : .15)), y: Math.round(r.y1 + (r.y2 - r.y1) * .6),
@@ -72,11 +83,11 @@ function exact(nodes: UiNode[], key: string) {
 async function scan(input: FormInput, signal: AbortSignal, visitor?: (nodes: UiNode[]) => boolean) {
   const limit = input.max_pages ?? 12, seen = new Set<number>(), instances = new Map<string, FormInstance>();
   await act(input.target, { action: "key", key: "Home" }, signal);
-  let nodes = await fresh(input.target, signal), page = desktopPage(nodes);
+  let nodes = await desktopNodes(input.target, signal), page = desktopPage(nodes);
   for (let i = 0; page.index !== 0 && i < limit; i++) {
     const previous = page.index;
     await slide(input.target, page.node, false, signal);
-    nodes = await fresh(input.target, signal); page = desktopPage(nodes);
+    nodes = await desktopNodes(input.target, signal); page = desktopPage(nodes);
     if (page.index === previous) break;
   }
   const fromFirst = page.index === 0;
@@ -87,7 +98,7 @@ async function scan(input: FormInput, signal: AbortSignal, visitor?: (nodes: UiN
     for (const item of desktopForms(nodes)) instances.set(`${item.bundle}:${item.instance_id}`, item);
     if (visitor?.(nodes)) return { instances: [...instances.values()], pages: [...seen], complete: false, nodes, found: true };
     await slide(input.target, page.node, true, signal);
-    nodes = await fresh(input.target, signal);
+    nodes = await desktopNodes(input.target, signal);
   }
   return { instances: [...instances.values()], pages: [...seen], complete: fromFirst && seen.has(desktopPage(nodes).index), nodes, found: false };
 }

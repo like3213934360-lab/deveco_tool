@@ -183,8 +183,8 @@ test("checker summaries distinguish dependency scope and retain every diagnostic
   assert.deepEqual(report.scope, result.scope);
   const match = await m.readArtifact(result.report_artifact, { grep: "dependency issue 64" });
   assert.equal(match.matched_lines, 1);
-  const preflight = { errors: result.errors, warnings: result.warnings, files: result.files, scope: "changed", diagnostic_scope: result.scope, report_artifact: result.report_artifact, issues: result.issues.slice(0, 10) };
-  const settled = m.settlePreflight(preflight, true);
+  const preflight = { errors: result.errors, warnings: result.warnings, files: result.files, scope: "changed", diagnostic_scope: result.scope, report_artifact: result.report_artifact, issues: result.issues.slice(0, 10), source_identity: "checked-source" };
+  const settled = m.settlePreflight(preflight, true, "checked-source");
   assert.equal(settled.errors, 0);
   assert.equal(settled.overruled, 2);
   assert.equal(settled.issues, undefined, "The build summary cannot keep compiler-overruled errors active");
@@ -198,6 +198,21 @@ test("checker summaries distinguish dependency scope and retain every diagnostic
   const clean = await m.formatCheck({ checkedFiles: [], errors: [], summary: { errorCount: 0, warnCount: 0, fileCount: 0 } }, root, false, false);
   assert.deepEqual(clean.scope, { mode: "project", requested_files: null, diagnostic_files: 0, additional_files: 0, unlocated_issues: 0 });
   assert.equal(clean.truncated, false);
+});
+
+test("a successful build cannot overrule findings from different or unverified source", () => {
+  const preflight = { errors: 1, source_identity: "before-repair", issues: [{ message: "real compiler error" }], report_artifact: "original-report" };
+  for (const identity of ["after-repair", null, undefined]) {
+    const summary = m.settlePreflight(preflight, true, identity);
+    assert.equal(summary.errors, 1);
+    assert.equal(summary.overruled, undefined);
+    assert.equal(summary.source_match, false);
+    assert.deepEqual(summary.issues, preflight.issues);
+    assert.equal(summary.report_artifact, preflight.report_artifact);
+  }
+  const legacy = m.settlePreflight({ errors: 1 }, true, "current-source");
+  assert.equal(legacy.overruled, undefined);
+  assert.equal(legacy.source_match, false);
 });
 
 test("force resume never repeats a protected cloud mutation without a receipt", async () => {

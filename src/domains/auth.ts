@@ -189,7 +189,11 @@ export async function teams(signal?: AbortSignal) {
   });
   const data = (await response.json()) as { ret?: { code: number; msg?: string }; teams?: { id: string | number; name: string; userType?: number }[] };
   invariant(!data.ret || data.ret.code === 0, "HTTP_ERROR", `Team query rejected: ${data.ret?.msg ?? data.ret?.code}`);
-  return { teams: (data.teams ?? []).map((t) => ({ id: String(t.id), name: t.name, role: t.userType })) };
+  return { teams: (data.teams ?? []).map((t) => {
+    const characters = [...(t.name ?? "")];
+    const name = characters.length ? `${characters.slice(0, Math.max(1, Math.floor(characters.length / 2))).join("")}****` : "";
+    return { id: String(t.id), name, role: t.userType };
+  }) };
 }
 
 /** One-time import of v0.x credentials (same AES-GCM format, provider as AAD). */

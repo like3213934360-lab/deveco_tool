@@ -49,10 +49,24 @@ test("device", async (t) => {
   await t.test("device.log-window-follow", async () => {
     const d = await call("device", { action: "log", target, bundle, project, from: "2m", to: "0s", lines: 50 });
     assert.ok(d.lines > 0 && d.window.from < d.window.to);
-    const first = await call("device", { action: "log", target, bundle, follow: true, lines: 5, wait_ms: 1000 });
-    assert.match(first.cursor, /^\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}$/);
+    const live = await call("device", { action: "log", target, bundle, follow: true, lines: 5, wait_ms: 1000 });
+    assert.match(live.cursor, /^\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}(?:#[1-9]\d*)?$/);
+    if (!live.cursor.includes("#")) assert.equal(live.lines, 0, "An initial empty poll may preserve its timestamp seed");
+    // Consume the independently observed window, rather than assuming the app is still logging now.
+    const first = await call("device", { action: "log", target, bundle, follow: true, cursor: d.window.from, lines: 5, wait_ms: 1000 });
+    assert.ok(first.lines > 0, "The positive pagination case must consume actual device logs");
+    const cursor = (value) => {
+      const match = /^(\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3})#([1-9]\d*)$/.exec(value);
+      assert.ok(match, `Invalid log cursor: ${value}`);
+      return { timestamp: match[1], consumed: BigInt(match[2]) };
+    };
+    const before = cursor(first.cursor);
     const next = await call("device", { action: "log", target, bundle, follow: true, cursor: first.cursor, lines: 5, wait_ms: 1000 });
-    assert.ok(next.cursor >= first.cursor);
+    const after = cursor(next.cursor);
+    // Compare same-millisecond ordinals numerically, including #9 -> #10.
+    assert.ok(after.timestamp > before.timestamp || after.timestamp === before.timestamp && after.consumed >= before.consumed,
+      `Log cursor moved backwards: ${first.cursor} -> ${next.cursor}`);
+    if (next.lines > 0) assert.notEqual(next.cursor, first.cursor, "A non-empty page must advance the consumed-line cursor");
   });
   await t.test("ui.observe-screenshot-tree-find-windows", async () => {
     const r = await raw("ui", { action: "observe", target, bundle });
@@ -129,7 +143,7 @@ test("gestures", async (t) => {
 });
 
 test("flows", async (t) => {
-  const { call, raw, job, run, target, project, bundle, ui, visible, launch, defer } = await app(t);
+  const { call, raw, job, run, target, project, bundle, ui, visible, launch, defer, info } = await app(t);
 
   await launch(); await visible("Hello World");
   const flow = (args) => call("ui_flow", { project, ...(["record", "stop", "replay"].includes(args.action) ? { target } : {}), ...args });
@@ -153,9 +167,25 @@ test("flows", async (t) => {
   });
   await t.test("ui.visual", async () => {
     await launch(); await visible("Hello World");
-    const name = run, baseline = await ui({ action: "visual", project, name });
-    assert.equal(baseline.baseline, "created");
-    defer(() => fs.rmSync(baseline.file));
+    const name = run, state = path.join(fs.realpathSync(project), ".arkpilot");
+    if (fs.existsSync(state)) assert.equal(fs.realpathSync(state), state);
+    const model = info.model ?? info.name ?? target;
+    assert.equal(typeof model, "string"); assert.ok(model.length > 0);
+    const expected = path.join(state, "baselines", `${name}@${model.replace(/[^\w.-]+/g, "_")}.png`);
+    const files = [expected, `${expected}.json`], parent = path.dirname(expected);
+    if (fs.existsSync(parent)) assert.equal(fs.realpathSync(parent), parent);
+    for (const file of files) assert.equal(fs.lstatSync(file, { throwIfNoEntry: false }), undefined, `Refusing to overwrite ${file}`);
+    for (const file of files) {
+      defer(() => {
+        const stat = fs.lstatSync(file, { throwIfNoEntry: false });
+        if (!stat) return;
+        assert.equal(fs.realpathSync(parent), parent, "Baseline directory changed; retain for inspection");
+        assert.ok(stat.isFile() && !stat.isSymbolicLink(), `Not an owned baseline file: ${file}`);
+        fs.rmSync(file);
+      });
+    }
+    const baseline = await ui({ action: "visual", project, name });
+    assert.equal(baseline.baseline, "created"); assert.equal(fs.realpathSync(baseline.file), expected);
     assert.equal((await ui({ action: "visual", project, name })).same, true);
     await ui({ action: "act", op: "click", selector: { key: "HelloWorld" } });
     const changed = await ui({ action: "visual", project, name });
@@ -188,7 +218,8 @@ test("jobs", async (t) => {
   const { call, raw, job, directory, project, file } = await app(t);
 
   await t.test("project.clean", async () => {
-    assert.equal((await call("project", { action: "clean", project })).cleaned, true);
+    const cleaned = await job("project", { action: "clean", project, wait: 0 });
+    assert.equal(cleaned.result.cleaned, true);
     assert.ok(!fs.existsSync(path.join(project, "entry/build/default/outputs/default/entry-default-signed.hap")));
   });
   await t.test("job.cancel", async () => {
@@ -308,12 +339,7 @@ test("lifecycle", async (t) => {
 });
 
 test("equivalence", async (t) => {
-  const { call } = await session(t);
-
-  const project = process.env.E2E_PROJECT, target = process.env.E2E_TARGET;
-  assert.ok(project && path.isAbsolute(project) && target && !target.includes(":"));
-  const info = await call("project", { action: "info", project });
-  assert.match(info.bundle_name, /^com\.devecomcp\./, "Only a dedicated audit app may be installed");
+  const { call, project, target } = await app(t);
   await t.test("model-live.install-dedicated-app", async () => {
     let d = await call("run", { action: "build_run", project, target });
     d = await waitJob(call, d);
@@ -328,7 +354,19 @@ test("equivalence", async (t) => {
     const file = "entry/src/main/ets/pages/Index.ets", args = { action: "check", project };
     const relative = await call("code", { ...args, files: [file] });
     const absolute = await call("code", { ...args, files: [path.join(project, file)] });
-    assert.deepEqual(absolute, relative);
+    const report = async ({ report_artifact, read_full, ...summary }) => {
+      assert.match(report_artifact, /^a_[a-f0-9]+$/);
+      assert.ok(read_full.includes(report_artifact), "The read hint must refer to this invocation's complete report");
+      let content = "", line = 0;
+      do {
+        const page = await call("job", { action: "read", artifact_id: report_artifact, line, limit: 2000 });
+        content += page.content + "\n";
+        line = page.next_line;
+      } while (line !== null);
+      return { summary, complete: JSON.parse(content) };
+    };
+    // IDs and read hints are invocation metadata, not diagnostic differences.
+    assert.deepEqual(await report(absolute), await report(relative));
   });
 
 });

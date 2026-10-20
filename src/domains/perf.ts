@@ -242,9 +242,17 @@ export async function measureScroll(target: string, options: PerfOptions, signal
       reason: samples.length ? undefined : profilerFailure ?? (allSamples.length ? "all_zero_samples" : "unrecognized_output") },
   };
   const activityVerified = activity.length > 0 && activity.every((a) => a.status === "changed");
-  const artifact = await saveArtifact(JSON.stringify({ target, started_at: new Date(started).toISOString(), gestures, activity, captures, diagnostics, sampling }, null, 2), "application/json");
-  const common = { gestures: gestures.length, elapsed_ms: Date.now() - started, activity, activity_verified: activityVerified, diagnostics, sampling, diagnostic_artifact: artifact.artifact_id, ...(memory ? { memory } : {}) };
-  if (stats) return { source: "composer", verdict: activityVerified && !boundaryFailure && !composerFailure && sampling.status === "overlapping" && !stats.excluded_intervals.length ? perfVerdict(stats) : "inconclusive", ...stats, ...common };
+  const reasons: { code: string; message: string; gesture_indexes?: number[] }[] = [];
+  if (!activityVerified) reasons.push({ code: "activity_unverified", message: "UI tree motion was not confirmed for every gesture; use a scrollable selector and inspect activity. This does not prove the screen was idle.", gesture_indexes: activity.filter((a) => a.status !== "changed").map((a) => a.index) });
+  if (boundaryFailure) reasons.push({ code: "boundary_unverified", message: `Pre-run frame boundary unavailable: ${boundaryFailure}` });
+  if (clearFailed) reasons.push({ code: "clear_failed", message: "Composer history could not be cleared; old frames cannot establish current performance" });
+  if (composerFailure) reasons.push({ code: "composer_failed", message: `Composer command evidence failed: ${composerFailure}` });
+  if (sampling.status !== "overlapping") reasons.push({ code: "sampling_incomplete", message: `Frame sampling is ${sampling.status}; see sampling.windows and sampling.gaps` });
+  if (stats?.excluded_intervals.length) reasons.push({ code: "unattributed_gaps", message: `${stats.excluded_intervals.length} long frame intervals may be idle, stalls or missing data; see excluded_intervals` });
+  if (!stats) reasons.push({ code: "frame_data_insufficient", message: "Insufficient valid per-frame intervals for a smoothness verdict; see diagnostics" });
+  const artifact = await saveArtifact(JSON.stringify({ target, started_at: new Date(started).toISOString(), gestures, activity, reasons, captures, diagnostics, sampling }, null, 2), "application/json");
+  const common = { gestures: gestures.length, elapsed_ms: Date.now() - started, activity, activity_verified: activityVerified, reasons, diagnostics, sampling, diagnostic_artifact: artifact.artifact_id, ...(memory ? { memory } : {}) };
+  if (stats) return { source: "composer", verdict: reasons.length ? "inconclusive" : perfVerdict(stats), ...stats, ...common };
   if (samples.length) return {
     source: "profilerfps", verdict: "fps_only", avg_fps: +(samples.reduce((s, x) => s + x.fps, 0) / samples.length).toFixed(1),
     min_fps: Math.min(...samples.map((s) => s.fps)), samples: samples.length, ...common,

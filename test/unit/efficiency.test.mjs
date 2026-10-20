@@ -16,7 +16,7 @@ const src = (f) => JSON.stringify(path.join(root, "src", f));
 const entry = path.join(out, "entry.ts");
 fs.writeFileSync(entry, [
   `export { screenDiff, stepAction, visibleLabels } from ${src("domains/uibatch.ts")};`,
-  `export { snapshotSources, diffSources, importersOf } from ${src("domains/preflight.ts")};`,
+  `export { snapshotSources, diffSources, importersOf, sourceIdentity } from ${src("domains/preflight.ts")};`,
   `export { saveExecutedFlow, readFlow } from ${src("domains/flows.ts")};`,
   `export { parseSourceRefs, resolveRef, locate, snippet, mapPosition } from ${src("domains/sourcemap.ts")};`,
   `export { BuildOutputParser } from ${src("domains/project.ts")};`,
@@ -142,10 +142,15 @@ test("preflight: only real content edits count; build rewrites of BuildProfile.e
   fs.utimesSync(path.join(proj, "entry/src/main/ets/pages/Other.ets"), later, later);
   write("entry/BuildProfile.ets", "gen2");
   assert.deepEqual(m.diffSources(first, m.snapshotSources(proj, first)), []);
+  assert.equal(m.sourceIdentity(first), m.sourceIdentity(m.snapshotSources(proj)));
+  assert.equal(m.sourceIdentity(first), m.sourceIdentity(Object.fromEntries(Object.entries(first).reverse())));
   // A real edit and a new file are changes.
   write("entry/src/main/ets/pages/Index.ets", "a2");
   write("entry/src/main/ets/pages/New.ets", "n");
   assert.deepEqual(m.diffSources(first, m.snapshotSources(proj, first)), ["entry/src/main/ets/pages/Index.ets", "entry/src/main/ets/pages/New.ets"]);
+  assert.notEqual(m.sourceIdentity(first), m.sourceIdentity(m.snapshotSources(proj)));
+  fs.rmSync(path.join(proj, "entry/src/main/ets/pages/Index.ets"));
+  assert.notEqual(m.sourceIdentity(first), m.sourceIdentity(m.snapshotSources(proj)));
 });
 
 test("preflight: importers of a changed file are checked too (relative imports)", () => {

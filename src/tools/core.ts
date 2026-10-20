@@ -380,8 +380,8 @@ export const deviceTool = tool({
     level: z.enum(["D", "I", "W", "E", "F"]).optional().describe("log: minimum level"),
     lines: z.number().int().min(1).max(20000).optional(),
     clear: z.boolean().optional(),
-    from: z.string().optional().describe("log: window start, e.g. 5m/30s/1h ago (device clock)"),
-    to: z.string().optional().describe("log: window end, e.g. 1m ago (default now)"),
+    from: z.string().optional().describe("log: start age, e.g. 5m/30s/1h; no 'ago'"),
+    to: z.string().optional().describe("log: end age, e.g. 1m; omit for now"),
     follow: z.boolean().optional().describe("log: newer than cursor; await wait_ms; returns next cursor"),
     cursor: z.string().optional().describe("log follow: previous cursor (omit initially)"),
     wait_ms: z.number().int().min(0).max(30000).optional().describe("log follow: max wait for new lines (default 5000)"),
@@ -504,7 +504,7 @@ export const uiTool = tool({
     node: z.string().optional().describe("tree: one component (id/key) subtree"),
     display: z.number().int().optional().describe("screenshot: display id"),
     save_path: z.string().optional().describe("screenshot/record_stop: absolute copy; automatically deleted after 24h"),
-    depth: z.number().int().min(0).max(100).optional().describe("tree/observe: depth (0 all, 1 root)"),
+    depth: z.number().int().min(0).max(100).optional().describe("tree/observe: 0 all, 1 root; interactive still filters"),
     all: z.boolean().optional().describe("windows: include system windows"),
     discard: z.boolean().optional().describe("record_stop: stop without downloading"),
     external: z.boolean().optional().describe("record_stop: stop a foreign recording"),
@@ -710,11 +710,12 @@ export const uiTool = tool({
         const all = await ui.dumpTree(target, ctx.signal, 0, { ...scope, all_windows: input.all_windows });
         const nodes = input.node ? ui.subtree(all, input.node) : all;
         if (input.node && !nodes.length) return { nodes: 0, tree: "", hint: `No component with id/key ${input.node}; call ui tree to list ids` };
-        return { nodes: nodes.length, tree: ui.compact(nodes, { interactive: input.interactive ?? true, limit: input.limit, bundle: input.bundle, depth: input.depth }) };
+        return { nodes: nodes.length, ...ui.compactTree(nodes, { interactive: input.interactive ?? true, limit: input.limit, bundle: input.bundle, depth: input.depth }) };
       }
       case "observe": {
         const [nodes, shot] = await Promise.all([ui.dumpTree(target, ctx.signal, 0, scope), ui.screenshot(target, { format: input.format, width: input.width }, ctx.signal)]);
-        return { elements: ui.compact(nodes, { interactive: input.interactive ?? true, limit: input.limit ?? 200, bundle: input.bundle, depth: input.depth }), screenshot: shot.artifact_id, _image: { data: shot.data, mime: shot.mime } };
+        const { tree, ...summary } = ui.compactTree(nodes, { interactive: input.interactive ?? true, limit: input.limit ?? 200, bundle: input.bundle, depth: input.depth });
+        return { elements: tree, nodes: nodes.length, ...summary, screenshot: shot.artifact_id, _image: { data: shot.data, mime: shot.mime } };
       }
       case "find": {
         invariant(input.selector, "INVALID_INPUT", "selector is required");
@@ -723,7 +724,7 @@ export const uiTool = tool({
       case "assert": {
         invariant(input.visible || input.hidden, "INVALID_INPUT", "Pass visible or hidden selector");
         const verdict = await ui.waitFor(target, (input.visible ?? input.hidden)!, input.visible ? "visible" : "hidden", input.timeout_ms ?? 5000, ctx.signal, false, scope);
-        return verdict.passed ? verdict : { ...verdict, hint: "Not satisfied: call ui observe to inspect the screen" };
+        return verdict.passed || "hint" in verdict ? verdict : { ...verdict, hint: "Not satisfied: call ui observe to inspect the screen" };
       }
       case "act": {
         invariant(input.op || input.steps, "INVALID_INPUT", "Pass op or steps");

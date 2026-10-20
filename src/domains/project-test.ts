@@ -6,7 +6,7 @@ import { invariant, ToolError } from "../core/errors.js";
 import { run } from "../core/proc.js";
 import { toolCommand, sdkInfo } from "../core/toolchain.js";
 import { fileSha256, walk } from "../core/files.js";
-import { inspectProject } from "./project.js";
+import { BuildOutputParser, inspectProject } from "./project.js";
 import { openHdcTarget } from "../core/hdc-target.js";
 
 export interface ProjectTestInput {
@@ -83,12 +83,17 @@ export async function runProjectTests(input: ProjectTestInput, signal: AbortSign
     args.push("-p", `scope=${input.scope.join(",")}`);
   }
   const log = artifactPath(), started = Date.now();
+  const parser = new BuildOutputParser(project.root, 10);
+  let compileFailed = false;
   let execution, route: Awaited<ReturnType<typeof openHdcTarget>> | undefined;
   try {
     if (target) route = await openHdcTarget(target);
     try {
       execution = await run(toolCommand("hvigor", args, project.root, route ? { OHOS_HDC_SERVER_PORT: String(route.port) } : undefined),
-        { signal, timeoutMs: input.timeout_ms ?? 600000, logFile: log.file, allowFailure: true });
+        { signal, timeoutMs: input.timeout_ms ?? 600000, logFile: log.file, allowFailure: true, onLine: (line) => {
+          parser.line(line);
+          if (/\bCOMPILE RESULT:\s*FAIL\b/.test(line)) compileFailed = true;
+        } });
       route?.assertHealthy();
     } finally { await route?.close(); }
   }
@@ -100,11 +105,26 @@ export async function runProjectTests(input: ProjectTestInput, signal: AbortSign
   }
   const logArtifact = await commitArtifact(log.id, log.file, "text/plain", jobId);
   const context = { target, routing: route?.routing, log_artifact: logArtifact.artifact_id };
+  const build = parser.finish();
+  const compileTask = build.failed_tasks?.some((task) => /@(?:Compile\w*|UnitTestArkTS)$/.test(task));
+  if (compileFailed || execution.code !== 0 && compileTask) {
+    throw new ToolError("BUILD_FAILED", "SDK test compilation failed; tests did not complete", {
+      ...context, stage: "compile", exit_code: execution.code, counts: build.counts,
+      diagnostics: build.diagnostics.filter((d) => d.severity === "error").slice(0, 10), failed_tasks: build.failed_tasks,
+    }, "Fix the compiler diagnostics before running tests again; read the full SDK log with job read artifact_id=" + logArtifact.artifact_id);
+  }
   const coverageError = input.coverage !== false ? await sdkCoverageFailure(log.file) : undefined;
   const results = [];
   for (const report of reports) {
     const stat = fs.statSync(report.result, { throwIfNoEntry: false });
-    invariant(stat && stat.mtimeMs >= started - 1000 && stat.mtimeMs !== before.get(report.result), "TEST_REPORT_MISSING", "SDK did not produce a fresh test report", { ...context, module: report.module, exit_code: execution.code });
+    const fresh = stat && stat.mtimeMs >= started - 1000 && stat.mtimeMs !== before.get(report.result);
+    if (!fresh && execution.code !== 0) {
+      throw new ToolError("TEST_EXECUTION_FAILED", "SDK test command failed before producing a fresh report", {
+        ...context, module: report.module, exit_code: execution.code, failed_tasks: build.failed_tasks,
+        diagnostics: build.diagnostics.filter((d) => d.severity === "error").slice(0, 10),
+      }, "Read the SDK log to identify the failed task; no test result is verified");
+    }
+    invariant(fresh, "TEST_REPORT_MISSING", "SDK did not produce a fresh test report", { ...context, module: report.module, exit_code: execution.code });
     const raw = fs.readFileSync(report.result, "utf8");
     const artifact = await saveArtifact(raw, "text/plain", jobId);
     let parsed;

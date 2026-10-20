@@ -19,6 +19,33 @@ const call = async (name, args) => { const r = await client.call(name, args); as
 let sequence = 0;
 const cmd = (script) => ({ file: process.execPath, args: ['-e', script] });
 const check = (id, verdict) => ({ id, type: 'command', command: cmd(`console.log(JSON.stringify({verdict:${JSON.stringify(verdict)}}))`) });
+test('source origin excludes ignored cache copies before limiting results and retains new source', async () => {
+  for (const git of [false, true]) {
+    const directory = path.join(work, git ? 'origin-git' : 'origin-plain');
+    fs.mkdirSync(path.join(directory, '.cache'), { recursive: true });
+    for (let i = 0; i < 40; i++) fs.writeFileSync(path.join(directory, '.cache', `${i}.ets`), `Text('Origin needle')`);
+    fs.writeFileSync(path.join(directory, 'Main.ets'), `Text('Origin needle')`);
+    if (git) {
+      fs.writeFileSync(path.join(directory, '.gitignore'), '.cache/\ncustom-output/\n');
+      fs.mkdirSync(path.join(directory, 'custom-output'));
+      fs.writeFileSync(path.join(directory, 'custom-output/Copied.ets'), `Text('Origin needle')`);
+      for (const args of [['init'], ['add', '.'], ['-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-m', 'source']])
+        assert.equal(spawnSync('git', args, { cwd: directory }).status, 0);
+      fs.writeFileSync(path.join(directory, 'New source.ets'), `Text('Origin needle')`);
+    }
+    const result = await call('code', { action: 'origin', project: directory, text: 'Origin needle' });
+    assert.equal(result.total, git ? 2 : 1);
+    assert.deepEqual(result.locations.map((v) => v.file).sort(), git ? ['Main.ets', 'New source.ets'] : ['Main.ets']);
+    assert.equal(result.mapping, 'static-candidates');
+    assert.equal(result.runtime_identity_verified, false);
+    if (git) {
+      assert.equal(result.locations.find((v) => v.file === 'Main.ets').tracked, true);
+      assert.equal(result.locations.find((v) => v.file === 'New source.ets').tracked, false);
+    }
+    const explicit = await call('code', { action: 'origin', project: directory, file: '.cache/0.ets', line: 1 });
+    assert.equal(explicit.locations[0].evidence, 'caller-location');
+  }
+});
 async function verify(plan, extra = {}) {
   const id = sequence++, file = path.join(work, `plan-${id}.json`), output = path.join(work, `out-${id}`);
   fs.writeFileSync(file, JSON.stringify(plan));
