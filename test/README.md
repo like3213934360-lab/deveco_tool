@@ -4,12 +4,16 @@
 
 ## 分层与入口
 
-在仓库根目录执行，使用现有 Node >=22.18 和 `npm ci` 安装的开发依赖。TypeScript/JSDoc 检查公共传输、媒体、提示统计与提供商采集模块；目录门禁检查全部测试语法、静态引用及 E2E 未定义符号。没有新编译链或运行依赖。
+在仓库根目录执行，使用现有 Node >=22.18 和 `npm ci` 安装的开发依赖。TypeScript/JSDoc 检查公共传输、媒体、提示统计与提供商采集模块；目录门禁检查全部测试语法、静态引用及 E2E 未定义符号。测试复用现有编译链，不增加测试运行器。
 
 | 命令 | 范围 / 条件 |
 | --- | --- |
 | `npm run typecheck` | 产品及公共模块静态检查 |
 | `npm test` | 构建 + 全部离线 unit/integration；并发 4，不连 SDK、设备或模型，不含外部 FFmpeg 套件 |
+| `npm run test:fonts` | 真实字体读取/安装/卸载；E2E_DIR、E2E_TARGET、E2E_FONT_FILE、E2E_FONT_NAME，必须是独占可卸载字体；缺少系统服务明确失败 |
+| `npm run test:ui-selectors` | 指定应用上的 XPath/正则查找、断言和批量等待；E2E_DIR、E2E_TARGET、E2E_BUNDLE、E2E_ABILITY，可选 E2E_MODULE |
+| `npm run test:build-signing` | 真实 SDK 单次签名选择、签名包校验、失败恢复；E2E_DIR、E2E_PROJECT（专用单入口工程）、E2E_SIGNING_CONFIG、E2E_BUNDLE，可选 E2E_BUILD_MODE |
+| `npm run test:release-signing` | 云端 Release 自动签名及独立 Profile 检查；E2E_DIR、E2E_PROJECT（专用工程，无已有 product_release）、E2E_TEAM、E2E_BUNDLE、E2E_ALLOW_SIGN_AUTO=1，可选 E2E_PRODUCT；需要空闲配额和发行权限，只清理本轮对象 |
 | `npm run test:unit` | 独立规则及纯逻辑；某些规则夹具包含临时文件 |
 | `npm run test:integration` | MCP、进程、数据库、打包、模型采集/评分的离线回归 |
 | `npm run test:media` | 已安装 ffmpeg/ffprobe 的真实生成与严格解码；缺少命令直接失败 |

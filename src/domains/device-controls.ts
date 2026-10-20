@@ -1,6 +1,9 @@
+import crypto from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { invariant, ToolError } from "../core/errors.js";
-import { shell, deviceInfo, forceStop, uninstall, wantArgs } from "./device.js";
+import { shell, deviceInfo, forceStop, uninstall, wantArgs, sendFile } from "./device.js";
 import { systemScenario } from "./scenario.js";
 import { displayControl, dumpTree, listWindows, invalidate } from "./ui.js";
 
@@ -9,6 +12,7 @@ export function validateControl(input: Record<string, unknown>) {
   const operations: Record<string, Record<string, string[]>> = {
     app: { list: ["offset", "limit"], info: ["bundle"], foreground: [], start: ["bundle", "ability", "module", "want"], stop: ["bundle"], uninstall: ["bundle", "allow_data_reset"], clear_cache: ["bundle"], clear_data: ["bundle", "allow_data_reset"], install: ["files", "shared", "replace", "user", "install_timeout", "wait", "request_key"] },
     file: { exists: ["remote"], delete: ["remote"] }, clipboard: { read: [], write: ["text"], clear: [] },
+    font: { info: ["local"], install: ["local"], uninstall: ["name"] },
     screen: { size: [], status: [], wake: [], sleep: [], rotation: [], rotate: ["value"], rotation_lock: ["value"], sleeptime: ["value"], viewmode: ["value"] },
     system: { time: ["value"], timezone: ["value"], unlock: [], control_center: [], notification_center: [] },
   };
@@ -18,6 +22,36 @@ export function validateControl(input: Record<string, unknown>) {
   invariant(!unused.length, "INVALID_INPUT", `Unused fields for ${input.action}.${input.operation}: ${unused.join(", ")}`);
   if (input.action === "file") invariant(typeof input.remote === "string", "INVALID_INPUT", "file requires remote path");
   if (input.action === "system") invariant(input.value === undefined || typeof input.value === "string", "INVALID_INPUT", "System value must be a string");
+  if (input.action === "font") {
+    if (input.operation === "uninstall") invariant(typeof input.name === "string" && input.name.trim() && input.name.length <= 256 && !/[\0\r\n]/.test(input.name), "INVALID_INPUT", "font uninstall requires a font name");
+    else invariant(typeof input.local === "string" && path.isAbsolute(input.local) && fs.statSync(input.local, { throwIfNoEntry: false })?.isFile(), "NOT_FOUND", "font info/install requires an existing absolute local font file");
+  }
+}
+
+/** Only the uploaded file belongs to this operation; never leave it on the device. */
+export async function fontControl(target: string, input: { operation: string; local?: string; name?: string }, signal: AbortSignal) {
+  validateControl({ action: "font", ...input });
+  if (input.operation === "uninstall") {
+    const output = await checkedCommand(target, ["testhelper", "uninstall-font", shellValue(input.name!)], signal);
+    invariant(/success/i.test(output), "DEVICE_OUTPUT_INVALID", "Font helper did not confirm uninstall", { output });
+    return { target, name: input.name, command_confirmed: true, runtime_verified: false, output };
+  }
+  const remote = "/data/local/tmp/deveco-font-" + crypto.randomUUID() + path.extname(input.local!);
+  let failure: unknown;
+  try {
+    await sendFile(target, input.local!, remote, signal);
+    const operation = input.operation === "info" ? "get-fontname" : "install-font";
+    const output = await checkedCommand(target, ["testhelper", operation, shellValue(remote)], signal);
+    invariant(output.length > 0 && (input.operation === "info" || /success/i.test(output)), "DEVICE_OUTPUT_INVALID", "Font helper returned no confirmed result", { output });
+    const name = input.operation === "info" ? /^Font name:\s*(.+)$/i.exec(output)?.[1]?.trim() : undefined;
+    invariant(input.operation !== "info" || name, "DEVICE_OUTPUT_INVALID", "Font helper returned no font name", { output });
+    return { target, operation: input.operation, ...(name ? { name } : {}),
+      command_confirmed: true, runtime_verified: false, output };
+  } catch (error) { failure = error; throw error;
+  } finally {
+    try { await checkedCommand(target, ["rm", "-f", shellValue(remote)], AbortSignal.timeout(15000)); }
+    catch (error) { throw new ToolError("DEVICE_CLEANUP_FAILED", "Uploaded font cleanup failed; no retry", { remote, cause: String(error), original: failure ? String(failure) : undefined }); }
+  }
 }
 
 export function shellValue(value: string): string {
@@ -34,7 +68,7 @@ export async function checkedCommand(target: string, args: string[], signal?: Ab
   invariant(!result.truncated, "DEVICE_OUTPUT_INVALID", "Device output exceeded the capture limit; cannot return incomplete evidence");
   const output = `${result.stdout}\n${result.stderr}`.trim();
   const diagnostic = content ? result.stderr : output;
-  const unsupported = /(?:testhelper|power-shell).*(?:not found|inaccessible)|unknown (?:command|option)|not supported|permission denied|Get parameter .*fail! errNum is:1002/i.test(diagnostic);
+  const unsupported = /(?:testhelper|power-shell).*(?:not found|inaccessible)|unknown (?:command|option)|not supported|permission denied|Get parameter .*fail! errNum is:1002/i.test(diagnostic) || /^(?:Error:\s*)?Service is not available\.?$/i.test(diagnostic.trim());
   invariant(!unsupported, "CAPABILITY_UNAVAILABLE", "Device does not support or permit this operation", { command: args.slice(0, 2), output: output.slice(0, 1500) });
   invariant(result.code === 0 && !/^(?:error\b|failed\b|failure\b|\[fail\])|\bfailed to\b|Get parameter .*fail!/im.test(diagnostic), "DEVICE_COMMAND_FAILED", "Device command failed", { command: args.slice(0, 2), output: output.slice(0, 1500) });
   return content ? result.stdout : result.stdout.trim();

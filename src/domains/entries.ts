@@ -4,43 +4,12 @@ import JSON5 from "json5";
 import { z } from "zod";
 import { invariant } from "../core/errors.js";
 import { readJson5, walk } from "../core/files.js";
+import { json5Locations } from "../core/json5-source.js";
 import { inspectProject } from "./project.js";
 
-/** Index properties by their JSON path, not by names shared with metadata or other entries.
- * JSON5 already validates the document; this token walk only retains source locations. */
+/** Property locations use the same JSON5 source scanner as reversible build selection. */
 function declarationLines(text: string) {
-  const lines = new Map<string, number>();
-  const tokens: { text: string; line: number }[] = [];
-  let end = 0, line = 1;
-  for (const match of text.matchAll(/\/\/[^\r\n\u2028\u2029]*|\/\*[\s\S]*?\*\/|"(?:\\[\s\S]|[^"\\])*"|'(?:\\[\s\S]|[^'\\])*'|[{}\[\]:,]|[^\s{}\[\]:,"'/]+/g)) {
-    line += text.slice(end, match.index).split(/\r\n|[\r\n\u2028\u2029]/).length - 1;
-    const token = match[0];
-    if (!token.startsWith("//") && !token.startsWith("/*")) tokens.push({ text: token, line });
-    line += token.split(/\r\n|[\r\n\u2028\u2029]/).length - 1;
-    end = match.index + token.length;
-  }
-  let cursor = 0;
-  const visit = (at: (string | number)[]) => {
-    const token = tokens[cursor++]?.text;
-    if (token !== "{" && token !== "[") return;
-    const close = token === "{" ? "}" : "]";
-    let index = 0;
-    while (cursor < tokens.length && tokens[cursor]!.text !== close) {
-      let key: string | number = index++;
-      if (token === "{") {
-        const property = tokens[cursor++]!;
-        // Parsing a one-property object also decodes quoted and escaped JSON5 keys.
-        key = Object.keys(JSON5.parse(`{${property.text}:0}`))[0]!;
-        if (key === "name" || key === "shortcutId") lines.set(JSON.stringify([...at, key]), property.line);
-        cursor++; // colon
-      }
-      visit([...at, key]);
-      if (tokens[cursor]?.text === ",") cursor++;
-    }
-    cursor++; // closing brace/bracket
-  };
-  visit([]);
-  return lines;
+  return new Map([...json5Locations(text)].map(([key, location]) => [key, location.line]));
 }
 
 const ability = z.object({ name: z.string().min(1), type: z.string().optional(), srcEntry: z.string().optional(), exported: z.boolean().optional(), skills: z.array(z.unknown()).optional(), metadata: z.array(z.unknown()).optional() }).passthrough();

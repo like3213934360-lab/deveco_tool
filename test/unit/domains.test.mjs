@@ -66,6 +66,32 @@ test("UI selectors combine semantic attributes, text modes, subtree and negative
   assert.equal(m.select(nodes, { text: "save", index: -3 }).length, 0);
 });
 
+test("XPath tree relationships intersect regex, semantic filters, scope and final index", () => {
+  const nodes = m.flatten({ attributes: { type: "Column", key: "root", bounds: "[0,0][200,200]" }, children: [
+    { attributes: { type: "Text", text: "账户 & 用户", bounds: "[0,0][80,20]" } },
+    { attributes: { type: "Row", key: "row", bounds: "[0,20][200,80]" }, children: [
+      { attributes: { type: "Button", id: "first", accessibilityLevel: "yes", text: "Save 12", description: "Store locally", clickable: true, bounds: "[0,20][80,40]" } },
+      { attributes: { type: "Button", id: "second", text: "Save 24", description: "Store remotely", clickable: true, bounds: "[80,20][160,40]" } },
+      { attributes: { type: "Button", id: "hidden", text: "Save 48", visible: false, bounds: "[80,20][160,40]" } },
+    ] },
+  ] });
+  const ids = (selector) => m.select(nodes, selector).map((node) => node.id);
+  assert.deepEqual(ids({ xpath: '//Button[preceding-sibling::Button[@id="first"]]', regex: { text: "^save [0-9]+$", description: "remotely$" }, within: "row", clickable: true, index: -1 }), ["second"]);
+  assert.deepEqual(ids({ xpath: '//Text[@text="账户 & 用户"]/following-sibling::Row/Button[1]' }), ["first"]);
+  assert.deepEqual(ids({ xpath: '//Button[ancestor::Column[@key="root"]]', within: "row", regex: { id: "^(first|second)$" }, index: -1 }), ["second"]);
+  assert.deepEqual(ids({ regex: { text: "^save" }, regex_flags: "" }), []);
+  assert.deepEqual(ids({ xpath: '//Button[@accessibilityLevel="yes" and @bounds="[0,20][80,40]"]' }), ["first"]);
+  const scoped = nodes.filter((node) => node.id === "second");
+  assert.equal(m.select(scoped, { xpath: '//Button[@id="second"]' })[0].id, "second");
+  for (const selector of [{ xpath: "//Button[" }, { xpath: "count(//Button)" }, { xpath: "//Button/@id" }, { regex: { text: "[" } }, { regex: {} }, { regex: { text: "Save" }, regex_flags: "gg" }, { regex_flags: "" }])
+    assert.throws(() => m.select(nodes, selector), { code: "INVALID_INPUT" });
+});
+
+test("expensive regular expressions are interrupted without weakening the query", () => {
+  const nodes = m.flatten({ attributes: { text: "a".repeat(40) + "!", bounds: "[0,0][20,20]" } });
+  assert.throws(() => m.select(nodes, { regex: { text: "^(a+)+$" } }), { code: "UI_QUERY_TIMEOUT" });
+});
+
 test("module cleanup sends only validated product/module targets to hvigor", () => {
   const project = { product: "demo", modules: [{ name: "phone", target: "test" }, { name: "watch", target: "default" }] };
   assert.deepEqual(m.cleanArguments(project, ["phone"]), ["--mode", "module", "-p", "product=demo", "-p", "module=phone@test", "clean"]);

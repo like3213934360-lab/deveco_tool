@@ -11,10 +11,10 @@ import { toolchain } from "../core/toolchain.js";
 import { listTargets } from "./device.js";
 import { decryptPassword, encryptPassword, existingSigning, listCertificates, listDevices, registerDevice, request, download, signer, projectAclPermissions, profilePayload, profileSummary, teamId } from "./sign.js";
 
-export interface AutoInput { project: string; product?: string; team?: string; acl?: string[]; force?: boolean }
+export interface AutoInput { project: string; product?: string; team?: string; acl?: string[]; force?: boolean; type?: "debug" | "release" }
 type Context = StepContext<AutoInput>;
 interface Prepared {
-  root: string; product: string; bundle: string; team: string; dir: string; lock: string;
+  root: string; product: string; bundle: string; team: string; dir: string; lock: string; type?: "debug" | "release"; signingConfig?: string;
   previous: string; certName: string; beforeIds: string[]; password: string; acl: string[];
 }
 const prepared = (ctx: Context) => {
@@ -23,7 +23,7 @@ const prepared = (ctx: Context) => {
   invariant(!fs.existsSync(path.join(p.dir, "compensation.json")), "SIGN_ATTEMPT_CLOSED", "Signing compensation was started; reconcile cleanup before starting a new attempt");
   return p;
 };
-const file = (p: Prepared, ext: string) => path.join(p.dir, `debug.${ext}`);
+const file = (p: Prepared, ext: string) => path.join(p.dir, `${p.type === "release" ? "release" : "debug"}.${ext}`);
 const uncertain = (stage: string, cause?: unknown) => new ToolError("EFFECT_UNCERTAIN", `Auto signing ${stage} may have executed; existing signing remains unchanged`,
   { stage, ...(cause instanceof Error ? { cause: cause.message } : {}) }, "Inspect AGC and job status detail=true, then resume to reconcile. Force never repeats uncertain certificate/profile creation.");
 function releaseLock(ctx: Context, p: Prepared) {
@@ -39,7 +39,13 @@ export async function prepare(ctx: Context): Promise<Prepared> {
   const project = inspectProject(ctx.input.project, ctx.input.product);
   const root = project.root, product = project.product;
   invariant(project.bundleName, "PROJECT_INVALID", "bundleName missing");
-  const current = existingSigning(root, product);
+  const type = ctx.input.type ?? "debug";
+  invariant(type === "debug" || type === "release", "INVALID_INPUT", "Auto signing type must be debug or release");
+  const signingConfig = type === "release" ? product + "_release" : product;
+  const profile = readJson5(path.join(root, "build-profile.json5")) as any;
+  const current = type === "release"
+    ? profile.app.signingConfigs?.some((c: any) => c.name === signingConfig) ? { source: "build-profile.json5", config: signingConfig } : undefined
+    : existingSigning(root, product);
   invariant(!current || ctx.input.force, "SIGN_CONFIGURED", "Project already has signing; nothing changed", current, "Build with existing signing, or explicitly request force=true to prepare a replacement (requires free certificate quota)");
   invariant(!current || current.source === "build-profile.json5", "SIGN_CONFIGURED", `Signing comes from ${current?.source}; edit that override instead`);
   const team = await teamId(ctx.input.team, true);
@@ -53,8 +59,8 @@ export async function prepare(ctx: Context): Promise<Prepared> {
     fs.rmSync(dir, { recursive: true, force: true });
     fs.mkdirSync(dir, { mode: 0o700 });
     const password = crypto.randomBytes(16).toString("hex");
-    const p: Prepared = { root, product, bundle: project.bundleName, team, dir, lock,
-      previous: sha256(fs.readFileSync(path.join(root, "build-profile.json5"))), certName: `auto_debug_${ctx.job_id}.cer`,
+    const p: Prepared = { root, product, type, signingConfig, bundle: project.bundleName, team, dir, lock,
+      previous: sha256(fs.readFileSync(path.join(root, "build-profile.json5"))), certName: `auto_${type}_${ctx.job_id}.cer`,
       beforeIds: (await listCertificates(team, ctx.signal)).map((c) => c.id), password: "",
       acl: [...new Set([...projectAclPermissions(project.modules).acl, ...(ctx.input.acl ?? [])])] };
     ctx.log("preparing isolated keypair and CSR (old material retained)");
@@ -85,7 +91,7 @@ export async function certificate(ctx: Context) {
   ownsLock(ctx, p);
   ctx.signal.throwIfAborted();
   try {
-    await request(p.team, "/api/cps/harmony-cert-manage/v1/cert/add", "POST", { csr: fs.readFileSync(file(p, "csr"), "utf8"), certName: p.certName, certType: "1" }, ctx.signal);
+    await request(p.team, "/api/cps/harmony-cert-manage/v1/cert/add", "POST", { csr: fs.readFileSync(file(p, "csr"), "utf8"), certName: p.certName, certType: p.type === "release" ? "2" : "1" }, ctx.signal);
     const cert = await ownedCertificate(p, ctx.signal);
     if (!cert) throw uncertain("certificate");
     return cert;
@@ -108,9 +114,11 @@ export async function profile(ctx: Context) {
   const p = prepared(ctx);
   ownsLock(ctx, p);
   ctx.signal.throwIfAborted();
+  invariant(ctx.outputs.certificate.type === (p.type ?? "debug"), "SIGN_MATERIAL_INVALID", "New certificate type differs from the requested signing type");
   try {
-    const result = await request(p.team, "/api/cps/provision-manage/v1/ide/test/provision/add", "POST", {
-      certList: [ctx.outputs.certificate.id], packageName: p.bundle, deviceList: ctx.outputs.devices.ids,
+    const result = await request(p.team, `/api/cps/provision-manage/v1/ide/${p.type === "release" ? "real" : "test"}/provision/add`, "POST", {
+      certList: [ctx.outputs.certificate.id], packageName: p.bundle,
+      ...(p.type === "release" ? {} : { deviceList: ctx.outputs.devices.ids }),
       provisionName: `mcp_${ctx.job_id}`, ...(p.acl.length ? { aclPermissionList: p.acl } : {}),
     }, ctx.signal);
     if (!result.provisionFileUrl) throw uncertain("profile");
@@ -125,6 +133,7 @@ export async function profile(ctx: Context) {
 /** Check file integrity, validity, bundle and key correspondence before publishing references. */
 export async function material(ctx: Context) {
   const p = prepared(ctx);
+  invariant(ctx.outputs.certificate.type === (p.type ?? "debug"), "SIGN_MATERIAL_INVALID", "New certificate type differs from the requested signing type");
   await download(p.team, ctx.outputs.certificate.object, file(p, "cer"), ctx.signal);
   await download(p.team, ctx.outputs.profile.object, file(p, "p7b"), ctx.signal);
   const cert = new crypto.X509Certificate(fs.readFileSync(file(p, "cer")));
@@ -139,12 +148,14 @@ export async function material(ctx: Context) {
   const publicKey = (c: crypto.X509Certificate) => c.publicKey.export({ type: "spki", format: "der" });
   invariant(publicKey(cert).equals(publicKey(new crypto.X509Certificate(pem))), "SIGN_MATERIAL_INVALID", "New certificate does not match the prepared keypair");
   const bytes = fs.readFileSync(file(p, "p7b")), summary = profileSummary(bytes), payload = profilePayload(bytes);
-  invariant(summary?.bundle === p.bundle && summary.type === "debug" && summary.expired === false && summary.valid_from && Date.parse(summary.valid_from) <= Date.now(),
-    "SIGN_MATERIAL_INVALID", "New debug profile does not match this bundle/devices or is expired");
-  const actual = payload?.["debug-info"]?.["device-ids"];
-  invariant(Array.isArray(actual) && JSON.stringify(actual.map((v: string) => v.toUpperCase()).sort()) === JSON.stringify([...ctx.outputs.devices.udids].sort()),
-    "SIGN_MATERIAL_INVALID", "New debug profile device identities differ from the requested set");
-  const embedded = payload?.["bundle-info"]?.["development-certificate"];
+  invariant(summary?.bundle === p.bundle && summary.type === (p.type ?? "debug") && summary.expired === false && summary.valid_from && Date.parse(summary.valid_from) <= Date.now(),
+    "SIGN_MATERIAL_INVALID", "New profile does not match the requested bundle/type or is expired");
+  if (p.type !== "release") {
+    const actual = payload?.["debug-info"]?.["device-ids"];
+    invariant(Array.isArray(actual) && JSON.stringify(actual.map((v: string) => v.toUpperCase()).sort()) === JSON.stringify([...ctx.outputs.devices.udids].sort()),
+      "SIGN_MATERIAL_INVALID", "New debug profile device identities differ from the requested set");
+  }
+  const embedded = payload?.["bundle-info"]?.[p.type === "release" ? "distribution-certificate" : "development-certificate"];
   invariant(typeof embedded === "string" && new crypto.X509Certificate(embedded).raw.equals(cert.raw), "SIGN_MATERIAL_INVALID", "New profile is bound to a different certificate");
   invariant(p.acl.every((permission) => summary.acl_permissions?.includes(permission)), "SIGN_MATERIAL_INVALID", "New profile is missing requested ACL permissions");
   await signer(["verify-profile", "-inFile", file(p, "p7b")], ctx.signal);
@@ -152,13 +163,16 @@ export async function material(ctx: Context) {
 }
 function committed(p: Prepared) {
   const config = readJson5(path.join(p.root, "build-profile.json5")) as any;
-  const entry = config.app.signingConfigs?.find((c: any) => c.name === p.product);
+  const entry = config.app.signingConfigs?.find((c: any) => c.name === (p.signingConfig ?? p.product));
   return entry?.material?.storeFile === file(p, "p12") && entry?.material?.certpath === file(p, "cer") && entry?.material?.profile === file(p, "p7b")
-    && config.app.products?.find((v: any) => v.name === p.product)?.signingConfig === p.product;
+    && (p.type === "release" || config.app.products?.find((v: any) => v.name === p.product)?.signingConfig === p.product);
 }
 function result(ctx: Context, p: Prepared) {
-  return { signed: true, product: p.product, team: p.team, certificate: ctx.outputs.certificate.id, devices: ctx.outputs.devices.ids.length, acl_permissions: p.acl,
-    files: { p12: file(p, "p12"), cer: file(p, "cer"), p7b: file(p, "p7b") }, previous_material: "retained; never revoked automatically", next: { tool: "run", action: "build_run", project: p.root } };
+  const signing_config = p.signingConfig ?? p.product;
+  return { signed: true, scope: "signing_material", type: p.type ?? "debug", signing_config, product: p.product, team: p.team, certificate: ctx.outputs.certificate.id, devices: ctx.outputs.devices?.ids.length ?? 0, acl_permissions: p.acl,
+    files: { p12: file(p, "p12"), cer: file(p, "cer"), p7b: file(p, "p7b") }, previous_material: "retained; never revoked automatically",
+    next: p.type === "release" ? { tool: "project", action: "build", project: p.root, product: p.product, mode: "release", task: "assembleApp", signing_config }
+      : { tool: "run", action: "build_run", project: p.root } };
 }
 function validateHashes(ctx: Context, p: Prepared) {
   for (const [ext, hash] of Object.entries(ctx.outputs.material.hashes))
@@ -173,10 +187,11 @@ export async function commit(ctx: Context) {
   const original = fs.readFileSync(profilePath);
   invariant(sha256(original) === p.previous, "CONFLICT", "Project signing configuration changed during preparation; nothing overwritten");
   const config = JSON5.parse(original.toString()) as any;
-  config.app.signingConfigs = (config.app.signingConfigs ?? []).filter((c: any) => c.name !== p.product);
-  config.app.signingConfigs.push({ name: p.product, type: "HarmonyOS", material: { certpath: file(p, "cer"), keyAlias: "debugKey", keyPassword: p.password,
+  const signingConfig = p.signingConfig ?? p.product;
+  config.app.signingConfigs = (config.app.signingConfigs ?? []).filter((c: any) => c.name !== signingConfig);
+  config.app.signingConfigs.push({ name: signingConfig, type: "HarmonyOS", material: { certpath: file(p, "cer"), keyAlias: "debugKey", keyPassword: p.password,
     profile: file(p, "p7b"), signAlg: "SHA256withECDSA", storeFile: file(p, "p12"), storePassword: p.password } });
-  for (const v of config.app.products ?? []) if (v.name === p.product) v.signingConfig = p.product;
+  if (p.type !== "release") for (const v of config.app.products ?? []) if (v.name === p.product) v.signingConfig = p.product;
   atomicWrite(profilePath, JSON5.stringify(config, null, 2));
   return result(ctx, p);
 }

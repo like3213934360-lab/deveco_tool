@@ -10,6 +10,7 @@ import { config, packageRoot } from "../core/config.js";
 import { errorResult, invariant, ToolError } from "../core/errors.js";
 import { assertConnected, hdc, shell } from "./device.js";
 
+import { queryNodes } from "./ui-query.js";
 import { automaticResult } from "./agreements.js";
 export { automaticActions, automaticResult, type AutomaticAction, type AutomaticResult } from "./agreements.js";
 
@@ -17,6 +18,7 @@ export { automaticActions, automaticResult, type AutomaticAction, type Automatic
 
 export interface Rect { x1: number; y1: number; x2: number; y2: number }
 export interface UiNode {
+  attributes?: Readonly<Record<string, unknown>>;
   i: number;
   parent: number | null;
   depth: number;
@@ -40,6 +42,9 @@ export interface UiNode {
   page: string | null;
 }
 export interface Selector {
+  xpath?: string;
+  regex?: Partial<Record<"text" | "description" | "id" | "key" | "type" | "bundle" | "window" | "page", string>>;
+  regex_flags?: string;
   text?: string;
   exact?: boolean;
   text_match?: "contains" | "exact" | "prefix" | "suffix";
@@ -90,6 +95,7 @@ export function flatten(raw: unknown): UiNode[] {
       .find((v) => typeof v === "string" && v.trim()) as string | undefined;
     const index = nodes.length;
     nodes.push({
+      attributes: attrs,
       i: index, parent: cur.parent, depth: cur.depth,
       id: str(attrs.id ?? node.$ID), type, key: str(attrs.key ?? attrs.id), text: text ?? "",
       rect: parseRect(node.$rect ?? attrs.bounds ?? attrs.rect),
@@ -112,7 +118,9 @@ export function select(nodes: UiNode[], s: Selector): UiNode[] {
   const text = s.text?.toLowerCase();
   const type = s.type?.toLowerCase();
   const mode = s.text_match ?? (s.exact ? "exact" : "contains");
-  const hits = (s.within ? subtree(nodes, s.within) : nodes).filter((n) =>
+  const scope = s.within ? new Set(subtree(nodes, s.within).map((n) => n.i)) : undefined;
+  const hits = queryNodes(nodes, s).filter((n) =>
+    (!scope || scope.has(n.i)) &&
     (text === undefined || (mode === "exact" ? n.text.toLowerCase() === text : mode === "prefix" ? n.text.toLowerCase().startsWith(text) : mode === "suffix" ? n.text.toLowerCase().endsWith(text) : n.text.toLowerCase().includes(text))) &&
     (s.description === undefined || n.description?.toLowerCase().includes(s.description.toLowerCase())) &&
     (s.focused === undefined || n.focused === s.focused) &&

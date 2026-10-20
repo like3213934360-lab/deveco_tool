@@ -111,7 +111,7 @@ defineJob<FormJobInput & { form_cases: { target?: string; emulator?: { device_ty
   summarize: (o) => ({ cases: o.cases, scope: "explicit-targets-and-previews", business_correctness: "not-judged" }),
 });
 
-interface BuildInput { project: string; product?: string; modules?: string[]; task?: BuildTask; mode?: string; clean?: boolean; preflight?: boolean }
+interface BuildInput { project: string; product?: string; modules?: string[]; task?: BuildTask; mode?: string; signing_config?: string; clean?: boolean; preflight?: boolean }
 
 defineJob<{ project: string; product?: string }>({
   kind: "sync",
@@ -223,7 +223,7 @@ const ITERATING_MS = 2 * 3600 * 1000;
 /** Test hosts and CI can disable the automatic quick-fix path entirely (DEVECO_AUTO_HOT=0). */
 const autoHotEnabled = () => process.env.DEVECO_AUTO_HOT !== "0";
 // Release/other build modes are never quick-fixed: only debug builds were baselined.
-const autoMode = (input: RunInput) => autoHotEnabled() && input.run_mode !== "full" && !input.hot_reload && !input.uninstall_first && !input.skip_build && (!input.mode || input.mode === "debug");
+const autoMode = (input: RunInput) => autoHotEnabled() && input.run_mode !== "full" && !input.signing_config && !input.hot_reload && !input.uninstall_first && !input.skip_build && (!input.mode || input.mode === "debug");
 const wentHot = (ctx: { outputs: Record<string, any> }) => ctx.outputs.hot?.path === "hot_reload";
 const relaunchOnly = (ctx: { outputs: Record<string, any> }) => ctx.outputs.hot?.path === "relaunch";
 /** Wrap a deploy step so it is skipped when the quick fix already updated the app (or nothing changed). */
@@ -540,7 +540,7 @@ defineJob<import("./domains/sign-auto.js").AutoInput>({
   steps: [
     { id: "prepare", run: async (ctx) => (await autoDomain()).prepare(ctx) },
     { id: "certificate", effect: true, replay: false, run: async (ctx) => (await autoDomain()).certificate(ctx), reconcile: async (ctx) => (await autoDomain()).reconcileCertificate(ctx) },
-    { id: "devices", run: async (ctx) => (await autoDomain()).devices(ctx) },
+    { id: "devices", when: (ctx) => ctx.input.type !== "release", run: async (ctx) => (await autoDomain()).devices(ctx) },
     { id: "profile", effect: true, replay: false, run: async (ctx) => (await autoDomain()).profile(ctx) },
     { id: "material", run: async (ctx) => (await autoDomain()).material(ctx) },
     { id: "commit", effect: true, replay: false, run: async (ctx) => (await autoDomain()).commit(ctx), reconcile: async (ctx) => (await autoDomain()).reconcileCommit(ctx) },

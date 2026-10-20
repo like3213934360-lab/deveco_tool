@@ -7,7 +7,7 @@ export const signTool = tool({
   name: "sign",
   title: "App signing",
   description: [
-    "auto: debug signing for all connected devices (auth provider=developer; no target): keystore/CSR/certificate/device registration/profile/signingConfigs. Existing signing needs force=true; new chain prepared before switching; free certificate slot required; old material kept. Interrupted cloud mutations require reconciliation.",
+    "auto: debug (default) registers connected devices; release skips devices, writes <product>_release, keeps product default. Requires developer auth and free certificate quota; existing config needs force=true. Old material retained. Interrupted cloud mutations require reconciliation.",
     "sign: file+out and project signingConfigs or all keystore/password/alias/cert/profile fields; verify: file. certificates/devices/register_device/delete_certificate: AGC.",
     "Steps: keypair(out+keystore_password>=6 chars, optional key_alias) -> csr(keystore+keystore_password+out) -> certificate_create(csr+name+out) -> profile_create(id=certificate ID,out,bundle or project); profile_delete(id=numeric AGC console profile ID). wait: auto only.",
     "AGC create/delete: multiple teams require team; TEAM_AMBIGUOUS: ask the user.",
@@ -15,7 +15,7 @@ export const signTool = tool({
   schema: z.object({
     action: z.enum(["auto", "sign", "verify", "certificates", "devices", "register_device", "delete_certificate",
       "keypair", "csr", "certificate_create", "profile_create", "profile_delete"]),
-    type: z.enum(["debug", "release"]).optional().describe("certificate_create/profile_create (default debug)"),
+    type: z.enum(["debug", "release"]).optional().describe("auto/certificate_create/profile_create (default debug)"),
     name: z.string().max(100).optional().describe("certificate_create/profile_create name"),
     csr: z.string().optional().describe("certificate_create: CSR file"),
     bundle: z.string().optional().describe("profile_create: bundle name (or pass project)"),
@@ -27,7 +27,7 @@ export const signTool = tool({
     file: z.string().optional(),
     out: z.string().optional(),
     keystore: z.string().optional(), keystore_password: z.string().optional(),
-    key_alias: z.string().optional().describe("keypair/csr: default debugKey; sign: required with explicit material, use the keystore's actual alias"), key_password: z.string().optional(),
+    key_alias: z.string().optional().describe("keypair/csr: debugKey default; sign: explicit material needs actual alias"), key_password: z.string().optional(),
     cert: z.string().optional(), profile: z.string().optional(),
     id: z.string().optional(),
     acl: z.array(z.string()).optional().describe("auto/profile_create: extra ACLs; project module.json5 permissions are derived"),
@@ -35,7 +35,7 @@ export const signTool = tool({
     wait: fields.wait,
   }),
   params: {
-    auto: ["project", "product", "team", "acl", "force", "wait"],
+    auto: ["project", "product", "team", "acl", "force", "type", "wait"],
     sign: ["file", "out", "project", "product", "keystore", "keystore_password", "key_alias", "key_password", "cert", "profile"],
     verify: ["file"],
     certificates: ["team"], devices: ["team"], register_device: ["team", "target"], delete_certificate: ["team", "id"],
@@ -52,7 +52,7 @@ export const signTool = tool({
         invariant(input.project, "INVALID_INPUT", "project is required");
         await ensureJobs();
         const { startJob, waitJob } = await import("../core/jobs.js");
-        const { job_id } = await startJob("auto_sign", { project: input.project, product: input.product, team: input.team, acl: input.acl, force: input.force });
+        const { job_id } = await startJob("auto_sign", { project: input.project, product: input.product, team: input.team, acl: input.acl, force: input.force, type: input.type });
         return waitJob(job_id, input.wait ?? 20000);
       }
       case "sign":
@@ -96,29 +96,28 @@ export const emulatorTool = tool({
   name: "emulator",
   title: "Emulator",
   description: [
-    "HarmonyOS: list; start/stop (start waits for boot, returns target); create(device_type,os_version,screen_profile or screen,memory,storage...); delete.",
-    "start: boot_mode=coldboot/snapshot/reset; hdc_port 10000-16555, one instance. Invalid port: ask, never call or substitute.",
-    "images: downloaded (all=true: all); install_image/remove_image. license accepts; license_view reads. start/create/install_image accept unless auto_accept_license=false.",
-    "scenario: inject sensors/motion; select scenario (see enum).",
+    "list; start/stop (waits for boot, returns target); create(device_type,os_version,screen_profile/screen,memory,storage); delete.",
+    "start: coldboot/snapshot/reset, hdc_port 10000-16555 (one instance), window=false. Invalid port: ask, never substitute.",
+    "images(all=true)/install_image/remove_image; license accepts; license_view reads. start/create/install_image accept unless auto_accept_license=false. scenario: sensors/motion.",
   ].join(" "),
   schema: z.object({
     action: z.enum(["list", "start", "stop", "create", "delete", "images", "install_image", "remove_image", "license", "license_view", "scenario"]),
-    name: z.string().optional().describe("Instance name (scenario too); create: 1-60 letters/digits/spaces/_/+; no hyphens"),
+    name: z.string().optional().describe("Instance; create: 1-60 letters/digits/spaces/_/+, no hyphens"),
     names: z.array(z.string()).min(1).max(8).optional().describe("start/stop: name or names, not both"),
     details: z.boolean().optional().describe("list: raw emulator fields"),
     cold: z.boolean().optional().describe("start: legacy coldboot flag; must agree with boot_mode"),
     boot_mode: z.enum(["coldboot", "snapshot", "reset"]).optional().describe("start: preserve data / restore Quick Boot / ERASE data; default instance setting"),
     hdc_port: z.number().int().min(10000).max(16555).optional().describe("start: integer 10000-16555, one instance; invalid: ask, never call/substitute; occupied: fail"),
     window: z.boolean().optional().describe("start: false for no window"),
-    device_type: z.string().optional().describe("phone, foldable, widefold, triplefold, tablet, 2in1, wearable, tv, car ..."),
+    device_type: z.string().optional().describe("Device form: phone/foldable/tablet/2in1/wearable/tv/car..."),
     os_version: z.string().optional().describe('e.g. "HarmonyOS 6.0.0(20)"'),
     memory: z.number().int().min(2).max(32).optional(), storage: z.number().int().min(2).max(1023).optional(),
     screen_profile: z.string().optional().describe('create: predefined screen model, e.g. "Mate 70 Pro"'),
-    screen: z.array(z.string()).min(1).max(2).optional().describe('create: custom screen "width height dpi inches" (second entry = folded screen)'),
+    screen: z.array(z.string()).min(1).max(2).optional().describe('create: "width height dpi inches"; second=folded screen'),
     hot_boot: z.boolean().optional().describe("create: enable quick boot"),
     instance_path: z.string().optional().describe("list/create/delete/start/stop: instance directory (default: Emulator's)"),
     image_root: z.string().optional().describe("create/start: image root directory"),
-    force: z.boolean().optional().describe("create: existing overwrite unavailable (preserved); install_image: re-download"),
+    force: z.boolean().optional().describe("create: refuses overwrite; install_image: redownload"),
     auto_accept_license: z.boolean().optional().describe("start/create/install_image: accept license (default true)"),
     all: z.boolean().optional().describe("images: include images not downloaded yet"),
     scenario: z.enum(["shake", "power", "rotate", "volume", "fold", "battery", "gps", "sensor", "outdoor_running", "outdoor_cycling", "driving_navigation"]).optional(),

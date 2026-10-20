@@ -30,6 +30,8 @@ test("control operations reject ignored fields and unknown operations", () => {
 test("command errors and unavailable testhelper remain failures; clipboard content is data", async () => {
   f.respond = () => reply("", 127, "testhelper: not found");
   await assert.rejects(m.clipboard("target", "read", undefined, signal), { code: "CAPABILITY_UNAVAILABLE" });
+  f.respond = () => reply("Error: Service is not available.");
+  await assert.rejects(m.screenControl("target", "wake", undefined, signal), { code: "CAPABILITY_UNAVAILABLE" });
   f.respond = () => reply("Error: permission denied");
   await assert.rejects(m.screenControl("target", "wake", undefined, signal), { code: "CAPABILITY_UNAVAILABLE" });
   f.respond = () => reply("Pasteboard text: Error: a copied diagnostic, not a command failure\n");
@@ -126,4 +128,32 @@ test("viewmode setter does not depend on a missing legacy parameter and accepts 
   for (const output of ['Error: Service is not available.', 'success', 'Set view mode to dark successfully.\nError: failure']) {
     f.respond = () => reply(output); await assert.rejects(m.screenControl('target', 'viewmode', 'dark', signal), { code: 'DEVICE_COMMAND_FAILED' });
   }
+});
+
+
+test("font operations quote names and reclaim only their uploaded file on success, failure and cancellation", async () => {
+  const font = path.join(work, "font with spaces.ttf"); fs.writeFileSync(font, "fixture font");
+  for (const operation of ["info", "install"]) {
+    f.calls = []; f.respond = (args) => args[2] === "file" ? reply("FileTransfer finish") : args[3]?.startsWith("testhelper get-fontname") ? reply("Font name: Fixture Font") : reply("success");
+    const result = await m.fontControl("target", { operation, local: font }, signal);
+    assert.equal(result.command_confirmed, true); assert.equal(result.runtime_verified, false);
+    if (operation === "info") assert.equal(result.name, "Fixture Font");
+    const sent = f.calls.find((args) => args[2] === "file");
+    assert.match(sent.at(-1), /^\/data\/local\/tmp\/deveco-font-[a-f0-9-]+\.ttf$/);
+    assert.equal(f.calls.filter((args) => args[3]?.startsWith("rm -f ")).length, 1);
+    assert.ok(f.calls.at(-1)[3].includes(sent.at(-1)));
+  }
+  f.calls = []; f.respond = () => reply("success");
+  await m.fontControl("target", { operation: "uninstall", name: "Font'; echo unwanted" }, signal);
+  assert.equal(f.calls.length, 1); assert.ok(f.calls[0][3].includes(m.shellValue("Font'; echo unwanted")));
+  f.calls = []; f.respond = (args) => args[2] === "file" ? reply("FileTransfer finish") : args[3]?.startsWith("rm ") ? reply("") : reply("testhelper: not found", 127);
+  await assert.rejects(m.fontControl("target", { operation: "install", local: font }, signal), { code: "CAPABILITY_UNAVAILABLE" });
+  assert.equal(f.calls.filter((args) => args[3]?.startsWith("rm ")).length, 1);
+  const controller = new AbortController(); f.calls = [];
+  f.respond = (args) => { if (args[2] === "file") { controller.abort(); throw new Error("font transfer cancelled"); } return reply(""); };
+  await assert.rejects(m.fontControl("target", { operation: "info", local: font }, controller.signal), /font transfer cancelled/);
+  assert.equal(f.calls.filter((args) => args[3]?.startsWith("rm ")).length, 1);
+  f.calls = [];
+  await assert.rejects(m.fontControl("target", { operation: "info", local: work }, signal), { code: "NOT_FOUND" });
+  assert.equal(f.calls.length, 0);
 });

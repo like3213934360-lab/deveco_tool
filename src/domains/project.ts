@@ -463,7 +463,17 @@ export function hasNativeCode(project: Project) {
 
 export async function buildProject(
   project: Project,
-  options: { task?: BuildTask; modules?: string[]; mode?: string; clean?: boolean; sync?: boolean; props?: string[] },
+  options: { task?: BuildTask; modules?: string[]; mode?: string; clean?: boolean; sync?: boolean; props?: string[]; signing_config?: string },
+  signal: AbortSignal,
+  jobId?: string,
+) {
+  const { withBuildSigning } = await import("./build-signing.js");
+  return withBuildSigning(project.root, project.product, options.signing_config, signal, () => compileProject(project, options, signal, jobId));
+}
+
+async function compileProject(
+  project: Project,
+  options: { task?: BuildTask; modules?: string[]; mode?: string; clean?: boolean; sync?: boolean; props?: string[]; signing_config?: string },
   signal: AbortSignal,
   jobId?: string,
 ) {

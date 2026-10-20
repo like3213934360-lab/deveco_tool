@@ -1,6 +1,7 @@
 // All auto-signing here is simulated: real runner/domain + loopback AGC, fake SDK/keytool.
 // No user credentials, home signing material, device, or real AGC endpoint is used.
 import assert from "node:assert/strict";
+import JSON5 from "json5";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import http from "node:http";
@@ -19,17 +20,17 @@ process.env.DEVECO_STATE_DIR = path.join(work, "state");
 process.env.DEVECO_COORDINATION_DIR = path.join(work, "coordination");
 const pem = fs.readFileSync(path.join(root, "test/fixtures/public-cert.pem"), "utf8");
 const fixture = globalThis.__devecoSignFixture = { home, pem, fault: null, config: null };
-let mode = "ok", certs = [], creates = 0, profiles = 0, deletes = [], hold, mutated;
+let mode = "ok", certs = [], creates = 0, profiles = 0, deletes = [], hold, mutated, requestedType = "debug", profileBody, deviceCalls = 0;
 const server = http.createServer(async (req, res) => {
   let raw = ""; for await (const chunk of req) raw += chunk;
   const body = raw ? JSON.parse(raw) : {};
   const send = (value) => res.end(JSON.stringify(value));
   if (req.url.endsWith("/cert/list")) return send({ certList: certs });
   if (req.url.endsWith("/cert/add")) {
-    creates++;
+    creates++; requestedType = body.certType === "2" ? "release" : "debug";
     if (mode === "quota") return send({ ret: { code: 205389872, msg: "quota" } });
     if (mode === "http") { res.statusCode = 500; return send({}); }
-    certs.push({ id: `new-${creates}`, certName: body.certName, certType: 1, certObjectId: "cert-object" });
+    certs.push({ id: `new-${creates}`, certName: body.certName, certType: mode === "wrong-cert-type" ? 1 : Number(body.certType), certObjectId: "cert-object" });
     if (mode === "crash-cert") { mutated?.(); return; }
     if (mode === "lost-cert") return res.destroy();
     return send({ ret: { code: 0 } });
@@ -39,11 +40,12 @@ const server = http.createServer(async (req, res) => {
     return send({ ret: { code: 0 } });
   }
   if (req.url.startsWith("/api/cps/device-manage/")) {
+    deviceCalls++;
     if (mode === "cancel") { hold?.(); return; }
     return send({ list: [{ id: "device-1", udid: "FIXTURE-UDID", deviceName: "test" }], totalCount: 1 });
   }
-  if (req.url.endsWith("/ide/test/provision/add")) {
-    profiles++;
+  if (/\/ide\/(?:test|real)\/provision\/add$/.test(req.url)) {
+    profiles++; profileBody = { url: req.url, ...body };
     if (mode === "profile-reject") return send({ ret: { code: 205389938, msg: "profile quota" } });
     if (mode === "lost-profile") return res.destroy();
     return send({ provisionFileUrl: "profile-object" });
@@ -64,7 +66,7 @@ process.env.DEVECO_AGC_URL = url;
 const digest = (b) => crypto.createHash("sha256").update(b).digest("hex");
 function bytes(object) {
   if (object === "cert-object") return Buffer.from(mode === "bad-cert" ? "invalid" : pem);
-  return Buffer.from(JSON.stringify({ "version-name": "2.0", type: "debug", "bundle-info": { "bundle-name": mode === "wrong-bundle" ? "com.wrong" : "com.test.audit", "development-certificate": pem },
+  return Buffer.from(JSON.stringify({ "version-name": "2.0", type: mode === "wrong-type" ? "debug" : requestedType, "bundle-info": { "bundle-name": mode === "wrong-bundle" ? "com.wrong" : "com.test.audit", [requestedType === "release" ? "distribution-certificate" : "development-certificate"]: pem },
     "debug-info": { "device-ids": [mode === "wrong-device" ? "FOREIGN" : "FIXTURE-UDID"] }, validity: { "not-before": 1, "not-after": 4102444800 } }));
 }
 const bundle = path.join(root, "node_modules/.cache/deveco-auto-harness.mjs");
@@ -98,7 +100,7 @@ const m = await import(pathToFileURL(bundle).href);
 after(async () => { await m.shutdownJobs(); await m.closeCoordination(); m.closeDatabase(); server.closeAllConnections(); await new Promise((r) => server.close(r)); fs.rmSync(work, { recursive: true, force: true }); fs.rmSync(bundle, { force: true }); delete globalThis.__devecoSignFixture; });
 
 function setup(existing = true) {
-  mode = "ok"; fixture.fault = null; creates = 0; profiles = 0; deletes = []; certs = [{ id: "old-cert", certName: "business", certType: 1, certObjectId: "old" }];
+  mode = "ok"; requestedType = "debug"; profileBody = undefined; deviceCalls = 0; fixture.fault = null; creates = 0; profiles = 0; deletes = []; certs = [{ id: "old-cert", certName: "business", certType: 1, certObjectId: "old" }];
   const project = fs.mkdtempSync(path.join(work, "project-"));
   const material = Object.fromEntries(["p12", "cer", "p7b", "csr"].map((ext) => {
     const f = path.join(project, `old.${ext}`); fs.writeFileSync(f, `original-${ext}`); return [ext, f];
@@ -109,7 +111,7 @@ function setup(existing = true) {
   return { project, config, material, hashes };
 }
 const unchanged = (p) => { for (const [file, hash] of Object.entries(p.hashes)) assert.equal(digest(fs.readFileSync(file)), hash, file); assert.ok(certs.some((c) => c.id === "old-cert")); assert.ok(!deletes.includes("old-cert")); };
-async function run(p, force = true) { const { job_id } = await m.startJob("auto_sign", { project: p.project, team: "offline-team", force }); await m.waitJob(job_id, 5000); return m.jobStatus(job_id, true); }
+async function run(p, force = true, type = "debug") { const { job_id } = await m.startJob("auto_sign", { project: p.project, team: "offline-team", force, type }); await m.waitJob(job_id, 5000); return m.jobStatus(job_id, true); }
 
 test("first sign, repeat refusal, force replacement retain all prior signing material", async () => {
   const p = setup(false); const first = await run(p, false);
@@ -193,5 +195,37 @@ test("a killed signing process reconciles certificate and atomic-config intents 
     assert.equal(recovered.status, "succeeded", JSON.stringify(recovered));
     assert.equal(creates, 1); assert.equal(profiles, 1); assert.equal(certs.length, 2); assert.deepEqual(deletes, []);
     for (const [file, hash] of Object.entries(p.hashes)) if (file !== p.config) assert.equal(digest(fs.readFileSync(file)), hash);
+  }
+});
+
+
+test("release auto-signing uses distribution material without devices or changing debug product references", async () => {
+  const p = setup(); const first = await run(p, false, "release");
+  assert.equal(first.status, "succeeded", JSON.stringify(first));
+  assert.equal(first.result.type, "release"); assert.equal(first.result.devices, 0); assert.equal(deviceCalls, 0);
+  assert.equal(profileBody.url, "/api/cps/provision-manage/v1/ide/real/provision/add");
+  assert.equal(profileBody.deviceList, undefined); assert.equal(requestedType, "release");
+  assert.equal(first.result.signing_config, "default_release");
+  assert.equal(first.result.next.signing_config, "default_release"); assert.equal(first.result.next.mode, "release");
+  const config = JSON5.parse(fs.readFileSync(p.config, "utf8"));
+  assert.equal(config.app.products[0].signingConfig, "old");
+  assert.equal(config.app.signingConfigs.find((v) => v.name === "old").material.storeFile, p.material.p12);
+  assert.ok(config.app.signingConfigs.find((v) => v.name === "default_release").material.profile.endsWith("release.p7b"));
+  for (const [file, hash] of Object.entries(p.hashes)) if (file !== p.config) assert.equal(digest(fs.readFileSync(file)), hash);
+  const previous = fs.readFileSync(p.config); const repeat = await run(p, false, "release");
+  assert.equal(repeat.error.code, "SIGN_CONFIGURED"); assert.equal(creates, 1); assert.deepEqual(fs.readFileSync(p.config), previous);
+});
+
+test("release profile rejection, invalid type and lost reply preserve the prior chain without partial configuration", async () => {
+  for (const failure of ["profile-reject", "wrong-type", "wrong-cert-type", "download", "config", "lost-profile"]) {
+    const p = setup(); if (failure === "config") fixture.fault = failure; else mode = failure;
+    const result = await run(p, false, "release");
+    assert.equal(result.status, failure === "lost-profile" ? "needs_input" : "failed", JSON.stringify(result));
+    assert.equal(deviceCalls, 0); unchanged(p);
+    assert.equal(certs.filter((v) => v.certType === 2).length, failure === "lost-profile" ? 1 : 0);
+    if (failure === "lost-profile") {
+      const posts = profiles; mode = "ok"; await m.resumeJob(result.job_id, true);
+      assert.equal((await m.waitJob(result.job_id, 5000)).status, "needs_input"); assert.equal(profiles, posts);
+    }
   }
 });

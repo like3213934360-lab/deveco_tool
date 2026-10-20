@@ -1,6 +1,6 @@
 {
   "name": "deveco-mcp",
-  "version": "1.6.3",
+  "version": "1.7.0",
   "description": "Lean HarmonyOS MCP server: build, deploy, device UI, code intelligence and updatable knowledge packs for any MCP host.",
   "type": "module",
   "license": "MIT",
@@ -49,10 +49,16 @@
     "test:verify": "node tools/build.mjs && node --test --test-concurrency=1 test/e2e/verification.test.mjs test/e2e/baselines.test.mjs",
     "test:scenarios": "node tools/build.mjs && node --test --test-concurrency=1 test/e2e/scenario.test.mjs",
     "test:forms": "node tools/build.mjs && node --test --test-concurrency=1 test/e2e/form.test.mjs",
-    "test:instrument-target": "node tools/build.mjs && node --test test/e2e/instrument-target.test.mjs"
+    "test:instrument-target": "node tools/build.mjs && node --test test/e2e/instrument-target.test.mjs",
+    "test:fonts": "node tools/build.mjs && node --test test/e2e/font.test.mjs",
+    "test:ui-selectors": "node tools/build.mjs && node --test --test-name-pattern=\"^UI query selectors\" test/e2e/ui.test.mjs",
+    "test:build-signing": "node tools/build.mjs && node --test test/e2e/build-signing.test.mjs",
+    "test:release-signing": "node tools/build.mjs && node --test --test-name-pattern=\"^release automatic signing$\" test/e2e/sign-cloud.test.mjs"
   },
   "dependencies": {
+    "@xmldom/xmldom": "0.9.12",
     "json5": "2.2.3",
+    "xpath": "0.0.35",
     "yauzl": "3.4.0",
     "zod": "4.4.3"
   },

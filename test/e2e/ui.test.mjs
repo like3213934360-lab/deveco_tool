@@ -4,7 +4,27 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { test } from "node:test";
-import { app } from "../support/acceptance.mjs";
+import { app, required, session } from "../support/acceptance.mjs";
+
+test("UI query selectors on an explicitly selected app", async (t) => {
+  const { call, raw } = await session(t);
+  const target = required("E2E_TARGET"), bundle = required("E2E_BUNDLE"), ability = required("E2E_ABILITY");
+  await call("device", { action: "app", operation: "start", target, bundle, ability, ...(process.env.E2E_MODULE ? { module: process.env.E2E_MODULE } : {}) });
+  const visible = await call("ui", { action: "find", target, bundle, selector: { regex: { text: "\\S" } }, timeout_ms: 5000, limit: 20 });
+  assert.ok(visible.matches.length > 0, "The selected app must expose text in its visible UI tree");
+  const node = visible.matches[0], pattern = node.text.replace(/[.*+?^{}$()|[\]\\]/g, "\\$&");
+  const expected = await call("ui", { action: "find", target, bundle, selector: { text: node.text, exact: true } });
+  const matched = await call("ui", { action: "find", target, bundle, selector: { xpath: "//*[@text]", regex: { text: "^" + pattern + "$" } } });
+  assert.ok(matched.count > 0); assert.equal(matched.count, expected.count);
+  const assertion = await call("ui", { action: "assert", target, bundle, visible: { xpath: "//*[@text]", regex: { text: "^" + pattern + "$" } }, timeout_ms: 1000 });
+  assert.equal(assertion.passed, true);
+  const batch = await call("ui", { action: "act", target, steps: [{ op: "wait", selector: { xpath: "//*[@text]", regex: { text: "^" + pattern + "$" }, bundle }, timeout_ms: 1000 }], assert: { visible: { regex: { text: "^" + pattern + "$" }, bundle }, timeout_ms: 1000 } });
+  assert.equal(batch.passed, true);
+  for (const selector of [{ xpath: "count(//*)" }, { regex: { text: "[" } }]) {
+    const invalid = await raw("ui", { action: "find", target, bundle, selector });
+    assert.equal(invalid.isError, true); assert.equal(invalid.data.error.code, "INVALID_INPUT");
+  }
+});
 
 test("UI failure boundaries and stability", async (t) => {
   const { raw, job, target, project, bundle, ui, launch, visible, run, defer, info } = await app(t);

@@ -41,7 +41,7 @@ export const SYNC_WAIT_MS = MAX_WAIT_MS - 3000;
 /** Shared field helpers keep descriptions consistent across tools. */
 export const fields = {
   project: z.string().min(1).describe("Absolute project root"),
-  product: z.string().min(1).optional().describe("Product if multiple"),
+  product: z.string().min(1).optional().describe("Product"),
   modules: z.array(z.string().min(1)).max(64).optional().describe("Module or name@target"),
   target: z.string().min(1).optional().describe("Device serial/name; multiple devices: ask user"),
   requestKey: z.string().min(1).max(200).optional().describe("Dedup key"),

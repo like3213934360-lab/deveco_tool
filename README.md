@@ -127,9 +127,19 @@ FPS 无有效数据返回 `verdict=inconclusive` 和 `diagnostic_artifact`；`re
 
 `file operation=exists/delete remote=...` 只删除指定文件，不递归删除目录，失败不重复尝试。`clipboard operation=read/write/clear` 使用设备 testhelper。`screen` 提供 size/status/wake/sleep、rotation/rotate（value=0..3）、rotation_lock（布尔值）、sleeptime（毫秒、-1 或 restore）和 viewmode（dark/light）；`system` 提供 time/timezone 的读取与设置，以及 unlock/control_center/notification_center 手势。设备缺少权限或命令时明确失败；结果中的 `verified`、`state_verified` 和 `runtime_verified` 限定证据范围。滑动不代表成功解锁，密码锁仍需要用户解锁。旋转只发送一次设置请求，最多等待 2 秒读取实际方向；UiTest 可能同时解除旋转锁，调用方需显式恢复。viewmode 设置不依赖旧版系统参数；参数缺失仍会明确拒绝查询，设置回执不代替应用颜色配置验收。测试修改设置后应按原值恢复；sleeptime=restore 取消 MCP 设置的息屏覆盖。安装的 install_timeout 遵循 bm 的 180–600 秒范围。剪贴板保留原始空白与特殊字符，写入/清空后读取校验；time/timezone 返回去除命令提示的值，便于恢复原设置。
 
-例如 `device {action:"app",operation:"foreground",target:"<serial>"}` 查询前台，`device {action:"screen",operation:"viewmode",value:"dark",target:"<serial>"}` 切换深色；`ui {action:"find",window:123,selector:{text:"保存",text_match:"prefix"},timeout_ms:3000,target:"<serial>"}` 等待指定窗口的匹配控件。查找结果用 offset/limit 分页；选择器还支持 description、focused、scrollable、long_clickable、checkable、within（子树 id/key）和负 index。保留结构化选择器，不支持 CLI DSL/Base64 或完整 XPath。`project clean` 可传 modules（含 name@target）、execution_mode 和 wait；不传模块保持 SDK 默认清理范围。
+例如 `device {action:"app",operation:"foreground",target:"<serial>"}` 查询前台，`device {action:"screen",operation:"viewmode",value:"dark",target:"<serial>"}` 切换深色；`ui {action:"find",window:123,selector:{text:"保存",text_match:"prefix"},timeout_ms:3000,target:"<serial>"}` 等待指定窗口的匹配控件。查找结果用 offset/limit 分页；选择器还支持 description、focused、scrollable、long_clickable、checkable、within（子树 id/key）和负 index。保留结构化选择器，支持 XPath 1.0 和正则，不解析 CLI DSL/Base64。`project clean` 可传 modules（含 name@target）、execution_mode 和 wait；不传模块保持 SDK 默认清理范围。
 
 `ui tree` 的 depth 与 interactive 过滤同时生效；返回 shown_nodes、filtered_nodes 和空结果指引。`find`/`assert` 未匹配时仅补查一次窗口上下文，返回锁屏、桌面、应用或未知状态；hidden 通过只表示所查树中没有匹配项，不代表应用业务状态正确。`project build` 的 synced 是布尔值，表示本次是否执行同步；触发原因单列为 sync_reason。`project test` 的编译错误返回 BUILD_FAILED 及源码诊断，非编译执行失败与成功退出但缺报告分别保留不同分类。
+
+## 字体、签名与复杂定位
+
+`device {action:"font", operation:"info"|"install", local:"/absolute/owned.ttf", target:"<serial>"}` 读取字体名称或安装字体；卸载使用 `operation:"uninstall", name:"字体名称"`。命令依赖设备的 testhelper 和系统字体服务，明确报告不支持或权限不足。上传文件在成功、失败和取消后清理；命令完成不代表应用渲染已验收。
+
+`project {action:"build", project:"/absolute/project", signing_config:"release"}` 单次选择已有签名配置，成功、失败和取消后恢复原始配置字节。`run build_run` 同样支持，显式选择时执行完整构建，不能与 `skip_build` 同用。恢复记录只保存被修改的配置名称片段，不复制配置备份；进程意外退出后，下次构建先恢复。配置发生并发修改时保留现场并报冲突，不覆盖外部编辑。
+
+`sign {action:"auto", type:"release", project:"/absolute/project", team:"<explicit team>"}` 自动准备密钥、发行证书和 Release Profile，校验证书、密钥、包名、有效期、ACL 和 Profile 签名后，写入 `<product>_release` 配置，保留 product 的默认签名引用。返回的 `next` 指明使用该配置构建。默认 `type:"debug"` 保持原流程；Release 不注册设备。配额不足、Profile 创建失败均明确失败，不写入不完整配置；不重试结果不确定的云端创建，不自动撤销原有证书。
+
+所有结构化 UI 选择器支持 XPath 1.0 元素查询及多字段正则，例如 `selector:{xpath:"//Button[ancestor::Row]",regex:{text:"^(保存|确定)$"},regex_flags:"u"}`。正则字段为 text/description/id/key/type/bundle/window/page，默认 flags 为 `iu`，可传不重复的 i/m/s/u；空字符串表示区分大小写。XPath、正则、普通属性和 within 范围取交集，最后应用 index；支持 find、assert、act、批量操作和流程。只接受元素结果，属性、文本或标量查询报错；复杂求值超过 100ms 返回 UI_QUERY_TIMEOUT，不截断结果制造成功。使用结构化参数，不解析 CLI DSL/Base64。
 
 ## 知识包
 

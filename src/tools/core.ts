@@ -36,10 +36,10 @@ export const projectTool = tool({
   name: "project",
   title: "Project create/sync/build",
   description: [
-    "info: metadata; create(app_name,bundle_name): built-in template, never overwrites; clean (job): build outputs by modules/execution_mode=module|project.",
-    "sync (job): ohpm install + hvigor sync. build (job): advisory edited-file preflight + hvigor; packages or first 100 compile errors (code/file/line/message/source) with fixes. oh-package.json5/build-profile.json5 edits auto-install dependencies.",
-    "test (job): SDK local/instrument tests with verified case counts; instrument requires allow_data_reset and an explicit target when several devices are connected; other targets remain untouched. verify (job): JSON plan -> scoped acceptance verdict + JSON/JUnit/HTML evidence; launch/perf: baseline or max required, else inconclusive. entries: declared Ability/Extension/form/shortcut graph with main/device_types/runtime_verified=false; not installed-device evidence.",
-    "Build already checks edited files: no code check first. request_key/wait: sync/build/clean/test/verify only.",
+    "info: metadata; create(app_name,bundle_name): template, never overwrite. clean (job): modules/execution_mode=module|project; sync: ohpm+hvigor.",
+    "build (job): edited-file preflight+compiler; artifacts or compile diagnostics with fixes. Manifest edits sync dependencies. signing_config selects temporarily and restores.",
+    "test (job): verified SDK local/instrument case counts; instrument erases data, needs allow_data_reset and target with multiple devices. verify: scoped JSON plan, JSON/JUnit/HTML; launch/perf need baseline/max or inconclusive.",
+    "entries: declared Ability/Extension/form/shortcut graph; main/device_types/runtime_verified=false, no runtime verdict. Build already checks edited files: no code check first. request_key/wait: sync/build/clean/test/verify only.",
   ].join(" "),
   schema: z.object({
     action: z.enum(["info", "create", "sync", "build", "clean", "test", "verify", "entries"]),
@@ -60,8 +60,9 @@ export const projectTool = tool({
     base: z.string().optional().describe("verify changed_only: explicit Git base ref"),
     baseline_mode: z.enum(["compare", "record"]).optional(),
     allow_commands: z.boolean().optional().describe("verify: explicitly permit reviewed project commands"),
-    task: z.enum(["assembleHap", "assembleHar", "assembleHsp", "assembleApp", "compileNative"]).optional().describe("build: default assembleHap; compileNative writes compile_commands.json for clangd"),
+    task: z.enum(["assembleHap", "assembleHar", "assembleHsp", "assembleApp", "compileNative"]).optional().describe("build: assembleHap default; compileNative: clangd inputs"),
     mode: z.string().optional().describe("build: buildMode, default debug"),
+    signing_config: z.string().min(1).max(128).optional().describe("build: temporary signingConfig selection"),
     clean: z.boolean().optional().describe("build: clean first"),
     preflight: z.boolean().optional().describe("build: ArkTS preflight (default true; advisory)"),
     app_name: z.string().optional().describe("create: display name"),
@@ -80,7 +81,7 @@ export const projectTool = tool({
     verify: ["project", "product", "plan", "output", "target", "changed_only", "base", "baseline_mode", "allow_commands", "request_key", "wait"],
     create: ["project", "app_name", "bundle_name", "sdk_version", "target_api", "compatible_api", "device_types", "merge"],
     sync: ["project", "product", "request_key", "wait"],
-    build: ["project", "product", "modules", "task", "mode", "clean", "preflight", "request_key", "wait"],
+    build: ["project", "product", "modules", "task", "mode", "signing_config", "clean", "preflight", "request_key", "wait"],
     clean: ["project", "product", "modules", "execution_mode", "wait", "request_key"],
   },
   async handler(input, ctx) {
@@ -108,7 +109,7 @@ export const projectTool = tool({
       case "sync":
         return startAndWait("sync", { project: input.project, product: input.product }, input.request_key, input.wait);
       case "build":
-        return startAndWait("build", { project: input.project, product: input.product, modules: input.modules, task: input.task, mode: input.mode, clean: input.clean, preflight: input.preflight ?? true }, input.request_key, input.wait);
+        return startAndWait("build", { project: input.project, product: input.product, modules: input.modules, task: input.task, mode: input.mode, signing_config: input.signing_config, clean: input.clean, preflight: input.preflight ?? true }, input.request_key, input.wait);
     }
   },
 });
@@ -119,17 +120,20 @@ const assertSchema = z.object({
   timeout_ms: z.number().int().min(100).max(120000).optional(),
 }).refine((input) => !!input.visible !== !!input.hidden, "Pass exactly one visible or hidden selector");
 export const selectorSchema = z.object({
-  text: z.string().optional().describe("Substring; exact=true"),
+  xpath: z.string().min(1).max(2048).optional().describe("XPath 1.0"),
+  regex: z.record(z.string().regex(/^(text|description|id|key|type|bundle|window|page)$/), z.string().min(1).max(512)).optional(),
+  regex_flags: z.string().max(4).optional().describe("i/m/s/u; default iu"),
+  text: z.string().optional().describe("Contains"),
   exact: z.boolean().optional(),
   text_match: z.enum(["contains", "exact", "prefix", "suffix"]).optional(),
-  description: z.string().optional().describe("Substring"),
+  description: z.string().optional(),
   focused: z.boolean().optional(),
   scrollable: z.boolean().optional(),
   long_clickable: z.boolean().optional(),
   checkable: z.boolean().optional(),
   within: z.string().optional().describe("Ancestor id/key"),
   key: z.string().optional().describe("ArkUI .id('...')"),
-  type: z.string().optional().describe("E.g. Button, TextInput"),
+  type: z.string().optional(),
   id: z.string().optional(),
   bundle: z.string().optional(),
   clickable: z.boolean().optional(),
@@ -156,12 +160,10 @@ export const runTool = tool({
   name: "run",
   title: "Deploy and launch",
   description: [
-    "Deploy device-matched modules; preserve project signing.",
-    "build_run: check edited files + build + install + launch + crash check; no code check first.",
-    "run_mode=auto (default): first build_run on the same device deploys; later entry-module code-only edits quick-fix, others fully deploy. Returns path=hot_reload|full|relaunch, fallback_reason. full always deploys.",
-    "Startup crash: LAUNCH_FAILED + crash.source(file/line/code).",
-    "then_flow=<ui_flow id>: replay after launch; assert then verifies the final screen.",
-    "deploy: install latest build + launch. launch: project/product/target/module/ability/want only; stop/uninstall: project/product/target only. wait/request_key: build_run/deploy only. hot_reload=true saves baseline after successful launch.",
+    "build_run: check edited files + build/install/launch/crash; no code check first. signing_config: full build, restored.",
+    "run_mode=auto: first build_run on the same device deploys; later entry-only edits quick-fix. path=hot_reload|full|relaunch; full always deploys. LAUNCH_FAILED includes crash.source.",
+    "then_flow=<ui_flow id>: replay after launch; assert then verifies the final screen. deploy uses latest packages.",
+    "launch: project/product/target/module/ability/want only; stop/uninstall: project/product/target only. wait/request_key: build_run/deploy only. hot_reload=true saves baseline after successful launch.",
   ].join(" "),
   schema: z.object({
     action: z.enum(["build_run", "deploy", "launch", "stop", "uninstall"]),
@@ -170,6 +172,7 @@ export const runTool = tool({
     modules: fields.modules,
     target: fields.target,
     mode: z.string().optional(),
+    signing_config: z.string().min(1).max(128).optional().describe("build_run: temporary signingConfig; full build"),
     module: z.string().optional().describe("Launch module (default entry)"),
     ability: z.string().optional().describe("Launch ability (default module mainElement)"),
     want: z.object({ uri: z.string().max(4096).optional(), action: z.string().max(256).optional(), parameters: z.record(z.string(), z.union([z.string().max(4096), z.number().int(), z.boolean()])).optional() }).strict().optional().describe("launch: URI/action and typed Want parameters"),
@@ -184,7 +187,7 @@ export const runTool = tool({
     wait: fields.wait,
   }),
   params: {
-    build_run: ["project", "product", "modules", "target", "mode", "run_mode", "module", "ability", "assert", "hot_reload", "skip_build", "uninstall_first", "then_flow", "flow_variables", "request_key", "wait"],
+    build_run: ["project", "product", "modules", "target", "mode", "signing_config", "run_mode", "module", "ability", "assert", "hot_reload", "skip_build", "uninstall_first", "then_flow", "flow_variables", "request_key", "wait"],
     deploy: ["project", "product", "modules", "target", "module", "ability", "assert", "hot_reload", "uninstall_first", "then_flow", "flow_variables", "request_key", "wait"],
     launch: ["project", "product", "target", "module", "ability", "want"],
     stop: ["project", "product", "target"],
@@ -192,6 +195,7 @@ export const runTool = tool({
   },
   async handler(input, ctx) {
     if (input.action === "build_run" || input.action === "deploy") {
+      invariant(!input.signing_config || !input.skip_build, "INVALID_INPUT", "signing_config cannot be used with skip_build");
       if (input.then_flow) {
         // Fail before a long build when the flow does not exist or needs variables that were not given.
         const { readFlow } = await import("../domains/flows.js");
@@ -347,9 +351,9 @@ export const codeTool = tool({
 export const deviceTool = tool({
   name: "device",
   title: "Devices/logs/files",
-  description: "list/info: devices, model/API/screen. action=log: hilog bundle/grep/level/from/to/follow/cursor/clear; project locates source. shell: read-only. databases: debug RDB paths. fixture: owned scratch table prepare/inspect/cleanup; refuses changed data. scenario: background/clear_data/grant/revoke. trace: bounded hitrace, no inferred stack. action=sqlite: db+sql; read-only unless write=true. send/recv: local/remote files. app operation=list|info|foreground|start|stop|install(job)|uninstall|clear_cache|clear_data; projectless; resets need allow_data_reset=true. file=exists|delete: single file. clipboard=read|write|clear: testhelper. screen=size|status|wake|sleep|rotation|rotate|rotation_lock|sleeptime|viewmode; rotation value=0..3; lock boolean. system=time|timezone (optional string value)|unlock|control_center|notification_center. Support checked on use; command completion is not state/business verification.",
+  description: "list/info: devices/API/screen. action=log: hilog filters/cursor/follow; project adds source. shell: read-only; action=sqlite: db+sql, write=true for mutation. databases: debug RDBs; fixture: owned table prepare/inspect/cleanup. scenario: background/clear_data/grant/revoke; trace: raw hitrace. app: list/info/foreground/start/stop/install(job)/uninstall/clear_cache/clear_data; resets need allow_data_reset. file: exists/delete one file; send/recv: local+remote. font: info/install(local)/uninstall(name), uploaded file removed. clipboard: read/write/clear. screen: size/status/wake/sleep/rotation/rotate(0..3)/rotation_lock(bool)/sleeptime/viewmode. system: time/timezone(string value)/unlock/control_center/notification_center. Unsupported commands fail; completion is not state/business verification.",
   schema: z.object({
-    action: z.enum(["list", "info", "log", "shell", "sqlite", "send", "recv", "databases", "scenario", "fixture", "trace", "app", "file", "clipboard", "screen", "system"]),
+    action: z.enum(["list", "info", "log", "shell", "sqlite", "send", "recv", "databases", "scenario", "fixture", "trace", "app", "file", "clipboard", "screen", "system", "font"]),
     operation: z.enum(["background", "clear_data", "grant", "revoke", "prepare", "inspect", "cleanup", "list", "info", "foreground", "start", "stop", "uninstall", "install", "clear_cache", "exists", "delete", "read", "write", "clear", "size", "rotation", "rotate", "rotation_lock", "sleeptime", "viewmode", "wake", "sleep", "status", "time", "timezone", "unlock", "control_center", "notification_center"]).optional(),
     ability: z.string().optional(),
     want: z.object({ uri: z.string().max(4096).optional(), action: z.string().max(256).optional(), parameters: z.record(z.string(), z.union([z.string().max(4096), z.number().int(), z.boolean()])).optional() }).strict().optional(),
@@ -386,6 +390,7 @@ export const deviceTool = tool({
     cursor: z.string().optional().describe("log follow: previous cursor (omit initially)"),
     wait_ms: z.number().int().min(0).max(30000).optional().describe("log follow: max wait for new lines (default 5000)"),
     command: z.string().optional().describe("shell: read-only command line"),
+    name: z.string().max(256).optional().describe("font uninstall: installed font name"),
     local: z.string().optional(),
     remote: z.string().optional(),
     project: z.string().optional().describe("log: project root for error source files/lines/code"),
@@ -393,6 +398,7 @@ export const deviceTool = tool({
   params: {
     list: [], info: ["target"],
     app: ["target", "operation", "bundle", "ability", "module", "want", "allow_data_reset", "files", "shared", "replace", "user", "install_timeout", "offset", "limit", "wait", "request_key"],
+    font: ["target", "operation", "local", "name"],
     file: ["target", "operation", "remote"], clipboard: ["target", "operation", "text"],
     screen: ["target", "operation", "value"], system: ["target", "operation", "value"],
     databases: ["target", "bundle", "module"], scenario: ["target", "operation", "bundle", "permission", "allow_data_reset"],
@@ -403,7 +409,7 @@ export const deviceTool = tool({
   },
   async handler(input, ctx) {
     const device = await import("../domains/device.js");
-    if (["app", "file", "clipboard", "screen", "system"].includes(input.action)) {
+    if (["app", "file", "clipboard", "screen", "system", "font"].includes(input.action)) {
       const controls = await import("../domains/device-controls.js");
       controls.validateControl(input);
       if (input.action === "app" && input.operation === "install") {
@@ -413,6 +419,7 @@ export const deviceTool = tool({
       const target = await device.resolveTarget(input.target, ctx.signal);
       switch (input.action) {
         case "app": return controls.appControl(target, { ...input, operation: input.operation! }, ctx.signal);
+        case "font": return controls.fontControl(target, { operation: input.operation!, local: input.local, name: input.name }, ctx.signal);
         case "file": return controls.deviceFile(target, input.operation!, input.remote!, ctx.signal);
         case "clipboard": return controls.clipboard(target, input.operation!, input.text, ctx.signal);
         case "screen": return controls.screenControl(target, input.operation!, input.value, ctx.signal);
@@ -473,23 +480,22 @@ export const uiTool = tool({
   name: "ui",
   title: "Device UI",
   description: [
-    "observe: screenshot+elements; screenshot/tree/find/windows: inspect. find: timeout_ms/window/bundle/offset/limit; assert: window/bundle. tree: window/depth/all_windows/node.",
-    "selector/visible/hidden: objects, e.g. {\"text\":\"Hi\"}.",
-    "act: click/double_click/long_click selector or x,y; input/type text; swipe/drag/fling x,y,x2,y2; scroll; key/keys chord; mouse_* for tablet/2in1.",
+    "observe: screenshot+elements; screenshot/tree/find/windows inspect. find: timeout_ms/window/bundle/offset/limit; tree: window/depth/all_windows/node.",
+    "selector/visible/hidden: objects, e.g. {\"text\":\"Hi\"}. XPath 1.0 and per-field regex intersect other filters; evaluation capped at 100 ms.",
+    "act: op + selector/coordinates; text for input/type; keys=chord; mouse_* for tablet/2in1.",
     "act after={changed,kind,added,removed}: app's on-screen elements; no extra observe.",
-    "act steps=[...]: waits for each element, stops at first failure with controls. save_flow={project,id} for run then_flow. ~52 s/call; stopped_at=continuation.",
+    "act steps=[...]: waits for each element, stops at first failure. save_flow={project,id}; run then_flow replays. stopped_at=continuation (~52 s/call).",
     "assert: visible OR hidden, not screenshots alone.",
     "Accept consent (agreements_accepted) and setup preserving defaults (onboarding_completed) by window text/control state, never app names/fixed IDs. If still blocked, observe; never blindly repeat.",
-    "visual: baseline (first saves, update replaces); changed_ratio/regions/diff_artifact; dimming=global_shift.",
-    "layout: geometry heuristics; forms=[foldable,widefold,triplefold] job. wait/request_key: layout forms and form.",
-    "form (job): form_action=inventory|catalog|exercise|matrix; desktop only; no business verdict inferred.",
-    "perf: scroll smoothness/jank; no data=inconclusive + diagnostic_artifact; bundle adds pss. record_start/record_stop/record_status: mp4. record_receipts/record_archive(target,name)/record_restore(receipt_id): offline; preserve receipts, no device I/O.",
-    "Tests: test_start(plan) -> test_step(test_id, op/selector or visible/hidden) -> review(test_id+requirement) captures an image; inspect it before review(test_id+review_id+outcome+reason) -> test_finish -> test_log/test_export. Omit outcome/review_id on capture. checklist_item links every plan item; missing coverage=inconclusive.",
+    "visual: baseline/update, changed_ratio/regions/diff_artifact; global_shift=dimming. layout: geometry; forms job. wait/request_key: layout forms and form.",
+    "form (job): desktop inventory/catalog/exercise/matrix; no business verdict. perf: scroll smoothness/jank; no data=inconclusive + diagnostic_artifact; bundle adds pss.",
+    "record_start/record_stop/record_status: mp4. record_receipts/record_archive/record_restore: offline receipt management; no device I/O.",
+    "Tests: test_start(plan) -> test_step(test_id, op/selector or visible/hidden) -> review(test_id+requirement) captures an image; inspect it before review(test_id+review_id+outcome+reason) -> test_finish -> test_log/test_export. Omit outcome/review_id on capture. checklist_item links plan coverage; missing coverage=inconclusive.",
   ].join(" "),
   schema: z.object({
     action: z.enum(["observe", "screenshot", "tree", "find", "act", "assert", "windows", "perf", "visual", "layout", "record_start", "record_stop", "record_status", "record_receipts", "record_archive", "record_restore",
       "test_start", "test_step", "review", "test_finish", "test_log", "test_export", "form"]),
-    form_action: z.enum(["inventory", "catalog", "exercise", "matrix"]).optional().describe("catalog returns form_index; exercise adds/checks/removes its own instance; matrix needs form_cases; form_size needs a host size control; then_flow runs project assertions"),
+    form_action: z.enum(["inventory", "catalog", "exercise", "matrix"]).optional().describe("catalog: form_index; exercise: owned instance; matrix: form_cases; size needs host control"),
     form_index: z.number().int().min(0).max(99).optional(),
     form_size: z.string().regex(/^[1-6]\*[1-6]$/).optional(),
     max_pages: z.number().int().min(1).max(30).optional(),
@@ -557,7 +563,7 @@ export const uiTool = tool({
     strict_targets: z.boolean().optional().describe("layout: tiny targets fail; default advisory"),
     threshold: z.number().int().min(1).max(64).optional().describe("visual: gray difference per block (default 8)"),
     forms: z.array(z.enum(["foldable", "widefold", "triplefold"])).min(1).max(3).optional().describe("layout: emulator forms to check (job)"),
-    then_flow: z.string().optional().describe("layout/form: ui_flow without required variables; form requires start.mode=attach"),
+    then_flow: z.string().optional().describe("layout/form: flow without required variables; form needs attach"),
     keep_running: z.boolean().optional().describe("layout forms: leave the emulators running"),
     request_key: fields.requestKey,
     wait: fields.wait,
@@ -588,6 +594,10 @@ export const uiTool = tool({
     };
   })(),
   async handler(input, ctx) {
+    // Validate queries before automatic UI interactions or any explicit action.
+    const { validateSelector } = await import("../domains/ui-query.js");
+    for (const selector of [input.selector, input.visible, input.hidden, input.assert?.visible, input.assert?.hidden, ...(input.steps?.map((step) => step.selector) ?? [])])
+      if (selector) validateSelector(selector);
     // Domain callers also use this handler without the MCP schema boundary.
     invariant(!(input.visible && input.hidden), "INVALID_INPUT", "Pass exactly one visible or hidden selector");
     if (input.action === "act" && !input.steps) invariant(!input.assert && !input.save_flow, "INVALID_INPUT", "assert/save_flow require steps; use a one-step array for one action plus assertion");
@@ -872,7 +882,7 @@ export const uiFlowTool = tool({
     assert: assertSchema.optional().describe("stop: final assert required to save"),
     discard: z.boolean().optional(),
     repair: z.boolean().optional(),
-    snapshot: z.boolean().optional().describe("replay: after final assert, compare screen; first snapshot replay saves baseline"),
+    snapshot: z.boolean().optional().describe("replay: final comparison; first saves baseline"),
     request_key: fields.requestKey,
     wait: fields.wait,
   }),
@@ -954,10 +964,9 @@ export const knowledgeTool = tool({
   title: "Knowledge",
   readOnly: false,
   description: [
-    "Updatable offline HarmonyOS guides/APIs/best practices/FAQ/releases, ArkTS rules/compile errors/crash patterns.",
-    "search: Chinese/English full text, APIs, decorators, errors. read: id, section=heading. catalog: no parameters; rollback: restore previous pack, no parameters. status/update: check.",
-    "source=cloud: only query; Huawei CodeGenie (auth provider=codegenie); labels: official (local_doc = matching document) / official_other_platform (not ArkTS) / community / unverified; full_artifact holds full answer (job action=read).",
-    "Conflicts: SDK declarations (code lsp hover) and a successful build win, then official docs; community never defines the API.",
+    "Offline HarmonyOS docs and ArkTS rules/errors/crash patterns.",
+    "search: Chinese/English; read: id+section; catalog: no parameters; rollback: no parameters; status/update: check.",
+    "source=cloud: only query; CodeGenie auth; official(local_doc)/official_other_platform/community/unverified. Full answer: full_artifact via job read. SDK declarations and a successful build win, then official docs; community never defines the API.",
   ].join(" "),
   schema: z.object({
     action: z.enum(["search", "read", "catalog", "status", "update", "rollback"]),
