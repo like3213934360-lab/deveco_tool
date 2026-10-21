@@ -117,8 +117,12 @@ test("hot reload and deploy", async (t) => {
       fs.writeFileSync(source, fs.readFileSync(source, "utf8").replace(`'${previous}'`, `'${next}'`));
       previous = next;
       const started = performance.now();
-      assert.equal((await call("hot_reload", { action: "apply", project, target, restart: true })).applied, true);
+      const applied = await call("hot_reload", { action: "apply", project, target, restart: true });
+      assert.equal(applied.applied, true);
       const elapsed = performance.now() - started;
+      assert.ok(applied.timings_ms.compile > 0 && applied.timings_ms.total >= applied.timings_ms.compile);
+      assert.ok(Object.values(applied.timings_ms).every((ms) => Number.isFinite(ms) && ms >= 0));
+      t.diagnostic(JSON.stringify({ patch: next, elapsed_ms: Math.round(elapsed), timings_ms: applied.timings_ms }));
       assert.equal((await call("ui", { action: "assert", target, visible: { text: next, exact: true }, timeout_ms: 5000 })).passed, true);
       assert.ok(elapsed <= 6000, `Patch and restart took ${Math.round(elapsed)} ms; budget is 6000 ms`);
     });

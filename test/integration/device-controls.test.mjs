@@ -23,7 +23,7 @@ after(() => { delete globalThis.__controls; fs.rmSync(bundle, { force: true }); 
 function reply(stdout, code = 0, stderr = "") { return { code, stdout, stderr }; }
 test("control operations reject ignored fields and unknown operations", () => {
   m.validateControl({ action: "app", operation: "start", bundle: "com.example.app", ability: "Main" });
-  for (const input of [{ action: "app", operation: "stop", files: [] }, { action: "clipboard", operation: "read", text: "unused" }, { action: "system", operation: "time", value: 1 }, { action: "screen", operation: "clear_data" }]) {
+  for (const input of [{ action: "app", operation: "stop", files: [] }, { action: "app", operation: "install", files: ["/owned/app.hap"], shared: ["/owned/system.hsp"] }, { action: "clipboard", operation: "read", text: "unused" }, { action: "system", operation: "time", value: 1 }, { action: "screen", operation: "clear_data" }]) {
     assert.throws(() => m.validateControl(input), { code: "INVALID_INPUT" });
   }
 });
@@ -97,19 +97,22 @@ test("package install shares HAP/HSP staging and cleans it once on failure or ca
   const hap = path.join(work, "a package.hap"), hsp = path.join(work, "shared.hsp");
   fs.writeFileSync(hap, "fixture"); fs.writeFileSync(hsp, "fixture");
   f.calls = []; f.respond = (args) => args[3] === "bm" ? reply("install bundle successfully.") : args[2] === "file" ? reply("FileTransfer finish") : reply("success");
-  await m.install("target", [hap], signal, true, { shared: [hsp], user: 100, install_timeout: 180 });
+  await m.install("target", [hap, hsp], signal, true, { user: 100, install_timeout: 180 });
   const install = f.calls.find((a) => a[3] === "bm");
-  assert.ok(install.includes("-p") && install.includes("-s") && install.includes("-u") && install.includes("-w"));
+  assert.ok(install.includes("-p") && !install.includes("-s") && install.includes("-u") && install.includes("-w"));
+  const transfers = f.calls.filter((a) => a[2] === "file");
+  assert.equal(transfers.length, 2);
+  assert.equal(path.posix.dirname(transfers[0].at(-1)), path.posix.dirname(transfers[1].at(-1)), "HAP and intra-app HSP must be installed from one directory");
   assert.equal(f.calls.filter((a) => a[3]?.startsWith("rm ")).length, 1);
   f.calls = []; const controller = new AbortController();
   f.respond = (args) => {
     if (args[2] === "file") { controller.abort(); throw new Error("transfer cancelled"); }
     return reply("success");
   };
-  await assert.rejects(m.install("target", [hap], controller.signal, true, { shared: [hsp] }), /transfer cancelled/);
+  await assert.rejects(m.install("target", [hap, hsp], controller.signal), /transfer cancelled/);
   assert.equal(f.calls.filter((a) => a[3]?.startsWith("rm ")).length, 1);
   f.calls = []; f.respond = (args) => args[3]?.startsWith("rm ") ? reply("", 1, "Permission denied") : args[2] === "file" ? reply("FileTransfer finish") : reply("install bundle successfully.");
-  await assert.rejects(m.install("target", [hap], signal, true, { shared: [hsp] }), { code: "DEVICE_CLEANUP_FAILED" });
+  await assert.rejects(m.install("target", [hap, hsp], signal), { code: "DEVICE_CLEANUP_FAILED" });
   assert.equal(f.calls.filter((a) => a[3]?.startsWith("rm ")).length, 1);
   assert.throws(() => m.validatePackages([hap, hap]), { code: "INVALID_INPUT" });
   assert.throws(() => m.validatePackages([hap], { install_timeout: 90 }), { code: "INVALID_INPUT" });

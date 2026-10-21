@@ -13,7 +13,7 @@ process.env.DEVECO_STATE_DIR = path.join(work, 'state');
 process.env.DEVECO_COORDINATION_DIR = path.join(work, 'coordination');
 fs.symlinkSync(path.join(root, 'node_modules'), path.join(work, 'node_modules'), 'junction');
 const entry = path.join(work, 'entry.ts'), bundle = path.join(work, 'entry.mjs');
-fs.writeFileSync(entry, ['domains/project-test', 'domains/evidence', 'domains/quality', 'domains/verify', 'core/operations', 'core/artifacts', 'core/db', 'domains/device', 'domains/entries', 'domains/uitest'].map((p) => `export * from ${JSON.stringify(path.join(root, 'src', p + '.ts'))}`).join('\n'));
+fs.writeFileSync(entry, ['domains/project-test', 'domains/evidence', 'domains/quality', 'domains/verify', 'core/operations', 'core/artifacts', 'core/db', 'domains/device', 'domains/entries', 'domains/uitest', 'domains/hotreload'].map((p) => `export * from ${JSON.stringify(path.join(root, 'src', p + '.ts'))}`).join('\n'));
 await build({ entryPoints: [entry], outfile: bundle, bundle: true, format: 'esm', platform: 'node', packages: 'external', logLevel: 'error' });
 const m = await import(pathToFileURL(bundle));
 after(async () => { await m.closeCoordination(); m.closeDatabase(); fs.rmSync(work, { recursive: true, force: true }); });
@@ -82,6 +82,31 @@ test('locks coordinate processes with different state directories and preserve n
   assert.equal((await m.resourceStatus()).length, 0);
   await assert.rejects(m.withResources([key], 'failed', async () => { throw new Error('failure'); }));
   assert.equal((await m.resourceStatus()).length, 0);
+});
+function hotProject() {
+  const dir = fs.mkdtempSync(path.join(work, 'hot-')), module = path.join(dir, 'entry');
+  fs.mkdirSync(path.join(dir, 'AppScope')); fs.mkdirSync(path.join(module, 'src/main/ets'), { recursive: true });
+  fs.writeFileSync(path.join(dir, 'AppScope/app.json5'), JSON.stringify({ app: { bundleName: 'com.devecomcp.hot', versionName: '1.0.0', versionCode: 1 } }));
+  fs.writeFileSync(path.join(dir, 'build-profile.json5'), JSON.stringify({ app: { products: [{ name: 'default' }] }, modules: [{ name: 'entry', srcPath: './entry' }] }));
+  fs.writeFileSync(path.join(module, 'src/main/module.json5'), JSON.stringify({ module: { name: 'entry', type: 'entry', mainElement: 'EntryAbility', deviceTypes: ['phone'], abilities: [{ name: 'EntryAbility' }] } }));
+  const baseline = path.join(module, 'build/default/intermediates/deveco-mcp-hot.json');
+  fs.mkdirSync(path.dirname(baseline), { recursive: true });
+  fs.writeFileSync(baseline, JSON.stringify({ module: 'entry', bundle: 'com.devecomcp.hot', target: 'baseline-device', files: {}, at: 1 }));
+  return { dir, baseline, project: { root: dir, product: 'default', bundleName: 'com.devecomcp.hot', modules: [{ name: 'entry', root: module, type: 'entry', target: 'default', deviceTypes: ['phone'] }] } };
+}
+test('direct hot apply and reset reserve their project and recorded device', async () => {
+  const p = hotProject(), signal = new AbortController().signal;
+  for (const action of ['apply', 'reset']) {
+    const input = { action, project: p.dir, module: 'entry' };
+    assert.deepEqual((await m.operationResources('hot_reload', input, signal)).sort(), [m.projectResource(p.dir), 'device:baseline-device'].sort());
+    assert.equal(input.target, 'baseline-device');
+  }
+});
+test('hot apply rejects a conflicting explicit target before compiling or changing its baseline', async () => {
+  const p = hotProject(), before = fs.readFileSync(p.baseline);
+  await assert.rejects(m.applyHotReload(p.project, 'entry', new AbortController().signal, () => {}, { target: 'another-device' }), { code: 'CONFLICT' });
+  assert.deepEqual(fs.readFileSync(p.baseline), before);
+  assert.equal(fs.existsSync(path.join(p.dir, 'entry/build/config/buildConfig.json')), false);
 });
 test('Want values are shell-quoted and integer/line boundaries are enforced', () => {
   const args = m.wantArgs({ uri: 'demo://x?quote=\'&a=$(secret)', parameters: { n: 2, yes: true, text: 'hello world' } });

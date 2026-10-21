@@ -2,6 +2,10 @@
 
 这是当前测试入口的唯一说明。目录规则见 [AGENTS.md](../AGENTS.md)。不以测试/产品行数比例决定删减，不安装工具、更换模型、模拟器镜像或签名配置来让测试通过。
 
+验收范围与环境限制遵循 [README](../README.md)：macOS 为主，Windows/Linux 以 GitHub CI 为准；模拟器缺少有效帧数据和字体服务、手表卡片不列为阻塞项，不再追查历史慢调用或帧间隔。保留现有录屏和媒体测试，不增加长录制、受控音画同步或麦克风来源门禁。环境不支持仍明确失败或 inconclusive，不改成通过。
+
+宿主以 Codex 为验收目标，不要求 WorkBuddy 专项验证；旧凭据导入、Debug/Release 自动签名及云证书/profile 创建删除不追加重复实测门禁，保留既有回归测试入口。
+
 ## 分层与入口
 
 在仓库根目录执行，使用现有 Node >=22.18 和 `npm ci` 安装的开发依赖。TypeScript/JSDoc 检查公共传输、媒体、提示统计与提供商采集模块；目录门禁检查全部测试语法、静态引用及 E2E 未定义符号。测试复用现有编译链，不增加测试运行器。
@@ -88,7 +92,7 @@ node --test --test-concurrency=1 test/e2e/hotreload.test.mjs
 | `e2e/signing.test.mjs` | `E2E_TEAM`；列出现有签名对象、在证据目录生成密钥/CSR、验证 HAP，不改变工程签名 |
 | 同文件 `local signing reference` | 仅 E2E_PROJECT、E2E_DIR；专用工程须已有完整本地签名材料及单 entry unsigned HAP。临时 phone→debug 配置引用现有材料，真实签名/验签并核对原文件哈希，清理临时配置；不连云端 |
 | `e2e/sign-cloud.test.mjs` | `E2E_TEAM`、已登记 `E2E_TARGET`、`E2E_HDC` 与实际云配额；HDC 只读 UDID 独立核对登记，MCP shell 白名单不变。新建唯一证书与 IDE profile，OpenSSL 验证 profile 签名、bundle 和设备，仅删除本轮证书。IDE profile 不返回控制台 ID，控制台 profile 删除需另行授权的专用对象及独立确认，此套件不冒充覆盖；无配额时失败，不借用用户证书兜底 |
-| `e2e/cloud.test.mjs` | 原 CodeGenie 登录及联网；来源标签、域名、制品完整性与独立文档重合率；不可判定来源单独记未验证 |
+| `e2e/cloud.test.mjs` | 原 CodeGenie 登录及联网；来源清点、行指针、官方文本的独立原文片段核对；未匹配来源和网页发布者身份不冒充已验证 |
 | `e2e/skills.test.mjs` | 用户指定 `E2E_SKILLS` 绝对目录、`E2E_HOST=codex` 或 `opencode`（无默认两宿主循环）；专用目录内 export/install/uninstall/init，原全局配置哈希不变 |
 | `e2e/auth.test.mjs` | 显式 `DEVECO_STATE_DIR` 与原浏览器登录；注销/重登录 CodeGenie，其他 provider 凭据哈希不变；需用户参与，不混入普通测试 |
 | `e2e/knowledge.test.mjs` | 显式 `DEVECO_STATE_DIR` 及其已安装 KB；检查与默认更新一致、同内容不重复安装；显式 force 重建并回滚，校验原内容哈希；不替用户准备/重置知识库 |
@@ -121,7 +125,7 @@ node --test --test-concurrency=1 test/e2e/hotreload.test.mjs
 
 form 用例先完整清点桌面，再通过 `ui form exercise` 添加指定预览，运行工程自有 flow 断言，并只移除本次新增实例。取消和失败使用独立限时清理，失败不自动重试。`E2E_FORM_INDEX` 来自 `ui form catalog`，不等于声明数组下标；无需人工添加卡片或抄写实例 key。清点默认有界扫描 12 页，可设 max_pages；超出范围不能声称完整。锁屏/负一屏没有经过验证的适配器。专用夹具内的文本、点击后内容和配置页预期只属于该测试工程。
 
-仅验证 MCP 平台实例链路时，执行 `node --test --test-name-pattern='^form: owned desktop attachment and cleanup$' test/e2e/form.test.mjs`。此用例使用明确授权的已安装应用，必填 E2E_PROJECT、E2E_TARGET、E2E_DIR、E2E_FORM_INDEX；可选 E2E_FORM_MAX_PAGES（1–30，默认 12）。它记录设备信息并比较前后完整清点，不要求专用业务夹具，也不将卡片业务内容纳入断言。
+仅验证 MCP 平台实例链路时，执行 `node --test --test-name-pattern='^form: owned desktop attachment and cleanup$' test/e2e/form.test.mjs`。此用例使用明确授权的已安装应用，必填 E2E_PROJECT、E2E_TARGET、E2E_DIR、E2E_FORM_INDEX；可选 E2E_FORM_MAX_PAGES（1–30，默认 12）。它从启动应用开始，验证返回桌面、完整遍历、添加与清理并比较前后实例，不要求专用业务夹具，也不将卡片业务内容纳入断言。
 
 `unit/verification.test.mjs` 检查测试核算、部分计划、基线、跨进程锁、永久证据等独立规则；`integration/verification.test.mjs` 用真实 MCP/job/进程及项目命令验证超时、取消、清理、污染和 CLI 共享路径，不伪造 SDK/设备成功。标准 `npm test` 已包含它们；CI 仍是三平台 × Node 22/24。
 

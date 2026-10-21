@@ -687,8 +687,8 @@ export function packCloudSections(sections: { n: number; origin: CloudOrigin; te
 
 /** Precedence when sources disagree (shown to agents with cloud answers and in tool docs). */
 export const AUTHORITY = "When sources disagree: 1) the project's SDK declarations (code action=lsp op=hover/definition) and a successful build win; "
-  + "2) official docs: local pack results and cloud sections marked official (prefer the one matching the project's API level; read the local copy via local_doc); "
-  + "cloud sections marked official_other_platform are official Huawei docs for Android/Java (HMS Core) or Cangjie: not ArkTS API; "
+  + "2) official docs: local pack results and matching cloud text (read local_doc and prefer the project's API level). Cloud official labels verify text overlap, not the page's publisher; "
+  + "official_other_platform matches text for Android/Java (HMS Core) or Cangjie, not ArkTS API; "
   + "3) cloud sections marked community or unverified: never use them as the API contract, only as hints to verify.";
 
 /** Official doc titles of the local pack -> document ids. */
@@ -713,7 +713,7 @@ async function officialLookup(handle: KnowledgeHandle): Promise<OfficialLookup> 
   const cache = new Map<string, Set<string>>();
   // Indexed once per document (the same docs come back for many sections).
   const docText = async (id: string) => {
-    if (!cache.has(id)) cache.set(id, windows(normText(await readZipEntry(handle, `${id}.md`).catch(() => ""))));
+    if (!cache.has(id)) cache.set(id, windows(normText(await readZipEntry(handle, `${id}.md`))));
     return cache.get(id)!;
   };
   return async (title, body) => {
@@ -734,7 +734,7 @@ async function officialLookup(handle: KnowledgeHandle): Promise<OfficialLookup> 
     if (settled) return out;
     const sentences = body.replace(/[#*`>|]/g, " ").split(/[。！？\n]/).map((s) => s.trim()).filter((s) => s.length >= 16).sort((a, b) => b.length - a.length);
     for (const q of [title, ...sentences.slice(0, 2).map((s) => s.slice(0, 60))]) {
-      for (const id of await officialDocIds(handle, q).catch(() => [])) await add(id);
+      for (const id of await officialDocIds(handle, q)) await add(id);
       if (settled) break;
     }
     return out;
@@ -743,14 +743,14 @@ async function officialLookup(handle: KnowledgeHandle): Promise<OfficialLookup> 
 
 /**
  * official: the section's text is found in an official document of the local pack (verified by text
- *   overlap, not by title), or it is official HarmonyOS content the pack does not carry (Codelab);
+ *   overlap, not by title). This verifies matching text, not the cloud page's publisher;
  * official_other_platform: official Huawei text for another platform/language (HMS Core Android/Java,
  *   Cangjie) — authoritative for that platform, not for ArkTS;
- * community: articles/Q&A whose text is not in the official docs;
- * unverified: could not be decided (too short, or partial overlap).
+ * community: retained for response compatibility; a local search miss cannot establish provenance;
+ * unverified: no verified local match, insufficient text, or failed verification.
  */
 export type CloudOrigin = "official" | "official_other_platform" | "community" | "unverified";
-export interface CloudSource { n: number; title: string; origin: CloudOrigin; local_doc?: string; overlap?: number; why: string }
+export interface CloudSource { n: number; title: string; origin: CloudOrigin; local_doc?: string; overlap?: number; verification_error?: string; why: string }
 
 /** Distinctive 12-character shingles of a text (markup and whitespace removed). */
 export function shingles(text: string, n = 12, step = 6) {
@@ -785,9 +785,8 @@ export type OfficialLookup = (title: string, body: string) => Promise<{ id: stri
  * apart (community posts reuse official titles and republish official text; official pages have
  * generic titles), so each section is judged by its text: shared text with an official document of
  * the local pack (>= 50% of its 12-character shingles) makes it official, and that document becomes
- * local_doc; almost none (<= 10%) makes it community. Codelabs are official content the pack does not
- * carry. Everything else is left unverified rather than guessed. Measured on 679 real sections
- * (test/e2e/cloud.test.mjs).
+ * local_doc. A Codelab mention, platform-specific code, or a local search miss cannot identify the
+ * publisher; unmatched text stays unverified. Failed verification remains explicit in why.
  */
 export async function labelCloudSources(content: string, lookup: OfficialLookup | undefined) {
   const sources: CloudSource[] = [];
@@ -796,6 +795,7 @@ export async function labelCloudSources(content: string, lookup: OfficialLookup 
   const parts = content.split(/(?=^\[\d+\]网页标题：)/m);
   // Candidate lookups are independent: resolve them up front, a few at a time.
   const bests = new Map<number, { id: string; overlap: number }>();
+  const failures = new Map<number, string>();
   if (lookup) {
     const jobs = parts.map((part, i) => ({ i, m: header.exec(part), part })).filter((j) => j.m);
     let next = 0;
@@ -805,11 +805,13 @@ export async function labelCloudSources(content: string, lookup: OfficialLookup 
         const body = part.slice(m![0].length);
         const sh = shingles(body);
         if (sh.size < 5) continue;
-        for (const cand of await lookup(m![2]!.trim(), body).catch(() => [])) {
-          const overlap = textOverlap(sh, cand.text);
-          const prev = bests.get(i);
-          if (!prev || overlap > prev.overlap) bests.set(i, { id: cand.id, overlap });
-        }
+        try {
+          for (const cand of await lookup(m![2]!.trim(), body)) {
+            const overlap = textOverlap(sh, cand.text);
+            const prev = bests.get(i);
+            if (!prev || overlap > prev.overlap) bests.set(i, { id: cand.id, overlap });
+          }
+        } catch (error) { failures.set(i, String(error).slice(0, 400)); }
       }
     }));
   }
@@ -823,20 +825,21 @@ export async function labelCloudSources(content: string, lookup: OfficialLookup 
     const sh = shingles(body);
     const best = bests.get(i);
     const overlap = best ? Math.round(best.overlap * 100) / 100 : 0;
-    const codelab = /Codelab/i.test(body.slice(0, 400));
     const otherPlatform = OTHER_PLATFORM.test(body);
     let origin: CloudOrigin, why: string;
     if (best && best.overlap >= 0.5) { origin = otherPlatform ? "official_other_platform" : "official"; why = `text found in official doc ${best.id} (${Math.round(best.overlap * 100)}% shared)`; }
-    else if (otherPlatform && (codelab || /^#\s/m.test(body.slice(0, 200)))) { origin = "official_other_platform"; why = "Huawei doc for another platform/language (Android/Java or Cangjie)"; }
-    else if (codelab) { origin = "official"; why = "Huawei Codelab (not in the local pack)"; }
-    else if (sh.size >= 5 && lookup && (!best || best.overlap <= 0.1)) { origin = "community"; why = "text not found in the official docs"; }
-    else { origin = "unverified"; why = sh.size < 5 ? "too short to verify" : lookup ? `partial overlap with official doc (${Math.round(overlap * 100)}%)` : "local pack unavailable"; }
+    else {
+      origin = "unverified";
+      why = failures.has(i) ? `Local verification failed: ${failures.get(i)}` : sh.size < 5 ? "too short to verify"
+        : !lookup ? "local pack unavailable" : best ? `insufficient text overlap with official doc (${Math.round(overlap * 100)}%); publisher unverified`
+          : "no matching text verified in the local official pack; publisher unverified";
+    }
     const doc = origin === "official" || origin === "official_other_platform" ? (best && best.overlap >= 0.5 ? best.id : undefined) : undefined;
-    sources.push({ n: Number(n), title, origin, ...(doc ? { local_doc: doc } : {}), ...(best ? { overlap } : {}), why });
-    const label = origin === "official" ? "官方文档/official"
-      : origin === "official_other_platform" ? "官方文档·非 ArkTS 平台/official_other_platform — 仅适用于该平台"
-      : origin === "community" ? "社区文章/community — 未核实，不能作为 API 依据"
-      : "未确认来源/unverified — 按社区内容对待，需自行核实";
+    sources.push({ n: Number(n), title, origin, ...(doc ? { local_doc: doc } : {}), ...(best ? { overlap } : {}),
+      ...(failures.has(i) ? { verification_error: failures.get(i) } : {}), why });
+    const label = origin === "official" ? "官方文档/official — 正文匹配本地文档，发布者未核实"
+      : origin === "official_other_platform" ? "官方文档·非 ArkTS 平台/official_other_platform — 正文匹配，仅适用于该平台，发布者未核实"
+      : "未确认来源/unverified — 需自行核实，不能作为 API 依据";
     const text = part.replace(header, `[${n}]【${label}】网页标题：${title}|||网页内容：`);
     sections.push({ n: Number(n), origin, text, ...(doc ? { doc } : {}) });
     out.push(text);

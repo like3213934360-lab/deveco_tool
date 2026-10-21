@@ -91,7 +91,7 @@ export async function releaseResource(resource: string, ownerPid: number) {
   return { released: resource, owner_pid: ownerPid, effects_replayed: false };
 }
 
-const asynchronous = new Set(["project.clean", "project.sync", "project.build", "project.test", "project.verify", "run.build_run", "run.deploy", "ui_flow.replay", "sign.auto", "hot_reload.apply", "hot_reload.reset", "knowledge.update", "ui.form"]);
+const asynchronous = new Set(["project.clean", "project.sync", "project.build", "project.test", "project.verify", "run.build_run", "run.deploy", "ui_flow.replay", "sign.auto", "knowledge.update", "ui.form"]);
 
 /** Resolve aliases before locking and before executing; the caller then uses this exact device. */
 export async function operationResources(name: string, input: Record<string, any>, signal: AbortSignal): Promise<string[]> {
@@ -105,6 +105,10 @@ export async function operationResources(name: string, input: Record<string, any
     appDatabasePath(input.bundle ?? "", input.db, input.module);
   }
   if (!name.startsWith("job:") && (asynchronous.has(`${name}.${action}`) || (name === "ui" && action === "layout" && input.forms))) return [];
+  const hot = name === "hot_reload" && action !== "stop_daemon"
+    ? await (await import("../domains/hotreload.js")).hotReloadSelection((await import("../domains/project.js")).inspectProject(input.project, input.product), input.module, input.target, signal)
+    : undefined;
+  if (hot) { input.module = hot.module; input.target = hot.target; }
   const job = name.startsWith("job:") ? name.slice(4) : undefined;
   const device = job ? ["device_install", "build_run", "deploy", "flow_replay", "hot_reload", "hot_reset", "form_check", "form_inventory"].includes(job) || (job === "project_test" && input.kind === "instrument") || (job === "verify" && !!input.target)
     : name === "run" || (name === "device" && ["app", "file", "clipboard", "screen", "system", "font", "sqlite", "send", "recv", "scenario", "databases", "fixture", "trace"].includes(action))
@@ -112,6 +116,7 @@ export async function operationResources(name: string, input: Record<string, any
       || (name === "ui_flow" && ["record", "stop"].includes(action));
   const keys: string[] = [];
   if (input.project && job !== "form_matrix" && (job || (["project", "run", "code", "hot_reload", "ui_flow", "sign"].includes(name) || name === "ui" && ["visual", "test_start", "test_export"].includes(action)))) keys.push(projectResource(input.project));
+  if (hot) keys.push(`device:${hot.target}`);
   if (name === "ui" && input.test_id) keys.push(`ui-test:${input.test_id}`);
   if (device) {
     const { resolveTarget } = await import("../domains/device.js");

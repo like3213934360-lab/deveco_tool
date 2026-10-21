@@ -358,7 +358,6 @@ export const deviceTool = tool({
     ability: z.string().optional(),
     want: z.object({ uri: z.string().max(4096).optional(), action: z.string().max(256).optional(), parameters: z.record(z.string(), z.union([z.string().max(4096), z.number().int(), z.boolean()])).optional() }).strict().optional(),
     files: z.array(z.string()).min(1).max(64).optional().describe("Install: absolute HAP/HSP paths"),
-    shared: z.array(z.string()).min(1).max(64).optional().describe("Inter-app HSPs (system-only); intra-app: files"),
     replace: z.boolean().optional().describe("app install: default true"),
     user: z.number().int().min(0).optional().describe("app install: OS user ID"),
     install_timeout: z.number().int().min(180).max(600).optional().describe("bm wait seconds"),
@@ -397,7 +396,7 @@ export const deviceTool = tool({
   }),
   params: {
     list: [], info: ["target"],
-    app: ["target", "operation", "bundle", "ability", "module", "want", "allow_data_reset", "files", "shared", "replace", "user", "install_timeout", "offset", "limit", "wait", "request_key"],
+    app: ["target", "operation", "bundle", "ability", "module", "want", "allow_data_reset", "files", "replace", "user", "install_timeout", "offset", "limit", "wait", "request_key"],
     font: ["target", "operation", "local", "name"],
     file: ["target", "operation", "remote"], clipboard: ["target", "operation", "text"],
     screen: ["target", "operation", "value"], system: ["target", "operation", "value"],
@@ -413,7 +412,7 @@ export const deviceTool = tool({
       const controls = await import("../domains/device-controls.js");
       controls.validateControl(input);
       if (input.action === "app" && input.operation === "install") {
-        device.validatePackages(input.files ?? [], { shared: input.shared });
+        device.validatePackages(input.files ?? [], { install_timeout: input.install_timeout });
         return startAndWait("device_install", input, input.request_key, input.wait);
       }
       const target = await device.resolveTarget(input.target, ctx.signal);
@@ -495,13 +494,12 @@ export const uiTool = tool({
   schema: z.object({
     action: z.enum(["observe", "screenshot", "tree", "find", "act", "assert", "windows", "perf", "visual", "layout", "record_start", "record_stop", "record_status", "record_receipts", "record_archive", "record_restore",
       "test_start", "test_step", "review", "test_finish", "test_log", "test_export", "form"]),
-    form_action: z.enum(["inventory", "catalog", "exercise", "matrix"]).optional().describe("catalog: form_index; exercise: owned instance; matrix: form_cases; size needs host control"),
+    form_action: z.enum(["inventory", "catalog", "exercise", "matrix"]).optional().describe("catalog: form_index; exercise: owned instance; matrix: form_cases"),
     form_index: z.number().int().min(0).max(99).optional(),
-    form_size: z.string().regex(/^[1-6]\*[1-6]$/).optional(),
     max_pages: z.number().int().min(1).max(30).optional(),
     form_cases: z.array(z.object({ target: z.string().min(1).optional(),
       emulator: z.object({ device_type: z.string().min(1), os_version: z.string().min(1) }).strict().optional(),
-      form_index: z.number().int().min(0).max(99), form_size: z.string().regex(/^[1-6]\*[1-6]$/).optional(),
+      form_index: z.number().int().min(0).max(99),
     }).strict().refine((v) => !!v.target !== !!v.emulator, "Each case requires exactly one target or emulator")).min(1).max(20).optional(),
     target: fields.target,
     product: fields.product,
@@ -576,7 +574,7 @@ export const uiTool = tool({
     return {
       act: [...act, "diff", "steps", "assert", "save_flow"],
       observe: ["target", "window", "depth", "interactive", "limit", "bundle", "format", "width"],
-      form: ["target", "project", "product", "bundle", "form_action", "form_index", "form_size", "max_pages", "form_cases", "then_flow", "wait", "request_key"],
+      form: ["target", "project", "product", "bundle", "form_action", "form_index", "max_pages", "form_cases", "then_flow", "wait", "request_key"],
       screenshot: ["target", "display", "save_path", "format", "width"],
       tree: ["target", "window", "all_windows", "node", "depth", "interactive", "limit", "bundle"],
       find: ["target", "selector", "limit", "offset", "timeout_ms", "window", "bundle"],
@@ -604,11 +602,11 @@ export const uiTool = tool({
     if (input.action === "form") {
       invariant(input.form_action, "INVALID_INPUT", "form_action is required");
       if (input.form_action === "matrix") {
-        invariant(input.form_cases && !input.target && input.form_index === undefined && !input.form_size, "INVALID_INPUT", "matrix requires form_cases; place target/form_index/form_size inside each case");
+        invariant(input.form_cases && !input.target && input.form_index === undefined, "INVALID_INPUT", "matrix requires form_cases; place target/form_index inside each case");
         invariant(input.project || input.form_cases.every((c) => !c.emulator), "INVALID_INPUT", "Disposable emulator cases require a project to build and deploy");
       } else {
         invariant(!input.form_cases, "INVALID_INPUT", "form_cases is used only by matrix");
-        invariant(input.form_action === "exercise" || input.form_index === undefined && !input.form_size, "INVALID_INPUT", "form_index/form_size are used only by exercise");
+        invariant(input.form_action === "exercise" || input.form_index === undefined, "INVALID_INPUT", "form_index is used only by exercise");
       }
       if (input.form_action !== "inventory") (await import("../domains/forms.js")).formContext({ ...input, target: input.target ?? "" });
       if (input.then_flow) {

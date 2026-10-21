@@ -5,8 +5,8 @@ import { invariant, ToolError } from "../core/errors.js";
 import { atomicWrite, clip, fileSha256, inside, readJson5, sha256, walk } from "../core/files.js";
 import { run } from "../core/proc.js";
 import { toolCommand } from "../core/toolchain.js";
-import { hdc, install, installStamp, pidOf, shell } from "./device.js";
-import { BuildOutputParser, type Project } from "./project.js";
+import { hdc, install, installStamp, pidOf, resolveTarget, shell } from "./device.js";
+import { BuildOutputParser, runnableDeviceTypes, selectRunModules, type Project } from "./project.js";
 import { decryptPassword } from "./sign.js";
 
 /*
@@ -35,6 +35,27 @@ function baselineArchive(file: string, directory: string) {
 /** Modules that have a hot-reload baseline (installed with build_run hot_reload=true). */
 export function baselineModules(project: Project) {
   return project.modules.filter((m) => (m.type === "entry" || m.type === "feature") && fs.existsSync(statePath(project, m.name))).map((m) => m.name);
+}
+
+/** Resolve the recorded target before acquiring locks; an explicit device never redirects a baseline. */
+export async function hotReloadSelection(project: Project, module: string | undefined, requested: string | undefined, signal: AbortSignal) {
+  const target = requested ? await resolveTarget(requested, signal, runnableDeviceTypes(project)) : undefined;
+  if (!module) {
+    const recorded = target ? [] : baselineModules(project);
+    if (recorded.length === 1) module = recorded[0];
+    else {
+      const type = target ? await shell(target, ["param", "get", "const.product.devicetype"], signal, 10000) : undefined;
+      invariant(!type || type.code === 0, "DEVICE_OUTPUT_INVALID", "Cannot select a hot-reload module from the device type");
+      module = selectRunModules(project, { deviceType: type?.stdout.trim() }).modules.find((m) => m.type === "entry")?.name;
+    }
+  }
+  invariant(module && project.modules.some((m) => m.name === module), "INVALID_INPUT", "Choose a hot-reload module explicitly");
+  const file = statePath(project, module);
+  invariant(fs.existsSync(file), "NOT_FOUND", "No hot-reload baseline for this module", undefined, "Start with run build_run hot_reload=true");
+  const baseline = JSON.parse(fs.readFileSync(file, "utf8")) as Baseline;
+  invariant(typeof baseline.target === "string" && baseline.target && baseline.bundle === project.bundleName && (!target || target === baseline.target),
+    "CONFLICT", "Hot-reload device/bundle does not match the recorded baseline", { requested_target: target, baseline_target: baseline.target });
+  return { module, target: baseline.target };
 }
 
 function sourceDigests(moduleRoot: string) {
@@ -176,13 +197,15 @@ export async function stopDaemon(project: Project, signal: AbortSignal) {
   return { stopped: result.code === 0, output: clip((result.stdout + result.stderr).trim(), 300) };
 }
 
-export async function applyHotReload(project: Project, module: string, signal: AbortSignal, log: (m: string) => void, options: { files?: string[]; restart?: boolean; ability?: string } = {}) {
+export async function applyHotReload(project: Project, module: string, signal: AbortSignal, log: (m: string) => void, options: { files?: string[]; restart?: boolean; ability?: string; target?: string } = {}) {
+  const started = Date.now();
   const m = project.modules.find((x) => x.name === module);
   invariant(m && ["entry", "feature"].includes(m.type), "INVALID_INPUT", `Hot reload needs an entry/feature module, got ${module}`);
   const file = statePath(project, module);
   invariant(fs.existsSync(file), "NOT_FOUND", "No hot-reload baseline for this module", undefined,
     "Start with run action=build_run hot_reload=true (installs the baseline build)");
   const baseline = JSON.parse(fs.readFileSync(file, "utf8")) as Baseline;
+  invariant(baseline.bundle === project.bundleName && (!options.target || options.target === baseline.target), "CONFLICT", "Hot-reload device/bundle does not match the recorded baseline");
   const current = sourceDigests(m.root);
   // Explicit file list (like devecocli's --apply <fileName> list) or the automatic source diff.
   const explicit = options.files?.map((f) => path.resolve(project.root, f));
@@ -209,12 +232,13 @@ export async function applyHotReload(project: Project, module: string, signal: A
   const { result, diagnostics } = await devHqf(project, module, signal).finally(() => clearBuildConfig(project));
   const patchAbc = [...walk(path.join(patchDir, "ets"), new Set())].some((f) => f.endsWith(".abc"));
   if (result.code !== 0 || !fs.existsSync(unsigned) || !patchAbc)
-    throw new ToolError("BUILD_FAILED", patchAbc || result.code !== 0 ? "Hot reload compile failed" : "Compiler produced no patch code for these changes", { ...diagnostics, tail: clip(result.stderr || result.stdout, 2000) },
+    throw new ToolError("BUILD_FAILED", patchAbc || result.code !== 0 ? "Hot reload compile failed" : "Compiler produced no patch code for these changes", { ...diagnostics, timings_ms: { compile: result.elapsedMs, total: Date.now() - started }, tail: clip(result.stderr || result.stdout, 2000) },
       "Fix compile errors. Structural changes (new pages, decorators, resources, module.json) need a full redeploy: run action=build_run");
 
   // 3. signing: hvigor signs the HQF itself whenever the project's signing is configured (build-profile
   //    signingConfigs or hvigorfile overrides) — use that as-is. Only sign ourselves from build-profile
   //    material when hvigor did not; never touch the project's signing files.
+  const signingStarted = Date.now();
   let hqf = unsigned;
   const profile = readJson5(path.join(project.root, "build-profile.json5")) as { app: { signingConfigs?: any[]; products?: any[] } };
   const configName = profile.app.products?.find((p) => p.name === project.product)?.signingConfig;
@@ -229,6 +253,8 @@ export async function applyHotReload(project: Project, module: string, signal: A
     hqf = signed;
   }
 
+  const signingMs = Date.now() - signingStarted;
+  let transferMs = 0, applyMs = 0;
   // 4. apply on device
   log("applying quick fix on device");
   const remote = `/data/local/tmp/deveco-hqf-${crypto.randomBytes(4).toString("hex")}`;
@@ -236,14 +262,17 @@ export async function applyHotReload(project: Project, module: string, signal: A
   try {
     const remoteFile = `${remote}/${baseline.bundle}_0.hqf`;
     const sent = await hdc(["-t", baseline.target, "file", "send", hqf, remoteFile], signal, 60000, true);
+    transferMs = sent.elapsedMs;
     invariant(/finish/i.test(sent.stdout), "PROCESS_FAILED", `HQF transfer failed: ${clip(sent.stdout, 200)}`);
     const applied = await shell(baseline.target, ["bm", "quickfix", "-a", "-f", remoteFile, "-d"], signal, 120000);
+    applyMs = applied.elapsedMs;
     const text = applied.stdout + applied.stderr;
     invariant(/succe/i.test(text) && !/fail|error/i.test(text), "HOT_APPLY_FAILED", `bm quickfix failed: ${clip(text, 600)}`,
       undefined, hqf !== unsigned ? "The change may be unsupported by quick fix: redeploy with run action=build_run" : "Real devices require a signed HQF: configure signing (sign action=auto)");
   } finally {
     await shell(baseline.target, ["rm", "-rf", remote], undefined, 5000).catch(() => {}); // awaited: the host may exit right after this call
   }
+  const restartStarted = Date.now();
   let launch: Awaited<ReturnType<typeof import("./device.js").launchAndCheck>> | undefined;
   if (options.restart && options.ability) {
     // `devecocli run --apply`: quick fix then relaunch, so startup code also runs the patch.
@@ -257,6 +286,7 @@ export async function applyHotReload(project: Project, module: string, signal: A
   atomicWrite(file, JSON.stringify({ ...baseline, files: current, at: Date.now() }));
   return {
     applied: true, files: changed.map((f) => path.relative(project.root, f)), added: added.length,
+    timings_ms: { compile: result.elapsedMs, signing: signingMs, transfer: transferMs, apply: applyMs, restart: Date.now() - restartStarted, total: Date.now() - started },
     restarted: after !== pid, pid: after, ...(launch ? { launch } : {}),
     note: "Verify the change with ui observe/assert",
   };

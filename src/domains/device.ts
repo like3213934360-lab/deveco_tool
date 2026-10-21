@@ -105,20 +105,19 @@ export async function deviceInfo(target: string, signal?: AbortSignal) {
 
 /* ------------------------------ install / launch ------------------------------ */
 
-export interface InstallOptions { shared?: string[]; user?: number; install_timeout?: number }
+export interface InstallOptions { user?: number; install_timeout?: number }
 export function validatePackages(packages: string[], options: InstallOptions = {}) {
-  invariant(packages.length + (options.shared?.length ?? 0) > 0, "INVALID_INPUT", "No packages to install");
+  invariant(packages.length > 0, "INVALID_INPUT", "No packages to install");
   invariant(options.install_timeout === undefined || Number.isInteger(options.install_timeout) && options.install_timeout >= 180 && options.install_timeout <= 600, "INVALID_INPUT", "bm install wait must be 180..600 seconds");
-  for (const pkg of [...packages, ...options.shared ?? []]) {
+  for (const pkg of packages) {
     invariant(path.isAbsolute(pkg) && /\.(hap|hsp)$/i.test(pkg), "INVALID_INPUT", "Use absolute HAP/HSP file paths", { file: pkg });
     invariant(fs.statSync(pkg, { throwIfNoEntry: false })?.isFile(), "NOT_FOUND", `Package not found: ${pkg}`);
   }
-  invariant(!options.shared?.some((p) => !/\.hsp$/i.test(p)), "INVALID_INPUT", "shared accepts HSP files only");
-  for (const group of [packages, options.shared ?? []]) invariant(new Set(group.map((p) => path.basename(p).toLowerCase())).size === group.length, "INVALID_INPUT", "Duplicate package basenames would overwrite each other on device");
+  invariant(new Set(packages.map((p) => path.basename(p).toLowerCase())).size === packages.length, "INVALID_INPUT", "Duplicate package basenames would overwrite each other on device");
 }
 export async function install(target: string, packages: string[], signal: AbortSignal, replace = true, options: InstallOptions = {}) {
   validatePackages(packages, options);
-  if (packages.length === 1 && !options.shared?.length && options.user === undefined && options.install_timeout === undefined) {
+  if (packages.length === 1 && options.user === undefined && options.install_timeout === undefined) {
     const result = await hdc(["-t", target, "install", ...(replace ? ["-r"] : []), packages[0]!], signal, 300000, true);
     const text = result.stdout + result.stderr;
     if (result.code !== 0 || !/install bundle successfully/i.test(text)) throw installError(text);
@@ -126,19 +125,18 @@ export async function install(target: string, packages: string[], signal: AbortS
   }
   // Multi-HAP/HSP apps must be installed atomically in one bm call.
   const dir = `/data/local/tmp/deveco-${crypto.randomBytes(8).toString("hex")}`;
-  const dirs = [{ files: packages, path: `${dir}/app`, flag: "-p" }, { files: options.shared ?? [], path: `${dir}/shared`, flag: "-s" }].filter((d) => d.files.length);
   const { checkedCommand } = await import("./device-controls.js");
   let failure: unknown;
   try {
-    await checkedCommand(target, ["mkdir", "-p", ...dirs.map((d) => d.path)], signal);
-    for (const group of dirs) for (const [index, pkg] of group.files.entries()) {
-      const sent = await hdc(["-t", target, "file", "send", pkg, `${group.path}/${index}${path.extname(pkg)}`], signal, 300000, true);
+    await checkedCommand(target, ["mkdir", "-p", dir], signal);
+    for (const [index, pkg] of packages.entries()) {
+      const sent = await hdc(["-t", target, "file", "send", pkg, `${dir}/${index}${path.extname(pkg)}`], signal, 300000, true);
       invariant(sent.code === 0 && /finish|success/i.test(sent.stdout), "PROCESS_FAILED", `Transfer failed for ${path.basename(pkg)}`, { output: clip(sent.stdout, 500) });
     }
-    const result = await shell(target, ["bm", "install", ...dirs.flatMap((d) => [d.flag, d.path]), ...(replace ? ["-r"] : []),
+    const result = await shell(target, ["bm", "install", "-p", dir, ...(replace ? ["-r"] : []),
       ...(options.user !== undefined ? ["-u", String(options.user)] : []), ...(options.install_timeout !== undefined ? ["-w", String(options.install_timeout)] : [])], signal, Math.max(300000, (options.install_timeout ?? 0) * 1000 + 10000));
     if (result.code !== 0 || !/install bundle successfully/i.test(result.stdout + result.stderr)) throw installError(result.stdout + result.stderr);
-    return { installed: packages.map((p) => path.basename(p)), shared: options.shared?.map((p) => path.basename(p)), user: options.user, method: "bm install" };
+    return { installed: packages.map((p) => path.basename(p)), user: options.user, method: "bm install" };
   } catch (error) { failure = error; throw error;
   } finally {
     try { await checkedCommand(target, ["rm", "-rf", dir], AbortSignal.timeout(15000)); }
@@ -147,7 +145,7 @@ export async function install(target: string, packages: string[], signal: AbortS
 }
 
 const installHints: [RegExp, string][] = [
-  [/9568265|install param error/i, "Use files for HAPs and intra-app HSPs together. shared maps to bm -s for inter-app HSPs only; these require system distribution privileges and are not third-party shared modules."],
+  [/9568265|install param error/i, "Use files for HAPs and intra-app HSPs from one app together. Inter-app HSP installation is not supported for third-party applications."],
   [/9568322|signature.*(verif|invalid)|no signature/i, "Package is unsigned or the signature does not match this device. Configure signing (sign action=auto) or use an emulator."],
   [/sign info inconsistent/i, "The installed copy of this app was signed with a different certificate (e.g. before the debug certificate was renewed). Reinstall with run uninstall_first=true — this deletes the app's data on the device, so confirm with the user first."],
   [/9568332|version.*(downgrade|lower)/i, "Installed version is newer. Reinstall with run uninstall_first=true, or increase versionCode."],

@@ -18,15 +18,21 @@ function nodes() {
     const i = out.length; out.push({ i, parent, key, text, type: 'Column', rect: bounds, visible: true, clickable: true }); return i;
   };
   if (f.view === 'desktop') {
-    add(`SwiperPage_Grid_WorkSpace_${f.page}`);
-    if (f.page === 0) add(`Container_AppIcon_Image_${bundle}EntryAbilityphone0_undefined_0`);
-    for (const card of f.cards.filter((v) => v.page === f.page)) {
-      const parent = add(`SwiperPage_FormItem_${card.bundle}_${card.id}`);
-      add(`FormItem_${card.bundle}_${card.id}`, 'Visible content', parent);
+    const pager = add('GridSwiper_Stack_Swiper');
+    for (let page = f.page; page < Math.min(f.page + f.visiblePages, f.pages); page++) {
+      const grid = add(`SwiperPage_Grid_WorkSpace_${page}`, '', pager, f.insetGrid ?? rect);
+      if (page === 0) for (const { key, image } of f.icons) {
+        const icon = add(key, '', grid);
+        add(image, '', icon);
+      }
+      for (const card of f.cards.filter((v) => v.page === page)) {
+        const parent = add(`SwiperPage_FormItem_${card.bundle}_${card.id}`, '', grid);
+        add(`FormItem_${card.bundle}_${card.id}`, 'Visible content', parent);
+      }
     }
   } else if (f.view === 'app-menu') add('AppMenu_HorizontalMenuItem_fixedMenu0', '卡片');
   else if (f.view === 'center') {
-    add('FormManagerView_Stack'); add('FormCenterSwiper');
+    add(f.centerRoot); add('FormCenterSwiper');
     const parent = add(`SwiperItemView_Column_${f.preview}`);
     add(`FormCenterFormItem_Stack_${bundle}_${f.preview}`, `Preview ${f.preview}`, parent);
     add('SwiperLayout_AddToDesktopButton');
@@ -36,14 +42,16 @@ function nodes() {
   f.nodes = out; return out;
 }
 function reset(extra = {}) {
-  Object.assign(f, { view: 'desktop', page: 0, pages: 5, preview: 0, previews: 2, cards: [{ bundle, id: '9223372036854775800', page: 4 }], calls: [], failAdd: false, abortAdd: false, failRemove: false, failInspect: false, controller: new AbortController(), ...extra });
+  Object.assign(f, { view: 'desktop', centerRoot: 'FormManagerView_Stack', page: 0, pages: 5, visiblePages: 1, pageStep: 1, insetGrid: undefined, preview: 0, previews: 2,
+    icons: [{ key: `Container_AppIcon_Image_${bundle}EntryAbilityphone0_undefined_0`, image: `AppIcon_Image_${bundle}EntryAbilityphone0_undefined_0` }],
+    cards: [{ bundle, id: '9223372036854775800', page: 4 }], calls: [], failAdd: false, abortAdd: false, failRemove: false, failInspect: false, controller: new AbortController(), ...extra });
   f.tree = nodes;
   f.act = async (action, signal) => {
     signal.throwIfAborted(); f.calls.push(action);
     if (action.action === 'key') f.view = 'desktop';
     else if (action.action === 'swipe') {
       const delta = action.x > action.x2 ? 1 : -1;
-      if (f.view === 'desktop') f.page = Math.max(0, Math.min(f.pages - 1, f.page + delta));
+      if (f.view === 'desktop') f.page = Math.max(0, Math.min(Math.floor((f.pages - 1) / f.visiblePages) * f.visiblePages, f.page + delta * f.pageStep));
       if (f.view === 'center') f.preview = Math.max(0, Math.min(f.previews - 1, f.preview + delta));
     } else if (action.action === 'long_click') {
       if (f.page === 0) f.view = 'app-menu';
@@ -71,6 +79,22 @@ test('inventory scans beyond three pages, deduplicates wrapper keys and retains 
   const result=await m.inventoryForms(input,reset());assert.equal(result.complete,true);assert.equal(result.pages.length,5);assert.equal(result.instances.length,1);assert.equal(result.instances[0].instance_id,'9223372036854775800');assert.equal(result.instances[0].page,4);
   assert.equal((await m.inventoryForms({...input,max_pages:3},reset())).complete,false);
   assert.equal((await m.inventoryForms({...input,max_pages:1},reset({pages:1,cards:[]}))).complete,true);
+});
+test('multi-page desktops retain both page identities and skipped pages prevent complete inventory', async () => {
+  for (const pageStep of [1, 2]) {
+    const result = await m.inventoryForms(input, reset({ pages: 4, visiblePages: 2, pageStep,
+      cards: [{ bundle, id: '1', page: 1 }, { bundle, id: '3', page: 3 }] }));
+    assert.equal(result.complete, true);
+    assert.deepEqual(result.pages, [0, 1, 2, 3]);
+    assert.deepEqual(result.instances.map((v) => [v.instance_id, v.page]), [['1', 1], ['3', 3]]);
+  }
+  assert.equal((await m.inventoryForms(input, reset({ pageStep: 2 }))).complete, false);
+});
+test('desktop traversal swipes the system pager rather than the inset icon grid', async () => {
+  const grid = { x1: 200, y1: 300, x2: 800, y2: 1000 };
+  assert.equal((await m.inventoryForms(input, reset({ insetGrid: grid }))).complete, true);
+  const swipe = f.calls.find((v) => v.action === 'swipe');
+  assert.ok(swipe.x > grid.x2 && swipe.x2 < grid.x1, 'Gesture must span the pager beyond the inset grid');
 });
 test('unknown host fails explicitly',async()=>{
   reset(); f.act=async()=>{}; f.view='unknown';
@@ -109,6 +133,34 @@ test('catalog rewinds a default preview in the middle and cannot call a bounded 
   const partial = await m.catalogForms({ ...input, max_pages: 2 }, reset({ preview: 4, previews: 5 }));
   assert.equal(partial.complete, false);
 });
+test('observed app icon containers open one catalog despite their nested images', async () => {
+  const image = `AppIcon_Image_${bundle}EntryAbilityphone0_undefined_0`;
+  for (const key of [`Container_AppIcon_Image_${bundle}EntryAbilityphone0_undefined_0`, `AppIconCommonView_${bundle}.EntryAbility`]) {
+    const signal = reset({ icons: [{ key, image }] });
+    assert.equal((await m.catalogForms(input, signal)).complete, true);
+    assert.equal(f.calls.filter((v) => v.action === 'long_click').length, 1);
+    const before = await m.inventoryForms(input, signal);
+    const attached = await m.attachForm({ ...input, form_index: 0 }, before, signal);
+    assert.equal((await m.removeForm(input, attached, signal)).preexisting_preserved, true);
+    assert.deepEqual(f.cards.map((v) => v.id), before.instances.map((v) => v.instance_id));
+  }
+});
+test('multiple observed app entry containers remain ambiguous before any long press', async () => {
+  const signal = reset({ icons: [
+    { key: `Container_AppIcon_Image_${bundle}FirstAbilityphone0_undefined_0`, image: `AppIcon_Image_${bundle}FirstAbilityphone0_undefined_0` },
+    { key: `AppIconCommonView_${bundle}.SecondAbility`, image: `AppIcon_Image_${bundle}SecondAbilityphone0_undefined_0` },
+  ] });
+  await assert.rejects(m.catalogForms(input, signal), { code: 'UI_AMBIGUOUS' });
+  assert.equal(f.calls.filter((v) => v.action === 'long_click').length, 0);
+});
+test('observed split card center supports enumeration and owned cleanup; unknown roots remain unsupported', async () => {
+  const signal = reset({ centerRoot: 'FormCenterSplitView_Navigation' });
+  const before = await m.inventoryForms(input, signal);
+  const attached = await m.attachForm({ ...input, form_index: 1 }, before, signal);
+  assert.equal(attached.selected_index, 1);
+  assert.equal((await m.removeForm(input, attached, signal)).preexisting_preserved, true);
+  await assert.rejects(m.catalogForms(input, reset({ centerRoot: 'UnknownCardCenter' })), { code: 'CAPABILITY_UNAVAILABLE' });
+});
 test('catalog indices do not select a declaration; owned removal preserves the existing duplicate',async()=>{
   const signal=reset(),before=await m.inventoryForms(input,signal);
   await assert.rejects(m.attachForm(input,before,signal),{code:'INVALID_INPUT'});
@@ -128,10 +180,12 @@ test('rejected add confirms no addition; failed removal is surfaced without repe
   signal=reset({abortAdd:true,failRemove:true});before=await m.inventoryForms(input,signal);
   await assert.rejects(m.attachForm({...input,form_index:0},before,signal),e=>e.code==='FORM_CLEANUP_FAILED'&&e.details.original.message==='cancelled'&&e.details.cleanup.message==='remove rejected');assert.equal(f.cards.length,2);assert.equal(f.calls.filter(v=>v.action==='long_click').length,2);
 });
-test('size selection and incomplete baseline cannot silently use a different test',async()=>{
+test('incomplete baseline prevents any card attachment',async()=>{
   const signal=reset(),before=await m.inventoryForms(input,signal);
-  await assert.rejects(m.attachForm({...input,form_index:0,form_size:'2*4'},before,signal),{code:'CAPABILITY_UNAVAILABLE'});assert.equal(f.cards.length,1);
+  f.calls = [];
   await assert.rejects(m.attachForm({...input,form_index:0},{...before,complete:false},signal),{code:'EVIDENCE_MISSING'});
+  assert.equal(f.cards.length,1);
+  assert.deepEqual(f.calls, []);
 });
 test('correlation requires explicit identity and never turns business log messages into a verdict',()=>{
   const instance={bundle,instance_id:'12'},declarations=[{name:'Tile',module_name:'phone',referenced_by:[{owner:'Cards'}],source:{file:'base'}}];

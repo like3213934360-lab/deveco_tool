@@ -18,7 +18,7 @@ await build({ entryPoints: [path.join(root, "src/domains/hotreload.ts")], outfil
     toolchain: `export const toolCommand=()=>({});`,
     proc: `export async function run(){globalThis.__devecoHot.compile++;return {code:0,stdout:'',stderr:''}}`,
     device: `import fs from 'node:fs';const f=()=>globalThis.__devecoHot;
-      export async function installStamp(){return f().stamp};export async function pidOf(){return 123};export async function hdc(){throw new Error('unexpected hdc')};
+      export const resolveTarget=async(target)=>target;export async function installStamp(){return f().stamp};export async function pidOf(){return 123};export async function hdc(){throw new Error('unexpected hdc')};
       export async function install(target,packages,signal,replace){signal.throwIfAborted();f().calls.push({target,packages:packages.map(p=>fs.readFileSync(p,'utf8')),replace});if(f().fail)throw new Error('install failed');f().patch=f().keepPatch?3000001:0;f().stamp='1:3'};
       export async function shell(target,args){f().calls.push({target,args});return {code:0,stdout:f().query??('bundle name: com.test.hot\\npatch version code: '+f().patch+'\\n'),stderr:''}};`,
   }[a.path] }));

@@ -17,8 +17,11 @@ defineJob<{ project: string; product?: string; modules?: string[]; execution_mod
     return (await import("./domains/project.js")).cleanProject(project, ctx.signal, modules, ctx.input.execution_mode);
   } }], summarize: (o) => o.clean,
 });
-defineJob<{ target: string; files?: string[]; shared?: string[]; replace?: boolean; user?: number; install_timeout?: number }>({
+defineJob<{ target: string; files?: string[]; replace?: boolean; user?: number; install_timeout?: number }>({
   kind: "device_install", steps: [{ id: "install", effect: true, replay: false, async run(ctx) {
+    const input = { ...ctx.input } as Record<string, unknown>;
+    delete input._job_id;
+    (await import("./domains/device-controls.js")).validateControl({ ...input, action: "app", operation: "install" });
     return (await import("./domains/device.js")).install(ctx.input.target, ctx.input.files ?? [], ctx.signal, ctx.input.replace ?? true, ctx.input);
   } }], summarize: (o) => o.install,
 });
@@ -62,7 +65,7 @@ defineJob<FormJobInput>({
   },
   summarize: (o) => ({ ...o.inspect, reachability: o.reachability, project_assertions: o.flow, cleanup: o.cleanup, scope: "desktop-attachment-evidence", business_correctness: "not-judged" }),
 });
-defineJob<FormJobInput & { form_cases: { target?: string; emulator?: { device_type: string; os_version: string }; form_index: number; form_size?: string }[] }>({
+defineJob<FormJobInput & { form_cases: { target?: string; emulator?: { device_type: string; os_version: string }; form_index: number }[] }>({
   kind: "form_matrix",
   steps: [{ id: "cases", effect: true, replay: false, async run(ctx) {
     const { startJob, waitJob, cancelJob, jobStatus } = await import("./core/jobs.js");
@@ -85,7 +88,7 @@ defineJob<FormJobInput & { form_cases: { target?: string; emulator?: { device_ty
     for (const [index, selected] of ctx.input.form_cases.entries()) {
       ctx.signal.throwIfAborted();
       const exercise = (target: string) => runChild("form_check", { project: ctx.input.project, product: ctx.input.product, bundle: ctx.input.bundle,
-        max_pages: ctx.input.max_pages, then_flow: ctx.input.then_flow, form_index: selected.form_index, form_size: selected.form_size, target }, `${ctx.job_id}:form:${index}`);
+        max_pages: ctx.input.max_pages, then_flow: ctx.input.then_flow, form_index: selected.form_index, target }, `${ctx.job_id}:form:${index}`);
       try {
         const result = selected.emulator ? await withResources(["emulator:manager"], "form-matrix-emulator", async () => {
           const { withOwnedEmulator } = await import("./domains/layout.js");
@@ -268,7 +271,7 @@ const hotStep = {
       // restart: build_run means "a freshly launched app with the new code" — a page whose build() already
       // ran would otherwise keep showing the old UI (seen in the e2e gesture page test).
       const ability = ctx.input.ability ?? mainAbility(project, module.name).ability;
-      const applied = await applyHotReload(project, module.name, ctx.signal, ctx.log, { files: decision.files.map((f) => path.join(project.root, f)), restart: true, ability });
+      const applied = await applyHotReload(project, module.name, ctx.signal, ctx.log, { target: ctx.outputs.target.target, files: decision.files.map((f) => path.join(project.root, f)), restart: true, ability });
       hp.writeState(file, { ...state!, sources });
       if (applied.launch && !applied.launch.started) {
         // The patched code crashes on startup: same diagnosis as a normal deploy.

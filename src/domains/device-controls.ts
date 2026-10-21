@@ -10,7 +10,7 @@ import { displayControl, dumpTree, listWindows, invalidate } from "./ui.js";
 /** Reject fields for a different operation before any device side effects. */
 export function validateControl(input: Record<string, unknown>) {
   const operations: Record<string, Record<string, string[]>> = {
-    app: { list: ["offset", "limit"], info: ["bundle"], foreground: [], start: ["bundle", "ability", "module", "want"], stop: ["bundle"], uninstall: ["bundle", "allow_data_reset"], clear_cache: ["bundle"], clear_data: ["bundle", "allow_data_reset"], install: ["files", "shared", "replace", "user", "install_timeout", "wait", "request_key"] },
+    app: { list: ["offset", "limit"], info: ["bundle"], foreground: [], start: ["bundle", "ability", "module", "want"], stop: ["bundle"], uninstall: ["bundle", "allow_data_reset"], clear_cache: ["bundle"], clear_data: ["bundle", "allow_data_reset"], install: ["files", "replace", "user", "install_timeout", "wait", "request_key"] },
     file: { exists: ["remote"], delete: ["remote"] }, clipboard: { read: [], write: ["text"], clear: [] },
     font: { info: ["local"], install: ["local"], uninstall: ["name"] },
     screen: { size: [], status: [], wake: [], sleep: [], rotation: [], rotate: ["value"], rotation_lock: ["value"], sleeptime: ["value"], viewmode: ["value"] },

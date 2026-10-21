@@ -7,7 +7,7 @@ import { errorResult, invariant, ToolError } from "../core/errors.js";
 
 export interface FormInput {
   target: string; project?: string; product?: string; bundle?: string;
-  form_index?: number; form_size?: string; max_pages?: number; then_flow?: string;
+  form_index?: number; max_pages?: number; then_flow?: string;
 }
 export interface FormInstance {
   bundle: string; instance_id: string; key: string; page: number | null;
@@ -16,11 +16,13 @@ export interface FormInstance {
 
 /** A host adapter based on observed system structure; unknown hosts are explicitly unsupported. */
 export function desktopForms(nodes: UiNode[]): FormInstance[] {
-  const page = nodes.find((n) => /^SwiperPage_Grid_WorkSpace_\d+$/.test(n.key ?? ""))?.key?.match(/(\d+)$/)?.[1];
   const result = new Map<string, FormInstance>();
   for (const node of nodes) {
     const match = /^(?:SwiperPage_)?FormItem_(.+)_(-?\d+)$/.exec(node.key ?? "");
     if (!match || !node.rect || node.visible === false) continue;
+    let owner = node;
+    while (owner.parent !== null && !/^SwiperPage_Grid_WorkSpace_\d+$/.test(owner.key ?? "")) owner = nodes[owner.parent]!;
+    const page = /^SwiperPage_Grid_WorkSpace_(\d+)$/.exec(owner.key ?? "")?.[1];
     const item = { bundle: match[1]!, instance_id: match[2]!, key: node.key!, page: page === undefined ? null : Number(page), bounds: node.rect,
       text: [...new Set(subtree(nodes, node.i).map((n) => n.text).filter(Boolean))].slice(0, 20) };
     if (!result.has(`${item.bundle}:${item.instance_id}`)) result.set(`${item.bundle}:${item.instance_id}`, item);
@@ -46,11 +48,13 @@ function selectedPreview(nodes: UiNode[], bundle: string) {
   return selected;
 }
 
-const desktopWorkspace = (nodes: UiNode[]) => nodes.find((n) => /^SwiperPage_Grid_WorkSpace_\d+$/.test(n.key ?? "") && n.rect && n.visible !== false);
+const desktopWorkspaces = (nodes: UiNode[]) => nodes.filter((n) => /^SwiperPage_Grid_WorkSpace_\d+$/.test(n.key ?? "") && n.rect && n.visible !== false);
+const desktopWorkspace = (nodes: UiNode[]) => desktopWorkspaces(nodes)[0];
 function desktopPage(nodes: UiNode[]) {
   const node = desktopWorkspace(nodes);
   invariant(node, "CAPABILITY_UNAVAILABLE", "The current UI is not a supported desktop page", undefined, "Unlock the selected device and return to its desktop; lock-screen and other hosts require separate adapters");
-  return { index: Number(node.key!.match(/(\d+)$/)![1]), node };
+  return { index: Number(node.key!.match(/(\d+)$/)![1]), node: exact(nodes, "GridSwiper_Stack_Swiper"),
+    indices: desktopWorkspaces(nodes).map((n) => Number(n.key!.match(/(\d+)$/)![1])) };
 }
 async function fresh(target: string, signal: AbortSignal) { invalidate(target); return dumpTree(target, signal); }
 /** Home and page animations complete asynchronously; observe readiness without replaying actions. */
@@ -81,7 +85,7 @@ function exact(nodes: UiNode[], key: string) {
 
 /** Bounded desktop traversal. Visitor true stops on the page containing the selected instance/icon. */
 async function scan(input: FormInput, signal: AbortSignal, visitor?: (nodes: UiNode[]) => boolean) {
-  const limit = input.max_pages ?? 12, seen = new Set<number>(), instances = new Map<string, FormInstance>();
+  const limit = input.max_pages ?? 12, seen = new Set<number>(), visited = new Set<number>(), instances = new Map<string, FormInstance>();
   await act(input.target, { action: "key", key: "Home" }, signal);
   let nodes = await desktopNodes(input.target, signal), page = desktopPage(nodes);
   for (let i = 0; page.index !== 0 && i < limit; i++) {
@@ -91,16 +95,18 @@ async function scan(input: FormInput, signal: AbortSignal, visitor?: (nodes: UiN
     if (page.index === previous) break;
   }
   const fromFirst = page.index === 0;
+  const covered = () => fromFirst && seen.size === Math.max(...seen) + 1;
   for (let i = 0; i < limit; i++) {
     page = desktopPage(nodes);
-    if (seen.has(page.index)) return { instances: [...instances.values()], pages: [...seen], complete: fromFirst, nodes, found: false };
-    seen.add(page.index);
+    if (visited.has(page.index)) return { instances: [...instances.values()], pages: [...seen], complete: covered(), nodes, found: false };
+    visited.add(page.index);
+    page.indices.forEach((index) => seen.add(index));
     for (const item of desktopForms(nodes)) instances.set(`${item.bundle}:${item.instance_id}`, item);
     if (visitor?.(nodes)) return { instances: [...instances.values()], pages: [...seen], complete: false, nodes, found: true };
     await slide(input.target, page.node, true, signal);
     nodes = await desktopNodes(input.target, signal);
   }
-  return { instances: [...instances.values()], pages: [...seen], complete: fromFirst && seen.has(desktopPage(nodes).index), nodes, found: false };
+  return { instances: [...instances.values()], pages: [...seen], complete: covered() && visited.has(desktopPage(nodes).index), nodes, found: false };
 }
 
 export async function inventoryForms(input: FormInput, signal: AbortSignal) {
@@ -118,10 +124,12 @@ export function formContext(input: FormInput) {
 
 export async function catalogForms(input: FormInput, signal: AbortSignal) {
   const { bundle } = formContext(input);
-  const iconPrefix = `Container_AppIcon_Image_${bundle}`;
-  const located = await scan(input, signal, (nodes) => nodes.some((n) => n.key?.startsWith(iconPrefix) && n.rect));
+  // Observed desktop versions use either container; their nested AppIcon_Image is the same entry.
+  const prefixes = [`Container_AppIcon_Image_${bundle}`, `AppIconCommonView_${bundle}.`];
+  const iconsOn = (nodes: UiNode[]) => nodes.filter((n) => n.rect && n.visible !== false && prefixes.some((prefix) => n.key?.startsWith(prefix)));
+  const located = await scan(input, signal, (nodes) => iconsOn(nodes).length > 0);
   invariant(located.found, "NOT_FOUND", "Application icon not found in scanned desktop pages", { bundle, pages: located.pages });
-  const icons = located.nodes.filter((n) => n.key?.startsWith(iconPrefix) && n.rect && n.visible !== false);
+  const icons = iconsOn(located.nodes);
   invariant(icons.length === 1, "UI_AMBIGUOUS", "Multiple app entry icons; open the intended card center explicitly", { keys: icons.map((n) => n.key) });
   await click(input.target, icons[0]!, signal, true);
   let nodes = await fresh(input.target, signal);
@@ -129,7 +137,8 @@ export async function catalogForms(input: FormInput, signal: AbortSignal) {
   invariant(menus.length === 1, "CAPABILITY_UNAVAILABLE", "No unique system card menu was found", { bundle });
   await click(input.target, menus[0]!, signal);
   nodes = await fresh(input.target, signal);
-  exact(nodes, "FormManagerView_Stack");
+  const centers = nodes.filter((n) => ["FormManagerView_Stack", "FormCenterSplitView_Navigation"].includes(n.key ?? "") && n.rect && n.visible !== false);
+  invariant(centers.length === 1, "CAPABILITY_UNAVAILABLE", "No unique supported system card center was found", { matches: centers.length }, "Inspect this host version with ui tree; phone and observed split layouts are supported");
   // Hosts can open on the default card in the middle of the catalog.
   // Confirm the leading boundary before claiming an enumeration is complete.
   let fromFirst = false;
@@ -154,7 +163,7 @@ export async function catalogForms(input: FormInput, signal: AbortSignal) {
 }
 
 export type FormBaseline = Awaited<ReturnType<typeof inventoryForms>>;
-export interface Attachment { target: string; bundle: string; instance: FormInstance; started_at: number; selected_index: number; requested_size?: string; baseline: FormBaseline }
+export interface Attachment { target: string; bundle: string; instance: FormInstance; started_at: number; selected_index: number; baseline: FormBaseline }
 
 export function addedForms(before: FormInstance[], after: FormInstance[], bundle: string) {
   const previous = new Set(before.map((v) => `${v.bundle}:${v.instance_id}`));
@@ -175,11 +184,6 @@ export async function attachForm(input: FormInput, baseline: FormBaseline, signa
     await slide(input.target, exact(nodes, "FormCenterSwiper"), selected.index < index, signal);
     nodes = await fresh(input.target, signal);
   }
-  if (input.form_size) {
-    const sizes = nodes.filter((n) => n.text.replace(/[×x＊]/g, "*").replace(/\s/g, "") === input.form_size && n.clickable && n.rect);
-    invariant(sizes.length === 1, "CAPABILITY_UNAVAILABLE", "This host exposes no unique control for the requested form size", { requested_size: input.form_size }, "Omit form_size to exercise the selected preview without claiming a size selection");
-    await click(input.target, sizes[0]!, signal); nodes = await fresh(input.target, signal);
-  }
   let attempted = false;
   try {
     const add = exact(nodes, "SwiperLayout_AddToDesktopButton");
@@ -187,7 +191,7 @@ export async function attachForm(input: FormInput, baseline: FormBaseline, signa
     await click(input.target, add, signal);
     const after = await inventoryForms(input, signal), added = addedForms(baseline.instances, after.instances, catalog.bundle);
     invariant(after.complete && added.length === 1, "EVIDENCE_MISSING", "Cannot uniquely identify the form created by this operation", { added, complete: after.complete });
-    return { target: input.target, bundle: catalog.bundle, instance: added[0]!, started_at: started, selected_index: index, requested_size: input.form_size, baseline };
+    return { target: input.target, bundle: catalog.bundle, instance: added[0]!, started_at: started, selected_index: index, baseline };
   } catch (error) {
     if (!attempted) throw error;
     const cleanupSignal = AbortSignal.timeout(90000);
@@ -235,7 +239,7 @@ export async function inspectForm(input: FormInput, attachment: Attachment, sign
   const correlation = correlateForm(instance, declarations, logs.tail);
   return { instance, declarations,
     correlation: { ...correlation, log_scope: "returned tail of bounded system log query; related processes may not emit identifying fields; read its artifact for all captured matches", logs },
-    selection: { center_index: attachment.selected_index, requested_size: attachment.requested_size, reported_sizes: correlation.reported_sizes, size_verified: !!attachment.requested_size && correlation.reported_sizes.length === 1 && correlation.reported_sizes[0] === attachment.requested_size },
+    selection: { center_index: attachment.selected_index, reported_sizes: correlation.reported_sizes },
     attachment_verified: true, business_correctness: "not-judged", rendering: "observable-content-only" };
 }
 

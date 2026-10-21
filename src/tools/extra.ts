@@ -212,27 +212,13 @@ export const hotReloadTool = tool({
   },
   async handler(input, ctx) {
     const { inspectProject } = await import("../domains/project.js");
-    const { applyHotReload, resetHotReload } = await import("../domains/hotreload.js");
+    const { applyHotReload, resetHotReload, hotReloadSelection } = await import("../domains/hotreload.js");
     const project = inspectProject(input.project, input.product);
-    const { resolveTarget, shell } = await import("../domains/device.js");
-    const { runnableDeviceTypes } = await import("../domains/project.js");
-    // apply/reset act on the device the hot-reload baseline was installed on (recorded then); an
-    // explicit target is only resolved (name or serial) and used to pick the module.
-    const target = input.action === "stop_daemon" || !input.target ? undefined : await resolveTarget(input.target, ctx.signal, runnableDeviceTypes(project));
-    // Default module = the entry that belongs on the target device (phone vs watch), like run.
-    let module = input.module;
-    if (!module) {
-      const { selectRunModules } = await import("../domains/project.js");
-      const { baselineModules } = await import("../domains/hotreload.js");
-      const withBaseline = target ? [] : baselineModules(project);
-      const deviceType = target ? (await shell(target, ["param", "get", "const.product.devicetype"], ctx.signal, 10000).catch(() => undefined))?.stdout.trim() : undefined;
-      module = (withBaseline.length === 1 ? withBaseline[0] : undefined)
-        ?? (() => { try { return selectRunModules(project, { deviceType }).modules.find((m) => m.type === "entry")?.name; } catch { return undefined; } })()
-        ?? project.modules.find((m) => m.type === "entry")?.name ?? "entry";
-    }
-    if (input.action === "reset") return resetHotReload(project, module, target, ctx.signal);
     if (input.action === "stop_daemon") return (await import("../domains/hotreload.js")).stopDaemon(project, ctx.signal);
+    // Recheck after acquiring project/device ownership; never operate on a newly redirected baseline.
+    const { module, target } = await hotReloadSelection(project, input.module, input.target, ctx.signal);
+    if (input.action === "reset") return resetHotReload(project, module, target, ctx.signal);
     const { mainAbility } = await import("../domains/project.js");
-    return applyHotReload(project, module, ctx.signal, () => {}, { files: input.files, restart: input.restart, ability: input.restart ? mainAbility(project, module).ability : undefined });
+    return applyHotReload(project, module, ctx.signal, () => {}, { target, files: input.files, restart: input.restart, ability: input.restart ? mainAbility(project, module).ability : undefined });
   },
 });

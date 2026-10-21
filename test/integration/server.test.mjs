@@ -70,12 +70,35 @@ test("arguments: unknown/misplaced parameters are refused, long waits are capped
   const misplaced = await client.call("knowledge", { action: "rollback", version: "1.0.0" });
   assert.equal(misplaced.data.error.code, "INVALID_INPUT");
   assert.deepEqual(misplaced.data.error.details.not_used, ["version"]);
+  const device = (await client.request("tools/list")).result.tools.find((t) => t.name === "device");
+  assert.equal(Object.hasOwn(device.inputSchema.properties, "shared"), false);
+  const retired = await client.call("device", { action: "app", operation: "install", files: ["/owned/app.hap"], shared: ["/owned/system.hsp"] });
+  assert.equal(retired.data.error.code, "INVALID_INPUT");
+  assert.deepEqual(retired.data.error.details.unknown, ["shared"]);
   const capped = await client.call("job", { action: "list", limit: 1 });
   assert.equal(capped.isError, false);
   // wait above the cap is clamped (not rejected) and noted; job_id missing is the only error here
   const waited = await client.call("job", { action: "wait", job_id: "j_none", wait: 600000 });
   assert.equal(waited.data.error.code, "NOT_FOUND");
   await client.close();
+});
+
+test("retired form size selection is absent and rejected before any form job", async (t) => {
+  const client = connect(env);
+  t.after(() => client.close());
+  await client.initialize();
+  const list = await client.request("tools/list");
+  const ui = list.result.tools.find((tool) => tool.name === "ui");
+  assert.equal(JSON.stringify(ui.inputSchema).includes("form_size"), false, "Retired size selection must be absent from both form schemas");
+  for (const input of [
+    { action: "form", form_action: "exercise", bundle: "com.example.cards", target: "none", form_index: 0, form_size: "2*2" },
+    { action: "form", form_action: "matrix", bundle: "com.example.cards", form_cases: [{ target: "none", form_index: 0, form_size: "2*2" }] },
+  ]) {
+    const result = await client.call("ui", input);
+    assert.equal(result.isError, true);
+    assert.equal(result.data.error.code, "INVALID_INPUT");
+    assert.equal(result.data.job_id, undefined);
+  }
 });
 
 test("skills are exposed as tools, resources and prompts", async () => {

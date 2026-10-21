@@ -50,9 +50,9 @@ CLI 仅 passed 返回 0，包括基线录制在内的其他结果均非零。MCP
 
 - `form_action=inventory` 返回实例字符串 ID、bundle、所在页、边界和可见文本；默认最多 12 页，可设 max_pages（1–30），complete=false 表示不能确认清点完整。像素边界不换算成声明尺寸。
 - `catalog` 需要 project（可选 product）或 bundle，返回系统卡片中心的 form_index。预览序号不是声明标识。`exercise` 添加指定预览，按前后差集定位唯一新实例，关联显式 formId 的日志并清理。应用日志仅作为原始证据，不按专有错误码推断业务根因；声明匹配缺字段或资源变体不明确时保留候选。
-- `form_size="2*4"` 只操作宿主明确暴露的尺寸控件，找不到就报不支持，不换用别的尺寸。实际尺寸证据与请求参数分开返回。
+- 卡片仅按 `form_index` 选择系统预览，不提供独立尺寸选择。预览边界不推导声明尺寸；日志中的尺寸字段仅作为平台报告值返回。
 - `then_flow` 可运行工程定义的交互、配置页和内容断言；flow 必须 start.mode=attach、无必填变量，且至少包含一个显式 visible/hidden 断言。MCP 不内置这些业务预期。verify 的 form check 使用同一 exercise，只有新增实例、旧实例保护、清理和工程断言都有证据时该检查才能 passed；未提供 then_flow 为 inconclusive。这个判定只覆盖该工程声明的断言。
-- `matrix` 接受 form_cases，每项显式给 target 或 emulator={device_type,os_version}（二选一）以及 form_index，可选 form_size。真机/已有模拟器仅使用所选目标；一次性模拟器要求 project，并复用构建部署流程，仅使用已安装的匹配镜像，不下载或自动接受许可。按 case 查看 status/result/error；编排 job 完成不代表全部 case 通过。
+- `matrix` 接受 form_cases，每项显式给 target 或 emulator={device_type,os_version}（二选一）以及 form_index。真机/已有模拟器仅使用所选目标；一次性模拟器要求 project，并复用构建部署流程，仅使用已安装的匹配镜像，不下载或自动接受许可。按 case 查看 status/result/error；编排 job 完成不代表全部 case 通过。
 - 清理只处理本次新增卡片或创建的模拟器，不删除已有实例。失败/取消使用独立限时信号清理一次，失败保留错误和定位信息，不无限重试。进程中断产生的不确定副作用不能强制重放。资源占用返回 RESOURCE_BUSY。
 
 `device log` 先按查询条件过滤，再应用返回条数限制；普通、时间窗口与 follow 均有扫描上限并返回 scan。follow 游标包含同毫秒内的序号，消费未匹配行以避免重复轮询；它只覆盖仍存在于设备日志缓冲区且在扫描范围内的记录，possibly_truncated=true 时不能声称完整。

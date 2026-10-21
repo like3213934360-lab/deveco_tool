@@ -136,7 +136,7 @@
     "cli:cmd:device app install": {"status":"full","to":"device action=app operation=install"},
     "cli:cmd:device app install:arg:files": {"status":"full","to":"device action=app operation=install files"},
     "cli:cmd:device app install:opt:--replace": {"status":"full","to":"device action=app operation=install replace"},
-    "cli:cmd:device app install:opt:--shared": {"status":"full","to":"device action=app operation=install shared"},
+    "cli:cmd:device app install:opt:--shared": {"status":"skip","reason":"Inter-app HSP installation is unavailable to third-party applications; omit the system-only bm -s path. Intra-app HSPs remain supported through files."},
     "cli:cmd:device app install:opt:--user": {"status":"full","to":"device action=app operation=install user"},
     "cli:cmd:device app install:opt:--wait": {"status":"full","to":"device action=app operation=install install_timeout"},
     "cli:cmd:device app list": {"status":"full","to":"device action=app operation=list"},

@@ -15,6 +15,7 @@ test('form: owned desktop attachment and cleanup', async (t) => {
   const project = required('E2E_PROJECT'), target = required('E2E_TARGET');
   assert.ok(path.isAbsolute(project));
   const device = await call('device', { action: 'info', target });
+  await call('run', { action: 'launch', project, target });
   const before = (await job('ui', { action: 'form', form_action: 'inventory', target, max_pages, wait: 0 })).result;
   assert.equal(before.complete, true);
   const exercised = await job('ui', { action: 'form', form_action: 'exercise', project, target, form_index: index, max_pages, wait: 0 });

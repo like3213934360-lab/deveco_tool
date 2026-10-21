@@ -390,26 +390,42 @@ test("ArkTS checker: resources of nested modules, AppScope and local libs; comme
 test("cloud answers: labelled by text found in official docs, not by title; official first, duplicates once", async () => {
   const pushDoc = "Push Token标识了每台设备上每个应用，开发者调用getToken()接口向Push Kit服务端请求Token，获取到Token后，使用Push Token来推送消息。Token一般情况不会变化，仅下列场景Token会发生变化：清除应用数据后重新打开应用。";
   const navDoc = "Navigation组件是路由导航的根视图容器，一般作为页面的根容器使用，其内部默认包含了标题栏、内容区和工具栏。NavPathStack提供pushPath等路由跳转接口。";
-  const docs = { "push/get-token": pushDoc, "arkui/navigation": navDoc };
+  const otherDoc = "# 获取和注销Token\n public class TokenAbilitySlice extends AbilitySlice { private static final HiLogLabel LABEL = null; }";
+  const docs = { "push/get-token": pushDoc, "arkui/navigation": navDoc, "java/token": otherDoc };
   const lookup = async () => Object.entries(docs).map(([id, text]) => ({ id, text }));
   const sec = (n, title, body) => `[${n}]网页标题：${title}|||网页时间：|||网页分类：无|||网页内容：${body}\n`;
   const content = sec(1, "Push Kit 从入门到精通：全指南", "一、引言：我在项目里踩了很多坑，这篇文章记录我自己的实践经验和心得体会，".repeat(8))
     + sec(2, "HarmonyOS 在线和离线推送（API12+）", `问题解答：${pushDoc}`) // community-looking title, official text
     + sec(3, "推送服务-获取Push Token", pushDoc)
     + sec(4, "路由", navDoc)
-    + sec(5, "获取和注销Token", "# 获取和注销Token\n public class TokenAbilitySlice extends AbilitySlice { private static final HiLogLabel LABEL = null; }")
+    + sec(5, "获取和注销Token", otherDoc)
     + sec(6, "短", "太短");
   const r = await m.labelCloudSources(content, lookup);
-  assert.deepEqual(r.sources.map((s) => s.origin), ["community", "official", "official", "official", "official_other_platform", "unverified"]);
+  assert.deepEqual(r.sources.map((s) => s.origin), ["unverified", "official", "official", "official", "official_other_platform", "unverified"]);
   assert.equal(r.sources[1].local_doc, "push/get-token");
   assert.equal(r.sources[3].local_doc, "arkui/navigation");
-  assert.match(r.content, /\[1\]【社区文章\/community/);
+  assert.match(r.content, /\[1\]【未确认来源\/unverified/);
   assert.match(r.content, /\[5\]【官方文档·非 ArkTS 平台/);
   const packed = m.packCloudSections(r.sections, 3000);
-  assert.ok(packed.content.indexOf("[3]【官方") < packed.content.indexOf("[1]【社区"), "official sections come first");
+  assert.ok(packed.content.indexOf("[3]【官方") < packed.content.indexOf("[1]【未确认"), "verified text comes first");
   assert.equal(packed.shown.has(3), false, "a second section of the same official doc is not repeated");
   assert.ok(packed.content.length <= 3100);
   assert.match(m.AUTHORITY, /SDK declarations/);
+});
+
+test("cloud source hints never establish official provenance and lookup failures remain explicit", async () => {
+  const sec = (n, body) => `[${n}]网页标题：Tutorial|||网页时间：|||网页分类：|||网页内容：${body}\n`;
+  const bodies = [
+    "This community Codelab describes a personal experiment, with no verified publisher or official text match.",
+    "# Android sample\npublic class PersonalDemo extends Activity { /* this example has no verified publisher */ }",
+    "An official document may be newer than the local package. A missing search result does not identify its publisher.",
+  ];
+  const content = bodies.map((body, i) => sec(i + 1, body)).join("");
+  const unmatched = await m.labelCloudSources(content, async () => []);
+  assert.ok(unmatched.sources.every((s) => s.origin === "unverified"));
+  assert.doesNotMatch(unmatched.content, /【官方文档/);
+  const failed = await m.labelCloudSources(content, async () => { throw new Error("official document unavailable"); });
+  assert.ok(failed.sources.every((s) => s.origin === "unverified" && /official document unavailable/.test(s.why) && /official document unavailable/.test(s.verification_error)));
 });
 
 test("device-compatibility: build warnings summarized, capability hints instead of 'missing dependency'", () => {
