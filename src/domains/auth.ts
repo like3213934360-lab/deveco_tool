@@ -36,7 +36,7 @@ function secret(): Buffer {
   return key;
 }
 
-async function load(provider: Provider): Promise<Credentials | undefined> {
+async function load(provider: Provider): Promise<{ value: Credentials; data: Buffer } | undefined> {
   const row = (await database()).prepare("SELECT data FROM credentials WHERE provider=?").get(provider) as { data: Uint8Array | null } | undefined;
   if (!row?.data) return undefined;
   const data = Buffer.from(row.data);
@@ -44,19 +44,23 @@ async function load(provider: Provider): Promise<Credentials | undefined> {
     const decipher = crypto.createDecipheriv("aes-256-gcm", secret(), data.subarray(0, 12));
     decipher.setAAD(Buffer.from(provider));
     decipher.setAuthTag(data.subarray(12, 28));
-    return JSON.parse(Buffer.concat([decipher.update(data.subarray(28)), decipher.final()]).toString("utf8"));
+    return { value: JSON.parse(Buffer.concat([decipher.update(data.subarray(28)), decipher.final()]).toString("utf8")) as Credentials, data };
   } catch {
     throw new ToolError("AUTH_REQUIRED", "Stored credentials cannot be decrypted", undefined, `auth action=logout provider=${provider}, then log in again`);
   }
 }
-async function save(provider: Provider, value: Credentials | undefined) {
+async function save(provider: Provider, value: Credentials | undefined, expected?: Buffer) {
   const db = await database();
   if (!value) { db.prepare("DELETE FROM credentials WHERE provider=?").run(provider); return; }
   const iv = crypto.randomBytes(12);
   const cipher = crypto.createCipheriv("aes-256-gcm", secret(), iv);
   cipher.setAAD(Buffer.from(provider));
   const body = Buffer.concat([cipher.update(JSON.stringify(value)), cipher.final()]);
-  db.prepare("INSERT OR REPLACE INTO credentials(provider,data) VALUES(?,?)").run(provider, Buffer.concat([iv, cipher.getAuthTag(), body]));
+  const encrypted = Buffer.concat([iv, cipher.getAuthTag(), body]);
+  if (expected) {
+    const changed = db.prepare("UPDATE credentials SET data=? WHERE provider=? AND data=?").run(encrypted, provider, expected);
+    invariant(changed.changes === 1, "AUTH_REQUIRED", "Login changed during token refresh; the old refresh was discarded");
+  } else db.prepare("INSERT OR REPLACE INTO credentials(provider,data) VALUES(?,?)").run(provider, encrypted);
 }
 
 async function checkJwt(jwt: string, refresh: boolean, region: Region, signal?: AbortSignal): Promise<string> {
@@ -67,12 +71,12 @@ async function checkJwt(jwt: string, refresh: boolean, region: Region, signal?: 
 }
 
 export async function credentials(provider: Provider, force = false, signal?: AbortSignal): Promise<Credentials> {
-  const current = await load(provider);
+  const stored = await load(provider), current = stored?.value;
   invariant(current && (!current.expires || current.expires * 1000 > Date.now()), "AUTH_REQUIRED", `Not logged in to ${provider}`, undefined, `auth action=login provider=${provider}`);
   if (!force && Date.now() - current.saved < 30 * 60000) return current;
   const access = await checkJwt(current.jwt, true, current.region ?? "cn", signal);
   const updated = { ...current, access, saved: Date.now() };
-  await save(provider, updated);
+  await save(provider, updated, stored!.data);
   return updated;
 }
 
@@ -160,7 +164,7 @@ export async function login(provider: Provider, openBrowser = true, region: Regi
 }
 
 export async function status(provider: Provider) {
-  const current = await load(provider).catch(() => undefined);
+  const current = (await load(provider).catch(() => undefined))?.value;
   const pending = logins.get(provider);
   return {
     provider,
@@ -185,11 +189,13 @@ export async function logout(provider: Provider) {
 export async function teams(signal?: AbortSignal) {
   const auth = await credentials("developer", false, signal);
   const response = await fetch(`${process.env.DEVECO_AGC_URL || "https://connect-api.cloud.huawei.com"}/api/ups/user-permission-service/v1/user-team-list`, {
-    headers: { uid: auth.userId, oauth2Token: auth.access, source: "cli", lang: "zh_CN" }, signal: AbortSignal.timeout(20000),
+    headers: { uid: auth.userId, oauth2Token: auth.access, source: "cli", lang: "zh_CN" }, signal: AbortSignal.any([AbortSignal.timeout(20000), ...(signal ? [signal] : [])]),
   });
+  invariant(response.ok, "HTTP_ERROR", `Team query returned HTTP ${response.status}`);
   const data = (await response.json()) as { ret?: { code: number; msg?: string }; teams?: { id: string | number; name: string; userType?: number }[] };
   invariant(!data.ret || data.ret.code === 0, "HTTP_ERROR", `Team query rejected: ${data.ret?.msg ?? data.ret?.code}`);
-  return { teams: (data.teams ?? []).map((t) => {
+  invariant(Array.isArray(data.teams) && data.teams.every((t) => t && ["string", "number"].includes(typeof t.id) && typeof t.name === "string"), "EVIDENCE_MISSING", "Invalid developer team list");
+  return { teams: data.teams.map((t) => {
     const characters = [...(t.name ?? "")];
     const name = characters.length ? `${characters.slice(0, Math.max(1, Math.floor(characters.length / 2))).join("")}****` : "";
     return { id: String(t.id), name, role: t.userType };

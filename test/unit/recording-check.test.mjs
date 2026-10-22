@@ -1,6 +1,6 @@
+import { temporaryDirectory } from "../support/workspace.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 import { checkRecording } from "../support/recording.mjs";
@@ -10,7 +10,7 @@ const media = { streams: [
   { index: 1, codec_type: "video", width: 64, height: 64, nb_read_frames: "12" },
 ] };
 function fixture(t, change = () => {}) {
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-recording-check-"));
+  const directory = temporaryDirectory("deveco-recording-check-");
   t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
   const file = path.join(directory, "original video.mp4"), receipt = path.join(directory, "check.json"), calls = [];
   fs.writeFileSync(file, "original bytes");

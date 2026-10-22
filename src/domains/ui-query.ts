@@ -1,3 +1,4 @@
+import { selectorSchema } from "./selectors.js";
 import vm from "node:vm";
 import { DOMImplementation } from "@xmldom/xmldom";
 import xpath from "xpath";
@@ -8,6 +9,8 @@ const query = new vm.Script("run()", { filename: "ui-selector" });
 const stringFields = new Set(["text", "description", "id", "key", "type", "bundle", "window", "page"]);
 
 export function validateSelector(selector: Selector) {
+  const parsed = selectorSchema.safeParse(selector);
+  invariant(parsed.success, "INVALID_INPUT", "Invalid UI selector", { issues: parsed.error?.issues });
   invariant(selector.regex_flags === undefined || selector.regex, "INVALID_INPUT", "regex_flags requires selector.regex");
   const flags = selector.regex_flags ?? "iu";
   invariant(/^[imsu]*$/.test(flags) && new Set(flags).size === flags.length, "INVALID_INPUT", "regex_flags supports distinct i, m, s, u flags only");

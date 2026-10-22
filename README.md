@@ -23,7 +23,7 @@ npm ci && npm run build
 
 宿主启动入口固定为 `bin/deveco-mcp.mjs`。源码目录启动时会核对源码指纹和全部产物；更新源码后漏构建，会先自动完成本地构建，构建失败则拒绝启动旧代码。npm 包在打包前重建，安装后发现产物不完整或版本不符会明确报错。版本号在编译时固定，启动日志和 `doctor.server.build_id` 可确认实际构建身份。
 
-构建通过不可变目录和原子切换发布新产物，保留已运行连接的分包；现有指向 `dist/cli.js` 的配置也会进入同一启动校验。已运行的连接继续使用原构建，重载宿主 MCP 后才采用新构建。旧产物不按时间自动删除；需要回收时，先关闭使用此目录的全部连接，再删除 `dist` 并运行 `npm run build`。npm 包仅包含当前构建。
+构建通过不可变目录和原子切换发布新产物，保留已运行连接的分包与资源；现有指向 `dist/cli.js` 的配置也会进入同一启动校验。已运行的连接继续使用原构建，重载宿主 MCP 后才采用新构建。构建和打包按进程租约回收不再使用的旧代，保留活跃宿主及子进程使用的构建；无租约的旧宿主退出前保留其可能使用的旧代，不凭文件年龄删除。npm 包仅包含当前构建。
 
 用一条命令完成 MCP 配置并导出 Skill。支持 cursor、claude、codex、opencode、trae-cn、codebuddy、qoder、pi；已有同名配置不会被覆盖，除非加 `--force`：
 
@@ -73,7 +73,7 @@ node bin/deveco-mcp.mjs init --host codex --project .      # 项目级配置（.
 | `kb_package` | 成品包 npm 名；显式自定义名称且无 kb_source 时保留 pack 来源 |
 | `npm_registry` | 更新知识包时使用的 npm 源 |
 
-MCP 运行时按文件到期时间清理；退出或电脑休眠期间不能执行删除，恢复运行后补清。仅电脑缓存和已登记的导出副本受此规则管理，手机图库原视频、工程基线及永久 verify 交付包保留。删除失败时，每轮仅输出一条精简 stderr 汇总，每个失败路径在现有状态库中保留一条记录，后续检查及重启均跳过，不自动重试；失败文件需手动处理。MCP 重新生成同一路径的文件后按新文件计时。数据库或目录访问等清理基础设施出错时停止本进程的自动清理，修复后重启恢复。无法回收的失败文件不挤占可清理文件的容量预算，磁盘实际占用可能超过上限。
+MCP 运行时按文件到期时间清理；退出或电脑休眠期间不能执行删除，恢复运行后补清。电脑缓存和已登记的导出副本受此规则管理，手机图库原视频、工程基线及永久 verify 交付包保留。操作元数据写入状态库并按记录时间保留 24 小时，活跃操作的记录延至操作结束；旧 `audit/operations.jsonl` 在无活跃操作时原子迁移，已过期记录不导入。`hotpath` 内超过 24 小时且模块目录已不存在或内容损坏的状态会回收，有效基线和正在使用的状态保留。删除失败时，每轮仅输出一条精简 stderr 汇总，每个失败路径在现有状态库中保留一条记录，后续检查及重启均跳过，不自动重试；失败文件需手动处理。MCP 重新生成同一路径的文件后按新文件计时。数据库或目录访问等清理基础设施出错时停止本进程的自动清理，修复后重启恢复。无法回收的失败文件不挤占可清理文件的容量预算，磁盘实际占用可能超过上限。
 
 用 `node bin/deveco-mcp.mjs doctor [project]` 或 `doctor` 工具检查环境。
 
@@ -143,6 +143,8 @@ FPS 无有效数据返回 `verdict=inconclusive` 和 `diagnostic_artifact`；`re
 
 `project {action:"build", project:"/absolute/project", signing_config:"release"}` 单次选择已有签名配置，成功、失败和取消后恢复原始配置字节。`run build_run` 同样支持，显式选择时执行完整构建，不能与 `skip_build` 同用。恢复记录只保存被修改的配置名称片段，不复制配置备份；进程意外退出后，下次构建先恢复。配置发生并发修改时保留现场并报冲突，不覆盖外部编辑。
 
+构建会先移除本次产品、模块及 target 范围的最终打包文件并重新生成，保留编译中间缓存；依赖的共享模块 HSP 同步重新打包，失败时不返回旧包。`deploy`/`skip_build` 遇到多份包时校对 ZIP 应用内容，仅在内容相同且签名候选唯一时选择签名包；内容不同或存在多份不同签名容器均报冲突，文件时间不能证明包归属。自动热更新基线记录完整模块集合及各自 target，增减模块或切换任一 target 后执行完整构建和部署。
+
 `sign {action:"auto", type:"release", project:"/absolute/project", team:"<explicit team>"}` 自动准备密钥、发行证书和 Release Profile，校验证书、密钥、包名、有效期、ACL 和 Profile 签名后，写入 `<product>_release` 配置，保留 product 的默认签名引用。返回的 `next` 指明使用该配置构建。默认 `type:"debug"` 保持原流程；Release 不注册设备。配额不足、Profile 创建失败均明确失败，不写入不完整配置；不重试结果不确定的云端创建，不自动撤销原有证书。
 
 所有结构化 UI 选择器支持 XPath 1.0 元素查询及多字段正则，例如 `selector:{xpath:"//Button[ancestor::Row]",regex:{text:"^(保存|确定)$"},regex_flags:"u"}`。正则字段为 text/description/id/key/type/bundle/window/page，默认 flags 为 `iu`，可传不重复的 i/m/s/u；空字符串表示区分大小写。XPath、正则、普通属性和 within 范围取交集，最后应用 index；支持 find、assert、act、批量操作和流程。只接受元素结果，属性、文本或标量查询报错；复杂求值超过 100ms 返回 UI_QUERY_TIMEOUT，不截断结果制造成功。使用结构化参数，不解析 CLI DSL/Base64。
@@ -183,15 +185,17 @@ tools/          build.mjs、bench.mjs（含性能预算检查）、upstream-sync
 test/           unit / integration / e2e / model；support 与 fixtures 共用
 ```
 
+构建将 `knowledge/`、`templates/` 和 `resources/` 固化到所选构建代的 `assets/`，发布包也从该快照读取资源及第三方许可证；代次入口见 `dist/current.json`。源码工作区在 `npm run build` 时回收无活跃使用者的旧代；升级前未登记租约的旧宿主退出后，下次构建才能安全清理其候选旧代。
+
 任务机制用一个小型的持久化步骤执行器代替了 LangGraph：
 
 - 每一步的输出在下一步开始前保存。
 - 有副作用的步骤（安装、签名）执行前先记录意图，完成后记录回执。
 - 如果在两者之间崩溃，任务会进入 `needs_input`，不会盲目重做。
-- 检查过现场后，通常可以用 `job resume force=true` 重新执行该步骤；自动签名的云端创建和配置提交必须先核对回执，`force` 不能跳过这个保护。
+- 普通可重试步骤在检查现场后可用 `job resume force=true` 重做。安装和 UI 流程的未确认副作用不能强制重放，核对外部状态后需用新任务表达新的执行意图；自动签名的云端创建和配置提交仍须通过回执核对，`force` 不能跳过保护。
 - 启动时，所属进程已经退出的任务会被标记为 `interrupted`。
 
-保留策略按时间、任务数和总大小三个上限控制。清理在每个任务结束后执行，不使用定时器。
+保留策略按时间、任务数和总大小三个上限控制。清理复用一个后台定时器，按到期时间、任务结束和每小时维护触发；不需要等待下一次工具调用。
 
 ## 开发
 
@@ -238,7 +242,7 @@ Requires Node ≥ 22.18, plus DevEco Studio or the Command Line Tools. Devices a
 
 Hosts launch `bin/deveco-mcp.mjs`. In a source checkout it verifies the source fingerprint and all compiled outputs, builds stale/missing outputs locally before starting, and refuses to run old code if that build fails. npm packing rebuilds the package; an incomplete or mismatched installed package fails explicitly. The version is compiled into the code; startup logs and `doctor.server.build_id` identify the actual build.
 
-Builds publish immutable directories through an atomic pointer and retain lazy chunks for existing connections. Existing `dist/cli.js` configurations enter the same startup gate. Running connections keep their original build until the host reloads MCP. Old outputs are never deleted by age; to reclaim them, close all connections using the checkout, delete `dist`, then run `npm run build`. npm archives contain only the active build.
+Builds publish immutable directories through an atomic pointer and retain lazy chunks and assets for existing connections. Existing `dist/cli.js` configurations enter the same startup gate. Running connections keep their original build until the host reloads MCP. Builds and packaging reclaim unused generations using process leases, protecting active hosts and children. Pre-lease hosts retain the older generations they may use until they exit; age alone never permits deletion. npm archives contain only the active build.
 
 Register the server and export the skills in one step (cursor, claude, codex, opencode, trae-cn, codebuddy, qoder, pi; existing entries are kept unless you pass `--force`):
 
@@ -288,7 +292,7 @@ Other config keys:
 | `kb_package` | Pack npm name; custom names without kb_source retain pack mode |
 | `npm_registry` | Registry used for knowledge pack updates |
 
-While MCP is running, cleanup follows file expiry deadlines. Deletion catches up after shutdown or sleep. Only local caches and tracked export copies expire; phone gallery originals, project baselines and permanent verify bundles remain. Each sweep emits at most one short failure summary on stderr and stores one record per failed path in the existing state database. Later checks and restarts skip those files without retrying; remove them manually. Regenerating a file through MCP starts a new lifetime. Database or directory access errors stop automatic cleanup in that process until repaired and restarted. Unreclaimable files do not consume the reclaimable-file quota, so actual disk usage may exceed the limit.
+While MCP is running, cleanup follows file expiry deadlines. Deletion catches up after shutdown or sleep. Local caches and tracked export copies expire; phone gallery originals, project baselines and permanent verify bundles remain. Operation metadata lives in SQLite for 24 hours per record, retaining active operations until completion. The old `audit/operations.jsonl` is imported between operations, excluding expired rows. Hot-path state older than 24 hours is reclaimed when corrupt or its module directory is gone; valid and active baselines remain. Each sweep emits at most one short failure summary on stderr and stores one record per failed path in the existing state database. Later checks and restarts skip those files without retrying; remove them manually. Regenerating a file through MCP starts a new lifetime. Database or directory access errors stop automatic cleanup in that process until repaired and restarted. Unreclaimable files do not consume the reclaimable-file quota, so actual disk usage may exceed the limit.
 
 Check the setup with `node bin/deveco-mcp.mjs doctor [project]`, or call the `doctor` tool.
 
@@ -372,15 +376,17 @@ tools/          build.mjs, bench.mjs (with performance budgets), upstream-sync.m
 test/           unit / integration / e2e / model; shared support and fixtures
 ```
 
+Builds snapshot `knowledge/`, `templates/` and `resources/` into the selected generation’s `assets/`; packaged installations read resources and third-party licenses from that snapshot. The entry is recorded in `dist/current.json`. In source checkouts, `npm run build` reclaims generations without active users. Candidate generations held by pre-lease hosts remain protected until those hosts exit and a subsequent build runs.
+
 Jobs replace LangGraph with a small durable step runner:
 
 - Each step's output is persisted before the next step starts.
 - Steps with side effects (install, signing) record an intent before running and a receipt after.
 - If a crash happens between the two, the job goes to `needs_input` and is never replayed blindly.
-- `job resume force=true` normally re-runs such a step after inspection. Auto-sign cloud creation and configuration commit require receipt reconciliation; force cannot bypass this protection.
+- Retryable steps can use `job resume force=true` after inspection. Uncertain installation and UI-flow effects cannot be force-replayed; inspect external state and express any new execution intent as a new job. Auto-sign cloud creation and configuration commit still require receipt reconciliation; force cannot bypass that protection.
 - Jobs owned by a process that died are marked `interrupted` on startup.
 
-Retention is capped by age, job count and bytes, and cleanup runs after each job rather than on a timer.
+Retention is capped by age, job count and bytes. One background timer handles expiry deadlines, job completion and hourly maintenance without waiting for another tool call.
 
 ### Development
 

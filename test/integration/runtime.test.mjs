@@ -1,9 +1,9 @@
+import { temporaryDirectory } from "../support/workspace.mjs";
 // Exercise the actual launcher, compiled MCP and npm archive, with isolated checkouts/state.
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
-import { execFileSync, spawnSync } from "node:child_process";
+import { execFileSync, spawnSync, spawn } from "node:child_process";
 import { createRequire } from "node:module";
 import { test } from "node:test";
 import { buildPackage } from "../../tools/build.mjs";
@@ -13,7 +13,7 @@ import { connect } from "../support/mcp.mjs";
 const root = path.resolve(import.meta.dirname, "../..");
 const connections = new Map();
 function fixture(t) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-runtime-"));
+  const dir = temporaryDirectory("deveco-runtime-");
   for (const name of ["src", "bin", "tools", "knowledge", "templates", "resources", "README.md", "LICENSE", "package.json", "package-lock.json"])
     fs.cpSync(path.join(root, name), path.join(dir, name), { recursive: true });
   fs.symlinkSync(path.join(root, "node_modules"), path.join(dir, "node_modules"), "junction");
@@ -49,7 +49,12 @@ test("upgrades bind version to code and preserve old processes' lazy chunks, inc
   const old = client(t, dir);
   assert.equal((await old.initialize()).result.serverInfo.version, "1.0.0");
   for (const file of Object.keys(original.files)) fs.utimesSync(path.join(dir, "dist", file), 1, 1);
-  // Legacy chunks from a pre-generation server must survive the first migration too.
+  // A pre-lease process can still hold flat chunks; inventory protects it during migration.
+  const legacyFile = path.join(dir, "dist/legacy-cli.js");
+  fs.writeFileSync(legacyFile, "process.stdout.write('ready\\n');setInterval(()=>{},1000)");
+  const legacy = spawn(process.execPath, ["dist/legacy-cli.js"], { cwd: dir, stdio: ["ignore", "pipe", "pipe"] });
+  await new Promise((resolve) => legacy.stdout.once("data", resolve));
+  t.after(() => legacy.kill("SIGKILL"));
   fs.mkdirSync(path.join(dir, "dist/chunks"));
   fs.writeFileSync(path.join(dir, "dist/chunks/legacy.js"), "// retained for an existing server\n");
   fs.utimesSync(path.join(dir, "dist/chunks/legacy.js"), 1, 1);
@@ -68,7 +73,20 @@ test("upgrades bind version to code and preserve old processes' lazy chunks, inc
   assert.match(response.result.instructions, /Same-version source edit/);
   assert.match(edited.stderr, /rebuilding/);
   assert.notEqual(verifyBuild(dir).input_hash, original.input_hash);
-  await Promise.all([old.close(), updated.close(), edited.close()]);
+  for (let i=0;i<4;i++) {fs.appendFileSync(server,`\n// iteration ${i}\n`);await buildPackage(dir);}
+  assert.equal(fs.readdirSync(path.join(dir,"dist/builds")).length,4,"a pre-lease host cannot retain unused future generations; only current and three leased builds remain");
+  legacy.kill("SIGTERM"); await new Promise((resolve) => legacy.once("close", resolve));
+  const died = new Promise((resolve) => old.child.once("close", resolve));
+  old.child.kill("SIGKILL"); await died;
+  await Promise.all([updated.close(), edited.close()]);
+  const released = path.join(dir,"dist/.build-users/released.json");
+  fs.writeFileSync(released,JSON.stringify({pid:process.pid,generation:path.dirname(original.entry).split("/")[1]}));
+  const read = fs.readFileSync;
+  const concurrentExit = t.mock.method(fs,"readFileSync",(file,...args)=>{if(file===released)fs.rmSync(released,{force:true});return read(file,...args);});
+  try { await buildPackage(dir); } finally {concurrentExit.mock.restore();}
+  assert.equal(fs.existsSync(path.join(dir, "dist", original.entry)), false, "a dead process lease is removed and its retired generation is reclaimed");
+  assert.equal(fs.readdirSync(path.join(dir, "dist/builds")).length, 1);
+  assert.equal(fs.existsSync(path.join(dir, "dist/chunks")), false);
 });
 
 test("a failed compile cannot publish or silently start the last valid build", async (t) => {
@@ -135,10 +153,11 @@ test("npm pack builds current sources and ships only the selected generation, wh
   assert.ok(!files.has(`dist/${old.entry}`));
   assert.ok(!files.has("tools/build.mjs"));
   assert.ok(!files.has("src/cli.ts"));
-  assert.deepEqual([...files].filter((f) => f.startsWith("dist/")).sort(),
-    ["dist/cli.js", "dist/current.json", ...Object.keys(manifest.files).map((f) => `dist/${f}`)].sort());
+  const expected = new Set(["dist/cli.js", "dist/current.json", ...Object.keys(manifest.files).map((f) => `dist/${f}`)]);
+  assert.deepEqual([...files].filter((f) => f.startsWith("dist/") && !expected.has(f)), []);
+  assert.deepEqual([...expected].filter((f) => !files.has(f)), []);
   // Install outside the checkout: ancestor node_modules must not accidentally provide esbuild.
-  const installed = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-package-"));
+  const installed = temporaryDirectory("deveco-package-", true);
   t.after(() => fs.rmSync(installed, { recursive: true, force: true }));
   execFileSync("tar", ["-xzf", path.join(dir, packed.filename), "-C", installed]);
   const packageDir = path.join(installed, "package");
@@ -158,6 +177,7 @@ test("npm pack builds current sources and ships only the selected generation, wh
   assert.equal((await c.initialize()).result.serverInfo.version, "1.0.1");
   assert.equal((await c.request("prompts/list")).result.prompts.length, 3);
   assert.doesNotMatch(c.stderr, /rebuilding/);
+  assert.equal(fs.existsSync(path.join(packageDir,"dist/.build-users")),false,"source-less packages do not require writes to the installation directory");
   await c.close();
 });
 
@@ -191,4 +211,33 @@ test("test layout rejects retired runners, broken references and runtime depende
   });
   const missing = ts.getPreEmitDiagnostics(program).filter((d) => [2304, 2305, 2307, 2552, 2554].includes(d.code));
   assert.deepEqual(missing.map((d) => `${d.file?.fileName}: ${ts.flattenDiagnosticMessageText(d.messageText, " ")}`), []);
+});
+
+test("runtime assets bind the build ID and remain immutable for an already loaded host", async (t) => {
+  const dir = fixture(t);
+  fs.writeFileSync(path.join(dir,"resources/vendor/generation-probe.cjs"),"process.stdout.write('ready\\n');setInterval(()=>{},1000)");
+  const before = await buildPackage(dir), old = client(t, dir);
+  const child = spawn(process.execPath,[path.join(dir,"dist",path.dirname(before.entry),"assets/resources/vendor/generation-probe.cjs")],{stdio:["ignore","pipe","pipe"]});
+  await new Promise((resolve)=>child.stdout.once("data",resolve));
+  t.after(async()=>{if(child.exitCode===null&&child.signalCode===null){const ended=new Promise(r=>child.once("close",r));child.kill("SIGKILL");await ended;}});
+  await old.initialize();
+  const read = async (c) => { const r = await c.call("skills", {action:"read",name:"deveco-mcp-workflow"}); assert.equal(r.isError,false);return JSON.stringify(r.data); };
+  const content = await read(old);
+  for (const rel of ["resources/vendor/arkts-check.cjs", "templates/application/build-profile.json5", "knowledge/skills/deveco-mcp-workflow/SKILL.md"]) {
+    const file = path.join(dir, rel); fs.appendFileSync(file, "\nasset-snapshot-marker\n");
+    const next = await buildPackage(dir);
+    assert.notEqual(next.input_hash, before.input_hash, rel);
+    assert.equal(fs.existsSync(path.join(dir,"dist", before.entry)),true);
+    const snapshot = path.join(dir,"dist", path.dirname(before.entry),"assets",rel);
+    assert.doesNotMatch(fs.readFileSync(snapshot,"utf8"),/asset-snapshot-marker/);
+  }
+  assert.equal(await read(old),content);
+  const updated = client(t,dir);await updated.initialize();assert.match(await read(updated),/asset-snapshot-marker/);
+  await old.close(); await buildPackage(dir);
+  assert.equal(fs.existsSync(path.join(dir,"dist",before.entry)),true,"a surviving child protects its referenced assets after the host exits");
+  const ended=new Promise(r=>child.once("close",r));child.kill("SIGKILL");await ended;await buildPackage(dir);
+  assert.equal(fs.existsSync(path.join(dir,"dist",before.entry)),false);
+  const manifest = verifyBuild(dir), native = Object.keys(manifest.files).find((file)=>file.includes("resources/native/")&&!file.endsWith(".md"));
+  assert.ok(native); fs.appendFileSync(path.join(dir,"dist",native),"changed");
+  assert.throws(()=>verifyBuild(dir),/Missing or changed build output/);
 });

@@ -1,22 +1,54 @@
+import { temporaryDirectory } from "../support/workspace.mjs";
 // Gate accounting and baseline semantics are independent of SDK command success.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { test, after } from 'node:test';
 import { pathToFileURL } from 'node:url';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { build } from 'esbuild';
-const root = path.resolve(import.meta.dirname, '../..'), work = fs.mkdtempSync(path.join(os.tmpdir(), 'deveco-verify-'));
+const root = path.resolve(import.meta.dirname, '../..'), work = temporaryDirectory("deveco-verify-");
 process.env.DEVECO_STATE_DIR = path.join(work, 'state');
 process.env.DEVECO_COORDINATION_DIR = path.join(work, 'coordination');
 fs.symlinkSync(path.join(root, 'node_modules'), path.join(work, 'node_modules'), 'junction');
 const entry = path.join(work, 'entry.ts'), bundle = path.join(work, 'entry.mjs');
-fs.writeFileSync(entry, ['domains/project-test', 'domains/evidence', 'domains/quality', 'domains/verify', 'core/operations', 'core/artifacts', 'core/db', 'domains/device', 'domains/entries', 'domains/uitest', 'domains/hotreload'].map((p) => `export * from ${JSON.stringify(path.join(root, 'src', p + '.ts'))}`).join('\n'));
+fs.writeFileSync(entry, ['domains/project-test', 'domains/evidence', 'domains/quality', 'domains/verify', 'core/operations', 'core/artifacts', 'core/audit', 'core/db', 'domains/device', 'domains/entries', 'domains/uitest', 'domains/hotreload'].map((p) => `export * from ${JSON.stringify(path.join(root, 'src', p + '.ts'))}`).join('\n'));
 await build({ entryPoints: [entry], outfile: bundle, bundle: true, format: 'esm', platform: 'node', packages: 'external', logLevel: 'error' });
 const m = await import(pathToFileURL(bundle));
-after(async () => { await m.closeCoordination(); m.closeDatabase(); fs.rmSync(work, { recursive: true, force: true }); });
+after(async () => { await m.stopCleanup(); await m.closeCoordination(); m.closeDatabase(); fs.rmSync(work, { recursive: true, force: true }); });
+
+test('audit expiry preserves active operation evidence and captures only the current owner', async () => {
+  const db = await m.database(), cutoff = Date.now() - 86400000;
+  await m.appendAudit({ id: 'unrelated', owner_id: 'another-owner', at: new Date(0).toISOString() });
+  await m.withOperation('code', { action: 'check', project: work, password: 'private-value' }, new AbortController().signal, async () => {
+    const own = await m.currentAudit(); assert.equal(own.length, 1); assert.equal(own[0].phase, 'intent');
+    assert.doesNotMatch(JSON.stringify(own), /private-value|unrelated/);
+    db.prepare('UPDATE audit_events SET created=0 WHERE owner=?').run(own[0].owner_id);
+    await m.cleanupAudit(cutoff);
+    assert.equal((await m.currentAudit()).length, 1, 'a running operation retains its evidence even beyond the retention limit');
+    assert.equal(db.prepare("SELECT count(*) AS n FROM audit_events WHERE owner='another-owner'").get().n, 0);
+  });
+  await m.cleanupAudit(cutoff);
+  assert.equal(db.prepare('SELECT count(*) AS n FROM audit_events WHERE created=0').get().n, 0);
+  assert.deepEqual(await m.currentAudit(), []);
+});
+
+test('legacy audit import waits for writers, is idempotent and preserves malformed input', async () => {
+  const dir = path.join(work, 'state/audit'), file = path.join(dir, 'operations.jsonl'); fs.mkdirSync(dir, { recursive: true });
+  const line = JSON.stringify({ id: 'legacy', owner_id: 'legacy-owner', at: new Date().toISOString(), phase: 'returned' }) + '\n';
+  fs.writeFileSync(file, line);
+  await m.withResources(['audit-fixture'], 'legacy-writer', async () => {
+    await m.cleanupAudit(Date.now() - 86400000); assert.equal(fs.readFileSync(file, 'utf8'), line);
+  });
+  await m.cleanupAudit(Date.now() - 86400000); assert.equal(fs.existsSync(file), false);
+  fs.writeFileSync(file, line); await m.cleanupAudit(Date.now() - 86400000);
+  const db = await m.database();
+  assert.equal(db.prepare("SELECT count(*) AS n FROM audit_events WHERE owner='legacy-owner'").get().n, 1);
+  fs.writeFileSync(file, '{interrupted log');
+  try { await assert.rejects(m.cleanupAudit(0), SyntaxError); assert.equal(fs.readFileSync(file, 'utf8'), '{interrupted log'); }
+  finally { fs.rmSync(file); }
+});
 const report = (outcome, summary) => `class=Suite\ntest=one\nresult=${outcome}\nTests run: ${summary}\n`;
 
 test('SDK exit zero never substitutes for complete test accounting', () => {

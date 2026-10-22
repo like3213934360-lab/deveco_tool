@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { packageRoot } from "../core/config.js";
+import { assetRoot } from "../core/config.js";
 import { invariant } from "../core/errors.js";
 import { saveArtifact } from "../core/artifacts.js";
 import { faultlogNames, readFaultlog } from "./device.js";
@@ -78,7 +78,7 @@ const RUNTIME_REFS = "knowledge/skills/hmos-runtime-fix-skill/references";
 function loadPatterns(): Pattern[] {
   if (patterns) return patterns;
   patterns = [];
-  const dir = path.join(packageRoot, RUNTIME_REFS);
+  const dir = path.join(assetRoot, RUNTIME_REFS);
   for (const file of fs.existsSync(dir) ? fs.readdirSync(dir) : []) {
     const name = file.replace(/\.md$/, "");
     const text = fs.readFileSync(path.join(dir, file), "utf8");

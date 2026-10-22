@@ -252,8 +252,8 @@ export async function serve() {
     ]);
     await Promise.race([Promise.all([shutdownJobs(), closeAllSessions()]), new Promise((r) => setTimeout(r, 3000))]);
     killAll();
-    await closeCoordination();
     await stopCleanup().catch((error) => process.stderr.write(`[retention] Shutdown: ${error.message}\n`));
+    await closeCoordination();
     closeDatabase();
     process.exit(0);
   };

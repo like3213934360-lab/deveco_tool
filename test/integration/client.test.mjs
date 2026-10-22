@@ -1,12 +1,12 @@
+import { temporaryDirectory } from "../support/workspace.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 import { connect, waitJob } from "../support/mcp.mjs";
 
 function server(t, body) {
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-client-")), entry = path.join(directory, "server.mjs");
+  const directory = temporaryDirectory("deveco-client-"), entry = path.join(directory, "server.mjs");
   fs.writeFileSync(entry, `import {createInterface} from 'node:readline';\nconst lines=createInterface({input:process.stdin});\nlines.on('line',async line=>{const m=JSON.parse(line);${body}});\n`);
   const client = connect({}, entry);
   t.after(async () => { await client.close(); fs.rmSync(directory, { recursive: true, force: true }); });

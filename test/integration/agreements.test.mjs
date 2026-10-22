@@ -1,12 +1,12 @@
+import { temporaryDirectory } from "../support/workspace.mjs";
 // Actual tool, UI, batch and replay code; only device transport is simulated.
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { after, test } from "node:test";
 import { pathToFileURL } from "node:url";
 import { build } from "esbuild";
-const root = path.resolve(import.meta.dirname, "../.."), work = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-consent-"));
+const root = path.resolve(import.meta.dirname, "../.."), work = temporaryDirectory("deveco-consent-");
 process.env.DEVECO_STATE_DIR = work;
 process.env.DEVECO_CONFIG = path.join(work, "config.json");
 fs.writeFileSync(process.env.DEVECO_CONFIG, "{}");
@@ -15,7 +15,7 @@ const raw = (text, type = "Text", y = 0, attrs = {}) => ({ attributes: { type, t
 const dialog = (body, button, bundle) => ({ attributes: { bundleName: bundle, windowId: "dialog", bounds: "[0,0][400,800]" }, children: [raw(body), raw("不同意", "Button", 100), raw(button, "Button", 200)] });
 const app = () => ({ attributes: { bundleName: "example.application", windowId: "app", bounds: "[0,0][400,800]" }, children: [raw(`taps:${f.taps}`, "Button", 400, { id: "action", clickable: true })] });
 const reset = (frames) => { f.frames = frames; f.clicks = []; f.taps = 0; f.contextReads = 0; f.dumps = []; delete f.windowReply; m.invalidate("test"); };
-const bundle = path.join(root, "node_modules/.cache/deveco-consent-integration.mjs");
+const bundle = path.join(work, "deveco-consent-integration.mjs");
 await build({ stdin: { contents: `export {uiTool} from ${JSON.stringify(path.join(root, "src/tools/core.ts"))};export * from ${JSON.stringify(path.join(root, "src/domains/ui.ts"))};export {runBatch} from ${JSON.stringify(path.join(root, "src/domains/uibatch.ts"))};export {replayFlow,writeFlow} from ${JSON.stringify(path.join(root, "src/domains/flows.ts"))};export {resetConfig} from ${JSON.stringify(path.join(root, "src/core/config.ts"))};export {closeDatabase} from ${JSON.stringify(path.join(root, "src/core/db.ts"))};`, resolveDir: root }, outfile: bundle, bundle: true, format: "esm", platform: "node", packages: "external", logLevel: "error", plugins: [{ name: "transport", setup(b) {
   b.onResolve({ filter: /device\.js$/ }, (a) => /(?:domains\/(?:ui|flows)\.ts|tools\/core\.ts)$/.test(a.importer.replaceAll("\\", "/")) ? { path: "device", namespace: "fixture" } : undefined);
   b.onLoad({ filter: /.*/, namespace: "fixture" }, () => ({ contents: `import fs from 'node:fs';const f=()=>globalThis.__devecoConsent;export async function resolveTarget(){return 'test'};export async function assertConnected(){};export async function forceStop(){};export async function launch(){};export async function deviceInfo(){return {screen:{width:400,height:800}}};

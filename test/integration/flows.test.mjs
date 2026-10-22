@@ -1,17 +1,17 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
-import { test } from "node:test";
+import { after, test } from "node:test";
 import { pathToFileURL } from "node:url";
 import { build } from "esbuild";
+import { workspace } from "../support/workspace.mjs";
 
-const out = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-flows-"));
-process.on("exit", () => { try { fs.rmSync(out, { recursive: true, force: true }); } catch { /* Windows: file still locked */ } }); // tests leave nothing behind
+const temporary = workspace("flows"), out = temporary.directory;
 process.env.DEVECO_STATE_DIR = out;
-const bundle = path.resolve("node_modules/.cache/deveco-flows-harness.mjs");
-await build({ entryPoints: [path.resolve("src/domains/flows.ts")], outfile: bundle, bundle: true, format: "esm", platform: "node", packages: "external", logLevel: "error" });
+const bundle = path.join(out, "flows.mjs");
+await build({ stdin: { contents: `export * from ${JSON.stringify(path.resolve("src/domains/flows.ts"))};export {closeDatabase} from ${JSON.stringify(path.resolve("src/core/db.ts"))};export {stopCleanup} from ${JSON.stringify(path.resolve("src/core/artifacts.ts"))};`, resolveDir: process.cwd() }, outfile: bundle, bundle: true, format: "esm", platform: "node", packages: "external", logLevel: "error" });
 const flows = await import(`${pathToFileURL(bundle).href}?t=${Date.now()}`);
+after(async () => { await flows.stopCleanup(); flows.closeDatabase(); temporary.remove(); });
 
 // A v0.x (version 2) flow as written by the previous implementation.
 const legacy = {
@@ -51,8 +51,14 @@ test("v0.x flow files load, list and round-trip", () => {
 
 test("selector conversion keeps meaning", () => {
   const s = flows.toSelector({ text: "登录", textMode: "exact", clickableOnly: true, key: "k", bundle_name: "b" });
-  assert.deepEqual(s, { text: "登录", exact: true, key: "k", type: undefined, id: undefined, bundle: "b", checked: undefined, selected: undefined, enabled: undefined, clickable: true });
-  assert.deepEqual(flows.fromSelector(s), { text: "登录", textMode: "exact", key: "k", bundle_name: "b", clickableOnly: true });
+  assert.equal(s.text, "登录"); assert.equal(s.exact, true); assert.equal(s.clickable, true); assert.equal(s.bundle, "b");
+  assert.deepEqual(flows.toSelector(flows.fromSelector(s)), s);
+  const advanced = { xpath: "//Button", regex: { text: "S.*" }, regex_flags: "i", text_match: "prefix", within: "form", index: -1, description: "Save", focused: true };
+  assert.deepEqual(flows.toSelector(flows.fromSelector(advanced)), advanced);
+  const project = path.join(out, "selectors");
+  fs.mkdirSync(project, { recursive: true });
+  flows.writeFlow(project, { ...legacy, id: "selectors", steps: [{ id: "s1", action: "tap", selector: flows.fromSelector(advanced) }] });
+  assert.deepEqual(flows.toSelector(flows.readFlow(project, "selectors").steps[0].selector), flows.toSelector(advanced));
 });
 
 test("draft discovery survives reconnect, isolates project/target and hides input secrets", async () => {
@@ -65,9 +71,21 @@ test("draft discovery survives reconnect, isolates project/target and hides inpu
   const shown = await flows.showFlow(project, "draft"); assert.equal(shown.status, "draft"); assert.doesNotMatch(JSON.stringify(shown), /secret-input/);
   // A newly loaded domain reads the persisted draft instead of an in-memory singleton.
   const reconnected = await import(`${pathToFileURL(bundle).href}?reconnect=1`);
-  assert.equal((await reconnected.showFlow(project, "draft")).status, "draft");
-  await assert.rejects(reconnected.stopRecording("offline-target", { project: other, discard: true }), (e) => e.code === "INVALID_INPUT");
-  await assert.rejects(reconnected.stopRecording("offline-target", { project }), (e) => e.code === "INVALID_INPUT");
-  assert.equal((await reconnected.stopRecording("offline-target", { project, discard: true })).discarded, "draft");
-  assert.equal((await flows.listDrafts(project)).length, 0);
+  try {
+    assert.equal((await reconnected.showFlow(project, "draft")).status, "draft");
+    await assert.rejects(reconnected.stopRecording("offline-target", { project: other, discard: true }), (e) => e.code === "INVALID_INPUT");
+    await assert.rejects(reconnected.stopRecording("offline-target", { project }), (e) => e.code === "INVALID_INPUT");
+    assert.equal((await reconnected.stopRecording("offline-target", { project, discard: true })).discarded, "draft");
+    assert.equal((await flows.listDrafts(project)).length, 0);
+  } finally { await reconnected.stopCleanup(); reconnected.closeDatabase(); }
+});
+
+test("recorded focus typing uses required secret variables and never stores literal input in a saved flow", () => {
+  const flow = structuredClone(legacy), values = {};
+  const step = flows.makeStep(flow, values, { action: "type", text: "private-password" });
+  assert.equal(step.action, "focusInput");
+  const name = step.value.slice(2, -1);
+  assert.deepEqual(flow.variables[name], { required: true, secret: true });
+  assert.equal(values[name], "private-password");
+  assert.doesNotMatch(JSON.stringify({ ...flow, steps: [step] }), /private-password/);
 });

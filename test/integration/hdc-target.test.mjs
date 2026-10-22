@@ -1,7 +1,7 @@
+import { temporaryDirectory } from "../support/workspace.mjs";
 // Real loopback streams; fixture peers exercise HDC routing, not SDK/device test verdicts.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import net from 'node:net';
 import { once } from 'node:events';
@@ -9,7 +9,7 @@ import { test, after } from 'node:test';
 import { pathToFileURL } from 'node:url';
 import { build } from 'esbuild';
 
-const work = fs.mkdtempSync(path.join(os.tmpdir(), 'deveco-hdc-target-'));
+const work = temporaryDirectory("deveco-hdc-target-");
 const bundle = path.join(work, 'target.mjs');
 await build({ entryPoints: [path.resolve('src/core/hdc-target.ts')], outfile: bundle, bundle: true, format: 'esm', platform: 'node', logLevel: 'error' });
 const { openHdcTarget } = await import(pathToFileURL(bundle));

@@ -43,9 +43,15 @@ test("template SDK build", async (t) => {
     assert.ok(status.result.artifacts[0].path.endsWith(".hap"));
     assert.equal(status.result.synced, true);
     assert.equal(status.result.sync_reason, "dependencies not installed");
+    const stale = path.join(path.dirname(status.result.artifacts[0].path), "obsolete-signed.hap");
+    fs.writeFileSync(stale, "old signed payload from an earlier build");
+    const time = fs.statSync(status.result.artifacts[0].path).mtime;
+    fs.utimesSync(stale, time, time);
     const incremental = await waitJob(await call("project", { action: "build", project, wait: 60000 }));
-    assert.equal(incremental.status, "succeeded"); assert.equal(incremental.result.synced, false);
+    assert.equal(incremental.status, "succeeded", JSON.stringify(incremental.error)); assert.equal(incremental.result.synced, false);
     assert.equal(incremental.result.sync_reason, undefined);
+    assert.equal(fs.existsSync(stale), false);
+    assert.ok(incremental.result.artifacts.every((a) => a.path !== stale && fs.statSync(a.path).size > 0));
   });
 
   await t.test("resuming a repaired build refreshes preflight instead of claiming a false positive", async () => {

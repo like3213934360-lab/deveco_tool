@@ -4,10 +4,11 @@ import path from "node:path";
 import { after, test } from "node:test";
 import { pathToFileURL } from "node:url";
 import { build } from "esbuild";
-const bundle = path.resolve("node_modules/.cache/deveco-agreements.mjs");
+import { temporaryDirectory } from "../support/workspace.mjs";
+const work = temporaryDirectory("agreements"), bundle = path.join(work, "agreements.mjs");
 await build({ entryPoints: [path.resolve("src/domains/agreements.ts")], outfile: bundle, bundle: true, format: "esm", platform: "node", packages: "external", logLevel: "error" });
 const { agreementAction, onboardingAction, automaticResult, resolveAgreements } = await import(pathToFileURL(bundle).href);
-after(() => fs.rmSync(bundle, { force: true }));
+after(() => fs.rmSync(work, { recursive: true, force: true }));
 const n = (i, text, type = "Text", extra = {}) => ({ i, parent: null, text, type, rect: { x1: 0, y1: i * 50, x2: 400, y2: i * 50 + 40 }, window: "front", bundle: "arbitrary.app", visible: true, checked: null, ...extra });
 const dialog = (body, accept, extra = {}) => [n(0, body), n(1, "不同意", "Button"), n(2, accept, "Button", extra)];
 test("agreement recognition is independent of app names, ids and onboarding provider", () => {

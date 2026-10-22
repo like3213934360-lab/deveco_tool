@@ -1,3 +1,4 @@
+import { temporaryDirectory } from "../support/workspace.mjs";
 // Actual domains with an isolated SDK fixture. These checks do not claim real media playback.
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -6,11 +7,11 @@ import path from "node:path";
 import { after, test } from "node:test";
 import { pathToFileURL } from "node:url";
 import { build } from "esbuild";
-const root = path.resolve(import.meta.dirname, "../.."), work = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-lifecycle-"));
+const root = path.resolve(import.meta.dirname, "../.."), work = temporaryDirectory("deveco-lifecycle-");
 process.env.DEVECO_STATE_DIR = work;
 const box = (type, text) => { const b = Buffer.alloc(8 + text.length); b.writeUInt32BE(b.length); b.write(type, 4); b.write(text, 8); return b; };
 const fixture = globalThis.__devecoLifecycle = { active: false, recorder: 1, toggles: 0, mode: "ok", removed: [], cli: [], running: true, stopping: false, polls: 0, video: Buffer.concat([box("ftyp", "isom"), box("mdat", "samples"), box("moov", "vide")]) };
-const bundle = path.join(root, "node_modules/.cache/deveco-lifecycle.mjs");
+const bundle = path.join(work, "deveco-lifecycle.mjs");
 await build({ stdin: { contents: `export * from ${JSON.stringify(path.join(root, "src/domains/ui.ts"))};export * from ${JSON.stringify(path.join(root, "src/domains/emulator.ts"))};export {closeDatabase,kvSet,kvGet} from ${JSON.stringify(path.join(root, "src/core/db.ts"))};`, resolveDir: root }, outfile: bundle,
   bundle: true, format: "esm", platform: "node", packages: "external", logLevel: "error", plugins: [{ name: "sdk", setup(b) {
     b.onResolve({ filter: /(?:device|proc|toolchain)\.js$/ }, (a) => /domains\/(?:ui|emulator)\.ts$/.test(a.importer.replaceAll("\\", "/")) ? { path: path.basename(a.path, ".js"), namespace: "fixture" } : undefined);

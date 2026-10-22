@@ -1,13 +1,14 @@
+import { temporaryDirectory } from "../support/workspace.mjs";
 // System host state machine at the UI boundary; no SDK/device or application-specific product rules.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import os from 'node:os';
 import { after, test } from 'node:test';
 import { pathToFileURL } from 'node:url';
 import { build } from 'esbuild';
-const root = process.cwd(), file = path.resolve('node_modules/.cache/deveco-forms.mjs');
-const state = fs.mkdtempSync(path.join(os.tmpdir(), 'deveco-form-job-'));
+const root = process.cwd();
+const state = temporaryDirectory("deveco-form-job-");
+const file = path.join(state, 'forms.mjs');
 process.env.DEVECO_STATE_DIR = state;
 process.env.DEVECO_COORDINATION_DIR = path.join(state, 'coordination');
 const f = globalThis.__forms = {};

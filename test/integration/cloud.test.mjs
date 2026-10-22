@@ -1,15 +1,15 @@
+import { temporaryDirectory } from "../support/workspace.mjs";
 // Cloud flows against local mocks (no real account is touched): browser login callback,
 // AppGallery Connect certificate / device / profile management, token refresh and error mapping.
 import assert from "node:assert/strict";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import http from "node:http";
-import os from "node:os";
 import path from "node:path";
 import { after, before, test } from "node:test";
 import { connect } from "../support/mcp.mjs";
 
-const work = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-cloud-"));
+const work = temporaryDirectory("deveco-cloud-");
 process.on("exit", () => { try { fs.rmSync(work, { recursive: true, force: true }); } catch { /* Windows: file still locked */ } }); // tests leave nothing behind
 const UDID = "A".repeat(32) + "0123456789ABCDEF0123456789ABCDEF";
 const b64 = (o) => Buffer.from(JSON.stringify(o)).toString("base64url");
@@ -31,7 +31,7 @@ function handle(req, res, body) {
     return res.end(url.searchParams.get("tempToken") === "tmp-ok" ? JWT : "bad");
   }
   if (url.pathname === "/authrouter/auth/api/jwToken/check") {
-    if (req.headers.refresh === "true") agc.refreshes++;
+    if (req.headers.refresh === "true") { agc.refreshes++; if (agc.delayRefresh) { agc.pendingRefresh = () => json({ status: true, userInfo: { accessToken: `acc-${agc.refreshes}` } }); return; } }
     return json(req.headers.jwttoken === JWT ? { status: true, userInfo: { accessToken: `acc-${agc.refreshes}` } } : { status: false });
   }
   if (url.pathname.startsWith("/file/")) return res.end(agc.files.get(url.pathname.slice(6)));
@@ -42,7 +42,7 @@ function handle(req, res, body) {
   const data = body ? JSON.parse(body) : {};
   const file = (name, content) => { agc.files.set(name, content); return { newUrl: `${base}/file/${name}`, sha256: crypto.createHash("sha256").update(content).digest("hex") }; };
   switch (`${req.method} ${url.pathname}`) {
-    case "GET /api/ups/user-permission-service/v1/user-team-list": return json({ teams: agc.teams ?? [{ id: 7, name: "Team", userType: 1 }] });
+    case "GET /api/ups/user-permission-service/v1/user-team-list": return agc.teamFailure ? json(agc.teamFailure.body, agc.teamFailure.status) : json({ teams: agc.teams ?? [{ id: 7, name: "Team", userType: 1 }] });
     case "POST /api/cps/harmony-cert-manage/v1/cert/list": return ok({ certList: agc.certs });
     case "POST /api/cps/harmony-cert-manage/v1/cert/add": {
       assert.match(data.csr, /BEGIN NEW CERTIFICATE REQUEST|CSR/);
@@ -296,8 +296,30 @@ test("AGC rejections carry a code and an actionable hint; missing inputs are ref
   }
 });
 
-test("logout clears credentials", async () => {
-  await call("auth", { action: "logout", provider: "developer" });
-  assert.equal((await call("auth", { action: "status", provider: "developer" })).logged_in, false);
-  assert.equal((await client.call("sign", { action: "certificates" })).data.error.code, "AUTH_REQUIRED");
+test("team lookup failures, invalid responses and empty teams prevent AGC writes", async () => {
+  for (const failure of [{ status: 503, body: {} }, { status: 200, body: {} }, { status: 200, body: { teams: [{ id: 7 }] } }, { status: 200, body: { teams: [] } }]) {
+    agc.teamFailure = failure;
+    const writes = agc.calls.filter((c) => c.startsWith("POST")).length;
+    try {
+      const r = await client.call("sign", { action: "certificate_create", csr: "/x.csr", name: "x", out: path.join(work, "team-failed.cer") });
+      assert.equal(r.isError, true, JSON.stringify(r));
+      assert.ok(["HTTP_ERROR", "EVIDENCE_MISSING", "CLOUD_RESPONSE_INVALID"].includes(r.data.error.code), JSON.stringify(r));
+      assert.equal(agc.calls.filter((c) => c.startsWith("POST")).length, writes);
+      assert.equal(fs.existsSync(path.join(work, "team-failed.cer")), false);
+    } finally { agc.teamFailure = undefined; }
+  }
+});
+
+test("logout wins against an in-flight refresh and credentials cannot be resurrected", async () => {
+  agc.fail401 = 1; agc.delayRefresh = true;
+  const pending = client.call("sign", { action: "certificates" });
+  try {
+    for (let i = 0; i < 100 && !agc.pendingRefresh; i++) await new Promise((r) => setTimeout(r, 20));
+    assert.ok(agc.pendingRefresh, "refresh must be in flight before logout");
+    await call("auth", { action: "logout", provider: "developer" });
+    agc.pendingRefresh(); agc.pendingRefresh = undefined;
+    assert.equal((await pending).data.error.code, "AUTH_REQUIRED");
+    assert.equal((await call("auth", { action: "status", provider: "developer" })).logged_in, false);
+    assert.equal((await client.call("sign", { action: "certificates" })).data.error.code, "AUTH_REQUIRED");
+  } finally { agc.delayRefresh = false; agc.pendingRefresh?.(); agc.pendingRefresh = undefined; await pending; }
 });

@@ -1,13 +1,13 @@
+import { temporaryDirectory } from "../support/workspace.mjs";
 // FPS collection integration with isolated command evidence; no devices or runtime build required.
 // Run: node --test test/integration/perf.test.mjs
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { after, test } from "node:test";
 import { pathToFileURL } from "node:url";
 import { build } from "esbuild";
-const root = path.resolve(import.meta.dirname, "../.."), work = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-perf-"));
+const root = path.resolve(import.meta.dirname, "../.."), work = temporaryDirectory("deveco-perf-");
 const f = globalThis.__devecoPerf = {};
 const entry = path.join(work, "perf.mjs");
 await build({ entryPoints: [path.join(root, "src/domains/perf.ts")], outfile: entry, bundle: true, format: "esm", platform: "node", packages: "external", logLevel: "error", plugins: [{ name: "commands", setup(b) {

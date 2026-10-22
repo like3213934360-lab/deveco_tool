@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { packageRoot, version as mcpVersion } from "../core/config.js";
+import { assetRoot, version as mcpVersion } from "../core/config.js";
 import { invariant } from "../core/errors.js";
 import { run } from "../core/proc.js";
 import { catalogs, KB_SCHEMA, UPSTREAM_API_VERSION, type Manifest } from "./knowledge.js";
@@ -117,7 +117,7 @@ export async function buildKnowledgePack(options: { upstream: string; out: strin
 
 type LocalDocument = { id: string; title: string; catalog: number; file: string; text: string; relative: string };
 
-function localKnowledgeDocuments(local = path.join(packageRoot, "knowledge")): LocalDocument[] {
+function localKnowledgeDocuments(local = path.join(assetRoot, "knowledge")): LocalDocument[] {
   const localDocs: LocalDocument[] = [];
   const sources: [catalog: (typeof catalogs)[number], dir: string][] = [
     ["rules", "rules"], ["errors", "errors"],
@@ -145,7 +145,7 @@ function hashLocalDocuments(docs: LocalDocument[]) {
 }
 
 /** Relative paths and exact bodies of the files the builder indexes (NOTICE and duplicate runtime excluded). */
-export function localKnowledgeContentSha256(local = path.join(packageRoot, "knowledge")) {
+export function localKnowledgeContentSha256(local = path.join(assetRoot, "knowledge")) {
   return hashLocalDocuments(localKnowledgeDocuments(local));
 }
 

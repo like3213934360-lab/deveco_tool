@@ -1,10 +1,10 @@
+import { temporaryDirectory } from "../support/workspace.mjs";
 // Isolated knowledge registry/conversion regression. Run: node --test test/integration/kb-source.test.mjs
 // Requires Node >=22.18, esbuild and tar; POSIX also uses zip. No accounts or devices.
 import assert from "node:assert/strict";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import http from "node:http";
-import os from "node:os";
 import path from "node:path";
 import { execFile } from "node:child_process";
 import { pathToFileURL } from "node:url";
@@ -15,7 +15,7 @@ import { build } from "esbuild";
 import { zipFixture } from "../support/zip.mjs";
 
 const root = path.resolve(import.meta.dirname, "../..");
-const work = fs.mkdtempSync(path.join(process.env.PI_SCRATCH_DIR || os.tmpdir(), "deveco-kb-source-"));
+const work = temporaryDirectory("deveco-kb-source-");
 const upstreamName = "@deveco/deveco-cli-knowledgebase";
 const signal = new AbortController().signal;
 const fault = globalThis.__devecoKbSource = { pointer: false };
@@ -26,7 +26,7 @@ const exec = promisify(execFile);
 const integrity = (bytes) => `sha512-${crypto.createHash("sha512").update(bytes).digest("base64")}`;
 function index(file) {
   const db = new DatabaseSync(file);
-  db.exec(`CREATE TABLE documents(id INTEGER PRIMARY KEY, document_id TEXT UNIQUE, catalog_id INTEGER, doc_title TEXT);
+  db.exec(`CREATE TABLE vocab(term TEXT PRIMARY KEY); CREATE TABLE documents(id INTEGER PRIMARY KEY, document_id TEXT UNIQUE, catalog_id INTEGER, doc_title TEXT);
     CREATE TABLE segments(id INTEGER PRIMARY KEY, doc_id INTEGER, section_title TEXT DEFAULT '', lead_text TEXT DEFAULT '', search_text TEXT, excerpt_truncated INTEGER DEFAULT 0);
     CREATE VIRTUAL TABLE segments_fts USING fts5(search_text, content='segments', content_rowid='id');
     CREATE TRIGGER segments_ai AFTER INSERT ON segments BEGIN INSERT INTO segments_fts(rowid,search_text) VALUES(new.id,new.search_text); END;

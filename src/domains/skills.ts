@@ -1,10 +1,10 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { packageRoot } from "../core/config.js";
+import { assetRoot } from "../core/config.js";
 import { invariant, ToolError } from "../core/errors.js";
 
-const skillsRoot = () => path.join(packageRoot, "knowledge/skills");
+const skillsRoot = () => path.join(assetRoot, "knowledge/skills");
 
 function frontMatter(text: string) {
   const match = /^---\n([\s\S]*?)\n---/.exec(text);

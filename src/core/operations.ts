@@ -4,8 +4,9 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import type { DatabaseSync } from "node:sqlite";
-import { buildInfo, stateDir } from "./config.js";
+import { buildInfo } from "./config.js";
 import { invariant } from "./errors.js";
+import { appendAudit, readAudit } from "./audit.js";
 
 interface Owner { token: string; keys: Set<string> }
 const context = new AsyncLocalStorage<Owner>();
@@ -44,6 +45,18 @@ export async function resourceStatus() {
 function alive(pid: number) {
   try { process.kill(pid, 0); return true; }
   catch (e) { return (e as NodeJS.ErrnoException).code !== "ESRCH"; }
+}
+
+/** Snapshot active owners under the same gate used by old and new operation writers.
+ * The callback is synchronous: never hold a SQLite transaction across event-loop work. */
+export async function withResourceSnapshot<T>(fn: (owners: Set<string>) => T): Promise<T> {
+  const db = await coordination();
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    const rows = db.prepare("SELECT DISTINCT token,pid FROM locks").all() as { token: string; pid: number }[];
+    const value = fn(new Set(rows.filter((row) => alive(row.pid)).map((row) => row.token)));
+    db.exec("COMMIT"); return value;
+  } catch (error) { db.exec("ROLLBACK"); throw error; }
 }
 
 /** Canonical paths prevent symlink aliases from bypassing project ownership. */
@@ -133,26 +146,22 @@ export async function operationResources(name: string, input: Record<string, any
 export async function withOperation<T>(name: string, input: Record<string, any>, signal: AbortSignal, fn: () => Promise<T>): Promise<T> {
   const keys = await operationResources(name, input, signal);
   if (!keys.length) return fn();
-  const id = crypto.randomUUID(), dir = path.join(stateDir(), "audit");
-  fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
+  const id = crypto.randomUUID();
   const base = { id, session, pid: process.pid, operation: name, action: input.action, resources: keys, bundle: typeof input.bundle === "string" ? input.bundle : null,
     caller_claim: process.env.DEVECO_CALLER ?? null, caller_authenticated: false, build_id: buildInfo.input_hash };
-  const record = (phase: string, code?: string) => {
+  const record = async (phase: string, code?: string) => {
     const owner_id = context.getStore()?.token;
-    const fd = fs.openSync(path.join(dir, "operations.jsonl"), "a", 0o600);
-    try { fs.writeSync(fd, JSON.stringify({ ...base, owner_id, job_id: input._job_id, at: new Date().toISOString(), phase, code }) + "\n"); fs.fsyncSync(fd); }
-    finally { fs.closeSync(fd); }
+    await appendAudit({ ...base, owner_id, job_id: input._job_id, at: new Date().toISOString(), phase, code });
   };
   return withResources(keys, name, async () => {
-    signal.throwIfAborted(); record("intent");
-    try { const result = await fn(); record("returned"); return result; }
-    catch (error) { record("error", (error as { code?: string }).code ?? "INTERNAL"); throw error; }
+    signal.throwIfAborted(); await record("intent");
+    try { const result = await fn(); await record("returned"); return result; }
+    catch (error) { await record("error", (error as { code?: string }).code ?? "INTERNAL"); throw error; }
   });
 }
 
 /** Current composite operation only; unrelated caller/device audit history is never exported. */
-export function currentAudit() {
-  const owner = context.getStore()?.token, file = path.join(stateDir(), "audit", "operations.jsonl");
-  if (!owner || !fs.existsSync(file)) return [];
-  return fs.readFileSync(file, "utf8").split("\n").filter(Boolean).map((line) => JSON.parse(line)).filter((row) => row.owner_id === owner);
+export async function currentAudit() {
+  const owner = context.getStore()?.token;
+  return owner ? readAudit(owner) : [];
 }

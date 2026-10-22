@@ -1,3 +1,4 @@
+import { temporaryDirectory } from "../support/workspace.mjs";
 // Pure domain logic (no device): bundled on the fly from src/ with esbuild.
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -6,9 +7,10 @@ import path from "node:path";
 import { test } from "node:test";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { build } from "esbuild";
+import { zipFixture } from "../support/zip.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-const out = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-unit-"));
+const out = temporaryDirectory("deveco-unit-");
 process.on("exit", () => { try { fs.rmSync(out, { recursive: true, force: true }); } catch { /* Windows: file still locked */ } }); // tests leave nothing behind
 const entry = path.join(out, "entry.ts");
 fs.writeFileSync(entry, [
@@ -24,7 +26,7 @@ fs.writeFileSync(entry, [
   `export { labelCloudSources, packCloudSections, AUTHORITY } from ${JSON.stringify(path.join(root, "src/domains/knowledge.ts"))};`,
   `export { applicableSyscap, deviceCaps } from ${JSON.stringify(path.join(root, "src/domains/syscap.ts"))};`,
   `export { parseDuration } from ${JSON.stringify(path.join(root, "src/domains/device.ts"))};`,
-  `export { projectRoots, findProjectRoot, selectRunModules, BuildOutputParser, cleanArguments } from ${JSON.stringify(path.join(root, "src/domains/project.ts"))};`,
+  `export { projectRoots, findProjectRoot, selectRunModules, BuildOutputParser, cleanArguments, buildOutputs } from ${JSON.stringify(path.join(root, "src/domains/project.ts"))};`,
   `export { readonlySqlAllowed, readonlyShellArgs, appDatabasePath } from ${JSON.stringify(path.join(root, "src/domains/device.ts"))};`,
 ].join("\n"));
 await build({ entryPoints: [entry], outfile: path.join(out, "entry.mjs"), bundle: true, format: "esm", platform: "node", packages: "external", logLevel: "error", nodePaths: [path.join(root, "node_modules")] });
@@ -560,4 +562,30 @@ test('target scroll gestures stay inside nested bounds and preserve requested di
     if (direction === 'right') assert.ok(g.x < g.x2);
   }
   assert.throws(() => m.scrollGesture({ x1: 1, x2: 2, y1: 1, y2: 2 }, 'up'), { code: 'UI_NO_BOUNDS' });
+});
+
+test("package selection requires matching payloads, independent of output timestamps", async () => {
+  const project = { root: out, product: "phone", modules: [{ name: "entry", root: path.join(out, "entry"), target: "phoneTarget" }] };
+  const dir = path.join(out, "entry/build/phone/outputs/phoneTarget"); fs.mkdirSync(dir, { recursive: true });
+  const signed = path.join(dir, "entry-signed.hap"), unsigned = path.join(dir, "entry-unsigned.hap");
+  fs.writeFileSync(signed, zipFixture({ "module.json": "old signed payload" }));
+  fs.writeFileSync(unsigned, zipFixture({ "module.json": "current unsigned payload" }));
+  for (const signedTime of [10, 20, 30]) {
+    fs.utimesSync(signed, signedTime, signedTime); fs.utimesSync(unsigned, 20, 20);
+    await assert.rejects(m.buildOutputs(project), { code: "CONFLICT" });
+  }
+  // Signing changes the ZIP container, but cannot change its application entries.
+  const same = zipFixture({ "module.json": "current unsigned payload" });
+  same.writeUInt16LE(1, same.length - 2);
+  fs.writeFileSync(signed, Buffer.concat([same, Buffer.from("x")]));
+  assert.equal((await m.buildOutputs(project))[0].path, signed);
+  const secondSignature = path.join(dir, "another-signed.hap");
+  fs.writeFileSync(secondSignature, zipFixture({ "module.json": "current unsigned payload" }));
+  await assert.rejects(m.buildOutputs(project), { code: "CONFLICT" });
+  fs.rmSync(secondSignature);
+  fs.rmSync(signed);
+  assert.equal((await m.buildOutputs(project))[0].path, unsigned);
+  fs.mkdirSync(path.join(out, "build/outputs/default"), { recursive: true });
+  fs.writeFileSync(path.join(out, "build/outputs/default/wrong.app"), "different product");
+  assert.deepEqual(await m.buildOutputs(project, "assembleApp"), []);
 });

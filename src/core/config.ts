@@ -18,10 +18,11 @@ export const packageRoot = (() => {
   return path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 })();
 // Replaced at compile time. Running code never relabels itself after a package/source update.
-declare const __DEVECO_BUILD__: { version: string; input_hash: string };
+declare const __DEVECO_BUILD__: { version: string; input_hash: string; generation?: string };
 export const buildInfo = typeof __DEVECO_BUILD__ === "undefined"
   ? { version: "0.0.0-dev", input_hash: "unbundled" } : __DEVECO_BUILD__;
 export const version = buildInfo.version;
+export const assetRoot = buildInfo.generation ? path.join(packageRoot, "dist", buildInfo.generation, "assets") : packageRoot;
 
 const configSchema = z
   .object({

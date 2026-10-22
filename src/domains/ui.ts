@@ -6,7 +6,7 @@ import zlib from "node:zlib";
 import { StringDecoder } from "node:string_decoder";
 import { setTimeout as delay } from "node:timers/promises";
 import { artifactDir, commitArtifact, saveArtifact, trackExport } from "../core/artifacts.js";
-import { config, packageRoot } from "../core/config.js";
+import { config, assetRoot } from "../core/config.js";
 import { errorResult, invariant, ToolError } from "../core/errors.js";
 import { assertConnected, hdc, shell } from "./device.js";
 
@@ -620,7 +620,7 @@ async function withAgent(target: string, signal: AbortSignal | undefined, fn: (c
     if (!(await ready())) {
       const name = `deveco-agent-${crypto.randomBytes(4).toString("hex")}.so`;
       remote = `/data/local/tmp/${name}`;
-      await hdc(["-t", target, "file", "send", path.join(packageRoot, "resources/native/hypium", asset), remote], signal, 30000);
+      await hdc(["-t", target, "file", "send", path.join(assetRoot, "resources/native/hypium", asset), remote], signal, 30000);
       await shell(target, ["uitest", "start-daemon", "singleness", "--extension-name", name], signal);
       const deadline = Date.now() + 5000;
       while (!(await ready())) {

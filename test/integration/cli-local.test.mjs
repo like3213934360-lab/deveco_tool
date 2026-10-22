@@ -1,3 +1,4 @@
+import { temporaryDirectory } from "../support/workspace.mjs";
 // Local CLI wiring against the built entrypoint; no SDK, device, account or remote registry.
 // Run after the shared build: node --test test/integration/cli-local.test.mjs
 // Requires Node >=22.18, tar, and zip on POSIX (the real knowledge-pack builder uses them).
@@ -5,7 +6,6 @@ import assert from "node:assert/strict";
 import crypto from "node:crypto";
 import { execFile } from "node:child_process";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { test } from "node:test";
@@ -17,7 +17,7 @@ const exec = promisify(execFile);
 const json = (file) => JSON.parse(fs.readFileSync(file, "utf8"));
 
 function localCli(t) {
-  const work = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-cli-local-"));
+  const work = temporaryDirectory("deveco-cli-local-");
   t.after(() => fs.rmSync(work, { recursive: true, force: true }));
   const home = path.join(work, "home"), state = path.join(work, "state");
   fs.mkdirSync(home);

@@ -1,7 +1,7 @@
+import { temporaryDirectory } from "./workspace.mjs";
 // Protocol sizes, not model tokens. Report host expansion without trading away capability guidance.
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { connect } from "./mcp.mjs";
@@ -24,7 +24,7 @@ export function promptMetrics(instructions, tools) {
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const args = process.argv.slice(2);
   assert.ok(args.length === 0 || (args.length === 2 && args[0] === "--snapshot"), "Usage: node test/support/prompts.mjs [--snapshot <file>]");
-  const state = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-prompt-"));
+  const state = temporaryDirectory("deveco-prompt-");
   const client = connect({ DEVECO_STATE_DIR: state, DEVECO_CONFIG: path.join(state, "none.json") });
   try {
     const init = await client.initialize(), list = await client.request("tools/list");

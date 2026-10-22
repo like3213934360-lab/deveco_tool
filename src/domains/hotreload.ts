@@ -19,7 +19,7 @@ import { decryptPassword } from "./sign.js";
  */
 
 interface Baseline {
-  module: string; bundle: string; target: string; files: Record<string, string>; at: number;
+  module: string; moduleTarget: string; bundle: string; target: string; files: Record<string, string>; at: number;
   restore?: { directory: string; install: string; packages: { file: string; sha256: string }[] };
 }
 
@@ -144,7 +144,7 @@ export async function recordBaseline(project: Project, module: string, bundle: s
     invariant(result.code === 0, "BUILD_FAILED", "Hot reload baseline compile failed", { ...diagnostics, tail: clip(result.stderr || result.stdout, 1500) });
     invariant(saved.every((p) => fs.existsSync(path.join(archive, p.file))), "CONFLICT", "Baseline packages were removed during compilation");
     invariant(await installStamp(target, bundle, signal) === stamp, "CONFLICT", "Installed app changed while recording the baseline");
-    const baseline: Baseline = { module, bundle, target, files, at: Date.now(), restore: { directory, install: stamp, packages: saved } };
+    const baseline: Baseline = { module, moduleTarget: m.target, bundle, target, files, at: Date.now(), restore: { directory, install: stamp, packages: saved } };
     atomicWrite(file, JSON.stringify(baseline));
   } catch (error) {
     fs.rmSync(archive, { recursive: true, force: true });
@@ -205,7 +205,9 @@ export async function applyHotReload(project: Project, module: string, signal: A
   invariant(fs.existsSync(file), "NOT_FOUND", "No hot-reload baseline for this module", undefined,
     "Start with run action=build_run hot_reload=true (installs the baseline build)");
   const baseline = JSON.parse(fs.readFileSync(file, "utf8")) as Baseline;
-  invariant(baseline.bundle === project.bundleName && (!options.target || options.target === baseline.target), "CONFLICT", "Hot-reload device/bundle does not match the recorded baseline");
+  invariant(baseline.module === module && baseline.moduleTarget === m.target && baseline.bundle === project.bundleName && (!options.target || options.target === baseline.target), "CONFLICT", "Hot-reload module target/device/bundle does not match the recorded baseline");
+  invariant(baseline.restore?.install && await installStamp(baseline.target, baseline.bundle, signal) === baseline.restore.install,
+    "CONFLICT", "Installed app changed or baseline installation identity is missing; redeploy before applying a patch");
   const current = sourceDigests(m.root);
   // Explicit file list (like devecocli's --apply <fileName> list) or the automatic source diff.
   const explicit = options.files?.map((f) => path.resolve(project.root, f));
@@ -256,6 +258,9 @@ export async function applyHotReload(project: Project, module: string, signal: A
   const signingMs = Date.now() - signingStarted;
   let transferMs = 0, applyMs = 0;
   // 4. apply on device
+  const compiledSources = sourceDigests(m.root);
+  invariant(changed.every((f) => compiledSources[f] === current[f]), "CONFLICT", "Sources changed during patch compilation; patch was not applied");
+  invariant(await installStamp(baseline.target, baseline.bundle, signal) === baseline.restore!.install, "CONFLICT", "Installed app changed during patch compilation");
   log("applying quick fix on device");
   const remote = `/data/local/tmp/deveco-hqf-${crypto.randomBytes(4).toString("hex")}`;
   await shell(baseline.target, ["mkdir", "-p", remote], signal);
@@ -283,7 +288,7 @@ export async function applyHotReload(project: Project, module: string, signal: A
   }
   const after = await pidOf(baseline.target, baseline.bundle, signal);
   // Commit the new baseline so the next apply only sends newer changes.
-  atomicWrite(file, JSON.stringify({ ...baseline, files: current, at: Date.now() }));
+  atomicWrite(file, JSON.stringify({ ...baseline, files: { ...baseline.files, ...Object.fromEntries(changed.map((f) => [f, current[f]])) }, at: Date.now() }));
   return {
     applied: true, files: changed.map((f) => path.relative(project.root, f)), added: added.length,
     timings_ms: { compile: result.elapsedMs, signing: signingMs, transfer: transferMs, apply: applyMs, restart: Date.now() - restartStarted, total: Date.now() - started },

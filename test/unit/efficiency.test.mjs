@@ -1,3 +1,4 @@
+import { temporaryDirectory } from "../support/workspace.mjs";
 // Efficiency features (batch UI steps, screen diff, incremental preflight, ...): pure logic, no device.
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -9,7 +10,7 @@ import { build } from "esbuild";
 import { parseArgs, runCheck } from "../../resources/vendor/arkts-check.cjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-const out = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-eff-"));
+const out = temporaryDirectory("deveco-eff-");
 process.on("exit", () => { try { fs.rmSync(out, { recursive: true, force: true }); } catch { /* Windows: file still locked */ } }); // tests leave nothing behind
 process.env.DEVECO_STATE_DIR = path.join(out, "state");
 const src = (f) => JSON.stringify(path.join(root, "src", f));
@@ -283,9 +284,23 @@ test("repeat detection: the same opening taps after a relaunch are suggested onc
 test("auto hot reload: only provably equivalent changes are quick-fixed; every other case says why", () => {
   const src = { "products/phone/src/main/ets/pages/Index.ets": "1:1:a", "features/tools/src/main/ets/A.ets": "1:1:b" };
   const i1 = { "products/phone/src/main/resources/base/element/string.json": "1:1:r1" };
-  const state = { module: "phone", moduleRoot: "/p/products/phone", target: "D", install: "100:200", sources: src, inputs: i1 };
-  const now = (o = {}) => ({ target: "D", install: "100:200", running: true, sources: src, inputs: i1, moduleRel: "products/phone", ...o });
+  const modules = [{ name: "phone", target: "phoneTarget" }, { name: "tools", target: "default" }];
+  const state = { product: "phoneProduct", moduleTarget: "phoneTarget", modules, module: "phone", moduleRoot: "/p/products/phone", target: "D", install: "100:200", sources: src, inputs: i1 };
+  const now = (o = {}) => ({ product: "phoneProduct", moduleTarget: "phoneTarget", modules, module: "phone", target: "D", install: "100:200", running: true, sources: src, inputs: i1, moduleRel: "products/phone", ...o });
+  for (const selection of [{ product: "watchProduct" }, { module: "watch" }, { moduleTarget: "watchTarget" }]) {
+    assert.equal(m.decideHot(state, now(selection)).unchanged, undefined);
+    assert.match(m.decideHot(state, now(selection)).reason, /build product, module or module target changed/);
+  }
   const edit = { ...src, "products/phone/src/main/ets/pages/Index.ets": "2:1:c" };
+  for (const selection of [modules.slice(0, 1), [...modules, { name: "extra", target: "default" }], [modules[0], { name: "tools", target: "custom" }]]) {
+    for (const sources of [src, edit]) {
+      const decision = m.decideHot(state, now({ modules: selection, sources }));
+      assert.equal(decision.hot, false); assert.equal(decision.unchanged, undefined);
+      assert.match(decision.reason, /module selection/);
+    }
+  }
+  assert.equal(m.decideHot(state, now({ modules: [...modules].reverse() })).unchanged, true);
+  assert.match(m.decideHot({ ...state, modules: undefined }, now()).reason, /baseline/);
   assert.deepEqual(m.decideHot(state, now({ sources: edit })), { hot: true, files: ["products/phone/src/main/ets/pages/Index.ets"] });
   assert.equal(m.decideHot(state, now()).unchanged, true, "nothing changed: relaunch only");
   const reason = (s, n) => m.decideHot(s, n).reason;
@@ -497,11 +512,20 @@ test("saveExecutedFlow: executed batch becomes a replayable flow with secret inp
   assert.equal(saved.steps, 3);
   assert.deepEqual(saved.not_saved, ["mouse_move"]);
   const flow = m.readFlow(proj, "open-rain");
-  assert.deepEqual(flow.steps[0].selector, { text: "工具", textMode: "exact" });
+  assert.deepEqual(flow.steps[0].selector, { text: "工具", exact: true });
   assert.equal(flow.steps[1].value, "${input1}");
   assert.equal(fs.readFileSync(saved.file, "utf8").includes("p@ss-w0rd"), false, "typed text is not stored in the flow file");
   assert.equal(flow.variables.input1.secret, true);
   assert.deepEqual(flow.steps[2].point, { xPercent: 50, yPercent: 50 });
-  assert.deepEqual(flow.assert.visible, { text: "选择壁纸", textMode: "contains" });
+  assert.deepEqual(flow.assert.visible, { text: "选择壁纸" });
   assert.throws(() => m.saveExecutedFlow(proj, "Bad Id", "x", { bundleName: "a", module: "b", ability: "c" }, [], { visible: { text: "x" } }), /Flow id/);
+});
+
+test("nested selector and assertion typos reject before any UI action", () => {
+  for (const input of [
+    { action: "assert", visible: { texxt: "never-visible" } },
+    { action: "act", steps: [{ op: "click", selector: { texxt: "never-visible" } }] },
+    { action: "assert", visible: { regex: { texxt: "wrong" } } },
+  ]) assert.throws(() => m.validateTool("ui", input));
+  assert.throws(() => m.validateTool("run", { action: "build_run", project: "/fixture", assert: { visble: { text: "ready" } } }));
 });

@@ -1,11 +1,13 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import os from "node:os";
 import { setImmediate as yieldTurn } from "node:timers/promises";
 import type { DatabaseSync } from "node:sqlite";
-import { stateDir } from "./config.js";
+import { packageRoot, stateDir } from "./config.js";
 import { database } from "./db.js";
 import { invariant } from "./errors.js";
+import { withResourceSnapshot } from "./operations.js";
 
 const DAY = 86400000;
 let due = 0;
@@ -112,7 +114,7 @@ async function removeTree(file: string, progress: { count: number }) {
   if (++progress.count % 64 === 0) await yieldTurn();
 }
 
-export async function removeStorage(file: string, eligible: () => boolean = () => true): Promise<CleanupResult> {
+export async function removeStorage(file: string, eligible: () => boolean = () => true, betweenOperations = false): Promise<CleanupResult> {
   file = storagePath(file);
   const result: CleanupResult = { removed: 0, failed: 0 };
   const owner = crypto.randomUUID();
@@ -124,7 +126,16 @@ export async function removeStorage(file: string, eligible: () => boolean = () =
   });
   if (!claimed) return result;
   const db = await database();
-  try { await removeTree(file, { count: 0 }); result.removed = 1; }
+  try {
+    // Hot-state writers in older hosts do not pin files. Their resource gate must stay held
+    // through the unlink, without yielding; new writers are also excluded by the delete pin.
+    if (betweenOperations) result.removed = await withResourceSnapshot((owners) => {
+      if (owners.size || !eligible()) return 0;
+      try { fs.unlinkSync(file); return 1; }
+      catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") return 0; throw error; }
+    });
+    else { await removeTree(file, { count: 0 }); result.removed = 1; }
+  }
   catch (error) {
     const code = ((error as NodeJS.ErrnoException).code ?? "UNKNOWN").slice(0, 64);
     if (db.prepare("INSERT OR IGNORE INTO retention_failures VALUES(?,?,?)").run(file, code, Date.now()).changes) {
@@ -132,6 +143,38 @@ export async function removeStorage(file: string, eligible: () => boolean = () =
     }
   } finally { db.prepare("DELETE FROM retention_pins WHERE path=? AND owner=?").run(file, owner); }
   return result;
+}
+
+function invalidHotState(file: string) {
+  let value: { moduleRoot?: unknown };
+  try { value = JSON.parse(fs.readFileSync(file, "utf8")); }
+  catch (error) { if (error instanceof SyntaxError) return true; if ((error as NodeJS.ErrnoException).code === "ENOENT") return false; throw error; }
+  if (!value || typeof value.moduleRoot !== "string") return true;
+  try { return !fs.statSync(value.moduleRoot).isDirectory(); }
+  catch (error) { if (["ENOENT", "ENOTDIR"].includes((error as NodeJS.ErrnoException).code ?? "")) return true; throw error; }
+}
+
+/** Only explicitly owned test workspaces are disposable; arbitrary scratch material is not. */
+function testWorkspace(file: string): { created: number; pids: number[] } | undefined {
+  const marker = path.join(file, ".deveco-temporary.json");
+  let stat;
+  try { stat = fs.lstatSync(marker); }
+  catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") return; throw error; }
+  if (!stat.isFile()) return;
+  let value;
+  try { value = JSON.parse(fs.readFileSync(marker, "utf8")); }
+  catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") return; throw error; }
+  if (value.package_root !== packageRoot) return;
+  invariant(value.schema === 1 && Number.isFinite(value.created) && Array.isArray(value.pids) && value.pids.length
+    && value.pids.every((pid: unknown) => Number.isSafeInteger(pid) && Number(pid) > 0), "INVALID_INPUT", "Invalid temporary workspace ownership marker", { file });
+  return value;
+}
+function workspaceExpired(file: string) {
+  const value = testWorkspace(file);
+  return !!value && value.created + DAY <= Date.now() && value.pids.every((pid) => {
+    try { process.kill(pid, 0); return false; }
+    catch (error) { return (error as NodeJS.ErrnoException).code === "ESRCH"; }
+  });
 }
 
 /** Pointer changes need a scan that starts after the change, even if an older sweep is running.
@@ -142,12 +185,12 @@ export async function collectStorage(afterChange = false): Promise<CleanupResult
 }
 async function collect(): Promise<CleanupResult> {
   due = Date.now() + 3600000;
-  const root = storagePath(stateDir(), true), kb = path.join(root, "kb"), backups = path.join(root, "backups");
+  const root = storagePath(stateDir(), true), kb = path.join(root, "kb"), backups = path.join(root, "backups"), hotpath = path.join(root, "hotpath"), scratch = path.join(packageRoot, ".scratch"), external = os.tmpdir();
   const result: CleanupResult = { removed: 0, failed: 0 };
   const db = await database();
   await storageGuard((db) => { pins(db); });
   const add = (r: CleanupResult) => { result.removed += r.removed; result.failed += r.failed; result.first_failure ??= r.first_failure; };
-  for (const dir of [kb, backups, root]) {
+  for (const dir of [kb, backups, root, hotpath, scratch, external]) {
     let stream;
     try {
       const stat = await fs.promises.lstat(dir);
@@ -156,22 +199,29 @@ async function collect(): Promise<CleanupResult> {
     } catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") continue; throw error; }
     for await (const entry of stream) {
       const file = storagePath(path.join(dir, entry.name));
+      const hot = dir === hotpath && entry.isFile() && /^[a-f0-9]{16}\.json$/.test(entry.name);
+      const workspace = entry.isDirectory() && (dir === scratch && /^test-[a-z0-9-]+$/.test(entry.name)
+        || dir === external && /^deveco-test-[a-z0-9-]+$/.test(entry.name)) ? testWorkspace(file) : undefined;
       const temporary = dir === backups || dir === root && /^state\.db\.corrupt-/.test(entry.name)
         || dir === kb && /^\.(?:upstream|tmp|download)-[a-f0-9]+(?:\.tgz)?$/.test(entry.name);
       const pack = dir === kb && entry.isDirectory() && !entry.name.startsWith(".");
-      if ((!temporary && !pack) || db.prepare("SELECT 1 FROM retention_failures WHERE path=?").get(file)) continue;
+      if ((!temporary && !pack && !hot && !workspace) || db.prepare("SELECT 1 FROM retention_failures WHERE path=?").get(file)) continue;
       if (pack && knowledgeReferences().has(file)) continue;
       let expires = 0;
-      if (temporary) {
+      if (temporary || hot) {
         try { expires = temporaryExpiry(file); }
         catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") continue; throw error; }
       }
+      if (workspace) expires = workspace.created + DAY;
       if (expires > Date.now()) { due = Math.min(due, expires); continue; }
+      if (hot && !invalidHotState(file)) continue;
+      if (workspace && !workspaceExpired(file)) { due = Math.min(due, Date.now() + 30000); continue; }
       add(await removeStorage(file, () => {
         if (pack) return !knowledgeReferences().has(file);
-        try { return temporaryExpiry(file) <= Date.now(); }
+        try { return workspace ? workspaceExpired(file) : temporaryExpiry(file) <= Date.now() && (!hot || invalidHotState(file)); }
         catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") return true; throw error; }
-      }));
+      }, hot));
+      if (hot) due = Math.min(due, Date.now() + 30000);
       await yieldTurn();
     }
   }

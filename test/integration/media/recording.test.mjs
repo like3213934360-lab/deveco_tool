@@ -1,8 +1,8 @@
+import { temporaryDirectory } from "../../support/workspace.mjs";
 // Real FFmpeg regression tests. Explicit invocation requires installed tools; no install or skip.
 // Generated fixtures are separate from device recordings and are never used as device evidence.
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { test } from "node:test";
@@ -11,7 +11,7 @@ import { checkRecording, requireRecordingTools } from "../../support/recording.m
 requireRecordingTools();
 const exec = (tool, args) => execFileSync(tool, args, { encoding: "utf8", stdio: "pipe", timeout: 120000 });
 function fixture(t, audio, variable) {
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-media-")), file = path.join(directory, "source.mp4");
+  const directory = temporaryDirectory("deveco-media-"), file = path.join(directory, "source.mp4");
   t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
   exec("ffmpeg", ["-v", "error", "-nostdin", "-xerror", "-f", "lavfi", "-i", `testsrc2=size=64x64:rate=${variable ? 100 : 12}:duration=${variable ? 0.12 : 1.5}`,
     ...(audio ? ["-f", "lavfi", "-i", "sine=frequency=1000:duration=1.5", "-map", "0:v", "-map", "1:a", "-c:a", "aac"] : []),

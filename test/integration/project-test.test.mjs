@@ -1,12 +1,12 @@
+import { temporaryDirectory } from "../support/workspace.mjs";
 // SDK process/report boundary, with isolated files and transport; no real device claims.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { after, test } from 'node:test';
 import { pathToFileURL } from 'node:url';
 import { build } from 'esbuild';
-const work = fs.mkdtempSync(path.join(os.tmpdir(), 'deveco-sdk-reports-'));
+const work = temporaryDirectory("deveco-sdk-reports-");
 fs.symlinkSync(path.resolve('node_modules'),path.join(work,'node_modules'),'junction');
 after(() => { delete globalThis.__sdkReports; fs.rmSync(work,{recursive:true,force:true}); });
 const f = globalThis.__sdkReports = { root: work, mode: 'valid' };

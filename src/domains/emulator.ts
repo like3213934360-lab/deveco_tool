@@ -215,8 +215,9 @@ export async function startEmulator(name: string, options: StartInput, signal: A
       }
       if (options.hdc_port !== undefined) await freePort(options.hdc_port);
       licenseAcceptedNow = await ensureLicense(options.auto_accept_license ?? true, pending);
-      logFile = path.join(os.tmpdir(), `deveco-emulator-${randomUUID()}.log`);
-      await (await import("../core/artifacts.js")).trackExport(logFile);
+      const { artifactDir, trackExport } = await import("../core/artifacts.js");
+      logFile = path.join(artifactDir(), `deveco-emulator-${randomUUID()}.log`);
+      await trackExport(logFile);
     }
     if (logFile) {
       pending.throwIfAborted();

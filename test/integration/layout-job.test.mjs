@@ -1,18 +1,18 @@
+import { temporaryDirectory } from "../support/workspace.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { after, test } from "node:test";
 import { pathToFileURL } from "node:url";
 import { build } from "esbuild";
 
-const root = path.resolve(import.meta.dirname, "../.."), work = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-layout-"));
+const root = path.resolve(import.meta.dirname, "../.."), work = temporaryDirectory("deveco-layout-");
 process.env.DEVECO_STATE_DIR = work;
 const fixture = globalThis.__devecoLayoutFixture = { instances: [{ name: "deveco_layout_foldable", running: true }], mutations: [], rejectFold: false };
-const bundle = path.join(root, "node_modules/.cache/deveco-layout-harness.mjs");
+const bundle = path.join(work, "deveco-layout-harness.mjs");
 await build({ stdin: { contents: `export { uiTool } from ${JSON.stringify(path.join(root, "src/tools/core.ts"))}; export { layoutCheck, withOwnedEmulator } from ${JSON.stringify(path.join(root, "src/domains/layout.ts"))};`, resolveDir: root }, outfile: bundle,
   bundle: true, platform: "node", format: "esm", packages: "external", logLevel: "error", plugins: [{ name: "sdk", setup(b) {
-    b.onResolve({ filter: /(?:device|project|emulator|ui|jobs)\.js$/ }, (a) => {
+    b.onResolve({ filter: /(?:device|project|emulator|ui|jobs|flows)\.js$/ }, (a) => {
       if (/tools\/core\.ts$/.test(a.importer.replaceAll("\\", "/")) && /core\/jobs\.js$/.test(a.path)) return { path: "jobs", namespace: "fixture" };
       if (/tools\/core\.ts$/.test(a.importer.replaceAll("\\", "/")) && /device\.js$/.test(a.path)) return { path: "routing", namespace: "fixture" };
       if (/domains\/layout\.ts$/.test(a.importer.replaceAll("\\", "/"))) return { path: path.basename(a.path, ".js"), namespace: "fixture" };
@@ -20,6 +20,7 @@ await build({ stdin: { contents: `export { uiTool } from ${JSON.stringify(path.j
     b.onLoad({ filter: /.*/, namespace: "fixture" }, (a) => ({ contents: {
       jobs: `export async function startJob(kind,input){globalThis.__devecoLayoutFixture.job={kind,input}; return {job_id:'owned',deduplicated:false}};export async function waitJob(){return {status:'running',job_id:'owned'}};`,
       routing: `export async function resolveTarget(){const e=new Error('Several devices connected');e.code='DEVICE_AMBIGUOUS';throw e};`,
+      flows: `export async function replayFlow(){return {passed:false,steps:1,error:{code:"ASSERT_FAILED"}}};`,
       project: `export function inspectProject(root){return {root,bundleName:'com.test.layout',modules:[{name:'entry',type:'entry',deviceTypes:['phone']}]}};export function mainAbility(){return {ability:'EntryAbility',module:'entry'}};export async function buildOutputs(_p,task){return task==='assembleHap'?[{path:'/fake.hap'}]:[]};`,
       emulator: `const f=()=>globalThis.__devecoLayoutFixture;export async function images(){return {images:[{downloaded:true,device_type:'foldable',os_version:'HarmonyOS 7.0.0(26)'}]}};export async function listEmulators(){return f().instances};
         export async function createEmulator(input){f().mutations.push(['create',input]);f().instances.push({name:input.name,running:false})};export async function startEmulator(name,options){f().mutations.push(['start',name,options]);f().instances.find(e=>e.name===name).running=true;return {target:'owned-target'}};
@@ -72,4 +73,11 @@ test('disposable targets require the installed image and clean after failed/canc
   assert.equal(fs.existsSync(path.join(work, 'emulators', input.owner, input.purpose, '.owner')), true);
   fixture.rejectDelete = false;
   fixture.instances = [{ name: 'deveco_layout_foldable', running: true }];
+});
+
+test("a required navigation flow failure makes the whole layout check fail", async () => {
+  fixture.rejectFold = false;
+  const r = await m.layoutCheck({ project: "/p", forms: ["foldable"], then_flow: "required-path" }, new AbortController().signal, () => {}, "j_flow_failed");
+  assert.equal(r.passed, false); assert.ok(r.failed.length > 0);
+  assert.ok(r.forms.flatMap((form) => form.results).some((row) => row.passed === false && row.flow?.passed === false));
 });

@@ -1,15 +1,15 @@
+import { temporaryDirectory } from "../support/workspace.mjs";
 // v0.x credential migration: same AES-256-GCM layout (iv|tag|ciphertext, provider as AAD).
 import assert from "node:assert/strict";
 import crypto from "node:crypto";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { test } from "node:test";
 import { connect } from "../support/mcp.mjs";
 
 test("imports v0.x credentials and reports login status", async () => {
-  const work = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-auth-"));
+  const work = temporaryDirectory("deveco-auth-");
   process.on("exit", () => { try { fs.rmSync(work, { recursive: true, force: true }); } catch { /* Windows: file still locked */ } });
   const legacy = path.join(work, "legacy");
   fs.mkdirSync(legacy);

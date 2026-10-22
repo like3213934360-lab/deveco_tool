@@ -1,13 +1,87 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { test } from "node:test";
 import { connect } from "../support/mcp.mjs";
+import { once } from "node:events";
+import { spawn } from "node:child_process";
+import { workspace, temporaryDirectory } from "../support/workspace.mjs";
+
+test("startup removes expired invalid hot states, preserving valid, fresh and pinned state", async (t) => {
+  const state = temporaryDirectory("deveco-retention-hot-"), dir = path.join(state, "hotpath");
+  fs.mkdirSync(dir); const validModule = path.join(state, "project/entry"); fs.mkdirSync(validModule, { recursive: true });
+  const files = ["a", "b", "c", "d", "e"].map((s) => path.join(dir, s.repeat(16) + ".json"));
+  for (const [i, file] of files.entries()) {
+    fs.writeFileSync(file, i === 4 ? "{interrupted" : JSON.stringify({ moduleRoot: i === 1 ? validModule : path.join(state, "gone/entry") }));
+    if (i !== 2) fs.utimesSync(file, 1, 1);
+  }
+  const held = spawn(process.execPath, ["-e", "setInterval(()=>{},1000)"], { stdio: "ignore" });
+  await once(held, "spawn");
+  const db = new DatabaseSync(path.join(state, "state.db"));
+  db.exec("CREATE TABLE retention_pins(path TEXT,owner TEXT,pid INTEGER,kind TEXT,PRIMARY KEY(path,owner))");
+  db.prepare("INSERT INTO retention_pins VALUES(?,'live',?,'use')").run(fs.realpathSync.native(files[3]), held.pid); db.close();
+  const client = connect({ DEVECO_STATE_DIR: state, DEVECO_CONFIG: path.join(state, "none.json"), DEVECO_COORDINATION_DIR: path.join(state, "coordination") });
+  try {
+    await client.initialize(); const deadline = Date.now() + 3000;
+    while ([files[0], files[4]].some((file) => fs.existsSync(file)) && Date.now() < deadline) await new Promise((r) => setTimeout(r, 20));
+    assert.equal(fs.existsSync(files[0]), false, "expired state with a missing module must be reclaimed");
+    assert.equal(fs.existsSync(files[4]), false, "an interrupted cache write cannot live forever");
+    for (const i of [1, 2, 3]) assert.ok(fs.existsSync(files[i]), `protected state ${i}`);
+    assert.doesNotMatch(client.stderr, /\[retention\]/);
+  } finally { await client.close(); const end = once(held, "close"); held.kill(); await end; fs.rmSync(state, { recursive: true, force: true }); }
+});
+
+test("legacy audit migration expires old rows and schedules retained rows without new operations", async () => {
+  const state = temporaryDirectory("deveco-retention-audit-"), dir = path.join(state, "audit");
+  fs.mkdirSync(dir); const file = path.join(dir, "operations.jsonl"), deadline = Date.now() + 2500;
+  const row = (id, at) => ({ id, owner_id: id, pid: 1, phase: "returned", at: new Date(at).toISOString() });
+  fs.writeFileSync(file, [row("expired", 0), row("soon", deadline - 86400000), row("fresh", Date.now())].map((v) => JSON.stringify(v)).join("\n") + "\n");
+  const client = connect({ DEVECO_STATE_DIR: state, DEVECO_CONFIG: path.join(state, "none.json"), DEVECO_COORDINATION_DIR: path.join(state, "coordination") });
+  try {
+    await client.initialize(); const started = Date.now();
+    while (fs.existsSync(file) && Date.now() - started < 3000) await new Promise((r) => setTimeout(r, 20));
+    assert.equal(fs.existsSync(file), false, "migrate the old append-only file instead of keeping two audit implementations");
+    const db = new DatabaseSync(path.join(state, "state.db"), { readOnly: true });
+    try {
+      const ids = () => db.prepare("SELECT data FROM audit_events ORDER BY created").all().map((r) => JSON.parse(r.data).id);
+      assert.deepEqual(ids(), ["soon", "fresh"]);
+      while (Date.now() < deadline + 1500 && ids().includes("soon")) { await client.request("ping", {}); await new Promise((r) => setTimeout(r, 20)); }
+      assert.deepEqual(ids(), ["fresh"]); assert.doesNotMatch(client.stderr, /\[retention\]/);
+    } finally { db.close(); }
+  } finally { await client.close(); fs.rmSync(state, { recursive: true, force: true }); }
+});
+
+test("owned test workspaces expire only after 24 hours and all parent/child users exit", async () => {
+  const old = workspace("retention-old"), held = workspace("retention-held"), fresh = workspace("retention-fresh"), external = workspace("retention-external", true);
+  const state = temporaryDirectory("deveco-retention-workspaces-");
+  const outside = path.join(state, "keep.txt"); fs.writeFileSync(outside, "user file");
+  const unowned = path.join(path.dirname(old.directory), path.basename(old.directory) + "-unowned"); fs.mkdirSync(unowned); fs.writeFileSync(path.join(unowned, "keep"), "not disposable");
+  const dead = spawn(process.execPath, ["-e", ""], { stdio: "ignore" }); await once(dead, "close");
+  const marker = (area, age) => { const file = path.join(area.directory, ".deveco-temporary.json"), value = JSON.parse(fs.readFileSync(file)); fs.writeFileSync(file, JSON.stringify({ ...value, created: Date.now() - age, pids: [dead.pid] })); };
+  marker(old, 86400001); marker(held, 86400001); marker(fresh, 0); marker(external, 86400001);
+  fs.symlinkSync(outside, path.join(old.directory, "external.txt"));
+  const child = connect({ DEVECO_STATE_DIR: path.join(held.directory, "state"), DEVECO_CONFIG: path.join(state, "none.json"), DEVECO_COORDINATION_DIR: path.join(state, "coordination") });
+  let collector;
+  try {
+    await child.initialize();
+    assert.ok(JSON.parse(fs.readFileSync(path.join(held.directory, ".deveco-temporary.json"))).pids.includes(child.child.pid));
+    collector = connect({ DEVECO_STATE_DIR: path.join(state, "collector"), DEVECO_CONFIG: path.join(state, "none.json"), DEVECO_COORDINATION_DIR: path.join(state, "coordination") });
+    await collector.initialize(); const deadline = Date.now() + 3000;
+    while ([old, external].some((area) => fs.existsSync(area.directory)) && Date.now() < deadline) await new Promise((r) => setTimeout(r, 20));
+    assert.equal(fs.existsSync(old.directory), false); assert.equal(fs.existsSync(external.directory), false); assert.ok(fs.existsSync(held.directory)); assert.ok(fs.existsSync(fresh.directory));
+    assert.equal(fs.readFileSync(outside, "utf8"), "user file"); assert.ok(fs.existsSync(unowned));
+    await child.close(); await collector.close();
+    collector = connect({ DEVECO_STATE_DIR: path.join(state, "collector"), DEVECO_CONFIG: path.join(state, "none.json"), DEVECO_COORDINATION_DIR: path.join(state, "coordination") });
+    await collector.initialize(); const stopped = Date.now() + 3000;
+    while (fs.existsSync(held.directory) && Date.now() < stopped) await new Promise((r) => setTimeout(r, 20));
+    assert.equal(fs.existsSync(held.directory), false, "a dead parent and closed child no longer pin a workspace");
+    assert.doesNotMatch(collector.stderr, /\[retention\]/);
+  } finally { await child.close(); await collector?.close(); for (const area of [old, held, fresh, external]) area.remove(); fs.rmSync(unowned, { recursive: true, force: true }); fs.rmSync(state, { recursive: true, force: true }); }
+});
 
 test("MCP expires media and exports at their deadline without jobs, and remains responsive during cleanup", async (t) => {
-  const state = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-retention-"));
+  const state = temporaryDirectory("deveco-retention-");
   const dir = path.join(state, "artifacts");
   fs.mkdirSync(dir);
   const db = new DatabaseSync(path.join(state, "state.db"));
@@ -72,7 +146,7 @@ test("MCP expires media and exports at their deadline without jobs, and remains 
 });
 
 test("MCP logs a bounded failure summary, never retries the file and preserves the exclusion after restart", async (t) => {
-  const state = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-retention-failure-"));
+  const state = temporaryDirectory("deveco-retention-failure-");
   const blocked = path.join(state, "export-0.mp4");
   const db = new DatabaseSync(path.join(state, "state.db"));
   db.exec("CREATE TABLE exports(path TEXT PRIMARY KEY,created INTEGER NOT NULL)");
@@ -126,7 +200,7 @@ test("MCP logs a bounded failure summary, never retries the file and preserves t
 });
 
 test("an inaccessible cleanup directory stops the cleaner once until a repaired process restarts", async () => {
-  const state = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-retention-stopped-"));
+  const state = temporaryDirectory("deveco-retention-stopped-");
   const dir = path.join(state, "artifacts"), copy = path.join(state, "copy.mp4");
   fs.writeFileSync(dir, "directory obstruction");
   fs.writeFileSync(copy, "await manual repair");

@@ -1,10 +1,10 @@
+import { temporaryDirectory } from "../support/workspace.mjs";
 // Knowledge pack update from an npm-compatible registry: integrity check, atomic switch, rollback.
 import assert from "node:assert/strict";
 import crypto from "node:crypto";
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import http from "node:http";
-import os from "node:os";
 import path from "node:path";
 import { after, before, test } from "node:test";
 import { once } from "node:events";
@@ -12,12 +12,12 @@ import { DatabaseSync } from "node:sqlite";
 import { connect } from "../support/mcp.mjs";
 import { zipFixture } from "../support/zip.mjs";
 
-const work = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-kbu-"));
+const work = temporaryDirectory("deveco-kbu-");
 process.on("exit", () => { try { fs.rmSync(work, { recursive: true, force: true }); } catch { /* Windows: file still locked */ } }); // tests leave nothing behind
 let server, client, url;
 const it = test;
 
-function makePack(version, title) {
+function makePack(version, title, mutate) {
   const dir = path.join(work, `src-${version}`, "package");
   fs.mkdirSync(dir, { recursive: true });
   const db = path.join(dir, "index.db");
@@ -36,6 +36,7 @@ function makePack(version, title) {
   fs.writeFileSync(path.join(dir, "docs.zip"), zipFixture({ "doc/one.md": `# ${title}\n\n## Usage\nbody ${version}\n` }));
   fs.writeFileSync(path.join(dir, "manifest.json"), JSON.stringify({ schema: 1, version, sources: {}, created_at: new Date().toISOString(), counts: { "harmonyos-guides": 1 } }));
   fs.writeFileSync(path.join(dir, "package.json"), JSON.stringify({ name: "@test/kb", version }));
+  mutate?.(dir);
   const tgz = path.join(work, `kb-${version}.tgz`);
   execFileSync("tar", ["-czf", tgz, "-C", path.dirname(dir), "package"]);
   const bytes = fs.readFileSync(tgz);
@@ -85,6 +86,8 @@ it("status reports remote latest", async () => {
 it("update installs a pinned version, then latest, and search/read use it", async () => {
   let r = await call({ action: "update", version: "1.0.0" });
   assert.equal(r.data.updated, true, JSON.stringify(r.data));
+  const kb = path.join(work, "state/kb"), active = JSON.parse(fs.readFileSync(path.join(kb, "current.json"), "utf8"));
+  assert.deepEqual(fs.readFileSync(path.join(kb, active.directory, "index.db")), fs.readFileSync(path.join(work, "src-1.0.0/package/index.db")), "FTS integrity validation must not change the pack database");
   r = await call({ action: "search", query: "alpha" });
   assert.equal(r.data.results[0].title, "Alpha");
   r = await call({ action: "update" });
@@ -136,4 +139,51 @@ it("multiple generations preserve another process's open pack and reclaim it aft
     assert.equal(dirs().length, 1, `Rollback removes the rejected generation immediately; dirs=${JSON.stringify(dirs())}; stderr=${client.stderr}`);
     assert.match((await call({ action: "read", id: "doc/one" })).data.content, /body 4\.0\.0/);
   } finally { await reader.close(); }
+});
+
+test("invalid indexes, archives, document membership and hashes cannot replace the active pack", async () => {
+  const pointerFile = path.join(work, "state/kb/current.json"), before = fs.readFileSync(pointerFile, "utf8");
+  const mutations = [
+    (dir) => fs.writeFileSync(path.join(dir, "index.db"), "not sqlite"),
+    (dir) => { const db = new DatabaseSync(path.join(dir, "index.db")); db.exec("DROP TABLE segments_fts"); db.close(); },
+    (dir) => { const db = new DatabaseSync(path.join(dir, "index.db")); db.exec("DROP TABLE segments_fts; CREATE TABLE segments_fts(search_text TEXT); INSERT INTO segments_fts(rowid,search_text) VALUES(1,'rejected 路由 跳转')"); db.close(); },
+    (dir) => { const db = new DatabaseSync(path.join(dir, "index.db")); db.exec("INSERT INTO segments_fts(segments_fts,rowid,search_text) VALUES('delete',1,'rejected 路由 跳转')"); db.close(); },
+    (dir) => fs.rmSync(path.join(dir, "docs.zip")),
+    (dir) => fs.writeFileSync(path.join(dir, "docs.zip"), "not a ZIP"),
+    (dir) => { const file = path.join(dir, "docs.zip"), bytes = fs.readFileSync(file); bytes[40] ^= 1; fs.writeFileSync(file, bytes); },
+    (dir) => fs.writeFileSync(path.join(dir, "docs.zip"), zipFixture({ "other.md": "wrong document" })),
+    (dir) => { const file = path.join(dir, "manifest.json"), manifest = JSON.parse(fs.readFileSync(file)); manifest.docs_sha256 = "0".repeat(64); fs.writeFileSync(file, JSON.stringify(manifest)); },
+  ];
+  for (const [i, mutate] of mutations.entries()) {
+    const version = `9.0.${i}`; makePack(version, "Rejected", mutate);
+    const r = await call({ action: "update", file: path.join(work, `kb-${version}.tgz`) });
+    assert.equal(r.isError, true, JSON.stringify(r));
+    assert.equal(fs.readFileSync(pointerFile, "utf8"), before);
+    assert.match((await call({ action: "read", id: "doc/one" })).data.content, /body 4.0.0/);
+    assert.equal((await call({ action: "search", query: "路由" })).data.results[0].title, "Delta");
+  }
+});
+
+it("rollback validates the retained pack before changing the active pointer", async () => {
+  for (const version of ["10.0.0","10.0.1"]) {makePack(version,"Stable");assert.equal((await call({action:"update",file:path.join(work,`kb-${version}.tgz`)})).isError,false);}
+  const pointerFile=path.join(work,"state/kb/current.json"), before=fs.readFileSync(pointerFile,"utf8"), pointer=JSON.parse(before);
+  fs.writeFileSync(path.join(work,"state/kb",pointer.previous,"docs.zip"),zipFixture({"other.md":"wrong document"}));
+  const rollback=await call({action:"rollback"});assert.equal(rollback.isError,true);
+  assert.equal(fs.readFileSync(pointerFile,"utf8"),before);
+  assert.match((await call({action:"read",id:"doc/one"})).data.content,/body 10.0.1/);
+});
+
+it("rollback refuses a table-shaped full-text index and preserves working search", async () => {
+  for (const version of ["11.0.0", "11.0.1"]) {
+    makePack(version, "Searchable");
+    assert.equal((await call({ action: "update", file: path.join(work, `kb-${version}.tgz`) })).isError, false);
+  }
+  const pointerFile = path.join(work, "state/kb/current.json"), before = fs.readFileSync(pointerFile, "utf8"), pointer = JSON.parse(before);
+  const file = path.join(work, "state/kb", pointer.previous, "index.db"), db = new DatabaseSync(file);
+  db.exec("DROP TABLE segments_fts; CREATE TABLE segments_fts(search_text TEXT)"); db.close();
+  const rollback = await call({ action: "rollback" });
+  assert.equal(rollback.isError, true, JSON.stringify(rollback));
+  assert.equal(fs.readFileSync(pointerFile, "utf8"), before);
+  const search = await call({ action: "search", query: "searchable" });
+  assert.equal(search.isError, false, JSON.stringify(search)); assert.equal(search.data.results[0].title, "Searchable");
 });

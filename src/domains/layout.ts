@@ -174,7 +174,7 @@ async function checkForm(form: string, input: LayoutInput, packages: string[], a
         const { replayFlow } = await import("./flows.js");
         const flow = await replayFlow(input.project, input.then_flow, target, input.flow_variables ?? {}, { attach: true, screen: info.screen ? { w: info.screen.width, h: info.screen.height } : undefined }, signal, log)
           .catch((e: Error) => ({ passed: false, error: e.message }));
-        if (!(flow as { passed?: boolean }).passed) results.push({ state, flow });
+        if (!(flow as { passed?: boolean }).passed) results.push({ state, passed: false, checked: 0, flow });
       }
       const size = await windowSize(target, app.bundle, signal) ?? (info.screen ? { w: info.screen.width, h: info.screen.height } : { w: 1080, h: 2400 });
       const nodes = await dumpTree(target, signal, 0);
@@ -232,7 +232,7 @@ export async function layoutCheck(input: LayoutInput, signal: AbortSignal, log: 
   const main = mainAbility(project, entry.name);
   const haps = await buildOutputs(project, "assembleHap", [entry]);
   invariant(haps.length, "NOT_FOUND", "No built package", undefined, "Build first: project action=build (or run action=build_run)");
-  const hsp = await buildOutputs(project, "assembleHsp", project.modules.filter((m) => m.type === "shared")).catch(() => []);
+  const hsp = await buildOutputs(project, "assembleHsp", project.modules.filter((m) => m.type === "shared"));
   const packages = [...haps, ...hsp].map((p) => p.path);
   const supported = entry.deviceTypes.map((t) => t.toLowerCase());
   const reports: unknown[] = [];

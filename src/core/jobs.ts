@@ -90,7 +90,10 @@ export async function startJob<I>(kind: string, input: I, key?: string) {
 }
 
 function execute(id: string) {
+  invariant(!running.has(id), "CONFLICT", "Job is already running");
   const controller = new AbortController();
+  const handle = { controller, done: Promise.resolve() };
+  running.set(id, handle);
   const done = (async () => {
     const current = await row(id);
     const definition = definitions.get(current.kind);
@@ -150,11 +153,11 @@ function execute(id: string) {
       await update(id, { status, error: JSON.stringify(failure), outputs: JSON.stringify(outputs) });
       await event(id, `${status}: ${failure.code} ${failure.message}`);
     } finally {
-      running.delete(id);
+      if (running.get(id) === handle) running.delete(id);
       scheduleCleanup(1000);
     }
   })();
-  running.set(id, { controller, done: done.catch(() => {}) });
+  handle.done = done.catch(() => {});
 }
 
 /** Large results go to an artifact so job rows and responses stay small. */
@@ -173,7 +176,7 @@ async function settleOrphan(id: string) {
   const current = await row(id);
   if ((current.status === "queued" || current.status === "running") && !running.has(id)
     && !(current.owner && current.owner !== process.pid && alive(current.owner))) {
-    (await database()).prepare("UPDATE jobs SET status='interrupted',updated=? WHERE id=? AND status IN ('queued','running')").run(Date.now(), id);
+    (await database()).prepare("UPDATE jobs SET status='interrupted',updated=? WHERE id=? AND status IN ('queued','running') AND owner IS ? AND updated=?").run(Date.now(), id, current.owner, current.updated);
     return row(id);
   }
   return current;
@@ -228,14 +231,17 @@ export async function resumeJob(id: string, force = false) {
   const current = await settleOrphan(id);
   invariant(!running.has(id), "CONFLICT", "Job is already running");
   invariant(["interrupted", "needs_input", "failed"].includes(current.status), "INVALID_INPUT", `Job is ${current.status}; only interrupted, needs_input or failed jobs can resume`);
-  if (force) {
-    const db = await database();
-    for (const step of definitions.get(current.kind)?.steps ?? [])
+  invariant(definitions.has(current.kind), "INVALID_INPUT", `Job kind ${current.kind} is not registered`);
+  const db = await database();
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    const claimed = db.prepare("UPDATE jobs SET status='running',owner=?,updated=? WHERE id=? AND status IN ('interrupted','needs_input','failed') AND owner IS ? AND updated=?")
+      .run(process.pid, Date.now(), id, current.owner, current.updated);
+    invariant(claimed.changes === 1 && !running.has(id), "CONFLICT", "Job was claimed or changed by another request");
+    if (force) for (const step of definitions.get(current.kind)!.steps)
       if (step.replay !== false) db.prepare("DELETE FROM effects WHERE job_id=? AND step=? AND state='intent'").run(id, step.id);
-  }
-  // Mark it running before answering: the caller must see the resumed state (and be told to wait),
-  // not the old "interrupted" with next=resume, which invited a second, conflicting resume.
-  (await database()).prepare("UPDATE jobs SET status='running',owner=?,updated=? WHERE id=?").run(process.pid, Date.now(), id);
+    db.exec("COMMIT");
+  } catch (error) { db.exec("ROLLBACK"); throw error; }
   execute(id);
   return jobStatus(id);
 }
@@ -251,11 +257,11 @@ export async function listJobs(limit = 20, status?: string) {
 /** On startup: jobs owned by dead processes become interrupted (never auto-replayed). */
 export async function recoverJobs() {
   const db = await database();
-  const rows = db.prepare("SELECT id,owner FROM jobs WHERE status IN ('queued','running')").all() as { id: string; owner: number | null }[];
-  for (const { id, owner } of rows) {
+  const rows = db.prepare("SELECT id,owner,updated FROM jobs WHERE status IN ('queued','running')").all() as { id: string; owner: number | null; updated: number }[];
+  for (const { id, owner, updated } of rows) {
     if (running.has(id)) continue; // started by this process
     if (owner && owner !== process.pid && alive(owner)) continue; // another live server owns it
-    db.prepare("UPDATE jobs SET status='interrupted',updated=? WHERE id=? AND status IN ('queued','running')").run(Date.now(), id);
+    db.prepare("UPDATE jobs SET status='interrupted',updated=? WHERE id=? AND status IN ('queued','running') AND owner IS ? AND updated=?").run(Date.now(), id, owner, updated);
   }
 }
 function alive(pid: number) {

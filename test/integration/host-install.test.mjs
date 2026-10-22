@@ -1,14 +1,14 @@
+import { temporaryDirectory } from "../support/workspace.mjs";
 // Exercise actual filesystem writers in isolated homes, not just merge helpers.
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { after, test } from "node:test";
 import { pathToFileURL } from "node:url";
 import { build } from "esbuild";
-const root = path.resolve(import.meta.dirname, "../.."), work = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-hosts-"));
+const root = path.resolve(import.meta.dirname, "../.."), work = temporaryDirectory("deveco-hosts-");
 process.env.APPDATA = path.join(work, "AppData");
-const bundle = path.join(root, "node_modules/.cache/deveco-host-install.mjs");
+const bundle = path.join(work, "deveco-host-install.mjs");
 await build({ stdin: { contents: `export * from ${JSON.stringify(path.join(root, "src/domains/hostconfig.ts"))};export {initHost,listSkills} from ${JSON.stringify(path.join(root, "src/domains/skills.ts"))};`, resolveDir: root }, outfile: bundle, bundle: true, format: "esm", platform: "node", packages: "external", logLevel: "error", plugins: [{ name: "home", setup(b) {
   b.onResolve({ filter: /^node:os$/ }, (a) => /domains\/(?:hostconfig|skills)\.ts$/.test(a.importer.replaceAll("\\", "/")) ? { path: "os", namespace: "fixture" } : undefined);
   b.onLoad({ filter: /.*/, namespace: "fixture" }, () => ({ contents: `export default {homedir:()=>${JSON.stringify(work)}};` }));

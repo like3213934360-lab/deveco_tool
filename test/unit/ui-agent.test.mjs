@@ -6,11 +6,12 @@ import { once } from "node:events";
 import { after, test } from "node:test";
 import { pathToFileURL } from "node:url";
 import { build } from "esbuild";
+import { temporaryDirectory } from "../support/workspace.mjs";
 
-const bundle = path.resolve("node_modules/.cache/deveco-agent-harness.mjs");
+const work = temporaryDirectory("ui-agent"), bundle = path.join(work, "agent.mjs");
 await build({ entryPoints: [path.resolve("src/domains/ui.ts")], outfile: bundle, bundle: true, format: "esm", platform: "node", packages: "external", logLevel: "error" });
 const { agentRpc, mp4Video, settledRotation } = await import(pathToFileURL(bundle).href);
-after(() => fs.rmSync(bundle, { force: true }));
+after(() => fs.rmSync(work, { recursive: true, force: true }));
 async function connection(t, onRequest) {
   const sockets = new Set();
   const server = net.createServer((socket) => {

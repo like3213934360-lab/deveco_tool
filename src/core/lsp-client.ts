@@ -2,7 +2,7 @@ import type { ChildProcess } from "node:child_process";
 import { ToolError } from "./errors.js";
 import { killTree } from "./proc.js";
 
-type Pending = { resolve(v: unknown): void; reject(e: Error): void; timer: NodeJS.Timeout };
+type Pending = { resolve(v: unknown): void; reject(e: Error): void; timer: NodeJS.Timeout; cleanup(): void };
 
 /** Minimal LSP JSON-RPC over stdio (Content-Length framing). No external dependency. */
 export class LspClient {
@@ -27,18 +27,18 @@ export class LspClient {
     if (this.closed) return Promise.reject(new ToolError("LSP_EXITED", "Language server is not running"));
     const id = this.nextId++;
     return new Promise<T>((resolve, reject) => {
+      if (signal?.aborted) { reject(new ToolError("CANCELLED", "Cancelled")); return; }
+      const cleanup = () => { clearTimeout(timer); signal?.removeEventListener("abort", abort); };
+      const abort = () => {
+        cleanup(); this.pending.delete(id); this.notify("$/cancelRequest", { id });
+        reject(new ToolError("CANCELLED", "Cancelled"));
+      };
       const timer = setTimeout(() => {
-        this.pending.delete(id);
-        this.notify("$/cancelRequest", { id });
+        cleanup(); this.pending.delete(id); this.notify("$/cancelRequest", { id });
         reject(new ToolError("TIMEOUT", `${method} timed out after ${timeoutMs} ms`, undefined, "The language server may still be indexing; retry shortly", true));
       }, timeoutMs);
-      signal?.addEventListener("abort", () => {
-        clearTimeout(timer);
-        this.pending.delete(id);
-        this.notify("$/cancelRequest", { id });
-        reject(new ToolError("CANCELLED", "Cancelled"));
-      }, { once: true });
-      this.pending.set(id, { resolve: resolve as (v: unknown) => void, reject, timer });
+      signal?.addEventListener("abort", abort, { once: true });
+      this.pending.set(id, { resolve: resolve as (v: unknown) => void, reject, timer, cleanup });
       this.send({ jsonrpc: "2.0", id, method, params });
     });
   }
@@ -74,7 +74,7 @@ export class LspClient {
         const pending = this.pending.get(message.id);
         if (!pending) continue;
         this.pending.delete(message.id);
-        clearTimeout(pending.timer);
+        pending.cleanup();
         if (message.error) pending.reject(new ToolError(message.error.code === -32601 ? "CAPABILITY_UNAVAILABLE" : "LSP_ERROR", message.error.message));
         else pending.resolve(message.result);
       }
@@ -85,7 +85,7 @@ export class LspClient {
     if (this.closed) return;
     this.closed = true;
     for (const pending of this.pending.values()) {
-      clearTimeout(pending.timer);
+      pending.cleanup();
       pending.reject(error);
     }
     this.pending.clear();

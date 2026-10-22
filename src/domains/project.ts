@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { artifactPath, commitArtifact } from "../core/artifacts.js";
-import { config, packageRoot } from "../core/config.js";
+import { config, assetRoot } from "../core/config.js";
 import { invariant, ToolError } from "../core/errors.js";
 import { fileSha256, inside, isFile, readJson5, walk } from "../core/files.js";
 import { run } from "../core/proc.js";
@@ -526,6 +526,18 @@ async function compileProject(
     // Files hvigor generated during this build (the module had none before) are removed again.
     for (const f of absent) fs.rmSync(f, { force: true });
   };
+  // Packaging outputs have no build-mode/signing provenance. Regenerate this task's packages,
+  // including shared dependencies, so an old signature cannot survive an unsigned build.
+  // Keep the compiler's intermediates: only the final package stage needs to run again.
+  signal.throwIfAborted();
+  if (task !== "compileNative") {
+    const packaging = task === "assembleApp" ? "assembleHap" : task;
+    const selected = task === "assembleApp" ? project.modules.filter((m) => taskTypes.assembleHap.includes(m.type)) : modules;
+    for (const m of selected) removePackages(path.join(m.root, "build", project.product, "outputs", m.target), suffix[packaging]);
+    if (task === "assembleHap" || task === "assembleApp")
+      for (const m of project.modules.filter((m) => m.type === "shared")) removePackages(path.join(m.root, "build", project.product, "outputs", m.target), suffix.assembleHsp);
+    if (task === "assembleApp") removePackages(path.join(project.root, "build/outputs", project.product), suffix.assembleApp);
+  }
   const result = await hvigor(project, args, signal, "Build", jobId).finally(restoreProfiles);
   // Any build of a C/C++ module emits per-module compile_commands.json; keep the central one fresh for clangd.
   const compileCommands = hasNativeCode(project) ? mergeCompileCommands(project) : 0;
@@ -534,6 +546,8 @@ async function compileProject(
     return { success: true, task, product: project.product, ...syncResult, compile_commands: compileCommands ? compileCommandsPath(project.root) : null, entries: compileCommands, log_artifact: result.log_artifact, elapsed_ms: result.elapsed_ms };
   const artifacts = await buildOutputs(project, task, modules);
   invariant(artifacts.length, "BUILD_FAILED", "Build finished but produced no package", { log_artifact: result.log_artifact });
+  const missing = task === "assembleApp" ? [] : modules.filter((m) => !artifacts.some((a) => a.module === m.name)).map((m) => m.name);
+  invariant(!missing.length, "BUILD_FAILED", "Build did not produce every requested module package", { missing, log_artifact: result.log_artifact });
   // Device-compatibility warnings are listed apart: they are the warnings that turn into runtime crashes.
   // Each one is verified against the SDK (hvigor's own check has false positives), see syscap.ts.
   const general = result.diagnostics.filter((d) => !/is not supported on all devices/.test(d.message));
@@ -549,31 +563,68 @@ async function compileProject(
     ...(deviceCompat ? { device_compat: deviceCompat } : {}), log_artifact: result.log_artifact, elapsed_ms: result.elapsed_ms };
 }
 
-/** Locate packages in the standard output directories (newest first). */
+function removePackages(dir: string, ext: string) {
+  if (!fs.existsSync(dir)) return;
+  for (const name of fs.readdirSync(dir)) if (name.endsWith(ext) && fs.lstatSync(path.join(dir, name)).isFile()) fs.unlinkSync(path.join(dir, name));
+}
+
+/** Application payload identity excludes ZIP container metadata and the signing block. */
+async function packagePayload(file: string) {
+  const yauzl = (await import("yauzl")).default;
+  return new Promise<string>((resolve, reject) => {
+    yauzl.open(file, { lazyEntries: true }, (error, zip) => {
+      if (error || !zip) return reject(error);
+      const entries = new Map<string, string>();
+      const fail = (error: unknown) => { zip.close(); reject(error); };
+      zip.on("error", fail);
+      zip.on("entry", (entry) => {
+        void (async () => {
+          if (!entry.fileName.endsWith("/")) {
+            invariant(!entries.has(entry.fileName), "CONFLICT", `Duplicate package entry: ${entry.fileName}`, { file });
+            const stream = await new Promise<import("node:stream").Readable>((resolve, reject) => {
+              zip.openReadStream(entry, (error, stream) => error || !stream ? reject(error) : resolve(stream));
+            });
+            const hash = crypto.createHash("sha256");
+            for await (const chunk of stream) hash.update(chunk);
+            entries.set(entry.fileName, hash.digest("hex"));
+          }
+          zip.readEntry();
+        })().catch(fail);
+      });
+      zip.on("end", () => resolve(crypto.createHash("sha256").update(JSON.stringify([...entries].sort(([a], [b]) => a.localeCompare(b)))).digest("hex")));
+      zip.readEntry();
+    });
+  });
+}
+
+/** Locate unambiguous packages; timestamps cannot establish which payload was built. */
 export async function buildOutputs(project: Project, task: BuildTask = "assembleHap", modules = project.modules) {
   const ext = suffix[task];
   const dirs = task === "assembleApp"
-    ? [path.join(project.root, "build/outputs", project.product), path.join(project.root, "build/outputs/default")]
+    ? [path.join(project.root, "build/outputs", project.product)]
     : modules.map((m) => path.join(m.root, "build", project.product, "outputs", m.target));
-  const found: { path: string; module?: string; signed: boolean; bytes: number; sha256: string; mtime: number }[] = [];
+  const list: { path: string; module?: string; signed: boolean; bytes: number; sha256: string }[] = [];
   for (const [index, dir] of dirs.entries()) {
     if (!fs.existsSync(dir)) continue;
+    const found: (typeof list)[number][] = [];
     for (const name of fs.readdirSync(dir)) {
       if (!name.endsWith(ext)) continue;
       const file = path.join(dir, name);
-      const stat = fs.statSync(file);
-      found.push({ path: file, module: task === "assembleApp" ? undefined : modules[index]?.name, signed: !name.includes("-unsigned"), bytes: stat.size, sha256: "", mtime: stat.mtimeMs });
+      const stat = fs.lstatSync(file);
+      invariant(stat.isFile(), "CONFLICT", "Package output must be a regular file", { file });
+      found.push({ path: file, module: task === "assembleApp" ? undefined : modules[index]?.name, signed: !name.includes("-unsigned"), bytes: stat.size, sha256: await fileSha256(file) });
     }
+    if (found.length > 1) {
+      const identities = await Promise.all(found.map((item) => packagePayload(item.path)));
+      invariant(new Set(identities).size === 1, "CONFLICT", "Package outputs contain different application payloads", { directory: dir, files: found.map((item) => item.path) },
+        "Build again to regenerate packages for the selected product and modules before deploying");
+      invariant(new Set(found.filter((item) => item.signed).map((item) => item.sha256)).size <= 1,
+        "CONFLICT", "Package outputs contain multiple distinct signed containers", { directory: dir }, "Build again with the intended signing configuration");
+    }
+    const selected = found.sort((a, b) => Number(b.signed) - Number(a.signed) || a.path.localeCompare(b.path))[0];
+    if (selected) list.push(selected);
   }
-  // Prefer signed packages; keep only the newest per module.
-  const best = new Map<string, (typeof found)[number]>();
-  for (const item of found.sort((a, b) => Number(b.signed) - Number(a.signed) || b.mtime - a.mtime)) {
-    const key = item.module ?? item.path;
-    if (!best.has(key)) best.set(key, item);
-  }
-  const list = [...best.values()];
-  for (const item of list) item.sha256 = await fileSha256(item.path);
-  return list.map(({ mtime: _m, ...rest }) => rest);
+  return list;
 }
 
 export function cleanArguments(project: Project, modules?: string[], executionMode?: "module" | "project") {
@@ -609,7 +660,7 @@ export async function createProject(input: {
   const compileVersion = input.sdk_version ?? sdk.platform_version;
   const versionFor = (api: number | undefined) => (api === undefined || api === sdk.api_level ? compileVersion : versionForApi(api));
   const compatibleVersion = versionFor(input.compatible_api ?? input.target_api), targetVersion = versionFor(input.target_api);
-  const template = path.join(packageRoot, "templates/application");
+  const template = path.join(assetRoot, "templates/application");
   const files = [...walk(template, new Set())].map((file) => path.relative(template, file).split(path.sep).join("/"));
   const target = (rel: string) => path.join(destination, path.basename(rel) === "gitignore.txt" ? path.join(path.dirname(rel), ".gitignore") : rel);
   const conflicts = files.filter((rel) => fs.existsSync(target(rel)));

@@ -1,12 +1,12 @@
+import { temporaryDirectory } from "../support/workspace.mjs";
 // Real MCP/jobs + project commands. No fake SDK test verdicts or device success.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { test, after } from 'node:test';
 import { spawnSync } from 'node:child_process';
 import { connect, waitJob } from '../support/mcp.mjs';
-const work = fs.mkdtempSync(path.join(os.tmpdir(), 'deveco-gate-'));
+const work = temporaryDirectory("deveco-gate-", true);
 const project = path.join(work, 'project'), clt = path.join(work, 'clt');
 fs.mkdirSync(path.join(project, 'AppScope'), { recursive: true }); fs.mkdirSync(clt);
 fs.writeFileSync(path.join(project, 'AppScope/app.json5'), JSON.stringify({ app: { bundleName: 'com.devecomcp.gate' } }));

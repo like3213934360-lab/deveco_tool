@@ -1,3 +1,4 @@
+import { temporaryDirectory } from "../support/workspace.mjs";
 // Reversible configuration selection and real SQLite/process interruption; no SDK or cloud.
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -11,7 +12,7 @@ import { build } from "esbuild";
 
 const root = path.resolve(import.meta.dirname, "../..");
 fs.mkdirSync(path.join(root, ".scratch"), { recursive: true });
-const work = fs.mkdtempSync(path.join(root, ".scratch/build-signing-test-"));
+const work = temporaryDirectory("build-signing-test");
 process.env.DEVECO_STATE_DIR = path.join(work, "state");
 const bundle = path.join(work, "harness.mjs");
 await build({ stdin: { contents: "export * from './src/domains/build-signing.ts'; export * from './src/core/db.ts';", resolveDir: root },

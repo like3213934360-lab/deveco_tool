@@ -46,6 +46,14 @@ CREATE TABLE IF NOT EXISTS artifacts (
 );
 CREATE INDEX IF NOT EXISTS artifacts_created ON artifacts(created,id);
 CREATE INDEX IF NOT EXISTS artifacts_file ON artifacts(file);
+CREATE TABLE IF NOT EXISTS audit_events (
+  id TEXT PRIMARY KEY,
+  owner TEXT NOT NULL,
+  created INTEGER NOT NULL,
+  data TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS audit_created ON audit_events(created);
+CREATE INDEX IF NOT EXISTS audit_owner ON audit_events(owner,created);
 CREATE TABLE IF NOT EXISTS credentials (
   provider TEXT PRIMARY KEY,
   data BLOB
@@ -91,7 +99,7 @@ function open(DatabaseSync: typeof import("node:sqlite").DatabaseSync, file: str
       handle.exec("COMMIT");
     } catch (error) { handle.exec("ROLLBACK"); throw error; }
     // A truncated file can open and still be unreadable: touch every table once.
-    for (const t of ["jobs", "effects", "events", "artifacts", "credentials", "exports", "retention_failures", "retention_pins", "kv"]) handle.prepare(`SELECT 1 FROM ${t} LIMIT 1`).get();
+    for (const t of ["jobs", "effects", "events", "artifacts", "audit_events", "credentials", "exports", "retention_failures", "retention_pins", "kv"]) handle.prepare(`SELECT 1 FROM ${t} LIMIT 1`).get();
     return handle;
   } catch (error) {
     handle.close();

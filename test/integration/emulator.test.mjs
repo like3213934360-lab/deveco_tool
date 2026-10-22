@@ -1,14 +1,14 @@
+import { temporaryDirectory } from "../support/workspace.mjs";
 // Real emulator domain and child-process runner, with an isolated CLI; no device or image changes.
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { after, beforeEach, test } from "node:test";
 import { pathToFileURL } from "node:url";
 import { build } from "esbuild";
 
-const root = path.resolve(import.meta.dirname, "../.."), work = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-emulator-"));
-const bundle = path.join(root, "node_modules/.cache/deveco-emulator.mjs"), cli = path.join(work, "emulator.cjs"), log = path.join(work, "calls.jsonl");
+const root = path.resolve(import.meta.dirname, "../.."), work = temporaryDirectory("deveco-emulator-");
+const bundle = path.join(work, "deveco-emulator.mjs"), cli = path.join(work, "emulator.cjs"), log = path.join(work, "calls.jsonl");
 process.env.DEVECO_EMULATOR_CONFIG_DIR = work;
 fs.mkdirSync(path.join(work, "Emulator1.0"));
 fs.writeFileSync(path.join(work, "Emulator1.0/.emu_config"), "HarmonyOS_Software_Service_Agreement: agree\nHarmonyOS_SDK_Agreement: agree\n");

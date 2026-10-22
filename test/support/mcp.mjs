@@ -1,6 +1,7 @@
 // Stdio MCP transport shared by tests and benchmarks; protocol errors never become tool success.
 import { spawn } from "node:child_process";
 import path from "node:path";
+import { retainWorkspace } from "./workspace.mjs";
 
 const root = path.resolve(import.meta.dirname, "../..");
 
@@ -8,6 +9,7 @@ const root = path.resolve(import.meta.dirname, "../..");
 export function connect(env = {}, entry = path.join(root, "bin/deveco-mcp.mjs")) {
   const started = performance.now();
   const child = spawn(process.execPath, [entry, "mcp"], { env: { ...process.env, ...env }, stdio: ["pipe", "pipe", "pipe"] });
+  const releaseWorkspace = retainWorkspace(env.DEVECO_STATE_DIR ?? process.env.DEVECO_STATE_DIR, child.pid);
   /** @type {Map<number, {resolve: (value: any) => void, reject: (error: Error) => void, timer: NodeJS.Timeout}>} */
   const pending = new Map();
   let buffer = "", stderr = "", id = 0, ended = false, closing = false;
@@ -21,6 +23,7 @@ export function connect(env = {}, entry = path.join(root, "bin/deveco-mcp.mjs"))
   };
   const exited = new Promise((resolve) => {
     child.once("close", (code, signal) => {
+      releaseWorkspace();
       ended = true;
       fail(new Error(`MCP closed (${signal ?? code}); stderr: ${stderr}`));
       resolve({ code, signal });

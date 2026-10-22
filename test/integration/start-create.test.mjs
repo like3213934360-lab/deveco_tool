@@ -1,3 +1,4 @@
+import { temporaryDirectory } from "../support/workspace.mjs";
 // Real domains and schemas with a deterministic SDK fixture. Live SDK evidence is recorded separately.
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -8,13 +9,14 @@ import JSON5 from "json5";
 import { after, beforeEach, test } from "node:test";
 import { pathToFileURL } from "node:url";
 import { build } from "esbuild";
+import { zipFixture } from "../support/zip.mjs";
 
-const root = path.resolve(import.meta.dirname, "../.."), work = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-start-create-"));
+const root = path.resolve(import.meta.dirname, "../.."), work = temporaryDirectory("deveco-start-create-");
 process.env.DEVECO_STATE_DIR = path.join(work, "state");
 process.env.DEVECO_EMULATOR_CONFIG_DIR = work;
 fs.mkdirSync(path.join(work, "Emulator1.0"));
 fs.writeFileSync(path.join(work, "Emulator1.0/.emu_config"), "HarmonyOS_Software_Service_Agreement: agree\nHarmonyOS_SDK_Agreement: agree\n");
-const bundle = path.join(root, "node_modules/.cache/deveco-start-create.mjs");
+const bundle = path.join(work, "deveco-start-create.mjs");
 const entry = ["domains/emulator", "domains/emulator-snapshot", "domains/project", "tools/extra", "tools/core", "core/errors", "core/db"].map((p) => `export * from ${JSON.stringify(path.join(root, `src/${p}.ts`))};`).join("\n");
 await build({ stdin: { contents: entry, resolveDir: root }, outfile: bundle, bundle: true, format: "esm", platform: "node", packages: "external", logLevel: "error",
   plugins: [{ name: "sdk", setup(b) {
@@ -27,9 +29,9 @@ await build({ stdin: { contents: entry, resolveDir: root }, outfile: bundle, bun
       toolchain: `export function toolCommand(name,args,cwd){return {file:name,args,cwd}};export function toolchain(){return {sdk:'fixture'}};export function sdkInfo(){return {platform_version:'26.0.0',api_level:26}};`,
       proc: `import fs from 'node:fs'; import path from 'node:path';
         export async function run(cmd,{signal,logFile}={}) {signal?.throwIfAborted();const f=globalThis.__startCreate;f.commands.push(cmd.args);
-          if(cmd.file==='ohpm'||cmd.args.includes('--sync')||cmd.args.includes('assembleHap')) {
+          if(cmd.file==='ohpm'||cmd.args.includes('--sync')||cmd.args.some(a=>/^assemble(?:Hap|Har|Hsp|App)$/.test(a))) {
             if(logFile)fs.writeFileSync(logFile,'BUILD SUCCESSFUL');
-            if(cmd.args.includes('assembleHap')){const out=path.join(cmd.cwd,'entry/build/default/outputs/default');fs.mkdirSync(out,{recursive:true});fs.writeFileSync(path.join(out,'entry-default-unsigned.hap'),'fixture package');}
+            if(cmd.args.some(a=>/^assemble(?:Hap|Har|Hsp|App)$/.test(a))){if(f.build)await f.build(cmd);else{const out=path.join(cmd.cwd,'entry/build/default/outputs/default');fs.mkdirSync(out,{recursive:true});fs.writeFileSync(path.join(out,'entry-default-unsigned.hap'),'fixture package');}}
             return {code:0,stdout:'BUILD SUCCESSFUL',stderr:'',elapsedMs:1};
           }
           if(cmd.args[0]==='-list')return {code:0,signal:null,stdout:f.raw??JSON.stringify(f.instances),stderr:''};
@@ -65,6 +67,63 @@ test("build reports whether it synchronized separately from the reason", async (
   assert.equal(second.synced, false); assert.equal(second.sync_reason, undefined);
   const requested = await m.buildProject(project, {sync:true}, new AbortController().signal);
   assert.equal(requested.synced, true); assert.equal(requested.sync_reason, 'requested');
+});
+
+test("build regenerates packaging outputs instead of selecting an older signed package", async () => {
+  const made = await create("package-generation"), project = m.inspectProject(made.created);
+  const dir = path.join(project.root, "entry/build/default/outputs/default");
+  fs.mkdirSync(dir, { recursive: true });
+  const signed = path.join(dir, "entry-default-signed.hap"), unsigned = path.join(dir, "entry-default-unsigned.hap");
+  const unrelated = path.join(dir, "compiler-cache.bin"); fs.writeFileSync(unrelated, "keep");
+  const otherProduct = path.join(project.root, "entry/build/watch/outputs/default/watch-signed.hap");
+  fs.mkdirSync(path.dirname(otherProduct), { recursive: true }); fs.writeFileSync(otherProduct, "keep watch");
+  for (const signedTime of [10, 20, 30]) {
+    fs.writeFileSync(signed, "old signed payload"); fs.utimesSync(signed, signedTime, signedTime);
+    f.build = () => {
+      assert.equal(fs.existsSync(signed), false, "old packages must be removed before the SDK runs");
+      assert.equal(fs.existsSync(unsigned), false);
+      fs.writeFileSync(unsigned, "current unsigned payload"); fs.utimesSync(unsigned, 20, 20);
+    };
+    const result = await m.buildProject(project, {}, new AbortController().signal);
+    assert.deepEqual(result.artifacts.map((a) => a.path), [unsigned]);
+    assert.equal(fs.readFileSync(result.artifacts[0].path, "utf8"), "current unsigned payload");
+  }
+  assert.equal(fs.readFileSync(unrelated, "utf8"), "keep");
+  assert.equal(fs.readFileSync(otherProduct, "utf8"), "keep watch");
+  f.build = () => {};
+  await assert.rejects(m.buildProject(project, {}, new AbortController().signal), { code: "BUILD_FAILED" });
+  assert.deepEqual(await m.buildOutputs(project), [], "a successful SDK exit with no output cannot reuse the previous package");
+});
+
+test("package generation covers APP/HSP/HAR, shared dependencies and missing module outputs", async () => {
+  const made = await create("all-packages"), file = path.join(made.created, "build-profile.json5"), profile = JSON5.parse(fs.readFileSync(file, "utf8"));
+  for (const [name, type] of [["feature", "feature"], ["library", "har"], ["shared", "shared"]]) {
+    const dir = path.join(made.created, name, "src/main"); fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, "module.json5"), JSON.stringify({ module: { name, type, deviceTypes: ["phone"] } }));
+    profile.modules.push({ name, srcPath: `./${name}`, targets: [{ name: "default", applyToProducts: ["default"] }] });
+  }
+  fs.writeFileSync(file, JSON.stringify(profile)); const project = m.inspectProject(made.created);
+  const hap = path.join(project.root, "entry/build/default/outputs/default/entry-unsigned.hap");
+  const feature = path.join(project.root, "feature/build/default/outputs/default/feature-unsigned.hap");
+  const hsp = path.join(project.root, "shared/build/default/outputs/default/shared-signed.hsp");
+  const har = path.join(project.root, "library/build/default/outputs/default/library.har");
+  const app = path.join(project.root, "build/outputs/default/app-signed.app");
+  const put = (file, bytes = "obsolete") => { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, bytes); };
+  for (const [options, files] of [
+    [{ modules: ["entry"] }, [hap, hsp]],
+    [{ task: "assembleHsp" }, [hsp]], [{ task: "assembleHar" }, [har]], [{ task: "assembleApp" }, [app, hap, feature, hsp]],
+  ]) {
+    for (const file of files) put(file);
+    f.build = () => { for (const file of files) { assert.equal(fs.existsSync(file), false, file); put(file, zipFixture({ "module.json": "current" })); } };
+    const result = await m.buildProject(project, options, new AbortController().signal);
+    assert.equal(result.success, true); assert.ok(result.artifacts.length);
+    for (const artifact of result.artifacts) assert.equal(fs.readFileSync(artifact.path).includes(Buffer.from("obsolete")), false);
+  }
+  f.build = () => put(hap, "new entry only");
+  await assert.rejects(m.buildProject(project, { modules: ["entry", "feature"] }, new AbortController().signal), (e) => e.code === "BUILD_FAILED" && e.details.missing.includes("feature"));
+  const signed = hap.replace("unsigned", "signed");
+  f.build = () => { for (const file of [hap, signed]) { put(file, zipFixture({ "module.json": "same generation" })); fs.utimesSync(file, 20, 20); } };
+  assert.equal((await m.buildProject(project, { modules: ["entry"] }, new AbortController().signal)).artifacts[0].path, signed);
 });
 
 test("create writes the requested device types and preserves all other template fields", async () => {
@@ -167,7 +226,7 @@ test("port conflicts leave the instance untouched; wrong actual port cannot repo
 test("launcher failure (even exit 0), spawn error and nonzero exit retain diagnostics", async () => {
   for (const log of ["Unable to start", "Invalid command", "snapshot description changed, snapshot boot failed.", "could not use snapshot or default snapshot is not exist."]) {
     f.log = log;f.launched = false;f.targets = {};
-    await assert.rejects(start(), (e) => e.code === "EMULATOR_FAILED" && fs.readFileSync(e.details.log, "utf8") === log);
+    await assert.rejects(start(), (e) => e.code === "EMULATOR_FAILED" && e.details.log.startsWith(path.join(work, "state/artifacts")) && fs.readFileSync(e.details.log, "utf8") === log);
   }
   f.log = "";f.spawnError = new Error("ENOENT");await assert.rejects(start(), rejected("PROCESS_FAILED"));delete f.spawnError;
   f.exit = 2;await assert.rejects(start(), rejected("EMULATOR_FAILED"));

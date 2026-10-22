@@ -1,3 +1,4 @@
+import { temporaryDirectory } from "../support/workspace.mjs";
 // All auto-signing here is simulated: real runner/domain + loopback AGC, fake SDK/keytool.
 // No user credentials, home signing material, device, or real AGC endpoint is used.
 import assert from "node:assert/strict";
@@ -5,7 +6,6 @@ import JSON5 from "json5";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import http from "node:http";
-import os from "node:os";
 import path from "node:path";
 import { after, test } from "node:test";
 import { pathToFileURL } from "node:url";
@@ -14,7 +14,7 @@ import { once } from "node:events";
 import { build } from "esbuild";
 
 const root = path.resolve(import.meta.dirname, "../..");
-const work = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-auto-"));
+const work = temporaryDirectory("deveco-auto-");
 const home = path.join(work, "home"); fs.mkdirSync(home);
 process.env.DEVECO_STATE_DIR = path.join(work, "state");
 process.env.DEVECO_COORDINATION_DIR = path.join(work, "coordination");
@@ -69,7 +69,7 @@ function bytes(object) {
   return Buffer.from(JSON.stringify({ "version-name": "2.0", type: mode === "wrong-type" ? "debug" : requestedType, "bundle-info": { "bundle-name": mode === "wrong-bundle" ? "com.wrong" : "com.test.audit", [requestedType === "release" ? "distribution-certificate" : "development-certificate"]: pem },
     "debug-info": { "device-ids": [mode === "wrong-device" ? "FOREIGN" : "FIXTURE-UDID"] }, validity: { "not-before": 1, "not-after": 4102444800 } }));
 }
-const bundle = path.join(root, "node_modules/.cache/deveco-auto-harness.mjs");
+const bundle = path.join(work, "deveco-auto-harness.mjs");
 await build({ stdin: { contents: `import ${JSON.stringify(path.join(root, "src/jobs.ts"))}; export * from ${JSON.stringify(path.join(root, "src/core/operations.ts"))}; export * from ${JSON.stringify(path.join(root, "src/core/jobs.ts"))}; export * from ${JSON.stringify(path.join(root, "src/core/db.ts"))};`, resolveDir: root },
   outfile: bundle, bundle: true, platform: "node", format: "esm", packages: "external", logLevel: "error",
   plugins: [{ name: "isolated-sdk", setup(b) {

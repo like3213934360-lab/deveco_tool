@@ -1,14 +1,14 @@
+import { temporaryDirectory } from "../support/workspace.mjs";
 // Exercise transport observation only; this fixture is not real-model acceptance.
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { once } from "node:events";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 
 test("model proxy preserves split UTF-8 bytes and drains the final large response", async () => {
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-proxy-"));
+  const directory = temporaryDirectory("deveco-proxy-");
   const entry = path.join(directory, "echo.cjs"), trace = path.join(directory, "trace.jsonl");
   fs.writeFileSync(entry, `
 const chunks=[];
@@ -40,7 +40,7 @@ process.stdin.on('end', ()=>process.stdout.end(Buffer.concat(chunks)));
 });
 
 test("a forbidden action or different device never reaches the server", async () => {
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-proxy-boundary-"));
+  const directory = temporaryDirectory("deveco-proxy-boundary-");
   const entry = path.join(directory, "sink.cjs"), policy = path.join(directory, "cases.json");
   fs.writeFileSync(entry, "process.stdin.on('data', chunk=>process.stdout.write(chunk));");
   fs.writeFileSync(policy, JSON.stringify([{ expect: [{ tool: "ui", arguments: { target: "test-emulator" } }],

@@ -5,7 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { randomBytes } from "node:crypto";
 import { fileURLToPath } from "node:url";
-import { atomicWrite, digest, packageInfo, sourceFingerprint, verifyBuild } from "../bin/runtime.mjs";
+import { atomicWrite, digest, packageInfo, sourceFingerprint, verifyBuild, withBuildLock, collectBuilds } from "../bin/runtime.mjs";
 
 function ensureBridge(dist) {
   const bridge = path.join(dist, "cli.js"), text = '#!/usr/bin/env node\nimport "../bin/deveco-mcp.mjs";\n';
@@ -16,19 +16,7 @@ function ensureBridge(dist) {
 export async function buildPackage(root) {
   const dist = path.join(root, "dist");
   fs.mkdirSync(path.join(dist, "builds"), { recursive: true });
-  // The launcher must work before runtime dependencies are loaded. Serialize builders here,
-  // then reuse a verified generation instead of racing to replace the Windows pointer twice.
-  const lock = path.join(dist, ".build-lock"), deadline = Date.now() + 30000;
-  for (;;) {
-    try { fs.mkdirSync(lock); break; }
-    catch (error) {
-      if (error.code !== "EEXIST") throw error;
-      if (Date.now() >= deadline) throw new Error(`Build is reserved: ${lock}. Inspect owner.json and the owning process; remove this lock only after confirming the builder stopped.`);
-      await new Promise((resolve) => setTimeout(resolve, 50));
-    }
-  }
-  try {
-    fs.writeFileSync(path.join(lock, "owner.json"), JSON.stringify({ pid: process.pid, started_at: new Date().toISOString() }));
+  return withBuildLock(root, async () => {
     let current;
     try { current = verifyBuild(root, sourceFingerprint(root)); }
     catch (error) {
@@ -37,9 +25,11 @@ export async function buildPackage(root) {
       if (error.code && error.code !== "ENOENT") throw error;
       if (!error.code && !/^(Compiled build does not match|Incomplete build manifest|Invalid build output|Missing or changed build output)/.test(error.message) && !(error instanceof SyntaxError)) throw error;
     }
-    if (current) { ensureBridge(dist); return current; }
-    return await compilePackage(root, dist);
-  } finally { fs.rmSync(lock, { recursive: true }); }
+    if (current) { ensureBridge(dist); collectBuilds(root, current); return current; }
+    current = await compilePackage(root, dist);
+    collectBuilds(root, current);
+    return current;
+  });
 }
 
 async function compilePackage(root, dist) {
@@ -53,8 +43,10 @@ async function compilePackage(root, dist) {
       entryPoints: [path.join(root, "src/cli.ts")], outdir: staging,
       bundle: true, splitting: true, format: "esm", platform: "node", target: "node22",
       packages: "external", sourcemap: "linked", chunkNames: "chunks/[name]-[hash]", logLevel: "warning",
-      define: { __DEVECO_BUILD__: JSON.stringify({ version, input_hash }) },
+      define: { __DEVECO_BUILD__: JSON.stringify({ version, input_hash, generation }) },
     });
+    fs.writeFileSync(path.join(staging, "runtime.json"), JSON.stringify({ lease_protocol: 1 }));
+    for (const dir of ["resources", "templates", "knowledge"]) fs.cpSync(path.join(root, dir), path.join(staging, "assets", dir), { recursive: true, dereference: true, filter: (file) => ![".DS_Store", "Thumbs.db"].includes(path.basename(file)) });
     if (sourceFingerprint(root) !== input_hash) throw new Error("Source changed during build; no build was published");
     const files = {};
     for (const name of fs.readdirSync(staging, { recursive: true }).sort()) {

@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { selectorSchema } from "../domains/selectors.js";
+export { selectorSchema } from "../domains/selectors.js";
 import { invariant } from "../core/errors.js";
 import * as repeatModule from "../domains/repeat.js";
 import { fields, MAX_WAIT_MS, SYNC_WAIT_MS, tool } from "../registry.js";
@@ -118,30 +120,7 @@ const assertSchema = z.object({
   visible: z.lazy(() => selectorSchema).optional(),
   hidden: z.lazy(() => selectorSchema).optional(),
   timeout_ms: z.number().int().min(100).max(120000).optional(),
-}).refine((input) => !!input.visible !== !!input.hidden, "Pass exactly one visible or hidden selector");
-export const selectorSchema = z.object({
-  xpath: z.string().min(1).max(2048).optional().describe("XPath 1.0"),
-  regex: z.record(z.string().regex(/^(text|description|id|key|type|bundle|window|page)$/), z.string().min(1).max(512)).optional(),
-  regex_flags: z.string().max(4).optional().describe("i/m/s/u; default iu"),
-  text: z.string().optional().describe("Contains"),
-  exact: z.boolean().optional(),
-  text_match: z.enum(["contains", "exact", "prefix", "suffix"]).optional(),
-  description: z.string().optional(),
-  focused: z.boolean().optional(),
-  scrollable: z.boolean().optional(),
-  long_clickable: z.boolean().optional(),
-  checkable: z.boolean().optional(),
-  within: z.string().optional().describe("Ancestor id/key"),
-  key: z.string().optional().describe("ArkUI .id('...')"),
-  type: z.string().optional(),
-  id: z.string().optional(),
-  bundle: z.string().optional(),
-  clickable: z.boolean().optional(),
-  checked: z.boolean().optional(),
-  selected: z.boolean().optional(),
-  enabled: z.boolean().optional(),
-  index: z.number().int().optional().describe("Zero-based; -1=last"),
-}).meta({ id: "Selector" }); // emitted once per tool as $defs/Selector
+}).strict().refine((input) => !!input.visible !== !!input.hidden, "Pass exactly one visible or hidden selector");
 
 const uiOpSchema = z.enum(["click", "double_click", "long_click", "input", "type", "swipe", "drag", "fling", "scroll", "key",
   "mouse_click", "mouse_double_click", "mouse_long_click", "mouse_move", "mouse_scroll", "mouse_drag"]).meta({ id: "UiOp" });
@@ -239,13 +218,14 @@ export const jobTool = tool({
     status: z.string().optional().describe("list: filter by status"),
     limit: z.number().int().min(1).max(2000).optional(),
     artifact_id: z.string().optional().describe("read: artifact to read"),
-    line: z.number().int().min(0).optional().describe("read: 0-based line; continue with returned next_line"),
+    line: z.number().int().min(0).optional().describe("read: next_line (0-based)"),
+    offset: z.number().int().min(0).optional().describe("read: next_offset within line"),
     grep: z.string().optional().describe("read: regex filter, e.g. 'error|ERROR'"),
   }),
   params: {
     resources: [], release_resource: ["resource", "owner_pid"],
     wait: ["job_id", "wait"], status: ["job_id", "detail"], list: ["limit", "status"], cancel: ["job_id"],
-    resume: ["job_id", "force"], read: ["artifact_id", "line", "limit", "grep"],
+    resume: ["job_id", "force"], read: ["artifact_id", "line", "offset", "limit", "grep"],
   },
   async handler(input) {
     if (input.action === "resources") return (await import("../core/operations.js")).resourceStatus();
@@ -259,7 +239,7 @@ export const jobTool = tool({
     if (input.action === "read") {
       invariant(input.artifact_id, "INVALID_INPUT", "artifact_id is required");
       const { readArtifact } = await import("../core/artifacts.js");
-      const result = await readArtifact(input.artifact_id, { line: input.line, limit: input.limit, grep: input.grep });
+      const result = await readArtifact(input.artifact_id, { line: input.line, offset: input.offset, limit: input.limit, grep: input.grep });
       if ("image" in result && result.image) {
         const { image, ...rest } = result;
         return { ...rest, _image: { data: image, mime: result.mime } };
@@ -290,7 +270,7 @@ export const codeTool = tool({
   schema: z.object({
     action: z.enum(["check", "lint", "api_scan", "api_versions", "lsp", "lsp_restart", "origin"]),
     project: fields.project.optional().describe("Project root; required except api_versions"),
-    files: z.array(z.string()).max(200).optional().describe("check/api_scan/lsp diagnostics: check uses files, not file. Existing .ets/.ts or C/C++; omit for project; no mixed languages"),
+    files: z.array(z.string()).max(200).optional().describe("check/api_scan/lsp diagnostics: lsp max20; check uses files, not file. Existing .ets/.ts or C/C++; omit for project; no mixed languages"),
     fix: z.boolean().optional(),
     product: fields.product,
     op: z.enum(["hover", "definition", "declaration", "implementation", "references", "symbols", "workspace_symbols", "diagnostics", "completion", "signature", "call_hierarchy"]).optional().describe("lsp operation"),

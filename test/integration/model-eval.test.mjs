@@ -1,3 +1,4 @@
+import { temporaryDirectory } from "../support/workspace.mjs";
 // The grader must reject invalid plans; these tests are not real model acceptance.
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
@@ -11,7 +12,7 @@ import { actualCalls, actionScenarios, callSet, grade, gradeLive, scenarios, unf
 
 let client, tools, state;
 before(async () => {
-  state = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-model-eval-"));
+  state = temporaryDirectory("deveco-model-eval-");
   client = connect({ DEVECO_STATE_DIR: state, DEVECO_CONFIG: path.join(state, "none.json") });
   await client.initialize();
   tools = (await client.request("tools/list")).result.tools;

@@ -1,3 +1,4 @@
+import { temporaryDirectory } from "../support/workspace.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
@@ -6,7 +7,7 @@ import { test } from "node:test";
 import { connect } from "../support/mcp.mjs";
 import { promptMetrics } from "../support/prompts.mjs";
 
-const state = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-test-"));
+const state = temporaryDirectory("deveco-test-");
 process.on("exit", () => { try { fs.rmSync(state, { recursive: true, force: true }); } catch { /* Windows: file still locked */ } }); // tests leave nothing behind
 const env = { DEVECO_STATE_DIR: state, DEVECO_CONFIG: path.join(state, "none.json") };
 

@@ -6,6 +6,7 @@ import { config, stateDir } from "./config.js";
 import { database } from "./db.js";
 import { invariant } from "./errors.js";
 import { collectStorage, storageDeadline, reportCleanup, type CleanupResult } from "./storage.js";
+import { cleanupAudit, auditDeadline } from "./audit.js";
 
 const extensions: Record<string, string> = {
   "text/plain": "txt",
@@ -58,7 +59,7 @@ async function lookup(id: string) {
  * response always says whether more remains (`next_line` null at the end).
  * `grep` filters lines first, which is usually what the model actually wants.
  */
-export async function readArtifact(id: string, options: { line?: number; limit?: number; grep?: string } = {}) {
+export async function readArtifact(id: string, options: { line?: number; offset?: number; limit?: number; grep?: string } = {}) {
   const row = await lookup(id);
   if (row.mime.startsWith("image/"))
     return { artifact_id: id, mime: row.mime, bytes: row.bytes, image: fs.readFileSync(row.file).toString("base64") };
@@ -74,15 +75,23 @@ export async function readArtifact(id: string, options: { line?: number; limit?:
   }
   const start = Math.max(0, options.line ?? 0);
   const limit = Math.min(Math.max(1, options.limit ?? 200), 2000);
+  const offset = options.offset ?? 0;
+  invariant(offset >= 0 && Number.isSafeInteger(offset) && offset <= (lines[start]?.length ?? 0), "INVALID_INPUT", "Invalid offset within artifact line");
   let chunk = lines.slice(start, start + limit);
+  if (chunk.length) chunk[0] = chunk[0]!.slice(offset);
   let joined = chunk.join("\n");
   // Keep responses bounded even for very long single lines.
   while (joined.length > 60000 && chunk.length > 1) {
     chunk = chunk.slice(0, Math.ceil(chunk.length / 2));
     joined = chunk.join("\n");
   }
-  if (joined.length > 60000) joined = joined.slice(0, 60000) + "…";
-  const end = start + chunk.length;
+  const continued = joined.length > 60000;
+  if (continued) {
+    let end = 60000;
+    if (/[\uD800-\uDBFF]/.test(joined[end - 1]!) && /[\uDC00-\uDFFF]/.test(joined[end]!)) end--;
+    joined = joined.slice(0, end);
+  }
+  const end = continued ? start : start + chunk.length;
   return {
     artifact_id: id,
     mime: row.mime,
@@ -90,6 +99,7 @@ export async function readArtifact(id: string, options: { line?: number; limit?:
     ...(matcher ? { matched_lines: lines.length } : {}),
     line: start,
     next_line: end < lines.length ? end : null,
+    next_offset: continued ? offset + joined.length : 0,
     content: joined,
   };
 }
@@ -170,6 +180,7 @@ async function sweep(maintenance: boolean, discover: boolean) {
   // Active or paused jobs must not exempt their media from the 24-hour limit.
   await prune("artifacts", "created<=?", [cutoff]);
   await prune("exports", "created<=?", [cutoff]);
+  if (maintenance || Date.now() >= auditDeadline()) await cleanupAudit(cutoff);
   if (maintenance) {
     const active = "('queued','running','needs_input')";
     const old = db.prepare(`SELECT id FROM jobs WHERE status NOT IN ${active} AND (updated<=? OR id IN (SELECT id FROM jobs WHERE status NOT IN ${active} ORDER BY updated DESC LIMIT -1 OFFSET ?)) LIMIT ${BATCH}`);
@@ -274,7 +285,7 @@ async function tick() {
     const artifact = db.prepare("SELECT created FROM artifacts WHERE NOT EXISTS (SELECT 1 FROM retention_failures WHERE path=artifacts.file) ORDER BY created LIMIT 1").get() as { created: number } | undefined;
     const exported = db.prepare("SELECT created FROM exports WHERE NOT EXISTS (SELECT 1 FROM retention_failures WHERE path=exports.path) ORDER BY created LIMIT 1").get() as { created: number } | undefined;
     // Cheap reconciliation catches another writer, wall-clock changes and wake from sleep.
-    arm(Math.min(Date.now() + RECHECK, maintenanceAt, discoveryAt, orphanAt, storageDeadline(), (artifact?.created ?? Infinity) + DAY, (exported?.created ?? Infinity) + DAY));
+    arm(Math.min(Date.now() + RECHECK, maintenanceAt, discoveryAt, orphanAt, storageDeadline(), auditDeadline(), (artifact?.created ?? Infinity) + DAY, (exported?.created ?? Infinity) + DAY));
   } catch (error) {
     stopped = true;
     clearTimeout(timer);

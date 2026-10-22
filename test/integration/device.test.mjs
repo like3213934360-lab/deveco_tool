@@ -5,9 +5,10 @@ import path from "node:path";
 import { after, test } from "node:test";
 import { pathToFileURL } from "node:url";
 import { build } from "esbuild";
+import { temporaryDirectory } from "../support/workspace.mjs";
 
 const root = path.resolve(import.meta.dirname, "../..");
-const bundle = path.join(root, "node_modules/.cache/deveco-device.mjs");
+const work = temporaryDirectory("device"), bundle = path.join(work, "device.mjs");
 const fixture = globalThis.__devecoDevice = { calls: [], result: { code: 0, signal: null, stdout: '[{"ok":1}]', stderr: "" } };
 await build({ stdin: { contents: `export { sqlite, appDatabasePath, launchAndCheck, selectLogLines, hilog } from ${JSON.stringify(path.join(root, "src/domains/device.ts"))};`, resolveDir: root }, outfile: bundle,
   bundle: true, format: "esm", platform: "node", packages: "external", logLevel: "error", plugins: [{ name: "device-process", setup(b) {
@@ -20,7 +21,7 @@ await build({ stdin: { contents: `export { sqlite, appDatabasePath, launchAndChe
     }[a.path] }));
   } }] });
 const m = await import(pathToFileURL(bundle).href);
-after(() => { fs.rmSync(bundle, { force: true }); delete globalThis.__devecoDevice; });
+after(() => { fs.rmSync(work, { recursive: true, force: true }); delete globalThis.__devecoDevice; });
 
 test("log filtering precedes limits and follow preserves matches sharing a timestamp", async () => {
   const stamp = '10-16 10:00:00.123';

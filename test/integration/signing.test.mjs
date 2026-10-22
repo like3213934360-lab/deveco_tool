@@ -1,14 +1,14 @@
+import { temporaryDirectory } from "../support/workspace.mjs";
 // Local signing configuration and the real process runner; no SDK, home material or AGC access.
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { after, test } from "node:test";
 import { pathToFileURL } from "node:url";
 import { build } from "esbuild";
 
-const root = path.resolve(import.meta.dirname, "../.."), work = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-signing-"));
-const bundle = path.join(root, "node_modules/.cache/deveco-signing.mjs"), cli = path.join(work, "signer.cjs");
+const root = path.resolve(import.meta.dirname, "../.."), work = temporaryDirectory("deveco-signing-");
+const bundle = path.join(work, "deveco-signing.mjs"), cli = path.join(work, "signer.cjs");
 fs.writeFileSync(cli, `const fs=require('node:fs');const args=process.argv.slice(2);fs.writeFileSync(args[args.indexOf('-outFile')+1],JSON.stringify(args));`);
 await build({ stdin: { contents: `export * from ${JSON.stringify(path.join(root, "src/domains/sign.ts"))};`, resolveDir: root }, outfile: bundle,
   bundle: true, format: "esm", platform: "node", packages: "external", logLevel: "error", plugins: [{ name: "local-signer", setup(b) {

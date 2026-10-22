@@ -1,6 +1,14 @@
 #!/usr/bin/env node
 /* Entry: `deveco-mcp [mcp]` serves stdio; `doctor` and `kb-build` are local helpers. */
 
+// Direct generation entry points lease too, before any lazy import can observe a retired build.
+declare const __DEVECO_BUILD__: { generation?: string };
+if (typeof __DEVECO_BUILD__ !== "undefined" && __DEVECO_BUILD__.generation) {
+  const { fileURLToPath } = await import("node:url");
+  const runtime = await import(new URL("../../../bin/runtime.mjs", import.meta.url).href);
+  await runtime.useGeneration(fileURLToPath(new URL("../../../", import.meta.url)), `${__DEVECO_BUILD__.generation}/cli.js`);
+}
+
 // node:sqlite prints an ExperimentalWarning on Node 22/24; keep stderr clean for MCP hosts.
 const emitWarning = process.emitWarning.bind(process);
 process.emitWarning = ((warning: string | Error, ...rest: unknown[]) => {

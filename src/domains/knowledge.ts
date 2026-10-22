@@ -4,11 +4,12 @@ import path from "node:path";
 import { Readable, Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { createRequire } from "node:module";
+import { crc32 } from "node:zlib";
 import type { DatabaseSync } from "node:sqlite";
 import { config, packageRoot, stateDir } from "../core/config.js";
 import { invariant, ToolError } from "../core/errors.js";
 import { run } from "../core/proc.js";
-import { atomicWrite } from "../core/files.js";
+import { atomicWrite, fileSha256 } from "../core/files.js";
 import { storageGuard, storageTransaction, pinStorage, temporaryStorage, removeStorage, collectStorage, reportCleanup, requestStorageCleanup } from "../core/storage.js";
 import { database as stateDatabase } from "../core/db.js";
 import { scheduleCleanup } from "../core/artifacts.js";
@@ -48,10 +49,58 @@ function readManifest(dir: string): Manifest | undefined {
   try {
     const manifest = JSON.parse(fs.readFileSync(path.join(dir, "manifest.json"), "utf8")) as Manifest;
     return manifest.schema === KB_SCHEMA && typeof manifest.version === "string" && typeof manifest.created_at === "string"
-      && record(manifest.sources) && fs.statSync(path.join(dir, "index.db")).isFile() ? manifest : undefined;
+      && record(manifest.sources) && fs.statSync(path.join(dir, "index.db")).isFile() && fs.statSync(path.join(dir, "docs.zip")).isFile() ? manifest : undefined;
   } catch {
     return undefined;
   }
+}
+
+/** Validate usable content before publishing a pointer; a readable manifest is not a pack receipt. */
+async function validatePack(dir: string, manifest: Manifest, signal?: AbortSignal) {
+  if (manifest.docs_sha256 !== undefined)
+    invariant(/^[a-f0-9]{64}$/.test(manifest.docs_sha256) && await fileSha256(path.join(dir, "docs.zip")) === manifest.docs_sha256,
+      "INTEGRITY_FAILED", "Knowledge docs archive does not match its manifest hash");
+  const { DatabaseSync } = await import("node:sqlite");
+  const index = new DatabaseSync(path.join(dir, "index.db"));
+  try {
+    invariant((index.prepare("PRAGMA quick_check").get() as { quick_check: string }).quick_check === "ok", "INVALID_INPUT", "Knowledge index is corrupt");
+    index.prepare("SELECT id,document_id,catalog_id,doc_title FROM documents LIMIT 0").all();
+    index.prepare("SELECT id,doc_id,section_title,lead_text,search_text,excerpt_truncated FROM segments LIMIT 0").all();
+    index.prepare("SELECT rowid,search_text FROM segments_fts LIMIT 0").all();
+    index.prepare("SELECT term FROM vocab LIMIT 0").all();
+    invariant((index.prepare("PRAGMA table_list('segments_fts')").get() as { type?: string } | undefined)?.type === "virtual",
+      "INVALID_INPUT", "Knowledge full-text index must be an FTS5 virtual table");
+    // FTS5 checks its shadow index and, with rank=1, its external content. This command needs a
+    // writable connection even though it changes no content; always roll back its transaction.
+    index.exec("BEGIN");
+    try { index.exec("INSERT INTO segments_fts(segments_fts,rank) VALUES('integrity-check',1)"); }
+    finally { index.exec("ROLLBACK"); }
+    index.exec("CREATE VIRTUAL TABLE temp.validation_terms USING fts5vocab(main, 'segments_fts', 'row')");
+    const term = (index.prepare("SELECT term FROM temp.validation_terms LIMIT 1").get() as { term: string } | undefined)?.term;
+    const probe = index.prepare(`SELECT snippet(segments_fts,0,'[',']','…',24) AS snippet, bm25(segments_fts) AS score
+      FROM segments_fts JOIN segments s ON s.id=segments_fts.rowid JOIN documents d ON d.id=s.doc_id
+      WHERE segments_fts MATCH ? ORDER BY score LIMIT 1`).get(`"${(term ?? "devecomcpvalidation").replaceAll('"', '""')}"`) as { snippet: string; score: number } | undefined;
+    invariant(!term || probe && typeof probe.snippet === "string" && Number.isFinite(probe.score), "INVALID_INPUT", "Knowledge full-text search is unusable");
+    const archive = await openZipIndex(path.join(dir, "docs.zip"));
+    try {
+      for (const row of index.prepare("SELECT document_id FROM documents").iterate() as Iterable<{ document_id: string }>) {
+        signal?.throwIfAborted();
+        const entry = archive.entries.get(`${row.document_id}.md`);
+        invariant(entry, "INVALID_INPUT", `Knowledge document missing from archive: ${row.document_id}`);
+        const stream = await new Promise<import("node:stream").Readable>((resolve, reject) => {
+          archive.zip.openReadStream(entry, (error, stream) => error || !stream ? reject(error) : resolve(stream));
+        });
+        let checksum = 0, bytes = 0;
+        const abort = () => stream.destroy(signal!.reason);
+        signal?.addEventListener("abort", abort, { once: true });
+        if (signal?.aborted) abort();
+        try {
+          for await (const chunk of stream) { checksum = crc32(chunk, checksum); bytes += chunk.length; }
+          invariant(bytes === entry.uncompressedSize && checksum === entry.crc32, "INTEGRITY_FAILED", `Knowledge document is corrupt: ${row.document_id}`);
+        } finally { signal?.removeEventListener("abort", abort); stream.destroy(); }
+      }
+    } finally { await closeZip(archive.zip); }
+  } finally { index.close(); }
 }
 
 function bundledDir(): string | undefined {
@@ -556,9 +605,10 @@ export async function update(options: UpdateOptions, signal: AbortSignal): Promi
       invariant(extracted0.code === 0, "INVALID_INPUT", "Not a knowledge pack archive (.tgz expected)", { tail: extracted0.stderr.slice(-300) });
       const extracted = fs.existsSync(path.join(temp, "package")) ? path.join(temp, "package") : temp;
       const manifest = readManifest(extracted);
-      invariant(manifest, "INVALID_INPUT", `Archive is not a schema ${KB_SCHEMA} knowledge pack (manifest.json + index.db required)`);
+      invariant(manifest, "INVALID_INPUT", `Archive is not a schema ${KB_SCHEMA} knowledge pack (manifest.json + index.db + docs.zip required)`);
       invariant(/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(manifest.version), "INVALID_INPUT", "Knowledge pack version is not a safe directory name");
       invariant(!expectedVersion || manifest.version === expectedVersion, "INVALID_INPUT", "Archive version does not match the requested registry version");
+      await validatePack(extracted, manifest, signal);
       signal.throwIfAborted();
       const directory = `${manifest.version}-${crypto.randomBytes(8).toString("hex")}`;
       const destination = path.join(root, directory);
@@ -584,16 +634,27 @@ export async function update(options: UpdateOptions, signal: AbortSignal): Promi
 }
 
 export async function rollback() {
-  await storageGuard(() => {
-    const root = kbRoot();
-    const pointer = path.join(root, "current.json");
+  const pointer = path.join(kbRoot(), "current.json");
+  const { before, candidate, release } = await storageGuard((db) => {
     invariant(fs.existsSync(pointer), "NOT_FOUND", "No updated pack to roll back from");
-    const current = JSON.parse(fs.readFileSync(pointer, "utf8")) as { version: string; previous: string | null };
-    if (current.previous && readManifest(path.join(root, current.previous))) {
-      const manifest = readManifest(path.join(root, current.previous))!;
-      atomicWrite(pointer, JSON.stringify({ version: manifest.version, directory: current.previous, previous: null, at: new Date().toISOString() }));
-    } else fs.rmSync(pointer);
+    const before = fs.readFileSync(pointer, "utf8");
+    const candidate = JSON.parse(before).previous as string | null;
+    return { before, candidate, release: candidate ? pinStorage(db, path.join(kbRoot(), candidate)) : () => {} };
   });
+  try {
+    if (candidate) {
+      const dir = path.join(kbRoot(), candidate), manifest = readManifest(dir);
+      invariant(manifest, "INVALID_INPUT", "Rollback pack is incomplete");
+      await validatePack(dir, manifest);
+    }
+    await storageGuard(() => {
+      invariant(fs.readFileSync(pointer, "utf8") === before, "CONFLICT", "Knowledge pack changed while validating rollback");
+      if (candidate) {
+        const manifest = readManifest(path.join(kbRoot(), candidate))!;
+        atomicWrite(pointer, JSON.stringify({ version: manifest.version, directory: candidate, previous: null, at: new Date().toISOString() }));
+      } else fs.rmSync(pointer);
+    });
+  } finally { release(); }
   await closeKnowledge();
   requestStorageCleanup();
   reportCleanup(await collectStorage(true));

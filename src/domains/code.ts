@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { pathToFileURL, fileURLToPath } from "node:url";
 import { artifactPath, commitArtifact, saveArtifact } from "../core/artifacts.js";
-import { packageRoot, stateDir } from "../core/config.js";
+import { assetRoot, stateDir } from "../core/config.js";
 import { invariant, ToolError } from "../core/errors.js";
 import { isFile, sha256, walk } from "../core/files.js";
 import { LspClient } from "../core/lsp-client.js";
@@ -32,7 +32,7 @@ const checkers = pool<CheckerProcess>(1);
 
 function startChecker(): Promise<CheckerProcess> {
   const tc = toolchain();
-  const script = path.join(packageRoot, "resources/vendor/arkts-check.cjs");
+  const script = path.join(assetRoot, "resources/vendor/arkts-check.cjs");
   const child = spawnManaged({
     file: component("node", tc),
     args: ["--max-old-space-size=2048", "--expose-gc", script, "--serve"],
@@ -192,7 +192,8 @@ interface LspSession {
   language: "arkts" | "cpp";
   ready: Promise<void>;
   opened: Map<string, { version: number; hash: string }>;
-  diagnostics: Map<string, { at: number; items: any[] }>;
+  diagnostics: Map<string, { version: number; items: any[] }>;
+  nextVersion: number;
   close(): Promise<void>;
 }
 const sessions = pool<LspSession>(3);
@@ -226,14 +227,16 @@ async function startLsp(root: string, language: "arkts" | "cpp"): Promise<LspSes
   const child = spawnManaged(cmd);
   const client = new LspClient(child);
   const session: LspSession = {
-    client, root, language, opened: new Map(), diagnostics: new Map(),
+    client, root, language, opened: new Map(), diagnostics: new Map(), nextVersion: 0,
     ready: Promise.resolve(),
     close: () => client.close(),
   };
   // A crashed server leaves the pool so the next request starts a fresh one instead of failing.
   child.once("exit", () => void sessions.closeIf(`${root}|${language}`, session));
-  client.onNotification("textDocument/publishDiagnostics", (params: { uri: string; diagnostics: any[] }) => {
-    session.diagnostics.set(params.uri, { at: Date.now(), items: params.diagnostics });
+  client.onNotification("textDocument/publishDiagnostics", (params: { uri: string; diagnostics: any[]; version?: number }) => {
+    const opened = session.opened.get(params.uri);
+    if (!opened || params.version !== opened.version || !Array.isArray(params.diagnostics)) return;
+    session.diagnostics.set(params.uri, { version: opened.version, items: params.diagnostics });
   });
   // ArkTS loads the project model asynchronously after initialize; answers before that are file-local only.
   let modulesLoaded!: () => void;
@@ -263,7 +266,11 @@ async function startLsp(root: string, language: "arkts" | "cpp"): Promise<LspSes
     }, 120000);
     client.notify("initialized", {});
     // Bounded wait (large projects index for a while; results are still useful, just less complete).
-    if (language === "arkts") await Promise.race([moduleInit, new Promise((r) => setTimeout(r, 60000))]);
+    if (language === "arkts") {
+      let timer: NodeJS.Timeout | undefined;
+      try { await Promise.race([moduleInit, new Promise((r) => { timer = setTimeout(r, 60000); })]); }
+      finally { clearTimeout(timer); }
+    }
   })();
   await session.ready;
   return session;
@@ -278,22 +285,25 @@ function findCompileCommands(root: string): string | undefined {
   return undefined;
 }
 
-async function sync(session: LspSession, file: string) {
+async function sync(session: LspSession, file: string, refresh = false) {
   const uri = pathToFileURL(file).href;
   const text = fs.readFileSync(file, "utf8");
   const hash = sha256(text);
   const state = session.opened.get(uri);
   if (!state) {
-    session.opened.set(uri, { version: 1, hash });
-    session.client.notify("textDocument/didOpen", { textDocument: { uri, languageId: session.language === "cpp" ? "cpp" : "ets", version: 1, text } });
+    const version = ++session.nextVersion;
+    session.opened.set(uri, { version, hash });
+    session.diagnostics.delete(uri);
+    session.client.notify("textDocument/didOpen", { textDocument: { uri, languageId: session.language === "cpp" ? "cpp" : "ets", version, text } });
     // Bound the working set: close the oldest document beyond 40.
     if (session.opened.size > 40) {
       const oldest = session.opened.keys().next().value!;
       session.opened.delete(oldest);
+      session.diagnostics.delete(oldest);
       session.client.notify("textDocument/didClose", { textDocument: { uri: oldest } });
     }
-  } else if (state.hash !== hash) {
-    state.version++;
+  } else if (refresh || state.hash !== hash) {
+    state.version = ++session.nextVersion;
     state.hash = hash;
     session.diagnostics.delete(uri);
     session.client.notify("textDocument/didChange", { textDocument: { uri, version: state.version }, contentChanges: [{ text }] });
@@ -423,6 +433,7 @@ export type LspAction = "hover" | "definition" | "declaration" | "implementation
 export async function lsp(input: {
   project: string; action: LspAction; file?: string; files?: string[]; symbol?: string; line?: number; column?: number; query?: string; language?: "arkts" | "cpp"; limit?: number; direction?: "incoming" | "outgoing";
 }, signal: AbortSignal) {
+  invariant(input.action !== "diagnostics" || !input.files || input.files.length <= 20, "INVALID_INPUT", "LSP diagnostics accepts at most 20 files per call; split the explicit file list");
   const root = path.resolve(input.project);
   const language = input.language ?? (input.file && /\.(c|cc|cpp|h|hpp)$/.test(input.file) ? "cpp" : "arkts");
   return sessions.use(`${root}|${language}`, () => startLsp(root, language), async (session) => {
@@ -435,28 +446,31 @@ export async function lsp(input: {
     if (input.action === "diagnostics") {
       const files = (input.files ?? (input.file ? [input.file] : [])).map((f) => path.resolve(root, f));
       invariant(files.length, "INVALID_INPUT", "Pass file or files");
+      invariant(files.length <= 20, "INVALID_INPUT", "LSP diagnostics accepts at most 20 files per call; split the explicit file list");
       const out: Record<string, unknown>[] = [];
       let suppressed = 0;
-      for (const file of files.slice(0, 20)) {
-        const { uri } = await sync(session, file);
+      for (const file of files) {
+        const { uri, text } = await sync(session, file, true);
+        const version = session.opened.get(uri)!.version;
         // Pull diagnostics first (what DevEco Studio / deveco-cli use for ArkTS: the ets-lint result
         // with module resolution done by the server); push notifications are the fallback (clangd).
         let items: any[] | undefined;
         if (language === "arkts") {
-          const pulled = await session.client.request<any>("textDocument/diagnostic", { textDocument: { uri } }, 30000, signal).catch(() => undefined);
+          const pulled = await session.client.request<any>("textDocument/diagnostic", { textDocument: { uri } }, 30000, signal).catch((error) => { if (error.code !== "CAPABILITY_UNAVAILABLE") throw error; return undefined; });
           if (Array.isArray(pulled?.items)) items = pulled.items;
         }
         if (!items) {
-          const since = Date.now();
-          const deadline = since + 15000;
+          const deadline = Date.now() + 15000;
           let entry = session.diagnostics.get(uri);
-          while ((!entry || entry.at < since - 50) && Date.now() < deadline) {
+          while ((!entry || entry.version !== version) && Date.now() < deadline) {
             signal.throwIfAborted();
             await new Promise((r) => setTimeout(r, 100));
             entry = session.diagnostics.get(uri);
           }
-          items = entry?.items ?? [];
+          invariant(entry?.version === version, "EVIDENCE_MISSING", "Language server did not publish diagnostics for the current source", { file: path.relative(root, file) });
+          items = entry.items;
         }
+        invariant(session.opened.get(uri)?.version === version && sha256(fs.readFileSync(file, "utf8")) === sha256(text), "CONFLICT", "Source changed while collecting diagnostics", { file: path.relative(root, file) });
         for (const d of items) {
           // ace-server reports "...devices phone do not include . Configure the capabilities in syscap.json." for
           // modules whose declarations carry no @syscap tag (e.g. @ohos.arkui.layoutAlgorithm). hvigor compiles

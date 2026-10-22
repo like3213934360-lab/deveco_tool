@@ -1,14 +1,16 @@
+import { temporaryDirectory } from "../support/workspace.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import http from "node:http";
 import { execFileSync } from "node:child_process";
 import { after, test } from "node:test";
 import { pathToFileURL } from "node:url";
 import { build } from "esbuild";
+import { DatabaseSync } from "node:sqlite";
+import { zipFixture } from "../support/zip.mjs";
 
-const root = path.resolve(import.meta.dirname, "../.."), work = fs.mkdtempSync(path.join(process.env.PI_SCRATCH_DIR || os.tmpdir(), "deveco-kba-"));
+const root = path.resolve(import.meta.dirname, "../.."), work = temporaryDirectory("deveco-kba-");
 process.env.DEVECO_STATE_DIR = path.join(work, "state"); process.env.DEVECO_CONFIG = path.join(work, "config.json"); fs.writeFileSync(process.env.DEVECO_CONFIG, "{}");
 const fixture = globalThis.__devecoKbAtomic = { fail: false };
 const bundle = path.join(work, "knowledge.mjs");
@@ -23,14 +25,17 @@ const m = await import(pathToFileURL(bundle).href);
 after(async () => { await m.closeKnowledge(); await m.stopCleanup(); m.closeDatabase(); fs.rmSync(bundle, { force: true }); fs.rmSync(work, { recursive: true, force: true }); delete globalThis.__devecoKbAtomic; });
 function pack(version, marker) {
   const dir = path.join(work, `src-${marker}`, "package"); fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(path.join(dir, "manifest.json"), JSON.stringify({ schema: 1, version, sources: {}, created_at: marker })); fs.writeFileSync(path.join(dir, "index.db"), marker);
+  fs.writeFileSync(path.join(dir, "manifest.json"), JSON.stringify({ schema: 1, version, sources: {}, created_at: marker })); const db = new DatabaseSync(path.join(dir, "index.db"));
+  db.exec("CREATE TABLE documents(id INTEGER PRIMARY KEY,document_id TEXT,catalog_id INTEGER,doc_title TEXT); CREATE TABLE segments(id INTEGER PRIMARY KEY,doc_id INTEGER,section_title TEXT,lead_text TEXT,search_text TEXT,excerpt_truncated INTEGER); CREATE VIRTUAL TABLE segments_fts USING fts5(search_text); CREATE TABLE vocab(term TEXT); ");
+  db.prepare("INSERT INTO documents VALUES(1,'doc',0,?)").run(marker); db.close();
+  fs.writeFileSync(path.join(dir, "docs.zip"), zipFixture({ "doc.md": marker }));
   const file = path.join(work, `.download-user-${marker}.tgz`); execFileSync("tar", ["-czf", file, "-C", path.dirname(dir), "package"]); return file;
 }
 test("same-version pointer failure preserves the active bytes and the caller's archive", async () => {
   const a = pack("1.0.0", "old"), b = pack("1.0.0", "new"), signal = new AbortController().signal;
   await m.update({ source: a }, signal); const old = m.activePack(), before = fs.readFileSync(path.join(work, "state/kb/current.json"));
   fixture.fail = true; await assert.rejects(m.update({ source: b, force: true }, signal), /injected pointer failure/); fixture.fail = false;
-  assert.deepEqual(fs.readFileSync(path.join(work, "state/kb/current.json")), before); assert.equal(fs.readFileSync(path.join(old.dir, "index.db"), "utf8"), "old");
+  assert.deepEqual(fs.readFileSync(path.join(work, "state/kb/current.json")), before); const saved = new DatabaseSync(path.join(old.dir, "index.db"), {readOnly:true}); try { assert.equal(saved.prepare("SELECT doc_title FROM documents").get().doc_title, "old"); } finally {saved.close();}
   assert.equal(fs.existsSync(a), true); assert.equal(fs.existsSync(b), true);
   await m.update({ source: b, force: true }, signal); assert.equal(m.activePack().manifest.created_at, "new");
   await m.rollback(); assert.equal(m.activePack().manifest.created_at, "old");

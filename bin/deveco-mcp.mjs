@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { spawnSync } from "node:child_process";
-import { sourceFingerprint, verifyBuild } from "./runtime.mjs";
+import { sourceFingerprint, verifyBuild, useGeneration } from "./runtime.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 try {
@@ -20,6 +20,7 @@ try {
     if (result.error || result.status !== 0) throw new Error("Local build failed; run npm ci and npm run build", { cause: result.error });
     manifest = verifyBuild(root, sourceFingerprint(root));
   }
+  await useGeneration(root, manifest.entry);
   if ((process.argv[2] ?? "mcp") === "mcp")
     console.error(`deveco-mcp ${manifest.version} build ${manifest.input_hash}`);
   await import(pathToFileURL(path.join(root, "dist", manifest.entry)).href);

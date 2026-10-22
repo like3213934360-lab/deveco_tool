@@ -1,14 +1,14 @@
+import { temporaryDirectory } from "../support/workspace.mjs";
 // Metadata coverage, not proof of model behavior. Real host trials live in test/model/eval.mjs.
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 import { connect } from "../support/mcp.mjs";
 import { promptMetrics } from "../support/prompts.mjs";
 
 test("guidance covers discovery, standalone tools, safe continuation and evidence rules", async () => {
-  const state = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-guidance-"));
+  const state = temporaryDirectory("deveco-guidance-");
   const client = connect({ DEVECO_STATE_DIR: state, DEVECO_CONFIG: path.join(state, "none.json") });
   try {
     const { instructions } = (await client.initialize()).result;

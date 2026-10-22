@@ -1,13 +1,13 @@
+import { temporaryDirectory } from "../support/workspace.mjs";
 // Platform command contracts with real argument construction and isolated transport replies.
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { after, test } from "node:test";
 import { pathToFileURL } from "node:url";
 import { build } from "esbuild";
-const root = path.resolve(import.meta.dirname, "../.."), work = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-controls-"));
-const bundle = path.join(root, "node_modules/.cache/device-controls-test.mjs");
+const root = path.resolve(import.meta.dirname, "../.."), work = temporaryDirectory("deveco-controls-");
+const bundle = path.join(work, "device-controls-test.mjs");
 const f = globalThis.__controls = { calls: [], respond: () => ({ code: 0, stdout: "success", stderr: "" }) };
 await build({ stdin: { contents: `export * from './src/domains/device-controls.ts'; export { install, validatePackages } from './src/domains/device.ts';`, resolveDir: root }, outfile: bundle,
   bundle: true, platform: "node", format: "esm", packages: "external", logLevel: "error", plugins: [{ name: "transport", setup(b) {

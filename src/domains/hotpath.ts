@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { atomicWrite } from "../core/files.js";
 import { diffSources, snapshotSources, type SourceSnapshot } from "./preflight.js";
+import { pinStorage, storageGuard } from "../core/storage.js";
 
 /*
  * run build_run mode=auto: patch the running app (HQF quick fix, ~5 s) instead of build + install +
@@ -17,6 +18,9 @@ import { diffSources, snapshotSources, type SourceSnapshot } from "./preflight.j
  */
 
 export interface HotState {
+  product: string;
+  moduleTarget: string;
+  modules: { name: string; target: string }[];
   module: string;
   moduleRoot: string;
   target: string;
@@ -67,8 +71,13 @@ export function changedInputs(previous: SourceSnapshot, current: SourceSnapshot)
 export type HotDecision = { hot: true; files: string[] } | { hot: false; reason: string; unchanged?: boolean };
 
 /** Decide whether a quick fix is equivalent to a redeploy. Pure (given the snapshots). */
-export function decideHot(state: HotState | undefined, now: { target: string; install?: string; running: boolean; sources: SourceSnapshot; inputs: SourceSnapshot; moduleRel: string }): HotDecision {
-  if (!state || !state.install || typeof state.inputs !== "object") return { hot: false, reason: "no quick-fix baseline yet (recorded from the second deploy on)" };
+export function decideHot(state: HotState | undefined, now: { product: string; module: string; moduleTarget: string; modules: HotState["modules"]; target: string; install?: string; running: boolean; sources: SourceSnapshot; inputs: SourceSnapshot; moduleRel: string }): HotDecision {
+  if (!state || !state.install || typeof state.inputs !== "object" || !Array.isArray(state.modules) || !state.modules.length)
+    return { hot: false, reason: "no quick-fix baseline yet (recorded from the second deploy on)" };
+  if (state.product !== now.product || state.module !== now.module || state.moduleTarget !== now.moduleTarget)
+    return { hot: false, reason: "build product, module or module target changed" };
+  const selection = (modules: HotState["modules"]) => JSON.stringify(modules.map((m) => [m.name, m.target] as const).sort(([a, at], [b, bt]) => a.localeCompare(b) || at.localeCompare(bt)));
+  if (selection(state.modules) !== selection(now.modules)) return { hot: false, reason: "build module selection or module target changed" };
   const inputs = changedInputs(state.inputs, now.inputs);
   // Nothing changed and the same copy is running: relaunching it is all a deploy would achieve.
   if (state.target === now.target && now.install === state.install && !inputs.length && !diffSources(state.sources, now.sources).length
@@ -95,8 +104,11 @@ export function stateFile(stateDir: string, project: string, target: string) {
 export function readState(file: string): HotState | undefined {
   try { return JSON.parse(fs.readFileSync(file, "utf8")) as HotState; } catch { return undefined; }
 }
-export function writeState(file: string, state: HotState) {
-  atomicWrite(file, JSON.stringify(state));
+export async function writeState(file: string, state: HotState) {
+  await storageGuard((db) => {
+    const release = pinStorage(db, file);
+    try { atomicWrite(file, JSON.stringify(state)); } finally { release(); }
+  });
 }
 export function currentSources(root: string, previous?: SourceSnapshot) {
   return snapshotSources(root, previous);

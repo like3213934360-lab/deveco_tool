@@ -13,7 +13,7 @@
 | 命令 | 范围 / 条件 |
 | --- | --- |
 | `npm run typecheck` | 产品及公共模块静态检查 |
-| `npm test` | 构建 + 全部离线 unit/integration；并发 4，不连 SDK、设备或模型，不含外部 FFmpeg 套件 |
+| `npm test` | 构建 + 全部离线 unit/integration（含 LSP 协议夹具、并发恢复、ZIP/知识包校验、热更新身份及构建代租约/打包）；并发 4，不连 SDK、设备或模型，不含外部 FFmpeg 套件 |
 | `npm run test:fonts` | 真实字体读取/安装/卸载；E2E_DIR、E2E_TARGET、E2E_FONT_FILE、E2E_FONT_NAME，必须是独占可卸载字体；缺少系统服务明确失败 |
 | `npm run test:ui-selectors` | 指定应用上的 XPath/正则查找、断言和批量等待；E2E_DIR、E2E_TARGET、E2E_BUNDLE、E2E_ABILITY，可选 E2E_MODULE |
 | `npm run test:build-signing` | 真实 SDK 单次签名选择、签名包校验、失败恢复；E2E_DIR、E2E_PROJECT（专用单入口工程）、E2E_SIGNING_CONFIG、E2E_BUNDLE，可选 E2E_BUILD_MODE |
@@ -49,7 +49,11 @@ MCP 契约回归同样包含在 `npm test`：`integration/protocol.test.mjs`、`
 
 电脑端产物保留回归也包含在 `npm test`：`node --test test/integration/jobs.test.mjs test/integration/retention.test.mjs`。前者验证过期边界、活动任务、容量限额、失败后停止重试、目录保护及引用变化与旧扫描并发的回收边界；后者启动真实 MCP 进程，验证无任务时到期自动删除、批量删除期间的协议响应、失败日志汇总和重启后继续跳过失败文件。仅使用自行清理的临时目录，不连接设备。 知识包生命周期由 `kb-source.test.mjs`、`kb-update.test.mjs` 与这些保留回归共同覆盖：并发读取、多进程占用、异常退出、回滚回收、临时修复目录过期、符号链接边界及失败状态跨进程持久化。
 
-`unit/domains.test.mjs` 与 `integration/agreements.test.mjs` 验证根节点深度、过滤计数、平台锁屏/桌面/应用窗口、上下文查询失败及正常命中不增加查询；后者只模拟设备传输。`integration/start-create.test.mjs` 验证 build 的布尔 synced 和独立 sync_reason，真实 SDK 对应 `e2e/project.test.mjs` 的模板构建与增量构建。
+离线测试、媒体检查、提示统计和性能脚本通过 `support/workspace.mjs` 创建带所有权标记的 `.scratch/test-*` 临时目录，正常结束立即清理；遗留目录满 24 小时且父进程、已登记 MCP 子进程均退出后由运行时回收。独立安装包的依赖解析测试及须脱离仓库 Git 忽略规则的来源测试，使用系统临时目录内同样登记的 `deveco-test-*`；不扫描或删除未登记的旧 `.scratch` 材料。测试编译包和启动日志也在该工作区内，E2E 显式证据目录继续保留。`retention.test.mjs` 验证状态失效、有效/活动状态保护、旧日志迁移、逐记录到期、工作区进程占用和外部链接边界；`unit/verification.test.mjs` 验证活跃审查记录、并发迁移和坏日志保留。
+
+`unit/domains.test.mjs` 与 `integration/agreements.test.mjs` 验证根节点深度、过滤计数、平台锁屏/桌面/应用窗口、上下文查询失败及正常命中不增加查询；后者只模拟设备传输。`integration/start-create.test.mjs` 验证 build 的布尔 synced、独立 sync_reason，以及 HAP/HSP/HAR/APP 打包范围、旧签名清理、模块缺包和同时间戳候选；仅替换 SDK 边界，真实 SDK 对应 `e2e/project.test.mjs` 的模板构建、旧签名残留与增量再打包。
+
+自动热更新由 `unit/efficiency.test.mjs` 和 `integration/jobs.test.mjs` 验证完整模块集合及每个 target：后者连接真实工程解析、select、baseline、hot 与构建/安装分支，仅替换设备身份和基线编译边界。知识包 `integration/kb-update.test.mjs` 使用真实 SQLite/ZIP 和 MCP 更新/回滚，拒绝伪装全文索引的普通表、索引内容脱节及坏归档，并核对失败后指针和原检索保持可用；不算云源或设备验收。
 
 `integration/verification.test.mjs` 验证源码定位在截断前排除 Git 忽略的缓存，并保留未跟踪源码与显式文件定位；`integration/forms.test.mjs` 验证桌面过渡等待、取消与超时，保留未知宿主失败和卡片唯一实例清理规则。构建预检的源码身份比较由 `jobs.test.mjs` 与 `unit/efficiency.test.mjs` 覆盖，真实编译失败、源码修复和同一任务恢复由 `e2e/project.test.mjs` 覆盖。
 
@@ -134,3 +138,5 @@ form 用例先完整清点桌面，再通过 `ui form exercise` 添加指定预�
 `integration/hdc-target.test.mjs`（已纳入 `npm test`）使用真实本地 TCP 连接验证任务级 HDC 目标绑定、并发隔离、分包/粘包与二进制透传、错误目标/全局命令拒绝、握手超时、断连和取消清理。这些协议夹具不代表 SDK 或设备测试通过。产品 Instrument 支持明确选定的真机或模拟器；上述既有 USB 套件的默认设备保护条件保留，模拟器验收单独记录实际 MCP 调用及原始 SDK/设备证据。
 
 多设备模拟器专项：`npm run test:instrument-target`，显式传 E2E_PROJECT/E2E_TARGET/E2E_DIR；必须有另一台已连接设备，所选目标必须经 device info 证明为模拟器，专用工程需具备 SDK onDeviceTest 所要求的签名。覆盖正例、故意失败例和覆盖率，其他设备仅进行只读枚举，不执行测试操作；不把模拟器结果写成 USB 验收。
+
+LSP 离线连接回归可单独运行 `node --test test/integration/lsp.test.mjs`，使用临时语言服务器、现有 Node 与 esbuild，不依赖 SDK；真实 SDK 行为仍由 `npm run test:lsp` 验证。推送诊断须携带本次文档版本；无版本或未返回当前源码结果明确缺证，不能按零错误判定。诊断显式文件列表每次最多 20 个，超限在启动 SDK 前拒绝。

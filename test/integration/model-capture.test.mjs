@@ -1,13 +1,14 @@
+import { temporaryDirectory } from "../support/workspace.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 import { setTimeout as delay } from "node:timers/promises";
 import { Capture } from "../model/capture.mjs";
 
 test("provider observation preserves request and streaming Response identity without recording headers", async () => {
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-model-capture-"));
+  const temporary = temporaryDirectory("deveco-model-capture-"), directory = path.join(temporary, "capture");
+  fs.mkdirSync(directory);
   const original = globalThis.fetch, previous = process.env.DEVECO_MODEL_CAPTURE;
   const input = "https://provider.invalid", init = { body: JSON.stringify({ model: "test", tools: [{ function: { name: "deveco_ui" } }] }), headers: { Authorization: "private-token" } };
   const stream = "data: 中文🙂\n\ndata: [DONE]\n\n", response = new Response(stream);
@@ -26,6 +27,6 @@ test("provider observation preserves request and streaming Response identity wit
   } finally {
     globalThis.fetch = original;
     if (previous === undefined) delete process.env.DEVECO_MODEL_CAPTURE; else process.env.DEVECO_MODEL_CAPTURE = previous;
-    fs.rmSync(directory, { recursive: true, force: true });
+    fs.rmSync(temporary, { recursive: true, force: true });
   }
 });

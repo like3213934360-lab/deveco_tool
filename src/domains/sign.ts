@@ -127,7 +127,8 @@ export async function teamId(team?: string, write = false) {
   const auth = await credentials("developer");
   if (write) {
     const { teams } = await import("./auth.js");
-    const list = (await teams().catch(() => ({ teams: [] as { id: string; name: string; role?: number }[] }))).teams;
+    const list = (await teams()).teams;
+    invariant(list.length > 0, "EVIDENCE_MISSING", "The account returned no selectable developer teams; pass an explicit team after inspection");
     if (list.length > 1)
       throw new ToolError("TEAM_AMBIGUOUS", `This account belongs to ${list.length} developer teams and no team was given`, { teams: list },
         "Do not choose on your own: ask the user which team to use, then call again with team=<id>");

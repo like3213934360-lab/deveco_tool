@@ -1,12 +1,12 @@
+import { temporaryDirectory } from "../test/support/workspace.mjs";
 // Measure handshake latency, tools/list, idle CPU and RSS of the MCP server.
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { connect } from "../test/support/mcp.mjs";
 import { promptMetrics } from "../test/support/prompts.mjs";
 
-const state = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-bench-"));
+const state = temporaryDirectory("deveco-bench-");
 const env = { DEVECO_STATE_DIR: state, ...(process.env.DEVECO_CONFIG ? { DEVECO_CONFIG: process.env.DEVECO_CONFIG } : {}) };
 const samples = [];
 for (let i = 0; i < 5; i++) {

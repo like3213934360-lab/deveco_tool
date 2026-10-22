@@ -1,7 +1,7 @@
+import { temporaryDirectory } from "../support/workspace.mjs";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import readline from "node:readline";
 import http from "node:http";
@@ -11,7 +11,7 @@ import { connect } from "../support/mcp.mjs";
 
 const root = path.resolve(import.meta.dirname, "../..");
 function raw(t) {
-  const state = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-rpc-"));
+  const state = temporaryDirectory("deveco-rpc-");
   const env = { DEVECO_STATE_DIR: state, DEVECO_CONFIG: path.join(state, "none.json") };
   const child = spawn(process.execPath, [path.join(root, "dist/cli.js"), "mcp"], { env: { ...process.env, ...env } });
   const messages = [], readers = [];

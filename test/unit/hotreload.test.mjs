@@ -1,24 +1,24 @@
+import { temporaryDirectory } from "../support/workspace.mjs";
 // Domain regression tests use an SDK fixture; real patch/UI acceptance is a separate E2E test.
 import assert from "node:assert/strict";
 import crypto from "node:crypto";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { after, test } from "node:test";
 import { pathToFileURL } from "node:url";
 import { build } from "esbuild";
 
-const root = path.resolve(import.meta.dirname, "../.."), work = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-hot-"));
+const root = path.resolve(import.meta.dirname, "../.."), work = temporaryDirectory("deveco-hot-");
 process.env.DEVECO_STATE_DIR = path.join(work, "state");
 const fixture = globalThis.__devecoHot = { stamp: "1:2", patch: 3000001, calls: [], fail: false, compile: 0 };
-const output = path.join(root, "node_modules/.cache/deveco-hot.mjs");
+const output = path.join(work, "deveco-hot.mjs");
 await build({ entryPoints: [path.join(root, "src/domains/hotreload.ts")], outfile: output, bundle: true, format: "esm", platform: "node", packages: "external", logLevel: "error", plugins: [{ name: "sdk", setup(b) {
   b.onResolve({ filter: /(?:device|proc|toolchain)\.js$/ }, (a) => a.importer.replaceAll("\\", "/").endsWith("/domains/hotreload.ts") ? { path: path.basename(a.path, ".js"), namespace: "fixture" } : undefined);
   b.onLoad({ filter: /.*/, namespace: "fixture" }, (a) => ({ contents: {
     toolchain: `export const toolCommand=()=>({});`,
-    proc: `export async function run(){globalThis.__devecoHot.compile++;return {code:0,stdout:'',stderr:''}}`,
+    proc: `import fs from 'node:fs';import path from 'node:path';export async function run(){const f=globalThis.__devecoHot;f.compile++;if(f.patchOutput){const base=f.patchOutput;fs.mkdirSync(path.dirname(base.hqf),{recursive:true});fs.writeFileSync(base.hqf,'patch');fs.mkdirSync(path.dirname(base.abc),{recursive:true});fs.writeFileSync(base.abc,'abc');f.onCompile?.()}return {code:0,stdout:'',stderr:'',elapsedMs:1}}`,
     device: `import fs from 'node:fs';const f=()=>globalThis.__devecoHot;
-      export const resolveTarget=async(target)=>target;export async function installStamp(){return f().stamp};export async function pidOf(){return 123};export async function hdc(){throw new Error('unexpected hdc')};
+      export const resolveTarget=async(target)=>target;export async function installStamp(){return f().stamp};export async function pidOf(){return 123};export async function hdc(){f().calls.push({transfer:true});return {code:0,stdout:'finish',elapsedMs:1}};
       export async function install(target,packages,signal,replace){signal.throwIfAborted();f().calls.push({target,packages:packages.map(p=>fs.readFileSync(p,'utf8')),replace});if(f().fail)throw new Error('install failed');f().patch=f().keepPatch?3000001:0;f().stamp='1:3'};
       export async function shell(target,args){f().calls.push({target,args});return {code:0,stdout:f().query??('bundle name: com.test.hot\\npatch version code: '+f().patch+'\\n'),stderr:''}};`,
   }[a.path] }));
@@ -27,12 +27,13 @@ const m = await import(pathToFileURL(output).href);
 after(() => { fs.rmSync(output, { force: true }); fs.rmSync(work, { recursive: true, force: true }); delete globalThis.__devecoHot; });
 const signal = new AbortController().signal;
 async function baseline() {
-  Object.assign(fixture, { stamp: "1:2", patch: 3000001, calls: [], fail: false, compile: 0, keepPatch: false, query: undefined });
+  Object.assign(fixture, { stamp: "1:2", patch: 3000001, calls: [], fail: false, compile: 0, keepPatch: false, query: undefined, patchOutput: undefined, onCompile: undefined });
   const projectRoot = fs.mkdtempSync(path.join(work, "project-"));
   const project = { root: projectRoot, product: "default", bundleName: "com.test.hot", modules: [{ name: "entry", type: "entry", root: path.join(projectRoot, "entry"), target: "default" }] };
   const source = path.join(project.modules[0].root, "src/main/ets/Index.ets");
   fs.mkdirSync(path.dirname(source), { recursive: true }); fs.writeFileSync(source, "original source");
   const packages = ["entry.hap", "shared.hsp"].map((name) => { const file = path.join(projectRoot, name); fs.writeFileSync(file, `original ${name}`); return { path: file, sha256: crypto.createHash("sha256").update(fs.readFileSync(file)).digest("hex") }; });
+  fs.writeFileSync(path.join(projectRoot, "build-profile.json5"), JSON.stringify({ app: { products: [{ name: "default" }] } }));
   await m.recordBaseline(project, "entry", project.bundleName, "owned", signal, packages);
   const state = path.join(project.modules[0].root, "build/default/intermediates/deveco-mcp-hot.json");
   return { project, source, packages, state, read: () => JSON.parse(fs.readFileSync(state, "utf8")) };
@@ -87,4 +88,33 @@ test("a package changed since installation cannot replace an existing baseline",
   assert.equal(fs.readFileSync(b.state, "utf8"), previous);
   assert.equal(fs.readdirSync(path.dirname(b.state)).filter((n) => n.startsWith("deveco-mcp-baseline-")).length, 1);
   assert.equal(fixture.compile, 1);
+});
+
+function patchOutput(b) {
+  fixture.patchOutput = { hqf: path.join(b.project.modules[0].root, "build/default/outputs/default/entry-default-unsigned.hqf"), abc: path.join(b.project.modules[0].root, "build/default/intermediates/patch/default/ets/patch.abc") };
+  fixture.query = "apply quick fix successfully";
+}
+test("explicit patch files advance only sent digests; other edits remain pending", async () => {
+  const b = await baseline(), second = path.join(path.dirname(b.source), "Second.ets");
+  fs.writeFileSync(second, "second baseline");
+  await m.recordBaseline(b.project, "entry", b.project.bundleName, "owned", signal, b.packages);
+  fs.writeFileSync(b.source, "first edit"); fs.writeFileSync(second, "second edit");
+  const before = b.read(); patchOutput(b);
+  const first = await m.applyHotReload(b.project, "entry", signal, () => {}, { files: [b.source] });
+  assert.equal(first.applied, true); assert.equal(b.read().files[second], before.files[second]);
+  assert.notEqual(b.read().files[b.source], before.files[b.source]);
+  const next = await m.applyHotReload(b.project, "entry", signal, () => {});
+  assert.deepEqual(next.files, [path.relative(b.project.root, second)]);
+});
+test("direct patches reject replaced installations and source races before device mutation", async () => {
+  for (const mode of ["reinstalled", "legacy", "moduleTarget", "duringCompile", "sourceRace"]) {
+    const b = await baseline(); fs.writeFileSync(b.source, "edit"); const before = b.read(); patchOutput(b);
+    if (mode === "moduleTarget") b.project.modules[0].target = "anotherTarget";
+    if (mode === "reinstalled") fixture.stamp = "different-install";
+    if (mode === "legacy") { delete before.restore; fs.writeFileSync(b.state, JSON.stringify(before)); }
+    if (mode === "duringCompile") fixture.onCompile = () => { fixture.stamp = "different-install"; };
+    if (mode === "sourceRace") fixture.onCompile = () => fs.writeFileSync(b.source, "new edit while building");
+    await assert.rejects(m.applyHotReload(b.project, "entry", signal, () => {}), { code: "CONFLICT" });
+    assert.equal(fixture.calls.length, 0, mode); assert.deepEqual(b.read(), before);
+  }
 });

@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { z } from "zod";
+import { selectorSchema } from "./selectors.js";
 import { kvDelete, kvGet, kvSet } from "../core/db.js";
 import { invariant, ToolError } from "../core/errors.js";
 import { atomicWrite } from "../core/files.js";
@@ -9,11 +10,10 @@ import { automaticActions, automaticResult, acceptAgreements, act, center, descr
 
 /* Flows are stored in <project>/.arkpilot/flows/<id>.json (compatible with v0.x files). */
 
-const legacySelector = z.object({
-  text: z.string().optional(), textMode: z.enum(["contains", "exact"]).optional(), key: z.string().optional(),
-  type: z.string().optional(), node_id: z.string().optional(), bundle_name: z.string().optional(),
-  checked: z.boolean().optional(), selected: z.boolean().optional(), enabled: z.boolean().optional(),
-  clickableOnly: z.boolean().optional(),
+// Retain historic flow metadata, while every current selector field shares the tool contract.
+const legacySelector = selectorSchema.extend({
+  textMode: z.enum(["contains", "exact"]).optional(), node_id: z.string().optional(),
+  bundle_name: z.string().optional(), clickableOnly: z.boolean().optional(),
 }).passthrough();
 const pct = z.object({ xPercent: z.number(), yPercent: z.number() });
 const stepSchema = z.object({
@@ -44,16 +44,14 @@ type Step = Flow["steps"][number];
 type LegacySelector = z.infer<typeof legacySelector>;
 
 export function toSelector(s: LegacySelector): Selector {
-  return {
-    text: s.text, exact: s.textMode === "exact", key: s.key, type: s.type, id: s.node_id, bundle: s.bundle_name,
-    checked: s.checked, selected: s.selected, enabled: s.enabled, clickable: s.clickableOnly ? true : undefined,
-  };
+  const current = Object.fromEntries(Object.keys(selectorSchema.shape).filter((key) => s[key] !== undefined).map((key) => [key, s[key]]));
+  return selectorSchema.parse(Object.fromEntries(Object.entries({ ...current,
+    exact: s.exact ?? (s.textMode === undefined ? undefined : s.textMode === "exact"),
+    id: s.id ?? s.node_id, bundle: s.bundle ?? s.bundle_name, clickable: s.clickable ?? s.clickableOnly,
+  }).filter(([, value]) => value !== undefined)));
 }
 export function fromSelector(s: Selector): LegacySelector {
-  return Object.fromEntries(Object.entries({
-    text: s.text, textMode: s.text ? (s.exact ? "exact" : "contains") : undefined, key: s.key, type: s.type, node_id: s.id,
-    bundle_name: s.bundle, checked: s.checked, selected: s.selected, enabled: s.enabled, clickableOnly: s.clickable || undefined,
-  }).filter(([, v]) => v !== undefined)) as LegacySelector;
+  return selectorSchema.parse(s);
 }
 
 function flowDir(project: string) {
@@ -138,8 +136,8 @@ export function makeStep(flow: Flow, values: Record<string, string>, action: Act
     case "click": step.action = "tap"; break;
     case "double_click": step.action = "doubleTap"; break;
     case "long_click": step.action = "longTap"; break;
-    case "input": {
-      step.action = "input";
+    case "input": case "type": {
+      step.action = action.action === "input" ? "input" : "focusInput";
       const variable = `input${Object.keys(flow.variables).length + 1}`;
       flow.variables[variable] = { required: true, secret: true };
       values[variable] = action.text;
@@ -152,7 +150,6 @@ export function makeStep(flow: Flow, values: Record<string, string>, action: Act
       if (screen) step.gesture = { fromXPercent: +(action.x * 100 / screen.w).toFixed(2), fromYPercent: +(action.y * 100 / screen.h).toFixed(2), toXPercent: +(action.x2 * 100 / screen.w).toFixed(2), toYPercent: +(action.y2 * 100 / screen.h).toFixed(2) };
       break;
     case "scroll": step.action = "dircFling"; step.direction = { left: 0, right: 1, up: 2, down: 3 }[action.direction]; break;
-    case "type": step.action = "focusInput"; break;
     default: return undefined;
   }
   if (selector) step.selector = fromSelector(selector);

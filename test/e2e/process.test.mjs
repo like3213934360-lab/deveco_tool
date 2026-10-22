@@ -140,8 +140,10 @@ test("SDK children recover after process death and shut down cleanly", async (t)
     assert.ok(interrupted, "The interrupted job must exist in this run's private state");
     const input = JSON.parse(interrupted.input), outputs = JSON.parse(interrupted.outputs);
     const inputsAfter = Object.fromEntries(Object.keys(inputsBefore).map((file) => [file, sha(fs.readFileSync(path.join(projectRoot, file)))]));
-    const audit = fs.readFileSync(path.join(state, "audit", "operations.jsonl"), "utf8").split("\n").filter(Boolean)
-      .map((line) => JSON.parse(line)).filter((entry) => entry.job_id === started.job_id);
+    const auditDb = new DatabaseSync(path.join(state, "state.db"), { readOnly: true });
+    let audit;
+    try { audit = auditDb.prepare("SELECT data FROM audit_events ORDER BY created,rowid").all().map((row) => JSON.parse(row.data)).filter((entry) => entry.job_id === started.job_id); }
+    finally { auditDb.close(); }
     const resource = `project:${projectRoot}`, reservations = await call("job", { action: "resources" });
     const leases = reservations.filter((entry) => entry.resource === resource);
     const remaining = survivors([...owned.values()].filter((child) => sameIdentity(killedOwner, child.owner)));

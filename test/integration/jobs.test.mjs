@@ -1,16 +1,17 @@
+import { temporaryDirectory } from "../support/workspace.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { after, test } from "node:test";
 import { pathToFileURL } from "node:url";
 import { once } from "node:events";
 import { Worker } from "node:worker_threads";
+import { spawn } from "node:child_process";
 import { build } from "esbuild";
 import { connect } from "../support/mcp.mjs";
 
 // Bundle a small harness that exercises the job runner directly (TS sources -> ESM).
-const out = fs.mkdtempSync(path.join(os.tmpdir(), "deveco-jobs-"));
+const out = temporaryDirectory("deveco-jobs-");
 // Native resolution expands Windows runner short names (e.g. RUNNER~1); JS realpath does not.
 const canonicalPath = (file) => { const p = fs.realpathSync.native(file); return process.platform === "win32" ? p.toLowerCase() : p; };
 // Tests leave nothing behind; on Windows the state DB may still be open at exit (EPERM): best effort there.
@@ -25,9 +26,10 @@ export * from ${JSON.stringify(path.resolve("src/core/storage.ts"))};
 export { ToolError } from ${JSON.stringify(path.resolve("src/core/errors.ts"))};
 export { formatCheck } from ${JSON.stringify(path.resolve("src/domains/code.ts"))};
 export { settlePreflight } from ${JSON.stringify(path.resolve("src/jobs.ts"))};
+export { writeState } from ${JSON.stringify(path.resolve("src/domains/hotpath.ts"))};
 `);
-// Output inside the repo so external packages (zod, json5) resolve from node_modules.
-const bundle = path.resolve("node_modules/.cache/deveco-test-harness.mjs");
+// The owned workspace resolves packages from the checkout without leaving shared harness files.
+const bundle = path.join(out, "harness.mjs");
 await build({ entryPoints: [harness], outfile: bundle, bundle: true, format: "esm", platform: "node", packages: "external", logLevel: "error" });
 const m = await import(`${pathToFileURL(bundle).href}?t=${Date.now()}`);
 after(async () => {
@@ -540,6 +542,7 @@ test("a claimed deletion refuses new users and a temporary repair workspace is r
   try {
     await Promise.race([started, removing.then(() => assert.fail("Deletion completed without reaching the intended file gate"))]);
     await assert.rejects(m.storageGuard((db) => m.pinStorage(db, file)), { code: "RESOURCE_BUSY" });
+    await assert.rejects(m.writeState(file, { moduleRoot: out }), { code: "RESOURCE_BUSY" });
   } finally { resume(); await removing; }
   assert.equal(fs.existsSync(dir), false);
   await assert.rejects(m.temporaryStorage(dir, async () => { fs.writeFileSync(file, "temporary"); throw new Error("repair failed"); }), /repair failed/);
@@ -581,4 +584,122 @@ test("managed deletion failures remain excluded in a fresh MCP process", async (
     for (const dir of roots) assert.equal(fs.readFileSync(path.join(dir, "blocked"), "utf8"), "manual cleanup only");
     assert.doesNotMatch(client.stderr, /\[retention\]/);
   } finally { await client.close(); }
+});
+
+test("simultaneous resume claims once and cancellation retains the original runner", async () => {
+  const db = await m.database(); let executions = 0, entered;
+  const started = new Promise((resolve) => { entered = resolve; });
+  m.defineJob({ kind: "t_resume_race", steps: [{ id: "wait", run: async (ctx) => {
+    executions++; entered();
+    await new Promise((resolve, reject) => { if (ctx.signal.aborted) reject(ctx.signal.reason); else ctx.signal.addEventListener("abort", () => reject(ctx.signal.reason), { once: true }); });
+  } }] });
+  db.prepare("INSERT INTO jobs(id,kind,status,input,created,updated) VALUES('j_race','t_resume_race','interrupted','{}',0,0)").run();
+  const results = await Promise.allSettled(Array.from({ length: 8 }, () => m.resumeJob("j_race")));
+  assert.equal(results.filter((r) => r.status === "fulfilled").length, 1);
+  await started; assert.equal(executions, 1);
+  assert.equal((await m.jobStatus("j_race")).status, "running");
+  assert.equal((await m.cancelJob("j_race")).status, "cancelled");
+  assert.equal(executions, 1);
+});
+
+test("single-line JSON artifacts can be read completely with continuation offsets", async () => {
+  const original = JSON.stringify({ evidence: "x".repeat(59985) + "😀" + "尾".repeat(90000) });
+  const saved = await m.saveArtifact(original, "application/json");
+  let line = 0, offset = 0, content = "", pages = 0;
+  do {
+    const page = await m.readArtifact(saved.artifact_id, { line, offset });
+    assert.ok(page.content.length <= 60000);
+    assert.equal(page.content.includes("�"), false);
+    content += page.content; pages++;
+    line = page.next_line; offset = page.next_offset;
+  } while (line !== null && pages < 10);
+  assert.equal(line, null); assert.ok(pages >= 3);
+  assert.equal(content, original); assert.deepEqual(JSON.parse(content), JSON.parse(original));
+});
+
+test("actual deploy and flow workflows refuse uncertain effects even under forced resume", async () => {
+  const isolated = `${bundle}-effects.mjs`;
+  await build({stdin:{contents:`import ${JSON.stringify(path.resolve("src/jobs.ts"))};export * from ${JSON.stringify(path.resolve("src/core/jobs.ts"))};export {closeDatabase} from ${JSON.stringify(path.resolve("src/core/db.ts"))};export {stopCleanup} from ${JSON.stringify(path.resolve("src/core/artifacts.ts"))};`,resolveDir:process.cwd()},outfile:isolated,bundle:true,format:"esm",platform:"node",packages:"external",logLevel:"error",plugins:[{name:"offline-resource-boundary",setup(b){
+    b.onResolve({filter:/operations\.js$/},a=>a.importer.replaceAll("\\","/").endsWith("/core/jobs.ts")?{path:"operations",namespace:"fixture"}:undefined);
+    b.onLoad({filter:/.*/,namespace:"fixture"},()=>({contents:"export const withOperation=async(_name,_input,_signal,fn)=>fn();"}));
+  }}]});
+  const runner=await import(pathToFileURL(isolated).href);
+  try {
+    const db = await m.database();
+    const cases = [
+      {kind:"deploy",step:"install",outputs:{target:{target:"offline"},select:{modules:["entry"]},uninstall:null}},
+      {kind:"deploy",step:"flow",outputs:{target:{target:"offline"},select:{modules:["entry"]},uninstall:null,install:{installed:true},launch:{started:true}}},
+      {kind:"flow_replay",step:"replay",outputs:{}},
+    ];
+    for (const [i,c] of cases.entries()) {
+      const id=`j_real_effect_${i}`, input={project:path.join(out,"missing-project"),target:"offline",then_flow:"dangerous-path"};
+      db.prepare("INSERT INTO jobs(id,kind,status,input,outputs,created,updated) VALUES(?,?,'interrupted',?,?,0,0)").run(id,c.kind,JSON.stringify(input),JSON.stringify(c.outputs));
+      db.prepare("INSERT INTO effects(job_id,step,state,updated) VALUES(?,?,'intent',0)").run(id,c.step);
+      await runner.resumeJob(id,true);const result=await runner.waitJob(id,3000);
+      assert.equal(result.status,"needs_input",JSON.stringify(result));assert.equal(result.error.code,"EFFECT_UNCERTAIN");assert.equal(result.error.details.step,c.step);
+      assert.equal(db.prepare("SELECT state FROM effects WHERE job_id=? AND step=?").get(id,c.step).state,"intent");
+    }
+  } finally {await runner.stopCleanup();runner.closeDatabase();fs.rmSync(isolated,{force:true});}
+});
+
+test("actual auto-deploy binds its baseline to every selected module target", async () => {
+  const isolated = `${bundle}-hot-selection.mjs`, projectRoot = path.join(out, "hot-selection");
+  const definitions = globalThis.__hotSelectionJobs = new Map();
+  await build({ stdin: { contents: `import ${JSON.stringify(path.resolve("src/jobs.ts"))};export * from ${JSON.stringify(path.resolve("src/domains/hotpath.ts"))};`, resolveDir: process.cwd() },
+    outfile: isolated, bundle: true, format: "esm", platform: "node", packages: "external", logLevel: "error", plugins: [{ name: "hot-device-compiler-boundary", setup(b) {
+      b.onResolve({ filter: /(?:core\/jobs|domains\/(?:device|hotreload))\.js$/ }, (a) => a.importer.replaceAll("\\", "/").endsWith("/src/jobs.ts") ? { path: a.path, namespace: "hot-fixture" } : undefined);
+      b.onLoad({ filter: /.*/, namespace: "hot-fixture" }, (a) => ({ contents: a.path.includes("core/jobs")
+        ? "export const defineJob=d=>globalThis.__hotSelectionJobs.set(d.kind,d);export const startJob=()=>{throw Error('unexpected start')};export const waitJob=startJob,cancelJob=startJob,jobStatus=startJob;"
+        : a.path.includes("hotreload") ? "export const recordBaseline=async()=>{};export const applyHotReload=()=>{throw Error('unexpected hot compile')};export const hotBuildProps=()=>[];"
+          : "export const installStamp=async()=> '100:200';export const pidOf=async()=>123;" }));
+    } }] });
+  const hp = await import(pathToFileURL(isolated).href);
+  try {
+    fs.mkdirSync(path.join(projectRoot, "AppScope"), { recursive: true });
+    fs.writeFileSync(path.join(projectRoot, "AppScope/app.json5"), JSON.stringify({ app: { bundleName: "com.devecomcp.selection" } }));
+    fs.writeFileSync(path.join(projectRoot, "build-profile.json5"), JSON.stringify({ app: { products: [{ name: "default" }] }, modules: [
+      { name: "entry", srcPath: "./entry", targets: [{ name: "default", applyToProducts: ["default"] }] },
+      { name: "feature", srcPath: "./feature", targets: ["default", "custom"].map((name) => ({ name, applyToProducts: ["default"] })) },
+    ] }));
+    for (const type of ["entry", "feature"]) {
+      const dir = path.join(projectRoot, type, "src/main/ets"); fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(path.join(dir, "Index.ets"), "export const value = 1;");
+      fs.writeFileSync(path.join(dir, "../module.json5"), JSON.stringify({ module: { name: type, type, deviceTypes: ["phone"] } }));
+    }
+    const steps = definitions.get("build_run").steps, step = (id) => steps.find((s) => s.id === id);
+    const ctx = { input: { project: projectRoot }, outputs: { target: { target: "offline", device_type: "phone" } }, signal: new AbortController().signal, log() {} };
+    const select = async (modules) => { ctx.input.modules = modules; ctx.outputs.select = await step("select").run(ctx); };
+    const file = hp.stateFile(out, projectRoot, "offline");
+    for (const [before, after] of [
+      [["entry"], ["entry", "feature"]], [["entry", "feature"], ["entry"]],
+      [["entry", "feature@default"], ["entry", "feature@custom"]],
+    ]) {
+      fs.rmSync(file, { force: true }); await select(before);
+      await step("baseline").run(ctx); assert.equal((await step("baseline").run(ctx)).recorded, true);
+      const saved = hp.readState(file);
+      assert.deepEqual(saved.modules.map((m) => `${m.name}@${m.target}`), before.map((name) => name.includes("@") ? name : `${name}@default`));
+      assert.equal((await step("hot").run(ctx)).path, "relaunch");
+      await select(after); ctx.outputs.hot = await step("hot").run(ctx);
+      assert.equal(ctx.outputs.hot.path, "full"); assert.match(ctx.outputs.hot.fallback_reason, /module selection/);
+      assert.equal(step("build").when(ctx), true); assert.equal(step("install").when(ctx), true);
+      await hp.writeState(file, { ...saved, modules: undefined });
+      assert.equal((await step("hot").run(ctx)).path, "full", "old baselines cannot skip deployment");
+      delete ctx.outputs.hot;
+    }
+  } finally { fs.rmSync(isolated, { force: true }); delete globalThis.__hotSelectionJobs; }
+});
+
+test("two independent processes cannot resume one job twice", async () => {
+  const db=await m.database(), id="j_cross_process_resume", marker=path.join(out,"resume-executions");
+  db.prepare("INSERT INTO jobs(id,kind,status,input,created,updated) VALUES(?,'t_cross_resume','interrupted','{}',0,0)").run(id);
+  const code=`import fs from 'node:fs';const m=await import(${JSON.stringify(pathToFileURL(bundle).href)});m.defineJob({kind:'t_cross_resume',steps:[{id:'effect',run:async()=>{fs.appendFileSync(${JSON.stringify(marker)},String(process.pid)+'\\n');await new Promise(r=>setTimeout(r,500));return 'done'}}]});process.stdout.write('ready\\n');process.stdin.once('data',async()=>{try{await m.resumeJob(${JSON.stringify(id)});await m.waitJob(${JSON.stringify(id)},3000)}catch(e){if(!['CONFLICT','INVALID_INPUT'].includes(e.code))process.exitCode=1}finally{await m.stopCleanup();m.closeDatabase();process.stdin.destroy()}});`;
+  const children=Array.from({length:2},()=>spawn(process.execPath,["--input-type=module","-e",code],{stdio:["pipe","pipe","pipe"],env:process.env}));
+  const closed=children.map(c=>once(c,"close"));
+  try {
+    await Promise.all(children.map(c=>new Promise((resolve,reject)=>{c.stdout.once("data",resolve);c.once("error",reject)})));
+    for(const c of children)c.stdin.end("resume");
+    for(const end of closed)assert.deepEqual(await end,[0,null]);
+    assert.equal(fs.readFileSync(marker,"utf8").trim().split("\n").length,1);
+    assert.equal((await m.jobStatus(id)).status,"succeeded");
+  } finally {for(const c of children)if(c.exitCode===null)c.kill("SIGKILL");await Promise.all(closed);}
 });

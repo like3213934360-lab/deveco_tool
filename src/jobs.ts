@@ -244,21 +244,23 @@ async function hotContext(ctx: { input: RunInput; outputs: Record<string, any>; 
   const target = ctx.outputs.target.target as string;
   const entryName = (ctx.outputs.select.modules as string[]).find((n) => project.modules.find((m) => m.name === n)?.type === "entry");
   const module = project.modules.find((m) => m.name === (ctx.input.module ?? entryName));
+  const modules = project.modules.filter((m) => (ctx.outputs.select.modules as string[]).includes(m.name))
+    .map(({ name, target }) => ({ name, target }));
   const file = hp.stateFile(stateDir(), project.root, target);
-  return { hp, project, target, module, file };
+  return { hp, project, target, module, modules, file };
 }
 
 const hotStep = {
   id: "hot",
   when: (ctx: { input: RunInput }) => autoMode(ctx.input),
   async run(ctx: { input: RunInput; outputs: Record<string, any>; signal: AbortSignal; log(m: string): void }) {
-    const { hp, project, target, module, file } = await hotContext(ctx);
+    const { hp, project, target, module, modules, file } = await hotContext(ctx);
     const state = hp.readState(file);
     if (!module || !project.bundleName) return { path: "full", fallback_reason: "no entry module to quick-fix" };
     const { installStamp, pidOf } = await import("./domains/device.js");
     const [install, pid] = await Promise.all([installStamp(target, project.bundleName, ctx.signal), pidOf(target, project.bundleName, ctx.signal)]);
     const sources = hp.currentSources(project.root, state?.sources);
-    const decision = hp.decideHot(state, { target, install, running: !!pid, sources, inputs: hp.inputsSnapshot(project.root, state?.inputs && typeof state.inputs === "object" ? state.inputs : undefined), moduleRel: path.relative(project.root, module.root).replaceAll("\\", "/") });
+    const decision = hp.decideHot(state, { target, install, running: !!pid, sources, inputs: hp.inputsSnapshot(project.root, state?.inputs && typeof state.inputs === "object" ? state.inputs : undefined), product: project.product, module: module.name, moduleTarget: module.target, modules, moduleRel: path.relative(project.root, module.root).replaceAll("\\", "/") });
     if (!decision.hot && decision.unchanged) {
       // Same code, same installed copy: skip build + install; the launch step restarts it (fresh state).
       return { path: "relaunch", note: "No changes since the last deploy: relaunched the installed app" };
@@ -272,7 +274,7 @@ const hotStep = {
       // ran would otherwise keep showing the old UI (seen in the e2e gesture page test).
       const ability = ctx.input.ability ?? mainAbility(project, module.name).ability;
       const applied = await applyHotReload(project, module.name, ctx.signal, ctx.log, { target: ctx.outputs.target.target, files: decision.files.map((f) => path.join(project.root, f)), restart: true, ability });
-      hp.writeState(file, { ...state!, sources });
+      await hp.writeState(file, { ...state!, sources });
       if (applied.launch && !applied.launch.started) {
         // The patched code crashes on startup: same diagnosis as a normal deploy.
         const { crashSummary } = await import("./domains/diagnose.js");
@@ -287,7 +289,7 @@ const hotStep = {
       if ((error as { code?: string }).code === "LAUNCH_FAILED") throw error;
       // Anything the quick fix cannot do (compile error, unsupported change, device refused) -> real deploy.
       ctx.log(`hot reload failed, deploying normally: ${(error as Error).message}`);
-      hp.writeState(file, { ...state!, install: "" }); // the next deploy re-records a baseline
+      await hp.writeState(file, { ...state!, install: "" }); // the next deploy re-records a baseline
       return { path: "full", fallback_reason: `quick fix failed: ${(error as Error).message.slice(0, 200)}` };
     }
   },
@@ -299,14 +301,14 @@ const baselineStep = {
   when: (ctx: { input: RunInput; outputs: Record<string, any> }) => autoMode(ctx.input) && !wentHot(ctx) && !relaunchOnly(ctx),
   async run(ctx: { input: RunInput; outputs: Record<string, any>; signal: AbortSignal; log(m: string): void }) {
     try {
-      const { hp, project, target, module, file } = await hotContext(ctx);
+      const { hp, project, target, module, modules, file } = await hotContext(ctx);
       if (!module || !project.bundleName || !["entry", "feature"].includes(module.type)) return { recorded: false };
       const previous = hp.readState(file);
       const iterating = !!previous?.last_full && Date.now() - previous.last_full < ITERATING_MS;
-      const base = { module: module.name, moduleRoot: module.root, target, last_full: Date.now() };
+      const base = { product: project.product, moduleTarget: module.target, module: module.name, modules, moduleRoot: module.root, target, last_full: Date.now() };
       if (!iterating) {
         // First deploy: remember it; the baseline compile is only paid when a second deploy follows.
-        hp.writeState(file, { ...base, install: "", sources: {}, inputs: {} });
+        await hp.writeState(file, { ...base, install: "", sources: {}, inputs: {} });
         return { recorded: false, note: "next build_run records the quick-fix baseline" };
       }
       const started = Date.now();
@@ -316,7 +318,7 @@ const baselineStep = {
       await recordBaseline(project, module.name, project.bundleName, target, ctx.signal, ctx.outputs.install?.package_files);
       const { installStamp } = await import("./domains/device.js");
       const install = (await installStamp(target, project.bundleName, ctx.signal)) ?? "";
-      hp.writeState(file, { ...base, install, sources, inputs });
+      await hp.writeState(file, { ...base, install, sources, inputs });
       return { recorded: true, elapsed_ms: Date.now() - started, note: "later build_run calls quick-fix code changes of this module in seconds" };
     } catch (error) {
       ctx.log(`baseline not recorded: ${(error as Error).message}`);
@@ -328,6 +330,7 @@ const baselineStep = {
 /** After launch: walk a saved flow to the target page (attach: the app was just started). */
 const flowStep = {
   id: "flow",
+  effect: true, replay: false as const,
   when: (ctx: { input: RunInput }) => !!ctx.input.then_flow,
   async run(ctx: { input: RunInput; outputs: Record<string, any>; signal: AbortSignal; log(m: string): void }) {
     const { replayFlow } = await import("./domains/flows.js");
@@ -412,7 +415,7 @@ const baseRunSteps = (build: boolean): Step<RunInput>[] => [
   },
   {
     id: "install",
-    effect: true,
+    effect: true, replay: false,
     async run(ctx: { input: RunInput; outputs: Record<string, any>; signal: AbortSignal }) {
       const { buildOutputs } = await import("./domains/project.js");
       const { install } = await import("./domains/device.js");
@@ -425,21 +428,14 @@ const baseRunSteps = (build: boolean): Step<RunInput>[] => [
       invariant(haps.length, "NOT_FOUND", `No built package for ${selected.map((m) => m.name).join(", ")}`, undefined,
         "Use run action=build_run, or project action=build modules=[...] first");
       // HSPs are only needed when this app actually has shared modules; ship the ones built for this product.
-      const hsp = await buildOutputs(project, "assembleHsp", project.modules.filter((m) => m.type === "shared")).catch(() => []);
+      const hsp = await buildOutputs(project, "assembleHsp", project.modules.filter((m) => m.type === "shared"));
       const paths = [...new Set([...haps.map((p: { path: string }) => p.path), ...hsp.map((p) => p.path)])];
       const unsigned = paths.filter((p) => /-unsigned\.h[as]p$/.test(p));
       const { fileSha256 } = await import("./core/files.js");
       const package_files = ctx.input.hot_reload || autoMode(ctx.input) ? await Promise.all(paths.map(async (path) => ({ path, sha256: await fileSha256(path) }))) : undefined;
       return { ...(await install(ctx.outputs.target.target, paths, ctx.signal)), packages: paths.map((p) => p.split(/[\\/]/).pop()), package_files, ...(unsigned.length ? { unsigned: unsigned.length } : {}) };
     },
-    // After a crash mid-install, the app being present with the expected bundle is good enough to continue.
-    async reconcile(ctx: { input: RunInput; outputs: Record<string, any>; signal: AbortSignal }) {
-      const { inspectProject } = await import("./domains/project.js");
-      const { shell } = await import("./domains/device.js");
-      const project = inspectProject(ctx.input.project, ctx.input.product);
-      const dump = await shell(ctx.outputs.target.target, ["bm", "dump", "-n", project.bundleName ?? ""], ctx.signal);
-      return /"bundleName"/.test(dump.stdout) ? { installed: "reconciled" } : undefined;
-    },
+
   },
   {
     id: "launch",
@@ -493,7 +489,7 @@ defineJob<RunInput>({ kind: "deploy", steps: runSteps(false), summarize: runSumm
 defineJob<{ project: string; target?: string; id: string; variables: Record<string, string>; repair: boolean; snapshot?: boolean }>({
   kind: "flow_replay",
   steps: [{
-    id: "replay",
+    id: "replay", effect: true, replay: false,
     async run(ctx) {
       const { resolveTarget, deviceInfo } = await import("./domains/device.js");
       const { replayFlow } = await import("./domains/flows.js");

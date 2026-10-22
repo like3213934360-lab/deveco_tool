@@ -32,7 +32,8 @@ const live = new Set<ChildProcess>();
 
 /** Kill the whole process tree: POSIX via process group, Windows via taskkill /T. */
 export function killTree(child: ChildProcess, sig: NodeJS.Signals = "SIGTERM") {
-  if (child.exitCode !== null || child.signalCode !== null || child.pid === undefined) return;
+  if (child.pid === undefined) return;
+  if (process.platform === "win32" && (child.exitCode !== null || child.signalCode !== null)) return;
   try {
     if (process.platform === "win32") spawn("taskkill", ["/pid", String(child.pid), "/T", "/F"], { stdio: "ignore", windowsHide: true });
     else process.kill(-child.pid, sig);
@@ -104,7 +105,7 @@ export async function spawnIndependent(cmd: Command, logFile?: string): Promise<
 
 function track(child: ChildProcess) {
   live.add(child);
-  child.once("exit", () => live.delete(child));
+  child.once("close", () => live.delete(child));
   child.once("error", () => live.delete(child));
   return child;
 }
@@ -143,16 +144,33 @@ export async function run(cmd: Command, options: RunOptions = {}): Promise<RunRe
   else child.stdin?.end();
 
   let timedOut = false;
-  const timer = options.timeoutMs
-    ? setTimeout(() => { timedOut = true; killTree(child); setTimeout(() => killTree(child, "SIGKILL"), 3000).unref(); }, options.timeoutMs)
-    : undefined;
-  const onAbort = () => { killTree(child); setTimeout(() => killTree(child, "SIGKILL"), 3000).unref(); };
+  let escalation: NodeJS.Timeout | undefined, drain: NodeJS.Timeout | undefined;
+  let cleanupFailed!: (error: ToolError) => void;
+  const cleanup = new Promise<never>((_resolve, reject) => { cleanupFailed = reject; });
+  const terminate = () => {
+    if (escalation) return;
+    killTree(child);
+    escalation = setTimeout(() => {
+      killTree(child, "SIGKILL");
+      drain = setTimeout(() => {
+        child.stdout?.destroy(); child.stderr?.destroy(); child.stdin?.destroy();
+        cleanupFailed(new ToolError("PROCESS_CLEANUP_FAILED", "Process pipes remained open after terminating its process group", { pid: child.pid }));
+      }, 2000);
+    }, 3000);
+  };
+  // A parent can exit before its descendants, including descendants without inherited pipes.
+  const parentExited = () => { if (timedOut || options.signal?.aborted) killTree(child, "SIGKILL"); };
+  child.once("exit", parentExited);
+  const timer = options.timeoutMs ? setTimeout(() => { timedOut = true; terminate(); }, options.timeoutMs) : undefined;
+  const onAbort = () => terminate();
   options.signal?.addEventListener("abort", onAbort, { once: true });
+  if (options.signal?.aborted) onAbort();
   try {
-    const [code, sig] = await new Promise<[number | null, NodeJS.Signals | null]>((resolve, reject) => {
+    const [code, sig] = await Promise.race([cleanup, new Promise<[number | null, NodeJS.Signals | null]>((resolve, reject) => {
       child.once("error", reject);
       child.once("close", (c, s) => resolve([c, s]));
-    }).catch((error: NodeJS.ErrnoException) => {
+    })]).catch((error: NodeJS.ErrnoException) => {
+      if (error instanceof ToolError) throw error;
       throw new ToolError("PROCESS_FAILED", `Cannot start ${cmd.file}: ${error.message}`, { code: error.code });
     });
     for (const name of ["stdout", "stderr"] as const) {
@@ -168,6 +186,8 @@ export async function run(cmd: Command, options: RunOptions = {}): Promise<RunRe
     return result;
   } finally {
     if (timer) clearTimeout(timer);
+    clearTimeout(escalation); clearTimeout(drain);
+    child.off("exit", parentExited);
     options.signal?.removeEventListener("abort", onAbort);
     await new Promise<void>((resolve) => (log ? log.end(resolve) : resolve()));
   }
