@@ -14,8 +14,6 @@ import { connect } from "../support/mcp.mjs";
 const out = temporaryDirectory("deveco-jobs-");
 // Native resolution expands Windows runner short names (e.g. RUNNER~1); JS realpath does not.
 const canonicalPath = (file) => { const p = fs.realpathSync.native(file); return process.platform === "win32" ? p.toLowerCase() : p; };
-// Tests leave nothing behind; on Windows the state DB may still be open at exit (EPERM): best effort there.
-process.on("exit", () => { try { fs.rmSync(out, { recursive: true, force: true }); } catch { /* Windows: file still locked */ } });
 process.env.DEVECO_STATE_DIR = out;
 const harness = path.join(out, "harness.ts");
 fs.writeFileSync(harness, `
@@ -23,6 +21,7 @@ export * from ${JSON.stringify(path.resolve("src/core/jobs.ts"))};
 export * from ${JSON.stringify(path.resolve("src/core/artifacts.ts"))};
 export * from ${JSON.stringify(path.resolve("src/core/db.ts"))};
 export * from ${JSON.stringify(path.resolve("src/core/storage.ts"))};
+export { closeCoordination } from ${JSON.stringify(path.resolve("src/core/operations.ts"))};
 export { ToolError } from ${JSON.stringify(path.resolve("src/core/errors.ts"))};
 export { formatCheck } from ${JSON.stringify(path.resolve("src/domains/code.ts"))};
 export { settlePreflight } from ${JSON.stringify(path.resolve("src/jobs.ts"))};
@@ -34,9 +33,9 @@ await build({ entryPoints: [harness], outfile: bundle, bundle: true, format: "es
 const m = await import(`${pathToFileURL(bundle).href}?t=${Date.now()}`);
 after(async () => {
   await m.stopCleanup();
+  await m.closeCoordination();
   m.closeDatabase();
   fs.rmSync(out, { recursive: true, force: true });
-  fs.rmSync(bundle, { force: true });
 });
 
 let effectRuns = 0;
@@ -645,7 +644,7 @@ test("actual deploy and flow workflows refuse uncertain effects even under force
 test("actual auto-deploy binds its baseline to every selected module target", async () => {
   const isolated = `${bundle}-hot-selection.mjs`, projectRoot = path.join(out, "hot-selection");
   const definitions = globalThis.__hotSelectionJobs = new Map();
-  await build({ stdin: { contents: `import ${JSON.stringify(path.resolve("src/jobs.ts"))};export * from ${JSON.stringify(path.resolve("src/domains/hotpath.ts"))};`, resolveDir: process.cwd() },
+  await build({ stdin: { contents: `import ${JSON.stringify(path.resolve("src/jobs.ts"))};export * from ${JSON.stringify(path.resolve("src/domains/hotpath.ts"))};export {closeDatabase} from ${JSON.stringify(path.resolve("src/core/db.ts"))};`, resolveDir: process.cwd() },
     outfile: isolated, bundle: true, format: "esm", platform: "node", packages: "external", logLevel: "error", plugins: [{ name: "hot-device-compiler-boundary", setup(b) {
       b.onResolve({ filter: /(?:core\/jobs|domains\/(?:device|hotreload))\.js$/ }, (a) => a.importer.replaceAll("\\", "/").endsWith("/src/jobs.ts") ? { path: a.path, namespace: "hot-fixture" } : undefined);
       b.onLoad({ filter: /.*/, namespace: "hot-fixture" }, (a) => ({ contents: a.path.includes("core/jobs")
@@ -686,7 +685,7 @@ test("actual auto-deploy binds its baseline to every selected module target", as
       assert.equal((await step("hot").run(ctx)).path, "full", "old baselines cannot skip deployment");
       delete ctx.outputs.hot;
     }
-  } finally { fs.rmSync(isolated, { force: true }); delete globalThis.__hotSelectionJobs; }
+  } finally { hp.closeDatabase(); fs.rmSync(isolated, { force: true }); delete globalThis.__hotSelectionJobs; }
 });
 
 test("two independent processes cannot resume one job twice", async () => {

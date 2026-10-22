@@ -132,12 +132,19 @@ export function collectBuilds(root, current) {
     : execFileSync("ps", ["-axo", "pid=,command="], { encoding: "utf8" }).split("\n").map((line) => {
         const match = /^\s*(\d+)\s+(.*)$/.exec(line); return { pid: Number(match?.[1]), command: match?.[2] ?? "" };
       });
-  const nodeProcesses = process.platform === "win32" ? undefined : new Set(execFileSync("ps", ["-axo", "pid=,comm="], { encoding: "utf8" }).split("\n").flatMap((line) => {
+  const nodeProcesses = ["win32", "linux"].includes(process.platform) ? undefined : new Set(execFileSync("ps", ["-axo", "pid=,comm="], { encoding: "utf8" }).split("\n").flatMap((line) => {
     const match = /^\s*(\d+)\s+(.*)$/.exec(line); return match && /(?:^|[/\\])node(?:js)?$/.test(match[2]) ? [Number(match[1])] : [];
   }));
+  const isNode = (p) => {
+    if (process.platform === "win32") return p.node;
+    if (process.platform !== "linux") return nodeProcesses.has(p.pid);
+    // Linux comm is a mutable thread name (including Node's MainThread), not an executable.
+    try { return /(?:^|\/)node(?:js)?(?: \(deleted\))?$/.test(fs.readlinkSync(`/proc/${p.pid}/exe`)); }
+    catch (error) { if (["ENOENT", "ESRCH"].includes(error.code)) return false; throw error; }
+  };
   const roots = new Set([root, fs.realpathSync(root)]);
   if (process.platform === "darwin") for (const dir of [...roots]) roots.add(dir.replace(/^\/private(?=\/var\/)/, ""));
-  const legacy = processes.some((p) => !owners.has(p.pid) && (nodeProcesses ? nodeProcesses.has(p.pid) : p.node) && ([...roots].some((dir) => p.command.includes(dir)) || /(?:^|\s)(?:\.\/)?(?:bin[/\\]deveco-mcp\.mjs|dist[/\\].*cli\.js)(?:\s|$)/.test(p.command)) && /(?:deveco-mcp\.mjs|dist[/\\].*cli\.js)/.test(p.command));
+  const legacy = processes.some((p) => !owners.has(p.pid) && ([...roots].some((dir) => p.command.includes(dir)) || /(?:^|\s)(?:\.\/)?(?:bin[/\\]deveco-mcp\.mjs|dist[/\\].*cli\.js)(?:\s|$)/.test(p.command)) && /(?:deveco-mcp\.mjs|dist[/\\].*cli\.js)/.test(p.command) && isNode(p));
   // A managed child may outlive its host after an abrupt exit and still read generation assets.
   for (const p of processes) if ([...roots].some((dir) => p.command.includes(dir)))
     for (const match of p.command.matchAll(/[/\\]dist[/\\]builds[/\\]([a-f0-9]{64}-[a-f0-9]{12})(?:[/\\]|\s|$)/g)) keep.add(match[1]);

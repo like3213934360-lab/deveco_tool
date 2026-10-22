@@ -328,6 +328,26 @@ test("fingerprint includes relative paths/bodies, excludes NOTICE, and indexes r
   await assert.rejects(m.buildKnowledgePack({ upstream: upstream.dir, out: path.join(work, "invalid-out") }), code("INVALID_INPUT"));
 });
 
+test("knowledge archives build when the output and system temporary directory are on different volumes", async (t) => {
+  await isolate();
+  const upstream = await archive(upstreamName, "1.3.5-Test.1"), out = path.join(work, "cross-volume-out");
+  const link = fs.linkSync;
+  let links = 0;
+  const boundary = t.mock.method(fs, "linkSync", (source, destination) => {
+    // Model the Windows C: temp / D: output boundary while retaining actual hard links.
+    const outputVolume = (file) => path.resolve(file).startsWith(out + path.sep);
+    if (outputVolume(source) !== outputVolume(destination)) throw Object.assign(new Error("cross-device link"), { code: "EXDEV" });
+    links++; return link(source, destination);
+  });
+  try {
+    const built = await m.buildKnowledgePack({ upstream: upstream.dir, out, version: "1.0.0" });
+    assert.ok(links > 0, "exercise the archive's hard links across the simulated volume boundary");
+    await m.update({ source: built.tarball }, signal);
+    assert.match((await m.read("doc/one")).content, /router navigation official/);
+    assert.deepEqual(fs.readdirSync(out).filter((name) => name.startsWith(".tmp-")), []);
+  } finally { boundary.mock.restore(); }
+});
+
 test("integrity and pointer failures preserve active pointer and previous rollback for both sources", async () => {
   await isolate();
   await m.update({ version: "1.3.5-Test.1" }, signal);

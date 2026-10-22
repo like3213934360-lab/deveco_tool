@@ -51,7 +51,7 @@ test("upgrades bind version to code and preserve old processes' lazy chunks, inc
   for (const file of Object.keys(original.files)) fs.utimesSync(path.join(dir, "dist", file), 1, 1);
   // A pre-lease process can still hold flat chunks; inventory protects it during migration.
   const legacyFile = path.join(dir, "dist/legacy-cli.js");
-  fs.writeFileSync(legacyFile, "process.stdout.write('ready\\n');setInterval(()=>{},1000)");
+  fs.writeFileSync(legacyFile, "import fs from 'node:fs';if(process.platform==='linux')fs.writeFileSync('/proc/self/comm','legacy-host');process.stdout.write('ready\\n');setInterval(()=>{},1000)");
   const legacy = spawn(process.execPath, ["dist/legacy-cli.js"], { cwd: dir, stdio: ["ignore", "pipe", "pipe"] });
   await new Promise((resolve) => legacy.stdout.once("data", resolve));
   t.after(() => legacy.kill("SIGKILL"));

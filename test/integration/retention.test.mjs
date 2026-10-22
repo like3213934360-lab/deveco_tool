@@ -20,7 +20,8 @@ test("startup removes expired invalid hot states, preserving valid, fresh and pi
   await once(held, "spawn");
   const db = new DatabaseSync(path.join(state, "state.db"));
   db.exec("CREATE TABLE retention_pins(path TEXT,owner TEXT,pid INTEGER,kind TEXT,PRIMARY KEY(path,owner))");
-  db.prepare("INSERT INTO retention_pins VALUES(?,'live',?,'use')").run(fs.realpathSync.native(files[3]), held.pid); db.close();
+  const pinned = fs.realpathSync.native(files[3]);
+  db.prepare("INSERT INTO retention_pins VALUES(?,'live',?,'use')").run(process.platform === "win32" ? pinned.toLowerCase() : pinned, held.pid); db.close();
   const client = connect({ DEVECO_STATE_DIR: state, DEVECO_CONFIG: path.join(state, "none.json"), DEVECO_COORDINATION_DIR: path.join(state, "coordination") });
   try {
     await client.initialize(); const deadline = Date.now() + 3000;

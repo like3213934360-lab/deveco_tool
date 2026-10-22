@@ -1,6 +1,5 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { assetRoot, version as mcpVersion } from "../core/config.js";
 import { invariant } from "../core/errors.js";
@@ -23,7 +22,10 @@ export async function buildKnowledgePack(options: { upstream: string; out: strin
   invariant(upstreamPkg.apiVersion === UPSTREAM_API_VERSION, "INVALID_INPUT", `Upstream package must support apiVersion ${UPSTREAM_API_VERSION}`);
   const localDocs = localKnowledgeDocuments(options.local);
   const contentSha256 = hashLocalDocuments(localDocs);
-  const work = fs.mkdtempSync(path.join(os.tmpdir(), "kb-build-"));
+  // The npm archive uses hard links; stage on the output filesystem even when TMPDIR
+  // is on another volume (for example a Windows C: temp directory and D: checkout).
+  fs.mkdirSync(path.resolve(options.out), { recursive: true });
+  const work = fs.mkdtempSync(path.join(path.resolve(options.out), ".tmp-"));
   try {
     const { extractZip } = await import("../core/unzip.js");
     await extractZip(indexZip, work);
