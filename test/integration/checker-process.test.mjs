@@ -23,7 +23,7 @@ await build({ stdin: { contents: `export {arktsCheck} from './src/domains/code.t
   outfile: bundle, bundle: true, format: "esm", platform: "node", packages: "external", logLevel: "error",
   plugins: [{ name: "checker-sdk-boundary", setup(b) {
     b.onResolve({ filter: /toolchain\.js$/ }, () => ({ path: "toolchain", namespace: "fixture" }));
-    b.onResolve({ filter: /core\/config\.js$/ }, (a) => a.importer.endsWith("domains/code.ts") ? { path: "config", namespace: "fixture" } : undefined);
+    b.onResolve({ filter: /core\/config\.js$/ }, (a) => a.importer.replaceAll("\\", "/").endsWith("/domains/code.ts") ? { path: "config", namespace: "fixture" } : undefined);
     b.onLoad({ filter: /.*/, namespace: "fixture" }, (a) => ({ contents: a.path === "config"
       ? `export const assetRoot=${JSON.stringify(work)};export const stateDir=()=>${JSON.stringify(path.join(work, "state"))};`
       : `export const toolchain=()=>({root:${JSON.stringify(work)},content:${JSON.stringify(work)},components:{etsLoader:'fixture'}});export const component=()=>${JSON.stringify(process.execPath)};export const toolCommand=()=>{throw new Error('unexpected SDK call')};export const sdkInfo=()=>({});` }));
