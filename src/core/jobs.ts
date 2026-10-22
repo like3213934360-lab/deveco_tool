@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { setTimeout as delay } from "node:timers/promises";
 import { scheduleCleanup, saveArtifact } from "./artifacts.js";
 import { database } from "./db.js";
 import { errorResult, invariant, ToolError } from "./errors.js";
@@ -44,6 +45,8 @@ interface JobRow {
   id: string; kind: string; key: string | null; status: JobStatus; input: string; step: string | null;
   outputs: string; result: string | null; error: string | null; owner: number | null; created: number; updated: number;
 }
+type JobState = Pick<JobRow, "id" | "kind" | "status" | "step" | "owner" | "created" | "updated">;
+const stateColumns = "id,kind,status,step,owner,created,updated";
 
 const definitions = new Map<string, JobDefinition>();
 const running = new Map<string, { controller: AbortController; done: Promise<void> }>();
@@ -95,16 +98,19 @@ function execute(id: string) {
   const handle = { controller, done: Promise.resolve() };
   running.set(id, handle);
   const done = (async () => {
-    const current = await row(id);
-    const definition = definitions.get(current.kind);
-    invariant(definition, "INTERNAL", `Job kind ${current.kind} is not registered`);
-    const input = JSON.parse(current.input);
-    const outputs: Record<string, any> = JSON.parse(current.outputs);
-    await update(id, { status: "running", owner: process.pid, error: null });
-    input._job_id = id;
-    if (outputs.target?.target) input.target = outputs.target.target;
-    const ctx: StepContext = { job_id: id, input, outputs, signal: controller.signal, log: (m) => void event(id, m) };
+    let outputs: Record<string, any> = {};
     try {
+      const current = await row(id);
+      const definition = definitions.get(current.kind);
+      invariant(definition, "INTERNAL", `Job kind ${current.kind} is not registered`);
+      const input = JSON.parse(current.input);
+      outputs = JSON.parse(current.outputs);
+      await update(id, { status: "running", owner: process.pid, error: null });
+      input._job_id = id;
+      if (outputs.target?.target) input.target = outputs.target.target;
+      const ctx: StepContext = { job_id: id, input, outputs, signal: controller.signal, log: (message) => {
+        void event(id, message).catch((error: unknown) => { controller.abort(error); process.stderr.write(`[jobs] Event persistence failed: ${String(error)}\n`); });
+      } };
       const { withOperation } = await import("./operations.js");
       await withOperation(`job:${current.kind}`, input, controller.signal, async () => {
         try {
@@ -157,7 +163,7 @@ function execute(id: string) {
       scheduleCleanup(1000);
     }
   })();
-  handle.done = done.catch(() => {});
+  handle.done = done.catch((error: unknown) => { process.stderr.write(`[jobs] Could not persist terminal state for ${id}: ${String(error)}\n`); });
 }
 
 /** Large results go to an artifact so job rows and responses stay small. */
@@ -172,18 +178,20 @@ async function boundedJson(value: unknown, jobId: string) {
  * A queued/running row that no live process owns belongs to a crashed server: mark it interrupted
  * on first read (startup recovery runs later, off the handshake path, and may not have run yet).
  */
-async function settleOrphan(id: string) {
-  const current = await row(id);
+async function settleOrphan(id: string, known?: JobState): Promise<JobState> {
+  const current = known ?? (await database()).prepare(`SELECT ${stateColumns} FROM jobs WHERE id=?`).get(id) as JobState | undefined;
+  invariant(current, "NOT_FOUND", `Job ${id} does not exist`);
   if ((current.status === "queued" || current.status === "running") && !running.has(id)
     && !(current.owner && current.owner !== process.pid && alive(current.owner))) {
     (await database()).prepare("UPDATE jobs SET status='interrupted',updated=? WHERE id=? AND status IN ('queued','running') AND owner IS ? AND updated=?").run(Date.now(), id, current.owner, current.updated);
-    return row(id);
+    return (await database()).prepare(`SELECT ${stateColumns} FROM jobs WHERE id=?`).get(id) as JobState;
   }
   return current;
 }
 
 export async function jobStatus(id: string, detail = false) {
-  const current = await settleOrphan(id);
+  let current = await row(id);
+  if (await settleOrphan(id, current) !== current) current = await row(id);
   const events = (await database())
     .prepare("SELECT at,message FROM events WHERE job_id=? ORDER BY id DESC LIMIT ?")
     .all(id, detail ? 50 : 5) as { at: number; message: string }[];
@@ -192,25 +200,33 @@ export async function jobStatus(id: string, detail = false) {
     kind: current.kind,
     status: current.status,
     ...(current.step ? { step: current.step } : {}),
-    elapsed_ms: current.updated - current.created,
+    elapsed_ms: (["queued", "running"].includes(current.status) ? Date.now() : current.updated) - current.created,
     ...(current.result ? { result: JSON.parse(current.result) } : {}),
     ...(current.error ? { error: JSON.parse(current.error) } : {}),
     recent_events: events.reverse().map((e) => e.message),
+    ...(detail ? { input: JSON.parse(current.input), outputs: JSON.parse(current.outputs) } : {}),
   };
   if (current.status === "needs_input" || current.status === "interrupted")
     return { ...base, next: { tool: "job", action: "resume", job_id: id } };
   if (current.status === "queued" || current.status === "running")
     return { ...base, next: { tool: "job", action: "wait", job_id: id } };
-  return detail ? { ...base, input: JSON.parse(current.input), outputs: JSON.parse(current.outputs) } : base;
+  return base;
 }
 
-/** Wait up to `ms` for completion without polling the database. */
-export async function waitJob(id: string, ms = 1000) {
-  const handle = running.get(id);
-  if (handle && ms > 0) {
-    let timer: NodeJS.Timeout | undefined;
-    await Promise.race([handle.done, new Promise<void>((resolve) => (timer = setTimeout(resolve, Math.min(ms, MAX_WAIT_MS))))]);
-    clearTimeout(timer);
+/** Local jobs notify directly; another server's durable state is checked at most four times/sec. */
+export async function waitJob(id: string, ms = 1000, signal?: AbortSignal) {
+  const deadline = performance.now() + Math.max(0, Math.min(ms, MAX_WAIT_MS));
+  for (;;) {
+    signal?.throwIfAborted();
+    const current = await settleOrphan(id), remaining = deadline - performance.now();
+    if (!["queued", "running"].includes(current.status) || remaining <= 0) break;
+    const handle = running.get(id);
+    if (!handle) { await delay(Math.min(remaining, 250), undefined, { signal }); continue; }
+    const timer = new AbortController();
+    try {
+      await Promise.race([handle.done, delay(remaining, undefined, { signal: signal ? AbortSignal.any([signal, timer.signal]) : timer.signal })]);
+    } finally { timer.abort(); }
+    break;
   }
   return jobStatus(id);
 }
@@ -219,9 +235,13 @@ export async function cancelJob(id: string) {
   const handle = running.get(id);
   if (handle) {
     handle.controller.abort(new ToolError("CANCELLED", "Cancelled by request"));
-    await handle.done;
+    // Cleanup can outlive a host request. Report its actual state while it finishes.
+    const status = await waitJob(id, 1000);
+    return { ...status, ...(["queued", "running"].includes(status.status) ? { cancellation_requested: true } : {}) };
   } else {
     const current = await settleOrphan(id);
+    invariant(!["queued", "running"].includes(current.status), "RESOURCE_BUSY", "Job belongs to another live MCP server; cancellation was not delivered",
+      { job_id: id, owner_pid: current.owner }, "Cancel from the owning connection, or wait for completion; do not restart the operation");
     if (["queued", "interrupted", "needs_input"].includes(current.status)) await update(id, { status: "cancelled" });
   }
   return jobStatus(id);
@@ -249,9 +269,12 @@ export async function resumeJob(id: string, force = false) {
 export async function listJobs(limit = 20, status?: string) {
   const db = await database();
   const rows = (status
-    ? db.prepare("SELECT id,kind,status,step,created,updated FROM jobs WHERE status=? ORDER BY updated DESC LIMIT ?").all(status, limit)
-    : db.prepare("SELECT id,kind,status,step,created,updated FROM jobs ORDER BY updated DESC LIMIT ?").all(limit)) as Pick<JobRow, "id" | "kind" | "status" | "step" | "created" | "updated">[];
-  return rows.map((r) => ({ job_id: r.id, kind: r.kind, status: r.status, step: r.step, updated: new Date(r.updated).toISOString() }));
+    ? db.prepare(`SELECT ${stateColumns} FROM jobs WHERE status=? ORDER BY updated DESC LIMIT ?`).all(status, limit)
+    : db.prepare(`SELECT ${stateColumns} FROM jobs ORDER BY updated DESC LIMIT ?`).all(limit)) as JobState[];
+  const settled: JobState[] = [];
+  for (const current of rows) settled.push(await settleOrphan(current.id, current));
+  return settled.filter((r) => !status || r.status === status)
+    .map((r) => ({ job_id: r.id, kind: r.kind, status: r.status, step: r.step, updated: new Date(r.updated).toISOString() }));
 }
 
 /** On startup: jobs owned by dead processes become interrupted (never auto-replayed). */

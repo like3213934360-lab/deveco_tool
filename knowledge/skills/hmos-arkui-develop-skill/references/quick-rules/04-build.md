@@ -12,7 +12,7 @@
 | 禁止本地作用域 | `{ ... }` 不允许 | — |
 | 禁止调用非 `@Builder` 方法产出 UI | 只能调用 `@Builder` 装饰的方法来生成 UI 片段 | — |
 | 禁止 `switch` | 用 `if` 替代 | — |
-| 禁止三元表达式 | `? :` 不允许，用 `if` 渲染 | — |
+| UI 节点选择用 if/else | 组件参数可使用无副作用的三元表达式；不要用三元选择 UI 节点 | — |
 | **禁止直接改变状态变量** | `this.counter += 1` 会导致循环渲染 | — |
 | **sort/filter 陷阱** | `this.arr.sort().filter(...)` 中 `sort()` 改变原数组触发状态变更 → 循环 | — |
 | **Button('label') 与 children 互斥** | `Button('x') { ... }` 同时传 label 和 children 报 **10905202**。要么 `Button('x')` 要么 `Button() { Text('x') }` | **10905202** |
@@ -27,7 +27,7 @@
 | `let n = this.compute()` 在 build() 中 | 把计算逻辑提到方法中，在 build() 中调用 | 禁止本地变量 |
 | `console.info('x')` 在 build() 中 | 移到方法/事件回调中 | 禁止 console |
 | `switch (this.type) { case 1: Text('a'); }` | `if (this.type === 1) { Text('a') }` | 用 if 替代 switch |
-| `Text(this.flag ? 'yes' : 'no')` | `if (this.flag) { Text('yes') } else { Text('no') }` | 用 if 替代三元 |
+| `this.flag ? Text('yes') : Text('no')` | `Text(this.flag ? 'yes' : 'no')` 或 if/else 节点分支 | 区分参数表达式与 UI 节点选择 |
 | `this.counter += 1` 在 build() 中 | 放在事件回调 `.onClick(() => { this.counter += 1 })` | 不直接改状态变量 |
 | `this.arr.sort().filter(x => x > 0)` | `this.arr.filter(x => x > 0).sort()` | sort() 改变原数组 |
 | `Button('x') { Text('x') }`（同时传 label 和 children） | `Button('x')` 或 `Button() { Text('x') }` | 10905202 |

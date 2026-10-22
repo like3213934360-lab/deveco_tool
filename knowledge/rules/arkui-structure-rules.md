@@ -28,7 +28,7 @@ build() {
 Rules:
 
 - `build()` contains exactly ONE top-level component.
-- For `@Entry` pages the root must be a **container** (`Column`, `Row`, `Stack`, `Flex`, `RelativeContainer`, ...), not a leaf like `Text`.
+- For `@Entry` pages the root must be a **container** (`Column`, `Row`, `Stack`, `Flex`, `RelativeContainer`, ...), as defined by the selected SDK. `Text` accepts span children and is not a leaf; do not reject it as a root solely by its name.
 - `if/else` at the root counts as multiple possible roots for `@Entry` — wrap it in a container.
 - The same single-root rule applies to each branch of conditional rendering inside `@Builder` functions used as page content.
 

@@ -78,7 +78,6 @@ interface UserData {
   email?: string;
 }
 
-@Entry
 @Component
 struct InterfaceTypeCorrect {
   @State data: UserData = { name: 'John', age: 30 };
@@ -111,7 +110,6 @@ struct InterfaceTypeCorrect {
  */
 type StringOrNumber = string | number;
 
-@Entry
 @Component
 struct UnionTypeCorrect {
   @State value: StringOrNumber = 'Hello';
@@ -146,7 +144,6 @@ struct UnionTypeCorrect {
 /**
  * ✅ 正确示例：使用泛型
  */
-@Entry
 @Component
 struct GenericTypeCorrect {
   @State items: number[] = [1, 2, 3, 4, 5];
@@ -188,7 +185,6 @@ interface LogArg {
   key: string;
 }
 
-@Entry
 @Component
 struct ObjectTypeCorrect {
   @State config: Config = { width: 100, height: 200 };
@@ -236,7 +232,6 @@ interface NumberData {
 
 type Data = StringData | NumberData;
 
-@Entry
 @Component
 struct TypeGuardCorrect {
   @State data: Data = { type: 'string', value: 'Hello' };

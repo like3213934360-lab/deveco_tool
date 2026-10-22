@@ -1,5 +1,3 @@
-import fs from "node:fs";
-import path from "node:path";
 import { buildInfo, config, stateDir, version } from "../core/config.js";
 import { errorResult } from "../core/errors.js";
 import { sdkInfo, toolchain, type Component } from "../core/toolchain.js";
@@ -104,14 +102,4 @@ export function compatibility(sdk: { compile?: string; target?: string; compatib
     fixes.push("Use a newer device/emulator image, or lower compatibleSdkVersion (check APIs with code action=api_scan)");
   }
   return { name: "compatibility", ok: problems.length === 0, detail: { compile_api: compile, compatible_api: compatible, installed_sdk_api: installedApi, device_api: deviceApi, problems }, fix: fixes.join("; ") || undefined };
-}
-
-export function stateUsage() {
-  const dir = stateDir();
-  const size = (p: string): number => {
-    if (!fs.existsSync(p)) return 0;
-    const stat = fs.statSync(p);
-    return stat.isDirectory() ? fs.readdirSync(p).reduce((sum, e) => sum + size(path.join(p, e)), 0) : stat.size;
-  };
-  return { state_dir: dir, bytes: { artifacts: size(path.join(dir, "artifacts")), kb: size(path.join(dir, "kb")), db: size(path.join(dir, "state.db")) } };
 }

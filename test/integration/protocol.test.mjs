@@ -65,6 +65,44 @@ test("invalid frames return protocol errors and the subprocess stays usable", as
   assert.deepEqual(new Set(ids.map((m) => m.id)), new Set([0, "0", 42, "last"]));
 });
 
+test("oversized fragmented requests are bounded and the next valid request remains usable", async (t) => {
+  const c = raw(t);
+  c.child.stdin.write('x'.repeat(1024 * 1024 + 1));
+  const error = await c.next();
+  assert.equal(error.error.code, -32600);
+  assert.match(error.error.message, /1 MiB/);
+  c.child.stdin.write('discarded tail\n');
+  c.send({ jsonrpc: '2.0', id: 'after-oversized', method: 'ping' });
+  assert.deepEqual(await c.next(), { jsonrpc: '2.0', id: 'after-oversized', result: {} });
+});
+
+test("inflight requests are bounded and cancellation still frees capacity", { timeout: 10000 }, async (t) => {
+  const c = raw(t);
+  let started = 0, closed = 0, ready, drained;
+  const begun = new Promise((resolve) => { ready = resolve; });
+  const disconnected = new Promise((resolve) => { drained = resolve; });
+  const server = http.createServer((_req, res) => {
+    if (++started === 32) ready();
+    res.once("close", () => { if (++closed === 32) drained(); });
+  });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  t.after(() => { server.closeAllConnections(); server.close(); });
+  fs.writeFileSync(c.env.DEVECO_CONFIG, JSON.stringify({ npm_registry: `http://127.0.0.1:${server.address().port}` }));
+  for (let id = 0; id < 32; id++) c.send({ jsonrpc: "2.0", id, method: "tools/call", params: { name: "knowledge", arguments: { action: "status" } } });
+  c.send({ jsonrpc: "2.0", id: "overflow", method: "ping" });
+  const overflow = await c.next();
+  assert.equal(overflow.id, "overflow"); assert.equal(overflow.error.code, -32000);
+  await begun;
+  for (let id = 0; id < 32; id++) c.send({ jsonrpc: "2.0", method: "notifications/cancelled", params: { requestId: id } });
+  let timer;
+  try { await Promise.race([disconnected, new Promise((_, reject) => { timer = setTimeout(() => reject(new Error("Cancellation did not drain requests")), 1500); })]); }
+  finally { clearTimeout(timer); }
+  // Closing sockets precedes completion of the handlers' audit writes.
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  c.send({ jsonrpc: "2.0", id: "after-capacity", method: "ping" });
+  assert.deepEqual(await c.next(), { jsonrpc: "2.0", id: "after-capacity", result: {} });
+});
+
 test("version negotiation only claims the implemented single-message protocol", async (t) => {
   for (const requested of ["2025-06-18", "2025-03-26", "2024-11-05", "2099-01-01"]) {
     const c = raw(t);

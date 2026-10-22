@@ -166,108 +166,6 @@ function unionProjectFiles(files, projectPath) {
   return merged;
 }
 
-// --- Per-file diagnostic cache (warm --serve process only) ---
-//
-// A file's checker diagnostics depend on its own content plus the content it
-// imports, so caching on the file's own hash alone would go stale the moment a
-// dependency changed. Each entry is therefore keyed on a *closure* hash: this
-// file's content plus every relatively-imported file reachable from it.
-//
-// Two things sit outside any closure and would silently go stale, so they are
-// folded into a process-wide epoch that clears the whole cache when it changes:
-// installed dependencies (`ohpm install` mid-session) and ambient `.d.ets`
-// declarations, which affect files with no import edge to them.
-const fileDiagCache = new Map(); // abs -> { closureHash, diagnostics }
-let cacheEpoch = '';
-
-function hashText(text) {
-  return require('crypto').createHash('sha1').update(text).digest('hex');
-}
-
-function fileHash(abs) {
-  try {
-    return hashText(fs.readFileSync(abs, 'utf-8'));
-  } catch {
-    return 'missing';
-  }
-}
-
-function computeEpoch(projectPath, devecoHome) {
-  const parts = [devecoHome];
-  for (const rel of ['oh-package.json5', 'oh-package-lock.json5', 'build-profile.json5']) {
-    parts.push(rel, fileHash(path.join(projectPath, rel)));
-  }
-  for (const abs of collectAmbientDeclarations(projectPath)) {
-    parts.push(path.relative(projectPath, abs), fileHash(abs));
-  }
-  return hashText(parts.join('\n'));
-}
-
-// Ambient `.d.ets` files declare types with no import edge, so any file's
-// diagnostics can depend on them. Collected project-wide, excluding deps.
-function collectAmbientDeclarations(projectPath) {
-  const results = [];
-  function walk(dir) {
-    let entries;
-    try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
-    for (const entry of entries) {
-      const full = path.join(dir, entry.name);
-      if (entry.isDirectory()) {
-        if (entry.name === 'node_modules' || entry.name === 'oh_modules' || entry.name === 'build') continue;
-        if (entry.name.startsWith('.')) continue;
-        walk(full);
-        continue;
-      }
-      if (entry.name.endsWith('.d.ets') || entry.name.endsWith('.d.ts')) results.push(full);
-    }
-  }
-  walk(projectPath);
-  return results;
-}
-
-// Resolve a relative specifier for closure walking. Wider than
-// `resolveModuleFile` (which is .ets-only, for the import fixer): a relative
-// `.ts` or `.d.ets` dependency changing must also invalidate the importer.
-function resolveClosureDependency(importerAbs, spec) {
-  if (!spec.startsWith('.')) return null;
-  const base = path.resolve(path.dirname(importerAbs), spec);
-  const candidates = /\.(ets|ts)$/.test(base)
-    ? [base]
-    : [base + '.ets', base + '.ts', base + '.d.ets', base + '.d.ts',
-       path.join(base, 'index.ets'), path.join(base, 'index.ts')];
-  for (const c of candidates) {
-    try { if (fs.statSync(c).isFile()) return c; } catch { /* not present */ }
-  }
-  return null;
-}
-
-const IMPORT_SPEC_RE = /(?:^|\n)\s*(?:import|export)\b[^;\n]*?from\s*['"]([^'"]+)['"]/g;
-
-// Hash of `abs` plus every relatively-imported file transitively reachable from
-// it. Cycles terminate via `seen`; unresolvable and bare specifiers are ignored
-// (bare package imports are covered by the epoch instead).
-function closureHash(abs) {
-  const seen = new Set();
-  const parts = [];
-  const stack = [abs];
-  while (stack.length > 0) {
-    const current = stack.pop();
-    if (seen.has(current)) continue;
-    seen.add(current);
-    let content;
-    try { content = fs.readFileSync(current, 'utf-8'); } catch { parts.push(current + ':missing'); continue; }
-    parts.push(current + ':' + hashText(content));
-    IMPORT_SPEC_RE.lastIndex = 0;
-    for (;;) {
-      const m = IMPORT_SPEC_RE.exec(content);
-      if (!m) break;
-      const dep = resolveClosureDependency(current, m[1]);
-      if (dep && !seen.has(dep)) stack.push(dep);
-    }
-  }
-  return hashText(parts.sort().join('\n'));
-}
-
 // --- Diagnostic output capture ---
 
 function parseDiagnosticLine(line) {
@@ -382,7 +280,7 @@ function projectModuleRoots(projectPath) {
     for (const m of (parsed && Array.isArray(parsed.modules) ? parsed.modules : [])) {
       if (m && typeof m.srcPath === 'string') roots.add(path.resolve(projectPath, m.srcPath));
     }
-  } catch { /* fall back to the directory scan */ }
+  } catch (error) { if (error.code !== "ENOENT") throw error; }
   try {
     for (const d of fs.readdirSync(projectPath, { withFileTypes: true })) {
       if (!d.isDirectory() || d.name === 'node_modules' || d.name === 'oh_modules' || d.name.startsWith('.')) continue;
@@ -781,7 +679,7 @@ function validatePageEntryCount(etsFile, projectPath, pagePath) {
   let content;
   try { content = fs.readFileSync(etsFile, 'utf-8'); } catch { return null; }
   const entryLines = [];
-  const lines = content.split('\n');
+  const lines = codeLines(content.split('\n')); 
   for (let i = 0; i < lines.length; i++) {
     if (/^\s*@Entry\b/.test(lines[i])) entryLines.push(i + 1);
   }
@@ -846,7 +744,13 @@ const STRUCT_DECL_RE = /^(\s*)((?:@\w+(?:\([^)]*\))?\s*)*)(?:export\s+(?:default
 // Collect `{lineIdx, name, inline}` for every struct declared in `lines`, in
 // document order. Struct bodies are delimited by the next struct declaration
 // (or EOF), matching the line-range convention the decorator checks already use.
+function codeLines(lines) {
+  const state = { quote: null, inBlockComment: false };
+  return lines.map(line => maskNonCode(line, state));
+}
+
 function collectStructs(lines) {
+  lines = codeLines(lines);
   const structs = [];
   for (let i = 0; i < lines.length; i++) {
     const m = STRUCT_DECL_RE.exec(lines[i]);
@@ -860,6 +764,7 @@ function collectStructs(lines) {
 // @ComponentV2 struct Foo {`) plus decorator-only lines walking backward
 // (mirrors the decorator-chain walk in buildExportEdit).
 function collectStructDecorators(lines, structLineIdx, inlineDecoratorText) {
+  lines = codeLines(lines);
   const names = new Set();
   const inlineRe = /@(\w+)/g;
   let m;
@@ -883,7 +788,7 @@ function collectStructDecorators(lines, structLineIdx, inlineDecoratorText) {
 function validateComponentDecoratorConsistency(filePath, projectPath) {
   let content;
   try { content = fs.readFileSync(filePath, 'utf-8'); } catch { return []; }
-  const lines = content.split('\n');
+  const lines = codeLines(content.split('\n')); 
   // `export struct Foo {` is the overwhelmingly common form in generated ArkTS
   // (roughly 2/3 of struct declarations across observed bootstrap output) — an
   // earlier version of this regex only matched a bare `struct Foo {`, silently
@@ -962,60 +867,31 @@ const CLASS_DECL_RE = /^(\s*)((?:@\w+(?:\([^)]*\))?\s*)*)(?:export\s+(?:default\
 // shape and guessing at it risks false positives for no observed payoff.
 const STATE_PROPERTY_TYPE_RE = /^\s*@(State|Prop|Provide|Consume)\b(?:\([^)]*\))?\s+\w+\s*:\s*([A-Za-z_$][\w$]*)\b(?!\s*[<[.])/;
 
-// SDK classes that hvigor treats as @ObservedV2 but that never appear as a
-// declaration in project source, so collectObservedV2ClassNames' file scan can
-// never see them. EMPTY ON PURPOSE, and adding a name is almost certainly wrong:
-// hvigor's 10905348 check (ets-loader/lib/validate_ui_syntax.js,
-// validatePropertyInStruct -> validatePropertyType -> parsePropertyType) reads
-// the resolved type's own `symbol.valueDeclaration` decorators through the TS
-// checker, and no class in the ArkUI component declarations carries @ObservedV2
-// -- `ets/component/*.d.ts` mentions it only as the
-// `declare const ObservedV2: ClassDecorator` definition. The SDK classes that do
-// carry it live in `@ohos.arkui.advanced.{ArcSlider,DialogV2,SubHeaderV2,
-// ProgressButtonV2,SegmentButtonV2,ToolBarV2}.d.ets` and are never used as
-// @State/@Prop property types. 'NavPathStack' was seeded here from a
-// misattributed bootstrap failure -- `declare class NavPathStack` in
-// `ets/component/navigation.d.ts` carries no decorators at all -- and it made the
-// legal `@Prop pathStack: NavPathStack = new NavPathStack()` a hard error.
-const SDK_OBSERVED_V2_CLASSES = new Set();
-
-// The @ObservedV2 class index must be built from the WHOLE project, not just
-// the checked `files`: the decorated class lives in a model file while the
-// offending @State property lives in a page/component file, and the agent
-// typically batches a check over one of those groups but not both (observed in
-// bootstrap task-009: a 23-file check covering every model and zero pages, so
-// the cross-file pair never co-occurred and 5 real 10905348 errors reached
-// hvigor). Scanning every project .ets costs ~20 ms (recursive walk + read of
-// ~80 KB), which is noise next to runChecker's multi-second tsc pass, and can
-// only ever ADD declarations to the index — the reported diagnostics are still
-// keyed to properties found in `files`, so widening this cannot introduce a
-// false positive on a file the caller did not ask about.
-function collectObservedV2ClassNames(files, projectPath) {
-  const names = new Set(SDK_OBSERVED_V2_CLASSES);
-  const declarationFiles = projectPath ? unionProjectFiles(files, projectPath) : files;
-  for (const filePath of declarationFiles) {
-    let content;
-    try { content = fs.readFileSync(filePath, 'utf-8'); } catch { continue; }
-    const lines = content.split('\n');
+// These source rules only assert locally declared, unambiguous types. Imported
+// symbols require SDK resolution; a same-name declaration elsewhere is not proof.
+function collectObservedV2ClassNames(files) {
+  const names = new Set(), declared = new Set();
+  for (const filePath of files) {
+    const lines = codeLines(fs.readFileSync(filePath, 'utf-8').split('\n'));
     for (let i = 0; i < lines.length; i++) {
       const m = CLASS_DECL_RE.exec(lines[i]);
       if (!m) continue;
-      const decorators = collectStructDecorators(lines, i, m[2]);
-      if (decorators.has('ObservedV2')) names.add(m[3]);
+      if (declared.has(m[3])) { names.delete(m[3]); continue; }
+      declared.add(m[3]);
+      if (collectStructDecorators(lines, i, m[2]).has('ObservedV2')) names.add(m[3]);
     }
   }
   return names;
 }
 
 function validateObservedV2PropertyTypes(files, projectPath) {
-  const observedV2Classes = collectObservedV2ClassNames(files, projectPath);
-  if (observedV2Classes.size === 0) return [];
-
   const diagnostics = [];
   for (const filePath of files) {
+    const observedV2Classes = collectObservedV2ClassNames([filePath]);
+    if (!observedV2Classes.size) continue;
     let content;
     try { content = fs.readFileSync(filePath, 'utf-8'); } catch { continue; }
-    const lines = content.split('\n');
+    const lines = codeLines(content.split('\n')); 
     const relFile = path.relative(projectPath, filePath);
     for (let i = 0; i < lines.length; i++) {
       const m = STATE_PROPERTY_TYPE_RE.exec(lines[i]);
@@ -1516,8 +1392,8 @@ function readProjectSdkConfig(projectPath, devecoHome) {
   let parsed = null;
   try {
     parsed = parseJson5Loose(fs.readFileSync(profilePath, 'utf-8'));
-  } catch {
-    parsed = null;
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
   }
 
   const products = parsed && parsed.app && Array.isArray(parsed.app.products) ? parsed.app.products : [];
@@ -2049,18 +1925,13 @@ function validateNavDestinationRoot(files, projectPath) {
 // throws at startup, so the app crashes on launch. V2 state belongs in
 // `AppStorageV2.connect` / `PersistenceV2.connect`.
 function validateAppStorageV2Mixing(files, projectPath) {
-  // Only a class the project itself decorates '@ObservedV2' crashes here, which is
-  // exactly what this index holds while SDK_OBSERVED_V2_CLASSES stays empty. If a
-  // name is ever seeded there, re-check whether it also crashes AppStorage before
-  // letting it reach this rule.
-  const observedV2Classes = collectObservedV2ClassNames(files, projectPath);
-  if (observedV2Classes.size === 0) return [];
-
   const diagnostics = [];
   for (const filePath of files) {
+    const observedV2Classes = collectObservedV2ClassNames([filePath]);
+    if (!observedV2Classes.size) continue;
     let content;
     try { content = fs.readFileSync(filePath, 'utf-8'); } catch { continue; }
-    const lines = content.split('\n');
+    const lines = codeLines(content.split('\n')); 
     const relFile = path.relative(projectPath, filePath);
 
     // Local `name: Type` declarations, so a bare `this.viewModel` argument can
@@ -2187,34 +2058,10 @@ function validateModelVersion(projectPath) {
 // The linter never reads module.json5's permission block, so we add it here.
 
 // Parse a JSON5-ish document (comments + trailing commas) into an object, or
-// null on failure. Comment stripping is string-literal aware so a `//` inside a
-// value is preserved. Deliberately minimal — enough for module.json5 configs.
+// Uses the package JSON5 parser; malformed input fails instead of skipping checks.
 function parseJson5Loose(text) {
-  try {
-    let out = '';
-    let inStr = false;
-    let quote = '';
-    for (let i = 0; i < text.length; i++) {
-      const c = text[i];
-      const next = text[i + 1];
-      if (inStr) {
-        out += c;
-        if (c === '\\') { out += next; i++; continue; }
-        if (c === quote) inStr = false;
-        continue;
-      }
-      if (c === '"' || c === "'") { inStr = true; quote = c; out += c; continue; }
-      if (c === '/' && next === '/') { while (i < text.length && text[i] !== '\n') i++; out += '\n'; continue; }
-      if (c === '/' && next === '*') { i += 2; while (i < text.length && !(text[i] === '*' && text[i + 1] === '/')) i++; i++; continue; }
-      out += c;
-    }
-    // Single-quoted strings -> double-quoted; drop trailing commas.
-    out = out.replace(/'((?:[^'\\]|\\.)*)'/g, (_m, inner) => '"' + inner.replace(/"/g, '\\"') + '"');
-    out = out.replace(/,(\s*[}\]])/g, '$1');
-    return JSON.parse(out);
-  } catch {
-    return null;
-  }
+  try { return require('json5').parse(text); }
+  catch (error) { throw new Error(`Invalid JSON5 configuration: ${error.message}`); }
 }
 
 // Set of `$string:` keys defined in a string.json document, or null if the
@@ -2686,7 +2533,7 @@ function buildComponentVersionEdits(content, diags) {
   }
   if (structNames.size === 0) return [];
 
-  const lines = content.split('\n');
+  const lines = codeLines(content.split('\n')); 
   const structs = collectStructs(lines);
 
   const lineStarts = computeLineStarts(content);
@@ -3157,50 +3004,6 @@ function dropFalsePositives(diagnostics, projectPath, aceModuleJsonPath) {
   });
 }
 
-// Checker diagnostics for `files`, reusing cached results for files whose
-// dependency closure is unchanged and running the checker only over the rest.
-// Project-level diagnostics are excluded — they are computed once per request in
-// runCheck and are not per-file, so they must not enter the per-file cache.
-//
-// Worth roughly 25ms per skipped file. That is small next to the ~2s fixed cost
-// of a warm check, but it is what makes re-sending an unchanged 47-file list
-// cheap, which is the pattern the prompt asks the model to follow.
-function cachedCheckerDiagnostics(files, env) {
-  const epoch = computeEpoch(env.projectPath, env.devecoHome);
-  if (epoch !== cacheEpoch) {
-    fileDiagCache.clear();
-    cacheEpoch = epoch;
-  }
-
-  const hashes = new Map(files.map((f) => [f, closureHash(f)]));
-  const stale = files.filter((f) => fileDiagCache.get(f)?.closureHash !== hashes.get(f));
-
-  if (stale.length > 0) {
-    const fresh = runChecker(stale, { ...env, skipProjectDiagnostics: true });
-    // Seed an empty entry for every re-checked file so a clean file is a future
-    // hit rather than a permanent miss.
-    for (const f of stale) fileDiagCache.set(f, { closureHash: hashes.get(f), diagnostics: [] });
-    for (const d of fresh) {
-      const abs = path.isAbsolute(d.file) ? d.file : path.resolve(env.projectPath, d.file);
-      // The checker can attribute a diagnostic to a file outside `stale` (for
-      // example a dependency); those are kept in the result but not cached, since
-      // this pass did not check that file in full.
-      const entry = fileDiagCache.get(abs);
-      if (entry && entry.closureHash === hashes.get(abs)) entry.diagnostics.push(d);
-    }
-    return [...fresh, ...files.filter((f) => !stale.includes(f)).flatMap((f) => fileDiagCache.get(f).diagnostics)];
-  }
-
-  return files.flatMap((f) => fileDiagCache.get(f).diagnostics);
-}
-
-// Drop cache entries for files the auto-fixer rewrote. Their closure hash has
-// changed anyway, so this is belt-and-braces against a hash collision or a
-// same-content rewrite, and keeps the cache from growing stale entries.
-function invalidateFileDiagCache(absPaths) {
-  for (const abs of absPaths) fileDiagCache.delete(abs);
-}
-
 // Merge a partial (incremental) re-check back into a whole-project view.
 // `recheckResult` holds the accurate diagnostics for the files in `recheckSet`
 // (absolute paths); every other file keeps its `firstPass` diagnostics. Project
@@ -3255,15 +3058,13 @@ function restoreDroppedDiagnostics(firstPass, merged, writtenFiles, absOf) {
 // Files whose `original` has been released were already verified and kept, so
 // they are skipped; re-reverting an already-reverted file is a no-op.
 function revertAllTouched(touched) {
+  const failures = [];
   for (const t of touched) {
-    if (t.original === null || t.original === undefined) continue;
-    try {
-      fs.writeFileSync(t.abs, t.original, 'utf-8');
-    } catch {
-      // Best effort: a file we cannot restore is worse than one we can, but
-      // failing the whole revert over it would strand the rest.
-    }
+    if (t.original == null) continue;
+    try { fs.writeFileSync(t.abs, t.original, 'utf-8'); }
+    catch (error) { failures.push({ file: t.abs, error: error.message }); }
   }
+  return failures;
 }
 
 // Attempt heuristic fixes over `diagnostics`. Edits are applied per file, then
@@ -3290,6 +3091,7 @@ function applyAutoFixes(diagnostics, env) {
   const moduleIndex = buildModuleIndex(projectPath);
 
   const touched = [];       // { abs, original, appliedKeys:Set }
+  try {
   for (const [abs, diags] of byFile) {
     let content;
     try { content = fs.readFileSync(abs, 'utf-8'); } catch { continue; }
@@ -3297,8 +3099,8 @@ function applyAutoFixes(diagnostics, env) {
     if (edits.length === 0) continue;
     const { output, applied } = applyEdits(content, edits);
     if (output === content || applied.length === 0) continue;
-    fs.writeFileSync(abs, output, 'utf-8');
     touched.push({ abs, original: content, appliedKeys: new Set(applied.map(diagKey)) });
+    fs.writeFileSync(abs, output, 'utf-8');
   }
 
   // Cross-file channel: "declares 'X' locally, but it is not exported" appears on
@@ -3336,18 +3138,12 @@ function applyAutoFixes(diagnostics, env) {
     if (edits.length === 0) continue;
     const { output } = applyEdits(content, edits);
     if (output === content) continue;
-    fs.writeFileSync(declAbs, output, 'utf-8');
     touched.push({ abs: declAbs, original: content, appliedKeys: bucket.keys });
+    fs.writeFileSync(declAbs, output, 'utf-8');
     exportDeclAbs.add(declAbs);
   }
 
   if (!touched || touched.length === 0) return { fixed: [], diagnostics };
-
-  // The auto-fixer rewrote these files, so any cached diagnostics for them (and
-  // for importers whose missing-export error it targeted) describe the old text.
-  // Their closure hashes have changed too, but dropping the entries keeps the
-  // cache from carrying results this pass is about to supersede.
-  invalidateFileDiagCache([...(touched || []).map((t) => t.abs), ...exportImporters]);
 
   // Incremental re-check: a fix only changes diagnostics in the file it edited,
   // plus — for the cross-file `export` fix — the importer files that referenced
@@ -3402,13 +3198,7 @@ function applyAutoFixes(diagnostics, env) {
   // runChecker throws when the ArkTS checker fails. The edits are on disk by
   // now, so roll them back before the error propagates -- an unverified rewrite
   // is not something to leave behind on a failed check.
-  let after;
-  try {
-    after = runChecker(recheckFiles, env);
-  } catch (e) {
-    revertAllTouched(touched);
-    throw new Error(`${e.message} (auto-fix edits were rolled back)`);
-  }
+  const after = runChecker(recheckFiles, env);
 
   const projectDiags = env.projectDiagnostics || [];
   // Per-file error counts before/after to detect regressions.
@@ -3422,12 +3212,6 @@ function applyAutoFixes(diagnostics, env) {
     }
   }
 
-  // `original` is only needed for the revert above; drop the kept files' copies
-  // so we don't hold every touched file's full source through the rest of the pass.
-  for (const t of touched) {
-    if (!reverted.has(t.abs)) t.original = null;
-  }
-
   // Accurate diagnostics for the re-checked subset after any reverts.
   let recheckResult;
   if (reverted.size === 0) {
@@ -3436,16 +3220,7 @@ function applyAutoFixes(diagnostics, env) {
     // A reverted export fix re-breaks its importers, which `after` still shows as
     // fixed; splicing would be wrong, so re-run the (still incremental) checker.
     for (const t of (touched || [])) stateFieldCache.delete(t.abs);
-    try {
-      recheckResult = runChecker(recheckFiles, env);
-    } catch (e) {
-      // Kept files released their `original` above, so only the already-reverted
-      // ones are restorable here. That is the right scope anyway: the first
-      // re-check confirmed each kept edit did not regress its own file, so those
-      // stay. Only the verdict on the reverted files' importers is missing.
-      revertAllTouched(touched);
-      throw new Error(`${e.message} (reverted-file edits were rolled back; kept edits remain)`);
-    }
+    recheckResult = runChecker(recheckFiles, env);
   } else {
     // No cross-file propagation among reverted files: splice instead of re-running.
     recheckResult = spliceRevertedDiagnostics(diagnostics, after, reverted, projectDiags, absOf);
@@ -3483,6 +3258,12 @@ function applyAutoFixes(diagnostics, env) {
     .map(t => path.relative(projectPath, t.abs));
 
   return { fixed, diagnostics: finalDiagnostics, alsoModified };
+  } catch (error) {
+    const failures = revertAllTouched(touched);
+    const result = new Error(`${error.message} (${failures.length ? 'auto-fix rollback incomplete: ' + failures.map(f => f.file).join(', ') : 'auto-fix edits were rolled back'})`, { cause: error });
+    result.rollback_failures = failures;
+    throw result;
+  }
 }
 
 // One check pass over `args` ({ project, files, fix }). Returns the result object
@@ -3583,12 +3364,9 @@ function runCheck(args) {
   // and JSON.parse are done a single time regardless of how many re-checks run.
   env.projectDiagnostics = computeProjectDiagnostics(files, env, hasExplicitFiles);
 
-  // The per-file cache only pays off across requests, so it is limited to the
-  // warm --serve process; a one-shot CLI run would just hash files for nothing.
-  const checkerDiags = args.cache ? cachedCheckerDiagnostics(files, env) : undefined;
-  let filtered = checkerDiags
-    ? [...checkerDiags, ...dropFalsePositives(env.projectDiagnostics, args.project, aceModuleJsonPath)]
-    : runChecker(files, env);
+  // Keep the process warm, but always ask the SDK to check the requested files.
+  // Local regexes cannot prove the complete import/configuration dependency graph.
+  let filtered = runChecker(files, env);
   // How many of these came from the ArkTS checker rather than the source-derived
   // project rules. The two layers fail independently: across an observed 26-task
   // run, several sessions produced project-rule diagnostics normally while the
@@ -3673,9 +3451,6 @@ function handleRequest(line) {
   // between two requests the model has edited files, added new ones, or switched
   // projects, and a stale entry would report diagnostics for content no longer
   // on disk. Both caches exist only to avoid re-reading within a single pass.
-  // `fileDiagCache` is deliberately NOT cleared here — surviving across requests
-  // is its entire purpose. It self-invalidates per file via closure hashes and
-  // wholesale via the epoch.
   projectEtsFileCache.clear();
   stateFieldCache.clear();
 
@@ -3685,7 +3460,6 @@ function handleRequest(line) {
         project: req.project ? path.resolve(req.project) : '',
         files: req.files,
         fix: req.fix === true,
-        cache: true,
       });
     } catch (e) {
       return { success: false, error: `Internal error: ${e && e.message}`, errors: [], summary: { errorCount: 0, warnCount: 0 } };
@@ -3745,8 +3519,7 @@ module.exports = {
   parseArgs, runCheck,
   readProjectSdkConfig, parseCompatibleSdkVersion, readSdkApiLevel,
   DEFAULT_SDK_INFO, DEFAULT_RUNTIME_OS,
-  closureHash, computeEpoch, resolveClosureDependency, collectAmbientDeclarations,
-  fileDiagCache, invalidateFileDiagCache, dropFalsePositives, hashText,
+  dropFalsePositives,
   isOutsideProject, isDeclarationFile,
 };
 

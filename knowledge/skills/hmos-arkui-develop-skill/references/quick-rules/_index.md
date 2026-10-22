@@ -47,7 +47,7 @@
 - [ ] @Builder 按引用传递用单参数对象字面量；@Builder 内不修改入参（见 05-state）
 
 ### 渲染控制
-- [ ] ForEach / LazyForEach 有第三个参数作为 key，且用业务 ID 不用索引（见 06-rendering）
+- [ ] 可变列表建议为 ForEach / LazyForEach 提供稳定业务 key；第三个参数并非必填（见 06-rendering）
 - [ ] dataSource 不重新赋值，通过 DataChangeListener 更新（见 06-rendering）
 
 ### build() 函数
@@ -58,7 +58,7 @@
 - [ ] 变量名避开框架保留字（见 03-component 保留字全表）
 - [ ] 组件和变量命名避开框架内置组件和属性名（见 03-component）
 - [ ] 组件嵌套符合约束（List 内必须用 ListItem，Tabs 内必须用 TabContent）（见 12-layout）
-- [ ] **多页面生成时，所有顶层 interface/class 名必须带用例 ID 或页面名前缀**（防 arkts-no-decl-merging，见 03-component）
+- [ ] 区分共享全局的 script 与独立 module；只处理实际作用域内的同名声明冲突（见 03-component）
 
 ### 属性参数
 - [ ] 不捏造属性名/枚举值（见 07-attribute-params 臆造API清单）

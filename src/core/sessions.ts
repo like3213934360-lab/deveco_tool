@@ -1,4 +1,5 @@
 import { config } from "./config.js";
+import { ToolError } from "./errors.js";
 
 /**
  * Keyed pool of long-lived resources (language servers, log streams, watchers).
@@ -24,10 +25,12 @@ export class SessionPool<T extends Closable> {
   async use<R>(key: string, create: () => Promise<T>, fn: (value: T) => Promise<R>): Promise<R> {
     let entry = this.entries.get(key);
     if (!entry) {
-      await this.evict();
-      entry = { value: create(), active: 0 };
+      // Reserve synchronously, before awaiting an eviction or starting the process.
+      const retired = this.evict();
+      entry = { value: retired.then(create), active: 0 };
       this.entries.set(key, entry);
-      entry.value.catch(() => this.entries.delete(key));
+      const created = entry;
+      entry.value.catch(() => { if (this.entries.get(key) === created) this.entries.delete(key); });
     }
     clearTimeout(entry.timer);
     entry.active++;
@@ -62,17 +65,18 @@ export class SessionPool<T extends Closable> {
   /** Close `key` only if it still holds `value` (a stale instance must not close its replacement). */
   async closeIf(key: string, value: T) {
     const entry = this.entries.get(key);
-    if (entry && (await entry.value.catch(() => undefined)) === value) await this.close(key);
+    if (entry && (await entry.value.catch(() => undefined)) === value && this.entries.get(key) === entry) await this.close(key);
   }
 
   async closeAll() {
     await Promise.all(this.keys().map((key) => this.close(key)));
   }
 
-  private async evict() {
-    if (this.entries.size < this.limit) return;
+  private evict(): Promise<void> {
+    if (this.entries.size < this.limit) return Promise.resolve();
     const idle = [...this.entries].find(([, e]) => e.active === 0);
-    if (idle) await this.close(idle[0]);
+    if (idle) return this.close(idle[0]);
+    throw new ToolError("RESOURCE_BUSY", "All language-service sessions are in use", { limit: this.limit }, "Wait for an active request to finish before opening another project", true);
   }
 }
 

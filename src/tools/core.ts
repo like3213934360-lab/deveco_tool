@@ -206,7 +206,7 @@ export const runTool = tool({
 export const jobTool = tool({
   name: "job",
   title: "Jobs",
-  description: `resources: inspect same-host reservations; release_resource: exact resource+owner_pid, dead owners only after effect reconciliation. Jobs: wait (default 20000, max ${MAX_WAIT_MS} ms; repeat while running, never restart), status, list, cancel; resume interrupted/needs_input jobs only after inspection (force=true repeats an uncertain step). read: full artifacts (logs/reports/images) by artifact_id; line/limit page, grep filters.`,
+  description: `resources: inspect same-host reservations; release_resource: exact resource+owner_pid, dead owners only after effect reconciliation. Jobs: wait (default 20000, max ${MAX_WAIT_MS} ms; repeat while running, never restart), status, list, cancel; resume failed/interrupted/needs_input jobs only after inspection (force=true repeats an uncertain step). read: full artifacts (logs/reports/images) by artifact_id; line/limit page, grep filters.`,
   schema: z.object({
     action: z.enum(["wait", "status", "list", "cancel", "resume", "read", "resources", "release_resource"]),
     resource: z.string().optional(),
@@ -227,7 +227,7 @@ export const jobTool = tool({
     wait: ["job_id", "wait"], status: ["job_id", "detail"], list: ["limit", "status"], cancel: ["job_id"],
     resume: ["job_id", "force"], read: ["artifact_id", "line", "offset", "limit", "grep"],
   },
-  async handler(input) {
+  async handler(input, { signal }) {
     if (input.action === "resources") return (await import("../core/operations.js")).resourceStatus();
     if (input.action === "release_resource") {
       invariant(input.resource && input.owner_pid, "INVALID_INPUT", "Exact resource and owner_pid required after reconciling side effects");
@@ -239,7 +239,7 @@ export const jobTool = tool({
     if (input.action === "read") {
       invariant(input.artifact_id, "INVALID_INPUT", "artifact_id is required");
       const { readArtifact } = await import("../core/artifacts.js");
-      const result = await readArtifact(input.artifact_id, { line: input.line, offset: input.offset, limit: input.limit, grep: input.grep });
+      const result = await readArtifact(input.artifact_id, { line: input.line, offset: input.offset, limit: input.limit, grep: input.grep }, signal);
       if ("image" in result && result.image) {
         const { image, ...rest } = result;
         return { ...rest, _image: { data: image, mime: result.mime } };
@@ -248,7 +248,7 @@ export const jobTool = tool({
     }
     invariant(input.job_id, "INVALID_INPUT", "job_id is required");
     switch (input.action) {
-      case "wait": return jobs.waitJob(input.job_id, input.wait ?? 20000);
+      case "wait": return jobs.waitJob(input.job_id, input.wait ?? 20000, signal);
       case "status": return jobs.jobStatus(input.job_id, input.detail);
       case "cancel": return jobs.cancelJob(input.job_id);
       case "resume": return jobs.resumeJob(input.job_id, input.force);
@@ -323,7 +323,7 @@ export const codeTool = tool({
         return code.restartLsp(project, input.language ?? "all");
       case "lsp":
         invariant(input.op, "INVALID_INPUT", "op is required for lsp");
-        return code.lsp({ project, action: input.op, file: input.file, files: input.files, symbol: input.symbol, line: input.line, column: input.column, query: input.query, language: input.language === "all" ? undefined : input.language, limit: input.limit, direction: input.direction }, ctx.signal);
+        return code.lsp({ project, product: input.product, action: input.op, file: input.file, files: input.files, symbol: input.symbol, line: input.line, column: input.column, query: input.query, language: input.language === "all" ? undefined : input.language, limit: input.limit, direction: input.direction }, ctx.signal);
     }
   },
 });
@@ -617,13 +617,14 @@ export const uiTool = tool({
       invariant(input.test_id, "INVALID_INPUT", "test_id is required");
       const t = await uitest();
       if (input.action === "test_finish") return t.finishTest(input.test_id);
-      if (input.action === "test_log") return t.testLog(input.test_id, { grep: input.grep, max_chars: input.max_chars });
+      if (input.action === "test_log") return t.testLog(input.test_id, { grep: input.grep, max_chars: input.max_chars }, ctx.signal);
       invariant(input.directory, "INVALID_INPUT", "directory is required");
       return t.exportTest(input.test_id, input.directory);
     }
     if (input.action === "layout" && input.forms) {
       invariant(input.project, "INVALID_INPUT", "layout forms needs project");
-      return startAndWait("layout_check", { project: input.project, forms: input.forms, then_flow: input.then_flow, keep_running: input.keep_running }, input.request_key, input.wait ?? 3000);
+      invariant(input.target === undefined && input.bundle === undefined, "INVALID_INPUT", "layout forms selects its own emulators and project bundle; target/bundle are not applicable");
+      return startAndWait("layout_check", { project: input.project, forms: input.forms, then_flow: input.then_flow, keep_running: input.keep_running, min_target_vp: input.min_target_vp, strict_targets: input.strict_targets }, input.request_key, input.wait ?? 3000);
     }
     let projectTypes: string[] | undefined;
     if (input.action === "test_start" && input.project && !input.target) {
@@ -719,6 +720,7 @@ export const uiTool = tool({
         invariant(!(input.op && input.steps), "INVALID_INPUT", "Pass either op (one action) or steps (several), not both");
         invariant(!input.save_flow || input.assert, "INVALID_INPUT", "save_flow needs an assert that proves the goal was reached");
         if (input.op) await buildAction({ ...input, selector: undefined, x: input.selector ? 0 : input.x, y: input.selector ? 0 : input.y }, target, ui, ctx.signal);
+        if (input.steps) (await import("../domains/uibatch.js")).validateBatchSteps(input.steps);
         const consent = await ui.acceptAgreements(target, ctx.signal);
         const { deviceInfo } = await import("../domains/device.js");
         const flows = await import("../domains/flows.js");
@@ -741,7 +743,8 @@ export const uiTool = tool({
           const repeat = saved ? undefined : repeatHint(target, result.executed);
           return {
             ...rest, ...ui.automaticResult(consent.accepted, result), ...(saved ? { saved_flow: saved } : {}), ...(repeat ? { suggest: repeat } : {}),
-            ...(!result.passed ? { hint: result.stopped_at !== undefined ? `Time budget of one call used up: call again with steps from index ${result.stopped_at}`
+            ...(!result.passed ? { hint: result.error?.code === "UI_OBSERVATION_FAILED" ? "Actions were sent but observation failed; inspect the UI before repeating any action"
+              : result.stopped_at !== undefined ? `Time budget of one call used up: call again with steps from index ${result.stopped_at}`
               : result.failed_step !== undefined ? "Fix the failing step using the visible list, then call again with the remaining steps" : "The final assert failed: check after/visible" } : {}),
           };
         }
@@ -804,7 +807,7 @@ async function buildAction(input: UiInput, target: string, ui: typeof import("..
   let action: import("../domains/ui.js").Action;
   switch (input.op) {
     case "click": case "double_click": case "long_click": need(x !== undefined && y !== undefined, "selector or x,y"); action = { action: input.op, x: x!, y: y! }; break;
-    case "input": need(x !== undefined && input.text !== undefined, "selector or x,y and text"); action = { action: "input", x: x!, y: y!, text: input.text!, append: input.append }; break;
+    case "input": need(x !== undefined && y !== undefined && input.text !== undefined, "selector or x,y and text"); action = { action: "input", x: x!, y: y!, text: input.text!, append: input.append }; break;
     case "type": need(input.text !== undefined, "text"); action = { action: "type", text: input.text! }; break;
     case "swipe": case "drag": case "fling": need([input.x, input.y, input.x2, input.y2].every((v) => v !== undefined), "x,y,x2,y2"); action = { action: input.op, x: input.x!, y: input.y!, x2: input.x2!, y2: input.y2!, speed: input.speed }; break;
     case "scroll": need(input.direction, "direction"); action = { action: "scroll", direction: input.direction!, speed: input.speed, ...(input.selector ? { selector: input.selector } : {}) }; break;

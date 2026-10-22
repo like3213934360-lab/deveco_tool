@@ -33,6 +33,7 @@ const categories: Record<string, ErrorCategory> = {
   CANCELLED: "tool",
   ASSERTION_FAILED: "evidence",
   EFFECT_UNCERTAIN: "evidence",
+  UI_OBSERVATION_FAILED: "evidence",
 };
 
 export class ToolError extends Error {

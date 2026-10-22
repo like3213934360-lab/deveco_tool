@@ -4,7 +4,7 @@
 
 | 规则 | 说明 | 错误码 |
 |------|------|--------|
-| **必须有第三个参数（keyGenerator）** | 缺少 key 生成器导致渲染异常 | — |
+| **建议提供稳定的 keyGenerator** | 第三个参数在签名中可选；稳定业务 key 更适合可变列表 | — |
 | key 用业务 ID，不用索引 | `(item, index) => index` 导致渲染不正确和性能差 | — |
 | key 必须唯一 | 重复键值导致渲染异常 | — |
 | 默认 key 有性能隐患 | 默认使用 `index + '__' + JSON.stringify(item)`，复杂对象 JSON 序列化占用大量内存 | — |
@@ -31,7 +31,7 @@
 |------|------|--------|
 | 仅在 @ComponentV2 中使用 | V1 用会错 | — |
 | virtualScroll 模式需设 totalCount | `virtualScroll({ totalCount: arr.length })` | — |
-| cachedCount 设在**滚动容器**上 | 不在 Repeat 链上（否则 **10505001**） | **10505001** |
+| cachedCount 区分两种用途 | 容器 `.cachedCount()` 控制预加载；Repeat `.template(..., { cachedCount })` 控制模板缓存，不是 Repeat 链式方法（否则 **10505001**） | **10505001** |
 | key() 必须唯一 | | — |
 
 ```ts
@@ -54,7 +54,7 @@ List() { Repeat(this.list).virtualScroll({ totalCount: this.list.length }) }.cac
 
 | ❌ 错误写法 | ✅ 正确写法 | 说明 |
 |------------|-----------|------|
-| `ForEach(this.list, item => { ... })` 缺第三个参数 | `(item: Item) => Text(item.name), (item: Item) => item.id.toString()` | 必须提供 keyGenerator |
+| 可变列表依赖默认 key | 显式提供 `(item: Item) => item.id.toString()` | 性能和身份稳定性建议，非必填语法 |
 | `(item, index) => index` 做 key | `(item: Item) => item.id.toString()` | 索引做 key 导致渲染不正确 |
 | `LazyForEach` 的 dataSource 用状态变量并重新赋值 | 必须用 DataChangeListener 通知 | 重新赋值 dataSource 异常 |
 | `LazyForEach` 放在 Scroll 里 | 仅 List/Grid/WaterFlow/Swiper 支持 | Scroll 不支持懒加载 |

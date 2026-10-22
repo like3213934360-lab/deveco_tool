@@ -1,6 +1,8 @@
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { inspectProject } from "./project.js";
 import { readJson5 } from "../core/files.js";
 
 /*
@@ -33,9 +35,10 @@ function lockDependencies(lock: any, name: string, key: "dependencies" | "dynami
   });
 }
 
-export function arktsModuleModels(root: string, sdk: string) {
+export function arktsModuleModels(root: string, sdk: string, productName?: string) {
   const profile = readJsonSafe(path.join(root, "build-profile.json5")) ?? {};
-  const product = profile.app?.products?.[0] ?? {};
+  const project = inspectProject(root, productName);
+  const product = profile.app?.products?.find((p: { name: string }) => p.name === project.product) ?? {};
   const compat = String(product.compatibleSdkVersion ?? profile.app?.compatibleSdkVersion ?? "");
   const [compatVersion, compatLevel] = /^(.*)\((\d+)\)$/.exec(compat)?.slice(1) ?? [compat, compat];
   const pkg = readJsonSafe(path.join(sdk, "default", "sdk-pkg.json"))?.data ?? {};
@@ -49,9 +52,8 @@ export function arktsModuleModels(root: string, sdk: string) {
     hosSdkPath: unix(path.join(sdk, "default/hms")),
   };
   const models = [];
-  for (const m of profile.modules ?? []) {
-    if (typeof m?.name !== "string" || typeof m?.srcPath !== "string") continue;
-    const modulePath = unix(path.resolve(root, m.srcPath));
+  for (const m of project.modules) {
+    const modulePath = unix(m.root);
     const manifest = readJsonSafe(path.join(modulePath, "src/main/module.json5"))?.module ?? {};
     const pages = readJsonSafe(path.join(modulePath, "src/main/resources/base/profile/main_pages.json"))?.src ?? [];
     const deps = lock ? [...lockDependencies(lock, m.name, "dependencies"), ...lockDependencies(lock, m.name, "devDependencies"), ...rootDeps] : [];
@@ -70,7 +72,7 @@ export function arktsModuleModels(root: string, sdk: string) {
       permissions: (manifest.requestPermissions ?? []).map((p: { name?: string }) => p.name).filter(Boolean),
       testPermissions: [],
       buildProfileParam: {
-        productName: "default", buildModeName: "debug", targetName: "default", arkTSVersion: "1.1",
+        productName: project.product, buildModeName: "debug", targetName: m.target, arkTSVersion: "1.1",
         resourceDirectories: [unix(path.join(modulePath, "src/main/resources"))], targetESVersion: "ES2021", maxFlowDepth: 2000,
         caseSensitiveCheck: true, tsImportSendable: false, compatibleSdkVersionStage: "", useNormalizedOHMUrl: true,
         reExportCheckMode: "noCheck", skipOhModulesLint: false, byteCodeHar: true, obfuscationRuleOptionsEnable: false,
@@ -87,18 +89,18 @@ export function arktsModuleModels(root: string, sdk: string) {
       globalDeclarationFiles: [],
     });
   }
-  return { models, lock: !!lock, dependencyMap: fs.existsSync(path.join(root, ".hvigor", "dependencyMap")) };
+  return { models, product: project.product, lock: !!lock, dependencyMap: fs.existsSync(path.join(root, ".hvigor", "dependencyMap")) };
 }
 
-export function arktsInitializationOptions(root: string, sdk: string, stateDir: string, serverPath?: string) {
-  const { models } = arktsModuleModels(root, sdk);
+export function arktsInitializationOptions(root: string, sdk: string, stateDir: string, serverPath?: string, productName?: string) {
+  const { models, product } = arktsModuleModels(root, sdk, productName);
   return {
     // The server takes its workspace from here (not from the top-level rootUri).
     rootUri: pathToFileURL(root).href,
     lspServerWorkspacePath: serverPath ? unix(path.dirname(path.dirname(serverPath))) : "",
     modules: models,
     clientType: "intellij",
-    indexingDataLocation: unix(path.join(stateDir, "lsp-index", Buffer.from(root).toString("base64url").slice(-40))),
+    indexingDataLocation: unix(path.join(stateDir, "lsp-index", createHash("sha256").update(JSON.stringify([path.resolve(root), product])).digest("hex"))),
     completionSortSetting: { enableRecentlyUsed: false, enableCompletionSortByType: true, maxValidCompletionItemsCount: 50, enableCompletionFunctionParameter: false, enableIndexModuleRootDirEtsFile: false },
     gutterIconsSetting: { overriddenEnable: true, overridingEnable: true, implementedEnable: true, implementingEnable: true },
     inlayHintsSetting: { typeSetting: {}, parameterNames: {} },

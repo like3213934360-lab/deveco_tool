@@ -118,7 +118,7 @@ test("gestures", async (t) => {
   const firstRow = async () => (await ui({ action: "tree", node: "Rows", interactive: false, limit: 80 })).tree.match(/"row \d+"/)?.[0];
   for (const op of ["scroll", "mouse_scroll"]) await t.test(`ui.act.${op}`, async () => {
     const before = await firstRow(); assert.ok(before);
-    const b = await at("Rows"); await act({ op, x: b.x, y: b.y, direction: "down", ticks: 5 });
+    const b = await at("Rows"); await act(op === "scroll" ? { op, selector: { key: "Rows" }, direction: "up" } : { op, x: b.x, y: b.y, direction: "down", ticks: 5 });
     const after = await firstRow(); assert.ok(after); assert.notEqual(after, before);
   });
   await t.test("ui.act.mouse_move", async () => {

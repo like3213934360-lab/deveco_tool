@@ -246,7 +246,7 @@
 | sections | WaterFlowSections | 否 | — | API 12+ 分区配置 |
 | layoutMode | WaterFlowLayoutMode | 否 | — | 布局模式 |
 
-> **注意：不存在 WaterFlowController。** WaterFlow 不接受 controller 参数，不要尝试 import 或创建 WaterFlowController。
+> **注意：不存在 WaterFlowController。** WaterFlow 使用 `Scroller`，通过 `scroller` 参数绑定（如 `WaterFlow({ scroller: this.scroller })`），不是 `controller` 参数。
 
 **属性方法：**
 

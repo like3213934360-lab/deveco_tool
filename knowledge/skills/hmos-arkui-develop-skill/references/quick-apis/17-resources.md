@@ -1074,7 +1074,7 @@
 | hexagon | circle | 六边形（不存在单独的） |
 | pentagon | circle | 五边形（不存在） |
 | octagon | circle | 八边形（不存在） |
-| capsule | pill | 胶囊（不存在） |
+| capsule | cross_vial | 胶囊（不存在） |
 | sphere | circle | 球体（不存在） |
 | server | computer_fill | 服务器（不存在） |
 | sidebar | list_bullet | 侧边栏（不存在） |

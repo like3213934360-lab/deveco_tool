@@ -366,3 +366,14 @@ test("integrity and pointer failures preserve active pointer and previous rollba
   await m.rollback(); assert.equal(m.activePack().manifest.sources.upstream.version, "1.3.5-Test.1");
   assert.deepEqual(fs.readdirSync(path.join(state, "kb")).filter((name) => name.startsWith(".")), []);
 });
+
+test('knowledge publication keeps an existing version and pointer intact on validation or publish failure',async(t)=>{
+  const upstream=await archive(upstreamName,'1.3.5-Test.1'), out=path.join(work,'publish-safe');
+  const first=await m.buildKnowledgePack({upstream:upstream.dir,out,version:'1.0.0'});
+  const previous=fs.readFileSync(first.tarball), pointer=fs.readlinkSync(path.join(out,'current'));
+  await assert.rejects(m.buildKnowledgePack({upstream:upstream.dir,out,version:'1.0.0'}),{code:'CONFLICT'});
+  const rename=fs.renameSync, mock=t.mock.method(fs,'renameSync',(from,to)=>{if(to===path.join(out,'current'))throw new Error('publish failure');return rename(from,to)});
+  try{await assert.rejects(m.buildKnowledgePack({upstream:upstream.dir,out,version:'1.0.1'}),/publish failure/)}finally{mock.mock.restore()}
+  assert.deepEqual(fs.readFileSync(first.tarball),previous);assert.equal(fs.readlinkSync(path.join(out,'current')),pointer);
+  assert.ok(!fs.existsSync(path.join(out,'1.0.1')));
+});

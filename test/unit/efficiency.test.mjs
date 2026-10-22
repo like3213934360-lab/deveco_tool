@@ -200,7 +200,10 @@ test("locate: module names map to module folders, .ts frames find .ets sources, 
   assert.equal(found.length, 1);
   assert.equal(found[0].file, "features/Toolbox/src/main/ets/tool/Page.ets");
   assert.equal(found[0].line, 12);
-  assert.deepEqual(found[0].snippet, ["     9 | line 9", "    10 | line 10", "    11 | line 11", ">   12 | line 12", "    13 | line 13", "    14 | line 14", "    15 | line 15"]);
+  assert.deepEqual(found[0].snippet, []);
+  assert.match(found[0].mapping_note, /unverified/);
+  const direct = m.locate("features/Toolbox/src/main/ets/tool/Page.ets:12:5", project);
+  assert.ok(direct[0].snippet.some(line => line === ">   12 | line 12"));
   // Paths outside the project are never read.
   assert.equal(m.resolveRef({ rel: "/etc/hosts", line: 1 }, project), undefined);
   assert.deepEqual(m.locate("no locations here", project), []);
@@ -226,7 +229,7 @@ test("source maps: compiled .ts frames map back to the .ets line (release-bundle
   fs.mkdirSync(mapsDir, { recursive: true });
   fs.writeFileSync(path.join(mapsDir, "sourceMaps.map"), JSON.stringify({ "entry|entry|1.0.0|src/main/ets/pages/Index.ts": { version: 3, ...map } }));
   const later = new Date(Date.now() + 60000); fs.utimesSync(path.join(mapsDir, "sourceMaps.map"), later, later);
-  const found = m.locate("at aboutToAppear (entry|entry|1.0.0|src/main/ets/pages/Index.ts:3:41)", { root: proj, modules: [{ name: "entry", root: path.join(proj, "entry") }] });
+  const found = m.locate("at aboutToAppear (entry|entry|1.0.0|src/main/ets/pages/Index.ts:3:41)", { root: proj, product: "default", modules: [{ name: "entry", root: path.join(proj, "entry"), target: "default" }] });
   assert.equal(found[0].file, "entry/src/main/ets/pages/Index.ets");
   assert.equal(found[0].line, 6);
   assert.equal(found[0].mapped_from, "entry/src/main/ets/pages/Index.ts:3:41");
@@ -439,12 +442,16 @@ test("hot path inputs: resources compared by content", () => {
   fs.writeFileSync(f, "{}");
   fs.writeFileSync(path.join(proj, "entry/src/main/ets.ets"), "code");
   const a = m.inputsSnapshot(proj);
-  assert.deepEqual(Object.keys(a), ["entry/src/main/resources/base/element/string.json"]);
+  assert.deepEqual(Object.keys(a), ["entry/src/main/ets.ets", "entry/src/main/resources/base/element/string.json"]);
   const later = new Date(Date.now() + 5000);
   fs.utimesSync(f, later, later);
   assert.deepEqual(m.changedInputs(a, m.inputsSnapshot(proj, a)), [], "touched, same content");
   fs.writeFileSync(f, '{"x":1}');
   assert.deepEqual(m.changedInputs(a, m.inputsSnapshot(proj, a)), ["entry/src/main/resources/base/element/string.json"]);
+  const previousTime=fs.statSync(f), baseline=m.inputsSnapshot(proj);
+  fs.writeFileSync(f,'{"y":2}');fs.utimesSync(f,previousTime.atime,previousTime.mtime);
+  assert.deepEqual(m.changedInputs(baseline,m.inputsSnapshot(proj,baseline)),["entry/src/main/resources/base/element/string.json"],"restored mtime must not hide a same-size edit");
+
 });
 
 test("artifact read hints: every artifact id in any response shape gets a job read line", () => {
@@ -528,4 +535,44 @@ test("nested selector and assertion typos reject before any UI action", () => {
     { action: "assert", visible: { regex: { texxt: "wrong" } } },
   ]) assert.throws(() => m.validateTool("ui", input));
   assert.throws(() => m.validateTool("run", { action: "build_run", project: "/fixture", assert: { visble: { text: "ready" } } }));
+});
+
+test("PNG decoders reject truncated pixels, invalid filters, CRCs and missing end markers", async () => {
+  const {deflateSync,crc32}=await import('node:zlib');
+  const chunk=(type,data)=>{const body=Buffer.concat([Buffer.from(type),data]), head=Buffer.alloc(4),tail=Buffer.alloc(4);head.writeUInt32BE(data.length);tail.writeUInt32BE(crc32(body));return Buffer.concat([head,body,tail])};
+  for(const color of [0,2,6]) {
+    const header=Buffer.alloc(13);header.writeUInt32BE(2);header.writeUInt32BE(2,4);header[8]=8;header[9]=color;
+    const size=(2*({0:1,2:3,6:4}[color])+1)*2;
+    const make=(raw)=>Buffer.concat([Buffer.from([137,80,78,71,13,10,26,10]),chunk('IHDR',header),chunk('IDAT',deflateSync(raw)),chunk('IEND',Buffer.alloc(0))]);
+    const valid=make(Buffer.alloc(size));assert.equal(m.pngGray(valid).gray.length,4);assert.deepEqual(m.decodeGray(valid),m.pngGray(valid));
+    const badFilter=Buffer.alloc(size);badFilter[0]=5;
+    const badCrc=Buffer.from(valid);badCrc[29]^=1;
+    const badSignature=Buffer.from(valid);badSignature[0]=0;
+    for(const bad of [make(Buffer.alloc(1)),make(Buffer.alloc(size+1)),make(badFilter),badCrc,badSignature,valid.subarray(0,-12),Buffer.concat([valid,Buffer.from([0])])]) {
+      assert.equal(m.pngGray(bad),undefined);assert.equal(m.decodeGray(bad),undefined);
+    }
+  }
+});
+
+test("hot inputs include build scripts, declarations and arbitrary assets", () => {
+  const project=fs.mkdtempSync(path.join(out,'hot-inputs-'));
+  const files=['hvigorfile.ts','hvigor/hvigorconfig.ts','libs/Helper.ts','types.d.ts','.ohpmrc','assets/payload.bin','entry/src/main/ets/.hidden/Value.ets','libs/shared/src/main/ets/Value.ets'];
+  for(const file of files){fs.mkdirSync(path.dirname(path.join(project,file)),{recursive:true});fs.writeFileSync(path.join(project,file),'before')}
+  const before=m.inputsSnapshot(project);
+  for(const file of files){fs.writeFileSync(path.join(project,file),'after changed');assert.ok(m.changedInputs(before,m.inputsSnapshot(project)).includes(file))}
+  assert.deepEqual(Object.keys(before).sort(),files.sort());
+});
+
+test('source mapping stays within selected product/target and detects only its own stale map',()=>{
+  const root=fs.mkdtempSync(path.join(out,'map-identity-')), module=path.join(root,'entry');
+  const source=path.join(module,'src/main/ets/A.ets');fs.mkdirSync(path.dirname(source),{recursive:true});fs.writeFileSync(source,'one\ntwo\nthree');
+  const key='entry|entry|1|src/main/ets/A.ts';
+  const put=(product,target,mappings,extra={})=>{const file=path.join(module,'build',product,'intermediates/loader_out',target,'ets/sourceMaps.map');fs.mkdirSync(path.dirname(file),{recursive:true});fs.writeFileSync(file,JSON.stringify({[key]:{sources:['entry/src/main/ets/A.ets'],mappings},...extra}));return file};
+  const selected=put('watch','watchTarget','AACA'), unrelated=put('default','default','AAAA');
+  fs.utimesSync(selected,10,10);fs.utimesSync(source,20,20);fs.utimesSync(unrelated,30,30);
+  const project={root,product:'watch',modules:[{name:'entry',root:module,target:'watchTarget'}]}, stack='at f (entry|entry|1|src/main/ets/A.ts:1:1)';
+  const hit=m.locate(stack,project)[0];assert.equal(hit.line,2);assert.match(hit.stale,/source changed/);
+  assert.match(m.locate(stack,{...project,product:undefined})[0].mapping_note,/unverified/);
+  put('watch','watchTarget','AACA',{'entry|entry|2|src/main/ets/A.ts':{sources:['entry/src/main/ets/A.ets'],mappings:'AAAA'}});
+  assert.equal(m.locate(stack,project)[0].mapped_from,undefined);
 });

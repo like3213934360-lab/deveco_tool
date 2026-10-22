@@ -106,16 +106,23 @@ async function main() {
         if (!project) throw new Error("serve-lsp --auto-detect: no HarmonyOS project (build-profile.json5 + AppScope) under the current directory");
       }
       const cmd = lspCommand(project ?? process.cwd(), args.includes("--cpp") ? "cpp" : "arkts");
-      const child = spawn(cmd.file, cmd.args, { cwd: cmd.cwd, env: cmd.env as NodeJS.ProcessEnv, stdio: ["pipe", "inherit", "inherit"] });
-      for (const sig of ["SIGINT", "SIGTERM"] as const) process.on(sig, () => child.kill(sig));
-      // The SDK ArkTS server ignores the LSP `exit` notification: enforce it (and editor disconnects).
-      const stop = () => setTimeout(() => child.kill("SIGTERM"), 1000).unref();
+      const child = spawn(cmd.file, cmd.args, { detached: process.platform !== "win32", cwd: cmd.cwd, env: cmd.env as NodeJS.ProcessEnv, stdio: ["pipe", "inherit", "inherit"] });
+      const { killTree } = await import("./core/proc.js");
+      const { LspMessages } = await import("./core/lsp-client.js");
+      const messages = new LspMessages();
+      let stopping = false, failed = false;
+      const stop = () => { if (!stopping) { stopping = true; setTimeout(() => killTree(child, "SIGKILL"), 1000).unref(); } };
+      for (const sig of ["SIGINT", "SIGTERM"] as const) process.on(sig, () => { killTree(child, sig); stop(); });
+      // pipe supplies backpressure; framing observes whole notifications, including split exit messages.
+      process.stdin.pipe(child.stdin!);
       process.stdin.on("data", (chunk: Buffer) => {
-        child.stdin!.write(chunk);
-        if (/"method"\s*:\s*"exit"/.test(chunk.toString("utf8"))) stop();
+        try { for (const message of messages.receive(chunk)) if (message.method === "exit" && message.id === undefined) stop(); }
+        catch (error) { failed = true; process.stderr.write(String(error) + "\n"); killTree(child, "SIGKILL"); }
       });
-      process.stdin.on("end", () => { child.stdin!.end(); stop(); });
-      child.on("exit", (code) => process.exit(code ?? 0)); // stdin listeners would otherwise keep us alive
+      process.stdin.on("end", stop);
+      child.stdin!.on("error", stop);
+      child.on("error", (error) => { process.stderr.write(String(error) + "\n"); process.exit(1); });
+      child.on("exit", (code) => { killTree(child, "SIGKILL"); process.exit(failed ? 1 : code ?? (stopping ? 0 : 1)); }); // owned descendants must not outlive the SDK parent
       return;
     }
     case "kb-update": {

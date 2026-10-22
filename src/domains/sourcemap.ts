@@ -12,8 +12,10 @@ import path from "node:path";
  * project's modules. Stacks of compiled .ets report ".ts": both extensions are tried.
  */
 
-export interface SourceRef { raw: string; module?: string; rel: string; line: number; column?: number }
-export interface ResolvedRef { file: string; line: number; column?: number; snippet: string[]; mapped_from?: string; stale?: string }
+export interface SourceRef { raw: string; module?: string; source_map?: string; rel: string; line: number; column?: number }
+export interface ResolvedRef { file: string; line: number; column?: number; snippet: string[]; mapped_from?: string; stale?: string; mapping_note?: string }
+
+interface SourceProject { root: string; product?: string; modules: { name: string; root: string; target?: string }[] }
 
 /** A path-ish token followed by :line[:col]. Tokens stop at whitespace, parentheses, quotes and commas. */
 const LOC = /([^\s()"'`,]+?):(\d+)(?::(\d+))?(?=[\s)"'`,]|$)/gm;
@@ -51,7 +53,7 @@ export function parseSourceRefs(text: string, limit = 20): SourceRef[] {
  * names the module, not its folder: features/Toolbox is module "Toolbox"), and finally a suffix match
  * on "src/main/ets/...". Returns undefined for system/SDK frames.
  */
-export function resolveRef(ref: SourceRef, project: { root: string; modules: { name: string; root: string }[] }): string | undefined {
+export function resolveRef(ref: SourceRef, project: SourceProject): string | undefined {
   const exts = (p: string) => (p.endsWith(".ts") ? [p.replace(/\.ts$/, ".ets"), p] : [p, p.replace(/\.ets$/, ".ts")]);
   const exists = (p: string) => { try { return fs.statSync(p).isFile(); } catch { return false; } };
   const root = path.resolve(project.root);
@@ -145,50 +147,28 @@ function loadMaps(file: string) {
   } catch { return undefined; }
 }
 
-/** Every sourceMaps.map of the project's entry/feature modules (newest build output). */
-function projectSourceMaps(project: { root: string; modules: { name: string; root: string }[] }) {
-  const out: string[] = [];
-  for (const m of project.modules) {
-    const build = path.join(m.root, "build");
-    let products: string[] = [];
-    try { products = fs.readdirSync(build); } catch { continue; }
-    for (const product of products) {
-      const base = path.join(build, product, "intermediates", "loader_out");
-      let targets: string[] = [];
-      try { targets = fs.readdirSync(base); } catch { continue; }
-      for (const t of targets) { const f = path.join(base, t, "ets", "sourceMaps.map"); if (fs.existsSync(f)) out.push(f); }
-    }
-  }
-  return out;
+/** Only the selected module/product/target can supply a map; directory order is not build identity. */
+export function mapFrame(ref: SourceRef, project: SourceProject): SourceRef | undefined {
+  if (!ref.module || !/\.ts$/.test(ref.rel) || !project.product) return undefined;
+  const module = project.modules.find((m) => m.name === ref.module);
+  if (!module?.target) return undefined;
+  const file = path.join(module.root, "build", project.product, "intermediates/loader_out", module.target, "ets/sourceMaps.map");
+  const maps = loadMaps(file);
+  if (!maps) return undefined;
+  const inner = ref.rel.slice(ref.module.length + 1);
+  const keys = Object.keys(maps).filter((k) => k.startsWith(`${ref.module}|`) && k.endsWith(`|${inner}`));
+  if (keys.length !== 1) return undefined;
+  const pos = mapPosition(maps[keys[0]!]!, ref.line, ref.column ?? 1);
+  return pos ? { raw: ref.raw, rel: pos.source.replaceAll("\\", "/"), line: pos.line, column: pos.column, source_map: file } : undefined;
 }
 
-/**
- * Map a compiled-file frame back to its .ets source via the build's source maps. Returns undefined
- * when no map has the file (then the frame is used as written). Never throws.
- */
-export function mapFrame(ref: SourceRef, project: { root: string; modules: { name: string; root: string }[] }): SourceRef | undefined {
-  if (!ref.module || !/\.ts$/.test(ref.rel)) return undefined;
-  for (const file of projectSourceMaps(project)) {
-    const maps = loadMaps(file);
-    if (!maps) continue;
-    const inner = ref.rel.slice(ref.module.length + 1);
-    const key = Object.keys(maps).find((k) => k.startsWith(`${ref.module}|`) && k.endsWith(`|${inner}`));
-    if (!key) continue;
-    const pos = mapPosition(maps[key]!, ref.line, ref.column ?? 1);
-    if (pos) return { raw: ref.raw, rel: pos.source.replaceAll("\\", "/"), line: pos.line, column: pos.column };
-  }
-  return undefined;
-}
-
-function sourceNewerThanMaps(file: string, project: { root: string; modules: { name: string; root: string }[] }) {
-  try {
-    const src = fs.statSync(file).mtimeMs;
-    return projectSourceMaps(project).every((m) => fs.statSync(m).mtimeMs < src);
-  } catch { return false; }
+function sourceNewerThanMap(file: string, map: string) {
+  try { return fs.statSync(file).mtimeMs > fs.statSync(map).mtimeMs; }
+  catch { return true; }
 }
 
 /** Parse + resolve + snippet: the project's own frames only, at most `limit`. Never throws. */
-export function locate(text: string, project: { root: string; modules: { name: string; root: string }[] } | undefined, limit = 3): ResolvedRef[] {
+export function locate(text: string, project: SourceProject | undefined, limit = 3): ResolvedRef[] {
   if (!project || !text) return [];
   try {
     const out: ResolvedRef[] = [];
@@ -202,8 +182,9 @@ export function locate(text: string, project: { root: string; modules: { name: s
       const rel = path.relative(project.root, file).replaceAll("\\", "/");
       if (seen.has(`${rel}:${ref.line}`)) continue;
       seen.add(`${rel}:${ref.line}`);
-      out.push({ file: rel, line: ref.line, ...(ref.column !== undefined ? { column: ref.column } : {}), snippet: snippet(file, ref.line), ...(mapped ? { mapped_from: `${parsed.rel}:${parsed.line}:${parsed.column ?? 0}` } : {}),
-        ...(mapped && sourceNewerThanMaps(file, project) ? { stale: "the source changed after the build that produced this stack: the line may have moved" } : {}) });
+      out.push({ file: rel, line: ref.line, ...(ref.column !== undefined ? { column: ref.column } : {}), snippet: parsed.module && !mapped ? [] : snippet(file, ref.line), ...(mapped ? { mapped_from: `${parsed.rel}:${parsed.line}:${parsed.column ?? 0}` } : {}),
+        ...(parsed.module ? { mapping_note: mapped ? "Mapped using the selected local build; deployed artifact identity is not verified" : "Source mapping is unverified: selected build identity or one unambiguous map is unavailable; line is from the compiled frame" } : {}),
+        ...(mapped && sourceNewerThanMap(file, mapped.source_map!) ? { stale: "the source changed after the build that produced this stack: the line may have moved" } : {}) });
       if (out.length >= limit) break;
     }
     return out;

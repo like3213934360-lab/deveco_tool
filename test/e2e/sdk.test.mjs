@@ -114,3 +114,66 @@ test("SDK catalog resolves across device types", async (t) => {
   // This module is available only to privileged SDK applications, not a public device type.
   assert.deepEqual(Object.entries(resolved).filter(([, types]) => !types.length).map(([name]) => name), ["@ohos.wifiext"]);
 });
+
+
+test('knowledge examples compile with the installed SDK', {timeout:180000}, async(t)=>{
+  const {call,job,directory}=await session(t),project=path.join(directory,'Knowledge');
+  await call('project',{action:'create',project,app_name:'Knowledge',bundle_name:'com.devecomcp.knowledge'});
+  const names=['ObjectLiteralTypeError','ObjectLiteralInterfaceError','StandaloneFunctionContext','StandaloneFunctionError','TitleButtonRectTypeError','AvoidAreaTypeError','WindowRectSizeError','WindowTypeError','ResourceConversionError','UnusedVariableWarning','UtilityTypeError','DisplayListenerTypeError','PossiblyNullError','AnyTypeError','ESObjectTypeError','ObjectSpreadError','FunctionReturnTypeError','IDataSourceError'];
+  const docs=['object_spread_errors','object_literal_type_errors','function_return_type_errors','object_literal_interface_errors','possibly_null_errors','esobject_type_errors','display_listener_type_errors','any_type_errors','utility_type_errors','unused_variable_warnings','window_type_errors','standalone_function_errors','title_button_rect_type_errors','resource_conversion_errors'];
+  const files=[],pages=[];
+  function save(name,source){
+    const file='entry/src/main/ets/pages/'+name+'.ets';
+    if(/^@Entry\b/m.test(source))pages.push('pages/'+name);
+    fs.writeFileSync(path.join(project,file),source+'\nexport {};\n');files.push(file);
+  }
+  for(const name of names)save(name,fs.readFileSync(new URL('../../knowledge/errors/examples/'+name+'.ets',import.meta.url),'utf8'));
+  for(const name of docs){
+    const text=fs.readFileSync(new URL('../../knowledge/errors/'+name+'.md',import.meta.url),'utf8');
+    for(const [i,match] of [...text.matchAll(/```typescript\n([\s\S]*?)```/g)].entries())save('Doc_'+name+'_'+i,match[1]);
+  }
+  save('QuickRuleContracts',String.raw`
+@Entry
+@Component
+struct QuickRuleContracts {
+  @State selection: string = '';
+  @State sheetVisible: boolean = false;
+  private waterScroller: Scroller = new Scroller();
+  @Builder
+  sheetContent() {
+    Column() { Text('Sheet') }
+  }
+  build() {
+    Column() {
+      Button('Pick').onClick(() => {
+        TextPickerDialog.show({
+          range: ['A', 'B'],
+          onAccept: (result: TextPickerResult) => {
+            const index = result.index;
+            this.selection = typeof index === 'number' ? index.toString() : index.join(',');
+          }
+        });
+      })
+      Text(this.selection)
+      List() {
+        ListItem() { Text('Centered') }.width('50%')
+      }.height(100).alignListItem(ListItemAlign.Center)
+      WaterFlow({ scroller: this.waterScroller }) {
+        FlowItem() { Text('WaterFlow') }
+      }.height(100)
+      Button('Show sheet').onClick(() => { this.sheetVisible = true; })
+        .bindSheet(this.sheetVisible, this.sheetContent, {
+          onDisappear: () => { this.sheetVisible = false; }
+        })
+    }
+  }
+}
+`);
+  fs.writeFileSync(path.join(project,'entry/src/main/resources/base/profile/main_pages.json'),JSON.stringify({src:pages}));
+  const started=performance.now();
+  const first=await call('code',{action:'check',project,files});assert.equal(first.errors,0,JSON.stringify(first));
+  const firstMs=performance.now()-started,warmStarted=performance.now();
+  const warm=await call('code',{action:'check',project,files});assert.equal(warm.errors,0,JSON.stringify(warm));
+  t.diagnostic('Checker timings: first='+Math.round(firstMs)+'ms, warm='+Math.round(performance.now()-warmStarted)+'ms; SDK warnings='+warm.warnings);
+  await job('project',{action:'build',project,wait:0});
+});

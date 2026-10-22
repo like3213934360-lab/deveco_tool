@@ -261,7 +261,8 @@ export async function serve() {
   process.once("SIGTERM", shutdown);
   server.start(() => void shutdown());
   // Mark jobs from dead processes as interrupted, off the handshake path.
-  setTimeout(() => void import("./core/jobs.js").then((m) => m.recoverJobs()).catch(() => {}), 2000).unref();
+  setTimeout(() => void import("./core/jobs.js").then((m) => m.recoverJobs())
+    .catch((error) => process.stderr.write(`[jobs] Recovery failed: ${error.message}\n`)), 2000).unref();
   // Retention also applies to sessions that never run a job (screenshots, cloud answers, UI tests).
   void import("./core/artifacts.js").then((m) => { if (!stopping) m.scheduleCleanup(); })
     .catch((error) => process.stderr.write(`[retention] Startup failed: ${error.message}\n`));

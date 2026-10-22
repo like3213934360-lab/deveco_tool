@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { toolchain } from "../core/toolchain.js";
 import type { DeviceApiWarning, Project } from "./project.js";
+import { errorResult, invariant, ToolError } from "../core/errors.js";
 
 /*
  * Verification of hvigor's "The system capacity of this api 'X' is not supported on all devices".
@@ -22,7 +23,11 @@ type Caps = Set<string>;
 const capsCache = new Map<string, Caps>();
 
 function readCaps(file: string): string[] {
-  try { return (JSON.parse(fs.readFileSync(file, "utf8")) as { SysCaps?: string[] }).SysCaps ?? []; } catch { return []; }
+  try {
+    const caps = JSON.parse(fs.readFileSync(file, "utf8"))?.SysCaps;
+    invariant(Array.isArray(caps) && caps.every((cap) => typeof cap === "string"), "SDK_DATA_INVALID", "Invalid SysCaps array");
+    return caps;
+  } catch (error) { throw new ToolError("SDK_DATA_INVALID", "Cannot verify SDK device capabilities", { file, cause: errorResult(error) }); }
 }
 
 /** Capabilities of one device type: OpenHarmony device-define + HMS device-define (HarmonyOS). */
@@ -38,7 +43,7 @@ export function deviceCaps(deviceType: string, sdk = toolchain().sdk): Caps {
   try {
     // Exact device files only ("phone.json", "phone-hmos.json"), not e.g. "liteWearable" for "wearable".
     hms = fs.readdirSync(hmsDir).filter((f) => f === `${prefix}.json` || f === `${prefix}-hmos.json`).flatMap((f) => readCaps(path.join(hmsDir, f)));
-  } catch { /* OpenHarmony-only SDK */ }
+  } catch (error) { if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error; }
   const caps = new Set([...readCaps(oh), ...hms]);
   capsCache.set(key, caps);
   return caps;
@@ -72,7 +77,7 @@ export interface VerifiedDeviceApi extends DeviceApiWarning { syscap?: string; m
 export async function verifyDeviceApis(project: Project, items: DeviceApiWarning[], signal: AbortSignal, budgetMs = 90000) {
   const { lsp } = await import("./code.js");
   const compileApi = Number(/\((\d+)\)/.exec(project.compileSdk ?? "")?.[1] ?? /^(\d+)/.exec(project.compileSdk ?? "")?.[1] ?? 0) || 99;
-  const real: VerifiedDeviceApi[] = [], unverified: DeviceApiWarning[] = [];
+  const real: VerifiedDeviceApi[] = [], unverified: (DeviceApiWarning & { error?: ReturnType<typeof errorResult> })[] = [];
   let falsePositives = 0;
   const deadline = Date.now() + budgetMs;
   const tagCache = new Map<string, string | undefined>();
@@ -84,14 +89,16 @@ export async function verifyDeviceApis(project: Project, items: DeviceApiWarning
     if (!tagCache.has(key)) {
       // hvigor columns are the identifier start; try it and the next character (0/1-based differences).
       for (const column of [w.column + 1, w.column]) {
-        const h = await lsp({ project: project.root, action: "hover", file: w.file, line: w.line, column }, signal).catch(() => undefined) as { hover?: string | null } | undefined;
+        const h = await lsp({ project: project.root, product: project.product, action: "hover", file: w.file, line: w.line, column }, signal).catch(() => undefined) as { hover?: string | null } | undefined;
         cap = h?.hover ? applicableSyscap(h.hover, compileApi) : undefined;
         if (cap) break;
       }
       tagCache.set(key, cap);
     }
     if (!cap) { unverified.push(w); continue; }
-    const missing = mod.deviceTypes.filter((t) => !deviceCaps(t).has(cap!)).map((t) => (t === "default" ? "phone" : t));
+    let missing: string[];
+    try { missing = mod.deviceTypes.filter((t) => !deviceCaps(t).has(cap!)).map((t) => (t === "default" ? "phone" : t)); }
+    catch (error) { unverified.push({ ...w, error: errorResult(error) }); continue; }
     if (missing.length) real.push({ ...w, syscap: cap, missing_on: missing });
     else falsePositives++;
   }
@@ -110,6 +117,7 @@ export function summarizeVerified(v: Awaited<ReturnType<typeof verifyDeviceApis>
     unguarded_calls: v.real.length,
     compiler_false_positives: v.falsePositives,
     ...(v.unverified.length ? { unverified: v.unverified.length, unverified_at: v.unverified.slice(0, maxLocations).map((w) => `${w.file}:${w.line}:${w.column} (${w.api})`) } : {}),
+    ...(v.unverified.some((w) => w.error) ? { verification_errors: v.unverified.filter((w) => w.error).slice(0, maxLocations).map((w) => w.error) } : {}),
     dependency_warnings: dependencyWarnings,
     capabilities: sorted.slice(0, maxGroups).map(([, list]) => ({
       syscap: list[0]!.syscap, missing_on: list[0]!.missing_on, count: list.length,

@@ -96,6 +96,7 @@ export interface LayoutInput {
   project: string; product?: string; forms?: string[]; then_flow?: string; flow_variables?: Record<string, string>;
   /** keep the emulators running afterwards (default: stop the ones this check started) */
   keep_running?: boolean;
+  min_target_vp?: number; strict_targets?: boolean;
 }
 type Log = (m: string) => void;
 
@@ -111,6 +112,8 @@ async function newestImage(deviceType: string, signal: AbortSignal) {
 export async function withOwnedEmulator<T>(input: { owner: string; purpose: string; device_type: string; os_version: string; keep_running?: boolean },
   signal: AbortSignal, work: (instance: { name: string; target: string; instancePath: string }) => Promise<T>): Promise<T> {
   const emu = await import("./emulator.js");
+  // Cleanup must be supported before creating any instance in a separate directory.
+  await emu.requireScopedStop(signal);
   const available = (await emu.images(input.device_type, signal)).images;
   invariant(available.some((i) => i.downloaded && i.device_type?.toLowerCase() === input.device_type && i.os_version === input.os_version),
     "CAPABILITY_UNAVAILABLE", "No installed image matches the explicit emulator constraints", { device_type: input.device_type, os_version: input.os_version });
@@ -157,7 +160,7 @@ async function checkForm(form: string, input: LayoutInput, packages: string[], a
   return withOwnedEmulator({ owner, purpose: form, device_type: spec.device_type, os_version: osVersion, keep_running: input.keep_running }, signal, async ({ name, target, instancePath }) => {
     log(`${form}: installing`);
     await device.install(target, packages, signal);
-    await device.forceStop(target, app.bundle, signal).catch(() => {});
+    await device.forceStop(target, app.bundle, signal);
     await device.launch(target, app.bundle, app.ability, app.module, signal);
     await settleApp(target, app.bundle, signal, log);
     const info = await device.deviceInfo(target, signal);
@@ -179,7 +182,7 @@ async function checkForm(form: string, input: LayoutInput, packages: string[], a
       const size = await windowSize(target, app.bundle, signal) ?? (info.screen ? { w: info.screen.width, h: info.screen.height } : { w: 1080, h: 2400 });
       const nodes = await dumpTree(target, signal, 0);
       const density = await pixelRatio(target, signal);
-      const check = checkLayout(nodes, size, { bundle: app.bundle, density });
+      const check = checkLayout(nodes, size, { bundle: app.bundle, density, min_target_vp: input.min_target_vp, strict_targets: input.strict_targets });
       const { saveTree } = await import("./ui.js");
       const tree = await saveTree(nodes).catch(() => undefined);
       const shot = await (await import("./ui.js")).screenshot(target, { format: "jpeg", width: 720 }, signal).catch(() => undefined);

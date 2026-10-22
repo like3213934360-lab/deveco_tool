@@ -56,7 +56,7 @@ function readManifest(dir: string): Manifest | undefined {
 }
 
 /** Validate usable content before publishing a pointer; a readable manifest is not a pack receipt. */
-async function validatePack(dir: string, manifest: Manifest, signal?: AbortSignal) {
+export async function validatePack(dir: string, manifest: Manifest, signal?: AbortSignal) {
   if (manifest.docs_sha256 !== undefined)
     invariant(/^[a-f0-9]{64}$/.test(manifest.docs_sha256) && await fileSha256(path.join(dir, "docs.zip")) === manifest.docs_sha256,
       "INTEGRITY_FAILED", "Knowledge docs archive does not match its manifest hash");

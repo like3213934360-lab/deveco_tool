@@ -22,12 +22,12 @@ await build({ stdin: { contents: `export { uiTool } from ${JSON.stringify(path.j
       routing: `export async function resolveTarget(){const e=new Error('Several devices connected');e.code='DEVICE_AMBIGUOUS';throw e};`,
       flows: `export async function replayFlow(){return {passed:false,steps:1,error:{code:"ASSERT_FAILED"}}};`,
       project: `export function inspectProject(root){return {root,bundleName:'com.test.layout',modules:[{name:'entry',type:'entry',deviceTypes:['phone']}]}};export function mainAbility(){return {ability:'EntryAbility',module:'entry'}};export async function buildOutputs(_p,task){return task==='assembleHap'?[{path:'/fake.hap'}]:[]};`,
-      emulator: `const f=()=>globalThis.__devecoLayoutFixture;export async function images(){return {images:[{downloaded:true,device_type:'foldable',os_version:'HarmonyOS 7.0.0(26)'}]}};export async function listEmulators(){return f().instances};
+      emulator: `const f=()=>globalThis.__devecoLayoutFixture;export async function requireScopedStop(){if(f().unsupportedStop)throw Object.assign(new Error("no scoped stop"),{code:"CAPABILITY_UNAVAILABLE"})};export async function images(){return {images:[{downloaded:true,device_type:'foldable',os_version:'HarmonyOS 7.0.0(26)'}]}};export async function listEmulators(){return f().instances};
         export async function createEmulator(input){f().mutations.push(['create',input]);f().instances.push({name:input.name,running:false})};export async function startEmulator(name,options){f().mutations.push(['start',name,options]);f().instances.find(e=>e.name===name).running=true;return {target:'owned-target'}};
         export async function stopEmulator(name,signal){if(signal.aborted)throw new Error('cleanup signal aborted');f().mutations.push(['stop',name]);f().instances.find(e=>e.name===name).running=false};export async function deleteEmulator(name){f().mutations.push(['delete',name]);if(f().rejectDelete)throw new Error('delete blocked');f().instances=f().instances.filter(e=>e.name!==name)};
         export async function scenario(_name,s){if(f().rejectFold&&s.state==='close')throw new Error('unsupported fold')};`,
       device: `export async function install(){};export async function forceStop(){};export async function launch(){};export async function deviceInfo(){return {model:'fixture',screen:{width:1000,height:2000}}};export async function shell(){return {stdout:'VirtualPixelRatio: 3'}};`,
-      ui: `export async function dumpTree(){return [{i:0,parent:null,type:'Text',text:'app',bundle:'com.test.layout',rect:{x1:0,y1:0,x2:300,y2:100}}]};export async function acceptAgreements(_t,_s,nodes){return {nodes,accepted:[]}};export function select(){return []};export function center(){return {x:1,y:1}};export async function act(){};export function invalidate(){};export async function listWindows(){return [{type:1,visible:true,name:'app',bounds:[0,0,1000,2000]}]};export async function saveTree(){return {artifact_id:'fixture'}};export async function screenshot(){return undefined};`,
+      ui: `export async function dumpTree(){return globalThis.__devecoLayoutFixture.nodes??[{i:0,parent:null,type:'Text',text:'app',bundle:'com.test.layout',rect:{x1:0,y1:0,x2:300,y2:100}}]};export async function acceptAgreements(_t,_s,nodes){return {nodes,accepted:[]}};export function select(){return []};export function center(){return {x:1,y:1}};export async function act(){};export function invalidate(){};export async function listWindows(){return [{type:1,visible:true,name:'app',bounds:[0,0,1000,2000]}]};export async function saveTree(){return {artifact_id:'fixture'}};export async function screenshot(){return undefined};`,
     }[a.path], loader: "js" }));
   } }] });
 const m = await import(pathToFileURL(bundle).href);
@@ -80,4 +80,19 @@ test("a required navigation flow failure makes the whole layout check fail", asy
   const r = await m.layoutCheck({ project: "/p", forms: ["foldable"], then_flow: "required-path" }, new AbortController().signal, () => {}, "j_flow_failed");
   assert.equal(r.passed, false); assert.ok(r.failed.length > 0);
   assert.ok(r.forms.flatMap((form) => form.results).some((row) => row.passed === false && row.flow?.passed === false));
+});
+
+
+test('forms preserve explicit target rules from tool entry through the job input',async()=>{
+  const ctx={signal:new AbortController().signal};fixture.rejectFold=false;
+  fixture.nodes=[{i:0,parent:null,type:'Button',text:'small',clickable:true,bundle:'com.test.layout',rect:{x1:100,y1:100,x2:160,y2:160}}];
+  try{
+    await m.uiTool.handler({action:'layout',project:'/p',forms:['foldable'],strict_targets:true,min_target_vp:40},ctx);
+    assert.equal(fixture.job.input.strict_targets,true);assert.equal(fixture.job.input.min_target_vp,40);
+    const result=await m.layoutCheck(fixture.job.input,ctx.signal,()=>{},'strict');assert.equal(result.passed,false);
+    const count=fixture.mutations.length;
+    for(const fields of [{bundle:'other'},{target:'other'}])await assert.rejects(m.uiTool.handler({action:'layout',project:'/p',forms:['foldable'],...fields},ctx),{code:'INVALID_INPUT'});
+    fixture.unsupportedStop=true;await assert.rejects(m.withOwnedEmulator({owner:'unsupported',purpose:'x',device_type:'foldable',os_version:'HarmonyOS 7.0.0(26)'},ctx.signal,()=>{}),{code:'CAPABILITY_UNAVAILABLE'});
+    assert.equal(fixture.mutations.length,count);
+  }finally{delete fixture.nodes;delete fixture.unsupportedStop}
 });

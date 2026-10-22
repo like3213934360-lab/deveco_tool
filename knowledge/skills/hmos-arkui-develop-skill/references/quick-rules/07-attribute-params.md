@@ -9,7 +9,7 @@
 | **禁止捏造不存在的属性名** | 不确定时必须检索确认 |
 | **禁止使用缩写属性** | 无 `.bgColor()`、`.radius()`、`.textSize()` 等缩写 |
 | **属性归属组件需匹配** | `.textOverflow()` 仅 Text 支持，`.objectFit()` 仅 Image 等媒体组件支持 |
-| **Button 文字样式通过子组件设置** | 不直接支持 `.fontColor()` |
+| Button 文字颜色 | `Button('label').fontColor(Color.Red)` 可用；自定义 Text 子组件可自行设置颜色 |
 
 ### 枚举值
 
@@ -42,7 +42,7 @@
 | RichEditor 必须传 controller | `RichEditor({ controller: this.editor })` |
 | overlay 必须传 CustomBuilder | 不能直接 `.overlay(Text('x'))`，需 @Builder 包装 |
 | Scroll 传实例不传类 | `Scroll(new Scroller())`，不能 `Scroll(Scroller)` |
-| ListItemGroup 无 divider 属性 | 用 List 的 `.divider()` 统一设置 |
+| ListItemGroup 分割线 | 支持 `.divider(options)`；List 也有自己的 divider 配置 |
 | Refresh 构造器传 refreshing | `Refresh({ refreshing: this.isRefreshing })`，状态变化通过 `.onStateChange()` / `.onRefreshing()` 监听，非链式方法 |
 
 ### 构造参数字段实测高发错
@@ -68,7 +68,7 @@ TimePicker(opt)
 | 参数类型必须精确 | `onClick` 参数是 `ClickEvent`，不是 `GestureEvent` |
 | 回调参数多为对象而非原始类型 | Video `onUpdate` 返回 `PlaybackInfo` 对象 |
 | bindPopup onStateChange 参数是对象 | `{ isVisible }`，不是 `boolean` |
-| TextPickerResult.index 是数组 | `result.index[0]`，不是 `result.index` |
+| TextPickerResult.index 按实际类型处理 | API 8–9 为 `number`，API 10+ 为 `number \| number[]`；用 `typeof result.index === 'number'` 区分，不能无条件取 `[0]` |
 | curves.springCurve 需要 4 个参数 | `curves.springCurve(10, 1, 228, 30)` |
 | **选择器回调参数是联合类型** | 勿收窄，照编译器声明抄（见下方"常见错误"） |
 
@@ -116,7 +116,7 @@ TimePicker(opt)
 | PanelType                         | `.MiniCard` / `.HalfCard`                                    | `PanelType.Minibar` / `.Foldable`                            |
 | ImageRenderMode                   | `ImageRenderingMode.ORIGINAL`                                | `ImageRenderMode.Original`                                   |
 | DataPanelType                     | `DataPanelType.Close` / `.Ring`                              | `DataPanelType.Circle` / `.Line`                             |
-| **Stack**                         | `.justifyContent()` / `.alignItems()` 在 Stack 上            | Stack 对齐**只在构造器**：`Stack({ alignContent: Alignment.TopStart })`，无 `.justifyContent()` 也无 `.alignItems()` |
+| **Stack**                         | `.justifyContent()` / `.alignItems()` 在 Stack 上            | Stack 对齐可用 `.alignContent(...)` 或构造器：`Stack({ alignContent: Alignment.TopStart })`，无 `.justifyContent()` 也无 `.alignItems()` |
 | **Flex space**                    | `Flex({ space: 10 })`                                        | Flex 的 `space` 是 `{ main: LengthMetrics.vp(8) }`，不是数字 |
 | **Switch**                        | `Switch(...)` 组件                                           | ArkUI 无 `Switch` 组件，用 `Toggle({ type: ToggleType.Switch, isOn })` |
 | **ScrollAlign** vs **EdgeEffect** | `ScrollAlign.Start` 用于 `.edgeEffect()` 等混用              | `ScrollAlign` 用于 `scrollToIndex()`（Start/Center/End/Auto）；`EdgeEffect` 用于 `.edgeEffect()`（Spring/Fade/None）— 两者不可混用 |
@@ -125,7 +125,7 @@ TimePicker(opt)
 | **vp2px/px2vp**                   | 全局调用 `vp2px(20)`                                         | 已废弃；用 `this.getUIContext().vp2px(20)` 或 `display.getDefaultDisplaySync().densityPixels` 换算 |
 | **NavPathStack import**           | `import { NavPathStack } from '@kit.ArkUI'`                  | NavPathStack 是全局类型，不需要 import                       |
 | **onSizeChange 参数**             | `.onSizeChange((w, h) => {})`                                | 签名：`(oldValue: SizeOptions, newValue: SizeOptions) => void` |
-| **List .alignListItem()**         | `.alignListItem(ListItemAlign.Center)`                        | 正确名是 `ListAlign` 不是 `ListItemAlignment`；List 属性是 `.alignListItem(ListItemAlign)` |
+| **List .alignListItem()**         | `.alignListItem(ListAlign.Center)`                            | 正确写法是 `.alignListItem(ListItemAlign.Center)`，参数枚举为 `ListItemAlign` |
 | **Slider .onGesture()**           | `.onGesture()`                                                | Slider 用 `.gesture()` 不是 `.onGesture()` |
 | **TimePicker .fontSize()**        | `.fontSize(16)`                                               | `TimePicker` 用 `.textStyle(PickerTextStyle)` 不是 `.fontSize()` |
 | **SaveButton .margin()**          | `SaveButton().margin(8)`                                      | 安全组件（SaveButton/PasteButton）接受 `.padding()` 但不接受 `.margin()` |
@@ -139,11 +139,9 @@ TimePicker(opt)
 
 | 名称                                                  | 说明                                                         |
 | ----------------------------------------------------- | ------------------------------------------------------------ |
-| `WaterFlowController`                                 | WaterFlow 无控制器                                           |
+| `WaterFlowController`                                 | 不存在此类型；使用 `Scroller`，通过 `WaterFlow({ scroller: this.scroller })` 绑定 |
 | `StarStyle` 枚举                                      | Rating starStyle 只接受自定义图片对象                        |
-| `SnapAlign` / `SnapPagination`                        | scrollSnap 不可用                                            |
 | `curves.easeInOut()`                                  | 用 `curves.initCurve(Curve.EaseInOut)`                       |
-| `LengthMetrics.vp()`                                  | LengthMetrics 是类型不能当值用                               |
 | `GradientDirection.BottomRight`                       | 正确名是 `RightBottom`（仅 TopLeft/TopRight/BottomLeft/RightBottom/LeftBottom）                               |
 | `TextInputStyle.Normal`                               | 不存在，不调 `.style()`                                      |
 | `Curve.springMotion` / `Curve.responsiveSpringMotion` | 这些是 `curves` 命名空间**函数**，非 `Curve.*` 枚举成员      |
@@ -217,3 +215,5 @@ TimePicker(opt)
 - @Extend/@Styles 返回类型见 [10-style](10-style.md)
 - 废弃 API 替换见 [14-deprecated](14-deprecated.md)
 - 相关错误码：**10505001**（属性不存在）、**10605038**（无类型对象字面量）
+
+`Scroll.scrollSnap(options)` 在支持的 SDK 中可用，选项使用 `ScrollSnapOptions`。`LengthMetrics` 是运行时类，可从 `@kit.ArkUI` 导入并调用 `LengthMetrics.vp(8)`；检查项目兼容版本。

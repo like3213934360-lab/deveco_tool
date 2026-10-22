@@ -25,6 +25,7 @@ fs.writeFileSync(entry, [
   `export { createArgs, agreementsAccepted, emulatorFailure } from ${JSON.stringify(path.join(root, "src/domains/emulator.ts"))};`,
   `export { labelCloudSources, packCloudSections, AUTHORITY } from ${JSON.stringify(path.join(root, "src/domains/knowledge.ts"))};`,
   `export { applicableSyscap, deviceCaps } from ${JSON.stringify(path.join(root, "src/domains/syscap.ts"))};`,
+  `export { arktsModuleModels, arktsInitializationOptions } from ${JSON.stringify(path.join(root, "src/domains/arktsModules.ts"))};`,
   `export { parseDuration } from ${JSON.stringify(path.join(root, "src/domains/device.ts"))};`,
   `export { projectRoots, findProjectRoot, selectRunModules, BuildOutputParser, cleanArguments, buildOutputs } from ${JSON.stringify(path.join(root, "src/domains/project.ts"))};`,
   `export { readonlySqlAllowed, readonlyShellArgs, appDatabasePath } from ${JSON.stringify(path.join(root, "src/domains/device.ts"))};`,
@@ -579,6 +580,14 @@ test("package selection requires matching payloads, independent of output timest
   same.writeUInt16LE(1, same.length - 2);
   fs.writeFileSync(signed, Buffer.concat([same, Buffer.from("x")]));
   assert.equal((await m.buildOutputs(project))[0].path, signed);
+  // The SDK signer adds a root page-alignment entry; application entries still match.
+  fs.writeFileSync(signed, zipFixture({ "module.json": "current unsigned payload", ".pages.info": "alignment" }));
+  assert.equal((await m.buildOutputs(project))[0].path, signed);
+  fs.writeFileSync(signed, zipFixture({ "module.json": "changed payload", ".pages.info": "alignment" }));
+  await assert.rejects(m.buildOutputs(project), { code: "CONFLICT" });
+  fs.writeFileSync(signed, zipFixture({ "module.json": "current unsigned payload", "resources/.pages.info": "application resource" }));
+  await assert.rejects(m.buildOutputs(project), { code: "CONFLICT" });
+  fs.writeFileSync(signed, zipFixture({ "module.json": "current unsigned payload", ".pages.info": "alignment" }));
   const secondSignature = path.join(dir, "another-signed.hap");
   fs.writeFileSync(secondSignature, zipFixture({ "module.json": "current unsigned payload" }));
   await assert.rejects(m.buildOutputs(project), { code: "CONFLICT" });
@@ -588,4 +597,113 @@ test("package selection requires matching payloads, independent of output timest
   fs.mkdirSync(path.join(out, "build/outputs/default"), { recursive: true });
   fs.writeFileSync(path.join(out, "build/outputs/default/wrong.app"), "different product");
   assert.deepEqual(await m.buildOutputs(project, "assembleApp"), []);
+});
+
+test("TOML table comments, quoted keys and multiline content preserve unrelated settings", () => {
+  const spec = { command: "new", args: [], env: {} };
+  const peer = '[mcp_servers.\'peer#]\'] # retained\ncommand = "peer"\ntext = """\n[mcp_servers.deveco]\nfake header\n"""\n';
+  const literal = "description = '''\n[mcp_servers.deveco]\n'''\n";
+  const original = literal + '[mcp_servers."deveco"] # target\ncommand="old"\n[mcp_servers.deveco.env] # old env\nA="old"\n' + peer + '[settings] # keep\nvalue=3\n';
+  assert.equal(m.mergeCodexToml(original, 'deveco', spec, false).text, original);
+  const result = m.mergeCodexToml(original, 'deveco', spec, true).text;
+  assert.ok(result.includes(peer)); assert.ok(result.startsWith(literal)); assert.ok(result.includes('[settings] # keep\nvalue=3'));
+  assert.ok(!result.includes('command="old"')); assert.ok(!result.includes('A="old"'));
+  assert.throws(() => m.mergeCodexToml('value="""unterminated', 'deveco', spec, true));
+});
+
+test("capability input errors cannot become an empty supported set", () => {
+  const make = () => fs.mkdtempSync(path.join(out, 'caps-'));
+  assert.throws(() => m.deviceCaps('phone', make()), {code:'SDK_DATA_INVALID'});
+  for (const contents of ['broken', '{"SysCaps":{}}', '{"SysCaps":[3]}']) {
+    const sdk=make(), dir=path.join(sdk,'default/openharmony/ets/api/device-define');
+    fs.mkdirSync(dir,{recursive:true}); fs.writeFileSync(path.join(dir,'default.json'),contents);
+    assert.throws(() => m.deviceCaps('phone',sdk), {code:'SDK_DATA_INVALID'});
+  }
+  const sdk=make(), dir=path.join(sdk,'default/openharmony/ets/api/device-define');
+  fs.mkdirSync(dir,{recursive:true}); fs.writeFileSync(path.join(dir,'default.json'),'{"SysCaps":["A"]}');
+  assert.deepEqual([...m.deviceCaps('phone',sdk)],['A'], 'optional HMS directory may be absent');
+});
+
+test("ArkTS language model uses selected product and applicable module targets", () => {
+  const project=fs.mkdtempSync(path.join(out,'products-'));
+  fs.writeFileSync(path.join(project,'build-profile.json5'), JSON.stringify({app:{products:[
+    {name:'watch',compatibleSdkVersion:'6.0.0(20)'},{name:'default',compatibleSdkVersion:'6.1.0(23)'}]}, modules:[
+    {name:'shared',srcPath:'shared',targets:[{name:'w',applyToProducts:['watch']},{name:'p',applyToProducts:['default']}]},
+    {name:'phoneOnly',srcPath:'phoneOnly',targets:[{name:'default',applyToProducts:['default']}]}]}));
+  const phone=m.arktsModuleModels(project,out).models, watch=m.arktsModuleModels(project,out,'watch').models;
+  assert.equal(phone[0].compatibleSdkLevel,'23'); assert.equal(phone[0].buildProfileParam.productName,'default');
+  assert.equal(phone[0].buildProfileParam.targetName,'p'); assert.equal(phone.length,2);
+  assert.equal(watch[0].compatibleSdkLevel,'20'); assert.equal(watch[0].buildProfileParam.targetName,'w'); assert.equal(watch.length,1);
+  assert.throws(()=>m.arktsModuleModels(project,out,'missing'),{code:'PRODUCT_AMBIGUOUS'});
+});
+
+
+test('unsupported inline TOML forms are rejected instead of appending duplicate server declarations',()=>{
+  for(const original of ['mcp_servers = { deveco = { command = "old" } }','[mcp_servers]\ndeveco = { command = "old" }','mcp_servers.deveco.command = "old"'])
+    for(const force of [false,true])assert.throws(()=>m.mergeCodexToml(original,'deveco',{command:'new',args:[],env:{}},force),{code:'INVALID_INPUT'});
+});
+
+test('language-server indexing identity includes the complete project path and product',()=>{
+  const base=fs.mkdtempSync(path.join(out,'index-'));
+  const paths=['one','two'].map(prefix=>path.join(base,prefix,'shared/long-project-directory-name/Application'));
+  for(const root of paths){fs.mkdirSync(root,{recursive:true});fs.writeFileSync(path.join(root,'build-profile.json5'),JSON.stringify({app:{products:[{name:'default'},{name:'watch'}]},modules:[]}))}
+  const a=m.arktsInitializationOptions(paths[0],out,out,undefined,'default').indexingDataLocation;
+  const b=m.arktsInitializationOptions(paths[1],out,out,undefined,'default').indexingDataLocation;
+  const c=m.arktsInitializationOptions(paths[0],out,out,undefined,'watch').indexingDataLocation;
+  assert.notEqual(a,b);assert.notEqual(a,c);
+});
+
+test('checker parses JSON5 literally and ignores comments/templates in declaration rules',async()=>{
+  const {createRequire}=await import('node:module'), chk=createRequire(import.meta.url)(path.join(root,'resources/vendor/arkts-check.cjs'));
+  assert.deepEqual(chk.parseJson5Loose("{app:{products:[{name:'default',compatibleSdkVersion:'6.1.0(23)'}]}, text: 'comma,} and \\'quote\\'',}"),{app:{products:[{name:'default',compatibleSdkVersion:'6.1.0(23)'}]},text:"comma,} and 'quote'"});
+  assert.throws(()=>chk.parseJson5Loose('{broken'),/Invalid JSON5/);
+  const dir=fs.mkdtempSync(path.join(out,'syntax-')), file=path.join(dir,'Main.ets');
+  const fake='/*\n@Entry\n@ComponentV2\nstruct Fake {}\n*/\nconst message = `\n@Entry\n@Local x: number = 0\n`\n';
+  fs.writeFileSync(file,fake+'@Entry\n@Component\nstruct Main {\n @State x: number = 0\n build() { Text("x") }\n}\n');
+  assert.equal(chk.validatePageEntryCount(file,dir,'Main'),null);assert.deepEqual(chk.validateComponentDecoratorConsistency(file,dir),[]);
+  assert.deepEqual(chk.collectStructs(fs.readFileSync(file,'utf8').split('\n')).map(s=>s.name),['Main']);
+  fs.appendFileSync(file,'\n@Entry\n@ComponentV2\nstruct Second {\n @State x: number = 0\n}\n');
+  assert.equal(chk.validatePageEntryCount(file,dir,'Main').rule,'page-entry-count');assert.equal(chk.validateComponentDecoratorConsistency(file,dir).length,1);
+});
+
+test('unrelated ObservedV2 declarations cannot classify a local imported type by its name',async()=>{
+  const {createRequire}=await import('node:module'), chk=createRequire(import.meta.url)(path.join(root,'resources/vendor/arkts-check.cjs'));
+  const dir=fs.mkdtempSync(path.join(out,'observed-')), main=path.join(dir,'Main.ets');
+  fs.writeFileSync(path.join(dir,'Model.ets'),'export class Model {}');fs.writeFileSync(path.join(dir,'Other.ets'),'@ObservedV2\nexport class Model {}');
+  fs.writeFileSync(main,"import { Model } from './Model'\n@Component\nstruct Main {\n @State model: Model = new Model()\n aboutToAppear() { AppStorage.setOrCreate('key', new Model()) }\n}\n");
+  assert.deepEqual(chk.validateObservedV2PropertyTypes([main],dir),[]);assert.deepEqual(chk.validateAppStorageV2Mixing([main],dir),[]);
+  fs.writeFileSync(main,fs.readFileSync(main,'utf8').replace("import { Model } from './Model'","@ObservedV2\nclass Model {}"));
+  assert.equal(chk.validateObservedV2PropertyTypes([main],dir).length,1);assert.equal(chk.validateAppStorageV2Mixing([main],dir).length,1);
+});
+
+test('warm checker rechecks dependencies and auto-fix rolls back every later failure',async()=>{
+  const vm=await import('node:vm'),{createRequire}=await import('node:module');
+  const vendor=path.join(root,'resources/vendor/arkts-check.cjs'), req=createRequire(vendor), source=fs.readFileSync(vendor,'utf8').replace(/^#![^\n]*\n/,'');
+  const load=(fakeFs,hooks)=>{
+    const localRequire=name=>name==='fs'?fakeFs:req(name);localRequire.cache={};
+    const module={exports:{}};
+    vm.runInNewContext(source+"\nmodule.exports.configure=(h)=>{runChecker=h.check;computeProjectDiagnostics=h.project;findDevecoHome=()=>'/fixture';findEtsLoader=()=>'/fixture';readProjectSdkConfig=()=>({});if(h.edits)buildFileEdits=h.edits};module.exports.applyAutoFixes=applyAutoFixes;",{require:localRequire,module,exports:module.exports,process,console,Buffer});
+    module.exports.configure(hooks);return module.exports;
+  };
+  const dir=fs.mkdtempSync(path.join(out,'checker-failure-')), a=path.join(dir,'Main.ets'), b=path.join(dir,'Model.ets');
+  fs.writeFileSync(a,"import {\n Model\n} from './Model'\nconst value = new Model()");fs.writeFileSync(b,'before');let calls=0;
+  const warm=load(fs,{project:()=>[],check:()=>{calls++;return fs.readFileSync(b,'utf8')==='after'?[{file:'Main.ets',line:1,column:1,severity:'error',message:'changed dependency'}]:[]}});
+  assert.equal(warm.runCheck({project:dir,files:[a],fix:false,cache:true}).summary.errorCount,0);
+  fs.writeFileSync(b,'after');assert.equal(warm.runCheck({project:dir,files:[a],fix:false,cache:true}).summary.errorCount,1);assert.equal(calls,2);
+  for(const failure of ['second-write','project-check','sdk-check','restore']){
+    fs.writeFileSync(a,'originalA');fs.writeFileSync(b,'originalB');let edits=0;
+    const fake=Object.create(fs);fake.writeFileSync=(file,content,...rest)=>{
+      if(String(content)==='fixed'){edits++;if(failure==='second-write'&&file===b)throw new Error('second write failed')}
+      if(failure==='restore'&&edits&&file===a&&content==='originalA')throw new Error('restore denied');
+      return fs.writeFileSync(file,content,...rest);
+    };
+    const checker=load(fake,{project:()=>{if(failure==='project-check')throw new Error('project check failed');return []},check:()=>{throw new Error('SDK check failed')},edits:(content,diags)=>[{start:0,end:content.length,text:'fixed',diag:diags}]});
+    const diagnostics=[a,b].map(file=>({file,line:1,column:1,severity:'error',message:'fixable'}));
+    assert.throws(()=>checker.applyAutoFixes(diagnostics,{projectPath:dir,files:[a,b]}),error=>{
+      if(failure==='restore'){assert.match(error.message,/rollback incomplete/);assert.equal(error.rollback_failures[0].file,a)}
+      else assert.match(error.message,/edits were rolled back/);
+      return true;
+    });
+    assert.equal(fs.readFileSync(b,'utf8'),'originalB');assert.equal(fs.readFileSync(a,'utf8'),failure==='restore'?'fixed':'originalA');
+  }
 });

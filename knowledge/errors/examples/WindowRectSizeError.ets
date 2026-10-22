@@ -1,65 +1,39 @@
-// window.Rect 和 window.Size 类型使用示例
 import { window } from '@kit.ArkUI';
+import { common } from '@kit.AbilityKit';
 
 @Entry
 @Component
-struct WindowRectSizeExample {
-  @State windowRect: window.Rect = { left: 0, top: 0, width: 0, height: 0 };
-  @State windowSize: window.Size = { width: 0, height: 0 };
-  @State breakpoint: string = 'sm';
-
-  aboutToAppear() {
+struct WindowRectSizeError {
+  @State value: string = '';
+  private currentWindow?: window.Window;
+  private generation: number = 0;
+  private changed = (data: window.Size): void => {
+    this.value = `${data.width} × ${data.height}`;
+  };
+  async aboutToAppear(): Promise<void> {
+    const generation = ++this.generation;
+    const host = this.getUIContext().getHostContext();
+    if (host === undefined) {
+      this.value = 'Context is unavailable';
+      return;
+    }
     try {
-      window.getLastWindow(this.getUIContext().getHostContext(), (err, win) => {
-        if (err.code !== 0) {
-          console.error('Failed to get window:', err);
-          return;
-        }
-        const properties = win.getWindowProperties();
-        this.windowRect = properties.windowRect;
-        this.windowSize = { width: properties.windowRect.width, height: properties.windowRect.height };
-        this.breakpoint = this.calculateBreakpoint(properties.windowRect.width);
-
-        win.on('windowSizeChange', (size: window.Size) => {
-          this.windowSize = size;
-          this.windowRect = {
-            left: this.windowRect.left,
-            top: this.windowRect.top,
-            width: size.width,
-            height: size.height
-          };
-          this.breakpoint = this.calculateBreakpoint(size.width);
-        });
-      });
-    } catch (e) {
-      console.error('Error:', e);
+      const currentWindow = await window.getLastWindow(host as common.UIAbilityContext);
+      if (generation !== this.generation) { return; }
+      const rect = currentWindow.getWindowProperties().windowRect;
+      this.value = `${rect.width} × ${rect.height}`;
+      currentWindow.on('windowSizeChange', this.changed);
+      this.currentWindow = currentWindow;
+    } catch (error) {
+      if (generation === this.generation) { this.value = `窗口读取失败: ${String(error)}`; }
     }
   }
-
-  private calculateBreakpoint(width: number): string {
-    if (width < 600) return 'sm';
-    if (width < 840) return 'md';
-    if (width < 1440) return 'lg';
-    return 'xl';
+  aboutToDisappear(): void {
+    this.generation++;
+    this.currentWindow?.off('windowSizeChange', this.changed);
+    this.currentWindow = undefined;
   }
-
   build() {
-    Column({ space: 20 }) {
-      Text('窗口信息')
-        .fontSize(24)
-        .fontWeight(FontWeight.Bold)
-
-      Text(`窗口位置: x=${this.windowRect.left}, y=${this.windowRect.top}`)
-        .fontSize(16)
-
-      Text(`窗口尺寸: w=${this.windowRect.width}, h=${this.windowRect.height}`)
-        .fontSize(16)
-
-      Text(`当前断点: ${this.breakpoint}`)
-        .fontSize(16)
-    }
-    .width('100%')
-    .height('100%')
-    .padding(20)
+    Column() { Text(this.value) }
   }
 }

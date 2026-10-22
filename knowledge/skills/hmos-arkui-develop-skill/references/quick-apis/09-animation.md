@@ -43,12 +43,12 @@
 | 曲线 | 签名 | 说明 |
 |------|------|------|
 | **预设曲线** | `Curve.Linear/Ease/EaseIn/EaseOut/EaseInOut/FastOutSlowIn/...` | 13种预设 |
-| **贝塞尔** | `Curve.cubicBezierCurve(x1,y1,x2,y2)` | 三阶贝塞尔 |
+| **贝塞尔** | `curves.cubicBezierCurve(x1,y1,x2,y2)` | 三阶贝塞尔 |
 | **弹簧** | `curves.springCurve(velocity,mass,stiffness,damping)` | **必须 4 参数**，需 `import { curves } from '@kit.ArkUI'` |
-| **弹簧运动** | `Curve.springMotion(response?,dampingFraction?,velocity?)` | 弹簧物理运动 |
-| **响应弹簧** | `Curve.responsiveSpringMotion(response?,dampingFraction?,velocity?)` | 响应式 |
-| **插值弹簧** | `Curve.interpolatingSpring(velocity,mass,stiffness,damping)` | 插值弹簧 |
-| **自定义** | `Curve.customCurve(interpolate: (t) => number)` | 自定义 |
+| **弹簧运动** | `curves.springMotion(response?,dampingFraction?,overlapDuration?)` | 弹簧物理运动 |
+| **响应弹簧** | `curves.responsiveSpringMotion(response?,dampingFraction?,overlapDuration?)` | 响应式 |
+| **插值弹簧** | `curves.interpolatingSpring(velocity,mass,stiffness,damping)` | 插值弹簧 |
+| **自定义** | `curves.customCurve(interpolate: (t) => number)` | 自定义 |
 | **初始化曲线** | `curves.initCurve(Curve.EaseInOut)` | 获取预设曲线实例 |
 
 ### 转场动画

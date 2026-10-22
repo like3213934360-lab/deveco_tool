@@ -64,11 +64,6 @@ function sourceDigests(moduleRoot: string) {
   return out;
 }
 
-/** Extra hvigor props for the baseline build (kept for parity with DevEco's hot-reload baseline). */
-export function hotBuildProps() {
-  return [] as string[];
-}
-
 /**
  * ColdReloadArkCompile only runs when <module>/build/config/buildConfig.json exists. An empty
  * compileConfig lets hvigor derive the real settings (explicit paths break module resolution).

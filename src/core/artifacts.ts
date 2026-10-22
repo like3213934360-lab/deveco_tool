@@ -59,49 +59,14 @@ async function lookup(id: string) {
  * response always says whether more remains (`next_line` null at the end).
  * `grep` filters lines first, which is usually what the model actually wants.
  */
-export async function readArtifact(id: string, options: { line?: number; offset?: number; limit?: number; grep?: string } = {}) {
+export async function readArtifact(id: string, options: { line?: number; offset?: number; limit?: number; grep?: string } = {}, signal?: AbortSignal) {
   const row = await lookup(id);
   if (row.mime.startsWith("image/"))
     return { artifact_id: id, mime: row.mime, bytes: row.bytes, image: fs.readFileSync(row.file).toString("base64") };
   if (!row.mime.startsWith("text/") && row.mime !== "application/json")
     return { artifact_id: id, mime: row.mime, bytes: row.bytes, file: row.file, note: "Binary artifact: open the file path directly" };
-  const text = fs.readFileSync(row.file, "utf8");
-  let lines = text.split("\n");
-  const total = lines.length;
-  let matcher: RegExp | undefined;
-  if (options.grep) {
-    try { matcher = new RegExp(options.grep, "i"); } catch { matcher = new RegExp(options.grep.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i"); }
-    lines = lines.map((line, index) => `${index + 1}: ${line}`).filter((line) => matcher!.test(line));
-  }
-  const start = Math.max(0, options.line ?? 0);
-  const limit = Math.min(Math.max(1, options.limit ?? 200), 2000);
-  const offset = options.offset ?? 0;
-  invariant(offset >= 0 && Number.isSafeInteger(offset) && offset <= (lines[start]?.length ?? 0), "INVALID_INPUT", "Invalid offset within artifact line");
-  let chunk = lines.slice(start, start + limit);
-  if (chunk.length) chunk[0] = chunk[0]!.slice(offset);
-  let joined = chunk.join("\n");
-  // Keep responses bounded even for very long single lines.
-  while (joined.length > 60000 && chunk.length > 1) {
-    chunk = chunk.slice(0, Math.ceil(chunk.length / 2));
-    joined = chunk.join("\n");
-  }
-  const continued = joined.length > 60000;
-  if (continued) {
-    let end = 60000;
-    if (/[\uD800-\uDBFF]/.test(joined[end - 1]!) && /[\uDC00-\uDFFF]/.test(joined[end]!)) end--;
-    joined = joined.slice(0, end);
-  }
-  const end = continued ? start : start + chunk.length;
-  return {
-    artifact_id: id,
-    mime: row.mime,
-    total_lines: total,
-    ...(matcher ? { matched_lines: lines.length } : {}),
-    line: start,
-    next_line: end < lines.length ? end : null,
-    next_offset: continued ? offset + joined.length : 0,
-    content: joined,
-  };
+  const { readTextPage } = await import("./artifact-text.js");
+  return { artifact_id: id, mime: row.mime, ...await readTextPage(row.file, options, signal) };
 }
 
 const DAY = 86400000;

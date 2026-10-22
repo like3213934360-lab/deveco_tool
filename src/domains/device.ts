@@ -4,6 +4,7 @@ import crypto from "node:crypto";
 import { artifactDir, saveArtifact } from "../core/artifacts.js";
 import { invariant, ToolError } from "../core/errors.js";
 import { clip } from "../core/files.js";
+import { grepMatcher } from "../core/grep.js";
 import { run, type RunResult } from "../core/proc.js";
 import { toolCommand } from "../core/toolchain.js";
 
@@ -212,7 +213,7 @@ export async function pidOf(target: string, bundle: string, signal?: AbortSignal
 /** Launch and watch for a few seconds: process alive and no new crash log means "started". */
 export async function launchAndCheck(target: string, bundle: string, ability: string, module: string | undefined, signal: AbortSignal, observeMs = 3000, want?: Parameters<typeof launch>[5]) {
   const before = new Set(await faultlogNames(target, signal));
-  await forceStop(target, bundle, signal).catch(() => {});
+  await forceStop(target, bundle, signal);
   await launch(target, bundle, ability, module, signal, want);
   (await import("./repeat.js")).noteLaunch(target);
   const deadline = Date.now() + observeMs;
@@ -344,31 +345,24 @@ export async function hilog(target: string, options: LogOptions, signal?: AbortS
 
 /** Filter before limiting. Follow pages consume matching lines chronologically, including timestamp ties. */
 export function selectLogLines(raw: string, options: { limit: number; grep?: string; lower?: string; upper?: string; cursor?: string }) {
-  let pattern: RegExp | undefined;
-  if (options.grep) {
-    try { pattern = new RegExp(options.grep, "i"); }
-    catch { pattern = new RegExp(options.grep.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i"); }
-  }
+  const match = options.grep ? grepMatcher(options.grep) : undefined;
   const [since, consumed] = (options.cursor ?? "").split("#"), counts = new Map<string, number>();
   const records = raw.split(/\r?\n/).filter(Boolean).map((line) => {
     const stamp = stampOf(line), n = (counts.get(stamp ?? "") ?? 0) + 1;
     if (stamp) counts.set(stamp, n);
     return { line, stamp, n, cursor: stamp ? `${stamp}#${n}` : undefined };
   }).filter((r) => !options.cursor || r.stamp && (r.stamp > since! || r.stamp === since && consumed !== undefined && r.n > Number(consumed)));
-  const matched = records.filter((r) => (!options.lower || r.stamp && r.stamp >= options.lower) && (!options.upper || r.stamp && r.stamp <= options.upper) && (!pattern || pattern.test(r.line)));
+  const window = records.filter((r) => (!options.lower || r.stamp && r.stamp >= options.lower) && (!options.upper || r.stamp && r.stamp <= options.upper));
+  const hits = match?.(window.map((r) => r.line));
+  const matched = hits ? window.filter((_, i) => hits[i]) : window;
   const picked = options.cursor ? matched.slice(0, options.limit) : matched.slice(-options.limit);
   const hasMore = matched.length > picked.length;
   return { text: picked.map((r) => r.line).join("\n"), has_more: hasMore, scanned_new: records.length,
     cursor: (hasMore ? picked.at(-1) : records.at(-1))?.cursor ?? options.cursor };
 }
 
-async function summarizeLog(stdout: string, grep?: string) {
-  let lines = stdout.split(/\r?\n/).filter(Boolean);
-  if (grep) {
-    let pattern: RegExp;
-    try { pattern = new RegExp(grep, "i"); } catch { pattern = new RegExp(grep.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i"); }
-    lines = lines.filter((l) => pattern.test(l));
-  }
+async function summarizeLog(stdout: string) {
+  const lines = stdout.split(/\r?\n/).filter(Boolean);
   const text = lines.join("\n");
   const artifact = text.length > 8000 ? await saveArtifact(text) : undefined;
   if (!artifact) return { lines: lines.length, errors: lines.filter((l) => /\s[EF]\s/.test(l)).slice(-20), tail: text };
@@ -386,7 +380,8 @@ async function summarizeLog(stdout: string, grep?: string) {
 }
 
 export async function clearLog(target: string, signal?: AbortSignal) {
-  await shell(target, ["hilog", "-r"], signal);
+  const { checkedCommand } = await import("./device-controls.js");
+  await checkedCommand(target, ["hilog", "-r"], signal);
   return { cleared: true };
 }
 
@@ -436,14 +431,21 @@ export async function readFaultlog(target: string, name: string, signal?: AbortS
 export async function sendFile(target: string, local: string, remote: string, signal?: AbortSignal) {
   invariant(fs.existsSync(local), "NOT_FOUND", `${local} does not exist`);
   const result = await hdc(["-t", target, "file", "send", local, remote], signal, 300000, true);
-  invariant(/finish|success/i.test(result.stdout), "PROCESS_FAILED", `Send failed: ${clip(result.stdout, 300)}`);
+  invariant(result.code === 0 && /FileTransfer finish\b/i.test(result.stdout) && !/\[Fail\]|\bfailed\b|\berror\b|permission denied/i.test(result.stdout + result.stderr), "PROCESS_FAILED", `Send failed: ${clip(result.stdout + result.stderr, 300)}`);
   return { sent: local, remote };
 }
 export async function recvFile(target: string, remote: string, local: string, signal?: AbortSignal) {
   fs.mkdirSync(path.dirname(local), { recursive: true });
-  const result = await hdc(["-t", target, "file", "recv", remote, local], signal, 300000, true);
-  invariant(fs.existsSync(local), "PROCESS_FAILED", `Receive failed: ${clip(result.stdout, 300)}`);
-  return { received: remote, local, bytes: fs.statSync(local).size };
+  const work = fs.mkdtempSync(path.join(path.dirname(local), ".deveco-recv-"));
+  const received = path.join(work, "received");
+  try {
+    const result = await hdc(["-t", target, "file", "recv", remote, received], signal, 300000, true);
+    const stat = fs.lstatSync(received, { throwIfNoEntry: false });
+    invariant(result.code === 0 && /FileTransfer finish\b/i.test(result.stdout) && !/\[Fail\]|\bfailed\b|\berror\b|permission denied/i.test(result.stdout + result.stderr) && stat?.isFile(), "PROCESS_FAILED", `Receive failed: ${clip(result.stdout + result.stderr, 300)}`);
+    signal?.throwIfAborted();
+    fs.renameSync(received, local);
+    return { received: remote, local, bytes: stat!.size };
+  } finally { fs.rmSync(work, { recursive: true, force: true }); }
 }
 
 /* ---------------------------------- sqlite ---------------------------------- */

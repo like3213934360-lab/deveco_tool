@@ -489,38 +489,25 @@ async def advanced_search(query: str, ctx: Context) -> str:
     '''Advanced tool with context access for logging and progress.'''
 
     # Report progress for long operations
-    await ctx.report_progress(0.25, "Starting search...")
+    await ctx.report_progress(0.25, 1, "Starting search...")
 
     # Log information for debugging
-    await ctx.log_info("Processing query", {"query": query, "timestamp": datetime.now()})
+    await ctx.info("Processing search query")
 
     # Perform search
     results = await search_api(query)
-    await ctx.report_progress(0.75, "Formatting results...")
+    await ctx.report_progress(0.75, 1, "Formatting results...")
 
     # Access server configuration
     server_name = ctx.fastmcp.name
 
     return format_results(results)
 
-@mcp.tool()
-async def interactive_tool(resource_id: str, ctx: Context) -> str:
-    '''Tool that can request additional input from users.'''
-
-    # Request sensitive information when needed
-    api_key = await ctx.elicit(
-        prompt="Please provide your API key:",
-        input_type="password"
-    )
-
-    # Use the provided key
-    return await api_call(resource_id, api_key)
 ```
 
 **Context capabilities:**
-- `ctx.report_progress(progress, message)` - Report progress for long operations
-- `ctx.log_info(message, data)` / `ctx.log_error()` / `ctx.log_debug()` - Logging
-- `ctx.elicit(prompt, input_type)` - Request input from users
+- `ctx.report_progress(progress, total=None, message=None)` - Report progress for long operations
+- `ctx.info(message)` / `ctx.error(message)` / `ctx.debug(message)` - Logging
 - `ctx.fastmcp.name` - Access server configuration
 - `ctx.read_resource(uri)` - Read MCP resources
 
@@ -536,9 +523,12 @@ async def get_document(name: str) -> str:
     Resources are useful for static or semi-static data that doesn't
     require complex parameters. They use URI templates for flexible access.
     '''
-    document_path = f"./docs/{name}"
-    with open(document_path, "r") as f:
-        return f.read()
+    from pathlib import Path
+    root = Path("./docs").resolve()
+    document_path = (root / name).resolve()
+    if not document_path.is_relative_to(root) or not document_path.is_file():
+        raise ValueError("Document path is outside the configured directory or unavailable")
+    return document_path.read_text(encoding="utf-8")
 
 @mcp.resource("config://settings/{key}")
 async def get_setting(key: str, ctx: Context) -> str:
@@ -594,24 +584,23 @@ Initialize resources that persist across requests:
 from contextlib import asynccontextmanager
 
 @asynccontextmanager
-async def app_lifespan():
+async def app_lifespan(app: FastMCP):
     '''Manage resources that live for the server's lifetime.'''
     # Initialize connections, load config, etc.
     db = await connect_to_database()
-    config = load_configuration()
-
-    # Make available to all tools
-    yield {"db": db, "config": config}
-
-    # Cleanup on shutdown
-    await db.close()
+    # Make available to all tools; configuration failure also closes the database.
+    try:
+        config = load_configuration()
+        yield {"db": db, "config": config}
+    finally:
+        await db.close()
 
 mcp = FastMCP("example_mcp", lifespan=app_lifespan)
 
 @mcp.tool()
 async def query_data(query: str, ctx: Context) -> str:
     '''Access lifespan resources through context.'''
-    db = ctx.request_context.lifespan_state["db"]
+    db = ctx.request_context.lifespan_context["db"]
     results = await db.query(query)
     return format_results(results)
 ```
@@ -627,7 +616,7 @@ if __name__ == "__main__":
 
 # Streamable HTTP transport (for remote servers)
 if __name__ == "__main__":
-    mcp.run(transport="streamable_http", port=8000)
+    mcp.run(transport="streamable-http")  # configure port=8000 on FastMCP(...)
 ```
 
 **Transport selection:**

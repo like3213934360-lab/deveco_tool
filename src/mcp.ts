@@ -16,6 +16,8 @@ export class McpServer {
   private readonly handlers = new Map<string, Handler>();
   private readonly inflight = new Map<string | number, AbortController>();
   private buffer = "";
+  private discarding = false;
+  private ended = false;
 
   constructor(private readonly info: { name: string; version: string }, private readonly capabilities: Json, private readonly instructions: string) {
     this.handlers.set("ping", async () => ({}));
@@ -26,21 +28,45 @@ export class McpServer {
   }
 
   start(onEnd: () => void) {
+    const end = () => {
+      if (this.ended) return;
+      this.ended = true;
+      this.buffer = "";
+      for (const controller of this.inflight.values()) controller.abort();
+      onEnd();
+    };
+    process.stdout.on("error", end);
+    process.stdout.on("drain", () => { if (!this.ended) process.stdin.resume(); });
     process.stdin.setEncoding("utf8");
     process.stdin.on("data", (chunk: string) => {
+      if (this.ended) return;
+      if (this.discarding) {
+        const newline = chunk.indexOf("\n");
+        if (newline < 0) return;
+        chunk = chunk.slice(newline + 1); this.discarding = false;
+      }
       this.buffer += chunk;
       let index: number;
       while ((index = this.buffer.indexOf("\n")) >= 0) {
         const line = this.buffer.slice(0, index).trim();
         this.buffer = this.buffer.slice(index + 1);
-        if (line) this.receive(line);
+        if (Buffer.byteLength(line) > 1024 * 1024) this.oversized();
+        else if (line) this.receive(line);
+      }
+      if (Buffer.byteLength(this.buffer) > 1024 * 1024) {
+        this.buffer = ""; this.discarding = true; this.oversized();
       }
     });
-    process.stdin.once("end", onEnd);
+    process.stdin.once("end", end);
+    process.stdin.once("error", end);
+  }
+
+  private oversized() {
+    this.send({ id: null, error: { code: -32600, message: "MCP request exceeds 1 MiB; split the input" } });
   }
 
   private send(message: Json) {
-    process.stdout.write(JSON.stringify({ jsonrpc: "2.0", ...message }) + "\n");
+    if (!this.ended && !process.stdout.write(JSON.stringify({ jsonrpc: "2.0", ...message }) + "\n")) process.stdin.pause();
   }
 
   private receive(line: string) {
@@ -72,6 +98,10 @@ export class McpServer {
     }
     if (this.inflight.has(id!)) {
       invalid(-32600, "Request id is already in use");
+      return;
+    }
+    if (this.inflight.size >= 32) {
+      invalid(-32000, "MCP server is busy with 32 requests; wait for a response before retrying");
       return;
     }
     if (method === "initialize") {

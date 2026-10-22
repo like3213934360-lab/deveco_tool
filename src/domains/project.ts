@@ -479,15 +479,15 @@ async function compileProject(
 ) {
   const task = options.task ?? "assembleHap";
   let modules = project.modules;
+  if (options.modules?.length) {
+    const unknown = options.modules.filter((name) => !project.modules.some((m) => m.name === name));
+    invariant(!unknown.length, "INVALID_INPUT", `Unknown modules: ${unknown.join(", ")}`, { modules: project.modules.map((m) => m.name) });
+    modules = modules.filter((m) => options.modules!.includes(m.name));
+  }
   if (task === "compileNative") {
-    invariant(hasNativeCode(project), "INVALID_INPUT", "Project has no C/C++ sources (src/main/cpp)");
-    modules = project.modules.filter((m) => fs.existsSync(path.join(m.root, "src/main/cpp")) && (!options.modules?.length || options.modules.includes(m.name)));
+    modules = modules.filter((m) => fs.existsSync(path.join(m.root, "src/main/cpp")));
+    invariant(modules.length, "INVALID_INPUT", "Selected modules have no C/C++ sources (src/main/cpp)");
   } else if (task !== "assembleApp") {
-    if (options.modules?.length) {
-      const unknown = options.modules.filter((name) => !project.modules.some((m) => m.name === name));
-      invariant(!unknown.length, "INVALID_INPUT", `Unknown modules: ${unknown.join(", ")}`, { modules: project.modules.map((m) => m.name) });
-      modules = project.modules.filter((m) => options.modules!.includes(m.name));
-    }
     modules = modules.filter((m) => taskTypes[task].includes(m.type));
     invariant(modules.length, "INVALID_INPUT", `No ${taskTypes[task].join("/")} modules to build with ${task}`,
       { modules: project.modules.map((m) => `${m.name}(${m.type})`) });
@@ -519,12 +519,27 @@ async function compileProject(
   // hvigor rewrites each module's BuildProfile.ets (build mode constants). When those files are
   // committed, a build would show up as a source change: restore their exact bytes afterwards.
   const profileFiles = project.modules.map((m) => path.join(m.root, "BuildProfile.ets"));
-  const profiles = profileFiles.filter((f) => isFile(f)).map((f) => [f, fs.readFileSync(f)] as const);
-  const absent = profileFiles.filter((f) => !isFile(f));
+  const profiles = new Map<string, Buffer | undefined>();
+  for (const f of profileFiles) {
+    const stat = fs.lstatSync(f, { throwIfNoEntry: false });
+    invariant(!stat || stat.isFile(), "CONFLICT", "BuildProfile.ets must be a regular file", { file: f });
+    profiles.set(f, stat ? fs.readFileSync(f) : undefined);
+  }
   const restoreProfiles = () => {
-    for (const [f, bytes] of profiles) { try { if (!fs.readFileSync(f).equals(bytes)) fs.writeFileSync(f, bytes); } catch { /* removed by clean */ } }
-    // Files hvigor generated during this build (the module had none before) are removed again.
-    for (const f of absent) fs.rmSync(f, { force: true });
+    const failures: { file: string; error: string }[] = [];
+    for (const [file, bytes] of profiles) {
+      try {
+        const stat = fs.lstatSync(file, { throwIfNoEntry: false });
+        invariant(!stat || stat.isFile(), "CONFLICT", "BuildProfile.ets became a non-regular file");
+        if (bytes) {
+          if (!stat || !fs.readFileSync(file).equals(bytes)) { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, bytes); }
+        } else if (stat) {
+          invariant(/^\/\*\*\s*\* Use these variables when you tailor your ArkTS code\. They must be of the const type\./.test(fs.readFileSync(file, "utf8")), "CONFLICT", "New BuildProfile.ets is not a recognized generated file; preserved");
+          fs.unlinkSync(file);
+        }
+      } catch (error) { failures.push({ file, error: String(error) }); }
+    }
+    invariant(!failures.length, "BUILD_RESTORE_FAILED", "Could not restore all BuildProfile.ets files", { failures });
   };
   // Packaging outputs have no build-mode/signing provenance. Regenerate this task's packages,
   // including shared dependencies, so an old signature cannot survive an unsigned build.
@@ -538,13 +553,21 @@ async function compileProject(
       for (const m of project.modules.filter((m) => m.type === "shared")) removePackages(path.join(m.root, "build", project.product, "outputs", m.target), suffix.assembleHsp);
     if (task === "assembleApp") removePackages(path.join(project.root, "build/outputs", project.product), suffix.assembleApp);
   }
-  const result = await hvigor(project, args, signal, "Build", jobId).finally(restoreProfiles);
+  let buildError: unknown;
+  const result = await hvigor(project, args, signal, "Build", jobId).catch((error: unknown) => { buildError = error; throw error; }).finally(() => {
+    try { restoreProfiles(); }
+    catch (error) { if (error instanceof ToolError && buildError) throw new ToolError(error.code, error.message, { ...error.details, build_error: String(buildError) }); throw error; }
+  });
   // Any build of a C/C++ module emits per-module compile_commands.json; keep the central one fresh for clangd.
   const compileCommands = hasNativeCode(project) ? mergeCompileCommands(project) : 0;
   const syncResult = { synced: syncReason !== undefined, ...(syncReason ? { sync_reason: syncReason } : {}) };
   if (task === "compileNative")
     return { success: true, task, product: project.product, ...syncResult, compile_commands: compileCommands ? compileCommandsPath(project.root) : null, entries: compileCommands, log_artifact: result.log_artifact, elapsed_ms: result.elapsed_ms };
-  const artifacts = await buildOutputs(project, task, modules);
+  const artifacts = await buildOutputs(project, task, modules).catch((error: unknown) => {
+    if (error instanceof ToolError) throw new ToolError(error.code, error.message,
+      { ...error.details, log_artifact: result.log_artifact }, error.hint, error.retryable);
+    throw error;
+  });
   invariant(artifacts.length, "BUILD_FAILED", "Build finished but produced no package", { log_artifact: result.log_artifact });
   const missing = task === "assembleApp" ? [] : modules.filter((m) => !artifacts.some((a) => a.module === m.name)).map((m) => m.name);
   invariant(!missing.length, "BUILD_FAILED", "Build did not produce every requested module package", { missing, log_artifact: result.log_artifact });
@@ -568,19 +591,22 @@ function removePackages(dir: string, ext: string) {
   for (const name of fs.readdirSync(dir)) if (name.endsWith(ext) && fs.lstatSync(path.join(dir, name)).isFile()) fs.unlinkSync(path.join(dir, name));
 }
 
-/** Application payload identity excludes ZIP container metadata and the signing block. */
+/** Exclude container/signing metadata, including the SDK signer's root page-alignment entry. */
 async function packagePayload(file: string) {
   const yauzl = (await import("yauzl")).default;
   return new Promise<string>((resolve, reject) => {
     yauzl.open(file, { lazyEntries: true }, (error, zip) => {
       if (error || !zip) return reject(error);
       const entries = new Map<string, string>();
+      const seen = new Set<string>();
       const fail = (error: unknown) => { zip.close(); reject(error); };
       zip.on("error", fail);
       zip.on("entry", (entry) => {
         void (async () => {
           if (!entry.fileName.endsWith("/")) {
-            invariant(!entries.has(entry.fileName), "CONFLICT", `Duplicate package entry: ${entry.fileName}`, { file });
+            invariant(!seen.has(entry.fileName), "CONFLICT", `Duplicate package entry: ${entry.fileName}`, { file });
+            seen.add(entry.fileName);
+            if (entry.fileName === ".pages.info") { zip.readEntry(); return; }
             const stream = await new Promise<import("node:stream").Readable>((resolve, reject) => {
               zip.openReadStream(entry, (error, stream) => error || !stream ? reject(error) : resolve(stream));
             });

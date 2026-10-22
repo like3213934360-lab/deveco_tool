@@ -204,44 +204,61 @@ export function compact(nodes: UiNode[], options: TreeOptions = {}) {
 
 /* ------------------------------ blank screen ------------------------------ */
 
-/** Minimal PNG decoder (8-bit RGB/RGBA, non-interlaced) -> grayscale. Enough for tiny on-device snapshots. */
+/** Strict bounded PNG decoder: 8-bit grayscale/RGB/RGBA, non-interlaced. */
 export function pngGray(buf: Buffer): { width: number; height: number; gray: Uint8Array } | undefined {
-  if (buf.length < 33 || buf.readUInt32BE(0) !== 0x89504e47) return undefined;
-  let offset = 8, width = 0, height = 0, colorType = 0, depth = 0;
-  const idat: Buffer[] = [];
-  while (offset + 8 <= buf.length) {
-    const length = buf.readUInt32BE(offset);
-    const type = buf.toString("latin1", offset + 4, offset + 8);
-    const data = buf.subarray(offset + 8, offset + 8 + length);
-    if (type === "IHDR") { width = data.readUInt32BE(0); height = data.readUInt32BE(4); depth = data[8]!; colorType = data[9]!; if (data[12]) return undefined; }
-    else if (type === "IDAT") idat.push(data);
-    else if (type === "IEND") break;
-    offset += 12 + length;
-  }
-  const channels = colorType === 2 ? 3 : colorType === 6 ? 4 : 0;
-  if (!channels || depth !== 8 || !width || !height || width * height > 4_000_000) return undefined;
-  const raw = zlib.inflateSync(Buffer.concat(idat));
-  const stride = width * channels;
-  const pixels = Buffer.alloc(stride * height);
-  for (let y = 0; y < height; y++) {
-    const filter = raw[y * (stride + 1)]!;
-    const line = raw.subarray(y * (stride + 1) + 1, (y + 1) * (stride + 1));
-    const out = pixels.subarray(y * stride, (y + 1) * stride);
-    const prev = y ? pixels.subarray((y - 1) * stride, y * stride) : undefined;
-    for (let i = 0; i < stride; i++) {
-      const a = i >= channels ? out[i - channels]! : 0, b = prev ? prev[i]! : 0, c = prev && i >= channels ? prev[i - channels]! : 0;
-      const x = line[i]!;
-      let predictor = 0;
-      if (filter === 1) predictor = a;
-      else if (filter === 2) predictor = b;
-      else if (filter === 3) predictor = (a + b) >> 1;
-      else if (filter === 4) { const p = a + b - c, pa = Math.abs(p - a), pb = Math.abs(p - b), pc = Math.abs(p - c); predictor = pa <= pb && pa <= pc ? a : pb <= pc ? b : c; }
-      out[i] = (x + predictor) & 0xff;
+  try {
+    if (buf.length < 33 || !buf.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))) return undefined;
+    let offset = 8, width = 0, height = 0, colorType = 0, depth = 0;
+    let ended = false, dataEnded = false;
+    const idat: Buffer[] = [];
+    while (offset + 12 <= buf.length) {
+      const length = buf.readUInt32BE(offset);
+      if (length > buf.length - offset - 12) return undefined;
+      const type = buf.toString("latin1", offset + 4, offset + 8);
+      const data = buf.subarray(offset + 8, offset + 8 + length);
+      if (!/^[A-Za-z]{4}$/.test(type) || zlib.crc32(buf.subarray(offset + 4, offset + 8 + length)) !== buf.readUInt32BE(offset + 8 + length)) return undefined;
+      if (offset === 8 && type !== "IHDR") return undefined;
+      if (type === "IHDR") {
+        if (offset !== 8 || length !== 13) return undefined;
+        width = data.readUInt32BE(0); height = data.readUInt32BE(4); depth = data[8]!; colorType = data[9]!;
+        if (data[10] || data[11] || data[12]) return undefined;
+      } else if (type === "IDAT") { if (dataEnded) return undefined; idat.push(data); }
+      else if (type === "IEND") { if (length || !idat.length) return undefined; ended = true; offset += 12; break; }
+      else {
+        if (idat.length) dataEnded = true;
+        if (type === "PLTE") { if (idat.length || colorType === 0 || !length || length % 3 || length > 768) return undefined; }
+        else if (type[0] === type[0]!.toUpperCase()) return undefined;
+      }
+      offset += 12 + length;
     }
-  }
-  const gray = new Uint8Array(width * height);
-  for (let i = 0; i < width * height; i++) gray[i] = (pixels[i * channels]! * 299 + pixels[i * channels + 1]! * 587 + pixels[i * channels + 2]! * 114) / 1000;
-  return { width, height, gray };
+    const channels = colorType === 0 ? 1 : colorType === 2 ? 3 : colorType === 6 ? 4 : 0;
+    if (!ended || offset !== buf.length || !channels || depth !== 8 || !width || !height || width * height > 4_000_000) return undefined;
+    const stride = width * channels;
+    const expected = (stride + 1) * height;
+    const raw = zlib.inflateSync(Buffer.concat(idat), { maxOutputLength: expected });
+    if (raw.length !== expected) return undefined;
+    const pixels = Buffer.alloc(stride * height);
+    for (let y = 0; y < height; y++) {
+      const filter = raw[y * (stride + 1)]!;
+      if (filter > 4) return undefined;
+      const line = raw.subarray(y * (stride + 1) + 1, (y + 1) * (stride + 1));
+      const out = pixels.subarray(y * stride, (y + 1) * stride);
+      const prev = y ? pixels.subarray((y - 1) * stride, y * stride) : undefined;
+      for (let i = 0; i < stride; i++) {
+        const a = i >= channels ? out[i - channels]! : 0, b = prev ? prev[i]! : 0, c = prev && i >= channels ? prev[i - channels]! : 0;
+        const x = line[i]!;
+        let predictor = 0;
+        if (filter === 1) predictor = a;
+        else if (filter === 2) predictor = b;
+        else if (filter === 3) predictor = (a + b) >> 1;
+        else if (filter === 4) { const p = a + b - c, pa = Math.abs(p - a), pb = Math.abs(p - b), pc = Math.abs(p - c); predictor = pa <= pb && pa <= pc ? a : pb <= pc ? b : c; }
+        out[i] = (x + predictor) & 0xff;
+      }
+    }
+    const gray = new Uint8Array(width * height);
+    for (let i = 0; i < width * height; i++) gray[i] = channels === 1 ? pixels[i]! : (pixels[i * channels]! * 299 + pixels[i * channels + 1]! * 587 + pixels[i * channels + 2]! * 114) / 1000;
+    return { width, height, gray };
+  } catch { return undefined; }
 }
 
 /** A screen is blank when, ignoring status/navigation bars, ≥99.8% of pixels match the dominant shade. */
@@ -557,14 +574,20 @@ export async function act(target: string, a: Action, signal?: AbortSignal) {
     a = scrollGesture(node.rect!, scroll.direction, scroll.speed);
   }
   const completed = async (result: { performed: string; method?: string }) => {
-    consent.accepted.push(...(await acceptAgreements(target, signal, undefined, 1000)).accepted);
-    let motion;
-    if (scroll) {
-      const nodes = await dumpTree(target, signal), matches = select(nodes, scroll.selector!), node = matches.length === 1 ? matches[0] : undefined;
-      motion = { selector: scroll.selector, status: !node ? "target_unresolved" : treeSignature(subtree(nodes, node.i)) !== before ? "changed" : "unchanged",
-        scope: "selected-subtree", note: "Visible subtree change is evidence of motion, not proof of business correctness" };
+    try {
+      consent.accepted.push(...(await acceptAgreements(target, signal, undefined, 1000)).accepted);
+      let motion;
+      if (scroll) {
+        const nodes = await dumpTree(target, signal), matches = select(nodes, scroll.selector!), node = matches.length === 1 ? matches[0] : undefined;
+        motion = { selector: scroll.selector, status: !node ? "target_unresolved" : treeSignature(subtree(nodes, node.i)) !== before ? "changed" : "unchanged",
+          scope: "selected-subtree", note: "Visible subtree change is evidence of motion, not proof of business correctness" };
+      }
+      return { ...result, ...(scroll ? { performed: "scroll", method: "bounded-swipe", motion } : {}), ...automaticResult(consent.accepted) };
+    } catch (error) {
+      throw new ToolError("UI_OBSERVATION_FAILED", "Action completed but its subsequent UI observation failed", {
+        action_completed: true, performed: scroll ? "scroll" : result.performed, ...automaticResult(consent.accepted), observation_error: errorResult(error),
+      }, "Inspect the UI before repeating this action");
     }
-    return { ...result, ...(scroll ? { performed: "scroll", method: "bounded-swipe", motion } : {}), ...automaticResult(consent.accepted) };
   };
   invalidate(target);
   if (a.action === "input" && !a.append) {

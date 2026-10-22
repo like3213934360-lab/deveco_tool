@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { atomicWrite } from "../core/files.js";
-import { diffSources, snapshotSources, type SourceSnapshot } from "./preflight.js";
+import { diffSources, snapshotSources, trackedSource, type SourceSnapshot } from "./preflight.js";
 import { pinStorage, storageGuard } from "../core/storage.js";
 
 /*
@@ -34,29 +34,37 @@ export interface HotState {
 /**
  * Everything except .ets/.ts that changes what the app is: resources, manifests, dependencies, native
  * code. Content-based like the source snapshot (an edit that is reverted is no change); hashes are
- * reused while mtime and size match, so only touched files are read.
+ * reused while mtime, ctime and size match, so only touched files are read.
  */
 export function inputsSnapshot(root: string, previous: SourceSnapshot = {}): SourceSnapshot {
-  const skip = new Set(["node_modules", "oh_modules", "build", ".hvigor", ".git", ".idea", ".preview", ".arkpilot", ".local"]);
+  const skip = new Set(["node_modules", "oh_modules", "build", ".hvigor", ".git", ".idea", ".preview", ".arkpilot", ".local", ".scratch", ".agents", ".codex"]);
   const base = path.resolve(root);
   const out: SourceSnapshot = {};
   const stack = [base];
   while (stack.length) {
     const dir = stack.pop()!;
     let entries: fs.Dirent[];
-    try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { continue; }
+    entries = fs.readdirSync(dir, { withFileTypes: true });
     for (const e of entries) {
-      if (skip.has(e.name) || e.name.startsWith(".")) continue;
+      if (skip.has(e.name)) continue;
       const full = path.join(dir, e.name);
       if (e.isDirectory()) { stack.push(full); continue; }
-      if (!(/\.json5?$/.test(e.name) || /[/\\](resources|cpp)[/\\]/.test(full))) continue;
       const rel = path.relative(base, full).replaceAll("\\", "/");
-      try {
+      // Only the source snapshot's patchable files and SDK-generated profiles are excluded.
+      if (trackedSource(rel) && /\/src\/main\/ets\//.test(rel) || e.name === "BuildProfile.ets") continue;
+      if (!e.isFile()) throw new Error(`Cannot prove build inputs for non-regular file: ${full}`);
+      {
         const st = fs.statSync(full);
-        const s = `${Math.floor(st.mtimeMs)}:${st.size}`;
+        const s = `${st.mtimeMs},${st.ctimeMs}:${st.size}`;
         const prev = previous[rel];
-        out[rel] = prev?.startsWith(`${s}:`) ? prev : `${s}:${crypto.createHash("sha1").update(fs.readFileSync(full)).digest("hex").slice(0, 16)}`;
-      } catch { /* vanished */ }
+        if (prev?.startsWith(`${s}:`)) out[rel] = prev;
+        else {
+          const hash = crypto.createHash("sha1"), buffer = Buffer.allocUnsafe(64 * 1024), fd = fs.openSync(full, "r");
+          try { for (let n; (n = fs.readSync(fd, buffer)) > 0;) hash.update(buffer.subarray(0, n)); }
+          finally { fs.closeSync(fd); }
+          out[rel] = `${s}:${hash.digest("hex").slice(0, 16)}`;
+        }
+      }
     }
   }
   return out;
@@ -91,7 +99,7 @@ export function decideHot(state: HotState | undefined, now: { product: string; m
   if (added.length || removed.length) return { hot: false, reason: `files were ${added.length ? "added" : "deleted"}: ${[...added, ...removed].slice(0, 3).join(", ")}` };
   const changed = diffSources(state.sources, now.sources);
   if (!changed.length) return { hot: false, reason: "no source changes since the baseline" };
-  const prefix = now.moduleRel.replace(/\/?$/, "/");
+  const prefix = `${now.moduleRel.replace(/\/$/, "")}/src/main/ets/`;
   const outside = changed.filter((f) => !f.startsWith(prefix));
   if (outside.length) return { hot: false, reason: `changes outside module ${state.module} (e.g. ${outside[0]}) cannot be quick-fixed` };
   return { hot: true, files: changed };

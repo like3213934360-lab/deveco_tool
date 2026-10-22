@@ -10,7 +10,7 @@ import { temporaryDirectory } from "../support/workspace.mjs";
 const root = path.resolve(import.meta.dirname, "../..");
 const work = temporaryDirectory("device"), bundle = path.join(work, "device.mjs");
 const fixture = globalThis.__devecoDevice = { calls: [], result: { code: 0, signal: null, stdout: '[{"ok":1}]', stderr: "" } };
-await build({ stdin: { contents: `export { sqlite, appDatabasePath, launchAndCheck, selectLogLines, hilog } from ${JSON.stringify(path.join(root, "src/domains/device.ts"))};`, resolveDir: root }, outfile: bundle,
+await build({ stdin: { contents: `export { recvFile, sendFile, clearLog, sqlite, appDatabasePath, launchAndCheck, selectLogLines, hilog } from ${JSON.stringify(path.join(root, "src/domains/device.ts"))};`, resolveDir: root }, outfile: bundle,
   bundle: true, format: "esm", platform: "node", packages: "external", logLevel: "error", plugins: [{ name: "device-process", setup(b) {
     b.onResolve({ filter: /(?:proc|toolchain|ui|repeat)\.js$/ }, (a) => a.importer.replaceAll("\\", "/").endsWith("/domains/device.ts") ? { path: path.basename(a.path, ".js"), namespace: "fixture" } : undefined);
     b.onLoad({ filter: /.*/, namespace: "fixture" }, (a) => ({ contents: {
@@ -21,6 +21,14 @@ await build({ stdin: { contents: `export { sqlite, appDatabasePath, launchAndChe
     }[a.path] }));
   } }] });
 const m = await import(pathToFileURL(bundle).href);
+
+test("log grep rejects malformed and pathological expressions without blocking later reads", () => {
+  assert.throws(() => m.selectLogLines("message", { limit: 1, grep: "[" }), { code: "INVALID_INPUT" });
+  const start = performance.now();
+  assert.throws(() => m.selectLogLines("a".repeat(10000) + "!", { limit: 1, grep: "(a+)+$" }), /100 ms/);
+  assert.ok(performance.now() - start < 1500);
+  assert.equal(m.selectLogLines("one\nTWO", { limit: 1, grep: "two" }).text, "TWO");
+});
 after(() => { fs.rmSync(work, { recursive: true, force: true }); delete globalThis.__devecoDevice; });
 
 test("log filtering precedes limits and follow preserves matches sharing a timestamp", async () => {
@@ -101,4 +109,25 @@ test("SQLite uses the explicit owning module and reports the resolved path when 
   assert.deepEqual(fixture.calls.at(-1).command.args, [
     "-t", "fixture-device", "shell", "sqlite3 -readonly '/data/app/el2/100/database/com.example.app/default/rdb/app.db' '.tables'",
   ]);
+});
+
+
+test('failed file receive preserves old bytes and clean-log failure is not success',async()=>{
+  const local=path.join(work,'received');fs.writeFileSync(local,'original');
+  for(const result of [{code:1,stdout:'FileTransfer finish',stderr:'failed'}, {code:0,stdout:'[Fail] permission denied',stderr:''}]) {
+    fixture.respond=()=>result;
+    await assert.rejects(m.recvFile('fixture-device','/remote',local),{code:'PROCESS_FAILED'});
+    assert.equal(fs.readFileSync(local,'utf8'),'original');
+    await assert.rejects(m.sendFile('fixture-device',local,'/remote'),{code:'PROCESS_FAILED'});
+    await assert.rejects(m.clearLog('fixture-device'));
+  }
+  fixture.respond=({args})=>{fs.writeFileSync(args.at(-1),'new bytes');return {code:0,stdout:'FileTransfer finish, Size:9',stderr:''}};
+  assert.equal((await m.recvFile('fixture-device','/remote',local)).bytes,9);assert.equal(fs.readFileSync(local,'utf8'),'new bytes');
+  assert.deepEqual(fs.readdirSync(work).filter(x=>x.startsWith('.deveco-recv-')),[]);delete fixture.respond;
+});
+
+test('restart failure stops before launch',async()=>{
+  fixture.calls=[];fixture.respond=({args})=>({code:args.includes('force-stop')?1:0,stdout:'',stderr:args.includes('force-stop')?'permission denied':''});
+  try {await assert.rejects(m.launchAndCheck('fixture-device','com.test','Main',undefined,new AbortController().signal,0));assert.ok(!fixture.calls.some(c=>c.command.args.includes('start')))}
+  finally{delete fixture.respond}
 });

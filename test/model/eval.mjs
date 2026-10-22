@@ -60,9 +60,36 @@ export function actualCalls(trace) {
     const text = response?.result?.content?.find((c) => c.type === "text")?.text;
     const result = text === undefined ? undefined : JSON.parse(text);
     return { tool: params.name, arguments: params.arguments ?? {}, result,
-      received: !!response, succeeded: !!response?.result && !response.result.isError && !result?.error && result?.passed !== false
-        && !["failed", "cancelled", "interrupted", "needs_input"].includes(result?.status),
+      received: !!response, succeeded: !!response?.result && !response.result.isError && !result?.error && (result?.passed === undefined || result.passed === true) && result?.checked !== false && result?.supported !== false
+        && !["failed", "cancelled", "interrupted", "needs_input", "inconclusive", "blocked", "unsupported", "unverified", "not_run"].includes(result?.status),
       pending: ["running", "queued"].includes(result?.status) };
+  });
+}
+
+/** Bound the owned host lifetime even when it ignores graceful termination. */
+export function waitHostExit(child, timeoutMs = 600000, graceMs = 1000) {
+  return new Promise((resolve, reject) => {
+    let timedOut = false, done = false, hard, deadline;
+    const stop = (signal) => {
+      if (!child.pid) return;
+      try {
+        if (process.platform === "win32") execFileSync("taskkill", ["/PID", String(child.pid), "/T", "/F"], { stdio: "ignore", timeout: 2000 });
+        else process.kill(-child.pid, signal);
+      } catch (error) { if (error.code !== "ESRCH" && child.exitCode === null) child.kill("SIGKILL"); }
+    };
+    const finish = (error, code) => {
+      if (done) return; done = true;
+      clearTimeout(timer); clearTimeout(hard); clearTimeout(deadline);
+      stop("SIGKILL");
+      if (error) reject(error); else resolve({ exitCode: code, timedOut });
+    };
+    const timer = setTimeout(() => {
+      timedOut = true; stop("SIGTERM");
+      hard = setTimeout(() => { stop("SIGKILL"); deadline = setTimeout(() => finish(new Error("Host did not exit after SIGKILL")), graceMs); }, graceMs);
+    }, timeoutMs);
+    child.once("error", error => finish(error));
+    child.stdin?.on("error", error => finish(error));
+    child.once("exit", code => finish(undefined, code));
   });
 }
 
@@ -83,13 +110,13 @@ export function gradeLive(calls, tools, cases) {
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const args = process.argv.slice(2), options = {};
-  assert.ok(args.length % 2 === 0, "Usage: node test/model/eval.mjs --host codex|opencode --suite discovery|live --out <new directory> [--model provider/id] [--cases file.json] [--entry cli.js] [--project path]");
+  assert.ok(args.length % 2 === 0, "Usage: node test/model/eval.mjs --host opencode --suite discovery|live --out <new directory> [--model provider/id] [--cases file.json] [--entry cli.js] [--project path]");
   for (let i = 0; i < args.length; i += 2) {
     assert.ok(["--host", "--suite", "--out", "--entry", "--project", "--model", "--cases", "--capture-provider"].includes(args[i]), `Unknown option ${args[i]}`);
     options[args[i].slice(2)] = args[i + 1];
   }
   const { host, suite } = options;
-  assert.ok(["codex", "opencode"].includes(host) && ["discovery", "live"].includes(suite) && options.out);
+  assert.ok(host === "opencode" && ["discovery", "live"].includes(suite) && options.out);
   assert.ok(!options.model || host === "opencode", "Explicit model selection is supported for OpenCode trials");
   assert.ok(!options["capture-provider"] || host === "opencode" && options["capture-provider"] === "true", "Provider observation requires OpenCode and --capture-provider true");
   const out = path.resolve(options.out);
@@ -117,9 +144,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   fs.writeFileSync(casesFile, JSON.stringify(cases, null, 2) + "\n", { mode: 0o600 });
   const server = { command: process.execPath, args: [path.join(root, "test/model/proxy.mjs"), entry, path.join(out, "transport.jsonl"), casesFile] };
   const env = { ...process.env };
-  const argv = host === "codex"
-    ? ["exec", "--json", "--ephemeral", "-s", "read-only", "-c", `mcp_servers.deveco.command=${JSON.stringify(server.command)}`, "-c", `mcp_servers.deveco.args=${JSON.stringify(server.args)}`, "-o", path.join(out, "answer.txt"), "-"]
-    : ["run", "--format", "json", ...(options.model ? ["--model", options.model] : []), prompt];
+  const argv = ["run", "--format", "json", ...(options.model ? ["--model", options.model] : []), prompt];
   if (host === "opencode") {
     if (options["capture-provider"]) env.DEVECO_MODEL_CAPTURE = out;
     env.OPENCODE_CONFIG_CONTENT = JSON.stringify({ mcp: { deveco: { type: "local", command: [server.command, ...server.args], enabled: true } },
@@ -128,11 +153,12 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   const version = execFileSync(host, ["--version"], { encoding: "utf8" }).trim();
   const started = Date.now(), stdout = fs.openSync(path.join(out, "events.jsonl"), "w"), stderr = fs.openSync(path.join(out, "stderr.txt"), "w");
   const child = spawn(host, argv, { cwd: root, env, stdio: ["pipe", stdout, stderr], detached: process.platform !== "win32" });
-  let timedOut = false;
-  const timer = setTimeout(() => { timedOut = true; process.platform === "win32" ? child.kill() : process.kill(-child.pid, "SIGTERM"); }, 600000);
-  child.stdin.end(host === "opencode" ? undefined : prompt);
-  const exitCode = await new Promise((resolve, reject) => { child.on("error", reject); child.on("exit", resolve); });
-  clearTimeout(timer); fs.closeSync(stdout); fs.closeSync(stderr);
+  let exitCode, timedOut;
+  try {
+    const exited = waitHostExit(child);
+    child.stdin.end();
+    ({exitCode, timedOut} = await exited);
+  } finally { fs.closeSync(stdout); fs.closeSync(stderr); }
   const events = readEvents(path.join(out, "events.jsonl"));
   const report = { host, version, suite, requested_model: options.model, server_version: metadata.serverInfo.version, entry,
     metadata_sha256: hash(JSON.stringify(metadata)), prompt_sha256: hash(prompt), scenarios_sha256: hash(JSON.stringify(cases)),
@@ -167,8 +193,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
         assert.deepEqual(callSet(hostCalls.map((c) => ({ tool: c.tool, arguments: c.state.input }))), callSet(report.calls), "host and server calls differ");
       }
     }
-    const answer = host === "codex" ? fs.readFileSync(path.join(out, "answer.txt"), "utf8")
-      : events.filter((e) => e.type === "text").map((e) => e.part.text).join("\n");
+    const answer = events.filter((e) => e.type === "text").map((e) => e.part.text).join("\n");
     assert.ok(answer, "host returned no model answer");
     fs.writeFileSync(path.join(out, "answer.txt"), answer);
     if (suite === "discovery") {

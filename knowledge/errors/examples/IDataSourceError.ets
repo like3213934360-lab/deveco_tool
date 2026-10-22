@@ -1,26 +1,27 @@
-// 错误示例 - LazyForEach 使用 string[] 直接报错
-@Entry
-@Component
-struct IDataSourceErrorExample {
-  private data: string[] = ['Item 1', 'Item 2', 'Item 3'];
-
-  build() {
-    Column() {
-      List() {
-        LazyForEach(this.data, (item: string) => {
-          ListItem() {
-            Text(item)
-          }
-        }, (item: string) => item)
-      }
-      .width('100%')
-      .height('100%')
-    }
-  }
-}
+// // 错误示例 - LazyForEach 使用 string[] 直接报错
+// @Entry
+// @Component
+// struct IDataSourceErrorExample {
+//   private data: string[] = ['Item 1', 'Item 2', 'Item 3'];
+//
+//   build() {
+//     Column() {
+//       List() {
+//         LazyForEach(this.data, (item: string) => {
+//           ListItem() {
+//             Text(item)
+//           }
+//         }, (item: string) => item)
+//       }
+//       .width('100%')
+//       .height('100%')
+//     }
+//   }
+// }
+//
 
 // 解决方案 - 实现 IDataSource 接口
-class MyDataSource {
+class MyDataSource implements IDataSource {
   data: string[] = [];
   private listeners: DataChangeListener[] = [];
 

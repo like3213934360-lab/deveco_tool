@@ -36,13 +36,13 @@ this.getUIContext().showAlertDialog({
 ```ts
 // ✅ RIGHT
 .bindSheet($$this.isShow, this.sheetBuilder, {
-  height: SheetSize.MEDIUM,   // SheetSize 只有 MEDIUM/LARGE，没有 HALF
+  height: SheetSize.MEDIUM,   // SheetSize 有 MEDIUM/LARGE/FIT_CONTENT（API 11+），没有 HALF
   dragBar: true,
   showClose: true
 })
 ```
 
-`SheetSize` 只有 `MEDIUM`/`LARGE`，**没有 `HALF`**（`10505001`）。`$$` 双向绑定必填，否则 sheet 关不掉。用 `detents`/`height`，**没有 `sheetSize` 字段**。
+`SheetSize` 包含 `MEDIUM`/`LARGE`/`FIT_CONTENT`（API 11+），**没有 `HALF`**（`10505001`）。`bindSheet` 接受普通 `boolean`；传入状态变量时，应在 `onDisappear` 中回写关闭状态，保持状态与面板一致。也可用双向绑定自动同步：API 10+ 支持 `$$`，API 18+ 支持 `!!`，并非必填。用 `detents`/`height`，**没有 `sheetSize` 字段**。
 
 ### ActionSheet 用 `sheets`，不是 `buttons`
 
@@ -62,7 +62,7 @@ this.getUIContext().showActionSheet({ sheets: [{ title: 'x', action: () => {} }]
 | ❌ 错误写法 | ✅ 正确写法 | 说明 |
 |------------|-----------|------|
 | `buttons: [{ text: '取消' }]` | `buttons: [{ value: '取消', action: () => {} }]` | AlertDialog 按钮用 value 非 text |
-| `height: SheetSize.HALF` | `height: SheetSize.MEDIUM` | SheetSize 无 HALF，只有 MEDIUM/LARGE |
+| `height: SheetSize.HALF` | `height: SheetSize.MEDIUM` | SheetSize 无 HALF，还有 MEDIUM/LARGE/FIT_CONTENT |
 | `ActionSheet.show({ buttons: [...] })` | `showActionSheet({ sheets: [...] })` | ActionSheet 用 sheets |
 | `CustomDialogController` | `promptAction.openCustomDialog` | 已废弃 |
 

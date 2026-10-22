@@ -84,9 +84,9 @@ struct Parent {
 
 | 方法 | 签名 | 核心参数 |
 |------|------|---------|
-| **.bindSheet** | `.bindSheet($$isShow, builder, options?)` | options: `{detents?, height?, preferType?, dragBar?, backgroundColor?, blurStyle?, title?, showInSubWindow?, enableOutsideInteractive?, onWillDismiss?, onWillAppear?, onAppear?, onWillDisappear?, onDisappear?}`。注意：没有 `sheetSize` 字段，用 `detents` 或 `height` |
+| **.bindSheet** | `.bindSheet(isShow: boolean, builder, options?)` | 普通状态传参需在 `onDisappear` 同步关闭状态；双向绑定可选 `$$`（API 10+）或 `!!`（API 18+）。options: `{detents?, height?, preferType?, dragBar?, backgroundColor?, blurStyle?, title?, showInSubWindow?, enableOutsideInteractive?, onWillDismiss?, onWillAppear?, onAppear?, onWillDisappear?, onDisappear?}`。注意：没有 `sheetSize` 字段，用 `detents` 或 `height` |
 | **.bindContentCover** | `.bindContentCover(isShow, builder, options?)` | `{modalTransition?}` |
 
-> **⚠️ $$ 双向绑定必须**：第一个参数必须用 `$$this.showXxx`，不能用 `this.showXxx`。只有用 $$ 绑定，设置 showXxx = false 时面板才会关闭。
+> `bindSheet` 的双向绑定不是必需条件。普通状态变量也可控制显示与关闭；用户拖拽或点击关闭按钮后，调用方应通过 `onDisappear` 同步状态，或选用支持的双向绑定语法。
 
 ---

@@ -1,5 +1,6 @@
 """Lightweight connection handling for MCP servers."""
 
+import json
 from abc import ABC, abstractmethod
 from contextlib import AsyncExitStack
 from typing import Any
@@ -67,7 +68,10 @@ class MCPConnection(ABC):
     async def call_tool(self, tool_name: str, arguments: dict[str, Any]) -> Any:
         """Call a tool on the MCP server with provided arguments."""
         result = await self.session.call_tool(tool_name, arguments=arguments)
-        return result.content
+        content = [block.model_dump(mode="json", exclude_none=True) for block in result.content]
+        if result.isError:
+            raise RuntimeError(json.dumps(content))
+        return content
 
 
 class MCPConnectionStdio(MCPConnection):

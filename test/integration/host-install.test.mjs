@@ -5,11 +5,13 @@ import fs from "node:fs";
 import path from "node:path";
 import { after, test } from "node:test";
 import { pathToFileURL } from "node:url";
+import crypto from "node:crypto";
+import { zipFixture } from "../support/zip.mjs";
 import { build } from "esbuild";
 const root = path.resolve(import.meta.dirname, "../.."), work = temporaryDirectory("deveco-hosts-");
 process.env.APPDATA = path.join(work, "AppData");
 const bundle = path.join(work, "deveco-host-install.mjs");
-await build({ stdin: { contents: `export * from ${JSON.stringify(path.join(root, "src/domains/hostconfig.ts"))};export {initHost,listSkills} from ${JSON.stringify(path.join(root, "src/domains/skills.ts"))};`, resolveDir: root }, outfile: bundle, bundle: true, format: "esm", platform: "node", packages: "external", logLevel: "error", plugins: [{ name: "home", setup(b) {
+await build({ stdin: { contents: `export * from ${JSON.stringify(path.join(root, "src/domains/hostconfig.ts"))};export {initHost,listSkills,marketInstall} from ${JSON.stringify(path.join(root, "src/domains/skills.ts"))};`, resolveDir: root }, outfile: bundle, bundle: true, format: "esm", platform: "node", packages: "external", logLevel: "error", plugins: [{ name: "home", setup(b) {
   b.onResolve({ filter: /^node:os$/ }, (a) => /domains\/(?:hostconfig|skills)\.ts$/.test(a.importer.replaceAll("\\", "/")) ? { path: "os", namespace: "fixture" } : undefined);
   b.onLoad({ filter: /.*/, namespace: "fixture" }, () => ({ contents: `export default {homedir:()=>${JSON.stringify(work)}};` }));
 } }] });
@@ -37,4 +39,17 @@ test("all eleven hosts export real skills in both scopes; eight MCP writers pres
     const final = fs.readFileSync(file, "utf8"); assert.match(final, /keep-me/); assert.match(final, /peer/); assert.match(final, /deveco/);
     if (entry.format !== "codex") { const data = JSON.parse(final); assert.equal(data.keep, "keep-me"); assert.deepEqual(data[entry.format === "opencode" ? "mcp" : "mcpServers"].peer, { command: "peer" }); }
   }
+});
+
+
+test('market replacement validates new content independently and preserves existing install on failure',async(t)=>{
+  const dir=path.join(work,'market'),target=path.join(dir,'example');fs.mkdirSync(target,{recursive:true});fs.writeFileSync(path.join(target,'SKILL.md'),'original');fs.writeFileSync(path.join(target,'obsolete'),'old');
+  let bytes=zipFixture({'bad.txt':'no skill'}), calls=0;
+  t.mock.method(globalThis,'fetch',async url=>{calls++;return url.endsWith('/checksum')?new Response(JSON.stringify({code:'20000',data:{sha256:crypto.createHash('sha256').update(bytes).digest('hex'),size:bytes.length}})):new Response(bytes)});
+  await assert.rejects(m.marketInstall('example',undefined,'user',undefined,dir));assert.equal(fs.readFileSync(path.join(target,'SKILL.md'),'utf8'),'original');
+  bytes=zipFixture({'wrapper/SKILL.md':'replacement','wrapper/new.txt':'new'});
+  await m.marketInstall('example',undefined,'user',undefined,dir);assert.equal(fs.readFileSync(path.join(target,'SKILL.md'),'utf8'),'replacement');assert.equal(fs.existsSync(path.join(target,'obsolete')),false);
+  assert.deepEqual(fs.readdirSync(dir),['example']);
+  fs.symlinkSync(target,path.join(dir,'linked'),'junction');const before=calls;
+  await assert.rejects(m.marketInstall('linked',undefined,'user',undefined,dir),{code:'CONFLICT'});assert.equal(calls,before);
 });

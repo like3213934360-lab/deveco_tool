@@ -20,7 +20,7 @@ await build({ stdin: { contents: `export {uiTool} from ${JSON.stringify(path.joi
   b.onResolve({ filter: /device\.js$/ }, (a) => /(?:domains\/(?:ui|flows)\.ts|tools\/core\.ts)$/.test(a.importer.replaceAll("\\", "/")) ? { path: "device", namespace: "fixture" } : undefined);
   b.onLoad({ filter: /.*/, namespace: "fixture" }, () => ({ contents: `import fs from 'node:fs';const f=()=>globalThis.__devecoConsent;export async function resolveTarget(){return 'test'};export async function assertConnected(){};export async function forceStop(){};export async function launch(){};export async function deviceInfo(){return {screen:{width:400,height:800}}};
     export async function hdc(args){fs.writeFileSync(args.at(-1),JSON.stringify(f().frames[0]));return {stdout:'',stderr:'',code:0}};
-    export async function shell(_target,args,signal){signal?.throwIfAborted();const command=args.join(' ');if(command.includes('WindowManagerService')){f().contextReads++;return f().windowReply??{code:0,stderr:'',stdout:'WindowName DisplayId Pid WinId Type\\nFixture 0 7 123 1\\nFocus window: 123'}};if(command.includes('dumpLayout')){(f().dumps??=[]).push(command);return {stdout:'DumpLayout saved',stderr:'',code:0}};if(args[0]==='rm')return {stdout:'',stderr:'',code:0};if(command.includes('uiInput swipe')){f().swipes??=[];f().swipes.push(command);if(f().frames.length>1)f().frames.shift();return {stdout:'No Error',stderr:'',code:0}};const hit=/uiInput click (\\d+) (\\d+)/.exec(command);if(!hit)throw new Error('unexpected command '+command);f().clicks.push(Number(hit[2]));if(Number(hit[2])===220)f().frames.shift();else if(Number(hit[2])===420){f().taps++;f().onTap?.()};return {stdout:'No Error',stderr:'',code:0}};` }));
+    export async function shell(_target,args,signal){signal?.throwIfAborted();const command=args.join(' ');if(command.includes('WindowManagerService')){f().contextReads++;return f().windowReply??{code:0,stderr:'',stdout:'WindowName DisplayId Pid WinId Type\\nFixture 0 7 123 1\\nFocus window: 123'}};if(command.includes('dumpLayout')){if(f().dumpFailure)throw new Error('fixture observation unavailable');(f().dumps??=[]).push(command);return {stdout:'DumpLayout saved',stderr:'',code:0}};if(args[0]==='rm')return {stdout:'',stderr:'',code:0};if(command.includes('uiInput swipe')){f().swipes??=[];f().swipes.push(command);if(f().frames.length>1)f().frames.shift();return {stdout:'No Error',stderr:'',code:0}};const hit=/uiInput click (\\d+) (\\d+)/.exec(command);if(!hit)throw new Error('unexpected command '+command);f().clicks.push(Number(hit[2]));if(Number(hit[2])===220)f().frames.shift();else if(Number(hit[2])===420){f().taps++;f().onTap?.()};return {stdout:'No Error',stderr:'',code:0}};` }));
 } }] });
 const m = await import(pathToFileURL(bundle).href);
 const ctx = { signal: new AbortController().signal };
@@ -118,7 +118,7 @@ test("replay handles consent at startup and in final assertion without recording
 });
 test("invalid action arguments accept no consent", async () => {
   reset([dialog("用户协议与隐私政策", "同意", "any.vendor")]);
-  for (const args of [{}, { op: "click", steps: [{ op: "click", x: 1, y: 1 }] }, { op: "input", selector: { id: "action" } },
+  for (const args of [{}, { op: "click", steps: [{ op: "click", x: 1, y: 1 }] }, { op: "input", selector: { id: "action" } }, { op: "input", x: 10, text: "x" }, { steps: [{ op: "input", x: 10, text: "x" }] },
     { op: "click", selector: { id: "action" }, assert: { visible: { text: "Done" } } },
     { op: "click", selector: { id: "action" }, save_flow: { project: work, id: "never-saved" } }])
     await assert.rejects(m.uiTool.handler({ action: "act", target: "test", ...args }, ctx), (e) => e.code === "INVALID_INPUT");
@@ -178,4 +178,63 @@ test('scroll keeps the nested selector through tool, batch and flow; missing/amb
     await assert.rejects(m.act('test', { action: 'scroll', selector: { key: 'nested' }, direction: 'up' }, ctx.signal), { code: count ? 'UI_AMBIGUOUS' : 'UI_NOT_FOUND' });
     assert.equal(f.swipes.length, 0);
   }
+});
+
+
+test("batch observation failure retains executed actions without claiming an unchanged screen", async () => {
+  for (const automatic of [true, false]) {
+    fs.writeFileSync(process.env.DEVECO_CONFIG, JSON.stringify({ auto_accept_ui_agreements: automatic, auto_complete_ui_onboarding: automatic })); m.resetConfig();
+    reset([app()]);
+    f.onTap = () => { f.dumpFailure = true; };
+    try {
+      const result = await m.runBatch("test", [{ op: "click", selector: { id: "action" } }], {}, ctx.signal);
+      assert.equal(result.passed, false);
+      assert.equal(result.steps[0].ok, true);
+      assert.equal(result.executed.length, 1);
+      assert.equal(result.steps.length, 1);
+      assert.equal(f.taps, 1);
+      assert.equal(result.after, undefined);
+      assert.equal(result.error.code, "UI_OBSERVATION_FAILED");
+      assert.match(result.observation_error.message, /observation unavailable/);
+    } finally { delete f.onTap; delete f.dumpFailure; }
+  }
+  fs.writeFileSync(process.env.DEVECO_CONFIG, "{}"); m.resetConfig();
+});
+
+test("single actions retain the delivered action when post-action observation fails", async () => {
+  reset([app()]); f.onTap = () => { f.dumpFailure = true; };
+  try {
+    await assert.rejects(m.act("test", { action: "click", x: 100, y: 420 }, ctx.signal), (error) => {
+      assert.equal(error.code, "UI_OBSERVATION_FAILED");
+      assert.equal(error.details.action_completed, true);
+      assert.equal(error.details.performed, "click");
+      assert.match(error.hint, /before repeating/); return true;
+    });
+    assert.equal(f.taps, 1);
+  } finally { delete f.onTap; delete f.dumpFailure; }
+});
+
+
+test('test_step rejects incomplete input coordinates before automatic UI changes',async()=>{
+  reset([dialog('用户协议与隐私政策','同意','any.vendor')]);
+  await assert.rejects(m.uiTool.handler({action:'test_step',target:'test',test_id:'unused',op:'input',x:10,text:'x'},ctx),{code:'INVALID_INPUT'});
+  assert.deepEqual(f.clicks,[]);
+});
+
+test('next-step observation failure belongs to the unexecuted selector step',async()=>{
+  fs.writeFileSync(process.env.DEVECO_CONFIG,JSON.stringify({auto_accept_ui_agreements:false,auto_complete_ui_onboarding:false}));m.resetConfig();
+  reset([app()]);f.onTap=()=>{f.dumpFailure=true};
+  try{const result=await m.runBatch('test',[{op:'click',x:100,y:420},{op:'click',selector:{id:'action'}}],{},ctx.signal);
+    assert.equal(result.executed.length,1);assert.equal(result.steps[0].ok,true);assert.equal(result.steps[1].ok,false);assert.equal(f.taps,1);
+  }finally{delete f.onTap;delete f.dumpFailure;fs.writeFileSync(process.env.DEVECO_CONFIG,'{}');m.resetConfig()}
+});
+
+
+test('a timed wait invalidates coordinates before the following selector action',async()=>{
+  fs.writeFileSync(process.env.DEVECO_CONFIG,JSON.stringify({auto_accept_ui_agreements:false,auto_complete_ui_onboarding:false}));m.resetConfig();
+  reset([app()]);
+  const move=setTimeout(()=>{f.frames=[{attributes:{bounds:'[0,0][400,800]'},children:[raw('Moved','Button',500,{id:'action',clickable:true})]}]},60);
+  try{const result=await m.runBatch('test',[{op:'wait',ms:150},{op:'click',selector:{id:'action'}}],{},ctx.signal);
+    assert.equal(result.passed,true);assert.deepEqual(f.clicks,[520]);
+  }finally{clearTimeout(move);fs.writeFileSync(process.env.DEVECO_CONFIG,'{}');m.resetConfig()}
 });

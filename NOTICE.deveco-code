@@ -136,11 +136,11 @@ ADDED BY deveco-tool — NOT PART OF THE UPSTREAM NOTICE
 Everything above this line is DevEco Code's NOTICE from commit
 b5911d2ad6daa66d4ca1bd673a9be260da19e1db, reproduced verbatim.
 
-The native architecture uses selected reference documents and ArkTS examples as
-on-demand knowledge under resources/knowledge, with exact source paths, commits,
-and byte hashes in provenance/resources.json and resources/knowledge.json.
-Skill definitions and their executable scripts are not shipped or installed.
-Workflows and domain services are maintained as typed native implementations.
-Historical source locks and installation fingerprints preserve provenance and
-allow ownership-checked removal of this project's former Skill installations.
+Selected reference documents and ArkTS examples are distributed as on-demand
+knowledge under knowledge/, including Skill definitions under knowledge/skills/.
+Local corrections to examples and API guidance preserve the upstream attribution.
+The MCP provides explicit Skill export/install operations in src/domains/skills.ts;
+it does not automatically synchronize user-managed Skills.
+The separately vendored ArkTS checker is attributed in NOTICE.deveco-cli; native
+Hypium provenance is in resources/native/hypium/provenance.json and NOTICE.hypium.
 This note does not change any upstream copyright or license.

@@ -259,8 +259,15 @@ const hotStep = {
     if (!module || !project.bundleName) return { path: "full", fallback_reason: "no entry module to quick-fix" };
     const { installStamp, pidOf } = await import("./domains/device.js");
     const [install, pid] = await Promise.all([installStamp(target, project.bundleName, ctx.signal), pidOf(target, project.bundleName, ctx.signal)]);
-    const sources = hp.currentSources(project.root, state?.sources);
-    const decision = hp.decideHot(state, { target, install, running: !!pid, sources, inputs: hp.inputsSnapshot(project.root, state?.inputs && typeof state.inputs === "object" ? state.inputs : undefined), product: project.product, module: module.name, moduleTarget: module.target, modules, moduleRel: path.relative(project.root, module.root).replaceAll("\\", "/") });
+    let sources: ReturnType<typeof hp.currentSources>, inputs: ReturnType<typeof hp.inputsSnapshot>;
+    try {
+      sources = hp.currentSources(project.root, state?.sources);
+      inputs = hp.inputsSnapshot(project.root, state?.inputs && typeof state.inputs === "object" ? state.inputs : undefined);
+    } catch (error) {
+      ctx.signal.throwIfAborted();
+      return { path: "full", fallback_reason: `Build input identity is unverified: ${String(error)}` };
+    }
+    const decision = hp.decideHot(state, { target, install, running: !!pid, sources, inputs, product: project.product, module: module.name, moduleTarget: module.target, modules, moduleRel: path.relative(project.root, module.root).replaceAll("\\", "/") });
     if (!decision.hot && decision.unchanged) {
       // Same code, same installed copy: skip build + install; the launch step restarts it (fresh state).
       return { path: "relaunch", note: "No changes since the last deploy: relaunched the installed app" };
@@ -395,22 +402,21 @@ const baseRunSteps = (build: boolean): Step<RunInput>[] => [
           if (details?.diagnostics) Object.assign(details, { hints: buildFailureHints(details.diagnostics) });
           throw error;
         });
-        const { hotBuildProps } = await import("./domains/hotreload.js");
-        return buildProject(project, { ...input, props: hotBuildProps() }, ctx.signal, ctx.job_id);
+        return buildProject(project, input, ctx.signal, ctx.job_id);
       });
     },
   })] : []),
   {
     // `devecocli run --uninstall`: remove the installed app first (clean data / signature change).
     id: "uninstall",
-    effect: true,
+    effect: true, replay: false,
     when: (ctx: { input: RunInput }) => !!ctx.input.uninstall_first,
     async run(ctx: { input: RunInput; outputs: Record<string, any>; signal: AbortSignal }) {
       const { inspectProject } = await import("./domains/project.js");
       const { uninstall } = await import("./domains/device.js");
       const project = inspectProject(ctx.input.project, ctx.input.product);
       invariant(project.bundleName, "PROJECT_INVALID", "bundleName missing");
-      return uninstall(ctx.outputs.target.target, project.bundleName, ctx.signal).catch((e: Error) => ({ uninstalled: false, note: e.message }));
+      return uninstall(ctx.outputs.target.target, project.bundleName, ctx.signal);
     },
   },
   {

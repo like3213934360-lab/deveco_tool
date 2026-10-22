@@ -51,7 +51,7 @@ export async function listEmulators(signal?: AbortSignal, details = false, insta
   const where = instancePath ? ["-instancePath", instancePath] : [];
   const text = await emulatorChecked("list", ["-list", "-details", ...where], signal, 30000);
   if (details) { try { return JSON.parse(text) as Record<string, string>[]; } catch { /* plain list below */ } }
-  const running = await runningNames(signal);
+  const running = instancePath ? new Set<string>() : await runningNames(signal);
   const names = text.split(/\r?\n/).map((l) => l.trim()).filter((l) => l && !/^\[Empty\]$/.test(l));
   // `-list -details` returns JSON on current releases; plain names otherwise.
   try {
@@ -59,10 +59,10 @@ export async function listEmulators(signal?: AbortSignal, details = false, insta
     return parsed.map((e) => ({
       name: e.name, device_type: e.deviceType, model: e.productModel, os: e["os.osVersion"], api: e["os.apiVersion"],
       screen: e["hw.lcd.single.width"] ? `${e["hw.lcd.single.width"]}x${e["hw.lcd.single.height"]}` : undefined,
-      running: running.has(e.name!) || e.isRunning === "true",
+      running: instancePath ? e.isRunning !== "false" : running.has(e.name!) || e.isRunning === "true",
     }));
   } catch {
-    return names.map((name) => ({ name, running: running.has(name) }));
+    return names.map((name) => ({ name, running: instancePath ? true : running.has(name) }));
   }
 }
 
@@ -263,13 +263,19 @@ export async function startEmulator(name: string, options: StartInput, signal: A
   } finally { await child?.detach(); keys.forEach((key) => starting.delete(key)); }
 }
 
+export async function requireScopedStop(signal?: AbortSignal) {
+  const help = await emulator(["-help"], signal, 30000);
+  invariant(/-stop[^\r\n]*-instancePath/.test(help), "CAPABILITY_UNAVAILABLE", "This SDK does not document stopping an emulator by instance directory; refusing a potentially different same-name instance");
+}
+
 export async function stopEmulator(name: string, signal?: AbortSignal, instancePath?: string) {
+  if (instancePath) await requireScopedStop(signal);
   // Like deveco-cli: stopping an emulator that is not running is a no-op, not an error.
   const known = await listEmulators(signal, false, instancePath);
   const entry = known.find((e) => e.name === name);
   if (!entry) throw new ToolError("NOT_FOUND", `Emulator ${name} not found`, { emulators: known.map((e) => e.name) });
   if (!entry.running) return { stopped: name, already_stopped: true };
-  const output = await emulatorChecked("stop", ["-stop", name], signal, 60000);
+  const output = await emulatorChecked("stop", ["-stop", name, ...(instancePath ? ["-instancePath", instancePath] : [])], signal, 60000);
   const deadline = Date.now() + 15000;
   let stopped = 0;
   while (Date.now() < deadline) {

@@ -167,7 +167,7 @@ export async function projectModel(root: string) {
   try {
     const { inspectProject } = await import("./project.js");
     const p = inspectProject(root);
-    return { root: p.root, modules: p.modules.map((m) => ({ name: m.name, root: m.root })) };
+    return { root: p.root, product: p.product, modules: p.modules.map((m) => ({ name: m.name, root: m.root, target: m.target })) };
   } catch {
     return undefined;
   }

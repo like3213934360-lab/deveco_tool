@@ -19,20 +19,10 @@ export interface Gray { width: number; height: number; gray: Uint8Array }
 
 /* ------------------------------- PNG writer ------------------------------- */
 
-const crcTable = Array.from({ length: 256 }, (_, n) => {
-  let c = n;
-  for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
-  return c >>> 0;
-});
-function crc32(buf: Buffer) {
-  let c = 0xffffffff;
-  for (const b of buf) c = crcTable[(c ^ b) & 0xff]! ^ (c >>> 8);
-  return (c ^ 0xffffffff) >>> 0;
-}
 function chunk(type: string, data: Buffer) {
   const len = Buffer.alloc(4); len.writeUInt32BE(data.length);
   const body = Buffer.concat([Buffer.from(type, "latin1"), data]);
-  const crc = Buffer.alloc(4); crc.writeUInt32BE(crc32(body));
+  const crc = Buffer.alloc(4); crc.writeUInt32BE(zlib.crc32(body));
   return Buffer.concat([len, body, crc]);
 }
 /** Encode 8-bit grayscale (channels=1) or RGB (channels=3) pixels as PNG. Pure. */
@@ -47,23 +37,7 @@ export function encodePng(width: number, height: number, pixels: Uint8Array, cha
 }
 
 /** Decode a grayscale PNG written by encodePng (color type 0) or an RGB/RGBA one (pngGray). */
-export function decodeGray(buf: Buffer): Gray | undefined {
-  if (buf.length > 25 && buf[25] === 0) {
-    const width = buf.readUInt32BE(16), height = buf.readUInt32BE(20);
-    let offset = 8; const idat: Buffer[] = [];
-    while (offset + 8 <= buf.length) {
-      const length = buf.readUInt32BE(offset), type = buf.toString("latin1", offset + 4, offset + 8);
-      if (type === "IDAT") idat.push(buf.subarray(offset + 8, offset + 8 + length));
-      offset += 12 + length;
-    }
-    const raw = zlib.inflateSync(Buffer.concat(idat));
-    const gray = new Uint8Array(width * height);
-    // encodePng writes filter 0 only.
-    for (let y = 0; y < height; y++) gray.set(raw.subarray(y * (width + 1) + 1, (y + 1) * (width + 1)), y * width);
-    return { width, height, gray };
-  }
-  return pngGray(buf);
-}
+export const decodeGray = pngGray;
 
 /* ------------------------------- comparison ------------------------------- */
 
@@ -198,18 +172,13 @@ export async function visualCheck(target: string, input: { project: string; name
     fs.writeFileSync(out, annotate(current, result.regions));
     artifact = (await commitArtifact(id, out, "image/png")).artifact_id;
   }
-  // Most of the screen changed: keep the plain shot too, so the cause (dialog, dimming, another page) can be checked.
-  if (result.changed_ratio > 0.5 || result.global_shift) {
-    const id = `a_${crypto.randomBytes(8).toString("hex")}`;
-    const out = path.join(artifactDir(), `${id}.png`);
-    fs.writeFileSync(out, encodePng(current.width, current.height, current.gray));
-    currentArtifact = (await commitArtifact(id, out, "image/png")).artifact_id;
-  }
+  const captured = (await saveArtifact(encodePng(current.width, current.height, current.gray), "image/png")).artifact_id;
+  if (result.changed_ratio > 0.5 || result.global_shift) currentArtifact = captured;
   const scale = device.size ? device.size.w / current.width : 1;
   return {
     same, changed_ratio: result.changed_ratio,
     baseline_artifact: (await saveArtifact(fs.readFileSync(file), "image/png")).artifact_id,
-    captured_artifact: (await saveArtifact(encodePng(current.width, current.height, current.gray), "image/png")).artifact_id,
+    captured_artifact: captured,
     context,
     ...(result.global_shift ? { global_shift: true, brightness_delta: result.brightness_delta, note_global: "The whole screen got uniformly brighter/darker (dimming, night mode, a translucent overlay): compared after removing that shift" } : {}),
     ...(currentArtifact ? { current_artifact: currentArtifact } : {}),

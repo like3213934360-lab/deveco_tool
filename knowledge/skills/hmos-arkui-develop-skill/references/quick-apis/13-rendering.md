@@ -15,8 +15,5 @@
 | .key | `.key((item, index) => string)` | 生成 key |
 | .virtualScroll | `.virtualScroll(options?)` | 虚拟滚动 |
 | .template | `.template(name, itemGen, options?)` | 模板化 |
-| .cachedCount | `.cachedCount(value: number)` | 缓存数 |
-| .totalCount | `.totalCount(value: number)` | 总数 |
-| .onRequestItem | `.onRequestItem((index, key) => void)` | 请求数据 |
 
----
+总条目数放入 `.virtualScroll({ totalCount })`；模板缓存数放入 `.template(name, itemBuilder, { cachedCount })`。滚动容器另有 `.cachedCount()`。这些不是 Repeat 的三个独立链式方法。

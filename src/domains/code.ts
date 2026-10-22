@@ -7,7 +7,7 @@ import { assetRoot, stateDir } from "../core/config.js";
 import { invariant, ToolError } from "../core/errors.js";
 import { isFile, sha256, walk } from "../core/files.js";
 import { LspClient } from "../core/lsp-client.js";
-import { run, spawnManaged } from "../core/proc.js";
+import { killTree, run, spawnManaged } from "../core/proc.js";
 import { pool } from "../core/sessions.js";
 import { component, toolCommand, toolchain } from "../core/toolchain.js";
 import { buildFailureHints } from "./diagnose.js";
@@ -30,7 +30,8 @@ interface CheckerProcess {
  */
 const checkers = pool<CheckerProcess>(1);
 
-function startChecker(): Promise<CheckerProcess> {
+function startChecker(signal: AbortSignal): Promise<CheckerProcess> {
+  signal.throwIfAborted();
   const tc = toolchain();
   const script = path.join(assetRoot, "resources/vendor/arkts-check.cjs");
   const child = spawnManaged({
@@ -45,29 +46,48 @@ function startChecker(): Promise<CheckerProcess> {
   return new Promise((resolve, reject) => {
     let buffer = "";
     let ready = false;
+    const clearStartup = () => { clearTimeout(timer); signal.removeEventListener("abort", onAbort); };
+    const fail = (error: ToolError) => {
+      clearStartup();
+      killTree(child, "SIGKILL");
+      for (const done of proc.pending.values()) done({ error: error.message, errorCode: error.code });
+      proc.pending.clear();
+      reject(error);
+    };
+    const onAbort = () => fail(new ToolError("CANCELLED", "Cancelled during checker startup"));
+    const timer = setTimeout(() => fail(new ToolError("TIMEOUT", "ArkTS checker did not start in 60s")), 60000);
+    timer.unref();
+    signal.addEventListener("abort", onAbort, { once: true });
+    child.once("error", (error) => fail(new ToolError("CHECK_FAILED", `ArkTS checker failed to start: ${error.message}`)));
+    child.stdin!.on("error", (error) => fail(new ToolError("CHECK_FAILED", `ArkTS checker pipe failed: ${error.message}`)));
     child.stdout!.setEncoding("utf8");
     child.stdout!.on("data", (chunk: string) => {
       buffer += chunk;
+      if (buffer.length > 16 * 1024 * 1024) { fail(new ToolError("CHECK_FAILED", "ArkTS checker response exceeds 16 MiB")); return; }
       let index: number;
       while ((index = buffer.indexOf("\n")) >= 0) {
         const line = buffer.slice(0, index).trim();
         buffer = buffer.slice(index + 1);
         if (!line) continue;
         let message: { ready?: boolean; id?: number; result?: unknown };
-        try { message = JSON.parse(line); } catch { continue; }
-        if (message.ready && !ready) { ready = true; resolve(proc); continue; }
+        try {
+          message = JSON.parse(line);
+          if (!message || typeof message !== "object") throw new Error("Expected an object");
+        } catch { fail(new ToolError("CHECK_FAILED", "Invalid ArkTS checker response")); return; }
+        if (message.ready && !ready) { ready = true; clearStartup(); resolve(proc); continue; }
         if (message.id !== undefined) { proc.pending.get(message.id)?.(message.result); proc.pending.delete(message.id); }
       }
     });
     child.stderr?.resume();
     child.once("exit", () => {
+      clearStartup();
       // A dead daemon must leave the pool, or every later check would write into a closed pipe and wait forever.
       void checkers.closeIf(tc.root, proc);
       for (const done of proc.pending.values()) done({ success: false, error: "ArkTS checker exited", errors: [], summary: { errorCount: 0, warnCount: 0 } });
       proc.pending.clear();
       if (!ready) reject(new ToolError("CHECK_FAILED", "ArkTS checker failed to start"));
     });
-    setTimeout(() => !ready && reject(new ToolError("TIMEOUT", "ArkTS checker did not start in 60s")), 60000).unref();
+    if (signal.aborted) onAbort();
   });
 }
 
@@ -85,7 +105,8 @@ export async function arktsCheck(projectRoot: string, files: string[] | undefine
 
 function checkOnce(key: string, request: { project: string; files?: string[]; fix: boolean }, signal: AbortSignal): Promise<any> {
   signal.throwIfAborted();
-  return checkers.use(key, startChecker, (proc) => new Promise<any>((resolve, reject) => {
+  return checkers.use(key, () => startChecker(signal), (proc) => new Promise<any>((resolve, reject) => {
+    signal.throwIfAborted();
     // Pooled daemon died since the last use (killed with a cancelled job's process group, OOM...):
     // report it as retryable instead of writing into a closed pipe and waiting forever.
     if (proc.child.exitCode !== null || proc.child.signalCode !== null || !proc.child.stdin?.writable) {
@@ -97,15 +118,19 @@ function checkOnce(key: string, request: { project: string; files?: string[]; fi
     // (cancelled job, timeout) would keep it busy and stall every later check. Drop the daemon
     // instead; the next check starts a fresh one.
     const abandon = (error: ToolError) => {
-      clearTimeout(timer);
+      cleanup();
       if (!proc.pending.delete(id)) return;
       void checkers.closeIf(key, proc);
       reject(error);
     };
+    const onAbort = () => abandon(new ToolError("CANCELLED", "Cancelled"));
+    const cleanup = () => { clearTimeout(timer); signal.removeEventListener("abort", onAbort); };
     const timer = setTimeout(() => abandon(new ToolError("TIMEOUT", "ArkTS check timed out after 180s")), 180000);
-    signal.addEventListener("abort", () => abandon(new ToolError("CANCELLED", "Cancelled")), { once: true });
-    proc.pending.set(id, (value) => { clearTimeout(timer); resolve(value); });
-    proc.child.stdin!.write(JSON.stringify({ id, ...request }) + "\n");
+    signal.addEventListener("abort", onAbort, { once: true });
+    proc.pending.set(id, (value) => { cleanup(); resolve(value); });
+    proc.child.stdin!.write(JSON.stringify({ id, ...request }) + "\n", (error) => {
+      if (error) abandon(new ToolError("CHECK_FAILED", `ArkTS checker write failed: ${error.message}`));
+    });
   }));
 }
 
@@ -222,7 +247,8 @@ export function lspCommand(project: string, language: "arkts" | "cpp", withModel
   };
 }
 
-async function startLsp(root: string, language: "arkts" | "cpp"): Promise<LspSession> {
+async function startLsp(root: string, language: "arkts" | "cpp", signal: AbortSignal, key: string, product?: string): Promise<LspSession> {
+  signal.throwIfAborted();
   const cmd = lspCommand(root, language, true);
   const child = spawnManaged(cmd);
   const client = new LspClient(child);
@@ -232,7 +258,7 @@ async function startLsp(root: string, language: "arkts" | "cpp"): Promise<LspSes
     close: () => client.close(),
   };
   // A crashed server leaves the pool so the next request starts a fresh one instead of failing.
-  child.once("exit", () => void sessions.closeIf(`${root}|${language}`, session));
+  child.once("exit", () => void sessions.closeIf(key, session));
   client.onNotification("textDocument/publishDiagnostics", (params: { uri: string; diagnostics: any[]; version?: number }) => {
     const opened = session.opened.get(params.uri);
     if (!opened || params.version !== opened.version || !Array.isArray(params.diagnostics)) return;
@@ -261,19 +287,19 @@ async function startLsp(root: string, language: "arkts" | "cpp"): Promise<LspSes
       },
       // ArkTS: full project model (modules, SDK/HMS paths, resolved ohpm deps) so kits and @module imports resolve.
       initializationOptions: language === "arkts"
-        ? (await import("./arktsModules.js")).arktsInitializationOptions(root, toolchain().sdk, stateDir(), component("arkts", toolchain()))
+        ? (await import("./arktsModules.js")).arktsInitializationOptions(root, toolchain().sdk, stateDir(), component("arkts", toolchain()), product)
         : {},
-    }, 120000);
+    }, 120000, signal);
     client.notify("initialized", {});
     // Bounded wait (large projects index for a while; results are still useful, just less complete).
     if (language === "arkts") {
-      let timer: NodeJS.Timeout | undefined;
-      try { await Promise.race([moduleInit, new Promise((r) => { timer = setTimeout(r, 60000); })]); }
-      finally { clearTimeout(timer); }
+      const timer = new AbortController();
+      try { await Promise.race([moduleInit, (await import("node:timers/promises")).setTimeout(60000, undefined, { signal: AbortSignal.any([signal, timer.signal]) })]); }
+      finally { timer.abort(); }
     }
   })();
-  await session.ready;
-  return session;
+  try { await session.ready; signal.throwIfAborted(); return session; }
+  catch (error) { killTree(child, "SIGKILL"); await client.close(); throw error; }
 }
 
 function findCompileCommands(root: string): string | undefined {
@@ -431,12 +457,17 @@ function flattenSymbols(items: any[], out: any[] = [], depth = 0): any[] {
 export type LspAction = "hover" | "definition" | "declaration" | "implementation" | "references" | "symbols" | "workspace_symbols" | "diagnostics" | "completion" | "signature" | "call_hierarchy";
 
 export async function lsp(input: {
-  project: string; action: LspAction; file?: string; files?: string[]; symbol?: string; line?: number; column?: number; query?: string; language?: "arkts" | "cpp"; limit?: number; direction?: "incoming" | "outgoing";
+  project: string; product?: string; action: LspAction; file?: string; files?: string[]; symbol?: string; line?: number; column?: number; query?: string; language?: "arkts" | "cpp"; limit?: number; direction?: "incoming" | "outgoing";
 }, signal: AbortSignal) {
   invariant(input.action !== "diagnostics" || !input.files || input.files.length <= 20, "INVALID_INPUT", "LSP diagnostics accepts at most 20 files per call; split the explicit file list");
   const root = path.resolve(input.project);
   const language = input.language ?? (input.file && /\.(c|cc|cpp|h|hpp)$/.test(input.file) ? "cpp" : "arkts");
-  return sessions.use(`${root}|${language}`, () => startLsp(root, language), async (session) => {
+  invariant(language !== "cpp" || input.product === undefined, "CAPABILITY_UNAVAILABLE", "C++ language service cannot bind compile_commands.json to a requested product");
+  const product = language === "arkts" && (input.product !== undefined || isFile(path.join(root, "build-profile.json5")))
+    ? (await import("./project.js")).inspectProject(root, input.product).product : undefined;
+  const key = `${root}|${language}|${product ?? ""}`;
+  return sessions.use(key, () => startLsp(root, language, signal, key, product), async (session) => {
+    signal.throwIfAborted();
     const limit = input.limit ?? 30;
     if (input.action === "workspace_symbols") {
       invariant(input.query, "INVALID_INPUT", "query is required");
@@ -557,7 +588,7 @@ export async function lsp(input: {
 export async function restartLsp(project: string, language: "arkts" | "cpp" | "all" = "all") {
   const root = path.resolve(project);
   const languages = language === "all" ? ["arkts", "cpp"] : [language];
-  for (const l of languages) await sessions.close(`${root}|${l}`);
+  for (const key of sessions.keys()) if (languages.some((l) => key.startsWith(`${root}|${l}|`))) await sessions.close(key);
   return { restarted: languages };
 }
 

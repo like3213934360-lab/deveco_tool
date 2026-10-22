@@ -16,7 +16,7 @@
 | `@Component`（V1）禁 getter accessor | 编译转换会丢弃 getter，可能造成运行时崩溃；改用普通成员方法（`@ComponentV2` 不受此限） | — |
 | 生命周期钩子不能 `private` | `aboutToAppear`、`aboutToDisappear` 等生命周期方法**不能标记为 `private`** | — |
 | 成员属性名禁止与链式方法重名 | 见下方"保留名"清单 | **10505001** |
-| 跨文件 interface/class 必须重名校验 | 同一 hap 全局作用域，通用名跨文件碰撞 → `arkts-no-decl-merging` | **arkts-no-decl-merging** |
+| 按实际作用域检查同名声明 | 无 import/export 的 script 文件可能共享全局；独立 module 的局部类名不要求全仓唯一 | **arkts-no-decl-merging** |
 
 ### 成员变量名禁止与 CustomComponent 链式方法/通用属性重名
 
@@ -28,7 +28,7 @@
 
 ### 跨文件 interface/class 重名 → `arkts-no-decl-merging`（CRITICAL）
 
-ArkTS 把同一 hap 内**所有页面**编译进**共享全局作用域**。多个页面文件在顶层声明同名 `interface`/`class`，会被判定为"声明合并"而报错。**碰撞发生在文件之间，本文件内看不到。** 命名之前需要避免重名存在。
+没有 import/export 的 script 文件可能共享全局作用域，同名声明会冲突。具有 import/export 的文件是独立模块，局部 interface/class 可同名；通过明确导入引用所需声明。前缀是命名选择，不是所有页面必须遵循的平台规则。
 
 ## 框架保留字全表
 

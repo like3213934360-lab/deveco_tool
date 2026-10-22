@@ -1,6 +1,7 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import fs from "node:fs";
 import { StringDecoder } from "node:string_decoder";
+import { finished } from "node:stream/promises";
 import { ToolError } from "./errors.js";
 
 export interface Command {
@@ -116,23 +117,38 @@ export async function run(cmd: Command, options: RunOptions = {}): Promise<RunRe
   const started = performance.now();
   const child = spawnManaged(cmd);
   const log = options.logFile ? fs.createWriteStream(options.logFile, { flags: "a" }) : undefined;
+  let outputError: ToolError | undefined;
+  const failOutput = (code: string, error: unknown) => {
+    outputError ??= new ToolError(code, error instanceof Error ? error.message : String(error));
+    terminate();
+  };
+  const logDone = log ? finished(log).catch((error: unknown) => { failOutput("PROCESS_LOG_FAILED", error); }) : Promise.resolve();
+  log?.on("drain", () => { child.stdout?.resume(); child.stderr?.resume(); });
   const out = { stdout: "", stderr: "" };
   let truncated = false;
   const pending = { stdout: "", stderr: "" };
   const decoders = { stdout: new StringDecoder("utf8"), stderr: new StringDecoder("utf8") };
-  const collect = (name: "stdout" | "stderr") => (chunk: Buffer) => {
-    log?.write(chunk);
-    const text = decoders[name].write(chunk);
+  const retain = (name: "stdout" | "stderr", text: string) => {
     out[name] += text;
-    if (out[name].length > keep) {
-      out[name] = out[name].slice(out[name].length - keep);
+    if (Buffer.byteLength(out[name]) > keep) {
+      const bytes = Buffer.from(out[name]);
+      let start = Math.max(0, bytes.length - keep);
+      while (start < bytes.length && (bytes[start]! & 0xc0) === 0x80) start++;
+      out[name] = bytes.subarray(start).toString("utf8");
       truncated = true;
     }
+  };
+  const collect = (name: "stdout" | "stderr") => (chunk: Buffer) => {
+    if (outputError) return;
+    if (log && !log.write(chunk)) { child.stdout?.pause(); child.stderr?.pause(); }
+    const text = decoders[name].write(chunk);
+    retain(name, text);
     if (options.onLine) {
       pending[name] += text;
       let index: number;
       while ((index = pending[name].indexOf("\n")) >= 0) {
-        options.onLine(pending[name].slice(0, index).replace(/\r$/, ""), name);
+        try { options.onLine(pending[name].slice(0, index).replace(/\r$/, ""), name); }
+        catch (error) { failOutput("PROCESS_OUTPUT_FAILED", error); return; }
         pending[name] = pending[name].slice(index + 1);
       }
       if (pending[name].length > 65536) pending[name] = pending[name].slice(-8192);
@@ -140,6 +156,7 @@ export async function run(cmd: Command, options: RunOptions = {}): Promise<RunRe
   };
   child.stdout?.on("data", collect("stdout"));
   child.stderr?.on("data", collect("stderr"));
+  child.stdin?.on("error", (error) => failOutput("PROCESS_INPUT_FAILED", error));
   if (options.input !== undefined) child.stdin?.end(options.input);
   else child.stdin?.end();
 
@@ -159,7 +176,7 @@ export async function run(cmd: Command, options: RunOptions = {}): Promise<RunRe
     }, 3000);
   };
   // A parent can exit before its descendants, including descendants without inherited pipes.
-  const parentExited = () => { if (timedOut || options.signal?.aborted) killTree(child, "SIGKILL"); };
+  const parentExited = () => { if (timedOut || outputError || options.signal?.aborted) killTree(child, "SIGKILL"); };
   child.once("exit", parentExited);
   const timer = options.timeoutMs ? setTimeout(() => { timedOut = true; terminate(); }, options.timeoutMs) : undefined;
   const onAbort = () => terminate();
@@ -175,8 +192,11 @@ export async function run(cmd: Command, options: RunOptions = {}): Promise<RunRe
     });
     for (const name of ["stdout", "stderr"] as const) {
       const rest = decoders[name].end();
-      out[name] += rest;
-      if (options.onLine && (pending[name] + rest)) options.onLine(pending[name] + rest, name);
+      retain(name, rest);
+      if (!outputError && options.onLine && (pending[name] + rest)) {
+        try { options.onLine(pending[name] + rest, name); }
+        catch (error) { failOutput("PROCESS_OUTPUT_FAILED", error); }
+      }
     }
     const result: RunResult = { code, signal: sig, ...out, truncated, elapsedMs: Math.round(performance.now() - started) };
     if (options.signal?.aborted) throw new ToolError("CANCELLED", "Cancelled", undefined, undefined, true);
@@ -189,7 +209,11 @@ export async function run(cmd: Command, options: RunOptions = {}): Promise<RunRe
     clearTimeout(escalation); clearTimeout(drain);
     child.off("exit", parentExited);
     options.signal?.removeEventListener("abort", onAbort);
-    await new Promise<void>((resolve) => (log ? log.end(resolve) : resolve()));
+    if (log && !log.destroyed) log.end();
+    await logDone;
+    // finished() may report a disk error only when the final buffered write completes.
+    clearTimeout(escalation); clearTimeout(drain);
+    if (outputError) throw outputError;
   }
 }
 

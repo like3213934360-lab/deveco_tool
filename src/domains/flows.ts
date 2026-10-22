@@ -3,7 +3,7 @@ import path from "node:path";
 import { z } from "zod";
 import { selectorSchema } from "./selectors.js";
 import { kvDelete, kvGet, kvSet } from "../core/db.js";
-import { invariant, ToolError } from "../core/errors.js";
+import { errorResult, invariant, ToolError } from "../core/errors.js";
 import { atomicWrite } from "../core/files.js";
 import { forceStop, launch } from "./device.js";
 import { automaticActions, automaticResult, acceptAgreements, act, center, describe, dumpTree, select, waitFor, type Action, type Selector } from "./ui.js";
@@ -238,7 +238,7 @@ export async function replayFlow(project: string, id: string, target: string, va
   invariant(!missing.length, "INVALID_INPUT", `Missing flow variables: ${missing.join(", ")}`, { variables: Object.keys(flow.variables) });
   // attach: the app was just (re)launched by the caller (run then_flow), so do not restart it again.
   if (flow.start.mode === "restart" && !options.attach) {
-    await forceStop(target, flow.app.bundleName, signal).catch(() => {});
+    await forceStop(target, flow.app.bundleName, signal);
     await launch(target, flow.app.bundleName, flow.app.ability, flow.app.module, signal);
     (await import("./repeat.js")).noteLaunch(target);
   }
@@ -309,9 +309,13 @@ export async function replayFlow(project: string, id: string, target: string, va
     } catch (error) {
       results.push({ step: step.id, ok: false, detail: (error as Error).message });
       if (repaired) writeFlow(project, flow);
-      const nodes = await dumpTree(target, signal).catch(() => []);
+      let observation: Record<string, unknown>;
+      try {
+        const nodes = await dumpTree(target, signal);
+        observation = { visible: nodes.filter((n) => n.text && n.bundle === flow.app.bundleName).slice(0, 20).map(describe) };
+      } catch (error) { observation = { observation_error: errorResult(error) }; }
       throw new ToolError("FLOW_STEP_FAILED", `Flow ${id} failed at ${step.id}`, {
-        results, ...automaticResult(accepted), visible: nodes.filter((n) => n.text && n.bundle === flow.app.bundleName).slice(0, 20).map(describe),
+        results, cause: errorResult(error), ...automaticResult(accepted), ...observation,
       }, "Inspect with ui observe; update the flow by re-recording or pass repair=true with alternates");
     }
   }

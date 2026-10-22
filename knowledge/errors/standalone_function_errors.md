@@ -1,68 +1,18 @@
-# Standalone Function `this` Usage Error
+# 独立函数中的 UI Context
 
-## 错误描述
-
-在独立函数（非类方法）中不能直接使用 `this`，因为 `this` 在独立函数中没有上下文绑定。
-
-## 错误示例
+独立函数没有组件的 `this.getUIContext()`。由组件取得 Context、检查是否存在，然后显式传入函数。
 
 ```typescript
-async function getAvoidArea() {
-  const win = await window.getLastWindow(this.getUIContext().getHostContext());
-  return win.getWindowAvoidArea(window.AvoidAreaType.TYPE_SYSTEM);
+import { window } from '@kit.ArkUI';
+import { common } from '@kit.AbilityKit';
+
+export async function getAvoidArea(context: common.UIAbilityContext): Promise<window.AvoidArea> {
+  const currentWindow = await window.getLastWindow(context);
+  return currentWindow.getWindowAvoidArea(window.AvoidAreaType.TYPE_SYSTEM);
 }
 ```
 
-**错误信息：**
-```
-Cannot find name 'this'
-```
+组件内先取 `this.getUIContext().getHostContext()` 并检查 `undefined`。只有确定宿主为 UIAbility 时才使用相应 Context 类型。调用方 `await` 上述函数并处理异常；SDK Promise 拒绝及同步窗口 API 异常都会正常传播，不能用遗漏 `try/catch` 的回调包装造成永久 pending。
 
-## 解决方案
-
-将上下文作为参数传递给独立函数。
-
-```typescript
-async function getAvoidArea(context: common.UIAbilityContext): Promise<window.AvoidArea> {
-  return new Promise((resolve, reject) => {
-    window.getLastWindow(context, (err, win) => {
-      if (err.code !== 0) {
-        reject(err);
-        return;
-      }
-      const avoidArea = win.getWindowAvoidArea(window.AvoidAreaType.TYPE_SYSTEM);
-      resolve(avoidArea);
-    });
-  });
-}
-```
-
-## 简单示例
-
-```typescript
-@Entry
-@Component
-struct Example {
-  @State avoidAreaHeight: number = 0;
-
-  async aboutToAppear() {
-    const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
-    try {
-      const avoidArea = await getAvoidArea(context);
-      this.avoidAreaHeight = avoidArea.topRect.height;
-    } catch (err) {
-      console.error('获取避让区域失败:', err);
-    }
-  }
-
-  build() {
-    Column() {
-      Text(`避让区域高度: ${this.avoidAreaHeight}`)
-    }
-  }
-}
-```
-
-## 详细代码示例
-
-- [StandaloneFunctionError.ets](deveco://knowledge/arkts-error-fixes/examples/StandaloneFunctionError) - 完整的独立函数上下文传递示例，包含多个独立函数的使用
+[示例](deveco://knowledge/arkts-error-fixes/examples/StandaloneFunctionError)
+[多个窗口操作](deveco://knowledge/arkts-error-fixes/examples/StandaloneFunctionContext)

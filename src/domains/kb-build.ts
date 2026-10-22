@@ -4,7 +4,7 @@ import path from "node:path";
 import { assetRoot, version as mcpVersion } from "../core/config.js";
 import { invariant } from "../core/errors.js";
 import { run } from "../core/proc.js";
-import { catalogs, KB_SCHEMA, UPSTREAM_API_VERSION, type Manifest } from "./knowledge.js";
+import { catalogs, KB_SCHEMA, UPSTREAM_API_VERSION, validatePack, type Manifest } from "./knowledge.js";
 
 /**
  * Build a knowledge pack from:
@@ -35,14 +35,19 @@ export async function buildKnowledgePack(options: { upstream: string; out: strin
 
     const version = options.version ?? `${upstreamPkg.version.replace(/-.*$/, "")}-${new Date().toISOString().slice(0, 10).replaceAll("-", "")}`;
     invariant(/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(version), "INVALID_INPUT", "Knowledge pack version is not a safe directory name");
-    const target = path.join(path.resolve(options.out), version);
-    fs.rmSync(target, { recursive: true, force: true });
+    const destination = path.join(path.resolve(options.out), version);
+    const tarball = path.join(path.resolve(options.out), `deveco-kb-${version}.tgz`);
+    invariant(!fs.lstatSync(destination, { throwIfNoEntry: false }) && !fs.lstatSync(tarball, { throwIfNoEntry: false }),
+      "CONFLICT", "Knowledge version output already exists; use a new version or output directory", { destination, tarball });
+    const target = path.join(work, "built");
     fs.mkdirSync(target, { recursive: true });
     const indexDb = path.join(target, "index.db");
     fs.copyFileSync(upstreamDb, indexDb);
 
     const { DatabaseSync } = await import("node:sqlite");
     const db = new DatabaseSync(indexDb);
+    let counts: Record<string, number>;
+    try {
     // Local knowledge: rules / error cases / runtime patterns / skills, one document per markdown file.
     db.exec("BEGIN");
     const insertDoc = db.prepare("INSERT INTO documents(document_id, catalog_id, doc_title) VALUES(?,?,?)");
@@ -59,10 +64,10 @@ export async function buildKnowledgePack(options: { upstream: string; out: strin
     db.exec("INSERT INTO vocab SELECT term FROM temp.v WHERE length(term) BETWEEN 2 AND 12 AND term GLOB '*[^ -~]*' AND doc >= 2");
     db.exec("COMMIT");
     db.exec("INSERT INTO segments_fts(segments_fts) VALUES('optimize')");
-    const counts = Object.fromEntries((db.prepare("SELECT catalog_id, COUNT(*) AS n FROM documents GROUP BY catalog_id").all() as { catalog_id: number; n: number }[])
+    counts = Object.fromEntries((db.prepare("SELECT catalog_id, COUNT(*) AS n FROM documents GROUP BY catalog_id").all() as { catalog_id: number; n: number }[])
       .map((r) => [catalogs[r.catalog_id] ?? String(r.catalog_id), r.n]));
     db.exec("VACUUM");
-    db.close();
+    } finally { db.close(); }
 
     // Docs archive: upstream docs + local markdown under the same ids.
     const docsOut = path.join(target, "docs.zip");
@@ -101,17 +106,29 @@ export async function buildKnowledgePack(options: { upstream: string; out: strin
       name: npmName, version, description: "HarmonyOS knowledge pack for deveco-mcp (docs, ArkTS rules, error cases, runtime patterns)",
       license: "MIT", kbSchema: KB_SCHEMA, files: ["manifest.json", "index.db", "docs.zip"],
     }, null, 2) + "\n");
-    // Stable pointer for local development (bundledDir falls back to kb-dist/current).
-    const current = path.join(path.resolve(options.out), "current");
-    fs.rmSync(current, { recursive: true, force: true });
-    fs.symlinkSync(target, current, process.platform === "win32" ? "junction" : "dir");
+    await validatePack(target, manifest);
     // npm-style tarball (top-level "package/") so `knowledge update source=<file>` and `npm publish <file>` both work.
-    const tarball = path.join(path.resolve(options.out), `deveco-kb-${version}.tgz`);
+    const archive = path.join(work, "archive.tgz");
     const pack = path.join(work, "package");
     fs.mkdirSync(pack);
     for (const name of ["manifest.json", "index.db", "docs.zip", "package.json"]) fs.linkSync(path.join(target, name), path.join(pack, name));
-    await run({ file: "tar", args: ["-czf", tarball, "-C", work, "package"] }, { timeoutMs: 600000 });
-    return { version, dir: target, tarball, counts, bytes: { index: fs.statSync(indexDb).size, docs: fs.statSync(docsOut).size, tarball: fs.statSync(tarball).size } };
+    await run({ file: "tar", args: ["-czf", archive, "-C", work, "package"] }, { timeoutMs: 600000 });
+    const bytes = { index: fs.statSync(indexDb).size, docs: fs.statSync(docsOut).size, tarball: fs.statSync(archive).size };
+    const current = path.join(path.resolve(options.out), "current"), next = path.join(work, "current");
+    invariant(!fs.lstatSync(current, { throwIfNoEntry: false }) || fs.lstatSync(current).isSymbolicLink(), "CONFLICT", "Knowledge current must be a symlink; existing data was preserved");
+    fs.symlinkSync(destination, next, process.platform === "win32" ? "junction" : "dir");
+    // Version directories stay immutable: existing readers may still have the old index open.
+    invariant(!fs.lstatSync(destination, { throwIfNoEntry: false }) && !fs.lstatSync(tarball, { throwIfNoEntry: false }), "CONFLICT", "Knowledge output appeared during build");
+    fs.renameSync(target, destination);
+    try {
+      fs.renameSync(archive, tarball);
+      fs.renameSync(next, current);
+    } catch (error) {
+      fs.rmSync(destination, { recursive: true, force: true });
+      if (!fs.existsSync(archive)) fs.rmSync(tarball, { force: true });
+      throw error;
+    }
+    return { version, dir: destination, tarball, counts, bytes };
   } finally {
     fs.rmSync(work, { recursive: true, force: true });
   }

@@ -52,16 +52,69 @@ function readJson(file: string): Record<string, any> {
 
 /* Minimal TOML support for Codex: rewrite only our [mcp_servers.<name>] table(s), keep the rest verbatim. */
 const tomlString = (s: string) => JSON.stringify(s);
+/** Find table boundaries outside comments, strings and multiline arrays, preserving original lines. */
+function tomlTables(lines: string[], name: string) {
+  const tables = new Map<number, string[]>();
+  let quote = "", depth = 0;
+  let context: string[] = [];
+  for (const [index, line] of lines.entries()) {
+    if (!quote && !depth && line.trimStart().startsWith("[")) {
+      const header = line.trimStart(), close = header.startsWith("[[") ? "]]" : "]";
+      const keys: string[] = [];
+      let rest = header.slice(close.length).trimStart();
+      for (;;) {
+        const key = /^("(?:[^"\\]|\\.)*"|'[^']*'|[A-Za-z0-9_-]+)\s*/.exec(rest);
+        invariant(key, "INVALID_INPUT", "Cannot safely identify TOML table key", { line: index + 1 });
+        const token = key[1]!;
+        keys.push(token.startsWith('"') ? JSON.parse(token.replace(/\\(?:U([0-9A-Fa-f]{8})|.)/g, (escape: string, hex?: string) => hex ? JSON.stringify(String.fromCodePoint(parseInt(hex, 16))).slice(1, -1) : escape))
+          : token.startsWith("'") ? token.slice(1, -1) : token);
+        rest = rest.slice(key[0].length).trimStart();
+        if (rest.startsWith(".")) { rest = rest.slice(1).trimStart(); continue; }
+        invariant(rest.startsWith(close) && /^\s*(?:#.*)?$/.test(rest.slice(close.length)), "INVALID_INPUT", "Cannot safely identify TOML table boundary", { line: index + 1 });
+        break;
+      }
+      context = keys;
+      tables.set(index, keys);
+      continue;
+    }
+    if (!quote && !depth && context.length < 2) {
+      const assignment = /^\s*((?:(?:"(?:[^"\\]|\\.)*"|'[^']*'|[A-Za-z0-9_-]+)\s*(?:\.\s*)?)+)=/.exec(line);
+      if (assignment) {
+        const tokens = assignment[1]!.match(/"(?:[^"\\]|\\.)*"|'[^']*'|[A-Za-z0-9_-]+/g)!;
+        const keys = [...context, ...tokens.map((token) => token.startsWith('"') ? JSON.parse(token) : token.startsWith("'") ? token.slice(1, -1) : token)];
+        invariant(keys[0] !== "mcp_servers" || keys.length > 1 && keys[1] !== name, "INVALID_INPUT",
+          "Inline or dotted MCP configuration cannot be safely rewritten; use a dedicated server table", { line: index + 1 });
+      }
+    }
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i]!;
+      if (quote) {
+        if (quote[0] === '"' && ch === "\\") { i++; continue; }
+        if (line.startsWith(quote, i)) {
+          i += quote.length - 1;
+          if (quote.length === 3) while (line[i + 1] === quote[0]) i++;
+          quote = "";
+        }
+      } else if (ch === "#") break;
+      else if (ch === '"' || ch === "'") { quote = line.startsWith(ch.repeat(3), i) ? ch.repeat(3) : ch; i += quote.length - 1; }
+      else if (ch === "[" || ch === "{") depth++;
+      else if (ch === "]" || ch === "}") depth--;
+    }
+  }
+  invariant(!quote && depth === 0, "INVALID_INPUT", "Unterminated TOML value; configuration was not changed");
+  return tables;
+}
 export function mergeCodexToml(existing: string, name: string, spec: ServerSpec, force: boolean): { text: string; changed: boolean; exists: boolean } {
-  const header = new RegExp(`^\\[mcp_servers\\.(?:"${name}"|${name})(?:\\.env)?\\]\\s*$`);
   const lines = existing.split(/\r?\n/);
-  const exists = lines.some((l) => header.test(l.trim()));
+  const tables = tomlTables(lines, name);
+  const ours = (keys: string[]) => keys[0] === "mcp_servers" && keys[1] === name;
+  const exists = [...tables.values()].some(ours);
   if (exists && !force) return { text: existing, changed: false, exists };
   const kept: string[] = [];
   let skipping = false;
-  for (const line of lines) {
-    const t = line.trim();
-    if (/^\[.*\]$/.test(t)) skipping = header.test(t);
+  for (const [index, line] of lines.entries()) {
+    const table = tables.get(index);
+    if (table) skipping = ours(table);
     if (!skipping) kept.push(line);
   }
   while (kept.length && !kept[kept.length - 1]!.trim()) kept.pop();
@@ -71,7 +124,7 @@ export function mergeCodexToml(existing: string, name: string, spec: ServerSpec,
     `args = [${spec.args.map(tomlString).join(", ")}]`,
     ...(Object.keys(spec.env).length ? [`[mcp_servers.${name}.env]`, ...Object.entries(spec.env).map(([k, v]) => `${k} = ${tomlString(v)}`)] : []),
   ];
-  return { text: [...kept, ...(kept.length ? [""] : []), ...block, ""].join("\n"), changed: true, exists };
+  return { text: [...kept, ...(kept.length ? [""] : []), ...block, ""].join(existing.includes("\r\n") ? "\r\n" : "\n"), changed: true, exists };
 }
 
 export function mergeJsonConfig(data: Record<string, any>, format: Format, name: string, spec: ServerSpec, force: boolean) {

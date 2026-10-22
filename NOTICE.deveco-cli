@@ -7,7 +7,7 @@ Reused or adapted in deveco-mcp:
   auto-signing flow (certificate, device, debug profile endpoints) follow packages/cli/src/signature.
 - src/domains/ui.ts: screen-recorder toggle protocol follows packages/cli/src/ui/screenrecord.
 - src/domains/skills.ts: OpenHarmony skill-market API usage follows packages/cli/src/skills.
-- Knowledge packs are built from the @deveco-test/deveco-cli-knowledgebase docs package.
+- Knowledge packs are built from the @deveco/deveco-cli-knowledgebase docs package.
 
 MIT License
 

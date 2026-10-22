@@ -66,7 +66,7 @@ struct ESObjectTypeError {
         .fontWeight(FontWeight.Bold)
         .margin({ bottom: 10 })
 
-      Text(`let nfcModule: ESModule | null = null;`)
+      Text(`await import('@kit.ConnectivityKit');`)
         .fontSize(12)
         .fontColor('#00AA00')
         .fontFamily('monospace')
@@ -121,12 +121,12 @@ struct ESObjectTypeError {
         .fontColor('#666666')
         .margin({ bottom: 5 })
 
-      Text('• 使用 ESModule 类型或具体类型来声明动态导入的模块')
+      Text('• 需要模块成员时使用 SDK 声明提供的静态导入')
         .fontSize(12)
         .fontColor('#666666')
         .margin({ bottom: 5 })
 
-      Text('• 使用 import() 函数进行动态导入')
+      Text('• await import() 放在 try 内才能捕获异步导入失败')
         .fontSize(12)
         .fontColor('#666666')
     }

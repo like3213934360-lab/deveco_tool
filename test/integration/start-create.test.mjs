@@ -124,6 +124,13 @@ test("package generation covers APP/HSP/HAR, shared dependencies and missing mod
   const signed = hap.replace("unsigned", "signed");
   f.build = () => { for (const file of [hap, signed]) { put(file, zipFixture({ "module.json": "same generation" })); fs.utimesSync(file, 20, 20); } };
   assert.equal((await m.buildProject(project, { modules: ["entry"] }, new AbortController().signal)).artifacts[0].path, signed);
+  f.build = () => { put(hap, zipFixture({ "module.json": "unsigned" })); put(signed, zipFixture({ "module.json": "different" })); };
+  await assert.rejects(m.buildProject(project, { modules: ["entry"] }, new AbortController().signal), asyncError => {
+    assert.equal(asyncError.code, "CONFLICT");
+    assert.match(asyncError.details.log_artifact, /^a_/);
+    assert.equal(asyncError.details.directory, path.dirname(hap));
+    return true;
+  });
 });
 
 test("create writes the requested device types and preserves all other template fields", async () => {
@@ -329,4 +336,33 @@ test("snapshot start requires both saved state and fresh restore evidence, witho
   await assert.rejects(start({ boot_mode: "snapshot" }), rejected("CAPABILITY_UNAVAILABLE"));
   assert.equal(f.starts.length, 3);
   for (const file of f.logs) fs.rmSync(file, { force: true });
+});
+
+test('build restores original BuildProfile bytes after clean, failure and cancellation', async()=>{
+  const made=await create('restore-profiles'), project=m.inspectProject(made.created), file=path.join(project.modules[0].root,'BuildProfile.ets');
+  const original=Buffer.from('original\r\nbyte exact\0');fs.writeFileSync(file,original);
+  for(const outcome of ['success','failure','cancel']) {
+    const controller=new AbortController();
+    f.build=cmd=>{fs.rmSync(file);if(outcome==='failure')throw new Error('build failed');if(outcome==='cancel'){controller.abort();controller.signal.throwIfAborted()}
+      const out=path.join(cmd.cwd,'entry/build/default/outputs/default');fs.mkdirSync(out,{recursive:true});fs.writeFileSync(path.join(out,'entry-default-unsigned.hap'),'current')};
+    const run=m.buildProject(project,{clean:true},controller.signal);
+    if(outcome==='success')await run;else await assert.rejects(run);
+    assert.deepEqual(fs.readFileSync(file),original,outcome);
+  }
+  f.build=()=>{fs.rmSync(file);fs.mkdirSync(file);throw new Error('SDK failed too')};
+  await assert.rejects(m.buildProject(project,{},new AbortController().signal),e=>e.code==='BUILD_RESTORE_FAILED'&&e.details.failures[0].file===file&&e.details.build_error.includes('SDK failed too'));
+  fs.rmdirSync(file);fs.writeFileSync(file,original);
+});
+
+test('compileNative rejects unknown or non-native selections before executing the SDK', async()=>{
+  const made=await create('native-selection'),project=m.inspectProject(made.created),before=f.commands.length;
+  for(const modules of [['missing'],['entry']])await assert.rejects(m.buildProject(project,{task:'compileNative',modules},new AbortController().signal),{code:'INVALID_INPUT'});
+  assert.equal(f.commands.length,before);
+});
+
+test('scoped stop refuses SDKs without scope support before stopping any same-name instance',async()=>{
+  f.instances=[{name:'same',isRunning:'true',instancePath:'/one'},{name:'same',isRunning:'true',instancePath:'/two'}];
+  f.help='[-stop <name>]\n-instancePath: directory';
+  await assert.rejects(m.stopEmulator('same',new AbortController().signal,'/one'),{code:'CAPABILITY_UNAVAILABLE'});
+  assert.deepEqual(f.commands,[['-help']]);
 });

@@ -1,4 +1,4 @@
-import { ToolError } from "../core/errors.js";
+import { errorResult, ToolError } from "../core/errors.js";
 import { automaticActions, automaticResult, acceptAgreements, act, center, describe, dumpTree, invalidate, pickMatch, select, treeSignature, waitFor, type Action, type AutomaticResult, type Selector, type UiNode } from "./ui.js";
 
 /* ------------------------------ screen diff ------------------------------ */
@@ -136,7 +136,7 @@ export function stepAction(s: BatchStep, point?: { x: number; y: number }): Acti
   const need = (ok: unknown, what: string) => { if (!ok) throw new ToolError("INVALID_INPUT", `${s.op} needs ${what}`); };
   switch (s.op) {
     case "click": case "double_click": case "long_click": need(x !== undefined && y !== undefined, "selector or x,y"); return { action: s.op, x: x!, y: y! };
-    case "input": need(x !== undefined && s.text !== undefined, "selector or x,y and text"); return { action: "input", x: x!, y: y!, text: s.text!, append: s.append };
+    case "input": need(x !== undefined && y !== undefined && s.text !== undefined, "selector or x,y and text"); return { action: "input", x: x!, y: y!, text: s.text!, append: s.append };
     case "type": need(s.text !== undefined, "text"); return { action: "type", text: s.text! };
     case "swipe": case "drag": case "fling":
       need([s.x, s.y, s.x2, s.y2].every((v) => v !== undefined), "x,y,x2,y2");
@@ -154,27 +154,33 @@ export function stepAction(s: BatchStep, point?: { x: number; y: number }): Acti
   }
 }
 
+export function validateBatchSteps(steps: BatchStep[]) {
+  for (const step of steps) if (step.op !== "wait") stepAction(step, step.selector ? { x: 0, y: 0 } : undefined);
+}
+
 const pick = pickMatch;
 
 export interface BatchResult extends AutomaticResult {
   passed: boolean;
   steps: { i: number; op: string; ok: boolean; target?: string; ms: number; error?: string }[];
   failed_step?: number;
-  /** set when the call ran out of time: call again with steps from this index */
+  /** First unexecuted step; inspect any observation failure before continuing. */
   stopped_at?: number;
   error?: { code: string; message: string };
   visible?: string[];
   after?: ReturnType<typeof screenDiff>;
+  observation_error?: ReturnType<typeof errorResult>;
   assert?: unknown;
   executed: { action: Action; selector?: Selector }[];
 }
 
 /**
  * Run several UI steps in one call. Each selector step polls the (fresh) tree until its element
- * appears, so no fixed sleeps are needed between steps: the dump that locates the next element
- * also proves the previous action took effect. Stops at the first failing step.
+ * appears. Each new tree is evidence of the current UI, not proof of business correctness.
+ * Stops at the first failing step or observation.
  */
 export async function runBatch(target: string, steps: BatchStep[], options: { assert?: { visible?: Selector; hidden?: Selector; timeout_ms?: number }; bundle?: string; budgetMs?: number }, signal: AbortSignal): Promise<BatchResult> {
+  validateBatchSteps(steps);
   const results: BatchResult["steps"] = [];
   const executed: BatchResult["executed"] = [];
   const accepted: { text: string; kind: string }[] = [];
@@ -190,19 +196,17 @@ export async function runBatch(target: string, steps: BatchStep[], options: { as
   const first = await ready(await dumpTree(target, signal, 1500));
   let last = first;
   let fresh = true; // `last` reflects the screen after the latest action
-  // A step locating its element by selector needs a tree taken after the previous action.
-  const wantsTree = (s: BatchStep | undefined) => !!s && !!s.selector && needsPoint.has(s.op);
   for (let i = 0; i < steps.length; i++) {
     signal.throwIfAborted();
     const s = steps[i]!;
     const started = Date.now();
+    let action: Action | undefined;
     if (left() < 1500) {
       // Out of time: report what was done and where to resume, instead of letting the host time out.
-      const nodes = await dumpTree(target, signal).catch(() => last);
       return {
         passed: false, steps: results, failed_step: i, stopped_at: i, executed, ...agreements(),
         error: { code: "TIMEOUT", message: `Stopped before step ${i}: one call may take at most ${Math.round((options.budgetMs ?? 52000) / 1000)} s` },
-        visible: visibleLabels(nodes, options.bundle), after: screenDiff(first, nodes, 10, options.bundle),
+        observation_error: errorResult(new ToolError("TIMEOUT", "No time remains for a fresh UI observation")),
       };
     }
     try {
@@ -211,15 +215,15 @@ export async function runBatch(target: string, steps: BatchStep[], options: { as
           const verdict = await waitFor(target, s.selector, "visible", Math.min(s.timeout_ms ?? 10000, left() - 1000), signal, true);
           accepted.push(...automaticActions(verdict));
           if (!verdict.passed) throw new ToolError("UI_NOT_FOUND", "Element did not appear", { selector: s.selector });
-          fresh = false;
         } else await new Promise((r) => setTimeout(r, Math.min(s.ms ?? 500, 10000, Math.max(0, left() - 1500))));
+        fresh = false;
         results.push({ i, op: "wait", ok: true, ms: Date.now() - started });
         continue;
       }
       let point: { x: number; y: number } | undefined;
       let hit: UiNode | undefined;
       if (s.selector && needsPoint.has(s.op)) {
-        if (!fresh) { invalidate(target); last = await ready(await dumpTree(target, signal)); fresh = true; }
+        if (!fresh) { await new Promise((r) => setTimeout(r, 250)); invalidate(target); last = await ready(await dumpTree(target, signal)); fresh = true; }
         const deadline = Date.now() + Math.min(s.timeout_ms ?? 10000, left() - 1000);
         let ambiguous: UiNode[] | undefined;
         for (;;) {
@@ -238,40 +242,51 @@ export async function runBatch(target: string, steps: BatchStep[], options: { as
         }
         point = center(hit);
       }
-      const action = stepAction(s, point);
+      action = stepAction(s, point);
       const performed = await act(target, action, signal);
       accepted.push(...automaticActions(performed));
       executed.push({ action, selector: s.selector });
       results.push({ i, op: s.op, ok: true, ...(hit ? { target: label(hit) } : {}), ms: Date.now() - started });
       fresh = false;
-      // Dump only when the next step has to find an element (it also proves this step took effect);
-      // gestures, keys and coordinate taps need no tree. The final tree is taken once at the end.
-      if (wantsTree(steps[i + 1])) {
-        await new Promise((r) => setTimeout(r, 250));
-        last = await ready(await dumpTree(target, signal)); fresh = true;
-      }
     } catch (error) {
       const e = error as ToolError;
-      results.push({ i, op: s.op, ok: false, ms: Date.now() - started, error: e.message });
-      const nodes = await dumpTree(target, signal).catch(() => last);
+      const completed = action !== undefined && e.details?.action_completed === true;
+      if (completed) {
+        executed.push({ action: action!, selector: s.selector });
+        accepted.push(...automaticActions(e.details));
+        results.push({ i, op: s.op, ok: true, ms: Date.now() - started });
+      }
+      if (!completed) results.push({ i, op: s.op, ok: false, ms: Date.now() - started, error: e.message });
+      let observation: Pick<BatchResult, "visible" | "after" | "observation_error">;
+      try {
+        signal.throwIfAborted();
+        if (left() < 1500) throw new ToolError("TIMEOUT", "No time remains for a fresh UI observation");
+        invalidate(target);
+        const nodes = await dumpTree(target, signal);
+        observation = { visible: visibleLabels(nodes, options.bundle), after: screenDiff(first, nodes, 10, options.bundle) };
+      } catch (error) { observation = { observation_error: errorResult(error) }; }
       return {
-        passed: false, steps: results, failed_step: i, executed, ...agreements(),
-        error: { code: e.code ?? "UI_ACTION_FAILED", message: e.message },
-        visible: visibleLabels(nodes, options.bundle),
-        after: screenDiff(first, nodes, 10, options.bundle),
+        passed: false, steps: results, ...(completed ? { stopped_at: i + 1 } : { failed_step: i }), executed, ...agreements(),
+        error: { code: completed ? "UI_OBSERVATION_FAILED" : e.code ?? "UI_ACTION_FAILED", message: e.message },
+        ...observation,
       };
     }
   }
-  let assertion: Awaited<ReturnType<typeof waitFor>> | undefined;
-  if (options.assert && (options.assert.visible || options.assert.hidden)) {
-    const selector = (options.assert.visible ?? options.assert.hidden)!;
-    assertion = await waitFor(target, selector, options.assert.visible ? "visible" : "hidden", Math.max(500, Math.min(options.assert.timeout_ms ?? 5000, left() - 1500)), signal, true);
-    accepted.push(...automaticActions(assertion));
-    last = await dumpTree(target, signal, 1500); fresh = true;
+  try {
+    let assertion: Awaited<ReturnType<typeof waitFor>> | undefined;
+    if (options.assert && (options.assert.visible || options.assert.hidden)) {
+      const selector = (options.assert.visible ?? options.assert.hidden)!;
+      assertion = await waitFor(target, selector, options.assert.visible ? "visible" : "hidden", Math.max(500, Math.min(options.assert.timeout_ms ?? 5000, left() - 1500)), signal, true);
+      accepted.push(...automaticActions(assertion));
+      last = await dumpTree(target, signal, 1500); fresh = true;
+    }
+    if (!fresh) { await new Promise((r) => setTimeout(r, 250)); invalidate(target); last = await dumpTree(target, signal); }
+    return {
+      passed: !assertion || assertion.passed, steps: results, executed, ...agreements(), after: screenDiff(first, last, 10, options.bundle),
+      ...(assertion ? { assert: assertion } : {}),
+    };
+  } catch (error) {
+    return { passed: false, steps: results, executed, ...agreements(), observation_error: errorResult(error),
+      error: { code: "UI_OBSERVATION_FAILED", message: "Actions completed but the final observation failed; inspect the UI before deciding whether further actions are needed" } };
   }
-  if (!fresh) { await new Promise((r) => setTimeout(r, 250)); invalidate(target); last = await dumpTree(target, signal); }
-  return {
-    passed: !assertion || assertion.passed, steps: results, executed, ...agreements(), after: screenDiff(first, last, 10, options.bundle),
-    ...(assertion ? { assert: assertion } : {}),
-  };
 }

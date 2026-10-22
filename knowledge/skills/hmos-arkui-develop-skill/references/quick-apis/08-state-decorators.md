@@ -69,8 +69,8 @@
 
 | API | 签名 | 说明 |
 |-----|------|------|
-| **AppStorageV2** | `.connect(this, 'key', type?)` | V2 应用级状态 |
-| **PersistenceV2** | `.connect(this, 'key', type?)` | V2 持久化 |
+| **AppStorageV2** | `.connect(Type, keyOrDefaultCreator?, defaultCreator?)` | V2 应用级状态，返回 `T \| undefined` |
+| **PersistenceV2** | `.connect(Type, keyOrDefaultCreator?, defaultCreator?)` | V2 持久化，返回 `T \| undefined` |
 | **makeObserved** | `makeObserved(target)` | 将对象变为可观测 |
 | **canBeObserved** | `canBeObserved(target)` | 判断是否可观测 |
 | **getTarget** | `getTarget(proxy)` | 获取 Proxy 原始对象 |

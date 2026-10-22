@@ -8,7 +8,7 @@ import path from "node:path";
 import { after, before, test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { connect } from "../support/mcp.mjs";
-import { actualCalls, actionScenarios, callSet, grade, gradeLive, scenarios, unfinishedJobs } from "../model/eval.mjs";
+import { actualCalls, waitHostExit, actionScenarios, callSet, grade, gradeLive, scenarios, unfinishedJobs } from "../model/eval.mjs";
 
 let client, tools, state;
 before(async () => {
@@ -127,4 +127,44 @@ test("model grader accepts valid alternatives and refuses extra array choices", 
     assert.equal(grade([{ id: "sdk-signature", calls: [{ tool: "code", arguments: { action: "lsp", op, project: "/workspace/Demo", symbol: "router.pushUrl" } }] }], tools, scenario("sdk-signature"))[0].passed, true);
   const call = { tool: "project", arguments: { action: "create", project: "/workspace/Demo", app_name: "Demo", bundle_name: "com.example.demo", device_types: ["phone", "tablet", "wearable"] } };
   assert.equal(grade([{ id: "project-types", calls: [call] }], tools, scenario("project-types"))[0].passed, false);
+});
+
+
+test('explicitly unverified tool outcomes never pass live grading',()=>{
+  const request={direction:'request',message:{id:1,method:'tools/call',params:{name:'code',arguments:{action:'check',project:'/p'}}}};
+  for(const result of [{status:'inconclusive',passed:null},{status:'blocked'},{status:'unsupported'},{checked:false},{supported:false}]) {
+    const calls=actualCalls([request,{direction:'response',message:{id:1,result:{content:[{type:'text',text:JSON.stringify(result)}]}}}]);
+    assert.equal(calls[0].succeeded,false);
+    const cases=[{id:'unverified',expect:[{tool:'code',arguments:{action:'check',project:'/p'}}]}];
+    assert.equal(gradeLive(calls,tools,cases)[0].passed,false);
+  }
+});
+
+test('host timeout kills a real child that ignores SIGTERM', {timeout:8000},async()=>{
+  const {spawn}=await import('node:child_process');
+  const child=spawn(process.execPath,['-e',"process.on('SIGTERM',()=>{});process.stdout.write('ready');setInterval(()=>{},1000)"],{detached:process.platform!=='win32',stdio:['pipe','pipe','pipe']});
+  await new Promise(resolve=>child.stdout.once('data',resolve));
+  const started=Date.now(), result=await waitHostExit(child,100,100);
+  assert.equal(result.timedOut,true);assert.ok(Date.now()-started<3000);assert.throws(()=>process.kill(child.pid,0),{code:'ESRCH'});
+});
+
+test('Codex CLI evaluation is rejected before starting a model or writing trial files',()=>{
+  const out=path.join(state,'forbidden-cli');
+  assert.throws(()=>execFileSync(process.execPath,[fileURLToPath(new URL('../model/eval.mjs',import.meta.url)),'--host','codex','--out',out],{encoding:'utf8',stdio:'pipe'}),/current Codex App|opencode/);
+  assert.equal(fs.existsSync(out),false);
+});
+
+
+test('host parent exit still terminates its owned stubborn descendant',{skip:process.platform==='win32',timeout:8000},async()=>{
+  const {spawn}=await import('node:child_process'), pidFile=path.join(state,'grandchild.pid');
+  const script="process.on('SIGTERM',()=>{});require('node:fs').writeFileSync(process.argv[1],String(process.pid));console.log('ready');setInterval(()=>{},1000)";
+  const parent="require('node:child_process').spawn(process.execPath,['-e',"+JSON.stringify(script)+",process.argv[1]],{stdio:'inherit'});process.on('SIGTERM',()=>process.exit(0));setInterval(()=>{},1000)";
+  const child=spawn(process.execPath,['-e',parent,pidFile],{detached:true,stdio:['pipe','pipe','pipe']});
+  try{
+    await new Promise(resolve=>child.stdout.once('data',resolve));
+    const result=await waitHostExit(child,100,100);assert.equal(result.timedOut,true);
+    const pid=Number(fs.readFileSync(pidFile,'utf8'));
+    const alive=()=>{try{return !execFileSync('ps',['-o','stat=','-p',String(pid)],{encoding:'utf8'}).trim().startsWith('Z')}catch{return false}};
+    for(let i=0;i<50&&alive();i++)await new Promise(r=>setTimeout(r,20));assert.equal(alive(),false);
+  }finally{try{process.kill(-child.pid,'SIGKILL')}catch(e){if(e.code!=='ESRCH')throw e}}
 });

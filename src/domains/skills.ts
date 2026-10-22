@@ -148,28 +148,44 @@ export async function marketSearch(keyword: string, limit = 20) {
 export async function marketInstall(name: string, host: string | undefined, scope: "user" | "project", project?: string, dir?: string) {
   invariant(/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(name), "INVALID_INPUT", "Invalid skill name");
   const root = skillsDir(host, scope, project, dir);
+  const target = path.join(root, name), previous = fs.lstatSync(target, { throwIfNoEntry: false });
+  invariant(!previous || previous.isDirectory() && !previous.isSymbolicLink(), "CONFLICT", "Skill destination must be a regular directory", { target });
   const checksum = await marketJson<{ sha256: string; size: number }>(`${market}/registry/skill/${name}/checksum`);
   const response = await fetch(`${market}/registry/skill/${name}/install?format=zip`, { signal: AbortSignal.timeout(60000) });
   invariant(response.ok, "HTTP_ERROR", `Download failed (HTTP ${response.status})`);
   const bytes = Buffer.from(await response.arrayBuffer());
   const { createHash } = await import("node:crypto");
   invariant(createHash("sha256").update(bytes).digest("hex").toLowerCase() === checksum.sha256.toLowerCase(), "INTEGRITY_FAILED", "Skill archive checksum mismatch");
-  const target = path.join(root, name);
-  fs.mkdirSync(target, { recursive: true });
-  const zip = path.join(target, ".download.zip");
-  fs.writeFileSync(zip, bytes);
+  fs.mkdirSync(root, { recursive: true });
+  const work = fs.mkdtempSync(path.join(root, ".skill-")), content = path.join(work, "content"), backup = path.join(work, "previous");
+  const zip = path.join(work, "download.zip");
+  let preserveBackup = false;
   try {
+    fs.writeFileSync(zip, bytes);
     const { extractZip } = await import("../core/unzip.js");
-    await extractZip(zip, target);
+    await extractZip(zip, content);
+    const skill = (base: string) => fs.lstatSync(path.join(base, "SKILL.md"), { throwIfNoEntry: false })?.isFile();
+    let source = content;
+    if (!skill(source)) {
+      const candidates = fs.readdirSync(content, { withFileTypes: true }).filter((entry) => entry.isDirectory() && skill(path.join(content, entry.name)));
+      invariant(candidates.length === 1, "INVALID_INPUT", "Downloaded archive must contain one unambiguous SKILL.md");
+      source = path.join(content, candidates[0]!.name);
+    }
+    const current = fs.lstatSync(target, { throwIfNoEntry: false });
+    invariant(current?.ino === previous?.ino && current?.dev === previous?.dev && !current?.isSymbolicLink(), "CONFLICT", "Skill destination changed during download", { target });
+    if (previous) fs.renameSync(target, backup);
+    try { fs.renameSync(source, target); }
+    catch (error) {
+      if (previous) {
+        preserveBackup = true;
+        try { fs.renameSync(backup, target); preserveBackup = false; }
+        catch (restore) { throw new ToolError("INSTALL_ROLLBACK_FAILED", "Skill installation and restoration failed; original files were retained", { backup, cause: String(error), restore: String(restore) }); }
+      }
+      throw error;
+    }
   } finally {
-    fs.rmSync(zip, { force: true });
+    if (!preserveBackup) fs.rmSync(work, { recursive: true, force: true });
   }
-  // Some archives wrap files in a top folder; flatten when SKILL.md is one level down.
-  if (!fs.existsSync(path.join(target, "SKILL.md"))) {
-    const inner = fs.readdirSync(target).find((d) => fs.existsSync(path.join(target, d, "SKILL.md")));
-    if (inner) for (const entry of fs.readdirSync(path.join(target, inner))) fs.renameSync(path.join(target, inner, entry), path.join(target, entry));
-  }
-  invariant(fs.existsSync(path.join(target, "SKILL.md")), "INVALID_INPUT", "Downloaded archive has no SKILL.md");
   return { installed: name, directory: target };
 }
 

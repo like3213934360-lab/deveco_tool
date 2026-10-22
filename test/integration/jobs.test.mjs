@@ -24,6 +24,7 @@ export * from ${JSON.stringify(path.resolve("src/core/storage.ts"))};
 export { closeCoordination } from ${JSON.stringify(path.resolve("src/core/operations.ts"))};
 export { ToolError } from ${JSON.stringify(path.resolve("src/core/errors.ts"))};
 export { formatCheck } from ${JSON.stringify(path.resolve("src/domains/code.ts"))};
+export { testLog } from ${JSON.stringify(path.resolve("src/domains/uitest.ts"))};
 export { settlePreflight } from ${JSON.stringify(path.resolve("src/jobs.ts"))};
 export { writeState } from ${JSON.stringify(path.resolve("src/domains/hotpath.ts"))};
 `);
@@ -124,6 +125,65 @@ test("cancel stops a running job", async () => {
   assert.equal(status.status, "cancelled");
 });
 
+test("running elapsed time advances and interrupted detail remains inspectable", async () => {
+  const { job_id } = await m.startJob("t_slow", { reason: "inspect" });
+  try {
+    await m.waitJob(job_id, 10);
+    const first = await m.jobStatus(job_id, true);
+    await new Promise((r) => setTimeout(r, 60));
+    const next = await m.jobStatus(job_id, true);
+    assert.ok(next.elapsed_ms >= first.elapsed_ms + 40);
+    assert.equal(next.input.reason, "inspect");
+  } finally { await m.cancelJob(job_id); }
+  const db = await m.database();
+  db.prepare("INSERT INTO jobs(id,kind,status,input,outputs,created,updated) VALUES('j_inspect','t_slow','needs_input','{\"reason\":\"inspect\"}','{\"prior\":1}',0,0)").run();
+  const detail = await m.jobStatus("j_inspect", true);
+  assert.equal(detail.input.reason, "inspect");
+  assert.deepEqual(detail.outputs, { prior: 1 });
+  assert.equal(detail.next.action, "resume");
+});
+
+test("another server's job waits for completion and cannot be silently cancelled", async (t) => {
+  const child = spawn(process.execPath, ["--input-type=module", "-e", `
+    const m=await import(${JSON.stringify(pathToFileURL(bundle).href)});
+    m.defineJob({kind:'t_foreign_wait',steps:[{id:'work',run:()=>new Promise(r=>setTimeout(()=>r('done'),800))}]});
+    const {job_id}=await m.startJob('t_foreign_wait',{});process.stdout.write(job_id+'\\n');
+    await m.waitJob(job_id,3000);await m.stopCleanup();m.closeDatabase();
+  `], { env: { ...process.env }, stdio: ["ignore", "pipe", "pipe"] });
+  const exited = once(child, "exit");
+  t.after(async () => { if (child.exitCode === null) child.kill(); await exited; });
+  const [data] = await once(child.stdout, "data"), id = data.toString().trim();
+  await assert.rejects(m.cancelJob(id), { code: "RESOURCE_BUSY" });
+  const started = performance.now();
+  const result = await m.waitJob(id, 3000);
+  assert.equal(result.status, "succeeded");
+  assert.ok(performance.now() - started >= 300, "foreign jobs must not cause tight agent polling");
+  await exited;
+});
+
+test("cancelling a wait leaves the job alive and slow cancellation reports pending cleanup", async () => {
+  let finish;
+  m.defineJob({ kind: "t_delayed_cleanup", steps: [{ id: "hold", run: () => new Promise((resolve) => { finish = resolve; }) }] });
+  const { job_id } = await m.startJob("t_delayed_cleanup", {});
+  try {
+    await assert.rejects(m.waitJob(job_id, 5000, AbortSignal.timeout(40)), { name: "AbortError" });
+    assert.equal((await m.jobStatus(job_id)).status, "running");
+    const started = performance.now(), result = await m.cancelJob(job_id);
+    assert.ok(performance.now() - started < 2000);
+    assert.equal(result.status, "running"); assert.equal(result.cancellation_requested, true);
+  } finally { finish(); await m.waitJob(job_id, 1000); }
+  assert.equal((await m.jobStatus(job_id)).status, "cancelled");
+});
+
+test("invalid persisted job input fails explicitly and releases the runner", async () => {
+  const db = await m.database();
+  db.prepare("INSERT INTO jobs(id,kind,status,input,created,updated) VALUES('j_invalid_input','t_ok','interrupted','not json',0,0)").run();
+  await m.resumeJob("j_invalid_input");
+  const result = await m.waitJob("j_invalid_input", 1000);
+  assert.equal(result.status, "failed"); assert.equal(result.error.code, "INTERNAL");
+  assert.equal((await m.cancelJob("j_invalid_input")).status, "failed");
+});
+
 test("interrupted effect is not replayed without force", async () => {
   const db = await m.database();
   let runs = 0;
@@ -152,6 +212,25 @@ test("artifacts page by line and filter with grep", async () => {
   const errors = await m.readArtifact(artifact.artifact_id, { grep: "ERROR" });
   assert.equal(errors.matched_lines, 10);
   assert.match(errors.content, /^1: line 0 ERROR/);
+});
+
+test("artifact reads stream long lines, honour cancellation and reject unsafe grep explicitly", async () => {
+  const artifact = await m.saveArtifact("start\n" + "鸿".repeat(2 * 1024 * 1024) + "\nend\n");
+  const page = await m.readArtifact(artifact.artifact_id, { line: 1, offset: 65530, limit: 2 });
+  assert.equal(page.total_lines, 4);
+  assert.equal(page.content, "鸿".repeat(60000));
+  assert.equal(page.next_line, 1);
+  assert.equal(page.next_offset, 125530);
+  const tail = await m.readArtifact(artifact.artifact_id, { line: 2 });
+  assert.equal(tail.content, "end\n"); assert.equal(tail.next_line, null);
+  await assert.rejects(m.readArtifact(artifact.artifact_id, { grep: "[" }), { code: "INVALID_INPUT" });
+  await assert.rejects(m.readArtifact(artifact.artifact_id, { grep: "end" }), /lines above 1 MiB/);
+  const controller = new AbortController(); controller.abort();
+  await assert.rejects(m.readArtifact(artifact.artifact_id, {}, controller.signal), { name: "AbortError" });
+  const difficult = await m.saveArtifact("a".repeat(10000) + "!");
+  const started = performance.now();
+  await assert.rejects(m.readArtifact(difficult.artifact_id, { grep: "(a+)+$" }), /100 ms/);
+  assert.ok(performance.now() - started < 1500);
 });
 
 test("checker summaries distinguish dependency scope and retain every diagnostic in a pageable artifact", async () => {
@@ -649,8 +728,8 @@ test("actual auto-deploy binds its baseline to every selected module target", as
       b.onResolve({ filter: /(?:core\/jobs|domains\/(?:device|hotreload))\.js$/ }, (a) => a.importer.replaceAll("\\", "/").endsWith("/src/jobs.ts") ? { path: a.path, namespace: "hot-fixture" } : undefined);
       b.onLoad({ filter: /.*/, namespace: "hot-fixture" }, (a) => ({ contents: a.path.includes("core/jobs")
         ? "export const defineJob=d=>globalThis.__hotSelectionJobs.set(d.kind,d);export const startJob=()=>{throw Error('unexpected start')};export const waitJob=startJob,cancelJob=startJob,jobStatus=startJob;"
-        : a.path.includes("hotreload") ? "export const recordBaseline=async()=>{};export const applyHotReload=()=>{throw Error('unexpected hot compile')};export const hotBuildProps=()=>[];"
-          : "export const installStamp=async()=> '100:200';export const pidOf=async()=>123;" }));
+        : a.path.includes("hotreload") ? "export const recordBaseline=async()=>{};export const applyHotReload=()=>{throw Error('unexpected hot compile')};"
+          : "export const uninstall=async()=>{if(globalThis.__uninstallFailure)throw new Error('uninstall rejected');return {uninstalled:false,reason:'not_installed'}};export const installStamp=async()=> '100:200';export const pidOf=async()=>123;" }));
     } }] });
   const hp = await import(pathToFileURL(isolated).href);
   try {
@@ -685,6 +764,11 @@ test("actual auto-deploy binds its baseline to every selected module target", as
       assert.equal((await step("hot").run(ctx)).path, "full", "old baselines cannot skip deployment");
       delete ctx.outputs.hot;
     }
+    let installed=0;const uninstallStep=step("uninstall");assert.equal(uninstallStep.replay,false);
+    m.defineJob({kind:'t_actual_uninstall',steps:[{id:'target',run:async()=>({target:'offline'})},uninstallStep,{id:'install',run:async()=>{installed++;return {installed:true}}}]});
+    globalThis.__uninstallFailure=true;
+    try{const failed=await m.startJob('t_actual_uninstall',{project:projectRoot,uninstall_first:true});assert.equal((await m.waitJob(failed.job_id,2000)).status,'failed');assert.equal(installed,0)}finally{delete globalThis.__uninstallFailure}
+    const missing=await m.startJob('t_actual_uninstall',{project:projectRoot,uninstall_first:true});assert.equal((await m.waitJob(missing.job_id,2000)).status,'succeeded');assert.equal(installed,1);
   } finally { hp.closeDatabase(); fs.rmSync(isolated, { force: true }); delete globalThis.__hotSelectionJobs; }
 });
 
@@ -701,4 +785,26 @@ test("two independent processes cannot resume one job twice", async () => {
     assert.equal(fs.readFileSync(marker,"utf8").trim().split("\n").length,1);
     assert.equal((await m.jobStatus(id)).status,"succeeded");
   } finally {for(const c of children)if(c.exitCode===null)c.kill("SIGKILL");await Promise.all(closed);}
+});
+
+
+test('stored test logs propagate missing evidence and invalid grep',async()=>{
+  const db=await m.database();db.exec('CREATE TABLE IF NOT EXISTS ui_tests (id TEXT PRIMARY KEY,data TEXT NOT NULL,updated INTEGER NOT NULL)');
+  const artifact=await m.saveArtifact('recorded log','text/plain');
+  const put=logs=>db.prepare('INSERT OR REPLACE INTO ui_tests VALUES(?,?,?)').run('test-logs',JSON.stringify({id:'test-logs',logs}),Date.now());
+  put([artifact.artifact_id]);await assert.rejects(m.testLog('test-logs',{grep:'['}),{code:'INVALID_INPUT'});
+  put([artifact.artifact_id,'a_0000000000000000']);await assert.rejects(m.testLog('test-logs',{}),{code:'NOT_FOUND'});
+  put([artifact.artifact_id]);await assert.rejects(m.testLog('test-logs',{},AbortSignal.abort()),{name:'AbortError'});
+});
+
+test('job list and wait project only state until the final status response',async(t)=>{
+  const db=await m.database(), prepare=db.prepare.bind(db), queries=[];
+  const id='projection-job', now=Date.now();
+  db.prepare('INSERT INTO jobs(id,kind,status,input,outputs,owner,created,updated) VALUES(?,?,?,?,?,?,?,?)').run(id,'t_ok','running','{}',JSON.stringify({large:'x'.repeat(1024*1024)}),process.ppid,now,now);
+  const mock=t.mock.method(db,'prepare',sql=>{queries.push(sql);return prepare(sql)});
+  try{
+    await m.listJobs(1,'running');assert.equal(queries.filter(q=>/^SELECT.*FROM jobs/i.test(q)).length,1);assert.ok(!queries.some(q=>/SELECT \*/i.test(q)));
+    queries.length=0;await m.waitJob(id,550);
+    assert.equal(queries.filter(q=>/SELECT \* FROM jobs/.test(q)).length,1,'only final status loads outputs');assert.ok(queries.filter(q=>/SELECT id,kind,status/.test(q)).length>=3);
+  }finally{mock.mock.restore();db.prepare('DELETE FROM jobs WHERE id=?').run(id)}
 });

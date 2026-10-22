@@ -7,7 +7,7 @@
 一个轻量的鸿蒙（HarmonyOS）开发 MCP 服务。MCP 宿主（OpenCode、Codex、Cursor 等）都可以通过它调用 DevEco 工具链，完成鸿蒙应用的构建、运行、调试和验证，并离线查询鸿蒙开发知识。
 
 - **上游能力映射。** 脚本从 [deveco-code](https://gitcode.com/openharmony-sig/deveco-code) 和 [deveco-cli](https://gitcode.com/openharmony-sig/deveco-cli) 源码抽取工具、参数和命令，对照 [当前映射](tools/upstream/decisions.json) 检查独立 MCP 能力。CI 定期检查新增提交、未映射能力和失效决策。
-- **轻量。** 运行时依赖只有 3 个，不用 LangGraph，也没有原生模块（数据库用 Node 自带的 `node:sqlite`）。单进程运行，空闲时不占 CPU。语言服务和代码检查器按需启动，空闲 10 分钟后自动关闭。
+- **轻量。** 运行时依赖有 5 个，不用 LangGraph，也没有原生模块（数据库用 Node 自带的 `node:sqlite`）。单进程运行，空闲时不占 CPU。语言服务和代码检查器按需启动，空闲 10 分钟后自动关闭。
 - **为 AI 宿主设计。** 15 个工具按用途命名，全部默认可用；返回结构化且长度有上限；每个错误都带 `code`、`category` 和修复提示 `hint`；耗时操作以任务形式异步执行。
 
 版本发布遵循 [GitHub 发布流程](docs/RELEASING.md)：`main` 上的新稳定版本通过全部 CI 后自动发布，并核验 tag、提交和 Latest。
@@ -228,7 +228,7 @@ MIT。第三方声明：`NOTICE.deveco-cli`、`NOTICE.deveco-code`、`NOTICE.hyp
 A lean MCP server for HarmonyOS development. It lets MCP hosts (OpenCode, Codex, Cursor, …) build, run, debug and verify HarmonyOS apps with the DevEco toolchain, and query HarmonyOS knowledge offline.
 
 - **Upstream capability mapping.** Source extraction inventories tools, parameters and commands from [deveco-code](https://gitcode.com/openharmony-sig/deveco-code) and [deveco-cli](https://gitcode.com/openharmony-sig/deveco-cli). CI checks the [current mapping](tools/upstream/decisions.json) for new commits, unmapped capabilities and stale decisions.
-- **Light.** 3 runtime dependencies. No LangGraph, no native modules (uses the built-in `node:sqlite`). A single process with zero idle CPU. Language servers and the checker start on demand and shut down after 10 idle minutes.
+- **Light.** 5 runtime dependencies. No LangGraph, no native modules (uses the built-in `node:sqlite`). A single process with zero idle CPU. Language servers and the checker start on demand and shut down after 10 idle minutes.
 - **Built for AI hosts.** 15 tools named by intent, all enabled by default. Responses are structured and bounded. Every error carries a `code`, a `category` and a fix `hint`. Long operations become jobs.
 
 ### Install

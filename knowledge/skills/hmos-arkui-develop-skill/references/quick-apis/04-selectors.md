@@ -31,7 +31,8 @@
 | 参数 | 类型 | 必填 | 默认值 | 说明 |
 |------|------|------|--------|------|
 | selected | Date | 否 | 当前时间 | 选中时间 |
-| useMilitaryTime | boolean | 否 | true | 24小时制 |
+
+**24 小时制：** `TimePicker({ selected: new Date() }).useMilitaryTime(true)`，不是构造选项。
 
 **事件：** `.onChange(callback)`
 
@@ -59,18 +60,18 @@
 
 图案密码锁。
 
-**构造：** `PatternLock(options?: PatternLockOptions)`
+**构造：** `PatternLock(controller?: PatternLockController)`
 
 | 参数 | 类型 | 必填 | 默认值 | 说明 |
 |------|------|------|--------|------|
 | controller | PatternLockController | 否 | — | 控制器 |
-| sideLength | number | 否 | 300vp | 边长 |
-| circleRadius | number | 否 | 14vp | 圆点半径 |
-| regularColor | ResourceColor | 否 | #FF182431 | 常规颜色 |
-| selectedColor | ResourceColor | 否 | #FF182431 | 选中颜色 |
-| activeColor | ResourceColor | 否 | #FF182431 | 激活颜色 |
-| pathColor | ResourceColor | 否 | #FF317AF7 | 路径颜色 |
+| .sideLength | Length | — | — | 链式边长属性 |
+| .circleRadius | Length | — | — | 链式圆点半径属性 |
+| .regularColor | ResourceColor | 否 | #FF182431 | 常规颜色 |
+| .selectedColor | ResourceColor | 否 | #FF182431 | 选中颜色 |
+| .activeColor | ResourceColor | 否 | #FF182431 | 激活颜色 |
+| .pathColor | ResourceColor | 否 | #FF317AF7 | 路径颜色 |
 
-**属性方法：** `.autoReset(boolean)` `.challengeResult(PatternLockChallengeResult)`
+**属性方法：** `.autoReset(boolean)`；验证结果通过 `PatternLockController.setChallengeResult(...)` 设置。
 
 **事件：** `.onPatternComplete(callback: (input: number[]) => void)`

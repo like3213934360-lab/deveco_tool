@@ -108,7 +108,7 @@ async function logWindow(target: string, bundle: string | undefined, since: numb
 export async function startTest(target: string, input: { plan: string; bundle?: string; ability?: string; module?: string; fresh_start?: boolean }, signal: AbortSignal) {
   if (input.fresh_start && input.bundle) {
     invariant(input.ability, "INVALID_INPUT", "fresh_start needs the app ability (pass project or ability)");
-    await forceStop(target, input.bundle, signal).catch(() => {});
+    await forceStop(target, input.bundle, signal);
     await launch(target, input.bundle, input.ability, input.module, signal);
     await waitFor(target, { bundle: input.bundle }, "visible", 10000, signal, true);
   }
@@ -224,13 +224,15 @@ export async function finishTest(testId: string) {
   };
 }
 
-export async function testLog(testId: string, options: { grep?: string; max_chars?: number }) {
+export async function testLog(testId: string, options: { grep?: string; max_chars?: number }, signal?: AbortSignal) {
+  signal?.throwIfAborted();
   const s = await load(testId);
   const { readArtifact } = await import("../core/artifacts.js");
   const parts: string[] = [];
   for (const id of s.logs) {
-    const page = await readArtifact(id, { grep: options.grep, limit: 2000 }).catch(() => undefined);
-    if (page && "content" in page) parts.push(String(page.content));
+    const page = await readArtifact(id, { grep: options.grep, limit: 2000 }, signal);
+    invariant("content" in page, "EVIDENCE_MISSING", "Test log artifact is not readable text", { artifact_id: id });
+    parts.push(String(page.content));
   }
   const text = parts.join("\n");
   const max = options.max_chars === -1 ? Infinity : options.max_chars ?? 5000;

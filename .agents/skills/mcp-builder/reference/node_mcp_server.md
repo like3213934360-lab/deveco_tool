@@ -411,6 +411,7 @@ Provide clear, actionable error messages:
 
 ```typescript
 import axios, { AxiosError } from "axios";
+import express from "express";
 
 function handleApiError(error: unknown): string {
   if (error instanceof AxiosError) {
@@ -546,9 +547,11 @@ async function getUser(id: string): Promise<any> {
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.6.1",
     "axios": "^1.7.9",
+    "express": "^4.21.2",
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@types/express": "^4.17.21",
     "@types/node": "^22.10.0",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2"
@@ -593,9 +596,11 @@ async function getUser(id: string): Promise<any> {
  */
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import axios, { AxiosError } from "axios";
+import express from "express";
 
 // Constants
 const API_BASE_URL = "https://api.example.com/v1";
@@ -635,8 +640,8 @@ type UserSearchInput = z.infer<typeof UserSearchInputSchema>;
 async function makeApiRequest<T>(
   endpoint: string,
   method: "GET" | "POST" | "PUT" | "DELETE" = "GET",
-  data?: any,
-  params?: any
+  data?: unknown,
+  params?: Record<string, unknown>
 ): Promise<T> {
   try {
     const response = await axios({
@@ -647,7 +652,8 @@ async function makeApiRequest<T>(
       timeout: 30000,
       headers: {
         "Content-Type": "application/json",
-        "Accept": "application/json"
+        "Accept": "application/json",
+        "Authorization": `Bearer ${process.env.EXAMPLE_API_KEY}`
       }
     });
     return response.data;
@@ -676,7 +682,8 @@ function handleApiError(error: unknown): string {
   return `Error: Unexpected error occurred: ${error instanceof Error ? error.message : String(error)}`;
 }
 
-// Create MCP server instance
+// One server per stateless HTTP request; one server for the stdio connection.
+function createServer(): McpServer {
 const server = new McpServer({
   name: "example-mcp",
   version: "1.0.0"
@@ -697,9 +704,20 @@ server.registerTool(
     }
   },
   async (params: UserSearchInput) => {
-    // Implementation as shown above
+    try {
+      const result = await makeApiRequest<unknown>("users/search", "GET", undefined, {
+        q: params.query, limit: params.limit, offset: params.offset
+      });
+      return { content: [{ type: "text", text: params.response_format === ResponseFormat.MARKDOWN
+        ? "```json\n" + JSON.stringify(result, null, 2) + "\n```" : JSON.stringify(result) }] };
+    } catch (error) {
+      return { isError: true, content: [{ type: "text", text: handleApiError(error) }] };
+    }
   }
 );
+
+return server;
+}
 
 // Main function
 // For stdio (local):
@@ -710,7 +728,7 @@ async function runStdio() {
   }
 
   const transport = new StdioServerTransport();
-  await server.connect(transport);
+  await createServer().connect(transport);
   console.error("MCP server running via stdio");
 }
 
@@ -724,14 +742,20 @@ async function runHTTP() {
   const app = express();
   app.use(express.json());
 
-  app.post('/mcp', async (req, res) => {
+  app.post('/mcp', async (req, res, next) => {
+    const server = createServer();
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: undefined,
       enableJsonResponse: true
     });
-    res.on('close', () => transport.close());
-    await server.connect(transport);
-    await transport.handleRequest(req, res, req.body);
+    res.on('close', () => { void server.close().catch(console.error); });
+    try {
+      await server.connect(transport);
+      await transport.handleRequest(req, res, req.body);
+    } catch (error) {
+      await server.close().catch(console.error);
+      next(error);
+    }
   });
 
   const port = parseInt(process.env.PORT || '3000');
@@ -764,48 +788,24 @@ if (transport === 'http') {
 Expose data as resources for efficient, URI-based access:
 
 ```typescript
-import { ResourceTemplate } from "@modelcontextprotocol/sdk/types.js";
+import { ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 
-// Register a resource with URI template
+// Example inventory: resolve only published names, never arbitrary filesystem paths.
+const documents = new Map([["readme", "Example document"]]);
 server.registerResource(
-  {
-    uri: "file://documents/{name}",
-    name: "Document Resource",
-    description: "Access documents by name",
-    mimeType: "text/plain"
-  },
-  async (uri: string) => {
-    // Extract parameter from URI
-    const match = uri.match(/^file:\/\/documents\/(.+)$/);
-    if (!match) {
-      throw new Error("Invalid URI format");
-    }
-
-    const documentName = match[1];
-    const content = await loadDocument(documentName);
-
-    return {
-      contents: [{
-        uri,
-        mimeType: "text/plain",
-        text: content
-      }]
-    };
+  "documents",
+  new ResourceTemplate("document://local/{name}", {
+    list: async () => ({ resources: [...documents.keys()].map(name => ({
+      uri: `document://local/${encodeURIComponent(name)}`, name, mimeType: "text/plain"
+    })) })
+  }),
+  { description: "Read a published document", mimeType: "text/plain" },
+  async (uri, { name }) => {
+    if (typeof name !== "string" || !documents.has(name)) throw new Error("Unknown document");
+    return { contents: [{ uri: uri.href, mimeType: "text/plain", text: documents.get(name)! }] };
   }
 );
 
-// List available resources dynamically
-server.registerResourceList(async () => {
-  const documents = await getAvailableDocuments();
-  return {
-    resources: documents.map(doc => ({
-      uri: `file://documents/${doc.name}`,
-      name: doc.name,
-      mimeType: "text/plain",
-      description: doc.description
-    }))
-  };
-});
 ```
 
 **When to use Resources vs Tools:**
@@ -827,17 +827,23 @@ import express from "express";
 const app = express();
 app.use(express.json());
 
-app.post('/mcp', async (req, res) => {
+// createServer() registers tools on a fresh McpServer (as in the complete example).
+app.post('/mcp', async (req, res, next) => {
+  const server = createServer();
   // Create new transport for each request (stateless, prevents request ID collisions)
   const transport = new StreamableHTTPServerTransport({
     sessionIdGenerator: undefined,
     enableJsonResponse: true
   });
 
-  res.on('close', () => transport.close());
-
-  await server.connect(transport);
-  await transport.handleRequest(req, res, req.body);
+  res.on('close', () => { void server.close().catch(console.error); });
+  try {
+    await server.connect(transport);
+    await transport.handleRequest(req, res, req.body);
+  } catch (error) {
+    await server.close().catch(console.error);
+    next(error);
+  }
 });
 
 app.listen(3000);
@@ -862,12 +868,12 @@ Notify clients when server state changes:
 
 ```typescript
 // Notify when tools list changes
-server.notification({
+await server.server.notification({
   method: "notifications/tools/list_changed"
 });
 
 // Notify when resources change
-server.notification({
+await server.server.notification({
   method: "notifications/resources/list_changed"
 });
 ```

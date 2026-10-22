@@ -2,58 +2,23 @@ import { window } from '@kit.ArkUI';
 import { common } from '@kit.AbilityKit';
 
 async function getAvoidArea(context: common.UIAbilityContext): Promise<window.AvoidArea> {
-  return new Promise((resolve, reject) => {
-    window.getLastWindow(context, (err, win) => {
-      if (err.code !== 0) {
-        reject(new Error(err.message));
-        return;
-      }
-      const avoidArea = win.getWindowAvoidArea(window.AvoidAreaType.TYPE_SYSTEM);
-      resolve(avoidArea);
-    });
-  });
+  const currentWindow = await window.getLastWindow(context);
+  return currentWindow.getWindowAvoidArea(window.AvoidAreaType.TYPE_SYSTEM);
 }
 
 async function setImmersiveWindow(context: common.UIAbilityContext): Promise<void> {
-  return new Promise((resolve, reject) => {
-    window.getLastWindow(context, (err, win) => {
-      if (err.code !== 0) {
-        reject(new Error(err.message));
-        return;
-      }
-      win.setWindowLayoutFullScreen(true).then(() => {
-        resolve();
-      }).catch((error: Error) => {
-        reject(new Error(error.message));
-      });
-    });
-  });
+  const currentWindow = await window.getLastWindow(context);
+  await currentWindow.setWindowLayoutFullScreen(true);
 }
 
 async function getTitleButtonRect(context: common.UIAbilityContext): Promise<window.TitleButtonRect> {
-  return new Promise((resolve, reject) => {
-    window.getLastWindow(context, (err, win) => {
-      if (err.code !== 0) {
-        reject(new Error(err.message));
-        return;
-      }
-      const titleButtonRect = win.getTitleButtonRect();
-      resolve(titleButtonRect);
-    });
-  });
+  const currentWindow = await window.getLastWindow(context);
+  return currentWindow.getTitleButtonRect();
 }
 
 async function getWindowProperties(context: common.UIAbilityContext): Promise<window.WindowProperties> {
-  return new Promise((resolve, reject) => {
-    window.getLastWindow(context, (err, win) => {
-      if (err.code !== 0) {
-        reject(new Error(err.message));
-        return;
-      }
-      const properties = win.getWindowProperties();
-      resolve(properties);
-    });
-  });
+  const currentWindow = await window.getLastWindow(context);
+  return currentWindow.getWindowProperties();
 }
 
 @Entry
@@ -66,7 +31,12 @@ struct StandaloneFunctionExample {
   @State windowHeight: number = 0;
 
   async aboutToAppear() {
-    const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+    const host = this.getUIContext().getHostContext();
+    if (host === undefined) {
+      console.error('UIAbility context is unavailable');
+      return;
+    }
+    const context = host as common.UIAbilityContext;
     
     try {
       const avoidArea = await getAvoidArea(context);

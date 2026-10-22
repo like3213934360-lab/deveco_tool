@@ -1,95 +1,20 @@
 # Window API Type Errors
 
-## Error: `window.getLastWindow` type inference issue
+`window.getLastWindow(context)` 有 `Promise<window.Window>` 重载，可以正常使用 `await`；传入回调才选择返回 `void` 的重载。不要把一般类型错误归咎于 async/await。
 
-### Error Message
-```
-Type 'void & Promise<Window>' errors
-```
-
-### Cause
-Using async/await pattern with `window.getLastWindow()` causes type inference issues in ArkTS. The function signature doesn't properly resolve to a Promise type when used with await.
-
-### Solution
-Use the callback pattern instead of async/await for `window.getLastWindow()`.
-
-### Key Points
-- Use callback pattern: `window.getLastWindow(context, (err, win) => { ... })`
-- Always check error code: `if (err.code !== 0)`
-- Handle errors gracefully with console logging
-- Use explicit type annotation for size: `(size: window.Size) => void`
-
-### Callback Pattern
 ```typescript
-window.getLastWindow(context, (err, win) => {
-  if (err.code !== 0) {
-    console.error('Failed to get window:', err);
-    return;
-  }
-  
-  // Use window instance
-  const properties = win.getWindowProperties();
-});
-```
+import { window } from '@kit.ArkUI';
+import { common } from '@kit.AbilityKit';
 
-### Window Properties
-```typescript
-interface WindowProperties {
-  windowRect: Rect;      // Window position and size
-  type: WindowType;        // Window type
-  mode: WindowMode;         // Window mode
-  brightness: number;       // Brightness (0.0-1.0)
-  isPrivacyMode: boolean;   // Privacy mode status
-  isFullScreen: boolean;    // Full screen status
-  layoutMode: LayoutMode;   // Layout mode
-}
-
-interface Rect {
-  left: number;   // Left position
-  top: number;    // Top position
-  width: number;  // Width
-  height: number; // Height
+export async function readWindowSize(context: common.UIAbilityContext): Promise<window.Size> {
+  const currentWindow = await window.getLastWindow(context);
+  const rect = currentWindow.getWindowProperties().windowRect;
+  return { width: rect.width, height: rect.height };
 }
 ```
 
-### Window Size Change Event
-```typescript
-win.on('windowSizeChange', (size: window.Size) => {
-  console.info(`New size: ${size.width}x${size.height}`);
-});
+调用前检查可选 Context。`async` 函数中同步读取窗口属性抛错会使 Promise 拒绝，调用方应处理该拒绝；不要再套一层没有异常保护的回调式 `new Promise`。
 
-interface Size {
-  width: number;  // New width
-  height: number; // New height
-}
-```
+监听 `windowSizeChange` 使用 `window.Size`，监听 `avoidAreaChange` 使用 `window.AvoidAreaOptions`（含 `type` 和 `area`）。保留原窗口与回调并在结束时 `off()`；异步获取窗口晚于组件销毁时，不应继续注册。
 
-### Common Window Events
-```typescript
-win.on('windowSizeChange', (size: window.Size) => { });
-win.on('systemBarTintChange', (region: Region) => { });
-win.on('windowEvent', (data: WindowEvent) => { });
-win.on('avoidAreaChange', (data: AvoidArea) => { });
-```
-
-### Error Handling
-```typescript
-// Check for specific error codes
-if (err.code === 1300001) {
-  // Invalid parameter
-} else if (err.code === 1300002) {
-  // Window not found
-} else if (err.code === 1300003) {
-  // Window operation failed
-}
-```
-
-### Best Practices
-1. **Always check error code**: Never assume success
-2. **Log errors**: Use console.error for debugging
-3. **Clean up listeners**: Remove event listeners in `aboutToDisappear()`
-4. **Use type annotations**: Explicit types prevent inference issues
-5. **Handle window state**: Account for window resize and orientation changes
-
-### Related Files
-- [Code Example](deveco://knowledge/arkts-error-fixes/examples/WindowTypeError)
+[完整示例](deveco://knowledge/arkts-error-fixes/examples/WindowTypeError)

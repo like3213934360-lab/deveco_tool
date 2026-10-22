@@ -76,3 +76,23 @@ test("ZIP entry mapping and output stream failures reject without crashing or le
   assert.equal((await unzip(zip, destination)).length, 1);
   assert.equal(fs.readFileSync(path.join(destination, "valid.txt"), "utf8"), "payload");
 });
+
+test("process logging and output callbacks fail explicitly without crashing the host", async () => {
+  const command = { file: process.execPath, args: ["-e", "console.log('ready');setInterval(()=>{},1000)"] };
+  await assert.rejects(run(command, { logFile: work, timeoutMs: 3000 }), { code: "PROCESS_LOG_FAILED" });
+  await assert.rejects(run(command, { onLine() { throw new Error("parser refused"); }, timeoutMs: 3000 }),
+    (error) => error.code === "PROCESS_OUTPUT_FAILED" && /parser refused/.test(error.message));
+  const healthy = await run({ file: process.execPath, args: ["-e", "console.log('healthy')"] });
+  assert.equal(healthy.stdout.trim(), "healthy");
+});
+
+test("large process output is retained completely on disk and bounded in memory", async () => {
+  const logFile = path.join(work, "large.log"), size = 8 * 1024 * 1024;
+  const result = await run({ file: process.execPath, args: ["-e", `process.stdout.write('x'.repeat(${size}));process.stderr.write('終'.repeat(1000))`] },
+    { logFile, keepBytes: 1024, timeoutMs: 10000 });
+  assert.equal(fs.statSync(logFile).size, size + 3000);
+  assert.ok(result.stdout.length <= 1024);
+  assert.ok(Buffer.byteLength(result.stderr) <= 1024, "keepBytes limits bytes, including multibyte text");
+  assert.ok(!result.stderr.includes("�"));
+  assert.equal(result.truncated, true);
+});
