@@ -38,8 +38,11 @@ export class LspClient {
   private readonly pending = new Map<number, Pending>();
   private readonly handlers = new Map<string, (params: any) => void>();
   private closed = false;
+  private readonly exited: Promise<void>;
+  private closing?: Promise<void>;
 
   constructor(readonly child: ChildProcess) {
+    this.exited = new Promise((resolve) => child.once("close", () => resolve()));
     child.stdout!.on("data", (chunk: Buffer) => this.receive(chunk));
     child.stderr?.resume();
     child.once("error", (error) => this.fail(new ToolError("LSP_EXITED", `Cannot start language server: ${error.message}`), true));
@@ -112,13 +115,27 @@ export class LspClient {
     this.pending.clear();
   }
 
-  async close() {
-    if (this.closed) return;
-    try {
-      await this.request("shutdown", null, 3000);
-      this.notify("exit", null);
-    } catch { /* ignore */ }
+  close(): Promise<void> {
+    return this.closing ??= this.stop();
+  }
+
+  private async stop() {
+    if (!this.closed) {
+      try {
+        await this.request("shutdown", null, 3000);
+        this.notify("exit", null);
+      } catch { killTree(this.child, "SIGKILL"); }
+    }
     this.fail(new ToolError("LSP_EXITED", "Closed"));
-    setTimeout(() => killTree(this.child, "SIGKILL"), 1000).unref();
+    const escalation = setTimeout(() => killTree(this.child, "SIGKILL"), 1000);
+    let deadline: NodeJS.Timeout | undefined;
+    try {
+      await Promise.race([this.exited, new Promise<never>((_resolve, reject) => {
+        deadline = setTimeout(() => {
+          this.child.stdin?.destroy(); this.child.stdout?.destroy(); this.child.stderr?.destroy();
+          reject(new ToolError("LSP_CLEANUP_FAILED", "Language server did not close after termination", { pid: this.child.pid }));
+        }, 3000);
+      })]);
+    } finally { clearTimeout(escalation); clearTimeout(deadline); }
   }
 }

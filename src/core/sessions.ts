@@ -39,7 +39,7 @@ export class SessionPool<T extends Closable> {
     } finally {
       entry.active--;
       if (entry.active === 0 && this.entries.get(key) === entry) {
-        entry.timer = setTimeout(() => void this.close(key), this.idleMs());
+        entry.timer = setTimeout(() => void this.close(key).catch(reportCleanup), this.idleMs());
         entry.timer.unref();
       }
     }
@@ -57,15 +57,21 @@ export class SessionPool<T extends Closable> {
     if (!entry) return;
     this.entries.delete(key);
     clearTimeout(entry.timer);
-    try {
-      await (await entry.value).close();
-    } catch { /* already gone */ }
+    // A failed startup was reported to its caller; a failed cleanup must remain visible.
+    const value = await entry.value.catch(() => undefined);
+    if (value) {
+      try { await value.close(); }
+      catch (error) {
+        if (!this.entries.has(key)) this.entries.set(key, entry);
+        throw error;
+      }
+    }
   }
 
   /** Close `key` only if it still holds `value` (a stale instance must not close its replacement). */
   async closeIf(key: string, value: T) {
     const entry = this.entries.get(key);
-    if (entry && (await entry.value.catch(() => undefined)) === value && this.entries.get(key) === entry) await this.close(key);
+    if (entry && (await entry.value.catch(() => undefined)) === value && this.entries.get(key) === entry) await this.close(key).catch(reportCleanup);
   }
 
   async closeAll() {
@@ -78,6 +84,10 @@ export class SessionPool<T extends Closable> {
     if (idle) return this.close(idle[0]);
     throw new ToolError("RESOURCE_BUSY", "All language-service sessions are in use", { limit: this.limit }, "Wait for an active request to finish before opening another project", true);
   }
+}
+
+function reportCleanup(error: unknown) {
+  process.stderr.write(`[sessions] Cleanup failed: ${error instanceof Error ? error.message : String(error)}\n`);
 }
 
 const pools = new Set<SessionPool<any>>();

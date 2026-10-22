@@ -39,3 +39,13 @@ test("failed creation cannot evict a replacement, and idle eviction closes befor
     assert.deepEqual(events, ["closed", "created"]);
   } finally { await pool.closeAll(); }
 });
+
+test("cleanup failure prevents replacement and is reported to the caller", async () => {
+  const pool = new SessionPool(1);
+  await pool.use("one", async () => ({ close() { throw new Error("cleanup failed"); } }), async () => {});
+  let created = false;
+  await assert.rejects(pool.use("two", async () => { created = true; return { close() {} }; }, async () => {}), /cleanup failed/);
+  assert.equal(created, false);
+  assert.equal(pool.has("one"), true, "an unclosed resource still occupies capacity");
+  await assert.rejects(pool.closeAll(), /cleanup failed/);
+});

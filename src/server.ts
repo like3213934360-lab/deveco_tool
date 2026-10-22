@@ -250,7 +250,8 @@ export async function serve() {
     const [{ shutdownJobs }, { closeAllSessions }, { killAll }, { closeDatabase }, { closeCoordination }, { stopCleanup }] = await Promise.all([
       import("./core/jobs.js"), import("./core/sessions.js"), import("./core/proc.js"), import("./core/db.js"), import("./core/operations.js"), import("./core/artifacts.js"),
     ]);
-    await Promise.race([Promise.all([shutdownJobs(), closeAllSessions()]), new Promise((r) => setTimeout(r, 3000))]);
+    await Promise.race([Promise.all([shutdownJobs(), closeAllSessions()]), new Promise((r) => setTimeout(r, 3000))])
+      .catch((error) => process.stderr.write(`[shutdown] Cleanup failed: ${error.message}\n`));
     killAll();
     await stopCleanup().catch((error) => process.stderr.write(`[retention] Shutdown: ${error.message}\n`));
     await closeCoordination();

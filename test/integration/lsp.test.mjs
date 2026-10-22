@@ -25,7 +25,10 @@ else if(m.method==='textDocument/didOpen'||m.method==='textDocument/didChange'){
  if(text.includes('STALE')){publish(d.version-1,[]);setTimeout(()=>publish(d.version,errors),30)}
  else publish(text.includes('UNVERSIONED')?undefined:d.version,text.includes('ERROR')?errors:[]);
 }else if(m.method==='textDocument/diagnostic')send({id:m.id,error:{code:docs.get(m.params.textDocument.uri)?.includes('PULL_FAIL')?-32001:-32601,message:'fixture pull rejection'}});
-else if(m.method==='shutdown')send({id:m.id,result:null});else if(m.method==='exit')process.exit(0);
+else if(m.method==='shutdown')send({id:m.id,result:null});else if(m.method==='exit'){
+ const mode=fs.existsSync(${JSON.stringify(trace+'.exit-mode')})?fs.readFileSync(${JSON.stringify(trace+'.exit-mode')},'utf8'):'';
+ if(mode==='delay')setTimeout(()=>process.exit(0),200);else if(mode!=='hang')process.exit(0);
+}
 }});`);
 await build({stdin:{contents:`export {lsp,cppCheck,restartLsp} from './src/domains/code.ts';export {killAll,spawnManaged} from './src/core/proc.ts';export {LspClient} from './src/core/lsp-client.ts';`,resolveDir:root},outfile:bundle,bundle:true,format:'esm',platform:'node',packages:'external',logLevel:'error',plugins:[{name:'offline-sdk',setup(b){
   b.onResolve({filter:/toolchain\.js$/},()=>({path:'toolchain',namespace:'fixture'}));
@@ -60,6 +63,19 @@ test('malformed and oversized LSP messages reject pending calls and terminate th
     await assert.rejects(client.request('probe', {}, 3000), { code: 'LSP_PROTOCOL_ERROR' });
     await exited;
     await assert.rejects(client.request('after', {}), { code: 'LSP_EXITED' });
+  }
+});
+
+test('LSP close waits for process and pipe closure, including forced termination', {timeout:10000}, async () => {
+  for (const mode of ['delay','hang']) {
+    fs.writeFileSync(trace+'.exit-mode',mode);
+    const child=m.spawnManaged({file:process.execPath,args:[server],cwd:work});
+    let closed=false;const exited=once(child,'close').then(()=>{closed=true});
+    const client=new m.LspClient(child);
+    try {
+      await Promise.all([client.close(),client.close()]);
+      assert.equal(closed,true,'close must not leave the project directory held by its child');
+    } finally {child.kill('SIGKILL');await exited;fs.rmSync(trace+'.exit-mode')}
   }
 });
 
