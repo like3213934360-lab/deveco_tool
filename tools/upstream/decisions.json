@@ -7,7 +7,7 @@
     "  '<tool> [param] [param=value] ...'  checked against the live tools/list JSON Schema (value must be in the enum when one exists)",
     "  'cli:<text>'  src/cli.ts must contain the text;  'prompt:<name>' / 'skill:<name>'  must be served by the MCP server"
   ],
-  "upstream_rev": {"deveco-code":"cc7a159dc7cd3c73caa214af51bdd7bd90891b47","deveco-cli":"45466820de2170e709e12c64882ef00636505da0"},
+  "upstream_rev": {"deveco-code":"fff123b4cc20a5d4ba9fde4ab35f0d7f922fe440","deveco-cli":"5f763dc62c59bb0701145fca01485018543d10e3"},
   "items": {
     "code:tool:arkts_check": { "status": "full", "to": "code action=check" },
     "code:tool:arkts_check:param:files": { "status": "full", "to": "code action=check files" },
@@ -56,7 +56,7 @@
     "code:skill:hmos-runtime-fix-skill": { "status": "full", "to": "skill:hmos-runtime-fix-skill" },
     "code:skill:customize-deveco": { "status": "skip", "reason": "Configures DevEco Code itself; not applicable to other hosts (user decision)." },
     "code:skill:deveco-cli": { "status": "skip", "reason": "Teaches devecocli shell usage; the same capabilities are MCP tools here (user decision)." },
-    "code:skill:hmos-d2a-design-to-arkts-entry": { "status": "skip", "reason": "Upstream host-specific Pixso/Figma workflow with controller, Anchor/Pixso integrations and nested vision tools; not bundled or auto-installed. Skill selection and updates remain user-managed under AGENTS.md; this MCP does not claim the D2A workflow." },
+    "code:skill:hmos-design-to-arkts": { "status": "skip", "reason": "Renamed upstream host-specific Pixso/Figma workflow with controller, Anchor/Pixso integrations and nested vision tools; not bundled or auto-installed. Skill selection and updates remain user-managed under AGENTS.md; this MCP does not claim the D2A workflow." },
     "code:skill:hmos-dfx-analyzer": { "status": "skip", "reason": "Optional fault-log analyzer with Python/native-symbol scripts and an HTML report pipeline. Skill selection and updates remain user-managed under AGENTS.md; it is not bundled or auto-installed. Existing diagnose tools do not claim this analyzer's complete workflow or conclusions." },
     "code:command:debug": { "status": "full", "to": "prompt:debug-crash" },
     "code:command:dfx": { "status": "host", "reason": "The upstream /analyze command dispatches an isolated DFX subagent session, which is host command/session orchestration. This MCP does not supply the upstream dfx agent, analyzer Skill or HTML report pipeline." },
@@ -309,6 +309,9 @@
     "cli:cmd:log": { "status": "full", "to": "device action=log" },
     "cli:cmd:log:opt:--bundle-name": { "status": "full", "to": "device bundle" },
     "cli:cmd:log:opt:--crash": { "status": "full", "to": "diagnose action=crash" },
+    "cli:cmd:log:opt:--path": { "status": "skip", "reason": "Only single UTF-8 crash files up to 4 MB are supported via diagnose action=crash file; the upstream directory selection, detailed local fault analysis, HiLog extraction and sample-stack paths are not claimed." },
+    "cli:cmd:log:opt:--stack": { "status": "skip", "reason": "Sample-stack hotspot analysis is not implemented; the user selected single-file crash diagnosis and deferred this distinct capability." },
+    "cli:cmd:log:opt:--limit": { "status": "skip", "reason": "This limits sample-stack hotspots, an analysis capability not implemented by this MCP." },
     "cli:cmd:log:opt:--level": { "status": "full", "to": "device level" },
     "cli:cmd:log:opt:--keyword": { "status": "full", "to": "device grep" },
     "cli:cmd:log:opt:--tail": { "status": "full", "to": "device lines" },

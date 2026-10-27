@@ -3016,13 +3016,22 @@ function mergeIncrementalDiagnostics(firstPass, recheckResult, recheckSet, proje
   return [...recheckResult, ...carriedOver];
 }
 
+// Code-unit order is stable across filesystems and host locales.
+function sortDiagnostics(diags) {
+  const compare = (a, b) => a < b ? -1 : a > b ? 1 : 0;
+  return diags.slice().sort((a, b) =>
+    compare(String(a.file || ''), String(b.file || '')) ||
+    (a.line || 0) - (b.line || 0) || (a.column || 0) - (b.column || 0) ||
+    compare(String(a.rule || ''), String(b.rule || '')) || compare(String(a.message || ''), String(b.message || '')));
+}
+
 // Produce the accurate diagnostics for the re-checked subset AFTER a regression
 // revert, without another checker run: reverted files return to their first-pass
 // diagnostics, kept files keep their `after` diagnostics, and project diagnostics
 // appear exactly once. Only valid when no reverted file is a cross-file
 // propagation source (an export-fix decl file) — the caller checks that first.
-function spliceRevertedDiagnostics(firstPass, after, reverted, projectDiags, absOf) {
-  const projectSet = new Set(projectDiags);
+function spliceRevertedDiagnostics(firstPass, after, reverted, projectDiags, absOf, staleProjectDiags = []) {
+  const projectSet = new Set([...projectDiags, ...staleProjectDiags]);
   const kept = after.filter((d) => !projectSet.has(d) && !reverted.has(absOf(d.file)));
   const restored = firstPass.filter((d) => !projectSet.has(d) && reverted.has(absOf(d.file)));
   return [...kept, ...restored, ...projectDiags];
@@ -3170,6 +3179,7 @@ function applyAutoFixes(diagnostics, env) {
   // cached diagnostics CAN go stale after an edit: recompute them before the
   // re-check, or a successful flip still reports its original mismatch and the
   // fix is never credited.
+  const firstPassProjectDiags = env.projectDiagnostics || [];
   if (touched && touched.length > 0) {
     env.projectDiagnostics = computeProjectDiagnostics(env.files || [], env, env.hasExplicitFiles);
   }
@@ -3200,7 +3210,8 @@ function applyAutoFixes(diagnostics, env) {
   // is not something to leave behind on a failed check.
   const after = runChecker(recheckFiles, env);
 
-  const projectDiags = env.projectDiagnostics || [];
+  let projectDiags = env.projectDiagnostics || [];
+  const editedProjectDiags = projectDiags;
   // Per-file error counts before/after to detect regressions.
   const errCount = (list, abs) => list.filter(d => d.severity === 'error' && absOf(d.file) === abs).length;
 
@@ -3211,6 +3222,10 @@ function applyAutoFixes(diagnostics, env) {
       reverted.add(t.abs);
     }
   }
+
+  // Reverted source files can change source-derived project diagnostics again.
+  if (reverted.size) projectDiags = env.projectDiagnostics = computeProjectDiagnostics(env.files || [], env, env.hasExplicitFiles);
+  const staleProjectDiags = [...firstPassProjectDiags, ...editedProjectDiags];
 
   // Accurate diagnostics for the re-checked subset after any reverts.
   let recheckResult;
@@ -3223,7 +3238,7 @@ function applyAutoFixes(diagnostics, env) {
     recheckResult = runChecker(recheckFiles, env);
   } else {
     // No cross-file propagation among reverted files: splice instead of re-running.
-    recheckResult = spliceRevertedDiagnostics(diagnostics, after, reverted, projectDiags, absOf);
+    recheckResult = spliceRevertedDiagnostics(diagnostics, after, reverted, projectDiags, absOf, staleProjectDiags);
   }
 
   // Only files still holding a fixer edit may lose diagnostics; a reverted file
@@ -3235,8 +3250,9 @@ function applyAutoFixes(diagnostics, env) {
     ...(touched || []).filter((t) => !reverted.has(t.abs)).map((t) => t.abs),
     ...exportImporters,
   ]);
-  const merged = mergeIncrementalDiagnostics(diagnostics, recheckResult, recheckSet, projectDiags, absOf);
-  const finalDiagnostics = restoreDroppedDiagnostics(diagnostics, merged, writtenFiles, absOf);
+  const merged = mergeIncrementalDiagnostics(diagnostics, recheckResult, recheckSet, [...projectDiags, ...staleProjectDiags], absOf);
+  const firstPassProjectSet = new Set(firstPassProjectDiags);
+  const finalDiagnostics = restoreDroppedDiagnostics(diagnostics.filter(d => !firstPassProjectSet.has(d)), merged, writtenFiles, absOf);
 
   // Built from the guarded view: a restored diagnostic must not read as fixed.
   const finalKeys = new Set(finalDiagnostics.map(diagKey));
@@ -3395,6 +3411,7 @@ function runCheck(args) {
     checkerDiagCount = Math.max(checkerDiagCount, filtered.filter((d) => !afterProjectSet.has(d)).length);
   }
 
+  filtered = sortDiagnostics(filtered);
   const errorCount = filtered.filter(d => d.severity === 'error').length;
   const warnCount = filtered.filter(d => d.severity === 'warning').length;
 

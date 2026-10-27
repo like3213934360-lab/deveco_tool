@@ -851,8 +851,8 @@ async function screenSize(target: string, info: (t: string, s?: AbortSignal) => 
 
 export const uiFlowTool = tool({
   name: "ui_flow",
-  title: "Record/replay UI flows",
-  description: "In <project>/.arkpilot/flows; save via ui act steps + save_flow. list(project); show/delete(project,id); record(project,target,id,name) -> ui act -> stop(project,target,assert or discard=true). replay(project,target,id,variables) uses the saved restart/attach mode (job); show first, supply required variables (e.g. input1). wait/request_key: replay only. repair=true promotes working alternates, snapshot=true compares screens. Uses ui consent/setup handling; inspect blockers before retrying.",
+  title: "Reuse UI navigation flows",
+  description: "Repeat a page visit or return after deploy: list(project), then show(project,id); check restart/attach mode and steps, supply required variables (e.g. input1). replay(project,target,id,variables) is a job; run then_flow replays after launch. Save via ui act steps+assert+save_flow, or record -> ui act -> stop(assert or discard=true). Files: <project>/.arkpilot/flows; delete(project,id). wait/request_key: replay only. repair=true promotes alternates; snapshot=true compares screens. Uses ui consent/setup handling; inspect blockers before retrying.",
   schema: z.object({
     action: z.enum(["list", "show", "record", "stop", "replay", "delete"]),
     project: fields.project,
@@ -917,12 +917,13 @@ export const diagnoseTool = tool({
   title: "Crash & failure diagnosis",
   readOnly: true,
   openWorld: false,
-  description: "crash: latest jscrash/cppcrash/appfreeze or pasted log; error, app frames, fault-pattern causes; project adds source (file/line/code). build_run/launch attach startup crashes. build: fix hints, diagnostics only (no project).",
+  description: "crash: device, log or file; error, app frames, likely causes; project adds source. build_run/launch attach startup crashes. build: fix hints, diagnostics only (no project).",
   schema: z.object({
     action: z.enum(["crash", "build"]),
     target: fields.target,
     bundle: z.string().optional().describe("crash: only reports of this app"),
     log: z.string().max(4_000_000).optional().describe("crash: analyze this text instead of reading the device"),
+    file: z.string().min(1).optional().describe("crash: absolute UTF-8 log file, max 4 MB; no log or device filters"),
     name: z.string().optional().describe("crash: exact faultlog file name"),
     latest: z.number().int().min(1).max(5).optional(),
     since_minutes: z.number().int().min(1).max(10080).optional().describe("crash: only reports from the last N minutes (device clock)"),
@@ -930,12 +931,15 @@ export const diagnoseTool = tool({
     diagnostics: z.array(z.object({ code: z.string().optional(), message: z.string() })).max(100).optional().describe("build: diagnostics to explain"),
     project: z.string().optional().describe("crash: project root; adds source code around app frames"),
   }),
-  params: { crash: ["target", "bundle", "log", "name", "latest", "since_minutes", "project", "strict"], build: ["diagnostics"] },
+  params: { crash: ["target", "bundle", "log", "file", "name", "latest", "since_minutes", "project", "strict"], build: ["diagnostics"] },
   async handler(input, ctx) {
     const diagnose = await import("../domains/diagnose.js");
     if (input.action === "build") return { hints: diagnose.buildFailureHints(input.diagnostics ?? []) };
     let target: string | undefined;
-    if (!input.log) target = await (await import("../domains/device.js")).resolveTarget(input.target, ctx.signal);
+    if (input.file !== undefined) {
+      invariant(![input.log, input.target, input.bundle, input.name, input.latest, input.since_minutes, input.strict].some((v) => v !== undefined), "INVALID_INPUT", "file cannot be combined with log or device filters");
+    }
+    if (!input.log && input.file === undefined) target = await (await import("../domains/device.js")).resolveTarget(input.target, ctx.signal);
     return diagnose.diagnoseCrash(input, target, ctx.signal);
   },
 });
@@ -1000,7 +1004,7 @@ export const skillsTool = tool({
   name: "skills",
   title: "Skills",
   readOnly: false,
-  description: "Built-ins: hmos-arkui-develop-skill (ArkTS/ArkUI gotchas/APIs), hmos-runtime-fix-skill (crash/white-screen diagnosis), deveco-mcp-workflow (tool choice). list/read; export: SKILL.md folders (scope=project: <project>/.agents/skills); install_mcp: host registration; init: export+install_mcp; search/install/uninstall: OpenHarmony market.",
+  description: "Built-ins: deveco-mcp-workflow (tool choice/flow reuse), hmos-test-design (HarmonyOS tests), hmos-arkui-develop-skill (ArkTS/ArkUI), hmos-runtime-fix-skill (crashes). list/read; export: SKILL.md folders; install_mcp: host registration; init: export+install_mcp; search/install/uninstall: OpenHarmony market.",
   schema: z.object({
     action: z.enum(["list", "read", "export", "install_mcp", "init", "search", "install", "uninstall"]),
     name: z.string().optional(),

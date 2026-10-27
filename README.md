@@ -91,7 +91,7 @@ MCP 运行时按文件到期时间清理；退出或电脑休眠期间不能执�
 | `device` | `list` / `info` / `log`（按应用、级别或正则过滤；`from`/`to` 取相对时间段，如 5 分钟前到 1 分钟前；`follow` 加游标持续获取新日志；`clear` 清空；带 `project` 时把报错行里的源码位置定位到工程文件）/ 只读 `shell` / `sqlite`（查询设备数据库或调试包的 RDB 数据库，返回 JSON；默认只读，传 `write` 才可写）/ `send` / `recv` |
 | `ui` | `observe`（截图加精简控件列表）/ `screenshot`（`display` 多屏、`save_path` 另存）/ `tree`（`window`、`depth`（0 不限，1 只有根节点，与 devecocli 一致）、`all_windows` 全部窗口、`node` 单个组件子树）/ `windows` / `find` (absent matches include one bounded window-context query; unknown context remains explicit) / `act`（点击；输入，支持中文和任意特殊字符，默认替换原内容；键入；滑动；滚动；按键和组合键；鼠标点击、移动、滚轮、拖拽；每次返回 `after`：新出现和消失的控件、是否换页，一般不必再 `observe`；`steps` 一次调用执行整条路径，每步自动等待控件出现，可带最终断言，`save_flow` 存成 flow；同一路径重启后又走一遍时会提示存起来）/ `assert` / `visual`（截图回归：按名称和机型保存基准，之后对比，返回变化比例、区域和红框标注图）/ `layout`（检查当前页面的布局问题：超出屏幕、可点区域重叠、文字被裁切或被挤没、点击区域过小；`forms` 在折叠屏、阔折叠、三折叠模拟器上逐个形态和折叠状态检查）/ `perf`（在当前页面滑动，按逐帧时间统计帧率、帧耗时 p50/p95/最大值、卡顿帧和内存变化） / 录屏 `record_start` / `record_stop`（`discard`、`external`、`save_path`）/ `record_status`。**UI 测试会话**由宿主 AI 驱动：`test_start` → `test_step`（执行操作或断言，记录操作前后截图、控件摘要和应用日志片段）→ `review`（宿主看截图做判断；控件断言失败时不能改判为通过）→ `test_finish`（生成 JSON 和 Markdown 报告）→ `test_log` / `test_export` |
 | `ui_flow` | 用 `ui act` 录制可复用的操作流程，以一个最终断言收尾保存，回放时支持变量替换和自动修复，`snapshot` 回放后做截图回归。保存在 `.arkpilot/flows`，兼容 v0.x |
-| `diagnose` | `crash`（读取 jscrash、cppcrash、appfreeze 日志，量产手机也支持；`since_minutes` 限定时间窗口；提取错误特征和应用调用栈，并匹配故障模式库；带 `project` 时解析已有 ArkTS 源码位置及前后代码。Native PC 保留在报告中，尚不提供 C++ 地址符号化）/ `build` |
+| `diagnose` | `crash`（读取设备 jscrash、cppcrash、appfreeze 日志，或通过 `file` 指定本地单个 UTF-8 日志文件，最大 4 MB；`since_minutes` 限定设备时间窗口；提取错误特征和应用调用栈，并匹配故障模式库；带 `project` 时解析已有 ArkTS 源码位置及前后代码。Native PC 保留在报告中，尚不提供 C++ 地址符号化）/ `build` |
 | `knowledge` | 离线文档、ArkTS 规则、错误案例和运行时问题模式：`search` / `read`（按 `section` 读取）/ `catalog` / `status` / `update` / `rollback`；`source=cloud` 在线查询 CodeGenie，每段按正文与本地官方文档比对，标注官方 / 官方·非 ArkTS 平台 / 社区 / 未确认 |
 | `skills` | 内置的鸿蒙 Skill：`list` / `read`；`export` 导出为宿主原生的 `SKILL.md`（`path` 指定任意目录）；`install_mcp` 把本服务写入宿主配置（cursor、claude、codex、opencode、trae-cn、codebuddy、qoder、pi；重复执行不会重复写入；atomcode、dsh、deveco 只导出技能）；`init` 一次完成两者；`search` / `install` / `uninstall` 使用 OpenHarmony Skill 市场 |
 | `auth` | 华为账号浏览器登录：`codegenie`（云端知识）或 `developer`（签名），`region` 可选 cn / global；`teams`；`import` 导入 v0.x 的登录凭据 |
@@ -107,12 +107,13 @@ MCP 运行时按文件到期时间清理；退出或电脑休眠期间不能执�
 
 本服务独立实现这些能力，不依赖上游 CLI；Skill 的存放位置和更新由用户决定，不随版本自动分发、迁移或同步，也不引入 Windows NTLM 代理。
 
-内置 3 个 Skill：
+内置 4 个 Skill：
 
 | Skill | 用途 |
 | --- | --- |
 | `hmos-arkui-develop-skill` | 写 ArkTS/ArkUI 前必读：26 条高频致命错误、组件 API 速查卡片（`quick-apis`）和约束规则（`quick-rules`）。来自上游 DevEco Code，MIT 许可 |
 | `hmos-runtime-fix-skill` | 闪退、崩溃、白屏排查流程和 9 类崩溃模式库；已改为使用本服务的 `diagnose`、`device log`。来自上游 DevEco Code，MIT 许可 |
+| `hmos-test-design` | 鸿蒙测试设计、编写、审查与修复；选择官方测试框架和运行方式，通过 DevEco MCP 或工程工具链验证 |
 | `deveco-mcp-workflow` | 各种场景下该用哪个 deveco 工具、按什么顺序调用 |
 
 项目级导出（`scope=project` 或 `init --project`）写入 `<project>/.agents/skills`，Codex、Claude Code、Cursor、Qoder、OpenCode、DevEco Code 都会读取这个目录，一份即可通用。
@@ -308,7 +309,7 @@ Check the setup with `node bin/deveco-mcp.mjs doctor [project]`, or call the `do
 | `device` | `list` / `info` / `log` (filter by bundle, level or regex; `from`/`to` relative ages, e.g. `from="5m", to="1m"` (omit `to` for now; do not include `ago`); `follow` + cursor streams new lines across calls; `clear`; with `project`, source locations in error lines are resolved to project files) / read-only `shell` / `sqlite` (JSON rows from an on-device database or a debuggable app's RDB store; read-only unless `write`) / `send` / `recv` |
 | `ui` | `observe` (screenshot plus compact element list) / `screenshot` (`display` for multi-screen, `save_path`) / `tree` (`window`, `depth` (0 = unlimited, 1 = root only, as in devecocli), `all_windows`, `node` for one component subtree; depth and default `interactive=true` filters compose, with `shown_nodes`, filter counts and empty-result hints) / `windows` / `find` (absent matches include one bounded window-context query; unknown context remains explicit) / `act` (click, input with Chinese and any special characters and replace-by-default, type, swipe, scroll, key and key chords, mouse click/move/scroll/drag; every act returns `after`: elements that appeared/disappeared and whether the page changed, so observe is rarely needed; `steps` runs a whole path in one call, each step waiting for its element, with an optional final assert and `save_flow`; a path walked again after a relaunch is suggested for saving) / `assert` / `visual` (screenshot regression: baselines per name and device model, change ratio, regions and a red-boxed diff image) / `layout` (layout bugs on the current screen: off screen, overlapping tap targets, clipped or collapsed text, tiny targets; `forms` checks every fold state on foldable, widefold and triplefold emulators) / `perf` (scrolls the current screen and reports fps, frame time p50/p95/max, janky frames and memory from per-frame timestamps; `reasons` names each unmet evidence condition and gesture index, without weakening `inconclusive`) / screen recording `record_start` / `record_stop` (`discard`, `external`, `save_path`) / `record_status`. **UI test sessions** driven by the host AI: `test_start` → `test_step` (actions and assertions with before/after screenshots, element summary and the app's log window) → `review` (host judges a screenshot; a failed control assertion is never overridden) → `test_finish` (JSON + Markdown report) → `test_log` / `test_export` |
 | `ui_flow` | Record reusable flows through `ui act`, save them with a final assert, and replay with variables and self-repair; `snapshot` adds a screenshot regression check. Stored in `.arkpilot/flows`, compatible with v0.x |
-| `diagnose` | `crash` (reads jscrash/cppcrash/appfreeze reports, also on production phones; `since_minutes` time window; extracts the signature and app frames, matches the fault-pattern library; with `project`, resolves existing ArkTS source locations and surrounding code. Native PCs are retained; C++ address symbolication is not implemented) / `build` |
+| `diagnose` | `crash` (reads device jscrash/cppcrash/appfreeze reports, or one local UTF-8 log via `file`, up to 4 MB; `since_minutes` filters device reports; extracts the signature and app frames, matches the fault-pattern library; with `project`, resolves existing ArkTS source locations and surrounding code. Native PCs are retained; C++ address symbolication is not implemented) / `build` |
 | `knowledge` | Offline docs, ArkTS rules, error cases and runtime patterns: `search` / `read` (by `section`) / `catalog` / `status` / `update` / `rollback`; `source=cloud` queries CodeGenie online; official labels require matching local official text via local_doc and do not verify the webpage publisher; unmatched or failed checks remain unverified |
 | `skills` | Built-in HarmonyOS skills: `list` / `read`, `export` as native `SKILL.md` for your host (`path` for any directory), `install_mcp` registers this server in the host config (cursor, claude, codex, opencode, trae-cn, codebuddy, qoder, pi; idempotent merge; atomcode, dsh and deveco get skills only), `init` does both, `search` / `install` / `uninstall` from the OpenHarmony skill market |
 | `auth` | Huawei browser login for `codegenie` (cloud knowledge) or `developer` (signing), `region` cn / global; `teams`; `import` v0.x credentials |
@@ -328,12 +329,13 @@ Acceptance focuses on macOS and supported HarmonyOS devices; Windows/Linux requi
 
 Host acceptance targets Codex; WorkBuddy-specific checks are not required. Legacy credential import, Debug/Release automatic signing and cloud certificate/profile creation/deletion do not require repeated live acceptance. Existing features, regression tests and explicit cloud error handling remain.
 
-Three built-in skills:
+Four built-in skills:
 
 | Skill | Purpose |
 | --- | --- |
 | `hmos-arkui-develop-skill` | Read before writing ArkTS/ArkUI: 26 high-frequency fatal mistakes, component API cards (`quick-apis`) and constraint rules (`quick-rules`). From upstream DevEco Code, MIT |
 | `hmos-runtime-fix-skill` | Crash / white-screen diagnosis flow and a 9-category crash pattern library, adapted to this server's `diagnose` and `device log`. From upstream DevEco Code, MIT |
+| `hmos-test-design` | Design, write, review and fix HarmonyOS tests; select official test frameworks and execution modes, and validate through DevEco MCP or the project toolchain |
 | `deveco-mcp-workflow` | Which deveco tool to use for each task, and in what order |
 
 Project-scope export (`scope=project` or `init --project`) writes `<project>/.agents/skills`, which Codex, Claude Code, Cursor, Qoder, OpenCode and DevEco Code all read, so one copy serves every tool.

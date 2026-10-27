@@ -1,10 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
 import { pipeline } from "node:stream/promises";
+import { Transform } from "node:stream";
+import { crc32 } from "node:zlib";
 import { inside } from "./files.js";
 
 /** Extract entries serially; archive, validation and stream errors reject the operation. */
-export async function extractZip(zipFile: string, destination: string): Promise<string[]> {
+export async function extractZip(zipFile: string, destination: string, verifyCrc = false): Promise<string[]> {
   const yauzl = (await import("yauzl")).default;
   fs.mkdirSync(destination, { recursive: true });
   return new Promise((resolve, reject) => {
@@ -23,7 +25,12 @@ export async function extractZip(zipFile: string, destination: string): Promise<
             const stream = await new Promise<NodeJS.ReadableStream>((resolve, reject) => {
               zip.openReadStream(entry, (error, stream) => error || !stream ? reject(error) : resolve(stream));
             });
-            await pipeline(stream, fs.createWriteStream(target));
+            if (verifyCrc) {
+              let checksum = 0, bytes = 0;
+              const verify = new Transform({ transform(chunk: Buffer, _encoding, done) { checksum = crc32(chunk, checksum); bytes += chunk.length; done(null, chunk); } });
+              await pipeline(stream, verify, fs.createWriteStream(target));
+              if (bytes !== entry.uncompressedSize || checksum !== entry.crc32) throw new Error(`ZIP entry checksum mismatch: ${name}`);
+            } else await pipeline(stream, fs.createWriteStream(target));
             written.push(target);
           }
           if (!failed) zip.readEntry();

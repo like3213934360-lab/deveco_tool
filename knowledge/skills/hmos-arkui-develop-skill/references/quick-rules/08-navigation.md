@@ -16,6 +16,8 @@
 | 路由栈读取 | 目标页 `NavDestination().onReady((ctx: NavDestinationContext) => { this.navPathStack = ctx.pathStack })` 取栈，`ctx.pathInfo.param` 取参；不推荐 `@Provide`/`@Consume` 传 NavPathStack | — |
 | 目标页根节点为 NavDestination | 目标页 `build()` 首节点必须是 `NavDestination`，否则白屏/挂载失败 | **100006** |
 | 单 navDestination builder | 链式多次 `.navDestination()` 后者覆盖前者，所有路由落到最后一个页面（编译期不报错，运行时白屏） | — |
+| 首页加载白屏 | 核对 `loadContent` 页面路径、模块 `pages` 指向的页面配置中的注册项和对应源码文件 | — |
+| 渲染期间不要修改状态 | 不要在 `build` 等渲染过程中触发修改状态的路由操作；路由栈可在 `onReady` 中获取 | — |
 | hideNavBar 语义陷阱 | `.hideNavBar(true)` 隐藏导航页（标题+内容+工具栏），栈空时首页显示空白，且失去自适应分栏能力；全屏需求用 NavDestination 的 `.fullScreenOverlay(true)`，只藏标题用 `.hideTitleBar(true)` | — |
 | Dialog 类型 NavDestination 无默认转场 | API 13 前无默认转场动画 | — |
 
@@ -48,9 +50,9 @@ this.stack.pushPath({ name: 'first', param: p })
 
 ### 方案一（推荐）：系统路由表 router_map.json
 
-无需 import 页面、按需加载、天然跨模块，多页面一律用此方案。
+无需 import 页面、按需加载、支持跨模块；根据工程需求选择。
 
-- 配置 `resources/base/profile/router_map.json`（`routerMap` 数组：`name` + `buildMethod` + `pageSourceFile`）
+- 配置 `resources/base/profile/router_map.json`（`routerMap` 数组：`name` + `buildFunction` + `pageSourceFile`）
 - `module.json5` 添加 `"routerMap": "$profile:router_map"`
 - 页面文件导出 `@Builder export function XxxBuilder(): void { XxxPage() }`
 - 主文件用 `pushDestination({ name: 'PageName', param })` 跳转：Promise 返回、错误码经 reject 传递（`pushPath`/`pushPathByName` 无错误码返回，不推荐）
@@ -58,7 +60,7 @@ this.stack.pushPath({ name: 'first', param: p })
 
 ### 方案二（备选）：自定义路由表 .navDestination(builder)
 
-仅限单层简单场景。必须用**单个** builder 内 `if/else` 做 name→page 映射；**链式多次 `.navDestination()` 后者覆盖前者**，所有路由会落到最后一个页面（编译期不报错，运行时白屏）。
+适合需要自定义路由处理的场景，也可与系统路由表混用；避免为同一页面维护不必要的重复映射。使用**单个** builder 内 `if/else` 做 name→page 映射；**链式多次 `.navDestination()` 后者覆盖前者**，所有路由会落到最后一个页面（编译期不报错，运行时白屏）。
 
 ```ts
 // PageA.ets
@@ -81,7 +83,7 @@ import { PageA } from './PageA'
 }
 ```
 
-> 页面获取栈：`onReady` 从 NavDestinationContext 取（推荐，可同时取 `pathInfo.param`）；`queryNavigationInfo()`（12+，推荐）任意自定义组件任意时机可取、不依赖生命周期。不推荐 `@Provide`/`@Consume` 或 AppStorage 传栈。
+> 页面获取栈：`onReady` 从 NavDestinationContext 取（可同时取 `pathInfo.param`）；也可根据生命周期使用 `queryNavigationInfo()`（12+）。避免在渲染过程中操作路由栈并修改状态。
 
 ---
 
@@ -98,5 +100,7 @@ import { PageA } from './PageA'
 
 ## 参考
 
+- [Navigation 跨包路由](https://developer.huawei.com/consumer/cn/doc/doccenter-capabilities/arkts-navigation-cross-package)
+- [组件渲染期间修改状态的排查](https://developer.huawei.com/consumer/cn/doc/doccenter-dev-faq/faqs-performance-53)
 - 废弃接口替换见 [19-deprecated](14-deprecated.md)
 - 对话框与半模态见 [12-dialog](09-dialog.md)

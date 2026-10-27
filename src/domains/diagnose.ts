@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { assetRoot } from "../core/config.js";
-import { invariant } from "../core/errors.js";
+import { invariant, ToolError } from "../core/errors.js";
 import { saveArtifact } from "../core/artifacts.js";
 import { faultlogNames, readFaultlog } from "./device.js";
 import { locate, type ResolvedRef } from "./sourcemap.js";
@@ -117,10 +117,38 @@ export function matchPatterns(signature: Pick<CrashSignature, "kind" | "message"
 
 /* ------------------------------ entry points ------------------------------ */
 
-export async function diagnoseCrash(input: { target?: string; bundle?: string; log?: string; name?: string; latest?: number; since_minutes?: number; project?: string; strict?: boolean }, target: string | undefined, signal: AbortSignal) {
+export async function diagnoseCrash(input: { target?: string; bundle?: string; log?: string; file?: string; name?: string; latest?: number; since_minutes?: number; project?: string; strict?: boolean }, target: string | undefined, signal: AbortSignal) {
   const project = input.project ? await projectModel(input.project) : undefined;
   const reports: { source?: string; text: string }[] = [];
-  if (input.log) reports.push({ text: input.log });
+  if (input.file !== undefined) {
+    invariant(path.isAbsolute(input.file), "INVALID_INPUT", "file must be an absolute path");
+    const limit = 4_000_000;
+    let handle: fs.promises.FileHandle;
+    try { handle = await fs.promises.open(input.file, fs.constants.O_RDONLY | fs.constants.O_NONBLOCK); }
+    catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") throw new ToolError("NOT_FOUND", "Fault log file not found", { file: input.file });
+      throw new ToolError("INVALID_INPUT", `Cannot open fault log file: ${(error as Error).message}`, { file: input.file });
+    }
+    try {
+      const stat = await handle.stat();
+      invariant(stat.isFile(), "INVALID_INPUT", "file must be a regular file");
+      invariant(stat.size <= limit, "INVALID_INPUT", "Fault log file exceeds 4 MB");
+      const buffer = Buffer.alloc(limit + 1);
+      let length = 0;
+      while (length < buffer.length) {
+        signal.throwIfAborted();
+        const { bytesRead } = await handle.read(buffer, length, buffer.length - length, null);
+        if (!bytesRead) break;
+        length += bytesRead;
+      }
+      invariant(length <= limit, "INVALID_INPUT", "Fault log file exceeds 4 MB");
+      let text: string;
+      try { text = new TextDecoder("utf-8", { fatal: true }).decode(buffer.subarray(0, length)); }
+      catch { throw new ToolError("INVALID_INPUT", "Fault log file must contain valid UTF-8"); }
+      invariant(text.trim(), "INVALID_INPUT", "Fault log file is empty");
+      reports.push({ source: path.basename(input.file), text });
+    } finally { await handle.close(); }
+  } else if (input.log) reports.push({ text: input.log });
   else {
     invariant(target, "DEVICE_UNAVAILABLE", "A device is required to read crash logs, or pass log text");
     const inventory = input.strict ? await (await import("./device.js")).faultlogInventory(target, signal) : undefined;

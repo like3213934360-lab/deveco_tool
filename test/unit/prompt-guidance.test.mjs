@@ -91,7 +91,7 @@ test("guidance covers discovery, standalone tools, safe continuation and evidenc
     assert.match(byName.ui.inputSchema.properties.test_id.description, /test_finish\/test_log\/test_export need no device/);
     assert.match(byName.ui.inputSchema.properties.assert.description, /test_step uses top-level visible\/hidden, never assert/);
     assert.match(byName.ui.inputSchema.properties.steps.description, /act:.*perf:/);
-    assert.match(byName.ui_flow.description, /show first, supply required variables.*input1/);
+    assert.match(byName.ui_flow.description, /list\(project\), then show\(project,id\).*supply required variables.*input1/);
     assert.match(byName.ui_flow.description, /wait\/request_key: replay only/);
     assert.match(byName.ui_flow.inputSchema.properties.variables.description, /required\/secret by default/);
     assert.match(byName.auth.inputSchema.properties.provider.description, /login\/logout: default codegenie; status: omitted=both; teams: no parameters/);

@@ -94,7 +94,7 @@ test("init --path exports only to the requested skills directory; missing host f
   await assert.rejects(c.run(["init"]), failure(/usage: deveco-mcp init --host/));
 });
 
-test("kb-build and kb-update connect real local SQLite, ZIP and tarball components", async (t) => {
+for (const prefix of ["", "docs/"]) test(`kb-build and kb-update connect SQLite, ZIP and tarball components (prefix=${prefix || "none"})`, async (t) => {
   const c = localCli(t), upstream = path.join(c.work, "upstream docs"), out = path.join(c.work, "built packs");
   fs.mkdirSync(upstream);
   const dbFile = path.join(upstream, "search.db"), db = new DatabaseSync(dbFile);
@@ -108,7 +108,7 @@ test("kb-build and kb-update connect real local SQLite, ZIP and tarball componen
   } finally { db.close(); }
   fs.writeFileSync(path.join(upstream, "package.json"), JSON.stringify({ name: "@test/cli-upstream", version: "1.0.0", apiVersion: 1 }));
   fs.writeFileSync(path.join(upstream, "index.zip"), zipFixture({ "search.db": fs.readFileSync(dbFile) }));
-  fs.writeFileSync(path.join(upstream, "docs.zip"), zipFixture({ "cli/local.md": "# CLI local knowledge\n\n## Usage\nOnly local files.\n" }));
+  fs.writeFileSync(path.join(upstream, "docs.zip"), zipFixture({ [`${prefix}cli/local.md`]: "# CLI local knowledge\n\n## Usage\nOnly local files.\n" }));
   const version = "2.3.4-cli", built = await c.call(["kb-build", upstream, out, "--version", version, "--name", "@test/cli-kb"]);
   assert.equal(built.version, version);
   assert.equal(built.dir, path.join(out, version));
@@ -143,6 +143,14 @@ test("kb-build and kb-update connect real local SQLite, ZIP and tarball componen
   await assert.rejects(c.run(["kb-update", corrupt, "--force"]), failure(/Not a knowledge pack archive/));
   assert.equal(fs.readFileSync(pointerFile, "utf8"), before, "a failed update must preserve the active generation");
   assert.deepEqual(fs.readFileSync(path.join(active, "index.db")), fs.readFileSync(path.join(built.dir, "index.db")));
+  if (prefix) {
+    const broken = zipFixture({ [`${prefix}cli/local.md`]: "# CLI local knowledge" });
+    const central = broken.indexOf(Buffer.from([0x50, 0x4b, 0x01, 0x02]));
+    assert.ok(central >= 0); broken.writeUInt32LE(0, central + 16);
+    fs.writeFileSync(path.join(upstream, "docs.zip"), broken);
+    await assert.rejects(c.run(["kb-build", upstream, out, "--version", "2.3.5-corrupt"]), failure(/checksum mismatch/));
+    assert.equal(fs.readFileSync(pointerFile, "utf8"), before);
+  }
 });
 
 test("knowledge CLI missing or invalid local inputs fail rather than selecting a remote source", async (t) => {

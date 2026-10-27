@@ -56,6 +56,24 @@ test("checker file scope and complete report", async (t) => {
   assert.ok(all.files > 1, "Omitting files still checks the project");
 });
 
+test("checker fix retains one current project diagnostic", async (t) => {
+  const { call, directory } = await session(t);
+  const project = path.join(directory, "fix"), source = "entry/src/main/ets/pages/Index.ets";
+  await call("project", { action: "create", project, app_name: "Fix", bundle_name: "com.devecomcp.fix" });
+  fs.writeFileSync(path.join(project, source), '@Entry\n@Component\nstruct Index {\n  @Local count: number = 0\n  build() { Column() { Text(`${this.count}`) } }\n}\n');
+  fs.writeFileSync(path.join(project, "entry/src/main/resources/base/profile/route_map.json"), JSON.stringify({ routerMap: [{ name: "Page" }] }));
+  const before = await call("code", { action: "check", project });
+  assert.ok(before.issues.some(d => d.rule === "component-decorator-version-mismatch"));
+  const expected = before.issues.filter(d => d.rule === "route-map-missing-key");
+  assert.equal(expected.length, 2);
+  const after = await call("code", { action: "check", project, fix: true });
+  assert.match(fs.readFileSync(path.join(project, source), "utf8"), /@ComponentV2/);
+  assert.equal(after.issues.some(d => d.rule === "component-decorator-version-mismatch"), false);
+  assert.equal(after.issues.filter(d => d.rule === "route-map-missing-key").length, expected.length);
+  const again = await call("code", { action: "check", project });
+  assert.deepEqual(after.issues, again.issues);
+});
+
 for (const [kind, cases] of [["violations", violations], ["legal", legal]]) test(`checker ${kind}`, async (t) => {
   const { call, job, directory } = await session(t);
   const base = path.join(directory, "base");

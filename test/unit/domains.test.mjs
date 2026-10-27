@@ -707,3 +707,39 @@ test('warm checker rechecks dependencies and auto-fix rolls back every later fai
     assert.equal(fs.readFileSync(b,'utf8'),'originalB');assert.equal(fs.readFileSync(a,'utf8'),failure==='restore'?'fixed':'originalA');
   }
 });
+
+test('checker recomputes project diagnostics after fixes and reverts without duplicates or lost SDK errors', async () => {
+  const vm = await import('node:vm'), { createRequire } = await import('node:module');
+  const vendor = path.join(root, 'resources/vendor/arkts-check.cjs'), req = createRequire(vendor);
+  const source = fs.readFileSync(vendor, 'utf8').replace(/^#![^\n]*\n/, '');
+  const localRequire = name => req(name); localRequire.cache = {};
+  const module = { exports: {} };
+  vm.runInNewContext(source + '\nmodule.exports.configure=(h)=>{runChecker=h.check;computeProjectDiagnostics=h.project;buildFileEdits=h.edits};module.exports.applyAutoFixes=applyAutoFixes;module.exports.sortDiagnostics=sortDiagnostics;', { require: localRequire, module, exports: module.exports, process, console, Buffer });
+  const chk = module.exports, dir = fs.mkdtempSync(path.join(out, 'checker-project-diag-'));
+  const file = path.join(dir, 'Main.ets'), config = path.join(dir, 'module.json5'), other = path.join(dir, 'Other.ets');
+  const projectDiag = message => ({ file: config, line: 1, column: 1, severity: 'error', message });
+  const fixable = { file, line: 1, column: 1, severity: 'error', message: 'fixable' };
+  const unrelated = { file: other, line: 1, column: 1, severity: 'error', message: 'preserve' };
+  for (const revert of [false, true]) {
+    fs.writeFileSync(file, 'original');
+    const initial = projectDiag('original project issue');
+    const env = { projectPath: dir, files: [file, other], projectDiagnostics: [initial] };
+    chk.configure({
+      edits: (content, diags, options) => options.abs === file ? [{ start: 0, end: content.length, text: 'fixed', diag: diags }] : [],
+      project: () => [projectDiag(fs.readFileSync(file, 'utf8') === 'fixed' ? 'updated project issue' : 'original project issue')],
+      check: () => [...env.projectDiagnostics, ...(revert ? [fixable, { ...fixable, line: 2, message: 'regression' }] : [])],
+    });
+    const result = chk.applyAutoFixes([initial, fixable, unrelated], env);
+    const messages = Array.from(result.diagnostics, d => d.message);
+    assert.equal(messages.filter(m => m.includes('project issue')).length, 1);
+    assert.ok(messages.includes(revert ? 'original project issue' : 'updated project issue'));
+    assert.ok(messages.includes('preserve'));
+    assert.equal(fs.readFileSync(file, 'utf8'), revert ? 'original' : 'fixed');
+  }
+  const sorted = chk.sortDiagnostics([
+    { file: 'b.ets', line: 1, column: 1, message: 'b' },
+    { file: 'a.ets', line: 2, column: 1, message: 'c' },
+    { file: 'a.ets', line: 1, column: 1, message: 'a' },
+  ]);
+  assert.deepEqual(Array.from(sorted, d => d.message), ['a', 'c', 'b']);
+});

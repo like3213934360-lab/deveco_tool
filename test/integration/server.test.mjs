@@ -106,7 +106,7 @@ test("skills are exposed as tools, resources and prompts", async () => {
   const client = connect(env);
   await client.initialize();
   const skills = await client.call("skills", { action: "list" });
-  assert.deepEqual(skills.data.skills.map((s) => s.name).sort(), ["deveco-mcp-workflow", "hmos-arkui-develop-skill", "hmos-runtime-fix-skill"]);
+  assert.deepEqual(skills.data.skills.map((s) => s.name).sort(), ["deveco-mcp-workflow", "hmos-arkui-develop-skill", "hmos-runtime-fix-skill", "hmos-test-design"]);
   const card = await client.call("skills", { action: "read", name: "hmos-arkui-develop-skill", reference: "quick-apis/_index.md" });
   assert.match(card.data.content, /ArkUI API/);
   const escape = await client.call("skills", { action: "read", name: "hmos-arkui-develop-skill", reference: "../../../package.json" });
@@ -225,6 +225,33 @@ test("diagnose crash from pasted jscrash text matches the pattern library", asyn
   assert.ok(report.app_frames[0].includes("Index.ets"));
   assert.ok(report.candidates.length > 0, "should match Cannot read property pattern");
   await client.close();
+});
+
+test("diagnose a local fault log without a device, rejecting invalid inputs", async (t) => {
+  const client = connect(env); t.after(() => client.close()); await client.initialize();
+  for (const [name, text, type, kind] of [
+    ["jscrash-com.example.app-123.log", "Module name:com.example.app\nError name:TypeError\nError message:bad\nStacktrace:\n    at click (entry/src/main/ets/pages/Index.ets:25:13)", "jscrash", "TypeError"],
+    ["cppcrash-com.example.app-123.log", "Signal: SIGSEGV\nFault thread info:\nTid:1\n#00 pc 123 /app/libentry.so", "cppcrash", "SIGSEGV"],
+    ["appfreeze-com.example.app-123.log", "Reason: THREAD_BLOCK_6S\nTid:1\n#00 pc 123 /app/libentry.so", "appfreeze", "THREAD_BLOCK_6S"],
+  ]) {
+    const file = path.join(state, name); fs.writeFileSync(file, text);
+    const result = await client.call("diagnose", { action: "crash", file });
+    assert.equal(result.isError, false, JSON.stringify(result.data));
+    assert.equal(result.data.reports[0].type, type); assert.equal(result.data.reports[0].kind, kind);
+    assert.ok(result.data.reports[0].report_artifact);
+  }
+  const file = path.join(state, "bad.log");
+  for (const content of ["", Buffer.from([0xff]), Buffer.alloc(4_000_001)]) {
+    fs.writeFileSync(file, content);
+    const result = await client.call("diagnose", { action: "crash", file });
+    assert.equal(result.data.error.code, "INVALID_INPUT");
+  }
+  for (const args of [{ file: state }, { file: "relative.log" }, { file, log: "text" }, { file, target: "device" }, { file, strict: false }]) {
+    const result = await client.call("diagnose", { action: "crash", ...args });
+    assert.equal(result.data.error.code, "INVALID_INPUT");
+  }
+  const missing = await client.call("diagnose", { action: "crash", file: path.join(state, "missing.log") });
+  assert.equal(missing.data.error.code, "NOT_FOUND");
 });
 
 

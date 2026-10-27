@@ -71,10 +71,12 @@
 
 | 方式 | 写法 | 说明 |
 |------|------|------|
-| `queryNavigationInfo`（12+，推荐） | `let info = this.queryNavigationInfo(); if (info !== undefined) { this.pathStack = info.pathStack }` | 自定义组件方法，任意时机可取、不依赖 NavDestination 生命周期 |
+| `queryNavigationInfo`（12+） | `let info = this.queryNavigationInfo(); if (info !== undefined) { this.pathStack = info.pathStack }` | 自定义组件方法；结果可能为 `undefined`，注意组件生命周期 |
 | `onReady`（推荐） | `NavDestination().onReady((ctx: NavDestinationContext) => { this.navPathStack = ctx.pathStack; const p = ctx.pathInfo.param as DetailParams })` | NavDestination 生命周期回调，取栈同时可取本页参数 |
-| AppStorage 全局共享 | 宿主 `AppStorage.setOrCreate` / 页面 `AppStorage.get` | 不推荐 |
-| `@Provide`/`@Consume` | 跨层级传递 | 不推荐 |
+| AppStorage 全局共享 | 宿主 `AppStorage.setOrCreate` / 页面 `AppStorage.get` | 注意路由栈生命周期，不要在渲染时操作栈并修改状态 |
+| `@Provide`/`@Consume` | 跨层级传递 | 根据组件层级与状态模型选择 |
+
+首页白屏时，核对 `loadContent` 页面路径、模块 `pages` 指向的页面配置中的注册项及对应源码文件。
 
 #### 全局路由状态监听
 

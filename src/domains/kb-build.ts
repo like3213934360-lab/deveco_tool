@@ -71,18 +71,31 @@ export async function buildKnowledgePack(options: { upstream: string; out: strin
 
     // Docs archive: upstream docs + local markdown under the same ids.
     const docsOut = path.join(target, "docs.zip");
-    fs.copyFileSync(docsZip, docsOut);
+    let upstreamDocs = docsZip;
+    if (await hasDocsRoot(docsZip)) {
+      // Current upstream archives wrap every document in docs/, but index IDs omit it.
+      const extracted = path.join(work, "upstream-docs");
+      await extractZip(docsZip, extracted, true);
+      const root = path.join(extracted, "docs"), names = fs.readdirSync(root);
+      invariant(names.length, "INVALID_INPUT", "Upstream docs archive is empty");
+      upstreamDocs = path.join(work, "canonical-docs.zip");
+      const command = process.platform === "win32"
+        ? { file: "tar", args: ["--format=zip", "-cf", upstreamDocs, ...names], cwd: root }
+        : { file: "zip", args: ["-q", "-r", upstreamDocs, ...names], cwd: root };
+      await run(command, { timeoutMs: 300000 });
+    }
     const staging = path.join(work, "local-docs");
     for (const doc of localDocs) {
       const out = path.join(staging, `${doc.id}.md`);
       fs.mkdirSync(path.dirname(out), { recursive: true });
       fs.writeFileSync(out, doc.text);
     }
+    if (process.platform !== "win32" || !localDocs.length) fs.copyFileSync(upstreamDocs, docsOut);
     if (localDocs.length) {
       // Windows supplies bsdtar, not Info-ZIP. Convert the original archive and add exact
       // local ids in one command; never retry a failed archiver or change the output format.
       const command = process.platform === "win32"
-        ? { file: "tar", args: ["--format=zip", "-cf", docsOut, `@${docsZip}`, ...localDocs.map((doc) => `${doc.id}.md`)], cwd: staging }
+        ? { file: "tar", args: ["--format=zip", "-cf", docsOut, `@${upstreamDocs}`, ...localDocs.map((doc) => `${doc.id}.md`)], cwd: staging }
         : { file: "zip", args: ["-q", "-r", docsOut, "."], cwd: staging };
       await run(command, { timeoutMs: 300000 });
     }
@@ -132,6 +145,25 @@ export async function buildKnowledgePack(options: { upstream: string; out: strin
   } finally {
     fs.rmSync(work, { recursive: true, force: true });
   }
+}
+
+/** Only normalize an archive when every file uses the upstream docs/ wrapper. */
+async function hasDocsRoot(file: string): Promise<boolean> {
+  const yauzl = (await import("yauzl")).default;
+  return new Promise((resolve, reject) => {
+    yauzl.open(file, { lazyEntries: true, decodeStrings: false }, (error, zip) => {
+      if (error || !zip) return reject(error);
+      let files = 0, allWrapped = true;
+      zip.on("entry", (entry) => {
+        const name = Buffer.isBuffer(entry.fileName) ? (entry.fileName as unknown as Buffer).toString("utf8") : String(entry.fileName);
+        if (!name.endsWith("/")) { files++; if (!name.startsWith("docs/")) allWrapped = false; }
+        zip.readEntry();
+      });
+      zip.on("end", () => resolve(files > 0 && allWrapped));
+      zip.on("error", reject);
+      zip.readEntry();
+    });
+  });
 }
 
 type LocalDocument = { id: string; title: string; catalog: number; file: string; text: string; relative: string };
