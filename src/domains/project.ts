@@ -213,6 +213,8 @@ export class BuildOutputParser {
     if (!text) return;
     const failed = /^>?\s*hvigor ERROR:\s*Failed :(\S+?)\.*\s*$/.exec(text);
     if (failed) { this.flush(); this.failedTasks.push(failed[1]!); return; }
+    const sdkCode = /^ErrorCode:\s*(\d{8})$/.exec(text)?.[1];
+    if (sdkCode) { this.flush(); this.pending = { severity: "error", code: sdkCode, message: "" }; return; }
     // Numbered compiler entry: "12 ERROR: 10605040 ArkTS Compiler Error" / "3 WARN: ArkTS:WARN File: ..."
     const numbered = /^\d+\s+(ERROR|WARN):\s*(\d{8})?\s*(.*)$/.exec(text);
     const arkts = /ArkTS:(ERROR|WARN)\b/.exec(text);
@@ -229,7 +231,7 @@ export class BuildOutputParser {
       return;
     }
     if (this.pending) {
-      const message = /^Error Message:\s*(.*)$/.exec(text)?.[1];
+      const message = /^(?:Error Message|Description):\s*(.*)$/.exec(text)?.[1];
       if (message !== undefined) {
         const at = /\s*\.?\s*At File:\s*(.+?):(\d+)(?::(\d+))?\s*$/i.exec(message);
         this.pending.message = (at ? message.slice(0, at.index) : message).trim();

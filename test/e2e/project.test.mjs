@@ -151,3 +151,28 @@ test("phone and wearable entry builds remain independently selectable", async (t
     assert.ok(path.basename(built.result.artifacts[0].path).startsWith(`${name}-`));
   }
 });
+
+test("local SDK runtime labels do not establish a native failure", async (t) => {
+  const { call, directory } = await session(t), project = path.join(directory, "RuntimeLabel");
+  await call("project", { action: "create", project, app_name: "RuntimeLabel", bundle_name: "com.devecomcp.runtimelabel" });
+  const tests = path.join(project, "entry/src/test"); fs.mkdirSync(tests, { recursive: true });
+  const positive = "import { describe, it, expect } from '@ohos/hypium';\nexport default function testsuite(): void { describe('Pure', () => { it('one', 0, () => { expect(2).assertEqual(2); }); }); }\n";
+  const file = path.join(tests, "List.test.ets"); fs.writeFileSync(file, positive);
+  await terminal(call, await call("project", { action: "sync", project, wait: 1000 }));
+  const input = { action: "test", project, kind: "local", coverage: false, scope: ["Pure"], expected_tests: 1, timeout_ms: 30000, wait: 1000 };
+  const passed = await terminal(call, await call("project", input));
+  assert.equal(passed.status, "succeeded"); assert.equal(passed.result.counts.passed, 1);
+  fs.writeFileSync(file, positive + "\nfunction failAtImport(): number { throw new TypeError('deveco runtime label probe'); }\nconst value: number = failAtImport();\n");
+  let failed = await call("project", input);
+  try {
+    failed = await terminal(call, failed);
+    assert.equal(failed.status, "failed"); assert.equal(failed.error.code, "TEST_REPORT_MISSING");
+    assert.ok(failed.error.details.diagnostics.some((diagnostic) => diagnostic.code === "00507016"));
+    assert.match(failed.error.hint, /not verified root causes/);
+    const runtime = fs.readFileSync(path.join(project, "entry/.test/default/intermediates/test/coverage_data/coverage.log"), "utf8");
+    assert.match(runtime, /TypeError: deveco runtime label probe/);
+  } finally {
+    if (["queued", "running"].includes(failed.status)) await call("job", { action: "cancel", job_id: failed.job_id });
+    fs.writeFileSync(file, positive);
+  }
+});

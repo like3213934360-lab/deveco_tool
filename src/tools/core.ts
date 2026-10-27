@@ -39,9 +39,9 @@ export const projectTool = tool({
   title: "Project create/sync/build",
   description: [
     "info: metadata; create(app_name,bundle_name): template, never overwrite. clean (job): modules/execution_mode=module|project; sync: ohpm+hvigor.",
-    "build (job): edited-file preflight+compiler; artifacts or compile diagnostics with fixes. Manifest edits sync dependencies. signing_config selects temporarily and restores.",
-    "test (job): verified SDK local/instrument case counts; instrument erases data, needs allow_data_reset and target with multiple devices. verify: scoped JSON plan, JSON/JUnit/HTML; launch/perf need baseline/max or inconclusive.",
-    "entries: declared Ability/Extension/form/shortcut graph; main/device_types/runtime_verified=false, no runtime verdict. Build already checks edited files: no code check first. request_key/wait: sync/build/clean/test/verify only.",
+    "build (job): preflight+compiler; artifacts or diagnostics/fixes. Manifest edits sync dependencies. signing_config is restored.",
+    "test (job): SDK local/instrument counts; instrument erases data, needs allow_data_reset and target if multiple devices. verify: scoped JSON plan + JSON/JUnit/HTML; launch/perf need baseline/max or inconclusive.",
+    "entries: declared Ability/Extension/form/shortcut graph; main/device_types, runtime_verified=false. Build already checks edited files: no code check first. request_key/wait: sync/build/clean/test/verify only.",
   ].join(" "),
   schema: z.object({
     action: z.enum(["info", "create", "sync", "build", "clean", "test", "verify", "entries"]),
@@ -50,7 +50,7 @@ export const projectTool = tool({
     modules: fields.modules,
     execution_mode: z.enum(["module", "project"]).optional().describe("clean execution scope"),
     kind: z.enum(["local", "instrument"]).optional(),
-    scope: z.array(z.string()).min(1).max(100).optional(),
+    scope: z.array(z.string()).min(1).max(100).optional().describe("test: suite[#method]; does not isolate entry imports"),
     coverage: z.boolean().optional(),
     target: fields.target,
     timeout_ms: z.number().int().min(1000).max(1800000).optional().describe("Test deadline ms; default 600000"),
@@ -123,9 +123,9 @@ const assertSchema = z.object({
 }).strict().refine((input) => !!input.visible !== !!input.hidden, "Pass exactly one visible or hidden selector");
 
 const uiOpSchema = z.enum(["click", "double_click", "long_click", "input", "type", "swipe", "drag", "fling", "scroll", "key",
-  "mouse_click", "mouse_double_click", "mouse_long_click", "mouse_move", "mouse_scroll", "mouse_drag"]).meta({ id: "UiOp" });
+  "mouse_click", "mouse_double_click", "mouse_long_click", "mouse_move", "mouse_scroll", "mouse_drag"]);
 const batchStepSchema = z.object({
-  op: z.union([uiOpSchema, z.literal("wait")]),
+  op: z.enum([...uiOpSchema.options, "wait"]),
   selector: selectorSchema.optional(),
   x: z.number().int().optional(), y: z.number().int().optional(), x2: z.number().int().optional(), y2: z.number().int().optional(),
   text: z.string().optional(), append: z.boolean().optional(), key: z.string().optional(), keys: z.array(z.string()).min(1).max(3).optional(),
@@ -262,10 +262,10 @@ export const codeTool = tool({
   readOnly: false,
   openWorld: false,
   description: [
-    "origin: key/text/file static source candidates with Git changed-line/blame context; no runtime mapping. ArkTS/C++ checks and LSP use the project SDK.",
+    "origin: key/text/file static candidates + Git changed-line/blame; no runtime mapping. ArkTS/C++ checks and LSP use project SDK.",
     "check: static checks/fix hints, no build; fix=true applies safe fixes. May diagnose dependencies; scope counts roots, report_artifact has all issues. The compiler is the final judge.",
-    "lint: Code Linter report. api_scan / api_versions: API compatibility between SDK versions.",
-    "action=lsp requires op: see enum; locate by symbol (+line hint). lsp_restart restarts servers.",
+    "lint: Code Linter report. api_scan/api_versions: SDK API compatibility.",
+    "action=lsp requires op: see enum; symbol (+line hint). lsp_restart restarts servers.",
   ].join(" "),
   schema: z.object({
     action: z.enum(["check", "lint", "api_scan", "api_versions", "lsp", "lsp_restart", "origin"]),

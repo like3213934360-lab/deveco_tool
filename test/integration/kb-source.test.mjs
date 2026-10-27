@@ -19,7 +19,7 @@ const work = temporaryDirectory("deveco-kb-source-");
 const upstreamName = "@deveco/deveco-cli-knowledgebase";
 const signal = new AbortController().signal;
 const fault = globalThis.__devecoKbSource = { pointer: false };
-let m, server, url, registry, responseStatus, disconnect, tamper, state, downloads;
+let m, server, url, registry, responseStatus, disconnect, transfer, tamper, state, downloads;
 let sequence = 0;
 const archives = new Map();
 const exec = promisify(execFile);
@@ -71,7 +71,7 @@ async function isolate(value = {}) {
   process.env.DEVECO_STATE_DIR = state;
   process.env.DEVECO_CONFIG = path.join(work, `config-${sequence}.json`);
   configure(value);
-  responseStatus = 200; disconnect = false; tamper = false; downloads = 0;
+  responseStatus = 200; disconnect = false; transfer = undefined; tamper = false; downloads = 0;
   registry = {
     [upstreamName]: await metadata(upstreamName, ["1.3.5-Test.1", "1.3.5-Test.2"], { latest: "1.3.5-Test.1", daily: "1.3.5-Test.2" }),
     "@private/kb": await metadata("@private/kb", ["1.0.0", "2.0.0"], { latest: "2.0.0" }, false),
@@ -100,6 +100,13 @@ before(async () => {
     if (req.url.startsWith("/archive/")) {
       downloads++;
       const bytes = archives.get(decodeURIComponent(req.url.slice(9)));
+      if (transfer) {
+        res.writeHead(200, { "content-length": bytes.length }); res.flushHeaders();
+        res.write(bytes.subarray(0, 32));
+        transfer.started?.();
+        if (transfer.mode === "disconnect") setTimeout(() => res.destroy(), 20);
+        return;
+      }
       res.end(tamper ? Buffer.from("invalid archive") : bytes);
     } else {
       const meta = registry[decodeURIComponent(req.url.slice(1))];
@@ -281,6 +288,44 @@ test("HTTP401/404 and real disconnected registry surface errors, not no-update",
   await assert.rejects(m.status(true), /fetch failed/);
   await assert.rejects(m.update({}, signal), /fetch failed/);
   assert.equal(pointer(), before);
+});
+
+test("interrupted downloads retain their transport cause without retrying or replacing the active pack", async () => {
+  for (const source of ["upstream", "pack", "url"]) {
+    await isolate({ kb_package: "@private/kb" });
+    await m.update({ source: "upstream" }, signal);
+    const before = pointer(), count = downloads;
+    transfer = { mode: "disconnect" };
+    const input = { source: source === "url" ? registry["@private/kb"].versions["2.0.0"].dist.tarball : source, force: true };
+    try {
+      await assert.rejects(m.update(input, signal), (error) => {
+        assert.equal(error.code, "HTTP_ERROR");
+        assert.deepEqual(error.details, { phase: "download", transport_code: "UND_ERR_SOCKET" });
+        return true;
+      });
+    } finally { transfer = undefined; }
+    assert.equal(downloads - count, 1);
+    assert.equal(pointer(), before);
+    assert.equal(fs.readdirSync(path.join(state, "kb")).some((name) => /^\.(download|upstream)-/.test(name)), false);
+  }
+});
+
+test("download cancellation stays cancelled and preserves the active pack and cleanup", { timeout: 10000 }, async () => {
+  for (const source of ["upstream", "pack"]) {
+    await isolate({ kb_package: "@private/kb" });
+    await m.update({ source: "upstream" }, signal);
+    const before = pointer(), controller = new AbortController();
+    let entered;
+    const started = new Promise((resolve) => { entered = resolve; });
+    transfer = { mode: "stall", started: entered };
+    const updating = m.update({ source, force: true }, controller.signal);
+    try {
+      await started; controller.abort();
+      await assert.rejects(updating, { name: "AbortError" });
+    } finally { controller.abort(); transfer = undefined; server.closeAllConnections(); }
+    assert.equal(pointer(), before);
+    assert.equal(fs.readdirSync(path.join(state, "kb")).some((name) => /^\.(download|upstream)-/.test(name)), false);
+  }
 });
 
 test("legacy fingerprint is unknown; differing indexed content is local refresh, not official update", async () => {

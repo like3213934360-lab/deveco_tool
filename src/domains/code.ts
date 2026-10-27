@@ -203,7 +203,11 @@ export async function codeLinter(projectRoot: string, options: { path?: string; 
     const rank = (s: string) => (s === "error" ? 0 : s === "warning" || s === "warn" ? 1 : 2);
     issues.sort((a, b) => rank(a.severity) - rank(b.severity));
     const artifact = await saveArtifact(content, "application/json");
-    return { counts, total: issues.length, issues: issues.slice(0, 50), report_artifact: artifact.artifact_id, exit_code: result.code };
+    return { counts, total: issues.length, issues: issues.slice(0, 50), report_artifact: artifact.artifact_id, exit_code: result.code,
+      ...(issues.some((issue) => issue.rule === "@typescript-eslint/await-thenable") ? {
+        hints: ["await-thenable depends on CodeLinter's resolved type. Some SDKs misreport imports from declaration-only packages, including .so. Inspect the declaration and SDK LSP hover before changing await; a build alone does not verify native signatures. Raw diagnostics and counts are preserved."],
+      } : {}),
+    };
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }

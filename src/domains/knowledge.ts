@@ -533,6 +533,15 @@ export async function status(checkRemote = false, signal?: AbortSignal, options:
     ...(remote.source === "upstream" ? { upstream_update_available: updateAvailable, upstream: { installed_version: installedUpstream(pack)?.version ?? null, latest: remote.latest, available_version: remote.available_version, api_version: entry.apiVersion } } : {}) };
 }
 
+function downloadFailure(error: unknown, signal: AbortSignal): never {
+  signal.throwIfAborted();
+  const cause = error instanceof Error ? error.cause as { code?: unknown } | undefined : undefined;
+  if (error instanceof TypeError && cause?.code === "UND_ERR_SOCKET")
+    throw new ToolError("HTTP_ERROR", "Knowledge download transport failed", { phase: "download", transport_code: cause.code },
+      "The active pack was preserved; inspect the transport cause before an explicit retry");
+  throw error;
+}
+
 /** Download, verify, convert (upstream only), and atomically install. */
 export async function update(options: UpdateOptions, signal: AbortSignal): Promise<{ updated: boolean; version: string; reason?: string; previous?: string | null; counts?: Record<string, number>; source?: string; tag?: string; latest?: string; available_version?: string; compatibility?: Awaited<ReturnType<typeof resolveRemote>>["compatibility"] }> {
   const root = kbRoot();
@@ -552,10 +561,10 @@ export async function update(options: UpdateOptions, signal: AbortSignal): Promi
     const dir = path.join(root, `.upstream-${crypto.randomBytes(4).toString("hex")}`);
     return temporaryStorage(dir, async () => {
       const file = path.join(dir, "upstream.tgz");
-      const response = await fetch(entry.dist.tarball, { signal: AbortSignal.any([signal, AbortSignal.timeout(30 * 60000)]) });
+      const response = await fetch(entry.dist.tarball, { signal: AbortSignal.any([signal, AbortSignal.timeout(30 * 60000)]) }).catch((error) => downloadFailure(error, signal));
       invariant(response.ok && response.body, "HTTP_ERROR", `Upstream download failed with HTTP ${response.status}`);
       const hash = crypto.createHash("sha512");
-      await pipeline(Readable.fromWeb(response.body as any), new Transform({ transform(chunk, _encoding, done) { hash.update(chunk); done(null, chunk); } }), fs.createWriteStream(file), { signal });
+      await pipeline(Readable.fromWeb(response.body as any), new Transform({ transform(chunk, _encoding, done) { hash.update(chunk); done(null, chunk); } }), fs.createWriteStream(file), { signal }).catch((error) => downloadFailure(error, signal));
       invariant(`sha512-${hash.digest("base64")}` === entry.dist.integrity, "INTEGRITY_FAILED", "Upstream docs package failed integrity verification");
       await run({ file: "tar", args: ["-xzf", file, "-C", dir] }, { signal, timeoutMs: 600000 });
       const upstreamDir = path.join(dir, "package");
@@ -583,9 +592,9 @@ export async function update(options: UpdateOptions, signal: AbortSignal): Promi
     tarball = path.join(root, `.download-${crypto.randomBytes(4).toString("hex")}.tgz`);
     releaseDownload = await storageGuard((db) => pinStorage(db, tarball));
     try {
-      const response = await fetch(url!, { signal: AbortSignal.any([signal, AbortSignal.timeout(30 * 60000)]) });
+      const response = await fetch(url!, { signal: AbortSignal.any([signal, AbortSignal.timeout(30 * 60000)]) }).catch((error) => downloadFailure(error, signal));
       invariant(response.ok && response.body, "HTTP_ERROR", `Download failed with HTTP ${response.status}`);
-      await pipeline(Readable.fromWeb(response.body as any), fs.createWriteStream(tarball), { signal });
+      await pipeline(Readable.fromWeb(response.body as any), fs.createWriteStream(tarball), { signal }).catch((error) => downloadFailure(error, signal));
     } catch (error) {
       releaseDownload();
       reportCleanup(await removeStorage(tarball));

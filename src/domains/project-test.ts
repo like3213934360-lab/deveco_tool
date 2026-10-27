@@ -124,7 +124,10 @@ export async function runProjectTests(input: ProjectTestInput, signal: AbortSign
         diagnostics: build.diagnostics.filter((d) => d.severity === "error").slice(0, 10),
       }, "Read the SDK log to identify the failed task; no test result is verified");
     }
-    invariant(fresh, "TEST_REPORT_MISSING", "SDK did not produce a fresh test report", { ...context, module: report.module, exit_code: execution.code });
+    invariant(fresh, "TEST_REPORT_MISSING", "SDK did not produce a fresh test report", {
+      ...context, module: report.module, exit_code: execution.code,
+      diagnostics: build.diagnostics.filter((d) => d.severity === "error" && d.message).slice(0, 10),
+    }, "Inspect the SDK diagnostics and log; SDK descriptions are emitted labels, not verified root causes. scope filters cases, not entry imports");
     const raw = fs.readFileSync(report.result, "utf8");
     const artifact = await saveArtifact(raw, "text/plain", jobId);
     let parsed;

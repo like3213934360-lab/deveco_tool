@@ -97,3 +97,18 @@ test('non-compile process failures and successful commands without reports remai
     finally {delete f.failure;}
   }
 });
+
+test('SDK emitted descriptions survive exit zero without becoming a root-cause verdict', async () => {
+  f.failure={code:0,log:'> hvigor \u001b[91mERROR: \nErrorCode: 00507016\nDescription: Testing on C/C++ methods not supported.\n> hvigor BUILD SUCCESSFUL'};
+  try {
+    await assert.rejects(run('no_report',false),error=>{
+      assert.equal(error.code,'TEST_REPORT_MISSING');
+      assert.equal(error.details.exit_code,0);
+      assert.equal(error.details.log_artifact,'log');
+      assert.deepEqual(error.details.diagnostics,[{severity:'error',code:'00507016',message:'Testing on C/C++ methods not supported.'}]);
+      assert.match(error.hint,/not verified root causes/);
+      assert.match(error.hint,/scope filters cases, not entry imports/);
+      return true;
+    });
+  } finally {delete f.failure;}
+});

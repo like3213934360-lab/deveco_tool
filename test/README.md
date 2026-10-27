@@ -47,6 +47,8 @@
 
 MCP 契约回归同样包含在 `npm test`：`integration/protocol.test.mjs`、`server.test.mjs` 覆盖协议、注解及提前拒绝；`server.test.mjs` 还覆盖多产品入口图谱、模块别名、扩展主入口、无入口 HAR、设备声明、同名字段隔离、JSON5 转义/换行及结构错误指引；`device.test.mjs` 验证 SQLite 路径完整引用，以及未启动/崩溃/空白屏的判定与后续指引；`emulator.test.mjs`、`signing.test.mjs` 用隔离进程验证退出状态和配置引用；`jobs.test.mjs` 与 `unit/efficiency.test.mjs` 验证检查范围、完整报告、构建预检结果、数据库并发初始化及真实写锁争用。未增加测试运行器或依赖。
 
+`integration/kb-source.test.mjs` 另覆盖下载断流的传输错误、无自动重试、取消与旧包/临时目录保护；`integration/project-test.test.mjs` 覆盖 SDK 分行错误诊断，保留缺报告判定且不将 SDK 标签当成根因；`unit/prompt-guidance.test.mjs` 检查 UI 枚举直接导出及 `scope` 的入口导入边界。
+
 电脑端产物保留回归也包含在 `npm test`：`node --test test/integration/jobs.test.mjs test/integration/retention.test.mjs`。前者验证过期边界、活动任务、容量限额、失败后停止重试、目录保护及引用变化与旧扫描并发的回收边界；后者启动真实 MCP 进程，验证无任务时到期自动删除、批量删除期间的协议响应、失败日志汇总和重启后继续跳过失败文件。仅使用自行清理的临时目录，不连接设备。 知识包生命周期由 `kb-source.test.mjs`、`kb-update.test.mjs` 与这些保留回归共同覆盖：并发读取、多进程占用、异常退出、回滚回收、临时修复目录过期、符号链接边界及失败状态跨进程持久化。
 
 离线测试、媒体检查、提示统计和性能脚本通过 `support/workspace.mjs` 创建带所有权标记的 `.scratch/test-*` 临时目录，正常结束立即清理；遗留目录满 24 小时且父进程、已登记 MCP 子进程均退出后由运行时回收。独立安装包的依赖解析测试及须脱离仓库 Git 忽略规则的来源测试，使用系统临时目录内同样登记的 `deveco-test-*`；不扫描或删除未登记的旧 `.scratch` 材料。测试编译包和启动日志也在该工作区内，E2E 显式证据目录继续保留。`retention.test.mjs` 验证状态失效、有效/活动状态保护、旧日志迁移、逐记录到期、工作区进程占用和外部链接边界；`unit/verification.test.mjs` 验证活跃审查记录、并发迁移和坏日志保留。
@@ -80,9 +82,11 @@ node --test --test-concurrency=1 test/e2e/hotreload.test.mjs
 | 按能力执行的文件 | 额外条件及影响 |
 | --- | --- |
 | `e2e/project.test.mjs` | 真实 SDK；专用新工程，无设备 |
+| 同文件 `local SDK runtime labels do not establish a native failure` | 仅 SDK 和 E2E_DIR；`--test-name-pattern='^local SDK runtime labels'` 对照纯 ArkTS 正例与导入时 TypeError，核对 SDK 00507016、原始运行日志及缺报告失败，不推断 C/C++ 根因 |
 | `e2e/sdk.test.mjs` | 原完整夹具与签名；临时改 C++ 后逐字恢复 |
 | `e2e/checker.test.mjs` | `--test-name-pattern='checker (violations|legal)'` 独立编译正反例；`checker runtime claims` 另需明确的原模拟器（新模板不配置真机签名），安装/卸载专用应用 |
 | 同文件 `checker file scope and complete report` | 仅 SDK 和 E2E_DIR；新建专用工程，验证显式 .ts、61 条额外文件诊断的完整分页报告，以及无效 fix 请求保持文件哈希不变 |
+| 同文件 `CodeLinter retains real await misuse and explains declaration package limits` | 仅 SDK 和 E2E_DIR；以 `--test-name-pattern='^CodeLinter retains'` 运行，复用临时模板验证相对声明、声明包及 `.so` 包，保留真实 `await 1` 负例和原始诊断计数，不验证原生实现 |
 | `e2e/device.test.mjs` | 完整夹具及明确设备类型，`E2E_HDC` 为现有 SDK HDC 绝对路径，仅用于清理本轮传输文件（MCP shell 为只读）；会构建、安装、写专用 SQLite、交互、卸载再安装；不能把单独运行后续依赖步骤称为整套通过 |
 | `e2e/lsp.test.mjs` | 使用 `npm run test:lsp`；直接 node 运行前必须构建，陈旧构建明确失败。完整夹具中 Util.ets 有 leaf、napi_init.cpp 有 Add，C++ 已生成编译数据库；保留原始 stdio 和写入边界，仅清理本轮独立进程组，不与修改同工程/构建身份的任务并行 |
 | `e2e/device-controls.test.mjs` 的 `device controls` | 使用对应 npm 入口；专用单签名 HAP，接入下述标记夹具，当前路径前提为 user 100。会清空专用应用数据，成功后留未安装；失败不补装/补卸。剪贴板原文不落调用日志，只留哈希/长度并立即恢复；不支持的查询真实失败，不用写入制造可读值 |

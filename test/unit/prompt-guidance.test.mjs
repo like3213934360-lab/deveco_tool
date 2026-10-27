@@ -14,6 +14,13 @@ test("guidance covers discovery, standalone tools, safe continuation and evidenc
     const { instructions } = (await client.initialize()).result;
     const { tools } = (await client.request("tools/list")).result;
     const byName = Object.fromEntries(tools.map((t) => [t.name, t]));
+    const uiOps = byName.ui.inputSchema.properties.op;
+    assert.equal(uiOps.$ref, undefined);
+    assert.ok(uiOps.enum.includes("click") && uiOps.enum.includes("key"));
+    assert.ok(!uiOps.enum.includes("tap") && !uiOps.enum.includes("back") && !uiOps.enum.includes("recent"));
+    const batchOps = byName.ui.inputSchema.properties.steps.items.properties.op;
+    assert.deepEqual(batchOps.enum, [...uiOps.enum, "wait"]);
+    assert.match(byName.project.inputSchema.properties.scope.description, /does not isolate entry imports/);
     for (const rule of [/doctor.*unknown\/failing/, /absolute project paths/, /Before answering.*ArkTS\/ArkUI\/@kit.*knowledge action=search\/read/,
       /exact signatures: code action=lsp op=hover\/definition.*project SDK/, /SDK declarations.*successful build > official docs > community hints/,
       /job action=wait, never repeat/, /Inspect needs_input before resume/,

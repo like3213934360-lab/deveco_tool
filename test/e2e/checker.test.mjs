@@ -74,6 +74,45 @@ test("checker fix retains one current project diagnostic", async (t) => {
   assert.deepEqual(after.issues, again.issues);
 });
 
+test("CodeLinter retains real await misuse and explains declaration package limits", async (t) => {
+  const { call, directory } = await session(t);
+  const project = path.join(directory, "declarations"), file = "entry/src/main/ets/pages/LintProbe.ets";
+  await call("project", { action: "create", project, app_name: "Declarations", bundle_name: "com.devecomcp.declarations" });
+  const names = ["libprobe.so", "typed-probe"];
+  for (const name of names) {
+    const root = path.join(project, "entry/src/main/types", name);
+    fs.mkdirSync(root, { recursive: true });
+    fs.writeFileSync(path.join(root, "index.d.ts"), "export const declarationPromise: () => Promise<void>;\n");
+    fs.writeFileSync(path.join(root, "oh-package.json5"), JSON.stringify({ name, version: "1.0.0", types: "./index.d.ts" }));
+  }
+  const manifestFile = path.join(project, "entry/oh-package.json5");
+  const manifest = JSON.parse(fs.readFileSync(manifestFile, "utf8"));
+  manifest.dependencies = { ...manifest.dependencies, ...Object.fromEntries(names.map((name) => [name, `file:./src/main/types/${name}`])) };
+  fs.writeFileSync(manifestFile, JSON.stringify(manifest));
+  fs.writeFileSync(path.join(project, "entry/src/main/ets/pages/typed.d.ts"), "export const declarationPromise: () => Promise<void>;\n");
+  fs.writeFileSync(path.join(project, file), [
+    "import { declarationPromise as nativePromise } from 'libprobe.so';",
+    "import { declarationPromise as packagePromise } from 'typed-probe';",
+    "import { declarationPromise as relativePromise } from './typed';",
+    "export async function nativeCall(): Promise<void> { await nativePromise(); }",
+    "export async function packageCall(): Promise<void> { await packagePromise(); }",
+    "export async function relativeCall(): Promise<void> { await relativePromise(); }",
+    "export async function ordinaryPromise(): Promise<void> { await Promise.resolve(1); }",
+    "export async function realMisuse(): Promise<void> { await 1; }",
+  ].join("\n"));
+  await call("project", { action: "sync", project, wait: 1000 }).then((result) => waitJob(call, result));
+  const result = await call("code", { action: "lint", project, file });
+  const awaits = result.issues.filter((issue) => issue.rule === "@typescript-eslint/await-thenable");
+  assert.ok(awaits.some((issue) => issue.line === 8), "A real non-Promise await must remain a negative");
+  assert.ok(!awaits.some((issue) => issue.line === 6 || issue.line === 7), "Relative declarations and local Promise types remain valid");
+  assert.match(result.hints.join(" "), /declaration-only packages.*\.so.*before changing await/);
+  const raw = JSON.parse((await call("job", { action: "read", artifact_id: result.report_artifact, limit: 200 })).content);
+  const messages = raw.flatMap((item) => item.messages);
+  assert.equal(result.total, messages.length);
+  assert.equal(result.counts.error, messages.filter((message) => message.severity === "Error" || message.severity === "error" || message.severity === 2).length);
+  t.diagnostic(`Declaration package diagnostics on lines 4/5: ${awaits.filter((issue) => issue.line === 4 || issue.line === 5).length}; SDK output retained`);
+});
+
 for (const [kind, cases] of [["violations", violations], ["legal", legal]]) test(`checker ${kind}`, async (t) => {
   const { call, job, directory } = await session(t);
   const base = path.join(directory, "base");
