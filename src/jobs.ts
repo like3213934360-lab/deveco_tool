@@ -295,8 +295,8 @@ const hotStep = {
     const [install, pid] = await Promise.all([installStamp(target, project.bundleName, ctx.signal), pidOf(target, project.bundleName, ctx.signal)]);
     let sources: ReturnType<typeof hp.currentSources>, inputs: ReturnType<typeof hp.inputsSnapshot>;
     try {
-      sources = hp.currentSources(project.root, state?.sources);
-      inputs = hp.inputsSnapshot(project.root, state?.inputs && typeof state.inputs === "object" ? state.inputs : undefined, externalModules);
+      sources = hp.currentSources(project.root);
+      inputs = hp.inputsSnapshot(project.root, externalModules);
     } catch (error) {
       ctx.signal.throwIfAborted();
       return { path: "full", fallback_reason: `Build input identity is unverified: ${String(error)}` };
@@ -355,7 +355,7 @@ const baselineStep = {
       const started = Date.now();
       const { recordBaseline } = await import("./domains/hotreload.js");
       // Snapshot before compiling: an edit made while the baseline compiles is then seen as a change.
-      const sources = hp.currentSources(project.root), inputs = hp.inputsSnapshot(project.root, undefined, externalModules);
+      const sources = hp.currentSources(project.root), inputs = hp.inputsSnapshot(project.root, externalModules);
       await recordBaseline(project, module.name, project.bundleName, target, ctx.signal, ctx.outputs.install?.package_files);
       const { installStamp } = await import("./domains/device.js");
       const install = (await installStamp(target, project.bundleName, ctx.signal)) ?? "";

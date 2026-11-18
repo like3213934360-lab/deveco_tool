@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { atomicWrite } from "../core/files.js";
-import { diffSources, snapshotSources, trackedSource, type SourceSnapshot } from "./preflight.js";
+import { diffSources, snapshotFile, trackedSource, type SourceSnapshot } from "./preflight.js";
 import { pinStorage, storageGuard } from "../core/storage.js";
 
 /*
@@ -31,13 +31,14 @@ export interface HotState {
 
 /**
  * Everything except .ets/.ts that changes what the app is: resources, manifests, dependencies, native
- * code. Content-based like the source snapshot (an edit that is reverted is no change); hashes are
- * reused while mtime, ctime and size match, so only touched files are read.
+ * code. Content-based like the source snapshot (an edit that is reverted is no change); each capture
+ * reads the selected inputs, including external HAR files with unchanged timestamps.
  */
-export function inputsSnapshot(root: string, previous: SourceSnapshot = {}, externalModules: string[] = []): SourceSnapshot {
+export function inputsSnapshot(root: string, externalModules: string[] = []): SourceSnapshot {
   const skip = new Set(["node_modules", "oh_modules", "build", ".hvigor", ".git", ".idea", ".preview", ".arkpilot", ".local", ".scratch", ".agents", ".codex"]);
   const base = path.resolve(root);
   const out: SourceSnapshot = {};
+  const buffer = Buffer.allocUnsafe(64 * 1024);
   const stack = [base, ...new Set(externalModules)];
   while (stack.length) {
     const dir = stack.pop()!;
@@ -52,18 +53,7 @@ export function inputsSnapshot(root: string, previous: SourceSnapshot = {}, exte
       const local = !rel.startsWith("../") && !path.isAbsolute(rel);
       if ((local && trackedSource(rel) && /\/src\/main\/ets\//.test(rel)) || e.name === "BuildProfile.ets") continue;
       if (!e.isFile()) throw new Error(`Cannot prove build inputs for non-regular file: ${full}`);
-      {
-        const st = fs.statSync(full);
-        const s = `${st.mtimeMs},${st.ctimeMs}:${st.size}`;
-        const prev = previous[rel];
-        if (prev?.startsWith(`${s}:`)) out[rel] = prev;
-        else {
-          const hash = crypto.createHash("sha1"), buffer = Buffer.allocUnsafe(64 * 1024), fd = fs.openSync(full, "r");
-          try { for (let n; (n = fs.readSync(fd, buffer)) > 0;) hash.update(buffer.subarray(0, n)); }
-          finally { fs.closeSync(fd); }
-          out[rel] = `${s}:${hash.digest("hex").slice(0, 16)}`;
-        }
-      }
+      out[rel] = snapshotFile(full, buffer);
     }
   }
   return out;
@@ -117,6 +107,4 @@ export async function writeState(file: string, state: HotState) {
     try { atomicWrite(file, JSON.stringify(state)); } finally { release(); }
   });
 }
-export function currentSources(root: string, previous?: SourceSnapshot) {
-  return snapshotSources(root, previous);
-}
+export { snapshotSources as currentSources } from "./preflight.js";

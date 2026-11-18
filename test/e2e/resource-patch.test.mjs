@@ -319,4 +319,21 @@ test("resource patches preserve prior edits and restore the installed baseline",
   assert.equal(restored.patch_version, 0);
   await launch();
   await visible("code-original"); await visible("raw-original"); await visible("res-original"); await visible("har-original"); await visible("har-code-original");
+
+  await t.test("auto deploys a same-size edit in an indirect external HAR", async () => {
+    const auto = () => job("run", { action: "build_run", project, target, run_mode: "auto", wait: 0 });
+    // The first auto deployment warms the project and the second records its incremental baseline.
+    await auto();
+    await auto();
+    await visible("har-code-updated");
+    assert.equal((await auto()).result.path, "relaunch");
+    const times = fs.statSync(harSource);
+    fs.writeFileSync(harSource, harCode.replace("har-code-original", "har-code-changed"));
+    assert.equal(fs.statSync(harSource).size, times.size);
+    fs.utimesSync(harSource, times.atime, times.mtime);
+    const { result } = await auto();
+    assert.equal(result.path, "full");
+    assert.match(result.fallback_reason, /dependencies changed/);
+    await visible("har-code-changed");
+  });
 });

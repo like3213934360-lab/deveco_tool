@@ -17,7 +17,8 @@ const src = (f) => JSON.stringify(path.join(root, "src", f));
 const entry = path.join(out, "entry.ts");
 fs.writeFileSync(entry, [
   `export { screenDiff, stepAction, visibleLabels } from ${src("domains/uibatch.ts")};`,
-  `export { snapshotSources, diffSources, importersOf, sourceIdentity } from ${src("domains/preflight.ts")};`,
+  `export { snapshotSources, diffSources, importersOf, sourceIdentity, changedSources, rememberSources } from ${src("domains/preflight.ts")};`,
+  `export { closeDatabase } from ${src("core/db.ts")};`,
   `export { saveExecutedFlow, readFlow } from ${src("domains/flows.ts")};`,
   `export { parseSourceRefs, resolveRef, locate, snippet, mapPosition } from ${src("domains/sourcemap.ts")};`,
   `export { BuildOutputParser } from ${src("domains/project.ts")};`,
@@ -142,13 +143,13 @@ test("preflight: only real content edits count; build rewrites of BuildProfile.e
   const later = new Date(Date.now() + 5000);
   fs.utimesSync(path.join(proj, "entry/src/main/ets/pages/Other.ets"), later, later);
   write("entry/BuildProfile.ets", "gen2");
-  assert.deepEqual(m.diffSources(first, m.snapshotSources(proj, first)), []);
+  assert.deepEqual(m.diffSources(first, m.snapshotSources(proj)), []);
   assert.equal(m.sourceIdentity(first), m.sourceIdentity(m.snapshotSources(proj)));
   assert.equal(m.sourceIdentity(first), m.sourceIdentity(Object.fromEntries(Object.entries(first).reverse())));
   // A real edit and a new file are changes.
   write("entry/src/main/ets/pages/Index.ets", "a2");
   write("entry/src/main/ets/pages/New.ets", "n");
-  assert.deepEqual(m.diffSources(first, m.snapshotSources(proj, first)), ["entry/src/main/ets/pages/Index.ets", "entry/src/main/ets/pages/New.ets"]);
+  assert.deepEqual(m.diffSources(first, m.snapshotSources(proj)), ["entry/src/main/ets/pages/Index.ets", "entry/src/main/ets/pages/New.ets"]);
   assert.notEqual(m.sourceIdentity(first), m.sourceIdentity(m.snapshotSources(proj)));
   fs.rmSync(path.join(proj, "entry/src/main/ets/pages/Index.ets"));
   assert.notEqual(m.sourceIdentity(first), m.sourceIdentity(m.snapshotSources(proj)));
@@ -445,19 +446,36 @@ test("hot path inputs: resources compared by content", () => {
   assert.deepEqual(Object.keys(a), ["entry/src/main/ets.ets", "entry/src/main/resources/base/element/string.json"]);
   const later = new Date(Date.now() + 5000);
   fs.utimesSync(f, later, later);
-  assert.deepEqual(m.changedInputs(a, m.inputsSnapshot(proj, a)), [], "touched, same content");
+  assert.deepEqual(m.changedInputs(a, m.inputsSnapshot(proj)), [], "touched, same content");
   fs.writeFileSync(f, '{"x":1}');
-  assert.deepEqual(m.changedInputs(a, m.inputsSnapshot(proj, a)), ["entry/src/main/resources/base/element/string.json"]);
+  assert.deepEqual(m.changedInputs(a, m.inputsSnapshot(proj)), ["entry/src/main/resources/base/element/string.json"]);
   const previousTime=fs.statSync(f), baseline=m.inputsSnapshot(proj);
   fs.writeFileSync(f,'{"y":2}');fs.utimesSync(f,previousTime.atime,previousTime.mtime);
-  assert.deepEqual(m.changedInputs(baseline,m.inputsSnapshot(proj,baseline)),["entry/src/main/resources/base/element/string.json"],"restored mtime must not hide a same-size edit");
+  assert.deepEqual(m.changedInputs(baseline,m.inputsSnapshot(proj)),["entry/src/main/resources/base/element/string.json"],"restored mtime must not hide a same-size edit");
   const har = fs.mkdtempSync(path.join(out, "external-har-"));
   const externalSource = path.join(har, "src/main/ets/Index.ets");
   fs.mkdirSync(path.dirname(externalSource), { recursive: true });
   fs.writeFileSync(externalSource, "old");
-  const withHar = m.inputsSnapshot(proj, {}, [har]);
+  const withHar = m.inputsSnapshot(proj, [har]);
+  const key = path.relative(proj, externalSource).split(path.sep).join("/");
+  const legacy = { ...withHar, [key]: "1000,1000:3:c00dbbc9dadfbe1e" }; // SHA-1 prefix of "old"
+  assert.deepEqual(m.changedInputs(legacy, withHar), []);
   fs.writeFileSync(externalSource, "new");
-  assert.deepEqual(m.changedInputs(withHar, m.inputsSnapshot(proj, withHar, [har])), [path.relative(proj, externalSource).split(path.sep).join("/")]);
+  assert.deepEqual(m.changedInputs(legacy, m.inputsSnapshot(proj, [har])), [key]);
+});
+
+test("preflight detects a changed source with identical legacy timestamps and size", async (t) => {
+  const project = fs.mkdtempSync(path.join(out, "same-stamp-"));
+  const file = path.join(project, "Index.ets");
+  fs.writeFileSync(file, "new");
+  const { mtimeMs, ctimeMs, size } = fs.statSync(file);
+  t.after(() => m.closeDatabase());
+  // Persist the old bytes' digest with precisely the metadata of the new bytes.
+  await m.rememberSources(project, { "Index.ets": `${mtimeMs},${ctimeMs}:${size}:c00dbbc9dadfbe1e` });
+  const changed = await m.changedSources(project);
+  assert.deepEqual(changed.files, ["Index.ets"]);
+  await m.rememberSources(project, changed.snapshot);
+  assert.deepEqual((await m.changedSources(project)).files, []);
 });
 
 test("artifact read hints: every artifact id in any response shape gets a job read line", () => {

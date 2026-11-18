@@ -32,7 +32,7 @@
 | `npm run test:e2e` | 现有 SDK 的模板、静态设计源与快照导出、ArkUI 页面与资源审查导入、HDS 候选修订、离线 PNG 比对、Native C++ HAP、混合诊断、语言服务重同步、ELF 符号化、外部 HAR、编译失败后修复并恢复任务、Kit、增量 HAR/HSP 构建；仅在专用证据目录创建工程 |
 | `npm run test:sdk` | 指定现有专用工程的 ArkTS/C++、编译、lint、API 扫描、30 模块 × 6 设备类型解析；独立知识示例编译仅需 SDK 与 E2E_DIR |
 | `npm run test:device` | 显式设备及专用应用（默认 USB，模拟器须 E2E_DEVICE_KIND=emulator）：设备、手势、清空输入、流程、任务、引导、崩溃、生命周期；手势工程入口页使用 `test/fixtures/gesture-page.ets`，等价性场景会重新安装 |
-| `npm run test:resource-patch` | E2E_DIR、E2E_TARGET（临时模拟器）、E2E_PROJECT（默认产品的单入口专用工程）；验证功能模块和 HSP、同批 HQF、连续资源及代码补丁、间接外部 HAR、安装时间、包摘要、恢复和页面内容 |
+| `npm run test:resource-patch` | E2E_DIR、E2E_TARGET（临时模拟器）、E2E_PROJECT（默认产品的单入口专用工程）。验证功能模块和 HSP、同批 HQF、连续补丁、安装时间、包摘要与恢复，并通过页面内容核验间接外部 HAR 的等长编辑触发完整部署。 |
 | `npm run test:ui-gestures` | E2E_DIR、E2E_TARGET（临时模拟器）、E2E_PROJECT（专用工程）；验证双指手势、长按实测时长和取消、XPath/正则滚动查找、窗口作用域和 Deep Link 冷启动、热启动及错误路径 |
 | `npm run test:recording` | 指定设备全新录制、取回、严格解码、最终 idle；不改变原视频 |
 | `npm run test:video -- /absolute/video.mp4 /absolute/new-receipt.json` | 只读检查已有视频，回执排他创建 |
