@@ -10,7 +10,7 @@ const root = path.resolve(import.meta.dirname, "../.."), work = temporaryDirecto
 process.env.DEVECO_STATE_DIR = path.join(work, "state");
 const bundle = path.join(work, "device-controls-test.mjs");
 const f = globalThis.__controls = { calls: [], respond: () => ({ code: 0, stdout: "success", stderr: "" }) };
-await build({ stdin: { contents: `export * from './src/domains/device-controls.ts'; export { playback, locationMock } from './src/domains/device-media-location.ts'; export { networkSimulation } from './src/domains/network-simulation.ts'; export { install, validatePackages } from './src/domains/device.ts';`, resolveDir: root }, outfile: bundle,
+await build({ stdin: { contents: `export * from './src/domains/device-controls.ts'; export { playback, locationMock } from './src/domains/device-media-location.ts'; export { networkSimulation } from './src/domains/network-simulation.ts'; export { install, validatePackages } from './src/domains/device.ts'; export { closeDatabase } from './src/core/db.ts';`, resolveDir: root }, outfile: bundle,
   bundle: true, platform: "node", format: "esm", packages: "external", logLevel: "error", plugins: [{ name: "transport", setup(b) {
     b.onResolve({ filter: /(?:proc|toolchain|ui)\.js$/ }, (a) => /domains\/(?:device|device-controls)\.ts$/.test(a.importer.replaceAll("\\", "/")) ? { path: path.basename(a.path, ".js"), namespace: "transport" } : undefined);
     b.onLoad({ filter: /.*/, namespace: "transport" }, (a) => ({ contents: {
@@ -20,7 +20,11 @@ await build({ stdin: { contents: `export * from './src/domains/device-controls.t
     }[a.path] }));
   } }] });
 const m = await import(pathToFileURL(bundle).href), signal = new AbortController().signal;
-after(() => { delete globalThis.__controls; fs.rmSync(bundle, { force: true }); fs.rmSync(work, { recursive: true, force: true }); });
+after(() => {
+  m.closeDatabase();
+  delete globalThis.__controls;
+  fs.rmSync(work, { recursive: true, force: true });
+});
 function reply(stdout, code = 0, stderr = "") { return { code, stdout, stderr }; }
 test("failed simulation rolls back its active scenario and custom record, without suppressing the device failure", async () => {
   f.calls = [];
