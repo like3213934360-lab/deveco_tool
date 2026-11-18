@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export interface ToolContext {
   signal: AbortSignal;
+  fromJob?: true;
 }
 /** Handlers may attach one image; the server emits it as MCP image content. */
 export interface ImageResult {
@@ -40,10 +41,10 @@ export const SYNC_WAIT_MS = MAX_WAIT_MS - 3000;
 
 /** Shared field helpers keep descriptions consistent across tools. */
 export const fields = {
-  project: z.string().min(1).describe("Absolute project root"),
+  project: z.string().min(1).describe("Absolute root"),
   product: z.string().min(1).optional(),
   modules: z.array(z.string().min(1)).max(64).optional().describe("Module or name@target"),
   target: z.string().min(1).optional().describe("Device serial/name; multiple devices: ask user"),
   requestKey: z.string().min(1).max(200).optional().describe("Dedup key"),
-  wait: z.number().int().min(0).max(MAX_WAIT_MS).optional().describe("Wait ms; then job wait"),
+  wait: z.number().int().min(0).max(MAX_WAIT_MS).optional().describe("ms; then job wait"),
 };

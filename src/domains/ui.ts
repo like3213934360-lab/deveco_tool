@@ -2,13 +2,15 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import net from "node:net";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import zlib from "node:zlib";
 import { StringDecoder } from "node:string_decoder";
 import { setTimeout as delay } from "node:timers/promises";
 import { artifactDir, commitArtifact, saveArtifact, trackExport } from "../core/artifacts.js";
 import { config, assetRoot } from "../core/config.js";
 import { errorResult, invariant, ToolError } from "../core/errors.js";
-import { assertConnected, hdc, shell } from "./device.js";
+import { clip } from "../core/files.js";
+import { assertConnected, deviceInfo, hdc, shell } from "./device.js";
 
 import { queryNodes } from "./ui-query.js";
 import { automaticResult } from "./agreements.js";
@@ -90,7 +92,7 @@ export function flatten(raw: unknown): UiNode[] {
     const attrs = (node.attributes ?? node.$attrs ?? {}) as Record<string, unknown>;
     const type = String(node.$type ?? attrs.type ?? "");
     const bundle = str(attrs.bundleName) ?? cur.bundle;
-    const window = str(attrs.windowId) ?? cur.window;
+    const window = str(attrs.hostWindowId ?? attrs.windowId) ?? cur.window;
     const text = [attrs.text, attrs.content, attrs.label, attrs.accessibilityText, attrs.description]
       .find((v) => typeof v === "string" && v.trim()) as string | undefined;
     const index = nodes.length;
@@ -314,18 +316,22 @@ export function parseWindows(raw: string): WindowInfo[] {
   const header = lines.findIndex((l) => l.trimStart().startsWith("WindowName"));
   if (header < 0) return [];
   const focus = Number(/Focus window:\s*(\d+)/.exec(raw)?.[1]);
+  const displayFocus = new Map([...raw.matchAll(/^\s*DisplayId:\s*(\d+)\s+WindowId:\s*(-?\d+)\s*$/gm)]
+    .map(([, display, id]) => [Number(display), Number(id)]));
   const out: WindowInfo[] = [];
   let visible = true;
   for (const line of lines.slice(header + 1)) {
     const t = line.trim();
     if (/^-{5,}$/.test(t)) { visible = false; continue; } // below the separator: hidden windows
-    if (!t || /^(Focus window|All Focus|Total window)/.test(t)) break;
+    if (/^(Focus window|All Focus|Total window)/.test(t)) break;
+    if (t.startsWith("WindowName")) { visible = true; continue; }
+    if (!t || /^(?:-+)?ScreenGroup/.test(t)) continue;
     const tok = t.split(/\s+/);
     if (tok.length < 5) continue;
     const [name, display, pid, id, type] = [tok[0]!, Number(tok[1]), Number(tok[2]), Number(tok[3]), Number(tok[4])];
     if (![display, pid, id, type].every(Number.isFinite)) continue;
     const rect = /\[\s*(-?\d+)\s+(-?\d+)\s+(\d+)\s+(\d+)\s*\]/.exec(t);
-    out.push({ id, name, pid, display, type, focused: id === focus, visible, ...(rect ? { bounds: rect.slice(1, 5).map(Number) } : {}) });
+    out.push({ id, name, pid, display, type, focused: id === (displayFocus.get(display) ?? focus), visible, ...(rect ? { bounds: rect.slice(1, 5).map(Number) } : {}) });
   }
   return out;
 }
@@ -337,16 +343,45 @@ export async function listWindows(target: string, all = false, signal?: AbortSig
   return all ? windows : windows.filter((w) => w.type < 2000 || w.focused);
 }
 
+/** Inspect the launched process's focused window with the same geometry rules as DevEco CLI. */
+export async function launchOverlap(target: string, pid: number, bundle: string, signal: AbortSignal) {
+  try {
+    const windows = (await listWindows(target, true, signal)).filter(w => w.pid === pid && w.focused && w.visible);
+    if (windows.length !== 1) return { status: "inconclusive", reason: "no unique focused window for the launched process" };
+    const win = windows[0]!;
+    const nodes = await dumpTree(target, signal, 0, { window: win.id, display: win.display });
+    const own = nodes.filter(n => n.window === String(win.id) && n.bundle === bundle);
+    if (!own.length || own.length > 512 || own.some(n => n.depth > 64))
+      return { status: "inconclusive", reason: "window identity missing or layout exceeds analysis budget", nodes: own.length };
+    type Tree = { attributes: UiNode["attributes"]; children: Tree[] };
+    const roots: Tree[] = [], byId = new Map<number, Tree>();
+    for (const n of own) {
+      const item: Tree = { attributes: n.attributes, children: [] };
+      (byId.get(n.parent ?? -1)?.children ?? roots).push(item);
+      byId.set(n.i, item);
+    }
+    const { analyzeOverlap } = await import(pathToFileURL(path.join(assetRoot, "resources/vendor/smoke-overlap.mjs")).href);
+    const analysis: { noBounds: boolean; hits: { confidence: number }[] } = analyzeOverlap(roots.length === 1 ? roots[0] : { children: roots });
+    if (analysis.noBounds) return { status: "inconclusive", reason: "window has no geometry" };
+    return { status: analysis.hits.some(hit => hit.confidence >= 1) ? "failed" : "passed", window: win.id, display: win.display, hits: analysis.hits };
+  } catch (error) {
+    signal.throwIfAborted();
+    return { status: "inconclusive", error: errorResult(error) };
+  }
+}
+
 /** One bounded query after an absent match, never on each poll or a successful visible match. */
-async function missingUiContext(target: string, scope: { window?: number; bundle?: string }, signal?: AbortSignal) {
+async function missingUiContext(target: string, scope: { window?: number; bundle?: string; display?: number }, signal?: AbortSignal) {
   try {
     const dump = await shell(target, ["hidumper", "-s", "WindowManagerService", "-a", "-a"], signal, 3000);
     invariant(dump.code === 0 && !dump.truncated && /^\s*WindowName\s/m.test(dump.stdout) && /Focus window:\s*-?\d+/.test(dump.stdout),
       "DEVICE_OUTPUT_INVALID", "Window context is unavailable or incomplete");
     const windows = parseWindows(dump.stdout), visible = windows.filter((w) => w.visible);
-    const focused = visible.find((w) => w.focused);
+    const requested = windows.find((w) => w.id === scope.window);
+    const selectedDisplay = scope.display ?? requested?.display;
+    const focused = visible.find((w) => w.focused && (selectedDisplay === undefined || w.display === selectedDisplay));
     // OpenHarmony wm_common.h WindowType: KEYGUARD=2110, DESKTOP=2001. Names vary by host.
-    const display = windows.find((w) => w.id === scope.window)?.display ?? focused?.display;
+    const display = selectedDisplay ?? focused?.display;
     const keyguard = visible.find((w) => w.type === 2110 && (display === undefined || w.display === display));
     const status = keyguard ? "lockscreen_visible" : focused?.type === 2001 ? "desktop"
       : focused ? focused.type < 2000 ? "application" : "system_window" : "no_focused_window";
@@ -369,10 +404,10 @@ async function missingUiContext(target: string, scope: { window?: number; bundle
 const cache = new Map<string, { at: number; nodes: UiNode[] }>();
 const nativeSizes = new Map<string, { w: number; h: number }>();
 
-export async function dumpTree(target: string, signal?: AbortSignal, maxAgeMs = 0, scope: { window?: number; bundle?: string; all_windows?: boolean } = {}): Promise<UiNode[]> {
+export async function dumpTree(target: string, signal?: AbortSignal, maxAgeMs = 0, scope: { window?: number; bundle?: string; display?: number; all_windows?: boolean } = {}): Promise<UiNode[]> {
   if (scope.all_windows) {
     // Every window on every display (upstream --all-windows): one unmerged dump per display.
-    invariant(scope.window === undefined, "INVALID_INPUT", "all_windows and window are mutually exclusive");
+    invariant(scope.window === undefined && scope.display === undefined, "INVALID_INPUT", "all_windows excludes window and display");
     const displays = [...new Set((await listWindows(target, true, signal)).map((w) => w.display))];
     const all: UiNode[] = [];
     for (const d of displays.length ? displays : [0]) {
@@ -381,12 +416,13 @@ export async function dumpTree(target: string, signal?: AbortSignal, maxAgeMs = 
     }
     return all;
   }
-  const scoped = scope.window !== undefined || scope.bundle !== undefined;
+  const scoped = scope.window !== undefined || scope.bundle !== undefined || scope.display !== undefined;
   const hit = cache.get(target);
   if (!scoped && hit && Date.now() - hit.at <= maxAgeMs) return hit.nodes;
   const extra: string[] = [];
   if (scope.window !== undefined) extra.push("-w", String(scope.window));
   else if (scope.bundle && /^[\w.]+$/.test(scope.bundle)) extra.push("-b", scope.bundle);
+  if (scope.display !== undefined) extra.push("-d", String(scope.display));
   const nodes = await dumpRaw(target, extra, signal);
   if (scope.window !== undefined && scope.bundle) {
     invariant(nodes.some((n) => n.bundle), "EVIDENCE_MISSING", "Window tree does not expose bundle identity; use window or bundle alone");
@@ -458,17 +494,21 @@ export async function screenshot(target: string, options: { format?: "jpeg" | "p
 /* -------------------------------- actions -------------------------------- */
 
 export type Action =
-  | { action: "click" | "double_click" | "long_click"; x: number; y: number }
-  | { action: "swipe" | "drag" | "fling"; x: number; y: number; x2: number; y2: number; speed?: number }
+  | { action: "click" | "double_click"; x: number; y: number; window?: number }
+  | { action: "long_click"; x: number; y: number; durationMs?: number }
+  | { action: "swipe" | "drag" | "fling"; x: number; y: number; x2: number; y2: number; speed?: number; to?: Selector; window?: number }
   | { action: "scroll"; direction: "up" | "down" | "left" | "right"; speed?: number; selector?: Selector }
+  | { action: "scroll_start" | "scroll_end" | "scroll_find"; selector: Selector; to?: Selector; direction?: "up" | "down" | "left" | "right"; speed?: number; scrollOffset?: number; timeoutMs?: number }
   | { action: "key"; key: string }
   | { action: "input"; x: number; y: number; text: string; append?: boolean }
+  | { action: "clear_text"; x?: number; y?: number; window?: number; selector?: Selector }
   | { action: "type"; text: string }
   | { action: "keys"; keys: string[] }
   | { action: "mouse_click" | "mouse_double_click" | "mouse_long_click"; x: number; y: number; button?: "left" | "right" | "middle"; keys?: string[] }
   | { action: "mouse_move"; x: number; y: number }
   | { action: "mouse_scroll"; x: number; y: number; direction: "up" | "down"; ticks?: number; keys?: string[] }
-  | { action: "mouse_drag"; x: number; y: number; x2: number; y2: number; speed?: number };
+  | { action: "mouse_drag"; x: number; y: number; x2: number; y2: number; speed?: number }
+  | { action: "pinch" | "rotate"; x?: number; y?: number; selector?: Selector; scale?: number; degrees?: number; radius?: number; speed?: number };
 
 const keyAliases: Record<string, string> = { back: "Back", home: "Home", power: "Power", enter: "2054", delete: "2055", backspace: "2055", tab: "2049", menu: "2067", volume_up: "16", volume_down: "17" };
 /** Keys usable in chords (OpenHarmony KeyCode values). */
@@ -536,17 +576,101 @@ function mouseRequest(a: Extract<Action, { action: `mouse_${string}` }>): { api:
 
 const uiInputOk = (out: string, code: number | null) => code === 0 && (!out || /No Error|success/i.test(out));
 
+export async function requireActionWindow(target: string, id: number, signal?: AbortSignal, options: { allowUnfocused?: boolean; display?: number } = {}) {
+  const windows = await listWindows(target, true, signal);
+  const match = windows.find(w => w.id === id);
+  invariant(match?.visible, "UI_NOT_FOUND", `Window ${id} is unavailable`);
+  invariant(options.display === undefined || match.display === options.display, "CONFLICT", "The window belongs to another display", { window: id, display: match.display });
+  invariant(match.bounds && match.bounds[2]! > 0 && match.bounds[3]! > 0, "EVIDENCE_MISSING", `Window ${id} has no input bounds`);
+  invariant(match.focused || options.allowUnfocused, "CONFLICT", `Window ${id} must have focus before sending keyboard input`);
+  return { display: match.display, bounds: match.bounds, focused: match.focused };
+}
+
+/** The merged, filtered UiTest tree reports the exposed bounds and owning window on a display. */
+export function checkExposedGesture(nodes: UiNode[], window: number, points: number[][]) {
+  invariant(points.length, "CONFLICT", "Input to an unfocused window needs an exposed point");
+  const id = String(window), visible = nodes.filter(n => n.window && n.visible !== false && n.rect && n.rect.x2 > n.rect.x1 && n.rect.y2 > n.rect.y1);
+  const inside = (p: number[], r: Rect) => p[0]! >= r.x1 && p[0]! < r.x2 && p[1]! >= r.y1 && p[1]! < r.y2;
+  const xs = points.map(p => p[0]!), ys = points.map(p => p[1]!);
+  const blocked = visible.some(n => n.window !== id && n.attributes?.hitTestBehavior !== "HitTestMode.None" &&
+    n.rect!.x1 <= Math.max(...xs) && n.rect!.x2 > Math.min(...xs) && n.rect!.y1 <= Math.max(...ys) && n.rect!.y2 > Math.min(...ys));
+  invariant(!blocked && points.every(p => visible.some(n => n.window === id && inside(p, n.rect!))),
+    "CONFLICT", "UiTest cannot confirm the gesture is exposed in the requested window", { window });
+}
+
+async function timedLongClick(target: string, x: number, y: number, duration: number, signal?: AbortSignal) {
+  invariant(Number.isSafeInteger(x) && Number.isSafeInteger(y), "INVALID_INPUT", "Long press coordinates must be integers");
+  signal?.throwIfAborted();
+  const dir = `/data/local/tmp/deveco-press-${crypto.randomBytes(12).toString("hex")}`;
+  const marker = `${dir}/pid`;
+  // read_stat uses shell built-ins: some device images have no awk. Strip the PID and parenthesized comm before taking field 22.
+  const readStat = `read_stat() {
+  IFS= read -r stat_line < "/proc/$1/stat" || return 1
+  set -- \${stat_line##*) }
+  printf '%s\\n' "\${20}"
+}`;
+  // Keep the sleep in a shell we own. The uinput binary can run with privileges the HDC shell cannot signal.
+  const command = `${readStat}
+stamp=$(read_stat "$$") && [ -n "$stamp" ] && printf '%s %s\\n' "$$" "$stamp" > ${marker} || exit 1
+sleeper=''
+trap 'if [ -n "$sleeper" ]; then kill "$sleeper" 2>/dev/null; fi; exit 1' TERM
+uinput -T -d ${x} ${y} || exit 1
+sleep ${(duration / 1000).toFixed(3)} &
+sleeper=$!
+wait "$sleeper" && uinput -T -u ${x} ${y}`;
+  let active = false;
+  let preserveReceipt = false;
+  try {
+    const setup = await shell(target, [`mkdir ${dir} && printf 'ready\\n'`], signal, 5000);
+    invariant(setup.code === 0 && setup.stdout.trim() === "ready", "UI_ACTION_FAILED", "Could not reserve the remote press process");
+    active = true;
+    const result = await shell(target, [command], signal, duration + 6000);
+    const lines = result.stdout.split(/\r?\n/), down = lines.indexOf(`touch down ${x} ${y}`), up = lines.indexOf(`touch up ${x} ${y}`);
+    active = down >= 0 && up < down;
+    invariant(result.code === 0 && down >= 0 && up > down && result.elapsedMs >= duration,
+      "UI_ACTION_FAILED", "Timed long press was rejected or ended early", { output: clip(result.stdout + result.stderr, 300) });
+  } catch (error) {
+    if (active) {
+      try {
+        // A cancelled HDC client can leave the sleep running. Stop its owner before sending UP.
+        const stop = `${readStat}
+if ! rmdir ${dir} 2>/dev/null && [ -d ${dir} ]; then
+  read pid stamp < ${marker} || exit 1
+  case "$pid$stamp" in ''|*[!0-9]*) exit 1;; esac
+  [ "$pid" -gt 1 ] && [ -n "$stamp" ] || exit 1
+  if [ "$(read_stat "$pid" 2>/dev/null)" = "$stamp" ]; then
+    kill "$pid" || exit 1
+  fi
+fi
+uinput -T -u ${x} ${y}`;
+        const release = await shell(target, [stop], undefined, 4000);
+        invariant(release.code === 0 && release.stdout.split(/\r?\n/).includes(`touch up ${x} ${y}`),
+          "UI_ACTION_FAILED", "Could not stop the remote press and confirm touch release", { output: clip(release.stdout + release.stderr, 250) });
+      } catch (cleanup) {
+        preserveReceipt = true;
+        throw new ToolError("EFFECT_UNCERTAIN", "Interrupted press could still be active", { path: dir, cause: errorResult(error), cleanup: errorResult(cleanup) });
+      }
+    }
+    throw error;
+  } finally {
+    if (!preserveReceipt) {
+      const cleaned = await shell(target, [`rm -rf ${dir} && printf 'removed\\n'`], undefined, 4000);
+      invariant(cleaned.code === 0 && cleaned.stdout.trim() === "removed", "DEVICE_CLEANUP_FAILED", "Could not remove the remote press receipt", { path: dir });
+    }
+  }
+}
+
 /** Shared by actions, batches and flows; observation alone stays read-only. */
-export async function acceptAgreements(target: string, signal?: AbortSignal, initial?: UiNode[], settleMs = 0) {
+export async function acceptAgreements(target: string, signal?: AbortSignal, initial?: UiNode[], settleMs = 0, display?: number) {
   const { auto_accept_ui_agreements: agreements, auto_complete_ui_onboarding: onboarding } = config();
   if (!agreements && !onboarding) return { nodes: initial, accepted: [] as { text: string; kind: string }[] };
   const { resolveAgreements } = await import("./agreements.js");
-  return resolveAgreements(initial ?? await dumpTree(target, signal, 1500), {
+  return resolveAgreements(initial ?? await dumpTree(target, signal, 1500, { display }), {
     settleMs, agreements, onboarding,
-    read: async () => { await new Promise((r) => setTimeout(r, 500)); invalidate(target); return dumpTree(target, signal); },
+    read: async () => { await new Promise((r) => setTimeout(r, 500)); invalidate(target); return dumpTree(target, signal, 0, { display }); },
     click: async (node) => {
       const point = center(node);
-      const r = await shell(target, ["uitest", "uiInput", "click", String(point.x), String(point.y)], signal, 15000);
+      const r = await shell(target, ["uitest", "uiInput", "click", String(point.x), String(point.y), ...(display === undefined ? [] : [String(display)])], signal, 15000);
       invariant(uiInputOk((r.stdout + r.stderr).trim(), r.code), "UI_ACTION_FAILED", "Automatic UI click failed");
       invalidate(target);
     },
@@ -563,7 +687,18 @@ export function scrollGesture(rect: Rect, direction: "up" | "down" | "left" | "r
 }
 
 export async function act(target: string, a: Action, signal?: AbortSignal) {
-  const consent = await acceptAgreements(target, signal);
+  const scoped = (a.action === "click" || a.action === "clear_text" || a.action === "swipe" || a.action === "drag") && a.window !== undefined ? a : undefined;
+  const inputWindow = scoped && await requireActionWindow(target, scoped.window!, signal, { allowUnfocused: true });
+  const displayScope = inputWindow ? inputWindow.display : undefined;
+  const consent = await acceptAgreements(target, signal, undefined, 0, displayScope);
+  if (scoped && inputWindow) {
+    const [left, top, width, height] = inputWindow.bounds;
+    const points = scoped.action === "swipe" || scoped.action === "drag" ? [[scoped.x, scoped.y], [scoped.x2, scoped.y2]]
+      : scoped.x === undefined ? [] : [[scoped.x, scoped.y!]];
+    invariant(points.every(([x, y]) => x! >= left! && x! < left! + width! && y! >= top! && y! < top! + height!),
+      "UI_NO_BOUNDS", `Gesture points must be inside window ${scoped.window}`, { bounds: inputWindow.bounds });
+    if (!inputWindow.focused) checkExposedGesture(await dumpTree(target, signal, 0, { display: inputWindow.display }), scoped.window!, points);
+  }
   const scroll = a.action === "scroll" && a.selector ? a : undefined;
   let before: string | undefined;
   if (scroll) {
@@ -575,7 +710,7 @@ export async function act(target: string, a: Action, signal?: AbortSignal) {
   }
   const completed = async (result: { performed: string; method?: string }) => {
     try {
-      consent.accepted.push(...(await acceptAgreements(target, signal, undefined, 1000)).accepted);
+      consent.accepted.push(...(await acceptAgreements(target, signal, undefined, 1000, displayScope)).accepted);
       let motion;
       if (scroll) {
         const nodes = await dumpTree(target, signal), matches = select(nodes, scroll.selector!), node = matches.length === 1 ? matches[0] : undefined;
@@ -590,14 +725,52 @@ export async function act(target: string, a: Action, signal?: AbortSignal) {
     }
   };
   invalidate(target);
-  if (a.action === "input" && !a.append) {
-    // Replace semantics (what hosts expect): focus, select all (Ctrl+A), delete.
-    for (const args of [["click", String(a.x), String(a.y)], ["keyEvent", "2072", "2017"], ["keyEvent", "2055"]]) {
+  if (a.action === "clear_text" || (a.action === "input" && !a.append)) {
+    invariant((a.x === undefined) === (a.y === undefined), "INVALID_INPUT", "Clearing needs both x,y or neither");
+    const focus = a.x !== undefined ? [["click", String(a.x), String(a.y), ...(inputWindow ? [String(inputWindow.display)] : [])]] : [];
+    for (const args of [...focus, ...(inputWindow && inputWindow.display !== 0 ? [] : [["keyEvent", "2072", "2017"], ["keyEvent", "2055"]])]) {
       const r = await shell(target, ["uitest", "uiInput", ...args], signal, 15000);
       invariant(uiInputOk((r.stdout + r.stderr).trim(), r.code), "UI_ACTION_FAILED", `Clearing the field failed: ${r.stdout.trim()}`);
       await new Promise((resolve) => setTimeout(resolve, 250));
-      if (args[0] === "click") consent.accepted.push(...(await acceptAgreements(target, signal, undefined, 1000)).accepted);
+      if (args[0] === "click") {
+        const setup = await acceptAgreements(target, signal, undefined, 1000, displayScope);
+        consent.accepted.push(...setup.accepted);
+        if (scoped) await requireActionWindow(target, scoped.window!, signal);
+        if (setup.accepted.length && scoped?.action === "clear_text") {
+          invariant(scoped.selector, "UI_OBSERVATION_FAILED", "Input setup changed the UI. Select the field again before clearing it");
+          const nodes = await dumpTree(target, signal, 0, { window: scoped.window, display: inputWindow!.display });
+          const field = requireMatch(select(nodes, scoped.selector), scoped.selector);
+          if (!field.focused) {
+            const point = center(field);
+            const click = await shell(target, ["uitest", "uiInput", "click", String(point.x), String(point.y), String(inputWindow!.display)], signal, 15000);
+            invariant(uiInputOk((click.stdout + click.stderr).trim(), click.code), "UI_ACTION_FAILED", "Cannot return focus to the requested field");
+            await requireActionWindow(target, scoped.window!, signal);
+          }
+        }
+      }
     }
+    if (inputWindow && inputWindow.display !== 0) await withAgent(target, signal, async (call, driver) => {
+      await call("Driver.triggerCombineKeys", driver, [2072, 2017, 0, inputWindow.display]);
+      await call("Driver.triggerKey", driver, [2055, inputWindow.display]);
+    });
+  }
+  if (a.action === "clear_text") return completed({ performed: a.action });
+  if (a.action === "long_click" && a.durationMs !== undefined) {
+    await timedLongClick(target, a.x, a.y, a.durationMs, signal);
+    return { ...await completed({ performed: a.action, method: "uinput" }), duration_ms: a.durationMs };
+  }
+  if (a.action === "pinch" || a.action === "rotate") {
+    await twoFingerGesture(target, a, signal);
+    return completed({ performed: a.action, method: "uitest-agent" });
+  }
+  if (a.action === "scroll_start" || a.action === "scroll_end" || a.action === "scroll_find") {
+    const match = a.to ? scrollTarget(a.to) : undefined;
+    if (a.to && !match) {
+      const element = await layoutScroll(target, a, a.to, signal);
+      return { ...await completed({ performed: a.action, method: "uitest-layout" }), scroll_match: describe(element) };
+    }
+    await nativeScroll(target, a, match, signal);
+    return completed({ performed: a.action, method: "uitest-agent" });
   }
   if (a.action === "input" && /[^\x20-\x7e]|['"`]/.test(a.text)) {
     // uitest inputText drops non-ASCII (Chinese) text, and typed quotes go through the IME's smart
@@ -612,7 +785,8 @@ export async function act(target: string, a: Action, signal?: AbortSignal) {
     return completed({ performed: a.action, method: "uitest-agent" });
   }
   // One command string: hdc passes it to the device shell as-is, so deviceText()'s $(...) expands there.
-  const result = await shell(target, [["uitest", "uiInput", ...uiInput(a)].join(" ")], signal, 30000);
+  const display = inputWindow ? [String(inputWindow.display)] : [];
+  const result = await shell(target, [["uitest", "uiInput", ...uiInput(a), ...display].join(" ")], signal, 30000);
   const out = (result.stdout + result.stderr).trim();
   invariant(uiInputOk(out, result.code), "UI_ACTION_FAILED", `uiInput ${a.action} failed: ${out.slice(0, 300)}`);
   return completed({ performed: a.action });
@@ -627,8 +801,212 @@ export function treeSignature(nodes: UiNode[]) {
 /* ------------------------- non-ASCII text via uitest agent ------------------------- */
 
 type AgentCall = (api: string, self: string, args: unknown[]) => Promise<unknown>;
+
+const nativeScrollFlags = {
+  focused: "focused", scrollable: "scrollable", long_clickable: "longClickable", checkable: "checkable",
+  clickable: "clickable", checked: "checked", selected: "selected", enabled: "enabled",
+} as const;
+
+export function nativeScrollBudget(operation?: string) {
+  if (operation === "scroll_find") return 38000;
+  if (operation === "scroll_start" || operation === "scroll_end") return 22000;
+  return undefined;
+}
+
+export function scrollTarget(selector: Selector) {
+  const { key, text, type, description, exact, text_match: match } = selector;
+  invariant(selector.index === undefined, "INVALID_INPUT", "scroll_find to does not support index");
+  invariant(text !== undefined || (exact === undefined && match === undefined), "INVALID_INPUT", "Text matching options require text");
+  if (selector.xpath !== undefined || selector.regex !== undefined || selector.regex_flags !== undefined || selector.within || selector.id || selector.bundle) {
+    select([], selector);
+    return undefined;
+  }
+  const filters: { api: string; args: (string | number | boolean)[] }[] = [];
+  if (key) filters.push({ api: "On.id", args: [key, 0] });
+  if (type) filters.push({ api: "On.type", args: [type, 0] });
+  if (text) filters.push({ api: "On.text", args: [text, { exact: 0, contains: 1, prefix: 2, suffix: 3 }[match ?? (exact ? "exact" : "contains")]] });
+  if (description) filters.push({ api: "On.description", args: [description, 1] });
+  for (const field of Object.keys(nativeScrollFlags) as (keyof typeof nativeScrollFlags)[]) {
+    const state = selector[field];
+    if (state !== undefined) filters.push({ api: `On.${nativeScrollFlags[field]}`, args: [state] });
+  }
+  invariant(filters.length, "INVALID_INPUT", "scroll_find to needs at least one matcher");
+  return filters;
+}
+
+type ContainerScroll = Extract<Action, { action: "scroll_start" | "scroll_end" | "scroll_find" }>;
+
+async function layoutScroll(target: string, action: ContainerScroll, selector: Selector, signal?: AbortSignal) {
+  const milliseconds = action.timeoutMs ?? nativeScrollBudget(action.action)!;
+  const deadline = AbortSignal.timeout(milliseconds);
+  const budget = signal ? AbortSignal.any([signal, deadline]) : deadline;
+  const direction = action.direction ?? "down";
+  const horizontal = direction === "left" || direction === "right";
+  const forward = direction === "down" || direction === "right";
+  const visited = new Set<string>();
+  let sent = 0, gestureAttempted = false;
+  try {
+    for (;;) {
+      const tree = await dumpTree(target, budget);
+      const container = requireMatch(select(tree, action.selector), action.selector);
+      invariant(container.scrollable && container.rect, "INVALID_INPUT", "The selected container must be visible and scrollable");
+      const { x1, x2, y1, y2 } = container.rect;
+      const range = horizontal ? x2 - x1 : y2 - y1;
+      const offset = action.scrollOffset ?? Math.floor(range * 0.2);
+      invariant(range - 2 * offset >= 10, "UI_NO_BOUNDS", "Scroll offset leaves no room to scroll inside the container");
+      const viewport = subtree(tree, container.i).filter((node) => node.i !== container.i && node.visible !== false
+        && node.rect && Math.min(x2, node.rect.x2) > Math.max(x1, node.rect.x1) && Math.min(y2, node.rect.y2) > Math.max(y1, node.rect.y1));
+      const visible = new Set(viewport.map((node) => node.i));
+      const match = select(tree, selector).find((node) => visible.has(node.i));
+      if (match) return match;
+      // Ignore transient accessibility IDs and small elastic movement when the gesture hits an edge.
+      const signature = crypto.createHash("sha256").update(JSON.stringify(viewport.map((node) => [node.key, node.type, node.text, node.description, node.checked, node.selected,
+        horizontal ? Math.round((node.rect!.x1 - x1) / 8) : Math.round((node.rect!.y1 - y1) / 8)]))).digest("hex");
+      invariant(!visited.has(signature), "UI_NOT_FOUND", "The scroll viewport repeated before the target was found", { selector, gestures: sent });
+      visited.add(signature);
+      const start = (horizontal ? x1 : y1) + Math.max(1, offset), end = (horizontal ? x2 : y2) - Math.max(1, offset);
+      const middle = Math.round(horizontal ? (y1 + y2) / 2 : (x1 + x2) / 2);
+      const points = forward ? [end, start] : [start, end];
+      const args = horizontal ? [points[0], middle, points[1], middle] : [middle, points[0], middle, points[1]];
+      gestureAttempted = true;
+      const result = await shell(target, ["uitest", "uiInput", "swipe", ...args.map(String), String(action.speed ?? 600)], budget, 30000);
+      const output = (result.stdout + result.stderr).trim();
+      invariant(uiInputOk(output, result.code), "UI_ACTION_FAILED", `uiInput swipe failed: ${clip(output, 300)}`);
+      sent++;
+      await delay(500, undefined, { signal: budget });
+    }
+  } catch (error) {
+    if (deadline.aborted && !signal?.aborted) throw new ToolError("TIMEOUT", `Layout scroll exceeded ${milliseconds} ms`,
+      { timeout_ms: milliseconds, action_completed: false, gesture_attempted: gestureAttempted, gestures: sent });
+    throw error;
+  }
+}
+
+async function nativeScroll(target: string, action: ContainerScroll, match: ReturnType<typeof scrollTarget>, signal?: AbortSignal) {
+  const node = await resolveOne(target, action.selector, signal);
+  invariant(node.scrollable && node.rect, "INVALID_INPUT", "The selected container must be visible and scrollable");
+  const vertical = action.direction !== "left" && action.direction !== "right";
+  const span = vertical ? node.rect.y2 - node.rect.y1 : node.rect.x2 - node.rect.x1;
+  invariant(action.scrollOffset === undefined || action.scrollOffset * 2 < span, "UI_NO_BOUNDS", "Scroll offset leaves no room to scroll inside the container");
+  let gestureAttempted = false;
+  const budget = action.timeoutMs ?? nativeScrollBudget(action.action)!;
+  const expires = performance.now() + budget;
+  const perform = async (call: AgentCall, driver: string, refs: string[], mark: () => void) => {
+    const filter = await call(node.key ? "On.id" : "On.type", "On#seed", [node.key || node.type, 0]);
+    invariant(typeof filter === "string", "UI_AGENT_FAILED", "Invalid container selector reference");
+    refs.unshift(filter);
+    const candidates = await call("Driver.findComponents", driver, [filter]);
+    invariant(Array.isArray(candidates) && candidates.every((ref) => typeof ref === "string"), "UI_AGENT_FAILED", "Invalid scroll container references");
+    refs.unshift(...candidates);
+    invariant(candidates.length <= 40, "UI_AMBIGUOUS", "Too many matching native containers; select a container with a unique key");
+    const matches: string[] = [];
+    for (const ref of candidates) {
+      const b = await call("Component.getBounds", ref, []) as { left?: number; top?: number; right?: number; bottom?: number } | null;
+      if (b?.left === node.rect!.x1 && b?.top === node.rect!.y1 && b?.right === node.rect!.x2 && b?.bottom === node.rect!.y2) matches.push(ref);
+    }
+    invariant(matches.length === 1, matches.length ? "UI_AMBIGUOUS" : "UI_NOT_FOUND", "The native container could not be bound to the current layout");
+    if (match) {
+      let query = "On#seed";
+      for (const field of match) {
+        const next = await call(field.api, query, field.args);
+        invariant(typeof next === "string", "UI_AGENT_FAILED", "Invalid scroll target reference");
+        if (!refs.includes(next)) refs.unshift(next);
+        query = next;
+      }
+      const args = action.scrollOffset === undefined ? [query, vertical] : [query, vertical, action.scrollOffset];
+      gestureAttempted = true;
+      const found = await call("Component.scrollSearch", matches[0]!, args);
+      invariant(typeof found === "string", "UI_NOT_FOUND", "UITest reached the end of the search without finding the target", { selector: action.to, scrolled: true });
+      refs.unshift(found);
+    } else {
+      gestureAttempted = true;
+      await call(action.action === "scroll_start" ? "Component.scrollToTop" : "Component.scrollToBottom", matches[0]!, [action.speed ?? 1500]);
+    }
+    mark();
+  };
+  for (let attempt = 0; ; attempt++) {
+    try {
+      await withGestureAgent(target, action.action, perform, signal, Math.max(1, Math.ceil(expires - performance.now())));
+      return;
+    } catch (error) {
+      if (!(error instanceof ToolError)) throw error;
+      if (error.code === "TIMEOUT")
+        throw new ToolError("TIMEOUT", `UITest ${action.action} exceeded ${budget} ms`, { ...error.details, timeout_ms: budget, gesture_attempted: gestureAttempted },
+          gestureAttempted ? "Observe the device before issuing another action; the native scroll may still be in progress" : undefined);
+      // Reconnect once during selector binding. A scroll request may never be repeated after dispatch.
+      if (attempt || gestureAttempted || signal?.aborted || performance.now() >= expires
+        || !["UI_AGENT_CONNECTION", "UI_AGENT_CLOSED"].includes(error.code)) throw error;
+    }
+  }
+}
+
+async function withGestureAgent(target: string, action: string, perform: (call: AgentCall, driver: string, refs: string[], mark: () => void) => Promise<void>, signal?: AbortSignal, budgetMs = 22000) {
+  const timeout = AbortSignal.timeout(budgetMs);
+  const budget = signal ? AbortSignal.any([signal, timeout]) : timeout;
+  let injected = false;
+  try {
+    await withAgent(target, budget, async (call, driver) => {
+      const refs = [driver];
+      const clean = () => call("BackendObjectsCleaner", "", [...new Set(refs)]);
+      try {
+        await perform(call, driver, refs, () => { injected = true; });
+      } catch (error) {
+        // Object IDs are session-local. Closing the socket ends the session and a new connection can reuse the same IDs.
+        const disconnected = error instanceof ToolError && ["UI_AGENT_CONNECTION", "UI_AGENT_CLOSED", "UI_AGENT_TIMEOUT"].includes(error.code);
+        if (!budget.aborted && !disconnected) {
+          try { await clean(); }
+          catch (cleanup) {
+            throw new ToolError("UI_AGENT_FAILED", "Could not release the gesture's UITest objects",
+              { action_completed: injected, performed: action, cause: errorResult(error), cleanup: errorResult(cleanup) });
+          }
+        }
+        throw error;
+      }
+      await clean();
+    }, budgetMs);
+  } catch (error) {
+    if (injected) throw new ToolError("UI_OBSERVATION_FAILED", "Gesture completed before the connection failed",
+      { action_completed: true, performed: action, cause: errorResult(error) });
+    if (timeout.aborted && !signal?.aborted) throw new ToolError("TIMEOUT", `UITest ${action} exceeded ${budgetMs} ms`,
+      { timeout_ms: budgetMs, action_completed: false });
+    throw error;
+  }
+}
+
+async function twoFingerGesture(target: string, action: Extract<Action, { action: "pinch" | "rotate" }>, signal?: AbortSignal) {
+  const node = action.selector ? await resolveOne(target, action.selector, signal) : undefined;
+  const screen = (await deviceInfo(target, signal)).screen;
+  invariant(screen && screen.width > 0 && screen.height > 0, "EVIDENCE_MISSING", "Gesture screen bounds are unavailable");
+  const bounds = node?.rect ?? { x1: 0, y1: 0, x2: screen.width, y2: screen.height };
+  const x = action.x ?? Math.round((bounds.x1 + bounds.x2) / 2), y = action.y ?? Math.round((bounds.y1 + bounds.y2) / 2);
+  const available = Math.min(x - Math.max(0, bounds.x1), Math.min(screen.width, bounds.x2) - x - 1,
+    y - Math.max(0, bounds.y1), Math.min(screen.height, bounds.y2) - y - 1);
+  const radius = action.radius ?? Math.floor(Math.min(800, available * 0.8));
+  invariant(radius >= 10 && radius <= available, "UI_NO_BOUNDS", "Gesture radius does not fit inside the target");
+  const scale = action.scale ?? 1, radians = (action.degrees ?? 0) * Math.PI / 180;
+  const start = radius / Math.max(scale, 1), end = start * scale;
+  const distance = action.action === "pinch" ? Math.abs(end - start) : radius * Math.abs(radians);
+  const speed = action.speed ?? 600;
+  invariant(distance <= speed * 10, "INVALID_INPUT", "Gesture exceeds the input time budget; increase speed or reduce radius");
+  const steps = Math.max(3, Math.ceil(distance / 45) + 1);
+  await withGestureAgent(target, action.action, async (call, driver, refs, mark) => {
+    const matrix = await call("PointerMatrix.create", "PointerMatrix#seed", [2, steps]);
+    invariant(typeof matrix === "string", "UI_AGENT_FAILED", "Invalid pointer matrix reference");
+    refs.unshift(matrix);
+    for (const finger of [0, 1]) for (let step = 0; step < steps; step++) {
+      const progress = step / (steps - 1);
+      const theta = finger * Math.PI + progress * radians, distance = start + (end - start) * progress;
+      await call("PointerMatrix.setPoint", matrix, [finger, step,
+        { x: Math.round(x + distance * Math.cos(theta)), y: Math.round(y + distance * Math.sin(theta)) }]);
+    }
+    invariant(await call("Driver.injectMultiPointerAction", driver, [matrix, speed]) === true,
+      "UI_ACTION_FAILED", "UITest did not confirm multi-pointer injection");
+    mark();
+  }, signal);
+}
+
 /** Connect to the uitest hypium agent (starting it if needed), create a Driver, run fn, clean up. */
-async function withAgent(target: string, signal: AbortSignal | undefined, fn: (call: AgentCall, driver: string) => Promise<void>) {
+async function withAgent(target: string, signal: AbortSignal | undefined, fn: (call: AgentCall, driver: string) => Promise<void>, rpcMs?: number) {
   const machine = (await shell(target, ["uname", "-m"], signal)).stdout.trim();
   const unix = machine !== "x86_64";
   const asset = unix ? "uitest_agent_v1.2.2.so" : "uitest_agent_v1.1.9.x86_64.so";
@@ -671,7 +1049,7 @@ async function withAgent(target: string, signal: AbortSignal | undefined, fn: (c
     const active = socket;
     const driver = await agentRpc(active, "Driver.create", "", [], signal);
     invariant(typeof driver === "string", "UI_AGENT_FAILED", "Invalid driver reference");
-    await fn((api, self, args) => agentRpc(active, api, self, args, signal), driver);
+    await fn((api, self, args) => agentRpc(active, api, self, args, signal, rpcMs), driver);
   } finally {
     socket?.destroy();
     if (forward) await hdc(["-t", target, "fport", "rm", forward, endpoint], undefined, 5000, true).catch(() => {});
@@ -707,14 +1085,14 @@ export async function displayControl(target: string, operation: string, value: s
   return { target, rotation, ...(operation === "rotate" ? { verified: rotation === value, rotation_lock_side_effect: "UITest may disable rotation lock; restore it explicitly if needed" } : operation === "rotation_lock" ? { command_confirmed: true, state_verified: false, locked_requested: value } : {}) };
 }
 
-export function agentRpc(socket: net.Socket, api: string, self: string, args: unknown[], signal?: AbortSignal): Promise<unknown> {
+export function agentRpc(socket: net.Socket, api: string, self: string, args: unknown[], signal?: AbortSignal, timeoutMs = 15000): Promise<unknown> {
   signal?.throwIfAborted();
   if (socket.destroyed) return Promise.reject(new ToolError("UI_AGENT_CLOSED", "UiTest agent connection is closed; action was not sent"));
   return new Promise((resolve, reject) => {
     let raw = "";
     let settled = false;
     const decoder = new StringDecoder("utf8");
-    const timer = setTimeout(() => done(new ToolError("UI_AGENT_TIMEOUT", "UiTest agent timed out")), 15000);
+    const timer = setTimeout(() => done(new ToolError("UI_AGENT_TIMEOUT", "UiTest agent timed out")), timeoutMs);
     const done = (error?: Error, value?: unknown) => {
       if (settled) return;
       settled = true;
@@ -746,7 +1124,7 @@ export function agentRpc(socket: net.Socket, api: string, self: string, args: un
 
 /* ------------------------------ assertions ------------------------------ */
 
-export async function waitFor(target: string, selector: Selector, state: "visible" | "hidden", timeoutMs: number, signal?: AbortSignal, autoAccept = false, scope: { window?: number; bundle?: string } = {}) {
+export async function waitFor(target: string, selector: Selector, state: "visible" | "hidden", timeoutMs: number, signal?: AbortSignal, autoAccept = false, scope: { window?: number; bundle?: string; display?: number } = {}) {
   const deadline = Date.now() + timeoutMs;
   let last: UiNode[] = [];
   const accepted: { text: string; kind: string }[] = [];
@@ -754,7 +1132,7 @@ export async function waitFor(target: string, selector: Selector, state: "visibl
     signal?.throwIfAborted();
     let nodes = await dumpTree(target, signal, 0, scope);
     if (autoAccept) {
-      const consent = await acceptAgreements(target, signal, nodes);
+      const consent = await acceptAgreements(target, signal, nodes, 0, scope.display);
       nodes = consent.nodes ?? nodes;
       accepted.push(...consent.accepted);
     }
@@ -766,14 +1144,14 @@ export async function waitFor(target: string, selector: Selector, state: "visibl
   }
 }
 
-export async function findElements(target: string, selector: Selector, options: { window?: number; bundle?: string; timeout_ms?: number; limit?: number; offset?: number }, signal: AbortSignal) {
+export async function findElements(target: string, selector: Selector, options: { window?: number; bundle?: string; display?: number; timeout_ms?: number; limit?: number; offset?: number }, signal: AbortSignal) {
   const deadline = Date.now() + (options.timeout_ms ?? 0);
   for (;;) {
     signal.throwIfAborted();
     const matches = select(await dumpTree(target, signal, 0, options), selector);
     if (matches.length || Date.now() >= deadline) {
       const offset = options.offset ?? 0, limit = options.limit ?? 20;
-      return { count: matches.length, matches: matches.slice(offset, offset + limit).map(describe), next_offset: offset + limit < matches.length ? offset + limit : null, timed_out: !matches.length && !!options.timeout_ms, scope: { window: options.window, bundle: options.bundle },
+      return { count: matches.length, matches: matches.slice(offset, offset + limit).map(describe), next_offset: offset + limit < matches.length ? offset + limit : null, timed_out: !matches.length && !!options.timeout_ms, scope: { window: options.window, bundle: options.bundle, display: options.display },
         ...(!matches.length ? await missingUiContext(target, options, signal) : {}) };
     }
     await delay(Math.min(400, Math.max(0, deadline - Date.now())), undefined, { signal });
@@ -803,6 +1181,10 @@ export async function resolveOne(target: string, selector: Selector, signal?: Ab
   let matches = select(await dumpTree(target, signal, 1500), selector);
   // A cached tree can predate a transition: never fail on it without one fresh look.
   if (!matches.length && cache.has(target)) { invalidate(target); matches = select(await dumpTree(target, signal), selector); }
+  return requireMatch(matches, selector);
+}
+
+export function requireMatch(matches: UiNode[], selector: Selector) {
   invariant(matches.length > 0, "UI_NOT_FOUND", "No element matches the selector", { selector },
     "Call ui observe to see current elements; the page may still be loading");
   const hit = pickMatch(matches, selector);

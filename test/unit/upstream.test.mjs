@@ -24,6 +24,9 @@ test("extracts every commander / zod / effect-schema construct from upstream-sha
     // exported command added by name + inline addCommand(new Command(...))
     "cli:cmd:ui tap:opt:--id", "cli:cmd:ui tap:arg:x", "cli:cmd:ui shot:opt:--display",
     "cli:cmd:ui wake", "cli:cmd:ui wake:opt:--device", "cli:cmd:ui timezone:arg:timezone",
+    // Nested default import, factory registration, loop names, conditional options and chained subcommands.
+    "cli:cmd:debug attach:opt:--pid", "cli:cmd:skills read", "cli:cmd:skills export:opt:--out", "cli:cmd:skills host list:opt:--long",
+    "cli:cmd:device playback play:opt:--device", "cli:cmd:device playback pause:opt:--device",
     // bundled MCP server: array-driven registration sharing a schema variable, multi-line zod enum
     "climcp:tool:hover:param:line", "climcp:tool:definition:param:file",
     "climcp:tool:restart:enum:target=cpp", "climcp:tool:restart:param:force",
@@ -31,12 +34,20 @@ test("extracts every commander / zod / effect-schema construct from upstream-sha
     "code:tool:demo_tool", "code:tool:demo_tool:enum:operation=incomingCalls", "code:tool:demo_tool:enum:mode=b",
     "code:tool:demo_tool:param:filePath",
     "code:skill:demo-skill",
+    "code:skill:shared-cli-skill", "cli:skill:shared-cli-skill",
+    "code:command:analyze",
+    "code:skill:hmos-design-to-arkts:mode:reacquire", "code:skill:hmos-design-to-arkts:source:lanhu",
+    "code:skill:hmos-design-to-arkts:capability:hmos-d2a-react-to-arkui",
   ];
   for (const e of expected) assert.ok(items.has(e), `missing ${e}`);
   // No enum values leak across parameters.
   assert.ok(!items.has("code:tool:demo_tool:enum:filePath=a"));
   assert.ok(!items.has("climcp:tool:restart:enum:force=all"));
   assert.ok(!items.has("cli:cmd:ui wake:arg:timezone"));
+  assert.ok(!items.has("cli:cmd:skills read:opt:--out"));
+  assert.ok(!items.has("cli:cmd:skills list"));
+  assert.ok(!items.has("cli:cmd:device playback not-a-registration"));
+  assert.ok(!items.has("code:command:unused-default"));
 });
 
 test("every decision rule and item is well-formed", () => {

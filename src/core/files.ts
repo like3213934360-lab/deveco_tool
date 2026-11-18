@@ -38,6 +38,24 @@ export async function fileSha256(file: string): Promise<string> {
   return hash.digest("hex");
 }
 
+export function fileSnapshot(file: string, limit: number) {
+  const stat = fs.lstatSync(file, { throwIfNoEntry: false });
+  if (!stat) return undefined;
+  invariant(stat.isFile() && stat.size <= limit && fs.realpathSync(file) === file, "INVALID_INPUT", "Expected a bounded regular file with no symbolic path", { file, max_bytes: limit });
+  const fd = fs.openSync(file, fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW | fs.constants.O_NONBLOCK);
+  try {
+    const opened = fs.fstatSync(fd);
+    invariant(opened.isFile() && opened.dev === stat.dev && opened.ino === stat.ino && opened.size === stat.size,
+      "CONFLICT", "File changed before reading", { file });
+    const bytes = Buffer.alloc(opened.size);
+    const read = fs.readSync(fd, bytes, 0, bytes.length, 0), after = fs.lstatSync(file, { throwIfNoEntry: false });
+    invariant(read === bytes.length && after?.isFile() && after.dev === opened.dev && after.ino === opened.ino &&
+      after.size === opened.size && after.mtimeMs === opened.mtimeMs && after.ctimeMs === opened.ctimeMs,
+      "CONFLICT", "File changed while reading", { file });
+    return { bytes, mode: opened.mode & 0o777 };
+  } finally { fs.closeSync(fd); }
+}
+
 /** Resolve `relative` inside `root`, rejecting traversal. */
 export function inside(root: string, relative: string): string {
   const target = path.resolve(root, relative);

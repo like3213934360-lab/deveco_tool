@@ -197,6 +197,15 @@ export async function launch(target: string, bundle: string, ability: string, mo
   return { launched: true, bundle, ability };
 }
 
+/** Ask the platform to resolve a registered URI within this bundle. */
+export async function launchDeepLink(target: string, bundle: string, uri: string, signal: AbortSignal) {
+  invariant(/^[\w.]+$/.test(bundle), "INVALID_INPUT", "A valid session bundle is required");
+  const result = await shell(target, ["aa", "start", "-b", bundle, ...wantArgs({ uri, action: "ohos.want.action.viewData" })], signal, 15000);
+  const output = result.stdout + result.stderr;
+  invariant(result.code === 0 && !result.truncated && /start ability successfully/i.test(output), "LAUNCH_FAILED", "The system rejected the deep link for this bundle",
+    { bundle, platform_code: /\b\d{8}\b/.exec(output)?.[0] });
+}
+
 /** Identity of the installed copy (changes on every install/update); undefined when not installed. */
 export async function installStamp(target: string, bundle: string, signal?: AbortSignal) {
   const dump = (await shell(target, ["bm", "dump", "-n", bundle], signal, 15000).catch(() => undefined))?.stdout ?? "";
@@ -229,10 +238,14 @@ export async function launchAndCheck(target: string, bundle: string, ability: st
   const ok = !!after && crashes.length === 0;
   // A missing process without a new crash log is not evidence of a crash.
   const blank = ok ? await (await import("./ui.js")).blankScreen(target, signal) : undefined;
-  const smoke = crashes.length ? "FAIL_CRASH" : !after ? "FAIL_NO_PROCESS" : blank?.blank ? "FAIL_BLANK" : "PASS";
+  signal.throwIfAborted();
+  const overlap = after && !crashes.length && !blank?.blank ? await (await import("./ui.js")).launchOverlap(target, after, bundle, signal) : undefined;
+  const smoke = crashes.length ? "FAIL_CRASH" : !after ? "FAIL_NO_PROCESS" : blank?.blank ? "FAIL_BLANK" :
+    overlap?.status === "failed" ? "FAIL_UI_OVERLAP" : !blank || overlap?.status !== "passed" ? "INCONCLUSIVE" : "PASS";
   return {
     started: ok, pid: after, crashed: crashes.length > 0, new_crash_logs: crashes, smoke,
     ...(blank ? { screen_uniformity: blank.uniform } : {}),
+    ...(overlap && { overlap }),
     ...(smoke === "FAIL_CRASH" ? { next: { tool: "diagnose", action: "crash", target, bundle } } : {}),
     ...(smoke === "FAIL_NO_PROCESS" ? {
       next: { tool: "device", action: "log", target, grep: bundle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), from: "1m" },

@@ -21,7 +21,14 @@ struct Index {
         .gesture(TapGesture({ count: 2 }).onAction(() => { this.doubles++; }))
       Text(`longs:${this.longs}`).id('LongBox').width('90%').height(56).backgroundColor('#FFF0D0')
         .gesture(LongPressGesture({ repeat: false }).onAction(() => { this.longs++; }))
-      Text(`swipe:${this.swipe}`).id('SwipeBox').width('90%').height(56).backgroundColor('#F0E0FF')
+      Stack() {
+        Text(`swipe:${this.swipe}`).id('SwipeBox').width('100%').height(56).textAlign(TextAlign.Center)
+        Row() {
+          Text('L').id('SwipeLeft')
+          Blank()
+          Text('R').id('SwipeRight')
+        }.width('90%')
+      }.width('90%').height(56).backgroundColor('#F0E0FF')
         .gesture(PanGesture({ direction: PanDirection.Horizontal, distance: 40 }).onActionEnd((e: GestureEvent) => {
           this.swipe = e.offsetX > 0 ? 'right' : 'left';
         }))

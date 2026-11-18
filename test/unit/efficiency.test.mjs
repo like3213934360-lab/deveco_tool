@@ -451,7 +451,13 @@ test("hot path inputs: resources compared by content", () => {
   const previousTime=fs.statSync(f), baseline=m.inputsSnapshot(proj);
   fs.writeFileSync(f,'{"y":2}');fs.utimesSync(f,previousTime.atime,previousTime.mtime);
   assert.deepEqual(m.changedInputs(baseline,m.inputsSnapshot(proj,baseline)),["entry/src/main/resources/base/element/string.json"],"restored mtime must not hide a same-size edit");
-
+  const har = fs.mkdtempSync(path.join(out, "external-har-"));
+  const externalSource = path.join(har, "src/main/ets/Index.ets");
+  fs.mkdirSync(path.dirname(externalSource), { recursive: true });
+  fs.writeFileSync(externalSource, "old");
+  const withHar = m.inputsSnapshot(proj, {}, [har]);
+  fs.writeFileSync(externalSource, "new");
+  assert.deepEqual(m.changedInputs(withHar, m.inputsSnapshot(proj, withHar, [har])), [path.relative(proj, externalSource).split(path.sep).join("/")]);
 });
 
 test("artifact read hints: every artifact id in any response shape gets a job read line", () => {

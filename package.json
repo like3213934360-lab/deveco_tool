@@ -1,6 +1,6 @@
 {
   "name": "deveco-mcp",
-  "version": "1.7.5",
+  "version": "1.7.6",
   "description": "Lean HarmonyOS MCP server: build, deploy, device UI, code intelligence and updatable knowledge packs for any MCP host.",
   "type": "module",
   "license": "MIT",
@@ -34,6 +34,7 @@
     "test:cli-local": "node tools/build.mjs && node --test --test-concurrency=1 test/integration/cli-local.test.mjs",
     "test:lsp": "node tools/build.mjs && node --test --test-concurrency=1 test/e2e/lsp.test.mjs",
     "test:device-controls": "node tools/build.mjs && node --test --test-concurrency=1 --test-name-pattern=\"^device controls$\" test/e2e/device-controls.test.mjs",
+    "test:device-simulation": "node tools/build.mjs && node --test --test-concurrency=1 --test-name-pattern=\"^device simulation and restoration$\" test/e2e/device-controls.test.mjs",
     "test:emulator-controls": "node tools/build.mjs && node --test --test-concurrency=1 --test-name-pattern=\"^disposable emulator system controls$\" test/e2e/device-controls.test.mjs",
     "test:model": "node test/model/eval.mjs",
     "test:models": "node test/model/matrix.mjs",
@@ -43,18 +44,26 @@
     "test:video": "node test/support/recording.mjs",
     "test:sdk": "node tools/build.mjs && node --test --test-concurrency=1 test/e2e/sdk.test.mjs",
     "test:device": "node tools/build.mjs && node --test --test-concurrency=1 test/e2e/device.test.mjs",
+    "test:resource-patch": "node tools/build.mjs && node --test test/e2e/resource-patch.test.mjs",
+    "test:ui-gestures": "node tools/build.mjs && node --test --test-name-pattern=\"^two-finger gestures|^native container scroll|^timed long press|^window scoped gestures|^UI test sessions resolve\" test/e2e/ui.test.mjs",
     "test:verify": "node tools/build.mjs && node --test --test-concurrency=1 test/e2e/verification.test.mjs test/e2e/baselines.test.mjs",
     "test:scenarios": "node tools/build.mjs && node --test --test-concurrency=1 test/e2e/scenario.test.mjs",
     "test:forms": "node tools/build.mjs && node --test --test-concurrency=1 test/e2e/form.test.mjs",
     "test:instrument-target": "node tools/build.mjs && node --test test/e2e/instrument-target.test.mjs",
     "test:fonts": "node tools/build.mjs && node --test test/e2e/font.test.mjs",
     "test:ui-selectors": "node tools/build.mjs && node --test --test-name-pattern=\"^UI query selectors\" test/e2e/ui.test.mjs",
+    "test:debug": "node tools/build.mjs && node --test --test-name-pattern=\"^ArkTS debugger\" test/e2e/ui.test.mjs",
+    "test:ui-displays": "node tools/build.mjs && node --test --test-name-pattern=\"^UI display inventory\" test/e2e/ui.test.mjs",
+    "test:ui-multidisplay": "node tools/build.mjs && node --test --test-name-pattern=\"^UI extended display\" test/e2e/ui.test.mjs",
     "test:build-signing": "node tools/build.mjs && node --test test/e2e/build-signing.test.mjs",
     "test:release-signing": "node tools/build.mjs && node --test --test-name-pattern=\"^release automatic signing$\" test/e2e/sign-cloud.test.mjs"
   },
   "dependencies": {
+    "@babel/parser": "7.29.14",
     "@xmldom/xmldom": "0.9.12",
     "json5": "2.2.3",
+    "parse5": "8.1.1",
+    "ws": "8.23.0",
     "xpath": "0.0.35",
     "yauzl": "3.4.0",
     "zod": "4.4.3"
@@ -64,6 +73,7 @@
   },
   "devDependencies": {
     "@types/node": "22.20.1",
+    "@types/ws": "8.18.2",
     "@types/yauzl": "3.4.0",
     "esbuild": "0.25.10",
     "typescript": "6.0.3"

@@ -17,6 +17,55 @@ await client.initialize();
 after(async () => { await client.close(); fs.rmSync(work, { recursive: true, force: true }); });
 const call = async (name, args) => { const r = await client.call(name, args); assert.equal(r.isError, false, JSON.stringify(r.data)); return r.data; };
 let sequence = 0;
+test("Testing service maintenance uses the advertised CLI and verifies the resulting catalog", async (t) => {
+  const directory = path.join(work, "testing cli"), bin = path.join(directory, "bin");
+  fs.mkdirSync(bin, { recursive: true });
+  const win = process.platform === "win32", ext = win ? ".bat" : ".sh";
+  const manifest = path.join(directory, "capabilities.json"), version = path.join(bin, "version");
+  fs.writeFileSync(path.join(bin, win ? "java.exe" : "java"), "");
+  fs.writeFileSync(path.join(bin, "DevEcoTestingConsole" + ext), win ? "@exit /b 89\r\n" : "#!/bin/sh\nexit 89\n", { mode: 0o755 });
+  fs.writeFileSync(path.join(bin, "DevEcoTestingCli" + ext), win
+    ? '@"%TESTING_FIXTURE_NODE%" fixture.cjs %*\r\n' : '#!/bin/sh\nexec "$TESTING_FIXTURE_NODE" fixture.cjs "$@"\n', { mode: 0o755 });
+  fs.writeFileSync(path.join(bin, "fixture.cjs"), `
+    const fs = require("node:fs");
+    const [operation, flag, key] = process.argv.slice(2);
+    if (operation === "list") {
+      const version = fs.existsSync("version") ? fs.readFileSync("version", "utf8") : "-";
+      const status = version === "-" ? "NOT installed" : version === "2.0" ? "Installed" : "Outdated";
+      console.log("Service | ServiceKey | Version | Latest | Status | Detail");
+      console.log(["Memory", "MemLeakTest", version, "2.0", status, "test"].join(" | "));
+    } else if (flag !== "--service" || key !== "MemLeakTest") process.exit(10);
+    else if (fs.existsSync("auth-error")) console.error("[ERRORCODE] DT.100901");
+    else if (!fs.existsSync("ignore")) fs.writeFileSync("version", operation === "install" ? "1.0" : "2.0");
+  `);
+  const serviceClient = connect({ DEVECO_TESTING_HOME: directory, TESTING_FIXTURE_NODE: process.execPath,
+    DEVECO_STATE_DIR: path.join(directory, "state"), DEVECO_COORDINATION_DIR: path.join(directory, "coordination") });
+  t.after(() => serviceClient.close());
+  await serviceClient.initialize();
+  const request = async (tool, input) => {
+    const response = await serviceClient.call(tool, input);
+    assert.equal(response.isError, false, JSON.stringify(response.data));
+    return response.data;
+  };
+  const maintain = async (operation, service = "MemLeakTest") => waitJob(request,
+    await request("project", { action: "testing", operation, service, wait: 0 }));
+  fs.writeFileSync(manifest, JSON.stringify({ commands: ["list"] }));
+  assert.equal((await maintain("install")).error.code, "CAPABILITY_UNAVAILABLE");
+  assert.equal(fs.existsSync(version), false);
+  fs.writeFileSync(manifest, JSON.stringify({ commands: ["list", "install", "update"] }));
+  assert.equal((await request("project", { action: "testing", operation: "services" })).service_catalog[0].status, "NOT installed");
+  assert.equal((await maintain("update")).error.code, "INVALID_INPUT");
+  assert.equal((await maintain("install", "OtherService")).error.code, "NOT_FOUND");
+  assert.equal((await maintain("install")).result.after.version, "1.0");
+  fs.writeFileSync(path.join(bin, "auth-error"), "");
+  assert.equal((await maintain("update")).error.code, "AUTH_REQUIRED");
+  fs.unlinkSync(path.join(bin, "auth-error"));
+  fs.writeFileSync(path.join(bin, "ignore"), "");
+  assert.equal((await maintain("update")).error.code, "EFFECT_UNCERTAIN");
+  fs.unlinkSync(path.join(bin, "ignore"));
+  assert.equal((await maintain("update")).result.after.version, "2.0");
+  assert.equal((await maintain("update")).result.changed, false);
+});
 const cmd = (script) => ({ file: process.execPath, args: ['-e', script] });
 const check = (id, verdict) => ({ id, type: 'command', command: cmd(`console.log(JSON.stringify({verdict:${JSON.stringify(verdict)}}))`) });
 test('source origin excludes ignored cache copies before limiting results and retains new source', async () => {

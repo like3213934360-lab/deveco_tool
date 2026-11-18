@@ -117,38 +117,143 @@ export function matchPatterns(signature: Pick<CrashSignature, "kind" | "message"
 
 /* ------------------------------ entry points ------------------------------ */
 
-export async function diagnoseCrash(input: { target?: string; bundle?: string; log?: string; file?: string; name?: string; latest?: number; since_minutes?: number; project?: string; strict?: boolean }, target: string | undefined, signal: AbortSignal) {
+async function readLocalFaultlog(file: string, signal: AbortSignal, fromDirectory = false) {
+  invariant(path.isAbsolute(file), "INVALID_INPUT", "file must be an absolute path");
+  const limit = 4_000_000;
+  let handle: fs.promises.FileHandle;
+  try { handle = await fs.promises.open(file, fs.constants.O_RDONLY | fs.constants.O_NONBLOCK | (fromDirectory ? fs.constants.O_NOFOLLOW : 0)); }
+  catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") throw new ToolError("NOT_FOUND", "Fault log file not found", { file });
+    throw new ToolError("INVALID_INPUT", `Cannot open fault log file: ${(error as Error).message}`, { file });
+  }
+  try {
+    const stat = await handle.stat();
+    invariant(stat.isFile(), "INVALID_INPUT", "file must be a regular file");
+    invariant(stat.size <= limit, "INVALID_INPUT", "Fault log file exceeds 4 MB");
+    const buffer = Buffer.alloc(limit + 1);
+    let length = 0;
+    while (length < buffer.length) {
+      signal.throwIfAborted();
+      const { bytesRead } = await handle.read(buffer, length, buffer.length - length, null);
+      if (!bytesRead) break;
+      length += bytesRead;
+    }
+    invariant(length <= limit, "INVALID_INPUT", "Fault log file exceeds 4 MB");
+    let text: string;
+    try { text = new TextDecoder("utf-8", { fatal: true }).decode(buffer.subarray(0, length)); }
+    catch { throw new ToolError("INVALID_INPUT", "Fault log file must contain valid UTF-8"); }
+    invariant(text.trim(), "INVALID_INPUT", "Fault log file is empty");
+    return { source: path.basename(file), text };
+  } finally { await handle.close(); }
+}
+
+async function localFaultlogs(directory: string, filters: { name?: string; latest?: number }, signal: AbortSignal) {
+  invariant(path.isAbsolute(directory), "INVALID_INPUT", "directory must be an absolute path");
+  const root = fs.statSync(directory, { throwIfNoEntry: false });
+  invariant(root, "NOT_FOUND", "Fault log directory not found", { directory });
+  invariant(root.isDirectory(), "INVALID_INPUT", "directory must refer to a directory");
+  const names: string[] = [];
+  let visited = 0;
+  for await (const entry of await fs.promises.opendir(directory)) {
+    signal.throwIfAborted();
+    invariant(++visited <= 5000, "INVALID_INPUT", "Fault log directory exceeds 5000 entries", { directory }, "Pass file for an individual report");
+    if (entry.isFile() && (filters.name !== undefined ? entry.name === filters.name : /^(?:jscrash|cppcrash|appfreeze|sysfreeze)-[\w.-]+$/.test(entry.name))) names.push(entry.name);
+  }
+  invariant(names.length, "NOT_FOUND", "No matching fault log files in the directory", { directory, name: filters.name });
+  names.sort((a, b) => order(b) - order(a) || b.localeCompare(a));
+  const reports = [];
+  for (const name of names.slice(0, filters.latest ?? 1)) reports.push(await readLocalFaultlog(path.join(directory, name), signal, true));
+  return reports;
+}
+
+export async function diagnoseStack(file: string, limit: number, signal: AbortSignal) {
+  const { source, text } = await readLocalFaultlog(file, signal);
+  const snapshots = new Map<string, { thread: string; timestamp: string; frames: string[] }>();
+  const cpu: Record<string, number> = {};
+  let thread: string | undefined;
+  let snapshot: { frames: string[] } | undefined;
+  for (const raw of text.split(/\r?\n/)) {
+    signal.throwIfAborted();
+    const line = raw.trim();
+    const usage = /^cpu(\d+) Usage (\d+(?:\.\d+)?)%$/.exec(line);
+    if (usage && Number(usage[2]) <= 100) cpu[usage[1]!] = Number(usage[2]);
+    const section = /^#ThreadInfos\s+Tid:\s*(\d+)\b/.exec(line);
+    if (section) { thread = section[1]; snapshot = undefined; continue; }
+    if (line.startsWith("SubmitterStacktrace")) { thread = undefined; snapshot = undefined; continue; }
+    if (!thread) continue;
+    const stamp = /^(?:Timestamp|SnapshotTime):\s*(.+)$/.exec(line)?.[1];
+    if (stamp !== undefined) {
+      snapshot = undefined;
+      if (!/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?$/.test(stamp)) continue;
+      const value = { thread, timestamp: stamp, frames: [] };
+      snapshots.set(`${thread}:${stamp}`, value);
+      snapshot = value;
+      continue;
+    }
+    if (!snapshot) continue;
+    const native = /^#\d+\s+pc\s+[0-9a-f]+\s+(.+)$/i.exec(line)?.[1];
+    const frame = native?.replace(/\([0-9a-f]{16,}\)\s*$/i, "").trim() ?? (/^at\s+.+:\d+:\d+\)?$/.test(line) ? line : undefined);
+    if (frame && !/^\/(?:system|vendor|prod(?:uct)?)\//.test(frame) && !/\/foundation\/arkui|libarkweb_engine\.so|\[shmm\]|\banonymous\b/.test(frame)) snapshot.frames.push(frame);
+  }
+  invariant(snapshots.size, "INVALID_INPUT", "No timestamped thread snapshots found in the sample stack file");
+  const groups = new Map<string, { parent: string; count: number; examples: { thread: string; timestamp: string; calls: string[] }[] }>();
+  for (const { thread, timestamp, frames } of snapshots.values()) {
+    const parent = frames.at(-1);
+    if (!parent) continue;
+    const group = groups.get(parent) ?? { parent, count: 0, examples: [] };
+    group.count++;
+    if (group.examples.length < 3) group.examples.push({ thread, timestamp, calls: frames.slice(-24).reverse() });
+    groups.set(parent, group);
+  }
+  const metric = (name: string) => {
+    const value = new RegExp(`^${name}:[ \\t]+(\\d+)[ \\t]+ms\\b`, "m").exec(text)?.[1];
+    return value !== undefined ? Number(value) : null;
+  };
+  const artifact = await saveArtifact(text);
+  return { source, snapshot_count: snapshots.size, duration_ms: metric("StaticsDuration"), cpu_time_ms: metric("CpuTime"), cpu_usage_percent: cpu,
+    hotspot_count: groups.size, hotspots: [...groups.values()].sort((a, b) => b.count - a.count || a.parent.localeCompare(b.parent)).slice(0, limit),
+    report_artifact: artifact.artifact_id };
+}
+
+export async function symbolize(file: string, buildId: string, addresses: string[], signal: AbortSignal) {
+  invariant(path.isAbsolute(file), "INVALID_INPUT", "file must be the absolute ELF object path");
+  invariant(/^(?:[0-9a-f]{2}){8,64}$/i.test(buildId), "INVALID_INPUT", "build_id must be the hexadecimal ELF Build ID from the fault report");
+  invariant(addresses.every((pc) => /^(?:0x)?[0-9a-f]{1,16}$/i.test(pc)), "INVALID_INPUT", "pc must contain hexadecimal image-relative offsets");
+  const offsets = addresses.map((pc) => BigInt("0x" + pc.replace(/^0x/i, "")).toString(16)).map((pc) => `0x${pc}`);
+  const identity = fs.statSync(file, { throwIfNoEntry: false, bigint: true });
+  invariant(identity, "NOT_FOUND", "Native ELF object not found", { file });
+  invariant(identity.isFile(), "INVALID_INPUT", "file must be a regular ELF object");
+  const { run } = await import("../core/proc.js");
+  const { toolCommand } = await import("../core/toolchain.js");
+  const notes = await run(toolCommand("llvmReadelf", ["--notes", file]), { signal, timeoutMs: 8000 });
+  const ids = [...notes.stdout.matchAll(/^\s*Build ID:\s*([0-9a-f]+)\s*$/gim)].map((m) => m[1]!.toLowerCase());
+  invariant(!notes.truncated && ids.length === 1, "EVIDENCE_MISSING", "ELF object did not report a unique Build ID");
+  invariant(ids[0] === buildId.toLowerCase(), "CONFLICT", "The ELF object Build ID differs from the fault report", { expected: buildId, actual: ids[0] });
+  const result = await run(toolCommand("llvmSymbolizer", ["--no-debuginfod", "--relative-address", "--output-style=JSON", `--obj=${file}`, ...offsets]), { signal, timeoutMs: 15000 });
+  const after = fs.statSync(file, { throwIfNoEntry: false, bigint: true });
+  invariant(after && after.dev === identity.dev && after.ino === identity.ino && after.size === identity.size && after.ctimeNs === identity.ctimeNs && after.mtimeNs === identity.mtimeNs,
+    "CONFLICT", "ELF object changed during symbolication");
+  invariant(!result.truncated, "EVIDENCE_MISSING", "Native symbolicator output was truncated");
+  type Symbol = { FunctionName?: string; FileName?: string; Line?: number; Column?: number };
+  let rows: { Address?: string; Symbol?: Symbol[] }[];
+  try { rows = JSON.parse(result.stdout); } catch { throw new ToolError("DEVICE_OUTPUT_INVALID", "LLVM symbolicator returned invalid JSON"); }
+  invariant(Array.isArray(rows) && rows.length === offsets.length && rows.every((row, i) => row?.Address?.toLowerCase() === offsets[i] && Array.isArray(row.Symbol)),
+    "EVIDENCE_MISSING", "LLVM symbolicator did not report a result for every requested offset");
+  const frames = rows.map((row, i) => {
+    const symbols = row.Symbol!.map((s) => ({ function: s.FunctionName && s.FunctionName !== "??" ? s.FunctionName : null,
+      file: s.FileName && s.FileName !== "??" ? s.FileName : null, line: s.Line || null, column: s.Column || null }))
+      .filter((s) => s.function || s.line && s.file);
+    return { pc: offsets[i], status: symbols.some((s) => s.line && s.file) ? "source" : symbols.length ? "symbol" : "unresolved", symbols };
+  });
+  return { file, build_id: ids[0], frames };
+}
+
+export async function diagnoseCrash(input: { target?: string; bundle?: string; log?: string; file?: string; directory?: string; hilog?: boolean; report?: boolean; name?: string; latest?: number; since_minutes?: number; project?: string; strict?: boolean }, target: string | undefined, signal: AbortSignal) {
   const project = input.project ? await projectModel(input.project) : undefined;
   const reports: { source?: string; text: string }[] = [];
-  if (input.file !== undefined) {
-    invariant(path.isAbsolute(input.file), "INVALID_INPUT", "file must be an absolute path");
-    const limit = 4_000_000;
-    let handle: fs.promises.FileHandle;
-    try { handle = await fs.promises.open(input.file, fs.constants.O_RDONLY | fs.constants.O_NONBLOCK); }
-    catch (error) {
-      if ((error as NodeJS.ErrnoException).code === "ENOENT") throw new ToolError("NOT_FOUND", "Fault log file not found", { file: input.file });
-      throw new ToolError("INVALID_INPUT", `Cannot open fault log file: ${(error as Error).message}`, { file: input.file });
-    }
-    try {
-      const stat = await handle.stat();
-      invariant(stat.isFile(), "INVALID_INPUT", "file must be a regular file");
-      invariant(stat.size <= limit, "INVALID_INPUT", "Fault log file exceeds 4 MB");
-      const buffer = Buffer.alloc(limit + 1);
-      let length = 0;
-      while (length < buffer.length) {
-        signal.throwIfAborted();
-        const { bytesRead } = await handle.read(buffer, length, buffer.length - length, null);
-        if (!bytesRead) break;
-        length += bytesRead;
-      }
-      invariant(length <= limit, "INVALID_INPUT", "Fault log file exceeds 4 MB");
-      let text: string;
-      try { text = new TextDecoder("utf-8", { fatal: true }).decode(buffer.subarray(0, length)); }
-      catch { throw new ToolError("INVALID_INPUT", "Fault log file must contain valid UTF-8"); }
-      invariant(text.trim(), "INVALID_INPUT", "Fault log file is empty");
-      reports.push({ source: path.basename(input.file), text });
-    } finally { await handle.close(); }
-  } else if (input.log) reports.push({ text: input.log });
+  if (input.directory !== undefined) reports.push(...await localFaultlogs(input.directory, input, signal));
+  else if (input.file !== undefined) reports.push(await readLocalFaultlog(input.file, signal));
+  else if (input.log) reports.push({ text: input.log });
   else {
     invariant(target, "DEVICE_UNAVAILABLE", "A device is required to read crash logs, or pass log text");
     const inventory = input.strict ? await (await import("./device.js")).faultlogInventory(target, signal) : undefined;
@@ -177,6 +282,8 @@ export async function diagnoseCrash(input: { target?: string; bundle?: string; l
   for (const report of reports) {
     const signature = parseCrash(report.text, report.source);
     const artifact = await saveArtifact(report.text);
+    const section = input.hilog ? /^HiLog:[ \t]*\r?$\n([\s\S]*)/m.exec(report.text)?.[1]?.trim() : undefined;
+    const hilog = section ? await saveArtifact(section) : undefined;
     // The project's own frames with the code around them: the first place to look.
     const source = project ? locate(signature.frames.join("\n") || report.text.split(/^HiLog:\s*$/m)[0]!, project) : [];
     results.push({
@@ -184,10 +291,19 @@ export async function diagnoseCrash(input: { target?: string; bundle?: string; l
       ...(source.length ? { source } : {}),
       candidates: signature.type === "jscrash" || signature.kind ? matchPatterns(signature) : [],
       report_artifact: artifact.artifact_id,
+      ...(input.hilog ? { hilog: hilog ? { status: "extracted", hilog_artifact: hilog.artifact_id } : { status: "absent" } } : {}),
       guidance: guidance(signature),
     });
   }
-  return { reports: results };
+  if (!input.report) return { reports: results };
+  const asText = (value: unknown) => JSON.stringify(value, null, 2).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+  const sections = results.map(({ candidates, guidance, ...facts }, i) => `<section><h2>Fault log ${i + 1}</h2>
+<h3>Observed and extracted evidence</h3><pre>${asText(facts)}</pre>
+<h3>Candidate causes from the pattern library</h3><pre>${asText(candidates)}</pre>
+<h3>Suggested checks</h3><pre>${asText(guidance)}</pre></section>`);
+  const html = "<!doctype html><html lang=\"en\"><meta charset=\"utf-8\"><title>HarmonyOS fault analysis</title><h1>HarmonyOS fault analysis</h1>" + sections.join("\n") + "</html>";
+  const artifact = await saveArtifact(html, "text/html");
+  return { reports: results, dfx_artifact: artifact.artifact_id };
 }
 
 /** Project modules for source lookup; undefined when the path is not a readable project (never throws). */

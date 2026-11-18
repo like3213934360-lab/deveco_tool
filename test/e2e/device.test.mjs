@@ -8,6 +8,35 @@ import { test } from "node:test";
 import { app, required, session, sha } from "../support/acceptance.mjs";
 import { waitJob } from "../support/mcp.mjs";
 
+test("launch smoke detects a covered control and clears the finding after repair", async (t) => {
+  const { job, project, target, file, defer } = await app(t);
+  const entry = path.join(project, file), original = fs.readFileSync(entry);
+  const deploy = async () => (await job("run", { action: "build_run", project, target, run_mode: "full", wait: 0 })).result.launch;
+  defer(async () => { fs.writeFileSync(entry, original); await deploy(); });
+  const blocked = `@Entry
+@Component
+struct Index {
+  @State last: string = 'Smoke probe';
+  build() {
+    Column() {
+      Text(this.last).fontSize(28)
+      Stack() {
+        Button('Covered control').id('Covered').width(180).height(60).onClick(() => { this.last = 'Covered'; })
+        Button('Cover').id('Cover').width(180).height(60).onClick(() => { this.last = 'Cover'; })
+      }
+    }.width('100%').height('100%').justifyContent(FlexAlign.Center)
+  }
+}`;
+  fs.writeFileSync(entry, blocked);
+  const failed = await deploy();
+  assert.equal(failed.smoke, "FAIL_UI_OVERLAP", JSON.stringify(failed));
+  assert.ok(failed.overlap.hits.some(hit => hit.covered.id === "Covered" && hit.cover.id === "Cover"));
+  fs.writeFileSync(entry, blocked.replace("Stack()", "Column()"));
+  const repaired = await deploy();
+  assert.equal(repaired.smoke, "PASS", JSON.stringify(repaired));
+  assert.equal(repaired.overlap.status, "passed");
+});
+
 test("device", async (t) => {
   const hdc = required("E2E_HDC"); assert.ok(path.isAbsolute(hdc) && fs.statSync(hdc).isFile());
   const { call, raw, job, directory, target, project, bundle, ui, defer, receipt } = await app(t);
@@ -140,6 +169,40 @@ test("gestures", async (t) => {
     assert.ok(d); await visible("Welcome"); await text("TapBox", "taps:1");
   });
 
+});
+
+test("clear text", async (t) => {
+  const { raw, target, ui, visible, launch } = await app(t);
+  const selector = { key: "Field" };
+  await launch(); await visible("Hello World");
+  assert.equal((await raw("ui", { action: "act", op: "clear_text", x: 12, target })).data.error.code, "INVALID_INPUT");
+  await ui({ action: "act", op: "input", selector, text: "first" }); await visible("typed:first");
+  await ui({ action: "act", op: "clear_text" }); await visible("typed:");
+  await ui({ action: "act", op: "input", selector, text: "second" }); await visible("typed:second");
+  const result = await ui({ action: "act", steps: [{ op: "clear_text", selector }], assert: { visible: { text: "typed:", exact: true } } });
+  assert.equal(result.passed, true);
+});
+
+test("gesture endpoints", async (t) => {
+  const { raw, target, project, run, defer, call, job, ui, visible, launch } = await app(t);
+  const start = { key: "SwipeLeft" }, end = { key: "SwipeRight" };
+  await launch(); await visible("swipe:none");
+  const notFound = await raw("ui", { action: "act", target, op: "swipe", selector: start, to: { key: "missing" } });
+  assert.equal(notFound.data.error.code, "UI_NOT_FOUND");
+  await visible("swipe:none");
+  await ui({ action: "act", op: "swipe", selector: start, to: end }); await visible("swipe:right");
+  const d = await ui({ action: "act", steps: [
+    { op: "swipe", selector: end, to: start },
+    { op: "drag", selector: { key: "DragBox" }, to: { key: "Rows" } },
+  ], assert: { visible: { text: "dragged:1", exact: true } }, save_flow: { project, id: run } });
+  assert.equal(d.passed, true);
+  defer(() => call("ui_flow", { action: "delete", project, id: run }));
+  await visible("swipe:left");
+  const flow = await call("ui_flow", { action: "show", project, id: run });
+  assert.deepEqual(flow.steps[0].endSelector, start);
+  const replay = await job("ui_flow", { action: "replay", project, target, id: run, wait: 0 });
+  assert.equal(replay.result.passed, true);
+  await visible("swipe:left");
 });
 
 test("flows", async (t) => {

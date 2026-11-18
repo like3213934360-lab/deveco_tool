@@ -10,6 +10,23 @@ async function projectOf(input: { project: string; product?: string; modules?: s
 }
 
 /* All long-running workflows. Effect steps (install) are journaled; others are safe to re-run. */
+defineJob<{ operation: "install" | "update"; service: string }>({
+  kind: "testing_service", steps: [{ id: "maintain", effect: true, replay: false, async run({ input, signal }) {
+    return (await import("./domains/testing-console.js")).maintainTestingService(input.operation, input.service, signal);
+  } }], summarize: (outputs) => outputs.maintain,
+});
+defineJob<{ target: string; params: Record<string, unknown>; update_service?: boolean }>({
+  kind: "testing_run", steps: [{ id: "run", effect: true, replay: false, async run(ctx) {
+    return (await import("./domains/testing-console.js")).runTesting(ctx.input.params, ctx.input.update_service ?? false, ctx);
+  } }], summarize: (outputs) => outputs.run,
+});
+defineJob<{ project: string; product?: string; plan: string; output?: string }>({
+  kind: "export_page",
+  steps: [{ id: "export", effect: true, replay: false, async run({ input, signal }) {
+    const { project } = await projectOf(input);
+    return (await import("./domains/design-export.js")).exportDesign(project, input.plan, input.output, signal);
+  } }], summarize: (o) => o.export,
+});
 defineJob<{ project: string; product?: string; modules?: string[]; execution_mode?: "module" | "project" }>({
   kind: "project_clean",
   steps: [{ id: "clean", effect: true, replay: false, async run(ctx) {
@@ -27,6 +44,14 @@ defineJob<{ target: string; files?: string[]; replace?: boolean; user?: number; 
 });
 
 const formDomain = () => import("./domains/forms.js");
+type UiActInput = Parameters<(typeof import("./tools/core.js"))["uiTool"]["handler"]>[0];
+for (const [kind, id] of [["ui_long_press", "press"], ["ui_scroll", "scroll"]] as const) defineJob<UiActInput>({
+  kind,
+  steps: [{ id, effect: true, replay: false, async run({ input, signal }) {
+    return (await import("./tools/core.js")).uiTool.handler(input, { signal, fromJob: true });
+  } }], summarize: (outputs) => outputs[id],
+});
+
 type FormJobInput = import("./domains/forms.js").FormInput & { form_action?: string; _form_cleanup_attempted?: boolean };
 defineJob<FormJobInput>({
   kind: "form_inventory",
@@ -114,7 +139,7 @@ defineJob<FormJobInput & { form_cases: { target?: string; emulator?: { device_ty
   summarize: (o) => ({ cases: o.cases, scope: "explicit-targets-and-previews", business_correctness: "not-judged" }),
 });
 
-interface BuildInput { project: string; product?: string; modules?: string[]; task?: BuildTask; mode?: string; signing_config?: string; clean?: boolean; preflight?: boolean }
+interface BuildInput { project: string; product?: string; modules?: string[]; task?: BuildTask; mode?: string; signing_config?: string; clean?: boolean; preflight?: boolean; debug_line?: boolean }
 
 defineJob<{ project: string; product?: string }>({
   kind: "sync",
@@ -126,6 +151,15 @@ defineJob<{ project: string; product?: string }>({
     },
   }],
   summarize: (o) => o.sync,
+});
+
+defineJob<{ project: string; product?: string; language: "arkts" | "cpp" | "all" }>({
+  kind: "lsp_resync",
+  steps: [{ id: "resync", async run(ctx) {
+    const { project, product, language } = ctx.input;
+    return (await import("./domains/code.js")).resyncLsp(project, language, product, ctx.signal, ctx.job_id);
+  } }],
+  summarize: (o) => o.resync,
 });
 
 const preflightStep = {
@@ -211,7 +245,7 @@ defineJob<BuildInput>({
 });
 
 interface RunInput extends BuildInput {
-  target?: string; module?: string; ability?: string; hot_reload?: boolean; skip_build?: boolean; uninstall_first?: boolean;
+  target?: string; module?: string; ability?: string; hot_reload?: boolean; hot_reload_module?: string | string[]; skip_build?: boolean; uninstall_first?: boolean;
   assert?: { visible?: Record<string, unknown>; hidden?: Record<string, unknown>; timeout_ms?: number };
   /** ui_flow id replayed right after launch (lands on the page being worked on) */
   then_flow?: string; flow_variables?: Record<string, string>;
@@ -226,7 +260,7 @@ const ITERATING_MS = 2 * 3600 * 1000;
 /** Test hosts and CI can disable the automatic quick-fix path entirely (DEVECO_AUTO_HOT=0). */
 const autoHotEnabled = () => process.env.DEVECO_AUTO_HOT !== "0";
 // Release/other build modes are never quick-fixed: only debug builds were baselined.
-const autoMode = (input: RunInput) => autoHotEnabled() && input.run_mode !== "full" && !input.signing_config && !input.hot_reload && !input.uninstall_first && !input.skip_build && (!input.mode || input.mode === "debug");
+const autoMode = (input: RunInput) => autoHotEnabled() && input.run_mode !== "full" && !input.signing_config && !input.debug_line && !input.hot_reload && !input.uninstall_first && !input.skip_build && (!input.mode || input.mode === "debug");
 const wentHot = (ctx: { outputs: Record<string, any> }) => ctx.outputs.hot?.path === "hot_reload";
 const relaunchOnly = (ctx: { outputs: Record<string, any> }) => ctx.outputs.hot?.path === "relaunch";
 /** Wrap a deploy step so it is skipped when the quick fix already updated the app (or nothing changed). */
@@ -237,7 +271,7 @@ function unlessHot(step: Step<RunInput>): Step<RunInput> {
 }
 
 async function hotContext(ctx: { input: RunInput; outputs: Record<string, any>; signal: AbortSignal }) {
-  const { projectFor } = await import("./domains/project.js");
+  const { externalModuleRoots, projectFor } = await import("./domains/project.js");
   const { stateDir } = await import("./core/config.js");
   const hp = await import("./domains/hotpath.js");
   const { project } = await projectFor(ctx.input);
@@ -247,14 +281,14 @@ async function hotContext(ctx: { input: RunInput; outputs: Record<string, any>; 
   const modules = project.modules.filter((m) => (ctx.outputs.select.modules as string[]).includes(m.name))
     .map(({ name, target }) => ({ name, target }));
   const file = hp.stateFile(stateDir(), project.root, target);
-  return { hp, project, target, module, modules, file };
+  return { hp, project, target, module, modules, file, externalModules: externalModuleRoots(project) };
 }
 
 const hotStep = {
   id: "hot",
   when: (ctx: { input: RunInput }) => autoMode(ctx.input),
   async run(ctx: { input: RunInput; outputs: Record<string, any>; signal: AbortSignal; log(m: string): void }) {
-    const { hp, project, target, module, modules, file } = await hotContext(ctx);
+    const { hp, project, target, module, modules, file, externalModules } = await hotContext(ctx);
     const state = hp.readState(file);
     if (!module || !project.bundleName) return { path: "full", fallback_reason: "no entry module to quick-fix" };
     const { installStamp, pidOf } = await import("./domains/device.js");
@@ -262,7 +296,7 @@ const hotStep = {
     let sources: ReturnType<typeof hp.currentSources>, inputs: ReturnType<typeof hp.inputsSnapshot>;
     try {
       sources = hp.currentSources(project.root, state?.sources);
-      inputs = hp.inputsSnapshot(project.root, state?.inputs && typeof state.inputs === "object" ? state.inputs : undefined);
+      inputs = hp.inputsSnapshot(project.root, state?.inputs && typeof state.inputs === "object" ? state.inputs : undefined, externalModules);
     } catch (error) {
       ctx.signal.throwIfAborted();
       return { path: "full", fallback_reason: `Build input identity is unverified: ${String(error)}` };
@@ -308,7 +342,7 @@ const baselineStep = {
   when: (ctx: { input: RunInput; outputs: Record<string, any> }) => autoMode(ctx.input) && !wentHot(ctx) && !relaunchOnly(ctx),
   async run(ctx: { input: RunInput; outputs: Record<string, any>; signal: AbortSignal; log(m: string): void }) {
     try {
-      const { hp, project, target, module, modules, file } = await hotContext(ctx);
+      const { hp, project, target, module, modules, file, externalModules } = await hotContext(ctx);
       if (!module || !project.bundleName || !["entry", "feature"].includes(module.type)) return { recorded: false };
       const previous = hp.readState(file);
       const iterating = !!previous?.last_full && Date.now() - previous.last_full < ITERATING_MS;
@@ -321,7 +355,7 @@ const baselineStep = {
       const started = Date.now();
       const { recordBaseline } = await import("./domains/hotreload.js");
       // Snapshot before compiling: an edit made while the baseline compiles is then seen as a change.
-      const sources = hp.currentSources(project.root), inputs = hp.inputsSnapshot(project.root);
+      const sources = hp.currentSources(project.root), inputs = hp.inputsSnapshot(project.root, undefined, externalModules);
       await recordBaseline(project, module.name, project.bundleName, target, ctx.signal, ctx.outputs.install?.package_files);
       const { installStamp } = await import("./domains/device.js");
       const install = (await installStamp(target, project.bundleName, ctx.signal)) ?? "";
@@ -381,11 +415,23 @@ const baseRunSteps = (build: boolean): Step<RunInput>[] => [
   {
     id: "select",
     async run(ctx: { input: RunInput; outputs: Record<string, any> }) {
-      const { selectRunModules } = await import("./domains/project.js");
+      const { selectRunModules, localModuleDependencies } = await import("./domains/project.js");
       const { project, modules: names } = await projectOf(ctx.input);
       const explicit = names?.length ? names : ctx.input.module ? [ctx.input.module] : undefined;
       const { modules, reason } = selectRunModules(project, { modules: explicit, deviceType: ctx.outputs.target.device_type });
-      return { modules: modules.map((m) => m.name), reason, device_type: ctx.outputs.target.device_type ?? null };
+      const roots = new Set(modules);
+      if (ctx.input.hot_reload_module) {
+        const { patchableModule } = await import("./domains/hotreload.js");
+        for (const name of [ctx.input.hot_reload_module].flat()) {
+          const patched = project.modules.find((m) => m.name === name);
+          invariant(patched && patchableModule(patched), "INVALID_INPUT", "hot_reload_module must name an entry, feature or shared module in this product", { module: name });
+          invariant(patched.type === "shared" || modules.includes(patched), "INVALID_INPUT", "hot_reload_module must be included in the deployment", { module: name });
+          roots.add(patched);
+        }
+      }
+      const shared = build && project.modules.some((m) => m.type === "shared")
+        ? [...roots, ...localModuleDependencies(project, [...roots], ["har", "shared"])].filter((m) => m.type === "shared").map((m) => m.name) : [];
+      return { modules: modules.map((m) => m.name), reason, device_type: ctx.outputs.target.device_type ?? null, shared };
     },
   },
   ...(build ? [hotStep as Step<RunInput>, unlessHot(preflightStep as Step<RunInput>), unlessHot({
@@ -404,6 +450,15 @@ const baseRunSteps = (build: boolean): Step<RunInput>[] => [
         });
         return buildProject(project, input, ctx.signal, ctx.job_id);
       });
+    },
+  }), unlessHot({
+    id: "shared_package",
+    when: ({ outputs }) => !!outputs.select.shared?.length,
+    async run(ctx) {
+      const { buildProject } = await import("./domains/project.js");
+      const { project } = await projectOf(ctx.input);
+      // assembleHap compiles HSP dependencies but does not necessarily package them.
+      return buildProject(project, { ...ctx.input, task: "assembleHsp", modules: ctx.outputs.select.shared }, ctx.signal, ctx.job_id);
     },
   })] : []),
   {
@@ -424,7 +479,7 @@ const baseRunSteps = (build: boolean): Step<RunInput>[] => [
     effect: true, replay: false,
     async run(ctx: { input: RunInput; outputs: Record<string, any>; signal: AbortSignal }) {
       const { buildOutputs } = await import("./domains/project.js");
-      const { install } = await import("./domains/device.js");
+      const { install, installStamp } = await import("./domains/device.js");
       const { project } = await projectOf(ctx.input);
       // Only packages of the selected modules: never ship the watch HAP to a phone (or vice versa).
       const selected = project.modules.filter((m) => (ctx.outputs.select.modules as string[]).includes(m.name));
@@ -435,34 +490,40 @@ const baseRunSteps = (build: boolean): Step<RunInput>[] => [
         "Use run action=build_run, or project action=build modules=[...] first");
       // HSPs are only needed when this app actually has shared modules; ship the ones built for this product.
       const hsp = await buildOutputs(project, "assembleHsp", project.modules.filter((m) => m.type === "shared"));
+      for (const name of [ctx.input.hot_reload_module ?? []].flat()) invariant([...haps, ...hsp].some((p) => p.module === name),
+        "NOT_FOUND", `No package from this build for hot_reload_module ${name}`);
       const paths = [...new Set([...haps.map((p: { path: string }) => p.path), ...hsp.map((p) => p.path)])];
       const unsigned = paths.filter((p) => /-unsigned\.h[as]p$/.test(p));
       const { fileSha256 } = await import("./core/files.js");
-      const package_files = ctx.input.hot_reload || autoMode(ctx.input) ? await Promise.all(paths.map(async (path) => ({ path, sha256: await fileSha256(path) }))) : undefined;
-      return { ...(await install(ctx.outputs.target.target, paths, ctx.signal)), packages: paths.map((p) => p.split(/[\\/]/).pop()), package_files, ...(unsigned.length ? { unsigned: unsigned.length } : {}) };
+      const package_files = ctx.input.hot_reload || ctx.input.debug_line || autoMode(ctx.input) ? await Promise.all(paths.map(async (path) => ({ path,
+        module: [...haps, ...hsp].find((p) => p.path === path)?.module, sha256: await fileSha256(path) }))) : undefined;
+      const installed = await install(ctx.outputs.target.target, paths, ctx.signal);
+      const stamp = package_files && project.bundleName ? await installStamp(ctx.outputs.target.target, project.bundleName, ctx.signal) : undefined;
+      return { ...installed, packages: paths.map((p) => p.split(/[\\/]/).pop()), package_files, stamp, ...(unsigned.length ? { unsigned: unsigned.length } : {}) };
     },
 
   },
   {
     id: "launch",
     async run(ctx: { input: RunInput; outputs: Record<string, any>; signal: AbortSignal }) {
-      const { inspectProject, mainAbility } = await import("./domains/project.js");
+      const { mainAbility } = await import("./domains/project.js");
       const { launchAndCheck } = await import("./domains/device.js");
-      const project = inspectProject(ctx.input.project, ctx.input.product);
+      const { project } = await projectOf(ctx.input);
       invariant(project.bundleName, "PROJECT_INVALID", "bundleName missing");
       const entry = (ctx.outputs.select?.modules as string[] | undefined)?.find((n) => project.modules.find((m) => m.name === n)?.type === "entry");
       const main = mainAbility(project, ctx.input.module ?? entry);
       const result = await launchAndCheck(ctx.outputs.target.target, project.bundleName, ctx.input.ability ?? main.ability, main.module, ctx.signal);
-      if (ctx.input.hot_reload) {
-        const { recordBaseline } = await import("./domains/hotreload.js");
-        await recordBaseline(project, main.module, project.bundleName, ctx.outputs.target.target, ctx.signal, ctx.outputs.install?.package_files);
-      }
       if (!result.started) {
         // Diagnose right here: crash kind, message, the project's own frames with code, likely causes.
         const { crashSummary } = await import("./domains/diagnose.js");
         const crash = result.crashed ? await crashSummary(ctx.outputs.target.target, project.bundleName, result.new_crash_logs, ctx.input.project, ctx.signal) : undefined;
         invariant(false, "LAUNCH_FAILED", result.crashed ? "App crashed on startup" : "App process is not running after launch", { ...result, ...(crash ? { crash } : {}) },
           crash?.source?.length ? `Fix ${crash.source[0]!.file}:${crash.source[0]!.line} (see crash.source), then build_run again` : result.crashed ? "Run diagnose action=crash to see the crash report" : result.hint);
+      }
+      if (ctx.input.hot_reload) {
+        const { recordBaseline } = await import("./domains/hotreload.js");
+        await recordBaseline(project, ctx.input.hot_reload_module ?? main.module, project.bundleName, ctx.outputs.target.target, ctx.signal, ctx.outputs.install?.package_files,
+          { debugLine: ctx.input.debug_line, launch: { module: main.module, ability: ctx.input.ability ?? main.ability } });
       }
       return result;
     },
@@ -485,12 +546,22 @@ const baseRunSteps = (build: boolean): Step<RunInput>[] => [
 const runSummary = (o: Record<string, any>) => ({
   device: o.target?.target, modules: o.select?.modules, module_selection: o.select?.reason,
   ...(o.hot ? { path: o.hot.path, ...(o.hot.fallback_reason ? { fallback_reason: o.hot.fallback_reason } : {}), ...(o.hot.note ? { note: o.hot.note } : {}), ...(o.hot.path === "hot_reload" ? { hot_reload: { files: o.hot.files, elapsed_ms: o.hot.elapsed_ms, note: "Quick-fixed the installed app (no rebuild/reinstall) and relaunched it with the new code" } } : {}) } : {}),
-  ...(o.baseline?.recorded ? { baseline: o.baseline } : {}), build: o.build ? { artifacts: o.build.artifacts?.map((a: { path: string }) => a.path), elapsed_ms: o.build.elapsed_ms, warnings: o.build.warnings, ...(o.build.device_compat ? { device_compat: o.build.device_compat } : {}) } : undefined,
-  installed: o.install, launch: o.launch, ...(o.flow ? { flow: o.flow } : {}), assert: o.assert ?? undefined,
+  ...(o.baseline?.recorded ? { baseline: o.baseline } : {}), build: o.build ? {
+    artifacts: [...(o.build.artifacts ?? []), ...(o.shared_package?.artifacts ?? [])].map((a: { path: string }) => a.path),
+    elapsed_ms: o.build.elapsed_ms + (o.shared_package?.elapsed_ms ?? 0), warnings: o.build.warnings,
+    ...(o.build.device_compat ? { device_compat: o.build.device_compat } : {}),
+  } : undefined,
+  installed: o.install, launch: o.hot?.launch ?? o.launch, ...(o.flow ? { flow: o.flow } : {}), assert: o.assert ?? undefined,
   ...(o.preflight ? { preflight: settlePreflight(o.preflight, !!o.build, o.build?.source_identity) } : {}),
 });
 defineJob<RunInput>({ kind: "build_run", steps: runSteps(true), summarize: runSummary });
 defineJob<RunInput>({ kind: "deploy", steps: runSteps(false), summarize: runSummary });
+
+defineJob<Parameters<typeof import("./domains/ark-debug.js").startArkDebug>[0]>({
+  kind: "ark_debug_start", steps: [{ id: "start", effect: true, replay: false,
+    async run(ctx) { return (await import("./domains/ark-debug.js")).startArkDebug(ctx.input, ctx.signal, ctx.job_id); },
+  }], summarize: (output) => output.start,
+});
 
 defineJob<{ project: string; target?: string; id: string; variables: Record<string, string>; repair: boolean; snapshot?: boolean }>({
   kind: "flow_replay",

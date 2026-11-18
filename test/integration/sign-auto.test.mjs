@@ -83,7 +83,12 @@ await build({ stdin: { contents: `import ${JSON.stringify(path.join(root, "src/j
       const modules = {
         os: `import os from 'node:os'; export default {...os,homedir:()=>globalThis.__devecoSignFixture.home};`,
         fs: `import fs from 'node:fs'; export default {...fs, renameSync:(a,b)=>{const f=globalThis.__devecoSignFixture;if(f.fault==='config'&&b===f.config)throw new Error('injected config rename'); fs.renameSync(a,b); if(f.fault==='crash-commit'&&b===f.config)process.exit(91);}};`,
-        auth: `export async function credentials(){return {access:'fake',userId:'offline'}}; export async function teams(){return {teams:[]}};`,
+        auth: `export async function credentials(){return {access:'fake',userId:'offline'}};
+          export async function teams(){return {teams:[]}};
+          export async function serviceBase(region, service){
+            if (service !== 'agcsign') throw new Error('Expected signing service');
+            return process.env.DEVECO_AGC_URL;
+          }`,
         device: `export async function listTargets(){return []}; export async function shell(){throw new Error('unexpected device')};`,
         project: `export function inspectProject(root,product='default'){return {root,product,bundleName:'com.test.audit',modules:[]}};`,
         toolchain: `export function toolchain(){return {components:{java:'/fake/bin/java'}}}; export function toolCommand(_name,args){return {file:'fake',args}};`,

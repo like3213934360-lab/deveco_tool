@@ -61,6 +61,7 @@ node bin/deveco-mcp.mjs init --host codex --project .      # 项目级配置（.
 | 配置项 | 作用 |
 | --- | --- |
 | `clt` | Command Line Tools 路径，可以代替 `studio` |
+| `appanalyzer_clt` | 单独提供 AppAnalyzer 的 Command Line Tools 根目录 |
 | `java_home` | 使用的 JDK |
 | `state_dir` | 状态目录，默认 `~/.deveco-mcp` |
 | `retention_days` | 固定为 1：电脑端截图、录屏、日志及 `save_path` / `test_export` 副本满 24 小时自动删除；不接受更长保留期 |
@@ -91,13 +92,82 @@ MCP 运行时按文件到期时间清理；退出或电脑休眠期间不能执�
 | `device` | `list` / `info` / `log`（按应用、级别或正则过滤；`from`/`to` 取相对时间段，如 5 分钟前到 1 分钟前；`follow` 加游标持续获取新日志；`clear` 清空；带 `project` 时把报错行里的源码位置定位到工程文件）/ 只读 `shell` / `sqlite`（查询设备数据库或调试包的 RDB 数据库，返回 JSON；默认只读，传 `write` 才可写）/ `send` / `recv` |
 | `ui` | `observe`（截图加精简控件列表）/ `screenshot`（`display` 多屏、`save_path` 另存）/ `tree`（`window`、`depth`（0 不限，1 只有根节点，与 devecocli 一致）、`all_windows` 全部窗口、`node` 单个组件子树）/ `windows` / `find` (absent matches include one bounded window-context query; unknown context remains explicit) / `act`（点击；输入，支持中文和任意特殊字符，默认替换原内容；键入；滑动；滚动；按键和组合键；鼠标点击、移动、滚轮、拖拽；每次返回 `after`：新出现和消失的控件、是否换页，一般不必再 `observe`；`steps` 一次调用执行整条路径，每步自动等待控件出现，可带最终断言，`save_flow` 存成 flow；同一路径重启后又走一遍时会提示存起来）/ `assert` / `visual`（截图回归：按名称和机型保存基准，之后对比，返回变化比例、区域和红框标注图）/ `layout`（检查当前页面的布局问题：超出屏幕、可点区域重叠、文字被裁切或被挤没、点击区域过小；`forms` 在折叠屏、阔折叠、三折叠模拟器上逐个形态和折叠状态检查）/ `perf`（在当前页面滑动，按逐帧时间统计帧率、帧耗时 p50/p95/最大值、卡顿帧和内存变化） / 录屏 `record_start` / `record_stop`（`discard`、`external`、`save_path`）/ `record_status`。**UI 测试会话**由宿主 AI 驱动：`test_start` → `test_step`（执行操作或断言，记录操作前后截图、控件摘要和应用日志片段）→ `review`（宿主看截图做判断；控件断言失败时不能改判为通过）→ `test_finish`（生成 JSON 和 Markdown 报告）→ `test_log` / `test_export` |
 | `ui_flow` | 用 `ui act` 录制可复用的操作流程，以一个最终断言收尾保存，回放时支持变量替换和自动修复，`snapshot` 回放后做截图回归。保存在 `.arkpilot/flows`，兼容 v0.x |
-| `diagnose` | `crash`（读取设备 jscrash、cppcrash、appfreeze 日志，或通过 `file` 指定本地单个 UTF-8 日志文件，最大 4 MB；`since_minutes` 限定设备时间窗口；提取错误特征和应用调用栈，并匹配故障模式库；带 `project` 时解析已有 ArkTS 源码位置及前后代码。Native PC 保留在报告中，尚不提供 C++ 地址符号化）/ `build` |
+| `diagnose` | `crash`（读取设备 jscrash、cppcrash、appfreeze 日志，或通过 `file` 读取单个 UTF-8 文件、`directory` 读取本地目录，每份最大 4 MB；`hilog=true` 单独提取报告中的 HiLog；`since_minutes` 限定设备时间窗口；提取错误特征和应用调用栈，并匹配故障模式库；带 `project` 时解析已有 ArkTS 源码位置及前后代码。`report=true` 生成 HTML 诊断报告）/ `stack`（`file` 指定采样栈，`limit` 限制热点数）/ `symbolize`（`file` 指定 ELF，`build_id` 校验产物身份，`pc` 传镜像内十六进制偏移）/ `build` |
 | `knowledge` | 离线文档、ArkTS 规则、错误案例和运行时问题模式：`search` / `read`（按 `section` 读取）/ `catalog` / `status` / `update` / `rollback`；`source=cloud` 在线查询 CodeGenie，每段按正文与本地官方文档比对，标注官方 / 官方·非 ArkTS 平台 / 社区 / 未确认 |
-| `skills` | 内置的鸿蒙 Skill：`list` / `read`；`export` 导出为宿主原生的 `SKILL.md`（`path` 指定任意目录）；`install_mcp` 把本服务写入宿主配置（cursor、claude、codex、opencode、trae-cn、codebuddy、qoder、pi；重复执行不会重复写入；atomcode、dsh、deveco 只导出技能）；`init` 一次完成两者；`search` / `install` / `uninstall` 使用 OpenHarmony Skill 市场 |
-| `auth` | 华为账号浏览器登录：`codegenie`（云端知识）或 `developer`（签名），`region` 可选 cn / global；`teams`；`import` 导入 v0.x 的登录凭据 |
+| `skills` | 内置的鸿蒙 Skill：`list` / `read`；`export` 导出为宿主原生的 `SKILL.md`（`path` 指定任意目录）；`install_mcp` 把本服务写入宿主配置（cursor、claude、codex、opencode、trae-cn、codebuddy、qoder、pi；重复执行不会重复写入；atomcode、dsh、deveco 只导出技能）；`init` 一次完成两者；`search` / `install` / `uninstall` 使用 OpenHarmony Skill 市场；卸载已修改或来源未验证的目录需 `force=true` |
+| `auth` | 华为账号浏览器登录支持 `cn`、`global`、`hk`、`mo`。港澳账号按华为 GRS 路由云端知识、签名及团队查询。DevEco Testing 使用其客户端独立登录。支持导入 v0.x 凭据。 |
 | `sign` | `auto`（工程已配置签名时拒绝执行、不做任何修改，`force` 时先准备并验证新材料，再原子切换配置；保留旧材料和证书，需要空闲证书名额；否则一键为真机生成调试签名：密钥库、证书、设备注册、Profile，ACL 权限从 `module.json5` 自动推导，并写入工程的 `signingConfigs`）/ `sign` / `verify` / AppGallery Connect 证书和设备管理 / 逐项操作 `keypair`、`csr`、`certificate_create`、`profile_create`、`profile_delete`。账号属于多个开发者团队时，会在 AGC 新建或删除东西的操作必须指定 `team`（否则列出团队让 AI 先问用户） |
 | `emulator` | `list`（`details`）/ `start`（`boot_mode`、`hdc_port`、`window`）/ `stop`（`name` 或多个 `names`；启动会核验实例、端口及开机完成）/ `create`（`screen_profile` 或自定义 `screen`、`hot_boot`、`instance_path`、`image_root`、`force`）/ `delete` / `images`（按行返回设备类型和系统版本；默认已下载，`all` 全部）/ `install_image`（`force` 重新下载；返回路径、大小、耗时）/ `remove_image` / `license`（接受）/ `license_view`（只读查看）/ `scenario`（电量和充电状态、GPS、光照/湿度/温度/步数/心率传感器、旋转、折叠、运动场景等）。启动、创建、下载镜像时，如果许可协议还没同意，会自动同意并在结果中注明（`auto_accept_license=false` 可关闭） |
 | `hot_reload` | `apply` 把 ArkTS 改动以 HQF 快速修复包推送到运行中的应用，，应用不重启（`files` 指定改动文件，`restart` 打完补丁后重启应用）；`reset` 覆盖安装保存的原始基线包（停止应用、保留数据、不重新编译，校验补丁清零；旧基线须重新部署建立）；`stop_daemon` 停止工程的 hvigor 守护进程 |
+
+`ui action=displays` 枚举目标设备的显示器 ID 和分辨率，可用返回的 ID 指定截图的 `display`。`all=true` 还返回屏幕 ID、刷新率、像素比和旋转角度，设备未提供的字段为 `null`。
+
+`ui act op=clear_text` 清空当前焦点输入框。传 `selector` 或 `x,y` 时先点击指定控件。批量操作可用同一个 `op`。`swipe` 和 `drag` 可分别通过 `selector` 与 `to` 定位起终点，也可传对应坐标。`pinch` 用 `touch.scale` 指定缩放比例，`rotate` 用 `touch.degrees` 指定角度，正值顺时针。可使用 `selector`、`x,y` 或屏幕中心，可选 `touch.radius`（像素）。容器滚动到开头或结尾用 `scroll_start` 或 `scroll_end`。`scroll_find` 用 `selector` 选容器，`to` 可组合 `key`、`text` 和 `type`。`direction=left/right` 搜索横向列表，`scroll_offset` 指定距容器边缘的像素数。
+
+`ui act op=long_click` 可指定 `duration_ms`，范围为 500–60000 毫秒。超过 30 秒请用单步 `act`，并通过 `job wait` 等待。传 `wait` 或 `request_key` 时也按任务执行。用 `job cancel` 中断任务中的长按并释放触点。
+
+单步 `click`、`clear_text`、`swipe` 和 `drag` 可传 `ui windows` 返回的窗口 ID。向非焦点窗口输入时，MCP 通过目标屏幕的 UiTest 布局核对触点归属和可见区域。窗口被遮挡或无法确认触点归属时返回冲突。
+
+`scroll_find` 的 `to` 还可匹配控件描述和状态，如 `description`、`enabled`、`clickable`。`scroll_start`、`scroll_end` 和 `scroll_find` 的 `timeout_ms` 控制 UITest 操作时限，范围为 1–3600000 毫秒。超过 38 秒请用单步 `act`，通过 `job wait` 等待。超时结果会说明是否已尝试发送滚动。已尝试发送时应先观察设备状态。
+
+`scroll_find` 接受 XPath、正则、`within`、`id` 和 `bundle`。这类条件在每次滚动后的布局上查询，只接受所选容器内可见的匹配。`direction` 指定查找的方向，默认 `down`。找到时返回 `scroll_match`，视口重复或超过时限时返回失败。目标选择器不接受 `index`。
+
+`ui test_step` 的 `uri` 可在测试会话中打开该应用已注册的自定义 Deep Link，并用 `visible` 或 `hidden` 核对页面。会话需指定 `bundle`，也可从 `project` 获取包名。URI 参数只用于本次设备调用，不写入测试步骤报告。
+
+`ui displays` 可查询显示器 ID。`tree`、`find`、`assert` 和 `observe` 接受 `display`，`observe` 的截图与布局使用同一显示器。发送窗口内输入时，`window` 用于识别显示器及焦点，显式 `display` 必须与该窗口所在显示器一致。
+
+`code action=lsp_restart resync=true` 重新同步项目，检查语言服务初始化结果，可用 `language=arkts` 或 `cpp` 指定单侧。C/C++ 重建编译数据库。使用 `job wait` 查看完成状态。
+
+工程可通过 `build-profile.json5` 的 `modules[].srcPath` 引用工程目录外的本地 HAR。该模块的 manifest 名称须与声明一致，构建仍遵循 SDK 的模块约束。
+
+独立 DevEcoTestingCli 支持 `project action=testing operation=install/update`，以 `service` 指定服务键。macOS Console 通过 `operation=services` 查看 Testing 服务，`start` 接受单台设备和官方 JSON 计划，后续按厂商任务 ID 查询、停止或读报告。[参数与示例](docs/VERIFY.md)
+
+宿主可读取 MCP 提示 `analyze`，按用户给出的故障证据调用 `diagnose`，通过 `job read` 读取报告及原始日志制品。
+
+用 `run build_run hot_reload=true` 保存基线后，`hot_reload apply` 可为入口或功能模块中已被应用引用的 `rawfile`、`resfile` 和 ArkTS 源码生成 HQF。补丁也可包含消费模块通过 `file:` 依赖的已声明 HAR，包括间接依赖、HAR 入口文件及 `src/main/ets` 下的源码。省略 `files` 时自动检查已记录文件的改动。传 `restart=true` 在安装后重新启动。连续补丁保留已应用的改动。显式列出 `files` 时也要包含本轮改过的历史补丁文件。用 `hot_reload reset` 恢复原安装包。
+
+给 HSP 打 ArkTS 或资源补丁时，在 `run build_run hot_reload=true` 中传 `hot_reload_module=<HSP 模块>`，构建、安装 HSP 和声明的依赖包，并记录该模块的基线。随后在 `hot_reload apply/reset` 中传 `module=<HSP 模块>`。`restart=true` 会启动记录基线时使用的 Ability。功能模块也可通过 `hot_reload_module` 选择基线，应用可用对应模块的资源上下文读取补丁内容。
+
+一次修补多个模块时，在部署时传 `hot_reload_module=["entry","shared"]`，再用 `hot_reload apply` 提交涉及这些模块的文件。模块共享同一份安装基线，补丁由同一次 Quick Fix 安装。后续补丁会保留组内既有改动，发现未提交的既有补丁文件改动时会拒绝本次安装。用组内任一模块执行 `hot_reload reset` 可恢复整个原始安装包集合。
+
+`project action=templates` 列出 `empty-ability`（默认）和 `native-cpp`。创建 Native C++ 模板会加入 CMake、NAPI 示例和 ArkTS 调用页。`code action=check` 可同时检查 `.ets` 与 C/C++ 文件，返回合计及分语言诊断。`fix=true` 只用于纯 ArkTS/TypeScript 文件。
+
+`project action=export_page` 接收本地 JSON `plan`。省略 `output` 可只读检查输入和媒体摘要、图层资源映射、布局元素及参考图。计划支持 `reference_scale`（1 或 2）和独立的 `component_reference` PNG。提供新的绝对路径 `output` 时写入 ArkTS、媒体、`import.json` 和可选的参考 PNG。返回的 `plan` 可直接预览导入。将 `reference_image` 传给 `ui visual` 或 `project verify` 可与设备截图比较，也可用 `candidate_image` 指定本地 PNG 做离线比较。
+
+```json
+{"module":"entry","page":"DesignPage","source":{"format":"figma","file":"frame.json","node":"3:1"},"assets":{"3:3":"badge.png"},"reference":"frame.png"}
+```
+
+- `html` 和 `jsx` 接受静态标签、换行 Flex 布局和本地 PNG/SVG。`jsx` 可展开同文件内的函数组件和 const 箭头组件，支持解构字符串或数字参数。运行时逻辑、事件处理器、外部样式和脚本会被拒绝。
+- `figma`、`pixso` 和 `mastergo` 分别接受 Figma REST 节点快照、Pixso 完整 `pixTreeNodes` 快照和 MasterGo `dsl` 快照。用 `node` 选择画板，`assets` 以图层 ID 对应导出的本地 PNG 或 SVG。生成页面保留已支持图层的几何位置。
+- `lanhu` 用 `file` 和 `context` 读取匹配的 `node-index.json` 与 `design-context.json`。要求完整节点列表和已验证的源画板坐标。支持本地容器、统一样式的文本和按图层 ID 绑定的导出图片。
+- `arkts` 暂存调用方提供的 `.ets`，包括从截图重建或转换为 HDS 的候选。此时 `assets` 的键是 ArkTS 中使用的媒体资源名。修订已导入页面时，在导出计划里添加当前页面的 `replace_sha256`。
+
+`project action=import_page` 将已导出的本地 ArkUI 页面和媒体导入所选的 `entry` 或 `feature` 模块。`plan` 指向本地 JSON，暂存文件路径以该 JSON 所在目录为准。
+
+```json
+{"module":"entry","page":{"name":"DesignPage","source":"Export.ets"},"media":[{"name":"hero.png","source":"hero.png"}]}
+```
+
+先调用 `import_page` 预览并用 `job read` 打开 `review_artifact`，再传回 `review_sha256` 应用。导入会注册 `pages/DesignPage`，媒体写入 `resources/base/media`。同名同内容的媒体可以复用。修订现有页面或媒体时，为对应条目填写当前文件的 `replace_sha256`。仅修订媒体时，填写 `page.name` 和 `page.replace_sha256`，省略 `page.source`。暂存或目标内容变化后需重新预览。用 `project build` 检查编译，用 `ui visual` 或 `project verify` 检查效果。
+
+`project action=build` 和 `run action=build_run` 接受 `debug_line=true`，向 Hvigor 传入 `debugLine=true`。与 `hot_reload=true` 一起使用时，后续 `hot_reload apply` 沿用该基线的设置。显式请求 `debug_line=true` 必须构建，不能与 `skip_build` 同用。
+
+`code action=debug op=start project=<绝对路径> target=<设备>` 构建、部署和启动 ArkTS 调试。可指定 `module` 和已声明的 `ability`，传 `stop_at_entry=true` 在入口暂停，传 `skip_build=true` 部署现有构建包。通过 `job wait` 获取 `session_id`。`op=attach` 可用 `project` 或 `bundle` 附加已运行的调试应用，可传 `pid` 核对进程身份。设置 `project` 可按源码位置调试，附加时可用 `module` 限定源码映射。后续用同一会话查询状态、调用栈、变量和事件，或控制执行。
+
+`break_add` 使用 `file` 和从 1 开始的 `line`，根据当前构建的 source map 映射到已加载脚本。也可传 VM 脚本 URL 和生成行。`query` 支持局部变量、对象自身的数据属性和字面量，可组合括号、取反、算术、比较、短路逻辑及三元运算。条件求值失败时会保留暂停并记录错误事件。`text` 设置命中后写入事件并继续执行的日志点。`eval` 读取暂停帧中的表达式结果。`set` 用 `symbol` 指定变量，`query` 指定 JSON 原始值，以 VM 读回值判断是否写入。
+
+`vars` 可用 `symbol` 读取指定局部变量或其自身的数据属性，省略时列出帧内作用域中的变量。
+
+需要调试 Worker 时，先用 `op=threads` 启动发现，再触发应用中的 Worker。把返回的 `thread` 传给断点、执行控制、栈、变量及事件操作。各线程事件游标独立。
+
+在 `start` 或 `attach` 时传绝对 `output_path`，可创建或追加 ArkTS NDJSON 事件文件。主线程和 Worker 的记录均带会话和线程 ID。`stop` 返回日志是否完整，单文件上限为 16 MiB。
+
+`break_add` 可用 `disabled=true` 创建禁用断点。`break_enable`、`break_disable` 和 `break_remove` 接受断点 ID（`query`）、`file` 和 `line`，或 `all=true`。`break_list` 和批量删除可用 `break_kind` 区分普通断点与日志点。`hit_count` 支持 `N`、`=N`、`>=N`、`<=N` 和 `%N`。日志点可传带 `{变量名}` 的 `text`，或传 `log_expression` 计算复合表达式的值，级别由 `log_level` 指定。`events` 可用 `query` 传逗号分隔的事件名，用 `wait` 等待新事件，用 `line` 传上次返回的非零 `cursor`。
+
+`device action=network_sim` 通过 `operation=start` 开启设备弱网，传 `scenario_id` 或 `name` 加全部上下行带宽（bps）、延迟（ms）和丢包率（0–1）。`list` 和 `status` 返回设备标记的活动场景，`stop` 只停止 MCP 管理的模拟并清理所属自定义场景。有效流量指标须由测试另行记录。
+
+`device action=location` 使用 `testhelper` 开关模拟定位，`operation=set` 接受经纬度或绝对 GPX 1.1 路径 `local`。模拟坐标供调试签名的应用使用，测试后调用 `operation=disable`。`device action=playback` 查询或控制系统媒体会话，控制时使用 `session_id` 或能匹配到唯一会话的 `bundle`，`seek` 以 `position_seconds` 指定位置。媒体操作要求所选设备允许 HDC 执行系统的 `ohos-avsession-manager`。
 
 建项时，`device_types` 接受 `phone`、`tablet`、`2in1`、`car`、`wearable`、`tv` 的非空组合，默认 `["phone"]`；去重后写入 `entry/src/main/module.json5`，并在结果中返回。非法类型、已有文件冲突或不可用的 API 映射在写入前报错。
 
@@ -118,7 +188,7 @@ MCP 运行时按文件到期时间清理；退出或电脑休眠期间不能执�
 
 项目级导出（`scope=project` 或 `init --project`）写入 `<project>/.agents/skills`，Codex、Claude Code、Cursor、Qoder、OpenCode、DevEco Code 都会读取这个目录，一份即可通用。
 
-服务还提供 MCP **Resources**（`deveco://skills/<name>`）和 **Prompts**：`fix-build`、`debug-crash` 和 `upgrade-sdk`。需求规划交给宿主自带的 Plan 模式。
+服务还提供 MCP **Resources**（`deveco://skills/<name>`）和 **Prompts**：`fix-build`、`debug-crash`、`analyze` 和 `upgrade-sdk`。需求规划交给宿主自带的 Plan 模式。
 
 录屏回执安全：`ui action=record_receipts` 可离线查看（target 是原始连接键）。确认文件名后用 `record_archive target=<原键> name=<完整文件名> reason=<说明>` 保存完整回执并释放占位；`record_restore receipt_id=<id>` 仅恢复到空槽，不自动认领身份或停止设备。旧格式未绑定身份的回执必须先归档，不能用于操作复用端口。归档不停止正在录屏的服务，亦不删除视频。
 
@@ -281,6 +351,7 @@ Other config keys:
 | Key | Purpose |
 | --- | --- |
 | `clt` | Command Line Tools path; use instead of `studio` |
+| `appanalyzer_clt` | Separate Command Line Tools root for AppAnalyzer |
 | `java_home` | JDK to use |
 | `state_dir` | State location; default `~/.deveco-mcp` |
 | `retention_days` | Fixed at 1: local screenshots, recordings, logs and `save_path` / `test_export` copies are deleted automatically after 24 hours; longer retention is rejected |
@@ -309,15 +380,31 @@ Check the setup with `node bin/deveco-mcp.mjs doctor [project]`, or call the `do
 | `device` | `list` / `info` / `log` (filter by bundle, level or regex; `from`/`to` relative ages, e.g. `from="5m", to="1m"` (omit `to` for now; do not include `ago`); `follow` + cursor streams new lines across calls; `clear`; with `project`, source locations in error lines are resolved to project files) / read-only `shell` / `sqlite` (JSON rows from an on-device database or a debuggable app's RDB store; read-only unless `write`) / `send` / `recv` |
 | `ui` | `observe` (screenshot plus compact element list) / `screenshot` (`display` for multi-screen, `save_path`) / `tree` (`window`, `depth` (0 = unlimited, 1 = root only, as in devecocli), `all_windows`, `node` for one component subtree; depth and default `interactive=true` filters compose, with `shown_nodes`, filter counts and empty-result hints) / `windows` / `find` (absent matches include one bounded window-context query; unknown context remains explicit) / `act` (click, input with Chinese and any special characters and replace-by-default, type, swipe, scroll, key and key chords, mouse click/move/scroll/drag; every act returns `after`: elements that appeared/disappeared and whether the page changed, so observe is rarely needed; `steps` runs a whole path in one call, each step waiting for its element, with an optional final assert and `save_flow`; a path walked again after a relaunch is suggested for saving) / `assert` / `visual` (screenshot regression: baselines per name and device model, change ratio, regions and a red-boxed diff image) / `layout` (layout bugs on the current screen: off screen, overlapping tap targets, clipped or collapsed text, tiny targets; `forms` checks every fold state on foldable, widefold and triplefold emulators) / `perf` (scrolls the current screen and reports fps, frame time p50/p95/max, janky frames and memory from per-frame timestamps; `reasons` names each unmet evidence condition and gesture index, without weakening `inconclusive`) / screen recording `record_start` / `record_stop` (`discard`, `external`, `save_path`) / `record_status`. **UI test sessions** driven by the host AI: `test_start` → `test_step` (actions and assertions with before/after screenshots, element summary and the app's log window) → `review` (host judges a screenshot; a failed control assertion is never overridden) → `test_finish` (JSON + Markdown report) → `test_log` / `test_export` |
 | `ui_flow` | Record reusable flows through `ui act`, save them with a final assert, and replay with variables and self-repair; `snapshot` adds a screenshot regression check. Stored in `.arkpilot/flows`, compatible with v0.x |
-| `diagnose` | `crash` (reads device jscrash/cppcrash/appfreeze reports, or one local UTF-8 log via `file`, up to 4 MB; `since_minutes` filters device reports; extracts the signature and app frames, matches the fault-pattern library; with `project`, resolves existing ArkTS source locations and surrounding code. Native PCs are retained; C++ address symbolication is not implemented) / `build` |
+| `diagnose` | `crash` (reads device jscrash/cppcrash/appfreeze reports, or local UTF-8 reports via `file` or `directory`, up to 4 MB each; `hilog=true` extracts embedded HiLog; `since_minutes` filters device reports; extracts the signature and app frames, matches the fault-pattern library; with `project`, resolves existing ArkTS source locations and surrounding code. `report=true` adds an HTML report) / `stack` (local sample-stack `file`, optional hotspot `limit`) / `symbolize` (ELF `file`, report `build_id`, image-relative hex `pc` offsets) / `build` |
 | `knowledge` | Offline docs, ArkTS rules, error cases and runtime patterns: `search` / `read` (by `section`) / `catalog` / `status` / `update` / `rollback`; `source=cloud` queries CodeGenie online; official labels require matching local official text via local_doc and do not verify the webpage publisher; unmatched or failed checks remain unverified |
 | `skills` | Built-in HarmonyOS skills: `list` / `read`, `export` as native `SKILL.md` for your host (`path` for any directory), `install_mcp` registers this server in the host config (cursor, claude, codex, opencode, trae-cn, codebuddy, qoder, pi; idempotent merge; atomcode, dsh and deveco get skills only), `init` does both, `search` / `install` / `uninstall` from the OpenHarmony skill market |
-| `auth` | Huawei browser login for `codegenie` (cloud knowledge) or `developer` (signing), `region` cn / global; `teams`; `import` v0.x credentials |
+| `auth` | Huawei browser login for cloud knowledge and developer signing supports `cn`, `global`, `hk` and `mo`. Hong Kong and Macao accounts use Huawei GRS for service routing. Testing uses its own client login. Supports v0.x credential import. |
 | `sign` | `auto` (refuses and changes nothing when the project already has signing unless `force`; prepares and verifies a new chain before atomically switching config, keeps old material and certificates, and needs a free certificate slot; otherwise one-step debug signing for real devices: keystore, certificate, device registration, profile with ACL permissions derived from `module.json5`, and `signingConfigs` in the project) / `sign` / `verify` / AppGallery Connect certificates and devices / itemized `keypair`, `csr`, `certificate_create`, `profile_create`, `profile_delete`. For accounts in several developer teams, actions that create or delete in AGC require `team` (otherwise the teams are listed so the agent asks the user) |
 | `emulator` | `list` (`details`) / `start` (`boot_mode`, `hdc_port`, `window`) / `stop` (`name` or several `names`; start verifies identity, port and boot completion) / `create` (`screen_profile` or custom `screen`, `hot_boot`, `instance_path`, `image_root`, `force`) / `delete` / `images` (rows of device type and OS version; downloaded, `all` for every image) / `install_image` (`force` re-downloads; returns path, size, duration) / `remove_image` / `license` (accept) / `license_view` (read-only) / `scenario` (battery level and charging status, GPS, light/humidity/temperature/steps/heart-rate sensors, rotation, fold, motion scenes, …). Start, create and image download accept the license agreements automatically when needed and say so in the result (`auto_accept_license=false` to opt out) |
 | `hot_reload` | `apply` pushes ArkTS changes to the running app as an HQF quick fix in about 5 s with no restart (`files` limits it to given files, `restart` relaunches after patching); `reset` replacement-installs archived baseline packages (stops the app, preserves data, no rebuild, verifies zero patches; legacy baselines need a new deployment); `stop_daemon` stops the project's hvigor daemon |
 
+Use `run build_run hot_reload=true hot_reload_module=<module>` to record an explicit feature or HSP baseline. Pass the module to `hot_reload apply/reset`. An HSP can patch ArkTS, `rawfile` and `resfile`. Set `restart=true` to relaunch the ability recorded with the baseline. Entry and feature patches also track declared local HAR dependencies, including transitive assets and ArkTS source.
+
+Pass multiple names in `hot_reload_module`, for example `["entry","shared"]`, to save one baseline for the group and apply their HQFs in one Quick Fix operation. Later applies preserve the group's prior patches. A reset through any group member restores the complete original package set.
+
+Use `ui act op=long_click duration_ms=<500–60000>` to set the hold time. Holds over 30 seconds run as jobs. `job cancel` releases the touch for an active hold. `scroll_find` accepts combined `key`, `text` and `type` matchers, horizontal `direction=left/right`, and `scroll_offset` in pixels.
+
+Single `click`, `clear_text`, `swipe` and `drag` operations accept a `window` ID from `ui windows`. For an unfocused window, the MCP checks the visible input region and window identity in the target display's UiTest layout. Obscured or unconfirmed points return a conflict.
+
+`scroll_find` can also match accessibility descriptions and control state, such as `enabled` and `clickable`. Set `timeout_ms` on `scroll_start`, `scroll_end` or `scroll_find` to limit the UITest operation. Single actions with deadlines over 38 seconds run as jobs. A timeout reports whether scroll dispatch was attempted.
+
+`scroll_find` accepts XPath, regular expressions, `within`, `id`, and `bundle`. These conditions are evaluated on each new layout and only match visible descendants of the container. `direction` specifies the direction to search, defaulting to `down`. A match returns `scroll_match`. A repeated viewport or expired deadline ends the search. The target selector does not accept `index`.
+
+`ui test_step` accepts `uri` to open a registered custom Deep Link in the session's bundle. Use `visible` or `hidden` to check the resulting page. Set `bundle` or `project` when starting the session. The step report omits URI parameters.
+
 `project create` accepts a nonempty `device_types` array containing `phone`, `tablet`, `2in1`, `car`, `wearable` and/or `tv` (default `["phone"]`). It deduplicates the array, writes `entry/src/main/module.json5` and returns the chosen types. Invalid types, existing-file conflicts and unavailable API mappings fail before writing.
+
+`project export_page` stages ArkTS and media from static HTML or JSX, local Figma/Pixso/MasterGo/Lanhu snapshots, or a supplied ArkTS page. Omit `output` for read-only inspection of source, media and layout. Set `output` to a new directory to export. Pass the returned `plan` to `project import_page` and optionally compare `reference_image` with a device screenshot or a saved `candidate_image`. Read `review_artifact` with `job read`, then pass its `review_sha256` to apply. Revisions require the current file's `replace_sha256`. The [plan examples above](#工具) show both inputs.
 
 `emulator start` supports `boot_mode=coldboot` (preserve data), `snapshot` (restore saved Quick Boot state) and `reset` (**erase instance data**). Omission uses the instance default; legacy `cold=true` means `coldboot`, and conflicting arguments fail. Explicit `snapshot` requires Quick Boot, saved VM state and evidence from this launch's restore log. Missing snapshots, failed restores or unverifiable restores fail without a coldboot retry. A snapshot may restore its original HDC port; a mismatch with the requested port fails too.
 
@@ -340,7 +427,9 @@ Four built-in skills:
 
 Project-scope export (`scope=project` or `init --project`) writes `<project>/.agents/skills`, which Codex, Claude Code, Cursor, Qoder, OpenCode and DevEco Code all read, so one copy serves every tool.
 
-The server also exposes MCP **Resources** (`deveco://skills/<name>`) and **Prompts**: `fix-build`, `debug-crash`, and `upgrade-sdk`. Feature planning is left to the host's own plan mode.
+With a DevEcoTestingCli launcher that advertises list and install or update, pass its service key to `project testing` for standalone maintenance. On macOS, `project action=testing` lists local Testing services and starts a vendor JSON plan for one device. Query, stop or read the report using the vendor task UUID. See [verification options](docs/VERIFY.md).
+
+The server also exposes MCP **Resources** (`deveco://skills/<name>`) and **Prompts**: `fix-build`, `debug-crash`, `analyze`, and `upgrade-sdk`. Feature planning is left to the host's own plan mode.
 
 ### Knowledge packs
 

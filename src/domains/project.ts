@@ -4,7 +4,7 @@ import path from "node:path";
 import { artifactPath, commitArtifact } from "../core/artifacts.js";
 import { config, assetRoot } from "../core/config.js";
 import { invariant, ToolError } from "../core/errors.js";
-import { fileSha256, inside, isFile, readJson5, walk } from "../core/files.js";
+import { fileSha256, isFile, readJson5, walk } from "../core/files.js";
 import { run } from "../core/proc.js";
 import { sdkInfo, toolCommand, toolchain } from "../core/toolchain.js";
 
@@ -86,12 +86,16 @@ export function inspectProject(projectPath: string, productName?: string, target
       : applicable.find((t) => t.name === "default") ?? applicable[0];
     invariant(target, "INVALID_INPUT", `Target ${item.name}@${wanted} does not apply to product ${product.name}`,
       { targets: applicable.map((t) => t.name) }, `Use one of: ${applicable.map((t) => `${item.name}@${t.name}`).join(", ")}`);
-    const moduleRoot = inside(root, item.srcPath);
+    invariant(typeof item.srcPath === "string" && item.srcPath.trim(), "PROJECT_INVALID", `Module ${item.name} has no srcPath`);
+    const moduleRoot = path.resolve(root, item.srcPath);
+    const external = !isWithin(root, moduleRoot) || (fs.existsSync(moduleRoot) && !isWithin(fs.realpathSync(root), fs.realpathSync(moduleRoot)));
     let type: Module["type"] = "unknown";
     let deviceTypes: string[] = [];
     const manifest = path.join(moduleRoot, "src/main/module.json5");
+    invariant(!external || isFile(manifest), "PROJECT_INVALID", `External module ${item.name} has no module.json5`, { module_path: moduleRoot });
     if (isFile(manifest)) {
-      const m = readJson5(manifest).module as { type?: Module["type"]; deviceTypes?: string[] } | undefined;
+      const m = readJson5(manifest).module as { name?: string; type?: Module["type"]; deviceTypes?: string[] } | undefined;
+      invariant(!external || m?.name === item.name, "PROJECT_INVALID", `External module ${item.name} has a different manifest name`, { module_path: moduleRoot, manifest_name: m?.name });
       type = m?.type ?? "unknown";
       deviceTypes = m?.deviceTypes ?? [];
     }
@@ -111,6 +115,42 @@ export function inspectProject(projectPath: string, productName?: string, target
     compatibleSdk: text(product.compatibleSdkVersion ?? profile.app?.compatibleSdkVersion),
     modules, bundleName,
   };
+}
+
+function isWithin(root: string, file: string) {
+  const relative = path.relative(root, file);
+  return relative !== ".." && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative);
+}
+
+/** Build outputs of an external module can be shared by several declaring projects. */
+export function externalModuleRoots(project: Project) {
+  const root = fs.realpathSync(project.root);
+  return project.modules.filter((m) => fs.existsSync(m.root) && !isWithin(root, fs.realpathSync(m.root))).map((m) => m.root);
+}
+
+/** Resolve source dependencies through the project's declared modules for this product. */
+export function localModuleDependencies(project: Project, consumers: Module[], types: Module["type"][]) {
+  const declared = new Map(project.modules.filter((m) => types.includes(m.type)).map((m) => [fs.realpathSync(m.root), m]));
+  const visited = new Set(consumers), found: Module[] = [];
+  for (const consumer of visited) {
+    const manifest = path.join(consumer.root, "oh-package.json5");
+    if (!isFile(manifest)) continue;
+    const pkg = readJson5(manifest) as { dependencies?: Record<string, unknown>; dynamicDependencies?: Record<string, unknown> };
+    const specs = [...Object.values(pkg.dependencies ?? {}), ...Object.values(pkg.dynamicDependencies ?? {})];
+    for (const spec of specs) {
+      if (typeof spec !== "string") continue;
+      const relative = spec.startsWith("file:") ? spec.slice(5) : /^\.\.?[\\/]/.test(spec) ? spec : undefined;
+      if (!relative) continue;
+      const candidate = path.resolve(consumer.root, relative);
+      if (!fs.existsSync(candidate)) continue;
+      const module = declared.get(fs.realpathSync(candidate));
+      if (module && !visited.has(module)) {
+        visited.add(module);
+        found.push(module);
+      }
+    }
+  }
+  return found;
 }
 
 /** Device types any runnable (entry/feature) module of the project supports. */
@@ -163,11 +203,13 @@ export function selectRunModules(project: Project, options: { modules?: string[]
     "Pass modules=[\"<module>\"] (e.g. the phone or the watch entry)");
 }
 
-export function mainAbility(project: Project, moduleName?: string) {
+export function mainAbility(project: Project, moduleName?: string, abilityName?: string) {
   const module = moduleName ? project.modules.find((m) => m.name === moduleName) : project.modules.find((m) => m.type === "entry");
   invariant(module, "INVALID_INPUT", moduleName ? `Unknown module ${moduleName}` : "No entry module found");
   const manifest = readJson5(path.join(module.root, "src/main/module.json5")).module as { name: string; mainElement?: string; abilities?: { name: string }[] };
-  const ability = manifest.mainElement ?? manifest.abilities?.[0]?.name;
+  invariant(abilityName === undefined || manifest.abilities?.some((entry) => entry.name === abilityName),
+    "INVALID_INPUT", "The selected module does not declare this ability", { module: module.name, ability: abilityName });
+  const ability = abilityName ?? manifest.mainElement ?? manifest.abilities?.[0]?.name;
   invariant(ability, "PROJECT_INVALID", `Module ${module.name} declares no ability`);
   return { module: manifest.name, ability };
 }
@@ -465,7 +507,7 @@ export function hasNativeCode(project: Project) {
 
 export async function buildProject(
   project: Project,
-  options: { task?: BuildTask; modules?: string[]; mode?: string; clean?: boolean; sync?: boolean; props?: string[]; signing_config?: string },
+  options: { task?: BuildTask; modules?: string[]; mode?: string; clean?: boolean; sync?: boolean; props?: string[]; signing_config?: string; debug_line?: boolean },
   signal: AbortSignal,
   jobId?: string,
 ) {
@@ -475,7 +517,7 @@ export async function buildProject(
 
 async function compileProject(
   project: Project,
-  options: { task?: BuildTask; modules?: string[]; mode?: string; clean?: boolean; sync?: boolean; props?: string[]; signing_config?: string },
+  options: Parameters<typeof buildProject>[1],
   signal: AbortSignal,
   jobId?: string,
 ) {
@@ -516,6 +558,7 @@ async function compileProject(
     ? ["--mode", "project", "-p", `product=${project.product}`, "-p", `buildMode=${mode}`]
     : ["--mode", "module", "-p", `module=${modules.map((m) => `${m.name}@${m.target}`).join(",")}`, "-p", `product=${project.product}`, "-p", `buildMode=${mode}`];
   if (mode !== "release") args.push("-p", "debuggable=true");
+  if (options.debug_line) args.push("-p", "debugLine=true");
   if (options.props) args.push(...options.props);
   args.push(...(options.clean ? ["clean", task] : [task]));
   // hvigor rewrites each module's BuildProfile.ets (build mode constants). When those files are
@@ -673,8 +716,11 @@ export async function cleanProject(project: Project, signal: AbortSignal, module
 
 /* --------------------------------- create --------------------------------- */
 
+export const projectTemplates = ["empty-ability", "native-cpp"] as const;
+
 export async function createProject(input: {
   project: string; app_name: string; bundle_name: string; sdk_version?: string; target_api?: number; compatible_api?: number; device_types?: string[]; merge?: boolean;
+  template?: (typeof projectTemplates)[number];
 }) {
   const destination = path.resolve(input.project);
   invariant(/^[a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z0-9_]+){2,}$/.test(input.bundle_name), "INVALID_INPUT", "bundle_name must look like com.example.app (at least 3 segments)");
@@ -688,28 +734,33 @@ export async function createProject(input: {
   const compileVersion = input.sdk_version ?? sdk.platform_version;
   const versionFor = (api: number | undefined) => (api === undefined || api === sdk.api_level ? compileVersion : versionForApi(api));
   const compatibleVersion = versionFor(input.compatible_api ?? input.target_api), targetVersion = versionFor(input.target_api);
-  const template = path.join(assetRoot, "templates/application");
-  const files = [...walk(template, new Set())].map((file) => path.relative(template, file).split(path.sep).join("/"));
+  const templateId = input.template ?? "empty-ability";
+  invariant(projectTemplates.includes(templateId), "INVALID_INPUT", "Unknown project template", { templates: projectTemplates });
+  const templateRoot = path.join(assetRoot, "templates"), files = new Map<string, string>();
+  for (const directory of templateId === "native-cpp" ? ["application", "native-cpp"] : ["application"]) {
+    const template = path.join(templateRoot, directory);
+    for (const file of walk(template, new Set())) files.set(path.relative(template, file).split(path.sep).join("/"), file);
+  }
   const target = (rel: string) => path.join(destination, path.basename(rel) === "gitignore.txt" ? path.join(path.dirname(rel), ".gitignore") : rel);
-  const conflicts = files.filter((rel) => fs.existsSync(target(rel)));
+  const conflicts = [...files.keys()].filter((rel) => fs.lstatSync(target(rel), { throwIfNoEntry: false }));
   invariant(!conflicts.length, "CONFLICT", "Project creation would overwrite existing files", { conflicts: conflicts.slice(0, 20) });
   const written: string[] = [];
-  for (const rel of files) {
+  for (const [rel, source] of files) {
     const out = target(rel);
     fs.mkdirSync(path.dirname(out), { recursive: true });
-    let content = fs.readFileSync(path.join(template, rel));
+    let content = fs.readFileSync(source);
     if (rel === "AppScope/app.json5") {
-      const app = readJson5(path.join(template, rel));
+      const app = readJson5(source);
       app.app = { ...(app.app as object), bundleName: input.bundle_name };
       content = Buffer.from(JSON.stringify(app, null, 2));
     } else if (rel === "AppScope/resources/base/element/string.json") {
       content = Buffer.from(JSON.stringify({ string: [{ name: "app_name", value: input.app_name }] }, null, 2));
     } else if (rel === "entry/src/main/module.json5") {
-      const data = readJson5(path.join(template, rel));
+      const data = readJson5(source);
       (data.module as Record<string, unknown>).deviceTypes = deviceTypes;
       content = Buffer.from(JSON.stringify(data, null, 2));
     } else if (rel === "build-profile.json5") {
-      const profile = readJson5(path.join(template, rel));
+      const profile = readJson5(source);
       // No signingConfig: debug builds on emulators work unsigned; sign action configures real devices.
       (profile.app as Record<string, unknown>).products = [{
         name: "default",
@@ -720,8 +771,18 @@ export async function createProject(input: {
         buildOption: { strictMode: { caseSensitiveCheck: true, useNormalizedOHMUrl: true } },
       }];
       content = Buffer.from(JSON.stringify(profile, null, 2));
+    } else if (templateId === "native-cpp" && rel === "entry/build-profile.json5") {
+      const profile = readJson5(source);
+      profile.buildOption = { ...profile.buildOption as object, externalNativeOptions: {
+        path: "./src/main/cpp/CMakeLists.txt", arguments: "", cppFlags: "", abiFilters: ["arm64-v8a", "x86_64"],
+      } };
+      content = Buffer.from(JSON.stringify(profile, null, 2));
+    } else if (templateId === "native-cpp" && rel === "entry/oh-package.json5") {
+      const data = readJson5(source);
+      data.dependencies = { ...data.dependencies as object, "libentry.so": "file:./src/main/cpp/types/libentry" };
+      content = Buffer.from(JSON.stringify(data, null, 2));
     } else if (rel === "oh-package.json5" || rel === "hvigor/hvigor-config.json5") {
-      const data = readJson5(path.join(template, rel));
+      const data = readJson5(source);
       data.modelVersion = sdk.platform_version;
       content = Buffer.from(JSON.stringify(data, null, 2));
     }
@@ -730,7 +791,7 @@ export async function createProject(input: {
   }
   const project = inspectProject(destination);
   return {
-    created: destination, files: written.length, bundle_name: input.bundle_name, product: project.product, device_types: deviceTypes,
+    created: destination, template: templateId, files: written.length, bundle_name: input.bundle_name, product: project.product, device_types: deviceTypes,
     sdk: { compile: compileVersion, api_level: sdk.api_level },
     next: [{ tool: "project", action: "build", project: destination }, { tool: "run", action: "build_run", project: destination }],
   };

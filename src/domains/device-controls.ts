@@ -15,6 +15,10 @@ export function validateControl(input: Record<string, unknown>) {
     font: { info: ["local"], install: ["local"], uninstall: ["name"] },
     screen: { size: [], status: [], wake: [], sleep: [], rotation: [], rotate: ["value"], rotation_lock: ["value"], sleeptime: ["value"], viewmode: ["value"] },
     system: { time: ["value"], timezone: ["value"], unlock: [], control_center: [], notification_center: [] },
+    location: { enable: [], disable: [], set: ["local", "latitude", "longitude", "altitude", "speed", "bearing", "interval"] },
+    network_sim: { list: [], status: [], stop: [], start: ["scenario_id", "name", "up_bandwidth", "down_bandwidth", "up_latency", "down_latency", "up_drop", "down_drop"] },
+    playback: { list: [], play: ["session_id", "bundle"], pause: ["session_id", "bundle"], next: ["session_id", "bundle"], previous: ["session_id", "bundle"],
+      forward: ["session_id", "bundle"], rewind: ["session_id", "bundle"], seek: ["session_id", "bundle", "position_seconds"] },
   };
   const fields = operations[String(input.action)]?.[String(input.operation)];
   invariant(fields, "INVALID_INPUT", `Unknown ${input.action} operation`, { operations: Object.keys(operations[String(input.action)] ?? {}) });
@@ -68,7 +72,7 @@ export async function checkedCommand(target: string, args: string[], signal?: Ab
   invariant(!result.truncated, "DEVICE_OUTPUT_INVALID", "Device output exceeded the capture limit; cannot return incomplete evidence");
   const output = `${result.stdout}\n${result.stderr}`.trim();
   const diagnostic = content ? result.stderr : output;
-  const unsupported = /(?:testhelper|power-shell).*(?:not found|inaccessible)|unknown (?:command|option)|not supported|permission denied|Get parameter .*fail! errNum is:1002/i.test(diagnostic) || /^(?:Error:\s*)?Service is not available\.?$/i.test(diagnostic.trim());
+  const unsupported = /(?:testhelper|power-shell|netcopilot|ohos-avsession-manager).*(?:not found|inaccessible)|unknown (?:command|option)|not supported|permission denied|Get parameter .*fail! errNum is:1002/i.test(diagnostic) || /^(?:Error:\s*)?Service is not available\.?$/i.test(diagnostic.trim());
   invariant(!unsupported, "CAPABILITY_UNAVAILABLE", "Device does not support or permit this operation", { command: args.slice(0, 2), output: output.slice(0, 1500) });
   invariant(result.code === 0 && !/^(?:error\b|failed\b|failure\b|\[fail\])|\bfailed to\b|Get parameter .*fail!/im.test(diagnostic), "DEVICE_COMMAND_FAILED", "Device command failed", { command: args.slice(0, 2), output: output.slice(0, 1500) });
   return content ? result.stdout : result.stdout.trim();

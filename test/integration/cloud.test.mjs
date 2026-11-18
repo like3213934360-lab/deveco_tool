@@ -32,7 +32,7 @@ function handle(req, res, body) {
   }
   if (url.pathname === "/authrouter/auth/api/jwToken/check") {
     if (req.headers.refresh === "true") { agc.refreshes++; if (agc.delayRefresh) { agc.pendingRefresh = () => json({ status: true, userInfo: { accessToken: `acc-${agc.refreshes}` } }); return; } }
-    return json(req.headers.jwttoken === JWT ? { status: true, userInfo: { accessToken: `acc-${agc.refreshes}` } } : { status: false });
+    return json(req.headers.jwttoken === JWT ? { status: true, userInfo: { accessToken: `acc-${agc.refreshes}`, nationalCode: agc.country } } : { status: false });
   }
   if (url.pathname.startsWith("/file/")) return res.end(agc.files.get(url.pathname.slice(6)));
   // AGC: every call must carry the account headers
@@ -163,6 +163,53 @@ test("both login providers support cn/global with region-matched callbacks", asy
       assert.equal(agc.loginChecks.at(-1).appid, appid);
       assert.equal(agc.loginChecks.at(-1).site, region === "cn" ? "CN" : "SG");
     }
+  }
+});
+
+test("regional login verifies the account market and keeps the callback site for exchange and refresh", async () => {
+  const provider = "developer";
+  const begin = async (region) => {
+    await call("auth", { action: "logout", provider });
+    const url = new URL((await call("auth", { action: "login", provider, region, open_browser: false })).login_url);
+    return (siteId) => fetch(`http://127.0.0.1:${url.searchParams.get("port")}/callback`, {
+      method: "POST", body: new URLSearchParams({ code: url.searchParams.get("code"), tempToken: "tmp-ok", ...(siteId && { siteId }) }),
+    });
+  };
+  try {
+    for (const [region, site, country] of [["hk", "5", "SG"], ["mo", "1", "CN"]]) {
+      const finish = await begin(region);
+      const conflict = await client.call("auth", { action: "login", provider, region: "cn", open_browser: false });
+      assert.equal(conflict.data.error.code, "CONFLICT");
+      for (const invalid of [undefined, "99", "constructor"]) assert.equal((await finish(invalid)).status, 400);
+      agc.country = region.toUpperCase();
+      assert.equal((await finish(site)).status, 200);
+      assert.equal((await waitLogin(provider)).region, region);
+      assert.equal(agc.loginChecks.at(-1).site, country);
+      const before = agc.refreshes;
+      agc.fail401 = 1;
+      await call("sign", { action: "certificates" });
+      assert.equal(agc.refreshes, before + 1);
+      agc.country = "CN";
+      agc.fail401 = 1;
+      assert.equal((await client.call("sign", { action: "certificates" })).data.error.code, "AUTH_REQUIRED");
+    }
+    for (const country of [undefined, "MO"]) {
+      agc.country = country;
+      const finish = await begin("hk");
+      await finish("5");
+      const rejected = await waitLogin(provider);
+      assert.equal(rejected.logged_in, false);
+      assert.match(rejected.error, /region/);
+    }
+    agc.country = "HK";
+    const finish = await begin("global");
+    await finish("5");
+    assert.equal((await waitLogin(provider)).region, "hk");
+  } finally {
+    delete agc.country;
+    const finish = await begin("cn");
+    await finish("1");
+    assert.equal((await waitLogin(provider)).logged_in, true);
   }
 });
 

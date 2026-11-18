@@ -195,10 +195,10 @@ export const emulatorTool = tool({
 export const hotReloadTool = tool({
   name: "hot_reload",
   title: "Hot reload",
-  description: "apply: HQF (~5s) after run build_run hot_reload=true; files limits edits, restart relaunches. build_run auto-patches code. reset: replace-install saved baseline packages; stops app, keeps data, verifies patch=0; no rebuild. Old baseline: redeploy. stop_daemon: stop hvigor. New files/resources/decorators need redeploy.",
+  description: "apply: HQF after build_run hot_reload=true. rawfile/resfile supported. reset: reinstall baseline packages, keep data, verify patch=0. stop_daemon: stop hvigor.",
   schema: z.object({
     action: z.enum(["apply", "reset", "stop_daemon"]),
-    files: z.array(z.string()).max(500).optional().describe("apply: changed .ets/.ts files (default: detect from baseline)"),
+    files: z.array(z.string()).max(500).optional().describe("apply: code/rawfile/resfile; default auto-detect"),
     restart: z.boolean().optional().describe("apply: relaunch after patching to execute startup code"),
     project: fields.project,
     product: fields.product,
@@ -218,7 +218,6 @@ export const hotReloadTool = tool({
     // Recheck after acquiring project/device ownership; never operate on a newly redirected baseline.
     const { module, target } = await hotReloadSelection(project, input.module, input.target, ctx.signal);
     if (input.action === "reset") return resetHotReload(project, module, target, ctx.signal);
-    const { mainAbility } = await import("../domains/project.js");
-    return applyHotReload(project, module, ctx.signal, () => {}, { target, files: input.files, restart: input.restart, ability: input.restart ? mainAbility(project, module).ability : undefined });
+    return applyHotReload(project, module, ctx.signal, () => {}, { target, files: input.files, restart: input.restart });
   },
 });

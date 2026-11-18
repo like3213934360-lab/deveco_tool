@@ -3,7 +3,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
-import { app } from '../support/acceptance.mjs';
+import { app, sha } from '../support/acceptance.mjs';
 
 test('baselines: measured SDK/device evidence with explicit record and compare', async (t) => {
   const { call, job, ui, project, target, directory, receipt, defer, info } = await app(t);
@@ -68,4 +68,29 @@ test('baselines: measured SDK/device evidence with explicit record and compare',
     assert.equal(finished.status, 'inconclusive'); assert.equal(finished.checklist_coverage.missing[0].checklist_item, 2);
     receipt('ui-incomplete.json', finished);
   });
+});
+
+test('design PNG comparison through UI and project verification', async (t) => {
+  const { call, raw, job, ui, launch, project, target, directory, bundle, defer } = await app(t);
+  await launch();
+  defer(launch);
+  const reference = path.join(directory, 'reference.png');
+  await ui({ action: 'screenshot', format: 'png', width: 360, save_path: reference });
+  const hash = sha(fs.readFileSync(reference));
+  const args = { action: 'visual', reference_image: reference, context: 'fixture-home' };
+  const same = await ui(args);
+  assert.equal(same.same, true, JSON.stringify(same));
+  assert.equal(same.reference_sha256, hash);
+  assert.ok(same.reference_artifact && same.captured_artifact);
+  const plan = path.join(directory, 'plan.json');
+  fs.writeFileSync(plan, JSON.stringify({ schema: 1, checks: [{ id: 'reference', type: 'visual', options: { reference_image: reference } }] }));
+  const checked = await job('project', { action: 'verify', project, target, plan, output: path.join(directory, 'verification'), wait: 0 });
+  assert.equal(checked.result.verdict, 'passed');
+  await call('device', { action: 'app', operation: 'stop', bundle, target });
+  const changed = await ui(args);
+  assert.equal(changed.same, false, JSON.stringify(changed));
+  assert.ok(changed.diff_artifact);
+  assert.equal(sha(fs.readFileSync(reference)), hash);
+  const malformed = await raw('ui', { ...args, target, update: true });
+  assert.equal(malformed.data.error.code, 'INVALID_INPUT');
 });

@@ -19,6 +19,7 @@ fs.writeFileSync(entry, [
   `export { mergeCodexToml, mergeJsonConfig, installMcp } from ${JSON.stringify(path.join(root, "src/domains/hostconfig.ts"))};`,
   `export { projectAclPermissions, profileSummary } from ${JSON.stringify(path.join(root, "src/domains/sign.ts"))};`,
   `export { siteAllowed, regionBase } from ${JSON.stringify(path.join(root, "src/domains/auth.ts"))};`,
+  `export { regionalRoutes } from ${JSON.stringify(path.join(root, "src/domains/region-services.ts"))};`,
   `export { apiOf, compatibility } from ${JSON.stringify(path.join(root, "src/domains/doctor.ts"))};`,
   `export { faultTime, buildFailureHints, parseCrash } from ${JSON.stringify(path.join(root, "src/domains/diagnose.ts"))};`,
   `export { scrollGesture, chordCodes, treeSignature, subtree, deviceText } from ${JSON.stringify(path.join(root, "src/domains/ui.ts"))};`,
@@ -33,6 +34,16 @@ fs.writeFileSync(entry, [
 await build({ entryPoints: [entry], outfile: path.join(out, "entry.mjs"), bundle: true, format: "esm", platform: "node", packages: "external", logLevel: "error", nodePaths: [path.join(root, "node_modules")] });
 fs.symlinkSync(path.join(root, "node_modules"), path.join(out, "node_modules"), "junction"); // junction: no admin rights needed on Windows
 const m = await import(pathToFileURL(path.join(out, "entry.mjs")).href);
+
+test("regional service discovery validates every credential destination", () => {
+  const routes = { spaceintroduce: "https://sg.devecostudio.huawei.com", agcups: "https://connect-api.cloud.huawei.com", agcsign: "https://connect-api-dra.cloud.huawei.com" };
+  const response = (entries) => JSON.stringify({ resultCode: 0, services: { "com.huawei.devecostudio.region": entries } });
+  assert.deepEqual(m.regionalRoutes(response(routes)), routes);
+  for (const value of [undefined, "https://huawei.com.example.org", "http://a.huawei.com", "https://x@a.huawei.com", "https://a.huawei.com:123", "https://a.huawei.com/path"]) {
+    assert.throws(() => m.regionalRoutes(response({ ...routes, agcsign: value })), { code: "HTTP_ERROR" });
+  }
+  for (const body of ["", "null", "{}"]) assert.throws(() => m.regionalRoutes(body), { code: "HTTP_ERROR" });
+});
 
 test("tree depth and interactivity retain their semantics and explain every omitted node", () => {
   const nodes=m.flatten({attributes:{bounds:'[0,0][100,100]'},children:[
@@ -137,13 +148,20 @@ test("parses the WindowManagerService window table", () => {
     "SCBStatusBar24       0         1453    27    2108 1    0    2202 0           [ 0    0    1320 117  ]",
     "---------------------------------------------------------------------------------------",
     "xxwidgt0             0         6628    200   1    1    0    -1   0           [ 0    0    1276 2848 ]",
+    "-------------------------------------ScreenGroup 1-------------------------------------",
+    "WindowName           DisplayId Pid     WinId Type Mode Flag ZOrd Orientation [ x    y    w    h    ]",
+    "second_screen       2         2494    301   1    1    0    3    0           [ 0    0    1024 768  ]",
     "Focus window: 197",
-    "Total window num: 3",
+    "All Focus window:",
+    "DisplayId: 0 WindowId: 197",
+    "DisplayId: 2 WindowId: 301",
+    "Total window num: 4",
   ].join("\n");
   const w = m.parseWindows(raw);
-  assert.equal(w.length, 3);
+  assert.equal(w.length, 4);
   assert.deepEqual(w[0], { id: 197, name: "nimble_widget_app0", pid: 2494, display: 0, type: 1, focused: true, visible: true, bounds: [0, 0, 1276, 2848] });
   assert.equal(w[2].visible, false);
+  assert.equal(w[3].visible, true); assert.equal(w[3].focused, true);
 });
 
 test("splits a test plan into a checklist", () => {

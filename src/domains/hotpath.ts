@@ -8,10 +8,8 @@ import { pinStorage, storageGuard } from "../core/storage.js";
 /*
  * run build_run mode=auto: patch the running app (HQF quick fix, ~5 s) instead of build + install +
  * launch (25-90 s) when that is provably equivalent. Measured facts that shape the rules:
- *   - the cold-reload compiler resolves changed files under the hot-reload module's own ets directory,
- *     so only that module's .ets/.ts files are patchable (an edit in a HAR yields no patch);
- *   - resources, module.json5, oh-package.json5, build-profile.json5 and new/deleted files need a
- *     real build (hot_reload tool documentation; HQF cannot add or remove code units);
+ *   - auto mode quick-fixes existing .ets/.ts files in the launched module's src/main/ets;
+ *   - resource and dependency changes follow the full path; explicit hot_reload can patch supported resources and HAR inputs;
  *   - the patch is only valid against the exact install the baseline was recorded for
  *     (bm dump installTime/updateTime).
  * Every rule that cannot be proven falls back to the full path; the reason is reported.
@@ -36,11 +34,11 @@ export interface HotState {
  * code. Content-based like the source snapshot (an edit that is reverted is no change); hashes are
  * reused while mtime, ctime and size match, so only touched files are read.
  */
-export function inputsSnapshot(root: string, previous: SourceSnapshot = {}): SourceSnapshot {
+export function inputsSnapshot(root: string, previous: SourceSnapshot = {}, externalModules: string[] = []): SourceSnapshot {
   const skip = new Set(["node_modules", "oh_modules", "build", ".hvigor", ".git", ".idea", ".preview", ".arkpilot", ".local", ".scratch", ".agents", ".codex"]);
   const base = path.resolve(root);
   const out: SourceSnapshot = {};
-  const stack = [base];
+  const stack = [base, ...new Set(externalModules)];
   while (stack.length) {
     const dir = stack.pop()!;
     let entries: fs.Dirent[];
@@ -51,7 +49,8 @@ export function inputsSnapshot(root: string, previous: SourceSnapshot = {}): Sou
       if (e.isDirectory()) { stack.push(full); continue; }
       const rel = path.relative(base, full).replaceAll("\\", "/");
       // Only the source snapshot's patchable files and SDK-generated profiles are excluded.
-      if (trackedSource(rel) && /\/src\/main\/ets\//.test(rel) || e.name === "BuildProfile.ets") continue;
+      const local = !rel.startsWith("../") && !path.isAbsolute(rel);
+      if ((local && trackedSource(rel) && /\/src\/main\/ets\//.test(rel)) || e.name === "BuildProfile.ets") continue;
       if (!e.isFile()) throw new Error(`Cannot prove build inputs for non-regular file: ${full}`);
       {
         const st = fs.statSync(full);

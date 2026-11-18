@@ -16,6 +16,9 @@
 | `npm test` | 构建 + 全部离线 unit/integration（含 LSP 协议夹具、并发恢复、ZIP/知识包校验、热更新身份及构建代租约/打包）；并发 4，不连 SDK、设备或模型，不含外部 FFmpeg 套件 |
 | `npm run test:fonts` | 真实字体读取/安装/卸载；E2E_DIR、E2E_TARGET、E2E_FONT_FILE、E2E_FONT_NAME，必须是独占可卸载字体；缺少系统服务明确失败 |
 | `npm run test:ui-selectors` | 指定应用上的 XPath/正则查找、断言和批量等待；E2E_DIR、E2E_TARGET、E2E_BUNDLE、E2E_ABILITY，可选 E2E_MODULE |
+| `npm run test:ui-displays` | 指定设备显示器的基础及扩展清单，对照设备的主屏尺寸；E2E_DIR、E2E_TARGET |
+| `npm run test:ui-multidisplay` | 在同一模拟器的两个屏幕启动测试应用，核对按窗口点击后的独立计数。需 E2E_DIR、E2E_TARGET、专用 E2E_PROJECT 和已启用的副屏 ID E2E_DISPLAY。 |
+| `npm run test:debug` | E2E_DIR、E2E_TARGET（临时模拟器）、E2E_PROJECT（专用工程）、E2E_HDC（所选 SDK 的绝对路径）；调试启动、附加、主线程和 Worker、断点和日志点、变量修改、单步和退出后的转发回收 |
 | `npm run test:build-signing` | 真实 SDK 单次签名选择、签名包校验、失败恢复；E2E_DIR、E2E_PROJECT（专用单入口工程）、E2E_SIGNING_CONFIG、E2E_BUNDLE，可选 E2E_BUILD_MODE |
 | `npm run test:release-signing` | 云端 Release 自动签名及独立 Profile 检查；E2E_DIR、E2E_PROJECT（专用工程，无已有 product_release）、E2E_TEAM、E2E_BUNDLE、E2E_ALLOW_SIGN_AUTO=1，可选 E2E_PRODUCT；需要空闲配额和发行权限，只清理本轮对象 |
 | `npm run test:unit` | 独立规则及纯逻辑；某些规则夹具包含临时文件 |
@@ -24,10 +27,13 @@
 | `npm run test:cli-local` | 本地 init 模式/范围/保护、SQLite + ZIP 知识包构建及本地安装、缺工程的 serve-lsp 拒绝；Node >=22.18、tar、POSIX zip，无 SDK/账号/远程 registry |
 | `npm run test:lsp` | 真实 SDK 的编辑器 stdio：initialize、ArkTS hover / C++ 符号、shutdown/exit、独立 EOF/SIGTERM、ArkTS 分块 exit；POSIX、E2E_DIR、含 leaf/Add 与 compile_commands.json 的完整 E2E_PROJECT，无设备 |
 | `npm run test:device-controls` | 专用应用安装/启停/清缓存/清数据/卸载、独占文件、私有剪贴板恢复、屏幕/时间只读查询；E2E_DIR/PROJECT/TARGET 和明确设备类型；不写真机系统设置 |
+| `npm run test:device-simulation` | 在明确授权的设备上验证预置与自定义弱网、坐标和 GPX 定位及恢复；E2E_DIR、E2E_TARGET、E2E_NET_ID（选该设备网络支持的预置场景）、E2E_ALLOW_SYSTEM_WRITE=1；设备初始弱网须关闭、未开启模拟定位 |
 | `npm run test:emulator-controls` | 仅本轮新建可销毁模拟器；E2E_DIR/TARGET、E2E_DEVICE_KIND=emulator、E2E_ALLOW_SYSTEM_WRITE=1；休眠、旋转、主题、系统面板、时间/时区写入与恢复，禁止用于真机 |
-| `npm run test:e2e` | 现有 SDK 的新模板、编译失败后修复并恢复任务、Kit、增量 HAR/HSP 构建；仅在专用证据目录创建工程 |
+| `npm run test:e2e` | 现有 SDK 的模板、静态设计源与快照导出、ArkUI 页面与资源审查导入、HDS 候选修订、离线 PNG 比对、Native C++ HAP、混合诊断、语言服务重同步、ELF 符号化、外部 HAR、编译失败后修复并恢复任务、Kit、增量 HAR/HSP 构建；仅在专用证据目录创建工程 |
 | `npm run test:sdk` | 指定现有专用工程的 ArkTS/C++、编译、lint、API 扫描、30 模块 × 6 设备类型解析；独立知识示例编译仅需 SDK 与 E2E_DIR |
-| `npm run test:device` | 显式设备及专用应用（默认 USB，模拟器须 E2E_DEVICE_KIND=emulator）：设备、手势、流程、任务、引导、崩溃、生命周期；等价性场景会重新安装，结束后须显式清理 |
+| `npm run test:device` | 显式设备及专用应用（默认 USB，模拟器须 E2E_DEVICE_KIND=emulator）：设备、手势、清空输入、流程、任务、引导、崩溃、生命周期；手势工程入口页使用 `test/fixtures/gesture-page.ets`，等价性场景会重新安装 |
+| `npm run test:resource-patch` | E2E_DIR、E2E_TARGET（临时模拟器）、E2E_PROJECT（默认产品的单入口专用工程）；验证功能模块和 HSP、同批 HQF、连续资源及代码补丁、间接外部 HAR、安装时间、包摘要、恢复和页面内容 |
+| `npm run test:ui-gestures` | E2E_DIR、E2E_TARGET（临时模拟器）、E2E_PROJECT（专用工程）；验证双指手势、长按实测时长和取消、XPath/正则滚动查找、窗口作用域和 Deep Link 冷启动、热启动及错误路径 |
 | `npm run test:recording` | 指定设备全新录制、取回、严格解码、最终 idle；不改变原视频 |
 | `npm run test:video -- /absolute/video.mp4 /absolute/new-receipt.json` | 只读检查已有视频，回执排他创建 |
 | `npm run test:prompts -- --snapshot /absolute/new-snapshot.json` | 实际 tools/list 与 instructions 字节/字符统计，不声称是 token 数 |

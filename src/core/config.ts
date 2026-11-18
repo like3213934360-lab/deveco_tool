@@ -28,6 +28,7 @@ const configSchema = z
   .object({
     studio: z.string().optional(),
     clt: z.string().optional(),
+    appanalyzer_clt: z.string().min(1).optional(),
     java_home: z.string().optional(),
     state_dir: z.string().optional(),
     retention_days: z.literal(1).default(1),

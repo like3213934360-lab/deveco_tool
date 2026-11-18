@@ -7,12 +7,11 @@ import { invariant, ToolError } from "../core/errors.js";
 import { atomicWrite, clip, readJson5 } from "../core/files.js";
 import { run } from "../core/proc.js";
 import { toolchain, toolCommand } from "../core/toolchain.js";
-import { credentials } from "./auth.js";
+import { credentials, serviceBase } from "./auth.js";
 import { listTargets, shell } from "./device.js";
 import { inspectProject } from "./project.js";
 
 /** AppGallery Connect API; DEVECO_AGC_URL points tests at a local mock (never set in normal use). */
-const cloud = process.env.DEVECO_AGC_URL || "https://connect-api.cloud.huawei.com";
 
 /* ------------------------ Studio/Hvigor password material ------------------------ */
 // Layout and algorithm match DevEco Studio / deveco-cli KeyManager (MIT):
@@ -81,8 +80,9 @@ export function decryptPassword(hex: string, storeFile: string) {
 export async function request(team: string, route: string, method: string, body?: unknown, signal?: AbortSignal) {
   let auth = await credentials("developer", false, signal);
   for (let attempt = 0; attempt < 2; attempt++) {
+    const cloud = await serviceBase(auth.region, "agcsign", signal);
     const response = await fetch(cloud + route, {
-      method,
+      method, redirect: "error",
       headers: { uid: auth.userId, teamId: team, oauth2Token: auth.access, "Content-Type": "application/json" },
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
       signal: AbortSignal.any([AbortSignal.timeout(30000), ...(signal ? [signal] : [])]),

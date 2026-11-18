@@ -10,10 +10,13 @@
 //   cli:cmd:<path>:choice:<--flag|arg>=<v> .choices([...])
 //   climcp:tool:<name>[:param:<p>|:enum:<p>=<v>]   deveco-cli bundled MCP server (toolRouter.add + zod)
 //   code:skill:<name> / code:command:<name> / code:spec:<file> / code:agent:<name>
+//   code:skill:hmos-design-to-arkts:{mode,source,capability}:<name>
+//   cli:skill:<name>                       built-in CLI Skill manifest entries
 //
 // Usage: node tools/upstream/extract.mjs --code <deveco-code> --cli <deveco-cli> [--json]
 import fs from "node:fs";
 import path from "node:path";
+import ts from "typescript";
 
 /* ------------------------------- helpers ------------------------------- */
 
@@ -48,9 +51,9 @@ export function matchBracket(text, open) {
   return -1;
 }
 const strings = (s) => [...s.matchAll(/['"`]([^'"`]+)['"`]/g)].map((m) => m[1]);
-/** Resolve `const NAME = [ 'a', 'b' ] as const` in the same file. */
+/** Resolve literal arrays and sets in the same file. */
 const constArray = (text, name) => {
-  const m = new RegExp(`(?:const|let)\\s+${name}\\s*(?::[^=]+)?=\\s*\\[`).exec(text);
+  const m = new RegExp(`(?:const|let)\\s+${name}\\s*(?::[^=]+)?=\\s*(?:new Set\\(\\s*)?\\[`).exec(text);
   if (!m) return [];
   const start = m.index + m[0].length - 1;
   return strings(text.slice(start, matchBracket(text, start) + 1));
@@ -131,11 +134,37 @@ function codeContent(root) {
   const skills = path.join(res, "skills");
   for (const d of fs.existsSync(skills) ? fs.readdirSync(skills) : [])
     if (fs.existsSync(path.join(skills, d, "SKILL.md"))) items.push(`code:skill:${d}`);
+  const design = path.join(skills, "hmos-design-to-arkts"), workflow = path.join(design, "scripts/workflow.mjs");
+  const designId = "code:skill:hmos-design-to-arkts";
+  if (fs.existsSync(workflow)) {
+    const text = read(workflow);
+    for (const [kind, name] of [["mode", "VALID_MODES"], ["source", "VALID_SOURCES"]]) {
+      const values = constArray(text, name);
+      if (!values.length) throw new Error(`Cannot inventory ${name} in ${workflow}`);
+      for (const value of values) items.push(`${designId}:${kind}:${value}`);
+    }
+  }
+  const capabilities = path.join(design, "references/capabilities");
+  for (const name of fs.existsSync(capabilities) ? fs.readdirSync(capabilities) : []) {
+    if (fs.existsSync(path.join(capabilities, name, "INSTRUCTIONS.md"))) items.push(`${designId}:capability:${name}`);
+  }
+  const sources = path.join(root, "packages/opencode/script/skill-sources.ts");
+  if (fs.existsSync(sources)) for (const name of constArray(read(sources), "CLI_BUNDLED_SKILLS")) items.push(`code:skill:${name}`);
   for (const sub of ["commands", "templates"])
     for (const f of fs.existsSync(path.join(res, "spec", sub)) ? fs.readdirSync(path.join(res, "spec", sub)) : [])
       items.push(`code:spec:${sub}/${f}`);
   const cmdDir = path.join(root, "packages/opencode/src/command/template");
   for (const f of fs.existsSync(cmdDir) ? fs.readdirSync(cmdDir) : []) items.push(`code:command:${f.replace(/\.txt$/, "")}`);
+  const commandIndex = path.join(root, "packages/opencode/src/command/index.ts");
+  if (fs.existsSync(commandIndex)) {
+    const text = read(commandIndex);
+    const defaults = /\bconst Default\s*=\s*\{/.exec(text);
+    if (defaults) {
+      const open = defaults.index + defaults[0].length - 1;
+      const names = new Map([...text.slice(open + 1, matchBracket(text, open)).matchAll(/\b(\w+):\s*['"]([\w-]+)['"]/g)].map((m) => [m[1], m[2]]));
+      for (const m of text.matchAll(/\bcommands\[Default\.(\w+)\]\s*=/g)) if (names.has(m[1])) items.push(`code:command:${names.get(m[1])}`);
+    }
+  }
   const agent = path.join(root, "packages/opencode/src/agent/agent.ts");
   if (fs.existsSync(agent)) {
     const text = read(agent);
@@ -154,6 +183,8 @@ export function cliCommands(cmdFiles, entryFile) {
   const nodes = new Map(); // id -> { name, opts:Set, args:Set, choices:Set, children:[] }
   const vars = new Map(); // `${file}:${var}` or exported name -> node id
   const exportsByFile = new Map();
+  const files = new Map(cmdFiles.map((file) => [path.resolve(file), file]));
+  const reference = (s) => /^\s*(\w+)(?:\s*\([\s\S]*\))?\s*$/.exec(s)?.[1];
   let seq = 0;
   const node = (name) => { const id = seq++; nodes.set(id, { name, opts: new Set(), args: new Set(), choices: new Set(), children: [] }); return id; };
 
@@ -177,7 +208,7 @@ export function cliCommands(cmdFiles, entryFile) {
         const [name, ...args] = spec.split(/\s+/);
         const child = node(name);
         for (const a of args) nodes.get(child).args.add(a.replace(/[<>[\]]|\.\.\./g, ""));
-        n.children.push(child);
+        cur.children.push(child);
         current = child;
         lastFlag = null;
       } else if (kind === "option" || kind === "requiredOption") {
@@ -220,8 +251,8 @@ export function cliCommands(cmdFiles, entryFile) {
         for (const v of strings(inner)) cur.choices.add(`${lastFlag}=${v}`);
       } else if (kind === "addCommand") {
         const t = inner.trim();
-        const ref = /^(\w+)(\(\))?$/.exec(t);
-        if (ref) cur.children.push({ ref: ref[1], file });
+        const ref = reference(t);
+        if (ref) cur.children.push({ ref, file });
         else if (t.startsWith("new Command")) {
           const name = strings(t)[0];
           const child = node(name);
@@ -231,6 +262,7 @@ export function cliCommands(cmdFiles, entryFile) {
       }
       re.lastIndex = kind === "addCommand" || kind === "addOption" || kind === "addArgument" || kind === "option" || kind === "requiredOption" ? close : re.lastIndex;
     }
+    return current;
   };
 
   for (const file of cmdFiles) {
@@ -286,6 +318,95 @@ export function cliCommands(cmdFiles, entryFile) {
     exportsByFile.set(file, { def, named: [...text.matchAll(/export\s+(?:const|function)\s+(\w+)/g)].map((x) => x[1]) });
   }
 
+  // Follow the static registration helpers used by the newer CLI. Inspect ASTs only:
+  // do not load upstream modules or inspect action callbacks as registrations.
+  for (const file of cmdFiles) {
+    const src = ts.createSourceFile(file, read(file), ts.ScriptTarget.Latest, true);
+    const functions = new Map(src.statements.filter(ts.isFunctionDeclaration).filter((fn) => fn.name && fn.body).map((fn) => [fn.name.text, fn]));
+    const constants = new Map(src.statements.filter(ts.isVariableStatement).flatMap((s) => [...s.declarationList.declarations]).filter((d) => ts.isIdentifier(d.name) && d.initializer).map((d) => [d.name.text, d.initializer]));
+    const unwrap = (n) => n && (ts.isAsExpression(n) || ts.isParenthesizedExpression(n) || ts.isSatisfiesExpression(n) ? unwrap(n.expression) : n);
+    const literal = (n, values, depth = 0) => {
+      n = unwrap(n);
+      if (!n || depth > 8) return undefined;
+      if (ts.isStringLiteral(n)) return n.text;
+      if (ts.isIdentifier(n)) return values.has(n.text) ? values.get(n.text) : literal(constants.get(n.text), values, depth + 1);
+      if (ts.isArrayLiteralExpression(n)) return n.elements.map((entry) => literal(entry, values, depth + 1));
+      if (ts.isObjectLiteralExpression(n)) return Object.fromEntries(n.properties.filter(ts.isPropertyAssignment).map((p) => [p.name.text, literal(p.initializer, values, depth + 1)]));
+      if (ts.isBinaryExpression(n)) {
+        const left = literal(n.left, values, depth + 1), right = literal(n.right, values, depth + 1);
+        if (n.operatorToken.kind === ts.SyntaxKind.EqualsEqualsEqualsToken) return left === undefined || right === undefined ? undefined : left === right;
+        if (n.operatorToken.kind === ts.SyntaxKind.ExclamationEqualsEqualsToken) return left === undefined || right === undefined ? undefined : left !== right;
+        if (n.operatorToken.kind === ts.SyntaxKind.BarBarToken) return left === true || right === true ? true : left === false && right === false ? false : undefined;
+      }
+      return undefined;
+    };
+    const attached = (expr, bindings, values, depth, chains) => {
+      expr = unwrap(expr);
+      if (!expr || !ts.isCallExpression(expr)) return undefined;
+      if (ts.isIdentifier(expr.expression)) {
+        const fn = functions.get(expr.expression.text), target = expr.arguments[0];
+        const id = target && ts.isIdentifier(target) ? bindings.get(target.text) : undefined;
+        if (fn && id !== undefined && depth < 12) {
+          const args = new Map(), childValues = new Map(values);
+          for (const [i, param] of fn.parameters.entries()) if (ts.isIdentifier(param.name)) {
+            const arg = expr.arguments[i];
+            if (arg && ts.isIdentifier(arg) && bindings.has(arg.text)) args.set(param.name.text, bindings.get(arg.text));
+            childValues.set(param.name.text, literal(arg, values));
+          }
+          visit(fn.body, args, childValues, depth + 1, true);
+        }
+        return undefined;
+      }
+      if (!chains) return undefined;
+      const parts = [];
+      for (; ts.isCallExpression(expr) && ts.isPropertyAccessExpression(expr.expression); expr = expr.expression.expression) {
+        const name = expr.expression.name.text;
+        const args = [...expr.arguments].map((arg, i) => name === "command" && i === 0 && typeof literal(arg, values) === "string"
+          ? JSON.stringify(literal(arg, values)) : arg.getText(src));
+        if (name !== "command" || typeof literal(expr.arguments[0], values) === "string") parts.unshift(`.${name}(${args.join(",")})`);
+      }
+      const id = ts.isIdentifier(expr) ? bindings.get(expr.text) : undefined;
+      if (id === undefined || !parts.length) return undefined;
+      return scanChain(file, parts.join(""), id);
+    };
+    const visit = (s, bindings, values, depth, chains) => {
+      if (ts.isBlock(s)) for (const child of s.statements) visit(child, bindings, values, depth, chains);
+      else if (ts.isExpressionStatement(s)) attached(s.expression, bindings, values, depth, chains);
+      else if (ts.isVariableStatement(s) && chains) for (const d of s.declarationList.declarations) {
+        const id = attached(d.initializer, bindings, values, depth, chains);
+        if (id !== undefined && ts.isIdentifier(d.name)) bindings.set(d.name.text, id);
+      }
+      else if (ts.isIfStatement(s)) {
+        const test = literal(s.expression, values);
+        if (test !== false) visit(s.thenStatement, new Map(bindings), values, depth, chains);
+        if (s.elseStatement && test !== true) visit(s.elseStatement, new Map(bindings), values, depth, chains);
+      }
+      else if (ts.isForOfStatement(s) && ts.isVariableDeclarationList(s.initializer)) {
+        const list = literal(s.expression, values), name = s.initializer.declarations[0]?.name;
+        if (!Array.isArray(list) || !name || !list.length) return;
+        for (const item of list) {
+          const loop = new Map(values);
+          if (ts.isIdentifier(name)) loop.set(name.text, item);
+          else for (const [i, element] of name.elements.entries()) if (ts.isBindingElement(element) && ts.isIdentifier(element.name)) {
+            const key = ts.isArrayBindingPattern(name) ? i : element.propertyName?.text ?? element.name.text;
+            loop.set(element.name.text, item?.[key]);
+          }
+          visit(s.statement, new Map(bindings), loop, depth, true);
+        }
+      }
+    };
+    const top = new Map([...vars].filter(([key]) => key.startsWith(`${file}:`)).map(([key, id]) => [key.slice(file.length + 1), id]));
+    for (const s of src.statements) visit(s, top, new Map(), 0, false);
+    for (const [name, fn] of functions) {
+      const ret = fn.body.statements.find(ts.isReturnStatement)?.expression;
+      if (!ret || !ts.isIdentifier(ret) || !top.has(ret.text)) continue;
+      const id = top.get(ret.text);
+      if (!fn.body.statements.filter(ts.isVariableStatement).some((s) => s.declarationList.declarations.some((d) => ts.isIdentifier(d.name) && d.name.text === ret.text && /^new Command\(/.test(d.initializer?.getText(src) ?? "")))) continue;
+      vars.set(`${file}:${name}`, id);
+      visit(fn.body, new Map([[ret.text, id]]), new Map(), 0, true);
+    }
+  }
+
   // Resolve addCommand references across files (imports by name).
   const resolveRef = (ref, fromFile) => {
     const local = vars.get(`${fromFile}:${ref}`);
@@ -294,9 +415,9 @@ export function cliCommands(cmdFiles, entryFile) {
       if (ex.named.includes(ref) && vars.has(`${file}:${ref}`)) return vars.get(`${file}:${ref}`);
     }
     // default import: `import x from './file.js'`
-    const imp = new RegExp(`import\\s+${ref}\\s+from\\s+['"]\\./([\\w-]+)\\.js['"]`).exec(read(fromFile));
+    const imp = new RegExp(`import\\s+${ref}\\s+from\\s+['"](\\.[\\w./-]+)\\.js['"]`).exec(read(fromFile));
     if (imp) {
-      const target = cmdFiles.find((f) => path.basename(f, ".ts") === imp[1]);
+      const target = files.get(path.resolve(path.dirname(fromFile), `${imp[1]}.ts`));
       const def = target && exportsByFile.get(target)?.def;
       if (def) return vars.get(`${target}:${def}`);
     }
@@ -309,11 +430,9 @@ export function cliCommands(cmdFiles, entryFile) {
 
   // Roots: commands added to the program in the entry file.
   const entry = read(entryFile);
-  const roots = [...entry.matchAll(/program\.addCommand\((\w+)\)/g)].map((m) => {
-    const imp = new RegExp(`import\\s+${m[1]}\\s+from\\s+['"]\\./commands/([\\w-]+)\\.js['"]`).exec(entry);
-    const file = imp && cmdFiles.find((f) => path.basename(f, ".ts") === imp[1]);
-    const def = file && exportsByFile.get(file)?.def;
-    return def !== undefined ? vars.get(`${file}:${def}`) : undefined;
+  const roots = [...entry.matchAll(/program\.addCommand\(/g)].map((m) => {
+    const open = m.index + m[0].length - 1, ref = reference(entry.slice(open + 1, matchBracket(entry, open)));
+    return ref === undefined ? undefined : resolveRef(ref, entryFile);
   }).filter((x) => x !== undefined);
 
   const items = [];
@@ -419,11 +538,13 @@ function zodParams(def, prefix) {
 export function extract({ code, cli }) {
   // Every source file that defines a commander Command (commands/, arktscheck/, codelinter/, ...).
   const cmdFiles = walk(path.join(cli, "packages/cli/src"), (p) => isSrc(p) && /new Command\(/.test(read(p)));
+  const manifest = path.join(cli, "packages/cli/skills.manifest.json");
   const items = [
     ...codeTools(code),
     ...codeContent(code),
     ...cliCommands(cmdFiles, path.join(cli, "packages/cli/src/cli.ts")),
     ...cliMcp(cli),
+    ...(fs.existsSync(manifest) ? JSON.parse(read(manifest)).skills.map(({ name }) => `cli:skill:${name}`) : []),
   ];
   return [...new Set(items)].sort();
 }

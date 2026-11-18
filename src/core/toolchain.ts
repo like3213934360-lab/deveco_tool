@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { config } from "./config.js";
 import { invariant } from "./errors.js";
@@ -6,8 +7,8 @@ import { isFile, readJson5 } from "./files.js";
 import type { Command } from "./proc.js";
 
 export type Component =
-  | "node" | "java" | "ohpm" | "hvigor" | "hdc" | "arkts" | "clangd"
-  | "linter" | "apiscan" | "emulator" | "signer" | "etsLoader";
+  | "node" | "java" | "ohpm" | "hvigor" | "hdc" | "arkts" | "clangd" | "llvmReadelf" | "llvmSymbolizer"
+  | "linter" | "apiscan" | "emulator" | "signer" | "etsLoader" | "appanalyzer";
 
 export interface Toolchain {
   root: string;
@@ -34,7 +35,7 @@ export function toolchain(): Toolchain {
     "DevEco Studio or Command Line Tools not found",
     { searched: requested || null },
     'Set "studio" or "clt" in the JSON file referenced by DEVECO_CONFIG');
-  const key = `${requested}|${cfg.java_home ?? ""}`;
+  const key = `${requested}|${cfg.java_home ?? ""}|${cfg.appanalyzer_clt ?? ""}`;
   if (cached?.key === key) return cached.value;
 
   const root = fs.realpathSync.native(requested);
@@ -45,6 +46,10 @@ export function toolchain(): Toolchain {
   const win = process.platform === "win32";
   const exe = (name: string) => (win ? `${name}.exe` : name);
   const javaHome = cfg.java_home || (kind === "clt" ? process.env.JAVA_HOME : undefined);
+  const analyzerRoots = cfg.appanalyzer_clt ? [path.resolve(cfg.appanalyzer_clt)] : [
+    ...(kind === "clt" ? [root] : []),
+    ...(process.platform === "darwin" ? [path.join(os.homedir(), "Library/Huawei/CommandLineTools")] : []),
+  ];
   const candidates: Record<Component, string[]> = {
     node: [path.join(tools, kind === "clt" ? "tool/node" : "node", win ? "node.exe" : "bin/node")],
     java: javaHome
@@ -55,11 +60,14 @@ export function toolchain(): Toolchain {
     hdc: [path.join(sdk, "default/openharmony/toolchains", exe("hdc")), path.join(sdk, "openharmony/toolchains", exe("hdc"))],
     arkts: [path.join(content, kind === "clt" ? "arkts-lsp/lib/out/standardIndex/index.js" : "plugins/openharmony/ace-server/out/standardIndex/index.js")],
     clangd: [path.join(sdk, "default/openharmony/native/llvm/bin", exe("clangd"))],
+    llvmReadelf: [path.join(sdk, "default/openharmony/native/llvm/bin", exe("llvm-readelf"))],
+    llvmSymbolizer: [path.join(sdk, "default/openharmony/native/llvm/bin", exe("llvm-symbolizer"))],
     linter: (kind === "clt"
       ? ["codelinter/index.js", "codelinter/run/index.js", "tool/codelinter/bin/codelinter.js"]
       : ["plugins/codelinter/run/index.js", "plugins/codelinter/index.js", "tools/codelinter/bin/codelinter.js"]
     ).map((file) => path.join(content, file)),
     apiscan: [path.join(content, "plugins/harmony/arkanalyzer-apiscan/api-change-scan.js")],
+    appanalyzer: analyzerRoots.map((dir) => path.join(dir, "bin", win ? "appanalyzer.bat" : "appanalyzer")),
     emulator: [path.join(tools, "emulator", exe("Emulator"))],
     signer: [path.join(sdk, "default/openharmony/toolchains/lib/hap-sign-tool.jar")],
     etsLoader: [
@@ -104,7 +112,7 @@ export function toolCommand(name: Component, args: string[], cwd?: string, extra
   const file = component(name, tc);
   const env: Record<string, string | undefined> = {
     ...process.env,
-    DEVECO_SDK_HOME: tc.sdk,
+    DEVECO_SDK_HOME: name === "appanalyzer" ? path.join(path.dirname(file), "../sdk") : tc.sdk,
     ...(tc.components.java ? { JAVA_HOME: path.dirname(path.dirname(tc.components.java)) } : {}),
     ...extraEnv,
   };

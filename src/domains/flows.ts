@@ -6,7 +6,7 @@ import { kvDelete, kvGet, kvSet } from "../core/db.js";
 import { errorResult, invariant, ToolError } from "../core/errors.js";
 import { atomicWrite } from "../core/files.js";
 import { forceStop, launch } from "./device.js";
-import { automaticActions, automaticResult, acceptAgreements, act, center, describe, dumpTree, select, waitFor, type Action, type Selector } from "./ui.js";
+import { automaticActions, automaticResult, acceptAgreements, act, center, describe, dumpTree, pickMatch, select, waitFor, type Action, type Selector } from "./ui.js";
 
 /* Flows are stored in <project>/.arkpilot/flows/<id>.json (compatible with v0.x files). */
 
@@ -20,7 +20,9 @@ const stepSchema = z.object({
   id: z.string(),
   action: z.string(),
   timeoutMs: z.number().optional(),
+  durationMs: z.number().int().min(500).max(60000).optional(),
   selector: legacySelector.optional(),
+  endSelector: legacySelector.optional(),
   alternates: z.array(legacySelector).optional(),
   point: pct.optional(),
   value: z.string().optional(),
@@ -130,12 +132,21 @@ export async function startRecording(project: string, target: string, id: string
  * Input text becomes a secret ${inputN} variable; returns undefined for actions flows cannot replay.
  */
 export function makeStep(flow: Flow, values: Record<string, string>, action: Action, selector: Selector | undefined, screen: { w: number; h: number } | undefined): Step | undefined {
+  // Window IDs are assigned by the device and can change across launches.
+  if ("window" in action && action.window !== undefined) return undefined;
   const step: Step = { id: `s${flow.steps.length + 1}`, action: "tap", timeoutMs: 10000 };
   const pctOf = (x: number, y: number) => screen ? { xPercent: +(x * 100 / screen.w).toFixed(2), yPercent: +(y * 100 / screen.h).toFixed(2) } : undefined;
   switch (action.action) {
     case "click": step.action = "tap"; break;
     case "double_click": step.action = "doubleTap"; break;
-    case "long_click": step.action = "longTap"; break;
+    case "long_click":
+      step.action = "longTap";
+      if (action.durationMs !== undefined) step.durationMs = action.durationMs;
+      break;
+    case "clear_text":
+      step.action = "clearText";
+      if (!selector && action.x !== undefined && (!screen || action.y === undefined)) return undefined;
+      break;
     case "input": case "type": {
       step.action = action.action === "input" ? "input" : "focusInput";
       const variable = `input${Object.keys(flow.variables).length + 1}`;
@@ -147,13 +158,15 @@ export function makeStep(flow: Flow, values: Record<string, string>, action: Act
     case "key": step.action = "key"; step.key = action.key; break;
     case "swipe": case "drag": case "fling":
       step.action = action.action;
-      if (screen) step.gesture = { fromXPercent: +(action.x * 100 / screen.w).toFixed(2), fromYPercent: +(action.y * 100 / screen.h).toFixed(2), toXPercent: +(action.x2 * 100 / screen.w).toFixed(2), toYPercent: +(action.y2 * 100 / screen.h).toFixed(2) };
+      if (action.to) step.endSelector = fromSelector(action.to);
+      if (screen) step.gesture = { fromXPercent: +(action.x * 100 / screen.w).toFixed(2), fromYPercent: +(action.y * 100 / screen.h).toFixed(2), toXPercent: +(action.x2 * 100 / screen.w).toFixed(2), toYPercent: +(action.y2 * 100 / screen.h).toFixed(2), velocity: action.speed };
+      else if (!selector || !action.to) return undefined;
       break;
     case "scroll": step.action = "dircFling"; step.direction = { left: 0, right: 1, up: 2, down: 3 }[action.direction]; break;
     default: return undefined;
   }
   if (selector) step.selector = fromSelector(selector);
-  else if ("x" in action && ["tap", "doubleTap", "longTap", "input"].includes(step.action)) step.point = pctOf(action.x, action.y);
+  else if ("x" in action && action.x !== undefined && action.y !== undefined && ["tap", "doubleTap", "longTap", "input", "clearText"].includes(step.action)) step.point = pctOf(action.x, action.y);
   return step;
 }
 
@@ -263,16 +276,20 @@ export async function replayFlow(project: string, id: string, target: string, va
         results.push({ step: step.id, ok: true });
         continue;
       }
-      let xy: { x: number; y: number } | undefined;
-      if (step.selector) {
-        const candidates = [step.selector, ...(step.alternates ?? [])];
+      let xy: { x: number; y: number } | undefined, end: { x: number; y: number } | undefined;
+      const endSelector = step.endSelector ? toSelector(step.endSelector) : undefined;
+      if (step.selector || endSelector) {
+        const candidates = step.selector ? [step.selector, ...(step.alternates ?? [])] : [];
         const deadline = Date.now() + timeout;
         for (;;) {
           const nodes = await ready(await dumpTree(target, signal)) ?? await dumpTree(target, signal);
           const hit = candidates.map((c, i) => ({ i, m: select(nodes, toSelector(c)) })).find((c) => c.m.length > 0);
-          if (hit) {
-            xy = center(hit.m.find((n) => n.clickable) ?? hit.m[0]!);
-            if (hit.i > 0 && options.repair) {
+          const ends = endSelector ? select(nodes, endSelector) : [];
+          const endHit = endSelector && pickMatch(ends, endSelector);
+          if ((!step.selector || hit) && (!endSelector || endHit)) {
+            if (hit) xy = center(hit.m.find((n) => n.clickable) ?? hit.m[0]!);
+            if (endHit) end = center(endHit);
+            if (hit && step.selector && hit.i > 0 && options.repair) {
               // Promote the alternate that worked so future replays are fast and stable.
               step.alternates = [step.selector, ...(step.alternates ?? []).filter((_, j) => j !== hit.i - 1)];
               step.selector = candidates[hit.i]!;
@@ -280,23 +297,33 @@ export async function replayFlow(project: string, id: string, target: string, va
             }
             break;
           }
-          if (Date.now() > deadline) throw new ToolError("UI_NOT_FOUND", `${step.id}: element not found`, { selector: step.selector });
+          if (Date.now() > deadline) {
+            const missingStart = step.selector && !hit;
+            throw new ToolError(!missingStart && ends.length > 1 ? "UI_AMBIGUOUS" : "UI_NOT_FOUND",
+              `${step.id}: could not resolve all selectors`, { selector: missingStart ? step.selector : endSelector });
+          }
           await new Promise((r) => setTimeout(r, 400));
         }
       } else if (step.point) xy = point(step.point);
       const value = step.value?.replace(/^\$\{(\w+)\}$/, (_, name: string) => variables[name] ?? "");
       const g = step.gesture;
-      const gesture = g && screen ? { ...point({ xPercent: g.fromXPercent, yPercent: g.fromYPercent }), ...Object.fromEntries(Object.entries(point({ xPercent: g.toXPercent, yPercent: g.toYPercent })).map(([k, v]) => [`${k}2`, v])) } as { x: number; y: number; x2: number; y2: number } : undefined;
+      const gesture = (action: "swipe" | "drag" | "fling"): Action => {
+        const from = xy ?? (g && screen ? point({ xPercent: g.fromXPercent, yPercent: g.fromYPercent }) : undefined);
+        const to = end ?? (g && screen ? point({ xPercent: g.toXPercent, yPercent: g.toYPercent }) : undefined);
+        invariant(from && to, "FLOW_INVALID", `${step.id} needs both gesture endpoints`);
+        return { action, ...from, x2: to.x, y2: to.y, speed: g?.velocity };
+      };
       const map: Record<string, () => Action> = {
         tap: () => ({ action: "click", ...xy! }),
         doubleTap: () => ({ action: "double_click", ...xy! }),
-        longTap: () => ({ action: "long_click", ...xy! }),
+        longTap: () => ({ action: "long_click", ...xy!, durationMs: step.durationMs }),
         input: () => ({ action: "input", ...xy!, text: value ?? "" }),
+        clearText: () => ({ action: "clear_text", ...xy }),
         focusInput: () => ({ action: "type", text: value ?? "" }),
         key: () => ({ action: "key", key: step.key ?? step.keys?.[0] ?? "Back" }),
-        swipe: () => ({ action: "swipe", ...gesture! }),
-        drag: () => ({ action: "drag", ...gesture! }),
-        fling: () => ({ action: "fling", ...gesture! }),
+        swipe: () => gesture("swipe"),
+        drag: () => gesture("drag"),
+        fling: () => gesture("fling"),
         dircFling: () => ({ action: "scroll", direction: (["left", "right", "up", "down"] as const)[step.direction ?? 3]!, ...(step.selector ? { selector: toSelector(step.selector) } : {}) }),
       };
       const build = map[step.action];

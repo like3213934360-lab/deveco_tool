@@ -12,6 +12,7 @@ const extensions: Record<string, string> = {
   "text/plain": "txt",
   "text/markdown": "md",
   "application/json": "json",
+  "application/zip": "zip",
   "image/png": "png",
   "image/jpeg": "jpg",
   "video/mp4": "mp4",

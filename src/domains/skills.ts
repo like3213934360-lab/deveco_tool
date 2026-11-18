@@ -1,10 +1,38 @@
 import fs from "node:fs";
+import { createHash } from "node:crypto";
 import os from "node:os";
 import path from "node:path";
 import { assetRoot } from "../core/config.js";
 import { invariant, ToolError } from "../core/errors.js";
 
 const skillsRoot = () => path.join(assetRoot, "knowledge/skills");
+const skillReceipt = ".deveco-mcp-skill.json";
+
+function skillDigest(root: string) {
+  const hash = createHash("sha256");
+  function scan(relative: string) {
+    const entries = fs.readdirSync(path.join(root, relative), { withFileTypes: true })
+      .sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
+    for (const entry of entries) {
+      if (!relative && entry.name === skillReceipt) continue;
+      const key = path.join(relative, entry.name);
+      const file = path.join(root, key);
+      const kind = entry.isDirectory() ? "dir" : entry.isFile() ? "file" : entry.isSymbolicLink() ? "link" : "other";
+      const value = kind === "file" ? createHash("sha256").update(fs.readFileSync(file)).digest("hex")
+        : kind === "link" ? fs.readlinkSync(file) : "";
+      hash.update(JSON.stringify([key.split(path.sep).join("/"), kind, value]) + "\n");
+      if (kind === "dir") scan(key);
+    }
+  }
+  scan("");
+  return hash.digest("hex");
+}
+
+function protectBundledSkill(target: string) {
+  const bundled = fs.realpathSync(skillsRoot()), destination = fs.realpathSync(path.dirname(target));
+  const rel = path.relative(bundled, destination);
+  invariant(rel === ".." || rel.startsWith(`..${path.sep}`) || path.isAbsolute(rel), "CONFLICT", "Bundled Skill files belong to the MCP package", { target });
+}
 
 function frontMatter(text: string) {
   const match = /^---\n([\s\S]*?)\n---/.exec(text);
@@ -154,9 +182,9 @@ export async function marketInstall(name: string, host: string | undefined, scop
   const response = await fetch(`${market}/registry/skill/${name}/install?format=zip`, { signal: AbortSignal.timeout(60000) });
   invariant(response.ok, "HTTP_ERROR", `Download failed (HTTP ${response.status})`);
   const bytes = Buffer.from(await response.arrayBuffer());
-  const { createHash } = await import("node:crypto");
   invariant(createHash("sha256").update(bytes).digest("hex").toLowerCase() === checksum.sha256.toLowerCase(), "INTEGRITY_FAILED", "Skill archive checksum mismatch");
   fs.mkdirSync(root, { recursive: true });
+  protectBundledSkill(target);
   const work = fs.mkdtempSync(path.join(root, ".skill-")), content = path.join(work, "content"), backup = path.join(work, "previous");
   const zip = path.join(work, "download.zip");
   let preserveBackup = false;
@@ -171,6 +199,7 @@ export async function marketInstall(name: string, host: string | undefined, scop
       invariant(candidates.length === 1, "INVALID_INPUT", "Downloaded archive must contain one unambiguous SKILL.md");
       source = path.join(content, candidates[0]!.name);
     }
+    fs.writeFileSync(path.join(source, skillReceipt), JSON.stringify({ name, sha256: skillDigest(source) }), { flag: "wx", mode: 0o600 });
     const current = fs.lstatSync(target, { throwIfNoEntry: false });
     invariant(current?.ino === previous?.ino && current?.dev === previous?.dev && !current?.isSymbolicLink(), "CONFLICT", "Skill destination changed during download", { target });
     if (previous) fs.renameSync(target, backup);
@@ -189,10 +218,35 @@ export async function marketInstall(name: string, host: string | undefined, scop
   return { installed: name, directory: target };
 }
 
-export function uninstallSkill(name: string, host: string | undefined, scope: "user" | "project", project?: string, dir?: string) {
+export function uninstallSkill(name: string, host: string | undefined, scope: "user" | "project", project?: string, dir?: string, force = false) {
   invariant(/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(name), "INVALID_INPUT", "Invalid skill name");
   const target = path.join(skillsDir(host, scope, project, dir), name);
-  if (!fs.existsSync(target)) throw new ToolError("NOT_FOUND", `${name} is not installed in ${path.dirname(target)}`);
+  const stat = fs.lstatSync(target, { throwIfNoEntry: false });
+  invariant(stat, "NOT_FOUND", `${name} is not installed in ${path.dirname(target)}`);
+  protectBundledSkill(target);
+  if (stat.isSymbolicLink()) {
+    fs.unlinkSync(target);
+    return { removed: name, directory: target, link_only: true };
+  }
+  invariant(stat.isDirectory() && fs.lstatSync(path.join(target, "SKILL.md"), { throwIfNoEntry: false })?.isFile(),
+    "CONFLICT", "Skill removal requires a directory with a regular SKILL.md", { target });
+  if (!force) {
+    const receipt = path.join(target, skillReceipt);
+    let expected: string | undefined;
+    const metadata = fs.lstatSync(receipt, { throwIfNoEntry: false });
+    if (metadata?.isFile() && metadata.size <= 4096) {
+      try {
+        const record = JSON.parse(fs.readFileSync(receipt, "utf8"));
+        if (record?.name === name && /^[0-9a-f]{64}$/.test(record?.sha256)) expected = record.sha256;
+      } catch (error) {
+        if (!(error instanceof SyntaxError)) throw error;
+      }
+    } else if (!metadata && listSkills().some((skill) => skill.name === name)) {
+      expected = skillDigest(path.join(skillsRoot(), name));
+    }
+    invariant(expected && skillDigest(target) === expected, "CONFLICT", "Skill has local edits or no verified original", { target },
+      "Inspect the directory and pass force=true to remove its contents explicitly");
+  }
   fs.rmSync(target, { recursive: true, force: true });
   return { removed: name, directory: target };
 }

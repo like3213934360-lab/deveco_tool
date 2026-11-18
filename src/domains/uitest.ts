@@ -3,9 +3,9 @@ import fs from "node:fs";
 import path from "node:path";
 import { saveArtifact } from "../core/artifacts.js";
 import { database } from "../core/db.js";
-import { invariant, ToolError } from "../core/errors.js";
-import { forceStop, launch, pidOf, shell } from "./device.js";
-import { automaticResult, act, compact, dumpTree, screenshot, waitFor, type Action, type AutomaticAction, type AutomaticResult, type Selector } from "./ui.js";
+import { errorResult, invariant, ToolError } from "../core/errors.js";
+import { forceStop, launch, launchDeepLink, pidOf, shell } from "./device.js";
+import { automaticResult, act, compact, dumpTree, invalidate, screenshot, waitFor, type Action, type AutomaticAction, type AutomaticResult, type Selector } from "./ui.js";
 
 /*
  * Host-driven UI test sessions (parity with deveco-code verify_ui / get_ui_verification_log /
@@ -19,7 +19,7 @@ export interface StepRecord extends AutomaticResult {
   n: number;
   checklist_item?: number;
   asserted?: boolean;
-  kind: "act" | "assert" | "observe" | "review";
+  kind: "act" | "assert" | "deeplink" | "observe" | "review";
   description?: string;
   action?: Action;
   selector?: Selector;
@@ -83,8 +83,8 @@ export function checklist(plan: string): string[] {
   return plan.split(/(?<=[。;；!?！？])\s*|(?<=\.)\s+/).map((s) => s.trim()).filter((s) => s.length > 1).slice(0, 50);
 }
 
-async function shot(target: string, signal?: AbortSignal) {
-  return (await screenshot(target, { width: 720 }, signal)).artifact_id;
+async function shot(target: string, signal?: AbortSignal, display?: number) {
+  return (await screenshot(target, { width: 720, display }, signal)).artifact_id;
 }
 
 /** App log for [since, now]: hilog lines of the app process within the step window. */
@@ -127,16 +127,36 @@ export async function startTest(target: string, input: { plan: string; bundle?: 
   };
 }
 
-export async function testStep(testId: string, step: { checklist_item?: number; description?: string; action?: Action; selector?: Selector; automatic?: AutomaticAction[]; assert?: { visible?: Selector; hidden?: Selector; timeout_ms?: number } }, signal: AbortSignal) {
+export function validateDeepLink(value: string) {
+  const route = URL.canParse(value) ? new URL(value) : undefined;
+  invariant(route && /^[a-z][a-z0-9+.-]*:\/\/[a-z0-9.-]+\//.test(value) && !/[\x00-\x20\x7f\\]/.test(value) &&
+    !/^(?:ohos|https?:|file:)/.test(route.protocol) && !route.username && !route.password && !route.port && !route.hash && route.pathname.length > 1,
+  "INVALID_INPUT", "Use a custom-scheme URI with a host and path. Omit credentials, ports and fragments");
+}
+
+export async function testStep(testId: string, step: { checklist_item?: number; description?: string; action?: Action; selector?: Selector; uri?: string; automatic?: AutomaticAction[];
+  assert?: { visible?: Selector; hidden?: Selector; timeout_ms?: number }; scope?: { window?: number; display?: number } }, signal: AbortSignal) {
   const s = await load(testId);
   invariant(s.status === "running", "CONFLICT", `Test ${testId} is ${s.status}`);
-  invariant(step.action || step.assert, "INVALID_INPUT", "Pass op (+selector/coordinates), visible or hidden");
+  invariant(step.action || step.assert || step.uri, "INVALID_INPUT", "Pass op, uri, visible or hidden");
+  if (step.uri !== undefined) {
+    invariant(!step.action && s.bundle, "INVALID_INPUT", "Deep links need a bundled test session. Omit op");
+    validateDeepLink(step.uri);
+  }
   const item = step.assert ? checklistItem(s, step.checklist_item) : step.checklist_item;
   const started = Date.now();
-  const record: StepRecord = { n: s.steps.length, checklist_item: item, asserted: !!step.assert, kind: step.action ? "act" : "assert", description: step.description, action: step.action, selector: step.selector, at: started, ...automaticResult(step.automatic) };
+  const record: StepRecord = { n: s.steps.length, checklist_item: item, asserted: !!step.assert, kind: step.uri ? "deeplink" : step.action ? "act" : "assert", description: step.description, action: step.action, selector: step.selector, at: started, ...automaticResult(step.automatic) };
   try {
+    if (step.uri) {
+      record.before = await shot(s.target, signal, step.scope?.display);
+      await launchDeepLink(s.target, s.bundle!, step.uri, signal);
+      invalidate(s.target);
+      const visible = await waitFor(s.target, { bundle: s.bundle }, "visible", step.assert?.timeout_ms ?? 5000, signal, false, { bundle: s.bundle });
+      invariant(visible.passed, "EVIDENCE_MISSING", "The route was accepted but the session app did not become visible");
+      record.passed = true;
+    }
     if (step.action) {
-      record.before = await shot(s.target, signal);
+      record.before = await shot(s.target, signal, step.scope?.display);
       const performed = await act(s.target, step.action, signal);
       Object.assign(record, automaticResult(record, performed));
       await new Promise((r) => setTimeout(r, 600));
@@ -144,17 +164,18 @@ export async function testStep(testId: string, step: { checklist_item?: number; 
     }
     if (step.assert) {
       const selector = (step.assert.visible ?? step.assert.hidden)!;
-      const verdict = await waitFor(s.target, selector, step.assert.visible ? "visible" : "hidden", step.assert.timeout_ms ?? 5000, signal, true);
+      const verdict = await waitFor(s.target, selector, step.assert.visible ? "visible" : "hidden", step.assert.timeout_ms ?? 5000, signal, !step.scope?.window,
+        step.uri ? { bundle: s.bundle } : step.scope);
       record.passed = verdict.passed;
       record.detail = verdict;
       Object.assign(record, automaticResult(record, verdict));
     }
   } catch (error) {
     record.passed = false;
-    record.detail = { error: (error as Error).message };
+    record.detail = step.uri ? { error: errorResult(error) } : { error: (error as Error).message };
   }
-  record.after = await shot(s.target, signal).catch(() => undefined);
-  const nodes = await dumpTree(s.target, signal).catch(() => []);
+  record.after = await shot(s.target, signal, step.scope?.display).catch(() => undefined);
+  const nodes = await dumpTree(s.target, signal, 0, step.scope).catch(() => []);
   record.elements = compact(nodes, { interactive: true, limit: 80, bundle: s.bundle });
   const log = await logWindow(s.target, s.bundle, started, signal).catch(() => "");
   if (log) {
@@ -199,7 +220,7 @@ export async function review(testId: string, input: { checklist_item?: number; r
 
 export async function finishTest(testId: string) {
   const s = await load(testId);
-  const failedControl = s.steps.filter((st) => (st.kind === "act" || st.kind === "assert") && st.passed === false);
+  const failedControl = s.steps.filter((st) => (st.kind === "act" || st.kind === "assert" || st.kind === "deeplink") && st.passed === false);
   const failedReview = s.reviews.filter((r) => r.outcome === "failed");
   const unresolved = s.reviews.filter((r) => r.outcome === undefined || r.outcome === "insufficient");
   const assertions = s.steps.filter((st) => st.kind === "assert" || st.asserted).length;

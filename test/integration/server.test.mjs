@@ -124,7 +124,37 @@ test("skills are exposed as tools, resources and prompts", async () => {
   const crash = (await client.request("prompts/get", { name: "debug-crash", arguments: { project: "/p" } })).result.messages[0].content.text;
   assert.match(crash, /crash\.source/);
   assert.match(crash, /diagnose action=crash project=\/p/);
+  const analyze = await client.request("prompts/get", { name: "analyze", arguments: { request: "Review /faults" } });
+  assert.match(analyze.result.messages[0].content.text, /Review \/faults/);
+  assert.match(analyze.result.messages[0].content.text, /diagnose action=crash report=true hilog=true/);
   await client.close();
+});
+
+test("Skill removal protects local edits and unlinks copies without deleting their targets", async (t) => {
+  const client = connect(env); t.after(() => client.close()); await client.initialize();
+  const directory = fs.mkdtempSync(path.join(state, "skill-removal-"));
+  const name = "deveco-mcp-workflow", target = path.join(directory, name);
+  const exportSkill = () => client.call("skills", { action: "export", names: [name], path: directory });
+  const uninstall = (force) => client.call("skills", { action: "uninstall", path: directory, name, ...(force ? { force } : {}) });
+  assert.equal((await exportSkill()).isError, false);
+  assert.equal((await uninstall()).data.removed, name);
+  assert.equal(fs.existsSync(target), false);
+
+  assert.equal((await exportSkill()).isError, false);
+  const reference = path.join(target, "custom-notes.md");
+  fs.writeFileSync(reference, "User edits");
+  const refused = await uninstall();
+  assert.equal(refused.data.error.code, "CONFLICT");
+  assert.equal(fs.readFileSync(reference, "utf8"), "User edits");
+  assert.equal((await uninstall(true)).data.removed, name);
+  assert.equal(fs.existsSync(target), false);
+
+  const local = path.join(directory, "owned-skill-files");
+  fs.mkdirSync(local); fs.writeFileSync(path.join(local, "SKILL.md"), "User skill");
+  fs.symlinkSync(local, target, "junction");
+  const unlinked = await uninstall();
+  assert.equal(unlinked.isError, false); assert.equal(unlinked.data.link_only, true);
+  assert.equal(fs.readFileSync(path.join(local, "SKILL.md"), "utf8"), "User skill");
 });
 
 test("documented action boundaries reject cross-action fields before execution", async (t) => {
@@ -158,10 +188,10 @@ test("invalid source and device operations fail before SDK or device resolution"
   const client = connect(env);
   t.after(() => client.close());
   await client.initialize();
-  const mixed = await client.call("code", { action: "check", project: state, files: ["Native.cpp", "Index.ets"] });
+  const mixed = await client.call("code", { action: "check", project: state, files: ["Native.cpp", "Index.ets"], fix: true });
   assert.equal(mixed.isError, true);
   assert.equal(mixed.data.error.code, "INVALID_INPUT");
-  assert.match(mixed.data.error.message, /separate calls/);
+  assert.match(mixed.data.error.message, /fix=true is only supported for ArkTS\/TypeScript/);
   const sqlite = await client.call("device", { action: "sqlite", target: "missing-device", bundle: "com.example.app", db: "app.db", sql: ".tables" });
   assert.equal(sqlite.isError, true);
   assert.equal(sqlite.data.error.code, "INVALID_INPUT");
@@ -252,8 +282,57 @@ test("diagnose a local fault log without a device, rejecting invalid inputs", as
   }
   const missing = await client.call("diagnose", { action: "crash", file: path.join(state, "missing.log") });
   assert.equal(missing.data.error.code, "NOT_FOUND");
+
+  const directory = fs.mkdtempSync(path.join(state, "faultlogs-"));
+  const newer = "jscrash-com.example.app-1700000000001.log", older = "cppcrash-com.example.app-1700000000000.log";
+  fs.writeFileSync(path.join(directory, newer), "Error name:TypeError\r\nError message:<script>alert(1)</script>\r\nHiLog:\r\nI App: detail\r\n");
+  fs.writeFileSync(path.join(directory, older), "Signal: SIGSEGV");
+  fs.symlinkSync(newer, path.join(directory, "jscrash-com.example.app-1700000000002.log"));
+  fs.writeFileSync(path.join(directory, "README.txt"), "unrelated");
+  const listed = await client.call("diagnose", { action: "crash", directory, latest: 2, hilog: true, report: true });
+  assert.equal(listed.isError, false, JSON.stringify(listed.data));
+  assert.deepEqual(listed.data.reports.map((r) => r.source), [newer, older]);
+  const [first, second] = listed.data.reports;
+  assert.equal(first.hilog.status, "extracted"); assert.equal(second.hilog.status, "absent");
+  const hilog = await client.call("job", { action: "read", artifact_id: first.hilog.hilog_artifact });
+  assert.equal(hilog.isError, false); assert.match(JSON.stringify(hilog.data), /I App: detail/);
+  assert.doesNotMatch(JSON.stringify(hilog.data), /Error name:/);
+  const html = await client.call("job", { action: "read", artifact_id: listed.data.dfx_artifact, limit: 100 });
+  assert.equal(html.isError, false);
+  assert.match(JSON.stringify(html.data), /&lt;script&gt;alert\(1\)&lt;\/script&gt;/);
+  assert.doesNotMatch(JSON.stringify(html.data), /<script>/);
+  assert.match(JSON.stringify(html.data), /Observed and extracted evidence/);
+  assert.match(JSON.stringify(html.data), /Candidate causes from the pattern library/);
+  const selected = await client.call("diagnose", { action: "crash", directory, name: older });
+  assert.deepEqual(selected.data.reports.map((r) => r.source), [older]);
+  for (const args of [{ directory: "." }, { directory, file }, { directory, target: "device" }]) {
+    assert.equal((await client.call("diagnose", { action: "crash", ...args })).data.error.code, "INVALID_INPUT");
+  }
+  const escaped = await client.call("diagnose", { action: "crash", directory, name: "../bad.log" });
+  assert.equal(escaped.data.error.code, "NOT_FOUND");
 });
 
+test("diagnose groups sampled stacks without counting submitter or system frames", async (t) => {
+  const client = connect(env); t.after(() => client.close()); await client.initialize();
+  const file = path.join(state, "sample-stacks.log");
+  fs.writeFileSync(file, [
+    "#Basic Statistical", "StaticsDuration: 10000 ms", "CpuTime: 5000 ms", "#CpuFreq Usage", "cpu0 Usage 12.34%",
+    "#ThreadInfos Tid: 100", "Timestamp: 2026-09-01 12:00:01.000", "#00 pc 1234 /app/libworker.so(run+4)", "#01 pc 5678 /app/libentry.so(main+16)",
+    "SnapshotTime: 2026-09-01 12:00:02.000", "#00 pc 1234 /system/lib/libc.so(poll+4)", "#01 pc 5678 /app/libentry.so(main+16)(0123456789abcdef)",
+    "Timestamp: 2026-09-01 12:00:03.000", "#00 pc 1234 /app/libgraphics.so(draw+4)",
+    "SubmitterStacktrace:", "#00 pc 1234 /app/libcollector.so(capture+4)",
+  ].join("\n"));
+  const result = await client.call("diagnose", { action: "stack", file, limit: 1 });
+  assert.equal(result.isError, false, JSON.stringify(result.data));
+  const { snapshot_count, duration_ms, cpu_time_ms, cpu_usage_percent, hotspots, hotspot_count, report_artifact } = result.data;
+  assert.equal(snapshot_count, 3); assert.equal(hotspot_count, 2); assert.equal(hotspots.length, 1);
+  assert.equal(duration_ms, 10000); assert.equal(cpu_time_ms, 5000); assert.deepEqual(cpu_usage_percent, { 0: 12.34 });
+  assert.equal(hotspots[0].parent, "/app/libentry.so(main+16)"); assert.equal(hotspots[0].count, 2);
+  assert.deepEqual(hotspots[0].examples.map((example) => example.calls), [["/app/libentry.so(main+16)", "/app/libworker.so(run+4)"], ["/app/libentry.so(main+16)"]]);
+  assert.ok(report_artifact);
+  fs.writeFileSync(file, "Signal: SIGSEGV");
+  assert.equal((await client.call("diagnose", { action: "stack", file })).data.error.code, "INVALID_INPUT");
+});
 
 test("recording receipt tools are offline and preserve legacy bytes", async (t) => {
   const client = connect(env); t.after(() => client.close()); await client.initialize();

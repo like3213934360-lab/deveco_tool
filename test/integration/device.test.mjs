@@ -16,7 +16,8 @@ await build({ stdin: { contents: `export { recvFile, sendFile, clearLog, sqlite,
     b.onLoad({ filter: /.*/, namespace: "fixture" }, (a) => ({ contents: {
       toolchain: `export function toolCommand(name,args){if(name!=='hdc')throw new Error('unexpected tool '+name);return {file:name,args}}`,
       proc: `export async function run(command,options){options.signal?.throwIfAborted();const f=globalThis.__devecoDevice;f.calls.push({command,options});return f.respond ? f.respond(command) : f.result}`,
-      ui: `export async function blankScreen(){const f=globalThis.__devecoDevice;f.screenChecks++;return {blank:f.blank,uniform:f.blank?1:0.2}}`,
+      ui: `export async function blankScreen(){const f=globalThis.__devecoDevice;f.screenChecks++;return {blank:f.blank,uniform:f.blank?1:0.2}}
+           export async function launchOverlap(){return {status:globalThis.__devecoDevice.overlap}}`,
       repeat: `export function noteLaunch(){}`,
     }[a.path] }));
   } }] });
@@ -68,9 +69,11 @@ test("launch smoke distinguishes missing processes, fresh crashes, old logs and 
     { name: "fresh crash with surviving process", pid: "42", logs: [old, fresh], blank: false, smoke: "FAIL_CRASH", crashed: true, started: false },
     { name: "old and unrelated crashes do not fail launch", pid: "42", logs: [old, "jscrash-com.other.app-new"], blank: false, smoke: "PASS", crashed: false, started: true },
     { name: "blank screen still fails smoke", pid: "42", logs: [old], blank: true, smoke: "FAIL_BLANK", crashed: false, started: true },
+    { name: "controls covered", pid: "42", logs: [old], blank: false, overlap: "failed", smoke: "FAIL_UI_OVERLAP", crashed: false, started: true },
+    { name: "unavailable layout", pid: "42", logs: [old], blank: false, overlap: "inconclusive", smoke: "INCONCLUSIVE", crashed: false, started: true },
   ]) await t.test(c.name, async () => {
     let launched = false;
-    fixture.screenChecks = 0; fixture.blank = c.blank;
+    fixture.screenChecks = 0; fixture.blank = c.blank; fixture.overlap = c.overlap ?? "passed";
     fixture.respond = ({ args }) => {
       assert.deepEqual(args.slice(0, 3), ["-t", "fixture-device", "shell"]);
       const command = args.slice(3);

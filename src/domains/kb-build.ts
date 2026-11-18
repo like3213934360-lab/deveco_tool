@@ -72,11 +72,12 @@ export async function buildKnowledgePack(options: { upstream: string; out: strin
     // Docs archive: upstream docs + local markdown under the same ids.
     const docsOut = path.join(target, "docs.zip");
     let upstreamDocs = docsZip;
-    if (await hasDocsRoot(docsZip)) {
-      // Current upstream archives wrap every document in docs/, but index IDs omit it.
+    const sourceRoot = await docsRoot(docsZip);
+    if (sourceRoot) {
+      // Upstream keeps index IDs relative to the source directory inside the archive.
       const extracted = path.join(work, "upstream-docs");
       await extractZip(docsZip, extracted, true);
-      const root = path.join(extracted, "docs"), names = fs.readdirSync(root);
+      const root = path.join(extracted, sourceRoot), names = fs.readdirSync(root);
       invariant(names.length, "INVALID_INPUT", "Upstream docs archive is empty");
       upstreamDocs = path.join(work, "canonical-docs.zip");
       const command = process.platform === "win32"
@@ -147,19 +148,24 @@ export async function buildKnowledgePack(options: { upstream: string; out: strin
   }
 }
 
-/** Only normalize an archive when every file uses the upstream docs/ wrapper. */
-async function hasDocsRoot(file: string): Promise<boolean> {
+/** Recognize the legacy docs/ layout and the upstream kb/source/ layout with its archive metadata. */
+async function docsRoot(file: string): Promise<"docs" | "kb/source" | undefined> {
   const yauzl = (await import("yauzl")).default;
   return new Promise((resolve, reject) => {
     yauzl.open(file, { lazyEntries: true, decodeStrings: false }, (error, zip) => {
       if (error || !zip) return reject(error);
-      let files = 0, allWrapped = true;
+      let files = 0, legacy = 0, source = 0, metadata = 0;
       zip.on("entry", (entry) => {
         const name = Buffer.isBuffer(entry.fileName) ? (entry.fileName as unknown as Buffer).toString("utf8") : String(entry.fileName);
-        if (!name.endsWith("/")) { files++; if (!name.startsWith("docs/")) allWrapped = false; }
+        if (!name.endsWith("/")) {
+          files++;
+          if (name.startsWith("docs/")) legacy++;
+          else if (name.startsWith("kb/source/")) source++;
+          else if (name === "kb/knowledgebase-meta.json" || name === "kb/mdfile-state.jsonl") metadata++;
+        }
         zip.readEntry();
       });
-      zip.on("end", () => resolve(files > 0 && allWrapped));
+      zip.on("end", () => resolve(legacy && legacy === files ? "docs" : source && source + metadata === files ? "kb/source" : undefined));
       zip.on("error", reject);
       zip.readEntry();
     });

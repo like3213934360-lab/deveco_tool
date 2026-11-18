@@ -4,8 +4,9 @@ import path from "node:path";
 import zlib from "node:zlib";
 import { invariant } from "../core/errors.js";
 import { artifactDir, commitArtifact, saveArtifact } from "../core/artifacts.js";
-import { atomicWrite, sha256 } from "../core/files.js";
+import { atomicWrite, fileSnapshot, sha256 } from "../core/files.js";
 import { assertConnected, hdc, shell } from "./device.js";
+import { run } from "../core/proc.js";
 import { pngGray } from "./ui.js";
 
 /*
@@ -138,6 +139,69 @@ export async function grayShot(target: string, size: { w: number; h: number } | 
 export function baselinePath(project: string, name: string, model: string) {
   invariant(/^[\w.-]{1,64}$/.test(name), "INVALID_INPUT", "baseline name: letters, digits, . _ - (max 64)");
   return path.join(path.resolve(project), ".arkpilot", "baselines", `${name}@${model.replace(/[^\w.-]+/g, "_")}.png`);
+}
+
+function visualInput(file: string, field: "reference_image" | "candidate_image") {
+  const stat = path.isAbsolute(file) && fs.statSync(file, { throwIfNoEntry: false });
+  invariant(stat && stat.isFile() && stat.size <= 16 * 1024 * 1024, "INVALID_INPUT", `${field} must be an existing absolute PNG path (max 16 MiB)`);
+  const snapshot = fileSnapshot(fs.realpathSync(file), 16 * 1024 * 1024);
+  invariant(snapshot, "INVALID_INPUT", `${field} disappeared before comparison`);
+  const { bytes } = snapshot, image = decodeGray(bytes);
+  invariant(image, "INVALID_INPUT", `${field} must be a decodable 8-bit PNG within four million pixels`);
+  return { bytes, image };
+}
+
+type VisualOptions = { threshold?: number; context?: string };
+async function compareReference({ bytes, image: reference }: ReturnType<typeof visualInput>, current: Gray, options: VisualOptions, candidate?: Buffer) {
+  invariant(Math.abs(reference.height * current.width / reference.width - current.height) <= 1,
+    "VISUAL_SIZE_MISMATCH", "Reference and candidate must have the same aspect ratio", { reference: [reference.width, reference.height], captured: [current.width, current.height] });
+  const { width, height } = current, gray = new Uint8Array(width * height);
+  for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+    const sourceX = Math.floor((x + 0.5) * reference.width / width);
+    const sourceY = Math.floor((y + 0.5) * reference.height / height);
+    gray[y * width + x] = reference.gray[sourceY * reference.width + sourceX]!;
+  }
+  const diff = compareGray({ width, height, gray }, current, { threshold: options.threshold });
+  return {
+    ...diff, regions: diff.regions.slice(0, 10), same: diff.changed_ratio === 0 && !diff.global_shift, method: "gray-block-v1", context: options.context,
+    reference_sha256: sha256(bytes),
+    reference_artifact: (await saveArtifact(bytes, "image/png")).artifact_id,
+    ...(candidate ? { candidate_sha256: sha256(candidate) } : {}),
+    captured_artifact: (await saveArtifact(candidate ?? encodePng(width, height, current.gray), "image/png")).artifact_id,
+    ...((diff.changed_ratio || diff.global_shift) ? { diff_artifact: (await saveArtifact(annotate(current, diff.regions), "image/png")).artifact_id } : {}),
+  };
+}
+
+export async function visualFiles(reference: string, candidate: string, options: VisualOptions & { score_script?: string }, signal: AbortSignal) {
+  signal.throwIfAborted();
+  const current = visualInput(candidate, "candidate_image"), expected = visualInput(reference, "reference_image");
+  if (options.score_script === undefined) return compareReference(expected, current.image, options, current.bytes);
+  invariant(!options.context && options.threshold === undefined && path.isAbsolute(options.score_script), "INVALID_INPUT", "Scoring needs an absolute upstream ui_score.py path and no gray-diff options");
+  const script = fileSnapshot(options.score_script, 128 * 1024);
+  const digest = "70862380c9b6e94404144046d78064cb98d12d86f51c9bb7978102c66f6143d4";
+  invariant(script && sha256(script.bytes) === digest, "CAPABILITY_UNAVAILABLE", "Supply the pinned DevEco UI scorer", { sha256: digest });
+  const normalizedHeight = Math.round(current.bytes.readUInt32BE(20) * expected.bytes.readUInt32BE(16) / current.bytes.readUInt32BE(16));
+  invariant(normalizedHeight * expected.bytes.readUInt32BE(16) <= 4000000, "INVALID_INPUT", "Resized candidate exceeds four million pixels");
+  const dir = fs.mkdtempSync(path.join(artifactDir(), "visual-score-"));
+  try {
+    const scripts = path.join(dir, "engine/references/capabilities/score/scripts");
+    fs.mkdirSync(scripts, { recursive: true });
+    const scorer = path.join(scripts, "ui_score.py"), ref = path.join(dir, "reference.png"), actual = path.join(dir, "candidate.png"), out = path.join(dir, "out");
+    fs.writeFileSync(scorer, script.bytes); fs.writeFileSync(ref, expected.bytes); fs.writeFileSync(actual, current.bytes);
+    await run({ file: process.platform === "win32" ? "python" : "python3", args: ["-I", scorer, ref, actual, "--out", out], cwd: dir }, { signal, timeoutMs: 45000 });
+    const result = fileSnapshot(path.join(out, "score.json"), 1024 * 1024);
+    invariant(result, "EVIDENCE_MISSING", "Scorer did not create score.json");
+    const data = JSON.parse(result.bytes.toString("utf8")), score = data.aggregate?.final_baseline_score;
+    invariant(data.pair_count === 1 && Number.isFinite(score) && score >= 0 && score <= 100, "EVIDENCE_MISSING", "Scorer did not return one image-pair score");
+    return { method: "deveco-ui-score", scorer_sha256: digest, reference_sha256: sha256(expected.bytes), candidate_sha256: sha256(current.bytes),
+      score, metrics: data.aggregate, ignored_top_px: data.ignored_top_status_px, ignored_bottom_px: data.ignored_bottom_system_px };
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+}
+
+/** Compare an explicitly selected design PNG against a fresh device screenshot. */
+export async function visualReference(target: string, file: string, size: { w: number; h: number } | undefined, options: VisualOptions, signal: AbortSignal) {
+  const reference = visualInput(file, "reference_image");
+  return compareReference(reference, await grayShot(target, size, signal), options);
 }
 
 /**

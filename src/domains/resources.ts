@@ -30,6 +30,13 @@ const prompts: Record<string, { description: string; args: { name: string; descr
     args: [{ name: "project", description: "Absolute project path", required: true }, { name: "symptom", description: "What the user saw" }],
     text: (a) => `The app in ${a.project} crashes${a.symptom ? ` (${a.symptom})` : ""}. 1) run action=build_run (target=<device>). If it fails with LAUNCH_FAILED, crash.source already gives the project file, line and code, plus likely causes: fix that and build_run again. 2) Otherwise check ui_flow list/show for a matching reproduction path; replay only if its steps and start state fit. For a new path use ui act steps=[...] with an expected-screen assert; save reusable navigation with save_flow for run then_flow=<id>. 3) Read the crash with diagnose action=crash project=${a.project} bundle=<bundle> since_minutes=10 (project adds the source location); follow skill hmos-runtime-fix-skill for the root cause. 4) Fix it, build_run again, inspect flow.passed if then_flow was used, and verify the expected behavior.`,
   },
+  "analyze": {
+    description: "Analyze HarmonyOS fault evidence and produce a DFX report",
+    args: [{ name: "request", description: "The evidence path or paste, app scope, and analysis request", required: true }],
+    text: (a) => `Analyze this HarmonyOS fault request: ${JSON.stringify(a.request)}.
+Use diagnose action=crash report=true hilog=true with the supplied file, directory, or pasted log. For a symptom with no log, ask for an explicit device and bundle before collecting the matching device fault reports. Use diagnose stack for supplied sample stacks, and diagnose symbolize only when the report Build ID and matching ELF are available.
+Read the report and relevant artifacts with job read. Present extracted facts, possible causes with their evidence, and your suggested checks separately. State insufficient evidence where it applies. Keep this workflow read-only and provide the DFX artifact ID.`,
+  },
   "upgrade-sdk": {
     description: "Check API compatibility before raising the SDK level",
     args: [{ name: "project", description: "Absolute project path", required: true }],

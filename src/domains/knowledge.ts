@@ -675,12 +675,13 @@ export async function rollback() {
 /* ---------------------------------- cloud ---------------------------------- */
 
 export async function cloudSearch(query: string, signal: AbortSignal) {
-  const { credentials } = await import("./auth.js");
+  const { credentials, serviceBase } = await import("./auth.js");
   let data: any;
   for (let attempt = 0; attempt < 2; attempt++) {
     const auth = await credentials("codegenie", attempt > 0, signal);
-    const response = await fetch("https://cn.devecostudio.huawei.com/codeGenie/bigSearch", {
-      method: "POST", headers: { Authorization: auth.access, "Content-Type": "application/json" },
+    const base = await serviceBase(auth.region, "spaceintroduce", signal);
+    const response = await fetch(base + "/codeGenie/bigSearch", {
+      method: "POST", redirect: "error", headers: { Authorization: auth.access, "Content-Type": "application/json" },
       body: JSON.stringify({ question: query }), signal: AbortSignal.any([signal, AbortSignal.timeout(30000)]),
     });
     invariant(response.ok, "HTTP_ERROR", `Cloud knowledge returned HTTP ${response.status}`);

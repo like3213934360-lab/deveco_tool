@@ -85,7 +85,7 @@ test("guidance covers discovery, standalone tools, safe continuation and evidenc
     assert.match(byName.skills.inputSchema.properties.names.description, /export: skill names \(not name\); default all/);
 
     // A merged input schema must still explain which action consumes each ambiguous field.
-    assert.match(byName.project.description, /request_key\/wait: sync\/build\/clean\/test\/verify only/);
+    assert.match(byName.project.description, /request_key\/wait: sync\/build\/clean\/test\/verify\/export_page\/testing start\/install\/update only/);
     assert.match(byName.run.description, /launch: project\/product\/target\/module\/ability\/want only/);
     assert.match(byName.run.description, /wait\/request_key: build_run\/deploy only/);
     assert.match(byName.run.description, /hot_reload=true saves baseline after successful launch/);

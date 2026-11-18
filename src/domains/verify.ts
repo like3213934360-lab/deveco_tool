@@ -10,6 +10,8 @@ import { buildInfo } from "../core/config.js";
 import { aggregate, exportEvidence, sourceIdentity, type CheckResult, type Verdict } from "./evidence.js";
 import { qualityBaseline, diagnosticKeys, type Measurement } from "./quality.js";
 import { inspectProject } from "./project.js";
+import { analyzeApp, analyzerOptions } from "./appanalyzer.js";
+import { readRoutes, verifyTemporaryRoute } from "./temporary-route.js";
 
 const commandSchema = z.object({ file: z.string().min(1), args: z.array(z.string()).default([]), cwd: z.string().default("."), timeout_ms: z.number().int().min(100).max(600000).default(30000) }).strict();
 export const planSchema = z.object({
@@ -17,7 +19,7 @@ export const planSchema = z.object({
   prepare: commandSchema.optional(), cleanup: commandSchema.optional(),
   checks: z.array(z.object({
     id: z.string().regex(/^[\w.-]{1,80}$/),
-    type: z.enum(["build", "deploy", "test", "flow", "assert", "visual", "perf", "layout", "crash", "diagnostics", "launch", "command", "entries", "form"]),
+    type: z.enum(["build", "deploy", "test", "flow", "assert", "visual", "perf", "layout", "crash", "diagnostics", "launch", "command", "entries", "form", "appanalyzer", "deeplink"]),
     required: z.boolean().default(true), options: z.record(z.string(), z.unknown()).default({}),
     affects: z.array(z.string().min(1)).default([]),
     baseline: z.string().regex(/^[\w.-]{1,80}$/).optional(),
@@ -38,13 +40,17 @@ type Plan = z.infer<typeof planSchema>;
 type Check = Plan["checks"][number];
 export interface VerifyInput { project: string; product?: string; plan: string; output: string; target?: string; changed_only?: boolean; base?: string; baseline_mode?: "compare" | "record"; allow_commands?: boolean }
 const destinations: Record<string, [string, string]> = { build: ["project", "build"], deploy: ["run", "deploy"], test: ["project", "test"], flow: ["ui_flow", "replay"], assert: ["ui", "assert"], visual: ["ui", "visual"], perf: ["ui", "perf"], layout: ["ui", "layout"], crash: ["diagnose", "crash"], diagnostics: ["code", "check"], launch: ["run", "launch"], entries: ["project", "entries"], form: ["ui", "form"] };
-const deviceTypes = new Set(["deploy", "flow", "assert", "visual", "perf", "layout", "crash", "launch", "form"]);
+const deviceTypes = new Set(["deploy", "flow", "assert", "visual", "perf", "layout", "crash", "launch", "form", "appanalyzer", "deeplink"]);
 export function readPlan(input: VerifyInput) {
   const file = path.resolve(input.project, input.plan);
   const raw = fs.readFileSync(file, "utf8");
   return { plan: planSchema.parse(JSON.parse(raw)), file, sha256: sha256(raw) };
 }
-export function planNeedsDevice(plan: Plan) { return plan.checks.some((c) => deviceTypes.has(c.type) || (c.type === "test" && c.options.kind === "instrument")); }
+function checkNeedsDevice(check: Check) {
+  if (check.type === "visual") return check.options.candidate_image === undefined;
+  return deviceTypes.has(check.type) || (check.type === "test" && check.options.kind === "instrument");
+}
+export function planNeedsDevice(plan: Plan) { return plan.checks.some(checkNeedsDevice); }
 export function selectChanged(checks: Check[], files: string[]) {
   const matches = (c: Check, file: string) => c.affects.some((prefix) => prefix === "*" || file === prefix || file.startsWith(prefix.replace(/\/$/, "") + "/"));
   return { selected: checks.filter((c) => files.some((f) => matches(c, f))), uncovered: files.filter((f) => !checks.some((c) => c.required && matches(c, f))) };
@@ -62,9 +68,9 @@ function callInput(check: Check, input: VerifyInput, bundle: string | undefined)
   const args: Record<string, unknown> = { ...check.options, action };
   if (["project", "run", "code", "ui_flow", "diagnose"].includes(tool) || ["visual", "layout", "form"].includes(check.type)) args.project = input.project;
   if ((["project", "run"].includes(tool) || check.type === "form") && input.product) args.product = input.product;
-  if (deviceTypes.has(check.type) || (check.type === "test" && check.options.kind === "instrument")) args.target = input.target;
+  if (checkNeedsDevice(check)) args.target = input.target;
   if (["perf", "layout", "crash"].includes(check.type)) args.bundle ??= bundle;
-  if (check.type === "visual") { args.require_baseline = input.baseline_mode !== "record"; args.update = input.baseline_mode === "record"; }
+  if (check.type === "visual" && args.reference_image === undefined) { args.require_baseline = input.baseline_mode !== "record"; args.update = input.baseline_mode === "record"; }
   if (check.type === "diagnostics") invariant(!args.fix, "INVALID_INPUT", "Verification diagnostics cannot fix sources");
   if (check.type === "crash") args.strict = true;
   if (check.type === "crash") invariant(args.since_minutes && !args.log && !args.name, "INVALID_INPUT", "Crash checks need a since_minutes window, not pasted logs or a selected report");
@@ -76,10 +82,11 @@ function callInput(check: Check, input: VerifyInput, bundle: string | undefined)
   }
   return { tool, args };
 }
-async function dispatch(tool: string, args: Record<string, unknown>, signal: AbortSignal): Promise<any> {
+async function dispatch(tool: string, args: Record<string, unknown>, signal: AbortSignal, onJob?: (id: string) => void): Promise<any> {
   const { invokeTool } = await import("../server.js");
   let result: any = await invokeTool(tool, args, signal);
   if (!result?.job_id) return result;
+  onJob?.(result.job_id);
   const { waitJob, cancelJob } = await import("../core/jobs.js");
   let cancelled: ReturnType<typeof cancelJob> | undefined;
   const cancel = () => { cancelled = cancelJob(result.job_id); };
@@ -115,10 +122,13 @@ async function command(cmd: z.infer<typeof commandSchema>, root: string, signal:
   }
 }
 export function judge(type: string, result: any): Verdict {
-  if (type === "test" || type === "command") return result.verdict;
+  if (["test", "command", "appanalyzer", "deeplink"].includes(type)) return result.verdict;
   if (type === "build") return result.success === true ? "passed" : "failed";
-  if (type === "deploy") return result.flow?.passed === false || result.crashed || result.launch?.crashed || result.launch?.started === false || result.launch?.smoke === "FAIL_BLANK" ? "failed" : "passed";
-  if (type === "launch") return result.started === true && result.smoke === "PASS" ? "passed" : "failed";
+  if (type === "deploy") {
+    if (result.flow?.passed === false || result.crashed || result.launch?.crashed || result.launch?.started === false || result.launch?.smoke?.startsWith("FAIL_")) return "failed";
+    return result.launch?.smoke === "INCONCLUSIVE" ? "inconclusive" : "passed";
+  }
+  if (type === "launch") return result.started === true && result.smoke === "INCONCLUSIVE" ? "inconclusive" : result.started === true && result.smoke === "PASS" ? "passed" : "failed";
   if (type === "entries") return result.issues?.length ? "failed" : result.entries?.length ? "passed" : "inconclusive";
   if (type === "form") return result.attachment_verified !== true || result.cleanup?.removed !== true || result.cleanup?.preexisting_preserved !== true || result.project_assertions?.passed === false ? "failed"
     : result.project_assertions?.passed === true ? "passed" : "inconclusive";
@@ -145,7 +155,11 @@ export async function runVerification(input: VerifyInput, signal: AbortSignal, j
   const { validateTool } = await import("../server.js");
   invariant(path.isAbsolute(input.output) && !fs.existsSync(input.output), "INVALID_INPUT", "output must be a new absolute evidence directory");
   invariant(input.allow_commands || (!plan.prepare && !plan.cleanup && !plan.checks.some((c) => c.command)), "INVALID_INPUT", "Project commands require allow_commands=true; review the plan first");
-  for (const c of plan.checks) if (c.type !== "command") { const call = callInput(c, input, project.bundleName); validateTool(call.tool, call.args); }
+  for (const c of plan.checks) {
+    if (c.type === "appanalyzer") analyzerOptions.parse(c.options);
+    else if (c.type === "deeplink") readRoutes(c.options);
+    else if (c.type !== "command") { const call = callInput(c, input, project.bundleName); validateTool(call.tool, call.args); }
+  }
   const identity = await sourceIdentity(project.root), sdk = sdkInfo();
   const outputRelative = path.relative(project.root, input.output);
   invariant(outputRelative.startsWith("..") || path.isAbsolute(outputRelative) || outputRelative.startsWith(`.arkpilot${path.sep}`), "INVALID_INPUT", "Evidence must be outside source files or under .arkpilot");
@@ -177,6 +191,17 @@ export async function runVerification(input: VerifyInput, signal: AbortSignal, j
           if (c.type === "launch") await dispatch("run", { action: "stop", project: input.project, target: input.target }, signal);
           let result;
           if (c.command) result = await command(c.command, project.root, signal);
+          else if (c.type === "appanalyzer") {
+            invariant(input.target && project.bundleName, "INVALID_INPUT", "AppAnalyzer requires a selected device and an application bundle");
+            result = await analyzeApp({ root: project.root, bundleName: project.bundleName }, input.target, c.options, signal, jobId);
+          } else if (c.type === "deeplink") {
+            invariant(input.target, "INVALID_INPUT", "Temporary routes require a selected device");
+            const deploy = async (remember: (id: string) => void) => {
+              const args = { action: "build_run", project: project.root, product: project.product, target: input.target, debug_line: true, run_mode: "full", wait: 0 };
+              await dispatch("run", args, signal, remember);
+            };
+            result = await verifyTemporaryRoute(project, input.target, c.options, deploy, signal);
+          }
           else {
             const call = callInput(c, input, project.bundleName);
             result = await dispatch(call.tool, call.args, signal);
@@ -215,7 +240,8 @@ export async function runVerification(input: VerifyInput, signal: AbortSignal, j
   for (const c of plan.checks) if (!results.some((r) => r.id === c.id)) results.push({ id: c.id, type: c.type, required: !input.changed_only && c.required, verdict: "not_run", elapsed_ms: 0, detail: "Not selected or preparation blocked" });
   const after = await sourceIdentity(project.root);
   results.push({ id: "source-integrity", type: "integrity", required: true, verdict: identity.sha256 === after.sha256 ? "passed" : "failed", elapsed_ms: 0, detail: { before: identity.sha256, after: after.sha256, changed_files: [...new Set([...identity.files.map((f) => f.file), ...after.files.map((f) => f.file)])].filter((file) => identity.files.find((f) => f.file === file)?.sha256 !== after.files.find((f) => f.file === file)?.sha256) } });
-  const report = { schema: 1, verdict: aggregate(results), scope: input.changed_only ? "changed-only" : "full-plan", changed, base: input.base, project: project.root, bundle: project.bundleName, sdk, device, build: buildInfo, plan: { file: loaded.file, sha256: loaded.sha256, definition: plan }, source: identity, audit: await (await import("../core/operations.js")).currentAudit(), results, created_at: new Date().toISOString() };
+  const definition = { ...plan, checks: plan.checks.map((c) => c.type === "deeplink" ? { ...c, options: { sha256: sha256(JSON.stringify(c.options)) } } : c) };
+  const report = { schema: 1, verdict: aggregate(results), scope: input.changed_only ? "changed-only" : "full-plan", changed, base: input.base, project: project.root, bundle: project.bundleName, sdk, device, build: buildInfo, plan: { file: loaded.file, sha256: loaded.sha256, definition }, source: identity, audit: await (await import("../core/operations.js")).currentAudit(), results, created_at: new Date().toISOString() };
   const exported = await exportEvidence(input.output, report);
   return { verdict: report.verdict, scope: report.scope, checks: results.map(({ detail: _d, ...r }) => r), evidence: exported, report_artifact: (await saveArtifact(JSON.stringify(report), "application/json", jobId)).artifact_id };
 }

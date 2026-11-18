@@ -94,7 +94,7 @@ test("init --path exports only to the requested skills directory; missing host f
   await assert.rejects(c.run(["init"]), failure(/usage: deveco-mcp init --host/));
 });
 
-for (const prefix of ["", "docs/"]) test(`kb-build and kb-update connect SQLite, ZIP and tarball components (prefix=${prefix || "none"})`, async (t) => {
+for (const prefix of ["", "docs/", "kb/source/"]) test(`kb-build and kb-update connect SQLite, ZIP and tarball components (prefix=${prefix || "none"})`, async (t) => {
   const c = localCli(t), upstream = path.join(c.work, "upstream docs"), out = path.join(c.work, "built packs");
   fs.mkdirSync(upstream);
   const dbFile = path.join(upstream, "search.db"), db = new DatabaseSync(dbFile);
@@ -108,7 +108,9 @@ for (const prefix of ["", "docs/"]) test(`kb-build and kb-update connect SQLite,
   } finally { db.close(); }
   fs.writeFileSync(path.join(upstream, "package.json"), JSON.stringify({ name: "@test/cli-upstream", version: "1.0.0", apiVersion: 1 }));
   fs.writeFileSync(path.join(upstream, "index.zip"), zipFixture({ "search.db": fs.readFileSync(dbFile) }));
-  fs.writeFileSync(path.join(upstream, "docs.zip"), zipFixture({ [`${prefix}cli/local.md`]: "# CLI local knowledge\n\n## Usage\nOnly local files.\n" }));
+  const docs = { [`${prefix}cli/local.md`]: "# CLI local knowledge\n\n## Usage\nOnly local files.\n" };
+  if (prefix === "kb/source/") Object.assign(docs, { "kb/knowledgebase-meta.json": "{}", "kb/mdfile-state.jsonl": "{}\n", "kb/source/cli/local.json": "{}" });
+  fs.writeFileSync(path.join(upstream, "docs.zip"), zipFixture(docs));
   const version = "2.3.4-cli", built = await c.call(["kb-build", upstream, out, "--version", version, "--name", "@test/cli-kb"]);
   assert.equal(built.version, version);
   assert.equal(built.dir, path.join(out, version));

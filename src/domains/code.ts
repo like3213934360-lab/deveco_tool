@@ -220,6 +220,7 @@ interface LspSession {
   root: string;
   language: "arkts" | "cpp";
   ready: Promise<void>;
+  indexed: boolean;
   opened: Map<string, { version: number; hash: string }>;
   diagnostics: Map<string, { version: number; items: any[] }>;
   nextVersion: number;
@@ -258,7 +259,7 @@ async function startLsp(root: string, language: "arkts" | "cpp", signal: AbortSi
   const client = new LspClient(child);
   const session: LspSession = {
     client, root, language, opened: new Map(), diagnostics: new Map(), nextVersion: 0,
-    ready: Promise.resolve(),
+    ready: Promise.resolve(), indexed: false,
     close: () => client.close(),
   };
   // A crashed server leaves the pool so the next request starts a fresh one instead of failing.
@@ -271,7 +272,10 @@ async function startLsp(root: string, language: "arkts" | "cpp", signal: AbortSi
   // ArkTS loads the project model asynchronously after initialize; answers before that are file-local only.
   let modulesLoaded!: () => void;
   const moduleInit = new Promise<void>((r) => { modulesLoaded = r; });
-  client.onNotification("aceProject/onModuleInitFinish", () => modulesLoaded());
+  client.onNotification("aceProject/onModuleInitFinish", () => {
+    session.indexed = true;
+    modulesLoaded();
+  });
   session.ready = (async () => {
     await client.request("initialize", {
       processId: process.pid,
@@ -280,7 +284,7 @@ async function startLsp(root: string, language: "arkts" | "cpp", signal: AbortSi
       capabilities: {
         general: { positionEncodings: ["utf-16"] },
         textDocument: {
-          publishDiagnostics: { relatedInformation: true },
+          publishDiagnostics: { relatedInformation: true, versionSupport: true },
           hover: { contentFormat: ["markdown", "plaintext"] },
           definition: { linkSupport: true }, declaration: { linkSupport: true }, implementation: { linkSupport: true }, references: {}, callHierarchy: {},
           documentSymbol: { hierarchicalDocumentSymbolSupport: true },
@@ -319,6 +323,11 @@ async function sync(session: LspSession, file: string, refresh = false) {
   const uri = pathToFileURL(file).href;
   const text = fs.readFileSync(file, "utf8");
   const hash = sha256(text);
+  // clangd may suppress an identical diagnostic publication after didChange.
+  // A fresh document opens with a new version, including when only headers changed.
+  if (refresh && session.language === "cpp" && session.opened.delete(uri)) {
+    session.client.notify("textDocument/didClose", { textDocument: { uri } });
+  }
   const state = session.opened.get(uri);
   if (!state) {
     const version = ++session.nextVersion;
@@ -596,6 +605,33 @@ export async function restartLsp(project: string, language: "arkts" | "cpp" | "a
   return { restarted: languages };
 }
 
+export async function resyncLsp(root: string, language: "arkts" | "cpp" | "all", product: string | undefined, signal: AbortSignal, jobId: string) {
+  const { inspectProject, syncProject, buildProject } = await import("./project.js");
+  const project = inspectProject(root, product);
+  const native = project.modules.some((module) => fs.existsSync(path.join(module.root, "src/main/cpp")));
+  invariant(native || language !== "cpp", "CAPABILITY_UNAVAILABLE", "Selected project has no C/C++ sources");
+  await restartLsp(project.root, language);
+  const sync = await syncProject(project, signal, true, jobId);
+  const compiled = native && language !== "arkts" ? await buildProject(project, { task: "compileNative" }, signal, jobId) : undefined;
+  if (compiled) invariant("entries" in compiled && compiled.entries, "EVIDENCE_MISSING", "Native sync produced no compilation database entries");
+  const ready: string[] = [];
+  for (const side of ["arkts", "cpp"] as const) {
+    if ((language !== "all" && language !== side) || (side === "cpp" && !compiled)) continue;
+    const selected = side === "arkts" ? project.product : undefined;
+    const key = `${project.root}|${side}|${selected ?? ""}`;
+    try {
+      await sessions.use(key, () => startLsp(project.root, side, signal, key, selected), async (session) => {
+        if (side === "arkts") invariant(session.indexed, "EVIDENCE_MISSING", "ArkTS LSP did not confirm module indexing");
+      });
+    } catch (error) {
+      await sessions.close(key);
+      throw error;
+    }
+    ready.push(side);
+  }
+  return { ...sync, ready, ...(compiled ? { native: compiled } : {}), ...(language === "all" && !native ? { no_cpp_sources: true } : {}) };
+}
+
 /** Save a report to a user-chosen absolute path (never overwrites a directory). */
 function exportReport(content: string, target: string) {
   invariant(path.isAbsolute(target), "INVALID_INPUT", "output_path must be an absolute file path");
@@ -607,7 +643,9 @@ function exportReport(content: string, target: string) {
 
 /** C/C++ quick check: clangd diagnostics via the pooled session. */
 export async function cppCheck(project: string, files: string[], signal: AbortSignal) {
-  return lsp({ project, action: "diagnostics", files, language: "cpp" }, signal);
+  const result = await lsp({ project, action: "diagnostics", files, language: "cpp" }, signal);
+  invariant("errors" in result && typeof result.errors === "number" && typeof result.warnings === "number", "CHECK_FAILED", "Native diagnostics did not return counts");
+  return result;
 }
 
 /* ------------------------------- API scanning ------------------------------- */

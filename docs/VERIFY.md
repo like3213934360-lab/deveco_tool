@@ -21,7 +21,7 @@ deveco-mcp verify --project /absolute/project --plan verify.json --target SERIAL
 
 CLI 仅 passed 返回 0，包括基线录制在内的其他结果均非零。MCP 用 `project {action:"verify",project,plan,output,target,wait:0}`，持续 `job wait` 到终态，再读 verdict。`output` 必须是新目录，位于工程源码外或 `.arkpilot/` 下，并在 `DEVECO_STATE_DIR` 外；不会覆盖原报告。JSON、JUnit、离线 HTML、原始 artifact 和 SHA-256 manifest 不参与短期 retention。请自行保管证据目录，其中可含工程路径、设备标识、截图和应用日志。
 
-计划支持 build、deploy、test、flow、assert、visual、layout、perf、crash、diagnostics、launch、command、entries、form。options 使用对应现有动作的参数；不能覆盖 project/product/target/action/request_key/wait。所有工具参数在准备动作前检查。不开放循环、表达式或任意工具名。未运行项目如实列出；source-integrity 检查包括未提交/未跟踪源码，不自动 `git reset` 或覆盖用户文件。
+计划支持 build、deploy、test、flow、assert、visual、layout、perf、crash、diagnostics、launch、command、entries、form、appanalyzer、deeplink。options 使用对应现有动作的参数；不能覆盖 project/product/target/action/request_key/wait。所有工具参数在准备动作前检查。不开放循环、表达式或任意工具名。未运行项目如实列出；source-integrity 检查包括未提交/未跟踪源码，不自动 `git reset` 或覆盖用户文件。
 
 ## 测试、变更范围与基线
 
@@ -33,7 +33,15 @@ CLI 仅 passed 返回 0，包括基线录制在内的其他结果均非零。MCP
 - perf 与 launch 若既未指定 baseline，也没有任何 max 阈值，返回 inconclusive；测得数值本身不是质量通过条件。
 - launch_check_ms 是 force-stop 后启动及约 3 秒存活/崩溃/空白屏检查的端到端耗时，**不是**系统首帧时间。perf 在手势期间独立限频读取帧缓冲，结束后停止采样；原始证据包含各命令的起止时间及 sampling 窗口。相邻有效窗口必须有重叠；不重叠、采样失败、帧时间戳全零或 >200ms 的未归因间隔均不能判通过，长间隔保留为 excluded_intervals。动作带 selector 时只在唯一匹配区域内滚动，并记录该子树的前后变化及操作窗口；目标未动或丢失时返回 inconclusive。整个窗口的变化也不等于业务更新。原始 hitrace 不提供未经证实的 ArkTS 栈映射。
 - visual 通过 name 引用图像基线；verify 禁止默认创建。sidecar 校验设备、OS/API、工程 SDK、比较方法、context 和图片哈希，旧无元数据基线须重新录制。通过 options.context 声明主题/语言/字体/业务场景；MCP 不会猜测这些设置。完整截图基线与采样进入证据包。
+- visual 也可使用 `options.reference_image` 指向本地设计 PNG 的绝对路径。参考图和设备截图需使用相同宽高比。结果保留原图摘要、参考图、采样和存在差异时的标注图；灰度分块比较用于检查布局差异。视觉语义由审查者结合 `ui review` 判断。
 - layout 在 verify 内默认 48vp、tiny_target 作为失败项；节点数标为 checked_unit=nodes。无法取得真实 density 时为 inconclusive。独立 `ui layout` 保留原先 advisory tiny-target 默认，可显式 strict_targets/min_target_vp。
+- `appanalyzer` 检查使用 Command Line Tools 26.0.1 或更高版本提供的 AppAnalyzer。可用 `appanalyzer_clt` 指定独立的 CLT 根目录，也可在 macOS 将它安装到 `~/Library/Huawei/CommandLineTools`。工程构建继续使用所选的 Studio 或 CLT。`options.mode` 接受 `ux`、`power` 或 `auto`。自动遍历需指定 `scope` 为 `ux`、`power` 或 `both`，可传 `minutes`（5–240）。UX 可传 `scenes` 选择 `S14` 截断、`S15` 大图大字、`S16` 留白、`S17` 避让区遮挡和 `S18` 基础。选择基础场景时可传 `packages` 指定工程内待检 HAP。首次使用需在 CLT 中执行 `appanalyzer init`，检测前用 `doctor` 查看依赖并将应用放到设备前台。功耗需要真机和支持该检查的 AppAnalyzer。需要源码位置时先用 `debug_line=true` 构建并部署。报告需来自本次执行且包含所请求类别，报告中的规则命中项会使检查失败。 [AppAnalyzer 命令行参考](https://developer.huawei.com/consumer/cn/doc/HarmonyOS-Guides/ide-commandline-appanalyzer/)
+- `doctor` 可发现 DevEco Testing 的 `DevEcoTestingConsole` 和随附 Java。非默认安装可通过 `DEVECO_TESTING_HOME` 指定安装根目录或启动器。CLI 连接本地 DevEco Testing 客户端，运行测试前需在客户端登录。 [DevEco Testing 命令行参考](https://developer.huawei.com/consumer/cn/doc/doccenter-testing/command-testing/)
+- 装有独立 DevEcoTestingCli 时，`project action=testing operation=services` 返回客户端服务目录和版本。`operation=install` 或 `update` 使用目录中的 `service` 键（如 `MemLeakTest`），接受 `request_key` 和 `wait`。启动器的 capabilities.json 需声明 list 和相应维护命令。MCP 对照操作前后版本，任务不需要设备或测试计划。
+- macOS 的 `project action=testing` 支持 `operation=services` 查看文档服务种类及磁盘上的服务清单。`operation=start` 需要 `target` 和官方任务 JSON 的绝对路径 `plan`，其中 `taskParams.sn` 只可包含该目标；任务会执行该计划的安装、卸载或遍历选项。缺失的服务由客户端按需下载，只有传 `update_service=true` 才请求更新已有服务。返回 MCP 的 job ID，可用 `job wait/status/cancel`；厂商分配的 UUID 在任务事件中。用 `operation=status/stop/report` 和 `task_id` 查询厂商状态、停止任务或读取报告。测试结论仅指该任务检测项，已停止的报告为 `inconclusive`。
+- `ui action=visual` 离线传入两张 PNG 时，可传 `score_script` 指向用户管理的[官方 ui_score.py](https://gitcode.com/openharmony-sig/deveco-cli/blob/d891cf001507713653a068828035723e55d02e27/packages/design2arkts-engine/resources/skill/references/capabilities/hmos-d2a-ui-reconstruction-score/scripts/ui_score.py)。需要 PATH 中的 Python 和 Pillow；只运行与仓库固定摘要匹配的脚本，返回颜色、结构和边缘的单轮评分。默认仍使用灰度分块差异，两种结果不可互换。
+- `deeplink` 检查接收调用方审过的临时路由改动。先对同一工程和目标运行 `run build_run`，传 `run_mode=full` 和 `debug_line=true`，将其 `job_id` 填入 `options.baseline_job`。`options.edits` 为 `{file,before_sha256,content}` 数组，可替换现有 `.ets`、模块清单或页面配置。`options.cases` 为 `{uri,visible}` 或 `{uri,hidden}` 数组，可指定 `timeout_ms`。URI 由系统按当前包名解析，断言限制在该应用的布局内。
+- 临时路由执行前校验当前安装与基线任务、安装模块集合及本地安装包摘要。执行完会恢复源码和生成的 HAP/HSP，并用原包覆盖安装，无需卸载或重建原包。源码发生并发编辑或设备安装无法归属时返回恢复冲突，并保留恢复目录供检查。`deeplink` 检查只运行计划给定的路由和断言，自然语言计划及截图语义由宿主通过 `ui test_*` 和 `review` 处理。
 - crash 必须给 since_minutes；严格读取目录或 Faultlogger 的有效清单并验证设备时钟，读取失败不能被解释为“没有崩溃”。
 
 ## 场景、入口和归因

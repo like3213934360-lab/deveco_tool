@@ -147,8 +147,7 @@ function loadMaps(file: string) {
   } catch { return undefined; }
 }
 
-/** Only the selected module/product/target can supply a map; directory order is not build identity. */
-export function mapFrame(ref: SourceRef, project: SourceProject): SourceRef | undefined {
+function mapOf(ref: SourceRef, project: SourceProject) {
   if (!ref.module || !/\.ts$/.test(ref.rel) || !project.product) return undefined;
   const module = project.modules.find((m) => m.name === ref.module);
   if (!module?.target) return undefined;
@@ -158,13 +157,47 @@ export function mapFrame(ref: SourceRef, project: SourceProject): SourceRef | un
   const inner = ref.rel.slice(ref.module.length + 1);
   const keys = Object.keys(maps).filter((k) => k.startsWith(`${ref.module}|`) && k.endsWith(`|${inner}`));
   if (keys.length !== 1) return undefined;
-  const pos = mapPosition(maps[keys[0]!]!, ref.line, ref.column ?? 1);
+  return { file, map: maps[keys[0]!]! };
+}
+
+/** Only the selected module/product/target can supply a map; directory order is not build identity. */
+export function mapFrame(ref: SourceRef, project: SourceProject): SourceRef | undefined {
+  const selected = mapOf(ref, project);
+  if (!selected) return undefined;
+  const { file, map } = selected;
+  const pos = mapPosition(map, ref.line, ref.column ?? 1);
   return pos ? { raw: ref.raw, rel: pos.source.replaceAll("\\", "/"), line: pos.line, column: pos.column, source_map: file } : undefined;
 }
 
 function sourceNewerThanMap(file: string, map: string) {
   try { return fs.statSync(file).mtimeMs > fs.statSync(map).mtimeMs; }
   catch { return true; }
+}
+
+/** Reverse lookup for a loaded VM script and an original project file. Coordinates returned are zero-based. */
+export function mapBreakpoint(url: string, project: SourceProject, file: string, line: number, column?: number) {
+  const ref = parseSourceRefs(`${url}:1:1`, 1)[0];
+  const selected = ref && mapOf(ref, project);
+  if (!selected || sourceNewerThanMap(file, selected.file)) return undefined;
+  const indices = new Set(selected.map.sources.map((source, i) => ({ source, i })).filter(({ source }) =>
+    resolveRef({ raw: source, rel: source.replaceAll("\\", "/"), line: 1 }, project) === file).map(({ i }) => i));
+  if (!indices.size) return undefined;
+  let source = 0, originalLine = 0, originalColumn = 0;
+  let best: { lineNumber: number; columnNumber: number; distance: number } | undefined;
+  for (const [lineNumber, row] of selected.map.mappings.split(";").entries()) {
+    let columnNumber = 0;
+    for (const part of row.split(",")) {
+      if (!part) continue;
+      const segment = vlq(part);
+      columnNumber += segment[0] ?? 0;
+      if (segment.length < 4) continue;
+      source += segment[1]!; originalLine += segment[2]!; originalColumn += segment[3]!;
+      if (!indices.has(source) || originalLine + 1 !== line) continue;
+      const distance = column === undefined ? 0 : Math.abs(column - 1 - originalColumn);
+      if (!best || distance < best.distance) best = { lineNumber, columnNumber, distance };
+    }
+  }
+  return best && { lineNumber: best.lineNumber, columnNumber: best.columnNumber };
 }
 
 /** Parse + resolve + snippet: the project's own frames only, at most `limit`. Never throws. */

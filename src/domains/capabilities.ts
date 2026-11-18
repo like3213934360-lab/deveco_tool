@@ -4,6 +4,7 @@ import { inspectProject } from "./project.js";
 import { toolchain, sdkInfo } from "../core/toolchain.js";
 import { errorResult } from "../core/errors.js";
 import { resourceStatus, coordinationDirectory } from "../core/operations.js";
+import { testingRuntime } from "./testing-runtime.js";
 
 /** Preflight facts are separate from execution evidence and unsupported platform features. */
 export async function capabilities(projectPath: string | undefined, targets: string[], target?: string) {
@@ -12,6 +13,13 @@ export async function capabilities(projectPath: string | undefined, targets: str
   let project, components;
   try { components = toolchain().components; } catch (e) { add("toolchain", "blocked", errorResult(e).message, "Configure DevEco Studio/CLT"); }
   try { if (projectPath) project = inspectProject(projectPath); } catch (e) { add("project", "blocked", errorResult(e).message); }
+  const appanalyzer = components?.appanalyzer;
+  add("runtime.appanalyzer", appanalyzer ? "unprobed" : "blocked", appanalyzer ? "CLT executable found" : "AppAnalyzer CLI was not found", "Set appanalyzer_clt to a Command Line Tools installation containing bin/appanalyzer");
+  let testing: ReturnType<typeof testingRuntime>;
+  try {
+    testing = testingRuntime();
+    add("runtime.deveco_testing", testing ? "unprobed" : "blocked", testing ? `CLI and bundled Java found; capability manifest ${testing.manifest}` : "DevEco Testing CLI and its bundled Java were not found", "Set DEVECO_TESTING_HOME to a DevEco Testing CLI installation");
+  } catch (e) { add("runtime.deveco_testing", "blocked", errorResult(e).message); }
   add("project.verify", project ? "ready_for_attempt" : "blocked", "Requires a valid plan and new permanent output directory", "Pass project, plan and output");
   for (const [kind, directory] of [["local", "test"], ["instrument", "ohosTest"]]) {
     const sources = project?.modules.some((m) => fs.existsSync(path.join(m.root, `src/${directory}`)));
@@ -28,5 +36,5 @@ export async function capabilities(projectPath: string | undefined, targets: str
   add("perf.source", "unsupported", "Composer FPS does not identify ArkTS calls", "device trace exports official raw events for analysis with matching debug metadata");
   add("scenario.http_mock", "unprobed", "Project-owned prepare/check/cleanup commands may expose test endpoints; no system proxy is installed", "Use reviewed verify commands with allow_commands=true");
   for (const action of ["form.standalone_host", "distributed.device_farm", "release.agc"]) add(action, "unsupported", "No implementation in this release");
-  return { matrix, sdk: components ? sdkInfo() : undefined, coordination: { directory: coordinationDirectory(), resources: await resourceStatus(), scope: "same host, participating server processes; older MCP versions and external tools do not honor these locks", stale_owner: "Inspect side effects, then job release_resource; no automatic stealing" } };
+  return { matrix, sdk: components ? sdkInfo() : undefined, analysis_runtimes: { appanalyzer: appanalyzer ?? null, deveco_testing: testing ?? null }, coordination: { directory: coordinationDirectory(), resources: await resourceStatus(), scope: "same host, participating server processes; older MCP versions and external tools do not honor these locks", stale_owner: "Inspect side effects, then job release_resource; no automatic stealing" } };
 }

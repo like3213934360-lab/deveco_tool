@@ -104,12 +104,12 @@ export async function releaseResource(resource: string, ownerPid: number) {
   return { released: resource, owner_pid: ownerPid, effects_replayed: false };
 }
 
-const asynchronous = new Set(["project.clean", "project.sync", "project.build", "project.test", "project.verify", "run.build_run", "run.deploy", "ui_flow.replay", "sign.auto", "knowledge.update", "ui.form"]);
+const asynchronous = new Set(["project.clean", "project.sync", "project.build", "project.test", "project.verify", "project.export_page", "run.build_run", "run.deploy", "ui_flow.replay", "sign.auto", "knowledge.update", "ui.form"]);
 
 /** Resolve aliases before locking and before executing; the caller then uses this exact device. */
 export async function operationResources(name: string, input: Record<string, any>, signal: AbortSignal): Promise<string[]> {
   const action = String(input.action ?? "");
-  if (name === "device" && ["app", "file", "clipboard", "screen", "system", "font"].includes(action)) {
+  if (name === "device" && ["app", "file", "clipboard", "screen", "system", "font", "location", "network_sim", "playback"].includes(action)) {
     (await import("../domains/device-controls.js")).validateControl(input);
     if (action === "app" && input.operation === "install") return [];
   }
@@ -117,19 +117,34 @@ export async function operationResources(name: string, input: Record<string, any
     const { appDatabasePath } = await import("../domains/device.js");
     appDatabasePath(input.bundle ?? "", input.db, input.module);
   }
-  if (!name.startsWith("job:") && (asynchronous.has(`${name}.${action}`) || (name === "ui" && action === "layout" && input.forms))) return [];
+  if (!name.startsWith("job:") && (asynchronous.has(`${name}.${action}`) || (name === "ui" && action === "layout" && input.forms) || (name === "code" && action === "lsp_restart" && input.resync))) return [];
+  if (name === "ui" && action === "act" && (input.duration_ms !== undefined || input.timeout_ms !== undefined || input.wait !== undefined || input.request_key !== undefined)
+    && (await import("../domains/uibatch.js")).uiActionJob(input)) return [];
+  if (name === "ui" && action === "visual" && input.candidate_image !== undefined) return [];
   const hot = name === "hot_reload" && action !== "stop_daemon"
     ? await (await import("../domains/hotreload.js")).hotReloadSelection((await import("../domains/project.js")).inspectProject(input.project, input.product), input.module, input.target, signal)
     : undefined;
   if (hot) { input.module = hot.module; input.target = hot.target; }
   const job = name.startsWith("job:") ? name.slice(4) : undefined;
-  const device = job ? ["device_install", "build_run", "deploy", "flow_replay", "hot_reload", "hot_reset", "form_check", "form_inventory"].includes(job) || (job === "project_test" && input.kind === "instrument") || (job === "verify" && !!input.target)
-    : name === "run" || (name === "device" && ["app", "file", "clipboard", "screen", "system", "font", "sqlite", "send", "recv", "scenario", "databases", "fixture", "trace"].includes(action))
+  const device = job ? ["device_install", "testing_run", "build_run", "deploy", "flow_replay", "hot_reload", "hot_reset", "form_check", "form_inventory", "ui_long_press", "ui_scroll", "ark_debug_start"].includes(job) || (job === "project_test" && input.kind === "instrument") || (job === "verify" && !!input.target)
+    : name === "run" || (name === "code" && action === "debug" && input.op === "attach") || (name === "device" && ["app", "file", "clipboard", "screen", "system", "font", "location", "network_sim", "playback", "sqlite", "send", "recv", "scenario", "databases", "fixture", "trace"].includes(action))
       || (name === "ui" && !["test_finish", "test_export", "test_log", "record_receipts", "record_archive", "record_restore"].includes(action))
       || (name === "ui_flow" && ["record", "stop"].includes(action));
   const keys: string[] = [];
+  if (job === "testing_service" || job === "testing_run") keys.push("testing:services");
   if (input.project && job !== "form_matrix" && (job || (["project", "run", "code", "hot_reload", "ui_flow", "sign"].includes(name) || name === "ui" && ["visual", "test_start", "test_export"].includes(action)))) keys.push(projectResource(input.project));
+  if (input.project && (["sync", "build", "build_run", "deploy", "project_clean", "project_test", "verify", "lsp_resync", "ark_debug_start"].includes(job ?? "")
+    || name === "hot_reload" || name === "code" && action === "check" && input.fix)) {
+    const { externalModuleRoots, projectFor } = await import("../domains/project.js");
+    const profile = path.resolve(input.project, "build-profile.json5");
+    if (fs.existsSync(profile)) keys.push(...externalModuleRoots(projectFor(input as { project: string; product?: string; modules?: string[] }).project).map(projectResource));
+  }
   if (hot) keys.push(`device:${hot.target}`);
+  if (name === "code" && action === "debug" && input.session_id) {
+    const recorded = (await import("../domains/ark-debug.js")).debugTarget(input.session_id);
+    invariant(!input.target || input.target === recorded, "CONFLICT", "Debug session belongs to another target", { target: recorded });
+    if (input.op !== "events") keys.push(`device:${recorded}`);
+  }
   if (name === "ui" && input.test_id) keys.push(`ui-test:${input.test_id}`);
   if (device) {
     const { resolveTarget } = await import("../domains/device.js");

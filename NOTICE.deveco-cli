@@ -6,6 +6,9 @@ Reused or adapted in deveco-mcp:
 - src/domains/sign.ts: Studio/Hvigor signing-material password format and AppGallery Connect
   auto-signing flow (certificate, device, debug profile endpoints) follow packages/cli/src/signature.
 - src/domains/ui.ts: screen-recorder toggle protocol follows packages/cli/src/ui/screenrecord.
+- resources/vendor/smoke-overlap.mjs: ES module of analyzeOverlap and its layout helpers from
+  packages/cli/src/smoke/checkers/overlap-analyzer.ts at commit 67f8db1 (target es2022).
+- src/domains/region-services.ts: Huawei GRS intermediate certificate from packages/cli/src/grs/ca-bundle.ts.
 - src/domains/skills.ts: OpenHarmony skill-market API usage follows packages/cli/src/skills.
 - Knowledge packs are built from the @deveco/deveco-cli-knowledgebase docs package.
 

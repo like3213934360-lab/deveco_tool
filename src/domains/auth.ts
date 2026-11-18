@@ -6,23 +6,38 @@ import { stateDir } from "../core/config.js";
 import { database } from "../core/db.js";
 import { invariant, ToolError } from "../core/errors.js";
 import { spawnIndependent } from "../core/proc.js";
+import { resolveRegion } from "./region-services.js";
 
 export type Provider = "developer" | "codegenie";
-export type Region = "cn" | "global";
+export type Region = "cn" | "global" | "hk" | "mo";
 /** Login portals (upstream ApiEndpoints.CN_LOGIN_URL / LOGIN_URL). */
-export const regionBase: Record<Region, string> = process.env.DEVECO_LOGIN_URL
+export const regionBase = process.env.DEVECO_LOGIN_URL
   ? { cn: process.env.DEVECO_LOGIN_URL, global: process.env.DEVECO_LOGIN_URL } // tests: local mock portal
   : { cn: "https://cn.devecostudio.huawei.com", global: "https://devecostudio.huawei.com" };
 /** Callback siteId -> country code sent to temptoken/check (upstream utils/region.ts). */
 export const siteCountry: Record<string, string> = { "1": "CN", "5": "SG", "7": "EU", "8": "RU" };
 /** Which callback sites a region accepts: cn only the China site, global the overseas sites. */
 export function siteAllowed(region: Region, siteId: string | null) {
+  if (region === "hk" || region === "mo") return !!siteId && Object.hasOwn(siteCountry, siteId);
   if (!siteId) return true;
-  return region === "cn" ? siteId === "1" : siteId in siteCountry && siteId !== "1";
+  return region === "cn" ? siteId === "1" : Object.hasOwn(siteCountry, siteId) && siteId !== "1";
+}
+async function loginBase(region: Region, site?: string, signal?: AbortSignal) {
+  if (region === "cn" || region === "global") return regionBase[region];
+  if (process.env.DEVECO_LOGIN_URL) return process.env.DEVECO_LOGIN_URL;
+  if (site === "CN") return regionBase.cn;
+  return (await resolveRegion(site ?? region.toUpperCase(), signal)).spaceintroduce;
+}
+
+export async function serviceBase(region: Region = "cn", service: "agcups" | "agcsign" | "spaceintroduce", signal?: AbortSignal) {
+  const override = service === "spaceintroduce" ? process.env.DEVECO_LOGIN_URL : process.env.DEVECO_AGC_URL;
+  if (override) return override;
+  if (region === "hk" || region === "mo") return (await resolveRegion(region.toUpperCase(), signal))[service];
+  return service === "spaceintroduce" ? regionBase.cn : "https://connect-api.cloud.huawei.com";
 }
 const appIds: Record<Provider, string> = { developer: "1009", codegenie: "1008" };
 
-interface Credentials { jwt: string; access: string; saved: number; userId: string; userName: string; expires?: number; region?: Region }
+interface Credentials { jwt: string; access: string; saved: number; userId: string; userName: string; expires?: number; region?: Region; site?: string }
 
 let key: Buffer | undefined;
 function secret(): Buffer {
@@ -63,19 +78,22 @@ async function save(provider: Provider, value: Credentials | undefined, expected
   } else db.prepare("INSERT OR REPLACE INTO credentials(provider,data) VALUES(?,?)").run(provider, encrypted);
 }
 
-async function checkJwt(jwt: string, refresh: boolean, region: Region, signal?: AbortSignal): Promise<string> {
-  const response = await fetch(`${regionBase[region]}/authrouter/auth/api/jwToken/check`, { headers: { jwtToken: jwt, refresh: String(refresh) }, signal: AbortSignal.any([AbortSignal.timeout(20000), ...(signal ? [signal] : [])]) });
-  const data = (await response.json().catch(() => ({}))) as { status?: boolean; userInfo?: { accessToken?: string } };
+async function checkJwt(jwt: string, refresh: boolean, region: Region, base: string, signal?: AbortSignal) {
+  const response = await fetch(`${base}/authrouter/auth/api/jwToken/check`, { redirect: "error", headers: { jwtToken: jwt, refresh: String(refresh) }, signal: AbortSignal.any([AbortSignal.timeout(20000), ...(signal ? [signal] : [])]) });
+  const data = (await response.json().catch(() => ({}))) as { status?: boolean; userInfo?: { accessToken?: string; nationalCode?: string } };
   invariant(response.ok && data.status === true && data.userInfo?.accessToken, "AUTH_REQUIRED", "Login expired or was rejected", undefined, "Log in again with auth action=login");
-  return data.userInfo.accessToken;
+  const market = typeof data.userInfo.nationalCode === "string" ? data.userInfo.nationalCode.toLowerCase() : undefined;
+  if (region === "hk" || region === "mo") invariant(market === region, "AUTH_REQUIRED", "Verified account region does not match the selected region");
+  return { access: data.userInfo.accessToken, region: market === "hk" || market === "mo" ? market as Region : region };
 }
 
 export async function credentials(provider: Provider, force = false, signal?: AbortSignal): Promise<Credentials> {
   const stored = await load(provider), current = stored?.value;
   invariant(current && (!current.expires || current.expires * 1000 > Date.now()), "AUTH_REQUIRED", `Not logged in to ${provider}`, undefined, `auth action=login provider=${provider}`);
   if (!force && Date.now() - current.saved < 30 * 60000) return current;
-  const access = await checkJwt(current.jwt, true, current.region ?? "cn", signal);
-  const updated = { ...current, access, saved: Date.now() };
+  const region = current.region ?? "cn";
+  const checked = await checkJwt(current.jwt, true, region, await loginBase(region, current.site, signal), signal);
+  const updated = { ...current, ...checked, saved: Date.now() };
   await save(provider, updated, stored!.data);
   return updated;
 }
@@ -87,16 +105,30 @@ interface Login {
   error?: string; browser: string; region: Region;
 }
 const logins = new Map<Provider, Login>();
+const starting = new Map<Provider, { region: Region; ready: ReturnType<typeof startLogin> }>();
 
 export async function login(provider: Provider, openBrowser = true, region: Region = "cn") {
+  const initial = starting.get(provider);
+  if (initial) {
+    invariant(initial.region === region, "CONFLICT", "Another region already has a pending login for this provider");
+    return initial.ready;
+  }
+  const ready = startLogin(provider, openBrowser, region);
+  starting.set(provider, { region, ready });
+  try { return await ready; } finally { starting.delete(provider); }
+}
+
+async function startLogin(provider: Provider, openBrowser: boolean, region: Region) {
   const active = logins.get(provider);
-  if (active?.pending) return { provider, region: active.region, pending: true, login_url: active.url, browser: active.browser };
-  const base = regionBase[region];
-  let site = "1";
+  if (active?.pending) {
+    invariant(active.region === region, "CONFLICT", "Another region already has a pending login for this provider");
+    return { provider, region: active.region, pending: true, login_url: active.url, browser: active.browser };
+  }
+  const base = await loginBase(region);
   const nonce = crypto.randomBytes(24).toString("hex");
-  let accept!: (token: string) => void;
+  let accept!: (value: { temp: string; site: string }) => void;
   let reject!: (error: Error) => void;
-  const token = new Promise<string>((a, r) => { accept = a; reject = r; });
+  const token = new Promise<{ temp: string; site: string }>((a, r) => { accept = a; reject = r; });
   token.catch(() => {});
   const controller = new AbortController();
   const cancel = (error: ToolError) => { controller.abort(error); reject(error); };
@@ -113,18 +145,17 @@ export async function login(provider: Provider, openBrowser = true, region: Regi
       const expected = Buffer.from(nonce);
       const hostOk = [`127.0.0.1:${(server.address() as { port: number }).port}`, `localhost:${(server.address() as { port: number }).port}`].includes(req.headers.host ?? "");
       if (!hostOk || url.pathname !== "/callback" || code.length !== expected.length || !crypto.timingSafeEqual(code, expected)) throw new Error("invalid callback");
-      if (!siteAllowed(region, params.get("siteId"))) throw new Error(`account site ${params.get("siteId")} does not match region ${region}`);
-      site = params.get("siteId") ?? site;
-      res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" });
+      res.setHeader("content-type", "text/html; charset=utf-8");
+      res.setHeader("cache-control", "no-store");
       if (["true", "access_denied", "quit"].includes(params.get("quit") ?? "")) {
         res.end("<h1>登录已取消</h1>");
         reject(new ToolError("AUTH_REQUIRED", "Login was cancelled in the browser"));
         return;
       }
       const temp = params.get("tempToken");
-      if (!temp) throw new Error("missing token");
+      if (!temp || !siteAllowed(region, params.get("siteId"))) throw new Error("invalid token or site");
       res.end("<h1>DevEco MCP 已收到登录信息</h1><p>正在验证，请返回宿主通过 auth status 确认登录结果。</p>");
-      accept(temp);
+      accept({ temp, site: siteCountry[params.get("siteId") ?? "1"]! });
     })().catch(() => { if (!res.headersSent) { res.writeHead(400); res.end("invalid"); } });
   });
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
@@ -136,15 +167,17 @@ export async function login(provider: Provider, openBrowser = true, region: Regi
     cancel: () => cancel(new ToolError("AUTH_REQUIRED", "Login was cancelled by logout")) };
   entry.done = (async () => {
     try {
-      const temp = await token;
-      const query = new URLSearchParams({ tempToken: temp.split("&")[0]!, site: siteCountry[site] ?? "CN", version: "1.0.0", appid: appIds[provider] });
-      const response = await fetch(`${base}/authrouter/auth/api/temptoken/check?${query}`, { signal: AbortSignal.any([controller.signal, AbortSignal.timeout(20000)]) });
+      const { temp, site } = await token;
+      const exchange = await loginBase(region, site, controller.signal);
+      const query = new URLSearchParams({ tempToken: temp.split("&")[0]!, site, version: "1.0.0", appid: appIds[provider] });
+      const response = await fetch(`${exchange}/authrouter/auth/api/temptoken/check?${query}`, { redirect: "error", signal: AbortSignal.any([controller.signal, AbortSignal.timeout(20000)]) });
+      invariant(response.ok, "AUTH_REQUIRED", "Token exchange was rejected");
       const jwt = (await response.text()).trim();
       invariant(jwt.split(".").length === 3, "AUTH_REQUIRED", "Authentication server returned an invalid session");
       const payload = JSON.parse(Buffer.from(jwt.split(".")[1]!, "base64url").toString("utf8")) as { userId?: string; userName?: string; exp?: number };
-      const access = await checkJwt(jwt, false, region, controller.signal);
+      const checked = await checkJwt(jwt, false, region, exchange, controller.signal);
       controller.signal.throwIfAborted();
-      await save(provider, { jwt, access, saved: Date.now(), userId: payload.userId ?? "", userName: payload.userName ?? "", expires: payload.exp, region });
+      await save(provider, { jwt, ...checked, saved: Date.now(), userId: payload.userId ?? "", userName: payload.userName ?? "", expires: payload.exp, site });
     } catch (error) {
       entry.error = (error as Error).message;
     } finally {
@@ -176,6 +209,7 @@ export async function status(provider: Provider) {
 }
 
 export async function logout(provider: Provider) {
+  await starting.get(provider)?.ready.catch(() => undefined); // A failed start has no listener to cancel.
   const pending = logins.get(provider);
   if (pending) {
     pending.cancel();
@@ -188,8 +222,10 @@ export async function logout(provider: Provider) {
 
 export async function teams(signal?: AbortSignal) {
   const auth = await credentials("developer", false, signal);
-  const response = await fetch(`${process.env.DEVECO_AGC_URL || "https://connect-api.cloud.huawei.com"}/api/ups/user-permission-service/v1/user-team-list`, {
-    headers: { uid: auth.userId, oauth2Token: auth.access, source: "cli", lang: "zh_CN" }, signal: AbortSignal.any([AbortSignal.timeout(20000), ...(signal ? [signal] : [])]),
+  const base = await serviceBase(auth.region, "agcups", signal);
+  const lang = auth.region === "hk" || auth.region === "mo" ? "en_" + auth.region.toUpperCase() : "zh_CN";
+  const response = await fetch(`${base}/api/ups/user-permission-service/v1/user-team-list`, {
+    redirect: "error", headers: { uid: auth.userId, oauth2Token: auth.access, source: "cli", lang }, signal: AbortSignal.any([AbortSignal.timeout(20000), ...(signal ? [signal] : [])]),
   });
   invariant(response.ok, "HTTP_ERROR", `Team query returned HTTP ${response.status}`);
   const data = (await response.json()) as { ret?: { code: number; msg?: string }; teams?: { id: string | number; name: string; userType?: number }[] };

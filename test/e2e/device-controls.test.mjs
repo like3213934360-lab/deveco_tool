@@ -41,6 +41,42 @@ async function foreground(device, bundle, present) {
   assert.fail(`Dedicated app foreground did not become ${present}: ${JSON.stringify(result)}`);
 }
 
+test("device simulation and restoration", async (t) => {
+  const target = required("E2E_TARGET");
+  assert.equal(required("E2E_ALLOW_SYSTEM_WRITE"), "1", "Select a device authorized for network and location changes");
+  const { call, directory } = await session(t);
+  const device = (action, operation, args = {}) => call("device", { target, action, operation, ...args });
+  const before = await device("network_sim", "status");
+  assert.equal(before.enabled, false, "Network simulation must already be disabled");
+  assert.equal(before.managed, false);
+  for (const settings of [{ scenario_id: Number(required("E2E_NET_ID")) }, {
+    name: `MCP${crypto.randomBytes(2).toString("hex")}`, up_bandwidth: 100000, down_bandwidth: 500000,
+    up_latency: 200, down_latency: 200, up_drop: 0.05, down_drop: 0.01,
+  }]) {
+    try {
+      const started = await device("network_sim", "start", settings);
+      const listed = await device("network_sim", "list");
+      const active = listed.scenarios.find(({ id, active }) => active && id === started.active_id);
+      assert.ok(active);
+      if (settings.name) assert.equal(active.name, settings.name);
+      else assert.equal(active.id, settings.scenario_id);
+    } finally {
+      await device("network_sim", "stop");
+      const after = await device("network_sim", "status");
+      assert.deepEqual({ enabled: after.enabled, managed: after.managed }, { enabled: false, managed: false });
+    }
+  }
+  const local = path.join(directory, "test-route.gpx");
+  fs.writeFileSync(local, '<gpx version="1.1" creator="MCP" xmlns="http://www.topografix.com/GPX/1/1"><wpt lat="1.290" lon="103.852"/><wpt lat="1.291" lon="103.853"/></gpx>', { flag: "wx" });
+  try {
+    assert.equal((await device("location", "enable")).command_confirmed, true);
+    assert.equal((await device("location", "set", { latitude: 1.290, longitude: 103.852, altitude: 10, speed: 2, bearing: 90, interval: 1 })).command_confirmed, true);
+    assert.equal((await device("location", "set", { local, interval: 2 })).command_confirmed, true);
+  } finally {
+    assert.equal((await device("location", "disable")).command_confirmed, true);
+  }
+});
+
 test("device controls", async (t) => {
   const { call, raw, client, job, directory, target, project, bundle, receipt, defer } = await app(t);
   const device = (args) => call("device", { target, ...args });

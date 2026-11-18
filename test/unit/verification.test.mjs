@@ -13,7 +13,7 @@ process.env.DEVECO_STATE_DIR = path.join(work, 'state');
 process.env.DEVECO_COORDINATION_DIR = path.join(work, 'coordination');
 fs.symlinkSync(path.join(root, 'node_modules'), path.join(work, 'node_modules'), 'junction');
 const entry = path.join(work, 'entry.ts'), bundle = path.join(work, 'entry.mjs');
-fs.writeFileSync(entry, ['domains/project-test', 'domains/evidence', 'domains/quality', 'domains/verify', 'core/operations', 'core/artifacts', 'core/audit', 'core/db', 'domains/device', 'domains/entries', 'domains/uitest', 'domains/hotreload'].map((p) => `export * from ${JSON.stringify(path.join(root, 'src', p + '.ts'))}`).join('\n'));
+fs.writeFileSync(entry, ['domains/project-test', 'domains/evidence', 'domains/quality', 'domains/verify', 'core/operations', 'core/artifacts', 'core/audit', 'core/db', 'domains/device', 'domains/entries', 'domains/uitest', 'domains/hotreload', 'domains/appanalyzer', 'domains/testing-runtime', 'domains/testing-console'].map((p) => `export * from ${JSON.stringify(path.join(root, 'src', p + '.ts'))}`).join('\n'));
 await build({ entryPoints: [entry], outfile: bundle, bundle: true, format: 'esm', platform: 'node', packages: 'external', logLevel: 'error' });
 const m = await import(pathToFileURL(bundle));
 after(async () => { await m.stopCleanup(); await m.closeCoordination(); m.closeDatabase(); fs.rmSync(work, { recursive: true, force: true }); });
@@ -50,6 +50,52 @@ test('legacy audit import waits for writers, is idempotent and preserves malform
   finally { fs.rmSync(file); }
 });
 const report = (outcome, summary) => `class=Suite\ntest=one\nresult=${outcome}\nTests run: ${summary}\n`;
+
+test('AppAnalyzer success requires a report for the requested bundle and every requested category', () => {
+  const metadata = { reportVersion: '1.0', taskId: 'test-task', bundleName: 'com.example.test' };
+  const parse = (report, scope) => m.analyzerReport(JSON.stringify({ ...metadata, ...report }), 'com.example.test', scope);
+  assert.equal(parse({ uxIssues: [] }, 'ux').verdict, 'passed');
+  assert.equal(parse({ uxIssues: [], powerIssues: [{ result: 'fail' }] }, 'both').verdict, 'failed');
+  for (const invalid of [{ uxIssues: [] }, { uxIssues: [], powerIssues: ['bad type'] }, { bundleName: 'other', uxIssues: [], powerIssues: [] }]) {
+    assert.throws(() => parse(invalid, 'both'), { code: 'EVIDENCE_MISSING' });
+  }
+  assert.throws(() => m.analyzerReport('{', 'com.example.test', 'ux'), { code: 'EVIDENCE_MISSING' });
+  assert.throws(() => m.analyzerOptions.parse({ mode: 'power', minutes: 20 }));
+  assert.throws(() => m.analyzerOptions.parse({ mode: 'auto', scope: 'ux', minutes: 4 }));
+  assert.equal(m.analyzerOptions.safeParse({ mode: 'ux', scenes: ['S14', 'S18'], packages: ['entry.hap'] }).success, true);
+  assert.equal(m.analyzerOptions.safeParse({ mode: 'ux', scenes: ['S14'], packages: ['entry.hap'] }).success, false);
+  assert.equal(m.analyzerOptions.safeParse({ mode: 'auto', scope: 'power', scenes: ['S14'] }).success, false);
+});
+
+test('DevEco Testing discovery requires the bundled Java and reports manifest integrity', () => {
+  const install = path.join(work, 'testing'), bin = path.join(install, 'bin');
+  const script = path.join(bin, process.platform === 'win32' ? 'DevEcoTestingCli.bat' : 'DevEcoTestingCli.sh');
+  const java = path.join(bin, process.platform === 'win32' ? 'java.exe' : 'java'), manifest = path.join(install, 'capabilities.json');
+  fs.mkdirSync(bin, { recursive: true });
+  fs.writeFileSync(script, 'discovery fixture');
+  assert.equal(m.testingRuntime(install), undefined);
+  fs.writeFileSync(java, 'discovery fixture');
+  assert.deepEqual(m.testingRuntime(script), { script, java, manifest: 'missing' });
+  fs.writeFileSync(manifest, '{"commands":[3]}');
+  assert.equal(m.testingRuntime(bin).manifest, 'invalid');
+  fs.writeFileSync(manifest, '{"commands":["list","run","list"]}');
+  assert.deepEqual(m.testingRuntime(install), { script, java, manifest: 'present', commands: ['list', 'run'] });
+  const consoleScript = path.join(bin, process.platform === 'win32' ? 'DevEcoTestingConsole.bat' : 'DevEcoTestingConsole.sh');
+  fs.writeFileSync(consoleScript, 'official console launcher');
+  assert.equal(m.testingRuntime(install).script, consoleScript);
+  assert.equal(m.testingRuntime(script).script, script);
+});
+
+test('Testing submits a frozen vendor plan for exactly the selected device', () => {
+  const plan = path.join(fs.realpathSync(work), 'console.json');
+  const params = { solutionName: '稳定性基础质量测试', taskName: 'probe', sn: ['phone'], 'package.name': 'com.example.probe' };
+  fs.writeFileSync(plan, JSON.stringify({ taskParams: params }));
+  const frozen = m.testingPlan(plan, 'phone');
+  assert.throws(() => m.testingPlan(plan, 'watch'));
+  fs.writeFileSync(plan, JSON.stringify({ taskParams: { ...params, sn: ['phone', 'watch'] } }));
+  assert.throws(() => m.testingPlan(plan, 'phone'));
+  assert.deepEqual(frozen, params);
+});
 
 test('SDK exit zero never substitutes for complete test accounting', () => {
   assert.equal(m.parseTestReport(report('Failure', '1, Failure: 1, Error: 0, Pass: 0, Ignore: 0')).verdict, 'failed');

@@ -1,5 +1,5 @@
 import { errorResult, ToolError } from "../core/errors.js";
-import { automaticActions, automaticResult, acceptAgreements, act, center, describe, dumpTree, invalidate, pickMatch, select, treeSignature, waitFor, type Action, type AutomaticResult, type Selector, type UiNode } from "./ui.js";
+import { automaticActions, automaticResult, acceptAgreements, act, center, describe, dumpTree, invalidate, nativeScrollBudget, scrollTarget, pickMatch, select, treeSignature, waitFor, type Action, type AutomaticResult, type Selector, type UiNode } from "./ui.js";
 
 /* ------------------------------ screen diff ------------------------------ */
 
@@ -120,28 +120,64 @@ export function screenDiff(before: UiNode[], after: UiNode[], limit = 10, bundle
 export interface BatchStep {
   op: Action["action"] | "wait";
   selector?: Selector;
+  to?: Selector;
   x?: number; y?: number; x2?: number; y2?: number;
   text?: string; append?: boolean; key?: string; keys?: string[];
+  touch?: { scale?: number; degrees?: number; radius?: number };
   direction?: "up" | "down" | "left" | "right"; speed?: number;
+  scroll_offset?: number;
+  duration_ms?: number;
   button?: "left" | "right" | "middle"; ticks?: number;
   /** wait: selector to wait for (visible); ms: fixed pause */
   ms?: number; timeout_ms?: number;
 }
 
-const needsPoint = new Set(["click", "double_click", "long_click", "input", "mouse_click", "mouse_double_click", "mouse_long_click", "mouse_move", "mouse_scroll"]);
+export const needsPoint = new Set(["click", "double_click", "long_click", "input", "clear_text", "swipe", "drag", "mouse_click", "mouse_double_click", "mouse_long_click", "mouse_move", "mouse_scroll"]);
+export const SYNC_HOLD_MS = 30000;
+
+export function uiActionJob(input: { action?: string; op?: string; duration_ms?: number; timeout_ms?: number; wait?: number; request_key?: string }) {
+  if (input.action !== "act") return undefined;
+  const requested = input.wait !== undefined || input.request_key !== undefined;
+  if (input.op === "long_click" && input.duration_ms !== undefined && (input.duration_ms > SYNC_HOLD_MS || requested)) return "ui_long_press";
+  if (nativeScrollBudget(input.op) !== undefined && ((input.timeout_ms ?? 0) > 38000 || requested)) return "ui_scroll";
+  return undefined;
+}
 
 /** Concrete Action for a step once its selector (if any) resolved to a point. Pure. */
-export function stepAction(s: BatchStep, point?: { x: number; y: number }): Action {
+export function stepAction(s: BatchStep, point?: { x: number; y: number }, end?: { x: number; y: number }): Action {
   const x = point?.x ?? s.x, y = point?.y ?? s.y;
+  const x2 = end?.x ?? s.x2, y2 = end?.y ?? s.y2;
   const need = (ok: unknown, what: string) => { if (!ok) throw new ToolError("INVALID_INPUT", `${s.op} needs ${what}`); };
+  if (s.to && s.op !== "swipe" && s.op !== "drag" && s.op !== "scroll_find") throw new ToolError("INVALID_INPUT", "to selects a swipe/drag endpoint or scroll_find target");
+  if (s.touch && s.op !== "pinch" && s.op !== "rotate") throw new ToolError("INVALID_INPUT", "touch options require pinch or rotate");
+  if (s.scroll_offset !== undefined) need(s.op === "scroll_find" && Number.isSafeInteger(s.scroll_offset) && s.scroll_offset >= 0, "a nonnegative pixel scroll_offset for scroll_find");
+  if (s.duration_ms !== undefined) need(s.op === "long_click" && Number.isInteger(s.duration_ms) && s.duration_ms >= 500 && s.duration_ms <= 60000, "long_click with duration_ms in 500–60000");
   switch (s.op) {
-    case "click": case "double_click": case "long_click": need(x !== undefined && y !== undefined, "selector or x,y"); return { action: s.op, x: x!, y: y! };
+    case "click": case "double_click": need(x !== undefined && y !== undefined, "selector or x,y"); return { action: s.op, x: x!, y: y! };
+    case "long_click": need(x !== undefined && y !== undefined, "selector or x,y"); return { action: s.op, x: x!, y: y!, durationMs: s.duration_ms };
     case "input": need(x !== undefined && y !== undefined && s.text !== undefined, "selector or x,y and text"); return { action: "input", x: x!, y: y!, text: s.text!, append: s.append };
+    case "clear_text": need((x === undefined) === (y === undefined), "both x,y or neither"); return { action: "clear_text", x, y };
+    case "pinch": case "rotate": {
+      need((s.x === undefined) === (s.y === undefined) && (!s.selector || s.x === undefined), "selector, x,y, or neither for screen center");
+      const { scale, degrees, radius } = s.touch ?? {};
+      if (s.op === "pinch") need(scale !== undefined && scale >= 0.1 && scale <= 10 && scale !== 1 && degrees === undefined, "scale within 0.1–10, excluding 1");
+      else need(degrees !== undefined && Math.abs(degrees) <= 360 && degrees !== 0 && scale === undefined, "signed degrees within ±360, excluding 0");
+      need(radius === undefined || Number.isInteger(radius) && radius >= 10 && radius <= 2000, "radius of 10–2000 pixels");
+      return { action: s.op, x: s.x, y: s.y, selector: s.selector, scale, degrees, radius, speed: s.speed };
+    }
     case "type": need(s.text !== undefined, "text"); return { action: "type", text: s.text! };
-    case "swipe": case "drag": case "fling":
+    case "swipe": case "drag":
+      need([x, y, x2, y2].every((v) => v !== undefined), "x,y,x2,y2 or selector/to for the corresponding endpoint");
+      return { action: s.op, x: x!, y: y!, x2: x2!, y2: y2!, speed: s.speed, to: s.to };
+    case "fling":
       need([s.x, s.y, s.x2, s.y2].every((v) => v !== undefined), "x,y,x2,y2");
       return { action: s.op, x: s.x!, y: s.y!, x2: s.x2!, y2: s.y2!, speed: s.speed };
     case "scroll": need(s.direction, "direction"); return { action: "scroll", direction: s.direction!, speed: s.speed, ...(s.selector ? { selector: s.selector } : {}) };
+    case "scroll_start": case "scroll_end": case "scroll_find":
+      need(s.selector, "a scrollable container selector");
+      need(s.timeout_ms === undefined || Number.isInteger(s.timeout_ms) && s.timeout_ms >= 1 && s.timeout_ms <= 3600000, "timeout_ms in 1–3600000 for the UITest operation");
+      if (s.op === "scroll_find") { need(s.to, "a to matcher"); scrollTarget(s.to!); }
+      return { action: s.op, selector: s.selector!, to: s.to, direction: s.direction, speed: s.speed, scrollOffset: s.scroll_offset, timeoutMs: s.timeout_ms };
     case "key": need(s.key || s.keys, "key or keys"); return s.keys ? { action: "keys", keys: s.keys } : { action: "key", key: s.key! };
     case "mouse_click": case "mouse_double_click": case "mouse_long_click":
       need(x !== undefined && y !== undefined, "selector or x,y"); return { action: s.op, x: x!, y: y!, button: s.button, keys: s.keys };
@@ -155,7 +191,13 @@ export function stepAction(s: BatchStep, point?: { x: number; y: number }): Acti
 }
 
 export function validateBatchSteps(steps: BatchStep[]) {
-  for (const step of steps) if (step.op !== "wait") stepAction(step, step.selector ? { x: 0, y: 0 } : undefined);
+  for (const step of steps) {
+    if (step.timeout_ms !== undefined && nativeScrollBudget(step.op) === undefined && step.timeout_ms < 100)
+      throw new ToolError("INVALID_INPUT", "Selector waits require at least 100 ms");
+    if (step.op === "wait" && !step.to) continue;
+    const point = { x: 0, y: 0 };
+    stepAction(step, step.selector ? point : undefined, step.to ? point : undefined);
+  }
 }
 
 const pick = pickMatch;
@@ -181,6 +223,10 @@ export interface BatchResult extends AutomaticResult {
  */
 export async function runBatch(target: string, steps: BatchStep[], options: { assert?: { visible?: Selector; hidden?: Selector; timeout_ms?: number }; bundle?: string; budgetMs?: number }, signal: AbortSignal): Promise<BatchResult> {
   validateBatchSteps(steps);
+  if (steps.some((step) => (step.duration_ms ?? 0) > SYNC_HOLD_MS))
+    throw new ToolError("INVALID_INPUT", "Use a single ui act for a long press exceeding 30000 ms");
+  if (steps.some((step) => nativeScrollBudget(step.op) !== undefined && (step.timeout_ms ?? 0) > 38000))
+    throw new ToolError("INVALID_INPUT", "Use a single ui act for scroll deadlines exceeding 38000 ms");
   const results: BatchResult["steps"] = [];
   const executed: BatchResult["executed"] = [];
   const accepted: { text: string; kind: string }[] = [];
@@ -201,7 +247,10 @@ export async function runBatch(target: string, steps: BatchStep[], options: { as
     const s = steps[i]!;
     const started = Date.now();
     let action: Action | undefined;
-    if (left() < 1500) {
+    const scroll = nativeScrollBudget(s.op);
+    const budget = s.duration_ms !== undefined ? s.duration_ms + 7000 : scroll !== undefined ? (s.timeout_ms ?? scroll) + 4000
+      : ["pinch", "rotate"].includes(s.op) ? 26000 : 1500;
+    if (left() < budget) {
       // Out of time: report what was done and where to resume, instead of letting the host time out.
       return {
         passed: false, steps: results, failed_step: i, stopped_at: i, executed, ...agreements(),
@@ -220,29 +269,30 @@ export async function runBatch(target: string, steps: BatchStep[], options: { as
         results.push({ i, op: "wait", ok: true, ms: Date.now() - started });
         continue;
       }
-      let point: { x: number; y: number } | undefined;
-      let hit: UiNode | undefined;
-      if (s.selector && needsPoint.has(s.op)) {
+      const start = needsPoint.has(s.op) ? s.selector : undefined;
+      let hit: UiNode | undefined, end: UiNode | undefined;
+      const finish = s.op === "scroll_find" ? undefined : s.to;
+      if (start || finish) {
         if (!fresh) { await new Promise((r) => setTimeout(r, 250)); invalidate(target); last = await ready(await dumpTree(target, signal)); fresh = true; }
-        const deadline = Date.now() + Math.min(s.timeout_ms ?? 10000, left() - 1000);
+        const deadline = Date.now() + Math.min(s.timeout_ms ?? 10000, left() - (s.duration_ms === undefined ? 1000 : budget));
         let ambiguous: UiNode[] | undefined;
         for (;;) {
-          const matches = select(last, s.selector);
-          hit = matches.length ? pick(matches, s.selector) : undefined;
-          if (hit) break;
-          if (matches.length > 1) ambiguous = matches;
+          const matches = start ? select(last, start) : [], ends = finish ? select(last, finish) : [];
+          hit = start && matches.length ? pick(matches, start) : undefined;
+          end = finish && ends.length ? pick(ends, finish) : undefined;
+          if ((!start || hit) && (!finish || end)) break;
+          ambiguous = !hit && matches.length > 1 ? matches : !end && ends.length > 1 ? ends : undefined;
           // A dump takes ~1s: stop when the next one would end past the deadline.
           if (Date.now() + 1000 > deadline) {
             if (ambiguous) throw new ToolError("UI_AMBIGUOUS", `${ambiguous.length} elements match; refine selector or pass index`, { candidates: ambiguous.slice(0, 6).map(describe) });
-            throw new ToolError("UI_NOT_FOUND", "No element matches the selector", { selector: s.selector });
+            throw new ToolError("UI_NOT_FOUND", "No element matches the selector", { selector: !hit && start ? start : finish });
           }
           await new Promise((r) => setTimeout(r, 200));
           invalidate(target);
           last = await ready(await dumpTree(target, signal));
         }
-        point = center(hit);
       }
-      action = stepAction(s, point);
+      action = stepAction(s, hit && center(hit), end && center(end));
       const performed = await act(target, action, signal);
       accepted.push(...automaticActions(performed));
       executed.push({ action, selector: s.selector });

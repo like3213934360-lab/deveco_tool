@@ -81,6 +81,8 @@ test("find and assert preserve window scope, wait for changing content and cance
     finally { clearTimeout(cancel); }
     assert.deepEqual(f.clicks, []);
     assert.ok(f.dumps.length >= 4); assert.ok(f.dumps.every((command) => command.includes("-w 123")));
+    await m.uiTool.handler({ action: "find", target: "test", window: 123, display: 2, selector: { text: "Ready" } }, ctx);
+    assert.match(f.dumps.at(-1), /-w 123 -d 2\b/);
     f.dumps = [];
   } finally { clearTimeout(timer); }
 });

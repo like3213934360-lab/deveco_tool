@@ -7,9 +7,10 @@ import { after, test } from "node:test";
 import { pathToFileURL } from "node:url";
 import { build } from "esbuild";
 const root = path.resolve(import.meta.dirname, "../.."), work = temporaryDirectory("deveco-controls-");
+process.env.DEVECO_STATE_DIR = path.join(work, "state");
 const bundle = path.join(work, "device-controls-test.mjs");
 const f = globalThis.__controls = { calls: [], respond: () => ({ code: 0, stdout: "success", stderr: "" }) };
-await build({ stdin: { contents: `export * from './src/domains/device-controls.ts'; export { install, validatePackages } from './src/domains/device.ts';`, resolveDir: root }, outfile: bundle,
+await build({ stdin: { contents: `export * from './src/domains/device-controls.ts'; export { playback, locationMock } from './src/domains/device-media-location.ts'; export { networkSimulation } from './src/domains/network-simulation.ts'; export { install, validatePackages } from './src/domains/device.ts';`, resolveDir: root }, outfile: bundle,
   bundle: true, platform: "node", format: "esm", packages: "external", logLevel: "error", plugins: [{ name: "transport", setup(b) {
     b.onResolve({ filter: /(?:proc|toolchain|ui)\.js$/ }, (a) => /domains\/(?:device|device-controls)\.ts$/.test(a.importer.replaceAll("\\", "/")) ? { path: path.basename(a.path, ".js"), namespace: "transport" } : undefined);
     b.onLoad({ filter: /.*/, namespace: "transport" }, (a) => ({ contents: {
@@ -21,6 +22,45 @@ await build({ stdin: { contents: `export * from './src/domains/device-controls.t
 const m = await import(pathToFileURL(bundle).href), signal = new AbortController().signal;
 after(() => { delete globalThis.__controls; fs.rmSync(bundle, { force: true }); fs.rmSync(work, { recursive: true, force: true }); });
 function reply(stdout, code = 0, stderr = "") { return { code, stdout, stderr }; }
+test("failed simulation rolls back its active scenario and custom record, without suppressing the device failure", async () => {
+  f.calls = [];
+  let enabled = false, added = false, active = false;
+  f.respond = ([, , , command]) => {
+    const args = command.replace("netcopilot ", "");
+    if (args === "-p") return reply(enabled ? `| ScenarioID | ScenarioName |\n 1 | preset\n${added ? ` ${active ? "[1000]" : "1000"} | Private probe\n` : ""}` : "get active scenario failed, make sure netcopilot is enabled");
+    if (args === "-e 1") enabled = true;
+    else if (args === "-e 0") enabled = false;
+    else if (args.startsWith("-a ")) added = true;
+    else if (args === "-s 1000") { active = true; return reply("Failed to simulate scenario 1000"); }
+    else if (args === "-c") active = false;
+    else if (args === "-d 1000") added = false;
+    else assert.fail(args);
+    return reply("success");
+  };
+  await assert.rejects(m.networkSimulation("owned", { operation: "start", name: "Private probe", up_bandwidth: 8000, down_bandwidth: 9000, up_latency: 20, down_latency: 30, up_drop: 0, down_drop: 0.1 }, signal), { code: "DEVICE_COMMAND_FAILED" });
+  assert.deepEqual(await m.networkSimulation("owned", { operation: "status" }, signal), { target: "owned", enabled: false, scenarios: [], active_id: null, managed: false });
+  assert.deepEqual(f.calls.map((args) => args[3]).filter((command) => / -[cds] /.test(`${command} `)), ["netcopilot -s 1000", "netcopilot -c", "netcopilot -d 1000"]);
+});
+
+test("media session matching refuses ambiguity and seek uses bounded milliseconds", async () => {
+  f.calls = [];
+  f.respond = (args) => reply(JSON.stringify({ status: "success", ...(args[3].endsWith("list-sessions") ? { data: { sessions: ["one", "two"].map((sessionId) => ({ sessionId, elementName: { bundleName: "com.test.media" } })) } } : {}) }));
+  await assert.rejects(m.playback("target", { operation: "play", bundle: "com.test.media" }, signal), { code: "INVALID_INPUT" });
+  assert.equal(f.calls.length, 1);
+  const result = await m.playback("target", { operation: "seek", bundle: "com.test.media", session_id: "two", position_seconds: 1.2 }, signal);
+  assert.equal(result.command_confirmed, true);
+  assert.match(f.calls.at(-1)[3], /--session-id 'two' --command seek --time 1200$/);
+});
+
+test("a failed location enable still removes the owned uploaded GPX", async () => {
+  f.calls = [];
+  f.respond = (args) => args[2] === "file" ? reply("FileTransfer finish") : args[3].includes("enable-location-mock") ? reply("Error: Service is not available.") : reply("");
+  await assert.rejects(m.locationMock("target", { operation: "set", latitude: 0, longitude: 0 }, signal), { code: "CAPABILITY_UNAVAILABLE" });
+  const send = f.calls[0];
+  assert.match(send[5], /^\/data\/local\/tmp\/deveco-gpx-.+\.gpx$/);
+  assert.equal(f.calls.at(-1)[3], `rm -f ${send[5]}`);
+  assert.equal(fs.existsSync(send[4]), false);
+});
 test("control operations reject ignored fields and unknown operations", () => {
   m.validateControl({ action: "app", operation: "start", bundle: "com.example.app", ability: "Main" });
   for (const input of [{ action: "app", operation: "stop", files: [] }, { action: "app", operation: "install", files: ["/owned/app.hap"], shared: ["/owned/system.hsp"] }, { action: "clipboard", operation: "read", text: "unused" }, { action: "system", operation: "time", value: 1 }, { action: "screen", operation: "clear_data" }]) {

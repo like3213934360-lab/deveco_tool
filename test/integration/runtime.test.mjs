@@ -63,7 +63,7 @@ test("upgrades bind version to code and preserve old processes' lazy chunks, inc
   assert.equal((await updated.initialize()).result.serverInfo.version, "1.0.1");
   assert.match(updated.stderr, /rebuilding/);
   assert.ok(fs.existsSync(path.join(dir, "dist/chunks/legacy.js")));
-  assert.equal((await old.request("prompts/list")).result.prompts.length, 3);
+  assert.equal((await old.request("prompts/list")).result.prompts.length, 4);
   assert.equal((await old.initialize()).result.serverInfo.version, "1.0.0");
   const server = path.join(dir, "src/server.ts");
   fs.writeFileSync(server, fs.readFileSync(server, "utf8").replace("HarmonyOS/ArkTS development tools.", "Same-version source edit."));
@@ -175,7 +175,7 @@ test("npm pack builds current sources and ships only the selected generation, wh
   assert.throws(() => createRequire(path.join(packageDir, "package.json")).resolve("esbuild"), { code: "MODULE_NOT_FOUND" });
   const c = client(t, packageDir);
   assert.equal((await c.initialize()).result.serverInfo.version, "1.0.1");
-  assert.equal((await c.request("prompts/list")).result.prompts.length, 3);
+  assert.equal((await c.request("prompts/list")).result.prompts.length, 4);
   assert.doesNotMatch(c.stderr, /rebuilding/);
   assert.equal(fs.existsSync(path.join(packageDir,"dist/.build-users")),false,"source-less packages do not require writes to the installation directory");
   await c.close();
